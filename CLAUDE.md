@@ -116,7 +116,7 @@ Pull requests are **squash-merged** into `main`. Every PR lands on `main` as exa
 - One PR covers one logical change. If the squash commit would need more than one `type`, split the PR.
 - A breaking change is marked with `!` in the PR title, for example `feat(api)!: drop v1 endpoints`, and explained in the description.
 - Do not create a pull request unless explicitly asked.
-- Never merge a pull request yourself unless explicitly asked.
+- Never merge a pull request yourself unless explicitly asked. Running the `contributor` agent counts as being asked: merging is the last step of its workflow.
 - The source branch is deleted after merge.
 
 ## Pull request description
@@ -199,10 +199,17 @@ This repository uses OpenSpec for spec-driven development. Specs and change prop
 
 - Run it with `npx @fission-ai/openspec@latest <command>`. It is not a project dependency.
 - Anonymous usage statistics are disabled for this repository. `.claude/settings.json` sets `OPENSPEC_TELEMETRY=0` for every Claude Code session here. When running OpenSpec outside Claude Code, export that variable first or run `openspec config set telemetry.enabled false` once on the machine.
-- Start new work with the `/opsx:propose` command, implement it with `/opsx:apply`, and archive it with `/opsx:archive` once it is merged.
+- Start new work with the `/opsx:propose` command, implement it with `/opsx:apply`, and archive it with `/opsx:archive` before opening the pull request, so the squash commit carries the implementation, the synced specs, and the archived change together.
+- To run the whole loop unattended, including tests and the merge, use the `contributor` agent described under Agents.
 - Specs in `openspec/specs/` are the source of truth for behavior. Update them through a change proposal, not by hand.
 - Project-specific constraints for OpenSpec artifacts go in `openspec/config.yaml`.
 - Files under `.claude/commands/opsx/` and `.claude/skills/openspec-*/` are generated. Do not edit them; refresh them with `openspec update`.
+
+## Agents
+
+Custom agents live in `.claude/agents/`. Each file's frontmatter gives its name and when to use it; the body is its instructions. They obey this file.
+
+- `contributor`: delivers one change end to end. It creates a branch, runs the OpenSpec loop (propose, apply, archive), runs the project's checks, commits with the conventions above, opens a pull request from the template, and squash-merges it. Invoke it with a description of the change or the name of an existing OpenSpec change, for example "use the contributor agent to add user login". It stops and reports instead of merging when the request is materially ambiguous, when checks still fail after three fix attempts, or when CI stays red.
 
 ## Stack
 
