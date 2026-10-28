@@ -28,6 +28,10 @@ toolchain:
 	$(MAKE) -C "$(SPINEL_SRC)" install PREFIX="$(PREFIX)"
 	@echo "Installed spinel and spin under $(PREFIX)/bin. Make sure it is on your PATH."
 
+## spinel-rev: print the commit of Spinel that SPINEL_REF currently points to on SPINEL_REPO, used as the CI cache key
+spinel-rev:
+	@git ls-remote "https://github.com/$(SPINEL_REPO)" "refs/heads/$(SPINEL_REF)" | cut -f1
+
 ## doctor: check that spinel, spin, a C compiler, and node for OpenSpec are available
 doctor:
 	@ok=1; \
@@ -116,4 +120,4 @@ help:
 	@echo
 	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)"
 
-.PHONY: toolchain doctor build run install pack clean test lint snapshots types gen-config check spec-list spec-validate spec-update help
+.PHONY: toolchain spinel-rev doctor build run install pack clean test lint snapshots types gen-config check spec-list spec-validate spec-update help

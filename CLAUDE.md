@@ -231,6 +231,7 @@ Decided in `docs/architecture.md` and in place since the project skeleton.
 Every command has a Makefile target. Run `make help` for the full list. All targets are verified under Spinel. Keep this list current.
 
 - `make doctor`: check that `spinel`, `spin`, a C compiler, and `node` are on the path.
+- `make spinel-rev`: print the Spinel commit that `SPINEL_REF` points to, the CI cache key.
 - `make toolchain`: clone Spinel into `SPINEL_SRC` if it is missing, or fast-forward it, then build and install `spinel` and `spin` into `PREFIX`. `SPINEL_REPO` and `SPINEL_REF` select the repository and branch.
 - `make build`: `spin build`, compiles every `bin/*.rb` into `build/bin`.
 - `make run FILE=path`: `spin run carat -- path`.
@@ -253,7 +254,7 @@ Defined in `docs/architecture.md`, section 11, in the shape `spin` expects. The 
 - `carat.rb` and `carat/`: the library. `carat/domain/` entities, `carat/use_cases/`, `carat/ports/`, `carat/adapters/`, `carat/drivers/`, `carat/doubles/` test doubles, and `carat/testing.rb`.
 - `carat/plugin_api.rb` and `carat/plugins/`: the plugin API, the generated registry, and the built-in compiled plugins. `config/plugins.json` lists them in order.
 - `test/`: one Spinel program per file with a committed `.expected` snapshot, including `lint.rb` and `config_sync.rb`. Regenerate snapshots only with `make snapshots` and review the diff.
-- `.github/workflows/ci.yml`: builds Spinel with `make toolchain`, then runs `make build`, checks the generated config, and runs `make test` on Ubuntu.
+- `.github/workflows/ci.yml`: restores the installed toolchain from the Actions cache keyed by the Spinel commit from `make spinel-rev`, builds it with `make toolchain` only on a cache miss, then runs `make build`, checks the generated config, and runs `make test` on Ubuntu.
 - `build/`: `spin` output, ignored by git.
 - `docs/`: `architecture.md`, `compatibility.md`, `actions.md`.
 - `openspec/`: specs and change proposals.
