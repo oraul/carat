@@ -31,7 +31,7 @@
 
 ## 7. Integration
 
-- [ ] 7.1 Run `make snapshots` for the new and changed test programs, review the diff, then `make check` (build, gen-config, test, diagnose); verify everything passes and the binary still edits a file in a terminal
+- [x] 7.1 Run `make snapshots` for the new and changed test programs, review the diff, then `make check` (build, gen-config, test, diagnose); verify everything passes and the binary still edits a file in a terminal
 
 ## Workflow follow-up
 
