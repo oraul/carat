@@ -6,7 +6,7 @@ Guidance for Claude Code when working in this repository.
 
 - Name: carat
 - What it is: a terminal IDE written in Ruby with Neovim's modal editing model: modes, the count-operator-motion grammar, text objects, registers, and ex commands, plus IDE services such as language servers, and a plugin system on which the explorer, finder, and git integration are built. Built, tested, and shipped entirely with Spinel at the Ruby 4 language level; CRuby is never required.
-- Status: architecture defined, no source code yet. The README is a placeholder.
+- Status: project skeleton in place and verified under Spinel: manifest, require graph, `Carat::Json`, `Carat::Testing`, the config generator, the lint and config tests, and an entry point that opens a file and quits. No editing yet; the next roadmap item is `editor-foundation`. The README is a placeholder.
 - Architecture: `docs/architecture.md` is binding. Read it before planning any change. It fixes the Clean Architecture layers, the ports, the module names, the Spinel rules for all production code, the JSON configuration schema, and the roadmap order.
 - When code is added, update the "Commands" section below and keep "Stack" and "Layout" accurate.
 
@@ -215,7 +215,7 @@ Custom agents live in `.claude/agents/`. Each file's frontmatter gives its name 
 
 ## Stack
 
-Decided in `docs/architecture.md`. Not yet in place; update this section when it is.
+Decided in `docs/architecture.md` and in place since the project skeleton.
 
 - Language: Ruby at the Ruby 4 language level, compiled with Spinel, Matz's ahead-of-time Ruby-to-C compiler. There is no CRuby anywhere in the workflow.
 - Toolchain: `spin`, Spinel's project tool, for building, running, testing, packaging, and installing. The `Makefile` only maps targets to `spin` and OpenSpec commands. No Rakefile, no Bundler.
@@ -227,7 +227,7 @@ Decided in `docs/architecture.md`. Not yet in place; update this section when it
 
 ## Commands
 
-Every command has a Makefile target. Run `make help` for the full list. The `spin` targets are planned in `docs/architecture.md`; confirm each one when the project skeleton lands and keep this list current.
+Every command has a Makefile target. Run `make help` for the full list. All targets are verified under Spinel. Keep this list current.
 
 - `make doctor`: check that `spinel`, `spin`, a C compiler, and `node` are on the path.
 - `make toolchain`: clone Spinel into `SPINEL_SRC` if it is missing, or fast-forward it, then build and install `spinel` and `spin` into `PREFIX`. `SPINEL_REPO` and `SPINEL_REF` select the repository and branch.
@@ -243,14 +243,15 @@ Every command has a Makefile target. Run `make help` for the full list. The `spi
 
 ## Layout
 
-Planned in `docs/architecture.md`, section 10, in the shape `spin` expects. Create directories as the roadmap reaches them.
+Defined in `docs/architecture.md`, section 11, in the shape `spin` expects. The skeleton created the top level; create the remaining layer directories as the roadmap reaches them.
 
 - `spin.toml`: the project manifest. `Makefile`: the command map. `.gitignore`: `build/` and `dist/`.
 - `bin/carat.rb`: entry point and composition root, the only place drivers are constructed. `bin/carat-gen-config.rb` generates the default config mirror. Every `bin/*.rb` is a compile root.
 - `config/default.json`: every default option and key binding. The generated `carat/domain/default_config.rb` mirrors it and is never edited by hand.
 - `carat.rb` and `carat/`: the library. `carat/domain/` entities, `carat/use_cases/`, `carat/ports/`, `carat/adapters/`, `carat/drivers/`, `carat/doubles/` test doubles, and `carat/testing.rb`.
 - `carat/plugin_api.rb` and `carat/plugins/`: the plugin API, the generated registry, and the built-in compiled plugins. `config/plugins.json` lists them in order.
-- `test/`: one Spinel program per file with a committed `.expected` snapshot, including `lint.rb` and `config_sync.rb`.
+- `test/`: one Spinel program per file with a committed `.expected` snapshot, including `lint.rb` and `config_sync.rb`. Regenerate snapshots only with `make snapshots` and review the diff.
+- `.github/workflows/ci.yml`: builds Spinel with `make toolchain`, then runs `make build`, checks the generated config, and runs `make test` on Linux and macOS.
 - `build/`: `spin` output, ignored by git.
 - `docs/`: `architecture.md`, `compatibility.md`, `actions.md`.
 - `openspec/`: specs and change proposals.
