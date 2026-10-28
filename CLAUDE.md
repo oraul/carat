@@ -112,9 +112,9 @@ More subject examples:
 
 Pull requests are **squash-merged** into `main`. Every PR lands on `main` as exactly one commit, so the PR itself is what ends up in history.
 
-- The PR title becomes the subject of the squash commit. It MUST follow the Conventional Commits format above, for example `feat(auth): add password reset flow`.
+- The PR title becomes the subject of the squash commit, followed by a space and the PR number in parentheses, exactly as GitHub pre-fills it, for example `feat(auth): add password reset flow (#12)`. The number is what links the commit on `main` back to the pull request. The title itself MUST follow the Conventional Commits format above.
 - The PR description becomes the body of the squash commit. Follow the "Pull request description" standard below.
-- Before merging, check the squash commit message in the merge dialog. GitHub pre-fills it from the PR title and description. Keep the `Co-Authored-By: Claude <noreply@anthropic.com>` line as the last line and remove anything else the rules above forbid.
+- Before merging, check the squash commit message in the merge dialog. GitHub pre-fills it from the PR title and description. Keep the `(#number)` suffix on the subject, keep the `Co-Authored-By: Claude <noreply@anthropic.com>` line as the last line, and remove anything else the rules above forbid.
 - Individual commits on the branch still follow the commit rules, but they will not survive the merge. Keep them tidy, do not spend effort rewriting them.
 - One PR covers one logical change. If the squash commit would need more than one `type`, split the PR.
 - A breaking change is marked with `!` in the PR title, for example `feat(api)!: drop v1 endpoints`, and explained in the description.

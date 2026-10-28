@@ -78,8 +78,8 @@ Work through these phases in order. Each phase ends with a verified state before
 ### 8. Merge
 
 - Squash-merge the pull request with the GitHub tools, passing the current head SHA as the expected head so a concurrent push cannot be merged by mistake.
-- The squash commit title is the pull request title. The squash commit message is the pull request description followed by one blank line and the co-author trailer `Co-Authored-By: Claude <noreply@anthropic.com>` as the very last line.
-- After merging, fetch `origin`, confirm `origin/main` now contains the squash commit with that exact subject and trailer, and confirm the source branch no longer exists on the remote. If it still exists, delete it; if deletion is not permitted from your environment, say so in the report.
+- The squash commit title is the pull request title followed by a space and the pull request number in parentheses, for example `feat(auth): add password reset flow (#12)`, so the commit on `main` links back to the pull request. The squash commit message is the pull request description followed by one blank line and the co-author trailer `Co-Authored-By: Claude <noreply@anthropic.com>` as the very last line.
+- After merging, fetch `origin`, confirm `origin/main` now contains the squash commit with that exact subject including the number, and the trailer, and confirm the source branch no longer exists on the remote. If it still exists, delete it; if deletion is not permitted from your environment, say so in the report.
 - Check out `main` locally at `origin/main` and delete the local feature branch.
 
 ## Report
