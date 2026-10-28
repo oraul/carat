@@ -40,4 +40,13 @@ ok   set_lines marks the buffer modified
 ok   unmodified after load
 ok   modified after insert
 ok   unmodified after save
-domain_buffer: 42 passed, 0 failed
+ok   positions are equal by value
+ok   positions are eql by value
+ok   equal positions hash alike
+ok   a position works as a hash key by value
+ok   positions are frozen
+ok   with copies a position
+ok   with leaves the original unchanged
+ok   ranges are equal by value
+ok   ranges are frozen
+domain_buffer: 51 passed, 0 failed

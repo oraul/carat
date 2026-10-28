@@ -38,15 +38,8 @@ module Carat
     # prefix), :prefix (more keys needed), :match (bound, nothing longer), or
     # :match_prefix (bound, and a longer binding exists). value is the bound
     # action name or remap sequence for :match and :match_prefix.
-    class KeymapMatch
-      attr_reader :kind #: Symbol
-      attr_reader :value #: String?
-
-      #: (Symbol, String?) -> void
-      def initialize(kind, value)
-        @kind = kind
-        @value = value
-      end
+    # A Data value: equal by value and frozen.
+    class KeymapMatch < Data.define(:kind, :value)
     end
 
     # One trie per mode from key sequences to action names or remap

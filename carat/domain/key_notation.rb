@@ -5,19 +5,11 @@ module Carat
     # Names are case-insensitive.
     module KeyNotation
       # The outcome of parsing: the codes, or an error naming the bad key.
-      class Result
-        attr_reader :codes #: Array[Integer]
-        attr_reader :error #: String?
-
-        #: (Array[Integer], String?) -> void
-        def initialize(codes, error)
-          @codes = codes
-          @error = error
-        end
-
+      # A Data value: equal by value and frozen.
+      class Result < Data.define(:codes, :error)
         #: () -> bool
         def ok?
-          @error.nil?
+          error.nil?
         end
       end
 

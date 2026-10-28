@@ -111,4 +111,19 @@ t.assert_equal(true, b.modified, "modified after insert")
 b.modified = false
 t.assert_equal(false, b.modified, "unmodified after save")
 
+# Data semantics the domain relies on: value equality, hashing, immutability.
+p1 = pos(2, 3)
+p2 = pos(2, 3)
+t.assert_true(p1 == p2, "positions are equal by value")
+t.assert_true(p1.eql?(p2), "positions are eql by value")
+t.assert_equal(p1.hash, p2.hash, "equal positions hash alike")
+t.assert_equal("here", { p1 => "here" }[p2], "a position works as a hash key by value")
+t.assert_true(p1.frozen?, "positions are frozen")
+t.assert_equal([2, 4], p1.with(col: 4).to_a, "with copies a position")
+t.assert_equal([2, 3], p1.to_a, "with leaves the original unchanged")
+r1 = D::Range.charwise(pos(0, 0), pos(0, 2))
+r2 = D::Range.new(pos(0, 0), pos(0, 2), :charwise, false)
+t.assert_true(r1 == r2, "ranges are equal by value")
+t.assert_true(r1.frozen?, "ranges are frozen")
+
 t.finish

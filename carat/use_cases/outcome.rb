@@ -1,17 +1,9 @@
 module Carat
   module UseCases
     # What a file or ex use case reports back: whether it succeeded and the
-    # message to show, which may be empty.
-    class Outcome
-      attr_reader :ok #: bool
-      attr_reader :message #: String
-
-      #: (bool, String) -> void
-      def initialize(ok, message)
-        @ok = ok
-        @message = message
-      end
-
+    # message to show, which may be empty. A Data value: equal by value and
+    # frozen.
+    class Outcome < Data.define(:ok, :message)
       #: (String) -> Outcome
       def self.success(message)
         Outcome.new(true, message)
