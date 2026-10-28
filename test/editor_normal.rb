@@ -72,9 +72,9 @@ t.assert_equal([["ab"], [0, 0], :normal], [h.lines, h.cursor, h.mode], "ctrl-c c
 
 # Actions from later roadmap items.
 h = editor("ab\n")
-h.type("dd")
-t.assert_equal("Not implemented: operator.delete_line", h.message_row, "dd reports itself")
-t.assert_equal(["ab"], h.lines, "dd changes nothing")
+h.type("u")
+t.assert_equal("Not implemented: history.undo", h.message_row, "u reports itself")
+t.assert_equal(["ab"], h.lines, "u changes nothing")
 h.type("l")
 t.assert_equal("", h.message_row, "the message clears on the next key")
 
@@ -109,7 +109,6 @@ t.assert_equal([0, 5], h.cursor, "longer binding fires when completed in time")
 
 # Remaps.
 h = editor("ab\n")
-h.type("x")
 h.type("<Space>w")
 t.assert_equal("\"a.txt\" 1L, 3B written", h.message_row, "leader w writes the file")
 t.assert_equal("ab\n", h.files.get("a.txt"), "the file was written")

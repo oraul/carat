@@ -12,10 +12,20 @@ ok   unbound after prefix
 ok   mode with no bindings
 ok   control r
 ok   backspace in cmdline
+ok   d is an operator, not a prefix
+ok   dd is not a sequence
+ok   quote selects a register
+ok   w in operator-pending mode
+ok   i is a prefix in operator-pending mode
+ok   iw in operator-pending mode
+ok   a( in operator-pending mode
+ok   d in operator-pending mode doubles
+ok   escape in operator-pending mode
+ok   iw is not bound in normal mode
 ok   a matches and is a prefix
 ok   ab matches
 ok   j still bound after a bad key
 ok   k with a non-string value is unbound
 ok   malformed bindings are reported with mode and key
 ok   null unbinds a key
-domain_keymap: 20 passed, 0 failed
+domain_keymap: 30 passed, 0 failed

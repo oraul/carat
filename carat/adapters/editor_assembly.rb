@@ -5,6 +5,7 @@ require_relative "../domain/editor_state"
 require_relative "../domain/keymap"
 require_relative "../domain/options"
 require_relative "../use_cases/move"
+require_relative "../use_cases/operate"
 require_relative "../use_cases/enter_insert"
 require_relative "../use_cases/insert_text"
 require_relative "../use_cases/leave_insert"
@@ -42,6 +43,7 @@ module Carat
         @state = Domain::EditorState.new(Domain::Buffer.from_text("", nil), options, timeoutlen)
 
         move = UseCases::Move.new
+        operate = UseCases::Operate.new
         enter_insert = UseCases::EnterInsert.new(move)
         insert_text = UseCases::InsertText.new(enter_insert)
         leave_insert = UseCases::LeaveInsert.new
@@ -50,7 +52,7 @@ module Carat
         quit = UseCases::Quit.new
         execute_ex = UseCases::ExecuteEx.new(@open_file, save_file, quit)
         command_line = UseCases::EditCommandLine.new(execute_ex)
-        dispatcher = UseCases::Dispatcher.new(move, enter_insert, insert_text, leave_insert, command_line)
+        dispatcher = UseCases::Dispatcher.new(move, operate, enter_insert, insert_text, leave_insert, command_line)
         handle_key = UseCases::HandleKey.new(@keymap, dispatcher, insert_text, command_line)
 
         @controller = InputController.new(terminal, clock, KeyDecoder.new, handle_key)

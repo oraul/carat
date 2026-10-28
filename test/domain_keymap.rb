@@ -27,7 +27,17 @@ t.table([
   ["unbound after prefix", [:normal, "gz"], [:none, nil]],
   ["mode with no bindings", [:replace, "j"], [:none, nil]],
   ["control r", [:normal, "<C-r>"], [:match, "history.redo"]],
-  ["backspace in cmdline", [:cmdline, "<BS>"], [:match, "cmdline.backspace"]]
+  ["backspace in cmdline", [:cmdline, "<BS>"], [:match, "cmdline.backspace"]],
+  ["d is an operator, not a prefix", [:normal, "d"], [:match, "operator.delete"]],
+  ["dd is not a sequence", [:normal, "dd"], [:none, nil]],
+  ["quote selects a register", [:normal, "\""], [:match, "register.select"]],
+  ["w in operator-pending mode", [:operator_pending, "w"], [:match, "motion.word_forward"]],
+  ["i is a prefix in operator-pending mode", [:operator_pending, "i"], [:prefix, nil]],
+  ["iw in operator-pending mode", [:operator_pending, "iw"], [:match, "textobject.inner_word"]],
+  ["a( in operator-pending mode", [:operator_pending, "a("], [:match, "textobject.a_paren"]],
+  ["d in operator-pending mode doubles", [:operator_pending, "d"], [:match, "operator.delete"]],
+  ["escape in operator-pending mode", [:operator_pending, "<Esc>"], [:match, "mode.normal"]],
+  ["iw is not bound in normal mode", [:normal, "iw"], [:none, nil]]
 ]) do |input|
   match = keymap.lookup(input[0], codes(input[1]))
   [match.kind, match.value]

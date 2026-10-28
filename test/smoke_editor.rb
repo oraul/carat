@@ -96,7 +96,7 @@ t.assert_true(out.include?("1L, 6B"), "the editor shows the existing file messag
 mark = out.bytesize
 writer.write("x")
 settle(reader, out, 0.5)
-t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("Not implemented: operator.delete_char"), "x reports itself as not implemented")
+t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("[+]"), "x deletes a character and marks the buffer modified")
 writer.write("A!")
 settle(reader, out, 0.5)
 writer.write("\e")

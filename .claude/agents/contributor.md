@@ -56,20 +56,27 @@ Work through these phases in order. Each phase ends with a verified state before
 - On a failure, read the output, fix the root cause in the code or the test, and re-run. Count each full fix-and-rerun cycle as one attempt; stop after three failed attempts and report with the output.
 - If the repository has no automated checks at all, say so explicitly in the Testing section of the pull request, and describe the manual verification you performed instead. Never claim a check you did not run.
 
-### 5. Archive
+### 5. Security review
+
+- After `make check` passes and before archiving, run the repository's security review: make sure `origin/HEAD` points at `main` (`git remote set-head origin main`), because the review compares the branch's diff against `origin/HEAD`, then invoke the `security-review` skill with the Skill tool on the current branch.
+- A High or Medium finding that the review reports at confidence 8 or above and that is in code this change touches is fixed in this change before continuing, with its test, and `make check` is run again.
+- A finding outside this change's scope, or below that confidence, is added to `docs/backlog.md` with its location and fix outline instead of being fixed here.
+- The pull request's Testing section states that the review ran and what it found.
+
+### 6. Archive
 
 - Follow the `openspec-archive-change` skill. Confirm every task is `- [x]`, then run `openspec archive "<change-name>" -y`. Use `--skip-specs` only for a change that has no delta specs, such as tooling or docs.
 - Run `openspec validate --all --strict --no-interactive` afterwards and fix any finding.
 - Archiving happens before the pull request on purpose: the squash commit on `main` then carries the implementation, the synced main specs, and the archived change together, so `main` is always consistent.
 
-### 6. Commit and push
+### 7. Commit and push
 
 - Stage everything the change produced: code, tests, specs, the archived change, and any `CLAUDE.md` updates.
 - Commit following the Commit messages section of `CLAUDE.md`: Conventional Commits subject, optional body wrapped at 72 characters, and the required co-author trailer as the last line. Prefer one commit per logical step (specs, implementation, docs) but do not spend effort rewriting history; the branch is squash-merged.
 - Run the Hard rules checklist from `CLAUDE.md` against the diff and the commit messages: no URLs, no session identifiers, no model names, no secrets, no extra trailers.
 - Push the branch with upstream tracking.
 
-### 7. Pull request
+### 8. Pull request
 
 - Open the pull request against `main` with the GitHub tools available to you. Its title is the Conventional Commits subject of the squash commit, for example `feat(auth): add password reset flow`, with `!` for a breaking change.
 - Write the description exactly as the Pull request description section of `CLAUDE.md` specifies: the four headed sections with dividers, one line per paragraph and bullet, no hard wrapping, every template comment removed, and nothing after Notes. Testing lists only checks that actually ran, with their results.
@@ -77,7 +84,7 @@ Work through these phases in order. Each phase ends with a verified state before
 - If the repository has CI, wait for the checks on the head commit. If any fails, diagnose, fix, push, and wait again. Do not merge on red.
 - If the branch has a merge conflict with `main`, merge `origin/main` into the branch, resolve it, re-run the tests, and push.
 
-### 8. Merge
+### 9. Merge
 
 - Squash-merge the pull request with the GitHub tools, passing the current head SHA as the expected head so a concurrent push cannot be merged by mistake.
 - The squash commit title is the pull request title followed by a space and the pull request number in parentheses, for example `feat(auth): add password reset flow (#12)`, so the commit on `main` links back to the pull request. The squash commit message is the pull request description followed by one blank line and the co-author trailer `Co-Authored-By: Claude <noreply@anthropic.com>` as the very last line.
@@ -90,7 +97,7 @@ End with a short report containing:
 
 - The change name and the branch type used.
 - The pull request number and the squash commit subject.
-- The checks that ran and their results, naming any that could not run.
+- The checks that ran and their results, naming any that could not run, including whether the security review ran and what it reported.
 - Any assumption you recorded in the proposal.
 - Anything you left undone and why, including the exact question when you stopped for ambiguity.
 

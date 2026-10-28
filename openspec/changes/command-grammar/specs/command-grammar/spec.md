@@ -67,15 +67,15 @@ Pressing the operator key again while that operator is pending SHALL complete th
 - **THEN** the lines are unchanged and the mode is normal
 
 ### Requirement: A register prefix selects the register for the command
-Pressing the register key followed by a register name SHALL select that register for the command that follows; the name SHALL be the unnamed register, a letter "a" to "z", or a letter "A" to "Z". Any other name SHALL cancel the command and change nothing. The register prefix MAY be followed by a count.
+Pressing the register key followed by a register name SHALL select that register for the command that follows; the name SHALL be the unnamed register, a letter "a" to "z", or a letter "A" to "Z". Any other name SHALL drop the register prefix, and the keys after it SHALL form a new command. The register prefix MAY be followed by a count.
 
 #### Scenario: Named register with a count
 - **WHEN** the quote key, "a", "2", "d", "d" are pressed on ["a", "b", "c"]
 - **THEN** the lines are ["c"] and register "a" holds "a" and "b" as lines
 
 #### Scenario: Invalid register name
-- **WHEN** the quote key then "1" then "d" then "d" are pressed on ["a", "b"]
-- **THEN** the lines are unchanged and the mode is normal
+- **WHEN** the quote key then "1" then "x" are pressed at (0, 0) of "ab"
+- **THEN** the register prefix is dropped, "x" runs as a new command, and the line is "b"
 
 ### Requirement: A motion that takes a character argument reads the next key
 A motion that needs a character, such as "f", SHALL read the next key as its argument before completing, and SHALL take that key literally even when it is bound.

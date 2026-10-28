@@ -1,15 +1,18 @@
 module Carat
   module Domain
-    # A viewport over the buffer: the first visible row and the first visible
-    # display column. One window exists until the windows change. A Struct
-    # record: mutable, with a reader and a writer per member.
-    class Window < Struct.new(:top, :left)
+    # A viewport over the buffer: the first visible row, the first visible
+    # display column, and the number of text rows the last render gave it
+    # (0 before the first render), which the screen motions H, M, and L
+    # read. One window exists until the windows change. A Struct record:
+    # mutable, with a reader and a writer per member.
+    class Window < Struct.new(:top, :left, :height)
       # @rbs @top: Integer
       # @rbs @left: Integer
+      # @rbs @height: Integer
 
       #: () -> void
       def initialize
-        super(0, 0)
+        super(0, 0, 0)
       end
 
       # Scrolls so that row is visible with scrolloff rows of context where

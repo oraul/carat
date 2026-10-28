@@ -137,12 +137,35 @@ t.assert_equal([4, 1], c.to_a, "to_a is the position pair without want_col")
 t.assert_equal([:row, :col, :want_col], D::Cursor.members, "cursor members in constructor order")
 t.assert_equal(false, c.frozen?, "records are not frozen")
 w = D::Window.new
-t.assert_equal([0, 0], [w.top, w.left], "a window starts at the origin")
+t.assert_equal([0, 0, 0], [w.top, w.left, w.height], "a window starts at the origin with no height")
 w.top = 7
 t.assert_equal(7, w.top, "a window member has a writer")
 t.assert_equal([:lines, :path, :line_ending, :modified], D::Buffer.members, "buffer members in constructor order")
 t.assert_equal([:code, :width, :hl], D::Cell.members, "cell members")
 o = D::Options.new
 t.assert_equal([false, 8, 0], [o.number, o.tabstop, o.scrolloff], "options start with Vim's defaults")
+
+# Read helpers for operators: rows are [label, [lines, range], expected].
+def rng(r1, c1, r2, c2, inclusive)
+  D::Range.new(D::Position.new(r1, c1), D::Position.new(r2, c2), :charwise, inclusive)
+end
+t.table([
+  ["text of a range on one line", [["abcdef"], rng(0, 1, 0, 4, false)], "bcd"],
+  ["text of an inclusive range", [["abcdef"], rng(0, 1, 0, 4, true)], "bcde"],
+  ["text of a backward range", [["abcdef"], rng(0, 4, 0, 1, false)], "bcd"],
+  ["text of a range over lines", [["ab", "cd", "ef"], rng(0, 1, 2, 1, false)], "b\ncd\ne"],
+  ["text of a range to a line end", [["ab", "cd"], rng(0, 1, 0, 2, false)], "b"],
+  ["text of an empty range", [["ab"], rng(0, 1, 0, 1, false)], ""]
+]) do |input|
+  D::Buffer.new(input[0], nil, "\n").text_of(input[1])
+end
+b = D::Buffer.new(["  ab", "cd", "", "\tef"], nil, "\n")
+t.assert_equal(["cd", ""], b.lines_of(1, 2), "lines_of copies the rows")
+copy = b.lines_of(0, 0)
+copy << "x"
+t.assert_equal(4, b.line_count, "lines_of does not share the array")
+t.assert_equal([2, 0, 0, 1], [b.first_nonblank(0), b.first_nonblank(1), b.first_nonblank(2), b.first_nonblank(3)], "first_nonblank per row")
+t.assert_equal(["  ", "", "", "\t"], [b.indent_of(0), b.indent_of(1), b.indent_of(2), b.indent_of(3)], "indent_of per row")
+t.assert_equal("", b.line(9), "a row outside the buffer reads as empty")
 
 t.finish

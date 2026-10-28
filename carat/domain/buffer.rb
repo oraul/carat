@@ -56,6 +56,61 @@ module Carat
         to_text.bytesize
       end
 
+      # The text of a charwise range, with "\n" between lines.
+      #: (Range) -> String
+      def text_of(range)
+        r = range.normalized
+        from = r.from
+        to = r.to
+        if from.row == to.row
+          current = line(from.row)
+          a = clamp_col(current, from.col)
+          b = clamp_col(current, to.col)
+          return b > a ? current[a, b - a] : ""
+        end
+        first = line(from.row)
+        parts = [tail_of(first, clamp_col(first, from.col))]
+        row = from.row + 1
+        while row < to.row
+          parts << line(row)
+          row += 1
+        end
+        last = line(to.row)
+        parts << last[0, clamp_col(last, to.col)]
+        parts.join("\n")
+      end
+
+      # Copies of the lines from row from to row to, both inclusive.
+      #: (Integer, Integer) -> Array[String]
+      def lines_of(from, to)
+        result = []
+        row = from
+        while row <= to
+          result << line(row)
+          row += 1
+        end
+        result
+      end
+
+      # The column of the first character of row that is not a space or a
+      # tab, or the last column when the line is blank.
+      #: (Integer) -> Integer
+      def first_nonblank(row)
+        text = line(row)
+        i = 0
+        i += 1 while i < text.length && (text[i, 1] == " " || text[i, 1] == "\t")
+        i >= text.length ? (text.length > 0 ? text.length - 1 : 0) : i
+      end
+
+      # The leading spaces and tabs of row.
+      #: (Integer) -> String
+      def indent_of(row)
+        text = line(row)
+        i = 0
+        i += 1 while i < text.length && (text[i, 1] == " " || text[i, 1] == "\t")
+        text[0, i]
+      end
+
       # Inserts text at pos; newlines in text split the line.
       #: (Position, String) -> void
       def insert(pos, text)
