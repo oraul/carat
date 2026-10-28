@@ -37,7 +37,7 @@ t.table([
   ["write object", { "a" => 1, "b" => [] }, "{\"a\":1,\"b\":[]}"]
 ]) { |value| J.generate(value) }
 
-t.assert_equal("{\n  \"a\": [\n    1\n  ]\n}", J.generate({ "a" => [1] }, true), "pretty print")
+t.assert_equal("{\n  \"a\": [\n    1\n  ]\n}", J.pretty_generate({ "a" => [1] }), "pretty print")
 
 round = { "k" => [1, 2.5, "s", nil, true, { "n" => {} }] }
 t.assert_equal(round, J.parse(J.generate(round)), "round trip")

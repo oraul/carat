@@ -4,6 +4,12 @@ module Carat
   # failure. Output is deterministic so spin can diff it against the committed
   # .expected snapshot. No reflection, no autodiscovery.
   class Testing
+    # @rbs @name: String
+    # @rbs @passed: Integer
+    # @rbs @failed: Integer
+    # @rbs @out: IO
+
+    #: (String) -> void
     def initialize(name)
       @name = name
       @passed = 0
@@ -11,6 +17,7 @@ module Carat
       @out = STDOUT
     end
 
+    #: (untyped, untyped, String) -> void
     def assert_equal(expected, actual, label)
       if expected == actual
         pass(label)
@@ -19,10 +26,12 @@ module Carat
       end
     end
 
+    #: (untyped, String) -> void
     def assert_true(value, label)
       value ? pass(label) : fail(label, "expected true, got #{value.inspect}")
     end
 
+    #: (Class, String) { () -> untyped } -> void
     def assert_raises(error_class, label)
       begin
         yield
@@ -39,6 +48,7 @@ module Carat
 
     # Runs a table: each row is [label, input, expected]; the block maps an
     # input to an actual value.
+    #: (Array[Array[untyped]]) { (untyped) -> untyped } -> void
     def table(rows)
       rows.each do |row|
         actual = yield(row[1])
@@ -46,6 +56,7 @@ module Carat
       end
     end
 
+    #: () -> void
     def finish
       @out.puts "#{@name}: #{@passed} passed, #{@failed} failed"
       exit(@failed == 0 ? 0 : 1)
@@ -53,11 +64,13 @@ module Carat
 
     private
 
+    #: (String) -> void
     def pass(label)
       @passed += 1
       @out.puts "ok   #{label}"
     end
 
+    #: (String, String) -> void
     def fail(label, reason)
       @failed += 1
       @out.puts "FAIL #{label}: #{reason}"

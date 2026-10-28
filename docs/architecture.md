@@ -47,6 +47,7 @@ These come from Spinel's limitations document and from the notes gathered while 
 - `SIGINT` and `SIGTERM` are trapped before the first thread starts. Once a program has started a thread, an untrapped signal ends the process at once with no `ensure`, which would leave the terminal in raw mode. Raw mode itself turns off `ISIG`, so `Ctrl-C` arrives as byte 3 and is an ordinary key.
 - Threads run with true parallelism and no global lock. Shared state is guarded by `Mutex` or passed through `Queue`; nothing else is shared across threads. A program that never starts a thread behaves exactly as single-threaded Spinel, so the editor core never starts one; only service drivers do.
 - Only UTF-8 and binary encodings exist.
+- Every method and attribute carries an inline RBS signature in Spinel's comment form (`#: (String) -> Integer` above a `def`, `# @rbs @ivar: Type` blocks for instance variables, trailing `#: Type` on attributes). Spinel applies them before type inference and trusts them without verification, so a signature describes what the program stores, with `untyped` where a value is genuinely mixed. Optional, rest, and keyword-splat parameters receive no seed, so methods take required parameters. The `lint` test enforces presence; `make types` shows what the compiler inferred.
 
 ## 3. Clean Architecture layers
 

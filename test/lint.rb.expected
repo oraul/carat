@@ -1,2 +1,3 @@
 ok   no lint violations
-lint: 1 passed, 0 failed
+ok   every method and attribute has an inline RBS signature
+lint: 2 passed, 0 failed

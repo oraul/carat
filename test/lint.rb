@@ -77,6 +77,36 @@ source_files.each do |path|
   end
 end
 
+# Inline RBS: every method and attribute under carat/ carries a signature.
+# A def is covered when the comment block directly above it (same indent,
+# no blank line) contains a line starting with "#:" or "# @rbs".
+# An attr_reader, attr_writer or attr_accessor needs a trailing "#:" type.
+missing = []
+Dir.glob("carat/**/*.rb").sort.each do |path|
+  next if path == "carat/domain/default_config.rb"
+  lines = File.read(path).lines
+  lines.each_with_index do |line, i|
+    stripped = line.strip
+    if stripped.start_with?("def ") || stripped.start_with?("private def ") || stripped.start_with?("protected def ")
+      indent = line[/\A */].length
+      covered = false
+      j = i - 1
+      while j >= 0
+        above = lines[j]
+        break unless above[/\A */].length == indent && above.strip.start_with?("#")
+        text = above.strip
+        covered = true if text.start_with?("#:") || text.start_with?("# @rbs")
+        j -= 1
+      end
+      missing << "#{path}:#{i + 1}: #{stripped[0, 40]} has no inline RBS signature" unless covered
+    elsif stripped.start_with?("attr_reader ") || stripped.start_with?("attr_writer ") || stripped.start_with?("attr_accessor ")
+      missing << "#{path}:#{i + 1}: #{stripped[0, 40]} has no trailing #: type" unless stripped.include?("#:")
+    end
+  end
+end
+missing.each { |m| STDOUT.puts m }
+
 violations.each { |v| STDOUT.puts v }
 t.assert_equal(0, violations.length, "no lint violations")
+t.assert_equal(0, missing.length, "every method and attribute has an inline RBS signature")
 t.finish

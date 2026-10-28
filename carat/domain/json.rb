@@ -10,23 +10,38 @@ module Carat
     class Error < StandardError
     end
 
+    #: (String) -> untyped
     def self.parse(text)
       Parser.new(text).parse
     end
 
-    def self.generate(value, pretty = false)
+    #: (untyped) -> String
+    def self.generate(value)
       out = +""
-      Writer.new(out, pretty).write(value, 0)
+      Writer.new(out, false).write(value, 0)
+      out
+    end
+
+    #: (untyped) -> String
+    def self.pretty_generate(value)
+      out = +""
+      Writer.new(out, true).write(value, 0)
       out
     end
 
     class Parser
+      # @rbs @text: String
+      # @rbs @pos: Integer
+      # @rbs @len: Integer
+
+      #: (String) -> void
       def initialize(text)
         @text = text
         @pos = 0
         @len = text.bytesize
       end
 
+      #: () -> untyped
       def parse
         skip_ws
         value = parse_value
@@ -37,14 +52,17 @@ module Carat
 
       private
 
+      #: (String) -> void
       def error(message)
         raise Error, "#{message} at byte #{@pos}"
       end
 
+      #: () -> Integer
       def peek
         @pos < @len ? @text.getbyte(@pos) : -1
       end
 
+      #: () -> void
       def skip_ws
         while @pos < @len
           b = @text.getbyte(@pos)
@@ -53,6 +71,7 @@ module Carat
         end
       end
 
+      #: () -> untyped
       def parse_value
         b = peek
         if b == 123 # {
@@ -77,6 +96,7 @@ module Carat
         end
       end
 
+      #: (String) -> void
       def expect_word(word)
         if @text.byteslice(@pos, word.bytesize) == word
           @pos += word.bytesize
@@ -85,6 +105,7 @@ module Carat
         end
       end
 
+      #: () -> Hash[String, untyped]
       def parse_object
         @pos += 1
         result = {}
@@ -115,6 +136,7 @@ module Carat
         end
       end
 
+      #: () -> Array[untyped]
       def parse_array
         @pos += 1
         result = []
@@ -139,6 +161,7 @@ module Carat
         end
       end
 
+      #: () -> String
       def parse_string
         @pos += 1
         out = +""
@@ -174,6 +197,7 @@ module Carat
         end
       end
 
+      #: () -> String
       def parse_unicode_escape
         code = read_hex4
         if code >= 0xD800 && code <= 0xDBFF
@@ -187,6 +211,7 @@ module Carat
         [code].pack("U")
       end
 
+      #: () -> Integer
       def read_hex4
         error("short unicode escape") if @pos + 4 > @len
         value = 0
@@ -203,6 +228,7 @@ module Carat
         value
       end
 
+      #: () -> (Integer | Float)
       def parse_number
         start = @pos
         @pos += 1 if peek == 45
@@ -230,17 +256,23 @@ module Carat
         float ? text.to_f : text.to_i
       end
 
+      #: (Integer) -> bool
       def digit?(b)
         b >= 48 && b <= 57
       end
     end
 
     class Writer
+      # @rbs @out: String
+      # @rbs @pretty: bool
+
+      #: (String, bool) -> void
       def initialize(out, pretty)
         @out = out
         @pretty = pretty
       end
 
+      #: (untyped, Integer) -> void
       def write(value, depth)
         if value.nil?
           @out << "null"
@@ -263,12 +295,14 @@ module Carat
 
       private
 
+      #: (Integer) -> void
       def newline(depth)
         return unless @pretty
         @out << "\n"
         @out << ("  " * depth)
       end
 
+      #: (Array[untyped], Integer) -> void
       def write_array(value, depth)
         if value.empty?
           @out << "[]"
@@ -286,6 +320,7 @@ module Carat
         @out << "]"
       end
 
+      #: (Hash[untyped, untyped], Integer) -> void
       def write_object(value, depth)
         if value.empty?
           @out << "{}"
@@ -305,6 +340,7 @@ module Carat
         @out << "}"
       end
 
+      #: (String) -> void
       def write_string(s)
         @out << "\""
         s.each_char do |c|

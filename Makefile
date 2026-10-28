@@ -80,6 +80,12 @@ snapshots:
 	done
 	@echo "Snapshots come from the Spinel binaries, never from CRuby. Review the diff before committing."
 
+## types: print the signatures Spinel inferred for the editor, marking where inference widened to untyped
+types:
+	@mkdir -p build
+	spinel $$(spin flags) bin/carat.rb --emit-rbs -o build/carat.rbs >/dev/null
+	@cat build/carat.rbs
+
 ## gen-config: regenerate carat/domain/default_config.rb and carat/plugins/registry.rb from config/
 gen-config:
 	spin run carat-gen-config
@@ -110,4 +116,4 @@ help:
 	@echo
 	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)"
 
-.PHONY: toolchain doctor build run install pack clean test lint snapshots gen-config check spec-list spec-validate spec-update help
+.PHONY: toolchain doctor build run install pack clean test lint snapshots types gen-config check spec-list spec-validate spec-update help
