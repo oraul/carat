@@ -29,22 +29,42 @@ These apply to every commit, pull request, comment, file, and chat reply.
 
 ## Branch naming
 
-Every branch follows `<type>/<short-description>`.
+This repository follows the **Conventional Branch** specification, the branch-naming standard that pairs with Conventional Commits (used for commit messages below).
 
-- `type` is one of: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `hotfix`.
-- `short-description` is lowercase kebab-case, 2 to 5 words, describing the change, not the task ticket.
-- Use only letters, digits, and hyphens in the description. No underscores, spaces, dots, or slashes beyond the single type separator.
-- Never include a session id, a username, an email, or a URL in a branch name.
+Format: `<type>/<description>`
+
+Allowed types:
+
+| Type | Use for |
+| --- | --- |
+| `feature/` | New features or enhancements |
+| `bugfix/` | Fixes for bugs found in development |
+| `hotfix/` | Urgent fixes that go straight to production |
+| `release/` | Preparing a versioned release, for example `release/1.2.0` |
+| `chore/` | Maintenance, tooling, dependencies, docs, refactors with no behavior change |
+
+Rules:
+
+- `description` is lowercase kebab-case: letters, digits, and hyphens only. No underscores, spaces, dots, or extra slashes.
+- Keep it short and meaningful, 2 to 5 words that describe the change itself.
+- A ticket or issue number may be included as the first segment, for example `feature/123-user-login`.
+- Branch from `main` and open a pull request back into `main` when asked.
+- Branches are short-lived. Delete them after merge.
+- Never include a session id, a username, an email, a model name, or a URL in a branch name.
 - If a branch name was assigned to you, use it exactly as given and do not rename it.
 
 Examples:
 
-- `feat/user-login`
-- `fix/null-price-crash`
-- `docs/update-readme`
+- `feature/user-login`
+- `feature/42-order-export`
+- `bugfix/null-price-crash`
+- `hotfix/payment-timeout`
+- `release/1.0.0`
 - `chore/bump-dependencies`
 
 ## Commit messages
+
+This repository follows the **Conventional Commits** specification (v1.0.0).
 
 Format:
 
@@ -54,7 +74,8 @@ Format:
 <optional body>
 ```
 
-- `type` is one of: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `style`, `build`, `ci`.
+- `type` is one of: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `style`, `build`, `ci`, `revert`.
+- A breaking change is marked with `!` after the type or scope, for example `feat(api)!: drop v1 endpoints`, and explained in the body. Do not use a `BREAKING CHANGE:` footer, since footers and trailers are not allowed here.
 - `scope` is optional. Use a short lowercase module or area name, for example `auth`, `api`, `db`. Omit the parentheses when there is no scope.
 - `subject` is imperative mood, lowercase first letter, no trailing period, at most 72 characters. Say what the change does, not what you did.
 - `body` is optional plain text, wrapped at 72 characters. Use it to explain why, not how. Separate it from the subject with one blank line.
