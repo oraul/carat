@@ -91,6 +91,15 @@ snapshots:
 	done
 	@echo "Snapshots come from the Spinel binaries, never from CRuby. Review the diff before committing."
 
+## diagnose: run spinel-doctor on every compile root (bin/*.rb and test/*.rb): unsupported constructs, unresolved calls, widened slots, boxing advice, build, and behavior parity
+diagnose:
+	@status=0; \
+	for root in bin/*.rb test/*.rb; do \
+	  echo "== $$root"; \
+	  spinel-doctor --quiet "$$root" -- $$(spin flags) || status=1; \
+	done; \
+	exit $$status
+
 ## types: print the signatures Spinel inferred for the editor, marking where inference widened to untyped
 types:
 	@mkdir -p build
@@ -101,8 +110,8 @@ types:
 gen-config:
 	spin run carat-gen-config
 
-## check: everything a push needs: build, gen-config, and test
-check: build gen-config test
+## check: everything a push needs: build, gen-config, test, and diagnose
+check: build gen-config test diagnose
 
 # ----------------------------------------------------------------- openspec
 
@@ -127,4 +136,4 @@ help:
 	@echo
 	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)"
 
-.PHONY: toolchain spinel-rev doctor build run install pack clean test lint snapshots types gen-config check spec-list spec-validate spec-update help
+.PHONY: toolchain spinel-rev doctor build run install pack clean test lint snapshots diagnose types gen-config check spec-list spec-validate spec-update help

@@ -238,9 +238,10 @@ Every command has a Makefile target. Run `make help` for the full list. All targ
 - `make test`: `spin test`, every test program against its snapshot.
 - `make lint`: `spin test test/lint.rb`.
 - `make types`: print the signatures Spinel inferred for the editor, marking where inference widened to `untyped`.
+- `make diagnose`: run `spinel-doctor` on every compile root. It is Spinel's own checker and the closest thing to a linter for this project: unsupported constructs, unresolved calls, widened slots, boxing advice, a build, and a behavior check. It must report clean.
 - `make snapshots`: rebuild the test programs with Spinel and rewrite their `.expected` files; review the diff before committing.
 - `make gen-config`: `spin run carat-gen-config`, regenerates the default config mirror and the plugin registry.
-- `make check`: build, gen-config, and test; run it before every push.
+- `make check`: build, gen-config, test, and diagnose; run it before every push.
 - `make install`, `make pack`, `make clean`: `spin install`, `spin pack`, `spin clean`.
 - `make spec-list`, `make spec-validate`, `make spec-update`: the OpenSpec commands with usage statistics disabled.
 
@@ -265,6 +266,7 @@ Defined in `docs/architecture.md`, section 11, in the shape `spin` expects. The 
 - Match the existing style of the file you are editing.
 - Add or update tests alongside behavior changes.
 - All production code follows the Spinel rules in `docs/architecture.md`, section 2.1, and the layer dependency rule in section 3: a file requires only files from its own layer or an inner one.
+- There is no RuboCop, because RuboCop needs a CRuby interpreter. Style and Spinel rules are enforced by the `lint` test program and by `make diagnose`, which runs `spinel-doctor`, Spinel's own checker.
 - Every method and attribute under `carat/` carries an inline RBS signature in Spinel's comment form: a `#: (params) -> return` line directly above each `def`, a `# @rbs @name: Type` block at the top of each class for its instance variables, and a trailing `#: Type` on each `attr_*`. The `lint` test fails on a missing one. Signatures describe what the program actually stores, because Spinel trusts them without verifying; use `untyped` where a value is genuinely mixed. Optional, rest, and keyword-splat parameters are not seeded by Spinel, so prefer required parameters or a second method. No sidecar `.rbs` files. `make types` prints what Spinel inferred and where it widened to `untyped`.
 - Key bindings are never hard-coded in Ruby. Add or change them in `config/default.json` and regenerate the Ruby mirror. A plugin's default bindings live in its manifest.
 - Features beyond core modal editing are plugins. A plugin requires only `carat/plugin_api.rb`, never the editor's entities, use cases, or drivers.

@@ -318,6 +318,7 @@ Everything runs through `spin test`, compiled with Spinel. There is no CRuby tes
 - `test/lint.rb`: a test program that reads every source file and checks the Spinel rules of section 2.1 that the compiler does not catch on its own, the layer rule of section 3, and the plugin rule of section 9: a file under one layer directory requires only files from its own layer or an inner one, no `eval` or computed `send`, no `IO.popen`, no key binding literals outside `config/default.json`. It prints the violations, so the snapshot is the empty report.
 - `test/config_sync.rb`: parses `config/default.json` with `Carat::Json` and compares it to the generated `Carat::Domain::DEFAULT_CONFIG`, so a stale generated file fails the suite.
 - `test/smoke_*.rb`: start `build/bin/carat` inside a pseudo-terminal through `Process.spawn`, send keys, and check the file written and the final screen. Few and slow.
+- `make diagnose` runs `spinel-doctor`, Spinel's bundled checker, on every compile root: unsupported constructs, unresolved calls, slots widened to `untyped`, boxing advice for hot loops, a build, and a behavior check. It is part of `make check` and must report clean. Its advice lines are the guide for where a signature is worth tightening.
 - Continuous integration installs Spinel from source and runs `spin build` and `spin test` on Ubuntu.
 
 ## 11. Repository layout
