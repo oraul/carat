@@ -15,7 +15,7 @@ Guidance for Claude Code when working in this repository.
 These apply to every commit, pull request, comment, file, and chat reply.
 
 - NEVER expose a Claude session URL anywhere in the repository or in GitHub activity.
-- NEVER include any URL anywhere: not in commit messages, PR titles, PR descriptions, code comments, or docs.
+- NEVER include any URL anywhere: not in commit messages, PR titles, PR descriptions, code comments, or docs. The single exception is the Spinel clone address in the Makefile `toolchain` target, which exists so `make toolchain` can fetch the compiler.
 - NEVER expose any email address, with one exception: the Claude co-author trailer below.
 - Every commit ends with exactly this trailer, so Claude is attributed and its avatar shows on GitHub:
 
@@ -230,7 +230,7 @@ Decided in `docs/architecture.md`. Not yet in place; update this section when it
 Every command has a Makefile target. Run `make help` for the full list. The `spin` targets are planned in `docs/architecture.md`; confirm each one when the project skeleton lands and keep this list current.
 
 - `make doctor`: check that `spinel`, `spin`, a C compiler, and `node` are on the path.
-- `make toolchain`: build and install Spinel and `spin` from a local checkout at `SPINEL_SRC`, into `PREFIX`.
+- `make toolchain`: clone Spinel into `SPINEL_SRC` if it is missing, or fast-forward it, then build and install `spinel` and `spin` into `PREFIX`. `SPINEL_REPO` and `SPINEL_REF` select the repository and branch.
 - `make build`: `spin build`, compiles every `bin/*.rb` into `build/bin`.
 - `make run FILE=path`: `spin run carat -- path`.
 - `make test`: `spin test`, every test program against its snapshot.

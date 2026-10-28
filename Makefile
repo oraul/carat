@@ -4,8 +4,10 @@
 # OpenSpec. Nothing is built here directly; see docs/architecture.md.
 # Run `make help` for the list.
 
-SPINEL_SRC ?= $(HOME)/Repositories/spinel
-PREFIX     ?= $(HOME)/.local
+SPINEL_SRC  ?= $(HOME)/Repositories/spinel
+SPINEL_REPO ?= matz/spinel
+SPINEL_REF  ?= master
+PREFIX      ?= $(HOME)/.local
 FILE       ?= README.md
 OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y @fission-ai/openspec@latest
 
@@ -13,9 +15,14 @@ OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y @fission-ai/openspec@latest
 
 # ---------------------------------------------------------------- toolchain
 
-## toolchain: build Spinel and spin from a local checkout at SPINEL_SRC and install them under PREFIX
+## toolchain: clone Spinel into SPINEL_SRC if missing (or fast-forward it), build it, and install spinel and spin under PREFIX
 toolchain:
-	@test -d "$(SPINEL_SRC)" || { echo "Spinel checkout not found at $(SPINEL_SRC). Clone it there or set SPINEL_SRC."; exit 1; }
+	@if [ -d "$(SPINEL_SRC)/.git" ]; then \
+	  echo "Updating Spinel in $(SPINEL_SRC)"; git -C "$(SPINEL_SRC)" pull --ff-only; \
+	else \
+	  echo "Cloning Spinel into $(SPINEL_SRC)"; \
+	  git clone --depth 1 --branch "$(SPINEL_REF)" "https://github.com/$(SPINEL_REPO)" "$(SPINEL_SRC)"; \
+	fi
 	$(MAKE) -C "$(SPINEL_SRC)" deps
 	$(MAKE) -C "$(SPINEL_SRC)"
 	$(MAKE) -C "$(SPINEL_SRC)" install PREFIX="$(PREFIX)"
@@ -101,6 +108,6 @@ help:
 	@echo "Carat targets:"
 	@grep -E '^## [a-z-]+:' $(MAKEFILE_LIST) | sed -E 's/^## ([a-z-]+): (.*)/  \1\t\2/' | expand -t 16
 	@echo
-	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  PREFIX=$(PREFIX)  FILE=$(FILE)"
+	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)"
 
 .PHONY: toolchain doctor build run install pack clean test lint snapshots gen-config check spec-list spec-validate spec-update help

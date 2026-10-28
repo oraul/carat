@@ -15,17 +15,9 @@ jobs:
       - name: Check out carat
         uses: actions/checkout@v4
 
-      - name: Check out Spinel
-        uses: actions/checkout@v4
-        with:
-          repository: matz/spinel
-          path: .spinel
-
-      - name: Build and install Spinel and spin
+      - name: Install the toolchain
         run: |
-          make -C .spinel deps
-          make -C .spinel
-          make -C .spinel install PREFIX="$HOME/.local"
+          make toolchain SPINEL_SRC="$RUNNER_TEMP/spinel" PREFIX="$HOME/.local"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Doctor
