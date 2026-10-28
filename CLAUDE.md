@@ -213,6 +213,8 @@ This repository uses OpenSpec for spec-driven development. Specs and change prop
 
 Custom agents live in `.claude/agents/`. Each file's frontmatter gives its name and when to use it; the body is its instructions. They obey this file.
 
+Every change to the repository is delivered by the `contributor` agent: feature, fix, refactor, tooling, or docs. Claude in the main session plans, answers questions, reviews, verifies, and hands work to the agent; it does not implement a change by hand, not even a small one. If a change was started by hand, stop, and hand it to the agent to finish through the OpenSpec loop.
+
 - `contributor`: delivers one change end to end. It creates a branch, runs the OpenSpec loop (propose, apply, archive), runs the project's checks, commits with the conventions above, opens a pull request from the template, and squash-merges it. Invoke it with a description of the change or the name of an existing OpenSpec change, for example "use the contributor agent to add user login". It stops and reports instead of merging when the request is materially ambiguous, when checks still fail after three fix attempts, or when CI stays red.
 
 ## Stack
