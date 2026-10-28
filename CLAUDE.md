@@ -110,7 +110,7 @@ More subject examples:
 Pull requests are **squash-merged** into `main`. Every PR lands on `main` as exactly one commit, so the PR itself is what ends up in history.
 
 - The PR title becomes the subject of the squash commit. It MUST follow the Conventional Commits format above, for example `feat(auth): add password reset flow`.
-- The PR description becomes the body of the squash commit. Write it as a plain-text explanation of what changed and why. Keep it free of URLs, session ids, model names, checklists, headings, and any attribution line or link footer.
+- The PR description becomes the body of the squash commit. Follow the "Pull request description" standard below.
 - Before merging, check the squash commit message in the merge dialog. GitHub pre-fills it from the individual commits. Keep the `Co-Authored-By: Claude <noreply@anthropic.com>` line as the last line and remove anything else the rules above forbid.
 - Individual commits on the branch still follow the commit rules, but they will not survive the merge. Keep them tidy, do not spend effort rewriting them.
 - One PR covers one logical change. If the squash commit would need more than one `type`, split the PR.
@@ -118,6 +118,39 @@ Pull requests are **squash-merged** into `main`. Every PR lands on `main` as exa
 - Do not create a pull request unless explicitly asked.
 - Never merge a pull request yourself unless explicitly asked.
 - The source branch is deleted after merge.
+
+## Pull request description
+
+Every PR description follows the template in `.github/pull_request_template.md`, which GitHub pre-fills when a PR is opened. The description doubles as the squash commit body, so it must read well as plain text in `git log`.
+
+Structure, in this order, with these exact section labels on their own line:
+
+```
+Summary
+One or two sentences on what this change does and why it is needed.
+
+Changes
+- What was added, changed, or removed, one item per line
+
+Testing
+- How the change was verified, or "Not applicable" with the reason
+
+Notes
+Breaking changes, follow-ups, or anything the reviewer should know. Write "None" if there is nothing.
+```
+
+Rules:
+
+- Keep all four sections and their order. Do not add other sections.
+- Section labels are plain words, not Markdown headings. No `#`, no bold, no emoji.
+- Use plain text and simple `-` bullets only. No checklists, tables, images, or code fences longer than a few lines.
+- Wrap lines at 72 characters so the squash commit body stays readable.
+- Summary explains why, not just what. A reviewer should understand the motivation without opening the diff.
+- Changes lists concrete, reviewable items. Name files or modules only when it helps the reviewer navigate.
+- Testing states what was actually run. Do not claim tests that were not run.
+- Notes must mention any breaking change, matching the `!` marker in the PR title.
+- Never include a URL, email address, session id, model name, ticket link, or attribution line or link footer. Refer to an issue by its number in plain text, for example "Closes issue 42", not by link.
+- Nothing follows the Notes section.
 
 ## Stack
 
