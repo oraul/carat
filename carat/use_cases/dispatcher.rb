@@ -1,5 +1,8 @@
 require_relative "../domain/editor_state"
+require_relative "../domain/command"
+require_relative "../domain/command_grammar"
 require_relative "move"
+require_relative "operate"
 require_relative "enter_insert"
 require_relative "insert_text"
 require_relative "leave_insert"
@@ -7,39 +10,52 @@ require_relative "edit_command_line"
 
 module Carat
   module UseCases
-    # Maps an action name from the keymap to the use case that performs it.
-    # The names are listed in docs/actions.md. An action a later roadmap
-    # item owns shows a "Not implemented" message.
+    # Maps a command from the grammar to the use case that performs it: an
+    # operator command goes to Operate, a motion to Move, and every other
+    # action is a case over its name. The names are listed in
+    # docs/actions.md. An action a later roadmap item owns shows a "Not
+    # implemented" message.
     class Dispatcher
       QUIT_HINT = "Type  :q!  and press <Enter> to abandon all changes and exit Carat"
 
       # @rbs @move: Move
+      # @rbs @operate: Operate
       # @rbs @enter_insert: EnterInsert
       # @rbs @insert_text: InsertText
       # @rbs @leave_insert: LeaveInsert
       # @rbs @command_line: EditCommandLine
 
-      #: (Move, EnterInsert, InsertText, LeaveInsert, EditCommandLine) -> void
-      def initialize(move, enter_insert, insert_text, leave_insert, command_line)
+      #: (Move, Operate, EnterInsert, InsertText, LeaveInsert, EditCommandLine) -> void
+      def initialize(move, operate, enter_insert, insert_text, leave_insert, command_line)
         @move = move
+        @operate = operate
         @enter_insert = enter_insert
         @insert_text = insert_text
         @leave_insert = leave_insert
         @command_line = command_line
       end
 
-      #: (Domain::EditorState, String) -> void
-      def call(state, action)
+      #: (Domain::EditorState, Domain::Command) -> void
+      def call(state, command)
+        if command.operator?
+          @operate.call(state, command)
+          return
+        end
+        action = command.action
+        if Domain::CommandGrammar.motion?(action)
+          @move.call(state, command)
+          return
+        end
         case action
-        when "cursor.left" then @move.call(state, :left)
-        when "cursor.right" then @move.call(state, :right)
-        when "cursor.up" then @move.call(state, :up)
-        when "cursor.down" then @move.call(state, :down)
-        when "cursor.line_start" then @move.call(state, :line_start)
-        when "cursor.first_nonblank" then @move.call(state, :first_nonblank)
-        when "cursor.line_end" then @move.call(state, :line_end)
-        when "cursor.buffer_start" then @move.call(state, :buffer_start)
-        when "cursor.buffer_end" then @move.call(state, :buffer_end)
+        when "operator.delete_char" then @operate.fixed(state, command, Operate::DELETE, "cursor.right", false)
+        when "operator.substitute_char" then @operate.fixed(state, command, Operate::CHANGE, "cursor.right", false)
+        when "operator.substitute_line" then @operate.fixed(state, command, Operate::CHANGE, "", true)
+        when "operator.change_to_end" then @operate.fixed(state, command, Operate::CHANGE, "cursor.line_end", false)
+        when "operator.delete_to_end" then @operate.fixed(state, command, Operate::DELETE, "cursor.line_end", false)
+        when "operator.yank_to_end" then @operate.fixed(state, command, Operate::YANK, "cursor.line_end", false)
+        when "operator.join" then @operate.join(state, command)
+        when "operator.put_after" then @operate.put(state, command, true)
+        when "operator.put_before" then @operate.put(state, command, false)
         when "mode.insert" then @enter_insert.call(state, :before)
         when "mode.insert_after" then @enter_insert.call(state, :after)
         when "mode.insert_line_start" then @enter_insert.call(state, :line_start)

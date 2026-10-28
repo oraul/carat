@@ -1,0 +1,31 @@
+ok   a charwise entry
+ok   lines joins with newlines
+ok   an empty linewise entry is one empty line
+ok   two empty lines
+ok   lines splits the text
+ok   charwise onto charwise joins
+ok   linewise onto linewise adds lines
+ok   linewise onto charwise becomes linewise
+ok   charwise onto linewise becomes linewise
+ok   entries are equal by value
+ok   the quote
+ok   a lowercase letter
+ok   z
+ok   an uppercase letter
+ok   a digit
+ok   the black hole
+ok   a percent sign
+ok   two letters
+ok   empty
+ok   the unnamed register starts empty
+ok   a named register starts empty
+ok   writing with no name fills the unnamed register
+ok   the quote reads the unnamed register
+ok   and no named register
+ok   a named write fills the name and the unnamed register
+ok   an uppercase write appends and the unnamed register holds the new text
+ok   an uppercase read is the lowercase register
+ok   appending to an empty register stores the entry
+ok   writing the quote register writes only the unnamed register
+ok   a lowercase write replaces
+domain_registers: 30 passed, 0 failed

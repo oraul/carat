@@ -1,0 +1,109 @@
+ok   dw deletes to the next word
+ok   de deletes to the end of the word
+ok   db deletes back to the word start
+ok   dj deletes two lines
+ok   dk deletes this line and the one above
+ok   df. deletes through the dot
+ok   dt. deletes up to the dot
+ok   dF. deletes back through the dot
+ok   d$ deletes to the end of the line
+ok   d0 deletes to the start of the line
+ok   d^ deletes to the first non-blank
+ok   dG deletes to the end of the buffer
+ok   dgg deletes to the start of the buffer
+ok   dl at the last character deletes it
+ok   dh at column 0 deletes nothing
+ok   dj on the last line deletes nothing
+ok   dw on the last word of the buffer deletes it
+ok   dw on the last character deletes it
+ok   de at the last character deletes it
+ok   dw on an empty line deletes it
+ok   d} deletes whole lines from the line start
+ok   d} from inside a line keeps the start
+ok   dw at the end of a line stays on the line
+ok   d) deletes the sentence
+ok   d) on the last sentence deletes to the end
+ok   d+ deletes two lines
+ok   dH deletes to the top of the window
+ok   dL deletes to the bottom of the window
+ok   dM deletes to the middle of the window
+ok   2dw with a count deletes two words
+ok   d2w with the count after
+ok   2d3w multiplies the counts
+ok   dd deletes the line
+ok   dd goes to the first non-blank
+ok   dd on the last line
+ok   dd on the only line
+ok   2dd deletes two lines
+ok   d2d counts after the first key
+ok   2d2d multiplies
+ok   9dd clamps to the buffer
+ok   yd cancels
+ok   cw changes the word only
+ok   cw on the last character of a word changes it
+ok   2cw changes two words
+ok   cW changes the WORD
+ok   cw on blanks changes the blanks
+ok   ce changes to the end of the word
+ok   cc keeps the indent with autoindent
+ok   c$ changes to the end of the line
+ok   ciw changes the word
+ok   cj changes two lines
+ok   yw leaves the cursor
+ok   yb moves the cursor to the start
+ok   yy leaves the cursor
+ok   yk moves up keeping the column
+ok   yj leaves the cursor
+ok   y$ leaves the cursor
+ok   >> indents by shiftwidth
+ok   << dedents
+ok   << at column 0 stays
+ok   << below shiftwidth goes to column 0
+ok   3>> indents three lines
+ok   >j indents two lines
+ok   >ip indents the paragraph
+ok   >> leaves empty lines empty
+ok   <k dedents two lines
+ok   x deletes the character
+ok   x at the end moves left
+ok   3x stops at the line end
+ok   x on an empty line does nothing
+ok   s substitutes the character
+ok   2s substitutes two characters
+ok   S substitutes the line keeping the indent
+ok   C changes to the end of the line
+ok   2C changes to the end of the next line
+ok   D deletes to the end of the line
+ok   2D deletes to the end of the next line
+ok   Y then p puts the rest of the line
+ok   J joins with one space
+ok   3J joins three lines
+ok   J adds no space before a closing parenthesis
+ok   J adds no space after a blank
+ok   J with an empty next line
+ok   J on the last line does nothing
+ok   9J joins what exists
+ok   p puts charwise text after the cursor
+ok   P puts charwise text before the cursor
+ok   3p repeats the text
+ok   p puts lines below
+ok   P puts lines above
+ok   2p repeats the lines
+ok   p after a multi-line charwise delete
+ok   p on an empty line
+ok   dd then p moves the line down
+ok   x then P puts it back
+ok   cc without autoindent
+ok   >> with tabs
+ok   >> twice with tabs makes a tab
+ok   << with tabs
+ok   >> with shiftwidth 0 uses tabstop
+ok   p from an empty register reports E353
+ok   an empty put changes nothing
+ok   an empty put does not modify the buffer
+ok   a yank does not modify the buffer
+ok   a delete modifies the buffer
+ok   dw stores charwise text
+ok   dd stores a line
+ok   cc stores the changed line
+editor_operators: 108 passed, 0 failed

@@ -2,9 +2,11 @@ module Carat
   module Domain
     # Everything a use case reads or changes: the buffer, the window, the
     # cursor, the mode, the options, the command line, the message, the keys
-    # pending in the keymap, and the quit flag. A Struct record: mutable,
-    # with a reader and a writer per member.
-    class EditorState < Struct.new(:buffer, :window, :cursor, :mode, :options, :timeoutlen, :cmdline, :message, :message_error, :pending_keys, :quit)
+    # pending in the keymap, the quit flag, the registers, the command
+    # grammar with the keys of the command being typed, and the last f/t
+    # motion for ";" and ",". A Struct record: mutable, with a reader and a
+    # writer per member.
+    class EditorState < Struct.new(:buffer, :window, :cursor, :mode, :options, :timeoutlen, :cmdline, :message, :message_error, :pending_keys, :quit, :registers, :grammar, :last_find)
       # @rbs @buffer: Buffer
       # @rbs @window: Window
       # @rbs @cursor: Cursor
@@ -16,10 +18,27 @@ module Carat
       # @rbs @message_error: bool
       # @rbs @pending_keys: Array[Integer]
       # @rbs @quit: bool
+      # @rbs @registers: Registers
+      # @rbs @grammar: CommandGrammar
+      # @rbs @last_find: Find?
 
       #: (Buffer, Options, Integer) -> void
       def initialize(buffer, options, timeoutlen)
-        super(buffer, Window.new, Cursor.new(0, 0), Mode::NORMAL, options, timeoutlen, "", "", false, [], false)
+        super(buffer, Window.new, Cursor.new(0, 0), Mode::NORMAL, options, timeoutlen, "", "", false, [], false, Registers.new, CommandGrammar.new, nil)
+      end
+
+      # The keys of the command being typed, for the pending-keys display:
+      # what the grammar has taken plus what the keymap is still waiting on.
+      #: () -> String
+      def showcmd
+        text = grammar.typed
+        keys = pending_keys
+        i = 0
+        while i < keys.length
+          text = text + CommandGrammar.display(keys[i])
+          i += 1
+        end
+        text
       end
 
       #: (String, bool) -> void

@@ -1,33 +1,28 @@
 require_relative "../domain/editor_state"
+require_relative "../domain/command"
+require_relative "../domain/motions"
 
 module Carat
   module UseCases
-    # The foundation cursor motions. Horizontal motions set the wanted
-    # column; vertical motions aim for it and clamp to the line.
+    # Moves the cursor by a motion command: every motion comes from
+    # Domain::Motions, and the result decides what happens to the wanted
+    # column. A motion that cannot move changes nothing.
     class Move
-      #: (Domain::EditorState, Symbol) -> void
-      def call(state, direction)
+      #: (Domain::EditorState, Domain::Command) -> void
+      def call(state, command)
+        motion = Domain::Motions.for_command(state, command, false)
+        return if motion.nil?
         cursor = state.cursor
-        case direction
-        when :left
-          cursor.move_to(cursor.row, cursor.col - 1) if cursor.col > 0
-        when :right
-          cursor.move_to(cursor.row, cursor.col + 1) if cursor.col < state.max_col(cursor.row)
-        when :up
-          vertical(state, cursor.row - 1) if cursor.row > 0
-        when :down
-          vertical(state, cursor.row + 1) if cursor.row < state.buffer.line_count - 1
-        when :line_start
-          cursor.move_to(cursor.row, 0)
-        when :first_nonblank
-          cursor.move_to(cursor.row, first_nonblank(state.current_line))
-        when :line_end
-          cursor.move_to(cursor.row, state.max_col(cursor.row))
+        target = motion.target
+        case motion.want
+        when :keep
+          cursor.row = target.row
+          cursor.col = target.col
+        when :end
+          cursor.move_to(target.row, target.col)
           cursor.want_col = -1
-        when :buffer_start
-          vertical(state, 0)
-        when :buffer_end
-          vertical(state, state.buffer.line_count - 1)
+        else
+          cursor.move_to(target.row, target.col)
         end
       end
 
@@ -38,19 +33,6 @@ module Carat
         i = 0
         i += 1 while i < line.length && (line[i, 1] == " " || line[i, 1] == "\t")
         i >= line.length ? (line.length > 0 ? line.length - 1 : 0) : i
-      end
-
-      private
-
-      #: (Domain::EditorState, Integer) -> void
-      def vertical(state, row)
-        cursor = state.cursor
-        max = state.max_col(row)
-        want = cursor.want_col
-        col = want < 0 ? max : want
-        col = max if col > max
-        cursor.row = row
-        cursor.col = col
       end
     end
   end

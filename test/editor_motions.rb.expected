@@ -1,0 +1,81 @@
+ok   3l moves three columns
+ok   12l takes a two-digit count
+ok   0 without a count goes to column 0
+ok   10j takes 0 inside a count
+ok   5h stops at column 0
+ok   9j stops at the last line
+ok   9k stops at the first line
+ok   2G goes to line 2
+ok   9G clamps to the last line
+ok   3gg goes to line 3
+ok   2$ goes to the end of the next line
+ok   f. finds the next dot
+ok   F. with no dot to the left stays
+ok   F. finds the previous dot
+ok   2f. finds the second dot
+ok   tc stops before c
+ok   Ta stops after a
+ok   fz with no z does nothing
+ok   3f. past the last dot does nothing
+ok   ; repeats f.
+ok   ; repeats f. again
+ok   , reverses the repeat
+ok   t. then ; skips the adjacent match
+ok   t. alone stays before the dot
+ok   ; without a previous find does nothing
+ok   fj finds a bound key literally
+ok   + goes down to the first non-blank
+ok   - goes up to the first non-blank
+ok   2_ goes one line down to the first non-blank
+ok   _ stays on the line
+ok   + on the last line does nothing
+ok   w stops at punctuation
+ok   w moves past punctuation
+ok   w moves to the next word
+ok   W moves over a WORD
+ok   w crosses lines to an empty line
+ok   w leaves an empty line
+ok   w at the end of the buffer goes to the last character
+ok   w on the last character does nothing
+ok   3w counts words
+ok   b goes to the start of the previous word
+ok   B goes to the start of the previous WORD
+ok   b crosses lines
+ok   b stops on an empty line
+ok   e goes to the end of the word
+ok   E goes to the end of the WORD
+ok   e at the end of a word goes to the next end
+ok   e on the last character does nothing
+ok   ge goes to the end of the previous word
+ok   ge again stops at punctuation
+ok   gE goes to the end of the previous WORD
+ok   ge crosses lines
+ok   keyword characters include non-ASCII letters
+ok   ) goes to the next sentence
+ok   ) again
+ok   ( goes back a sentence
+ok   ) on the last sentence goes to the end
+ok   ) crosses lines
+ok   ) stops at an empty line
+ok   ) from an empty line goes to the next paragraph
+ok   ( from inside a sentence goes to its start
+ok   ( at the start of the buffer does nothing
+ok   } goes to the next empty line
+ok   } without another empty line goes to the end
+ok   { goes back to the empty line
+ok   { without an empty line goes to the start
+ok   2} counts paragraphs
+ok   H goes to the top of the window
+ok   M goes to the middle of the window
+ok   L goes to the bottom of the window
+ok   3H counts from the top
+ok   2L counts from the bottom
+ok   L honors scrolloff
+ok   H ignores scrolloff at the buffer start
+ok   H honors scrolloff when scrolled
+ok   M in a window showing the whole buffer
+ok   M before any render treats the buffer as the window
+ok   G keeps the wanted column
+ok   H keeps the wanted column
+ok   + sets the wanted column
+editor_motions: 80 passed, 0 failed

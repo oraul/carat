@@ -1,0 +1,47 @@
+ok   diw deletes the word
+ok   daw deletes the word and the blanks after it
+ok   daw at the end takes the blanks before
+ok   diw on blanks deletes the blanks
+ok   daw on blanks deletes the blanks and the next word
+ok   d2iw takes the word and the blanks
+ok   d2aw takes two words
+ok   diW deletes the WORD
+ok   daW deletes the WORD and the blanks
+ok   diw on an empty line does nothing
+ok   dis deletes the sentence
+ok   das deletes the sentence and the blanks
+ok   das on the last sentence takes the blanks before
+ok   dis on the first sentence
+ok   dip deletes the paragraph
+ok   dap deletes the paragraph and the empty lines after it
+ok   dap on the last paragraph takes the empty lines before
+ok   dip on empty lines deletes them
+ok   dap on empty lines takes the next paragraph
+ok   d2ap deletes two paragraphs
+ok   di( deletes inside the parentheses
+ok   da( deletes the parentheses too
+ok   2di) takes the second enclosing pair
+ok   dib is di(
+ok   di( with the cursor on the opening bracket
+ok   di( with the cursor on the closing bracket
+ok   di[ deletes inside square brackets
+ok   daB deletes the braces
+ok   di< deletes inside angle brackets
+ok   di{ over lines is linewise
+ok   da{ over lines is charwise
+ok   di( with no pair does nothing
+ok   di( on an empty pair does nothing
+ok   di" deletes inside the string
+ok   da" deletes the string and the blanks after it
+ok   da" at the end takes the blanks before
+ok   di' before the string uses the first one
+ok   di" skips an escaped quote
+ok   di` deletes inside backticks
+ok   di" with no string does nothing
+ok   a missing object returns to normal mode
+ok   a missing object shows no message
+ok   ciw ends in insert mode
+ok   yiw yanks the word
+ok   yaw at the end yanks the blanks before
+ok   yaw moves the cursor to the start of the object
+editor_text_objects: 46 passed, 0 failed

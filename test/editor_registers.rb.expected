@@ -1,0 +1,21 @@
+ok   dd then p
+ok   x then P
+ok   the latest write wins
+ok   yank into a and put from a
+ok   the unnamed register follows a named yank
+ok   an uppercase name reads the lowercase register
+ok   append lines
+ok   append characters
+ok   mixed kinds become linewise
+ok   a named delete fills the register
+ok   a named change fills the register
+ok   registers survive a cancelled command
+ok   the unnamed register holds only the appended text
+ok   an empty named register reports E353
+ok   and changes nothing
+ok   the message names the register as typed
+ok   a linewise entry stores the line
+ok   appending charwise text to a linewise entry adds a line
+ok   the unnamed register holds the new text only
+ok   A reads the same entry as a
+editor_registers: 20 passed, 0 failed

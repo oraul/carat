@@ -1,0 +1,49 @@
+ok   a count applies to a motion
+ok   an operator then a motion
+ok   an operator then a text object
+ok   counts before and after multiply
+ok   a count after the operator
+ok   a doubled operator is linewise
+ok   a count on a doubled operator
+ok   a count between the doubled keys
+ok   a different operator cancels
+ok   a register prefix with a count
+ok   an invalid register name drops the prefix
+ok   the unnamed register by name
+ok   a find motion takes a bound key literally
+ok   a find motion under an operator
+ok   escape cancels a pending operator
+ok   escape cancels a pending count
+ok   an unbound key discards a count
+ok   an unbound key in operator-pending mode cancels
+ok   a standalone action takes the count
+ok   a count before an insert action is ignored
+ok   an operator then an unbound sequence cancels
+ok   change ends in insert mode
+ok   a count on a remap
+ok   an operator enters operator-pending mode
+ok   the cursor stays a block while pending
+ok   the motion returns to normal mode
+ok   a count before gg
+ok   g is pending in the keymap
+ok   a digit after a prefix is not a count
+ok   the unbound sequence is dropped
+ok   nothing pending after a motion
+ok   the keys typed so far show at the right edge
+ok   they end at the last column
+ok   a second count joins the display
+ok   the display clears when the command completes
+ok   six lines asked, the two below deleted
+ok   a keymap prefix shows too
+ok   an unbound sequence clears the display
+ok   escape clears the display
+ok   escape returns to normal mode
+ok   a find motion waiting for its character shows
+ok   escape cancels the find motion
+ok   and nothing moved
+ok   insert mode shows nothing pending
+ok   d after a count is an operator
+ok   w completes it
+ok   the command remembers the keys that formed it
+ok   the grammar is empty after take
+editor_grammar: 48 passed, 0 failed

@@ -54,9 +54,20 @@ ok   a cursor member has a writer
 ok   to_a is the position pair without want_col
 ok   cursor members in constructor order
 ok   records are not frozen
-ok   a window starts at the origin
+ok   a window starts at the origin with no height
 ok   a window member has a writer
 ok   buffer members in constructor order
 ok   cell members
 ok   options start with Vim's defaults
-domain_buffer: 61 passed, 0 failed
+ok   text of a range on one line
+ok   text of an inclusive range
+ok   text of a backward range
+ok   text of a range over lines
+ok   text of a range to a line end
+ok   text of an empty range
+ok   lines_of copies the rows
+ok   lines_of does not share the array
+ok   first_nonblank per row
+ok   indent_of per row
+ok   a row outside the buffer reads as empty
+domain_buffer: 72 passed, 0 failed

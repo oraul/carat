@@ -7,9 +7,12 @@ module Carat
   module Adapters
     # A pure function from editor state to a Frame for one window: line
     # number gutter, text with tabs expanded, tilde rows, the status line,
-    # and the message or command line row. It scrolls the window first so
-    # the state and the frame agree.
+    # and the message or command line row with the keys of a pending
+    # command at its right edge. It records the window height and scrolls
+    # the window first so the state and the frame agree.
     class FramePresenter
+      SHOWCMD_WIDTH = 10
+
       # @rbs @frame: Domain::Frame?
 
       #: () -> void
@@ -31,6 +34,7 @@ module Carat
         text_width = 1 if text_width < 1
         tabstop = options.tabstop > 0 ? options.tabstop : 8
 
+        window.height = height
         window.scroll_to_row(cursor.row, buffer.line_count, height, options.scrolloff)
         cursor_dcol = display_col(buffer.line(cursor.row), cursor.col, tabstop)
         window.scroll_to_col(cursor_dcol, text_width)
@@ -187,12 +191,19 @@ module Carat
       def paint_message(frame, frame_row, cols, state)
         if state.mode == Domain::Mode::CMDLINE
           frame.put(frame_row, 0, ":" + state.cmdline, Domain::Highlight::NORMAL)
-        elsif !state.message.empty?
+          return
+        end
+        if !state.message.empty?
           hl = state.message_error ? Domain::Highlight::MESSAGE_ERROR : Domain::Highlight::NORMAL
           frame.put(frame_row, 0, state.message, hl)
         elsif state.mode == Domain::Mode::INSERT
           frame.put(frame_row, 0, "-- INSERT --", Domain::Highlight::NORMAL)
         end
+        showcmd = state.showcmd
+        return if showcmd.empty?
+        showcmd = showcmd[showcmd.length - SHOWCMD_WIDTH, SHOWCMD_WIDTH] if showcmd.length > SHOWCMD_WIDTH
+        start = cols - showcmd.length
+        frame.put(frame_row, start, showcmd, Domain::Highlight::NORMAL) if start >= 0
       end
     end
   end

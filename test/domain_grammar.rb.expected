@@ -1,0 +1,49 @@
+ok   a motion completes at once
+ok   a count then a motion
+ok   two digits
+ok   an operator waits
+ok   an operator then a motion
+ok   counts multiply
+ok   a count after the operator only
+ok   a doubled operator is linewise
+ok   a different operator cancels
+ok   a standalone action in operator-pending cancels
+ok   a text object completes an operator
+ok   a text object without an operator cancels
+ok   a register prefix
+ok   an uppercase register
+ok   the quote register
+ok   an invalid register cancels
+ok   a special key as a register cancels
+ok   a find motion wants a character
+ok   a find motion under an operator
+ok   escape cancels a find motion
+ok   a standalone action with a count
+ok   a remap-style action name
+ok   0 does not start a count
+ok   1 starts a count
+ok   0 continues a count
+ok   digits accumulate
+ok   typed shows the digits
+ok   typed shows the operator
+ok   the count moves to the operator on an operator
+ok   an action while a register is wanted cancels
+ok   typed shows the waiting motion
+ok   typed shows the character
+ok   take resets the register
+ok   take resets everything
+ok   nothing pending after take
+ok   a special key displays in notation
+ok   a printable key displays itself
+ok   cursor actions are motions
+ok   motion actions are motions
+ok   operators are not motions
+ok   indent is an operator
+ok   x is not a pending operator
+ok   text objects are recognized
+ok   a plain command
+ok   count_or with no count
+ok   count_or with a count
+ok   a plain command has no operator
+ok   reversed flips the direction
+domain_grammar: 48 passed, 0 failed
