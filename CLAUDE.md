@@ -198,6 +198,7 @@ Closes issue 42. Tokens are stored hashed, so existing sessions are unaffected. 
 This repository uses OpenSpec for spec-driven development. Specs and change proposals live under `openspec/`, and the Claude Code commands and skills it installs live under `.claude/`.
 
 - Run it with `npx @fission-ai/openspec@latest <command>`. It is not a project dependency.
+- Anonymous usage statistics are disabled for this repository. `.claude/settings.json` sets `OPENSPEC_TELEMETRY=0` for every Claude Code session here. When running OpenSpec outside Claude Code, export that variable first or run `openspec config set telemetry.enabled false` once on the machine.
 - Start new work with the `/opsx:propose` command, implement it with `/opsx:apply`, and archive it with `/opsx:archive` once it is merged.
 - Specs in `openspec/specs/` are the source of truth for behavior. Update them through a change proposal, not by hand.
 - Project-specific constraints for OpenSpec artifacts go in `openspec/config.yaml`.
