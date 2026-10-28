@@ -50,7 +50,7 @@ Work through these phases in order. Each phase ends with a verified state before
 
 ### 4. Test
 
-- Run every check listed under Commands in `CLAUDE.md`: lint, format, type check, unit tests, and build, in that order. If the section is a placeholder, run the checks you detected in preflight and add them to `CLAUDE.md` in this change.
+- Run every check listed under Commands in `CLAUDE.md`, which means `make check`: build, gen-config, and test under Spinel. Never run a file with a CRuby interpreter as a substitute, even as a quick check; if Spinel is not installed, run `make toolchain` first, and if that is impossible, stop and report.
 - On a failure, read the output, fix the root cause in the code or the test, and re-run. Count each full fix-and-rerun cycle as one attempt; stop after three failed attempts and report with the output.
 - If the repository has no automated checks at all, say so explicitly in the Testing section of the pull request, and describe the manual verification you performed instead. Never claim a check you did not run.
 
@@ -78,8 +78,8 @@ Work through these phases in order. Each phase ends with a verified state before
 ### 8. Merge
 
 - Squash-merge the pull request with the GitHub tools, passing the current head SHA as the expected head so a concurrent push cannot be merged by mistake.
-- The squash commit title is the pull request title. The squash commit message is the pull request description followed by one blank line and the co-author trailer `Co-Authored-By: Claude <noreply@anthropic.com>` as the very last line.
-- After merging, fetch `origin`, confirm `origin/main` now contains the squash commit with that exact subject and trailer, and confirm the source branch no longer exists on the remote. If it still exists, delete it; if deletion is not permitted from your environment, say so in the report.
+- The squash commit title is the pull request title followed by a space and the pull request number in parentheses, for example `feat(auth): add password reset flow (#12)`, so the commit on `main` links back to the pull request. The squash commit message is the pull request description followed by one blank line and the co-author trailer `Co-Authored-By: Claude <noreply@anthropic.com>` as the very last line.
+- After merging, fetch `origin`, confirm `origin/main` now contains the squash commit with that exact subject including the number, and the trailer, and confirm the source branch no longer exists on the remote. If it still exists, delete it; if deletion is not permitted from your environment, say so in the report.
 - Check out `main` locally at `origin/main` and delete the local feature branch.
 
 ## Report

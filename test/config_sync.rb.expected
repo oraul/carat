@@ -1,0 +1,18 @@
+ok   generated mirror matches config/default.json
+ok   config is an object
+ok   has leader
+ok   has timeoutlen
+ok   has options
+ok   has keymaps
+ok   has languages
+ok   has plugins
+ok   has theme
+ok   keymaps.normal is an object
+ok   keymaps.insert is an object
+ok   keymaps.visual is an object
+ok   keymaps.visual_line is an object
+ok   keymaps.visual_block is an object
+ok   keymaps.operator_pending is an object
+ok   keymaps.cmdline is an object
+ok   every binding is an action name, a key sequence, or null
+config_sync: 17 passed, 0 failed

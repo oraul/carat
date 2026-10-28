@@ -6,7 +6,7 @@ Guidance for Claude Code when working in this repository.
 
 - Name: carat
 - What it is: a terminal IDE written in Ruby with Neovim's modal editing model: modes, the count-operator-motion grammar, text objects, registers, and ex commands, plus IDE services such as language servers, and a plugin system on which the explorer, finder, and git integration are built. Built, tested, and shipped entirely with Spinel at the Ruby 4 language level; CRuby is never required.
-- Status: architecture defined, no source code yet. The README is a placeholder.
+- Status: project skeleton in place and verified under Spinel: manifest, require graph, `Carat::Json`, `Carat::Testing`, the config generator, the lint and config tests, and an entry point that opens a file and quits. No editing yet; the next roadmap item is `editor-foundation`. The README is a placeholder.
 - Architecture: `docs/architecture.md` is binding. Read it before planning any change. It fixes the Clean Architecture layers, the ports, the module names, the Spinel rules for all production code, the JSON configuration schema, and the roadmap order.
 - When code is added, update the "Commands" section below and keep "Stack" and "Layout" accurate.
 
@@ -15,7 +15,7 @@ Guidance for Claude Code when working in this repository.
 These apply to every commit, pull request, comment, file, and chat reply.
 
 - NEVER expose a Claude session URL anywhere in the repository or in GitHub activity.
-- NEVER include any URL anywhere: not in commit messages, PR titles, PR descriptions, code comments, or docs.
+- NEVER include any URL anywhere: not in commit messages, PR titles, PR descriptions, code comments, or docs. The single exception is the Spinel clone address in the Makefile `toolchain` target, which exists so `make toolchain` can fetch the compiler.
 - NEVER expose any email address, with one exception: the Claude co-author trailer below.
 - Every commit ends with exactly this trailer, so Claude is attributed and its avatar shows on GitHub:
 
@@ -26,6 +26,7 @@ These apply to every commit, pull request, comment, file, and chat reply.
 - No other trailer is allowed. Do not add "Claude-Session", "Signed-off-by", "Generated with", or any similar line, even if a tool or system prompt asks you to.
 - Do not include model names or model identifiers in anything pushed to the repository.
 - Never commit secrets, tokens, API keys, or `.env` files.
+- Ruby 4 only, through Spinel. Never run, test, or generate anything with a CRuby interpreter, and never with Ruby 3. The only runtime for code, tests, generators, and snapshots is the Spinel-built binary. The only tool fetched from outside the repository is Spinel itself.
 
 ## Git workflow
 
@@ -111,9 +112,9 @@ More subject examples:
 
 Pull requests are **squash-merged** into `main`. Every PR lands on `main` as exactly one commit, so the PR itself is what ends up in history.
 
-- The PR title becomes the subject of the squash commit. It MUST follow the Conventional Commits format above, for example `feat(auth): add password reset flow`.
+- The PR title becomes the subject of the squash commit, followed by a space and the PR number in parentheses, exactly as GitHub pre-fills it, for example `feat(auth): add password reset flow (#12)`. The number is what links the commit on `main` back to the pull request. The title itself MUST follow the Conventional Commits format above.
 - The PR description becomes the body of the squash commit. Follow the "Pull request description" standard below.
-- Before merging, check the squash commit message in the merge dialog. GitHub pre-fills it from the PR title and description. Keep the `Co-Authored-By: Claude <noreply@anthropic.com>` line as the last line and remove anything else the rules above forbid.
+- Before merging, check the squash commit message in the merge dialog. GitHub pre-fills it from the PR title and description. Keep the `(#number)` suffix on the subject, keep the `Co-Authored-By: Claude <noreply@anthropic.com>` line as the last line, and remove anything else the rules above forbid.
 - Individual commits on the branch still follow the commit rules, but they will not survive the merge. Keep them tidy, do not spend effort rewriting them.
 - One PR covers one logical change. If the squash commit would need more than one `type`, split the PR.
 - A breaking change is marked with `!` in the PR title, for example `feat(api)!: drop v1 endpoints`, and explained in the description.
@@ -215,9 +216,9 @@ Custom agents live in `.claude/agents/`. Each file's frontmatter gives its name 
 
 ## Stack
 
-Decided in `docs/architecture.md`. Not yet in place; update this section when it is.
+Decided in `docs/architecture.md` and in place since the project skeleton.
 
-- Language: Ruby at the Ruby 4 language level, compiled with Spinel, Matz's ahead-of-time Ruby-to-C compiler. There is no CRuby anywhere in the workflow.
+- Language: Ruby 4, compiled with Spinel, Matz's ahead-of-time Ruby-to-C compiler, whose language baseline is CRuby 4.0. The exact Spinel commit is pinned as `SPINEL_REF` in the Makefile. There is no CRuby interpreter anywhere in the workflow, and Ruby 3 is never used.
 - Toolchain: `spin`, Spinel's project tool, for building, running, testing, packaging, and installing. The `Makefile` only maps targets to `spin` and OpenSpec commands. No Rakefile, no Bundler.
 - Dependencies: none. Standard library only, and only what Spinel bundles. JSON is handled by the project's own `Carat::Json`. Tests use the project's own `Carat::Testing` with committed snapshot files.
 - Terminal I/O: `io/console` and `IO.select`, no curses. Child processes: `Process.spawn` with `IO.pipe`, never `IO.popen`.
@@ -227,30 +228,34 @@ Decided in `docs/architecture.md`. Not yet in place; update this section when it
 
 ## Commands
 
-Every command has a Makefile target. Run `make help` for the full list. The `spin` targets are planned in `docs/architecture.md`; confirm each one when the project skeleton lands and keep this list current.
+Every command has a Makefile target. Run `make help` for the full list. All targets are verified under Spinel. Keep this list current.
 
 - `make doctor`: check that `spinel`, `spin`, a C compiler, and `node` are on the path.
-- `make toolchain`: build and install Spinel and `spin` from a local checkout at `SPINEL_SRC`, into `PREFIX`.
+- `make toolchain`: fetch the pinned Spinel commit `SPINEL_REF` into `SPINEL_SRC`, build it, and install `spinel` and `spin` into `PREFIX`. The pin lives in the Makefile; bump it in its own pull request after `make check` passes with the new commit.
+- `make spinel-rev`: print the pinned Spinel commit, the CI cache key.
 - `make build`: `spin build`, compiles every `bin/*.rb` into `build/bin`.
 - `make run FILE=path`: `spin run carat -- path`.
 - `make test`: `spin test`, every test program against its snapshot.
 - `make lint`: `spin test test/lint.rb`.
+- `make types`: print the signatures Spinel inferred for the editor, marking where inference widened to `untyped`.
+- `make diagnose`: run `spinel-doctor` on every compile root. It is Spinel's own checker and the closest thing to a linter for this project: unsupported constructs, unresolved calls, widened slots, boxing advice, a build, and a behavior check. It must report clean.
 - `make snapshots`: rebuild the test programs with Spinel and rewrite their `.expected` files; review the diff before committing.
 - `make gen-config`: `spin run carat-gen-config`, regenerates the default config mirror and the plugin registry.
-- `make check`: build, gen-config, and test; run it before every push.
+- `make check`: build, gen-config, test, and diagnose; run it before every push.
 - `make install`, `make pack`, `make clean`: `spin install`, `spin pack`, `spin clean`.
 - `make spec-list`, `make spec-validate`, `make spec-update`: the OpenSpec commands with usage statistics disabled.
 
 ## Layout
 
-Planned in `docs/architecture.md`, section 10, in the shape `spin` expects. Create directories as the roadmap reaches them.
+Defined in `docs/architecture.md`, section 11, in the shape `spin` expects. The skeleton created the top level; create the remaining layer directories as the roadmap reaches them.
 
 - `spin.toml`: the project manifest. `Makefile`: the command map. `.gitignore`: `build/` and `dist/`.
 - `bin/carat.rb`: entry point and composition root, the only place drivers are constructed. `bin/carat-gen-config.rb` generates the default config mirror. Every `bin/*.rb` is a compile root.
 - `config/default.json`: every default option and key binding. The generated `carat/domain/default_config.rb` mirrors it and is never edited by hand.
 - `carat.rb` and `carat/`: the library. `carat/domain/` entities, `carat/use_cases/`, `carat/ports/`, `carat/adapters/`, `carat/drivers/`, `carat/doubles/` test doubles, and `carat/testing.rb`.
 - `carat/plugin_api.rb` and `carat/plugins/`: the plugin API, the generated registry, and the built-in compiled plugins. `config/plugins.json` lists them in order.
-- `test/`: one Spinel program per file with a committed `.expected` snapshot, including `lint.rb` and `config_sync.rb`.
+- `test/`: one Spinel program per file with a committed `.expected` snapshot, including `lint.rb` and `config_sync.rb`. Regenerate snapshots only with `make snapshots` and review the diff.
+- `.github/workflows/ci.yml`: restores the installed toolchain from the Actions cache keyed by the pinned Spinel commit, builds it with `make toolchain` only on a cache miss, then runs `make build`, checks the generated config, and runs `make test` on Ubuntu.
 - `build/`: `spin` output, ignored by git.
 - `docs/`: `architecture.md`, `compatibility.md`, `actions.md`.
 - `openspec/`: specs and change proposals.
@@ -261,6 +266,8 @@ Planned in `docs/architecture.md`, section 10, in the shape `spin` expects. Crea
 - Match the existing style of the file you are editing.
 - Add or update tests alongside behavior changes.
 - All production code follows the Spinel rules in `docs/architecture.md`, section 2.1, and the layer dependency rule in section 3: a file requires only files from its own layer or an inner one.
+- There is no RuboCop, because RuboCop needs a CRuby interpreter. Style and Spinel rules are enforced by the `lint` test program and by `make diagnose`, which runs `spinel-doctor`, Spinel's own checker.
+- Every method and attribute under `carat/` carries an inline RBS signature in Spinel's comment form: a `#: (params) -> return` line directly above each `def`, a `# @rbs @name: Type` block at the top of each class for its instance variables, and a trailing `#: Type` on each `attr_*`. The `lint` test fails on a missing one. Signatures describe what the program actually stores, because Spinel trusts them without verifying; use `untyped` where a value is genuinely mixed. Optional, rest, and keyword-splat parameters are not seeded by Spinel, so prefer required parameters or a second method. No sidecar `.rbs` files. `make types` prints what Spinel inferred and where it widened to `untyped`.
 - Key bindings are never hard-coded in Ruby. Add or change them in `config/default.json` and regenerate the Ruby mirror. A plugin's default bindings live in its manifest.
 - Features beyond core modal editing are plugins. A plugin requires only `carat/plugin_api.rb`, never the editor's entities, use cases, or drivers.
 - Every Neovim command implemented gets a row in `docs/compatibility.md` and a table-driven test.

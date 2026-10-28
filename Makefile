@@ -4,8 +4,12 @@
 # OpenSpec. Nothing is built here directly; see docs/architecture.md.
 # Run `make help` for the list.
 
-SPINEL_SRC ?= $(HOME)/Repositories/spinel
-PREFIX     ?= $(HOME)/.local
+SPINEL_SRC  ?= $(HOME)/Repositories/spinel
+SPINEL_REPO ?= matz/spinel
+# The exact Spinel commit this project builds with. Bump it deliberately, in
+# its own pull request, after make check passes with the new commit.
+SPINEL_REF  ?= 001419ff1af7f77aaf8862ff248afef66047dd41
+PREFIX      ?= $(HOME)/.local
 FILE       ?= README.md
 OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y @fission-ai/openspec@latest
 
@@ -13,13 +17,27 @@ OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y @fission-ai/openspec@latest
 
 # ---------------------------------------------------------------- toolchain
 
-## toolchain: build Spinel and spin from a local checkout at SPINEL_SRC and install them under PREFIX
+## toolchain: fetch the pinned Spinel commit SPINEL_REF into SPINEL_SRC, build it, and install spinel and spin under PREFIX
 toolchain:
-	@test -d "$(SPINEL_SRC)" || { echo "Spinel checkout not found at $(SPINEL_SRC). Clone it there or set SPINEL_SRC."; exit 1; }
+	@if [ ! -d "$(SPINEL_SRC)/.git" ]; then \
+	  echo "Initializing Spinel checkout in $(SPINEL_SRC)"; \
+	  git init -q "$(SPINEL_SRC)"; \
+	  git -C "$(SPINEL_SRC)" remote add origin "https://github.com/$(SPINEL_REPO)"; \
+	fi
+	git -C "$(SPINEL_SRC)" fetch --depth 1 origin "$(SPINEL_REF)"
+	git -C "$(SPINEL_SRC)" checkout -q --detach FETCH_HEAD
 	$(MAKE) -C "$(SPINEL_SRC)" deps
 	$(MAKE) -C "$(SPINEL_SRC)"
 	$(MAKE) -C "$(SPINEL_SRC)" install PREFIX="$(PREFIX)"
-	@echo "Installed spinel and spin under $(PREFIX)/bin. Make sure it is on your PATH."
+	@echo "Installed spinel and spin ($(SPINEL_REF)) under $(PREFIX)/bin. Make sure it is on your PATH."
+
+## spinel-rev: print the Spinel commit the build is pinned to (resolving a branch or tag name through the remote), used as the CI cache key
+spinel-rev:
+	@if echo "$(SPINEL_REF)" | grep -qE '^[0-9a-f]{40}$$'; then \
+	  echo "$(SPINEL_REF)"; \
+	else \
+	  git ls-remote "https://github.com/$(SPINEL_REPO)" "$(SPINEL_REF)" | head -1 | cut -f1; \
+	fi
 
 ## doctor: check that spinel, spin, a C compiler, and node for OpenSpec are available
 doctor:
@@ -73,12 +91,27 @@ snapshots:
 	done
 	@echo "Snapshots come from the Spinel binaries, never from CRuby. Review the diff before committing."
 
+## diagnose: run spinel-doctor on every compile root (bin/*.rb and test/*.rb): unsupported constructs, unresolved calls, widened slots, boxing advice, build, and behavior parity
+diagnose:
+	@status=0; \
+	for root in bin/*.rb test/*.rb; do \
+	  echo "== $$root"; \
+	  spinel-doctor --quiet "$$root" -- $$(spin flags) || status=1; \
+	done; \
+	exit $$status
+
+## types: print the signatures Spinel inferred for the editor, marking where inference widened to untyped
+types:
+	@mkdir -p build
+	spinel $$(spin flags) bin/carat.rb --emit-rbs -o build/carat.rbs >/dev/null
+	@cat build/carat.rbs
+
 ## gen-config: regenerate carat/domain/default_config.rb and carat/plugins/registry.rb from config/
 gen-config:
 	spin run carat-gen-config
 
-## check: everything a push needs: build, gen-config, and test
-check: build gen-config test
+## check: everything a push needs: build, gen-config, test, and diagnose
+check: build gen-config test diagnose
 
 # ----------------------------------------------------------------- openspec
 
@@ -101,6 +134,6 @@ help:
 	@echo "Carat targets:"
 	@grep -E '^## [a-z-]+:' $(MAKEFILE_LIST) | sed -E 's/^## ([a-z-]+): (.*)/  \1\t\2/' | expand -t 16
 	@echo
-	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  PREFIX=$(PREFIX)  FILE=$(FILE)"
+	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)"
 
-.PHONY: toolchain doctor build run install pack clean test lint snapshots gen-config check spec-list spec-validate spec-update help
+.PHONY: toolchain spinel-rev doctor build run install pack clean test lint snapshots diagnose types gen-config check spec-list spec-validate spec-update help
