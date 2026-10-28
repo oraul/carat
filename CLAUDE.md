@@ -193,6 +193,16 @@ Adds password reset by email so locked-out users can regain access without conta
 Closes issue 42. Tokens are stored hashed, so existing sessions are unaffected. Localized email templates are left for a follow-up.
 ```
 
+## OpenSpec
+
+This repository uses OpenSpec for spec-driven development. Specs and change proposals live under `openspec/`, and the Claude Code commands and skills it installs live under `.claude/`.
+
+- Run it with `npx @fission-ai/openspec@latest <command>`. It is not a project dependency.
+- Start new work with the `/opsx:propose` command, implement it with `/opsx:apply`, and archive it with `/opsx:archive` once it is merged.
+- Specs in `openspec/specs/` are the source of truth for behavior. Update them through a change proposal, not by hand.
+- Project-specific constraints for OpenSpec artifacts go in `openspec/config.yaml`.
+- Files under `.claude/commands/opsx/` and `.claude/skills/openspec-*/` are generated. Do not edit them; refresh them with `openspec update`.
+
 ## Stack
 
 To be filled in when the first code lands. Record:
