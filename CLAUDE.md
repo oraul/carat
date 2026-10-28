@@ -49,7 +49,7 @@ Rules:
 - Keep it short and meaningful, 2 to 5 words that describe the change itself.
 - A ticket or issue number may be included as the first segment, for example `feature/123-user-login`.
 - Branch from `main` and open a pull request back into `main` when asked.
-- Branches are short-lived. Delete them after merge.
+- Branches are short-lived. They are squash-merged and deleted after merge.
 - Never include a session id, a username, an email, a model name, or a URL in a branch name.
 - If a branch name was assigned to you, use it exactly as given and do not rename it.
 
@@ -88,6 +88,20 @@ Examples:
 - `fix(api): return 404 for missing orders`
 - `docs: add branch and commit conventions`
 - `chore: configure linter`
+
+## Pull requests
+
+Pull requests are **squash-merged** into `main`. Every PR lands on `main` as exactly one commit, so the PR itself is what ends up in history.
+
+- The PR title becomes the subject of the squash commit. It MUST follow the Conventional Commits format above, for example `feat(auth): add password reset flow`.
+- The PR description becomes the body of the squash commit. Write it as a plain-text explanation of what changed and why. Keep it free of URLs, email addresses, session ids, model names, checklists, headings, and any trailer or attribution line.
+- Before merging, check the squash commit message in the merge dialog and remove anything the rules above forbid. GitHub pre-fills it from the individual commits.
+- Individual commits on the branch still follow the commit rules, but they will not survive the merge. Keep them tidy, do not spend effort rewriting them.
+- One PR covers one logical change. If the squash commit would need more than one `type`, split the PR.
+- A breaking change is marked with `!` in the PR title, for example `feat(api)!: drop v1 endpoints`, and explained in the description.
+- Do not create a pull request unless explicitly asked.
+- Never merge a pull request yourself unless explicitly asked.
+- The source branch is deleted after merge.
 
 ## Stack
 
