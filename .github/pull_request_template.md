@@ -1,11 +1,11 @@
 Summary
-One or two sentences on what this change does and why it is needed.
+<What this change does, in present tense. Then why it is needed. Optionally the approach, if not obvious. 1 to 3 sentences.>
 
 Changes
-- What was added, changed, or removed, one item per line
+- <Verb-first bullet per reviewable unit of change, most significant first. 1 to 10 bullets.>
 
 Testing
-- How the change was verified, or "Not applicable" with the reason
+- <One bullet per verification actually run, with its result. If nothing was run: "Not applicable: <reason>".>
 
 Notes
-Breaking changes, follow-ups, or anything the reviewer should know. Write "None" if there is nothing.
+<Breaking changes, follow-ups, reviewer guidance, or issue references by number. Otherwise exactly: None>

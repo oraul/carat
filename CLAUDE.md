@@ -121,36 +121,72 @@ Pull requests are **squash-merged** into `main`. Every PR lands on `main` as exa
 
 ## Pull request description
 
-Every PR description follows the template in `.github/pull_request_template.md`, which GitHub pre-fills when a PR is opened. The description doubles as the squash commit body, so it must read well as plain text in `git log`.
+The PR description is the body of the squash commit on `main`. It follows the template in `.github/pull_request_template.md`, which GitHub pre-fills. This section is the specification for filling it in.
 
-Structure, in this order, with these exact section labels on their own line:
+### Output contract
+
+- Produce plain text only. No Markdown headings, bold, italics, tables, images, emoji, HTML, or checklists.
+- Produce exactly four sections, in this order, each introduced by its label alone on a line: `Summary`, `Changes`, `Testing`, `Notes`.
+- Separate sections with exactly one blank line. Do not put a blank line between a label and its content.
+- Wrap every line at 72 characters. Indent continuation lines of a bullet with two spaces.
+- Bullets use `- ` (hyphen, space). No numbering, no nested bullets.
+- Replace every `<placeholder>` from the template. The final text contains no angle brackets.
+- Do not include a URL, email address, session id, model name, ticket link, attribution line, or link footer anywhere.
+- Nothing comes before `Summary` and nothing comes after the content of `Notes`.
+
+### Section definitions
+
+**Summary** (required, 1 to 3 sentences, prose)
+- Sentence 1: what the change does, in the present tense, from the user's or system's point of view.
+- Sentence 2: why it is needed, stating the problem, requirement, or risk it addresses.
+- Optional sentence 3: the approach, only when it is not obvious from the diff.
+- Do not restate the PR title. Do not list files.
+
+**Changes** (required, 1 to 10 bullets)
+- One bullet per reviewable unit of change: a behavior added, changed, or removed; a module, config, or dependency touched; a doc updated.
+- Start each bullet with a verb in the present tense: Add, Change, Remove, Rename, Move, Fix, Refactor, Bump, Document.
+- Each bullet is one sentence, at most two lines. State the effect, not the diff.
+- Name a file or module only when the reviewer needs it to navigate.
+- Order bullets from most to least significant.
+
+**Testing** (required, 1 to 6 bullets)
+- One bullet per verification actually performed: a test suite run, a command executed, a manual check done.
+- State what was run and the result, for example "Run unit tests, all pass".
+- Never list a check that was not run. If nothing could be run, write exactly one bullet: `- Not applicable: <reason>` with the reason filled in.
+- Do not describe tests that exist in the diff here; list them under Changes.
+
+**Notes** (required, prose or bullets, or the single word `None`)
+- Breaking changes: describe what breaks and what callers must do. Required whenever the PR title carries `!`.
+- Follow-ups: work intentionally left out and why.
+- Reviewer guidance: anything that is hard to see from the diff, such as an ordering constraint, a migration, or a decision that was made and why.
+- Issue references: by number in plain text, for example `Closes issue 42`.
+- If none of the above apply, the content is exactly `None`.
+
+### Example
 
 ```
 Summary
-One or two sentences on what this change does and why it is needed.
+Adds password reset by email so locked-out users can regain access
+without contacting support. Support tickets for lockouts were the
+largest category last quarter.
 
 Changes
-- What was added, changed, or removed, one item per line
+- Add a reset-request endpoint that emails a single-use token valid
+  for 15 minutes
+- Add a reset-confirm endpoint that validates the token and sets the
+  new password
+- Add rate limiting of five reset requests per hour per account
+- Document the flow in the auth module readme
 
 Testing
-- How the change was verified, or "Not applicable" with the reason
+- Run the auth unit tests, all pass
+- Run the full integration suite, all pass
+- Manually request and complete a reset against a local mail sink
 
 Notes
-Breaking changes, follow-ups, or anything the reviewer should know. Write "None" if there is nothing.
+Closes issue 42. Tokens are stored hashed, so existing sessions are
+unaffected. Localized email templates are left for a follow-up.
 ```
-
-Rules:
-
-- Keep all four sections and their order. Do not add other sections.
-- Section labels are plain words, not Markdown headings. No `#`, no bold, no emoji.
-- Use plain text and simple `-` bullets only. No checklists, tables, images, or code fences longer than a few lines.
-- Wrap lines at 72 characters so the squash commit body stays readable.
-- Summary explains why, not just what. A reviewer should understand the motivation without opening the diff.
-- Changes lists concrete, reviewable items. Name files or modules only when it helps the reviewer navigate.
-- Testing states what was actually run. Do not claim tests that were not run.
-- Notes must mention any breaking change, matching the `!` marker in the PR title.
-- Never include a URL, email address, session id, model name, ticket link, or attribution line or link footer. Refer to an issue by its number in plain text, for example "Closes issue 42", not by link.
-- Nothing follows the Notes section.
 
 ## Stack
 
