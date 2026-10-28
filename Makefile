@@ -6,7 +6,9 @@
 
 SPINEL_SRC  ?= $(HOME)/Repositories/spinel
 SPINEL_REPO ?= matz/spinel
-SPINEL_REF  ?= master
+# The exact Spinel commit this project builds with. Bump it deliberately, in
+# its own pull request, after make check passes with the new commit.
+SPINEL_REF  ?= 001419ff1af7f77aaf8862ff248afef66047dd41
 PREFIX      ?= $(HOME)/.local
 FILE       ?= README.md
 OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y @fission-ai/openspec@latest
@@ -15,22 +17,27 @@ OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y @fission-ai/openspec@latest
 
 # ---------------------------------------------------------------- toolchain
 
-## toolchain: clone Spinel into SPINEL_SRC if missing (or fast-forward it), build it, and install spinel and spin under PREFIX
+## toolchain: fetch the pinned Spinel commit SPINEL_REF into SPINEL_SRC, build it, and install spinel and spin under PREFIX
 toolchain:
-	@if [ -d "$(SPINEL_SRC)/.git" ]; then \
-	  echo "Updating Spinel in $(SPINEL_SRC)"; git -C "$(SPINEL_SRC)" pull --ff-only; \
-	else \
-	  echo "Cloning Spinel into $(SPINEL_SRC)"; \
-	  git clone --depth 1 --branch "$(SPINEL_REF)" "https://github.com/$(SPINEL_REPO)" "$(SPINEL_SRC)"; \
+	@if [ ! -d "$(SPINEL_SRC)/.git" ]; then \
+	  echo "Initializing Spinel checkout in $(SPINEL_SRC)"; \
+	  git init -q "$(SPINEL_SRC)"; \
+	  git -C "$(SPINEL_SRC)" remote add origin "https://github.com/$(SPINEL_REPO)"; \
 	fi
+	git -C "$(SPINEL_SRC)" fetch --depth 1 origin "$(SPINEL_REF)"
+	git -C "$(SPINEL_SRC)" checkout -q --detach FETCH_HEAD
 	$(MAKE) -C "$(SPINEL_SRC)" deps
 	$(MAKE) -C "$(SPINEL_SRC)"
 	$(MAKE) -C "$(SPINEL_SRC)" install PREFIX="$(PREFIX)"
-	@echo "Installed spinel and spin under $(PREFIX)/bin. Make sure it is on your PATH."
+	@echo "Installed spinel and spin ($(SPINEL_REF)) under $(PREFIX)/bin. Make sure it is on your PATH."
 
-## spinel-rev: print the commit of Spinel that SPINEL_REF currently points to on SPINEL_REPO, used as the CI cache key
+## spinel-rev: print the Spinel commit the build is pinned to (resolving a branch or tag name through the remote), used as the CI cache key
 spinel-rev:
-	@git ls-remote "https://github.com/$(SPINEL_REPO)" "refs/heads/$(SPINEL_REF)" | cut -f1
+	@if echo "$(SPINEL_REF)" | grep -qE '^[0-9a-f]{40}$$'; then \
+	  echo "$(SPINEL_REF)"; \
+	else \
+	  git ls-remote "https://github.com/$(SPINEL_REPO)" "$(SPINEL_REF)" | head -1 | cut -f1; \
+	fi
 
 ## doctor: check that spinel, spin, a C compiler, and node for OpenSpec are available
 doctor:

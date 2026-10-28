@@ -24,7 +24,7 @@ Non-goals:
 
 ## 2. Runtime and compiler
 
-- Compiler: Spinel. It parses Ruby with Prism, infers types across the whole program, emits C, and calls the system C compiler. Its language level is Ruby 4; its own benchmark baseline is CRuby 4.0.4.
+- Compiler: Spinel. It parses Ruby with Prism, infers types across the whole program, emits C, and calls the system C compiler. Its language level is Ruby 4; its own benchmark baseline is CRuby 4.0.4. The project pins one exact Spinel commit in the Makefile, so every build, locally and in CI, uses the same compiler; bumping it is a deliberate change in its own pull request.
 - Project tool: `spin`, which ships with Spinel. It owns the manifest, dependency resolution, multi-file builds, test runs, packaging, and installation. The repository's `Makefile` is only a map: every target calls `spin` or OpenSpec and builds nothing itself. `make help` lists the targets.
 - Development loop: `spin build` compiles every `bin/*.rb` into `build/bin/`, `spin run carat -- FILE` builds and runs the editor, `spin test` compiles and runs every `test/*.rb`. All three need only Spinel and a C compiler.
 - Tests are Spinel programs too. `spin test` judges each test program by its exit status and by diffing its stdout against a committed `test/<name>.rb.expected` snapshot. Carat commits every snapshot, so `spin test` never falls back to CRuby. The `--regen` option, which refreshes snapshots by running the test under CRuby, is not used; `make snapshots` rebuilds each test program with Spinel and rewrites its snapshot from that output, and the diff is reviewed before committing.
