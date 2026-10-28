@@ -252,7 +252,7 @@ Defined in `docs/architecture.md`, section 11, in the shape `spin` expects. The 
 - `carat.rb` and `carat/`: the library. `carat/domain/` entities, `carat/use_cases/`, `carat/ports/`, `carat/adapters/`, `carat/drivers/`, `carat/doubles/` test doubles, and `carat/testing.rb`.
 - `carat/plugin_api.rb` and `carat/plugins/`: the plugin API, the generated registry, and the built-in compiled plugins. `config/plugins.json` lists them in order.
 - `test/`: one Spinel program per file with a committed `.expected` snapshot, including `lint.rb` and `config_sync.rb`. Regenerate snapshots only with `make snapshots` and review the diff.
-- `.github/workflows/ci.yml`: builds Spinel with `make toolchain`, then runs `make build`, checks the generated config, and runs `make test` on Linux and macOS.
+- `.github/workflows/ci.yml`: builds Spinel with `make toolchain`, then runs `make build`, checks the generated config, and runs `make test` on Ubuntu.
 - `build/`: `spin` output, ignored by git.
 - `docs/`: `architecture.md`, `compatibility.md`, `actions.md`.
 - `openspec/`: specs and change proposals.

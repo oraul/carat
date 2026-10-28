@@ -7,10 +7,7 @@ on:
 
 jobs:
   spin:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - name: Check out carat
         uses: actions/checkout@v4
