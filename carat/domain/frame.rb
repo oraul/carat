@@ -3,26 +3,21 @@ module Carat
     # The view model: a grid of cells plus the cursor position and shape. It
     # contains no terminal knowledge; presenters and tests both reason about
     # it. Cells hold integer code points, so the frame never aliases a
-    # buffer line's string storage.
-    class Frame
+    # buffer line's string storage. A Struct record: mutable, and repainted
+    # in place across renders rather than allocated anew.
+    class Frame < Struct.new(:rows, :cols, :cursor_row, :cursor_col, :cursor_shape, :cells)
       SPACE = 32
 
-      attr_reader :rows #: Integer
-      attr_reader :cols #: Integer
-      attr_accessor :cursor_row #: Integer
-      attr_accessor :cursor_col #: Integer
-      attr_accessor :cursor_shape #: Symbol
-
+      # @rbs @rows: Integer
+      # @rbs @cols: Integer
+      # @rbs @cursor_row: Integer
+      # @rbs @cursor_col: Integer
+      # @rbs @cursor_shape: Symbol
       # @rbs @cells: Array[Array[Cell]]
 
       #: (Integer, Integer) -> void
       def initialize(rows, cols)
-        @rows = rows
-        @cols = cols
-        @cursor_row = 0
-        @cursor_col = 0
-        @cursor_shape = :block
-        @cells = []
+        grid = []
         r = 0
         while r < rows
           row = []
@@ -31,14 +26,15 @@ module Carat
             row << Cell.new(SPACE, 1, Highlight::NORMAL)
             c += 1
           end
-          @cells << row
+          grid << row
           r += 1
         end
+        super(rows, cols, 0, 0, :block, grid)
       end
 
       #: (Integer, Integer) -> Cell
       def cell(row, col)
-        @cells[row][col]
+        cells[row][col]
       end
 
       # Resets every cell to a blank and the cursor to the origin, so one
@@ -46,10 +42,10 @@ module Carat
       #: () -> void
       def clear
         r = 0
-        while r < @rows
-          row = @cells[r]
+        while r < rows
+          row = cells[r]
           c = 0
-          while c < @cols
+          while c < cols
             current = row[c]
             current.code = SPACE
             current.width = 1
@@ -58,20 +54,20 @@ module Carat
           end
           r += 1
         end
-        @cursor_row = 0
-        @cursor_col = 0
-        @cursor_shape = :block
+        self.cursor_row = 0
+        self.cursor_col = 0
+        self.cursor_shape = :block
       end
 
       # Writes text from (row, col), honoring display width and stopping at
       # the right edge. Returns the column after the last cell written.
       #: (Integer, Integer, String, Integer) -> Integer
       def put(row, col, text, hl)
-        return col if row < 0 || row >= @rows
+        return col if row < 0 || row >= rows
         text.each_codepoint do |code|
           width = DisplayWidth.of(code)
           next if width == 0
-          break if col + width > @cols
+          break if col + width > cols
           target = cell(row, col)
           target.code = code
           target.width = width
@@ -90,9 +86,9 @@ module Carat
       # Sets the highlight of every cell in [from, to) of a row.
       #: (Integer, Integer, Integer, Integer) -> void
       def fill(row, from, to, hl)
-        return if row < 0 || row >= @rows
+        return if row < 0 || row >= rows
         c = from
-        while c < to && c < @cols
+        while c < to && c < cols
           cell(row, c).hl = hl
           c += 1
         end
@@ -104,7 +100,7 @@ module Carat
       def row_text(row)
         codes = []
         c = 0
-        while c < @cols
+        while c < cols
           current = cell(row, c)
           codes << current.code if current.width > 0
           c += 1
@@ -116,7 +112,7 @@ module Carat
       def text_rows
         out = []
         r = 0
-        while r < @rows
+        while r < rows
           out << row_text(r)
           r += 1
         end
@@ -129,9 +125,9 @@ module Carat
       #: (Frame) -> void
       def sync_from(other)
         r = 0
-        while r < @rows
+        while r < rows
           c = 0
-          while c < @cols
+          while c < cols
             mine = cell(r, c)
             theirs = other.cell(r, c)
             mine.code = theirs.code
@@ -141,16 +137,16 @@ module Carat
           end
           r += 1
         end
-        @cursor_row = other.cursor_row
-        @cursor_col = other.cursor_col
-        @cursor_shape = other.cursor_shape
+        self.cursor_row = other.cursor_row
+        self.cursor_col = other.cursor_col
+        self.cursor_shape = other.cursor_shape
       end
 
       #: (Frame, Integer) -> bool
       def row_same?(other, row)
-        return false unless other.cols == @cols
+        return false unless other.cols == cols
         c = 0
-        while c < @cols
+        while c < cols
           return false unless cell(row, c).same?(other.cell(row, c))
           c += 1
         end

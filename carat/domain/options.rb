@@ -1,26 +1,21 @@
 module Carat
   module Domain
     # Typed options with Vim names. Only the ones the foundation reads are
-    # typed fields; :set and local options arrive with the options change.
-    class Options
-      attr_accessor :number #: bool
-      attr_accessor :relativenumber #: bool
-      attr_accessor :tabstop #: Integer
-      attr_accessor :shiftwidth #: Integer
-      attr_accessor :expandtab #: bool
-      attr_accessor :autoindent #: bool
-      attr_accessor :scrolloff #: Integer
+    # members; :set and local options arrive with the options change. A
+    # Struct record: mutable, with a reader and a writer per member.
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scrolloff)
+      # @rbs @number: bool
+      # @rbs @relativenumber: bool
+      # @rbs @tabstop: Integer
+      # @rbs @shiftwidth: Integer
+      # @rbs @expandtab: bool
+      # @rbs @autoindent: bool
+      # @rbs @scrolloff: Integer
 
       # Vim's defaults.
       #: () -> void
       def initialize
-        @number = false
-        @relativenumber = false
-        @tabstop = 8
-        @shiftwidth = 8
-        @expandtab = false
-        @autoindent = false
-        @scrolloff = 0
+        super(false, false, 8, 8, false, false, 0)
       end
 
       # Builds options from the "options" object of a config value. A value

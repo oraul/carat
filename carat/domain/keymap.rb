@@ -1,36 +1,35 @@
 module Carat
   module Domain
     # One node of a keymap trie. Children are keyed by the decimal string of
-    # the key code, a form the compiler can type.
-    class KeymapNode
-      attr_accessor :value #: String?
-
+    # the key code, a form the compiler can type. A Struct record: mutable,
+    # with a reader and a writer per member.
+    class KeymapNode < Struct.new(:value, :children)
+      # @rbs @value: String?
       # @rbs @children: Hash[String, KeymapNode]
 
       #: () -> void
       def initialize
-        @children = {}
-        @value = nil
+        super(nil, {})
       end
 
       #: (Integer) -> bool
       def child?(code)
-        @children.key?(code.to_s)
+        children.key?(code.to_s)
       end
 
       #: (Integer) -> KeymapNode
       def child!(code)
         key = code.to_s
-        existing = @children[key]
+        existing = children[key]
         return existing unless existing.nil?
         node = KeymapNode.new
-        @children[key] = node
+        children[key] = node
         node
       end
 
       #: () -> bool
       def leaf?
-        @children.empty?
+        children.empty?
       end
     end
 
@@ -43,16 +42,21 @@ module Carat
     end
 
     # One trie per mode from key sequences to action names or remap
-    # sequences, built only from the JSON "keymaps" object.
-    class Keymap
-      attr_reader :errors #: Array[String]
-
+    # sequences, built only from the JSON "keymaps" object. A Struct record:
+    # the roots fill as bindings are added and errors collect as they are
+    # found.
+    class Keymap < Struct.new(:roots, :errors)
       # @rbs @roots: Hash[String, KeymapNode]
+      # @rbs @errors: Array[String]
 
+      # The empty literals are stored through the writers, not passed to
+      # super: an empty array literal is typed Array[Integer] by default, and
+      # only an assignment coerces it to the pinned member type.
       #: () -> void
       def initialize
-        @roots = {}
-        @errors = []
+        super()
+        self.roots = {}
+        self.errors = []
       end
 
       # Builds the keymap from the "keymaps" object of the configuration,
@@ -81,11 +85,11 @@ module Carat
       def add(mode, key, value, leader)
         parsed = KeyNotation.parse(key, leader)
         unless parsed.ok?
-          @errors << "#{Mode.name_of(mode)}.#{key}: #{parsed.error}"
+          errors << "#{Mode.name_of(mode)}.#{key}: #{parsed.error}"
           return
         end
         if parsed.codes.empty?
-          @errors << "#{Mode.name_of(mode)}.#{key}: empty key"
+          errors << "#{Mode.name_of(mode)}.#{key}: empty key"
           return
         end
         if value.nil?
@@ -93,7 +97,7 @@ module Carat
         elsif value.is_a?(String) && !value.empty?
           bind(mode, parsed.codes, value)
         else
-          @errors << "#{Mode.name_of(mode)}.#{key}: value must be an action name or a key sequence"
+          errors << "#{Mode.name_of(mode)}.#{key}: value must be an action name or a key sequence"
         end
       end
 
@@ -133,10 +137,10 @@ module Carat
       #: (Symbol) -> KeymapNode
       def root(mode)
         name = Mode.name_of(mode)
-        existing = @roots[name]
+        existing = roots[name]
         return existing unless existing.nil?
         node = KeymapNode.new
-        @roots[name] = node
+        roots[name] = node
         node
       end
     end

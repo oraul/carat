@@ -126,4 +126,23 @@ r2 = D::Range.new(pos(0, 0), pos(0, 2), :charwise, false)
 t.assert_true(r1 == r2, "ranges are equal by value")
 t.assert_true(r1.frozen?, "ranges are frozen")
 
+# Struct semantics the mutable records rely on: positional construction,
+# readers and writers, members, and the constructor defaults.
+c = D::Cursor.new(2, 3)
+t.assert_equal([2, 3, 3], [c.row, c.col, c.want_col], "a cursor starts wanting its column")
+c.col = 5
+t.assert_equal(5, c.col, "a cursor member has a writer")
+c.move_to(4, 1)
+t.assert_equal([4, 1], c.to_a, "to_a is the position pair without want_col")
+t.assert_equal([:row, :col, :want_col], D::Cursor.members, "cursor members in constructor order")
+t.assert_equal(false, c.frozen?, "records are not frozen")
+w = D::Window.new
+t.assert_equal([0, 0], [w.top, w.left], "a window starts at the origin")
+w.top = 7
+t.assert_equal(7, w.top, "a window member has a writer")
+t.assert_equal([:lines, :path, :line_ending, :modified], D::Buffer.members, "buffer members in constructor order")
+t.assert_equal([:code, :width, :hl], D::Cell.members, "cell members")
+o = D::Options.new
+t.assert_equal([false, 8, 0], [o.number, o.tabstop, o.scrolloff], "options start with Vim's defaults")
+
 t.finish

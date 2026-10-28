@@ -44,4 +44,7 @@ ok   control characters show as caret notation
 ok   frame has 24 rows
 ok   frame has 10 rows after shrinking
 ok   status line moved to row 8
-adapters_frame_presenter: 46 passed, 0 failed
+ok   a render of the same size reuses the frame
+ok   a render of the same size reuses the cells
+ok   the reused frame shows the new text
+adapters_frame_presenter: 49 passed, 0 failed
