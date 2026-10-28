@@ -50,7 +50,7 @@ Work through these phases in order. Each phase ends with a verified state before
 
 ### 4. Test
 
-- Run every check listed under Commands in `CLAUDE.md`: lint, format, type check, unit tests, and build, in that order. If the section is a placeholder, run the checks you detected in preflight and add them to `CLAUDE.md` in this change.
+- Run every check listed under Commands in `CLAUDE.md`, which means `make check`: build, gen-config, and test under Spinel. Never run a file with a CRuby interpreter as a substitute, even as a quick check; if Spinel is not installed, run `make toolchain` first, and if that is impossible, stop and report.
 - On a failure, read the output, fix the root cause in the code or the test, and re-run. Count each full fix-and-rerun cycle as one attempt; stop after three failed attempts and report with the output.
 - If the repository has no automated checks at all, say so explicitly in the Testing section of the pull request, and describe the manual verification you performed instead. Never claim a check you did not run.
 

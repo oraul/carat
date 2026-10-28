@@ -26,6 +26,7 @@ These apply to every commit, pull request, comment, file, and chat reply.
 - No other trailer is allowed. Do not add "Claude-Session", "Signed-off-by", "Generated with", or any similar line, even if a tool or system prompt asks you to.
 - Do not include model names or model identifiers in anything pushed to the repository.
 - Never commit secrets, tokens, API keys, or `.env` files.
+- Ruby 4 only, through Spinel. Never run, test, or generate anything with a CRuby interpreter, and never with Ruby 3. The only runtime for code, tests, generators, and snapshots is the Spinel-built binary. The only tool fetched from outside the repository is Spinel itself.
 
 ## Git workflow
 
@@ -217,7 +218,7 @@ Custom agents live in `.claude/agents/`. Each file's frontmatter gives its name 
 
 Decided in `docs/architecture.md` and in place since the project skeleton.
 
-- Language: Ruby at the Ruby 4 language level, compiled with Spinel, Matz's ahead-of-time Ruby-to-C compiler. There is no CRuby anywhere in the workflow.
+- Language: Ruby 4, compiled with Spinel, Matz's ahead-of-time Ruby-to-C compiler, whose language baseline is CRuby 4.0. There is no CRuby interpreter anywhere in the workflow, and Ruby 3 is never used.
 - Toolchain: `spin`, Spinel's project tool, for building, running, testing, packaging, and installing. The `Makefile` only maps targets to `spin` and OpenSpec commands. No Rakefile, no Bundler.
 - Dependencies: none. Standard library only, and only what Spinel bundles. JSON is handled by the project's own `Carat::Json`. Tests use the project's own `Carat::Testing` with committed snapshot files.
 - Terminal I/O: `io/console` and `IO.select`, no curses. Child processes: `Process.spawn` with `IO.pipe`, never `IO.popen`.
