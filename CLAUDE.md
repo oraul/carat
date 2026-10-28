@@ -111,7 +111,7 @@ Pull requests are **squash-merged** into `main`. Every PR lands on `main` as exa
 
 - The PR title becomes the subject of the squash commit. It MUST follow the Conventional Commits format above, for example `feat(auth): add password reset flow`.
 - The PR description becomes the body of the squash commit. Follow the "Pull request description" standard below.
-- Before merging, check the squash commit message in the merge dialog. GitHub pre-fills it from the individual commits. Keep the `Co-Authored-By: Claude <noreply@anthropic.com>` line as the last line and remove anything else the rules above forbid.
+- Before merging, check the squash commit message in the merge dialog. GitHub pre-fills it from the PR title and description. Keep the `Co-Authored-By: Claude <noreply@anthropic.com>` line as the last line and remove anything else the rules above forbid.
 - Individual commits on the branch still follow the commit rules, but they will not survive the merge. Keep them tidy, do not spend effort rewriting them.
 - One PR covers one logical change. If the squash commit would need more than one `type`, split the PR.
 - A breaking change is marked with `!` in the PR title, for example `feat(api)!: drop v1 endpoints`, and explained in the description.
@@ -121,18 +121,18 @@ Pull requests are **squash-merged** into `main`. Every PR lands on `main` as exa
 
 ## Pull request description
 
-The PR description is the body of the squash commit on `main`. It follows the template in `.github/pull_request_template.md`, which GitHub pre-fills. This section is the specification for filling it in.
+The PR description is the body of the squash commit on `main`. It follows the template in `.github/pull_request_template.md`, which GitHub pre-fills. This section is the specification for filling it in. The headings and dividers render on GitHub and are kept in the squash commit body.
 
 ### Output contract
 
-- Produce plain text only. No Markdown headings, bold, italics, tables, images, emoji, HTML, or checklists.
-- Produce exactly four sections, in this order, each introduced by its label alone on a line: `Summary`, `Changes`, `Testing`, `Notes`.
-- Separate sections with exactly one blank line. Do not put a blank line between a label and its content.
+- Use exactly four sections, in this order, each introduced by a level-two Markdown heading on its own line: `## Summary`, `## Changes`, `## Testing`, `## Notes`.
+- Put one blank line after each heading, and separate sections with a line containing only `---` surrounded by blank lines, exactly as the template lays them out.
+- Inside a section use plain prose and `- ` bullets only. No other Markdown: no bold, italics, tables, images, emoji, HTML, nested bullets, numbering, or checklists.
 - Wrap every line at 72 characters. Indent continuation lines of a bullet with two spaces.
-- Bullets use `- ` (hyphen, space). No numbering, no nested bullets.
-- Replace every `<placeholder>` from the template. The final text contains no angle brackets.
+- The template contains `<!-- ... -->` guidance comments. Delete every one of them. The final text contains no `<!--`, no `-->`, and no angle brackets.
+- Fill every section. Do not leave an empty bullet or an empty section.
 - Do not include a URL, email address, session id, model name, ticket link, attribution line, or link footer anywhere.
-- Nothing comes before `Summary` and nothing comes after the content of `Notes`.
+- Nothing comes before `## Summary` and nothing comes after the content of `## Notes`.
 
 ### Section definitions
 
@@ -165,12 +165,16 @@ The PR description is the body of the squash commit on `main`. It follows the te
 ### Example
 
 ```
-Summary
+## Summary
+
 Adds password reset by email so locked-out users can regain access
 without contacting support. Support tickets for lockouts were the
 largest category last quarter.
 
-Changes
+---
+
+## Changes
+
 - Add a reset-request endpoint that emails a single-use token valid
   for 15 minutes
 - Add a reset-confirm endpoint that validates the token and sets the
@@ -178,12 +182,18 @@ Changes
 - Add rate limiting of five reset requests per hour per account
 - Document the flow in the auth module readme
 
-Testing
+---
+
+## Testing
+
 - Run the auth unit tests, all pass
 - Run the full integration suite, all pass
 - Manually request and complete a reset against a local mail sink
 
-Notes
+---
+
+## Notes
+
 Closes issue 42. Tokens are stored hashed, so existing sessions are
 unaffected. Localized email templates are left for a follow-up.
 ```
