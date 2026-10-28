@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  spin:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out carat
+        uses: actions/checkout@v4
+
+      - name: Check out Spinel
+        uses: actions/checkout@v4
+        with:
+          repository: matz/spinel
+          path: .spinel
+
+      - name: Build and install Spinel and spin
+        run: |
+          make -C .spinel deps
+          make -C .spinel
+          make -C .spinel install PREFIX="$HOME/.local"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Doctor
+        run: make doctor
+
+      - name: Build
+        run: make build
+
+      - name: Generated config is current
+        run: |
+          make gen-config
+          git diff --exit-code -- carat/domain/default_config.rb
+
+      - name: Test
+        run: make test
