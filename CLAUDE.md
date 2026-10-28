@@ -32,7 +32,7 @@ These apply to every commit, pull request, comment, file, and chat reply.
 - Work on the branch you were assigned. Never push to `main` directly.
 - Do not create a pull request unless explicitly asked.
 - Do not rewrite history on a shared branch (no rebase, amend, or force-push).
-- Run `spin build` and `spin test` before every push once the project skeleton exists.
+- Run `make check` before every push once the project skeleton exists.
 
 ## Branch naming
 
@@ -218,7 +218,7 @@ Custom agents live in `.claude/agents/`. Each file's frontmatter gives its name 
 Decided in `docs/architecture.md`. Not yet in place; update this section when it is.
 
 - Language: Ruby at the Ruby 4 language level, compiled with Spinel, Matz's ahead-of-time Ruby-to-C compiler. There is no CRuby anywhere in the workflow.
-- Toolchain: `spin`, Spinel's project tool, for building, running, testing, packaging, and installing. No Makefile, no Rakefile, no Bundler.
+- Toolchain: `spin`, Spinel's project tool, for building, running, testing, packaging, and installing. The `Makefile` only maps targets to `spin` and OpenSpec commands. No Rakefile, no Bundler.
 - Dependencies: none. Standard library only, and only what Spinel bundles. JSON is handled by the project's own `Carat::Json`. Tests use the project's own `Carat::Testing` with committed snapshot files.
 - Terminal I/O: `io/console` and `IO.select`, no curses. Child processes: `Process.spawn` with `IO.pipe`, never `IO.popen`.
 - Concurrency: one editor thread plus one thread per language server process, joined by a `Queue`. No Ractor.
@@ -227,21 +227,25 @@ Decided in `docs/architecture.md`. Not yet in place; update this section when it
 
 ## Commands
 
-Planned in `docs/architecture.md`; confirm each one when the project skeleton lands and keep this list current.
+Every command has a Makefile target. Run `make help` for the full list. The `spin` targets are planned in `docs/architecture.md`; confirm each one when the project skeleton lands and keep this list current.
 
-- Install the toolchain: build Spinel from its repository with `make deps && make`, then `make install` so `spinel` and `spin` are on the path.
-- Build: `spin build`
-- Run locally: `spin run carat -- FILE`
-- Test: `spin test`
-- Lint: part of `spin test`, through the `test/lint.rb` program
-- Regenerate the default config mirror: `spin run carat-gen-config`
-- Clean: `spin clean`
+- `make doctor`: check that `spinel`, `spin`, a C compiler, and `node` are on the path.
+- `make toolchain`: build and install Spinel and `spin` from a local checkout at `SPINEL_SRC`, into `PREFIX`.
+- `make build`: `spin build`, compiles every `bin/*.rb` into `build/bin`.
+- `make run FILE=path`: `spin run carat -- path`.
+- `make test`: `spin test`, every test program against its snapshot.
+- `make lint`: `spin test test/lint.rb`.
+- `make snapshots`: rebuild the test programs with Spinel and rewrite their `.expected` files; review the diff before committing.
+- `make gen-config`: `spin run carat-gen-config`, regenerates the default config mirror and the plugin registry.
+- `make check`: build, gen-config, and test; run it before every push.
+- `make install`, `make pack`, `make clean`: `spin install`, `spin pack`, `spin clean`.
+- `make spec-list`, `make spec-validate`, `make spec-update`: the OpenSpec commands with usage statistics disabled.
 
 ## Layout
 
 Planned in `docs/architecture.md`, section 10, in the shape `spin` expects. Create directories as the roadmap reaches them.
 
-- `spin.toml`: the project manifest.
+- `spin.toml`: the project manifest. `Makefile`: the command map. `.gitignore`: `build/` and `dist/`.
 - `bin/carat.rb`: entry point and composition root, the only place drivers are constructed. `bin/carat-gen-config.rb` generates the default config mirror. Every `bin/*.rb` is a compile root.
 - `config/default.json`: every default option and key binding. The generated `carat/domain/default_config.rb` mirrors it and is never edited by hand.
 - `carat.rb` and `carat/`: the library. `carat/domain/` entities, `carat/use_cases/`, `carat/ports/`, `carat/adapters/`, `carat/drivers/`, `carat/doubles/` test doubles, and `carat/testing.rb`.
