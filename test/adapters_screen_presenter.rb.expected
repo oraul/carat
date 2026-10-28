@@ -1,0 +1,22 @@
+ok   enter reaches the terminal
+ok   enter switches to the alternate screen and clears it
+ok   first frame clears the screen
+ok   first frame writes row 1 with the normal highlight
+ok   line number highlight is emitted before the text
+ok   first frame writes every row
+ok   cursor position, block shape, and cursor shown last
+ok   cursor hidden while drawing
+ok   identical frame writes no cell text
+ok   identical frame writes no second row
+ok   identical frame still positions the cursor
+ok   unchanged shape is not repeated
+ok   changed row is written with its highlight
+ok   unchanged row is not written
+ok   bar shape is emitted when it changes
+ok   a size change clears the screen
+ok   a size change repaints every row
+ok   a wide character is written once and its continuation cell skipped
+ok   leave reaches the terminal
+ok   leave restores the block cursor and the main screen last
+ok   output begins with the alternate screen
+adapters_screen_presenter: 21 passed, 0 failed

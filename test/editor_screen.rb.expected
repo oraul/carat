@@ -1,0 +1,26 @@
+ok   three lines with numbers and a tilde
+ok   status line names the file
+ok   message row shows the opened message
+ok   output begins with the alternate screen
+ok   first frame paints row 1
+ok   first frame carries the gutter and the text
+ok   terminal entered once
+ok   one write per frame
+ok   unchanged text row is not rewritten
+ok   cursor moved to row 2 after the gutter
+ok   insert mode switches to the bar cursor
+ok   message row shows insert
+ok   normal mode switches back to the block cursor
+ok   frame has 10 rows after resizing
+ok   status line moved to row 8
+ok   resize repaints in full
+ok   status line on row 22 at 24 rows
+ok   G shows the last line at the bottom of the window
+ok   position is Bot
+ok   gg scrolls back to the top
+ok   position is Top
+ok   cursor on row 8
+ok   window scrolled with scrolloff capped at half the window
+ok   leaving restores the main screen last
+ok   terminal left once
+editor_screen: 25 passed, 0 failed

@@ -2,5 +2,66 @@
 # Every file is pulled in here once; bin/*.rb and test/*.rb require only this
 # file (and test/*.rb also carat/testing.rb).
 require_relative "carat/version"
+
+# Entities
 require_relative "carat/domain/json"
 require_relative "carat/domain/default_config"
+require_relative "carat/domain/position"
+require_relative "carat/domain/range"
+require_relative "carat/domain/cursor"
+require_relative "carat/domain/buffer"
+require_relative "carat/domain/key"
+require_relative "carat/domain/key_notation"
+require_relative "carat/domain/mode"
+require_relative "carat/domain/options"
+require_relative "carat/domain/keymap"
+require_relative "carat/domain/ex_command"
+require_relative "carat/domain/ex_grammar"
+require_relative "carat/domain/highlight"
+require_relative "carat/domain/display_width"
+require_relative "carat/domain/cell"
+require_relative "carat/domain/frame"
+require_relative "carat/domain/window"
+require_relative "carat/domain/editor_state"
+
+# Ports
+require_relative "carat/ports/terminal_port"
+require_relative "carat/ports/clock_port"
+require_relative "carat/ports/file_port"
+require_relative "carat/ports/config_port"
+
+# Use cases
+require_relative "carat/use_cases/outcome"
+require_relative "carat/use_cases/move"
+require_relative "carat/use_cases/enter_insert"
+require_relative "carat/use_cases/insert_text"
+require_relative "carat/use_cases/leave_insert"
+require_relative "carat/use_cases/files/open_file"
+require_relative "carat/use_cases/files/save_file"
+require_relative "carat/use_cases/files/quit"
+require_relative "carat/use_cases/files/execute_ex"
+require_relative "carat/use_cases/edit_command_line"
+require_relative "carat/use_cases/dispatcher"
+require_relative "carat/use_cases/handle_key"
+
+# Interface adapters
+require_relative "carat/adapters/key_decoder"
+require_relative "carat/adapters/input_controller"
+require_relative "carat/adapters/frame_presenter"
+require_relative "carat/adapters/screen_presenter"
+require_relative "carat/adapters/json_config_gateway"
+require_relative "carat/adapters/editor_assembly"
+
+# Test doubles
+require_relative "carat/doubles/manual_clock"
+require_relative "carat/doubles/fake_terminal"
+require_relative "carat/doubles/memory_files"
+require_relative "carat/doubles/fixed_config"
+require_relative "carat/doubles/editor_harness"
+
+# Frameworks and drivers
+require_relative "carat/drivers/ansi_terminal"
+require_relative "carat/drivers/disk_files"
+require_relative "carat/drivers/monotonic_clock"
+require_relative "carat/drivers/signals"
+require_relative "carat/drivers/main_loop"

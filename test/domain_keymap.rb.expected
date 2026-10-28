@@ -1,0 +1,21 @@
+ok   default configuration has no keymap errors
+ok   j in normal
+ok   arrow in normal
+ok   escape in insert
+ok   colon in normal
+ok   g is a prefix
+ok   gg completes
+ok   leader is a prefix
+ok   leader w remaps
+ok   unbound key
+ok   unbound after prefix
+ok   mode with no bindings
+ok   control r
+ok   backspace in cmdline
+ok   a matches and is a prefix
+ok   ab matches
+ok   j still bound after a bad key
+ok   k with a non-string value is unbound
+ok   malformed bindings are reported with mode and key
+ok   null unbinds a key
+domain_keymap: 20 passed, 0 failed

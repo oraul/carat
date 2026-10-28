@@ -1,0 +1,43 @@
+ok   trailing newline
+ok   no trailing newline
+ok   empty text
+ok   only a newline
+ok   blank line in the middle
+ok   windows endings
+ok   unix ending
+ok   windows ending
+ok   no terminator
+ok   windows round trip
+ok   missing final newline added
+ok   empty becomes one newline
+ok   loaded buffer is unmodified
+ok   loaded buffer keeps its path
+ok   line count
+ok   line outside the buffer is empty
+ok   byte count includes the newline
+ok   insert within a line
+ok   insert a newline
+ok   insert multi-line text
+ok   insert at line end
+ok   insert past line end clamps
+ok   insert empty text
+ok   insert on second line
+ok   insert marks the buffer modified
+ok   delete within a line
+ok   delete across lines
+ok   delete a line break
+ok   delete reversed range
+ok   delete nothing
+ok   delete whole buffer
+ok   inclusive range deletes its end character
+ok   replace within a line
+ok   replace across lines
+ok   replace two lines with one
+ok   insert lines without removing
+ok   remove every line leaves one
+ok   append at the end
+ok   set_lines marks the buffer modified
+ok   unmodified after load
+ok   modified after insert
+ok   unmodified after save
+domain_buffer: 42 passed, 0 failed

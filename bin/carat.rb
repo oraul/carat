@@ -1,8 +1,8 @@
-# Carat entry point and composition root.
-#
-# The skeleton version opens a file, reports it, and quits. The editor loop,
-# drivers and use cases arrive with the editor-foundation change; this file
-# is where they will be constructed and injected.
+# Carat entry point and composition root: the only place drivers are
+# constructed. Argument checks and the terminal check happen before anything
+# touches the terminal; signals are trapped before the loop starts; the raw
+# block holds a single call; the screen is restored in an ensure.
+require "io/console"
 require_relative "../carat"
 
 if ARGV.length != 1
@@ -10,9 +10,25 @@ if ARGV.length != 1
   exit 1
 end
 
+unless STDIN.tty?
+  STDERR.puts "carat: standard input is not a terminal"
+  exit 1
+end
+
 path = ARGV[0]
-config = Carat::Json.parse(Carat::Domain::DEFAULT_CONFIG_JSON)
-lines = File.exist?(path) ? File.read(path).split("\n") : []
-STDOUT.puts "carat #{Carat::VERSION}"
-STDOUT.puts "#{path}: #{lines.length} lines"
-STDOUT.puts "default bindings: #{config["keymaps"]["normal"].length} normal, #{config["keymaps"]["insert"].length} insert"
+Carat::Drivers::Signals.install
+
+terminal = Carat::Drivers::AnsiTerminal.new(STDIN, STDOUT)
+clock = Carat::Drivers::MonotonicClock.new
+files = Carat::Drivers::DiskFiles.new
+config = Carat::Adapters::JsonConfigGateway.new.load
+assembly = Carat::Adapters::EditorAssembly.new(terminal, clock, files, config)
+main_loop = Carat::Drivers::MainLoop.new(assembly, terminal)
+
+assembly.screen_presenter.enter
+assembly.open(path)
+begin
+  STDIN.raw { |io| main_loop.run }
+ensure
+  assembly.screen_presenter.leave
+end

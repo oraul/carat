@@ -1,0 +1,47 @@
+ok   window rows with numbers and a tilde
+ok   status line starts with the path
+ok   status line ends with the cursor and position
+ok   message row is blank
+ok   status line uses the status highlight
+ok   status highlight fills the row
+ok   the ruler is dropped when it would touch the path
+ok   gutter uses the line number highlight
+ok   tilde uses the non-text highlight
+ok   cursor sits after the gutter
+ok   block cursor in normal mode
+ok   number off removes the gutter
+ok   cursor at column 0 without a gutter
+ok   gutter widens to the digits of the line count
+ok   position is Top at the start of a long buffer
+ok   relative numbers around the cursor with the absolute number on its row
+ok   cursor row shows 0 when number is off
+ok   modified buffer shows [+]
+ok   status line shows row,col and All
+ok   unnamed buffer
+ok   insert indicator
+ok   bar cursor in insert mode
+ok   message replaces the indicator
+ok   error message highlight
+ok   command line with colon
+ok   cursor after the command line text
+ok   first window row shows line 8 after moving to row 10
+ok   cursor row is third from the bottom of the six window rows
+ok   window top is 7
+ok   position shows a percentage
+ok   last line at the bottom when the cursor reaches it
+ok   position is Bot at the end
+ok   scrolls back up to the start
+ok   cursor is inside the frame
+ok   the row shows the text around the cursor
+ok   row no longer starts at column 0
+ok   scrolls back to column 0
+ok   tab expands to the next multiple of tabstop
+ok   cursor after a tab is placed by display width
+ok   cursor after a wide character is at column 2
+ok   wide character cell has width 2
+ok   the cell after a wide character is a continuation
+ok   control characters show as caret notation
+ok   frame has 24 rows
+ok   frame has 10 rows after shrinking
+ok   status line moved to row 8
+adapters_frame_presenter: 46 passed, 0 failed

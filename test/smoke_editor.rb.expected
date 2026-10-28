@@ -1,0 +1,21 @@
+ok   no argument prints the usage
+ok   no argument exits with status 1
+ok   piped input is refused
+ok   piped input exits with status 1
+ok   the editor enters the alternate screen
+ok   the editor shows the new file message
+ok   typed text is drawn
+ok   insert mode uses the bar cursor
+ok   escape returns to the block cursor
+ok   the editor exits with status 0 after :wq
+ok   the file holds the typed text
+ok   the output ends with leaving the alternate screen
+ok   the editor shows the existing file message
+ok   x reports itself as not implemented
+ok   quit is refused with E37
+ok   the editor exits with status 0 after :q!
+ok   the forced quit did not write
+ok   the editor drew its first frame for the signal check
+ok   SIGTERM ends the editor with status 0
+ok   SIGTERM leaves the alternate screen
+smoke_editor: 20 passed, 0 failed

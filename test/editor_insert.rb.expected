@@ -1,0 +1,30 @@
+ok   typing a word
+ok   typing a non-ascii character
+ok   right reaches the end of the line
+ok   left stops at 0
+ok   enter splits the line
+ok   enter at the end opens a line
+ok   backspace in a line
+ok   backspace joins lines
+ok   backspace at the start of the buffer
+ok   delete in a line
+ok   delete at the end of a line joins
+ok   delete at the end of the buffer
+ok   escape after typing
+ok   escape at column 0
+ok   down keeps the insert column
+ok   typing then moving then typing
+ok   unbound control key inserts nothing
+ok   typing marks the buffer modified
+ok   autoindent copies the indent
+ok   o copies the indent with autoindent
+ok   o does not indent without autoindent
+ok   expandtab inserts spaces to the next tabstop
+ok   noexpandtab inserts a tab character
+ok   insert indicator shown
+ok   bar cursor in insert mode
+ok   indicator cleared in normal mode
+ok   block cursor in normal mode
+ok   typed text appears on the screen
+ok   status line shows the buffer as modified
+editor_insert: 29 passed, 0 failed

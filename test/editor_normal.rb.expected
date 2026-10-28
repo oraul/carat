@@ -1,0 +1,47 @@
+ok   starts in normal mode
+ok   starts at the first line
+ok   shows the opened message
+ok   right at line end does nothing
+ok   left at line start does nothing
+ok   right moves one column
+ok   arrows move too
+ok   empty line stays at 0
+ok   shorter line clamps the column
+ok   desired column returns
+ok   horizontal motion resets the desired column
+ok   down at the last line does nothing
+ok   up at the first line does nothing
+ok   up and down arrows
+ok   zero goes to column 0
+ok   caret goes to the first non-blank
+ok   dollar goes to the last character
+ok   dollar then down sticks to line ends
+ok   G goes to the last line
+ok   gg goes to the first line
+ok   unbound key changes nothing
+ok   i before the cursor
+ok   a after the cursor
+ok   a on an empty line
+ok   A past the end
+ok   I at the first non-blank
+ok   o opens a line below
+ok   O opens a line above
+ok   o marks the buffer modified
+ok   ctrl-c shows the quit hint
+ok   ctrl-c changes nothing else
+ok   dd reports itself
+ok   dd changes nothing
+ok   the message clears on the next key
+ok   g alone dispatches nothing
+ok   g is pending
+ok   gg completes the sequence
+ok   nothing pending after gg
+ok   a lone prefix is dropped after timeoutlen
+ok   nothing pending after the timeout
+ok   ambiguous prefix waits
+ok   shorter binding fires after timeoutlen
+ok   longer binding fires when completed in time
+ok   leader w writes the file
+ok   the file was written
+ok   a self-referencing remap stops
+editor_normal: 46 passed, 0 failed
