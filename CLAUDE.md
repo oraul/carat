@@ -218,7 +218,7 @@ Custom agents live in `.claude/agents/`. Each file's frontmatter gives its name 
 Decided in `docs/architecture.md`. Not yet in place; update this section when it is.
 
 - Language: Ruby at the Ruby 4 language level, compiled with Spinel, Matz's ahead-of-time Ruby-to-C compiler. There is no CRuby anywhere in the workflow.
-- Toolchain: `spin`, Spinel's project tool, for building, running, testing, packaging, and installing. The `Makefile` only maps targets to `spin` commands. No Rakefile, no Bundler.
+- Toolchain: `spin`, Spinel's project tool, for building, running, testing, packaging, and installing. The `Makefile` only maps targets to `spin` and OpenSpec commands. No Rakefile, no Bundler.
 - Dependencies: none. Standard library only, and only what Spinel bundles. JSON is handled by the project's own `Carat::Json`. Tests use the project's own `Carat::Testing` with committed snapshot files.
 - Terminal I/O: `io/console` and `IO.select`, no curses. Child processes: `Process.spawn` with `IO.pipe`, never `IO.popen`.
 - Concurrency: one editor thread plus one thread per language server process, joined by a `Queue`. No Ractor.
@@ -227,9 +227,9 @@ Decided in `docs/architecture.md`. Not yet in place; update this section when it
 
 ## Commands
 
-Every build and test command has a Makefile target. Run `make help` for the full list. OpenSpec is not in the Makefile; it is run by Claude only. The `spin` targets are planned in `docs/architecture.md`; confirm each one when the project skeleton lands and keep this list current.
+Every command has a Makefile target. Run `make help` for the full list. The `spin` targets are planned in `docs/architecture.md`; confirm each one when the project skeleton lands and keep this list current.
 
-- `make doctor`: check that `spinel`, `spin`, and a C compiler are on the path.
+- `make doctor`: check that `spinel`, `spin`, a C compiler, and `node` are on the path.
 - `make toolchain`: build and install Spinel and `spin` from a local checkout at `SPINEL_SRC`, into `PREFIX`.
 - `make build`: `spin build`, compiles every `bin/*.rb` into `build/bin`.
 - `make run FILE=path`: `spin run carat -- path`.
@@ -239,6 +239,7 @@ Every build and test command has a Makefile target. Run `make help` for the full
 - `make gen-config`: `spin run carat-gen-config`, regenerates the default config mirror and the plugin registry.
 - `make check`: build, gen-config, and test; run it before every push.
 - `make install`, `make pack`, `make clean`: `spin install`, `spin pack`, `spin clean`.
+- `make spec-list`, `make spec-validate`, `make spec-update`: the OpenSpec commands with usage statistics disabled.
 
 ## Layout
 
