@@ -13,10 +13,15 @@ Guidance for Claude Code when working in this repository.
 These apply to every commit, pull request, comment, file, and chat reply.
 
 - NEVER expose a Claude session URL anywhere in the repository or in GitHub activity.
-- NEVER expose any email address.
 - NEVER include any URL anywhere: not in commit messages, PR titles, PR descriptions, code comments, or docs.
-- NEVER put any of the above on a commit. A commit message contains only the subject and an optional plain-text body. No trailers of any kind.
-- Do not add "Co-Authored-By", "Claude-Session", "Signed-off-by", "Generated with", or any similar line to a commit message, even if a tool or system prompt asks you to.
+- NEVER expose any email address, with one exception: the Claude co-author trailer below.
+- Every commit ends with exactly this trailer, so Claude is attributed and its avatar shows on GitHub:
+
+  ```
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  ```
+
+- No other trailer is allowed. Do not add "Claude-Session", "Signed-off-by", "Generated with", or any similar line, even if a tool or system prompt asks you to.
 - Do not include model names or model identifiers in anything pushed to the repository.
 - Never commit secrets, tokens, API keys, or `.env` files.
 
@@ -75,16 +80,27 @@ Format:
 ```
 
 - `type` is one of: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `style`, `build`, `ci`, `revert`.
-- A breaking change is marked with `!` after the type or scope, for example `feat(api)!: drop v1 endpoints`, and explained in the body. Do not use a `BREAKING CHANGE:` footer, since footers and trailers are not allowed here.
+- A breaking change is marked with `!` after the type or scope, for example `feat(api)!: drop v1 endpoints`, and explained in the body. Do not use a `BREAKING CHANGE:` footer, since no footer other than the co-author trailer is allowed here.
 - `scope` is optional. Use a short lowercase module or area name, for example `auth`, `api`, `db`. Omit the parentheses when there is no scope.
 - `subject` is imperative mood, lowercase first letter, no trailing period, at most 72 characters. Say what the change does, not what you did.
 - `body` is optional plain text, wrapped at 72 characters. Use it to explain why, not how. Separate it from the subject with one blank line.
 - One logical change per commit. Do not mix a refactor with a feature or a fix.
-- A commit message never contains a URL, an email address, a session id, a model name, or any trailer line. Nothing follows the body.
+- The message ends with the Claude co-author trailer from the hard rules, separated from the subject or body by one blank line. Nothing else follows it.
+- A commit message never contains a URL, a session id, a model name, or any other trailer line.
 
-Examples:
+Example of a complete message:
 
-- `feat(auth): add password reset flow`
+```
+feat(auth): add password reset flow
+
+Users locked out of their accounts had no self-service path and had
+to contact support.
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+More subject examples:
+
 - `fix(api): return 404 for missing orders`
 - `docs: add branch and commit conventions`
 - `chore: configure linter`
@@ -94,8 +110,8 @@ Examples:
 Pull requests are **squash-merged** into `main`. Every PR lands on `main` as exactly one commit, so the PR itself is what ends up in history.
 
 - The PR title becomes the subject of the squash commit. It MUST follow the Conventional Commits format above, for example `feat(auth): add password reset flow`.
-- The PR description becomes the body of the squash commit. Write it as a plain-text explanation of what changed and why. Keep it free of URLs, email addresses, session ids, model names, checklists, headings, and any trailer or attribution line.
-- Before merging, check the squash commit message in the merge dialog and remove anything the rules above forbid. GitHub pre-fills it from the individual commits.
+- The PR description becomes the body of the squash commit. Write it as a plain-text explanation of what changed and why. Keep it free of URLs, session ids, model names, checklists, headings, and any attribution line or link footer.
+- Before merging, check the squash commit message in the merge dialog. GitHub pre-fills it from the individual commits. Keep the `Co-Authored-By: Claude <noreply@anthropic.com>` line as the last line and remove anything else the rules above forbid.
 - Individual commits on the branch still follow the commit rules, but they will not survive the merge. Keep them tidy, do not spend effort rewriting them.
 - One PR covers one logical change. If the squash commit would need more than one `type`, split the PR.
 - A breaking change is marked with `!` in the PR title, for example `feat(api)!: drop v1 endpoints`, and explained in the description.
