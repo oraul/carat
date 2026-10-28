@@ -5,8 +5,10 @@ Guidance for Claude Code when working in this repository.
 ## Project
 
 - Name: carat
-- Status: new project, no source code yet. The README is a placeholder.
-- When code is added, update the "Stack", "Commands", and "Layout" sections below so they stay accurate.
+- What it is: a terminal IDE written in Ruby with Neovim's modal editing model: modes, the count-operator-motion grammar, text objects, registers, and ex commands, plus IDE services such as language servers and a fuzzy finder.
+- Status: architecture defined, no source code yet. The README is a placeholder.
+- Architecture: `docs/architecture.md` is binding. Read it before planning any change. It fixes the layers, the ports, the module names, the coding rules for the core, and the roadmap order.
+- When code is added, update the "Commands" section below and keep "Stack" and "Layout" accurate.
 
 ## Hard rules
 
@@ -213,11 +215,12 @@ Custom agents live in `.claude/agents/`. Each file's frontmatter gives its name 
 
 ## Stack
 
-To be filled in when the first code lands. Record:
+Decided in `docs/architecture.md`. Not yet in place; update this section when it is.
 
-- Language and runtime version
-- Package manager and how to install dependencies
-- Framework(s) and major libraries
+- Language and runtime: Ruby, CRuby 3.3 or newer. The core under `lib/carat/core` is kept compatible with the Spinel ahead-of-time compiler so a native binary stays possible.
+- Dependencies: none at runtime in the core, standard library only. Development dependencies: `minitest`, `rubocop`, `rake`, managed with Bundler.
+- Terminal I/O: `io/console` and `IO.select`, no curses.
+- IDE services: `ruby-lsp` and RuboCop as subprocesses, driven from `lib/carat/host`.
 
 ## Commands
 
@@ -231,12 +234,22 @@ To be filled in. Keep this list current so Claude can run them without guessing:
 
 ## Layout
 
-To be filled in. Describe the top-level directories and what belongs in each.
+Planned in `docs/architecture.md`, section 10. Create directories as the roadmap reaches them.
+
+- `bin/carat`: entry point.
+- `lib/carat/core/`: Spinel-compatible core, split into `app`, `input`, `commands`, `model`, `view`, `syntax`, and `ports`.
+- `lib/carat/adapters/`: real and fake implementations of the ports.
+- `lib/carat/host/`: CRuby-only services: config loader, LSP client, formatter, finder, explorer, git.
+- `test/unit/`, `test/editor/`, `test/smoke/`: unit tests mirroring the core, full-editor tests with the fake terminal, and pseudo-terminal smoke tests.
+- `docs/`: `architecture.md` and `compatibility.md`.
+- `openspec/`: specs and change proposals.
 
 ## Coding conventions
 
 - Prefer the simplest change that fully solves the task. Do not widen scope on your own.
 - Match the existing style of the file you are editing.
 - Add or update tests alongside behavior changes.
+- Code under `lib/carat/core` follows the Spinel compatibility rules in `docs/architecture.md`, section 2. Code that needs threads, subprocesses, JSON, or gems goes under `lib/carat/host`.
+- Every Neovim command implemented gets a row in `docs/compatibility.md` and a table-driven test.
 - Keep documentation in this file and the README in sync with the code.
 - Ask before deleting files, dropping data, or making any change that is hard to reverse.

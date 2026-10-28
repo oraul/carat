@@ -1,5 +1,29 @@
 schema: spec-driven
 
+context: |
+  Carat is a terminal IDE in Ruby with Neovim's modal editing model.
+  The architecture in docs/architecture.md is binding: layers, ports,
+  module names, and the roadmap order. Read it before planning a change.
+  Core code under lib/carat/core must stay Spinel-compatible: standard
+  library only, no gems, no eval, method_missing, define_method, send
+  with a computed name, or custom hash/eql?; string literals are frozen;
+  line arrays hold only strings; every ivar is initialized in initialize.
+  CRuby-only code (threads, subprocesses, JSON, gems) lives under
+  lib/carat/host and reaches the core only through the ports.
+  Every Neovim command Carat implements is recorded in
+  docs/compatibility.md with a table-driven test.
+  Tests use minitest from the standard library.
+
+rules:
+  proposal:
+    - Name which roadmap item from docs/architecture.md the change delivers, or say it is outside the roadmap and why
+    - State what is out of scope
+  specs:
+    - Write requirements in terms of keys pressed and observable editor state, not implementation
+  tasks:
+    - Each task names the module it touches and the test that proves it
+    - Keep the editor usable after every task
+
 # Project context (optional)
 # Add only constraints that should guide OpenSpec artifacts and workflows.
 # Include constraints an agent cannot infer by reading the code.
