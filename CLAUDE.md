@@ -128,7 +128,7 @@ The PR description is the body of the squash commit on `main`. It follows the te
 - Use exactly four sections, in this order, each introduced by a level-two Markdown heading on its own line: `## Summary`, `## Changes`, `## Testing`, `## Notes`.
 - Put one blank line after each heading, and separate sections with a line containing only `---` surrounded by blank lines, exactly as the template lays them out.
 - Inside a section use plain prose and `- ` bullets only. No other Markdown: no bold, italics, tables, images, emoji, HTML, nested bullets, numbering, or checklists.
-- Wrap every line at 72 characters. Indent continuation lines of a bullet with two spaces.
+- Do not hard-wrap. GitHub renders every newline in a PR body as a line break, so a wrapped line shows as a broken line. Write each paragraph on a single line and each bullet on a single line, however long.
 - The template contains `<!-- ... -->` guidance comments. Delete every one of them. The final text contains no `<!--`, no `-->`, and no angle brackets.
 - Fill every section. Do not leave an empty bullet or an empty section.
 - Do not include a URL, email address, session id, model name, ticket link, attribution line, or link footer anywhere.
@@ -145,7 +145,7 @@ The PR description is the body of the squash commit on `main`. It follows the te
 **Changes** (required, 1 to 10 bullets)
 - One bullet per reviewable unit of change: a behavior added, changed, or removed; a module, config, or dependency touched; a doc updated.
 - Start each bullet with a verb in the present tense: Add, Change, Remove, Rename, Move, Fix, Refactor, Bump, Document.
-- Each bullet is one sentence, at most two lines. State the effect, not the diff.
+- Each bullet is one sentence on one line. State the effect, not the diff.
 - Name a file or module only when the reviewer needs it to navigate.
 - Order bullets from most to least significant.
 
@@ -167,18 +167,14 @@ The PR description is the body of the squash commit on `main`. It follows the te
 ```
 ## Summary
 
-Adds password reset by email so locked-out users can regain access
-without contacting support. Support tickets for lockouts were the
-largest category last quarter.
+Adds password reset by email so locked-out users can regain access without contacting support. Support tickets for lockouts were the largest category last quarter.
 
 ---
 
 ## Changes
 
-- Add a reset-request endpoint that emails a single-use token valid
-  for 15 minutes
-- Add a reset-confirm endpoint that validates the token and sets the
-  new password
+- Add a reset-request endpoint that emails a single-use token valid for 15 minutes
+- Add a reset-confirm endpoint that validates the token and sets the new password
 - Add rate limiting of five reset requests per hour per account
 - Document the flow in the auth module readme
 
@@ -194,8 +190,7 @@ largest category last quarter.
 
 ## Notes
 
-Closes issue 42. Tokens are stored hashed, so existing sessions are
-unaffected. Localized email templates are left for a follow-up.
+Closes issue 42. Tokens are stored hashed, so existing sessions are unaffected. Localized email templates are left for a follow-up.
 ```
 
 ## Stack
