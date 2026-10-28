@@ -203,6 +203,7 @@ This repository uses OpenSpec for spec-driven development. Specs and change prop
 - Run it with `npx @fission-ai/openspec@latest <command>`. It is not a project dependency.
 - Anonymous usage statistics are disabled for this repository. `.claude/settings.json` sets `OPENSPEC_TELEMETRY=0` for every Claude Code session here. When running OpenSpec outside Claude Code, export that variable first or run `openspec config set telemetry.enabled false` once on the machine.
 - Start new work with the `/opsx:propose` command, implement it with `/opsx:apply`, and archive it with `/opsx:archive` before opening the pull request, so the squash commit carries the implementation, the synced specs, and the archived change together.
+- Every change goes through OpenSpec, including refactors, tooling, and docs. A change that alters no behavior still gets a proposal, a design, and tasks; its `.openspec.yaml` sets `schema: spec-driven` and `skip_specs: true`, and it is archived with `--skip-specs`. The archived change is the record of why the code looks the way it does.
 - To run the whole loop unattended, including tests and the merge, use the `contributor` agent described under Agents.
 - Specs in `openspec/specs/` are the source of truth for behavior. Update them through a change proposal, not by hand.
 - Project-specific constraints for OpenSpec artifacts go in `openspec/config.yaml`.
