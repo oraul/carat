@@ -1,13 +1,16 @@
 schema: spec-driven
 
 context: |
-  Carat is a terminal IDE in Ruby with Neovim's modal editing model,
-  developed on CRuby 4 and released as a native binary built with Spinel.
+  Carat is a terminal IDE in Ruby with Neovim's modal editing model.
+  Spinel does everything: spin build, spin run, and spin test are the
+  only toolchain, at the Ruby 4 language level, and CRuby is never
+  required. Tests are Spinel programs using Carat::Testing with committed
+  .expected snapshots; there is no minitest and no RuboCop.
   The architecture in docs/architecture.md is binding: Clean Architecture
   layers (domain, use_cases, ports, adapters, drivers) with dependencies
   pointing inward only, the module names, and the roadmap order.
-  All production code must compile with Spinel: standard library only,
-  no gems, no json library (use Carat::Json), no eval, method_missing,
+  All code must compile with Spinel: standard library only, no gems,
+  no json library (use Carat::Json), no IO.popen, no eval, method_missing,
   send with a computed name, define_method under a runtime condition,
   or custom hash/eql?; string literals are frozen; line arrays hold only
   strings; every ivar is initialized in initialize; no Ractor, threads
@@ -15,7 +18,8 @@ context: |
   Every key binding lives in config/default.json; none is hard-coded.
   Every Neovim command Carat implements is recorded in
   docs/compatibility.md with a table-driven test.
-  Tests use minitest from the standard library and run on CRuby 4.
+  Layers live at carat/domain, carat/use_cases, carat/ports,
+  carat/adapters, carat/drivers; bin/*.rb are compile roots.
 
 rules:
   proposal:

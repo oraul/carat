@@ -5,7 +5,7 @@ Guidance for Claude Code when working in this repository.
 ## Project
 
 - Name: carat
-- What it is: a terminal IDE written in Ruby with Neovim's modal editing model: modes, the count-operator-motion grammar, text objects, registers, and ex commands, plus IDE services such as language servers and a fuzzy finder. Developed on CRuby 4, released as a native binary built with Spinel.
+- What it is: a terminal IDE written in Ruby with Neovim's modal editing model: modes, the count-operator-motion grammar, text objects, registers, and ex commands, plus IDE services such as language servers and a fuzzy finder. Built, tested, and shipped entirely with Spinel at the Ruby 4 language level; CRuby is never required.
 - Status: architecture defined, no source code yet. The README is a placeholder.
 - Architecture: `docs/architecture.md` is binding. Read it before planning any change. It fixes the Clean Architecture layers, the ports, the module names, the Spinel rules for all production code, the JSON configuration schema, and the roadmap order.
 - When code is added, update the "Commands" section below and keep "Stack" and "Layout" accurate.
@@ -32,7 +32,7 @@ These apply to every commit, pull request, comment, file, and chat reply.
 - Work on the branch you were assigned. Never push to `main` directly.
 - Do not create a pull request unless explicitly asked.
 - Do not rewrite history on a shared branch (no rebase, amend, or force-push).
-- Run the project's lint, format, and tests before every push once they exist.
+- Run `spin build` and `spin test` before every push once the project skeleton exists.
 
 ## Branch naming
 
@@ -217,35 +217,36 @@ Custom agents live in `.claude/agents/`. Each file's frontmatter gives its name 
 
 Decided in `docs/architecture.md`. Not yet in place; update this section when it is.
 
-- Language: Ruby. Development and tests on CRuby 4.0 or newer. Releases are native binaries compiled with Spinel, Matz's ahead-of-time Ruby-to-C compiler, whose language baseline is CRuby 4.0.
-- Dependencies: none at runtime, standard library only, and only what Spinel bundles. JSON is handled by the project's own `Carat::Json`. Development dependencies: `minitest`, `rubocop`, `rake`, managed with Bundler.
-- Terminal I/O: `io/console` and `IO.select`, no curses.
+- Language: Ruby at the Ruby 4 language level, compiled with Spinel, Matz's ahead-of-time Ruby-to-C compiler. There is no CRuby anywhere in the workflow.
+- Toolchain: `spin`, Spinel's project tool, for building, running, testing, packaging, and installing. No Makefile, no Rakefile, no Bundler.
+- Dependencies: none. Standard library only, and only what Spinel bundles. JSON is handled by the project's own `Carat::Json`. Tests use the project's own `Carat::Testing` with committed snapshot files.
+- Terminal I/O: `io/console` and `IO.select`, no curses. Child processes: `Process.spawn` with `IO.pipe`, never `IO.popen`.
 - Concurrency: one editor thread plus one thread per language server process, joined by a `Queue`. No Ractor.
 - Configuration: JSON. `config/default.json` holds every default option and key binding; users override with `~/.config/carat/config.json` and a project `.carat.json`.
 - IDE services: `ruby-lsp` and RuboCop as subprocesses over JSON-RPC and stdio.
 
 ## Commands
 
-To be filled in. Keep this list current so Claude can run them without guessing:
+Planned in `docs/architecture.md`; confirm each one when the project skeleton lands and keep this list current.
 
-- Install: _tbd_
-- Build: _tbd_
-- Test: _tbd_
-- Lint / format: _tbd_
-- Run locally: _tbd_
+- Install the toolchain: build Spinel from its repository with `make deps && make`, then `make install` so `spinel` and `spin` are on the path.
+- Build: `spin build`
+- Run locally: `spin run carat -- FILE`
+- Test: `spin test`
+- Lint: part of `spin test`, through the `test/lint.rb` program
+- Regenerate the default config mirror: `spin run carat-gen-config`
+- Clean: `spin clean`
 
 ## Layout
 
-Planned in `docs/architecture.md`, section 10. Create directories as the roadmap reaches them.
+Planned in `docs/architecture.md`, section 10, in the shape `spin` expects. Create directories as the roadmap reaches them.
 
-- `bin/carat`: entry point and composition root, the only place drivers are constructed.
-- `config/default.json`: every default option and key binding. A generated `lib/carat/domain/default_config.rb` mirrors it for the native binary and is never edited by hand.
-- `lib/carat/domain/`: entities, pure Ruby with no I/O.
-- `lib/carat/use_cases/`: one class per use case, depending only on entities and ports.
-- `lib/carat/ports/`: the interfaces use cases depend on.
-- `lib/carat/adapters/`: controllers, presenters, and gateways that implement ports.
-- `lib/carat/drivers/`: terminal, files, processes, threads, and the main loop.
-- `test/domain/`, `test/use_cases/`, `test/adapters/`, `test/editor/`, `test/doubles/`, `test/smoke/`.
+- `spin.toml`: the project manifest.
+- `bin/carat.rb`: entry point and composition root, the only place drivers are constructed. `bin/carat-gen-config.rb` generates the default config mirror. Every `bin/*.rb` is a compile root.
+- `config/default.json`: every default option and key binding. The generated `carat/domain/default_config.rb` mirrors it and is never edited by hand.
+- `carat.rb` and `carat/`: the library. `carat/domain/` entities, `carat/use_cases/`, `carat/ports/`, `carat/adapters/`, `carat/drivers/`, `carat/doubles/` test doubles, and `carat/testing.rb`.
+- `test/`: one Spinel program per file with a committed `.expected` snapshot, including `lint.rb` and `config_sync.rb`.
+- `build/`: `spin` output, ignored by git.
 - `docs/`: `architecture.md`, `compatibility.md`, `actions.md`.
 - `openspec/`: specs and change proposals.
 
