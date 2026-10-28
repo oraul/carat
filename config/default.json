@@ -1,0 +1,109 @@
+{
+  "leader": " ",
+  "timeoutlen": 500,
+  "options": {
+    "number": true,
+    "relativenumber": false,
+    "tabstop": 2,
+    "shiftwidth": 2,
+    "expandtab": true,
+    "autoindent": true,
+    "ignorecase": false,
+    "smartcase": true,
+    "hlsearch": true,
+    "incsearch": true,
+    "wrap": false,
+    "scrolloff": 5,
+    "clipboard": ""
+  },
+  "keymaps": {
+    "normal": {
+      "h": "cursor.left",
+      "j": "cursor.down",
+      "k": "cursor.up",
+      "l": "cursor.right",
+      "<Left>": "cursor.left",
+      "<Down>": "cursor.down",
+      "<Up>": "cursor.up",
+      "<Right>": "cursor.right",
+      "0": "cursor.line_start",
+      "^": "cursor.first_nonblank",
+      "$": "cursor.line_end",
+      "gg": "cursor.buffer_start",
+      "G": "cursor.buffer_end",
+      "w": "motion.word_forward",
+      "b": "motion.word_backward",
+      "e": "motion.word_end",
+      "x": "operator.delete_char",
+      "dd": "operator.delete_line",
+      "yy": "operator.yank_line",
+      "p": "operator.put_after",
+      "P": "operator.put_before",
+      "u": "history.undo",
+      "<C-r>": "history.redo",
+      ".": "history.repeat",
+      "i": "mode.insert",
+      "a": "mode.insert_after",
+      "I": "mode.insert_line_start",
+      "A": "mode.insert_line_end",
+      "o": "mode.insert_open_below",
+      "O": "mode.insert_open_above",
+      "v": "mode.visual",
+      "V": "mode.visual_line",
+      "<C-v>": "mode.visual_block",
+      ":": "mode.cmdline",
+      "/": "search.forward",
+      "?": "search.backward",
+      "n": "search.next",
+      "N": "search.previous",
+      "<C-c>": "message.quit_hint",
+      "<leader>w": ":w<CR>",
+      "<leader>q": ":q<CR>"
+    },
+    "insert": {
+      "<Esc>": "mode.normal",
+      "<CR>": "insert.newline",
+      "<BS>": "insert.backspace",
+      "<Del>": "insert.delete",
+      "<Tab>": "insert.tab",
+      "<Left>": "cursor.left",
+      "<Down>": "cursor.down",
+      "<Up>": "cursor.up",
+      "<Right>": "cursor.right"
+    },
+    "visual": {
+      "<Esc>": "mode.normal",
+      "d": "operator.delete",
+      "y": "operator.yank",
+      "c": "operator.change",
+      ">": "operator.indent",
+      "<": "operator.dedent"
+    },
+    "visual_line": {
+      "<Esc>": "mode.normal",
+      "d": "operator.delete",
+      "y": "operator.yank",
+      "c": "operator.change"
+    },
+    "visual_block": {
+      "<Esc>": "mode.normal",
+      "d": "operator.delete",
+      "y": "operator.yank"
+    },
+    "operator_pending": {
+      "<Esc>": "mode.normal"
+    },
+    "cmdline": {
+      "<Esc>": "mode.normal",
+      "<CR>": "cmdline.execute",
+      "<BS>": "cmdline.backspace"
+    }
+  },
+  "languages": {
+    "ruby": {
+      "lsp": ["ruby-lsp"],
+      "formatter": ["rubocop", "-A", "--stdin", "{file}", "--stderr"]
+    }
+  },
+  "theme": "carat-dark"
+}

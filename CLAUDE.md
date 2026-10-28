@@ -5,9 +5,9 @@ Guidance for Claude Code when working in this repository.
 ## Project
 
 - Name: carat
-- What it is: a terminal IDE written in Ruby with Neovim's modal editing model: modes, the count-operator-motion grammar, text objects, registers, and ex commands, plus IDE services such as language servers and a fuzzy finder.
+- What it is: a terminal IDE written in Ruby with Neovim's modal editing model: modes, the count-operator-motion grammar, text objects, registers, and ex commands, plus IDE services such as language servers and a fuzzy finder. Developed on CRuby 4, released as a native binary built with Spinel.
 - Status: architecture defined, no source code yet. The README is a placeholder.
-- Architecture: `docs/architecture.md` is binding. Read it before planning any change. It fixes the layers, the ports, the module names, the coding rules for the core, and the roadmap order.
+- Architecture: `docs/architecture.md` is binding. Read it before planning any change. It fixes the Clean Architecture layers, the ports, the module names, the Spinel rules for all production code, the JSON configuration schema, and the roadmap order.
 - When code is added, update the "Commands" section below and keep "Stack" and "Layout" accurate.
 
 ## Hard rules
@@ -217,10 +217,12 @@ Custom agents live in `.claude/agents/`. Each file's frontmatter gives its name 
 
 Decided in `docs/architecture.md`. Not yet in place; update this section when it is.
 
-- Language and runtime: Ruby, CRuby 3.3 or newer. The core under `lib/carat/core` is kept compatible with the Spinel ahead-of-time compiler so a native binary stays possible.
-- Dependencies: none at runtime in the core, standard library only. Development dependencies: `minitest`, `rubocop`, `rake`, managed with Bundler.
+- Language: Ruby. Development and tests on CRuby 4.0 or newer. Releases are native binaries compiled with Spinel, Matz's ahead-of-time Ruby-to-C compiler, whose language baseline is CRuby 4.0.
+- Dependencies: none at runtime, standard library only, and only what Spinel bundles. JSON is handled by the project's own `Carat::Json`. Development dependencies: `minitest`, `rubocop`, `rake`, managed with Bundler.
 - Terminal I/O: `io/console` and `IO.select`, no curses.
-- IDE services: `ruby-lsp` and RuboCop as subprocesses, driven from `lib/carat/host`.
+- Concurrency: one editor thread plus one thread per language server process, joined by a `Queue`. No Ractor.
+- Configuration: JSON. `config/default.json` holds every default option and key binding; users override with `~/.config/carat/config.json` and a project `.carat.json`.
+- IDE services: `ruby-lsp` and RuboCop as subprocesses over JSON-RPC and stdio.
 
 ## Commands
 
@@ -236,12 +238,15 @@ To be filled in. Keep this list current so Claude can run them without guessing:
 
 Planned in `docs/architecture.md`, section 10. Create directories as the roadmap reaches them.
 
-- `bin/carat`: entry point.
-- `lib/carat/core/`: Spinel-compatible core, split into `app`, `input`, `commands`, `model`, `view`, `syntax`, and `ports`.
-- `lib/carat/adapters/`: real and fake implementations of the ports.
-- `lib/carat/host/`: CRuby-only services: config loader, LSP client, formatter, finder, explorer, git.
-- `test/unit/`, `test/editor/`, `test/smoke/`: unit tests mirroring the core, full-editor tests with the fake terminal, and pseudo-terminal smoke tests.
-- `docs/`: `architecture.md` and `compatibility.md`.
+- `bin/carat`: entry point and composition root, the only place drivers are constructed.
+- `config/default.json`: every default option and key binding. A generated `lib/carat/domain/default_config.rb` mirrors it for the native binary and is never edited by hand.
+- `lib/carat/domain/`: entities, pure Ruby with no I/O.
+- `lib/carat/use_cases/`: one class per use case, depending only on entities and ports.
+- `lib/carat/ports/`: the interfaces use cases depend on.
+- `lib/carat/adapters/`: controllers, presenters, and gateways that implement ports.
+- `lib/carat/drivers/`: terminal, files, processes, threads, and the main loop.
+- `test/domain/`, `test/use_cases/`, `test/adapters/`, `test/editor/`, `test/doubles/`, `test/smoke/`.
+- `docs/`: `architecture.md`, `compatibility.md`, `actions.md`.
 - `openspec/`: specs and change proposals.
 
 ## Coding conventions
@@ -249,7 +254,8 @@ Planned in `docs/architecture.md`, section 10. Create directories as the roadmap
 - Prefer the simplest change that fully solves the task. Do not widen scope on your own.
 - Match the existing style of the file you are editing.
 - Add or update tests alongside behavior changes.
-- Code under `lib/carat/core` follows the Spinel compatibility rules in `docs/architecture.md`, section 2. Code that needs threads, subprocesses, JSON, or gems goes under `lib/carat/host`.
+- All production code follows the Spinel rules in `docs/architecture.md`, section 2.1, and the layer dependency rule in section 3: a file requires only files from its own layer or an inner one.
+- Key bindings are never hard-coded in Ruby. Add or change them in `config/default.json` and regenerate the Ruby mirror.
 - Every Neovim command implemented gets a row in `docs/compatibility.md` and a table-driven test.
 - Keep documentation in this file and the README in sync with the code.
 - Ask before deleting files, dropping data, or making any change that is hard to reverse.
