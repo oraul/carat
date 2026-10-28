@@ -1,0 +1,11 @@
+ok   bang and argument
+ok   leading colon and spaces
+ok   long form
+ok   wq with bang
+ok   edit with path
+ok   argument with spaces trimmed
+ok   unknown word
+ok   number only
+ok   empty
+ok   double colon
+domain_ex_grammar: 10 passed, 0 failed

@@ -1,0 +1,42 @@
+ok   ascii letter
+ok   several letters
+ok   multi-byte character
+ok   enter and ctrl-c
+ok   backspace
+ok   arrow up
+ok   arrow down
+ok   arrow right
+ok   arrow left
+ok   delete
+ok   page up
+ok   ss3 home
+ok   ss3 f1
+ok   csi f5
+ok   modified arrow
+ok   alt x
+ok   alt multi-byte
+ok   double escape leaves one pending
+ok   arrow then letter
+ok   unknown csi
+ok   invalid utf-8 byte
+ok   first byte of a character produces nothing
+ok   second byte completes the character
+ok   nothing pending after the character
+ok   lone escape waits
+ok   escape is pending
+ok   flush turns the lone escape into the escape key
+ok   nothing pending after flush
+ok   escape followed by a sequence in the next read
+ok   flush of a partial sequence yields escape and the bracket
+ok   flush drops an incomplete character
+ok   nothing pending after dropping
+ok   letter
+ok   escape
+ok   up
+ok   delete
+ok   f1
+ok   f12
+ok   alt x
+ok   unicode
+ok   every key round-trips through encode and feed
+adapters_key_decoder: 41 passed, 0 failed

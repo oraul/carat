@@ -1,0 +1,122 @@
+# Spec Delta
+
+## Purpose
+
+Command-line mode lets the user type an ex command after ":" and run it with Enter. This capability covers editing the command line and the file commands :w, :q, :wq, and :e with their bang and long forms, with Vim's messages for success and failure.
+
+## ADDED Requirements
+
+### Requirement: Colon enters command-line mode
+Pressing ":" in normal mode SHALL enter command-line mode with an empty command line, shown on the bottom row prefixed by ":" with the cursor after the text.
+
+#### Scenario: Enter the command line
+- **WHEN** ":" is pressed in normal mode
+- **THEN** the mode is cmdline and the bottom row shows ":"
+
+### Requirement: The command line is edited with typed keys
+In command-line mode printable keys SHALL append to the command line, Backspace SHALL remove the last character, Backspace on an empty command line SHALL return to normal mode, and Escape SHALL discard the command line and return to normal mode.
+
+#### Scenario: Typing and correcting
+- **WHEN** ":", "w", "x", Backspace are pressed
+- **THEN** the bottom row shows ":w"
+
+#### Scenario: Backspace on empty leaves
+- **WHEN** ":" then Backspace are pressed
+- **THEN** the mode is normal and the bottom row is empty
+
+#### Scenario: Escape discards
+- **WHEN** ":", "w", Escape are pressed on a modified buffer
+- **THEN** the mode is normal and no file is written
+
+### Requirement: Enter executes the command and returns to normal mode
+Enter SHALL run the command line as an ex command and return to normal mode, showing the command's message if it produced one. An empty command line SHALL do nothing.
+
+#### Scenario: Empty command
+- **WHEN** ":" then Enter are pressed
+- **THEN** the mode is normal and nothing else changes
+
+### Requirement: Unknown commands report E492
+A command whose name is not an editor command SHALL show "E492: Not an editor command: " followed by the text typed, and change nothing.
+
+#### Scenario: Unknown command
+- **WHEN** ":foo" is run
+- **THEN** the message is "E492: Not an editor command: foo"
+
+### Requirement: Write saves the buffer
+":w" and ":write" SHALL write the buffer's text to its path, clear the modified flag, and show the message in Vim's form: the quoted path, then the line count with "L", the byte count with "B", and "written", for example "\"a.txt\" 2L, 8B written". With an argument the command SHALL write to that path instead and, when the buffer had no path, adopt it. A buffer with no path and no argument SHALL report "E32: No file name".
+
+#### Scenario: Write an edited file
+- **WHEN** the buffer for "a.txt" holds ["one", "two"] after an edit and ":w" is run
+- **THEN** the file "a.txt" contains "one\ntwo\n", the buffer is unmodified, and the message is "\"a.txt\" 2L, 8B written"
+
+#### Scenario: Long form
+- **WHEN** ":write" is run on the same buffer
+- **THEN** the file is written and the same message shown
+
+#### Scenario: Write to another path
+- **WHEN** ":w b.txt" is run on the buffer for "a.txt"
+- **THEN** "b.txt" contains the text, "a.txt" is untouched, and the buffer path stays "a.txt"
+
+#### Scenario: No file name
+- **WHEN** ":w" is run on a buffer with no path
+- **THEN** the message is "E32: No file name" and nothing is written
+
+#### Scenario: Write failure is reported
+- **WHEN** ":w" is run and the file cannot be written
+- **THEN** the message starts with "E212: Can't open file for writing" and the buffer stays modified
+
+### Requirement: Quit leaves the editor unless changes are unsaved
+":q" and ":quit" SHALL end the editor when the buffer is unmodified and SHALL show "E37: No write since last change (add ! to override)" and stay otherwise. ":q!" and ":quit!" SHALL end the editor regardless of the modified flag without writing.
+
+#### Scenario: Quit a clean buffer
+- **WHEN** ":q" is run on an unmodified buffer
+- **THEN** the editor ends
+
+#### Scenario: Quit refused
+- **WHEN** ":q" is run on a modified buffer
+- **THEN** the editor stays, the message is "E37: No write since last change (add ! to override)", and the mode is normal
+
+#### Scenario: Forced quit
+- **WHEN** ":q!" is run on a modified buffer
+- **THEN** the editor ends and the file is not written
+
+### Requirement: Write-quit writes then quits
+":wq" SHALL write the buffer as ":w" does and then end the editor; if the write fails the editor SHALL stay and show the write error. ":wq!" SHALL do the same with a forced write. ":wq path" SHALL write to that path first.
+
+#### Scenario: Write and quit
+- **WHEN** ":wq" is run on a modified buffer for "a.txt"
+- **THEN** "a.txt" holds the buffer text and the editor ends
+
+#### Scenario: Write-quit with no file name
+- **WHEN** ":wq" is run on a buffer with no path
+- **THEN** the editor stays and the message is "E32: No file name"
+
+### Requirement: Edit opens a file or reloads the current one
+":e path" and ":edit path" SHALL replace the buffer with the file at that path, or with an empty buffer for that path if the file does not exist, placing the cursor at (0, 0). ":e" with no argument SHALL reload the current file. Either SHALL be refused with E37 when the buffer is modified unless the bang form is used, which discards the changes.
+
+#### Scenario: Open another file
+- **WHEN** ":e b.txt" is run on an unmodified buffer and "b.txt" holds "zz"
+- **THEN** the buffer path is "b.txt", the lines are ["zz"], the cursor is at (0, 0), and the message is "\"b.txt\" 1L, 3B"
+
+#### Scenario: Open a new file
+- **WHEN** ":e new.txt" is run and the file does not exist
+- **THEN** the buffer path is "new.txt", the lines are [""], and the message is "\"new.txt\" [New]"
+
+#### Scenario: Refused while modified
+- **WHEN** ":e b.txt" is run on a modified buffer
+- **THEN** the message is "E37: No write since last change (add ! to override)" and the buffer is unchanged
+
+#### Scenario: Forced reload discards changes
+- **WHEN** ":e!" is run on a modified buffer for "a.txt"
+- **THEN** the lines are those of the file on disk and the buffer is unmodified
+
+### Requirement: Command names accept a bang and an argument
+A command line SHALL be parsed as a name of letters, an optional "!" directly after it, and the rest after whitespace as the argument. Leading and trailing whitespace and leading colons SHALL be ignored.
+
+#### Scenario: Bang and argument
+- **WHEN** the command line "w! out.txt" is parsed
+- **THEN** the name is "w", bang is set, and the argument is "out.txt"
+
+#### Scenario: Leading colon and spaces
+- **WHEN** the command line " :q " is parsed
+- **THEN** the name is "q", bang is not set, and the argument is empty

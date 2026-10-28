@@ -6,7 +6,7 @@ Guidance for Claude Code when working in this repository.
 
 - Name: carat
 - What it is: a terminal IDE written in Ruby with Neovim's modal editing model: modes, the count-operator-motion grammar, text objects, registers, and ex commands, plus IDE services such as language servers, and a plugin system on which the explorer, finder, and git integration are built. Built, tested, and shipped entirely with Spinel at the Ruby 4 language level; CRuby is never required.
-- Status: project skeleton in place and verified under Spinel: manifest, require graph, `Carat::Json`, `Carat::Testing`, the config generator, the lint and config tests, and an entry point that opens a file and quits. No editing yet; the next roadmap item is `editor-foundation`. The README is a placeholder.
+- Status: roadmap items 1 and 2 are done. The skeleton (manifest, require graph, `Carat::Json`, `Carat::Testing`, the config generator, the lint and config tests) and the editor foundation are in place: one window, normal, insert, and command-line modes with the foundation bindings, `:w`, `:q`, `:wq`, and `:e` with their bang and long forms, the editor test harness over doubles, and a smoke test in a pseudo-terminal. The next roadmap item is `command-grammar`.
 - Architecture: `docs/architecture.md` is binding. Read it before planning any change. It fixes the Clean Architecture layers, the ports, the module names, the Spinel rules for all production code, the JSON configuration schema, and the roadmap order.
 - When code is added, update the "Commands" section below and keep "Stack" and "Layout" accurate.
 
@@ -220,7 +220,7 @@ Decided in `docs/architecture.md` and in place since the project skeleton.
 
 - Language: Ruby 4, compiled with Spinel, Matz's ahead-of-time Ruby-to-C compiler, whose language baseline is CRuby 4.0. The exact Spinel commit is pinned as `SPINEL_REF` in the Makefile. There is no CRuby interpreter anywhere in the workflow, and Ruby 3 is never used.
 - Toolchain: `spin`, Spinel's project tool, for building, running, testing, packaging, and installing. The `Makefile` only maps targets to `spin` and OpenSpec commands. No Rakefile, no Bundler.
-- Dependencies: none. Standard library only, and only what Spinel bundles. JSON is handled by the project's own `Carat::Json`. Tests use the project's own `Carat::Testing` with committed snapshot files.
+- Dependencies: none. Standard library only, and only what Spinel bundles: `io/console` in the terminal driver, and `pty` and `open3` in the smoke test program only. JSON is handled by the project's own `Carat::Json`. Tests use the project's own `Carat::Testing` with committed snapshot files.
 - Terminal I/O: `io/console` and `IO.select`, no curses. Child processes: `Process.spawn` with `IO.pipe`, never `IO.popen`.
 - Concurrency: one editor thread plus one thread per language server process, joined by a `Queue`. No Ractor.
 - Configuration: JSON. `config/default.json` holds every default option and key binding; users override with `~/.config/carat/config.json` and a project `.carat.json`.
@@ -235,7 +235,7 @@ Every command has a Makefile target. Run `make help` for the full list. All targ
 - `make spinel-rev`: print the pinned Spinel commit, the CI cache key.
 - `make build`: `spin build`, compiles every `bin/*.rb` into `build/bin`.
 - `make run FILE=path`: `spin run carat -- path`.
-- `make test`: `spin test`, every test program against its snapshot.
+- `make test`: `make build` first, because `test/smoke_editor.rb` runs `build/bin/carat` in a pseudo-terminal, then `spin test`, every test program against its snapshot. `spin test` alone does not build `bin/`.
 - `make lint`: `spin test test/lint.rb`.
 - `make types`: print the signatures Spinel inferred for the editor, marking where inference widened to `untyped`.
 - `make diagnose`: run `spinel-doctor` on every compile root. It is Spinel's own checker and the closest thing to a linter for this project: unsupported constructs, unresolved calls, widened slots, boxing advice, a build, and a behavior check. It must report clean.
@@ -247,17 +247,23 @@ Every command has a Makefile target. Run `make help` for the full list. All targ
 
 ## Layout
 
-Defined in `docs/architecture.md`, section 11, in the shape `spin` expects. The skeleton created the top level; create the remaining layer directories as the roadmap reaches them.
+Defined in `docs/architecture.md`, section 11, in the shape `spin` expects. Every layer directory exists; `carat/plugin_api.rb`, `carat/plugins/`, and `config/plugins.json` arrive with the plugin host.
 
 - `spin.toml`: the project manifest. `Makefile`: the command map. `.gitignore`: `build/` and `dist/`.
-- `bin/carat.rb`: entry point and composition root, the only place drivers are constructed. `bin/carat-gen-config.rb` generates the default config mirror. Every `bin/*.rb` is a compile root.
+- `bin/carat.rb`: entry point and composition root, the only place drivers are constructed: it checks the arguments and the terminal, installs the signal flags, builds the drivers and the `EditorAssembly`, and runs the `MainLoop` inside the single-call `STDIN.raw` block. `bin/carat-gen-config.rb` generates the default config mirror. Every `bin/*.rb` is a compile root.
 - `config/default.json`: every default option and key binding. The generated `carat/domain/default_config.rb` mirrors it and is never edited by hand.
-- `carat.rb` and `carat/`: the library. `carat/domain/` entities, `carat/use_cases/`, `carat/ports/`, `carat/adapters/`, `carat/drivers/`, `carat/doubles/` test doubles, and `carat/testing.rb`.
+- `carat.rb`: the require graph, innermost layer first. `carat/version.rb`; `carat/testing.rb`, the assertion harness.
+- `carat/domain/`: entities. `json.rb`, `position.rb`, `range.rb`, `cursor.rb`, `buffer.rb` (the four primitives), `key.rb`, `key_notation.rb`, `mode.rb`, `options.rb`, `keymap.rb`, `ex_command.rb`, `ex_grammar.rb`, `highlight.rb`, `display_width.rb`, `cell.rb`, `frame.rb`, `window.rb`, `editor_state.rb`.
+- `carat/ports/`: `terminal_port.rb`, `clock_port.rb`, `file_port.rb`, `config_port.rb`. Each is a class whose methods raise `NotImplementedError`; drivers and doubles subclass it.
+- `carat/use_cases/`: `handle_key.rb` and `dispatcher.rb` (the action name registry), `move.rb`, `enter_insert.rb`, `insert_text.rb`, `leave_insert.rb`, `edit_command_line.rb`, `outcome.rb`, and `files/` with `open_file.rb`, `save_file.rb`, `quit.rb`, `execute_ex.rb` (the ex command registry).
+- `carat/adapters/`: `key_decoder.rb`, `input_controller.rb`, `frame_presenter.rb`, `screen_presenter.rb`, `json_config_gateway.rb`, `editor_assembly.rb` (wires use cases and adapters over the ports for both `bin/carat.rb` and the test harness).
+- `carat/drivers/`: `ansi_terminal.rb`, `disk_files.rb`, `monotonic_clock.rb`, `signals.rb`, `main_loop.rb`.
+- `carat/doubles/`: `fake_terminal.rb`, `manual_clock.rb`, `memory_files.rb`, `fixed_config.rb`, `editor_harness.rb` (the whole editor over the doubles; editor tests type keys in Vim notation).
 - `carat/plugin_api.rb` and `carat/plugins/`: the plugin API, the generated registry, and the built-in compiled plugins. `config/plugins.json` lists them in order.
-- `test/`: one Spinel program per file with a committed `.expected` snapshot, including `lint.rb` and `config_sync.rb`. Regenerate snapshots only with `make snapshots` and review the diff.
+- `test/`: one Spinel program per file with a committed `.expected` snapshot: `domain_*.rb`, `use_cases_*.rb`, `adapters_*.rb`, `editor_*.rb` (whole-editor tests over the harness), `smoke_editor.rb` (the binary in a pseudo-terminal), `json.rb`, `lint.rb`, `config_sync.rb`. Regenerate snapshots only with `make snapshots` and review the diff.
 - `.github/workflows/ci.yml`: restores the installed toolchain from the Actions cache keyed by the pinned Spinel commit, builds it with `make toolchain` only on a cache miss, then runs `make build`, checks the generated config, and runs `make test` on Ubuntu.
-- `build/`: `spin` output, ignored by git.
-- `docs/`: `architecture.md`, `compatibility.md`, `actions.md`.
+- `build/`: `spin` output, ignored by git; `build/smoke/` holds the smoke test's files.
+- `docs/`: `architecture.md`, `compatibility.md` (every Neovim command implemented, with its test), `actions.md` (every action name a keymap may use).
 - `openspec/`: specs and change proposals.
 
 ## Coding conventions
@@ -266,6 +272,7 @@ Defined in `docs/architecture.md`, section 11, in the shape `spin` expects. The 
 - Match the existing style of the file you are editing.
 - Add or update tests alongside behavior changes.
 - All production code follows the Spinel rules in `docs/architecture.md`, section 2.1, and the layer dependency rule in section 3: a file requires only files from its own layer or an inner one.
+- Every method, attribute, and instance variable under `carat/` carries an inline RBS signature; `test/lint.rb` enforces it. Use required parameters only, since Spinel seeds no optional, rest, or keyword-splat parameters. A method that a subclass overrides (every port method and its driver and double overrides) cannot have its return type applied, so give it `# @rbs name: Type` parameter lines, or `# @rbs skip` when it takes no parameters, and describe the return in prose; a `-> void` return is annotated normally. A `Hash` type pins only with `String` or `Symbol` keys, and `Array[T]` only with a builtin `T`.
 - There is no RuboCop, because RuboCop needs a CRuby interpreter. Style and Spinel rules are enforced by the `lint` test program and by `make diagnose`, which runs `spinel-doctor`, Spinel's own checker.
 - Every method and attribute under `carat/` carries an inline RBS signature in Spinel's comment form: a `#: (params) -> return` line directly above each `def`, a `# @rbs @name: Type` block at the top of each class for its instance variables, and a trailing `#: Type` on each `attr_*`. The `lint` test fails on a missing one. Signatures describe what the program actually stores, because Spinel trusts them without verifying; use `untyped` where a value is genuinely mixed. Optional, rest, and keyword-splat parameters are not seeded by Spinel, so prefer required parameters or a second method. No sidecar `.rbs` files. `make types` prints what Spinel inferred and where it widened to `untyped`.
 - Key bindings are never hard-coded in Ruby. Add or change them in `config/default.json` and regenerate the Ruby mirror. A plugin's default bindings live in its manifest.

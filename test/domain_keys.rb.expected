@@ -1,0 +1,47 @@
+ok   plain characters
+ok   sequence with named keys
+ok   escape
+ok   case-insensitive name
+ok   control key
+ok   control uppercase letter
+ok   control bracket
+ok   alt key
+ok   meta spelling
+ok   leader expands
+ok   space
+ok   tab and backspace
+ok   arrows
+ok   home end del
+ok   page keys and insert
+ok   function keys
+ok   lt and bar
+ok   unicode character
+ok   empty
+ok   malformed notation is not ok
+ok   malformed notation names the key
+ok   malformed notation yields no codes
+ok   an unclosed bracket is the less-than character itself
+ok   leader with no leader configured is an error
+ok   leader written in notation
+ok   up
+ok   enter
+ok   escape
+ok   control c
+ok   letter
+ok   space
+ok   less than
+ok   alt x
+ok   nul
+ok   delete
+ok   f5
+ok   letter is printable
+ok   space is printable
+ok   unicode is printable
+ok   control is not printable
+ok   backspace is not printable
+ok   special is not printable
+ok   alt is not printable
+ok   base strips the alt flag
+ok   alt? sees the flag
+ok   char encodes a code point
+domain_keys: 46 passed, 0 failed

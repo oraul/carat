@@ -1,0 +1,34 @@
+ok   write reports the written message
+ok   write stores the text
+ok   write clears the modified flag
+ok   long form writes
+ok   write to another path
+ok   buffer path unchanged by writing elsewhere
+ok   writing elsewhere keeps the buffer modified
+ok   write with no path fails
+ok   unnamed buffer adopts the written path
+ok   adopting the path clears the modified flag
+ok   write failure is a failure
+ok   write failure reports E212
+ok   failed write keeps the buffer modified
+ok   quit on a clean buffer ends the editor
+ok   quit refused while modified
+ok   long form quit refused too
+ok   forced quit ends the editor
+ok   long form forced quit
+ok   wq writes and quits
+ok   wq with no file name stays
+ok   wq stays when the write fails
+ok   wq with a path writes there and quits
+ok   edit opens another file
+ok   edit starts a new file
+ok   edit refused while modified
+ok   forced reload discards changes
+ok   long form edit
+ok   edit with no path and no argument
+ok   edit without argument reloads
+ok   unknown command
+ok   unknown command keeps its argument text
+ok   empty command does nothing
+ok   a bare number is not a command yet
+use_cases_ex: 33 passed, 0 failed

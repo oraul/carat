@@ -73,8 +73,8 @@ clean:
 
 # --------------------------------------------------------------------- test
 
-## test: compile and run every test/*.rb against its committed snapshot
-test:
+## test: build the executables (the smoke test runs build/bin/carat), then compile and run every test/*.rb against its committed snapshot
+test: build
 	spin test
 
 ## lint: run only the lint test program
