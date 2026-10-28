@@ -16,6 +16,11 @@ context: |
   strings; every ivar is initialized in initialize; no Ractor, threads
   only in drivers with a Queue between them and the editor thread.
   Every key binding lives in config/default.json; none is hard-coded.
+  Everything beyond core modal editing is a plugin on the plugin API of
+  docs/architecture.md section 9: compiled plugins are spin packages
+  listed in config/plugins.json with a generated registry, process
+  plugins speak JSON-RPC per docs/plugin-protocol.md. A plugin may
+  require only carat/plugin_api.rb.
   Every Neovim command Carat implements is recorded in
   docs/compatibility.md with a table-driven test.
   Layers live at carat/domain, carat/use_cases, carat/ports,

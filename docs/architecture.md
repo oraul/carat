@@ -12,11 +12,12 @@ Goals:
 - Be plain Ruby. Readable, testable, no native extensions, no metaprogramming tricks.
 - Follow Clean Architecture. Business rules at the center, frameworks and devices at the edge, dependencies pointing inward only.
 - Every key binding comes from JSON. There are no bindings hard-coded in Ruby.
+- Be extensible with plugins. Anything beyond core modal editing is built on one plugin API, and the same API is open to third parties.
 
 Non-goals:
 
 - Vimscript or Lua compatibility. Configuration is JSON.
-- A plugin marketplace. Extensions arrive later as external processes speaking the same protocol as language servers.
+- Loading Ruby source at run time. A Spinel binary is fixed at compile time, so plugins are either compiled in as packages or run as separate processes (section 9). There is no `require` of a user file.
 - Byte-for-byte Neovim parity. Where Neovim behavior is obscure, Carat picks the simple, documented behavior and records it in a spec.
 - GUI front ends. The only front end is a terminal.
 - Ractor. Spinel documents Thread, Fiber, Mutex, Queue, SizedQueue, and ConditionVariable, and never mentions Ractor. CRuby 4.0 still marks Ractor experimental. Carat uses threads and queues for concurrency and nothing else.
@@ -143,7 +144,7 @@ Each use case is one class with a single `call` taking a request value and retur
 
 - `SplitWindow`, `CloseWindow`, `FocusWindow`, `ResizeLayout`, `OpenTab`.
 - `RequestCompletion`, `RequestDefinition`, `RequestHover`, `RequestReferences`, `Rename`, `FormatBuffer`, `ApplyDiagnostics`: each talks to `LanguageServicePort`. They are written so that a port that reports no service available produces an empty response and a message, never an error.
-- `FindFiles`, `FindInBuffers`, `ExploreDirectory`: the finder and explorer, over `FilePort` and `ProcessPort`.
+- `RegisterPlugin`, `DispatchPluginAction`, `EmitEvent`, `ApplyPluginEdit`: the plugin host use cases of section 9. The finder, the explorer, and git signs are plugins built on them, not separate use cases.
 
 ### 5.4 Shared library inside the inner layers
 
@@ -211,6 +212,11 @@ Schema:
       "formatter": ["rubocop", "-A", "--stdin", "{file}", "--stderr"]
     }
   },
+  "plugins": {
+    "explorer": { "enabled": true },
+    "finder": { "enabled": true, "options": { "ignore": [".git", "build"] } },
+    "spell": { "command": ["carat-spell", "--lang", "en"] }
+  },
   "theme": "carat-dark"
 }
 ```
@@ -221,6 +227,7 @@ Rules of the schema:
 - Keys are written in Vim notation: plain characters, `<CR>`, `<Esc>`, `<Tab>`, `<BS>`, `<Space>`, `<Up>`, `<C-x>`, `<A-x>`, `<F1>` to `<F12>`, `<leader>`.
 - Unknown keys, unknown action names, and malformed notation are reported with the file name and the JSON path, and the rest of the file still loads.
 - Options in JSON use the Vim names and the same types as `:set`.
+- A `plugins` entry with `enabled` refers to a compiled plugin by name. An entry with `command` starts a process plugin. `options` is passed to the plugin unchanged. A plugin's own default bindings live in its manifest and are merged below `keymaps`, so the user file always wins.
 
 ## 8. Interface adapters and drivers
 
@@ -250,7 +257,56 @@ Rules of the schema:
 - `ServiceThreads`: one thread per language server process that blocks on the process's stdout, parses JSON-RPC frames, and pushes messages onto the `MessageQueuePort`. This is the only place threads are created, and the queue is the only thing shared with the editor thread. Spinel runs these threads in parallel with no global lock, so the editor thread never blocks on a service, and the queue is the only synchronization point.
 - `bin/carat.rb`: argument parsing, construction of every driver, adapter, and use case, injection in one place, and `STDIN.raw { |io| loop.run }` as the single-call raw block.
 
-## 9. Testing strategy
+## 9. Plugins
+
+Everything beyond core modal editing is a plugin: the file explorer, the fuzzy finder, git signs, and later spell checking, snippets, or a test runner. Third parties use the same API. Because a Spinel binary cannot load code at run time, there are two kinds of plugin with one API between them.
+
+### 9.1 The plugin API
+
+The API is a set of plain values and port methods owned by the use case layer. A plugin never touches an entity or a driver directly.
+
+What a plugin can declare, in its manifest:
+
+- `name`, `version`, and the API version it was written against.
+- Actions: names in `plugin.<name>.<action>` form that keymaps may bind, each with a short description for `docs/actions.md`.
+- Ex commands: names and abbreviations added to the ex registry, routed back to the plugin.
+- Default key bindings, in the same JSON shape as `config/default.json`, merged below the user's bindings.
+- Event subscriptions: `buffer_open`, `buffer_change`, `buffer_save`, `cursor_move`, `mode_change`, `window_focus`, `idle`, `resize`, `quit`.
+- Options it accepts, with types and defaults.
+
+What a plugin can do, through `PluginHostPort`:
+
+- Read a buffer: lines, cursor, selection, marks, path, modified flag.
+- Edit a buffer: a list of `(range, text)` replacements applied as one transaction, so the user undoes a plugin edit in one step.
+- Move the cursor, set a selection, set a mark.
+- Open a scratch buffer in a split or floating window, with its own keymap bound to the plugin's actions. This is how the explorer and the finder draw their lists: they are ordinary buffers with plugin-owned bindings, in the way Neovim's `oil` and `telescope` present text.
+- Show a message, set a status line segment, place signs and virtual text, set highlights for a range.
+- Ask for input on the command line with a prompt.
+- Run an ex command string.
+- Start a child process and receive its output, through the same `ProcessPort` as language servers.
+
+Every call is a request value in and a response value out, with no callbacks. Events are delivered as values too. This shape is what lets one API serve both plugin kinds.
+
+### 9.2 Compiled plugins
+
+A compiled plugin is a `spin` package that depends on `carat` and implements one class with `manifest`, `activate(host)`, `deactivate`, `on_event(event)`, `on_action(name, context)`, and `on_command(command)`. It is listed in `spin.toml` under `[dependencies]` and in `config/plugins.json`, from which `bin/carat-gen-config.rb` generates `carat/plugins/registry.rb`: an explicit `require` and an explicit constructor call per plugin, in order. Spinel sees a fixed list; there is no reflection and no computed constant lookup. The built-in plugins live in `carat/plugins/` inside this repository and go through exactly the same registry, so the API is exercised by the project itself from the first plugin change.
+
+Compiled plugins run on the editor thread and are as fast as the editor. They obey the Spinel rules of section 2.1 and the layer rule: a plugin may require only `carat/plugin_api.rb` and its own files, never the editor's entities, use cases, or drivers. The `lint` test checks this.
+
+### 9.3 Process plugins
+
+A process plugin is any executable started with `command` from the user's config. It speaks the Carat plugin protocol over stdio: JSON-RPC framed as in the Language Server Protocol, with the same message shapes as the API above, specified in `docs/plugin-protocol.md`. On start the plugin sends its manifest; the host registers it as it would a compiled plugin. Requests from the host carry an id and expect a response; events are notifications. The host does not wait on a plugin: a slow response leaves the editor responsive, and a plugin that exits is unregistered with a message.
+
+Process plugins may be written in any language, CRuby included, so an author can prototype in CRuby with the full standard library and gems, then port to a compiled plugin for speed. The `JsonRpcLanguageGateway` and `ServiceThreads` already carry the framing, the process handle, and the queue; the plugin gateway reuses them with a different message table.
+
+### 9.4 Rules
+
+- The editor must start, edit, save, and quit with every plugin disabled. Core editing never depends on a plugin.
+- A plugin failure is reported in the message area and disables that plugin; it never ends the editor or corrupts a buffer, because every edit goes through one validated transaction.
+- A plugin's bindings never override a user's bindings, and `config/default.json` never contains a plugin's bindings; those belong to the plugin manifest.
+- The API is versioned. The host refuses a manifest written against a newer major version and says so.
+
+## 10. Testing strategy
 
 Everything runs through `spin test`, compiled with Spinel. There is no CRuby test runner.
 
@@ -258,12 +314,12 @@ Everything runs through `spin test`, compiled with Spinel. There is no CRuby tes
 - `test/domain_*.rb` and `test/use_cases_*.rb`: unit test programs for entities and use cases. Motions, operators, and text objects are table-driven: buffer text, cursor, keys, expected text, expected cursor. These tables are the compatibility record in `docs/compatibility.md`.
 - `test/adapters_*.rb`: presenter tests compare a `Frame` to an expected grid of strings; `ScreenPresenter` tests check ANSI bytes for a known frame diff; gateway tests feed scripted JSON-RPC frames and assert the plain values produced.
 - `test/editor_*.rb`: whole-editor tests with `FakeTerminal`, `MemoryFiles`, a manual clock, and a fixed config: feed keys, assert the frame and the buffer. This is the main integration level.
-- `test/lint.rb`: a test program that reads every source file and checks the Spinel rules of section 2.1 that the compiler does not catch on its own, and the layer rule of section 3: a file under one layer directory requires only files from its own layer or an inner one, no `eval` or computed `send`, no `IO.popen`, no key binding literals outside `config/default.json`. It prints the violations, so the snapshot is the empty report.
+- `test/lint.rb`: a test program that reads every source file and checks the Spinel rules of section 2.1 that the compiler does not catch on its own, the layer rule of section 3, and the plugin rule of section 9: a file under one layer directory requires only files from its own layer or an inner one, no `eval` or computed `send`, no `IO.popen`, no key binding literals outside `config/default.json`. It prints the violations, so the snapshot is the empty report.
 - `test/config_sync.rb`: parses `config/default.json` with `Carat::Json` and compares it to the generated `Carat::Domain::DEFAULT_CONFIG`, so a stale generated file fails the suite.
 - `test/smoke_*.rb`: start `build/bin/carat` inside a pseudo-terminal through `Process.spawn`, send keys, and check the file written and the final screen. Few and slow.
 - Continuous integration installs Spinel from source and runs `spin build` and `spin test` on Linux and macOS.
 
-## 10. Repository layout
+## 11. Repository layout
 
 The layout is the one `spin` expects: a manifest, a library file with a directory of the same name, `bin/` compile roots, and `test/` programs.
 
@@ -295,6 +351,12 @@ carat/adapters/
 carat/drivers/
   ansi_terminal.rb disk_files.rb process_runner.rb monotonic_clock.rb
   main_loop.rb service_threads.rb
+carat/plugin_api.rb             the only file a plugin may require
+carat/plugins/
+  registry.rb (generated)       explicit require and constructor per plugin
+  explorer/ finder/ git_signs/  built-in compiled plugins
+carat/adapters/json_rpc_plugin_gateway.rb
+config/plugins.json             the ordered list of compiled plugins
 carat/doubles/
   fake_terminal.rb memory_files.rb manual_clock.rb fake_process.rb
 test/                           one program per file, each with a committed .expected
@@ -302,11 +364,11 @@ test/                           one program per file, each with a committed .exp
   editor_*.rb lint.rb config_sync.rb smoke_*.rb
 build/                          spin output, ignored by git
 docs/
-  architecture.md compatibility.md actions.md
+  architecture.md compatibility.md actions.md plugin-protocol.md
 openspec/                       specs are the behavioral source of truth
 ```
 
-## 11. Roadmap as OpenSpec changes
+## 12. Roadmap as OpenSpec changes
 
 Each item is one OpenSpec change and one pull request, in this order. Each leaves the editor usable, and `spin build` and `spin test` green.
 
@@ -320,13 +382,15 @@ Each item is one OpenSpec change and one pull request, in this order. Each leave
 8. `syntax-highlighting`: tokenizer interface, Ruby tokenizer, themes, color output.
 9. `options-and-config`: `:set`, local options, user and project config files with merge and unbinding.
 10. `language-services`: `ProcessPort`, `ServiceThreads`, `JsonRpcLanguageGateway`, `ruby-lsp` integration, diagnostics, go-to-definition, hover, completion menu.
-11. `finder-and-explorer`: fuzzy finder and the file tree.
-12. `formatting-and-git`: RuboCop formatting, git signs and status.
-13. `release-build`: reproducible builds for Linux and macOS with `spin build` and `spin pack`, release packaging, `spin install`, and the smoke tests against the released binary.
+11. `plugin-host`: `carat/plugin_api.rb`, the manifest, the plugin host use cases, the generated registry from `config/plugins.json`, events, scratch buffers with plugin-owned keymaps, and the lint rule for plugin dependencies. Proven by a tiny built-in `hello` plugin that adds one action and one ex command.
+12. `plugin-explorer-and-finder`: the file tree and the fuzzy finder as the first real compiled plugins.
+13. `plugin-protocol`: `docs/plugin-protocol.md`, the JSON-RPC plugin gateway reusing the language service framing, and a sample process plugin written in CRuby to prove the protocol from outside the binary.
+14. `plugin-git-and-formatting`: git signs and status as a plugin; RuboCop formatting through the language service.
+15. `release-build`: reproducible builds for Linux and macOS with `spin build` and `spin pack`, release packaging, `spin install`, and the smoke tests against the released binary.
 
 Before item 10 starts, a short spike verifies on Spinel that a subprocess with piped stdin and stdout can be read from a thread while the main thread sits in `IO.select`. The spike result is recorded in the change's design document.
 
-## 12. Decisions and alternatives
+## 13. Decisions and alternatives
 
 | Decision | Chosen | Alternatives considered | Why |
 | --- | --- | --- | --- |
@@ -343,3 +407,4 @@ Before item 10 starts, a short spike verifies on Spinel that a subprocess with p
 | Rendering | Full frame then diff | Incremental region updates | Simple to reason about and already minimal in bytes |
 | Highlighting | Hand-written line tokenizers | Tree-sitter | No native extension; Spinel cannot link it |
 | IDE features | Use cases over `LanguageServicePort` | Built into the editor loop | Optional, replaceable, and mockable |
+| Plugins | Two kinds, compiled packages and processes, over one value-based API | Runtime Ruby loading; Lua; processes only | A Spinel binary cannot load code; compiled plugins give speed, process plugins give any-language freedom, and one API keeps both honest |

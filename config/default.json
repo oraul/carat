@@ -105,5 +105,10 @@
       "formatter": ["rubocop", "-A", "--stdin", "{file}", "--stderr"]
     }
   },
+  "plugins": {
+    "explorer": { "enabled": true },
+    "finder": { "enabled": true },
+    "git_signs": { "enabled": true }
+  },
   "theme": "carat-dark"
 }

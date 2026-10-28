@@ -5,7 +5,7 @@ Guidance for Claude Code when working in this repository.
 ## Project
 
 - Name: carat
-- What it is: a terminal IDE written in Ruby with Neovim's modal editing model: modes, the count-operator-motion grammar, text objects, registers, and ex commands, plus IDE services such as language servers and a fuzzy finder. Built, tested, and shipped entirely with Spinel at the Ruby 4 language level; CRuby is never required.
+- What it is: a terminal IDE written in Ruby with Neovim's modal editing model: modes, the count-operator-motion grammar, text objects, registers, and ex commands, plus IDE services such as language servers, and a plugin system on which the explorer, finder, and git integration are built. Built, tested, and shipped entirely with Spinel at the Ruby 4 language level; CRuby is never required.
 - Status: architecture defined, no source code yet. The README is a placeholder.
 - Architecture: `docs/architecture.md` is binding. Read it before planning any change. It fixes the Clean Architecture layers, the ports, the module names, the Spinel rules for all production code, the JSON configuration schema, and the roadmap order.
 - When code is added, update the "Commands" section below and keep "Stack" and "Layout" accurate.
@@ -245,6 +245,7 @@ Planned in `docs/architecture.md`, section 10, in the shape `spin` expects. Crea
 - `bin/carat.rb`: entry point and composition root, the only place drivers are constructed. `bin/carat-gen-config.rb` generates the default config mirror. Every `bin/*.rb` is a compile root.
 - `config/default.json`: every default option and key binding. The generated `carat/domain/default_config.rb` mirrors it and is never edited by hand.
 - `carat.rb` and `carat/`: the library. `carat/domain/` entities, `carat/use_cases/`, `carat/ports/`, `carat/adapters/`, `carat/drivers/`, `carat/doubles/` test doubles, and `carat/testing.rb`.
+- `carat/plugin_api.rb` and `carat/plugins/`: the plugin API, the generated registry, and the built-in compiled plugins. `config/plugins.json` lists them in order.
 - `test/`: one Spinel program per file with a committed `.expected` snapshot, including `lint.rb` and `config_sync.rb`.
 - `build/`: `spin` output, ignored by git.
 - `docs/`: `architecture.md`, `compatibility.md`, `actions.md`.
@@ -256,7 +257,8 @@ Planned in `docs/architecture.md`, section 10, in the shape `spin` expects. Crea
 - Match the existing style of the file you are editing.
 - Add or update tests alongside behavior changes.
 - All production code follows the Spinel rules in `docs/architecture.md`, section 2.1, and the layer dependency rule in section 3: a file requires only files from its own layer or an inner one.
-- Key bindings are never hard-coded in Ruby. Add or change them in `config/default.json` and regenerate the Ruby mirror.
+- Key bindings are never hard-coded in Ruby. Add or change them in `config/default.json` and regenerate the Ruby mirror. A plugin's default bindings live in its manifest.
+- Features beyond core modal editing are plugins. A plugin requires only `carat/plugin_api.rb`, never the editor's entities, use cases, or drivers.
 - Every Neovim command implemented gets a row in `docs/compatibility.md` and a table-driven test.
 - Keep documentation in this file and the README in sync with the code.
 - Ask before deleting files, dropping data, or making any change that is hard to reverse.
