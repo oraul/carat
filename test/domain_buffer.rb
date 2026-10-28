@@ -111,4 +111,38 @@ t.assert_equal(true, b.modified, "modified after insert")
 b.modified = false
 t.assert_equal(false, b.modified, "unmodified after save")
 
+# Data semantics the domain relies on: value equality, hashing, immutability.
+p1 = pos(2, 3)
+p2 = pos(2, 3)
+t.assert_true(p1 == p2, "positions are equal by value")
+t.assert_true(p1.eql?(p2), "positions are eql by value")
+t.assert_equal(p1.hash, p2.hash, "equal positions hash alike")
+t.assert_equal("here", { p1 => "here" }[p2], "a position works as a hash key by value")
+t.assert_true(p1.frozen?, "positions are frozen")
+t.assert_equal([2, 4], p1.with(col: 4).to_a, "with copies a position")
+t.assert_equal([2, 3], p1.to_a, "with leaves the original unchanged")
+r1 = D::Range.charwise(pos(0, 0), pos(0, 2))
+r2 = D::Range.new(pos(0, 0), pos(0, 2), :charwise, false)
+t.assert_true(r1 == r2, "ranges are equal by value")
+t.assert_true(r1.frozen?, "ranges are frozen")
+
+# Struct semantics the mutable records rely on: positional construction,
+# readers and writers, members, and the constructor defaults.
+c = D::Cursor.new(2, 3)
+t.assert_equal([2, 3, 3], [c.row, c.col, c.want_col], "a cursor starts wanting its column")
+c.col = 5
+t.assert_equal(5, c.col, "a cursor member has a writer")
+c.move_to(4, 1)
+t.assert_equal([4, 1], c.to_a, "to_a is the position pair without want_col")
+t.assert_equal([:row, :col, :want_col], D::Cursor.members, "cursor members in constructor order")
+t.assert_equal(false, c.frozen?, "records are not frozen")
+w = D::Window.new
+t.assert_equal([0, 0], [w.top, w.left], "a window starts at the origin")
+w.top = 7
+t.assert_equal(7, w.top, "a window member has a writer")
+t.assert_equal([:lines, :path, :line_ending, :modified], D::Buffer.members, "buffer members in constructor order")
+t.assert_equal([:code, :width, :hl], D::Cell.members, "cell members")
+o = D::Options.new
+t.assert_equal([false, 8, 0], [o.number, o.tabstop, o.scrolloff], "options start with Vim's defaults")
+
 t.finish

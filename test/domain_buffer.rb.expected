@@ -40,4 +40,23 @@ ok   set_lines marks the buffer modified
 ok   unmodified after load
 ok   modified after insert
 ok   unmodified after save
-domain_buffer: 42 passed, 0 failed
+ok   positions are equal by value
+ok   positions are eql by value
+ok   equal positions hash alike
+ok   a position works as a hash key by value
+ok   positions are frozen
+ok   with copies a position
+ok   with leaves the original unchanged
+ok   ranges are equal by value
+ok   ranges are frozen
+ok   a cursor starts wanting its column
+ok   a cursor member has a writer
+ok   to_a is the position pair without want_col
+ok   cursor members in constructor order
+ok   records are not frozen
+ok   a window starts at the origin
+ok   a window member has a writer
+ok   buffer members in constructor order
+ok   cell members
+ok   options start with Vim's defaults
+domain_buffer: 61 passed, 0 failed

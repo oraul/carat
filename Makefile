@@ -91,12 +91,12 @@ snapshots:
 	done
 	@echo "Snapshots come from the Spinel binaries, never from CRuby. Review the diff before committing."
 
-## diagnose: run spinel-doctor on every compile root (bin/*.rb and test/*.rb): unsupported constructs, unresolved calls, widened slots, boxing advice, build, and behavior parity
+## diagnose: run spinel-doctor on every compile root (bin/*.rb and test/*.rb): unsupported constructs, unresolved calls, widened slots, boxing advice, and build. The behavior leg is skipped: it compares against a CRuby on the path, which this project never uses and which differs from Ruby 4 output
 diagnose:
 	@status=0; \
 	for root in bin/*.rb test/*.rb; do \
 	  echo "== $$root"; \
-	  spinel-doctor --quiet "$$root" -- $$(spin flags) || status=1; \
+	  spinel-doctor --quiet --skip behavior "$$root" -- $$(spin flags) || status=1; \
 	done; \
 	exit $$status
 

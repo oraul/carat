@@ -144,4 +144,12 @@ f = P.call(s, 10, 40)
 t.assert_equal(10, f.rows, "frame has 10 rows after shrinking")
 t.assert_equal("a.txt", f.row_text(8)[0, 5], "status line moved to row 8")
 
+# Reuse: a render of the same size repaints the same frame and cells.
+first_cell = f.cell(0, 0)
+s.buffer.insert(D::Position.new(0, 0), "x")
+again = P.call(s, 10, 40)
+t.assert_true(again.equal?(f), "a render of the same size reuses the frame")
+t.assert_true(again.cell(0, 0).equal?(first_cell), "a render of the same size reuses the cells")
+t.assert_equal("  1 xab", again.row_text(0), "the reused frame shows the new text")
+
 t.finish

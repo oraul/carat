@@ -4,20 +4,18 @@ module Carat
     # path, modified, and line_ending. All edits go through the four
     # primitives insert, delete, replace, and set_lines; a later change hooks
     # transactions into them without changing their signatures. Lines are
-    # never mutated in place: every primitive stores new strings.
-    class Buffer
-      attr_reader :lines #: Array[String]
-      attr_accessor :path #: String?
-      attr_accessor :modified #: bool
-      attr_reader :line_ending #: String
+    # never mutated in place: every primitive stores new strings. A Struct
+    # record: mutable, with a reader and a writer per member.
+    class Buffer < Struct.new(:lines, :path, :line_ending, :modified)
+      # @rbs @lines: Array[String]
+      # @rbs @path: String?
+      # @rbs @line_ending: String
+      # @rbs @modified: bool
 
       #: (Array[String], String?, String) -> void
       def initialize(lines, path, line_ending)
-        @lines = lines
-        @lines << "" if @lines.empty?
-        @path = path
-        @line_ending = line_ending
-        @modified = false
+        lines << "" if lines.empty?
+        super(lines, path, line_ending, false)
       end
 
       # Splits file text into lines. The line ending is "\r\n" when the first
@@ -38,18 +36,18 @@ module Carat
       # The file text: every line followed by the line ending.
       #: () -> String
       def to_text
-        @lines.join(@line_ending) + @line_ending
+        lines.join(line_ending) + line_ending
       end
 
       #: () -> Integer
       def line_count
-        @lines.length
+        lines.length
       end
 
       # The line at row, or an empty string outside the buffer.
       #: (Integer) -> String
       def line(row)
-        l = @lines[row]
+        l = lines[row]
         l.nil? ? "" : l
       end
 
@@ -107,13 +105,13 @@ module Carat
         insert(r.from, text)
       end
 
-      # Replaces the rows from..to (exclusive) with lines, keeping at least
-      # one line in the buffer.
+      # Replaces the rows from..to (exclusive) with new_lines, keeping at
+      # least one line in the buffer.
       #: (Integer, Integer, Array[String]) -> void
-      def set_lines(from, to, lines)
-        @lines[from...to] = lines
-        @lines << "" if @lines.empty?
-        @modified = true
+      def set_lines(from, to, new_lines)
+        lines[from...to] = new_lines
+        lines << "" if lines.empty?
+        self.modified = true
       end
 
       private
