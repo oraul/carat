@@ -1,13 +1,12 @@
 # Carat command map.
 #
-# Every target is a thin wrapper over spin, Spinel's project tool, or over
-# OpenSpec. Nothing is built here directly; see docs/architecture.md.
+# Every target is a thin wrapper over spin, Spinel's project tool.
+# Nothing is built here directly; see docs/architecture.md.
 # Run `make help` for the list.
 
 SPINEL_SRC ?= $(HOME)/Repositories/spinel
 PREFIX     ?= $(HOME)/.local
 FILE       ?= README.md
-OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y @fission-ai/openspec@latest
 
 .DEFAULT_GOAL := help
 
@@ -80,20 +79,6 @@ gen-config:
 ## check: everything a push needs: build, gen-config, and test
 check: build gen-config test
 
-# ----------------------------------------------------------------- openspec
-
-## spec-list: list active OpenSpec changes
-spec-list:
-	$(OPENSPEC) list
-
-## spec-validate: validate every OpenSpec change and spec in strict mode
-spec-validate:
-	$(OPENSPEC) validate --all --strict --no-interactive
-
-## spec-update: refresh the generated OpenSpec commands and skills under .claude/
-spec-update:
-	$(OPENSPEC) update
-
 # --------------------------------------------------------------------- help
 
 ## help: list the targets
@@ -103,4 +88,4 @@ help:
 	@echo
 	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  PREFIX=$(PREFIX)  FILE=$(FILE)"
 
-.PHONY: toolchain doctor build run install pack clean test lint snapshots gen-config check spec-list spec-validate spec-update help
+.PHONY: toolchain doctor build run install pack clean test lint snapshots gen-config check help

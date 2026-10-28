@@ -25,7 +25,7 @@ Non-goals:
 ## 2. Runtime and compiler
 
 - Compiler: Spinel. It parses Ruby with Prism, infers types across the whole program, emits C, and calls the system C compiler. Its language level is Ruby 4; its own benchmark baseline is CRuby 4.0.4.
-- Project tool: `spin`, which ships with Spinel. It owns the manifest, dependency resolution, multi-file builds, test runs, packaging, and installation. The repository's `Makefile` is only a map: every target calls `spin` or OpenSpec and builds nothing itself. `make help` lists the targets.
+- Project tool: `spin`, which ships with Spinel. It owns the manifest, dependency resolution, multi-file builds, test runs, packaging, and installation. The repository's `Makefile` is only a map: every target calls `spin` and builds nothing itself. `make help` lists the targets.
 - Development loop: `spin build` compiles every `bin/*.rb` into `build/bin/`, `spin run carat -- FILE` builds and runs the editor, `spin test` compiles and runs every `test/*.rb`. All three need only Spinel and a C compiler.
 - Tests are Spinel programs too. `spin test` judges each test program by its exit status and by diffing its stdout against a committed `test/<name>.rb.expected` snapshot. Carat commits every snapshot, so `spin test` never falls back to CRuby. The `--regen` option, which refreshes snapshots by running the test under CRuby, is not used; `make snapshots` rebuilds each test program with Spinel and rewrites its snapshot from that output, and the diff is reviewed before committing.
 - One codebase, one runtime. Code that Spinel cannot compile is a bug and fails `spin build`.
@@ -325,7 +325,7 @@ The layout is the one `spin` expects: a manifest, a library file with a director
 
 ```
 spin.toml                       manifest: package name, version, no dependencies
-Makefile                        command map over spin and OpenSpec; builds nothing itself
+Makefile                        command map over spin; builds nothing itself
 .gitignore                      build/ and dist/
 bin/carat.rb                    entry point and composition root; builds to build/bin/carat
 bin/carat-gen-config.rb         generates carat/domain/default_config.rb from config/default.json
