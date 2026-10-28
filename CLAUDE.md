@@ -229,7 +229,7 @@ Decided in `docs/architecture.md`. Not yet in place; update this section when it
 
 Every build and test command has a Makefile target. Run `make help` for the full list. OpenSpec is not in the Makefile; it is run by Claude only. The `spin` targets are planned in `docs/architecture.md`; confirm each one when the project skeleton lands and keep this list current.
 
-- `make doctor`: check that `spinel`, `spin`, a C compiler, and `node` are on the path.
+- `make doctor`: check that `spinel`, `spin`, and a C compiler are on the path.
 - `make toolchain`: build and install Spinel and `spin` from a local checkout at `SPINEL_SRC`, into `PREFIX`.
 - `make build`: `spin build`, compiles every `bin/*.rb` into `build/bin`.
 - `make run FILE=path`: `spin run carat -- path`.

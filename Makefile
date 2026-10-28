@@ -20,10 +20,10 @@ toolchain:
 	$(MAKE) -C "$(SPINEL_SRC)" install PREFIX="$(PREFIX)"
 	@echo "Installed spinel and spin under $(PREFIX)/bin. Make sure it is on your PATH."
 
-## doctor: check that spinel, spin, a C compiler, and node are available
+## doctor: check that spinel, spin, and a C compiler are available
 doctor:
 	@ok=1; \
-	for tool in spinel spin cc node; do \
+	for tool in spinel spin cc; do \
 	  if command -v $$tool >/dev/null 2>&1; then echo "ok       $$tool: $$(command -v $$tool)"; \
 	  else echo "missing  $$tool"; ok=0; fi; \
 	done; \
