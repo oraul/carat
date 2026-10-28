@@ -1,5 +1,41 @@
 schema: spec-driven
 
+context: |
+  Carat is a terminal IDE in Ruby with Neovim's modal editing model.
+  Spinel does everything: spin build, spin run, and spin test are the
+  only toolchain, at the Ruby 4 language level, and CRuby is never
+  required. Tests are Spinel programs using Carat::Testing with committed
+  .expected snapshots; there is no minitest and no RuboCop.
+  The architecture in docs/architecture.md is binding: Clean Architecture
+  layers (domain, use_cases, ports, adapters, drivers) with dependencies
+  pointing inward only, the module names, and the roadmap order.
+  All code must compile with Spinel: standard library only, no gems,
+  no json library (use Carat::Json), no IO.popen, no eval, method_missing,
+  send with a computed name, define_method under a runtime condition,
+  or custom hash/eql?; string literals are frozen; line arrays hold only
+  strings; every ivar is initialized in initialize; no Ractor, threads
+  only in drivers with a Queue between them and the editor thread.
+  Every key binding lives in config/default.json; none is hard-coded.
+  Everything beyond core modal editing is a plugin on the plugin API of
+  docs/architecture.md section 9: compiled plugins are spin packages
+  listed in config/plugins.json with a generated registry, process
+  plugins speak JSON-RPC per docs/plugin-protocol.md. A plugin may
+  require only carat/plugin_api.rb.
+  Every Neovim command Carat implements is recorded in
+  docs/compatibility.md with a table-driven test.
+  Layers live at carat/domain, carat/use_cases, carat/ports,
+  carat/adapters, carat/drivers; bin/*.rb are compile roots.
+
+rules:
+  proposal:
+    - Name which roadmap item from docs/architecture.md the change delivers, or say it is outside the roadmap and why
+    - State what is out of scope
+  specs:
+    - Write requirements in terms of keys pressed and observable editor state, not implementation
+  tasks:
+    - Each task names the module it touches and the test that proves it
+    - Keep the editor usable after every task
+
 # Project context (optional)
 # Add only constraints that should guide OpenSpec artifacts and workflows.
 # Include constraints an agent cannot infer by reading the code.
