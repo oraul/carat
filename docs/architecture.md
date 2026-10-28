@@ -31,7 +31,7 @@ Non-goals:
 
 ### 2.1 Spinel rules for all production code
 
-These come from Spinel's limitations document and from the notes gathered while building the earlier Carat prototype. They are enforced by RuboCop configuration and by compiling in CI.
+These come from Spinel's limitations document and from the notes gathered while building the earlier Carat prototype. They are enforced by the compiler itself and by the `lint` test program in section 9.
 
 - Standard library only, and only the parts Spinel bundles: `io/console`, `IO.select`, `IO.pipe`, `Process.spawn`, `open3`, `set`, `forwardable`, `stringio`, `strscan`, `time`, `pathname`, `optparse`. No gems, no `spin` dependencies beyond what the roadmap names. No `json` library: Spinel documents no JSON parser and refuses the pure-Ruby `json/pure`, so Carat ships its own small JSON reader and writer (section 5.4). No `minitest`: tests use Carat's own assertion harness (section 9).
 - `IO.popen` is refused by the compiler. A child process with live pipes is started with `Process.spawn` and `IO.pipe` pairs; one-shot commands use `Open3.capture2` or `capture3`.
