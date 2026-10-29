@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Quit leaves the editor unless changes are unsaved
-":q" and ":quit" SHALL close the current window when another window exists in any tab page, closing the tab page when it was its last window and keeping a modified buffer hidden in the buffer list when no other window shows it. On the last window of the last tab page they SHALL end the editor when no buffer in the list is modified and SHALL show "E37: No write since last change (add ! to override)" and stay otherwise. ":q!" and ":quit!" SHALL do the same without the check, except that on the last window a modified hidden buffer is shown in the window instead of ending the editor.
+:q" and ":quit" SHALL close the current window when another window exists in any tab page, closing its tab page when it was the last window there and keeping a modified buffer hidden in the list. On the last window of the last tab page they SHALL end the editor unless a listed buffer is modified, when they SHALL show "E37: No write since last change (add ! to override)". ":q!" and ":quit!" SHALL skip the check, except that on the last window a modified hidden buffer is shown instead of ending.
 
 #### Scenario: Quit a clean buffer
 - **WHEN** ":q" is run on an unmodified buffer in the only window
@@ -49,7 +49,7 @@
 - **THEN** the file is written, one window remains, and the editor is still running
 
 ### Requirement: Edit opens a file or reloads the current one
-":e path" and ":edit path" SHALL show the file at that path in the current window: the buffer already in the list for that path when there is one, otherwise the file read from disk, or an empty buffer for that path if the file does not exist, placing the cursor at (0, 0). ":e" with no argument, and ":e" with the current buffer's own path, SHALL reload the file into the buffer in place so every window showing it sees the file's text. Either SHALL be refused with E37 when the buffer is modified unless the bang form is used, which discards the changes. A buffer no window shows after the command SHALL leave the buffer list.
+:e path" and ":edit path" SHALL show the file in the current window: the listed buffer for that path when there is one, else the file read from disk, or an empty buffer if it does not exist, with the cursor at (0, 0). ":e" with no argument or with the current buffer's own path SHALL reload the file into the buffer in place. Both SHALL be refused with E37 when the buffer is modified unless the bang form is used, which discards the changes. A buffer no window shows afterwards SHALL leave the list.
 
 #### Scenario: Open another file
 - **WHEN** ":e b.txt" is run on an unmodified buffer and "b.txt" holds "zz"
@@ -76,7 +76,7 @@
 - **THEN** both windows show the new text of "a.txt"
 
 ### Requirement: Write-all writes every modified buffer
-":wa", ":wall", and their bang forms SHALL write every modified buffer in the buffer list, in list order and across every tab page, to its own path with the message of ":w" and clear its modified flag, showing the message of the last write. An unmodified buffer SHALL not be written and no message SHALL be shown for it. A modified buffer with no path SHALL report "E141: No file name for buffer N", N being its position in the list starting at 1; the other buffers SHALL still be written and the first failure SHALL be the message shown.
+:wa", ":wall", and their bang forms SHALL write every modified buffer in the list, in list order across every tab page, to its own path with the message of ":w", clear its modified flag, and show the message of the last write. An unmodified buffer SHALL not be written nor reported. A modified buffer with no path SHALL report "E141: No file name for buffer N", N being its list position from 1; the other buffers SHALL still be written and the first failure SHALL be the message shown.
 
 #### Scenario: Write-all on a modified buffer
 - **WHEN** the buffer for "a.txt" holds ["one", "two"] after an edit and ":wa" is run
