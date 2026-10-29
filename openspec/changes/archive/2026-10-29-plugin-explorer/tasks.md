@@ -30,7 +30,7 @@
 ## 5. Documentation and checks
 
 - [x] 5.1 Document the actions in `docs/actions.md`, an explorer section in `docs/compatibility.md`, the new requests and the fixture status of `hello` in `docs/plugins.md`, a "File tree" section in `README.md`, the split of item 12 and the new port methods in `docs/architecture.md`, and Status, Layout, and the test list in `CLAUDE.md`; verify every new action name appears in `docs/actions.md`
-- [ ] 5.2 Regenerate the snapshots with `make snapshots`, review the diff, and run `make check`; verify it passes with `make diagnose` clean
+- [x] 5.2 Regenerate the snapshots with `make snapshots`, review the diff, and run `make check`; verify it passes with `make diagnose` clean
 
 ## Workflow follow-up
 
