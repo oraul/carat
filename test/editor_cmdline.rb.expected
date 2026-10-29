@@ -25,6 +25,16 @@ ok   forced quit ends the editor
 ok   forced quit does not write
 ok   wq writes and quits
 ok   wq with bang
+ok   x writes a modified buffer and quits
+ok   x on a clean buffer quits without writing
+ok   long form exit with bang
+ok   wa writes the modified buffer and stays
+ok   wa on a clean buffer shows nothing
+ok   qa refused while modified
+ok   long form qa refused too
+ok   forced qa does not write
+ok   wqa with bang writes and quits
+ok   xa on a clean buffer quits without writing
 ok   edit opens another file
 ok   the screen shows the other file
 ok   edit starts a new file
@@ -35,4 +45,4 @@ ok   leader q quits
 ok   message shown
 ok   message stays while idle
 ok   message clears on the next key
-editor_cmdline: 37 passed, 0 failed
+editor_cmdline: 47 passed, 0 failed

@@ -20,6 +20,68 @@ ok   wq writes and quits
 ok   wq with no file name stays
 ok   wq stays when the write fails
 ok   wq with a path writes there and quits
+ok   x on a clean buffer quits without writing
+ok   x on a modified buffer writes and quits
+ok   x with no file name stays
+ok   x stays when the write fails
+ok   x! on a modified buffer writes and quits
+ok   x! on a clean buffer quits
+ok   x! with no file name stays
+ok   x! stays when the write fails
+ok   xit writes and quits
+ok   xit! writes and quits
+ok   exi writes and quits
+ok   exi! writes and quits
+ok   exit writes and quits
+ok   exit! writes and quits
+ok   xit on a clean buffer quits without writing
+ok   exit on a clean buffer quits without writing
+ok   x with a path writes there even when clean and quits
+ok   qa on a clean buffer quits
+ok   qa refused while modified
+ok   qa refused on a modified unnamed buffer
+ok   qa! on a clean buffer quits
+ok   qa! discards changes
+ok   qa! discards an unnamed buffer
+ok   qall on a clean buffer quits
+ok   qall refused while modified
+ok   qall! discards changes
+ok   quita on a clean buffer quits
+ok   quita refused while modified
+ok   quita! discards changes
+ok   quitall on a clean buffer quits
+ok   quitall refused while modified
+ok   quitall! discards changes
+ok   wa on a clean buffer writes nothing
+ok   wa writes a modified buffer
+ok   wa with no file name reports E141
+ok   wa reports a failed write
+ok   wa! on a clean buffer writes nothing
+ok   wa! writes a modified buffer
+ok   wa! with no file name reports E141
+ok   wall on a clean buffer writes nothing
+ok   wall writes a modified buffer
+ok   wall with no file name reports E141
+ok   wall! writes a modified buffer
+ok   wqa on a clean buffer quits without writing
+ok   wqa writes a modified buffer and quits
+ok   wqa with no file name stays
+ok   wqa stays when the write fails
+ok   wqa! on a clean buffer quits
+ok   wqa! writes a modified buffer and quits
+ok   wqa! with no file name stays
+ok   wqa! stays when the write fails
+ok   wqall writes a modified buffer and quits
+ok   wqall! writes a modified buffer and quits
+ok   xa on a clean buffer quits without writing
+ok   xa writes a modified buffer and quits
+ok   xa with no file name stays
+ok   xa stays when the write fails
+ok   xa! writes a modified buffer and quits
+ok   xa! with no file name stays
+ok   xall writes a modified buffer and quits
+ok   xall! writes a modified buffer and quits
+ok   xall on a clean buffer quits without writing
 ok   edit opens another file
 ok   edit starts a new file
 ok   edit refused while modified
@@ -31,4 +93,4 @@ ok   unknown command
 ok   unknown command keeps its argument text
 ok   empty command does nothing
 ok   a bare number is not a command yet
-use_cases_ex: 33 passed, 0 failed
+use_cases_ex: 95 passed, 0 failed

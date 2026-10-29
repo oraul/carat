@@ -82,6 +82,116 @@ s.buffer.modified = true
 r = ex.call(s, "wq other.txt")
 t.assert_equal(["x\n", true], [files.get("other.txt"), s.quit], "wq with a path writes there and quits")
 
+# Runs one ex command on a fresh editor whose buffer holds ["new"] over a
+# disk file "a.txt" holding "old\n", and reports what it observed:
+# [ok, message, quit, text of a.txt on disk, modified]. The kind is :clean,
+# :modified, :unnamed (modified, no path), or :unwritable (modified, a.txt
+# refuses writes).
+def run_ex(text, kind)
+  files = Carat::Doubles::MemoryFiles.new
+  files.put("a.txt", "old\n")
+  files.unwritable << "a.txt" if kind == :unwritable
+  s = state_with(["new"], kind == :unnamed ? nil : "a.txt")
+  s.buffer.modified = kind != :clean
+  r = build(files).call(s, text)
+  [r.ok, r.message, s.quit, files.get("a.txt"), s.buffer.modified]
+end
+
+E37 = "E37: No write since last change (add ! to override)"
+E141 = "E141: No file name for buffer 1"
+E212 = "E212: Can't open file for writing: Permission denied"
+WRITTEN = "\"a.txt\" 1L, 4B written"
+
+# Exit. Rows are [label, [command line, buffer kind], [ok, message, quit, disk, modified]].
+t.table([
+  ["x on a clean buffer quits without writing", ["x", :clean], [true, "", true, "old\n", false]],
+  ["x on a modified buffer writes and quits", ["x", :modified], [true, "", true, "new\n", false]],
+  ["x with no file name stays", ["x", :unnamed], [false, "E32: No file name", false, "old\n", true]],
+  ["x stays when the write fails", ["x", :unwritable], [false, E212, false, "old\n", true]],
+  ["x! on a modified buffer writes and quits", ["x!", :modified], [true, "", true, "new\n", false]],
+  ["x! on a clean buffer quits", ["x!", :clean], [true, "", true, "old\n", false]],
+  ["x! with no file name stays", ["x!", :unnamed], [false, "E32: No file name", false, "old\n", true]],
+  ["x! stays when the write fails", ["x!", :unwritable], [false, E212, false, "old\n", true]],
+  ["xit writes and quits", ["xit", :modified], [true, "", true, "new\n", false]],
+  ["xit! writes and quits", ["xit!", :modified], [true, "", true, "new\n", false]],
+  ["exi writes and quits", ["exi", :modified], [true, "", true, "new\n", false]],
+  ["exi! writes and quits", ["exi!", :modified], [true, "", true, "new\n", false]],
+  ["exit writes and quits", ["exit", :modified], [true, "", true, "new\n", false]],
+  ["exit! writes and quits", ["exit!", :modified], [true, "", true, "new\n", false]],
+  ["xit on a clean buffer quits without writing", ["xit", :clean], [true, "", true, "old\n", false]],
+  ["exit on a clean buffer quits without writing", ["exit", :clean], [true, "", true, "old\n", false]]
+]) do |input|
+  run_ex(input[0], input[1])
+end
+files = Carat::Doubles::MemoryFiles.new
+ex = build(files)
+s = state_with(["x"], "a.txt")
+r = ex.call(s, "x b.txt")
+t.assert_equal([true, "x\n", nil, true], [r.ok, files.get("b.txt"), files.get("a.txt"), s.quit], "x with a path writes there even when clean and quits")
+
+# Quit-all.
+t.table([
+  ["qa on a clean buffer quits", ["qa", :clean], [true, "", true, "old\n", false]],
+  ["qa refused while modified", ["qa", :modified], [false, E37, false, "old\n", true]],
+  ["qa refused on a modified unnamed buffer", ["qa", :unnamed], [false, E37, false, "old\n", true]],
+  ["qa! on a clean buffer quits", ["qa!", :clean], [true, "", true, "old\n", false]],
+  ["qa! discards changes", ["qa!", :modified], [true, "", true, "old\n", true]],
+  ["qa! discards an unnamed buffer", ["qa!", :unnamed], [true, "", true, "old\n", true]],
+  ["qall on a clean buffer quits", ["qall", :clean], [true, "", true, "old\n", false]],
+  ["qall refused while modified", ["qall", :modified], [false, E37, false, "old\n", true]],
+  ["qall! discards changes", ["qall!", :modified], [true, "", true, "old\n", true]],
+  ["quita on a clean buffer quits", ["quita", :clean], [true, "", true, "old\n", false]],
+  ["quita refused while modified", ["quita", :modified], [false, E37, false, "old\n", true]],
+  ["quita! discards changes", ["quita!", :modified], [true, "", true, "old\n", true]],
+  ["quitall on a clean buffer quits", ["quitall", :clean], [true, "", true, "old\n", false]],
+  ["quitall refused while modified", ["quitall", :modified], [false, E37, false, "old\n", true]],
+  ["quitall! discards changes", ["quitall!", :modified], [true, "", true, "old\n", true]]
+]) do |input|
+  run_ex(input[0], input[1])
+end
+
+# Write-all.
+t.table([
+  ["wa on a clean buffer writes nothing", ["wa", :clean], [true, "", false, "old\n", false]],
+  ["wa writes a modified buffer", ["wa", :modified], [true, WRITTEN, false, "new\n", false]],
+  ["wa with no file name reports E141", ["wa", :unnamed], [false, E141, false, "old\n", true]],
+  ["wa reports a failed write", ["wa", :unwritable], [false, E212, false, "old\n", true]],
+  ["wa! on a clean buffer writes nothing", ["wa!", :clean], [true, "", false, "old\n", false]],
+  ["wa! writes a modified buffer", ["wa!", :modified], [true, WRITTEN, false, "new\n", false]],
+  ["wa! with no file name reports E141", ["wa!", :unnamed], [false, E141, false, "old\n", true]],
+  ["wall on a clean buffer writes nothing", ["wall", :clean], [true, "", false, "old\n", false]],
+  ["wall writes a modified buffer", ["wall", :modified], [true, WRITTEN, false, "new\n", false]],
+  ["wall with no file name reports E141", ["wall", :unnamed], [false, E141, false, "old\n", true]],
+  ["wall! writes a modified buffer", ["wall!", :modified], [true, WRITTEN, false, "new\n", false]]
+]) do |input|
+  run_ex(input[0], input[1])
+end
+
+# Write-quit-all.
+t.table([
+  ["wqa on a clean buffer quits without writing", ["wqa", :clean], [true, "", true, "old\n", false]],
+  ["wqa writes a modified buffer and quits", ["wqa", :modified], [true, "", true, "new\n", false]],
+  ["wqa with no file name stays", ["wqa", :unnamed], [false, E141, false, "old\n", true]],
+  ["wqa stays when the write fails", ["wqa", :unwritable], [false, E212, false, "old\n", true]],
+  ["wqa! on a clean buffer quits", ["wqa!", :clean], [true, "", true, "old\n", false]],
+  ["wqa! writes a modified buffer and quits", ["wqa!", :modified], [true, "", true, "new\n", false]],
+  ["wqa! with no file name stays", ["wqa!", :unnamed], [false, E141, false, "old\n", true]],
+  ["wqa! stays when the write fails", ["wqa!", :unwritable], [false, E212, false, "old\n", true]],
+  ["wqall writes a modified buffer and quits", ["wqall", :modified], [true, "", true, "new\n", false]],
+  ["wqall! writes a modified buffer and quits", ["wqall!", :modified], [true, "", true, "new\n", false]],
+  ["xa on a clean buffer quits without writing", ["xa", :clean], [true, "", true, "old\n", false]],
+  ["xa writes a modified buffer and quits", ["xa", :modified], [true, "", true, "new\n", false]],
+  ["xa with no file name stays", ["xa", :unnamed], [false, E141, false, "old\n", true]],
+  ["xa stays when the write fails", ["xa", :unwritable], [false, E212, false, "old\n", true]],
+  ["xa! writes a modified buffer and quits", ["xa!", :modified], [true, "", true, "new\n", false]],
+  ["xa! with no file name stays", ["xa!", :unnamed], [false, E141, false, "old\n", true]],
+  ["xall writes a modified buffer and quits", ["xall", :modified], [true, "", true, "new\n", false]],
+  ["xall! writes a modified buffer and quits", ["xall!", :modified], [true, "", true, "new\n", false]],
+  ["xall on a clean buffer quits without writing", ["xall", :clean], [true, "", true, "old\n", false]]
+]) do |input|
+  run_ex(input[0], input[1])
+end
+
 # Edit.
 files = Carat::Doubles::MemoryFiles.new
 files.put("b.txt", "zz\n")
