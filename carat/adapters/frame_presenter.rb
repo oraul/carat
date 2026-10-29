@@ -110,11 +110,15 @@ module Carat
 
       private
 
+      # Tabs reach the next tabstop, C0 controls take two cells as ^X, and
+      # delete and the C1 controls take four as <xx>, matching shown_text.
       #: (String, Integer, Integer) -> Integer
       def char_width(ch, dcol, tabstop)
         return tabstop - (dcol % tabstop) if ch == "\t"
-        return 2 if ch.ord < 32
-        Domain::DisplayWidth.of_char(ch)
+        code = ch.ord
+        return 2 if code < 32
+        return 4 if Domain::DisplayWidth.control?(code)
+        Domain::DisplayWidth.of(code)
       end
 
       #: (Integer, Integer) -> Integer
@@ -139,7 +143,8 @@ module Carat
       end
 
       # Paints the visible part of a line: characters whose display columns
-      # fall inside [left, left + width), tabs as blanks, controls as ^X.
+      # fall inside [left, left + width), tabs as blanks, C0 controls as ^X,
+      # delete and C1 controls as <xx>.
       #: (Domain::Frame, Integer, String, Integer, Integer, Integer, Integer) -> void
       def paint_line(frame, frame_row, line, gutter, width, left, tabstop)
         dcol = 0
@@ -160,7 +165,9 @@ module Carat
       #: (String, Integer) -> String
       def shown_text(ch, width)
         return " " * width if ch == "\t"
-        return "^" + Domain::Key.char(ch.ord + 64) if ch.ord < 32
+        code = ch.ord
+        return "^" + Domain::Key.char(code + 64) if code < 32
+        return "<" + code.to_s(16) + ">" if Domain::DisplayWidth.control?(code)
         ch
       end
 

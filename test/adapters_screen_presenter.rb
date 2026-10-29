@@ -63,6 +63,29 @@ wide.put(0, 0, "日x", D::Highlight::NORMAL)
 screen.present(wide)
 t.assert_true(terminal.last_write.include?("日x "), "a wide character is written once and its continuation cell skipped")
 
+# A frame drawn from a line with C1 controls reaches the terminal as markers:
+# the only control byte in the output is the escape that starts the
+# presenter's own sequences.
+def only_escapes?(bytes)
+  clean = true
+  bytes.each_codepoint do |code|
+    clean = false if code != 27 && Carat::Domain::DisplayWidth.control?(code)
+  end
+  clean
+end
+
+buffer = D::Buffer.new(["a\u009Bb\u009Dc"], "a.txt", "\n")
+options = D::Options.new
+options.number = false
+state = D::EditorState.new(buffer, options, 500)
+drawn = Carat::Adapters::FramePresenter.new.call(state, 3, 12)
+screen.present(drawn)
+bytes = terminal.last_write
+t.assert_true(bytes.include?("a<9b>b<9d>c"), "C1 controls are written as markers")
+t.assert_true(only_escapes?(bytes), "the output holds no C0 or C1 code point outside the escape sequences")
+t.assert_equal(false, bytes.include?("\u009B"), "no raw CSI introducer is written")
+t.assert_equal(false, bytes.include?("\u009D"), "no raw OSC introducer is written")
+
 screen.leave
 t.assert_equal(1, terminal.left, "leave reaches the terminal")
 t.assert_true(terminal.output.end_with?("\e[0m\e[2 q\e[?25h\e[?1049l"), "leave restores the block cursor and the main screen last")

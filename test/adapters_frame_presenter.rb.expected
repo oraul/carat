@@ -41,10 +41,26 @@ ok   cursor after a wide character is at column 2
 ok   wide character cell has width 2
 ok   the cell after a wide character is a continuation
 ok   control characters show as caret notation
+ok   U+007F shows as <7f>
+ok   U+0080 shows as <80>
+ok   U+009B shows as <9b>
+ok   U+009D shows as <9d>
+ok   U+007F marker is four cells wide and the frame holds no control
+ok   U+0080 marker is four cells wide and the frame holds no control
+ok   U+009B marker is four cells wide and the frame holds no control
+ok   U+009D marker is four cells wide and the frame holds no control
+ok   cursor on a C1 control sits on the first cell of its marker
+ok   cursor after a C1 control is placed past its four cells
+ok   markers and caret notation mix on one line
+ok   no cell holds a control code point after a mixed line
+ok   put stores one cell per control code point
+ok   put stores the replacement character for a C1 control
+ok   put stores the replacement character for C0 and delete
+ok   a frame written to directly holds no control code point
 ok   frame has 24 rows
 ok   frame has 10 rows after shrinking
 ok   status line moved to row 8
 ok   a render of the same size reuses the frame
 ok   a render of the same size reuses the cells
 ok   the reused frame shows the new text
-adapters_frame_presenter: 49 passed, 0 failed
+adapters_frame_presenter: 65 passed, 0 failed

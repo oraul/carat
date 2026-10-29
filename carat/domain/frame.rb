@@ -7,6 +7,7 @@ module Carat
     # in place across renders rather than allocated anew.
     class Frame < Struct.new(:rows, :cols, :cursor_row, :cursor_col, :cursor_shape, :cells)
       SPACE = 32
+      REPLACEMENT = 0xFFFD
 
       # @rbs @rows: Integer
       # @rbs @cols: Integer
@@ -60,11 +61,16 @@ module Carat
       end
 
       # Writes text from (row, col), honoring display width and stopping at
-      # the right edge. Returns the column after the last cell written.
+      # the right edge. Returns the column after the last cell written. A
+      # control code point is stored as the replacement character, so no
+      # cell ever holds one and the terminal never receives it raw; the
+      # presenter turns the ones it meets in a line into markers before
+      # they get here.
       #: (Integer, Integer, String, Integer) -> Integer
       def put(row, col, text, hl)
         return col if row < 0 || row >= rows
-        text.each_codepoint do |code|
+        text.each_codepoint do |raw|
+          code = DisplayWidth.control?(raw) ? REPLACEMENT : raw
           width = DisplayWidth.of(code)
           next if width == 0
           break if col + width > cols
