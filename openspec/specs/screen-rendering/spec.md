@@ -28,7 +28,7 @@ When the relativenumber option is on, every row other than the cursor row SHALL 
 - **THEN** the gutters read "  1 ", "  2 ", "  1 " for rows 0, 1, and 2 respectively, with row 1 showing the absolute number 2
 
 ### Requirement: Status line content
-The status line of a window SHALL show the buffer path, or "[No Name]" when there is none, followed by " [+]" when the buffer is modified, and SHALL show at its right end that window's cursor as "row,col" using 1-based numbers followed by the window position "All", "Top", "Bot", or a percentage.
+The status line of a window SHALL show the buffer path, or the title of a scratch buffer, or "[No Name]" when there is neither, followed by " [+]" when the buffer is modified, then on the current window's status line the status segments of the plugins in registration order separated by one space after two spaces, and SHALL show at its right end that window's cursor as "row,col" using 1-based numbers followed by the window position "All", "Top", "Bot", or a percentage.
 
 #### Scenario: Modified buffer
 - **WHEN** the buffer for "a.txt" is modified and the cursor is at (1, 2) in a short buffer
@@ -37,6 +37,14 @@ The status line of a window SHALL show the buffer path, or "[No Name]" when ther
 #### Scenario: Unnamed buffer
 - **WHEN** a buffer with no path is rendered
 - **THEN** the status line starts with "[No Name]"
+
+#### Scenario: Scratch buffer
+- **WHEN** a scratch buffer titled "list" is rendered
+- **THEN** its status line starts with "list"
+
+#### Scenario: Status segment
+- **WHEN** the hello plugin has set the segment "hello 1" and the current window shows "a.txt"
+- **THEN** the current window's status line starts with "a.txt  hello 1" and another window's status line does not show the segment
 
 ### Requirement: Message row content
 The message row SHALL show, in priority order, the command line prefixed by ":" in command-line mode, the pending message if one was set by the last action, or "-- INSERT --" in insert mode, and SHALL be blank otherwise. A message SHALL stay until the next key is handled.
@@ -168,3 +176,14 @@ When more than one tab page exists, row 0 SHALL be the tab line and the windows 
 #### Scenario: Two tab pages
 - **WHEN** two tab pages exist, the first showing "a.txt" and current, the second "b.txt", in a 7-row frame
 - **THEN** row 0 reads " 1 a.txt  2 b.txt " with " 1 a.txt " in the selected tab line highlight, " 2 b.txt " in the tab line highlight, the rest of the row in the tab line fill highlight, row 1 is the first text row, and row 5 is the status line
+
+### Requirement: Signs take a column before the line numbers
+A buffer with at least one sign SHALL be drawn with a sign column two cells wide at the left of its windows, before the line numbers, holding each sign's glyph on its row and blanks elsewhere; a buffer with no signs SHALL have no sign column.
+
+#### Scenario: One sign
+- **WHEN** the "error" sign of the ascii set is placed on row 1 of a three-line buffer with line numbers on
+- **THEN** row 1 of the frame starts with "X   2 " and row 0 starts with "    1 "
+
+#### Scenario: No signs
+- **WHEN** the buffer has no signs
+- **THEN** row 0 starts with "  1 "

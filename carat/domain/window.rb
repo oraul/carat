@@ -9,6 +9,8 @@ module Carat
     # equalizing leave it alone. A Struct record: mutable, with a reader
     # and a writer per member.
     class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width)
+      SIGN_WIDTH = 2
+
       # @rbs @buffer: Buffer
       # @rbs @cursor: Cursor
       # @rbs @top: Integer
@@ -44,14 +46,16 @@ module Carat
         self.left = other.left
       end
 
-      # The gutter is max(3, digits of the line count) plus one space when
-      # numbers are shown, and absent otherwise.
+      # The gutter is the sign column, two cells while the buffer has
+      # signs, plus max(3, digits of the line count) and one space when
+      # numbers are shown.
       #: (Options) -> Integer
       def gutter_width(options)
-        return 0 unless options.number || options.relativenumber
+        signs = buffer.signs? ? SIGN_WIDTH : 0
+        return signs unless options.number || options.relativenumber
         digits = buffer.line_count.to_s.length
         digits = 3 if digits < 3
-        digits + 1
+        signs + digits + 1
       end
 
       # Scrolls so that row is visible with scrolloff rows of context where

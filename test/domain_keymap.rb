@@ -73,4 +73,25 @@ unbound = D::Keymap.build({ "normal" => { "j" => "cursor.down" } }, " ")
 unbound.add(:normal, "j", nil, " ")
 t.assert_equal(:none, unbound.lookup(:normal, codes("j")).kind, "null unbinds a key")
 
+# A plugin's defaults go in first and the configuration last, so the
+# configuration replaces or removes them and leaves the rest alone.
+PLUGIN = { "normal" => { "<leader>hh" => "plugin.hello.greet", "<leader>hx" => "plugin.hello.extra" } }
+t.table([
+  ["plugin binding stays when the configuration is silent", {}, [[:match, "plugin.hello.greet"], [:match, "plugin.hello.extra"]]],
+  ["configuration replaces the plugin binding", { "normal" => { "<leader>hh" => "cursor.down" } }, [[:match, "cursor.down"], [:match, "plugin.hello.extra"]]],
+  ["configuration removes the plugin binding", { "normal" => { "<leader>hh" => nil } }, [[:none, nil], [:match, "plugin.hello.extra"]]],
+  ["configuration adds a longer binding", { "normal" => { "<leader>hhh" => "cursor.up" } }, [[:match_prefix, "plugin.hello.greet"], [:match, "plugin.hello.extra"]]]
+]) do |user|
+  merged = D::Keymap.new
+  merged.add_all(PLUGIN, " ")
+  merged.add_all(user, " ")
+  a = merged.lookup(:normal, codes("<leader>hh"))
+  b = merged.lookup(:normal, codes("<leader>hx"))
+  [[a.kind, a.value], [b.kind, b.value]]
+end
+merged = D::Keymap.new
+merged.add_all({ "nope" => {} }, " ")
+merged.add_all(nil, " ")
+t.assert_equal(["nope: unknown mode"], merged.errors, "add_all records errors and ignores a non-object")
+
 t.finish

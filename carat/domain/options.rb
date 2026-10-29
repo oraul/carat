@@ -1,9 +1,11 @@
 module Carat
   module Domain
-    # Typed options with Vim names. Only the ones the foundation reads are
-    # members; :set and local options arrive with the options change. A
-    # Struct record: mutable, with a reader and a writer per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scrolloff)
+    # Typed options with Vim names, plus icons, Carat's own: the icon set
+    # plugins draw with, "nerd", "unicode", or "ascii". Only the ones the
+    # editor reads are members; :set and local options arrive with the
+    # options change. A Struct record: mutable, with a reader and a writer
+    # per member.
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scrolloff, :icons)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -11,11 +13,12 @@ module Carat
       # @rbs @expandtab: bool
       # @rbs @autoindent: bool
       # @rbs @scrolloff: Integer
+      # @rbs @icons: String
 
-      # Vim's defaults.
+      # Vim's defaults, and the nerd icon set.
       #: () -> void
       def initialize
-        super(false, false, 8, 8, false, false, 0)
+        super(false, false, 8, 8, false, false, 0, "nerd")
       end
 
       # Builds options from the "options" object of a config value. A value
@@ -31,7 +34,15 @@ module Carat
         options.expandtab = flag(hash, "expandtab", options.expandtab)
         options.autoindent = flag(hash, "autoindent", options.autoindent)
         options.scrolloff = count(hash, "scrolloff", options.scrolloff)
+        options.icons = icon_set(hash, "icons", options.icons)
         options
+      end
+
+      #: (untyped, String, String) -> String
+      def self.icon_set(hash, key, default)
+        value = hash[key]
+        return value if value.is_a?(String) && Icons.set?(value)
+        default
       end
 
       #: (untyped, String, bool) -> bool

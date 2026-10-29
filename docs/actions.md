@@ -1,8 +1,8 @@
 # Actions
 
-The action names a keymap value may use, in `namespace.action` form. A keymap value that is not an action name is a key sequence in Vim notation to replay. Actions that `config/default.json` already binds but that a later roadmap item implements are listed under Reserved; pressing their keys shows "Not implemented: name".
+The action names a keymap value may use, in `namespace.action` form, or `plugin.<name>.<action>` for a plugin's action. A keymap value that is not an action name is a key sequence in Vim notation to replay. Actions that `config/default.json` already binds but that a later roadmap item implements are listed under Reserved; pressing their keys shows "Not implemented: name".
 
-In normal and operator-pending modes the command grammar classifies an action by its name: `cursor.*` and `motion.*` are motions, which move the cursor on their own and give an operator its range; `operator.delete`, `operator.change`, `operator.yank`, `operator.indent`, and `operator.dedent` are the pending operators, which wait for a motion, a text object, or themselves again for a linewise command; `textobject.*` actions are text objects, usable only after an operator; `register.select` and the four find motions read one more key; every other action, the `window.*` and `tab.*` actions included, completes at once with the count and register typed before it.
+In normal and operator-pending modes the command grammar classifies an action by its name: `cursor.*` and `motion.*` are motions, which move the cursor on their own and give an operator its range; `operator.delete`, `operator.change`, `operator.yank`, `operator.indent`, and `operator.dedent` are the pending operators, which wait for a motion, a text object, or themselves again for a linewise command; `textobject.*` actions are text objects, usable only after an operator; `register.select` and the four find motions read one more key; every other action, the `window.*`, `tab.*`, and `plugin.*` actions included, completes at once with the count and register typed before it. A `plugin.<name>.<action>` action is routed to the plugin that declared it in its manifest; a plugin's default bindings live in its manifest, not in `config/default.json`, and a user binding of the same keys replaces them.
 
 ## Implemented
 
@@ -98,6 +98,12 @@ In normal and operator-pending modes the command grammar classifies an action by
 | `window.quit` | normal | `:q` on the window, or on window count |
 | `tab.next` | normal | Next tab page, wrapping; a count is a tab page number |
 | `tab.previous` | normal | Count tab pages back, wrapping |
+
+## Plugins
+
+| Action | Plugin | Default keys | Effect |
+| --- | --- | --- | --- |
+| `plugin.hello.greet` | `hello` | `<leader>hh` | Show a greeting with the info icon and count it in the status line |
 
 ## Reserved
 

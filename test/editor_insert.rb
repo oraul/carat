@@ -10,7 +10,7 @@ def editor(text, autoindent, expandtab)
   config["options"]["tabstop"] = 4
   files = Carat::Doubles::MemoryFiles.new
   files.put("a.txt", text)
-  h = Carat::Doubles::EditorHarness.new(files, config, 10, 40)
+  h = Carat::Doubles::EditorHarness.new(files, config, 10, 40, [])
   h.open("a.txt")
   h
 end

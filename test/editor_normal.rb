@@ -98,7 +98,7 @@ config["keymaps"]["normal"]["a"] = "cursor.right"
 config["keymaps"]["normal"]["ab"] = "cursor.line_end"
 files = Carat::Doubles::MemoryFiles.new
 files.put("a.txt", "abcdef\n")
-h = H.new(files, config, 10, 80)
+h = H.new(files, config, 10, 80, [])
 h.open("a.txt")
 h.type("a")
 t.assert_equal([0, 0], h.cursor, "ambiguous prefix waits")
@@ -116,7 +116,7 @@ loop_config = Carat::Doubles::FixedConfig.defaults
 loop_config["keymaps"]["normal"]["q"] = "q"
 files = Carat::Doubles::MemoryFiles.new
 files.put("a.txt", "ab\n")
-h = H.new(files, loop_config, 10, 80)
+h = H.new(files, loop_config, 10, 80, [])
 h.open("a.txt")
 h.type("q")
 t.assert_equal("E223: Recursive mapping", h.message_row, "a self-referencing remap stops")

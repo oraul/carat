@@ -18,7 +18,7 @@ def editor_with(text, options)
   options.each { |key, value| config["options"][key] = value }
   files = Carat::Doubles::MemoryFiles.new
   files.put("a.txt", text)
-  h = Carat::Doubles::EditorHarness.new(files, config, 10, 80)
+  h = Carat::Doubles::EditorHarness.new(files, config, 10, 80, [])
   h.open("a.txt")
   h
 end

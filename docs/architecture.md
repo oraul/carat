@@ -99,7 +99,7 @@ The `lint` test program (section 9) enforces that a file in one directory only r
 
 Pure Ruby objects with no I/O. They hold the editor's state and the rules of modal editing.
 
-- `Buffer`: the text of one file as an array of line strings without newlines, plus `path`, `modified`, and `line_ending`, a `Struct` record. All edits go through four primitives: `insert(pos, text)`, `delete(range)`, `replace(range, text)`, and `set_lines(from, to, lines)`. Each primitive records its inverse in the open `Transaction`. An array of lines handles files up to a few hundred thousand lines; a piece table is a contained later change behind the same primitives.
+- `Buffer`: the text of one file as an array of line strings without newlines, plus `path`, `modified`, and `line_ending`, a `Struct` record. All edits go through four primitives: `insert(pos, text)`, `delete(range)`, `replace(range, text)`, and `set_lines(from, to, lines)`. Each primitive records its inverse in the open `Transaction` and counts in `changes`, which the plugin host reads to tell that the text changed. An array of lines handles files up to a few hundred thousand lines; a piece table is a contained later change behind the same primitives. A scratch buffer, one a plugin owns, carries the plugin name in `owner`, a `title` shown in place of the path, and a `keymap` of its own; every buffer carries its `signs`, glyphs keyed by row, with the plugin that placed each in `sign_owners`.
 - `Position`: a `(row, col)` pair in code point columns, a `Data` value. Display width is a presenter concern.
 - `Range`: two positions plus a kind: `charwise`, `linewise`, or `blockwise`, and an inclusive flag, a `Data` value. Every operator receives a `Range`.
 - `Cursor`: the current position plus `want_col`, the column aimed for when moving vertically through shorter lines, as Vim's `curswant`, a `Struct` record.
@@ -107,7 +107,7 @@ Pure Ruby objects with no I/O. They hold the editor's state and the rules of mod
 - `Transaction` and `UndoTree`: a transaction groups the edits of one command with the cursor before and after. The tree keeps branches so `u`, `Ctrl-R`, and `g-` behave like Vim. Insert mode opens one transaction on entry and closes it on `Esc`.
 - `Registers`: named `a` to `z` with uppercase append, numbered `0` to `9` with shifting, unnamed, black hole, and the read-only `%`, `:`, and `.`. Each entry stores text and a kind, so a linewise yank pastes as lines.
 - `Marks`: per-buffer lowercase, global uppercase, and the automatic `'`, `.`, `^`, `[`, `]`, `<`, `>`, adjusted on line insert and delete.
-- `Options`: typed global and buffer-local options with Vim names, a `Struct` record: `number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, `wrap`, `scrolloff`, `timeoutlen`, `clipboard`.
+- `Options`: typed global and buffer-local options with Vim names, a `Struct` record: `number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, `wrap`, `scrolloff`, `timeoutlen`, `clipboard`, plus Carat's own `icons`, the icon set (`nerd`, `unicode`, or `ascii`) the `Icons` table serves to plugins by name; Nerd Font glyphs live in the private use areas, which `DisplayWidth` counts as one cell.
 - `Key`: an integer code. Printable code points are themselves, control characters are their byte, special keys (arrows, function keys, Home, End, Delete, Page Up and Down) are codes above the Unicode range, and Alt is a flag bit. `KeyNotation` converts between codes and the Vim spelling used in JSON: `<CR>`, `<Esc>`, `<C-w>`, `<A-x>`, `<leader>`, `<Up>`, `<F5>`.
 - `Mode`: `normal`, `insert`, `replace`, `visual`, `visual_line`, `visual_block`, `operator_pending`, `cmdline`.
 - `Keymap`: one trie per mode from key sequences to action names, built from JSON (section 7); the keymap and its `KeymapNode` are `Struct` records. An ambiguous prefix such as `g` before `gg` waits for the next key until `timeoutlen`.
@@ -148,7 +148,7 @@ Each use case is one class with a single `call` taking a request value and retur
 
 - `SplitWindow`, `CloseWindow`, `FocusWindow`, `ResizeLayout`, `OpenTab`, `CloseTab`, `SwitchTab`; `Quit` applies the `:q` rule over them: close the window when another exists anywhere, else end the editor unless a listed buffer is modified.
 - `RequestCompletion`, `RequestDefinition`, `RequestHover`, `RequestReferences`, `Rename`, `FormatBuffer`, `ApplyDiagnostics`: each talks to `LanguageServicePort`. They are written so that a port that reports no service available produces an empty response and a message, never an error.
-- `RegisterPlugin`, `DispatchPluginAction`, `EmitEvent`, `ApplyPluginEdit`: the plugin host use cases of section 9. The finder, the explorer, and git signs are plugins built on them, not separate use cases.
+- `PluginHost` with `PluginLink` and `PluginEntry`: the plugin host of section 9 as one use case that registers, validates, activates, routes, observes, and serves requests, handing each plugin a `PluginLink`, its own `PluginApi::Host`, so requests arrive with the plugin's name. The finder, the explorer, and git signs are plugins built on it, not separate use cases.
 
 ### 5.4 Shared library inside the inner layers
 
@@ -278,22 +278,22 @@ What a plugin can declare, in its manifest:
 - Event subscriptions: `buffer_open`, `buffer_change`, `buffer_save`, `cursor_move`, `mode_change`, `window_focus`, `idle`, `resize`, `quit`.
 - Options it accepts, with types and defaults.
 
-What a plugin can do, through `PluginHostPort`:
+What a plugin can do, through its `PluginApi::Host` (one method per request; the plugin host change delivered the requests marked with an asterisk, the rest arrive with the changes named here):
 
-- Read a buffer: lines, cursor, selection, marks, path, modified flag.
-- Edit a buffer: a list of `(range, text)` replacements applied as one transaction, so the user undoes a plugin edit in one step.
-- Move the cursor, set a selection, set a mark.
-- Open a scratch buffer in a split or floating window, with its own keymap bound to the plugin's actions. This is how the explorer and the finder draw their lists: they are ordinary buffers with plugin-owned bindings, in the way Neovim's `oil` and `telescope` present text.
-- Show a message, set a status line segment, place signs and virtual text, set highlights for a range.
+- Read a buffer: lines, cursor, path, modified flag (*); selection and marks come with the visual modes and marks.
+- Edit a buffer: a list of `(range, text)` replacements validated as a whole and applied as one batch (*), which becomes one undo transaction when the undo tree lands, so the user undoes a plugin edit in one step.
+- Move the cursor (*); set a selection, set a mark.
+- Open a scratch buffer in a fixed-width side window at the left or right edge of the tab page, with its own keymap bound to the plugin's actions, replace its lines, close it, focus a window, open a file in a window (*); floating windows later. This is how the explorer and the finder draw their lists: they are ordinary buffers with plugin-owned bindings, in the way Neovim's `oil` and `telescope` present text.
+- Show a message, set a status line segment, place and clear signs (*); virtual text and highlights for a range come with the syntax highlighting change, which gives a plugin highlight groups of its own.
 - Ask for input on the command line with a prompt.
-- Run an ex command string.
+- Run an ex command string, list a directory, stat a path, look up an icon by name, read the plugin's own options (*).
 - Start a child process and receive its output, through the same `ProcessPort` as language servers.
 
-Every call is a request value in and a response value out, with no callbacks. Events are delivered as values too. This shape is what lets one API serve both plugin kinds.
+Every call is a request value in and a response value out, with no callbacks: the method's parameters are the request and its return the response (`Response`, `BufferView`, or `FileInfo`). Buffers are numbered by list position and windows by layout order, both from 1, 0 meaning the current one. Events are delivered as values too, after the key that caused them, by comparing the state with the state after the previous key (`buffer_save` from the write itself, `resize` from the render, `idle` once the main loop has an idle tick). This shape is what lets one API serve both plugin kinds.
 
 ### 9.2 Compiled plugins
 
-A compiled plugin is a `spin` package that depends on `carat` and implements one class with `manifest`, `activate(host)`, `deactivate`, `on_event(event)`, `on_action(name, context)`, and `on_command(command)`. It is listed in `spin.toml` under `[dependencies]` and in `config/plugins.json`, from which `bin/carat-gen-config.rb` generates `carat/plugins/registry.rb`: an explicit `require` and an explicit constructor call per plugin, in order. Spinel sees a fixed list; there is no reflection and no computed constant lookup. The built-in plugins live in `carat/plugins/` inside this repository and go through exactly the same registry, so the API is exercised by the project itself from the first plugin change.
+A compiled plugin is a `spin` package that depends on `carat` and implements one class, a subclass of `PluginApi::Plugin`, with `manifest`, `activate(host)`, `deactivate`, `on_event(event)`, `on_action(name, context)`, and `on_command(command)`. It is listed in `spin.toml` under `[dependencies]` and in `config/plugins.json` as `{"name", "path", "class"}`, from which `bin/carat-gen-config.rb` generates `carat/plugins/registry.rb` through `Domain::RegistrySource`: an explicit `require` and an explicit constructor call per plugin, in order, which the `config_sync` test renders again to catch a stale file. Spinel sees a fixed list; there is no reflection and no computed constant lookup. The built-in plugins live in `carat/plugins/` inside this repository and go through exactly the same registry, so the API is exercised by the project itself from the first plugin change; `docs/plugins.md` is the guide.
 
 Compiled plugins run on the editor thread and are as fast as the editor. They obey the Spinel rules of section 2.1 and the layer rule: a plugin may require only `carat/plugin_api.rb` and its own files, never the editor's entities, use cases, or drivers. The `lint` test checks this.
 
@@ -308,7 +308,7 @@ Process plugins may be written in any language, CRuby included, so an author can
 - The editor must start, edit, save, and quit with every plugin disabled. Core editing never depends on a plugin.
 - A plugin failure is reported in the message area and disables that plugin; it never ends the editor or corrupts a buffer, because every edit goes through one validated transaction.
 - A plugin's bindings never override a user's bindings, and `config/default.json` never contains a plugin's bindings; those belong to the plugin manifest.
-- The API is versioned. The host refuses a manifest written against a newer major version and says so.
+- The API is versioned, `1.0` in `PluginApi::VERSION`. The host refuses a manifest written against a newer major version and says so, and `Domain::ManifestCheck` holds every other rule a manifest must obey: name form, `plugin.<name>.<action>` action names, uppercase ex command names with prefix abbreviations, known events, bindings that parse and name the plugin's own actions, and typed options.
 
 ## 10. Testing strategy
 
@@ -345,11 +345,12 @@ carat/domain/                   entities
   undo_tree.rb registers.rb marks.rb options.rb key.rb key_notation.rb
   mode.rb keymap.rb command.rb command_grammar.rb motions.rb text_objects.rb
   operators.rb ex_command.rb ex_grammar.rb window.rb layout.rb tab_page.rb
-  frame.rb cell.rb json.rb default_config.rb (generated)
+  frame.rb cell.rb json.rb default_config.rb (generated) icons.rb
+  manifest_check.rb registry_source.rb
 carat/use_cases/
   handle_key.rb move.rb operate.rb enter_insert.rb insert_text.rb
   leave_insert.rb undo.rb redo.rb repeat_last.rb visual/*.rb search/*.rb
-  files/*.rb execute_ex.rb ex/*.rb windows/*.rb language/*.rb finder/*.rb
+  files/*.rb execute_ex.rb ex/*.rb windows/*.rb plugins/*.rb language/*.rb
 carat/ports/
   terminal_port.rb clock_port.rb file_port.rb config_port.rb
   language_service_port.rb process_port.rb message_queue_port.rb
@@ -363,7 +364,7 @@ carat/drivers/
 carat/plugin_api.rb             the only file a plugin may require
 carat/plugins/
   registry.rb (generated)       explicit require and constructor per plugin
-  explorer/ finder/ git_signs/  built-in compiled plugins
+  hello/ explorer/ finder/ git_signs/  built-in compiled plugins
 carat/adapters/json_rpc_plugin_gateway.rb
 config/plugins.json             the ordered list of compiled plugins
 carat/doubles/
@@ -373,7 +374,7 @@ test/                           one program per file, each with a committed .exp
   editor_*.rb lint.rb config_sync.rb smoke_*.rb
 build/                          spin output, ignored by git
 docs/
-  architecture.md compatibility.md actions.md plugin-protocol.md
+  architecture.md compatibility.md actions.md plugins.md plugin-protocol.md
 openspec/                       specs are the behavioral source of truth
 ```
 

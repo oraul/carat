@@ -9,12 +9,15 @@ require_relative "../windows/close_window"
 require_relative "../windows/open_tab"
 require_relative "../windows/close_tab"
 require_relative "../windows/switch_tab"
+require_relative "../plugins/plugin_host"
 
 module Carat
   module UseCases
     # Parses a command line and runs the matching ex command. The registry is
-    # the case below; later changes add their commands as arms. The "all"
-    # commands act on every buffer in the list, across every tab page.
+    # the case below; later changes add their commands as arms, and a name
+    # no arm takes is offered to the plugins before it is unknown. The
+    # "all" commands act on every buffer in the list, across every tab
+    # page.
     class ExecuteEx
       # @rbs @open_file: OpenFile
       # @rbs @save_file: SaveFile
@@ -24,9 +27,10 @@ module Carat
       # @rbs @open_tab: OpenTab
       # @rbs @close_tab: CloseTab
       # @rbs @switch_tab: SwitchTab
+      # @rbs @plugins: PluginHost
 
-      #: (OpenFile, SaveFile, Quit, SplitWindow, CloseWindow, OpenTab, CloseTab, SwitchTab) -> void
-      def initialize(open_file, save_file, quit, split_window, close_window, open_tab, close_tab, switch_tab)
+      #: (OpenFile, SaveFile, Quit, SplitWindow, CloseWindow, OpenTab, CloseTab, SwitchTab, PluginHost) -> void
+      def initialize(open_file, save_file, quit, split_window, close_window, open_tab, close_tab, switch_tab, plugins)
         @open_file = open_file
         @save_file = save_file
         @quit = quit
@@ -35,6 +39,7 @@ module Carat
         @open_tab = open_tab
         @close_tab = close_tab
         @switch_tab = switch_tab
+        @plugins = plugins
       end
 
       #: (Domain::EditorState, String) -> Outcome
@@ -90,7 +95,7 @@ module Carat
         when "tabl", "tablast"
           @switch_tab.last(state)
         else
-          unknown(text)
+          @plugins.command?(command.name) ? @plugins.command(state, command) : unknown(text)
         end
       end
 
@@ -126,7 +131,8 @@ module Carat
       # reports the last write, or the first failure: a modified buffer with
       # no name reports E141 with its list position, and the other buffers
       # are still written, as Neovim's do_wqall goes on after an error. A
-      # hidden buffer that is clean after its write leaves the list.
+      # scratch buffer is skipped. A hidden buffer that is clean after its
+      # write leaves the list.
       #: (Domain::EditorState) -> Outcome
       def write_all(state)
         result = Outcome.success("")
@@ -134,7 +140,7 @@ module Carat
         i = 0
         while i < state.buffer_count
           buffer = state.buffer_at(i)
-          if buffer.modified
+          if buffer.modified && !buffer.scratch?
             written = buffer.path.nil? ? Outcome.failure("E141: No file name for buffer #{i + 1}") : @save_file.write(buffer, "")
             if !written.ok && !failed
               result = written

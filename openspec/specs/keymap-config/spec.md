@@ -6,7 +6,7 @@ Key bindings come only from JSON configuration: one map per mode from a key sequ
 ## Requirements
 
 ### Requirement: Bindings are loaded from the configuration per mode
-The editor SHALL build its key bindings from the "keymaps" object of the configuration, one map for each mode named there, and from nothing else. A key written in Vim notation SHALL bind the key sequence it denotes, with <leader> expanded from the configuration's "leader".
+The editor SHALL build its key bindings from the default bindings of every enabled plugin's manifest and then from the "keymaps" object of the configuration, one map per mode named there, so a configuration binding of the same keys replaces a plugin's, null removes it, and no binding comes from anywhere else. A key in Vim notation SHALL bind the sequence it denotes, with <leader> expanded from the configuration's "leader". An action name is namespace segments and the action, joined by dots.
 
 #### Scenario: Default normal-mode binding
 - **WHEN** the default configuration is loaded and the key "j" is pressed in normal mode
@@ -19,6 +19,18 @@ The editor SHALL build its key bindings from the "keymaps" object of the configu
 #### Scenario: Insert-mode binding
 - **WHEN** the default configuration is loaded and Escape is pressed in insert mode
 - **THEN** the action "mode.normal" is selected
+
+#### Scenario: Plugin default binding
+- **WHEN** the hello plugin is enabled and Space, "h", "h" are pressed in normal mode
+- **THEN** the action "plugin.hello.greet" is selected
+
+#### Scenario: Configuration wins over a plugin
+- **WHEN** the configuration binds "<leader>hh" to "cursor.down" and the hello plugin is enabled
+- **THEN** Space, "h", "h" select "cursor.down"
+
+#### Scenario: Configuration unbinds a plugin key
+- **WHEN** the configuration maps "<leader>hh" to null and the hello plugin is enabled
+- **THEN** Space, "h", "h" are unbound
 
 ### Requirement: A multi-key binding waits for the rest of its sequence
 When the keys pressed so far are a proper prefix of a bound sequence and not themselves bound, the editor SHALL wait for the next key without dispatching anything.

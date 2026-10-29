@@ -1,0 +1,36 @@
+ok   the hello manifest breaks no rule
+ok   the host's own version is accepted
+ok   a newer minor is accepted
+ok   a newer major is refused with both versions
+ok   a malformed version is not a refusal
+ok   uppercase name
+ok   name starting with a digit
+ok   newer major
+ok   malformed version
+ok   action for another plugin
+ok   action without the prefix
+ok   action with a bad tail
+ok   action without a description
+ok   lowercase command
+ok   abbreviation that is not a prefix
+ok   abbreviation equal to the name
+ok   unknown event
+ok   bad key notation
+ok   unknown mode
+ok   binding to a foreign action
+ok   bindings that are not an object
+ok   option without a type
+ok   option with an unknown type
+ok   integer option with a bad default
+ok   bool option with a bad default
+ok   type without a default
+ok   a key sequence binding
+ok   a null binding
+ok   no bindings
+ok   a command with no abbreviation
+ok   every event
+ok   every option type
+ok   two problems are both reported
+ok   describe returns the description
+ok   describe returns empty for an unknown action
+domain_plugin_manifest: 35 passed, 0 failed

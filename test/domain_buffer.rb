@@ -140,7 +140,7 @@ w = D::Window.new(D::Buffer.from_text("ab\n", "w.txt"))
 t.assert_equal([0, 0, 0, "w.txt", [0, 0], false], [w.top, w.left, w.height, w.buffer.path, w.cursor.to_a, w.fixed_width], "a window starts at the origin with no height, showing its buffer from the start")
 w.top = 7
 t.assert_equal(7, w.top, "a window member has a writer")
-t.assert_equal([:lines, :path, :line_ending, :modified], D::Buffer.members, "buffer members in constructor order")
+t.assert_equal([:lines, :path, :line_ending, :modified, :owner, :title, :keymap, :signs, :sign_owners, :changes], D::Buffer.members, "buffer members in constructor order")
 t.assert_equal([:code, :width, :hl], D::Cell.members, "cell members")
 o = D::Options.new
 t.assert_equal([false, 8, 0], [o.number, o.tabstop, o.scrolloff], "options start with Vim's defaults")
@@ -167,5 +167,44 @@ t.assert_equal(4, b.line_count, "lines_of does not share the array")
 t.assert_equal([2, 0, 0, 1], [b.first_nonblank(0), b.first_nonblank(1), b.first_nonblank(2), b.first_nonblank(3)], "first_nonblank per row")
 t.assert_equal(["  ", "", "", "\t"], [b.indent_of(0), b.indent_of(1), b.indent_of(2), b.indent_of(3)], "indent_of per row")
 t.assert_equal("", b.line(9), "a row outside the buffer reads as empty")
+
+# Scratch members, signs, and the change counter.
+b = D::Buffer.new(["ab"], nil, "\n")
+t.assert_equal([false, "", "", true, nil, 0], [b.scratch?, b.owner, b.title, b.keymap.nil?, b.display_name, b.changes], "a file buffer has no owner, title, keymap, or changes")
+b.insert(D::Position.new(0, 1), "x")
+b.delete(rng(0, 0, 0, 1, false))
+b.set_lines(0, 1, ["y"])
+t.assert_equal(3, b.changes, "every primitive counts one change")
+b.lines = ["z"]
+t.assert_equal(3, b.changes, "replacing the lines outside the primitives does not count")
+b.owner = "hello"
+b.title = "list"
+t.assert_equal([true, "list"], [b.scratch?, b.display_name], "a scratch buffer is named by its title")
+named = D::Buffer.new(["ab"], "a.txt", "\n")
+t.assert_equal("a.txt", named.display_name, "a file buffer is named by its path")
+t.assert_equal(false, b.signs?, "no signs at first")
+b.signs["1"] = "X"
+b.sign_owners["1"] = "hello"
+t.assert_equal(true, b.signs?, "a sign is placed")
+
+# The state skips scratch buffers as unsaved work and drops them when
+# unshown.
+s = D::EditorState.new(D::Buffer.new(["one"], "a.txt", "\n"), D::Options.new, 500)
+scratch = D::Buffer.new(["l"], nil, "\n")
+scratch.owner = "hello"
+scratch.title = "list"
+s.add_buffer(scratch)
+scratch.set_lines(0, 1, ["m"])
+t.assert_equal([true, false, true], [scratch.modified, s.any_modified?, s.hidden_modified.nil?], "a changed scratch buffer is not unsaved work")
+t.assert_equal(2, s.buffer_number(scratch), "buffer_number is the list position from 1")
+t.assert_equal(0, s.buffer_number(D::Buffer.new(["q"], nil, "\n")), "an unlisted buffer has number 0")
+t.assert_equal(true, s.scratch_for("hello", "list").equal?(scratch), "scratch_for finds the plugin's buffer by title")
+t.assert_equal(true, s.scratch_for("hello", "nope").nil?, "scratch_for answers nil for another title")
+s.release(scratch)
+t.assert_equal(1, s.buffer_count, "an unshown scratch buffer leaves the list even when modified")
+s.buffer.set_lines(0, 1, ["two"])
+s.release(s.buffer)
+t.assert_equal(1, s.buffer_count, "a shown modified file buffer stays")
+t.assert_equal({}, s.segments, "no status segments at first")
 
 t.finish

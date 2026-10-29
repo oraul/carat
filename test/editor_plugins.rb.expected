@@ -1,0 +1,63 @@
+ok   the default binding greets with the info icon and the open count
+ok   the ex command greets
+ok   the abbreviation greets
+ok   the argument is the name
+ok   a partial abbreviation is unknown
+ok   buffer opens are counted
+ok   a count reaches the plugin
+ok   a register reaches the plugin
+ok   an unknown plugin action reports it
+ok   greeting sets the status segment
+ok   the segment shows on the status line
+ok   the current window shows the segment
+ok   the other window does not
+ok   a window command clears the message
+ok   a disabled plugin's binding does nothing
+ok   a disabled plugin's command is unknown
+ok   only the disabled plugin is off
+ok   an option from the configuration reaches the plugin
+ok   an option of the wrong type keeps the default and is recorded
+ok   a configuration binding replaces the plugin's
+ok   a null configuration binding removes the plugin's
+ok   the ascii set gives the plugin its icon
+ok   the unicode set too
+ok   the file opens
+ok   x edits
+ok   the file is written
+ok   the editor quits
+ok   both plugins were off
+ok   a side window on the left
+ok   a side window on the right
+ok   the width survives equalize
+ok   the width survives a split of the other window
+ok   reopening focuses the side window
+ok   no room reports E36
+ok   the plugin closes its window
+ok   closing a list that is not shown fails
+ok   :q closes the side window
+ok   Ctrl-W q closes the side window
+ok   open a file in the file window
+ok   focusing a missing window fails
+ok   the side window shows the plugin's lines
+ok   its status line shows the title
+ok   j falls through to the mode's keymap and Enter runs the plugin's action
+ok   the scratch keymap does not apply in the file window
+ok   back in the side window
+ok   the scratch buffer is listed without a path
+ok   quitting the side window drops the scratch buffer
+ok   the cursor is on row 5 of the list
+ok   the lines are replaced, the cursor clamped, and the buffer unmodified
+ok   an unknown title fails
+ok   writing a scratch buffer is refused
+ok   editing the scratch buffer is allowed
+ok   quit-all ignores the scratch buffer's changes
+ok   write-all skips the scratch buffer
+ok   and the editor quits
+ok   open_file shows the file in window 2 and makes it current
+ok   closing the file window leaves the side window
+ok   quitting the last side window ends the editor
+ok   a raise in an event at startup disables the plugin
+ok   its binding now reports it disabled
+ok   the editor goes on editing
+ok   the event plugin is off again
+editor_plugins: 62 passed, 0 failed

@@ -134,4 +134,8 @@ ok   unknown command
 ok   unknown command keeps its argument text
 ok   empty command does nothing
 ok   a bare number is not a command yet
-use_cases_ex: 136 passed, 0 failed
+ok   write on a scratch buffer reports E382
+ok   write-all skips the scratch buffer and writes the file
+ok   quit-all ignores the scratch buffer's changes
+ok   a name no plugin declares is unknown
+use_cases_ex: 140 passed, 0 failed

@@ -281,4 +281,47 @@ s.remove_tab(1)
 f = P.call(s, 7, 30)
 t.assert_equal("  1 one", f.row_text(0), "with one tab page there is no tab line")
 
+# The sign column: two cells before the numbers while the buffer has signs.
+s = state_for(["one", "two", "three"], "a.txt")
+f = P.call(s, 6, 20)
+t.assert_equal("  1 one", f.row_text(0), "no sign column without signs")
+s.buffer.signs["1"] = "X"
+s.buffer.sign_owners["1"] = "test"
+f = P.call(s, 6, 20)
+t.assert_equal(["    1 one", "X   2 two", "    3 three"], [f.row_text(0), f.row_text(1), f.row_text(2)], "the sign sits in its column and the numbers move right")
+t.assert_equal([D::Highlight::LINE_NUMBER, D::Highlight::LINE_NUMBER], [f.cell(1, 0).hl, f.cell(0, 1).hl], "the sign column carries the line number highlight")
+t.assert_equal([0, 6], [f.cursor_row, f.cursor_col], "the cursor moves right with the gutter")
+s.options.number = false
+f = P.call(s, 6, 20)
+t.assert_equal(["  one", "X two"], [f.row_text(0), f.row_text(1)], "the sign column stays when numbers are off")
+s.buffer.signs.clear
+f = P.call(s, 6, 20)
+t.assert_equal("one", f.row_text(0), "clearing the signs removes the column")
+
+# A scratch buffer's status line shows its title; the current window's
+# shows the plugins' segments.
+s = state_for(["one"], "a.txt")
+scratch = D::Buffer.new(["item"], nil, "\n")
+scratch.owner = "test"
+scratch.title = "list"
+s.add_buffer(scratch)
+P.call(s, 6, 40)
+side = D::Window.new(scratch)
+side.fixed_width = true
+id = s.tab.layout.split_edge(side, 12, true)
+f = P.call(s, 6, 40)
+t.assert_equal("list", f.row_text(4)[0, 4], "the side window's status line shows the scratch title")
+t.assert_equal("a.txt", f.row_text(4)[13, 5], "the file window keeps its path")
+s.segments["hello"] = "hello 1"
+s.segments["other"] = "x"
+f = P.call(s, 6, 40)
+t.assert_equal("a.txt  hello 1 x", f.row_text(4)[13, 16], "the current window's status line shows the segments in order")
+t.assert_equal(["list", false], [f.row_text(4)[0, 4], f.row_text(4)[0, 12].include?("hello")], "the other window's does not")
+s.tab.focus(id)
+f = P.call(s, 6, 40)
+t.assert_equal(["list  hello ", "a.txt   "], [f.row_text(4)[0, 12], f.row_text(4)[13, 8]], "the segments follow the current window, clipped to the window")
+scratch.modified = true
+f = P.call(s, 6, 40)
+t.assert_equal("list [+]  he", f.row_text(4)[0, 12], "the modified marker comes before the segments")
+
 t.finish

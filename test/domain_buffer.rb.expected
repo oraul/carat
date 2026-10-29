@@ -70,4 +70,19 @@ ok   lines_of does not share the array
 ok   first_nonblank per row
 ok   indent_of per row
 ok   a row outside the buffer reads as empty
-domain_buffer: 72 passed, 0 failed
+ok   a file buffer has no owner, title, keymap, or changes
+ok   every primitive counts one change
+ok   replacing the lines outside the primitives does not count
+ok   a scratch buffer is named by its title
+ok   a file buffer is named by its path
+ok   no signs at first
+ok   a sign is placed
+ok   a changed scratch buffer is not unsaved work
+ok   buffer_number is the list position from 1
+ok   an unlisted buffer has number 0
+ok   scratch_for finds the plugin's buffer by title
+ok   scratch_for answers nil for another title
+ok   an unshown scratch buffer leaves the list even when modified
+ok   a shown modified file buffer stays
+ok   no status segments at first
+domain_buffer: 87 passed, 0 failed

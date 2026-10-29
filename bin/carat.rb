@@ -1,7 +1,8 @@
 # Carat entry point and composition root: the only place drivers are
-# constructed. Argument checks and the terminal check happen before anything
-# touches the terminal; signals are trapped before the loop starts; the raw
-# block holds a single call; the screen is restored in an ensure.
+# constructed and the only place the plugin registry is read. Argument
+# checks and the terminal check happen before anything touches the
+# terminal; signals are trapped before the loop starts; the raw block holds
+# a single call; the screen is restored in an ensure.
 require "io/console"
 require_relative "../carat"
 
@@ -22,7 +23,7 @@ terminal = Carat::Drivers::AnsiTerminal.new(STDIN, STDOUT)
 clock = Carat::Drivers::MonotonicClock.new
 files = Carat::Drivers::DiskFiles.new
 config = Carat::Adapters::JsonConfigGateway.new.load
-assembly = Carat::Adapters::EditorAssembly.new(terminal, clock, files, config)
+assembly = Carat::Adapters::EditorAssembly.new(terminal, clock, files, config, Carat::Plugins::Registry.all)
 main_loop = Carat::Drivers::MainLoop.new(assembly, terminal)
 
 assembly.screen_presenter.enter

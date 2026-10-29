@@ -19,7 +19,8 @@ module Carat
           "incsearch": true,
           "wrap": false,
           "scrolloff": 5,
-          "clipboard": ""
+          "clipboard": "",
+          "icons": "nerd"
         },
         "keymaps": {
           "normal": {
@@ -233,9 +234,7 @@ module Carat
           }
         },
         "plugins": {
-          "explorer": { "enabled": true },
-          "finder": { "enabled": true },
-          "git_signs": { "enabled": true }
+          "hello": { "enabled": true, "options": { "greeting": "Hello" } }
         },
         "theme": "carat-dark"
       }

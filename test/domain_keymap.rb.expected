@@ -35,4 +35,9 @@ ok   j still bound after a bad key
 ok   k with a non-string value is unbound
 ok   malformed bindings are reported with mode and key
 ok   null unbinds a key
-domain_keymap: 37 passed, 0 failed
+ok   plugin binding stays when the configuration is silent
+ok   configuration replaces the plugin binding
+ok   configuration removes the plugin binding
+ok   configuration adds a longer binding
+ok   add_all records errors and ignores a non-object
+domain_keymap: 42 passed, 0 failed

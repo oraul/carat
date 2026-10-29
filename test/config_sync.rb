@@ -1,5 +1,6 @@
 # Fails when carat/domain/default_config.rb is out of date with
-# config/default.json, or when the JSON does not match the schema's shape.
+# config/default.json, when carat/plugins/registry.rb is out of date with
+# config/plugins.json, or when the JSON does not match the schema's shape.
 require_relative "../carat"
 require_relative "../carat/testing"
 
@@ -25,5 +26,19 @@ config["keymaps"].each do |mode, map|
   end
 end
 t.assert_equal([], bad, "every binding is an action name, a key sequence, or null")
+t.assert_true(Carat::Domain::Icons.set?(config["options"]["icons"]), "the icons option names a set")
+
+# The plugin registry mirrors config/plugins.json.
+plugins_text = File.read("config/plugins.json")
+plugins = Carat::Json.parse(plugins_text)
+names = Carat::Domain::RegistrySource.names(plugins)
+t.assert_true(names.length > 0, "config/plugins.json lists at least one plugin")
+t.assert_equal(names.length, plugins["plugins"].length, "every plugins.json entry has a name, a path, and a class")
+t.assert_equal(Carat::Domain::RegistrySource.render(plugins), File.read("carat/plugins/registry.rb"), "generated registry matches config/plugins.json")
+t.assert_equal(names, Carat::Plugins::Registry::NAMES, "the compiled registry names the same plugins")
+t.assert_equal(names.length, Carat::Plugins::Registry.all.length, "the compiled registry constructs one plugin per entry")
+stale = []
+config["plugins"].each_key { |name| stale << name unless names.include?(name) }
+t.assert_equal([], stale, "every plugins entry of config/default.json names a listed plugin")
 
 t.finish

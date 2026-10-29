@@ -1,5 +1,7 @@
 # Checks the rules the Spinel compiler does not enforce by itself:
-# the layer dependency rule, forbidden constructs, and hard-coded bindings.
+# the layer dependency rule, the plugin rule (a plugin requires only
+# carat/plugin_api.rb and its own directory; the generated registry may
+# require any plugin), forbidden constructs, and hard-coded bindings.
 # Prints every violation; the snapshot is the empty report.
 require_relative "../carat/testing"
 
@@ -65,8 +67,9 @@ source_files.each do |path|
       full = File.expand_path(target, File.dirname(path)).sub(Dir.pwd + "/", "") + ".rb"
       to_layer = layer_of(full)
       if from_layer == "plugins"
-        unless full == "carat/plugin_api.rb" || full.start_with?("carat/plugins/")
-          violations << "#{path}:#{number}: a plugin may require only carat/plugin_api.rb"
+        own_dir = path == "carat/plugins/registry.rb" ? "carat/plugins/" : File.dirname(path) + "/"
+        unless full == "carat/plugin_api.rb" || full.start_with?(own_dir)
+          violations << "#{path}:#{number}: a plugin may require only carat/plugin_api.rb and files in its own directory"
         end
       elsif to_layer && LAYER_RANK.key?(to_layer) && LAYER_RANK.key?(from_layer)
         if LAYER_RANK[to_layer] > LAYER_RANK[from_layer]
