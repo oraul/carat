@@ -222,8 +222,8 @@ Every change to the repository is delivered by the `contributor` agent: feature,
 
 Decided in `docs/architecture.md` and in place since the project skeleton.
 
-- Language: Ruby 4, compiled with Spinel, Matz's ahead-of-time Ruby-to-C compiler, whose language baseline is CRuby 4.0. The exact Spinel commit is pinned as `SPINEL_REF` in the Makefile. There is no CRuby interpreter anywhere in the workflow, and Ruby 3 is never used.
-- Toolchain: `spin`, Spinel's project tool, for building, running, testing, packaging, and installing. The `Makefile` only maps targets to `spin` and OpenSpec commands. No Rakefile, no Bundler.
+- Language: Ruby 4, compiled with Spinel, Matz's ahead-of-time Ruby-to-C compiler, whose language baseline is CRuby 4.0. The exact Spinel commit is pinned as `SPINEL_REF` in the Makefile. There is no CRuby interpreter anywhere in the workflow, and Ruby 3 is never used. That holds for building Spinel itself: the one header Spinel's build generates with a CRuby script is vendored at `tools/spinel/spinel_rt_responds_generated.h` and copied into the checkout by `make toolchain`, and CI builds the toolchain with a `ruby` stub on the path that fails when invoked, so the prerequisites for a clone are a C compiler, `make`, `git`, and `curl` only.
+- Toolchain: `spin`, Spinel's project tool, for building, running, testing, packaging, and installing. `make toolchain` fetches Spinel into `tmp/.spinel` and installs `spinel`, `spin`, and `spinel-doctor` under `tmp/.toolchain`, both ignored by git and hidden because `spin` scans every visible directory under the repository as project source, and the Makefile puts `tmp/.toolchain/bin` first on the `PATH` of every target, so no shell setup is needed. The `Makefile` only maps targets to `spin` and OpenSpec commands. No Rakefile, no Bundler.
 - Dependencies: none. Standard library only, and only what Spinel bundles: `io/console` in the terminal driver, and `pty` and `open3` in the smoke test program only. JSON is handled by the project's own `Carat::Json`. Tests use the project's own `Carat::Testing` with committed snapshot files.
 - Terminal I/O: `io/console` and `IO.select`, no curses. Child processes: `Process.spawn` with `IO.pipe`, never `IO.popen`.
 - Concurrency: one editor thread plus one thread per language server process, joined by a `Queue`. No Ractor.
@@ -235,9 +235,10 @@ Decided in `docs/architecture.md` and in place since the project skeleton.
 Every command has a Makefile target. Run `make help` for the full list. All targets are verified under Spinel. Keep this list current.
 
 - `make doctor`: check that `spinel`, `spin`, a C compiler, and `node` are on the path.
-- `make toolchain`: fetch the pinned Spinel commit `SPINEL_REF` into `SPINEL_SRC`, build it, and install `spinel` and `spin` into `PREFIX`. The pin lives in the Makefile; bump it in its own pull request after `make check` passes with the new commit.
+- `make toolchain`: fetch the pinned Spinel commit `SPINEL_REF` into `SPINEL_SRC` (default `tmp/.spinel`), copy the vendored header `tools/spinel/spinel_rt_responds_generated.h` into the checkout so the build needs no Ruby, build it, and install `spinel`, `spin`, and `spinel-doctor` into `PREFIX` (default `tmp/.toolchain`); every other target finds them there automatically. The pin lives in the Makefile; bump it in its own pull request after `make check` passes with the new commit, and regenerate the vendored header with Spinel's `tools/gen_respond_to_tables.rb` at the new commit in that same pull request.
+- `make toolchain-clean`: remove `tmp/`, the Spinel checkout and the installed toolchain.
 - `make spinel-rev`: print the pinned Spinel commit, the CI cache key.
-- `make build`: `spin build`, compiles every `bin/*.rb` into `build/bin`.
+- `make build`: `spin build`, compiles every `bin/*.rb` into `build/bin`, then prints the absolute path of the binary and the alias line to add to a shell profile to run it from anywhere.
 - `make run FILE=path`: `spin run carat -- path`.
 - `make test`: `make build` first, because `test/smoke_editor.rb` runs `build/bin/carat` in a pseudo-terminal, then `spin test`, every test program against its snapshot. `spin test` alone does not build `bin/`.
 - `make lint`: `spin test test/lint.rb`.
@@ -246,14 +247,16 @@ Every command has a Makefile target. Run `make help` for the full list. All targ
 - `make snapshots`: rebuild the test programs with Spinel and rewrite their `.expected` files; review the diff before committing.
 - `make gen-config`: `spin run carat-gen-config`, regenerates the default config mirror and the plugin registry.
 - `make check`: build, gen-config, test, and diagnose; run it before every push.
-- `make install`, `make pack`, `make clean`: `spin install`, `spin pack`, `spin clean`.
+- `make install`, `make pack`, `make clean`: `spin install` (into `PREFIX/bin`, printing where the binary went), `spin pack`, `spin clean`. `make clean` never touches `tmp/`.
 - `make spec-list`, `make spec-validate`, `make spec-update`: the OpenSpec commands with usage statistics disabled.
 
 ## Layout
 
 Defined in `docs/architecture.md`, section 11, in the shape `spin` expects. Every layer directory exists; `carat/plugin_api.rb`, `carat/plugins/`, and `config/plugins.json` arrive with the plugin host.
 
-- `spin.toml`: the project manifest. `Makefile`: the command map. `.gitignore`: `build/` and `dist/`.
+- `spin.toml`: the project manifest. `Makefile`: the command map. `.gitignore`: `build/`, `dist/`, and `tmp/`.
+- `tools/spinel/spinel_rt_responds_generated.h`: the header Spinel's build generates with a CRuby script, vendored at the pinned commit so `make toolchain` needs no Ruby; regenerated in the pull request that bumps `SPINEL_REF`.
+- `tmp/`: ignored by git; `tmp/.spinel` is the Spinel checkout and `tmp/.toolchain` the installed toolchain, both made by `make toolchain` and removed by `make toolchain-clean`. They are hidden because `spin` skips hidden directories and would otherwise read Spinel's sources and test sidecars as part of the project.
 - `bin/carat.rb`: entry point and composition root, the only place drivers are constructed: it checks the arguments and the terminal, installs the signal flags, builds the drivers and the `EditorAssembly`, and runs the `MainLoop` inside the single-call `STDIN.raw` block. `bin/carat-gen-config.rb` generates the default config mirror. Every `bin/*.rb` is a compile root.
 - `config/default.json`: every default option and key binding. The generated `carat/domain/default_config.rb` mirrors it and is never edited by hand.
 - `carat.rb`: the require graph, innermost layer first. `carat/version.rb`; `carat/testing.rb`, the assertion harness.
@@ -265,7 +268,7 @@ Defined in `docs/architecture.md`, section 11, in the shape `spin` expects. Ever
 - `carat/doubles/`: `fake_terminal.rb`, `manual_clock.rb`, `memory_files.rb`, `fixed_config.rb`, `editor_harness.rb` (the whole editor over the doubles; editor tests type keys in Vim notation).
 - `carat/plugin_api.rb` and `carat/plugins/`: the plugin API, the generated registry, and the built-in compiled plugins. `config/plugins.json` lists them in order.
 - `test/`: one Spinel program per file with a committed `.expected` snapshot: `domain_*.rb`, `use_cases_*.rb`, `adapters_*.rb`, `editor_*.rb` (whole-editor tests over the harness), `smoke_editor.rb` (the binary in a pseudo-terminal), `json.rb`, `lint.rb`, `config_sync.rb`. Regenerate snapshots only with `make snapshots` and review the diff.
-- `.github/workflows/ci.yml`: restores the installed toolchain from the Actions cache keyed by the pinned Spinel commit, builds it with `make toolchain` only on a cache miss, then runs `make build`, checks the generated config, and runs `make test` on Ubuntu.
+- `.github/workflows/ci.yml`: restores `tmp/.toolchain` from the Actions cache keyed by the pinned Spinel commit, builds it with `make toolchain` only on a cache miss, with a `ruby` stub that fails when invoked first on the path of that step so the build is proven Ruby-free, then runs `make doctor`, `make build`, checks the generated config, and runs `make test` on Ubuntu.
 - `build/`: `spin` output, ignored by git; `build/smoke/` holds the smoke test's files.
 - `docs/`: `architecture.md`, `compatibility.md` (every Neovim command implemented, with its test), `actions.md` (every action name a keymap may use), `backlog.md` (known items left for later changes, each with its location and fix outline).
 - `openspec/`: specs and change proposals.
