@@ -148,11 +148,16 @@ Differences from Neovim: the numbered registers `0` to `9`, the black hole `_`, 
 | `:q[uit]` | Quit unless modified | `E37` | `use_cases_ex`, `editor_cmdline` |
 | `:q[uit]!` | Quit, discarding changes | | `use_cases_ex`, `editor_cmdline` |
 | `:wq [file]`, `:wq!` | Write, then quit | as `:w` | `use_cases_ex`, `editor_cmdline` |
+| `:x[it] [file]`, `:exi[t] [file]`, `:x!` | Write when modified or given a file, then quit | as `:w` | `use_cases_ex`, `editor_cmdline` |
+| `:wa[ll]`, `:wa!` | Write every modified buffer, here the one buffer | as `:w`, `E141` | `use_cases_ex`, `editor_cmdline` |
+| `:qa[ll]`, `:quita[ll]` | Quit all unless modified, here the one buffer | `E37` | `use_cases_ex`, `editor_cmdline` |
+| `:qa[ll]!`, `:quita[ll]!` | Quit all, discarding changes | | `use_cases_ex`, `editor_cmdline` |
+| `:wqa[ll]`, `:xa[ll]`, `:wqa!`, `:xa!` | Write every modified buffer, then quit all, here the one buffer | as `:w`, `E141` | `use_cases_ex`, `editor_cmdline` |
 | `:e[dit] [file]` | Open file, or reload the current one | `"name" 1L, 3B`, `"name" [New]`, `E37` | `use_cases_ex`, `editor_cmdline` |
 | `:e[dit]! [file]` | Open or reload, discarding changes | | `use_cases_ex`, `editor_cmdline` |
 | unknown | Report the command | `E492: Not an editor command: name` | `use_cases_ex`, `editor_cmdline` |
 
-Differences from Neovim: `:w` abbreviations other than `w` and `write` are not recognized yet; ranges, `:x`, `:wa`, `:qa`, and `:saveas` arrive with later changes.
+Differences from Neovim: only the shortest and the full spelling of each command are recognized (`w` and `write`, not `wr`; `x` and `xit`, not `xi`); the "all" commands act on the single buffer until the buffer list exists, so `E141` always names buffer 1; `:qa` on a modified buffer shows only `E37`, not Neovim's second `E162` line naming the buffer; `:x` with a file argument writes even an unmodified buffer, where Neovim writes only a changed one; ranges, `:update`, and `:saveas` arrive with later changes.
 
 ## Options read so far
 
