@@ -25,6 +25,15 @@ module Carat
       def self.of_char(ch)
         of(ch.ord)
       end
+
+      # True for the code points no cell may hold raw: the C0 controls
+      # below 32, delete (U+007F), and the C1 controls U+0080 to U+009F,
+      # whose UTF-8 forms some terminals read as escape introducers.
+      #: (Integer) -> bool
+      def self.control?(code)
+        return true if code < 32
+        code >= 0x7F && code <= 0x9F
+      end
     end
   end
 end

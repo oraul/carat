@@ -136,6 +136,64 @@ s.options.number = false
 f = P.call(s, 4, 12)
 t.assert_equal("a^Ab", f.row_text(0), "control characters show as caret notation")
 
+# Delete and the C1 controls show as <xx> markers and never reach a cell raw.
+def control_free?(frame)
+  r = 0
+  while r < frame.rows
+    c = 0
+    while c < frame.cols
+      code = frame.cell(r, c).code
+      return false if code != 0 && Carat::Domain::DisplayWidth.control?(code)
+      c += 1
+    end
+    r += 1
+  end
+  true
+end
+
+markers = [
+  ["U+007F shows as <7f>", "a\u007Fb", "a<7f>b"],
+  ["U+0080 shows as <80>", "a\u0080b", "a<80>b"],
+  ["U+009B shows as <9b>", "a\u009Bb", "a<9b>b"],
+  ["U+009D shows as <9d>", "a\u009Db", "a<9d>b"],
+]
+t.table(markers) do |line|
+  s = state_for([line], "a.txt")
+  s.options.number = false
+  P.call(s, 4, 12).row_text(0)
+end
+widths = [
+  ["U+007F marker is four cells wide and the frame holds no control", "a\u007Fb", [6, "b", 1, true]],
+  ["U+0080 marker is four cells wide and the frame holds no control", "a\u0080b", [6, "b", 1, true]],
+  ["U+009B marker is four cells wide and the frame holds no control", "a\u009Bb", [6, "b", 1, true]],
+  ["U+009D marker is four cells wide and the frame holds no control", "a\u009Db", [6, "b", 1, true]],
+]
+t.table(widths) do |line|
+  s = state_for([line], "a.txt")
+  s.options.number = false
+  f = P.call(s, 4, 12)
+  [P.display_width(line, 4), f.row_text(0)[5, 1], f.cell(0, 1).width, control_free?(f)]
+end
+s = state_for(["a\u009Bb"], "a.txt")
+s.options.number = false
+s.cursor.move_to(0, 1)
+f = P.call(s, 4, 12)
+t.assert_equal(1, f.cursor_col, "cursor on a C1 control sits on the first cell of its marker")
+s.cursor.move_to(0, 2)
+f = P.call(s, 4, 12)
+t.assert_equal(5, f.cursor_col, "cursor after a C1 control is placed past its four cells")
+s = state_for(["a\u009B\x01\u007F"], "a.txt")
+s.options.number = false
+f = P.call(s, 4, 12)
+t.assert_equal("a<9b>^A<7f>", f.row_text(0), "markers and caret notation mix on one line")
+t.assert_true(control_free?(f), "no cell holds a control code point after a mixed line")
+direct = D::Frame.new(1, 6)
+t.assert_equal(3, direct.put(0, 0, "a\u009Bb", D::Highlight::NORMAL), "put stores one cell per control code point")
+t.assert_equal(["a", 0xFFFD, "b"], [direct.cell(0, 0).char, direct.cell(0, 1).code, direct.cell(0, 2).char], "put stores the replacement character for a C1 control")
+direct.put(0, 0, "\x01\u007F", D::Highlight::NORMAL)
+t.assert_equal([0xFFFD, 0xFFFD], [direct.cell(0, 0).code, direct.cell(0, 1).code], "put stores the replacement character for C0 and delete")
+t.assert_true(control_free?(direct), "a frame written to directly holds no control code point")
+
 # Resizing.
 s = state_for(["ab"], "a.txt")
 f = P.call(s, 24, 80)

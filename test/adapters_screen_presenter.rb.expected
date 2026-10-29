@@ -16,7 +16,11 @@ ok   bar shape is emitted when it changes
 ok   a size change clears the screen
 ok   a size change repaints every row
 ok   a wide character is written once and its continuation cell skipped
+ok   C1 controls are written as markers
+ok   the output holds no C0 or C1 code point outside the escape sequences
+ok   no raw CSI introducer is written
+ok   no raw OSC introducer is written
 ok   leave reaches the terminal
 ok   leave restores the block cursor and the main screen last
 ok   output begins with the alternate screen
-adapters_screen_presenter: 21 passed, 0 failed
+adapters_screen_presenter: 25 passed, 0 failed
