@@ -12,6 +12,13 @@ require_relative "../use_cases/leave_insert"
 require_relative "../use_cases/files/open_file"
 require_relative "../use_cases/files/save_file"
 require_relative "../use_cases/files/quit"
+require_relative "../use_cases/windows/split_window"
+require_relative "../use_cases/windows/close_window"
+require_relative "../use_cases/windows/focus_window"
+require_relative "../use_cases/windows/resize_layout"
+require_relative "../use_cases/windows/open_tab"
+require_relative "../use_cases/windows/close_tab"
+require_relative "../use_cases/windows/switch_tab"
 require_relative "../use_cases/files/execute_ex"
 require_relative "../use_cases/edit_command_line"
 require_relative "../use_cases/dispatcher"
@@ -49,10 +56,17 @@ module Carat
         leave_insert = UseCases::LeaveInsert.new
         @open_file = UseCases::OpenFile.new(files)
         save_file = UseCases::SaveFile.new(files)
-        quit = UseCases::Quit.new
-        execute_ex = UseCases::ExecuteEx.new(@open_file, save_file, quit)
+        close_window = UseCases::CloseWindow.new
+        quit = UseCases::Quit.new(close_window)
+        split_window = UseCases::SplitWindow.new(@open_file)
+        focus_window = UseCases::FocusWindow.new
+        resize_layout = UseCases::ResizeLayout.new
+        open_tab = UseCases::OpenTab.new(@open_file)
+        close_tab = UseCases::CloseTab.new
+        switch_tab = UseCases::SwitchTab.new
+        execute_ex = UseCases::ExecuteEx.new(@open_file, save_file, quit, split_window, close_window, open_tab, close_tab, switch_tab)
         command_line = UseCases::EditCommandLine.new(execute_ex)
-        dispatcher = UseCases::Dispatcher.new(move, operate, enter_insert, insert_text, leave_insert, command_line)
+        dispatcher = UseCases::Dispatcher.new(move, operate, enter_insert, insert_text, leave_insert, command_line, quit, split_window, close_window, focus_window, resize_layout, switch_tab)
         handle_key = UseCases::HandleKey.new(@keymap, dispatcher, insert_text, command_line)
 
         @controller = InputController.new(terminal, clock, KeyDecoder.new, handle_key)

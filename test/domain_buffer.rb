@@ -136,8 +136,8 @@ c.move_to(4, 1)
 t.assert_equal([4, 1], c.to_a, "to_a is the position pair without want_col")
 t.assert_equal([:row, :col, :want_col], D::Cursor.members, "cursor members in constructor order")
 t.assert_equal(false, c.frozen?, "records are not frozen")
-w = D::Window.new
-t.assert_equal([0, 0, 0], [w.top, w.left, w.height], "a window starts at the origin with no height")
+w = D::Window.new(D::Buffer.from_text("ab\n", "w.txt"))
+t.assert_equal([0, 0, 0, "w.txt", [0, 0], false], [w.top, w.left, w.height, w.buffer.path, w.cursor.to_a, w.fixed_width], "a window starts at the origin with no height, showing its buffer from the start")
 w.top = 7
 t.assert_equal(7, w.top, "a window member has a writer")
 t.assert_equal([:lines, :path, :line_ending, :modified], D::Buffer.members, "buffer members in constructor order")

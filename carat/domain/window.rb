@@ -1,18 +1,57 @@
 module Carat
   module Domain
-    # A viewport over the buffer: the first visible row, the first visible
-    # display column, and the number of text rows the last render gave it
-    # (0 before the first render), which the screen motions H, M, and L
-    # read. One window exists until the windows change. A Struct record:
-    # mutable, with a reader and a writer per member.
-    class Window < Struct.new(:top, :left, :height)
+    # A viewport over one buffer: the buffer it shows, its own cursor, the
+    # first visible row and display column, the rectangle the layout gave
+    # it at the last render (row, col, height in text rows, width in
+    # columns including the gutter; all 0 before the first render, when the
+    # screen motions H, M, and L treat the whole buffer as visible), and
+    # whether its width is fixed, as Neovim's winfixwidth, so resizes and
+    # equalizing leave it alone. A Struct record: mutable, with a reader
+    # and a writer per member.
+    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width)
+      # @rbs @buffer: Buffer
+      # @rbs @cursor: Cursor
       # @rbs @top: Integer
       # @rbs @left: Integer
+      # @rbs @row: Integer
+      # @rbs @col: Integer
       # @rbs @height: Integer
+      # @rbs @width: Integer
+      # @rbs @fixed_width: bool
 
-      #: () -> void
-      def initialize
-        super(0, 0, 0)
+      #: (Buffer) -> void
+      def initialize(buffer)
+        super(buffer, Cursor.new(0, 0), 0, 0, 0, 0, 0, 0, false)
+      end
+
+      # Shows another buffer from its start.
+      #: (Buffer) -> void
+      def show(buffer)
+        self.buffer = buffer
+        self.cursor = Cursor.new(0, 0)
+        self.top = 0
+        self.left = 0
+      end
+
+      # Takes the buffer, cursor, and scroll position of other, as a split
+      # gives the new window the same view.
+      #: (Window) -> void
+      def copy_from(other)
+        self.buffer = other.buffer
+        self.cursor = Cursor.new(other.cursor.row, other.cursor.col)
+        cursor.want_col = other.cursor.want_col
+        self.top = other.top
+        self.left = other.left
+      end
+
+      # The gutter is max(3, digits of the line count) plus one space when
+      # numbers are shown, and absent otherwise.
+      #: (Options) -> Integer
+      def gutter_width(options)
+        return 0 unless options.number || options.relativenumber
+        digits = buffer.line_count.to_s.length
+        digits = 3 if digits < 3
+        digits + 1
       end
 
       # Scrolls so that row is visible with scrolloff rows of context where

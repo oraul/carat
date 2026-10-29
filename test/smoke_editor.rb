@@ -109,6 +109,30 @@ code = finish_session(reader, out, pid)
 t.assert_equal(0, code, "the editor exits with status 0 after :q!")
 t.assert_equal("hello\n", File.read(path), "the forced quit did not write")
 
+# A vertical split, a tab page, and the quits that close them: the tab
+# page first, then one of the two windows, then the last window.
+reader, writer, pid = PTY.spawn(BIN, path)
+writer.winsize = [24, 80]
+out = +"".b
+settle(reader, out, 0.5)
+t.assert_true(out.include?("1L, 6B"), "the editor drew its first frame for the windows check")
+mark = out.bytesize
+writer.write(":vsplit\r")
+settle(reader, out, 0.5)
+t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("\u2502".b), "vsplit draws the separator column")
+mark = out.bytesize
+writer.write(":tabnew\r")
+settle(reader, out, 0.5)
+t.assert_true(out.byteslice(mark, out.bytesize - mark).include?(" 2 [No Name] "), "tabnew draws the tab line")
+writer.write(":q\r")
+settle(reader, out, 0.5)
+writer.write(":q\r")
+settle(reader, out, 0.5)
+writer.write(":q\r")
+code = finish_session(reader, out, pid)
+t.assert_equal(0, code, "the editor exits with status 0 after closing the tab page, a window, and the last window")
+t.assert_true(out.end_with?("\e[?1049l"), "closing the last window leaves the alternate screen")
+
 # SIGTERM ends a running editor cleanly.
 reader, writer, pid = PTY.spawn(BIN, path)
 writer.winsize = [24, 80]

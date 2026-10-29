@@ -37,7 +37,14 @@ t.table([
   ["a( in operator-pending mode", [:operator_pending, "a("], [:match, "textobject.a_paren"]],
   ["d in operator-pending mode doubles", [:operator_pending, "d"], [:match, "operator.delete"]],
   ["escape in operator-pending mode", [:operator_pending, "<Esc>"], [:match, "mode.normal"]],
-  ["iw is not bound in normal mode", [:normal, "iw"], [:none, nil]]
+  ["iw is not bound in normal mode", [:normal, "iw"], [:none, nil]],
+  ["control w is a prefix", [:normal, "<C-w>"], [:prefix, nil]],
+  ["control w s splits", [:normal, "<C-w>s"], [:match, "window.split"]],
+  ["control w v splits vertically", [:normal, "<C-w>v"], [:match, "window.vsplit"]],
+  ["control w equals equalizes", [:normal, "<C-w>="], [:match, "window.equalize"]],
+  ["control w q quits the window", [:normal, "<C-w>q"], [:match, "window.quit"]],
+  ["gt goes to the next tab page", [:normal, "gt"], [:match, "tab.next"]],
+  ["gT goes to the previous tab page", [:normal, "gT"], [:match, "tab.previous"]]
 ]) do |input|
   match = keymap.lookup(input[0], codes(input[1]))
   [match.kind, match.value]

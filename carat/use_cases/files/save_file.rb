@@ -4,7 +4,7 @@ require_relative "../outcome"
 
 module Carat
   module UseCases
-    # Writes the buffer to its path, or to the given path, with Vim's
+    # Writes a buffer to its path, or to the given path, with Vim's
     # messages: the written message, E32, and E212.
     class SaveFile
       # @rbs @files: Ports::FilePort
@@ -14,10 +14,17 @@ module Carat
         @files = files
       end
 
-      # path_arg is the command argument; empty means the buffer's own path.
+      # Writes the current buffer. path_arg is the command argument; empty
+      # means the buffer's own path.
       #: (Domain::EditorState, String) -> Outcome
       def call(state, path_arg)
-        buffer = state.buffer
+        write(state.buffer, path_arg)
+      end
+
+      # Writes one buffer, which need not be the current one: :wa writes
+      # every modified buffer in the list this way.
+      #: (Domain::Buffer, String) -> Outcome
+      def write(buffer, path_arg)
         own = buffer.path
         path = path_arg.empty? ? own : path_arg
         return Outcome.failure("E32: No file name") if path.nil?

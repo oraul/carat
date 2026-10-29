@@ -210,4 +210,75 @@ t.assert_true(again.equal?(f), "a render of the same size reuses the frame")
 t.assert_true(again.cell(0, 0).equal?(first_cell), "a render of the same size reuses the cells")
 t.assert_equal("  1 xab", again.row_text(0), "the reused frame shows the new text")
 
+# Two stacked windows: the layout is split after a first render sized the
+# window, and the old window at the bottom stays current.
+s = state_for(["one", "two", "three"], "a.txt")
+P.call(s, 9, 14)
+top = s.tab.layout.split(0, false, 0, 5)
+f = P.call(s, 9, 14)
+t.assert_equal(["  1 one", "  2 two", "  3 three"], f.text_rows[0, 3], "the top window shows the lines")
+t.assert_equal("a.txt", f.row_text(3)[0, 5], "row 3 is the top window's status line")
+t.assert_equal(["  1 one", "  2 two", "  3 three"], f.text_rows[4, 3], "the bottom window shows the same lines")
+t.assert_equal("a.txt", f.row_text(7)[0, 5], "row 7 is the bottom window's status line")
+t.assert_equal("", f.row_text(8), "row 8 is the message row")
+t.assert_equal([D::Highlight::STATUS_NC, D::Highlight::STATUS], [f.cell(3, 0).hl, f.cell(7, 0).hl], "the current window's status line is highlighted, the other inactive")
+s.window.cursor.move_to(1, 0)
+f = P.call(s, 9, 14)
+t.assert_equal([5, 4], [f.cursor_row, f.cursor_col], "the cursor is placed in the bottom window")
+t.assert_equal(["1,1 All", "2,1 All"], [f.row_text(3)[-7, 7], f.row_text(7)[-7, 7]], "each status line shows its own cursor")
+s.tab.focus(top)
+f = P.call(s, 9, 14)
+t.assert_equal([0, 4], [f.cursor_row, f.cursor_col], "focusing the top window moves the cursor there")
+t.assert_equal([D::Highlight::STATUS, D::Highlight::STATUS_NC], [f.cell(3, 0).hl, f.cell(7, 0).hl], "the highlights follow the current window")
+
+# Two windows side by side with the separator between them.
+s = state_for(["one", "two"], "a.txt")
+P.call(s, 6, 21)
+s.tab.layout.split(0, true, 0, 5)
+f = P.call(s, 6, 21)
+t.assert_equal("  1 one   \u2502  1 one", f.row_text(0), "both windows on row 0 with the separator at column 10")
+t.assert_equal("  2 two   \u2502  2 two", f.row_text(1), "row 1 too")
+t.assert_equal("~         \u2502~", f.row_text(2), "tilde rows in both windows")
+t.assert_equal(D::Highlight::STATUS, f.cell(0, 10).hl, "the separator carries the status highlight")
+t.assert_equal(D::Highlight::NON_TEXT, f.cell(2, 0).hl, "the tilde keeps its highlight")
+t.assert_equal(["a.txt", "a.txt"], [f.row_text(4)[0, 5], f.row_text(4)[11, 5]], "row 4 holds both status lines")
+t.assert_equal(D::Highlight::STATUS, f.cell(4, 10).hl, "the separator continues through the status row")
+t.assert_equal("", f.row_text(5), "row 5 is the message row")
+t.assert_equal([0, 15], [f.cursor_row, f.cursor_col], "the cursor is in the right window, which stayed current")
+s.buffer.modified = true
+f = P.call(s, 6, 21)
+t.assert_equal("a.txt [+]", f.row_text(4)[0, 9], "a status line clipped to its window still shows the marker")
+t.assert_equal(" ", f.cell(4, 9).char, "the left status line stops before the separator")
+
+# A long line is clipped at the window's edge.
+s = state_for(["abcdefghijklmnopqrstuvwxyz"], "a.txt")
+s.options.number = false
+P.call(s, 4, 11)
+s.tab.layout.split(0, true, 0, 1)
+f = P.call(s, 4, 11)
+t.assert_equal("abcde\u2502abcde", f.row_text(0), "each window shows what fits before its edge")
+
+# Two tab pages: the tab line takes the top row.
+s = state_for(["one", "two", "three"], "a.txt")
+other = D::Buffer.new(["zz"], "b.txt", "\n")
+s.add_buffer(other)
+s.add_tab(D::TabPage.new(D::Window.new(other)))
+s.tab_index = 0
+f = P.call(s, 7, 30)
+t.assert_equal(" 1 a.txt  2 b.txt", f.row_text(0), "the tab line lists both tab pages")
+t.assert_equal([D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_FILL], [f.cell(0, 0).hl, f.cell(0, 9).hl, f.cell(0, 18).hl], "selected, plain, and fill highlights")
+t.assert_equal("  1 one", f.row_text(1), "the first text row is row 1")
+t.assert_equal("a.txt", f.row_text(5)[0, 5], "the status line is on row 5")
+t.assert_equal("", f.row_text(6), "the message row stays last")
+t.assert_equal([1, 4], [f.cursor_row, f.cursor_col], "the cursor is under the tab line")
+s.tab_index = 1
+other.modified = true
+f = P.call(s, 7, 30)
+t.assert_equal(" 1 a.txt  2 b.txt [+]", f.row_text(0), "the modified marker shows in the label")
+t.assert_equal([D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_SELECTED], [f.cell(0, 0).hl, f.cell(0, 9).hl], "the second label is selected now")
+t.assert_equal("  1 zz", f.row_text(1), "the second tab page's window is drawn")
+s.remove_tab(1)
+f = P.call(s, 7, 30)
+t.assert_equal("  1 one", f.row_text(0), "with one tab page there is no tab line")
+
 t.finish

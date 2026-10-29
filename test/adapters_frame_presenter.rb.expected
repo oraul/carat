@@ -63,4 +63,36 @@ ok   status line moved to row 8
 ok   a render of the same size reuses the frame
 ok   a render of the same size reuses the cells
 ok   the reused frame shows the new text
-adapters_frame_presenter: 65 passed, 0 failed
+ok   the top window shows the lines
+ok   row 3 is the top window's status line
+ok   the bottom window shows the same lines
+ok   row 7 is the bottom window's status line
+ok   row 8 is the message row
+ok   the current window's status line is highlighted, the other inactive
+ok   the cursor is placed in the bottom window
+ok   each status line shows its own cursor
+ok   focusing the top window moves the cursor there
+ok   the highlights follow the current window
+ok   both windows on row 0 with the separator at column 10
+ok   row 1 too
+ok   tilde rows in both windows
+ok   the separator carries the status highlight
+ok   the tilde keeps its highlight
+ok   row 4 holds both status lines
+ok   the separator continues through the status row
+ok   row 5 is the message row
+ok   the cursor is in the right window, which stayed current
+ok   a status line clipped to its window still shows the marker
+ok   the left status line stops before the separator
+ok   each window shows what fits before its edge
+ok   the tab line lists both tab pages
+ok   selected, plain, and fill highlights
+ok   the first text row is row 1
+ok   the status line is on row 5
+ok   the message row stays last
+ok   the cursor is under the tab line
+ok   the modified marker shows in the label
+ok   the second label is selected now
+ok   the second tab page's window is drawn
+ok   with one tab page there is no tab line
+adapters_frame_presenter: 97 passed, 0 failed

@@ -7,6 +7,10 @@ module Carat
       STATUS = 2
       MESSAGE_ERROR = 3
       NON_TEXT = 4
+      STATUS_NC = 5
+      TAB_LINE = 6
+      TAB_LINE_SELECTED = 7
+      TAB_LINE_FILL = 8
     end
   end
 end

@@ -63,7 +63,7 @@ Differences from Neovim: a different operator after a pending one cancels silent
 | `<leader>w` | `:w<CR>` | Write the file | `editor_normal` |
 | `<leader>q` | `:q<CR>` | Quit | `editor_cmdline` |
 
-Differences from Neovim: `startofline` is off, so `gg G H M L` keep the wanted column; keyword characters are ASCII letters, digits, underscore, and every code point from U+00C0 upward until `iskeyword` exists; sentence ends are `. ! ?` with optional `) ] " '` before a blank or the line end, and paragraph boundaries are empty lines only (no nroff macros, no form feeds); `H` and `L` take `scrolloff` into account when moving the cursor and ignore it under an operator, as Neovim does; the quit hint names `:q!` because there is one window.
+Differences from Neovim: `startofline` is off, so `gg G H M L` keep the wanted column; keyword characters are ASCII letters, digits, underscore, and every code point from U+00C0 upward until `iskeyword` exists; sentence ends are `. ! ?` with optional `) ] " '` before a blank or the line end, and paragraph boundaries are empty lines only (no nroff macros, no form feeds); `H` and `L` take `scrolloff` into account when moving the cursor and ignore it under an operator, as Neovim does; the quit hint names `:q!` as Neovim does for the last window.
 
 ## Operators
 
@@ -145,19 +145,65 @@ Differences from Neovim: the numbered registers `0` to `9`, the black hole `_`, 
 | Command | Behavior | Messages | Test |
 | --- | --- | --- | --- |
 | `:w[rite] [file]` | Write the buffer to its path or to file | `"name" 2L, 8B written`, `E32`, `E212` | `use_cases_ex`, `editor_cmdline` |
-| `:q[uit]` | Quit unless modified | `E37` | `use_cases_ex`, `editor_cmdline` |
-| `:q[uit]!` | Quit, discarding changes | | `use_cases_ex`, `editor_cmdline` |
-| `:wq [file]`, `:wq!` | Write, then quit | as `:w` | `use_cases_ex`, `editor_cmdline` |
-| `:x[it] [file]`, `:exi[t] [file]`, `:x!` | Write when modified or given a file, then quit | as `:w` | `use_cases_ex`, `editor_cmdline` |
-| `:wa[ll]`, `:wa!` | Write every modified buffer, here the one buffer | as `:w`, `E141` | `use_cases_ex`, `editor_cmdline` |
-| `:qa[ll]`, `:quita[ll]` | Quit all unless modified, here the one buffer | `E37` | `use_cases_ex`, `editor_cmdline` |
+| `:q[uit]` | Close the window when another exists anywhere, else quit unless a buffer is modified | `E37` | `use_cases_ex`, `editor_cmdline`, `editor_windows` |
+| `:q[uit]!` | Close the window, or quit discarding changes; on the last window a modified hidden buffer is shown instead | | `use_cases_ex`, `editor_cmdline`, `editor_windows` |
+| `:wq [file]`, `:wq!` | Write, then close the window or quit | as `:w`, `E37` | `use_cases_ex`, `editor_cmdline` |
+| `:x[it] [file]`, `:exi[t] [file]`, `:x!` | Write when modified or given a file, then close the window or quit | as `:w`, `E37` | `use_cases_ex`, `editor_cmdline` |
+| `:wa[ll]`, `:wa!` | Write every modified buffer in every tab page, in list order | as `:w`, `E141` | `use_cases_ex`, `editor_cmdline`, `editor_windows` |
+| `:qa[ll]`, `:quita[ll]` | Quit unless a buffer in the list is modified, hidden ones included | `E37` | `use_cases_ex`, `editor_cmdline`, `editor_tabs` |
 | `:qa[ll]!`, `:quita[ll]!` | Quit all, discarding changes | | `use_cases_ex`, `editor_cmdline` |
-| `:wqa[ll]`, `:xa[ll]`, `:wqa!`, `:xa!` | Write every modified buffer, then quit all, here the one buffer | as `:w`, `E141` | `use_cases_ex`, `editor_cmdline` |
-| `:e[dit] [file]` | Open file, or reload the current one | `"name" 1L, 3B`, `"name" [New]`, `E37` | `use_cases_ex`, `editor_cmdline` |
+| `:wqa[ll]`, `:xa[ll]`, `:wqa!`, `:xa!` | Write every modified buffer, then quit all | as `:w`, `E141` | `use_cases_ex`, `editor_cmdline`, `editor_tabs` |
+| `:e[dit] [file]` | Show the file in the window: the listed buffer for it, or the file read from disk; reload the current one in place | `"name" 1L, 3B`, `"name" [New]`, `E37` | `use_cases_ex`, `editor_cmdline`, `editor_windows` |
 | `:e[dit]! [file]` | Open or reload, discarding changes | | `use_cases_ex`, `editor_cmdline` |
+| `:sp[lit] [file]` | Split the window horizontally, the new window above showing the same buffer or file | `E36`, as `:e` | `use_cases_ex`, `editor_windows` |
+| `:vs[plit] [file]` | Split the window vertically, the new window to the left | `E36`, as `:e` | `use_cases_ex`, `editor_windows` |
+| `:new` | Split horizontally with a new unnamed buffer | `E36` | `use_cases_ex`, `editor_windows` |
+| `:vne[w]` | Split vertically with a new unnamed buffer | `E36` | `use_cases_ex`, `editor_windows` |
+| `:clo[se]` | Close the window, or its tab page when it was the last one there | `E444` | `use_cases_ex`, `editor_windows` |
+| `:on[ly]` | Close every other window of the tab page | `Already only one window` | `use_cases_ex`, `editor_windows` |
+| `:tabnew`, `:tabe[dit] [file]` | Open a tab page after the current one on a new buffer or the file | as `:e` | `use_cases_ex`, `editor_tabs` |
+| `:tabc[lose]` | Close the tab page; the next one, or the previous when it was last, becomes current | `E784` | `use_cases_ex`, `editor_tabs` |
+| `:tabo[nly]` | Close every other tab page | `Already only one tab page` | `use_cases_ex`, `editor_tabs` |
+| `:tabn[ext]` | Next tab page, wrapping | | `use_cases_ex`, `editor_tabs` |
+| `:tabp[revious]`, `:tabN[ext]` | Previous tab page, wrapping | | `use_cases_ex`, `editor_tabs` |
+| `:tabfir[st]`, `:tabl[ast]` | First and last tab page | | `use_cases_ex`, `editor_tabs` |
 | unknown | Report the command | `E492: Not an editor command: name` | `use_cases_ex`, `editor_cmdline` |
 
-Differences from Neovim: only the shortest and the full spelling of each command are recognized (`w` and `write`, not `wr`; `x` and `xit`, not `xi`); the "all" commands act on the single buffer until the buffer list exists, so `E141` always names buffer 1; `:qa` on a modified buffer shows only `E37`, not Neovim's second `E162` line naming the buffer; `:x` with a file argument writes even an unmodified buffer, where Neovim writes only a changed one; ranges, `:update`, and `:saveas` arrive with later changes.
+Differences from Neovim: only the shortest and the full spelling of each command are recognized (`w` and `write`, not `wr`; `x` and `xit`, not `xi`; `tabn` and `tabnext`, not `tabne`); `E141` names a buffer by its position in the list, which shifts when a buffer leaves the list, where Neovim keeps buffer numbers for the session; `:qa` on a modified buffer shows only `E37`, not Neovim's second `E162` line naming the buffer; `:wa` shows the message of the last write only; `:e` without a bang refuses a modified buffer even when another window shows it, as Neovim does with `'hidden'` off, while closing a window keeps a modified buffer hidden, as Neovim does with `'hidden'` on; `:x` with a file argument writes even an unmodified buffer, where Neovim writes only a changed one; `:tabn N`, `:Nsplit`, `:tabm[ove]`, `:ls`, `:bn`, `:bp`, `:bd`, `:b N`, ranges, `:update`, and `:saveas` arrive with later changes.
+
+## Windows
+
+Every window shows one buffer from the buffer list with its own cursor and scroll position, and has a status line; windows side by side are separated by one column. A count before `<C-w>` is taken where Neovim takes one.
+
+| Keys | Action name | Behavior | Test |
+| --- | --- | --- | --- |
+| `[count]<C-w>s` | `window.split` | Split horizontally: the new window above shows the same view with half the text rows, or count rows | `editor_windows`, `domain_layout` |
+| `[count]<C-w>v` | `window.vsplit` | Split vertically: the new window to the left shows the same view with half the columns, or count columns | `editor_windows`, `domain_layout` |
+| `[count]<C-w>h`, `j`, `k`, `l` | `window.left`, `window.down`, `window.up`, `window.right` | To the neighbour overlapping the cursor's screen row or column, count times, stopping at the edge | `editor_windows`, `domain_layout` |
+| `[count]<C-w>w` | `window.next` | Next window in layout order, wrapping; with a count, window number count or the last | `editor_windows` |
+| `[count]<C-w>W` | `window.previous` | Previous window in layout order, wrapping; with a count, as `<C-w>w` | `editor_windows` |
+| `<C-w>p` | `window.last_accessed` | The window that was current before the last change, if it still exists | `editor_windows` |
+| `[count]<C-w>c` | `window.close` | Close the window, or window count; its space goes to the window after it, or before it when last | `editor_windows`, `domain_layout` |
+| `<C-w>o` | `window.only` | Close every other window of the tab page | `editor_windows` |
+| `<C-w>=` | `window.equalize` | Make the windows of every split the same size, fixed-width windows kept | `editor_windows`, `domain_layout` |
+| `[count]<C-w>q` | `window.quit` | `:q` on the window, or on window count | `editor_windows` |
+
+Messages: `E36: Not enough room` when the current window has fewer than three text rows or cannot give both windows one text column plus the number column and a separator; `E444: Cannot close last window` from `<C-w>c` and `:close` on the last window of the last tab page; `Already only one window` from `<C-w>o` and `:only`.
+
+Differences from Neovim: `splitbelow` and `splitright` are off and not options; a window's minimum height is one text row and its minimum width one column plus the number column, with no `winminheight` or `winminwidth`; a fixed-width window (`winfixwidth`) is set by the explorer plugin and not by `:set`; `<C-w>` followed by a count (`<C-w>3j`) is not read, only a count before `<C-w>`; `<C-w>t b x r R H J K L T`, `<C-w>+ - < >`, `:resize`, `<C-w><C-w>` and the other `<C-w><C-x>` aliases, `winfixheight`, and scroll binding arrive with later changes; the neighbour for `<C-w>h j k l` is chosen by the cursor's row and code point column, not its display column.
+
+## Tab pages
+
+Each tab page holds its own window layout; the tab line on the top row lists them only when there is more than one, as `showtabline=1`.
+
+| Keys | Action name | Behavior | Test |
+| --- | --- | --- | --- |
+| `[count]gt` | `tab.next` | Next tab page, wrapping; with a count, tab page count, or nothing when there is none | `editor_tabs`, `domain_layout` |
+| `[count]gT` | `tab.previous` | Count tab pages back, wrapping | `editor_tabs`, `domain_layout` |
+
+The tab line label of a tab page is a space, its number, a space, the file name of its current window's buffer or `[No Name]`, ` [+]` when that buffer is modified, and a space; the current label is highlighted (`editor_tabs`, `adapters_frame_presenter`).
+
+Differences from Neovim: the label shows the tab number instead of the window count, and never the count of windows; `:tabm[ove]`, `:tabn N`, `:tabs`, and `:tabdo` arrive with later changes.
 
 ## Options read so far
 
