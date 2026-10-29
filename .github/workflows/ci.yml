@@ -20,15 +20,22 @@ jobs:
         id: toolchain-cache
         uses: actions/cache@v4
         with:
-          path: ~/.local
+          path: tmp/.toolchain
           key: spinel-${{ runner.os }}-${{ steps.spinel.outputs.rev }}
 
-      - name: Build and install the toolchain
+      # The runner image ships Ruby, so a stub that fails when invoked is put
+      # first on the PATH of the toolchain step only: a cold build then proves
+      # that the toolchain builds with no Ruby interpreter.
+      - name: Stub ruby so the toolchain build cannot use it
         if: steps.toolchain-cache.outputs.cache-hit != 'true'
-        run: make toolchain SPINEL_SRC="$RUNNER_TEMP/spinel" PREFIX="$HOME/.local"
+        run: |
+          mkdir -p "$RUNNER_TEMP/noruby"
+          printf '#!/bin/sh\necho "ruby must not be needed to build the toolchain, but was invoked with: $*" >&2\nexit 127\n' > "$RUNNER_TEMP/noruby/ruby"
+          chmod +x "$RUNNER_TEMP/noruby/ruby"
 
-      - name: Put the toolchain on the path
-        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Build and install the toolchain without Ruby
+        if: steps.toolchain-cache.outputs.cache-hit != 'true'
+        run: PATH="$RUNNER_TEMP/noruby:$PATH" make toolchain
 
       - name: Doctor
         run: make doctor

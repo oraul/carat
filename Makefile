@@ -4,20 +4,46 @@
 # OpenSpec. Nothing is built here directly; see docs/architecture.md.
 # Run `make help` for the list.
 
-SPINEL_SRC  ?= $(HOME)/Repositories/spinel
+# Everything make toolchain fetches or installs lives under tmp/, which git
+# ignores and make toolchain-clean removes. Both locations can still be
+# overridden on the command line. The two directories are hidden because spin
+# treats every visible directory under the repository as part of the project:
+# it would report Spinel's C sources as undeclared and feed the .rbs sidecars
+# in Spinel's tests to the compiler, which fails on them. spin skips hidden
+# directories.
+SPINEL_SRC  ?= $(CURDIR)/tmp/.spinel
 SPINEL_REPO ?= matz/spinel
 # The exact Spinel commit this project builds with. Bump it deliberately, in
-# its own pull request, after make check passes with the new commit.
+# its own pull request, after make check passes with the new commit, and
+# regenerate tools/spinel/spinel_rt_responds_generated.h in that same pull
+# request (see the toolchain target).
 SPINEL_REF  ?= 001419ff1af7f77aaf8862ff248afef66047dd41
-PREFIX      ?= $(HOME)/.local
+PREFIX      ?= $(CURDIR)/tmp/.toolchain
 FILE       ?= README.md
 OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y @fission-ai/openspec@latest
+
+# The installed toolchain comes first on the PATH of every recipe, so after
+# make toolchain every other target finds spinel, spin, and spinel-doctor
+# with no shell setup.
+export PATH := $(PREFIX)/bin:$(PATH)
 
 .DEFAULT_GOAL := help
 
 # ---------------------------------------------------------------- toolchain
 
-## toolchain: fetch the pinned Spinel commit SPINEL_REF into SPINEL_SRC, build it, and install spinel and spin under PREFIX
+# Spinel's own build runs a CRuby script, tools/gen_respond_to_tables.rb, to
+# generate lib/spinel_rt_responds_generated.h, a header that is not in
+# Spinel's git. tools/spinel/spinel_rt_responds_generated.h is that script's
+# output at the pinned commit SPINEL_REF, copied into this repository so that
+# no Ruby interpreter is needed to build the toolchain. The toolchain target
+# copies it into the checkout after the checkout step and before make deps,
+# so the copy is newer than its prerequisites and Spinel's rule leaves it
+# alone. It is a pure function of Spinel's sources: regenerate it with that
+# script, on a machine that has CRuby, in the same pull request that bumps
+# SPINEL_REF.
+SPINEL_GENERATED_HEADER := tools/spinel/spinel_rt_responds_generated.h
+
+## toolchain: fetch the pinned Spinel commit SPINEL_REF into SPINEL_SRC (default tmp/.spinel), build it without Ruby, and install spinel, spin, and spinel-doctor under PREFIX (default tmp/.toolchain)
 toolchain:
 	@if [ ! -d "$(SPINEL_SRC)/.git" ]; then \
 	  echo "Initializing Spinel checkout in $(SPINEL_SRC)"; \
@@ -26,10 +52,17 @@ toolchain:
 	fi
 	git -C "$(SPINEL_SRC)" fetch --depth 1 origin "$(SPINEL_REF)"
 	git -C "$(SPINEL_SRC)" checkout -q --detach FETCH_HEAD
+	cp "$(SPINEL_GENERATED_HEADER)" "$(SPINEL_SRC)/lib/spinel_rt_responds_generated.h"
 	$(MAKE) -C "$(SPINEL_SRC)" deps
 	$(MAKE) -C "$(SPINEL_SRC)"
 	$(MAKE) -C "$(SPINEL_SRC)" install PREFIX="$(PREFIX)"
-	@echo "Installed spinel and spin ($(SPINEL_REF)) under $(PREFIX)/bin. Make sure it is on your PATH."
+	@echo
+	@echo "Installed spinel, spin, and spinel-doctor ($(SPINEL_REF)) under $(PREFIX)/bin."
+	@echo "The make targets find them there automatically; no PATH change is needed."
+
+## toolchain-clean: remove tmp/, the Spinel checkout and the installed toolchain
+toolchain-clean:
+	rm -rf tmp
 
 ## spinel-rev: print the Spinel commit the build is pinned to (resolving a branch or tag name through the remote), used as the CI cache key
 spinel-rev:
@@ -50,17 +83,24 @@ doctor:
 
 # -------------------------------------------------------------------- build
 
-## build: compile every bin/*.rb into build/bin
+## build: compile every bin/*.rb into build/bin and print how to run the editor from anywhere
 build:
 	spin build
+	@echo
+	@echo "Built $(CURDIR)/build/bin/carat"
+	@echo "To run it from anywhere, add an alias to your shell profile (~/.bashrc, ~/.zshrc, or ~/.config/fish/config.fish):"
+	@echo "  bash and zsh:  alias carat='$(CURDIR)/build/bin/carat'"
+	@echo "  fish:          alias carat '$(CURDIR)/build/bin/carat'"
+	@echo "Or run make install PREFIX=dir to copy it to dir/bin, a directory on your PATH, instead."
 
 ## run: build and run the editor on FILE (default README.md), e.g. make run FILE=path/to/file
 run:
 	spin run carat -- "$(FILE)"
 
-## install: copy the built executables to PREFIX/bin
+## install: copy the built executables to PREFIX/bin (default tmp/.toolchain/bin, the PATH of every make target); PREFIX=dir installs into dir/bin
 install:
-	spin install --prefix "$(PREFIX)"
+	spin install --prefix "$(PREFIX)/bin"
+	@echo "Installed $(PREFIX)/bin/carat. Run make install PREFIX=dir to install into dir/bin, a directory on your own PATH."
 
 ## pack: write a self-contained C source tree to dist/ that builds without Spinel
 pack:
@@ -136,4 +176,4 @@ help:
 	@echo
 	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)"
 
-.PHONY: toolchain spinel-rev doctor build run install pack clean test lint snapshots diagnose types gen-config check spec-list spec-validate spec-update help
+.PHONY: toolchain toolchain-clean spinel-rev doctor build run install pack clean test lint snapshots diagnose types gen-config check spec-list spec-validate spec-update help
