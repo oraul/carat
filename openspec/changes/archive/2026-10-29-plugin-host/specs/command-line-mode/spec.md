@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Write-all writes every modified buffer
-:wa", ":wall", and their bang forms SHALL write every modified buffer in the list, in list order across every tab page, to its own path with the message of ":w", clear its modified flag, and show the message of the last write. An unmodified buffer and a scratch buffer owned by a plugin SHALL not be written nor reported. A modified buffer with no path SHALL report "E141: No file name for buffer N", N being its list position from 1; the other buffers SHALL still be written and the first failure SHALL be the message shown.
+":wa", ":wall", and their bang forms SHALL write every modified buffer in the list, in list order across every tab page, to its own path with the message of ":w", clear its modified flag, and show the message of the last write. An unmodified buffer and a plugin's scratch buffer SHALL be neither written nor reported. A modified buffer with no path SHALL report "E141: No file name for buffer N", N being its list position from 1; the others SHALL still be written and the first failure shown.
 
 #### Scenario: Write-all on a modified buffer
 - **WHEN** the buffer for "a.txt" holds ["one", "two"] after an edit and ":wa" is run

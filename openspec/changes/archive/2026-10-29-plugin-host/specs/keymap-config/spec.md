@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Bindings are loaded from the configuration per mode
-The editor SHALL build its key bindings from the default bindings of every enabled plugin's manifest and then from the "keymaps" object of the configuration, one map for each mode named there, so a configuration binding of the same keys replaces a plugin's, a configuration value of null removes it, and no binding comes from anywhere else. A key written in Vim notation SHALL bind the key sequence it denotes, with <leader> expanded from the configuration's "leader". An action name is one or more namespace segments followed by the action, each in lowercase letters, digits, and underscores, joined by dots.
+The editor SHALL build its key bindings from the default bindings of every enabled plugin's manifest and then from the "keymaps" object of the configuration, one map per mode named there, so a configuration binding of the same keys replaces a plugin's, null removes it, and no binding comes from anywhere else. A key in Vim notation SHALL bind the sequence it denotes, with <leader> expanded from the configuration's "leader". An action name is namespace segments and the action, joined by dots.
 
 #### Scenario: Default normal-mode binding
 - **WHEN** the default configuration is loaded and the key "j" is pressed in normal mode
