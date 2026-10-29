@@ -123,9 +123,9 @@ Pure Ruby objects with no I/O. They hold the editor's state and the rules of mod
 - `Motions` and `TextObjects`: pure functions from `(state, count)` to a `Range`. Left-right (`h l 0 ^ $ f F t T ; ,`), up-down (`j k G gg + - _`), word (`w W b B e E ge gE`), object (`( ) { }`), search (`n N * #`), marks (`'x` and backtick), screen (`H M L`); text objects `iw aw iW aW is as ip ap` and the pair objects for brackets, quotes, and tags. One implementation serves both cursor movement and operator ranges.
 - `Operators`: `d c y p P > < = ~ g~ gu gU gq J r x s S C D Y`, each a function from a `Range` to buffer primitives inside one transaction. `c` ends by requesting insert mode so the dot register can replay typed text.
 - `ExCommand` and `ExGrammar`: a parsed command line as `range`, `name`, `bang`, `args`. Addresses are `.`, `$`, `%`, a number, a mark, a pattern, or arithmetic on those, joined by `,` or `;`. Names and abbreviations (`w`, `wr`, `write`) resolve through a registry owned by the use case layer.
-- `Window`, `Layout`, `TabPage`: a window is a viewport over a buffer with its own cursor, scroll offsets, and local options, a `Struct` record; a layout is a tree of splits; tab pages hold layouts.
+- `Window`, `Layout`, `TabPage`: a window is a viewport over a buffer with its own cursor, scroll offsets, the rectangle the last render gave it, a fixed-width flag (`winfixwidth`, for the explorer), and later local options, a `Struct` record. A layout is the tree of splits of one tab page, kept as a flat table of `LayoutNode` records addressed by integer ids (leaf, column of stacked children, row of side-by-side children), with `split`, `close`, `neighbour`, `equalize`, and `arrange`, which assigns every window its rectangle inside an area; the flat table keeps the walks over integers under Spinel. A tab page holds one layout, its current window, and the previously used one.
 - `Frame` and `Cell`: the view model, both `Struct` records. A frame is a grid of cells, each a code point, display width, and highlight group id, plus the cursor position and shape. It is an entity because presenters and tests both reason about it, and it contains no terminal knowledge. Presenters reuse one frame and repaint its cells in place, because allocating a grid per render churned the heap and corrupted buffers under Spinel's garbage collector.
-- `EditorState`: everything a use case reads or changes, a `Struct` record holding the buffer, window, cursor, mode, options, command line, message, pending keys, and quit flag.
+- `EditorState`: everything a use case reads or changes, a `Struct` record holding the buffer list, the tab pages and the current one, mode, options, command line, message, pending keys, and quit flag; the current window, its buffer, and its cursor are reached through the current tab page. A buffer stays in the list while a window shows it or it is modified, so a closed window's edits are never lost.
 
 ## 5. Use cases
 
@@ -146,7 +146,7 @@ Each use case is one class with a single `call` taking a request value and retur
 
 ### 5.3 Windows and services
 
-- `SplitWindow`, `CloseWindow`, `FocusWindow`, `ResizeLayout`, `OpenTab`.
+- `SplitWindow`, `CloseWindow`, `FocusWindow`, `ResizeLayout`, `OpenTab`, `CloseTab`, `SwitchTab`; `Quit` applies the `:q` rule over them: close the window when another exists anywhere, else end the editor unless a listed buffer is modified.
 - `RequestCompletion`, `RequestDefinition`, `RequestHover`, `RequestReferences`, `Rename`, `FormatBuffer`, `ApplyDiagnostics`: each talks to `LanguageServicePort`. They are written so that a port that reports no service available produces an empty response and a message, never an error.
 - `RegisterPlugin`, `DispatchPluginAction`, `EmitEvent`, `ApplyPluginEdit`: the plugin host use cases of section 9. The finder, the explorer, and git signs are plugins built on them, not separate use cases.
 
@@ -242,7 +242,7 @@ Rules of the schema:
 
 ### 8.2 Output
 
-- `FramePresenter`: a pure function from editor state to a `Frame`. It draws every window's text with line numbers and sign column, status lines, the tab line, the command line or message area, and overlays: completion menu and diagnostic text. Display width uses an East Asian width table; tabs expand to `tabstop`.
+- `FramePresenter`: a pure function from editor state to a `Frame`. It reserves the top row for the tab line when more than one tab page exists and the last row for the command line or message area, has the current tab page's layout arrange its windows in the rows between, and draws every window in its rectangle: text with line numbers and sign column, a status line under it, a separator column between windows side by side, and overlays: completion menu and diagnostic text. The cursor is placed in the current window. Display width uses an East Asian width table; tabs expand to `tabstop`.
 - `ScreenPresenter`: keeps the last frame and emits only changed cells as ANSI bytes, with cursor shape per mode, the alternate screen, and bracketed paste. One `write` per frame.
 - `Highlighter` and tokenizers: line-oriented, incremental tokenizers carrying an opaque state across lines so multi-line strings and comments work. Ruby, Markdown, JSON, YAML, and a plain fallback. Tree-sitter is excluded because it needs a native extension.
 - `Theme`: maps highlight groups to 256-color or truecolor values.
@@ -387,7 +387,7 @@ Each item is one OpenSpec change and one pull request, in this order. Each leave
 4. `undo-and-registers`: `Transaction`, `UndoTree`, `u`, `Ctrl-R`, the dot command, numbered and named registers.
 5. `visual-modes`: charwise, linewise, and blockwise selection with operators.
 6. `search-and-substitute`: `/ ? n N * #`, `hlsearch`, `incsearch`, `:s`, `:g`, `:v`.
-7. `buffers-windows-tabs`: buffer list, splits, `Ctrl-W` commands, tab pages, and their ex commands.
+7. `buffers-windows-tabs`: buffer list, splits, `Ctrl-W` commands, tab pages, and their ex commands. Delivered in two changes: `windows-and-splits` brought the layout, the `Ctrl-W` commands, the tab pages, and the buffer list that windows share, ahead of the plugins that need a side window; `buffer-list` brings `:ls`, `:bn`, `:bp`, `:bd`, `:b N`, and the `E162` line of `:qa`, and may land after the plugin items.
 8. `syntax-highlighting`: tokenizer interface, Ruby tokenizer, themes, color output.
 9. `options-and-config`: `:set`, local options, user and project config files with merge and unbinding.
 10. `language-services`: `ProcessPort`, `ServiceThreads`, `JsonRpcLanguageGateway`, `ruby-lsp` integration, diagnostics, go-to-definition, hover, completion menu.

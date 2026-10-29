@@ -1,0 +1,84 @@
+ok   one window takes the area minus its status line
+ok   the root leaf has id 0
+ok   the only window is number 1
+ok   the last window cannot be closed
+ok   the new leaf takes the next slot after the inner node
+ok   the new window comes first in layout order
+ok   11 text rows above, 10 below, a status line each
+ok   windows are numbered in layout order
+ok   a number past the last window gives the last window
+ok   both windows show the same buffer
+ok   a count sets the new window's text rows
+ok   a large count leaves the old window one text row
+ok   two text rows cannot be split horizontally
+ok   nothing changed
+ok   three text rows can be split
+ok   nine columns cannot hold two gutters, two text columns, and a separator
+ok   eleven columns can
+ok   40 columns left, a separator, 39 right
+ok   a count sets the new window's columns
+ok   a large count leaves the old window its minimum
+ok   closing the top window hands its rows to the one below
+ok   the remaining window takes the whole area
+ok   the remaining leaf is the root again
+ok   three stacked windows
+ok   the second split halves the bottom window
+ok   closing the middle window gives its rows to the one after it
+ok   the bottom window grew
+ok   closing the last window gives its rows to the one before it
+ok   one window again
+ok   three windows side by side
+ok   the window before takes the space when the one after is fixed-width
+ok   the left window grew and the fixed one kept its width
+ok   left and right neighbours
+ok   no neighbour above or below
+ok   neighbours above and below
+ok   with the cursor on the first row the upper right window is next
+ok   with the cursor low on the screen the lower right window is next
+ok   both right windows have the left window to their left
+ok   the right windows are stacked
+ok   equalize halves the rows, the first window taking the remainder
+ok   a fixed-width window keeps its width
+ok   without the flag the columns are shared
+ok   three windows share 23 rows as 8, 8, and 7
+ok   the bottom window shrinks
+ok   at its minimum the bottom window passes the difference up
+ok   growth goes to the bottom window
+ok   a fixed-width window keeps its width when the terminal shrinks
+ok   and when it grows
+ok   when every window is fixed the last one changes anyway
+ok   closed nodes' slots are reused by the next split
+ok   the split after a close works
+ok   a column is fixed when one child is, a row when all are
+ok   one buffer, one tab page, one window
+ok   the current window shows the buffer
+ok   a buffer is listed once
+ok   two unnamed buffers are told apart by identity
+ok   neither unnamed buffer is shown
+ok   a clean unshown buffer leaves the list when released
+ok   a modified unshown buffer stays hidden
+ok   it is the hidden modified buffer
+ok   the list has a modified buffer
+ok   a shown buffer stays
+ok   loading replaces the window's buffer and drops the one no window shows
+ok   a listed buffer is found by path
+ok   a dropped buffer is not
+ok   cursors on a replaced buffer are pulled back inside it
+ok   a new tab page goes after the current one and is current
+ok   inserted after the first tab page
+ok   one window per tab page
+ok   next from the second goes to the third
+ok   next from the last wraps
+ok   a count goes to that tab page
+ok   a count past the last does nothing
+ok   previous goes back one
+ok   previous with a count wraps
+ok   two back from the first lands on the second of three
+ok   closing the current tab page makes the next one current
+ok   closing the last tab page makes the one before it current
+ok   closing a tab page before the current one keeps it current
+ok   the first tab page is gone
+ok   focusing remembers the window left
+ok   focusing the current window changes nothing
+ok   a closed previous window is forgotten
+domain_layout: 83 passed, 0 failed

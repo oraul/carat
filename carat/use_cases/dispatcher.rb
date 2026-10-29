@@ -7,6 +7,12 @@ require_relative "enter_insert"
 require_relative "insert_text"
 require_relative "leave_insert"
 require_relative "edit_command_line"
+require_relative "files/quit"
+require_relative "windows/split_window"
+require_relative "windows/close_window"
+require_relative "windows/focus_window"
+require_relative "windows/resize_layout"
+require_relative "windows/switch_tab"
 
 module Carat
   module UseCases
@@ -24,15 +30,27 @@ module Carat
       # @rbs @insert_text: InsertText
       # @rbs @leave_insert: LeaveInsert
       # @rbs @command_line: EditCommandLine
+      # @rbs @quit: Quit
+      # @rbs @split_window: SplitWindow
+      # @rbs @close_window: CloseWindow
+      # @rbs @focus_window: FocusWindow
+      # @rbs @resize_layout: ResizeLayout
+      # @rbs @switch_tab: SwitchTab
 
-      #: (Move, Operate, EnterInsert, InsertText, LeaveInsert, EditCommandLine) -> void
-      def initialize(move, operate, enter_insert, insert_text, leave_insert, command_line)
+      #: (Move, Operate, EnterInsert, InsertText, LeaveInsert, EditCommandLine, Quit, SplitWindow, CloseWindow, FocusWindow, ResizeLayout, SwitchTab) -> void
+      def initialize(move, operate, enter_insert, insert_text, leave_insert, command_line, quit, split_window, close_window, focus_window, resize_layout, switch_tab)
         @move = move
         @operate = operate
         @enter_insert = enter_insert
         @insert_text = insert_text
         @leave_insert = leave_insert
         @command_line = command_line
+        @quit = quit
+        @split_window = split_window
+        @close_window = close_window
+        @focus_window = focus_window
+        @resize_layout = resize_layout
+        @switch_tab = switch_tab
       end
 
       #: (Domain::EditorState, Domain::Command) -> void
@@ -71,6 +89,21 @@ module Carat
         when "cmdline.execute" then @command_line.execute(state)
         when "cmdline.backspace" then @command_line.backspace(state)
         when "message.quit_hint" then state.show(QUIT_HINT, false)
+        when "window.split" then report(state, @split_window.call(state, false, command.count, "", false))
+        when "window.vsplit" then report(state, @split_window.call(state, true, command.count, "", false))
+        when "window.left" then @focus_window.direction(state, :left, command.count)
+        when "window.down" then @focus_window.direction(state, :down, command.count)
+        when "window.up" then @focus_window.direction(state, :up, command.count)
+        when "window.right" then @focus_window.direction(state, :right, command.count)
+        when "window.next" then @focus_window.cycle(state, true, command.count)
+        when "window.previous" then @focus_window.cycle(state, false, command.count)
+        when "window.last_accessed" then @focus_window.previous(state)
+        when "window.close" then report(state, @close_window.close(state, command.count))
+        when "window.only" then report(state, @close_window.only(state))
+        when "window.equalize" then @resize_layout.equalize(state)
+        when "window.quit" then quit_window(state, command.count)
+        when "tab.next" then @switch_tab.next(state, command.count)
+        when "tab.previous" then @switch_tab.previous(state, command.count)
         else state.show("Not implemented: #{action}", false)
         end
       end
@@ -83,6 +116,23 @@ module Carat
         when Domain::Mode::INSERT then @leave_insert.call(state)
         when Domain::Mode::CMDLINE then @command_line.cancel(state)
         else state.mode = Domain::Mode::NORMAL
+        end
+      end
+
+      # Shows an outcome's message as the command line would.
+      #: (Domain::EditorState, Outcome) -> void
+      def report(state, outcome)
+        state.show(outcome.message, !outcome.ok) unless outcome.message.empty?
+      end
+
+      # Ctrl-W q: :q on the current window, or with a count on window n,
+      # which closes it without moving the cursor as :{n}quit does.
+      #: (Domain::EditorState, Integer) -> void
+      def quit_window(state, n)
+        if n > 0 && state.total_windows > 1
+          report(state, @close_window.close(state, n))
+        else
+          report(state, @quit.call(state, false))
         end
       end
     end

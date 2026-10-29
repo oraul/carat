@@ -8,7 +8,11 @@ U = Carat::UseCases
 def build(files)
   open_file = Carat::UseCases::OpenFile.new(files)
   save_file = Carat::UseCases::SaveFile.new(files)
-  Carat::UseCases::ExecuteEx.new(open_file, save_file, Carat::UseCases::Quit.new)
+  close_window = Carat::UseCases::CloseWindow.new
+  quit = Carat::UseCases::Quit.new(close_window)
+  split_window = Carat::UseCases::SplitWindow.new(open_file)
+  open_tab = Carat::UseCases::OpenTab.new(open_file)
+  Carat::UseCases::ExecuteEx.new(open_file, save_file, quit, split_window, close_window, open_tab, Carat::UseCases::CloseTab.new, Carat::UseCases::SwitchTab.new)
 end
 
 def state_with(lines, path)
@@ -216,6 +220,109 @@ t.assert_equal("E32: No file name", r.message, "edit with no path and no argumen
 s = state_with(["mem"], "a.txt")
 r = ex.call(s, "e")
 t.assert_equal(["disk"], s.buffer.lines, "edit without argument reloads")
+
+# Windows and tab pages through the registry, on a state laid out at 23 by
+# 80: rows are [label, command line, [ok, message, windows, tab pages]].
+E36 = "E36: Not enough room"
+def run_window(text)
+  files = Carat::Doubles::MemoryFiles.new
+  files.put("b.txt", "zz\n")
+  s = state_with(["mem"], "a.txt")
+  s.tab.layout.arrange(0, 0, 23, 80)
+  r = build(files).call(s, text)
+  [r.ok, r.message, s.window_count, s.tab_count]
+end
+t.table([
+  ["sp splits", "sp", [true, "", 2, 1]],
+  ["split splits", "split", [true, "", 2, 1]],
+  ["sp file shows the file", "sp b.txt", [true, "\"b.txt\" 1L, 3B", 2, 1]],
+  ["vs splits", "vs", [true, "", 2, 1]],
+  ["vsplit splits", "vsplit", [true, "", 2, 1]],
+  ["vs file shows the file", "vs b.txt", [true, "\"b.txt\" 1L, 3B", 2, 1]],
+  ["new splits", "new", [true, "", 2, 1]],
+  ["vne splits", "vne", [true, "", 2, 1]],
+  ["vnew splits", "vnew", [true, "", 2, 1]],
+  ["clo on the last window fails", "clo", [false, "E444: Cannot close last window", 1, 1]],
+  ["close on the last window fails", "close", [false, "E444: Cannot close last window", 1, 1]],
+  ["on with one window says so", "on", [true, "Already only one window", 1, 1]],
+  ["only with one window says so", "only", [true, "Already only one window", 1, 1]],
+  ["tabnew opens a tab page", "tabnew", [true, "", 1, 2]],
+  ["tabe opens a tab page", "tabe", [true, "", 1, 2]],
+  ["tabedit file opens a tab page on the file", "tabedit b.txt", [true, "\"b.txt\" 1L, 3B", 1, 2]],
+  ["tabc on the last tab page fails", "tabc", [false, "E784: Cannot close last tab page", 1, 1]],
+  ["tabclose on the last tab page fails", "tabclose", [false, "E784: Cannot close last tab page", 1, 1]],
+  ["tabo with one tab page says so", "tabo", [true, "Already only one tab page", 1, 1]],
+  ["tabonly with one tab page says so", "tabonly", [true, "Already only one tab page", 1, 1]],
+  ["tabn with one tab page stays", "tabn", [true, "", 1, 1]],
+  ["tabnext with one tab page stays", "tabnext", [true, "", 1, 1]],
+  ["tabp with one tab page stays", "tabp", [true, "", 1, 1]],
+  ["tabprevious with one tab page stays", "tabprevious", [true, "", 1, 1]],
+  ["tabN with one tab page stays", "tabN", [true, "", 1, 1]],
+  ["tabNext with one tab page stays", "tabNext", [true, "", 1, 1]],
+  ["tabfir with one tab page stays", "tabfir", [true, "", 1, 1]],
+  ["tabfirst with one tab page stays", "tabfirst", [true, "", 1, 1]],
+  ["tabl with one tab page stays", "tabl", [true, "", 1, 1]],
+  ["tablast with one tab page stays", "tablast", [true, "", 1, 1]]
+]) do |text|
+  run_window(text)
+end
+files = Carat::Doubles::MemoryFiles.new
+s = state_with(["mem"], "a.txt")
+s.tab.layout.arrange(0, 0, 3, 80)
+r = build(files).call(s, "sp")
+t.assert_equal([false, E36, 1], [r.ok, r.message, s.window_count], "sp with two text rows reports E36")
+
+# Windows and the file commands.
+files = Carat::Doubles::MemoryFiles.new
+files.put("b.txt", "zz\n")
+ex = build(files)
+s = state_with(["mem"], "a.txt")
+s.tab.layout.arrange(0, 0, 23, 80)
+ex.call(s, "sp")
+s.buffer.modified = true
+r = ex.call(s, "q")
+t.assert_equal([true, 1, false, true], [r.ok, s.window_count, s.quit, s.buffer.modified], "q with two windows closes one and keeps the buffer")
+ex.call(s, "sp b.txt")
+s.buffer.modified = true
+r = ex.call(s, "close")
+t.assert_equal([1, "a.txt", 2], [s.window_count, s.buffer.path, s.buffer_count], "close keeps the modified buffer hidden")
+r = ex.call(s, "qa")
+t.assert_equal([false, E37, false], [r.ok, r.message, s.quit], "qa is refused by the hidden buffer")
+r = ex.call(s, "wa")
+t.assert_equal([true, "\"b.txt\" 1L, 3B written", "zz\n", 1], [r.ok, r.message, files.get("b.txt"), s.buffer_count], "wa writes the hidden buffer, reports the write, and drops it once clean")
+s = state_with(["mem"], "a.txt")
+s.tab.layout.arrange(0, 0, 23, 80)
+ex.call(s, "sp b.txt")
+s.buffer.modified = true
+ex.call(s, "close")
+r = ex.call(s, "q!")
+t.assert_equal([true, false, "b.txt", 1], [r.ok, s.quit, s.buffer.path, s.buffer_count], "q! on the last window shows the hidden modified buffer and abandons the clean one")
+s = state_with(["mem"], "a.txt")
+s.tab.layout.arrange(0, 0, 23, 80)
+ex.call(s, "sp b.txt")
+s.buffer.modified = true
+ex.call(s, "close")
+r = ex.call(s, "e b.txt")
+t.assert_equal([true, "\"b.txt\" 1L, 3B", true, 1], [r.ok, r.message, s.buffer.modified, s.buffer_count], "e brings a hidden buffer back without reading it, dropping the clean one")
+s = state_with(["mem"], "a.txt")
+s.tab.layout.arrange(0, 0, 23, 80)
+ex.call(s, "sp")
+s.buffer.modified = true
+r = ex.call(s, "wq")
+t.assert_equal([true, "mem\n", 1, false], [r.ok, files.get("a.txt"), s.window_count, s.quit], "wq with two windows writes and closes one")
+s.buffer.modified = true
+r = ex.call(s, "x")
+t.assert_equal([true, true], [r.ok, s.quit], "x on the last window writes and quits")
+s = state_with(["mem"], "a.txt")
+s.tab.layout.arrange(0, 0, 23, 80)
+ex.call(s, "tabnew")
+ex.call(s, "e b.txt")
+s.buffer.modified = true
+ex.call(s, "tabfir")
+r = ex.call(s, "qa")
+t.assert_equal([false, E37], [r.ok, r.message], "qa is refused by a modified buffer in another tab page")
+r = ex.call(s, "wqa")
+t.assert_equal([true, true, "zz\n"], [r.ok, s.quit, files.get("b.txt")], "wqa writes the other tab page's buffer and quits")
 
 # Unknown and empty.
 r = ex.call(s, "foo")

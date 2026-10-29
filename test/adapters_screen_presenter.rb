@@ -91,4 +91,20 @@ t.assert_equal(1, terminal.left, "leave reaches the terminal")
 t.assert_true(terminal.output.end_with?("\e[0m\e[2 q\e[?25h\e[?1049l"), "leave restores the block cursor and the main screen last")
 t.assert_true(terminal.output.start_with?("\e[?1049h"), "output begins with the alternate screen")
 
+# The window and tab line highlights have their own sequences.
+colored = D::Frame.new(4, 8)
+colored.put(0, 0, "nc", D::Highlight::STATUS_NC)
+colored.put(1, 0, "tab", D::Highlight::TAB_LINE)
+colored.put(2, 0, "sel", D::Highlight::TAB_LINE_SELECTED)
+colored.put(3, 0, "fill", D::Highlight::TAB_LINE_FILL)
+clock = Carat::Doubles::ManualClock.new
+terminal = Carat::Doubles::FakeTerminal.new(clock, 4, 8)
+screen = Carat::Adapters::ScreenPresenter.new(terminal)
+screen.present(colored)
+out = terminal.last_write
+t.assert_true(out.include?("\e[0;2;7mnc"), "inactive status lines are dim reverse video")
+t.assert_true(out.include?("\e[0;7mtab"), "tab line labels are reverse video")
+t.assert_true(out.include?("\e[0;1msel"), "the selected label is bold")
+t.assert_true(out.include?("\e[0;7mfill"), "the tab line fill is reverse video")
+
 t.finish

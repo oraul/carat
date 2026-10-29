@@ -4,24 +4,37 @@ require_relative "../outcome"
 require_relative "open_file"
 require_relative "save_file"
 require_relative "quit"
+require_relative "../windows/split_window"
+require_relative "../windows/close_window"
+require_relative "../windows/open_tab"
+require_relative "../windows/close_tab"
+require_relative "../windows/switch_tab"
 
 module Carat
   module UseCases
     # Parses a command line and runs the matching ex command. The registry is
     # the case below; later changes add their commands as arms. The "all"
-    # commands act on the single buffer until the buffer list exists.
+    # commands act on every buffer in the list, across every tab page.
     class ExecuteEx
-      E141 = "E141: No file name for buffer 1"
-
       # @rbs @open_file: OpenFile
       # @rbs @save_file: SaveFile
       # @rbs @quit: Quit
+      # @rbs @split_window: SplitWindow
+      # @rbs @close_window: CloseWindow
+      # @rbs @open_tab: OpenTab
+      # @rbs @close_tab: CloseTab
+      # @rbs @switch_tab: SwitchTab
 
-      #: (OpenFile, SaveFile, Quit) -> void
-      def initialize(open_file, save_file, quit)
+      #: (OpenFile, SaveFile, Quit, SplitWindow, CloseWindow, OpenTab, CloseTab, SwitchTab) -> void
+      def initialize(open_file, save_file, quit, split_window, close_window, open_tab, close_tab, switch_tab)
         @open_file = open_file
         @save_file = save_file
         @quit = quit
+        @split_window = split_window
+        @close_window = close_window
+        @open_tab = open_tab
+        @close_tab = close_tab
+        @switch_tab = switch_tab
       end
 
       #: (Domain::EditorState, String) -> Outcome
@@ -37,19 +50,45 @@ module Carat
         when "wq"
           written = @save_file.call(state, command.args)
           return written unless written.ok
-          @quit.call(state, true)
+          @quit.leave(state)
         when "x", "xit", "exi", "exit"
           exit_editor(state, command)
         when "wa", "wall"
           write_all(state)
         when "qa", "qall", "quita", "quitall"
-          @quit.call(state, command.bang)
+          @quit.all(state, command.bang)
         when "wqa", "wqall", "xa", "xall"
           written = write_all(state)
           return written unless written.ok
-          @quit.call(state, true)
+          @quit.all(state, true)
         when "e", "edit"
           edit(state, command)
+        when "sp", "split"
+          @split_window.call(state, false, 0, command.args, false)
+        when "vs", "vsplit"
+          @split_window.call(state, true, 0, command.args, false)
+        when "new"
+          @split_window.call(state, false, 0, "", true)
+        when "vne", "vnew"
+          @split_window.call(state, true, 0, "", true)
+        when "clo", "close"
+          @close_window.close(state, 0)
+        when "on", "only"
+          @close_window.only(state)
+        when "tabnew", "tabe", "tabedit"
+          @open_tab.call(state, command.args)
+        when "tabc", "tabclose"
+          @close_tab.close(state)
+        when "tabo", "tabonly"
+          @close_tab.only(state)
+        when "tabn", "tabnext"
+          @switch_tab.next(state, 0)
+        when "tabp", "tabprevious", "tabN", "tabNext"
+          @switch_tab.previous(state, 0)
+        when "tabfir", "tabfirst"
+          @switch_tab.first(state)
+        when "tabl", "tablast"
+          @switch_tab.last(state)
         else
           unknown(text)
         end
@@ -73,24 +112,45 @@ module Carat
       end
 
       # :x writes only when there is something to write: a modified buffer or
-      # a file argument. After a successful write it quits as :wq does.
+      # a file argument. After a successful write it leaves as :wq does.
       #: (Domain::EditorState, Domain::ExCommand) -> Outcome
       def exit_editor(state, command)
         if state.buffer.modified || !command.args.empty?
           written = @save_file.call(state, command.args)
           return written unless written.ok
         end
-        @quit.call(state, true)
+        @quit.leave(state)
       end
 
-      # Writes every modified buffer to its own path; with one buffer this is
-      # one write or nothing. A modified buffer with no name reports E141.
+      # Writes every modified buffer to its own path, in list order, and
+      # reports the last write, or the first failure: a modified buffer with
+      # no name reports E141 with its list position, and the other buffers
+      # are still written, as Neovim's do_wqall goes on after an error. A
+      # hidden buffer that is clean after its write leaves the list.
       #: (Domain::EditorState) -> Outcome
       def write_all(state)
-        buffer = state.buffer
-        return Outcome.success("") unless buffer.modified
-        return Outcome.failure(E141) if buffer.path.nil?
-        @save_file.call(state, "")
+        result = Outcome.success("")
+        failed = false
+        i = 0
+        while i < state.buffer_count
+          buffer = state.buffer_at(i)
+          if buffer.modified
+            written = buffer.path.nil? ? Outcome.failure("E141: No file name for buffer #{i + 1}") : @save_file.write(buffer, "")
+            if !written.ok && !failed
+              result = written
+              failed = true
+            elsif !failed
+              result = written
+            end
+          end
+          i += 1
+        end
+        i = state.buffer_count - 1
+        while i >= 0
+          state.release(state.buffer_at(i))
+          i -= 1
+        end
+        result
       end
     end
   end

@@ -41,8 +41,20 @@ ok   edit starts a new file
 ok   edit refused while modified
 ok   forced reload discards changes
 ok   long form edit
+ok   q with two windows closes one
+ok   q on the last window quits
+ok   wq with two windows writes and closes one
+ok   x with two windows writes and closes one
+ok   e shows the listed buffer in the window and drops the one no window shows
+ok   both windows share one buffer
+ok   e a.txt reads the file again after its buffer left the list
+ok   e reloads the file for every window showing it
+ok   wa writes every buffer in every tab page
+ok   qa quits with several windows and tab pages
+ok   qa is refused by a modified buffer in another tab page
+ok   wqa writes the buffers of both tab pages and quits
 ok   leader q quits
 ok   message shown
 ok   message stays while idle
 ok   message clears on the next key
-editor_cmdline: 47 passed, 0 failed
+editor_cmdline: 59 passed, 0 failed

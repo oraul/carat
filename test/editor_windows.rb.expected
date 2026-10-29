@@ -1,0 +1,110 @@
+ok   Ctrl-W s splits with the new window above
+ok   :sp splits
+ok   :split splits
+ok   a count sets the new window's rows
+ok   Ctrl-W v splits with the new window left
+ok   :vs splits vertically
+ok   :vsplit splits vertically
+ok   a count sets the new window's columns
+ok   Ctrl-W j moves down
+ok   Ctrl-W k moves back up
+ok   Ctrl-W k with nothing above stays
+ok   Ctrl-W l moves right
+ok   Ctrl-W h moves back left
+ok   Ctrl-W l with nothing to the right stays
+ok   a count moves several windows and stops at the edge
+ok   Ctrl-W w goes to the next window
+ok   Ctrl-W w wraps to the first
+ok   Ctrl-W W wraps to the last
+ok   Ctrl-W W goes to the previous window
+ok   a count before Ctrl-W w picks that window
+ok   a count past the last window picks the last
+ok   a count before Ctrl-W W picks that window too
+ok   Ctrl-W p returns to the previous window
+ok   Ctrl-W p again goes forward
+ok   Ctrl-W p after the previous window closed stays
+ok   Ctrl-W c closes the window
+ok   :close closes the window
+ok   :clo closes the window
+ok   Ctrl-W c on the last window stays
+ok   a count before Ctrl-W c closes that window
+ok   closing the bottom window gives its rows to the one above
+ok   Ctrl-W o keeps only the current window
+ok   :only keeps only the current window
+ok   :on keeps only the current window
+ok   Ctrl-W = equalizes rows
+ok   Ctrl-W = equalizes columns
+ok   Ctrl-W q closes one of two windows
+ok   a count before Ctrl-W q quits that window
+ok   :q closes one of two windows
+ok   :new splits with an empty buffer
+ok   :vnew splits vertically with an empty buffer
+ok   :vne splits vertically with an empty buffer
+ok   :sp file splits and shows the file
+ok   nested splits
+ok   two text rows cannot be split
+ok   three text rows can
+ok   nine columns cannot be split with the gutter
+ok   eleven columns can
+ok   :sp reports E36 too
+ok   closing the last window reports E444
+ok   :close on the last window reports E444
+ok   Ctrl-W o with one window says so
+ok   :only with one window says so
+ok   Ctrl-W o with two windows says nothing
+ok   :sp file shows the opened message
+ok   E36 leaves one window
+ok   E36 is shown as an error
+ok   :sp file shows the file above
+ok   :vs file shows the file left
+ok   :new shows an unnamed empty buffer
+ok   :vnew shows an unnamed empty buffer
+ok   Ctrl-W s shows the same buffer
+ok   the old window keeps its buffer after Ctrl-W j
+ok   x deletes in the shared buffer
+ok   both windows show the edit
+ok   both status lines carry the marker
+ok   each status line shows its own cursor
+ok   the current window's status line is highlighted, the other inactive
+ok   the cursor is in the bottom window
+ok   a separator column between the windows
+ok   the separator uses the status highlight
+ok   the right window starts after the separator
+ok   the right window's status line starts after the separator
+ok   the cursor is in the left window
+ok   the cursor moves to the right window
+ok   cursors are independent
+ok   switching back restores the other cursor
+ok   G moves only the top window's cursor
+ok   the top window scrolled to the end
+ok   the bottom window did not scroll
+ok   Ctrl-W = leaves a fixed-width window alone
+ok   a resize leaves a fixed-width window alone
+ok   without the flag the columns are shared
+ok   the bottom window absorbs the lost rows
+ok   the bottom status line is on row 18
+ok   the right window gives up its columns first, down to one
+ok   the separator moved
+ok   equalizing shares the narrower width
+ok   Ctrl-W q closes one of two windows
+ok   Ctrl-W q on the last window quits
+ok   Ctrl-W q on the last window refuses a modified buffer
+ok   the other window keeps showing the modified buffer
+ok   the hidden buffer blocks :qa
+ok   the hidden buffer is still listed
+ok   :wa writes the hidden buffer
+ok   a clean hidden buffer leaves the list
+ok   :qa then ends the editor
+ok   :e brings the hidden buffer back without reading the file
+ok   a clean buffer leaves the list when its window closes
+ok   :q closes the window and keeps the buffer
+ok   and :qa is refused
+ok   :q on the last window is refused by the hidden buffer
+ok   :q! shows the hidden buffer instead of quitting
+ok   a second :q! quits
+ok   Ctrl-W o reports one window
+ok   :only keeps the current window with its buffer
+ok   :wa reports the nameless buffer and writes the others
+ok   the nameless buffer stays modified
+ok   :wqa does not quit while a buffer could not be written
+editor_windows: 109 passed, 0 failed

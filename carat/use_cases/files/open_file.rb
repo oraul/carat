@@ -4,8 +4,11 @@ require_relative "../outcome"
 
 module Carat
   module UseCases
-    # Loads a file into the state, or starts an empty buffer for a path that
-    # does not exist yet, with Vim's message for each.
+    # Shows a file in the current window: the buffer already listed for
+    # that path, which is not read again, the file read from disk, or an
+    # empty buffer for a path that does not exist yet, with Vim's message
+    # for each. The current buffer's own path is reloaded in place so every
+    # window showing it sees the file's text.
     class OpenFile
       # @rbs @files: Ports::FilePort
 
@@ -16,20 +19,31 @@ module Carat
 
       #: (Domain::EditorState, String) -> Outcome
       def call(state, path)
+        listed = state.buffer_for(path)
+        if !listed.nil? && !listed.equal?(state.buffer)
+          state.load(listed)
+          return Outcome.success("\"#{path}\" #{listed.line_count}L, #{listed.byte_count}B")
+        end
+        text = +""
         if @files.exist?(path)
-          text = +""
           begin
             text = @files.read(path)
           rescue StandardError => e
             return Outcome.failure("E484: Can't open file #{path}: #{e.message}")
           end
-          buffer = Domain::Buffer.from_text(text, path)
-          state.load(buffer)
-          Outcome.success("\"#{path}\" #{buffer.line_count}L, #{text.bytesize}B")
-        else
-          state.load(Domain::Buffer.from_text("", path))
-          Outcome.success("\"#{path}\" [New]")
         end
+        fresh = Domain::Buffer.from_text(text, path)
+        if listed.nil?
+          state.load(fresh)
+        else
+          listed.lines = fresh.lines
+          listed.line_ending = fresh.line_ending
+          listed.modified = false
+          state.window.show(listed)
+          state.clamp_cursors(listed)
+        end
+        return Outcome.success("\"#{path}\" [New]") unless @files.exist?(path)
+        Outcome.success("\"#{path}\" #{fresh.line_count}L, #{text.bytesize}B")
       end
     end
   end

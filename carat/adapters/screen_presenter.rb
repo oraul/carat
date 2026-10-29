@@ -101,6 +101,10 @@ module Carat
         when Domain::Highlight::STATUS then "\e[0;7m"
         when Domain::Highlight::MESSAGE_ERROR then "\e[0;37;41m"
         when Domain::Highlight::NON_TEXT then "\e[0;34m"
+        when Domain::Highlight::STATUS_NC then "\e[0;2;7m"
+        when Domain::Highlight::TAB_LINE then "\e[0;7m"
+        when Domain::Highlight::TAB_LINE_SELECTED then "\e[0;1m"
+        when Domain::Highlight::TAB_LINE_FILL then "\e[0;7m"
         else "\e[0m"
         end
       end

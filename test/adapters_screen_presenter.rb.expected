@@ -23,4 +23,8 @@ ok   no raw OSC introducer is written
 ok   leave reaches the terminal
 ok   leave restores the block cursor and the main screen last
 ok   output begins with the alternate screen
-adapters_screen_presenter: 25 passed, 0 failed
+ok   inactive status lines are dim reverse video
+ok   tab line labels are reverse video
+ok   the selected label is bold
+ok   the tab line fill is reverse video
+adapters_screen_presenter: 29 passed, 0 failed

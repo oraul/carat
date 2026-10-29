@@ -42,7 +42,9 @@ module Carat
       end
 
       # Types keys written in Vim notation, one terminal read per key, and
-      # lets every wait the decoder needs expire in between.
+      # lets every wait the decoder needs expire in between. The frame is
+      # drawn after every key, as the main loop draws after every read, so
+      # a window command sees the layout the previous key left.
       #: (String) -> void
       def type(notation)
         parsed = Domain::KeyNotation.parse(notation, "")
@@ -53,9 +55,9 @@ module Carat
           @terminal.push(Adapters::KeyDecoder.encode(codes[i]))
           pump
           pump while @assembly.controller.decoder.pending?
+          render
           i += 1
         end
-        render
       end
 
       # Pushes raw bytes as one read, as a terminal would deliver a sequence.
@@ -124,6 +126,61 @@ module Carat
       #: (Integer) -> String
       def row(index)
         @frame.row_text(index)
+      end
+
+      # The number of windows in the current tab page.
+      #: () -> Integer
+      def window_count
+        @assembly.state.window_count
+      end
+
+      # The 1-based number of the current window in layout order.
+      #: () -> Integer
+      def window_index
+        tab = @assembly.state.tab
+        tab.layout.number_of(tab.current)
+      end
+
+      #: () -> Integer
+      def tab_count
+        @assembly.state.tab_count
+      end
+
+      # The 1-based number of the current tab page.
+      #: () -> Integer
+      def tab_index
+        @assembly.state.tab_index + 1
+      end
+
+      # Every window of the current tab page in layout order, each as
+      # [row, col, text rows, columns, path or "", cursor row, cursor col].
+      #: () -> Array[Array[untyped]]
+      def windows
+        layout = @assembly.state.tab.layout
+        ids = layout.leaves
+        out = []
+        i = 0
+        while i < ids.length
+          w = layout.window_at(ids[i])
+          path = w.buffer.path
+          out << [w.row, w.col, w.height, w.width, path.nil? ? "" : path, w.cursor.row, w.cursor.col]
+          i += 1
+        end
+        out
+      end
+
+      # The paths of the listed buffers, "" for an unnamed one.
+      #: () -> Array[String]
+      def buffer_paths
+        s = @assembly.state
+        out = []
+        i = 0
+        while i < s.buffer_count
+          path = s.buffer_at(i).path
+          out << (path.nil? ? "" : path)
+          i += 1
+        end
+        out
       end
 
       #: () -> String

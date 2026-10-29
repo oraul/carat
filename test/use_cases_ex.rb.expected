@@ -89,8 +89,49 @@ ok   forced reload discards changes
 ok   long form edit
 ok   edit with no path and no argument
 ok   edit without argument reloads
+ok   sp splits
+ok   split splits
+ok   sp file shows the file
+ok   vs splits
+ok   vsplit splits
+ok   vs file shows the file
+ok   new splits
+ok   vne splits
+ok   vnew splits
+ok   clo on the last window fails
+ok   close on the last window fails
+ok   on with one window says so
+ok   only with one window says so
+ok   tabnew opens a tab page
+ok   tabe opens a tab page
+ok   tabedit file opens a tab page on the file
+ok   tabc on the last tab page fails
+ok   tabclose on the last tab page fails
+ok   tabo with one tab page says so
+ok   tabonly with one tab page says so
+ok   tabn with one tab page stays
+ok   tabnext with one tab page stays
+ok   tabp with one tab page stays
+ok   tabprevious with one tab page stays
+ok   tabN with one tab page stays
+ok   tabNext with one tab page stays
+ok   tabfir with one tab page stays
+ok   tabfirst with one tab page stays
+ok   tabl with one tab page stays
+ok   tablast with one tab page stays
+ok   sp with two text rows reports E36
+ok   q with two windows closes one and keeps the buffer
+ok   close keeps the modified buffer hidden
+ok   qa is refused by the hidden buffer
+ok   wa writes the hidden buffer, reports the write, and drops it once clean
+ok   q! on the last window shows the hidden modified buffer and abandons the clean one
+ok   e brings a hidden buffer back without reading it, dropping the clean one
+ok   wq with two windows writes and closes one
+ok   x on the last window writes and quits
+ok   qa is refused by a modified buffer in another tab page
+ok   wqa writes the other tab page's buffer and quits
 ok   unknown command
 ok   unknown command keeps its argument text
 ok   empty command does nothing
 ok   a bare number is not a command yet
-use_cases_ex: 95 passed, 0 failed
+use_cases_ex: 136 passed, 0 failed

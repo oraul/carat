@@ -2,7 +2,7 @@
 
 The action names a keymap value may use, in `namespace.action` form. A keymap value that is not an action name is a key sequence in Vim notation to replay. Actions that `config/default.json` already binds but that a later roadmap item implements are listed under Reserved; pressing their keys shows "Not implemented: name".
 
-In normal and operator-pending modes the command grammar classifies an action by its name: `cursor.*` and `motion.*` are motions, which move the cursor on their own and give an operator its range; `operator.delete`, `operator.change`, `operator.yank`, `operator.indent`, and `operator.dedent` are the pending operators, which wait for a motion, a text object, or themselves again for a linewise command; `textobject.*` actions are text objects, usable only after an operator; `register.select` and the four find motions read one more key; every other action completes at once with the count and register typed before it.
+In normal and operator-pending modes the command grammar classifies an action by its name: `cursor.*` and `motion.*` are motions, which move the cursor on their own and give an operator its range; `operator.delete`, `operator.change`, `operator.yank`, `operator.indent`, and `operator.dedent` are the pending operators, which wait for a motion, a text object, or themselves again for a linewise command; `textobject.*` actions are text objects, usable only after an operator; `register.select` and the four find motions read one more key; every other action, the `window.*` and `tab.*` actions included, completes at once with the count and register typed before it.
 
 ## Implemented
 
@@ -86,6 +86,18 @@ In normal and operator-pending modes the command grammar classifies an action by
 | `cmdline.execute` | cmdline | Run the command line |
 | `cmdline.backspace` | cmdline | Remove the last character, or leave when empty |
 | `message.quit_hint` | normal | Show the quit hint |
+| `window.split` | normal | Split the window horizontally, the new window above; a count is its text rows |
+| `window.vsplit` | normal | Split the window vertically, the new window to the left; a count is its columns |
+| `window.left`, `window.down`, `window.up`, `window.right` | normal | Go to the neighbour window in that direction, count times |
+| `window.next` | normal | Next window in layout order, wrapping; a count is a window number |
+| `window.previous` | normal | Previous window in layout order, wrapping; a count is a window number |
+| `window.last_accessed` | normal | Back to the previously used window |
+| `window.close` | normal | Close the window, or window count; the last window of the last tab page reports E444 |
+| `window.only` | normal | Close every other window of the tab page |
+| `window.equalize` | normal | Make the windows of every split the same size, fixed-width windows kept |
+| `window.quit` | normal | `:q` on the window, or on window count |
+| `tab.next` | normal | Next tab page, wrapping; a count is a tab page number |
+| `tab.previous` | normal | Count tab pages back, wrapping |
 
 ## Reserved
 

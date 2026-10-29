@@ -15,7 +15,12 @@ ok   x deletes a character and marks the buffer modified
 ok   quit is refused with E37
 ok   the editor exits with status 0 after :q!
 ok   the forced quit did not write
+ok   the editor drew its first frame for the windows check
+ok   vsplit draws the separator column
+ok   tabnew draws the tab line
+ok   the editor exits with status 0 after closing the tab page, a window, and the last window
+ok   closing the last window leaves the alternate screen
 ok   the editor drew its first frame for the signal check
 ok   SIGTERM ends the editor with status 0
 ok   SIGTERM leaves the alternate screen
-smoke_editor: 20 passed, 0 failed
+smoke_editor: 25 passed, 0 failed

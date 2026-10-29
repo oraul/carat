@@ -1,0 +1,71 @@
+ok   :tabnew opens a tab page after the current one
+ok   :tabe file opens a tab page on the file
+ok   :tabedit file
+ok   :tabedit without a file opens an empty buffer
+ok   :tabe without a file opens an empty buffer
+ok   a new tab page goes after the current one
+ok   :tabclose closes the current tab page
+ok   :tabc closes the current tab page
+ok   closing the first of three makes the next one current
+ok   closing the last of three makes the one before it current
+ok   :tabclose on the last tab page stays
+ok   :tabonly keeps the current tab page
+ok   :tabo keeps the current tab page
+ok   :q closes the tab page
+ok   Ctrl-W c closes the tab page
+ok   Ctrl-W q closes the tab page
+ok   gt goes to the next tab page
+ok   gt wraps
+ok   gT goes back
+ok   gT wraps
+ok   :tabn goes to the next tab page
+ok   :tabnext wraps
+ok   :tabp goes back
+ok   :tabprevious wraps
+ok   :tabN goes back
+ok   :tabNext goes back
+ok   :tabl goes to the last
+ok   :tablast goes to the last
+ok   :tabfir goes to the first
+ok   :tabfirst goes to the first
+ok   3gt goes to tab page 3
+ok   2gt goes to tab page 2
+ok   5gt with three tab pages does nothing
+ok   2gT goes two back, wrapping
+ok   1gT goes one back
+ok   :tabclose on the last tab page reports E784
+ok   :tabc on the last tab page reports E784
+ok   :tabonly with one tab page says so
+ok   :tabo with one tab page says so
+ok   :tabe file shows the opened message
+ok   :tabnew shows nothing
+ok   the new tab page shows the file at the top
+ok   the text starts under the tab line
+ok   the first tab page kept its cursor
+ok   :tabnew shows an unnamed empty buffer
+ok   both buffers are listed and each tab page has a window
+ok   a modified buffer in a closed tab page stays hidden and blocks :qa
+ok   :tabonly keeps the modified buffer hidden
+ok   :qa! ends the editor
+ok   a clean buffer leaves the list with its tab page
+ok   :qa is refused by a modified buffer in another tab page
+ok   :wa writes the buffers of every tab page
+ok   :wqa writes every tab page's buffer and quits
+ok   :qa quits with several windows and tab pages
+ok   the new tab page has one window
+ok   the first tab page still has two
+ok   the first tab page remembers its current window
+ok   the tab line lists the tab pages with their files
+ok   the current label is selected, the rest filled
+ok   the fill reaches the right edge
+ok   the window starts under the tab line with one row less
+ok   the status line is above the message row
+ok   the cursor is under the tab line
+ok   a modified buffer is marked in its label
+ok   the first label is now selected
+ok   an unnamed buffer shows as [No Name]
+ok   one tab page has no tab line
+ok   the window takes the top row again
+ok   a label shows the file name without its directory
+ok   the status line path is untouched
+editor_tabs: 70 passed, 0 failed

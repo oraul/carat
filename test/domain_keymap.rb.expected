@@ -22,10 +22,17 @@ ok   a( in operator-pending mode
 ok   d in operator-pending mode doubles
 ok   escape in operator-pending mode
 ok   iw is not bound in normal mode
+ok   control w is a prefix
+ok   control w s splits
+ok   control w v splits vertically
+ok   control w equals equalizes
+ok   control w q quits the window
+ok   gt goes to the next tab page
+ok   gT goes to the previous tab page
 ok   a matches and is a prefix
 ok   ab matches
 ok   j still bound after a bad key
 ok   k with a non-string value is unbound
 ok   malformed bindings are reported with mode and key
 ok   null unbinds a key
-domain_keymap: 30 passed, 0 failed
+domain_keymap: 37 passed, 0 failed
