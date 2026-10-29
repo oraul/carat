@@ -5,18 +5,23 @@ t = Carat::Testing.new("use_cases_ex")
 D = Carat::Domain
 U = Carat::UseCases
 
+def state_with(lines, path)
+  Carat::Domain::EditorState.new(Carat::Domain::Buffer.new(lines, path, "\n"), Carat::Domain::Options.new, 500)
+end
+
+# The ex use case over a plugin host with no plugins, whose own state is a
+# throwaway: every command here takes its state as an argument.
 def build(files)
   open_file = Carat::UseCases::OpenFile.new(files)
-  save_file = Carat::UseCases::SaveFile.new(files)
   close_window = Carat::UseCases::CloseWindow.new
+  plugins = Carat::UseCases::PluginHost.new(state_with([], nil), files, open_file, close_window, Carat::Domain::Keymap.new, " ")
+  save_file = Carat::UseCases::SaveFile.new(files, plugins)
   quit = Carat::UseCases::Quit.new(close_window)
   split_window = Carat::UseCases::SplitWindow.new(open_file)
   open_tab = Carat::UseCases::OpenTab.new(open_file)
-  Carat::UseCases::ExecuteEx.new(open_file, save_file, quit, split_window, close_window, open_tab, Carat::UseCases::CloseTab.new, Carat::UseCases::SwitchTab.new)
-end
-
-def state_with(lines, path)
-  Carat::Domain::EditorState.new(Carat::Domain::Buffer.new(lines, path, "\n"), Carat::Domain::Options.new, 500)
+  ex = Carat::UseCases::ExecuteEx.new(open_file, save_file, quit, split_window, close_window, open_tab, Carat::UseCases::CloseTab.new, Carat::UseCases::SwitchTab.new, plugins)
+  plugins.attach(ex)
+  ex
 end
 
 # Write.
@@ -333,5 +338,30 @@ r = ex.call(s, "")
 t.assert_equal([true, ""], [r.ok, r.message], "empty command does nothing")
 r = ex.call(s, "12")
 t.assert_equal("E492: Not an editor command: 12", r.message, "a bare number is not a command yet")
+
+# Scratch buffers: never written, skipped by :wa, and not unsaved work.
+files = Carat::Doubles::MemoryFiles.new
+ex = build(files)
+s = state_with(["one"], "a.txt")
+scratch = D::Buffer.new(["l"], nil, "\n")
+scratch.owner = "hello"
+scratch.title = "list"
+s.add_buffer(scratch)
+s.tab.layout.arrange(0, 0, 23, 80)
+side = D::Window.new(scratch)
+side.fixed_width = true
+s.tab.focus(s.tab.layout.split_edge(side, 20, true))
+r = ex.call(s, "w")
+t.assert_equal([false, "E382: Cannot write, 'buftype' option is set"], [r.ok, r.message], "write on a scratch buffer reports E382")
+scratch.set_lines(0, 1, ["m"])
+s.buffer_at(0).set_lines(0, 1, ["two"])
+r = ex.call(s, "wa")
+t.assert_equal([true, "\"a.txt\" 1L, 4B written", "two\n", true], [r.ok, r.message, files.get("a.txt"), scratch.modified], "write-all skips the scratch buffer and writes the file")
+r = ex.call(s, "qa")
+t.assert_equal([true, true], [r.ok, s.quit], "quit-all ignores the scratch buffer's changes")
+s.quit = false
+s.tab.focus(s.tab.layout.leaves[1])
+r = ex.call(s, "Nope")
+t.assert_equal("E492: Not an editor command: Nope", r.message, "a name no plugin declares is unknown")
 
 t.finish

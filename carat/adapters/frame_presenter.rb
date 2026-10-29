@@ -8,8 +8,9 @@ module Carat
   module Adapters
     # A pure function from editor state to a Frame: the tab line when there
     # is more than one tab page, every window of the current tab page in
-    # the rectangle the layout gives it (line number gutter, text with tabs
-    # expanded, tilde rows, a status line under it), a separator column
+    # the rectangle the layout gives it (sign column, line number gutter,
+    # text with tabs expanded, tilde rows, a status line under it with the
+    # plugins' segments on the current window's), a separator column
     # between windows side by side, and the message or command line row
     # with the keys of a pending command at its right edge. It arranges the
     # layout and scrolls every window first so the state and the frame
@@ -43,7 +44,7 @@ module Carat
         i = 0
         while i < ids.length
           id = ids[i]
-          paint_window(frame, layout.window_at(id), id == tab.current, options, tabstop)
+          paint_window(frame, layout.window_at(id), id == tab.current, options, tabstop, state.segments)
           i += 1
         end
         paint_separators(frame, layout, layout.root)
@@ -117,8 +118,8 @@ module Carat
 
       # One window: scrolled to its own cursor, then its gutter, text, tilde
       # rows, and status line inside its rectangle.
-      #: (Domain::Frame, Domain::Window, bool, Domain::Options, Integer) -> void
-      def paint_window(frame, window, current, options, tabstop)
+      #: (Domain::Frame, Domain::Window, bool, Domain::Options, Integer, Hash[String, String]) -> void
+      def paint_window(frame, window, current, options, tabstop, segments)
         buffer = window.buffer
         cursor = window.cursor
         gutter = window.gutter_width(options)
@@ -133,28 +134,41 @@ module Carat
           frame_row = window.row + i
           row = window.top + i
           if row < buffer.line_count
-            paint_gutter(frame, frame_row, window.col, window.width, row, gutter, cursor.row, options)
+            paint_gutter(frame, frame_row, window.col, window.width, row, gutter, cursor.row, options, buffer)
             paint_line(frame, frame_row, window.col + gutter, buffer.line(row), text_width, window.left, tabstop)
           else
             frame.put(frame_row, window.col, "~", Domain::Highlight::NON_TEXT)
           end
           i += 1
         end
-        paint_status(frame, window.row + height, window.col, window.width, window, current)
+        paint_status(frame, window.row + height, window.col, window.width, window, current, segments)
       end
 
-      #: (Domain::Frame, Integer, Integer, Integer, Integer, Integer, Integer, Domain::Options) -> void
-      def paint_gutter(frame, frame_row, col, width, row, gutter, cursor_row, options)
+      # The sign column, when the buffer has signs, then the number.
+      #: (Domain::Frame, Integer, Integer, Integer, Integer, Integer, Integer, Domain::Options, Domain::Buffer) -> void
+      def paint_gutter(frame, frame_row, col, width, row, gutter, cursor_row, options, buffer)
         return if gutter == 0
+        numbers = gutter
+        start = col
+        if buffer.signs?
+          numbers = gutter - Domain::Window::SIGN_WIDTH
+          glyph = buffer.signs[row.to_s]
+          sign = glyph.nil? ? "" : glyph
+          sign = sign[0, Domain::Window::SIGN_WIDTH] if sign.length > Domain::Window::SIGN_WIDTH
+          frame.fill(frame_row, col, col + Domain::Window::SIGN_WIDTH, Domain::Highlight::LINE_NUMBER)
+          frame.put(frame_row, col, sign, Domain::Highlight::LINE_NUMBER)
+          start = col + Domain::Window::SIGN_WIDTH
+        end
+        return if numbers <= 0
         number = row + 1
         if options.relativenumber && row != cursor_row
           number = row > cursor_row ? row - cursor_row : cursor_row - row
         elsif options.relativenumber && !options.number
           number = 0
         end
-        text = number.to_s.rjust(gutter - 1) + " "
+        text = number.to_s.rjust(numbers - 1) + " "
         text = text[0, width] if text.length > width
-        frame.put(frame_row, col, text, Domain::Highlight::LINE_NUMBER)
+        frame.put(frame_row, start, text, Domain::Highlight::LINE_NUMBER)
       end
 
       # Paints the visible part of a line from frame column col: characters
@@ -186,17 +200,19 @@ module Carat
         ch
       end
 
-      # The status line of a window across its width: the path and the
-      # modified marker at the left, the cursor and the position at the
-      # right when they fit, in the status highlight for the current window
-      # and the inactive one otherwise.
-      #: (Domain::Frame, Integer, Integer, Integer, Domain::Window, bool) -> void
-      def paint_status(frame, frame_row, col, width, window, current)
+      # The status line of a window across its width: the path, or the
+      # scratch title, and the modified marker at the left, the plugins'
+      # segments after them on the current window, the cursor and the
+      # position at the right when they fit, in the status highlight for
+      # the current window and the inactive one otherwise.
+      #: (Domain::Frame, Integer, Integer, Integer, Domain::Window, bool, Hash[String, String]) -> void
+      def paint_status(frame, frame_row, col, width, window, current, segments)
         hl = current ? Domain::Highlight::STATUS : Domain::Highlight::STATUS_NC
         buffer = window.buffer
-        path = buffer.path
-        left = path.nil? ? "[No Name]" : path
+        name = buffer.display_name
+        left = name.nil? ? "[No Name]" : name
         left = left + " [+]" if buffer.modified
+        left = left + "  " + segments.values.join(" ") if current && !segments.empty?
         left = left[0, width] if left.length > width
         cursor = window.cursor
         right = "#{cursor.row + 1},#{cursor.col + 1} #{position_text(window)}"

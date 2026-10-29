@@ -1,6 +1,6 @@
 # Neovim compatibility
 
-Every Neovim command Carat implements has a row here and a table-driven test. The test column names the `test/*.rb` program whose table or assertions cover the row. Commands from later roadmap items are not listed until they land; pressing a key bound to one of them shows a "Not implemented" message.
+Every Neovim command Carat implements has a row here and a table-driven test. The test column names the `test/*.rb` program whose table or assertions cover the row. Commands from later roadmap items are not listed until they land; pressing a key bound to one of them shows a "Not implemented" message. The commands plugins add, such as `:Hello` and `<leader>hh` of the built-in `hello` plugin, are Carat's own and are listed in `docs/actions.md` and `docs/plugins.md`, with `test/editor_plugins.rb`; a scratch window a plugin opens behaves as a `nofile` buffer in a `winfixwidth` window: `:w` reports `E382`, `:wa` skips it, and `:q` closes it.
 
 ## Command grammar
 

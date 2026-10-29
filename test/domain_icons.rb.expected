@@ -1,0 +1,90 @@
+ok   nerd folder_closed is a pua glyph
+ok   nerd folder_open is a pua glyph
+ok   nerd file is a pua glyph
+ok   nerd symlink is a pua glyph
+ok   nerd modified is a pua glyph
+ok   nerd error is a pua glyph
+ok   nerd warning is a pua glyph
+ok   nerd info is a pua glyph
+ok   nerd hint is a pua glyph
+ok   nerd ruby is a pua glyph
+ok   nerd json is a pua glyph
+ok   nerd markdown is a pua glyph
+ok   nerd toml is a pua glyph
+ok   nerd makefile is a pua glyph
+ok   nerd shell is a pua glyph
+ok   nerd c is a pua glyph
+ok   nerd yaml is a pua glyph
+ok   nerd git is a pua glyph
+ok   nerd lock is a pua glyph
+ok   nerd default is a pua glyph
+ok   unicode folder_closed is a unicode glyph
+ok   unicode folder_open is a unicode glyph
+ok   unicode file is a unicode glyph
+ok   unicode symlink is a unicode glyph
+ok   unicode modified is a unicode glyph
+ok   unicode error is a unicode glyph
+ok   unicode warning is a unicode glyph
+ok   unicode info is a unicode glyph
+ok   unicode hint is a unicode glyph
+ok   unicode ruby is a unicode glyph
+ok   unicode json is a unicode glyph
+ok   unicode markdown is a unicode glyph
+ok   unicode toml is a unicode glyph
+ok   unicode makefile is a unicode glyph
+ok   unicode shell is a unicode glyph
+ok   unicode c is a unicode glyph
+ok   unicode yaml is a unicode glyph
+ok   unicode git is a unicode glyph
+ok   unicode lock is a unicode glyph
+ok   unicode default is a unicode glyph
+ok   ascii folder_closed is a ascii glyph
+ok   ascii folder_open is a ascii glyph
+ok   ascii file is a ascii glyph
+ok   ascii symlink is a ascii glyph
+ok   ascii modified is a ascii glyph
+ok   ascii error is a ascii glyph
+ok   ascii warning is a ascii glyph
+ok   ascii info is a ascii glyph
+ok   ascii hint is a ascii glyph
+ok   ascii ruby is a ascii glyph
+ok   ascii json is a ascii glyph
+ok   ascii markdown is a ascii glyph
+ok   ascii toml is a ascii glyph
+ok   ascii makefile is a ascii glyph
+ok   ascii shell is a ascii glyph
+ok   ascii c is a ascii glyph
+ok   ascii yaml is a ascii glyph
+ok   ascii git is a ascii glyph
+ok   ascii lock is a ascii glyph
+ok   ascii default is a ascii glyph
+ok   ascii closed folder
+ok   ascii open folder
+ok   ascii error
+ok   ascii info
+ok   unicode closed folder
+ok   nerd closed folder
+ok   unknown name
+ok   unknown name in ascii
+ok   unknown set reads as nerd
+ok   twenty icon names
+ok   unicode is a set
+ok   emoji is not a set
+ok   default is nerd
+ok   unicode
+ok   ascii
+ok   invalid keeps the default
+ok   wrong type keeps the default
+ok   fresh options use nerd
+ok   the shipped configuration selects nerd
+ok   nerd folder
+ok   start of the basic plane area
+ok   end of the basic plane area
+ok   supplementary area
+ok   end of the supplementary area
+ok   past the supplementary area
+ok   a wide character is still wide
+ok   a unicode icon
+ok   private_use? for a nerd glyph
+ok   private_use? for a letter
+domain_icons: 89 passed, 0 failed

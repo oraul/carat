@@ -15,4 +15,11 @@ ok   keymaps.visual_block is an object
 ok   keymaps.operator_pending is an object
 ok   keymaps.cmdline is an object
 ok   every binding is an action name, a key sequence, or null
-config_sync: 17 passed, 0 failed
+ok   the icons option names a set
+ok   config/plugins.json lists at least one plugin
+ok   every plugins.json entry has a name, a path, and a class
+ok   generated registry matches config/plugins.json
+ok   the compiled registry names the same plugins
+ok   the compiled registry constructs one plugin per entry
+ok   every plugins entry of config/default.json names a listed plugin
+config_sync: 24 passed, 0 failed

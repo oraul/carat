@@ -153,6 +153,41 @@ module Carat
         new_id
       end
 
+      # Adds a window at the left (first) or right edge of the whole layout,
+      # size columns wide, as a plugin's side window: when the root is
+      # already a row the new leaf joins it at that end, otherwise a new
+      # row becomes the root holding the new leaf and the old root, which
+      # keeps the rest of the width minus the separator. Returns the new
+      # leaf's id, or -1 when the root's width cannot hold the size, the
+      # separator, and the minimum of what is there; the next arrange fits
+      # the old content to the width left.
+      #: (Window, Integer, bool) -> Integer
+      def split_edge(window, size, first)
+        old_root = node(root)
+        total = old_root.width
+        return -1 if size < LEAF_MIN_WIDTH || total < size + 1 + min_size(root, true)
+        new_id = 0
+        if old_root.kind == :row
+          new_id = allocate(:leaf, root, window)
+          first ? old_root.children.unshift(new_id) : old_root.children.push(new_id)
+        else
+          inner_id = allocate(:row, -1, nil)
+          inner = node(inner_id)
+          inner.size = old_root.size
+          inner.row = old_root.row
+          inner.col = old_root.col
+          inner.height = old_root.height
+          inner.width = old_root.width
+          old_root.parent = inner_id
+          old_root.size = total - size - 1
+          new_id = allocate(:leaf, inner_id, window)
+          inner.children = first ? [new_id, root] : [root, new_id]
+          self.root = inner_id
+        end
+        node(new_id).size = size
+        new_id
+      end
+
       # Closes leaf id, giving its space to the sibling after it, or before
       # it when it was last, preferring a sibling that is not fixed-width.
       # Returns the id of the node that took the space, or -1 for the last

@@ -7,6 +7,7 @@ require_relative "../domain/command_grammar"
 require_relative "dispatcher"
 require_relative "insert_text"
 require_relative "edit_command_line"
+require_relative "plugins/plugin_host"
 
 module Carat
   module UseCases
@@ -16,7 +17,10 @@ module Carat
     # or :pending, the latter meaning the keymap is waiting for more keys.
     # A remap sequence is queued in front of the keys still to handle, so
     # replay is a loop, not a recursion; one key may cause at most
-    # MAX_REPLAYS remaps before E223 stops it.
+    # MAX_REPLAYS remaps before E223 stops it. A key is looked up first in
+    # the keymap of a scratch buffer the current window shows, then in the
+    # mode's keymap. After every key the plugin host observes the state
+    # and delivers the events the key caused.
     class HandleKey
       MAX_REPLAYS = 100
 
@@ -24,14 +28,16 @@ module Carat
       # @rbs @dispatcher: Dispatcher
       # @rbs @insert_text: InsertText
       # @rbs @command_line: EditCommandLine
+      # @rbs @plugins: PluginHost
       # @rbs @replays: Integer
 
-      #: (Domain::Keymap, Dispatcher, InsertText, EditCommandLine) -> void
-      def initialize(keymap, dispatcher, insert_text, command_line)
+      #: (Domain::Keymap, Dispatcher, InsertText, EditCommandLine, PluginHost) -> void
+      def initialize(keymap, dispatcher, insert_text, command_line, plugins)
         @keymap = keymap
         @dispatcher = dispatcher
         @insert_text = insert_text
         @command_line = command_line
+        @plugins = plugins
         @replays = 0
       end
 
@@ -41,6 +47,7 @@ module Carat
         queue = [code]
         result = :handled
         result = step(state, queue.shift, queue) until queue.empty?
+        @plugins.observe(state)
         result
       end
 
@@ -51,7 +58,7 @@ module Carat
         keys = state.pending_keys
         return :idle if keys.empty?
         @replays = 0
-        match = @keymap.lookup(state.mode, keys)
+        match = lookup(state, keys)
         state.pending_keys = []
         value = match.value
         queue = []
@@ -62,10 +69,23 @@ module Carat
           dispatch(state, value, keys, queue)
         end
         step(state, queue.shift, queue) until queue.empty?
+        @plugins.observe(state)
         :handled
       end
 
       private
+
+      # The scratch buffer's own keymap answers first; a key it neither
+      # binds nor starts a binding with falls through to the mode's keymap.
+      #: (Domain::EditorState, Array[Integer]) -> Domain::KeymapMatch
+      def lookup(state, keys)
+        local = state.buffer.keymap
+        unless local.nil?
+          match = local.lookup(state.mode, keys)
+          return match unless match.kind == :none
+        end
+        @keymap.lookup(state.mode, keys)
+      end
 
       # Whether the grammar reads keys in the current mode.
       #: (Domain::EditorState) -> bool
@@ -89,7 +109,7 @@ module Carat
           end
         end
         state.pending_keys << code
-        match = @keymap.lookup(state.mode, state.pending_keys)
+        match = lookup(state, state.pending_keys)
         case match.kind
         when :match
           keys = state.pending_keys
@@ -146,11 +166,12 @@ module Carat
         state.mode = Domain::Mode::NORMAL
       end
 
-      # An action name is namespace.action in lowercase letters, digits, and
-      # underscores; anything else is a key sequence to replay.
+      # An action name is one or more namespace segments and the action, in
+      # lowercase letters, digits, and underscores joined by dots, as
+      # plugin.hello.greet; anything else is a key sequence to replay.
       #: (String) -> bool
       def action_name?(value)
-        value.match?(/\A[a-z0-9_]+\.[a-z0-9_]+\z/)
+        value.match?(/\A[a-z0-9_]+(\.[a-z0-9_]+)+\z/)
       end
 
       #: (Domain::EditorState, String, Array[Integer]) -> void

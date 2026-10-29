@@ -59,25 +59,35 @@ module Carat
         self.errors = []
       end
 
-      # Builds the keymap from the "keymaps" object of the configuration,
-      # expanding <leader> with the given leader. Malformed entries are
-      # recorded in errors as "mode.key: reason" and skipped.
+      # Builds a keymap from a "keymaps" object, expanding <leader> with
+      # the given leader. Malformed entries are recorded in errors as
+      # "mode.key: reason" and skipped.
       #: (untyped, String) -> Keymap
       def self.build(keymaps, leader)
         keymap = Keymap.new
-        return keymap unless keymaps.is_a?(Hash)
+        keymap.add_all(keymaps, leader)
+        keymap
+      end
+
+      # Adds every binding of a "keymaps" object, in the same JSON shape as
+      # the configuration, over the bindings already present: a later
+      # binding of the same keys replaces an earlier one and null removes
+      # it, which is how a plugin's defaults go in first and the
+      # configuration last.
+      #: (untyped, String) -> void
+      def add_all(keymaps, leader)
+        return unless keymaps.is_a?(Hash)
         keymaps.each do |mode_name, bindings|
           mode = Mode.from_name(mode_name.to_s)
           if mode.nil?
-            keymap.errors << "#{mode_name}: unknown mode"
+            errors << "#{mode_name}: unknown mode"
             next
           end
           next unless bindings.is_a?(Hash)
           bindings.each do |key, value|
-            keymap.add(mode, key.to_s, value, leader)
+            add(mode, key.to_s, value, leader)
           end
         end
-        keymap
       end
 
       # Adds one binding from its JSON form. A nil value unbinds.

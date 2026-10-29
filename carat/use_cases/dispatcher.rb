@@ -13,14 +13,16 @@ require_relative "windows/close_window"
 require_relative "windows/focus_window"
 require_relative "windows/resize_layout"
 require_relative "windows/switch_tab"
+require_relative "plugins/plugin_host"
 
 module Carat
   module UseCases
     # Maps a command from the grammar to the use case that performs it: an
     # operator command goes to Operate, a motion to Move, and every other
     # action is a case over its name. The names are listed in
-    # docs/actions.md. An action a later roadmap item owns shows a "Not
-    # implemented" message.
+    # docs/actions.md. A plugin.<name>.<action> action goes to the plugin
+    # host; an action a later roadmap item owns shows a "Not implemented"
+    # message.
     class Dispatcher
       QUIT_HINT = "Type  :q!  and press <Enter> to abandon all changes and exit Carat"
 
@@ -36,9 +38,10 @@ module Carat
       # @rbs @focus_window: FocusWindow
       # @rbs @resize_layout: ResizeLayout
       # @rbs @switch_tab: SwitchTab
+      # @rbs @plugins: PluginHost
 
-      #: (Move, Operate, EnterInsert, InsertText, LeaveInsert, EditCommandLine, Quit, SplitWindow, CloseWindow, FocusWindow, ResizeLayout, SwitchTab) -> void
-      def initialize(move, operate, enter_insert, insert_text, leave_insert, command_line, quit, split_window, close_window, focus_window, resize_layout, switch_tab)
+      #: (Move, Operate, EnterInsert, InsertText, LeaveInsert, EditCommandLine, Quit, SplitWindow, CloseWindow, FocusWindow, ResizeLayout, SwitchTab, PluginHost) -> void
+      def initialize(move, operate, enter_insert, insert_text, leave_insert, command_line, quit, split_window, close_window, focus_window, resize_layout, switch_tab, plugins)
         @move = move
         @operate = operate
         @enter_insert = enter_insert
@@ -51,6 +54,7 @@ module Carat
         @focus_window = focus_window
         @resize_layout = resize_layout
         @switch_tab = switch_tab
+        @plugins = plugins
       end
 
       #: (Domain::EditorState, Domain::Command) -> void
@@ -104,7 +108,12 @@ module Carat
         when "window.quit" then quit_window(state, command.count)
         when "tab.next" then @switch_tab.next(state, command.count)
         when "tab.previous" then @switch_tab.previous(state, command.count)
-        else state.show("Not implemented: #{action}", false)
+        else
+          if action.start_with?("plugin.")
+            @plugins.action(state, action, command)
+          else
+            state.show("Not implemented: #{action}", false)
+          end
         end
       end
 

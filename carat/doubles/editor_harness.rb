@@ -10,7 +10,9 @@ module Carat
   module Doubles
     # The whole editor over doubles: type keys in Vim notation, then read the
     # frame, the buffer, the cursor, the mode, the message, and the files.
-    # It pumps the input controller exactly as MainLoop does.
+    # It pumps the input controller exactly as MainLoop does. The plugins
+    # are a parameter because the doubles may not require the registry;
+    # default runs with none, with_plugins with the list given.
     class EditorHarness
       attr_reader :terminal #: FakeTerminal
       attr_reader :clock #: ManualClock
@@ -18,19 +20,31 @@ module Carat
       attr_reader :assembly #: Adapters::EditorAssembly
       attr_reader :frame #: Domain::Frame
 
-      #: (MemoryFiles, untyped, Integer, Integer) -> void
-      def initialize(files, config, rows, cols)
+      #: (MemoryFiles, untyped, Integer, Integer, Array[untyped]) -> void
+      def initialize(files, config, rows, cols, plugins)
         @files = files
         @clock = ManualClock.new
         @terminal = FakeTerminal.new(@clock, rows, cols)
-        @assembly = Adapters::EditorAssembly.new(@terminal, @clock, @files, config)
+        @assembly = Adapters::EditorAssembly.new(@terminal, @clock, @files, config, plugins)
         @frame = Domain::Frame.new(rows, cols)
       end
 
-      # A harness over the default configuration with the given files.
+      # A harness over the default configuration with the given files and
+      # no plugins.
       #: (MemoryFiles, Integer, Integer) -> EditorHarness
       def self.default(files, rows, cols)
-        new(files, FixedConfig.defaults, rows, cols)
+        new(files, FixedConfig.defaults, rows, cols, [])
+      end
+
+      # A harness over the default configuration with the given plugins.
+      #: (MemoryFiles, Integer, Integer, Array[untyped]) -> EditorHarness
+      def self.with_plugins(files, rows, cols, plugins)
+        new(files, FixedConfig.defaults, rows, cols, plugins)
+      end
+
+      #: () -> UseCases::PluginHost
+      def plugins
+        @assembly.plugins
       end
 
       # Opens the file as bin/carat does and draws the first frame.

@@ -4,18 +4,61 @@ module Carat
     # path, modified, and line_ending. All edits go through the four
     # primitives insert, delete, replace, and set_lines; a later change hooks
     # transactions into them without changing their signatures. Lines are
-    # never mutated in place: every primitive stores new strings. A Struct
-    # record: mutable, with a reader and a writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :modified)
+    # never mutated in place: every primitive stores new strings. A scratch
+    # buffer, one a plugin owns, has an owner (the plugin name, empty for a
+    # file buffer), a title shown in place of the path, and a keymap of its
+    # own that wins over the mode's keymap while the cursor is in its
+    # window. Signs are glyphs on rows, keyed by the row as text (a hash
+    # pins only with string keys), with the plugin that placed each one in
+    # sign_owners; changes counts the primitive edits, so the plugin host
+    # can tell that the text changed. A Struct record: mutable, with a
+    # reader and a writer per member.
+    class Buffer < Struct.new(:lines, :path, :line_ending, :modified, :owner, :title, :keymap, :signs, :sign_owners, :changes)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
       # @rbs @modified: bool
+      # @rbs @owner: String
+      # @rbs @title: String
+      # @rbs @keymap: Keymap?
+      # @rbs @signs: Hash[String, String]
+      # @rbs @sign_owners: Hash[String, String]
+      # @rbs @changes: Integer
 
+      # The original members go through super and the plugin members
+      # through the writers, so the empty sign tables take the pinned
+      # types.
       #: (Array[String], String?, String) -> void
       def initialize(lines, path, line_ending)
         lines << "" if lines.empty?
         super(lines, path, line_ending, false)
+        self.owner = ""
+        self.title = ""
+        self.keymap = nil
+        self.signs = {}
+        self.sign_owners = {}
+        self.changes = 0
+      end
+
+      # Whether a plugin owns the buffer: it is never written and never
+      # counts as unsaved work.
+      #: () -> bool
+      def scratch?
+        !owner.empty?
+      end
+
+      # The name the status line shows: the path, the scratch title, or
+      # nil for an unnamed file buffer.
+      #: () -> String?
+      def display_name
+        return path unless path.nil?
+        title.empty? ? nil : title
+      end
+
+      # Whether any sign is placed on the buffer.
+      #: () -> bool
+      def signs?
+        !signs.empty?
       end
 
       # Splits file text into lines. The line ending is "\r\n" when the first
@@ -167,6 +210,7 @@ module Carat
         lines[from...to] = new_lines
         lines << "" if lines.empty?
         self.modified = true
+        self.changes = changes + 1
       end
 
       private

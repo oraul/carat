@@ -1,7 +1,9 @@
 # Require graph for the carat library, innermost layer first.
 # Every file is pulled in here once; bin/*.rb and test/*.rb require only this
-# file (and test/*.rb also carat/testing.rb).
+# file (and test/*.rb also carat/testing.rb). The plugin API has no layer:
+# it requires nothing and the plugins require only it.
 require_relative "carat/version"
+require_relative "carat/plugin_api"
 
 # Entities
 require_relative "carat/domain/json"
@@ -9,12 +11,15 @@ require_relative "carat/domain/default_config"
 require_relative "carat/domain/position"
 require_relative "carat/domain/range"
 require_relative "carat/domain/cursor"
-require_relative "carat/domain/buffer"
 require_relative "carat/domain/key"
 require_relative "carat/domain/key_notation"
 require_relative "carat/domain/mode"
+require_relative "carat/domain/icons"
 require_relative "carat/domain/options"
 require_relative "carat/domain/keymap"
+require_relative "carat/domain/buffer"
+require_relative "carat/domain/manifest_check"
+require_relative "carat/domain/registry_source"
 require_relative "carat/domain/command"
 require_relative "carat/domain/registers"
 require_relative "carat/domain/command_grammar"
@@ -55,6 +60,9 @@ require_relative "carat/use_cases/windows/resize_layout"
 require_relative "carat/use_cases/windows/open_tab"
 require_relative "carat/use_cases/windows/close_tab"
 require_relative "carat/use_cases/windows/switch_tab"
+require_relative "carat/use_cases/plugins/plugin_link"
+require_relative "carat/use_cases/plugins/plugin_entry"
+require_relative "carat/use_cases/plugins/plugin_host"
 require_relative "carat/use_cases/files/execute_ex"
 require_relative "carat/use_cases/edit_command_line"
 require_relative "carat/use_cases/dispatcher"
@@ -81,3 +89,6 @@ require_relative "carat/drivers/disk_files"
 require_relative "carat/drivers/monotonic_clock"
 require_relative "carat/drivers/signals"
 require_relative "carat/drivers/main_loop"
+
+# Compiled plugins: the generated registry and, through it, every plugin
+require_relative "carat/plugins/registry"

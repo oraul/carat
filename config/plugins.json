@@ -1,0 +1,5 @@
+{
+  "plugins": [
+    { "name": "hello", "path": "hello/plugin", "class": "Carat::Plugins::Hello::Plugin" }
+  ]
+}

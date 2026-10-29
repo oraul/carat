@@ -53,11 +53,13 @@ module Carat
         out.sort
       end
 
-      # Returns the size of the text and zero for mtime and directory.
+      # Returns the size of the text and zero for mtime and directory,
+      # raising for a path that was never put, as the disk does.
       # @rbs path: String
       def stat(path)
         text = @files[path]
-        { "size" => text.nil? ? 0 : text.bytesize, "mtime" => 0, "directory" => 0 }
+        raise ArgumentError, "no such file: #{path}" if text.nil?
+        { "size" => text.bytesize, "mtime" => 0, "directory" => 0 }
       end
     end
   end

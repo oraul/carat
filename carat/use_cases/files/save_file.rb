@@ -1,17 +1,24 @@
 require_relative "../../domain/editor_state"
 require_relative "../../ports/file_port"
 require_relative "../outcome"
+require_relative "../plugins/plugin_host"
 
 module Carat
   module UseCases
     # Writes a buffer to its path, or to the given path, with Vim's
-    # messages: the written message, E32, and E212.
+    # messages: the written message, E32, E212, and E382 for a scratch
+    # buffer, which is never written. A write is reported to the plugins
+    # as a buffer_save event.
     class SaveFile
-      # @rbs @files: Ports::FilePort
+      E382 = "E382: Cannot write, 'buftype' option is set"
 
-      #: (Ports::FilePort) -> void
-      def initialize(files)
+      # @rbs @files: Ports::FilePort
+      # @rbs @plugins: PluginHost
+
+      #: (Ports::FilePort, PluginHost) -> void
+      def initialize(files, plugins)
         @files = files
+        @plugins = plugins
       end
 
       # Writes the current buffer. path_arg is the command argument; empty
@@ -25,6 +32,7 @@ module Carat
       # every modified buffer in the list this way.
       #: (Domain::Buffer, String) -> Outcome
       def write(buffer, path_arg)
+        return Outcome.failure(E382) if buffer.scratch?
         own = buffer.path
         path = path_arg.empty? ? own : path_arg
         return Outcome.failure("E32: No file name") if path.nil?
@@ -39,6 +47,7 @@ module Carat
           own = path
         end
         buffer.modified = false if path == own
+        @plugins.saved(buffer)
         Outcome.success("\"#{path}\" #{buffer.line_count}L, #{text.bytesize}B written")
       end
     end

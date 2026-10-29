@@ -266,6 +266,59 @@ s.remove_tab(0)
 t.assert_equal([1, 0, "d.txt"], [s.tab_count, s.tab_index, s.tab.window.buffer.path], "closing a tab page before the current one keeps it current")
 t.assert_true(!s.tab_at(0).equal?(first), "the first tab page is gone")
 
+# A side window at the edge of the layout: rows are
+# [label, [first, size, keys], [new id, leaves with rectangles after arrange]].
+def side(first, size, split_first)
+  page = D::TabPage.new(D::Window.new(buffer_named("a.txt")))
+  layout = page.layout
+  layout.arrange(0, 0, 23, 80)
+  if split_first
+    other = layout.split(0, true, 0, MIN)
+    layout.arrange(0, 0, 23, 80)
+  end
+  side = D::Window.new(buffer_named("list"))
+  side.fixed_width = true
+  id = layout.split_edge(side, size, first)
+  layout.arrange(0, 0, 23, 80)
+  rects = []
+  layout.leaves.each do |leaf|
+    w = layout.window_at(leaf)
+    rects << [w.row, w.col, w.height, w.width, w.buffer.path]
+  end
+  [id, rects]
+end
+t.table([
+  ["left of one window", [true, 30, false], [2, [[0, 0, 22, 30, "list"], [0, 31, 22, 49, "a.txt"]]]],
+  ["right of one window", [false, 30, false], [2, [[0, 0, 22, 49, "a.txt"], [0, 50, 22, 30, "list"]]]],
+  ["left of an existing row joins it", [true, 20, true], [3, [[0, 0, 22, 20, "list"], [0, 21, 22, 40, "a.txt"], [0, 62, 22, 18, "a.txt"]]]],
+  ["right of an existing row joins it", [false, 20, true], [3, [[0, 0, 22, 40, "a.txt"], [0, 41, 22, 18, "a.txt"], [0, 60, 22, 20, "list"]]]],
+  ["too wide for one window", [true, 79, false], [-1, [[0, 0, 22, 80, "a.txt"]]]],
+  ["zero width", [true, 0, false], [-1, [[0, 0, 22, 80, "a.txt"]]]]
+]) do |input|
+  side(input[0], input[1], input[2])
+end
+
+# The side window keeps its width through equalize and a resize.
+page = D::TabPage.new(D::Window.new(buffer_named("a.txt")))
+layout = page.layout
+layout.arrange(0, 0, 23, 80)
+side = D::Window.new(buffer_named("list"))
+side.fixed_width = true
+id = layout.split_edge(side, 30, true)
+layout.arrange(0, 0, 23, 80)
+layout.split(layout.leaves[1], true, 0, MIN)
+layout.arrange(0, 0, 23, 80)
+layout.equalize
+layout.arrange(0, 0, 23, 80)
+widths = []
+layout.leaves.each { |leaf| widths << layout.window_at(leaf).width }
+t.assert_equal([30, 24, 24], widths, "equalize shares the rest between the other windows")
+layout.arrange(0, 0, 23, 60)
+widths = []
+layout.leaves.each { |leaf| widths << layout.window_at(leaf).width }
+t.assert_equal([30, 24, 4], widths, "a resize takes from the last flexible window")
+t.assert_equal(true, layout.window_at(id).fixed_width, "the side window stays fixed-width")
+
 # The tab page remembers the previous window.
 page = D::TabPage.new(D::Window.new(buffer_named("a.txt")))
 page.layout.arrange(0, 0, 23, 80)

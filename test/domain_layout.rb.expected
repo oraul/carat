@@ -78,7 +78,16 @@ ok   closing the current tab page makes the next one current
 ok   closing the last tab page makes the one before it current
 ok   closing a tab page before the current one keeps it current
 ok   the first tab page is gone
+ok   left of one window
+ok   right of one window
+ok   left of an existing row joins it
+ok   right of an existing row joins it
+ok   too wide for one window
+ok   zero width
+ok   equalize shares the rest between the other windows
+ok   a resize takes from the last flexible window
+ok   the side window stays fixed-width
 ok   focusing remembers the window left
 ok   focusing the current window changes nothing
 ok   a closed previous window is forgotten
-domain_layout: 83 passed, 0 failed
+domain_layout: 92 passed, 0 failed

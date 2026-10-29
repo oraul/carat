@@ -2,12 +2,14 @@ module Carat
   module Domain
     # Display width of a code point in terminal cells: 2 for the wide ranges
     # (CJK, Hangul, fullwidth forms, the common emoji blocks), 0 for
-    # combining marks, 1 otherwise. A complete East Asian width table is a
-    # later change.
+    # combining marks, 1 otherwise, including the private use areas where
+    # Nerd Font glyphs live, which a terminal draws in one cell. A complete
+    # East Asian width table is a later change and must keep that.
     module DisplayWidth
       #: (Integer) -> Integer
       def self.of(code)
         return 0 if code >= 0x0300 && code <= 0x036F
+        return 1 if private_use?(code)
         return 2 if code >= 0x1100 && code <= 0x115F
         return 2 if code >= 0x2E80 && code <= 0xA4CF && code != 0x303F
         return 2 if code >= 0xAC00 && code <= 0xD7A3
@@ -19,6 +21,14 @@ module Carat
         return 2 if code >= 0x1F900 && code <= 0x1F9FF
         return 2 if code >= 0x20000 && code <= 0x3FFFD
         1
+      end
+
+      # The private use areas: U+E000 to U+F8FF in the basic plane and the
+      # supplementary plane U+F0000 to U+FFFFD.
+      #: (Integer) -> bool
+      def self.private_use?(code)
+        return true if code >= 0xE000 && code <= 0xF8FF
+        code >= 0xF0000 && code <= 0xFFFFD
       end
 
       #: (String) -> Integer

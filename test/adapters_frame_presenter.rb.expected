@@ -95,4 +95,16 @@ ok   the modified marker shows in the label
 ok   the second label is selected now
 ok   the second tab page's window is drawn
 ok   with one tab page there is no tab line
-adapters_frame_presenter: 97 passed, 0 failed
+ok   no sign column without signs
+ok   the sign sits in its column and the numbers move right
+ok   the sign column carries the line number highlight
+ok   the cursor moves right with the gutter
+ok   the sign column stays when numbers are off
+ok   clearing the signs removes the column
+ok   the side window's status line shows the scratch title
+ok   the file window keeps its path
+ok   the current window's status line shows the segments in order
+ok   the other window's does not
+ok   the segments follow the current window, clipped to the window
+ok   the modified marker comes before the segments
+adapters_frame_presenter: 109 passed, 0 failed
