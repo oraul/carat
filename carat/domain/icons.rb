@@ -10,7 +10,7 @@ module Carat
     module Icons
       SETS = ["nerd", "unicode", "ascii"]
 
-      NAMES = ["folder_closed", "folder_open", "file", "symlink", "modified", "error", "warning", "info", "hint", "ruby", "json", "markdown", "toml", "makefile", "shell", "c", "yaml", "git", "lock", "default"]
+      NAMES = ["folder_closed", "folder_open", "file", "symlink", "modified", "current", "error", "warning", "info", "hint", "ruby", "json", "markdown", "toml", "makefile", "shell", "c", "yaml", "git", "lock", "default"]
 
       NERD = {
         "folder_closed" => "\u{F07B}",
@@ -18,6 +18,7 @@ module Carat
         "file" => "\u{F016}",
         "symlink" => "\u{F0C1}",
         "modified" => "\u{F111}",
+        "current" => "\u{F054}",
         "error" => "\u{F057}",
         "warning" => "\u{F071}",
         "info" => "\u{F05A}",
@@ -41,6 +42,7 @@ module Carat
         "file" => "•",
         "symlink" => "→",
         "modified" => "●",
+        "current" => "›",
         "error" => "✖",
         "warning" => "▲",
         "info" => "◆",
@@ -64,6 +66,7 @@ module Carat
         "file" => ".",
         "symlink" => "~",
         "modified" => "*",
+        "current" => ">",
         "error" => "X",
         "warning" => "!",
         "info" => "i",

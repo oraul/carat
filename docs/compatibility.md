@@ -1,6 +1,6 @@
 # Neovim compatibility
 
-Every Neovim command Carat implements has a row here and a table-driven test. The test column names the `test/*.rb` program whose table or assertions cover the row. Commands from later roadmap items are not listed until they land; pressing a key bound to one of them shows a "Not implemented" message. The commands plugins add, such as `:Hello` and `<leader>hh` of the built-in `hello` plugin, are Carat's own and are listed in `docs/actions.md` and `docs/plugins.md`, with `test/editor_plugins.rb`; a scratch window a plugin opens behaves as a `nofile` buffer in a `winfixwidth` window: `:w` reports `E382`, `:wa` skips it, and `:q` closes it.
+Every Neovim command Carat implements has a row here and a table-driven test. The test column names the `test/*.rb` program whose table or assertions cover the row. Commands from later roadmap items are not listed until they land; pressing a key bound to one of them shows a "Not implemented" message. The commands plugins add are Carat's own, not Neovim's, and are listed in `docs/actions.md` and `docs/plugins.md`; the file explorer's are in the File explorer section below. A scratch window a plugin opens behaves as a `nofile` buffer in a `winfixwidth` window with `nonumber`: `:w` reports `E382`, `:wa` skips it, and `:q` closes it; `:q` in the last window that shows a file, when the only other windows of its tab page are plugin windows, closes that tab page, or ends the editor on the last one, as Neovim's tree plugins arrange.
 
 ## Command grammar
 
@@ -204,6 +204,27 @@ Each tab page holds its own window layout; the tab line on the top row lists the
 The tab line label of a tab page is a space, its number, a space, the file name of its current window's buffer or `[No Name]`, ` [+]` when that buffer is modified, and a space; the current label is highlighted (`editor_tabs`, `adapters_frame_presenter`).
 
 Differences from Neovim: the label shows the tab number instead of the window count, and never the count of windows; `:tabm[ove]`, `:tabn N`, `:tabs`, and `:tabdo` arrive with later changes.
+
+## File explorer
+
+The built-in `explorer` plugin is Carat's own, not part of Neovim; its keys follow the conventions common to Neovim's tree plugins, such as nvim-tree and neo-tree, so they feel familiar, but they are not copied from any one of them. Every row is covered by `test/editor_explorer.rb`, and the tree model by `test/plugins_explorer.rb`.
+
+| Keys | Where | Action name | Behavior |
+| --- | --- | --- | --- |
+| `<leader>e`, `:Explorer` | normal mode | `plugin.explorer.toggle` | Open the tree at the configured side and width, focus it when it is open, close it when it is current |
+| `:ExplorerFind` | command line | none | Open or focus the tree with the current file revealed and the cursor on it |
+| `<CR>`, `l` | tree | `plugin.explorer.open` | Open the file in the previously used file window, or expand the directory |
+| `h` | tree | `plugin.explorer.collapse` | Collapse the directory, or go to the parent's line |
+| `o` | tree | `plugin.explorer.toggle_dir` | Toggle the directory, or open the file |
+| `s`, `v`, `t` | tree | `plugin.explorer.open_split`, `open_vsplit`, `open_tab` | Open the file in a horizontal split, a vertical split, or a new tab page |
+| `a` | tree | `plugin.explorer.create` | Prompt for a name and create a file, or a directory when it ends with `/`, in the entry's directory |
+| `r` | tree | `plugin.explorer.rename` | Prompt for a new name, starting from the current one, and rename in place |
+| `d` | tree | `plugin.explorer.delete` | Ask `Delete name? (y/n)` and delete a file or an empty directory |
+| `R`, `H` | tree | `plugin.explorer.refresh`, `toggle_hidden` | List again from disk; show or hide dot files |
+| `-`, `C` | tree | `plugin.explorer.root_up`, `set_root` | Root up one directory; root at the directory under the cursor |
+| `q`, `?` | tree | `plugin.explorer.close`, `help` | Close the tree; show the keys in the message row |
+
+`j`, `k`, `gg`, `G`, counts, `<C-w>` commands, and `:` work in the tree as in any window. The tree keeps its width on `<C-w>=` and on resizes, and `:q` in it closes only the tree. Not implemented: copy, cut, and paste of files, bookmarks, git status, recursive delete, trash, and live updates when files change outside the editor.
 
 ## Options read so far
 

@@ -1,6 +1,6 @@
 # Writing a compiled plugin
 
-Everything beyond core modal editing is a plugin on one API, `carat/plugin_api.rb`, and that file is the only one a plugin may require. A compiled plugin is a Ruby class compiled into the binary with the editor; it runs on the editor thread, obeys the Spinel rules of `docs/architecture.md` section 2.1, and talks to the editor only through values. This document is the practical guide; the `plugin-host`, `plugin-windows`, and `icons` specs under `openspec/specs/` are the contract, and `carat/plugins/hello/plugin.rb` is a complete example.
+Everything beyond core modal editing is a plugin on one API, `carat/plugin_api.rb`, and that file is the only one a plugin may require. A compiled plugin is a Ruby class compiled into the binary with the editor; it runs on the editor thread, obeys the Spinel rules of `docs/architecture.md` section 2.1, and talks to the editor only through values. This document is the practical guide; the `plugin-host`, `plugin-windows`, `icons`, and `file-explorer` specs under `openspec/specs/` are the contract. `carat/plugins/explorer/` is a complete plugin that ships with the editor; `carat/plugins/hello/plugin.rb` is the smallest complete example, a test fixture that is not in `config/plugins.json`, so the editor does not contain it and the tests register it directly.
 
 ## The files
 
@@ -20,7 +20,7 @@ The plugin is listed in `config/plugins.json`, in the order the plugins are regi
 
 - `name`: lowercase letters, digits, and underscores, starting with a letter; the same as the directory and the configuration key.
 - `version`: the plugin's own, free-form.
-- `api_version`: the API this plugin was written against, `"1.0"` today (`Carat::PluginApi::VERSION`). The host refuses a greater major version and accepts any minor.
+- `api_version`: the API this plugin was written against, `"1.1"` today (`Carat::PluginApi::VERSION`). The host refuses a greater major version and accepts any minor. Version 1.1 added `working_directory`, `editing_window`, `scratch_window`, `make_file`, `make_dir`, `rename_path`, `delete_path`, `prompt`, `on_input`, `FileInfo#symlink`, and `PluginApi::Paths`; a 1.0 plugin keeps working unchanged.
 - `actions`: a hash from action name to a one-line description. Every action is `plugin.<name>.<action>`, with the plugin's own name, and goes into `docs/actions.md`.
 - `commands`: a hash from ex command name to its abbreviation, or `""` for none. A name starts with an uppercase letter, as Vim's user commands do, and the abbreviation is a proper prefix of it.
 - `bindings`: default key bindings in the JSON keymap shape, `{"normal" => {"<leader>tt" => "plugin.thing.toggle"}}`, or `nil`. A value is one of the plugin's own actions or a key sequence to replay. The host adds them to the keymap before the configuration's `keymaps`, so a user binding of the same keys replaces them and `null` removes them.
@@ -38,6 +38,7 @@ Override what the plugin needs:
 - `on_event(event)`: a `Carat::PluginApi::Event` with `name`, `buffer`, `window`, `path`, `row`, `col`, and `detail`.
 - `on_action(name, context)`: one of the plugin's actions with a `Carat::PluginApi::Context`: the `count` and `register` typed before the key, the current `buffer` and `window` numbers, the `path`, and the cursor `row` and `col`.
 - `on_command(command)`: a `Carat::PluginApi::Command` with the declared `name`, `bang`, and `args`.
+- `on_input(input)`: a `Carat::PluginApi::Input` with the `id` the plugin gave a prompt, the `text` typed, and `cancelled`, when a prompt the plugin opened ends.
 
 A plugin that raises in any of these is disabled with "Plugin thing disabled: ..." in the message row; the editor goes on, and the plugin's later requests are refused. Keep the work inside a call small: the editor draws after the key returns.
 
@@ -65,11 +66,24 @@ Every method of the host takes plain values and returns a value; nothing calls b
 | `clear_signs(number)` | removes the signs this plugin placed in the buffer |
 | `run_ex(text)` | runs an ex command line and returns its outcome |
 | `list_dir(path)` | the sorted entries of a directory in `lines` |
-| `stat(path)` | a `FileInfo`: `ok`, `size`, `mtime`, `directory` |
+| `stat(path)` | a `FileInfo`: `ok`, `size`, `mtime`, `directory` (following a link), `symlink` |
 | `icon(name)` | the glyph of the configured icon set, see `Carat::Domain::Icons::NAMES`; `""` for an unknown name |
 | `option(name)` | the plugin's option value as text |
+| `working_directory` | the editor's working directory as an absolute path |
+| `editing_window` | `number` is the window to open a file in: the previously used window when it shows a file, otherwise the first that does, 0 when none does |
+| `scratch_window(title)` | `number` is the window of the current tab page showing the plugin's scratch buffer of that title, 0 when none does |
+| `make_file(root, path)`, `make_dir(root, path)` | creates an empty file or a directory at a path strictly inside root |
+| `rename_path(root, path, name)` | renames the entry at path, inside root, to name in the same directory; open buffers of it follow |
+| `delete_path(root, path)` | deletes a file or an empty directory inside root; an open buffer of the file stays and becomes modified |
+| `prompt(id, text, initial)` | opens a prompt in the command-line row; the answer arrives later through `on_input` |
 
-A scratch buffer has no path, shows its title on the status line, is never written (`:w` reports `E382`), is skipped by `:wa`, never counts as unsaved work, and leaves the buffer list when its window closes; `:q` in its window closes it like any window. Its keymap is consulted before the mode's keymap in every mode and falls through for keys it does not bind, so the cursor motions keep working in it.
+The four file requests are validated by the host before anything changes on disk, and refused with a message in the response: a path that is not strictly inside root after resolving `.` and `..` ("Outside the tree root: path"), an empty name, `.`, or `..` ("Empty name"), a rename to a name containing `/` ("Name contains a path separator: name"), a path that already exists ("Already exists: path"), a missing parent ("No such directory: dir") or source ("No such file or directory: path"), and a directory with entries ("Directory not empty: path"); there is no recursive delete. Paths in messages are relative to the working directory when they lie below it. The root check is lexical, so a symbolic link inside the root counts as inside it, as the tree shows it.
+
+A prompt puts the editor in command-line mode with the prompt's text in place of `:` followed by `initial`; the command-line keys edit it, Enter delivers the text, and Escape or a backspace on an empty line delivers a cancel. Only one prompt is open at a time; a second request while one is open is refused. A plugin keeps what the answer is about in an instance variable until `on_input` arrives.
+
+`Carat::PluginApi::Paths` holds the pure path functions a plugin needs: `normalize`, `join`, `dirname`, `basename`, `absolute(cwd, path)`, `relative(cwd, path)`, and `inside?(root, path)`.
+
+A scratch buffer has no path, shows its title on the status line, has no line numbers, is never written (`:w` reports `E382`), is skipped by `:wa`, never counts as unsaved work, and leaves the buffer list when its window closes; `:q` in its window closes it like any window, and `:q` in the last file window beside it ends the editor, or closes that tab page when there are others. Opening a scratch buffer shown only in another tab page shows the same buffer in the current one. `open_file` over a modified buffer keeps that buffer hidden in the list, opening the file the window already shows leaves it as it is, and a side window that `open_file` gives a file loses its fixed width. Its keymap is consulted before the mode's keymap in every mode and falls through for keys it does not bind, so the cursor motions keep working in it.
 
 ## Events
 

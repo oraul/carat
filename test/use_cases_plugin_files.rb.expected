@@ -1,0 +1,67 @@
+ok   normalize resolves dot and dot-dot
+ok   normalize stops at the root
+ok   normalize keeps a leading dot-dot of a relative path
+ok   join adds one slash
+ok   join after the root
+ok   dirname of a root entry
+ok   dirname of a bare name
+ok   basename
+ok   absolute resolves against the working directory
+ok   relative below the working directory
+ok   relative outside it stays absolute
+ok   inside is strict
+ok   list answers the sorted entry names
+ok   putting a file makes its directories
+ok   listing a missing directory raises
+ok   deleting a non-empty directory raises
+ok   making an existing directory raises
+ok   renaming a directory moves what is under it
+ok   a path marked as a link stats as one
+ok   the working directory is absolute
+ok   no list is shown and window 1 edits a file
+ok   the list is window 1 and the previously used window 2 edits
+ok   with only the list left nothing edits
+ok   a file
+ok   a directory
+ok   a file in a subdirectory
+ok   a relative path resolves against the working directory
+ok   outside the root
+ok   the root itself
+ok   below a root that is not the working directory
+ok   an empty name
+ok   an existing file
+ok   an existing directory
+ok   a missing parent
+ok   the created entries exist
+ok   the refused ones do not
+ok   an empty name
+ok   a path separator
+ok   dot-dot
+ok   outside the root
+ok   the root
+ok   a missing entry
+ok   an existing target
+ok   a file
+ok   only the accepted rename changed the disk
+ok   the open buffer follows a renamed file
+ok   a buffer under a renamed directory follows it
+ok   an absolute path stays absolute
+ok   outside the root
+ok   the root
+ok   a missing entry
+ok   a non-empty directory
+ok   an empty directory
+ok   a file
+ok   only the accepted deletes changed the disk
+ok   the open buffer of a deleted file stays and becomes modified
+ok   and quitting asks for a write
+ok   a link to a directory stats as both
+ok   the prompt shows its text and the edited value
+ok   the cursor is after the value
+ok   a second prompt is refused while one is open
+ok   Enter delivers the text
+ok   Escape delivers a cancel
+ok   a backspace on an empty line cancels
+ok   the text is not run as an ex command
+ok   the next command line is an ex command again
+use_cases_plugin_files: 66 passed, 0 failed

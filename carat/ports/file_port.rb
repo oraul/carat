@@ -26,10 +26,36 @@ module Carat
         raise NotImplementedError, "FilePort#list"
       end
 
-      # Returns {"size" => bytes, "mtime" => seconds, "directory" => 0 or 1}.
+      # Returns {"size" => bytes, "mtime" => seconds, "directory" => 0 or
+      # 1, "symlink" => 0 or 1}; directory follows a link, symlink does not.
       # @rbs path: String
       def stat(path)
         raise NotImplementedError, "FilePort#stat"
+      end
+
+      # Creates one directory; raises when it exists or its parent does not.
+      #: (String) -> void
+      def mkdir(path)
+        raise NotImplementedError, "FilePort#mkdir"
+      end
+
+      # Renames a file or a directory; raises when from is missing.
+      #: (String, String) -> void
+      def rename(from, to)
+        raise NotImplementedError, "FilePort#rename"
+      end
+
+      # Deletes a file, a symbolic link, or an empty directory, never
+      # recursively; raises for a directory with entries.
+      #: (String) -> void
+      def delete(path)
+        raise NotImplementedError, "FilePort#delete"
+      end
+
+      # Returns the absolute path of the working directory.
+      # @rbs skip
+      def cwd
+        raise NotImplementedError, "FilePort#cwd"
       end
     end
   end

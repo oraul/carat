@@ -129,8 +129,8 @@ t.assert_equal("", host.describe("plugin.probe.nope"), "and not another")
 
 bad = Probe.new("probe", "2.0", [], ACTIONS, {}, nil)
 state, host, keymap, files, ex = setup([bad], {})
-t.assert_equal([false, "needs API 2.0, the host has 1.0"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
-t.assert_equal(["plugin probe: needs API 2.0, the host has 1.0"], host.errors, "the refusal is recorded")
+t.assert_equal([false, "needs API 2.0, the host has 1.1"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
+t.assert_equal(["plugin probe: needs API 2.0, the host has 1.1"], host.errors, "the refusal is recorded")
 t.assert_equal([], bad.log, "a refused plugin is not activated")
 
 minor = Probe.new("probe", "1.7", [], ACTIONS, {}, nil)
@@ -332,9 +332,9 @@ p = probe([])
 state, host, keymap, files, ex = setup([p], {})
 h = p.host
 r = h.list_dir("dir/")
-t.assert_equal([true, ["dir/a.txt", "dir/b.txt"]], [r.ok, r.lines], "list_dir answers the sorted entries")
+t.assert_equal([true, ["a.txt", "b.txt"]], [r.ok, r.lines], "list_dir answers the sorted entry names")
 info = h.stat("a.txt")
-t.assert_equal([true, 8, 0, false], [info.ok, info.size, info.mtime, info.directory], "stat answers size, mtime, and the directory flag")
+t.assert_equal([true, 8, 0, false, false], [info.ok, info.size, info.mtime, info.directory, info.symlink], "stat answers size, mtime, and the directory and symlink flags")
 info = h.stat("nope")
 t.assert_equal([false, 0], [info.ok, info.size], "stat of a missing path fails")
 

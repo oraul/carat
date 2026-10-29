@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 1
-    MINOR = 0
-    VERSION = "1.0"
+    MINOR = 1
+    VERSION = "1.1"
 
     # The events a plugin may subscribe to. idle arrives with the language
     # services change, which gives the main loop an idle tick.
@@ -165,17 +165,118 @@ module Carat
     end
 
     # The answer to a stat: ok is false when the path cannot be read;
-    # otherwise the size in bytes, the modification time in seconds, and
-    # whether the path is a directory. A Data value.
-    class FileInfo < Data.define(:ok, :size, :mtime, :directory)
+    # otherwise the size in bytes, the modification time in seconds,
+    # whether the path is a directory (following a symbolic link), and
+    # whether it is a symbolic link itself. A Data value.
+    class FileInfo < Data.define(:ok, :size, :mtime, :directory, :symlink)
       # @rbs @ok: bool
       # @rbs @size: Integer
       # @rbs @mtime: Integer
       # @rbs @directory: bool
+      # @rbs @symlink: bool
 
       #: () -> FileInfo
       def self.missing
-        FileInfo.new(false, 0, 0, false)
+        FileInfo.new(false, 0, 0, false, false)
+      end
+    end
+
+    # What on_input receives when a prompt ends: the id the plugin gave
+    # the prompt, the text typed ("" when cancelled), and whether the user
+    # cancelled with Escape or a backspace on an empty line. A Data value.
+    class Input < Data.define(:id, :text, :cancelled)
+      # @rbs @id: String
+      # @rbs @text: String
+      # @rbs @cancelled: bool
+
+      # Whether the user answered with some text.
+      #: () -> bool
+      def answered?
+        !cancelled && !text.empty?
+      end
+    end
+
+    # Pure path functions over "/"-separated text, for plugins and the
+    # host alike: nothing here touches the disk. An absolute path starts
+    # with "/"; normalize resolves "." and ".." and repeated slashes.
+    module Paths
+      #: (String) -> String
+      def self.normalize(path)
+        text = segments(path).join("/")
+        return "/" + text if path.start_with?("/")
+        text.empty? ? "." : text
+      end
+
+      # The names of a path after resolving "." and "..": a ".." at the
+      # start of a relative path stays, one above the root is dropped.
+      #: (String) -> Array[String]
+      def self.segments(path)
+        out = []
+        absolute = path.start_with?("/")
+        pieces = path.split("/")
+        i = 0
+        while i < pieces.length
+          piece = pieces[i]
+          if piece == ".."
+            if !out.empty? && out[out.length - 1] != ".."
+              out.pop
+            elsif !absolute
+              out << ".."
+            end
+          elsif !piece.empty? && piece != "."
+            out << piece
+          end
+          i += 1
+        end
+        out
+      end
+
+      #: (String, String) -> String
+      def self.join(dir, name)
+        return name if dir.empty?
+        dir.end_with?("/") ? dir + name : dir + "/" + name
+      end
+
+      # The directory part: "/" for an entry of the root, "." for a bare
+      # name.
+      #: (String) -> String
+      def self.dirname(path)
+        slash = path.rindex("/")
+        return "." if slash.nil?
+        return "/" if slash == 0
+        path[0, slash]
+      end
+
+      # The last name; "/" for the root itself.
+      #: (String) -> String
+      def self.basename(path)
+        return "/" if path == "/"
+        slash = path.rindex("/")
+        slash.nil? ? path : path[slash + 1, path.length - slash - 1]
+      end
+
+      # The normalized absolute form of path, resolved against cwd when
+      # it is relative.
+      #: (String, String) -> String
+      def self.absolute(cwd, path)
+        path.start_with?("/") ? normalize(path) : normalize(join(cwd, path))
+      end
+
+      # The path relative to cwd when it lies below it, otherwise the path
+      # itself; both are normalized absolute paths.
+      #: (String, String) -> String
+      def self.relative(cwd, path)
+        return path unless inside?(cwd, path)
+        prefix = cwd == "/" ? "/" : cwd + "/"
+        path[prefix.length, path.length - prefix.length]
+      end
+
+      # Whether path lies strictly below root; both are normalized
+      # absolute paths.
+      #: (String, String) -> bool
+      def self.inside?(root, path)
+        prefix = root == "/" ? "/" : root + "/"
+        path.start_with?(prefix) && path.length > prefix.length
       end
     end
 
@@ -313,14 +414,86 @@ module Carat
       def option(name)
         raise NotImplementedError, "Host#option"
       end
+
+      # Returns the absolute path of the editor's working directory.
+      # @rbs skip
+      def working_directory
+        raise NotImplementedError, "Host#working_directory"
+      end
+
+      # Returns a Response whose number is the window to open a file in:
+      # the previously used window of the current tab page when it shows a
+      # file buffer, otherwise the first window in layout order that does,
+      # 0 when none does.
+      # @rbs skip
+      def editing_window
+        raise NotImplementedError, "Host#editing_window"
+      end
+
+      # Returns a Response whose number is the window of the current tab
+      # page showing the plugin's scratch buffer with that title, 0 when
+      # none does.
+      # @rbs title: String
+      def scratch_window(title)
+        raise NotImplementedError, "Host#scratch_window"
+      end
+
+      # Creates an empty file at path, which must lie strictly inside root,
+      # and returns a Response; refused when the name is empty, the path
+      # exists, or its directory does not.
+      # @rbs root: String
+      # @rbs path: String
+      def make_file(root, path)
+        raise NotImplementedError, "Host#make_file"
+      end
+
+      # Creates a directory at path inside root, refused as make_file is,
+      # and returns a Response.
+      # @rbs root: String
+      # @rbs path: String
+      def make_dir(root, path)
+        raise NotImplementedError, "Host#make_dir"
+      end
+
+      # Renames the entry at path inside root to name in the same directory
+      # and returns a Response; refused for an empty name, a name with a
+      # "/", a missing entry, or an existing target. Open buffers of the
+      # entry follow it.
+      # @rbs root: String
+      # @rbs path: String
+      # @rbs name: String
+      def rename_path(root, path, name)
+        raise NotImplementedError, "Host#rename_path"
+      end
+
+      # Deletes the file or empty directory at path inside root and
+      # returns a Response; a directory with entries is refused. An open
+      # buffer of the file stays and becomes modified.
+      # @rbs root: String
+      # @rbs path: String
+      def delete_path(root, path)
+        raise NotImplementedError, "Host#delete_path"
+      end
+
+      # Opens a prompt in the command-line row: text in place of ":", then
+      # initial, edited with the command-line keys. Enter or a cancel
+      # arrives later as an Input with the id through on_input. Returns a
+      # Response, failed while another prompt is open.
+      # @rbs id: String
+      # @rbs text: String
+      # @rbs initial: String
+      def prompt(id, text, initial)
+        raise NotImplementedError, "Host#prompt"
+      end
     end
 
     # What a compiled plugin implements. manifest is required; the rest
     # do nothing unless overridden. The host calls activate once with the
     # plugin's Host when the plugin is enabled, deactivate when the editor
     # quits, on_event for every subscribed event, on_action for every
-    # action of the plugin, and on_command for every ex command of the
-    # plugin. A plugin that raises in any of them is disabled.
+    # action of the plugin, on_command for every ex command of the
+    # plugin, and on_input when a prompt the plugin opened ends. A plugin
+    # that raises in any of them is disabled.
     class Plugin
       # Returns the plugin's Manifest.
       # @rbs skip
@@ -346,6 +519,10 @@ module Carat
 
       #: (Command) -> void
       def on_command(command)
+      end
+
+      #: (Input) -> void
+      def on_input(input)
       end
     end
   end

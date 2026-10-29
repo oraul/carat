@@ -1,0 +1,37 @@
+ok   the root, then directories, then files, each sorted ignoring case
+ok   an expanded directory lists its entries two spaces deeper
+ok   rows and parents
+ok   collapsing hides the entries again
+ok   toggle expands a collapsed directory
+ok   hidden entries show when toggled, ignored ones never
+ok   a path outside the root reveals nothing
+ok   a path inside the root is revealed
+ok   every directory above it is expanded and its line marked
+ok   the marked row
+ok   a rename moves the expanded set and the mark
+ok   the parent as root keeps the old root expanded
+ok   a directory as root
+ok   a link uses the symlink icon
+ok   a link to a directory still sorts and expands as one
+ok   ruby
+ok   json
+ok   markdown
+ok   toml
+ok   makefile
+ok   shell
+ok   c source
+ok   c header
+ok   yml
+ok   yaml
+ok   gitignore
+ok   lock
+ok   unknown extension
+ok   no extension
+ok   dot file
+ok   closed folder
+ok   open folder
+ok   symlink
+ok   ascii
+ok   unicode
+ok   nerd
+plugins_explorer: 36 passed, 0 failed

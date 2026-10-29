@@ -103,7 +103,25 @@ In normal and operator-pending modes the command grammar classifies an action by
 
 | Action | Plugin | Default keys | Effect |
 | --- | --- | --- | --- |
-| `plugin.hello.greet` | `hello` | `<leader>hh` | Show a greeting with the info icon and count it in the status line |
+| `plugin.explorer.toggle` | `explorer` | `<leader>e` | Open the file tree, focus it, or close it when it is focused |
+| `plugin.explorer.focus` | `explorer` | none | Open the file tree or focus it |
+| `plugin.explorer.open` | `explorer` | `<CR>`, `l` in the tree | Open the file under the cursor in the editing window, or expand the directory |
+| `plugin.explorer.collapse` | `explorer` | `h` in the tree | Collapse the directory under the cursor, or go to its parent |
+| `plugin.explorer.toggle_dir` | `explorer` | `o` in the tree | Expand or collapse the directory under the cursor, or open the file |
+| `plugin.explorer.open_split` | `explorer` | `s` in the tree | Open the file under the cursor in a horizontal split |
+| `plugin.explorer.open_vsplit` | `explorer` | `v` in the tree | Open the file under the cursor in a vertical split |
+| `plugin.explorer.open_tab` | `explorer` | `t` in the tree | Open the file under the cursor in a new tab page |
+| `plugin.explorer.create` | `explorer` | `a` in the tree | Create a file, or a directory with a trailing /, next to the entry |
+| `plugin.explorer.rename` | `explorer` | `r` in the tree | Rename the entry under the cursor |
+| `plugin.explorer.delete` | `explorer` | `d` in the tree | Delete the file or empty directory under the cursor after confirmation |
+| `plugin.explorer.refresh` | `explorer` | `R` in the tree | List the tree again from disk |
+| `plugin.explorer.toggle_hidden` | `explorer` | `H` in the tree | Show or hide entries whose name starts with a dot |
+| `plugin.explorer.root_up` | `explorer` | `-` in the tree | Make the parent of the root the root |
+| `plugin.explorer.set_root` | `explorer` | `C` in the tree | Make the directory under the cursor the root |
+| `plugin.explorer.close` | `explorer` | `q` in the tree | Close the file tree |
+| `plugin.explorer.help` | `explorer` | `?` in the tree | Show the tree's keys in the message row |
+
+The keys marked "in the tree" are bound in the tree window's own keymap, which the plugin gives its scratch buffer, so they apply only while the tree is the current window; every other key falls through to the normal keymap. The test fixture `hello` (`carat/plugins/hello/`) declares `plugin.hello.greet` on `<leader>hh`, but it is not in the registry, so the editor does not contain it.
 
 ## Reserved
 

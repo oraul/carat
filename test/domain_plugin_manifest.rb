@@ -18,16 +18,17 @@ def good
 end
 
 t.assert_equal([], M.check(good), "the hello manifest breaks no rule")
-t.assert_equal("", M.refusal("1.0"), "the host's own version is accepted")
+t.assert_equal("", M.refusal("1.1"), "the host's own version is accepted")
+t.assert_equal("", M.refusal("1.0"), "an older minor is accepted")
 t.assert_equal("", M.refusal("1.3"), "a newer minor is accepted")
-t.assert_equal("needs API 2.0, the host has 1.0", M.refusal("2.0"), "a newer major is refused with both versions")
+t.assert_equal("needs API 2.0, the host has 1.1", M.refusal("2.0"), "a newer major is refused with both versions")
 t.assert_equal("", M.refusal("x"), "a malformed version is not a refusal")
 
 # Rows are [label, manifest, the first problem reported].
 t.table([
   ["uppercase name", manifest("Hello", "1.0", GOOD_ACTIONS, {}, nil, [], {}, {}), "name \"Hello\" is not lowercase letters, digits, and underscores starting with a letter"],
   ["name starting with a digit", manifest("1x", "1.0", {}, {}, nil, [], {}, {}), "name \"1x\" is not lowercase letters, digits, and underscores starting with a letter"],
-  ["newer major", manifest("hello", "2.0", GOOD_ACTIONS, {}, nil, [], {}, {}), "needs API 2.0, the host has 1.0"],
+  ["newer major", manifest("hello", "2.0", GOOD_ACTIONS, {}, nil, [], {}, {}), "needs API 2.0, the host has 1.1"],
   ["malformed version", manifest("hello", "one", GOOD_ACTIONS, {}, nil, [], {}, {}), "api_version \"one\" is not major.minor"],
   ["action for another plugin", manifest("a", "1.0", { "plugin.b.go" => "Go" }, {}, nil, [], {}, {}), "action \"plugin.b.go\" is not plugin.a.<action>"],
   ["action without the prefix", manifest("hello", "1.0", { "greet" => "Greet" }, {}, nil, [], {}, {}), "action \"greet\" is not plugin.hello.<action>"],

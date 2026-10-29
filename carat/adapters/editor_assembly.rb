@@ -84,7 +84,7 @@ module Carat
         switch_tab = UseCases::SwitchTab.new
         execute_ex = UseCases::ExecuteEx.new(@open_file, save_file, quit, split_window, close_window, open_tab, close_tab, switch_tab, @plugins)
         @plugins.attach(execute_ex)
-        command_line = UseCases::EditCommandLine.new(execute_ex)
+        command_line = UseCases::EditCommandLine.new(execute_ex, @plugins)
         dispatcher = UseCases::Dispatcher.new(move, operate, enter_insert, insert_text, leave_insert, command_line, quit, split_window, close_window, focus_window, resize_layout, switch_tab, @plugins)
         handle_key = UseCases::HandleKey.new(@keymap, dispatcher, insert_text, command_line, @plugins)
 

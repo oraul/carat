@@ -1,5 +1,6 @@
 ok   the hello manifest breaks no rule
 ok   the host's own version is accepted
+ok   an older minor is accepted
 ok   a newer minor is accepted
 ok   a newer major is refused with both versions
 ok   a malformed version is not a refusal
@@ -33,4 +34,4 @@ ok   every option type
 ok   two problems are both reported
 ok   describe returns the description
 ok   describe returns empty for an unknown action
-domain_plugin_manifest: 35 passed, 0 failed
+domain_plugin_manifest: 36 passed, 0 failed

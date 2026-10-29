@@ -107,4 +107,8 @@ ok   the current window's status line shows the segments in order
 ok   the other window's does not
 ok   the segments follow the current window, clipped to the window
 ok   the modified marker comes before the segments
-adapters_frame_presenter: 109 passed, 0 failed
+ok   the side window has no line numbers while the file window keeps them
+ok   its sign column still shows
+ok   the prompt row and the cursor after it
+ok   an ex command line keeps its colon
+adapters_frame_presenter: 113 passed, 0 failed

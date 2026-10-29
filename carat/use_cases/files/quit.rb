@@ -6,8 +6,11 @@ module Carat
   module UseCases
     # The :q rule: closes the current window when another exists in any tab
     # page, and ends the editor otherwise unless a listed buffer has unsaved
-    # changes and no bang was given. :qa ends the editor at once under the
-    # same check.
+    # changes and no bang was given. A file window whose only companions in
+    # its tab page are plugin side windows counts as the last window there,
+    # as Neovim's tree plugins arrange: its tab page closes with them when
+    # other tab pages exist, and the last-window rule applies otherwise.
+    # :qa ends the editor at once under the same check.
     class Quit
       E37 = "E37: No write since last change (add ! to override)"
 
@@ -23,7 +26,10 @@ module Carat
       # is the only way to lose it.
       #: (Domain::EditorState, bool) -> Outcome
       def call(state, bang)
-        return close_window(state) if state.total_windows > 1
+        if state.total_windows > 1
+          return close_window(state) unless beside_side_windows?(state)
+          return close_page(state) if state.tab_count > 1
+        end
         if bang
           hidden = state.hidden_modified
           if hidden.nil?
@@ -43,7 +49,10 @@ module Carat
       # write to another path leaves it modified on purpose.
       #: (Domain::EditorState) -> Outcome
       def leave(state)
-        return close_window(state) if state.total_windows > 1
+        if state.total_windows > 1
+          return close_window(state) unless beside_side_windows?(state)
+          return close_page(state) if state.tab_count > 1
+        end
         return Outcome.failure(E37) unless state.hidden_modified.nil?
         state.quit = true
         Outcome.success("")
@@ -62,6 +71,38 @@ module Carat
       #: (Domain::EditorState) -> Outcome
       def close_window(state)
         @close_window.remove(state, state.tab.current)
+        Outcome.success("")
+      end
+
+      # Whether the current window shows a file and every other window of
+      # its tab page shows a plugin's scratch buffer, at least one.
+      #: (Domain::EditorState) -> bool
+      def beside_side_windows?(state)
+        tab = state.tab
+        layout = tab.layout
+        return false if layout.leaf_count <= 1 || state.buffer.scratch?
+        ids = layout.leaves
+        i = 0
+        while i < ids.length
+          return false if ids[i] != tab.current && !layout.window_at(ids[i]).buffer.scratch?
+          i += 1
+        end
+        true
+      end
+
+      # Closes the side windows of the current tab page, then the current
+      # window, which closes the tab page.
+      #: (Domain::EditorState) -> Outcome
+      def close_page(state)
+        tab = state.tab
+        ids = tab.layout.leaves
+        current = tab.current
+        i = 0
+        while i < ids.length
+          @close_window.remove(state, ids[i]) unless ids[i] == current
+          i += 1
+        end
+        @close_window.remove(state, current)
         Outcome.success("")
       end
     end
