@@ -48,10 +48,12 @@ module Carat
 
       # The gutter is the sign column, two cells while the buffer has
       # signs, plus max(3, digits of the line count) and one space when
-      # numbers are shown.
+      # numbers are shown. A plugin's scratch buffer shows no numbers, as
+      # Neovim's tree plugins set nonumber in their windows.
       #: (Options) -> Integer
       def gutter_width(options)
         signs = buffer.signs? ? SIGN_WIDTH : 0
+        return signs if buffer.scratch?
         return signs unless options.number || options.relativenumber
         digits = buffer.line_count.to_s.length
         digits = 3 if digits < 3

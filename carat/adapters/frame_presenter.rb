@@ -12,7 +12,7 @@ module Carat
     # text with tabs expanded, tilde rows, a status line under it with the
     # plugins' segments on the current window's), a separator column
     # between windows side by side, and the message or command line row
-    # with the keys of a pending command at its right edge. It arranges the
+    # (a plugin's prompt in place of the colon) with the keys of a pending command at its right edge. It arranges the
     # layout and scrolls every window first so the state and the frame
     # agree, and places the cursor in the current window.
     class FramePresenter
@@ -54,7 +54,7 @@ module Carat
         cursor = window.cursor
         if state.mode == Domain::Mode::CMDLINE
           frame.cursor_row = rows - 1
-          frame.cursor_col = clamp(1 + display_width(state.cmdline, tabstop), cols - 1)
+          frame.cursor_col = clamp(display_width(command_prefix(state), tabstop) + display_width(state.cmdline, tabstop), cols - 1)
         else
           gutter = window.gutter_width(options)
           cursor_dcol = display_col(window.buffer.line(cursor.row), cursor.col, tabstop)
@@ -283,10 +283,16 @@ module Carat
         slash.nil? ? path : path[slash + 1, path.length - slash - 1]
       end
 
+      # ":" for an ex command line, a plugin's prompt text while one is open.
+      #: (Domain::EditorState) -> String
+      def command_prefix(state)
+        state.prompting? ? state.prompt : ":"
+      end
+
       #: (Domain::Frame, Integer, Integer, Domain::EditorState) -> void
       def paint_message(frame, frame_row, cols, state)
         if state.mode == Domain::Mode::CMDLINE
-          frame.put(frame_row, 0, ":" + state.cmdline, Domain::Highlight::NORMAL)
+          frame.put(frame_row, 0, command_prefix(state) + state.cmdline, Domain::Highlight::NORMAL)
           return
         end
         if !state.message.empty?

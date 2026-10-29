@@ -1,6 +1,6 @@
 # Runs build/bin/carat inside a pseudo-terminal: the usage and terminal
-# checks, an insert-write-quit session, a quit refused then forced, and
-# SIGTERM. Needs the binary that spin build produces; make test builds it
+# checks, an insert-write-quit session, a quit refused then forced, split
+# windows and a tab page, the file tree, and SIGTERM. Needs the binary that spin build produces; make test builds it
 # first. Prints only the harness lines so the snapshot is stable.
 #
 # Between sending keys the test drains the editor's output until it goes
@@ -132,6 +132,26 @@ writer.write(":q\r")
 code = finish_session(reader, out, pid)
 t.assert_equal(0, code, "the editor exits with status 0 after closing the tab page, a window, and the last window")
 t.assert_true(out.end_with?("\e[?1049l"), "closing the last window leaves the alternate screen")
+
+# The file tree opens with <leader>e at the left, and :q in the file
+# window ends the editor while the tree is open.
+reader, writer, pid = PTY.spawn(BIN, path)
+writer.winsize = [24, 80]
+out = +"".b
+settle(reader, out, 0.5)
+t.assert_true(out.include?("1L, 6B"), "the editor drew its first frame for the tree check")
+mark = out.bytesize
+writer.write(" e")
+settle(reader, out, 0.5)
+drawn = out.byteslice(mark, out.bytesize - mark)
+t.assert_true(drawn.include?("explorer"), "<leader>e opens the tree, titled explorer")
+t.assert_true(drawn.include?("\u{F07C}".b), "the tree's root line has the open folder icon")
+writer.write("\x17l")
+settle(reader, out, 0.5)
+writer.write(":q\r")
+code = finish_session(reader, out, pid)
+t.assert_equal(0, code, "the editor exits with status 0 after :q in the file window beside the tree")
+t.assert_true(out.end_with?("\e[?1049l"), "quitting beside the tree leaves the alternate screen")
 
 # SIGTERM ends a running editor cleanly.
 reader, writer, pid = PTY.spawn(BIN, path)

@@ -5,11 +5,13 @@ module Carat
     # message, the keys pending in the keymap, the quit flag, the registers,
     # the command grammar with the keys of the command being typed, the
     # last f/t motion for ";" and ",", and the status line segments the
-    # plugins set, by plugin name in registration order. The current
+    # plugins set, by plugin name in registration order, and the prompt a
+    # plugin opened on the command line (its text, the plugin, and the
+    # plugin's id for it, all "" when none is open). The current
     # window, its buffer, and its cursor are reached through the current
     # tab page. A Struct record: mutable, with a reader and a writer per
     # member.
-    class EditorState < Struct.new(:buffers, :tabs, :tab_index, :mode, :options, :timeoutlen, :cmdline, :message, :message_error, :pending_keys, :quit, :registers, :grammar, :last_find, :segments)
+    class EditorState < Struct.new(:buffers, :tabs, :tab_index, :mode, :options, :timeoutlen, :cmdline, :message, :message_error, :pending_keys, :quit, :registers, :grammar, :last_find, :segments, :prompt, :prompt_owner, :prompt_id)
       # @rbs @buffers: Array[untyped]
       # @rbs @tabs: Array[untyped]
       # @rbs @tab_index: Integer
@@ -25,6 +27,9 @@ module Carat
       # @rbs @grammar: CommandGrammar
       # @rbs @last_find: Find?
       # @rbs @segments: Hash[String, String]
+      # @rbs @prompt: String
+      # @rbs @prompt_owner: String
+      # @rbs @prompt_id: String
 
       # The lists are stored through the writers, not passed to super, so
       # their element type is the pinned one; the rest follows for symmetry.
@@ -48,6 +53,15 @@ module Carat
         self.grammar = CommandGrammar.new
         self.last_find = nil
         self.segments = {}
+        self.prompt = ""
+        self.prompt_owner = ""
+        self.prompt_id = ""
+      end
+
+      # Whether a plugin's prompt holds the command line.
+      #: () -> bool
+      def prompting?
+        !prompt_owner.empty?
       end
 
       # ------------------------------------------------------- current view

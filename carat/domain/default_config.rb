@@ -234,7 +234,7 @@ module Carat
           }
         },
         "plugins": {
-          "hello": { "enabled": true, "options": { "greeting": "Hello" } }
+          "explorer": { "enabled": true, "options": { "width": 30, "side": "left", "show_hidden": false, "ignore": [".git", "build", "tmp"] } }
         },
         "theme": "carat-dark"
       }

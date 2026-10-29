@@ -2,7 +2,7 @@
 
 A terminal IDE written in Ruby with Neovim's modal editing model, built, tested, and shipped with Spinel. `docs/architecture.md` holds the design and the roadmap; `CLAUDE.md` holds the commands and conventions.
 
-Today it is an editor with split windows, tab pages, and a plugin host: normal, insert, operator-pending, and command-line modes; counts, the `"x` register prefix, and Neovim's `[count] operator [count] motion` grammar; the motions `h l 0 ^ $ f F t T ; , j k G gg + - _ w W b B e E ge gE ( ) { } H M L`; the text objects `iw aw iW aW is as ip ap` and the bracket and quote objects; the operators `d c y > <` with `dd cc yy >> <<` and `x s S C D Y J p P`; the unnamed and named registers; insert-mode editing; the window commands `<C-w>s v h j k l w W p c o = q`, `gt`, and `gT`; and the ex commands `:w :q :wq :x :wa :qa :wqa :xa :e :sp :vs :new :vnew :close :only` and `:tabnew :tabedit :tabclose :tabonly :tabnext :tabprevious :tabfirst :tablast`. Compiled plugins add actions, ex commands, and side windows through the API in `docs/plugins.md`; the built-in `hello` plugin (`<leader>hh`, `:Hello`) proves it. `docs/compatibility.md` lists every Neovim command it implements with its test, and `docs/backlog.md` the known items left for later changes.
+Today it is an editor with split windows, tab pages, a plugin host, and a file tree: normal, insert, operator-pending, and command-line modes; counts, the `"x` register prefix, and Neovim's `[count] operator [count] motion` grammar; the motions `h l 0 ^ $ f F t T ; , j k G gg + - _ w W b B e E ge gE ( ) { } H M L`; the text objects `iw aw iW aW is as ip ap` and the bracket and quote objects; the operators `d c y > <` with `dd cc yy >> <<` and `x s S C D Y J p P`; the unnamed and named registers; insert-mode editing; the window commands `<C-w>s v h j k l w W p c o = q`, `gt`, and `gT`; and the ex commands `:w :q :wq :x :wa :qa :wqa :xa :e :sp :vs :new :vnew :close :only` and `:tabnew :tabedit :tabclose :tabonly :tabnext :tabprevious :tabfirst :tablast`. Compiled plugins add actions, ex commands, and side windows through the API in `docs/plugins.md`; the built-in `explorer` plugin, the file tree below, is built on it. `docs/compatibility.md` lists every Neovim command it implements with its test, and `docs/backlog.md` the known items left for later changes.
 
 ## Building
 
@@ -27,6 +27,24 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make gen-config` | Regenerate the default config mirror and the plugin registry |
 | `make check` | Build, gen-config, test, and diagnose |
 | `make spec-list`, `make spec-validate`, `make spec-update` | The OpenSpec commands |
+
+## File tree
+
+`<leader>e` (Space, then `e`) or `:Explorer` opens a file tree in a 30-column window at the left, rooted at the directory you started Carat in, with the current file revealed and marked; the same key focuses the tree when it is open and closes it when it is focused. `:ExplorerFind` reveals the current file in the tree. Inside the tree:
+
+- `<CR>` or `l` opens a file in the window you came from, or expands a directory; `h` collapses or goes to the parent; `o` toggles a directory.
+- `s`, `v`, and `t` open the file in a horizontal split, a vertical split, or a new tab page.
+- `a` creates a file next to the entry, or a directory when the name ends with `/`; `r` renames; `d` deletes a file or an empty directory after asking `y` or `n`. The name is typed on the command line, Enter confirms, Escape cancels.
+- `R` refreshes, `H` shows dot files, `-` moves the root up, `C` makes the directory under the cursor the root, `q` closes the tree, and `?` shows these keys.
+- `j`, `k`, `gg`, `G`, and the `<C-w>` commands work as in any window; `:q` in the last file window quits even while the tree is open.
+
+The tree draws its folders and file types with the icons below, so it reads well with or without a Nerd Font. Its options live in your configuration:
+
+```json
+{ "plugins": { "explorer": { "options": { "width": 30, "side": "left", "show_hidden": false, "ignore": [".git", "build", "tmp"] } } } }
+```
+
+`side` is `left` or `right`, `show_hidden` lists names starting with a dot from the start, and `ignore` names entries the tree never lists. Set `"enabled": false` in that entry to turn the tree off, and bind `<leader>e` to something else in `keymaps` to free the key. Carat reads only its built-in defaults today: the user and project configuration files arrive with the `options-and-config` roadmap item, and until then these values are changed in `config/default.json` before `make gen-config` and `make build`.
 
 ## Icons and Nerd Fonts
 

@@ -3,6 +3,7 @@ ok   nerd folder_open is a pua glyph
 ok   nerd file is a pua glyph
 ok   nerd symlink is a pua glyph
 ok   nerd modified is a pua glyph
+ok   nerd current is a pua glyph
 ok   nerd error is a pua glyph
 ok   nerd warning is a pua glyph
 ok   nerd info is a pua glyph
@@ -23,6 +24,7 @@ ok   unicode folder_open is a unicode glyph
 ok   unicode file is a unicode glyph
 ok   unicode symlink is a unicode glyph
 ok   unicode modified is a unicode glyph
+ok   unicode current is a unicode glyph
 ok   unicode error is a unicode glyph
 ok   unicode warning is a unicode glyph
 ok   unicode info is a unicode glyph
@@ -43,6 +45,7 @@ ok   ascii folder_open is a ascii glyph
 ok   ascii file is a ascii glyph
 ok   ascii symlink is a ascii glyph
 ok   ascii modified is a ascii glyph
+ok   ascii current is a ascii glyph
 ok   ascii error is a ascii glyph
 ok   ascii warning is a ascii glyph
 ok   ascii info is a ascii glyph
@@ -67,7 +70,8 @@ ok   nerd closed folder
 ok   unknown name
 ok   unknown name in ascii
 ok   unknown set reads as nerd
-ok   twenty icon names
+ok   twenty-one icon names
+ok   the ascii current marker is >
 ok   unicode is a set
 ok   emoji is not a set
 ok   default is nerd
@@ -87,4 +91,4 @@ ok   a wide character is still wide
 ok   a unicode icon
 ok   private_use? for a nerd glyph
 ok   private_use? for a letter
-domain_icons: 89 passed, 0 failed
+domain_icons: 93 passed, 0 failed

@@ -162,7 +162,7 @@ Ports are the interfaces use cases depend on. Each is a Ruby class with methods 
 | --- | --- | --- | --- |
 | `TerminalPort` | `size`, `read_key(timeout)`, `write(bytes)`, `enter`, `leave` | `AnsiTerminal` | `FakeTerminal` with a scripted key queue and captured output |
 | `ClockPort` | `now`, `sleep(seconds)` | monotonic clock | manual clock |
-| `FilePort` | `read(path)`, `write(path, text)`, `exist?`, `list(dir)`, `stat(path)` | `DiskFiles` | `MemoryFiles` |
+| `FilePort` | `read(path)`, `write(path, text)`, `exist?`, `list(dir)`, `stat(path)`, `mkdir(path)`, `rename(from, to)`, `delete(path)` (a file or an empty directory), `cwd` | `DiskFiles` | `MemoryFiles` |
 | `ConfigPort` | `load` returning the parsed config value | `JsonConfigGateway` | fixed config |
 | `LanguageServicePort` | `start(language)`, `notify(method, params)`, `request(method, params)`, `poll` | `JsonRpcLanguageGateway` | scripted responses |
 | `ProcessPort` | `spawn(argv)` returning a handle with `write`, `read_nonblock`, `wait` | `ProcessRunner` | fake handle |
@@ -278,14 +278,15 @@ What a plugin can declare, in its manifest:
 - Event subscriptions: `buffer_open`, `buffer_change`, `buffer_save`, `cursor_move`, `mode_change`, `window_focus`, `idle`, `resize`, `quit`.
 - Options it accepts, with types and defaults.
 
-What a plugin can do, through its `PluginApi::Host` (one method per request; the plugin host change delivered the requests marked with an asterisk, the rest arrive with the changes named here):
+What a plugin can do, through its `PluginApi::Host` (one method per request; the plugin host and explorer changes delivered the requests marked with an asterisk, the rest arrive with the changes named here):
 
 - Read a buffer: lines, cursor, path, modified flag (*); selection and marks come with the visual modes and marks.
 - Edit a buffer: a list of `(range, text)` replacements validated as a whole and applied as one batch (*), which becomes one undo transaction when the undo tree lands, so the user undoes a plugin edit in one step.
 - Move the cursor (*); set a selection, set a mark.
 - Open a scratch buffer in a fixed-width side window at the left or right edge of the tab page, with its own keymap bound to the plugin's actions, replace its lines, close it, focus a window, open a file in a window (*); floating windows later. This is how the explorer and the finder draw their lists: they are ordinary buffers with plugin-owned bindings, in the way Neovim's `oil` and `telescope` present text.
 - Show a message, set a status line segment, place and clear signs (*); virtual text and highlights for a range come with the syntax highlighting change, which gives a plugin highlight groups of its own.
-- Ask for input on the command line with a prompt.
+- Ask for input on the command line with a prompt, the answer arriving through `on_input` (*, from the explorer change).
+- Read the working directory and the numbers of the editing window and of its own scratch window; create, rename, and delete files and empty directories inside a root it names, validated by the host so a typed name cannot leave the root or overwrite an entry (*, from the explorer change).
 - Run an ex command string, list a directory, stat a path, look up an icon by name, read the plugin's own options (*).
 - Start a child process and receive its output, through the same `ProcessPort` as language servers.
 
@@ -308,7 +309,7 @@ Process plugins may be written in any language, CRuby included, so an author can
 - The editor must start, edit, save, and quit with every plugin disabled. Core editing never depends on a plugin.
 - A plugin failure is reported in the message area and disables that plugin; it never ends the editor or corrupts a buffer, because every edit goes through one validated transaction.
 - A plugin's bindings never override a user's bindings, and `config/default.json` never contains a plugin's bindings; those belong to the plugin manifest.
-- The API is versioned, `1.0` in `PluginApi::VERSION`. The host refuses a manifest written against a newer major version and says so, and `Domain::ManifestCheck` holds every other rule a manifest must obey: name form, `plugin.<name>.<action>` action names, uppercase ex command names with prefix abbreviations, known events, bindings that parse and name the plugin's own actions, and typed options.
+- The API is versioned, `1.1` in `PluginApi::VERSION` since the explorer change added requests; a minor version only adds. The host refuses a manifest written against a newer major version and says so, and `Domain::ManifestCheck` holds every other rule a manifest must obey: name form, `plugin.<name>.<action>` action names, uppercase ex command names with prefix abbreviations, known events, bindings that parse and name the plugin's own actions, and typed options.
 
 ## 10. Testing strategy
 
@@ -364,7 +365,8 @@ carat/drivers/
 carat/plugin_api.rb             the only file a plugin may require
 carat/plugins/
   registry.rb (generated)       explicit require and constructor per plugin
-  hello/ explorer/ finder/ git_signs/  built-in compiled plugins
+  explorer/ finder/ git_signs/  built-in compiled plugins
+  hello/                        the smallest example, a test fixture outside the registry
 carat/adapters/json_rpc_plugin_gateway.rb
 config/plugins.json             the ordered list of compiled plugins
 carat/doubles/
@@ -393,7 +395,7 @@ Each item is one OpenSpec change and one pull request, in this order. Each leave
 9. `options-and-config`: `:set`, local options, user and project config files with merge and unbinding.
 10. `language-services`: `ProcessPort`, `ServiceThreads`, `JsonRpcLanguageGateway`, `ruby-lsp` integration, diagnostics, go-to-definition, hover, completion menu.
 11. `plugin-host`: `carat/plugin_api.rb`, the manifest, the plugin host use cases, the generated registry from `config/plugins.json`, events, scratch buffers with plugin-owned keymaps, and the lint rule for plugin dependencies. Proven by a tiny built-in `hello` plugin that adds one action and one ex command.
-12. `plugin-explorer-and-finder`: the file tree and the fuzzy finder as the first real compiled plugins.
+12. `plugin-explorer-and-finder`: the file tree and the fuzzy finder as the first real compiled plugins. Delivered in two changes: `plugin-explorer` brought the file tree with icons and the host requests it needs (file operations inside a root and a command-line prompt); `plugin-finder` brings the fuzzy finder.
 13. `plugin-protocol`: `docs/plugin-protocol.md`, the JSON-RPC plugin gateway reusing the language service framing, and a sample process plugin written in CRuby to prove the protocol from outside the binary.
 14. `plugin-git-and-formatting`: git signs and status as a plugin; RuboCop formatting through the language service.
 15. `release-build`: reproducible builds for Linux and macOS with `spin build` and `spin pack`, release packaging, `spin install`, and the smoke tests against the released binary.

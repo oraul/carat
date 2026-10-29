@@ -133,6 +133,61 @@ module Carat
       def option(name)
         @host.option(@name, name)
       end
+
+      # Returns the working directory.
+      # @rbs skip
+      def working_directory
+        @host.working_directory(@name)
+      end
+
+      # Returns a Response with the editing window's number.
+      # @rbs skip
+      def editing_window
+        @host.editing_window(@name)
+      end
+
+      # Returns a Response with the scratch window's number.
+      # @rbs title: String
+      def scratch_window(title)
+        @host.scratch_window(@name, title)
+      end
+
+      # Returns a Response.
+      # @rbs root: String
+      # @rbs path: String
+      def make_file(root, path)
+        @host.make_file(@name, root, path)
+      end
+
+      # Returns a Response.
+      # @rbs root: String
+      # @rbs path: String
+      def make_dir(root, path)
+        @host.make_dir(@name, root, path)
+      end
+
+      # Returns a Response.
+      # @rbs root: String
+      # @rbs path: String
+      # @rbs name: String
+      def rename_path(root, path, name)
+        @host.rename_path(@name, root, path, name)
+      end
+
+      # Returns a Response.
+      # @rbs root: String
+      # @rbs path: String
+      def delete_path(root, path)
+        @host.delete_path(@name, root, path)
+      end
+
+      # Returns a Response.
+      # @rbs id: String
+      # @rbs text: String
+      # @rbs initial: String
+      def prompt(id, text, initial)
+        @host.prompt(@name, id, text, initial)
+      end
     end
   end
 end

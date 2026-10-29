@@ -70,8 +70,8 @@ ok   a plugin clears only its own signs
 ok   a row outside the buffer is refused
 ok   an unknown icon is refused
 ok   clearing a missing buffer fails
-ok   list_dir answers the sorted entries
-ok   stat answers size, mtime, and the directory flag
+ok   list_dir answers the sorted entry names
+ok   stat answers size, mtime, and the directory and symlink flags
 ok   stat of a missing path fails
 ok   a raise in an action disables the plugin with a message
 ok   the buffer is untouched by the failed plugin

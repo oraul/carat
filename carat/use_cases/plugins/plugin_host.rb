@@ -357,6 +357,10 @@ module Carat
             state.tab.focus(id)
             return PluginApi::Response.success("", layout.number_of(id))
           end
+          if state.shown?(existing)
+            replace_lines(existing, lines)
+            return place_side(state, existing, side, width)
+          end
           state.drop_buffer(existing)
         end
         buffer = Domain::Buffer.new(copy(lines), nil, "\n")
@@ -365,13 +369,7 @@ module Carat
         keymap = Domain::Keymap.build(bindings, @leader)
         record_errors(name, keymap.errors)
         buffer.keymap = keymap
-        window = Domain::Window.new(buffer)
-        window.fixed_width = true
-        id = layout.split_edge(window, width, side == :left)
-        return PluginApi::Response.failure(E36) if id < 0
-        state.add_buffer(buffer)
-        state.tab.focus(id)
-        PluginApi::Response.success("", layout.number_of(id))
+        place_side(state, buffer, side, width)
       end
 
       #: (String, String, Array[String]) -> PluginApi::Response
@@ -414,7 +412,14 @@ module Carat
         return PluginApi::Response.failure(why) unless why.empty?
         focused = focus_window(name, number)
         return focused unless focused.ok
-        outcome = @open_file.call(@state, path)
+        state = @state
+        window = state.window
+        old = window.buffer
+        own = old.path
+        return focused if !own.nil? && !old.scratch? && same_path?(own, path)
+        outcome = @open_file.call(state, path)
+        window.fixed_width = false if old.scratch? && !window.buffer.equal?(old)
+        state.add_buffer(old) if old.modified && !old.scratch? && state.buffer_index(old) < 0
         PluginApi::Response.new(outcome.ok, outcome.message, focused.number, [])
       end
 
@@ -504,7 +509,7 @@ module Carat
         rescue StandardError
           return PluginApi::FileInfo.missing
         end
-        PluginApi::FileInfo.new(true, int_of(info, "size"), int_of(info, "mtime"), int_of(info, "directory") == 1)
+        PluginApi::FileInfo.new(true, int_of(info, "size"), int_of(info, "mtime"), int_of(info, "directory") == 1, int_of(info, "symlink") == 1)
       end
 
       #: (String, String) -> String
@@ -521,7 +526,278 @@ module Carat
         value.nil? ? "" : value
       end
 
+      #: (String) -> String
+      def working_directory(name)
+        return "" unless enabled?(name)
+        cwd
+      end
+
+      # The previously used window when it shows a file buffer, otherwise
+      # the first window in layout order that does, 0 when none does.
+      #: (String) -> PluginApi::Response
+      def editing_window(name)
+        why = refused(name)
+        return PluginApi::Response.failure(why) unless why.empty?
+        tab = @state.tab
+        layout = tab.layout
+        if tab.previous? && !layout.window_at(tab.previous).buffer.scratch?
+          return PluginApi::Response.success("", layout.number_of(tab.previous))
+        end
+        ids = layout.leaves
+        i = 0
+        while i < ids.length
+          return PluginApi::Response.success("", layout.number_of(ids[i])) unless layout.window_at(ids[i]).buffer.scratch?
+          i += 1
+        end
+        PluginApi::Response.success("", 0)
+      end
+
+      #: (String, String) -> PluginApi::Response
+      def scratch_window(name, title)
+        why = refused(name)
+        return PluginApi::Response.failure(why) unless why.empty?
+        state = @state
+        buffer = state.scratch_for(name, title)
+        id = buffer.nil? ? -1 : window_showing(state, buffer)
+        PluginApi::Response.success("", id < 0 ? 0 : state.tab.layout.number_of(id))
+      end
+
+      #: (String, String, String) -> PluginApi::Response
+      def make_file(name, root, path)
+        create(name, root, path, false)
+      end
+
+      #: (String, String, String) -> PluginApi::Response
+      def make_dir(name, root, path)
+        create(name, root, path, true)
+      end
+
+      # Renames the entry in its directory after every check passed, then
+      # lets the open buffers of it, or under it, follow.
+      #: (String, String, String, String) -> PluginApi::Response
+      def rename_path(name, root, path, new_name)
+        why = refused(name)
+        return PluginApi::Response.failure(why) unless why.empty?
+        here = cwd
+        base = PluginApi::Paths.absolute(here, root)
+        source = PluginApi::Paths.absolute(here, path)
+        return PluginApi::Response.failure("Empty name") if new_name.empty?
+        return PluginApi::Response.failure("Name contains a path separator: #{new_name}") if new_name.include?("/")
+        return PluginApi::Response.failure("Invalid name: #{new_name}") if new_name == "." || new_name == ".."
+        return PluginApi::Response.failure("Outside the tree root: #{shown(source)}") unless PluginApi::Paths.inside?(base, source)
+        return PluginApi::Response.failure("No such file or directory: #{shown(source)}") unless present?(source)
+        target = PluginApi::Paths.join(PluginApi::Paths.dirname(source), new_name)
+        return PluginApi::Response.failure("Already exists: #{shown(target)}") if present?(target)
+        begin
+          @files.rename(source, target)
+        rescue StandardError => error
+          return PluginApi::Response.failure(error.message)
+        end
+        follow_rename(here, source, target)
+        PluginApi::Response.success("", 0)
+      end
+
+      # Deletes a file or an empty directory after every check passed; an
+      # open buffer of the file stays and becomes modified.
+      #: (String, String, String) -> PluginApi::Response
+      def delete_path(name, root, path)
+        why = refused(name)
+        return PluginApi::Response.failure(why) unless why.empty?
+        here = cwd
+        base = PluginApi::Paths.absolute(here, root)
+        target = PluginApi::Paths.absolute(here, path)
+        return PluginApi::Response.failure("Outside the tree root: #{shown(target)}") unless PluginApi::Paths.inside?(base, target)
+        return PluginApi::Response.failure("No such file or directory: #{shown(target)}") unless present?(target)
+        if real_directory?(target) && !entries(target).empty?
+          return PluginApi::Response.failure("Directory not empty: #{shown(target)}")
+        end
+        begin
+          @files.delete(target)
+        rescue StandardError => error
+          return PluginApi::Response.failure(error.message)
+        end
+        mark_deleted(here, target)
+        PluginApi::Response.success("", 0)
+      end
+
+      # Opens a prompt in the command-line row for the plugin.
+      #: (String, String, String, String) -> PluginApi::Response
+      def prompt(name, id, text, initial)
+        why = refused(name)
+        return PluginApi::Response.failure(why) unless why.empty?
+        state = @state
+        return PluginApi::Response.failure("A prompt is already open") unless state.prompt_owner.empty?
+        state.prompt = text
+        state.prompt_owner = name
+        state.prompt_id = id
+        state.cmdline = initial
+        state.pending_keys = []
+        state.mode = Domain::Mode::CMDLINE
+        PluginApi::Response.success("", 0)
+      end
+
+      # Ends the open prompt: delivers the text, or a cancel, to the plugin
+      # that opened it.
+      #: (Domain::EditorState, String, bool) -> void
+      def answer(state, text, cancelled)
+        owner = state.prompt_owner
+        id = state.prompt_id
+        state.prompt = ""
+        state.prompt_owner = ""
+        state.prompt_id = ""
+        e = find(owner)
+        return if e.nil? || !e.enabled
+        input = PluginApi::Input.new(id, cancelled ? "" : text, cancelled)
+        begin
+          e.plugin.on_input(input)
+        rescue StandardError => error
+          disable(e, error.message)
+        end
+      end
+
       private
+
+      #: () -> String
+      def cwd
+        @files.cwd
+      end
+
+      # A path for a message: relative to the working directory when it
+      # lies below it.
+      #: (String) -> String
+      def shown(path)
+        PluginApi::Paths.relative(cwd, path)
+      end
+
+      #: (String, String) -> bool
+      def same_path?(a, b)
+        here = cwd
+        PluginApi::Paths.absolute(here, a) == PluginApi::Paths.absolute(here, b)
+      end
+
+      # Whether anything, a link to nothing included, is at the path.
+      #: (String) -> bool
+      def present?(path)
+        begin
+          @files.stat(path)
+        rescue StandardError
+          return false
+        end
+        true
+      end
+
+      # Whether the path is a directory, following a link.
+      #: (String) -> bool
+      def directory?(path)
+        info = nil
+        begin
+          info = @files.stat(path)
+        rescue StandardError
+          return false
+        end
+        int_of(info, "directory") == 1
+      end
+
+      # Whether the path is a directory and not a link to one.
+      #: (String) -> bool
+      def real_directory?(path)
+        info = nil
+        begin
+          info = @files.stat(path)
+        rescue StandardError
+          return false
+        end
+        int_of(info, "directory") == 1 && int_of(info, "symlink") == 0
+      end
+
+      #: (String) -> Array[String]
+      def entries(dir)
+        names = []
+        begin
+          names = @files.list(dir)
+        rescue StandardError
+          return []
+        end
+        copy(names)
+      end
+
+      # The last name of a path as typed: "" when it ends with a "/".
+      #: (String) -> String
+      def last_name(path)
+        return "" if path.end_with?("/")
+        PluginApi::Paths.basename(path)
+      end
+
+      # Creates a file or a directory after every check passed.
+      #: (String, String, String, bool) -> PluginApi::Response
+      def create(name, root, path, directory)
+        why = refused(name)
+        return PluginApi::Response.failure(why) unless why.empty?
+        here = cwd
+        base = PluginApi::Paths.absolute(here, root)
+        target = PluginApi::Paths.absolute(here, path)
+        last = last_name(path)
+        return PluginApi::Response.failure("Empty name") if last.empty? || last == "." || last == ".."
+        return PluginApi::Response.failure("Outside the tree root: #{shown(target)}") unless PluginApi::Paths.inside?(base, target)
+        return PluginApi::Response.failure("Already exists: #{shown(target)}") if present?(target)
+        parent = PluginApi::Paths.dirname(target)
+        return PluginApi::Response.failure("No such directory: #{shown(parent)}") unless directory?(parent)
+        begin
+          if directory
+            @files.mkdir(target)
+          else
+            @files.write(target, "")
+          end
+        rescue StandardError => error
+          return PluginApi::Response.failure(error.message)
+        end
+        PluginApi::Response.success("", 0)
+      end
+
+      # Every listed file buffer of the renamed path, or under it, takes
+      # the new path, relative to the working directory when it was.
+      #: (String, String, String) -> void
+      def follow_rename(here, from, to)
+        i = 0
+        while i < @state.buffer_count
+          b = @state.buffer_at(i)
+          path = b.path
+          unless path.nil? || b.scratch?
+            abs = PluginApi::Paths.absolute(here, path)
+            if abs == from || abs.start_with?(from + "/")
+              moved = to + abs[from.length, abs.length - from.length]
+              b.path = path.start_with?("/") ? moved : PluginApi::Paths.relative(here, moved)
+            end
+          end
+          i += 1
+        end
+      end
+
+      # A listed buffer of the deleted file stays and becomes modified.
+      #: (String, String) -> void
+      def mark_deleted(here, target)
+        i = 0
+        while i < @state.buffer_count
+          b = @state.buffer_at(i)
+          path = b.path
+          b.modified = true if !path.nil? && !b.scratch? && PluginApi::Paths.absolute(here, path) == target
+          i += 1
+        end
+      end
+
+      # Adds a fixed-width window showing the buffer at the edge of the
+      # current tab page and makes it current.
+      #: (Domain::EditorState, Domain::Buffer, Symbol, Integer) -> PluginApi::Response
+      def place_side(state, buffer, side, width)
+        layout = state.tab.layout
+        window = Domain::Window.new(buffer)
+        window.fixed_width = true
+        id = layout.split_edge(window, width, side == :left)
+        return PluginApi::Response.failure(E36) if id < 0
+        state.add_buffer(buffer)
+        state.tab.focus(id)
+        PluginApi::Response.success("", layout.number_of(id))
+      end
 
       # The reason a request from the named plugin is refused, "" for none.
       #: (String) -> String

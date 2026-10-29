@@ -1,5 +1,5 @@
 {
   "plugins": [
-    { "name": "hello", "path": "hello/plugin", "class": "Carat::Plugins::Hello::Plugin" }
+    { "name": "explorer", "path": "explorer/plugin", "class": "Carat::Plugins::Explorer::Plugin" }
   ]
 }

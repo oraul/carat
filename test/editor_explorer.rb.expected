@@ -1,0 +1,81 @@
+ok   <leader>e opens the tree at the left, focused on the current file
+ok   <leader>e from the file window focuses the tree
+ok   <leader>e in the tree closes it
+ok   :Explorer opens the tree
+ok   :Explorer twice closes it
+ok   q closes the tree
+ok   :q in the tree closes only the tree
+ok   Ctrl-W l and h move out of the tree and back
+ok   Ctrl-W h returns to the tree
+ok   Ctrl-W = leaves the tree's width alone
+ok   j and k fall through to the normal keymap
+ok   G falls through too
+ok   the root, the directories, then the files, the current file marked
+ok   the tree's status line shows its title and the width option is 30
+ok   quitting the last file window ends the editor with the tree open
+ok   the side option puts the tree at the right
+ok   a disabled explorer opens nothing
+ok   show_hidden lists dot files but not ignored names
+ok   the directories above the current file are expanded on open and the cursor is on it
+ok   the tree follows another file
+ok   and the next one
+ok   :ExplorerFind reveals the current file, focuses the tree, and puts the cursor on it
+ok   :ExplorerFind opens a closed tree
+ok   Enter opens the file in the editing window
+ok   l opens it too
+ok   o on a file opens it too
+ok   s opens it in a horizontal split
+ok   v opens it in a vertical split
+ok   t opens it in a new tab page
+ok   s on a directory does nothing
+ok   with only the tree left the file gets a new window
+ok   Enter opens in the window used before the tree
+ok   the new tree is fixed-width and the file window is not
+ok   Enter expands a directory
+ok   l expands it too
+ok   Enter leaves an expanded directory expanded
+ok   o toggles it closed again
+ok   h collapses an expanded directory
+ok   h on a file goes to its parent
+ok   h on a top-level entry goes to the root line
+ok   h on the root line does nothing
+ok   Enter on the root line does nothing
+ok   H shows hidden files but not ignored ones
+ok   H again hides them
+ok   - moves the root up and keeps the old root expanded
+ok   C makes the directory under the cursor the root
+ok   C on a file makes its directory the root
+ok   R lists the directories again
+ok   ? shows the keys in the message row
+ok   a on the root line creates a file there
+ok   a trailing slash creates a directory
+ok   a on a directory creates inside it
+ok   a on a file creates next to it
+ok   Escape cancels
+ok   an empty name creates nothing
+ok   an existing name is refused
+ok   a name leaving the root is refused
+ok   the prompt names the directory
+ok   the directory exists on disk and no file was made
+ok   a refusal is an error
+ok   the prompt starts with the current name
+ok   a rename changes the disk and the open buffer follows
+ok   the tree lists the new name, still marked, with the cursor on it
+ok   a separator is refused
+ok   the root is not renamed
+ok   Escape renames nothing
+ok   the confirmation names the entry
+ok   yes deletes the file
+ok   and it is no longer listed
+ok   n declines
+ok   Escape declines
+ok   YES confirms
+ok   a directory with entries is refused
+ok   deleting the open file keeps its buffer, modified
+ok   and :q asks for a write
+ok   the root is not deleted
+ok   ascii
+ok   unicode
+ok   nerd
+ok   the tree has no line numbers and a separator at its right
+editor_explorer: 80 passed, 0 failed

@@ -44,7 +44,8 @@ t.table([
   I.glyph(pair[0], pair[1])
 end
 
-t.assert_equal(20, I::NAMES.length, "twenty icon names")
+t.assert_equal(21, I::NAMES.length, "twenty-one icon names")
+t.assert_equal(">", I.glyph("current", "ascii"), "the ascii current marker is >")
 t.assert_equal(true, I.set?("unicode"), "unicode is a set")
 t.assert_equal(false, I.set?("emoji"), "emoji is not a set")
 

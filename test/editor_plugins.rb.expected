@@ -25,7 +25,7 @@ ok   the file opens
 ok   x edits
 ok   the file is written
 ok   the editor quits
-ok   both plugins were off
+ok   every plugin was off
 ok   a side window on the left
 ok   a side window on the right
 ok   the width survives equalize
@@ -54,10 +54,26 @@ ok   quit-all ignores the scratch buffer's changes
 ok   write-all skips the scratch buffer
 ok   and the editor quits
 ok   open_file shows the file in window 2 and makes it current
-ok   closing the file window leaves the side window
+ok   closing the file window with Ctrl-W c leaves the side window
 ok   quitting the last side window ends the editor
+ok   :q beside a side window ends the editor
+ok   Ctrl-W q there too
+ok   :wq there too
+ok   :x there too
+ok   :q on a modified buffer is refused
+ok   :q! there ends the editor
+ok   :q in the side window closes only it
+ok   :q in a split file window closes it
+ok   :q in a second tab page closes that tab page
+ok   opening over a modified buffer keeps it hidden in the list
+ok   a side window that takes a file loses its fixed width
+ok   opening the file a window already shows leaves it as it is, changes kept
+ok   a side window opens in the second tab page
+ok   and shows the one scratch buffer the first tab page shows
+ok   the first tab page still shows it
+ok   the side window's rows start at its first column
 ok   a raise in an event at startup disables the plugin
 ok   its binding now reports it disabled
 ok   the editor goes on editing
 ok   the event plugin is off again
-editor_plugins: 62 passed, 0 failed
+editor_plugins: 78 passed, 0 failed

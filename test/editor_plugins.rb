@@ -1,5 +1,6 @@
 require_relative "../carat"
 require_relative "../carat/testing"
+require_relative "../carat/plugins/hello/plugin"
 
 t = Carat::Testing.new("editor_plugins")
 D = Carat::Domain
@@ -36,10 +37,11 @@ class Side < Carat::PluginApi::Plugin
         "plugin.side.nope" => "Replace the lines of a list that does not exist",
         "plugin.side.file" => "Open b.txt in window 2",
         "plugin.side.far" => "Focus window 9",
-        "plugin.side.count" => "Report the count and the register"
+        "plugin.side.count" => "Report the count and the register",
+        "plugin.side.here" => "Open b.txt in the side window itself"
       },
       {},
-      { "normal" => { "<leader>to" => "plugin.side.open", "<leader>tr" => "plugin.side.right", "<leader>tw" => "plugin.side.wide", "<leader>tc" => "plugin.side.close", "<leader>tl" => "plugin.side.lines", "<leader>tn" => "plugin.side.nope", "<leader>tf" => "plugin.side.file", "<leader>tx" => "plugin.side.far", "<leader>tt" => "plugin.side.count" } },
+      { "normal" => { "<leader>to" => "plugin.side.open", "<leader>tr" => "plugin.side.right", "<leader>tw" => "plugin.side.wide", "<leader>tc" => "plugin.side.close", "<leader>tl" => "plugin.side.lines", "<leader>tn" => "plugin.side.nope", "<leader>tf" => "plugin.side.file", "<leader>tx" => "plugin.side.far", "<leader>tt" => "plugin.side.count", "<leader>th" => "plugin.side.here" } },
       [], {}, {}
     )
   end
@@ -64,6 +66,7 @@ class Side < Carat::PluginApi::Plugin
     when "plugin.side.nope" then report(host.set_scratch_lines("nope", ["x"]))
     when "plugin.side.file" then report(host.open_file(2, "b.txt"))
     when "plugin.side.far" then report(host.focus_window(9))
+    when "plugin.side.here" then report(host.open_file(host.scratch_window("list").number, "b.txt"))
     when "plugin.side.count" then host.message("count #{context.count} register #{context.register.inspect} buffer #{context.buffer}", false)
     end
   end
@@ -78,14 +81,17 @@ class Side < Carat::PluginApi::Plugin
   end
 end
 
+# The registry's plugins, then the hello fixture, which is not in the
+# registry, and the side test plugin.
 def plugin_list
   list = Carat::Plugins::Registry.all
+  list << Carat::Plugins::Hello::Plugin.new
   list << Side.new
   list
 end
 
-# An editor on "a.txt" with "b.txt" on disk, the hello and side plugins,
-# and the given configuration.
+# An editor on "a.txt" with "b.txt" on disk, the registry's plugins, the
+# hello and side plugins, and the given configuration.
 def editor_with(config, rows, cols)
   files = Carat::Doubles::MemoryFiles.new
   files.put("a.txt", "one\ntwo\nthree\n")
@@ -141,7 +147,7 @@ t.assert_equal("", h.message, "a window command clears the message")
 
 # The configuration: disabled, options, bindings, icons.
 config = Carat::Doubles::FixedConfig.defaults
-config["plugins"]["hello"]["enabled"] = false
+config["plugins"]["hello"] = { "enabled" => false }
 h = editor_with(config, 24, 80)
 h.type(" hh")
 t.assert_equal(["", [0, 0]], [h.message, h.cursor], "a disabled plugin's binding does nothing")
@@ -149,12 +155,12 @@ h.type(":Hello<CR>")
 t.assert_equal("E492: Not an editor command: Hello", h.message, "a disabled plugin's command is unknown")
 t.assert_equal(["disabled in the configuration", true], [h.plugins.reason("hello"), h.plugins.enabled?("side")], "only the disabled plugin is off")
 config = Carat::Doubles::FixedConfig.defaults
-config["plugins"]["hello"]["options"]["greeting"] = "Hi"
+config["plugins"]["hello"] = { "options" => { "greeting" => "Hi" } }
 h = editor_with(config, 24, 80)
 h.type(":Hello<CR>")
 t.assert_equal("#{INFO} Hi, world! 1 buffer opened", h.message, "an option from the configuration reaches the plugin")
 config = Carat::Doubles::FixedConfig.defaults
-config["plugins"]["hello"]["options"]["greeting"] = 7
+config["plugins"]["hello"] = { "options" => { "greeting" => 7 } }
 h = editor_with(config, 24, 80)
 h.type(":Hello<CR>")
 t.assert_equal(["#{INFO} Hello, world! 1 buffer opened", ["plugin hello: option greeting must be a string"]], [h.message, h.plugins.errors], "an option of the wrong type keeps the default and is recorded")
@@ -181,8 +187,9 @@ t.assert_equal("◆ Hello, world! 1 buffer opened", h.message, "the unicode set 
 
 # Every plugin disabled: the editor starts, edits, saves, and quits.
 config = Carat::Doubles::FixedConfig.defaults
-config["plugins"]["hello"]["enabled"] = false
+config["plugins"]["hello"] = { "enabled" => false }
 config["plugins"]["side"] = { "enabled" => false }
+config["plugins"]["explorer"] = { "enabled" => false }
 h = editor_with(config, 24, 80)
 t.assert_equal("\"a.txt\" 3L, 14B", h.message, "the file opens")
 h.type("x:w<CR>")
@@ -190,7 +197,7 @@ t.assert_equal(["ne", "two", "three"], h.lines, "x edits")
 t.assert_equal("ne\ntwo\nthree\n", h.files.get("a.txt"), "the file is written")
 h.type(":q<CR>")
 t.assert_equal(true, h.quit?, "the editor quits")
-t.assert_equal([false, false], [h.plugins.enabled?("hello"), h.plugins.enabled?("side")], "both plugins were off")
+t.assert_equal([false, false, false], [h.plugins.enabled?("hello"), h.plugins.enabled?("side"), h.plugins.enabled?("explorer")], "every plugin was off")
 
 # Plugin windows: rows are [label, keys, [message, windows]].
 LEFT = [[0, 0, 22, 30, "list"], [0, 31, 22, 49, "a.txt"]]
@@ -247,10 +254,51 @@ h.type(":q<CR>:q<CR>")
 t.assert_equal(true, h.quit?, "and the editor quits")
 h = session(" to tf")
 t.assert_equal([2, ["zz"]], [h.window_index, h.lines], "open_file shows the file in window 2 and makes it current")
-h.type(":q<CR>")
-t.assert_equal([1, ["a.txt", ""].length], [h.window_count, 2], "closing the file window leaves the side window")
+h.type("<C-w>c")
+t.assert_equal([1, false], [h.window_count, h.quit?], "closing the file window with Ctrl-W c leaves the side window")
 h.type(":q<CR>")
 t.assert_equal(true, h.quit?, "quitting the last side window ends the editor")
+
+# Quitting the last file window beside a side window ends the editor, or
+# closes its tab page: rows are [label, keys, [quit, windows, tab pages,
+# message]].
+t.table([
+  [":q beside a side window ends the editor", " to<C-w>l:q<CR>", [true, 2, 1, ""]],
+  ["Ctrl-W q there too", " to<C-w>l<C-w>q", [true, 2, 1, ""]],
+  [":wq there too", " to<C-w>l:wq<CR>", [true, 2, 1, ""]],
+  [":x there too", " to<C-w>l:x<CR>", [true, 2, 1, ""]],
+  [":q on a modified buffer is refused", " to<C-w>lx:q<CR>", [false, 2, 1, "E37: No write since last change (add ! to override)"]],
+  [":q! there ends the editor", " to<C-w>lx:q!<CR>", [true, 2, 1, ""]],
+  [":q in the side window closes only it", " to:q<CR>", [false, 1, 1, ""]],
+  [":q in a split file window closes it", " to<C-w>l<C-w>v:q<CR>", [false, 2, 1, ""]],
+  [":q in a second tab page closes that tab page", ":tabnew b.txt<CR> to<C-w>l:q<CR>", [false, 1, 1, ""]]
+]) do |keys|
+  h = session(keys)
+  [h.quit?, h.window_count, h.tab_count, h.message]
+end
+
+# The open file request and scratch buffers across tab pages.
+h = session(" to<C-w>lx<C-w>h tf")
+t.assert_equal([["zz"], ["", "b.txt", "a.txt"], true], [h.lines, h.buffer_paths, h.state.buffer_at(2).modified], "opening over a modified buffer keeps it hidden in the list")
+h = session(" to th")
+t.assert_equal([["zz"], false, 2], [h.lines, h.state.window.fixed_width, h.window_count], "a side window that takes a file loses its fixed width")
+h = session(" to tfx tf")
+t.assert_equal(["ok 2", 2, ["z"], true], [h.message, h.window_index, h.lines, h.buffer.modified], "opening the file a window already shows leaves it as it is, changes kept")
+h = session(" to:tabnew<CR> to")
+titles = []
+i = 0
+while i < h.state.buffer_count
+  titles << h.state.buffer_at(i).title
+  i += 1
+end
+t.assert_equal([2, 2, 2], [h.tab_count, h.tab_index, h.window_count], "a side window opens in the second tab page")
+t.assert_equal(["", "list", ""], titles, "and shows the one scratch buffer the first tab page shows")
+h.type("gt")
+t.assert_equal([2, "list"], [h.window_count, h.state.window.buffer.title], "the first tab page still shows it")
+
+# A side window has no line numbers.
+h = session(" to")
+t.assert_equal(["l0", "l1"], [h.row(0)[0, 2], h.row(1)[0, 2]], "the side window's rows start at its first column")
 
 # A plugin that raises is disabled in the running editor.
 class Boom < Carat::PluginApi::Plugin

@@ -323,5 +323,22 @@ t.assert_equal(["list  hello ", "a.txt   "], [f.row_text(4)[0, 12], f.row_text(4
 scratch.modified = true
 f = P.call(s, 6, 40)
 t.assert_equal("list [+]  he", f.row_text(4)[0, 12], "the modified marker comes before the segments")
+t.assert_equal(["item", "  1 one"], [f.row_text(0)[0, 4], f.row_text(0)[13, 7]], "the side window has no line numbers while the file window keeps them")
+scratch.signs["0"] = "!"
+f = P.call(s, 6, 40)
+t.assert_equal("! item", f.row_text(0)[0, 6], "its sign column still shows")
+
+# A plugin's prompt takes the place of the colon, with the cursor after
+# the text.
+s = state_for(["one"], "a.txt")
+s.mode = D::Mode::CMDLINE
+s.prompt = "Rename to: "
+s.prompt_owner = "test"
+s.cmdline = "a.rb"
+f = P.call(s, 6, 40)
+t.assert_equal(["Rename to: a.rb", 5, 15], [f.row_text(5), f.cursor_row, f.cursor_col], "the prompt row and the cursor after it")
+s.prompt_owner = ""
+f = P.call(s, 6, 40)
+t.assert_equal([":a.rb", 5], [f.row_text(5), f.cursor_col], "an ex command line keeps its colon")
 
 t.finish
