@@ -36,6 +36,48 @@ module Carat
         of(ch.ord)
       end
 
+      # The cells one character takes when it starts at display column
+      # dcol: a tab reaches the next tabstop, a C0 control takes two as ^X,
+      # delete and the C1 controls take four as <xx>, and every other code
+      # point its display width.
+      #: (String, Integer, Integer) -> Integer
+      def self.cell(ch, dcol, tabstop)
+        ts = tabstop > 0 ? tabstop : 8
+        return ts - (dcol % ts) if ch == "\t"
+        code = ch.ord
+        return 2 if code < 32
+        return 4 if control?(code)
+        of(code)
+      end
+
+      # The display column where code point column col of line starts; a
+      # column past the end gives the width of the whole line.
+      #: (String, Integer, Integer) -> Integer
+      def self.column(line, col, tabstop)
+        dcol = 0
+        i = 0
+        while i < col && i < line.length
+          dcol += cell(line[i, 1], dcol, tabstop)
+          i += 1
+        end
+        dcol
+      end
+
+      # The code point column of the character whose cells cover display
+      # column vcol, or the line length when the line ends before it.
+      #: (String, Integer, Integer) -> Integer
+      def self.col_at(line, vcol, tabstop)
+        dcol = 0
+        i = 0
+        while i < line.length
+          w = cell(line[i, 1], dcol, tabstop)
+          return i if dcol + w > vcol
+          dcol += w
+          i += 1
+        end
+        line.length
+      end
+
       # True for the code points no cell may hold raw: the C0 controls
       # below 32, delete (U+007F), and the C1 controls U+0080 to U+009F,
       # whose UTF-8 forms some terminals read as escape introducers.

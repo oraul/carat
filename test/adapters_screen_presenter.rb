@@ -107,4 +107,14 @@ t.assert_true(out.include?("\e[0;7mtab"), "tab line labels are reverse video")
 t.assert_true(out.include?("\e[0;1msel"), "the selected label is bold")
 t.assert_true(out.include?("\e[0;7mfill"), "the tab line fill is reverse video")
 
+# The visual selection is reverse video, Vim's default Visual on a terminal.
+selected = D::Frame.new(1, 8)
+selected.put(0, 0, "ab", D::Highlight::NORMAL)
+selected.put(0, 2, "cd", D::Highlight::VISUAL)
+clock = Carat::Doubles::ManualClock.new
+terminal = Carat::Doubles::FakeTerminal.new(clock, 1, 8)
+screen = Carat::Adapters::ScreenPresenter.new(terminal)
+screen.present(selected)
+t.assert_true(terminal.last_write.include?("\e[0;7mcd"), "the selection is reverse video")
+
 t.finish

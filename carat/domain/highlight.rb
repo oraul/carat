@@ -11,6 +11,7 @@ module Carat
       TAB_LINE = 6
       TAB_LINE_SELECTED = 7
       TAB_LINE_FILL = 8
+      VISUAL = 9
     end
   end
 end

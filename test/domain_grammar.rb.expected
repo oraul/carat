@@ -20,6 +20,14 @@ ok   a find motion under an operator
 ok   escape cancels a find motion
 ok   a standalone action with a count
 ok   a remap-style action name
+ok   a visual operator completes at once
+ok   a visual motion with a count
+ok   a visual register prefix
+ok   a visual text object completes
+ok   visual r wants a character
+ok   visual r with a special key cancels
+ok   a visual find wants a character
+ok   a visual action while a register is wanted cancels
 ok   0 does not start a count
 ok   1 starts a count
 ok   0 continues a count
@@ -46,4 +54,4 @@ ok   count_or with no count
 ok   count_or with a count
 ok   a plain command has no operator
 ok   reversed flips the direction
-domain_grammar: 48 passed, 0 failed
+domain_grammar: 56 passed, 0 failed

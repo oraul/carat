@@ -7,11 +7,12 @@ module Carat
     # last f/t motion for ";" and ",", and the status line segments the
     # plugins set, by plugin name in registration order, and the prompt a
     # plugin opened on the command line (its text, the plugin, and the
-    # plugin's id for it, all "" when none is open). The current
-    # window, its buffer, and its cursor are reached through the current
-    # tab page. A Struct record: mutable, with a reader and a writer per
-    # member.
-    class EditorState < Struct.new(:buffers, :tabs, :tab_index, :mode, :options, :timeoutlen, :cmdline, :message, :message_error, :pending_keys, :quit, :registers, :grammar, :last_find, :segments, :prompt, :prompt_owner, :prompt_id)
+    # plugin's id for it, all "" when none is open), and the repetition a
+    # blockwise insert owes when insert mode is left. The current window,
+    # its buffer, and its cursor are reached through the current tab page,
+    # and so is the visual selection, which the current window owns. A
+    # Struct record: mutable, with a reader and a writer per member.
+    class EditorState < Struct.new(:buffers, :tabs, :tab_index, :mode, :options, :timeoutlen, :cmdline, :message, :message_error, :pending_keys, :quit, :registers, :grammar, :last_find, :segments, :prompt, :prompt_owner, :prompt_id, :block_insert)
       # @rbs @buffers: Array[untyped]
       # @rbs @tabs: Array[untyped]
       # @rbs @tab_index: Integer
@@ -30,6 +31,7 @@ module Carat
       # @rbs @prompt: String
       # @rbs @prompt_owner: String
       # @rbs @prompt_id: String
+      # @rbs @block_insert: BlockInsert
 
       # The lists are stored through the writers, not passed to super, so
       # their element type is the pinned one; the rest follows for symmetry.
@@ -56,6 +58,7 @@ module Carat
         self.prompt = ""
         self.prompt_owner = ""
         self.prompt_id = ""
+        self.block_insert = BlockInsert.new
       end
 
       # Whether a plugin's prompt holds the command line.
@@ -92,12 +95,39 @@ module Carat
       end
 
       # The largest column the cursor may occupy on a row in the current
-      # mode: past the last character in insert mode, on it otherwise.
+      # mode: past the last character in insert mode and on the end of
+      # the line in the visual modes, where it selects the line break, on
+      # the last character otherwise.
       #: (Integer) -> Integer
       def max_col(row)
         len = buffer.line(row).length
-        return len if mode == Mode::INSERT
+        return len if mode == Mode::INSERT || Mode.visual?(mode)
         len > 0 ? len - 1 : 0
+      end
+
+      # ---------------------------------------------------------- selection
+
+      # The visual selection of the current window: its anchor, its cursor,
+      # the kind the mode gives, and whether "$" set the wanted column to
+      # the line end. Outside the visual modes the kind is :none.
+      #: () -> Selection
+      def selection
+        Selection.new(window.anchor, cursor.position, Mode.visual_kind(mode), cursor.want_col < 0)
+      end
+
+      # Leaves visual mode: the selection is stored on the window for
+      # "gv", the mode returns to normal, and the cursor moves onto the
+      # last character when it rested on the end of the line. Returns the
+      # selection that was left.
+      #: () -> Selection
+      def end_visual
+        current = selection
+        window.last_selection = current
+        self.mode = Mode::NORMAL
+        c = cursor
+        max = max_col(c.row)
+        c.col = max if c.col > max
+        current
       end
 
       # ----------------------------------------------------------- messages

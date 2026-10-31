@@ -3,6 +3,7 @@ require_relative "../domain/frame"
 require_relative "../domain/highlight"
 require_relative "../domain/display_width"
 require_relative "../domain/layout"
+require_relative "../domain/selection"
 
 module Carat
   module Adapters
@@ -12,12 +13,16 @@ module Carat
     # text with tabs expanded, tilde rows, a status line under it with the
     # plugins' segments on the current window's), a separator column
     # between windows side by side, and the message or command line row
-    # (a plugin's prompt in place of the colon) with the keys of a pending command at its right edge. It arranges the
-    # layout and scrolls every window first so the state and the frame
+    # (a plugin's prompt in place of the colon) with the keys of a pending
+    # command at its right edge. In a visual mode the current window draws
+    # its selection with the Visual highlight, leaving the cell under the
+    # cursor in its own highlight so the cursor shows on top. It arranges
+    # the layout and scrolls every window first so the state and the frame
     # agree, and places the cursor in the current window.
     class FramePresenter
       SHOWCMD_WIDTH = 10
       SEPARATOR = "│"
+      FAR = 1 << 30
 
       # @rbs @frame: Domain::Frame?
 
@@ -40,11 +45,15 @@ module Carat
         layout.arrange(tabline, 0, area, cols)
 
         paint_tabline(frame, state, cols) if tabline == 1
+        visual = Domain::Mode.visual?(state.mode)
+        none = Domain::Selection.none
         ids = layout.leaves
         i = 0
         while i < ids.length
           id = ids[i]
-          paint_window(frame, layout.window_at(id), id == tab.current, options, tabstop, state.segments)
+          current = id == tab.current
+          selection = current && visual ? state.selection : none
+          paint_window(frame, layout.window_at(id), current, options, tabstop, state.segments, selection)
           i += 1
         end
         paint_separators(frame, layout, layout.root)
@@ -60,6 +69,8 @@ module Carat
           cursor_dcol = display_col(window.buffer.line(cursor.row), cursor.col, tabstop)
           frame.cursor_row = clamp(window.row + cursor.row - window.top, rows - 1)
           frame.cursor_col = clamp(window.col + gutter + cursor_dcol - window.left, cols - 1)
+          under = frame.cell(frame.cursor_row, frame.cursor_col)
+          under.hl = Domain::Highlight::NORMAL if visual && under.hl == Domain::Highlight::VISUAL
         end
         frame.cursor_shape = state.mode == Domain::Mode::INSERT ? :bar : :block
         frame
@@ -83,13 +94,7 @@ module Carat
       # The display column where code-point column col of line starts.
       #: (String, Integer, Integer) -> Integer
       def display_col(line, col, tabstop)
-        dcol = 0
-        i = 0
-        while i < col && i < line.length
-          dcol += char_width(line[i, 1], dcol, tabstop)
-          i += 1
-        end
-        dcol
+        Domain::DisplayWidth.column(line, col, tabstop)
       end
 
       #: (String, Integer) -> Integer
@@ -103,11 +108,7 @@ module Carat
       # delete and the C1 controls take four as <xx>, matching shown_text.
       #: (String, Integer, Integer) -> Integer
       def char_width(ch, dcol, tabstop)
-        return tabstop - (dcol % tabstop) if ch == "\t"
-        code = ch.ord
-        return 2 if code < 32
-        return 4 if Domain::DisplayWidth.control?(code)
-        Domain::DisplayWidth.of(code)
+        Domain::DisplayWidth.cell(ch, dcol, tabstop)
       end
 
       #: (Integer, Integer) -> Integer
@@ -116,10 +117,11 @@ module Carat
         value > max ? max : value
       end
 
-      # One window: scrolled to its own cursor, then its gutter, text, tilde
-      # rows, and status line inside its rectangle.
-      #: (Domain::Frame, Domain::Window, bool, Domain::Options, Integer, Hash[String, String]) -> void
-      def paint_window(frame, window, current, options, tabstop, segments)
+      # One window: scrolled to its own cursor, then its gutter, text with
+      # the selection when it has one, tilde rows, and status line inside
+      # its rectangle.
+      #: (Domain::Frame, Domain::Window, bool, Domain::Options, Integer, Hash[String, String], Domain::Selection) -> void
+      def paint_window(frame, window, current, options, tabstop, segments, selection)
         buffer = window.buffer
         cursor = window.cursor
         gutter = window.gutter_width(options)
@@ -129,13 +131,16 @@ module Carat
         window.scroll_to_row(cursor.row, buffer.line_count, height, options.scrolloff)
         cursor_dcol = display_col(buffer.line(cursor.row), cursor.col, tabstop)
         window.scroll_to_col(cursor_dcol, text_width)
+        block = selection.kind == :blockwise ? selection.block(buffer, tabstop) : Domain::Block.new(0, -1, 1, 0, false)
         i = 0
         while i < height
           frame_row = window.row + i
           row = window.top + i
           if row < buffer.line_count
+            line = buffer.line(row)
             paint_gutter(frame, frame_row, window.col, window.width, row, gutter, cursor.row, options, buffer)
-            paint_line(frame, frame_row, window.col + gutter, buffer.line(row), text_width, window.left, tabstop)
+            paint_line(frame, frame_row, window.col + gutter, line, text_width, window.left, tabstop)
+            paint_selection(frame, frame_row, window.col + gutter, line, text_width, window.left, tabstop, selection.span(buffer, row, tabstop), block)
           else
             frame.put(frame_row, window.col, "~", Domain::Highlight::NON_TEXT)
           end
@@ -189,6 +194,33 @@ module Carat
           dcol += w
           i += 1
         end
+      end
+
+      # Paints the Visual highlight over the selected part of a line that
+      # paint_line drew: the display columns of span, or of the block on a
+      # block's row, cell by cell so a tab is covered only where selected,
+      # and the cell after the last character when the line break is
+      # selected.
+      #: (Domain::Frame, Integer, Integer, String, Integer, Integer, Integer, Domain::Span, Domain::Block) -> void
+      def paint_selection(frame, frame_row, col, line, width, left, tabstop, span, block)
+        return if span.empty?
+        line_width = display_col(line, line.length, tabstop)
+        from = display_col(line, span.from, tabstop)
+        to = display_col(line, span.to, tabstop) - 1
+        if block.top <= block.bottom
+          return if line_width < block.left
+          from = block.left
+          to = block.to_end ? FAR : block.right
+          to = line_width - 1 if to > line_width - 1
+        end
+        to = line_width if span.eol
+        dcol = from > left ? from : left
+        while dcol <= to && dcol < left + width
+          frame.cell(frame_row, col + dcol - left).hl = Domain::Highlight::VISUAL
+          dcol += 1
+        end
+        return unless span.eol && line_width >= left && line_width < left + width
+        frame.put(frame_row, col + line_width - left, " ", Domain::Highlight::VISUAL)
       end
 
       #: (String, Integer) -> String
@@ -300,6 +332,12 @@ module Carat
           frame.put(frame_row, 0, state.message, hl)
         elsif state.mode == Domain::Mode::INSERT
           frame.put(frame_row, 0, "-- INSERT --", Domain::Highlight::NORMAL)
+        elsif state.mode == Domain::Mode::VISUAL
+          frame.put(frame_row, 0, "-- VISUAL --", Domain::Highlight::NORMAL)
+        elsif state.mode == Domain::Mode::VISUAL_LINE
+          frame.put(frame_row, 0, "-- VISUAL LINE --", Domain::Highlight::NORMAL)
+        elsif state.mode == Domain::Mode::VISUAL_BLOCK
+          frame.put(frame_row, 0, "-- VISUAL BLOCK --", Domain::Highlight::NORMAL)
         end
         showcmd = state.showcmd
         return if showcmd.empty?

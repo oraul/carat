@@ -111,4 +111,27 @@ ok   the side window has no line numbers while the file window keeps them
 ok   its sign column still shows
 ok   the prompt row and the cursor after it
 ok   an ex command line keeps its colon
-adapters_frame_presenter: 113 passed, 0 failed
+ok   charwise: the anchor's cell is selected, the cursor's cell keeps its highlight
+ok   the charwise mode line
+ok   charwise across lines selects the first row's line end
+ok   and stops at the cursor on the last row
+ok   with the cursor first, its row is selected after it
+ok   and the anchor's row up to the anchor
+ok   linewise selects the whole row and its line end
+ok   but not the next row
+ok   the linewise mode line
+ok   an empty line shows its selected line end, under the cursor here
+ok   blockwise: the block's columns on the first row
+ok   a tab is selected only in the block's columns
+ok   the cursor's cell keeps its highlight
+ok   the blockwise mode line
+ok   a wide character fills the block's two columns
+ok   the same columns on the next row
+ok   after $ the block reaches every row's end
+ok   a shorter row ends at its line end, under the cursor here
+ok   a row ending before the block draws nothing
+ok   normal mode draws no selection
+ok   the current window, at the bottom, draws its selection
+ok   the other window on the same buffer draws none
+ok   on any row
+adapters_frame_presenter: 136 passed, 0 failed

@@ -32,6 +32,7 @@ module Carat
       OPERATORS = ["operator.delete", "operator.change", "operator.yank", "operator.indent", "operator.dedent"]
       CHAR_MOTIONS = ["motion.find_forward", "motion.find_backward", "motion.till_forward", "motion.till_backward"]
       REGISTER_SELECT = "register.select"
+      VISUAL_REPLACE = "visual.replace"
 
       #: () -> void
       def initialize
@@ -145,6 +146,30 @@ module Carat
         else
           accept_in_pending(action)
         end
+      end
+
+      # Takes the action the keymap resolved in a visual mode, where an
+      # operator acts on the selection at once instead of waiting for a
+      # motion: a register prefix and the actions that want a character
+      # (the find motions and "r") return :pending, every other action
+      # :complete, and a key arriving while a character was wanted :cancel.
+      #: (String, Array[Integer]) -> Symbol
+      def accept_visual(action, codes)
+        if wants_char?
+          reset
+          return :cancel
+        end
+        remember(codes)
+        if action == REGISTER_SELECT
+          self.want = :register
+          return :pending
+        end
+        self.action = action
+        if CHAR_MOTIONS.include?(action) || action == VISUAL_REPLACE
+          self.want = :char
+          return :pending
+        end
+        :complete
       end
 
       # The finished command; the grammar is reset for the next one.

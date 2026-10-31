@@ -341,4 +341,84 @@ s.prompt_owner = ""
 f = P.call(s, 6, 40)
 t.assert_equal([":a.rb", 5], [f.row_text(5), f.cursor_col], "an ex command line keeps its colon")
 
+# The visual selection: the Visual highlight on the selected cells of the
+# current window, the cell under the cursor left in its own highlight.
+VIS = D::Highlight::VISUAL
+NOR = D::Highlight::NORMAL
+
+# Renders lines in a visual mode with the anchor and the cursor given and
+# returns the frame; tabstop is 4 and the gutter four cells wide.
+def visual_frame(lines, mode, anchor, head)
+  s = state_for(lines, "a.txt")
+  s.mode = mode
+  s.window.anchor = Carat::Domain::Position.new(anchor[0], anchor[1])
+  s.cursor.move_to(head[0], head[1])
+  P.call(s, 6, 20)
+end
+
+# The highlight of each cell of a row from frame column 4, where the text
+# starts, for count cells.
+def highlights(frame, row, count)
+  out = []
+  c = 4
+  while c < 4 + count
+    out << frame.cell(row, c).hl
+    c += 1
+  end
+  out
+end
+
+f = visual_frame(["abc"], D::Mode::VISUAL, [0, 0], [0, 1])
+t.assert_equal([VIS, NOR, NOR, NOR], highlights(f, 0, 4), "charwise: the anchor's cell is selected, the cursor's cell keeps its highlight")
+t.assert_equal("-- VISUAL --", f.row_text(5), "the charwise mode line")
+f = visual_frame(["ab", "cd"], D::Mode::VISUAL, [0, 1], [1, 0])
+t.assert_equal([NOR, VIS, VIS], highlights(f, 0, 3), "charwise across lines selects the first row's line end")
+t.assert_equal([NOR, NOR, NOR], highlights(f, 1, 3), "and stops at the cursor on the last row")
+f = visual_frame(["ab", "cd"], D::Mode::VISUAL, [1, 1], [0, 1])
+t.assert_equal([NOR, NOR, VIS], highlights(f, 0, 3), "with the cursor first, its row is selected after it")
+t.assert_equal([VIS, VIS, NOR], highlights(f, 1, 3), "and the anchor's row up to the anchor")
+f = visual_frame(["ab", "cd"], D::Mode::VISUAL_LINE, [0, 0], [0, 0])
+t.assert_equal([NOR, VIS, VIS], highlights(f, 0, 3), "linewise selects the whole row and its line end")
+t.assert_equal([NOR, NOR, NOR], highlights(f, 1, 3), "but not the next row")
+t.assert_equal("-- VISUAL LINE --", f.row_text(5), "the linewise mode line")
+f = visual_frame(["", "x"], D::Mode::VISUAL_LINE, [1, 0], [0, 0])
+t.assert_equal([NOR, VIS], [f.cell(0, 4).hl, f.cell(1, 5).hl], "an empty line shows its selected line end, under the cursor here")
+f = visual_frame(["abcd", "a\tb", "abcd"], D::Mode::VISUAL_BLOCK, [0, 1], [2, 2])
+t.assert_equal([NOR, VIS, VIS, NOR], highlights(f, 0, 4), "blockwise: the block's columns on the first row")
+t.assert_equal([NOR, VIS, VIS, NOR, NOR], highlights(f, 1, 5), "a tab is selected only in the block's columns")
+t.assert_equal([NOR, VIS, NOR, NOR], highlights(f, 2, 4), "the cursor's cell keeps its highlight")
+t.assert_equal("-- VISUAL BLOCK --", f.row_text(5), "the blockwise mode line")
+f = visual_frame(["a中b", "abcd"], D::Mode::VISUAL_BLOCK, [0, 1], [1, 1])
+t.assert_equal([NOR, VIS, VIS, NOR], highlights(f, 0, 4), "a wide character fills the block's two columns")
+t.assert_equal([NOR, NOR, VIS, NOR], highlights(f, 1, 4), "the same columns on the next row")
+s = state_for(["abc", "a"], "a.txt")
+s.mode = D::Mode::VISUAL_BLOCK
+s.window.anchor = D::Position.new(0, 1)
+s.cursor.move_to(1, 1)
+s.cursor.want_col = -1
+f = P.call(s, 6, 20)
+t.assert_equal([NOR, VIS, VIS, VIS], highlights(f, 0, 4), "after $ the block reaches every row's end")
+t.assert_equal([NOR, NOR, NOR], highlights(f, 1, 3), "a shorter row ends at its line end, under the cursor here")
+s = state_for(["abcd", "a", "abcd"], "a.txt")
+s.mode = D::Mode::VISUAL_BLOCK
+s.window.anchor = D::Position.new(0, 2)
+s.cursor.move_to(2, 3)
+f = P.call(s, 6, 20)
+t.assert_equal([NOR, NOR], highlights(f, 1, 2), "a row ending before the block draws nothing")
+s.mode = D::Mode::NORMAL
+f = P.call(s, 6, 20)
+t.assert_equal([NOR, NOR, NOR, NOR], highlights(f, 0, 4), "normal mode draws no selection")
+
+# Two windows on one buffer: only the current one draws its selection.
+s = state_for(["one", "two", "three"], "a.txt")
+P.call(s, 9, 14)
+s.tab.layout.split(0, false, 0, 5)
+s.mode = D::Mode::VISUAL_LINE
+s.window.anchor = D::Position.new(0, 0)
+s.cursor.move_to(1, 0)
+f = P.call(s, 9, 14)
+t.assert_equal([VIS, VIS, VIS], highlights(f, 4, 3), "the current window, at the bottom, draws its selection")
+t.assert_equal([NOR, NOR, NOR], highlights(f, 0, 3), "the other window on the same buffer draws none")
+t.assert_equal([NOR, NOR, NOR], highlights(f, 1, 3), "on any row")
+
 t.finish

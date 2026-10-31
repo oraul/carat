@@ -50,4 +50,12 @@ t.assert_equal(["one\ntwo", true], [entry.text, entry.linewise], "appending char
 t.assert_equal(["two", false], [h.state.registers.read("").text, h.state.registers.read("").linewise], "the unnamed register holds the new text only")
 t.assert_equal(entry, h.state.registers.read("A"), "A reads the same entry as a")
 
+# A block yank stores a blockwise entry, and p puts it as a block.
+h = editor("ab\ncd\n")
+h.type("<C-v>jy")
+entry = h.state.registers.read("")
+t.assert_equal(["a\nc", :blockwise], [entry.text, entry.kind], "a block yank stores a blockwise entry")
+h.type("$p")
+t.assert_equal([["aba", "cdc"], [0, 2]], [h.lines, h.cursor], "p puts the block after the cursor on each row")
+
 t.finish

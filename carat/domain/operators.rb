@@ -2,6 +2,8 @@ require_relative "position"
 require_relative "range"
 require_relative "buffer"
 require_relative "registers"
+require_relative "display_width"
+require_relative "selection"
 
 module Carat
   module Domain
@@ -61,29 +63,171 @@ module Carat
       end
 
       # Joins count lines (at least two) starting at row and returns the
-      # column of the last join: leading blanks of each joined line are
-      # dropped and one space inserted unless the text so far ends in a
-      # blank or the joined line is empty or starts with ")".
-      #: (Buffer, Integer, Integer) -> Integer
-      def self.join(buffer, row, count)
+      # column of the last join. With spaces, as "J" does, leading blanks
+      # of each joined line are dropped and one space inserted unless the
+      # text so far ends in a blank or the joined line is empty or starts
+      # with ")"; without, as "gJ" does, the lines are joined as they are.
+      #: (Buffer, Integer, Integer, bool) -> Integer
+      def self.join(buffer, row, count, spaces)
         text = buffer.line(row)
         col = 0
         i = 1
         while i < count
           next_line = buffer.line(row + i)
-          j = 0
-          j += 1 while j < next_line.length && (next_line[j, 1] == " " || next_line[j, 1] == "\t")
-          rest = next_line[j, next_line.length - j]
           col = text.length
-          if !rest.empty? && !rest.start_with?(")") && !text.empty? && !text.end_with?(" ") && !text.end_with?("\t")
-            text = text + " " + rest
+          if spaces
+            j = 0
+            j += 1 while j < next_line.length && (next_line[j, 1] == " " || next_line[j, 1] == "\t")
+            rest = next_line[j, next_line.length - j]
+            if !rest.empty? && !rest.start_with?(")") && !text.empty? && !text.end_with?(" ") && !text.end_with?("\t")
+              text = text + " " + rest
+            else
+              text = text + rest
+            end
           else
-            text = text + rest
+            text = text + next_line
           end
           i += 1
         end
         buffer.set_lines(row, row + count, [text])
         col
+      end
+
+      # ------------------------------------------------------------ blocks
+
+      # The rows of a block as a blockwise entry, each the characters the
+      # block's columns meet.
+      #: (Buffer, Block, Integer) -> RegisterEntry
+      def self.extract_block(buffer, block, tabstop)
+        rows = []
+        r = block.top
+        while r <= block.bottom
+          line = buffer.line(r)
+          span = block.span(line, tabstop)
+          rows << line[span.from, span.to - span.from]
+          r += 1
+        end
+        RegisterEntry.block(rows)
+      end
+
+      # Removes the characters of a block from every row, in one edit.
+      #: (Buffer, Block, Integer) -> void
+      def self.delete_block(buffer, block, tabstop)
+        lines = []
+        r = block.top
+        while r <= block.bottom
+          line = buffer.line(r)
+          span = block.span(line, tabstop)
+          lines << line[0, span.from] + line[span.to, line.length - span.to]
+          r += 1
+        end
+        buffer.set_lines(block.top, block.bottom + 1, lines)
+      end
+
+      # Puts the rows of entry as a block from display column vcol of row
+      # downward, each row count times: a row too short is padded with
+      # spaces, rows past the end of the buffer are added, and each copy
+      # is padded to the block's width unless nothing follows it. Returns
+      # the position of the block's first character.
+      #: (Buffer, Integer, Integer, RegisterEntry, Integer, Integer) -> Position
+      def self.put_block(buffer, row, vcol, entry, count, tabstop)
+        rows = entry.lines
+        width = 0
+        i = 0
+        while i < rows.length
+          w = DisplayWidth.column(rows[i], rows[i].length, tabstop)
+          width = w if w > width
+          i += 1
+        end
+        first = 0
+        i = 0
+        while i < rows.length
+          r = row + i
+          buffer.set_lines(r, r, [""]) if r >= buffer.line_count
+          line = buffer.line(r)
+          line_width = DisplayWidth.column(line, line.length, tabstop)
+          line = line + (" " * (vcol - line_width)) if line_width < vcol
+          col = DisplayWidth.col_at(line, vcol, tabstop)
+          text = rows[i]
+          pad = " " * (width - DisplayWidth.column(text, text.length, tabstop))
+          piece = +""
+          k = 0
+          while k < count
+            piece << text
+            piece << pad if k < count - 1 || col < line.length
+            k += 1
+          end
+          buffer.set_lines(r, r + 1, [line[0, col] + piece + line[col, line.length - col]])
+          first = col if i == 0
+          i += 1
+        end
+        Position.new(row, first)
+      end
+
+      # Shifts the text of every row that goes past the block by amount
+      # steps of shiftwidth at the block's left edge: right inserts spaces
+      # there, left removes up to that many columns of blanks after it.
+      #: (Buffer, Block, Integer, Integer, Integer) -> void
+      def self.shift_block(buffer, block, amount, shiftwidth, tabstop)
+        width = shiftwidth > 0 ? shiftwidth : (tabstop > 0 ? tabstop : 8)
+        total = (amount < 0 ? -amount : amount) * width
+        lines = []
+        r = block.top
+        while r <= block.bottom
+          line = buffer.line(r)
+          line_width = DisplayWidth.column(line, line.length, tabstop)
+          short = block.to_end ? line_width < block.left : line_width <= block.right
+          if short
+            lines << line
+          else
+            col = block.span(line, tabstop).from
+            if amount > 0
+              lines << line[0, col] + (" " * total) + line[col, line.length - col]
+            else
+              lines << line[0, col] + unindent(line, col, total, tabstop)
+            end
+          end
+          r += 1
+        end
+        buffer.set_lines(block.top, block.bottom + 1, lines)
+      end
+
+      # The part of line from col with up to total columns of blanks
+      # removed from its start; a tab that reaches past total leaves the
+      # rest of its width as spaces.
+      #: (String, Integer, Integer, Integer) -> String
+      def self.unindent(line, col, total, tabstop)
+        keep = ""
+        removed = 0
+        j = col
+        while j < line.length && removed < total
+          ch = line[j, 1]
+          break unless ch == " " || ch == "\t"
+          w = DisplayWidth.cell(ch, DisplayWidth.column(line, j, tabstop), tabstop)
+          if removed + w > total
+            keep = " " * (removed + w - total)
+            removed = total
+          else
+            removed += w
+          end
+          j += 1
+        end
+        keep + line[j, line.length - j]
+      end
+
+      # -------------------------------------------------------------- case
+
+      # text changed as the visual "~", "u", "U", and "r" change it: how is
+      # :toggle, :lower, :upper, or :replace, which puts char in place of
+      # every character.
+      #: (String, Symbol, String) -> String
+      def self.recase(text, how, char)
+        case how
+        when :toggle then text.swapcase
+        when :lower then text.downcase
+        when :upper then text.upcase
+        else char * text.length
+        end
       end
 
       # Shifts rows from..to by amount steps of shiftwidth: right when
