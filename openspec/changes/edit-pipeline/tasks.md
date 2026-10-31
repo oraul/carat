@@ -21,7 +21,7 @@
 ## 4. Performance and documentation
 
 - [ ] 4.1 Benchmark `ddP`, `o<Esc>dd`, and typing in the middle of a line on 100,000 lines with the scratch harness against a copy of the branch, and the allocation report; verify the key handling is under 30 us per key for the first two and at or below the baseline for typing
-- [ ] 4.2 Check `make types` for `Buffer`, `ChangeRecord`, `Transaction`, and `LineSplice` members and keep `make diagnose` clean; verify by the command output
+- [x] 4.2 Check `make types` for `Buffer`, `ChangeRecord`, `Transaction`, and `LineSplice` members and keep `make diagnose` clean; verify by the command output
 - [x] 4.3 Update `CLAUDE.md` (Layout for `buffer.rb` and the new files, the edit convention), `docs/architecture.md` (entities and a section on the edit path), and `docs/backlog.md` (the six findings); verify by reading the docs against the code
 
 ## Workflow follow-up
