@@ -114,7 +114,7 @@ The line of the file shown in the current window SHALL carry the `current` icon 
 - **THEN** the cursor is on the line of "docs"
 
 ### Requirement: Files open in splits and tab pages
-`s` and `v` on a file SHALL open it in a new window split horizontally or vertically from the previously used file window, and `t` SHALL open it in a new tab page; on a directory they SHALL do nothing.
+`s` and `v` on a file SHALL open it in a new window split horizontally or vertically from the previously used file window, and `t` SHALL open it in a new tab page; on a directory they SHALL do nothing. A file name holding a space or a `|` SHALL open as it is named, since the tree opens files without building an ex command line.
 
 #### Scenario: Horizontal split
 - **WHEN** `s` is pressed on "b.rb" with the tree and one file window
@@ -127,6 +127,14 @@ The line of the file shown in the current window SHALL carry the `current` icon 
 #### Scenario: Tab page
 - **WHEN** `t` is pressed on "b.rb"
 - **THEN** there are two tab pages and the current one shows "b.rb"
+
+#### Scenario: A name with a space in a split
+- **WHEN** `s` is pressed on "my notes.md"
+- **THEN** there are three windows and the current one shows "my notes.md" with its text
+
+#### Scenario: A name with a bar in a tab page
+- **WHEN** `t` is pressed on "a|b.md"
+- **THEN** there are two tab pages and the current one shows "a|b.md" with its text
 
 ### Requirement: a creates a file or a directory
 `a` SHALL prompt for a name in the command-line row and create, under the directory of the entry under the cursor (the entry itself when it is a directory, the root on the root line), an empty file, or a directory when the name ends with "/"; the tree SHALL be redrawn with that directory expanded and the cursor on the new entry. An empty name, Escape, or a refusal from the host SHALL create nothing, a refusal showing its message as an error.
