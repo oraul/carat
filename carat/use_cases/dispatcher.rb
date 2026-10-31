@@ -149,7 +149,7 @@ module Carat
         when "tab.previous" then @switch_tab.previous(state, command.count)
         else
           if action.start_with?("plugin.")
-            @plugins.action(state, action, command)
+            @plugins.action(action, command)
           else
             state.show("Not implemented: #{action}", false)
           end

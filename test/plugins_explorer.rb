@@ -35,10 +35,10 @@ class FakeHost < Carat::PluginApi::Host
     Carat::PluginApi::FileInfo.new(true, info["size"], 0, info["directory"] == 1, info["symlink"] == 1)
   end
 
-  # Returns the glyph.
+  # Returns a TextResponse with the glyph.
   # @rbs name: String
   def icon(name)
-    Carat::Domain::Icons.glyph(name, @set)
+    Carat::PluginApi::TextResponse.success(Carat::Domain::Icons.glyph(name, @set))
   end
 end
 

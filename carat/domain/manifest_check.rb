@@ -6,19 +6,28 @@ module Carat
     # The rules a plugin manifest must obey before the host registers it.
     # check returns every rule broken, in a fixed order, as one line each
     # without the plugin name, so the host can prefix it; an empty list
-    # means the manifest is accepted.
+    # means the manifest is accepted. The rules that involve other plugins,
+    # unique names and ex commands, are the host's.
     module ManifestCheck
       NAME = /\A[a-z][a-z0-9_]*\z/
       ACTION = /\A[a-z0-9_]+\z/
       COMMAND = /\A[A-Z][A-Za-z0-9]*\z/
       API = /\A[0-9]+\.[0-9]+\z/
 
+      # Every member is checked for its type before it is used, so a
+      # manifest of the wrong shape is reported rather than raising.
       #: (PluginApi::Manifest) -> Array[String]
       def self.check(manifest)
         problems = []
         name = manifest.name
+        unless name.is_a?(String) && manifest.api_version.is_a?(String)
+          problems << "name and api_version must be strings"
+          return problems
+        end
         problems << "name #{name.inspect} is not lowercase letters, digits, and underscores starting with a letter" unless name.match?(NAME)
         problems.concat(check_api(manifest.api_version))
+        problems.concat(check_shapes(manifest))
+        return problems unless shapes_ok?(manifest)
         problems.concat(check_actions(name, manifest.actions))
         problems.concat(check_commands(manifest.commands))
         problems.concat(check_events(manifest.events))
@@ -27,13 +36,43 @@ module Carat
         problems
       end
 
-      # The refusal of a newer major version, or "" when the version is
-      # accepted or malformed (malformed is reported by check).
+      # The members that are not of the type the rules read.
+      #: (PluginApi::Manifest) -> Array[String]
+      def self.check_shapes(manifest)
+        problems = []
+        problems << "actions is not an object of action names" unless string_hash?(manifest.actions)
+        problems << "commands is not an object of command names" unless string_hash?(manifest.commands)
+        problems << "events is not a list of event names" unless manifest.events.is_a?(Array)
+        problems << "options is not an object of option defaults" unless string_hash?(manifest.options)
+        problems << "option_types is not an object of option types" unless manifest.option_types.is_a?(Hash)
+        problems
+      end
+
+      #: (PluginApi::Manifest) -> bool
+      def self.shapes_ok?(manifest)
+        check_shapes(manifest).empty?
+      end
+
+      # Whether the value is a hash from strings to strings.
+      #: (untyped) -> bool
+      def self.string_hash?(value)
+        return false unless value.is_a?(Hash)
+        value.each do |key, item|
+          return false unless key.is_a?(String) && item.is_a?(String)
+        end
+        true
+      end
+
+      # The refusal of the version, or "" when it is accepted or malformed
+      # (malformed is reported by check): a different major, or the host's
+      # major with a newer minor, is refused.
       #: (String) -> String
       def self.refusal(api_version)
         return "" unless api_version.match?(API)
-        major = api_version.split(".")[0].to_i
-        return "" if major <= PluginApi::MAJOR
+        parts = api_version.split(".")
+        major = parts[0].to_i
+        minor = parts[1].to_i
+        return "" if major == PluginApi::MAJOR && minor <= PluginApi::MINOR
         "needs API #{api_version}, the host has #{PluginApi::VERSION}"
       end
 
@@ -49,7 +88,7 @@ module Carat
         problems
       end
 
-      #: (String, Hash[String, String]) -> Array[String]
+      #: (String, untyped) -> Array[String]
       def self.check_actions(name, actions)
         problems = []
         prefix = "plugin.#{name}."
@@ -61,7 +100,7 @@ module Carat
         problems
       end
 
-      #: (Hash[String, String]) -> Array[String]
+      #: (untyped) -> Array[String]
       def self.check_commands(commands)
         problems = []
         commands.each do |command, abbreviation|
@@ -74,14 +113,15 @@ module Carat
         problems
       end
 
-      # The list is untyped because a signature naming Array[Symbol] is
-      # not applied by the compiler.
+      # Event names are strings; a symbol, as API 1.1 spelled them, is
+      # read as its name.
       #: (untyped) -> Array[String]
       def self.check_events(events)
         problems = []
         return problems unless events.is_a?(Array)
         events.each do |event|
-          problems << "event #{event} is unknown" unless PluginApi::EVENTS.include?(event)
+          known = (event.is_a?(String) || event.is_a?(Symbol)) && PluginApi::EVENTS.include?(event.to_s)
+          problems << "event #{event} is unknown" unless known
         end
         problems
       end
@@ -89,7 +129,7 @@ module Carat
       # The bindings must build without errors, and a value that is an
       # action name must be one of the plugin's own actions; a key sequence
       # to replay is accepted as it is.
-      #: (Hash[String, String], untyped) -> Array[String]
+      #: (untyped, untyped) -> Array[String]
       def self.check_bindings(actions, bindings)
         problems = []
         return problems if bindings.nil?
@@ -108,27 +148,25 @@ module Carat
           next unless map.is_a?(Hash)
           map.each do |key, value|
             next unless value.is_a?(String)
-            next unless action_name?(value)
-            problems << "binding #{mode}.#{key} names #{value.inspect}, not one of the plugin's actions" unless actions.key?(value)
+            action = value.to_s
+            next unless Keymap.action_name?(action)
+            problems << "binding #{mode}.#{key} names #{action.inspect}, not one of the plugin's actions" unless actions.key?(action)
           end
         end
         problems
       end
 
-      #: (String) -> bool
-      def self.action_name?(value)
-        value.match?(/\A[a-z0-9_]+(\.[a-z0-9_]+)+\z/)
-      end
-
-      # Every option has a type among OPTION_TYPES and a default of that
-      # type; a typed option with no default and a default with no type are
-      # both reported.
-      #: (Hash[String, String], Hash[String, Symbol]) -> Array[String]
+      # Every option has a type among OPTION_TYPES, a string or, as API
+      # 1.1 spelled it, a symbol, and a default of that type; a typed
+      # option with no default and a default with no type are both
+      # reported.
+      #: (untyped, untyped) -> Array[String]
       def self.check_options(options, option_types)
         problems = []
         options.each do |name, default|
-          type = option_types[name]
-          if type.nil?
+          raw = option_types[name]
+          type = raw.nil? ? "" : raw.to_s
+          if raw.nil?
             problems << "option #{name.inspect} has no type"
           elsif !PluginApi::OPTION_TYPES.include?(type)
             problems << "option #{name.inspect} has the unknown type #{type}"
@@ -143,11 +181,11 @@ module Carat
       end
 
       # Whether a text value is a valid representation of the type.
-      #: (String, Symbol) -> bool
+      #: (String, String) -> bool
       def self.text_of_type?(text, type)
         case type
-        when :bool then text == "true" || text == "false"
-        when :integer then text.match?(/\A-?[0-9]+\z/)
+        when "bool" then text == "true" || text == "false"
+        when "integer" then text.match?(/\A-?[0-9]+\z/)
         else true
         end
       end

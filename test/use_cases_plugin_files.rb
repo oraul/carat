@@ -19,7 +19,7 @@ class Fs < Carat::PluginApi::Plugin
   # Returns the manifest.
   # @rbs skip
   def manifest
-    Carat::PluginApi::Manifest.new("fs", "1.0.0", "1.1", { "plugin.fs.list" => "Open the list" }, {}, { "normal" => { "<leader>fl" => "plugin.fs.list" } }, [], {}, {})
+    Carat::PluginApi::Manifest.new("fs", "1.0.0", "1.2", { "plugin.fs.list" => "Open the list" }, {}, { "normal" => { "<leader>fl" => "plugin.fs.list" } }, [], {}, {})
   end
 
   #: (Carat::PluginApi::Host) -> void
@@ -29,7 +29,7 @@ class Fs < Carat::PluginApi::Plugin
 
   #: (String, Carat::PluginApi::Context) -> void
   def on_action(name, context)
-    host.open_scratch("list", :left, 20, ["x", "y"], nil)
+    host.open_scratch("list", "left", 20, ["x", "y"], nil)
   end
 
   #: (Carat::PluginApi::Input) -> void
@@ -97,13 +97,13 @@ t.assert_equal(1, files.stat("src")["symlink"], "a path marked as a link stats a
 h, fs = editor
 host = fs.host
 
-# Working directory and window numbers.
-t.assert_equal("/w", host.working_directory, "the working directory is absolute")
-t.assert_equal([0, 1], [host.scratch_window("list").number, host.editing_window.number], "no list is shown and window 1 edits a file")
+# Working directory and window ids.
+t.assert_equal("/w", host.working_directory.text, "the working directory is absolute")
+t.assert_equal([0, 1], [host.scratch_window("list").window, host.editing_window.window], "no list is shown and the first window, id 1, edits a file")
 h.type(" fl")
-t.assert_equal([1, 2, 0], [host.scratch_window("list").number, host.editing_window.number, host.scratch_window("nope").number], "the list is window 1 and the previously used window 2 edits")
+t.assert_equal([2, 1, 0], [host.scratch_window("list").window, host.editing_window.window, host.scratch_window("nope").window], "the list is window id 2 and the previously used window, id 1, edits")
 h.type("<C-w>l<C-w>c")
-t.assert_equal([1, 0], [h.window_count, host.editing_window.number], "with only the list left nothing edits")
+t.assert_equal([1, 0], [h.window_count, host.editing_window.window], "with only the list left nothing edits")
 
 # Creating files and directories.
 h, fs = editor

@@ -48,11 +48,18 @@ module Carat
       # has checked that another window exists somewhere.
       #: (Domain::EditorState, Integer) -> void
       def remove(state, id)
-        tab = state.tab
+        remove_in(state, state.tab_index, id)
+      end
+
+      # Removes leaf id from the tab page at index, as remove does for the
+      # current one.
+      #: (Domain::EditorState, Integer, Integer) -> void
+      def remove_in(state, index, id)
+        tab = state.tab_at(index)
         layout = tab.layout
         buffer = layout.window_at(id).buffer
         if layout.leaf_count <= 1
-          state.remove_tab(state.tab_index)
+          state.remove_tab(index)
         else
           taker = layout.close(id)
           tab.current = layout.first_leaf(taker) if id == tab.current

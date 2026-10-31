@@ -3,6 +3,8 @@ require_relative "range"
 require_relative "line_splice"
 require_relative "change_record"
 require_relative "transaction"
+require_relative "sign_layer"
+require_relative "buffer_feed"
 
 module Carat
   module Domain
@@ -26,11 +28,13 @@ module Carat
     # A scratch buffer, one a plugin owns, has an owner (the plugin name,
     # empty for a file buffer), a title shown in place of the path, and a
     # keymap of its own that wins over the mode's keymap while the cursor
-    # is in its window. Signs are glyphs on rows, keyed by the row as text
-    # (a hash pins only with string keys), with the plugin that placed each
-    # one in sign_owners. A Struct record: mutable, with a reader and a
-    # writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :signs, :sign_owners, :changes, :id, :transaction, :last_transaction, :closed_count)
+    # is in its window. Signs are kept per plugin in sign_layers, sorted by
+    # the plugin's priority, each with one mark per line that the splice
+    # moves with inserted and deleted lines. feed is the editor's buffer
+    # feed while the buffer is listed (nil before): renames and closed
+    # transactions are recorded there for the plugin host. A Struct
+    # record: mutable, with a reader and a writer per member.
+    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
@@ -38,17 +42,16 @@ module Carat
       # @rbs @owner: String
       # @rbs @title: String
       # @rbs @keymap: Keymap?
-      # @rbs @signs: Hash[String, String]
-      # @rbs @sign_owners: Hash[String, String]
+      # @rbs @sign_layers: Array[untyped]
       # @rbs @changes: Integer
       # @rbs @id: Integer
       # @rbs @transaction: Transaction?
       # @rbs @last_transaction: Transaction?
       # @rbs @closed_count: Integer
+      # @rbs @feed: BufferFeed?
 
       # The original members go through super and the later members
-      # through the writers, so the empty sign tables take the pinned
-      # types.
+      # through the writers, so the empty sign list takes the pinned type.
       #: (Array[String], String?, String) -> void
       def initialize(lines, path, line_ending)
         lines << "" if lines.empty?
@@ -56,13 +59,13 @@ module Carat
         self.owner = ""
         self.title = ""
         self.keymap = nil
-        self.signs = {}
-        self.sign_owners = {}
+        self.sign_layers = []
         self.changes = 0
         self.id = 0
         self.transaction = nil
         self.last_transaction = nil
         self.closed_count = 0
+        self.feed = nil
       end
 
       # Whether an edit changed the text since the last load, reload, or
@@ -101,10 +104,85 @@ module Carat
         title.empty? ? nil : title
       end
 
+      # The path, or "" for a buffer without one.
+      #: () -> String
+      def path_text
+        current = path
+        current.nil? ? "" : current
+      end
+
+      # Gives the buffer a new path and records the rename in the feed,
+      # with the old path, when the buffer is listed.
+      #: (String) -> void
+      def rename(new_path)
+        old = path_text
+        self.path = new_path
+        sink = feed
+        sink.note("rename", id, new_path, old) unless sink.nil? || old == new_path
+      end
+
+      # ------------------------------------------------------------- signs
+
       # Whether any sign is placed on the buffer.
       #: () -> bool
       def signs?
-        !signs.empty?
+        !sign_layers.empty?
+      end
+
+      #: (Integer) -> SignLayer
+      def layer_at(i)
+        sign_layers[i]
+      end
+
+      # Places the glyph on the row in the owner's layer, which is made,
+      # in priority order, when the owner has none yet. The row must be
+      # inside the buffer.
+      #: (String, Integer, Integer, String) -> void
+      def place_sign(owner, priority, row, glyph)
+        i = 0
+        while i < sign_layers.length
+          layer = layer_at(i)
+          if layer.owner == owner
+            layer.place(row, glyph)
+            return
+          end
+          i += 1
+        end
+        fresh = SignLayer.new(owner, priority, lines.length)
+        fresh.place(row, glyph)
+        at = 0
+        at += 1 while at < sign_layers.length && layer_at(at).priority <= priority
+        sign_layers.insert(at, fresh)
+        nil
+      end
+
+      # Removes the owner's signs and returns how many rows they marked.
+      #: (String) -> Integer
+      def clear_signs(owner)
+        i = 0
+        while i < sign_layers.length
+          layer = layer_at(i)
+          if layer.owner == owner
+            count = layer.count
+            sign_layers.delete_at(i)
+            return count
+          end
+          i += 1
+        end
+        0
+      end
+
+      # The glyph shown on the row: the mark of the layer with the highest
+      # priority that marks it, "" for none.
+      #: (Integer) -> String
+      def sign_at(row)
+        i = 0
+        while i < sign_layers.length
+          glyph = layer_at(i).glyph_at(row)
+          return glyph unless glyph.empty?
+          i += 1
+        end
+        ""
       end
 
       # Splits file text into lines. The line ending is "\r\n" when the first
@@ -281,6 +359,33 @@ module Carat
         !transaction.nil?
       end
 
+      # The number of records in the open transaction, 0 when none is open.
+      #: () -> Integer
+      def transaction_size
+        open = transaction
+        open.nil? ? 0 : open.size
+      end
+
+      # Undoes the records of the open transaction after the first count,
+      # last first, without recording anything: the lines, the change
+      # counter, and the signs return to how they were. The plugin host
+      # uses it when applying a validated edit request still fails.
+      #: (Integer) -> void
+      def revert_to(count)
+        open = transaction
+        return if open.nil?
+        i = open.size - 1
+        while i >= count
+          change = open.record_at(i)
+          gone = change.inserted.length
+          LineSplice.apply(lines, change.row, change.row + gone, change.removed)
+          shift_signs(change.row, gone, change.removed.length)
+          self.changes = changes - 1
+          i -= 1
+        end
+        open.truncate(count)
+      end
+
       private
 
       # The one place the line array changes. Clamps the rows into the
@@ -299,6 +404,7 @@ module Carat
         inserted = [""] if inserted.empty? && a == 0 && b == count
         removed = lines[a, b - a]
         LineSplice.apply(lines, a, b, inserted)
+        shift_signs(a, b - a, inserted.length)
         self.changes = changes + 1
         record(ChangeRecord.new(id, a, removed, inserted))
       end
@@ -309,20 +415,49 @@ module Carat
       def record(change)
         open = transaction
         unless open.nil?
-          open.add(change)
+          open.add(change, cause)
           return
         end
         at = Position.new(change.row, 0)
         single = Transaction.new(id, at)
-        single.add(change)
+        single.add(change, cause)
         close(single, at)
       end
 
+      # The plugin whose call is running, "" for none or an unlisted
+      # buffer.
+      #: () -> String
+      def cause
+        sink = feed
+        sink.nil? ? "" : sink.cause
+      end
+
+      # Keeps the closed transaction for the undo change and records its
+      # span in the feed as a change.
       #: (Transaction, Position) -> void
       def close(done, after)
         done.after = after
         self.last_transaction = done
         self.closed_count = closed_count + 1
+        sink = feed
+        return if sink.nil?
+        span = done.span
+        notice = BufferNotice.new("change", id, path_text, "", done.cause)
+        notice.row = span[0]
+        notice.removed = span[1]
+        notice.inserted = span[2]
+        sink.push(notice)
+      end
+
+      # Moves every sign layer by an edit at row that replaced removed rows
+      # with inserted ones.
+      #: (Integer, Integer, Integer) -> void
+      def shift_signs(row, removed, inserted)
+        i = 0
+        while i < sign_layers.length
+          LineSplice.shift_marks(layer_at(i).marks, row, removed, inserted)
+          i += 1
+        end
       end
 
       # head, then text, then tail, split into lines at each newline of

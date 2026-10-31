@@ -248,4 +248,22 @@ h = editor_on("a.md", config_with("ascii"))
 h.type(" e")
 t.assert_equal(["│", "~"], [h.row(0)[30, 1], h.row(5)[0, 1]], "the tree has no line numbers and a separator at its right")
 
+# Names with a space or a bar open as named, never parsed as an ex
+# command line.
+h = session(" e")
+h.files.put("my notes.md", "spaced\n")
+h.files.put("a|b.md", "barred\n")
+h.type("R")
+t.assert_equal(["   m a|b.md", "   m my notes.md"], [tree_lines(h)[4], tree_lines(h)[6]], "the tree lists both names")
+h.type("7Gs")
+t.assert_equal([3, "my notes.md", ["spaced"]], [h.window_count, h.buffer.path, h.lines], "s opens a name with a space in a split")
+h = session(" e")
+h.files.put("a|b.md", "barred\n")
+h.type("R5Gt")
+t.assert_equal([2, "a|b.md", ["barred"]], [h.tab_count, h.buffer.path, h.lines], "t opens a name with a bar in a tab page")
+h = session(" e")
+h.files.put("my notes.md", "spaced\n")
+h.type("R6Gv")
+t.assert_equal([3, "my notes.md", ["spaced"]], [h.window_count, h.buffer.path, h.lines], "v opens a name with a space in a vertical split")
+
 t.finish

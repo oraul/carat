@@ -16,9 +16,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The plugin API cannot read or set the visual selection
 
-- Where: `Carat::PluginApi::Host` and `BufferView` in `carat/plugin_api.rb`, and the requests in `carat/use_cases/plugins/plugin_host.rb`; `docs/architecture.md` section 9.1 lists reading the selection and setting one among the requests a plugin can make.
+- Where: `Carat::PluginApi::Host` and `BufferView` in `carat/plugin_api.rb`, and the requests in `carat/use_cases/plugins/buffer_requests.rb`; `docs/architecture.md` section 9.1 lists reading the selection and setting one among the requests a plugin can make.
 - Why it matters: the visual modes keep each window's selection (its anchor, the cursor, and the kind from the mode, plus the last selection for `gv`), but a plugin cannot see it, so a plugin action bound in a visual map (a formatter, a comment toggle, a finder seeded with the selected text) has no way to know what was selected. The `visual-modes` change left the API at 1.1, because the plugin API was outside its scope.
-- Fix outline: add the selection to `BufferView` (kind, anchor row and column, cursor row and column, `""` kind outside visual mode) and a `set_selection(kind, from_row, from_col, to_row, to_col)` request validated like `move_cursor`, bump `PluginApi::VERSION` to 1.2, and document both in `docs/plugins.md`.
+- Fix outline: add the selection to `BufferView` (kind, anchor row and column, cursor row and column, `""` kind outside visual mode) and a `set_selection(kind, from_row, from_col, to_row, to_col)` request validated like `move_cursor`, bump the minor of `PluginApi::VERSION`, and document both in `docs/plugins.md`.
 
 ## Motions take the whole editor state and write the last find
 
@@ -49,12 +49,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat.rb` requires `carat/doubles/*` (the fake terminal, the manual clock, the memory files, the fixed config, and the editor harness), and `bin/carat.rb` requires `carat.rb`.
 - Why it matters: the shipped binary carries test code it never runs, which costs size and compile time and lets production code reach a double by mistake without a compile error.
 - Fix outline: belongs to the `dependency-injection` change of the core-quality queue: move the doubles out of the library require graph into a file only `test/*.rb` and benchmarks require, and keep `bin/carat.rb` on the drivers.
-
-## Signs stay on their row numbers when lines are inserted or deleted
-
-- Where: `Buffer#signs` and `Buffer#sign_owners` in `carat/domain/buffer.rb`, keyed by the row as text, and `PluginHost#place_sign` in `carat/use_cases/plugins/plugin_host.rb`.
-- Why it matters: after `dd` or `o` above a sign, the sign marks a different line than the one the plugin placed it on, until the plugin places its signs again; Neovim moves signs with their lines.
-- Fix outline: shift the sign rows from each `ChangeRecord` (rows after the record's row move by its `delta`, rows inside a removed span are dropped), or keep signs in a per-row array spliced with a sibling of `LineSplice.apply`.
 
 ## Line edits on very large buffers move the rest of the line array
 

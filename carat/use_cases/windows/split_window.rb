@@ -7,7 +7,8 @@ module Carat
     # Splits the current window horizontally or vertically. The new window
     # goes above or to the left, becomes current, and shows the same view,
     # a file opened as :e does, or a fresh unnamed buffer. A split that
-    # cannot give both windows their minimum size reports E36.
+    # cannot give both windows their minimum size reports E36. Every new
+    # window gets its id from the editor state.
     class SplitWindow
       E36 = "E36: Not enough room"
 
@@ -26,6 +27,7 @@ module Carat
         min_width = state.window.gutter_width(state.options) + 1
         id = tab.layout.split(tab.current, vertical, size, min_width)
         return Outcome.failure(E36) if id < 0
+        state.adopt(tab.layout.window_at(id))
         tab.focus(id)
         if fresh
           state.load(Domain::Buffer.from_text("", nil))
@@ -33,6 +35,23 @@ module Carat
         end
         return Outcome.success("") if path.empty?
         @open_file.call(state, path)
+      end
+
+      # Adds a fixed-width window showing the buffer at the left or right
+      # edge of the current tab page, width columns wide, lists the buffer,
+      # and makes the window current; E36 when the layout cannot hold it.
+      # This is how a plugin's side window opens.
+      #: (Domain::EditorState, Domain::Buffer, Integer, bool) -> Outcome
+      def side(state, buffer, width, left)
+        tab = state.tab
+        window = Domain::Window.new(buffer)
+        window.fixed_width = true
+        id = tab.layout.split_edge(window, width, left)
+        return Outcome.failure(E36) if id < 0
+        state.adopt(window)
+        state.add_buffer(buffer)
+        tab.focus(id)
+        Outcome.success("")
       end
     end
   end

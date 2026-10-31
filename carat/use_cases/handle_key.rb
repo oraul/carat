@@ -49,7 +49,7 @@ module Carat
         queue = [code]
         result = :handled
         result = step(state, queue.shift, queue) until queue.empty?
-        @plugins.observe(state)
+        @plugins.observe
         result
       end
 
@@ -71,7 +71,7 @@ module Carat
           dispatch(state, value, keys, queue)
         end
         step(state, queue.shift, queue) until queue.empty?
-        @plugins.observe(state)
+        @plugins.observe
         :handled
       end
 
@@ -133,7 +133,7 @@ module Carat
       #: (Domain::EditorState, String?, Array[Integer], Array[Integer]) -> void
       def dispatch(state, value, keys, queue)
         return if value.nil?
-        unless action_name?(value)
+        unless Domain::Keymap.action_name?(value)
           replay(state, value, queue)
           return
         end
@@ -172,14 +172,6 @@ module Carat
         return unless grammar_mode?(state)
         state.grammar.reset
         state.mode = Domain::Mode::NORMAL unless Domain::Mode.visual?(state.mode)
-      end
-
-      # An action name is one or more namespace segments and the action, in
-      # lowercase letters, digits, and underscores joined by dots, as
-      # plugin.hello.greet; anything else is a key sequence to replay.
-      #: (String) -> bool
-      def action_name?(value)
-        value.match?(/\A[a-z0-9_]+(\.[a-z0-9_]+)+\z/)
       end
 
       #: (Domain::EditorState, String, Array[Integer]) -> void

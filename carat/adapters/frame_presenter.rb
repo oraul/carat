@@ -157,8 +157,7 @@ module Carat
         start = col
         if buffer.signs?
           numbers = gutter - Domain::Window::SIGN_WIDTH
-          glyph = buffer.signs[row.to_s]
-          sign = glyph.nil? ? "" : glyph
+          sign = buffer.sign_at(row)
           sign = sign[0, Domain::Window::SIGN_WIDTH] if sign.length > Domain::Window::SIGN_WIDTH
           frame.fill(frame_row, col, col + Domain::Window::SIGN_WIDTH, Domain::Highlight::LINE_NUMBER)
           frame.put(frame_row, col, sign, Domain::Highlight::LINE_NUMBER)

@@ -1,3 +1,7 @@
+ok   the plugin reference rule
+ok   the concern rules
+ok   the link coverage rule reads both classes
+ok   defs_of reads one class body
 ok   no lint violations
 ok   every method and attribute has an inline RBS signature
-lint: 2 passed, 0 failed
+lint: 6 passed, 0 failed

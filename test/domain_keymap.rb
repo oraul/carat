@@ -94,4 +94,17 @@ merged.add_all({ "nope" => {} }, " ")
 merged.add_all(nil, " ")
 t.assert_equal(["nope: unknown mode"], merged.errors, "add_all records errors and ignores a non-object")
 
+# Owners: a plugin's bindings can be removed with it, another plugin
+# cannot take its keys, and the configuration replaces either.
+owned = D::Keymap.new
+owned.add_owned({ "normal" => { "<leader>pp" => "plugin.probe.go", "<leader>pq" => "plugin.probe.quit" } }, " ", "probe")
+owned.add_owned({ "normal" => { "<leader>pp" => "plugin.other.go", "<leader>oo" => "plugin.other.go" } }, " ", "other")
+t.assert_equal([["normal.<leader>pp is already bound by plugin probe"], "plugin.probe.go", "probe"], [owned.conflicts, owned.lookup(:normal, codes("<leader>pp")).value, owned.holder_of(:normal, codes("<leader>pp"))], "a second plugin's binding of held keys is refused and recorded")
+owned.remove_owner("probe")
+t.assert_equal([:none, :none, :match], [owned.lookup(:normal, codes("<leader>pp")).kind, owned.lookup(:normal, codes("<leader>p")).kind, owned.lookup(:normal, codes("<leader>oo")).kind], "removing an owner drops its bindings and the prefixes left empty, and keeps the others")
+owned.add_owned({ "normal" => { "<leader>oo" => "cursor.down" } }, " ", "")
+owned.remove_owner("other")
+t.assert_equal([:match, "cursor.down"], [owned.lookup(:normal, codes("<leader>oo")).kind, owned.lookup(:normal, codes("<leader>oo")).value], "the configuration replaces a plugin binding and keeps it when the plugin goes")
+t.assert_equal([true, false, false], [D::Keymap.action_name?("plugin.a.b"), D::Keymap.action_name?(":w<CR>"), D::Keymap.action_name?("plain")], "an action name has namespace segments, a key sequence does not")
+
 t.finish

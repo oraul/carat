@@ -285,8 +285,7 @@ t.assert_equal("  1 one", f.row_text(0), "with one tab page there is no tab line
 s = state_for(["one", "two", "three"], "a.txt")
 f = P.call(s, 6, 20)
 t.assert_equal("  1 one", f.row_text(0), "no sign column without signs")
-s.buffer.signs["1"] = "X"
-s.buffer.sign_owners["1"] = "test"
+s.buffer.place_sign("test", 0, 1, "X")
 f = P.call(s, 6, 20)
 t.assert_equal(["    1 one", "X   2 two", "    3 three"], [f.row_text(0), f.row_text(1), f.row_text(2)], "the sign sits in its column and the numbers move right")
 t.assert_equal([D::Highlight::LINE_NUMBER, D::Highlight::LINE_NUMBER], [f.cell(1, 0).hl, f.cell(0, 1).hl], "the sign column carries the line number highlight")
@@ -294,7 +293,7 @@ t.assert_equal([0, 6], [f.cursor_row, f.cursor_col], "the cursor moves right wit
 s.options.number = false
 f = P.call(s, 6, 20)
 t.assert_equal(["  one", "X two"], [f.row_text(0), f.row_text(1)], "the sign column stays when numbers are off")
-s.buffer.signs.clear
+s.buffer.clear_signs("test")
 f = P.call(s, 6, 20)
 t.assert_equal("one", f.row_text(0), "clearing the signs removes the column")
 
@@ -324,7 +323,7 @@ scratch.mark_unsaved
 f = P.call(s, 6, 40)
 t.assert_equal("list [+]  he", f.row_text(4)[0, 12], "the modified marker comes before the segments")
 t.assert_equal(["item", "  1 one"], [f.row_text(0)[0, 4], f.row_text(0)[13, 7]], "the side window has no line numbers while the file window keeps them")
-scratch.signs["0"] = "!"
+scratch.place_sign("test", 0, 0, "!")
 f = P.call(s, 6, 40)
 t.assert_equal("! item", f.row_text(0)[0, 6], "its sign column still shows")
 

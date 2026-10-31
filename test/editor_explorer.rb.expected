@@ -78,4 +78,8 @@ ok   ascii
 ok   unicode
 ok   nerd
 ok   the tree has no line numbers and a separator at its right
-editor_explorer: 80 passed, 0 failed
+ok   the tree lists both names
+ok   s opens a name with a space in a split
+ok   t opens a name with a bar in a tab page
+ok   v opens a name with a space in a vertical split
+editor_explorer: 84 passed, 0 failed

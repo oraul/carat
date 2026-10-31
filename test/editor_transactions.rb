@@ -31,6 +31,13 @@ class Edits < Carat::PluginApi::Plugin
     @host = host
   end
 
+  # The host as never nil, for a request made outside a command.
+  #: () -> Carat::PluginApi::Host
+  def link
+    h = @host
+    h.nil? ? Carat::PluginApi::Host.new : h
+  end
+
   #: (String, Carat::PluginApi::Context) -> void
   def on_action(name, context)
     host = @host
@@ -91,9 +98,13 @@ h.type("x")
 t.assert_equal([1, [[0, ["", "b"], ["a", "b"]]], 0, 0], closed(h, ":e!<CR>"), "a forced reload is one transaction with one record")
 
 # A plugin edit request outside a command is a transaction of its own.
-h = editor("ab\ncd\n")
+edits = Edits.new
+files = Carat::Doubles::MemoryFiles.new
+files.put("a.txt", "ab\ncd\n")
+h = Carat::Doubles::EditorHarness.with_plugins(files, 10, 80, [edits])
+h.open("a.txt")
 start = h.buffer.closed_count
-r = h.plugins.edit_buffer("edits", 0, [A::Edit.new(0, 0, 0, 1, "X"), A::Edit.new(1, 0, 1, 1, "Y")])
+r = edits.link.edit_buffer(0, [A::Edit.new(0, 0, 0, 1, "X"), A::Edit.new(1, 0, 1, 1, "Y")])
 t.assert_equal([true, 1, 2, ["Xb", "Yd"]], [r.ok, h.buffer.closed_count - start, h.buffer.last_transaction.size, h.lines], "a plugin edit request outside a command closes one transaction with both records")
 
 # A session left open outside insert mode is closed by the next command.

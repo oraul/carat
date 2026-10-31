@@ -8,9 +8,11 @@ module Carat
     # whether its width is fixed, as Neovim's winfixwidth, so resizes and
     # equalizing leave it alone. The window owns its visual selection: the
     # anchor where it started (the cursor is the other end, the mode its
-    # kind), and the last selection it left, which "gv" restores. A Struct
-    # record: mutable, with a reader and a writer per member.
-    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :anchor, :last_selection)
+    # kind), and the last selection it left, which "gv" restores. id is the
+    # stable number the editor gives the window when it enters a tab page
+    # (0 until then), never given to another window. A Struct record:
+    # mutable, with a reader and a writer per member.
+    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :anchor, :last_selection, :id)
       SIGN_WIDTH = 2
 
       # @rbs @buffer: Buffer
@@ -24,10 +26,11 @@ module Carat
       # @rbs @fixed_width: bool
       # @rbs @anchor: Position
       # @rbs @last_selection: Selection
+      # @rbs @id: Integer
 
       #: (Buffer) -> void
       def initialize(buffer)
-        super(buffer, Cursor.new(0, 0), 0, 0, 0, 0, 0, 0, false, Position.new(0, 0), Selection.none)
+        super(buffer, Cursor.new(0, 0), 0, 0, 0, 0, 0, 0, false, Position.new(0, 0), Selection.none, 0)
       end
 
       # Shows another buffer from its start, forgetting the last selection,

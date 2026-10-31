@@ -43,7 +43,7 @@ module Carat
           return Outcome.failure("E212: Can't open file for writing: #{e.message}")
         end
         if own.nil?
-          buffer.path = path
+          buffer.rename(path)
           own = path
         end
         buffer.mark_saved if path == own
