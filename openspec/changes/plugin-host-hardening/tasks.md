@@ -30,7 +30,7 @@
 
 ## 6. Integration
 
-- [ ] 6.1 Run `make check`, review the regenerated snapshots, and compare `make types` with `main` for new `untyped`
+- [x] 6.1 Run `make check`, review the regenerated snapshots, and compare `make types` with `main` for new `untyped`
 
 ## Workflow follow-up
 

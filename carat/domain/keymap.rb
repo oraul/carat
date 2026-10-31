@@ -29,6 +29,15 @@ module Carat
         node
       end
 
+      # The child under the decimal key, or a new empty node when there
+      # is none, so the answer is never nil.
+      #: (String) -> KeymapNode
+      def child_named(key)
+        existing = children[key]
+        return existing unless existing.nil?
+        KeymapNode.new
+      end
+
       #: () -> bool
       def leaf?
         children.empty?
@@ -224,11 +233,9 @@ module Carat
         keys = node.children.keys
         i = 0
         while i < keys.length
-          child = node.children[keys[i]]
-          unless child.nil?
-            clear_owner(child, owner)
-            node.children.delete(keys[i]) if child.value.nil? && child.leaf?
-          end
+          child = node.child_named(keys[i])
+          clear_owner(child, owner)
+          node.children.delete(keys[i]) if child.value.nil? && child.leaf?
           i += 1
         end
       end
