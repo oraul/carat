@@ -14,21 +14,23 @@ GOOD_ACTIONS = { "plugin.hello.greet" => "Show a greeting" }
 GOOD_BINDINGS = { "normal" => { "<leader>hh" => "plugin.hello.greet" } }
 
 def good
-  manifest("hello", "1.0", GOOD_ACTIONS, { "Hello" => "Hel" }, GOOD_BINDINGS, [:buffer_open], { "greeting" => "Hello" }, { "greeting" => :string })
+  manifest("hello", "1.2", GOOD_ACTIONS, { "Hello" => "Hel" }, GOOD_BINDINGS, ["buffer_open"], { "greeting" => "Hello" }, { "greeting" => "string" })
 end
 
 t.assert_equal([], M.check(good), "the hello manifest breaks no rule")
-t.assert_equal("", M.refusal("1.1"), "the host's own version is accepted")
+t.assert_equal([], M.check(manifest("hello", "1.1", GOOD_ACTIONS, {}, nil, [:buffer_open, :buffer_close], { "n" => "1" }, { "n" => "integer" })), "a 1.1 manifest's symbols are read as names")
+t.assert_equal("", M.refusal("1.2"), "the host's own version is accepted")
 t.assert_equal("", M.refusal("1.0"), "an older minor is accepted")
-t.assert_equal("", M.refusal("1.3"), "a newer minor is accepted")
-t.assert_equal("needs API 2.0, the host has 1.1", M.refusal("2.0"), "a newer major is refused with both versions")
+t.assert_equal("needs API 1.3, the host has 1.2", M.refusal("1.3"), "a newer minor is refused")
+t.assert_equal("needs API 2.0, the host has 1.2", M.refusal("2.0"), "a newer major is refused with both versions")
+t.assert_equal("needs API 0.9, the host has 1.2", M.refusal("0.9"), "an older major is refused")
 t.assert_equal("", M.refusal("x"), "a malformed version is not a refusal")
 
 # Rows are [label, manifest, the first problem reported].
 t.table([
   ["uppercase name", manifest("Hello", "1.0", GOOD_ACTIONS, {}, nil, [], {}, {}), "name \"Hello\" is not lowercase letters, digits, and underscores starting with a letter"],
   ["name starting with a digit", manifest("1x", "1.0", {}, {}, nil, [], {}, {}), "name \"1x\" is not lowercase letters, digits, and underscores starting with a letter"],
-  ["newer major", manifest("hello", "2.0", GOOD_ACTIONS, {}, nil, [], {}, {}), "needs API 2.0, the host has 1.1"],
+  ["newer major", manifest("hello", "2.0", GOOD_ACTIONS, {}, nil, [], {}, {}), "needs API 2.0, the host has 1.2"],
   ["malformed version", manifest("hello", "one", GOOD_ACTIONS, {}, nil, [], {}, {}), "api_version \"one\" is not major.minor"],
   ["action for another plugin", manifest("a", "1.0", { "plugin.b.go" => "Go" }, {}, nil, [], {}, {}), "action \"plugin.b.go\" is not plugin.a.<action>"],
   ["action without the prefix", manifest("hello", "1.0", { "greet" => "Greet" }, {}, nil, [], {}, {}), "action \"greet\" is not plugin.hello.<action>"],
@@ -37,16 +39,19 @@ t.table([
   ["lowercase command", manifest("hello", "1.0", GOOD_ACTIONS, { "hello" => "" }, nil, [], {}, {}), "command \"hello\" does not start with an uppercase letter"],
   ["abbreviation that is not a prefix", manifest("hello", "1.0", GOOD_ACTIONS, { "Hello" => "Hal" }, nil, [], {}, {}), "abbreviation \"Hal\" is not a proper prefix of \"Hello\""],
   ["abbreviation equal to the name", manifest("hello", "1.0", GOOD_ACTIONS, { "Hello" => "Hello" }, nil, [], {}, {}), "abbreviation \"Hello\" is not a proper prefix of \"Hello\""],
-  ["unknown event", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, [:idle], {}, {}), "event idle is unknown"],
+  ["unknown event", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, ["idle"], {}, {}), "event idle is unknown"],
   ["bad key notation", manifest("hello", "1.0", GOOD_ACTIONS, {}, { "normal" => { "<Nope>" => "plugin.hello.greet" } }, [], {}, {}), "binding normal.<Nope>: unknown key <Nope>"],
   ["unknown mode", manifest("hello", "1.0", GOOD_ACTIONS, {}, { "nope" => { "x" => "plugin.hello.greet" } }, [], {}, {}), "binding nope: unknown mode"],
   ["binding to a foreign action", manifest("hello", "1.0", GOOD_ACTIONS, {}, { "normal" => { "x" => "cursor.down" } }, [], {}, {}), "binding normal.x names \"cursor.down\", not one of the plugin's actions"],
   ["bindings that are not an object", manifest("hello", "1.0", GOOD_ACTIONS, {}, [1], [], {}, {}), "bindings is not an object of modes"],
   ["option without a type", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, [], { "depth" => "3" }, {}), "option \"depth\" has no type"],
-  ["option with an unknown type", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, [], { "depth" => "3" }, { "depth" => :float }), "option \"depth\" has the unknown type float"],
-  ["integer option with a bad default", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, [], { "depth" => "many" }, { "depth" => :integer }), "option \"depth\" default \"many\" is not a integer"],
-  ["bool option with a bad default", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, [], { "deep" => "yes" }, { "deep" => :bool }), "option \"deep\" default \"yes\" is not a bool"],
-  ["type without a default", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, [], {}, { "depth" => :integer }), "option \"depth\" has a type but no default"]
+  ["option with an unknown type", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, [], { "depth" => "3" }, { "depth" => "float" }), "option \"depth\" has the unknown type float"],
+  ["integer option with a bad default", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, [], { "depth" => "many" }, { "depth" => "integer" }), "option \"depth\" default \"many\" is not a integer"],
+  ["bool option with a bad default", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, [], { "deep" => "yes" }, { "deep" => "bool" }), "option \"deep\" default \"yes\" is not a bool"],
+  ["actions of the wrong type", manifest("hello", "1.0", "nope", {}, nil, [], {}, {}), "actions is not an object of action names"],
+  ["events of the wrong type", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, 7, {}, {}), "events is not a list of event names"],
+  ["an event that is not a name", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, [3], {}, {}), "event 3 is unknown"],
+  ["type without a default", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, [], {}, { "depth" => "integer" }), "option \"depth\" has a type but no default"]
 ]) do |m|
   problems = M.check(m)
   problems.empty? ? "" : problems[0]
@@ -59,7 +64,7 @@ t.table([
   ["no bindings", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, [], {}, {}), 0],
   ["a command with no abbreviation", manifest("hello", "1.0", GOOD_ACTIONS, { "Hello" => "" }, nil, [], {}, {}), 0],
   ["every event", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, Carat::PluginApi::EVENTS, {}, {}), 0],
-  ["every option type", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, [], { "a" => "true", "b" => "-2", "c" => "x", "d" => "p\nq" }, { "a" => :bool, "b" => :integer, "c" => :string, "d" => :list }), 0],
+  ["every option type", manifest("hello", "1.0", GOOD_ACTIONS, {}, nil, [], { "a" => "true", "b" => "-2", "c" => "x", "d" => "p\nq" }, { "a" => "bool", "b" => "integer", "c" => "string", "d" => "list" }), 0],
   ["two problems are both reported", manifest("hello", "2.0", GOOD_ACTIONS, { "hello" => "" }, nil, [], {}, {}), 2]
 ]) do |m|
   M.check(m).length

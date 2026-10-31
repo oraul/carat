@@ -34,9 +34,9 @@ module Carat
             { "plugin.hello.greet" => "Show a greeting with the info icon and count it in the status line" },
             { "Hello" => "Hel" },
             { "normal" => { "<leader>hh" => GREET } },
-            [:buffer_open],
+            ["buffer_open"],
             { "greeting" => "Hello" },
-            { "greeting" => :string }
+            { "greeting" => "string" }
           )
         end
 
@@ -52,7 +52,7 @@ module Carat
 
         #: (Carat::PluginApi::Event) -> void
         def on_event(event)
-          @opened += 1 if event.name == :buffer_open
+          @opened += 1 if event.name == "buffer_open"
         end
 
         #: (String, Carat::PluginApi::Context) -> void
@@ -73,7 +73,7 @@ module Carat
           return if host.nil?
           @greeted += 1
           plural = @opened == 1 ? "buffer" : "buffers"
-          host.message("#{host.icon("info")} #{host.option("greeting")}, #{who}! #{@opened} #{plural} opened", false)
+          host.message("#{host.icon("info").text} #{host.option("greeting").text}, #{who}! #{@opened} #{plural} opened", false)
           host.set_status("hello #{@greeted}")
         end
       end

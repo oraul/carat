@@ -58,9 +58,9 @@ module Carat
             },
             { "Explorer" => "", "ExplorerFind" => "" },
             { "normal" => { "<leader>e" => "plugin.explorer.toggle" } },
-            [:buffer_open, :window_focus, :cursor_move],
+            ["buffer_open", "window_focus", "cursor_move"],
             { "width" => "30", "side" => "left", "show_hidden" => "false", "ignore" => ".git\nbuild\ntmp" },
-            { "width" => :integer, "side" => :string, "show_hidden" => :bool, "ignore" => :list }
+            { "width" => "integer", "side" => "string", "show_hidden" => "bool", "ignore" => "list" }
           )
         end
 
@@ -128,7 +128,7 @@ module Carat
 
         #: (Carat::PluginApi::Host, Integer) -> void
         def toggle(host, window)
-          shown = host.scratch_window(TITLE).number
+          shown = host.scratch_window(TITLE).window
           if shown == 0
             show_tree(host)
           elsif shown == window
@@ -140,7 +140,7 @@ module Carat
 
         #: (Carat::PluginApi::Host) -> void
         def focus(host)
-          shown = host.scratch_window(TITLE).number
+          shown = host.scratch_window(TITLE).window
           if shown == 0
             show_tree(host)
           else
@@ -158,23 +158,23 @@ module Carat
           tree.build(host)
           opened = host.open_scratch(TITLE, side(host), width(host), tree.lines(host), keymap)
           unless opened.ok
-            report(host, opened)
+            report_window(host, opened)
             return
           end
           row = tree.row_of(@followed)
           host.move_cursor(row, 0) if row >= 0
         end
 
-        # The number of the current window, for an ex command, which carries
-        # no context: focusing window 0 answers it and changes nothing.
+        # The id of the current window, for an ex command, which carries no
+        # context: focusing window 0 answers it and changes nothing.
         #: (Carat::PluginApi::Host) -> Integer
         def current_window(host)
-          host.focus_window(0).number
+          host.focus_window(0).window
         end
 
         #: (Carat::PluginApi::Host, Integer) -> bool
         def in_tree?(host, window)
-          shown = host.scratch_window(TITLE).number
+          shown = host.scratch_window(TITLE).window
           shown > 0 && shown == window
         end
 
@@ -189,7 +189,7 @@ module Carat
           tree = @tree
           return if tree.nil?
           tree.mark(absolute)
-          return if host.scratch_window(TITLE).number == 0
+          return if host.scratch_window(TITLE).window == 0
           tree.reveal(absolute)
           refresh(host, tree)
         end
@@ -241,24 +241,25 @@ module Carat
           open_path(host, n.path, how)
         end
 
+        # The path goes to the host as it is, never inside an ex command
+        # line, so a name with a space or a bar opens as named.
         #: (Carat::PluginApi::Host, String, Symbol) -> void
         def open_path(host, path, how)
           relative = PluginApi::Paths.relative(cwd(host), path)
           if how == :tab
-            report(host, host.run_ex("tabnew " + relative))
+            report_window(host, host.open_in_tab(relative))
             return
           end
-          target = host.editing_window.number
+          target = host.editing_window.window
           if target == 0
             open_in_tree_window(host, relative)
             return
           end
           case how
           when :split, :vsplit
-            host.focus_window(target)
-            report(host, host.run_ex((how == :split ? "split " : "vsplit ") + relative))
+            report_window(host, host.open_in_split(target, relative, how == :vsplit))
           else
-            report(host, host.open_file(target, relative))
+            report_window(host, host.open_file(target, relative))
           end
         end
 
@@ -267,14 +268,14 @@ module Carat
         # width; the file window stays current.
         #: (Carat::PluginApi::Host, String) -> void
         def open_in_tree_window(host, relative)
-          opened = host.open_file(host.scratch_window(TITLE).number, relative)
-          report(host, opened)
+          opened = host.open_file(host.scratch_window(TITLE).window, relative)
+          report_window(host, opened)
           return unless opened.ok
           tree = tree_of(host)
           tree.build(host)
           again = host.open_scratch(TITLE, side(host), width(host), tree.lines(host), keymap)
           return unless again.ok
-          host.focus_window(host.editing_window.number)
+          host.focus_window(host.editing_window.window)
         end
 
         #: (Carat::PluginApi::Host, Tree, Integer) -> void
@@ -417,7 +418,7 @@ module Carat
         def tree_of(host)
           tree = @tree
           return tree unless tree.nil?
-          made = Tree.new(cwd(host), host.option("show_hidden") == "true", ignored(host))
+          made = Tree.new(cwd(host), host.option("show_hidden").text == "true", ignored(host))
           made.mark(@followed)
           @tree = made
           made
@@ -431,25 +432,25 @@ module Carat
 
         #: (Carat::PluginApi::Host) -> String
         def cwd(host)
-          @cwd = host.working_directory if @cwd.empty?
+          @cwd = host.working_directory.text if @cwd.empty?
           @cwd
         end
 
         #: (Carat::PluginApi::Host) -> Array[String]
         def ignored(host)
-          text = host.option("ignore")
+          text = host.option("ignore").text
           text.empty? ? [] : text.split("\n")
         end
 
         #: (Carat::PluginApi::Host) -> Integer
         def width(host)
-          value = host.option("width").to_i
+          value = host.option("width").text.to_i
           value > 0 ? value : 30
         end
 
-        #: (Carat::PluginApi::Host) -> Symbol
+        #: (Carat::PluginApi::Host) -> String
         def side(host)
-          host.option("side") == "right" ? :right : :left
+          host.option("side").text == "right" ? "right" : "left"
         end
 
         # A directory as the prompt names it: the root by its name, the
@@ -462,6 +463,12 @@ module Carat
         # Shows a response's message, as an error when it failed.
         #: (Carat::PluginApi::Host, Carat::PluginApi::Response) -> void
         def report(host, response)
+          host.message(response.message, !response.ok) unless response.message.empty?
+        end
+
+        # Shows a window response's message, as an error when it failed.
+        #: (Carat::PluginApi::Host, Carat::PluginApi::WindowResponse) -> void
+        def report_window(host, response)
           host.message(response.message, !response.ok) unless response.message.empty?
         end
 

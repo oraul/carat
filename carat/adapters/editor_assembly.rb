@@ -38,8 +38,10 @@ module Carat
     # given ports and the list of compiled plugins. bin/carat.rb builds it
     # over the drivers with the generated registry; the editor harness
     # builds it over the doubles, so both run the same graph. The plugins
-    # are registered and activated before the configuration's bindings go
-    # into the keymap, so the configuration always wins.
+    # are registered first, activated once the ex command runner is
+    # attached (so a plugin may run ex commands in activate), and before
+    # the configuration's bindings go into the keymap, so the
+    # configuration always wins.
     class EditorAssembly
       attr_reader :state #: Domain::EditorState
       attr_reader :keymap #: Domain::Keymap
@@ -75,8 +77,6 @@ module Carat
           @plugins.register(plugin_list[i])
           i += 1
         end
-        @plugins.activate_all(config["plugins"])
-        @keymap.add_all(config["keymaps"], leader)
         save_file = UseCases::SaveFile.new(files, @plugins)
         quit = UseCases::Quit.new(close_window)
         split_window = UseCases::SplitWindow.new(@open_file)
@@ -87,6 +87,8 @@ module Carat
         switch_tab = UseCases::SwitchTab.new
         execute_ex = UseCases::ExecuteEx.new(@open_file, save_file, quit, split_window, close_window, open_tab, close_tab, switch_tab, @plugins)
         @plugins.attach(execute_ex)
+        @plugins.activate_all(config["plugins"])
+        @keymap.add_all(config["keymaps"], leader)
         command_line = UseCases::EditCommandLine.new(execute_ex, @plugins)
         dispatcher = UseCases::Dispatcher.new(move, operate, enter_insert, insert_text, leave_insert, command_line, quit, split_window, close_window, focus_window, resize_layout, switch_tab, @plugins, UseCases::StartVisual.new, UseCases::ExtendVisual.new, UseCases::OperateOnSelection.new)
         handle_key = UseCases::HandleKey.new(@keymap, dispatcher, insert_text, command_line, @plugins)
@@ -102,7 +104,7 @@ module Carat
       def open(path)
         outcome = @open_file.call(@state, path)
         @state.show(outcome.message, !outcome.ok)
-        @plugins.observe(@state)
+        @plugins.observe
       end
 
       # Renders the state at the given size and writes it to the terminal,

@@ -95,7 +95,7 @@ module Carat
         when "tabl", "tablast"
           @switch_tab.last(state)
         else
-          @plugins.command?(command.name) ? @plugins.command(state, command) : unknown(text)
+          @plugins.command?(command.name) ? @plugins.command(command) : unknown(text)
         end
       end
 

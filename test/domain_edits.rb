@@ -156,4 +156,110 @@ t.assert_equal([2, 3], [second.id, loose.id], "a buffer keeps its id when it com
 second.set_lines(0, 1, ["z"])
 t.assert_equal(2, second.last_transaction.record_at(0).buffer_id, "records carry the buffer's id")
 
+# A transaction's span merges its records over the text before it:
+# [first row, rows removed, rows inserted].
+b = D::Buffer.new(["a", "b", "c", "d", "e"], nil, "\n")
+b.begin_transaction(pos(0, 0))
+b.set_lines(3, 4, [])
+b.set_lines(1, 1, ["x", "y"])
+b.commit_transaction(pos(0, 0))
+t.assert_equal([[1, 3, 4], ["a", "x", "y", "b", "c", "e"]], [b.last_transaction.span, b.lines], "two records widen the span to cover both, unchanged rows between included")
+b.set_lines(2, 3, ["Y"])
+t.assert_equal([2, 1, 1], b.last_transaction.span, "one record is its own span")
+b.begin_transaction(pos(0, 0))
+b.set_lines(4, 5, [])
+b.set_lines(0, 1, [])
+b.commit_transaction(pos(0, 0))
+t.assert_equal([0, 5, 3], b.last_transaction.span, "a record above an earlier one moves the span's start")
+
+# The feed records opens, closes, renames, and closed transactions with
+# their cause.
+first = D::Buffer.new(["a", "b", "c"], "a.txt", "\n")
+s = D::EditorState.new(first, D::Options.new, 500)
+feed = s.feed
+other = D::Buffer.new(["o"], "o.txt", "\n")
+s.add_buffer(other)
+first.set_lines(1, 2, [])
+feed.cause = "probe"
+other.rename("p.txt")
+other.insert(pos(0, 0), "x")
+feed.cause = ""
+s.drop_buffer(other)
+lines = []
+i = 0
+while i < feed.count
+  n = feed.notice_at(i)
+  lines << "#{n.kind} #{n.buffer_id} #{n.path} #{n.row} -#{n.removed} +#{n.inserted} #{n.detail} [#{n.cause}]"
+  i += 1
+end
+t.assert_equal(["open 1 a.txt 0 -0 +0  []", "open 2 o.txt 0 -0 +0  []", "change 1 a.txt 1 -1 +0  []", "rename 2 p.txt 0 -0 +0 o.txt [probe]", "change 2 p.txt 0 -1 +1  [probe]", "close 2 p.txt 0 -0 +0  []"], lines, "every listed buffer's events are in the feed in order, with the cause at the time")
+feed.clear
+b = D::Buffer.new(["q"], nil, "\n")
+b.insert(pos(0, 0), "x")
+t.assert_equal(0, feed.count, "an unlisted buffer records nothing")
+
+# A transaction joined by records of another cause is the editor's.
+b = D::Buffer.new(["a"], nil, "\n")
+b.begin_transaction(pos(0, 0))
+b.last_transaction
+tx = b.transaction
+tx.add(D::ChangeRecord.new(0, 0, [], []), "probe")
+t.assert_equal("probe", tx.cause, "the first record gives the cause")
+tx.add(D::ChangeRecord.new(0, 0, [], []), "probe")
+t.assert_equal("probe", tx.cause, "records of the same cause keep it")
+tx.add(D::ChangeRecord.new(0, 0, [], []), "")
+t.assert_equal("", tx.cause, "a record of another cause makes it the editor's")
+
+# revert_to undoes the open transaction's records after a count.
+b = D::Buffer.new(["one", "two", "three"], nil, "\n")
+b.place_sign("p", 0, 2, "S")
+b.begin_transaction(pos(0, 0))
+b.insert(pos(0, 0), "x")
+mark = b.transaction_size
+changes = b.changes
+b.set_lines(1, 2, [])
+b.insert(pos(0, 0), "a\nb")
+b.revert_to(mark)
+t.assert_equal([["xone", "two", "three"], 1, changes, "S"], [b.lines, b.transaction_size, b.changes, b.sign_at(2)], "the later records are undone, the earlier kept, and the signs moved back")
+b.commit_transaction(pos(0, 0))
+
+# Signs move with their lines, one layer per plugin in priority order.
+b = D::Buffer.new(["a", "b", "c", "d"], nil, "\n")
+b.place_sign("git", 1, 2, "G")
+b.set_lines(0, 0, ["new"])
+t.assert_equal(["", "G"], [b.sign_at(2), b.sign_at(3)], "a line inserted above moves the sign down")
+b.insert(pos(3, 0), "x")
+t.assert_equal("G", b.sign_at(3), "editing the line keeps its sign")
+b.insert(pos(3, 1), "\nsplit")
+t.assert_equal(["G", ""], [b.sign_at(3), b.sign_at(4)], "splitting the line keeps the sign on its first part")
+b.set_lines(0, 2, [])
+t.assert_equal("G", b.sign_at(1), "lines deleted above move it up")
+b.set_lines(1, 2, [])
+t.assert_equal([false, ""], [b.sign_at(1) == "G", b.sign_at(0)], "deleting its line removes it")
+b = D::Buffer.new(["a", "b"], nil, "\n")
+b.place_sign("second", 5, 0, "2")
+b.place_sign("first", 1, 0, "1")
+b.place_sign("first", 1, 0, "!")
+t.assert_equal(["!", "first"], [b.sign_at(0), b.layer_at(0).owner], "the higher priority shows and a plugin replaces only its own sign")
+t.assert_equal([1, "2"], [b.clear_signs("first"), b.sign_at(0)], "clearing one plugin's signs shows the other's")
+t.assert_equal(0, b.clear_signs("nobody"), "clearing signs never placed counts none")
+marks = [0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 3]
+D::LineSplice.shift_marks(marks, 1, 0, 10)
+t.assert_equal([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 3], marks, "a large insertion moves the tail in one pass")
+D::LineSplice.shift_marks(marks, 2, 12, 0)
+t.assert_equal([0, 0, 0, 0, 0, 0, 0, 0, 3], marks, "a large deletion closes the gap")
+
+# Window ids come from the editor state and are never reused.
+s = D::EditorState.new(D::Buffer.new(["a"], "a.txt", "\n"), D::Options.new, 500)
+t.assert_equal([1, 1], [s.window.id, s.window_id], "the first window has id 1")
+page = D::TabPage.new(D::Window.new(s.buffer))
+s.add_tab(page)
+t.assert_equal([2, 1, 0, -1], [page.window.id, s.window_tab(2), s.window_tab(1), s.window_tab(9)], "a new tab page's window gets the next id and is found by it")
+s.remove_tab(1)
+lone = D::Window.new(s.buffer)
+s.adopt(lone)
+s.adopt(lone)
+t.assert_equal(3, lone.id, "an id is given once and never again")
+t.assert_equal([true, true], [s.buffer_with_id(1).equal?(s.buffer), s.buffer_with_id(7).nil?], "a buffer is found by its id")
+
 t.finish

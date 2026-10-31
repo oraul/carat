@@ -18,8 +18,8 @@ ok   making an existing directory raises
 ok   renaming a directory moves what is under it
 ok   a path marked as a link stats as one
 ok   the working directory is absolute
-ok   no list is shown and window 1 edits a file
-ok   the list is window 1 and the previously used window 2 edits
+ok   no list is shown and the first window, id 1, edits a file
+ok   the list is window id 2 and the previously used window, id 1, edits
 ok   with only the list left nothing edits
 ok   a file
 ok   a directory

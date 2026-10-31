@@ -94,6 +94,31 @@ module Carat
         all[index]
       end
 
+      # The leaf whose window has the window id, or -1.
+      #: (Integer) -> Integer
+      def leaf_of(window_id)
+        all = leaves
+        i = 0
+        while i < all.length
+          return all[i] if window_at(all[i]).id == window_id
+          i += 1
+        end
+        -1
+      end
+
+      # The first leaf in layout order whose window shows the buffer, or
+      # -1.
+      #: (Buffer) -> Integer
+      def leaf_showing(buffer)
+        all = leaves
+        i = 0
+        while i < all.length
+          return all[i] if window_at(all[i]).buffer.equal?(buffer)
+          i += 1
+        end
+        -1
+      end
+
       # Splits leaf id, vertically (side by side) or horizontally (stacked),
       # returning the new leaf's id or -1 when there is not enough room. The
       # new window shows the same view and goes above or to the left. size is

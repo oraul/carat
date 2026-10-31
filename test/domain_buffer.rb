@@ -140,7 +140,7 @@ w = D::Window.new(D::Buffer.from_text("ab\n", "w.txt"))
 t.assert_equal([0, 0, 0, "w.txt", [0, 0], false], [w.top, w.left, w.height, w.buffer.path, w.cursor.to_a, w.fixed_width], "a window starts at the origin with no height, showing its buffer from the start")
 w.top = 7
 t.assert_equal(7, w.top, "a window member has a writer")
-t.assert_equal([:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :signs, :sign_owners, :changes, :id, :transaction, :last_transaction, :closed_count], D::Buffer.members, "buffer members in constructor order")
+t.assert_equal([:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed], D::Buffer.members, "buffer members in constructor order")
 t.assert_equal([:code, :width, :hl], D::Cell.members, "cell members")
 o = D::Options.new
 t.assert_equal([false, 8, 0], [o.number, o.tabstop, o.scrolloff], "options start with Vim's defaults")
@@ -183,9 +183,8 @@ t.assert_equal([true, "list"], [b.scratch?, b.display_name], "a scratch buffer i
 named = D::Buffer.new(["ab"], "a.txt", "\n")
 t.assert_equal("a.txt", named.display_name, "a file buffer is named by its path")
 t.assert_equal(false, b.signs?, "no signs at first")
-b.signs["1"] = "X"
-b.sign_owners["1"] = "hello"
-t.assert_equal(true, b.signs?, "a sign is placed")
+b.place_sign("hello", 0, 0, "X")
+t.assert_equal([true, "X", ""], [b.signs?, b.sign_at(0), b.sign_at(1)], "a sign is placed on its row")
 
 # The state skips scratch buffers as unsaved work and drops them when
 # unshown.

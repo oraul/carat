@@ -330,4 +330,16 @@ t.assert_equal(0, page.previous, "focusing the current window changes nothing")
 page.layout.close(0)
 t.assert_equal(false, page.previous?, "a closed previous window is forgotten")
 
+# Leaves by window id and by buffer.
+shown = buffer_named("shown.txt")
+w = D::Window.new(shown)
+w.id = 7
+lay = D::Layout.new(w)
+lay.arrange(0, 0, 20, 80)
+other = D::Window.new(buffer_named("o.txt"))
+other.id = 8
+right = lay.split_edge(other, 20, false)
+t.assert_equal([0, right, -1], [lay.leaf_of(7), lay.leaf_of(8), lay.leaf_of(9)], "a leaf is found by its window's id")
+t.assert_equal([0, -1], [lay.leaf_showing(shown), lay.leaf_showing(buffer_named("shown.txt"))], "a leaf is found by the buffer it shows, by identity")
+
 t.finish

@@ -14,6 +14,61 @@ module Carat
     module LineSplice
       SMALL = 8
 
+      # The integer sibling of apply, for per-line marks such as signs:
+      # moves marks by an edit at row that replaced removed rows with
+      # inserted ones. The rows both sides have in common keep their marks,
+      # so editing a line keeps its mark; extra inserted rows get 0 and
+      # extra removed rows lose theirs. Inserting moves the tail per row up
+      # to SMALL rows and in one pass above, as apply does.
+      #: (Array[Integer], Integer, Integer, Integer) -> void
+      def self.shift_marks(marks, row, removed, inserted)
+        common = removed < inserted ? removed : inserted
+        at = row + common
+        at = marks.length if at > marks.length
+        if inserted > removed
+          extra = inserted - removed
+          if extra <= SMALL
+            k = 0
+            while k < extra
+              marks.insert(at, 0)
+              k += 1
+            end
+          else
+            old = marks.length
+            k = 0
+            while k < extra
+              marks << 0
+              k += 1
+            end
+            j = old - 1
+            while j >= at
+              marks[j + extra] = marks[j]
+              j -= 1
+            end
+            k = 0
+            while k < extra
+              marks[at + k] = 0
+              k += 1
+            end
+          end
+        elsif removed > inserted
+          gone = removed - inserted
+          gone = marks.length - at if at + gone > marks.length
+          last = marks.length - gone
+          j = at
+          while j < last
+            marks[j] = marks[j + gone]
+            j += 1
+          end
+          k = 0
+          while k < gone
+            marks.pop
+            k += 1
+          end
+        end
+        nil
+      end
+
       # Replaces lines[from...to] with new_lines; from and to are inside
       # the array, from <= to.
       #: (Array[String], Integer, Integer, Array[String]) -> void

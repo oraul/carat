@@ -8,17 +8,20 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 1
-    MINOR = 1
-    VERSION = "1.1"
+    MINOR = 2
+    VERSION = "1.2"
 
-    # The events a plugin may subscribe to. idle arrives with the language
-    # services change, which gives the main loop an idle tick.
-    EVENTS = [:buffer_open, :buffer_change, :buffer_save, :cursor_move, :mode_change, :window_focus, :resize, :quit]
+    # The events a plugin may subscribe to, by name. idle arrives with the
+    # language services change, which gives the main loop an idle tick.
+    EVENTS = ["buffer_open", "buffer_change", "buffer_save", "buffer_close", "buffer_rename", "cursor_move", "mode_change", "window_focus", "resize", "quit"]
 
     # The types an option may have; values travel as text on both sides:
     # "true" or "false", digits, the string itself, or list items joined
     # by newlines.
-    OPTION_TYPES = [:bool, :integer, :string, :list]
+    OPTION_TYPES = ["bool", "integer", "string", "list"]
+
+    # The edges of the tab page a scratch window opens at.
+    SIDES = ["left", "right"]
 
     # What a plugin declares. name is lowercase letters, digits, and
     # underscores starting with a letter; version is the plugin's own;
@@ -27,9 +30,11 @@ module Carat
     # command name, starting with an uppercase letter, to its abbreviation
     # or ""; bindings is the JSON keymap shape, a hash from mode name to a
     # hash from key notation to an action name or key sequence; events is
-    # the list of event symbols; options maps an option name to its default
-    # as text and option_types the same names to :bool, :integer, :string,
-    # or :list. A Data value: equal by value and frozen.
+    # the list of event names; options maps an option name to its default
+    # as text and option_types the same names to "bool", "integer",
+    # "string", or "list". The host also reads events and option types
+    # given as symbols, as API 1.1 spelled them. A Data value: equal by
+    # value and frozen.
     class Manifest < Data.define(:name, :version, :api_version, :actions, :commands, :bindings, :events, :options, :option_types)
       # @rbs @name: String
       # @rbs @version: String
@@ -49,28 +54,34 @@ module Carat
       end
     end
 
-    # One event: its name, the buffer and window numbers (positions from 1,
-    # 0 for none), the path ("" for none), the cursor row and column (for
-    # :resize, the rows and columns of the screen), and a detail (the mode
-    # name for :mode_change, "" otherwise). A Data value.
-    class Event < Data.define(:name, :buffer, :window, :path, :row, :col, :detail)
-      # @rbs @name: Symbol
+    # One event: its name, the buffer and window ids (0 for none), the path
+    # ("" for none), the cursor row and column (for resize, the rows and
+    # columns of the screen; for buffer_change, the first changed row and
+    # column 0), a detail (the mode name for mode_change, the old path for
+    # buffer_rename, "" otherwise), and for buffer_change the number of
+    # rows removed at row and the number inserted in their place (0
+    # otherwise). A Data value.
+    class Event < Data.define(:name, :buffer, :window, :path, :row, :col, :detail, :removed, :inserted)
+      # @rbs @name: String
       # @rbs @buffer: Integer
       # @rbs @window: Integer
       # @rbs @path: String
       # @rbs @row: Integer
       # @rbs @col: Integer
       # @rbs @detail: String
+      # @rbs @removed: Integer
+      # @rbs @inserted: Integer
 
       # One line naming every field, for logs and tests.
       #: () -> String
       def to_line
-        "#{name} b#{buffer} w#{window} #{path} #{row},#{col} #{detail}".rstrip
+        range = name == "buffer_change" ? " -#{removed} +#{inserted}" : ""
+        "#{name} b#{buffer} w#{window} #{path} #{row},#{col}#{range} #{detail}".rstrip
       end
     end
 
     # What on_action receives: the count and register typed before the
-    # key (0 and "" for none), the current buffer and window numbers, the
+    # key (0 and "" for none), the current buffer and window ids, the
     # buffer's path ("" for none), and the cursor. A Data value.
     class Context < Data.define(:count, :register, :buffer, :window, :path, :row, :col)
       # @rbs @count: Integer
@@ -119,9 +130,8 @@ module Carat
     end
 
     # The general answer to a request: whether it succeeded, a message
-    # ("" for none), a number (a window number or a count, 0 when the
-    # request has none), and lines (a listing, empty when the request has
-    # none). A Data value.
+    # ("" for none), a number (a count, 0 when the request has none), and
+    # lines (a listing, empty when the request has none). A Data value.
     class Response < Data.define(:ok, :message, :number, :lines)
       # @rbs @ok: bool
       # @rbs @message: String
@@ -144,23 +154,62 @@ module Carat
       end
     end
 
-    # The answer to a buffer read: ok is false when there is no such
-    # buffer; otherwise the buffer number, its path ("" for none), copies
-    # of its lines, the cursor of the current window when the buffer is
-    # the current one (0, 0 otherwise), and the modified flag. A Data
-    # value.
-    class BufferView < Data.define(:ok, :number, :path, :lines, :row, :col, :modified)
+    # The answer to a request about a window: whether it succeeded, a
+    # message ("" for none), and the id of the window it is about (0 when
+    # it failed or there is none). A Data value.
+    class WindowResponse < Data.define(:ok, :message, :window)
       # @rbs @ok: bool
-      # @rbs @number: Integer
+      # @rbs @message: String
+      # @rbs @window: Integer
+
+      #: (String, Integer) -> WindowResponse
+      def self.success(message, window)
+        WindowResponse.new(true, message, window)
+      end
+
+      #: (String) -> WindowResponse
+      def self.failure(message)
+        WindowResponse.new(false, message, 0)
+      end
+    end
+
+    # The answer to a request for one piece of text: whether it succeeded,
+    # a message ("" for none, the reason when it failed), and the text ("" when
+    # it failed). A Data value.
+    class TextResponse < Data.define(:ok, :message, :text)
+      # @rbs @ok: bool
+      # @rbs @message: String
+      # @rbs @text: String
+
+      #: (String) -> TextResponse
+      def self.success(text)
+        TextResponse.new(true, "", text)
+      end
+
+      #: (String) -> TextResponse
+      def self.failure(message)
+        TextResponse.new(false, message, "")
+      end
+    end
+
+    # The answer to a buffer read: ok is false, with the reason in message,
+    # when there is no such buffer; otherwise the buffer id, its path (""
+    # for none), copies of its lines, the cursor of the current window
+    # when the buffer is the current one (0, 0 otherwise), and the modified
+    # flag. A Data value.
+    class BufferView < Data.define(:ok, :message, :buffer, :path, :lines, :row, :col, :modified)
+      # @rbs @ok: bool
+      # @rbs @message: String
+      # @rbs @buffer: Integer
       # @rbs @path: String
       # @rbs @lines: Array[String]
       # @rbs @row: Integer
       # @rbs @col: Integer
       # @rbs @modified: bool
 
-      #: () -> BufferView
-      def self.missing
-        BufferView.new(false, 0, "", [], 0, 0, false)
+      #: (String) -> BufferView
+      def self.missing(message)
+        BufferView.new(false, message, 0, "", [], 0, 0, false)
       end
     end
 
@@ -283,22 +332,22 @@ module Carat
     # The requests a plugin can make, one method each. The host hands every
     # plugin its own instance at activation, so the host knows which plugin
     # owns a scratch buffer, a sign, a status segment, or an option. Every
-    # method here raises; the editor's host overrides them all. Buffer
-    # numbers are positions in the buffer list from 1 and window numbers
-    # positions in the current tab page's layout order from 1, 0 meaning
-    # the current one; both move when buffers or windows come and go.
+    # method here raises; the editor's host overrides them all. Buffers and
+    # windows are addressed by id, the number the editor gives each when it
+    # is created and never gives another; 0 means the current one.
     class Host
-      # Returns a BufferView of buffer number.
-      # @rbs number: Integer
-      def read_buffer(number)
+      # Returns a BufferView of the buffer with the id.
+      # @rbs buffer: Integer
+      def read_buffer(buffer)
         raise NotImplementedError, "Host#read_buffer"
       end
 
-      # Applies the Edit values to buffer number as one validated batch and
-      # returns a Response; one bad edit refuses them all.
-      # @rbs number: Integer
+      # Applies the Edit values to the buffer as one validated transaction
+      # and returns a Response whose number is the count; one bad item
+      # refuses them all and changes nothing.
+      # @rbs buffer: Integer
       # @rbs edits: Array[untyped]
-      def edit_buffer(number, edits)
+      def edit_buffer(buffer, edits)
         raise NotImplementedError, "Host#edit_buffer"
       end
 
@@ -311,12 +360,12 @@ module Carat
       end
 
       # Opens, or refreshes and focuses, the plugin's scratch buffer with
-      # that title in a fixed-width window at the :left or :right edge of
+      # that title in a fixed-width window at the "left" or "right" edge of
       # the tab page, holding the lines, with its own keymap built from
-      # bindings in the JSON keymap shape. Returns a Response whose number
-      # is the window number.
+      # bindings in the JSON keymap shape. Returns a WindowResponse with
+      # the window's id.
       # @rbs title: String
-      # @rbs side: Symbol
+      # @rbs side: String
       # @rbs width: Integer
       # @rbs lines: Array[String]
       # @rbs bindings: untyped
@@ -339,18 +388,37 @@ module Carat
         raise NotImplementedError, "Host#close_scratch"
       end
 
-      # Makes window number current and returns a Response.
-      # @rbs number: Integer
-      def focus_window(number)
+      # Makes the window with the id current, and its tab page with it, and
+      # returns a WindowResponse.
+      # @rbs window: Integer
+      def focus_window(window)
         raise NotImplementedError, "Host#focus_window"
       end
 
-      # Shows the file at path in window number, as :e does there, and
-      # returns a Response with the opened message.
-      # @rbs number: Integer
+      # Shows the file at path in the window with the id, as :e does there,
+      # then makes the window current, and returns a WindowResponse with
+      # the opened message.
+      # @rbs window: Integer
       # @rbs path: String
-      def open_file(number, path)
+      def open_file(window, path)
         raise NotImplementedError, "Host#open_file"
+      end
+
+      # Splits the window with the id, horizontally or vertically, and
+      # shows the file at path, taken as it is, in the new window, which
+      # becomes current; returns a WindowResponse with its id.
+      # @rbs window: Integer
+      # @rbs path: String
+      # @rbs vertical: bool
+      def open_in_split(window, path, vertical)
+        raise NotImplementedError, "Host#open_in_split"
+      end
+
+      # Opens a tab page after the current one showing the file at path,
+      # taken as it is; returns a WindowResponse with its window's id.
+      # @rbs path: String
+      def open_in_tab(path)
+        raise NotImplementedError, "Host#open_in_tab"
       end
 
       # Shows text in the message row, as an error when error is true, and
@@ -368,19 +436,19 @@ module Carat
         raise NotImplementedError, "Host#set_status"
       end
 
-      # Places the icon named icon as a sign on row of buffer number and
-      # returns a Response.
-      # @rbs number: Integer
+      # Places the icon named icon as the plugin's sign on row of the
+      # buffer and returns a Response.
+      # @rbs buffer: Integer
       # @rbs row: Integer
       # @rbs icon: String
-      def place_sign(number, row, icon)
+      def place_sign(buffer, row, icon)
         raise NotImplementedError, "Host#place_sign"
       end
 
-      # Removes the signs the plugin placed in buffer number and returns a
-      # Response.
-      # @rbs number: Integer
-      def clear_signs(number)
+      # Removes the signs the plugin placed in the buffer and returns a
+      # Response whose number is how many there were.
+      # @rbs buffer: Integer
+      def clear_signs(buffer)
         raise NotImplementedError, "Host#clear_signs"
       end
 
@@ -403,26 +471,29 @@ module Carat
         raise NotImplementedError, "Host#stat"
       end
 
-      # Returns the glyph of the named icon in the configured icon set.
+      # Returns a TextResponse with the glyph of the named icon in the
+      # configured icon set, failed for an unknown name.
       # @rbs name: String
       def icon(name)
         raise NotImplementedError, "Host#icon"
       end
 
-      # Returns the plugin's option value as text, "" for an unknown name.
+      # Returns a TextResponse with the plugin's option value as text,
+      # failed for an unknown name.
       # @rbs name: String
       def option(name)
         raise NotImplementedError, "Host#option"
       end
 
-      # Returns the absolute path of the editor's working directory.
+      # Returns a TextResponse with the absolute path of the editor's
+      # working directory.
       # @rbs skip
       def working_directory
         raise NotImplementedError, "Host#working_directory"
       end
 
-      # Returns a Response whose number is the window to open a file in:
-      # the previously used window of the current tab page when it shows a
+      # Returns a WindowResponse with the window to open a file in: the
+      # previously used window of the current tab page when it shows a
       # file buffer, otherwise the first window in layout order that does,
       # 0 when none does.
       # @rbs skip
@@ -430,9 +501,9 @@ module Carat
         raise NotImplementedError, "Host#editing_window"
       end
 
-      # Returns a Response whose number is the window of the current tab
-      # page showing the plugin's scratch buffer with that title, 0 when
-      # none does.
+      # Returns a WindowResponse with the window of the current tab page
+      # showing the plugin's scratch buffer with that title, 0 when none
+      # does.
       # @rbs title: String
       def scratch_window(title)
         raise NotImplementedError, "Host#scratch_window"
@@ -493,7 +564,8 @@ module Carat
     # quits, on_event for every subscribed event, on_action for every
     # action of the plugin, on_command for every ex command of the
     # plugin, and on_input when a prompt the plugin opened ends. A plugin
-    # that raises in any of them is disabled.
+    # that raises anything in any of them, an unimplemented method's
+    # NotImplementedError and a stack overflow included, is disabled.
     class Plugin
       # Returns the plugin's Manifest.
       # @rbs skip

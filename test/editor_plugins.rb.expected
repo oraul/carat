@@ -26,7 +26,7 @@ ok   x edits
 ok   the file is written
 ok   the editor quits
 ok   every plugin was off
-ok   a side window on the left
+ok   a side window on the left, with its window id
 ok   a side window on the right
 ok   the width survives equalize
 ok   the width survives a split of the other window
@@ -36,7 +36,7 @@ ok   the plugin closes its window
 ok   closing a list that is not shown fails
 ok   :q closes the side window
 ok   Ctrl-W q closes the side window
-ok   open a file in the file window
+ok   open a file in the file window, id 1
 ok   focusing a missing window fails
 ok   the side window shows the plugin's lines
 ok   its status line shows the title
@@ -73,7 +73,7 @@ ok   and shows the one scratch buffer the first tab page shows
 ok   the first tab page still shows it
 ok   the side window's rows start at its first column
 ok   a raise in an event at startup disables the plugin
-ok   its binding now reports it disabled
+ok   its binding went with it
 ok   the editor goes on editing
 ok   the event plugin is off again
 editor_plugins: 78 passed, 0 failed

@@ -76,7 +76,7 @@ ok   reload counts one change and leaves the buffer unmodified
 ok   a scratch buffer is named by its title
 ok   a file buffer is named by its path
 ok   no signs at first
-ok   a sign is placed
+ok   a sign is placed on its row
 ok   a changed scratch buffer is not unsaved work
 ok   buffer_number is the list position from 1
 ok   an unlisted buffer has number 0

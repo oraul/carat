@@ -46,7 +46,7 @@ module Carat
       def cancel(state)
         state.cmdline = ""
         state.mode = Domain::Mode::NORMAL
-        @plugins.answer(state, "", true) if state.prompting?
+        @plugins.answer("", true) if state.prompting?
       end
 
       #: (Domain::EditorState) -> void
@@ -55,7 +55,7 @@ module Carat
         state.cmdline = ""
         state.mode = Domain::Mode::NORMAL
         if state.prompting?
-          @plugins.answer(state, text, false)
+          @plugins.answer(text, false)
           return
         end
         return if text.strip.empty?

@@ -90,4 +90,6 @@ ok   the side window stays fixed-width
 ok   focusing remembers the window left
 ok   focusing the current window changes nothing
 ok   a closed previous window is forgotten
-domain_layout: 92 passed, 0 failed
+ok   a leaf is found by its window's id
+ok   a leaf is found by the buffer it shows, by identity
+domain_layout: 94 passed, 0 failed

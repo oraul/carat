@@ -40,4 +40,8 @@ ok   configuration replaces the plugin binding
 ok   configuration removes the plugin binding
 ok   configuration adds a longer binding
 ok   add_all records errors and ignores a non-object
-domain_keymap: 42 passed, 0 failed
+ok   a second plugin's binding of held keys is refused and recorded
+ok   removing an owner drops its bindings and the prefixes left empty, and keeps the others
+ok   the configuration replaces a plugin binding and keeps it when the plugin goes
+ok   an action name has namespace segments, a key sequence does not
+domain_keymap: 46 passed, 0 failed

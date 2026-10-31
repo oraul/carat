@@ -8,12 +8,15 @@ module Carat
     # plugins set, by plugin name in registration order, and the prompt a
     # plugin opened on the command line (its text, the plugin, and the
     # plugin's id for it, all "" when none is open), and the repetition a
-    # blockwise insert owes when insert mode is left, and the id the next
-    # buffer to enter the list receives. The current window,
+    # blockwise insert owes when insert mode is left, the id the next
+    # buffer to enter the list receives, the id the next window to enter a
+    # tab page receives, and the buffer feed, where the list records
+    # buffers opening and closing and the buffers their renames and
+    # changes, for the plugin host. The current window,
     # its buffer, and its cursor are reached through the current tab page,
     # and so is the visual selection, which the current window owns. A
     # Struct record: mutable, with a reader and a writer per member.
-    class EditorState < Struct.new(:buffers, :tabs, :tab_index, :mode, :options, :timeoutlen, :cmdline, :message, :message_error, :pending_keys, :quit, :registers, :grammar, :last_find, :segments, :prompt, :prompt_owner, :prompt_id, :block_insert, :next_buffer_id)
+    class EditorState < Struct.new(:buffers, :tabs, :tab_index, :mode, :options, :timeoutlen, :cmdline, :message, :message_error, :pending_keys, :quit, :registers, :grammar, :last_find, :segments, :prompt, :prompt_owner, :prompt_id, :block_insert, :next_buffer_id, :next_window_id, :feed)
       # @rbs @buffers: Array[untyped]
       # @rbs @tabs: Array[untyped]
       # @rbs @tab_index: Integer
@@ -34,6 +37,8 @@ module Carat
       # @rbs @prompt_id: String
       # @rbs @block_insert: BlockInsert
       # @rbs @next_buffer_id: Integer
+      # @rbs @next_window_id: Integer
+      # @rbs @feed: BufferFeed
 
       # The lists are stored through the writers, not passed to super, so
       # their element type is the pinned one; the rest follows for symmetry.
@@ -43,8 +48,12 @@ module Carat
         self.buffers = []
         self.tabs = []
         self.next_buffer_id = 1
+        self.next_window_id = 1
+        self.feed = BufferFeed.new
         add_buffer(buffer)
-        tabs << TabPage.new(Window.new(buffer))
+        first = Window.new(buffer)
+        adopt(first)
+        tabs << TabPage.new(first)
         self.tab_index = 0
         self.mode = Mode::NORMAL
         self.options = options
@@ -281,12 +290,28 @@ module Carat
           self.next_buffer_id = next_buffer_id + 1
         end
         buffers << target
+        target.feed = feed
+        feed.note("open", target.id, target.path_text, "")
       end
 
       #: (Buffer) -> void
       def drop_buffer(target)
         index = buffer_index(target)
-        buffers.delete_at(index) if index >= 0
+        return if index < 0
+        buffers.delete_at(index)
+        feed.note("close", target.id, target.path_text, "")
+      end
+
+      # The listed buffer with the id, or nil.
+      #: (Integer) -> Buffer?
+      def buffer_with_id(id)
+        i = 0
+        while i < buffers.length
+          candidate = buffer_at(i)
+          return candidate if candidate.id == id
+          i += 1
+        end
+        nil
       end
 
       # Lets go of a buffer a window stopped showing: it leaves the list
@@ -330,6 +355,32 @@ module Carat
 
       # ------------------------------------------------------------ windows
 
+      # Gives a window that has none the next window id, which it keeps
+      # for as long as the editor runs; no other window ever gets it.
+      #: (Window) -> void
+      def adopt(window)
+        return unless window.id == 0
+        window.id = next_window_id
+        self.next_window_id = next_window_id + 1
+      end
+
+      # The index of the tab page holding the window with the id, or -1.
+      #: (Integer) -> Integer
+      def window_tab(id)
+        t = 0
+        while t < tabs.length
+          return t if tab_at(t).layout.leaf_of(id) >= 0
+          t += 1
+        end
+        -1
+      end
+
+      # The id of the current window.
+      #: () -> Integer
+      def window_id
+        window.id
+      end
+
       #: () -> Integer
       def window_count
         tab.window_count
@@ -362,6 +413,7 @@ module Carat
       # Inserts a tab page after the current one and makes it current.
       #: (TabPage) -> void
       def add_tab(page)
+        adopt(page.window)
         tabs.insert(tab_index + 1, page)
         self.tab_index = tab_index + 1
       end

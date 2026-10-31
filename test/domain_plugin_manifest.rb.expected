@@ -1,8 +1,10 @@
 ok   the hello manifest breaks no rule
+ok   a 1.1 manifest's symbols are read as names
 ok   the host's own version is accepted
 ok   an older minor is accepted
-ok   a newer minor is accepted
+ok   a newer minor is refused
 ok   a newer major is refused with both versions
+ok   an older major is refused
 ok   a malformed version is not a refusal
 ok   uppercase name
 ok   name starting with a digit
@@ -24,6 +26,9 @@ ok   option without a type
 ok   option with an unknown type
 ok   integer option with a bad default
 ok   bool option with a bad default
+ok   actions of the wrong type
+ok   events of the wrong type
+ok   an event that is not a name
 ok   type without a default
 ok   a key sequence binding
 ok   a null binding
@@ -34,4 +39,4 @@ ok   every option type
 ok   two problems are both reported
 ok   describe returns the description
 ok   describe returns empty for an unknown action
-domain_plugin_manifest: 36 passed, 0 failed
+domain_plugin_manifest: 41 passed, 0 failed

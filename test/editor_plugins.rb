@@ -35,8 +35,8 @@ class Side < Carat::PluginApi::Plugin
         "plugin.side.close" => "Close the list",
         "plugin.side.lines" => "Replace the list's lines",
         "plugin.side.nope" => "Replace the lines of a list that does not exist",
-        "plugin.side.file" => "Open b.txt in window 2",
-        "plugin.side.far" => "Focus window 9",
+        "plugin.side.file" => "Open b.txt in the editing window",
+        "plugin.side.far" => "Focus window id 9",
         "plugin.side.count" => "Report the count and the register",
         "plugin.side.here" => "Open b.txt in the side window itself"
       },
@@ -57,16 +57,16 @@ class Side < Carat::PluginApi::Plugin
     return if host.nil?
     keymap = { "normal" => { "<CR>" => "plugin.side.pick" } }
     case name
-    when "plugin.side.open" then report(host.open_scratch("list", :left, 30, LINES, keymap))
-    when "plugin.side.right" then report(host.open_scratch("list", :right, 30, LINES, keymap))
-    when "plugin.side.wide" then report(host.open_scratch("wide", :left, 79, LINES, nil))
+    when "plugin.side.open" then report_window(host.open_scratch("list", "left", 30, LINES, keymap))
+    when "plugin.side.right" then report_window(host.open_scratch("list", "right", 30, LINES, keymap))
+    when "plugin.side.wide" then report_window(host.open_scratch("wide", "left", 79, LINES, nil))
     when "plugin.side.pick" then host.message("picked row #{context.row} in window #{context.window}", false)
     when "plugin.side.close" then report(host.close_scratch("list"))
     when "plugin.side.lines" then report(host.set_scratch_lines("list", ["x"]))
     when "plugin.side.nope" then report(host.set_scratch_lines("nope", ["x"]))
-    when "plugin.side.file" then report(host.open_file(2, "b.txt"))
-    when "plugin.side.far" then report(host.focus_window(9))
-    when "plugin.side.here" then report(host.open_file(host.scratch_window("list").number, "b.txt"))
+    when "plugin.side.file" then report_window(host.open_file(host.editing_window.window, "b.txt"))
+    when "plugin.side.far" then report_window(host.focus_window(9))
+    when "plugin.side.here" then report_window(host.open_file(host.scratch_window("list").window, "b.txt"))
     when "plugin.side.count" then host.message("count #{context.count} register #{context.register.inspect} buffer #{context.buffer}", false)
     end
   end
@@ -78,6 +78,13 @@ class Side < Carat::PluginApi::Plugin
     host = @host
     return if host.nil?
     host.message("#{response.ok ? "ok" : "failed"} #{response.number} #{response.message}".rstrip, !response.ok)
+  end
+
+  #: (Carat::PluginApi::WindowResponse) -> void
+  def report_window(response)
+    host = @host
+    return if host.nil?
+    host.message("#{response.ok ? "ok" : "failed"} #{response.window} #{response.message}".rstrip, !response.ok)
   end
 end
 
@@ -130,8 +137,8 @@ t.table([
   ["the argument is the name", ":Hello Ada<CR>", "#{INFO} Hello, Ada! 1 buffer opened"],
   ["a partial abbreviation is unknown", ":He<CR>", "E492: Not an editor command: He"],
   ["buffer opens are counted", ":e b.txt<CR> hh", "#{INFO} Hello, world! 2 buffers opened"],
-  ["a count reaches the plugin", "3 tt", "count 3 register \"\" buffer 1"],
-  ["a register reaches the plugin", "\"a tt", "count 0 register \"a\" buffer 1"],
+  ["a count reaches the plugin", "3 tt", "count 3 register \"\" buffer 2"],
+  ["a register reaches the plugin", "\"a tt", "count 0 register \"a\" buffer 2"],
   ["an unknown plugin action reports it", ":Nope<CR>", "E492: Not an editor command: Nope"]
 ]) do |keys|
   session(keys).message
@@ -203,17 +210,17 @@ t.assert_equal([false, false, false], [h.plugins.enabled?("hello"), h.plugins.en
 LEFT = [[0, 0, 22, 30, "list"], [0, 31, 22, 49, "a.txt"]]
 RIGHT = [[0, 0, 22, 49, "a.txt"], [0, 50, 22, 30, "list"]]
 t.table([
-  ["a side window on the left", " to", ["ok 1", LEFT, 1]],
+  ["a side window on the left, with its window id", " to", ["ok 2", LEFT, 1]],
   ["a side window on the right", " tr", ["ok 2", RIGHT, 2]],
   ["the width survives equalize", " to<C-w>=", ["", LEFT, 1]],
   ["the width survives a split of the other window", " to<C-w>l<C-w>v<C-w>=", ["", [[0, 0, 22, 30, "list"], [0, 31, 22, 24, "a.txt"], [0, 56, 22, 24, "a.txt"]], 2]],
-  ["reopening focuses the side window", " to<C-w>l to", ["ok 1", LEFT, 1]],
+  ["reopening focuses the side window", " to<C-w>l to", ["ok 2", LEFT, 1]],
   ["no room reports E36", " tw", ["failed 0 #{E36}", [[0, 0, 22, 80, "a.txt"]], 1]],
   ["the plugin closes its window", " to tc", ["ok 0", [[0, 0, 22, 80, "a.txt"]], 1]],
   ["closing a list that is not shown fails", " tc", ["failed 0 No window shows list", [[0, 0, 22, 80, "a.txt"]], 1]],
   [":q closes the side window", " to:q<CR>", ["", [[0, 0, 22, 80, "a.txt"]], 1]],
   ["Ctrl-W q closes the side window", " to<C-w>q", ["", [[0, 0, 22, 80, "a.txt"]], 1]],
-  ["open a file in the file window", " to tf", ["ok 2 \"b.txt\" 1L, 3B", [[0, 0, 22, 30, "list"], [0, 31, 22, 49, "b.txt"]], 2]],
+  ["open a file in the file window, id 1", " to tf", ["ok 1 \"b.txt\" 1L, 3B", [[0, 0, 22, 30, "list"], [0, 31, 22, 49, "b.txt"]], 2]],
   ["focusing a missing window fails", " to tx", ["failed 0 No window 9", LEFT, 1]]
 ]) do |keys|
   h = session(keys)
@@ -225,7 +232,7 @@ h = session(" to")
 t.assert_equal(Side::LINES, h.lines, "the side window shows the plugin's lines")
 t.assert_equal("list", h.status_row[0, 4], "its status line shows the title")
 h.type("jj<CR>")
-t.assert_equal([[2, 0], "picked row 2 in window 1"], [h.cursor, h.message], "j falls through to the mode's keymap and Enter runs the plugin's action")
+t.assert_equal([[2, 0], "picked row 2 in window 2"], [h.cursor, h.message], "j falls through to the mode's keymap and Enter runs the plugin's action")
 h.type("<C-w>l<CR>")
 t.assert_equal(["", 2], [h.message, h.window_index], "the scratch keymap does not apply in the file window")
 h.type("<C-w>h")
@@ -283,7 +290,7 @@ t.assert_equal([["zz"], ["", "b.txt", "a.txt"], true], [h.lines, h.buffer_paths,
 h = session(" to th")
 t.assert_equal([["zz"], false, 2], [h.lines, h.state.window.fixed_width, h.window_count], "a side window that takes a file loses its fixed width")
 h = session(" to tfx tf")
-t.assert_equal(["ok 2", 2, ["z"], true], [h.message, h.window_index, h.lines, h.buffer.modified], "opening the file a window already shows leaves it as it is, changes kept")
+t.assert_equal(["ok 1", 2, ["z"], true], [h.message, h.window_index, h.lines, h.buffer.modified], "opening the file a window already shows leaves it as it is, changes kept")
 h = session(" to:tabnew<CR> to")
 titles = []
 i = 0
@@ -325,7 +332,7 @@ h = Carat::Doubles::EditorHarness.with_plugins(files, 24, 80, [Boom.new])
 h.open("a.txt")
 t.assert_equal(["Plugin boom disabled: event boom", true], [h.message, h.state.message_error], "a raise in an event at startup disables the plugin")
 h.type(" bb")
-t.assert_equal("Plugin boom is disabled", h.message, "its binding now reports it disabled")
+t.assert_equal(["", [0, 0]], [h.message, h.cursor], "its binding went with it")
 h.type("x")
 t.assert_equal([["ne", "two"], ""], [h.lines, h.message], "the editor goes on editing")
 h = Carat::Doubles::EditorHarness.with_plugins(files, 24, 80, [Boom.new])

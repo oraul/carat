@@ -1,0 +1,45 @@
+ok   a host method the plugin's host does not implement disables the plugin
+ok   and the editor goes on editing
+ok   a stack overflow disables the plugin
+ok   and the editor goes on editing
+ok   a manifest that raises and one of the wrong shape register disabled, the others enabled
+ok   both are recorded
+ok   the editor started and edits
+ok   a plugin writing on a save hears only the user's save, not its own
+ok   two plugins writing on each other's saves stop after 8 rounds
+ok   each heard one save per round
+ok   a command that runs itself runs 4 deep, then is refused
+ok   a bad last item refuses the request before any edit lands
+ok   a window id still names the same window after another closed
+ok   a new window gets an id never given before
+ok   an unknown window id fails
+ok   a buffer that left the list loses its id for good and the reopened file gets a new one
+ok   a buffer that is not current is read by its id
+ok   focusing a window of another tab page goes to that tab page
+ok   a failed open fails and leaves the focus where it was
+ok   a split opens a name with a space
+ok   and answers the new window's id
+ok   a tab page opens a name with a bar
+ok   a vertical split puts the new window at the left
+ok   dd on row 1 reports row 1, one row removed
+ok   an insert session reports once, when it ends
+ok   another plugin hears the change of a buffer that is not current, with its rows
+ok   the plugin that edited does not
+ok   closing the window of a clean buffer closes the buffer
+ok   a renamed file's buffer follows it and the rename is an event with the old path
+ok   changing a read line or path changes nothing in the buffer
+ok   changing a given scratch line changes nothing in the buffer
+ok   a plugin disabled after opening a side window, a sign, a status, and a prompt leaves none of them
+ok   its scratch buffer left the list
+ok   it says why it was disabled
+ok   its binding went with it
+ok   a second plugin with a registered name is refused
+ok   and the first keeps its name
+ok   a plugin repeating another's ex command or abbreviation is refused
+ok   two plugins declaring one ex command: the second is refused and the command reaches the first
+ok   a binding conflict between plugins is reported
+ok   and the first plugin keeps the keys
+ok   a line opened above moves the sign down
+ok   deleting its line removes it
+ok   a plugin runs an ex command in activate
+use_cases_plugin_hardening: 44 passed, 0 failed

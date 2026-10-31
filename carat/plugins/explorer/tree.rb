@@ -162,12 +162,12 @@ module Carat
         #: (PluginApi::Host) -> Array[String]
         def lines(host)
           out = []
-          current = host.icon("current")
+          current = host.icon("current").text
           i = 0
           while i < @nodes.length
             n = node(i)
             mark = n.path == @marked ? current : " "
-            icon = host.icon(FileIcons.name_for(n.name, n.directory, expanded?(n.path), n.symlink))
+            icon = host.icon(FileIcons.name_for(n.name, n.directory, expanded?(n.path), n.symlink)).text
             out << mark + ("  " * n.depth) + icon + " " + n.name
             i += 1
           end

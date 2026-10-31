@@ -1,11 +1,12 @@
 ok   a valid plugin is registered and enabled
-ok   activation, the open of the start file, and the cursor now in it
+ok   activation, the open of the start file by its id, and the cursor now in it; the empty first buffer was never announced
 ok   the host describes a plugin's action
 ok   and not another
 ok   a newer major version is refused with both versions
 ok   the refusal is recorded
 ok   a refused plugin is not activated
-ok   a newer minor version is accepted
+ok   a newer minor version is refused
+ok   an older minor version is accepted
 ok   a broken manifest rule disables the plugin
 ok   a disabled entry registers without activating
 ok   an action of a disabled plugin says so
@@ -25,15 +26,15 @@ ok   an action with no plugin segment names none
 ok   the name and the abbreviation are known, a partial prefix is not
 ok   a plugin command succeeds silently
 ok   the plugin receives the declared name, the bang, and the arguments
-ok   opening a file delivers buffer_open then cursor_move; the clean buffer it replaced left the list
-ok   an edit at the same cursor delivers buffer_change only
+ok   opening a file delivers buffer_open, buffer_close for the clean buffer it replaced, then cursor_move
+ok   an edit at the same cursor delivers buffer_change only, with its rows
 ok   a cursor move delivers cursor_move
 ok   a mode change carries the mode name
 ok   several differences come in the fixed order
 ok   reloading the current buffer delivers buffer_change
-ok   a write delivers buffer_save at once
-ok   nothing else changed
-ok   a split focuses the new window
+ok   a write queues buffer_save
+ok   and the end of the key delivers it, and nothing else changed
+ok   a split focuses the new window, which has the next id
 ok   closing it focuses the one left
 ok   resize is delivered once per new size
 ok   quit is delivered once, then deactivate
@@ -42,9 +43,9 @@ ok   a plugin subscribed to buffer_save alone hears nothing of edits or modes
 ok   but hears the save
 ok   read_buffer 0 reads the current buffer
 ok   the lines are a copy
-ok   a buffer that is not current reads with the cursor at 0,0
-ok   a number past the list fails
-ok   a negative number fails
+ok   a buffer that is not current reads by its id with the cursor at 0,0
+ok   an id no listed buffer has fails
+ok   a negative id fails
 ok   move_cursor clamps the column into the row
 ok   and the row into the buffer
 ok   message shows plain text
@@ -54,7 +55,7 @@ ok   empty text removes it
 ok   run_ex runs the command and returns its outcome
 ok   a failed ex command is a failed response
 ok   icon reads the nerd set by default
-ok   and the ascii set when configured
+ok   and the ascii set when configured, refusing an unknown name
 ok   two edits apply as one batch
 ok   one bad edit refuses the whole list
 ok   overlapping edits are refused
@@ -66,7 +67,8 @@ ok   the cursor is kept inside the text
 ok   editing a missing buffer fails
 ok   an empty list succeeds
 ok   a sign is the icon's glyph with its owner
-ok   the last sign on a row wins
+ok   a plugin's later sign on a row replaces its own
+ok   the plugin registered first shows when two mark a row
 ok   a plugin clears only its own signs
 ok   a row outside the buffer is refused
 ok   an unknown icon is refused
@@ -82,4 +84,4 @@ ok   a raise in an event disables the plugin and keeps the edit
 ok   a disabled plugin's requests are refused
 ok   reads, stats, and icons too
 ok   a disabled plugin's segment is dropped when it is disabled
-use_cases_plugins: 84 passed, 0 failed
+use_cases_plugins: 86 passed, 0 failed
