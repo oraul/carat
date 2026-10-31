@@ -77,6 +77,20 @@ The alternative of passing a transaction object through every use case and primi
 - [`:e!` and the scratch refresh now fire `buffer_change`] → Intended: the text did change. No shipped plugin subscribes to `buffer_change`; the plugin-host spec gains a scenario for it.
 - [The lint rule's textual match misses an aliasing write such as `l = buffer.lines; l << x`] → Accepted; the rule catches the direct forms, review catches the rest, and the undo change will rely on records rather than on the array.
 
+## Measured result
+
+Key handling per key on 100,000 lines, with the scratch harness, four runs each against `main` at 2b8b2ba:
+
+| Keys | `main` | This change | Target |
+| --- | --- | --- | --- |
+| `ddP` | 300 to 378 us | 33.0 to 36.2 us | under 30 us |
+| `o<Esc>dd` | 226 to 251 us | 28.0 to 31.6 us | under 30 us |
+| typing in the middle of a line | 16.7 to 20.9 us | 16.3 to 18.6 us | at or below `main` |
+
+On 1,000,000 lines `ddP` takes 154 to 193 us per key against 5,462 to 6,166 us, the live heap does not grow over 9,000 keys, and the collector runs 67 collections in 2.15 s against 188 in 5.99 s.
+
+The 30 us target for `ddP` is missed by 3 to 6 us. The target was estimated from the tight-loop cost of one `delete_at` and one `insert` (about 15 us for the pair) and left out two costs this change does not touch: the per-key baseline of about 17 us that a cursor-only key pays on both builds, and the cost of the tail move when it runs cache-cold after a frame render. Profiling shows the splice adds no instructions over Spinel's own `delete_at` and `insert`, which are C loops that move every element after the edited row, about 400 KB at row 50,000 of 100,000; without rendering between keys `ddP` takes 25.9 us. Going lower for line edits needs a line store whose edits do not move the tail, recorded in `docs/backlog.md`.
+
 ## Migration Plan
 
 None: no data, configuration, or plugin API change. Rolling back is reverting the squash commit.

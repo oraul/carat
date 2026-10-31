@@ -109,6 +109,10 @@ After a key has been handled, the host SHALL deliver to every subscribed plugin,
 - **WHEN** "x" is pressed in a buffer with text
 - **THEN** the plugin receives buffer_change then cursor_move, and no mode_change
 
+#### Scenario: Reloading the current buffer
+- **WHEN** a test plugin subscribed to every event is active and ":e!" is run on the current buffer
+- **THEN** the plugin receives buffer_change
+
 #### Scenario: Entering insert mode
 - **WHEN** "i" is pressed
 - **THEN** the plugin receives mode_change with the detail "insert"
