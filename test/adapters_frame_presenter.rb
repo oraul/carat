@@ -53,7 +53,7 @@ t.assert_equal("  0 b", f.row_text(1), "cursor row shows 0 when number is off")
 
 # Status line content.
 s = state_for(["ab", "cdef"], "a.txt")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 s.cursor.move_to(1, 2)
 f = P.call(s, 6, 30)
 t.assert_equal("a.txt [+]", f.row_text(4)[0, 9], "modified buffer shows [+]")
@@ -245,7 +245,7 @@ t.assert_equal(["a.txt", "a.txt"], [f.row_text(4)[0, 5], f.row_text(4)[11, 5]], 
 t.assert_equal(D::Highlight::STATUS, f.cell(4, 10).hl, "the separator continues through the status row")
 t.assert_equal("", f.row_text(5), "row 5 is the message row")
 t.assert_equal([0, 15], [f.cursor_row, f.cursor_col], "the cursor is in the right window, which stayed current")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 f = P.call(s, 6, 21)
 t.assert_equal("a.txt [+]", f.row_text(4)[0, 9], "a status line clipped to its window still shows the marker")
 t.assert_equal(" ", f.cell(4, 9).char, "the left status line stops before the separator")
@@ -272,7 +272,7 @@ t.assert_equal("a.txt", f.row_text(5)[0, 5], "the status line is on row 5")
 t.assert_equal("", f.row_text(6), "the message row stays last")
 t.assert_equal([1, 4], [f.cursor_row, f.cursor_col], "the cursor is under the tab line")
 s.tab_index = 1
-other.modified = true
+other.mark_unsaved
 f = P.call(s, 7, 30)
 t.assert_equal(" 1 a.txt  2 b.txt [+]", f.row_text(0), "the modified marker shows in the label")
 t.assert_equal([D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_SELECTED], [f.cell(0, 0).hl, f.cell(0, 9).hl], "the second label is selected now")
@@ -320,7 +320,7 @@ t.assert_equal(["list", false], [f.row_text(4)[0, 4], f.row_text(4)[0, 12].inclu
 s.tab.focus(id)
 f = P.call(s, 6, 40)
 t.assert_equal(["list  hello ", "a.txt   "], [f.row_text(4)[0, 12], f.row_text(4)[13, 8]], "the segments follow the current window, clipped to the window")
-scratch.modified = true
+scratch.mark_unsaved
 f = P.call(s, 6, 40)
 t.assert_equal("list [+]  he", f.row_text(4)[0, 12], "the modified marker comes before the segments")
 t.assert_equal(["item", "  1 one"], [f.row_text(0)[0, 4], f.row_text(0)[13, 7]], "the side window has no line numbers while the file window keeps them")

@@ -8,11 +8,12 @@ module Carat
     # plugins set, by plugin name in registration order, and the prompt a
     # plugin opened on the command line (its text, the plugin, and the
     # plugin's id for it, all "" when none is open), and the repetition a
-    # blockwise insert owes when insert mode is left. The current window,
+    # blockwise insert owes when insert mode is left, and the id the next
+    # buffer to enter the list receives. The current window,
     # its buffer, and its cursor are reached through the current tab page,
     # and so is the visual selection, which the current window owns. A
     # Struct record: mutable, with a reader and a writer per member.
-    class EditorState < Struct.new(:buffers, :tabs, :tab_index, :mode, :options, :timeoutlen, :cmdline, :message, :message_error, :pending_keys, :quit, :registers, :grammar, :last_find, :segments, :prompt, :prompt_owner, :prompt_id, :block_insert)
+    class EditorState < Struct.new(:buffers, :tabs, :tab_index, :mode, :options, :timeoutlen, :cmdline, :message, :message_error, :pending_keys, :quit, :registers, :grammar, :last_find, :segments, :prompt, :prompt_owner, :prompt_id, :block_insert, :next_buffer_id)
       # @rbs @buffers: Array[untyped]
       # @rbs @tabs: Array[untyped]
       # @rbs @tab_index: Integer
@@ -32,6 +33,7 @@ module Carat
       # @rbs @prompt_owner: String
       # @rbs @prompt_id: String
       # @rbs @block_insert: BlockInsert
+      # @rbs @next_buffer_id: Integer
 
       # The lists are stored through the writers, not passed to super, so
       # their element type is the pinned one; the rest follows for symmetry.
@@ -40,7 +42,8 @@ module Carat
         super()
         self.buffers = []
         self.tabs = []
-        buffers << buffer
+        self.next_buffer_id = 1
+        add_buffer(buffer)
         tabs << TabPage.new(Window.new(buffer))
         self.tab_index = 0
         self.mode = Mode::NORMAL
@@ -267,9 +270,17 @@ module Carat
         end
       end
 
+      # Lists a buffer that is not listed yet. A buffer entering the list
+      # for the first time receives the next id, which it keeps for as
+      # long as the editor runs, also after leaving the list.
       #: (Buffer) -> void
       def add_buffer(target)
-        buffers << target if buffer_index(target) < 0
+        return if buffer_index(target) >= 0
+        if target.id == 0
+          target.id = next_buffer_id
+          self.next_buffer_id = next_buffer_id + 1
+        end
+        buffers << target
       end
 
       #: (Buffer) -> void

@@ -68,8 +68,31 @@ module Carat
         @operate_on_selection = operate_on_selection
       end
 
+      # Runs a command inside a transaction on the current buffer, so the
+      # edits of one command are grouped: the transaction closes after the
+      # command, unless the command left the editor in insert mode on the
+      # same buffer, when it stays open as the insert session that
+      # LeaveInsert closes. A command that runs while a transaction is
+      # already open (an insert-mode action) joins it. Outside insert
+      # mode an open transaction is a session that ended without
+      # LeaveInsert, and is closed first.
       #: (Domain::EditorState, Domain::Command) -> void
       def call(state, command)
+        buffer = state.buffer
+        before = state.cursor.position
+        buffer.commit_transaction(before) if state.mode != Domain::Mode::INSERT && buffer.transaction_open?
+        opened = buffer.begin_transaction(before)
+        run(state, command)
+        return unless opened
+        same = state.buffer.equal?(buffer)
+        return if same && state.mode == Domain::Mode::INSERT
+        buffer.commit_transaction(same ? state.cursor.position : before)
+      end
+
+      private
+
+      #: (Domain::EditorState, Domain::Command) -> void
+      def run(state, command)
         return if Domain::Mode.visual?(state.mode) && visual(state, command)
         if command.operator?
           @operate.call(state, command)
@@ -132,8 +155,6 @@ module Carat
           end
         end
       end
-
-      private
 
       # The actions that act on the selection in a visual mode; returns
       # false for any other action, which then runs as in normal mode

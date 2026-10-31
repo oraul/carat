@@ -46,7 +46,7 @@ module Carat
           buffer.path = path
           own = path
         end
-        buffer.modified = false if path == own
+        buffer.mark_saved if path == own
         @plugins.saved(buffer)
         Outcome.success("\"#{path}\" #{buffer.line_count}L, #{text.bytesize}B written")
       end

@@ -28,15 +28,15 @@ end
 files = Carat::Doubles::MemoryFiles.new
 ex = build(files)
 s = state_with(["one", "two"], "a.txt")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 r = ex.call(s, "w")
 t.assert_equal([true, "\"a.txt\" 2L, 8B written"], [r.ok, r.message], "write reports the written message")
 t.assert_equal("one\ntwo\n", files.get("a.txt"), "write stores the text")
 t.assert_equal(false, s.buffer.modified, "write clears the modified flag")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 r = ex.call(s, "write")
 t.assert_equal("\"a.txt\" 2L, 8B written", r.message, "long form writes")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 r = ex.call(s, "w b.txt")
 t.assert_equal("one\ntwo\n", files.get("b.txt"), "write to another path")
 t.assert_equal("a.txt", s.buffer.path, "buffer path unchanged by writing elsewhere")
@@ -49,7 +49,7 @@ t.assert_equal("new.txt", unnamed.buffer.path, "unnamed buffer adopts the writte
 t.assert_equal(false, unnamed.buffer.modified, "adopting the path clears the modified flag")
 files.unwritable << "ro.txt"
 ro = state_with(["x"], "ro.txt")
-ro.buffer.modified = true
+ro.buffer.mark_unsaved
 r = ex.call(ro, "w")
 t.assert_equal(false, r.ok, "write failure is a failure")
 t.assert_equal("E212: Can't open file for writing", r.message[0, 33], "write failure reports E212")
@@ -60,7 +60,7 @@ s = state_with(["x"], "a.txt")
 r = ex.call(s, "q")
 t.assert_equal([true, true], [r.ok, s.quit], "quit on a clean buffer ends the editor")
 s = state_with(["x"], "a.txt")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 r = ex.call(s, "q")
 t.assert_equal([false, "E37: No write since last change (add ! to override)", false], [r.ok, r.message, s.quit], "quit refused while modified")
 r = ex.call(s, "quit")
@@ -68,7 +68,7 @@ t.assert_equal(false, s.quit, "long form quit refused too")
 r = ex.call(s, "q!")
 t.assert_equal(true, s.quit, "forced quit ends the editor")
 s = state_with(["x"], "a.txt")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 ex.call(s, "quit!")
 t.assert_equal(true, s.quit, "long form forced quit")
 
@@ -76,7 +76,7 @@ t.assert_equal(true, s.quit, "long form forced quit")
 files = Carat::Doubles::MemoryFiles.new
 ex = build(files)
 s = state_with(["hello"], "a.txt")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 r = ex.call(s, "wq")
 t.assert_equal([true, "hello\n", true], [r.ok, files.get("a.txt"), s.quit], "wq writes and quits")
 s = state_with(["x"], nil)
@@ -87,7 +87,7 @@ s = state_with(["x"], "ro.txt")
 r = ex.call(s, "wq")
 t.assert_equal(false, s.quit, "wq stays when the write fails")
 s = state_with(["x"], "a.txt")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 r = ex.call(s, "wq other.txt")
 t.assert_equal(["x\n", true], [files.get("other.txt"), s.quit], "wq with a path writes there and quits")
 
@@ -101,7 +101,7 @@ def run_ex(text, kind)
   files.put("a.txt", "old\n")
   files.unwritable << "a.txt" if kind == :unwritable
   s = state_with(["new"], kind == :unnamed ? nil : "a.txt")
-  s.buffer.modified = kind != :clean
+  s.buffer.mark_unsaved if kind != :clean
   r = build(files).call(s, text)
   [r.ok, r.message, s.quit, files.get("a.txt"), s.buffer.modified]
 end
@@ -212,7 +212,7 @@ t.assert_equal([true, "\"b.txt\" 1L, 3B", "b.txt", ["zz"], [0, 0]], [r.ok, r.mes
 r = ex.call(s, "e new.txt")
 t.assert_equal(["\"new.txt\" [New]", "new.txt", [""], false], [r.message, s.buffer.path, s.buffer.lines, s.buffer.modified], "edit starts a new file")
 s = state_with(["mem"], "a.txt")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 r = ex.call(s, "e b.txt")
 t.assert_equal([false, "E37: No write since last change (add ! to override)", ["mem"]], [r.ok, r.message, s.buffer.lines], "edit refused while modified")
 r = ex.call(s, "e!")
@@ -284,11 +284,11 @@ ex = build(files)
 s = state_with(["mem"], "a.txt")
 s.tab.layout.arrange(0, 0, 23, 80)
 ex.call(s, "sp")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 r = ex.call(s, "q")
 t.assert_equal([true, 1, false, true], [r.ok, s.window_count, s.quit, s.buffer.modified], "q with two windows closes one and keeps the buffer")
 ex.call(s, "sp b.txt")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 r = ex.call(s, "close")
 t.assert_equal([1, "a.txt", 2], [s.window_count, s.buffer.path, s.buffer_count], "close keeps the modified buffer hidden")
 r = ex.call(s, "qa")
@@ -298,31 +298,31 @@ t.assert_equal([true, "\"b.txt\" 1L, 3B written", "zz\n", 1], [r.ok, r.message, 
 s = state_with(["mem"], "a.txt")
 s.tab.layout.arrange(0, 0, 23, 80)
 ex.call(s, "sp b.txt")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 ex.call(s, "close")
 r = ex.call(s, "q!")
 t.assert_equal([true, false, "b.txt", 1], [r.ok, s.quit, s.buffer.path, s.buffer_count], "q! on the last window shows the hidden modified buffer and abandons the clean one")
 s = state_with(["mem"], "a.txt")
 s.tab.layout.arrange(0, 0, 23, 80)
 ex.call(s, "sp b.txt")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 ex.call(s, "close")
 r = ex.call(s, "e b.txt")
 t.assert_equal([true, "\"b.txt\" 1L, 3B", true, 1], [r.ok, r.message, s.buffer.modified, s.buffer_count], "e brings a hidden buffer back without reading it, dropping the clean one")
 s = state_with(["mem"], "a.txt")
 s.tab.layout.arrange(0, 0, 23, 80)
 ex.call(s, "sp")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 r = ex.call(s, "wq")
 t.assert_equal([true, "mem\n", 1, false], [r.ok, files.get("a.txt"), s.window_count, s.quit], "wq with two windows writes and closes one")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 r = ex.call(s, "x")
 t.assert_equal([true, true], [r.ok, s.quit], "x on the last window writes and quits")
 s = state_with(["mem"], "a.txt")
 s.tab.layout.arrange(0, 0, 23, 80)
 ex.call(s, "tabnew")
 ex.call(s, "e b.txt")
-s.buffer.modified = true
+s.buffer.mark_unsaved
 ex.call(s, "tabfir")
 r = ex.call(s, "qa")
 t.assert_equal([false, E37], [r.ok, r.message], "qa is refused by a modified buffer in another tab page")

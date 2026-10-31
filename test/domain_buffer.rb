@@ -108,7 +108,7 @@ b = D::Buffer.from_text("one\n", "f.txt")
 t.assert_equal(false, b.modified, "unmodified after load")
 b.insert(pos(0, 0), "x")
 t.assert_equal(true, b.modified, "modified after insert")
-b.modified = false
+b.mark_saved
 t.assert_equal(false, b.modified, "unmodified after save")
 
 # Data semantics the domain relies on: value equality, hashing, immutability.
@@ -140,7 +140,7 @@ w = D::Window.new(D::Buffer.from_text("ab\n", "w.txt"))
 t.assert_equal([0, 0, 0, "w.txt", [0, 0], false], [w.top, w.left, w.height, w.buffer.path, w.cursor.to_a, w.fixed_width], "a window starts at the origin with no height, showing its buffer from the start")
 w.top = 7
 t.assert_equal(7, w.top, "a window member has a writer")
-t.assert_equal([:lines, :path, :line_ending, :modified, :owner, :title, :keymap, :signs, :sign_owners, :changes], D::Buffer.members, "buffer members in constructor order")
+t.assert_equal([:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :signs, :sign_owners, :changes, :id, :transaction, :last_transaction, :closed_count], D::Buffer.members, "buffer members in constructor order")
 t.assert_equal([:code, :width, :hl], D::Cell.members, "cell members")
 o = D::Options.new
 t.assert_equal([false, 8, 0], [o.number, o.tabstop, o.scrolloff], "options start with Vim's defaults")
@@ -175,8 +175,8 @@ b.insert(D::Position.new(0, 1), "x")
 b.delete(rng(0, 0, 0, 1, false))
 b.set_lines(0, 1, ["y"])
 t.assert_equal(3, b.changes, "every primitive counts one change")
-b.lines = ["z"]
-t.assert_equal(3, b.changes, "replacing the lines outside the primitives does not count")
+b.reload(["z"])
+t.assert_equal([4, false], [b.changes, b.modified], "reload counts one change and leaves the buffer unmodified")
 b.owner = "hello"
 b.title = "list"
 t.assert_equal([true, "list"], [b.scratch?, b.display_name], "a scratch buffer is named by its title")

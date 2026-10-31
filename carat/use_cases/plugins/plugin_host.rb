@@ -293,7 +293,9 @@ module Carat
       end
 
       # Validates every edit before touching a line, then applies them
-      # from the last to the first so earlier positions stay valid.
+      # from the last to the first so earlier positions stay valid, inside
+      # one transaction on the buffer (joining the command's when the
+      # request comes from an action bound to a key).
       #: (String, Integer, Array[untyped]) -> PluginApi::Response
       def edit_buffer(name, number, edits)
         why = refused(name)
@@ -311,6 +313,7 @@ module Carat
           prev_col = e.to_col
           i += 1
         end
+        opened = buffer.begin_transaction(cursor_on(buffer))
         i = edits.length - 1
         while i >= 0
           e = edit_at(edits, i)
@@ -319,6 +322,7 @@ module Carat
           i -= 1
         end
         @state.clamp_cursors(buffer)
+        buffer.commit_transaction(cursor_on(buffer)) if opened
         PluginApi::Response.success("", edits.length)
       end
 
@@ -773,14 +777,15 @@ module Carat
         end
       end
 
-      # A listed buffer of the deleted file stays and becomes modified.
+      # A listed buffer of the deleted file stays and becomes modified: no
+      # saved text matches it any more.
       #: (String, String) -> void
       def mark_deleted(here, target)
         i = 0
         while i < @state.buffer_count
           b = @state.buffer_at(i)
           path = b.path
-          b.modified = true if !path.nil? && !b.scratch? && PluginApi::Paths.absolute(here, path) == target
+          b.mark_unsaved if !path.nil? && !b.scratch? && PluginApi::Paths.absolute(here, path) == target
           i += 1
         end
       end
@@ -1022,13 +1027,22 @@ module Carat
         -1
       end
 
+      # Replaces a scratch buffer's lines through Buffer#reload, one
+      # change that leaves it unmodified, inside one transaction.
       #: (Domain::Buffer, Array[String]) -> void
       def replace_lines(buffer, lines)
-        fresh = copy(lines)
-        fresh << "" if fresh.empty?
-        buffer.lines = fresh
-        buffer.modified = false
+        opened = buffer.begin_transaction(cursor_on(buffer))
+        buffer.reload(copy(lines))
         @state.clamp_cursors(buffer)
+        buffer.commit_transaction(cursor_on(buffer)) if opened
+      end
+
+      # The cursor position on a buffer for a transaction: the current
+      # window's cursor when it shows the buffer, else the origin.
+      #: (Domain::Buffer) -> Domain::Position
+      def cursor_on(buffer)
+        return @state.cursor.position if buffer.equal?(@state.buffer)
+        Domain::Position.new(0, 0)
       end
 
       #: (Array[String]) -> Array[String]

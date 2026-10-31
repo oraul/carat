@@ -1,0 +1,39 @@
+ok   same count overwrites
+ok   grow by one
+ok   shrink by one
+ok   overwrite then grow
+ok   overwrite then shrink
+ok   append at the end
+ok   remove everything
+ok   grow above the threshold in the middle
+ok   shrink above the threshold in the middle
+ok   grow above the threshold at the start
+ok   shrink above the threshold at the end
+ok   every span of a 30-line array splices like array arithmetic
+ok   an edit that removes every line inserts one empty line, and its record says so
+ok   rows past the end are clamped to an append
+ok   deleting a line records its row and the removed line
+ok   the removed line is the buffer's own string, not a copy
+ok   a change record is frozen
+ok   a multi-line insert records the split line
+ok   the inserted lines are the strings the buffer holds
+ok   later edits leave an earlier record unchanged: lines are never mutated in place
+ok   replace is one change with one record
+ok   reload records the whole text and leaves the buffer unmodified
+ok   a loaded buffer is unmodified
+ok   an edit modifies it
+ok   a save clears it
+ok   editing the text back to the saved text leaves it modified
+ok   a reload clears it
+ok   a buffer whose saved text is gone is modified
+ok   a second open joins the first
+ok   records accumulate while the transaction is open
+ok   closing keeps the transaction with its records and the cursor before and after
+ok   the records are in the order of the edits
+ok   a transaction without records is dropped
+ok   closing with none open does nothing
+ok   an edit outside a transaction is a transaction of its own
+ok   a buffer gets the next id when it enters the list, an unlisted one has 0
+ok   a buffer keeps its id when it comes back to the list
+ok   records carry the buffer's id
+domain_edits: 38 passed, 0 failed
