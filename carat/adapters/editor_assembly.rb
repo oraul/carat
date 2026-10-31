@@ -24,6 +24,9 @@ require_relative "../use_cases/files/execute_ex"
 require_relative "../use_cases/edit_command_line"
 require_relative "../use_cases/dispatcher"
 require_relative "../use_cases/handle_key"
+require_relative "../use_cases/visual/start_visual"
+require_relative "../use_cases/visual/extend_visual"
+require_relative "../use_cases/visual/operate_on_selection"
 require_relative "key_decoder"
 require_relative "input_controller"
 require_relative "frame_presenter"
@@ -85,7 +88,7 @@ module Carat
         execute_ex = UseCases::ExecuteEx.new(@open_file, save_file, quit, split_window, close_window, open_tab, close_tab, switch_tab, @plugins)
         @plugins.attach(execute_ex)
         command_line = UseCases::EditCommandLine.new(execute_ex, @plugins)
-        dispatcher = UseCases::Dispatcher.new(move, operate, enter_insert, insert_text, leave_insert, command_line, quit, split_window, close_window, focus_window, resize_layout, switch_tab, @plugins)
+        dispatcher = UseCases::Dispatcher.new(move, operate, enter_insert, insert_text, leave_insert, command_line, quit, split_window, close_window, focus_window, resize_layout, switch_tab, @plugins, UseCases::StartVisual.new, UseCases::ExtendVisual.new, UseCases::OperateOnSelection.new)
         handle_key = UseCases::HandleKey.new(@keymap, dispatcher, insert_text, command_line, @plugins)
 
         @controller = InputController.new(terminal, clock, KeyDecoder.new, handle_key)

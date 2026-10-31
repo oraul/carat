@@ -1,0 +1,166 @@
+ok   v starts charwise visual mode
+ok   V starts linewise visual mode
+ok   <C-v> starts blockwise visual mode
+ok   v again leaves
+ok   V again leaves
+ok   <C-v> again leaves
+ok   V after v switches to linewise
+ok   <C-v> after V switches to blockwise
+ok   v after <C-v> switches to charwise
+ok   the switched kind keeps the anchor
+ok   Escape leaves and steps off the line end
+ok   <C-c> leaves
+ok   a count before v is ignored
+ok   an unbound key stays in visual mode
+ok   an unbound key drops a pending count
+ok   l reaches the end of the line
+ok   $ goes to the end of the line
+ok   j to a shorter line rests on its end
+ok   a count multiplies a motion
+ok   f reads its character
+ok   t stops before its character
+ok   e extends to the word end
+ok   b moves the cursor before the anchor
+ok   } selects through the empty line
+ok   G in linewise mode
+ok   gg in linewise mode
+ok   d deletes a charwise selection
+ok   x deletes a charwise selection
+ok   <Del> deletes a charwise selection
+ok   d across lines
+ok   d with the end on the line end joins
+ok   d on an empty line deletes it
+ok   d to the end of the last line
+ok   d deletes lines to the first non-blank
+ok   d on the last line
+ok   x deletes a block
+ok   d leaves a row that ends before the block
+ok   d after $ deletes to every row's end
+ok   y puts the cursor at the start
+ok   y backward puts the cursor at the start
+ok   y of lines from the anchor goes to column 0
+ok   y of lines with the cursor on top keeps its column
+ok   y of a block goes to its top-left
+ok   c changes a charwise selection
+ok   s changes a charwise selection
+ok   c of lines keeps the indent
+ok   c of a block repeats the text
+ok   c of a block skips a short row
+ok   > shifts lines by the count
+ok   < shifts a charwise selection's line
+ok   > shifts a block at its left edge
+ok   < removes blanks at the block's left edge
+ok   > leaves a row that ends inside the block
+ok   J joins the selected lines
+ok   J on one line joins it with the next
+ok   gJ keeps the blanks
+ok   J on the last line does nothing
+ok   p replaces a word
+ok   P replaces a word
+ok   a count repeats the text
+ok   lines into a charwise selection split the line
+ok   text into a linewise selection becomes a line
+ok   lines over the whole buffer
+ok   one line of text into every row of a block
+ok   a block into a block
+ok   lines into a block go below it with p
+ok   lines into a block go above it with P
+ok   a block into a charwise selection
+ok   an empty register changes nothing
+ok   r replaces every character
+ok   r replaces a block
+ok   r replaces whole lines
+ok   r leaves the line breaks
+ok   r then a special key stays in visual mode
+ok   ~ toggles the case
+ok   U upper-cases lines
+ok   u lower-cases a block
+ok   ~ on lines with the cursor on top
+ok   X deletes the lines
+ok   D deletes the lines
+ok   D in a block deletes to the end
+ok   X in a block deletes the block
+ok   C changes the lines
+ok   C in a block changes to the end
+ok   S changes the lines
+ok   R changes the lines
+ok   S in a block changes whole lines
+ok   Y yanks the lines
+ok   Y in a block yanks the block
+ok   I in a block inserts on every row that reaches it
+ok   A in a block appends after it
+ok   A pads a short row
+ok   A after $ appends at every row's end
+ok   I with nothing typed repeats nothing
+ok   a new line stops the repeat
+ok   I of lines inserts at the start
+ok   A of a charwise selection appends to the last line
+ok   o swaps the ends
+ok   o keeps the selection
+ok   O moves to the other corner of a block
+ok   O keeps the block
+ok   O back to the first corner
+ok   O outside a block acts as o
+ok   gv reselects after an escape
+ok   gv reselects after a delete
+ok   gv restores the kind
+ok   gv with nothing stored does nothing
+ok   gv in visual mode goes to the last selection
+ok   gv twice comes back
+ok   gv clamps to a shorter buffer
+ok   viw selects the word
+ok   vaw deletes the word and a blank
+ok   vip turns linewise
+ok   vip then d
+ok   ip again extends over the empty lines
+ok   iw turns a linewise selection charwise
+ok   iw keeps a block
+ok   an inner block between lines of their own is linewise
+ok   a bracket object with no pair leaves the selection
+ok   a charwise yank
+ok   a yank across lines
+ok   a yank with the cursor before the anchor
+ok   a yank with a counted word motion
+ok   a yank of the line end
+ok   a linewise yank
+ok   a blockwise yank
+ok   a block over a tab takes it whole
+ok   a block over a wide character takes it whole
+ok   a register prefix names the register
+ok   a delete into a named register
+ok   a block delete
+ok   a linewise delete
+ok   a change
+ok   a block change
+ok   p stores the replaced text
+ok   P keeps the register
+ok   p from a named register stores in the unnamed one
+ok   p leaves the named register
+ok   Y yanks lines
+ok   Y in a block yanks the block
+ok   X in a block deletes the block
+ok   D in a block deletes to the end
+ok   X deletes lines
+ok   o keeps the selection
+ok   iw selects the word
+ok   iw again extends forward
+ok   iw extends backward from the cursor
+ok   i( on a larger selection goes outward
+ok   a( selects the brackets
+ok   i" selects the string
+ok   is selects the sentence
+ok   an uppercase register appends to a block
+ok   p puts a block after the cursor
+ok   P pads a short row
+ok   rows past the end are added
+ok   a count repeats every row
+ok   a narrow row is padded to the block's width
+ok   charwise indicator
+ok   linewise indicator
+ok   blockwise indicator
+ok   a pending count shows at the right
+ok   a pending register shows at the right
+ok   leaving clears the indicator
+ok   p with an empty register reports E353
+ok   visual mode alone does not modify the buffer
+editor_visual: 165 passed, 0 failed

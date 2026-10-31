@@ -12,8 +12,10 @@ require_relative "plugins/plugin_host"
 module Carat
   module UseCases
     # The central use case: feeds one key through the current mode's keymap
-    # and, in normal and operator-pending modes, through the command
-    # grammar, dispatching the command when it completes. Returns :handled
+    # and, in normal, operator-pending, and the visual modes, through the
+    # command grammar, dispatching the command when it completes; in a
+    # visual mode an operator completes at once and the mode stays until
+    # the command ends it. Returns :handled
     # or :pending, the latter meaning the keymap is waiting for more keys.
     # A remap sequence is queued in front of the keys still to handle, so
     # replay is a loop, not a recursion; one key may cause at most
@@ -90,7 +92,8 @@ module Carat
       # Whether the grammar reads keys in the current mode.
       #: (Domain::EditorState) -> bool
       def grammar_mode?(state)
-        state.mode == Domain::Mode::NORMAL || state.mode == Domain::Mode::OPERATOR_PENDING
+        mode = state.mode
+        mode == Domain::Mode::NORMAL || mode == Domain::Mode::OPERATOR_PENDING || Domain::Mode.visual?(mode)
       end
 
       # Handles one key; a remap it triggers is pushed to the front of queue.
@@ -134,7 +137,9 @@ module Carat
           replay(state, value, queue)
           return
         end
-        if grammar_mode?(state)
+        if Domain::Mode.visual?(state.mode)
+          finish(state, state.grammar.accept_visual(value, keys))
+        elsif grammar_mode?(state)
           finish(state, state.grammar.accept(value, keys))
         else
           @dispatcher.call(state, Domain::Command.plain(value))
@@ -144,26 +149,29 @@ module Carat
       # Acts on what the grammar said: an operator switches to
       # operator-pending mode, a complete command returns to normal mode
       # and is dispatched (the command itself may enter insert mode), a
-      # cancel returns to normal mode, and pending waits.
+      # cancel returns to normal mode, and pending waits. In a visual mode
+      # the mode stays: the dispatched command decides what comes next.
       #: (Domain::EditorState, Symbol) -> void
       def finish(state, result)
+        visual = Domain::Mode.visual?(state.mode)
         case result
         when :operator
           state.mode = Domain::Mode::OPERATOR_PENDING
         when :complete
-          state.mode = Domain::Mode::NORMAL
+          state.mode = Domain::Mode::NORMAL unless visual
           @dispatcher.call(state, state.grammar.take)
         when :cancel
-          state.mode = Domain::Mode::NORMAL
+          state.mode = Domain::Mode::NORMAL unless visual
         end
       end
 
-      # An unbound key drops whatever command was being typed.
+      # An unbound key drops whatever command was being typed; a visual
+      # mode stays.
       #: (Domain::EditorState) -> void
       def cancel(state)
         return unless grammar_mode?(state)
         state.grammar.reset
-        state.mode = Domain::Mode::NORMAL
+        state.mode = Domain::Mode::NORMAL unless Domain::Mode.visual?(state.mode)
       end
 
       # An action name is one or more namespace segments and the action, in

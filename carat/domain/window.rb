@@ -6,9 +6,11 @@ module Carat
     # columns including the gutter; all 0 before the first render, when the
     # screen motions H, M, and L treat the whole buffer as visible), and
     # whether its width is fixed, as Neovim's winfixwidth, so resizes and
-    # equalizing leave it alone. A Struct record: mutable, with a reader
-    # and a writer per member.
-    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width)
+    # equalizing leave it alone. The window owns its visual selection: the
+    # anchor where it started (the cursor is the other end, the mode its
+    # kind), and the last selection it left, which "gv" restores. A Struct
+    # record: mutable, with a reader and a writer per member.
+    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :anchor, :last_selection)
       SIGN_WIDTH = 2
 
       # @rbs @buffer: Buffer
@@ -20,19 +22,23 @@ module Carat
       # @rbs @height: Integer
       # @rbs @width: Integer
       # @rbs @fixed_width: bool
+      # @rbs @anchor: Position
+      # @rbs @last_selection: Selection
 
       #: (Buffer) -> void
       def initialize(buffer)
-        super(buffer, Cursor.new(0, 0), 0, 0, 0, 0, 0, 0, false)
+        super(buffer, Cursor.new(0, 0), 0, 0, 0, 0, 0, 0, false, Position.new(0, 0), Selection.none)
       end
 
-      # Shows another buffer from its start.
+      # Shows another buffer from its start, forgetting the last selection,
+      # which belonged to the buffer shown before.
       #: (Buffer) -> void
       def show(buffer)
         self.buffer = buffer
         self.cursor = Cursor.new(0, 0)
         self.top = 0
         self.left = 0
+        self.last_selection = Selection.none
       end
 
       # Takes the buffer, cursor, and scroll position of other, as a split
@@ -44,6 +50,7 @@ module Carat
         cursor.want_col = other.cursor.want_col
         self.top = other.top
         self.left = other.left
+        self.last_selection = other.last_selection
       end
 
       # The gutter is the sign column, two cells while the buffer has

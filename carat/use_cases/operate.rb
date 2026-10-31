@@ -6,6 +6,7 @@ require_relative "../domain/motions"
 require_relative "../domain/text_objects"
 require_relative "../domain/operators"
 require_relative "../domain/registers"
+require_relative "../domain/display_width"
 
 module Carat
   module UseCases
@@ -49,6 +50,10 @@ module Carat
           state.show("E353: Nothing in register #{name}", true)
           return
         end
+        if entry.blockwise
+          put_block(state, entry, command.count_or(1), after)
+          return
+        end
         pos = Domain::Operators.put(state.buffer, state.cursor.position, entry, command.count_or(1), after)
         state.cursor.move_to(pos.row, pos.col)
       end
@@ -61,11 +66,25 @@ module Carat
         count = command.count_or(2)
         count = 2 if count < 2
         count = last - cursor.row + 1 if cursor.row + count - 1 > last
-        col = Domain::Operators.join(state.buffer, cursor.row, count)
+        col = Domain::Operators.join(state.buffer, cursor.row, count, true)
         cursor.move_to(cursor.row, clamp(state, cursor.row, col))
       end
 
       private
+
+      # A blockwise register put as a block from the display column of the
+      # cursor's character, or the one after it for "p".
+      #: (Domain::EditorState, Domain::RegisterEntry, Integer, bool) -> void
+      def put_block(state, entry, count, after)
+        buffer = state.buffer
+        cursor = state.cursor
+        tabstop = state.options.tabstop > 0 ? state.options.tabstop : 8
+        line = buffer.line(cursor.row)
+        vcol = Domain::DisplayWidth.column(line, cursor.col, tabstop)
+        vcol += Domain::DisplayWidth.cell(line[cursor.col, 1], vcol, tabstop) if after && cursor.col < line.length
+        pos = Domain::Operators.put_block(buffer, cursor.row, vcol, entry, count, tabstop)
+        cursor.move_to(pos.row, clamp(state, pos.row, pos.col))
+      end
 
       # The range of the operand, or nil when there is none.
       #: (Domain::EditorState, Domain::Command) -> Domain::Range?

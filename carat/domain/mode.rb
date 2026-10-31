@@ -32,6 +32,35 @@ module Carat
       def self.name_of(mode)
         mode.to_s
       end
+
+      # Whether mode is one of the three visual modes.
+      #: (Symbol) -> bool
+      def self.visual?(mode)
+        mode == VISUAL || mode == VISUAL_LINE || mode == VISUAL_BLOCK
+      end
+
+      # The selection kind of a visual mode: :charwise, :linewise,
+      # :blockwise, or :none for any other mode.
+      #: (Symbol) -> Symbol
+      def self.visual_kind(mode)
+        case mode
+        when VISUAL then :charwise
+        when VISUAL_LINE then :linewise
+        when VISUAL_BLOCK then :blockwise
+        else :none
+        end
+      end
+
+      # The visual mode of a selection kind; normal mode for :none.
+      #: (Symbol) -> Symbol
+      def self.for_kind(kind)
+        case kind
+        when :charwise then VISUAL
+        when :linewise then VISUAL_LINE
+        when :blockwise then VISUAL_BLOCK
+        else NORMAL
+        end
+      end
     end
   end
 end

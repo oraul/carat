@@ -103,9 +103,9 @@ Pure Ruby objects with no I/O. They hold the editor's state and the rules of mod
 - `Position`: a `(row, col)` pair in code point columns, a `Data` value. Display width is a presenter concern.
 - `Range`: two positions plus a kind: `charwise`, `linewise`, or `blockwise`, and an inclusive flag, a `Data` value. Every operator receives a `Range`.
 - `Cursor`: the current position plus `want_col`, the column aimed for when moving vertically through shorter lines, as Vim's `curswant`, a `Struct` record.
-- `Selection`: anchor and head of a visual selection, resolved to a `Range` by the visual kind.
+- `Selection`: anchor and head of a visual selection with its kind (charwise, linewise, or blockwise) and whether `$` made a block reach every row's end, a `Data` value. It resolves to a charwise `Range` that includes the line break when its end rests on the end of a line, a linewise `Range`, a `Span` of code point columns per row, or a `Block` of display columns, so a block over tabs and wide characters is measured as it is drawn. The window owns the anchor (the cursor is the other end, the mode the kind) and the last selection it left, which `gv` restores; `BlockInsert` records the repetition a blockwise `I`, `A`, or `c` owes when insert mode is left.
 - `Transaction` and `UndoTree`: a transaction groups the edits of one command with the cursor before and after. The tree keeps branches so `u`, `Ctrl-R`, and `g-` behave like Vim. Insert mode opens one transaction on entry and closes it on `Esc`.
-- `Registers`: named `a` to `z` with uppercase append, numbered `0` to `9` with shifting, unnamed, black hole, and the read-only `%`, `:`, and `.`. Each entry stores text and a kind, so a linewise yank pastes as lines.
+- `Registers`: named `a` to `z` with uppercase append, numbered `0` to `9` with shifting, unnamed, black hole, and the read-only `%`, `:`, and `.`. Each entry stores text and a kind, charwise, linewise, or blockwise, so a linewise yank pastes as lines and a block yank as a block.
 - `Marks`: per-buffer lowercase, global uppercase, and the automatic `'`, `.`, `^`, `[`, `]`, `<`, `>`, adjusted on line insert and delete.
 - `Options`: typed global and buffer-local options with Vim names, a `Struct` record: `number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, `wrap`, `scrolloff`, `timeoutlen`, `clipboard`, plus Carat's own `icons`, the icon set (`nerd`, `unicode`, or `ascii`) the `Icons` table serves to plugins by name; Nerd Font glyphs live in the private use areas, which `DisplayWidth` counts as one cell.
 - `Key`: an integer code. Printable code points are themselves, control characters are their byte, special keys (arrows, function keys, Home, End, Delete, Page Up and Down) are codes above the Unicode range, and Alt is a flag bit. `KeyNotation` converts between codes and the Vim spelling used in JSON: `<CR>`, `<Esc>`, `<C-w>`, `<A-x>`, `<leader>`, `<Up>`, `<F5>`.
@@ -123,9 +123,9 @@ Pure Ruby objects with no I/O. They hold the editor's state and the rules of mod
 - `Motions` and `TextObjects`: pure functions from `(state, count)` to a `Range`. Left-right (`h l 0 ^ $ f F t T ; ,`), up-down (`j k G gg + - _`), word (`w W b B e E ge gE`), object (`( ) { }`), search (`n N * #`), marks (`'x` and backtick), screen (`H M L`); text objects `iw aw iW aW is as ip ap` and the pair objects for brackets, quotes, and tags. One implementation serves both cursor movement and operator ranges.
 - `Operators`: `d c y p P > < = ~ g~ gu gU gq J r x s S C D Y`, each a function from a `Range` to buffer primitives inside one transaction. `c` ends by requesting insert mode so the dot register can replay typed text.
 - `ExCommand` and `ExGrammar`: a parsed command line as `range`, `name`, `bang`, `args`. Addresses are `.`, `$`, `%`, a number, a mark, a pattern, or arithmetic on those, joined by `,` or `;`. Names and abbreviations (`w`, `wr`, `write`) resolve through a registry owned by the use case layer.
-- `Window`, `Layout`, `TabPage`: a window is a viewport over a buffer with its own cursor, scroll offsets, the rectangle the last render gave it, a fixed-width flag (`winfixwidth`, for the explorer), and later local options, a `Struct` record. A layout is the tree of splits of one tab page, kept as a flat table of `LayoutNode` records addressed by integer ids (leaf, column of stacked children, row of side-by-side children), with `split`, `close`, `neighbour`, `equalize`, and `arrange`, which assigns every window its rectangle inside an area; the flat table keeps the walks over integers under Spinel. A tab page holds one layout, its current window, and the previously used one.
+- `Window`, `Layout`, `TabPage`: a window is a viewport over a buffer with its own cursor, scroll offsets, the rectangle the last render gave it, a fixed-width flag (`winfixwidth`, for the explorer), the anchor of its visual selection and its last selection, and later local options, a `Struct` record. A layout is the tree of splits of one tab page, kept as a flat table of `LayoutNode` records addressed by integer ids (leaf, column of stacked children, row of side-by-side children), with `split`, `close`, `neighbour`, `equalize`, and `arrange`, which assigns every window its rectangle inside an area; the flat table keeps the walks over integers under Spinel. A tab page holds one layout, its current window, and the previously used one.
 - `Frame` and `Cell`: the view model, both `Struct` records. A frame is a grid of cells, each a code point, display width, and highlight group id, plus the cursor position and shape. It is an entity because presenters and tests both reason about it, and it contains no terminal knowledge. Presenters reuse one frame and repaint its cells in place, because allocating a grid per render churned the heap and corrupted buffers under Spinel's garbage collector.
-- `EditorState`: everything a use case reads or changes, a `Struct` record holding the buffer list, the tab pages and the current one, mode, options, command line, message, pending keys, and quit flag; the current window, its buffer, and its cursor are reached through the current tab page. A buffer stays in the list while a window shows it or it is modified, so a closed window's edits are never lost.
+- `EditorState`: everything a use case reads or changes, a `Struct` record holding the buffer list, the tab pages and the current one, mode, options, command line, message, pending keys, quit flag, and the pending blockwise insert; the current window, its buffer, its cursor, and its visual selection are reached through the current tab page. A buffer stays in the list while a window shows it or it is modified, so a closed window's edits are never lost.
 
 ## 5. Use cases
 
@@ -136,7 +136,7 @@ Each use case is one class with a single `call` taking a request value and retur
 - `HandleKey`: the central use case. Feeds a key through the current mode's keymap and the grammar; when a `Command` completes, dispatches it. Returns what changed so the presenter can redraw only what is needed.
 - `Move`, `Operate`, `EnterInsert`, `InsertText`, `LeaveInsert`, `Replace`: the normal and insert mode operations behind the actions the keymap names.
 - `Undo`, `Redo`, `RepeatLast`: walk the undo tree and replay the dot register.
-- `StartVisual`, `ExtendVisual`, `OperateOnSelection`.
+- `StartVisual`, `ExtendVisual`, `OperateOnSelection`: entering, switching, leaving, and reselecting the visual modes; `o`, `O`, and the text objects on a selection; and every operator on the selection. Visual keys go through the same keymap and `CommandGrammar` as normal keys, with operators completing at once on the selection, and every operator leaves visual mode first so the window keeps the selection for `gv`.
 - `Search`, `SearchNext`, `Substitute`, `GlobalCommand`: pattern work, including the Vim-to-Ruby regular expression translation for the common escapes.
 
 ### 5.2 Files and ex commands
@@ -242,7 +242,7 @@ Rules of the schema:
 
 ### 8.2 Output
 
-- `FramePresenter`: a pure function from editor state to a `Frame`. It reserves the top row for the tab line when more than one tab page exists and the last row for the command line or message area, has the current tab page's layout arrange its windows in the rows between, and draws every window in its rectangle: text with line numbers and sign column, a status line under it, a separator column between windows side by side, and overlays: completion menu and diagnostic text. The cursor is placed in the current window. Display width uses an East Asian width table; tabs expand to `tabstop`.
+- `FramePresenter`: a pure function from editor state to a `Frame`. It reserves the top row for the tab line when more than one tab page exists and the last row for the command line or message area, has the current tab page's layout arrange its windows in the rows between, and draws every window in its rectangle: text with line numbers and sign column, the current window's visual selection in the `Visual` highlight, a status line under it, a separator column between windows side by side, and overlays: completion menu and diagnostic text. The cursor is placed in the current window. Display width uses an East Asian width table; tabs expand to `tabstop`.
 - `ScreenPresenter`: keeps the last frame and emits only changed cells as ANSI bytes, with cursor shape per mode, the alternate screen, and bracketed paste. One `write` per frame.
 - `Highlighter` and tokenizers: line-oriented, incremental tokenizers carrying an opaque state across lines so multi-line strings and comments work. Ruby, Markdown, JSON, YAML, and a plain fallback. Tree-sitter is excluded because it needs a native extension.
 - `Theme`: maps highlight groups to 256-color or truecolor values.
@@ -280,7 +280,7 @@ What a plugin can declare, in its manifest:
 
 What a plugin can do, through its `PluginApi::Host` (one method per request; the plugin host and explorer changes delivered the requests marked with an asterisk, the rest arrive with the changes named here):
 
-- Read a buffer: lines, cursor, path, modified flag (*); selection and marks come with the visual modes and marks.
+- Read a buffer: lines, cursor, path, modified flag (*); selection and marks come with a later change: the visual modes are in place, and the selection request is recorded in `docs/backlog.md`.
 - Edit a buffer: a list of `(range, text)` replacements validated as a whole and applied as one batch (*), which becomes one undo transaction when the undo tree lands, so the user undoes a plugin edit in one step.
 - Move the cursor (*); set a selection, set a mark.
 - Open a scratch buffer in a fixed-width side window at the left or right edge of the tab page, with its own keymap bound to the plugin's actions, replace its lines, close it, focus a window, open a file in a window (*); floating windows later. This is how the explorer and the finder draw their lists: they are ordinary buffers with plugin-owned bindings, in the way Neovim's `oil` and `telescope` present text.
@@ -342,7 +342,7 @@ carat.rb                        require graph, outermost layer first
 carat/version.rb
 carat/testing.rb                assertion harness used by test/*.rb
 carat/domain/                   entities
-  buffer.rb position.rb range.rb cursor.rb selection.rb transaction.rb
+  buffer.rb position.rb range.rb cursor.rb selection.rb block_insert.rb transaction.rb
   undo_tree.rb registers.rb marks.rb options.rb key.rb key_notation.rb
   mode.rb keymap.rb command.rb command_grammar.rb motions.rb text_objects.rb
   operators.rb ex_command.rb ex_grammar.rb window.rb layout.rb tab_page.rb
@@ -388,7 +388,7 @@ Each item is one OpenSpec change and one pull request, in this order. Each leave
 2. `editor-foundation`: ports and drivers, `Buffer` with the four primitives, `KeyDecoder`, `Keymap` from JSON, `HandleKey`, `FramePresenter` and `ScreenPresenter` for one window, normal and insert modes with the foundation bindings, command-line mode with `:w :q :wq :e`, and the editor test harness.
 3. `command-grammar`: `CommandGrammar`, counts, registers, the full motion set, the first operators, text objects. `docs/compatibility.md` starts here.
 4. `undo-and-registers`: `Transaction`, `UndoTree`, `u`, `Ctrl-R`, the dot command, numbered and named registers.
-5. `visual-modes`: charwise, linewise, and blockwise selection with operators.
+5. `visual-modes`: charwise, linewise, and blockwise selection with operators. Delivered ahead of item 4 at the user's request, so item 4, `undo-and-registers`, is the next item in order; the dot command and undo cover the visual operators when it lands, and the `'<` and `'>` marks arrive with the change that brings marks, set from the selection each window already keeps.
 6. `search-and-substitute`: `/ ? n N * #`, `hlsearch`, `incsearch`, `:s`, `:g`, `:v`.
 7. `buffers-windows-tabs`: buffer list, splits, `Ctrl-W` commands, tab pages, and their ex commands. Delivered in two changes: `windows-and-splits` brought the layout, the `Ctrl-W` commands, the tab pages, and the buffer list that windows share, ahead of the plugins that need a side window; `buffer-list` brings `:ls`, `:bn`, `:bp`, `:bd`, `:b N`, and the `E162` line of `:qa`, and may land after the plugin items.
 8. `syntax-highlighting`: tokenizer interface, Ruby tokenizer, themes, color output.

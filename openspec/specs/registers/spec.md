@@ -6,7 +6,7 @@ Registers hold text that deletes and yanks store and that puts read back, each e
 ## Requirements
 
 ### Requirement: Deletes and yanks write the unnamed register
-Every delete, change, and yank SHALL store the removed or copied text in the unnamed register with its kind, charwise or linewise, replacing what was there.
+Every delete, change, and yank SHALL store the removed or copied text in the unnamed register with its kind, charwise, linewise, or blockwise, replacing what was there.
 
 #### Scenario: dd then p
 - **WHEN** "dd" is pressed on row 0 of ["a", "b"], then "p"
@@ -19,6 +19,10 @@ Every delete, change, and yank SHALL store the removed or copied text in the unn
 #### Scenario: The latest write wins
 - **WHEN** "yw" is pressed at (0, 0) of "one two", then "x", then "$p"
 - **THEN** the line is "ne twoo"
+
+#### Scenario: A block yank is blockwise
+- **WHEN** "<C-v>jy" is pressed at (0, 0) of ["ab", "cd"]
+- **THEN** the unnamed register is blockwise with the rows "a" and "c"
 
 ### Requirement: A named register receives the text as well
 When the command names a register "a" to "z", the text SHALL be stored in that register and in the unnamed register. A put naming a lowercase or uppercase letter SHALL read that letter's register.
@@ -56,3 +60,10 @@ A put from a register that holds nothing SHALL show "E353: Nothing in register" 
 #### Scenario: Empty named register
 - **WHEN** the quote key, "b", "p" are pressed before register b was written
 - **THEN** the message row shows "E353: Nothing in register b"
+
+### Requirement: Appending to a blockwise register
+Appending with an uppercase register name SHALL give a linewise entry when either part is linewise, and otherwise a blockwise entry with the rows of both parts when either part is blockwise.
+
+#### Scenario: Charwise text appended to a block
+- **WHEN** "<C-v>j\"ayl\"Ayl" is pressed at (0, 0) of ["ab", "cd"]
+- **THEN** register "a" is blockwise with the rows "a", "c", and "b"

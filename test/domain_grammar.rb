@@ -18,6 +18,7 @@ def run(script)
     case step[0]
     when :digit then grammar.digit(step[1]); results << :digit
     when :char then results << grammar.char(step[1])
+    when :visual then results << grammar.accept_visual(step[1], step[2])
     else results << grammar.accept(step[1], step[2])
     end
   end
@@ -48,7 +49,16 @@ t.table([
   ["a find motion under an operator", [[:accept, "operator.delete", codes("d")], [:accept, "motion.till_forward", codes("t")], [:char, 46]], [[:operator, :pending, :complete], ["", 0, "operator.delete", "motion.till_forward", ".", false]]],
   ["escape cancels a find motion", [[:accept, "motion.find_forward", codes("f")], [:char, 27]], [[:pending, :cancel], nil]],
   ["a standalone action with a count", [[:digit, 51], [:accept, "operator.delete_char", codes("x")]], [[:digit, :complete], ["", 3, "", "operator.delete_char", "", false]]],
-  ["a remap-style action name", [[:accept, "mode.cmdline", codes(":")]], [[:complete], ["", 0, "", "mode.cmdline", "", false]]]
+  ["a remap-style action name", [[:accept, "mode.cmdline", codes(":")]], [[:complete], ["", 0, "", "mode.cmdline", "", false]]],
+  # Visual mode: an operator completes at once on the selection.
+  ["a visual operator completes at once", [[:visual, "operator.delete", codes("d")]], [[:complete], ["", 0, "", "operator.delete", "", false]]],
+  ["a visual motion with a count", [[:digit, 51], [:visual, "cursor.down", codes("j")]], [[:digit, :complete], ["", 3, "", "cursor.down", "", false]]],
+  ["a visual register prefix", [[:visual, "register.select", codes("\"")], [:char, 97], [:visual, "operator.yank", codes("y")]], [[:pending, :pending, :complete], ["a", 0, "", "operator.yank", "", false]]],
+  ["a visual text object completes", [[:visual, "textobject.inner_word", codes("iw")]], [[:complete], ["", 0, "", "textobject.inner_word", "", false]]],
+  ["visual r wants a character", [[:visual, "visual.replace", codes("r")], [:char, 120]], [[:pending, :complete], ["", 0, "", "visual.replace", "x", false]]],
+  ["visual r with a special key cancels", [[:visual, "visual.replace", codes("r")], [:char, 27]], [[:pending, :cancel], nil]],
+  ["a visual find wants a character", [[:visual, "motion.find_forward", codes("f")], [:char, 99]], [[:pending, :complete], ["", 0, "", "motion.find_forward", "c", false]]],
+  ["a visual action while a register is wanted cancels", [[:visual, "register.select", codes("\"")], [:visual, "cursor.down", codes("j")]], [[:pending, :cancel], nil]]
 ]) do |script|
   results, command = run(script)
   fields = command.nil? ? nil : [command.register, command.count, command.operator, command.action, command.char, command.linewise]

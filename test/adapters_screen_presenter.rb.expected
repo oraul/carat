@@ -27,4 +27,5 @@ ok   inactive status lines are dim reverse video
 ok   tab line labels are reverse video
 ok   the selected label is bold
 ok   the tab line fill is reverse video
-adapters_screen_presenter: 29 passed, 0 failed
+ok   the selection is reverse video
+adapters_screen_presenter: 30 passed, 0 failed

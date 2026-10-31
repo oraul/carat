@@ -88,11 +88,11 @@ The operand is a motion from the table above, a text object from the table below
 
 Exclusive motions follow Vim's two adjustments: an operator range ending in column 0 of a later line ends at the end of the previous line inclusively, and becomes linewise when it started at or before the first non-blank; `w` under an operator stops at the end of the line when the last word moved over ends there (`editor_operators`).
 
-Differences from Neovim: `d c y` always write the unnamed register, never the numbered or small-delete registers, until the undo change; the `=`, `~`, `g~`, `gu`, `gU`, `gq`, and `r` operators and `X` are not implemented; `joinspaces` is off; `p` of an empty register shows `E353` as Vim does.
+Differences from Neovim: `d c y` always write the unnamed register, never the numbered or small-delete registers, until the undo change; the `=`, `~`, `g~`, `gu`, `gU`, `gq`, and `r` operators and `X` are not implemented in normal mode (visual mode has `r ~ u U X`); `joinspaces` is off; `p` of an empty register shows `E353` as Vim does.
 
 ## Text objects
 
-Usable after an operator, in operator-pending mode.
+Usable after an operator, in operator-pending mode, and in the visual modes (see Visual mode).
 
 | Keys | Action name | Behavior | Test |
 | --- | --- | --- | --- |
@@ -118,6 +118,37 @@ Differences from Neovim: `is` and `as` take no count; quote objects pair quotes 
 | empty register | `E353: Nothing in register x` | `editor_operators`, `editor_registers` |
 
 Differences from Neovim: the numbered registers `0` to `9`, the black hole `_`, the read-only `% : .`, and the selection registers arrive with later changes; any other register name drops the prefix instead of beeping.
+
+## Visual mode
+
+The selection runs from the anchor, where visual mode started, to the cursor, both included; it belongs to the window, and only the current window draws it, with the `Visual` highlight in reverse video and the cell under the cursor left plain. In visual mode the cursor may rest on the end of a line, where `l`, `$`, and a vertical motion to a shorter line put it, and a charwise selection ending there or on an empty line includes the line break. Counts and the `"x` register prefix work as in normal mode, every motion of the normal-mode table moves the cursor end in all three kinds, and the mode line shows `-- VISUAL --`, `-- VISUAL LINE --`, or `-- VISUAL BLOCK --` with the pending keys at the right. Every row of the two tables below is covered by `editor_visual`, the selection ranges and the block's display columns by `domain_selection`, and the drawing by `adapters_frame_presenter`.
+
+| Keys | Action name | Behavior | Test |
+| --- | --- | --- | --- |
+| `v`, `V`, `<C-v>` | `mode.visual`, `mode.visual_line`, `mode.visual_block` | Start charwise, linewise, or blockwise visual mode at the cursor; the same key again leaves, another switches the kind keeping the selection | `editor_visual` |
+| `<Esc>`, `<C-c>` | `mode.normal` | Leave visual mode, moving the cursor off the end of the line | `editor_visual` |
+| `o` | `visual.swap_ends` | Exchange the anchor and the cursor | `editor_visual` |
+| `O` | `visual.swap_corner` | In a block, go to the other corner on the same row; otherwise as `o` | `editor_visual` |
+| `gv` | `visual.reselect` | Select the window's last selection again, clamped to the buffer; in visual mode exchange it with the current one | `editor_visual` |
+| `[count]iw aw iW aW is as ip ap` and the bracket and quote objects | `textobject.*` | On one character (one row for `ip ap`) select the object; on more, words, sentences, and paragraphs extend the cursor end and brackets and quotes select the smallest larger object | `editor_visual` |
+| `["x]d`, `x`, `<Del>` | `operator.delete` | Delete the selection; the cursor goes to its start, the first non-blank for lines, the top-left for a block | `editor_visual` |
+| `["x]y` | `operator.yank` | Yank the selection; the cursor goes to its start | `editor_visual` |
+| `["x]c`, `s` | `operator.change` | Change the selection; lines keep the indent with autoindent; a block's text is repeated on every row that reaches it when insert mode is left | `editor_visual` |
+| `[count]>`, `[count]<` | `operator.indent`, `operator.dedent` | Shift the lines count times by shiftwidth; in a block, insert or remove spaces at its left edge | `editor_visual` |
+| `J`, `gJ` | `visual.join`, `visual.join_raw` | Join the selected lines, at least two, with or without the blank handling of `J` | `editor_visual` |
+| `["x][count]p` | `visual.put` | Replace the selection with the register; the removed text goes to the unnamed register | `editor_visual` |
+| `["x][count]P` | `visual.put_keep` | Replace the selection with the register, leaving every register unchanged | `editor_visual` |
+| `r{char}` | `visual.replace` | Replace every selected character, not the line breaks | `editor_visual` |
+| `~`, `u`, `U` | `visual.toggle_case`, `visual.lowercase`, `visual.uppercase` | Toggle, lower, or upper the case of the selection | `editor_visual` |
+| `["x]X`, `["x]D` | `visual.delete_lines`, `visual.delete_to_end` | Delete the selected lines; in a block `X` deletes the block and `D` to the end of every row | `editor_visual` |
+| `["x]Y` | `visual.yank_lines` | Yank the selected lines; in a block, the block | `editor_visual` |
+| `["x]C`, `["x]S`, `["x]R` | `visual.change_to_end`, `visual.change_lines` | Change the selected lines; in a block `C` changes to the end of every row | `editor_visual` |
+| `I`, `A` | `visual.insert`, `visual.append` | Insert before or append after the selection; in a block, on every row when insert mode is left, `I` skipping short rows and `A` padding them, after `$` at every row's end | `editor_visual` |
+| `$` in a block | `cursor.line_end` | The block reaches the end of every row | `editor_visual`, `domain_selection` |
+
+Blockwise registers: a block yank or delete stores a blockwise entry, and `p` and `P` in normal mode put it as a block from the display column after or at the cursor, padding short rows with spaces and adding rows past the end of the buffer (`editor_visual`, `editor_registers`, `domain_registers`).
+
+Differences from Neovim: there are no `'<` and `'>` marks yet and no `:'<,'>` ranges, so `:` does nothing in visual mode; a count before `v V <C-v>` and on `J gJ r ~ u U I A` is ignored; `selection` is always `inclusive` and `virtualedit` does not exist; in a block a tab or a wide character the block's columns only partly cover is taken whole by the operators instead of being split into spaces, and `>` and `<` on a block insert and remove spaces, never tabs; the showcmd area shows the pending keys, not the size of the selection; a register prefix typed before `v` is not kept for the operator; on a larger selection a quote object selects the string around the selection's start when that is larger and otherwise leaves the selection alone; `p` with an empty register leaves visual mode with `E353`; `gq`, `g?`, `=`, `!`, `<C-a>`, `<C-x>`, `zf`, select mode, the mouse, and the dot command are not implemented.
 
 ## Insert mode
 

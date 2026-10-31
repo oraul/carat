@@ -5,7 +5,7 @@ t = Carat::Testing.new("domain_registers")
 D = Carat::Domain
 
 def entry(text, linewise)
-  Carat::Domain::RegisterEntry.new(text, linewise)
+  Carat::Domain::RegisterEntry.new(text, linewise ? :linewise : :charwise)
 end
 
 # Entries.
@@ -19,6 +19,18 @@ t.assert_equal(["a\nb", true], [D::RegisterEntry.joined(entry("a", true), entry(
 t.assert_equal(["a\nb", true], [D::RegisterEntry.joined(entry("a", false), entry("b", true)).text, D::RegisterEntry.joined(entry("a", false), entry("b", true)).linewise], "linewise onto charwise becomes linewise")
 t.assert_equal(["a\nb", true], [D::RegisterEntry.joined(entry("a", true), entry("b", false)).text, D::RegisterEntry.joined(entry("a", true), entry("b", false)).linewise], "charwise onto linewise becomes linewise")
 t.assert_true(entry("a", false) == entry("a", false), "entries are equal by value")
+
+# Blockwise entries and their joins.
+block = D::RegisterEntry.block(["ab", "cd"])
+t.assert_equal(["ab\ncd", :blockwise, true, false], [block.text, block.kind, block.blockwise, block.linewise], "a block joins its rows with newlines")
+t.assert_equal(["ab", "cd"], block.lines, "a block's lines are its rows")
+t.assert_equal(["ab\ncd\ne", :blockwise], [D::RegisterEntry.joined(block, entry("e", false)).text, D::RegisterEntry.joined(block, entry("e", false)).kind], "charwise onto a block adds a row")
+t.assert_equal(["e\nab\ncd", :blockwise], [D::RegisterEntry.joined(entry("e", false), block).text, D::RegisterEntry.joined(entry("e", false), block).kind], "a block onto charwise becomes a block")
+t.assert_equal(:linewise, D::RegisterEntry.joined(block, entry("e", true)).kind, "linewise onto a block becomes linewise")
+r = D::Registers.new
+r.write("a", block)
+r.write("A", D::RegisterEntry.charwise("e"))
+t.assert_equal(["ab\ncd\ne", :blockwise], [r.read("a").text, r.read("a").kind], "appending to a block register adds a row")
 
 # Names.
 t.table([

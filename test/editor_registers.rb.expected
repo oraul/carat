@@ -18,4 +18,6 @@ ok   a linewise entry stores the line
 ok   appending charwise text to a linewise entry adds a line
 ok   the unnamed register holds the new text only
 ok   A reads the same entry as a
-editor_registers: 20 passed, 0 failed
+ok   a block yank stores a blockwise entry
+ok   p puts the block after the cursor on each row
+editor_registers: 22 passed, 0 failed

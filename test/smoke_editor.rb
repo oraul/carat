@@ -1,6 +1,7 @@
 # Runs build/bin/carat inside a pseudo-terminal: the usage and terminal
 # checks, an insert-write-quit session, a quit refused then forced, split
-# windows and a tab page, the file tree, and SIGTERM. Needs the binary that spin build produces; make test builds it
+# windows and a tab page, the file tree, a linewise visual delete, and
+# SIGTERM. Needs the binary that spin build produces; make test builds it
 # first. Prints only the harness lines so the snapshot is stable.
 #
 # Between sending keys the test drains the editor's output until it goes
@@ -152,6 +153,25 @@ writer.write(":q\r")
 code = finish_session(reader, out, pid)
 t.assert_equal(0, code, "the editor exits with status 0 after :q in the file window beside the tree")
 t.assert_true(out.end_with?("\e[?1049l"), "quitting beside the tree leaves the alternate screen")
+
+# Linewise visual mode: Vj selects two lines, d deletes them, :wq writes.
+visual_path = "#{DIR}/visual.txt"
+File.write(visual_path, "one\ntwo\nthree\n")
+reader, writer, pid = PTY.spawn(BIN, visual_path)
+writer.winsize = [24, 80]
+out = +"".b
+settle(reader, out, 0.5)
+t.assert_true(out.include?("3L, 14B"), "the editor drew its first frame for the visual check")
+mark = out.bytesize
+writer.write("Vj")
+settle(reader, out, 0.5)
+t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("-- VISUAL LINE --"), "V and j show the linewise visual mode")
+writer.write("d")
+settle(reader, out, 0.5)
+writer.write(":wq\r")
+code = finish_session(reader, out, pid)
+t.assert_equal(0, code, "the editor exits with status 0 after Vjd and :wq")
+t.assert_equal("three\n", File.read(visual_path), "Vjd deleted the first two lines")
 
 # SIGTERM ends a running editor cleanly.
 reader, writer, pid = PTY.spawn(BIN, path)

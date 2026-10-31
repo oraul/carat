@@ -1,0 +1,54 @@
+ok   column after a tab
+ok   column of the tab
+ok   column after a wide character
+ok   column past the end is the width
+ok   col_at inside a tab
+ok   col_at on the second cell of a wide character
+ok   col_at past the end
+ok   cell widths of a tab, a wide character, a control, and a letter
+ok   charwise on one row
+ok   charwise first row of several
+ok   charwise middle row
+ok   charwise last row
+ok   charwise with the cursor before the anchor
+ok   charwise outside the rows
+ok   charwise ending on the end of the line
+ok   charwise on an empty line
+ok   linewise covers the whole row
+ok   block on plain text
+ok   block over a tab in a middle row
+ok   block whose corner is a tab
+ok   block whose corner is a wide character
+ok   block over a wide character in a middle row
+ok   block selecting a line end inside it
+ok   block after $ reaches the end
+ok   block after $ on a short row
+ok   no selection
+ok   a block on plain text
+ok   a tab at the anchor widens the block
+ok   a wide character at the cursor widens the block
+ok   the cursor on the end of a line counts one cell
+ok   the anchor below the cursor
+ok   a row ending before the block is short
+ok   a row ending at the block's first column is not short
+ok   a charwise range includes its end
+ok   an end on the line end reaches the next line
+ok   on the last line there is no line break to take
+ok   a linewise range covers the rows
+ok   a linewise operand starts at column 0 of the anchor's row
+ok   or at the cursor when it is on top
+ok   start and finish are ordered
+ok   as changes the kind
+ok   no selection is inactive
+ok   normal mode has no selection
+ok   the cursor may rest on the end of the line in visual mode
+ok   the selection runs from the anchor to the cursor
+ok   leaving moves the cursor onto the last character
+ok   leaving stores the selection on the window
+ok   end_visual returns the selection it left
+ok   showing another buffer forgets the last selection
+ok   a wanted column at the line end is a block to the end
+ok   the three visual modes
+ok   the kind of each mode
+ok   the mode of each kind
+domain_selection: 53 passed, 0 failed

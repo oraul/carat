@@ -105,6 +105,7 @@ module Carat
         when Domain::Highlight::TAB_LINE then "\e[0;7m"
         when Domain::Highlight::TAB_LINE_SELECTED then "\e[0;1m"
         when Domain::Highlight::TAB_LINE_FILL then "\e[0;7m"
+        when Domain::Highlight::VISUAL then "\e[0;7m"
         else "\e[0m"
         end
       end

@@ -8,6 +8,12 @@ ok   linewise onto linewise adds lines
 ok   linewise onto charwise becomes linewise
 ok   charwise onto linewise becomes linewise
 ok   entries are equal by value
+ok   a block joins its rows with newlines
+ok   a block's lines are its rows
+ok   charwise onto a block adds a row
+ok   a block onto charwise becomes a block
+ok   linewise onto a block becomes linewise
+ok   appending to a block register adds a row
 ok   the quote
 ok   a lowercase letter
 ok   z
@@ -28,4 +34,4 @@ ok   an uppercase read is the lowercase register
 ok   appending to an empty register stores the entry
 ok   writing the quote register writes only the unnamed register
 ok   a lowercase write replaces
-domain_registers: 30 passed, 0 failed
+domain_registers: 36 passed, 0 failed
