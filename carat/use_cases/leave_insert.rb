@@ -9,9 +9,20 @@ module Carat
     # typed on the block's top row is inserted on the block's other rows
     # first, when the cursor is still on that row and no line was added;
     # after "I" and "A" the cursor then goes to the block's top-left.
+    # Leaving insert mode ends the insert session: the transaction the
+    # command that entered insert mode opened is closed here, after the
+    # block repeat, with the cursor where it comes to rest.
     class LeaveInsert
       #: (Domain::EditorState) -> void
       def call(state)
+        leave(state)
+        state.buffer.commit_transaction(state.cursor.position)
+      end
+
+      private
+
+      #: (Domain::EditorState) -> void
+      def leave(state)
         cursor = state.cursor
         state.mode = Domain::Mode::NORMAL
         pending = state.block_insert
@@ -25,8 +36,6 @@ module Carat
         end
         cursor.move_to(cursor.row, cursor.col - 1) if cursor.col > 0
       end
-
-      private
 
       # Inserts the text typed on the top row on every recorded row and
       # returns the column the cursor goes to, or -1 for the usual one

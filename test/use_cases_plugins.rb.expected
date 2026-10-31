@@ -30,6 +30,7 @@ ok   an edit at the same cursor delivers buffer_change only
 ok   a cursor move delivers cursor_move
 ok   a mode change carries the mode name
 ok   several differences come in the fixed order
+ok   reloading the current buffer delivers buffer_change
 ok   a write delivers buffer_save at once
 ok   nothing else changed
 ok   a split focuses the new window
@@ -81,4 +82,4 @@ ok   a raise in an event disables the plugin and keeps the edit
 ok   a disabled plugin's requests are refused
 ok   reads, stats, and icons too
 ok   a disabled plugin's segment is dropped when it is disabled
-use_cases_plugins: 83 passed, 0 failed
+use_cases_plugins: 84 passed, 0 failed

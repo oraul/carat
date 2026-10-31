@@ -72,7 +72,7 @@ ok   indent_of per row
 ok   a row outside the buffer reads as empty
 ok   a file buffer has no owner, title, keymap, or changes
 ok   every primitive counts one change
-ok   replacing the lines outside the primitives does not count
+ok   reload counts one change and leaves the buffer unmodified
 ok   a scratch buffer is named by its title
 ok   a file buffer is named by its path
 ok   no signs at first

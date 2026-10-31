@@ -217,6 +217,10 @@ t.assert_equal(["buffer_change b1 w1 b.txt 0,0", "cursor_move b1 w1 b.txt 0,0", 
 state.mode = D::Mode::NORMAL
 host.observe(state)
 p.log.clear
+ex.call(state, "e!")
+host.observe(state)
+t.assert_equal(["buffer_change b1 w1 b.txt 0,0"], p.log, "reloading the current buffer delivers buffer_change")
+p.log.clear
 ex.call(state, "w")
 t.assert_equal(["buffer_save b1 w1 b.txt 0,0"], p.log, "a write delivers buffer_save at once")
 p.log.clear
@@ -258,7 +262,8 @@ h = p.host
 state.cursor.row = 1
 view = h.read_buffer(0)
 t.assert_equal([true, 1, "a.txt", ["one", "two"], 1, 0, false], [view.ok, view.number, view.path, view.lines, view.row, view.col, view.modified], "read_buffer 0 reads the current buffer")
-view.lines << "x"
+copied = view.lines
+copied << "x"
 t.assert_equal(2, state.buffer.line_count, "the lines are a copy")
 ex.call(state, "sp b.txt")
 view = h.read_buffer(1)

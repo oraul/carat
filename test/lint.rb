@@ -32,6 +32,35 @@ FORBIDDEN = [
   ["Ractor", "Ractor is not available in Spinel"]
 ]
 
+# A buffer's line array changes only inside carat/domain/buffer.rb,
+# through its primitives. Anywhere else, in the library, the executables,
+# and the tests, assigning lines, assigning one of its elements, or calling
+# a mutating method on it is a violation.
+LINES_MUTATORS = ["<<", ".insert(", ".delete_at(", ".push(", ".append(", ".prepend(", ".pop", ".shift", ".unshift(", ".concat(", ".clear", ".replace(", ".slice!(", ".delete(", ".delete_if", ".keep_if", ".fill(", ".map!", ".collect!", ".select!", ".filter!", ".reject!", ".sort!", ".sort_by!", ".reverse!", ".compact!", ".flatten!", ".uniq!", ".rotate!", ".shuffle!"]
+
+def assigns?(tail)
+  tail.start_with?("=") && !tail.start_with?("==") && !tail.start_with?("=~")
+end
+
+def lines_mutation?(stripped)
+  rest = stripped
+  at = rest.index(".lines")
+  until at.nil?
+    rest = rest[(at + 6)..-1]
+    unless rest.match?(/\A[A-Za-z0-9_?!]/)
+      tail = rest.lstrip
+      return true if assigns?(tail)
+      if tail.start_with?("[")
+        close = tail.index("]")
+        return true if !close.nil? && assigns?(tail[(close + 1)..-1].lstrip)
+      end
+      LINES_MUTATORS.each { |m| return true if tail.start_with?(m) }
+    end
+    at = rest.index(".lines")
+  end
+  false
+end
+
 def layer_of(path)
   parts = path.split("/")
   return nil unless parts[0] == "carat" && parts.length > 2
@@ -77,6 +106,18 @@ source_files.each do |path|
         end
       end
     end
+  end
+end
+
+edited = []
+edited.concat(source_files)
+edited.concat(Dir.glob("test/*.rb"))
+edited.sort.each do |path|
+  next if path == "carat/domain/buffer.rb"
+  File.read(path).each_line.with_index(1) do |line, number|
+    stripped = line.strip
+    next if stripped.start_with?("#")
+    violations << "#{path}:#{number}: only Buffer changes its lines; use the buffer primitives" if lines_mutation?(stripped)
   end
 end
 

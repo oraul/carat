@@ -218,7 +218,7 @@ t.assert_equal([1, 2], [s.buffer_index(one), s.buffer_index(two)], "two unnamed 
 t.assert_equal([false, false], [s.shown?(one), s.shown?(two)], "neither unnamed buffer is shown")
 s.release(one)
 t.assert_equal(2, s.buffer_count, "a clean unshown buffer leaves the list when released")
-two.modified = true
+two.mark_unsaved
 s.release(two)
 t.assert_equal(2, s.buffer_count, "a modified unshown buffer stays hidden")
 t.assert_true(s.hidden_modified.equal?(two), "it is the hidden modified buffer")
@@ -232,7 +232,7 @@ t.assert_true(s.buffer_for("b.txt").equal?(b), "a listed buffer is found by path
 t.assert_equal(nil, s.buffer_for("a.txt"), "a dropped buffer is not")
 s.cursor.move_to(2, 0)
 c = D::Buffer.from_text("x\n", "b.txt")
-b.lines = c.lines
+b.reload(c.lines)
 s.clamp_cursors(b)
 t.assert_equal([0, 0], s.cursor.to_a, "cursors on a replaced buffer are pulled back inside it")
 

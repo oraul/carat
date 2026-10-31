@@ -7,8 +7,9 @@ module Carat
     # Shows a file in the current window: the buffer already listed for
     # that path, which is not read again, the file read from disk, or an
     # empty buffer for a path that does not exist yet, with Vim's message
-    # for each. The current buffer's own path is reloaded in place so every
-    # window showing it sees the file's text.
+    # for each. The current buffer's own path is reloaded in place through
+    # Buffer#reload, one change that leaves it unmodified, so every window
+    # showing it sees the file's text.
     class OpenFile
       # @rbs @files: Ports::FilePort
 
@@ -36,9 +37,8 @@ module Carat
         if listed.nil?
           state.load(fresh)
         else
-          listed.lines = fresh.lines
+          listed.reload(fresh.lines)
           listed.line_ending = fresh.line_ending
-          listed.modified = false
           state.window.show(listed)
           state.clamp_cursors(listed)
         end
