@@ -11,13 +11,13 @@ module Carat
       QUIT_HINT = "Type  :q!  and press <Enter> to abandon all changes and exit Carat"
 
       # The reserved actions, listed under Reserved in docs/actions.md.
-      RESERVED = ["history.undo", "history.redo", "history.repeat", "search.forward", "search.backward", "search.next", "search.previous"]
+      RESERVED = ["search.forward", "search.backward", "search.next", "search.previous"]
 
       # @rbs @text: String
 
       #: (text: String, kind: Symbol) -> void
       def initialize(text:, kind:)
-        super(kind: kind)
+        super(kind: kind, repeat: false)
         @text = text
       end
 

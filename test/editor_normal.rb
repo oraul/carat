@@ -72,9 +72,9 @@ t.assert_equal([["ab"], [0, 0], :normal], [h.lines, h.cursor, h.mode], "ctrl-c c
 
 # Actions from later roadmap items.
 h = editor("ab\n")
-h.type("u")
-t.assert_equal("Not implemented: history.undo", h.message_row, "u reports itself")
-t.assert_equal(["ab"], h.lines, "u changes nothing")
+h.type("/")
+t.assert_equal("Not implemented: search.forward", h.message_row, "/ reports itself")
+t.assert_equal(["ab"], h.lines, "/ changes nothing")
 h.type("l")
 t.assert_equal("", h.message_row, "the message clears on the next key")
 

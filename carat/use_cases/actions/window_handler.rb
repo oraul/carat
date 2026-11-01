@@ -22,7 +22,7 @@ module Carat
 
       #: (split_window: SplitWindow, close_window: CloseWindow, focus_window: FocusWindow, resize_layout: ResizeLayout, quit: Quit, tabs: Domain::TabList, variant: Symbol) -> void
       def initialize(split_window:, close_window:, focus_window:, resize_layout:, quit:, tabs:, variant:)
-        super(kind: :action)
+        super(kind: :action, repeat: false)
         @split_window = split_window
         @close_window = close_window
         @focus_window = focus_window

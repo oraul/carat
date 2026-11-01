@@ -6,7 +6,9 @@
 # with LARGE keys, and the difference of the two totals divided by the
 # difference of the key counts is what one key allocates, with the setup
 # of the scenario cancelled out. When taskset exists the runs are pinned to
-# one core.
+# one core. The memory scenarios run with SPINEL_GC_MINOR=0, which makes
+# every collection full, so the live heap the benchmark reads after
+# GC.start is exact.
 #
 # Usage: bench/run.sh [SCENARIO...]       every scenario when none is named
 #        bench/run.sh --budget SCENARIO MAX
@@ -64,10 +66,13 @@ if [ "${1:-}" = "--budget" ]; then
 fi
 
 if [ $# -eq 0 ]; then
-  set -- lh j insert w ddp lh-utf8 j-utf8 long-ascii long-utf8 lh-explorer j-explorer
+  set -- lh j insert w ddp lh-utf8 j-utf8 long-ascii long-utf8 lh-explorer j-explorer undo undo-line r dot-r dd dot-dd ciw dot-ciw memory memory-10k
 fi
 for scenario in "$@"; do
-  line=$(pin "$BIN" "$scenario")
+  case "$scenario" in
+    memory*) line=$(SPINEL_GC_MINOR=0 pin "$BIN" "$scenario") ;;
+    *) line=$(pin "$BIN" "$scenario") ;;
+  esac
   set -- $(per_key "$scenario")
   echo "$line allocs=$1 alloc_bytes=$2"
 done

@@ -13,7 +13,7 @@ module Carat
 
       #: (insert_text: InsertText, variant: Symbol) -> void
       def initialize(insert_text:, variant:)
-        super(kind: :action)
+        super(kind: :action, repeat: false)
         @insert_text = insert_text
         @variant = variant
       end

@@ -3,6 +3,7 @@ require_relative "range"
 require_relative "line_splice"
 require_relative "change_record"
 require_relative "transaction"
+require_relative "undo_tree"
 require_relative "sign_layer"
 require_relative "buffer_feed"
 
@@ -34,7 +35,7 @@ module Carat
     # feed while the buffer is listed (nil before): renames and closed
     # transactions are recorded there for the plugin host. A Struct
     # record: mutable, with a reader and a writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed)
+    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
@@ -49,6 +50,7 @@ module Carat
       # @rbs @last_transaction: Transaction?
       # @rbs @closed_count: Integer
       # @rbs @feed: BufferFeed?
+      # @rbs @undo: UndoTree
 
       # The original members go through super and the later members
       # through the writers, so the empty sign list takes the pinned type.
@@ -66,6 +68,7 @@ module Carat
         self.last_transaction = nil
         self.closed_count = 0
         self.feed = nil
+        self.undo = UndoTree.new
       end
 
       # Whether an edit changed the text since the last load, reload, or
@@ -80,6 +83,7 @@ module Carat
       #: () -> void
       def mark_saved
         self.saved_change = changes
+        undo.mark_saved(transaction_size > 0)
       end
 
       # No saved text matches the buffer any more, as when its file was
@@ -87,6 +91,14 @@ module Carat
       #: () -> void
       def mark_unsaved
         self.saved_change = -1
+        undo.mark_unsaved
+      end
+
+      # After undo or redo: the buffer is unmodified when the text shows
+      # the state of the last write again.
+      #: () -> void
+      def settle_saved
+        self.saved_change = changes if undo.at_saved?
       end
 
       # Whether a plugin owns the buffer: it is never written and never
@@ -396,6 +408,57 @@ module Carat
         open.nil? ? 0 : open.size
       end
 
+      # Moves the cursor position before the open transaction to where an
+      # operator starts, while it has no record yet: Vim records the
+      # cursor of an undo state at its first change, after an operator
+      # put the cursor at the start of what it works on.
+      #: (Position) -> void
+      def start_at(at)
+        open = transaction
+        open.before = at if !open.nil? && open.empty?
+      end
+
+      # Seals the open transaction's records against merging and returns
+      # their count, 0 when none is open: the mark revert_to returns to.
+      #: () -> Integer
+      def transaction_mark
+        open = transaction
+        open.nil? ? 0 : open.seal
+      end
+
+      # Closes any open transaction and opens one for an undo or a redo,
+      # which observers see as a change but which becomes no undo state.
+      #: (Position) -> void
+      def begin_history(at)
+        commit_transaction(at)
+        begin_transaction(at)
+        open = transaction
+        open.history = true unless open.nil?
+      end
+
+      # Undoes the records of a state, last first, through the splice.
+      #: (Transaction) -> void
+      def revert(done)
+        i = done.size - 1
+        while i >= 0
+          change = done.record_at(i)
+          splice(change.row, change.row + change.inserted.length, change.removed)
+          i -= 1
+        end
+      end
+
+      # Applies the records of a state again, first first, through the
+      # splice.
+      #: (Transaction) -> void
+      def reapply(done)
+        i = 0
+        while i < done.size
+          change = done.record_at(i)
+          splice(change.row, change.row + change.removed.length, change.inserted)
+          i += 1
+        end
+      end
+
       # Undoes the records of the open transaction after the first count,
       # last first, without recording anything: the lines, the change
       # counter, and the signs return to how they were. The plugin host
@@ -462,14 +525,22 @@ module Carat
         sink.nil? ? "" : sink.cause
       end
 
-      # Keeps the closed transaction for the undo change and records its
-      # span in the feed as a change.
+      # Keeps the closed transaction as the last one and, unless it is an
+      # undo or a redo or the buffer a scratch buffer, as an undo state, and
+      # records its span in the feed as a change.
       #: (Transaction, Position) -> void
       def close(done, after)
         done.after = after
         self.last_transaction = done
         self.closed_count = closed_count + 1
         sink = feed
+        unless done.history || scratch?
+          if sink.nil?
+            undo.push(done, 0.0, BufferFeed::UNDOLEVELS)
+          else
+            undo.push(done, sink.now, sink.undolevels)
+          end
+        end
         return if sink.nil?
         span = done.span
         notice = BufferNotice.new("change", id, path_text, "", done.cause)

@@ -7,7 +7,7 @@ Every Neovim command Carat implements has a row here and a table-driven test. Th
 | Keys | Behavior | Test |
 | --- | --- | --- |
 | `[count]` | `1` to `9` start a count and `0` to `9` extend it; counts before and after an operator multiply | `editor_grammar`, `domain_grammar` |
-| `"x` | Select register `"`, `a` to `z`, or `A` to `Z` for the command; another name drops the prefix | `editor_grammar`, `editor_registers` |
+| `"x` | Select register `"`, `a` to `z`, `A` to `Z`, `0` to `9`, `-`, `_`, `.`, `:`, `%`, or `/` for the command; another name drops the prefix | `editor_grammar`, `editor_registers` |
 | operator twice | `dd`, `cc`, `yy`, `>>`, `<<` act linewise over count lines | `editor_grammar`, `editor_operators` |
 | `<Esc>` in operator-pending mode | Cancel the pending operator, count, and register | `editor_grammar` |
 | unbound key | Drop the pending count and register | `editor_grammar` |
@@ -85,10 +85,12 @@ The operand is a motion from the table above, a text object from the table below
 | `[count]J` | `operator.join` | Join count lines, at least two, with one space unless the line ends in a blank or the next starts with `)` or is empty | `editor_operators` |
 | `[count]p` | `operator.put_after` | Put the register after the cursor count times | `editor_operators`, `editor_registers` |
 | `[count]P` | `operator.put_before` | Put the register before the cursor count times | `editor_operators`, `editor_registers` |
+| `[count]r{char}` | `operator.replace_char` | Replace count characters with char, the cursor on the last; nothing when fewer remain | `editor_operators`, `editor_repeat` |
+| `[count]~` | `operator.toggle_case` | Switch the case of count characters, as many as remain, and move past them | `editor_operators`, `editor_repeat` |
 
 Exclusive motions follow Vim's two adjustments: an operator range ending in column 0 of a later line ends at the end of the previous line inclusively, and becomes linewise when it started at or before the first non-blank; `w` under an operator stops at the end of the line when the last word moved over ends there (`editor_operators`).
 
-Differences from Neovim: `d c y` always write the unnamed register, never the numbered or small-delete registers, until the undo change; the `=`, `~`, `g~`, `gu`, `gU`, `gq`, and `r` operators and `X` are not implemented in normal mode (visual mode has `r ~ u U X`); `joinspaces` is off; `p` of an empty register shows `E353` as Vim does.
+Differences from Neovim: the `=`, `g~`, `gu`, `gU`, and `gq` operators and `X` are not implemented in normal mode (visual mode has `u U X`); `r<CR>` does not split the line and `r` with fewer characters left than its count does nothing silently where Neovim beeps; `tildeop` does not exist; `joinspaces` is off; `p` of an empty register shows `E353` as Vim does.
 
 ## Text objects
 
@@ -116,8 +118,32 @@ Differences from Neovim: `is` and `as` take no count; quote objects pair quotes 
 | `"a` to `"z` | A named register, written together with the unnamed one and read by `p` and `P` | `editor_registers`, `domain_registers` |
 | `"A` to `"Z` | Append to the lowercase register: charwise text joins, a linewise part makes the result linewise | `editor_registers`, `domain_registers` |
 | empty register | `E353: Nothing in register x` | `editor_operators`, `editor_registers` |
+| `"0` | The last yank that named no register | `editor_registers`, `domain_registers` |
+| `"1` to `"9` | Deletes and changes of whole lines, of more than one line, or with `( ) { }`, also when a register is named; each shifts `"1` to `"8` down and drops `"9` | `editor_registers`, `domain_registers` |
+| `"-` | Deletes and changes within one line that named no register | `editor_registers`, `domain_registers` |
+| `"_` | The black hole: a delete, change, or yank into it stores nothing, the unnamed register included; a put reports `E353` | `editor_registers`, `domain_registers` |
+| `".` | The text typed in the last insert session; read-only | `editor_registers`, `domain_registers` |
+| `":` | The last command line run; read-only | `editor_registers`, `domain_registers` |
+| `"%` | The current file's name; read-only | `editor_registers`, `domain_registers` |
+| `"/` | Accepted and empty until search exists; read-only | `editor_registers` |
+| write to `. : % /` | Refused with `E354: Invalid register name: '.'`; the text is left alone | `editor_registers` |
 
-Differences from Neovim: the numbered registers `0` to `9`, the black hole `_`, the read-only `% : .`, and the selection registers arrive with later changes; any other register name drops the prefix instead of beeping.
+Differences from Neovim: the registers are written as Neovim's `op_yank` and `op_delete` code does, which differs from its help text in that a big delete naming a register also writes `"1`; after an uppercase append the unnamed register holds only the new text, where Neovim's points to the whole register; a delete, change, or yank into a read-only register shows `E354`, which Neovim shows only for `:let @.`, where it beeps; a visual `p` stores the replaced text by the delete rules, as Neovim's `v_p` does; the `"#`, `"=`, `"*`, and `"+` registers and `:let @x` are not implemented, and `"/` holds nothing until search exists; any other register name drops the prefix instead of beeping.
+
+## Undo and repeat
+
+| Keys | Action name | Behavior | Test |
+| --- | --- | --- | --- |
+| `[count]u` | `history.undo` | Undo count states along the current branch; the cursor goes to the first changed line, at its place before the change when the change started there | `editor_undo`, `domain_undo_tree` |
+| `[count]<C-r>` | `history.redo` | Redo count states along the current branch | `editor_undo`, `domain_undo_tree` |
+| `U` | `history.undo_line` | Put back the last changed line as it was before the latest run of changes on it, as a change `u` undoes and `U` reverses | `editor_undo`, `domain_undo_tree` |
+| `[count]g-` | `history.older` | Go count states back in the order they were made, across branches | `editor_undo`, `domain_undo_tree` |
+| `[count]g+` | `history.newer` | Go count states forward in the order they were made, across branches | `editor_undo`, `domain_undo_tree` |
+| `[count].` | `history.repeat` | Repeat the last change: an operator with its motion or text object, `x s S C D J p P r ~`, an insert command with its text, or a visual operator over a region of the same size; a count replaces the change's count, and `"1` to `"8` step to the next register | `editor_repeat` |
+
+Every change to a file buffer is one undo state: a normal-mode, visual-mode, or command-line command, an insert session from the command that entered insert mode to leaving it (a visual block insert included), and a plugin's edit request. The messages are Neovim's: `1 line less; before #3  0 seconds ago`, `1 more line`, `N fewer lines`, `N more lines`, `1 change`, `N changes`, `after #N`, `Already at oldest change`, and `Already at newest change`; undo and redo back to the state of the last write leave the buffer unmodified. `undolevels` (default 1000) limits the states a buffer keeps.
+
+Differences from Neovim: times are always shown as seconds ago, also after 100 seconds, where Neovim shows the time of day, because the editor's clock is monotonic; `g-` at the oldest state and `g+` at the newest say `Already at oldest change` and `Already at newest change`; an `undolevels` of 0 keeps no state, where Neovim's Vi-compatible mode lets `u` undo itself, and a negative value is not accepted; buffers a plugin owns keep no undo history; `U` forgets its line when a change inserts or removes lines, and does nothing silently where Neovim beeps; a count before `i a I A o O` is ignored, so `.` after an insert puts its text in once; `.` repeats a plugin's action only when that action is a change the editor knows, which none is; persistent undo, `:undojoin`, `<C-g>u`, and `undoreload` are not implemented (`:e!` is always undoable).
 
 ## Visual mode
 
@@ -136,7 +162,7 @@ The selection runs from the anchor, where visual mode started, to the cursor, bo
 | `["x]c`, `s` | `operator.change` | Change the selection; lines keep the indent with autoindent; a block's text is repeated on every row that reaches it when insert mode is left | `editor_visual` |
 | `[count]>`, `[count]<` | `operator.indent`, `operator.dedent` | Shift the lines count times by shiftwidth; in a block, insert or remove spaces at its left edge | `editor_visual` |
 | `J`, `gJ` | `visual.join`, `visual.join_raw` | Join the selected lines, at least two, with or without the blank handling of `J` | `editor_visual` |
-| `["x][count]p` | `visual.put` | Replace the selection with the register; the removed text goes to the unnamed register | `editor_visual` |
+| `["x][count]p` | `visual.put` | Replace the selection with the register; the removed text goes to the unnamed register and to `"1` or `"-` as a delete | `editor_visual` |
 | `["x][count]P` | `visual.put_keep` | Replace the selection with the register, leaving every register unchanged | `editor_visual` |
 | `r{char}` | `visual.replace` | Replace every selected character, not the line breaks | `editor_visual` |
 | `~`, `u`, `U` | `visual.toggle_case`, `visual.lowercase`, `visual.uppercase` | Toggle, lower, or upper the case of the selection | `editor_visual` |
@@ -148,7 +174,7 @@ The selection runs from the anchor, where visual mode started, to the cursor, bo
 
 Blockwise registers: a block yank or delete stores a blockwise entry, and `p` and `P` in normal mode put it as a block from the display column after or at the cursor, padding short rows with spaces and adding rows past the end of the buffer (`editor_visual`, `editor_registers`, `domain_registers`).
 
-Differences from Neovim: there are no `'<` and `'>` marks yet and no `:'<,'>` ranges, so `:` does nothing in visual mode; a count before `v V <C-v>` and on `J gJ r ~ u U I A` is ignored; `selection` is always `inclusive` and `virtualedit` does not exist; in a block a tab or a wide character the block's columns only partly cover is taken whole by the operators instead of being split into spaces, and `>` and `<` on a block insert and remove spaces, never tabs; the showcmd area shows the pending keys, not the size of the selection; a register prefix typed before `v` is not kept for the operator; on a larger selection a quote object selects the string around the selection's start when that is larger and otherwise leaves the selection alone; `p` with an empty register leaves visual mode with `E353`; `gq`, `g?`, `=`, `!`, `<C-a>`, `<C-x>`, `zf`, select mode, the mouse, and the dot command are not implemented.
+Differences from Neovim: there are no `'<` and `'>` marks yet and no `:'<,'>` ranges, so `:` does nothing in visual mode; a count before `v V <C-v>` and on `J gJ r ~ u U I A` is ignored; `selection` is always `inclusive` and `virtualedit` does not exist; in a block a tab or a wide character the block's columns only partly cover is taken whole by the operators instead of being split into spaces, and `>` and `<` on a block insert and remove spaces, never tabs; the showcmd area shows the pending keys, not the size of the selection; a register prefix typed before `v` is not kept for the operator; on a larger selection a quote object selects the string around the selection's start when that is larger and otherwise leaves the selection alone; `p` with an empty register leaves visual mode with `E353`; `.` after a visual operator uses its count for the operator over a region of the original size; `gq`, `g?`, `=`, `!`, `<C-a>`, `<C-x>`, `zf`, select mode, and the mouse are not implemented.
 
 ## Insert mode
 
@@ -198,11 +224,18 @@ Differences from Neovim: there are no `'<` and `'>` marks yet and no `:'<,'>` ra
 | `:tabn[ext]` | Next tab page, wrapping | | `use_cases_ex`, `editor_tabs` |
 | `:tabp[revious]`, `:tabN[ext]` | Previous tab page, wrapping | | `use_cases_ex`, `editor_tabs` |
 | `:tabfir[st]`, `:tabl[ast]` | First and last tab page | | `use_cases_ex`, `editor_tabs` |
+| `:u[ndo]` | Undo one state | as `u`, `Already at oldest change` | `editor_undo` |
+| `:u[ndo] N` | Go to the text after state N, 0 for the original | `2 changes; after #1  0 seconds ago`, `E830: Undo number N not found`, `E474: Invalid argument` | `editor_undo` |
+| `:red[o]` | Redo one state | as `<C-r>`, `Already at newest change` | `editor_undo` |
+| `:undol[ist]` | List the states without later states on their branch: number, changes from the original, seconds ago, and the write number | `Nothing to undo` | `editor_undo` |
+| `:ea[rlier] [N]` | Go N states back in time order, one without a count | as `g-`, `E475: Invalid argument: x` | `editor_undo` |
+| `:lat[er] [N]` | Go N states forward in time order, one without a count | as `g+`, `E475: Invalid argument: x` | `editor_undo` |
+| `:reg[isters] [names]`, `:di[splay] [names]` | List the registers that hold text, or only the ones named | `Type Name Content` | `editor_registers` |
 | unknown | Report the command | `E492: Not an editor command: name` | `use_cases_ex`, `editor_cmdline` |
 
 Every command is recognized from its abbreviation to its full name, as the `name[suffix]` notation of the table means: `:vs`, `:vsp`, and `:vsplit` all split vertically, and `:tabf` and `:vsplitx` are unknown; the commands are tried in the order of this table, which is Vim's order where two could match, and the commands plugins declare come after them (`use_cases_ex` checks every spelling of every row, `editor_cmdline` runs `:vsp`, `:spl`, `:wr`, `:wal`, `:xi`, and `:tabfirs`).
 
-Differences from Neovim: `E141` names a buffer by its position in the list, which shifts when a buffer leaves the list, where Neovim keeps buffer numbers for the session; `:qa` on a modified buffer shows only `E37`, not Neovim's second `E162` line naming the buffer; `:wa` shows the message of the last write only; `:e` without a bang refuses a modified buffer even when another window shows it, as Neovim does with `'hidden'` off, while closing a window keeps a modified buffer hidden, as Neovim does with `'hidden'` on; `:x` with a file argument writes even an unmodified buffer, where Neovim writes only a changed one; `:tabn N`, `:Nsplit`, `:tabm[ove]`, `:ls`, `:bn`, `:bp`, `:bd`, `:b N`, ranges, `:update`, and `:saveas` arrive with later changes.
+Differences from Neovim: `E141` names a buffer by its position in the list, which shifts when a buffer leaves the list, where Neovim keeps buffer numbers for the session; `:qa` on a modified buffer shows only `E37`, not Neovim's second `E162` line naming the buffer; `:wa` shows the message of the last write only; `:e` without a bang refuses a modified buffer even when another window shows it, as Neovim does with `'hidden'` off, while closing a window keeps a modified buffer hidden, as Neovim does with `'hidden'` on; `:x` with a file argument writes even an unmodified buffer, where Neovim writes only a changed one; `:earlier` and `:later` with a time (`10s`, `5m`, `1h`, `1d`) or a write count (`1f`) answer `Not implemented: :earlier 10s`; a listing of several lines, as `:undolist` and `:registers` print, shows its last lines when it is taller than the screen, with no `-- More --` paging and no scrolling back at the hit-enter prompt; `:tabn N`, `:Nsplit`, `:tabm[ove]`, `:ls`, `:bn`, `:bp`, `:bd`, `:b N`, ranges, `:update`, and `:saveas` arrive with later changes.
 
 ## Windows
 

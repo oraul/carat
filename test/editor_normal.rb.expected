@@ -29,8 +29,8 @@ ok   O opens a line above
 ok   o marks the buffer modified
 ok   ctrl-c shows the quit hint
 ok   ctrl-c changes nothing else
-ok   u reports itself
-ok   u changes nothing
+ok   / reports itself
+ok   / changes nothing
 ok   the message clears on the next key
 ok   g alone dispatches nothing
 ok   g is pending

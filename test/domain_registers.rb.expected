@@ -20,12 +20,16 @@ ok   z
 ok   an uppercase letter
 ok   a digit
 ok   the black hole
+ok   the small delete register
+ok   the read-only registers
 ok   a percent sign
+ok   the search register
+ok   an unknown sign
 ok   two letters
 ok   empty
 ok   the unnamed register starts empty
 ok   a named register starts empty
-ok   writing with no name fills the unnamed register
+ok   a yank with no name fills the unnamed register
 ok   the quote reads the unnamed register
 ok   and no named register
 ok   a named write fills the name and the unnamed register
@@ -34,4 +38,15 @@ ok   an uppercase read is the lowercase register
 ok   appending to an empty register stores the entry
 ok   writing the quote register writes only the unnamed register
 ok   a lowercase write replaces
-domain_registers: 36 passed, 0 failed
+ok   a yank with no name fills register 0
+ok   a named yank leaves register 0
+ok   big deletes shift down through the numbered registers
+ok   a small delete fills register - and leaves the numbered ones
+ok   a small named delete leaves register -
+ok   a big named delete fills register 1 too
+ok   register 9 drops the oldest
+ok   the black hole takes nothing
+ok   the read-only registers start empty
+ok   they read the inserted text, the command line, and the file name
+ok   which names are read-only
+domain_registers: 51 passed, 0 failed

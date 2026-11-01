@@ -20,7 +20,8 @@ module Carat
           "wrap": false,
           "scrolloff": 5,
           "clipboard": "",
-          "icons": "nerd"
+          "icons": "nerd",
+          "undolevels": 1000
         },
         "keymaps": {
           "normal": {
@@ -76,8 +77,13 @@ module Carat
             "p": "operator.put_after",
             "P": "operator.put_before",
             "\"": "register.select",
+            "r": "operator.replace_char",
+            "~": "operator.toggle_case",
             "u": "history.undo",
             "<C-r>": "history.redo",
+            "U": "history.undo_line",
+            "g-": "history.older",
+            "g+": "history.newer",
             ".": "history.repeat",
             "i": "mode.insert",
             "a": "mode.insert_after",

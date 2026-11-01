@@ -57,6 +57,8 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `operator.join` | normal | Join count lines, at least two |
 | `operator.put_after` | normal | Put the register after the cursor count times |
 | `operator.put_before` | normal | Put the register before the cursor count times |
+| `operator.replace_char` | normal | Replace count characters from the cursor with the next key typed; nothing when fewer remain |
+| `operator.toggle_case` | normal | Switch the case of count characters from the cursor and move past them |
 | `register.select` | normal, visual | Read the next key as the register name for the command |
 | `textobject.inner_word` | operator_pending, visual | The word under the cursor, or the blanks |
 | `textobject.a_word` | operator_pending, visual | The word and the blanks after it, or before it |
@@ -109,6 +111,12 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `cmdline.execute` | cmdline | Run the command line |
 | `cmdline.backspace` | cmdline | Remove the last character, or leave when empty |
 | `message.quit_hint` | normal | Show the quit hint |
+| `history.undo` | normal | Undo count states along the current branch of the undo tree |
+| `history.redo` | normal | Redo count states along the current branch |
+| `history.undo_line` | normal | Put the last changed line back as it was before the latest run of changes on it, as a change of its own |
+| `history.older` | normal | Go count states back in the order they were made, across branches |
+| `history.newer` | normal | Go count states forward in the order they were made, across branches |
+| `history.repeat` | normal | Repeat the last change; a count replaces its count |
 | `window.split` | normal | Split the window horizontally, the new window above; a count is its text rows |
 | `window.vsplit` | normal | Split the window vertically, the new window to the left; a count is its columns |
 | `window.left`, `window.down`, `window.up`, `window.right` | normal | Go to the neighbour window in that direction, count times |
@@ -148,4 +156,4 @@ The keys marked "in the tree" are bound in the tree window's own keymap, which t
 
 ## Reserved
 
-`history.undo`, `history.redo`, `history.repeat`, `search.forward`, `search.backward`, `search.next`, `search.previous`.
+`search.forward`, `search.backward`, `search.next`, `search.previous`.

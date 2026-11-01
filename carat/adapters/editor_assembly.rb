@@ -9,6 +9,7 @@ require_relative "../domain/input_state"
 require_relative "../domain/last_find"
 require_relative "../domain/plugin_ui"
 require_relative "../domain/registers"
+require_relative "../domain/last_change"
 require_relative "../domain/keymap"
 require_relative "../domain/options"
 require_relative "../domain/line_cache"
@@ -19,6 +20,8 @@ require_relative "../use_cases/operate"
 require_relative "../use_cases/enter_insert"
 require_relative "../use_cases/insert_text"
 require_relative "../use_cases/leave_insert"
+require_relative "../use_cases/undo"
+require_relative "../use_cases/repeat_last"
 require_relative "../use_cases/files/open_file"
 require_relative "../use_cases/files/save_file"
 require_relative "../use_cases/files/quit"
@@ -39,6 +42,8 @@ require_relative "../use_cases/ex/execute_ex"
 require_relative "../use_cases/ex/file_command_handler"
 require_relative "../use_cases/ex/window_command_handler"
 require_relative "../use_cases/ex/tab_command_handler"
+require_relative "../use_cases/ex/history_command_handler"
+require_relative "../use_cases/ex/register_command_handler"
 require_relative "../use_cases/ex/plugin_command_handler"
 require_relative "../use_cases/edit_command_line"
 require_relative "../use_cases/actions/action_table"
@@ -55,6 +60,7 @@ require_relative "../use_cases/actions/command_line_handler"
 require_relative "../use_cases/actions/window_handler"
 require_relative "../use_cases/actions/tab_handler"
 require_relative "../use_cases/actions/message_handler"
+require_relative "../use_cases/actions/history_handler"
 require_relative "../use_cases/actions/plugin_action_handler"
 require_relative "../use_cases/dispatcher"
 require_relative "../use_cases/handle_key"
@@ -95,6 +101,7 @@ module Carat
       attr_reader :state #: Domain::EditorState
       attr_reader :keymap #: Domain::Keymap
       attr_reader :registers #: Domain::Registers
+      attr_reader :last_change #: Domain::LastChange
       attr_reader :last_find #: Domain::LastFind
       attr_reader :input #: Domain::InputState
       attr_reader :plugin_ui #: Domain::PluginUi
@@ -106,6 +113,8 @@ module Carat
       attr_reader :move #: UseCases::Move
       attr_reader :operate #: UseCases::Operate
       attr_reader :selection #: UseCases::OperateOnSelection
+      attr_reader :undo #: UseCases::Undo
+      attr_reader :repeat_last #: UseCases::RepeatLast
       attr_reader :open_file #: UseCases::OpenFile
       attr_reader :save_file #: UseCases::SaveFile
       attr_reader :quit #: UseCases::Quit
@@ -116,6 +125,7 @@ module Carat
       attr_reader :switch_tab #: UseCases::SwitchTab
       attr_reader :plugins #: UseCases::PluginHost
       attr_reader :command_line #: UseCases::EditCommandLine
+      attr_reader :dispatcher #: UseCases::Dispatcher
       attr_reader :handle_key #: UseCases::HandleKey
       attr_reader :controller #: InputController
       attr_reader :frame_presenter #: FramePresenter
@@ -137,6 +147,8 @@ module Carat
         @state = Domain::EditorState.new(@tabs, Domain::Options.from_config(value))
         @keymap = Domain::Keymap.new
         @registers = Domain::Registers.new
+        @last_change = Domain::LastChange.new
+        @buffers.feed.undolevels = @state.options.undolevels
         @last_find = Domain::LastFind.new
         @input = Domain::InputState.new
         @plugin_ui = Domain::PluginUi.new
@@ -151,8 +163,10 @@ module Carat
         @operate = UseCases::Operate.new(registers: @registers, last_find: @last_find)
         @selection = UseCases::OperateOnSelection.new(registers: @registers)
         enter_insert = UseCases::EnterInsert.new(move: @move)
-        insert_text = UseCases::InsertText.new(enter_insert: enter_insert)
-        leave_insert = UseCases::LeaveInsert.new
+        insert_text = UseCases::InsertText.new(enter_insert: enter_insert, last_change: @last_change)
+        leave_insert = UseCases::LeaveInsert.new(last_change: @last_change, registers: @registers)
+        @undo = UseCases::Undo.new(clock: clock)
+        @repeat_last = UseCases::RepeatLast.new(last_change: @last_change, actions: @actions, insert_text: insert_text, leave_insert: leave_insert)
         @open_file = UseCases::OpenFile.new(files: files, buffers: @buffers)
         @close_window = UseCases::CloseWindow.new(buffers: @buffers, tabs: @tabs)
         @split_window = UseCases::SplitWindow.new(open_file: @open_file, buffers: @buffers, tabs: @tabs)
@@ -173,10 +187,12 @@ module Carat
         UseCases::FileCommandHandler.register(@commands, save_file: @save_file, quit: @quit, open_file: @open_file)
         UseCases::WindowCommandHandler.register(@commands, split_window: @split_window, close_window: @close_window)
         UseCases::TabCommandHandler.register(@commands, open_tab: @open_tab, close_tab: @close_tab, switch_tab: @switch_tab)
+        UseCases::HistoryCommandHandler.register(@commands, undo: @undo)
+        UseCases::RegisterCommandHandler.register(@commands, registers: @registers)
         UseCases::PluginCommandHandler.register(@commands, plugins: @plugins)
         @plugins.activate_all(value["plugins"])
 
-        @command_line = UseCases::EditCommandLine.new(runner: @runner, plugins: @plugins, plugin_ui: @plugin_ui)
+        @command_line = UseCases::EditCommandLine.new(runner: @runner, plugins: @plugins, plugin_ui: @plugin_ui, registers: @registers)
         start_visual = UseCases::StartVisual.new
         extend_visual = UseCases::ExtendVisual.new
         UseCases::MotionHandler.register(@actions, move: @move)
@@ -190,6 +206,7 @@ module Carat
         UseCases::CommandLineHandler.register(@actions, command_line: @command_line)
         UseCases::InsertTextHandler.register(@actions, insert_text: insert_text)
         UseCases::MessageHandler.register(@actions)
+        UseCases::HistoryHandler.register(@actions, undo: @undo, repeat_last: @repeat_last)
         UseCases::WindowHandler.register(@actions, split_window: @split_window, close_window: @close_window, focus_window: focus_window, resize_layout: resize_layout, quit: @quit, tabs: @tabs)
         UseCases::TabHandler.register(@actions, switch_tab: @switch_tab)
         UseCases::PluginActionHandler.register(@actions, plugins: @plugins)
@@ -203,8 +220,8 @@ module Carat
           i += 1
         end
 
-        dispatcher = UseCases::Dispatcher.new(actions: @actions)
-        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: dispatcher, insert_text: insert_text, command_line: @command_line, plugins: @plugins, arrange_view: @arrange_view)
+        @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
+        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: insert_text, command_line: @command_line, plugins: @plugins, arrange_view: @arrange_view)
         @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key)
         @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache)
         @screen_presenter = ScreenPresenter.new(terminal: terminal)

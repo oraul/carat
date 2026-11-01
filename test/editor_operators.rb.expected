@@ -93,6 +93,14 @@ ok   p after a multi-line charwise delete
 ok   p on an empty line
 ok   dd then p moves the line down
 ok   x then P puts it back
+ok   r replaces one character
+ok   r with a count
+ok   r with too few characters
+ok   r on an empty line
+ok   r cancelled by Escape
+ok   ~ toggles and moves
+ok   ~ with a count past the end
+ok   ~ on an empty line
 ok   cc without autoindent
 ok   >> with tabs
 ok   >> twice with tabs makes a tab
@@ -106,4 +114,4 @@ ok   a delete modifies the buffer
 ok   dw stores charwise text
 ok   dd stores a line
 ok   cc stores the changed line
-editor_operators: 108 passed, 0 failed
+editor_operators: 116 passed, 0 failed

@@ -13,7 +13,7 @@ module Carat
 
       #: (start_visual: StartVisual, variant: Symbol) -> void
       def initialize(start_visual:, variant:)
-        super(kind: :action)
+        super(kind: :action, repeat: false)
         @start_visual = start_visual
         @variant = variant
       end

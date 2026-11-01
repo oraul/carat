@@ -12,11 +12,19 @@ module Carat
     # cause is the name of the plugin whose call is running, "" outside
     # any plugin call; a notice records the cause at the moment it is
     # made. The notices are Array[untyped], read through notice_at, which
-    # declares their type. A Struct record.
-    class BufferFeed < Struct.new(:cause, :notices, :tabs)
+    # declares their type. now is the time of the command being run, in
+    # seconds, and undolevels the number of undo states a buffer keeps:
+    # a listed buffer reads both when a transaction closes. A Struct
+    # record.
+    class BufferFeed < Struct.new(:cause, :notices, :tabs, :now, :undolevels)
+      # Vim's default 'undolevels'.
+      UNDOLEVELS = 1000
+
       # @rbs @cause: String
       # @rbs @notices: Array[untyped]
       # @rbs @tabs: TabList?
+      # @rbs @now: Float
+      # @rbs @undolevels: Integer
 
       # The empty list is stored through the writer, so it takes the
       # pinned type.
@@ -26,6 +34,8 @@ module Carat
         self.cause = ""
         self.notices = []
         self.tabs = nil
+        self.now = 0.0
+        self.undolevels = UNDOLEVELS
       end
 
       # Records the notice; a change also clamps the cursors of the windows
