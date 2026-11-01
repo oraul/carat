@@ -10,8 +10,8 @@ module Carat
       # @rbs @input: IO
       # @rbs @output: IO
 
-      #: (IO, IO) -> void
-      def initialize(input, output)
+      #: (input: IO, output: IO) -> void
+      def initialize(input:, output:)
         @input = input
         @output = output
       end

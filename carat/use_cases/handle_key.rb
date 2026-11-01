@@ -1,4 +1,5 @@
 require_relative "../domain/editor_state"
+require_relative "../domain/input_state"
 require_relative "../domain/keymap"
 require_relative "../domain/key"
 require_relative "../domain/key_notation"
@@ -26,23 +27,27 @@ module Carat
     # the keymap of a scratch buffer the current window shows, then in the
     # mode's keymap. The grammar reads each action with the kind of its
     # handler in the action table. After every key the plugin host
-    # observes the state and delivers the events the key caused.
+    # observes the state and delivers the events the key caused. It owns
+    # the input state: the keys the keymap waits on and the grammar.
     class HandleKey
       include Reporting
 
       MAX_REPLAYS = 100
 
-      # @rbs @keymap: Domain::Keymap
+      attr_reader :keymap #: Domain::Keymap
+      attr_reader :input #: Domain::InputState
+      attr_reader :plugins #: PluginHost
+
       # @rbs @actions: ActionTable
       # @rbs @dispatcher: Dispatcher
       # @rbs @insert_text: InsertText
       # @rbs @command_line: EditCommandLine
-      # @rbs @plugins: PluginHost
       # @rbs @replays: Integer
 
-      #: (keymap: Domain::Keymap, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, plugins: PluginHost) -> void
-      def initialize(keymap:, actions:, dispatcher:, insert_text:, command_line:, plugins:)
+      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, plugins: PluginHost) -> void
+      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, plugins:)
         @keymap = keymap
+        @input = input
         @actions = actions
         @dispatcher = dispatcher
         @insert_text = insert_text
@@ -61,15 +66,22 @@ module Carat
         result
       end
 
+      # Whether the keymap is waiting for more keys of a binding.
+      #: () -> bool
+      def pending?
+        @input.pending?
+      end
+
       # Resolves pending keys after timeoutlen: the shorter binding fires if
       # there is one, otherwise the keys are dropped (or inserted as text).
       #: (Domain::EditorState) -> Symbol
       def timeout(state)
-        keys = state.pending_keys
+        input = @input
+        keys = input.pending_keys
         return :idle if keys.empty?
         @replays = 0
         match = lookup(state, keys)
-        state.pending_keys = []
+        input.pending_keys = []
         value = match.value
         queue = []
         if value.nil?
@@ -108,30 +120,29 @@ module Carat
       #: (Domain::EditorState, Integer, Array[Integer]) -> Symbol
       def step(state, code, queue)
         state.clear_message
+        input = @input
         if grammar_mode?(state)
-          grammar = state.grammar
+          grammar = input.grammar
           if grammar.wants_char?
             finish(state, grammar.char(code))
             return :handled
           end
-          if state.pending_keys.empty? && grammar.digit?(code)
+          if input.pending_keys.empty? && grammar.digit?(code)
             grammar.digit(code)
             return :handled
           end
         end
-        state.pending_keys << code
-        match = lookup(state, state.pending_keys)
+        input.pending_keys << code
+        match = lookup(state, input.pending_keys)
         case match.kind
         when :match
-          keys = state.pending_keys
-          state.pending_keys = []
+          keys = input.take_keys
           dispatch(state, match.value, keys, queue)
           :handled
         when :prefix, :match_prefix
           :pending
         else
-          keys = state.pending_keys
-          state.pending_keys = []
+          keys = input.take_keys
           cancel(state)
           insert_literal(state, keys)
           :handled
@@ -146,9 +157,9 @@ module Carat
           return
         end
         if Domain::Mode.visual?(state.mode)
-          finish(state, state.grammar.accept_visual(value, @actions.kind_of(value), keys))
+          finish(state, @input.grammar.accept_visual(value, @actions.kind_of(value), keys))
         elsif grammar_mode?(state)
-          finish(state, state.grammar.accept(value, @actions.kind_of(value), keys))
+          finish(state, @input.grammar.accept(value, @actions.kind_of(value), keys))
         else
           @dispatcher.call(state, Domain::Command.plain(value))
         end
@@ -167,7 +178,7 @@ module Carat
           state.mode = Domain::Mode::OPERATOR_PENDING
         when :complete
           state.mode = Domain::Mode::NORMAL unless visual
-          @dispatcher.call(state, state.grammar.take)
+          @dispatcher.call(state, @input.grammar.take)
         when :cancel
           state.mode = Domain::Mode::NORMAL unless visual
         end
@@ -178,7 +189,7 @@ module Carat
       #: (Domain::EditorState) -> void
       def cancel(state)
         return unless grammar_mode?(state)
-        state.grammar.reset
+        @input.grammar.reset
         state.mode = Domain::Mode::NORMAL unless Domain::Mode.visual?(state.mode)
       end
 

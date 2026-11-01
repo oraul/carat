@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 t = Carat::Testing.new("editor_transactions")

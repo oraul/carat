@@ -142,20 +142,6 @@ t.assert_equal(1, b.closed_count, "closing with none open does nothing")
 b.insert(pos(0, 0), "y")
 t.assert_equal([2, 1, [0, 0]], [b.closed_count, b.last_transaction.size, b.last_transaction.before.to_a], "an edit outside a transaction is a transaction of its own")
 
-# Buffer ids come from the buffer list.
-first = D::Buffer.new(["a"], "a.txt", "\n")
-s = D::EditorState.new(first, D::Options.new, 500)
-second = D::Buffer.new(["b"], "b.txt", "\n")
-loose = D::Buffer.new(["c"], nil, "\n")
-s.add_buffer(second)
-t.assert_equal([1, 2, 0], [first.id, second.id, loose.id], "a buffer gets the next id when it enters the list, an unlisted one has 0")
-s.drop_buffer(second)
-s.add_buffer(second)
-s.add_buffer(loose)
-t.assert_equal([2, 3], [second.id, loose.id], "a buffer keeps its id when it comes back to the list")
-second.set_lines(0, 1, ["z"])
-t.assert_equal(2, second.last_transaction.record_at(0).buffer_id, "records carry the buffer's id")
-
 # A transaction's span merges its records over the text before it:
 # [first row, rows removed, rows inserted].
 b = D::Buffer.new(["a", "b", "c", "d", "e"], nil, "\n")
@@ -171,32 +157,6 @@ b.set_lines(4, 5, [])
 b.set_lines(0, 1, [])
 b.commit_transaction(pos(0, 0))
 t.assert_equal([0, 5, 3], b.last_transaction.span, "a record above an earlier one moves the span's start")
-
-# The feed records opens, closes, renames, and closed transactions with
-# their cause.
-first = D::Buffer.new(["a", "b", "c"], "a.txt", "\n")
-s = D::EditorState.new(first, D::Options.new, 500)
-feed = s.feed
-other = D::Buffer.new(["o"], "o.txt", "\n")
-s.add_buffer(other)
-first.set_lines(1, 2, [])
-feed.cause = "probe"
-other.rename("p.txt")
-other.insert(pos(0, 0), "x")
-feed.cause = ""
-s.drop_buffer(other)
-lines = []
-i = 0
-while i < feed.count
-  n = feed.notice_at(i)
-  lines << "#{n.kind} #{n.buffer_id} #{n.path} #{n.row} -#{n.removed} +#{n.inserted} #{n.detail} [#{n.cause}]"
-  i += 1
-end
-t.assert_equal(["open 1 a.txt 0 -0 +0  []", "open 2 o.txt 0 -0 +0  []", "change 1 a.txt 1 -1 +0  []", "rename 2 p.txt 0 -0 +0 o.txt [probe]", "change 2 p.txt 0 -1 +1  [probe]", "close 2 p.txt 0 -0 +0  []"], lines, "every listed buffer's events are in the feed in order, with the cause at the time")
-feed.clear
-b = D::Buffer.new(["q"], nil, "\n")
-b.insert(pos(0, 0), "x")
-t.assert_equal(0, feed.count, "an unlisted buffer records nothing")
 
 # A transaction joined by records of another cause is the editor's.
 b = D::Buffer.new(["a"], nil, "\n")
@@ -248,18 +208,5 @@ D::LineSplice.shift_marks(marks, 1, 0, 10)
 t.assert_equal([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 3], marks, "a large insertion moves the tail in one pass")
 D::LineSplice.shift_marks(marks, 2, 12, 0)
 t.assert_equal([0, 0, 0, 0, 0, 0, 0, 0, 3], marks, "a large deletion closes the gap")
-
-# Window ids come from the editor state and are never reused.
-s = D::EditorState.new(D::Buffer.new(["a"], "a.txt", "\n"), D::Options.new, 500)
-t.assert_equal([1, 1], [s.window.id, s.window_id], "the first window has id 1")
-page = D::TabPage.new(D::Window.new(s.buffer))
-s.add_tab(page)
-t.assert_equal([2, 1, 0, -1], [page.window.id, s.window_tab(2), s.window_tab(1), s.window_tab(9)], "a new tab page's window gets the next id and is found by it")
-s.remove_tab(1)
-lone = D::Window.new(s.buffer)
-s.adopt(lone)
-s.adopt(lone)
-t.assert_equal(3, lone.id, "an id is given once and never again")
-t.assert_equal([true, true], [s.buffer_with_id(1).equal?(s.buffer), s.buffer_with_id(7).nil?], "a buffer is found by its id")
 
 t.finish

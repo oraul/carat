@@ -1,33 +1,34 @@
 require_relative "../domain/editor_state"
-require_relative "ex/execute_ex"
+require_relative "../domain/plugin_ui"
+require_relative "ex/command_runner"
 require_relative "plugins/plugin_host"
 require_relative "outcome"
 
 module Carat
   module UseCases
     # Command-line mode: entering it, editing the text, cancelling, and
-    # executing through ExecuteEx. While a plugin's prompt holds the
+    # executing through the command runner. While a plugin's prompt holds the
     # command line, Enter delivers the text to that plugin instead of
     # running it, and cancelling delivers a cancel. Every entry point but
     # append returns the Outcome to report; executing returns the ex
     # command's.
     class EditCommandLine
-      # @rbs @execute_ex: ExecuteEx
-      # @rbs @plugins: PluginHost
+      attr_reader :runner #: CommandRunner
+      attr_reader :plugins #: PluginHost
+      attr_reader :plugin_ui #: Domain::PluginUi
 
-      #: (execute_ex: ExecuteEx, plugins: PluginHost) -> void
-      def initialize(execute_ex:, plugins:)
-        @execute_ex = execute_ex
+      #: (runner: CommandRunner, plugins: PluginHost, plugin_ui: Domain::PluginUi) -> void
+      def initialize(runner:, plugins:, plugin_ui:)
+        @runner = runner
         @plugins = plugins
+        @plugin_ui = plugin_ui
       end
 
       #: (Domain::EditorState) -> Outcome
       def start(state)
         state.mode = Domain::Mode::CMDLINE
         state.cmdline = ""
-        state.prompt = ""
-        state.prompt_owner = ""
-        state.prompt_id = ""
+        @plugin_ui.close_prompt
         Outcome.none
       end
 
@@ -48,7 +49,7 @@ module Carat
       def cancel(state)
         state.cmdline = ""
         state.mode = Domain::Mode::NORMAL
-        @plugins.answer("", true) if state.prompting?
+        @plugins.answer("", true) if @plugin_ui.prompting?
         Outcome.none
       end
 
@@ -57,12 +58,12 @@ module Carat
         text = state.cmdline
         state.cmdline = ""
         state.mode = Domain::Mode::NORMAL
-        if state.prompting?
+        if @plugin_ui.prompting?
           @plugins.answer(text, false)
           return Outcome.none
         end
         return Outcome.none if text.strip.empty?
-        @execute_ex.call(state, text)
+        @runner.call(state, text)
       end
     end
   end

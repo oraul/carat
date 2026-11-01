@@ -10,7 +10,7 @@ module Carat
     class PluginActionHandler < ActionHandler
       PREFIX = "plugin."
 
-      # @rbs @plugins: PluginHost
+      attr_reader :plugins #: PluginHost
 
       #: (plugins: PluginHost) -> void
       def initialize(plugins:)

@@ -1,5 +1,8 @@
 require_relative "../../plugin_api"
 require_relative "../../domain/editor_state"
+require_relative "../../domain/buffer_list"
+require_relative "../../domain/tab_list"
+require_relative "../../domain/plugin_ui"
 require_relative "../../domain/buffer"
 require_relative "../../domain/keymap"
 require_relative "../../domain/manifest_check"
@@ -22,17 +25,24 @@ module Carat
     class PluginRegistry
       include Guarded
 
-      # @rbs @state: Domain::EditorState
-      # @rbs @keymap: Domain::Keymap
+      attr_reader :state #: Domain::EditorState
+      attr_reader :buffers #: Domain::BufferList
+      attr_reader :tabs #: Domain::TabList
+      attr_reader :plugin_ui #: Domain::PluginUi
+      attr_reader :keymap #: Domain::Keymap
+      attr_reader :close_window #: CloseWindow
+
       # @rbs @leader: String
-      # @rbs @close_window: CloseWindow
       # @rbs @entries: PluginEntries
       # @rbs @errors: Array[String]
       # @rbs @causes: Array[String]
 
-      #: (Domain::EditorState, Domain::Keymap, String, CloseWindow) -> void
-      def initialize(state, keymap, leader, close_window)
+      #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, plugin_ui: Domain::PluginUi, keymap: Domain::Keymap, leader: String, close_window: CloseWindow) -> void
+      def initialize(state:, buffers:, tabs:, plugin_ui:, keymap:, leader:, close_window:)
         @state = state
+        @buffers = buffers
+        @tabs = tabs
+        @plugin_ui = plugin_ui
         @keymap = keymap
         @leader = leader
         @close_window = close_window
@@ -159,13 +169,13 @@ module Carat
       #: (String) -> void
       def enter(name)
         @causes << name
-        @state.feed.cause = name
+        @buffers.feed.cause = name
       end
 
       #: () -> void
       def leave
         @causes.pop
-        @state.feed.cause = @causes.empty? ? "" : @causes[@causes.length - 1]
+        @buffers.feed.cause = @causes.empty? ? "" : @causes[@causes.length - 1]
       end
 
       # The plugin whose call is the innermost in progress, "" for none.
@@ -313,24 +323,22 @@ module Carat
       #: (String) -> void
       def clean_up(name)
         state = @state
-        state.segments.delete(name)
-        if state.prompt_owner == name
-          state.prompt = ""
-          state.prompt_owner = ""
-          state.prompt_id = ""
+        buffers = @buffers
+        if @plugin_ui.prompt_owner == name
           state.cmdline = ""
           state.mode = Domain::Mode::NORMAL if state.mode == Domain::Mode::CMDLINE
         end
+        @plugin_ui.drop(name)
         i = 0
-        while i < state.buffer_count
-          state.buffer_at(i).clear_signs(name)
+        while i < buffers.count
+          buffers.buffer_at(i).clear_signs(name)
           i += 1
         end
         close_scratch_windows(name)
-        i = state.buffer_count - 1
+        i = buffers.count - 1
         while i >= 0
-          b = state.buffer_at(i)
-          state.drop_buffer(b) if b.owner == name
+          b = buffers.buffer_at(i)
+          buffers.remove(b) if b.owner == name
           i -= 1
         end
         @keymap.remove_owner(name)
@@ -342,19 +350,20 @@ module Carat
       #: (String) -> void
       def close_scratch_windows(name)
         state = @state
-        t = state.tab_count - 1
+        tabs = @tabs
+        t = tabs.tab_count - 1
         while t >= 0
-          layout = state.tab_at(t).layout
+          layout = tabs.tab_at(t).layout
           ids = layout.leaves
           k = ids.length - 1
           while k >= 0
             window = layout.window_at(ids[k])
             if window.buffer.owner == name
-              if state.total_windows > 1
+              if tabs.total_windows > 1
                 @close_window.remove_in(state, t, ids[k])
               else
                 fresh = Domain::Buffer.from_text("", nil)
-                state.add_buffer(fresh)
+                @buffers.add(fresh)
                 window.show(fresh)
                 window.fixed_width = false
               end
@@ -362,7 +371,7 @@ module Carat
             k -= 1
           end
           t -= 1
-          t = state.tab_count - 1 if t > state.tab_count - 1
+          t = tabs.tab_count - 1 if t > tabs.tab_count - 1
         end
       end
 

@@ -92,7 +92,7 @@ t.assert_equal([:linewise, true], [s.as(:linewise, true).kind, s.as(:linewise, t
 t.assert_true(!D::Selection.none.active?, "no selection is inactive")
 
 # The editor state's selection and leaving visual mode.
-state = D::EditorState.new(buffer_of(["abc", "de"]), D::Options.new, 500)
+state = D::EditorState.new(D::TabList.new(D::Window.new(buffer_of(["abc", "de"]))), D::Options.new)
 t.assert_equal(:none, state.selection.kind, "normal mode has no selection")
 state.mode = D::Mode::VISUAL
 state.window.anchor = pos([0, 1])

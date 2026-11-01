@@ -1,4 +1,5 @@
 require_relative "../../domain/editor_state"
+require_relative "../../domain/buffer_list"
 require_relative "../../ports/file_port"
 require_relative "../outcome"
 require_relative "../plugins/plugin_host"
@@ -12,13 +13,15 @@ module Carat
     class SaveFile
       E382 = "E382: Cannot write, 'buftype' option is set"
 
-      # @rbs @files: Ports::FilePort
-      # @rbs @plugins: PluginHost
+      attr_reader :files #: Ports::FilePort
+      attr_reader :plugins #: PluginHost
+      attr_reader :buffers #: Domain::BufferList
 
-      #: (files: Ports::FilePort, plugins: PluginHost) -> void
-      def initialize(files:, plugins:)
+      #: (files: Ports::FilePort, plugins: PluginHost, buffers: Domain::BufferList) -> void
+      def initialize(files:, plugins:, buffers:)
         @files = files
         @plugins = plugins
+        @buffers = buffers
       end
 
       # Writes the current buffer. path_arg is the command argument; empty
@@ -62,8 +65,8 @@ module Carat
         result = Outcome.none
         failed = false
         i = 0
-        while i < state.buffer_count
-          buffer = state.buffer_at(i)
+        while i < @buffers.count
+          buffer = @buffers.buffer_at(i)
           if buffer.modified? && !buffer.scratch?
             written = buffer.path.nil? ? Outcome.failure("E141: No file name for buffer #{i + 1}") : write(buffer, "")
             if !written.ok && !failed
@@ -75,9 +78,9 @@ module Carat
           end
           i += 1
         end
-        i = state.buffer_count - 1
+        i = @buffers.count - 1
         while i >= 0
-          state.release(state.buffer_at(i))
+          @buffers.release(@buffers.buffer_at(i))
           i -= 1
         end
         result

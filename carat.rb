@@ -1,6 +1,7 @@
 # Require graph for the carat library, innermost layer first.
-# Every file is pulled in here once; bin/*.rb and test/*.rb require only this
-# file (and test/*.rb also carat/testing.rb). The plugin API sits in the
+# Every file is pulled in here once; bin/*.rb require only this file. The
+# test doubles are not part of it: test and benchmark programs require
+# carat/test_support.rb, which adds them, and carat/testing.rb. The plugin API sits in the
 # innermost ring beside the entities: it requires nothing, every layer may
 # name it, and the plugins require only it.
 require_relative "carat/version"
@@ -51,6 +52,11 @@ require_relative "carat/domain/window"
 require_relative "carat/domain/layout_node"
 require_relative "carat/domain/layout"
 require_relative "carat/domain/tab_page"
+require_relative "carat/domain/tab_list"
+require_relative "carat/domain/buffer_list"
+require_relative "carat/domain/input_state"
+require_relative "carat/domain/last_find"
+require_relative "carat/domain/plugin_ui"
 require_relative "carat/domain/editor_state"
 require_relative "carat/domain/walker"
 require_relative "carat/domain/sentence_starts"
@@ -65,6 +71,7 @@ require_relative "carat/ports/terminal_port"
 require_relative "carat/ports/clock_port"
 require_relative "carat/ports/file_port"
 require_relative "carat/ports/config_port"
+require_relative "carat/ports/signal_port"
 
 # Use cases
 require_relative "carat/use_cases/outcome"
@@ -98,6 +105,7 @@ require_relative "carat/use_cases/plugins/window_requests"
 require_relative "carat/use_cases/plugins/file_requests"
 require_relative "carat/use_cases/plugins/ui_requests"
 require_relative "carat/use_cases/plugins/plugin_link"
+require_relative "carat/use_cases/ex/command_runner"
 require_relative "carat/use_cases/plugins/plugin_host"
 require_relative "carat/use_cases/ex/ex_handler"
 require_relative "carat/use_cases/ex/ex_table"
@@ -136,13 +144,6 @@ require_relative "carat/adapters/frame_presenter"
 require_relative "carat/adapters/screen_presenter"
 require_relative "carat/adapters/json_config_gateway"
 require_relative "carat/adapters/editor_assembly"
-
-# Test doubles
-require_relative "carat/doubles/manual_clock"
-require_relative "carat/doubles/fake_terminal"
-require_relative "carat/doubles/memory_files"
-require_relative "carat/doubles/fixed_config"
-require_relative "carat/doubles/editor_harness"
 
 # Frameworks and drivers
 require_relative "carat/drivers/ansi_terminal"

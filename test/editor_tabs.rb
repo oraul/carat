@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 t = Carat::Testing.new("editor_tabs")
@@ -21,7 +21,7 @@ end
 
 # The path shown by the current window of every tab page.
 def tab_paths(h)
-  s = h.state
+  s = h.assembly.tabs
   out = []
   i = 0
   while i < s.tab_count
@@ -90,10 +90,10 @@ end
 h = session("jj:tabe b.txt<CR>")
 t.assert_equal([["zz"], [0, 0], "b.txt"], [h.lines, h.cursor, h.buffer.path], "the new tab page shows the file at the top")
 t.assert_equal("  1 zz", h.row(1), "the text starts under the tab line")
-t.assert_equal([2, 0], [h.state.tab_at(0).window.cursor.row, h.state.tab_at(0).window.cursor.col], "the first tab page kept its cursor")
+t.assert_equal([2, 0], [h.assembly.tabs.tab_at(0).window.cursor.row, h.assembly.tabs.tab_at(0).window.cursor.col], "the first tab page kept its cursor")
 h = session(":tabnew<CR>")
 t.assert_equal([[""], nil, false], [h.lines, h.buffer.path, h.buffer.modified?], ":tabnew shows an unnamed empty buffer")
-t.assert_equal([["a.txt", ""], 2], [h.buffer_paths, h.state.total_windows], "both buffers are listed and each tab page has a window")
+t.assert_equal([["a.txt", ""], 2], [h.buffer_paths, h.assembly.tabs.total_windows], "both buffers are listed and each tab page has a window")
 
 # Hidden buffers after closing tab pages.
 h = session(":tabe b.txt<CR>x:tabclose<CR>:qa<CR>")
@@ -107,7 +107,7 @@ t.assert_equal(["a.txt"], h.buffer_paths, "a clean buffer leaves the list with i
 h = session(":tabe b.txt<CR>xgt:qa<CR>")
 t.assert_equal([false, E37, 1], [h.quit?, h.message_row, h.tab_index], ":qa is refused by a modified buffer in another tab page")
 h = session(":tabe b.txt<CR>xgtx:wa<CR>")
-t.assert_equal(["ne\ntwo\nthree\n", "z\n", false], [h.files.get("a.txt"), h.files.get("b.txt"), h.state.any_modified?], ":wa writes the buffers of every tab page")
+t.assert_equal(["ne\ntwo\nthree\n", "z\n", false], [h.files.get("a.txt"), h.files.get("b.txt"), h.assembly.buffers.any_modified?], ":wa writes the buffers of every tab page")
 h = session("x:tabe b.txt<CR>x:wqa<CR>")
 t.assert_equal(["ne\ntwo\nthree\n", "z\n", true], [h.files.get("a.txt"), h.files.get("b.txt"), h.quit?], ":wqa writes every tab page's buffer and quits")
 h = session("<C-w>s:tabnew<CR>:qa<CR>")
@@ -143,6 +143,6 @@ h = Carat::Doubles::EditorHarness.default(files, 24, 80)
 h.open("dir/sub/deep.txt")
 h.type(":tabnew<CR>")
 t.assert_equal(" 1 deep.txt  2 [No Name]", h.row(0), "a label shows the file name without its directory")
-t.assert_equal("dir/sub/deep.txt", h.state.tab_at(0).window.buffer.path, "the status line path is untouched")
+t.assert_equal("dir/sub/deep.txt", h.assembly.tabs.tab_at(0).window.buffer.path, "the status line path is untouched")
 
 t.finish

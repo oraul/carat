@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 t = Carat::Testing.new("editor_operators")
@@ -164,10 +164,10 @@ t.assert_true(h.buffer.modified?, "a delete modifies the buffer")
 # The register holds the deleted text with its kind.
 h = editor("one two\nthree\n")
 h.type("dw")
-t.assert_equal(["one ", false], [h.state.registers.read("").text, h.state.registers.read("").linewise?], "dw stores charwise text")
+t.assert_equal(["one ", false], [h.assembly.registers.read("").text, h.assembly.registers.read("").linewise?], "dw stores charwise text")
 h.type("dd")
-t.assert_equal(["two", true], [h.state.registers.read("").text, h.state.registers.read("").linewise?], "dd stores a line")
+t.assert_equal(["two", true], [h.assembly.registers.read("").text, h.assembly.registers.read("").linewise?], "dd stores a line")
 h.type("cc")
-t.assert_equal("three", h.state.registers.read("").text, "cc stores the changed line")
+t.assert_equal("three", h.assembly.registers.read("").text, "cc stores the changed line")
 
 t.finish

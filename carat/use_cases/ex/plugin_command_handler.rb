@@ -10,7 +10,7 @@ module Carat
     # the command's abbreviation to its full name, and runs it in the
     # first such plugin.
     class PluginCommandHandler < ExHandler
-      # @rbs @plugins: PluginHost
+      attr_reader :plugins #: PluginHost
 
       #: (plugins: PluginHost) -> void
       def initialize(plugins:)

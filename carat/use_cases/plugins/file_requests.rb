@@ -1,5 +1,4 @@
 require_relative "../../plugin_api"
-require_relative "../../domain/editor_state"
 require_relative "../files/file_ops"
 require_relative "boundary"
 
@@ -10,12 +9,10 @@ module Carat
     # which FileOps checks and performs. The plugin link has checked that
     # the plugin is enabled.
     class FileRequests
-      # @rbs @state: Domain::EditorState
-      # @rbs @file_ops: FileOps
+      attr_reader :file_ops #: FileOps
 
-      #: (Domain::EditorState, FileOps) -> void
-      def initialize(state, file_ops)
-        @state = state
+      #: (file_ops: FileOps) -> void
+      def initialize(file_ops:)
         @file_ops = file_ops
       end
 
@@ -49,12 +46,12 @@ module Carat
 
       #: (String, String, String, String) -> PluginApi::Response
       def rename_path(name, root, path, new_name)
-        respond(@file_ops.rename(@state, root, path, new_name))
+        respond(@file_ops.rename(root, path, new_name))
       end
 
       #: (String, String, String) -> PluginApi::Response
       def delete_path(name, root, path)
-        respond(@file_ops.delete(@state, root, path))
+        respond(@file_ops.delete(root, path))
       end
 
       private

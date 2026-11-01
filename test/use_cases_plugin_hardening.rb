@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 # The plugin host's hardening: every call into a plugin is guarded, events
@@ -225,9 +225,9 @@ third = h.state.tab.layout.window_at(h.state.tab.layout.leaves[2]).id
 h.type("1<C-w>w<C-w>c")
 p.target = third
 h.type(" rp")
-t.assert_equal([["focus true #{third}"], third, 2], [p.log, h.state.window_id, h.window_count], "a window id still names the same window after another closed")
+t.assert_equal([["focus true #{third}"], third, 2], [p.log, h.state.window.id, h.window_count], "a window id still names the same window after another closed")
 h.type(":new<CR>")
-t.assert_equal(true, h.state.window_id > third, "a new window gets an id never given before")
+t.assert_equal(true, h.state.window.id > third, "a new window gets an id never given before")
 p.target = 99
 h.type(" rp")
 t.assert_equal("focus false 0 No window 99", p.log[1], "an unknown window id fails")
@@ -244,19 +244,19 @@ t.assert_equal("bee", r.host.read_buffer(b_id).lines[0], "a buffer that is not c
 # Windows across tab pages, and a failed open keeps the focus.
 p = rig("probe", "focus", [])
 h = editor([p])
-first = h.state.window_id
+first = h.state.window.id
 h.type(":tabnew<CR>")
 p.target = first
 h.type(" rp")
-t.assert_equal([1, first], [h.tab_index, h.state.window_id], "focusing a window of another tab page goes to that tab page")
+t.assert_equal([1, first], [h.tab_index, h.state.window.id], "focusing a window of another tab page goes to that tab page")
 p = rig("probe", "open", [])
 h = editor([p])
 h.type(":vs<CR>")
-left = h.state.window_id
+left = h.state.window.id
 p.target = h.state.tab.layout.window_at(h.state.tab.layout.leaves[1]).id
 p.arg = "dir"
 h.type(" rp")
-t.assert_equal([true, left], [p.log[0].start_with?("open false 0 E484"), h.state.window_id], "a failed open fails and leaves the focus where it was")
+t.assert_equal([true, left], [p.log[0].start_with?("open false 0 E484"), h.state.window.id], "a failed open fails and leaves the focus where it was")
 
 # Splits and tab pages take the path as it is.
 p = rig("probe", "split", [])
@@ -264,7 +264,7 @@ p.arg = "my notes.txt"
 h = editor([p])
 h.type(" rp")
 t.assert_equal([2, "my notes.txt", ["spaced"]], [h.window_count, h.buffer.path, h.lines], "a split opens a name with a space")
-t.assert_equal(true, p.log[0].start_with?("split true #{h.state.window_id} "), "and answers the new window's id")
+t.assert_equal(true, p.log[0].start_with?("split true #{h.state.window.id} "), "and answers the new window's id")
 p.mode = "tab"
 p.arg = "a|b.txt"
 h.type(" rp")
@@ -272,7 +272,7 @@ t.assert_equal([2, "a|b.txt", ["barred"]], [h.tab_count, h.buffer.path, h.lines]
 p = rig("probe", "vsplit", [])
 p.arg = "b.txt"
 h = editor([p])
-p.target = h.state.window_id
+p.target = h.state.window.id
 h.type(" rp")
 t.assert_equal([2, "b.txt", 0], [h.window_count, h.buffer.path, h.state.window.col], "a vertical split puts the new window at the left")
 
@@ -295,7 +295,7 @@ editor_rig.target = b_id
 other.log.clear
 editor_rig.log.clear
 h.type(" re")
-t.assert_equal([["buffer_change b#{b_id} w1 b.txt 0,0 -1 +2"], ["new", "bee"]], [other.log, h.state.buffer_with_id(b_id).lines], "another plugin hears the change of a buffer that is not current, with its rows")
+t.assert_equal([["buffer_change b#{b_id} w1 b.txt 0,0 -1 +2"], ["new", "bee"]], [other.log, h.assembly.buffers.with_id(b_id).lines], "another plugin hears the change of a buffer that is not current, with its rows")
 t.assert_equal(["edit true"], editor_rig.log, "the plugin that edited does not")
 
 # Close and rename events.
@@ -325,7 +325,7 @@ l = rig("litter", "litter", [])
 h = editor([l])
 l.target = h.buffer.id
 h.type(" rl")
-t.assert_equal([1, false, {}, :normal, "", "a.txt"], [h.window_count, h.buffer.signs?, h.state.segments, h.mode, h.state.prompt, h.buffer.path], "a plugin disabled after opening a side window, a sign, a status, and a prompt leaves none of them")
+t.assert_equal([1, false, {}, :normal, "", "a.txt"], [h.window_count, h.buffer.signs?, h.assembly.plugin_ui.segments, h.mode, h.assembly.plugin_ui.prompt, h.buffer.path], "a plugin disabled after opening a side window, a sign, a status, and a prompt leaves none of them")
 t.assert_equal(["a.txt"], h.buffer_paths, "its scratch buffer left the list")
 t.assert_equal("Plugin litter disabled: after littering", h.message, "it says why it was disabled")
 t.assert_equal(:none, h.assembly.keymap.lookup(:normal, Carat::Domain::KeyNotation.parse("<leader>rl", " ").codes).kind, "its binding went with it")

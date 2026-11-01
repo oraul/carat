@@ -1,0 +1,28 @@
+ok   one buffer, one tab page, one window
+ok   the current window shows the buffer
+ok   a buffer is listed once
+ok   two unnamed buffers are told apart by identity
+ok   neither unnamed buffer is shown
+ok   a clean unshown buffer leaves the list when released
+ok   a modified unshown buffer stays hidden
+ok   it is the hidden modified buffer
+ok   the list has a modified buffer
+ok   a shown buffer stays
+ok   loading replaces the window's buffer and drops the one no window shows
+ok   a listed buffer is found by path
+ok   a dropped buffer is not
+ok   the closed reload pulls the cursors on the buffer back inside it
+ok   a changed scratch buffer is not unsaved work
+ok   number_of is the list position from 1
+ok   an unlisted buffer has number 0
+ok   scratch_for finds the plugin's buffer by title
+ok   scratch_for answers nil for another title
+ok   an unshown scratch buffer leaves the list even when modified
+ok   a shown modified file buffer stays
+ok   a buffer gets the next id when it enters the list, an unlisted one has 0
+ok   a buffer keeps its id when it comes back to the list
+ok   records carry the buffer's id
+ok   a buffer is found by its id
+ok   every listed buffer's events are in the feed in order, with the cause at the time
+ok   the feed reports to the list's tab list
+domain_buffer_list: 27 passed, 0 failed

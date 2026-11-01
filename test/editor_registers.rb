@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 t = Carat::Testing.new("editor_registers")
@@ -42,18 +42,18 @@ t.assert_equal("E353: Nothing in register B", h.message_row, "the message names 
 
 h = editor("one\ntwo\n")
 h.type("\"ayy")
-entry = h.state.registers.read("a")
+entry = h.assembly.registers.read("a")
 t.assert_equal(["one", true], [entry.text, entry.linewise?], "a linewise entry stores the line")
 h.type("j\"Ayw")
-entry = h.state.registers.read("a")
+entry = h.assembly.registers.read("a")
 t.assert_equal(["one\ntwo", true], [entry.text, entry.linewise?], "appending charwise text to a linewise entry adds a line")
-t.assert_equal(["two", false], [h.state.registers.read("").text, h.state.registers.read("").linewise?], "the unnamed register holds the new text only")
-t.assert_equal(entry, h.state.registers.read("A"), "A reads the same entry as a")
+t.assert_equal(["two", false], [h.assembly.registers.read("").text, h.assembly.registers.read("").linewise?], "the unnamed register holds the new text only")
+t.assert_equal(entry, h.assembly.registers.read("A"), "A reads the same entry as a")
 
 # A block yank stores a blockwise entry, and p puts it as a block.
 h = editor("ab\ncd\n")
 h.type("<C-v>jy")
-entry = h.state.registers.read("")
+entry = h.assembly.registers.read("")
 t.assert_equal(["a\nc", :blockwise], [entry.text, entry.kind], "a block yank stores a blockwise entry")
 h.type("$p")
 t.assert_equal([["aba", "cdc"], [0, 2]], [h.lines, h.cursor], "p puts the block after the cursor on each row")

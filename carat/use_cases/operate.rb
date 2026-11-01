@@ -5,6 +5,7 @@ require_relative "../domain/motions"
 require_relative "../domain/text_objects"
 require_relative "../domain/operators"
 require_relative "../domain/registers"
+require_relative "../domain/last_find"
 require_relative "../domain/display_width"
 require_relative "outcome"
 
@@ -22,6 +23,15 @@ module Carat
       YANK = "operator.yank"
       INDENT = "operator.indent"
       DEDENT = "operator.dedent"
+
+      attr_reader :registers #: Domain::Registers
+      attr_reader :last_find #: Domain::LastFind
+
+      #: (registers: Domain::Registers, last_find: Domain::LastFind) -> void
+      def initialize(registers:, last_find:)
+        @registers = registers
+        @last_find = last_find
+      end
 
       #: (Domain::EditorState, Domain::Command) -> Outcome
       def call(state, command)
@@ -45,7 +55,7 @@ module Carat
 
       #: (Domain::EditorState, Domain::Command, bool) -> Outcome
       def put(state, command, after)
-        entry = state.registers.read(command.register)
+        entry = @registers.read(command.register)
         if entry.nil?
           name = command.register.empty? ? "\"" : command.register
           return Outcome.failure("E353: Nothing in register #{name}")
@@ -132,13 +142,13 @@ module Carat
             return Domain::Motions.word_end(state, command.count_or(1), action == "motion.big_word_forward", true, true)
           end
         end
-        Domain::Motions.for_command(state, command, true)
+        Domain::Motions.for_command(state, @last_find, command, true)
       end
 
       #: (Domain::EditorState, Domain::Command, Domain::Range) -> void
       def delete(state, command, range)
         buffer = state.buffer
-        state.registers.write(command.register, Domain::Operators.extract(buffer, range))
+        @registers.write(command.register, Domain::Operators.extract(buffer, range))
         Domain::Operators.delete(buffer, range)
         cursor = state.cursor
         if range.kind == :linewise
@@ -154,7 +164,7 @@ module Carat
       #: (Domain::EditorState, Domain::Command, Domain::Range) -> void
       def change(state, command, range)
         buffer = state.buffer
-        state.registers.write(command.register, Domain::Operators.extract(buffer, range))
+        @registers.write(command.register, Domain::Operators.extract(buffer, range))
         cursor = state.cursor
         if range.kind == :linewise
           indent = state.options.autoindent ? buffer.indent_of(range.from.row) : ""
@@ -170,7 +180,7 @@ module Carat
 
       #: (Domain::EditorState, Domain::Command, Domain::Range) -> void
       def yank(state, command, range)
-        state.registers.write(command.register, Domain::Operators.extract(state.buffer, range))
+        @registers.write(command.register, Domain::Operators.extract(state.buffer, range))
         cursor = state.cursor
         if range.kind == :linewise
           cursor.row = range.from.row

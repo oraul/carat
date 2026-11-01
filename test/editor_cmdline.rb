@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 t = Carat::Testing.new("editor_cmdline")
@@ -163,7 +163,7 @@ files.put("b.txt", "zz\n")
 files.put("c.txt", "cc\n")
 h = editor(files)
 h.type(":sp b.txt<CR>x<C-w>jx:tabe c.txt<CR>x:wa<CR>")
-t.assert_equal(["b\n", "z\n", "c\n", false], [h.files.get("a.txt"), h.files.get("b.txt"), h.files.get("c.txt"), h.state.any_modified?], "wa writes every buffer in every tab page")
+t.assert_equal(["b\n", "z\n", "c\n", false], [h.files.get("a.txt"), h.files.get("b.txt"), h.files.get("c.txt"), h.assembly.buffers.any_modified?], "wa writes every buffer in every tab page")
 h = editor(files_with("ab\n"))
 h.type("<C-w>s:tabnew<CR>:qa<CR>")
 t.assert_equal(true, h.quit?, "qa quits with several windows and tab pages")
@@ -202,7 +202,7 @@ h.type("x:wr<CR>")
 t.assert_equal(["b\n", "\"a.txt\" 1L, 2B written"], [h.files.get("a.txt"), h.message_row], "wr writes as write does")
 h = editor(files_with("ab\n"))
 h.type("x:wal<CR>")
-t.assert_equal(["b\n", false], [h.files.get("a.txt"), h.state.any_modified?], "wal writes every modified buffer as wall does")
+t.assert_equal(["b\n", false], [h.files.get("a.txt"), h.assembly.buffers.any_modified?], "wal writes every modified buffer as wall does")
 h.type(":xi<CR>")
 t.assert_equal(true, h.quit?, "xi leaves as xit does")
 h = editor(files_with("ab\n"))

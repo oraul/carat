@@ -17,8 +17,8 @@ module Carat
       # @rbs @clock: ManualClock
       # @rbs @writes: Array[String]
 
-      #: (ManualClock, Integer, Integer) -> void
-      def initialize(clock, rows, cols)
+      #: (clock: ManualClock, rows: Integer, cols: Integer) -> void
+      def initialize(clock:, rows:, cols:)
         @clock = clock
         @rows = rows
         @cols = cols

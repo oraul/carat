@@ -107,7 +107,7 @@ Pure Ruby objects with no I/O. They hold the editor's state and the rules of mod
 - `Range`: two positions plus a kind: `charwise`, `linewise`, or `blockwise`, and an inclusive flag, a `Data` value. Every operator receives a `Range`.
 - `Cursor`: the current position plus `want_col`, the column aimed for when moving vertically through shorter lines, as Vim's `curswant`, a `Struct` record.
 - `Selection`: anchor and head of a visual selection with its kind (charwise, linewise, or blockwise) and whether `$` made a block reach every row's end, a `Data` value. It resolves to a charwise `Range` that includes the line break when its end rests on the end of a line, a linewise `Range`, a `Span` of code point columns per row, or a `Block` of display columns, so a block over tabs and wide characters is measured as it is drawn. The window owns the anchor (the cursor is the other end, the mode the kind) and the last selection it left, which `gv` restores; `BlockInsert` records the repetition a blockwise `I`, `A`, or `c` owes when insert mode is left.
-- `BufferFeed` and `BufferNotice`: the one sink of buffer events, owned by `EditorState`: the list records a buffer opening and closing, a buffer its renames and its closed transactions with their row span, each with its cause, the plugin whose call was running (`""` for the editor), which the plugin host turns into events.
+- `BufferFeed` and `BufferNotice`: the one sink of buffer events, owned by the `BufferList`: the list records a buffer opening and closing, a buffer its renames and its closed transactions with their row span, each with its cause, the plugin whose call was running (`""` for the editor), which the plugin host turns into events. The feed reports every closed transaction to the `TabList`, which keeps the cursors of the windows showing that buffer inside the text from the first changed row on, so the change records drive cursor clamping for every edit.
 - `PathPolicy` and `PathInfo`: the rules a path or a name given for a file operation obeys without touching the disk (containment in a root, a usable name), and what the file port says about a path.
 - `ChangeRecord`: what one primitive changed, a `Data` value: the buffer's id, the first row, the lines removed, and the lines inserted, sharing the line strings with the buffer, which is sound because lines are never mutated in place.
 - `LineSplice`: the function that changes a line array in place without copying the rest of it (section 4.1); later per-line arrays such as highlight states and marks get siblings of the same shape.
@@ -130,9 +130,14 @@ Pure Ruby objects with no I/O. They hold the editor's state and the rules of mod
 - `Motions` and `TextObjects`: pure functions from `(state, count)` to a `Range`. Left-right (`h l 0 ^ $ f F t T ; ,`), up-down (`j k G gg + - _`), word (`w W b B e E ge gE`), object (`( ) { }`), search (`n N * #`), marks (`'x` and backtick), screen (`H M L`); text objects `iw aw iW aW is as ip ap` and the pair objects for brackets, quotes, and tags. One implementation serves both cursor movement and operator ranges.
 - `Operators`: `d c y p P > < = ~ g~ gu gU gq J r x s S C D Y`, each a function from a `Range` to buffer primitives inside one transaction. `c` ends by requesting insert mode so the dot register can replay typed text.
 - `ExCommand`, `ExGrammar`, and `ExName`: a parsed command line as `range`, `name`, `bang`, `args`. Addresses are `.`, `$`, `%`, a number, a mark, a pattern, or arithmetic on those, joined by `,` or `;`. A command's name is an `ExName` in Vim's `name[suffix]` notation, whose `match?` accepts every spelling from the abbreviation to the full name (`w`, `wr`, `write`); the use case layer's ex table resolves a typed name with it, for core and plugin commands alike.
-- `Window`, `Layout`, `TabPage`: a window is a viewport over a buffer with its own stable `id`, given by `EditorState` when the window is created and never reused, its own cursor, scroll offsets, the rectangle the last render gave it, a fixed-width flag (`winfixwidth`, for the explorer), the anchor of its visual selection and its last selection, and later local options, a `Struct` record. A layout is the tree of splits of one tab page, kept as a flat table of `LayoutNode` records addressed by integer ids (leaf, column of stacked children, row of side-by-side children), with `split`, `close`, `neighbour`, `equalize`, and `arrange`, which assigns every window its rectangle inside an area; the flat table keeps the walks over integers under Spinel. A tab page holds one layout, its current window, and the previously used one.
+- `Window`, `Layout`, `TabPage`: a window is a viewport over a buffer with its own stable `id`, given by the `TabList` when the window is created and never reused, its own cursor, scroll offsets, the rectangle the last render gave it, a fixed-width flag (`winfixwidth`, for the explorer), the anchor of its visual selection and its last selection, and later local options, a `Struct` record. A layout is the tree of splits of one tab page, kept as a flat table of `LayoutNode` records addressed by integer ids (leaf, column of stacked children, row of side-by-side children), with `split`, `close`, `neighbour`, `equalize`, and `arrange`, which assigns every window its rectangle inside an area; the flat table keeps the walks over integers under Spinel. A tab page holds one layout, its current window, and the previously used one.
 - `Frame` and `Cell`: the view model, both `Struct` records. A frame is a grid of cells, each a code point, display width, and highlight group id, plus the cursor position and shape. It is an entity because presenters and tests both reason about it, and it contains no terminal knowledge. Presenters reuse one frame and repaint its cells in place, because allocating a grid per render churned the heap and corrupted buffers under Spinel's garbage collector.
-- `EditorState`: everything a use case reads or changes, a `Struct` record holding the buffer list, the tab pages and the current one, mode, options, command line, message, pending keys, quit flag, and the pending blockwise insert; the current window, its buffer, its cursor, and its visual selection are reached through the current tab page. A buffer stays in the list while a window shows it or it is modified, so a closed window's edits are never lost.
+- `BufferList`: the listed buffers in order, the ids it gives them, the buffer feed, and the keep or release policy, a `Struct` record built over the tab list: a buffer stays in the list while a window shows it or it is modified, so a closed window's edits are never lost, and a scratch buffer leaves as soon as no window shows it.
+- `TabList`: the tab pages, the current one, the alternate tab rule of Neovim's `alt_tabpage` when one closes, the window ids, and cursor clamping, a `Struct` record.
+- `InputState`: the keys the keymap is waiting on and the `CommandGrammar` with what it has taken, a `Struct` record `HandleKey` owns; the presenter reads it for the pending-keys display.
+- `LastFind`: the last `f`, `F`, `t`, or `T`, which `;` and `,` repeat, a `Struct` record `Move` and `Operate` share.
+- `PluginUi`: the plugins' status line segments and the prompt one of them opened on the command line, the plugin host's own state, a `Struct` record the presenter draws.
+- `EditorState`: the current view the use cases and the presenter share, a thin `Struct` record aggregating the tab list, mode, options, command line, message, quit flag, and the pending blockwise insert; the current window, its buffer, its cursor, and its visual selection are reached through the current tab page. Everything else is in the focused records above, each handed by the composition root to the use cases that need it; the buffer list is not part of the aggregate, so a use case that lists, releases, or finds buffers receives it.
 
 ### 4.1 The edit path
 
@@ -159,7 +164,7 @@ Each use case is one class whose entry point, `call` or a method named for what 
 ### 5.2 Files and ex commands
 
 - `OpenFile`, `SaveFile`, `SaveAll`, `Quit`, `QuitAll`: through `FilePort`, with the Vim error codes `E37`, `E212`, `E492` as response values.
-- `ExecuteEx` (`use_cases/ex/`): parses a command line with `ExGrammar` and runs the first handler of the ex table, in registration order, whose name matches the typed one, `E492` when none does. Each feature registers its ex handlers there: files (`e w wq x q qa wa saveas`), buffers and windows (`bn bp bd ls sp vs only close`), editing (`s g v d m t normal sort`), navigation (`marks registers jumps` and a bare line number), options (`set setlocal`).
+- `ExecuteEx` (`use_cases/ex/`): parses a command line with `ExGrammar` and runs the first handler of the ex table, in registration order, whose name matches the typed one, `E492` when none does. It implements `CommandRunner`, the interface the command line and the plugin host's `run_ex` request depend on; the plugin host receives the runner already built, and the ex table is filled after it, so nothing is attached after construction. Each feature registers its ex handlers there: files (`e w wq x q qa wa saveas`), buffers and windows (`bn bp bd ls sp vs only close`), editing (`s g v d m t normal sort`), navigation (`marks registers jumps` and a bare line number), options (`set setlocal`).
 
 ### 5.3 Windows and services
 
@@ -176,7 +181,7 @@ Each use case is one class whose entry point, `call` or a method named for what 
 
 Input ports are how the core reaches the use cases. `ActionHandler` (`use_cases/actions/`) has a `kind` and `call(state, command)`; `ExHandler` (`use_cases/ex/`) carries its `ExName` and has `call(state, ex_command)`; both raise `NotImplementedError` in the base class and return an `Outcome` in every subclass. Each feature has one handler class, whose instances hold the variant they run, and a `register(table, ...)` class method that takes the feature's use cases as keyword arguments and registers its names: in the `ActionTable` by action name, with one namespace handler for `plugin.`, and in the `ExTable` in order of precedence, the core commands before the plugin commands. A table keeps its handlers as `Array[untyped]` behind a `find` declared to return the base class, so the call through it stays typed; handlers are never kept in a literal array, which Spinel cannot resolve. The dispatcher and the ex runner depend only on their table, and the action table's names are what a configuration binding may name besides the plugins' actions.
 
-The output port is the `Outcome` (`ok` and `message`) every handler returns; the `Reporting` concern's `report` is the one place it reaches the message row, after the command.
+The output port is the `Outcome` (`ok` and `message`) every handler returns; the `Reporting` concern's `report` is the one place it reaches the message row, after the command. `CommandRunner` (`use_cases/ex/command_runner.rb`) is the input port for a whole command line, `call(state, text)` returning an `Outcome`, which `ExecuteEx` implements.
 
 Ports to the outside are the interfaces use cases depend on. Each is a Ruby class with methods that raise `NotImplementedError`, so Spinel sees one concrete method table per port.
 
@@ -184,8 +189,9 @@ Ports to the outside are the interfaces use cases depend on. Each is a Ruby clas
 | --- | --- | --- | --- |
 | `TerminalPort` | `size`, `read_key(timeout)`, `write(bytes)`, `enter`, `leave` | `AnsiTerminal` | `FakeTerminal` with a scripted key queue and captured output |
 | `ClockPort` | `now`, `sleep(seconds)` | monotonic clock | manual clock |
-| `FilePort` | `read(path)`, `write(path, text)`, `exist?`, `list(dir)`, `stat(path)`, `mkdir(path)`, `rename(from, to)`, `delete(path)` (a file or an empty directory), `cwd` | `DiskFiles` | `MemoryFiles` |
-| `ConfigPort` | `load` returning the parsed config value | `JsonConfigGateway` | fixed config |
+| `FilePort` | `read(path)`, `write(path, text)`, `exist?`, `list(dir)`, `stat(path)` returning the `PathInfo` value (`PathInfo.missing` for nothing there), `mkdir(path)`, `rename(from, to)`, `delete(path)` (a file or an empty directory), `cwd` | `DiskFiles` | `MemoryFiles` |
+| `ConfigPort` | `load` returning the parsed config value, `source` the file name its problems are reported with | `JsonConfigGateway` | `FixedConfig` |
+| `SignalPort` | `install`, `terminated?`, `resized?`, `acknowledge_resize` | `Signals` | `ManualSignals`, which a test trips |
 | `LanguageServicePort` | `start(language)`, `notify(method, params)`, `request(method, params)`, `poll` | `JsonRpcLanguageGateway` | scripted responses |
 | `ProcessPort` | `spawn(argv)` returning a handle with `write`, `read_nonblock`, `wait` | `ProcessRunner` | fake handle |
 | `MessageQueuePort` | `push(message)`, `pop(timeout)` | `Queue` from the runtime | array-backed |
@@ -279,9 +285,9 @@ Rules of the schema:
 - `AnsiTerminal`: raw mode through `io/console`, window size, byte reads with `readpartial` so no bytes hide in a stdio buffer that `IO.select` cannot see.
 - `DiskFiles`, `MonotonicClock`.
 - `ProcessRunner`: starts a language server with `Process.spawn`, its stdin and stdout connected to `IO.pipe` pairs, stderr to a log file. The handle exposes the write end, the read end for `IO.select`, and `Process.wait`. One-shot tools such as a formatter run through `Open3.capture3` with `stdin_data`.
-- `MainLoop`: the single editor thread. One iteration: compute the next timeout from pending key waits, service polls, and the redraw deadline; `IO.select` on the terminal and on the message queue's pipe; decode and handle every ready key; drain the message queue; present if anything is dirty. Resize is a flag set by the `WINCH` handler and checked each iteration.
+- `MainLoop`: the single editor thread. One iteration: compute the next timeout from pending key waits, service polls, and the redraw deadline; `IO.select` on the terminal and on the message queue's pipe; decode and handle every ready key; drain the message queue; present if anything is dirty. It receives the `SignalPort`: a resize is a flag the `WINCH` handler sets, checked and acknowledged each iteration, and a terminate ends the loop.
 - `ServiceThreads`: one thread per language server process that blocks on the process's stdout, parses JSON-RPC frames, and pushes messages onto the `MessageQueuePort`. This is the only place threads are created, and the queue is the only thing shared with the editor thread. Spinel runs these threads in parallel with no global lock, so the editor thread never blocks on a service, and the queue is the only synchronization point.
-- `bin/carat.rb`: argument parsing, construction of every driver, adapter, and use case, injection in one place, and `STDIN.raw { |io| loop.run }` as the single-call raw block.
+- `bin/carat.rb`: argument parsing, construction and installation of the signal driver, construction of the other drivers and the configuration gateway, the `EditorAssembly` over them, and `STDIN.raw { |io| loop.run }` as the single-call raw block. `EditorAssembly` is the composition root for both the binary and the test harness: it reads the configuration through the `ConfigPort` once, builds every record and use case once, and hands each by keyword to everything that holds it, keeping a reader for each so a test can check that every holder has the same object. A value the configuration leaves out falls back to Vim's default in the domain, never in the assembly.
 
 ## 9. Plugins
 
@@ -341,6 +347,8 @@ Everything runs through `spin test`, compiled with Spinel. There is no CRuby tes
 - `test/domain_*.rb` and `test/use_cases_*.rb`: unit test programs for entities and use cases. Motions, operators, and text objects are table-driven: buffer text, cursor, keys, expected text, expected cursor. These tables are the compatibility record in `docs/compatibility.md`.
 - `test/adapters_*.rb`: presenter tests compare a `Frame` to an expected grid of strings; `ScreenPresenter` tests check ANSI bytes for a known frame diff; gateway tests feed scripted JSON-RPC frames and assert the plain values produced.
 - `test/editor_*.rb`: whole-editor tests with `FakeTerminal`, `MemoryFiles`, a manual clock, and a fixed config: feed keys, assert the frame and the buffer. This is the main integration level.
+- The test doubles are not in the production require graph: `carat.rb` leaves them out, and test and benchmark programs require `carat/test_support.rb`, which requires the library and the doubles. The `lint` test refuses a require of a double from `bin/` or `carat/` outside `carat/doubles/` and that file.
+- `test/adapters_assembly.rb` is the shared-instance guard: after building the assembly, every collaborator holding the buffer list, the tab list, the registers, the keymap, the input state, the plugin UI state, the plugin host, the command runner, and each port holds the same object, compared with `equal?`, because a keyword default would build a second one silently.
 - `test/lint.rb`: a test program that reads every source file and checks the Spinel rules of section 2.1 that the compiler does not catch on its own, the layer rule of section 3 for requires and for constant references, the plugin rule of section 9, the naming conventions of `CLAUDE.md` (one class per file named after it, namespaces by layer, case, predicates, abbreviations, the suffixes of handlers, ports, doubles, and concerns), the concern rules, and keyword constructors: no `eval` or computed `send`, no `IO.popen`, no key binding literals outside `config/default.json`. Each rule is a function asserted against a known good and a known bad case. It prints the violations, so the snapshot is the empty report.
 - `test/config_sync.rb`: parses `config/default.json` with `Carat::Json` and compares it to the generated `Carat::Domain::DEFAULT_CONFIG`, so a stale generated file fails the suite.
 - `test/smoke_*.rb`: start `build/bin/carat` inside a pseudo-terminal through `Process.spawn`, send keys, and check the file written and the final screen. Few and slow.
@@ -360,7 +368,8 @@ tmp/                            .spinel, the Spinel checkout, and .toolchain, th
 bin/carat.rb                    entry point and composition root; builds to build/bin/carat
 bin/carat-gen-config.rb         generates carat/domain/default_config.rb from config/default.json
 config/default.json             every default option and key binding
-carat.rb                        require graph, outermost layer first
+carat.rb                        require graph, innermost layer first; no test double
+carat/test_support.rb           require graph of test and benchmark programs: carat.rb and the doubles
 carat/version.rb
 carat/testing.rb                assertion harness used by test/*.rb
 carat/domain/                   entities
@@ -371,6 +380,7 @@ carat/domain/                   entities
   mode.rb keymap_node.rb keymap_match.rb keymap.rb find.rb command.rb command_grammar.rb
   walker.rb sentence_starts.rb motion.rb motions.rb runs.rb text_objects.rb
   operators.rb ex_command.rb ex_grammar.rb ex_name.rb window.rb layout_node.rb layout.rb tab_page.rb
+  tab_list.rb buffer_list.rb input_state.rb last_find.rb plugin_ui.rb editor_state.rb
   frame.rb cell.rb json.rb default_config.rb (generated) icons.rb
   manifest_check.rb registry_source.rb
 carat/use_cases/
@@ -379,7 +389,7 @@ carat/use_cases/
   actions/*.rb (the action handlers and table) ex/*.rb (execute_ex.rb, the ex handlers and table)
   visual/*.rb search/*.rb files/*.rb windows/*.rb plugins/*.rb language/*.rb concerns/*.rb
 carat/ports/
-  terminal_port.rb clock_port.rb file_port.rb config_port.rb
+  terminal_port.rb clock_port.rb file_port.rb config_port.rb signal_port.rb
   language_service_port.rb process_port.rb message_queue_port.rb
 carat/adapters/
   input_controller.rb key_decoder.rb frame_presenter.rb screen_presenter.rb
@@ -387,7 +397,7 @@ carat/adapters/
   json_rpc_language_gateway.rb
 carat/drivers/
   ansi_terminal.rb disk_files.rb process_runner.rb monotonic_clock.rb
-  main_loop.rb service_threads.rb
+  signals.rb main_loop.rb service_threads.rb
 carat/plugin_api.rb             the only file a plugin may require; the innermost ring beside the entities
 carat/plugins/
   registry.rb (generated)       explicit require and constructor per plugin
@@ -396,7 +406,8 @@ carat/plugins/
 carat/adapters/json_rpc_plugin_gateway.rb
 config/plugins.json             the ordered list of compiled plugins
 carat/doubles/
-  fake_terminal.rb memory_files.rb manual_clock.rb fake_process.rb
+  fake_terminal.rb memory_files.rb manual_clock.rb fixed_config.rb manual_signals.rb
+  editor_harness.rb fake_process.rb
 test/                           one program per file, each with a committed .expected
   domain_buffer.rb domain_motions.rb ... use_cases_*.rb adapters_*.rb
   editor_*.rb lint.rb config_sync.rb smoke_*.rb

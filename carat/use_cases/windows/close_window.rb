@@ -1,4 +1,6 @@
 require_relative "../../domain/editor_state"
+require_relative "../../domain/tab_list"
+require_relative "../../domain/buffer_list"
 require_relative "../outcome"
 
 module Carat
@@ -11,11 +13,20 @@ module Carat
       E444 = "E444: Cannot close last window"
       ONLY_ONE = "Already only one window"
 
+      attr_reader :buffers #: Domain::BufferList
+      attr_reader :tabs #: Domain::TabList
+
+      #: (buffers: Domain::BufferList, tabs: Domain::TabList) -> void
+      def initialize(buffers:, tabs:)
+        @buffers = buffers
+        @tabs = tabs
+      end
+
       # Closes window number n of the current tab page, or the current
       # window when n is 0; the last window of the last tab page stays.
       #: (Domain::EditorState, Integer) -> Outcome
       def close(state, n)
-        return Outcome.failure(E444) if state.total_windows <= 1
+        return Outcome.failure(E444) if @tabs.total_windows <= 1
         tab = state.tab
         id = n > 0 ? tab.layout.leaf_number(n) : tab.current
         remove(state, id)
@@ -35,7 +46,7 @@ module Carat
           unless id == tab.current
             buffer = layout.window_at(id).buffer
             layout.close(id)
-            state.release(buffer)
+            @buffers.release(buffer)
           end
           i += 1
         end
@@ -48,24 +59,24 @@ module Carat
       # has checked that another window exists somewhere.
       #: (Domain::EditorState, Integer) -> void
       def remove(state, id)
-        remove_in(state, state.tab_index, id)
+        remove_in(state, @tabs.tab_index, id)
       end
 
       # Removes leaf id from the tab page at index, as remove does for the
       # current one.
       #: (Domain::EditorState, Integer, Integer) -> void
       def remove_in(state, index, id)
-        tab = state.tab_at(index)
+        tab = @tabs.tab_at(index)
         layout = tab.layout
         buffer = layout.window_at(id).buffer
         if layout.leaf_count <= 1
-          state.remove_tab(index)
+          @tabs.remove_tab(index)
         else
           taker = layout.close(id)
           tab.current = layout.first_leaf(taker) if id == tab.current
           tab.previous = -1 if tab.previous == id
         end
-        state.release(buffer)
+        @buffers.release(buffer)
       end
     end
   end

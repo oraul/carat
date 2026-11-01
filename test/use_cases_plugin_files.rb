@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 t = Carat::Testing.new("use_cases_plugin_files")
@@ -92,7 +92,7 @@ t.assert_raises(ArgumentError, "making an existing directory raises") { files.mk
 files.rename("lib", "src")
 t.assert_equal([nil, "x"], [files.get("lib/x.rb"), files.get("src/x.rb")], "renaming a directory moves what is under it")
 files.link("src")
-t.assert_equal(1, files.stat("src")["symlink"], "a path marked as a link stats as one")
+t.assert_equal(true, files.stat("src").symlink, "a path marked as a link stats as one")
 
 h, fs = editor
 host = fs.host

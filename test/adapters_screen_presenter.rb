@@ -1,12 +1,12 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 t = Carat::Testing.new("adapters_screen_presenter")
 D = Carat::Domain
 
 clock = Carat::Doubles::ManualClock.new
-terminal = Carat::Doubles::FakeTerminal.new(clock, 4, 10)
-screen = Carat::Adapters::ScreenPresenter.new(terminal)
+terminal = Carat::Doubles::FakeTerminal.new(clock: clock, rows: 4, cols: 10)
+screen = Carat::Adapters::ScreenPresenter.new(terminal: terminal)
 
 screen.enter
 t.assert_equal(1, terminal.entered, "enter reaches the terminal")
@@ -77,8 +77,8 @@ end
 buffer = D::Buffer.new(["a\u009Bb\u009Dc"], "a.txt", "\n")
 options = D::Options.new
 options.number = false
-state = D::EditorState.new(buffer, options, 500)
-drawn = Carat::Adapters::FramePresenter.new.call(state, 3, 12)
+state = D::EditorState.new(D::TabList.new(D::Window.new(buffer)), options)
+drawn = Carat::Adapters::FramePresenter.new(input: D::InputState.new, plugin_ui: D::PluginUi.new).call(state, 3, 12)
 screen.present(drawn)
 bytes = terminal.last_write
 t.assert_true(bytes.include?("a<9b>b<9d>c"), "C1 controls are written as markers")
@@ -98,8 +98,8 @@ colored.put(1, 0, "tab", D::Highlight::TAB_LINE)
 colored.put(2, 0, "sel", D::Highlight::TAB_LINE_SELECTED)
 colored.put(3, 0, "fill", D::Highlight::TAB_LINE_FILL)
 clock = Carat::Doubles::ManualClock.new
-terminal = Carat::Doubles::FakeTerminal.new(clock, 4, 8)
-screen = Carat::Adapters::ScreenPresenter.new(terminal)
+terminal = Carat::Doubles::FakeTerminal.new(clock: clock, rows: 4, cols: 8)
+screen = Carat::Adapters::ScreenPresenter.new(terminal: terminal)
 screen.present(colored)
 out = terminal.last_write
 t.assert_true(out.include?("\e[0;2;7mnc"), "inactive status lines are dim reverse video")
@@ -112,8 +112,8 @@ selected = D::Frame.new(1, 8)
 selected.put(0, 0, "ab", D::Highlight::NORMAL)
 selected.put(0, 2, "cd", D::Highlight::VISUAL)
 clock = Carat::Doubles::ManualClock.new
-terminal = Carat::Doubles::FakeTerminal.new(clock, 1, 8)
-screen = Carat::Adapters::ScreenPresenter.new(terminal)
+terminal = Carat::Doubles::FakeTerminal.new(clock: clock, rows: 1, cols: 8)
+screen = Carat::Adapters::ScreenPresenter.new(terminal: terminal)
 screen.present(selected)
 t.assert_true(terminal.last_write.include?("\e[0;7mcd"), "the selection is reverse video")
 

@@ -12,20 +12,20 @@ module Carat
 
     #: (String) -> untyped
     def self.parse(text)
-      Parser.new(text).parse
+      Parser.new(text: text).parse
     end
 
     #: (untyped) -> String
     def self.generate(value)
       out = +""
-      Writer.new(out, false).write(value, 0)
+      Writer.new(out: out, pretty: false).write(value, 0)
       out
     end
 
     #: (untyped) -> String
     def self.pretty_generate(value)
       out = +""
-      Writer.new(out, true).write(value, 0)
+      Writer.new(out: out, pretty: true).write(value, 0)
       out
     end
 
@@ -34,8 +34,8 @@ module Carat
       # @rbs @pos: Integer
       # @rbs @len: Integer
 
-      #: (String) -> void
-      def initialize(text)
+      #: (text: String) -> void
+      def initialize(text:)
         @text = text
         @pos = 0
         @len = text.bytesize
@@ -266,8 +266,8 @@ module Carat
       # @rbs @out: String
       # @rbs @pretty: bool
 
-      #: (String, bool) -> void
-      def initialize(out, pretty)
+      #: (out: String, pretty: bool) -> void
+      def initialize(out:, pretty:)
         @out = out
         @pretty = pretty
       end

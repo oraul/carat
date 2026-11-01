@@ -2,6 +2,7 @@ require_relative "position"
 require_relative "buffer"
 require_relative "editor_state"
 require_relative "command"
+require_relative "last_find"
 require_relative "walker"
 require_relative "sentence_starts"
 require_relative "motion"
@@ -36,31 +37,31 @@ module Carat
       ]
 
       # The motion a command asks for. This is the one entry point with a
-      # side effect: f, F, t, and T record themselves in state.last_find
-      # so that ";" and "," can repeat them.
-      #: (EditorState, Command, bool) -> Motion?
-      def self.for_command(state, command, pending)
+      # side effect: f, F, t, and T record themselves in last_find so that
+      # ";" and "," can repeat them.
+      #: (EditorState, LastFind, Command, bool) -> Motion?
+      def self.for_command(state, last_find, command, pending)
         action = command.action
         count = command.count
         case action
-        when "motion.find_forward" then remember(state, Find.new(command.char, true, false), count, false)
-        when "motion.find_backward" then remember(state, Find.new(command.char, false, false), count, false)
-        when "motion.till_forward" then remember(state, Find.new(command.char, true, true), count, false)
-        when "motion.till_backward" then remember(state, Find.new(command.char, false, true), count, false)
+        when "motion.find_forward" then remember(state, last_find, Find.new(command.char, true, false), count)
+        when "motion.find_backward" then remember(state, last_find, Find.new(command.char, false, false), count)
+        when "motion.till_forward" then remember(state, last_find, Find.new(command.char, true, true), count)
+        when "motion.till_backward" then remember(state, last_find, Find.new(command.char, false, true), count)
         when "motion.repeat_find"
-          find = state.last_find
+          find = last_find.entry
           find.nil? ? nil : find_char(state, find, count, true)
         when "motion.repeat_find_reverse"
-          find = state.last_find
+          find = last_find.entry
           find.nil? ? nil : find_char(state, find.reversed, count, true)
         else call(state, action, count, pending)
         end
       end
 
-      #: (EditorState, Find, Integer, bool) -> Motion?
-      def self.remember(state, find, count, repeat)
-        state.last_find = find
-        find_char(state, find, count, repeat)
+      #: (EditorState, LastFind, Find, Integer) -> Motion?
+      def self.remember(state, last_find, find, count)
+        last_find.remember(find)
+        find_char(state, find, count, false)
       end
 
       # A motion by action name; count is 0 when none was typed.

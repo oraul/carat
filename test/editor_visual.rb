@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 t = Carat::Testing.new("editor_visual")
@@ -15,7 +15,7 @@ end
 
 # The text and kind of a register, or nil when it is empty.
 def register_of(h, name)
-  entry = h.state.registers.read(name)
+  entry = h.assembly.registers.read(name)
   entry.nil? ? nil : [entry.text, entry.kind]
 end
 

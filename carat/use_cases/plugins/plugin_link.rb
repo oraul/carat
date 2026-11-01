@@ -21,14 +21,14 @@ module Carat
       # @rbs @files: FileRequests
       # @rbs @ui: UiRequests
 
-      #: (String, PluginRegistry, BufferRequests, WindowRequests, FileRequests, UiRequests) -> void
-      def initialize(name, registry, buffers, windows, files, ui)
+      #: (name: String, registry: PluginRegistry, buffer_requests: BufferRequests, window_requests: WindowRequests, file_requests: FileRequests, ui_requests: UiRequests) -> void
+      def initialize(name:, registry:, buffer_requests:, window_requests:, file_requests:, ui_requests:)
         @name = name
         @registry = registry
-        @buffers = buffers
-        @windows = windows
-        @files = files
-        @ui = ui
+        @buffers = buffer_requests
+        @windows = window_requests
+        @files = file_requests
+        @ui = ui_requests
       end
 
       #: () -> String

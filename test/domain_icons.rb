@@ -57,11 +57,11 @@ t.table([
   ["invalid keeps the default", { "icons" => "emoji" }, "nerd"],
   ["wrong type keeps the default", { "icons" => 3 }, "nerd"]
 ]) do |hash|
-  D::Options.from_config(hash).icons
+  D::Options.from_config({ "options" => hash }).icons
 end
 t.assert_equal("nerd", D::Options.new.icons, "fresh options use nerd")
 config = Carat::Json.parse(D::DEFAULT_CONFIG_JSON)
-t.assert_equal("nerd", D::Options.from_config(config["options"]).icons, "the shipped configuration selects nerd")
+t.assert_equal("nerd", D::Options.from_config(config).icons, "the shipped configuration selects nerd")
 
 # Display width of the private use areas, where Nerd Font glyphs live.
 t.table([

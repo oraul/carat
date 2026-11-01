@@ -38,6 +38,18 @@ module Carat
         value.match?(ACTION_NAME)
       end
 
+      # Vim's mapleader when the configuration names none.
+      DEFAULT_LEADER = "\\"
+
+      # The "leader" string of a configuration value, Vim's backslash when
+      # it is missing or not a string.
+      #: (untyped) -> String
+      def self.leader_from(config)
+        return DEFAULT_LEADER unless config.is_a?(Hash)
+        value = config["leader"]
+        value.is_a?(String) ? value : DEFAULT_LEADER
+      end
+
       # Builds a keymap from a "keymaps" object, expanding <leader> with
       # the given leader. Malformed entries are recorded in errors as
       # "mode.key: reason" and skipped.

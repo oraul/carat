@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 # The input ports of the core: the action table and the ex table with
@@ -36,7 +36,7 @@ class EchoCommandHandler < Carat::UseCases::ExHandler
 end
 
 def state
-  Carat::Domain::EditorState.new(Carat::Domain::Buffer.from_text("", nil), Carat::Domain::Options.new, 500)
+  Carat::Domain::EditorState.new(Carat::Domain::TabList.new(Carat::Domain::Window.new(Carat::Domain::Buffer.from_text("", nil))), Carat::Domain::Options.new)
 end
 
 # ------------------------------------------------------------ action table

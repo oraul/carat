@@ -1,5 +1,6 @@
 require_relative "../../plugin_api"
 require_relative "../../domain/editor_state"
+require_relative "../../domain/buffer_list"
 require_relative "../../domain/buffer"
 require_relative "../../domain/icons"
 require_relative "../../domain/position"
@@ -14,12 +15,14 @@ module Carat
     # clearing signs. Buffers are addressed by id, 0 for the current one.
     # The plugin link has checked that the plugin is enabled.
     class BufferRequests
-      # @rbs @state: Domain::EditorState
-      # @rbs @registry: PluginRegistry
+      attr_reader :state #: Domain::EditorState
+      attr_reader :buffers #: Domain::BufferList
+      attr_reader :registry #: PluginRegistry
 
-      #: (Domain::EditorState, PluginRegistry) -> void
-      def initialize(state, registry)
+      #: (state: Domain::EditorState, buffers: Domain::BufferList, registry: PluginRegistry) -> void
+      def initialize(state:, buffers:, registry:)
         @state = state
+        @buffers = buffers
         @registry = registry
       end
 
@@ -42,7 +45,8 @@ module Carat
       # from the last to the first so earlier positions stay valid, inside
       # one transaction on the buffer (joining the command's when the
       # request comes from an action bound to a key). Should applying still
-      # raise, the records it made are undone and the request fails.
+      # raise, the records it made are undone and the request fails. The
+    # closed transaction keeps the cursors on the buffer inside its text.
       #: (String, Integer, Array[untyped]) -> PluginApi::Response
       def edit_buffer(name, id, edits)
         buffer = buffer_for(id)
@@ -70,7 +74,6 @@ module Carat
           buffer.commit_transaction(cursor_on(buffer)) if opened
           return PluginApi::Response.failure("edit failed: #{error.message}")
         end
-        @state.clamp_cursors(buffer)
         buffer.commit_transaction(cursor_on(buffer)) if opened
         PluginApi::Response.success("", edits.length)
       end
@@ -121,7 +124,7 @@ module Carat
       #: (Integer) -> Domain::Buffer?
       def buffer_for(id)
         return @state.buffer if id == 0
-        @state.buffer_with_id(id)
+        @buffers.with_id(id)
       end
 
       #: (Domain::Buffer, Array[untyped]) -> void

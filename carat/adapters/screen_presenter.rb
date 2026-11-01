@@ -11,12 +11,13 @@ module Carat
       ENTER = "\e[?1049h\e[H\e[2J"
       LEAVE = "\e[0m\e[2 q\e[?25h\e[?1049l"
 
-      # @rbs @terminal: Ports::TerminalPort
+      attr_reader :terminal #: Ports::TerminalPort
+
       # @rbs @shadow: Domain::Frame?
       # @rbs @shape: Symbol
 
-      #: (Ports::TerminalPort) -> void
-      def initialize(terminal)
+      #: (terminal: Ports::TerminalPort) -> void
+      def initialize(terminal:)
         @terminal = terminal
         @shadow = nil
         @shape = :none

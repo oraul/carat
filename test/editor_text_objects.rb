@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 t = Carat::Testing.new("editor_text_objects")
@@ -76,10 +76,10 @@ t.assert_equal([[" two"], [0, 0], :insert], [h.lines, h.cursor, h.mode], "ciw en
 
 h = editor("one two\n")
 h.type("yiw")
-t.assert_equal("one", h.state.registers.read("").text, "yiw yanks the word")
+t.assert_equal("one", h.assembly.registers.read("").text, "yiw yanks the word")
 h.type("$")
 h.type("yaw")
-t.assert_equal(" two", h.state.registers.read("").text, "yaw at the end yanks the blanks before")
+t.assert_equal(" two", h.assembly.registers.read("").text, "yaw at the end yanks the blanks before")
 t.assert_equal([0, 3], h.cursor, "yaw moves the cursor to the start of the object")
 
 t.finish

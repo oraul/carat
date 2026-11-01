@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 t = Carat::Testing.new("editor_explorer")
@@ -41,9 +41,9 @@ end
 
 # The lines of the tree's buffer, [] when it is not listed.
 def tree_lines(h)
-  s = h.state
+  s = h.assembly.buffers
   i = 0
-  while i < s.buffer_count
+  while i < s.count
     b = s.buffer_at(i)
     return b.lines if b.title == "explorer"
     i += 1
@@ -222,7 +222,7 @@ end
 h = session(" eggjd" + "y<CR>")
 t.assert_equal([true, "Directory not empty: docs", true], [h.files.exist?("docs/guide.md"), h.message, h.state.message_error], "a directory with entries is refused")
 h = session(" ed" + "y<CR>")
-t.assert_equal([false, ["a.md", ""], true], [h.files.exist?("a.md"), h.buffer_paths, h.state.buffer_at(0).modified?], "deleting the open file keeps its buffer, modified")
+t.assert_equal([false, ["a.md", ""], true], [h.files.exist?("a.md"), h.buffer_paths, h.assembly.buffers.buffer_at(0).modified?], "deleting the open file keeps its buffer, modified")
 h.type("<C-w>l:q<CR>")
 t.assert_equal([false, "E37: No write since last change (add ! to override)"], [h.quit?, h.message], "and :q asks for a write")
 h = session(" eggd")

@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 require_relative "../carat/plugins/hello/plugin"
 
@@ -146,7 +146,7 @@ t.table([
 end
 
 h = session(" hh")
-t.assert_equal({ "hello" => "hello 1" }, h.state.segments, "greeting sets the status segment")
+t.assert_equal({ "hello" => "hello 1" }, h.assembly.plugin_ui.segments, "greeting sets the status segment")
 t.assert_equal("a.txt  hello 1", h.status_row[0, 14], "the segment shows on the status line")
 h.type(" hh<C-w>v")
 t.assert_equal("a.txt  hello 2", h.row(22)[0, 14], "the current window shows the segment")
@@ -287,7 +287,7 @@ end
 
 # The open file request and scratch buffers across tab pages.
 h = session(" to<C-w>lx<C-w>h tf")
-t.assert_equal([["zz"], ["", "b.txt", "a.txt"], true], [h.lines, h.buffer_paths, h.state.buffer_at(2).modified?], "opening over a modified buffer keeps it hidden in the list")
+t.assert_equal([["zz"], ["", "b.txt", "a.txt"], true], [h.lines, h.buffer_paths, h.assembly.buffers.buffer_at(2).modified?], "opening over a modified buffer keeps it hidden in the list")
 h = session(" to th")
 t.assert_equal([["zz"], false, 2], [h.lines, h.state.window.fixed_width, h.window_count], "a side window that takes a file loses its fixed width")
 h = session(" to tfx tf")
@@ -295,8 +295,8 @@ t.assert_equal(["ok 1", 2, ["z"], true], [h.message, h.window_index, h.lines, h.
 h = session(" to:tabnew<CR> to")
 titles = []
 i = 0
-while i < h.state.buffer_count
-  titles << h.state.buffer_at(i).title
+while i < h.assembly.buffers.count
+  titles << h.assembly.buffers.buffer_at(i).title
   i += 1
 end
 t.assert_equal([2, 2, 2], [h.tab_count, h.tab_index, h.window_count], "a side window opens in the second tab page")
