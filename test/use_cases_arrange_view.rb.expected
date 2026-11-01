@@ -1,0 +1,15 @@
+ok   before the size is known the window keeps no rectangle
+ok   the size is recorded in the state
+ok   one window takes the rows above its status line and the message row
+ok   a cursor below the window scrolls it down until the cursor is on the last row
+ok   a cursor above the window scrolls it up until the cursor is on the first row
+ok   scrolloff keeps rows below the cursor
+ok   a cursor past the right edge scrolls the window right
+ok   a cursor left of the window scrolls it back
+ok   tabs count with their display width
+ok   the windows start under the tab line
+ok   two splits typed with no frame between them give 5, 5, and 10 text rows
+ok   the top window is current
+ok   no split reported E36
+ok   H after 30G goes to line 23, the top line the window shows after the jump
+use_cases_arrange_view: 14 passed, 0 failed

@@ -17,6 +17,8 @@ ok   the split window use case
 ok   the open tab use case
 ok   the file operations
 ok   the key handler
+ok   the line cache
+ok   the arrange view use case
 ok   the terminal port
 ok   the clock port
 ok   the file port
@@ -26,4 +28,4 @@ ok   the assembly reads timeoutlen and the leader from the port
 ok   the gateway serves the shipped defaults
 ok   a configuration without values falls back to Vim's defaults
 ok   a configuration problem names the port's source
-adapters_assembly: 28 passed, 0 failed
+adapters_assembly: 30 passed, 0 failed

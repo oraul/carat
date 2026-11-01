@@ -50,3 +50,9 @@ jobs:
 
       - name: Test
         run: make test
+
+      # One key of the cursor scenario of the benchmark must allocate fewer
+      # than ALLOC_BUDGET objects (see the Makefile); one more compile and a
+      # few seconds of running.
+      - name: Allocation budget
+        run: make bench-budget

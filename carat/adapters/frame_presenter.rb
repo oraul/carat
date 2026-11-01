@@ -2,28 +2,42 @@ require_relative "../domain/editor_state"
 require_relative "../domain/frame"
 require_relative "../domain/highlight"
 require_relative "../domain/display_width"
+require_relative "../domain/decoded_line"
+require_relative "../domain/line_cache"
 require_relative "../domain/layout"
 require_relative "../domain/selection"
 require_relative "../domain/input_state"
 require_relative "../domain/plugin_ui"
 require_relative "../domain/command_grammar"
+require_relative "painted_rows"
 
 module Carat
   module Adapters
-    # A pure function from editor state to a Frame: the tab line when there
-    # is more than one tab page, every window of the current tab page in
-    # the rectangle the layout gives it (sign column, line number gutter,
-    # text with tabs expanded, tilde rows, a status line under it with the
-    # plugins' segments on the current window's), a separator column
-    # between windows side by side, and the message or command line row
-    # (a plugin's prompt in place of the colon) with the keys of a pending
+    # Draws the editor state into a Frame, reading the state and changing
+    # nothing in it: ArrangeView has already laid out the windows and
+    # scrolled them for the screen size the state holds. The frame shows
+    # the tab line when there is more than one tab page, every window of
+    # the current tab page in its rectangle (sign column, line number
+    # gutter, text with tabs expanded and unprintable code points as
+    # markers, tilde rows, a status line under it with the plugins'
+    # segments on the current window's), a separator column between
+    # windows side by side, and the message or command line row (a
+    # plugin's prompt in place of the colon) with the keys of a pending
     # command at its right edge. In a visual mode the current window draws
     # its selection with the Visual highlight, leaving the cell under the
-    # cursor in its own highlight so the cursor shows on top. It arranges
-    # the layout and scrolls every window first so the state and the frame
-    # agree, and places the cursor in the current window. The pending keys
-    # come from the input state and the segments and the prompt from the
-    # plugin UI state.
+    # cursor in its own highlight so the cursor shows on top. The cursor is
+    # placed in the current window.
+    #
+    # Two frames are kept and painted in turn, so the one the screen shows
+    # stays intact while the other is drawn; they are reallocated only when
+    # the size changes. Each keeps a PaintedRows record of what its window
+    # rows show, one segment per row and window, so a row is painted only when what it shows differs from
+    # what that frame already holds, and is marked dirty when it differs
+    # from the frame drawn before. A full-width window whose first visible
+    # row moved by less than its height records a scroll, its rows sourced
+    # from where they were. The status lines, the tab line, and the message
+    # row are painted every time and compared cell by cell. Lines are drawn
+    # from the shared line cache, which turns once per frame.
     class FramePresenter
       SHOWCMD_WIDTH = 10
       SEPARATOR = "│"
@@ -31,74 +45,100 @@ module Carat
 
       attr_reader :input #: Domain::InputState
       attr_reader :plugin_ui #: Domain::PluginUi
+      attr_reader :cache #: Domain::LineCache
 
-      # @rbs @frame: Domain::Frame?
+      # @rbs @front: Domain::Frame
+      # @rbs @back: Domain::Frame
+      # @rbs @front_rows: PaintedRows
+      # @rbs @back_rows: PaintedRows
+      # @rbs @serial: Integer
+      # @rbs @key: Array[Integer]
+      # @rbs @chrome: Array[Integer]
+      # @rbs @sel_from: Integer
+      # @rbs @sel_to: Integer
+      # @rbs @sel_end: Integer
+      # @rbs @none: Domain::Selection
+      # @rbs @no_block: Domain::Block
 
-      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi) -> void
-      def initialize(input:, plugin_ui:)
+      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache) -> void
+      def initialize(input:, plugin_ui:, cache:)
         @input = input
         @plugin_ui = plugin_ui
-        @frame = nil
+        @cache = cache
+        @front = Domain::Frame.new(1, 1)
+        @back = Domain::Frame.new(1, 1)
+        @front_rows = PaintedRows.new(rows: 1, slots: 1)
+        @back_rows = PaintedRows.new(rows: 1, slots: 1)
+        @serial = 0
+        @key = []
+        @chrome = []
+        @sel_from = -1
+        @sel_to = -2
+        @sel_end = -1
+        @none = Domain::Selection.none
+        @no_block = Domain::Block.new(0, -1, 1, 0, false)
       end
 
-      #: (Domain::EditorState, Integer, Integer) -> Domain::Frame
-      def call(state, rows, cols)
-        frame = reuse(rows, cols)
-        return frame if rows <= 0 || cols <= 0
+      #: (Domain::EditorState) -> Domain::Frame
+      def call(state)
+        rows = state.screen_rows
+        cols = state.screen_cols
+        ensure_size(rows > 0 ? rows : 1, cols > 0 ? cols : 1)
+        return @back if rows <= 0 || cols <= 0
+        @cache.turn
+        back = @back
+        base = @front
+        @serial += 1
+        back.serial = @serial
+        based = base.serial > 0
+        back.base_serial = based ? base.serial : -1
         options = state.options
         tabstop = options.tabstop > 0 ? options.tabstop : 8
         tabline = state.tabs.tab_count > 1 ? 1 : 0
-        area = rows - 1 - tabline
-        area = 1 if area < 1
         tab = state.tab
         layout = tab.layout
-        layout.arrange(tabline, 0, area, cols)
-
-        paint_tabline(frame, state, cols) if tabline == 1
-        visual = Domain::Mode.visual?(state.mode)
-        none = Domain::Selection.none
         ids = layout.leaves
+        ensure_slots(rows, ids.length)
+        build_key(rows, cols, tabline, tabstop, layout, ids)
+        unless same_key?(back.layout)
+          @back_rows.invalidate
+          copy_key(back.layout)
+        end
+        base_same = based && same_key?(base.layout)
+        back.reset_rows
+        @chrome.clear
+
+        if tabline == 1
+          back.blank(0, 0, cols)
+          paint_tabline(back, state, cols)
+          @chrome << 0
+        end
+        visual = Domain::Mode.visual?(state.mode)
+        selection = visual ? state.selection : @none
         i = 0
         while i < ids.length
           id = ids[i]
           current = id == tab.current
-          selection = current && visual ? state.selection : none
-          paint_window(frame, layout.window_at(id), current, options, tabstop, @plugin_ui.segments, selection)
+          paint_window(back, layout.window_at(id), i, current, options, tabstop, @plugin_ui.segments, current ? selection : @none, cols, base_same)
           i += 1
         end
-        paint_separators(frame, layout, layout.root)
-        paint_message(frame, rows - 1, cols, state)
-
-        window = state.window
-        cursor = window.cursor
-        if state.mode == Domain::Mode::CMDLINE
-          frame.cursor_row = rows - 1
-          frame.cursor_col = clamp(display_width(command_prefix(state), tabstop) + display_width(state.cmdline, tabstop), cols - 1)
+        paint_separators(back, layout, layout.root)
+        back.blank(rows - 1, 0, cols)
+        paint_message(back, rows - 1, cols, state)
+        @chrome << rows - 1
+        if base_same
+          i = 0
+          while i < @chrome.length
+            row = @chrome[i]
+            back.dirty[row] = 1 unless back.same_row?(row, base, row)
+            i += 1
+          end
         else
-          gutter = window.gutter_width(options)
-          cursor_dcol = display_col(window.buffer.line(cursor.row), cursor.col, tabstop)
-          frame.cursor_row = clamp(window.row + cursor.row - window.top, rows - 1)
-          frame.cursor_col = clamp(window.col + gutter + cursor_dcol - window.left, cols - 1)
-          under = frame.cell(frame.cursor_row, frame.cursor_col)
-          under.hl = Domain::Highlight::NORMAL if visual && under.hl == Domain::Highlight::VISUAL
+          back.mark_all_dirty
         end
-        frame.cursor_shape = state.mode == Domain::Mode::INSERT ? :bar : :block
-        frame
-      end
-
-      # Reuses one frame across renders, reallocating only when the size
-      # changes, so a steady stream of renders does not churn the heap with
-      # thousands of cell objects each frame.
-      #: (Integer, Integer) -> Domain::Frame
-      def reuse(rows, cols)
-        frame = @frame
-        if frame.nil? || frame.rows != rows || frame.cols != cols
-          frame = Domain::Frame.new(rows > 0 ? rows : 1, cols > 0 ? cols : 1)
-          @frame = frame
-        else
-          frame.clear
-        end
-        frame
+        place_cursor(back, state, options, tabstop, visual, rows, cols)
+        swap
+        back
       end
 
       # The display column where code-point column col of line starts.
@@ -114,11 +154,84 @@ module Carat
 
       private
 
-      # Tabs reach the next tabstop, C0 controls take two cells as ^X, and
-      # delete and the C1 controls take four as <xx>, matching shown_text.
-      #: (String, Integer, Integer) -> Integer
-      def char_width(ch, dcol, tabstop)
-        Domain::DisplayWidth.cell(ch, dcol, tabstop)
+      # Keeps two frames of the size, allocating both anew when it changes;
+      # the new ones have no base.
+      #: (Integer, Integer) -> void
+      def ensure_size(rows, cols)
+        return if @back.rows == rows && @back.cols == cols && @front.rows == rows && @front.cols == cols
+        @front = Domain::Frame.new(rows, cols)
+        @back = Domain::Frame.new(rows, cols)
+        slots = @back_rows.slots
+        @front_rows = PaintedRows.new(rows: rows, slots: slots)
+        @back_rows = PaintedRows.new(rows: rows, slots: slots)
+      end
+
+      # Keeps room for a segment per window on every row, allocating the
+      # records anew when there are more windows than slots; the frames'
+      # layout keys are dropped so neither counts as painted.
+      #: (Integer, Integer) -> void
+      def ensure_slots(rows, windows)
+        return if windows <= @back_rows.slots
+        slots = @back_rows.slots * 2
+        slots = windows if slots < windows
+        @front_rows = PaintedRows.new(rows: rows, slots: slots)
+        @back_rows = PaintedRows.new(rows: rows, slots: slots)
+        @front.layout.clear
+        @back.layout.clear
+      end
+
+      #: () -> void
+      def swap
+        painted = @back
+        @back = @front
+        @front = painted
+        rows = @back_rows
+        @back_rows = @front_rows
+        @front_rows = rows
+      end
+
+      # The geometry a frame is painted with: the size, the tab line, the
+      # tabstop, and every window's rectangle.
+      #: (Integer, Integer, Integer, Integer, Domain::Layout, Array[Integer]) -> void
+      def build_key(rows, cols, tabline, tabstop, layout, ids)
+        key = @key
+        key.clear
+        key << rows
+        key << cols
+        key << tabline
+        key << tabstop
+        i = 0
+        while i < ids.length
+          window = layout.window_at(ids[i])
+          key << window.row
+          key << window.col
+          key << window.height
+          key << window.width
+          i += 1
+        end
+      end
+
+      #: (Array[Integer]) -> bool
+      def same_key?(other)
+        key = @key
+        return false unless other.length == key.length
+        i = 0
+        while i < key.length
+          return false unless other[i] == key[i]
+          i += 1
+        end
+        true
+      end
+
+      #: (Array[Integer]) -> void
+      def copy_key(target)
+        target.clear
+        key = @key
+        i = 0
+        while i < key.length
+          target << key[i]
+          i += 1
+        end
       end
 
       #: (Integer, Integer) -> Integer
@@ -127,95 +240,121 @@ module Carat
         value > max ? max : value
       end
 
-      # One window: scrolled to its own cursor, then its gutter, text with
-      # the selection when it has one, tilde rows, and status line inside
-      # its rectangle.
-      #: (Domain::Frame, Domain::Window, bool, Domain::Options, Integer, Hash[String, String], Domain::Selection) -> void
-      def paint_window(frame, window, current, options, tabstop, segments, selection)
+      #: (Domain::Frame, Domain::EditorState, Domain::Options, Integer, bool, Integer, Integer) -> void
+      def place_cursor(frame, state, options, tabstop, visual, rows, cols)
+        if state.mode == Domain::Mode::CMDLINE
+          frame.cursor_row = rows - 1
+          frame.cursor_col = clamp(display_width(command_prefix(state), tabstop) + display_width(state.cmdline, tabstop), cols - 1)
+        else
+          window = state.window
+          cursor = window.cursor
+          gutter = window.gutter_width(options)
+          cursor_dcol = @cache.fetch(window.buffer.line(cursor.row), tabstop).col(cursor.col)
+          row = clamp(window.row + cursor.row - window.top, rows - 1)
+          col = clamp(window.col + gutter + cursor_dcol - window.left, cols - 1)
+          frame.cursor_row = row
+          frame.cursor_col = col
+          frame.set_hl(row, col, Domain::Highlight::NORMAL) if visual && frame.hl_at(row, col) == Domain::Highlight::VISUAL
+        end
+        frame.cursor_shape = state.mode == Domain::Mode::INSERT ? :bar : :block
+      end
+
+      # One window: each text row painted when what it shows changed and
+      # marked dirty when it differs from the base frame's, a scroll
+      # recorded for a full-width window, then the status line.
+      #: (Domain::Frame, Domain::Window, Integer, bool, Domain::Options, Integer, Hash[String, String], Domain::Selection, Integer, bool) -> void
+      def paint_window(frame, window, slot, current, options, tabstop, segments, selection, cols, base_same)
         buffer = window.buffer
         cursor = window.cursor
         gutter = window.gutter_width(options)
-        text_width = window.width - gutter
+        width = window.width
+        text_width = width - gutter
         text_width = 1 if text_width < 1
         height = window.height
-        window.scroll_to_row(cursor.row, buffer.line_count, height, options.scrolloff)
-        cursor_dcol = display_col(buffer.line(cursor.row), cursor.col, tabstop)
-        window.scroll_to_col(cursor_dcol, text_width)
-        block = selection.kind == :blockwise ? selection.block(buffer, tabstop) : Domain::Block.new(0, -1, 1, 0, false)
+        top = window.top
+        left = window.left
+        x = window.col
+        wrow = window.row
+        selecting = selection.kind != :none
+        block = selection.kind == :blockwise ? selection.block(buffer, tabstop) : @no_block
+        delta = 0
+        if base_same && x == 0 && width == cols && height > 1
+          first = @front_rows.index(wrow, slot)
+          if @front_rows.painted?(first) && @front_rows.owner(first) == window.id
+            moved = top - @front_rows.top(first)
+            delta = moved if moved != 0 && moved > -height && moved < height
+          end
+        end
+        frame.add_scroll(wrow, wrow + height - 1, delta) if delta != 0
+        signs = buffer.signs?
+        count = buffer.line_count
         i = 0
         while i < height
-          frame_row = window.row + i
-          row = window.top + i
-          if row < buffer.line_count
+          frame_row = wrow + i
+          row = top + i
+          seg = @back_rows.index(frame_row, slot)
+          line = PaintedRows::TILDE
+          number = -1
+          sign = ""
+          cur = -1
+          @sel_from = -1
+          @sel_to = -2
+          @sel_end = -1
+          if row < count
             line = buffer.line(row)
-            paint_gutter(frame, frame_row, window.col, window.width, row, gutter, cursor.row, options, buffer)
-            paint_line(frame, frame_row, window.col + gutter, line, text_width, window.left, tabstop)
-            paint_selection(frame, frame_row, window.col + gutter, line, text_width, window.left, tabstop, selection.span(buffer, row, tabstop), block)
-          else
-            frame.put(frame_row, window.col, "~", Domain::Highlight::NON_TEXT)
+            number = number_shown(row, cursor.row, options, gutter, signs)
+            sign = buffer.sign_at(row) if signs
+            cur = cursor.col if row == cursor.row
+            select_columns(selection, buffer, row, line, tabstop, block) if selecting
+          end
+          unless @back_rows.same?(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur)
+            paint_row(frame, frame_row, x, width, gutter, line, number, sign, signs, text_width, left, tabstop)
+            @back_rows.store(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur)
+          end
+          @back_rows.place(seg, window.id, top)
+          if base_same
+            source = frame_row
+            if delta != 0
+              j = i + delta
+              source = j >= 0 && j < height ? wrow + j : -1
+              frame.sources[frame_row] = source
+            end
+            frame.dirty[frame_row] = 1 if source < 0 || !@front_rows.same?(@front_rows.index(source, slot), line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur)
           end
           i += 1
         end
-        paint_status(frame, window.row + height, window.col, window.width, window, current, segments)
+        status_row = wrow + height
+        frame.blank(status_row, x, x + width)
+        paint_status(frame, status_row, x, width, window, current, segments)
+        @chrome << status_row
       end
 
-      # The sign column, when the buffer has signs, then the number.
-      #: (Domain::Frame, Integer, Integer, Integer, Integer, Integer, Integer, Domain::Options, Domain::Buffer) -> void
-      def paint_gutter(frame, frame_row, col, width, row, gutter, cursor_row, options, buffer)
-        return if gutter == 0
-        numbers = gutter
-        start = col
-        if buffer.signs?
-          numbers = gutter - Domain::Window::SIGN_WIDTH
-          sign = buffer.sign_at(row)
-          sign = sign[0, Domain::Window::SIGN_WIDTH] if sign.length > Domain::Window::SIGN_WIDTH
-          frame.fill(frame_row, col, col + Domain::Window::SIGN_WIDTH, Domain::Highlight::LINE_NUMBER)
-          frame.put(frame_row, col, sign, Domain::Highlight::LINE_NUMBER)
-          start = col + Domain::Window::SIGN_WIDTH
-        end
-        return if numbers <= 0
-        number = row + 1
+      # The line number a row shows, -1 when the window has no number
+      # column.
+      #: (Integer, Integer, Domain::Options, Integer, bool) -> Integer
+      def number_shown(row, cursor_row, options, gutter, signs)
+        numbers = signs ? gutter - Domain::Window::SIGN_WIDTH : gutter
+        return -1 if numbers <= 0
         if options.relativenumber && row != cursor_row
-          number = row > cursor_row ? row - cursor_row : cursor_row - row
-        elsif options.relativenumber && !options.number
-          number = 0
+          return row > cursor_row ? row - cursor_row : cursor_row - row
         end
-        text = number.to_s.rjust(numbers - 1) + " "
-        text = text[0, width] if text.length > width
-        frame.put(frame_row, start, text, Domain::Highlight::LINE_NUMBER)
+        return 0 if options.relativenumber && !options.number
+        row + 1
       end
 
-      # Paints the visible part of a line from frame column col: characters
-      # whose display columns fall inside [left, left + width), tabs as
-      # blanks, C0 controls as ^X, delete and C1 controls as <xx>.
-      #: (Domain::Frame, Integer, Integer, String, Integer, Integer, Integer) -> void
-      def paint_line(frame, frame_row, col, line, width, left, tabstop)
-        dcol = 0
-        i = 0
-        while i < line.length
-          ch = line[i, 1]
-          w = char_width(ch, dcol, tabstop)
-          break if dcol >= left + width
-          if dcol >= left && dcol + w <= left + width
-            shown = shown_text(ch, w)
-            frame.put(frame_row, col + dcol - left, shown, Domain::Highlight::NORMAL)
-          end
-          dcol += w
-          i += 1
-        end
-      end
-
-      # Paints the Visual highlight over the selected part of a line that
-      # paint_line drew: the display columns of span, or of the block on a
-      # block's row, cell by cell so a tab is covered only where selected,
-      # and the cell after the last character when the line break is
-      # selected.
-      #: (Domain::Frame, Integer, Integer, String, Integer, Integer, Integer, Domain::Span, Domain::Block) -> void
-      def paint_selection(frame, frame_row, col, line, width, left, tabstop, span, block)
+      # Sets @sel_from and @sel_to, the selected display columns of the
+      # row, and @sel_end, the display column of the selected line end or
+      # -1: a span's columns, or the block's on a block's row, cut to the
+      # line, with the cell after the last character when the line break
+      # is selected.
+      #: (Domain::Selection, Domain::Buffer, Integer, String, Integer, Domain::Block) -> void
+      def select_columns(selection, buffer, row, line, tabstop, block)
+        span = selection.span(buffer, row, tabstop)
         return if span.empty?
-        line_width = display_col(line, line.length, tabstop)
-        from = display_col(line, span.from, tabstop)
-        to = display_col(line, span.to, tabstop) - 1
+        decoded = @cache.fetch(line, tabstop)
+        line_width = decoded.width
+        from = decoded.col(span.from)
+        to = decoded.col(span.to) - 1
         if block.top <= block.bottom
           return if line_width < block.left
           from = block.left
@@ -223,55 +362,189 @@ module Carat
           to = line_width - 1 if to > line_width - 1
         end
         to = line_width if span.eol
-        dcol = from > left ? from : left
-        while dcol <= to && dcol < left + width
-          frame.cell(frame_row, col + dcol - left).hl = Domain::Highlight::VISUAL
-          dcol += 1
-        end
-        return unless span.eol && line_width >= left && line_width < left + width
-        frame.put(frame_row, col + line_width - left, " ", Domain::Highlight::VISUAL)
+        @sel_from = from
+        @sel_to = to
+        @sel_end = span.eol ? line_width : -1
       end
 
-      #: (String, Integer) -> String
-      def shown_text(ch, width)
-        return " " * width if ch == "\t"
-        code = ch.ord
-        return "^" + Domain::Key.char(code + 64) if code < 32
-        return "<" + code.to_s(16) + ">" if Domain::DisplayWidth.control?(code)
-        ch
+      # One text row of a window, every cell written once: the tilde past
+      # the end of the buffer, or the sign column, the number, the text,
+      # and blanks between and after, then the selection.
+      #: (Domain::Frame, Integer, Integer, Integer, Integer, String, Integer, String, bool, Integer, Integer, Integer) -> void
+      def paint_row(frame, frame_row, x, width, gutter, line, number, sign, signs, text_width, left, tabstop)
+        if line.equal?(PaintedRows::TILDE)
+          frame.blank(frame_row, x, x + width)
+          frame.put(frame_row, x, "~", Domain::Highlight::NON_TEXT)
+          return
+        end
+        if gutter > 0
+          frame.blank(frame_row, x, x + gutter)
+          start = x
+          numbers = gutter
+          if signs
+            frame.fill(frame_row, x, x + Domain::Window::SIGN_WIDTH, Domain::Highlight::LINE_NUMBER)
+            shown = sign.length > Domain::Window::SIGN_WIDTH ? sign[0, Domain::Window::SIGN_WIDTH] : sign
+            frame.put(frame_row, x, shown, Domain::Highlight::LINE_NUMBER)
+            start = x + Domain::Window::SIGN_WIDTH
+            numbers = gutter - Domain::Window::SIGN_WIDTH
+          end
+          if number >= 0
+            visible = numbers > width ? width : numbers
+            frame.put_number(frame_row, start, numbers - 1, number, visible, Domain::Highlight::LINE_NUMBER)
+          end
+        end
+        decoded = @cache.fetch(line, tabstop)
+        paint_text(frame, frame_row, x + gutter, decoded, text_width, left)
+        paint_selection(frame, frame_row, x + gutter, text_width, left) if @sel_from <= @sel_to || @sel_end >= 0
+      end
+
+      # Paints the visible part of a decoded line from frame column col
+      # over width cells: characters whose display columns fall inside
+      # [left, left + width), C0 controls as ^X, delete and C1 controls as
+      # <xx>, and blanks everywhere else, tabs included.
+      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer) -> void
+      def paint_text(frame, frame_row, col, decoded, width, left)
+        if decoded.plain
+          paint_plain(frame, frame_row, col, decoded.text, width, left)
+          return
+        end
+        codes = decoded.codes
+        cols = decoded.cols
+        n = codes.length
+        limit = left + width
+        filled = col
+        k = left > 0 ? decoded.index_at(left) : 0
+        while k < n
+          dcol = cols[k]
+          break if dcol >= limit
+          w = cols[k + 1] - dcol
+          code = codes[k]
+          if dcol >= left && dcol + w <= limit && w > 0 && code != 9
+            at = col + dcol - left
+            frame.blank(frame_row, filled, at) if at > filled
+            if code < 32
+              frame.put_code(frame_row, at, 94, 1, Domain::Highlight::NORMAL)
+              frame.put_code(frame_row, at + 1, code + 64, 1, Domain::Highlight::NORMAL)
+            elsif w == 4 && Domain::DisplayWidth.control?(code)
+              frame.put_code(frame_row, at, 60, 1, Domain::Highlight::NORMAL)
+              frame.put_code(frame_row, at + 1, hex_digit(code >> 4), 1, Domain::Highlight::NORMAL)
+              frame.put_code(frame_row, at + 2, hex_digit(code & 15), 1, Domain::Highlight::NORMAL)
+              frame.put_code(frame_row, at + 3, 62, 1, Domain::Highlight::NORMAL)
+            else
+              frame.put_code(frame_row, at, code, w, Domain::Highlight::NORMAL)
+            end
+            filled = at + w
+          end
+          k += 1
+        end
+        frame.blank(frame_row, filled, col + width) if filled < col + width
+      end
+
+      # paint_text for a line of printable ASCII: one cell per byte.
+      #: (Domain::Frame, Integer, Integer, String, Integer, Integer) -> void
+      def paint_plain(frame, frame_row, col, text, width, left)
+        n = text.bytesize
+        k = left
+        stop = left + width
+        stop = n if stop > n
+        at = col
+        while k < stop
+          frame.put_code(frame_row, at, text.getbyte(k).to_i, 1, Domain::Highlight::NORMAL)
+          k += 1
+          at += 1
+        end
+        frame.blank(frame_row, at, col + width) if at < col + width
+      end
+
+      # The code point of a lowercase hexadecimal digit.
+      #: (Integer) -> Integer
+      def hex_digit(value)
+        value < 10 ? 48 + value : 87 + value
+      end
+
+      # Paints the Visual highlight over the selected display columns of a
+      # row that paint_text drew, cell by cell so a tab is covered only
+      # where selected, and the cell after the last character when the line
+      # break is selected.
+      #: (Domain::Frame, Integer, Integer, Integer, Integer) -> void
+      def paint_selection(frame, frame_row, col, width, left)
+        to = @sel_to
+        dcol = @sel_from > left ? @sel_from : left
+        while dcol <= to && dcol < left + width
+          frame.set_hl(frame_row, col + dcol - left, Domain::Highlight::VISUAL)
+          dcol += 1
+        end
+        eol = @sel_end
+        return unless eol >= 0 && eol >= left && eol < left + width
+        frame.put(frame_row, col + eol - left, " ", Domain::Highlight::VISUAL)
       end
 
       # The status line of a window across its width: the path, or the
       # scratch title, and the modified marker at the left, the plugins'
       # segments after them on the current window, the cursor and the
       # position at the right when they fit, in the status highlight for
-      # the current window and the inactive one otherwise.
+      # the current window and the inactive one otherwise. The pieces are
+      # written one after the other and the numbers digit by digit, so a
+      # status line costs no string unless plugins have segments.
       #: (Domain::Frame, Integer, Integer, Integer, Domain::Window, bool, Hash[String, String]) -> void
       def paint_status(frame, frame_row, col, width, window, current, segments)
         hl = current ? Domain::Highlight::STATUS : Domain::Highlight::STATUS_NC
         buffer = window.buffer
         name = buffer.display_name
-        left = name.nil? ? "[No Name]" : name
-        left = left + " [+]" if buffer.modified?
-        left = left + "  " + segments.values.join(" ") if current && !segments.empty?
-        left = left[0, width] if left.length > width
-        cursor = window.cursor
-        right = "#{cursor.row + 1},#{cursor.col + 1} #{position_text(window)}"
-        frame.fill(frame_row, col, col + width, hl)
-        frame.put(frame_row, col, left, hl)
-        start = width - right.length
-        frame.put(frame_row, col + start, right, hl) if start >= left.length + 1
+        limit = col + width
+        frame.fill(frame_row, col, limit, hl)
+        shown = name.nil? ? "[No Name]" : name
+        left = shown.length
+        at = frame.put_within(frame_row, col, shown, hl, limit)
+        if buffer.modified?
+          at = frame.put_within(frame_row, at, " [+]", hl, limit)
+          left += 4
+        end
+        if current && !segments.empty?
+          joined = segments.values.join(" ")
+          at = frame.put_within(frame_row, at, "  ", hl, limit)
+          frame.put_within(frame_row, at, joined, hl, limit)
+          left += 2 + joined.length
+        end
+        left = width if left > width
+        paint_ruler(frame, frame_row, col, width, window, left, hl)
       end
 
-      #: (Domain::Window) -> String
-      def position_text(window)
+      # The cursor as row,col and the position, All, Top, Bot, or a
+      # percentage, at the right of a status line when they leave a blank
+      # after the left part.
+      #: (Domain::Frame, Integer, Integer, Integer, Domain::Window, Integer, Integer) -> void
+      def paint_ruler(frame, frame_row, col, width, window, left, hl)
+        cursor = window.cursor
+        row = cursor.row + 1
+        column = cursor.col + 1
         count = window.buffer.line_count
         top = window.top
         height = window.height
-        return "All" if count <= height
-        return "Top" if top == 0
-        return "Bot" if top + height >= count
-        "#{top * 100 / (count - height)}%"
+        word = ""
+        percent = -1
+        if count <= height
+          word = "All"
+        elsif top == 0
+          word = "Top"
+        elsif top + height >= count
+          word = "Bot"
+        else
+          percent = top * 100 / (count - height)
+        end
+        length = Domain::Frame.digits(row) + Domain::Frame.digits(column) + 2 + (percent >= 0 ? Domain::Frame.digits(percent) + 1 : word.length)
+        start = width - length
+        return unless start >= left + 1
+        at = frame.put_digits(frame_row, col + start, row, hl)
+        at = frame.put(frame_row, at, ",", hl)
+        at = frame.put_digits(frame_row, at, column, hl)
+        at = frame.put(frame_row, at, " ", hl)
+        if percent >= 0
+          at = frame.put_digits(frame_row, at, percent, hl)
+          frame.put(frame_row, at, "%", hl)
+        else
+          frame.put(frame_row, at, word, hl)
+        end
       end
 
       # A separator column after every child of a row but the last, over
@@ -350,7 +623,8 @@ module Carat
       #: (Domain::Frame, Integer, Integer, Domain::EditorState) -> void
       def paint_message(frame, frame_row, cols, state)
         if state.mode == Domain::Mode::CMDLINE
-          frame.put(frame_row, 0, command_prefix(state) + state.cmdline, Domain::Highlight::NORMAL)
+          col = frame.put(frame_row, 0, command_prefix(state), Domain::Highlight::NORMAL)
+          frame.put(frame_row, col, state.cmdline, Domain::Highlight::NORMAL)
           return
         end
         if !state.message.empty?

@@ -1,0 +1,28 @@
+ok   three flat arrays of rows * cols cells
+ok   a fresh cell is a blank
+ok   every row of a fresh frame is dirty
+ok   a fresh frame has no base and no scroll
+ok   cells are indexed row * cols + col
+ok   put returns the column after the text
+ok   a wide character takes a cell and a continuation cell
+ok   row_text joins the characters and skips continuations
+ok   a wide character that would cross the right edge is not written
+ok   the row keeps what fit
+ok   put stores one cell per control code point
+ok   a C1 control is stored as U+FFFD
+ok   C0 controls and delete are stored as U+FFFD
+ok   a combining mark takes no cell
+ok   a number right-aligned in its field and a space
+ok   the whole gutter takes the highlight
+ok   a number wider than its field keeps every digit
+ok   only the visible cells of a cut gutter are written
+ok   fill sets the highlight of a span of cells
+ok   blank stops at the right edge
+ok   rows are compared cell by cell, from any row of another frame
+ok   a different highlight is a different row
+ok   a frame of another width never has the same row
+ok   a paint starts with every row clean
+ok   a scroll is three integers
+ok   marking every row dirty drops the scrolls
+ok   a frame of another size has arrays of its size
+domain_frame: 27 passed, 0 failed

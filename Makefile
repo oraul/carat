@@ -20,6 +20,9 @@ SPINEL_REPO ?= matz/spinel
 SPINEL_REF  ?= 001419ff1af7f77aaf8862ff248afef66047dd41
 PREFIX      ?= $(CURDIR)/tmp/.toolchain
 FILE       ?= README.md
+# The most objects one key of the cursor scenario of the benchmark may
+# allocate; make bench-budget fails at this number or above.
+ALLOC_BUDGET ?= 100
 OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y @fission-ai/openspec@latest
 
 # The installed toolchain comes first on the PATH of every recipe, so after
@@ -140,6 +143,24 @@ diagnose:
 	done; \
 	exit $$status
 
+## bench: build the key benchmark bench/keys.rb into build/bench and run its scenarios (all, or SCENARIOS="lh j"): time per key for handling and rendering, the slowest key, bytes written, the collector's share, and allocations per key, pinned to one core when taskset exists
+bench:
+	@mkdir -p build/bench
+	spinel $$(spin flags) bench/keys.rb -o build/bench/keys
+	sh bench/run.sh $(SCENARIOS)
+
+## bench-budget: build the key benchmark and fail when one key of the cursor scenario (lh) allocates ALLOC_BUDGET objects or more (default 100); CI runs it
+bench-budget:
+	@mkdir -p build/bench
+	spinel $$(spin flags) bench/keys.rb -o build/bench/keys
+	sh bench/run.sh --budget lh $(ALLOC_BUDGET)
+
+## profile: build the key benchmark with spinel --profile into build/profile and, when perf works (or PERF names one that does), record the j and lh scenarios and print the top functions by self time with their Ruby names
+profile:
+	@mkdir -p build/profile
+	spinel $$(spin flags) bench/keys.rb --profile -o build/profile/keys
+	sh bench/profile.sh build/profile/keys
+
 ## types: print the signatures Spinel inferred for the editor, marking where inference widened to untyped
 types:
 	@mkdir -p build
@@ -176,4 +197,4 @@ help:
 	@echo
 	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)"
 
-.PHONY: toolchain toolchain-clean spinel-rev doctor build run install pack clean test lint snapshots diagnose types gen-config check spec-list spec-validate spec-update help
+.PHONY: toolchain toolchain-clean spinel-rev doctor build run install pack clean test lint snapshots diagnose bench bench-budget profile types gen-config check spec-list spec-validate spec-update help

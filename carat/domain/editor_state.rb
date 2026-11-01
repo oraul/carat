@@ -10,12 +10,13 @@ module Carat
     # list, through which the current tab page, window, buffer, cursor, and
     # visual selection are reached, the mode, the options, the command
     # line, the message, the quit flag, and the repetition a blockwise
-    # insert owes when insert mode is left. The rest of the editor's state
+    # insert owes when insert mode is left, and the size of the screen
+    # in rows and columns, 0 before the first render. The rest of the editor's state
     # lives in focused records the composition root hands to the use cases
     # that need them: the buffer list, the input state, the registers, the
     # last find, and the plugins' segments and prompt. A Struct record:
     # mutable, with a reader and a writer per member.
-    class EditorState < Struct.new(:tabs, :mode, :options, :cmdline, :message, :message_error, :quit, :block_insert)
+    class EditorState < Struct.new(:tabs, :mode, :options, :cmdline, :message, :message_error, :quit, :block_insert, :screen_rows, :screen_cols)
       # @rbs @tabs: TabList
       # @rbs @mode: Symbol
       # @rbs @options: Options
@@ -24,6 +25,8 @@ module Carat
       # @rbs @message_error: bool
       # @rbs @quit: bool
       # @rbs @block_insert: BlockInsert
+      # @rbs @screen_rows: Integer
+      # @rbs @screen_cols: Integer
 
       #: (TabList, Options) -> void
       def initialize(tabs, options)
@@ -36,6 +39,15 @@ module Carat
         self.message_error = false
         self.quit = false
         self.block_insert = BlockInsert.new
+        self.screen_rows = 0
+        self.screen_cols = 0
+      end
+
+      # Records the size of the screen.
+      #: (Integer, Integer) -> void
+      def resize(rows, cols)
+        self.screen_rows = rows
+        self.screen_cols = cols
       end
 
       # ------------------------------------------------------- current view

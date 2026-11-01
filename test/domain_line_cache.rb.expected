@@ -1,0 +1,36 @@
+ok   ASCII
+ok   an accented letter is one code point
+ok   a wide character takes two columns
+ok   a tab reaches the next tabstop
+ok   a C0 control takes two columns as ^X
+ok   delete and C1 controls take four as <xx>
+ok   a four-byte character
+ok   an empty line
+ok   a line of printable ASCII is plain, a tab or a UTF-8 character is not
+ok   a plain line keeps no arrays
+ok   a plain line's columns are its indexes
+ok   a malformed byte is one code point, U+FFFD
+ok   the code points of a line
+ok   a long UTF-8 line has a column per code point
+ok   DisplayWidth.column agrees with the decoded columns
+ok   col_at on a long UTF-8 line
+ok   index_at finds the code point whose cells cover a column
+ok   col gives the start column, the width past the end
+ok   the same line object is a hit
+ok   an equal line that is another object is decoded on its own
+ok   another tabstop decodes the line again
+ok   a line fetched before a turn is kept one generation
+ok   a line fetched in every generation stays
+ok   a line not fetched for two turns is evicted
+ok   and so is every other line that left the view
+ok   an edit replaces the line string
+ok   and leaves the old string unchanged
+ok   the edited line is decoded again
+ok   the old string still finds its own entry
+ok   an untouched row is still a hit
+ok   a table grown past its capacity finds every line
+ok   code classes of a blank, an accented letter, punctuation, and underscore
+ok   every non-blank is one class for WORDs
+ok   first_nonblank by bytes before UTF-8 text and on a blank line
+ok   indent_of by bytes
+domain_line_cache: 35 passed, 0 failed

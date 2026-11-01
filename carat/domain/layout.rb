@@ -38,6 +38,14 @@ module Carat
         window.nil? ? Window.new(Buffer.from_text("", nil)) : window
       end
 
+      # The number of slots of the node table, free ones included; a walk
+      # over 0 to node_count asks node(id).leaf? to visit every window
+      # without building the list of leaves.
+      #: () -> Integer
+      def node_count
+        nodes.length
+      end
+
       # The leaf ids in layout order: top to bottom and left to right.
       #: () -> Array[Integer]
       def leaves

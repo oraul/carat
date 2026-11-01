@@ -196,10 +196,24 @@ module Carat
         @queue << PendingEvent.new(event, notice.cause)
       end
 
+      # Queues an event of the editor's own unless no enabled plugin
+      # subscribes to it, so a key builds no event nobody would receive.
       #: (String, Domain::Buffer, Integer, Integer, String, String) -> void
       def queue(name, buffer, row, col, detail, cause)
+        return unless wanted?(name)
         event = PluginApi::Event.new(name, buffer.id, @state.window.id, buffer.path_text.dup, row, col, detail, 0, 0)
         @queue << PendingEvent.new(event, cause)
+      end
+
+      #: (String) -> bool
+      def wanted?(name)
+        i = 0
+        while i < @registry.count
+          e = @registry.entry(i)
+          return true if e.enabled && e.subscribed?(name)
+          i += 1
+        end
+        false
       end
 
       # Delivers one event to every enabled subscriber but its cause, in
