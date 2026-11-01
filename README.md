@@ -6,15 +6,16 @@ Today it is an editor with split windows, tab pages, a plugin host, and a file t
 
 ## Building
 
-The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpreter is needed, not even to build the compiler.
+The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpreter is needed, not even to build the compiler, and none is ever used: every `make` target puts `tools/noruby` first on its `PATH`, whose `ruby` refuses to run, so a CRuby installed on the machine is never reached.
 
 1. `make toolchain` fetches the pinned Spinel commit into `tmp/.spinel`, builds it, and installs `spinel`, `spin`, and `spinel-doctor` under `tmp/.toolchain`. Both directories are ignored by git, every `make` target finds the toolchain there on its own, and `make toolchain-clean` removes them.
 2. `make build` compiles the editor to `build/bin/carat` and prints the alias line to add to your shell profile to run it from anywhere; `make install` puts it on the `PATH` instead.
-3. `make check` builds, regenerates the config mirror, and runs the tests and `spinel-doctor`; run it before every push.
+3. `make check` builds, regenerates the config mirror, and runs the tests, `spinel-doctor`, and the `make no-cruby` proof; run it before every push. Run tests, snapshots, and benchmarks only through `make`, never with `spin test` directly: for a test program without a snapshot, `spin test` compares against the `ruby` on your `PATH`.
 
 | Command | What it does |
 | --- | --- |
-| `make doctor` | Check that `spinel`, `spin`, a C compiler, and `node` are on the path |
+| `make doctor` | Check that `spinel`, `spin`, a C compiler, and `node` are on the path, and that the `ruby` every target reaches is the refusing stub |
+| `make no-cruby` | Prove that a test program without a snapshot fails instead of being compared against a CRuby |
 | `make toolchain` | Fetch, build without Ruby, and install the pinned Spinel commit under `tmp/` |
 | `make toolchain-clean` | Remove `tmp/`, the Spinel checkout and the installed toolchain |
 | `make build` | Compile `bin/*.rb` into `build/bin` and print how to run it from anywhere |
@@ -28,7 +29,7 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make profile` | Build the benchmark with `spinel --profile` and print the top functions with `perf` when it works |
 | `make snapshots` | Rebuild the test programs and rewrite their snapshots |
 | `make gen-config` | Regenerate the default config mirror and the plugin registry |
-| `make check` | Build, gen-config, test, and diagnose |
+| `make check` | Build, gen-config, test, diagnose, and no-cruby |
 | `make spec-list`, `make spec-validate`, `make spec-update` | The OpenSpec commands |
 
 ## File tree
