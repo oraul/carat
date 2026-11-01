@@ -17,7 +17,7 @@ set -eu
 BIN=${BENCH_BIN:-build/bench/keys}
 SMALL=${BENCH_SMALL:-200}
 LARGE=${BENCH_LARGE:-1200}
-REPORT=${TMPDIR:-/tmp}/carat-bench-alloc.$$
+REPORT=$(mktemp "${TMPDIR:-/tmp}/carat-bench-alloc.XXXXXX")
 
 pin() {
   if command -v taskset >/dev/null 2>&1; then

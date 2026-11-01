@@ -83,3 +83,32 @@ With rendering at about nine objects per key, key handling allocates most of wha
 ## Migration Plan
 
 None: no data, configuration, or plugin API change. Rolling back is reverting the squash commit.
+
+## Measured result
+
+`make bench` scenarios at 200 by 60 on 10,000 lines (500 lines with one 10,000-character line for the last two rows), built from 0978d16 and from this change, run interleaved seven times each pinned to one core of an otherwise idle machine; medians, and for the slowest key the median of each run's slowest key and the slowest of all runs. Allocations per key come from `bench/run.sh` (two `SPINEL_ALLOC_REPORT` runs of 200 and 1,200 keys).
+
+| Measure | 0978d16 | This change | Target | Met |
+| --- | --- | --- | --- | --- |
+| Time per key, `l h` | 885.6 us | 13.0 us | under 150 us | yes |
+| Time per key, `j` (scrolling) | 923.9 us | 65.3 us | under 150 us | yes |
+| Time per key, typing (`x<BS>`) | 962.4 us | 14.5 us | under 150 us | yes |
+| Allocations per key, `l h` | 8,063 | 26 | under 100 | yes |
+| Allocations per key, `j` | 8,277 | 27 | under 100 | yes |
+| Allocations per key, typing | 8,205 | 32.5 | none set | |
+| Bytes written per `j` | 13,028 | 145 | under 500 | yes |
+| Collector share, `l h` | 5.95% | 1.97% | under 3% | yes |
+| Collector share, `j` | 6.98% | 0.73% | under 3% | yes |
+| Collector share, typing | 8.50% | 3.43% | under 3% | no |
+| Slowest key, `l h` (median / max) | 12.6 / 15.9 ms | 0.68 / 2.29 ms | under 2 ms | no |
+| Slowest key, `j` (median / max) | 12.7 / 15.7 ms | 1.67 / 2.35 ms | under 2 ms | no |
+| Slowest key, typing (median / max) | 12.9 / 13.6 ms | 1.46 / 11.97 ms | under 2 ms | no |
+| 10,000-character line, ASCII | 1,397 us | 14.8 us | | |
+| 10,000-character line, UTF-8 | 20,346 us | 13.3 us | within 2x of ASCII | yes (0.9x) |
+
+Two targets are missed, both inside Spinel's runtime rather than in the work a key does.
+
+- The collector's share while typing. A key now takes about 14 us, so each collection weighs more: Spinel collects about six times per 10,000 typed keys whatever this change trimmed (from 9 down to 6 by the allocation work above, then flat), at 0.5 to 0.8 ms each, most of it marking a live set of 10 to 16 MB that includes the 10,000-line buffer; six collections in 140 ms of typing is 3.4 percent. Rendering allocates about nine objects a key; the remaining two dozen are key handling (the decoder's byte slices, the command, the motion, a position, the transaction and its change record, the keymap match). Closing the gap needs fewer objects per key in key handling, or a smaller set to mark (a chunked line store, in the backlog), or a collector that marks incrementally.
+- The slowest key. The spikes of 8 to 12 ms carry no collector time: Spinel returns free slab chunks to the system at the end of a full cycle and maps fresh ones as transparent huge pages (`MADV_HUGEPAGE`), and on a host whose huge page defragmentation is `madvise` the first touch stalls for compaction. With `SPINEL_SLAB_HUGE=0` the typing scenario's slowest keys fall to 1.2 to 2.0 ms and `l h`'s to 0.6 to 1.5 ms, leaving full collections of 1.2 to 2 ms and a rare outlier (one `j` run at 6.1 ms in five). Closing it needs the runtime to keep released chunks or skip huge pages for small heaps, which is a Spinel change, or fewer full collections from fewer allocations per key.
+
+Measured on the same binaries: `make types` reports no member of the new records widened (the 34 new widened lines are void methods and compiler helpers); the frame and screen presenters together allocate about nine objects per key.
