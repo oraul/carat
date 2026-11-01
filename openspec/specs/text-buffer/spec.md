@@ -88,7 +88,7 @@ The buffer SHALL replace the lines from a start row up to an exclusive end row w
 - **THEN** the lines are [""] and the buffer is modified
 
 ### Requirement: Modified flag follows edits and saves
-A buffer SHALL be modified exactly when an edit changed its text since it was loaded, reloaded, or saved. Every primitive except reload SHALL count one change; changing the text back by another edit SHALL leave the buffer modified.
+A buffer SHALL be modified exactly when an edit changed its text since it was loaded, reloaded, or saved. Every primitive except reload SHALL count one change; changing the text back by another edit SHALL leave the buffer modified. Undo or redo that returns the text to the state it was in when it was last loaded, reloaded, or saved SHALL leave the buffer unmodified, and undo or redo away from that state SHALL make it modified again.
 
 #### Scenario: Load, edit, save
 - **WHEN** a buffer is loaded, then text is inserted, then it is marked saved
@@ -101,6 +101,14 @@ A buffer SHALL be modified exactly when an edit changed its text since it was lo
 #### Scenario: Write then edit
 - **WHEN** "x" is pressed in a buffer, ":w" is run, and "x" is pressed again
 - **THEN** the buffer is unmodified after the write and modified after the second "x"
+
+#### Scenario: Undo back to the write
+- **WHEN** "x" is pressed in a buffer, ":w" is run, "x" is pressed again, and then "u"
+- **THEN** the buffer is unmodified after "u" and modified again after "<C-r>"
+
+#### Scenario: Undo to the loaded text
+- **WHEN** "x" is pressed in a freshly opened buffer and then "u"
+- **THEN** the buffer is unmodified
 
 ### Requirement: Reload primitive
 The buffer SHALL replace all of its lines with a given list of lines in one step, keeping at least one line, counting it as one change, and leaving the buffer unmodified.

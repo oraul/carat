@@ -40,10 +40,10 @@
 
 ## 8. Benchmarks
 
-- [ ] 8.1 Add the `undo`, `undo-line`, `dot-r`, `r`, `dot-dd`, `dd`, `dot-ciw`, `ciw`, and memory scenarios (`bench/keys.rb`, `bench/run.sh`); run `make bench` against the baseline, interleaved and pinned, and record the results in design.md
+- [x] 8.1 Add the `undo`, `undo-line`, `dot-r`, `r`, `dot-dd`, `dd`, `dot-ciw`, `ciw`, and memory scenarios (`bench/keys.rb`, `bench/run.sh`); run `make bench` against the baseline, interleaved and pinned, and record the results in design.md
 
 ## 9. Docs and checks
 
 - [x] 9.1 Add every implemented Neovim command to `docs/compatibility.md` and every new action to `docs/actions.md`; record the deferred `:earlier` and `:later` suffixes and `"/` in `docs/backlog.md`
 - [x] 9.2 Update `docs/architecture.md` and `CLAUDE.md` (Status: roadmap item 4 done, Layout, Commands if any)
-- [ ] 9.3 Regenerate snapshots with `make snapshots`, review the diff, and run `make check` (build, gen-config, test, diagnose) and `make types` for the tree's members
+- [x] 9.3 Regenerate snapshots with `make snapshots`, review the diff, and run `make check` (build, gen-config, test, diagnose) and `make types` for the tree's members
