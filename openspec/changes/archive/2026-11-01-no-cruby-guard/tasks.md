@@ -21,8 +21,8 @@
 
 ## 5. Integration
 
-- [ ] 5.1 Run `make doctor` and `make check` with `/usr/local/bin/ruby` present and confirm both pass and that the stub, not CRuby, is what `spin` reached.
-- [ ] 5.2 Confirm `make toolchain` still builds with the stub first on the `PATH` by building into a scratch `SPINEL_SRC` and `PREFIX` outside the repository, so the installed toolchain is not disturbed.
+- [x] 5.1 Run `make doctor` and `make check` with `/usr/local/bin/ruby` present and confirm both pass and that the stub, not CRuby, is what `spin` reached.
+- [x] 5.2 Confirm `make toolchain` still builds with the stub first on the `PATH` by building into a scratch `SPINEL_SRC` and `PREFIX` outside the repository, so the installed toolchain is not disturbed.
 
 ## Workflow follow-up
 
