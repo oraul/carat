@@ -23,6 +23,9 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make lint` | Run the lint test program only |
 | `make types` | Print the signatures Spinel inferred |
 | `make diagnose` | Run `spinel-doctor` on every compile root |
+| `make bench` | Build and run the key benchmark: time, bytes written, collector share, and allocations per key |
+| `make bench-budget` | Fail when a key of the cursor scenario allocates 100 objects or more; CI runs it |
+| `make profile` | Build the benchmark with `spinel --profile` and print the top functions with `perf` when it works |
 | `make snapshots` | Rebuild the test programs and rewrite their snapshots |
 | `make gen-config` | Regenerate the default config mirror and the plugin registry |
 | `make check` | Build, gen-config, test, and diagnose |
