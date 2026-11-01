@@ -27,7 +27,7 @@
 
 ## 5. Verification
 
-- [ ] 5.1 Run `make check` and `make types` (no member of the new records widens), and the key benchmark against `main` for `keys lh 2000 10000`, `keys i 2000 10000`, and `keys dd 2000 100000`, pinned to one core with interleaved runs, recording the result in the design; verify key handling stays within 10 percent
+- [x] 5.1 Run `make check` and `make types` (no member of the new records widens), and the key benchmark against `main` for `keys lh 2000 10000`, `keys i 2000 10000`, and `keys dd 2000 100000`, pinned to one core with interleaved runs, recording the result in the design; verify key handling stays within 10 percent
 
 ## Workflow follow-up
 

@@ -91,3 +91,17 @@ The 18 pending files take required keyword arguments: `InputController`, `Screen
 ## Migration Plan
 
 None: no data, configuration, or plugin API change. Rolling back is reverting the squash commit.
+
+## Measured result
+
+Key handling per key (the `handle` column of the scratch key benchmark, which excludes rendering), built from scratch copies of `main` at 7cc05e0 and of this change, run alternately 15 times each pinned to one core on an otherwise idle machine:
+
+| Keys | `main` median (min) | This change median (min) | Change of the median |
+| --- | --- | --- | --- |
+| `keys lh 2000 10000` (cursor only) | 19.1 us (16.7 us) | 19.9 us (16.9 us) | +4.2 percent |
+| `keys i 2000 10000` (typing in the middle of a line), first batch | 19.8 us (15.2 us) | 23.5 us (15.9 us) | +18.7 percent |
+| `keys i 2000 10000`, second batch | 20.7 us (17.6 us) | 17.1 us (13.7 us) | -17.4 percent |
+| `keys i 2000 10000`, both batches (30 runs each) | 20.6 us (15.2 us) | 18.2 us (13.7 us) | -11.2 percent |
+| `keys dd 2000 100000` (`ddP` on 100,000 lines) | 35.3 us (32.6 us) | 36.5 us (33.9 us) | +3.4 percent |
+
+The typing case swings by up to 19 percent in either direction between batches of the same two binaries, so it was examined under callgrind (`keys i 300 10000`): both binaries make the same allocations (960,540 and 960,541) and the same 70 garbage collections, and execute 3,299 and 3,313 million instructions in all (+0.4 percent). The handle column moves because Spinel charges a collection to the allocation that triggers it: in one binary more collections are triggered by the `Mode.name_of` string in `Keymap#root` during key handling, in the other by the render that follows, which the column does not count. Total time per key, handling and rendering, differed by +2.9 percent in the second batch. Key handling therefore stays within the 10 percent the change allows. `make types` reports 253 widened signatures against 260 on `main`; every member of the new records is pinned (the arrays are `Array[untyped]` behind typed readers by design), and the doubles' signatures are gone from the binary.
