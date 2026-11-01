@@ -11,6 +11,7 @@ require_relative "../domain/plugin_ui"
 require_relative "../domain/registers"
 require_relative "../domain/keymap"
 require_relative "../domain/options"
+require_relative "../domain/line_cache"
 require_relative "../use_cases/outcome"
 require_relative "../use_cases/concerns/reporting"
 require_relative "../use_cases/move"
@@ -57,6 +58,7 @@ require_relative "../use_cases/actions/message_handler"
 require_relative "../use_cases/actions/plugin_action_handler"
 require_relative "../use_cases/dispatcher"
 require_relative "../use_cases/handle_key"
+require_relative "../use_cases/arrange_view"
 require_relative "key_decoder"
 require_relative "input_controller"
 require_relative "frame_presenter"
@@ -96,6 +98,8 @@ module Carat
       attr_reader :last_find #: Domain::LastFind
       attr_reader :input #: Domain::InputState
       attr_reader :plugin_ui #: Domain::PluginUi
+      attr_reader :cache #: Domain::LineCache
+      attr_reader :arrange_view #: UseCases::ArrangeView
       attr_reader :actions #: UseCases::ActionTable
       attr_reader :commands #: UseCases::ExTable
       attr_reader :runner #: UseCases::CommandRunner
@@ -136,6 +140,8 @@ module Carat
         @last_find = Domain::LastFind.new
         @input = Domain::InputState.new
         @plugin_ui = Domain::PluginUi.new
+        @cache = Domain::LineCache.new
+        @arrange_view = UseCases::ArrangeView.new(cache: @cache)
         @actions = UseCases::ActionTable.new
         @commands = UseCases::ExTable.new
         @runner = UseCases::ExecuteEx.new(commands: @commands)
@@ -198,32 +204,38 @@ module Carat
         end
 
         dispatcher = UseCases::Dispatcher.new(actions: @actions)
-        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: dispatcher, insert_text: insert_text, command_line: @command_line, plugins: @plugins)
+        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: dispatcher, insert_text: insert_text, command_line: @command_line, plugins: @plugins, arrange_view: @arrange_view)
         @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key)
-        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui)
+        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache)
         @screen_presenter = ScreenPresenter.new(terminal: terminal)
       end
 
       # Opens the file to edit, shows its message, lets the plugins see the
-      # buffer open, and then shows the first configuration problem, if
-      # there is one, with the count of the others.
+      # buffer open, lays out the windows, and then shows the first
+      # configuration problem, if there is one, with the count of the
+      # others.
       #: (String) -> void
       def open(path)
         report(@state, @open_file.call(@state, path))
         @plugins.observe
+        @arrange_view.call(@state)
         return if @config_errors.empty?
         more = @config_errors.length - 1
         first = @config_errors[0]
         report(@state, UseCases::Outcome.failure(more > 0 ? "#{first} (and #{more} more)" : first))
       end
 
-      # Renders the state at the given size and writes it to the terminal,
-      # telling the plugins first when the size changed so what they do
-      # about it is in this frame.
+      # Renders the state at the given size and writes it to the terminal:
+      # the size goes into the state, the plugins hear of a change first so
+      # what they do about it is in this frame, ArrangeView lays the
+      # windows out (so a state changed outside a key is arranged too), and
+      # the frame presenter draws what the state holds.
       #: (Integer, Integer) -> Domain::Frame
       def render(rows, cols)
+        @state.resize(rows, cols)
         @plugins.resized(rows, cols)
-        frame = @frame_presenter.call(@state, rows, cols)
+        @arrange_view.call(@state)
+        frame = @frame_presenter.call(@state)
         @screen_presenter.present(frame)
         frame
       end

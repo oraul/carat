@@ -3,7 +3,7 @@ ok   enter switches to the alternate screen and clears it
 ok   first frame clears the screen
 ok   first frame writes row 1 with the normal highlight
 ok   line number highlight is emitted before the text
-ok   first frame writes every row
+ok   first frame skips a blank row, which the clear already drew
 ok   cursor position, block shape, and cursor shown last
 ok   cursor hidden while drawing
 ok   identical frame writes no cell text
@@ -28,4 +28,31 @@ ok   tab line labels are reverse video
 ok   the selected label is bold
 ok   the tab line fill is reverse video
 ok   the selection is reverse video
-adapters_screen_presenter: 30 passed, 0 failed
+ok   only the changed part of a row is written, from its column
+ok   the unchanged part of the row is not written
+ok   a later frame does not clear the screen
+ok   two changed cells a few cells apart are written as one run
+ok   the same frame presented again writes only the cursor
+ok   a wide character replaced by two narrow ones is rewritten from its first cell
+ok   a wide character replacing a narrow one is written from its column
+ok   a frame drawn after the presented one is written incrementally
+ok   a cursor move writes no line text
+ok   after a frame that was not presented the next one is drawn in full
+ok   and every row is written
+ok   a cursor move inside the window sends no scroll region
+ok   scrolling down a line sets the region over the text rows, scrolls it up by one, and resets it
+ok   the line that came into view at the bottom is written
+ok   the lines that moved are not written again
+ok   moving up inside the window sends no scroll region
+ok   scrolling up a line scrolls the region down by one
+ok   the line that came into view at the top is written
+ok   the lines that moved down are not written again
+ok   the first frame after a resize is written in full
+ok   and sends no scroll region though the window scrolled
+ok   a window beside another scrolls by rows, without a region
+ok   and writes the rows that changed
+ok   j at the bottom scrolls the window with a region
+ok   and writes fewer than 500 bytes
+ok   l writes no buffer text
+ok   l writes only the changed cell of the ruler
+adapters_screen_presenter: 57 passed, 0 failed

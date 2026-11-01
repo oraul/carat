@@ -14,14 +14,35 @@ module Carat
         super(nil, {}, "")
       end
 
+      # The decimal strings of the ASCII key codes.
+      #: () -> Array[String]
+      def self.ascii_names
+        names = []
+        code = 0
+        while code < 128
+          names << code.to_s
+          code += 1
+        end
+        names
+      end
+
+      # Made once, so looking up a typed ASCII key builds no string.
+      ASCII_NAMES = ascii_names
+
+      # The key a child is stored under: the decimal string of the code.
+      #: (Integer) -> String
+      def self.key_of(code)
+        code >= 0 && code < 128 ? ASCII_NAMES[code] : code.to_s
+      end
+
       #: (Integer) -> bool
       def child?(code)
-        children.key?(code.to_s)
+        children.key?(KeymapNode.key_of(code))
       end
 
       #: (Integer) -> KeymapNode
       def child_for(code)
-        key = code.to_s
+        key = KeymapNode.key_of(code)
         existing = children[key]
         return existing unless existing.nil?
         node = KeymapNode.new

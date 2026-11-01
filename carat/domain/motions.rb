@@ -114,6 +114,17 @@ module Carat
         ch.match?(/\A[A-Za-z0-9_]\z/) || ch.ord >= 0xC0
       end
 
+      # char_class for a code point: 0 for a space or a tab, then 1, or 2
+      # for ASCII letters, digits, underscore, and U+00C0 upward.
+      #: (Integer, bool) -> Integer
+      def self.code_class(code, big)
+        return 0 if code == 32 || code == 9
+        return 1 if big
+        return 2 if code >= 0xC0 || code == 95
+        return 2 if (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
+        1
+      end
+
       #: (String, bool) -> Integer
       def self.char_class(ch, big)
         return 0 if blank?(ch)

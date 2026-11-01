@@ -64,6 +64,8 @@ t.assert_equal([], strangers(a.split_window, [["window_requests", host.window_re
 t.assert_equal([], strangers(a.open_tab, [["window_requests", host.window_requests.open_tab]]), "the open tab use case")
 t.assert_equal([], strangers(host.file_ops, [["file_requests", host.file_requests.file_ops], ["ui_requests", host.ui_requests.file_ops], ["window_requests", host.window_requests.file_ops]]), "the file operations")
 t.assert_equal([], strangers(a.handle_key, [["controller", a.controller.handle_key]]), "the key handler")
+t.assert_equal([], strangers(a.cache, [["arrange_view", a.arrange_view.cache], ["frame_presenter", a.frame_presenter.cache]]), "the line cache")
+t.assert_equal([], strangers(a.arrange_view, [["handle_key", a.handle_key.arrange_view]]), "the arrange view use case")
 
 # Each port is one instance too.
 t.assert_equal([], strangers(h.terminal, [["assembly", a.terminal], ["controller", a.controller.terminal], ["screen_presenter", a.screen_presenter.terminal]]), "the terminal port")

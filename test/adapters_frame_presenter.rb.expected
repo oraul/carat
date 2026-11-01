@@ -60,9 +60,10 @@ ok   a frame written to directly holds no control code point
 ok   frame has 24 rows
 ok   frame has 10 rows after shrinking
 ok   status line moved to row 8
-ok   a render of the same size reuses the frame
-ok   a render of the same size reuses the cells
+ok   the next render paints the other frame
+ok   the render after that repaints the first frame again
 ok   the reused frame shows the new text
+ok   the other frame still shows what it showed
 ok   the top window shows the lines
 ok   row 3 is the top window's status line
 ok   the bottom window shows the same lines
@@ -134,4 +135,4 @@ ok   normal mode draws no selection
 ok   the current window, at the bottom, draws its selection
 ok   the other window on the same buffer draws none
 ok   on any row
-adapters_frame_presenter: 136 passed, 0 failed
+adapters_frame_presenter: 137 passed, 0 failed

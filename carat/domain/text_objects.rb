@@ -1,3 +1,4 @@
+require_relative "utf8"
 require_relative "position"
 require_relative "range"
 require_relative "buffer"
@@ -68,11 +69,12 @@ module Carat
       #: (String, bool) -> Runs
       def self.runs(line, big)
         result = Runs.new
+        codes = Utf8.codes(line)
         i = 0
-        while i < line.length
-          cls = Motions.char_class(line[i, 1], big)
+        while i < codes.length
+          cls = Motions.code_class(codes[i], big)
           j = i + 1
-          j += 1 while j < line.length && Motions.char_class(line[j, 1], big) == cls
+          j += 1 while j < codes.length && Motions.code_class(codes[j], big) == cls
           result.add(i, j, cls)
           i = j
         end

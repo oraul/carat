@@ -264,8 +264,7 @@ module Carat
       #: (Integer) -> Integer
       def first_nonblank(row)
         text = line(row)
-        i = 0
-        i += 1 while i < text.length && (text[i, 1] == " " || text[i, 1] == "\t")
+        i = blanks(text)
         i >= text.length ? (text.length > 0 ? text.length - 1 : 0) : i
       end
 
@@ -273,9 +272,22 @@ module Carat
       #: (Integer) -> String
       def indent_of(row)
         text = line(row)
+        text[0, blanks(text)]
+      end
+
+      # The number of spaces and tabs text starts with, counted by bytes,
+      # which is exact because both are one byte and every character
+      # before them is one of them.
+      #: (String) -> Integer
+      def blanks(text)
+        bytes = text.bytesize
         i = 0
-        i += 1 while i < text.length && (text[i, 1] == " " || text[i, 1] == "\t")
-        text[0, i]
+        while i < bytes
+          b = text.getbyte(i).to_i
+          break unless b == 32 || b == 9
+          i += 1
+        end
+        i
       end
 
       # Inserts text at pos; newlines in text split the line.
@@ -284,6 +296,15 @@ module Carat
         return if text.empty?
         current = line(pos.row)
         col = clamp_col(current, pos.col)
+        unless text.include?("\n")
+          # One new string, a copy of the line with the text in it, rather
+          # than a head, a tail, and their join: typing makes one string a
+          # key. The stored line itself is never changed.
+          fresh = current.dup
+          fresh.insert(col, text)
+          splice(pos.row, pos.row + 1, [fresh])
+          return
+        end
         splice(pos.row, pos.row + 1, joined(current[0, col], text, tail_of(current, col)))
       end
 
@@ -296,8 +317,17 @@ module Carat
         to = r.to
         first = line(from.row)
         last = line(to.row)
-        head = first[0, clamp_col(first, from.col)]
-        tail = tail_of(last, clamp_col(last, to.col))
+        start = clamp_col(first, from.col)
+        stop = clamp_col(last, to.col)
+        if from.row == to.row && start < stop
+          # A copy of the line with the characters taken out, one string.
+          fresh = first.dup
+          fresh[start, stop - start] = ""
+          splice(from.row, to.row + 1, [fresh])
+          return
+        end
+        head = first[0, start]
+        tail = tail_of(last, stop)
         splice(from.row, to.row + 1, [head + tail])
       end
 

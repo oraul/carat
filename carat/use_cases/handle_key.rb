@@ -12,6 +12,7 @@ require_relative "dispatcher"
 require_relative "insert_text"
 require_relative "edit_command_line"
 require_relative "plugins/plugin_host"
+require_relative "arrange_view"
 
 module Carat
   module UseCases
@@ -27,8 +28,11 @@ module Carat
     # the keymap of a scratch buffer the current window shows, then in the
     # mode's keymap. The grammar reads each action with the kind of its
     # handler in the action table. After every key the plugin host
-    # observes the state and delivers the events the key caused. It owns
-    # the input state: the keys the keymap waits on and the grammar.
+    # observes the state and delivers the events the key caused.
+    # ArrangeView lays out the windows again before every further key taken
+    # from the queue and after the plugins observed the state, so the next
+    # key sees current geometry. It owns the input state: the keys
+    # the keymap waits on and the grammar.
     class HandleKey
       include Reporting
 
@@ -37,6 +41,7 @@ module Carat
       attr_reader :keymap #: Domain::Keymap
       attr_reader :input #: Domain::InputState
       attr_reader :plugins #: PluginHost
+      attr_reader :arrange_view #: ArrangeView
 
       # @rbs @actions: ActionTable
       # @rbs @dispatcher: Dispatcher
@@ -44,8 +49,8 @@ module Carat
       # @rbs @command_line: EditCommandLine
       # @rbs @replays: Integer
 
-      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, plugins: PluginHost) -> void
-      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, plugins:)
+      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, plugins: PluginHost, arrange_view: ArrangeView) -> void
+      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, plugins:, arrange_view:)
         @keymap = keymap
         @input = input
         @actions = actions
@@ -53,6 +58,7 @@ module Carat
         @insert_text = insert_text
         @command_line = command_line
         @plugins = plugins
+        @arrange_view = arrange_view
         @replays = 0
       end
 
@@ -61,8 +67,12 @@ module Carat
         @replays = 0
         queue = [code]
         result = :handled
-        result = step(state, queue.shift, queue) until queue.empty?
+        until queue.empty?
+          result = step(state, queue.shift, queue)
+          @arrange_view.call(state) unless queue.empty?
+        end
         @plugins.observe
+        @arrange_view.call(state)
         result
       end
 
@@ -90,8 +100,12 @@ module Carat
         else
           dispatch(state, value, keys, queue)
         end
-        step(state, queue.shift, queue) until queue.empty?
+        until queue.empty?
+          @arrange_view.call(state)
+          step(state, queue.shift, queue)
+        end
         @plugins.observe
+        @arrange_view.call(state)
         :handled
       end
 

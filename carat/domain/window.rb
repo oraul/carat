@@ -65,7 +65,12 @@ module Carat
         signs = buffer.signs? ? SIGN_WIDTH : 0
         return signs if buffer.scratch?
         return signs unless options.number || options.relativenumber
-        digits = buffer.line_count.to_s.length
+        digits = 1
+        rest = buffer.line_count
+        while rest >= 10
+          rest /= 10
+          digits += 1
+        end
         digits = 3 if digits < 3
         signs + digits + 1
       end

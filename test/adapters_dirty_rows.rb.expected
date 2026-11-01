@@ -1,0 +1,18 @@
+ok   the first frame is dirty everywhere
+ok   a cursor move along a line dirties its row and the status line
+ok   a cursor move down dirties the row it left, the row it entered, and the status line
+ok   an edit dirties the row it changed and the status line's modified marker
+ok   deleting a line dirties it, every row that moved up, the status line, and the pending-keys display it clears
+ok   a message dirties the message row
+ok   a frame with no change has no dirty row
+ok   j past the scrolloff records a scroll of the text rows by one
+ok   each text row comes from the row below it, the last from nowhere
+ok   the row that came into view and the status line are dirty
+ok   rows that only moved are not
+ok   k past the scrolloff records a scroll down by one
+ok   the top row came into view
+ok   a window narrower than the screen records no scroll
+ok   its moved rows are dirty instead
+ok   with relative numbers a cursor row change dirties every text row
+ok   and the numbers are redrawn
+adapters_dirty_rows: 17 passed, 0 failed

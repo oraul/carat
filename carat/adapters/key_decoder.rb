@@ -6,6 +6,10 @@ module Carat
     # sequence stays pending until more bytes arrive or flush is called,
     # which is how a lone Escape is told apart from a sequence.
     class KeyDecoder
+      # What is pending when nothing is: one string kept for that, since
+      # most reads decode whole.
+      NOTHING = "".b
+
       # @rbs @pending: String
 
       #: () -> void
@@ -21,7 +25,7 @@ module Carat
       # Decodes as many keys as the bytes so far allow.
       #: (String) -> Array[Integer]
       def feed(bytes)
-        @pending = @pending + bytes.b
+        @pending = @pending.empty? ? bytes.b : @pending + bytes.b
         decode
       end
 
@@ -224,7 +228,8 @@ module Carat
 
       #: (Integer) -> void
       def consume(count)
-        @pending = @pending.byteslice(count, @pending.bytesize - count)
+        rest = @pending.bytesize - count
+        @pending = rest > 0 ? @pending.byteslice(count, rest) : NOTHING
       end
     end
   end

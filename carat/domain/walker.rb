@@ -1,5 +1,6 @@
 require_relative "position"
 require_relative "buffer"
+require_relative "utf8"
 
 module Carat
   module Domain
@@ -8,15 +9,19 @@ module Carat
     # empty line is its own position, and each step reports whether it
     # stayed on the line (0), crossed to another line (1), landed on the
     # end of the line (2), or could not move (-1). A Struct record used
-    # only while a word motion runs.
-    class Walker < Struct.new(:buffer, :row, :col)
+    # only while a word motion runs. It keeps the code points of the last
+    # line it classified, decoded once, so a word motion over a long UTF-8
+    # line slices no one-character strings.
+    class Walker < Struct.new(:buffer, :row, :col, :codes, :codes_line)
       # @rbs @buffer: Buffer
       # @rbs @row: Integer
       # @rbs @col: Integer
+      # @rbs @codes: Array[Integer]
+      # @rbs @codes_line: String
 
       #: (Buffer, Integer, Integer) -> void
       def initialize(buffer, row, col)
-        super(buffer, row, col)
+        super(buffer, row, col, [], "")
       end
 
       #: () -> Integer
@@ -51,7 +56,11 @@ module Carat
       def char_class(big)
         line = buffer.line(row)
         return 0 if col >= line.length
-        Motions.char_class(line[col, 1], big)
+        unless codes_line.equal?(line)
+          self.codes = Utf8.codes(line)
+          self.codes_line = line
+        end
+        Motions.code_class(codes[col], big)
       end
 
       #: () -> bool

@@ -1,3 +1,5 @@
+require_relative "utf8"
+
 module Carat
   module Domain
     # Display width of a code point in terminal cells: 2 for the wide ranges
@@ -42,23 +44,42 @@ module Carat
       # point its display width.
       #: (String, Integer, Integer) -> Integer
       def self.cell(ch, dcol, tabstop)
-        ts = tabstop > 0 ? tabstop : 8
-        return ts - (dcol % ts) if ch == "\t"
-        code = ch.ord
+        code_cells(ch.ord, dcol, tabstop)
+      end
+
+      # cell for a code point rather than a one-character string.
+      #: (Integer, Integer, Integer) -> Integer
+      def self.code_cells(code, dcol, tabstop)
+        if code == 9
+          ts = tabstop > 0 ? tabstop : 8
+          return ts - (dcol % ts)
+        end
         return 2 if code < 32
         return 4 if control?(code)
         of(code)
       end
 
       # The display column where code point column col of line starts; a
-      # column past the end gives the width of the whole line.
+      # column past the end gives the width of the whole line. The line is
+      # walked by bytes, so a long UTF-8 line costs no more than an ASCII
+      # one.
       #: (String, Integer, Integer) -> Integer
       def self.column(line, col, tabstop)
+        bytes = line.bytesize
         dcol = 0
         i = 0
-        while i < col && i < line.length
-          dcol += cell(line[i, 1], dcol, tabstop)
-          i += 1
+        k = 0
+        while k < col && i < bytes
+          code = line.getbyte(i).to_i
+          if code < 0x80
+            i += 1
+          else
+            size = Utf8.size_at(line, i, bytes)
+            code = Utf8.code_at(line, i, size)
+            i += size
+          end
+          dcol += code_cells(code, dcol, tabstop)
+          k += 1
         end
         dcol
       end
@@ -67,13 +88,23 @@ module Carat
       # column vcol, or the line length when the line ends before it.
       #: (String, Integer, Integer) -> Integer
       def self.col_at(line, vcol, tabstop)
+        bytes = line.bytesize
         dcol = 0
         i = 0
-        while i < line.length
-          w = cell(line[i, 1], dcol, tabstop)
-          return i if dcol + w > vcol
+        k = 0
+        while i < bytes
+          code = line.getbyte(i).to_i
+          if code < 0x80
+            i += 1
+          else
+            size = Utf8.size_at(line, i, bytes)
+            code = Utf8.code_at(line, i, size)
+            i += size
+          end
+          w = code_cells(code, dcol, tabstop)
+          return k if dcol + w > vcol
           dcol += w
-          i += 1
+          k += 1
         end
         line.length
       end
