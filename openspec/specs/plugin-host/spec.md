@@ -92,7 +92,7 @@ An action named `plugin.<name>.<action>` SHALL complete at once in normal mode, 
 - **THEN** the message row reads "No plugin named nope"
 
 ### Requirement: Plugin ex commands are routed by name or abbreviation
-An ex command a plugin declares SHALL be run by the plugin when typed by its full name or its abbreviation, with its bang and arguments, before the unknown-command check; its result message SHALL be shown as another ex command's is.
+An ex command a plugin declares SHALL be run by the plugin when typed as its abbreviation, its full name, or any spelling between them that starts the full name, with its bang and arguments, after the core ex commands and before the unknown-command check; when two plugins' commands accept the typed name, the plugin registered first SHALL run it. Its result message SHALL be shown as another ex command's is.
 
 #### Scenario: Full name
 - **WHEN** ":Hello Ada" is run
@@ -101,6 +101,14 @@ An ex command a plugin declares SHALL be run by the plugin when typed by its ful
 #### Scenario: Abbreviation
 - **WHEN** ":Hel" is run
 - **THEN** the hello plugin greets as ":Hello" does
+
+#### Scenario: Between the abbreviation and the full name
+- **WHEN** ":Hell" is run
+- **THEN** the hello plugin greets as ":Hello" does
+
+#### Scenario: Shorter than the abbreviation
+- **WHEN** ":He" is run
+- **THEN** the message is "E492: Not an editor command: He"
 
 ### Requirement: Events are delivered as values after the key that caused them
 After a key has been handled, the host SHALL deliver to every subscribed plugin, in registration order, the events the key caused: first the buffer events in the order they happened (`buffer_open`, `buffer_change`, `buffer_save`, `buffer_rename`, `buffer_close`), then `cursor_move` when the cursor or the current buffer changed, `mode_change` when the mode changed, `window_focus` when the current window or tab page changed, and `quit` when the editor is about to end.
