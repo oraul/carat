@@ -1,5 +1,9 @@
 require_relative "../../plugin_api"
 require_relative "../../domain/editor_state"
+require_relative "../../domain/buffer_list"
+require_relative "../../domain/tab_list"
+require_relative "../../domain/input_state"
+require_relative "../../domain/plugin_ui"
 require_relative "../../domain/buffer"
 require_relative "../../domain/keymap"
 require_relative "../../domain/command"
@@ -11,6 +15,7 @@ require_relative "../files/file_ops"
 require_relative "../windows/close_window"
 require_relative "../windows/split_window"
 require_relative "../windows/open_tab"
+require_relative "../ex/command_runner"
 require_relative "plugin_entry"
 require_relative "plugin_registry"
 require_relative "plugin_router"
@@ -30,39 +35,39 @@ module Carat
     # gets a PluginLink over the four request families. Events caused
     # during a plugin call are delivered after the outermost call, so
     # every entry point that may call a plugin ends by flushing them when
-    # no plugin call is in progress any more. ExecuteEx is attached after
-    # construction because it routes plugin commands here while the
-    # plugins run ex command strings through it.
+    # no plugin call is in progress any more. The ex command runner is
+    # given already built: the plugin command handler, which routes
+    # plugin commands here, is registered in its table after the host is
+    # made, so nothing is attached later.
     class PluginHost
-      # @rbs @state: Domain::EditorState
-      # @rbs @registry: PluginRegistry
+      attr_reader :state #: Domain::EditorState
+      attr_reader :plugin_ui #: Domain::PluginUi
+      attr_reader :registry #: PluginRegistry
+      attr_reader :events #: PluginEvents
+      attr_reader :file_ops #: FileOps
+      attr_reader :buffer_requests #: BufferRequests
+      attr_reader :window_requests #: WindowRequests
+      attr_reader :file_requests #: FileRequests
+      attr_reader :ui_requests #: UiRequests
+
       # @rbs @router: PluginRouter
-      # @rbs @events: PluginEvents
-      # @rbs @buffers: BufferRequests
-      # @rbs @windows: WindowRequests
-      # @rbs @files: FileRequests
-      # @rbs @ui: UiRequests
 
-      # The window use cases are the editor's own, built once by the
-      # assembly; the registry, the router, the events, and the request
-      # families are the host's parts and built here.
-      #: (state: Domain::EditorState, files: Ports::FilePort, open_file: OpenFile, close_window: CloseWindow, split_window: SplitWindow, open_tab: OpenTab, keymap: Domain::Keymap, leader: String) -> void
-      def initialize(state:, files:, open_file:, close_window:, split_window:, open_tab:, keymap:, leader:)
+      # The records, the window use cases, and the runner are the editor's
+      # own, built once by the assembly; the registry, the router, the
+      # events, the file operations, and the request families are the
+      # host's parts and built here from them.
+      #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, input: Domain::InputState, plugin_ui: Domain::PluginUi, files: Ports::FilePort, open_file: OpenFile, close_window: CloseWindow, split_window: SplitWindow, open_tab: OpenTab, keymap: Domain::Keymap, leader: String, runner: CommandRunner) -> void
+      def initialize(state:, buffers:, tabs:, input:, plugin_ui:, files:, open_file:, close_window:, split_window:, open_tab:, keymap:, leader:, runner:)
         @state = state
-        file_ops = FileOps.new(files)
-        @registry = PluginRegistry.new(state, keymap, leader, close_window)
-        @router = PluginRouter.new(state: state, registry: @registry)
-        @events = PluginEvents.new(state, @registry)
-        @buffers = BufferRequests.new(state, @registry)
-        @windows = WindowRequests.new(state, @registry, open_file, split_window, open_tab, close_window, file_ops)
-        @files = FileRequests.new(state, file_ops)
-        @ui = UiRequests.new(state, @registry, file_ops)
-      end
-
-      # Attaches the ex command runner the run_ex request uses.
-      #: (ExecuteEx) -> void
-      def attach(execute_ex)
-        @ui.attach(execute_ex)
+        @plugin_ui = plugin_ui
+        @file_ops = FileOps.new(files: files, buffers: buffers)
+        @registry = PluginRegistry.new(state: state, buffers: buffers, tabs: tabs, plugin_ui: plugin_ui, keymap: keymap, leader: leader, close_window: close_window)
+        @router = PluginRouter.new(state: state, registry: @registry, plugin_ui: plugin_ui)
+        @events = PluginEvents.new(state: state, buffers: buffers, tabs: tabs, registry: @registry)
+        @buffer_requests = BufferRequests.new(state: state, buffers: buffers, registry: @registry)
+        @window_requests = WindowRequests.new(state: state, buffers: buffers, tabs: tabs, registry: @registry, open_file: open_file, split_window: split_window, open_tab: open_tab, close_window: close_window, file_ops: @file_ops)
+        @file_requests = FileRequests.new(file_ops: @file_ops)
+        @ui_requests = UiRequests.new(state: state, registry: @registry, file_ops: @file_ops, plugin_ui: plugin_ui, input: input, runner: runner)
       end
 
       # ------------------------------------------------------ registration
@@ -71,7 +76,7 @@ module Carat
       #: (PluginApi::Plugin) -> void
       def register(plugin)
         e = @registry.register(plugin)
-        e.link = PluginLink.new(e.name, @registry, @buffers, @windows, @files, @ui)
+        e.link = PluginLink.new(name: e.name, registry: @registry, buffer_requests: @buffer_requests, window_requests: @window_requests, file_requests: @file_requests, ui_requests: @ui_requests)
         flush
       end
 

@@ -186,24 +186,4 @@ t.assert_equal(false, b.signs?, "no signs at first")
 b.place_sign("hello", 0, 0, "X")
 t.assert_equal([true, "X", ""], [b.signs?, b.sign_at(0), b.sign_at(1)], "a sign is placed on its row")
 
-# The state skips scratch buffers as unsaved work and drops them when
-# unshown.
-s = D::EditorState.new(D::Buffer.new(["one"], "a.txt", "\n"), D::Options.new, 500)
-scratch = D::Buffer.new(["l"], nil, "\n")
-scratch.owner = "hello"
-scratch.title = "list"
-s.add_buffer(scratch)
-scratch.set_lines(0, 1, ["m"])
-t.assert_equal([true, false, true], [scratch.modified?, s.any_modified?, s.hidden_modified.nil?], "a changed scratch buffer is not unsaved work")
-t.assert_equal(2, s.buffer_number(scratch), "buffer_number is the list position from 1")
-t.assert_equal(0, s.buffer_number(D::Buffer.new(["q"], nil, "\n")), "an unlisted buffer has number 0")
-t.assert_equal(true, s.scratch_for("hello", "list").equal?(scratch), "scratch_for finds the plugin's buffer by title")
-t.assert_equal(true, s.scratch_for("hello", "nope").nil?, "scratch_for answers nil for another title")
-s.release(scratch)
-t.assert_equal(1, s.buffer_count, "an unshown scratch buffer leaves the list even when modified")
-s.buffer.set_lines(0, 1, ["two"])
-s.release(s.buffer)
-t.assert_equal(1, s.buffer_count, "a shown modified file buffer stays")
-t.assert_equal({}, s.segments, "no status segments at first")
-
 t.finish

@@ -1,3 +1,4 @@
+require_relative "../../domain/tab_list"
 require_relative "../files/quit"
 require_relative "../windows/split_window"
 require_relative "../windows/close_window"
@@ -16,16 +17,18 @@ module Carat
       # @rbs @focus_window: FocusWindow
       # @rbs @resize_layout: ResizeLayout
       # @rbs @quit: Quit
+      # @rbs @tabs: Domain::TabList
       # @rbs @variant: Symbol
 
-      #: (split_window: SplitWindow, close_window: CloseWindow, focus_window: FocusWindow, resize_layout: ResizeLayout, quit: Quit, variant: Symbol) -> void
-      def initialize(split_window:, close_window:, focus_window:, resize_layout:, quit:, variant:)
+      #: (split_window: SplitWindow, close_window: CloseWindow, focus_window: FocusWindow, resize_layout: ResizeLayout, quit: Quit, tabs: Domain::TabList, variant: Symbol) -> void
+      def initialize(split_window:, close_window:, focus_window:, resize_layout:, quit:, tabs:, variant:)
         super(kind: :action)
         @split_window = split_window
         @close_window = close_window
         @focus_window = focus_window
         @resize_layout = resize_layout
         @quit = quit
+        @tabs = tabs
         @variant = variant
       end
 
@@ -51,13 +54,13 @@ module Carat
         end
       end
 
-      #: (ActionTable, split_window: SplitWindow, close_window: CloseWindow, focus_window: FocusWindow, resize_layout: ResizeLayout, quit: Quit) -> void
-      def self.register(table, split_window:, close_window:, focus_window:, resize_layout:, quit:)
+      #: (ActionTable, split_window: SplitWindow, close_window: CloseWindow, focus_window: FocusWindow, resize_layout: ResizeLayout, quit: Quit, tabs: Domain::TabList) -> void
+      def self.register(table, split_window:, close_window:, focus_window:, resize_layout:, quit:, tabs:)
         names = ["window.split", "window.vsplit", "window.left", "window.down", "window.up", "window.right", "window.next", "window.previous", "window.last_accessed", "window.close", "window.only", "window.equalize", "window.quit"]
         variants = [:split, :vsplit, :left, :down, :up, :right, :next, :previous, :last_accessed, :close, :only, :equalize, :quit]
         i = 0
         while i < names.length
-          table.register(names[i], WindowHandler.new(split_window: split_window, close_window: close_window, focus_window: focus_window, resize_layout: resize_layout, quit: quit, variant: variants[i]))
+          table.register(names[i], WindowHandler.new(split_window: split_window, close_window: close_window, focus_window: focus_window, resize_layout: resize_layout, quit: quit, tabs: tabs, variant: variants[i]))
           i += 1
         end
       end
@@ -68,7 +71,7 @@ module Carat
       # which closes it without moving the cursor as :{n}quit does.
       #: (Domain::EditorState, Integer) -> Outcome
       def quit_window(state, n)
-        return @close_window.close(state, n) if n > 0 && state.total_windows > 1
+        return @close_window.close(state, n) if n > 0 && @tabs.total_windows > 1
         @quit.call(state, false)
       end
     end

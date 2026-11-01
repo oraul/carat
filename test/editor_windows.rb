@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 t = Carat::Testing.new("editor_windows")
@@ -241,7 +241,7 @@ t.assert_equal([1, true], [h.window_count, h.buffer.modified?], ":only keeps the
 # E141 names the buffer by its list position.
 h = session(":new<CR>ix<Esc><C-w>jx:wa<CR>")
 t.assert_equal(["E141: No file name for buffer 2", "ne\ntwo\nthree\n"], [h.message_row, h.files.get("a.txt")], ":wa reports the nameless buffer and writes the others")
-t.assert_equal([true, false], [h.state.buffer_at(1).modified?, h.quit?], "the nameless buffer stays modified")
+t.assert_equal([true, false], [h.assembly.buffers.buffer_at(1).modified?, h.quit?], "the nameless buffer stays modified")
 h.type(":wqa<CR>")
 t.assert_equal([false, "E141: No file name for buffer 2"], [h.quit?, h.message_row], ":wqa does not quit while a buffer could not be written")
 

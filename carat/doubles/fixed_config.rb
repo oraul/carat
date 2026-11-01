@@ -29,6 +29,12 @@ module Carat
       def load
         @value
       end
+
+      # Returns SOURCE.
+      # @rbs skip
+      def source
+        SOURCE
+      end
     end
   end
 end

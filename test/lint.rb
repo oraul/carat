@@ -216,8 +216,6 @@ BOOL_COMMANDS = {
   "decode_utf8" => "decodes a UTF-8 sequence",
   "reveal" => "expands the tree down to a path",
   "next_tab" => "moves to the next tab page",
-  "resized" => "reads and clears the resize flag",
-  "terminated" => "reads and clears the termination flag",
   "flag" => "reads a boolean option from the configuration",
   "forward_word" => "a word motion step",
   "backward_word" => "a word motion step",
@@ -358,29 +356,9 @@ end
 # A behavior class takes its collaborators as required keyword
 # arguments, built once in the composition root; a default only for a
 # collaborator that takes no arguments, keeps no state, and does no I/O.
-# Records keep positional construction. The files below still take
-# positional arguments and are converted by the state-and-ports change;
-# the list only shrinks.
-PENDING_CONSTRUCTORS = [
-  "carat/adapters/input_controller.rb",
-  "carat/adapters/screen_presenter.rb",
-  "carat/domain/json.rb",
-  "carat/doubles/fake_terminal.rb",
-  "carat/drivers/ansi_terminal.rb",
-  "carat/drivers/main_loop.rb",
-  "carat/use_cases/files/file_ops.rb",
-  "carat/use_cases/files/open_file.rb",
-  "carat/use_cases/files/quit.rb",
-  "carat/use_cases/plugins/buffer_requests.rb",
-  "carat/use_cases/plugins/file_requests.rb",
-  "carat/use_cases/plugins/plugin_events.rb",
-  "carat/use_cases/plugins/plugin_link.rb",
-  "carat/use_cases/plugins/plugin_registry.rb",
-  "carat/use_cases/plugins/ui_requests.rb",
-  "carat/use_cases/plugins/window_requests.rb",
-  "carat/use_cases/windows/open_tab.rb",
-  "carat/use_cases/windows/split_window.rb"
-]
+# Records keep positional construction. Every behavior class follows the
+# rule; the shared-instance test in test/adapters_assembly.rb checks that
+# the composition root hands each shared object to all its holders.
 
 # Why a constructor's parameters are not required keywords, or "".
 def constructor_problem(stripped)
@@ -390,6 +368,22 @@ def constructor_problem(stripped)
     return "a constructor takes keyword arguments" unless param.strip.match?(/\A[a-z_][a-z0-9_]*:/)
   end
   ""
+end
+
+# ------------------------------------------------------------ doubles
+#
+# The test doubles are not part of the production require graph: only
+# files under carat/doubles/ and carat/test_support.rb, the require graph
+# of test and benchmark programs, may require one.
+TEST_SUPPORT = "carat/test_support.rb"
+
+# Why a file may not require the target path (both relative to the
+# repository, the target with its .rb), or "".
+def double_require_problem(path, target)
+  return "" unless target.start_with?("carat/doubles/")
+  return "" if path.start_with?("carat/doubles/") || path == TEST_SUPPORT
+  return "" unless path.start_with?("bin/") || path.start_with?("carat/") || path == "carat.rb"
+  "only carat/doubles/ and #{TEST_SUPPORT} may require a test double"
 end
 
 violations = []
@@ -433,6 +427,12 @@ source_files.each do |path|
     if stripped.include?(".send(") && !stripped.include?(".send(:")
       violations << "#{path}:#{number}: send with a computed name is not compiled by Spinel"
     end
+    if stripped.start_with?("require_relative ")
+      target = stripped.sub("require_relative ", "").delete("\"'")
+      full = File.expand_path(target, File.dirname(path)).sub(Dir.pwd + "/", "") + ".rb"
+      problem = double_require_problem(path, full)
+      violations << "#{path}:#{number}: #{problem}" unless problem.empty?
+    end
     if stripped.start_with?("require_relative ") && from_layer
       target = stripped.sub("require_relative ", "").delete("\"'")
       full = File.expand_path(target, File.dirname(path)).sub(Dir.pwd + "/", "") + ".rb"
@@ -465,7 +465,7 @@ Dir.glob("carat/**/*.rb").sort.each do |path|
     declaration_problems(lines, expected[0], expected[1]).each { |problem| violations << "#{path}: #{problem}" }
   end
   record = text.include?("< Struct.new(") || text.include?("< Data.define(")
-  keywords = layer_of(path) && layer_of(path) != "plugins" && layer_of(path) != "plugin_api" && !record && !PENDING_CONSTRUCTORS.include?(path)
+  keywords = layer_of(path) && layer_of(path) != "plugins" && layer_of(path) != "plugin_api" && !record
   lines.each_with_index do |line, i|
     stripped = line.strip
     next if stripped.start_with?("#")
@@ -538,6 +538,8 @@ t.assert_equal(["", "class and module names are CamelCase", "a handler's name en
 t.assert_equal(["", "constants are upper snake case", ""], [constant_problem("MAX_DEPTH = 4"), constant_problem("MaxDepth = 4"), constant_problem("x = MAX_DEPTH")], "the constant rule")
 t.assert_equal(["", "cls is an unclear abbreviation", "a predicate ends in ? instead of starting with get_, is_, or has_", "a predicate returns bool", "a method returning bool is a predicate ending in ?, or a command listed in BOOL_COMMANDS", "", "child! has no safe twin child", "", "a setter of one value is name=, not set_name", "", "an alternate constructor is a from_ class method", "", "method names are snake_case"], [method_problem("x.rb", "def char_class(big)", "Integer", ""), method_problem("x.rb", "def cls(big)", "Integer", ""), method_problem("x.rb", "def is_open", "bool", ""), method_problem("x.rb", "def open?", "Integer", ""), method_problem("x.rb", "def open", "bool", ""), method_problem("x.rb", "def pump(state)", "bool", ""), method_problem("x.rb", "def child!(code)", "KeymapNode", "def child!(code)\n"), method_problem("x.rb", "def save!", "void", "def save\ndef save!\n"), method_problem("x.rb", "def set_root(path)", "void", ""), method_problem("x.rb", "def set_lines(from, to, lines)", "void", ""), method_problem("x.rb", "def self.build(keymaps, leader)", "Keymap", ""), method_problem("x.rb", "def self.from_config(keymaps, leader)", "Keymap", ""), method_problem("x.rb", "def readLine", "String", "")], "the method name rules")
 t.assert_equal(["", "a constructor takes keyword arguments", "", ""], [constructor_problem("def initialize(actions:, files:)"), constructor_problem("def initialize(actions, files)"), constructor_problem("def initialize(store: Store.new)"), constructor_problem("def call(state, command)")], "the constructor rule")
+t.assert_equal(["", "only carat/doubles/ and carat/test_support.rb may require a test double", "only carat/doubles/ and carat/test_support.rb may require a test double", "", "", ""], [double_require_problem("carat/doubles/editor_harness.rb", "carat/doubles/fake_terminal.rb"), double_require_problem("carat.rb", "carat/doubles/fake_terminal.rb"), double_require_problem("bin/carat.rb", "carat/doubles/memory_files.rb"), double_require_problem("carat/test_support.rb", "carat/doubles/manual_signals.rb"), double_require_problem("carat/adapters/editor_assembly.rb", "carat/use_cases/move.rb"), double_require_problem("test/editor_normal.rb", "carat/doubles/fake_terminal.rb")], "the double require rule")
+t.assert_equal(false, File.read("carat.rb").include?("doubles/"), "the production require graph names no double")
 t.assert_equal("x = \"\" ", code_of("x = \"Domain::Buffer\" # UseCases::"), "code drops strings and comments")
 violations.each { |v| STDOUT.puts v }
 t.assert_equal(0, violations.length, "no lint violations")

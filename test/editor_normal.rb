@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 t = Carat::Testing.new("editor_normal")
@@ -83,15 +83,15 @@ h = editor("a\nb\nc\n")
 h.type("G")
 h.type("g")
 t.assert_equal([2, 0], h.cursor, "g alone dispatches nothing")
-t.assert_equal([103], h.state.pending_keys, "g is pending")
+t.assert_equal([103], h.assembly.input.pending_keys, "g is pending")
 h.type("g")
 t.assert_equal([0, 0], h.cursor, "gg completes the sequence")
-t.assert_equal([], h.state.pending_keys, "nothing pending after gg")
+t.assert_equal([], h.assembly.input.pending_keys, "nothing pending after gg")
 h.type("G")
 h.type("g")
 h.wait
 t.assert_equal([2, 0], h.cursor, "a lone prefix is dropped after timeoutlen")
-t.assert_equal([], h.state.pending_keys, "nothing pending after the timeout")
+t.assert_equal([], h.assembly.input.pending_keys, "nothing pending after the timeout")
 
 config = Carat::Doubles::FixedConfig.defaults
 config["keymaps"]["normal"]["a"] = "cursor.right"

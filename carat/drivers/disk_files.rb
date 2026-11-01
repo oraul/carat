@@ -1,4 +1,5 @@
 require_relative "../ports/file_port"
+require_relative "../domain/path_info"
 
 module Carat
   module Drivers
@@ -27,21 +28,14 @@ module Carat
         Dir.children(dir).sort
       end
 
-      # Returns size, mtime, and the directory and symlink flags as a hash
-      # of integers. A link whose target is missing reads as an empty link
-      # instead of raising; a missing path raises.
+      # Returns the PathInfo of the path: a link whose target is missing
+      # reads as an empty link, and a missing path as PathInfo.missing.
       # @rbs path: String
       def stat(path)
         link = File.symlink?(path)
-        if link && !File.exist?(path)
-          return { "size" => 0, "mtime" => 0, "directory" => 0, "symlink" => 1 }
-        end
-        {
-          "size" => File.size(path),
-          "mtime" => File.mtime(path).to_i,
-          "directory" => File.directory?(path) ? 1 : 0,
-          "symlink" => link ? 1 : 0
-        }
+        return Domain::PathInfo.new(true, 0, 0, false, true) if link && !File.exist?(path)
+        return Domain::PathInfo.missing unless link || File.exist?(path)
+        Domain::PathInfo.new(true, File.size(path), File.mtime(path).to_i, File.directory?(path), link)
       end
 
       #: (String) -> void

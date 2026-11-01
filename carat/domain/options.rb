@@ -1,11 +1,13 @@
 module Carat
   module Domain
     # Typed options with Vim names, plus icons, Carat's own: the icon set
-    # plugins draw with, "nerd", "unicode", or "ascii". Only the ones the
+    # plugins draw with, "nerd", "unicode", or "ascii". timeoutlen is the
+    # milliseconds the keymap waits for the rest of an ambiguous binding,
+    # from the top level of the configuration. Only the ones the
     # editor reads are members; :set and local options arrive with the
     # options change. A Struct record: mutable, with a reader and a writer
     # per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scrolloff, :icons)
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scrolloff, :icons, :timeoutlen)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -14,18 +16,23 @@ module Carat
       # @rbs @autoindent: bool
       # @rbs @scrolloff: Integer
       # @rbs @icons: String
+      # @rbs @timeoutlen: Integer
 
       # Vim's defaults, and the nerd icon set.
       #: () -> void
       def initialize
-        super(false, false, 8, 8, false, false, 0, "nerd")
+        super(false, false, 8, 8, false, false, 0, "nerd", 1000)
       end
 
-      # Builds options from the "options" object of a config value. A value
-      # of the wrong type keeps the default.
+      # Builds options from a configuration value: the members of its
+      # "options" object and its top-level "timeoutlen". A value that is
+      # missing or of the wrong type keeps Vim's default.
       #: (untyped) -> Options
-      def self.from_config(hash)
+      def self.from_config(config)
         options = Options.new
+        return options unless config.is_a?(Hash)
+        options.timeoutlen = count(config, "timeoutlen", options.timeoutlen)
+        hash = config["options"]
         return options unless hash.is_a?(Hash)
         options.number = flag(hash, "number", options.number)
         options.relativenumber = flag(hash, "relativenumber", options.relativenumber)

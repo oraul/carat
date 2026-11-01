@@ -1,5 +1,7 @@
 require_relative "../../plugin_api"
 require_relative "../../domain/editor_state"
+require_relative "../../domain/buffer_list"
+require_relative "../../domain/tab_list"
 require_relative "../../domain/buffer"
 require_relative "../../domain/buffer_feed"
 require_relative "../../domain/mode"
@@ -9,8 +11,8 @@ require_relative "pending_event"
 
 module Carat
   module UseCases
-    # Delivers events to the plugins. Buffer events come from the editor
-    # state's buffer feed (opens, closes, renames, and closed
+    # Delivers events to the plugins. Buffer events come from the buffer
+    # list's feed (opens, closes, renames, and closed
     # transactions), saves from SaveFile, resizes from the render, and
     # cursor_move, mode_change, and window_focus from comparing the state
     # after a key with the last snapshot. Events are queued, never
@@ -23,7 +25,10 @@ module Carat
 
       MAX_ROUNDS = 8
 
-      # @rbs @state: Domain::EditorState
+      attr_reader :state #: Domain::EditorState
+      attr_reader :buffers #: Domain::BufferList
+      attr_reader :tabs #: Domain::TabList
+
       # @rbs @registry: PluginRegistry
       # @rbs @queue: Array[untyped]
       # @rbs @announced: Hash[String, String]
@@ -40,9 +45,11 @@ module Carat
 
       # What the feed recorded before the host existed, the empty buffer
       # the editor starts with, is forgotten: no plugin saw it open.
-      #: (Domain::EditorState, PluginRegistry) -> void
-      def initialize(state, registry)
+      #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, registry: PluginRegistry) -> void
+      def initialize(state:, buffers:, tabs:, registry:)
         @state = state
+        @buffers = buffers
+        @tabs = tabs
         @registry = registry
         @queue = []
         @announced = {}
@@ -56,7 +63,7 @@ module Carat
         @last_rows = 0
         @last_cols = 0
         @quit_sent = false
-        state.feed.clear
+        buffers.feed.clear
         snapshot
       end
 
@@ -72,7 +79,7 @@ module Carat
           break if @queue.empty?
           if rounds >= MAX_ROUNDS
             @queue = []
-            @state.feed.clear
+            @buffers.feed.clear
             @state.show("Plugin events dropped after #{MAX_ROUNDS} rounds", true)
             break
           end
@@ -101,7 +108,7 @@ module Carat
         same = buffer.id == @last_buffer
         queue("cursor_move", buffer, cursor.row, cursor.col, "", "") if !same || cursor.row != @last_row || cursor.col != @last_col
         queue("mode_change", buffer, cursor.row, cursor.col, Domain::Mode.name_of(state.mode), "") if state.mode != @last_mode
-        queue("window_focus", buffer, cursor.row, cursor.col, "", "") if state.tab_index != @last_tab || state.window_id != @last_window
+        queue("window_focus", buffer, cursor.row, cursor.col, "", "") if @tabs.tab_index != @last_tab || state.window.id != @last_window
         snapshot
         flush
         return unless state.quit && !@quit_sent
@@ -151,7 +158,7 @@ module Carat
       # delivered only for a buffer whose open was.
       #: () -> void
       def collect
-        feed = @state.feed
+        feed = @buffers.feed
         n = feed.count
         i = 0
         while i < n
@@ -185,13 +192,13 @@ module Carat
           row = @state.cursor.row
           col = @state.cursor.col
         end
-        event = PluginApi::Event.new(name, notice.buffer_id, @state.window_id, notice.path.dup, row, col, notice.detail.dup, notice.removed, notice.inserted)
+        event = PluginApi::Event.new(name, notice.buffer_id, @state.window.id, notice.path.dup, row, col, notice.detail.dup, notice.removed, notice.inserted)
         @queue << PendingEvent.new(event, notice.cause)
       end
 
       #: (String, Domain::Buffer, Integer, Integer, String, String) -> void
       def queue(name, buffer, row, col, detail, cause)
-        event = PluginApi::Event.new(name, buffer.id, @state.window_id, buffer.path_text.dup, row, col, detail, 0, 0)
+        event = PluginApi::Event.new(name, buffer.id, @state.window.id, buffer.path_text.dup, row, col, detail, 0, 0)
         @queue << PendingEvent.new(event, cause)
       end
 
@@ -217,8 +224,8 @@ module Carat
         @last_row = state.cursor.row
         @last_col = state.cursor.col
         @last_mode = state.mode
-        @last_tab = state.tab_index
-        @last_window = state.window_id
+        @last_tab = @tabs.tab_index
+        @last_window = state.window.id
       end
     end
   end

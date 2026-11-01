@@ -1,4 +1,6 @@
 require_relative "../../domain/editor_state"
+require_relative "../../domain/buffer_list"
+require_relative "../../domain/tab_list"
 require_relative "../outcome"
 require_relative "../windows/close_window"
 
@@ -14,11 +16,15 @@ module Carat
     class Quit
       E37 = "E37: No write since last change (add ! to override)"
 
-      # @rbs @close_window: CloseWindow
+      attr_reader :close_window #: CloseWindow
+      attr_reader :buffers #: Domain::BufferList
+      attr_reader :tabs #: Domain::TabList
 
-      #: (CloseWindow) -> void
-      def initialize(close_window)
+      #: (close_window: CloseWindow, buffers: Domain::BufferList, tabs: Domain::TabList) -> void
+      def initialize(close_window:, buffers:, tabs:)
         @close_window = close_window
+        @buffers = buffers
+        @tabs = tabs
       end
 
       # With the bang on the last window, a modified hidden buffer is shown
@@ -26,20 +32,20 @@ module Carat
       # is the only way to lose it.
       #: (Domain::EditorState, bool) -> Outcome
       def call(state, bang)
-        if state.total_windows > 1
-          return close_window(state) unless beside_side_windows?(state)
-          return close_page(state) if state.tab_count > 1
+        if @tabs.total_windows > 1
+          return close_current(state) unless beside_side_windows?(state)
+          return close_page(state) if @tabs.tab_count > 1
         end
         if bang
-          hidden = state.hidden_modified
+          hidden = @buffers.hidden_modified
           if hidden.nil?
             state.quit = true
           else
-            state.load(hidden)
+            @buffers.load(hidden)
           end
           return Outcome.success("")
         end
-        return Outcome.failure(E37) if state.any_modified?
+        return Outcome.failure(E37) if @buffers.any_modified?
         state.quit = true
         Outcome.success("")
       end
@@ -49,11 +55,11 @@ module Carat
       # write to another path leaves it modified on purpose.
       #: (Domain::EditorState) -> Outcome
       def leave(state)
-        if state.total_windows > 1
-          return close_window(state) unless beside_side_windows?(state)
-          return close_page(state) if state.tab_count > 1
+        if @tabs.total_windows > 1
+          return close_current(state) unless beside_side_windows?(state)
+          return close_page(state) if @tabs.tab_count > 1
         end
-        return Outcome.failure(E37) unless state.hidden_modified.nil?
+        return Outcome.failure(E37) unless @buffers.hidden_modified.nil?
         state.quit = true
         Outcome.success("")
       end
@@ -61,7 +67,7 @@ module Carat
       # :qa and :qa!.
       #: (Domain::EditorState, bool) -> Outcome
       def all(state, bang)
-        return Outcome.failure(E37) if !bang && state.any_modified?
+        return Outcome.failure(E37) if !bang && @buffers.any_modified?
         state.quit = true
         Outcome.success("")
       end
@@ -69,7 +75,7 @@ module Carat
       private
 
       #: (Domain::EditorState) -> Outcome
-      def close_window(state)
+      def close_current(state)
         @close_window.remove(state, state.tab.current)
         Outcome.success("")
       end

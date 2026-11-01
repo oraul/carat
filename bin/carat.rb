@@ -17,14 +17,15 @@ unless STDIN.tty?
 end
 
 path = ARGV[0]
-Carat::Drivers::Signals.install
+signals = Carat::Drivers::Signals.new
+signals.install
 
-terminal = Carat::Drivers::AnsiTerminal.new(STDIN, STDOUT)
+terminal = Carat::Drivers::AnsiTerminal.new(input: STDIN, output: STDOUT)
 clock = Carat::Drivers::MonotonicClock.new
 files = Carat::Drivers::DiskFiles.new
-config = Carat::Adapters::JsonConfigGateway.new.load
-assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: config, config_source: Carat::Adapters::JsonConfigGateway::SOURCE, plugin_list: Carat::Plugins::Registry.all)
-main_loop = Carat::Drivers::MainLoop.new(assembly, terminal)
+config = Carat::Adapters::JsonConfigGateway.new
+assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: config, plugin_list: Carat::Plugins::Registry.all)
+main_loop = Carat::Drivers::MainLoop.new(assembly: assembly, terminal: terminal, signals: signals)
 
 assembly.screen_presenter.enter
 assembly.open(path)

@@ -3,14 +3,20 @@ require_relative "../carat/testing"
 
 t = Carat::Testing.new("adapters_frame_presenter")
 D = Carat::Domain
-P = Carat::Adapters::FramePresenter.new
+INPUT = Carat::Domain::InputState.new
+UI = Carat::Domain::PluginUi.new
+P = Carat::Adapters::FramePresenter.new(input: INPUT, plugin_ui: UI)
 
+# A state over one window showing the lines; the plugins' segments and
+# prompt start empty.
 def state_for(lines, path)
   buffer = Carat::Domain::Buffer.new(lines, path, "\n")
   options = Carat::Domain::Options.new
   options.number = true
   options.tabstop = 4
-  Carat::Domain::EditorState.new(buffer, options, 500)
+  UI.segments.clear
+  UI.close_prompt
+  Carat::Domain::EditorState.new(Carat::Domain::TabList.new(Carat::Domain::Window.new(buffer)), options)
 end
 
 # Layout of three lines in a six-row frame.
@@ -261,9 +267,8 @@ t.assert_equal("abcde\u2502abcde", f.row_text(0), "each window shows what fits b
 # Two tab pages: the tab line takes the top row.
 s = state_for(["one", "two", "three"], "a.txt")
 other = D::Buffer.new(["zz"], "b.txt", "\n")
-s.add_buffer(other)
-s.add_tab(D::TabPage.new(D::Window.new(other)))
-s.tab_index = 0
+s.tabs.add_tab(D::TabPage.new(D::Window.new(other)))
+s.tabs.tab_index = 0
 f = P.call(s, 7, 30)
 t.assert_equal(" 1 a.txt  2 b.txt", f.row_text(0), "the tab line lists both tab pages")
 t.assert_equal([D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_FILL], [f.cell(0, 0).hl, f.cell(0, 9).hl, f.cell(0, 18).hl], "selected, plain, and fill highlights")
@@ -271,13 +276,13 @@ t.assert_equal("  1 one", f.row_text(1), "the first text row is row 1")
 t.assert_equal("a.txt", f.row_text(5)[0, 5], "the status line is on row 5")
 t.assert_equal("", f.row_text(6), "the message row stays last")
 t.assert_equal([1, 4], [f.cursor_row, f.cursor_col], "the cursor is under the tab line")
-s.tab_index = 1
+s.tabs.tab_index = 1
 other.mark_unsaved
 f = P.call(s, 7, 30)
 t.assert_equal(" 1 a.txt  2 b.txt [+]", f.row_text(0), "the modified marker shows in the label")
 t.assert_equal([D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_SELECTED], [f.cell(0, 0).hl, f.cell(0, 9).hl], "the second label is selected now")
 t.assert_equal("  1 zz", f.row_text(1), "the second tab page's window is drawn")
-s.remove_tab(1)
+s.tabs.remove_tab(1)
 f = P.call(s, 7, 30)
 t.assert_equal("  1 one", f.row_text(0), "with one tab page there is no tab line")
 
@@ -303,7 +308,6 @@ s = state_for(["one"], "a.txt")
 scratch = D::Buffer.new(["item"], nil, "\n")
 scratch.owner = "test"
 scratch.title = "list"
-s.add_buffer(scratch)
 P.call(s, 6, 40)
 side = D::Window.new(scratch)
 side.fixed_width = true
@@ -311,8 +315,8 @@ id = s.tab.layout.split_edge(side, 12, true)
 f = P.call(s, 6, 40)
 t.assert_equal("list", f.row_text(4)[0, 4], "the side window's status line shows the scratch title")
 t.assert_equal("a.txt", f.row_text(4)[13, 5], "the file window keeps its path")
-s.segments["hello"] = "hello 1"
-s.segments["other"] = "x"
+UI.segments["hello"] = "hello 1"
+UI.segments["other"] = "x"
 f = P.call(s, 6, 40)
 t.assert_equal("a.txt  hello 1 x", f.row_text(4)[13, 16], "the current window's status line shows the segments in order")
 t.assert_equal(["list", false], [f.row_text(4)[0, 4], f.row_text(4)[0, 12].include?("hello")], "the other window's does not")
@@ -331,12 +335,11 @@ t.assert_equal("! item", f.row_text(0)[0, 6], "its sign column still shows")
 # the text.
 s = state_for(["one"], "a.txt")
 s.mode = D::Mode::CMDLINE
-s.prompt = "Rename to: "
-s.prompt_owner = "test"
+UI.open_prompt("test", "", "Rename to: ")
 s.cmdline = "a.rb"
 f = P.call(s, 6, 40)
 t.assert_equal(["Rename to: a.rb", 5, 15], [f.row_text(5), f.cursor_row, f.cursor_col], "the prompt row and the cursor after it")
-s.prompt_owner = ""
+UI.close_prompt
 f = P.call(s, 6, 40)
 t.assert_equal([":a.rb", 5], [f.row_text(5), f.cursor_col], "an ex command line keeps its colon")
 

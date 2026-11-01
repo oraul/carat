@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 t = Carat::Testing.new("plugins_explorer")
@@ -32,7 +32,7 @@ class FakeHost < Carat::PluginApi::Host
   # @rbs path: String
   def stat(path)
     info = @files.stat(path)
-    Carat::PluginApi::FileInfo.new(true, info["size"], 0, info["directory"] == 1, info["symlink"] == 1)
+    Carat::PluginApi::FileInfo.new(info.exists, info.size, 0, info.directory, info.symlink)
   end
 
   # Returns a TextResponse with the glyph.

@@ -13,14 +13,15 @@ module Carat
       ESCAPE_TIMEOUT = 0.05
       IDLE_TIMEOUT = 0.25
 
-      # @rbs @terminal: Ports::TerminalPort
-      # @rbs @clock: Ports::ClockPort
+      attr_reader :terminal #: Ports::TerminalPort
+      attr_reader :clock #: Ports::ClockPort
+      attr_reader :handle_key #: UseCases::HandleKey
+
       # @rbs @decoder: KeyDecoder
-      # @rbs @handle_key: UseCases::HandleKey
       # @rbs @wait_until: Float
 
-      #: (Ports::TerminalPort, Ports::ClockPort, KeyDecoder, UseCases::HandleKey) -> void
-      def initialize(terminal, clock, decoder, handle_key)
+      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey) -> void
+      def initialize(terminal:, clock:, decoder:, handle_key:)
         @terminal = terminal
         @clock = clock
         @decoder = decoder
@@ -37,7 +38,7 @@ module Carat
           if @decoder.pending?
             return handle(state, @decoder.flush)
           end
-          if !state.pending_keys.empty? && @clock.now >= @wait_until
+          if @handle_key.pending? && @clock.now >= @wait_until
             @handle_key.timeout(state)
             return true
           end
@@ -56,7 +57,7 @@ module Carat
       #: (Domain::EditorState) -> Float
       def next_timeout(state)
         return ESCAPE_TIMEOUT if @decoder.pending?
-        unless state.pending_keys.empty?
+        if @handle_key.pending?
           remaining = @wait_until - @clock.now
           return remaining > 0.0 ? remaining : 0.0
         end
@@ -69,7 +70,7 @@ module Carat
         i = 0
         while i < codes.length
           result = @handle_key.call(state, codes[i])
-          @wait_until = @clock.now + state.timeoutlen / 1000.0 if result == :pending
+          @wait_until = @clock.now + state.options.timeoutlen / 1000.0 if result == :pending
           i += 1
         end
         true

@@ -1,5 +1,6 @@
 require_relative "../ports/file_port"
 require_relative "../plugin_api"
+require_relative "../domain/path_info"
 
 module Carat
   module Doubles
@@ -92,16 +93,17 @@ module Carat
         children(k).sort
       end
 
-      # Returns the size of a file's text, zero for a directory, a zero
-      # mtime, and the flags, raising for a path that was never made.
+      # Returns the PathInfo of the path: the size of a file's text, zero
+      # for a directory, a zero mtime, and the flags; PathInfo.missing for
+      # a path that was never made.
       # @rbs path: String
       def stat(path)
         k = key(path)
-        link = @links.key?(k) ? 1 : 0
-        return { "size" => 0, "mtime" => 0, "directory" => 1, "symlink" => link } if @dirs.key?(k)
+        link = @links.key?(k)
+        return Domain::PathInfo.new(true, 0, 0, true, link) if @dirs.key?(k)
         text = @files[k]
-        raise ArgumentError, "no such file: #{path}" if text.nil?
-        { "size" => text.bytesize, "mtime" => 0, "directory" => 0, "symlink" => link }
+        return Domain::PathInfo.missing if text.nil?
+        Domain::PathInfo.new(true, text.bytesize, 0, false, link)
       end
 
       #: (String) -> void

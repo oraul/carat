@@ -21,6 +21,13 @@ module Carat
     # end of every row and X and Y keep the block; S and R always change
     # whole lines.
     class OperateOnSelection
+      attr_reader :registers #: Domain::Registers
+
+      #: (registers: Domain::Registers) -> void
+      def initialize(registers:)
+        @registers = registers
+      end
+
       # d, x, and <Del>.
       #: (Domain::EditorState, Domain::Command) -> Outcome
       def delete(state, command)
@@ -162,7 +169,7 @@ module Carat
       # text in the unnamed register, P leaves every register alone.
       #: (Domain::EditorState, Domain::Command, bool) -> Outcome
       def put(state, command, keep)
-        entry = state.registers.read(command.register)
+        entry = @registers.read(command.register)
         selection = state.end_visual
         if entry.nil?
           name = command.register.empty? ? "\"" : command.register
@@ -195,7 +202,7 @@ module Carat
 
       #: (Domain::EditorState, String, Domain::Selection) -> void
       def remove(state, register, selection)
-        state.registers.write(register, cut(state, selection))
+        @registers.write(register, cut(state, selection))
       end
 
       # Deletes the selection and returns what it held, leaving the cursor
@@ -239,17 +246,17 @@ module Carat
         buffer = state.buffer
         cursor = state.cursor
         if selection.kind == :linewise
-          state.registers.write(register, Domain::Operators.extract(buffer, selection.line_range))
+          @registers.write(register, Domain::Operators.extract(buffer, selection.line_range))
           start = selection.line_start
           cursor.move_to(start.row, clamp(state, start.row, start.col))
         elsif selection.kind == :blockwise
           tabstop = tabstop_of(state)
           block = selection.block(buffer, tabstop)
           col = block.span(buffer.line(block.top), tabstop).from
-          state.registers.write(register, Domain::Operators.extract_block(buffer, block, tabstop))
+          @registers.write(register, Domain::Operators.extract_block(buffer, block, tabstop))
           cursor.move_to(block.top, clamp(state, block.top, col))
         else
-          state.registers.write(register, Domain::Operators.extract(buffer, selection.char_range(buffer)))
+          @registers.write(register, Domain::Operators.extract(buffer, selection.char_range(buffer)))
           start = selection.start
           cursor.move_to(start.row, clamp(state, start.row, start.col))
         end
@@ -265,7 +272,7 @@ module Carat
         cursor = state.cursor
         if selection.kind == :linewise
           top = selection.top
-          state.registers.write(register, Domain::Operators.extract(buffer, selection.line_range))
+          @registers.write(register, Domain::Operators.extract(buffer, selection.line_range))
           indent = state.options.autoindent ? buffer.indent_of(top) : ""
           buffer.set_lines(top, selection.bottom + 1, [indent])
           state.mode = Domain::Mode::INSERT
@@ -286,7 +293,7 @@ module Carat
           return
         end
         range = selection.char_range(buffer)
-        state.registers.write(register, Domain::Operators.extract(buffer, range))
+        @registers.write(register, Domain::Operators.extract(buffer, range))
         Domain::Operators.delete(buffer, range)
         state.mode = Domain::Mode::INSERT
         cursor.move_to(range.from.row, range.from.col)
@@ -356,7 +363,7 @@ module Carat
         top_col = block.span(buffer.line(block.top), tabstop).from
         from = selection.char_range(buffer).from
         removed = cut(state, selection)
-        state.registers.write("", removed) unless keep
+        @registers.write("", removed) unless keep
         if selection.kind == :linewise
           put_lines(state, selection, entry, count, line_count)
         elsif selection.kind == :blockwise

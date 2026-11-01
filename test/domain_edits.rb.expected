@@ -33,14 +33,9 @@ ok   the records are in the order of the edits
 ok   a transaction without records is dropped
 ok   closing with none open does nothing
 ok   an edit outside a transaction is a transaction of its own
-ok   a buffer gets the next id when it enters the list, an unlisted one has 0
-ok   a buffer keeps its id when it comes back to the list
-ok   records carry the buffer's id
 ok   two records widen the span to cover both, unchanged rows between included
 ok   one record is its own span
 ok   a record above an earlier one moves the span's start
-ok   every listed buffer's events are in the feed in order, with the cause at the time
-ok   an unlisted buffer records nothing
 ok   the first record gives the cause
 ok   records of the same cause keep it
 ok   a record of another cause makes it the editor's
@@ -55,8 +50,4 @@ ok   clearing one plugin's signs shows the other's
 ok   clearing signs never placed counts none
 ok   a large insertion moves the tail in one pass
 ok   a large deletion closes the gap
-ok   the first window has id 1
-ok   a new tab page's window gets the next id and is found by it
-ok   an id is given once and never again
-ok   a buffer is found by its id
-domain_edits: 61 passed, 0 failed
+domain_edits: 52 passed, 0 failed

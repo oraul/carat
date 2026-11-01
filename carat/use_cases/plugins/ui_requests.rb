@@ -1,8 +1,11 @@
 require_relative "../../plugin_api"
 require_relative "../../domain/editor_state"
+require_relative "../../domain/input_state"
+require_relative "../../domain/plugin_ui"
 require_relative "../../domain/icons"
 require_relative "../../domain/mode"
 require_relative "../files/file_ops"
+require_relative "../ex/command_runner"
 require_relative "plugin_registry"
 
 module Carat
@@ -11,30 +14,28 @@ module Carat
     # message, the plugin's status segment, a prompt, an icon, the
     # plugin's options, the working directory, and running an ex command
     # line, which is refused with E169 when plugin calls are already
-    # nested MAX_DEPTH deep. ExecuteEx is attached after construction
-    # because it routes plugin commands to the host while this runs ex
-    # command strings through it. The plugin link has checked that the
-    # plugin is enabled.
+    # nested MAX_DEPTH deep. The command runner is given at construction,
+    # already built; the plugin link has checked that the plugin is
+    # enabled. The segments and the prompt live in the plugin UI state.
     class UiRequests
       MAX_DEPTH = 4
       E169 = "E169: Command too recursive"
 
-      # @rbs @state: Domain::EditorState
-      # @rbs @registry: PluginRegistry
-      # @rbs @file_ops: FileOps
-      # @rbs @execute_ex: ExecuteEx?
+      attr_reader :state #: Domain::EditorState
+      attr_reader :registry #: PluginRegistry
+      attr_reader :file_ops #: FileOps
+      attr_reader :plugin_ui #: Domain::PluginUi
+      attr_reader :input #: Domain::InputState
+      attr_reader :runner #: CommandRunner
 
-      #: (Domain::EditorState, PluginRegistry, FileOps) -> void
-      def initialize(state, registry, file_ops)
+      #: (state: Domain::EditorState, registry: PluginRegistry, file_ops: FileOps, plugin_ui: Domain::PluginUi, input: Domain::InputState, runner: CommandRunner) -> void
+      def initialize(state:, registry:, file_ops:, plugin_ui:, input:, runner:)
         @state = state
         @registry = registry
         @file_ops = file_ops
-        @execute_ex = nil
-      end
-
-      #: (ExecuteEx) -> void
-      def attach(execute_ex)
-        @execute_ex = execute_ex
+        @plugin_ui = plugin_ui
+        @input = input
+        @runner = runner
       end
 
       #: (String, String, bool) -> PluginApi::Response
@@ -45,11 +46,7 @@ module Carat
 
       #: (String, String) -> PluginApi::Response
       def set_status(name, text)
-        if text.empty?
-          @state.segments.delete(name)
-        else
-          @state.segments[name] = text.dup
-        end
+        @plugin_ui.segment(name, text.dup)
         PluginApi::Response.success("", 0)
       end
 
@@ -57,12 +54,10 @@ module Carat
       #: (String, String, String, String) -> PluginApi::Response
       def prompt(name, id, text, initial)
         state = @state
-        return PluginApi::Response.failure("A prompt is already open") if state.prompting?
-        state.prompt = text.dup
-        state.prompt_owner = name
-        state.prompt_id = id.dup
+        return PluginApi::Response.failure("A prompt is already open") if @plugin_ui.prompting?
+        @plugin_ui.open_prompt(name, id.dup, text.dup)
         state.cmdline = initial.dup
-        state.pending_keys = []
+        @input.pending_keys = []
         state.mode = Domain::Mode::CMDLINE
         PluginApi::Response.success("", 0)
       end
@@ -90,9 +85,7 @@ module Carat
       #: (String, String) -> PluginApi::Response
       def run_ex(name, text)
         return PluginApi::Response.failure(E169) if @registry.depth >= MAX_DEPTH
-        runner = @execute_ex
-        return PluginApi::Response.failure("No ex command runner") if runner.nil?
-        outcome = runner.call(@state, text)
+        outcome = @runner.call(@state, text)
         PluginApi::Response.new(outcome.ok, outcome.message, 0, [])
       end
     end

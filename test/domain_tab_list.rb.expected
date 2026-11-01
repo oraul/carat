@@ -1,0 +1,33 @@
+ok   a new tab page goes after the current one and is current
+ok   inserted after the first tab page
+ok   one window per tab page
+ok   next from the second goes to the third
+ok   next from the last wraps
+ok   a count goes to that tab page
+ok   a count past the last does nothing
+ok   previous goes back one
+ok   previous with a count wraps
+ok   two back from the first lands on the second of three
+ok   closing the current tab page makes the next one current
+ok   closing the last tab page makes the one before it current
+ok   closing a tab page before the current one keeps it current
+ok   the first tab page is gone
+ok   the first window has id 1
+ok   a new tab page's window gets the next id and is found by it
+ok   an id is given once and never again
+ok   two windows on the buffer in the first tab page and one in the second
+ok   a cursor past the end moves onto the last line and its last character, a scroll position past the end returns to the top, and a cursor above the change stays
+ok   every window on the buffer from the changed row on is clamped
+ok   a cursor above the change stays
+ok   a change to another buffer clamps nothing here
+ok   nothing is clamped while the transaction is open
+ok   it is clamped when the transaction closes
+ok   no keys pending at first
+ok   take_keys hands over the waiting keys and drops them
+ok   no find at first
+ok   remember keeps the find
+ok   no status segments and no prompt at first
+ok   segments by plugin, empty text removes one, and an open prompt
+ok   dropping another plugin keeps the prompt
+ok   dropping the plugin removes its segment and its prompt
+domain_tab_list: 32 passed, 0 failed

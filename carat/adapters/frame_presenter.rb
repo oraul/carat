@@ -4,6 +4,9 @@ require_relative "../domain/highlight"
 require_relative "../domain/display_width"
 require_relative "../domain/layout"
 require_relative "../domain/selection"
+require_relative "../domain/input_state"
+require_relative "../domain/plugin_ui"
+require_relative "../domain/command_grammar"
 
 module Carat
   module Adapters
@@ -18,16 +21,23 @@ module Carat
     # its selection with the Visual highlight, leaving the cell under the
     # cursor in its own highlight so the cursor shows on top. It arranges
     # the layout and scrolls every window first so the state and the frame
-    # agree, and places the cursor in the current window.
+    # agree, and places the cursor in the current window. The pending keys
+    # come from the input state and the segments and the prompt from the
+    # plugin UI state.
     class FramePresenter
       SHOWCMD_WIDTH = 10
       SEPARATOR = "│"
       FAR = 1 << 30
 
+      attr_reader :input #: Domain::InputState
+      attr_reader :plugin_ui #: Domain::PluginUi
+
       # @rbs @frame: Domain::Frame?
 
-      #: () -> void
-      def initialize
+      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi) -> void
+      def initialize(input:, plugin_ui:)
+        @input = input
+        @plugin_ui = plugin_ui
         @frame = nil
       end
 
@@ -37,7 +47,7 @@ module Carat
         return frame if rows <= 0 || cols <= 0
         options = state.options
         tabstop = options.tabstop > 0 ? options.tabstop : 8
-        tabline = state.tab_count > 1 ? 1 : 0
+        tabline = state.tabs.tab_count > 1 ? 1 : 0
         area = rows - 1 - tabline
         area = 1 if area < 1
         tab = state.tab
@@ -53,7 +63,7 @@ module Carat
           id = ids[i]
           current = id == tab.current
           selection = current && visual ? state.selection : none
-          paint_window(frame, layout.window_at(id), current, options, tabstop, state.segments, selection)
+          paint_window(frame, layout.window_at(id), current, options, tabstop, @plugin_ui.segments, selection)
           i += 1
         end
         paint_separators(frame, layout, layout.root)
@@ -294,11 +304,12 @@ module Carat
       def paint_tabline(frame, state, cols)
         frame.fill(0, 0, cols, Domain::Highlight::TAB_LINE_FILL)
         col = 0
+        tabs = state.tabs
         t = 0
-        while t < state.tab_count
-          buffer = state.tab_at(t).window.buffer
+        while t < tabs.tab_count
+          buffer = tabs.tab_at(t).window.buffer
           label = " #{t + 1} #{file_name(buffer)}#{buffer.modified? ? " [+]" : ""} "
-          hl = t == state.tab_index ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE
+          hl = t == tabs.tab_index ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE
           col = frame.put(0, col, label, hl)
           break if col >= cols
           t += 1
@@ -317,7 +328,23 @@ module Carat
       # ":" for an ex command line, a plugin's prompt text while one is open.
       #: (Domain::EditorState) -> String
       def command_prefix(state)
-        state.prompting? ? state.prompt : ":"
+        ui = @plugin_ui
+        ui.prompting? ? ui.prompt : ":"
+      end
+
+      # The keys of the command being typed, for the pending-keys display:
+      # what the grammar has taken plus what the keymap is still waiting on.
+      #: () -> String
+      def showcmd_text
+        input = @input
+        text = input.grammar.typed
+        keys = input.pending_keys
+        i = 0
+        while i < keys.length
+          text = text + Domain::CommandGrammar.display(keys[i])
+          i += 1
+        end
+        text
       end
 
       #: (Domain::Frame, Integer, Integer, Domain::EditorState) -> void
@@ -338,7 +365,7 @@ module Carat
         elsif state.mode == Domain::Mode::VISUAL_BLOCK
           frame.put(frame_row, 0, "-- VISUAL BLOCK --", Domain::Highlight::NORMAL)
         end
-        showcmd = state.showcmd
+        showcmd = showcmd_text
         return if showcmd.empty?
         showcmd = showcmd[showcmd.length - SHOWCMD_WIDTH, SHOWCMD_WIDTH] if showcmd.length > SHOWCMD_WIDTH
         start = cols - showcmd.length

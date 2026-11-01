@@ -20,12 +20,14 @@ module Carat
       attr_reader :assembly #: Adapters::EditorAssembly
       attr_reader :frame #: Domain::Frame
 
+      # config is the configuration value, which the harness serves
+      # through a FixedConfig.
       #: (files: MemoryFiles, config: untyped, rows: Integer, cols: Integer, plugins: Array[untyped]) -> void
       def initialize(files:, config:, rows:, cols:, plugins:)
         @files = files
         @clock = ManualClock.new
-        @terminal = FakeTerminal.new(@clock, rows, cols)
-        @assembly = Adapters::EditorAssembly.new(terminal: @terminal, clock: @clock, files: @files, config: config, config_source: FixedConfig::SOURCE, plugin_list: plugins)
+        @terminal = FakeTerminal.new(clock: @clock, rows: rows, cols: cols)
+        @assembly = Adapters::EditorAssembly.new(terminal: @terminal, clock: @clock, files: @files, config: FixedConfig.new(value: config), plugin_list: plugins)
         @frame = Domain::Frame.new(rows, cols)
       end
 
@@ -145,7 +147,7 @@ module Carat
       # The number of windows in the current tab page.
       #: () -> Integer
       def window_count
-        @assembly.state.window_count
+        @assembly.state.tab.window_count
       end
 
       # The 1-based number of the current window in layout order.
@@ -157,13 +159,13 @@ module Carat
 
       #: () -> Integer
       def tab_count
-        @assembly.state.tab_count
+        @assembly.tabs.tab_count
       end
 
       # The 1-based number of the current tab page.
       #: () -> Integer
       def tab_index
-        @assembly.state.tab_index + 1
+        @assembly.tabs.tab_index + 1
       end
 
       # Every window of the current tab page in layout order, each as
@@ -186,11 +188,11 @@ module Carat
       # The paths of the listed buffers, "" for an unnamed one.
       #: () -> Array[String]
       def buffer_paths
-        s = @assembly.state
+        list = @assembly.buffers
         out = []
         i = 0
-        while i < s.buffer_count
-          path = s.buffer_at(i).path
+        while i < list.count
+          path = list.buffer_at(i).path
           out << (path.nil? ? "" : path)
           i += 1
         end

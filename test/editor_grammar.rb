@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 t = Carat::Testing.new("editor_grammar")
@@ -58,10 +58,10 @@ h = editor("a\nb\nc\nd\n")
 h.type("3gg")
 t.assert_equal([2, 0], h.cursor, "a count before gg")
 h.type("g")
-t.assert_equal([103], h.state.pending_keys, "g is pending in the keymap")
+t.assert_equal([103], h.assembly.input.pending_keys, "g is pending in the keymap")
 h.type("1")
 t.assert_equal([2, 0], h.cursor, "a digit after a prefix is not a count")
-t.assert_equal([], h.state.pending_keys, "the unbound sequence is dropped")
+t.assert_equal([], h.assembly.input.pending_keys, "the unbound sequence is dropped")
 
 # The pending-keys display.
 h = editor("a\nb\nc\n")

@@ -1,4 +1,4 @@
-require_relative "../carat"
+require_relative "../carat/test_support"
 require_relative "../carat/testing"
 
 t = Carat::Testing.new("use_cases_plugins")
@@ -97,22 +97,25 @@ def setup(plugins, config_plugins)
   files.put("b.txt", "zz\n")
   files.put("dir/b.txt", "1\n")
   files.put("dir/a.txt", "2\n")
-  state = Carat::Domain::EditorState.new(Carat::Domain::Buffer.from_text("", nil), Carat::Domain::Options.new, 500)
+  first = Carat::Domain::Buffer.from_text("", nil)
+  tabs = Carat::Domain::TabList.new(Carat::Domain::Window.new(first))
+  buffers = Carat::Domain::BufferList.new(tabs)
+  buffers.add(first)
+  state = Carat::Domain::EditorState.new(tabs, Carat::Domain::Options.new)
   keymap = Carat::Domain::Keymap.new
-  open_file = Carat::UseCases::OpenFile.new(files)
-  close_window = Carat::UseCases::CloseWindow.new
-  split_window = Carat::UseCases::SplitWindow.new(open_file)
-  open_tab = Carat::UseCases::OpenTab.new(open_file)
-  host = Carat::UseCases::PluginHost.new(state: state, files: files, open_file: open_file, close_window: close_window, split_window: split_window, open_tab: open_tab, keymap: keymap, leader: " ")
-  save_file = Carat::UseCases::SaveFile.new(files: files, plugins: host)
-  quit = Carat::UseCases::Quit.new(close_window)
   commands = Carat::UseCases::ExTable.new
+  ex = Carat::UseCases::ExecuteEx.new(commands: commands)
+  open_file = Carat::UseCases::OpenFile.new(files: files, buffers: buffers)
+  close_window = Carat::UseCases::CloseWindow.new(buffers: buffers, tabs: tabs)
+  split_window = Carat::UseCases::SplitWindow.new(open_file: open_file, buffers: buffers, tabs: tabs)
+  open_tab = Carat::UseCases::OpenTab.new(open_file: open_file, buffers: buffers, tabs: tabs)
+  host = Carat::UseCases::PluginHost.new(state: state, buffers: buffers, tabs: tabs, input: Carat::Domain::InputState.new, plugin_ui: Carat::Domain::PluginUi.new, files: files, open_file: open_file, close_window: close_window, split_window: split_window, open_tab: open_tab, keymap: keymap, leader: " ", runner: ex)
+  save_file = Carat::UseCases::SaveFile.new(files: files, plugins: host, buffers: buffers)
+  quit = Carat::UseCases::Quit.new(close_window: close_window, buffers: buffers, tabs: tabs)
   Carat::UseCases::FileCommandHandler.register(commands, save_file: save_file, quit: quit, open_file: open_file)
   Carat::UseCases::WindowCommandHandler.register(commands, split_window: split_window, close_window: close_window)
-  Carat::UseCases::TabCommandHandler.register(commands, open_tab: open_tab, close_tab: Carat::UseCases::CloseTab.new, switch_tab: Carat::UseCases::SwitchTab.new)
+  Carat::UseCases::TabCommandHandler.register(commands, open_tab: open_tab, close_tab: Carat::UseCases::CloseTab.new(buffers: buffers, tabs: tabs), switch_tab: Carat::UseCases::SwitchTab.new(tabs: tabs))
   Carat::UseCases::PluginCommandHandler.register(commands, plugins: host)
-  ex = Carat::UseCases::ExecuteEx.new(commands: commands)
-  host.attach(ex)
   plugins.each { |p| host.register(p) }
   host.activate_all(config_plugins)
   keymap.add_all({ "normal" => { "<leader>pp" => "cursor.down" } }, " ")
@@ -292,9 +295,9 @@ t.assert_equal(["hi", false], [state.message, state.message_error], "message sho
 h.message("bad", true)
 t.assert_equal(["bad", true], [state.message, state.message_error], "message shows an error")
 h.set_status("probe 1")
-t.assert_equal({ "probe" => "probe 1" }, state.segments, "set_status keeps the segment by plugin name")
+t.assert_equal({ "probe" => "probe 1" }, host.plugin_ui.segments, "set_status keeps the segment by plugin name")
 h.set_status("")
-t.assert_equal({}, state.segments, "empty text removes it")
+t.assert_equal({}, host.plugin_ui.segments, "empty text removes it")
 state.buffer.set_lines(0, 1, ["edited"])
 r = h.run_ex("w")
 t.assert_equal([true, "\"a.txt\" 2L, 11B written", "edited\ntwo\n"], [r.ok, r.message, files.get("a.txt")], "run_ex runs the command and returns its outcome")
@@ -376,7 +379,7 @@ state.buffer.set_lines(0, 1, ["x"])
 host.observe
 t.assert_equal(["Plugin probe disabled: event boom", false, ["x", "two"]], [state.message, host.enabled?("probe"), state.buffer.lines], "a raise in an event disables the plugin and keeps the edit")
 r = p.host.set_status("gone")
-t.assert_equal([false, "Plugin probe is disabled", {}], [r.ok, r.message, state.segments], "a disabled plugin's requests are refused")
+t.assert_equal([false, "Plugin probe is disabled", {}], [r.ok, r.message, host.plugin_ui.segments], "a disabled plugin's requests are refused")
 t.assert_equal([false, false, "Plugin probe is disabled"], [p.host.read_buffer(0).ok, p.host.stat("a.txt").ok, p.host.icon("info").message], "reads, stats, and icons too")
 p = probe([])
 state, host, keymap, files, ex = setup([p], {})
@@ -384,6 +387,6 @@ p.host.set_status("here")
 p.raise_in_event = false
 p.raise_in_action = true
 host.action("plugin.probe.go", D::Command.plain("plugin.probe.go"))
-t.assert_equal({}, state.segments, "a disabled plugin's segment is dropped when it is disabled")
+t.assert_equal({}, host.plugin_ui.segments, "a disabled plugin's segment is dropped when it is disabled")
 
 t.finish

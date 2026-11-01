@@ -1,0 +1,10 @@
+ok   the loop draws the first frame and ends at the terminate signal
+ok   the resize draws a second frame
+ok   the redraw is a frame
+ok   a terminated loop draws nothing
+ok   :q ends the loop before the poll limit
+ok   no signal at first
+ok   WINCH sets the resize flag
+ok   acknowledging clears it
+ok   TERM sets the terminate flag
+drivers_main_loop: 9 passed, 0 failed

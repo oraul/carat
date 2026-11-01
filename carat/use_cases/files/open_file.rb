@@ -1,4 +1,5 @@
 require_relative "../../domain/editor_state"
+require_relative "../../domain/buffer_list"
 require_relative "../../ports/file_port"
 require_relative "../outcome"
 
@@ -9,20 +10,23 @@ module Carat
     # empty buffer for a path that does not exist yet, with Vim's message
     # for each. The current buffer's own path is reloaded in place through
     # Buffer#reload, one change that leaves it unmodified, so every window
-    # showing it sees the file's text.
+    # showing it sees the file's text; the closed transaction keeps their
+    # cursors inside it.
     class OpenFile
-      # @rbs @files: Ports::FilePort
+      attr_reader :files #: Ports::FilePort
+      attr_reader :buffers #: Domain::BufferList
 
-      #: (Ports::FilePort) -> void
-      def initialize(files)
+      #: (files: Ports::FilePort, buffers: Domain::BufferList) -> void
+      def initialize(files:, buffers:)
         @files = files
+        @buffers = buffers
       end
 
       #: (Domain::EditorState, String) -> Outcome
       def call(state, path)
-        listed = state.buffer_for(path)
+        listed = @buffers.for_path(path)
         if !listed.nil? && !listed.equal?(state.buffer)
-          state.load(listed)
+          @buffers.load(listed)
           return Outcome.success("\"#{path}\" #{listed.line_count}L, #{listed.byte_count}B")
         end
         text = +""
@@ -35,12 +39,11 @@ module Carat
         end
         fresh = Domain::Buffer.from_text(text, path)
         if listed.nil?
-          state.load(fresh)
+          @buffers.load(fresh)
         else
           listed.reload(fresh.lines)
           listed.line_ending = fresh.line_ending
           state.window.show(listed)
-          state.clamp_cursors(listed)
         end
         return Outcome.success("\"#{path}\" [New]") unless @files.exist?(path)
         Outcome.success("\"#{path}\" #{fresh.line_count}L, #{text.bytesize}B")

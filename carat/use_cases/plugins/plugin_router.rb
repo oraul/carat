@@ -1,5 +1,6 @@
 require_relative "../../plugin_api"
 require_relative "../../domain/editor_state"
+require_relative "../../domain/plugin_ui"
 require_relative "../../domain/command"
 require_relative "../../domain/ex_command"
 require_relative "../outcome"
@@ -17,11 +18,13 @@ module Carat
 
       # @rbs @state: Domain::EditorState
       # @rbs @registry: PluginRegistry
+      # @rbs @plugin_ui: Domain::PluginUi
 
-      #: (state: Domain::EditorState, registry: PluginRegistry) -> void
-      def initialize(state:, registry:)
+      #: (state: Domain::EditorState, registry: PluginRegistry, plugin_ui: Domain::PluginUi) -> void
+      def initialize(state:, registry:, plugin_ui:)
         @state = state
         @registry = registry
+        @plugin_ui = plugin_ui
       end
 
       # Runs a plugin.<name>.<action> action, with the count and register
@@ -38,7 +41,7 @@ module Carat
         actions = e.manifest.actions
         return Outcome.failure("Plugin #{plugin_name} has no action #{name}") unless actions.is_a?(Hash) && actions.key?(name)
         cursor = state.cursor
-        context = PluginApi::Context.new(command.count, command.register, state.buffer.id, state.window_id, state.buffer.path_text.dup, cursor.row, cursor.col)
+        context = PluginApi::Context.new(command.count, command.register, state.buffer.id, state.window.id, state.buffer.path_text.dup, cursor.row, cursor.col)
         guarded(e) { e.plugin.on_action(name, context) }
         Outcome.none
       end
@@ -65,12 +68,10 @@ module Carat
       # that opened it.
       #: (String, bool) -> void
       def answer(text, cancelled)
-        state = @state
-        owner = state.prompt_owner
-        id = state.prompt_id
-        state.prompt = ""
-        state.prompt_owner = ""
-        state.prompt_id = ""
+        ui = @plugin_ui
+        owner = ui.prompt_owner
+        id = ui.prompt_id
+        ui.close_prompt
         e = @registry.find(owner)
         return if e.nil? || !e.enabled
         input = PluginApi::Input.new(id, cancelled ? "" : text.dup, cancelled)

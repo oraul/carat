@@ -77,12 +77,4 @@ ok   a scratch buffer is named by its title
 ok   a file buffer is named by its path
 ok   no signs at first
 ok   a sign is placed on its row
-ok   a changed scratch buffer is not unsaved work
-ok   buffer_number is the list position from 1
-ok   an unlisted buffer has number 0
-ok   scratch_for finds the plugin's buffer by title
-ok   scratch_for answers nil for another title
-ok   an unshown scratch buffer leaves the list even when modified
-ok   a shown modified file buffer stays
-ok   no status segments at first
-domain_buffer: 87 passed, 0 failed
+domain_buffer: 79 passed, 0 failed

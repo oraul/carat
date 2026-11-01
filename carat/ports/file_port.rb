@@ -1,3 +1,5 @@
+require_relative "../domain/path_info"
+
 module Carat
   module Ports
     # The file system as the use cases see it. Errors raise StandardError
@@ -26,8 +28,10 @@ module Carat
         raise NotImplementedError, "FilePort#list"
       end
 
-      # Returns {"size" => bytes, "mtime" => seconds, "directory" => 0 or
-      # 1, "symlink" => 0 or 1}; directory follows a link, symlink does not.
+      # Returns the Domain::PathInfo of the path: size in bytes, mtime in
+      # seconds, directory (following a link), and symlink (the path
+      # itself); PathInfo.missing when nothing is there, while a link to
+      # nothing exists as a link of size 0.
       # @rbs path: String
       def stat(path)
         raise NotImplementedError, "FilePort#stat"

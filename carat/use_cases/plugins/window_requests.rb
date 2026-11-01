@@ -1,5 +1,7 @@
 require_relative "../../plugin_api"
 require_relative "../../domain/editor_state"
+require_relative "../../domain/buffer_list"
+require_relative "../../domain/tab_list"
 require_relative "../../domain/buffer"
 require_relative "../../domain/keymap"
 require_relative "../../domain/position"
@@ -23,17 +25,23 @@ module Carat
     class WindowRequests
       E444 = "E444: Cannot close last window"
 
-      # @rbs @state: Domain::EditorState
-      # @rbs @registry: PluginRegistry
-      # @rbs @open_file: OpenFile
-      # @rbs @split_window: SplitWindow
-      # @rbs @open_tab: OpenTab
-      # @rbs @close_window: CloseWindow
-      # @rbs @file_ops: FileOps
+      attr_reader :state #: Domain::EditorState
+      attr_reader :buffers #: Domain::BufferList
+      attr_reader :tabs #: Domain::TabList
+      attr_reader :registry #: PluginRegistry
+      attr_reader :split_window #: SplitWindow
+      attr_reader :open_tab #: OpenTab
+      attr_reader :close_window #: CloseWindow
+      attr_reader :file_ops #: FileOps
 
-      #: (Domain::EditorState, PluginRegistry, OpenFile, SplitWindow, OpenTab, CloseWindow, FileOps) -> void
-      def initialize(state, registry, open_file, split_window, open_tab, close_window, file_ops)
+      # open_file is also the name of a request, so it has no reader.
+      # @rbs @open_file: OpenFile
+
+      #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, registry: PluginRegistry, open_file: OpenFile, split_window: SplitWindow, open_tab: OpenTab, close_window: CloseWindow, file_ops: FileOps) -> void
+      def initialize(state:, buffers:, tabs:, registry:, open_file:, split_window:, open_tab:, close_window:, file_ops:)
         @state = state
+        @buffers = buffers
+        @tabs = tabs
         @registry = registry
         @open_file = open_file
         @split_window = split_window
@@ -51,7 +59,7 @@ module Carat
         return PluginApi::WindowResponse.failure("No side #{side}: left or right") unless PluginApi::SIDES.include?(side)
         state = @state
         layout = state.tab.layout
-        existing = state.scratch_for(name, title)
+        existing = @buffers.scratch_for(name, title)
         unless existing.nil?
           leaf = layout.leaf_showing(existing)
           if leaf >= 0
@@ -59,11 +67,11 @@ module Carat
             state.tab.focus(leaf)
             return PluginApi::WindowResponse.success("", layout.window_at(leaf).id)
           end
-          if state.shown?(existing)
+          if @tabs.shown?(existing)
             replace_lines(existing, lines)
             return place_side(existing, side, width)
           end
-          state.drop_buffer(existing)
+          @buffers.remove(existing)
         end
         buffer = Domain::Buffer.new(Boundary.copied_lines(lines), nil, "\n")
         buffer.owner = name
@@ -81,7 +89,7 @@ module Carat
 
       #: (String, String, Array[String]) -> PluginApi::Response
       def set_scratch_lines(name, title, lines)
-        buffer = @state.scratch_for(name, title)
+        buffer = @buffers.scratch_for(name, title)
         return PluginApi::Response.failure("No scratch buffer #{title}") if buffer.nil?
         replace_lines(buffer, lines)
         PluginApi::Response.success("", 0)
@@ -90,10 +98,10 @@ module Carat
       #: (String, String) -> PluginApi::Response
       def close_scratch(name, title)
         state = @state
-        buffer = state.scratch_for(name, title)
+        buffer = @buffers.scratch_for(name, title)
         leaf = buffer.nil? ? -1 : state.tab.layout.leaf_showing(buffer)
         return PluginApi::Response.failure("No window shows #{title}") if leaf < 0
-        return PluginApi::Response.failure(E444) if state.total_windows <= 1
+        return PluginApi::Response.failure(E444) if @tabs.total_windows <= 1
         @close_window.remove(state, leaf)
         PluginApi::Response.success("", 0)
       end
@@ -102,7 +110,7 @@ module Carat
       #: (String, Integer) -> PluginApi::WindowResponse
       def focus_window(name, id)
         target = window_or_current(id)
-        tab_index = @state.window_tab(target)
+        tab_index = @tabs.window_tab(target)
         return PluginApi::WindowResponse.failure("No window #{id}") if tab_index < 0
         focus_at(tab_index, target)
         PluginApi::WindowResponse.success("", target)
@@ -117,9 +125,9 @@ module Carat
       def open_file(name, id, path)
         state = @state
         target = window_or_current(id)
-        tab_index = state.window_tab(target)
+        tab_index = @tabs.window_tab(target)
         return PluginApi::WindowResponse.failure("No window #{id}") if tab_index < 0
-        tab = state.tab_at(tab_index)
+        tab = @tabs.tab_at(tab_index)
         leaf = tab.layout.leaf_of(target)
         window = tab.layout.window_at(leaf)
         old = window.buffer
@@ -131,7 +139,7 @@ module Carat
         outcome = in_window(tab_index, leaf) { @open_file.call(state, path) }
         return PluginApi::WindowResponse.failure(outcome.message) unless outcome.ok
         window.fixed_width = false if old.scratch? && !window.buffer.equal?(old)
-        state.add_buffer(old) if old.modified? && !old.scratch? && state.buffer_index(old) < 0
+        @buffers.add(old) if old.modified? && !old.scratch? && @buffers.index_of(old) < 0
         focus_at(tab_index, target)
         PluginApi::WindowResponse.success(outcome.message, target)
       end
@@ -142,20 +150,20 @@ module Carat
       def open_in_split(name, id, path, vertical)
         state = @state
         target = window_or_current(id)
-        tab_index = state.window_tab(target)
+        tab_index = @tabs.window_tab(target)
         return PluginApi::WindowResponse.failure("No window #{id}") if tab_index < 0
-        tab = state.tab_at(tab_index)
-        saved_tab = state.tab_index
+        tab = @tabs.tab_at(tab_index)
+        saved_tab = @tabs.tab_index
         saved_current = tab.current
-        state.tab_index = tab_index
+        @tabs.tab_index = tab_index
         tab.current = tab.layout.leaf_of(target)
         outcome = @split_window.call(state, vertical, 0, path, false)
         if tab.current == tab.layout.leaf_of(target)
           tab.current = saved_current
-          state.tab_index = saved_tab
+          @tabs.tab_index = saved_tab
         end
         return PluginApi::WindowResponse.failure(outcome.message) unless outcome.ok
-        PluginApi::WindowResponse.success(outcome.message, state.window_id)
+        PluginApi::WindowResponse.success(outcome.message, state.window.id)
       end
 
       # Opens a tab page after the current one showing the file, taken as
@@ -164,7 +172,7 @@ module Carat
       def open_in_tab(name, path)
         outcome = @open_tab.call(@state, path)
         return PluginApi::WindowResponse.failure(outcome.message) unless outcome.ok
-        PluginApi::WindowResponse.success(outcome.message, @state.window_id)
+        PluginApi::WindowResponse.success(outcome.message, @state.window.id)
       end
 
       # The previously used window when it shows a file buffer, otherwise
@@ -189,7 +197,7 @@ module Carat
       #: (String, String) -> PluginApi::WindowResponse
       def scratch_window(name, title)
         state = @state
-        buffer = state.scratch_for(name, title)
+        buffer = @buffers.scratch_for(name, title)
         layout = state.tab.layout
         leaf = buffer.nil? ? -1 : layout.leaf_showing(buffer)
         PluginApi::WindowResponse.success("", leaf < 0 ? 0 : layout.window_at(leaf).id)
@@ -199,13 +207,13 @@ module Carat
 
       #: (Integer) -> Integer
       def window_or_current(id)
-        id == 0 ? @state.window_id : id
+        id == 0 ? @state.window.id : id
       end
 
       # Makes the window with the id, in the tab page at the index, current.
       #: (Integer, Integer) -> void
       def focus_at(tab_index, id)
-        @state.tab_index = tab_index
+        @tabs.tab_index = tab_index
         tab = @state.tab
         tab.focus(tab.layout.leaf_of(id))
       end
@@ -215,14 +223,14 @@ module Carat
       # @rbs skip
       def in_window(tab_index, leaf)
         state = @state
-        tab = state.tab_at(tab_index)
-        saved_tab = state.tab_index
+        tab = @tabs.tab_at(tab_index)
+        saved_tab = @tabs.tab_index
         saved_current = tab.current
-        state.tab_index = tab_index
+        @tabs.tab_index = tab_index
         tab.current = leaf
         result = yield
         tab.current = saved_current
-        state.tab_index = saved_tab
+        @tabs.tab_index = saved_tab
         result
       end
 
@@ -231,18 +239,18 @@ module Carat
       def place_side(buffer, side, width)
         outcome = @split_window.side(@state, buffer, width, side == "left")
         return PluginApi::WindowResponse.failure(outcome.message) unless outcome.ok
-        PluginApi::WindowResponse.success("", @state.window_id)
+        PluginApi::WindowResponse.success("", @state.window.id)
       end
 
       # Replaces a scratch buffer's lines through Buffer#reload, one
-      # change that leaves it unmodified, inside one transaction.
+      # change that leaves it unmodified, inside one transaction, whose
+      # close keeps the cursors on the buffer inside the new lines.
       #: (Domain::Buffer, Array[String]) -> void
       def replace_lines(buffer, lines)
         state = @state
         before = buffer.equal?(state.buffer) ? state.cursor.position : Domain::Position.new(0, 0)
         opened = buffer.begin_transaction(before)
         buffer.reload(Boundary.copied_lines(lines))
-        state.clamp_cursors(buffer)
         after = buffer.equal?(state.buffer) ? state.cursor.position : Domain::Position.new(0, 0)
         buffer.commit_transaction(after) if opened
       end

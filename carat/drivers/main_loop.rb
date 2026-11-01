@@ -1,29 +1,33 @@
 require_relative "../ports/terminal_port"
+require_relative "../ports/signal_port"
 require_relative "../adapters/editor_assembly"
-require_relative "signals"
 
 module Carat
   module Drivers
     # The single editor thread. One iteration: present when something
-    # changed or the terminal was resized, then pump one read through the
-    # input controller. Ends when the state asks to quit or SIGTERM arrived.
+    # changed or the signal port reports a resize, then pump one read
+    # through the input controller. Ends when the state asks to quit or
+    # the signal port reports a request to end.
     class MainLoop
-      # @rbs @assembly: Adapters::EditorAssembly
-      # @rbs @terminal: Ports::TerminalPort
+      attr_reader :assembly #: Adapters::EditorAssembly
+      attr_reader :terminal #: Ports::TerminalPort
+      attr_reader :signals #: Ports::SignalPort
 
-      #: (Adapters::EditorAssembly, Ports::TerminalPort) -> void
-      def initialize(assembly, terminal)
+      #: (assembly: Adapters::EditorAssembly, terminal: Ports::TerminalPort, signals: Ports::SignalPort) -> void
+      def initialize(assembly:, terminal:, signals:)
         @assembly = assembly
         @terminal = terminal
+        @signals = signals
       end
 
       #: () -> void
       def run
         state = @assembly.state
+        signals = @signals
         dirty = true
-        until state.quit || Signals.terminated
-          if dirty || Signals.resized
-            Signals.resized = false
+        until state.quit || signals.terminated?
+          if dirty || signals.resized?
+            signals.acknowledge_resize
             size = @terminal.size
             @assembly.render(size[0], size[1])
             dirty = false

@@ -15,6 +15,12 @@ module Carat
       def load
         Carat::Json.parse(Domain::DEFAULT_CONFIG_JSON)
       end
+
+      # Returns SOURCE.
+      # @rbs skip
+      def source
+        SOURCE
+      end
     end
   end
 end

@@ -1,89 +1,48 @@
+require_relative "mode"
+require_relative "options"
+require_relative "selection"
+require_relative "block_insert"
+require_relative "tab_list"
+
 module Carat
   module Domain
-    # Everything a use case reads or changes: the buffer list, the tab pages
-    # and which is current, the mode, the options, the command line, the
-    # message, the keys pending in the keymap, the quit flag, the registers,
-    # the command grammar with the keys of the command being typed, the
-    # last f/t motion for ";" and ",", and the status line segments the
-    # plugins set, by plugin name in registration order, and the prompt a
-    # plugin opened on the command line (its text, the plugin, and the
-    # plugin's id for it, all "" when none is open), and the repetition a
-    # blockwise insert owes when insert mode is left, the id the next
-    # buffer to enter the list receives, the id the next window to enter a
-    # tab page receives, and the buffer feed, where the list records
-    # buffers opening and closing and the buffers their renames and
-    # changes, for the plugin host. The current window,
-    # its buffer, and its cursor are reached through the current tab page,
-    # and so is the visual selection, which the current window owns. A
-    # Struct record: mutable, with a reader and a writer per member.
-    class EditorState < Struct.new(:buffers, :tabs, :tab_index, :mode, :options, :timeoutlen, :cmdline, :message, :message_error, :pending_keys, :quit, :registers, :grammar, :last_find, :segments, :prompt, :prompt_owner, :prompt_id, :block_insert, :next_buffer_id, :next_window_id, :feed)
-      # @rbs @buffers: Array[untyped]
-      # @rbs @tabs: Array[untyped]
-      # @rbs @tab_index: Integer
+    # The current view the use cases and the presenter share: the tab
+    # list, through which the current tab page, window, buffer, cursor, and
+    # visual selection are reached, the mode, the options, the command
+    # line, the message, the quit flag, and the repetition a blockwise
+    # insert owes when insert mode is left. The rest of the editor's state
+    # lives in focused records the composition root hands to the use cases
+    # that need them: the buffer list, the input state, the registers, the
+    # last find, and the plugins' segments and prompt. A Struct record:
+    # mutable, with a reader and a writer per member.
+    class EditorState < Struct.new(:tabs, :mode, :options, :cmdline, :message, :message_error, :quit, :block_insert)
+      # @rbs @tabs: TabList
       # @rbs @mode: Symbol
       # @rbs @options: Options
-      # @rbs @timeoutlen: Integer
       # @rbs @cmdline: String
       # @rbs @message: String
       # @rbs @message_error: bool
-      # @rbs @pending_keys: Array[Integer]
       # @rbs @quit: bool
-      # @rbs @registers: Registers
-      # @rbs @grammar: CommandGrammar
-      # @rbs @last_find: Find?
-      # @rbs @segments: Hash[String, String]
-      # @rbs @prompt: String
-      # @rbs @prompt_owner: String
-      # @rbs @prompt_id: String
       # @rbs @block_insert: BlockInsert
-      # @rbs @next_buffer_id: Integer
-      # @rbs @next_window_id: Integer
-      # @rbs @feed: BufferFeed
 
-      # The lists are stored through the writers, not passed to super, so
-      # their element type is the pinned one; the rest follows for symmetry.
-      #: (Buffer, Options, Integer) -> void
-      def initialize(buffer, options, timeoutlen)
+      #: (TabList, Options) -> void
+      def initialize(tabs, options)
         super()
-        self.buffers = []
-        self.tabs = []
-        self.next_buffer_id = 1
-        self.next_window_id = 1
-        self.feed = BufferFeed.new
-        add_buffer(buffer)
-        first = Window.new(buffer)
-        adopt(first)
-        tabs << TabPage.new(first)
-        self.tab_index = 0
+        self.tabs = tabs
         self.mode = Mode::NORMAL
         self.options = options
-        self.timeoutlen = timeoutlen
         self.cmdline = ""
         self.message = ""
         self.message_error = false
-        self.pending_keys = []
         self.quit = false
-        self.registers = Registers.new
-        self.grammar = CommandGrammar.new
-        self.last_find = nil
-        self.segments = {}
-        self.prompt = ""
-        self.prompt_owner = ""
-        self.prompt_id = ""
         self.block_insert = BlockInsert.new
-      end
-
-      # Whether a plugin's prompt holds the command line.
-      #: () -> bool
-      def prompting?
-        !prompt_owner.empty?
       end
 
       # ------------------------------------------------------- current view
 
       #: () -> TabPage
       def tab
-        tab_at(tab_index)
+        tabs.tab
       end
 
       #: () -> Window
@@ -144,20 +103,6 @@ module Carat
 
       # ----------------------------------------------------------- messages
 
-      # The keys of the command being typed, for the pending-keys display:
-      # what the grammar has taken plus what the keymap is still waiting on.
-      #: () -> String
-      def showcmd
-        text = grammar.typed
-        keys = pending_keys
-        i = 0
-        while i < keys.length
-          text = text + CommandGrammar.display(keys[i])
-          i += 1
-        end
-        text
-      end
-
       #: (String, bool) -> void
       def show(text, error)
         self.message = text
@@ -168,284 +113,6 @@ module Carat
       def clear_message
         self.message = ""
         self.message_error = false
-      end
-
-      # -------------------------------------------------------- buffer list
-
-      #: (Integer) -> Buffer
-      def buffer_at(index)
-        buffers[index]
-      end
-
-      #: () -> Integer
-      def buffer_count
-        buffers.length
-      end
-
-      # The position of a buffer in the list by identity, or -1. Identity,
-      # not value: two unnamed empty buffers are equal by value.
-      #: (Buffer) -> Integer
-      def buffer_index(target)
-        i = 0
-        while i < buffers.length
-          return i if buffer_at(i).equal?(target)
-          i += 1
-        end
-        -1
-      end
-
-      # The listed buffer with that path, or nil.
-      #: (String) -> Buffer?
-      def buffer_for(path)
-        i = 0
-        while i < buffers.length
-          candidate = buffer_at(i)
-          return candidate if candidate.path == path
-          i += 1
-        end
-        nil
-      end
-
-      # Whether some window of some tab page shows the buffer.
-      #: (Buffer) -> bool
-      def shown?(target)
-        t = 0
-        while t < tabs.length
-          layout = tab_at(t).layout
-          ids = layout.leaves
-          i = 0
-          while i < ids.length
-            return true if layout.window_at(ids[i]).buffer.equal?(target)
-            i += 1
-          end
-          t += 1
-        end
-        false
-      end
-
-      # The first modified buffer in the list, or nil. A scratch buffer is
-      # never unsaved work, however its lines changed.
-      #: () -> Buffer?
-      def modified_buffer
-        i = 0
-        while i < buffers.length
-          candidate = buffer_at(i)
-          return candidate if candidate.modified? && !candidate.scratch?
-          i += 1
-        end
-        nil
-      end
-
-      #: () -> bool
-      def any_modified?
-        !modified_buffer.nil?
-      end
-
-      # The first modified buffer no window shows, or nil.
-      #: () -> Buffer?
-      def hidden_modified
-        i = 0
-        while i < buffers.length
-          candidate = buffer_at(i)
-          return candidate if candidate.modified? && !candidate.scratch? && !shown?(candidate)
-          i += 1
-        end
-        nil
-      end
-
-      # Keeps every cursor on the buffer inside its text after the buffer
-      # was replaced in place.
-      #: (Buffer) -> void
-      def clamp_cursors(target)
-        t = 0
-        while t < tabs.length
-          layout = tab_at(t).layout
-          ids = layout.leaves
-          i = 0
-          while i < ids.length
-            window = layout.window_at(ids[i])
-            if window.buffer.equal?(target)
-              cursor = window.cursor
-              last = target.line_count - 1
-              cursor.row = last if cursor.row > last
-              max = target.line(cursor.row).length
-              max = max > 0 ? max - 1 : 0
-              cursor.col = max if cursor.col > max
-              window.top = 0 if window.top > last
-            end
-            i += 1
-          end
-          t += 1
-        end
-      end
-
-      # Lists a buffer that is not listed yet. A buffer entering the list
-      # for the first time receives the next id, which it keeps for as
-      # long as the editor runs, also after leaving the list.
-      #: (Buffer) -> void
-      def add_buffer(target)
-        return if buffer_index(target) >= 0
-        if target.id == 0
-          target.id = next_buffer_id
-          self.next_buffer_id = next_buffer_id + 1
-        end
-        buffers << target
-        target.feed = feed
-        feed.note("open", target.id, target.path_text, "")
-      end
-
-      #: (Buffer) -> void
-      def drop_buffer(target)
-        index = buffer_index(target)
-        return if index < 0
-        buffers.delete_at(index)
-        feed.note("close", target.id, target.path_text, "")
-      end
-
-      # The listed buffer with the id, or nil.
-      #: (Integer) -> Buffer?
-      def buffer_with_id(id)
-        i = 0
-        while i < buffers.length
-          candidate = buffer_at(i)
-          return candidate if candidate.id == id
-          i += 1
-        end
-        nil
-      end
-
-      # Lets go of a buffer a window stopped showing: it leaves the list
-      # when it is unmodified and no window shows it, and stays hidden in
-      # the list otherwise, so no edit is lost. A scratch buffer leaves as
-      # soon as no window shows it.
-      #: (Buffer) -> void
-      def release(target)
-        drop_buffer(target) if (!target.modified? || target.scratch?) && !shown?(target)
-      end
-
-      # The 1-based list position of a buffer, or 0 when it is not listed.
-      #: (Buffer) -> Integer
-      def buffer_number(target)
-        buffer_index(target) + 1
-      end
-
-      # The listed scratch buffer a plugin owns with that title, or nil.
-      #: (String, String) -> Buffer?
-      def scratch_for(owner, title)
-        i = 0
-        while i < buffers.length
-          candidate = buffer_at(i)
-          return candidate if candidate.owner == owner && candidate.title == title
-          i += 1
-        end
-        nil
-      end
-
-      # Shows a buffer in the current window, listing it if needed. The
-      # buffer the window showed leaves the list when no window shows it any
-      # more; the callers make sure it is unmodified or that its changes
-      # were discarded on purpose.
-      #: (Buffer) -> void
-      def load(target)
-        old = window.buffer
-        add_buffer(target)
-        window.show(target)
-        drop_buffer(old) unless old.equal?(target) || shown?(old)
-      end
-
-      # ------------------------------------------------------------ windows
-
-      # Gives a window that has none the next window id, which it keeps
-      # for as long as the editor runs; no other window ever gets it.
-      #: (Window) -> void
-      def adopt(window)
-        return unless window.id == 0
-        window.id = next_window_id
-        self.next_window_id = next_window_id + 1
-      end
-
-      # The index of the tab page holding the window with the id, or -1.
-      #: (Integer) -> Integer
-      def window_tab(id)
-        t = 0
-        while t < tabs.length
-          return t if tab_at(t).layout.leaf_of(id) >= 0
-          t += 1
-        end
-        -1
-      end
-
-      # The id of the current window.
-      #: () -> Integer
-      def window_id
-        window.id
-      end
-
-      #: () -> Integer
-      def window_count
-        tab.window_count
-      end
-
-      # The number of windows over every tab page.
-      #: () -> Integer
-      def total_windows
-        total = 0
-        t = 0
-        while t < tabs.length
-          total += tab_at(t).window_count
-          t += 1
-        end
-        total
-      end
-
-      # ---------------------------------------------------------- tab pages
-
-      #: (Integer) -> TabPage
-      def tab_at(index)
-        tabs[index]
-      end
-
-      #: () -> Integer
-      def tab_count
-        tabs.length
-      end
-
-      # Inserts a tab page after the current one and makes it current.
-      #: (TabPage) -> void
-      def add_tab(page)
-        adopt(page.window)
-        tabs.insert(tab_index + 1, page)
-        self.tab_index = tab_index + 1
-      end
-
-      # Removes the tab page at index. When it was the current one, the one
-      # after it becomes current, or the one before it when it was last, as
-      # Neovim's alt_tabpage picks; otherwise the current one stays current.
-      #: (Integer) -> void
-      def remove_tab(index)
-        tabs.delete_at(index)
-        self.tab_index = tab_index - 1 if index < tab_index
-        self.tab_index = tabs.length - 1 if tab_index > tabs.length - 1
-      end
-
-      # Goes to tab page number n (1-based) when it exists; with 0, to the
-      # next one, wrapping. Returns whether the current tab page changed.
-      #: (Integer) -> bool
-      def next_tab(n)
-        if n == 0
-          self.tab_index = (tab_index + 1) % tabs.length
-          return true
-        end
-        return false if n > tabs.length
-        self.tab_index = n - 1
-        true
-      end
-
-      # Goes n tab pages back, wrapping; 0 counts as 1.
-      #: (Integer) -> void
-      def previous_tab(n)
-        steps = n > 0 ? n : 1
-        self.tab_index = (tab_index - steps) % tabs.length
       end
     end
   end
