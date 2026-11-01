@@ -25,10 +25,16 @@ FILE       ?= README.md
 ALLOC_BUDGET ?= 100
 OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y @fission-ai/openspec@latest
 
-# The installed toolchain comes first on the PATH of every recipe, so after
-# make toolchain every other target finds spinel, spin, and spinel-doctor
-# with no shell setup.
-export PATH := $(PREFIX)/bin:$(PATH)
+# tools/noruby holds a ruby that refuses to run and exits 127. It comes first
+# on the PATH of every recipe, so no target can start a CRuby installed on
+# the machine: spin test compares a test program that has no .expected
+# snapshot against `ruby` from the PATH, and Spinel's own Makefile probes
+# `ruby -rprism`; both reach the stub instead. The installed toolchain comes
+# next, so after make toolchain every other target finds spinel, spin, and
+# spinel-doctor with no shell setup. The override keeps both in front even
+# when PATH is given on the make command line.
+NORUBY := $(CURDIR)/tools/noruby
+override export PATH := $(NORUBY):$(PREFIX)/bin:$(PATH)
 
 .DEFAULT_GOAL := help
 
@@ -75,14 +81,39 @@ spinel-rev:
 	  git ls-remote "https://github.com/$(SPINEL_REPO)" "$(SPINEL_REF)" | head -1 | cut -f1; \
 	fi
 
-## doctor: check that spinel, spin, a C compiler, and node for OpenSpec are available
+## doctor: check that spinel, spin, a C compiler, and node for OpenSpec are available, and that the ruby every target reaches is the refusing stub in tools/noruby, never a CRuby
 doctor:
 	@ok=1; \
 	for tool in spinel spin cc node; do \
 	  if command -v $$tool >/dev/null 2>&1; then echo "ok       $$tool: $$(command -v $$tool)"; \
 	  else echo "missing  $$tool"; ok=0; fi; \
 	done; \
+	ruby=$$(command -v ruby || true); \
+	if [ "$$ruby" = "$(NORUBY)/ruby" ]; then \
+	  "$$ruby" -v >/dev/null 2>&1; status=$$?; \
+	  if [ $$status -eq 127 ]; then echo "ok       ruby: refused (stub)"; \
+	  else echo "error    ruby: the stub $$ruby exited $$status instead of refusing with 127"; ok=0; fi; \
+	elif [ -z "$$ruby" ]; then echo "missing  ruby: the stub $(NORUBY)/ruby is not on the make PATH"; ok=0; \
+	else echo "error    ruby: $$ruby would be reached instead of the stub $(NORUBY)/ruby"; ok=0; fi; \
 	test $$ok -eq 1
+
+## no-cruby: prove that a test program without a snapshot fails instead of being compared against a CRuby: run spin test on a one-line program in a temporary project outside the repository and require the stub's refusal
+no-cruby:
+	@dir=$$(mktemp -d "$${TMPDIR:-/tmp}/carat-no-cruby.XXXXXX"); \
+	trap 'rm -rf "$$dir"' EXIT; \
+	mkdir "$$dir/test"; \
+	printf '[package]\nname = "probe"\nversion = "0.1.0"\n' > "$$dir/spin.toml"; \
+	echo 'puts "probe"' > "$$dir/test/probe.rb"; \
+	if (cd "$$dir" && spin test) > "$$dir/report" 2>&1; then \
+	  cat "$$dir/report"; \
+	  echo "no-cruby: spin test passed a program without a snapshot, so it compared against an interpreter" >&2; exit 1; \
+	fi; \
+	if ! grep -q "carat never runs a CRuby interpreter; refused: ruby" "$$dir/report"; then \
+	  cat "$$dir/report"; \
+	  echo "no-cruby: spin test failed, but not because it reached the ruby stub" >&2; exit 1; \
+	fi; \
+	sed 's/^/  /' "$$dir/report"; \
+	echo "no-cruby: spin test reached $$(command -v ruby) and failed the program without a snapshot, as it must"
 
 # -------------------------------------------------------------------- build
 
@@ -171,8 +202,8 @@ types:
 gen-config:
 	spin run carat-gen-config
 
-## check: everything a push needs: build, gen-config, test, and diagnose
-check: build gen-config test diagnose
+## check: everything a push needs: build, gen-config, test, diagnose, and no-cruby
+check: build gen-config test diagnose no-cruby
 
 # ----------------------------------------------------------------- openspec
 
@@ -197,4 +228,4 @@ help:
 	@echo
 	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)"
 
-.PHONY: toolchain toolchain-clean spinel-rev doctor build run install pack clean test lint snapshots diagnose bench bench-budget profile types gen-config check spec-list spec-validate spec-update help
+.PHONY: toolchain toolchain-clean spinel-rev doctor no-cruby build run install pack clean test lint snapshots diagnose bench bench-budget profile types gen-config check spec-list spec-validate spec-update help

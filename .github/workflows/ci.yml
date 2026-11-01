@@ -23,22 +23,22 @@ jobs:
           path: tmp/.toolchain
           key: spinel-${{ runner.os }}-${{ steps.spinel.outputs.rev }}
 
-      # The runner image ships Ruby, so a stub that fails when invoked is put
-      # first on the PATH of the toolchain step only: a cold build then proves
-      # that the toolchain builds with no Ruby interpreter.
-      - name: Stub ruby so the toolchain build cannot use it
-        if: steps.toolchain-cache.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p "$RUNNER_TEMP/noruby"
-          printf '#!/bin/sh\necho "ruby must not be needed to build the toolchain, but was invoked with: $*" >&2\nexit 127\n' > "$RUNNER_TEMP/noruby/ruby"
-          chmod +x "$RUNNER_TEMP/noruby/ruby"
-
+      # The runner image ships Ruby. The Makefile puts tools/noruby, a ruby
+      # that refuses to run, first on the PATH of every target, so a cold
+      # toolchain build proves that the toolchain builds with no Ruby
+      # interpreter, and no later step can reach the runner's Ruby either.
       - name: Build and install the toolchain without Ruby
         if: steps.toolchain-cache.outputs.cache-hit != 'true'
-        run: PATH="$RUNNER_TEMP/noruby:$PATH" make toolchain
+        run: make toolchain
 
+      # Fails unless the ruby every make target reaches is the stub.
       - name: Doctor
         run: make doctor
+
+      # A test program without a snapshot must fail with the stub's refusal
+      # instead of being compared against the runner's Ruby.
+      - name: No CRuby
+        run: make no-cruby
 
       - name: Build
         run: make build
