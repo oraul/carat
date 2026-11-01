@@ -1,0 +1,10 @@
+#!/bin/sh
+# Stands in for ruby on the PATH of every make target. Carat is built,
+# tested, and benchmarked with Spinel alone, at the Ruby 4 language level,
+# and never runs a CRuby interpreter; the Makefile puts this directory first
+# on the PATH so a tool that falls back to `ruby` (spin test does, for a
+# test program without a snapshot) reaches this refusal instead of a CRuby
+# installed on the machine. Exit status 127 is the shell's "command not
+# found", so callers that probe for ruby treat it as absent.
+echo "carat never runs a CRuby interpreter; refused: ruby $*" >&2
+exit 127
