@@ -53,7 +53,7 @@ Every method of the host takes plain values and returns a value; nothing calls b
 | Request | Returns |
 | --- | --- |
 | `read_buffer(buffer)` | a `BufferView`: `ok`, `message` (why it failed), the `buffer` id, `path`, copies of the `lines`, the cursor `row` and `col` when the buffer is the current one, `modified` |
-| `edit_buffer(buffer, edits)` | applies a list of `Edit` values (`from_row`, `from_col`, `to_row`, `to_col`, `text`; exclusive end, ascending, not overlapping) as one transaction; every item is checked first, and one bad item ("edit 3: not an edit") refuses them all and changes nothing |
+| `edit_buffer(buffer, edits)` | applies a list of `Edit` values (`from_row`, `from_col`, `to_row`, `to_col`, `text`; exclusive end, ascending, not overlapping) as one transaction, which the user undoes and redoes in one step (inside an action bound to a key it joins that key's undo state); every item is checked first, and one bad item ("edit 3: not an edit") refuses them all and changes nothing |
 | `move_cursor(row, col)` | moves the cursor of the current window, clamped into the buffer |
 | `open_scratch(title, side, width, lines, bindings)` | opens the plugin's scratch buffer of that title in a fixed-width window at the `"left"` or `"right"` edge of the tab page, with its own keymap built from `bindings`; a `WindowResponse` with the window's id; `E36` when it does not fit; a title already shown is refreshed and focused instead |
 | `set_scratch_lines(title, lines)` | replaces the lines of that scratch buffer, leaving it unmodified |
@@ -91,7 +91,7 @@ A scratch buffer has no path, shows its title on the status line, has no line nu
 
 An `Event` carries its `name` (a string), the `buffer` and `window` ids, the `path`, the cursor `row` and `col`, a `detail`, and for `buffer_change` the rows `removed` and `inserted`. Events are delivered to every subscribed plugin in registration order, after the key that caused them:
 
-- First the buffer events, in the order they happened: `buffer_open` when a buffer entered the list, `buffer_change` once per closed transaction of any buffer (one command, one insert session when insert mode is left, one plugin edit request), with the first changed row in `row` and the rows removed there and inserted in their place, `buffer_save` when a buffer was written, `buffer_rename` when a listed buffer's path changed (the old path in `detail`), and `buffer_close` when a buffer left the list.
+- First the buffer events, in the order they happened: `buffer_open` when a buffer entered the list, `buffer_change` once per closed transaction of any buffer (one command, one insert session when insert mode is left or an arrow key splits it, one plugin edit request, one undo or redo), with the first changed row in `row` and the rows removed there and inserted in their place, `buffer_save` when a buffer was written, `buffer_rename` when a listed buffer's path changed (the old path in `detail`), and `buffer_close` when a buffer left the list.
 - Then, from comparing the editor with the state after the previous key: `cursor_move` when the cursor or the current buffer changed, `mode_change` with the mode name in `detail`, `window_focus` when the current window or tab page changed, and `quit` when the editor is ending, followed by `deactivate`.
 - `resize` when the editor is drawn at a new size, with the rows and columns in `row` and `col`. `idle` is not delivered yet.
 

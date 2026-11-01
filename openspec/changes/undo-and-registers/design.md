@@ -115,4 +115,23 @@ None: no data or plugin API change. The new `undolevels` option has a default; a
 
 ## Measured result
 
-To be filled in from `make bench` once the implementation is complete.
+`make bench` scenarios at 200 by 60, built from `main` at 0d47323 and from this change, run interleaved seven times each pinned to one core of an otherwise idle machine; medians of the key handling time per key. The new scenarios exist only in this change's benchmark. Allocations per key come from `bench/run.sh` (two `SPINEL_ALLOC_REPORT` runs of 200 and 1,200 keys), and the memory a scenario leaves behind from the live heap after a collection before and after its keys, with every collection full (`SPINEL_GC_MINOR=0`).
+
+| Measure | `main` | This change | Target | Met |
+| --- | --- | --- | --- | --- |
+| Handling per key, `l h` (10,000 lines) | 2.5 us | 2.5 us | within 10 percent | yes |
+| Handling per key, `j` | 3.8 us | 3.9 us | within 10 percent | yes |
+| Handling per key, typing `x<BS>` | 4.0 us | 3.1 us | within 10 percent | yes |
+| Handling per key, `w` (fifteen interleaved runs) | 3.8 us | 3.8 us | within 10 percent | yes |
+| Handling per key, `ddP` (100,000 lines) | 31.0 us | 15.1 us | within 10 percent | yes |
+| Allocations per key, `l h` | 26.0 | 26.0 | under the CI budget of 100 | yes |
+| Allocations per key, `j`, typing, `w`, `ddP` | 27.0, 32.5, 35.1, 57.3 | 27.0, 34.0, 35.1, 58.7 | | |
+| `u` and `<C-r>` of one line edited with `x`, 100,000 lines | | 4.7 us per key | under 50 us | yes |
+| `u` and `<C-r>` of a deleted line, 100,000 lines | | 19.0 us per key | under 50 us | yes |
+| `rx` against `.` (10,000 lines) | | 6.4 us per command (3.2 per key) against 4.6 us | `.` within 20 percent | yes |
+| `dd` against `.` (100,000 lines) | | 16.2 us per command (8.1 per key) against 12.7 us | `.` within 20 percent | yes |
+| `ciwfoo<Esc>` against `.` (10,000 lines) | | 21.7 us per command (3.1 per key) against 7.4 us | `.` within 20 percent | yes |
+| Live heap after 1,000 single-line edits (`rxj`), 100,000 lines | | 1,047,303 bytes, 1,047 per edit | proportional to the lines changed | yes |
+| The same on 10,000 lines | | 1,036,601 bytes, 1,037 per edit | | |
+
+The memory 1,000 edits leave behind is the same on 10,000 and 100,000 lines, about 1 KB per edit: the transaction, its record, the two one-line lists, the line the edit replaced (the new line is the buffer's own string), the two cursor positions, and the slots of the tree's arrays; nothing grows with the buffer. A run of 333 edits leaves 360,423 bytes, the same per edit. The `ddP` time halved against `main`; both builds do the same splices, and the spread of `main`'s runs (25 to 35 us) is wider than this change's (11 to 18 us), so part of it may be the machine. The first seven-run `w` comparison gave 3.6 and 4.0 us, which fifteen further interleaved runs put at 3.8 us for both. The dot command is faster than the commands it repeats because it runs the recorded handler directly, without the keymap, the grammar, or the keys of the insert session. Slowest keys and the collector's share are within the spread of `main`'s, whose limits `render-core` traced to Spinel's runtime.
