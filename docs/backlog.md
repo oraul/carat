@@ -22,9 +22,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Motions take the whole editor state and write the last find
 
-- Where: `Carat::Domain::Motions` in `carat/domain/motions.rb`, which receives `EditorState` in every motion and assigns `state.last_find` from `for_command` (about line 177), and `TextObjects`, which receives the state too.
+- Where: `Carat::Domain::Motions` in `carat/domain/motions.rb`, which receives `EditorState` in every motion and records f, F, t, and T in the `LastFind` record `for_command` receives (since `state-and-ports`), and `TextObjects`, which receives the state too.
 - Why it matters: a motion is meant to be a pure function of the text and the cursor (section 4 of `docs/architecture.md`), but with the whole state it can reach windows, registers, and modes, and the side effect on `last_find` makes it impossible to evaluate a motion speculatively, for a preview, a plugin, or a language service, without changing what `;` and `,` repeat.
-- Fix outline: pass the buffer, the cursor, and the viewport (top row and height for `H`, `M`, `L`) as values, return the find to record alongside the `Motion`, and have `Move` and `Operate` store it in `last_find`.
+- Fix outline: pass the buffer, the cursor, and the viewport (top row and height for `H`, `M`, `L`) as values, return the find to record alongside the `Motion`, and have `Move` and `Operate` store it in the `LastFind` record they already receive.
 
 ## The ex grammar parses no ranges
 
@@ -43,12 +43,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `Carat::Adapters::FramePresenter` and `ScreenPresenter` in `carat/adapters/`, which draw a full frame and diff it cell by cell, so a one-line scroll changes every text row.
 - Why it matters: `j` at the bottom of the window writes about 13 KB per key on a 200-column terminal, where a terminal scroll region would move the rows with a few bytes; on a slow connection that is the visible cost of scrolling.
 - Fix outline: belongs to the `render-core` change of the core-quality queue: detect a vertical shift of the window's rows between frames and emit a scroll region with the new rows only.
-
-## The test doubles are compiled into the production binary
-
-- Where: `carat.rb` requires `carat/doubles/*` (the fake terminal, the manual clock, the memory files, the fixed config, and the editor harness), and `bin/carat.rb` requires `carat.rb`.
-- Why it matters: the shipped binary carries test code it never runs, which costs size and compile time and lets production code reach a double by mistake without a compile error.
-- Fix outline: belongs to the `state-and-ports` change of the core-quality queue, which follows `dependency-injection`: move the doubles out of the library require graph into a file only `test/*.rb` and benchmarks require, and keep `bin/carat.rb` on the drivers.
 
 ## Line edits on very large buffers move the rest of the line array
 
