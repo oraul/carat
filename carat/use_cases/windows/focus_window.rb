@@ -1,4 +1,5 @@
 require_relative "../../domain/editor_state"
+require_relative "../outcome"
 
 module Carat
   module UseCases
@@ -8,7 +9,7 @@ module Carat
     class FocusWindow
       # Moves count times (at least once) in the direction, stopping at the
       # edge of the layout.
-      #: (Domain::EditorState, Symbol, Integer) -> void
+      #: (Domain::EditorState, Symbol, Integer) -> Outcome
       def direction(state, where, count)
         tab = state.tab
         steps = count > 0 ? count : 1
@@ -21,30 +22,33 @@ module Carat
           i += 1
         end
         tab.focus(id)
+        Outcome.none
       end
 
       # Without a count, the next or previous window, wrapping; with one,
       # window number count, or the last window when count is larger.
-      #: (Domain::EditorState, bool, Integer) -> void
+      #: (Domain::EditorState, bool, Integer) -> Outcome
       def cycle(state, forward, count)
         tab = state.tab
         layout = tab.layout
         if count > 0
           tab.focus(layout.leaf_number(count))
-          return
+          return Outcome.none
         end
         ids = layout.leaves
         pos = layout.number_of(tab.current) - 1
         pos = forward ? (pos + 1) % ids.length : (pos - 1 + ids.length) % ids.length
         tab.focus(ids[pos])
+        Outcome.none
       end
 
       # Back to the window that was current before the last change, if it
       # still exists.
-      #: (Domain::EditorState) -> void
+      #: (Domain::EditorState) -> Outcome
       def previous(state)
         tab = state.tab
         tab.focus(tab.previous) if tab.previous?
+        Outcome.none
       end
     end
   end

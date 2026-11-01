@@ -43,15 +43,13 @@ ok   take resets everything
 ok   nothing pending after take
 ok   a special key displays in notation
 ok   a printable key displays itself
-ok   cursor actions are motions
-ok   motion actions are motions
-ok   operators are not motions
-ok   indent is an operator
-ok   x is not a pending operator
+ok   cursor and motion actions are listed as motions
+ok   the find motions are listed apart
 ok   text objects are recognized
+ok   x is a plain action and > a pending operator
 ok   a plain command
 ok   count_or with no count
 ok   count_or with a count
 ok   a plain command has no operator
 ok   reversed flips the direction
-domain_grammar: 56 passed, 0 failed
+domain_grammar: 54 passed, 0 failed

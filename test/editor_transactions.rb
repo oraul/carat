@@ -118,17 +118,17 @@ t.assert_equal([1, false, 1], [h.buffer.closed_count - start, h.buffer.transacti
 # The modified flag follows writes and edits, through the keys.
 h = editor("ab\n")
 h.type("x")
-modified_after_edit = h.buffer.modified
+modified_after_edit = h.buffer.modified?
 h.type(":w<CR>")
-modified_after_write = h.buffer.modified
+modified_after_write = h.buffer.modified?
 h.type("x")
-t.assert_equal([true, false, true], [modified_after_edit, modified_after_write, h.buffer.modified], "an edit modifies, a write clears, the next edit modifies again")
+t.assert_equal([true, false, true], [modified_after_edit, modified_after_write, h.buffer.modified?], "an edit modifies, a write clears, the next edit modifies again")
 h = editor("ab\n")
 h.type("x")
 h.type("ia<Esc>")
-t.assert_equal([["ab"], true], [h.lines, h.buffer.modified], "typing the deleted character back leaves the buffer modified")
+t.assert_equal([["ab"], true], [h.lines, h.buffer.modified?], "typing the deleted character back leaves the buffer modified")
 h.type(":e!<CR>")
-t.assert_equal([["ab"], false], [h.lines, h.buffer.modified], "a forced reload clears the flag")
+t.assert_equal([["ab"], false], [h.lines, h.buffer.modified?], "a forced reload clears the flag")
 
 # Buffer ids are stable.
 h = editor("a\n")

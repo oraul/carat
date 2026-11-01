@@ -106,22 +106,22 @@ rec = b.last_transaction.record_at(0)
 t.assert_equal([["a-", "-d"], 1, 0, ["ab", "cd"], ["a-", "-d"]], [b.lines, b.changes - before, rec.row, rec.removed, rec.inserted], "replace is one change with one record")
 b.reload(["x"])
 rec = b.last_transaction.record_at(0)
-t.assert_equal([["x"], ["a-", "-d"], ["x"], false], [b.lines, rec.removed, rec.inserted, b.modified], "reload records the whole text and leaves the buffer unmodified")
+t.assert_equal([["x"], ["a-", "-d"], ["x"], false], [b.lines, rec.removed, rec.inserted, b.modified?], "reload records the whole text and leaves the buffer unmodified")
 
 # The derived modified flag.
 b = D::Buffer.from_text("one\n", "f.txt")
-t.assert_equal(false, b.modified, "a loaded buffer is unmodified")
+t.assert_equal(false, b.modified?, "a loaded buffer is unmodified")
 b.insert(pos(0, 0), "x")
-t.assert_equal(true, b.modified, "an edit modifies it")
+t.assert_equal(true, b.modified?, "an edit modifies it")
 b.mark_saved
-t.assert_equal(false, b.modified, "a save clears it")
+t.assert_equal(false, b.modified?, "a save clears it")
 b.insert(pos(0, 0), "y")
 b.delete(D::Range.charwise(pos(0, 0), pos(0, 1)))
-t.assert_equal([["xone"], true], [b.lines, b.modified], "editing the text back to the saved text leaves it modified")
+t.assert_equal([["xone"], true], [b.lines, b.modified?], "editing the text back to the saved text leaves it modified")
 b.reload(["one"])
-t.assert_equal(false, b.modified, "a reload clears it")
+t.assert_equal(false, b.modified?, "a reload clears it")
 b.mark_unsaved
-t.assert_equal(true, b.modified, "a buffer whose saved text is gone is modified")
+t.assert_equal(true, b.modified?, "a buffer whose saved text is gone is modified")
 
 # Transactions group the records of one command.
 b = D::Buffer.new(["a", "b", "c", "d"], nil, "\n")

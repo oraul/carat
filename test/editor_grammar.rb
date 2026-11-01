@@ -95,8 +95,8 @@ t.assert_equal("", h.message_row, "insert mode shows nothing pending")
 # The command that completes carries its keys.
 grammar = Carat::Domain::CommandGrammar.new
 grammar.digit(50)
-t.assert_equal(:operator, grammar.accept("operator.delete", [100]), "d after a count is an operator")
-t.assert_equal(:complete, grammar.accept("motion.word_forward", [119]), "w completes it")
+t.assert_equal(:operator, grammar.accept("operator.delete", :operator, [100]), "d after a count is an operator")
+t.assert_equal(:complete, grammar.accept("motion.word_forward", :motion, [119]), "w completes it")
 command = grammar.take
 t.assert_equal([50, 100, 119], command.keys, "the command remembers the keys that formed it")
 t.assert_equal("", grammar.typed, "the grammar is empty after take")

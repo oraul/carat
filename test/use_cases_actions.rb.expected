@@ -1,0 +1,41 @@
+ok   a name registers once and a second registration is refused
+ok   find returns the first handler registered for the name
+ok   an unknown name has no handler and reads as a plain action
+ok   one namespace handler registers
+ok   a name under the namespace finds its handler and a near miss does not
+ok   names lists the registered names in order
+ok   a spec with a suffix
+ok   the full name
+ok   a spelling between
+ok   shorter than the abbreviation
+ok   longer than the full name
+ok   not a prefix
+ok   a spec without brackets
+ok   a spec without brackets abbreviated
+ok   case matters
+ok   a name prints in Vim's notation
+ok   a name or abbreviation registers once
+ok   the abbreviation
+ok   a spelling between
+ok   the full name
+ok   the second command
+ok   an unknown name
+ok   an empty name
+ok   when two names accept a typed name the first registered wins
+ok   names lists the registered names in Vim's notation
+ok   h is a motion
+ok   f reads a character
+ok   d is a pending operator
+ok   x completes at once
+ok   iw is a text object
+ok   the register prefix
+ok   visual r reads a character
+ok   a plugin action completes at once
+ok   an unknown name completes at once
+ok   every registered action handler returns an Outcome
+ok   the table holds every core action
+ok   the plugin namespace handler returns the host's refusal as an Outcome
+ok   the action table and docs/actions.md list the same actions
+ok   a drift is reported in both directions
+ok   the Plugins section is not read as core actions and the Reserved one is
+use_cases_actions: 40 passed, 0 failed

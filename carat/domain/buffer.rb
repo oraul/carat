@@ -71,7 +71,7 @@ module Carat
       # Whether an edit changed the text since the last load, reload, or
       # save. Editing the text back does not clear it.
       #: () -> bool
-      def modified
+      def modified?
         changes != saved_change
       end
 

@@ -1,6 +1,7 @@
 require_relative "../domain/editor_state"
 require_relative "../domain/command"
 require_relative "../domain/motions"
+require_relative "outcome"
 
 module Carat
   module UseCases
@@ -8,10 +9,10 @@ module Carat
     # Domain::Motions, and the result decides what happens to the wanted
     # column. A motion that cannot move changes nothing.
     class Move
-      #: (Domain::EditorState, Domain::Command) -> void
+      #: (Domain::EditorState, Domain::Command) -> Outcome
       def call(state, command)
         motion = Domain::Motions.for_command(state, command, false)
-        return if motion.nil?
+        return Outcome.none if motion.nil?
         cursor = state.cursor
         target = motion.target
         case motion.want
@@ -24,6 +25,7 @@ module Carat
         else
           cursor.move_to(target.row, target.col)
         end
+        Outcome.none
       end
 
       # The column of the first character that is not a space or a tab, or

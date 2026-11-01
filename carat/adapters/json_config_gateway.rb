@@ -7,6 +7,9 @@ module Carat
     # Loads the configuration. This change loads the embedded defaults; the
     # user and project files are merged in by the options change.
     class JsonConfigGateway < Ports::ConfigPort
+      # The file the loaded value comes from, in configuration problems.
+      SOURCE = "config/default.json"
+
       # Returns the parsed default configuration.
       # @rbs skip
       def load

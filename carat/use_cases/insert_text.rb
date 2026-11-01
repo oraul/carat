@@ -1,6 +1,7 @@
 require_relative "../domain/editor_state"
 require_relative "../domain/range"
 require_relative "enter_insert"
+require_relative "outcome"
 
 module Carat
   module UseCases
@@ -8,28 +9,30 @@ module Carat
     class InsertText
       # @rbs @enter_insert: EnterInsert
 
-      #: (EnterInsert) -> void
-      def initialize(enter_insert)
+      #: (enter_insert: EnterInsert) -> void
+      def initialize(enter_insert:)
         @enter_insert = enter_insert
       end
 
       # Inserts text without newlines at the cursor and moves past it.
-      #: (Domain::EditorState, String) -> void
+      #: (Domain::EditorState, String) -> Outcome
       def call(state, text)
         cursor = state.cursor
         state.buffer.insert(cursor.position, text)
         cursor.move_to(cursor.row, cursor.col + text.length)
+        Outcome.none
       end
 
-      #: (Domain::EditorState) -> void
+      #: (Domain::EditorState) -> Outcome
       def newline(state)
         cursor = state.cursor
         indent = @enter_insert.indent_of(state, state.current_line)
         state.buffer.insert(cursor.position, "\n" + indent)
         cursor.move_to(cursor.row + 1, indent.length)
+        Outcome.none
       end
 
-      #: (Domain::EditorState) -> void
+      #: (Domain::EditorState) -> Outcome
       def backspace(state)
         cursor = state.cursor
         if cursor.col > 0
@@ -42,9 +45,10 @@ module Carat
           state.buffer.delete(Domain::Range.charwise(from, cursor.position))
           cursor.move_to(cursor.row - 1, prev_len)
         end
+        Outcome.none
       end
 
-      #: (Domain::EditorState) -> void
+      #: (Domain::EditorState) -> Outcome
       def delete(state)
         cursor = state.cursor
         line = state.current_line
@@ -55,9 +59,10 @@ module Carat
           to = Domain::Position.new(cursor.row + 1, 0)
           state.buffer.delete(Domain::Range.charwise(cursor.position, to))
         end
+        Outcome.none
       end
 
-      #: (Domain::EditorState) -> void
+      #: (Domain::EditorState) -> Outcome
       def tab(state)
         options = state.options
         if options.expandtab
@@ -67,6 +72,7 @@ module Carat
         else
           call(state, "\t")
         end
+        Outcome.none
       end
     end
   end

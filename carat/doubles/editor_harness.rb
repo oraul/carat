@@ -20,12 +20,12 @@ module Carat
       attr_reader :assembly #: Adapters::EditorAssembly
       attr_reader :frame #: Domain::Frame
 
-      #: (MemoryFiles, untyped, Integer, Integer, Array[untyped]) -> void
-      def initialize(files, config, rows, cols, plugins)
+      #: (files: MemoryFiles, config: untyped, rows: Integer, cols: Integer, plugins: Array[untyped]) -> void
+      def initialize(files:, config:, rows:, cols:, plugins:)
         @files = files
         @clock = ManualClock.new
         @terminal = FakeTerminal.new(@clock, rows, cols)
-        @assembly = Adapters::EditorAssembly.new(@terminal, @clock, @files, config, plugins)
+        @assembly = Adapters::EditorAssembly.new(terminal: @terminal, clock: @clock, files: @files, config: config, config_source: FixedConfig::SOURCE, plugin_list: plugins)
         @frame = Domain::Frame.new(rows, cols)
       end
 
@@ -33,13 +33,13 @@ module Carat
       # no plugins.
       #: (MemoryFiles, Integer, Integer) -> EditorHarness
       def self.default(files, rows, cols)
-        new(files, FixedConfig.defaults, rows, cols, [])
+        new(files: files, config: FixedConfig.defaults, rows: rows, cols: cols, plugins: [])
       end
 
       # A harness over the default configuration with the given plugins.
       #: (MemoryFiles, Integer, Integer, Array[untyped]) -> EditorHarness
       def self.with_plugins(files, rows, cols, plugins)
-        new(files, FixedConfig.defaults, rows, cols, plugins)
+        new(files: files, config: FixedConfig.defaults, rows: rows, cols: cols, plugins: plugins)
       end
 
       #: () -> UseCases::PluginHost

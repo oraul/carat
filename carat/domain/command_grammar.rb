@@ -12,10 +12,12 @@ module Carat
     #
     # It never sees a buffer and never looks keys up: HandleKey hands it
     # count digits and character arguments as keys, and every other key as
-    # the action name the keymap resolved. Actions are classified by name:
-    # the five pending operators, motions in the cursor. and motion.
-    # namespaces, text objects, register.select and the find motions that
-    # want one more key, and standalone actions that complete at once.
+    # the action name the keymap resolved with the kind of the handler the
+    # action table registered for it: :register (the register prefix,
+    # which reads a register name), :operator (waits for a motion, a text
+    # object, or itself), :find and :char (read one more key), :motion,
+    # :text_object (only under an operator or in a visual mode), and
+    # :action (completes at once). It knows no action name of its own.
     # A Struct record whose fields persist between keys.
     class CommandGrammar < Struct.new(:register, :count, :operator, :operator_count, :want, :action, :argument, :linewise, :keys, :typed)
       # @rbs @register: String
@@ -28,11 +30,6 @@ module Carat
       # @rbs @linewise: bool
       # @rbs @keys: Array[Integer]
       # @rbs @typed: String
-
-      OPERATORS = ["operator.delete", "operator.change", "operator.yank", "operator.indent", "operator.dedent"]
-      CHAR_MOTIONS = ["motion.find_forward", "motion.find_backward", "motion.till_forward", "motion.till_backward"]
-      REGISTER_SELECT = "register.select"
-      VISUAL_REPLACE = "visual.replace"
 
       #: () -> void
       def initialize
@@ -51,21 +48,6 @@ module Carat
         self.linewise = false
         self.keys = []
         self.typed = ""
-      end
-
-      #: (String) -> bool
-      def self.operator?(action)
-        OPERATORS.include?(action)
-      end
-
-      #: (String) -> bool
-      def self.motion?(action)
-        action.start_with?("cursor.") || action.start_with?("motion.")
-      end
-
-      #: (String) -> bool
-      def self.text_object?(action)
-        action.start_with?("textobject.")
       end
 
       # How a key reads in the pending-keys display.
@@ -131,20 +113,21 @@ module Carat
         end
       end
 
-      # Takes the action the keymap resolved for codes. Returns :pending
-      # (more keys wanted), :operator (an operator is now pending),
-      # :complete (take the command), or :cancel (reset, nothing to do).
-      #: (String, Array[Integer]) -> Symbol
-      def accept(action, codes)
+      # Takes the action the keymap resolved for codes, with its kind.
+      # Returns :pending (more keys wanted), :operator (an operator is now
+      # pending), :complete (take the command), or :cancel (reset, nothing
+      # to do).
+      #: (String, Symbol, Array[Integer]) -> Symbol
+      def accept(action, kind, codes)
         if wants_char?
           reset
           return :cancel
         end
         remember(codes)
         if operator.empty?
-          accept_in_normal(action)
+          accept_in_normal(action, kind)
         else
-          accept_in_pending(action)
+          accept_in_pending(action, kind)
         end
       end
 
@@ -153,19 +136,19 @@ module Carat
       # motion: a register prefix and the actions that want a character
       # (the find motions and "r") return :pending, every other action
       # :complete, and a key arriving while a character was wanted :cancel.
-      #: (String, Array[Integer]) -> Symbol
-      def accept_visual(action, codes)
+      #: (String, Symbol, Array[Integer]) -> Symbol
+      def accept_visual(action, kind, codes)
         if wants_char?
           reset
           return :cancel
         end
         remember(codes)
-        if action == REGISTER_SELECT
+        if kind == :register
           self.want = :register
           return :pending
         end
         self.action = action
-        if CHAR_MOTIONS.include?(action) || action == VISUAL_REPLACE
+        if kind == :find || kind == :char
           self.want = :char
           return :pending
         end
@@ -198,21 +181,21 @@ module Carat
         self.typed = text
       end
 
-      #: (String) -> Symbol
-      def accept_in_normal(action)
-        if action == REGISTER_SELECT
+      #: (String, Symbol) -> Symbol
+      def accept_in_normal(action, kind)
+        if kind == :register
           self.want = :register
           :pending
-        elsif CommandGrammar.operator?(action)
+        elsif kind == :operator
           self.operator = action
           self.operator_count = count
           self.count = 0
           :operator
-        elsif CHAR_MOTIONS.include?(action)
+        elsif kind == :find || kind == :char
           self.action = action
           self.want = :char
           :pending
-        elsif CommandGrammar.text_object?(action)
+        elsif kind == :text_object
           reset
           :cancel
         else
@@ -221,16 +204,16 @@ module Carat
         end
       end
 
-      #: (String) -> Symbol
-      def accept_in_pending(action)
+      #: (String, Symbol) -> Symbol
+      def accept_in_pending(action, kind)
         if action == operator
           self.linewise = true
           :complete
-        elsif CHAR_MOTIONS.include?(action)
+        elsif kind == :find
           self.action = action
           self.want = :char
           :pending
-        elsif CommandGrammar.motion?(action) || CommandGrammar.text_object?(action)
+        elsif kind == :motion || kind == :text_object
           self.action = action
           :complete
         else

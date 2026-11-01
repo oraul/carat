@@ -92,8 +92,11 @@ Module namespaces follow the layers exactly:
 | Ports | `Carat::Ports` | `carat/ports/` |
 | Interface adapters | `Carat::Adapters` | `carat/adapters/` |
 | Frameworks and drivers | `Carat::Drivers` | `carat/drivers/` |
+| Test doubles, at the edge beside the drivers | `Carat::Doubles` | `carat/doubles/` |
 
-The `lint` test program (section 9) enforces that a file in one directory only requires files from its own directory or an inner one.
+The plugin API, `Carat::PluginApi` in `carat/plugin_api.rb`, is not a layer of its own: it sits in the innermost ring beside the entities, requires nothing, names no layer, and may be named from every layer (section 9.1). Feature subdirectories of a layer, such as `use_cases/windows/`, group files and add no namespace; a compiled plugin's directory `carat/plugins/<name>/` is `Carat::Plugins::<Name>`.
+
+The `lint` test program (section 10) enforces the dependency rule twice: a file requires only files of its own rank or a lower one, and a line of code names (`Domain::`, `Ports::`, `UseCases::`, `Adapters::`, `Doubles::`, `Drivers::`, `Plugins::`) only such layers, strings and comments aside. The ranks are the entities and the plugin API 0, ports 1, use cases 2, adapters 3, and the doubles and drivers 4, which never name each other.
 
 ## 4. Entities
 
@@ -123,10 +126,10 @@ Pure Ruby objects with no I/O. They hold the editor's state and the rules of mod
   [register] [count] action
   ```
 
-  Counts multiply. A doubled operator (`dd`, `yy`, `cc`, `>>`) is linewise over `count` lines. The grammar produces a `Command` and never touches a buffer.
+  Counts multiply. A doubled operator (`dd`, `yy`, `cc`, `>>`) is linewise over `count` lines. The grammar produces a `Command` and never touches a buffer. It knows no action name: `HandleKey` hands it each action with the kind its handler declares in the action table (section 6), a motion, a find motion, an operator, a text object, the register prefix, an action reading a character, or a plain action.
 - `Motions` and `TextObjects`: pure functions from `(state, count)` to a `Range`. Left-right (`h l 0 ^ $ f F t T ; ,`), up-down (`j k G gg + - _`), word (`w W b B e E ge gE`), object (`( ) { }`), search (`n N * #`), marks (`'x` and backtick), screen (`H M L`); text objects `iw aw iW aW is as ip ap` and the pair objects for brackets, quotes, and tags. One implementation serves both cursor movement and operator ranges.
 - `Operators`: `d c y p P > < = ~ g~ gu gU gq J r x s S C D Y`, each a function from a `Range` to buffer primitives inside one transaction. `c` ends by requesting insert mode so the dot register can replay typed text.
-- `ExCommand` and `ExGrammar`: a parsed command line as `range`, `name`, `bang`, `args`. Addresses are `.`, `$`, `%`, a number, a mark, a pattern, or arithmetic on those, joined by `,` or `;`. Names and abbreviations (`w`, `wr`, `write`) resolve through a registry owned by the use case layer.
+- `ExCommand`, `ExGrammar`, and `ExName`: a parsed command line as `range`, `name`, `bang`, `args`. Addresses are `.`, `$`, `%`, a number, a mark, a pattern, or arithmetic on those, joined by `,` or `;`. A command's name is an `ExName` in Vim's `name[suffix]` notation, whose `match?` accepts every spelling from the abbreviation to the full name (`w`, `wr`, `write`); the use case layer's ex table resolves a typed name with it, for core and plugin commands alike.
 - `Window`, `Layout`, `TabPage`: a window is a viewport over a buffer with its own stable `id`, given by `EditorState` when the window is created and never reused, its own cursor, scroll offsets, the rectangle the last render gave it, a fixed-width flag (`winfixwidth`, for the explorer), the anchor of its visual selection and its last selection, and later local options, a `Struct` record. A layout is the tree of splits of one tab page, kept as a flat table of `LayoutNode` records addressed by integer ids (leaf, column of stacked children, row of side-by-side children), with `split`, `close`, `neighbour`, `equalize`, and `arrange`, which assigns every window its rectangle inside an area; the flat table keeps the walks over integers under Spinel. A tab page holds one layout, its current window, and the previously used one.
 - `Frame` and `Cell`: the view model, both `Struct` records. A frame is a grid of cells, each a code point, display width, and highlight group id, plus the cursor position and shape. It is an entity because presenters and tests both reason about it, and it contains no terminal knowledge. Presenters reuse one frame and repaint its cells in place, because allocating a grid per render churned the heap and corrupted buffers under Spinel's garbage collector.
 - `EditorState`: everything a use case reads or changes, a `Struct` record holding the buffer list, the tab pages and the current one, mode, options, command line, message, pending keys, quit flag, and the pending blockwise insert; the current window, its buffer, its cursor, and its visual selection are reached through the current tab page. A buffer stays in the list while a window shows it or it is modified, so a closed window's edits are never lost.
@@ -142,11 +145,12 @@ Every change to a buffer's text passes through one place, so undo, highlighting,
 
 ## 5. Use cases
 
-Each use case is one class with a single `call` taking a request value and returning a response value. Use cases receive their ports through the constructor. They are the only layer that orchestrates entities, and the only layer that talks to ports.
+Each use case is one class whose entry point, `call` or a method named for what it does, takes a request value and returns a response value, an `Outcome` for everything a key or an ex command runs. Use cases receive their ports and collaborators through the constructor, as required keyword arguments built once in the composition root. They are the only layer that orchestrates entities, and the only layer that talks to ports. The core reaches them through two input ports, the action handlers and the ex handlers, and reports through one output port, the `Outcome` the `Reporting` concern shows (section 6).
 
 ### 5.1 Editing
 
-- `HandleKey`: the central use case. Feeds a key through the current mode's keymap and the grammar; when a `Command` completes, dispatches it. Returns what changed so the presenter can redraw only what is needed.
+- `HandleKey`: the central use case. Feeds a key through the current mode's keymap and the grammar, with each action's kind from the action table; when a `Command` completes, dispatches it. Returns what changed so the presenter can redraw only what is needed.
+- `Dispatcher`: runs a completed command inside a transaction on the current buffer: it finds the handler of the pending operator, or of the action, in the action table, runs it, and reports its outcome. It knows no action name.
 - `Move`, `Operate`, `EnterInsert`, `InsertText`, `LeaveInsert`, `Replace`: the normal and insert mode operations behind the actions the keymap names.
 - `Undo`, `Redo`, `RepeatLast`: walk the undo tree and replay the dot register.
 - `StartVisual`, `ExtendVisual`, `OperateOnSelection`: entering, switching, leaving, and reselecting the visual modes; `o`, `O`, and the text objects on a selection; and every operator on the selection. Visual keys go through the same keymap and `CommandGrammar` as normal keys, with operators completing at once on the selection, and every operator leaves visual mode first so the window keeps the selection for `gv`.
@@ -155,14 +159,14 @@ Each use case is one class with a single `call` taking a request value and retur
 ### 5.2 Files and ex commands
 
 - `OpenFile`, `SaveFile`, `SaveAll`, `Quit`, `QuitAll`: through `FilePort`, with the Vim error codes `E37`, `E212`, `E492` as response values.
-- `ExecuteEx`: parses a command line with `ExGrammar` and runs the matching handler from the ex registry: files (`e w wq x q qa wa saveas`), buffers and windows (`bn bp bd ls sp vs only close`), editing (`s g v d m t normal sort`), navigation (`marks registers jumps` and a bare line number), options (`set setlocal`).
+- `ExecuteEx` (`use_cases/ex/`): parses a command line with `ExGrammar` and runs the first handler of the ex table, in registration order, whose name matches the typed one, `E492` when none does. Each feature registers its ex handlers there: files (`e w wq x q qa wa saveas`), buffers and windows (`bn bp bd ls sp vs only close`), editing (`s g v d m t normal sort`), navigation (`marks registers jumps` and a bare line number), options (`set setlocal`).
 
 ### 5.3 Windows and services
 
 - `SplitWindow`, `CloseWindow`, `FocusWindow`, `ResizeLayout`, `OpenTab`, `CloseTab`, `SwitchTab`; `Quit` applies the `:q` rule over them: close the window when another exists anywhere, else end the editor unless a listed buffer is modified.
 - `RequestCompletion`, `RequestDefinition`, `RequestHover`, `RequestReferences`, `Rename`, `FormatBuffer`, `ApplyDiagnostics`: each talks to `LanguageServicePort`. They are written so that a port that reports no service available produces an empty response and a message, never an error.
 - `PluginHost`: the plugin host of section 9, a facade over small classes under `use_cases/plugins/`: `PluginRegistry` (registration with every rule, activation, refusals, the depth of nested plugin calls and their cause, and disabling with cleanup), `PluginEntries`, `PluginRouter` (actions, ex commands, prompt answers), `PluginEvents` (the queue, the rounds, and the comparison after each key), and four request families, `BufferRequests`, `WindowRequests`, `FileRequests`, and `UiRequests`. Every call into a plugin goes through the `Guarded` concern. Each plugin gets a `PluginLink`, its own `PluginApi::Host`, which refuses a disabled plugin's requests and forwards the rest with the plugin's name. The window and file requests delegate to the core use cases: a side window is `SplitWindow#side`, files open through `OpenFile` and `OpenTab`, and creating, renaming, and deleting go through `FileOps`. The finder, the explorer, and git signs are plugins built on it, not separate use cases.
-- Concerns: a module under `<layer>/concerns/` that several classes of the layer include for shared behavior, such as `Guarded`. A concern lists the readers it depends on at its top, keeps no instance variables, has no constructor, builds no collaborators, uses no `extend`, `included` hook, or `define_method`, and marks its methods `# @rbs skip`, because a signature on a mixed-in method is not applied; the `lint` test enforces this. Hot paths keep explicit methods.
+- Concerns: a module under `<layer>/concerns/` that classes of the layer, or of an outer layer, include for shared behavior, such as `Guarded` and `Reporting`. A concern lists the readers it depends on at its top, keeps no instance variables, has no constructor, builds no collaborators, uses no `extend`, `included` hook, or `define_method`, and marks its methods `# @rbs skip`, because a signature on a mixed-in method is not applied; the `lint` test enforces this. Hot paths keep explicit methods.
 
 ### 5.4 Shared library inside the inner layers
 
@@ -170,7 +174,11 @@ Each use case is one class with a single `call` taking a request value and retur
 
 ## 6. Ports
 
-Ports are the interfaces use cases depend on. Each is a Ruby class with methods that raise `NotImplementedError`, so Spinel sees one concrete method table per port.
+Input ports are how the core reaches the use cases. `ActionHandler` (`use_cases/actions/`) has a `kind` and `call(state, command)`; `ExHandler` (`use_cases/ex/`) carries its `ExName` and has `call(state, ex_command)`; both raise `NotImplementedError` in the base class and return an `Outcome` in every subclass. Each feature has one handler class, whose instances hold the variant they run, and a `register(table, ...)` class method that takes the feature's use cases as keyword arguments and registers its names: in the `ActionTable` by action name, with one namespace handler for `plugin.`, and in the `ExTable` in order of precedence, the core commands before the plugin commands. A table keeps its handlers as `Array[untyped]` behind a `find` declared to return the base class, so the call through it stays typed; handlers are never kept in a literal array, which Spinel cannot resolve. The dispatcher and the ex runner depend only on their table, and the action table's names are what a configuration binding may name besides the plugins' actions.
+
+The output port is the `Outcome` (`ok` and `message`) every handler returns; the `Reporting` concern's `report` is the one place it reaches the message row, after the command.
+
+Ports to the outside are the interfaces use cases depend on. Each is a Ruby class with methods that raise `NotImplementedError`, so Spinel sees one concrete method table per port.
 
 | Port | Methods | Driver | Test double |
 | --- | --- | --- | --- |
@@ -243,7 +251,7 @@ Rules of the schema:
 
 - A keymap value is either an action name in `namespace.action` form, listed in `docs/actions.md`, or a key sequence in Vim notation to remap to, such as `:w<CR>`. A value of `null` removes the binding.
 - Keys are written in Vim notation: plain characters, `<CR>`, `<Esc>`, `<Tab>`, `<BS>`, `<Space>`, `<Up>`, `<C-x>`, `<A-x>`, `<F1>` to `<F12>`, `<leader>`.
-- Unknown keys, unknown action names, and malformed notation are reported with the file name and the JSON path, and the rest of the file still loads.
+- Unknown keys, unknown action names, and malformed notation are reported with the file name and the JSON path, and the rest of the file still loads: `Keymap#add_checked` refuses a binding whose action neither the action table nor a registered plugin declares, records every problem as `config/default.json: keymaps.normal.zq: unknown action foo.bar`, and the first is shown in the message row after startup with the count of the others.
 - Options in JSON use the Vim names and the same types as `:set`.
 - A `plugins` entry with `enabled` refers to a compiled plugin by name. An entry with `command` starts a process plugin. `options` is passed to the plugin unchanged. A plugin's own default bindings live in its manifest and are merged below `keymaps`, so the user file always wins.
 
@@ -281,13 +289,13 @@ Everything beyond core modal editing is a plugin: the file explorer, the fuzzy f
 
 ### 9.1 The plugin API
 
-The API is a set of plain values and port methods owned by the use case layer. A plugin never touches an entity or a driver directly.
+The API is a set of plain values and port methods in `carat/plugin_api.rb`, the innermost ring beside the entities: it requires nothing and names no layer, every layer may name it, and the host in the use case layer implements its requests. A plugin never touches an entity or a driver directly.
 
 What a plugin can declare, in its manifest:
 
 - `name`, `version`, and the API version it was written against.
 - Actions: names in `plugin.<name>.<action>` form that keymaps may bind, each with a short description for `docs/actions.md`.
-- Ex commands: names and abbreviations added to the ex registry, routed back to the plugin.
+- Ex commands: names and abbreviations added to the ex registry after the core commands, recognized from the abbreviation to the full name, and routed back to the plugin.
 - Default key bindings, in the same JSON shape as `config/default.json`, merged below the user's bindings.
 - Event subscriptions, by name: `buffer_open`, `buffer_change` (with the changed rows), `buffer_save`, `buffer_close`, `buffer_rename`, `cursor_move`, `mode_change`, `window_focus`, `idle`, `resize`, `quit`.
 - Options it accepts, with types and defaults.
@@ -333,7 +341,7 @@ Everything runs through `spin test`, compiled with Spinel. There is no CRuby tes
 - `test/domain_*.rb` and `test/use_cases_*.rb`: unit test programs for entities and use cases. Motions, operators, and text objects are table-driven: buffer text, cursor, keys, expected text, expected cursor. These tables are the compatibility record in `docs/compatibility.md`.
 - `test/adapters_*.rb`: presenter tests compare a `Frame` to an expected grid of strings; `ScreenPresenter` tests check ANSI bytes for a known frame diff; gateway tests feed scripted JSON-RPC frames and assert the plain values produced.
 - `test/editor_*.rb`: whole-editor tests with `FakeTerminal`, `MemoryFiles`, a manual clock, and a fixed config: feed keys, assert the frame and the buffer. This is the main integration level.
-- `test/lint.rb`: a test program that reads every source file and checks the Spinel rules of section 2.1 that the compiler does not catch on its own, the layer rule of section 3, and the plugin rule of section 9: a file under one layer directory requires only files from its own layer or an inner one, no `eval` or computed `send`, no `IO.popen`, no key binding literals outside `config/default.json`. It prints the violations, so the snapshot is the empty report.
+- `test/lint.rb`: a test program that reads every source file and checks the Spinel rules of section 2.1 that the compiler does not catch on its own, the layer rule of section 3 for requires and for constant references, the plugin rule of section 9, the naming conventions of `CLAUDE.md` (one class per file named after it, namespaces by layer, case, predicates, abbreviations, the suffixes of handlers, ports, doubles, and concerns), the concern rules, and keyword constructors: no `eval` or computed `send`, no `IO.popen`, no key binding literals outside `config/default.json`. Each rule is a function asserted against a known good and a known bad case. It prints the violations, so the snapshot is the empty report.
 - `test/config_sync.rb`: parses `config/default.json` with `Carat::Json` and compares it to the generated `Carat::Domain::DEFAULT_CONFIG`, so a stale generated file fails the suite.
 - `test/smoke_*.rb`: start `build/bin/carat` inside a pseudo-terminal through `Process.spawn`, send keys, and check the file written and the final screen. Few and slow.
 - `make diagnose` runs `spinel-doctor`, Spinel's bundled checker, on every compile root: unsupported constructs, unresolved calls, slots widened to `untyped`, boxing advice for hot loops, and a build. Its behavior leg, which compares against a CRuby interpreter, is skipped because the project uses none and Ruby 4 output differs from Ruby 3. It is part of `make check` and must report clean. Its advice lines are the guide for where a signature is worth tightening.
@@ -358,16 +366,18 @@ carat/testing.rb                assertion harness used by test/*.rb
 carat/domain/                   entities
   buffer.rb line_splice.rb change_record.rb transaction.rb buffer_feed.rb buffer_notice.rb
   sign_layer.rb path_policy.rb path_info.rb position.rb range.rb cursor.rb
-  selection.rb block_insert.rb
-  undo_tree.rb registers.rb marks.rb options.rb key.rb key_notation.rb
-  mode.rb keymap.rb command.rb command_grammar.rb motions.rb text_objects.rb
-  operators.rb ex_command.rb ex_grammar.rb window.rb layout.rb tab_page.rb
+  selection.rb span.rb block.rb block_insert.rb
+  undo_tree.rb register_entry.rb registers.rb marks.rb options.rb key.rb key_notation.rb
+  mode.rb keymap_node.rb keymap_match.rb keymap.rb find.rb command.rb command_grammar.rb
+  walker.rb sentence_starts.rb motion.rb motions.rb runs.rb text_objects.rb
+  operators.rb ex_command.rb ex_grammar.rb ex_name.rb window.rb layout_node.rb layout.rb tab_page.rb
   frame.rb cell.rb json.rb default_config.rb (generated) icons.rb
   manifest_check.rb registry_source.rb
 carat/use_cases/
   handle_key.rb move.rb operate.rb enter_insert.rb insert_text.rb
-  leave_insert.rb undo.rb redo.rb repeat_last.rb visual/*.rb search/*.rb
-  files/*.rb execute_ex.rb ex/*.rb windows/*.rb plugins/*.rb language/*.rb concerns/*.rb
+  leave_insert.rb dispatcher.rb outcome.rb undo.rb redo.rb repeat_last.rb
+  actions/*.rb (the action handlers and table) ex/*.rb (execute_ex.rb, the ex handlers and table)
+  visual/*.rb search/*.rb files/*.rb windows/*.rb plugins/*.rb language/*.rb concerns/*.rb
 carat/ports/
   terminal_port.rb clock_port.rb file_port.rb config_port.rb
   language_service_port.rb process_port.rb message_queue_port.rb
@@ -378,7 +388,7 @@ carat/adapters/
 carat/drivers/
   ansi_terminal.rb disk_files.rb process_runner.rb monotonic_clock.rb
   main_loop.rb service_threads.rb
-carat/plugin_api.rb             the only file a plugin may require
+carat/plugin_api.rb             the only file a plugin may require; the innermost ring beside the entities
 carat/plugins/
   registry.rb (generated)       explicit require and constructor per plugin
   explorer/ finder/ git_signs/  built-in compiled plugins

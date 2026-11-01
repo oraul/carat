@@ -138,4 +138,22 @@ ok   write on a scratch buffer reports E382
 ok   write-all skips the scratch buffer and writes the file
 ok   quit-all ignores the scratch buffer's changes
 ok   a name no plugin declares is unknown
-use_cases_ex: 140 passed, 0 failed
+ok   every documented spelling from the abbreviation to the full name runs its command
+ok   every registered ex command is documented
+ok   the documented commands are read from the table
+ok   vsp splits vertically
+ok   spl splits
+ok   wr writes
+ok   wal writes all
+ok   xi exits
+ok   exi exits
+ok   tabfirs goes to the first tab page
+ok   quita quits all
+ok   qui quits
+ok   tabne goes to the next tab page
+ok   tabnew opens a tab page
+ok   tabf is too short
+ok   vsplitx is too long
+ok   tab names nothing
+ok   ne is not new
+use_cases_ex: 158 passed, 0 failed

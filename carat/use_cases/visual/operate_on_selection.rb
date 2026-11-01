@@ -7,6 +7,7 @@ require_relative "../../domain/selection"
 require_relative "../../domain/display_width"
 require_relative "../../domain/operators"
 require_relative "../../domain/registers"
+require_relative "../outcome"
 
 module Carat
   module UseCases
@@ -21,38 +22,43 @@ module Carat
     # whole lines.
     class OperateOnSelection
       # d, x, and <Del>.
-      #: (Domain::EditorState, Domain::Command) -> void
+      #: (Domain::EditorState, Domain::Command) -> Outcome
       def delete(state, command)
         remove(state, command.register, state.end_visual)
+        Outcome.none
       end
 
       # X (to_end false) and D (to_end true).
-      #: (Domain::EditorState, Domain::Command, bool) -> void
+      #: (Domain::EditorState, Domain::Command, bool) -> Outcome
       def delete_lines(state, command, to_end)
         remove(state, command.register, lines_or_block(state.end_visual, to_end))
+        Outcome.none
       end
 
-      #: (Domain::EditorState, Domain::Command) -> void
+      #: (Domain::EditorState, Domain::Command) -> Outcome
       def yank(state, command)
         copy(state, command.register, state.end_visual)
+        Outcome.none
       end
 
       # Y.
-      #: (Domain::EditorState, Domain::Command) -> void
+      #: (Domain::EditorState, Domain::Command) -> Outcome
       def yank_lines(state, command)
         copy(state, command.register, lines_or_block(state.end_visual, false))
+        Outcome.none
       end
 
       # c and s.
-      #: (Domain::EditorState, Domain::Command) -> void
+      #: (Domain::EditorState, Domain::Command) -> Outcome
       def change(state, command)
         alter(state, command.register, state.end_visual)
+        Outcome.none
       end
 
       # S and R (to_end false) change whole lines in every kind; C (to_end
       # true) changes a block to the end of every row and whole lines
       # otherwise.
-      #: (Domain::EditorState, Domain::Command, bool) -> void
+      #: (Domain::EditorState, Domain::Command, bool) -> Outcome
       def change_lines(state, command, to_end)
         selection = state.end_visual
         if to_end && selection.kind == :blockwise
@@ -60,10 +66,11 @@ module Carat
         else
           alter(state, command.register, selection.as(:linewise, false))
         end
+        Outcome.none
       end
 
       # > (direction 1) and < (direction -1), count steps of shiftwidth.
-      #: (Domain::EditorState, Domain::Command, Integer) -> void
+      #: (Domain::EditorState, Domain::Command, Integer) -> Outcome
       def shift(state, command, direction)
         selection = state.end_visual
         amount = command.count_or(1) * direction
@@ -76,30 +83,32 @@ module Carat
           col = block.span(buffer.line(block.top), tabstop).from
           Domain::Operators.shift_block(buffer, block, amount, options.shiftwidth, tabstop)
           cursor.move_to(block.top, clamp(state, block.top, col))
-          return
+          return Outcome.none
         end
         top = selection.top
         Domain::Operators.shift(buffer, top, selection.bottom, amount, options.shiftwidth, options.tabstop, options.expandtab)
         cursor.move_to(top, buffer.first_nonblank(top))
+        Outcome.none
       end
 
       # J (spaces true) and gJ (spaces false): the selected rows, at least
       # two.
-      #: (Domain::EditorState, Domain::Command, bool) -> void
+      #: (Domain::EditorState, Domain::Command, bool) -> Outcome
       def join(state, command, spaces)
         selection = state.end_visual
         buffer = state.buffer
         top = selection.top
-        return if top >= buffer.line_count - 1
+        return Outcome.none if top >= buffer.line_count - 1
         count = selection.bottom - top + 1
         count = 2 if count < 2
         col = Domain::Operators.join(buffer, top, count, spaces)
         state.cursor.move_to(top, clamp(state, top, col))
+        Outcome.none
       end
 
       # ~ (:toggle), u (:lower), U (:upper), and r{char} (:replace) over
       # every selected character; the cursor goes to the start.
-      #: (Domain::EditorState, Domain::Command, Symbol) -> void
+      #: (Domain::EditorState, Domain::Command, Symbol) -> Outcome
       def recase(state, command, how)
         selection = state.end_visual
         buffer = state.buffer
@@ -121,17 +130,18 @@ module Carat
         end
         buffer.set_lines(top, selection.bottom + 1, lines)
         state.cursor.move_to(home.row, clamp(state, home.row, home.col))
+        Outcome.none
       end
 
       # I (append false) and A (append true): before the start or after the
       # end of the selection; in a block, on the top row, with the typed
       # text repeated on the other rows when insert mode is left.
-      #: (Domain::EditorState, Domain::Command, bool) -> void
+      #: (Domain::EditorState, Domain::Command, bool) -> Outcome
       def insert(state, command, append)
         selection = state.end_visual
         if selection.kind == :blockwise
           insert_block(state, selection, append)
-          return
+          return Outcome.none
         end
         buffer = state.buffer
         row = selection.bottom
@@ -144,21 +154,22 @@ module Carat
         state.mode = Domain::Mode::INSERT
         len = buffer.line(row).length
         state.cursor.move_to(row, col > len ? len : col)
+        Outcome.none
       end
 
       # p (keep false) and P (keep true): the selection is replaced by the
       # register, read before anything is removed; p stores the removed
       # text in the unnamed register, P leaves every register alone.
-      #: (Domain::EditorState, Domain::Command, bool) -> void
+      #: (Domain::EditorState, Domain::Command, bool) -> Outcome
       def put(state, command, keep)
         entry = state.registers.read(command.register)
         selection = state.end_visual
         if entry.nil?
           name = command.register.empty? ? "\"" : command.register
-          state.show("E353: Nothing in register #{name}", true)
-          return
+          return Outcome.failure("E353: Nothing in register #{name}")
         end
         replace_with(state, selection, entry, command.count_or(1), keep)
+        Outcome.none
       end
 
       private
@@ -377,9 +388,9 @@ module Carat
       def put_in_block(state, block, top_col, entry, count, keep)
         buffer = state.buffer
         tabstop = tabstop_of(state)
-        if entry.blockwise
+        if entry.blockwise?
           place(state, Domain::Operators.put_block(buffer, block.top, block.left, entry, count, tabstop))
-        elsif entry.linewise
+        elsif entry.linewise?
           row = keep ? block.top : block.bottom
           place(state, Domain::Operators.put(buffer, Domain::Position.new(row, 0), entry, count, !keep))
         elsif entry.lines.length == 1
@@ -403,13 +414,13 @@ module Carat
         buffer = state.buffer
         line = buffer.line(from.row)
         col = from.col > line.length ? line.length : from.col
-        if entry.linewise
+        if entry.linewise?
           parts = [line[0, col]]
           parts.concat(repeated(entry.lines, count))
           parts << line[col, line.length - col]
           buffer.set_lines(from.row, from.row + 1, parts)
           state.cursor.move_to(from.row + 1, buffer.first_nonblank(from.row + 1))
-        elsif entry.blockwise
+        elsif entry.blockwise?
           tabstop = tabstop_of(state)
           place(state, Domain::Operators.put_block(buffer, from.row, Domain::DisplayWidth.column(line, col, tabstop), entry, count, tabstop))
         else

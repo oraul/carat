@@ -37,7 +37,7 @@ module Carat
       # first non-blank of the first new line of linewise text.
       #: (Buffer, Position, RegisterEntry, Integer, bool) -> Position
       def self.put(buffer, pos, entry, count, after)
-        if entry.linewise
+        if entry.linewise?
           row = after ? pos.row + 1 : pos.row
           lines = []
           i = 0

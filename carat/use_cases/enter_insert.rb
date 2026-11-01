@@ -1,5 +1,6 @@
 require_relative "../domain/editor_state"
 require_relative "move"
+require_relative "outcome"
 
 module Carat
   module UseCases
@@ -7,12 +8,12 @@ module Carat
     class EnterInsert
       # @rbs @move: Move
 
-      #: (Move) -> void
-      def initialize(move)
+      #: (move: Move) -> void
+      def initialize(move:)
         @move = move
       end
 
-      #: (Domain::EditorState, Symbol) -> void
+      #: (Domain::EditorState, Symbol) -> Outcome
       def call(state, where)
         cursor = state.cursor
         buffer = state.buffer
@@ -34,6 +35,7 @@ module Carat
           cursor.move_to(cursor.row, indent.length)
         end
         state.mode = Domain::Mode::INSERT
+        Outcome.none
       end
 
       # The leading blanks of line when autoindent is on, else "".

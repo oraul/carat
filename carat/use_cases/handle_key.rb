@@ -4,6 +4,9 @@ require_relative "../domain/key"
 require_relative "../domain/key_notation"
 require_relative "../domain/command"
 require_relative "../domain/command_grammar"
+require_relative "outcome"
+require_relative "concerns/reporting"
+require_relative "actions/action_table"
 require_relative "dispatcher"
 require_relative "insert_text"
 require_relative "edit_command_line"
@@ -21,21 +24,26 @@ module Carat
     # replay is a loop, not a recursion; one key may cause at most
     # MAX_REPLAYS remaps before E223 stops it. A key is looked up first in
     # the keymap of a scratch buffer the current window shows, then in the
-    # mode's keymap. After every key the plugin host observes the state
-    # and delivers the events the key caused.
+    # mode's keymap. The grammar reads each action with the kind of its
+    # handler in the action table. After every key the plugin host
+    # observes the state and delivers the events the key caused.
     class HandleKey
+      include Reporting
+
       MAX_REPLAYS = 100
 
       # @rbs @keymap: Domain::Keymap
+      # @rbs @actions: ActionTable
       # @rbs @dispatcher: Dispatcher
       # @rbs @insert_text: InsertText
       # @rbs @command_line: EditCommandLine
       # @rbs @plugins: PluginHost
       # @rbs @replays: Integer
 
-      #: (Domain::Keymap, Dispatcher, InsertText, EditCommandLine, PluginHost) -> void
-      def initialize(keymap, dispatcher, insert_text, command_line, plugins)
+      #: (keymap: Domain::Keymap, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, plugins: PluginHost) -> void
+      def initialize(keymap:, actions:, dispatcher:, insert_text:, command_line:, plugins:)
         @keymap = keymap
+        @actions = actions
         @dispatcher = dispatcher
         @insert_text = insert_text
         @command_line = command_line
@@ -138,9 +146,9 @@ module Carat
           return
         end
         if Domain::Mode.visual?(state.mode)
-          finish(state, state.grammar.accept_visual(value, keys))
+          finish(state, state.grammar.accept_visual(value, @actions.kind_of(value), keys))
         elsif grammar_mode?(state)
-          finish(state, state.grammar.accept(value, keys))
+          finish(state, state.grammar.accept(value, @actions.kind_of(value), keys))
         else
           @dispatcher.call(state, Domain::Command.plain(value))
         end
@@ -178,13 +186,13 @@ module Carat
       def replay(state, sequence, queue)
         @replays += 1
         if @replays > MAX_REPLAYS
-          state.show("E223: Recursive mapping", true)
+          report(state, Outcome.failure("E223: Recursive mapping"))
           queue.clear
           return
         end
         parsed = Domain::KeyNotation.parse(sequence, "")
         unless parsed.ok?
-          state.show("Bad mapping: #{sequence}", true)
+          report(state, Outcome.failure("Bad mapping: #{sequence}"))
           return
         end
         codes = parsed.codes
@@ -205,7 +213,7 @@ module Carat
           if Domain::Key.printable?(code)
             text = Domain::Key.char(code)
             if mode == Domain::Mode::INSERT
-              @insert_text.call(state, text)
+              report(state, @insert_text.call(state, text))
             else
               @command_line.append(state, text)
             end

@@ -48,7 +48,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `carat.rb` requires `carat/doubles/*` (the fake terminal, the manual clock, the memory files, the fixed config, and the editor harness), and `bin/carat.rb` requires `carat.rb`.
 - Why it matters: the shipped binary carries test code it never runs, which costs size and compile time and lets production code reach a double by mistake without a compile error.
-- Fix outline: belongs to the `dependency-injection` change of the core-quality queue: move the doubles out of the library require graph into a file only `test/*.rb` and benchmarks require, and keep `bin/carat.rb` on the drivers.
+- Fix outline: belongs to the `state-and-ports` change of the core-quality queue, which follows `dependency-injection`: move the doubles out of the library require graph into a file only `test/*.rb` and benchmarks require, and keep `bin/carat.rb` on the drivers.
 
 ## Line edits on very large buffers move the rest of the line array
 

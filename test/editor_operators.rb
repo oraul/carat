@@ -18,7 +18,7 @@ def editor_with(text, options)
   options.each { |key, value| config["options"][key] = value }
   files = Carat::Doubles::MemoryFiles.new
   files.put("a.txt", text)
-  h = Carat::Doubles::EditorHarness.new(files, config, 10, 80, [])
+  h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 10, cols: 80, plugins: [])
   h.open("a.txt")
   h
 end
@@ -155,18 +155,18 @@ h = editor("ab\n")
 h.type("p")
 t.assert_equal("E353: Nothing in register \"", h.message_row, "p from an empty register reports E353")
 t.assert_equal(["ab"], h.lines, "an empty put changes nothing")
-t.assert_true(!h.buffer.modified, "an empty put does not modify the buffer")
+t.assert_true(!h.buffer.modified?, "an empty put does not modify the buffer")
 h.type("yy")
-t.assert_true(!h.buffer.modified, "a yank does not modify the buffer")
+t.assert_true(!h.buffer.modified?, "a yank does not modify the buffer")
 h.type("dd")
-t.assert_true(h.buffer.modified, "a delete modifies the buffer")
+t.assert_true(h.buffer.modified?, "a delete modifies the buffer")
 
 # The register holds the deleted text with its kind.
 h = editor("one two\nthree\n")
 h.type("dw")
-t.assert_equal(["one ", false], [h.state.registers.read("").text, h.state.registers.read("").linewise], "dw stores charwise text")
+t.assert_equal(["one ", false], [h.state.registers.read("").text, h.state.registers.read("").linewise?], "dw stores charwise text")
 h.type("dd")
-t.assert_equal(["two", true], [h.state.registers.read("").text, h.state.registers.read("").linewise], "dd stores a line")
+t.assert_equal(["two", true], [h.state.registers.read("").text, h.state.registers.read("").linewise?], "dd stores a line")
 h.type("cc")
 t.assert_equal("three", h.state.registers.read("").text, "cc stores the changed line")
 

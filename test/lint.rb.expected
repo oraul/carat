@@ -2,6 +2,15 @@ ok   the plugin reference rule
 ok   the concern rules
 ok   the link coverage rule reads both classes
 ok   defs_of reads one class body
+ok   the constant reference rule
+ok   the layer ranks
+ok   a file's namespace comes from its layer directory and its name from the file
+ok   the one class per file rule
+ok   the class name rules
+ok   the constant rule
+ok   the method name rules
+ok   the constructor rule
+ok   code drops strings and comments
 ok   no lint violations
 ok   every method and attribute has an inline RBS signature
-lint: 6 passed, 0 failed
+lint: 15 passed, 0 failed

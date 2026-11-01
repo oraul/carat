@@ -10,7 +10,7 @@ def editor(text, autoindent, expandtab)
   config["options"]["tabstop"] = 4
   files = Carat::Doubles::MemoryFiles.new
   files.put("a.txt", text)
-  h = Carat::Doubles::EditorHarness.new(files, config, 10, 40, [])
+  h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 10, cols: 40, plugins: [])
   h.open("a.txt")
   h
 end
@@ -43,7 +43,7 @@ end
 
 h = editor("ab\n", false, true)
 h.type("ix")
-t.assert_true(h.buffer.modified, "typing marks the buffer modified")
+t.assert_true(h.buffer.modified?, "typing marks the buffer modified")
 
 # Autoindent.
 h = editor("  ab\n", true, true)

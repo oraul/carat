@@ -1,57 +1,8 @@
+require_relative "keymap_node"
+require_relative "keymap_match"
+
 module Carat
   module Domain
-    # One node of a keymap trie. Children are keyed by the decimal string of
-    # the key code, a form the compiler can type. owner is the plugin whose
-    # default bindings put the value there, "" for the configuration. A
-    # Struct record: mutable, with a reader and a writer per member.
-    class KeymapNode < Struct.new(:value, :children, :owner)
-      # @rbs @value: String?
-      # @rbs @children: Hash[String, KeymapNode]
-      # @rbs @owner: String
-
-      #: () -> void
-      def initialize
-        super(nil, {}, "")
-      end
-
-      #: (Integer) -> bool
-      def child?(code)
-        children.key?(code.to_s)
-      end
-
-      #: (Integer) -> KeymapNode
-      def child!(code)
-        key = code.to_s
-        existing = children[key]
-        return existing unless existing.nil?
-        node = KeymapNode.new
-        children[key] = node
-        node
-      end
-
-      # The child under the decimal key, or a new empty node when there
-      # is none, so the answer is never nil.
-      #: (String) -> KeymapNode
-      def child_named(key)
-        existing = children[key]
-        return existing unless existing.nil?
-        KeymapNode.new
-      end
-
-      #: () -> bool
-      def leaf?
-        children.empty?
-      end
-    end
-
-    # The result of looking up a key sequence: kind is :none (unbound and no
-    # prefix), :prefix (more keys needed), :match (bound, nothing longer), or
-    # :match_prefix (bound, and a longer binding exists). value is the bound
-    # action name or remap sequence for :match and :match_prefix.
-    # A Data value: equal by value and frozen.
-    class KeymapMatch < Data.define(:kind, :value)
-    end
-
     # One trie per mode from key sequences to action names or remap
     # sequences, built only from the JSON "keymaps" object. Every binding
     # records its owner: the plugin whose defaults added it, or "" for the
@@ -91,7 +42,7 @@ module Carat
       # the given leader. Malformed entries are recorded in errors as
       # "mode.key: reason" and skipped.
       #: (untyped, String) -> Keymap
-      def self.build(keymaps, leader)
+      def self.from_config(keymaps, leader)
         keymap = Keymap.new
         keymap.add_all(keymaps, leader)
         keymap
@@ -123,6 +74,38 @@ module Carat
           bindings.each do |key, value|
             add_binding(mode, key.to_s, value, leader, owner)
           end
+        end
+      end
+
+      # Adds the configuration's bindings as add_all does, but refuses a
+      # value that is an action name known does not hold, and records every
+      # problem of the configuration with its file name and JSON path, as
+      # "config/default.json: keymaps.normal.zq: unknown action foo.bar".
+      # The other bindings still go in.
+      #: (untyped, String, Hash[String, bool], String) -> void
+      def add_checked(keymaps, leader, known, source)
+        from = errors.length
+        if keymaps.is_a?(Hash)
+          keymaps.each do |mode_name, bindings|
+            mode = Mode.from_name(mode_name.to_s)
+            if mode.nil?
+              errors << "#{mode_name}: unknown mode"
+              next
+            end
+            next unless bindings.is_a?(Hash)
+            bindings.each do |key, value|
+              if value.is_a?(String) && Keymap.action_name?(value) && !known.key?(value)
+                errors << "#{Mode.name_of(mode)}.#{key}: unknown action #{value}"
+              else
+                add_binding(mode, key.to_s, value, leader, "")
+              end
+            end
+          end
+        end
+        i = from
+        while i < errors.length
+          errors[i] = "#{source}: keymaps.#{errors[i]}"
+          i += 1
         end
       end
 
@@ -168,7 +151,7 @@ module Carat
         node = root(mode)
         i = 0
         while i < codes.length
-          node = node.child!(codes[i])
+          node = node.child_for(codes[i])
           i += 1
         end
         node.value = value
@@ -183,7 +166,7 @@ module Carat
         i = 0
         while i < codes.length
           return "" unless node.child?(codes[i])
-          node = node.child!(codes[i])
+          node = node.child_for(codes[i])
           i += 1
         end
         node.value.nil? ? "" : node.owner
@@ -208,7 +191,7 @@ module Carat
         i = 0
         while i < codes.length
           return KeymapMatch.new(:none, nil) unless node.child?(codes[i])
-          node = node.child!(codes[i])
+          node = node.child_for(codes[i])
           i += 1
         end
         value = node.value

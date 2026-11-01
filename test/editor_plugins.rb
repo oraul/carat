@@ -103,7 +103,7 @@ def editor_with(config, rows, cols)
   files = Carat::Doubles::MemoryFiles.new
   files.put("a.txt", "one\ntwo\nthree\n")
   files.put("b.txt", "zz\n")
-  h = Carat::Doubles::EditorHarness.new(files, config, rows, cols, plugin_list)
+  h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: rows, cols: cols, plugins: plugin_list)
   h.open("a.txt")
   h
 end
@@ -134,6 +134,7 @@ t.table([
   ["the default binding greets with the info icon and the open count", " hh", "#{INFO} Hello, world! 1 buffer opened"],
   ["the ex command greets", ":Hello<CR>", "#{INFO} Hello, world! 1 buffer opened"],
   ["the abbreviation greets", ":Hel<CR>", "#{INFO} Hello, world! 1 buffer opened"],
+  ["a spelling between the abbreviation and the name greets", ":Hell<CR>", "#{INFO} Hello, world! 1 buffer opened"],
   ["the argument is the name", ":Hello Ada<CR>", "#{INFO} Hello, Ada! 1 buffer opened"],
   ["a partial abbreviation is unknown", ":He<CR>", "E492: Not an editor command: He"],
   ["buffer opens are counted", ":e b.txt<CR> hh", "#{INFO} Hello, world! 2 buffers opened"],
@@ -251,7 +252,7 @@ t.assert_equal("failed 0 No scratch buffer nope", h.message, "an unknown title f
 h.type(":w<CR>")
 t.assert_equal(E382, h.message, "writing a scratch buffer is refused")
 h.type("x")
-t.assert_equal([[""], true], [h.lines, h.buffer.modified], "editing the scratch buffer is allowed")
+t.assert_equal([[""], true], [h.lines, h.buffer.modified?], "editing the scratch buffer is allowed")
 h.type(":qa<CR>")
 t.assert_equal(true, h.quit?, "quit-all ignores the scratch buffer's changes")
 h = session(" to<C-w>lx<C-w>h tl")
@@ -286,11 +287,11 @@ end
 
 # The open file request and scratch buffers across tab pages.
 h = session(" to<C-w>lx<C-w>h tf")
-t.assert_equal([["zz"], ["", "b.txt", "a.txt"], true], [h.lines, h.buffer_paths, h.state.buffer_at(2).modified], "opening over a modified buffer keeps it hidden in the list")
+t.assert_equal([["zz"], ["", "b.txt", "a.txt"], true], [h.lines, h.buffer_paths, h.state.buffer_at(2).modified?], "opening over a modified buffer keeps it hidden in the list")
 h = session(" to th")
 t.assert_equal([["zz"], false, 2], [h.lines, h.state.window.fixed_width, h.window_count], "a side window that takes a file loses its fixed width")
 h = session(" to tfx tf")
-t.assert_equal(["ok 1", 2, ["z"], true], [h.message, h.window_index, h.lines, h.buffer.modified], "opening the file a window already shows leaves it as it is, changes kept")
+t.assert_equal(["ok 1", 2, ["z"], true], [h.message, h.window_index, h.lines, h.buffer.modified?], "opening the file a window already shows leaves it as it is, changes kept")
 h = session(" to:tabnew<CR> to")
 titles = []
 i = 0
@@ -339,5 +340,26 @@ h = Carat::Doubles::EditorHarness.with_plugins(files, 24, 80, [Boom.new])
 h.assembly.plugins.register(Side.new)
 h.open("a.txt")
 t.assert_equal(true, h.plugins.enabled?("boom") == false, "the event plugin is off again")
+
+
+# Configuration problems are reported when the configuration loads, with
+# the file name and the JSON path; the binding is not added and the rest
+# loads. A plugin's action, enabled or not, is a known name.
+config = Carat::Doubles::FixedConfig.defaults
+config["keymaps"]["normal"]["zq"] = "foo.bar"
+config["keymaps"]["normal"]["zh"] = "plugin.hello.greet"
+h = editor_with(config, 24, 80)
+t.assert_equal([["config/default.json: keymaps.normal.zq: unknown action foo.bar"], "config/default.json: keymaps.normal.zq: unknown action foo.bar", true], [h.assembly.config_errors, h.message, h.state.message_error], "an unknown action is reported after startup with the file and path")
+h.type("zq")
+t.assert_equal([[0, 0], ""], [h.cursor, h.message], "the refused binding does nothing")
+h.type("zh")
+t.assert_equal("#{INFO} Hello, world! 1 buffer opened", h.message, "a binding of a plugin action loads")
+config = Carat::Doubles::FixedConfig.defaults
+config["keymaps"]["normal"]["zq"] = "foo.bar"
+config["keymaps"]["insert"]["zw"] = "foo.baz"
+h = editor_with(config, 24, 80)
+t.assert_equal(["config/default.json: keymaps.normal.zq: unknown action foo.bar", "config/default.json: keymaps.insert.zw: unknown action foo.baz"], h.assembly.config_errors, "every unknown action is reported")
+t.assert_equal("config/default.json: keymaps.normal.zq: unknown action foo.bar (and 1 more)", h.message, "the message row shows the first with the count of the others")
+t.assert_equal([], editor.assembly.config_errors, "the default configuration has no problem")
 
 t.finish

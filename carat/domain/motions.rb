@@ -2,145 +2,12 @@ require_relative "position"
 require_relative "buffer"
 require_relative "editor_state"
 require_relative "command"
+require_relative "walker"
+require_relative "sentence_starts"
+require_relative "motion"
 
 module Carat
   module Domain
-    # Steps through a buffer one character at a time, the way Vim's inc()
-    # and dec() do: the column may rest on the end of a line (the NUL), an
-    # empty line is its own position, and each step reports whether it
-    # stayed on the line (0), crossed to another line (1), landed on the
-    # end of the line (2), or could not move (-1). A Struct record used
-    # only while a word motion runs.
-    class Walker < Struct.new(:buffer, :row, :col)
-      # @rbs @buffer: Buffer
-      # @rbs @row: Integer
-      # @rbs @col: Integer
-
-      #: (Buffer, Integer, Integer) -> void
-      def initialize(buffer, row, col)
-        super(buffer, row, col)
-      end
-
-      #: () -> Integer
-      def inc
-        len = buffer.line(row).length
-        if col < len
-          self.col = col + 1
-          return col < len ? 0 : 2
-        end
-        return -1 if row >= buffer.line_count - 1
-        self.row = row + 1
-        self.col = 0
-        1
-      end
-
-      #: () -> Integer
-      def dec
-        if col > 0
-          self.col = col - 1
-          return 0
-        end
-        return -1 if row == 0
-        self.row = row - 1
-        self.col = buffer.line(row).length
-        1
-      end
-
-      # The class of the character under the walker: 0 for a blank or the
-      # end of the line, 1 for other characters, 2 for keyword characters;
-      # for WORDs every non-blank is 1.
-      #: (bool) -> Integer
-      def cls(big)
-        line = buffer.line(row)
-        return 0 if col >= line.length
-        Motions.char_class(line[col, 1], big)
-      end
-
-      #: () -> bool
-      def empty_line?
-        buffer.line(row).empty?
-      end
-
-      #: () -> Position
-      def position
-        Position.new(row, col)
-      end
-    end
-
-    # Where sentences start, in buffer order, as parallel row and column
-    # arrays: Spinel pins Array[Integer] but not an array of positions, and
-    # an untyped position would make every comparison a dynamic call. A
-    # Struct record built by Motions.sentence_starts.
-    class SentenceStarts < Struct.new(:rows, :cols)
-      # @rbs @rows: Array[Integer]
-      # @rbs @cols: Array[Integer]
-
-      #: () -> void
-      def initialize
-        super([], [])
-      end
-
-      # Adds a start unless it is not after the last one, which keeps the
-      # list ordered and without duplicates.
-      #: (Integer, Integer) -> void
-      def add(row, col)
-        last = rows.length - 1
-        return if last >= 0 && (rows[last] > row || (rows[last] == row && cols[last] >= col))
-        rows << row
-        cols << col
-      end
-
-      #: () -> Integer
-      def length
-        rows.length
-      end
-
-      # The readers go through methods with a return signature: an indexed
-      # element is nullable to the compiler, and passing it straight to
-      # Position.new would widen the position's members.
-      #: (Integer) -> Integer
-      def row(i)
-        rows[i]
-      end
-
-      #: (Integer) -> Integer
-      def col(i)
-        cols[i]
-      end
-
-      #: (Integer) -> Position
-      def position(i)
-        Position.new(row(i), col(i))
-      end
-
-      # Whether start i comes after pos.
-      #: (Integer, Position) -> bool
-      def after?(i, pos)
-        row(i) > pos.row || (row(i) == pos.row && col(i) > pos.col)
-      end
-
-      # Whether start i comes before pos.
-      #: (Integer, Position) -> bool
-      def before?(i, pos)
-        row(i) < pos.row || (row(i) == pos.row && col(i) < pos.col)
-      end
-
-      # The index of the last start at or before pos, or 0.
-      #: (Position) -> Integer
-      def index_at(pos)
-        i = 0
-        i += 1 while i + 1 < rows.length && !after?(i + 1, pos)
-        i
-      end
-    end
-
-    # The result of a motion: where it lands, whether it is linewise, whether
-    # an operator includes the target character, and what happens to the
-    # wanted column (:set for horizontal motions, :keep for vertical ones,
-    # :end for "$"). A Data value.
-    class Motion < Data.define(:target, :linewise, :inclusive, :want)
-    end
-
     # Every motion as a pure function from the editor state and a count to
     # a Motion, or nil when the motion cannot move. The same functions
     # serve cursor movement (pending false) and operator ranges (pending
@@ -149,6 +16,24 @@ module Carat
     module Motions
       CLOSERS = ")]\"'"
       TERMINATORS = ".!?"
+
+      # The motions that read one more key, the character to find; the
+      # action table registers them with the kind :find.
+      FIND_NAMES = ["motion.find_forward", "motion.find_backward", "motion.till_forward", "motion.till_backward"]
+
+      # Every other motion this module implements, in the order of the
+      # case statements below; the action table registers them with the
+      # kind :motion.
+      NAMES = [
+        "motion.repeat_find", "motion.repeat_find_reverse",
+        "cursor.left", "cursor.right", "cursor.up", "cursor.down", "cursor.line_start", "cursor.first_nonblank",
+        "cursor.line_end", "cursor.buffer_start", "cursor.buffer_end",
+        "motion.line_down", "motion.line_up", "motion.line",
+        "motion.word_forward", "motion.big_word_forward", "motion.word_backward", "motion.big_word_backward",
+        "motion.word_end", "motion.big_word_end", "motion.word_end_backward", "motion.big_word_end_backward",
+        "motion.sentence_forward", "motion.sentence_backward", "motion.paragraph_forward", "motion.paragraph_backward",
+        "motion.screen_top", "motion.screen_middle", "motion.screen_bottom"
+      ]
 
       # The motion a command asks for. This is the one entry point with a
       # side effect: f, F, t, and T record themselves in state.last_find
@@ -359,7 +244,7 @@ module Carat
       #: (EditorState, Integer, bool, bool) -> Motion?
       def self.word_forward(state, n, big, pending)
         w = walker(state)
-        ok = fwd_word(w, n, big, pending)
+        ok = forward_word(w, n, big, pending)
         return nil if !ok && !pending
         return nil if w.position == state.cursor.position
         word_motion(w, false, pending)
@@ -368,7 +253,7 @@ module Carat
       #: (EditorState, Integer, bool) -> Motion?
       def self.word_backward(state, n, big)
         w = walker(state)
-        return nil unless bck_word(w, n, big)
+        return nil unless backward_word(w, n, big)
         word_motion(w, false, false)
       end
 
@@ -383,57 +268,57 @@ module Carat
       #: (EditorState, Integer, bool) -> Motion?
       def self.word_end_backward(state, n, big)
         w = walker(state)
-        return nil unless bckend_word(w, n, big)
+        return nil unless backward_word_end(w, n, big)
         word_motion(w, true, false)
       end
 
-      # Vim's fwd_word: one word forward, count times. With eol (an operator
+      # Vim's forward_word: one word forward, count times. With eol (an operator
       # is pending) the last word stops at the end of its line. Returns
       # false when the walker was already at the end of the buffer.
       #: (Walker, Integer, bool, bool) -> bool
-      def self.fwd_word(w, count, big, eol)
+      def self.forward_word(w, count, big, eol)
         while count > 0
           count -= 1
-          sclass = w.cls(big)
+          sclass = w.char_class(big)
           last_line = w.row == w.buffer.line_count - 1
-          i = w.inc
+          i = w.step_forward
           return false if i == -1 || (i >= 1 && last_line)
           return true if i >= 1 && eol && count == 0
           if sclass != 0
-            while w.cls(big) == sclass
-              i = w.inc
+            while w.char_class(big) == sclass
+              i = w.step_forward
               return true if i == -1 || (i >= 1 && eol && count == 0)
             end
           end
-          while w.cls(big) == 0
+          while w.char_class(big) == 0
             break if w.col == 0 && w.empty_line?
-            i = w.inc
+            i = w.step_forward
             return true if i == -1 || (i >= 1 && eol && count == 0)
           end
         end
         true
       end
 
-      # Vim's bck_word: to the start of the current or previous word.
+      # Vim's backward_word: to the start of the current or previous word.
       #: (Walker, Integer, bool) -> bool
-      def self.bck_word(w, count, big)
+      def self.backward_word(w, count, big)
         while count > 0
           count -= 1
-          return false if w.dec == -1
+          return false if w.step_backward == -1
           finished = false
-          while w.cls(big) == 0
+          while w.char_class(big) == 0
             if w.col == 0 && w.empty_line?
               finished = true
               break
             end
-            return true if w.dec == -1
+            return true if w.step_backward == -1
           end
           next if finished
-          cclass = w.cls(big)
-          while w.cls(big) == cclass
-            return true if w.dec == -1
+          cclass = w.char_class(big)
+          while w.char_class(big) == cclass
+            return true if w.step_backward == -1
           end
-          w.inc
+          w.step_forward
         end
         true
       end
@@ -445,17 +330,17 @@ module Carat
       def self.end_word(w, count, big, stop)
         while count > 0
           count -= 1
-          sclass = w.cls(big)
-          return false if w.inc == -1
-          if w.cls(big) == sclass && sclass != 0
+          sclass = w.char_class(big)
+          return false if w.step_forward == -1
+          if w.char_class(big) == sclass && sclass != 0
             return false if skip_class(w, sclass, big)
           elsif !stop || sclass == 0
-            while w.cls(big) == 0
-              return false if w.inc == -1
+            while w.char_class(big) == 0
+              return false if w.step_forward == -1
             end
-            return false if skip_class(w, w.cls(big), big)
+            return false if skip_class(w, w.char_class(big), big)
           end
-          w.dec
+          w.step_backward
           stop = false
         end
         true
@@ -464,27 +349,27 @@ module Carat
       # Moves forward over characters of cclass; true when the buffer ended.
       #: (Walker, Integer, bool) -> bool
       def self.skip_class(w, cclass, big)
-        while w.cls(big) == cclass
-          return true if w.inc == -1
+        while w.char_class(big) == cclass
+          return true if w.step_forward == -1
         end
         false
       end
 
-      # Vim's bckend_word: to the end of the previous word.
+      # Vim's backward_word_end: to the end of the previous word.
       #: (Walker, Integer, bool) -> bool
-      def self.bckend_word(w, count, big)
+      def self.backward_word_end(w, count, big)
         while count > 0
           count -= 1
-          sclass = w.cls(big)
-          return false if w.dec == -1
+          sclass = w.char_class(big)
+          return false if w.step_backward == -1
           if sclass != 0
-            while w.cls(big) == sclass
-              return true if w.dec == -1
+            while w.char_class(big) == sclass
+              return true if w.step_backward == -1
             end
           end
-          while w.cls(big) == 0
+          while w.char_class(big) == 0
             break if w.col == 0 && w.empty_line?
-            return true if w.dec == -1
+            return true if w.step_backward == -1
           end
         end
         true

@@ -57,4 +57,12 @@ ok   leader q quits
 ok   message shown
 ok   message stays while idle
 ok   message clears on the next key
-editor_cmdline: 59 passed, 0 failed
+ok   vsp splits vertically as vsplit does
+ok   spl splits as split does
+ok   wr writes as write does
+ok   wal writes every modified buffer as wall does
+ok   xi leaves as xit does
+ok   tabfirs goes to the first tab page
+ok   a spelling shorter than the abbreviation is unknown
+ok   a spelling longer than the full name is unknown
+editor_cmdline: 67 passed, 0 failed

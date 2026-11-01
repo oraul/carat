@@ -1,12 +1,12 @@
 require_relative "../domain/editor_state"
 require_relative "../domain/command"
-require_relative "../domain/command_grammar"
 require_relative "../domain/range"
 require_relative "../domain/motions"
 require_relative "../domain/text_objects"
 require_relative "../domain/operators"
 require_relative "../domain/registers"
 require_relative "../domain/display_width"
+require_relative "outcome"
 
 module Carat
   module UseCases
@@ -23,10 +23,10 @@ module Carat
       INDENT = "operator.indent"
       DEDENT = "operator.dedent"
 
-      #: (Domain::EditorState, Domain::Command) -> void
+      #: (Domain::EditorState, Domain::Command) -> Outcome
       def call(state, command)
         range = operand(state, command)
-        return if range.nil?
+        return Outcome.none if range.nil?
         case command.operator
         when DELETE then delete(state, command, range)
         when CHANGE then change(state, command, range)
@@ -34,40 +34,42 @@ module Carat
         when INDENT then shift(state, range, 1)
         when DEDENT then shift(state, range, -1)
         end
+        Outcome.none
       end
 
       # x, s, S, C, D, and Y as an operator with a fixed motion.
-      #: (Domain::EditorState, Domain::Command, String, String, bool) -> void
+      #: (Domain::EditorState, Domain::Command, String, String, bool) -> Outcome
       def fixed(state, command, operator, motion, linewise)
         call(state, Domain::Command.new(command.register, command.count, operator, motion, "", linewise, command.keys))
       end
 
-      #: (Domain::EditorState, Domain::Command, bool) -> void
+      #: (Domain::EditorState, Domain::Command, bool) -> Outcome
       def put(state, command, after)
         entry = state.registers.read(command.register)
         if entry.nil?
           name = command.register.empty? ? "\"" : command.register
-          state.show("E353: Nothing in register #{name}", true)
-          return
+          return Outcome.failure("E353: Nothing in register #{name}")
         end
-        if entry.blockwise
+        if entry.blockwise?
           put_block(state, entry, command.count_or(1), after)
-          return
+          return Outcome.none
         end
         pos = Domain::Operators.put(state.buffer, state.cursor.position, entry, command.count_or(1), after)
         state.cursor.move_to(pos.row, pos.col)
+        Outcome.none
       end
 
-      #: (Domain::EditorState, Domain::Command) -> void
+      #: (Domain::EditorState, Domain::Command) -> Outcome
       def join(state, command)
         cursor = state.cursor
         last = state.buffer.line_count - 1
-        return if cursor.row >= last
+        return Outcome.none if cursor.row >= last
         count = command.count_or(2)
         count = 2 if count < 2
         count = last - cursor.row + 1 if cursor.row + count - 1 > last
         col = Domain::Operators.join(state.buffer, cursor.row, count, true)
         cursor.move_to(cursor.row, clamp(state, cursor.row, col))
+        Outcome.none
       end
 
       private
@@ -97,7 +99,7 @@ module Carat
           return Domain::Range.new(cursor.position, Domain::Position.new(last_row, cursor.col), :linewise, true)
         end
         action = command.action
-        return Domain::TextObjects.call(state, action, command.count) if Domain::CommandGrammar.text_object?(action)
+        return Domain::TextObjects.call(state, action, command.count) if Domain::TextObjects.object?(action)
         motion = motion_for(state, command)
         return nil if motion.nil?
         from = cursor.position

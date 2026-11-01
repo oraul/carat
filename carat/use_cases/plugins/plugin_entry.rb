@@ -1,3 +1,4 @@
+require_relative "../../domain/ex_name"
 require_relative "../../plugin_api"
 
 module Carat
@@ -39,22 +40,26 @@ module Carat
         events.include?(event)
       end
 
-      # Whether the plugin declared the ex command, by name or
-      # abbreviation.
+      # Whether the plugin declared the ex command typed as name: its
+      # abbreviation, its full name, or a spelling between them.
       #: (String) -> bool
       def command?(name)
         full_command(name) != ""
       end
 
-      # The declared name of the ex command typed as name or abbreviation,
-      # or "".
+      # The declared name of the ex command the typed name names, with
+      # the same matcher as the core commands (Domain::ExName), the
+      # abbreviation standing for the short form; "" when none does. The
+      # first command in the manifest's order wins.
       #: (String) -> String
       def full_command(name)
         commands = manifest.commands
         return "" unless commands.is_a?(Hash)
         commands.each do |command, abbreviation|
-          return command if command == name
-          return command if !abbreviation.empty? && abbreviation == name
+          full = command.to_s
+          short = abbreviation.to_s
+          short = full if short.empty?
+          return full if Domain::ExName.new(short, full).match?(name)
         end
         ""
       end

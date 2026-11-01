@@ -43,15 +43,18 @@ module Carat
       # @rbs @files: FileRequests
       # @rbs @ui: UiRequests
 
-      #: (Domain::EditorState, Ports::FilePort, OpenFile, CloseWindow, Domain::Keymap, String) -> void
-      def initialize(state, files, open_file, close_window, keymap, leader)
+      # The window use cases are the editor's own, built once by the
+      # assembly; the registry, the router, the events, and the request
+      # families are the host's parts and built here.
+      #: (state: Domain::EditorState, files: Ports::FilePort, open_file: OpenFile, close_window: CloseWindow, split_window: SplitWindow, open_tab: OpenTab, keymap: Domain::Keymap, leader: String) -> void
+      def initialize(state:, files:, open_file:, close_window:, split_window:, open_tab:, keymap:, leader:)
         @state = state
         file_ops = FileOps.new(files)
         @registry = PluginRegistry.new(state, keymap, leader, close_window)
-        @router = PluginRouter.new(state, @registry)
+        @router = PluginRouter.new(state: state, registry: @registry)
         @events = PluginEvents.new(state, @registry)
         @buffers = BufferRequests.new(state, @registry)
-        @windows = WindowRequests.new(state, @registry, open_file, SplitWindow.new(open_file), OpenTab.new(open_file), close_window, file_ops)
+        @windows = WindowRequests.new(state, @registry, open_file, split_window, open_tab, close_window, file_ops)
         @files = FileRequests.new(state, file_ops)
         @ui = UiRequests.new(state, @registry, file_ops)
       end
@@ -121,10 +124,21 @@ module Carat
 
       # ----------------------------------------------------------- routing
 
-      #: (String, Domain::Command) -> void
+      # Runs a plugin action and delivers what it caused; returns the
+      # router's outcome, a failure when no enabled plugin declares it.
+      #: (String, Domain::Command) -> Outcome
       def action(name, command)
-        @router.action(name, command)
+        outcome = @router.action(name, command)
         flush
+        outcome
+      end
+
+      # Every action name a registered plugin declares, enabled or not, so
+      # a configuration binding of a disabled plugin's action is not
+      # reported as unknown.
+      #: () -> Array[String]
+      def action_names
+        @registry.action_names
       end
 
       #: (String) -> bool

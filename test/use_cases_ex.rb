@@ -14,12 +14,17 @@ end
 def build(files)
   open_file = Carat::UseCases::OpenFile.new(files)
   close_window = Carat::UseCases::CloseWindow.new
-  plugins = Carat::UseCases::PluginHost.new(state_with([], nil), files, open_file, close_window, Carat::Domain::Keymap.new, " ")
-  save_file = Carat::UseCases::SaveFile.new(files, plugins)
-  quit = Carat::UseCases::Quit.new(close_window)
   split_window = Carat::UseCases::SplitWindow.new(open_file)
   open_tab = Carat::UseCases::OpenTab.new(open_file)
-  ex = Carat::UseCases::ExecuteEx.new(open_file, save_file, quit, split_window, close_window, open_tab, Carat::UseCases::CloseTab.new, Carat::UseCases::SwitchTab.new, plugins)
+  plugins = Carat::UseCases::PluginHost.new(state: state_with([], nil), files: files, open_file: open_file, close_window: close_window, split_window: split_window, open_tab: open_tab, keymap: Carat::Domain::Keymap.new, leader: " ")
+  save_file = Carat::UseCases::SaveFile.new(files: files, plugins: plugins)
+  quit = Carat::UseCases::Quit.new(close_window)
+  commands = Carat::UseCases::ExTable.new
+  Carat::UseCases::FileCommandHandler.register(commands, save_file: save_file, quit: quit, open_file: open_file)
+  Carat::UseCases::WindowCommandHandler.register(commands, split_window: split_window, close_window: close_window)
+  Carat::UseCases::TabCommandHandler.register(commands, open_tab: open_tab, close_tab: Carat::UseCases::CloseTab.new, switch_tab: Carat::UseCases::SwitchTab.new)
+  Carat::UseCases::PluginCommandHandler.register(commands, plugins: plugins)
+  ex = Carat::UseCases::ExecuteEx.new(commands: commands)
   plugins.attach(ex)
   ex
 end
@@ -32,7 +37,7 @@ s.buffer.mark_unsaved
 r = ex.call(s, "w")
 t.assert_equal([true, "\"a.txt\" 2L, 8B written"], [r.ok, r.message], "write reports the written message")
 t.assert_equal("one\ntwo\n", files.get("a.txt"), "write stores the text")
-t.assert_equal(false, s.buffer.modified, "write clears the modified flag")
+t.assert_equal(false, s.buffer.modified?, "write clears the modified flag")
 s.buffer.mark_unsaved
 r = ex.call(s, "write")
 t.assert_equal("\"a.txt\" 2L, 8B written", r.message, "long form writes")
@@ -40,20 +45,20 @@ s.buffer.mark_unsaved
 r = ex.call(s, "w b.txt")
 t.assert_equal("one\ntwo\n", files.get("b.txt"), "write to another path")
 t.assert_equal("a.txt", s.buffer.path, "buffer path unchanged by writing elsewhere")
-t.assert_equal(true, s.buffer.modified, "writing elsewhere keeps the buffer modified")
+t.assert_equal(true, s.buffer.modified?, "writing elsewhere keeps the buffer modified")
 unnamed = state_with(["x"], nil)
 r = ex.call(unnamed, "w")
 t.assert_equal([false, "E32: No file name"], [r.ok, r.message], "write with no path fails")
 r = ex.call(unnamed, "w new.txt")
 t.assert_equal("new.txt", unnamed.buffer.path, "unnamed buffer adopts the written path")
-t.assert_equal(false, unnamed.buffer.modified, "adopting the path clears the modified flag")
+t.assert_equal(false, unnamed.buffer.modified?, "adopting the path clears the modified flag")
 files.unwritable << "ro.txt"
 ro = state_with(["x"], "ro.txt")
 ro.buffer.mark_unsaved
 r = ex.call(ro, "w")
 t.assert_equal(false, r.ok, "write failure is a failure")
 t.assert_equal("E212: Can't open file for writing", r.message[0, 33], "write failure reports E212")
-t.assert_equal(true, ro.buffer.modified, "failed write keeps the buffer modified")
+t.assert_equal(true, ro.buffer.modified?, "failed write keeps the buffer modified")
 
 # Quit.
 s = state_with(["x"], "a.txt")
@@ -103,7 +108,7 @@ def run_ex(text, kind)
   s = state_with(["new"], kind == :unnamed ? nil : "a.txt")
   s.buffer.mark_unsaved if kind != :clean
   r = build(files).call(s, text)
-  [r.ok, r.message, s.quit, files.get("a.txt"), s.buffer.modified]
+  [r.ok, r.message, s.quit, files.get("a.txt"), s.buffer.modified?]
 end
 
 E37 = "E37: No write since last change (add ! to override)"
@@ -210,13 +215,13 @@ s = state_with(["mem"], "a.txt")
 r = ex.call(s, "e b.txt")
 t.assert_equal([true, "\"b.txt\" 1L, 3B", "b.txt", ["zz"], [0, 0]], [r.ok, r.message, s.buffer.path, s.buffer.lines, s.cursor.to_a], "edit opens another file")
 r = ex.call(s, "e new.txt")
-t.assert_equal(["\"new.txt\" [New]", "new.txt", [""], false], [r.message, s.buffer.path, s.buffer.lines, s.buffer.modified], "edit starts a new file")
+t.assert_equal(["\"new.txt\" [New]", "new.txt", [""], false], [r.message, s.buffer.path, s.buffer.lines, s.buffer.modified?], "edit starts a new file")
 s = state_with(["mem"], "a.txt")
 s.buffer.mark_unsaved
 r = ex.call(s, "e b.txt")
 t.assert_equal([false, "E37: No write since last change (add ! to override)", ["mem"]], [r.ok, r.message, s.buffer.lines], "edit refused while modified")
 r = ex.call(s, "e!")
-t.assert_equal([["disk"], false], [s.buffer.lines, s.buffer.modified], "forced reload discards changes")
+t.assert_equal([["disk"], false], [s.buffer.lines, s.buffer.modified?], "forced reload discards changes")
 r = ex.call(s, "edit b.txt")
 t.assert_equal(["zz"], s.buffer.lines, "long form edit")
 s = state_with(["x"], nil)
@@ -286,7 +291,7 @@ s.tab.layout.arrange(0, 0, 23, 80)
 ex.call(s, "sp")
 s.buffer.mark_unsaved
 r = ex.call(s, "q")
-t.assert_equal([true, 1, false, true], [r.ok, s.window_count, s.quit, s.buffer.modified], "q with two windows closes one and keeps the buffer")
+t.assert_equal([true, 1, false, true], [r.ok, s.window_count, s.quit, s.buffer.modified?], "q with two windows closes one and keeps the buffer")
 ex.call(s, "sp b.txt")
 s.buffer.mark_unsaved
 r = ex.call(s, "close")
@@ -308,7 +313,7 @@ ex.call(s, "sp b.txt")
 s.buffer.mark_unsaved
 ex.call(s, "close")
 r = ex.call(s, "e b.txt")
-t.assert_equal([true, "\"b.txt\" 1L, 3B", true, 1], [r.ok, r.message, s.buffer.modified, s.buffer_count], "e brings a hidden buffer back without reading it, dropping the clean one")
+t.assert_equal([true, "\"b.txt\" 1L, 3B", true, 1], [r.ok, r.message, s.buffer.modified?, s.buffer_count], "e brings a hidden buffer back without reading it, dropping the clean one")
 s = state_with(["mem"], "a.txt")
 s.tab.layout.arrange(0, 0, 23, 80)
 ex.call(s, "sp")
@@ -356,12 +361,84 @@ t.assert_equal([false, "E382: Cannot write, 'buftype' option is set"], [r.ok, r.
 scratch.set_lines(0, 1, ["m"])
 s.buffer_at(0).set_lines(0, 1, ["two"])
 r = ex.call(s, "wa")
-t.assert_equal([true, "\"a.txt\" 1L, 4B written", "two\n", true], [r.ok, r.message, files.get("a.txt"), scratch.modified], "write-all skips the scratch buffer and writes the file")
+t.assert_equal([true, "\"a.txt\" 1L, 4B written", "two\n", true], [r.ok, r.message, files.get("a.txt"), scratch.modified?], "write-all skips the scratch buffer and writes the file")
 r = ex.call(s, "qa")
 t.assert_equal([true, true], [r.ok, s.quit], "quit-all ignores the scratch buffer's changes")
 s.quit = false
 s.tab.focus(s.tab.layout.leaves[1])
 r = ex.call(s, "Nope")
 t.assert_equal("E492: Not an editor command: Nope", r.message, "a name no plugin declares is unknown")
+
+
+# Every documented command and abbreviation: each `:name[suffix]` form in
+# the Ex commands table of docs/compatibility.md is registered with that
+# name, and every spelling from its abbreviation to its full name runs it;
+# every registered name is documented.
+def documented_ex(text)
+  specs = []
+  inside = false
+  text.each_line do |line|
+    if line.start_with?("## ")
+      inside = line.strip == "## Ex commands"
+      next
+    end
+    next unless inside && line.start_with?("| `:")
+    cell = line.split("|")[1]
+    spans = cell.split("`")
+    k = 1
+    while k < spans.length
+      spec = spans[k].split(" ")[0]
+      spec = spec[1, spec.length - 1]
+      spec = spec[0, spec.length - 1] if spec.end_with?("!")
+      specs << spec unless specs.include?(spec)
+      k += 2
+    end
+  end
+  specs
+end
+
+table = Carat::Doubles::EditorHarness.default(Carat::Doubles::MemoryFiles.new, 10, 40).assembly.commands
+specs = documented_ex(File.read("docs/compatibility.md"))
+wrong = []
+specs.each do |spec|
+  name = D::ExName.parse(spec)
+  if spec.include?("[") || table.names.include?(spec)
+    len = name.short.length
+    while len <= name.full.length
+      typed = name.full[0, len]
+      handler = table.find(typed)
+      found = handler.nil? ? "nothing" : handler.name.full
+      wrong << "#{spec}: #{typed} runs #{found}" unless found == name.full
+      len += 1
+    end
+  elsif table.find(spec).nil?
+    # A bang form such as :x! documents an abbreviation of a longer name.
+    wrong << "#{spec}: runs nothing"
+  end
+end
+t.assert_equal([], wrong, "every documented spelling from the abbreviation to the full name runs its command")
+undocumented = table.names.reject { |n| specs.include?(n) }
+t.assert_equal([], undocumented, "every registered ex command is documented")
+t.assert_true(specs.include?("vs[plit]") && specs.include?("tabfir[st]") && specs.length >= 25, "the documented commands are read from the table")
+t.table([
+  ["vsp splits vertically", "vsp", "vsplit"],
+  ["spl splits", "spl", "split"],
+  ["wr writes", "wr", "write"],
+  ["wal writes all", "wal", "wall"],
+  ["xi exits", "xi", "xit"],
+  ["exi exits", "exi", "exit"],
+  ["tabfirs goes to the first tab page", "tabfirs", "tabfirst"],
+  ["quita quits all", "quita", "quitall"],
+  ["qui quits", "qui", "quit"],
+  ["tabne goes to the next tab page", "tabne", "tabnext"],
+  ["tabnew opens a tab page", "tabnew", "tabnew"],
+  ["tabf is too short", "tabf", ""],
+  ["vsplitx is too long", "vsplitx", ""],
+  ["tab names nothing", "tab", ""],
+  ["ne is not new", "ne", ""]
+]) do |typed|
+  handler = table.find(typed)
+  handler.nil? ? "" : handler.name.full
+end
 
 t.finish

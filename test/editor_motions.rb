@@ -8,7 +8,7 @@ def editor(text, scrolloff)
   config["options"]["scrolloff"] = scrolloff
   files = Carat::Doubles::MemoryFiles.new
   files.put("a.txt", text)
-  h = Carat::Doubles::EditorHarness.new(files, config, 10, 80, [])
+  h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 10, cols: 80, plugins: [])
   h.open("a.txt")
   h
 end

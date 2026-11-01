@@ -137,7 +137,7 @@ module Carat
           problems << "bindings is not an object of modes"
           return problems
         end
-        keymap = Keymap.build(bindings, " ")
+        keymap = Keymap.from_config(bindings, " ")
         errors = keymap.errors
         i = 0
         while i < errors.length

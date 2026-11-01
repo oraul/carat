@@ -145,7 +145,7 @@ t.table([
 end
 t.assert_equal([nil, "two\n", "one\n"], [files.get("b.txt"), files.get("c.txt"), files.get("a.txt")], "only the accepted rename changed the disk")
 r = host.rename_path("/w", "/w/a.txt", "d.txt")
-t.assert_equal([true, "d.txt", false], [r.ok, h.buffer.path, h.buffer.modified], "the open buffer follows a renamed file")
+t.assert_equal([true, "d.txt", false], [r.ok, h.buffer.path, h.buffer.modified?], "the open buffer follows a renamed file")
 h.type(":e lib/x.rb<CR>")
 r = host.rename_path("/w", "lib", "src")
 t.assert_equal([true, "src/x.rb", "x\n"], [r.ok, h.buffer.path, files.get("src/x.rb")], "a buffer under a renamed directory follows it")
@@ -169,7 +169,7 @@ t.table([
 end
 t.assert_equal([true, false, false], [files.exist?("/w/lib/x.rb"), files.exist?("/w/empty"), files.exist?("/w/b.txt")], "only the accepted deletes changed the disk")
 host.delete_path("/w", "/w/a.txt")
-t.assert_equal([["a.txt"], true, ["one"]], [h.buffer_paths, h.buffer.modified, h.lines], "the open buffer of a deleted file stays and becomes modified")
+t.assert_equal([["a.txt"], true, ["one"]], [h.buffer_paths, h.buffer.modified?, h.lines], "the open buffer of a deleted file stays and becomes modified")
 h.type(":q<CR>")
 t.assert_equal([false, "E37: No write since last change (add ! to override)"], [h.quit?, h.message], "and quitting asks for a write")
 
