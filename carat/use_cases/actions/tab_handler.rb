@@ -11,7 +11,7 @@ module Carat
 
       #: (switch_tab: SwitchTab, forward: bool) -> void
       def initialize(switch_tab:, forward:)
-        super(kind: :action)
+        super(kind: :action, repeat: false)
         @switch_tab = switch_tab
         @forward = forward
       end

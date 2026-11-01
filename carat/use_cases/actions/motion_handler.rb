@@ -14,7 +14,7 @@ module Carat
 
       #: (move: Move, kind: Symbol) -> void
       def initialize(move:, kind:)
-        super(kind: kind)
+        super(kind: kind, repeat: false)
         @move = move
       end
 

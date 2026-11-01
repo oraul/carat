@@ -42,7 +42,12 @@ t.assert_equal([], strangers(a.state, [
   ["host", host.state], ["registry", host.registry.state], ["events", host.events.state],
   ["buffer_requests", host.buffer_requests.state], ["window_requests", host.window_requests.state], ["ui_requests", host.ui_requests.state]
 ]), "the editor state")
-t.assert_equal([], strangers(a.registers, [["operate", a.operate.registers], ["selection", a.selection.registers]]), "the registers")
+t.assert_equal([], strangers(a.registers, [["operate", a.operate.registers], ["selection", a.selection.registers], ["command_line", a.command_line.registers], ["leave_insert", a.repeat_last.leave_insert.registers]]), "the registers")
+t.assert_equal([], strangers(a.last_change, [
+  ["dispatcher", a.dispatcher.last_change], ["repeat_last", a.repeat_last.last_change],
+  ["insert_text", a.repeat_last.insert_text.last_change], ["leave_insert", a.repeat_last.leave_insert.last_change]
+]), "the last change")
+t.assert_equal([], strangers(a.buffers.feed, [["dispatcher", a.dispatcher.feed]]), "the buffer feed")
 t.assert_equal([], strangers(a.last_find, [["move", a.move.last_find], ["operate", a.operate.last_find]]), "the last find")
 t.assert_equal([], strangers(a.keymap, [["handle_key", a.handle_key.keymap], ["registry", host.registry.keymap]]), "the keymap")
 t.assert_equal([], strangers(a.input, [["handle_key", a.handle_key.input], ["frame_presenter", a.frame_presenter.input], ["ui_requests", host.ui_requests.input]]), "the input state")
@@ -69,7 +74,7 @@ t.assert_equal([], strangers(a.arrange_view, [["handle_key", a.handle_key.arrang
 
 # Each port is one instance too.
 t.assert_equal([], strangers(h.terminal, [["assembly", a.terminal], ["controller", a.controller.terminal], ["screen_presenter", a.screen_presenter.terminal]]), "the terminal port")
-t.assert_equal([], strangers(h.clock, [["assembly", a.clock], ["controller", a.controller.clock]]), "the clock port")
+t.assert_equal([], strangers(h.clock, [["assembly", a.clock], ["controller", a.controller.clock], ["dispatcher", a.dispatcher.clock], ["undo", a.undo.clock]]), "the clock port")
 t.assert_equal([], strangers(h.files, [["assembly", a.files], ["open_file", a.open_file.files], ["save_file", a.save_file.files], ["file_ops", host.file_ops.files]]), "the file port")
 signals = Carat::Doubles::ManualSignals.new
 main_loop = Carat::Drivers::MainLoop.new(assembly: a, terminal: h.terminal, signals: signals)
@@ -84,7 +89,7 @@ t.assert_equal([true, 500, " "], [a.config.load.is_a?(Hash), a.state.options.tim
 gateway = Carat::Adapters::JsonConfigGateway.new
 t.assert_equal(["config/default.json", 500], [gateway.source, gateway.load["timeoutlen"]], "the gateway serves the shipped defaults")
 bare = Carat::Doubles::EditorHarness.new(files: files, config: {}, rows: 10, cols: 40, plugins: [])
-t.assert_equal([1000, "\\", false], [bare.state.options.timeoutlen, Carat::Domain::Keymap.leader_from({}), bare.state.options.number], "a configuration without values falls back to Vim's defaults")
+t.assert_equal([1000, "\\", false, 1000, 1000], [bare.state.options.timeoutlen, Carat::Domain::Keymap.leader_from({}), bare.state.options.number, bare.state.options.undolevels, bare.assembly.buffers.feed.undolevels], "a configuration without values falls back to Vim's defaults")
 broken = Carat::Doubles::FixedConfig.defaults
 broken["keymaps"]["normal"]["zq"] = "foo.bar"
 odd = Carat::Doubles::EditorHarness.new(files: files, config: broken, rows: 10, cols: 40, plugins: [])

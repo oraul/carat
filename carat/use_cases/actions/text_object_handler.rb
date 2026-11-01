@@ -15,7 +15,7 @@ module Carat
 
       #: (extend_visual: ExtendVisual) -> void
       def initialize(extend_visual:)
-        super(kind: :text_object)
+        super(kind: :text_object, repeat: false)
         @extend_visual = extend_visual
       end
 

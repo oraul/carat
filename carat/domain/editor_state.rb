@@ -121,6 +121,13 @@ module Carat
         self.message_error = error
       end
 
+      # Whether the message has several lines, shown over the bottom rows
+      # until a key dismisses it.
+      #: () -> bool
+      def list_message?
+        !message.empty? && message.include?("\n")
+      end
+
       #: () -> void
       def clear_message
         self.message = ""

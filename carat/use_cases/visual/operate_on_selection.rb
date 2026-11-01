@@ -8,6 +8,7 @@ require_relative "../../domain/display_width"
 require_relative "../../domain/operators"
 require_relative "../../domain/registers"
 require_relative "../outcome"
+require_relative "../operate"
 
 module Carat
   module UseCases
@@ -19,7 +20,10 @@ module Carat
     # where Neovim leaves them. The uppercase keys follow Neovim's v_visop:
     # X D Y C act on whole lines except in a block, where D and C reach the
     # end of every row and X and Y keep the block; S and R always change
-    # whole lines.
+    # whole lines. Deletes and changes write the registers by Vim's delete
+    # rules (register 1 for whole lines or more than one line), yanks by
+    # its yank rules, and naming a read-only register leaves visual mode
+    # and refuses the command with E354.
     class OperateOnSelection
       attr_reader :registers #: Domain::Registers
 
@@ -31,34 +35,44 @@ module Carat
       # d, x, and <Del>.
       #: (Domain::EditorState, Domain::Command) -> Outcome
       def delete(state, command)
-        remove(state, command.register, state.end_visual)
+        selection = state.end_visual
+        return Operate.read_only(command.register) if Domain::Registers.read_only?(command.register)
+        remove(state, command.register, selection)
         Outcome.none
       end
 
       # X (to_end false) and D (to_end true).
       #: (Domain::EditorState, Domain::Command, bool) -> Outcome
       def delete_lines(state, command, to_end)
-        remove(state, command.register, lines_or_block(state.end_visual, to_end))
+        selection = state.end_visual
+        return Operate.read_only(command.register) if Domain::Registers.read_only?(command.register)
+        remove(state, command.register, lines_or_block(selection, to_end))
         Outcome.none
       end
 
       #: (Domain::EditorState, Domain::Command) -> Outcome
       def yank(state, command)
-        copy(state, command.register, state.end_visual)
+        selection = state.end_visual
+        return Operate.read_only(command.register) if Domain::Registers.read_only?(command.register)
+        copy(state, command.register, selection)
         Outcome.none
       end
 
       # Y.
       #: (Domain::EditorState, Domain::Command) -> Outcome
       def yank_lines(state, command)
-        copy(state, command.register, lines_or_block(state.end_visual, false))
+        selection = state.end_visual
+        return Operate.read_only(command.register) if Domain::Registers.read_only?(command.register)
+        copy(state, command.register, lines_or_block(selection, false))
         Outcome.none
       end
 
       # c and s.
       #: (Domain::EditorState, Domain::Command) -> Outcome
       def change(state, command)
-        alter(state, command.register, state.end_visual)
+        selection = state.end_visual
+        return Operate.read_only(command.register) if Domain::Registers.read_only?(command.register)
+        alter(state, command.register, selection)
         Outcome.none
       end
 
@@ -68,6 +82,7 @@ module Carat
       #: (Domain::EditorState, Domain::Command, bool) -> Outcome
       def change_lines(state, command, to_end)
         selection = state.end_visual
+        return Operate.read_only(command.register) if Domain::Registers.read_only?(command.register)
         if to_end && selection.kind == :blockwise
           alter(state, command.register, selection.as(:blockwise, true))
         else
@@ -169,7 +184,7 @@ module Carat
       # text in the unnamed register, P leaves every register alone.
       #: (Domain::EditorState, Domain::Command, bool) -> Outcome
       def put(state, command, keep)
-        entry = @registers.read(command.register)
+        entry = @registers.read_with_file(command.register, state.buffer.path_text)
         selection = state.end_visual
         if entry.nil?
           name = command.register.empty? ? "\"" : command.register
@@ -202,7 +217,14 @@ module Carat
 
       #: (Domain::EditorState, String, Domain::Selection) -> void
       def remove(state, register, selection)
-        @registers.write(register, cut(state, selection))
+        @registers.delete(register, cut(state, selection), big?(selection))
+      end
+
+      # Whether a delete of the selection goes to register 1: whole lines
+      # or more than one line.
+      #: (Domain::Selection) -> bool
+      def big?(selection)
+        selection.kind == :linewise || selection.top != selection.bottom
       end
 
       # Deletes the selection and returns what it held, leaving the cursor
@@ -246,17 +268,17 @@ module Carat
         buffer = state.buffer
         cursor = state.cursor
         if selection.kind == :linewise
-          @registers.write(register, Domain::Operators.extract(buffer, selection.line_range))
+          @registers.yank(register, Domain::Operators.extract(buffer, selection.line_range))
           start = selection.line_start
           cursor.move_to(start.row, clamp(state, start.row, start.col))
         elsif selection.kind == :blockwise
           tabstop = tabstop_of(state)
           block = selection.block(buffer, tabstop)
           col = block.span(buffer.line(block.top), tabstop).from
-          @registers.write(register, Domain::Operators.extract_block(buffer, block, tabstop))
+          @registers.yank(register, Domain::Operators.extract_block(buffer, block, tabstop))
           cursor.move_to(block.top, clamp(state, block.top, col))
         else
-          @registers.write(register, Domain::Operators.extract(buffer, selection.char_range(buffer)))
+          @registers.yank(register, Domain::Operators.extract(buffer, selection.char_range(buffer)))
           start = selection.start
           cursor.move_to(start.row, clamp(state, start.row, start.col))
         end
@@ -272,7 +294,7 @@ module Carat
         cursor = state.cursor
         if selection.kind == :linewise
           top = selection.top
-          @registers.write(register, Domain::Operators.extract(buffer, selection.line_range))
+          @registers.delete(register, Domain::Operators.extract(buffer, selection.line_range), true)
           indent = state.options.autoindent ? buffer.indent_of(top) : ""
           buffer.set_lines(top, selection.bottom + 1, [indent])
           state.mode = Domain::Mode::INSERT
@@ -293,7 +315,7 @@ module Carat
           return
         end
         range = selection.char_range(buffer)
-        @registers.write(register, Domain::Operators.extract(buffer, range))
+        @registers.delete(register, Domain::Operators.extract(buffer, range), big?(selection))
         Domain::Operators.delete(buffer, range)
         state.mode = Domain::Mode::INSERT
         cursor.move_to(range.from.row, range.from.col)
@@ -363,7 +385,7 @@ module Carat
         top_col = block.span(buffer.line(block.top), tabstop).from
         from = selection.char_range(buffer).from
         removed = cut(state, selection)
-        @registers.write("", removed) unless keep
+        @registers.delete("", removed, big?(selection)) unless keep
         if selection.kind == :linewise
           put_lines(state, selection, entry, count, line_count)
         elsif selection.kind == :blockwise

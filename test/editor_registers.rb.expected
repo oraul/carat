@@ -20,4 +20,35 @@ ok   the unnamed register holds the new text only
 ok   A reads the same entry as a
 ok   a block yank stores a blockwise entry
 ok   p puts the block after the cursor on each row
-editor_registers: 22 passed, 0 failed
+ok   register 0 survives a delete
+ok   a named yank leaves register 0
+ok   register 1 takes a line delete
+ok   line deletes shift through the numbered registers
+ok   x fills register -
+ok   a delete across lines uses register 1
+ok   the black hole takes nothing
+ok   the black hole leaves the numbered registers
+ok   put the last inserted text
+ok   put the last command line
+ok   put the file name
+ok   a digit names a register to write
+ok   a visual put stores the replaced text as a delete
+ok   a visual yank fills register 0
+ok   three line deletes fill registers 1 to 3
+ok   a named line delete fills register 1 too
+ok   a paragraph motion uses register 1 and not register -
+ok   a delete into . is refused
+ok   a yank into % is refused
+ok   a visual delete into : leaves visual mode and is refused
+ok   a change into / is refused
+ok   the black hole cannot be put
+ok   the search register holds nothing yet
+ok   :registers after a line yank
+ok   the listing takes the bottom rows over the window
+ok   Enter dismisses the listing and does nothing else
+ok   the window rows and the status line under the listing are drawn again
+ok   :display with a name keeps that register
+ok   another key dismisses the listing and is handled
+ok   the small delete, inserted text, and command line registers are listed
+ok   a block is listed with its rows
+editor_registers: 53 passed, 0 failed

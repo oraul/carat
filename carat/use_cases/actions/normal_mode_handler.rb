@@ -17,7 +17,7 @@ module Carat
 
       #: (leave_insert: LeaveInsert, command_line: EditCommandLine, start_visual: StartVisual) -> void
       def initialize(leave_insert:, command_line:, start_visual:)
-        super(kind: :action)
+        super(kind: :action, repeat: false)
         @leave_insert = leave_insert
         @command_line = command_line
         @start_visual = start_visual

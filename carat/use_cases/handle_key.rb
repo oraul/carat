@@ -32,7 +32,9 @@ module Carat
     # ArrangeView lays out the windows again before every further key taken
     # from the queue and after the plugins observed the state, so the next
     # key sees current geometry. It owns the input state: the keys
-    # the keymap waits on and the grammar.
+    # the keymap waits on and the grammar. A key arriving while a message
+    # of several lines shows dismisses it; Enter and Space do nothing
+    # else, as at Neovim's hit-enter prompt.
     class HandleKey
       include Reporting
 
@@ -133,6 +135,10 @@ module Carat
       # Handles one key; a remap it triggers is pushed to the front of queue.
       #: (Domain::EditorState, Integer, Array[Integer]) -> Symbol
       def step(state, code, queue)
+        if state.list_message?
+          state.clear_message
+          return :handled if code == Domain::Key::CR || code == Domain::Key::SPACE
+        end
         state.clear_message
         input = @input
         if grammar_mode?(state)

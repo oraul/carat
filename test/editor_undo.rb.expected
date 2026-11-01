@@ -1,0 +1,65 @@
+ok   u undoes a delete
+ok   Ctrl-R redoes it
+ok   a count undoes several states
+ok   a count redoes several states
+ok   nothing to undo
+ok   nothing to redo
+ok   undoing a deleted line
+ok   redoing it
+ok   undoing three lines
+ok   undoing an opened line
+ok   an insert session is one state
+ok   undo puts the cursor back
+ok   undo goes to the first non-blank of a changed line
+ok   undoing a whole buffer delete
+ok   undoing everything typed into an empty buffer
+ok   a new branch after undo
+ok   g- reaches the abandoned branch
+ok   g- to the original
+ok   g+ forward again
+ok   g- at the oldest
+ok   g+ at the newest
+ok   a count on g-
+ok   U after two changes
+ok   U undoes U
+ok   u undoes U
+ok   U puts the cursor where the run started
+ok   U with nothing saved
+ok   an arrow key in insert mode splits the state
+ok   a visual block insert is one state
+ok   a visual delete is one state
+ok   :undo undoes one state
+ok   :u N goes to a state
+ok   :undo 0 goes to the original
+ok   :undo N not found
+ok   :undo with a bad argument
+ok   :redo
+ok   :earlier and :later
+ok   :ea with no count
+ok   :lat at the newest
+ok   :earlier with a time
+ok   :later with a file count
+ok   :earlier with a bad argument
+ok   the dot repeat is one state
+ok   the message counts the seconds since the change
+ok   one second is singular
+ok   :undolist before any change
+ok   two branches are two leaves
+ok   the write is on state 2, which is no leaf
+ok   undo keeps the leaves
+ok   an empty insert session makes no state
+ok   an edit after the write modifies the buffer
+ok   undo back to the write clears the flag
+ok   redo away from it sets it again
+ok   undo to the loaded text clears the flag
+ok   three levels keep the last three changes
+ok   a change on a large buffer keeps one removed and one inserted line
+ok   the inserted line is the buffer's own
+ok   undo puts the removed string itself back
+ok   the undo reaches the plugin as one buffer_change with its rows
+ok   the plugin edits two rows after the write
+ok   one u undoes the whole request and returns to the write
+ok   one Ctrl-R redoes it
+ok   the plugin's list is focused
+ok   u in a plugin's buffer undoes nothing
+editor_undo: 64 passed, 0 failed

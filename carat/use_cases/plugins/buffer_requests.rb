@@ -66,7 +66,7 @@ module Carat
           i += 1
         end
         opened = buffer.begin_transaction(cursor_on(buffer))
-        mark = buffer.transaction_size
+        mark = buffer.transaction_mark
         begin
           apply(buffer, edits)
         rescue StandardError => error

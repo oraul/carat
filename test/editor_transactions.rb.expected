@@ -1,11 +1,12 @@
 ok   dd is one transaction with one record
 ok   3dd is one transaction
-ok   o, typing, and Escape are one insert session
-ok   an insert session from i to Escape
+ok   o, typing, and Escape are one insert session, its records merged
+ok   an insert session from i to Escape, its records merged
 ok   typing a character records the line before and after
 ok   a newline in insert mode joins the session
 ok   visual d is one transaction
-ok   visual block c is one session with its repeat
+ok   visual block c is one session with its repeat, the cursor before at the block's top-left
+ok   an arrow key in insert mode closes the session so far
 ok   a put of three lines is one transaction
 ok   a motion closes nothing
 ok   a yank closes nothing
@@ -17,4 +18,4 @@ ok   an edit modifies, a write clears, the next edit modifies again
 ok   typing the deleted character back leaves the buffer modified
 ok   a forced reload clears the flag
 ok   two files have different ids and a.txt keeps its own
-editor_transactions: 19 passed, 0 failed
+editor_transactions: 20 passed, 0 failed

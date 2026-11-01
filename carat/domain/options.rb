@@ -5,9 +5,9 @@ module Carat
     # milliseconds the keymap waits for the rest of an ambiguous binding,
     # from the top level of the configuration. Only the ones the
     # editor reads are members; :set and local options arrive with the
-    # options change. A Struct record: mutable, with a reader and a writer
-    # per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scrolloff, :icons, :timeoutlen)
+    # options change. undolevels is how many undo states a buffer keeps. A
+    # Struct record: mutable, with a reader and a writer per member.
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scrolloff, :icons, :timeoutlen, :undolevels)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -17,11 +17,12 @@ module Carat
       # @rbs @scrolloff: Integer
       # @rbs @icons: String
       # @rbs @timeoutlen: Integer
+      # @rbs @undolevels: Integer
 
       # Vim's defaults, and the nerd icon set.
       #: () -> void
       def initialize
-        super(false, false, 8, 8, false, false, 0, "nerd", 1000)
+        super(false, false, 8, 8, false, false, 0, "nerd", 1000, 1000)
       end
 
       # Builds options from a configuration value: the members of its
@@ -42,6 +43,7 @@ module Carat
         options.autoindent = flag(hash, "autoindent", options.autoindent)
         options.scrolloff = count(hash, "scrolloff", options.scrolloff)
         options.icons = icon_set(hash, "icons", options.icons)
+        options.undolevels = count(hash, "undolevels", options.undolevels)
         options
       end
 

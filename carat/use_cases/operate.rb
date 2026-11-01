@@ -16,7 +16,10 @@ module Carat
     # exclusive-motion adjustments, writes the register, applies the
     # buffer work from Operators, and places the cursor and the mode. The
     # standalone commands x s S C D Y are the same path with a fixed
-    # operand; p, P, and J have their own entry points.
+    # operand; p, P, J, r, and ~ have their own entry points. Deletes and
+    # changes write the registers by Vim's delete rules and yanks by its
+    # yank rules; naming a read-only register refuses the command with
+    # E354.
     class Operate
       DELETE = "operator.delete"
       CHANGE = "operator.change"
@@ -33,10 +36,20 @@ module Carat
         @last_find = last_find
       end
 
+      # The motions after which a delete writes register 1 even within a
+      # line, as Vim's use_reg_one; search and marks arrive later.
+      REGISTER_ONE_MOTIONS = ["motion.sentence_forward", "motion.sentence_backward", "motion.paragraph_forward", "motion.paragraph_backward"]
+
       #: (Domain::EditorState, Domain::Command) -> Outcome
       def call(state, command)
+        operator = command.operator
+        register = command.register
+        if Domain::Registers.read_only?(register) && (operator == DELETE || operator == CHANGE || operator == YANK)
+          return Operate.read_only(register)
+        end
         range = operand(state, command)
         return Outcome.none if range.nil?
+        state.buffer.start_at(range.normalized.from) unless range.kind == :linewise
         case command.operator
         when DELETE then delete(state, command, range)
         when CHANGE then change(state, command, range)
@@ -53,9 +66,47 @@ module Carat
         call(state, Domain::Command.new(command.register, command.count, operator, motion, "", linewise, command.keys))
       end
 
+      # The refusal of a write to a read-only register.
+      #: (String) -> Outcome
+      def self.read_only(name)
+        Outcome.failure("E354: Invalid register name: '#{name}'")
+      end
+
+      # r{char}: count characters from the cursor replaced by the
+      # character, the cursor on the last one; nothing when fewer remain.
+      #: (Domain::EditorState, Domain::Command) -> Outcome
+      def replace_chars(state, command)
+        cursor = state.cursor
+        line = state.current_line
+        count = command.count_or(1)
+        col = cursor.col
+        return Outcome.none if command.char.empty? || col + count > line.length
+        fresh = line[0, col] + (command.char * count) + line[col + count, line.length - col - count]
+        state.buffer.set_lines(cursor.row, cursor.row + 1, [fresh])
+        cursor.move_to(cursor.row, col + count - 1)
+        Outcome.none
+      end
+
+      # ~: the case of count characters from the cursor switched, as many
+      # as remain, and the cursor past them, stopping on the last
+      # character.
+      #: (Domain::EditorState, Domain::Command) -> Outcome
+      def toggle_case(state, command)
+        cursor = state.cursor
+        line = state.current_line
+        col = cursor.col
+        return Outcome.none if col >= line.length
+        count = command.count_or(1)
+        count = line.length - col if col + count > line.length
+        fresh = line[0, col] + Domain::Operators.recase(line[col, count], :toggle, "") + line[col + count, line.length - col - count]
+        state.buffer.set_lines(cursor.row, cursor.row + 1, [fresh])
+        cursor.move_to(cursor.row, clamp(state, cursor.row, col + count))
+        Outcome.none
+      end
+
       #: (Domain::EditorState, Domain::Command, bool) -> Outcome
       def put(state, command, after)
-        entry = @registers.read(command.register)
+        entry = @registers.read_with_file(command.register, state.buffer.path_text)
         if entry.nil?
           name = command.register.empty? ? "\"" : command.register
           return Outcome.failure("E353: Nothing in register #{name}")
@@ -148,7 +199,7 @@ module Carat
       #: (Domain::EditorState, Domain::Command, Domain::Range) -> void
       def delete(state, command, range)
         buffer = state.buffer
-        @registers.write(command.register, Domain::Operators.extract(buffer, range))
+        @registers.delete(command.register, Domain::Operators.extract(buffer, range), big?(command, range))
         Domain::Operators.delete(buffer, range)
         cursor = state.cursor
         if range.kind == :linewise
@@ -164,7 +215,7 @@ module Carat
       #: (Domain::EditorState, Domain::Command, Domain::Range) -> void
       def change(state, command, range)
         buffer = state.buffer
-        @registers.write(command.register, Domain::Operators.extract(buffer, range))
+        @registers.delete(command.register, Domain::Operators.extract(buffer, range), big?(command, range))
         cursor = state.cursor
         if range.kind == :linewise
           indent = state.options.autoindent ? buffer.indent_of(range.from.row) : ""
@@ -180,7 +231,7 @@ module Carat
 
       #: (Domain::EditorState, Domain::Command, Domain::Range) -> void
       def yank(state, command, range)
-        @registers.write(command.register, Domain::Operators.extract(state.buffer, range))
+        @registers.yank(command.register, Domain::Operators.extract(state.buffer, range))
         cursor = state.cursor
         if range.kind == :linewise
           cursor.row = range.from.row
@@ -189,6 +240,17 @@ module Carat
           from = range.normalized.from
           cursor.move_to(from.row, clamp(state, from.row, from.col))
         end
+      end
+
+      # Whether a delete or change goes to register 1: whole lines, more
+      # than one line, or one of the motions Vim lists.
+      #: (Domain::Command, Domain::Range) -> bool
+      def big?(command, range)
+        return true if range.kind == :linewise || range.from.row != range.to.row
+        # The command's members are not pinned, so the action is made a
+        # String before the lookup, which otherwise never matches.
+        action = command.action.to_s
+        !command.operator.empty? && REGISTER_ONE_MOTIONS.include?(action)
       end
 
       #: (Domain::EditorState, Domain::Range, Integer) -> void

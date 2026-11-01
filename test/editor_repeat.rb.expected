@@ -1,0 +1,47 @@
+ok   an operator with a motion
+ok   an operator with a text object
+ok   a doubled operator
+ok   a doubled operator with a count
+ok   an indent
+ok   x
+ok   s with its text
+ok   S with its text
+ok   C with its text
+ok   D
+ok   J
+ok   p
+ok   P with a count
+ok   r
+ok   r with a count
+ok   ~
+ok   a change with its text
+ok   an insert command
+ok   i with its text
+ok   an opened line with Enter typed
+ok   O
+ok   Backspace in the session
+ok   text after an arrow key is a new change
+ok   nothing to repeat
+ok   a yank between
+ok   a motion between
+ok   undo between
+ok   an ex command between
+ok   U between
+ok   the original count
+ok   a new count replaces it
+ok   a count on an operator with a motion
+ok   visual characters on one line
+ok   visual characters across lines
+ok   visual lines
+ok   a visual block
+ok   a visual block to the line ends
+ok   a visual block insert
+ok   a visual change
+ok   a visual case change
+ok   a visual replace
+ok   the repeat deletes into register a again
+ok   "1p then . . puts registers 1, 2, and 3
+ok   the change remembers the last register used
+ok   u undoes the whole repeat
+ok   the repeat leaves the "." register alone
+editor_repeat: 46 passed, 0 failed

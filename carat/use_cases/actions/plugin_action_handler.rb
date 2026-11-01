@@ -14,7 +14,7 @@ module Carat
 
       #: (plugins: PluginHost) -> void
       def initialize(plugins:)
-        super(kind: :action)
+        super(kind: :action, repeat: false)
         @plugins = plugins
       end
 

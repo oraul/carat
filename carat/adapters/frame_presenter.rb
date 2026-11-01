@@ -38,8 +38,16 @@ module Carat
     # from where they were. The status lines, the tab line, and the message
     # row are painted every time and compared cell by cell. Lines are drawn
     # from the shared line cache, which turns once per frame.
+    #
+    # A message of several lines is painted over the rows above the
+    # message row, its last lines when it is taller than the screen, with
+    # the hit-enter line in the message row and the cursor after it; those
+    # rows are compared cell by cell like the rest of the chrome, and the
+    # frame forgets its layout key and painted rows, so the next frames
+    # repaint every window row and are compared in full.
     class FramePresenter
       SHOWCMD_WIDTH = 10
+      HIT_ENTER = "Press ENTER or type command to continue"
       SEPARATOR = "│"
       FAR = 1 << 30
 
@@ -126,6 +134,8 @@ module Carat
         back.blank(rows - 1, 0, cols)
         paint_message(back, rows - 1, cols, state)
         @chrome << rows - 1
+        listed = state.mode != Domain::Mode::CMDLINE && state.list_message?
+        paint_list(back, state, rows, cols) if listed
         if base_same
           i = 0
           while i < @chrome.length
@@ -137,6 +147,12 @@ module Carat
           back.mark_all_dirty
         end
         place_cursor(back, state, options, tabstop, visual, rows, cols)
+        if listed
+          back.cursor_row = rows - 1
+          back.cursor_col = clamp(HIT_ENTER.length, cols - 1)
+          back.layout.clear
+          @back_rows.invalidate
+        end
         swap
         back
       end
@@ -620,6 +636,25 @@ module Carat
         text
       end
 
+      # The lines of a message of several lines over the rows above the
+      # message row, the last ones when they do not all fit.
+      #: (Domain::Frame, Domain::EditorState, Integer, Integer) -> void
+      def paint_list(frame, state, rows, cols)
+        lines = state.message.split("\n", -1)
+        room = rows - 1
+        first = lines.length > room ? lines.length - room : 0
+        row = rows - 1 - (lines.length - first)
+        hl = state.message_error ? Domain::Highlight::MESSAGE_ERROR : Domain::Highlight::NORMAL
+        i = first
+        while i < lines.length
+          frame.blank(row, 0, cols)
+          frame.put(row, 0, lines[i], hl)
+          @chrome << row
+          row += 1
+          i += 1
+        end
+      end
+
       #: (Domain::Frame, Integer, Integer, Domain::EditorState) -> void
       def paint_message(frame, frame_row, cols, state)
         if state.mode == Domain::Mode::CMDLINE
@@ -627,7 +662,9 @@ module Carat
           frame.put(frame_row, col, state.cmdline, Domain::Highlight::NORMAL)
           return
         end
-        if !state.message.empty?
+        if state.list_message?
+          frame.put(frame_row, 0, HIT_ENTER, Domain::Highlight::NORMAL)
+        elsif !state.message.empty?
           hl = state.message_error ? Domain::Highlight::MESSAGE_ERROR : Domain::Highlight::NORMAL
           frame.put(frame_row, 0, state.message, hl)
         elsif state.mode == Domain::Mode::INSERT

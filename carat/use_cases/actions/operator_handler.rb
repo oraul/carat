@@ -18,7 +18,7 @@ module Carat
 
       #: (operate: Operate, selection: OperateOnSelection, variant: Symbol) -> void
       def initialize(operate:, selection:, variant:)
-        super(kind: :operator)
+        super(kind: :operator, repeat: true)
         @operate = operate
         @selection = selection
         @variant = variant

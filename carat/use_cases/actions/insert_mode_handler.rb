@@ -11,7 +11,7 @@ module Carat
 
       #: (enter_insert: EnterInsert, where: Symbol) -> void
       def initialize(enter_insert:, where:)
-        super(kind: :action)
+        super(kind: :action, repeat: true)
         @enter_insert = enter_insert
         @where = where
       end

@@ -12,12 +12,17 @@ module Carat
     # :find (a motion that reads a character), :operator (waits for a
     # motion), :text_object, :register (the register prefix), :char (an
     # action that reads a character), or :action (completes at once).
+    # repeat says whether the action is a change the dot command repeats
+    # when it changes the text or enters insert mode: operators, the
+    # standalone edits, the insert commands, and the visual operators.
     class ActionHandler
       attr_reader :kind #: Symbol
+      attr_reader :repeat #: bool
 
-      #: (kind: Symbol) -> void
-      def initialize(kind:)
+      #: (kind: Symbol, repeat: bool) -> void
+      def initialize(kind:, repeat:)
         @kind = kind
+        @repeat = repeat
       end
 
       # Runs the action and returns the Outcome to report.

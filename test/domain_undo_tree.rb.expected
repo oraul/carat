@@ -1,0 +1,35 @@
+ok   two edits make states 1 and 2, and 2 is current
+ok   each state is made on the one before
+ok   undo moves to the parent and redo would come back
+ok   redo applies the state again
+ok   undo and redo make no state, and their transaction is marked
+ok   the new change is state 2 beside state 1, and redo from the root follows it
+ok   both branches end in a leaf
+ok   from 2 to 1: undo 2, redo 1
+ok   state 1 is reached across the branch
+ok   the root's head follows the branch walked
+ok   the root is the original text
+ok   and state 2 is reached again
+ok   nearest finds kept states and the root
+ok   five states at three levels keep 3 to 5 over the root 2
+ok   the root counts the changes merged into it
+ok   undo stops at the root, the text after state 2
+ok   the old branch from the root is dropped with its states
+ok   no state is kept and the root is the current text
+ok   an edit after the write modifies the buffer
+ok   undo back to the written state clears the flag and the state keeps its write number
+ok   undo past it modifies the buffer again
+ok   coming back clears it again
+ok   a reload inside a command is the saved state
+ok   undo to the loaded text clears the flag
+ok   a one-line change keeps one removed and one inserted line
+ok   the inserted line is the buffer's own string
+ok   undo puts the very removed string back
+ok   records inside the lines the one before inserted merge into it
+ok   and the merged record undoes the whole session
+ok   the line before the first change of the run is saved
+ok   a change on another row saves that row
+ok   a change that removes a line forgets it
+ok   a scratch buffer keeps no state
+ok   a state keeps the time of the command
+domain_undo_tree: 34 passed, 0 failed

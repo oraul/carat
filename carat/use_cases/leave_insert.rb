@@ -1,6 +1,8 @@
 require_relative "../domain/editor_state"
 require_relative "../domain/block_insert"
 require_relative "../domain/display_width"
+require_relative "../domain/last_change"
+require_relative "../domain/registers"
 require_relative "outcome"
 
 module Carat
@@ -12,12 +14,26 @@ module Carat
     # after "I" and "A" the cursor then goes to the block's top-left.
     # Leaving insert mode ends the insert session: the transaction the
     # command that entered insert mode opened is closed here, after the
-    # block repeat, with the cursor where it comes to rest.
+    # block repeat, with the cursor where it comes to rest. The session
+    # stops recording for the dot command, and its typed text becomes the
+    # "." register.
     class LeaveInsert
+      attr_reader :last_change #: Domain::LastChange
+      attr_reader :registers #: Domain::Registers
+
+      #: (last_change: Domain::LastChange, registers: Domain::Registers) -> void
+      def initialize(last_change:, registers:)
+        @last_change = last_change
+        @registers = registers
+      end
+
       #: (Domain::EditorState) -> Outcome
       def call(state)
         leave(state)
         state.buffer.commit_transaction(state.cursor.position)
+        last = @last_change
+        last.stop
+        @registers.inserted = last.typed
         Outcome.none
       end
 

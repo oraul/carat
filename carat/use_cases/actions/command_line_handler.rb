@@ -12,7 +12,7 @@ module Carat
 
       #: (command_line: EditCommandLine, variant: Symbol) -> void
       def initialize(command_line:, variant:)
-        super(kind: :action)
+        super(kind: :action, repeat: false)
         @command_line = command_line
         @variant = variant
       end

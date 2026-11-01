@@ -128,7 +128,15 @@ t.table([
   ["p after a multi-line charwise delete", ["ab\ncd\n", [0, 1], "dep"], [["ab", "cd"], [0, 1], :normal]],
   ["p on an empty line", ["\n", [0, 0], "ixy<Esc>0xp"], [["yx"], [0, 1], :normal]],
   ["dd then p moves the line down", ["a\nb\n", [0, 0], "ddp"], [["b", "a"], [1, 0], :normal]],
-  ["x then P puts it back", ["ab\n", [0, 0], "xP"], [["ab"], [0, 0], :normal]]
+  ["x then P puts it back", ["ab\n", [0, 0], "xP"], [["ab"], [0, 0], :normal]],
+  ["r replaces one character", ["abc\n", [0, 1], "rx"], [["axc"], [0, 1], :normal]],
+  ["r with a count", ["abcd\n", [0, 0], "3rx"], [["xxxd"], [0, 2], :normal]],
+  ["r with too few characters", ["abc\n", [0, 0], "5rx"], [["abc"], [0, 0], :normal]],
+  ["r on an empty line", ["\n", [0, 0], "rx"], [[""], [0, 0], :normal]],
+  ["r cancelled by Escape", ["abc\n", [0, 0], "r<Esc>"], [["abc"], [0, 0], :normal]],
+  ["~ toggles and moves", ["abC\n", [0, 0], "~"], [["AbC"], [0, 1], :normal]],
+  ["~ with a count past the end", ["abC\n", [0, 1], "5~"], [["aBc"], [0, 2], :normal]],
+  ["~ on an empty line", ["\n", [0, 0], "~"], [[""], [0, 0], :normal]]
 ]) do |input|
   h = editor(input[0])
   h.state.cursor.move_to(input[1][0], input[1][1])

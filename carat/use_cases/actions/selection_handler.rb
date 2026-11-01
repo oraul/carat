@@ -17,7 +17,7 @@ module Carat
 
       #: (selection: OperateOnSelection, extend_visual: ExtendVisual, variant: Symbol, kind: Symbol) -> void
       def initialize(selection:, extend_visual:, variant:, kind:)
-        super(kind: kind)
+        super(kind: kind, repeat: true)
         @selection = selection
         @extend_visual = extend_visual
         @variant = variant

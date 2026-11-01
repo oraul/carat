@@ -14,6 +14,7 @@ ok   a register prefix
 ok   an uppercase register
 ok   the quote register
 ok   an invalid register cancels
+ok   a digit names a register
 ok   a special key as a register cancels
 ok   a find motion wants a character
 ok   a find motion under an operator
@@ -52,4 +53,4 @@ ok   count_or with no count
 ok   count_or with a count
 ok   a plain command has no operator
 ok   reversed flips the direction
-domain_grammar: 54 passed, 0 failed
+domain_grammar: 55 passed, 0 failed
