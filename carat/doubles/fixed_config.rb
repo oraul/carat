@@ -8,10 +8,13 @@ module Carat
     # a fresh parse of the shipped defaults, which a test may modify before
     # building the editor.
     class FixedConfig < Ports::ConfigPort
+      # The file the value stands for, in configuration problems.
+      SOURCE = "config/default.json"
+
       # @rbs @value: untyped
 
-      #: (untyped) -> void
-      def initialize(value)
+      #: (value: untyped) -> void
+      def initialize(value:)
         @value = value
       end
 

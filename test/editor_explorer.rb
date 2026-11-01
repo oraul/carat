@@ -28,7 +28,7 @@ end
 # An editor with the registry's plugins over the disk, on path, with the
 # given configuration.
 def editor_on(path, config)
-  h = Carat::Doubles::EditorHarness.new(disk, config, 24, 80, Carat::Plugins::Registry.all)
+  h = Carat::Doubles::EditorHarness.new(files: disk, config: config, rows: 24, cols: 80, plugins: Carat::Plugins::Registry.all)
   h.open(path)
   h
 end
@@ -222,7 +222,7 @@ end
 h = session(" eggjd" + "y<CR>")
 t.assert_equal([true, "Directory not empty: docs", true], [h.files.exist?("docs/guide.md"), h.message, h.state.message_error], "a directory with entries is refused")
 h = session(" ed" + "y<CR>")
-t.assert_equal([false, ["a.md", ""], true], [h.files.exist?("a.md"), h.buffer_paths, h.state.buffer_at(0).modified], "deleting the open file keeps its buffer, modified")
+t.assert_equal([false, ["a.md", ""], true], [h.files.exist?("a.md"), h.buffer_paths, h.state.buffer_at(0).modified?], "deleting the open file keeps its buffer, modified")
 h.type("<C-w>l:q<CR>")
 t.assert_equal([false, "E37: No write since last change (add ! to override)"], [h.quit?, h.message], "and :q asks for a write")
 h = session(" eggd")

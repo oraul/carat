@@ -230,7 +230,7 @@ module Carat
         i = 0
         while i < buffers.length
           candidate = buffer_at(i)
-          return candidate if candidate.modified && !candidate.scratch?
+          return candidate if candidate.modified? && !candidate.scratch?
           i += 1
         end
         nil
@@ -247,7 +247,7 @@ module Carat
         i = 0
         while i < buffers.length
           candidate = buffer_at(i)
-          return candidate if candidate.modified && !candidate.scratch? && !shown?(candidate)
+          return candidate if candidate.modified? && !candidate.scratch? && !shown?(candidate)
           i += 1
         end
         nil
@@ -320,7 +320,7 @@ module Carat
       # soon as no window shows it.
       #: (Buffer) -> void
       def release(target)
-        drop_buffer(target) if (!target.modified || target.scratch?) && !shown?(target)
+        drop_buffer(target) if (!target.modified? || target.scratch?) && !shown?(target)
       end
 
       # The 1-based list position of a buffer, or 0 when it is not listed.

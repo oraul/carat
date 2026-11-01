@@ -43,9 +43,9 @@ module Carat
 
       #: () -> untyped
       def parse
-        skip_ws
+        skip_whitespace
         value = parse_value
-        skip_ws
+        skip_whitespace
         error("trailing characters") if @pos < @len
         value
       end
@@ -63,7 +63,7 @@ module Carat
       end
 
       #: () -> void
-      def skip_ws
+      def skip_whitespace
         while @pos < @len
           b = @text.getbyte(@pos)
           break unless b == 32 || b == 9 || b == 10 || b == 13
@@ -109,21 +109,21 @@ module Carat
       def parse_object
         @pos += 1
         result = {}
-        skip_ws
+        skip_whitespace
         if peek == 125 # }
           @pos += 1
           return result
         end
         loop do
-          skip_ws
+          skip_whitespace
           error("expected string key") unless peek == 34
           key = parse_string
-          skip_ws
+          skip_whitespace
           error("expected colon") unless peek == 58
           @pos += 1
-          skip_ws
+          skip_whitespace
           result[key] = parse_value
-          skip_ws
+          skip_whitespace
           b = peek
           if b == 44 # ,
             @pos += 1
@@ -140,15 +140,15 @@ module Carat
       def parse_array
         @pos += 1
         result = []
-        skip_ws
+        skip_whitespace
         if peek == 93 # ]
           @pos += 1
           return result
         end
         loop do
-          skip_ws
+          skip_whitespace
           result << parse_value
-          skip_ws
+          skip_whitespace
           b = peek
           if b == 44 # ,
             @pos += 1

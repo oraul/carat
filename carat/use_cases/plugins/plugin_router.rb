@@ -18,36 +18,29 @@ module Carat
       # @rbs @state: Domain::EditorState
       # @rbs @registry: PluginRegistry
 
-      #: (Domain::EditorState, PluginRegistry) -> void
-      def initialize(state, registry)
+      #: (state: Domain::EditorState, registry: PluginRegistry) -> void
+      def initialize(state:, registry:)
         @state = state
         @registry = registry
       end
 
       # Runs a plugin.<name>.<action> action, with the count and register
-      # of the command, in the plugin that owns it.
-      #: (String, Domain::Command) -> void
+      # of the command, in the plugin that owns it; an action no enabled
+      # plugin declares is a failure to report.
+      #: (String, Domain::Command) -> Outcome
       def action(name, command)
         state = @state
         parts = name.split(".")
         plugin_name = parts.length > 1 ? parts[1] : ""
         e = @registry.find(plugin_name)
-        if e.nil?
-          state.show("No plugin named #{plugin_name}", true)
-          return
-        end
-        unless e.enabled
-          state.show("Plugin #{plugin_name} is disabled", true)
-          return
-        end
+        return Outcome.failure("No plugin named #{plugin_name}") if e.nil?
+        return Outcome.failure("Plugin #{plugin_name} is disabled") unless e.enabled
         actions = e.manifest.actions
-        unless actions.is_a?(Hash) && actions.key?(name)
-          state.show("Plugin #{plugin_name} has no action #{name}", true)
-          return
-        end
+        return Outcome.failure("Plugin #{plugin_name} has no action #{name}") unless actions.is_a?(Hash) && actions.key?(name)
         cursor = state.cursor
         context = PluginApi::Context.new(command.count, command.register, state.buffer.id, state.window_id, state.buffer.path_text.dup, cursor.row, cursor.col)
         guarded(e) { e.plugin.on_action(name, context) }
+        Outcome.none
       end
 
       # Whether an enabled plugin declared the ex command, by name or

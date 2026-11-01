@@ -5,7 +5,7 @@ t = Carat::Testing.new("domain_keymap")
 D = Carat::Domain
 
 config = Carat::Json.parse(D::DEFAULT_CONFIG_JSON)
-keymap = D::Keymap.build(config["keymaps"], config["leader"])
+keymap = D::Keymap.from_config(config["keymaps"], config["leader"])
 t.assert_equal([], keymap.errors, "default configuration has no keymap errors")
 
 def codes(text)
@@ -51,7 +51,7 @@ t.table([
 end
 
 # A custom map with an ambiguous prefix.
-custom = D::Keymap.build({ "normal" => { "a" => "one.a", "ab" => "one.ab", "<Nope>" => "x", "j" => "cursor.down", "k" => 5, "" => "empty" }, "bogus" => {} }, " ")
+custom = D::Keymap.from_config({ "normal" => { "a" => "one.a", "ab" => "one.ab", "<Nope>" => "x", "j" => "cursor.down", "k" => 5, "" => "empty" }, "bogus" => {} }, " ")
 t.table([
   ["a matches and is a prefix", "a", [:match_prefix, "one.a"]],
   ["ab matches", "ab", [:match, "one.ab"]],
@@ -69,7 +69,7 @@ t.assert_equal([
 ], custom.errors, "malformed bindings are reported with mode and key")
 
 # Unbinding with null.
-unbound = D::Keymap.build({ "normal" => { "j" => "cursor.down" } }, " ")
+unbound = D::Keymap.from_config({ "normal" => { "j" => "cursor.down" } }, " ")
 unbound.add(:normal, "j", nil, " ")
 t.assert_equal(:none, unbound.lookup(:normal, codes("j")).kind, "null unbinds a key")
 
@@ -105,6 +105,19 @@ t.assert_equal([:none, :none, :match], [owned.lookup(:normal, codes("<leader>pp"
 owned.add_owned({ "normal" => { "<leader>oo" => "cursor.down" } }, " ", "")
 owned.remove_owner("other")
 t.assert_equal([:match, "cursor.down"], [owned.lookup(:normal, codes("<leader>oo")).kind, owned.lookup(:normal, codes("<leader>oo")).value], "the configuration replaces a plugin binding and keeps it when the plugin goes")
+# Checked loading: an action name outside the known set is refused and
+# reported with the file name and JSON path; key sequences and known
+# actions go in, and every other problem carries the same prefix.
+checked = D::Keymap.new
+known = { "cursor.down" => true }
+checked.add_checked({ "normal" => { "j" => "cursor.down", "zq" => "foo.bar", "zz" => ":w<CR>", "<Nope>" => "cursor.down" }, "nope" => {} }, " ", known, "config/default.json")
+t.assert_equal([
+  "config/default.json: keymaps.normal.zq: unknown action foo.bar",
+  "config/default.json: keymaps.normal.<Nope>: unknown key <Nope>",
+  "config/default.json: keymaps.nope: unknown mode"
+], checked.errors, "checked loading reports unknown actions and malformed keys with the file and path")
+t.assert_equal([:match, :none, :match], [checked.lookup(:normal, codes("j")).kind, checked.lookup(:normal, codes("zq")).kind, checked.lookup(:normal, codes("zz")).kind], "the refused binding is not added and the others are")
+
 t.assert_equal([true, false, false], [D::Keymap.action_name?("plugin.a.b"), D::Keymap.action_name?(":w<CR>"), D::Keymap.action_name?("plain")], "an action name has namespace segments, a key sequence does not")
 
 t.finish

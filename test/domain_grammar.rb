@@ -8,6 +8,18 @@ def codes(text)
   Carat::Domain::KeyNotation.parse(text, " ").codes
 end
 
+# The kind the action table registers for each action these tests use,
+# which HandleKey passes to the grammar with the action.
+def kind(action)
+  return :register if action == "register.select"
+  return :char if action == "visual.replace"
+  return :operator if ["operator.delete", "operator.change", "operator.yank", "operator.indent", "operator.dedent"].include?(action)
+  return :find if Carat::Domain::Motions::FIND_NAMES.include?(action)
+  return :motion if Carat::Domain::Motions::NAMES.include?(action)
+  return :text_object if Carat::Domain::TextObjects.object?(action)
+  :action
+end
+
 # Feeds a script to a fresh grammar: each step is [:digit, code],
 # [:char, code], or [:accept, action, keys]; returns the results and the
 # command taken when the last result was :complete.
@@ -18,8 +30,8 @@ def run(script)
     case step[0]
     when :digit then grammar.digit(step[1]); results << :digit
     when :char then results << grammar.char(step[1])
-    when :visual then results << grammar.accept_visual(step[1], step[2])
-    else results << grammar.accept(step[1], step[2])
+    when :visual then results << grammar.accept_visual(step[1], kind(step[1]), step[2])
+    else results << grammar.accept(step[1], kind(step[1]), step[2])
     end
   end
   command = results.last == :complete ? grammar.take : nil
@@ -74,14 +86,14 @@ t.assert_true(g.digit?(48), "0 continues a count")
 g.digit(48)
 t.assert_equal(10, g.count, "digits accumulate")
 t.assert_equal("10", g.typed, "typed shows the digits")
-g.accept("operator.delete", codes("d"))
+g.accept("operator.delete", :operator, codes("d"))
 t.assert_equal("10d", g.typed, "typed shows the operator")
 t.assert_equal([10, 0], [g.operator_count, g.count], "the count moves to the operator on an operator")
 g = D::CommandGrammar.new
-g.accept("register.select", codes("\""))
-t.assert_equal(:cancel, g.accept("cursor.down", codes("j")), "an action while a register is wanted cancels")
+g.accept("register.select", :register, codes("\""))
+t.assert_equal(:cancel, g.accept("cursor.down", :motion, codes("j")), "an action while a register is wanted cancels")
 g = D::CommandGrammar.new
-g.accept("motion.find_forward", codes("f"))
+g.accept("motion.find_forward", :find, codes("f"))
 t.assert_equal("f", g.typed, "typed shows the waiting motion")
 g.char(97)
 t.assert_equal("fa", g.typed, "typed shows the character")
@@ -91,13 +103,11 @@ t.assert_true(!g.pending?, "nothing pending after take")
 t.assert_equal("<Esc>", D::CommandGrammar.display(27), "a special key displays in notation")
 t.assert_equal("é", D::CommandGrammar.display(233), "a printable key displays itself")
 
-# Classification by name.
-t.assert_true(D::CommandGrammar.motion?("cursor.left"), "cursor actions are motions")
-t.assert_true(D::CommandGrammar.motion?("motion.word_forward"), "motion actions are motions")
-t.assert_true(!D::CommandGrammar.motion?("operator.delete"), "operators are not motions")
-t.assert_true(D::CommandGrammar.operator?("operator.indent"), "indent is an operator")
-t.assert_true(!D::CommandGrammar.operator?("operator.delete_char"), "x is not a pending operator")
-t.assert_true(D::CommandGrammar.text_object?("textobject.a_paren"), "text objects are recognized")
+# The name lists the action table registers from.
+t.assert_true(D::Motions::NAMES.include?("cursor.left") && D::Motions::NAMES.include?("motion.word_forward"), "cursor and motion actions are listed as motions")
+t.assert_true(!D::Motions::NAMES.include?("motion.find_forward") && D::Motions::FIND_NAMES.include?("motion.till_backward"), "the find motions are listed apart")
+t.assert_true(D::TextObjects.object?("textobject.a_paren") && !D::TextObjects.object?("operator.delete"), "text objects are recognized")
+t.assert_true(kind("operator.delete_char") == :action && kind("operator.indent") == :operator, "x is a plain action and > a pending operator")
 
 # Command values.
 c = D::Command.plain("mode.insert")

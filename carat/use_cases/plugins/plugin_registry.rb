@@ -112,8 +112,24 @@ module Carat
         ""
       end
 
-      # The enabled plugin that declared the ex command, by name or
-      # abbreviation.
+      # Every action name the registered plugins declare, enabled or not,
+      # in registration order.
+      #: () -> Array[String]
+      def action_names
+        names = []
+        i = 0
+        while i < count
+          actions = entry(i).manifest.actions
+          if actions.is_a?(Hash)
+            actions.each_key { |key| names << key.to_s }
+          end
+          i += 1
+        end
+        names
+      end
+
+      # The enabled plugin that declared the ex command, by its name, its
+      # abbreviation, or a spelling between them; the first registered wins.
       #: (String) -> PluginEntry?
       def owner_of_command(name)
         i = 0

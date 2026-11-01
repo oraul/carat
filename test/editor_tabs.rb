@@ -92,7 +92,7 @@ t.assert_equal([["zz"], [0, 0], "b.txt"], [h.lines, h.cursor, h.buffer.path], "t
 t.assert_equal("  1 zz", h.row(1), "the text starts under the tab line")
 t.assert_equal([2, 0], [h.state.tab_at(0).window.cursor.row, h.state.tab_at(0).window.cursor.col], "the first tab page kept its cursor")
 h = session(":tabnew<CR>")
-t.assert_equal([[""], nil, false], [h.lines, h.buffer.path, h.buffer.modified], ":tabnew shows an unnamed empty buffer")
+t.assert_equal([[""], nil, false], [h.lines, h.buffer.path, h.buffer.modified?], ":tabnew shows an unnamed empty buffer")
 t.assert_equal([["a.txt", ""], 2], [h.buffer_paths, h.state.total_windows], "both buffers are listed and each tab page has a window")
 
 # Hidden buffers after closing tab pages.

@@ -43,11 +43,11 @@ t.assert_equal("E353: Nothing in register B", h.message_row, "the message names 
 h = editor("one\ntwo\n")
 h.type("\"ayy")
 entry = h.state.registers.read("a")
-t.assert_equal(["one", true], [entry.text, entry.linewise], "a linewise entry stores the line")
+t.assert_equal(["one", true], [entry.text, entry.linewise?], "a linewise entry stores the line")
 h.type("j\"Ayw")
 entry = h.state.registers.read("a")
-t.assert_equal(["one\ntwo", true], [entry.text, entry.linewise], "appending charwise text to a linewise entry adds a line")
-t.assert_equal(["two", false], [h.state.registers.read("").text, h.state.registers.read("").linewise], "the unnamed register holds the new text only")
+t.assert_equal(["one\ntwo", true], [entry.text, entry.linewise?], "appending charwise text to a linewise entry adds a line")
+t.assert_equal(["two", false], [h.state.registers.read("").text, h.state.registers.read("").linewise?], "the unnamed register holds the new text only")
 t.assert_equal(entry, h.state.registers.read("A"), "A reads the same entry as a")
 
 # A block yank stores a blockwise entry, and p puts it as a block.

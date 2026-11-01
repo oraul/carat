@@ -68,7 +68,7 @@ module Carat
         buffer = Domain::Buffer.new(Boundary.copied_lines(lines), nil, "\n")
         buffer.owner = name
         buffer.title = title
-        keymap = Domain::Keymap.build(bindings, @registry.leader)
+        keymap = Domain::Keymap.from_config(bindings, @registry.leader)
         errors = keymap.errors
         i = 0
         while i < errors.length
@@ -131,7 +131,7 @@ module Carat
         outcome = in_window(tab_index, leaf) { @open_file.call(state, path) }
         return PluginApi::WindowResponse.failure(outcome.message) unless outcome.ok
         window.fixed_width = false if old.scratch? && !window.buffer.equal?(old)
-        state.add_buffer(old) if old.modified && !old.scratch? && state.buffer_index(old) < 0
+        state.add_buffer(old) if old.modified? && !old.scratch? && state.buffer_index(old) < 0
         focus_at(tab_index, target)
         PluginApi::WindowResponse.success(outcome.message, target)
       end

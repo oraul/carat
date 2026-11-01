@@ -23,7 +23,7 @@ ok   the action reaches the plugin with the count, register, buffer, window, pat
 ok   an action for an unregistered plugin says so
 ok   an undeclared action says so
 ok   an action with no plugin segment names none
-ok   the name and the abbreviation are known, a partial prefix is not
+ok   the name, the abbreviation, and a spelling between are known, a shorter one is not
 ok   a plugin command succeeds silently
 ok   the plugin receives the declared name, the bang, and the arguments
 ok   opening a file delivers buffer_open, buffer_close for the clean buffer it replaced, then cursor_move

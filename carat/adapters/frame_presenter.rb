@@ -242,7 +242,7 @@ module Carat
         buffer = window.buffer
         name = buffer.display_name
         left = name.nil? ? "[No Name]" : name
-        left = left + " [+]" if buffer.modified
+        left = left + " [+]" if buffer.modified?
         left = left + "  " + segments.values.join(" ") if current && !segments.empty?
         left = left[0, width] if left.length > width
         cursor = window.cursor
@@ -297,7 +297,7 @@ module Carat
         t = 0
         while t < state.tab_count
           buffer = state.tab_at(t).window.buffer
-          label = " #{t + 1} #{file_name(buffer)}#{buffer.modified ? " [+]" : ""} "
+          label = " #{t + 1} #{file_name(buffer)}#{buffer.modified? ? " [+]" : ""} "
           hl = t == state.tab_index ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE
           col = frame.put(0, col, label, hl)
           break if col >= cols

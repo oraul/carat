@@ -51,7 +51,7 @@ module Carat
 
         # Makes a directory the root; the expanded set is kept.
         #: (String) -> void
-        def set_root(path)
+        def reroot(path)
           @root = PluginApi::Paths.normalize(path)
         end
 

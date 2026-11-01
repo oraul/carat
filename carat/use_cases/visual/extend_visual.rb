@@ -5,6 +5,7 @@ require_relative "../../domain/position"
 require_relative "../../domain/range"
 require_relative "../../domain/display_width"
 require_relative "../../domain/text_objects"
+require_relative "../outcome"
 
 module Carat
   module UseCases
@@ -17,23 +18,24 @@ module Carat
       MAX_LEVELS = 20
 
       # "o": the anchor and the cursor change places.
-      #: (Domain::EditorState) -> void
+      #: (Domain::EditorState) -> Outcome
       def swap_ends(state)
         window = state.window
         cursor = state.cursor
         anchor = window.anchor
         window.anchor = cursor.position
         cursor.move_to(anchor.row, anchor.col)
+        Outcome.none
       end
 
       # "O": in a block, the cursor goes to the other corner on its row and
       # the anchor to the opposite column on its own, as Neovim's
       # v_swap_corners; in the other kinds, as "o".
-      #: (Domain::EditorState) -> void
+      #: (Domain::EditorState) -> Outcome
       def swap_corner(state)
         unless state.mode == Domain::Mode::VISUAL_BLOCK
           swap_ends(state)
-          return
+          return Outcome.none
         end
         tabstop = tabstop_of(state)
         buffer = state.buffer
@@ -51,13 +53,14 @@ module Carat
         end
         window.anchor = Domain::Position.new(anchor.row, anchor_col)
         cursor.move_to(cursor.row, cursor_col)
+        Outcome.none
       end
 
       # A text object in a visual mode: on a selection of one character
       # (one row for a paragraph) the object is selected; on a larger one
       # word, sentence, and paragraph objects extend the cursor end, and
       # the enclosing objects select the smallest larger object.
-      #: (Domain::EditorState, Domain::Command) -> void
+      #: (Domain::EditorState, Domain::Command) -> Outcome
       def text_object(state, command)
         action = command.action
         n = command.count_or(1)
@@ -78,6 +81,7 @@ module Carat
         else
           enclose(state, action, n, anchor == head)
         end
+        Outcome.none
       end
 
       private

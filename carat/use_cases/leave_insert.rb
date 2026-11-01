@@ -1,6 +1,7 @@
 require_relative "../domain/editor_state"
 require_relative "../domain/block_insert"
 require_relative "../domain/display_width"
+require_relative "outcome"
 
 module Carat
   module UseCases
@@ -13,10 +14,11 @@ module Carat
     # command that entered insert mode opened is closed here, after the
     # block repeat, with the cursor where it comes to rest.
     class LeaveInsert
-      #: (Domain::EditorState) -> void
+      #: (Domain::EditorState) -> Outcome
       def call(state)
         leave(state)
         state.buffer.commit_transaction(state.cursor.position)
+        Outcome.none
       end
 
       private

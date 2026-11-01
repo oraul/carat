@@ -238,6 +238,6 @@ h.type("vp")
 t.assert_equal("E353: Nothing in register \"", h.message, "p with an empty register reports E353")
 h = editor("ab\n")
 h.type("vl<Esc>")
-t.assert_true(!h.buffer.modified, "visual mode alone does not modify the buffer")
+t.assert_true(!h.buffer.modified?, "visual mode alone does not modify the buffer")
 
 t.finish

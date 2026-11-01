@@ -138,7 +138,7 @@ t.table([
   ["the old window keeps its buffer after Ctrl-W j", ":sp b.txt<CR><C-w>j", [["b.txt", "a.txt"], ["one", "two", "three"], false]]
 ]) do |keys|
   h = session(keys)
-  [paths(h), h.lines, h.buffer.modified]
+  [paths(h), h.lines, h.buffer.modified?]
 end
 
 # Edits are shared between windows on one buffer.
@@ -208,7 +208,7 @@ t.assert_equal(true, h.quit?, "Ctrl-W q on the last window quits")
 h = session("x<C-w>q")
 t.assert_equal([false, E37], [h.quit?, h.message_row], "Ctrl-W q on the last window refuses a modified buffer")
 h = session("<C-w>sx:q<CR>")
-t.assert_equal([1, false, true], [h.window_count, h.quit?, h.buffer.modified], "the other window keeps showing the modified buffer")
+t.assert_equal([1, false, true], [h.window_count, h.quit?, h.buffer.modified?], "the other window keeps showing the modified buffer")
 
 # A modified buffer whose last window closes stays hidden.
 h = session(":sp b.txt<CR>x<C-w>c:qa<CR>")
@@ -220,7 +220,7 @@ t.assert_equal(["a.txt"], h.buffer_paths, "a clean hidden buffer leaves the list
 h.type(":qa<CR>")
 t.assert_equal(true, h.quit?, ":qa then ends the editor")
 h = session(":sp b.txt<CR>x<C-w>c:e b.txt<CR>")
-t.assert_equal([["z"], true, "\"b.txt\" 1L, 2B"], [h.lines, h.buffer.modified, h.message_row], ":e brings the hidden buffer back without reading the file")
+t.assert_equal([["z"], true, "\"b.txt\" 1L, 2B"], [h.lines, h.buffer.modified?, h.message_row], ":e brings the hidden buffer back without reading the file")
 h = session(":sp b.txt<CR><C-w>c")
 t.assert_equal(["a.txt"], h.buffer_paths, "a clean buffer leaves the list when its window closes")
 h = session(":sp b.txt<CR>x:q<CR>")
@@ -236,12 +236,12 @@ t.assert_equal(true, h.quit?, "a second :q! quits")
 h = session(":sp b.txt<CR>x<C-w>c<C-w>o")
 t.assert_equal("Already only one window", h.message_row, "Ctrl-W o reports one window")
 h = session("<C-w>s<C-w>s<C-w>jx<C-w>o")
-t.assert_equal([1, true], [h.window_count, h.buffer.modified], ":only keeps the current window with its buffer")
+t.assert_equal([1, true], [h.window_count, h.buffer.modified?], ":only keeps the current window with its buffer")
 
 # E141 names the buffer by its list position.
 h = session(":new<CR>ix<Esc><C-w>jx:wa<CR>")
 t.assert_equal(["E141: No file name for buffer 2", "ne\ntwo\nthree\n"], [h.message_row, h.files.get("a.txt")], ":wa reports the nameless buffer and writes the others")
-t.assert_equal([true, false], [h.state.buffer_at(1).modified, h.quit?], "the nameless buffer stays modified")
+t.assert_equal([true, false], [h.state.buffer_at(1).modified?, h.quit?], "the nameless buffer stays modified")
 h.type(":wqa<CR>")
 t.assert_equal([false, "E141: No file name for buffer 2"], [h.quit?, h.message_row], ":wqa does not quit while a buffer could not be written")
 

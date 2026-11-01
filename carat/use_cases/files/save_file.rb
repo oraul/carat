@@ -15,8 +15,8 @@ module Carat
       # @rbs @files: Ports::FilePort
       # @rbs @plugins: PluginHost
 
-      #: (Ports::FilePort, PluginHost) -> void
-      def initialize(files, plugins)
+      #: (files: Ports::FilePort, plugins: PluginHost) -> void
+      def initialize(files:, plugins:)
         @files = files
         @plugins = plugins
       end
@@ -49,6 +49,38 @@ module Carat
         buffer.mark_saved if path == own
         @plugins.saved(buffer)
         Outcome.success("\"#{path}\" #{buffer.line_count}L, #{text.bytesize}B written")
+      end
+
+      # Writes every modified buffer to its own path, in list order, and
+      # reports the last write, or the first failure: a modified buffer with
+      # no name reports E141 with its list position, and the other buffers
+      # are still written, as Neovim's do_wqall goes on after an error. A
+      # scratch buffer is skipped. A hidden buffer that is clean after its
+      # write leaves the list. :wa, :wqa, and :xa share it.
+      #: (Domain::EditorState) -> Outcome
+      def all(state)
+        result = Outcome.none
+        failed = false
+        i = 0
+        while i < state.buffer_count
+          buffer = state.buffer_at(i)
+          if buffer.modified? && !buffer.scratch?
+            written = buffer.path.nil? ? Outcome.failure("E141: No file name for buffer #{i + 1}") : write(buffer, "")
+            if !written.ok && !failed
+              result = written
+              failed = true
+            elsif !failed
+              result = written
+            end
+          end
+          i += 1
+        end
+        i = state.buffer_count - 1
+        while i >= 0
+          state.release(state.buffer_at(i))
+          i -= 1
+        end
+        result
       end
     end
   end

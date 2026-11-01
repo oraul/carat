@@ -23,7 +23,7 @@ terminal = Carat::Drivers::AnsiTerminal.new(STDIN, STDOUT)
 clock = Carat::Drivers::MonotonicClock.new
 files = Carat::Drivers::DiskFiles.new
 config = Carat::Adapters::JsonConfigGateway.new.load
-assembly = Carat::Adapters::EditorAssembly.new(terminal, clock, files, config, Carat::Plugins::Registry.all)
+assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: config, config_source: Carat::Adapters::JsonConfigGateway::SOURCE, plugin_list: Carat::Plugins::Registry.all)
 main_loop = Carat::Drivers::MainLoop.new(assembly, terminal)
 
 assembly.screen_presenter.enter

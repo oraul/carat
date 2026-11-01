@@ -214,7 +214,7 @@ module Carat
             tree.toggle_hidden
             refresh(host, tree)
           when "plugin.explorer.root_up" then root_up(host, tree)
-          when "plugin.explorer.set_root" then set_root(host, tree, row)
+          when "plugin.explorer.set_root" then root_at_cursor(host, tree, row)
           when "plugin.explorer.close" then report(host, host.close_scratch(TITLE))
           when "plugin.explorer.help" then host.message(HELP, false)
           end
@@ -295,7 +295,7 @@ module Carat
         def root_up(host, tree)
           old = tree.root
           return if old == "/"
-          tree.set_root(PluginApi::Paths.dirname(old))
+          tree.reroot(PluginApi::Paths.dirname(old))
           tree.expand(old)
           refresh(host, tree)
           row = tree.row_of(old)
@@ -303,10 +303,10 @@ module Carat
         end
 
         #: (Carat::PluginApi::Host, Tree, Integer) -> void
-        def set_root(host, tree, row)
+        def root_at_cursor(host, tree, row)
           n = tree.at(row)
           return if n.nil? || n.root?
-          tree.set_root(n.directory ? n.path : PluginApi::Paths.dirname(n.path))
+          tree.reroot(n.directory ? n.path : PluginApi::Paths.dirname(n.path))
           refresh(host, tree)
           host.move_cursor(0, 0)
         end

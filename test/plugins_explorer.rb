@@ -105,11 +105,11 @@ t.assert_equal([true, false, "/home/ada/proj/doc/deep/x.rb"], [tree.expanded?("/
 
 # Moving the root.
 tree = tree_over(files)
-tree.set_root("/home/ada")
+tree.reroot("/home/ada")
 tree.expand("/home/ada/proj")
 tree.build(host)
 t.assert_equal([" - ada", "   - proj", "     + docs"], tree.lines(host)[0, 3], "the parent as root keeps the old root expanded")
-tree.set_root("/home/ada/proj/docs")
+tree.reroot("/home/ada/proj/docs")
 tree.build(host)
 t.assert_equal(" - docs", tree.lines(host)[0], "a directory as root")
 

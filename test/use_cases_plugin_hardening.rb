@@ -215,7 +215,7 @@ e = rig("edit", "edit_bad_last", [])
 seen = rig("seen", "", ["buffer_change"])
 h = editor([e, seen])
 h.type(" re")
-t.assert_equal([["edit false edit 3: not an edit"], ["one", "two", "three"], false, []], [e.log, h.lines, h.buffer.modified, seen.log], "a bad last item refuses the request before any edit lands")
+t.assert_equal([["edit false edit 3: not an edit"], ["one", "two", "three"], false, []], [e.log, h.lines, h.buffer.modified?, seen.log], "a bad last item refuses the request before any edit lands")
 
 # Ids: a buffer id survives a list change and a window id a window close.
 p = rig("probe", "focus", [])

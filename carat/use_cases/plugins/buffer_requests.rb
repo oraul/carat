@@ -35,7 +35,7 @@ module Carat
           row = @state.cursor.row
           col = @state.cursor.col
         end
-        PluginApi::BufferView.new(true, "", buffer.id, buffer.path_text.dup, Boundary.copied_lines(buffer.lines), row, col, buffer.modified)
+        PluginApi::BufferView.new(true, "", buffer.id, buffer.path_text.dup, Boundary.copied_lines(buffer.lines), row, col, buffer.modified?)
       end
 
       # Validates every item before touching a line, then applies them

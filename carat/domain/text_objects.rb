@@ -3,68 +3,34 @@ require_relative "range"
 require_relative "buffer"
 require_relative "editor_state"
 require_relative "motions"
+require_relative "runs"
 
 module Carat
   module Domain
-    # The runs of characters of one class on a line, as parallel arrays of
-    # start column (inclusive), end column (exclusive), and class, because
-    # Spinel pins Array[Integer] but not an array of program values. A
-    # Struct record built by TextObjects.runs.
-    class Runs < Struct.new(:froms, :tos, :classes)
-      # @rbs @froms: Array[Integer]
-      # @rbs @tos: Array[Integer]
-      # @rbs @classes: Array[Integer]
-
-      #: () -> void
-      def initialize
-        super([], [], [])
-      end
-
-      #: (Integer, Integer, Integer) -> void
-      def add(from, to, cls)
-        froms << from
-        tos << to
-        classes << cls
-      end
-
-      #: () -> Integer
-      def length
-        froms.length
-      end
-
-      #: (Integer) -> Integer
-      def from(i)
-        froms[i]
-      end
-
-      #: (Integer) -> Integer
-      def to(i)
-        tos[i]
-      end
-
-      #: (Integer) -> Integer
-      def cls(i)
-        classes[i]
-      end
-
-      # The index of the run holding col, or the last run.
-      #: (Integer) -> Integer
-      def index_of(col)
-        i = 0
-        while i < froms.length
-          return i if col >= froms[i] && col < tos[i]
-          i += 1
-        end
-        froms.length - 1
-      end
-    end
-
     # Text objects as pure functions from the editor state and a count to
     # the Range an operator works on, or nil when there is no such object
     # around the cursor. Word and sentence objects are charwise, paragraph
     # objects linewise, bracket objects charwise unless the inner form
     # stands between brackets that end their lines.
     module TextObjects
+      # Every text object this module implements, in the order of the case
+      # statement below; the action table registers them with the kind
+      # :text_object.
+      NAMES = [
+        "textobject.inner_word", "textobject.a_word", "textobject.inner_big_word", "textobject.a_big_word",
+        "textobject.inner_sentence", "textobject.a_sentence", "textobject.inner_paragraph", "textobject.a_paragraph",
+        "textobject.inner_paren", "textobject.a_paren", "textobject.inner_bracket", "textobject.a_bracket",
+        "textobject.inner_brace", "textobject.a_brace", "textobject.inner_angle", "textobject.a_angle",
+        "textobject.inner_double_quote", "textobject.a_double_quote", "textobject.inner_single_quote",
+        "textobject.a_single_quote", "textobject.inner_backtick", "textobject.a_backtick"
+      ]
+
+      # Whether the action names a text object.
+      #: (String) -> bool
+      def self.object?(action)
+        NAMES.include?(action)
+      end
+
       #: (EditorState, String, Integer) -> Range?
       def self.call(state, action, count)
         n = count > 0 ? count : 1
@@ -127,11 +93,11 @@ module Carat
         to = runs.to(i)
         last = i
         if around
-          if runs.cls(i) != 0
+          if runs.class_at(i) != 0
             if i + 1 < runs.length
               last = i + 1
               to = runs.to(last)
-            elsif i > 0 && runs.cls(i - 1) == 0
+            elsif i > 0 && runs.class_at(i - 1) == 0
               from = runs.from(i - 1)
             end
           elsif i + 1 < runs.length
@@ -142,7 +108,7 @@ module Carat
           while n > 0 && last + 1 < runs.length
             last += 1
             to = runs.to(last)
-            if runs.cls(last) != 0 && last + 1 < runs.length && runs.cls(last + 1) == 0
+            if runs.class_at(last) != 0 && last + 1 < runs.length && runs.class_at(last + 1) == 0
               last += 1
               to = runs.to(last)
             end
@@ -272,7 +238,7 @@ module Carat
       def self.find_opener(buffer, pos, open, close)
         w = Walker.new(buffer, pos.row, pos.col)
         depth = 0
-        while w.dec != -1
+        while w.step_backward != -1
           ch = char_at(buffer, w.position)
           if ch == close
             depth += 1
@@ -289,7 +255,7 @@ module Carat
       def self.find_closer(buffer, pos, open, close)
         w = Walker.new(buffer, pos.row, pos.col)
         depth = 0
-        while w.inc != -1
+        while w.step_forward != -1
           ch = char_at(buffer, w.position)
           if ch == open
             depth += 1

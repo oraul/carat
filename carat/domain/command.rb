@@ -1,3 +1,5 @@
+require_relative "find"
+
 module Carat
   module Domain
     # What the command grammar produces: the register name ("" for the
@@ -24,14 +26,6 @@ module Carat
       #: () -> bool
       def operator?
         !operator.empty?
-      end
-    end
-
-    # The last f, F, t, or T motion, for ";" and ",". A Data value.
-    class Find < Data.define(:char, :forward, :till)
-      #: () -> Find
-      def reversed
-        Find.new(char, !forward, till)
       end
     end
   end

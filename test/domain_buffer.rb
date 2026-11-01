@@ -35,7 +35,7 @@ t.table([
 ]) { |text| D::Buffer.from_text(text, nil).to_text }
 
 fresh = D::Buffer.from_text("x\n", "f.txt")
-t.assert_equal(false, fresh.modified, "loaded buffer is unmodified")
+t.assert_equal(false, fresh.modified?, "loaded buffer is unmodified")
 t.assert_equal("f.txt", fresh.path, "loaded buffer keeps its path")
 t.assert_equal(1, fresh.line_count, "line count")
 t.assert_equal("", fresh.line(5), "line outside the buffer is empty")
@@ -58,7 +58,7 @@ end
 
 b = D::Buffer.new(["xy"], nil, "\n")
 b.insert(pos(0, 1), "a")
-t.assert_true(b.modified, "insert marks the buffer modified")
+t.assert_true(b.modified?, "insert marks the buffer modified")
 
 # Delete: rows are [label, [lines, r1, c1, r2, c2], expected lines].
 t.table([
@@ -101,15 +101,15 @@ end
 
 b = D::Buffer.new(["a", "b"], nil, "\n")
 b.set_lines(0, 2, [])
-t.assert_true(b.modified, "set_lines marks the buffer modified")
+t.assert_true(b.modified?, "set_lines marks the buffer modified")
 
 # Modified flag across load, edit, save.
 b = D::Buffer.from_text("one\n", "f.txt")
-t.assert_equal(false, b.modified, "unmodified after load")
+t.assert_equal(false, b.modified?, "unmodified after load")
 b.insert(pos(0, 0), "x")
-t.assert_equal(true, b.modified, "modified after insert")
+t.assert_equal(true, b.modified?, "modified after insert")
 b.mark_saved
-t.assert_equal(false, b.modified, "unmodified after save")
+t.assert_equal(false, b.modified?, "unmodified after save")
 
 # Data semantics the domain relies on: value equality, hashing, immutability.
 p1 = pos(2, 3)
@@ -176,7 +176,7 @@ b.delete(rng(0, 0, 0, 1, false))
 b.set_lines(0, 1, ["y"])
 t.assert_equal(3, b.changes, "every primitive counts one change")
 b.reload(["z"])
-t.assert_equal([4, false], [b.changes, b.modified], "reload counts one change and leaves the buffer unmodified")
+t.assert_equal([4, false], [b.changes, b.modified?], "reload counts one change and leaves the buffer unmodified")
 b.owner = "hello"
 b.title = "list"
 t.assert_equal([true, "list"], [b.scratch?, b.display_name], "a scratch buffer is named by its title")
@@ -194,7 +194,7 @@ scratch.owner = "hello"
 scratch.title = "list"
 s.add_buffer(scratch)
 scratch.set_lines(0, 1, ["m"])
-t.assert_equal([true, false, true], [scratch.modified, s.any_modified?, s.hidden_modified.nil?], "a changed scratch buffer is not unsaved work")
+t.assert_equal([true, false, true], [scratch.modified?, s.any_modified?, s.hidden_modified.nil?], "a changed scratch buffer is not unsaved work")
 t.assert_equal(2, s.buffer_number(scratch), "buffer_number is the list position from 1")
 t.assert_equal(0, s.buffer_number(D::Buffer.new(["q"], nil, "\n")), "an unlisted buffer has number 0")
 t.assert_equal(true, s.scratch_for("hello", "list").equal?(scratch), "scratch_for finds the plugin's buffer by title")
