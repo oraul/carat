@@ -5,7 +5,15 @@
 # timing key handling (the input controller, as MainLoop pumps it) and
 # rendering (EditorAssembly#render) of every key. One line per scenario:
 #
-#   name lines keys handle_us render_us total_us worst_us@key bytes_per_key gc_percent gc_runs
+#   name lines keys handle_us render_us total_us worst_us@key bytes_per_key gc_percent gc_runs retained
+#
+# retained, measured by the memory scenarios only (0 for the others), is
+# the growth of the live heap over the typed keys, in bytes, read from
+# Spinel's GC.stat after a collection before and after them: the memory
+# the keys left behind, such as undo states. It is exact only when every
+# collection is full (SPINEL_GC_MINOR=0), as bench/run.sh runs the
+# memory scenarios; otherwise a minor collection leaves old garbage in
+# the count.
 #
 # Usage: keys SCENARIO [KEYS [LINES]]. SCENARIO is one of the names in
 # SCENARIOS below or "all"; KEYS overrides the number of keys typed and
@@ -85,7 +93,17 @@ SCENARIOS = [
   ["long-ascii", "hl", 2_000, 500, "NG$", "long-ascii", false],
   ["long-utf8", "hl", 2_000, 500, "NG$", "long-utf8", false],
   ["lh-explorer", "lh", 10_000, 10_000, "NG", "code", true],
-  ["j-explorer", "j", 9_000, 10_000, "gg", "code", true]
+  ["j-explorer", "j", 9_000, 10_000, "gg", "code", true],
+  ["undo", "u<C-r>", 4_000, 100_000, "NGx", "code", false],
+  ["undo-line", "u<C-r>", 4_000, 100_000, "NGdd", "code", false],
+  ["r", "rx", 6_000, 10_000, "NG", "code", false],
+  ["dot-r", ".", 3_000, 10_000, "NGrx", "code", false],
+  ["dd", "dd", 3_000, 100_000, "NG", "code", false],
+  ["dot-dd", ".", 1_500, 100_000, "NGdd", "code", false],
+  ["ciw", "ciwfoo<Esc>", 7_000, 10_000, "NG", "code", false],
+  ["dot-ciw", ".", 1_000, 10_000, "NGciwfoo<Esc>", "code", false],
+  ["memory", "rxj", 3_000, 100_000, "gg", "code", false],
+  ["memory-10k", "rxj", 3_000, 10_000, "gg", "code", false]
 ]
 
 #: () -> Float
@@ -174,6 +192,12 @@ def run(scenario, count, size)
   terminal.reset
 
   typed = encode(keys)
+  measured = name.start_with?("memory")
+  live_before = 0
+  if measured
+    GC.start
+    live_before = GC.stat("bytes")
+  end
   handle = 0.0
   render = 0.0
   worst = 0.0
@@ -199,10 +223,15 @@ def run(scenario, count, size)
   wall = now - started
   gc = (GC.total_time - gc_before) / 1_000_000_000.0
   runs = GC.stat("cycle") - runs_before
+  retained = 0
+  if measured
+    GC.start
+    retained = GC.stat("bytes") - live_before
+  end
   us = 1_000_000.0
-  printf("%-12s lines=%-7d keys=%-6d handle=%7.1fus render=%7.1fus total=%7.1fus worst=%8.1fus@%-5d bytes=%-7d gc=%5.2f%% gc_runs=%d\n",
+  printf("%-12s lines=%-7d keys=%-6d handle=%7.1fus render=%7.1fus total=%7.1fus worst=%8.1fus@%-5d bytes=%-7d gc=%5.2f%% gc_runs=%d retained=%d\n",
     name, lines, total, handle * us / total, render * us / total, (handle + render) * us / total,
-    worst * us, worst_at, terminal.bytes / total, wall > 0.0 ? gc * 100.0 / wall : 0.0, runs)
+    worst * us, worst_at, terminal.bytes / total, wall > 0.0 ? gc * 100.0 / wall : 0.0, runs, retained)
 end
 
 which = ARGV.length > 0 ? ARGV[0] : "all"
