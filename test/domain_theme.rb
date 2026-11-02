@@ -22,12 +22,10 @@ t.table([
 t.assert_equal([false, true, true, false], [H.syntax?(H::VISUAL), H.syntax?(H::COMMENT), H.syntax?(H::ERROR), H.syntax?(H::COUNT)], "syntax? covers the syntax ids only")
 t.assert_equal(["Visual", ""], [H.name_of(H::VISUAL), H.name_of(99)], "name_of")
 
-# The themes: every group of both themes, Normal left to the terminal.
-dark = D::Themes.find("carat-dark")
-light = D::Themes.find("carat-light")
-t.assert_equal(["carat-dark", "carat-light", "carat-dark"], [dark.name, light.name, D::Themes.find("nope").name], "find, carat-dark for an unknown name")
-t.assert_equal([true, true, false], [D::Themes.known?("carat-dark"), D::Themes.known?("carat-light"), D::Themes.known?("nope")], "known?")
-[dark, light].each do |theme|
+# Every group of a theme but Normal has a color in both depths, and
+# Normal keeps the terminal's colors. A method rather than a block, so
+# Spinel types the theme.
+def check_theme(t, theme)
   t.assert_equal([-1, -1, -1, -1, 0], [theme.fg(H::NORMAL), theme.bg(H::NORMAL), theme.fg16(H::NORMAL), theme.bg16(H::NORMAL), theme.attr(H::NORMAL)], "#{theme.name}: Normal keeps the terminal's colors")
   missing = []
   id = 1
@@ -38,6 +36,14 @@ t.assert_equal([true, true, false], [D::Themes.known?("carat-dark"), D::Themes.k
   end
   t.assert_equal([], missing, "#{theme.name}: every other group has a color in both depths")
 end
+
+# The themes: every group of both themes, Normal left to the terminal.
+dark = D::Themes.find("carat-dark")
+light = D::Themes.find("carat-light")
+t.assert_equal(["carat-dark", "carat-light", "carat-dark"], [dark.name, light.name, D::Themes.find("nope").name], "find, carat-dark for an unknown name")
+t.assert_equal([true, true, false], [D::Themes.known?("carat-dark"), D::Themes.known?("carat-light"), D::Themes.known?("nope")], "known?")
+check_theme(t, dark)
+check_theme(t, light)
 t.assert_equal([0x7f849c, D::Theme::ITALIC], [dark.fg(H::COMMENT), dark.attr(H::COMMENT)], "carat-dark comments are grey and italic")
 t.assert_equal(0x8c8fa1, light.fg(H::COMMENT), "carat-light has its own comment color")
 t.assert_equal(D::Theme::BOLD, dark.attr(H::STATUS) & D::Theme::BOLD, "the status line is bold")
