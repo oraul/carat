@@ -13,6 +13,7 @@ require_relative "../domain/last_change"
 require_relative "../domain/keymap"
 require_relative "../domain/options"
 require_relative "../domain/line_cache"
+require_relative "../domain/themes"
 require_relative "../use_cases/outcome"
 require_relative "../use_cases/concerns/reporting"
 require_relative "../use_cases/move"
@@ -44,6 +45,8 @@ require_relative "../use_cases/ex/window_command_handler"
 require_relative "../use_cases/ex/tab_command_handler"
 require_relative "../use_cases/ex/history_command_handler"
 require_relative "../use_cases/ex/register_command_handler"
+require_relative "../use_cases/ex/syntax_command_handler"
+require_relative "../use_cases/ex/set_command_handler"
 require_relative "../use_cases/ex/plugin_command_handler"
 require_relative "../use_cases/edit_command_line"
 require_relative "../use_cases/actions/action_table"
@@ -65,6 +68,7 @@ require_relative "../use_cases/actions/plugin_action_handler"
 require_relative "../use_cases/dispatcher"
 require_relative "../use_cases/handle_key"
 require_relative "../use_cases/arrange_view"
+require_relative "../use_cases/syntax/highlight_view"
 require_relative "key_decoder"
 require_relative "input_controller"
 require_relative "frame_presenter"
@@ -107,6 +111,7 @@ module Carat
       attr_reader :plugin_ui #: Domain::PluginUi
       attr_reader :cache #: Domain::LineCache
       attr_reader :arrange_view #: UseCases::ArrangeView
+      attr_reader :highlight_view #: UseCases::HighlightView
       attr_reader :actions #: UseCases::ActionTable
       attr_reader :commands #: UseCases::ExTable
       attr_reader :runner #: UseCases::CommandRunner
@@ -183,12 +188,15 @@ module Carat
           i += 1
         end
         @save_file = UseCases::SaveFile.new(files: files, plugins: @plugins, buffers: @buffers)
+        @highlight_view = UseCases::HighlightView.new(syntax: @plugins.syntax)
 
         UseCases::FileCommandHandler.register(@commands, save_file: @save_file, quit: @quit, open_file: @open_file)
         UseCases::WindowCommandHandler.register(@commands, split_window: @split_window, close_window: @close_window)
         UseCases::TabCommandHandler.register(@commands, open_tab: @open_tab, close_tab: @close_tab, switch_tab: @switch_tab)
         UseCases::HistoryCommandHandler.register(@commands, undo: @undo)
         UseCases::RegisterCommandHandler.register(@commands, registers: @registers)
+        UseCases::SyntaxCommandHandler.register(@commands)
+        UseCases::SetCommandHandler.register(@commands)
         UseCases::PluginCommandHandler.register(@commands, plugins: @plugins)
         @plugins.activate_all(value["plugins"])
 
@@ -224,7 +232,7 @@ module Carat
         @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: insert_text, command_line: @command_line, plugins: @plugins, arrange_view: @arrange_view)
         @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key)
         @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache)
-        @screen_presenter = ScreenPresenter.new(terminal: terminal)
+        @screen_presenter = ScreenPresenter.new(terminal: terminal, theme: Domain::Themes.find(@state.options.theme), colors: terminal.colors)
       end
 
       # Opens the file to edit, shows its message, lets the plugins see the
@@ -245,13 +253,15 @@ module Carat
       # Renders the state at the given size and writes it to the terminal:
       # the size goes into the state, the plugins hear of a change first so
       # what they do about it is in this frame, ArrangeView lays the
-      # windows out (so a state changed outside a key is arranged too), and
+      # windows out (so a state changed outside a key is arranged too),
+      # HighlightView brings the syntax of the visible rows up to date, and
       # the frame presenter draws what the state holds.
       #: (Integer, Integer) -> Domain::Frame
       def render(rows, cols)
         @state.resize(rows, cols)
         @plugins.resized(rows, cols)
         @arrange_view.call(@state)
+        @highlight_view.call(@state)
         frame = @frame_presenter.call(@state)
         @screen_presenter.present(frame)
         frame

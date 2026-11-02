@@ -3,6 +3,7 @@ require_relative "../../domain/editor_state"
 require_relative "../../domain/input_state"
 require_relative "../../domain/plugin_ui"
 require_relative "../../domain/icons"
+require_relative "../../domain/highlight"
 require_relative "../../domain/mode"
 require_relative "../files/file_ops"
 require_relative "../ex/command_runner"
@@ -11,8 +12,8 @@ require_relative "plugin_registry"
 module Carat
   module UseCases
     # The requests of the plugin API about the editor around the text: a
-    # message, the plugin's status segment, a prompt, an icon, the
-    # plugin's options, the working directory, and running an ex command
+    # message, the plugin's status segment, a prompt, an icon, a highlight
+    # group's id, the plugin's options, the working directory, and running an ex command
     # line, which is refused with E169 when plugin calls are already
     # nested MAX_DEPTH deep. The command runner is given at construction,
     # already built; the plugin link has checked that the plugin is
@@ -67,6 +68,15 @@ module Carat
         glyph = Domain::Icons.glyph(icon_name, @state.options.icons)
         return PluginApi::TextResponse.failure("No icon named #{icon_name}") if glyph.empty?
         PluginApi::TextResponse.success(glyph)
+      end
+
+      # The id of a syntax highlight group by its name, as the number of a
+      # response.
+      #: (String, String) -> PluginApi::Response
+      def syntax_group(name, group)
+        id = Domain::Highlight.syntax_id(group)
+        return PluginApi::Response.failure("No highlight group named #{group}") if id < 0
+        PluginApi::Response.success("", id)
       end
 
       #: (String, String) -> PluginApi::TextResponse

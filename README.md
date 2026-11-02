@@ -2,7 +2,7 @@
 
 A terminal IDE written in Ruby with Neovim's modal editing model, built, tested, and shipped with Spinel. `docs/architecture.md` holds the design and the roadmap; `CLAUDE.md` holds the commands and conventions.
 
-Today it is an editor with split windows, tab pages, a plugin host, and a file tree: normal, insert, operator-pending, command-line, and the charwise, linewise, and blockwise visual modes (`v V <C-v>`, `o O gv`, every motion and text object, and `d x y c s > < J gJ p P r ~ u U X D C S R Y I A` on the selection); counts, the `"x` register prefix, and Neovim's `[count] operator [count] motion` grammar; the motions `h l 0 ^ $ f F t T ; , j k G gg + - _ w W b B e E ge gE ( ) { } H M L`; the text objects `iw aw iW aW is as ip ap` and the bracket and quote objects; the operators `d c y > <` with `dd cc yy >> <<` and `x s S C D Y J p P r ~`; undo and redo with branches (`u`, `<C-r>`, `U`, `g-`, `g+`, `:undo`, `:redo`, `:undolist`, `:earlier`, `:later`) and the dot command `.`; the unnamed, named, numbered, small delete, black hole, and read-only registers with `:registers`; insert-mode editing; the window commands `<C-w>s v h j k l w W p c o = q`, `gt`, and `gT`; and the ex commands `:w :q :wq :x :wa :qa :wqa :xa :e :sp :vs :new :vnew :close :only` and `:tabnew :tabedit :tabclose :tabonly :tabnext :tabprevious :tabfirst :tablast`. Compiled plugins add actions, ex commands, and side windows through the API in `docs/plugins.md`; the built-in `explorer` plugin, the file tree below, is built on it. `docs/compatibility.md` lists every Neovim command it implements with its test, and `docs/backlog.md` the known items left for later changes.
+Today it is an editor with split windows, tab pages, a plugin host, and a file tree: normal, insert, operator-pending, command-line, and the charwise, linewise, and blockwise visual modes (`v V <C-v>`, `o O gv`, every motion and text object, and `d x y c s > < J gJ p P r ~ u U X D C S R Y I A` on the selection); counts, the `"x` register prefix, and Neovim's `[count] operator [count] motion` grammar; the motions `h l 0 ^ $ f F t T ; , j k G gg + - _ w W b B e E ge gE ( ) { } H M L`; the text objects `iw aw iW aW is as ip ap` and the bracket and quote objects; the operators `d c y > <` with `dd cc yy >> <<` and `x s S C D Y J p P r ~`; undo and redo with branches (`u`, `<C-r>`, `U`, `g-`, `g+`, `:undo`, `:redo`, `:undolist`, `:earlier`, `:later`) and the dot command `.`; the unnamed, named, numbered, small delete, black hole, and read-only registers with `:registers`; insert-mode editing; the window commands `<C-w>s v h j k l w W p c o = q`, `gt`, and `gT`; and the ex commands `:w :q :wq :x :wa :qa :wqa :xa :e :sp :vs :new :vnew :close :only` and `:tabnew :tabedit :tabclose :tabonly :tabnext :tabprevious :tabfirst :tablast`. Ruby files are highlighted in color, and `:syntax on`, `:syntax off`, `:set filetype=`, and `:set syntax=` switch it. Compiled plugins add actions, ex commands, side windows, and tokenizers through the API in `docs/plugins.md`; the built-in `explorer` plugin, the file tree below, and the built-in `ruby` plugin, the Ruby tokenizer, are built on it. `docs/compatibility.md` lists every Neovim command it implements with its test, and `docs/backlog.md` the known items left for later changes.
 
 ## Building
 
@@ -31,6 +31,21 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make gen-config` | Regenerate the default config mirror and the plugin registry |
 | `make check` | Build, gen-config, test, diagnose, and no-cruby |
 | `make spec-list`, `make spec-validate`, `make spec-update` | The OpenSpec commands |
+
+## Syntax highlighting
+
+Carat highlights the files whose filetype a plugin tokenizes; the built-in `ruby` plugin covers Ruby: `.rb`, `.rake`, `.gemspec`, and `.ru` files, `Gemfile`, `Rakefile`, `config.ru`, and any file whose first line is a `ruby` shebang. Comments and their `TODO`s, keywords, definitions, constants, variables, symbols, numbers, strings with escapes and nested interpolation, percent literals, heredocs, and regular expressions get Neovim's standard highlight groups, and a construct that spans lines keeps its color on the lines that follow. Only the rows on the screen and the rows above them are ever tokenized, so a large file opens as fast as a plain one, and an edit re-highlights only until the colors after it are the same as before.
+
+- `:syntax off` draws every buffer plain and `:syntax on` brings the colors back.
+- `:set filetype=ruby` (or `:set ft=ruby`) highlights the current buffer as Ruby, `:set syntax=OFF` turns one buffer plain, and `:set ft?` shows the filetype.
+
+The colors come from a theme, chosen by the top-level `theme` key of the configuration: `carat-dark`, the default, for a dark terminal background, or `carat-light` for a light one. Both leave the background of the text to the terminal and color the status lines, the tab line, the line numbers, the selection, and the messages as well.
+
+```json
+{ "theme": "carat-light" }
+```
+
+Carat writes 24-bit colors when the terminal sets `COLORTERM` to `truecolor` or `24bit` (most modern terminals do), the 256-color palette otherwise, and the 16 basic colors when `TERM` names a terminal that has only those, such as the Linux console (`linux`). To turn the Ruby highlighting off, set `"enabled": false` in its entry of the `plugins` object, `{ "plugins": { "ruby": { "enabled": false } } }`.
 
 ## File tree
 

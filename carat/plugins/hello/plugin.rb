@@ -36,7 +36,7 @@ module Carat
             { "normal" => { "<leader>hh" => GREET } },
             ["buffer_open"],
             { "greeting" => "Hello" },
-            { "greeting" => "string" }
+            { "greeting" => "string" }, []
           )
         end
 

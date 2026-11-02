@@ -540,7 +540,8 @@ module Carat
           }
         },
         "plugins": {
-          "explorer": { "enabled": true, "options": { "width": 30, "side": "left", "show_hidden": false, "ignore": [".git", "build", "tmp"] } }
+          "explorer": { "enabled": true, "options": { "width": 30, "side": "left", "show_hidden": false, "ignore": [".git", "build", "tmp"] } },
+          "ruby": { "enabled": true }
         },
         "theme": "carat-dark"
       }

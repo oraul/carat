@@ -1,7 +1,7 @@
 module Carat
   module Ports
     # The terminal as the editor core sees it: a size, raw key bytes with a
-    # timeout, and a byte sink. Drivers and doubles subclass it. Return types
+    # timeout, a byte sink, and how many colors it shows. Drivers and doubles subclass it. Return types
     # of overridden methods are described in prose because the compiler
     # applies only the parameter types of a method a subclass overrides.
     class TerminalPort
@@ -21,6 +21,14 @@ module Carat
       #: (String) -> void
       def write(bytes)
         raise NotImplementedError, "TerminalPort#write"
+      end
+
+      # Returns how many colors the terminal shows, one of
+      # Domain::ColorDepth's TRUECOLOR, COLORS_256, and COLORS_16, decided
+      # once when the driver is made.
+      # @rbs skip
+      def colors
+        raise NotImplementedError, "TerminalPort#colors"
       end
 
       #: () -> void

@@ -71,6 +71,8 @@ t.assert_equal([], strangers(host.file_ops, [["file_requests", host.file_request
 t.assert_equal([], strangers(a.handle_key, [["controller", a.controller.handle_key]]), "the key handler")
 t.assert_equal([], strangers(a.cache, [["arrange_view", a.arrange_view.cache], ["frame_presenter", a.frame_presenter.cache]]), "the line cache")
 t.assert_equal([], strangers(a.arrange_view, [["handle_key", a.handle_key.arrange_view]]), "the arrange view use case")
+t.assert_equal([], strangers(a.plugins.syntax, [["highlight_view", a.highlight_view.syntax]]), "the plugins as tokenizers")
+t.assert_equal([], strangers(a.plugins.registry, [["plugin_syntax", a.plugins.syntax.registry]]), "the plugin registry, in the tokenizer part")
 
 # Each port is one instance too.
 t.assert_equal([], strangers(h.terminal, [["assembly", a.terminal], ["controller", a.controller.terminal], ["screen_presenter", a.screen_presenter.terminal]]), "the terminal port")

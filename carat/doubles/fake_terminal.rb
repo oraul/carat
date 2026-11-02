@@ -16,6 +16,7 @@ module Carat
       # @rbs @queue: Array[String]
       # @rbs @clock: ManualClock
       # @rbs @writes: Array[String]
+      # @rbs @colors: Integer
 
       #: (clock: ManualClock, rows: Integer, cols: Integer) -> void
       def initialize(clock:, rows:, cols:)
@@ -27,6 +28,13 @@ module Carat
         @writes = []
         @entered = 0
         @left = 0
+        @colors = 256
+      end
+
+      # Returns 256, the depth of most terminals.
+      # @rbs skip
+      def colors
+        @colors
       end
 
       #: (String) -> void

@@ -7,11 +7,16 @@ M = Carat::Domain::ManifestCheck
 
 # A manifest like the hello plugin's, with one field replaced per row.
 def manifest(name, api, actions, commands, bindings, events, options, types)
-  Carat::PluginApi::Manifest.new(name, "0.1.0", api, actions, commands, bindings, events, options, types)
+  Carat::PluginApi::Manifest.new(name, "0.1.0", api, actions, commands, bindings, events, options, types, [])
 end
 
 GOOD_ACTIONS = { "plugin.hello.greet" => "Show a greeting" }
 GOOD_BINDINGS = { "normal" => { "<leader>hh" => "plugin.hello.greet" } }
+
+# A manifest that tokenizes the given filetypes.
+def tokenizer(filetypes)
+  Carat::PluginApi::Manifest.new("lang", "0.1.0", "1.3", {}, {}, nil, [], {}, {}, filetypes)
+end
 
 def good
   manifest("hello", "1.2", GOOD_ACTIONS, { "Hello" => "Hel" }, GOOD_BINDINGS, ["buffer_open"], { "greeting" => "Hello" }, { "greeting" => "string" })
@@ -19,18 +24,19 @@ end
 
 t.assert_equal([], M.check(good), "the hello manifest breaks no rule")
 t.assert_equal([], M.check(manifest("hello", "1.1", GOOD_ACTIONS, {}, nil, [:buffer_open, :buffer_close], { "n" => "1" }, { "n" => "integer" })), "a 1.1 manifest's symbols are read as names")
-t.assert_equal("", M.refusal("1.2"), "the host's own version is accepted")
+t.assert_equal("", M.refusal("1.3"), "the host's own version is accepted")
+t.assert_equal("", M.refusal("1.2"), "the previous minor is accepted")
 t.assert_equal("", M.refusal("1.0"), "an older minor is accepted")
-t.assert_equal("needs API 1.3, the host has 1.2", M.refusal("1.3"), "a newer minor is refused")
-t.assert_equal("needs API 2.0, the host has 1.2", M.refusal("2.0"), "a newer major is refused with both versions")
-t.assert_equal("needs API 0.9, the host has 1.2", M.refusal("0.9"), "an older major is refused")
+t.assert_equal("needs API 1.4, the host has 1.3", M.refusal("1.4"), "a newer minor is refused")
+t.assert_equal("needs API 2.0, the host has 1.3", M.refusal("2.0"), "a newer major is refused with both versions")
+t.assert_equal("needs API 0.9, the host has 1.3", M.refusal("0.9"), "an older major is refused")
 t.assert_equal("", M.refusal("x"), "a malformed version is not a refusal")
 
 # Rows are [label, manifest, the first problem reported].
 t.table([
   ["uppercase name", manifest("Hello", "1.0", GOOD_ACTIONS, {}, nil, [], {}, {}), "name \"Hello\" is not lowercase letters, digits, and underscores starting with a letter"],
   ["name starting with a digit", manifest("1x", "1.0", {}, {}, nil, [], {}, {}), "name \"1x\" is not lowercase letters, digits, and underscores starting with a letter"],
-  ["newer major", manifest("hello", "2.0", GOOD_ACTIONS, {}, nil, [], {}, {}), "needs API 2.0, the host has 1.2"],
+  ["newer major", manifest("hello", "2.0", GOOD_ACTIONS, {}, nil, [], {}, {}), "needs API 2.0, the host has 1.3"],
   ["malformed version", manifest("hello", "one", GOOD_ACTIONS, {}, nil, [], {}, {}), "api_version \"one\" is not major.minor"],
   ["action for another plugin", manifest("a", "1.0", { "plugin.b.go" => "Go" }, {}, nil, [], {}, {}), "action \"plugin.b.go\" is not plugin.a.<action>"],
   ["action without the prefix", manifest("hello", "1.0", { "greet" => "Greet" }, {}, nil, [], {}, {}), "action \"greet\" is not plugin.hello.<action>"],
@@ -69,6 +75,16 @@ t.table([
 ]) do |m|
   M.check(m).length
 end
+
+# Filetypes: a list of names like plugin names.
+t.table([
+  ["no filetypes", [], []],
+  ["one filetype", ["ruby"], []],
+  ["several", ["ruby", "erb_ruby2"], []],
+  ["a malformed filetype", ["Ruby Script"], ["filetype \"Ruby Script\" is not lowercase letters, digits, and underscores starting with a letter"]],
+  ["a filetype that is not a string", [3], ["filetype 3 is not lowercase letters, digits, and underscores starting with a letter"]]
+]) { |types| M.check(tokenizer(types)) }
+t.assert_equal(["filetypes is not a list of filetype names"], M.check(tokenizer("ruby")), "filetypes of the wrong type")
 
 t.assert_equal("Show a greeting", good.describe("plugin.hello.greet"), "describe returns the description")
 t.assert_equal("", good.describe("plugin.hello.nope"), "describe returns empty for an unknown action")

@@ -1,3 +1,5 @@
+require_relative "../domain/syntax_line"
+
 module Carat
   module Adapters
     # What each window row segment of one frame shows, kept beside the
@@ -9,9 +11,10 @@ module Carat
     # by identity, since lines are never changed in place; TILDE for a row
     # past the end of the buffer, UNSET for nothing painted), the window's
     # horizontal scroll, width, and gutter width, the line number and the
-    # sign shown, the selected display columns and the line end cell, and
-    # the cursor's column on the cursor row; and, to recognize a scroll,
-    # the window id and its first visible row.
+    # sign shown, the selected display columns and the line end cell, the
+    # cursor's column on the cursor row, and the syntax entry whose tokens
+    # it was painted with (by identity, SyntaxLine::NONE for none); and,
+    # to recognize a scroll, the window id and its first visible row.
     class PaintedRows
       UNSET = String.new("unset")
       TILDE = String.new("tilde")
@@ -31,6 +34,7 @@ module Carat
       # @rbs @cursors: Array[Integer]
       # @rbs @owners: Array[Integer]
       # @rbs @tops: Array[Integer]
+      # @rbs @syntaxes: Array[untyped]
 
       #: (rows: Integer, slots: Integer) -> void
       def initialize(rows:, slots:)
@@ -49,6 +53,7 @@ module Carat
         @cursors = Array.new(size, 0)
         @owners = Array.new(size, 0)
         @tops = Array.new(size, 0)
+        @syntaxes = Array.new(size, Domain::SyntaxLine::NONE)
       end
 
       # The segment of a frame row in the window at a place of the layout
@@ -69,16 +74,22 @@ module Carat
       end
 
       # Whether segment i shows exactly this.
-      #: (Integer, String, Integer, Integer, Integer, Integer, String, Integer, Integer, Integer, Integer) -> bool
-      def same?(i, line, left, width, gutter, number, sign, sel_from, sel_to, sel_end, cursor)
+      #: (Integer, String, Integer, Integer, Integer, Integer, String, Integer, Integer, Integer, Integer, Domain::SyntaxLine) -> bool
+      def same?(i, line, left, width, gutter, number, sign, sel_from, sel_to, sel_end, cursor, syntax)
         @lines[i].equal?(line) && @lefts[i] == left && @widths[i] == width && @gutters[i] == gutter &&
           @numbers[i] == number && @sel_froms[i] == sel_from && @sel_tos[i] == sel_to && @sel_ends[i] == sel_end &&
-          @cursors[i] == cursor && @signs[i] == sign
+          @cursors[i] == cursor && @signs[i] == sign && syntax_at(i).equal?(syntax)
+      end
+
+      # The syntax entry segment i was painted with.
+      #: (Integer) -> Domain::SyntaxLine
+      def syntax_at(i)
+        @syntaxes[i]
       end
 
       # Records what segment i shows.
-      #: (Integer, String, Integer, Integer, Integer, Integer, String, Integer, Integer, Integer, Integer) -> void
-      def store(i, line, left, width, gutter, number, sign, sel_from, sel_to, sel_end, cursor)
+      #: (Integer, String, Integer, Integer, Integer, Integer, String, Integer, Integer, Integer, Integer, Domain::SyntaxLine) -> void
+      def store(i, line, left, width, gutter, number, sign, sel_from, sel_to, sel_end, cursor, syntax)
         @lines[i] = line
         @lefts[i] = left
         @widths[i] = width
@@ -89,6 +100,7 @@ module Carat
         @sel_tos[i] = sel_to
         @sel_ends[i] = sel_end
         @cursors[i] = cursor
+        @syntaxes[i] = syntax
       end
 
       # Records which window painted segment i and its first visible row.

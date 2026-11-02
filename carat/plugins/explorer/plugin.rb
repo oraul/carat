@@ -60,7 +60,7 @@ module Carat
             { "normal" => { "<leader>e" => "plugin.explorer.toggle" } },
             ["buffer_open", "window_focus", "cursor_move"],
             { "width" => "30", "side" => "left", "show_hidden" => "false", "ignore" => ".git\nbuild\ntmp" },
-            { "width" => "integer", "side" => "string", "show_hidden" => "bool", "ignore" => "list" }
+            { "width" => "integer", "side" => "string", "show_hidden" => "bool", "ignore" => "list" }, []
           )
         end
 

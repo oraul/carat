@@ -42,7 +42,7 @@ class Side < Carat::PluginApi::Plugin
       },
       {},
       { "normal" => { "<leader>to" => "plugin.side.open", "<leader>tr" => "plugin.side.right", "<leader>tw" => "plugin.side.wide", "<leader>tc" => "plugin.side.close", "<leader>tl" => "plugin.side.lines", "<leader>tn" => "plugin.side.nope", "<leader>tf" => "plugin.side.file", "<leader>tx" => "plugin.side.far", "<leader>tt" => "plugin.side.count", "<leader>th" => "plugin.side.here" } },
-      [], {}, {}
+      [], {}, {}, []
     )
   end
 
@@ -313,7 +313,7 @@ class Boom < Carat::PluginApi::Plugin
   # Returns the manifest.
   # @rbs skip
   def manifest
-    Carat::PluginApi::Manifest.new("boom", "1.0.0", "1.0", { "plugin.boom.go" => "Raise" }, {}, { "normal" => { " bb" => "plugin.boom.go" } }, [:cursor_move], {}, {})
+    Carat::PluginApi::Manifest.new("boom", "1.0.0", "1.0", { "plugin.boom.go" => "Raise" }, {}, { "normal" => { " bb" => "plugin.boom.go" } }, [:cursor_move], {}, {}, [])
   end
 
   #: (String, Carat::PluginApi::Context) -> void

@@ -40,7 +40,7 @@ class Probe < Carat::PluginApi::Plugin
   # Returns the manifest.
   # @rbs skip
   def manifest
-    Carat::PluginApi::Manifest.new(@name, "1.0.0", @api, @actions, @commands, @bindings, @events, { "depth" => "3", "deep" => "false", "names" => "a\nb" }, { "depth" => "integer", "deep" => "bool", "names" => "list" })
+    Carat::PluginApi::Manifest.new(@name, "1.0.0", @api, @actions, @commands, @bindings, @events, { "depth" => "3", "deep" => "false", "names" => "a\nb" }, { "depth" => "integer", "deep" => "bool", "names" => "list" }, [])
   end
 
   #: (Carat::PluginApi::Host) -> void
@@ -139,13 +139,13 @@ t.assert_equal("", host.describe("plugin.probe.nope"), "and not another")
 
 bad = Probe.new("probe", "2.0", [], ACTIONS, {}, nil)
 state, host, keymap, files, ex = setup([bad], {})
-t.assert_equal([false, "needs API 2.0, the host has 1.2"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
-t.assert_equal(["plugin probe: needs API 2.0, the host has 1.2"], host.errors, "the refusal is recorded")
+t.assert_equal([false, "needs API 2.0, the host has 1.3"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
+t.assert_equal(["plugin probe: needs API 2.0, the host has 1.3"], host.errors, "the refusal is recorded")
 t.assert_equal([], bad.log, "a refused plugin is not activated")
 
 minor = Probe.new("probe", "1.7", [], ACTIONS, {}, nil)
 state, host, keymap, files, ex = setup([minor], {})
-t.assert_equal([false, "needs API 1.7, the host has 1.2"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused")
+t.assert_equal([false, "needs API 1.7, the host has 1.3"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused")
 older = Probe.new("probe", "1.0", [], ACTIONS, {}, nil)
 state, host, keymap, files, ex = setup([older], {})
 t.assert_equal(true, host.enabled?("probe"), "an older minor version is accepted")

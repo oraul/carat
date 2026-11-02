@@ -2,18 +2,20 @@
 # Do not edit. Change config/plugins.json and run: spin run carat-gen-config
 require_relative "../plugin_api"
 require_relative "explorer/plugin"
+require_relative "ruby/plugin"
 
 module Carat
   module Plugins
     # The built-in compiled plugins in registry order, one constructor
     # call each, so the compiler sees a fixed list.
     module Registry
-      NAMES = ["explorer"]
+      NAMES = ["explorer", "ruby"]
 
       #: () -> Array[untyped]
       def self.all
         list = []
         list << Carat::Plugins::Explorer::Plugin.new
+        list << Carat::Plugins::Ruby::Plugin.new
         list
       end
     end

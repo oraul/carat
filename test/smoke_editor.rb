@@ -1,8 +1,9 @@
 # Runs build/bin/carat inside a pseudo-terminal: the usage and terminal
 # checks, an insert-write-quit session, a quit refused then forced, split
-# windows and a tab page, the file tree, a linewise visual delete, and
-# SIGTERM. Needs the binary that spin build produces; make test builds it
-# first. Prints only the harness lines so the snapshot is stable.
+# windows and a tab page, the file tree, a linewise visual delete, a
+# Ruby file in colors, and SIGTERM. Needs the binary that spin build
+# produces; make test builds it first. Prints only the harness lines so
+# the snapshot is stable.
 #
 # Between sending keys the test drains the editor's output until it goes
 # quiet, so the editor has finished drawing and is waiting on input before
@@ -172,6 +173,26 @@ writer.write(":wq\r")
 code = finish_session(reader, out, pid)
 t.assert_equal(0, code, "the editor exits with status 0 after Vjd and :wq")
 t.assert_equal("three\n", File.read(visual_path), "Vjd deleted the first two lines")
+
+# A Ruby file is drawn in colors: the keyword and the string are each
+# preceded by a color sequence, whatever depth the terminal's environment
+# gives, and :syntax off draws them plain again.
+ruby_path = "#{DIR}/colors.rb"
+File.write(ruby_path, "def go\n  \"hi\"\nend\n")
+reader, writer, pid = PTY.spawn(BIN, ruby_path)
+writer.winsize = [24, 80]
+out = +"".b
+settle(reader, out, 0.5)
+t.assert_true(out.include?("3L, 18B"), "the editor drew its first frame for the color check")
+t.assert_true(out.match?(/\e\[0;[0-9;]+mdef/), "def is written after a color sequence")
+t.assert_true(out.match?(/\e\[0;[0-9;]+m"hi"/), "the string is written after a color sequence")
+mark = out.bytesize
+writer.write(":syntax off\r")
+settle(reader, out, 0.5)
+t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("\e[0mdef"), ":syntax off writes def in the normal group")
+writer.write(":q\r")
+code = finish_session(reader, out, pid)
+t.assert_equal(0, code, "the editor exits with status 0 after the color check")
 
 # SIGTERM ends a running editor cleanly.
 reader, writer, pid = PTY.spawn(BIN, path)

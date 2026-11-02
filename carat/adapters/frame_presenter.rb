@@ -4,6 +4,7 @@ require_relative "../domain/highlight"
 require_relative "../domain/display_width"
 require_relative "../domain/decoded_line"
 require_relative "../domain/line_cache"
+require_relative "../domain/syntax_line"
 require_relative "../domain/layout"
 require_relative "../domain/selection"
 require_relative "../domain/input_state"
@@ -25,7 +26,8 @@ module Carat
     # plugin's prompt in place of the colon) with the keys of a pending
     # command at its right edge. In a visual mode the current window draws
     # its selection with the Visual highlight, leaving the cell under the
-    # cursor in its own highlight so the cursor shows on top. The cursor is
+    # cursor in its own highlight (its token's group or the normal one)
+    # so the cursor shows on top. The cursor is
     # placed in the current window.
     #
     # Two frames are kept and painted in turn, so the one the screen shows
@@ -270,9 +272,25 @@ module Carat
           col = clamp(window.col + gutter + cursor_dcol - window.left, cols - 1)
           frame.cursor_row = row
           frame.cursor_col = col
-          frame.set_hl(row, col, Domain::Highlight::NORMAL) if visual && frame.hl_at(row, col) == Domain::Highlight::VISUAL
+          if visual && frame.hl_at(row, col) == Domain::Highlight::VISUAL
+            line = window.buffer.line(cursor.row)
+            frame.set_hl(row, col, token_group(window.buffer.syntax_cache.lookup(cursor.row, line).tokens, cursor.col))
+          end
         end
         frame.cursor_shape = state.mode == Domain::Mode::INSERT ? :bar : :block
+      end
+
+      # The group of the token covering a code point column, the normal
+      # group for none.
+      #: (Array[Integer], Integer) -> Integer
+      def token_group(tokens, col)
+        i = 0
+        while i + 2 < tokens.length
+          from = tokens[i]
+          return tokens[i + 2] if col >= from && col < from + tokens[i + 1]
+          i += 3
+        end
+        Domain::Highlight::NORMAL
       end
 
       # One window: each text row painted when what it shows changed and
@@ -303,6 +321,7 @@ module Carat
         end
         frame.add_scroll(wrow, wrow + height - 1, delta) if delta != 0
         signs = buffer.signs?
+        highlights = buffer.syntax_cache
         count = buffer.line_count
         i = 0
         while i < height
@@ -310,6 +329,7 @@ module Carat
           row = top + i
           seg = @back_rows.index(frame_row, slot)
           line = PaintedRows::TILDE
+          syntax = Domain::SyntaxLine::NONE
           number = -1
           sign = ""
           cur = -1
@@ -318,14 +338,15 @@ module Carat
           @sel_end = -1
           if row < count
             line = buffer.line(row)
+            syntax = highlights.lookup(row, line)
             number = number_shown(row, cursor.row, options, gutter, signs)
             sign = buffer.sign_at(row) if signs
             cur = cursor.col if row == cursor.row
             select_columns(selection, buffer, row, line, tabstop, block) if selecting
           end
-          unless @back_rows.same?(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur)
-            paint_row(frame, frame_row, x, width, gutter, line, number, sign, signs, text_width, left, tabstop)
-            @back_rows.store(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur)
+          unless @back_rows.same?(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, syntax)
+            paint_row(frame, frame_row, x, width, gutter, line, number, sign, signs, text_width, left, tabstop, syntax)
+            @back_rows.store(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, syntax)
           end
           @back_rows.place(seg, window.id, top)
           if base_same
@@ -335,7 +356,7 @@ module Carat
               source = j >= 0 && j < height ? wrow + j : -1
               frame.sources[frame_row] = source
             end
-            frame.dirty[frame_row] = 1 if source < 0 || !@front_rows.same?(@front_rows.index(source, slot), line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur)
+            frame.dirty[frame_row] = 1 if source < 0 || !@front_rows.same?(@front_rows.index(source, slot), line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, syntax)
           end
           i += 1
         end
@@ -385,9 +406,10 @@ module Carat
 
       # One text row of a window, every cell written once: the tilde past
       # the end of the buffer, or the sign column, the number, the text,
-      # and blanks between and after, then the selection.
-      #: (Domain::Frame, Integer, Integer, Integer, Integer, String, Integer, String, bool, Integer, Integer, Integer) -> void
-      def paint_row(frame, frame_row, x, width, gutter, line, number, sign, signs, text_width, left, tabstop)
+      # and blanks between and after, then the token groups, then the
+      # selection.
+      #: (Domain::Frame, Integer, Integer, Integer, Integer, String, Integer, String, bool, Integer, Integer, Integer, Domain::SyntaxLine) -> void
+      def paint_row(frame, frame_row, x, width, gutter, line, number, sign, signs, text_width, left, tabstop, syntax)
         if line.equal?(PaintedRows::TILDE)
           frame.blank(frame_row, x, x + width)
           frame.put(frame_row, x, "~", Domain::Highlight::NON_TEXT)
@@ -398,9 +420,9 @@ module Carat
           start = x
           numbers = gutter
           if signs
-            frame.fill(frame_row, x, x + Domain::Window::SIGN_WIDTH, Domain::Highlight::LINE_NUMBER)
+            frame.fill(frame_row, x, x + Domain::Window::SIGN_WIDTH, Domain::Highlight::SIGN_COLUMN)
             shown = sign.length > Domain::Window::SIGN_WIDTH ? sign[0, Domain::Window::SIGN_WIDTH] : sign
-            frame.put(frame_row, x, shown, Domain::Highlight::LINE_NUMBER)
+            frame.put(frame_row, x, shown, Domain::Highlight::SIGN_COLUMN)
             start = x + Domain::Window::SIGN_WIDTH
             numbers = gutter - Domain::Window::SIGN_WIDTH
           end
@@ -411,6 +433,7 @@ module Carat
         end
         decoded = @cache.fetch(line, tabstop)
         paint_text(frame, frame_row, x + gutter, decoded, text_width, left)
+        paint_tokens(frame, frame_row, x + gutter, decoded, text_width, left, syntax.tokens) unless syntax.tokens.empty?
         paint_selection(frame, frame_row, x + gutter, text_width, left) if @sel_from <= @sel_to || @sel_end >= 0
       end
 
@@ -470,6 +493,29 @@ module Carat
           at += 1
         end
         frame.blank(frame_row, at, col + width) if at < col + width
+      end
+
+      # Gives the cells of each token the token's group: the display
+      # columns of its code points inside [left, left + width), a token
+      # past the end of the line cut there.
+      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer, Array[Integer]) -> void
+      def paint_tokens(frame, frame_row, col, decoded, width, left, tokens)
+        size = decoded.size
+        limit = left + width
+        i = 0
+        while i + 2 < tokens.length
+          from = tokens[i]
+          if from < size
+            to = from + tokens[i + 1]
+            to = size if to > size
+            first = decoded.col(from)
+            last = decoded.col(to)
+            first = left if first < left
+            last = limit if last > limit
+            frame.fill(frame_row, col + first - left, col + last - left, tokens[i + 2]) if first < last
+          end
+          i += 3
+        end
       end
 
       # The code point of a lowercase hexadecimal digit.

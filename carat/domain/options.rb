@@ -1,3 +1,5 @@
+require_relative "themes"
+
 module Carat
   module Domain
     # Typed options with Vim names, plus icons, Carat's own: the icon set
@@ -5,9 +7,12 @@ module Carat
     # milliseconds the keymap waits for the rest of an ambiguous binding,
     # from the top level of the configuration. Only the ones the
     # editor reads are members; :set and local options arrive with the
-    # options change. undolevels is how many undo states a buffer keeps. A
-    # Struct record: mutable, with a reader and a writer per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scrolloff, :icons, :timeoutlen, :undolevels)
+    # options change. undolevels is how many undo states a buffer keeps.
+    # theme names the theme, from the top level of the configuration, and
+    # syntax_on is the switch of :syntax on and :syntax off, on from the
+    # start as in Neovim. A Struct record: mutable, with a reader and a
+    # writer per member.
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :syntax_on)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -18,21 +23,27 @@ module Carat
       # @rbs @icons: String
       # @rbs @timeoutlen: Integer
       # @rbs @undolevels: Integer
+      # @rbs @theme: String
+      # @rbs @syntax_on: bool
 
-      # Vim's defaults, and the nerd icon set.
+      # Vim's defaults, the nerd icon set, the default theme, and syntax
+      # highlighting on.
       #: () -> void
       def initialize
-        super(false, false, 8, 8, false, false, 0, "nerd", 1000, 1000)
+        super(false, false, 8, 8, false, false, 0, "nerd", 1000, 1000, Themes::DEFAULT, true)
       end
 
       # Builds options from a configuration value: the members of its
-      # "options" object and its top-level "timeoutlen". A value that is
-      # missing or of the wrong type keeps Vim's default.
+      # "options" object and its top-level "timeoutlen" and "theme". A
+      # value that is missing, of the wrong type, or an unknown theme keeps
+      # the default.
       #: (untyped) -> Options
       def self.from_config(config)
         options = Options.new
         return options unless config.is_a?(Hash)
         options.timeoutlen = count(config, "timeoutlen", options.timeoutlen)
+        theme = config["theme"]
+        options.theme = theme if theme.is_a?(String) && Themes.known?(theme)
         hash = config["options"]
         return options unless hash.is_a?(Hash)
         options.number = flag(hash, "number", options.number)

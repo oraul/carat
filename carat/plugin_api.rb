@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 1
-    MINOR = 2
-    VERSION = "1.2"
+    MINOR = 3
+    VERSION = "1.3"
 
     # The events a plugin may subscribe to, by name. idle arrives with the
     # language services change, which gives the main loop an idle tick.
@@ -32,15 +32,18 @@ module Carat
     # hash from key notation to an action name or key sequence; events is
     # the list of event names; options maps an option name to its default
     # as text and option_types the same names to "bool", "integer",
-    # "string", or "list". The host also reads events and option types
-    # given as symbols, as API 1.1 spelled them. A Data value: equal by
-    # value and frozen.
-    class Manifest < Data.define(:name, :version, :api_version, :actions, :commands, :bindings, :events, :options, :option_types)
+    # "string", or "list"; filetypes lists the filetypes the plugin
+    # tokenizes (API 1.3), each lowercase letters, digits, and underscores
+    # starting with a letter, [] for none. The host also reads events and
+    # option types given as symbols, as API 1.1 spelled them. A Data value:
+    # equal by value and frozen.
+    class Manifest < Data.define(:name, :version, :api_version, :actions, :commands, :bindings, :events, :options, :option_types, :filetypes)
       # @rbs @name: String
       # @rbs @version: String
       # @rbs @api_version: String
       # @rbs @bindings: untyped
       # @rbs @events: untyped
+      # @rbs @filetypes: untyped
       #
       # The four hashes are not pinned: a pinned hash member refuses the
       # empty literal a plugin passes for "no commands" or "no options",
@@ -556,6 +559,16 @@ module Carat
       def prompt(id, text, initial)
         raise NotImplementedError, "Host#prompt"
       end
+
+      # Returns a Response whose number is the id of the syntax highlight
+      # group with that name ("Comment", "String", ... "Todo", "Error"),
+      # failed with "No highlight group named x" for any other name. A
+      # tokenizer resolves its groups once, in activate, and gives the ids
+      # in its tokens.
+      # @rbs name: String
+      def syntax_group(name)
+        raise NotImplementedError, "Host#syntax_group"
+      end
     end
 
     # What a compiled plugin implements. manifest is required; the rest
@@ -563,7 +576,9 @@ module Carat
     # plugin's Host when the plugin is enabled, deactivate when the editor
     # quits, on_event for every subscribed event, on_action for every
     # action of the plugin, on_command for every ex command of the
-    # plugin, and on_input when a prompt the plugin opened ends. A plugin
+    # plugin, on_input when a prompt the plugin opened ends, and tokenize
+    # for each line the editor highlights in a filetype the manifest
+    # declares. A plugin
     # that raises anything in any of them, an unimplemented method's
     # NotImplementedError and a stack overflow included, is disabled.
     class Plugin
@@ -595,6 +610,23 @@ module Carat
 
       #: (Input) -> void
       def on_input(input)
+      end
+
+      # Tokenizes one line of a buffer whose filetype the manifest
+      # declares: text is the line, a copy the host reuses, so it is valid
+      # during the call only; state is the state at the start of the line,
+      # 0 for the first line of the buffer, or what this method returned
+      # for the line before. Appends the tokens to tokens, an empty integer
+      # array, as flat triples of start column, length, and group id, in
+      # code point columns, with ids from Host#syntax_group, and returns
+      # the state at the end of the line, a non-negative integer the plugin
+      # encodes as it likes: the host only compares and passes it on.
+      # @rbs filetype: String
+      # @rbs text: String
+      # @rbs state: Integer
+      # @rbs tokens: Array[Integer]
+      def tokenize(filetype, text, state, tokens)
+        raise NotImplementedError, "Plugin#tokenize"
       end
     end
   end

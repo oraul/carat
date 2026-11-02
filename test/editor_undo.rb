@@ -21,7 +21,7 @@ class Fixer < Carat::PluginApi::Plugin
   # Returns the manifest.
   # @rbs skip
   def manifest
-    Carat::PluginApi::Manifest.new("fixer", "1.0.0", "1.0", { "plugin.fixer.list" => "Open a list" }, {}, { "normal" => { "<leader>tu" => "plugin.fixer.list" } }, ["buffer_change", "buffer_save"], {}, {})
+    Carat::PluginApi::Manifest.new("fixer", "1.0.0", "1.0", { "plugin.fixer.list" => "Open a list" }, {}, { "normal" => { "<leader>tu" => "plugin.fixer.list" } }, ["buffer_change", "buffer_save"], {}, {}, [])
   end
 
   #: (Carat::PluginApi::Host) -> void
