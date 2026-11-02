@@ -156,4 +156,8 @@ ok   tabf is too short
 ok   vsplitx is too long
 ok   tab names nothing
 ok   ne is not new
-use_cases_ex: 158 passed, 0 failed
+ok   se sets
+ok   sy is syntax
+ok   synt is syntax
+ok   s is not set
+use_cases_ex: 162 passed, 0 failed

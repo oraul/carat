@@ -1,0 +1,38 @@
+ok   every id has a name
+ok   thirty syntax groups
+ok   names by id
+ok   Comment
+ok   String
+ok   Define
+ok   Todo
+ok   an editor group is not a syntax group
+ok   Normal is not either
+ok   an unknown name
+ok   names are case sensitive
+ok   syntax? covers the syntax ids only
+ok   name_of
+ok   find, carat-dark for an unknown name
+ok   known?
+ok   carat-dark: Normal keeps the terminal's colors
+ok   carat-dark: every other group has a color in both depths
+ok   carat-light: Normal keeps the terminal's colors
+ok   carat-light: every other group has a color in both depths
+ok   carat-dark comments are grey and italic
+ok   carat-light has its own comment color
+ok   the status line is bold
+ok   the defaults: carat-dark, syntax on
+ok   the theme key selects a theme
+ok   an unknown theme keeps the default
+ok   a theme of the wrong type keeps the default
+ok   the shipped configuration names carat-dark
+ok   truecolor
+ok   24bit
+ok   256 colors
+ok   an unset TERM
+ok   plain xterm
+ok   the console
+ok   vt100
+ok   xterm-color
+ok   a -16color name
+ok   another COLORTERM
+domain_theme: 37 passed, 0 failed

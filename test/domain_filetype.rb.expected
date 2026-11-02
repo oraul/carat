@@ -1,0 +1,29 @@
+ok   an .rb file
+ok   a .rake file
+ok   a .gemspec file
+ok   a .ru file
+ok   Gemfile
+ok   Rakefile in a directory
+ok   config.ru
+ok   an unknown extension
+ok   a dot file
+ok   no extension
+ok   the extension is case sensitive
+ok   a ruby shebang
+ok   env ruby
+ok   env with options
+ok   env with a variable
+ok   a versioned ruby
+ok   another interpreter
+ok   rubocop is not ruby
+ok   a comment that is no shebang
+ok   an unknown extension falls back to the shebang
+ok   a known name wins over the shebang
+ok   no path, a shebang
+ok   no path, no shebang
+ok   a buffer of a.rb is ruby
+ok   renaming it to a.txt clears the filetype
+ok   a shebang names the filetype
+ok   assign_filetype sets both
+ok   an empty buffer has none
+domain_filetype: 28 passed, 0 failed

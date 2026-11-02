@@ -1,0 +1,36 @@
+ok   a.rb is highlighted by the ruby plugin
+ok   every visible row is
+ok   the gutter keeps its group, the text takes the token's
+ok   the selection covers the selected cells, the cursor cell keeps its token
+ok   and the tokens are back after it
+ok   an unclosed quote makes the rows after it String
+ok   undo restores their highlights
+ok   redo makes them String again
+ok   :syntax off draws every buffer plain
+ok   :sy on highlights again
+ok   :syntax enable keeps it on
+ok   an unknown subcommand is refused
+ok   :syntax alone would list the items
+ok   :set ft? shows the filetype
+ok   so does the bare name
+ok   :set syntax=OFF turns this buffer plain
+ok   and its syntax is empty
+ok   :set syn=ON goes back to the filetype
+ok   an option :set does not handle yet
+ok   an unknown option
+ok   a text file is plain
+ok   :se ft=ruby highlights it and sets the syntax
+ok   several arguments: the filetype emptied, then the syntax shown
+ok   the ruby plugin disabled in the configuration leaves Ruby plain
+ok   the registry's ruby plugin highlights a.rb
+ok   a raising tokenizer is disabled and the buffer is plain
+ok   the next plugin declaring the filetype takes over in the same frame
+ok   opening 100,000 lines tokenizes one screen
+ok   G tokenizes every row above the end once
+ok   and the last row is highlighted with the state carried from the top
+ok   G again tokenizes at most the rows of one screen
+ok   a heredoc body row is String
+ok   typing in a heredoc tokenizes one row
+ok   the row is String
+ok   typing in a multi-line string tokenizes one row
+editor_syntax: 35 passed, 0 failed

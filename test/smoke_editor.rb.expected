@@ -29,7 +29,12 @@ ok   the editor drew its first frame for the visual check
 ok   V and j show the linewise visual mode
 ok   the editor exits with status 0 after Vjd and :wq
 ok   Vjd deleted the first two lines
+ok   the editor drew its first frame for the color check
+ok   def is written after a color sequence
+ok   the string is written after a color sequence
+ok   :syntax off writes def in the normal group
+ok   the editor exits with status 0 after the color check
 ok   the editor drew its first frame for the signal check
 ok   SIGTERM ends the editor with status 0
 ok   SIGTERM leaves the alternate screen
-smoke_editor: 34 passed, 0 failed
+smoke_editor: 39 passed, 0 failed

@@ -3,6 +3,7 @@ ok   enter switches to the alternate screen and clears it
 ok   first frame clears the screen
 ok   first frame writes row 1 with the normal highlight
 ok   line number highlight is emitted before the text
+ok   the line numbers are carat-dark's gray at 256 colors
 ok   first frame skips a blank row, which the clear already drew
 ok   cursor position, block shape, and cursor shown last
 ok   cursor hidden while drawing
@@ -23,11 +24,12 @@ ok   no raw OSC introducer is written
 ok   leave reaches the terminal
 ok   leave restores the block cursor and the main screen last
 ok   output begins with the alternate screen
-ok   inactive status lines are dim reverse video
-ok   tab line labels are reverse video
-ok   the selected label is bold
-ok   the tab line fill is reverse video
-ok   the selection is reverse video
+ok   inactive status lines have the theme's StatusLineNC
+ok   tab line labels have TabLine
+ok   the selected label has TabLineSel
+ok   the tab line fill has TabLineFill
+ok   the tab line sequences at 256 colors
+ok   the selection has the Visual background
 ok   only the changed part of a row is written, from its column
 ok   the unchanged part of the row is not written
 ok   a later frame does not clear the screen
@@ -55,4 +57,17 @@ ok   j at the bottom scrolls the window with a region
 ok   and writes fewer than 500 bytes
 ok   l writes no buffer text
 ok   l writes only the changed cell of the ruler
-adapters_screen_presenter: 57 passed, 0 failed
+ok   a truecolor comment
+ok   a 256-color comment
+ok   a 16-color comment
+ok   a truecolor status line
+ok   a 16-color status line
+ok   a 16-color error message
+ok   a truecolor string
+ok   a 16-color Todo
+ok   carat-light's comment
+ok   carat-light's string at 256 colors
+ok   Normal is a bare reset
+ok   the nearest palette colors: cube corners and grays
+ok   an id out of range is drawn as Normal
+adapters_screen_presenter: 72 passed, 0 failed

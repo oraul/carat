@@ -1,0 +1,76 @@
+ok   a comment with Todo
+ok   Todo words only as words
+ok   =begin and =end
+ok   =begin needs column 0
+ok   __END__
+ok   an endless def
+ok   a method definition
+ok   operator and setter names
+ok   a class
+ok   a module
+ok   a singleton class
+ok   keywords as method names
+ok   control flow
+ok   loops and blocks
+ok   exceptions
+ok   includes and macros
+ok   defined? and super
+ok   variables
+ok   constants
+ok   numbers
+ok   a range is not a float
+ok   a method on a number
+ok   symbols and labels
+ok   operator symbols
+ok   a ternary is not a symbol
+ok   character literals
+ok   predicate then ternary
+ok   escapes
+ok   unicode escapes
+ok   single quotes keep other escapes
+ok   nested interpolation
+ok   braces inside interpolation
+ok   short interpolation
+ok   interpolation across lines
+ok   a string across lines
+ok   words with brackets
+ok   another delimiter
+ok   percent symbols
+ok   percent string with interpolation
+ok   a percent regex
+ok   modulo is not a literal
+ok   a format string
+ok   a regular expression
+ok   division
+ok   a regex after a method name
+ok   a regex after a keyword
+ok   a regex escape
+ok   a heredoc
+ok   two heredocs on one line
+ok   a plain heredoc needs column 0
+ok   a dash heredoc
+ok   shift is not a heredoc
+ok   code after a heredoc opener
+ok   utf-8 columns
+ok   a keyword label
+ok   plain code ends in state 0
+ok   =begin
+ok   =end
+ok   __END__
+ok   an open string
+ok   an open interpolation
+ok   two nested open strings
+ok   three nested open strings keep two
+ok   a pending heredoc
+ok   three pending heredocs keep two
+ok   a closed heredoc
+ok   an open %w
+ok   equal heredoc terminators give equal states
+ok   another terminator gives another state
+ok   a state too deep to encode is still a state
+ok   the next line after it is tokenized
+ok   states stay within 58 bits
+ok   the manifest declares the ruby filetype
+ok   and breaks no rule
+ok   one id per group
+plugins_ruby: 75 passed, 0 failed
