@@ -19,6 +19,7 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make toolchain` | Fetch, build without Ruby, and install the pinned Spinel commit under `tmp/` |
 | `make toolchain-clean` | Remove `tmp/`, the Spinel checkout and the installed toolchain |
 | `make build` | Compile `bin/*.rb` into `build/bin` and print how to run it from anywhere |
+| `make dev-build` | Compile the editor with the development flags into `build/dev/carat`, the binary CI's smoke test runs on pull requests |
 | `make run FILE=path` | Build and run the editor on a file |
 | `make test` | Build, compile every test into the one test runner, then run each test against its snapshot |
 | `make test-build`, `make test-run` | The two halves of the test step: compile the runner, run the tests from it |
@@ -28,7 +29,7 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make diagnose` | Run `spinel-doctor` on every compile root: `bin/*.rb` and the test runner |
 | `make diagnose-one T=path` | Run `spinel-doctor` on one file |
 | `make bench` | Build and run the key benchmark: time, bytes written, collector share, and allocations per key |
-| `make bench-budget` | Fail when a key of the cursor scenario allocates 100 objects or more; CI runs it |
+| `make bench-budget` | Build the benchmark with the development flags and fail when a key of the cursor scenario allocates 100 objects or more; CI runs it |
 | `make analysis-budget` | Fail when Spinel's analysis of `bin/carat.rb` or the test runner needs more than 2 re-narrowing rounds, a sign that a value widened to `untyped`; `make test-build` checks the runner's own report on every test run |
 | `make profile` | Build the benchmark with `spinel --profile` and print the top functions with `perf` when it works |
 | `make snapshots` | Rebuild the test runner and rewrite every test's snapshot from it |

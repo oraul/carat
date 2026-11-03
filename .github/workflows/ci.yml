@@ -22,8 +22,10 @@ jobs:
   spin:
     runs-on: ubuntu-latest
     env:
-      # The optimization level of the test runner's development build; the
-      # Makefile reads it, and it is part of the compile cache's key.
+      # The optimization level of the development builds (the editor of the
+      # smoke test, the test runner, and the benchmark of the allocation
+      # budget); the Makefile reads it, and it is part of the compile
+      # cache's key.
       TEST_OPT: "0"
     steps:
       - name: Check out carat
@@ -36,6 +38,9 @@ jobs:
       # tools/ci_scope.sh says whether the checks below are needed. They are
       # skipped when only documentation no test reads changed, and on a
       # push to main whose tree is the head of a pull request that passed.
+      # A push to main still compiles the development builds, which keeps
+      # main's compile cache warm, and builds and smoke tests the release
+      # binary.
       - name: Scope
         id: scope
         env:
@@ -66,20 +71,23 @@ jobs:
         if: (steps.scope.outputs.run == 'true' || github.event_name == 'push') && steps.toolchain-cache.outputs.cache-hit != 'true'
         run: make toolchain
 
-      # The objects of the test runner's units of C (spinel --incremental,
-      # SPINEL_CACHE_DIR), keyed by the Spinel commit, the optimization
-      # level, and the OS, which all change the objects. The sources' hash
-      # ends the key, so every change saves its own entry, and the fallback
-      # restores the newest entry of the same compiler and level: a unit
-      # whose text did not change is not compiled again. A pull request can
-      # restore what its own runs and main's saved; a push to main always
-      # compiles the runner, so main keeps a warm entry.
+      # The objects of the units of C of the three development builds
+      # (spinel --incremental, SPINEL_CACHE_DIR): the editor of the smoke
+      # test, the test runner, and the benchmark of the allocation budget.
+      # They are keyed by the Spinel commit, the optimization level, and
+      # the OS, which all change the objects. The hash of every Ruby source
+      # the three builds read ends the key, so every change saves its own
+      # entry, and the fallback restores the newest entry of the same
+      # compiler and level: a unit whose text did not change is not
+      # compiled again. A pull request can restore what its own runs and
+      # main's saved; a push to main always compiles the three builds, so
+      # main keeps a warm entry for every unit a pull request compiles.
       - name: Restore the compile cache
         if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
         uses: actions/cache@v4
         with:
           path: build/spinel-cache
-          key: spinel-units-${{ runner.os }}-${{ steps.spinel.outputs.rev }}-O${{ env.TEST_OPT }}-${{ hashFiles('carat.rb', 'carat/**/*.rb', 'bin/**/*.rb', 'test/**/*.rb') }}
+          key: spinel-units-${{ runner.os }}-${{ steps.spinel.outputs.rev }}-O${{ env.TEST_OPT }}-${{ hashFiles('carat.rb', 'carat/**/*.rb', 'bin/**/*.rb', 'test/**/*.rb', 'bench/**/*.rb') }}
           restore-keys: |
             spinel-units-${{ runner.os }}-${{ steps.spinel.outputs.rev }}-O${{ env.TEST_OPT }}-
 
@@ -94,9 +102,14 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: make no-cruby
 
-      - name: Build
-        if: steps.scope.outputs.run == 'true'
-        run: make build
+      # The editor the smoke test runs, compiled with the development flags
+      # (-O 0, --incremental) like the test runner: Spinel documents the
+      # same answers at every level, and the C compiles in seconds instead
+      # of the release build's 15 to 20. The release build at -O 2 runs on
+      # every push to main and by hand, below.
+      - name: Build the editor for the smoke test
+        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
+        run: make dev-build
 
       - name: Generated config is current
         if: steps.scope.outputs.run == 'true'
@@ -113,11 +126,25 @@ jobs:
 
       - name: Test
         if: steps.scope.outputs.run == 'true'
-        run: make test-run
+        run: make test-run CARAT_BIN=build/dev/carat
 
       # One key of the cursor scenario of the benchmark must allocate fewer
-      # than ALLOC_BUDGET objects (see the Makefile); one more compile and a
-      # few seconds of running.
+      # than ALLOC_BUDGET objects (see the Makefile). The benchmark is a
+      # development build too: every scenario allocates the same objects
+      # and bytes per key at -O 0 as at -O 2. A push to main runs it to keep
+      # the benchmark's units in the compile cache.
       - name: Allocation budget
-        if: steps.scope.outputs.run == 'true'
+        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
         run: make bench-budget
+
+      # The release binary, spin build at -O 2, and the smoke test against
+      # it, on every push to main and on a run by hand, so the binary make
+      # build and make install produce is built and run on every commit of
+      # main. Pull requests run the smoke test on the development build.
+      - name: Release build
+        if: github.event_name != 'pull_request'
+        run: make build
+
+      - name: Smoke test the release build
+        if: github.event_name != 'pull_request'
+        run: make test-run TESTS=test/smoke_editor.rb
