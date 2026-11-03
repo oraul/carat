@@ -1,0 +1,59 @@
+# Spinel notes
+
+Every Spinel pitfall this project has met, once, at the pinned compiler (`SPINEL_REF` in the `Makefile`). Each note gives the rule, why, and what enforces it; a note marked open has an item in `docs/backlog.md` and is rechecked when the pin is bumped. The notes are binding for all code under `carat/`, `bin/`, `test/`, and `bench/`: `CLAUDE.md` and `docs/architecture.md` state the rules and point here for the detail. Golden files that follow every note are listed in `docs/examples.md`.
+
+## Language and library
+
+- Standard library only, and only what Spinel bundles: `io/console`, `IO.select`, `IO.pipe`, `Process.spawn`, `open3`, `set`, `forwardable`, `stringio`, `strscan`, `time`, `pathname`, `optparse`. No gems. No `json` library (Spinel documents no parser and refuses `json/pure`), so JSON is `Carat::Json`; no `minitest`, so tests use `Carat::Testing`.
+- `IO.popen` is refused at compile time. A child with live pipes is `Process.spawn` with `IO.pipe` pairs; a one-shot command is `Open3.capture2` or `capture3`. The `lint` test also refuses it.
+- No `eval`, `method_missing`, `send` or `public_send` with a computed name, `define_method` under a runtime condition, `instance_variable_get` or `instance_variable_set` with a computed name, or `const_get` with a runtime name.
+- No custom `hash` or `eql?` on a class used as a hash key, and no array as a key: keys are strings, symbols, integers, or identity.
+- String literals are frozen with no opt-out; a mutable string is `+""`, `String.new`, or `dup`. Line arrays hold only strings, and a cell array holds one type.
+- Every instance variable is assigned in `initialize`: a call through an unassigned one crashes a release build.
+- A method does not both take a block and call itself.
+- `require_relative` is inlined at compile time, so a missing file is a compile error and the require graph is the module graph.
+- `STDIN.raw { }` is the only raw-mode form, and its block holds a single call: Spinel rewrites a short raw block and skips a long one.
+- A signal handler sets a flag only, since it runs where Ruby code may run, not inside a blocking call; the loop polls with a timeout. `SIGINT` and `SIGTERM` are trapped before the first thread starts, because once a thread runs an untrapped signal ends the process with no `ensure`, leaving the terminal raw.
+- Threads run in parallel with no global lock: shared state goes through a `Mutex` or a `Queue`. A program that starts no thread behaves as single-threaded Spinel, so the editor core starts none; only service drivers do. Ractor is not documented by Spinel and is not used.
+- Only UTF-8 and binary encodings exist.
+- Open: `line[i, 1]` on a line that is not ASCII is resolved from the start of the line, so a loop of one-character slices is quadratic on a long UTF-8 line. Walk code points with `Utf8.size_at` and `code_at`, or compare bytes (backlog: "Some per-command character loops still slice one-character strings").
+
+## Records
+
+- Immutable values are `Data` subclasses (`class Position < Data.define(:row, :col)`), mutable records are `Struct` subclasses with `keyword_init: true`, both in the subclass form only: inline RBS inside the block form is ignored, and `Struct.new` with a string name, `define_method` in the block, and singleton methods on an instance are refused. `lint` checks `keyword_init: true` on every `Struct.new`.
+- Every record is built with keyword arguments at every call site (`Position.new(row: 0, col: 0)`): a positional call of a `keyword_init` record raises `ArgumentError`, and a keyword `Data` construction compiles to the same C. `lint` checks every `Name.new(` of a record and every bare `new(` in a record's file.
+- A keyword `super` of a `keyword_init` record must name every member. A record that sets only some calls `super()` and stores every member through its writer, as `Buffer`, `PluginEntry`, and `Registers` do.
+- A `Struct` record's methods use the readers and the `self.member =` writers, never instance variables, and every member is pinned with a `# @rbs @member: Type` line at the top of the class.
+- An empty array literal is typed `Array[Integer]`, and a pinned member of another element type does not coerce it inside a `super` call: a record whose default is an empty collection of another type calls `super()` and stores the literal through the writer, as `Keymap` does. `Buffer` stores its line array the same way, and `LineSplice` writes the array one element at a time.
+- `# @rbs @member` pins apply to a `Data` subclass only when the class body holds at least one statement, so a pinned value has at least one method. A pinned hash member refuses an empty hash literal passed to the constructor, so a member callers may fill with `{}` stays unpinned.
+
+## Signatures and inference
+
+- Every method, attribute, and instance variable under `carat/` carries inline RBS in Spinel's comment form: `#: (String) -> Integer` directly above a `def`, a `# @rbs @name: Type` block at the top of a class, a trailing `#: Type` on each `attr_*`; no sidecar `.rbs` files. Spinel applies them before inference and trusts them unverified, so a signature describes what the program stores, `untyped` where a value is genuinely mixed. `lint` fails on a missing one; `make types` prints what was inferred and where it widened.
+- Optional, rest, and keyword-splat parameters get no seed, so methods take required parameters only. Required keywords are typed fully, also through `super(kind: kind)`.
+- A keyword default such as `store: Store.new` is typed, but evaluated again on every call, so two objects built with the default do not share it. Defaults are allowed only for a collaborator with no arguments, no state, and no I/O; everything shared is a required keyword built once in `EditorAssembly`, and `test/adapters_assembly.rb` checks every holder got the one instance.
+- The return type of a method a subclass overrides (every port method and its driver and double overrides) is not applied: give it `# @rbs name: Type` parameter lines, or `# @rbs skip` when it takes none, and describe the return in prose. A `-> void` return is annotated normally.
+- `Array[T]` and `Hash[K, V]` pin only with builtin element types, and `Symbol` is not one: an `Array[Symbol]` signature is not applied, so such a parameter is `untyped` and checked with `is_a?`, and a `Hash[String, Symbol]` pin leaves the values `untyped`. A `Hash` pins only with `String` or `Symbol` keys, and a hash literal whose key is a constant reads as `Hash[untyped, untyped]`: write the key as a literal.
+- A nullable local keeps its nullable type after a `nil` check, and reading its members widens what they are stored into: pass it through a helper typed as never nil, as `Position.sure` is.
+- A concern whose results widen in `make types` becomes a module function, as `Boundary.copied_lines` did; a list of objects of a program class is a class of its own with a pinned `Array[untyped]` and a typed reader, as `PluginEntries` is.
+
+## Analysis, tests, and the runner
+
+- Spinel types a method's parameters once for the whole program, and every test is in one runner, so an `untyped` argument (a table row's value, anything read from an untyped array) widens the library method it reaches for every test, and the analysis pays with re-narrowing rounds: `test/domain_buffer.rb` once took 5 rounds and 40 seconds instead of 2 and 23. Convert table values with a typed helper (`strings`, `ints`, `.to_s`, `.to_i`) before the call, as `test/domain_edits.rb` does; a test of a refusal of a wrongly typed value is the exception. `make test-build` fails above 2 rounds.
+- Open: values destructured from an array inside a method (`a, b = helper`) lose their types; in one test the generated C did not compile. A helper returning several values returns an object with typed readers (backlog: "Spinel loses the types of an array destructured inside a method").
+- `NameTest.main if __FILE__ == $0` is folded at compile time: true when the file is the compile root (`make test-one`), false inside the runner.
+- `-O 0` and `--incremental` are development modes with the same answers and slower code; the release binary is always `spin build` at `-O 2`. Allocations per key are the same at every level, so the allocation budget builds at `-O 0`.
+
+## Known miscompilations
+
+- Open: `private_constant` compiles but is not enforced (another class can still read `Owner::NAME`), while `private` on methods is. `lint` carries the rule: every constant of a use case file is in a `private_constant`, and no other file names it (backlog: "Spinel compiles private_constant without enforcing it").
+- Open: some string returns answer the method's argument: a `case` of string-literal branches called with a literal, a ternary of `""` and an indexed `to_s` in a two-parameter method, and a constant array's `include?` of a reader on a `Data` value. Rewrite as guard returns or through a local, and let a table test catch it (backlog: "Spinel answers a method's argument for some string returns").
+- Open: the runtime releases free slab chunks with `MADV_DONTNEED` on huge pages, so single keys can stall 8 to 12 ms on a host with `madvise` defragmentation; `SPINEL_SLAB_HUGE=0` avoids it (backlog: "Spinel's slab release stalls keys on transparent huge pages").
+
+## Toolchain
+
+- `spin` treats every visible directory as project source (it reports foreign `.c` files and feeds every `.rbs` to the compiler), so the Spinel checkout and the toolchain live in the hidden `tmp/.spinel` and `tmp/.toolchain`, and generator templates live inside `tools/new.sh`, not as `.rb` files.
+- `spin test` compares a program without a snapshot against `ruby` from the `PATH`, and `--regen` writes snapshots from it. Every `make` target puts the refusing stub `tools/noruby/ruby` first, `make no-cruby` proves it, and tests and snapshots run only through `make`.
+- Spinel's build generates one header with a CRuby script; it is vendored as `tools/spinel/spinel_rt_responds_generated.h` and regenerated in the pull request that bumps `SPINEL_REF`.
+- Open: `make types` leaves `build/carat.rbs`, which later `spin` runs fail to parse and warn about; delete it after use (backlog: "make types leaves build/carat.rbs that a later spin build warns about").
+- `spinel-doctor` (`make diagnose`) must report clean; its behavior leg compares against a CRuby and is always skipped, and its advice lines show where a signature is worth tightening.
