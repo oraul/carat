@@ -21,7 +21,7 @@ Non-Goals:
 
 ### Custom initializers take keywords and call super with keywords
 
-Each custom `initialize` keeps its parameters, as required keywords, with a keyword signature (`#: (rows: Integer, cols: Integer) -> void`), and passes keywords to `super` (`super(row: row, col: col, want_col: col)`). The lint test's constructor rule, which skipped record files, now covers them. The only parameter renamed is `TabList`'s `first`, now `window:`, because `TabList.new(first: window)` reads poorly. Records whose defaults are empty collections keep what they did: the ones that already call `super()` and store through the writers stay so (`Keymap`, `Transaction`, `UndoTree`, `BufferList`, and others), and the ones that pass empty literals through `super` pass integer arrays only (`Runs`, `SentenceStarts`, `Frame`, `CommandGrammar`, `BlockInsert`, `LayoutNode`, `Walker`) or a hash (`KeymapNode`, `Registers`), which compile as before.
+Each custom `initialize` keeps its parameters, as required keywords, with a keyword signature (`#: (rows: Integer, cols: Integer) -> void`), and passes keywords to `super` (`super(row: row, col: col, want_col: col)`). The lint test's constructor rule, which skipped record files, now covers them. The only parameter renamed is `TabList`'s `first`, now `window:`, because `TabList.new(first: window)` reads poorly. Spinel differs from CRuby in one respect the probe did not show: a keyword `super` of a `keyword_init` record must name every member, and raises `ArgumentError` for the missing ones at run time, where CRuby leaves them `nil`. The three records whose `super` named only some members, `Buffer`, `PluginEntry`, and `Registers`, therefore call `super()` and store every member through its writer, the pattern `Keymap` and `Transaction` already follow; `Buffer`'s line array goes through its writer too, which the conventions once warned against because a slice assignment lost its type that way, and which is safe now that `LineSplice` writes the array one element at a time, as every buffer test shows. Records whose defaults are empty collections keep what they did: the ones that already call `super()` and store through the writers stay so (`Keymap`, `Transaction`, `UndoTree`, `BufferList`, and others), and the ones that pass empty literals through `super` pass integer arrays only (`Runs`, `SentenceStarts`, `Frame`, `CommandGrammar`, `BlockInsert`, `LayoutNode`, `Walker`) or a hash (`KeymapNode`, `Registers`), which compile as before.
 
 ### Data values are built with keywords too
 
@@ -42,7 +42,33 @@ The call sites were rewritten by a throwaway script outside the repository that 
 
 ## Measurements
 
-Filled in by the implementation; see the tasks.
+Three trees were measured on the same four-core machine, one after another: 9edf2a3 (`base`), the `Struct` step alone (`struct`), and the `Struct` and `Data` steps together (`data`).
+
+Analysis, `make analysis-budget`, two runs each (milliseconds of analysis; fixpoint and re-narrowing rounds):
+
+| Root | base | struct | data |
+| --- | --- | --- | --- |
+| `bin/carat.rb` | 14686, 13921 | 14342, 16901 | 16058, 15661 |
+| `test/runner/run_all.rb` | 34448, 35496 | 35996, 36860 | 37144, 37972 |
+| Rounds, every root | 4 and 2 | 4 and 2 | 4 and 2 |
+
+Every root stays at 2 re-narrowing rounds. The analysis time moves by about 1.5 seconds between runs of the same tree; the test runner's analysis is 1 to 2.5 seconds slower with keyword construction everywhere, about 5 percent, well under the 45-second warning, and `bin/carat.rb`'s is within the noise.
+
+Benchmark, the `lh`, `j`, `insert`, `dd`, and `undo` scenarios of `bench/keys.rb` at `-O 2`, the three binaries run interleaved three times (total microseconds per key, fastest and mean of the three, and objects allocated per key):
+
+| Scenario | base min / mean | struct min / mean | data min / mean | allocs, all three |
+| --- | --- | --- | --- | --- |
+| `lh` | 11.0 / 12.4 | 10.5 / 10.8 | 10.9 / 10.9 | 27 |
+| `j` | 54.8 / 57.3 | 53.9 / 55.8 | 54.9 / 58.1 | 28 |
+| `insert` | 12.3 / 12.4 | 12.0 / 12.3 | 12.4 / 12.7 | 35 |
+| `dd` | 22.1 / 31.6 | 21.3 / 32.4 | 21.8 / 27.5 | 36 |
+| `undo` | 13.6 / 20.4 | 14.3 / 19.3 | 14.6 / 24.6 | 52 |
+
+Every scenario is within 10 percent of 9edf2a3 by its fastest run (`undo` the most, 7 percent, in a scenario whose runs on one binary range from 13.6 to 25.9), and every scenario allocates exactly the same objects and bytes per key, as the identical C predicts. The `dd` and `undo` scenarios work on a 100000-line buffer and swing between runs by their slowest keys on every binary alike.
+
+### Decision
+
+`Data` values are built with keywords. The run time is the same by construction and by measurement, the allocations are identical, the analysis keeps its 2 rounds at a cost within a few percent, and one rule for both record kinds is what the lint test can check and what a reader can follow.
 
 ## Risks / Trade-offs
 
