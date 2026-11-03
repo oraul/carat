@@ -73,7 +73,7 @@ module Carat
           end
           @buffers.remove(existing)
         end
-        buffer = Domain::Buffer.new(Boundary.copied_lines(lines), nil, "\n")
+        buffer = Domain::Buffer.new(lines: Boundary.copied_lines(lines), path: nil, line_ending: "\n")
         buffer.owner = name
         buffer.title = title
         keymap = Domain::Keymap.from_config(bindings, @registry.leader)

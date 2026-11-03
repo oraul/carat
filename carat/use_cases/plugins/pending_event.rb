@@ -5,13 +5,13 @@ module Carat
     # An event waiting in the plugin host's queue, with its cause: the
     # plugin whose request made it, which does not receive it, or "" for
     # the editor and the user. A Struct record.
-    class PendingEvent < Struct.new(:event, :cause)
+    class PendingEvent < Struct.new(:event, :cause, keyword_init: true)
       # @rbs @event: PluginApi::Event
       # @rbs @cause: String
 
-      #: (PluginApi::Event, String) -> void
-      def initialize(event, cause)
-        super(event, cause)
+      #: (event: PluginApi::Event, cause: String) -> void
+      def initialize(event:, cause:)
+        super(event: event, cause: cause)
       end
 
       # Whether the plugin named should receive the event.

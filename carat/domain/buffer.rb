@@ -43,7 +43,7 @@ module Carat
     # changed alone by :set syntax; syntax_cache keeps what the tokenizer
     # said, and every splice moves it with the rows. A Struct record:
     # mutable, with a reader and a writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache)
+    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, keyword_init: true)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
@@ -63,12 +63,18 @@ module Carat
       # @rbs @syntax: String
       # @rbs @syntax_cache: SyntaxCache
 
-      # The original members go through super and the later members
-      # through the writers, so the empty sign list takes the pinned type.
-      #: (Array[String], String?, String) -> void
-      def initialize(lines, path, line_ending)
+      # Every member is stored through its writer after super(), so the
+      # empty sign list takes the pinned type: Spinel's keyword super of a
+      # keyword_init record requires every member, and an empty literal
+      # passed through it is typed Array[Integer].
+      #: (lines: Array[String], path: String?, line_ending: String) -> void
+      def initialize(lines:, path:, line_ending:)
         lines << "" if lines.empty?
-        super(lines, path, line_ending, 0)
+        super()
+        self.lines = lines
+        self.path = path
+        self.line_ending = line_ending
+        self.saved_change = 0
         self.owner = ""
         self.title = ""
         self.keymap = nil
@@ -192,7 +198,7 @@ module Carat
           end
           i += 1
         end
-        fresh = SignLayer.new(owner, priority, lines.length)
+        fresh = SignLayer.new(owner: owner, priority: priority, line_count: lines.length)
         fresh.place(row, glyph)
         at = 0
         at += 1 while at < sign_layers.length && layer_at(at).priority <= priority
@@ -241,7 +247,7 @@ module Carat
         lines = body.split("\n", -1)
         lines.pop if lines.length > 1 && lines.last == ""
         lines = [""] if lines.empty?
-        new(lines, path, ending)
+        new(lines: lines, path: path, line_ending: ending)
       end
 
       # The file text: every line followed by the line ending.
@@ -414,7 +420,7 @@ module Carat
       #: (Position) -> bool
       def begin_transaction(before)
         return false unless transaction.nil?
-        self.transaction = Transaction.new(id, before)
+        self.transaction = Transaction.new(buffer_id: id, before: before)
         true
       end
 
@@ -546,7 +552,7 @@ module Carat
           return
         end
         at = Position.new(change.row, 0)
-        single = Transaction.new(id, at)
+        single = Transaction.new(buffer_id: id, before: at)
         single.add(change, cause)
         close(single, at)
       end
@@ -577,7 +583,7 @@ module Carat
         end
         return if sink.nil?
         span = done.span
-        notice = BufferNotice.new("change", id, path_text, "", done.cause)
+        notice = BufferNotice.new(kind: "change", buffer_id: id, path: path_text, detail: "", cause: done.cause)
         notice.row = span[0]
         notice.removed = span[1]
         notice.inserted = span[2]

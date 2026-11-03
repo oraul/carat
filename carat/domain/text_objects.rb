@@ -238,7 +238,7 @@ module Carat
       # and counting nesting; nil when there is none.
       #: (Buffer, Position, String, String) -> Position?
       def self.find_opener(buffer, pos, open, close)
-        w = Walker.new(buffer, pos.row, pos.col)
+        w = Walker.new(buffer: buffer, row: pos.row, col: pos.col)
         depth = 0
         while w.step_backward != -1
           ch = char_at(buffer, w.position)
@@ -255,7 +255,7 @@ module Carat
       # The closer matching the opener at pos.
       #: (Buffer, Position, String, String) -> Position?
       def self.find_closer(buffer, pos, open, close)
-        w = Walker.new(buffer, pos.row, pos.col)
+        w = Walker.new(buffer: buffer, row: pos.row, col: pos.col)
         depth = 0
         while w.step_forward != -1
           ch = char_at(buffer, w.position)

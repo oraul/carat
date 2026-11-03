@@ -238,7 +238,7 @@ module Carat
 
       #: (EditorState) -> Walker
       def self.walker(state)
-        Walker.new(state.buffer, state.cursor.row, state.cursor.col)
+        Walker.new(buffer: state.buffer, row: state.cursor.row, col: state.cursor.col)
       end
 
       # A charwise motion to where the walker stopped. A word motion may end

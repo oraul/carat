@@ -10,7 +10,7 @@ module Carat
     # spell them as symbols), and its priority, the registration position
     # from 0, which orders its signs, and the filetypes it tokenizes. A
     # Struct record: mutable, with a reader and a writer per member.
-    class PluginEntry < Struct.new(:plugin, :manifest, :name, :enabled, :reason, :link, :options, :events, :option_types, :priority, :filetypes)
+    class PluginEntry < Struct.new(:plugin, :manifest, :name, :enabled, :reason, :link, :options, :events, :option_types, :priority, :filetypes, keyword_init: true)
       # @rbs @plugin: PluginApi::Plugin
       # @rbs @manifest: PluginApi::Manifest
       # @rbs @name: String
@@ -23,12 +23,18 @@ module Carat
       # @rbs @priority: Integer
       # @rbs @filetypes: Array[String]
 
-      # The collections are stored through the writers after super, so the
+      # Every member is stored through its writer after super(), so the
       # empty literals take the pinned types. The link is nil until the
       # plugin host gives the entry its own.
-      #: (PluginApi::Plugin, PluginApi::Manifest, String, Integer) -> void
-      def initialize(plugin, manifest, name, priority)
-        super(plugin, manifest, name, true, "", nil)
+      #: (plugin: PluginApi::Plugin, manifest: PluginApi::Manifest, name: String, priority: Integer) -> void
+      def initialize(plugin:, manifest:, name:, priority:)
+        super()
+        self.plugin = plugin
+        self.manifest = manifest
+        self.name = name
+        self.enabled = true
+        self.reason = ""
+        self.link = nil
         self.options = {}
         self.events = []
         self.option_types = {}

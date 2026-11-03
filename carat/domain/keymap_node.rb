@@ -4,14 +4,14 @@ module Carat
     # the key code, a form the compiler can type. owner is the plugin whose
     # default bindings put the value there, "" for the configuration. A
     # Struct record: mutable, with a reader and a writer per member.
-    class KeymapNode < Struct.new(:value, :children, :owner)
+    class KeymapNode < Struct.new(:value, :children, :owner, keyword_init: true)
       # @rbs @value: String?
       # @rbs @children: Hash[String, KeymapNode]
       # @rbs @owner: String
 
       #: () -> void
       def initialize
-        super(nil, {}, "")
+        super(value: nil, children: {}, owner: "")
       end
 
       # The decimal strings of the ASCII key codes.

@@ -5,12 +5,12 @@ module Carat
     # The last f, F, t, or T motion, which ";" and "," repeat, nil before
     # the first. A Struct record: mutable, with a reader and a writer per
     # member.
-    class LastFind < Struct.new(:entry)
+    class LastFind < Struct.new(:entry, keyword_init: true)
       # @rbs @entry: Find?
 
       #: () -> void
       def initialize
-        super(nil)
+        super(entry: nil)
       end
 
       #: (Find) -> void

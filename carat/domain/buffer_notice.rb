@@ -8,7 +8,7 @@ module Carat
     # there and put in their place). path is the buffer's path when it
     # happened, "" for none, and cause is the name of the plugin whose
     # request did it, "" for the editor and the user. A Struct record.
-    class BufferNotice < Struct.new(:kind, :buffer_id, :row, :removed, :inserted, :path, :detail, :cause)
+    class BufferNotice < Struct.new(:kind, :buffer_id, :row, :removed, :inserted, :path, :detail, :cause, keyword_init: true)
       # @rbs @kind: String
       # @rbs @buffer_id: Integer
       # @rbs @row: Integer
@@ -18,9 +18,9 @@ module Carat
       # @rbs @detail: String
       # @rbs @cause: String
 
-      #: (String, Integer, String, String, String) -> void
-      def initialize(kind, buffer_id, path, detail, cause)
-        super(kind, buffer_id, 0, 0, 0, path, detail, cause)
+      #: (kind: String, buffer_id: Integer, path: String, detail: String, cause: String) -> void
+      def initialize(kind:, buffer_id:, path:, detail:, cause:)
+        super(kind: kind, buffer_id: buffer_id, row: 0, removed: 0, inserted: 0, path: path, detail: detail, cause: cause)
       end
 
       #: () -> bool

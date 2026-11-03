@@ -8,16 +8,16 @@ module Carat
       # directory (following a symbolic link), and whether it is a symbolic
       # link. A Struct record, so a node read from the tree's list keeps
       # its methods.
-      class Node < Struct.new(:path, :name, :depth, :directory, :symlink)
+      class Node < Struct.new(:path, :name, :depth, :directory, :symlink, keyword_init: true)
         # @rbs @path: String
         # @rbs @name: String
         # @rbs @depth: Integer
         # @rbs @directory: bool
         # @rbs @symlink: bool
 
-        #: (String, String, Integer, bool, bool) -> void
-        def initialize(path, name, depth, directory, symlink)
-          super(path, name, depth, directory, symlink)
+        #: (path: String, name: String, depth: Integer, directory: bool, symlink: bool) -> void
+        def initialize(path:, name:, depth:, directory:, symlink:)
+          super(path: path, name: name, depth: depth, directory: directory, symlink: symlink)
         end
 
         # Whether this is the root line.

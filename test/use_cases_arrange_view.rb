@@ -23,7 +23,7 @@ module UseCasesArrangeViewTest
     options = Carat::Domain::Options.new
     options.number = false
     options.scrolloff = 0
-    Carat::Domain::EditorState.new(Carat::Domain::TabList.new(Carat::Domain::Window.new(Carat::Domain::Buffer.new(lines, "a.txt", "\n"))), options)
+    Carat::Domain::EditorState.new(tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: Carat::Domain::Buffer.new(lines: lines, path: "a.txt", line_ending: "\n"))), options: options)
   end
 
   #: (Carat::Domain::Window) -> Array[Integer]
@@ -77,7 +77,7 @@ module UseCasesArrangeViewTest
     # The tab line takes the top row when there are several tab pages.
     s = state_for(numbered(3))
     s.resize(10, 40)
-    s.tabs.add_tab(D::TabPage.new(D::Window.new(D::Buffer.new(["b"], "b.txt", "\n"))))
+    s.tabs.add_tab(D::TabPage.new(window: D::Window.new(buffer: D::Buffer.new(lines: ["b"], path: "b.txt", line_ending: "\n"))))
     s.tabs.tab_index = 0
     arrange.call(s)
     t.assert_equal([1, 0, 7, 40], rect(s.window), "the windows start under the tab line")

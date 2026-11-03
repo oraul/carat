@@ -24,7 +24,7 @@ module Carat
     # key of the geometry the frame was painted with. A fresh frame is
     # blank with every row dirty and no base. A Struct record, repainted
     # in place and reallocated only when the size changes.
-    class Frame < Struct.new(:rows, :cols, :cursor_row, :cursor_col, :cursor_shape, :codes, :widths, :hls, :dirty, :sources, :scrolls, :serial, :base_serial, :layout)
+    class Frame < Struct.new(:rows, :cols, :cursor_row, :cursor_col, :cursor_shape, :codes, :widths, :hls, :dirty, :sources, :scrolls, :serial, :base_serial, :layout, keyword_init: true)
       SPACE = 32
       REPLACEMENT = 0xFFFD
 
@@ -43,10 +43,10 @@ module Carat
       # @rbs @base_serial: Integer
       # @rbs @layout: Array[Integer]
 
-      #: (Integer, Integer) -> void
-      def initialize(rows, cols)
+      #: (rows: Integer, cols: Integer) -> void
+      def initialize(rows:, cols:)
         n = rows * cols
-        super(rows, cols, 0, 0, :block, Array.new(n, SPACE), Array.new(n, 1), Array.new(n, Highlight::NORMAL), Array.new(rows, 1), Array.new(rows, 0), [], 0, -1, [])
+        super(rows: rows, cols: cols, cursor_row: 0, cursor_col: 0, cursor_shape: :block, codes: Array.new(n, SPACE), widths: Array.new(n, 1), hls: Array.new(n, Highlight::NORMAL), dirty: Array.new(rows, 1), sources: Array.new(rows, 0), scrolls: [], serial: 0, base_serial: -1, layout: [])
         reset_sources
       end
 
@@ -74,7 +74,7 @@ module Carat
       #: (Integer, Integer) -> Cell
       def cell(row, col)
         i = row * cols + col
-        Cell.new(codes[i], widths[i], hls[i])
+        Cell.new(code: codes[i], width: widths[i], hl: hls[i])
       end
 
       # Sets the highlight of the cell, the way the presenter keeps the

@@ -12,7 +12,7 @@ module Carat
     # syntax_on is the switch of :syntax on and :syntax off, on from the
     # start as in Neovim. A Struct record: mutable, with a reader and a
     # writer per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :syntax_on)
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :syntax_on, keyword_init: true)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -30,7 +30,7 @@ module Carat
       # highlighting on.
       #: () -> void
       def initialize
-        super(false, false, 8, 8, false, false, 0, "nerd", 1000, 1000, Themes::DEFAULT, true)
+        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, syntax_on: true)
       end
 
       # Builds options from a configuration value: the members of its

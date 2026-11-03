@@ -10,7 +10,7 @@ module DomainUndoTreeTest
   # A buffer with one edit per call: x at the start of row 0, each closed
   # as a transaction of its own and so an undo state.
   def self.buffer_of(lines)
-    D::Buffer.new(lines, nil, "\n")
+    D::Buffer.new(lines: lines, path: nil, line_ending: "\n")
   end
 
   def self.cut(b)

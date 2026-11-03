@@ -11,15 +11,15 @@ module UseCasesExTest
   # A state over a buffer of the lines and the path, with its own buffer
   # list and tab list, and the ex use case wired over them with a plugin
   # host with no plugins.
-  class World < Struct.new(:state, :buffers, :tabs, :ex)
+  class World < Struct.new(:state, :buffers, :tabs, :ex, keyword_init: true)
   end
 
   def self.world(files, lines, path)
-    buffer = D::Buffer.new(lines, path, "\n")
-    tabs = D::TabList.new(D::Window.new(buffer))
-    buffers = D::BufferList.new(tabs)
+    buffer = D::Buffer.new(lines: lines, path: path, line_ending: "\n")
+    tabs = D::TabList.new(window: D::Window.new(buffer: buffer))
+    buffers = D::BufferList.new(tabs: tabs)
     buffers.add(buffer)
-    state = D::EditorState.new(tabs, D::Options.new)
+    state = D::EditorState.new(tabs: tabs, options: D::Options.new)
     commands = U::ExTable.new
     ex = U::ExecuteEx.new(commands: commands)
     open_file = U::OpenFile.new(files: files, buffers: buffers)
@@ -33,7 +33,7 @@ module UseCasesExTest
     U::WindowCommandHandler.register(commands, split_window: split_window, close_window: close_window)
     U::TabCommandHandler.register(commands, open_tab: open_tab, close_tab: U::CloseTab.new(buffers: buffers, tabs: tabs), switch_tab: U::SwitchTab.new(tabs: tabs))
     U::PluginCommandHandler.register(commands, plugins: plugins)
-    World.new(state, buffers, tabs, ex)
+    World.new(state: state, buffers: buffers, tabs: tabs, ex: ex)
   end
 
   # Runs one ex command on a fresh editor whose buffer holds ["new"] over a
@@ -405,12 +405,12 @@ module UseCasesExTest
     files = Carat::Doubles::MemoryFiles.new
     s_w = world(files, ["one"], "a.txt")
     s = s_w.state
-    scratch = D::Buffer.new(["l"], nil, "\n")
+    scratch = D::Buffer.new(lines: ["l"], path: nil, line_ending: "\n")
     scratch.owner = "hello"
     scratch.title = "list"
     s_w.buffers.add(scratch)
     s.tab.layout.arrange(0, 0, 23, 80)
-    side = D::Window.new(scratch)
+    side = D::Window.new(buffer: scratch)
     side.fixed_width = true
     s.tab.focus(s.tab.layout.split_edge(side, 20, true))
     r = s_w.ex.call(s, "w")

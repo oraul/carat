@@ -18,7 +18,7 @@ module Carat
     # line, or a motion Vim lists), and writes "- when it is small and no
     # register is named. Both write the unnamed register with the new
     # text. A Struct record.
-    class Registers < Struct.new(:unnamed, :named, :numbered, :small, :inserted, :command_line)
+    class Registers < Struct.new(:unnamed, :named, :numbered, :small, :inserted, :command_line, keyword_init: true)
       # @rbs @unnamed: RegisterEntry?
       # @rbs @named: Hash[String, RegisterEntry]
       # @rbs @numbered: Array[untyped]
@@ -29,7 +29,9 @@ module Carat
       # Every register empty.
       #: () -> void
       def initialize
-        super(nil, {})
+        super()
+        self.unnamed = nil
+        self.named = {}
         self.numbered = []
         i = 0
         while i < 10

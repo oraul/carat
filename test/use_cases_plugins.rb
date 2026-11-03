@@ -121,10 +121,10 @@ module UseCasesPluginsTest
     files.put("dir/b.txt", "1\n")
     files.put("dir/a.txt", "2\n")
     first = Carat::Domain::Buffer.from_text("", nil)
-    tabs = Carat::Domain::TabList.new(Carat::Domain::Window.new(first))
-    buffers = Carat::Domain::BufferList.new(tabs)
+    tabs = Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: first))
+    buffers = Carat::Domain::BufferList.new(tabs: tabs)
     buffers.add(first)
-    state = Carat::Domain::EditorState.new(tabs, Carat::Domain::Options.new)
+    state = Carat::Domain::EditorState.new(tabs: tabs, options: Carat::Domain::Options.new)
     keymap = Carat::Domain::Keymap.new
     commands = Carat::UseCases::ExTable.new
     ex = Carat::UseCases::ExecuteEx.new(commands: commands)

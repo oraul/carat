@@ -7,7 +7,7 @@ module Carat
     # The presenter draws it; the command line hands an answer to the
     # owner. A Struct record: mutable, with a reader and a writer per
     # member.
-    class PluginUi < Struct.new(:segments, :prompt, :prompt_owner, :prompt_id)
+    class PluginUi < Struct.new(:segments, :prompt, :prompt_owner, :prompt_id, keyword_init: true)
       # @rbs @segments: Hash[String, String]
       # @rbs @prompt: String
       # @rbs @prompt_owner: String

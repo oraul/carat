@@ -9,7 +9,7 @@ module Carat
     # separator under a row), and row, col, height, and width are the
     # rectangle the last arrange gave it. A Struct record: mutable, with a
     # reader and a writer per member.
-    class LayoutNode < Struct.new(:kind, :parent, :children, :window, :size, :row, :col, :height, :width)
+    class LayoutNode < Struct.new(:kind, :parent, :children, :window, :size, :row, :col, :height, :width, keyword_init: true)
       # @rbs @kind: Symbol
       # @rbs @parent: Integer
       # @rbs @children: Array[Integer]
@@ -20,9 +20,9 @@ module Carat
       # @rbs @height: Integer
       # @rbs @width: Integer
 
-      #: (Symbol, Integer, Window?) -> void
-      def initialize(kind, parent, window)
-        super(kind, parent, [], window, 0, 0, 0, 0, 0)
+      #: (kind: Symbol, parent: Integer, window: Window?) -> void
+      def initialize(kind:, parent:, window:)
+        super(kind: kind, parent: parent, children: [], window: window, size: 0, row: 0, col: 0, height: 0, width: 0)
       end
 
       #: () -> bool

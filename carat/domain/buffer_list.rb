@@ -14,7 +14,7 @@ module Carat
     # reports closed transactions to the tab list, which keeps the cursors
     # inside the text. A Struct record: mutable, with a reader and a writer
     # per member.
-    class BufferList < Struct.new(:tabs, :buffers, :next_id, :feed)
+    class BufferList < Struct.new(:tabs, :buffers, :next_id, :feed, keyword_init: true)
       # @rbs @tabs: TabList
       # @rbs @buffers: Array[untyped]
       # @rbs @next_id: Integer
@@ -22,8 +22,8 @@ module Carat
 
       # An empty list over the tab list. The list is stored through the
       # writer, so it takes the pinned type.
-      #: (TabList) -> void
-      def initialize(tabs)
+      #: (tabs: TabList) -> void
+      def initialize(tabs:)
         super()
         self.tabs = tabs
         self.buffers = []

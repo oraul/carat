@@ -12,7 +12,7 @@ module Carat
     # stable number the editor gives the window when it enters a tab page
     # (0 until then), never given to another window. A Struct record:
     # mutable, with a reader and a writer per member.
-    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :anchor, :last_selection, :id)
+    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :anchor, :last_selection, :id, keyword_init: true)
       SIGN_WIDTH = 2
 
       # @rbs @buffer: Buffer
@@ -28,9 +28,9 @@ module Carat
       # @rbs @last_selection: Selection
       # @rbs @id: Integer
 
-      #: (Buffer) -> void
-      def initialize(buffer)
-        super(buffer, Cursor.new(0, 0), 0, 0, 0, 0, 0, 0, false, Position.new(0, 0), Selection.none, 0)
+      #: (buffer: Buffer) -> void
+      def initialize(buffer:)
+        super(buffer: buffer, cursor: Cursor.new(row: 0, col: 0), top: 0, left: 0, row: 0, col: 0, height: 0, width: 0, fixed_width: false, anchor: Position.new(0, 0), last_selection: Selection.none, id: 0)
       end
 
       # Shows another buffer from its start, forgetting the last selection,
@@ -38,7 +38,7 @@ module Carat
       #: (Buffer) -> void
       def show(buffer)
         self.buffer = buffer
-        self.cursor = Cursor.new(0, 0)
+        self.cursor = Cursor.new(row: 0, col: 0)
         self.top = 0
         self.left = 0
         self.last_selection = Selection.none
@@ -49,7 +49,7 @@ module Carat
       #: (Window) -> void
       def copy_from(other)
         self.buffer = other.buffer
-        self.cursor = Cursor.new(other.cursor.row, other.cursor.col)
+        self.cursor = Cursor.new(row: other.cursor.row, col: other.cursor.col)
         cursor.want_col = other.cursor.want_col
         self.top = other.top
         self.left = other.left

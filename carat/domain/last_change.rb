@@ -22,7 +22,7 @@ module Carat
     # session for the "." register. next_* hold the size of the selection
     # the command now running acts on, measured before it runs. A Struct
     # record: mutable, with a reader and a writer per member.
-    class LastChange < Struct.new(:command, :visual, :rows, :cols, :to_end, :steps, :texts, :recording, :restart, :replaying, :typed, :next_visual, :next_rows, :next_cols, :next_to_end)
+    class LastChange < Struct.new(:command, :visual, :rows, :cols, :to_end, :steps, :texts, :recording, :restart, :replaying, :typed, :next_visual, :next_rows, :next_cols, :next_to_end, keyword_init: true)
       # @rbs @command: Command?
       # @rbs @visual: Symbol
       # @rbs @rows: Integer

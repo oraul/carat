@@ -19,7 +19,7 @@ module Carat
     # :text_object (only under an operator or in a visual mode), and
     # :action (completes at once). It knows no action name of its own.
     # A Struct record whose fields persist between keys.
-    class CommandGrammar < Struct.new(:register, :count, :operator, :operator_count, :want, :action, :argument, :linewise, :keys, :typed)
+    class CommandGrammar < Struct.new(:register, :count, :operator, :operator_count, :want, :action, :argument, :linewise, :keys, :typed, keyword_init: true)
       # @rbs @register: String
       # @rbs @count: Integer
       # @rbs @operator: String
@@ -33,7 +33,7 @@ module Carat
 
       #: () -> void
       def initialize
-        super("", 0, "", 0, :none, "", "", false, [], "")
+        super(register: "", count: 0, operator: "", operator_count: 0, want: :none, action: "", argument: "", linewise: false, keys: [], typed: "")
       end
 
       #: () -> void

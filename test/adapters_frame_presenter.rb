@@ -24,13 +24,13 @@ module AdaptersFramePresenterTest
   # A state over one window showing the lines; the plugins' segments and
   # prompt start empty.
   def self.state_for(lines, path)
-    buffer = Carat::Domain::Buffer.new(lines, path, "\n")
+    buffer = Carat::Domain::Buffer.new(lines: lines, path: path, line_ending: "\n")
     options = Carat::Domain::Options.new
     options.number = true
     options.tabstop = 4
     UI.segments.clear
     UI.close_prompt
-    Carat::Domain::EditorState.new(Carat::Domain::TabList.new(Carat::Domain::Window.new(buffer)), options)
+    Carat::Domain::EditorState.new(tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: buffer)), options: options)
   end
 
   # Delete and the C1 controls show as <xx> markers and never reach a cell raw.
@@ -238,7 +238,7 @@ module AdaptersFramePresenterTest
     f = draw(s, 4, 12)
     t.assert_equal("a<9b>^A<7f>", f.row_text(0), "markers and caret notation mix on one line")
     t.assert_true(control_free?(f), "no cell holds a control code point after a mixed line")
-    direct = D::Frame.new(1, 6)
+    direct = D::Frame.new(rows: 1, cols: 6)
     t.assert_equal(3, direct.put(0, 0, "a\u009Bb", D::Highlight::NORMAL), "put stores one cell per control code point")
     t.assert_equal(["a", 0xFFFD, "b"], [direct.cell(0, 0).char, direct.cell(0, 1).code, direct.cell(0, 2).char], "put stores the replacement character for a C1 control")
     direct.put(0, 0, "\x01\u007F", D::Highlight::NORMAL)
@@ -313,8 +313,8 @@ module AdaptersFramePresenterTest
 
     # Two tab pages: the tab line takes the top row.
     s = state_for(["one", "two", "three"], "a.txt")
-    other = D::Buffer.new(["zz"], "b.txt", "\n")
-    s.tabs.add_tab(D::TabPage.new(D::Window.new(other)))
+    other = D::Buffer.new(lines: ["zz"], path: "b.txt", line_ending: "\n")
+    s.tabs.add_tab(D::TabPage.new(window: D::Window.new(buffer: other)))
     s.tabs.tab_index = 0
     f = draw(s, 7, 30)
     t.assert_equal(" 1 a.txt  2 b.txt", f.row_text(0), "the tab line lists both tab pages")
@@ -352,11 +352,11 @@ module AdaptersFramePresenterTest
     # A scratch buffer's status line shows its title; the current window's
     # shows the plugins' segments.
     s = state_for(["one"], "a.txt")
-    scratch = D::Buffer.new(["item"], nil, "\n")
+    scratch = D::Buffer.new(lines: ["item"], path: nil, line_ending: "\n")
     scratch.owner = "test"
     scratch.title = "list"
     draw(s, 6, 40)
-    side = D::Window.new(scratch)
+    side = D::Window.new(buffer: scratch)
     side.fixed_width = true
     id = s.tab.layout.split_edge(side, 12, true)
     f = draw(s, 6, 40)

@@ -50,7 +50,7 @@ module Carat
       #: (Domain::EditorState, Domain::Buffer, Integer, bool) -> Outcome
       def side(state, buffer, width, left)
         tab = state.tab
-        window = Domain::Window.new(buffer)
+        window = Domain::Window.new(buffer: buffer)
         window.fixed_width = true
         id = tab.layout.split_edge(window, width, left)
         return Outcome.failure(E36) if id < 0

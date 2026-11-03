@@ -12,11 +12,11 @@ module DomainTabListTest
   end
 
   def self.buffer_named(name)
-    Carat::Domain::Buffer.new(["a", "b", "c"], name, "\n")
+    Carat::Domain::Buffer.new(lines: ["a", "b", "c"], path: name, line_ending: "\n")
   end
 
   def self.tabs_over(buffer)
-    Carat::Domain::TabList.new(Carat::Domain::Window.new(buffer))
+    Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: buffer))
   end
 
   def self.main
@@ -25,10 +25,10 @@ module DomainTabListTest
     # Tab pages and the alternate tab rule.
     s = tabs_over(buffer_named("a.txt"))
     first = s.tab
-    s.add_tab(D::TabPage.new(D::Window.new(buffer_named("b.txt"))))
+    s.add_tab(D::TabPage.new(window: D::Window.new(buffer: buffer_named("b.txt"))))
     t.assert_equal([2, 1], [s.tab_count, s.tab_index], "a new tab page goes after the current one and is current")
     s.tab_index = 0
-    s.add_tab(D::TabPage.new(D::Window.new(buffer_named("c.txt"))))
+    s.add_tab(D::TabPage.new(window: D::Window.new(buffer: buffer_named("c.txt"))))
     t.assert_equal(["a.txt", "c.txt", "b.txt"], [s.tab_at(0).window.buffer.path, s.tab_at(1).window.buffer.path, s.tab_at(2).window.buffer.path], "inserted after the first tab page")
     t.assert_equal(3, s.total_windows, "one window per tab page")
     t.assert_equal([true, 2], [s.next_tab(0), s.tab_index], "next from the second goes to the third")
@@ -47,19 +47,19 @@ module DomainTabListTest
     t.assert_equal([2, 1, "b.txt"], [s.tab_count, s.tab_index, s.tab.window.buffer.path], "closing the current tab page makes the next one current")
     s.remove_tab(1)
     t.assert_equal([1, 0], [s.tab_count, s.tab_index], "closing the last tab page makes the one before it current")
-    s.add_tab(D::TabPage.new(D::Window.new(buffer_named("d.txt"))))
+    s.add_tab(D::TabPage.new(window: D::Window.new(buffer: buffer_named("d.txt"))))
     s.remove_tab(0)
     t.assert_equal([1, 0, "d.txt"], [s.tab_count, s.tab_index, s.tab.window.buffer.path], "closing a tab page before the current one keeps it current")
     t.assert_true(!s.tab_at(0).equal?(first), "the first tab page is gone")
 
     # Window ids come from the tab list and are never reused.
-    s = tabs_over(D::Buffer.new(["a"], "a.txt", "\n"))
+    s = tabs_over(D::Buffer.new(lines: ["a"], path: "a.txt", line_ending: "\n"))
     t.assert_equal(1, s.window.id, "the first window has id 1")
-    page = D::TabPage.new(D::Window.new(s.window.buffer))
+    page = D::TabPage.new(window: D::Window.new(buffer: s.window.buffer))
     s.add_tab(page)
     t.assert_equal([2, 1, 0, -1], [page.window.id, s.window_tab(2), s.window_tab(1), s.window_tab(9)], "a new tab page's window gets the next id and is found by it")
     s.remove_tab(1)
-    lone = D::Window.new(s.window.buffer)
+    lone = D::Window.new(buffer: s.window.buffer)
     s.adopt(lone)
     s.adopt(lone)
     t.assert_equal(3, lone.id, "an id is given once and never again")
@@ -67,19 +67,19 @@ module DomainTabListTest
     # Cursor clamping, driven by the change records: every closed transaction
     # on a listed buffer clamps the cursors of the windows showing it, from
     # its first changed row on, in every tab page.
-    text = D::Buffer.new(["zero", "one", "two", "three", "four"], "a.txt", "\n")
+    text = D::Buffer.new(lines: ["zero", "one", "two", "three", "four"], path: "a.txt", line_ending: "\n")
     tabs = tabs_over(text)
-    list = D::BufferList.new(tabs)
+    list = D::BufferList.new(tabs: tabs)
     list.add(text)
     here = tabs.window
     here.cursor.move_to(1, 2)
-    low = D::Window.new(text)
+    low = D::Window.new(buffer: text)
     low.cursor.move_to(4, 3)
     low.top = 4
     tabs.tab.layout.arrange(0, 0, 23, 80)
     tabs.tab.focus(tabs.tab.layout.split(tabs.tab.current, false, 0, 1))
     tabs.adopt(tabs.window)
-    tabs.add_tab(D::TabPage.new(low))
+    tabs.add_tab(D::TabPage.new(window: low))
     tabs.tab_index = 0
     t.assert_equal([2, 2], [tabs.tab.window_count, tabs.total_windows - 1], "two windows on the buffer in the first tab page and one in the second")
     text.set_lines(3, 5, [])
@@ -91,15 +91,15 @@ module DomainTabListTest
     here.cursor.move_to(0, 3)
     text.set_lines(1, 2, [])
     t.assert_equal([0, 3], here.cursor.to_a, "a cursor above the change stays")
-    other = D::Buffer.new(["only"], "b.txt", "\n")
+    other = D::Buffer.new(lines: ["only"], path: "b.txt", line_ending: "\n")
     list.add(other)
     low.cursor.move_to(0, 3)
     other.set_lines(0, 1, ["x"])
     t.assert_equal([0, 3], low.cursor.to_a, "a change to another buffer clamps nothing here")
-    open = D::Buffer.new(["one", "two"], "c.txt", "\n")
+    open = D::Buffer.new(lines: ["one", "two"], path: "c.txt", line_ending: "\n")
     list.add(open)
-    w = D::Window.new(open)
-    tabs.add_tab(D::TabPage.new(w))
+    w = D::Window.new(buffer: open)
+    tabs.add_tab(D::TabPage.new(window: w))
     w.cursor.move_to(1, 2)
     open.begin_transaction(pos(1, 2))
     open.set_lines(1, 2, [])

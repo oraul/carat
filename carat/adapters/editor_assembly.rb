@@ -146,10 +146,10 @@ module Carat
         value = config.load
         leader = Domain::Keymap.leader_from(value)
         first = Domain::Buffer.from_text("", nil)
-        @tabs = Domain::TabList.new(Domain::Window.new(first))
-        @buffers = Domain::BufferList.new(@tabs)
+        @tabs = Domain::TabList.new(window: Domain::Window.new(buffer: first))
+        @buffers = Domain::BufferList.new(tabs: @tabs)
         @buffers.add(first)
-        @state = Domain::EditorState.new(@tabs, Domain::Options.from_config(value))
+        @state = Domain::EditorState.new(tabs: @tabs, options: Domain::Options.from_config(value))
         @keymap = Domain::Keymap.new
         @registers = Domain::Registers.new
         @last_change = Domain::LastChange.new

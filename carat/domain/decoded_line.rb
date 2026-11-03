@@ -12,7 +12,7 @@ module Carat
     # no arrays: its code points are its bytes and its columns their
     # indexes. text is the line it was decoded from, which a cache compares
     # by identity. A Struct record, never changed after it is built.
-    class DecodedLine < Struct.new(:text, :codes, :cols, :tabstop, :plain)
+    class DecodedLine < Struct.new(:text, :codes, :cols, :tabstop, :plain, keyword_init: true)
       NONE = Array.new(0, 0)
 
       # @rbs @text: String
@@ -23,7 +23,7 @@ module Carat
 
       #: (String, Integer) -> DecodedLine
       def self.decode(text, tabstop)
-        return new(text, NONE, NONE, tabstop, true) if plain?(text)
+        return new(text: text, codes: NONE, cols: NONE, tabstop: tabstop, plain: true) if plain?(text)
         n = text.length
         codes = Array.new(n, 0)
         cols = Array.new(n + 1, 0)
@@ -49,7 +49,7 @@ module Carat
           k += 1
         end
         cols[n] = dcol
-        new(text, codes, cols, tabstop, false)
+        new(text: text, codes: codes, cols: cols, tabstop: tabstop, plain: false)
       end
 
       # Whether every byte of text is printable ASCII, a space to a tilde.

@@ -28,7 +28,7 @@ module Carat
         @clock = ManualClock.new
         @terminal = FakeTerminal.new(clock: @clock, rows: rows, cols: cols)
         @assembly = Adapters::EditorAssembly.new(terminal: @terminal, clock: @clock, files: @files, config: FixedConfig.new(value: config), plugin_list: plugins)
-        @frame = Domain::Frame.new(rows, cols)
+        @frame = Domain::Frame.new(rows: rows, cols: cols)
       end
 
       # A harness over the default configuration with the given files and

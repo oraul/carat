@@ -6,13 +6,13 @@ module Carat
     # arrays: Spinel pins Array[Integer] but not an array of positions, and
     # an untyped position would make every comparison a dynamic call. A
     # Struct record built by Motions.sentence_starts.
-    class SentenceStarts < Struct.new(:rows, :cols)
+    class SentenceStarts < Struct.new(:rows, :cols, keyword_init: true)
       # @rbs @rows: Array[Integer]
       # @rbs @cols: Array[Integer]
 
       #: () -> void
       def initialize
-        super([], [])
+        super(rows: [], cols: [])
       end
 
       # Adds a start unless it is not after the last one, which keeps the

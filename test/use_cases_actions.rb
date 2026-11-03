@@ -35,7 +35,7 @@ module UseCasesActionsTest
   end
 
   def self.state
-    Carat::Domain::EditorState.new(Carat::Domain::TabList.new(Carat::Domain::Window.new(Carat::Domain::Buffer.from_text("", nil))), Carat::Domain::Options.new)
+    Carat::Domain::EditorState.new(tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: Carat::Domain::Buffer.from_text("", nil))), options: Carat::Domain::Options.new)
   end
 
   # The action names a section of docs/actions.md lists, from the first

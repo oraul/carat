@@ -12,16 +12,16 @@ module Carat
     # only while a word motion runs. It keeps the code points of the last
     # line it classified, decoded once, so a word motion over a long UTF-8
     # line slices no one-character strings.
-    class Walker < Struct.new(:buffer, :row, :col, :codes, :codes_line)
+    class Walker < Struct.new(:buffer, :row, :col, :codes, :codes_line, keyword_init: true)
       # @rbs @buffer: Buffer
       # @rbs @row: Integer
       # @rbs @col: Integer
       # @rbs @codes: Array[Integer]
       # @rbs @codes_line: String
 
-      #: (Buffer, Integer, Integer) -> void
-      def initialize(buffer, row, col)
-        super(buffer, row, col, [], "")
+      #: (buffer: Buffer, row: Integer, col: Integer) -> void
+      def initialize(buffer:, row:, col:)
+        super(buffer: buffer, row: row, col: col, codes: [], codes_line: "")
       end
 
       #: () -> Integer

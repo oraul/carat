@@ -5,7 +5,7 @@ module Carat
     # group id. A frame keeps its cells in flat integer arrays and never
     # holds Cell values. A width-0 cell is the continuation half of a wide
     # character and carries code 0. A Struct record.
-    class Cell < Struct.new(:code, :width, :hl)
+    class Cell < Struct.new(:code, :width, :hl, keyword_init: true)
       # @rbs @code: Integer
       # @rbs @width: Integer
       # @rbs @hl: Integer
