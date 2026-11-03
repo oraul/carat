@@ -79,10 +79,10 @@ module DomainLineCacheTest
     t.assert_equal(false, cache.holds?(line), "a line not fetched for two turns is evicted")
     t.assert_equal(false, cache.holds?(copy), "and so is every other line that left the view")
 
-    buffer = D::Buffer.new(["one", "two"], "a.txt", "\n")
+    buffer = D::Buffer.new(lines: ["one", "two"], path: "a.txt", line_ending: "\n")
     before = buffer.line(0)
     decoded_before = cache.fetch(before, 4)
-    buffer.insert(D::Position.new(0, 3), "!")
+    buffer.insert(D::Position.new(row: 0, col: 3), "!")
     after = buffer.line(0)
     t.assert_equal(false, after.equal?(before), "an edit replaces the line string")
     t.assert_equal("one", before, "and leaves the old string unchanged")
@@ -114,7 +114,7 @@ module DomainLineCacheTest
     # Motions classify code points: a word motion over UTF-8 text.
     t.assert_equal([0, 2, 1, 2], [D::Motions.code_class(32, false), D::Motions.code_class(0xE9, false), D::Motions.code_class(40, false), D::Motions.code_class(95, false)], "code classes of a blank, an accented letter, punctuation, and underscore")
     t.assert_equal(1, D::Motions.code_class(40, true), "every non-blank is one class for WORDs")
-    indented = D::Buffer.new(["  \tété", "    "], nil, "\n")
+    indented = D::Buffer.new(lines: ["  \tété", "    "], path: nil, line_ending: "\n")
     t.assert_equal([3, 3], [indented.first_nonblank(0), indented.first_nonblank(1)], "first_nonblank by bytes before UTF-8 text and on a blank line")
     t.assert_equal("  \t", indented.indent_of(0), "indent_of by bytes")
 

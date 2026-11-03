@@ -8,12 +8,12 @@ module DomainLayoutTest
   D = Carat::Domain
 
   def self.buffer_named(name)
-    Carat::Domain::Buffer.new(["a", "b", "c"], name, "\n")
+    Carat::Domain::Buffer.new(lines: ["a", "b", "c"], path: name, line_ending: "\n")
   end
 
   # A layout of one window arranged in rows by cols.
   def self.layout_in(rows, cols)
-    layout = Carat::Domain::Layout.new(Carat::Domain::Window.new(buffer_named("a.txt")))
+    layout = Carat::Domain::Layout.new(window: Carat::Domain::Window.new(buffer: buffer_named("a.txt")))
     layout.arrange(0, 0, rows, cols)
     layout
   end
@@ -36,14 +36,14 @@ module DomainLayoutTest
   # A side window at the edge of the layout: rows are
   # [label, [first, size, keys], [new id, leaves with rectangles after arrange]].
   def self.side(first, size, split_first)
-    page = D::TabPage.new(D::Window.new(buffer_named("a.txt")))
+    page = D::TabPage.new(window: D::Window.new(buffer: buffer_named("a.txt")))
     layout = page.layout
     layout.arrange(0, 0, 23, 80)
     if split_first
       other = layout.split(0, true, 0, MIN)
       layout.arrange(0, 0, 23, 80)
     end
-    side = D::Window.new(buffer_named("list"))
+    side = D::Window.new(buffer: buffer_named("list"))
     side.fixed_width = true
     id = layout.split_edge(side, size, first)
     layout.arrange(0, 0, 23, 80)
@@ -243,10 +243,10 @@ module DomainLayoutTest
     end
 
     # The side window keeps its width through equalize and a resize.
-    page = D::TabPage.new(D::Window.new(buffer_named("a.txt")))
+    page = D::TabPage.new(window: D::Window.new(buffer: buffer_named("a.txt")))
     layout = page.layout
     layout.arrange(0, 0, 23, 80)
-    side = D::Window.new(buffer_named("list"))
+    side = D::Window.new(buffer: buffer_named("list"))
     side.fixed_width = true
     id = layout.split_edge(side, 30, true)
     layout.arrange(0, 0, 23, 80)
@@ -264,7 +264,7 @@ module DomainLayoutTest
     t.assert_equal(true, layout.window_at(id).fixed_width, "the side window stays fixed-width")
 
     # The tab page remembers the previous window.
-    page = D::TabPage.new(D::Window.new(buffer_named("a.txt")))
+    page = D::TabPage.new(window: D::Window.new(buffer: buffer_named("a.txt")))
     page.layout.arrange(0, 0, 23, 80)
     top = page.layout.split(0, false, 0, MIN)
     page.focus(top)
@@ -276,11 +276,11 @@ module DomainLayoutTest
 
     # Leaves by window id and by buffer.
     shown = buffer_named("shown.txt")
-    w = D::Window.new(shown)
+    w = D::Window.new(buffer: shown)
     w.id = 7
-    lay = D::Layout.new(w)
+    lay = D::Layout.new(window: w)
     lay.arrange(0, 0, 20, 80)
-    other = D::Window.new(buffer_named("o.txt"))
+    other = D::Window.new(buffer: buffer_named("o.txt"))
     other.id = 8
     right = lay.split_edge(other, 20, false)
     t.assert_equal([0, right, -1], [lay.leaf_of(7), lay.leaf_of(8), lay.leaf_of(9)], "a leaf is found by its window's id")

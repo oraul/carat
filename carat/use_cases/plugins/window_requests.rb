@@ -73,7 +73,7 @@ module Carat
           end
           @buffers.remove(existing)
         end
-        buffer = Domain::Buffer.new(Boundary.copied_lines(lines), nil, "\n")
+        buffer = Domain::Buffer.new(lines: Boundary.copied_lines(lines), path: nil, line_ending: "\n")
         buffer.owner = name
         buffer.title = title
         keymap = Domain::Keymap.from_config(bindings, @registry.leader)
@@ -248,10 +248,10 @@ module Carat
       #: (Domain::Buffer, Array[String]) -> void
       def replace_lines(buffer, lines)
         state = @state
-        before = buffer.equal?(state.buffer) ? state.cursor.position : Domain::Position.new(0, 0)
+        before = buffer.equal?(state.buffer) ? state.cursor.position : Domain::Position.new(row: 0, col: 0)
         opened = buffer.begin_transaction(before)
         buffer.reload(Boundary.copied_lines(lines))
-        after = buffer.equal?(state.buffer) ? state.cursor.position : Domain::Position.new(0, 0)
+        after = buffer.equal?(state.buffer) ? state.cursor.position : Domain::Position.new(row: 0, col: 0)
         buffer.commit_transaction(after) if opened
       end
     end

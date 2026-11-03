@@ -26,7 +26,7 @@ module Carat
       def call(state, path)
         buffer = Domain::Buffer.from_text("", nil)
         @buffers.add(buffer)
-        @tabs.add_tab(Domain::TabPage.new(Domain::Window.new(buffer)))
+        @tabs.add_tab(Domain::TabPage.new(window: Domain::Window.new(buffer: buffer)))
         return Outcome.success("") if path.empty?
         @open_file.call(state, path)
       end

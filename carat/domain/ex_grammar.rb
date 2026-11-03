@@ -16,7 +16,7 @@ module Carat
         rest = s[j, s.length - j]
         bang = rest.start_with?("!")
         rest = rest[1, rest.length - 1] if bang
-        ExCommand.new(name, bang, rest.strip)
+        ExCommand.new(name: name, bang: bang, args: rest.strip)
       end
 
       #: (String) -> bool

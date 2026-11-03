@@ -23,7 +23,7 @@ module Carat
     # history marks the transaction of an undo or a redo, which observers
     # see like any other but which is not kept as an undo state, and whose
     # records are never merged. A Struct record.
-    class Transaction < Struct.new(:buffer_id, :before, :after, :records, :cause, :history, :sealed)
+    class Transaction < Struct.new(:buffer_id, :before, :after, :records, :cause, :history, :sealed, keyword_init: true)
       # @rbs @buffer_id: Integer
       # @rbs @before: Position
       # @rbs @after: Position
@@ -34,8 +34,8 @@ module Carat
 
       # The empty list is stored through the writer, not passed to super,
       # so its element type is the pinned one.
-      #: (Integer, Position) -> void
-      def initialize(buffer_id, before)
+      #: (buffer_id: Integer, before: Position) -> void
+      def initialize(buffer_id:, before:)
         super()
         self.buffer_id = buffer_id
         self.before = before

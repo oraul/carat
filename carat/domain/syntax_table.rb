@@ -8,14 +8,14 @@ module Carat
     # over String#object_id in an integer array; a key that matches is
     # confirmed with equal? on the entry's text, which the entry keeps
     # alive. The table doubles when it is half full. A Struct record.
-    class SyntaxTable < Struct.new(:keys, :entries, :mask, :count)
+    class SyntaxTable < Struct.new(:keys, :entries, :mask, :count, keyword_init: true)
       # @rbs @keys: Array[Integer]
       # @rbs @entries: Array[untyped]
       # @rbs @mask: Integer
       # @rbs @count: Integer
 
-      #: (Integer) -> void
-      def initialize(capacity)
+      #: (capacity: Integer) -> void
+      def initialize(capacity:)
         super()
         self.keys = Array.new(capacity, 0)
         self.entries = Array.new(capacity, nil)

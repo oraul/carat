@@ -5,7 +5,7 @@ module Carat
     # two plugins mark a row), the glyphs it used, and one mark per line of
     # the buffer, 0 for none and k for the k-th glyph. The buffer moves the
     # marks with its lines. A Struct record.
-    class SignLayer < Struct.new(:owner, :priority, :glyphs, :marks)
+    class SignLayer < Struct.new(:owner, :priority, :glyphs, :marks, keyword_init: true)
       # @rbs @owner: String
       # @rbs @priority: Integer
       # @rbs @glyphs: Array[String]
@@ -13,8 +13,8 @@ module Carat
 
       # The glyph list is stored through the writer, so the empty literal
       # takes the pinned type; marks starts with a 0 per line.
-      #: (String, Integer, Integer) -> void
-      def initialize(owner, priority, line_count)
+      #: (owner: String, priority: Integer, line_count: Integer) -> void
+      def initialize(owner:, priority:, line_count:)
         super()
         self.owner = owner
         self.priority = priority

@@ -12,7 +12,7 @@ module DomainFrameTest
     t = Carat::Testing.new("domain_frame")
 
     # A fresh frame: flat cells, all blank, every row dirty, no base.
-    f = D::Frame.new(3, 5)
+    f = D::Frame.new(rows: 3, cols: 5)
     t.assert_equal([15, 15, 15], [f.codes.length, f.widths.length, f.hls.length], "three flat arrays of rows * cols cells")
     t.assert_equal([D::Frame::SPACE, 1, H::NORMAL], [f.code_at(2, 4), f.width_at(2, 4), f.hl_at(2, 4)], "a fresh cell is a blank")
     t.assert_equal([0, 1, 2], f.dirty_rows, "every row of a fresh frame is dirty")
@@ -32,7 +32,7 @@ module DomainFrameTest
     t.assert_equal(2, f.put(2, 0, "éx", H::NORMAL), "a combining mark takes no cell")
 
     # Line numbers, blanks, and highlights.
-    g = D::Frame.new(2, 8)
+    g = D::Frame.new(rows: 2, cols: 8)
     g.put_number(0, 0, 3, 42, 4, H::LINE_NUMBER)
     t.assert_equal(" 42", g.row_text(0), "a number right-aligned in its field and a space")
     t.assert_equal([H::LINE_NUMBER, H::LINE_NUMBER], [g.hl_at(0, 0), g.hl_at(0, 3)], "the whole gutter takes the highlight")
@@ -47,14 +47,14 @@ module DomainFrameTest
     t.assert_equal(H::NORMAL, g.hl_at(1, 7), "blank stops at the right edge")
 
     # Comparing rows and the bookkeeping of a paint.
-    a = D::Frame.new(2, 4)
-    b = D::Frame.new(2, 4)
+    a = D::Frame.new(rows: 2, cols: 4)
+    b = D::Frame.new(rows: 2, cols: 4)
     a.put(0, 0, "ab", H::NORMAL)
     b.put(1, 0, "ab", H::NORMAL)
     t.assert_equal([true, false, true], [a.same_row?(0, b, 1), a.same_row?(0, b, 0), a.same_row?(1, b, 0)], "rows are compared cell by cell, from any row of another frame")
     b.put(1, 0, "ab", H::STATUS)
     t.assert_equal(false, a.same_row?(0, b, 1), "a different highlight is a different row")
-    t.assert_equal(false, a.same_row?(0, D::Frame.new(2, 5), 0), "a frame of another width never has the same row")
+    t.assert_equal(false, a.same_row?(0, D::Frame.new(rows: 2, cols: 5), 0), "a frame of another width never has the same row")
     a.reset_rows
     t.assert_equal([], a.dirty_rows, "a paint starts with every row clean")
     a.add_scroll(0, 1, -1)
@@ -63,7 +63,7 @@ module DomainFrameTest
     t.assert_equal([[0, 1], 0], [a.dirty_rows, a.scroll_count], "marking every row dirty drops the scrolls")
 
     # Resizing is reallocation: a frame of another size is a new frame.
-    c = D::Frame.new(4, 6)
+    c = D::Frame.new(rows: 4, cols: 6)
     t.assert_equal([24, 4, 4], [c.codes.length, c.dirty.length, c.sources.length], "a frame of another size has arrays of its size")
 
     t.finish

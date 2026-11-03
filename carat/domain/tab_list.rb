@@ -10,20 +10,20 @@ module Carat
     # the buffer feed reports every closed transaction with its first
     # changed row, and the cursors on or below it are clamped. A Struct
     # record: mutable, with a reader and a writer per member.
-    class TabList < Struct.new(:pages, :tab_index, :next_window_id)
+    class TabList < Struct.new(:pages, :tab_index, :next_window_id, keyword_init: true)
       # @rbs @pages: Array[untyped]
       # @rbs @tab_index: Integer
       # @rbs @next_window_id: Integer
 
       # One tab page with the first window, which gets the first id. The
       # list is stored through the writer, so it takes the pinned type.
-      #: (Window) -> void
-      def initialize(first)
+      #: (window: Window) -> void
+      def initialize(window:)
         super()
         self.pages = []
         self.next_window_id = 1
-        adopt(first)
-        pages << TabPage.new(first)
+        adopt(window)
+        pages << TabPage.new(window: window)
         self.tab_index = 0
       end
 

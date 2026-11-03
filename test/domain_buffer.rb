@@ -8,7 +8,7 @@ module DomainBufferTest
   D = Carat::Domain
 
   def self.pos(row, col)
-    Carat::Domain::Position.new(row, col)
+    Carat::Domain::Position.new(row: row, col: col)
   end
 
   # A table row's values are untyped; the buffer takes typed arrays, and an
@@ -30,7 +30,7 @@ module DomainBufferTest
 
   # Read helpers for operators: rows are [label, [lines, range], expected].
   def self.rng(r1, c1, r2, c2, inclusive)
-    D::Range.new(D::Position.new(r1, c1), D::Position.new(r2, c2), :charwise, inclusive)
+    D::Range.new(from: D::Position.new(row: r1, col: c1), to: D::Position.new(row: r2, col: c2), kind: :charwise, inclusive: inclusive)
   end
 
   def self.main
@@ -75,12 +75,12 @@ module DomainBufferTest
       ["insert empty text", [["xy"], 0, 1, ""], ["xy"]],
       ["insert on second line", [["a", "b"], 1, 0, "z"], ["a", "zb"]]
     ]) do |input|
-      b = D::Buffer.new(strings(input[0]), nil, "\n")
+      b = D::Buffer.new(lines: strings(input[0]), path: nil, line_ending: "\n")
       b.insert(pos(input[1].to_i, input[2].to_i), input[3].to_s)
       b.lines
     end
 
-    b = D::Buffer.new(["xy"], nil, "\n")
+    b = D::Buffer.new(lines: ["xy"], path: nil, line_ending: "\n")
     b.insert(pos(0, 1), "a")
     t.assert_true(b.modified?, "insert marks the buffer modified")
 
@@ -93,21 +93,21 @@ module DomainBufferTest
       ["delete nothing", [["abcd"], 0, 2, 0, 2], ["abcd"]],
       ["delete whole buffer", [["ab", "cd"], 0, 0, 1, 2], [""]]
     ]) do |input|
-      b = D::Buffer.new(strings(input[0]), nil, "\n")
+      b = D::Buffer.new(lines: strings(input[0]), path: nil, line_ending: "\n")
       b.delete(range(input[1].to_i, input[2].to_i, input[3].to_i, input[4].to_i))
       b.lines
     end
 
-    inclusive = D::Range.new(pos(0, 1), pos(0, 2), :charwise, true)
-    b = D::Buffer.new(["abcd"], nil, "\n")
+    inclusive = D::Range.new(from: pos(0, 1), to: pos(0, 2), kind: :charwise, inclusive: true)
+    b = D::Buffer.new(lines: ["abcd"], path: nil, line_ending: "\n")
     b.delete(inclusive)
     t.assert_equal(["ad"], b.lines, "inclusive range deletes its end character")
 
     # Replace.
-    b = D::Buffer.new(["abcd"], nil, "\n")
+    b = D::Buffer.new(lines: ["abcd"], path: nil, line_ending: "\n")
     b.replace(range(0, 1, 0, 3), "XYZ")
     t.assert_equal(["aXYZd"], b.lines, "replace within a line")
-    b = D::Buffer.new(["ab", "cd"], nil, "\n")
+    b = D::Buffer.new(lines: ["ab", "cd"], path: nil, line_ending: "\n")
     b.replace(range(0, 1, 1, 1), "-\n-")
     t.assert_equal(["a-", "-d"], b.lines, "replace across lines")
 
@@ -118,12 +118,12 @@ module DomainBufferTest
       ["remove every line leaves one", [["a", "b"], 0, 2, []], [""]],
       ["append at the end", [["a"], 1, 1, ["b"]], ["a", "b"]]
     ]) do |input|
-      b = D::Buffer.new(strings(input[0]), nil, "\n")
+      b = D::Buffer.new(lines: strings(input[0]), path: nil, line_ending: "\n")
       b.set_lines(input[1].to_i, input[2].to_i, strings(input[3]))
       b.lines
     end
 
-    b = D::Buffer.new(["a", "b"], nil, "\n")
+    b = D::Buffer.new(lines: ["a", "b"], path: nil, line_ending: "\n")
     b.set_lines(0, 2, strings([]))
     t.assert_true(b.modified?, "set_lines marks the buffer modified")
 
@@ -146,13 +146,14 @@ module DomainBufferTest
     t.assert_equal([2, 4], p1.with(col: 4).to_a, "with copies a position")
     t.assert_equal([2, 3], p1.to_a, "with leaves the original unchanged")
     r1 = D::Range.charwise(pos(0, 0), pos(0, 2))
-    r2 = D::Range.new(pos(0, 0), pos(0, 2), :charwise, false)
+    r2 = D::Range.new(from: pos(0, 0), to: pos(0, 2), kind: :charwise, inclusive: false)
     t.assert_true(r1 == r2, "ranges are equal by value")
     t.assert_true(r1.frozen?, "ranges are frozen")
 
-    # Struct semantics the mutable records rely on: positional construction,
+    # Struct semantics the mutable records rely on: keyword construction,
     # readers and writers, members, and the constructor defaults.
-    c = D::Cursor.new(2, 3)
+    c = D::Cursor.new(row: 2, col: 3)
+    t.assert_equal([true, true, true, true], [D::Cursor.keyword_init? == true, D::Buffer.keyword_init? == true, D::Cell.keyword_init? == true, D::Window.keyword_init? == true], "struct records are built with keywords")
     t.assert_equal([2, 3, 3], [c.row, c.col, c.want_col], "a cursor starts wanting its column")
     c.col = 5
     t.assert_equal(5, c.col, "a cursor member has a writer")
@@ -160,7 +161,7 @@ module DomainBufferTest
     t.assert_equal([4, 1], c.to_a, "to_a is the position pair without want_col")
     t.assert_equal([:row, :col, :want_col], D::Cursor.members, "cursor members in constructor order")
     t.assert_equal(false, c.frozen?, "records are not frozen")
-    w = D::Window.new(D::Buffer.from_text("ab\n", "w.txt"))
+    w = D::Window.new(buffer: D::Buffer.from_text("ab\n", "w.txt"))
     t.assert_equal([0, 0, 0, "w.txt", [0, 0], false], [w.top, w.left, w.height, w.buffer.path, w.cursor.to_a, w.fixed_width], "a window starts at the origin with no height, showing its buffer from the start")
     w.top = 7
     t.assert_equal(7, w.top, "a window member has a writer")
@@ -177,9 +178,9 @@ module DomainBufferTest
       ["text of a range to a line end", [["ab", "cd"], rng(0, 1, 0, 2, false)], "b"],
       ["text of an empty range", [["ab"], rng(0, 1, 0, 1, false)], ""]
     ]) do |input|
-      D::Buffer.new(strings(input[0]), nil, "\n").text_of(input[1])
+      D::Buffer.new(lines: strings(input[0]), path: nil, line_ending: "\n").text_of(input[1])
     end
-    b = D::Buffer.new(["  ab", "cd", "", "\tef"], nil, "\n")
+    b = D::Buffer.new(lines: ["  ab", "cd", "", "\tef"], path: nil, line_ending: "\n")
     t.assert_equal(["cd", ""], b.lines_of(1, 2), "lines_of copies the rows")
     copy = b.lines_of(0, 0)
     copy << "x"
@@ -189,9 +190,9 @@ module DomainBufferTest
     t.assert_equal("", b.line(9), "a row outside the buffer reads as empty")
 
     # Scratch members, signs, and the change counter.
-    b = D::Buffer.new(["ab"], nil, "\n")
+    b = D::Buffer.new(lines: ["ab"], path: nil, line_ending: "\n")
     t.assert_equal([false, "", "", true, nil, 0], [b.scratch?, b.owner, b.title, b.keymap.nil?, b.display_name, b.changes], "a file buffer has no owner, title, keymap, or changes")
-    b.insert(D::Position.new(0, 1), "x")
+    b.insert(D::Position.new(row: 0, col: 1), "x")
     b.delete(rng(0, 0, 0, 1, false))
     b.set_lines(0, 1, ["y"])
     t.assert_equal(3, b.changes, "every primitive counts one change")
@@ -200,7 +201,7 @@ module DomainBufferTest
     b.owner = "hello"
     b.title = "list"
     t.assert_equal([true, "list"], [b.scratch?, b.display_name], "a scratch buffer is named by its title")
-    named = D::Buffer.new(["ab"], "a.txt", "\n")
+    named = D::Buffer.new(lines: ["ab"], path: "a.txt", line_ending: "\n")
     t.assert_equal("a.txt", named.display_name, "a file buffer is named by its path")
     t.assert_equal(false, b.signs?, "no signs at first")
     b.place_sign("hello", 0, 0, "X")

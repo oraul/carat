@@ -24,7 +24,7 @@ module Carat
     # It also keeps the line "U" restores: line_row (-1 for none), the text
     # it had before the latest run of changes on it, and the cursor column
     # then. A Struct record: mutable, with a reader and a writer per member.
-    class UndoTree < Struct.new(:base, :parents, :heads, :children, :depths, :saves, :times, :transactions, :root, :root_head, :root_children, :root_depth, :current, :last, :saved, :pending_save, :save_count, :live, :line_row, :line_text, :line_col)
+    class UndoTree < Struct.new(:base, :parents, :heads, :children, :depths, :saves, :times, :transactions, :root, :root_head, :root_children, :root_depth, :current, :last, :saved, :pending_save, :save_count, :live, :line_row, :line_text, :line_col, keyword_init: true)
       # @rbs @base: Integer
       # @rbs @parents: Array[Integer]
       # @rbs @heads: Array[Integer]

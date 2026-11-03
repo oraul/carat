@@ -8,7 +8,7 @@ module DomainEditsTest
   D = Carat::Domain
 
   def self.pos(row, col)
-    Carat::Domain::Position.new(row, col)
+    Carat::Domain::Position.new(row: row, col: col)
   end
 
   def self.letters(n)
@@ -83,15 +83,15 @@ module DomainEditsTest
     t.assert_equal([0, 330], [mismatches, cases], "every span of a 30-line array splices like array arithmetic")
 
     # Buffer splices keep at least one line.
-    b = D::Buffer.new(["a", "b"], nil, "\n")
+    b = D::Buffer.new(lines: ["a", "b"], path: nil, line_ending: "\n")
     b.set_lines(0, 2, [])
     t.assert_equal([[""], [""]], [b.lines, b.last_transaction.record_at(0).inserted], "an edit that removes every line inserts one empty line, and its record says so")
-    b = D::Buffer.new(["a", "b"], nil, "\n")
+    b = D::Buffer.new(lines: ["a", "b"], path: nil, line_ending: "\n")
     b.set_lines(5, 9, ["z"])
     t.assert_equal(["a", "b", "z"], b.lines, "rows past the end are clamped to an append")
 
     # Change records: one per primitive, sharing the line strings.
-    b = D::Buffer.new(["a", "b", "c"], nil, "\n")
+    b = D::Buffer.new(lines: ["a", "b", "c"], path: nil, line_ending: "\n")
     old = b.lines[1]
     b.set_lines(1, 2, [])
     rec = b.last_transaction.record_at(0)
@@ -105,7 +105,7 @@ module DomainEditsTest
     b.insert(pos(0, 0), "x")
     b.set_lines(0, 3, ["q"])
     t.assert_equal([["a"], ["a1", "2"]], [rec.removed, rec.inserted], "later edits leave an earlier record unchanged: lines are never mutated in place")
-    b = D::Buffer.new(["ab", "cd"], nil, "\n")
+    b = D::Buffer.new(lines: ["ab", "cd"], path: nil, line_ending: "\n")
     before = b.changes
     b.replace(D::Range.charwise(pos(0, 1), pos(1, 1)), "-\n-")
     rec = b.last_transaction.record_at(0)
@@ -130,7 +130,7 @@ module DomainEditsTest
     t.assert_equal(true, b.modified?, "a buffer whose saved text is gone is modified")
 
     # Transactions group the records of one command.
-    b = D::Buffer.new(["a", "b", "c", "d"], nil, "\n")
+    b = D::Buffer.new(lines: ["a", "b", "c", "d"], path: nil, line_ending: "\n")
     t.assert_equal([true, false], [b.begin_transaction(pos(0, 0)), b.begin_transaction(pos(3, 0))], "a second open joins the first")
     b.set_lines(0, 1, [])
     b.set_lines(0, 1, [])
@@ -150,7 +150,7 @@ module DomainEditsTest
 
     # A transaction's span merges its records over the text before it:
     # [first row, rows removed, rows inserted].
-    b = D::Buffer.new(["a", "b", "c", "d", "e"], nil, "\n")
+    b = D::Buffer.new(lines: ["a", "b", "c", "d", "e"], path: nil, line_ending: "\n")
     b.begin_transaction(pos(0, 0))
     b.set_lines(3, 4, [])
     b.set_lines(1, 1, ["x", "y"])
@@ -165,19 +165,19 @@ module DomainEditsTest
     t.assert_equal([0, 5, 3], b.last_transaction.span, "a record above an earlier one moves the span's start")
 
     # A transaction joined by records of another cause is the editor's.
-    b = D::Buffer.new(["a"], nil, "\n")
+    b = D::Buffer.new(lines: ["a"], path: nil, line_ending: "\n")
     b.begin_transaction(pos(0, 0))
     b.last_transaction
     tx = b.transaction
-    tx.add(D::ChangeRecord.new(0, 0, [], []), "probe")
+    tx.add(D::ChangeRecord.new(buffer_id: 0, row: 0, removed: [], inserted: []), "probe")
     t.assert_equal("probe", tx.cause, "the first record gives the cause")
-    tx.add(D::ChangeRecord.new(0, 0, [], []), "probe")
+    tx.add(D::ChangeRecord.new(buffer_id: 0, row: 0, removed: [], inserted: []), "probe")
     t.assert_equal("probe", tx.cause, "records of the same cause keep it")
-    tx.add(D::ChangeRecord.new(0, 0, [], []), "")
+    tx.add(D::ChangeRecord.new(buffer_id: 0, row: 0, removed: [], inserted: []), "")
     t.assert_equal("", tx.cause, "a record of another cause makes it the editor's")
 
     # revert_to undoes the open transaction's records after a count.
-    b = D::Buffer.new(["one", "two", "three"], nil, "\n")
+    b = D::Buffer.new(lines: ["one", "two", "three"], path: nil, line_ending: "\n")
     b.place_sign("p", 0, 2, "S")
     b.begin_transaction(pos(0, 0))
     b.insert(pos(0, 0), "x")
@@ -190,7 +190,7 @@ module DomainEditsTest
     b.commit_transaction(pos(0, 0))
 
     # Signs move with their lines, one layer per plugin in priority order.
-    b = D::Buffer.new(["a", "b", "c", "d"], nil, "\n")
+    b = D::Buffer.new(lines: ["a", "b", "c", "d"], path: nil, line_ending: "\n")
     b.place_sign("git", 1, 2, "G")
     b.set_lines(0, 0, ["new"])
     t.assert_equal(["", "G"], [b.sign_at(2), b.sign_at(3)], "a line inserted above moves the sign down")
@@ -202,7 +202,7 @@ module DomainEditsTest
     t.assert_equal("G", b.sign_at(1), "lines deleted above move it up")
     b.set_lines(1, 2, [])
     t.assert_equal([false, ""], [b.sign_at(1) == "G", b.sign_at(0)], "deleting its line removes it")
-    b = D::Buffer.new(["a", "b"], nil, "\n")
+    b = D::Buffer.new(lines: ["a", "b"], path: nil, line_ending: "\n")
     b.place_sign("second", 5, 0, "2")
     b.place_sign("first", 1, 0, "1")
     b.place_sign("first", 1, 0, "!")

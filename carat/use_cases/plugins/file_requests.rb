@@ -31,7 +31,7 @@ module Carat
       def stat(name, path)
         info = @file_ops.probe(path)
         return PluginApi::FileInfo.missing unless info.exists
-        PluginApi::FileInfo.new(true, info.size, info.mtime, info.directory, info.symlink)
+        PluginApi::FileInfo.new(ok: true, size: info.size, mtime: info.mtime, directory: info.directory, symlink: info.symlink)
       end
 
       #: (String, String, String) -> PluginApi::Response

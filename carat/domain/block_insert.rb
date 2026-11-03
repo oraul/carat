@@ -8,7 +8,7 @@ module Carat
     # every row's end), and the column the cursor goes to afterwards (-1
     # for the usual one column left). A Struct record held by the editor
     # state; active is false when nothing is owed.
-    class BlockInsert < Struct.new(:active, :kind, :row, :col, :length, :line_count, :rows, :vcol, :home)
+    class BlockInsert < Struct.new(:active, :kind, :row, :col, :length, :line_count, :rows, :vcol, :home, keyword_init: true)
       # @rbs @active: bool
       # @rbs @kind: Symbol
       # @rbs @row: Integer
@@ -21,7 +21,7 @@ module Carat
 
       #: () -> void
       def initialize
-        super(false, :none, 0, 0, 0, 0, [], 0, -1)
+        super(active: false, kind: :none, row: 0, col: 0, length: 0, line_count: 0, rows: [], vcol: 0, home: -1)
       end
 
       #: (Symbol, Integer, Integer, Integer, Integer, Array[Integer], Integer, Integer) -> void

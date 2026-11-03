@@ -41,7 +41,7 @@ module Carat
           attrs[id] = rows[i + 5]
           i += 6
         end
-        new(name, fgs, bgs, fgs16, bgs16, attrs)
+        new(name: name, fgs: fgs, bgs: bgs, fgs16: fgs16, bgs16: bgs16, attrs: attrs)
       end
 
       #: (Integer) -> Integer

@@ -11,7 +11,7 @@ module Carat
     # fill as bindings are added, errors collect as they are found, and
     # conflicts between plugins collect as "mode.keys is already bound by
     # plugin name".
-    class Keymap < Struct.new(:roots, :errors, :conflicts)
+    class Keymap < Struct.new(:roots, :errors, :conflicts, keyword_init: true)
       ACTION_NAME = /\A[a-z0-9_]+(\.[a-z0-9_]+)+\z/
 
       # @rbs @roots: Hash[String, KeymapNode]
@@ -202,18 +202,18 @@ module Carat
         node = root(mode)
         i = 0
         while i < codes.length
-          return KeymapMatch.new(:none, nil) unless node.child?(codes[i])
+          return KeymapMatch.new(kind: :none, value: nil) unless node.child?(codes[i])
           node = node.child_for(codes[i])
           i += 1
         end
         value = node.value
         if value.nil?
-          return KeymapMatch.new(:none, nil) if node.leaf?
-          KeymapMatch.new(:prefix, nil)
+          return KeymapMatch.new(kind: :none, value: nil) if node.leaf?
+          KeymapMatch.new(kind: :prefix, value: nil)
         elsif node.leaf?
-          KeymapMatch.new(:match, value)
+          KeymapMatch.new(kind: :match, value: value)
         else
-          KeymapMatch.new(:match_prefix, value)
+          KeymapMatch.new(kind: :match_prefix, value: value)
         end
       end
 

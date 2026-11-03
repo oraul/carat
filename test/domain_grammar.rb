@@ -149,9 +149,9 @@ module DomainGrammarTest
     c = D::Command.plain("mode.insert")
     t.assert_equal(["", 0, "", "mode.insert", "", false, []], [c.register, c.count, c.operator, c.action, c.char, c.linewise, c.keys], "a plain command")
     t.assert_equal(1, c.count_or(1), "count_or with no count")
-    t.assert_equal(4, D::Command.new("", 4, "", "x", "", false, []).count_or(1), "count_or with a count")
+    t.assert_equal(4, D::Command.new(register: "", count: 4, operator: "", action: "x", char: "", linewise: false, keys: []).count_or(1), "count_or with a count")
     t.assert_true(!c.operator?, "a plain command has no operator")
-    f = D::Find.new(".", true, true)
+    f = D::Find.new(char: ".", forward: true, till: true)
     t.assert_equal([".", false, true], [f.reversed.char, f.reversed.forward, f.reversed.till], "reversed flips the direction")
 
     t.finish

@@ -44,10 +44,10 @@ module Carat
         action = command.action
         count = command.count
         case action
-        when "motion.find_forward" then remember(state, last_find, Find.new(command.char, true, false), count)
-        when "motion.find_backward" then remember(state, last_find, Find.new(command.char, false, false), count)
-        when "motion.till_forward" then remember(state, last_find, Find.new(command.char, true, true), count)
-        when "motion.till_backward" then remember(state, last_find, Find.new(command.char, false, true), count)
+        when "motion.find_forward" then remember(state, last_find, Find.new(char: command.char, forward: true, till: false), count)
+        when "motion.find_backward" then remember(state, last_find, Find.new(char: command.char, forward: false, till: false), count)
+        when "motion.till_forward" then remember(state, last_find, Find.new(char: command.char, forward: true, till: true), count)
+        when "motion.till_backward" then remember(state, last_find, Find.new(char: command.char, forward: false, till: true), count)
         when "motion.repeat_find"
           find = last_find.entry
           find.nil? ? nil : find_char(state, find, count, true)
@@ -140,7 +140,7 @@ module Carat
         return nil if cursor.col == 0
         col = cursor.col - n
         col = 0 if col < 0
-        Motion.new(Position.new(cursor.row, col), false, false, :set)
+        Motion.new(target: Position.new(row: cursor.row, col: col), linewise: false, inclusive: false, want: :set)
       end
 
       #: (EditorState, Integer, bool) -> Motion?
@@ -150,12 +150,12 @@ module Carat
         return nil if cursor.col >= max
         col = cursor.col + n
         col = max if col > max
-        Motion.new(Position.new(cursor.row, col), false, false, :set)
+        Motion.new(target: Position.new(row: cursor.row, col: col), linewise: false, inclusive: false, want: :set)
       end
 
       #: (EditorState, Integer) -> Motion?
       def self.horizontal(state, col)
-        Motion.new(Position.new(state.cursor.row, col), false, false, :set)
+        Motion.new(target: Position.new(row: state.cursor.row, col: col), linewise: false, inclusive: false, want: :set)
       end
 
       #: (EditorState, Integer) -> Motion?
@@ -163,7 +163,7 @@ module Carat
         row = state.cursor.row + n - 1
         last = state.buffer.line_count - 1
         row = last if row > last
-        Motion.new(Position.new(row, state.max_col(row)), false, true, :end)
+        Motion.new(target: Position.new(row: row, col: state.max_col(row)), linewise: false, inclusive: true, want: :end)
       end
 
       # f, F, t, and T, and their repeats: the count-th occurrence of the
@@ -184,7 +184,7 @@ module Carat
           n -= 1 if line[col, 1] == ch
         end
         col -= step if find.till
-        Motion.new(Position.new(cursor.row, col), false, find.forward, :set)
+        Motion.new(target: Position.new(row: cursor.row, col: col), linewise: false, inclusive: find.forward, want: :set)
       end
 
       # --------------------------------------------------------- up-down
@@ -209,7 +209,7 @@ module Carat
         last = state.buffer.line_count - 1
         row = last if row > last
         row = 0 if row < 0
-        Motion.new(Position.new(row, wanted_col(state, row)), true, false, :keep)
+        Motion.new(target: Position.new(row: row, col: wanted_col(state, row)), linewise: true, inclusive: false, want: :keep)
       end
 
       # The column the wanted column gives on row in the current mode.
@@ -231,14 +231,14 @@ module Carat
         row = cursor.row + delta
         row = 0 if row < 0
         row = last if row > last
-        Motion.new(Position.new(row, state.buffer.first_nonblank(row)), true, false, :set)
+        Motion.new(target: Position.new(row: row, col: state.buffer.first_nonblank(row)), linewise: true, inclusive: false, want: :set)
       end
 
       # ------------------------------------------------------------ words
 
       #: (EditorState) -> Walker
       def self.walker(state)
-        Walker.new(state.buffer, state.cursor.row, state.cursor.col)
+        Walker.new(buffer: state.buffer, row: state.cursor.row, col: state.cursor.col)
       end
 
       # A charwise motion to where the walker stopped. A word motion may end
@@ -250,7 +250,7 @@ module Carat
         len = w.buffer.line(w.row).length
         col = w.col
         col = len - 1 if col >= len && len > 0 && (!pending || inclusive)
-        Motion.new(Position.new(w.row, col), false, inclusive, :set)
+        Motion.new(target: Position.new(row: w.row, col: col), linewise: false, inclusive: inclusive, want: :set)
       end
 
       #: (EditorState, Integer, bool, bool) -> Motion?
@@ -440,9 +440,9 @@ module Carat
         count = buffer.line_count
         while row < count
           line = buffer.line(row)
-          return Position.new(row, 0) if line.empty? && col == 0
+          return Position.new(row: row, col: 0) if line.empty? && col == 0
           while col < line.length
-            return Position.new(row, col) unless blank?(line[col, 1])
+            return Position.new(row: row, col: col) unless blank?(line[col, 1])
             col += 1
           end
           row += 1
@@ -455,7 +455,7 @@ module Carat
       #: (Buffer) -> Position
       def self.buffer_end(buffer)
         row = buffer.line_count - 1
-        Position.new(row, buffer.line(row).length)
+        Position.new(row: row, col: buffer.line(row).length)
       end
 
       #: (EditorState, Integer, bool) -> Motion?
@@ -488,7 +488,7 @@ module Carat
         len = buffer.line(pos.row).length
         col = pos.col
         col = len - 1 if col >= len && len > 0 && !pending
-        Motion.new(Position.new(pos.row, col), false, false, :set)
+        Motion.new(target: Position.new(row: pos.row, col: col), linewise: false, inclusive: false, want: :set)
       end
 
       #: (EditorState, Integer) -> Motion?
@@ -506,10 +506,10 @@ module Carat
             end
             i -= 1
           end
-          pos = found < 0 ? Position.new(0, 0) : starts.position(found)
+          pos = found < 0 ? Position.new(row: 0, col: 0) : starts.position(found)
         end
         return nil if pos == state.cursor.position
-        Motion.new(Position.new(pos.row, pos.col), false, false, :set)
+        Motion.new(target: Position.new(row: pos.row, col: pos.col), linewise: false, inclusive: false, want: :set)
       end
 
       # ------------------------------------------------------- paragraphs
@@ -534,7 +534,7 @@ module Carat
         if row >= last && !buffer.line(last).empty?
           end_motion(buffer, buffer_end(buffer), pending)
         else
-          Motion.new(Position.new(row, 0), false, false, :set)
+          Motion.new(target: Position.new(row: row, col: 0), linewise: false, inclusive: false, want: :set)
         end
       end
 
@@ -552,7 +552,7 @@ module Carat
             row -= 1
           end
         end
-        Motion.new(Position.new(row, 0), false, false, :set)
+        Motion.new(target: Position.new(row: row, col: 0), linewise: false, inclusive: false, want: :set)
       end
 
       # ----------------------------------------------------------- screen

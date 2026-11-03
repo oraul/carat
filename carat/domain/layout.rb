@@ -8,7 +8,7 @@ module Carat
     # as one leaf. Sizes are kept consistent by arrange, which assigns every
     # leaf window its rectangle; split, close, equalize, and neighbour work
     # from the rectangles of the last arrange. A Struct record.
-    class Layout < Struct.new(:nodes, :root)
+    class Layout < Struct.new(:nodes, :root, keyword_init: true)
       # @rbs @nodes: Array[untyped]
       # @rbs @root: Integer
 
@@ -17,12 +17,12 @@ module Carat
 
       # The empty table is stored through the writer, not passed to super,
       # so its element type is the pinned one.
-      #: (Window) -> void
-      def initialize(window)
+      #: (window: Window) -> void
+      def initialize(window:)
         super()
         self.nodes = []
         self.root = 0
-        nodes << LayoutNode.new(:leaf, -1, window)
+        nodes << LayoutNode.new(kind: :leaf, parent: -1, window: window)
       end
 
       #: (Integer) -> LayoutNode
@@ -35,7 +35,7 @@ module Carat
       #: (Integer) -> Window
       def window_at(id)
         window = node(id).window
-        window.nil? ? Window.new(Buffer.from_text("", nil)) : window
+        window.nil? ? Window.new(buffer: Buffer.from_text("", nil)) : window
       end
 
       # The number of slots of the node table, free ones included; a walk
@@ -125,7 +125,7 @@ module Carat
           new_size = new_text + 1
           old_size = text + 1 - new_size
         end
-        fresh = Window.new(old.buffer)
+        fresh = Window.new(buffer: old.buffer)
         fresh.copy_from(old)
         kind = vertical ? :row : :column
         parent_id = leaf.parent
@@ -339,12 +339,12 @@ module Carat
         i = 0
         while i < nodes.length
           if node(i).kind == :free
-            nodes[i] = LayoutNode.new(kind, parent, window)
+            nodes[i] = LayoutNode.new(kind: kind, parent: parent, window: window)
             return i
           end
           i += 1
         end
-        nodes << LayoutNode.new(kind, parent, window)
+        nodes << LayoutNode.new(kind: kind, parent: parent, window: window)
         nodes.length - 1
       end
 

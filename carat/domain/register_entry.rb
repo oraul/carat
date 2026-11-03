@@ -10,18 +10,18 @@ module Carat
 
       #: (String) -> RegisterEntry
       def self.charwise(text)
-        RegisterEntry.new(text, :charwise)
+        RegisterEntry.new(text: text, kind: :charwise)
       end
 
       #: (Array[String]) -> RegisterEntry
       def self.lines(lines)
-        RegisterEntry.new(lines.join("\n"), :linewise)
+        RegisterEntry.new(text: lines.join("\n"), kind: :linewise)
       end
 
       # A block of rows, as a blockwise visual yank stores it.
       #: (Array[String]) -> RegisterEntry
       def self.block(rows)
-        RegisterEntry.new(rows.join("\n"), :blockwise)
+        RegisterEntry.new(text: rows.join("\n"), kind: :blockwise)
       end
 
       #: () -> bool
@@ -50,11 +50,11 @@ module Carat
       #: (RegisterEntry, RegisterEntry) -> RegisterEntry
       def self.joined(first, second)
         if first.kind == :linewise || second.kind == :linewise
-          RegisterEntry.new(first.text + "\n" + second.text, :linewise)
+          RegisterEntry.new(text: first.text + "\n" + second.text, kind: :linewise)
         elsif first.kind == :blockwise || second.kind == :blockwise
-          RegisterEntry.new(first.text + "\n" + second.text, :blockwise)
+          RegisterEntry.new(text: first.text + "\n" + second.text, kind: :blockwise)
         else
-          RegisterEntry.new(first.text + second.text, :charwise)
+          RegisterEntry.new(text: first.text + second.text, kind: :charwise)
         end
       end
     end

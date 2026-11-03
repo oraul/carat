@@ -43,7 +43,7 @@ module UseCasesPluginsTest
     # Returns the manifest.
     # @rbs skip
     def manifest
-      Carat::PluginApi::Manifest.new(@name, "1.0.0", @api, @actions, @commands, @bindings, @events, { "depth" => "3", "deep" => "false", "names" => "a\nb" }, { "depth" => "integer", "deep" => "bool", "names" => "list" }, [])
+      Carat::PluginApi::Manifest.new(name: @name, version: "1.0.0", api_version: @api, actions: @actions, commands: @commands, bindings: @bindings, events: @events, options: { "depth" => "3", "deep" => "false", "names" => "a\nb" }, option_types: { "depth" => "integer", "deep" => "bool", "names" => "list" }, filetypes: [])
     end
 
     #: (Carat::PluginApi::Host) -> void
@@ -121,10 +121,10 @@ module UseCasesPluginsTest
     files.put("dir/b.txt", "1\n")
     files.put("dir/a.txt", "2\n")
     first = Carat::Domain::Buffer.from_text("", nil)
-    tabs = Carat::Domain::TabList.new(Carat::Domain::Window.new(first))
-    buffers = Carat::Domain::BufferList.new(tabs)
+    tabs = Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: first))
+    buffers = Carat::Domain::BufferList.new(tabs: tabs)
     buffers.add(first)
-    state = Carat::Domain::EditorState.new(tabs, Carat::Domain::Options.new)
+    state = Carat::Domain::EditorState.new(tabs: tabs, options: Carat::Domain::Options.new)
     keymap = Carat::Domain::Keymap.new
     commands = Carat::UseCases::ExTable.new
     ex = Carat::UseCases::ExecuteEx.new(commands: commands)
@@ -217,7 +217,7 @@ module UseCasesPluginsTest
     rig = setup([p], {})
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     state.cursor.row = 1
-    host.action("plugin.probe.go", D::Command.new("a", 3, "", "plugin.probe.go", "", false, []))
+    host.action("plugin.probe.go", D::Command.new(register: "a", count: 3, operator: "", action: "plugin.probe.go", char: "", linewise: false, keys: []))
     t.assert_equal(["activate", "action plugin.probe.go c3 r\"a\" b2 w1 a.txt 1,0"], p.log, "the action reaches the plugin with the count, register, buffer, window, path, and cursor")
     outcome = host.action("plugin.nope.go", D::Command.plain("plugin.nope.go"))
     t.assert_equal("No plugin named nope", outcome.message, "an action for an unregistered plugin says so")
@@ -352,23 +352,23 @@ module UseCasesPluginsTest
     rig = setup([p], {})
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     h = p.host
-    r = h.edit_buffer(0, [A::Edit.new(0, 0, 0, 3, "ONE"), A::Edit.new(1, 3, 1, 3, "!")])
+    r = h.edit_buffer(0, [A::Edit.new(from_row: 0, from_col: 0, to_row: 0, to_col: 3, text: "ONE"), A::Edit.new(from_row: 1, from_col: 3, to_row: 1, to_col: 3, text: "!")])
     t.assert_equal([true, ["ONE", "two!"], true, 2], [r.ok, state.buffer.lines, state.buffer.modified?, r.number], "two edits apply as one batch")
-    r = h.edit_buffer(0, [A::Edit.new(0, 0, 0, 1, "x"), A::Edit.new(5, 0, 5, 0, "y")])
+    r = h.edit_buffer(0, [A::Edit.new(from_row: 0, from_col: 0, to_row: 0, to_col: 1, text: "x"), A::Edit.new(from_row: 5, from_col: 0, to_row: 5, to_col: 0, text: "y")])
     t.assert_equal([false, "edit 2: row 5 is outside the buffer", ["ONE", "two!"]], [r.ok, r.message, state.buffer.lines], "one bad edit refuses the whole list")
-    r = h.edit_buffer(0, [A::Edit.new(0, 0, 0, 2, "x"), A::Edit.new(0, 1, 0, 3, "y")])
+    r = h.edit_buffer(0, [A::Edit.new(from_row: 0, from_col: 0, to_row: 0, to_col: 2, text: "x"), A::Edit.new(from_row: 0, from_col: 1, to_row: 0, to_col: 3, text: "y")])
     t.assert_equal([false, "edit 2: overlaps the edit before it", ["ONE", "two!"]], [r.ok, r.message, state.buffer.lines], "overlapping edits are refused")
-    r = h.edit_buffer(0, [A::Edit.new(1, 0, 1, 1, "x"), A::Edit.new(0, 0, 0, 1, "y")])
+    r = h.edit_buffer(0, [A::Edit.new(from_row: 1, from_col: 0, to_row: 1, to_col: 1, text: "x"), A::Edit.new(from_row: 0, from_col: 0, to_row: 0, to_col: 1, text: "y")])
     t.assert_equal([false, "edit 2: overlaps the edit before it"], [r.ok, r.message], "edits out of order are refused")
-    r = h.edit_buffer(0, [A::Edit.new(0, 2, 0, 1, "x")])
+    r = h.edit_buffer(0, [A::Edit.new(from_row: 0, from_col: 2, to_row: 0, to_col: 1, text: "x")])
     t.assert_equal("edit 1: end precedes start", r.message, "an end before its start is refused")
-    r = h.edit_buffer(0, [A::Edit.new(0, 0, 0, 9, "x")])
+    r = h.edit_buffer(0, [A::Edit.new(from_row: 0, from_col: 0, to_row: 0, to_col: 9, text: "x")])
     t.assert_equal("edit 1: column 9 is outside row 0", r.message, "a column past the line is refused")
-    r = h.edit_buffer(0, [A::Edit.new(0, 1, 1, 1, "\n\n")])
+    r = h.edit_buffer(0, [A::Edit.new(from_row: 0, from_col: 1, to_row: 1, to_col: 1, text: "\n\n")])
     t.assert_equal(["O", "", "wo!"], state.buffer.lines, "a replacement may span lines and insert newlines")
     state.cursor.row = 2
     state.cursor.col = 2
-    r = h.edit_buffer(0, [A::Edit.new(0, 0, 2, 3, "a")])
+    r = h.edit_buffer(0, [A::Edit.new(from_row: 0, from_col: 0, to_row: 2, to_col: 3, text: "a")])
     t.assert_equal([["a"], [0, 0]], [state.buffer.lines, state.cursor.to_a], "the cursor is kept inside the text")
     t.assert_equal(false, h.edit_buffer(99, []).ok, "editing a missing buffer fails")
     t.assert_equal(true, h.edit_buffer(0, []).ok, "an empty list succeeds")

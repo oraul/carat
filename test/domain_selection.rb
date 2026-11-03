@@ -18,16 +18,16 @@ module DomainSelectionTest
       copy << lines[i].to_s
       i += 1
     end
-    Carat::Domain::Buffer.new(copy, nil, "\n")
+    Carat::Domain::Buffer.new(lines: copy, path: nil, line_ending: "\n")
   end
 
   #: (untyped) -> Carat::Domain::Position
   def self.pos(pair)
-    Carat::Domain::Position.new(pair[0].to_i, pair[1].to_i)
+    Carat::Domain::Position.new(row: pair[0].to_i, col: pair[1].to_i)
   end
 
   def self.selection_of(anchor, head, kind, to_end)
-    Carat::Domain::Selection.new(pos(anchor), pos(head), kind, to_end)
+    Carat::Domain::Selection.new(anchor: pos(anchor), head: pos(head), kind: kind, to_end: to_end)
   end
 
   def self.main
@@ -109,7 +109,7 @@ module DomainSelectionTest
     t.assert_true(!D::Selection.none.active?, "no selection is inactive")
 
     # The editor state's selection and leaving visual mode.
-    state = D::EditorState.new(D::TabList.new(D::Window.new(buffer_of(["abc", "de"]))), D::Options.new)
+    state = D::EditorState.new(tabs: D::TabList.new(window: D::Window.new(buffer: buffer_of(["abc", "de"]))), options: D::Options.new)
     t.assert_equal(:none, state.selection.kind, "normal mode has no selection")
     state.mode = D::Mode::VISUAL
     state.window.anchor = pos([0, 1])

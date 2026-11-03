@@ -70,7 +70,7 @@ module Carat
             end
             name = chars[i + 1, close - i - 1].join
             resolved = resolve(name, leader)
-            return Result.new([], "unknown key <#{name}>") if resolved.nil?
+            return Result.new(codes: [], error: "unknown key <#{name}>") if resolved.nil?
             codes.concat(resolved)
             i = close + 1
           else
@@ -78,7 +78,7 @@ module Carat
             i += 1
           end
         end
-        Result.new(codes, nil)
+        Result.new(codes: codes, error: nil)
       end
 
       # The codes a <name> stands for, or nil when the name is unknown.

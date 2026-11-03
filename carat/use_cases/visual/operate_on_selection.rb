@@ -140,7 +140,7 @@ module Carat
         if selection.kind == :linewise
           home = selection.line_start
         elsif selection.kind == :blockwise
-          home = Domain::Position.new(top, selection.span(buffer, top, tabstop).from)
+          home = Domain::Position.new(row: top, col: selection.span(buffer, top, tabstop).from)
         end
         lines = []
         row = top
@@ -421,7 +421,7 @@ module Carat
           place(state, Domain::Operators.put_block(buffer, block.top, block.left, entry, count, tabstop))
         elsif entry.linewise?
           row = keep ? block.top : block.bottom
-          place(state, Domain::Operators.put(buffer, Domain::Position.new(row, 0), entry, count, !keep))
+          place(state, Domain::Operators.put(buffer, Domain::Position.new(row: row, col: 0), entry, count, !keep))
         elsif entry.lines.length == 1
           rows = []
           row = block.top
@@ -431,7 +431,7 @@ module Carat
           end
           place(state, Domain::Operators.put_block(buffer, block.top, block.left, Domain::RegisterEntry.block(rows), count, tabstop))
         else
-          place(state, Domain::Operators.put(buffer, Domain::Position.new(block.top, top_col), entry, count, false))
+          place(state, Domain::Operators.put(buffer, Domain::Position.new(row: block.top, col: top_col), entry, count, false))
         end
       end
 
@@ -453,7 +453,7 @@ module Carat
           tabstop = tabstop_of(state)
           place(state, Domain::Operators.put_block(buffer, from.row, Domain::DisplayWidth.column(line, col, tabstop), entry, count, tabstop))
         else
-          place(state, Domain::Operators.put(buffer, Domain::Position.new(from.row, col), entry, count, false))
+          place(state, Domain::Operators.put(buffer, Domain::Position.new(row: from.row, col: col), entry, count, false))
         end
       end
 

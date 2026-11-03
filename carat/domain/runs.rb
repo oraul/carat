@@ -4,14 +4,14 @@ module Carat
     # start column (inclusive), end column (exclusive), and class, because
     # Spinel pins Array[Integer] but not an array of program values. A
     # Struct record built by TextObjects.runs.
-    class Runs < Struct.new(:froms, :tos, :classes)
+    class Runs < Struct.new(:froms, :tos, :classes, keyword_init: true)
       # @rbs @froms: Array[Integer]
       # @rbs @tos: Array[Integer]
       # @rbs @classes: Array[Integer]
 
       #: () -> void
       def initialize
-        super([], [], [])
+        super(froms: [], tos: [], classes: [])
       end
 
       #: (Integer, Integer, Integer) -> void

@@ -16,7 +16,7 @@ module Carat
     # seconds, and undolevels the number of undo states a buffer keeps:
     # a listed buffer reads both when a transaction closes. A Struct
     # record.
-    class BufferFeed < Struct.new(:cause, :notices, :tabs, :now, :undolevels)
+    class BufferFeed < Struct.new(:cause, :notices, :tabs, :now, :undolevels, keyword_init: true)
       # Vim's default 'undolevels'.
       UNDOLEVELS = 1000
 
@@ -67,7 +67,7 @@ module Carat
       # current cause.
       #: (String, Integer, String, String) -> void
       def note(kind, buffer_id, path, detail)
-        push(BufferNotice.new(kind, buffer_id, path, detail, cause))
+        push(BufferNotice.new(kind: kind, buffer_id: buffer_id, path: path, detail: detail, cause: cause))
       end
     end
   end

@@ -116,7 +116,7 @@ module Carat
         #: (PluginApi::Host) -> void
         def build(host)
           @nodes = []
-          @nodes << Node.new(@root, PluginApi::Paths.basename(@root), 0, true, false)
+          @nodes << Node.new(path: @root, name: PluginApi::Paths.basename(@root), depth: 0, directory: true, symlink: false)
           walk(host, @root, 1)
         end
 
@@ -204,7 +204,7 @@ module Carat
           while i < names.length
             path = PluginApi::Paths.join(dir, names[i])
             info = host.stat(path)
-            n = Node.new(path, names[i], depth, info.ok && info.directory, info.ok && info.symlink)
+            n = Node.new(path: path, name: names[i], depth: depth, directory: info.ok && info.directory, symlink: info.ok && info.symlink)
             if n.directory
               dirs << n
             else

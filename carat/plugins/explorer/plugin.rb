@@ -34,10 +34,10 @@ module Carat
         # @rbs skip
         def manifest
           Carat::PluginApi::Manifest.new(
-            NAME,
-            "0.1.0",
-            Carat::PluginApi::VERSION,
-            {
+            name: NAME,
+            version: "0.1.0",
+            api_version: Carat::PluginApi::VERSION,
+            actions: {
               "plugin.explorer.toggle" => "Open the file tree, focus it, or close it when it is focused",
               "plugin.explorer.focus" => "Open the file tree or focus it",
               "plugin.explorer.open" => "Open the file under the cursor in the editing window, or expand the directory",
@@ -56,11 +56,12 @@ module Carat
               "plugin.explorer.close" => "Close the file tree",
               "plugin.explorer.help" => "Show the tree's keys in the message row"
             },
-            { "Explorer" => "", "ExplorerFind" => "" },
-            { "normal" => { "<leader>e" => "plugin.explorer.toggle" } },
-            ["buffer_open", "window_focus", "cursor_move"],
-            { "width" => "30", "side" => "left", "show_hidden" => "false", "ignore" => ".git\nbuild\ntmp" },
-            { "width" => "integer", "side" => "string", "show_hidden" => "bool", "ignore" => "list" }, []
+            commands: { "Explorer" => "", "ExplorerFind" => "" },
+            bindings: { "normal" => { "<leader>e" => "plugin.explorer.toggle" } },
+            events: ["buffer_open", "window_focus", "cursor_move"],
+            options: { "width" => "30", "side" => "left", "show_hidden" => "false", "ignore" => ".git\nbuild\ntmp" },
+            option_types: { "width" => "integer", "side" => "string", "show_hidden" => "bool", "ignore" => "list" },
+            filetypes: []
           )
         end
 

@@ -24,7 +24,7 @@ module EditorUndoTest
     # Returns the manifest.
     # @rbs skip
     def manifest
-      Carat::PluginApi::Manifest.new("fixer", "1.0.0", "1.0", { "plugin.fixer.list" => "Open a list" }, {}, { "normal" => { "<leader>tu" => "plugin.fixer.list" } }, ["buffer_change", "buffer_save"], {}, {}, [])
+      Carat::PluginApi::Manifest.new(name: "fixer", version: "1.0.0", api_version: "1.0", actions: { "plugin.fixer.list" => "Open a list" }, commands: {}, bindings: { "normal" => { "<leader>tu" => "plugin.fixer.list" } }, events: ["buffer_change", "buffer_save"], options: {}, option_types: {}, filetypes: [])
     end
 
     #: (Carat::PluginApi::Host) -> void
@@ -43,7 +43,7 @@ module EditorUndoTest
       @seen << event.to_line if event.name == "buffer_change"
       host = @host
       return if host.nil? || event.name != "buffer_save"
-      host.edit_buffer(0, [A::Edit.new(0, 0, 0, 1, "X"), A::Edit.new(1, 0, 1, 1, "Y")])
+      host.edit_buffer(0, [A::Edit.new(from_row: 0, from_col: 0, to_row: 0, to_col: 1, text: "X"), A::Edit.new(from_row: 1, from_col: 0, to_row: 1, to_col: 1, text: "Y")])
     end
   end
 

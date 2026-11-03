@@ -38,7 +38,7 @@ module Carat
           row = @state.cursor.row
           col = @state.cursor.col
         end
-        PluginApi::BufferView.new(true, "", buffer.id, buffer.path_text.dup, Boundary.copied_lines(buffer.lines), row, col, buffer.modified?)
+        PluginApi::BufferView.new(ok: true, message: "", buffer: buffer.id, path: buffer.path_text.dup, lines: Boundary.copied_lines(buffer.lines), row: row, col: col, modified: buffer.modified?)
       end
 
       # Validates every item before touching a line, then applies them
@@ -132,7 +132,7 @@ module Carat
         i = edits.length - 1
         while i >= 0
           e = edit_item(edits, i)
-          range = Domain::Range.charwise(Domain::Position.new(e.from_row, e.from_col), Domain::Position.new(e.to_row, e.to_col))
+          range = Domain::Range.charwise(Domain::Position.new(row: e.from_row, col: e.from_col), Domain::Position.new(row: e.to_row, col: e.to_col))
           buffer.replace(range, e.text.dup)
           i -= 1
         end
@@ -143,7 +143,7 @@ module Carat
       #: (Domain::Buffer) -> Domain::Position
       def cursor_on(buffer)
         return @state.cursor.position if buffer.equal?(@state.buffer)
-        Domain::Position.new(0, 0)
+        Domain::Position.new(row: 0, col: 0)
       end
 
       # One item of the list, checked to be an Edit by the caller.

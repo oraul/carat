@@ -27,7 +27,7 @@ module AdaptersAssemblyTest
 
     # The guard checks itself: a second object of the same kind is a
     # stranger, the same object is not.
-    t.assert_equal([["second"], []], [strangers(a.buffers, [["second", Carat::Domain::BufferList.new(a.tabs)]]), strangers(a.buffers, [["same", a.buffers]])], "strangers tells a second object from the shared one")
+    t.assert_equal([["second"], []], [strangers(a.buffers, [["second", Carat::Domain::BufferList.new(tabs: a.tabs)]]), strangers(a.buffers, [["same", a.buffers]])], "strangers tells a second object from the shared one")
 
     # Each shared object is one instance, held by every collaborator that
     # needs it.

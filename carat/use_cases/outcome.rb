@@ -11,12 +11,12 @@ module Carat
 
       #: (String) -> Outcome
       def self.success(message)
-        Outcome.new(true, message)
+        Outcome.new(ok: true, message: message)
       end
 
       #: (String) -> Outcome
       def self.failure(message)
-        Outcome.new(false, message)
+        Outcome.new(ok: false, message: message)
       end
 
       # The empty success: nothing to report.
@@ -25,7 +25,7 @@ module Carat
         NONE
       end
 
-      NONE = Outcome.new(true, "")
+      NONE = Outcome.new(ok: true, message: "")
     end
   end
 end

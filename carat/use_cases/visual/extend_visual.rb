@@ -51,7 +51,7 @@ module Carat
           anchor_col = Domain::DisplayWidth.col_at(anchor_line, block.right, tabstop)
           cursor_col = Domain::DisplayWidth.col_at(cursor_line, block.left, tabstop)
         end
-        window.anchor = Domain::Position.new(anchor.row, anchor_col)
+        window.anchor = Domain::Position.new(row: anchor.row, col: anchor_col)
         cursor.move_to(cursor.row, cursor_col)
         Outcome.none
       end
@@ -124,12 +124,12 @@ module Carat
         cursor = state.cursor
         if range.kind == :linewise
           state.mode = Domain::Mode::VISUAL_LINE
-          window.anchor = Domain::Position.new(range.from.row, 0)
+          window.anchor = Domain::Position.new(row: range.from.row, col: 0)
           cursor.move_to(range.to.row, 0)
           return
         end
         state.mode = Domain::Mode::VISUAL if state.mode == Domain::Mode::VISUAL_LINE
-        window.anchor = Domain::Position.new(range.from.row, range.from.col)
+        window.anchor = Domain::Position.new(row: range.from.row, col: range.from.col)
         last = last_of(state.buffer, range)
         cursor.move_to(last.row, last.col)
       end
@@ -142,19 +142,19 @@ module Carat
       def last_of(buffer, range)
         from = range.from
         to = range.to
-        return Domain::Position.new(to.row, buffer.line(to.row).length) if range.kind == :linewise
-        return Domain::Position.new(to.row, to.col) if range.inclusive
-        return Domain::Position.new(to.row, to.col - 1) if to.col > 0
-        return Domain::Position.new(to.row - 1, buffer.line(to.row - 1).length) if to.row > from.row
-        Domain::Position.new(from.row, from.col)
+        return Domain::Position.new(row: to.row, col: buffer.line(to.row).length) if range.kind == :linewise
+        return Domain::Position.new(row: to.row, col: to.col) if range.inclusive
+        return Domain::Position.new(row: to.row, col: to.col - 1) if to.col > 0
+        return Domain::Position.new(row: to.row - 1, col: buffer.line(to.row - 1).length) if to.row > from.row
+        Domain::Position.new(row: from.row, col: from.col)
       end
 
       # The position one character after pos, crossing to the next line,
       # or pos itself at the end of the buffer.
       #: (Domain::Buffer, Domain::Position) -> Domain::Position
       def after(buffer, pos)
-        return Domain::Position.new(pos.row, pos.col + 1) if pos.col + 1 < buffer.line(pos.row).length
-        return Domain::Position.new(pos.row + 1, 0) if pos.row < buffer.line_count - 1
+        return Domain::Position.new(row: pos.row, col: pos.col + 1) if pos.col + 1 < buffer.line(pos.row).length
+        return Domain::Position.new(row: pos.row + 1, col: 0) if pos.row < buffer.line_count - 1
         pos
       end
 
@@ -162,10 +162,10 @@ module Carat
       # previous line, or pos itself at the start of the buffer.
       #: (Domain::Buffer, Domain::Position) -> Domain::Position
       def before(buffer, pos)
-        return Domain::Position.new(pos.row, pos.col - 1) if pos.col > 0
+        return Domain::Position.new(row: pos.row, col: pos.col - 1) if pos.col > 0
         if pos.row > 0
           len = buffer.line(pos.row - 1).length
-          return Domain::Position.new(pos.row - 1, len > 0 ? len - 1 : 0)
+          return Domain::Position.new(row: pos.row - 1, col: len > 0 ? len - 1 : 0)
         end
         pos
       end
@@ -202,7 +202,7 @@ module Carat
         buffer = state.buffer
         row = state.cursor.row + (forward ? 1 : -1)
         return if row < 0 || row > buffer.line_count - 1
-        range = object_at(state, action, n, Domain::Position.new(row, 0))
+        range = object_at(state, action, n, Domain::Position.new(row: row, col: 0))
         return if range.nil?
         state.mode = Domain::Mode::VISUAL_LINE
         state.cursor.move_to(forward ? range.to.row : range.from.row, 0)
@@ -233,7 +233,7 @@ module Carat
       # Whether range covers from start to finish and more.
       #: (Domain::Buffer, Domain::Range, Domain::Position, Domain::Position) -> bool
       def larger?(buffer, range, start, finish)
-        first = range.kind == :linewise ? Domain::Position.new(range.from.row, 0) : range.from
+        first = range.kind == :linewise ? Domain::Position.new(row: range.from.row, col: 0) : range.from
         last = last_of(buffer, range)
         return false if start.before?(first) || last.before?(finish)
         first != start || last != finish

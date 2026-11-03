@@ -9,7 +9,7 @@ module Carat
       # whatever they are stored into.
       #: (Position?) -> Position
       def self.sure(pos)
-        pos.nil? ? Position.new(0, 0) : pos
+        pos.nil? ? Position.new(row: 0, col: 0) : pos
       end
 
       #: (Position) -> bool

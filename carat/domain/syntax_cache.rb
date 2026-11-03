@@ -25,7 +25,7 @@ module Carat
     # the last change, moves valid to the frontier: every row up to it was
     # computed from its own unchanged text and the state before it, which
     # is the same again. A Struct record.
-    class SyntaxCache < Struct.new(:ends, :valid, :dirty_to, :current, :previous, :owner, :name, :serial)
+    class SyntaxCache < Struct.new(:ends, :valid, :dirty_to, :current, :previous, :owner, :name, :serial, keyword_init: true)
       UNKNOWN = -1
       CAPACITY = 128
 
@@ -44,8 +44,8 @@ module Carat
         self.ends = []
         self.valid = 0
         self.dirty_to = 0
-        self.current = SyntaxTable.new(CAPACITY)
-        self.previous = SyntaxTable.new(CAPACITY)
+        self.current = SyntaxTable.new(capacity: CAPACITY)
+        self.previous = SyntaxTable.new(capacity: CAPACITY)
         self.owner = ""
         self.name = ""
         self.serial = 0
@@ -99,7 +99,7 @@ module Carat
       # Keeps the tokens of the line object for a start state.
       #: (String, Integer, Array[Integer], Integer) -> void
       def store(text, start, tokens, end_state)
-        current.store(SyntaxLine.new(text, start, tokens, end_state))
+        current.store(SyntaxLine.new(text: text, start: start, tokens: tokens, end_state: end_state))
       end
 
       # Records the end state of the row at valid and moves valid past it,

@@ -4,14 +4,14 @@ module Carat
     # id of the window that was current before it, for Ctrl-W p (-1 when
     # none). A Struct record: mutable, with a reader and a writer per
     # member.
-    class TabPage < Struct.new(:layout, :current, :previous)
+    class TabPage < Struct.new(:layout, :current, :previous, keyword_init: true)
       # @rbs @layout: Layout
       # @rbs @current: Integer
       # @rbs @previous: Integer
 
-      #: (Window) -> void
-      def initialize(window)
-        super(Layout.new(window), 0, -1)
+      #: (window: Window) -> void
+      def initialize(window:)
+        super(layout: Layout.new(window: window), current: 0, previous: -1)
       end
 
       #: () -> Window

@@ -49,6 +49,7 @@ ok   with copies a position
 ok   with leaves the original unchanged
 ok   ranges are equal by value
 ok   ranges are frozen
+ok   struct records are built with keywords
 ok   a cursor starts wanting its column
 ok   a cursor member has a writer
 ok   to_a is the position pair without want_col
@@ -77,4 +78,4 @@ ok   a scratch buffer is named by its title
 ok   a file buffer is named by its path
 ok   no signs at first
 ok   a sign is placed on its row
-domain_buffer: 79 passed, 0 failed
+domain_buffer: 80 passed, 0 failed

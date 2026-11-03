@@ -44,7 +44,7 @@ module AdaptersScreenPresenterTest
     clock = Carat::Doubles::ManualClock.new
     terminal = Carat::Doubles::FakeTerminal.new(clock: clock, rows: 1, cols: 6)
     screen = Carat::Adapters::ScreenPresenter.new(terminal: terminal, theme: Carat::Domain::Themes.find(theme), colors: colors)
-    frame = Carat::Domain::Frame.new(1, 6)
+    frame = Carat::Domain::Frame.new(rows: 1, cols: 6)
     frame.put(0, 0, "x", id)
     screen.present(frame)
     out = terminal.last_write
@@ -68,7 +68,7 @@ module AdaptersScreenPresenterTest
     t.assert_equal(1, terminal.entered, "enter reaches the terminal")
     t.assert_equal("\e[?1049h\e[H\e[2J", terminal.last_write, "enter switches to the alternate screen and clears it")
 
-    frame = D::Frame.new(3, 6)
+    frame = D::Frame.new(rows: 3, cols: 6)
     frame.put(0, 0, "hello", D::Highlight::NORMAL)
     frame.put(1, 0, "two", D::Highlight::LINE_NUMBER)
     frame.cursor_row = 1
@@ -83,7 +83,7 @@ module AdaptersScreenPresenterTest
     t.assert_true(first.end_with?("\e[2;3H\e[2 q\e[?25h"), "cursor position, block shape, and cursor shown last")
     t.assert_true(first.start_with?("\e[?25l"), "cursor hidden while drawing")
 
-    same = D::Frame.new(3, 6)
+    same = D::Frame.new(rows: 3, cols: 6)
     same.put(0, 0, "hello", D::Highlight::NORMAL)
     same.put(1, 0, "two", D::Highlight::LINE_NUMBER)
     same.cursor_row = 1
@@ -95,7 +95,7 @@ module AdaptersScreenPresenterTest
     t.assert_true(second.include?("\e[2;3H"), "identical frame still positions the cursor")
     t.assert_equal(false, second.include?(" q"), "unchanged shape is not repeated")
 
-    changed = D::Frame.new(3, 6)
+    changed = D::Frame.new(rows: 3, cols: 6)
     changed.put(0, 0, "hello", D::Highlight::NORMAL)
     changed.put(1, 0, "two", D::Highlight::LINE_NUMBER)
     changed.put(2, 0, "three", D::Highlight::STATUS)
@@ -108,22 +108,22 @@ module AdaptersScreenPresenterTest
     t.assert_equal(false, third.include?("hello"), "unchanged row is not written")
     t.assert_true(third.include?("\e[6 q"), "bar shape is emitted when it changes")
 
-    resized = D::Frame.new(2, 6)
+    resized = D::Frame.new(rows: 2, cols: 6)
     resized.put(0, 0, "hello", D::Highlight::NORMAL)
     screen.present(resized)
     fourth = terminal.last_write
     t.assert_true(fourth.include?("\e[2J"), "a size change clears the screen")
     t.assert_true(fourth.include?("hello"), "a size change repaints every row")
 
-    wide = D::Frame.new(1, 4)
+    wide = D::Frame.new(rows: 1, cols: 4)
     wide.put(0, 0, "日x", D::Highlight::NORMAL)
     screen.present(wide)
     t.assert_true(terminal.last_write.include?("日x"), "a wide character is written once and its continuation cell skipped")
 
-    buffer = D::Buffer.new(["a\u009Bb\u009Dc"], "a.txt", "\n")
+    buffer = D::Buffer.new(lines: ["a\u009Bb\u009Dc"], path: "a.txt", line_ending: "\n")
     options = D::Options.new
     options.number = false
-    state = D::EditorState.new(D::TabList.new(D::Window.new(buffer)), options)
+    state = D::EditorState.new(tabs: D::TabList.new(window: D::Window.new(buffer: buffer)), options: options)
     cache = D::LineCache.new
     state.resize(3, 12)
     Carat::UseCases::ArrangeView.new(cache: cache).call(state)
@@ -141,7 +141,7 @@ module AdaptersScreenPresenterTest
     t.assert_true(terminal.output.start_with?("\e[?1049h"), "output begins with the alternate screen")
 
     # The window and tab line highlights have their own sequences.
-    colored = D::Frame.new(4, 8)
+    colored = D::Frame.new(rows: 4, cols: 8)
     colored.put(0, 0, "nc", D::Highlight::STATUS_NC)
     colored.put(1, 0, "tab", D::Highlight::TAB_LINE)
     colored.put(2, 0, "sel", D::Highlight::TAB_LINE_SELECTED)
@@ -158,7 +158,7 @@ module AdaptersScreenPresenterTest
     t.assert_equal(["\e[0;38;5;146;48;5;237m", "\e[0;1;38;5;189m", "\e[0;48;5;237m"], [sgr256(H::TAB_LINE), sgr256(H::TAB_LINE_SELECTED), sgr256(H::TAB_LINE_FILL)], "the tab line sequences at 256 colors")
 
     # The visual selection has the theme's Visual background.
-    selected = D::Frame.new(1, 8)
+    selected = D::Frame.new(rows: 1, cols: 8)
     selected.put(0, 0, "ab", D::Highlight::NORMAL)
     selected.put(0, 2, "cd", D::Highlight::VISUAL)
     clock = Carat::Doubles::ManualClock.new
@@ -172,31 +172,31 @@ module AdaptersScreenPresenterTest
     clock = Carat::Doubles::ManualClock.new
     terminal = Carat::Doubles::FakeTerminal.new(clock: clock, rows: 2, cols: 20)
     screen = presenter(terminal)
-    before = D::Frame.new(2, 20)
+    before = D::Frame.new(rows: 2, cols: 20)
     before.put(0, 0, "hello world", D::Highlight::NORMAL)
     screen.present(before)
-    after = D::Frame.new(2, 20)
+    after = D::Frame.new(rows: 2, cols: 20)
     after.put(0, 0, "hello there", D::Highlight::NORMAL)
     screen.present(after)
     out = terminal.last_write
     t.assert_true(out.include?("\e[1;7H\e[0mthere"), "only the changed part of a row is written, from its column")
     t.assert_equal(false, out.include?("hello"), "the unchanged part of the row is not written")
     t.assert_equal(false, out.include?("\e[2J"), "a later frame does not clear the screen")
-    joined = D::Frame.new(2, 20)
+    joined = D::Frame.new(rows: 2, cols: 20)
     joined.put(0, 0, "Xello Xhere", D::Highlight::NORMAL)
     screen.present(joined)
     t.assert_true(terminal.last_write.include?("Xello X"), "two changed cells a few cells apart are written as one run")
     screen.present(joined)
     t.assert_equal("\e[?25l\e[1;1H\e[?25h", terminal.last_write, "the same frame presented again writes only the cursor")
-    wide_before = D::Frame.new(2, 20)
+    wide_before = D::Frame.new(rows: 2, cols: 20)
     wide_before.put(0, 0, "中b", D::Highlight::NORMAL)
     screen.present(wide_before)
-    wide_after = D::Frame.new(2, 20)
+    wide_after = D::Frame.new(rows: 2, cols: 20)
     wide_after.put(0, 0, "ab", D::Highlight::NORMAL)
     screen.present(wide_after)
     out = terminal.last_write
     t.assert_true(out.include?("\e[1;1H\e[0mab"), "a wide character replaced by two narrow ones is rewritten from its first cell")
-    narrow_after = D::Frame.new(2, 20)
+    narrow_after = D::Frame.new(rows: 2, cols: 20)
     narrow_after.put(0, 0, "a中", D::Highlight::NORMAL)
     screen.present(narrow_after)
     t.assert_true(terminal.last_write.include?("\e[1;2H\e[0m中"), "a wide character replacing a narrow one is written from its column")
@@ -210,7 +210,7 @@ module AdaptersScreenPresenterTest
       i += 1
     end
     options = D::Options.new
-    state = D::EditorState.new(D::TabList.new(D::Window.new(D::Buffer.new(lines, "a.txt", "\n"))), options)
+    state = D::EditorState.new(tabs: D::TabList.new(window: D::Window.new(buffer: D::Buffer.new(lines: lines, path: "a.txt", line_ending: "\n"))), options: options)
     cache = D::LineCache.new
     arrange = Carat::UseCases::ArrangeView.new(cache: cache)
     frames = Carat::Adapters::FramePresenter.new(input: D::InputState.new, plugin_ui: D::PluginUi.new, cache: cache)

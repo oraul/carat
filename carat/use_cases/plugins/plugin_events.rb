@@ -138,7 +138,7 @@ module Carat
         return if rows == @last_rows && cols == @last_cols
         @last_rows = rows
         @last_cols = cols
-        @queue << PendingEvent.new(PluginApi::Event.new("resize", 0, 0, "", rows, cols, "", 0, 0), "")
+        @queue << PendingEvent.new(event: PluginApi::Event.new(name: "resize", buffer: 0, window: 0, path: "", row: rows, col: cols, detail: "", removed: 0, inserted: 0), cause: "")
       end
 
       private
@@ -192,8 +192,8 @@ module Carat
           row = @state.cursor.row
           col = @state.cursor.col
         end
-        event = PluginApi::Event.new(name, notice.buffer_id, @state.window.id, notice.path.dup, row, col, notice.detail.dup, notice.removed, notice.inserted)
-        @queue << PendingEvent.new(event, notice.cause)
+        event = PluginApi::Event.new(name: name, buffer: notice.buffer_id, window: @state.window.id, path: notice.path.dup, row: row, col: col, detail: notice.detail.dup, removed: notice.removed, inserted: notice.inserted)
+        @queue << PendingEvent.new(event: event, cause: notice.cause)
       end
 
       # Queues an event of the editor's own unless no enabled plugin
@@ -201,8 +201,8 @@ module Carat
       #: (String, Domain::Buffer, Integer, Integer, String, String) -> void
       def queue(name, buffer, row, col, detail, cause)
         return unless wanted?(name)
-        event = PluginApi::Event.new(name, buffer.id, @state.window.id, buffer.path_text.dup, row, col, detail, 0, 0)
-        @queue << PendingEvent.new(event, cause)
+        event = PluginApi::Event.new(name: name, buffer: buffer.id, window: @state.window.id, path: buffer.path_text.dup, row: row, col: col, detail: detail, removed: 0, inserted: 0)
+        @queue << PendingEvent.new(event: event, cause: cause)
       end
 
       #: (String) -> bool

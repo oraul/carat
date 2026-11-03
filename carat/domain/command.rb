@@ -14,7 +14,7 @@ module Carat
       # insert and command-line modes dispatch.
       #: (String) -> Command
       def self.plain(action)
-        Command.new("", 0, "", action, "", false, [])
+        Command.new(register: "", count: 0, operator: "", action: action, char: "", linewise: false, keys: [])
       end
 
       # The count, or the default when none was typed.

@@ -8,23 +8,23 @@ module DomainBufferListTest
   D = Carat::Domain
 
   def self.pos(row, col)
-    Carat::Domain::Position.new(row, col)
+    Carat::Domain::Position.new(row: row, col: col)
   end
 
   def self.buffer_named(name)
-    Carat::Domain::Buffer.new(["a", "b", "c"], name, "\n")
+    Carat::Domain::Buffer.new(lines: ["a", "b", "c"], path: name, line_ending: "\n")
   end
 
   # The buffer list over a tab list whose one window shows the buffer, and
   # the state over them.
-  class Lists < Struct.new(:tabs, :buffers, :state)
+  class Lists < Struct.new(:tabs, :buffers, :state, keyword_init: true)
   end
 
   def self.lists_over(buffer)
-    tabs = D::TabList.new(D::Window.new(buffer))
-    buffers = D::BufferList.new(tabs)
+    tabs = D::TabList.new(window: D::Window.new(buffer: buffer))
+    buffers = D::BufferList.new(tabs: tabs)
     buffers.add(buffer)
-    Lists.new(tabs, buffers, D::EditorState.new(tabs, D::Options.new))
+    Lists.new(tabs: tabs, buffers: buffers, state: D::EditorState.new(tabs: tabs, options: D::Options.new))
   end
 
   def self.main
@@ -65,17 +65,17 @@ module DomainBufferListTest
     t.assert_equal([0, 0], s.cursor.to_a, "the closed reload pulls the cursors on the buffer back inside it")
 
     # Scratch buffers are not unsaved work and leave the list when unshown.
-    w = lists_over(D::Buffer.new(["one"], "a.txt", "\n"))
+    w = lists_over(D::Buffer.new(lines: ["one"], path: "a.txt", line_ending: "\n"))
     s = w.state
     list = w.buffers
-    scratch = D::Buffer.new(["l"], nil, "\n")
+    scratch = D::Buffer.new(lines: ["l"], path: nil, line_ending: "\n")
     scratch.owner = "hello"
     scratch.title = "list"
     list.add(scratch)
     scratch.set_lines(0, 1, ["m"])
     t.assert_equal([true, false, true], [scratch.modified?, list.any_modified?, list.hidden_modified.nil?], "a changed scratch buffer is not unsaved work")
     t.assert_equal(2, list.number_of(scratch), "number_of is the list position from 1")
-    t.assert_equal(0, list.number_of(D::Buffer.new(["q"], nil, "\n")), "an unlisted buffer has number 0")
+    t.assert_equal(0, list.number_of(D::Buffer.new(lines: ["q"], path: nil, line_ending: "\n")), "an unlisted buffer has number 0")
     t.assert_equal(true, list.scratch_for("hello", "list").equal?(scratch), "scratch_for finds the plugin's buffer by title")
     t.assert_equal(true, list.scratch_for("hello", "nope").nil?, "scratch_for answers nil for another title")
     list.release(scratch)
@@ -85,11 +85,11 @@ module DomainBufferListTest
     t.assert_equal(1, list.count, "a shown modified file buffer stays")
 
     # Buffer ids come from the buffer list.
-    first = D::Buffer.new(["a"], "a.txt", "\n")
+    first = D::Buffer.new(lines: ["a"], path: "a.txt", line_ending: "\n")
     w = lists_over(first)
     list = w.buffers
-    second = D::Buffer.new(["b"], "b.txt", "\n")
-    loose = D::Buffer.new(["c"], nil, "\n")
+    second = D::Buffer.new(lines: ["b"], path: "b.txt", line_ending: "\n")
+    loose = D::Buffer.new(lines: ["c"], path: nil, line_ending: "\n")
     list.add(second)
     t.assert_equal([1, 2, 0], [first.id, second.id, loose.id], "a buffer gets the next id when it enters the list, an unlisted one has 0")
     list.remove(second)
@@ -102,11 +102,11 @@ module DomainBufferListTest
 
     # The feed records opens, closes, renames, and closed transactions with
     # their cause.
-    first = D::Buffer.new(["a", "b", "c"], "a.txt", "\n")
+    first = D::Buffer.new(lines: ["a", "b", "c"], path: "a.txt", line_ending: "\n")
     w = lists_over(first)
     list = w.buffers
     feed = list.feed
-    other = D::Buffer.new(["o"], "o.txt", "\n")
+    other = D::Buffer.new(lines: ["o"], path: "o.txt", line_ending: "\n")
     list.add(other)
     first.set_lines(1, 2, [])
     feed.cause = "probe"

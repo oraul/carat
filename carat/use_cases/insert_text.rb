@@ -43,12 +43,12 @@ module Carat
         @last_change.add_action("insert.backspace", "", true)
         cursor = state.cursor
         if cursor.col > 0
-          from = Domain::Position.new(cursor.row, cursor.col - 1)
+          from = Domain::Position.new(row: cursor.row, col: cursor.col - 1)
           state.buffer.delete(Domain::Range.charwise(from, cursor.position))
           cursor.move_to(cursor.row, cursor.col - 1)
         elsif cursor.row > 0
           prev_len = state.buffer.line(cursor.row - 1).length
-          from = Domain::Position.new(cursor.row - 1, prev_len)
+          from = Domain::Position.new(row: cursor.row - 1, col: prev_len)
           state.buffer.delete(Domain::Range.charwise(from, cursor.position))
           cursor.move_to(cursor.row - 1, prev_len)
         end
@@ -61,10 +61,10 @@ module Carat
         cursor = state.cursor
         line = state.current_line
         if cursor.col < line.length
-          to = Domain::Position.new(cursor.row, cursor.col + 1)
+          to = Domain::Position.new(row: cursor.row, col: cursor.col + 1)
           state.buffer.delete(Domain::Range.charwise(cursor.position, to))
         elsif cursor.row < state.buffer.line_count - 1
-          to = Domain::Position.new(cursor.row + 1, 0)
+          to = Domain::Position.new(row: cursor.row + 1, col: 0)
           state.buffer.delete(Domain::Range.charwise(cursor.position, to))
         end
         Outcome.none

@@ -75,14 +75,14 @@ module DomainSyntaxCacheTest
     t.assert_equal([0, 0, 1, 1], [c.start_of(0), c.start_of(1), c.start_of(2), c.start_of(3)], "start_of is the state after the row before")
 
     # An edit that keeps the state settles on the row after it.
-    b.insert(D::Position.new(2, 0), "x")
+    b.insert(D::Position.new(row: 2, col: 0), "x")
     t.assert_equal([2, C::UNKNOWN, 3], [c.valid, c.ends[2], c.dirty_to], "an edit lowers valid and marks its row unknown")
     t.assert_equal(2, catch_up(c, b, 10), "the edited row and the one after are computed, then it settles")
     t.assert_equal(10, c.valid, "valid jumps to the frontier")
 
     # An edit that changes the state goes on while the states differ: an
     # unclosed quote flips every row after it.
-    b.insert(D::Position.new(0, 0), "\"")
+    b.insert(D::Position.new(row: 0, col: 0), "\"")
     t.assert_equal(10, catch_up(c, b, 10), "every row after an unclosed quote changes state")
     t.assert_equal([1, 0, 0, 1, 1], c.ends[0, 5], "the states after the quote are flipped")
     t.assert_equal(10, c.valid, "and valid is at the frontier again")
@@ -112,8 +112,8 @@ module DomainSyntaxCacheTest
     c2 = b2.syntax_cache
     c2.prepare("toy", "ruby", 1)
     catch_up(c2, b2, 20)
-    b2.insert(D::Position.new(3, 0), "y")
-    b2.insert(D::Position.new(12, 0), "y")
+    b2.insert(D::Position.new(row: 3, col: 0), "y")
+    b2.insert(D::Position.new(row: 12, col: 0), "y")
     t.assert_equal([3, 13], [c2.valid, c2.dirty_to], "valid at the first edit, dirty_to after the second")
     t.assert_equal(11, catch_up(c2, b2, 20), "rows 3 to 13 are computed before it settles")
     t.assert_equal(20, c2.valid, "then valid jumps to the frontier")
@@ -124,7 +124,7 @@ module DomainSyntaxCacheTest
     c3 = b3.syntax_cache
     c3.prepare("toy", "ruby", 1)
     catch_up(c3, b3, 10)
-    b3.insert(D::Position.new(30, 0), "y")
+    b3.insert(D::Position.new(row: 30, col: 0), "y")
     t.assert_equal([10, 10], [c3.ends.length, c3.valid], "an edit past the frontier changes nothing")
     b3.set_lines(8, 12, ["z"])
     t.assert_equal([8, 8], [c3.ends.length, c3.valid], "an edit reaching the frontier cuts it at the edit")

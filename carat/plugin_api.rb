@@ -143,17 +143,17 @@ module Carat
 
       #: (String, Integer) -> Response
       def self.success(message, number)
-        Response.new(true, message, number, [])
+        Response.new(ok: true, message: message, number: number, lines: [])
       end
 
       #: (String) -> Response
       def self.failure(message)
-        Response.new(false, message, 0, [])
+        Response.new(ok: false, message: message, number: 0, lines: [])
       end
 
       #: (Array[String]) -> Response
       def self.listing(lines)
-        Response.new(true, "", lines.length, lines)
+        Response.new(ok: true, message: "", number: lines.length, lines: lines)
       end
     end
 
@@ -167,12 +167,12 @@ module Carat
 
       #: (String, Integer) -> WindowResponse
       def self.success(message, window)
-        WindowResponse.new(true, message, window)
+        WindowResponse.new(ok: true, message: message, window: window)
       end
 
       #: (String) -> WindowResponse
       def self.failure(message)
-        WindowResponse.new(false, message, 0)
+        WindowResponse.new(ok: false, message: message, window: 0)
       end
     end
 
@@ -186,12 +186,12 @@ module Carat
 
       #: (String) -> TextResponse
       def self.success(text)
-        TextResponse.new(true, "", text)
+        TextResponse.new(ok: true, message: "", text: text)
       end
 
       #: (String) -> TextResponse
       def self.failure(message)
-        TextResponse.new(false, message, "")
+        TextResponse.new(ok: false, message: message, text: "")
       end
     end
 
@@ -212,7 +212,7 @@ module Carat
 
       #: (String) -> BufferView
       def self.missing(message)
-        BufferView.new(false, message, 0, "", [], 0, 0, false)
+        BufferView.new(ok: false, message: message, buffer: 0, path: "", lines: [], row: 0, col: 0, modified: false)
       end
     end
 
@@ -229,7 +229,7 @@ module Carat
 
       #: () -> FileInfo
       def self.missing
-        FileInfo.new(false, 0, 0, false, false)
+        FileInfo.new(ok: false, size: 0, mtime: 0, directory: false, symlink: false)
       end
     end
 

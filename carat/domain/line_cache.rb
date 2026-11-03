@@ -14,7 +14,7 @@ module Carat
     # after the next. A line asked for with another tabstop is decoded
     # again. A Struct record built once and shared by ArrangeView and the
     # frame presenter.
-    class LineCache < Struct.new(:current, :previous)
+    class LineCache < Struct.new(:current, :previous, keyword_init: true)
       CAPACITY = 256
 
       # @rbs @current: IdentityTable
@@ -22,7 +22,7 @@ module Carat
 
       #: () -> void
       def initialize
-        super(IdentityTable.new(CAPACITY), IdentityTable.new(CAPACITY))
+        super(current: IdentityTable.new(capacity: CAPACITY), previous: IdentityTable.new(capacity: CAPACITY))
       end
 
       #: (String, Integer) -> DecodedLine

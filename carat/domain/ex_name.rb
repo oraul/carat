@@ -15,11 +15,11 @@ module Carat
       #: (String) -> ExName
       def self.parse(spec)
         open = spec.index("[")
-        return ExName.new(spec, spec) if open.nil?
+        return ExName.new(short: spec, full: spec) if open.nil?
         close = spec.index("]")
         close = spec.length if close.nil? || close < open
         short = spec[0, open]
-        ExName.new(short, short + spec[open + 1, close - open - 1])
+        ExName.new(short: short, full: short + spec[open + 1, close - open - 1])
       end
 
       #: (String) -> bool

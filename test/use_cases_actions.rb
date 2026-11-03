@@ -35,7 +35,7 @@ module UseCasesActionsTest
   end
 
   def self.state
-    Carat::Domain::EditorState.new(Carat::Domain::TabList.new(Carat::Domain::Window.new(Carat::Domain::Buffer.from_text("", nil))), Carat::Domain::Options.new)
+    Carat::Domain::EditorState.new(tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: Carat::Domain::Buffer.from_text("", nil))), options: Carat::Domain::Options.new)
   end
 
   # The action names a section of docs/actions.md lists, from the first
@@ -123,7 +123,7 @@ module UseCasesActionsTest
       # The table's value is untyped; the ex command takes a typed name.
       name = typed.to_s
       handler = commands.find(name)
-      handler.nil? ? "" : handler.call(state, D::ExCommand.new(name, false, "")).message
+      handler.nil? ? "" : handler.call(state, D::ExCommand.new(name: name, bang: false, args: "")).message
     end
     ordered = U::ExTable.new
     ordered.register(EchoCommandHandler.new(spec: "ma[rk]"))

@@ -4,19 +4,19 @@ module Carat
     # vertically through shorter lines (Vim's curswant). A want_col of -1
     # means "the end of the line", set by $. A Struct record: mutable, with
     # a reader and a writer per member.
-    class Cursor < Struct.new(:row, :col, :want_col)
+    class Cursor < Struct.new(:row, :col, :want_col, keyword_init: true)
       # @rbs @row: Integer
       # @rbs @col: Integer
       # @rbs @want_col: Integer
 
-      #: (Integer, Integer) -> void
-      def initialize(row, col)
-        super(row, col, col)
+      #: (row: Integer, col: Integer) -> void
+      def initialize(row:, col:)
+        super(row: row, col: col, want_col: col)
       end
 
       #: () -> Position
       def position
-        Position.new(row, col)
+        Position.new(row: row, col: col)
       end
 
       # Moves horizontally: the new column becomes the wanted one.

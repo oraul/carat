@@ -75,8 +75,8 @@ module Carat
         @input = input
         @plugin_ui = plugin_ui
         @cache = cache
-        @front = Domain::Frame.new(1, 1)
-        @back = Domain::Frame.new(1, 1)
+        @front = Domain::Frame.new(rows: 1, cols: 1)
+        @back = Domain::Frame.new(rows: 1, cols: 1)
         @front_rows = PaintedRows.new(rows: 1, slots: 1)
         @back_rows = PaintedRows.new(rows: 1, slots: 1)
         @serial = 0
@@ -86,7 +86,7 @@ module Carat
         @sel_to = -2
         @sel_end = -1
         @none = Domain::Selection.none
-        @no_block = Domain::Block.new(0, -1, 1, 0, false)
+        @no_block = Domain::Block.new(top: 0, bottom: -1, left: 1, right: 0, to_end: false)
       end
 
       #: (Domain::EditorState) -> Domain::Frame
@@ -177,8 +177,8 @@ module Carat
       #: (Integer, Integer) -> void
       def ensure_size(rows, cols)
         return if @back.rows == rows && @back.cols == cols && @front.rows == rows && @front.cols == cols
-        @front = Domain::Frame.new(rows, cols)
-        @back = Domain::Frame.new(rows, cols)
+        @front = Domain::Frame.new(rows: rows, cols: cols)
+        @back = Domain::Frame.new(rows: rows, cols: cols)
         slots = @back_rows.slots
         @front_rows = PaintedRows.new(rows: rows, slots: slots)
         @back_rows = PaintedRows.new(rows: rows, slots: slots)

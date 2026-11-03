@@ -7,7 +7,7 @@ module Carat
     # it has taken. HandleKey owns it; the presenter reads it for the
     # pending-keys display, and a plugin's prompt drops the waiting keys.
     # A Struct record: mutable, with a reader and a writer per member.
-    class InputState < Struct.new(:pending_keys, :grammar)
+    class InputState < Struct.new(:pending_keys, :grammar, keyword_init: true)
       # @rbs @pending_keys: Array[Integer]
       # @rbs @grammar: CommandGrammar
 

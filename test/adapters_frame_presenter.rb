@@ -24,13 +24,13 @@ module AdaptersFramePresenterTest
   # A state over one window showing the lines; the plugins' segments and
   # prompt start empty.
   def self.state_for(lines, path)
-    buffer = Carat::Domain::Buffer.new(lines, path, "\n")
+    buffer = Carat::Domain::Buffer.new(lines: lines, path: path, line_ending: "\n")
     options = Carat::Domain::Options.new
     options.number = true
     options.tabstop = 4
     UI.segments.clear
     UI.close_prompt
-    Carat::Domain::EditorState.new(Carat::Domain::TabList.new(Carat::Domain::Window.new(buffer)), options)
+    Carat::Domain::EditorState.new(tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: buffer)), options: options)
   end
 
   # Delete and the C1 controls show as <xx> markers and never reach a cell raw.
@@ -59,7 +59,7 @@ module AdaptersFramePresenterTest
   def self.visual_frame(lines, mode, anchor, head)
     s = state_for(lines, "a.txt")
     s.mode = mode
-    s.window.anchor = Carat::Domain::Position.new(anchor[0], anchor[1])
+    s.window.anchor = Carat::Domain::Position.new(row: anchor[0], col: anchor[1])
     s.cursor.move_to(head[0], head[1])
     draw(s, 6, 20)
   end
@@ -238,7 +238,7 @@ module AdaptersFramePresenterTest
     f = draw(s, 4, 12)
     t.assert_equal("a<9b>^A<7f>", f.row_text(0), "markers and caret notation mix on one line")
     t.assert_true(control_free?(f), "no cell holds a control code point after a mixed line")
-    direct = D::Frame.new(1, 6)
+    direct = D::Frame.new(rows: 1, cols: 6)
     t.assert_equal(3, direct.put(0, 0, "a\u009Bb", D::Highlight::NORMAL), "put stores one cell per control code point")
     t.assert_equal(["a", 0xFFFD, "b"], [direct.cell(0, 0).char, direct.cell(0, 1).code, direct.cell(0, 2).char], "put stores the replacement character for a C1 control")
     direct.put(0, 0, "\x01\u007F", D::Highlight::NORMAL)
@@ -257,7 +257,7 @@ module AdaptersFramePresenterTest
     # on the screen stays intact while the other is drawn.
     second = draw(s, 10, 40)
     t.assert_true(!second.equal?(f), "the next render paints the other frame")
-    s.buffer.insert(D::Position.new(0, 0), "x")
+    s.buffer.insert(D::Position.new(row: 0, col: 0), "x")
     again = draw(s, 10, 40)
     t.assert_true(again.equal?(f), "the render after that repaints the first frame again")
     t.assert_equal("  1 xab", again.row_text(0), "the reused frame shows the new text")
@@ -313,8 +313,8 @@ module AdaptersFramePresenterTest
 
     # Two tab pages: the tab line takes the top row.
     s = state_for(["one", "two", "three"], "a.txt")
-    other = D::Buffer.new(["zz"], "b.txt", "\n")
-    s.tabs.add_tab(D::TabPage.new(D::Window.new(other)))
+    other = D::Buffer.new(lines: ["zz"], path: "b.txt", line_ending: "\n")
+    s.tabs.add_tab(D::TabPage.new(window: D::Window.new(buffer: other)))
     s.tabs.tab_index = 0
     f = draw(s, 7, 30)
     t.assert_equal(" 1 a.txt  2 b.txt", f.row_text(0), "the tab line lists both tab pages")
@@ -352,11 +352,11 @@ module AdaptersFramePresenterTest
     # A scratch buffer's status line shows its title; the current window's
     # shows the plugins' segments.
     s = state_for(["one"], "a.txt")
-    scratch = D::Buffer.new(["item"], nil, "\n")
+    scratch = D::Buffer.new(lines: ["item"], path: nil, line_ending: "\n")
     scratch.owner = "test"
     scratch.title = "list"
     draw(s, 6, 40)
-    side = D::Window.new(scratch)
+    side = D::Window.new(buffer: scratch)
     side.fixed_width = true
     id = s.tab.layout.split_edge(side, 12, true)
     f = draw(s, 6, 40)
@@ -415,7 +415,7 @@ module AdaptersFramePresenterTest
     t.assert_equal([NOR, NOR, VIS, NOR], highlights(f, 1, 4), "the same columns on the next row")
     s = state_for(["abc", "a"], "a.txt")
     s.mode = D::Mode::VISUAL_BLOCK
-    s.window.anchor = D::Position.new(0, 1)
+    s.window.anchor = D::Position.new(row: 0, col: 1)
     s.cursor.move_to(1, 1)
     s.cursor.want_col = -1
     f = draw(s, 6, 20)
@@ -423,7 +423,7 @@ module AdaptersFramePresenterTest
     t.assert_equal([NOR, NOR, NOR], highlights(f, 1, 3), "a shorter row ends at its line end, under the cursor here")
     s = state_for(["abcd", "a", "abcd"], "a.txt")
     s.mode = D::Mode::VISUAL_BLOCK
-    s.window.anchor = D::Position.new(0, 2)
+    s.window.anchor = D::Position.new(row: 0, col: 2)
     s.cursor.move_to(2, 3)
     f = draw(s, 6, 20)
     t.assert_equal([NOR, NOR], highlights(f, 1, 2), "a row ending before the block draws nothing")
@@ -436,7 +436,7 @@ module AdaptersFramePresenterTest
     draw(s, 9, 14)
     s.tab.layout.split(0, false, 0, 5)
     s.mode = D::Mode::VISUAL_LINE
-    s.window.anchor = D::Position.new(0, 0)
+    s.window.anchor = D::Position.new(row: 0, col: 0)
     s.cursor.move_to(1, 0)
     f = draw(s, 9, 14)
     t.assert_equal([VIS, VIS, VIS], highlights(f, 4, 3), "the current window, at the bottom, draws its selection")
