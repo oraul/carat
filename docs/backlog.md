@@ -160,7 +160,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The periodic review's areas miss the entry point, the tools, and CI
 
-- Where: `REVIEW_AREAS` in `tools/run_state.sh` (line 73). `utf8-input-safety` added the domain files that keep control characters off the terminal (`frame.rb`, `display_width.rb`, `utf8.rb`, `decoded_line.rb`) to the terminal output area; `bin/carat.rb`, `tools/`, and `.github/workflows/` are still in no area. Low finding of the periodic security review at 66fd52b.
+- Where: `REVIEW_AREAS` in `tools/run_state.sh`. `utf8-input-safety` added the domain files that keep control characters off the terminal (`frame.rb`, `display_width.rb`, `utf8.rb`, `decoded_line.rb`) to the terminal output area; `bin/carat.rb`, `tools/`, and `.github/workflows/` are still in no area. Low finding of the periodic security review at 66fd52b.
 - Why it matters: a change to the composition root, the gate scripts, or the CI workflow never makes a periodic security review due, though each decides what runs and what is checked.
 - Fix outline: add `bin/carat.rb` to the process spawning area and a "tooling and CI" area for `^(tools/|\.github/workflows/)`, with a `tools/tools_test.sh` case for each.
 
@@ -284,32 +284,38 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: an untested branch on hostile text is where the next crash on an illegal byte would hide.
 - Fix outline: add a `v$r` row over a line with an illegal byte.
 
-## The records gate passes a merge given no records
-
-- Where: `tools/gates.sh`, `gate_records`, which prints a notice and passes when `RECORDS` is empty. Left by `agent-authority`.
-- Why it matters: the comparison of the run state's reviews with the workflow's only runs when the merger passes them; the notice exists so that the delivery of `agent-authority` itself, run by the workflow it replaced, could merge.
-- Fix outline: once a delivery has merged with the new workflow, make an empty `RECORDS` a `FAIL` in the `merge` group and turn the case in `tools/tools_test.sh` into a refusal.
-
 ## File operations check containment and act in separate calls
 
-- Where: `carat/use_cases/files/resolve_inside.rb` (line 28, the real-path containment check) and the operations it guards, `carat/use_cases/files/make_path.rb` (line 90), `carat/use_cases/files/rename_path.rb` (line 151), and `carat/use_cases/files/delete_path.rb` (line 227). Low (2) finding of the periodic security review at 16cdcf7, a recorded non-goal of `plugin-path-containment`.
+- Where: `carat/use_cases/files/resolve_inside.rb` (line 28, the real-path containment check) and the operations it guards, `call` of `carat/use_cases/files/make_path.rb` (its `mkdir` and `write`), `carat/use_cases/files/rename_path.rb` (its `rename`), and `carat/use_cases/files/delete_path.rb` (its `delete`). Low (2) finding of the periodic security review at 16cdcf7, a recorded non-goal of `plugin-path-containment`.
 - Why it matters: a directory of the tree replaced by a link pointing outward between the check and the create, rename, or delete redirects the operation outside the tree root, so the containment holds only against a tree that does not change while the explorer acts on it.
 - Fix outline: when the file port gains directory-relative operations, open the resolved directory once and act through its descriptor (`openat`, `renameat`, `unlinkat` with no-follow), with a test row in `test/drivers_disk_files.rb`; until then record in `docs/spinel-notes.md` whether the pinned Spinel exposes them.
 
 ## The agent guard misses a quoted or escaped subcommand
 
-- Where: `tools/agent_guard.sh` line 84 (the git rule) and line 122 (the gh rule), and the `Bash(gh pr merge:*)` deny rule in `.claude/settings.json`. Low (7) finding of the security review of `agent-authority` at 8bf46e4; the design lists the limit as a non-goal, and the records gate and branch protection stand behind it.
+- Where: `tools/agent_guard.sh`, the git rule (`GIT` and `WRITES`) and the gh rule beside it, and the `Bash(gh pr merge:*)` deny rule in `.claude/settings.json`. Low (7) finding of the security review of `agent-authority` at 8bf46e4; the design lists the limit as a non-goal, and the records gate and branch protection stand behind it.
 - Why it matters: under the read profile `git 'push' origin x`, `"git" push`, and `g\it push` pass the text match, so injected text in the tree that tells an agent to quote the word gets a git write past the guard.
 - Fix outline: remove quotes and backslashes from the command text before matching (for example `tr -d "'\\\""`), refuse `eval`, `sh -c`, and `bash -c` when their argument names a refused word, and add `tools/tools_test.sh` cases for `git 'push'`, `"git" push`, and `"gh" pr merge`.
 
 ## The guard lets a symlink make the body file the run state
 
-- Where: `tools/agent_guard.sh` line 105, the contributor's body-file exemption (and the merger's at line 100), and `gate_pr_body` in `tools/gates.sh`. Low (6) finding of the security review of `workflow-trim` at aa3bf07.
+- Where: `tools/agent_guard.sh`, the contributor's and the merger's body-file exemption (`BODY_FILE`), and `gate_pr_body` in `tools/gates.sh`. Low (6) finding of the security review of `workflow-trim` at aa3bf07.
 - Why it matters: `ln -sf CHANGE.json build/pipeline/CHANGE.body.md` reduces to a command on the body file, which the guard allows, so a later Write or redirect to the body file overwrites `build/pipeline/CHANGE.json` and its review and phase records; the records gate at the merge still compares them with the workflow's results, so this is defense in depth.
 - Fix outline: in the contributor and merger profiles refuse `ln`, `cp -s`, and `mv` commands that name the body file, make `gate_pr_body` and the Write path refuse a body file that is a symlink (`[ -L file ]`), and add `tools/tools_test.sh` cases; or have `tools/run_state.sh` copy the body file in from a path under `tmp/`.
 
-## The run state's merged value reaches git log unchecked
+## The README names held-Ctrl forms the window keys do not have
 
-- Where: `tools/run_state.sh` line 374 (`newest_pending`) and line 487 (`history_row`), which pass the stored `merged` value to `git log -1` without `--end-of-options`, and `set`, which read-profile agents may call. Low (5) finding of the security review of `workflow-trim` at aa3bf07.
-- Why it matters: an injected agent could store `--output=<path>` as `merged`, and the next `bench` or `history` run would overwrite that file with a timestamp.
-- Fix outline: validate `merged` as 7 to 40 hexadecimal characters in `set`, `newest_pending`, and `history_row`, or call `git log -1 --format=%ct --end-of-options "$merged"`, with a `tools/tools_test.sh` case that stores an option-shaped value.
+- Where: `README.md` line 5, which says the window commands `s v h j k l w W p c o = q` work with Ctrl held on the second key. Periodic quality advisory at df5a203.
+- Why it matters: `W`, `c`, and `=` have no held-Ctrl binding, and `<C-w><C-c>` deliberately cancels as in Vim (`docs/compatibility.md`), so a user following the README presses keys that do nothing or cancel.
+- Fix outline: name only the keys that `config/default.caratrc` binds in the held-Ctrl form, with the `<C-w><C-c>` difference left to `docs/compatibility.md`.
+
+## The README's commands table omits five make targets
+
+- Where: `README.md` line 14, the commands table, which has no row for `make clean`, `make pack`, `make install`, `make spinel-rev`, or `make help`. Periodic quality advisory at df5a203.
+- Why it matters: the map's Build and CI rule gives every command a README line, and goal 11 keeps the README current.
+- Fix outline: add one row naming the missing targets, or one row per target, checked against `make help`.
+
+## CLAUDE.md has 23 bytes of room in its budget
+
+- Where: `CLAUDE.md`, 30,697 of its 30,720-byte budget in `tools/docs_lint.sh` (`BUDGETS`). Periodic quality advisory at df5a203; `docs/architecture.md` is at 88,063 of 88,064 and is handled by `project-config-guards`.
+- Why it matters: `CLAUDE.md` requires its Commands and Layout sections to stay in sync with the code, so the next change that must add a line there fails `make docs-lint` and pays for a trim it did not plan.
+- Fix outline: the first change that needs room trims `CLAUDE.md` in the same change, moving detail to `docs/codebase-map.md` or the agents' files, rather than raising the budget; accepted when `make docs-lint` passes with at least 1,000 bytes of room left.
