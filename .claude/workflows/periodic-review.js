@@ -26,12 +26,12 @@ const FINDING = {
 const SECURITY = {
   type: 'object',
   properties: { ran: { type: 'boolean' }, head: { type: 'string' }, findings: { type: 'array', items: FINDING }, tool_calls: CALLS },
-  required: ['ran', 'head', 'findings'],
+  required: ['ran', 'head', 'findings', 'tool_calls'],
 }
 const QUALITY = {
   type: 'object',
   properties: { head: { type: 'string' }, blocking: { type: 'array', items: { type: 'string' } }, advisory: { type: 'array', items: { type: 'string' } }, tool_calls: CALLS },
-  required: ['head', 'blocking', 'advisory'],
+  required: ['head', 'blocking', 'advisory', 'tool_calls'],
 }
 
 if (!/^[a-z0-9][a-z0-9-]*$/.test(change || '')) return { ran: false, reason: `no run state named: ${change}` }
