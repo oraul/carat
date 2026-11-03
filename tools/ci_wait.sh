@@ -11,6 +11,10 @@ set -u
 MAX=540
 case "${1:-}" in
   ""|*[!0-9]*) echo "ci_wait: not a whole number of seconds: ${1:-}" >&2; exit 2 ;;
+  # Four digits or more is past the bound; refused here, because a number
+  # past the shell's integer range makes both tests below error and fail
+  # open.
+  ????*) echo "ci_wait: refused: $1 seconds; wait 1 to $MAX seconds at a time" >&2; exit 2 ;;
 esac
 seconds=$(expr "$1" + 0)
 if [ "$seconds" -lt 1 ] || [ "$seconds" -gt $MAX ]; then

@@ -107,6 +107,7 @@ expect "ci_scope: a run by hand always runs" 0 "^run=true" scope workflow_dispat
 expect "ci_wait: waits the given seconds" 0 "^ci_wait: waited 1 seconds$" sh "$here/ci_wait.sh" 1
 expect "ci_wait: refuses zero" 2 "refused: 0 seconds" sh "$here/ci_wait.sh" 0
 expect "ci_wait: refuses more than 540" 2 "refused: 541 seconds" sh "$here/ci_wait.sh" 541
+expect "ci_wait: refuses a number past the shell's integer range" 2 "refused: 99999999999999999999999 seconds" sh "$here/ci_wait.sh" 99999999999999999999999
 expect "ci_wait: refuses a value that is not a whole number" 2 "not a whole number" sh "$here/ci_wait.sh" '1; true'
 expect "ci_wait: refuses no value" 2 "not a whole number" sh "$here/ci_wait.sh"
 
