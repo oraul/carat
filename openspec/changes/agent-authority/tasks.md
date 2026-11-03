@@ -12,8 +12,8 @@
 
 ## 3. Workflows and agents
 
-- [ ] 3.1 Record phases and reviews from `.claude/workflows/deliver-change.js` through `flush()` and pass `RECORDS` to the merger; record the periodic reviews from `.claude/workflows/periodic-review.js`; verify with `node --check` on both.
-- [ ] 3.2 Remove the `phase` and `review` records from the nine agents, point the merger at the workflow's gate line, and update `.claude/commands/review.md`; verify by reading each against the workflows and `make docs-lint`.
+- [x] 3.1 Record phases and reviews from `.claude/workflows/deliver-change.js` through `flush()` and pass `RECORDS` to the merger; record the periodic reviews from `.claude/workflows/periodic-review.js`; verify with `node --check` on both.
+- [x] 3.2 Remove the `phase` and `review` records from the nine agents, point the merger at the workflow's gate line, and update `.claude/commands/review.md`; verify by reading each against the workflows and `make docs-lint`.
 
 ## 4. Docs
 
