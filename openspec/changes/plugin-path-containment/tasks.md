@@ -19,7 +19,7 @@
 
 - [x] 4.1 Add the delivered-changes line for `untrusted-config-limits` (#37) to `docs/codebase-map.md`; verify with `make docs-lint`
 - [x] 4.2 Record in `docs/backlog.md` the periodic findings at 389c118 not fixed here (run_state `set` of `review.*`, read-only agents with unrestricted Bash, the duplicate checks in `options.rb`, `OpenFile`'s double existence query, its responses in `docs/architecture.md`, the long comment in `memory_files.rb` folded into the wrap-width entry, the 64 MiB test strings, the four stats in `disk_files.rb`) and drop the stale `config.rb` half of the `Carat::Json` entry; verify with `make docs-lint`
-- [ ] 4.3 Run `make gates`, and confirm every scenario of the delta specs has code and a test
+- [x] 4.3 Run `make gates`, and confirm every scenario of the delta specs has code and a test
 
 ## Workflow follow-up
 
