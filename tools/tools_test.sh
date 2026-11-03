@@ -1,7 +1,8 @@
 #!/bin/sh
 # Tests the shell tools behind CI and the delivery pipeline, each in a
 # temporary git repository or directory outside this one:
-# tools/ci_scope.sh (which changes run the checks), tools/metrics.sh (the
+# tools/ci_scope.sh (which changes run the checks), tools/ci_wait.sh (the
+# merger's wait), tools/metrics.sh (the
 # measurement and the comparison with main), tools/run_state.sh (the run
 # state, stages, resume, the push rule, the records only the workflow
 # writes, the history, and the budget), tools/agent_guard.sh (each
@@ -101,6 +102,13 @@ scope_case true docs/codebase-map.md
 scope_case true docs/actions.md
 scope_case true tools/x.sh
 expect "ci_scope: a run by hand always runs" 0 "^run=true" scope workflow_dispatch
+
+# ------------------------------------------------------------ ci_wait.sh
+expect "ci_wait: waits the given seconds" 0 "^ci_wait: waited 1 seconds$" sh "$here/ci_wait.sh" 1
+expect "ci_wait: refuses zero" 2 "refused: 0 seconds" sh "$here/ci_wait.sh" 0
+expect "ci_wait: refuses more than 540" 2 "refused: 541 seconds" sh "$here/ci_wait.sh" 541
+expect "ci_wait: refuses a value that is not a whole number" 2 "not a whole number" sh "$here/ci_wait.sh" '1; true'
+expect "ci_wait: refuses no value" 2 "not a whole number" sh "$here/ci_wait.sh"
 
 mkdir -p "$work/bin"
 cat > "$work/bin/gh" <<'EOF'
