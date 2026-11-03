@@ -456,6 +456,47 @@ expect "run_state: review-due is not due after one quiet change" 1 "^not due: 1 
 expect "run_state: review-due is due five changes after the last review" 0 "^due: 5 changes merged" state review-due due
 row f "security=pass quality=pass" >> docs/metrics.tsv
 expect "run_state: a periodic review restarts the count" 1 "^not due: 1 of 5" state review-due due
+# merge_touch MESSAGE PATH...: append a line to each PATH, commit, and
+# record the commit as the merged commit of the change areas.
+merge_touch() {
+  message=$1
+  shift
+  for f in "$@"; do
+    mkdir -p "$(dirname "$f")"
+    echo "# touched" >> "$f"
+  done
+  commit "$message"
+  state set areas merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+}
+fresh areas
+state init areas chore/areas > /dev/null
+merge_touch "feat: entry" bin/carat.rb
+expect "run_state: review-due names the entry point" 0 "^due: the change touched entry point [(]bin/carat[.]rb[)]" state review-due areas
+merge_touch "chore: tool" tools/x.sh
+expect "run_state: review-due names a tool" 0 "^due: the change touched tooling and CI [(]tools/x[.]sh[)]" state review-due areas
+merge_touch "chore: agent" .claude/agents/x.md
+expect "run_state: review-due names an agent" 0 "^due: the change touched tooling and CI [(][.]claude/agents/x[.]md[)]" state review-due areas
+merge_touch "ci: workflow" .github/workflows/ci.yml
+expect "run_state: review-due names the CI workflow" 0 "^due: the change touched tooling and CI [(][.]github/workflows/ci[.]yml[)]" state review-due areas
+mkdir -p config carat/domain
+printf '# Options.\noption.tabstop 2\nkeymap.normal j cursor.down\n' > config/default.caratrc
+echo 'mirror' > carat/domain/default_config.rb
+merge_touch "feat: config" README.md
+{ sed 's/^keymap.normal j .*/keymap.normal j cursor.up/' config/default.caratrc; printf '\n# Window keys.\nkeymap.normal <C-w><C-j> window.down\n'; } > rc.tmp
+mv rc.tmp config/default.caratrc
+merge_touch "feat: keys" carat/domain/default_config.rb
+expect "run_state: review-due skips a keymap-only change" 1 "^not due" state review-due areas
+echo 'option.tabstop 4' >> config/default.caratrc
+merge_touch "feat: tabstop" README.md
+expect "run_state: review-due names a changed option" 0 "^due: the change touched config loading [(]config/default[.]caratrc[)]" state review-due areas
+merge_touch "fix: mirror" carat/domain/default_config.rb
+expect "run_state: review-due names the mirror changed alone" 0 "^due: the change touched config loading [(]carat/domain/default_config[.]rb[)]" state review-due areas
+echo 'keymap.normal k cursor.up' >> config/default.caratrc
+merge_touch "fix: loader" carat/adapters/rc_config_gateway.rb
+expect "run_state: review-due names a loader" 0 "^due: the change touched config loading [(]carat/adapters/rc_config_gateway[.]rb[)]" state review-due areas
+echo 'keymap.normal l cursor.right' >> config/default.caratrc
+merge_touch "fix: generator" bin/carat-gen-config.rb
+expect "run_state: review-due names the generator" 0 "^due: the change touched config loading [(]bin/carat-gen-config[.]rb[)]" state review-due areas
 
 # forge CHANGE LINE: append LINE to the run state as a hand edit would.
 forge() {
