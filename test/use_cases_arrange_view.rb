@@ -59,6 +59,19 @@ module UseCasesArrangeViewTest
     arrange.call(s)
     t.assert_equal(25, s.window.top, "scrolloff keeps rows below the cursor")
 
+    # The clamp and the scrolloff cap that ArrangeView and ScrollWindow share.
+    w = s.window
+    t.assert_equal(32, w.max_top(40), "the last first-shown line fills the window to the last line")
+    t.assert_equal(0, w.max_top(5), "a buffer shorter than the window has max top 0")
+    t.assert_equal(2, w.margin(2), "a scrolloff under half the window is kept")
+    t.assert_equal(3, w.margin(99), "scrolloff is capped at half the window")
+    w.scroll_top_to(50, 40)
+    t.assert_equal(32, w.top, "scroll_top_to clamps a top past the end to max top")
+    w.scroll_top_to(-4, 40)
+    t.assert_equal(0, w.top, "scroll_top_to clamps a negative top to the first line")
+    w.scroll_top_to(7, 40)
+    t.assert_equal(7, w.top, "scroll_top_to keeps a top in range")
+
     # Horizontal scrolling to the cursor's display column.
     s = state_for(["é" + "a" * 99])
     s.resize(10, 40)

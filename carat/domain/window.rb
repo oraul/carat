@@ -76,19 +76,39 @@ module Carat
       end
 
       # Scrolls so that row is visible with scrolloff rows of context where
-      # the buffer allows, in a window of height rows.
-      #: (Integer, Integer, Integer, Integer) -> void
-      def scroll_to_row(row, line_count, height, scrolloff)
+      # the buffer allows, in the window's height of text rows.
+      #: (Integer, Integer, Integer) -> void
+      def scroll_to_row(row, line_count, scrolloff)
         return if height <= 0
-        off = scrolloff
-        half = (height - 1) / 2
-        off = half if off > half
+        off = margin(scrolloff)
         self.top = row - off if row - off < top
         self.top = row + off - height + 1 if row + off >= top + height
-        max_top = line_count - height
-        max_top = 0 if max_top < 0
-        self.top = max_top if top > max_top
-        self.top = 0 if top < 0
+        scroll_top_to(top, line_count)
+      end
+
+      # Makes row the first shown line, clamped between the first line and
+      # max_top, as every scroll of the window clamps it.
+      #: (Integer, Integer) -> void
+      def scroll_top_to(row, line_count)
+        last = max_top(line_count)
+        row = last if row > last
+        row = 0 if row < 0
+        self.top = row
+      end
+
+      # The last first-shown line: the one that fills the window to the
+      # last of line_count lines, 0 when they all fit.
+      #: (Integer) -> Integer
+      def max_top(line_count)
+        last = line_count - height
+        last < 0 ? 0 : last
+      end
+
+      # scrolloff, capped at half the window as Neovim caps it.
+      #: (Integer) -> Integer
+      def margin(scrolloff)
+        half = (height - 1) / 2
+        scrolloff > half ? half : scrolloff
       end
 
       # Scrolls horizontally so that display column col is visible in a text

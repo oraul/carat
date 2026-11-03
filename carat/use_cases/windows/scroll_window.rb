@@ -11,10 +11,11 @@ module Carat
     # option (half the window when 0) moving the cursor as far, by lines,
     # or so the cursor line sits at the top, middle, or bottom with
     # scrolloff. The first shown line stays between the first line and
-    # the one that fills the window to the last, as ArrangeView clamps it,
-    # and the cursor then moves onto the nearest line the window shows
-    # with scrolloff, keeping its wanted column, so the arrangement after
-    # the key keeps the view. <C-f> with the last line shown goes to the
+    # the one that fills the window to the last, and the cursor then moves
+    # onto the nearest line the window shows with scrolloff, keeping its
+    # wanted column. The clamp and the scrolloff cap are the Window's own
+    # (scroll_top_to, max_top, margin), which ArrangeView's scroll_to_row
+    # uses too, so the arrangement after the key keeps the view. <C-f> with the last line shown goes to the
     # last line. Before the first render, when the window has no height,
     # nothing scrolls.
     class ScrollWindow
@@ -38,13 +39,13 @@ module Carat
 
       #: (Domain::EditorState, Domain::Window, Integer) -> void
       def page(state, window, pages)
-        if pages > 0 && window.top >= max_top(state, window)
+        if pages > 0 && window.top >= window.max_top(state.buffer.line_count)
           move_row(state, state.buffer.line_count - 1)
           return
         end
         size = window.height - 2
         size = 1 if size < 1
-        scroll_to(state, window, window.top + pages * size)
+        window.scroll_top_to(window.top + pages * size, state.buffer.line_count)
         keep_in_view(state, window)
       end
 
@@ -54,14 +55,14 @@ module Carat
         options.scroll = count if count > 0
         amount = options.scroll > 0 ? options.scroll : window.height / 2
         amount = 1 if amount < 1
-        scroll_to(state, window, window.top + direction * amount)
+        window.scroll_top_to(window.top + direction * amount, state.buffer.line_count)
         move_row(state, state.cursor.row + direction * amount)
         keep_in_view(state, window)
       end
 
       #: (Domain::EditorState, Domain::Window, Integer) -> void
       def line(state, window, lines)
-        scroll_to(state, window, window.top + lines)
+        window.scroll_top_to(window.top + lines, state.buffer.line_count)
         keep_in_view(state, window)
       end
 
@@ -70,36 +71,12 @@ module Carat
         move_row(state, count - 1) if count > 0
         row = state.cursor.row
         height = window.height
-        off = margin(state, window)
+        off = window.margin(state.options.scrolloff)
         top = row - height + 1 + off
         top = row - off if where == :cursor_top
         top = row - (height - 1) / 2 if where == :cursor_middle
-        scroll_to(state, window, top)
+        window.scroll_top_to(top, state.buffer.line_count)
         keep_in_view(state, window)
-      end
-
-      # The last first-shown line: the one that fills the window to the
-      # last line of the buffer.
-      #: (Domain::EditorState, Domain::Window) -> Integer
-      def max_top(state, window)
-        last = state.buffer.line_count - window.height
-        last < 0 ? 0 : last
-      end
-
-      # scrolloff, capped at half the window as Neovim caps it.
-      #: (Domain::EditorState, Domain::Window) -> Integer
-      def margin(state, window)
-        off = state.options.scrolloff
-        half = (window.height - 1) / 2
-        off > half ? half : off
-      end
-
-      #: (Domain::EditorState, Domain::Window, Integer) -> void
-      def scroll_to(state, window, top)
-        last = max_top(state, window)
-        top = last if top > last
-        top = 0 if top < 0
-        window.top = top
       end
 
       # Moves the cursor onto the rows the window shows, scrolloff rows in
@@ -107,9 +84,9 @@ module Carat
       #: (Domain::EditorState, Domain::Window) -> void
       def keep_in_view(state, window)
         top = window.top
-        off = margin(state, window)
+        off = window.margin(state.options.scrolloff)
         low = top == 0 ? 0 : top + off
-        high = top >= max_top(state, window) ? state.buffer.line_count - 1 : top + window.height - 1 - off
+        high = top >= window.max_top(state.buffer.line_count) ? state.buffer.line_count - 1 : top + window.height - 1 - off
         row = state.cursor.row
         move_row(state, low) if row < low
         move_row(state, high) if row > high
