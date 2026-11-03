@@ -21,9 +21,9 @@ ok   carat-dark comments are grey and italic
 ok   carat-light has its own comment color
 ok   the status line is bold
 ok   the defaults: carat-dark, syntax on
-ok   the theme key selects a theme
-ok   an unknown theme keeps the default
-ok   a theme of the wrong type keeps the default
+ok   the theme line selects a theme
+ok   an unknown theme keeps the default and is reported
+ok   a theme of the wrong kind keeps the default
 ok   the shipped configuration names carat-dark
 ok   truecolor
 ok   24bit

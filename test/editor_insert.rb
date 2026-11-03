@@ -6,10 +6,7 @@ require_relative "../carat/testing"
 # the file is compiled on its own (make test-one).
 module EditorInsertTest
   def self.editor(text, autoindent, expandtab)
-    config = Carat::Doubles::FixedConfig.defaults
-    config["options"]["autoindent"] = autoindent
-    config["options"]["expandtab"] = expandtab
-    config["options"]["tabstop"] = 4
+    config = Carat::Doubles::FixedConfig.with("option.autoindent #{autoindent}\noption.expandtab #{expandtab}\noption.tabstop 4\n")
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", text)
     h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 10, cols: 40, plugins: [])

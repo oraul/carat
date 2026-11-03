@@ -76,7 +76,7 @@ module Carat
         buffer = Domain::Buffer.new(lines: Boundary.copied_lines(lines), path: nil, line_ending: "\n")
         buffer.owner = name
         buffer.title = title
-        keymap = Domain::Keymap.from_config(bindings, @registry.leader)
+        keymap = Domain::Keymap.from_lines(bindings, @registry.leader)
         errors = keymap.errors
         i = 0
         while i < errors.length

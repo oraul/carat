@@ -91,8 +91,9 @@ module Carat
     # a plugin may run ex commands in activate), and before the
     # configuration's bindings go into the keymap, so the configuration
     # always wins; a binding of an action neither the table nor a plugin
-    # declares is reported with the configuration's file name instead of
-    # added.
+    # declares is reported with its file and line instead of added. Every
+    # problem the options, the plugin host, and the keymap note on the
+    # configuration is kept in file order in config_errors.
     class EditorAssembly
       include UseCases::Reporting
 
@@ -198,7 +199,7 @@ module Carat
         UseCases::SyntaxCommandHandler.register(@commands)
         UseCases::SetCommandHandler.register(@commands)
         UseCases::PluginCommandHandler.register(@commands, plugins: @plugins)
-        @plugins.activate_all(value["plugins"])
+        @plugins.activate_all(value)
 
         @command_line = UseCases::EditCommandLine.new(runner: @runner, plugins: @plugins, plugin_ui: @plugin_ui, registers: @registers)
         start_visual = UseCases::StartVisual.new
@@ -219,10 +220,9 @@ module Carat
         UseCases::TabHandler.register(@actions, switch_tab: @switch_tab)
         UseCases::PluginActionHandler.register(@actions, plugins: @plugins)
 
-        from = @keymap.errors.length
-        @keymap.add_checked(value["keymaps"], leader, known_actions, config.source)
-        problems = @keymap.errors
-        i = from
+        @keymap.add_checked(value, known_actions)
+        problems = value.report
+        i = 0
         while i < problems.length
           @config_errors << problems[i]
           i += 1

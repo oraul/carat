@@ -1,0 +1,68 @@
+ok   a word
+ok   a number
+ok   a flag
+ok   a list
+ok   no value
+ok   tabs and runs of spaces
+ok   a quoted word
+ok   an empty quoted word
+ok   an escaped quote
+ok   an escaped backslash
+ok   another backslash stays
+ok   a backslash outside quotes
+ok   a quote inside a word
+ok   a quoted hash
+ok   a hash inside a word
+ok   a comment after the value
+ok   a comment right after a word
+ok   UTF-8 in a word
+ok   UTF-8 in quotes
+ok   a carriage return
+ok   a blank line
+ok   an empty line
+ok   a comment line
+ok   an indented comment
+ok   a key with digits and underscores
+ok   an unterminated quote
+ok   an escaped closing quote
+ok   text after a closing quote
+ok   a control character
+ok   a control character in a comment
+ok   a delete character
+ok   an undotted key
+ok   an uppercase key
+ok   a key with an empty segment
+ok   a key ending in a dot
+ok   a key with a dash
+ok   a quoted key
+ok   a control character in quotes
+ok   a tab in quotes stays
+ok   comments, blanks, and settings
+ok   no final newline
+ok   carriage returns
+ok   a malformed line among good ones
+ok   an unknown scope
+ok   a language command
+ok   an unknown language setting
+ok   an untrusted file cannot set language commands
+ok   an untrusted file sets anything else
+ok   the last line of a key wins and the defaults are the shipped lines
+ok   a key no line sets has no last line
+ok   problems are reported in file and line order, whoever noted them
+ok   true
+ok   false
+ok   yes is not a flag
+ok   a number
+ok   nine digits
+ok   ten digits
+ok   a negative number
+ok   a word is not a number
+ok   a word
+ok   an empty word
+ok   two words are not one
+ok   no word is not one
+ok   a list
+ok   an empty list
+ok   an unknown kind
+ok   each kind says what it takes
+domain_rc_parser: 67 passed, 0 failed

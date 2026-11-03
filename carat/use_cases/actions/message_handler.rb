@@ -5,7 +5,7 @@ module Carat
   module UseCases
     # An action that only answers a message: the quit hint on <C-c>, the
     # register prefix (which the grammar consumes, so it is never run),
-    # and the actions config/default.json binds but a later roadmap item
+    # and the actions config/default.caratrc binds but a later roadmap item
     # implements, which answer "Not implemented: name".
     class MessageHandler < ActionHandler
       QUIT_HINT = "Type  :q!  and press <Enter> to abandon all changes and exit Carat"

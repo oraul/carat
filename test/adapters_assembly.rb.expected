@@ -27,9 +27,10 @@ ok   the terminal port
 ok   the clock port
 ok   the file port
 ok   the main loop holds the assembly, the terminal, and the signal port it was given
-ok   the fixed config serves its value and its source
+ok   the fixed config serves the shipped defaults
 ok   the assembly reads timeoutlen and the leader from the port
-ok   the gateway serves the shipped defaults
-ok   a configuration without values falls back to Vim's defaults
-ok   a configuration problem names the port's source
-adapters_assembly: 34 passed, 0 failed
+ok   the gateway reads the shipped defaults through the file port it was given
+ok   the assembly and the gateway hold the one file port
+ok   a configuration without lines falls back to Vim's defaults
+ok   a configuration problem names its file and line
+adapters_assembly: 35 passed, 0 failed

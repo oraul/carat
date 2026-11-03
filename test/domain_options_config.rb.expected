@@ -1,0 +1,14 @@
+ok   no line keeps Vim's defaults
+ok   flags
+ok   numbers
+ok   a later line wins
+ok   the options read later are checked
+ok   an unknown option
+ok   a word for a number
+ok   no value
+ok   a flag that is not true or false
+ok   two words for one
+ok   a bad line keeps the value before it
+ok   other scopes are not options
+ok   the shipped defaults set Carat's options cleanly
+domain_options_config: 13 passed, 0 failed

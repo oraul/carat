@@ -1,6 +1,0 @@
-{
-  "plugins": [
-    { "name": "explorer", "path": "explorer/plugin", "class": "Carat::Plugins::Explorer::Plugin" },
-    { "name": "ruby", "path": "ruby/plugin", "class": "Carat::Plugins::Ruby::Plugin" }
-  ]
-}

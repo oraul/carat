@@ -87,20 +87,21 @@ module AdaptersAssemblyTest
     main_loop = Carat::Drivers::MainLoop.new(assembly: a, terminal: h.terminal, signals: signals)
     t.assert_equal([true, true, true], [main_loop.assembly.equal?(a), main_loop.terminal.equal?(h.terminal), main_loop.signals.equal?(signals)], "the main loop holds the assembly, the terminal, and the signal port it was given")
 
-    # The configuration comes through the port: its source names the
-    # problems, timeoutlen lands in the options, and what it leaves out
-    # falls back to Vim's defaults in the domain.
+    # The configuration comes through the port: its lines name the files
+    # of their problems, timeoutlen lands in the options, and what it
+    # leaves out falls back to Vim's defaults in the domain.
     fixed = Carat::Doubles::FixedConfig.new(value: Carat::Doubles::FixedConfig.defaults)
-    t.assert_equal(["config/default.json", " ", 500], [fixed.source, fixed.load["leader"], fixed.load["timeoutlen"]], "the fixed config serves its value and its source")
-    t.assert_equal([true, 500, " "], [a.config.load.is_a?(Hash), a.state.options.timeoutlen, Carat::Domain::Keymap.leader_from(a.config.load)], "the assembly reads timeoutlen and the leader from the port")
-    gateway = Carat::Adapters::JsonConfigGateway.new
-    t.assert_equal(["config/default.json", 500], [gateway.source, gateway.load["timeoutlen"]], "the gateway serves the shipped defaults")
-    bare = Carat::Doubles::EditorHarness.new(files: files, config: {}, rows: 10, cols: 40, plugins: [])
-    t.assert_equal([1000, "\\", false, 1000, 1000], [bare.state.options.timeoutlen, Carat::Domain::Keymap.leader_from({}), bare.state.options.number, bare.state.options.undolevels, bare.assembly.buffers.feed.undolevels], "a configuration without values falls back to Vim's defaults")
-    broken = Carat::Doubles::FixedConfig.defaults
-    broken["keymaps"]["normal"]["zq"] = "foo.bar"
-    odd = Carat::Doubles::EditorHarness.new(files: files, config: broken, rows: 10, cols: 40, plugins: [])
-    t.assert_equal(["config/default.json: keymaps.normal.zq: unknown action foo.bar"], odd.assembly.config_errors, "a configuration problem names the port's source")
+    served = fixed.load
+    t.assert_equal(["config/default.caratrc", "<Space>", "500", []], [served.line_at(0).source, Carat::Domain::Keymap.leader_from(served), served.last("option.timeoutlen").words[0], served.report], "the fixed config serves the shipped defaults")
+    t.assert_equal([500, "<Space>"], [a.state.options.timeoutlen, Carat::Domain::Keymap.leader_from(a.config.load)], "the assembly reads timeoutlen and the leader from the port")
+    gateway = Carat::Adapters::RcConfigGateway.new(files: files)
+    t.assert_equal([true, 500], [gateway.files.equal?(files), Carat::Domain::Options.from_config(gateway.load).timeoutlen], "the gateway reads the shipped defaults through the file port it was given")
+    through = Carat::Adapters::EditorAssembly.new(terminal: h.terminal, clock: h.clock, files: files, config: gateway, plugin_list: [])
+    t.assert_equal([true, true], [through.config.equal?(gateway), through.files.equal?(gateway.files)], "the assembly and the gateway hold the one file port")
+    bare = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Domain::Config.new, rows: 10, cols: 40, plugins: [])
+    t.assert_equal([1000, "\\", false, 1000, 1000], [bare.state.options.timeoutlen, Carat::Domain::Keymap.leader_from(Carat::Domain::Config.new), bare.state.options.number, bare.state.options.undolevels, bare.assembly.buffers.feed.undolevels], "a configuration without lines falls back to Vim's defaults")
+    odd = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with("keymap.normal zq foo.bar\n"), rows: 10, cols: 40, plugins: [])
+    t.assert_equal([".caratrc:1: unknown action foo.bar"], odd.assembly.config_errors, "a configuration problem names its file and line")
 
     t.finish
   end

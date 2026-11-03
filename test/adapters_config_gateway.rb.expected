@@ -1,0 +1,12 @@
+ok   with no user or project file the shipped defaults apply cleanly
+ok   the user file overrides the defaults
+ok   the project file overrides the user file
+ok   a later line of one file wins
+ok   the user file's problems come before the project file's
+ok   a project file cannot choose a program to run
+ok   without a home directory the user file is skipped
+ok   a directory named .caratrc is skipped
+ok   a file that cannot be read is reported and skipped
+ok   the files are found under the home and working directories the port names
+ok   the editor applies the files and shows the first problem with the count of the others
+adapters_config_gateway: 11 passed, 0 failed

@@ -20,9 +20,9 @@ module Carat
       attr_reader :assembly #: Adapters::EditorAssembly
       attr_reader :frame #: Domain::Frame
 
-      # config is the configuration value, which the harness serves
+      # config is the Domain::Config, which the harness serves
       # through a FixedConfig.
-      #: (files: MemoryFiles, config: untyped, rows: Integer, cols: Integer, plugins: Array[untyped]) -> void
+      #: (files: MemoryFiles, config: Domain::Config, rows: Integer, cols: Integer, plugins: Array[untyped]) -> void
       def initialize(files:, config:, rows:, cols:, plugins:)
         @files = files
         @clock = ManualClock.new

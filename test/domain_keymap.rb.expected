@@ -1,4 +1,5 @@
-ok   default configuration has no keymap errors
+ok   default configuration has no keymap problems
+ok   the default leader is Space
 ok   j in normal
 ok   arrow in normal
 ok   escape in insert
@@ -32,18 +33,22 @@ ok   gT goes to the previous tab page
 ok   a matches and is a prefix
 ok   ab matches
 ok   j still bound after a bad key
-ok   k with a non-string value is unbound
-ok   malformed bindings are reported with mode and key
-ok   null unbinds a key
+ok   k without an action is unbound
+ok   l with an empty action is unbound
+ok   malformed bindings are reported with the file and line
+ok   none unbinds a key and a later line wins
 ok   plugin binding stays when the configuration is silent
 ok   configuration replaces the plugin binding
 ok   configuration removes the plugin binding
 ok   configuration adds a longer binding
-ok   add_all records errors and ignores a non-object
+ok   add_lines records errors by line and ignores a non-list
+ok   from_lines builds a scratch keymap
 ok   a second plugin's binding of held keys is refused and recorded
 ok   removing an owner drops its bindings and the prefixes left empty, and keeps the others
 ok   the configuration replaces a plugin binding and keeps it when the plugin goes
-ok   checked loading reports unknown actions and malformed keys with the file and path
+ok   checked loading reports unknown actions and malformed keys with the file and line
 ok   the refused binding is not added and the others are
+ok   the leader is the last good leader line
+ok   the leader is a backslash when no line sets it
 ok   an action name has namespace segments, a key sequence does not
-domain_keymap: 48 passed, 0 failed
+domain_keymap: 53 passed, 0 failed

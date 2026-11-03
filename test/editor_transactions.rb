@@ -21,11 +21,11 @@ module EditorTransactionsTest
     # @rbs skip
     def manifest
       Carat::PluginApi::Manifest.new(
-        name: "edits", version: "1.0.0", api_version: "1.0",
+        name: "edits", version: "1.0.0", api_version: "2.0",
         actions: { "plugin.edits.two" => "Replace two ranges" },
         commands: {},
-        bindings: { "normal" => { "<leader>te" => "plugin.edits.two" } },
-        events: [], options: {}, option_types: {}, filetypes: []
+        bindings: ["keymap.normal <leader>te plugin.edits.two"],
+        events: [], options: [], option_types: {}, filetypes: []
       )
     end
 

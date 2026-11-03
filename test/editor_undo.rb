@@ -24,7 +24,7 @@ module EditorUndoTest
     # Returns the manifest.
     # @rbs skip
     def manifest
-      Carat::PluginApi::Manifest.new(name: "fixer", version: "1.0.0", api_version: "1.0", actions: { "plugin.fixer.list" => "Open a list" }, commands: {}, bindings: { "normal" => { "<leader>tu" => "plugin.fixer.list" } }, events: ["buffer_change", "buffer_save"], options: {}, option_types: {}, filetypes: [])
+      Carat::PluginApi::Manifest.new(name: "fixer", version: "1.0.0", api_version: "2.0", actions: { "plugin.fixer.list" => "Open a list" }, commands: {}, bindings: ["keymap.normal <leader>tu plugin.fixer.list"], events: ["buffer_change", "buffer_save"], options: [], option_types: {}, filetypes: [])
     end
 
     #: (Carat::PluginApi::Host) -> void
@@ -150,8 +150,7 @@ module EditorUndoTest
     # undolevels limits the history.
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "abcdef\n")
-    config = Carat::Doubles::FixedConfig.defaults
-    config["options"]["undolevels"] = 3
+    config = Carat::Doubles::FixedConfig.with("option.undolevels 3\n")
     h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 10, cols: 80, plugins: [])
     h.open("a.txt")
     h.type("xxxxx10u")

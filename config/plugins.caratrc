@@ -1,0 +1,6 @@
+# The compiled plugins, in registration order, one line each:
+# plugin.<name> <path under carat/plugins/> <class>. bin/carat-gen-config.rb
+# renders carat/plugins/registry.rb from these lines; run make gen-config
+# after a change.
+plugin.explorer explorer/plugin Carat::Plugins::Explorer::Plugin
+plugin.ruby ruby/plugin Carat::Plugins::Ruby::Plugin
