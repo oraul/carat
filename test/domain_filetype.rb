@@ -33,6 +33,7 @@ module DomainFiletypeTest
       ["a dot file", [".rb", ""], ""],
       ["no extension", ["README", ""], ""],
       ["the extension is case sensitive", ["A.RB", ""], ""],
+      ["a name that is not UTF-8", ["dir/caf\xE9.rb", ""], "ruby"],
       ["a ruby shebang", ["tool", "#!/usr/bin/ruby"], "ruby"],
       ["env ruby", ["tool", "#!/usr/bin/env ruby"], "ruby"],
       ["env with options", ["tool", "#!/usr/bin/env -S ruby -w"], "ruby"],

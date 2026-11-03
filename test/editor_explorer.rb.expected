@@ -94,4 +94,5 @@ ok   the tree lists names that are not UTF-8 as they are
 ok   the screen shows each illegal byte as one replacement character
 ok   the explorer stays enabled after listing them
 ok   Enter opens a name that is not UTF-8
-editor_explorer: 96 passed, 0 failed
+ok   the status line names the opened file with one replacement character per illegal byte
+editor_explorer: 97 passed, 0 failed

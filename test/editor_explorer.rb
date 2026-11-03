@@ -316,6 +316,7 @@ module EditorExplorerTest
     row = listed.index("   m \xF4\x90\x80\x80.md").to_i
     h.type("#{row + 1}G<CR>")
     t.assert_equal(["\xF4\x90\x80\x80.md", ["beyond"]], [h.buffer.path, h.lines], "Enter opens a name that is not UTF-8")
+    t.assert_true(h.status_row.include?("\u{FFFD}\u{FFFD}\u{FFFD}\u{FFFD}.md"), "the status line names the opened file with one replacement character per illegal byte")
 
     t.finish
   end
