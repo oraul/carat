@@ -1,7 +1,8 @@
 # Runs the editor binary inside a pseudo-terminal: the usage and terminal
 # checks, an insert-write-quit session, a quit refused then forced, split
 # windows and a tab page, the file tree, a linewise visual delete, a
-# Ruby file in colors, a file that is not UTF-8, and SIGTERM. Runs
+# Ruby file in colors, a file that is not UTF-8, a hostile project and
+# home directory, and SIGTERM. Runs
 # build/bin/carat, the release binary make test builds first, or the
 # binary CARAT_BIN names (CI runs the development build of make dev-build
 # on pull requests). Prints only the harness lines so the snapshot is
@@ -37,6 +38,39 @@ module SmokeEditorTest
         return
       end
     end
+  end
+
+  # Makes dir and the directories above it.
+  def self.make_dirs(dir)
+    return if File.directory?(dir)
+    make_dirs(File.dirname(dir))
+    Dir.mkdir(dir)
+  end
+
+  # Writes path afresh, removing a link or file already there.
+  def self.fresh(path)
+    File.delete(path) if File.symlink?(path) || File.exist?(path)
+  end
+
+  # Starts the editor on a.txt in the project directory with HOME set to
+  # home, and answers the output of its first frame after :q! and its
+  # exit status.
+  def self.hostile_session(project, home)
+    bin = File.expand_path(BIN)
+    here = Dir.pwd
+    Dir.chdir(project)
+    reader, writer, pid = PTY.spawn({ "HOME" => home }, bin, "a.txt")
+    Dir.chdir(here)
+    writer.winsize = [24, 80]
+    out = +"".b
+    settle(reader, out, 0.5)
+    writer.write(":q!\r")
+    code = finish_session(reader, out, pid)
+    HostileRun.new(out: out, code: code)
+  end
+
+  # What a hostile session drew and how it ended.
+  class HostileRun < Struct.new(:out, :code, keyword_init: true)
   end
 
   # Reads until the editor closes the terminal, then reaps it.
@@ -269,6 +303,30 @@ module SmokeEditorTest
     writer.write(":q!\r")
     code = finish_session(reader, out, pid)
     t.assert_equal(0, code, "the editor exits with status 0 after yanking and putting an illegal line")
+
+    # A hostile project: a .caratrc linked to /dev/zero is refused, not
+    # read, and the editor starts, says why, and quits. Then a .caratrc
+    # with a huge tabstop and a byte that is not UTF-8, under a home whose
+    # user file binds a value holding one, which once stopped startup.
+    base = "#{Dir.pwd}/#{DIR}/hostile"
+    empty_home = "#{base}/empty-home"
+    linked = "#{base}/linked"
+    make_dirs(empty_home)
+    make_dirs(linked)
+    fresh("#{linked}/.caratrc")
+    File.symlink("/dev/zero", "#{linked}/.caratrc")
+    run = hostile_session(linked, empty_home)
+    t.assert_true(run.out.include?(".caratrc: is a symbolic link, not read"), "a project .caratrc linked to /dev/zero is refused and the editor says so")
+    t.assert_equal(0, run.code, "the editor exits with status 0 after a linked .caratrc")
+    bytes = "#{base}/bytes"
+    home = "#{base}/home"
+    make_dirs(bytes)
+    make_dirs("#{home}/.config/carat")
+    File.binwrite("#{bytes}/.caratrc", "option.tabstop 999999999\nkeymap.normal \xE9 cursor.down\n".b)
+    File.binwrite("#{home}/.config/carat/caratrc", "keymap.normal x a\xFF.b\n".b)
+    run = hostile_session(bytes, home)
+    t.assert_true(run.out.include?("~/.config/carat/caratrc:1: illegal byte (and 2 more)"), "illegal bytes and a huge tabstop are reported, the user file's first")
+    t.assert_equal(0, run.code, "the editor exits with status 0 after hostile configuration lines")
 
     # SIGTERM ends a running editor cleanly.
     reader, writer, pid = PTY.spawn(BIN, path)
