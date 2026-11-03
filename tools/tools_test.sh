@@ -629,6 +629,7 @@ ln -s c.json "$proj/build/pipeline/d.body.md"
 ln -s ../build/pipeline "$proj/tmp/run"
 ln -s ../../tools "$proj/tmp/scout/out"
 ln -s missing "$proj/tmp/gone"
+ln -s nope/../run/c.json "$proj/tmp/hop"
 expect "guard: contributor refuses a link at the body file" 2 "a link, move, or copy onto the pull request body file" guard contributor 'ln -sf c.json build/pipeline/c.body.md'
 expect "guard: merger refuses a move onto the body file" 2 "a link, move, or copy onto the pull request body file" guard merger 'mv tmp/x build/pipeline/c.body.md'
 PROJECT=$proj
@@ -637,6 +638,10 @@ expect "guard: contributor refuses a write to a linked body file" 2 "a pull requ
 expect "guard: merger refuses a write to a linked body file" 2 "a pull request body file that is a link" guard_edit merger Write "$proj/build/pipeline/d.body.md" build/pipeline
 expect "guard: contributor refuses a linked directory into the run state" 2 "the run state's directory through a link" guard_edit contributor Write "$proj/tmp/run/c.json"
 expect "guard: contributor refuses a path through a dangling link" 2 "a dangling link" guard_edit contributor Write "$proj/tmp/gone/x/c.json"
+expect "guard: contributor refuses a parent step after a missing directory" 2 "a path with a parent step" guard_edit contributor Write "$proj/tmp/nope/../run/c.json"
+expect "guard: contributor refuses a relative parent step" 2 "a path with a parent step" guard_edit contributor Write "tmp/nope/../run/c.json"
+expect "guard: contributor refuses a link whose target steps back" 2 "a parent step after a missing directory" guard_edit contributor Write "$proj/tmp/hop"
+expect "guard: contributor allows a name with two dots" 0 "^$" guard_edit contributor Write "$proj/tmp/a..b.md"
 expect "guard: read refuses a link out of its directory" 2 "outside tmp/scout through a link" guard_edit read Write "$proj/tmp/scout/out/x.sh" tmp/scout
 expect "guard: read allows a pack in its real directory" 0 "^$" guard_edit read Write "$proj/tmp/scout/area.md" tmp/scout
 expect "guard: contributor writes the body file in a real tree" 0 "^$" guard_edit contributor Write "$proj/build/pipeline/c.body.md"

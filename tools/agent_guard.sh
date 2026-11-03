@@ -23,8 +23,10 @@
 # NotebookEdit) of a read or merger agent may write only under DIR of the
 # project (CLAUDE_PROJECT_DIR), none without one; the contributor's may
 # write anywhere but the run state's directory. A file edit is judged by its
-# path as written and by its real path, links resolved; the body file is
-# never a link, nor linked, moved, or copied onto. Text that names a refused
+# path as written and by its real path, links resolved, and a path or a
+# link target with a parent step (..) is refused for every profile, since
+# the write resolves it lexically and the guard through links; the body
+# file is never a link, nor linked, moved, or copied onto. Text that names a refused
 # command (a pack, a queue, a commit message) goes into a file through the
 # Write tool, since a heredoc carries it in the command.
 #
@@ -108,6 +110,9 @@ real_path() {
     rest="$(basename -- "$up")/$rest"
     up=$(dirname -- "$up")
   done
+  # A parent step after a missing directory stays unresolved here but
+  # resolves lexically when the file is written, past any link before it.
+  case "/$rest/" in */../*) refuse "a parent step after a missing directory: $1" ;; esac
   real="$(cd -P -- "$up" && pwd -P)/$rest"
   case "$real" in //*) real=${real#/} ;; esac
 }
@@ -170,6 +175,10 @@ esac
 # A file tool: the path, as written and as its real path, is all there is
 # to judge.
 if [ "$tool" != Bash ] && [ -n "$path" ]; then
+  has "build/pipeline|pipeline/" && refuse "an edit of the run state's directory: $path"
+  # A parent step resolves lexically when the file is written but through
+  # links here, so no profile names one.
+  case "/$path/" in */../*) refuse "a path with a parent step: $path" ;; esac
   real_path "$path"
   if [ "$profile" != contributor ]; then
     [ -n "$dir" ] || refuse "a file edit by an agent that writes no file: $path"
@@ -186,7 +195,6 @@ if [ "$tool" != Bash ] && [ -n "$path" ]; then
     esac
     real=$file
   fi
-  has "build/pipeline|pipeline/" && refuse "an edit of the run state's directory: $path"
   text=$real
   [ "$profile" = read ] || text=$(printf '%s\n' "$text" | sed -E -e "$BODY_FILE")
   has "build/pipeline|pipeline/" && refuse "an edit of the run state's directory through a link: $path"
