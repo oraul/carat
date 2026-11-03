@@ -1,3 +1,66 @@
-ok   an empty line has no characters
-ok   a word counts its characters
-domain_utf8: 2 passed, 0 failed
+ok   a truncated two-byte sequence
+ok   a truncated three-byte sequence
+ok   a truncated four-byte sequence before a letter
+ok   an overlong slash in two bytes
+ok   an overlong lead C1
+ok   an overlong three-byte NUL
+ok   an overlong three-byte form below U+0800
+ok   an overlong four-byte form below U+10000
+ok   a high surrogate
+ok   a low surrogate
+ok   above U+10FFFF after F4
+ok   lead byte F5
+ok   lead byte FF
+ok   a lone continuation byte
+ok   continuation bytes between letters
+ok   a Latin-1 letter
+ok   a NUL is a character of its own
+ok   U+0080, the first two-byte
+ok   U+07FF, the last two-byte
+ok   U+0800, the first three-byte
+ok   U+D7FF, just below the surrogates
+ok   U+E000, just above the surrogates
+ok   U+FFFF, the last three-byte
+ok   U+10000, the first four-byte
+ok   U+10FFFF, the last code point
+ok   ASCII
+ok   valid UTF-8
+ok   overlong
+ok   surrogate
+ok   above U+10FFFF
+ok   truncated at the end
+ok   lone continuation
+ok   NUL
+ok   a surrogate takes three cells, one per byte
+ok   above U+10FFFF takes four
+ok   a lone C1 byte is one cell, not a four-cell marker
+ok   a NUL takes two cells as ^@
+ok   a letter
+ok   a wide character
+ok   a valid C1 control takes four as <xx>
+ok   a lone byte 9B is U+FFFD, one cell
+ok   a lone byte FF is one cell
+ok   the first byte of an overlong form is one cell
+ok   zero
+ok   U+D7FF
+ok   U+D800
+ok   U+DFFF
+ok   U+E000
+ok   U+10FFFF
+ok   0x110000
+ok   negative
+ok   empty text has no pieces
+ok   one line
+ok   a trailing newline gives an empty last piece
+ok   only a newline
+ok   blank lines
+ok   a carriage return is kept without crlf
+ok   illegal bytes stay in their pieces
+ok   crlf drops the carriage return before each newline
+ok   a lone carriage return stays
+ok   with an illegal byte
+ok   split agrees with String#split on valid text
+ok   an absolute path
+ok   a relative path keeps a leading ..
+ok   a name that is not UTF-8
+domain_utf8: 65 passed, 0 failed

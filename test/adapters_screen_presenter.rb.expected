@@ -17,6 +17,7 @@ ok   bar shape is emitted when it changes
 ok   a size change clears the screen
 ok   a size change repaints every row
 ok   a wide character is written once and its continuation cell skipped
+ok   a code above U+10FFFF or a surrogate in a cell is written as U+FFFD
 ok   C1 controls are written as markers
 ok   the output holds no C0 or C1 code point outside the escape sequences
 ok   no raw CSI introducer is written
@@ -70,4 +71,4 @@ ok   carat-light's string at 256 colors
 ok   Normal is a bare reset
 ok   the nearest palette colors: cube corners and grays
 ok   an id out of range is drawn as Normal
-adapters_screen_presenter: 72 passed, 0 failed
+adapters_screen_presenter: 73 passed, 0 failed

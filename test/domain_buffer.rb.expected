@@ -10,6 +10,18 @@ ok   no terminator
 ok   windows round trip
 ok   missing final newline added
 ok   empty becomes one newline
+ok   a Latin-1 letter
+ok   an overlong slash
+ok   a surrogate
+ok   above U+10FFFF
+ok   a truncated sequence
+ok   a lone continuation byte
+ok   a NUL
+ok   several lines with illegal bytes
+ok   windows endings with an illegal byte
+ok   windows endings are found after an illegal byte
+ok   a shebang that is not UTF-8 names no filetype
+ok   text with illegal bytes and a newline is inserted by bytes
 ok   loaded buffer is unmodified
 ok   loaded buffer keeps its path
 ok   line count
@@ -78,4 +90,4 @@ ok   a scratch buffer is named by its title
 ok   a file buffer is named by its path
 ok   no signs at first
 ok   a sign is placed on its row
-domain_buffer: 80 passed, 0 failed
+domain_buffer: 92 passed, 0 failed

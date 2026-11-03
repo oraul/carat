@@ -11,6 +11,15 @@ ok   a named delete fills the register
 ok   a named change fills the register
 ok   registers survive a cancelled command
 ok   the unnamed register holds only the appended text
+ok   yy then p copies a line with an illegal byte
+ok   dd then p moves it
+ok   a charwise yank of illegal bytes
+ok   yank a word and put it after a surrogate
+ok   V and U change only the ASCII letters
+ok   V and u keep an illegal byte
+ok   tilde over illegal bytes
+ok   w moves over an illegal byte as a keyword character
+ok   :registers lists a register holding an illegal byte
 ok   an empty named register reports E353
 ok   and changes nothing
 ok   the message names the register as typed
@@ -51,4 +60,4 @@ ok   :display with a name keeps that register
 ok   another key dismisses the listing and is handled
 ok   the small delete, inserted text, and command line registers are listed
 ok   a block is listed with its rows
-editor_registers: 53 passed, 0 failed
+editor_registers: 62 passed, 0 failed
