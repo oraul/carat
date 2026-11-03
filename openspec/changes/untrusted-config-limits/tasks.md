@@ -12,20 +12,20 @@
 
 ## 3. The file port reads only bounded regular files
 
-- [ ] 3.1 `carat/domain/path_info.rb`: the `regular` member; `carat/ports/file_port.rb`: `read(path, limit)` and `real_path(path)`; `carat/drivers/disk_files.rb`: non-blocking open, check of the opened file, bounded read, `File.file?`, `File.realpath`; `carat/doubles/memory_files.rb`: `special`, `link_to`, `real_path`, the bounded read
-- [ ] 3.2 New `test/drivers_disk_files.rb` over a directory under `build/`: stat and read of a regular file, a symlink to `/dev/zero`, a FIFO, a directory, a file one byte over the limit and one at it, and `real_path` through a linked directory
+- [x] 3.1 `carat/domain/path_info.rb`: the `regular` member; `carat/ports/file_port.rb`: `read(path, limit)` and `real_path(path)`; `carat/drivers/disk_files.rb`: non-blocking open, check of the opened file, bounded read, `File.file?`, `File.realpath`; `carat/doubles/memory_files.rb`: `special`, `link_to`, `real_path`, the bounded read
+- [x] 3.2 New `test/drivers_disk_files.rb` over a directory under `build/`: stat and read of a regular file, a symlink to `/dev/zero`, a FIFO, a directory, a file one byte over the limit and one at it, and `real_path` through a linked directory
 
 ## 4. The configuration gateway refuses hostile files
 
-- [ ] 4.1 `carat/domain/config.rb`: `refuse(source, reason)` in place of `unreadable`; `carat/adapters/rc_config_gateway.rb`: refuse a linked project file, a non-regular file, and one above 1 MiB; rows in `test/adapters_config_gateway.rb` (symlink, FIFO, device, huge, a linked user file read, order of the reports)
+- [x] 4.1 `carat/domain/config.rb`: `refuse(source, reason)` in place of `unreadable`; `carat/adapters/rc_config_gateway.rb`: refuse a linked project file, a non-regular file, and one above 1 MiB; rows in `test/adapters_config_gateway.rb` (symlink, FIFO, device, huge, a linked user file read, order of the reports)
 
 ## 5. OpenFile refuses what is not a regular file of bounded size
 
-- [ ] 5.1 `carat/use_cases/files/open_file.rb`: Vim's messages for a directory and a non-regular file, E484 above 64 MiB, the bounded read; rows in `test/editor_cmdline.rb` (directory, FIFO, device, huge, linked regular file) and the `docs/compatibility.md` row
+- [x] 5.1 `carat/use_cases/files/open_file.rb`: Vim's messages for a directory and a non-regular file, E484 above 64 MiB, the bounded read; rows in `test/editor_cmdline.rb` (directory, FIFO, device, huge, linked regular file) and the `docs/compatibility.md` row
 
 ## 6. MakePath refuses a create through a link that leaves the root
 
-- [ ] 6.1 `carat/use_cases/files/make_path.rb`: compare the real paths of the parent and the root; rows in `test/use_cases_plugin_files.rb` (linked parent outside, linked parent inside, linked root) and a row in `test/editor_explorer.rb` for the explorer's `a`
+- [x] 6.1 `carat/use_cases/files/make_path.rb`: compare the real paths of the parent and the root; rows in `test/use_cases_plugin_files.rb` (linked parent outside, linked parent inside, linked root) and a row in `test/editor_explorer.rb` for the explorer's `a`
 
 ## 7. Smoke test and documentation
 
