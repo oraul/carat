@@ -164,8 +164,8 @@ jobs:
       # same kind of runner: more allocations or rounds fail, time more
       # than 20 percent slower warns. A pull request cannot write main's
       # cache scope. With no entry the comparison passes with a notice;
-      # the benchmark agent of the delivery workflow still compares with
-      # main before the push.
+      # the delivery workflow still compares with the last history row,
+      # and with main when they differ, before the push.
       - name: Measure
         if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
         run: make metrics

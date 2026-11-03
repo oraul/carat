@@ -158,12 +158,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a convention that changes (a base class's constructor, an anchor's neighbor, a lint rule) could leave a generator writing code that no longer compiles or lints, and nothing would say so until an author ran it. The `authoring-kit` change compiled, linted, and tested the output of all five generators by hand in a scratch worktree (59 tests, `spinel-doctor` clean).
 - Fix outline: a `make generators-check` target that runs every generator in a temporary worktree, then `make gen-config`, `make lint`, `make test-build`, and `make test-run` there, run by the checker when `tools/new.sh`, `carat.rb`, `EditorAssembly`, the handler bases, or `test/lint.rb` change rather than on every check, since it costs a full analysis of the library.
 
-## The ci-watcher and the merger read the same pull request state twice
-
-- Where: the CI and merge phases of `.claude/workflows/deliver-change.js`, which start the `ci-watcher` agent and then the `merger` agent, the second rereading the pull request head and the CI state the first just wrote.
-- Why it matters: in `authoring-kit` the two took 17 and 11 tool calls, 28 of 272 (10.3%), and 6,305 output tokens for a CI that passed first time in 3.0 minutes with 0 CI fixes. Proposed by that run's retrospective (note 3) and left out of the queue because one green run is the only evidence and the watcher drives the CI-fix rounds, which no run has measured yet.
-- Fix outline: once `docs/metrics.tsv` holds several runs with their `ci` and `merge` phase counts, including one with a CI fix, have the merger watch CI itself when the run has no CI fix to make, keeping the watcher only for the fix loop, and compare the two phases' tool calls before and after.
-
 ## The periodic review's areas miss the entry point, the tools, and CI
 
 - Where: `REVIEW_AREAS` in `tools/run_state.sh` (line 73). `utf8-input-safety` added the domain files that keep control characters off the terminal (`frame.rb`, `display_width.rb`, `utf8.rb`, `decoded_line.rb`) to the terminal output area; `bin/carat.rb`, `tools/`, and `.github/workflows/` are still in no area. Low finding of the periodic security review at 66fd52b.
@@ -289,12 +283,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `:replace` branch of `ascii_recase` in `carat/domain/operators.rb` (line 244, `char * text.length` over text that is not UTF-8), while `~`, `U`, and `u` have rows in `test/editor_registers.rb` (lines 49 to 51). Advisory of the periodic quality review at 6ea61b1.
 - Why it matters: an untested branch on hostile text is where the next crash on an illegal byte would hide.
 - Fix outline: add a `v$r` row over a line with an illegal byte.
-
-## CI took 12 minutes at untrusted-config-limits
-
-- Where: the `ci_min` figure of the run state of `untrusted-config-limits` (#37, 12.0 minutes at `8c33ffdefafe`) against 3.0 for `authoring-kit` and 4.0 for `utf8-input-safety`; the local `test-run` stage of the same commit took 26 s against 24 s, so no code location is known.
-- Why it matters: goal 2 of `docs/goals.md` keeps CI time through the history; a threefold rise that is never measured again may hide a lost cache, a slower test (the two 64 MiB strings of `test/editor_cmdline.rb:155` are a suspect), or a runner change.
-- Fix outline: compare the per-job and per-step times of the CI runs of #36 and #37 and the next two pull requests, check whether the Actions cache keyed on `make spinel-rev` hit, and if the rise holds, find the step and fix or record the cause; remove this entry when two runs are back near 4 minutes.
 
 ## The records gate passes a merge given no records
 
