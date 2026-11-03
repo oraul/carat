@@ -229,3 +229,39 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `Carat::Json` in `carat/domain/json.rb` (`each_char` at line 346), and every `index` or `rindex` on text that may hold illegal bytes (`carat/domain/config.rb` line 176 on a configuration key); the pinned Spinel's `index`, `rindex`, and `each_char` group a lead byte with the bytes after it, while `length` and `[i, n]` count each byte (`docs/spinel-notes.md`).
 - Why it matters: no path sends buffer text to JSON yet, but the language server change will; a character index from `index` on such text slices the wrong bytes, and JSON needs the text valid (a language server expects UTF-8).
 - Fix outline: escape illegal bytes in `Carat::Json` by walking bytes with `Utf8` (as U+FFFD or a documented escape), replace `index` and `rindex` on untrusted text with `byteindex` and `byterindex`, report the disagreement upstream, and add hostile rows to `test/json.rb`.
+
+## Plugin rename and delete follow symlinked directories out of the tree root
+
+- Where: `RenamePath` and `DeletePath` in `carat/use_cases/files/rename_path.rb` (lines 35 and 36) and `delete_path.rb` (line 33), which check containment with the lexical `Domain::PathPolicy.inside?` only. Low (5) finding of the periodic security review at 6ea61b1, and Low (6) finding of the security review of `untrusted-config-limits`, which fixed the create half in `MakePath`.
+- Why it matters: the explorer expands a link to a directory, so in an untrusted repository with a link such as `docs` pointing to the home directory, renaming or deleting a file under `docs` in the explorer changes the real file outside the project.
+- Fix outline: reuse the `resolved_inside?` check of `MakePath` (`carat/use_cases/files/make_path.rb` line 57): resolve the root and the source's parent, and the target's parent for a rename, with `FilePort#real_path`, and refuse when the result is neither the root nor inside it; add hostile rows for a symlinked parent in `test/use_cases_plugin_files.rb`.
+
+## The CI scope script word-splits the changed paths
+
+- Where: `tools/ci_scope.sh` (line 66, the unquoted `for path in $changed`, over `git diff --name-only`). Low (3) finding of the periodic security review at 6ea61b1, and Low (5) finding of the security review of `untrusted-config-limits`; queued in `pipeline-hardening`.
+- Why it matters: the loop splits names on spaces and expands glob characters, so a pull request whose changed paths contain them, such as `a.md .claude/x`, can make a change to code read as documentation only and CI skips `spin check`.
+- Fix outline: read `git diff --name-only -z` into a `while read` loop with `IFS` unset and `set -f`, quote `"$path"`, and add a `tools/tools_test.sh` case with a spaced path and one with a glob character.
+
+## Three copies of the byte basename
+
+- Where: `Filetype.from_name` in `carat/domain/filetype.rb` (line 30) and `FramePresenter#file_name` in `carat/adapters/frame_presenter.rb` (line 660) each copy the byte basename that `PluginApi::Paths.basename` (`carat/plugin_api.rb:315`) gives and `Domain::PathPolicy.last_name` reuses, while `Filetype.base` (line 68) still uses `rindex`. Advisory of the periodic quality review at 6ea61b1.
+- Why it matters: three copies of one byte walk drift apart, and the `rindex` copy groups a lead byte with what follows on a name that is not UTF-8.
+- Fix outline: call `PluginApi::Paths.basename` in all three places.
+
+## Filetype.program_type mixes byte and character indexes
+
+- Where: `Filetype.program_type` in `carat/domain/filetype.rb` (line 75) starts at `program.length` (characters) and reads `getbyte(stop - 1)` and `program[0, stop]`. Advisory of the periodic quality review at 6ea61b1.
+- Why it matters: byte and character positions disagree on a non-ASCII program name; harmless today because no such name is in `PROGRAMS`.
+- Fix outline: use `bytesize` and `byteslice` throughout.
+
+## code_of decodes UTF-8 inside DisplayWidth
+
+- Where: `DisplayWidth.code_of` in `carat/domain/display_width.rb` (line 54); `Motions` (`carat/domain/motions.rb` lines 9 and 119) requires `display_width` only to decode a character. Advisory of the periodic quality review at 6ea61b1.
+- Why it matters: a decoding helper kept in the width table hides the dependency and invites another copy.
+- Fix outline: move it to `Utf8` (for example `Utf8.first_code`) and call it from `DisplayWidth` and `Motions.keyword?`.
+
+## Visual r over an illegal byte has no test row
+
+- Where: the `:replace` branch of `ascii_recase` in `carat/domain/operators.rb` (line 244, `char * text.length` over text that is not UTF-8), while `~`, `U`, and `u` have rows in `test/editor_registers.rb` (lines 49 to 51). Advisory of the periodic quality review at 6ea61b1.
+- Why it matters: an untested branch on hostile text is where the next crash on an illegal byte would hide.
+- Fix outline: add a `v$r` row over a line with an illegal byte.
