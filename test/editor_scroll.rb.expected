@@ -37,6 +37,8 @@ ok   zt in blockwise visual mode keeps the selection
 ok   PageDown in insert mode
 ok   PageUp in insert mode
 ok   Ctrl-E in insert mode is not a scroll
+ok   undo after PageDown in insert mode takes back only the text after it
+ok   dot after PageDown in insert mode repeats only the text after it
 ok   Ctrl-E puts the cursor on the short line's last character
 ok   the wanted column survives the scroll
 ok   after $ the scroll keeps the cursor at the line end
@@ -48,4 +50,4 @@ ok   Ctrl-F in a buffer that fits goes to the last line
 ok   Ctrl-E and Ctrl-Y in a buffer that fits change nothing
 ok   a window with no height does not scroll
 ok   scrolling leaves the buffer unmodified
-editor_scroll: 50 passed, 0 failed
+editor_scroll: 52 passed, 0 failed

@@ -47,9 +47,10 @@ module Carat
       # command, unless the command left the editor in insert mode on the
       # same buffer, when it stays open as the insert session that
       # LeaveInsert closes. A command that runs while a transaction is
-      # already open (an insert-mode action) joins it, except a motion,
-      # which ends the session's undo state and starts a new one, as an
-      # arrow key in Neovim's insert mode does. Outside insert mode an
+      # already open (an insert-mode action) joins it, except a motion or
+      # a handler that breaks the insert (a scroll), which ends the
+      # session's undo state and starts a new one, as an arrow key or a
+      # page key in Neovim's insert mode does. Outside insert mode an
       # open transaction is a session that ended without LeaveInsert, and
       # is closed first.
       #: (Domain::EditorState, Domain::Command) -> void
@@ -65,7 +66,7 @@ module Carat
         before = state.cursor.position
         mode = state.mode
         if mode == Domain::Mode::INSERT
-          return split(state, handler, command) if handler.kind == :motion
+          return split(state, handler, command) if handler.kind == :motion || handler.breaks_insert
         elsif buffer.transaction_open?
           buffer.commit_transaction(before)
         end
@@ -85,7 +86,7 @@ module Carat
 
       private
 
-      # A motion in insert mode: the insert session's undo state so far
+      # A motion or a scroll in insert mode: the insert session's undo state so far
       # closes, the cursor moves, and a new one opens, which text typed
       # next becomes a new change for the dot command.
       #: (Domain::EditorState, ActionHandler, Domain::Command) -> void

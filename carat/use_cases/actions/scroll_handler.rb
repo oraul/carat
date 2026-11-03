@@ -7,7 +7,9 @@ module Carat
   module UseCases
     # <C-f> <C-b> <C-d> <C-u> <C-e> <C-y> zt zz zb and <PageDown> <PageUp>
     # with their counts, through ScrollWindow. An action that completes at
-    # once, in normal, visual, and insert mode alike.
+    # once, in normal, visual, and insert mode alike. In insert mode it
+    # breaks the insert session as a motion does, as a page key does in
+    # Neovim.
     class ScrollHandler < ActionHandler
       # @rbs @scroll_window: ScrollWindow
       # @rbs @target: Symbol
@@ -15,6 +17,7 @@ module Carat
       #: (scroll_window: ScrollWindow, target: Symbol) -> void
       def initialize(scroll_window:, target:)
         super(kind: :action, repeat: false)
+        @breaks_insert = true
         @scroll_window = scroll_window
         @target = target
       end

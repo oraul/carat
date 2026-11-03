@@ -40,6 +40,17 @@ After a scroll command the first shown line SHALL stay between the first line an
 - **WHEN** the window shows the last 10 of 100 lines with the cursor on line 91 and `<C-f>` is pressed
 - **THEN** the view is unchanged and the cursor is on line 100
 
+### Requirement: Page keys break the insert
+`<PageDown>` and `<PageUp>` in insert mode SHALL break the insert as an arrow key does: undo SHALL take back the text typed before and after the key separately, and the dot command SHALL repeat only the text typed after it.
+
+#### Scenario: Undo after a page key
+- **WHEN** `ifoo<PageDown>bar<Esc>` is typed on the first line of 100 and then `u`
+- **THEN** only `bar` is taken back and `foo` stays on the first line
+
+#### Scenario: Dot after a page key
+- **WHEN** `ifoo<PageDown>bar<Esc>` is typed on the first line of 100 and then `.`
+- **THEN** `bar` alone is inserted at the cursor
+
 ### Requirement: Half-page scrolling
 `<C-d>` SHALL scroll down and `<C-u>` up by the `scroll` option's number of lines, half the window's text rows when it is 0, and SHALL move the cursor by the same number of lines; when the view cannot scroll further the cursor SHALL still move, stopping at the first or last line. A count SHALL first set the `scroll` option to the count.
 

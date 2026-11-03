@@ -98,6 +98,20 @@ module EditorScrollTest
       [h.state.window.top, h.cursor, h.mode]
     end
 
+    # A page key in insert mode breaks the insert as an arrow key does:
+    # undo takes back only the text typed after it, and the dot command
+    # repeats only that text. Rows are [label, keys after the insert,
+    # [line 1, line 9, cursor]].
+    t.table([
+      ["undo after PageDown in insert mode takes back only the text after it", "u", ["fooline 1", "line 9", [8, 3]]],
+      ["dot after PageDown in insert mode repeats only the text after it", ".", ["fooline 1", "linbabarre 9", [8, 7]]]
+    ]) do |keys|
+      h = placed(0, 0, 0)
+      h.type("ifoo<PageDown>bar<Esc>")
+      h.type(keys.to_s)
+      [h.lines[0], h.lines[8], h.cursor]
+    end
+
     # The wanted column: Ctrl-E pushes the cursor from column 5 onto a
     # short line, and k back onto the long one returns it to column 5.
     h = editor("abcdefghij\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\nab\n", "option.scrolloff 0\n")
