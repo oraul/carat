@@ -3,11 +3,11 @@
 # temporary git repository or directory outside this one:
 # tools/ci_scope.sh (which changes run the checks), tools/metrics.sh (the
 # measurement and the comparison with main), tools/run_state.sh (the run
-# state, stages, resume, the push rule, and the records only the workflow
-# writes), tools/agent_guard.sh (each profile's refusals and allowances),
-# tools/docs_lint.sh (budgets, content, wraps, paths), tools/new.sh (every
-# generator and its refusals), and every gate of tools/gates.sh, each
-# passing and refusing.
+# state, stages, resume, the push rule, the records only the workflow
+# writes, the history, and the budget), tools/agent_guard.sh (each
+# profile's refusals and allowances), tools/docs_lint.sh (budgets, content,
+# wraps, paths, queue), tools/new.sh (every generator and its refusals),
+# and every gate of tools/gates.sh, each passing and refusing.
 # Prints "ok   NAME" or "FAIL NAME" and the output, then "P/T passed";
 # exits 1 when any failed. Run by make tools-test.
 #
@@ -487,6 +487,15 @@ expect "docs_lint: refuses a dead path and names it" 1 "docs/notes.md:1:tools/go
 docs line
 echo 'See `tools/x.sh:3-9`.' >> docs/notes.md
 expect "docs_lint: reads a path with a line suffix" 0 "ok   paths: 2 path" doclint
+docs queue
+printf '# Queue\n\n1. `a` (T2 user request, estimated small): one.\n2. `b` (T3 with T6 folded, estimated large): two.\n\n- An idea, not an item.\n' > docs/queue.md
+expect "docs_lint: passes a queue whose items carry a tier and a size" 0 "ok   queue: 2 item" doclint
+docs untiered
+printf '1. `a` (T2, estimated small): one.\n2. `b` (tier T, estimated medium): two.\n' > docs/queue.md
+expect "docs_lint: refuses a queue item without a tier and names it" 1 "^2:2[.] .b. [(]tier T, estimated medium[)]" doclint
+docs unsized
+printf '1. `a` (T2, estimated small): one.\n2. `b` (T5, large): two.\n' > docs/queue.md
+expect "docs_lint: refuses a queue item without a size" 1 "FAIL queue: a queue item without .estimated small" doclint
 
 # ----------------------------------------------------------------- new.sh
 
