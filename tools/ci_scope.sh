@@ -36,7 +36,7 @@ answer() {
 documentation() {
   case "$1" in
     docs/actions.md|docs/compatibility.md|docs/codebase-map.md) return 1 ;;
-    openspec/*|.claude/*|*.md) return 0 ;;
+    openspec/*|.claude/*|*.md|docs/metrics.tsv) return 0 ;;
     *) return 1 ;;
   esac
 }

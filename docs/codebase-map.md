@@ -33,22 +33,23 @@ The last section, Delivered changes, lists every change merged so far in order w
 
 What: builds with `spin`, maps commands to `make` targets, runs the checks locally and in CI, and keeps the pipeline's run state and gates.
 
-Flow: `make build` (release, `build/bin`) and `make dev-build` (development flags, `build/dev/carat`, analysis budget checked). `make check` runs `CHECK_STAGES`; the checker runs them one logged stage at a time through `tools/run_state.sh check`, and CI mirrors them after `tools/ci_scope.sh`, its differences recorded in the Makefile. `.claude/workflows/deliver-change.js` runs the agents; `tools/run_state.sh push` and the merger run `tools/gates.sh`.
+Flow: `make build` (release, `build/bin`) and `make dev-build` (development flags, `build/dev/carat`, analysis budget checked). `make check` runs `CHECK_STAGES`; the checker runs them one logged stage at a time through `tools/run_state.sh check`, and CI mirrors them after `tools/ci_scope.sh`, its differences recorded in the Makefile. `.claude/workflows/deliver-change.js` runs the agents, from the planner to the retrospective and, when due, `.claude/workflows/periodic-review.js`; `tools/run_state.sh push` and the merger run `tools/gates.sh`. The `metrics` stage writes `build/metrics/current.tsv` with `tools/metrics.sh`, which the benchmark agent compares with `main` and CI with the last push to `main`; the run state keeps each run's figures until the next change appends them to `docs/metrics.tsv`.
 
 Files:
 
 - `carat.rb`: the production require graph, innermost layer first, ending with the plugin registry; requires no test double.
 - `carat/version.rb`: `Carat::VERSION`.
-- `tools/ci_scope.sh`: `documentation` (Markdown but `docs/actions.md`, `docs/compatibility.md`, and the map, or under `openspec/` or `.claude/`) and `answer`; skips documentation-only changes and a push to `main` whose tree passed as a pull request head.
-- `tools/analysis_budget.sh`: compiles `ANALYSIS_ROOTS` to C with `SP_TIMING=1`, prints analysis milliseconds and rounds, fails above `ANALYSIS_ROUNDS`; `--check` reads a report a build already wrote.
-- `tools/run_state.sh`: the one writer of `build/pipeline/<change>.json` and the stage logs; `init`, `show`, `get`, `set`, `phase`, `review`, `stage`, `check`, `push`, `status`.
+- `tools/ci_scope.sh`: `documentation` (Markdown but `docs/actions.md`, `docs/compatibility.md`, and the map, `docs/metrics.tsv`, or under `openspec/` or `.claude/`) and `answer`; skips documentation-only changes and a push to `main` whose tree passed as a pull request head.
+- `tools/analysis_budget.sh`: compiles `ANALYSIS_ROOTS` to C with `SP_TIMING=1`, prints analysis milliseconds and rounds, fails above `ANALYSIS_ROUNDS`; `--check` reads a report a build already wrote; `--fields` prints a report's milliseconds and rounds.
+- `tools/metrics.sh`: `measure` (rounds and analysis time of both roots, allocations and time per key of `DEFAULT_SCENARIOS`) and `compare` (fails on more allocations or rounds, warns on time above `TIME_TOLERANCE`).
+- `tools/run_state.sh`: the one writer of `build/pipeline/<change>.json`, the stage logs, and `docs/metrics.tsv`; `init`, `show`, `get`, `set`, `phase`, `review`, `stage`, `check`, `push`, `metric`, `metrics`, `note`, `review-due` (`REVIEW_AREAS`), `pending`, `history`, `status` (`rates`).
 - `tools/gates.sh`: the rule gates `trailer`, `content`, `snapshots`, `docs`, `security`, `stages`, `pushes`, `pr-body`, and the groups `static`, `pre-push`, `merge`.
-- `tools/tools_test.sh`: `expect`, `fresh`; the scope, the run state, and every gate in temporary repositories.
-- Outside the five roots: `Makefile` (`make help`), `spin.toml`, `.gitignore`, `.github/workflows/ci.yml`, `.github/pull_request_template.md`, `.claude/workflows/deliver-change.js`, `.claude/agents/`, `.claude/commands/deliver.md` and `status.md`.
+- `tools/tools_test.sh`: `expect`, `fresh`; the scope, the measurement, the run state and history, and every gate in temporary repositories.
+- Outside the five roots: `Makefile` (`make help`), `spin.toml`, `.gitignore`, `.github/workflows/ci.yml`, `.github/pull_request_template.md`, `.claude/workflows/deliver-change.js` and `periodic-review.js`, `.claude/agents/` (the planner and the retrospective among them), `.claude/commands/deliver.md`, `status.md`, `plan.md`, and `review.md`, and `docs/metrics.tsv`, the history.
 
 Tests: `make check` itself; `tools/tools_test.sh`; `test/smoke_editor.rb` (area 18) runs the built binary.
 
-Designs: `test-build` (One runner, one process per test; Development builds; The analysis budget comes from the runner's own compile; CI), `ci-speed-2` (The compile cache; The allocation budget at `-O 0`; The smoke test on a development build), `analysis-speed` (The budget counts re-narrowing rounds), `delivery-pipeline` (every section).
+Designs: `test-build` (One runner, one process per test; Development builds; The analysis budget comes from the runner's own compile; CI), `ci-speed-2` (The compile cache; The allocation budget at `-O 0`; The smoke test on a development build), `analysis-speed` (The budget counts re-narrowing rounds), `delivery-pipeline` (every section), `planner-and-metrics` (every section).
 
 Rules: CLAUDE.md Hard rules and Commands; `docs/architecture.md` sections 2 and 10. A new command gets a target, a Commands line, and a README line; a new stage goes into `CHECK_STAGES` and CI or the recorded reasons.
 
@@ -511,7 +512,7 @@ Rules: `docs/architecture.md` sections 2.1 (signal handlers set a flag; `STDIN.r
 
 What: the assertion harness, the doubles, the test runner, the lint and smoke tests, and the key benchmark.
 
-Flow: `make test-build` compiles `test/runner/run_all.rb`, which requires every test module, into one program; `make test-run` runs each test by name in its own process through `tools/run_tests.sh` and compares its merged output with its `.expected` snapshot; `make test-one T=test/NAME.rb` compiles one test alone (its `main if __FILE__ == $0` guard). Editor tests drive `EditorHarness` over the doubles with keys in Vim notation. `make bench` compiles `bench/keys.rb` and runs its scenarios through `bench/run.sh`; `make bench-budget` checks `lh`'s allocations; `make profile` runs `bench/profile.sh`.
+Flow: `make test-build` compiles `test/runner/run_all.rb`, which requires every test module, into one program; `make test-run` runs each test by name in its own process through `tools/run_tests.sh` and compares its merged output with its `.expected` snapshot; `make test-one T=test/NAME.rb` compiles one test alone (its `main if __FILE__ == $0` guard). Editor tests drive `EditorHarness` over the doubles with keys in Vim notation. `make bench` compiles `bench/keys.rb` and runs its scenarios through `bench/run.sh`; `make bench-budget` checks `lh`'s allocations; `make metrics` measures eight scenarios through `bench/run.sh` (area 1); `make profile` runs `bench/profile.sh`.
 
 Files:
 
@@ -537,7 +538,7 @@ Designs: `test-build` (One runner, one process per test; The helpers that return
 
 Rules: CLAUDE.md Hard rules (tests, snapshots, and benchmarks only through `make`) and Coding conventions (test modules, typed table values, helpers returning objects); `docs/architecture.md` section 10.
 
-Bench: every scenario, `lh` for the allocation budget.
+Bench: every scenario, `lh` for the allocation budget, and `lh j insert ddp undo dot-ciw lh-ruby open-ruby` for `make metrics`.
 
 ---
 
@@ -564,6 +565,7 @@ In merge order, by pull request number, with the roadmap item of `docs/architect
 - #29, `caratrc-config`, item 9's files ahead of it: `.caratrc` lines, the user and project files, `none` to unbind, problems by file and line, plugin API 2.0, `config/plugins.caratrc`. Item 9 keeps the rest of `:set` and the local options.
 - #30, `use-case-boundaries`: one public `call` per use case, the many-method use cases split into 37 classes, shared logic in the domain, the lint rules. The plugin host under `use_cases/plugins/` is left for a plugin-side change.
 - `agents-and-map`: this map, its lint rule, the scout agent, the slim `CLAUDE.md`, and the contributor's instructions.
-- `delivery-pipeline`: the workflow, `/deliver`, `/status`, seven agents, run state, gates, one stage list. Next: `authoring-kit`, `planner-and-metrics`.
+- `delivery-pipeline`: the workflow, `/deliver`, `/status`, seven agents, run state, gates, one stage list. Next: `planner-and-metrics`, `authoring-kit`.
+- `planner-and-metrics`: the planner and the Plan phase, the metrics history `docs/metrics.tsv`, `make metrics` and the comparison with `main` in CI, the retrospective, periodic reviews, `/plan` and `/review`, archived briefs. Acting on what the retrospective and the reviews find is left to the queue.
 
 Next: `docs/queue.md`, ordered against the charter `docs/goals.md`.

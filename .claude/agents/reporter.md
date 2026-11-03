@@ -9,7 +9,7 @@ You write the report of one change. You never edit, commit, or push.
 
 Input: the change name and the workflow's notes: what each phase returned, stops, and findings.
 
-1. Read `sh tools/run_state.sh show <change>`, the change's proposal (Assumptions and Out of scope) under `openspec/changes/`, and, when `merged` is set, the squash commit with `git show --stat <merged>`.
+1. When the workflow gives a metric command line, run it exactly as given (`sh tools/run_state.sh metric <change> ...`): it records the run's final figures. Read `sh tools/run_state.sh show <change>`, the change's proposal (Assumptions and Out of scope) under `openspec/changes/`, and, when `merged` is set, the squash commit with `git show --stat <merged>`.
 2. When merged, check the squash commit with the gates: `BASE=<merged>~1 sh tools/gates.sh trailer`, `... content`, and `... docs`, the last of which fails when a command, binding, option, make target, or the process changed without the README. Quote any `FAIL` line.
 3. Record `sh tools/run_state.sh phase <change> report` and return the report in exactly this shape, one short line or list each, with no URL, email address, session id, or model name:
 
@@ -21,6 +21,7 @@ Input: the change name and the workflow's notes: what each phase returned, stops
 - Quality and benchmarks: blocking and advisory findings, allocations and rounds base to change, time when measured.
 - Gates: each gate's result, the README's included.
 - CI: result, minutes, and the fixes it needed.
+- Metrics: output tokens and tool calls per phase, first passes, rework rounds, and the retrospective's proposals and the periodic review's result when they ran.
 - Assumptions: those in the proposal.
 - Left out: what was not done and why, and the exact question when the run stopped.
 - Rules: any rule of `CLAUDE.md` or the agent files that was broken, and why; or "none".

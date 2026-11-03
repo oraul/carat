@@ -1,7 +1,8 @@
 #!/bin/sh
 # Tests the shell tools behind CI and the delivery pipeline, each in a
 # temporary git repository outside this one: tools/ci_scope.sh (which
-# changes run the checks), tools/run_state.sh (the run state, stages,
+# changes run the checks), tools/metrics.sh (the measurement and the
+# comparison with main), tools/run_state.sh (the run state, stages,
 # resume, and the push rule), and every gate of tools/gates.sh, each
 # passing and refusing. Prints "ok   NAME" or "FAIL NAME" and the output,
 # then "P/T passed"; exits 1 when any failed. Run by make tools-test.
@@ -91,6 +92,7 @@ scope_case() {
 scope_case false docs/notes.md
 scope_case false openspec/changes/x/proposal.md
 scope_case false .claude/agents/x.md
+scope_case false docs/metrics.tsv
 scope_case true docs/codebase-map.md
 scope_case true docs/actions.md
 scope_case true tools/x.sh
@@ -115,6 +117,45 @@ expect "ci_scope: a push whose tree passed in its pull request skips" 0 "^run=fa
   env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=1 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
 expect "ci_scope: a push whose pull request did not pass runs" 0 "^run=true" \
   env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=0 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
+
+# ------------------------------------------------------------- metrics.sh
+
+mkdir -p "$work/metrics"
+cd "$work/metrics" || exit 1
+printf 'spinel-timing: phase=analysis ms=1000.0 x=1\nspinel-timing: phase=analysis_renarrow rounds=2\n' > carat.timing
+printf 'spinel-timing: phase=analysis ms=2000.0 x=1\nspinel-timing: phase=analysis_renarrow rounds=3\n' > runner.timing
+cat > "$work/bin/fake-bench" <<'EOF'
+#!/bin/sh
+for s in "$@"; do
+  echo "$s lines=10 keys=10 handle=  1.0us render=  2.0us total=   50.0us worst= 9.0us@1 bytes=1 gc= 0.00% gc_runs=0 retained=0 open=1.0us tokenized=0.00 allocs=27.0 alloc_bytes=1616"
+done
+EOF
+chmod +x "$work/bin/fake-bench"
+measure() {
+  env CARAT_TIMING=carat.timing RUNNER_TIMING=runner.timing BENCH_RUN="$work/bin/fake-bench" sh "$here/metrics.sh" measure "$@"
+}
+expect "metrics: measure writes allocations per key" 0 "^allocs[.]lh[[:space:]]27[.]0$" measure base.tsv lh j
+expect "metrics: measure writes time per key" 0 "^us[.]j[[:space:]]50[.]0$" cat base.tsv
+expect "metrics: measure writes the rounds of each root" 0 "^rounds[.]runner[[:space:]]3$" cat base.tsv
+expect "metrics: measure writes the analysis time of each root" 0 "^analysis_ms[.]carat[[:space:]]1000[.]0$" cat base.tsv
+expect "metrics: measure refuses without the build reports" 1 "missing; make dev-build" \
+  env CARAT_TIMING=gone.timing sh "$here/metrics.sh" measure x.tsv lh
+# compare SED-EXPRESSION [VAR=VALUE...]: base.tsv against a copy edited by it.
+compare() {
+  sed "$1" base.tsv > current.tsv
+  shift
+  env "$@" sh "$here/metrics.sh" compare base.tsv current.tsv
+}
+expect "metrics: compare passes the same measurement" 0 "no allocation or analysis-round regression" compare 's/^//'
+expect "metrics: compare fails on more allocations per key" 1 "FAIL +allocs[.]lh +27[.]0 -> 27[.]5" compare 's/^allocs[.]lh\t27[.]0/allocs.lh\t27.5/'
+expect "metrics: compare fails on more analysis rounds" 1 "FAIL +rounds[.]carat +2 -> 3" compare 's/^rounds[.]carat\t2/rounds.carat\t3/'
+expect "metrics: compare fails on an unmeasured round count" 1 "not measured" compare 's/^rounds[.]carat\t2/rounds.carat\t?/'
+expect "metrics: compare passes fewer allocations" 0 "ok +allocs[.]lh +27[.]0 -> 20[.]0" compare 's/^allocs[.]lh\t27[.]0/allocs.lh\t20.0/'
+expect "metrics: compare only warns on slower time" 0 "warning +us[.]lh +50[.]0 -> 80[.]0: 60% slower" compare 's/^us[.]lh\t50[.]0/us.lh\t80.0/'
+expect "metrics: compare annotates a warning on GitHub Actions" 0 "::warning::us[.]lh is 60% slower" compare 's/^us[.]lh\t50[.]0/us.lh\t80.0/' GITHUB_ACTIONS=true
+expect "metrics: compare passes time within the tolerance" 0 "ok +us[.]lh +50[.]0 -> 55[.]0" compare 's/^us[.]lh\t50[.]0/us.lh\t55.0/'
+expect "metrics: compare passes with a notice when there is no base" 0 "no base measurement" \
+  sh "$here/metrics.sh" compare missing.tsv base.tsv
 
 # ----------------------------------------------------------- run_state.sh
 
@@ -141,7 +182,7 @@ expect "run_state: check stops at the first failing stage" 1 "stage b failed" \
 expect "run_state: check resumes after the passed stages" 0 "stage a: passed at .*, skipped" \
   env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
 expect "run_state: check records the phase" 0 "^$(git rev-parse --short=12 HEAD)$" state get state phase.check
-expect "run_state: status names the running change and its next phase" 0 "next phase: implement" state status
+expect "run_state: status names the running change and its next phase" 0 "next phase: plan" state status
 
 fresh pushing
 git_q init -q --bare "$work/origin.git"
@@ -152,6 +193,7 @@ echo more >> README.md
 commit "chore: more"
 expect "run_state: push refuses before the checks and the review" 1 "pre-push gates failed" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
+expect "run_state: a refused push counts a gate failure" 0 "^1$" state get pushing gates_failed
 state set pushing stage.lint "0 1s $(git rev-parse --short=12 HEAD) now" > /dev/null
 state review pushing security pass "no finding" > /dev/null
 expect "run_state: push passes the gates and pushes" 0 "ok   security" \
@@ -164,6 +206,62 @@ expect "run_state: a CI fix push needs a red CI run" 1 "needs a red CI run" \
 state set pushing ci "red abc" > /dev/null
 expect "run_state: a CI fix allows one more push" 0 "ok   pushes|ok   stages" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --ci-fix
+
+fresh history
+state init history chore/history > /dev/null
+state metric history rework=1 first_pass=check:1,quality:0,security:1 ci_min=2.5 out_tokens=1200 tool_calls=40 phases=implement=1000/30,check=200/10 > /dev/null
+expect "run_state: metric records a value" 0 "^check:1,quality:0,security:1$" state get history metric.first_pass
+expect "run_state: metric refuses a value with a space" 1 "not a metric value" state metric history 'rework=1 2'
+expect "run_state: metric refuses a value with a shell character" 1 "not a metric value" state metric history 'rework=$(x)'
+expect "run_state: metric refuses a pair without a value" 1 "is not NAME=VALUE" state metric history rework
+printf 'rounds.carat\t2\nallocs.lh\t27.0\nus.lh\t50.0\nallocs.j\t28.0\n' > m.tsv
+expect "run_state: metrics records a measurement" 0 "recorded 4 measurement" state metrics history m.tsv
+expect "run_state: a measurement is a metric" 0 "^28[.]0$" state get history metric.allocs.j
+state init unmeasured chore/unmeasured > /dev/null
+state metrics unmeasured m.tsv > /dev/null
+printf 'us.lh\t?\nallocs.k\t30.0\nanalysis_ms.carat\t?\n' > q.tsv
+expect "run_state: metrics skips an unmeasured value" 0 "recorded 1 measurement.*skipped 2 unmeasured" state metrics unmeasured q.tsv
+expect "run_state: metrics records the measured values beside it" 0 "^30[.]0$" state get unmeasured metric.allocs.k
+expect "run_state: metrics leaves an unmeasured value unrecorded" 0 "^$" state get unmeasured metric.analysis_ms.carat
+expect "run_state: metrics drops an earlier figure now unmeasured" 0 "^$" state get unmeasured metric.us.lh
+expect "run_state: metrics keeps the other earlier figures" 0 "^27[.]0$" state get unmeasured metric.allocs.lh
+state note history retro "drop a step; evidence: 9000 tokens" > /dev/null
+state note history security "Medium (6) tools/x.sh:3 quoting" > /dev/null
+expect "run_state: note numbers the notes" 0 "^security Medium [(]6[)]" state get history note.2
+expect "run_state: note refuses a kind that is not a word" 1 "the kind is lowercase" state note history 'Retro x' text
+expect "run_state: pending skips a change that is not merged" 0 "^$" state pending
+state set history merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+state set history pr 9 > /dev/null
+state set history pushes 1 > /dev/null
+state set history gates_failed 1 > /dev/null
+expect "run_state: pending names a merged change without a row" 0 "^history$" state pending
+expect "run_state: history appends the row" 0 "appended history" state history
+expect "run_state: the history starts with its header" 0 "^change[[:space:]]date[[:space:]]merged" head -1 docs/metrics.tsv
+expect "run_state: the row groups the measurements and the first passes" 0 \
+  "^carat=2 lh=27[.]0,j=28[.]0 lh=50[.]0 check:1,quality:0,security:1,gates:0 implement=1000/30,check=200/10 -$" \
+  awk -F'\t' 'NR == 2 { print $8, $9, $10, $6, $13, $14 }' docs/metrics.tsv
+expect "run_state: history appends a change once" 0 "nothing pending" state history
+expect "run_state: status prints the first-pass rates" 0 "first-pass rates over 1 change.s.: check 1/1 quality 0/1 security 1/1 gates 0/1" state status
+
+# row CHANGE REVIEW: a history row with only a change and a review column.
+row() {
+  printf '%s\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t%s\n' "$1" "$2"
+}
+fresh due
+state init due chore/due > /dev/null
+mkdir -p carat
+echo api > carat/plugin_api.rb
+commit "feat: api"
+state set due merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: review-due names a sensitive area" 0 "^due: the change touched plugin boundaries [(]carat/plugin_api[.]rb[)]" state review-due due
+echo more >> README.md
+commit "docs: readme"
+state set due merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: review-due is not due after one quiet change" 1 "^not due: 1 of 5" state review-due due
+{ printf 'header\n'; row a "security=pass quality=pass"; row b -; row c -; row d -; row e -; } > docs/metrics.tsv
+expect "run_state: review-due is due five changes after the last review" 0 "^due: 5 changes merged" state review-due due
+row f "security=pass quality=pass" >> docs/metrics.tsv
+expect "run_state: a periodic review restarts the count" 1 "^not due: 1 of 5" state review-due due
 
 # ---------------------------------------------------------------- gates.sh
 
@@ -236,6 +334,10 @@ mkdir -p openspec/changes/archive/x
 echo archived > openspec/changes/archive/x/tasks.md
 commit "chore: archive"
 expect "gates: security passes after an archive only" 0 "ok   security: pass" gates security
+echo "1. next" > docs/queue.md
+echo change > docs/metrics.tsv
+commit "docs: record the queue and the metrics"
+expect "gates: security passes after the planning records only" 0 "ok   security: pass" gates security
 echo code > tools/fix.sh
 commit "fix: code"
 expect "gates: security refuses after code changed" 1 "code changed since" gates security

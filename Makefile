@@ -94,7 +94,13 @@ UNIT_SUMMARY := awk '/^spinel-timing: phase=analysis / { a = $$3 } /^spinel-timi
 # minutes, while the checker runs it before every push; and gates, which
 # need the branch's history and its run state, which a pull request's
 # checkout lacks, so the checker and the merger run them.
-CHECK_STAGES := doctor build dev-build config-current test-build test-run diagnose no-cruby bench-budget tools-test gates
+CHECK_STAGES := doctor build dev-build config-current test-build test-run diagnose no-cruby bench-budget metrics tools-test gates
+# The measurement make metrics writes from the builds of dev-build,
+# test-build, and bench-budget (tools/metrics.sh), and the base make
+# metrics-compare compares it with: the benchmark agent measures main in a
+# worktree, and CI restores the measurement of the last push to main.
+METRICS_OUT  := build/metrics/current.tsv
+BASE_METRICS ?= build/metrics/base.tsv
 # The spinel-doctor legs the stages skip (see DIAGNOSE_SKIP).
 CHECK_SKIP   := behavior,build,inference,advice
 # The generated files make config-current checks.
@@ -307,6 +313,14 @@ bench-budget:
 	@$(UNIT_SUMMARY) $(BUDGET_BIN).timing
 	BENCH_BIN=$(BUDGET_BIN) sh bench/run.sh --budget lh $(ALLOC_BUDGET)
 
+## metrics: measure the tree into build/metrics/current.tsv from the reports and the binary of dev-build, test-build, and bench-budget: the re-narrowing rounds and analysis milliseconds of both compile roots, and allocations and time per key of eight scenarios (or SCENARIOS="lh j")
+metrics:
+	sh tools/metrics.sh measure $(METRICS_OUT) $(SCENARIOS)
+
+## metrics-compare: compare build/metrics/current.tsv with BASE_METRICS (default build/metrics/base.tsv): fail when allocations per key or re-narrowing rounds grew, warn when time grew by more than TIME_TOLERANCE percent (default 20); pass with a notice when there is no base
+metrics-compare:
+	sh tools/metrics.sh compare $(BASE_METRICS) $(METRICS_OUT)
+
 ## profile: build the key benchmark with spinel --profile into build/profile and, when perf works (or PERF names one that does), record the j and lh scenarios and print the top functions by self time with their Ruby names
 profile:
 	@mkdir -p build/profile
@@ -336,7 +350,7 @@ config-current:
 	fi; \
 	echo "config-current: $(GENERATED) match config/"
 
-## tools-test: test the shell tools in temporary repositories: tools/ci_scope.sh, tools/run_state.sh, and every gate of tools/gates.sh, passing and refusing
+## tools-test: test the shell tools in temporary repositories: tools/ci_scope.sh, tools/metrics.sh, tools/run_state.sh, and every gate of tools/gates.sh, passing and refusing
 tools-test:
 	sh tools/tools_test.sh
 
@@ -354,7 +368,7 @@ check-stage:
 	@case " $(CHECK_STAGES) " in *" $(S) "*) ;; *) echo "usage: make check-stage S=STAGE, one of: $(CHECK_STAGES)" >&2; exit 2 ;; esac
 	@$(MAKE) --no-print-directory $(S) DIAGNOSE_SKIP=$(DIAGNOSE_SKIP)
 
-## check: everything a push needs, the stages of CHECK_STAGES in order: doctor, build, dev-build and test-build with their analysis budgets, config-current, test-run, diagnose with the legs that can fail it, no-cruby, bench-budget, tools-test, and gates
+## check: everything a push needs, the stages of CHECK_STAGES in order: doctor, build, dev-build and test-build with their analysis budgets, config-current, test-run, diagnose with the legs that can fail it, no-cruby, bench-budget, metrics, tools-test, and gates
 check: DIAGNOSE_SKIP = $(CHECK_SKIP)
 check: $(CHECK_STAGES)
 

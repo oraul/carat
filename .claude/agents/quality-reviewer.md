@@ -13,3 +13,12 @@ Input: the change name. The diff is `git diff origin/main...HEAD`; uncommitted w
 3. Simple and elegant: no duplication, dead code, speculative generality, or cleverness the task did not need.
 4. Blocking: a correctness bug, a broken rule of `CLAUDE.md` or `docs/architecture.md`, a behavior change without its test, or code a careful maintainer would not merge. Everything else is advisory. Each finding: file, line, the rule or reason, and a one-line fix.
 5. Record: `sh tools/run_state.sh review <change> quality pass|blocked "<b> blocking, <a> advisory"`, `blocked` when any finding blocks.
+
+## Periodic mode
+
+When the input says `Mode: periodic`, review the whole tree at `origin/main` instead of a diff:
+
+1. `git fetch -q origin`, then `git worktree add --detach tmp/.review-quality origin/main` (or `git -C tmp/.review-quality checkout -q --detach origin/main` when it exists), and read only there.
+2. Start from the files the last five merged changes touched (`git log --name-only -5 origin/main`), then sample the rest of `docs/codebase-map.md`: the rules of step 2 across the code, drift between the code and `CLAUDE.md`, the map, the README, and `docs/architecture.md`, duplication and dead code, and `docs/backlog.md` entries already fixed or no longer true.
+3. Blocking: what a careful maintainer would fix before more features; everything else is advisory.
+4. Record `sh tools/run_state.sh review <change> periodic-quality pass|blocked "<b> blocking, <a> advisory"` and each finding as `sh tools/run_state.sh note <change> quality "<file>:<line> <rule or reason>; fix: <outline>"`, then `git worktree remove --force tmp/.review-quality`.
