@@ -272,6 +272,14 @@ module Carat
         @ui.prompt(@name, id, text, initial)
       end
 
+      # Returns a Response whose number is the group's id.
+      # @rbs name: String
+      def syntax_group(name)
+        why = refusal
+        return PluginApi::Response.failure(why) unless why.empty?
+        @ui.syntax_group(@name, name)
+      end
+
       private
 
       # Why a request of this plugin is refused, "" while it is enabled.

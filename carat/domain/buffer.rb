@@ -6,6 +6,8 @@ require_relative "transaction"
 require_relative "undo_tree"
 require_relative "sign_layer"
 require_relative "buffer_feed"
+require_relative "filetype"
+require_relative "syntax_cache"
 
 module Carat
   module Domain
@@ -33,9 +35,15 @@ module Carat
     # the plugin's priority, each with one mark per line that the splice
     # moves with inserted and deleted lines. feed is the editor's buffer
     # feed while the buffer is listed (nil before): renames and closed
-    # transactions are recorded there for the plugin host. A Struct
-    # record: mutable, with a reader and a writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo)
+    # transactions are recorded there for the plugin host.
+    #
+    # filetype is detected from the path, or a shebang on the first line,
+    # when the buffer is made and when it is renamed ("" for none); syntax
+    # is the name that chooses the tokenizer, set with the filetype and
+    # changed alone by :set syntax; syntax_cache keeps what the tokenizer
+    # said, and every splice moves it with the rows. A Struct record:
+    # mutable, with a reader and a writer per member.
+    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
@@ -51,6 +59,9 @@ module Carat
       # @rbs @closed_count: Integer
       # @rbs @feed: BufferFeed?
       # @rbs @undo: UndoTree
+      # @rbs @filetype: String
+      # @rbs @syntax: String
+      # @rbs @syntax_cache: SyntaxCache
 
       # The original members go through super and the later members
       # through the writers, so the empty sign list takes the pinned type.
@@ -69,6 +80,10 @@ module Carat
         self.closed_count = 0
         self.feed = nil
         self.undo = UndoTree.new
+        type = Filetype.detect(path, lines[0])
+        self.filetype = type
+        self.syntax = type
+        self.syntax_cache = SyntaxCache.new
       end
 
       # Whether an edit changed the text since the last load, reload, or
@@ -129,8 +144,25 @@ module Carat
       def rename(new_path)
         old = path_text
         self.path = new_path
+        detect_filetype
         sink = feed
         sink.note("rename", id, new_path, old) unless sink.nil? || old == new_path
+      end
+
+      # Detects the filetype from the path and the first line again and
+      # sets the syntax with it.
+      #: () -> void
+      def detect_filetype
+        type = Filetype.detect(path, line(0))
+        self.filetype = type
+        self.syntax = type
+      end
+
+      # Sets the filetype and the syntax with it, as :set filetype does.
+      #: (String) -> void
+      def assign_filetype(type)
+        self.filetype = type
+        self.syntax = type
       end
 
       # ------------------------------------------------------------- signs
@@ -473,6 +505,7 @@ module Carat
           gone = change.inserted.length
           LineSplice.apply(lines, change.row, change.row + gone, change.removed)
           shift_signs(change.row, gone, change.removed.length)
+          syntax_cache.shift(change.row, gone, change.removed.length)
           self.changes = changes - 1
           i -= 1
         end
@@ -498,6 +531,7 @@ module Carat
         removed = lines[a, b - a]
         LineSplice.apply(lines, a, b, inserted)
         shift_signs(a, b - a, inserted.length)
+        syntax_cache.shift(a, b - a, inserted.length)
         self.changes = changes + 1
         record(ChangeRecord.new(id, a, removed, inserted))
       end

@@ -41,7 +41,7 @@ module UseCasesPluginHardeningTest
     # @rbs skip
     def manifest
       action = "plugin.#{@name}.go"
-      Carat::PluginApi::Manifest.new(@name, "1.0.0", "1.2", { action => "Go" }, @commands, { "normal" => { @keys => action } }, @events, {}, {})
+      Carat::PluginApi::Manifest.new(@name, "1.0.0", "1.2", { action => "Go" }, @commands, { "normal" => { @keys => action } }, @events, {}, {}, [])
     end
 
     #: (Carat::PluginApi::Host) -> void
@@ -148,7 +148,7 @@ module UseCasesPluginHardeningTest
     # Returns the manifest.
     # @rbs skip
     def manifest
-      Carat::PluginApi::Manifest.new("crooked", "1.0.0", "1.2", "nope", {}, nil, [], {}, {})
+      Carat::PluginApi::Manifest.new("crooked", "1.0.0", "1.2", "nope", {}, nil, [], {}, {}, [])
     end
   end
 

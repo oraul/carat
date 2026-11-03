@@ -25,7 +25,7 @@ module EditorTransactionsTest
         { "plugin.edits.two" => "Replace two ranges" },
         {},
         { "normal" => { "<leader>te" => "plugin.edits.two" } },
-        [], {}, {}
+        [], {}, {}, []
       )
     end
 

@@ -1,6 +1,8 @@
 require_relative "../ports/terminal_port"
 require_relative "../domain/frame"
 require_relative "../domain/highlight"
+require_relative "../domain/theme"
+require_relative "sgr_table"
 
 module Carat
   module Adapters
@@ -17,7 +19,9 @@ module Carat
     # frame presented again unchanged writes only the cursor. Any other
     # frame is compared row by row with the last one when that one still
     # holds what it showed, and drawn in full otherwise, as is the first
-    # frame and every frame after a size change.
+    # frame and every frame after a size change. A cell's highlight group
+    # is written as the SGR sequence the theme gives it at the terminal's
+    # color depth, built once.
     class ScreenPresenter
       ENTER = "\e[?1049h\e[H\e[2J"
       LEAVE = "\e[0m\e[2 q\e[?25h\e[?1049l"
@@ -27,15 +31,17 @@ module Carat
       JOIN = 8
 
       attr_reader :terminal #: Ports::TerminalPort
+      attr_reader :sgr_table #: SgrTable
 
       # @rbs @shadow: Domain::Frame?
       # @rbs @shadow_serial: Integer
       # @rbs @shape: Symbol
       # @rbs @hl: Integer
 
-      #: (terminal: Ports::TerminalPort) -> void
-      def initialize(terminal:)
+      #: (terminal: Ports::TerminalPort, theme: Domain::Theme, colors: Integer) -> void
+      def initialize(terminal:, theme:, colors:)
         @terminal = terminal
+        @sgr_table = SgrTable.from_theme(theme, colors)
         @shadow = nil
         @shadow_serial = 0
         @shape = :none
@@ -248,18 +254,7 @@ module Carat
 
       #: (Integer) -> String
       def sgr(hl)
-        case hl
-        when Domain::Highlight::LINE_NUMBER then "\e[0;33m"
-        when Domain::Highlight::STATUS then "\e[0;7m"
-        when Domain::Highlight::MESSAGE_ERROR then "\e[0;37;41m"
-        when Domain::Highlight::NON_TEXT then "\e[0;34m"
-        when Domain::Highlight::STATUS_NC then "\e[0;2;7m"
-        when Domain::Highlight::TAB_LINE then "\e[0;7m"
-        when Domain::Highlight::TAB_LINE_SELECTED then "\e[0;1m"
-        when Domain::Highlight::TAB_LINE_FILL then "\e[0;7m"
-        when Domain::Highlight::VISUAL then "\e[0;7m"
-        else "\e[0m"
-        end
+        @sgr_table.at(hl)
       end
     end
   end

@@ -1,0 +1,41 @@
+ok   a new cache is empty and inactive
+ok   prepare makes it active
+ok   a stored line is found by identity
+ok   an equal string that is another object is not
+ok   another start state is not
+ok   a line survives one turn and moves forward
+ok   found again, it survives the next
+ok   the same frame serial does not turn
+ok   a line not looked at for two turns is dropped
+ok   another plugin resets the cache
+ok   another syntax resets the cache
+ok   drop forgets everything
+ok   ten rows computed
+ok   the end states and valid
+ok   start_of is the state after the row before
+ok   an edit lowers valid and marks its row unknown
+ok   the edited row and the one after are computed, then it settles
+ok   valid jumps to the frontier
+ok   every row after an unclosed quote changes state
+ok   the states after the quote are flipped
+ok   and valid is at the frontier again
+ok   undoing the quote lowers valid to its row
+ok   and recomputes every row whose state changes back
+ok   the states are back
+ok   three rows deleted: the frontier shrinks, valid and dirty_to at the row
+ok   the row that moved up is computed and settles
+ok   valid reaches the frontier
+ok   valid at the first edit, dirty_to after the second
+ok   rows 0 to 4 are computed, row 4 settles
+ok   valid at the first edit, dirty_to after the second
+ok   rows 3 to 13 are computed before it settles
+ok   then valid jumps to the frontier
+ok   an edit past the frontier changes nothing
+ok   an edit reaching the frontier cuts it at the edit
+ok   a reload cuts it at the top
+ok   an inactive cache gives NONE
+ok   a stored row is looked up
+ok   a row not stored gives NONE
+ok   a row past valid gives NONE
+ok   NONE has no tokens
+domain_syntax_cache: 40 passed, 0 failed

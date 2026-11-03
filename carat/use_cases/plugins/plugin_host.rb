@@ -25,6 +25,7 @@ require_relative "window_requests"
 require_relative "file_requests"
 require_relative "ui_requests"
 require_relative "plugin_link"
+require_relative "plugin_syntax"
 
 module Carat
   module UseCases
@@ -32,7 +33,8 @@ module Carat
     # activates the compiled plugins, routes plugin actions, ex commands,
     # and prompt answers to them, and delivers events, through the
     # registry, the router, and the events it is built from; each plugin
-    # gets a PluginLink over the four request families. Events caused
+    # gets a PluginLink over the four request families, and the plugins
+    # that tokenize are called through the syntax part. Events caused
     # during a plugin call are delivered after the outermost call, so
     # every entry point that may call a plugin ends by flushing them when
     # no plugin call is in progress any more. The ex command runner is
@@ -49,6 +51,7 @@ module Carat
       attr_reader :window_requests #: WindowRequests
       attr_reader :file_requests #: FileRequests
       attr_reader :ui_requests #: UiRequests
+      attr_reader :syntax #: PluginSyntax
 
       # @rbs @router: PluginRouter
 
@@ -68,6 +71,7 @@ module Carat
         @window_requests = WindowRequests.new(state: state, buffers: buffers, tabs: tabs, registry: @registry, open_file: open_file, split_window: split_window, open_tab: open_tab, close_window: close_window, file_ops: @file_ops)
         @file_requests = FileRequests.new(file_ops: @file_ops)
         @ui_requests = UiRequests.new(state: state, registry: @registry, file_ops: @file_ops, plugin_ui: plugin_ui, input: input, runner: runner)
+        @syntax = PluginSyntax.new(registry: @registry)
       end
 
       # ------------------------------------------------------ registration

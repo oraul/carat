@@ -98,7 +98,7 @@ ok   the second tab page's window is drawn
 ok   with one tab page there is no tab line
 ok   no sign column without signs
 ok   the sign sits in its column and the numbers move right
-ok   the sign column carries the line number highlight
+ok   the sign column carries the SignColumn highlight
 ok   the cursor moves right with the gutter
 ok   the sign column stays when numbers are off
 ok   clearing the signs removes the column

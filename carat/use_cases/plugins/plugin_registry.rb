@@ -195,7 +195,7 @@ module Carat
       def register(plugin)
         position = count
         placeholder = "plugin#{position + 1}"
-        e = PluginEntry.new(plugin, PluginApi::Manifest.new(placeholder, "", "", no_strings, no_strings, nil, [], no_strings, no_strings), placeholder, position)
+        e = PluginEntry.new(plugin, PluginApi::Manifest.new(placeholder, "", "", no_strings, no_strings, nil, [], no_strings, no_strings, []), placeholder, position)
         given = e.manifest
         read = guarded(e) { given = plugin.manifest }
         if read && given.is_a?(PluginApi::Manifest)

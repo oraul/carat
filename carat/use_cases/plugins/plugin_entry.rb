@@ -8,9 +8,9 @@ module Carat
     # receives at activation, its resolved options as text, the events it
     # subscribed to and its option types, both as names (a manifest may
     # spell them as symbols), and its priority, the registration position
-    # from 0, which orders its signs. A Struct record: mutable, with a
-    # reader and a writer per member.
-    class PluginEntry < Struct.new(:plugin, :manifest, :name, :enabled, :reason, :link, :options, :events, :option_types, :priority)
+    # from 0, which orders its signs, and the filetypes it tokenizes. A
+    # Struct record: mutable, with a reader and a writer per member.
+    class PluginEntry < Struct.new(:plugin, :manifest, :name, :enabled, :reason, :link, :options, :events, :option_types, :priority, :filetypes)
       # @rbs @plugin: PluginApi::Plugin
       # @rbs @manifest: PluginApi::Manifest
       # @rbs @name: String
@@ -21,6 +21,7 @@ module Carat
       # @rbs @events: Array[String]
       # @rbs @option_types: Hash[String, String]
       # @rbs @priority: Integer
+      # @rbs @filetypes: Array[String]
 
       # The collections are stored through the writers after super, so the
       # empty literals take the pinned types. The link is nil until the
@@ -32,6 +33,13 @@ module Carat
         self.events = []
         self.option_types = {}
         self.priority = priority
+        self.filetypes = []
+      end
+
+      # Whether the plugin tokenizes the filetype.
+      #: (String) -> bool
+      def tokenizes?(filetype)
+        filetypes.include?(filetype)
       end
 
       # Whether the plugin subscribed to the event.
@@ -65,7 +73,8 @@ module Carat
       end
 
       # Reads the manifest's events and option types as names, so a 1.1
-      # manifest's symbols and a 1.2 manifest's strings mean the same.
+      # manifest's symbols and a 1.2 manifest's strings mean the same, and
+      # its filetypes.
       #: () -> void
       def read_names
         list = []
@@ -80,6 +89,12 @@ module Carat
           declared.each { |key, type| types[key.to_s] = type.to_s }
         end
         self.option_types = types
+        types_list = []
+        declared_types = manifest.filetypes
+        if declared_types.is_a?(Array)
+          declared_types.each { |type| types_list << type.to_s }
+        end
+        self.filetypes = types_list
       end
     end
   end

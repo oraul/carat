@@ -1,0 +1,13 @@
+ok   syntax_group answers syntax groups by name and refuses others
+ok   the first registered plugin declaring a syntax tokenizes it
+ok   the entries hold the declared filetypes
+ok   the end state is returned
+ok   the plugin gets the filetype, the text, and the start state
+ok   a negative start, an empty token, an editor group, and an unknown id are dropped
+ok   a negative state counts as 0
+ok   the tokens color the text
+ok   each line starts in the state the line before ended in
+ok   a missing tokenize disables the plugin
+ok   and the buffer is plain
+ok   an out of range id is drawn normal
+use_cases_plugin_syntax: 12 passed, 0 failed

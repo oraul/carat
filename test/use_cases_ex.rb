@@ -464,7 +464,11 @@ module UseCasesExTest
       ["tabf is too short", "tabf", ""],
       ["vsplitx is too long", "vsplitx", ""],
       ["tab names nothing", "tab", ""],
-      ["ne is not new", "ne", ""]
+      ["ne is not new", "ne", ""],
+      ["se sets", "se", "set"],
+      ["sy is syntax", "sy", "syntax"],
+      ["synt is syntax", "synt", "syntax"],
+      ["s is not set", "s", ""]
     ]) do |typed|
       handler = table.find(typed)
       handler.nil? ? "" : handler.name.full

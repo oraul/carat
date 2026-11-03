@@ -340,7 +340,7 @@ module AdaptersFramePresenterTest
     s.buffer.place_sign("test", 0, 1, "X")
     f = draw(s, 6, 20)
     t.assert_equal(["    1 one", "X   2 two", "    3 three"], [f.row_text(0), f.row_text(1), f.row_text(2)], "the sign sits in its column and the numbers move right")
-    t.assert_equal([D::Highlight::LINE_NUMBER, D::Highlight::LINE_NUMBER], [f.cell(1, 0).hl, f.cell(0, 1).hl], "the sign column carries the line number highlight")
+    t.assert_equal([D::Highlight::SIGN_COLUMN, D::Highlight::SIGN_COLUMN], [f.cell(1, 0).hl, f.cell(0, 1).hl], "the sign column carries the SignColumn highlight")
     t.assert_equal([0, 6], [f.cursor_row, f.cursor_col], "the cursor moves right with the gutter")
     s.options.number = false
     f = draw(s, 6, 20)

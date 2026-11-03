@@ -33,6 +33,7 @@ module Carat
         problems.concat(check_events(manifest.events))
         problems.concat(check_bindings(manifest.actions, manifest.bindings))
         problems.concat(check_options(manifest.options, manifest.option_types))
+        problems.concat(check_filetypes(manifest.filetypes))
         problems
       end
 
@@ -45,6 +46,18 @@ module Carat
         problems << "events is not a list of event names" unless manifest.events.is_a?(Array)
         problems << "options is not an object of option defaults" unless string_hash?(manifest.options)
         problems << "option_types is not an object of option types" unless manifest.option_types.is_a?(Hash)
+        problems << "filetypes is not a list of filetype names" unless manifest.filetypes.is_a?(Array)
+        problems
+      end
+
+      # Each filetype is lowercase letters, digits, and underscores
+      # starting with a letter, as a plugin name.
+      #: (untyped) -> Array[String]
+      def self.check_filetypes(filetypes)
+        problems = []
+        filetypes.each do |type|
+          problems << "filetype #{type.inspect} is not lowercase letters, digits, and underscores starting with a letter" unless type.is_a?(String) && type.match?(NAME)
+        end
         problems
       end
 
