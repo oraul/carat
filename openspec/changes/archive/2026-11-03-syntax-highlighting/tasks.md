@@ -38,7 +38,7 @@
 
 - [x] 7.1 Add the Ruby scenarios, the plugin choice, the open time, and the rows tokenized per key to `bench/keys.rb` and `bench/run.sh`; run `make bench` for the Ruby and plain scenarios and record the numbers against the targets
 - [x] 7.2 Document the tokenizer API in `docs/plugins.md`, the design in `docs/architecture.md`, the section in the README, the status and layout in `CLAUDE.md`, and the items left out in `docs/backlog.md`; verify the action table test still matches `docs/actions.md`
-- [ ] 7.3 Run `make check` and `make bench-budget`; both pass
+- [x] 7.3 Run `make check` and `make bench-budget`; both pass (after merging main: `make check` 110 s with 56 of 56 tests, the runner at 2 re-narrowing rounds, and `spinel-doctor` clean on every root; `make bench-budget` 27 allocations per key for `lh`, under 100)
 
 ## Workflow follow-up
 
