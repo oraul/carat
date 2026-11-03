@@ -3,8 +3,9 @@
 # temporary git repository outside this one: tools/ci_scope.sh (which
 # changes run the checks), tools/metrics.sh (the measurement and the
 # comparison with main), tools/run_state.sh (the run state, stages,
-# resume, and the push rule), and every gate of tools/gates.sh, each
-# passing and refusing. Prints "ok   NAME" or "FAIL NAME" and the output,
+# resume, and the push rule), tools/docs_lint.sh (budgets, content,
+# wraps, paths), and every gate of tools/gates.sh, each passing and
+# refusing. Prints "ok   NAME" or "FAIL NAME" and the output,
 # then "P/T passed"; exits 1 when any failed. Run by make tools-test.
 #
 # Forbidden text (addresses, links, model names) is assembled from pieces
@@ -262,6 +263,56 @@ expect "run_state: review-due is not due after one quiet change" 1 "^not due: 1 
 expect "run_state: review-due is due five changes after the last review" 0 "^due: 5 changes merged" state review-due due
 row f "security=pass quality=pass" >> docs/metrics.tsv
 expect "run_state: a periodic review restarts the count" 1 "^not due: 1 of 5" state review-due due
+
+# ---------------------------------------------------------- docs_lint.sh
+
+# docs NAME: a tree of the documents docs_lint.sh reads, all passing;
+# changes into it.
+docs() {
+  cd "$work" || exit 1
+  rm -rf "$1"
+  mkdir -p "$1/docs" "$1/.claude/agents" "$1/.github" "$1/tools"
+  cd "$1" || exit 1
+  printf '# Rules\n\nSee `tools/x.sh`, `test/NAME.rb`, and `carat/<layer>/`.\n\n%s\n\n### Example\n\n```\n## Summary\n\nOne line.\n\n---\n\n- A bullet\n- Another\n```\n' "$TRAILER" > CLAUDE.md
+  echo "# readme" > README.md
+  echo "echo x" > tools/x.sh
+  printf -- '---\nname: x\nmodel: %s\n---\n\nAn agent.\n' "$TIER" > .claude/agents/x.md
+  printf '## Summary\n\n<!-- Guidance. -->\n\n---\n\n## Changes\n\n- \n' > .github/pull_request_template.md
+}
+
+doclint() {
+  sh "$here/docs_lint.sh" .
+}
+
+docs clean
+expect "docs_lint: passes a clean tree, the trailer, a tier alias in frontmatter, and placeholders" 0 "ok   paths: 1 path" doclint
+docs budget
+head -c 30721 /dev/zero | tr '\0' x >> CLAUDE.md
+expect "docs_lint: refuses CLAUDE.md over its budget" 1 "FAIL budgets: CLAUDE.md is [0-9]+ bytes, over its budget of 30720" doclint
+docs agent
+head -c 8193 /dev/zero | tr '\0' x >> .claude/agents/x.md
+expect "docs_lint: refuses an agent file over its budget" 1 "FAIL budgets: .claude/agents/x.md" doclint
+docs link
+echo "See $LINK." >> docs/notes.md
+expect "docs_lint: refuses a URL in a document" 1 "FAIL content: a URL" doclint
+docs mail
+echo "Write to $MAIL." >> README.md
+expect "docs_lint: refuses an email address" 1 "FAIL content: an email address" doclint
+docs model
+echo "Run it on $TIER." >> .claude/agents/x.md
+expect "docs_lint: refuses a model name outside the frontmatter" 1 "FAIL content: a model name" doclint
+docs wrap
+printf 'A paragraph\nwrapped by hand.\n' >> .github/pull_request_template.md
+expect "docs_lint: refuses a hard-wrapped template line" 1 "pull_request_template.md:[0-9]+: wrapped by hand" doclint
+docs example
+sed 's/^One line\.$/One line\nwrapped./' CLAUDE.md > c && mv c CLAUDE.md
+expect "docs_lint: refuses a hard-wrapped line in the example body" 1 "CLAUDE.md example: wrapped" doclint
+docs dead
+echo 'See `tools/gone.sh` and `docs/x.md:12`.' >> docs/notes.md
+expect "docs_lint: refuses a dead path and names it" 1 "docs/notes.md:1:tools/gone.sh" doclint
+docs line
+echo 'See `tools/x.sh:3-9`.' >> docs/notes.md
+expect "docs_lint: reads a path with a line suffix" 0 "ok   paths: 2 path" doclint
 
 # ---------------------------------------------------------------- gates.sh
 

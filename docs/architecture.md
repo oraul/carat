@@ -318,7 +318,7 @@ Compiled plugins run on the editor thread and are as fast as the editor. They ob
 
 ### 9.3 Process plugins
 
-A process plugin is any executable started by a command the user's configuration names (never the project's, section 7). It speaks the Carat plugin protocol over stdio: JSON-RPC framed as in the Language Server Protocol, with the same message shapes as the API above, specified in `docs/plugin-protocol.md`. On start the plugin sends its manifest; the host registers it as it would a compiled plugin. Requests from the host carry an id and expect a response; events are notifications. The host does not wait on a plugin: a slow response leaves the editor responsive, and a plugin that exits is unregistered with a message.
+A process plugin is any executable started by a command the user's configuration names (never the project's, section 7). It speaks the Carat plugin protocol over stdio: JSON-RPC framed as in the Language Server Protocol, with the same message shapes as the API above, specified in docs/plugin-protocol.md, to be written with the first process plugin. On start the plugin sends its manifest; the host registers it as it would a compiled plugin. Requests from the host carry an id and expect a response; events are notifications. The host does not wait on a plugin: a slow response leaves the editor responsive, and a plugin that exits is unregistered with a message.
 
 Process plugins may be written in any language, CRuby included, so an author can prototype in CRuby with the full standard library and gems, then port to a compiled plugin for speed. The `JsonRpcLanguageGateway` and `ServiceThreads` already carry the framing, the process handle, and the queue; the plugin gateway reuses them with a different message table.
 
@@ -440,7 +440,7 @@ Each item is one OpenSpec change and one pull request, in this order. Each leave
 10. `language-services`: `ProcessPort`, `ServiceThreads`, `JsonRpcLanguageGateway`, `ruby-lsp` integration, diagnostics, go-to-definition, hover, completion menu.
 11. `plugin-host`: `carat/plugin_api.rb`, the manifest, the plugin host use cases, the generated registry from the plugin list, events, scratch buffers with plugin-owned keymaps, and the lint rule for plugin dependencies. Proven by a tiny built-in `hello` plugin that adds one action and one ex command.
 12. `plugin-explorer-and-finder`: the file tree and the fuzzy finder as the first real compiled plugins. Delivered in two changes: `plugin-explorer` brought the file tree with icons and the host requests it needs (file operations inside a root and a command-line prompt); `plugin-finder` brings the fuzzy finder.
-13. `plugin-protocol`: `docs/plugin-protocol.md`, the JSON-RPC plugin gateway reusing the language service framing, and a sample process plugin written in CRuby to prove the protocol from outside the binary.
+13. `plugin-protocol`: the protocol document docs/plugin-protocol.md, the JSON-RPC plugin gateway reusing the language service framing, and a sample process plugin written in CRuby to prove the protocol from outside the binary.
 14. `plugin-git-and-formatting`: git signs and status as a plugin; RuboCop formatting through the language service.
 15. `release-build`: reproducible builds for Linux and macOS with `spin build` and `spin pack`, release packaging, `spin install`, and the smoke tests against the released binary.
 

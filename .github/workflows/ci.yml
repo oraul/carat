@@ -106,6 +106,14 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: make no-cruby
 
+      # The documents' byte budgets, forbidden content, hard-wrapped pull
+      # request text, and dead paths. A Markdown-only pull request skips
+      # the checks (tools/ci_scope.sh), so the checker's run before the
+      # push covers those.
+      - name: Docs lint
+        if: steps.scope.outputs.run == 'true'
+        run: make docs-lint
+
       # The shell tools behind CI and the delivery pipeline, tested in
       # temporary repositories: tools/ci_scope.sh, the run state, the gates.
       - name: Tools
