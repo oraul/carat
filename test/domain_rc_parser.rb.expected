@@ -63,6 +63,8 @@ ok   an untrusted file sets anything else
 ok   the last line of a key wins and the defaults are the shipped lines
 ok   a key no line sets has no last line
 ok   problems are reported in file and line order, whoever noted them
+ok   five runs of notes merge into line order, each line's notes as noted
+ok   20,000 interleaved problems are all reported in line order
 ok   true
 ok   false
 ok   yes is not a flag
@@ -79,4 +81,4 @@ ok   a list
 ok   an empty list
 ok   an unknown kind
 ok   each kind says what it takes
-domain_rc_parser: 81 passed, 0 failed
+domain_rc_parser: 83 passed, 0 failed

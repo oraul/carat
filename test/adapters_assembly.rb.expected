@@ -18,6 +18,7 @@ ok   the open side window use case
 ok   the split window use case
 ok   the open tab use case
 ok   the file operations
+ok   the containment check of the file operations
 ok   the key handler
 ok   the line cache
 ok   the arrange view use case
@@ -33,4 +34,4 @@ ok   the gateway reads the shipped defaults through the file port it was given
 ok   the assembly and the gateway hold the one file port
 ok   a configuration without lines falls back to Vim's defaults
 ok   a configuration problem names its file and line
-adapters_assembly: 35 passed, 0 failed
+adapters_assembly: 36 passed, 0 failed
