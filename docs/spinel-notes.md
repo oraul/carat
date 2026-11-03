@@ -49,6 +49,7 @@ Every Spinel pitfall this project has met, once, at the pinned compiler (`SPINEL
 
 - Open: `private_constant` compiles but is not enforced (another class can still read `Owner::NAME`), while `private` on methods is. `lint` carries the rule: every constant of a use case file is in a `private_constant`, and no other file names it (backlog: "Spinel compiles private_constant without enforcing it").
 - Open: some string returns answer the method's argument: a `case` of string-literal branches called with a literal, a ternary of `""` and an indexed `to_s` in a two-parameter method, a guard return of the argument before a `byteslice(...).to_s` result, and a constant array's `include?` of a reader on a `Data` value. Rewrite as guard returns or through a local, and let a table test catch it (backlog: "Spinel answers a method's argument for some string returns").
+- Open: an empty array literal passed to a method that appends to it comes back empty (an array holding an element keeps the appends): a method that fills an array returns it and the caller assigns the result, as `Config#merge_runs` does (backlog: "Spinel drops appends to an empty array literal passed to a method").
 - Open: the runtime releases free slab chunks with `MADV_DONTNEED` on huge pages, so single keys can stall 8 to 12 ms on a host with `madvise` defragmentation; `SPINEL_SLAB_HUGE=0` avoids it (backlog: "Spinel's slab release stalls keys on transparent huge pages").
 
 ## Toolchain

@@ -112,26 +112,36 @@ module Carat
         note_at(line.order, line.problem(message))
       end
 
-      # Every problem in file and line order.
+      # Every problem in file and line order, two of one line in the order
+      # noted. Each reader notes in load order, so the orders are a few
+      # ascending runs: a stable merge of the runs, pair by pair, sorts
+      # them in time linear for that handful and n log n at worst, where
+      # an insertion sort was quadratic on a hostile file of many lines.
       #: () -> Array[String]
       def report
         index = []
+        starts = []
         i = 0
-        while i < problems.length
+        while i < orders.length
+          starts << i if i == 0 || orders[i] < orders[i - 1]
           index << i
           i += 1
         end
-        # An insertion sort keeps problems of the same order as noted.
-        i = 1
-        while i < index.length
-          k = index[i]
-          j = i - 1
-          while j >= 0 && orders[index[j]] > orders[k]
-            index[j + 1] = index[j]
-            j -= 1
+        starts << orders.length
+        while starts.length > 2
+          merged = []
+          next_starts = []
+          r = 0
+          while r + 1 < starts.length
+            mid = starts[r + 1]
+            to = r + 2 < starts.length ? starts[r + 2] : mid
+            next_starts << starts[r]
+            merged = merge_runs(index, starts[r], mid, to, merged)
+            r += 2
           end
-          index[j + 1] = k
-          i += 1
+          next_starts << orders.length
+          index = merged
+          starts = next_starts
         end
         out = []
         i = 0
@@ -198,6 +208,33 @@ module Carat
         return true if value == "none" || RcParser.key?(value, 0, value.bytesize)
         note(line, "key sequences are not read from a project file")
         false
+      end
+
+      # Appends the problems of index[from, mid - from] and
+      # index[mid, to - mid], each in ascending order, to out in ascending
+      # order, the first run's first on equal orders, and returns out.
+      #: (Array[Integer], Integer, Integer, Integer, Array[Integer]) -> Array[Integer]
+      def merge_runs(index, from, mid, to, out)
+        a = from
+        b = mid
+        while a < mid && b < to
+          if orders[index[b]] < orders[index[a]]
+            out << index[b]
+            b += 1
+          else
+            out << index[a]
+            a += 1
+          end
+        end
+        while a < mid
+          out << index[a]
+          a += 1
+        end
+        while b < to
+          out << index[b]
+          b += 1
+        end
+        out
       end
 
       #: (Integer, String) -> void
