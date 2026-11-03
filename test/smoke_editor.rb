@@ -141,6 +141,29 @@ module SmokeEditorTest
     t.assert_equal(0, code, "the editor exits with status 0 after closing the tab page, a window, and the last window")
     t.assert_true(out.end_with?("\e[?1049l"), "closing the last window leaves the alternate screen")
 
+    # <C-w> waits for its second key past timeoutlen (500 ms in the
+    # shipped configuration): after a vertical split, <C-w>, a pause, and
+    # l put the cursor in the right window, at column 46 behind its
+    # four-column number gutter, instead of one column right in the left.
+    reader, writer, pid = PTY.spawn(BIN, path)
+    writer.winsize = [24, 80]
+    out = +"".b
+    settle(reader, out, 0.5)
+    t.assert_true(out.include?("1L, 6B"), "the editor drew its first frame for the slow window move")
+    writer.write(":vsplit\r")
+    settle(reader, out, 0.5)
+    writer.write("\x17")
+    settle(reader, out, 1.0)
+    mark = out.bytesize
+    writer.write("l")
+    settle(reader, out, 0.5)
+    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("\e[1;46H"), "<C-w>, a pause past timeoutlen, and l move to the right window")
+    writer.write(":q\r")
+    settle(reader, out, 0.5)
+    writer.write(":q\r")
+    code = finish_session(reader, out, pid)
+    t.assert_equal(0, code, "the editor exits with status 0 after the slow window move")
+
     # The file tree opens with <leader>e at the left, and :q in the file
     # window ends the editor while the tree is open.
     reader, writer, pid = PTY.spawn(BIN, path)

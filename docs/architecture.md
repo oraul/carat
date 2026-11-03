@@ -113,7 +113,7 @@ Pure Ruby objects with no I/O. They hold the editor's state and the rules of mod
 - `Options`: typed global and buffer-local options with Vim names, a `Struct` record: `number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, `wrap`, `scrolloff`, `timeoutlen`, `clipboard`, `undolevels`, plus Carat's own `icons`, the icon set (`nerd`, `unicode`, or `ascii`) the `Icons` table serves to plugins by name; Nerd Font glyphs live in the private use areas, which `DisplayWidth` counts as one cell.
 - `Key`: an integer code. Printable code points are themselves, control characters are their byte, special keys (arrows, function keys, Home, End, Delete, Page Up and Down) are codes above the Unicode range, and Alt is a flag bit. `KeyNotation` converts between codes and the Vim spelling used in the configuration files: `<CR>`, `<Esc>`, `<C-w>`, `<A-x>`, `<leader>`, `<Up>`, `<F5>`.
 - `Mode`: `normal`, `insert`, `replace`, `visual`, `visual_line`, `visual_block`, `operator_pending`, `cmdline`.
-- `Keymap`: one trie per mode from key sequences to action names, built from keymap lines (section 7); the keymap and its `KeymapNode` are `Struct` records. An ambiguous prefix such as `g` before `gg` waits for the next key until `timeoutlen`.
+- `Keymap`: one trie per mode from key sequences to action names, built from keymap lines (section 7); the keymap and its `KeymapNode` are `Struct` records. Keys that only begin a binding, such as `g` before `gg` or `<C-w>` before `<C-w>l`, wait for the next key with no time limit in normal, operator-pending, and the visual modes, as Neovim's built-in commands do; keys that are bound and also begin a longer binding, and any prefix in insert and command-line modes, are resolved after `timeoutlen`.
 - `Command`: the value the parser produces: register, count, operator, motion or text object, and the keys that formed it for the dot register.
 - `CommandGrammar`: the state machine over keys that implements
 
@@ -244,7 +244,7 @@ language.ruby.formatter rubocop -A --stdin {file} --stderr
 
 ### 8.1 Input
 
-- `InputController`: owns the key-to-use-case path. It reads keys from `TerminalPort`, runs them through `HandleKey`, and hands the response to the presenter. It is where the `timeoutlen` wait for ambiguous prefixes is implemented, using `ClockPort`.
+- `InputController`: owns the key-to-use-case path. It reads keys from `TerminalPort`, runs them through `HandleKey`, and hands the response to the presenter. It is where the `timeoutlen` wait for ambiguous prefixes is implemented, using `ClockPort`: a key `HandleKey` answers `:pending` gets the deadline, one it answers `:waiting` none.
 - `KeyDecoder`: turns terminal bytes into `Key` codes, disambiguating a lone `Esc` from an escape sequence with a short timeout.
 
 ### 8.2 Output

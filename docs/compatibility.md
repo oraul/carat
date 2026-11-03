@@ -12,6 +12,7 @@ Every Neovim command Carat implements has a row here and a table-driven test. Th
 | `<Esc>` in operator-pending mode | Cancel the pending operator, count, and register | `editor_grammar` |
 | unbound key | Drop the pending count and register | `editor_grammar` |
 | pending keys | The keys typed so far show at the right of the message row, as `showcmd` | `editor_grammar` |
+| prefix wait | Keys that only begin a command (`g`, `z`, `<C-w>`, `<leader>`) wait for the next key with no time limit, as Neovim's built-in commands do; a key that is bound and begins a longer binding, and a prefix in insert or command-line mode, are resolved after `timeoutlen` | `editor_normal`, `editor_windows`, `editor_explorer`, `smoke_editor` |
 
 Differences from Neovim: a different operator after a pending one cancels silently instead of beeping; the `o_v`, `o_V`, and `o_CTRL-V` prefixes are not implemented; counts before `i a I A o O :` are ignored.
 

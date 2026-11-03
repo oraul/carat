@@ -2,11 +2,11 @@
 
 ## 1. A lone prefix waits for its next key
 
-- [ ] 1.1 Add a pseudo-terminal check to `test/smoke_editor.rb` that splits, presses `<C-w>`, pauses past timeoutlen, presses `l`, and finds the cursor in the right window; verify it fails on the current code (the reproduction) before the fix
-- [ ] 1.2 Return `:waiting` from `HandleKey#step` for a pure prefix in a grammar mode (`carat/use_cases/handle_key.rb`) and keep no deadline for it in `InputController` (`carat/adapters/input_controller.rb`); verify with `test/editor_normal.rb` rows for the wait outlasting timeoutlen, Escape dropping the prefix, and insert mode still resolving after timeoutlen, and `make test-one T=test/smoke_editor.rb`
-- [ ] 1.3 Add rows with a wait between `<C-w>` and its key to `test/editor_windows.rb` (l, w) and `test/editor_explorer.rb` (out of the tree and back, `<C-w>w` cycling, `<C-w>p`); verify with `make test-one` on both
-- [ ] 1.4 Move the unbound-key examples from `z` to `Q` in `test/domain_keymap.rb`, `test/editor_grammar.rb`, and `test/editor_normal.rb`; verify with `make test-one` on each
-- [ ] 1.5 Document the wait in `docs/compatibility.md` (Command grammar) and `docs/architecture.md` section 8.1 where it describes the timeoutlen wait; verify with `make docs-lint`
+- [x] 1.1 Add a pseudo-terminal check to `test/smoke_editor.rb` that splits, presses `<C-w>`, pauses past timeoutlen, presses `l`, and finds the cursor in the right window; verify it fails on the current code (the reproduction) before the fix
+- [x] 1.2 Return `:waiting` from `HandleKey#step` for a pure prefix in a grammar mode (`carat/use_cases/handle_key.rb`) and keep no deadline for it in `InputController` (`carat/adapters/input_controller.rb`); verify with `test/editor_normal.rb` rows for the wait outlasting timeoutlen, Escape dropping the prefix, and insert mode still resolving after timeoutlen, and `make test-one T=test/smoke_editor.rb`
+- [x] 1.3 Add rows with a wait between `<C-w>` and its key to `test/editor_windows.rb` (l, w) and `test/editor_explorer.rb` (out of the tree and back, `<C-w>w` cycling, `<C-w>p`); verify with `make test-one` on both
+- [x] 1.4 Move the unbound-key examples from `z` to `Q` in `test/domain_keymap.rb`, `test/editor_grammar.rb`, and `test/editor_normal.rb`; verify with `make test-one` on each
+- [x] 1.5 Document the wait in `docs/compatibility.md` (Command grammar) and `docs/architecture.md` section 8.1 where it describes the timeoutlen wait; verify with `make docs-lint`
 
 ## 2. The scroll option
 

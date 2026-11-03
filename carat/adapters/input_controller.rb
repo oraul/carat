@@ -10,7 +10,9 @@ module Carat
   module Adapters
     # Owns the key-to-use-case path: reads bytes from the terminal with a
     # timeout, decodes them, feeds each key through HandleKey, and resolves
-    # the escape and timeoutlen waits with the clock.
+    # the escape and timeoutlen waits with the clock. Keys HandleKey keeps
+    # :pending get a deadline of timeoutlen; keys it keeps :waiting get
+    # none and wait for the next key however long it takes.
     class InputController
       ESCAPE_TIMEOUT = 0.05
       IDLE_TIMEOUT = 0.25
@@ -22,6 +24,7 @@ module Carat
 
       # @rbs @decoder: KeyDecoder
       # @rbs @wait_until: Float
+      # @rbs @deadline: bool
 
       #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState) -> void
       def initialize(terminal:, clock:, decoder:, handle_key:, input:)
@@ -31,6 +34,7 @@ module Carat
         @handle_key = handle_key
         @input = input
         @wait_until = 0.0
+        @deadline = false
       end
 
       # One read and everything it unlocks. Returns true when the state may
@@ -42,7 +46,7 @@ module Carat
           if @decoder.pending?
             return handle(state, @decoder.flush)
           end
-          if @input.pending? && @clock.now >= @wait_until
+          if @deadline && @input.pending? && @clock.now >= @wait_until
             @handle_key.call(state, Domain::Key::TIMEOUT)
             return true
           end
@@ -61,7 +65,7 @@ module Carat
       #: (Domain::EditorState) -> Float
       def next_timeout(state)
         return ESCAPE_TIMEOUT if @decoder.pending?
-        if @input.pending?
+        if @deadline && @input.pending?
           remaining = @wait_until - @clock.now
           return remaining > 0.0 ? remaining : 0.0
         end
@@ -74,7 +78,8 @@ module Carat
         i = 0
         while i < codes.length
           result = @handle_key.call(state, codes[i])
-          @wait_until = @clock.now + state.options.timeoutlen / 1000.0 if result == :pending
+          @deadline = result == :pending
+          @wait_until = @clock.now + state.options.timeoutlen / 1000.0 if @deadline
           i += 1
         end
         true

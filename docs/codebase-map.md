@@ -127,7 +127,7 @@ Rules: CLAUDE.md Coding conventions (keyword constructors, shared objects built 
 
 What: turns key codes into commands: decoding, keymap lookup per mode, the count-operator-motion grammar, and dispatch to the handler registered for each action.
 
-Flow: `InputController#pump` reads bytes, `KeyDecoder#feed` turns them into key codes, `HandleKey#call(state, code)` tries a scratch buffer's keymap, then the mode's keymap (`Keymap#lookup` over `KeymapNode` with a `KeymapMatch`), and feeds actions to `CommandGrammar#accept` (or `accept_visual`), which reads each action's kind from `ActionTable#kind_of`; a complete `Command` goes to `Dispatcher#call`, which finds the handler (`ActionTable#find`), runs it inside a transaction on the current buffer, records the last change, and reports the `Outcome`; then the plugin host observes and `ArrangeView` runs. `Key::TIMEOUT` resolves keys waiting after `timeoutlen`.
+Flow: `InputController#pump` reads bytes, `KeyDecoder#feed` turns them into key codes, `HandleKey#call(state, code)` tries a scratch buffer's keymap, then the mode's keymap (`Keymap#lookup` over `KeymapNode` with a `KeymapMatch`), and feeds actions to `CommandGrammar#accept` (or `accept_visual`), which reads each action's kind from `ActionTable#kind_of`; a complete `Command` goes to `Dispatcher#call`, which finds the handler (`ActionTable#find`), runs it inside a transaction on the current buffer, records the last change, and reports the `Outcome`; then the plugin host observes and `ArrangeView` runs. `Key::TIMEOUT` resolves keys `HandleKey` kept `:pending` after `timeoutlen`; keys it kept `:waiting` (a lone prefix in a grammar mode) wait for the next key with no deadline.
 
 Files:
 

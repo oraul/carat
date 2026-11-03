@@ -20,6 +20,9 @@ ok   vsplit draws the separator column
 ok   tabnew draws the tab line
 ok   the editor exits with status 0 after closing the tab page, a window, and the last window
 ok   closing the last window leaves the alternate screen
+ok   the editor drew its first frame for the slow window move
+ok   <C-w>, a pause past timeoutlen, and l move to the right window
+ok   the editor exits with status 0 after the slow window move
 ok   the editor drew its first frame for the tree check
 ok   <leader>e opens the tree, titled explorer
 ok   the tree's root line has the open folder icon
@@ -37,4 +40,4 @@ ok   the editor exits with status 0 after the color check
 ok   the editor drew its first frame for the signal check
 ok   SIGTERM ends the editor with status 0
 ok   SIGTERM leaves the alternate screen
-smoke_editor: 39 passed, 0 failed
+smoke_editor: 42 passed, 0 failed
