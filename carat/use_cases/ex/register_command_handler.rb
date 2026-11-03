@@ -16,6 +16,7 @@ module Carat
     class RegisterCommandHandler < ExHandler
       TITLE = "Type Name Content"
       ORDER = "\"0123456789abcdefghijklmnopqrstuvwxyz-.:%"
+      private_constant :TITLE, :ORDER
 
       attr_reader :registers #: Domain::Registers
 

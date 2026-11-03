@@ -229,6 +229,34 @@ module Carat
         ups
       end
 
+      # The steps of count undos along the current branch, in path_to's
+      # form, fewer when the root comes first; empty at the root.
+      #: (Integer) -> Array[Integer]
+      def undo_path(count)
+        path = []
+        seq = current
+        while path.length < count && seq != root
+          path << -seq
+          seq = parent_of(seq)
+        end
+        path
+      end
+
+      # The steps of count redos, each to the head of the state before it,
+      # in path_to's form, fewer when a state has no head; empty when the
+      # current state has none.
+      #: (Integer) -> Array[Integer]
+      def redo_path(count)
+        path = []
+        seq = current
+        while path.length < count
+          seq = head_of(seq)
+          break if seq < 0
+          path << seq
+        end
+        path
+      end
+
       # The kept state nearest to target: at or before it when older,
       # at or after it otherwise; the root when nothing older is kept, and
       # -1 when nothing newer is.

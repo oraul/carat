@@ -1,5 +1,6 @@
 require_relative "../../plugin_api"
 require_relative "../../domain/highlight"
+require_relative "../../domain/syntax_line"
 require_relative "../concerns/guarded"
 require_relative "plugin_entry"
 require_relative "plugin_registry"
@@ -18,8 +19,6 @@ module Carat
     # guard, as for every plugin call.
     class PluginSyntax
       include Guarded
-
-      FAILED = -1
 
       attr_reader :registry #: PluginRegistry
       attr_reader :tokens #: Array[Integer]
@@ -52,8 +51,8 @@ module Carat
 
       # Tokenizes one line with the entry's plugin for the syntax, from the
       # start state, and returns the end state, 0 for one that is not a
-      # non-negative integer, or FAILED when the plugin raised and is
-      # disabled. The tokens stay in tokens until the next call.
+      # non-negative integer, or Domain::SyntaxLine::FAILED when the plugin
+      # raised and is disabled. The tokens stay in tokens until the next call.
       #: (PluginEntry, String, String, Integer) -> Integer
       def tokenize(entry, syntax, line, start)
         @tokens.clear
@@ -63,7 +62,7 @@ module Carat
         text = @text
         tokens = @tokens
         ok = guarded(entry) { @end_state = state_of(plugin.tokenize(syntax, text, start, tokens)) }
-        ok ? @end_state : FAILED
+        ok ? @end_state : Domain::SyntaxLine::FAILED
       end
 
       # A copy of the valid triples of the last call: a start of 0 or

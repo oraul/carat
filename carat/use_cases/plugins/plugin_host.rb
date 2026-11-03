@@ -11,9 +11,12 @@ require_relative "../../domain/ex_command"
 require_relative "../../ports/file_port"
 require_relative "../outcome"
 require_relative "../files/open_file"
-require_relative "../files/file_ops"
-require_relative "../windows/close_window"
+require_relative "../files/probe_path"
+require_relative "../files/make_path"
+require_relative "../files/rename_path"
+require_relative "../files/delete_path"
 require_relative "../windows/split_window"
+require_relative "../windows/open_side_window"
 require_relative "../windows/open_tab"
 require_relative "../ex/command_runner"
 require_relative "plugin_entry"
@@ -46,7 +49,10 @@ module Carat
       attr_reader :plugin_ui #: Domain::PluginUi
       attr_reader :registry #: PluginRegistry
       attr_reader :events #: PluginEvents
-      attr_reader :file_ops #: FileOps
+      attr_reader :probe_path #: ProbePath
+      attr_reader :make_path #: MakePath
+      attr_reader :rename_path #: RenamePath
+      attr_reader :delete_path #: DeletePath
       attr_reader :buffer_requests #: BufferRequests
       attr_reader :window_requests #: WindowRequests
       attr_reader :file_requests #: FileRequests
@@ -57,20 +63,23 @@ module Carat
 
       # The records, the window use cases, and the runner are the editor's
       # own, built once by the assembly; the registry, the router, the
-      # events, the file operations, and the request families are the
+      # events, the path use cases, and the request families are the
       # host's parts and built here from them.
-      #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, input: Domain::InputState, plugin_ui: Domain::PluginUi, files: Ports::FilePort, open_file: OpenFile, close_window: CloseWindow, split_window: SplitWindow, open_tab: OpenTab, keymap: Domain::Keymap, leader: String, runner: CommandRunner) -> void
-      def initialize(state:, buffers:, tabs:, input:, plugin_ui:, files:, open_file:, close_window:, split_window:, open_tab:, keymap:, leader:, runner:)
+      #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, input: Domain::InputState, plugin_ui: Domain::PluginUi, files: Ports::FilePort, open_file: OpenFile, split_window: SplitWindow, open_side_window: OpenSideWindow, open_tab: OpenTab, keymap: Domain::Keymap, leader: String, runner: CommandRunner) -> void
+      def initialize(state:, buffers:, tabs:, input:, plugin_ui:, files:, open_file:, split_window:, open_side_window:, open_tab:, keymap:, leader:, runner:)
         @state = state
         @plugin_ui = plugin_ui
-        @file_ops = FileOps.new(files: files, buffers: buffers)
-        @registry = PluginRegistry.new(state: state, buffers: buffers, tabs: tabs, plugin_ui: plugin_ui, keymap: keymap, leader: leader, close_window: close_window)
+        @probe_path = ProbePath.new(files: files)
+        @make_path = MakePath.new(files: files, probe_path: @probe_path)
+        @rename_path = RenamePath.new(files: files, buffers: buffers, probe_path: @probe_path)
+        @delete_path = DeletePath.new(files: files, buffers: buffers, probe_path: @probe_path)
+        @registry = PluginRegistry.new(state: state, buffers: buffers, tabs: tabs, plugin_ui: plugin_ui, keymap: keymap, leader: leader)
         @router = PluginRouter.new(state: state, registry: @registry, plugin_ui: plugin_ui)
         @events = PluginEvents.new(state: state, buffers: buffers, tabs: tabs, registry: @registry)
         @buffer_requests = BufferRequests.new(state: state, buffers: buffers, registry: @registry)
-        @window_requests = WindowRequests.new(state: state, buffers: buffers, tabs: tabs, registry: @registry, open_file: open_file, split_window: split_window, open_tab: open_tab, close_window: close_window, file_ops: @file_ops)
-        @file_requests = FileRequests.new(file_ops: @file_ops)
-        @ui_requests = UiRequests.new(state: state, registry: @registry, file_ops: @file_ops, plugin_ui: plugin_ui, input: input, runner: runner)
+        @window_requests = WindowRequests.new(state: state, buffers: buffers, tabs: tabs, registry: @registry, open_file: open_file, split_window: split_window, open_tab: open_tab, open_side_window: open_side_window, files: files)
+        @file_requests = FileRequests.new(files: files, probe_path: @probe_path, make_path: @make_path, rename_path: @rename_path, delete_path: @delete_path)
+        @ui_requests = UiRequests.new(state: state, registry: @registry, files: files, plugin_ui: plugin_ui, input: input, runner: runner)
         @syntax = PluginSyntax.new(registry: @registry)
       end
 

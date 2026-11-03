@@ -45,6 +45,13 @@ module Carat
         "clipboard" => "string", "icons" => "string", "theme" => "string"
       }
 
+      # The width a tab takes for display and block columns: tabstop, or 8
+      # when tabstop is not positive.
+      #: () -> Integer
+      def tab_width
+        tabstop > 0 ? tabstop : 8
+      end
+
       # Builds options from the option lines of a configuration, applied
       # in order so a later line wins. An unknown option, a value of the
       # wrong kind, an unknown icon set, or an unknown theme is noted on

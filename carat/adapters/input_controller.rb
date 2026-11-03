@@ -1,6 +1,8 @@
 require_relative "../ports/terminal_port"
 require_relative "../ports/clock_port"
 require_relative "../domain/editor_state"
+require_relative "../domain/input_state"
+require_relative "../domain/key"
 require_relative "../use_cases/handle_key"
 require_relative "key_decoder"
 
@@ -16,16 +18,18 @@ module Carat
       attr_reader :terminal #: Ports::TerminalPort
       attr_reader :clock #: Ports::ClockPort
       attr_reader :handle_key #: UseCases::HandleKey
+      attr_reader :input #: Domain::InputState
 
       # @rbs @decoder: KeyDecoder
       # @rbs @wait_until: Float
 
-      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey) -> void
-      def initialize(terminal:, clock:, decoder:, handle_key:)
+      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState) -> void
+      def initialize(terminal:, clock:, decoder:, handle_key:, input:)
         @terminal = terminal
         @clock = clock
         @decoder = decoder
         @handle_key = handle_key
+        @input = input
         @wait_until = 0.0
       end
 
@@ -38,8 +42,8 @@ module Carat
           if @decoder.pending?
             return handle(state, @decoder.flush)
           end
-          if @handle_key.pending? && @clock.now >= @wait_until
-            @handle_key.timeout(state)
+          if @input.pending? && @clock.now >= @wait_until
+            @handle_key.call(state, Domain::Key::TIMEOUT)
             return true
           end
           return false
@@ -57,7 +61,7 @@ module Carat
       #: (Domain::EditorState) -> Float
       def next_timeout(state)
         return ESCAPE_TIMEOUT if @decoder.pending?
-        if @handle_key.pending?
+        if @input.pending?
           remaining = @wait_until - @clock.now
           return remaining > 0.0 ? remaining : 0.0
         end

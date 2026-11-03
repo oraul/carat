@@ -39,6 +39,7 @@ module Carat
       include Reporting
 
       MAX_REPLAYS = 100
+      private_constant :MAX_REPLAYS
 
       attr_reader :keymap #: Domain::Keymap
       attr_reader :input #: Domain::InputState
@@ -64,8 +65,11 @@ module Carat
         @replays = 0
       end
 
+      # Domain::Key::TIMEOUT is no key: it says the wait for more keys of
+      # a binding ran out, which resolves the pending keys.
       #: (Domain::EditorState, Integer) -> Symbol
       def call(state, code)
+        return timeout(state) if code == Domain::Key::TIMEOUT
         @replays = 0
         queue = [code]
         result = :handled
@@ -78,14 +82,11 @@ module Carat
         result
       end
 
-      # Whether the keymap is waiting for more keys of a binding.
-      #: () -> bool
-      def pending?
-        @input.pending?
-      end
+      private
 
       # Resolves pending keys after timeoutlen: the shorter binding fires if
-      # there is one, otherwise the keys are dropped (or inserted as text).
+      # there is one, otherwise the keys are dropped (or inserted as text);
+      # :idle when no key was pending.
       #: (Domain::EditorState) -> Symbol
       def timeout(state)
         input = @input
@@ -110,8 +111,6 @@ module Carat
         @arrange_view.call(state)
         :handled
       end
-
-      private
 
       # The scratch buffer's own keymap answers first; a key it neither
       # binds nor starts a binding with falls through to the mode's keymap.
@@ -246,7 +245,7 @@ module Carat
             if mode == Domain::Mode::INSERT
               report(state, @insert_text.call(state, text))
             else
-              @command_line.append(state, text)
+              @command_line.call(state, text)
             end
           end
           i += 1

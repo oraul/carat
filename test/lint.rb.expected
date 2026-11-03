@@ -16,6 +16,10 @@ ok   the keyword_init rule
 ok   record_names reads Struct and Data declarations
 ok   the record construction rule
 ok   code drops strings and comments
+ok   the one-call rule leaves out handlers, records, the plugin host, and Outcome
+ok   the one-call rule
+ok   the private constant rule
+ok   the constant read rule
 ok   no lint violations
 ok   every method and attribute has an inline RBS signature
-lint: 20 passed, 0 failed
+lint: 24 passed, 0 failed

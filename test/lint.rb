@@ -432,6 +432,93 @@ module LintTest
     "only carat/doubles/ and #{TEST_SUPPORT} may require a test double"
   end
 
+  # ------------------------------------------------------- use cases
+  #
+  # A use case exposes one public instance method, call, besides
+  # initialize and the readers the shared-instance test needs; every other
+  # method is private. The rule leaves out what is not a use case: the
+  # handlers and their bases (input ports with call and a register
+  # function), the two tables, the CommandRunner interface, Outcome,
+  # records, concerns, and the plugin host under use_cases/plugins/, whose
+  # request families are the adapter of PluginApi::Host by design and
+  # whose registry, entries, and events move out of use_cases with the
+  # host (docs/backlog.md). Spinel compiles private_constant without
+  # enforcing it, so the lint keeps every constant of a use case file
+  # private and no file outside it reading one.
+  ONE_CALL_EXEMPT = [
+    "carat/use_cases/actions/action_table.rb", "carat/use_cases/actions/action_handler.rb",
+    "carat/use_cases/ex/ex_table.rb", "carat/use_cases/ex/ex_handler.rb", "carat/use_cases/ex/command_runner.rb",
+    "carat/use_cases/outcome.rb"
+  ]
+
+  # Whether the one-call rule leaves the file out.
+  def self.one_call_exempt?(path, text)
+    return true unless path.start_with?("carat/use_cases/")
+    return true if path.include?("/concerns/") || path.start_with?("carat/use_cases/plugins/")
+    return true if ONE_CALL_EXEMPT.include?(path)
+    return true if text.include?("< Data.define(") || text.include?("< Struct.new(")
+    text.include?(" < ActionHandler") || text.include?(" < ExHandler")
+  end
+
+  # The public instance methods of a use case other than initialize and
+  # call, and its public writers, each as a problem; a class method and
+  # an attr_reader are allowed.
+  def self.one_call_problems(lines)
+    problems = []
+    hidden = false
+    lines.each do |line|
+      stripped = line.to_s.strip
+      next if stripped.start_with?("#")
+      hidden = true if stripped == "private"
+      next if hidden
+      if stripped.start_with?("attr_writer ") || stripped.start_with?("attr_accessor ")
+        problems << "a use case has no public writer (#{stripped.split(" ")[1]})"
+      elsif stripped.start_with?("def ") && !stripped.start_with?("def self.")
+        name = method_name(stripped)
+        problems << "a use case exposes only call; #{name} is public" unless name == "initialize" || name == "call"
+      end
+    end
+    problems
+  end
+
+  # The constants a file assigns at the start of a line.
+  def self.constants_of(text)
+    names = []
+    text.each_line do |line|
+      stripped = line.to_s.strip
+      names << stripped.split(" ")[0] if stripped.match?(/\A[A-Z][A-Z0-9_]* = /)
+    end
+    names
+  end
+
+  # The constants of a use case file missing from its private_constant
+  # lines, each as a problem.
+  def self.private_constant_problems(text)
+    listed = []
+    text.each_line do |line|
+      stripped = line.to_s.strip
+      next unless stripped.start_with?("private_constant ")
+      stripped.sub("private_constant ", "").split(",").each { |name| listed << name.strip.delete_prefix(":") }
+    end
+    problems = []
+    constants_of(text).each { |name| problems << "#{name} is not listed in a private_constant" unless listed.include?(name) }
+    problems
+  end
+
+  # Whether a line of code names the constant of a class as Class::CONST,
+  # with or without a namespace before the class.
+  def self.constant_read?(code, klass, constant)
+    target = "#{klass}::#{constant}"
+    at = code.index(target)
+    while at
+      before = at > 0 ? code[at - 1, 1] : ""
+      after = code[at + target.length, 1].to_s
+      return true unless before.match?(/[A-Za-z0-9_]/) || after.match?(/[A-Za-z0-9_]/)
+      at = code.index(target, at + 1)
+    end
+    false
+  end
+
   def self.main
     t = Carat::Testing.new("lint")
 
@@ -536,6 +623,8 @@ module LintTest
       end
       record = text.include?("< Struct.new(") || text.include?("< Data.define(")
       keywords = (layer_of(path) && layer_of(path) != "plugins" && layer_of(path) != "plugin_api") || record
+      one_call_problems(lines).each { |problem| violations << "#{path}: #{problem}" } unless one_call_exempt?(path, text)
+      private_constant_problems(text).each { |problem| violations << "#{path}: #{problem}" } if path.start_with?("carat/use_cases/")
       lines.each_with_index do |line, i|
         stripped = line.strip
         next if stripped.start_with?("#")
@@ -549,6 +638,33 @@ module LintTest
           problem = constructor_problem(stripped) if problem.empty? && keywords
         end
         violations << "#{path}:#{i + 1}: #{problem}" unless problem.empty?
+      end
+    end
+
+    # No file reads a use case's constant from outside the use case's
+    # file: the constants shared by several use cases live in the domain.
+    owned = []
+    Dir.glob("carat/use_cases/**/*.rb").sort.each do |path|
+      expected = expected_declaration(path)
+      next if expected.empty?
+      constants_of(File.read(path).to_s).each { |name| owned << [path, expected[1].to_s, name] }
+    end
+    readers = []
+    readers.concat(Dir.glob("carat/**/*.rb"))
+    readers.concat(Dir.glob("bin/*.rb"))
+    readers.concat(Dir.glob("test/**/*.rb"))
+    readers.concat(Dir.glob("bench/*.rb"))
+    readers.sort.each do |path|
+      next if path == "test/lint.rb"
+      File.read(path).to_s.each_line.with_index(1) do |line, number|
+        stripped = line.to_s.strip
+        next if stripped.start_with?("#")
+        code = code_of(stripped)
+        next unless code.include?("::")
+        owned.each do |home, klass, name|
+          next if home == path
+          violations << "#{path}:#{number}: #{klass}::#{name} is private to #{home}; a shared constant lives in the domain" if constant_read?(code, klass.to_s, name.to_s)
+        end
       end
     end
 
@@ -643,6 +759,10 @@ module LintTest
     t.assert_equal(["", "a record is built with keyword arguments", "", "a record is built with keyword arguments", "", "", "a record is built with keyword arguments", "", ""], [construction_problem("c = Cursor.new(row: 0, col: 0)", ["Cursor"], false, ""), construction_problem("c = D::Cursor.new(0, 0)", ["Cursor"], false, ""), construction_problem("n = LayoutNode.new(kind)", ["Node"], false, ""), construction_problem("new(text, codes)", ["DecodedLine"], true, ""), construction_problem("o = Options.new", ["Options"], false, ""), construction_problem("Manifest.new(", ["Manifest"], false, "name: \"\","), construction_problem("Manifest.new(", ["Manifest"], false, "\"\","), construction_problem("x = Array.new(3, 0)", ["Cursor"], true, ""), construction_problem("e = Event.new()", ["Event"], false, "")], "the record construction rule")
     t.assert_equal("x = \"\" ", code_of("x = \"Domain::Buffer\" # UseCases::"), "code drops strings and comments")
     violations.each { |v| STDOUT.puts v }
+    t.assert_equal([true, true, true, true, false], [one_call_exempt?("carat/use_cases/actions/window_handler.rb", "    class WindowHandler < ActionHandler\n"), one_call_exempt?("carat/use_cases/windows/focus_request.rb", "    class FocusRequest < Data.define(:target, :count)\n"), one_call_exempt?("carat/use_cases/plugins/plugin_host.rb", "    class PluginHost\n"), one_call_exempt?("carat/use_cases/outcome.rb", "    class Outcome\n"), one_call_exempt?("carat/use_cases/operate.rb", "    class Operate\n")], "the one-call rule leaves out handlers, records, the plugin host, and Outcome")
+    t.assert_equal([["a use case exposes only call; other is public", "a use case has no public writer (:mode)"], []], [one_call_problems(["class X\n", "attr_reader :tabs\n", "def initialize(tabs:)\n", "def call(state)\n", "def self.build(x)\n", "def other(state)\n", "attr_writer :mode\n", "private\n", "def helper\n"]), one_call_problems(["class X\n", "def call(state)\n", "private\n", "def helper(state)\n"])], "the one-call rule")
+    t.assert_equal([["B is not listed in a private_constant"], []], [private_constant_problems("A = 1\nB = \"b\"\nprivate_constant :A\n"), private_constant_problems("A = 1\nB = 2\nprivate_constant :A, :B\nx = A\n")], "the private constant rule")
+    t.assert_equal([true, true, false, false, false], [constant_read?("x = Operate::DELETE", "Operate", "DELETE"), constant_read?("x = UseCases::Operate::DELETE", "Operate", "DELETE"), constant_read?("x = MyOperate::DELETE", "Operate", "DELETE"), constant_read?("x = Operate::DELETED", "Operate", "DELETE"), constant_read?("x = Domain::OperatorKind::DELETE", "Operate", "DELETE")], "the constant read rule")
     t.assert_equal(0, violations.length, "no lint violations")
     t.assert_equal(0, missing.length, "every method and attribute has an inline RBS signature")
     t.finish

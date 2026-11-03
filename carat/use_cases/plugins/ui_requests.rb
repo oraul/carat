@@ -5,7 +5,7 @@ require_relative "../../domain/plugin_ui"
 require_relative "../../domain/icons"
 require_relative "../../domain/highlight"
 require_relative "../../domain/mode"
-require_relative "../files/file_ops"
+require_relative "../../ports/file_port"
 require_relative "../ex/command_runner"
 require_relative "plugin_registry"
 
@@ -21,19 +21,20 @@ module Carat
     class UiRequests
       MAX_DEPTH = 4
       E169 = "E169: Command too recursive"
+      private_constant :MAX_DEPTH, :E169
 
       attr_reader :state #: Domain::EditorState
       attr_reader :registry #: PluginRegistry
-      attr_reader :file_ops #: FileOps
+      attr_reader :files #: Ports::FilePort
       attr_reader :plugin_ui #: Domain::PluginUi
       attr_reader :input #: Domain::InputState
       attr_reader :runner #: CommandRunner
 
-      #: (state: Domain::EditorState, registry: PluginRegistry, file_ops: FileOps, plugin_ui: Domain::PluginUi, input: Domain::InputState, runner: CommandRunner) -> void
-      def initialize(state:, registry:, file_ops:, plugin_ui:, input:, runner:)
+      #: (state: Domain::EditorState, registry: PluginRegistry, files: Ports::FilePort, plugin_ui: Domain::PluginUi, input: Domain::InputState, runner: CommandRunner) -> void
+      def initialize(state:, registry:, files:, plugin_ui:, input:, runner:)
         @state = state
         @registry = registry
-        @file_ops = file_ops
+        @files = files
         @plugin_ui = plugin_ui
         @input = input
         @runner = runner
@@ -89,7 +90,7 @@ module Carat
 
       #: (String) -> PluginApi::TextResponse
       def working_directory(name)
-        PluginApi::TextResponse.success(@file_ops.cwd.dup)
+        PluginApi::TextResponse.success(@files.cwd.dup)
       end
 
       #: (String, String) -> PluginApi::Response

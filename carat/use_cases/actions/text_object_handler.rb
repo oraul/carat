@@ -23,7 +23,7 @@ module Carat
       # @rbs command: Domain::Command
       def call(state, command)
         return Outcome.none unless Domain::Mode.visual?(state.mode)
-        @extend_visual.text_object(state, command)
+        @extend_visual.call(state, command)
       end
 
       # Registers Domain::TextObjects::NAMES with the kind :text_object.

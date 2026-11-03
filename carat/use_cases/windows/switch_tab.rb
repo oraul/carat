@@ -1,11 +1,13 @@
 require_relative "../../domain/editor_state"
 require_relative "../../domain/tab_list"
 require_relative "../outcome"
+require_relative "tab_request"
 
 module Carat
   module UseCases
-    # Moves between tab pages: next and previous with wrapping and counts,
-    # as gt and gT and the :tab commands do, and first and last.
+    # Moves between tab pages as the request says: next and previous with
+    # wrapping and counts, as gt and gT and the :tab commands do, and
+    # first and last.
     class SwitchTab
       attr_reader :tabs #: Domain::TabList
 
@@ -14,30 +16,14 @@ module Carat
         @tabs = tabs
       end
 
-      # count 0 goes to the next tab page, wrapping; otherwise to tab page
-      # number count, doing nothing when there is no such tab page.
-      #: (Domain::EditorState, Integer) -> Outcome
-      def next(state, count)
-        @tabs.next_tab(count)
-        Outcome.success("")
-      end
-
-      # Goes count tab pages back (at least one), wrapping.
-      #: (Domain::EditorState, Integer) -> Outcome
-      def previous(state, count)
-        @tabs.previous_tab(count)
-        Outcome.success("")
-      end
-
-      #: (Domain::EditorState) -> Outcome
-      def first(state)
-        @tabs.tab_index = 0
-        Outcome.success("")
-      end
-
-      #: (Domain::EditorState) -> Outcome
-      def last(state)
-        @tabs.tab_index = @tabs.tab_count - 1
+      #: (Domain::EditorState, TabRequest) -> Outcome
+      def call(state, request)
+        case request.target
+        when :next then @tabs.next_tab(request.count)
+        when :previous then @tabs.previous_tab(request.count)
+        when :first then @tabs.tab_index = 0
+        else @tabs.tab_index = @tabs.tab_count - 1
+        end
         Outcome.success("")
       end
     end

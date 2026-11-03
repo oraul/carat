@@ -16,6 +16,7 @@ module Carat
     class SetCommandHandler < ExHandler
       # The options Carat has that :set does not handle yet.
       PENDING = ["number", "nu", "relativenumber", "rnu", "tabstop", "ts", "shiftwidth", "sw", "expandtab", "et", "autoindent", "ai", "scrolloff", "so", "timeoutlen", "tm", "undolevels", "ul", "icons", "theme"]
+      private_constant :PENDING
 
       #: (spec: String) -> void
       def initialize(spec:)
