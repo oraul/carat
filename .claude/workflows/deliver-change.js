@@ -21,9 +21,10 @@ export const meta = {
 
 // args: { change?, brief?, branch?, packs?: [path], areas?: [string] }, or a
 // string that is a change name or a brief. The run state, written only by
-// tools/run_state.sh, decides which phases are already done: a phase whose
-// recorded commit is the current one is skipped, so a restart resumes and a
-// fix (a new commit) runs every later phase again. The workflow also
+// tools/run_state.sh and read through its trusted command (only the records
+// at a commit of the branch or of main), decides which phases are already
+// done: a phase whose recorded commit is the current one is skipped, so a
+// restart resumes and a fix (a new commit) runs every later phase again. The workflow also
 // measures the run (output tokens and tool calls per phase, the first
 // verdict of each gate, rework rounds, CI minutes) and stores each figure
 // as metric.* when it changes, so a restart seeds them and tools/run_state.sh
@@ -57,7 +58,7 @@ const RESUME = {
   type: 'object',
   properties: {
     status: STATUS, change: { type: 'string' }, branch: { type: 'string' }, head: HEAD,
-    state_json: { type: 'string', description: 'the output of tools/run_state.sh init, verbatim' },
+    state_json: { type: 'string', description: 'the output of tools/run_state.sh trusted, verbatim' },
     reason: { type: 'string' },
   },
   required: ['status', 'change', 'branch', 'head', 'state_json'],
@@ -364,7 +365,7 @@ const resume = await agent(
 1. \`git fetch -q origin\`. The change name is input.change, or an existing change under openspec/changes/ that the brief names, or a kebab-case name of 2 to 5 words derived from the brief.
 2. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Check it out when it exists locally or on origin; otherwise create it from origin/main, which needs a clean tree (stop with the reason when it is not).
 3. \`make doctor\`; run \`make toolchain\` when it fails and stop when that fails too.
-4. Run \`sh tools/run_state.sh init <change> <branch>\` and return its output verbatim as state_json, with \`git rev-parse --short=12 HEAD\` as head.`,
+4. Run \`sh tools/run_state.sh init <change> <branch>\`, then \`sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git rev-parse --short=12 HEAD\` as head.`,
   { schema: RESUME, effort: 'low', label: 'resume' })
 if (!resume || resume.status !== 'done') {
   stopped = `resume stopped: ${resume ? resume.reason : 'no result'}`
@@ -373,6 +374,9 @@ if (!resume || resume.status !== 'done') {
   head = resume.head
   seed()
   note(`resumed ${state.change} on ${state.branch} at ${head}`)
+  // trusted left out the phase and review records git does not support, so
+  // their phases run again.
+  if (state.untrusted) note(`not trusted, run again: ${state.untrusted}`)
   if (!CHANGE.test(state.change || '')) stopped = `not a change name: ${state.change}`
 }
 
