@@ -158,12 +158,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a convention that changes (a base class's constructor, an anchor's neighbor, a lint rule) could leave a generator writing code that no longer compiles or lints, and nothing would say so until an author ran it. The `authoring-kit` change compiled, linted, and tested the output of all five generators by hand in a scratch worktree (59 tests, `spinel-doctor` clean).
 - Fix outline: a `make generators-check` target that runs every generator in a temporary worktree, then `make gen-config`, `make lint`, `make test-build`, and `make test-run` there, run by the checker when `tools/new.sh`, `carat.rb`, `EditorAssembly`, the handler bases, or `test/lint.rb` change rather than on every check, since it costs a full analysis of the library.
 
-## The periodic review's areas miss the entry point, the tools, and CI
-
-- Where: `REVIEW_AREAS` in `tools/run_state.sh`. `utf8-input-safety` added the domain files that keep control characters off the terminal (`frame.rb`, `display_width.rb`, `utf8.rb`, `decoded_line.rb`) to the terminal output area; `bin/carat.rb`, `tools/`, and `.github/workflows/` are still in no area. Low finding of the periodic security review at 66fd52b.
-- Why it matters: a change to the composition root, the gate scripts, or the CI workflow never makes a periodic security review due, though each decides what runs and what is checked.
-- Fix outline: add `bin/carat.rb` to the process spawning area and a "tooling and CI" area for `^(tools/|\.github/workflows/)`, with a `tools/tools_test.sh` case for each.
-
 ## The content gate has no secret patterns and .env is not ignored
 
 - Where: `tools/rules.sh` (line 8 starts the patterns: URLs, emails, session ids, model names) used by `tools/gates.sh`; `.gitignore`. Low finding of the periodic security review at 66fd52b.
@@ -290,18 +284,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a directory of the tree replaced by a link pointing outward between the check and the create, rename, or delete redirects the operation outside the tree root, so the containment holds only against a tree that does not change while the explorer acts on it.
 - Fix outline: when the file port gains directory-relative operations, open the resolved directory once and act through its descriptor (`openat`, `renameat`, `unlinkat` with no-follow), with a test row in `test/drivers_disk_files.rb`; until then record in `docs/spinel-notes.md` whether the pinned Spinel exposes them.
 
-## The agent guard misses a quoted or escaped subcommand
-
-- Where: `tools/agent_guard.sh`, the git rule (`GIT` and `WRITES`) and the gh rule beside it, and the `Bash(gh pr merge:*)` deny rule in `.claude/settings.json`. Low (7) finding of the security review of `agent-authority` at 8bf46e4; the design lists the limit as a non-goal, and the records gate and branch protection stand behind it.
-- Why it matters: under the read profile `git 'push' origin x`, `"git" push`, and `g\it push` pass the text match, so injected text in the tree that tells an agent to quote the word gets a git write past the guard.
-- Fix outline: remove quotes and backslashes from the command text before matching (for example `tr -d "'\\\""`), refuse `eval`, `sh -c`, and `bash -c` when their argument names a refused word, and add `tools/tools_test.sh` cases for `git 'push'`, `"git" push`, and `"gh" pr merge`.
-
-## The guard lets a symlink make the body file the run state
-
-- Where: `tools/agent_guard.sh`, the contributor's and the merger's body-file exemption (`BODY_FILE`), and `gate_pr_body` in `tools/gates.sh`. Low (6) finding of the security review of `workflow-trim` at aa3bf07.
-- Why it matters: `ln -sf CHANGE.json build/pipeline/CHANGE.body.md` reduces to a command on the body file, which the guard allows, so a later Write or redirect to the body file overwrites `build/pipeline/CHANGE.json` and its review and phase records; the records gate at the merge still compares them with the workflow's results, so this is defense in depth.
-- Fix outline: in the contributor and merger profiles refuse `ln`, `cp -s`, and `mv` commands that name the body file, make `gate_pr_body` and the Write path refuse a body file that is a symlink (`[ -L file ]`), and add `tools/tools_test.sh` cases; or have `tools/run_state.sh` copy the body file in from a path under `tmp/`.
-
 ## The README names held-Ctrl forms the window keys do not have
 
 - Where: `README.md` line 5, which says the window commands `s v h j k l w W p c o = q` work with Ctrl held on the second key. Periodic quality advisory at df5a203.
@@ -319,3 +301,15 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `CLAUDE.md`, 30,697 of its 30,720-byte budget in `tools/docs_lint.sh` (`BUDGETS`). Periodic quality advisory at df5a203; `docs/architecture.md` is at 88,063 of 88,064 and is handled by `project-config-guards`.
 - Why it matters: `CLAUDE.md` requires its Commands and Layout sections to stay in sync with the code, so the next change that must add a line there fails `make docs-lint` and pays for a trim it did not plan.
 - Fix outline: the first change that needs room trims `CLAUDE.md` in the same change, moving detail to `docs/codebase-map.md` or the agents' files, rather than raising the budget; accepted when `make docs-lint` passes with at least 1,000 bytes of room left.
+
+## /status and a killed run lose the package, CI, and merge phases
+
+- Where: `.claude/workflows/deliver-change.js` lines 459 to 475, which leave the package, CI, and merge phase lines to the final flush, and the next-phase loop of `tools/run_state.sh` near line 345. Advisory of the quality review of `workflow-records`.
+- Why it matters: during the CI wait `/status` prints next phase package although the pull request is open, and a run killed between the merge and the final flush never records package, ci, and merge, so its history row lacks those phases.
+- Fix outline: have `status` read `pushed`, `pr`, and `merged` as the resume does when the phase lines are absent, or record each phase as soon as its own record exists; add a `tools/tools_test.sh` case for a run state with `pushed` and `pr` but no package line. Queued as a fold of `workflow-cost`.
+
+## The merger's wait depends on the harness allowing a foreground sleep
+
+- Where: the header of `tools/ci_wait.sh` and step 2 of `.claude/agents/merger.md` (line 20). Advisory of the quality review of `workflow-records`.
+- Why it matters: the one-start wait holds only while the agent harness lets a foreground shell call sleep up to 540 seconds; if it refuses or shortens it, the merger falls back to returning pending, the cost of 36 to 58 merge tool calls a run that `workflow-records` set out to remove.
+- Fix outline: confirm on the first full run (`guard-hardening`) that the merger used one start with no pending note; record the harness behavior in the header and the merger's file, and if it fails, give the workflow the wait between merger starts instead. Queued as part (c) of `workflow-cost`.

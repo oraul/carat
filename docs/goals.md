@@ -2,7 +2,7 @@
 
 The planner's charter: what every change and every place in the queue serves, in order of priority, and the rubric that places each item. Every queue decision in `docs/queue.md` cites its tier and the data behind it: a benchmark, a CI time, a gate result, a token count, a finding, or the user's request.
 
-1. Security first. No merge without the security review of the committed diff and its result in the pull request; a High or Medium finding at confidence 8 or above blocks the merge; security fixes go to the front of the queue. A review of the whole codebase runs every five merged changes and after any change to config loading, file access, plugin boundaries, terminal output, or process spawning.
+1. Security first. No merge without the security review of the committed diff and its result in the pull request; a High or Medium finding at confidence 8 or above blocks the merge; security fixes go to the front of the queue. A review of the whole codebase runs every five merged changes and after any change to config loading, file access, plugin boundaries, terminal output, process spawning, the entry point, or the tooling and CI.
 2. Performance on CI and at run time, kept by the benchmark and a history of benchmark and CI results.
 3. Code quality the Ruby way, within Spinel's rules.
 4. Clean Architecture that is easy to extend.

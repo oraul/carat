@@ -1,7 +1,7 @@
 export const meta = {
   name: 'periodic-review',
   description: 'Review the whole codebase at main: the security review, never skipped, and the quality review, findings recorded in the run state for the planner',
-  whenToUse: '/review on demand; the delivery workflow runs it every five merged changes and after a change to config loading, file access, plugin boundaries, terminal output, or process spawning',
+  whenToUse: '/review on demand; the delivery workflow runs it every five merged changes and after a change to config loading, file access, plugin boundaries, terminal output, process spawning, the entry point, or the tooling and CI',
   phases: [
     { title: 'Review', detail: 'security and quality reviewers in their periodic mode, in parallel' },
   ],

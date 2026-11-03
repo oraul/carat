@@ -23,6 +23,6 @@
 
 ## 5. Docs and records
 
-- [ ] 5.1 The review areas in `README.md`, `docs/goals.md`, `.claude/commands/review.md`, and `.claude/workflows/periodic-review.js`; area 1 of `docs/codebase-map.md` for the guard, the run state, `ci_wait.sh`, and the gates. Checked by `make docs-lint` and `make gates`.
-- [ ] 5.2 `docs/backlog.md`: remove the three entries this change fixes; add the entries of `build/plan/backlog.md` this change leaves (the `/status` and killed-run phase loss, the merger's foreground sleep). Checked by `make docs-lint`.
+- [x] 5.1 The review areas in `README.md`, `docs/goals.md`, `.claude/commands/review.md`, and `.claude/workflows/periodic-review.js`; area 1 of `docs/codebase-map.md` for the guard, the run state, `ci_wait.sh`, and the gates. Checked by `make docs-lint` and `make gates`.
+- [x] 5.2 `docs/backlog.md`: remove the three entries this change fixes; add the entries of `build/plan/backlog.md` this change leaves (the `/status` and killed-run phase loss, the merger's foreground sleep). Checked by `make docs-lint`.
 - [ ] 5.3 Run `make tools-test`, `make lint`, `make docs-lint`, and `make gates`.
