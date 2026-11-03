@@ -30,7 +30,8 @@ export const meta = {
 // the retrospective and the reporter, which record them with
 // tools/run_state.sh metric. The run state's phase.* and review.* lines are
 // the script's own: it builds each command from a schema-checked result and
-// one agent that reads nothing else runs them (flush); tools/agent_guard.sh
+// one agent that reads nothing else runs them (flush), at the end of verify()
+// for the gates and right after every other phase; tools/agent_guard.sh
 // keeps the other agents off those commands, and the merger's records gate
 // compares the file with what the script received.
 const input = typeof args === 'string' ? { brief: args } : (args || {})
@@ -171,6 +172,12 @@ function phaseDone(name, commit) {
   state['phase.' + name] = commit
   queue(`sh tools/run_state.sh phase ${state.change} ${name} ${commit}`, commit)
 }
+// A phase outside verify() is recorded at once: package, CI, and the merge
+// cannot run twice (a second push is refused), so a restart must find them.
+async function recordPhase(name, commit) {
+  phaseDone(name, commit)
+  return flush()
+}
 function reviewed(kind, passed, commit, counts) {
   const result = passed ? 'pass' : 'blocked'
   state['review.' + kind] = `${result} ${commit}`
@@ -305,7 +312,7 @@ if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement
   else {
     note(`plan: ${p.decisions.map((d) => `${d.decision} (${d.evidence})`).join('; ') || 'no change to the queue'}`)
     if (p.security_first.length) stopped = `security first: deliver the fix of ${p.security_first.join('; ')} before this change`
-    else phaseDone('plan', head)
+    else await recordPhase('plan', head)
   }
 }
 
@@ -324,14 +331,14 @@ if (!stopped && !state.merged) {
     }
     phase('Implement')
     const done = await contributor('implement', `Brief: ${input.brief || 'the existing OpenSpec change'}. Scout packs: ${packs.join(', ') || 'none'}.`)
-    if (done) phaseDone('implement', head)
+    if (done) await recordPhase('implement', head)
   }
 
   if (!stopped && !(state['phase.package'] && state.pr)) {
     if (await verify()) {
       phase('Package')
       const done = await contributor('package', `Non-blocking findings for docs/backlog.md:\n- ${backlog.join('\n- ') || 'none'}\nApply the planner's files under build/plan/ and append the history of the merged changes as your package step says.`)
-      if (done) { phaseDone('package', head); state.pr = String(done.pr || '') }
+      if (done) { state.pr = String(done.pr || ''); await recordPhase('package', head) }
     }
   }
 
@@ -343,7 +350,7 @@ if (!stopped && !state.merged) {
       verdict('ci', ci.status === 'green')
       if (ci.minutes) ciMinutes = ci.minutes
       note(`CI at ${ci.head}: ${ci.status}${ci.minutes ? ` in ${ci.minutes} min` : ''}`)
-      if (ci.status === 'green') { state.ci = `green ${ci.head}`; phaseDone('ci', ci.head); break }
+      if (ci.status === 'green') { state.ci = `green ${ci.head}`; await recordPhase('ci', ci.head); break }
       if (ci.status !== 'red' || round >= ROUNDS) { stopped = `CI ${ci.status}${ci.step ? ' at ' + ci.step : ''}`; break }
       if (!(await contributor('fix', `CI failed at ${ci.step}; its log:\n${ci.log_excerpt || ''}`))) break
       if (!(await verify())) break
@@ -358,7 +365,7 @@ if (!stopped && !state.merged) {
     if (!m || !m.merged) stopped = `not merged: ${m ? m.problem : 'no result'}`
     else {
       state.merged = m.sha
-      phaseDone('merge', m.sha)
+      await recordPhase('merge', m.sha)
       note(`merged ${m.sha}: ${m.subject}${m.branch_deleted ? '' : ' (branch deletion refused)'}`)
     }
   }
@@ -375,7 +382,7 @@ if (!stopped && state.merged && !state['phase.retro']) {
     { agentType: 'retrospective', schema: withCalls(RETRO) }))
   if (!r) stopped = 'the retrospective returned no result'
   else {
-    phaseDone('retro', state.merged)
+    await recordPhase('retro', state.merged)
     note(`retrospective: ${r.proposals.map((x) => `${x.proposal} (${x.evidence})`).join('; ') || 'no proposal'}; ${r.review_due}`)
     if (r.due) {
       phase('Review')
