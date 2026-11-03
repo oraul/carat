@@ -307,7 +307,7 @@ printf 'A paragraph\nwrapped by hand.\n' >> .github/pull_request_template.md
 expect "docs_lint: refuses a hard-wrapped template line" 1 "pull_request_template.md:[0-9]+: wrapped by hand" doclint
 docs example
 sed 's/^One line\.$/One line\nwrapped./' CLAUDE.md > c && mv c CLAUDE.md
-expect "docs_lint: refuses a hard-wrapped line in the example body" 1 "CLAUDE.md example: wrapped" doclint
+expect "docs_lint: refuses a hard-wrapped line in the example body" 1 "CLAUDE.md example:[0-9]+: wrapped" doclint
 docs dead
 echo 'See `tools/gone.sh` and `docs/x.md:12`.' >> docs/notes.md
 expect "docs_lint: refuses a dead path and names it" 1 "docs/notes.md:1:tools/gone.sh" doclint

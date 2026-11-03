@@ -49,12 +49,14 @@ Sizes, before and after (bytes, `wc -c`):
 
 | File | Before | After |
 | --- | --- | --- |
-| `CLAUDE.md` | 41,066 | filled in by task 5.4 |
-| `docs/architecture.md` | 91,890 | filled in by task 5.4 |
-| `.claude/agents/contributor.md` | 6,716 | filled in by task 5.4 |
+| `CLAUDE.md` | 41,066 | 30,584 |
+| `docs/architecture.md` | 91,890 | 87,261 |
+| `.claude/agents/contributor.md` | 6,716 | 6,712 |
 
 ## Risks / Trade-offs
 
 - [Generated code could stop compiling when a convention changes] → the generators are covered by `make tools-test` for their files and insertions, and this change compiles, lints, and tests the output of all five by hand; an automated compile of the output is left in `docs/backlog.md` because it would add a full analysis of the library to every check.
 - [Anchored insertion breaks when an anchor line is renamed] → the script refuses with the anchor's name instead of writing a partial change, and `make tools-test` runs every generator against the current files.
 - [A budget blocks a change that must add a rule] → the budget is a number in `tools/docs_lint.sh`; raising it is a visible, reviewed line, which is the point.
+
+`CLAUDE.md` lost 26 percent and is the one document every agent reads in full. `docs/architecture.md` lost 5 percent: its sections 2.1 and 10 point to the notes, and the rest is design no other document holds, so its budget is set at the new size rounded up to the next KiB (88,064 bytes) to hold it there. The contributor's instructions stayed the same size while gaining the pointers to the examples, the generators, and the notes; the saving for the contributor is in what it no longer has to look up. The new guides, `docs/spinel-notes.md` (about 10 KB) and `docs/examples.md` (about 7 KB), replace reading three documents for the pitfalls and searching the tree for a file to copy.

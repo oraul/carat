@@ -76,37 +76,30 @@ check_content() {
   [ $failed -ne $start ] || ok "$(documents | wc -l | tr -d ' ') document(s)"
 }
 
-# wrapped FILE START END: the lines of FILE between a line equal to START
-# and a line equal to END (the whole file when START is empty) that follow
-# a non-blank line without being a bullet, heading, rule, or comment.
+# wrapped LABEL: the lines of standard input that follow a non-blank line
+# without being a bullet, heading, rule, or comment, each after LABEL and
+# its line number.
 wrapped() {
-  awk -v start="$2" -v end="$3" '
-    BEGIN { on = (start == "") }
-    !on { if ($0 == start) { on = 1; prev = "" } ; next }
-    on && end != "" && $0 == end { exit }
-    {
-      if ($0 != "" && prev != "" && $0 !~ /^(- |#|---|<!--)/)
-        print FILENAME ":" NR ": " $0
-      prev = $0
-    }' "$1"
+  awk -v label="$1" '
+    $0 != "" && prev != "" && $0 !~ /^(- |#|---|<!--)/ { print label ":" NR ": " $0 }
+    { prev = $0 }'
+}
+
+# The example body of CLAUDE.md: the fenced block after "### Example".
+example() {
+  awk '/^### Example$/ { seen = 1; next }
+    seen && /^```$/ { if (on) exit; on = 1; next }
+    on { print }' CLAUDE.md
 }
 
 check_wraps() {
   gate=wraps
   start=$failed
-  hits=""
-  [ -f .github/pull_request_template.md ] &&
-    hits=$(wrapped .github/pull_request_template.md "" "")
-  if [ -f CLAUDE.md ]; then
-    # The example body: the fenced block after the "### Example" heading.
-    first=$(awk '/^### Example$/ { e = 1 } e && /^```$/ { print NR; exit }' CLAUDE.md)
-    if [ -n "$first" ]; then
-      more=$(tail -n +"$((first + 1))" CLAUDE.md | awk '/^```$/ { exit } { print }' |
-        awk 'BEGIN { prev = "" } { if ($0 != "" && prev != "" && $0 !~ /^(- |#|---|<!--)/) print "CLAUDE.md example: " $0; prev = $0 }')
-      hits="$hits${hits:+${more:+
-}}$more"
-    fi
-  fi
+  hits=$(
+    [ ! -f .github/pull_request_template.md ] ||
+      wrapped .github/pull_request_template.md < .github/pull_request_template.md
+    [ ! -f CLAUDE.md ] || example | wrapped "CLAUDE.md example"
+  )
   [ -z "$hits" ] || bad "a hard-wrapped line, which GitHub shows broken; write each paragraph and bullet on one line:
 $hits"
   [ $failed -ne $start ] || ok "pull request template and example"
