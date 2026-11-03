@@ -566,4 +566,4 @@ In merge order, by pull request number, with the roadmap item of `docs/architect
 - `agents-and-map`: this map, its lint rule, the scout agent, the slim `CLAUDE.md`, and the contributor's instructions.
 - `delivery-pipeline`: the workflow, `/deliver`, `/status`, seven agents, run state, gates, one stage list. Next: `authoring-kit`, `planner-and-metrics`.
 
-Next in roadmap order: item 6, `search-and-substitute`; `plugin-finder` can start at any time.
+Next: `docs/queue.md`, ordered against the charter `docs/goals.md`.

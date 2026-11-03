@@ -13,7 +13,7 @@
 
 ## 3. Agents, workflow, and commands
 
-- [x] 3.1 Add the seven agents under `.claude/agents/`; verify each against its phase and that none sets `model:`.
+- [x] 3.1 Add the seven agents under `.claude/agents/`; verify each against its phase and that only the mechanical ones set a tier alias.
 - [x] 3.2 Add `.claude/workflows/deliver-change.js`; verify that it parses with `node --check` and reads against the phases.
 - [x] 3.3 Add `.claude/commands/deliver.md` and `status.md`; verify `sh tools/run_state.sh status`.
 - [x] 3.4 Reshape `.claude/agents/contributor.md` around the phases with the conflicts resolved; verify by reading it against `CLAUDE.md`.
@@ -23,6 +23,7 @@
 - [x] 4.1 Update `CLAUDE.md` (security first, Git workflow, Pull requests, Agents, Commands) within its current size; verify with `wc -c`.
 - [x] 4.2 Update `docs/codebase-map.md` areas 1 and 18 and the delivered changes within its current size; verify with `make lint` and `wc -c`.
 - [x] 4.3 Add the README section on how carat is built with AI; verify by reading it against what this change ships.
+- [x] 4.4 Add `docs/goals.md` and `docs/queue.md` and point `CLAUDE.md` and the map to them; verify with `sh tools/run_state.sh status` and the content gate.
 
 ## Workflow follow-up
 

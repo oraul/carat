@@ -16,7 +16,7 @@ Goals:
 
 Non-Goals:
 
-- The planner, the queue, metrics, retrospectives, and periodic reviews (`planner-and-metrics`); golden examples, generators, and the docs size gate (`authoring-kit`).
+- The planner agent, metrics, retrospectives, and periodic reviews (`planner-and-metrics`); golden examples, generators, and the docs size gate (`authoring-kit`).
 - Any change to the editor, the tests' behavior, or the generated OpenSpec files.
 
 ## Decisions
@@ -27,7 +27,7 @@ Non-Goals:
 
 ### Narrow agents
 
-Seven new files under `.claude/agents/`, each under 40 lines with a `tools:` list of only what the phase needs: the checker (shell and reading; never edits), the quality reviewer (the `code-review` skill on the committed diff plus the repository's rules: the Ruby way, naming, one public `call`, layers, simple code), the security reviewer (the `security-review` skill, inline when it cannot start sub-tasks), the benchmark agent, the CI watcher, the merger, and the reporter. None sets `model:`: the user has not decided whether that setting is allowed, so the scout's existing setting stays and the pull request says so. Reviewers and the checker report; only the contributor edits.
+Seven new files under `.claude/agents/`, each under 40 lines with a `tools:` list of only what the phase needs: the checker (shell and reading; never edits), the quality reviewer (the `code-review` skill on the committed diff plus the repository's rules: the Ruby way, naming, one public `call`, layers, simple code), the security reviewer (the `security-review` skill, inline when it cannot start sub-tasks), the benchmark agent, the CI watcher, the merger, and the reporter. The user delegated the `model:` setting to the main session, which decided: a short tier alias on that frontmatter line is the one exception to the model-name rule, recorded in the hard rules the way the clone address is, and the content gate allows exactly that line in that place. The scout, checker, benchmark, CI watcher, merger, and reporter do mechanical work and use the cheapest alias; the contributor and the two reviewers leave it out, so code and security judgment run on the session's model. Reviewers and the checker report; only the contributor edits.
 
 ### One writer for run state and stage logs
 
@@ -38,7 +38,7 @@ Seven new files under `.claude/agents/`, each under 40 lines with a `tools:` lis
 `tools/gates.sh` checks the branch against `origin/main` (`BASE` overrides it):
 
 - `trailer`: every commit's last line is the co-author trailer, which appears once, and no other trailer line exists.
-- `content`: added lines of the diff and every commit message hold no URL, email address other than the trailer's, session id, or model name. The `toolchain` target's clone line is the one URL allowed; a `model:` line in an agent's frontmatter is reported as a warning, not a failure, until the user decides. The script's own patterns are written so that they do not match themselves.
+- `content`: added lines of the diff and every commit message hold no URL, email address other than the trailer's, session id, or model name. The `toolchain` target's clone line is the one URL allowed, and a `model:` line naming a tier alias in an agent's frontmatter the one model name allowed. The script's own patterns are written so that they do not match themselves.
 - `snapshots`: a changed `.expected` file has its test and `make test-run` passed at the reviewed commit, which compares the snapshot with the Spinel runner byte for byte, so a snapshot written any other way fails it.
 - `docs`: a file added, moved, or removed under the five source roots needs the map in the diff; a new or removed make target or agent, command, or workflow file needs `CLAUDE.md`; a change to the default configuration, the compatibility table, make targets, or the process files needs `README.md`.
 - `security`: the security review is recorded with a passing result at a commit whose difference to `HEAD` touches only `openspec/` and `docs/backlog.md`.
@@ -56,6 +56,10 @@ Seven new files under `.claude/agents/`, each under 40 lines with a `tools:` lis
 - One push, plus one per CI fix, enforced by `run_state.sh push`.
 - The contributor runs the gates instead of the "Hard rules checklist" that `CLAUDE.md` never had.
 - `CLAUDE.md`'s Git workflow and Pull requests sections say that running the contributor or `/deliver` counts as being asked for the pull request and the merge.
+
+### Planning state in the repository
+
+`docs/goals.md` holds the planner's charter in priority order, security first, and `docs/queue.md` the ordered queue with a reason per item and the decisions behind the order, so the plan no longer lives in the main session's notes. `/status` prints the queue; `planner-and-metrics` adds the agent that keeps both.
 
 ### No URL outside the exception
 

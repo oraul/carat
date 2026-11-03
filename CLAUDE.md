@@ -6,7 +6,7 @@ Guidance for Claude Code when working in this repository.
 
 - Name: carat
 - What it is: a terminal IDE written in Ruby with Neovim's modal editing model: modes, the count-operator-motion grammar, text objects, registers, and ex commands, plus IDE services such as language servers, and a plugin system on which the explorer, finder, and git integration are built. Built, tested, and shipped entirely with Spinel at the Ruby 4 language level; CRuby is never required.
-- Status: roadmap items 1, 2, 3, 4, 5, 8, 11, the windows half of 7, and the explorer half of 12 are done, and the configuration files of item 9 arrived ahead of it. The next item in order is 6, `search-and-substitute`; the finder half of 12, `plugin-finder`, can start on the plugin host at any time. The roadmap is `docs/architecture.md` section 12; the delivered changes, in order and with what each left for later, close `docs/codebase-map.md`; known open items are in `docs/backlog.md`.
+- Status: roadmap items 1, 2, 3, 4, 5, 8, 11, the windows half of 7, and the explorer half of 12 are done, and the configuration files of item 9 arrived ahead of it. The order of the next changes is `docs/queue.md`. The roadmap is `docs/architecture.md` section 12; the delivered changes, in order and with what each left for later, close `docs/codebase-map.md`; known open items are in `docs/backlog.md`.
 - Architecture: `docs/architecture.md` is binding. It fixes the Clean Architecture layers, the ports, the module names, the Spinel rules for all production code, the `.caratrc` configuration format, and the roadmap order. Before planning a change, read the sections of it the change touches.
 - Code map: `docs/codebase-map.md` names every file under `carat/`, `bin/`, `test/`, `bench/`, and `tools/` in one area, with its key methods, tests, archived designs, rules, and benchmark scenarios. Start there to find what a change touches. A change that adds, moves, or removes a file updates its area; `test/lint.rb` fails on a file in no area or a named path that does not exist.
 - When code is added, update the "Commands" section below and keep "Stack", "Layout", and the code map accurate.
@@ -211,6 +211,7 @@ Custom agents live in `.claude/agents/`, their frontmatter giving name, tools, a
 - `scout`: reads one map area at the current commit into a context pack of facts in `tmp/scout/`; its file gives the shape and the reuse rules.
 - `checker`, `quality-reviewer` (`code-review` and this file's rules), `security-reviewer` (`security-review` on the committed diff), `benchmark` (allocations and rounds against `main`), `ci-watcher`, `merger`, and `reporter` never edit. The mechanical agents run on the cheapest tier; the contributor and the reviewers on the session's model.
 - Run state: `build/pipeline/<change>.json`, written only by `tools/run_state.sh`; stage logs in `build/stages/<change>/`.
+- Planning: the charter `docs/goals.md` and the ordered queue `docs/queue.md`.
 - Grouping: tasks of one domain may be grouped into one change when that makes sense, but each change stays balanced, one reviewable pull request; a contributor whose change grows past that proposes a split.
 
 ## Stack
@@ -251,7 +252,7 @@ Defined in `docs/architecture.md`, section 11, in the shape `spin` expects. `doc
 - `bin/`: the compile roots, `carat.rb` (entry point and composition root, the only place drivers are constructed) and `carat-gen-config.rb`.
 - `config/`: `default.caratrc` (every default option and key binding, mirrored by the generated `carat/domain/default_config.rb`) and `plugins.caratrc` (the compiled plugins in order).
 - `test/`: one test module per file with its `.expected` snapshot, and `runner/run_all.rb`. `bench/`: the key benchmark, not compiled by `spin`. `tools/`: the `noruby/ruby` stub, the vendored Spinel header, and the scripts behind the make targets, CI, and the pipeline.
-- `docs/`: `architecture.md`, `codebase-map.md`, `compatibility.md` (every Neovim command implemented, with its test), `actions.md` (every action name a keymap may use), `plugins.md` (how to write a compiled plugin), `backlog.md` (known items left for later, each with its location and fix outline).
+- `docs/`: `architecture.md`, `codebase-map.md`, `goals.md`, `queue.md`, `compatibility.md` (every Neovim command implemented, with its test), `actions.md` (every action name a keymap may use), `plugins.md` (how to write a compiled plugin), `backlog.md` (known items left for later, each with its location and fix outline).
 - `openspec/` (specs and changes), `.claude/` (agents, the delivery workflow, `/deliver` and `/status`, settings, and the generated OpenSpec commands and skills), `.github/` (the workflow and the pull request template).
 - Ignored by git: `build/` (`spin` output, development builds, the compile cache, `build/smoke/`, `build/stages/`, and `build/pipeline/`), `dist/`, and `tmp/` (`tmp/.spinel` and `tmp/.toolchain`, hidden because `spin` reads every visible directory as project source, and `tmp/scout/`, the scouts' packs).
 
