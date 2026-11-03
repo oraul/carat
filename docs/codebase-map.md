@@ -44,7 +44,10 @@ Files:
 - `tools/metrics.sh`: `measure` (rounds and analysis time of both roots, allocations and time per key of `DEFAULT_SCENARIOS`) and `compare` (fails on more allocations or rounds, warns on time above `TIME_TOLERANCE`).
 - `tools/run_state.sh`: the one writer of `build/pipeline/<change>.json`, the stage logs, and `docs/metrics.tsv`; `init`, `show`, `get`, `set`, `phase`, `review`, `stage`, `check`, `push`, `metric`, `metrics`, `note`, `review-due` (`REVIEW_AREAS`), `pending`, `history`, `status` (`rates`).
 - `tools/gates.sh`: the rule gates `trailer`, `content`, `snapshots`, `docs`, `security`, `stages`, `pushes`, `pr-body`, and the groups `static`, `pre-push`, `merge`.
-- `tools/tools_test.sh`: `expect`, `fresh`; the scope, the measurement, the run state and history, and every gate in temporary repositories.
+- `tools/tools_test.sh`: `expect`, `fresh`, `docs`, `kit`; the scope, the measurement, the run state and history, the docs lint, the generators, and every gate in temporary repositories.
+- `tools/rules.sh`: the forbidden-content patterns (`URL_RE`, `EMAIL_RE`, `SESSION_RE`, `MODEL_RE`) and `scan`, sourced by the gates and the docs lint.
+- `tools/docs_lint.sh`: `make docs-lint`; `check_budgets` (`BUDGETS`), `check_content`, `check_wraps`, `check_paths` over the documents agents read.
+- `tools/new.sh`: the generators behind `make new-use-case`, `new-action`, `new-ex-command`, `new-test`, and `new-plugin`; `use_case`, `action`, `ex_command`, `test_program`, `plugin`, and the insertion helpers `before`, `after`, `sorted`, `map_file`, `map_test`; each checks every anchor before writing.
 - Outside the five roots: `Makefile` (`make help`), `spin.toml`, `.gitignore`, `.github/workflows/ci.yml`, `.github/pull_request_template.md`, `.claude/workflows/deliver-change.js` and `periodic-review.js`, `.claude/agents/` (the planner and the retrospective among them), `.claude/commands/deliver.md`, `status.md`, `plan.md`, and `review.md`, and `docs/metrics.tsv`, the history.
 
 Tests: `make check` itself; `tools/tools_test.sh`; `test/smoke_editor.rb` (area 18) runs the built binary.
