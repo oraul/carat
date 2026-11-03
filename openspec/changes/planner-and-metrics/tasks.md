@@ -8,9 +8,9 @@
 
 ## 2. Run state and history
 
-- [ ] 2.1 Add `metric`, `metrics`, `note`, `pending`, `history`, and `review-due` to `tools/run_state.sh`, count gate failures in `push`, add the phases `plan` and `retro`, and print the first-pass rates in `status`; verify with `make tools-test`.
-- [ ] 2.2 Let `docs/queue.md`, `docs/goals.md`, and `docs/metrics.tsv` change after the reviewed commit in `tools/gates.sh`, and treat `docs/metrics.tsv` as documentation in `tools/ci_scope.sh`; verify with `make tools-test`.
-- [ ] 2.3 Add `docs/metrics.tsv` with its header; verify with `sh tools/run_state.sh status`.
+- [x] 2.1 Add `metric`, `metrics`, `note`, `pending`, `history`, and `review-due` to `tools/run_state.sh`, count gate failures in `push`, add the phases `plan` and `retro`, and print the first-pass rates in `status`; verify with `make tools-test`.
+- [x] 2.2 Let `docs/queue.md`, `docs/goals.md`, and `docs/metrics.tsv` change after the reviewed commit in `tools/gates.sh`, and treat `docs/metrics.tsv` as documentation in `tools/ci_scope.sh`; verify with `make tools-test`.
+- [x] 2.3 Add `docs/metrics.tsv` with its header; verify with `sh tools/run_state.sh status`.
 
 ## 3. Agents, workflows, and commands
 

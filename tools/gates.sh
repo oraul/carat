@@ -15,7 +15,8 @@
 #              added or removed need CLAUDE.md; the default configuration, the
 #              compatibility table, make targets, or process files need README.md
 #   security   the security review is recorded as pass at a commit whose
-#              difference to HEAD touches only openspec/ and docs/backlog.md
+#              difference to HEAD touches only openspec/, docs/backlog.md,
+#              docs/queue.md, docs/goals.md, and docs/metrics.tsv
 #   stages     every canonical stage passed at such a commit
 #   pushes     at most one push plus one per CI fix
 #   pr-body F  the pull request body F has the template's shape, no comment,
@@ -61,11 +62,13 @@ state() {
 }
 
 # True when the difference from COMMIT to HEAD touches only files no check
-# reads: the OpenSpec change (archived after the checks) and the backlog.
+# reads: the OpenSpec change (archived after the checks), the backlog, and
+# the planning records the package step writes (queue, goals, and metrics
+# history).
 settled_at() {
   [ -n "$1" ] || return 1
   rest=$(git diff --name-only "$1" HEAD 2>/dev/null) || return 1
-  [ -z "$(printf '%s\n' "$rest" | grep -v -E '^(openspec/|docs/backlog\.md$|$)')" ]
+  [ -z "$(printf '%s\n' "$rest" | grep -v -E '^(openspec/|docs/(backlog|queue|goals)\.md$|docs/metrics\.tsv$|$)')" ]
 }
 
 require_base() {
