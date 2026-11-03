@@ -13,8 +13,8 @@
 
 ## 3. Workflow advisories
 
-- [ ] 3.1 `.claude/workflows/deliver-change.js`: merge the advisories of every quality review without duplicates, seed them from every `quality-advisory` note, hand the package step the findings and the CI fix's push those that arrived after it. Checked by `node --check`.
-- [ ] 3.2 `.claude/agents/contributor.md`: push mode puts the findings it is given into `docs/backlog.md` and commits before the push. Checked by `make docs-lint` (agent budget).
+- [x] 3.1 `.claude/workflows/deliver-change.js`: merge the advisories of every quality review without duplicates, seed them from every `quality-advisory` note, hand the package step the findings and the CI fix's push those that arrived after it. Checked by `node --check`.
+- [x] 3.2 `.claude/agents/contributor.md`: push mode puts the findings it is given into `docs/backlog.md` and commits before the push. Checked by `make docs-lint` (agent budget).
 
 ## 4. Small fixes
 

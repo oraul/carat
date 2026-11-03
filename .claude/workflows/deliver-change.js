@@ -190,21 +190,27 @@ function seed() {
   rework = Number(state['metric.rework']) || 0
   if (state['metric.ci_min']) ciMinutes = Number(state['metric.ci_min'])
   if (SIZES.includes(state['metric.estimate'])) estimate = state['metric.estimate']
-  // The last quality review's findings, which its reviewer recorded as
-  // quality-blocking and quality-advisory notes; each list is kept only
-  // when all of its notes are there.
-  const [result, commit, blockingCount, advisoryCount] = at('review.quality')
+  // The notes in the order they were recorded. The advisories of every
+  // quality review of the run, which its reviewers recorded as
+  // quality-advisory notes at each commit; once pushed, the package step
+  // has handed them over.
+  const noted = Object.keys(state).filter((k) => /^note\.[0-9]+$/.test(k))
+    .sort((a, b) => Number(a.slice(5)) - Number(b.slice(5))).map((k) => String(state[k]))
+  for (const v of noted) {
+    const m = /^quality-advisory [0-9a-f]{7,40} (.+)$/.exec(v)
+    if (m) addAdvisories([m[1]])
+  }
+  if (state.pushed) for (const f of findings()) handed.add(f)
+  // The last quality review's blocking findings, recorded as
+  // quality-blocking notes; kept only when all of them are there.
+  const [result, commit, blockingCount] = at('review.quality')
   if (!COMMIT.test(commit || '')) return
-  const notesOf = (kind) => Object.keys(state).filter((k) => /^note\.[0-9]+$/.test(k))
-    .sort((a, b) => Number(a.slice(5)) - Number(b.slice(5)))
-    .map((k) => String(state[k])).filter((v) => v.startsWith(`${kind} ${commit} `)).map((v) => v.slice(kind.length + commit.length + 2))
-  const found = notesOf('quality-blocking')
+  const prefix = `quality-blocking ${commit} `
+  const found = noted.filter((v) => v.startsWith(prefix)).map((v) => v.slice(prefix.length))
   if (result === 'blocked' && found.length && blockingCount === `blocking=${found.length}`) {
     qualityBlocking = found
     qualityAt = commit
   }
-  const advisory = notesOf('quality-advisory')
-  if (advisoryCount === `advisory=${advisory.length}`) qualityAdvisory = advisory
 }
 // The figures in one line for the retrospective's and the reporter's
 // prompts; the run state holds the same.
@@ -267,8 +273,18 @@ let benchSameAt = ''
 let benchReport = []
 let qualityBlocking = []
 let qualityAt = ''
-// The advisories of the last quality review, for docs/backlog.md.
+// The advisories of every quality review of the run, in order and without
+// duplicates, for docs/backlog.md; the findings handed to the contributor
+// so far, so a CI fix's push gets only those that arrived after them.
 let qualityAdvisory = []
+const handed = new Set()
+const addAdvisories = (list) => { for (const a of list) if (!qualityAdvisory.includes(a)) qualityAdvisory.push(a) }
+const findings = () => backlog.concat(qualityAdvisory.map((a) => `quality advisory ${a}`))
+function handOver() {
+  const fresh = findings().filter((f) => !handed.has(f))
+  for (const f of fresh) handed.add(f)
+  return fresh
+}
 const intro = () => `Change \`${state.change}\` on branch \`${state.branch}\`.`
 
 async function contributor(mode, detail) {
@@ -329,7 +345,7 @@ async function rounds() {
       if (!q) { stopped = 'the quality reviewer returned no result'; return false }
       qualityBlocking = q.blocking
       qualityAt = q.head
-      qualityAdvisory = q.advisory
+      addAdvisories(q.advisory)
       verdict('quality', !q.blocking.length)
       note(`quality at ${q.head}: ${q.blocking.length} blocking, ${q.advisory.length} advisory`)
       reviewed('quality', !q.blocking.length, q.head, { blocking: q.blocking.length, advisory: q.advisory.length })
@@ -446,8 +462,7 @@ if (!stopped && !state.merged) {
   if (!stopped && !(state.pushed && state.pr)) {
     if (await verify()) {
       phase('Package')
-      const findings = backlog.concat(qualityAdvisory.map((a) => `quality advisory ${a}`))
-      const done = await contributor('package', `Non-blocking findings for docs/backlog.md:\n- ${findings.join('\n- ') || 'none'}\nApply the planner's files under build/plan/ and append the history of the merged changes as your package step says.`)
+      const done = await contributor('package', `Non-blocking findings for docs/backlog.md:\n- ${handOver().join('\n- ') || 'none'}\nApply the planner's files under build/plan/ and append the history of the merged changes as your package step says.`)
       if (done) { state.pr = String(done.pr || ''); phaseDone('package', head) }
     }
   }
@@ -491,7 +506,8 @@ if (!stopped && !state.merged) {
       if (!(await contributor('fix', `CI failed at ${m.step}; its log:\n${m.log_excerpt || ''}`))) break
       if (!(await verify())) break
       phase('Merge')
-      if (!(await contributor('push', 'Push the CI fix.'))) break
+      const fresh = handOver()
+      if (!(await contributor('push', `Push the CI fix.${fresh.length ? `\nNon-blocking findings for docs/backlog.md, which arrived after the package step:\n- ${fresh.join('\n- ')}` : ''}`))) break
     }
   }
 }
