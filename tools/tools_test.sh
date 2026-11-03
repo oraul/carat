@@ -620,6 +620,24 @@ expect "guard: contributor refuses a quoted push" 2 "a git command" guard contri
 expect "guard: read refuses a quoted run state record" 2 "a run state command" guard read "sh tools/run_state.sh re''view c security pass x"
 expect "guard: read refuses a quoted run state path" 2 "the run state's directory" guard read 'cat build/\"pipe\"line/c.json'
 expect "guard: read allows a quoted git read" 0 "^$" guard read "git log --oneline --grep 'push' -5"
+# A backslash before a newline continues the line; an escaped backslash
+# does not.
+expect "guard: read refuses git push over a line continuation" 2 "a git command" guard read 'git \\\npush origin x'
+expect "guard: contributor refuses git push over a line continuation" 2 "a git command" guard contributor 'git \\\npush -u origin chore/x'
+expect "guard: read refuses a review record over a line continuation" 2 "a run state command" guard read 'sh tools/run_state.sh \\\nreview c security pass x HEAD'
+expect "guard: contributor refuses a review record over a line continuation" 2 "a run state command" guard contributor 'sh tools/run_state.sh \\\nreview c security pass x HEAD'
+expect "guard: read refuses a push on the line after an escaped backslash" 2 "a git command" guard read 'echo x\\\\\ngit push'
+expect "guard: read allows a continued git read" 0 "^$" guard read 'git log \\\n--oneline -5'
+# The body file is a whole word: a quoted or escaped blank after it would
+# make a later step part of its name.
+expect "guard: contributor refuses a quoted blank and a parent step after the body file" 2 "a parent step in a command naming the run state's directory" guard contributor 'mkdir -p \"build/pipeline/x.body.md \" && printf x > \"build/pipeline/x.body.md /../x.json\"'
+expect "guard: contributor refuses an escaped blank and a parent step after the body file" 2 "a parent step in a command naming the run state's directory" guard contributor 'printf x > build/pipeline/x.body.md\\ /../x.json'
+expect "guard: merger refuses an escaped blank and a parent step after the body file" 2 "a parent step in a command naming the run state's directory" guard merger 'printf x > build/pipeline/x.body.md\\ /../x.json'
+expect "guard: contributor refuses a quoted blank after the body file" 2 "a pull request body file inside a longer word" guard contributor 'mkdir -p \"build/pipeline/x.body.md \"'
+expect "guard: contributor refuses a step after a quote closing the body file" 2 "a pull request body file that is not a whole word" guard contributor 'printf x > \"build/pipeline/x.body.md\"/y'
+expect "guard: contributor refuses an escaped blank after the body file" 2 "a pull request body file that is not a whole word" guard contributor 'printf x > build/pipeline/x.body.md\\ /y'
+expect "guard: contributor refuses a step after the body file inside quotes" 2 "a pull request body file inside a longer word" guard contributor 'printf x > \"build/pipeline/x.body.md /y\"'
+expect "guard: contributor allows the body gate by its absolute path" 0 "^$" guard contributor 'sh /w/tools/gates.sh pr-body /w/build/pipeline/c.body.md'
 # A real tree: a body file that is a link to the run state, a directory
 # linked to the run state's, and a link out of the scout's directory.
 proj="$work/proj"

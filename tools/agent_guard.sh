@@ -30,10 +30,13 @@
 # command (a pack, a queue, a commit message) goes into a file through the
 # Write tool, since a heredoc carries it in the command.
 #
-# It reads the command's text with its quotes and backslashes removed, as
-# the shell joins them into one word, so it stops an agent that text in the
-# tree led astray, not one that hides a command behind a variable or a glob;
-# the merge gate's comparison with the workflow's records (tools/gates.sh
+# The body file is named in a command only as a whole word of its own, and
+# a command naming the run state's directory takes no parent step.
+#
+# It reads the command's text with its quotes, backslashes, and line
+# continuations removed, as the shell joins them into one word, so it
+# stops an agent that text in the tree led astray, not one that hides a
+# command behind a variable or a glob; the merge gate's comparison with the workflow's records (tools/gates.sh
 # records) and branch protection stand behind it.
 set -u
 
@@ -46,7 +49,9 @@ refuse() {
 }
 
 # The first JSON string field KEY of the input with its escapes undone; an
-# escaped newline becomes ";", so each line reads as a command of its own.
+# escaped newline becomes ";", so each line reads as a command of its own,
+# but a newline after an odd run of backslashes is a line continuation the
+# shell joins, so the pair is dropped: 'git \<newline>push' is git push.
 field() {
   tr '\n\r' '  ' | K="$1" awk '
     {
@@ -60,7 +65,12 @@ field() {
         if (c == "\\") {
           i++
           c = substr(s, i, 1)
-          if (c == "n") c = ";"
+          if (c == "n") {
+            run = 0
+            while (run < length(out) && substr(out, length(out) - run, 1) == "\\") run++
+            if (run % 2 == 1) { out = substr(out, 1, length(out) - 1); continue }
+            c = ";"
+          }
           else if (c == "t" || c == "r") c = " "
           else if (c == "u") { i += 4; c = "?" }
         }
@@ -78,8 +88,10 @@ path=$(printf '%s' "$input" | field file_path)
 # A command's text without quotes and backslashes: 'pu'sh, "git", and g\it
 # are the words the shell runs. A path keeps them, as literal characters.
 if [ "$tool" = Bash ]; then
-  text=$(printf '%s' "$input" | field command | tr -d "\"'\\\\")
+  raw=$(printf '%s' "$input" | field command)
+  text=$(printf '%s' "$raw" | tr -d "\"'\\\\")
 else
+  raw=$path
   text=$path
 fi
 
@@ -149,6 +161,46 @@ body_links() {
   return 0
 }
 
+# words: the shell words of the command as written, one a line, with their
+# quotes and backslashes removed, split at unquoted blanks and operators.
+words() {
+  printf '%s\n' "$raw" | awk '
+    {
+      s = $0; n = length(s); w = ""; q = ""
+      for (i = 1; i <= n; i++) {
+        c = substr(s, i, 1)
+        if (q == "\047") { if (c == "\047") q = ""; else w = w c; continue }
+        if (q == "\"") {
+          if (c == "\"") q = ""
+          else if (c == "\\" && i < n && index("\"\\$`", substr(s, i + 1, 1))) { i++; w = w substr(s, i, 1) }
+          else w = w c
+          continue
+        }
+        if (c == "\047" || c == "\"") { q = c; continue }
+        if (c == "\\") { if (i < n) { i++; w = w substr(s, i, 1) }; continue }
+        if (index(" \t;&|()<>", c)) { if (w != "") print w; w = ""; continue }
+        w = w c
+      }
+      if (w != "") print w
+    }'
+}
+
+# The body file is named in a command only as a whole word: as written, it
+# is followed by a blank, an operator, or the end, never by a quote, a
+# backslash, or a further step, and every word naming it ends with it, since
+# a quoted or escaped blank after it would make a later step part of its
+# name; and a command naming the run state's directory takes no parent step.
+body_word() {
+  [ "$tool" = Bash ] || return 0
+  has "build/pipeline|pipeline/" || return 0
+  has '[.][.]' && refuse "a parent step in a command naming the run state's directory"
+  printf '%s\n' "$raw" | grep -q -E -- "${BODY_PATH}[^[:space:];&|()<>]" &&
+    refuse "a pull request body file that is not a whole word, which could name the run state's directory"
+  words | grep -E -- "$BODY_PATH" | grep -q -v -E -- "^([^ ]*[/=])?${BODY_PATH}\$" &&
+    refuse "a pull request body file inside a longer word, which could name the run state's directory"
+  return 0
+}
+
 case "$profile" in
   read)
     git_writes=$WRITES
@@ -157,6 +209,7 @@ case "$profile" in
     # The branch deletion of the merger's last steps, a Conventional
     # Branch alone at the end of its command, and the body file.
     body_links
+    body_word
     text=$(printf '%s\n' "$text" | sed -E \
       -e 's#git +push +origin +--delete +(feature|bugfix|hotfix|release|chore)/[a-z0-9][a-z0-9-]* *([;&|)]|$)#deleted-branch \2#g' \
       -e "$BODY_FILE")
@@ -165,6 +218,7 @@ case "$profile" in
   contributor)
     # The body file the package step writes and the merger squashes with.
     body_links
+    body_word
     text=$(printf '%s\n' "$text" | sed -E -e "$BODY_FILE")
     git_writes=push
     run_state_writes='phase|review|stage|init' ;;
