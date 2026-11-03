@@ -88,6 +88,14 @@ module Carat
         len > 0 ? len - 1 : 0
       end
 
+      # col moved back to the largest column the cursor may occupy on row
+      # in the current mode, as max_col gives it.
+      #: (Integer, Integer) -> Integer
+      def clamp_col(row, col)
+        max = max_col(row)
+        col > max ? max : col
+      end
+
       # ---------------------------------------------------------- selection
 
       # The visual selection of the current window: its anchor, its cursor,

@@ -9,59 +9,22 @@ require_relative "../outcome"
 
 module Carat
   module UseCases
-    # Changes the selection without editing: "o" and "O" move to the other
-    # end or corner, and the text objects select or extend. Motions need
-    # nothing here: Move moves the cursor end and the anchor stays.
+    # A text object in a visual mode changes the selection without
+    # editing: it selects or extends. Motions need nothing here: Move
+    # moves the cursor end and the anchor stays; "o" and "O" are
+    # SwapVisualEnds.
     class ExtendVisual
       EXTENDING = ["textobject.inner_word", "textobject.a_word", "textobject.inner_big_word", "textobject.a_big_word", "textobject.inner_sentence", "textobject.a_sentence"]
       PARAGRAPHS = ["textobject.inner_paragraph", "textobject.a_paragraph"]
       MAX_LEVELS = 20
-
-      # "o": the anchor and the cursor change places.
-      #: (Domain::EditorState) -> Outcome
-      def swap_ends(state)
-        window = state.window
-        cursor = state.cursor
-        anchor = window.anchor
-        window.anchor = cursor.position
-        cursor.move_to(anchor.row, anchor.col)
-        Outcome.none
-      end
-
-      # "O": in a block, the cursor goes to the other corner on its row and
-      # the anchor to the opposite column on its own, as Neovim's
-      # v_swap_corners; in the other kinds, as "o".
-      #: (Domain::EditorState) -> Outcome
-      def swap_corner(state)
-        unless state.mode == Domain::Mode::VISUAL_BLOCK
-          swap_ends(state)
-          return Outcome.none
-        end
-        tabstop = tabstop_of(state)
-        buffer = state.buffer
-        window = state.window
-        cursor = state.cursor
-        anchor = window.anchor
-        block = state.selection.block(buffer, tabstop)
-        anchor_line = buffer.line(anchor.row)
-        cursor_line = buffer.line(cursor.row)
-        anchor_col = Domain::DisplayWidth.col_at(anchor_line, block.left, tabstop)
-        cursor_col = Domain::DisplayWidth.col_at(cursor_line, block.right, tabstop)
-        if cursor_col == cursor.col
-          anchor_col = Domain::DisplayWidth.col_at(anchor_line, block.right, tabstop)
-          cursor_col = Domain::DisplayWidth.col_at(cursor_line, block.left, tabstop)
-        end
-        window.anchor = Domain::Position.new(row: anchor.row, col: anchor_col)
-        cursor.move_to(cursor.row, cursor_col)
-        Outcome.none
-      end
+      private_constant :EXTENDING, :PARAGRAPHS, :MAX_LEVELS
 
       # A text object in a visual mode: on a selection of one character
       # (one row for a paragraph) the object is selected; on a larger one
       # word, sentence, and paragraph objects extend the cursor end, and
       # the enclosing objects select the smallest larger object.
       #: (Domain::EditorState, Domain::Command) -> Outcome
-      def text_object(state, command)
+      def call(state, command)
         action = command.action
         n = command.count_or(1)
         anchor = state.window.anchor

@@ -24,6 +24,7 @@ module Carat
       include Guarded
 
       MAX_ROUNDS = 8
+      private_constant :MAX_ROUNDS
 
       attr_reader :state #: Domain::EditorState
       attr_reader :buffers #: Domain::BufferList

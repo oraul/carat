@@ -12,6 +12,7 @@ module Carat
 
       # The reserved actions, listed under Reserved in docs/actions.md.
       RESERVED = ["search.forward", "search.backward", "search.next", "search.previous"]
+      private_constant :QUIT_HINT, :RESERVED
 
       # @rbs @text: String
 

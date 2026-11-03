@@ -1,19 +1,26 @@
-require_relative "../edit_command_line"
+require_relative "../enter_command_line"
+require_relative "../execute_command_line"
+require_relative "../erase_command_line"
 require_relative "action_handler"
 require_relative "action_table"
 
 module Carat
   module UseCases
-    # ":" and the command-line keys bound to actions, through
-    # EditCommandLine; executing returns the ex command's outcome.
+    # ":" through EnterCommandLine, Enter through ExecuteCommandLine, whose
+    # outcome is the ex command's, and Backspace through
+    # EraseCommandLine.
     class CommandLineHandler < ActionHandler
-      # @rbs @command_line: EditCommandLine
+      # @rbs @enter_command_line: EnterCommandLine
+      # @rbs @execute_command_line: ExecuteCommandLine
+      # @rbs @erase_command_line: EraseCommandLine
       # @rbs @variant: Symbol
 
-      #: (command_line: EditCommandLine, variant: Symbol) -> void
-      def initialize(command_line:, variant:)
+      #: (enter_command_line: EnterCommandLine, execute_command_line: ExecuteCommandLine, erase_command_line: EraseCommandLine, variant: Symbol) -> void
+      def initialize(enter_command_line:, execute_command_line:, erase_command_line:, variant:)
         super(kind: :action, repeat: false)
-        @command_line = command_line
+        @enter_command_line = enter_command_line
+        @execute_command_line = execute_command_line
+        @erase_command_line = erase_command_line
         @variant = variant
       end
 
@@ -21,17 +28,21 @@ module Carat
       # @rbs command: Domain::Command
       def call(state, command)
         case @variant
-        when :start then @command_line.start(state)
-        when :execute then @command_line.execute(state)
-        else @command_line.backspace(state)
+        when :start then @enter_command_line.call(state)
+        when :execute then @execute_command_line.call(state)
+        else @erase_command_line.call(state)
         end
       end
 
-      #: (ActionTable, command_line: EditCommandLine) -> void
-      def self.register(table, command_line:)
-        table.register("mode.cmdline", CommandLineHandler.new(command_line: command_line, variant: :start))
-        table.register("cmdline.execute", CommandLineHandler.new(command_line: command_line, variant: :execute))
-        table.register("cmdline.backspace", CommandLineHandler.new(command_line: command_line, variant: :backspace))
+      #: (ActionTable, enter_command_line: EnterCommandLine, execute_command_line: ExecuteCommandLine, erase_command_line: EraseCommandLine) -> void
+      def self.register(table, enter_command_line:, execute_command_line:, erase_command_line:)
+        names = ["mode.cmdline", "cmdline.execute", "cmdline.backspace"]
+        variants = [:start, :execute, :backspace]
+        i = 0
+        while i < names.length
+          table.register(names[i], CommandLineHandler.new(enter_command_line: enter_command_line, execute_command_line: execute_command_line, erase_command_line: erase_command_line, variant: variants[i]))
+          i += 1
+        end
       end
     end
   end

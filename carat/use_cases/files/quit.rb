@@ -1,42 +1,40 @@
 require_relative "../../domain/editor_state"
 require_relative "../../domain/buffer_list"
 require_relative "../../domain/tab_list"
+require_relative "../../domain/messages"
 require_relative "../outcome"
-require_relative "../windows/close_window"
 
 module Carat
   module UseCases
     # The :q rule: closes the current window when another exists in any tab
     # page, and ends the editor otherwise unless a listed buffer has unsaved
-    # changes and no bang was given. A file window whose only companions in
-    # its tab page are plugin side windows counts as the last window there,
-    # as Neovim's tree plugins arrange: its tab page closes with them when
-    # other tab pages exist, and the last-window rule applies otherwise.
-    # :qa ends the editor at once under the same check.
+    # changes. A file window whose only companions in its tab page are
+    # plugin side windows counts as the last window there, as Neovim's
+    # tree plugins arrange: its tab page closes with them when other tab
+    # pages exist, and the last-window rule applies otherwise. The way is
+    # :quit for :q, :force for :q!, where a modified hidden buffer is shown
+    # in the window instead of ending the editor, as Neovim does, so :qa!
+    # is the only way to lose it, and :written after the write of :wq and
+    # :x, which ends the editor unless another buffer is modified: the
+    # buffer just written is not checked, since a write to another path
+    # leaves it modified on purpose.
     class Quit
-      E37 = "E37: No write since last change (add ! to override)"
-
-      attr_reader :close_window #: CloseWindow
       attr_reader :buffers #: Domain::BufferList
       attr_reader :tabs #: Domain::TabList
 
-      #: (close_window: CloseWindow, buffers: Domain::BufferList, tabs: Domain::TabList) -> void
-      def initialize(close_window:, buffers:, tabs:)
-        @close_window = close_window
+      #: (buffers: Domain::BufferList, tabs: Domain::TabList) -> void
+      def initialize(buffers:, tabs:)
         @buffers = buffers
         @tabs = tabs
       end
 
-      # With the bang on the last window, a modified hidden buffer is shown
-      # in the window instead of ending the editor, as Neovim does, so :qa!
-      # is the only way to lose it.
-      #: (Domain::EditorState, bool) -> Outcome
-      def call(state, bang)
+      #: (Domain::EditorState, Symbol) -> Outcome
+      def call(state, way)
         if @tabs.total_windows > 1
           return close_current(state) unless beside_side_windows?(state)
           return close_page(state) if @tabs.tab_count > 1
         end
-        if bang
+        if way == :force
           hidden = @buffers.hidden_modified
           if hidden.nil?
             state.quit = true
@@ -45,29 +43,11 @@ module Carat
           end
           return Outcome.success("")
         end
-        return Outcome.failure(E37) if @buffers.any_modified?
-        state.quit = true
-        Outcome.success("")
-      end
-
-      # After a write: closes the window, or ends the editor unless another
-      # buffer is modified; the buffer just written is not checked, since a
-      # write to another path leaves it modified on purpose.
-      #: (Domain::EditorState) -> Outcome
-      def leave(state)
-        if @tabs.total_windows > 1
-          return close_current(state) unless beside_side_windows?(state)
-          return close_page(state) if @tabs.tab_count > 1
+        if way == :written
+          return Outcome.failure(Domain::Messages::E37) unless @buffers.hidden_modified.nil?
+        elsif @buffers.any_modified?
+          return Outcome.failure(Domain::Messages::E37)
         end
-        return Outcome.failure(E37) unless @buffers.hidden_modified.nil?
-        state.quit = true
-        Outcome.success("")
-      end
-
-      # :qa and :qa!.
-      #: (Domain::EditorState, bool) -> Outcome
-      def all(state, bang)
-        return Outcome.failure(E37) if !bang && @buffers.any_modified?
         state.quit = true
         Outcome.success("")
       end
@@ -76,7 +56,7 @@ module Carat
 
       #: (Domain::EditorState) -> Outcome
       def close_current(state)
-        @close_window.remove(state, state.tab.current)
+        @buffers.close_window(@tabs.tab_index, state.tab.current)
         Outcome.success("")
       end
 
@@ -105,10 +85,10 @@ module Carat
         current = tab.current
         i = 0
         while i < ids.length
-          @close_window.remove(state, ids[i]) unless ids[i] == current
+          @buffers.close_window(@tabs.tab_index, ids[i]) unless ids[i] == current
           i += 1
         end
-        @close_window.remove(state, current)
+        @buffers.close_window(@tabs.tab_index, current)
         Outcome.success("")
       end
     end

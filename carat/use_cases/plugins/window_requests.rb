@@ -6,10 +6,10 @@ require_relative "../../domain/buffer"
 require_relative "../../domain/keymap"
 require_relative "../../domain/position"
 require_relative "../files/open_file"
-require_relative "../files/file_ops"
+require_relative "../../ports/file_port"
 require_relative "../windows/split_window"
 require_relative "../windows/open_tab"
-require_relative "../windows/close_window"
+require_relative "../windows/open_side_window"
 require_relative "boundary"
 require_relative "plugin_registry"
 
@@ -19,11 +19,12 @@ module Carat
     # windows, focusing a window, opening a file in a window, in a split,
     # or in a tab page, and the windows a plugin opens files in. Windows
     # are addressed by id, 0 for the current one, in any tab page. The
-    # rules are the core use cases': side windows go through SplitWindow,
-    # files through OpenFile and OpenTab. The plugin link has checked that
+    # rules are the core use cases': side windows go through
+    # OpenSideWindow, files through OpenFile, SplitWindow, and OpenTab. The plugin link has checked that
     # the plugin is enabled.
     class WindowRequests
       E444 = "E444: Cannot close last window"
+      private_constant :E444
 
       attr_reader :state #: Domain::EditorState
       attr_reader :buffers #: Domain::BufferList
@@ -31,14 +32,14 @@ module Carat
       attr_reader :registry #: PluginRegistry
       attr_reader :split_window #: SplitWindow
       attr_reader :open_tab #: OpenTab
-      attr_reader :close_window #: CloseWindow
-      attr_reader :file_ops #: FileOps
+      attr_reader :open_side_window #: OpenSideWindow
+      attr_reader :files #: Ports::FilePort
 
       # open_file is also the name of a request, so it has no reader.
       # @rbs @open_file: OpenFile
 
-      #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, registry: PluginRegistry, open_file: OpenFile, split_window: SplitWindow, open_tab: OpenTab, close_window: CloseWindow, file_ops: FileOps) -> void
-      def initialize(state:, buffers:, tabs:, registry:, open_file:, split_window:, open_tab:, close_window:, file_ops:)
+      #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, registry: PluginRegistry, open_file: OpenFile, split_window: SplitWindow, open_tab: OpenTab, open_side_window: OpenSideWindow, files: Ports::FilePort) -> void
+      def initialize(state:, buffers:, tabs:, registry:, open_file:, split_window:, open_tab:, open_side_window:, files:)
         @state = state
         @buffers = buffers
         @tabs = tabs
@@ -46,8 +47,8 @@ module Carat
         @open_file = open_file
         @split_window = split_window
         @open_tab = open_tab
-        @close_window = close_window
-        @file_ops = file_ops
+        @open_side_window = open_side_window
+        @files = files
       end
 
       # Opens the plugin's scratch buffer with that title in a fixed-width
@@ -102,7 +103,7 @@ module Carat
         leaf = buffer.nil? ? -1 : state.tab.layout.leaf_showing(buffer)
         return PluginApi::Response.failure("No window shows #{title}") if leaf < 0
         return PluginApi::Response.failure(E444) if @tabs.total_windows <= 1
-        @close_window.remove(state, leaf)
+        @buffers.close_window(@tabs.tab_index, leaf)
         PluginApi::Response.success("", 0)
       end
 
@@ -132,7 +133,7 @@ module Carat
         window = tab.layout.window_at(leaf)
         old = window.buffer
         own = old.path
-        if !own.nil? && !old.scratch? && @file_ops.same_path?(own, path)
+        if !own.nil? && !old.scratch? && same_path?(own, path)
           focus_at(tab_index, target)
           return PluginApi::WindowResponse.success("", target)
         end
@@ -234,10 +235,18 @@ module Carat
         result
       end
 
-      # Adds the side window through SplitWindow.
+      # Whether two paths name the same file once resolved against the
+      # working directory.
+      #: (String, String) -> bool
+      def same_path?(a, b)
+        here = @files.cwd
+        PluginApi::Paths.absolute(here, a) == PluginApi::Paths.absolute(here, b)
+      end
+
+      # Adds the side window through OpenSideWindow.
       #: (Domain::Buffer, String, Integer) -> PluginApi::WindowResponse
       def place_side(buffer, side, width)
-        outcome = @split_window.side(@state, buffer, width, side == "left")
+        outcome = @open_side_window.call(@state, buffer, width, side == "left")
         return PluginApi::WindowResponse.failure(outcome.message) unless outcome.ok
         PluginApi::WindowResponse.success("", @state.window.id)
       end

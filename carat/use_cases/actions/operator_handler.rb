@@ -1,6 +1,10 @@
 require_relative "../../domain/mode"
+require_relative "../../domain/operator_kind"
 require_relative "../operate"
-require_relative "../visual/operate_on_selection"
+require_relative "../visual/delete_selection"
+require_relative "../visual/yank_selection"
+require_relative "../visual/change_selection"
+require_relative "../visual/shift_selection"
 require_relative "action_handler"
 require_relative "action_table"
 
@@ -10,17 +14,24 @@ module Carat
     # holds the operator until its motion, text object, or doubled key
     # arrives, and the dispatcher runs this handler with the whole
     # command, which Operate carries out; in a visual mode the operator
-    # acts on the selection at once.
+    # acts on the selection at once, through the selection use case of
+    # its operation.
     class OperatorHandler < ActionHandler
       # @rbs @operate: Operate
-      # @rbs @selection: OperateOnSelection
+      # @rbs @delete_selection: DeleteSelection
+      # @rbs @yank_selection: YankSelection
+      # @rbs @change_selection: ChangeSelection
+      # @rbs @shift_selection: ShiftSelection
       # @rbs @variant: Symbol
 
-      #: (operate: Operate, selection: OperateOnSelection, variant: Symbol) -> void
-      def initialize(operate:, selection:, variant:)
+      #: (operate: Operate, delete_selection: DeleteSelection, yank_selection: YankSelection, change_selection: ChangeSelection, shift_selection: ShiftSelection, variant: Symbol) -> void
+      def initialize(operate:, delete_selection:, yank_selection:, change_selection:, shift_selection:, variant:)
         super(kind: :operator, repeat: true)
         @operate = operate
-        @selection = selection
+        @delete_selection = delete_selection
+        @yank_selection = yank_selection
+        @change_selection = change_selection
+        @shift_selection = shift_selection
         @variant = variant
       end
 
@@ -30,21 +41,23 @@ module Carat
         return @operate.call(state, command) if command.operator?
         return Outcome.none unless Domain::Mode.visual?(state.mode)
         case @variant
-        when :delete then @selection.delete(state, command)
-        when :yank then @selection.yank(state, command)
-        when :change then @selection.change(state, command)
-        when :indent then @selection.shift(state, command, 1)
-        else @selection.shift(state, command, -1)
+        when :delete then @delete_selection.call(state, command, :selected)
+        when :yank then @yank_selection.call(state, command, false)
+        when :change then @change_selection.call(state, command, :selected)
+        when :indent then @shift_selection.call(state, command, 1)
+        else @shift_selection.call(state, command, -1)
         end
       end
 
-      #: (ActionTable, operate: Operate, selection: OperateOnSelection) -> void
-      def self.register(table, operate:, selection:)
-        table.register(Operate::DELETE, OperatorHandler.new(operate: operate, selection: selection, variant: :delete))
-        table.register(Operate::CHANGE, OperatorHandler.new(operate: operate, selection: selection, variant: :change))
-        table.register(Operate::YANK, OperatorHandler.new(operate: operate, selection: selection, variant: :yank))
-        table.register(Operate::INDENT, OperatorHandler.new(operate: operate, selection: selection, variant: :indent))
-        table.register(Operate::DEDENT, OperatorHandler.new(operate: operate, selection: selection, variant: :dedent))
+      #: (ActionTable, operate: Operate, delete_selection: DeleteSelection, yank_selection: YankSelection, change_selection: ChangeSelection, shift_selection: ShiftSelection) -> void
+      def self.register(table, operate:, delete_selection:, yank_selection:, change_selection:, shift_selection:)
+        names = [Domain::OperatorKind::DELETE, Domain::OperatorKind::CHANGE, Domain::OperatorKind::YANK, Domain::OperatorKind::INDENT, Domain::OperatorKind::DEDENT]
+        variants = [:delete, :change, :yank, :indent, :dedent]
+        i = 0
+        while i < names.length
+          table.register(names[i], OperatorHandler.new(operate: operate, delete_selection: delete_selection, yank_selection: yank_selection, change_selection: change_selection, shift_selection: shift_selection, variant: variants[i]))
+          i += 1
+        end
       end
     end
   end

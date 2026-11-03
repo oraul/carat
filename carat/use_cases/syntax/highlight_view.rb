@@ -2,6 +2,7 @@ require_relative "../../domain/editor_state"
 require_relative "../../domain/window"
 require_relative "../../domain/buffer"
 require_relative "../../domain/syntax_cache"
+require_relative "../../domain/syntax_line"
 require_relative "../plugins/plugin_entry"
 require_relative "../plugins/plugin_syntax"
 
@@ -69,8 +70,8 @@ module Carat
           count = buffer.line_count
           bottom = count if bottom > count
           return if top >= bottom
-          failed = advance(entry, buffer, cache, name, top, bottom) == PluginSyntax::FAILED
-          failed = fill(entry, buffer, cache, name, top, bottom) == PluginSyntax::FAILED unless failed
+          failed = advance(entry, buffer, cache, name, top, bottom) == Domain::SyntaxLine::FAILED
+          failed = fill(entry, buffer, cache, name, top, bottom) == Domain::SyntaxLine::FAILED unless failed
           return unless failed
           cache.drop
         end
@@ -91,7 +92,7 @@ module Carat
           end
           if finish < 0
             finish = @syntax.tokenize(entry, name, line, start)
-            return PluginSyntax::FAILED if finish == PluginSyntax::FAILED
+            return Domain::SyntaxLine::FAILED if finish == Domain::SyntaxLine::FAILED
             @tokenized += 1
             cache.store(line, start, @syntax.copied_tokens, finish) if row >= top
           end
@@ -110,7 +111,7 @@ module Carat
           line = buffer.line(row)
           if cache.find(line, start).nil?
             finish = @syntax.tokenize(entry, name, line, start)
-            return PluginSyntax::FAILED if finish == PluginSyntax::FAILED
+            return Domain::SyntaxLine::FAILED if finish == Domain::SyntaxLine::FAILED
             @tokenized += 1
             cache.store(line, start, @syntax.copied_tokens, finish)
           end

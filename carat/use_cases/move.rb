@@ -36,15 +36,6 @@ module Carat
         end
         Outcome.none
       end
-
-      # The column of the first character that is not a space or a tab, or
-      # the last column when the line is blank.
-      #: (String) -> Integer
-      def first_nonblank(line)
-        i = 0
-        i += 1 while i < line.length && (line[i, 1] == " " || line[i, 1] == "\t")
-        i >= line.length ? (line.length > 0 ? line.length - 1 : 0) : i
-      end
     end
   end
 end

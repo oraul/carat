@@ -32,47 +32,56 @@ module AdaptersAssemblyTest
     # Each shared object is one instance, held by every collaborator that
     # needs it.
     t.assert_equal([], strangers(a.buffers, [
-      ["open_file", a.open_file.buffers], ["save_file", a.save_file.buffers], ["quit", a.quit.buffers],
-      ["close_window", a.close_window.buffers], ["split_window", a.split_window.buffers], ["open_tab", a.open_tab.buffers],
-      ["close_tab", a.close_tab.buffers], ["file_ops", host.file_ops.buffers], ["registry", host.registry.buffers],
-      ["events", host.events.buffers], ["buffer_requests", host.buffer_requests.buffers], ["window_requests", host.window_requests.buffers]
+      ["open_file", a.open_file.buffers], ["save_all", a.save_all.buffers], ["quit", a.quit.buffers], ["quit_all", a.quit_all.buffers],
+      ["close_window", a.close_window.buffers], ["close_other_windows", a.close_other_windows.buffers], ["split_window", a.split_window.buffers],
+      ["open_side_window", a.open_side_window.buffers], ["open_tab", a.open_tab.buffers], ["close_tab", a.close_tab.buffers],
+      ["close_other_tabs", a.close_other_tabs.buffers], ["rename_path", host.rename_path.buffers], ["delete_path", host.delete_path.buffers],
+      ["registry", host.registry.buffers], ["events", host.events.buffers], ["buffer_requests", host.buffer_requests.buffers],
+      ["window_requests", host.window_requests.buffers]
     ]), "the buffer list")
     t.assert_equal([], strangers(a.tabs, [
       ["state", a.state.tabs], ["buffers", a.buffers.tabs], ["feed", a.buffers.feed.tabs], ["quit", a.quit.tabs],
-      ["close_window", a.close_window.tabs], ["split_window", a.split_window.tabs], ["open_tab", a.open_tab.tabs],
-      ["close_tab", a.close_tab.tabs], ["switch_tab", a.switch_tab.tabs], ["registry", host.registry.tabs],
-      ["events", host.events.tabs], ["window_requests", host.window_requests.tabs]
+      ["close_window", a.close_window.tabs], ["split_window", a.split_window.tabs], ["open_side_window", a.open_side_window.tabs],
+      ["open_tab", a.open_tab.tabs], ["close_tab", a.close_tab.tabs], ["close_other_tabs", a.close_other_tabs.tabs],
+      ["switch_tab", a.switch_tab.tabs], ["registry", host.registry.tabs], ["events", host.events.tabs], ["window_requests", host.window_requests.tabs]
     ]), "the tab list")
     t.assert_equal([], strangers(a.state, [
       ["host", host.state], ["registry", host.registry.state], ["events", host.events.state],
       ["buffer_requests", host.buffer_requests.state], ["window_requests", host.window_requests.state], ["ui_requests", host.ui_requests.state]
     ]), "the editor state")
-    t.assert_equal([], strangers(a.registers, [["operate", a.operate.registers], ["selection", a.selection.registers], ["command_line", a.command_line.registers], ["leave_insert", a.repeat_last.leave_insert.registers]]), "the registers")
+    t.assert_equal([], strangers(a.registers, [
+      ["operate", a.operate.registers], ["put_register", a.put_register.registers], ["delete_selection", a.delete_selection.registers],
+      ["yank_selection", a.yank_selection.registers], ["change_selection", a.change_selection.registers], ["put_over_selection", a.put_over_selection.registers],
+      ["execute_command_line", a.execute_command_line.registers], ["leave_insert", a.repeat_last.leave_insert.registers]
+    ]), "the registers")
     t.assert_equal([], strangers(a.last_change, [
       ["dispatcher", a.dispatcher.last_change], ["repeat_last", a.repeat_last.last_change],
-      ["insert_text", a.repeat_last.insert_text.last_change], ["leave_insert", a.repeat_last.leave_insert.last_change]
+      ["insert_text", a.repeat_last.insert_text.last_change], ["leave_insert", a.repeat_last.leave_insert.last_change],
+      ["break_line", a.break_line.last_change], ["erase_character", a.erase_character.last_change], ["insert_tab", a.insert_tab.last_change]
     ]), "the last change")
     t.assert_equal([], strangers(a.buffers.feed, [["dispatcher", a.dispatcher.feed]]), "the buffer feed")
     t.assert_equal([], strangers(a.last_find, [["move", a.move.last_find], ["operate", a.operate.last_find]]), "the last find")
     t.assert_equal([], strangers(a.keymap, [["handle_key", a.handle_key.keymap], ["registry", host.registry.keymap]]), "the keymap")
-    t.assert_equal([], strangers(a.input, [["handle_key", a.handle_key.input], ["frame_presenter", a.frame_presenter.input], ["ui_requests", host.ui_requests.input]]), "the input state")
+    t.assert_equal([], strangers(a.input, [["handle_key", a.handle_key.input], ["controller", a.controller.input], ["frame_presenter", a.frame_presenter.input], ["ui_requests", host.ui_requests.input]]), "the input state")
     t.assert_equal([], strangers(a.plugin_ui, [
       ["host", host.plugin_ui], ["registry", host.registry.plugin_ui], ["ui_requests", host.ui_requests.plugin_ui],
-      ["command_line", a.command_line.plugin_ui], ["frame_presenter", a.frame_presenter.plugin_ui]
+      ["enter_command_line", a.enter_command_line.plugin_ui], ["cancel_command_line", a.cancel_command_line.plugin_ui],
+      ["execute_command_line", a.execute_command_line.plugin_ui], ["frame_presenter", a.frame_presenter.plugin_ui]
     ]), "the plugin UI state")
     t.assert_equal([], strangers(host, [
-      ["save_file", a.save_file.plugins], ["command_line", a.command_line.plugins], ["handle_key", a.handle_key.plugins]
+      ["save_file", a.save_file.plugins], ["cancel_command_line", a.cancel_command_line.plugins],
+      ["execute_command_line", a.execute_command_line.plugins], ["handle_key", a.handle_key.plugins]
     ]), "the plugin host")
     action = a.actions.find("plugin.hello.greet")
     command = a.commands.find("Hello")
     t.assert_equal([true, true], [action.is_a?(Carat::UseCases::PluginActionHandler), command.is_a?(Carat::UseCases::PluginCommandHandler)], "the plugin handlers are registered")
-    t.assert_equal([], strangers(a.runner, [["command_line", a.command_line.runner], ["ui_requests", host.ui_requests.runner]]), "the command runner")
+    t.assert_equal([], strangers(a.runner, [["execute_command_line", a.execute_command_line.runner], ["ui_requests", host.ui_requests.runner]]), "the command runner")
     t.assert_true(a.runner.is_a?(Carat::UseCases::ExecuteEx), "the command runner is the ex runner")
     t.assert_equal([], strangers(a.open_file, [["split_window", a.split_window.open_file], ["open_tab", a.open_tab.open_file]]), "the open file use case")
-    t.assert_equal([], strangers(a.close_window, [["quit", a.quit.close_window], ["registry", host.registry.close_window], ["window_requests", host.window_requests.close_window]]), "the close window use case")
+    t.assert_equal([], strangers(a.open_side_window, [["window_requests", host.window_requests.open_side_window]]), "the open side window use case")
     t.assert_equal([], strangers(a.split_window, [["window_requests", host.window_requests.split_window]]), "the split window use case")
     t.assert_equal([], strangers(a.open_tab, [["window_requests", host.window_requests.open_tab]]), "the open tab use case")
-    t.assert_equal([], strangers(host.file_ops, [["file_requests", host.file_requests.file_ops], ["ui_requests", host.ui_requests.file_ops], ["window_requests", host.window_requests.file_ops]]), "the file operations")
+    t.assert_equal([], strangers(host.probe_path, [["make_path", host.make_path.probe_path], ["rename_path", host.rename_path.probe_path], ["delete_path", host.delete_path.probe_path], ["file_requests", host.file_requests.probe_path]]), "the file operations")
     t.assert_equal([], strangers(a.handle_key, [["controller", a.controller.handle_key]]), "the key handler")
     t.assert_equal([], strangers(a.cache, [["arrange_view", a.arrange_view.cache], ["frame_presenter", a.frame_presenter.cache]]), "the line cache")
     t.assert_equal([], strangers(a.arrange_view, [["handle_key", a.handle_key.arrange_view]]), "the arrange view use case")
@@ -81,8 +90,10 @@ module AdaptersAssemblyTest
 
     # Each port is one instance too.
     t.assert_equal([], strangers(h.terminal, [["assembly", a.terminal], ["controller", a.controller.terminal], ["screen_presenter", a.screen_presenter.terminal]]), "the terminal port")
-    t.assert_equal([], strangers(h.clock, [["assembly", a.clock], ["controller", a.controller.clock], ["dispatcher", a.dispatcher.clock], ["undo", a.undo.clock]]), "the clock port")
-    t.assert_equal([], strangers(h.files, [["assembly", a.files], ["open_file", a.open_file.files], ["save_file", a.save_file.files], ["file_ops", host.file_ops.files]]), "the file port")
+    t.assert_equal([], strangers(h.clock, [["assembly", a.clock], ["controller", a.controller.clock], ["dispatcher", a.dispatcher.clock], ["walk_history", a.walk_history.clock], ["list_undo", a.list_undo.clock]]), "the clock port")
+    t.assert_equal([], strangers(h.files, [["assembly", a.files], ["open_file", a.open_file.files], ["save_file", a.save_file.files], ["probe_path", host.probe_path.files], ["make_path", host.make_path.files],
+      ["rename_path", host.rename_path.files], ["delete_path", host.delete_path.files], ["file_requests", host.file_requests.files],
+      ["ui_requests", host.ui_requests.files], ["window_requests", host.window_requests.files]]), "the file port")
     signals = Carat::Doubles::ManualSignals.new
     main_loop = Carat::Drivers::MainLoop.new(assembly: a, terminal: h.terminal, signals: signals)
     t.assert_equal([true, true, true], [main_loop.assembly.equal?(a), main_loop.terminal.equal?(h.terminal), main_loop.signals.equal?(signals)], "the main loop holds the assembly, the terminal, and the signal port it was given")

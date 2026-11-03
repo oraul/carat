@@ -26,6 +26,7 @@ module Carat
       end
 
       NONE = Outcome.new(ok: true, message: "")
+      private_constant :NONE
     end
   end
 end

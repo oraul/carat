@@ -6,7 +6,8 @@ require_relative "../domain/text_objects"
 require_relative "../domain/operators"
 require_relative "../domain/registers"
 require_relative "../domain/last_find"
-require_relative "../domain/display_width"
+require_relative "../domain/operator_kind"
+require_relative "../domain/messages"
 require_relative "outcome"
 
 module Carat
@@ -16,17 +17,12 @@ module Carat
     # exclusive-motion adjustments, writes the register, applies the
     # buffer work from Operators, and places the cursor and the mode. The
     # standalone commands x s S C D Y are the same path with a fixed
-    # operand; p, P, J, r, and ~ have their own entry points. Deletes and
+    # operand their handler builds; p, P, J, r, and ~ are use cases of
+    # their own (PutRegister, JoinLines, ReplaceChars, ToggleCase). Deletes and
     # changes write the registers by Vim's delete rules and yanks by its
     # yank rules; naming a read-only register refuses the command with
     # E354.
     class Operate
-      DELETE = "operator.delete"
-      CHANGE = "operator.change"
-      YANK = "operator.yank"
-      INDENT = "operator.indent"
-      DEDENT = "operator.dedent"
-
       attr_reader :registers #: Domain::Registers
       attr_reader :last_find #: Domain::LastFind
 
@@ -39,115 +35,29 @@ module Carat
       # The motions after which a delete writes register 1 even within a
       # line, as Vim's use_reg_one; search and marks arrive later.
       REGISTER_ONE_MOTIONS = ["motion.sentence_forward", "motion.sentence_backward", "motion.paragraph_forward", "motion.paragraph_backward"]
+      private_constant :REGISTER_ONE_MOTIONS
 
       #: (Domain::EditorState, Domain::Command) -> Outcome
       def call(state, command)
         operator = command.operator
         register = command.register
-        if Domain::Registers.read_only?(register) && (operator == DELETE || operator == CHANGE || operator == YANK)
-          return Operate.read_only(register)
+        if Domain::Registers.read_only?(register) && (operator == Domain::OperatorKind::DELETE || operator == Domain::OperatorKind::CHANGE || operator == Domain::OperatorKind::YANK)
+          return Outcome.failure(Domain::Messages.read_only_register(register))
         end
         range = operand(state, command)
         return Outcome.none if range.nil?
         state.buffer.start_at(range.normalized.from) unless range.kind == :linewise
         case command.operator
-        when DELETE then delete(state, command, range)
-        when CHANGE then change(state, command, range)
-        when YANK then yank(state, command, range)
-        when INDENT then shift(state, range, 1)
-        when DEDENT then shift(state, range, -1)
+        when Domain::OperatorKind::DELETE then delete(state, command, range)
+        when Domain::OperatorKind::CHANGE then change(state, command, range)
+        when Domain::OperatorKind::YANK then yank(state, command, range)
+        when Domain::OperatorKind::INDENT then shift(state, range, 1)
+        when Domain::OperatorKind::DEDENT then shift(state, range, -1)
         end
-        Outcome.none
-      end
-
-      # x, s, S, C, D, and Y as an operator with a fixed motion.
-      #: (Domain::EditorState, Domain::Command, String, String, bool) -> Outcome
-      def fixed(state, command, operator, motion, linewise)
-        call(state, Domain::Command.new(register: command.register, count: command.count, operator: operator, action: motion, char: "", linewise: linewise, keys: command.keys))
-      end
-
-      # The refusal of a write to a read-only register.
-      #: (String) -> Outcome
-      def self.read_only(name)
-        Outcome.failure("E354: Invalid register name: '#{name}'")
-      end
-
-      # r{char}: count characters from the cursor replaced by the
-      # character, the cursor on the last one; nothing when fewer remain.
-      #: (Domain::EditorState, Domain::Command) -> Outcome
-      def replace_chars(state, command)
-        cursor = state.cursor
-        line = state.current_line
-        count = command.count_or(1)
-        col = cursor.col
-        return Outcome.none if command.char.empty? || col + count > line.length
-        fresh = line[0, col] + (command.char * count) + line[col + count, line.length - col - count]
-        state.buffer.set_lines(cursor.row, cursor.row + 1, [fresh])
-        cursor.move_to(cursor.row, col + count - 1)
-        Outcome.none
-      end
-
-      # ~: the case of count characters from the cursor switched, as many
-      # as remain, and the cursor past them, stopping on the last
-      # character.
-      #: (Domain::EditorState, Domain::Command) -> Outcome
-      def toggle_case(state, command)
-        cursor = state.cursor
-        line = state.current_line
-        col = cursor.col
-        return Outcome.none if col >= line.length
-        count = command.count_or(1)
-        count = line.length - col if col + count > line.length
-        fresh = line[0, col] + Domain::Operators.recase(line[col, count], :toggle, "") + line[col + count, line.length - col - count]
-        state.buffer.set_lines(cursor.row, cursor.row + 1, [fresh])
-        cursor.move_to(cursor.row, clamp(state, cursor.row, col + count))
-        Outcome.none
-      end
-
-      #: (Domain::EditorState, Domain::Command, bool) -> Outcome
-      def put(state, command, after)
-        entry = @registers.read_with_file(command.register, state.buffer.path_text)
-        if entry.nil?
-          name = command.register.empty? ? "\"" : command.register
-          return Outcome.failure("E353: Nothing in register #{name}")
-        end
-        if entry.blockwise?
-          put_block(state, entry, command.count_or(1), after)
-          return Outcome.none
-        end
-        pos = Domain::Operators.put(state.buffer, state.cursor.position, entry, command.count_or(1), after)
-        state.cursor.move_to(pos.row, pos.col)
-        Outcome.none
-      end
-
-      #: (Domain::EditorState, Domain::Command) -> Outcome
-      def join(state, command)
-        cursor = state.cursor
-        last = state.buffer.line_count - 1
-        return Outcome.none if cursor.row >= last
-        count = command.count_or(2)
-        count = 2 if count < 2
-        count = last - cursor.row + 1 if cursor.row + count - 1 > last
-        col = Domain::Operators.join(state.buffer, cursor.row, count, true)
-        cursor.move_to(cursor.row, clamp(state, cursor.row, col))
         Outcome.none
       end
 
       private
-
-      # A blockwise register put as a block from the display column of the
-      # cursor's character, or the one after it for "p".
-      #: (Domain::EditorState, Domain::RegisterEntry, Integer, bool) -> void
-      def put_block(state, entry, count, after)
-        buffer = state.buffer
-        cursor = state.cursor
-        tabstop = state.options.tabstop > 0 ? state.options.tabstop : 8
-        line = buffer.line(cursor.row)
-        vcol = Domain::DisplayWidth.column(line, cursor.col, tabstop)
-        vcol += Domain::DisplayWidth.cell(line[cursor.col, 1], vcol, tabstop) if after && cursor.col < line.length
-        pos = Domain::Operators.put_block(buffer, cursor.row, vcol, entry, count, tabstop)
-        cursor.move_to(pos.row, clamp(state, pos.row, pos.col))
-      end
 
       # The range of the operand, or nil when there is none.
       #: (Domain::EditorState, Domain::Command) -> Domain::Range?
@@ -186,7 +96,7 @@ module Carat
       #: (Domain::EditorState, Domain::Command) -> Domain::Motion?
       def motion_for(state, command)
         action = command.action
-        if command.operator == CHANGE && (action == "motion.word_forward" || action == "motion.big_word_forward")
+        if command.operator == Domain::OperatorKind::CHANGE && (action == "motion.word_forward" || action == "motion.big_word_forward")
           line = state.current_line
           col = state.cursor.col
           if col < line.length && !Domain::Motions.blank?(line[col, 1])

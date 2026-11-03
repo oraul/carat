@@ -63,6 +63,22 @@ module Carat
         active? && row >= top && row <= bottom
       end
 
+      # Whether a delete of the selection writes the numbered registers, as
+      # Vim's delete rules say: whole lines, or more than one line.
+      #: () -> bool
+      def numbered_delete?
+        kind == :linewise || top != bottom
+      end
+
+      # The selection an uppercase visual key acts on: whole lines, or in a
+      # block the block itself, reaching every row's end with to_end or
+      # when "$" made it.
+      #: (bool) -> Selection
+      def lines_or_block(reach_end)
+        return as(:blockwise, to_end || reach_end) if kind == :blockwise
+        as(:linewise, false)
+      end
+
       # The same ends as another kind.
       #: (Symbol, bool) -> Selection
       def as(other_kind, other_to_end)

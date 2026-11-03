@@ -170,6 +170,46 @@ module Carat
         current.show(target)
         remove(old) unless old.equal?(target) || tabs.shown?(old)
       end
+
+      # Removes window id from the tab page at index, closing the tab page
+      # when it was the last window there, and lets go of the buffer it
+      # showed. The caller has checked that another window exists
+      # somewhere.
+      #: (Integer, Integer) -> void
+      def close_window(index, id)
+        tab = tabs.tab_at(index)
+        layout = tab.layout
+        shown = layout.window_at(id).buffer
+        if layout.leaf_count <= 1
+          tabs.remove_tab(index)
+        else
+          taker = layout.close(id)
+          tab.current = layout.first_leaf(taker) if id == tab.current
+          tab.previous = -1 if tab.previous == id
+        end
+        release(shown)
+      end
+
+      # Removes the tab page at index and lets go of every buffer its
+      # windows showed. The caller has checked that another tab page
+      # exists.
+      #: (Integer) -> void
+      def close_tab(index)
+        layout = tabs.tab_at(index).layout
+        ids = layout.leaves
+        held = []
+        i = 0
+        while i < ids.length
+          held << layout.window_at(ids[i]).buffer
+          i += 1
+        end
+        tabs.remove_tab(index)
+        i = 0
+        while i < held.length
+          release(held[i])
+          i += 1
+        end
+      end
     end
   end
 end

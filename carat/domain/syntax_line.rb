@@ -9,6 +9,10 @@ module Carat
       # The entry a row without highlighting is painted with.
       NONE = SyntaxLine.new(text: String.new("none"), start: -1, tokens: Array.new(0, 0), end_state: -1)
 
+      # The end state a tokenizer call answers with when the plugin raised
+      # and was disabled, never a state a tokenizer gives.
+      FAILED = -1
+
       # @rbs @text: String
       # @rbs @start: Integer
       # @rbs @tokens: Array[Integer]

@@ -1,4 +1,5 @@
 require_relative "display_width"
+require_relative "buffer"
 
 module Carat
   module Domain
@@ -43,6 +44,19 @@ module Carat
       #: (String, Integer) -> bool
       def short?(line, tabstop)
         DisplayWidth.column(line, line.length, tabstop) < left
+      end
+
+      # The rows below the top row whose text reaches the block, which a
+      # blockwise insert or change repeats its text on.
+      #: (Buffer, Integer) -> Array[Integer]
+      def reaching_rows(buffer, tabstop)
+        rows = []
+        row = top + 1
+        while row <= bottom
+          rows << row unless short?(buffer.line(row), tabstop)
+          row += 1
+        end
+        rows
       end
     end
   end

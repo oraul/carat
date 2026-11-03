@@ -1,20 +1,27 @@
-require_relative "../insert_text"
+require_relative "../break_line"
+require_relative "../erase_character"
+require_relative "../insert_tab"
 require_relative "action_handler"
 require_relative "action_table"
 
 module Carat
   module UseCases
-    # The insert-mode keys bound to actions: Enter, Backspace, Delete, and
-    # Tab, through InsertText. Typed text does not come here: HandleKey
-    # inserts an unbound printable key directly.
+    # The insert-mode keys bound to actions: Enter through BreakLine,
+    # Backspace and Delete through EraseCharacter, and Tab through
+    # InsertTab. Typed text does not come here: HandleKey inserts an
+    # unbound printable key through InsertText.
     class InsertTextHandler < ActionHandler
-      # @rbs @insert_text: InsertText
+      # @rbs @break_line: BreakLine
+      # @rbs @erase_character: EraseCharacter
+      # @rbs @insert_tab: InsertTab
       # @rbs @variant: Symbol
 
-      #: (insert_text: InsertText, variant: Symbol) -> void
-      def initialize(insert_text:, variant:)
+      #: (break_line: BreakLine, erase_character: EraseCharacter, insert_tab: InsertTab, variant: Symbol) -> void
+      def initialize(break_line:, erase_character:, insert_tab:, variant:)
         super(kind: :action, repeat: false)
-        @insert_text = insert_text
+        @break_line = break_line
+        @erase_character = erase_character
+        @insert_tab = insert_tab
         @variant = variant
       end
 
@@ -22,19 +29,22 @@ module Carat
       # @rbs command: Domain::Command
       def call(state, command)
         case @variant
-        when :newline then @insert_text.newline(state)
-        when :backspace then @insert_text.backspace(state)
-        when :delete then @insert_text.delete(state)
-        else @insert_text.tab(state)
+        when :newline then @break_line.call(state)
+        when :backspace then @erase_character.call(state, false)
+        when :delete then @erase_character.call(state, true)
+        else @insert_tab.call(state)
         end
       end
 
-      #: (ActionTable, insert_text: InsertText) -> void
-      def self.register(table, insert_text:)
-        table.register("insert.newline", InsertTextHandler.new(insert_text: insert_text, variant: :newline))
-        table.register("insert.backspace", InsertTextHandler.new(insert_text: insert_text, variant: :backspace))
-        table.register("insert.delete", InsertTextHandler.new(insert_text: insert_text, variant: :delete))
-        table.register("insert.tab", InsertTextHandler.new(insert_text: insert_text, variant: :tab))
+      #: (ActionTable, break_line: BreakLine, erase_character: EraseCharacter, insert_tab: InsertTab) -> void
+      def self.register(table, break_line:, erase_character:, insert_tab:)
+        names = ["insert.newline", "insert.backspace", "insert.delete", "insert.tab"]
+        variants = [:newline, :backspace, :delete, :tab]
+        i = 0
+        while i < names.length
+          table.register(names[i], InsertTextHandler.new(break_line: break_line, erase_character: erase_character, insert_tab: insert_tab, variant: variants[i]))
+          i += 1
+        end
       end
     end
   end

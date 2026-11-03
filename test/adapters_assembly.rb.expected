@@ -14,7 +14,7 @@ ok   the plugin handlers are registered
 ok   the command runner
 ok   the command runner is the ex runner
 ok   the open file use case
-ok   the close window use case
+ok   the open side window use case
 ok   the split window use case
 ok   the open tab use case
 ok   the file operations

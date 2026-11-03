@@ -9,6 +9,7 @@ module Carat
     # the plugin that declared it or answers why it cannot.
     class PluginActionHandler < ActionHandler
       PREFIX = "plugin."
+      private_constant :PREFIX
 
       attr_reader :plugins #: PluginHost
 

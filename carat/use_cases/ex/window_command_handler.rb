@@ -1,6 +1,7 @@
 require_relative "../../domain/editor_state"
 require_relative "../windows/split_window"
 require_relative "../windows/close_window"
+require_relative "../windows/close_other_windows"
 require_relative "ex_handler"
 require_relative "ex_table"
 
@@ -10,13 +11,15 @@ module Carat
     class WindowCommandHandler < ExHandler
       # @rbs @split_window: SplitWindow
       # @rbs @close_window: CloseWindow
+      # @rbs @close_other_windows: CloseOtherWindows
       # @rbs @variant: Symbol
 
-      #: (spec: String, split_window: SplitWindow, close_window: CloseWindow, variant: Symbol) -> void
-      def initialize(spec:, split_window:, close_window:, variant:)
+      #: (spec: String, split_window: SplitWindow, close_window: CloseWindow, close_other_windows: CloseOtherWindows, variant: Symbol) -> void
+      def initialize(spec:, split_window:, close_window:, close_other_windows:, variant:)
         super(spec: spec)
         @split_window = split_window
         @close_window = close_window
+        @close_other_windows = close_other_windows
         @variant = variant
       end
 
@@ -29,19 +32,19 @@ module Carat
         when :vsplit then split.call(state, true, 0, command.args, false)
         when :new then split.call(state, false, 0, "", true)
         when :vnew then split.call(state, true, 0, "", true)
-        when :close then @close_window.close(state, 0)
-        else @close_window.only(state)
+        when :close then @close_window.call(state, 0)
+        else @close_other_windows.call(state)
         end
       end
 
       # Registers the window commands in the order of docs/compatibility.md.
-      #: (ExTable, split_window: SplitWindow, close_window: CloseWindow) -> void
-      def self.register(table, split_window:, close_window:)
+      #: (ExTable, split_window: SplitWindow, close_window: CloseWindow, close_other_windows: CloseOtherWindows) -> void
+      def self.register(table, split_window:, close_window:, close_other_windows:)
         specs = ["sp[lit]", "vs[plit]", "new", "vne[w]", "clo[se]", "on[ly]"]
         variants = [:split, :vsplit, :new, :vnew, :close, :only]
         i = 0
         while i < specs.length
-          table.register(WindowCommandHandler.new(spec: specs[i], split_window: split_window, close_window: close_window, variant: variants[i]))
+          table.register(WindowCommandHandler.new(spec: specs[i], split_window: split_window, close_window: close_window, close_other_windows: close_other_windows, variant: variants[i]))
           i += 1
         end
       end

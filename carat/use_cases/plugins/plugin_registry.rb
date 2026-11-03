@@ -7,7 +7,6 @@ require_relative "../../domain/buffer"
 require_relative "../../domain/keymap"
 require_relative "../../domain/manifest_check"
 require_relative "../../domain/mode"
-require_relative "../windows/close_window"
 require_relative "../concerns/guarded"
 require_relative "plugin_entry"
 require_relative "plugin_entries"
@@ -30,22 +29,20 @@ module Carat
       attr_reader :tabs #: Domain::TabList
       attr_reader :plugin_ui #: Domain::PluginUi
       attr_reader :keymap #: Domain::Keymap
-      attr_reader :close_window #: CloseWindow
 
       # @rbs @leader: String
       # @rbs @entries: PluginEntries
       # @rbs @errors: Array[String]
       # @rbs @causes: Array[String]
 
-      #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, plugin_ui: Domain::PluginUi, keymap: Domain::Keymap, leader: String, close_window: CloseWindow) -> void
-      def initialize(state:, buffers:, tabs:, plugin_ui:, keymap:, leader:, close_window:)
+      #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, plugin_ui: Domain::PluginUi, keymap: Domain::Keymap, leader: String) -> void
+      def initialize(state:, buffers:, tabs:, plugin_ui:, keymap:, leader:)
         @state = state
         @buffers = buffers
         @tabs = tabs
         @plugin_ui = plugin_ui
         @keymap = keymap
         @leader = leader
-        @close_window = close_window
         @entries = PluginEntries.new
         @errors = []
         @causes = []
@@ -351,7 +348,6 @@ module Carat
       # new empty buffer instead.
       #: (String) -> void
       def close_scratch_windows(name)
-        state = @state
         tabs = @tabs
         t = tabs.tab_count - 1
         while t >= 0
@@ -362,7 +358,7 @@ module Carat
             window = layout.window_at(ids[k])
             if window.buffer.owner == name
               if tabs.total_windows > 1
-                @close_window.remove_in(state, t, ids[k])
+                @buffers.close_window(t, ids[k])
               else
                 fresh = Domain::Buffer.from_text("", nil)
                 @buffers.add(fresh)
