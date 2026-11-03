@@ -89,12 +89,13 @@ metrics_out=${METRICS_OUT:-build/metrics/current.tsv}
 PHASES="plan implement check quality security bench package ci merge retro report"
 # The stages that read what a test-only commit may change, which such a
 # commit runs again: test-build and test-run compile and run the tests,
-# diagnose runs spinel-doctor on the test runner, docs-lint reads docs/*.md
-# and the test paths the docs name, and gates reads the commit; check
-# carries the others. TEST_ONLY: the paths such a commit may change, tests
-# and their snapshots, the OpenSpec records, and the planning records and
-# metrics history, which no carried stage reads.
-TEST_STAGES="test-build test-run diagnose docs-lint gates"
+# diagnose runs spinel-doctor on the test runner, metrics reads the runner's
+# rounds from test-build's report, docs-lint reads docs/*.md and the test
+# paths the docs name, and gates reads the commit; check carries the others.
+# TEST_ONLY: the paths such a commit may change, tests and their snapshots,
+# the OpenSpec records, and the planning records and metrics history, which
+# no carried stage reads.
+TEST_STAGES="test-build test-run diagnose metrics docs-lint gates"
 TEST_ONLY='^(test/|openspec/|docs/(backlog|queue|goals)\.md$|docs/metrics\.tsv$|$)'
 # The gates of a history row's first passes, in order, before gates.
 GATES="check quality security bench ci"
@@ -209,9 +210,10 @@ run_stage() {
   return $status
 }
 
-# True when every path changed from COMMIT to HEAD matches TEST_ONLY.
+# True when every path changed from COMMIT to HEAD matches TEST_ONLY; a
+# rename counts both paths, so a file moved under test/ is no test-only change.
 tests_only_since() {
-  rest=$(git diff --name-only "$1" HEAD 2>/dev/null) || return 1
+  rest=$(git diff --no-renames --name-only "$1" HEAD 2>/dev/null) || return 1
   [ -z "$(printf '%s\n' "$rest" | grep -v -E "$TEST_ONLY")" ]
 }
 
@@ -228,8 +230,7 @@ check_stages() {
           continue
         fi
         # A stage that reads no test program keeps its result across a
-        # commit that changes only tests; metrics keeps the last full
-        # check's figures, which CI measures again and compares with main.
+        # commit that changes only tests.
         if ! one_of "$s" "$TEST_STAGES" && tests_only_since "$at"; then
           write_key "stage.$s" "0 0s $head $(utc_now) carried-from-$at"
           echo "stage $s: passed at $at, carried to $head (only tests changed since)"

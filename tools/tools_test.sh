@@ -188,20 +188,25 @@ expect "run_state: check resumes after the passed stages" 0 "stage a: passed at 
 expect "run_state: check records the phase" 0 "^$(git rev-parse --short=12 HEAD)$" state get state phase.check
 # A commit that changes only tests reruns the test stages and carries the
 # others; one that changes anything else reruns every stage.
-env STAGES="a b test-run diagnose docs-lint" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
+env STAGES="a b test-run diagnose metrics docs-lint" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
 before_tests=$(git rev-parse --short=12 HEAD)
 echo "check" > test/t.rb
 commit "test: t"
-env STAGES="a b test-run diagnose docs-lint" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > carry.out 2>&1
+env STAGES="a b test-run diagnose metrics docs-lint" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > carry.out 2>&1
 expect "run_state: check carries a stage after a test-only commit" 0 "^stage a: passed at $before_tests, carried to $(git rev-parse --short=12 HEAD)" cat carry.out
 expect "run_state: check reruns the test stages" 0 "^stage test-run: exit 0" cat carry.out
 expect "run_state: check reruns diagnose, which reads the test runner, after a test-only commit" 0 "^stage diagnose: exit 0" cat carry.out
 expect "run_state: check reruns docs-lint, which reads the docs and the test paths they name, after a test-only commit" 0 "^stage docs-lint: exit 0" cat carry.out
+expect "run_state: check reruns metrics, which reads the test runner's rounds, after a test-only commit" 0 "^stage metrics: exit 0" cat carry.out
 expect "run_state: a carried stage names its commit" 0 "^0 0s $(git rev-parse --short=12 HEAD) .* carried-from-$before_tests$" state get state stage.b
 rm carry.out
 echo "check" > tools/t.sh
 commit "chore: t"
 expect "run_state: check reruns every stage after a change outside test/" 0 "^stage a: exit 0" \
+  env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
+git_q mv tools/t.sh test/moved.sh
+commit "chore: move t"
+expect "run_state: check reruns every stage after a file moves under test/" 0 "^stage a: exit 0" \
   env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
 state phase state report > /dev/null
 expect "run_state: phase accepts report" 0 "^$(git rev-parse --short=12 HEAD)$" state get state phase.report
