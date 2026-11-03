@@ -210,6 +210,41 @@ module UseCasesPluginFilesTest
     h.type(":q<CR>")
     t.assert_equal([false, "E37: No write since last change (add ! to override)"], [h.quit?, h.message], "and quitting asks for a write")
 
+    # Renaming and deleting through links: "/w/out" and "/w/ext" lead out
+    # of the root, "/w/alias" stays inside it, and the root "/r" is a link.
+    session = editor
+    h, fs = session.harness, session.plugin
+    host = fs.host
+    files = h.files
+    files.mkdir("/elsewhere")
+    files.put("/elsewhere/x.rb", "out\n")
+    files.mkdir("/w/out")
+    files.put("/w/out/x.rb", "out\n")
+    files.link_to("/w/out", "/elsewhere")
+    files.mkdir("/w/ext")
+    files.link_to("/w/ext", "/elsewhere")
+    files.mkdir("/w/alias")
+    files.put("/w/alias/x.rb", "in\n")
+    files.link_to("/w/alias", "/w/lib")
+    files.mkdir("/real")
+    files.mkdir("/r")
+    files.put("/r/a.rb", "r\n")
+    files.link_to("/r", "/real")
+    t.table([
+      ["a rename below a link leading out of the root", host.rename_path("/w", "/w/out/x.rb", "y.rb"), [false, "Outside the tree root: out/x.rb"]],
+      ["a delete below a link leading out of the root", host.delete_path("/w", "/w/out/x.rb"), [false, "Outside the tree root: out/x.rb"]],
+      ["a missing entry below a link leading out keeps its message", host.delete_path("/w", "/w/out/nope.rb"), [false, "No such file or directory: out/nope.rb"]],
+      ["a rename below a link that stays inside", host.rename_path("/w", "/w/alias/x.rb", "y.rb"), [true, ""]],
+      ["a delete below a link that stays inside", host.delete_path("/w", "/w/alias/y.rb"), [true, ""]],
+      ["a rename below a linked root", host.rename_path("/r", "/r/a.rb", "b.rb"), [true, ""]],
+      ["a delete below a linked root", host.delete_path("/r", "/r/b.rb"), [true, ""]],
+      ["a rename of the link leading out itself", host.rename_path("/w", "/w/ext", "away"), [true, ""]],
+      ["a delete of the link leading out itself", host.delete_path("/w", "/w/away"), [true, ""]]
+    ]) do |r|
+      [r.ok, r.message]
+    end
+    t.assert_equal(["out\n", "out\n", false, true, false, false, false], [files.get("/w/out/x.rb"), files.get("/elsewhere/x.rb"), files.exist?("/w/out/y.rb"), files.directory?("/elsewhere"), files.exist?("/w/alias/y.rb"), files.exist?("/r/b.rb"), files.exist?("/w/away")], "nothing below a link leading out changed, and the accepted ones did")
+
     # Symbolic links through stat.
     session = editor
     h, fs = session.harness, session.plugin

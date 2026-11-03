@@ -357,7 +357,8 @@ Files:
 - `carat/use_cases/files/quit.rb`: `Quit#call(state, way)` with `:quit`, `:force`, or `:written`; a file window beside only side windows counts as the last.
 - `carat/use_cases/files/quit_all.rb`: `QuitAll#call` (`:qa`).
 - `carat/use_cases/files/probe_path.rb`: `ProbePath#call`, the one call of `FilePort#stat`, shared by `OpenFile` and the plugin file operations.
-- `carat/use_cases/files/make_path.rb`, `carat/use_cases/files/rename_path.rb` (the listed buffers following), `carat/use_cases/files/delete_path.rb`: `call`; make, rename, and delete inside a root with every check, used by the plugin file requests; `MakePath` compares the real paths of the parent and the root.
+- `carat/use_cases/files/make_path.rb`, `carat/use_cases/files/rename_path.rb` (the listed buffers following), `carat/use_cases/files/delete_path.rb`: `call`; make, rename, and delete inside a root with every check, used by the plugin file requests, each refusing a parent (create) or an entry's directory (rename, delete) that `ResolveInside` places outside the root.
+- `carat/use_cases/files/resolve_inside.rb`: `ResolveInside#call(root, dir, path)`, the one comparison of real paths (`FilePort#real_path`): `Outside the tree root: path` unless the directory with its links resolved is the resolved root or inside it; built by `PluginHost` and shared by the three.
 
 Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`.
 
@@ -508,7 +509,7 @@ Files:
 - `carat/drivers/main_loop.rb`: `MainLoop#run`.
 - `carat/domain/json.rb`: `Carat::Json` (`parse`, `generate`, `pretty_generate`), for JSON-RPC; the configuration is not JSON.
 
-Tests: `test/drivers_main_loop.rb` (a resize, a terminate, and `:q` over the signal double, and the driver's flags), `test/json.rb`, `test/drivers_disk_files.rb` (`DiskFiles` and `MakePath` over a real directory: a link to `/dev/zero`, a FIFO, files at and over a limit, links inside and outside a root).
+Tests: `test/drivers_main_loop.rb` (a resize, a terminate, and `:q` over the signal double, and the driver's flags), `test/json.rb`, `test/drivers_disk_files.rb` (`DiskFiles`, `MakePath`, `RenamePath`, and `DeletePath` over a real directory: a link to `/dev/zero`, a FIFO, files at and over a limit, links inside and outside a root).
 
 Designs: `state-and-ports` (Signals; The stat value; Configuration), `editor-foundation` (Ports, adapters, drivers, doubles).
 

@@ -12,6 +12,7 @@ require_relative "../../ports/file_port"
 require_relative "../outcome"
 require_relative "../files/open_file"
 require_relative "../files/probe_path"
+require_relative "../files/resolve_inside"
 require_relative "../files/make_path"
 require_relative "../files/rename_path"
 require_relative "../files/delete_path"
@@ -70,9 +71,10 @@ module Carat
         @state = state
         @plugin_ui = plugin_ui
         @probe_path = probe_path
-        @make_path = MakePath.new(files: files, probe_path: @probe_path)
-        @rename_path = RenamePath.new(files: files, buffers: buffers, probe_path: @probe_path)
-        @delete_path = DeletePath.new(files: files, buffers: buffers, probe_path: @probe_path)
+        resolve_inside = ResolveInside.new(files: files)
+        @make_path = MakePath.new(files: files, probe_path: @probe_path, resolve_inside: resolve_inside)
+        @rename_path = RenamePath.new(files: files, buffers: buffers, probe_path: @probe_path, resolve_inside: resolve_inside)
+        @delete_path = DeletePath.new(files: files, buffers: buffers, probe_path: @probe_path, resolve_inside: resolve_inside)
         @registry = PluginRegistry.new(state: state, buffers: buffers, tabs: tabs, plugin_ui: plugin_ui, keymap: keymap, leader: leader)
         @router = PluginRouter.new(state: state, registry: @registry, plugin_ui: plugin_ui)
         @events = PluginEvents.new(state: state, buffers: buffers, tabs: tabs, registry: @registry)

@@ -52,8 +52,11 @@ module DriversDiskFilesTest
     File.symlink("#{base}/reg.txt", "#{base}/link.txt")
     File.symlink("#{base}/nowhere", "#{base}/dangling")
     Dir.mkdir("#{base}/outside")
+    File.write("#{base}/outside/keep.rb", "keep\n")
     Dir.mkdir("#{base}/tree")
     Dir.mkdir("#{base}/tree/lib")
+    File.write("#{base}/tree/lib/in.rb", "in\n")
+    File.write("#{base}/tree/root.rb", "root\n")
     File.symlink("#{base}/tree/lib", "#{base}/tree/alias")
     File.symlink("#{base}/outside", "#{base}/tree/out")
     File.symlink("#{base}/outside/new.rb", "#{base}/tree/dangle")
@@ -113,7 +116,8 @@ module DriversDiskFilesTest
     # Creates through links: rows are [label, [root, path, directory],
     # [ok, message, where the entry would land exists]].
     probe = Carat::UseCases::ProbePath.new(files: files)
-    make = Carat::UseCases::MakePath.new(files: files, probe_path: probe)
+    resolve = Carat::UseCases::ResolveInside.new(files: files)
+    make = Carat::UseCases::MakePath.new(files: files, probe_path: probe, resolve_inside: resolve)
     shown = "#{DIR}/tree/out"
     t.table([
       ["a file below a link leading out of the root", ["tree", "tree/out/x.rb", "outside/x.rb", "file"], [false, "Outside the tree root: #{shown}/x.rb", false]],
@@ -125,6 +129,28 @@ module DriversDiskFilesTest
       outcome = make.call("#{base}/#{input[0]}", "#{base}/#{input[1]}", input[3].to_s == "dir")
       [outcome.ok, outcome.message, File.exist?("#{base}/#{input[2]}")]
     end
+
+    # Renames and deletes through links: rows are [label, [root, path,
+    # new name or "" to delete, the entry to look for], [ok, message,
+    # that entry exists]].
+    scratch = Carat::Domain::Buffer.from_text("", nil)
+    buffers = Carat::Domain::BufferList.new(tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: scratch)))
+    rename = Carat::UseCases::RenamePath.new(files: files, buffers: buffers, probe_path: probe, resolve_inside: resolve)
+    delete = Carat::UseCases::DeletePath.new(files: files, buffers: buffers, probe_path: probe, resolve_inside: resolve)
+    t.table([
+      ["a rename below a link leading out of the root", ["tree", "tree/out/keep.rb", "moved.rb", "outside/keep.rb"], [false, "Outside the tree root: #{shown}/keep.rb", true]],
+      ["a delete below a link leading out of the root", ["tree", "tree/out/keep.rb", "", "outside/keep.rb"], [false, "Outside the tree root: #{shown}/keep.rb", true]],
+      ["a rename below a link that stays inside", ["tree", "tree/alias/in.rb", "in2.rb", "tree/lib/in2.rb"], [true, "", true]],
+      ["a delete below a linked root", ["linkroot", "linkroot/root.rb", "", "tree/root.rb"], [true, "", false]],
+      ["a delete of the link leading out unlinks only the link", ["tree", "tree/out", "", "outside/keep.rb"], [true, "", true]]
+    ]) do |input|
+      root = "#{base}/#{input[0]}"
+      path = "#{base}/#{input[1]}"
+      name = input[2].to_s
+      outcome = name.empty? ? delete.call(root, path) : rename.call(root, path, name)
+      [outcome.ok, outcome.message, File.exist?("#{base}/#{input[3]}")]
+    end
+    t.assert_equal([false, true], [File.symlink?("#{base}/tree/out"), File.directory?("#{base}/outside")], "the link is gone and its target stays")
 
     remove(base)
     t.finish

@@ -3,6 +3,7 @@ require_relative "../../domain/path_policy"
 require_relative "../../ports/file_port"
 require_relative "../outcome"
 require_relative "probe_path"
+require_relative "resolve_inside"
 
 module Carat
   module UseCases
@@ -17,11 +18,13 @@ module Carat
     class MakePath
       attr_reader :files #: Ports::FilePort
       attr_reader :probe_path #: ProbePath
+      attr_reader :resolve_inside #: ResolveInside
 
-      #: (files: Ports::FilePort, probe_path: ProbePath) -> void
-      def initialize(files:, probe_path:)
+      #: (files: Ports::FilePort, probe_path: ProbePath, resolve_inside: ResolveInside) -> void
+      def initialize(files:, probe_path:, resolve_inside:)
         @files = files
         @probe_path = probe_path
+        @resolve_inside = resolve_inside
       end
 
       #: (String, String, bool) -> Outcome
@@ -35,7 +38,8 @@ module Carat
         return Outcome.failure("Already exists: #{Domain::PathPolicy.shown(here, target)}") if @probe_path.call(target).exists
         parent = PluginApi::Paths.dirname(target)
         return Outcome.failure("No such directory: #{Domain::PathPolicy.shown(here, parent)}") unless @probe_path.call(parent).directory
-        return Outcome.failure("Outside the tree root: #{Domain::PathPolicy.shown(here, target)}") unless resolved_inside?(base, parent)
+        resolved = @resolve_inside.call(base, parent, target)
+        return resolved unless resolved.ok
         begin
           if directory
             @files.mkdir(target)
@@ -46,24 +50,6 @@ module Carat
           return Outcome.failure(error.message)
         end
         Outcome.success("")
-      end
-
-      private
-
-      # Whether the parent, with its links resolved, is the root with its
-      # links resolved or lies inside it; false when either cannot be
-      # resolved.
-      #: (String, String) -> bool
-      def resolved_inside?(root, parent)
-        real_root = ""
-        real_parent = ""
-        begin
-          real_root = @files.real_path(root)
-          real_parent = @files.real_path(parent)
-        rescue StandardError
-          return false
-        end
-        real_parent == real_root || Domain::PathPolicy.inside?(real_root, real_parent)
       end
     end
   end

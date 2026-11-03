@@ -4,25 +4,31 @@ require_relative "../../domain/path_policy"
 require_relative "../../ports/file_port"
 require_relative "../outcome"
 require_relative "probe_path"
+require_relative "resolve_inside"
 
 module Carat
   module UseCases
     # Deletes the file or empty directory at a path inside a root, after
     # every check passed, with the message of the first one that did not:
-    # the path strictly inside the root, present, and an empty directory
-    # when it is one. A listed buffer of the file stays and becomes
+    # the path strictly inside the root, present, its directory, with
+    # every symbolic link resolved, the root or inside it, both resolved,
+    # so a link inside the tree that leads out of it is never deleted
+    # through, and an empty directory when it is one. A link is removed,
+    # never followed. A listed buffer of the file stays and becomes
     # modified. Paths are resolved against the working directory and
     # shown relative to it in messages.
     class DeletePath
       attr_reader :files #: Ports::FilePort
       attr_reader :buffers #: Domain::BufferList
       attr_reader :probe_path #: ProbePath
+      attr_reader :resolve_inside #: ResolveInside
 
-      #: (files: Ports::FilePort, buffers: Domain::BufferList, probe_path: ProbePath) -> void
-      def initialize(files:, buffers:, probe_path:)
+      #: (files: Ports::FilePort, buffers: Domain::BufferList, probe_path: ProbePath, resolve_inside: ResolveInside) -> void
+      def initialize(files:, buffers:, probe_path:, resolve_inside:)
         @files = files
         @buffers = buffers
         @probe_path = probe_path
+        @resolve_inside = resolve_inside
       end
 
       #: (String, String) -> Outcome
@@ -33,6 +39,8 @@ module Carat
         return Outcome.failure("Outside the tree root: #{Domain::PathPolicy.shown(here, target)}") unless Domain::PathPolicy.inside?(base, target)
         info = @probe_path.call(target)
         return Outcome.failure("No such file or directory: #{Domain::PathPolicy.shown(here, target)}") unless info.exists
+        resolved = @resolve_inside.call(base, PluginApi::Paths.dirname(target), target)
+        return resolved unless resolved.ok
         return Outcome.failure("Directory not empty: #{Domain::PathPolicy.shown(here, target)}") if info.real_directory? && !empty_directory?(target)
         begin
           @files.delete(target)

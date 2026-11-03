@@ -230,12 +230,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: no path sends buffer text to JSON yet, but the language server change will; a character index from `index` on such text slices the wrong bytes, and JSON needs the text valid (a language server expects UTF-8).
 - Fix outline: escape illegal bytes in `Carat::Json` by walking bytes with `Utf8` (as U+FFFD or a documented escape), replace `index` and `rindex` on untrusted text with `byteindex` and `byterindex`, report the disagreement upstream, and add hostile rows to `test/json.rb`.
 
-## Plugin rename and delete follow symlinked directories out of the tree root
-
-- Where: `RenamePath` and `DeletePath` in `carat/use_cases/files/rename_path.rb` (lines 35 and 36) and `delete_path.rb` (line 33), which check containment with the lexical `Domain::PathPolicy.inside?` only. Low (5) finding of the periodic security review at 6ea61b1, and Low (6) finding of the security review of `untrusted-config-limits`, which fixed the create half in `MakePath`.
-- Why it matters: the explorer expands a link to a directory, so in an untrusted repository with a link such as `docs` pointing to the home directory, renaming or deleting a file under `docs` in the explorer changes the real file outside the project.
-- Fix outline: reuse the `resolved_inside?` check of `MakePath` (`carat/use_cases/files/make_path.rb` line 57): resolve the root and the source's parent, and the target's parent for a rename, with `FilePort#real_path`, and refuse when the result is neither the root nor inside it; add hostile rows for a symlinked parent in `test/use_cases_plugin_files.rb`.
-
 ## The CI scope script word-splits the changed paths
 
 - Where: `tools/ci_scope.sh` (line 66, the unquoted `for path in $changed`, over `git diff --name-only`). Low (3) finding of the periodic security review at 6ea61b1, and Low (5) finding of the security review of `untrusted-config-limits`; queued in `pipeline-hardening`.
