@@ -16,193 +16,202 @@ require "open3"
 require "io/console"
 require_relative "../carat/testing"
 
-t = Carat::Testing.new("smoke_editor")
+# The test is this module's main. test/runner/run_all.rb runs it by name
+# with every other test in one program; the guard at the end runs it when
+# the file is compiled on its own (make test-one).
+module SmokeEditorTest
+  BIN = "build/bin/carat"
+  DIR = "build/smoke"
 
-BIN = "build/bin/carat"
-DIR = "build/smoke"
-
-unless File.exist?(BIN)
-  t.assert_true(false, "#{BIN} exists; run spin build first")
-  t.finish
-end
-Dir.mkdir(DIR) unless File.directory?(DIR)
-
-# Reads until the editor produces nothing for quiet seconds, appending to
-# out, so the next write lands while the editor is waiting on input.
-def settle(reader, out, quiet)
-  loop do
-    ready = IO.select([reader], nil, nil, quiet)
-    return if ready.nil?
-    begin
-      out << reader.readpartial(4096)
-    rescue EOFError, Errno::EIO
-      return
+  # Reads until the editor produces nothing for quiet seconds, appending to
+  # out, so the next write lands while the editor is waiting on input.
+  def self.settle(reader, out, quiet)
+    loop do
+      ready = IO.select([reader], nil, nil, quiet)
+      return if ready.nil?
+      begin
+        out << reader.readpartial(4096)
+      rescue EOFError, Errno::EIO
+        return
+      end
     end
+  end
+
+  # Reads until the editor closes the terminal, then reaps it.
+  def self.finish_session(reader, out, pid)
+    loop do
+      ready = IO.select([reader], nil, nil, 20.0)
+      break if ready.nil?
+      begin
+        out << reader.readpartial(4096)
+      rescue EOFError, Errno::EIO
+        break
+      end
+    end
+    pair = Process.waitpid2(pid)
+    pair[1].exitstatus
+  end
+
+  def self.main
+    t = Carat::Testing.new("smoke_editor")
+
+    unless File.exist?(BIN)
+      t.assert_true(false, "#{BIN} exists; run spin build first")
+      t.finish
+    end
+    Dir.mkdir(DIR) unless File.directory?(DIR)
+
+    # Usage and terminal checks run without a pseudo-terminal.
+    _out, err, status = Open3.capture3(BIN)
+    t.assert_equal("usage: carat FILE\n", err, "no argument prints the usage")
+    t.assert_equal(1, status.exitstatus, "no argument exits with status 1")
+    _out, err, status = Open3.capture3(BIN, "#{DIR}/x.txt", stdin_data: "")
+    t.assert_equal("carat: standard input is not a terminal\n", err, "piped input is refused")
+    t.assert_equal(1, status.exitstatus, "piped input exits with status 1")
+
+    # Insert, write, quit on a new file.
+    path = "#{DIR}/fresh.txt"
+    File.delete(path) if File.exist?(path)
+    reader, writer, pid = PTY.spawn(BIN, path)
+    writer.winsize = [24, 80]
+    out = +"".b
+    settle(reader, out, 0.5)
+    t.assert_true(out.include?("\e[?1049h"), "the editor enters the alternate screen")
+    t.assert_true(out.include?("[New]"), "the editor shows the new file message")
+    mark = out.bytesize
+    writer.write("ihello")
+    settle(reader, out, 0.5)
+    drawn = out.byteslice(mark, out.bytesize - mark)
+    t.assert_true(drawn.include?("hello"), "typed text is drawn")
+    t.assert_true(drawn.include?("\e[6 q"), "insert mode uses the bar cursor")
+    mark = out.bytesize
+    writer.write("\e")
+    settle(reader, out, 0.5)
+    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("\e[2 q"), "escape returns to the block cursor")
+    writer.write(":wq\r")
+    code = finish_session(reader, out, pid)
+    t.assert_equal(0, code, "the editor exits with status 0 after :wq")
+    t.assert_equal("hello\n", File.read(path), "the file holds the typed text")
+    t.assert_true(out.end_with?("\e[?1049l"), "the output ends with leaving the alternate screen")
+
+    # Quit refused, then forced, on the existing file.
+    reader, writer, pid = PTY.spawn(BIN, path)
+    writer.winsize = [24, 80]
+    out = +"".b
+    settle(reader, out, 0.5)
+    t.assert_true(out.include?("1L, 6B"), "the editor shows the existing file message")
+    mark = out.bytesize
+    writer.write("x")
+    settle(reader, out, 0.5)
+    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("[+]"), "x deletes a character and marks the buffer modified")
+    writer.write("A!")
+    settle(reader, out, 0.5)
+    writer.write("\e")
+    settle(reader, out, 0.5)
+    writer.write(":q\r")
+    settle(reader, out, 0.5)
+    t.assert_true(out.include?("E37: No write since last change (add ! to override)"), "quit is refused with E37")
+    writer.write(":q!\r")
+    code = finish_session(reader, out, pid)
+    t.assert_equal(0, code, "the editor exits with status 0 after :q!")
+    t.assert_equal("hello\n", File.read(path), "the forced quit did not write")
+
+    # A vertical split, a tab page, and the quits that close them: the tab
+    # page first, then one of the two windows, then the last window.
+    reader, writer, pid = PTY.spawn(BIN, path)
+    writer.winsize = [24, 80]
+    out = +"".b
+    settle(reader, out, 0.5)
+    t.assert_true(out.include?("1L, 6B"), "the editor drew its first frame for the windows check")
+    mark = out.bytesize
+    writer.write(":vsplit\r")
+    settle(reader, out, 0.5)
+    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("\u2502".b), "vsplit draws the separator column")
+    mark = out.bytesize
+    writer.write(":tabnew\r")
+    settle(reader, out, 0.5)
+    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?(" 2 [No Name] "), "tabnew draws the tab line")
+    writer.write(":q\r")
+    settle(reader, out, 0.5)
+    writer.write(":q\r")
+    settle(reader, out, 0.5)
+    writer.write(":q\r")
+    code = finish_session(reader, out, pid)
+    t.assert_equal(0, code, "the editor exits with status 0 after closing the tab page, a window, and the last window")
+    t.assert_true(out.end_with?("\e[?1049l"), "closing the last window leaves the alternate screen")
+
+    # The file tree opens with <leader>e at the left, and :q in the file
+    # window ends the editor while the tree is open.
+    reader, writer, pid = PTY.spawn(BIN, path)
+    writer.winsize = [24, 80]
+    out = +"".b
+    settle(reader, out, 0.5)
+    t.assert_true(out.include?("1L, 6B"), "the editor drew its first frame for the tree check")
+    mark = out.bytesize
+    writer.write(" e")
+    settle(reader, out, 0.5)
+    drawn = out.byteslice(mark, out.bytesize - mark)
+    t.assert_true(drawn.include?("explorer"), "<leader>e opens the tree, titled explorer")
+    t.assert_true(drawn.include?("\u{F07C}".b), "the tree's root line has the open folder icon")
+    writer.write("\x17l")
+    settle(reader, out, 0.5)
+    writer.write(":q\r")
+    code = finish_session(reader, out, pid)
+    t.assert_equal(0, code, "the editor exits with status 0 after :q in the file window beside the tree")
+    t.assert_true(out.end_with?("\e[?1049l"), "quitting beside the tree leaves the alternate screen")
+
+    # Linewise visual mode: Vj selects two lines, d deletes them, :wq writes.
+    visual_path = "#{DIR}/visual.txt"
+    File.write(visual_path, "one\ntwo\nthree\n")
+    reader, writer, pid = PTY.spawn(BIN, visual_path)
+    writer.winsize = [24, 80]
+    out = +"".b
+    settle(reader, out, 0.5)
+    t.assert_true(out.include?("3L, 14B"), "the editor drew its first frame for the visual check")
+    mark = out.bytesize
+    writer.write("Vj")
+    settle(reader, out, 0.5)
+    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("-- VISUAL LINE --"), "V and j show the linewise visual mode")
+    writer.write("d")
+    settle(reader, out, 0.5)
+    writer.write(":wq\r")
+    code = finish_session(reader, out, pid)
+    t.assert_equal(0, code, "the editor exits with status 0 after Vjd and :wq")
+    t.assert_equal("three\n", File.read(visual_path), "Vjd deleted the first two lines")
+
+    # A Ruby file is drawn in colors: the keyword and the string are each
+    # preceded by a color sequence, whatever depth the terminal's environment
+    # gives, and :syntax off draws them plain again.
+    ruby_path = "#{DIR}/colors.rb"
+    File.write(ruby_path, "def go\n  \"hi\"\nend\n")
+    reader, writer, pid = PTY.spawn(BIN, ruby_path)
+    writer.winsize = [24, 80]
+    out = +"".b
+    settle(reader, out, 0.5)
+    t.assert_true(out.include?("3L, 18B"), "the editor drew its first frame for the color check")
+    t.assert_true(out.match?(/\e\[0;[0-9;]+mdef/), "def is written after a color sequence")
+    t.assert_true(out.match?(/\e\[0;[0-9;]+m"hi"/), "the string is written after a color sequence")
+    mark = out.bytesize
+    writer.write(":syntax off\r")
+    settle(reader, out, 0.5)
+    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("\e[0mdef"), ":syntax off writes def in the normal group")
+    writer.write(":q\r")
+    code = finish_session(reader, out, pid)
+    t.assert_equal(0, code, "the editor exits with status 0 after the color check")
+
+    # SIGTERM ends a running editor cleanly.
+    reader, writer, pid = PTY.spawn(BIN, path)
+    writer.winsize = [24, 80]
+    out = +"".b
+    settle(reader, out, 0.5)
+    t.assert_true(out.include?("1L, 6B"), "the editor drew its first frame for the signal check")
+    Process.kill("TERM", pid)
+    code = finish_session(reader, out, pid)
+    t.assert_equal(0, code, "SIGTERM ends the editor with status 0")
+    t.assert_true(out.end_with?("\e[?1049l"), "SIGTERM leaves the alternate screen")
+
+    t.finish
   end
 end
 
-# Reads until the editor closes the terminal, then reaps it.
-def finish_session(reader, out, pid)
-  loop do
-    ready = IO.select([reader], nil, nil, 20.0)
-    break if ready.nil?
-    begin
-      out << reader.readpartial(4096)
-    rescue EOFError, Errno::EIO
-      break
-    end
-  end
-  pair = Process.waitpid2(pid)
-  pair[1].exitstatus
-end
-
-# Usage and terminal checks run without a pseudo-terminal.
-_out, err, status = Open3.capture3(BIN)
-t.assert_equal("usage: carat FILE\n", err, "no argument prints the usage")
-t.assert_equal(1, status.exitstatus, "no argument exits with status 1")
-_out, err, status = Open3.capture3(BIN, "#{DIR}/x.txt", stdin_data: "")
-t.assert_equal("carat: standard input is not a terminal\n", err, "piped input is refused")
-t.assert_equal(1, status.exitstatus, "piped input exits with status 1")
-
-# Insert, write, quit on a new file.
-path = "#{DIR}/fresh.txt"
-File.delete(path) if File.exist?(path)
-reader, writer, pid = PTY.spawn(BIN, path)
-writer.winsize = [24, 80]
-out = +"".b
-settle(reader, out, 0.5)
-t.assert_true(out.include?("\e[?1049h"), "the editor enters the alternate screen")
-t.assert_true(out.include?("[New]"), "the editor shows the new file message")
-mark = out.bytesize
-writer.write("ihello")
-settle(reader, out, 0.5)
-drawn = out.byteslice(mark, out.bytesize - mark)
-t.assert_true(drawn.include?("hello"), "typed text is drawn")
-t.assert_true(drawn.include?("\e[6 q"), "insert mode uses the bar cursor")
-mark = out.bytesize
-writer.write("\e")
-settle(reader, out, 0.5)
-t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("\e[2 q"), "escape returns to the block cursor")
-writer.write(":wq\r")
-code = finish_session(reader, out, pid)
-t.assert_equal(0, code, "the editor exits with status 0 after :wq")
-t.assert_equal("hello\n", File.read(path), "the file holds the typed text")
-t.assert_true(out.end_with?("\e[?1049l"), "the output ends with leaving the alternate screen")
-
-# Quit refused, then forced, on the existing file.
-reader, writer, pid = PTY.spawn(BIN, path)
-writer.winsize = [24, 80]
-out = +"".b
-settle(reader, out, 0.5)
-t.assert_true(out.include?("1L, 6B"), "the editor shows the existing file message")
-mark = out.bytesize
-writer.write("x")
-settle(reader, out, 0.5)
-t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("[+]"), "x deletes a character and marks the buffer modified")
-writer.write("A!")
-settle(reader, out, 0.5)
-writer.write("\e")
-settle(reader, out, 0.5)
-writer.write(":q\r")
-settle(reader, out, 0.5)
-t.assert_true(out.include?("E37: No write since last change (add ! to override)"), "quit is refused with E37")
-writer.write(":q!\r")
-code = finish_session(reader, out, pid)
-t.assert_equal(0, code, "the editor exits with status 0 after :q!")
-t.assert_equal("hello\n", File.read(path), "the forced quit did not write")
-
-# A vertical split, a tab page, and the quits that close them: the tab
-# page first, then one of the two windows, then the last window.
-reader, writer, pid = PTY.spawn(BIN, path)
-writer.winsize = [24, 80]
-out = +"".b
-settle(reader, out, 0.5)
-t.assert_true(out.include?("1L, 6B"), "the editor drew its first frame for the windows check")
-mark = out.bytesize
-writer.write(":vsplit\r")
-settle(reader, out, 0.5)
-t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("\u2502".b), "vsplit draws the separator column")
-mark = out.bytesize
-writer.write(":tabnew\r")
-settle(reader, out, 0.5)
-t.assert_true(out.byteslice(mark, out.bytesize - mark).include?(" 2 [No Name] "), "tabnew draws the tab line")
-writer.write(":q\r")
-settle(reader, out, 0.5)
-writer.write(":q\r")
-settle(reader, out, 0.5)
-writer.write(":q\r")
-code = finish_session(reader, out, pid)
-t.assert_equal(0, code, "the editor exits with status 0 after closing the tab page, a window, and the last window")
-t.assert_true(out.end_with?("\e[?1049l"), "closing the last window leaves the alternate screen")
-
-# The file tree opens with <leader>e at the left, and :q in the file
-# window ends the editor while the tree is open.
-reader, writer, pid = PTY.spawn(BIN, path)
-writer.winsize = [24, 80]
-out = +"".b
-settle(reader, out, 0.5)
-t.assert_true(out.include?("1L, 6B"), "the editor drew its first frame for the tree check")
-mark = out.bytesize
-writer.write(" e")
-settle(reader, out, 0.5)
-drawn = out.byteslice(mark, out.bytesize - mark)
-t.assert_true(drawn.include?("explorer"), "<leader>e opens the tree, titled explorer")
-t.assert_true(drawn.include?("\u{F07C}".b), "the tree's root line has the open folder icon")
-writer.write("\x17l")
-settle(reader, out, 0.5)
-writer.write(":q\r")
-code = finish_session(reader, out, pid)
-t.assert_equal(0, code, "the editor exits with status 0 after :q in the file window beside the tree")
-t.assert_true(out.end_with?("\e[?1049l"), "quitting beside the tree leaves the alternate screen")
-
-# Linewise visual mode: Vj selects two lines, d deletes them, :wq writes.
-visual_path = "#{DIR}/visual.txt"
-File.write(visual_path, "one\ntwo\nthree\n")
-reader, writer, pid = PTY.spawn(BIN, visual_path)
-writer.winsize = [24, 80]
-out = +"".b
-settle(reader, out, 0.5)
-t.assert_true(out.include?("3L, 14B"), "the editor drew its first frame for the visual check")
-mark = out.bytesize
-writer.write("Vj")
-settle(reader, out, 0.5)
-t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("-- VISUAL LINE --"), "V and j show the linewise visual mode")
-writer.write("d")
-settle(reader, out, 0.5)
-writer.write(":wq\r")
-code = finish_session(reader, out, pid)
-t.assert_equal(0, code, "the editor exits with status 0 after Vjd and :wq")
-t.assert_equal("three\n", File.read(visual_path), "Vjd deleted the first two lines")
-
-# A Ruby file is drawn in colors: the keyword and the string are each
-# preceded by a color sequence, whatever depth the terminal's environment
-# gives, and :syntax off draws them plain again.
-ruby_path = "#{DIR}/colors.rb"
-File.write(ruby_path, "def go\n  \"hi\"\nend\n")
-reader, writer, pid = PTY.spawn(BIN, ruby_path)
-writer.winsize = [24, 80]
-out = +"".b
-settle(reader, out, 0.5)
-t.assert_true(out.include?("3L, 18B"), "the editor drew its first frame for the color check")
-t.assert_true(out.match?(/\e\[0;[0-9;]+mdef/), "def is written after a color sequence")
-t.assert_true(out.match?(/\e\[0;[0-9;]+m"hi"/), "the string is written after a color sequence")
-mark = out.bytesize
-writer.write(":syntax off\r")
-settle(reader, out, 0.5)
-t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("\e[0mdef"), ":syntax off writes def in the normal group")
-writer.write(":q\r")
-code = finish_session(reader, out, pid)
-t.assert_equal(0, code, "the editor exits with status 0 after the color check")
-
-# SIGTERM ends a running editor cleanly.
-reader, writer, pid = PTY.spawn(BIN, path)
-writer.winsize = [24, 80]
-out = +"".b
-settle(reader, out, 0.5)
-t.assert_true(out.include?("1L, 6B"), "the editor drew its first frame for the signal check")
-Process.kill("TERM", pid)
-code = finish_session(reader, out, pid)
-t.assert_equal(0, code, "SIGTERM ends the editor with status 0")
-t.assert_true(out.end_with?("\e[?1049l"), "SIGTERM leaves the alternate screen")
-
-t.finish
+SmokeEditorTest.main if __FILE__ == $0
