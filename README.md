@@ -10,7 +10,7 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 
 1. `make toolchain` fetches the pinned Spinel commit into `tmp/.spinel`, builds it, and installs `spinel`, `spin`, and `spinel-doctor` under `tmp/.toolchain`. Both directories are ignored by git, every `make` target finds the toolchain there on its own, and `make toolchain-clean` removes them.
 2. `make build` compiles the editor to `build/bin/carat` and prints the alias line to add to your shell profile to run it from anywhere; `make install` puts it on the `PATH` instead.
-3. `make check` builds, regenerates the config mirror, compiles every test into one runner and runs each test against its snapshot, and runs `spinel-doctor` and the `make no-cruby` proof; run it before every push. `make test-one T=test/NAME.rb` compiles and runs one test on its own. Run tests, snapshots, and benchmarks only through `make`, never with `spin test` directly: for a test program without a snapshot, `spin test` compares against the `ruby` on your `PATH`.
+3. `make check` runs the canonical stage list: the toolchain check, the release and development builds, the generated config's freshness, every test against its snapshot, `spinel-doctor`, the `make no-cruby` proof, the allocation budget, the tests of the shell tools, and the rule gates; run it before every push. `make test-one T=test/NAME.rb` compiles and runs one test on its own. Run tests, snapshots, and benchmarks only through `make`, never with `spin test` directly: for a test program without a snapshot, `spin test` compares against the `ruby` on your `PATH`.
 
 | Command | What it does |
 | --- | --- |
@@ -19,7 +19,7 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make toolchain` | Fetch, build without Ruby, and install the pinned Spinel commit under `tmp/` |
 | `make toolchain-clean` | Remove `tmp/`, the Spinel checkout and the installed toolchain |
 | `make build` | Compile `bin/*.rb` into `build/bin` and print how to run it from anywhere |
-| `make dev-build` | Compile the editor with the development flags into `build/dev/carat`, the binary CI's smoke test runs on pull requests |
+| `make dev-build` | Compile the editor with the development flags into `build/dev/carat`, the binary CI's smoke test runs on pull requests, and check its analysis budget |
 | `make run FILE=path` | Build and run the editor on a file |
 | `make test` | Build, compile every test into the one test runner, then run each test against its snapshot |
 | `make test-build`, `make test-run` | The two halves of the test step: compile the runner, run the tests from it |
@@ -30,11 +30,14 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make diagnose-one T=path` | Run `spinel-doctor` on one file |
 | `make bench` | Build and run the key benchmark: time, bytes written, collector share, and allocations per key |
 | `make bench-budget` | Build the benchmark with the development flags and fail when a key of the cursor scenario allocates 100 objects or more; CI runs it |
-| `make analysis-budget` | Fail when Spinel's analysis of `bin/carat.rb` or the test runner needs more than 2 re-narrowing rounds, a sign that a value widened to `untyped`; `make test-build` checks the runner's own report on every test run |
+| `make analysis-budget` | Fail when Spinel's analysis of `bin/carat.rb` or the test runner needs more than 2 re-narrowing rounds, a sign that a value widened to `untyped`; `make dev-build` and `make test-build` check their own reports on every build |
 | `make profile` | Build the benchmark with `spinel --profile` and print the top functions with `perf` when it works |
 | `make snapshots` | Rebuild the test runner and rewrite every test's snapshot from it |
 | `make gen-config` | Regenerate the default config mirror and the plugin registry |
-| `make check` | Build, gen-config, test, diagnose, and no-cruby |
+| `make config-current` | Fail when `make gen-config` rewrote the config mirror or the plugin registry |
+| `make tools-test` | Test the shell tools behind CI and the delivery pipeline in temporary repositories |
+| `make gates` | Check the branch against the rules: the commit trailer, no link, address, or session id, snapshots from the runner, the docs kept current |
+| `make check` | Run every stage of `make stages` in order; `make check-stage S=NAME` runs one |
 | `make spec-list`, `make spec-validate`, `make spec-update` | The OpenSpec commands |
 
 ## Configuration
@@ -117,3 +120,22 @@ option.icons unicode
 ```
 
 `unicode` uses triangles, bullets, and geometric shapes that common terminal fonts already have, and `ascii` uses plain characters such as `+`, `-`, `*`, and `!`. The default is `nerd`. Plugins ask for icons by name, so the option switches every icon in the editor.
+
+## How carat is built with AI
+
+Every change to carat, from a feature to a one-line fix, is written by Claude agents and goes through the same pipeline; a person decides what to build and reads the result. The pipeline is a workflow, `.claude/workflows/deliver-change.js`, whose phases are fixed in code, so no step depends on an agent remembering it.
+
+1. Scouts read the code. For each area of `docs/codebase-map.md` the change touches, a read-only scout writes a context pack of facts (files, methods, callers, tests, designs, rules) to `tmp/scout/`, and a pack still current at `main` is reused.
+2. The contributor implements. It plans the change with OpenSpec (a proposal, a design, and tasks under `openspec/changes/`), writes the code and its tests, and commits as it goes. It is the only agent that edits the repository.
+3. The checker runs `make check` stage by stage, each with its log, and never edits.
+4. The quality reviewer reviews the committed diff for bugs and for the project's rules: idiomatic Ruby within Spinel's rules, naming, one public `call` per use case, the layers, and simple code.
+5. The security reviewer reviews the committed diff for vulnerabilities. It is the most important gate: it can never be skipped, and a High or Medium finding it is confident in blocks the merge until it is fixed.
+6. The benchmark agent compares allocations per key and Spinel's analysis rounds with `main`, and time per key when editor code changed.
+7. Whatever blocks goes back to the contributor, and every later phase runs again on the new commit, at most three times before the run stops and asks.
+8. The contributor archives the OpenSpec change, pushes once, and opens the pull request from the template. The CI watcher waits for CI; a red run goes back to the contributor with its log. The merger squash-merges, and the reporter writes a report in a fixed shape that names any rule broken.
+
+Rules are checked, not remembered. `tools/gates.sh` refuses a commit without its single co-author trailer, a link, an email address, a session id, or a model name in the diff, the commits, or the pull request; a snapshot not written by the test runner; a new file missing from the code map; a new command, binding, option, make target, or process change without this README; a second push without a CI failure to fix; and a merge without a recorded security review of the reviewed commit.
+
+The run state of a change, `build/pipeline/<change>.json`, records each phase and the commit it finished at, every check stage, the reviews, the pushes, the pull request, and CI. It is written only by `tools/run_state.sh`, so an interrupted run picks up where it stopped.
+
+To start or resume a change, run `/deliver` followed by a change name or a short description in Claude Code; `/status` shows the running change and its next phase. Outside Claude Code the same checks run with `make check`, `make gates`, and `sh tools/run_state.sh status`. A planner with a queue, a history of metrics, and periodic reviews of the code arrive in a later change.
