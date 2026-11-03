@@ -67,3 +67,8 @@ The quality reviewer's prompt names the commit of the last quality review and it
 ## Measuring it
 
 The next change's history row against this one's (`plugin-path-containment`: scout 211,029/124, bench 4,683/0, ci 9,629/24 and merge 4,078/17; `agent-authority`: ci and merge 7,473 of 7,968 tokens): the scout share, one `merge` key instead of `ci` and `merge`, no bench agent when allocations hold, and whole first passes and phase figures.
+
+Before and after, measured while implementing it (no real run uses the new script until the next change):
+
+- A dry run of the script at 6dfb3c4 and of this one with canned agent results: a run that passes everything first time starts 24 agents and 7 record flushes before, 18 and 4 after (one scout fewer of four asked for, no benchmark agent, one merger instead of the watcher and the merger, three record agents fewer); a quality fix round 27 and 7 before, 21 and 4 after; CI still running at the first look stopped the old run as `stalled` with no merge, the new one merges after two waits.
+- `tools/run_state.sh history` on `agent-authority`'s run state: `ci:1,gates:1` before, `check:1,quality:1,security:1,bench:1,ci:1,gates:1` after.
