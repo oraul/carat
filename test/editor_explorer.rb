@@ -40,6 +40,24 @@ module EditorExplorerTest
     h
   end
 
+  # A session in which each "|" in keys lets more than timeoutlen pass
+  # with no key, as a person pausing would.
+  def self.slow_session(keys)
+    h = editor_on("a.md", config_with("ascii", ""))
+    parts = keys.split("|")
+    i = 0
+    while i < parts.length
+      if i > 0
+        h.wait
+        h.wait
+        h.wait
+      end
+      h.type(parts[i].to_s)
+      i += 1
+    end
+    h
+  end
+
   # The lines of the tree's buffer, [] when it is not listed.
   def self.tree_lines(h)
     s = h.assembly.buffers
@@ -88,6 +106,23 @@ module EditorExplorerTest
     ]) do |keys|
       h = session(keys)
       [shape(h), h.window_index, h.cursor]
+    end
+
+    # The window commands into and out of the tree with a pause after
+    # <C-w> ("|"), where the tree's own h and l must not run instead:
+    # rows are [label, keys, [windows, current window, cursor, tree]].
+    t.table([
+      ["Ctrl-W, a pause, and l leave the tree", " e<C-w>|l", [OPEN, 2, [0, 0], TREE]],
+      ["Ctrl-W, a pause, and h return to the tree", " e<C-w>|l<C-w>|h", [OPEN, 1, [3, 0], TREE]],
+      ["Ctrl-W w leaves the tree", " e<C-w>w", [OPEN, 2, [0, 0], TREE]],
+      ["Ctrl-W w twice cycles back to the tree", " e<C-w>w<C-w>|w", [OPEN, 1, [3, 0], TREE]],
+      ["Ctrl-W W leaves the tree backwards, wrapping", " e<C-w>|W", [OPEN, 2, [0, 0], TREE]],
+      ["Ctrl-W p goes back to the file window", " e<C-w>l<C-w>h<C-w>|p", [OPEN, 2, [0, 0], TREE]],
+      ["Ctrl-W p from the file window returns to the tree", " e<C-w>|l<C-w>|p", [OPEN, 1, [3, 0], TREE]],
+      ["a pause after the leader still opens the tree", " |e", [OPEN, 1, [3, 0], TREE]]
+    ]) do |keys|
+      h = slow_session(keys.to_s)
+      [shape(h), h.window_index, h.cursor, tree_lines(h)]
     end
 
     h = session(" e")

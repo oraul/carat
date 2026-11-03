@@ -8,19 +8,21 @@ module Carat
     # Typed options with Vim names, plus icons, Carat's own: the icon set
     # plugins draw with, "nerd", "unicode", or "ascii". timeoutlen is the
     # milliseconds the keymap waits for the rest of an ambiguous binding.
+    # scroll is the lines <C-d> and <C-u> scroll, half the window when 0.
     # Only the ones the editor reads are members; :set and local options
     # arrive with the options change. undolevels is how many undo states a
     # buffer keeps. theme names the theme, and syntax_on is the switch of
     # :syntax on and :syntax off, on from the start as in Neovim. All but
     # syntax_on come from option lines of the configuration. A Struct
     # record: mutable, with a reader and a writer per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :syntax_on, keyword_init: true)
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :syntax_on, keyword_init: true)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
       # @rbs @shiftwidth: Integer
       # @rbs @expandtab: bool
       # @rbs @autoindent: bool
+      # @rbs @scroll: Integer
       # @rbs @scrolloff: Integer
       # @rbs @icons: String
       # @rbs @timeoutlen: Integer
@@ -32,7 +34,7 @@ module Carat
       # highlighting on.
       #: () -> void
       def initialize
-        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, syntax_on: true)
+        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, syntax_on: true)
       end
 
       # The options a configuration line may set, by name, with the kind
@@ -41,7 +43,7 @@ module Carat
       KINDS = {
         "number" => "bool", "relativenumber" => "bool", "expandtab" => "bool", "autoindent" => "bool",
         "ignorecase" => "bool", "smartcase" => "bool", "hlsearch" => "bool", "incsearch" => "bool", "wrap" => "bool",
-        "tabstop" => "integer", "shiftwidth" => "integer", "scrolloff" => "integer", "timeoutlen" => "integer", "undolevels" => "integer",
+        "tabstop" => "integer", "shiftwidth" => "integer", "scroll" => "integer", "scrolloff" => "integer", "timeoutlen" => "integer", "undolevels" => "integer",
         "clipboard" => "string", "icons" => "string", "theme" => "string"
       }
 
@@ -91,6 +93,7 @@ module Carat
         when "autoindent" then self.autoindent = word == "true"
         when "tabstop" then self.tabstop = word.to_i
         when "shiftwidth" then self.shiftwidth = word.to_i
+        when "scroll" then self.scroll = word.to_i
         when "scrolloff" then self.scrolloff = word.to_i
         when "timeoutlen" then self.timeoutlen = word.to_i
         when "undolevels" then self.undolevels = word.to_i

@@ -36,12 +36,16 @@ ok   g alone dispatches nothing
 ok   g is pending
 ok   gg completes the sequence
 ok   nothing pending after gg
-ok   a lone prefix is dropped after timeoutlen
-ok   nothing pending after the timeout
+ok   a lone prefix still waits after timeoutlen has passed
+ok   the second key completes the command however late it comes
+ok   Escape after a waiting prefix drops it and changes nothing
+ok   a prefix in insert mode waits
+ok   a prefix in insert mode is inserted as text after timeoutlen
+ok   the insert-mode binding completes in time
 ok   ambiguous prefix waits
 ok   shorter binding fires after timeoutlen
 ok   longer binding fires when completed in time
 ok   leader w writes the file
 ok   the file was written
 ok   a self-referencing remap stops
-editor_normal: 46 passed, 0 failed
+editor_normal: 50 passed, 0 failed

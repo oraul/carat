@@ -4,6 +4,13 @@ ok   one window takes the rows above its status line and the message row
 ok   a cursor below the window scrolls it down until the cursor is on the last row
 ok   a cursor above the window scrolls it up until the cursor is on the first row
 ok   scrolloff keeps rows below the cursor
+ok   the last first-shown line fills the window to the last line
+ok   a buffer shorter than the window has max top 0
+ok   a scrolloff under half the window is kept
+ok   scrolloff is capped at half the window
+ok   scroll_top_to clamps a top past the end to max top
+ok   scroll_top_to clamps a negative top to the first line
+ok   scroll_top_to keeps a top in range
 ok   a cursor past the right edge scrolls the window right
 ok   a cursor left of the window scrolls it back
 ok   tabs count with their display width
@@ -12,4 +19,4 @@ ok   two splits typed with no frame between them give 5, 5, and 10 text rows
 ok   the top window is current
 ok   no split reported E36
 ok   H after 30G goes to line 23, the top line the window shows after the jump
-use_cases_arrange_view: 14 passed, 0 failed
+use_cases_arrange_view: 21 passed, 0 failed

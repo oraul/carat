@@ -59,7 +59,7 @@ module DomainKeymapTest
       ["gg completes", [:normal, "gg"], [:match, "cursor.buffer_start"]],
       ["leader is a prefix", [:normal, "<leader>"], [:prefix, nil]],
       ["leader w remaps", [:normal, "<leader>w"], [:match, ":w<CR>"]],
-      ["unbound key", [:normal, "z"], [:none, nil]],
+      ["unbound key", [:normal, "Q"], [:none, nil]],
       ["unbound after prefix", [:normal, "gz"], [:none, nil]],
       ["mode with no bindings", [:replace, "j"], [:none, nil]],
       ["control r", [:normal, "<C-r>"], [:match, "history.redo"]],

@@ -20,8 +20,11 @@ module Carat
     # and, in normal, operator-pending, and the visual modes, through the
     # command grammar, dispatching the command when it completes; in a
     # visual mode an operator completes at once and the mode stays until
-    # the command ends it. Returns :handled
-    # or :pending, the latter meaning the keymap is waiting for more keys.
+    # the command ends it. Returns :handled, :pending when the keymap waits
+    # for more keys until timeoutlen (keys that are bound and begin a longer
+    # binding, or any prefix in insert and command-line modes), or :waiting
+    # when it waits with no time limit (keys that only begin a binding, in
+    # the grammar modes, as Neovim's built-in commands wait).
     # A remap sequence is queued in front of the keys still to handle, so
     # replay is a loop, not a recursion; one key may cause at most
     # MAX_REPLAYS remaps before E223 stops it. A key is looked up first in
@@ -158,7 +161,9 @@ module Carat
           keys = input.take_keys
           dispatch(state, match.value, keys, queue)
           :handled
-        when :prefix, :match_prefix
+        when :prefix
+          grammar_mode?(state) ? :waiting : :pending
+        when :match_prefix
           :pending
         else
           keys = input.take_keys

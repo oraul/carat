@@ -10,6 +10,14 @@ ok   Ctrl-W h returns to the tree
 ok   Ctrl-W = leaves the tree's width alone
 ok   j and k fall through to the normal keymap
 ok   G falls through too
+ok   Ctrl-W, a pause, and l leave the tree
+ok   Ctrl-W, a pause, and h return to the tree
+ok   Ctrl-W w leaves the tree
+ok   Ctrl-W w twice cycles back to the tree
+ok   Ctrl-W W leaves the tree backwards, wrapping
+ok   Ctrl-W p goes back to the file window
+ok   Ctrl-W p from the file window returns to the tree
+ok   a pause after the leader still opens the tree
 ok   the root, the directories, then the files, the current file marked
 ok   the tree's status line shows its title and the width option is 30
 ok   quitting the last file window ends the editor with the tree open
@@ -82,4 +90,4 @@ ok   the tree lists both names
 ok   s opens a name with a space in a split
 ok   t opens a name with a bar in a tab page
 ok   v opens a name with a space in a vertical split
-editor_explorer: 84 passed, 0 failed
+editor_explorer: 92 passed, 0 failed

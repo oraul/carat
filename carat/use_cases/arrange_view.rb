@@ -50,7 +50,7 @@ module Carat
         cursor = window.cursor
         text_width = window.width - window.gutter_width(options)
         text_width = 1 if text_width < 1
-        window.scroll_to_row(cursor.row, buffer.line_count, window.height, options.scrolloff)
+        window.scroll_to_row(cursor.row, buffer.line_count, options.scrolloff)
         dcol = @cache.fetch(buffer.line(cursor.row), tabstop).col(cursor.col)
         window.scroll_to_col(dcol, text_width)
       end

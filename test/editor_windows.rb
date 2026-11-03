@@ -53,6 +53,24 @@ module EditorWindowsTest
     out
   end
 
+  # A 24 by 80 editor after typing keys in which each "|" lets more
+  # than timeoutlen pass with no key, as a person pausing would.
+  def self.slow_session(keys)
+    h = editor(24, 80)
+    parts = keys.split("|")
+    i = 0
+    while i < parts.length
+      if i > 0
+        h.wait
+        h.wait
+        h.wait
+      end
+      h.type(parts[i].to_s)
+      i += 1
+    end
+    h
+  end
+
   ONE = [[0, 0, 22, 80]]
   STACKED = [[0, 0, 11, 80], [12, 0, 10, 80]]
   BESIDE = [[0, 0, 22, 40], [0, 41, 22, 39]]
@@ -108,6 +126,22 @@ module EditorWindowsTest
       ["nested splits", "<C-w>v<C-w>l<C-w>s", [3, 2, [[0, 0, 22, 40], [0, 41, 11, 39], [12, 41, 10, 39]]]]
     ]) do |keys|
       shape(session(keys))
+    end
+
+    # <C-w> waits for its second key past timeoutlen: rows are [label,
+    # keys with "|" for a pause, [count, current, rectangles, cursor]].
+    t.table([
+      ["Ctrl-W, a pause, and l move right without moving the cursor", "<C-w>v<C-w>|l", [2, 2, BESIDE, [0, 0]]],
+      ["Ctrl-W, a pause, and h move back left", "<C-w>v<C-w>|l<C-w>|h", [2, 1, BESIDE, [0, 0]]],
+      ["Ctrl-W, a pause, and j move down", "<C-w>s<C-w>|j", [2, 2, STACKED, [0, 0]]],
+      ["Ctrl-W, a pause, and k move back up", "<C-w>s<C-w>|j<C-w>|k", [2, 1, STACKED, [0, 0]]],
+      ["Ctrl-W, a pause, and w go to the next window", "<C-w>s<C-w>|w", [2, 2, STACKED, [0, 0]]],
+      ["Ctrl-W, a pause, and W go to the previous window", "<C-w>s<C-w>|W", [2, 2, STACKED, [0, 0]]],
+      ["Ctrl-W, a pause, and p return to the previous window", "<C-w>s<C-w>|j<C-w>|p", [2, 1, STACKED, [0, 0]]],
+      ["a pause after the split itself changes nothing", "<C-w>s|<C-w>j", [2, 2, STACKED, [0, 0]]]
+    ]) do |keys|
+      h = slow_session(keys.to_s)
+      shape(h) + [h.cursor]
     end
 
     # Messages: rows are [label, [rows, cols, keys], message].

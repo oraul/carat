@@ -127,7 +127,7 @@ Rules: CLAUDE.md Coding conventions (keyword constructors, shared objects built 
 
 What: turns key codes into commands: decoding, keymap lookup per mode, the count-operator-motion grammar, and dispatch to the handler registered for each action.
 
-Flow: `InputController#pump` reads bytes, `KeyDecoder#feed` turns them into key codes, `HandleKey#call(state, code)` tries a scratch buffer's keymap, then the mode's keymap (`Keymap#lookup` over `KeymapNode` with a `KeymapMatch`), and feeds actions to `CommandGrammar#accept` (or `accept_visual`), which reads each action's kind from `ActionTable#kind_of`; a complete `Command` goes to `Dispatcher#call`, which finds the handler (`ActionTable#find`), runs it inside a transaction on the current buffer, records the last change, and reports the `Outcome`; then the plugin host observes and `ArrangeView` runs. `Key::TIMEOUT` resolves keys waiting after `timeoutlen`.
+Flow: `InputController#pump` reads bytes, `KeyDecoder#feed` turns them into key codes, `HandleKey#call(state, code)` tries a scratch buffer's keymap, then the mode's keymap (`Keymap#lookup` over `KeymapNode` with a `KeymapMatch`), and feeds actions to `CommandGrammar#accept` (or `accept_visual`), which reads each action's kind from `ActionTable#kind_of`; a complete `Command` goes to `Dispatcher#call`, which finds the handler (`ActionTable#find`), runs it inside a transaction on the current buffer, records the last change, and reports the `Outcome`; then the plugin host observes and `ArrangeView` runs. `Key::TIMEOUT` resolves keys `HandleKey` kept `:pending` after `timeoutlen`; keys it kept `:waiting` (a lone prefix in a grammar mode) wait for the next key with no deadline.
 
 Files:
 
@@ -301,13 +301,13 @@ Rules: the visual keys whose meaning differs are `visual.*` actions; motions bin
 
 ## 11. Windows and tabs
 
-What: the split layout per tab page, the `<C-w>` commands, tab pages, and their ex commands.
+What: the split layout per tab page, the `<C-w>` commands, scrolling a window, tab pages, and their ex commands.
 
-Flow: `WindowHandler` (`<C-w>` keys, equalizing itself) and `WindowCommandHandler` (`:sp`, `:vs`, `:new`, `:vnew`, `:close`, `:only`) run `SplitWindow`, `CloseWindow`, `CloseOtherWindows`, and `FocusWindow` with a `FocusRequest`; `TabHandler` (`gt`, `gT`) and `TabCommandHandler` (the `:tab*` commands) run `OpenTab`, `CloseTab`, `CloseOtherTabs`, and `SwitchTab` with a `TabRequest`. They change `Layout` (`split`, `split_edge`, `close`, `neighbour`, `equalize`) in the current `TabPage` and `TabList`; `BufferList#close_window` lets go of buffers. `ArrangeView#call` runs after every key and before every render: `Layout#arrange` for the screen size and every window scrolled to its cursor.
+Flow: `WindowHandler` (`<C-w>` keys, equalizing itself) and `WindowCommandHandler` (`:sp`, `:vs`, `:new`, `:vnew`, `:close`, `:only`) run `SplitWindow`, `CloseWindow`, `CloseOtherWindows`, and `FocusWindow` with a `FocusRequest`; `ScrollHandler` (`<C-f> <C-b> <C-d> <C-u> <C-e> <C-y> zt zz zb <PageDown> <PageUp>`) runs `ScrollWindow` with a `ScrollRequest`, which moves `Window#top` and the cursor; `TabHandler` (`gt`, `gT`) and `TabCommandHandler` (the `:tab*` commands) run `OpenTab`, `CloseTab`, `CloseOtherTabs`, and `SwitchTab` with a `TabRequest`. They change `Layout` (`split`, `split_edge`, `close`, `neighbour`, `equalize`) in the current `TabPage` and `TabList`; `BufferList#close_window` lets go of buffers. `ArrangeView#call` runs after every key and before every render: `Layout#arrange` for the screen size and every window scrolled to its cursor.
 
 Files:
 
-- `carat/domain/window.rb`: `Window` record (id, buffer, cursor, scroll, rectangle, fixed width, visual anchor, last selection); `show`, `copy_from`, `gutter_width`, `scroll_to_row`, `scroll_to_col`.
+- `carat/domain/window.rb`: `Window` record (id, buffer, cursor, scroll, rectangle, fixed width, visual anchor, last selection); `show`, `copy_from`, `gutter_width`, `scroll_to_row`, `scroll_top_to`, `max_top`, `margin` (the clamp and scrolloff cap `ArrangeView` and `ScrollWindow` share), `scroll_to_col`.
 - `carat/domain/layout_node.rb`: `LayoutNode`; `leaf?`.
 - `carat/domain/layout.rb`: `Layout`, a flat node table; `split`, `split_edge`, `close`, `leaves`, `leaf_of`, `neighbour`, `equalize`, `arrange`, `number_of`, `first_leaf`, `fixed_width?`.
 - `carat/domain/tab_page.rb`: `TabPage`; `window`, `window_count`, `focus`, `previous?`.
@@ -317,14 +317,16 @@ Files:
 - `carat/use_cases/windows/open_side_window.rb`: `OpenSideWindow#call`, a plugin's fixed-width side window.
 - `carat/use_cases/windows/close_window.rb`, `carat/use_cases/windows/close_other_windows.rb`: `call`.
 - `carat/use_cases/windows/focus_window.rb`: `FocusWindow#call`; `carat/use_cases/windows/focus_request.rb`: `FocusRequest` (target, count); `steps`.
+- `carat/use_cases/windows/scroll_window.rb`: `ScrollWindow#call`, the page, half-page, line, and `zt zz zb` scrolls of the current window, the cursor kept in view with scrolloff and its wanted column; `carat/use_cases/windows/scroll_request.rb`: `ScrollRequest` (target, count); `steps`.
 - `carat/use_cases/windows/open_tab.rb`, `carat/use_cases/windows/close_tab.rb`, `carat/use_cases/windows/close_other_tabs.rb`: `call`.
 - `carat/use_cases/windows/switch_tab.rb`: `SwitchTab#call`; `carat/use_cases/windows/tab_request.rb`: `TabRequest`; `counted?`.
 - `carat/use_cases/actions/window_handler.rb`: `WindowHandler.register`.
 - `carat/use_cases/actions/tab_handler.rb`: `TabHandler.register`.
+- `carat/use_cases/actions/scroll_handler.rb`: `ScrollHandler.register`, the nine `scroll.*` actions, each a `ScrollRequest` target for `ScrollWindow`.
 - `carat/use_cases/ex/window_command_handler.rb`: `WindowCommandHandler.register`.
 - `carat/use_cases/ex/tab_command_handler.rb`: `TabCommandHandler.register`.
 
-Tests: `test/domain_layout.rb`, `test/domain_tab_list.rb`, `test/use_cases_arrange_view.rb`, `test/editor_windows.rb`, `test/editor_tabs.rb`.
+Tests: `test/domain_layout.rb`, `test/domain_tab_list.rb`, `test/use_cases_arrange_view.rb`, `test/editor_windows.rb`, `test/editor_tabs.rb`, `test/editor_scroll.rb`.
 
 Designs: `windows-and-splits` (all Decisions), `render-core` (ArrangeView and the screen size), `use-case-boundaries` (Variants).
 

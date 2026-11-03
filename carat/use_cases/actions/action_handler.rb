@@ -15,14 +15,20 @@ module Carat
     # repeat says whether the action is a change the dot command repeats
     # when it changes the text or enters insert mode: operators, the
     # standalone edits, the insert commands, and the visual operators.
+    # breaks_insert says whether the action, run in insert mode, ends the
+    # insert session's undo state and starts a new one, as a motion does:
+    # false here, set by a handler that moves the cursor without being a
+    # motion, as the scroll commands do.
     class ActionHandler
       attr_reader :kind #: Symbol
       attr_reader :repeat #: bool
+      attr_reader :breaks_insert #: bool
 
       #: (kind: Symbol, repeat: bool) -> void
       def initialize(kind:, repeat:)
         @kind = kind
         @repeat = repeat
+        @breaks_insert = false
       end
 
       # Runs the action and returns the Outcome to report.

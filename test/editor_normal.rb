@@ -42,7 +42,7 @@ module EditorNormalTest
       ["dollar then down sticks to line ends", ["abc\nabcdef\n", [0, 0], "$j"], [1, 5]],
       ["G goes to the last line", ["a\nb\nc\n", [1, 0], "G"], [2, 0]],
       ["gg goes to the first line", ["a\nb\nc\n", [2, 0], "gg"], [0, 0]],
-      ["unbound key changes nothing", ["abc\n", [0, 1], "z"], [0, 1]]
+      ["unbound key changes nothing", ["abc\n", [0, 1], "Q"], [0, 1]]
     ]) do |input|
       h = editor(input[0])
       h.state.cursor.move_to(input[1][0], input[1][1])
@@ -96,8 +96,30 @@ module EditorNormalTest
     h.type("G")
     h.type("g")
     h.wait
-    t.assert_equal([2, 0], h.cursor, "a lone prefix is dropped after timeoutlen")
-    t.assert_equal([], h.assembly.input.pending_keys, "nothing pending after the timeout")
+    h.wait
+    h.wait
+    t.assert_equal([[2, 0], [103]], [h.cursor, h.assembly.input.pending_keys], "a lone prefix still waits after timeoutlen has passed")
+    h.type("g")
+    t.assert_equal([[0, 0], []], [h.cursor, h.assembly.input.pending_keys], "the second key completes the command however late it comes")
+    h.type("G")
+    h.type("g")
+    h.wait
+    h.wait
+    h.wait
+    h.type("<Esc>")
+    t.assert_equal([[2, 0], [], :normal], [h.cursor, h.assembly.input.pending_keys, h.mode], "Escape after a waiting prefix drops it and changes nothing")
+
+    jk = Carat::Doubles::FixedConfig.with("keymap.insert jk mode.normal\n")
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.txt", "ab\n")
+    h = H.new(files: files, config: jk, rows: 10, cols: 80, plugins: [])
+    h.open("a.txt")
+    h.type("ij")
+    t.assert_equal([["ab"], [106]], [h.lines, h.assembly.input.pending_keys], "a prefix in insert mode waits")
+    h.wait
+    t.assert_equal([["jab"], [], :insert], [h.lines, h.assembly.input.pending_keys, h.mode], "a prefix in insert mode is inserted as text after timeoutlen")
+    h.type("jk")
+    t.assert_equal(:normal, h.mode, "the insert-mode binding completes in time")
 
     config = Carat::Doubles::FixedConfig.with("keymap.normal a cursor.right\nkeymap.normal ab cursor.line_end\n")
     files = Carat::Doubles::MemoryFiles.new

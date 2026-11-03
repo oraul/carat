@@ -11,4 +11,8 @@ ok   two words for one
 ok   a bad line keeps the value before it
 ok   other scopes are not options
 ok   the shipped defaults set Carat's options cleanly
-domain_options_config: 13 passed, 0 failed
+ok   scroll is 0 by default, half the window
+ok   scroll takes a number
+ok   scroll refuses a word
+ok   the shipped scroll is 0
+domain_options_config: 17 passed, 0 failed

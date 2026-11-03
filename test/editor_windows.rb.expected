@@ -42,6 +42,14 @@ ok   :vnew splits vertically with an empty buffer
 ok   :vne splits vertically with an empty buffer
 ok   :sp file splits and shows the file
 ok   nested splits
+ok   Ctrl-W, a pause, and l move right without moving the cursor
+ok   Ctrl-W, a pause, and h move back left
+ok   Ctrl-W, a pause, and j move down
+ok   Ctrl-W, a pause, and k move back up
+ok   Ctrl-W, a pause, and w go to the next window
+ok   Ctrl-W, a pause, and W go to the previous window
+ok   Ctrl-W, a pause, and p return to the previous window
+ok   a pause after the split itself changes nothing
 ok   two text rows cannot be split
 ok   three text rows can
 ok   nine columns cannot be split with the gutter
@@ -107,4 +115,4 @@ ok   :only keeps the current window with its buffer
 ok   :wa reports the nameless buffer and writes the others
 ok   the nameless buffer stays modified
 ok   :wqa does not quit while a buffer could not be written
-editor_windows: 109 passed, 0 failed
+editor_windows: 117 passed, 0 failed

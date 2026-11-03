@@ -45,6 +45,18 @@ module DomainOptionsConfigTest
     options = D::Options.from_config(shipped)
     t.assert_equal([[true, false, 2, 2, true, true, 5, 500, 1000], "nerd", "carat-dark", []], [[options.number, options.relativenumber, options.tabstop, options.shiftwidth, options.expandtab, options.autoindent, options.scrolloff, options.timeoutlen, options.undolevels], options.icons, options.theme, shipped.report], "the shipped defaults set Carat's options cleanly")
 
+    # The scroll option: rows are [label, project lines, [scroll, problems]].
+    t.table([
+      ["scroll is 0 by default, half the window", "", [0, []]],
+      ["scroll takes a number", "option.scroll 4\n", [4, []]],
+      ["scroll refuses a word", "option.scroll half\n", [0, [".caratrc:1: option.scroll takes a number"]]]
+    ]) do |text|
+      config = D::Config.new
+      config.read(".caratrc", text.to_s, false)
+      [D::Options.from_config(config).scroll, config.report]
+    end
+    t.assert_equal(0, options.scroll, "the shipped scroll is 0")
+
     t.finish
   end
 end
