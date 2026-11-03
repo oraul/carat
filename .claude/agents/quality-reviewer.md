@@ -18,8 +18,8 @@ Input: the change name. The diff is `git diff origin/main...HEAD`; uncommitted w
 2. Check the diff against the rules the code map's areas for the touched files name, reading only those sections of `CLAUDE.md` (Coding conventions) and `docs/architecture.md` (2.1, 3, and 5 for production code): idiomatic Ruby within the Spinel rules; the naming rules; one public `call` per use case; the layer dependency rule; records and behavior classes; inline RBS; keyword constructors; typed table values in tests; tests beside every behavior change; docs, the map, and the README kept current. For shell, Make, and agent files: quoting, exit statuses, and one clear way to do each thing.
 3. Simple and elegant: no duplication, dead code, speculative generality, or cleverness the task did not need.
 4. Blocking: a correctness bug, a broken rule of `CLAUDE.md` or `docs/architecture.md`, a behavior change without its test, or code a careful maintainer would not merge. Everything else is advisory. Each finding: file, line, the rule or reason, and a one-line fix.
-5. Record each blocking finding, so a resumed run can give them to the next review: `sh tools/run_state.sh note <change> quality-blocking "<commit> <file>:<line> <rule or reason>; fix: <outline>"`, the commit being `git rev-parse --short=12 HEAD`, the `head` you return.
-6. Return the findings; the workflow records the review from them, `blocked` when any finding blocks.
+5. Record every finding, so a resumed run keeps them and the planner can read them: each blocking one as `sh tools/run_state.sh note <change> quality-blocking "<commit> <file>:<line> <rule or reason>; fix: <outline>"` and each advisory one the same way as `quality-advisory`, the commit being `git rev-parse --short=12 HEAD`, the `head` you return. The text you note is the text you return.
+6. Return the findings; the workflow records the review from them, `blocked` when any finding blocks, and hands the advisories to the package step for `docs/backlog.md`.
 
 ## Periodic mode
 

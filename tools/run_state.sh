@@ -16,17 +16,19 @@
 #                    "green|red COMMIT"
 #   merged           the squash commit on main
 #   metric.NAME      one measurement or figure of the run: tools/metrics.sh
-#                    names, rework, ci_min, phase.KEY ("TOKENS/CALLS" of a
-#                    phase so far), and first.GATE (0 or 1, its first
-#                    verdict), stored by the workflow as they happen; older
-#                    runs stored first_pass, out_tokens, tool_calls, phases
+#                    names, rework, ci_min, estimate (the plan's size), phase.KEY
+#                    ("TOKENS/CALLS" of a phase so far), and first.GATE (0 or 1,
+#                    its first verdict), stored by the workflow, every figure
+#                    in each metric line it runs; older runs stored
+#                    first_pass, out_tokens, tool_calls, phases
 #   note.N           "KIND TEXT": a retrospective proposal or a finding
 # Logs: build/stages/CHANGE/STAGE.log, ending in "EXIT n".
 #
 # History: docs/metrics.tsv, one row per merged change, appended by history
 # from the run states that have none yet, so the next change carries the
 # rows of the runs before it (columns in HEADER below). A row's estimate is
-# the size word of the change's queue item, its actual the out_tokens.
+# metric.estimate, else the size word of the change's queue item, its
+# actual the out_tokens.
 #
 # Usage: sh tools/run_state.sh COMMAND ...
 #   init CHANGE BRANCH          create the state unless it exists, then show it
@@ -546,11 +548,17 @@ out_tokens() {
   fi
 }
 
-# The size the change was estimated at, small, medium, or large: the
-# "estimated SIZE" of its item ("N. `CHANGE` ...") in docs/queue.md at the
-# parent of its squash commit, the queue it was delivered from; "-" when
-# it is not merged or no item of it states a size.
+# The size the change was estimated at, small, medium, or large:
+# metric.estimate, which the workflow stores from the plan, so it outlives
+# the queue item; else, for a run that stored none, the "estimated SIZE" of
+# its item ("N. `CHANGE` ...") in docs/queue.md at the parent of its squash
+# commit, the queue it was delivered from; "-" when neither states a size.
 estimate_of() {
+  size=$(read_key metric.estimate)
+  if valid '(small|medium|large)' "$size"; then
+    echo "$size"
+    return
+  fi
   merged=$(merged_commit)
   [ -n "$merged" ] || { echo -; return; }
   size=$(git show --end-of-options "$merged^:docs/queue.md" 2>/dev/null | C="$change" awk '
@@ -570,7 +578,7 @@ budget_line() {
   size=$(estimate_of)
   tokens=$(out_tokens)
   if [ "$size" = "-" ]; then
-    echo "no estimate: no queue item of $change states a size; actual $tokens output tokens"
+    echo "no estimate: neither the run state nor a queue item of $change states a size; actual $tokens output tokens"
     return
   fi
   limit=$(printf '%s\n' $TOKEN_BUDGETS | sed -n "s/^$size=//p")
