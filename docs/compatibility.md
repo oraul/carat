@@ -211,7 +211,7 @@ Differences from Neovim: there are no `'<` and `'>` marks yet and no `:'<,'>` ra
 | `:qa[ll]`, `:quita[ll]` | Quit unless a buffer in the list is modified, hidden ones included | `E37` | `use_cases_ex`, `editor_cmdline`, `editor_tabs` |
 | `:qa[ll]!`, `:quita[ll]!` | Quit all, discarding changes | | `use_cases_ex`, `editor_cmdline` |
 | `:wqa[ll]`, `:xa[ll]`, `:wqa!`, `:xa!` | Write every modified buffer, then quit all | as `:w`, `E141` | `use_cases_ex`, `editor_cmdline`, `editor_tabs` |
-| `:e[dit] [file]` | Show the file in the window: the listed buffer for it, or the file read from disk; reload the current one in place | `"name" 1L, 3B`, `"name" [New]`, `E37` | `use_cases_ex`, `editor_cmdline`, `editor_windows` |
+| `:e[dit] [file]` | Show the file in the window: the listed buffer for it, or the file read from disk; reload the current one in place; bytes that are not UTF-8 are kept and drawn as U+FFFD | `"name" 1L, 3B`, `"name" [New]`, `"name" [ILLEGAL BYTE in line 2] 2L, 8B`, `E37`, `E484` | `use_cases_ex`, `editor_cmdline`, `editor_windows` |
 | `:e[dit]! [file]` | Open or reload, discarding changes | | `use_cases_ex`, `editor_cmdline` |
 | `:sp[lit] [file]` | Split the window horizontally, the new window above showing the same buffer or file | `E36`, as `:e` | `use_cases_ex`, `editor_windows` |
 | `:vs[plit] [file]` | Split the window vertically, the new window to the left | `E36`, as `:e` | `use_cases_ex`, `editor_windows` |

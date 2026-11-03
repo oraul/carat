@@ -8,6 +8,7 @@ require_relative "sign_layer"
 require_relative "buffer_feed"
 require_relative "filetype"
 require_relative "syntax_cache"
+require_relative "text_lines"
 
 module Carat
   module Domain
@@ -237,16 +238,18 @@ module Carat
 
       # Splits file text into lines. The line ending is "\r\n" when the first
       # terminator is one, "\n" otherwise; a trailing terminator does not
-      # produce an extra empty line.
+      # produce an extra empty line. The text is split by bytes, so a byte
+      # that is not UTF-8 stays in its line as it was read and is written
+      # back unchanged.
       #: (String, String?) -> Buffer
       def self.from_text(text, path)
-        first = text.index("\n")
-        ending = "\n"
-        ending = "\r\n" if !first.nil? && first > 0 && text[first - 1, 1] == "\r"
-        body = ending == "\r\n" ? text.gsub("\r\n", "\n") : text
-        lines = body.split("\n", -1)
+        first = text.byteindex("\n")
+        crlf = !first.nil? && first > 0 && text.getbyte(first - 1) == 13
+        lines = TextLines.split(text, crlf)
         lines.pop if lines.length > 1 && lines.last == ""
         lines = [""] if lines.empty?
+        ending = "\n"
+        ending = "\r\n" if crlf
         new(lines: lines, path: path, line_ending: ending)
       end
 
@@ -605,7 +608,7 @@ module Carat
       # text.
       #: (String, String, String) -> Array[String]
       def joined(head, text, tail)
-        parts = text.split("\n", -1)
+        parts = TextLines.split(text, false)
         return [head + text + tail] if parts.length <= 1
         result = [head + parts[0]]
         i = 1

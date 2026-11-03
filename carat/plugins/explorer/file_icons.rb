@@ -35,14 +35,15 @@ module Carat
         end
 
         # The icon name of a file: by its whole name first, then by the
-        # text after its last dot, "default" otherwise.
+        # text after its last dot, "default" otherwise. The dot is found by
+        # bytes, so a name that is not UTF-8 finds its extension.
         #: (String) -> String
         def self.file_type(name)
           whole = NAMES[name]
           return whole unless whole.nil?
-          dot = name.rindex(".")
+          dot = name.byterindex(".")
           return "default" if dot.nil? || dot == 0
-          by_extension = EXTENSIONS[name[dot + 1, name.length - dot - 1]]
+          by_extension = EXTENSIONS[name.byteslice(dot + 1, name.bytesize - dot - 1).to_s]
           by_extension.nil? ? "default" : by_extension
         end
       end

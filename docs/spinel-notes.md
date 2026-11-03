@@ -15,7 +15,7 @@ Every Spinel pitfall this project has met, once, at the pinned compiler (`SPINEL
 - `STDIN.raw { }` is the only raw-mode form, and its block holds a single call: Spinel rewrites a short raw block and skips a long one.
 - A signal handler sets a flag only, since it runs where Ruby code may run, not inside a blocking call; the loop polls with a timeout. `SIGINT` and `SIGTERM` are trapped before the first thread starts, because once a thread runs an untrapped signal ends the process with no `ensure`, leaving the terminal raw.
 - Threads run in parallel with no global lock: shared state goes through a `Mutex` or a `Queue`. A program that starts no thread behaves as single-threaded Spinel, so the editor core starts none; only service drivers do. Ractor is not documented by Spinel and is not used.
-- Only UTF-8 and binary encodings exist.
+- Only UTF-8 and binary encodings exist. On text that is not valid UTF-8, `split`, `scan`, and regular expressions raise `ArgumentError`; `length` and `[i, n]` count each byte outside an RFC 3629 sequence as a character, but `index` and `rindex` count a lead byte with the bytes after it as one, and `upcase` and `downcase` read the bytes as other characters. Text from files, names, or registers is cut with `byteindex`, `byterindex`, and `byteslice` (`TextLines.split`), decoded with `Utf8`, and recased over ASCII letters only; `test/domain_utf8.rb` holds the hostile sequences.
 - Open: `line[i, 1]` on a line that is not ASCII is resolved from the start of the line, so a loop of one-character slices is quadratic on a long UTF-8 line. Walk code points with `Utf8.size_at` and `code_at`, or compare bytes (backlog: "Some per-command character loops still slice one-character strings").
 
 ## Records
@@ -47,7 +47,7 @@ Every Spinel pitfall this project has met, once, at the pinned compiler (`SPINEL
 ## Known miscompilations
 
 - Open: `private_constant` compiles but is not enforced (another class can still read `Owner::NAME`), while `private` on methods is. `lint` carries the rule: every constant of a use case file is in a `private_constant`, and no other file names it (backlog: "Spinel compiles private_constant without enforcing it").
-- Open: some string returns answer the method's argument: a `case` of string-literal branches called with a literal, a ternary of `""` and an indexed `to_s` in a two-parameter method, and a constant array's `include?` of a reader on a `Data` value. Rewrite as guard returns or through a local, and let a table test catch it (backlog: "Spinel answers a method's argument for some string returns").
+- Open: some string returns answer the method's argument: a `case` of string-literal branches called with a literal, a ternary of `""` and an indexed `to_s` in a two-parameter method, a guard return of the argument before a `byteslice(...).to_s` result, and a constant array's `include?` of a reader on a `Data` value. Rewrite as guard returns or through a local, and let a table test catch it (backlog: "Spinel answers a method's argument for some string returns").
 - Open: the runtime releases free slab chunks with `MADV_DONTNEED` on huge pages, so single keys can stall 8 to 12 ms on a host with `madvise` defragmentation; `SPINEL_SLAB_HUGE=0` avoids it (backlog: "Spinel's slab release stalls keys on transparent huge pages").
 
 ## Toolchain

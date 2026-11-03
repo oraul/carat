@@ -1,6 +1,7 @@
 require_relative "../../domain/editor_state"
 require_relative "../../domain/registers"
 require_relative "../../domain/register_entry"
+require_relative "../../domain/text_lines"
 require_relative "ex_handler"
 require_relative "ex_table"
 
@@ -57,7 +58,7 @@ module Carat
         kind = entry.kind == :linewise ? "l" : (entry.kind == :blockwise ? "b" : "c")
         out = "  " + kind + "  \"" + name + "   "
         n = room
-        parts = entry.text.split("\n", -1)
+        parts = Domain::TextLines.split(entry.text, false)
         parts = [""] if parts.empty?
         j = 0
         while j < parts.length && n > 1

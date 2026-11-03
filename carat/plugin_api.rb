@@ -264,15 +264,19 @@ module Carat
       end
 
       # The names of a path after resolving "." and "..": a ".." at the
-      # start of a relative path stays, one above the root is dropped.
+      # start of a relative path stays, one above the root is dropped. The
+      # path is cut at each "/" by bytes, since String#split raises on a
+      # name that is not UTF-8.
       #: (String) -> Array[String]
       def self.segments(path)
         out = []
         absolute = path.start_with?("/")
-        pieces = path.split("/")
-        i = 0
-        while i < pieces.length
-          piece = pieces[i]
+        size = path.bytesize
+        start = 0
+        while start <= size
+          slash = path.byteindex("/", start)
+          stop = slash.nil? ? size : slash
+          piece = path.byteslice(start, stop - start).to_s
           if piece == ".."
             if !out.empty? && out[out.length - 1] != ".."
               out.pop
@@ -282,7 +286,7 @@ module Carat
           elsif !piece.empty? && piece != "."
             out << piece
           end
-          i += 1
+          start = stop + 1
         end
         out
       end
@@ -294,21 +298,24 @@ module Carat
       end
 
       # The directory part: "/" for an entry of the root, "." for a bare
-      # name.
+      # name. Found by bytes, as segments are, so a name that is not UTF-8
+      # cuts where its slash is.
       #: (String) -> String
       def self.dirname(path)
-        slash = path.rindex("/")
+        slash = path.byterindex("/")
         return "." if slash.nil?
         return "/" if slash == 0
-        path[0, slash]
+        path.byteslice(0, slash).to_s
       end
 
       # The last name; "/" for the root itself.
       #: (String) -> String
       def self.basename(path)
         return "/" if path == "/"
-        slash = path.rindex("/")
-        slash.nil? ? path : path[slash + 1, path.length - slash - 1]
+        slash = path.byterindex("/")
+        name = path
+        name = path.byteslice(slash + 1, path.bytesize - slash - 1).to_s unless slash.nil?
+        name
       end
 
       # The normalized absolute form of path, resolved against cwd when

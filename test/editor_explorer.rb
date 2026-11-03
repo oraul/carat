@@ -302,6 +302,21 @@ module EditorExplorerTest
     h.type("R6Gv")
     t.assert_equal([3, "my notes.md", ["spaced"]], [h.window_count, h.buffer.path, h.lines], "v opens a name with a space in a vertical split")
 
+    # Names that are not UTF-8 are listed with one replacement cell per
+    # illegal byte, the explorer stays enabled, and they open.
+    h = session(" e")
+    h.files.put("caf\xE9.md", "latin\n")
+    h.files.put("\xF4\x90\x80\x80.md", "beyond\n")
+    h.type("R")
+    listed = tree_lines(h)
+    t.assert_true(listed.include?("   m caf\xE9.md") && listed.include?("   m \xF4\x90\x80\x80.md"), "the tree lists names that are not UTF-8 as they are")
+    drawn = h.screen.join("\n")
+    t.assert_true(drawn.include?("m caf\u{FFFD}.md") && drawn.include?("m \u{FFFD}\u{FFFD}\u{FFFD}\u{FFFD}.md"), "the screen shows each illegal byte as one replacement character")
+    t.assert_true(h.plugins.enabled?("explorer"), "the explorer stays enabled after listing them")
+    row = listed.index("   m \xF4\x90\x80\x80.md").to_i
+    h.type("#{row + 1}G<CR>")
+    t.assert_equal(["\xF4\x90\x80\x80.md", ["beyond"]], [h.buffer.path, h.lines], "Enter opens a name that is not UTF-8")
+
     t.finish
   end
 end

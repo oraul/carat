@@ -221,6 +221,7 @@ Flow: a use case calls a `Buffer` primitive (`insert`, `delete`, `replace`, `set
 Files:
 
 - `carat/domain/buffer.rb`: `Buffer` record; the primitives `insert`, `delete`, `replace`, `set_lines`, `reload`; `begin_transaction`, `commit_transaction`, `transaction_open?`, `begin_history`, `start_at`, `transaction_mark`; `revert`, `reapply`, `revert_to`; `modified?`, `mark_saved`, `mark_unsaved`, `settle_saved`; `rename`, `detect_filetype`, `assign_filetype`; `from_text`, `to_text`, `line`, `line_count`, `text_of`, `lines_of`, `first_nonblank`, `indent_of`; `place_sign`, `clear_signs`, `sign_at`; `scratch?`.
+- `carat/domain/text_lines.rb`: `TextLines.split`, text cut at its newlines by bytes, so bytes that are not UTF-8 stay in their lines; used by `from_text`, `joined`, `RegisterEntry#lines`, `:registers`, and messages of several lines.
 - `carat/domain/line_splice.rb`: `LineSplice.apply` (per-line `insert` and `delete_at` up to `SMALL` lines, one tail move above) and `shift_marks`.
 - `carat/domain/change_record.rb`: `ChangeRecord` (buffer id, row, removed and inserted lines sharing the buffer's strings); `delta`.
 - `carat/domain/transaction.rb`: `Transaction` (records, cursor before and after, cause, merged row span, history flag); `add`, `seal`, `truncate`, `span`, `record_at`, `empty?`.
@@ -374,16 +375,16 @@ Files:
 
 - `carat/adapters/frame_presenter.rb`: `FramePresenter#call`, `display_col`, `display_width`; reads the state only; a message of several lines over the bottom rows with the hit-enter line.
 - `carat/adapters/painted_rows.rb`: `PaintedRows`, what every window row segment of a frame shows; `same?`, `store`, `invalidate`, `painted?`.
-- `carat/adapters/screen_presenter.rb`: `ScreenPresenter`; `enter`, `leave`, `present`.
+- `carat/adapters/screen_presenter.rb`: `ScreenPresenter`; `enter`, `leave`, `present`; a cell code that is not a scalar value is written as U+FFFD.
 - `carat/domain/frame.rb`: `Frame`, cells in three flat integer arrays; `put`, `put_code`, `put_within`, `fill`, `blank`, `set_hl`, `same_row?`, `dirty?`, `dirty_rows`, `reset_rows`, `mark_all_dirty`, `add_scroll`, `row_text`.
 - `carat/domain/cell.rb`: `Cell`, a value view of one cell for tests.
-- `carat/domain/utf8.rb`: `Utf8`; `size_at`, `code_at`, `codes`; decodes by walking bytes.
-- `carat/domain/display_width.rb`: `DisplayWidth`; `of`, `of_char`, `column`, `col_at`, `private_use?`, `control?`; the private use areas are one cell wide.
+- `carat/domain/utf8.rb`: `Utf8`; `size_at` (RFC 3629, every other byte one U+FFFD character, as `String#length` counts), `code_at`, `codes`, `scalar?`; decodes by walking bytes.
+- `carat/domain/display_width.rb`: `DisplayWidth`; `of`, `of_char`, `cell`, `code_of`, `column`, `col_at`, `private_use?`, `control?`; the private use areas are one cell wide.
 - `carat/domain/decoded_line.rb`: `DecodedLine`, a line's code points and display columns; `decode`, `plain?`, `code`, `col`, `width`, `index_at`.
 - `carat/domain/identity_table.rb`: `IdentityTable`, keyed by object identity; `find`, `store`, `clear`.
 - `carat/domain/line_cache.rb`: `LineCache`, decoded lines of the visible rows in two generations, shared by `ArrangeView` and the presenter; `fetch`, `turn`, `holds?`.
 
-Tests: `test/domain_frame.rb`, `test/domain_line_cache.rb`, `test/adapters_frame_presenter.rb`, `test/adapters_dirty_rows.rb`, `test/adapters_screen_presenter.rb`, `test/editor_screen.rb`.
+Tests: `test/domain_frame.rb`, `test/domain_line_cache.rb`, `test/adapters_frame_presenter.rb`, `test/adapters_dirty_rows.rb`, `test/adapters_screen_presenter.rb`, `test/editor_screen.rb`, `test/domain_utf8.rb` (hostile byte sequences through the decoder, display width, `TextLines`, and the plugin API's path segments).
 
 Designs: `render-core` (all Decisions; Measured result), `escape-c1-control-codes` (all Decisions), `windows-and-splits` (Rendering), `visual-modes` (Rendering).
 
@@ -573,5 +574,7 @@ In merge order, by pull request number, with the roadmap item of `docs/architect
 - `delivery-pipeline`: the workflow, `/deliver`, `/status`, seven agents, run state, gates, one stage list. Next: `planner-and-metrics`, `authoring-kit`.
 - `planner-and-metrics`: the planner and the Plan phase, the metrics history `docs/metrics.tsv`, `make metrics` and the comparison with `main` in CI, the retrospective, periodic reviews, `/plan` and `/review`, archived briefs. Acting on what the retrospective and the reviews find is left to the queue.
 - `authoring-kit`: the golden examples `docs/examples.md`, the generators `make new-use-case`, `new-action`, `new-ex-command`, `new-test`, and `new-plugin`, the Spinel notes `docs/spinel-notes.md`, the `docs-lint` stage with its budgets, and a slimmer `CLAUDE.md` (41,066 to about 30,600 bytes) and `docs/architecture.md`. A compile of the generators' output in `make check` is left in `docs/backlog.md`.
+- #35, `window-navigation-and-scroll`, a user-reported fix: a lone prefix in the grammar modes waits for its next key with no time limit, so `<C-w>` and its second key work however slowly they are typed, also between the file tree and the file windows; the scroll actions (`<C-f>`, `<C-b>`, `<PageDown>`, `<PageUp>`, `<C-d>`, `<C-u>`, `<C-e>`, `<C-y>`, `zt`, `zz`, `zb`) and the `scroll` option. Left: `z<CR>`, `z.`, `z-`, `:set scroll`, `<C-w>` outside normal mode, and a time limit for the prefixes of user bindings (`docs/backlog.md`).
+- `utf8-input-safety`, the security fix from the periodic review after #35: files and names that are not UTF-8 open, list, and draw without raising, their bytes kept through edits and writes, `[ILLEGAL BYTE in line N]` on open, RFC 3629 decoding with one U+FFFD cell per illegal byte, and no code point outside Unicode written to the terminal. Left: `<xx>` markers and `Carat::Json` on such text (`docs/backlog.md`).
 
 Next: `docs/queue.md`, ordered against the charter `docs/goals.md`.

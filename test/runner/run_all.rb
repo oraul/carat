@@ -33,6 +33,7 @@ require_relative "../domain_syntax_cache"
 require_relative "../domain_tab_list"
 require_relative "../domain_theme"
 require_relative "../domain_undo_tree"
+require_relative "../domain_utf8"
 require_relative "../drivers_main_loop"
 require_relative "../editor_cmdline"
 require_relative "../editor_explorer"
@@ -95,6 +96,7 @@ when "domain_syntax_cache" then DomainSyntaxCacheTest.main
 when "domain_tab_list" then DomainTabListTest.main
 when "domain_theme" then DomainThemeTest.main
 when "domain_undo_tree" then DomainUndoTreeTest.main
+when "domain_utf8" then DomainUtf8Test.main
 when "drivers_main_loop" then DriversMainLoopTest.main
 when "editor_cmdline" then EditorCmdlineTest.main
 when "editor_explorer" then EditorExplorerTest.main
