@@ -307,3 +307,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `:replace` branch of `ascii_recase` in `carat/domain/operators.rb` (line 244, `char * text.length` over text that is not UTF-8), while `~`, `U`, and `u` have rows in `test/editor_registers.rb` (lines 49 to 51). Advisory of the periodic quality review at 6ea61b1.
 - Why it matters: an untested branch on hostile text is where the next crash on an illegal byte would hide.
 - Fix outline: add a `v$r` row over a line with an illegal byte.
+
+## CI took 12 minutes at untrusted-config-limits
+
+- Where: the `ci_min` figure of the run state of `untrusted-config-limits` (#37, 12.0 minutes at `8c33ffdefafe`) against 3.0 for `authoring-kit` and 4.0 for `utf8-input-safety`; the local `test-run` stage of the same commit took 26 s against 24 s, so no code location is known.
+- Why it matters: goal 2 of `docs/goals.md` keeps CI time through the history; a threefold rise that is never measured again may hide a lost cache, a slower test (the two 64 MiB strings of `test/editor_cmdline.rb:155` are a suspect), or a runner change.
+- Fix outline: compare the per-job and per-step times of the CI runs of #36 and #37 and the next two pull requests, check whether the Actions cache keyed on `make spinel-rev` hit, and if the rise holds, find the step and fix or record the cause; remove this entry when two runs are back near 4 minutes.
