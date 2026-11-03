@@ -82,9 +82,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Only Ruby has a tokenizer
 
-- Where: `config/plugins.json` lists one tokenizer plugin, `carat/plugins/ruby/`, and `Carat::Domain::Filetype` in `carat/domain/filetype.rb` detects only `ruby`.
+- Where: `config/plugins.caratrc` lists one tokenizer plugin, `carat/plugins/ruby/`, and `Carat::Domain::Filetype` in `carat/domain/filetype.rb` detects only `ruby`.
 - Why it matters: section 8.2 of `docs/architecture.md` names Markdown, JSON, and YAML too; every other file is drawn plain.
-- Fix outline: one compiled plugin per language under `carat/plugins/<language>/` with its own tokenizer and state encoding, its extensions added to the `Filetype` tables, listed in `config/plugins.json` and `config/default.json`; the tokenizer test table of `test/plugins_ruby.rb` is the model.
+- Fix outline: one compiled plugin per language under `carat/plugins/<language>/` with its own tokenizer and state encoding, its extensions added to the `Filetype` tables, listed in `config/plugins.caratrc` and `config/default.caratrc`; the tokenizer test table of `test/plugins_ruby.rb` is the model.
 
 ## :set handles only filetype and syntax
 
@@ -94,9 +94,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Themes are fixed in the binary
 
-- Where: `Carat::Domain::Themes` in `carat/domain/themes.rb` holds `carat-dark` and `carat-light`, chosen once at startup by the top-level `theme` key; there is no `:colorscheme`, no `:highlight`, and no theme file.
-- Why it matters: users expect to pick or tune a color scheme without rebuilding; the user and project configuration files arrive with `options-and-config`.
-- Fix outline: with that change, read a `themes` object from the configuration (group name to foreground, background, 16-color values, and attributes, merged over a shipped theme), add `:colorscheme name` that rebuilds the screen presenter's SGR table and redraws, and `:highlight Group guifg=... ctermfg=...` for single groups.
+- Where: `Carat::Domain::Themes` in `carat/domain/themes.rb` holds `carat-dark` and `carat-light`, chosen once at startup by the `option.theme` line; there is no `:colorscheme`, no `:highlight`, and no theme file.
+- Why it matters: users expect to pick or tune a color scheme without rebuilding; the user and project configuration files are in place since `caratrc-config`, but they can only name a shipped theme.
+- Fix outline: read `theme.<name>.<group>` lines from the configuration files (foreground, background, 16-color values, and attributes as words, applied over a shipped theme), add `:colorscheme name` that rebuilds the screen presenter's SGR table and redraws, and `:highlight Group guifg=... ctermfg=...` for single groups.
 
 ## No semantic highlighting from the language server
 
@@ -127,3 +127,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the pinned Spinel (`SPINEL_REF` in the `Makefile`); seen in the test helpers `setup` of `test/use_cases_plugins.rb`, `editor` of `test/use_cases_plugin_files.rb`, and `run` of `test/domain_grammar.rb`, which returned `[a, b, ...]` for the caller to destructure (`state, host, keymap, files, ex = setup(...)`).
 - Why it matters: at the top level of a program those locals kept their types, but once the `test-build` change moved each test's statements into a method, they became poly: in `test/use_cases_plugins.rb` the generated C did not compile (`expected statement before ')'` at each `state.cursor.row = 1`), and in the other two spinel-doctor reported unresolved calls on poly receivers. A minimal program with three values of three classes kept its types, so the trigger is not yet isolated. The helpers now return an object with typed readers, which is the convention in `CLAUDE.md`; production code has no such destructuring.
 - Fix outline: restore the array return of `setup` in `test/use_cases_plugins.rb` and reduce it to a minimal reproduction (five values from a helper, destructured twenty times inside one method, one of them an attribute chain assigned through), report it upstream to Spinel, and drop the convention once a `SPINEL_REF` bump compiles it typed.
+
+## Spinel answers a method's argument for some string returns
+
+- Where: the pinned Spinel (`SPINEL_REF` in the `Makefile`); seen in `carat/domain/rc_value.rb` and `carat/domain/config.rb` during the `caratrc-config` change. `RcValue.expectation(kind)`, written as a `case` whose branches were string literals, answered the kind itself when called with a literal; `RcValue.text(words, kind)`, written as `words.empty? ? "" : words[0].to_s`, answered the kind; and `SCOPES.include?(line.scope)` answered false for a scope the array holds, while the same call through a local answered true.
+- Why it matters: each is silent wrong code, not a compile error; only the table tests caught them. The three places are rewritten (guard returns, a local for the first word, a local for the scope), but the same shapes elsewhere could be affected.
+- Fix outline: reduce each to a minimal program (a module function with a literal-branch `case` called with a literal; a ternary of `""` and an indexed `to_s` in a two-parameter method; a constant array's `include?` of a reader called on a `Data` value), report them upstream, and recheck them when `SPINEL_REF` is bumped.

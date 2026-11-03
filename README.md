@@ -37,6 +37,30 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make check` | Build, gen-config, test, diagnose, and no-cruby |
 | `make spec-list`, `make spec-validate`, `make spec-update` | The OpenSpec commands |
 
+## Configuration
+
+Carat reads its settings from plain text files of one setting per line, `scope.name value`: the first word is a dotted key, and the rest of the line is the value, a word, a number, `true` or `false`, or a list of words separated by spaces. A word containing spaces goes in double quotes (`\"` and `\\` inside them stand for a quote and a backslash), `#` starts a comment, and blank lines are ignored.
+
+```
+# ~/.config/carat/caratrc
+option.number true
+option.tabstop 2
+option.theme carat-dark
+keymap.normal <leader>e plugin.explorer.toggle
+keymap.insert <C-s> <Esc>:w<CR>
+keymap.normal Q none
+plugin.explorer.enabled true
+plugin.explorer.width 30
+plugin.explorer.ignore .git build tmp
+```
+
+- `option.<name>` sets an option by its Vim name (`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scrolloff`, `timeoutlen`, `undolevels`, and the others), plus Carat's `icons` and `theme`.
+- `keymap.<mode> <keys> <action>` binds keys in Vim notation in `normal`, `insert`, `visual`, `visual_line`, `visual_block`, `operator_pending`, or `cmdline` mode to an action from `docs/actions.md` or to keys to replay, such as `:w<CR>`; the action `none` removes a binding. `keymap.leader <Space>` sets what `<leader>` stands for.
+- `plugin.<name>.enabled` turns a plugin on or off, and `plugin.<name>.<option>` sets one of its options.
+- `language.<name>.lsp` and `language.<name>.formatter` name the commands the language services will run; they are read from the defaults and the user file only, never from a project's file, so opening a directory cannot choose a program to run.
+
+The files load in order, and a later line wins: the built-in defaults (`config/default.caratrc`, every option and binding Carat ships, built into the binary), then `~/.config/carat/caratrc`, then `.caratrc` in the directory Carat starts in. Every line is checked when the files load; a mistake is reported as `file:line: message`, that line is skipped and the rest still applies, and the first problem shows in the message row when Carat starts, with the number of the others.
+
 ## Syntax highlighting
 
 Carat highlights the files whose filetype a plugin tokenizes; the built-in `ruby` plugin covers Ruby: `.rb`, `.rake`, `.gemspec`, and `.ru` files, `Gemfile`, `Rakefile`, `config.ru`, and any file whose first line is a `ruby` shebang. Comments and their `TODO`s, keywords, definitions, constants, variables, symbols, numbers, strings with escapes and nested interpolation, percent literals, heredocs, and regular expressions get Neovim's standard highlight groups, and a construct that spans lines keeps its color on the lines that follow. Only the rows on the screen and the rows above them are ever tokenized, so a large file opens as fast as a plain one, and an edit re-highlights only until the colors after it are the same as before.
@@ -44,13 +68,13 @@ Carat highlights the files whose filetype a plugin tokenizes; the built-in `ruby
 - `:syntax off` draws every buffer plain and `:syntax on` brings the colors back.
 - `:set filetype=ruby` (or `:set ft=ruby`) highlights the current buffer as Ruby, `:set syntax=OFF` turns one buffer plain, and `:set ft?` shows the filetype.
 
-The colors come from a theme, chosen by the top-level `theme` key of the configuration: `carat-dark`, the default, for a dark terminal background, or `carat-light` for a light one. Both leave the background of the text to the terminal and color the status lines, the tab line, the line numbers, the selection, and the messages as well.
+The colors come from a theme, chosen by the `option.theme` line of the configuration: `carat-dark`, the default, for a dark terminal background, or `carat-light` for a light one. Both leave the background of the text to the terminal and color the status lines, the tab line, the line numbers, the selection, and the messages as well.
 
-```json
-{ "theme": "carat-light" }
+```
+option.theme carat-light
 ```
 
-Carat writes 24-bit colors when the terminal sets `COLORTERM` to `truecolor` or `24bit` (most modern terminals do), the 256-color palette otherwise, and the 16 basic colors when `TERM` names a terminal that has only those, such as the Linux console (`linux`). To turn the Ruby highlighting off, set `"enabled": false` in its entry of the `plugins` object, `{ "plugins": { "ruby": { "enabled": false } } }`.
+Carat writes 24-bit colors when the terminal sets `COLORTERM` to `truecolor` or `24bit` (most modern terminals do), the 256-color palette otherwise, and the 16 basic colors when `TERM` names a terminal that has only those, such as the Linux console (`linux`). To turn the Ruby highlighting off, add the line `plugin.ruby.enabled false`.
 
 ## File tree
 
@@ -64,11 +88,14 @@ Carat writes 24-bit colors when the terminal sets `COLORTERM` to `truecolor` or 
 
 The tree draws its folders and file types with the icons below, so it reads well with or without a Nerd Font. Its options live in your configuration:
 
-```json
-{ "plugins": { "explorer": { "options": { "width": 30, "side": "left", "show_hidden": false, "ignore": [".git", "build", "tmp"] } } } }
+```
+plugin.explorer.width 30
+plugin.explorer.side left
+plugin.explorer.show_hidden false
+plugin.explorer.ignore .git build tmp
 ```
 
-`side` is `left` or `right`, `show_hidden` lists names starting with a dot from the start, and `ignore` names entries the tree never lists. Set `"enabled": false` in that entry to turn the tree off, and bind `<leader>e` to something else in `keymaps` to free the key. Carat reads only its built-in defaults today: the user and project configuration files arrive with the `options-and-config` roadmap item, and until then these values are changed in `config/default.json` before `make gen-config` and `make build`.
+`side` is `left` or `right`, `show_hidden` lists names starting with a dot from the start, and `ignore` names entries the tree never lists. Add `plugin.explorer.enabled false` to turn the tree off, and bind `<leader>e` to something else, or to `none`, to free the key.
 
 ## Icons and Nerd Fonts
 
@@ -85,8 +112,8 @@ Then select the font in the terminal: in iTerm2, Terminal.app, Windows Terminal,
 
 Without a Nerd Font the icon cells show boxes or blanks. Set the `icons` option in your configuration to another set instead:
 
-```json
-{ "options": { "icons": "unicode" } }
+```
+option.icons unicode
 ```
 
 `unicode` uses triangles, bullets, and geometric shapes that common terminal fonts already have, and `ascii` uses plain characters such as `+`, `-`, `*`, and `!`. The default is `nerd`. Plugins ask for icons by name, so the option switches every icon in the editor.
