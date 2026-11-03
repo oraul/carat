@@ -1,0 +1,565 @@
+# Codebase map
+
+Where everything is, by area. Read the section of the area a change touches, then only the files, tests, and design sections it names. `docs/architecture.md` is the binding design; this map is the index into the code. Every file under `carat/`, `bin/`, `test/`, `bench/`, and `tools/` has its home in exactly one area, under its Files or its Tests (a test's `.expected` snapshot goes with its test), and `test/lint.rb` fails when a file is missing here or a path named here does not exist. A change that adds, moves, or removes a file updates its area in the same pull request.
+
+Method names are given without line numbers; find them with `grep -n "def name"`. Designs are archived OpenSpec changes under `openspec/changes/archive/`, named without their date prefix, with the sections that explain the area.
+
+Areas:
+
+1. Build and CI
+2. Toolchain
+3. Configuration
+4. Composition and state
+5. Grammar and keymap
+6. Motions and text objects
+7. Operators and registers
+8. Edit path, transactions, and insert mode
+9. Undo and repeat
+10. Visual modes
+11. Windows and tabs
+12. Ex commands, the command line, and files
+13. Rendering
+14. Syntax highlighting
+15. Plugin host and API
+16. Explorer plugin
+17. Ports and drivers
+18. Tests and benchmarks
+
+The last section, Delivered changes, lists every change merged so far in order with what it left for later.
+
+---
+
+## 1. Build and CI
+
+What: compiles the editor and the generator with `spin`, maps every command to a `make` target, and runs the checks in CI.
+
+Flow: `make build` runs `spin build` over every `bin/*.rb` into `build/bin`; `make dev-build` compiles `bin/carat.rb` with the development flags into `build/dev/carat`; `make check` runs build, gen-config, test (test-build with the analysis budget, then test-run), diagnose, and no-cruby. CI (`.github/workflows/ci.yml`) first runs `tools/ci_scope.sh`, then the toolchain from cache, `make doctor`, `make no-cruby`, `make dev-build`, the generated-config check, `make test-build`, `make test-run CARAT_BIN=build/dev/carat`, and `make bench-budget`; a push to `main` also builds the release binary and smoke tests it.
+
+Files:
+
+- `carat.rb`: the production require graph, innermost layer first, ending with the plugin registry; requires no test double.
+- `carat/version.rb`: `Carat::VERSION`.
+- `tools/ci_scope.sh`: `documentation` (a path no test reads: Markdown other than `docs/actions.md`, `docs/compatibility.md`, and `docs/codebase-map.md`, or anything under `openspec/` or `.claude/`) and `answer`; skips the checks for documentation-only changes and for a push to `main` whose tree equals a passed pull request head.
+- `tools/analysis_budget.sh`: compiles `ANALYSIS_ROOTS` to C with `SP_TIMING=1`, prints analysis milliseconds and fixpoint and re-narrowing rounds, fails above `ANALYSIS_ROUNDS`; `--check` reads a report a build already wrote.
+- Outside the five roots: `Makefile` (the command map; `make help`), `spin.toml`, `.gitignore`, `.github/workflows/ci.yml`, `.github/pull_request_template.md`.
+
+Tests: `make check` itself; `test/smoke_editor.rb` (area 18) runs the built binary.
+
+Designs: `test-build` (One runner, one process per test; Development builds; The analysis budget comes from the runner's own compile; `make diagnose` on the real roots; CI), `ci-speed-2` (The compile cache; The allocation budget at `-O 0`; The smoke test on a development build), `analysis-speed` (The budget counts re-narrowing rounds).
+
+Rules: CLAUDE.md Hard rules (only `make` runs tests, snapshots, and benchmarks) and Commands; `docs/architecture.md` sections 2 and 10. A new command gets a Makefile target and a line under Commands.
+
+## 2. Toolchain
+
+What: fetches and builds the pinned Spinel commit with no Ruby interpreter, and keeps CRuby unreachable from every target.
+
+Flow: `make toolchain` clones `SPINEL_REF` into `tmp/.spinel`, copies the vendored header in, builds, and installs `spinel`, `spin`, and `spinel-doctor` into `tmp/.toolchain`; every target exports `PATH` with `tmp/.toolchain/bin` and `tools/noruby/` first. `make doctor` reports the tools and `ruby: refused (stub)`; `make no-cruby` proves the stub refuses a snapshot-less `spin test`.
+
+Files:
+
+- `tools/noruby/ruby`: POSIX `sh` stub that prints its refusal with its arguments to standard error and exits 127.
+- `tools/spinel/spinel_rt_responds_generated.h`: the header Spinel's build would generate with CRuby, vendored at `SPINEL_REF`; regenerated in the pull request that bumps the pin.
+
+Tests: `make no-cruby`, `make doctor`.
+
+Designs: `toolchain-under-tmp` (Decisions), `no-cruby-guard` (Decisions).
+
+Rules: CLAUDE.md Hard rules (Ruby 4 only through Spinel) and Stack; bump `SPINEL_REF` in its own pull request after `make check` passes.
+
+## 3. Configuration
+
+What: reads `.caratrc` lines (shipped defaults, the user file, the project file) into a `Config` that options, the keymap, and plugins read, and generates the default mirror and the plugin registry.
+
+Flow: `bin/carat.rb` builds `RcConfigGateway` over the file driver; `EditorAssembly` calls `ConfigPort#load` once, which runs `Config#read_defaults` (the embedded `DEFAULT_CARATRC`) and `Config#read` for `~/.config/carat/caratrc` and the untrusted `.caratrc`; each line goes through `RcParser.parse` into an `RcParse` and then `RcLine.from_parse`; `Options.from_config` applies `option.*`, `Keymap#add_checked` the `keymap.*` lines, the plugin host `plugin.<name>.*`; problems are noted with `Config#note` and reported in file and line order (`Config#report`), the first shown after startup. `make gen-config` runs `bin/carat-gen-config.rb`, which writes `carat/domain/default_config.rb` from `config/default.caratrc` and `carat/plugins/registry.rb` through `RegistrySource.render` from `config/plugins.caratrc`.
+
+Files:
+
+- `bin/carat-gen-config.rb`: the generator; writes only what changed and refuses a line that does not read.
+- `carat/domain/rc_parser.rb`: `RcParser.parse`, `parse_range`, `key?`, `unquote`, `failure`; walks a line's bytes into a key and words, with quotes, escapes, and comments.
+- `carat/domain/rc_parse.rb`: `RcParse`, one parse result; `ok?`, `blank?`.
+- `carat/domain/rc_line.rb`: `RcLine`, a kept setting with file label, ordinal, line number, scope, name, and words; `from_parse`, `problem`, `order`.
+- `carat/domain/rc_value.rb`: `RcValue` bool, integer, string, and list kinds; `valid?`, `expectation`, `text`, `number?`.
+- `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `unreadable`, `line_at`, `last`, `note`, `report`; scope and language checks, the project file refused language commands and key-sequence bindings.
+- `carat/domain/default_config.rb`: generated, `DEFAULT_CARATRC`; never edited by hand.
+- `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, and the rest); `from_config`, `apply`, `tab_width`.
+- `carat/domain/registry_source.rb`: `RegistrySource.render`, `entry?`, `names`; the registry text from the plugin list lines.
+- `carat/adapters/rc_config_gateway.rb`: `RcConfigGateway#load`, the `ConfigPort` driver over `FilePort` (`home`, `cwd`).
+- Outside the five roots: `config/default.caratrc` (every default option, binding, language command, and plugin setting) and `config/plugins.caratrc` (`plugin.<name> <path> <class>` per compiled plugin).
+
+Tests: `test/domain_rc_parser.rb`, `test/domain_options_config.rb`, `test/adapters_config_gateway.rb`, `test/config_sync.rb` (the mirror and the registry match their sources, the defaults read cleanly and bind every mode).
+
+Designs: `caratrc-config` (all Decisions), `dependency-injection` (Configuration problems at load time), `state-and-ports` (Configuration).
+
+Rules: CLAUDE.md Coding conventions (key bindings are never hard-coded; regenerate with `make gen-config`); `docs/architecture.md` section 7.
+
+## 4. Composition and state
+
+What: builds every record and collaborator once and wires them; the editor state the use cases share.
+
+Flow: `bin/carat.rb` checks the arguments and the terminal, installs `Signals`, builds the drivers and the gateway, and hands them to `EditorAssembly.new`; `EditorAssembly#open` opens the file; `MainLoop#run` calls `EditorAssembly#render` and `InputController#pump`. Every handler returns an `Outcome`, shown through `Reporting#report`.
+
+Files:
+
+- `bin/carat.rb`: entry point and the only place drivers are constructed; runs `MainLoop` inside the single-call `STDIN.raw` block.
+- `carat/adapters/editor_assembly.rb`: `EditorAssembly`; `initialize` (reads the configuration once, builds records and collaborators with a reader for each, builds the ex table and runner before the plugin host, has each feature `register` its handlers, core ex commands before plugin commands, registers and activates plugins, then adds the configuration's bindings with `add_checked`), `open`, `render` (resize, `PluginHost#resized`, `ArrangeView`, `HighlightView`, `FramePresenter`, `ScreenPresenter#present`), `config_errors`.
+- `carat/domain/editor_state.rb`: `EditorState`, the thin aggregate of the current view (tab list, mode, options, command line, message, quit flag, pending block insert, screen size); `resize`, `tab`, `window`, `buffer`, `cursor`, `current_line`, `max_col`, `clamp_col`, `selection`, `end_visual`, `show`, `list_message?`, `clear_message`.
+- `carat/domain/position.rb`: `Position` value; `sure`, `before?`, `to_a`.
+- `carat/domain/range.rb`: `Range` value; `charwise`, `normalized`.
+- `carat/domain/cursor.rb`: `Cursor` record (`row`, `col`, `want_col`); `position`, `move_to`.
+- `carat/domain/messages.rb`: `Messages`, messages several use cases show (`E36`, `E37`, the register refusals, `seconds_ago`).
+- `carat/use_cases/outcome.rb`: `Outcome`; `success`, `failure`, `none` (shared).
+- `carat/use_cases/concerns/reporting.rb`: `Reporting#report(state, outcome)`, the one place an outcome reaches the message row.
+
+Tests: `test/adapters_assembly.rb` (every holder of a shared object holds the one the assembly built), `test/editor_normal.rb`.
+
+Designs: `state-and-ports` (The records; Wiring; Constructors), `dependency-injection` (Outcomes and the Reporting concern; Constructors), `editor-foundation` (Entities; Use cases), `data-value-objects`, `struct-record-types`, `struct-keyword-init` (all Decisions).
+
+Rules: CLAUDE.md Coding conventions (keyword constructors, shared objects built once in `EditorAssembly`, record kinds, concerns); `docs/architecture.md` sections 3 and 4.
+
+## 5. Grammar and keymap
+
+What: turns key codes into commands: decoding, keymap lookup per mode, the count-operator-motion grammar, and dispatch to the handler registered for each action.
+
+Flow: `InputController#pump` reads bytes, `KeyDecoder#feed` turns them into key codes, `HandleKey#call(state, code)` tries a scratch buffer's keymap, then the mode's keymap (`Keymap#lookup` over `KeymapNode` with a `KeymapMatch`), and feeds actions to `CommandGrammar#accept` (or `accept_visual`), which reads each action's kind from `ActionTable#kind_of`; a complete `Command` goes to `Dispatcher#call`, which finds the handler (`ActionTable#find`), runs it inside a transaction on the current buffer, records the last change, and reports the `Outcome`; then the plugin host observes and `ArrangeView` runs. `Key::TIMEOUT` resolves keys waiting after `timeoutlen`.
+
+Files:
+
+- `carat/adapters/key_decoder.rb`: `KeyDecoder`; `feed`, `flush`, `pending?`, `encode`.
+- `carat/adapters/input_controller.rb`: `InputController`; `pump` (the `timeoutlen` wait from the options), `decoder`.
+- `carat/domain/key.rb`: `Key` codes; `printable?`, `alt?`, `base`, `char`, `TIMEOUT`.
+- `carat/domain/key_notation.rb`: `KeyNotation`; `parse`, `resolve`, `format`, `control_code`, `special_name`; Vim notation such as `<C-w>`.
+- `carat/domain/mode.rb`: `Mode`; `from_name`, `name_of`, `visual?`, `visual_kind`, `for_kind`.
+- `carat/domain/keymap.rb`: `Keymap`; `action_name?`, `leader_from`, `from_lines`, `add_lines`, `add_checked` (applies the configuration's keymap lines, `none` unbinding, refuses an unknown action, notes problems), `bind`, `bind_owned`, `remove_owner`, `lookup`.
+- `carat/domain/keymap_node.rb`: `KeymapNode` trie node; `child?`, `child_for`, `child_named`, `leaf?`.
+- `carat/domain/keymap_match.rb`: `KeymapMatch` value (`kind`, `value`), a lookup result.
+- `carat/domain/command.rb`: `Command` value (`register`, `count`, `operator`, `action`, `char`, `linewise`, `keys`); `plain`, `count_or`, `operator?`.
+- `carat/domain/command_grammar.rb`: `CommandGrammar` state machine; `accept`, `accept_visual`, `take`, `reset`, `wants_char?`, `operator_pending?`, `pending?`, `display`.
+- `carat/domain/input_state.rb`: `InputState`, the pending keys and the grammar, owned by `HandleKey`; `pending?`, `take_keys`.
+- `carat/use_cases/handle_key.rb`: `HandleKey#call`.
+- `carat/use_cases/dispatcher.rb`: `Dispatcher#call`; an arrow key in insert mode closes the session's undo state and opens the next.
+- `carat/use_cases/actions/action_handler.rb`: `ActionHandler`, the input port of an action: `kind`, `repeat`, `call(state, command)`.
+- `carat/use_cases/actions/action_table.rb`: `ActionTable`; `register`, `register_namespace` (for `plugin.`), `find`, `kind_of`, `include?`, `names`.
+- `carat/use_cases/actions/normal_mode_handler.rb`: `NormalModeHandler`, leaving a visual mode itself.
+- `carat/use_cases/actions/message_handler.rb`: `MessageHandler`, the quit hint and the reserved actions.
+
+Tests: `test/domain_keys.rb`, `test/domain_keymap.rb`, `test/domain_grammar.rb`, `test/adapters_key_decoder.rb`, `test/use_cases_actions.rb` (the tables, the kinds, every handler returning an `Outcome`, the action table against `docs/actions.md`), `test/editor_grammar.rb`.
+
+Designs: `command-grammar` (The grammar sits between the keymap and the dispatcher; Counts are optional; Dispatcher receives a Command; Bindings), `dependency-injection` (Input ports; The grammar reads kinds), `editor-foundation` (Use cases).
+
+Rules: CLAUDE.md Coding conventions (bindings in `config/default.caratrc` only; every action has a handler and a line in `docs/actions.md`; the action kinds; a new motion binds in five modes); `docs/architecture.md` sections 4, 5.1, and 8.1.
+
+## 6. Motions and text objects
+
+What: every motion as a function of state and count, and the text objects as ranges.
+
+Flow: `MotionHandler` (kind `:motion` or `:find`) calls `Move#call`, which asks `Motions.call` for a target and moves the cursor; an operator's motion or `TextObjectHandler`'s object reaches `Operate` (area 7); `;` and `,` repeat through `LastFind`.
+
+Files:
+
+- `carat/domain/motions.rb`: `Motions`; `call`, `for_command`, `remember`, `NAMES`, `FIND_NAMES`, and one function per motion (`left`, `right`, `line_end`, `find_char`, `vertical`, `word_forward`, `word_backward`, `word_end`, `sentence_forward`, `paragraph_forward`, `screen`, and the rest).
+- `carat/domain/motion.rb`: `Motion` value (`target`, `linewise`, `inclusive`, `want`), a target with its kind, never a range.
+- `carat/domain/walker.rb`: `Walker`, classifies the code points of the line it walks; `step_forward`, `step_backward`, `char_class`.
+- `carat/domain/sentence_starts.rb`: `SentenceStarts`; `add`, `index_at`, `after?`, `before?`.
+- `carat/domain/find.rb`: `Find` value (`char`, `forward`, `till`) of `f F t T`; `reversed`.
+- `carat/domain/last_find.rb`: `LastFind`, the `;` and `,` repeat; `remember`.
+- `carat/domain/text_objects.rb`: `TextObjects`; `call`, `object?`, `NAMES`, `word`, `sentence`, `paragraph`, `pair`, `quote`.
+- `carat/domain/runs.rb`: `Runs`, the character class runs of a line; `add`, `class_at`, `index_of`.
+- `carat/use_cases/move.rb`: `Move#call`.
+- `carat/use_cases/actions/motion_handler.rb`: `MotionHandler.register`, registers `Motions::NAMES` and `FIND_NAMES`.
+- `carat/use_cases/actions/text_object_handler.rb`: `TextObjectHandler.register`, registers `TextObjects::NAMES`.
+
+Tests: `test/editor_motions.rb`, `test/editor_text_objects.rb`.
+
+Designs: `command-grammar` (Motions return a target with its kind; Text objects return a range).
+
+Rules: a new motion needs a binding in `normal`, `operator_pending`, `visual`, `visual_line`, and `visual_block`, a row in `docs/compatibility.md`, and a table-driven test.
+
+Bench: `lh`, `j`, `w`, `lh-utf8`, `j-utf8`, `long-ascii`, `long-utf8`.
+
+## 7. Operators and registers
+
+What: the operators over motions, text objects, and doubled forms, the standalone edits, and the registers they write and read.
+
+Flow: `OperatorHandler` (kind `:operator`, the five pending operators) and `EditHandler` (`x s S C D Y J p P r ~`) run `Operate#call` or a standalone use case; `Operate` resolves the range from `Motions.call` or `TextObjects.call`, runs `Operators.extract`, `delete`, `shift`, `recase`, or `join`, and writes `Registers#yank` or `Registers#delete` by Vim's rules; `PutRegister` reads `Registers#read` and calls `Operators.put` or `put_block`.
+
+Files:
+
+- `carat/domain/operators.rb`: `Operators`; `extract`, `delete`, `put`, `join`, `extract_block`, `delete_block`, `put_block`, `shift_block`, `shift`, `unindent`, `recase`, `make_indent`.
+- `carat/domain/operator_kind.rb`: `OperatorKind`, the five operator action names.
+- `carat/domain/register_entry.rb`: `RegisterEntry` (charwise, linewise, or blockwise); `charwise`, `lines`, `block`, `linewise?`, `blockwise?`, `joined`.
+- `carat/domain/registers.rb`: `Registers` (unnamed, named, numbered, small delete, black hole, read-only `. : % /`); `yank`, `delete`, `read`, `read_with_file`, `numbered_at`, `valid_name?`, `read_only?`.
+- `carat/use_cases/operate.rb`: `Operate#call`; refuses a read-only register with `E354`.
+- `carat/use_cases/replace_chars.rb`: `ReplaceChars#call` (`r`).
+- `carat/use_cases/toggle_case.rb`: `ToggleCase#call` (`~`).
+- `carat/use_cases/put_register.rb`: `PutRegister#call` (`p`, `P`).
+- `carat/use_cases/join_lines.rb`: `JoinLines#call` (`J`).
+- `carat/use_cases/actions/operator_handler.rb`: `OperatorHandler.register`.
+- `carat/use_cases/actions/edit_handler.rb`: `EditHandler.register`, the standalone edits over a fixed operand.
+- `carat/use_cases/ex/register_command_handler.rb`: `RegisterCommandHandler` (`:registers`, `:display`); `line`.
+
+Tests: `test/domain_registers.rb`, `test/editor_operators.rb`, `test/editor_registers.rb`.
+
+Designs: `command-grammar` (Operators are functions over ranges), `undo-and-registers` (Registers), `visual-modes` (Registers get a kind), `use-case-boundaries` (The splits; Shared logic).
+
+Rules: CLAUDE.md Coding conventions (use cases expose one `call`; shared logic in the domain).
+
+Bench: `ddp`, `dd`, `r`, `ciw`.
+
+## 8. Edit path, transactions, and insert mode
+
+What: every change to buffer text goes through one splice in `Buffer`, is recorded, and is grouped into a transaction per command, insert session, or plugin edit request; insert mode types through it.
+
+Flow: a use case calls a `Buffer` primitive (`insert`, `delete`, `replace`, `set_lines`, `reload`), which ends in the private splice: `LineSplice.apply` changes the line array in place, a `ChangeRecord` joins the open `Transaction`, the sign layers and the syntax cache shift. `Dispatcher` opens `begin_transaction` and closes `commit_transaction` (only when the open returned true); `LeaveInsert` closes the insert session's. A closed transaction goes to the file buffer's `UndoTree` and through `BufferFeed#push` as a `BufferNotice` to `TabList#clamp_cursors` and the plugin host. Insert mode: `InsertModeHandler` enters, `InsertTextHandler` routes typed keys to `InsertText`, `BreakLine`, `EraseCharacter`, and `InsertTab`, each noting its step in `LastChange`; `LeaveInsert` repeats a block insert and stores the typed text in the `.` register.
+
+Files:
+
+- `carat/domain/buffer.rb`: `Buffer` record; the primitives `insert`, `delete`, `replace`, `set_lines`, `reload`; `begin_transaction`, `commit_transaction`, `transaction_open?`, `begin_history`, `start_at`, `transaction_mark`; `revert`, `reapply`, `revert_to`; `modified?`, `mark_saved`, `mark_unsaved`, `settle_saved`; `rename`, `detect_filetype`, `assign_filetype`; `from_text`, `to_text`, `line`, `line_count`, `text_of`, `lines_of`, `first_nonblank`, `indent_of`; `place_sign`, `clear_signs`, `sign_at`; `scratch?`.
+- `carat/domain/line_splice.rb`: `LineSplice.apply` (per-line `insert` and `delete_at` up to `SMALL` lines, one tail move above) and `shift_marks`.
+- `carat/domain/change_record.rb`: `ChangeRecord` (buffer id, row, removed and inserted lines sharing the buffer's strings); `delta`.
+- `carat/domain/transaction.rb`: `Transaction` (records, cursor before and after, cause, merged row span, history flag); `add`, `seal`, `truncate`, `span`, `record_at`, `empty?`.
+- `carat/domain/buffer_feed.rb`: `BufferFeed`, the one sink of opens, closes, renames, and closed transactions, carrying the command's time and `undolevels`; `push`, `notice_at`, `count`, `clear`, `note`.
+- `carat/domain/buffer_notice.rb`: `BufferNotice`; `change?`.
+- `carat/domain/buffer_list.rb`: `BufferList` (listed buffers, their ids, the feed, keep or release policy); `add`, `remove`, `release`, `load`, `for_path`, `with_id`, `scratch_for`, `hidden_modified`, `any_modified?`, `close_window`, `close_tab`.
+- `carat/use_cases/insert_text.rb`: `InsertText#call`.
+- `carat/use_cases/break_line.rb`: `BreakLine#call` (Enter).
+- `carat/use_cases/erase_character.rb`: `EraseCharacter#call(state, forward)` (Backspace, Delete).
+- `carat/use_cases/insert_tab.rb`: `InsertTab#call`.
+- `carat/use_cases/leave_insert.rb`: `LeaveInsert#call`.
+- `carat/use_cases/actions/insert_mode_handler.rb`: `InsertModeHandler`, entering insert mode itself (`i a I A o O`).
+- `carat/use_cases/actions/insert_text_handler.rb`: `InsertTextHandler`.
+
+Tests: `test/domain_buffer.rb`, `test/domain_edits.rb` (splice, records, transactions, derived modified flag), `test/domain_buffer_list.rb`, `test/editor_insert.rb`, `test/editor_transactions.rb` (one transaction per command, insert session, reload, and plugin edit).
+
+Designs: `edit-pipeline` (all Decisions; Measured result), `state-and-ports` (Cursor clamping from the change records), `plugin-host-hardening` (Events from the edit path).
+
+Rules: CLAUDE.md Coding conventions (buffer text changes only through the primitives; never mutate a line string; the modified flag is derived; who opens transactions); `docs/architecture.md` section 4.1; the lint rule on `lines`.
+
+Bench: `insert`, `ddp`, `memory`, `memory-10k`.
+
+## 9. Undo and repeat
+
+What: the undo tree per buffer with branches and time travel, and the dot command.
+
+Flow: `HistoryHandler` (`u`, `<C-r>`, `U`, `g-`, `g+`, `.`) and `HistoryCommandHandler` (`:undo`, `:redo`, `:undolist`, `:earlier`, `:later`) run `UndoStep`, `RedoStep`, `UndoToState`, `TravelHistory`, `RestoreLine`, or `ListUndo`; each asks `UndoTree` for a path (`undo_path`, `redo_path`, `path_to`) and `WalkHistory#call` replays it inside `Buffer#begin_history` through `revert` and `reapply`, applying Neovim's cursor rule and messages. `RepeatLast#call` reruns `LastChange`'s handler with a new count, the next numbered register, a visual region of the same size, and its insert steps.
+
+Files:
+
+- `carat/domain/undo_tree.rb`: `UndoTree`, a flat table by state number; `push`, `undo_step`, `redo_to`, `undo_seq`, `redo_seq`, `path_to`, `undo_path`, `redo_path`, `nearest`, `leaves`, `mark_saved`, `mark_unsaved`, `at_saved?`, `note_line`, trimming at `undolevels`.
+- `carat/domain/last_change.rb`: `LastChange`; `start`, `begin_session`, `add_text`, `add_action`, `stop`, `measure`, `step_at`, `text_at`.
+- `carat/use_cases/history/walk_history.rb`: `WalkHistory#call` (clock read for "seconds ago"; `Already at oldest change`).
+- `carat/use_cases/history/undo_step.rb`: `UndoStep#call` (`u`).
+- `carat/use_cases/history/redo_step.rb`: `RedoStep#call` (`<C-r>`, `:redo`).
+- `carat/use_cases/history/undo_to_state.rb`: `UndoToState#call` (`:undo N`).
+- `carat/use_cases/history/travel_history.rb`: `TravelHistory#call` (`g-`, `g+`, `:earlier`, `:later`).
+- `carat/use_cases/history/restore_line.rb`: `RestoreLine#call` (`U`).
+- `carat/use_cases/history/list_undo.rb`: `ListUndo#call` (`:undolist`).
+- `carat/use_cases/repeat_last.rb`: `RepeatLast#call`.
+- `carat/use_cases/actions/history_handler.rb`: `HistoryHandler.register`.
+- `carat/use_cases/ex/history_command_handler.rb`: `HistoryCommandHandler.register`, `digits?`.
+
+Tests: `test/domain_undo_tree.rb`, `test/editor_undo.rb`, `test/editor_repeat.rb`.
+
+Designs: `undo-and-registers` (The undo tree is a flat table; Applying a state goes through the splice; Saved state; Records on one line are merged; Time and undolevels; The U line; The dot command records commands, not keys; Measured result), `use-case-boundaries` (The splits).
+
+Rules: undo applies through the splice as a history transaction that observers see but that makes no state.
+
+Bench: `undo`, `undo-line`, `dot-r`, `dot-dd`, `dot-ciw`.
+
+## 10. Visual modes
+
+What: charwise, linewise, and blockwise selection, with every motion and text object and the operators on the selection.
+
+Flow: `VisualModeHandler` runs `StartVisual` (enter, switch, leave), `ReselectVisual` (`gv`), `SwapVisualEnds` (`o`, `O`), and `ExtendVisual` (text objects); the anchor and the last selection live on the `Window`, and `EditorState#selection` resolves them to a `Selection`. In a visual mode the five operators complete at once; `SelectionHandler` runs one use case per operator, which use `SelectionCut.call`, the `Operators` block functions, and `BlockInsert` (repeated by `LeaveInsert`).
+
+Files:
+
+- `carat/domain/selection.rb`: `Selection`; `none`, `cells`, `active?`, `start`, `finish`, `top`, `bottom`, `covers?`, `char_range`, `line_range`, `block`, `span`, `lines_or_block`.
+- `carat/domain/span.rb`: `Span`, one row's columns; `empty`.
+- `carat/domain/block.rb`: `Block` of display columns; `span`, `short?`, `reaching_rows`.
+- `carat/domain/block_insert.rb`: `BlockInsert`, the repetition a blockwise `I`, `A`, or `c` owes; `start`, `row_at`, `clear`.
+- `carat/domain/selection_cut.rb`: `SelectionCut.call`, shared by visual delete, change, and put.
+- `carat/use_cases/visual/start_visual.rb`: `StartVisual#call`.
+- `carat/use_cases/visual/reselect_visual.rb`: `ReselectVisual#call`.
+- `carat/use_cases/visual/swap_visual_ends.rb`: `SwapVisualEnds#call`.
+- `carat/use_cases/visual/extend_visual.rb`: `ExtendVisual#call`.
+- `carat/use_cases/visual/delete_selection.rb`, `carat/use_cases/visual/yank_selection.rb`, `carat/use_cases/visual/change_selection.rb`, `carat/use_cases/visual/shift_selection.rb`, `carat/use_cases/visual/join_selection.rb`, `carat/use_cases/visual/recase_selection.rb`, `carat/use_cases/visual/insert_at_selection.rb`, `carat/use_cases/visual/put_over_selection.rb`: one `call` per operator, the uppercase keys as a shape or a flag.
+- `carat/use_cases/actions/visual_mode_handler.rb`: `VisualModeHandler.register`.
+- `carat/use_cases/actions/selection_handler.rb`: `SelectionHandler.register`.
+
+Tests: `test/domain_selection.rb`, `test/editor_visual.rb`.
+
+Designs: `visual-modes` (all Decisions), `use-case-boundaries` (The splits; Shared logic).
+
+Rules: the visual keys whose meaning differs are `visual.*` actions; motions bind in the three visual maps.
+
+## 11. Windows and tabs
+
+What: the split layout per tab page, the `<C-w>` commands, tab pages, and their ex commands.
+
+Flow: `WindowHandler` (`<C-w>` keys, equalizing itself) and `WindowCommandHandler` (`:sp`, `:vs`, `:new`, `:vnew`, `:close`, `:only`) run `SplitWindow`, `CloseWindow`, `CloseOtherWindows`, and `FocusWindow` with a `FocusRequest`; `TabHandler` (`gt`, `gT`) and `TabCommandHandler` (the `:tab*` commands) run `OpenTab`, `CloseTab`, `CloseOtherTabs`, and `SwitchTab` with a `TabRequest`. They change `Layout` (`split`, `split_edge`, `close`, `neighbour`, `equalize`) in the current `TabPage` and `TabList`; `BufferList#close_window` lets go of buffers. `ArrangeView#call` runs after every key and before every render: `Layout#arrange` for the screen size and every window scrolled to its cursor.
+
+Files:
+
+- `carat/domain/window.rb`: `Window` record (id, buffer, cursor, scroll, rectangle, fixed width, visual anchor, last selection); `show`, `copy_from`, `gutter_width`, `scroll_to_row`, `scroll_to_col`.
+- `carat/domain/layout_node.rb`: `LayoutNode`; `leaf?`.
+- `carat/domain/layout.rb`: `Layout`, a flat node table; `split`, `split_edge`, `close`, `leaves`, `leaf_of`, `neighbour`, `equalize`, `arrange`, `number_of`, `first_leaf`, `fixed_width?`.
+- `carat/domain/tab_page.rb`: `TabPage`; `window`, `window_count`, `focus`, `previous?`.
+- `carat/domain/tab_list.rb`: `TabList`; `tab`, `window`, `add_tab`, `remove_tab`, `next_tab`, `previous_tab`, `adopt`, `window_tab`, `total_windows`, `shown?`, `clamp_cursors`.
+- `carat/use_cases/arrange_view.rb`: `ArrangeView#call`.
+- `carat/use_cases/windows/split_window.rb`: `SplitWindow#call`; every new window gets its id.
+- `carat/use_cases/windows/open_side_window.rb`: `OpenSideWindow#call`, a plugin's fixed-width side window.
+- `carat/use_cases/windows/close_window.rb`, `carat/use_cases/windows/close_other_windows.rb`: `call`.
+- `carat/use_cases/windows/focus_window.rb`: `FocusWindow#call`; `carat/use_cases/windows/focus_request.rb`: `FocusRequest` (target, count); `steps`.
+- `carat/use_cases/windows/open_tab.rb`, `carat/use_cases/windows/close_tab.rb`, `carat/use_cases/windows/close_other_tabs.rb`: `call`.
+- `carat/use_cases/windows/switch_tab.rb`: `SwitchTab#call`; `carat/use_cases/windows/tab_request.rb`: `TabRequest`; `counted?`.
+- `carat/use_cases/actions/window_handler.rb`: `WindowHandler.register`.
+- `carat/use_cases/actions/tab_handler.rb`: `TabHandler.register`.
+- `carat/use_cases/ex/window_command_handler.rb`: `WindowCommandHandler.register`.
+- `carat/use_cases/ex/tab_command_handler.rb`: `TabCommandHandler.register`.
+
+Tests: `test/domain_layout.rb`, `test/domain_tab_list.rb`, `test/use_cases_arrange_view.rb`, `test/editor_windows.rb`, `test/editor_tabs.rb`.
+
+Designs: `windows-and-splits` (all Decisions), `render-core` (ArrangeView and the screen size), `use-case-boundaries` (Variants).
+
+Rules: CLAUDE.md Coding conventions (variants through one `call`, as a `Data` request when they carry a count). The buffer list commands are still to come (Delivered changes).
+
+## 12. Ex commands, the command line, and files
+
+What: command-line mode, the ex grammar and names, the ex table, and the file commands (`:w`, `:q`, `:e`, and their families).
+
+Flow: `CommandLineHandler` runs `EnterCommandLine` (`:`), `EditCommandLine` (typed text), `EraseCommandLine`, `CancelCommandLine`, and `ExecuteCommandLine` (Enter; a plugin's open prompt gets Enter and cancel; an executed line becomes the `:` register); `ExecuteCommandLine` calls the `CommandRunner`, `ExecuteEx#call`, which parses with `ExGrammar.parse` into an `ExCommand`, finds the first handler whose `ExName` matches in the `ExTable` (`E492` otherwise), and runs `ExHandler#call(state, ex_command)`. `FileCommandHandler` runs `OpenFile`, `SaveFile`, `SaveAll`, `Quit`, and `QuitAll`.
+
+Files:
+
+- `carat/domain/ex_command.rb`: `ExCommand` value (`name`, `bang`, `args`).
+- `carat/domain/ex_grammar.rb`: `ExGrammar.parse`, `letter?`.
+- `carat/domain/ex_name.rb`: `ExName` in Vim's `name[suffix]` notation; `parse`, `match?`, `to_s`; the one matcher for core and plugin commands.
+- `carat/use_cases/ex/command_runner.rb`: `CommandRunner`, the interface the command line and the plugin host depend on.
+- `carat/use_cases/ex/execute_ex.rb`: `ExecuteEx#call`.
+- `carat/use_cases/ex/ex_handler.rb`: `ExHandler`; `matches?`, `call`.
+- `carat/use_cases/ex/ex_table.rb`: `ExTable`, handlers in order of precedence; `register`, `find`, `names`.
+- `carat/use_cases/ex/file_command_handler.rb`: `FileCommandHandler.register`.
+- `carat/use_cases/enter_command_line.rb`, `carat/use_cases/edit_command_line.rb`, `carat/use_cases/erase_command_line.rb`, `carat/use_cases/cancel_command_line.rb`, `carat/use_cases/execute_command_line.rb`: `call`.
+- `carat/use_cases/actions/command_line_handler.rb`: `CommandLineHandler.register`.
+- `carat/use_cases/files/open_file.rb`: `OpenFile#call` (`:e!` reloads through `Buffer#reload`).
+- `carat/use_cases/files/save_file.rb`: `SaveFile#call` (`E382` for a scratch buffer, `mark_saved`, `buffer_save` to the host).
+- `carat/use_cases/files/save_all.rb`: `SaveAll#call`, the write-all loop of `:wa`, `:wqa`, `:xa`.
+- `carat/use_cases/files/quit.rb`: `Quit#call(state, way)` with `:quit`, `:force`, or `:written`; a file window beside only side windows counts as the last.
+- `carat/use_cases/files/quit_all.rb`: `QuitAll#call` (`:qa`).
+- `carat/use_cases/files/probe_path.rb`: `ProbePath#call`, the one call of `FilePort#stat`.
+- `carat/use_cases/files/make_path.rb`, `carat/use_cases/files/rename_path.rb` (the listed buffers following), `carat/use_cases/files/delete_path.rb`: `call`; make, rename, and delete inside a root with every check, used by the plugin file requests.
+
+Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`.
+
+Designs: `ex-write-quit-all` (all Decisions), `dependency-injection` (Ex names; ExecuteEx moves to use_cases/ex), `editor-foundation` (Use cases), `plugin-explorer` (The file requests are validated in the host), `use-case-boundaries` (The splits).
+
+Rules: CLAUDE.md Coding conventions (a new ex command is an `ExHandler` registered in the order of `docs/compatibility.md`; every Neovim command gets a row there and a table-driven test); `docs/architecture.md` section 5.2.
+
+## 13. Rendering
+
+What: paints the state into flat frames from decoded lines and writes only the changed cells to the terminal.
+
+Flow: `EditorAssembly#render` runs `ArrangeView` and `HighlightView`, then `FramePresenter#call(state)` paints every window of the current tab page (sign column, scratch title, status segments, the visual selection, the syntax tokens from `SyntaxCache#lookup`), the tab line, and the message row from decoded lines (`LineCache#fetch`, `DecodedLine.decode`) into one of two `Frame`s in turn, painting a row only when `PaintedRows` says what it shows changed and recording dirty rows and a full-width window's scroll; `ScreenPresenter#present(frame)` writes the changed runs of the dirty rows, scroll regions, or a full redraw, in one `TerminalPort#write`, each group in its `SgrTable` sequence.
+
+Files:
+
+- `carat/adapters/frame_presenter.rb`: `FramePresenter#call`, `display_col`, `display_width`; reads the state only; a message of several lines over the bottom rows with the hit-enter line.
+- `carat/adapters/painted_rows.rb`: `PaintedRows`, what every window row segment of a frame shows; `same?`, `store`, `invalidate`, `painted?`.
+- `carat/adapters/screen_presenter.rb`: `ScreenPresenter`; `enter`, `leave`, `present`.
+- `carat/domain/frame.rb`: `Frame`, cells in three flat integer arrays; `put`, `put_code`, `put_within`, `fill`, `blank`, `set_hl`, `same_row?`, `dirty?`, `dirty_rows`, `reset_rows`, `mark_all_dirty`, `add_scroll`, `row_text`.
+- `carat/domain/cell.rb`: `Cell`, a value view of one cell for tests.
+- `carat/domain/utf8.rb`: `Utf8`; `size_at`, `code_at`, `codes`; decodes by walking bytes.
+- `carat/domain/display_width.rb`: `DisplayWidth`; `of`, `of_char`, `column`, `col_at`, `private_use?`, `control?`; the private use areas are one cell wide.
+- `carat/domain/decoded_line.rb`: `DecodedLine`, a line's code points and display columns; `decode`, `plain?`, `code`, `col`, `width`, `index_at`.
+- `carat/domain/identity_table.rb`: `IdentityTable`, keyed by object identity; `find`, `store`, `clear`.
+- `carat/domain/line_cache.rb`: `LineCache`, decoded lines of the visible rows in two generations, shared by `ArrangeView` and the presenter; `fetch`, `turn`, `holds?`.
+
+Tests: `test/domain_frame.rb`, `test/domain_line_cache.rb`, `test/adapters_frame_presenter.rb`, `test/adapters_dirty_rows.rb`, `test/adapters_screen_presenter.rb`, `test/editor_screen.rb`.
+
+Designs: `render-core` (all Decisions; Measured result), `escape-c1-control-codes` (all Decisions), `windows-and-splits` (Rendering), `visual-modes` (Rendering).
+
+Rules: the presenters read the state only; `docs/architecture.md` section 8.2.
+
+Bench: `lh`, `j`, `long-ascii`, `long-utf8`, `open-plain`; `make profile` for `j` and `lh`; `make bench-budget` on `lh`.
+
+## 14. Syntax highlighting
+
+What: the highlight engine in the core, each language a plugin: filetype detection, highlight groups, the syntax cache, themes, and color output.
+
+Flow: a buffer detects its `filetype` when made or renamed (`Filetype.detect`); before every render `HighlightView#call` brings the `SyntaxCache` of every visible buffer up to date for its window, tokenizing only the visible rows and those above them through `PluginSyntax#tokenize`, which calls the first enabled plugin declaring the syntax (`Plugin#tokenize`, here `Ruby::Plugin` and `Tokenizer#call`) on the guarded path and validates the tokens; the splice invalidates the cache from the changed row until the state settles; `FramePresenter` reads `SyntaxCache#lookup` and `ScreenPresenter` writes each group in its `SgrTable` sequence from the `Theme` at the terminal's `ColorDepth`. `:syntax` and `:set filetype=`/`syntax=` switch it.
+
+Files:
+
+- `carat/domain/highlight.rb`: `Highlight` group ids (editor groups, `SIGN_COLUMN`, thirty syntax groups from `SYNTAX_FIRST` with Neovim's `NAMES`); `syntax_id`, `syntax?`, `name_of`.
+- `carat/domain/theme.rb`: `Theme`, per group 24-bit and 16-color colors and attributes; `from_rows`, `fg`, `bg`, `fg16`, `bg16`, `attr`.
+- `carat/domain/themes.rb`: `Themes`; `known?`, `find`, `dark`, `light` (`carat-dark`, `carat-light`).
+- `carat/domain/color_depth.rb`: `ColorDepth.detect` from `COLORTERM` and `TERM`.
+- `carat/domain/filetype.rb`: `Filetype`; `detect`, `from_name`, `from_shebang`.
+- `carat/domain/syntax_line.rb`: `SyntaxLine`, one line's tokens for a start state with its end state.
+- `carat/domain/syntax_table.rb`: `SyntaxTable`, the identity table of them; `find`, `store`, `clear`.
+- `carat/domain/syntax_cache.rb`: `SyntaxCache`; `prepare`, `active?`, `drop`, `start_of`, `find`, `store`, `advance`, `shift`, `lookup`.
+- `carat/use_cases/syntax/highlight_view.rb`: `HighlightView#call`, `tokenized` (read by the benchmark); a failing plugin's buffer dropped or taken over by the next plugin in the same frame.
+- `carat/use_cases/plugins/plugin_syntax.rb`: `PluginSyntax`; `provider`, `tokenize`, `copied_tokens`.
+- `carat/use_cases/ex/syntax_command_handler.rb`: `SyntaxCommandHandler` (`:syntax on`, `enable`, `off`).
+- `carat/use_cases/ex/set_command_handler.rb`: `SetCommandHandler` (`:set` for `filetype` and `syntax` only).
+- `carat/adapters/sgr_table.rb`: `SgrTable`; `from_theme`, `at`, `sequence`, `index_256`.
+- `carat/plugins/ruby/plugin.rb`: `Ruby::Plugin`; `manifest`, `activate`, `tokenize`.
+- `carat/plugins/ruby/tokenizer.rb`: `Tokenizer#call`, the Ruby tokenizer.
+- `carat/plugins/ruby/line_state.rb`: `LineState`, the documented integer state encoding (`pack`, `mode`, `heredoc`, `frame`, and their fields).
+- `carat/plugins/ruby/keywords.rb`: `Keywords`; `find`, `lookup`, `kind`.
+- `carat/plugins/ruby/groups.rb`: `Groups`, the integer group constants the tokenizer emits (`COMMENT`, `CONSTANT`, `STRING`, and the rest).
+
+Tests: `test/domain_filetype.rb`, `test/domain_theme.rb`, `test/domain_syntax_cache.rb`, `test/use_cases_plugin_syntax.rb`, `test/plugins_ruby.rb`, `test/editor_syntax.rb`.
+
+Designs: `syntax-highlighting` (all ten Decisions).
+
+Rules: `docs/architecture.md` section 4.2; the plugin rules of area 15. Range highlights, virtual text, other languages, the rest of `:set`, user themes, and semantic highlighting are in `docs/backlog.md`.
+
+Bench: `lh-ruby`, `j-ruby`, `insert-ruby`, `heredoc-ruby`, `string-ruby`, `quote-ruby`, `open-ruby`, `G-ruby`.
+
+## 15. Plugin host and API
+
+What: the plugin API every plugin requires and the host that registers plugins, routes actions, ex commands, and prompt answers to them, delivers events, and serves their requests.
+
+Flow: `EditorAssembly` registers `Plugins::Registry.all` with `PluginHost#register` (`PluginRegistry#register`, every manifest rule in `ManifestCheck.check`) and calls `activate_all` once every ex command is registered. A `plugin.<name>.<action>` binding reaches `PluginActionHandler` through the action table's namespace and `PluginHost#action` → `PluginRouter#action`; an unknown ex command reaches `PluginCommandHandler` (registered last) → `PluginHost#command`. Every call into a plugin goes through `Guarded#guarded`, which disables and cleans up a plugin that raises. A plugin calls its `PluginLink` (a `PluginApi::Host`), which refuses a disabled plugin and forwards to `BufferRequests`, `WindowRequests`, `FileRequests`, or `UiRequests`. After each key `HandleKey` calls `PluginHost#observe`; `PluginEvents` compares the state, queues events caused during plugin calls, and delivers them after the outermost call in bounded rounds.
+
+Files:
+
+- `carat/plugin_api.rb`: `Carat::PluginApi` (`VERSION` 2.0, `EVENTS`, `OPTION_TYPES`, `SIDES`), the values `Manifest`, `Event`, `Context`, `Command`, `Edit`, `Response`, `WindowResponse`, `TextResponse`, `BufferView`, `FileInfo`, `Input`, the path functions `Paths` (`normalize`, `join`, `dirname`, `basename`, `relative`, `inside?`), the `Host` base class (one method per request: `read_buffer`, `edit_buffer`, `open_scratch`, `open_in_split`, `run_ex`, `list_dir`, `make_file`, `prompt`, `syntax_group`, and the rest), and the `Plugin` base class (`manifest`, `activate`, `deactivate`, `on_event`, `on_action`, `on_command`, `on_input`, `tokenize`).
+- `carat/domain/manifest_check.rb`: `ManifestCheck.check` and its `check_*` rules (API version, shapes, actions, commands, events, bindings, options, filetypes).
+- `carat/domain/path_policy.rb`: `PathPolicy`; `create_problem`, `rename_problem`, `inside?`, `shown`.
+- `carat/domain/path_info.rb`: `PathInfo` value `FilePort#stat` returns; `missing`, `real_directory?`.
+- `carat/domain/plugin_ui.rb`: `PluginUi`, status segments and the open prompt; `open_prompt`, `close_prompt`, `prompting?`, `segment`, `drop`.
+- `carat/domain/sign_layer.rb`: `SignLayer`, one plugin's signs in one buffer, moved with the lines; `place`, `glyph_at`.
+- `carat/use_cases/plugins/plugin_host.rb`: `PluginHost`, the facade the core calls; `register`, `activate_all`, `action`, `command?`, `command`, `answer`, `observe`, `saved`, `resized`, `option`, `enabled?`, `errors`.
+- `carat/use_cases/plugins/plugin_registry.rb`: `PluginRegistry`; `register`, `activate_all`, `deactivate_all`, `disable` (cleanup), `refusal`, `enter`, `leave`, `depth`, `busy?`, `cause`, `owner_of_command`.
+- `carat/use_cases/plugins/plugin_entries.rb`: `PluginEntries`, the list with a typed reader; `add`, `entry`, `find`.
+- `carat/use_cases/plugins/plugin_entry.rb`: `PluginEntry` record; `subscribed?`, `command?`, `tokenizes?`.
+- `carat/use_cases/plugins/plugin_router.rb`: `PluginRouter`; `action`, `command?`, `command`, `answer`.
+- `carat/use_cases/plugins/plugin_events.rb`: `PluginEvents`; `observe`, `flush`, `saved`, `resized`.
+- `carat/use_cases/plugins/pending_event.rb`: `PendingEvent`; `for?`.
+- `carat/use_cases/plugins/plugin_link.rb`: `PluginLink`, the per-plugin `Host`; one override per `Host` method.
+- `carat/use_cases/plugins/buffer_requests.rb`: `BufferRequests`; `read_buffer`, `edit_buffer` (validated item by item, one transaction), `move_cursor`, `place_sign`, `clear_signs`.
+- `carat/use_cases/plugins/window_requests.rb`: `WindowRequests`; `open_scratch`, `set_scratch_lines`, `close_scratch`, `focus_window`, `open_file`, `open_in_split`, `open_in_tab`, `editing_window`, `scratch_window`.
+- `carat/use_cases/plugins/file_requests.rb`: `FileRequests`; `list_dir`, `stat`, `make_file`, `make_dir`, `rename_path`, `delete_path`.
+- `carat/use_cases/plugins/ui_requests.rb`: `UiRequests`; `message`, `set_status`, `prompt`, `icon`, `syntax_group`, `option`, `working_directory`, `run_ex`.
+- `carat/use_cases/plugins/boundary.rb`: `Boundary.copied_lines`, the copies of strings crossing the boundary.
+- `carat/use_cases/concerns/guarded.rb`: `Guarded#guarded`, the one guarded path into a plugin.
+- `carat/use_cases/actions/plugin_action_handler.rb`: `PluginActionHandler.register`.
+- `carat/use_cases/ex/plugin_command_handler.rb`: `PluginCommandHandler`; `matches?`, `call`.
+- `carat/plugins/registry.rb`: generated from `config/plugins.caratrc`; `Registry.all`, one `require_relative` and one constructor per plugin; never edited by hand.
+- `carat/plugins/hello/plugin.rb`: `Hello::Plugin`, the smallest example and a test fixture outside the registry.
+
+Tests: `test/domain_plugin_manifest.rb`, `test/use_cases_plugins.rb`, `test/use_cases_plugin_files.rb`, `test/use_cases_plugin_hardening.rb`, `test/editor_plugins.rb`.
+
+Designs: `plugin-host` (all Decisions), `plugin-host-hardening` (all Decisions), `plugin-explorer` (The API grows by requests; The prompt reuses command-line mode; Window rules), `caratrc-config` (Plugin manifests use lines), `use-case-boundaries` (The plugin side).
+
+Rules: CLAUDE.md Coding conventions (plugins require only `carat/plugin_api.rb`; ids across the API; strings copied; a new request is a `Host` method, a `PluginLink` override, and a family method with a minor version bump; every plugin call guarded; icons by name); `docs/architecture.md` section 9; `docs/plugins.md`. The host leaving `use_cases/plugins/` is in `docs/backlog.md`.
+
+## 16. Explorer plugin
+
+What: the built-in file tree in a side window, with icons, follow, and file operations inside a root.
+
+Flow: `<leader>e`, `:Explorer`, or `:ExplorerFind` reach `Explorer::Plugin#on_action` or `on_command` through the host; the plugin keeps a `Tree` of `Node`s, renders it into a scratch buffer with `Host#set_scratch_lines` and icons by name (`FileIcons.name_for`, `Host#icon`), answers the tree keys (`<CR> l h o s v t a r d R H - C q ?`) in its scratch keymap, opens files through `open_file`, `open_in_split`, and `open_in_tab`, asks for names through `prompt` and `on_input`, and follows the editing window on `on_event`.
+
+Files:
+
+- `carat/plugins/explorer/plugin.rb`: `Explorer::Plugin`; `manifest`, `activate`, `deactivate`, `on_event`, `on_action`, `on_command`, `on_input`.
+- `carat/plugins/explorer/tree.rb`: `Tree`; `build`, `lines`, `expand`, `collapse`, `toggle`, `reroot`, `reveal`, `mark`, `moved`, `toggle_hidden`, `at`, `row_of`, `parent_row`.
+- `carat/plugins/explorer/node.rb`: `Node` record; `root?`.
+- `carat/plugins/explorer/file_icons.rb`: `FileIcons`; `name_for`, `file_type`.
+- `carat/domain/icons.rb`: `Icons`, the icon table per set and the `icons` option; `glyph`, `table`, `set?`.
+
+Tests: `test/domain_icons.rb`, `test/plugins_explorer.rb` (the tree over a fake host), `test/editor_explorer.rb` (every key of the file tree).
+
+Designs: `plugin-explorer` (all Decisions).
+
+Rules: the plugin rules of area 15; its actions are in `docs/actions.md` and its `plugin.explorer.*` lines in `config/default.caratrc`.
+
+Bench: `lh-explorer`, `j-explorer`.
+
+## 17. Ports and drivers
+
+What: the interfaces the core uses to reach the terminal, files, clock, configuration, and signals, and the drivers that implement them.
+
+Flow: each port is a class whose methods raise `NotImplementedError`; drivers subclass them and are built only in `bin/carat.rb`; doubles (area 18) subclass them for tests. `MainLoop#run` polls the `SignalPort` (terminate, resize), renders on a resize, and pumps input.
+
+Files:
+
+- `carat/ports/terminal_port.rb`: `TerminalPort`; `size`, `read_key`, `write`, `colors`, `enter`, `leave`.
+- `carat/ports/clock_port.rb`: `ClockPort`; `now`, `sleep`.
+- `carat/ports/file_port.rb`: `FilePort`; `read`, `write`, `exist?`, `list`, `stat` (a `Domain::PathInfo`), `mkdir`, `rename`, `delete`, `cwd`, `home`.
+- `carat/ports/config_port.rb`: `ConfigPort#load`, the `Domain::Config` of every configuration file.
+- `carat/ports/signal_port.rb`: `SignalPort`; `install`, `terminated?`, `resized?`, `acknowledge_resize`.
+- `carat/drivers/ansi_terminal.rb`: `AnsiTerminal`; reads `COLORTERM` and `TERM` once for `colors`, the only environment read.
+- `carat/drivers/disk_files.rb`: `DiskFiles`, the `FilePort` driver.
+- `carat/drivers/monotonic_clock.rb`: `MonotonicClock`.
+- `carat/drivers/signals.rb`: `Signals`; INT and TERM terminate, WINCH resizes, flags only.
+- `carat/drivers/main_loop.rb`: `MainLoop#run`.
+- `carat/domain/json.rb`: `Carat::Json` (`parse`, `generate`, `pretty_generate`), for JSON-RPC; the configuration is not JSON.
+
+Tests: `test/drivers_main_loop.rb` (a resize, a terminate, and `:q` over the signal double, and the driver's flags), `test/json.rb`.
+
+Designs: `state-and-ports` (Signals; The stat value; Configuration), `editor-foundation` (Ports, adapters, drivers, doubles).
+
+Rules: `docs/architecture.md` sections 2.1 (signal handlers set a flag; `STDIN.raw` single call; `Process.spawn` with `IO.pipe`), 6, and 8.4. An overridden port method carries `# @rbs` parameter lines, not an applied return type.
+
+## 18. Tests and benchmarks
+
+What: the assertion harness, the doubles, the test runner, the lint and smoke tests, and the key benchmark.
+
+Flow: `make test-build` compiles `test/runner/run_all.rb`, which requires every test module, into one program; `make test-run` runs each test by name in its own process through `tools/run_tests.sh` and compares its merged output with its `.expected` snapshot; `make test-one T=test/NAME.rb` compiles one test alone (its `main if __FILE__ == $0` guard). Editor tests drive `EditorHarness` over the doubles with keys in Vim notation. `make bench` compiles `bench/keys.rb` and runs its scenarios through `bench/run.sh`; `make bench-budget` checks `lh`'s allocations; `make profile` runs `bench/profile.sh`.
+
+Files:
+
+- `carat/testing.rb`: `Carat::Testing`; `assert_equal`, `assert_true`, `assert_raises`, `table`, `finish`.
+- `carat/test_support.rb`: the require graph of tests and the benchmark, `carat.rb` and the doubles.
+- `carat/doubles/fake_terminal.rb`: `FakeTerminal` (256 colors); `push`, `writes`, `last_write`, `read_key`, `write`.
+- `carat/doubles/manual_clock.rb`: `ManualClock`; `now`, `advance`, `sleep`.
+- `carat/doubles/memory_files.rb`: `MemoryFiles`, files and directories under `/project` and a home `/home/user`, both movable; `put`, `get`, `link`, `move_to`, `move_home`, and the `FilePort` methods.
+- `carat/doubles/fixed_config.rb`: `FixedConfig`; `defaults`, `with(text)`, `with_user`, `load`.
+- `carat/doubles/manual_signals.rb`: `ManualSignals`; `resize`, `terminate`, `resize_after`, `terminate_after`.
+- `carat/doubles/editor_harness.rb`: `EditorHarness`; `default` (no plugins), `with_plugins`, `open`, `type`, `raw`, `wait`, `resize`, `lines`, `cursor`, `mode`, `message`, `screen`, `row`, `window_count`, `tab_count`, `status_row`.
+- `test/runner/run_all.rb`: the runner; a new test file gets a `require_relative` and a `when` line here; an unknown name exits 2.
+- `test/lint.rb`: `LintTest`, the rules the compiler does not enforce (layer requires and references, plugin references, `PluginLink` coverage, concerns, naming, constructors, records, use case rules, the `lines` rule, inline RBS, and this map's coverage), each with a self-check.
+- `test/smoke_editor.rb`: the binary (`build/bin/carat` or `CARAT_BIN`) in a pseudo-terminal.
+- `tools/run_tests.sh`: runs tests from a compiled runner, compares each with its snapshot, prints a diff and a summary.
+- `bench/keys.rb`: the key benchmark over the doubles at 200 by 60; `SCENARIOS` (name, keys, count, lines, setup, text kind, plugins); time per key, slowest key, bytes, collector share, open time, lines tokenized, live heap.
+- `bench/run.sh`: runs the scenarios pinned to one core with `SPINEL_ALLOC_REPORT`, allocations per key, and the budget.
+- `bench/profile.sh`: the `perf` report with Ruby names from the symbol map.
+
+Tests: every file under `test/`; snapshots only through `make snapshots`, diff reviewed.
+
+Designs: `test-build` (One runner, one process per test; The helpers that returned arrays return objects), `analysis-speed` (The widening is fixed where it starts, in the tests), `render-core` (Benchmark, profile, and budget), `editor-foundation` (Tests), `agents-and-map` (The coverage rule lives in the lint test).
+
+Rules: CLAUDE.md Hard rules (tests, snapshots, and benchmarks only through `make`) and Coding conventions (test modules, typed table values, helpers returning objects); `docs/architecture.md` section 10.
+
+Bench: every scenario, `lh` for the allocation budget.
+
+---
+
+## Delivered changes
+
+In merge order, by pull request number, with the roadmap item of `docs/architecture.md` section 12 where there is one; from #7 on each is archived under `openspec/changes/archive/`.
+
+- #1 to #6: the conventions, OpenSpec, the contributor agent, the architecture, the Makefile, and item 1, `project-skeleton` (manifest, require graph, `Carat::Json`, `Carat::Testing`, the config generator, the lint and config tests).
+- #7, item 2, `editor-foundation`: one window; normal, insert, and command-line modes; `:w`, `:q`, `:wq`, `:x`, `:e` with bang and long forms; the editor harness over doubles; the smoke test.
+- #8, `data-value-objects` and `struct-record-types`: the record kinds.
+- #9, item 3, `command-grammar`: counts, the `"x` prefix, operator-pending mode, the motion set, text objects, `d c y > <` with doubled forms and `x s S C D Y J p P`, unnamed and named registers.
+- #10 `toolchain-under-tmp`, #11 `escape-c1-control-codes`, #12 `ex-write-quit-all` (`:wa`, `:qa`, `:wqa`, `:xa`).
+- #13, item 7, first half, `windows-and-splits`: layout per tab page, `<C-w>s v h j k l w W p c o = q`, `gt`, `gT`, `:sp`, `:vs`, `:new`, `:vnew`, `:close`, `:only`, the `:tab*` commands, the tab line, and the file commands over several windows. Left for `buffer-list`: `:ls`, `:bn`, `:bp`, `:bd`, `:b N`, and the `E162` line of `:qa`.
+- #14, item 11, `plugin-host`: the plugin API, manifest rules, the host with actions, ex commands, events, and requests, scratch buffers in side windows with their own keymaps, the generated registry, the icon table, the `hello` fixture.
+- #15, item 12, first half, `plugin-explorer`: the file tree, API 1.1 (working directory, window numbers, file requests inside a root, a prompt), `FilePort` `mkdir`, `rename`, `delete`, `cwd`. Left: `plugin-finder`, which can start on the host at any time.
+- #16, item 5, `visual-modes`, taken ahead of item 4 at the user's request: the three kinds with every motion, count, register prefix, text object, and operator, block insert and append, the blockwise register kind, the `Visual` highlight. The `'<` and `'>` marks wait for marks.
+- #17 to #21, the core-quality queue the user approved before more plugins: `edit-pipeline` (one splice, change records, transactions, derived modified flag, buffer ids), `plugin-host-hardening` (guarded calls, queued events, ids, `buffer_change` from transactions, item-by-item validation, copies, cleanup, API 1.2, request families), `dependency-injection` (action and ex tables, kinds, `Outcome` and `Reporting`, ex abbreviations, unknown actions reported at load, keyword constructors), `state-and-ports` (focused records, `CommandRunner`, `ConfigPort`, `SignalPort`, `PathInfo`, doubles out of the production graph, the shared-instance test), `render-core` (flat frames, the line cache, dirty rows, changed runs, scroll regions, `ArrangeView`, `make bench`, `make bench-budget`, `make profile`).
+- #22, `no-cruby-guard`: the `tools/noruby/ruby` stub first on every target's `PATH` and `make no-cruby`.
+- #23, item 4, `undo-and-registers`, last of the queue: the undo tree with branches, `u`, `<C-r>`, `U`, `g-`, `g+`, `:undo`, `:redo`, `:undolist`, `:earlier N`, `:later N`; the dot command; numbered, small delete, black hole, and read-only registers with `E354`, `:registers`, `:display`; messages of several lines. Time and write-count arguments of `:earlier` and `:later` are in the backlog.
+- #24 `analysis-speed` and #25 `test-build`, the compile and test time effort the user asked for before syntax highlighting: typed test table values and `make analysis-budget`; one test runner, `make test-one`, `make diagnose-one`, and CI caching the units of C.
+- #26, item 8, `syntax-highlighting`: filetypes, highlight groups, the syntax cache, `HighlightView`, the themes and color depths, plugin API 1.3, the `ruby` plugin, `:syntax`, `:set filetype` and `syntax`. Range highlights, virtual text, other languages, the rest of `:set`, user themes, and semantic highlighting are in the backlog.
+- #27, `ci-speed-2`, the third of the time effort: pull requests under two minutes on development builds; `main` builds and smoke tests the release binary.
+- #28, `struct-keyword-init`: every record built with keyword arguments, checked by the lint test.
+- #29, `caratrc-config`, which brings the configuration files of item 9 ahead of it: `.caratrc` lines, the user and project files, `none` to unbind, problems by file and line, plugin API 2.0, `config/plugins.caratrc`. Item 9 keeps `:set` beyond `filetype` and `syntax` and the local options.
+- #30, `use-case-boundaries`: one public `call` per use case, the many-method use cases split into 37 classes, shared logic in the domain, the lint rules. The plugin host under `use_cases/plugins/` is left for a plugin-side change.
+- `agents-and-map`: this map, its lint rule, the scout agent, the slim `CLAUDE.md`, and the contributor's instructions.
+
+Next in roadmap order: item 6, `search-and-substitute`; `plugin-finder` can start at any time.
