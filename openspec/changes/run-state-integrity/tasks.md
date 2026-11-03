@@ -11,7 +11,7 @@
 ## 3. Trusted records
 
 - [x] 3.1 `tools/run_state.sh trusted`: the state without the `phase.*`, `review.*`, and `merged` records git does not support, with an `untrusted` key naming them. Tested by the cases "trusted keeps a record at an ancestor of HEAD", "... at a commit of main", "trusted leaves out a record at a missing commit", "... at a commit off the branch", "... that is not hexadecimal", "trusted names what it left out", and "trusted prints one flat object".
-- [ ] 3.2 `.claude/workflows/deliver-change.js`: the resume returns `trusted`'s output as `state_json` and notes `untrusted`; checked by reading the prompt against the command's cases (no dry run of the workflow can run inside its own delivery).
+- [x] 3.2 `.claude/workflows/deliver-change.js`: the resume returns `trusted`'s output as `state_json` and notes `untrusted`; checked by reading the prompt against the command's cases (no dry run of the workflow can run inside its own delivery).
 
 ## 4. Merge gates
 
