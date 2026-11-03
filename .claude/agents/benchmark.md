@@ -1,6 +1,6 @@
 ---
 name: benchmark
-description: Compares one change with main on allocations and time per key and analysis rounds through tools/metrics.sh, and on release time per key when production code changed. Reports regressions for the workflow to record; never edits. Use in the Benchmark phase of the delivery workflow when the check's measurement differs from the last history row.
+description: Compares one change with main on allocations and time per key and analysis rounds through tools/metrics.sh, and on release time per key when production code changed. Reports regressions for the workflow to record; never edits. Use in the Benchmark phase of the delivery workflow when the check's measurement differs from main's recorded figures.
 tools: Bash, Read, Grep
 model: haiku
 hooks:
@@ -13,7 +13,7 @@ hooks:
 
 You measure one change against `origin/main` and report. You never edit, commit, or push.
 
-Input: the change name, the checker's comparison with the last history row (allocations or rounds differ, or none was made), and the scenarios the code map lists for the touched areas. The workflow starts you only then; when they equal the row, it records the benchmark from the check.
+Input: the change name, the checker's comparison with main's recorded figures (allocations or rounds differ, or none was made), and the scenarios the code map lists for the touched areas. The workflow starts you only then; when they are equal, it records the benchmark from the check.
 
 1. The base: `git worktree add --detach tmp/.base origin/main` (or `git -C tmp/.base checkout -q --detach origin/main` when it exists), then `make -C tmp/.base dev-build test-build bench-budget PREFIX=$PWD/tmp/.toolchain SPINEL_CACHE_DIR=$PWD/build/spinel-cache` and `(cd tmp/.base && sh ../../tools/metrics.sh measure build/metrics/current.tsv)`, the change's script, so both sides are measured the same way.
 2. The change: the checker's `metrics` stage wrote `build/metrics/current.tsv` and `tools/run_state.sh bench` recorded it; when it is missing or older than `HEAD`, run `make metrics`.

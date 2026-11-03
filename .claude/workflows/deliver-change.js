@@ -10,7 +10,7 @@ export const meta = {
     { title: 'Check', detail: 'checker: the canonical stages through make' },
     { title: 'Quality', detail: 'quality reviewer: code-review and the repository rules' },
     { title: 'Security', detail: 'security reviewer on the committed diff; never skipped' },
-    { title: 'Benchmark', detail: 'allocations and rounds against the last history row; the agent against main only when they differ' },
+    { title: 'Benchmark', detail: 'allocations and rounds against the figures recorded for main; the agent against main only when they differ' },
     { title: 'Package', detail: 'contributor: archive, gates, one push, pull request' },
     { title: 'Merge', detail: 'merger: wait for CI, red back to the contributor; squash with the trailer, verify main' },
     { title: 'Retrospective', detail: 'retrospective: record the metrics, propose simplifications, decide whether a review is due' },
@@ -314,14 +314,15 @@ async function rounds() {
     if (!blocked && !reviewedAtHead('bench')) {
       phase('Benchmark')
       if (benchSameAt && benchSameAt === state['phase.check']) {
-        // The check measured the same allocations and rounds as the last
-        // history row: nothing to compare with main.
+        // The check measured the same allocations and rounds as main's
+        // recorded figures (the newest merged change without a history row,
+        // else the last row): nothing to compare with main.
         verdict('bench', true)
-        note(`benchmark at ${benchSameAt}: allocations and rounds equal the last history row; no agent`)
+        note(`benchmark at ${benchSameAt}: allocations and rounds equal main's recorded figures; no agent`)
         reviewed('bench', true, benchSameAt, { blocking: 0 })
       } else {
         const b = await measured('bench', () => agent(
-          `${intro()} The check's measurement differs from the last history row, or was not compared:\n- ${benchReport.join('\n- ') || 'no comparison'}\nCompare with main and return the result. Build the base with PREFIX=$PWD/tmp/.toolchain SPINEL_CACHE_DIR=$PWD/build/spinel-cache, as your step 1 says.`,
+          `${intro()} The check's measurement differs from main's recorded figures, or was not compared:\n- ${benchReport.join('\n- ') || 'no comparison'}\nCompare with main and return the result. Build the base with PREFIX=$PWD/tmp/.toolchain SPINEL_CACHE_DIR=$PWD/build/spinel-cache, as your step 1 says.`,
           { agentType: 'benchmark', schema: withCalls(BENCH), effort: 'low' }))
         if (!b) { stopped = 'the benchmark agent returned no result'; return false }
         verdict('bench', !b.blocking.length)

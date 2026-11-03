@@ -50,9 +50,11 @@
 #                               commit since which only tests changed is
 #                               carried to HEAD instead of run
 #   bench CHANGE                record the metrics stage's measurement and
-#                               compare it with the last history row through
-#                               make metrics-compare; exit 0 when allocations
-#                               and rounds equal the row's, 1 otherwise
+#                               compare it with main's through make
+#                               metrics-compare: the newest merged change
+#                               without a history row, else the last row;
+#                               exit 0 when allocations and rounds equal
+#                               them, 1 otherwise
 #   push CHANGE [--ci-fix]      run the pre-push gates, refuse a push beyond one
 #                               plus one per CI fix (a CI fix needs ci red), push
 #                               the branch with upstream tracking, and count it
@@ -85,12 +87,14 @@ make_cmd=${MAKE:-make}
 metrics_file=${METRICS_FILE:-docs/metrics.tsv}
 metrics_out=${METRICS_OUT:-build/metrics/current.tsv}
 PHASES="plan implement check quality security bench package ci merge retro report"
-# The stages that read the test programs, which a commit that changes only
-# tests runs again: test-build and test-run compile and run them, diagnose
-# runs spinel-doctor on the test runner, and gates reads the commit; check
+# The stages that read what a test-only commit may change, which such a
+# commit runs again: test-build and test-run compile and run the tests,
+# diagnose runs spinel-doctor on the test runner, docs-lint reads docs/*.md
+# and the test paths the docs name, and gates reads the commit; check
 # carries the others. TEST_ONLY: the paths such a commit may change, tests
-# and their snapshots and the paths no check reads (settled_at of tools/gates.sh).
-TEST_STAGES="test-build test-run diagnose gates"
+# and their snapshots, the OpenSpec records, and the planning records and
+# metrics history, which no carried stage reads.
+TEST_STAGES="test-build test-run diagnose docs-lint gates"
 TEST_ONLY='^(test/|openspec/|docs/(backlog|queue|goals)\.md$|docs/metrics\.tsv$|$)'
 # The gates of a history row's first passes, in order, before gates.
 GATES="check quality security bench ci"
@@ -361,8 +365,20 @@ import_metrics() {
   echo "metrics: recorded $recorded measurement(s) of $change, skipped $skipped unmeasured"
 }
 
-# The bench command: the metrics stage's measurement against the last
-# history row, which is main's when the branch is current.
+# The newest merged change without a history row, by its squash commit's
+# time; nothing when none is pending.
+newest_pending() {
+  for name in $(pending_list); do
+    merged=$(change=$name; read_key merged)
+    printf '%s %s\n' "$(git log -1 --format=%ct "$merged" 2>/dev/null || echo 0)" "$name"
+  done | sort -n -k1,1 | tail -1 | cut -d' ' -f2
+}
+
+# The bench command: the metrics stage's measurement against main's. The
+# history row of a merged change is appended in the next change's package
+# step, after this one, so main's figures are those of the newest merged
+# change without a row (its run state's metric.rounds.*, allocs.*, us.*),
+# and the last history row only when no merged change is pending.
 bench_compare() {
   record=$(read_key stage.metrics)
   case "$record" in
@@ -371,19 +387,31 @@ bench_compare() {
     *) die "bench: the metrics stage has not passed at HEAD; run the checks first" ;;
   esac
   import_metrics "$metrics_out"
-  if [ ! -f "$metrics_file" ] || [ "$(wc -l < "$metrics_file")" -le 1 ]; then
-    echo "bench: no history row in $metrics_file to compare with"
-    return 1
-  fi
   last=$(dirname "$metrics_out")/last.tsv
-  tail -1 "$metrics_file" | awk -F'\t' '
-    function out(kind, list,   n, i, p, kv) {
-      if (list == "-" || list == "") return
-      n = split(list, p, ",")
-      for (i = 1; i <= n; i++) { split(p[i], kv, "="); printf "%s.%s\t%s\n", kind, kv[1], kv[2] }
-    }
-    { out("rounds", $8); out("allocs", $9); out("us", $10) }' > "$last"
-  echo "bench: comparing with the history row of $(tail -1 "$metrics_file" | cut -f1)"
+  base=$(newest_pending)
+  if [ -n "$base" ]; then
+    (change=$base; keys_under metric.) | awk '
+      /^(rounds|allocs|us)[.][^=]*=/ { name = $0; sub(/=.*/, "", name); sub(/^[^=]*=/, ""); print name "\t" $0 }' > "$last"
+    if ! grep -q -E '^(allocs|rounds)[.]' "$last"; then
+      echo "bench: the newest merged change $base has no recorded allocations or rounds to compare with"
+      return 1
+    fi
+    source="the run state of $base, merged without a history row yet"
+  else
+    if [ ! -f "$metrics_file" ] || [ "$(wc -l < "$metrics_file")" -le 1 ]; then
+      echo "bench: no history row in $metrics_file to compare with"
+      return 1
+    fi
+    tail -1 "$metrics_file" | awk -F'\t' '
+      function out(kind, list,   n, i, p, kv) {
+        if (list == "-" || list == "") return
+        n = split(list, p, ",")
+        for (i = 1; i <= n; i++) { split(p[i], kv, "="); printf "%s.%s\t%s\n", kind, kv[1], kv[2] }
+      }
+      { out("rounds", $8); out("allocs", $9); out("us", $10) }' > "$last"
+    source="the history row of $(tail -1 "$metrics_file" | cut -f1)"
+  fi
+  echo "bench: comparing with $source"
   "$make_cmd" --no-print-directory metrics-compare "BASE_METRICS=$last"
   differ=$(awk -F'\t' '
     NR == FNR { if ($1 ~ /^(allocs|rounds)[.]/) base[$1] = $2; next }
@@ -393,11 +421,11 @@ bench_compare() {
     }
     END { for (k in base) if (!(k in seen)) print k " " base[k] " -> none" }' "$last" "$metrics_out")
   if [ -n "$differ" ]; then
-    echo "bench: differs from the history row:"
+    echo "bench: differs from $source:"
     printf '%s\n' "$differ"
     return 1
   fi
-  echo "bench: same allocations and rounds as the history row"
+  echo "bench: same allocations and rounds as $source"
 }
 
 add_note() {

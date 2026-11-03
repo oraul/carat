@@ -188,14 +188,15 @@ expect "run_state: check resumes after the passed stages" 0 "stage a: passed at 
 expect "run_state: check records the phase" 0 "^$(git rev-parse --short=12 HEAD)$" state get state phase.check
 # A commit that changes only tests reruns the test stages and carries the
 # others; one that changes anything else reruns every stage.
-env STAGES="a b test-run diagnose" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
+env STAGES="a b test-run diagnose docs-lint" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
 before_tests=$(git rev-parse --short=12 HEAD)
 echo "check" > test/t.rb
 commit "test: t"
-env STAGES="a b test-run diagnose" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > carry.out 2>&1
+env STAGES="a b test-run diagnose docs-lint" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > carry.out 2>&1
 expect "run_state: check carries a stage after a test-only commit" 0 "^stage a: passed at $before_tests, carried to $(git rev-parse --short=12 HEAD)" cat carry.out
 expect "run_state: check reruns the test stages" 0 "^stage test-run: exit 0" cat carry.out
 expect "run_state: check reruns diagnose, which reads the test runner, after a test-only commit" 0 "^stage diagnose: exit 0" cat carry.out
+expect "run_state: check reruns docs-lint, which reads the docs and the test paths they name, after a test-only commit" 0 "^stage docs-lint: exit 0" cat carry.out
 expect "run_state: a carried stage names its commit" 0 "^0 0s $(git rev-parse --short=12 HEAD) .* carried-from-$before_tests$" state get state stage.b
 rm carry.out
 echo "check" > tools/t.sh
@@ -323,6 +324,20 @@ expect "run_state: bench writes the last row as a base" 0 "^allocs[.]lh[[:space:
 expect "run_state: bench records the measurement" 0 "^60[.]0$" state get bench metric.us.lh
 printf 'rounds.carat\t2\nallocs.lh\t28.0\n' > build/metrics/current.tsv
 expect "run_state: bench names a differing figure" 1 "^allocs[.]lh 27 -> 28[.]0$" bench
+# A merged change without a history row yet is main's, not the last row.
+state init merged-first chore/merged-first > /dev/null
+state set merged-first merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+state metric merged-first rounds.carat=2 allocs.lh=28.0 us.lh=61.0 > /dev/null
+expect "run_state: bench compares with the merged change that has no history row" 0 "^bench: same allocations and rounds as the run state of merged-first" bench
+expect "run_state: bench writes the pending change's figures as a base" 0 "^allocs[.]lh[[:space:]]28[.]0$" cat build/metrics/last.tsv
+printf 'rounds.carat\t2\nallocs.lh\t27.0\n' > build/metrics/current.tsv
+expect "run_state: bench names a figure that differs from the pending change's" 1 "^allocs[.]lh 28[.]0 -> 27[.]0$" bench
+rm build/pipeline/merged-first.json
+state init merged-bare chore/merged-bare > /dev/null
+state set merged-bare merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: bench does not compare with a pending change without figures" 1 "has no recorded allocations or rounds" \
+  env MAKE="$work/bin/echo-make" sh "$here/run_state.sh" bench bench
+rm build/pipeline/merged-bare.json
 echo more >> README.md
 commit "docs: more"
 expect "run_state: bench refuses a measurement of another commit" 1 "passed at another commit" bench
