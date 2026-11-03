@@ -23,6 +23,16 @@ FILE       ?= README.md
 # The most objects one key of the cursor scenario of the benchmark may
 # allocate; make bench-budget fails at this number or above.
 ALLOC_BUDGET ?= 100
+# The analysis budget (tools/analysis_budget.sh): the compile roots it
+# analyses, the most re-narrowing rounds Spinel's analysis of each may
+# take, which fails the target, and the analysis milliseconds above which
+# it only warns, since time depends on the machine. Every root needed 2
+# rounds and about 22 to 25 seconds of analysis on a four-core machine
+# when the budget was set; a value that widens to untyped across the
+# library took 5 rounds and 40 seconds.
+ANALYSIS_ROOTS  ?= bin/carat.rb test/domain_buffer.rb
+ANALYSIS_ROUNDS ?= 2
+ANALYSIS_MS     ?= 45000
 OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y @fission-ai/openspec@latest
 
 # tools/noruby holds a ruby that refuses to run and exits 127. It comes first
@@ -192,6 +202,10 @@ profile:
 	spinel $$(spin flags) bench/keys.rb --profile -o build/profile/keys
 	sh bench/profile.sh build/profile/keys
 
+## analysis-budget: compile ANALYSIS_ROOTS (default bin/carat.rb and test/domain_buffer.rb) to C in parallel with SP_TIMING=1 and fail when Spinel's analysis of one needs more than ANALYSIS_ROUNDS re-narrowing rounds (default 2); warn when it takes more than ANALYSIS_MS milliseconds (default 45000); CI runs it
+analysis-budget:
+	SPIN_FLAGS="$$(spin flags)" sh tools/analysis_budget.sh $(ANALYSIS_ROUNDS) $(ANALYSIS_MS) $(ANALYSIS_ROOTS)
+
 ## types: print the signatures Spinel inferred for the editor, marking where inference widened to untyped
 types:
 	@mkdir -p build
@@ -202,8 +216,8 @@ types:
 gen-config:
 	spin run carat-gen-config
 
-## check: everything a push needs: build, gen-config, test, diagnose, and no-cruby
-check: build gen-config test diagnose no-cruby
+## check: everything a push needs: build, gen-config, analysis-budget, test, diagnose, and no-cruby
+check: build gen-config analysis-budget test diagnose no-cruby
 
 # ----------------------------------------------------------------- openspec
 
@@ -228,4 +242,4 @@ help:
 	@echo
 	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)"
 
-.PHONY: toolchain toolchain-clean spinel-rev doctor no-cruby build run install pack clean test lint snapshots diagnose bench bench-budget profile types gen-config check spec-list spec-validate spec-update help
+.PHONY: toolchain toolchain-clean spinel-rev doctor no-cruby build run install pack clean test lint snapshots diagnose bench bench-budget analysis-budget profile types gen-config check spec-list spec-validate spec-update help

@@ -175,7 +175,7 @@ markers = [
   ["U+009D shows as <9d>", "a\u009Db", "a<9d>b"],
 ]
 t.table(markers) do |line|
-  s = state_for([line], "a.txt")
+  s = state_for([line.to_s], "a.txt")
   s.options.number = false
   draw(s, 4, 12).row_text(0)
 end
@@ -186,7 +186,7 @@ widths = [
   ["U+009D marker is four cells wide and the frame holds no control", "a\u009Db", [6, "b", 1, true]],
 ]
 t.table(widths) do |line|
-  s = state_for([line], "a.txt")
+  s = state_for([line.to_s], "a.txt")
   s.options.number = false
   f = draw(s, 4, 12)
   [P.display_width(line, 4), f.row_text(0)[5, 1], f.cell(0, 1).width, control_free?(f)]

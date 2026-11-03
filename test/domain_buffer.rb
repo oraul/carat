@@ -8,6 +8,19 @@ def pos(row, col)
   Carat::Domain::Position.new(row, col)
 end
 
+# A table row's values are untyped; the buffer takes typed arrays, and an
+# untyped argument would widen its parameters for the whole program.
+#: (untyped) -> Array[String]
+def strings(value)
+  out = []
+  i = 0
+  while i < value.length
+    out << value[i].to_s
+    i += 1
+  end
+  out
+end
+
 def range(r1, c1, r2, c2)
   Carat::Domain::Range.charwise(pos(r1, c1), pos(r2, c2))
 end
@@ -51,8 +64,8 @@ t.table([
   ["insert empty text", [["xy"], 0, 1, ""], ["xy"]],
   ["insert on second line", [["a", "b"], 1, 0, "z"], ["a", "zb"]]
 ]) do |input|
-  b = D::Buffer.new(input[0], nil, "\n")
-  b.insert(pos(input[1], input[2]), input[3])
+  b = D::Buffer.new(strings(input[0]), nil, "\n")
+  b.insert(pos(input[1].to_i, input[2].to_i), input[3].to_s)
   b.lines
 end
 
@@ -69,8 +82,8 @@ t.table([
   ["delete nothing", [["abcd"], 0, 2, 0, 2], ["abcd"]],
   ["delete whole buffer", [["ab", "cd"], 0, 0, 1, 2], [""]]
 ]) do |input|
-  b = D::Buffer.new(input[0], nil, "\n")
-  b.delete(range(input[1], input[2], input[3], input[4]))
+  b = D::Buffer.new(strings(input[0]), nil, "\n")
+  b.delete(range(input[1].to_i, input[2].to_i, input[3].to_i, input[4].to_i))
   b.lines
 end
 
@@ -94,13 +107,13 @@ t.table([
   ["remove every line leaves one", [["a", "b"], 0, 2, []], [""]],
   ["append at the end", [["a"], 1, 1, ["b"]], ["a", "b"]]
 ]) do |input|
-  b = D::Buffer.new(input[0], nil, "\n")
-  b.set_lines(input[1], input[2], input[3])
+  b = D::Buffer.new(strings(input[0]), nil, "\n")
+  b.set_lines(input[1].to_i, input[2].to_i, strings(input[3]))
   b.lines
 end
 
 b = D::Buffer.new(["a", "b"], nil, "\n")
-b.set_lines(0, 2, [])
+b.set_lines(0, 2, strings([]))
 t.assert_true(b.modified?, "set_lines marks the buffer modified")
 
 # Modified flag across load, edit, save.
@@ -157,7 +170,7 @@ t.table([
   ["text of a range to a line end", [["ab", "cd"], rng(0, 1, 0, 2, false)], "b"],
   ["text of an empty range", [["ab"], rng(0, 1, 0, 1, false)], ""]
 ]) do |input|
-  D::Buffer.new(input[0], nil, "\n").text_of(input[1])
+  D::Buffer.new(strings(input[0]), nil, "\n").text_of(input[1])
 end
 b = D::Buffer.new(["  ab", "cd", "", "\tef"], nil, "\n")
 t.assert_equal(["cd", ""], b.lines_of(1, 2), "lines_of copies the rows")

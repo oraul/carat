@@ -4,12 +4,23 @@ require_relative "../carat/testing"
 t = Carat::Testing.new("domain_selection")
 D = Carat::Domain
 
+# A table row's values are untyped; the buffer and the position take typed
+# values, and an untyped argument would widen their parameters for the
+# whole program, so the helpers copy the lines and convert the numbers.
+#: (untyped) -> Carat::Domain::Buffer
 def buffer_of(lines)
-  Carat::Domain::Buffer.new(lines, nil, "\n")
+  copy = []
+  i = 0
+  while i < lines.length
+    copy << lines[i].to_s
+    i += 1
+  end
+  Carat::Domain::Buffer.new(copy, nil, "\n")
 end
 
+#: (untyped) -> Carat::Domain::Position
 def pos(pair)
-  Carat::Domain::Position.new(pair[0], pair[1])
+  Carat::Domain::Position.new(pair[0].to_i, pair[1].to_i)
 end
 
 def selection_of(anchor, head, kind, to_end)

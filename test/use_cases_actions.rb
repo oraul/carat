@@ -81,8 +81,10 @@ t.table([
   ["an unknown name", "fo", ""],
   ["an empty name", "", ""]
 ]) do |typed|
-  handler = commands.find(typed)
-  handler.nil? ? "" : handler.call(state, D::ExCommand.new(typed, false, "")).message
+  # The table's value is untyped; the ex command takes a typed name.
+  name = typed.to_s
+  handler = commands.find(name)
+  handler.nil? ? "" : handler.call(state, D::ExCommand.new(name, false, "")).message
 end
 ordered = U::ExTable.new
 ordered.register(EchoCommandHandler.new(spec: "ma[rk]"))
