@@ -123,7 +123,26 @@ module EditorWindowsTest
       [":vnew splits vertically with an empty buffer", ":vnew<CR>", [2, 1, BESIDE]],
       [":vne splits vertically with an empty buffer", ":vne<CR>", [2, 1, BESIDE]],
       [":sp file splits and shows the file", ":sp b.txt<CR>", [2, 1, STACKED]],
-      ["nested splits", "<C-w>v<C-w>l<C-w>s", [3, 2, [[0, 0, 22, 40], [0, 41, 11, 39], [12, 41, 10, 39]]]]
+      ["nested splits", "<C-w>v<C-w>l<C-w>s", [3, 2, [[0, 0, 22, 40], [0, 41, 11, 39], [12, 41, 10, 39]]]],
+      ["Ctrl-W Ctrl-S splits as Ctrl-W s", "<C-w><C-s>", [2, 1, STACKED]],
+      ["a count before Ctrl-W Ctrl-S sets the new window's rows", "5<C-w><C-s>", [2, 1, [[0, 0, 5, 80], [6, 0, 16, 80]]]],
+      ["Ctrl-W Ctrl-V splits as Ctrl-W v", "<C-w><C-v>", [2, 1, BESIDE]],
+      ["a count before Ctrl-W Ctrl-V sets the new window's columns", "30<C-w><C-v>", [2, 1, [[0, 0, 22, 30], [0, 31, 22, 49]]]],
+      ["Ctrl-W Ctrl-J moves down", "<C-w>s<C-w><C-j>", [2, 2, STACKED]],
+      ["Ctrl-W Ctrl-K moves back up", "<C-w>s<C-w><C-j><C-w><C-k>", [2, 1, STACKED]],
+      ["Ctrl-W Ctrl-L moves right", "<C-w>v<C-w><C-l>", [2, 2, BESIDE]],
+      ["Ctrl-W Ctrl-H moves back left", "<C-w>v<C-w><C-l><C-w><C-h>", [2, 1, BESIDE]],
+      ["a count before Ctrl-W Ctrl-J moves several windows and stops at the edge", "<C-w>s<C-w>s5<C-w><C-j>", [3, 3, [[0, 0, 5, 80], [6, 0, 5, 80], [12, 0, 10, 80]]]],
+      ["a count before Ctrl-W Ctrl-K moves several windows up", "<C-w>s<C-w>s5<C-w>j2<C-w><C-k>", [3, 1, [[0, 0, 5, 80], [6, 0, 5, 80], [12, 0, 10, 80]]]],
+      ["Ctrl-W Ctrl-W goes to the next window", "<C-w>s<C-w><C-w>", [2, 2, STACKED]],
+      ["Ctrl-W Ctrl-W wraps to the first", "<C-w>s<C-w><C-w><C-w><C-w>", [2, 1, STACKED]],
+      ["a count before Ctrl-W Ctrl-W picks that window", "<C-w>s<C-w>s3<C-w><C-w>", [3, 3, [[0, 0, 5, 80], [6, 0, 5, 80], [12, 0, 10, 80]]]],
+      ["Ctrl-W Ctrl-P returns to the previous window", "<C-w>s<C-w>j<C-w><C-p>", [2, 1, STACKED]],
+      ["Ctrl-W Ctrl-O keeps only the current window", "<C-w>s<C-w>s<C-w><C-o>", [1, 1, ONE]],
+      ["Ctrl-W Ctrl-Q closes one of two windows", "<C-w>s<C-w><C-q>", [1, 1, ONE]],
+      ["a count before Ctrl-W Ctrl-Q quits that window", "<C-w>s<C-w>s3<C-w><C-q>", [2, 1, [[0, 0, 5, 80], [6, 0, 16, 80]]]],
+      ["Ctrl-W Ctrl-C changes nothing", "<C-w>s<C-w><C-c>", [2, 1, STACKED]],
+      ["Ctrl-W Ctrl-C drops the count typed before it", "<C-w>s<C-w>s3<C-w><C-c><C-w>w", [3, 2, [[0, 0, 5, 80], [6, 0, 5, 80], [12, 0, 10, 80]]]]
     ]) do |keys|
       shape(session(keys))
     end
@@ -138,7 +157,11 @@ module EditorWindowsTest
       ["Ctrl-W, a pause, and w go to the next window", "<C-w>s<C-w>|w", [2, 2, STACKED, [0, 0]]],
       ["Ctrl-W, a pause, and W go to the previous window", "<C-w>s<C-w>|W", [2, 2, STACKED, [0, 0]]],
       ["Ctrl-W, a pause, and p return to the previous window", "<C-w>s<C-w>|j<C-w>|p", [2, 1, STACKED, [0, 0]]],
-      ["a pause after the split itself changes nothing", "<C-w>s|<C-w>j", [2, 2, STACKED, [0, 0]]]
+      ["a pause after the split itself changes nothing", "<C-w>s|<C-w>j", [2, 2, STACKED, [0, 0]]],
+      ["Ctrl-W, a pause, and Ctrl-J move down", "<C-w>s<C-w>|<C-j>", [2, 2, STACKED, [0, 0]]],
+      ["Ctrl-W, a pause, and Ctrl-L move right", "<C-w>v<C-w>|<C-l>", [2, 2, BESIDE, [0, 0]]],
+      ["Ctrl-W, a pause, and Ctrl-W go to the next window", "<C-w>s<C-w>|<C-w>", [2, 2, STACKED, [0, 0]]],
+      ["j after Ctrl-W Ctrl-C moves the cursor in the same window", "<C-w>s<C-w><C-c>j", [2, 1, STACKED, [1, 0]]]
     ]) do |keys|
       h = slow_session(keys.to_s)
       shape(h) + [h.cursor]
@@ -244,6 +267,8 @@ module EditorWindowsTest
     t.assert_equal([1, false], [h.window_count, h.quit?], "Ctrl-W q closes one of two windows")
     h = session("<C-w>q")
     t.assert_equal(true, h.quit?, "Ctrl-W q on the last window quits")
+    h = session("<C-w><C-q>")
+    t.assert_equal(true, h.quit?, "Ctrl-W Ctrl-Q on the last window quits")
     h = session("x<C-w>q")
     t.assert_equal([false, E37], [h.quit?, h.message_row], "Ctrl-W q on the last window refuses a modified buffer")
     h = session("<C-w>sx:q<CR>")

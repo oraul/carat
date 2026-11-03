@@ -100,6 +100,9 @@ module EditorExplorerTest
       [":q in the tree closes only the tree", " e:q<CR>", [[[0, 80, "a.md"]], 1, [0, 0]]],
       ["Ctrl-W l and h move out of the tree and back", " e<C-w>l", [OPEN, 2, [0, 0]]],
       ["Ctrl-W h returns to the tree", " e<C-w>l<C-w>h", [OPEN, 1, [3, 0]]],
+      ["Ctrl-W Ctrl-L leaves the tree", " e<C-w><C-l>", [OPEN, 2, [0, 0]]],
+      ["Ctrl-W Ctrl-H returns to the tree", " e<C-w><C-l><C-w><C-h>", [OPEN, 1, [3, 0]]],
+      ["a count before Ctrl-W Ctrl-W picks the tree from the file window", " e<C-w><C-l>1<C-w><C-w>", [OPEN, 1, [3, 0]]],
       ["Ctrl-W = leaves the tree's width alone", " e<C-w>l<C-w>v<C-w>=", [[[0, 30, "explorer"], [31, 24, "a.md"], [56, 24, "a.md"]], 2, [0, 0]]],
       ["j and k fall through to the normal keymap", " eggj", [OPEN, 1, [1, 0]]],
       ["G falls through too", " eG", [OPEN, 1, [4, 0]]]
@@ -119,7 +122,13 @@ module EditorExplorerTest
       ["Ctrl-W W leaves the tree backwards, wrapping", " e<C-w>|W", [OPEN, 2, [0, 0], TREE]],
       ["Ctrl-W p goes back to the file window", " e<C-w>l<C-w>h<C-w>|p", [OPEN, 2, [0, 0], TREE]],
       ["Ctrl-W p from the file window returns to the tree", " e<C-w>|l<C-w>|p", [OPEN, 1, [3, 0], TREE]],
-      ["a pause after the leader still opens the tree", " |e", [OPEN, 1, [3, 0], TREE]]
+      ["a pause after the leader still opens the tree", " |e", [OPEN, 1, [3, 0], TREE]],
+      ["Ctrl-W, a pause, and Ctrl-L leave the tree", " e<C-w>|<C-l>", [OPEN, 2, [0, 0], TREE]],
+      ["Ctrl-W, a pause, and Ctrl-H return to the tree", " e<C-w>|<C-l><C-w>|<C-h>", [OPEN, 1, [3, 0], TREE]],
+      ["Ctrl-W Ctrl-W leaves the tree", " e<C-w><C-w>", [OPEN, 2, [0, 0], TREE]],
+      ["Ctrl-W Ctrl-W twice cycles back to the tree", " e<C-w><C-w><C-w>|<C-w>", [OPEN, 1, [3, 0], TREE]],
+      ["Ctrl-W Ctrl-P goes back to the file window", " e<C-w><C-l><C-w><C-h><C-w>|<C-p>", [OPEN, 2, [0, 0], TREE]],
+      ["Ctrl-W Ctrl-P from the file window returns to the tree", " e<C-w>|<C-l><C-w>|<C-p>", [OPEN, 1, [3, 0], TREE]]
     ]) do |keys|
       h = slow_session(keys.to_s)
       [shape(h), h.window_index, h.cursor, tree_lines(h)]

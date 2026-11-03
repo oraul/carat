@@ -7,6 +7,9 @@ ok   q closes the tree
 ok   :q in the tree closes only the tree
 ok   Ctrl-W l and h move out of the tree and back
 ok   Ctrl-W h returns to the tree
+ok   Ctrl-W Ctrl-L leaves the tree
+ok   Ctrl-W Ctrl-H returns to the tree
+ok   a count before Ctrl-W Ctrl-W picks the tree from the file window
 ok   Ctrl-W = leaves the tree's width alone
 ok   j and k fall through to the normal keymap
 ok   G falls through too
@@ -18,6 +21,12 @@ ok   Ctrl-W W leaves the tree backwards, wrapping
 ok   Ctrl-W p goes back to the file window
 ok   Ctrl-W p from the file window returns to the tree
 ok   a pause after the leader still opens the tree
+ok   Ctrl-W, a pause, and Ctrl-L leave the tree
+ok   Ctrl-W, a pause, and Ctrl-H return to the tree
+ok   Ctrl-W Ctrl-W leaves the tree
+ok   Ctrl-W Ctrl-W twice cycles back to the tree
+ok   Ctrl-W Ctrl-P goes back to the file window
+ok   Ctrl-W Ctrl-P from the file window returns to the tree
 ok   the root, the directories, then the files, the current file marked
 ok   the tree's status line shows its title and the width option is 30
 ok   quitting the last file window ends the editor with the tree open
@@ -96,4 +105,4 @@ ok   the screen shows each illegal byte as one replacement character
 ok   the explorer stays enabled after listing them
 ok   Enter opens a name that is not UTF-8
 ok   the status line names the opened file with one replacement character per illegal byte
-editor_explorer: 98 passed, 0 failed
+editor_explorer: 107 passed, 0 failed
