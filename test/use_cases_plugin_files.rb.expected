@@ -59,6 +59,16 @@ ok   a file
 ok   only the accepted deletes changed the disk
 ok   the open buffer of a deleted file stays and becomes modified
 ok   and quitting asks for a write
+ok   a rename below a link leading out of the root
+ok   a delete below a link leading out of the root
+ok   a missing entry below a link leading out keeps its message
+ok   a rename below a link that stays inside
+ok   a delete below a link that stays inside
+ok   a rename below a linked root
+ok   a delete below a linked root
+ok   a rename of the link leading out itself
+ok   a delete of the link leading out itself
+ok   nothing below a link leading out changed, and the accepted ones did
 ok   a link to a directory stats as both
 ok   the prompt shows its text and the edited value
 ok   the cursor is after the value
@@ -68,4 +78,4 @@ ok   Escape delivers a cancel
 ok   a backspace on an empty line cancels
 ok   the text is not run as an ex command
 ok   the next command line is an ex command again
-use_cases_plugin_files: 70 passed, 0 failed
+use_cases_plugin_files: 80 passed, 0 failed

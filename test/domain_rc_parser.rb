@@ -124,6 +124,35 @@ module DomainRcParserTest
       ".caratrc:2: language commands are not read from a project file"
     ], config.report, "problems are reported in file and line order, whoever noted them")
 
+    # Runs noted out of order, two notes on one line each: the line order,
+    # and on one line the order noted.
+    runs = D::Config.new
+    runs.read(".caratrc", "option.a 1\noption.b 1\noption.c 1\noption.d 1\n", true)
+    ["4 d1", "2 b1", "3 c1", "1 a1", "3 c2", "4 d2", "2 b2", "1 a2"].each do |note|
+      runs.note(runs.line_at(note[0, 1].to_i - 1), note[2, 2].to_s)
+    end
+    t.assert_equal([".caratrc:1: a1", ".caratrc:1: a2", ".caratrc:2: b1", ".caratrc:2: b2", ".caratrc:3: c1", ".caratrc:3: c2", ".caratrc:4: d1", ".caratrc:4: d2"], runs.report, "five runs of notes merge into line order, each line's notes as noted")
+
+    # A hostile file of many bad lines, two readers interleaving their
+    # problems: every one is reported in line order.
+    text = +""
+    expected = []
+    n = 1
+    while n <= 20_000
+      if n.odd?
+        text << "option.tabstop wide\n"
+        expected << ".caratrc:#{n}: option.tabstop takes a number"
+      else
+        text << "editor.font mono\n"
+        expected << ".caratrc:#{n}: unknown setting editor.font"
+      end
+      n += 1
+    end
+    many = D::Config.new
+    many.read(".caratrc", text, false)
+    D::Options.from_config(many)
+    t.assert_equal([20_000, true], [many.report.length, many.report == expected], "20,000 interleaved problems are all reported in line order")
+
     # Values: rows are [label, [words, kind], [valid, text]].
     t.table([
       ["true", [["true"], "bool"], [true, "true"]],

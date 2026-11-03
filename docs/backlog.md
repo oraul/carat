@@ -140,6 +140,12 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the rule that a use case exposes only `call` holds for the core, but the host's parts are not use cases at all: they are the infrastructure between compiled plugins and the core, and while they sit in `use_cases` the layer reads as if a use case could have two dozen entry points. The `use-case-boundaries` change decided they move out with the whole host and left the move to this plugin-side part, because it reworks the host's construction, the assembly, and five test programs.
 - Fix outline: move `carat/use_cases/plugins/` with `concerns/guarded.rb` and `plugins/boundary.rb` to carat/adapters/plugins/ as `Carat::Adapters`, give the core a port in `carat/ports/` for the calls the use cases make into the host (`observe`, `saved`, `resized`, `answer`, `action`, `command?`, `command`, and the tokenizer calls of `HighlightView`), implemented by the host and handed to `SaveFile`, `HandleKey`, `CancelCommandLine`, `ExecuteCommandLine`, `PluginActionHandler`, `PluginCommandHandler`, and `HighlightView` by the assembly, keep the request families' request methods, update the layer ranks and `docs/architecture.md` sections 3, 5, and 9, and drop the `use_cases/plugins/` exemption from the one-call rule.
 
+## Spinel drops appends to an empty array literal passed to a method
+
+- Where: found in `Config#report` (`carat/domain/config.rb`), whose merge helper first appended to an array the caller created as `[]`; on the pinned Spinel the caller's array stayed empty, while one created as `[0]` kept the appends (`docs/spinel-notes.md`).
+- Why it matters: any helper that fills an out-parameter starting empty silently loses its work, and only a test of the result catches it.
+- Fix outline: reduce it with `spinel-reduce`, report it upstream with the probe, and when a fixed pin arrives let `merge_runs` append in place again; until then a filling helper returns the array and the caller assigns it.
+
 ## Spinel compiles private_constant without enforcing it
 
 - Where: the pinned Spinel (`SPINEL_REF` in the `Makefile`); every `private_constant` line under `carat/use_cases/` since the `use-case-boundaries` change.
@@ -206,11 +212,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: one thing under two names makes a search for the action miss the code that runs it.
 - Fix outline: rename the targets `:half_page_down` and `:half_page_up` in the three files.
 
-## Two comments run past their file's wrap width
+## Three comments run past their file's wrap width
 
-- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters) and `carat/use_cases/dispatcher.rb` (line 89). Advisory of the periodic quality review at 66fd52b.
+- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters) and `carat/use_cases/dispatcher.rb` (line 89), advisories of the periodic quality review at 66fd52b, and the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118.
 - Why it matters: style only; the rest of each file wraps comments at the surrounding width.
-- Fix outline: rewrap both comments to the width of the lines around them.
+- Fix outline: rewrap the three comments to the width of the lines around them.
 
 ## lh time per key rose 26% at window-navigation-and-scroll
 
@@ -226,15 +232,51 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Carat::Json and String#index on text that is not UTF-8
 
-- Where: `Carat::Json` in `carat/domain/json.rb` (`each_char` at line 346), and every `index` or `rindex` on text that may hold illegal bytes (`carat/domain/config.rb` line 176 on a configuration key); the pinned Spinel's `index`, `rindex`, and `each_char` group a lead byte with the bytes after it, while `length` and `[i, n]` count each byte (`docs/spinel-notes.md`).
+- Where: `Carat::Json` in `carat/domain/json.rb` (`each_char` at line 346), and every `index` or `rindex` on text that may hold illegal bytes; the pinned Spinel's `index`, `rindex`, and `each_char` group a lead byte with the bytes after it, while `length` and `[i, n]` count each byte (`docs/spinel-notes.md`).
 - Why it matters: no path sends buffer text to JSON yet, but the language server change will; a character index from `index` on such text slices the wrong bytes, and JSON needs the text valid (a language server expects UTF-8).
 - Fix outline: escape illegal bytes in `Carat::Json` by walking bytes with `Utf8` (as U+FFFD or a documented escape), replace `index` and `rindex` on untrusted text with `byteindex` and `byterindex`, report the disagreement upstream, and add hostile rows to `test/json.rb`.
 
-## Plugin rename and delete follow symlinked directories out of the tree root
+## The run state's review records can be written by any agent
 
-- Where: `RenamePath` and `DeletePath` in `carat/use_cases/files/rename_path.rb` (lines 35 and 36) and `delete_path.rb` (line 33), which check containment with the lexical `Domain::PathPolicy.inside?` only. Low (5) finding of the periodic security review at 6ea61b1, and Low (6) finding of the security review of `untrusted-config-limits`, which fixed the create half in `MakePath`.
-- Why it matters: the explorer expands a link to a directory, so in an untrusted repository with a link such as `docs` pointing to the home directory, renaming or deleting a file under `docs` in the explorer changes the real file outside the project.
-- Fix outline: reuse the `resolved_inside?` check of `MakePath` (`carat/use_cases/files/make_path.rb` line 57): resolve the root and the source's parent, and the target's parent for a rename, with `FilePort#real_path`, and refuse when the result is neither the root nor inside it; add hostile rows for a symlinked parent in `test/use_cases_plugin_files.rb`.
+- Where: `tools/run_state.sh` line 441, the `set` subcommand, which writes any key, `review.*` and `phase.*` included, and the `review` subcommand (line 447), which takes any kind. Low (5) finding of the periodic security review at 389c118.
+- Why it matters: the pre-push and merge gates trust `review.security`, so a prompt-injected agent with Bash can record a pass for a review that never ran.
+- Fix outline: refuse `set` for `review.*` and `phase.*` keys, have the workflow script, not an agent, write the review result it received, and let the merger compare it with the workflow's state; a `tools/tools_test.sh` case for each refusal. Queued as `agent-authority`.
+
+## The read-only agents have unrestricted Bash
+
+- Where: the `tools:` line of `.claude/agents/scout.md` (line 3) and of the checker, benchmark, reporter, ci-watcher, planner, retrospective, quality-reviewer, and security-reviewer agents, each a bare `Bash`. Low (4) finding of the periodic security review at 389c118.
+- Why it matters: those agents read an untrusted tree, and text in it can make one run `git push`, `gh pr merge`, or a `gh api` write, past the gates the workflow keeps for the contributor and the merger.
+- Fix outline: permission deny rules in `.claude/settings.json` for `git push`, `gh pr merge`, and `gh api` writes outside the contributor and the merger, or a narrowed `Bash(...)` grant per agent file listing the commands its body names. Queued as `agent-authority`.
+
+## Options repeats its bounded-number and known-name checks
+
+- Where: `Options#apply` in `carat/domain/options.rb`: the `tabstop` and `shiftwidth` blocks (lines 107 to 120) and the `icons` and `theme` blocks (lines 125 to 136) are each the same check-then-set-or-note shape. Advisory of the periodic quality review at 389c118.
+- Why it matters: a third bounded option copies the block again, and a fix to one copy can miss the other.
+- Fix outline: one private helper that takes the line, the value, and the low bound and returns whether to set (or a `width_value?` check both call), and one for a name checked against a known set; the rows of `test/domain_options_config.rb` stay as they are.
+
+## OpenFile asks the port about a path twice
+
+- Where: `OpenFile#call` in `carat/use_cases/files/open_file.rb` line 45, `@files.exist?(path)` and then `ProbePath` through `refusal`. Advisory of the periodic quality review at 389c118.
+- Why it matters: `docs/architecture.md` section 5.2 says `ProbePath` is the one place a use case asks the port about a path, and the two answers can disagree on a dangling link.
+- Fix outline: take existence from the one `ProbePath` result, deciding the dangling-link case (a new buffer or "is not a file") with a row in `test/editor_cmdline.rb`. Queued as `file-access-tidy`.
+
+## The architecture lists only some of OpenFile's responses
+
+- Where: `docs/architecture.md` section 5.2 (line 171) lists `E37`, `E212`, and `E492` as the responses of the file use cases. Advisory of the periodic quality review at 389c118.
+- Why it matters: `OpenFile` also refuses a directory, a non-regular file, and a file over 64 MiB with `E484` and Vim's messages, and the binding document should say so.
+- Fix outline: name those responses in that line, making room within the document's budget. Queued as `file-access-tidy`.
+
+## Every test run builds two 64 MiB strings
+
+- Where: `test/editor_cmdline.rb` lines 155 and 156 put a file one byte over and one exactly at `OpenFile`'s 64 MiB limit into `MemoryFiles`, and open the second. Advisory of the periodic quality review at 389c118.
+- Why it matters: 128 MiB of strings and a 64 MiB read in every test run cost memory and time for one boundary, and are a suspect for slower CI.
+- Fix outline: let `MemoryFiles` report a stat size for a path (as `special` does for the kind) so the over-limit row needs no real string, and keep the exact-limit read check in `test/drivers_disk_files.rb` with its small limit. Queued as `file-access-tidy`.
+
+## DiskFiles#stat makes four system stats per path
+
+- Where: `DiskFiles#stat` in `carat/drivers/disk_files.rb` line 57, `File.size`, `File.mtime`, `File.directory?`, and `File.stat` for one path. Advisory of the periodic quality review at 389c118.
+- Why it matters: every open, explorer listing, and plugin stat pays four system calls where one would do, and the answers can come from different moments.
+- Fix outline: take the size, mtime, directory, and regular flags from one `File.stat` where the pinned Spinel supports them, else record why in `docs/spinel-notes.md`. Queued as `file-access-tidy`.
 
 ## The CI scope script word-splits the changed paths
 
@@ -265,3 +307,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `:replace` branch of `ascii_recase` in `carat/domain/operators.rb` (line 244, `char * text.length` over text that is not UTF-8), while `~`, `U`, and `u` have rows in `test/editor_registers.rb` (lines 49 to 51). Advisory of the periodic quality review at 6ea61b1.
 - Why it matters: an untested branch on hostile text is where the next crash on an illegal byte would hide.
 - Fix outline: add a `v$r` row over a line with an illegal byte.
+
+## CI took 12 minutes at untrusted-config-limits
+
+- Where: the `ci_min` figure of the run state of `untrusted-config-limits` (#37, 12.0 minutes at `8c33ffdefafe`) against 3.0 for `authoring-kit` and 4.0 for `utf8-input-safety`; the local `test-run` stage of the same commit took 26 s against 24 s, so no code location is known.
+- Why it matters: goal 2 of `docs/goals.md` keeps CI time through the history; a threefold rise that is never measured again may hide a lost cache, a slower test (the two 64 MiB strings of `test/editor_cmdline.rb:155` are a suspect), or a runner change.
+- Fix outline: compare the per-job and per-step times of the CI runs of #36 and #37 and the next two pull requests, check whether the Actions cache keyed on `make spinel-rev` hit, and if the rise holds, find the step and fix or record the cause; remove this entry when two runs are back near 4 minutes.

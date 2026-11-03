@@ -60,4 +60,7 @@ ok   an empty value
 ok   one segment and the action
 ok   a trusted binding with an illegal byte is reported and skipped
 ok   a plugin's binding with an illegal byte is an error of its line
-domain_keymap: 62 passed, 0 failed
+ok   a binding of 65 keys is reported and skipped, one of 64 is bound
+ok   a plugin's binding of 65 keys is an error of its line and nothing of it is bound
+ok   removing the plugin drops its 64-key binding and every prefix of it
+domain_keymap: 65 passed, 0 failed

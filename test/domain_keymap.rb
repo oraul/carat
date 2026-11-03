@@ -200,6 +200,19 @@ module DomainKeymapTest
     hostile_lines = D::Keymap.from_lines(["keymap.normal q plugin.p.\xFF", "keymap.normal w plugin.p.ok"], " ")
     t.assert_equal([["keymap.normal q plugin.p.\xFF: illegal byte"], :none, "plugin.p.ok"], [hostile_lines.errors, hostile_lines.lookup(:normal, codes("q")).kind, hostile_lines.lookup(:normal, codes("w")).value], "a plugin's binding with an illegal byte is an error of its line")
 
+    # Long bindings: at most 64 keys, so the trie, which removing a
+    # plugin's bindings walks recursively, stays shallow.
+    long_config = project("keymap.normal #{"j" * 65} cursor.down\nkeymap.normal #{"j" * 64} cursor.down\n")
+    long = D::Keymap.new
+    long.add_checked(long_config, known)
+    t.assert_equal([[".caratrc:1: more than 64 keys"], :none, :match], [long_config.report, long.lookup(:normal, codes("j" * 65)).kind, long.lookup(:normal, codes("j" * 64)).kind], "a binding of 65 keys is reported and skipped, one of 64 is bound")
+    too_long = "keymap.normal #{"x" * 65} plugin.probe.go"
+    long_owned = D::Keymap.new
+    long_owned.add_lines([too_long, "keymap.normal #{"y" * 64} plugin.probe.go"], " ", "probe")
+    t.assert_equal([["#{too_long}: more than 64 keys"], :none, :match], [long_owned.errors, long_owned.lookup(:normal, codes("x")).kind, long_owned.lookup(:normal, codes("y" * 64)).kind], "a plugin's binding of 65 keys is an error of its line and nothing of it is bound")
+    long_owned.remove_owner("probe")
+    t.assert_equal([:none, :none], [long_owned.lookup(:normal, codes("y" * 64)).kind, long_owned.lookup(:normal, codes("y")).kind], "removing the plugin drops its 64-key binding and every prefix of it")
+
     t.finish
   end
 end

@@ -86,7 +86,7 @@ Files:
 - `carat/domain/rc_parse.rb`: `RcParse`, one parse result; `ok?`, `blank?`.
 - `carat/domain/rc_line.rb`: `RcLine`, a kept setting with file label, ordinal, line number, scope, name, and words; `from_parse`, `problem`, `order`.
 - `carat/domain/rc_value.rb`: `RcValue` bool, integer, string, and list kinds; `valid?`, `expectation`, `text`, `number?`.
-- `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `refuse`, `line_at`, `last`, `note`, `report`; scope and language checks, the project file refused language commands and key-sequence bindings.
+- `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `refuse`, `line_at`, `last`, `note`, `report` (a stable merge of the ascending runs the readers note); scope and language checks, the project file refused language commands and key-sequence bindings.
 - `carat/domain/default_config.rb`: generated, `DEFAULT_CARATRC`; never edited by hand.
 - `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, and the rest); `from_config`, `apply`, `width_problem` (tabstop 1 to 9999, shiftwidth 0 to 9999), `tab_width`.
 - `carat/domain/registry_source.rb`: `RegistrySource.render`, `entry?`, `names`; the registry text from the plugin list lines.
@@ -136,7 +136,7 @@ Files:
 - `carat/domain/key.rb`: `Key` codes; `printable?`, `alt?`, `base`, `char`, `TIMEOUT`.
 - `carat/domain/key_notation.rb`: `KeyNotation`; `parse`, `resolve`, `format`, `control_code`, `special_name`; Vim notation such as `<C-w>`.
 - `carat/domain/mode.rb`: `Mode`; `from_name`, `name_of`, `visual?`, `visual_kind`, `for_kind`.
-- `carat/domain/keymap.rb`: `Keymap`; `action_name?`, `leader_from`, `from_lines`, `add_lines`, `add_checked` (applies the configuration's keymap lines, `none` unbinding, refuses an unknown action, notes problems), `bind`, `bind_owned`, `remove_owner`, `lookup`.
+- `carat/domain/keymap.rb`: `Keymap`; `action_name?`, `leader_from`, `from_lines`, `add_lines`, `add_checked` (applies the configuration's keymap lines, `none` unbinding, refuses an unknown action and more than `MAX_KEYS` (64) keys, notes problems), `bind`, `bind_owned`, `remove_owner`, `lookup`.
 - `carat/domain/keymap_node.rb`: `KeymapNode` trie node; `child?`, `child_for`, `child_named`, `leaf?`.
 - `carat/domain/keymap_match.rb`: `KeymapMatch` value (`kind`, `value`), a lookup result.
 - `carat/domain/command.rb`: `Command` value (`register`, `count`, `operator`, `action`, `char`, `linewise`, `keys`); `plain`, `count_or`, `operator?`.
@@ -357,7 +357,8 @@ Files:
 - `carat/use_cases/files/quit.rb`: `Quit#call(state, way)` with `:quit`, `:force`, or `:written`; a file window beside only side windows counts as the last.
 - `carat/use_cases/files/quit_all.rb`: `QuitAll#call` (`:qa`).
 - `carat/use_cases/files/probe_path.rb`: `ProbePath#call`, the one call of `FilePort#stat`, shared by `OpenFile` and the plugin file operations.
-- `carat/use_cases/files/make_path.rb`, `carat/use_cases/files/rename_path.rb` (the listed buffers following), `carat/use_cases/files/delete_path.rb`: `call`; make, rename, and delete inside a root with every check, used by the plugin file requests; `MakePath` compares the real paths of the parent and the root.
+- `carat/use_cases/files/make_path.rb`, `carat/use_cases/files/rename_path.rb` (the listed buffers following), `carat/use_cases/files/delete_path.rb`: `call`; make, rename, and delete inside a root with every check, used by the plugin file requests, each refusing a parent (create) or an entry's directory (rename, delete) that `ResolveInside` places outside the root.
+- `carat/use_cases/files/resolve_inside.rb`: `ResolveInside#call(root, dir, path)`, the one comparison of real paths (`FilePort#real_path`): `Outside the tree root: path` unless the directory with its links resolved is the resolved root or inside it; built by `PluginHost` and shared by the three.
 
 Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`.
 
@@ -508,7 +509,7 @@ Files:
 - `carat/drivers/main_loop.rb`: `MainLoop#run`.
 - `carat/domain/json.rb`: `Carat::Json` (`parse`, `generate`, `pretty_generate`), for JSON-RPC; the configuration is not JSON.
 
-Tests: `test/drivers_main_loop.rb` (a resize, a terminate, and `:q` over the signal double, and the driver's flags), `test/json.rb`, `test/drivers_disk_files.rb` (`DiskFiles` and `MakePath` over a real directory: a link to `/dev/zero`, a FIFO, files at and over a limit, links inside and outside a root).
+Tests: `test/drivers_main_loop.rb` (a resize, a terminate, and `:q` over the signal double, and the driver's flags), `test/json.rb`, `test/drivers_disk_files.rb` (`DiskFiles`, `MakePath`, `RenamePath`, and `DeletePath` over a real directory: a link to `/dev/zero`, a FIFO, files at and over a limit, links inside and outside a root).
 
 Designs: `state-and-ports` (Signals; The stat value; Configuration), `editor-foundation` (Ports, adapters, drivers, doubles).
 
@@ -576,5 +577,6 @@ In merge order, by pull request number, with the roadmap item of `docs/architect
 - `authoring-kit`: the golden examples `docs/examples.md`, the generators `make new-use-case`, `new-action`, `new-ex-command`, `new-test`, and `new-plugin`, the Spinel notes `docs/spinel-notes.md`, the `docs-lint` stage with its budgets, and a slimmer `CLAUDE.md` (41,066 to about 30,600 bytes) and `docs/architecture.md`. A compile of the generators' output in `make check` is left in `docs/backlog.md`.
 - #35, `window-navigation-and-scroll`, a user-reported fix: a lone prefix in the grammar modes waits for its next key with no time limit, so `<C-w>` and its second key work however slowly they are typed, also between the file tree and the file windows; the scroll actions (`<C-f>`, `<C-b>`, `<PageDown>`, `<PageUp>`, `<C-d>`, `<C-u>`, `<C-e>`, `<C-y>`, `zt`, `zz`, `zb`) and the `scroll` option. Left: `z<CR>`, `z.`, `z-`, `:set scroll`, `<C-w>` outside normal mode, and a time limit for the prefixes of user bindings (`docs/backlog.md`).
 - `utf8-input-safety`, the security fix from the periodic review after #35: files and names that are not UTF-8 open, list, and draw without raising, their bytes kept through edits and writes, `[ILLEGAL BYTE in line N]` on open, RFC 3629 decoding with one U+FFFD cell per illegal byte, and no code point outside Unicode written to the terminal. Left: `<xx>` markers and `Carat::Json` on such text (`docs/backlog.md`).
+- #37, `untrusted-config-limits`, the security fix from the periodic reviews at 66fd52b and 6ea61b1: configuration lines with an illegal byte reported and skipped and `Keymap.action_name?` reading bytes; a project `.caratrc` that is a link, not a regular file, or over 1 MiB refused with a report; `tabstop` and `shiftwidth` bounded to 9999; `:e` and every open refusing a directory, a FIFO or device, and a file over 64 MiB, read through a bounded non-blocking read; and a plugin create refused through a link that leaves the tree root. Left: rename and delete through such a link, an unbounded binding length, and quadratic problem sorting (`plugin-path-containment`).
 
 Next: `docs/queue.md`, ordered against the charter `docs/goals.md`.
