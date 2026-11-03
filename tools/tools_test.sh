@@ -307,6 +307,10 @@ guard_edit() {
 
 expect "guard: read refuses git push" 2 "refused for the read profile: a git command" guard read 'git push origin chore/x'
 expect "guard: read refuses git push after global options" 2 "a git command" guard read 'cd /w && git -C tmp/.base -c a=b push'
+expect "guard: read refuses git push after a long option" 2 "a git command" guard read 'git --no-pager push origin x'
+expect "guard: read refuses a commit after a long option with a value" 2 "a git command" guard read 'git --git-dir=.git commit -m x'
+expect "guard: read refuses an add after mixed global options" 2 "a git command" guard read 'git -C . --work-tree . add x'
+expect "guard: read allows a long option before a git read" 0 "^$" guard read 'git --no-pager log --oneline -5'
 expect "guard: read refuses a commit on a later line" 2 "a git command" guard read 'git status\ngit commit -m \"x\"'
 expect "guard: read allows a git read that names push" 0 "^$" guard read 'git log --oneline --grep push -5'
 expect "guard: read allows a worktree checkout" 0 "^$" guard read 'git -C tmp/.base checkout -q --detach origin/main'

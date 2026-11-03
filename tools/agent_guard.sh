@@ -77,10 +77,11 @@ has() {
   printf '%s\n' "$text" | grep -q -E -- "$1"
 }
 
-# A word's start and end, and git with its global options (-C dir, -c x=y).
+# A word's start and end, and git with its global options (-C dir, -c x=y,
+# --no-pager, --git-dir=x).
 B='(^|[^A-Za-z0-9_.-])'
 E='([^A-Za-z0-9_-]|$)'
-GIT="${B}git( +-[A-Za-z][A-Za-z-]*(=[^ ;&|]*)?( +[^ ;&|-][^ ;&|]*)?)* +"
+GIT="${B}git( +-{1,2}[A-Za-z][A-Za-z-]*(=[^ ;&|]*)?( +[^ ;&|-][^ ;&|]*)?)* +"
 WRITES='push|commit|add|merge|rebase|reset|tag|cherry-pick|revert|am|stash|restore|rm|mv|clean|pull|apply'
 RUN_STATE="run_state[.]sh[\"']? +[\"']?"
 
