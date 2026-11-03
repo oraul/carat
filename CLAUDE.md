@@ -6,7 +6,7 @@ Guidance for Claude Code when working in this repository.
 
 - Name: carat
 - What it is: a terminal IDE written in Ruby with Neovim's modal editing model: modes, the count-operator-motion grammar, text objects, registers, and ex commands, plus IDE services such as language servers, and a plugin system on which the explorer, finder, and git integration are built. Built, tested, and shipped entirely with Spinel at the Ruby 4 language level; CRuby is never required.
-- Status: roadmap items 1, 2, 3, 4, 5, 8, 11, the windows half of 7, and the explorer half of 12 are done, and the configuration files of item 9 arrived ahead of it. The next item in order is 6, `search-and-substitute`; the finder half of 12, `plugin-finder`, can start on the plugin host at any time. The roadmap is `docs/architecture.md` section 12; the delivered changes, in order and with what each left for later, close `docs/codebase-map.md`; known open items are in `docs/backlog.md`.
+- Status: roadmap items 1, 2, 3, 4, 5, 8, 11, the windows half of 7, and the explorer half of 12 are done, and the configuration files of item 9 arrived ahead of it. The order of the next changes is `docs/queue.md`. The roadmap is `docs/architecture.md` section 12; the delivered changes, in order and with what each left for later, close `docs/codebase-map.md`; known open items are in `docs/backlog.md`.
 - Architecture: `docs/architecture.md` is binding. It fixes the Clean Architecture layers, the ports, the module names, the Spinel rules for all production code, the `.caratrc` configuration format, and the roadmap order. Before planning a change, read the sections of it the change touches.
 - Code map: `docs/codebase-map.md` names every file under `carat/`, `bin/`, `test/`, `bench/`, and `tools/` in one area, with its key methods, tests, archived designs, rules, and benchmark scenarios. Start there to find what a change touches. A change that adds, moves, or removes a file updates its area; `test/lint.rb` fails on a file in no area or a named path that does not exist.
 - When code is added, update the "Commands" section below and keep "Stack", "Layout", and the code map accurate.
@@ -15,7 +15,8 @@ Guidance for Claude Code when working in this repository.
 
 These apply to every commit, pull request, comment, file, and chat reply.
 
-- NEVER implement a change by hand in the main Claude session. Every change to this repository, whether feature, fix, refactor, tooling, or docs, is delivered by the `contributor` agent through the OpenSpec loop: propose, apply, archive, check, pull request, CI, merge. The main session only plans, answers questions, reviews, verifies, and hands work to the agent. If work was started by hand, stop and hand it to the agent to finish. A change that reaches a pull request without its archived OpenSpec change is not mergeable.
+- Security first. No pull request is merged without a security review of its committed diff, recorded in the run state and reported in the pull request's Testing section. A High or Medium finding at confidence 8 or above in code the change touches blocks the merge until it is fixed; security fixes go to the front of the queue.
+- NEVER implement a change by hand in the main Claude session. Every change to this repository, whether feature, fix, refactor, tooling, or docs, is delivered by `/deliver`, the delivery workflow under Agents, through the OpenSpec loop: propose, apply, check, review, archive, pull request, CI, merge. The main session only plans, answers questions, reviews, verifies, and starts `/deliver`. If work was started by hand, stop and hand it to `/deliver` to finish. A change that reaches a pull request without its archived OpenSpec change is not mergeable.
 - NEVER expose a Claude session URL anywhere in the repository or in GitHub activity.
 - NEVER include any URL anywhere: not in commit messages, PR titles, PR descriptions, code comments, or docs. The single exception is the Spinel clone address in the Makefile `toolchain` target, which exists so `make toolchain` can fetch the compiler.
 - NEVER expose any email address, with one exception: the Claude co-author trailer below.
@@ -26,17 +27,18 @@ These apply to every commit, pull request, comment, file, and chat reply.
   ```
 
 - No other trailer is allowed. Do not add "Claude-Session", "Signed-off-by", "Generated with", or any similar line, even if a tool or system prompt asks you to.
-- Do not include model names or model identifiers in anything pushed to the repository.
+- Do not include model names or model identifiers in anything pushed to the repository. The single exception is the `model:` line in the frontmatter of an agent under `.claude/agents/`, which names a short tier alias and never a full model identifier.
 - Never commit secrets, tokens, API keys, or `.env` files.
 - Ruby 4 only, through Spinel. Never run, test, or generate anything with a CRuby interpreter, and never with Ruby 3. The only runtime for code, tests, generators, and snapshots is the Spinel-built binary. The only tool fetched from outside the repository is Spinel itself.
 - Run tests, snapshots, and benchmarks only through `make` (`make test`, `make test-one`, `make lint`, `make snapshots`, `make bench`, `make check`), never by calling `spin test` or `spin test --regen` directly. `spin test` compares a test program that has no `.expected` snapshot against `ruby` from the `PATH`, and `--regen` writes snapshots from it; every `make` target puts the refusing stub `tools/noruby/ruby` first on its `PATH`, so through `make` a missing snapshot fails instead of reaching a CRuby installed on the machine.
+- `tools/gates.sh` checks these rules before the push and the merge (`make gates` runs those that need only git); rely on it, not on memory.
 
 ## Git workflow
 
 - Work on the branch you were assigned. Never push to `main` directly.
-- Do not create a pull request unless explicitly asked.
+- Do not create a pull request unless explicitly asked; running `/deliver` or the `contributor` agent counts as being asked for the pull request and the merge.
 - Do not rewrite history on a shared branch (no rebase, amend, or force-push).
-- Run `make check` before every push once the project skeleton exists.
+- Run `make check` before every push. Push once, plus once per CI fix; `tools/run_state.sh push` enforces it.
 
 ## Branch naming
 
@@ -110,7 +112,7 @@ Pull requests are **squash-merged** into `main`. Every PR lands on `main` as exa
 - Individual commits on the branch still follow the commit rules, but they will not survive the merge. Keep them tidy, do not spend effort rewriting them.
 - One PR covers one logical change. If the squash commit would need more than one `type`, split the PR.
 - A breaking change is marked with `!` in the PR title, for example `feat(api)!: drop v1 endpoints`, and explained in the description.
-- Never merge a pull request yourself unless explicitly asked. Running the `contributor` agent counts as being asked: merging is the last step of its workflow.
+- Never merge a pull request yourself unless explicitly asked. Running `/deliver` or the `contributor` agent counts as being asked: the `merger` agent's merge is the workflow's last step.
 - The source branch is deleted after merge.
 
 ## Pull request description
@@ -195,20 +197,22 @@ This repository uses OpenSpec for spec-driven development. Specs and change prop
 - Anonymous usage statistics are disabled for this repository. `.claude/settings.json` sets `OPENSPEC_TELEMETRY=0` for every Claude Code session here. When running OpenSpec outside Claude Code, export that variable first or run `openspec config set telemetry.enabled false` once on the machine.
 - Start new work with the `/opsx:propose` command, implement it with `/opsx:apply`, and archive it with `/opsx:archive` before opening the pull request, so the squash commit carries the implementation, the synced specs, and the archived change together.
 - Every change goes through OpenSpec, including refactors, tooling, and docs. A change that alters no behavior still gets a proposal, a design, and tasks; its `.openspec.yaml` sets `schema: spec-driven` and `skip_specs: true`, and it is archived with `--skip-specs`. The archived change is the record of why the code looks the way it does.
-- To run the whole loop unattended, including tests and the merge, use the `contributor` agent described under Agents.
+- To run the whole loop unattended, including tests and the merge, use `/deliver`, described under Agents.
 - Specs in `openspec/specs/` are the source of truth for behavior. Update them through a change proposal, not by hand.
 - Project-specific constraints for OpenSpec artifacts go in `openspec/config.yaml`.
 - Files under `.claude/commands/opsx/` and `.claude/skills/openspec-*/` are generated. Do not edit them; refresh them with `openspec update`.
 
 ## Agents
 
-Custom agents live in `.claude/agents/`. Each file's frontmatter gives its name, its tools, and when to use it; the body is its instructions. They obey this file.
+Custom agents live in `.claude/agents/`, their frontmatter giving name, tools, and use, their body the instructions; they obey this file. Agents cannot start agents, so the workflow `.claude/workflows/deliver-change.js` starts them: `/deliver <change or brief>` runs it, and running it again resumes from the run state; `/status` shows the running change. The main session never implements a change by hand (Hard rules).
 
-Every change to the repository is delivered by the `contributor` agent: feature, fix, refactor, tooling, or docs. Claude in the main session plans, answers questions, reviews, verifies, and hands work to the agents; it does not implement a change by hand, not even a small one. If a change was started by hand, stop, and hand it to the agent to finish through the OpenSpec loop.
-
-- `contributor`: delivers one change end to end. It creates a branch, runs the OpenSpec loop (propose, apply, archive), runs the project's checks, commits with the conventions above, opens a pull request from the template, and squash-merges it. Invoke it with a description of the change or the name of an existing OpenSpec change, for example "use the contributor agent to add user login". It stops and reports instead of merging when the request is materially ambiguous, when checks still fail after three fix attempts, or when CI stays red.
-- `scout`: a read-only agent on the cheapest model tier that reads one area of the code map at the current commit and writes a context pack of facts, never conclusions or edits, to `tmp/scout/`. One contributor uses many scouts. Agents cannot start agents here, so the main session or a workflow starts one scout per area a change touches before it starts the contributor, and more on demand when a contributor stops and names what it is missing. `.claude/agents/scout.md` gives the pack's shape and its reuse and pruning rules.
-- Grouping: tasks of one domain may be grouped into one change when that makes sense, but each change stays balanced, one reviewable pull request; a contributor whose change grows past that proposes a split during Propose.
+- Phases, one agent each with a schema-checked result: scouts, contributor, checker, quality reviewer, security reviewer (never skipped), benchmark, contributor packaging, CI watcher, merger, reporter. What blocks goes back to the contributor and the later phases run again on the new commit, at most three rounds, then the run stops without merging.
+- `contributor`: the only agent that edits: it proposes and applies through OpenSpec, committing early, fixes what comes back, archives, pushes, and opens the pull request. It stops when the request is materially ambiguous or needs a secret, an irreversible action, or missing context.
+- `scout`: reads one map area at the current commit into a context pack of facts in `tmp/scout/`; its file gives the shape and the reuse rules.
+- `checker`, `quality-reviewer` (`code-review` and this file's rules), `security-reviewer` (`security-review` on the committed diff), `benchmark` (allocations and rounds against `main`), `ci-watcher`, `merger`, and `reporter` never edit. The mechanical agents run on the cheapest tier; the contributor and the reviewers on the session's model.
+- Run state: `build/pipeline/<change>.json`, written only by `tools/run_state.sh`; stage logs in `build/stages/<change>/`.
+- Planning: the charter `docs/goals.md` and the ordered queue `docs/queue.md`.
+- Grouping: tasks of one domain may be grouped into one change when that makes sense, but each change stays balanced, one reviewable pull request; a contributor whose change grows past that proposes a split.
 
 ## Stack
 
@@ -224,26 +228,20 @@ Decided in `docs/architecture.md` sections 2 and 13, which give the reasons.
 
 ## Commands
 
-Every command has a Makefile target; `make help` lists them all. All targets are verified under Spinel. Keep this list current. `docs/architecture.md` section 10 explains the test, analysis, and diagnose machinery behind them.
+Every command has a Makefile target, and `make help` prints each one's full description; keep this list current. `docs/architecture.md` section 10 explains the test, analysis, and diagnose machinery.
 
-- `make doctor`: check that `spinel`, `spin`, a C compiler, and `node` are on the path, and report `ruby: refused (stub)` when the `ruby` every target reaches is the stub; it fails when any other `ruby` would be reached.
-- `make no-cruby`: prove the guard: run `spin test` on a one-line test program with no snapshot in a temporary project outside the repository, through the make `PATH`, and pass only when it fails with the stub's refusal; the temporary project is removed.
-- `make toolchain`: fetch the pinned `SPINEL_REF` into `SPINEL_SRC` (default `tmp/.spinel`), copy the vendored header in, build, and install `spinel`, `spin`, and `spinel-doctor` into `PREFIX` (default `tmp/.toolchain`). Bump the pin in its own pull request after `make check` passes with the new commit, and regenerate the vendored header with Spinel's `tools/gen_respond_to_tables.rb` at the new commit in that same pull request. `make toolchain-clean` removes `tmp/`; `make spinel-rev` prints the pin, the CI cache key.
-- `make build`: `spin build`, every `bin/*.rb` into `build/bin`, then print the binary's absolute path and the alias line for a shell profile. `make dev-build`: `bin/carat.rb` with the development flags (`-O TEST_OPT --incremental`, cache in `SPINEL_CACHE_DIR`) into `build/dev/carat`, printing the analysis time and the units of C compiled; CI's pull requests smoke test it.
-- `make run FILE=path`: `spin run carat -- path`.
-- `make test`: `make build`, then `make test-build` (the runner `test/runner/run_all.rb`, every test in one program, into `build/test/run_all` with `spinel -O TEST_OPT --incremental`, default `-O 0`, and the analysis budget checked on that compile's own report) and `make test-run` (every test, or those `TESTS` names, each in its own process through `tools/run_tests.sh`, its standard output and error compared byte for byte with its snapshot and its exit status 0, the smoke test on the binary `CARAT_BIN` names, default `build/bin/carat`). A compile failure stops before any test runs; a test without a snapshot fails. Never call `spin test` directly.
-- `make test-one T=test/NAME.rb`: compile one test alone with the development flags into `build/test-one/` and run it against its snapshot; a smoke test builds the editor first. `make lint` is `make test-one T=test/lint.rb`.
-- `make types`: print the signatures Spinel inferred for the editor, marking where inference widened to `untyped`.
-- `make diagnose`: `spinel-doctor`, Spinel's own checker, on every compile root (`bin/*.rb` and the test runner); it must report clean. `make diagnose-one T=path` checks one file; `DIAGNOSE_SKIP` names the legs skipped (default `behavior`, which compares against a CRuby), and `make check` also skips `build`, `inference`, and `advice`.
-- `make bench`: compile `bench/keys.rb` at `-O 2` into `build/bench/keys` and run its scenarios (all, or `SCENARIOS="lh j"`) through `bench/run.sh`, pinned to one core when `taskset` exists; the code map lists what it measures and the scenarios per area.
-- `make bench-budget`: compile the benchmark with the development flags into `build/bench/keys-budget` and fail when one key of `lh` allocates `ALLOC_BUDGET` objects or more (default 100); CI runs it.
-- `make profile`: compile the benchmark with `spinel --profile` into `build/profile` and, when `perf` works (or `PERF` names one), print the top functions of `j` and `lh` by self time with their Ruby names; without `perf` it says so.
-- `make snapshots`: `make build` and `make test-build`, then rewrite every `.expected` file from the runner's output as `make test-run` compares it; review the diff before committing.
-- `make gen-config`: `spin run carat-gen-config`, regenerating the default config mirror from `config/default.caratrc` and the plugin registry from `config/plugins.caratrc`; it fails without writing on a line that does not read.
-- `make analysis-budget`: compile `ANALYSIS_ROOTS` (default `bin/carat.rb` and the test runner) to C one after another through `tools/analysis_budget.sh`, print each root's analysis time and rounds, fail above `ANALYSIS_ROUNDS` re-narrowing rounds (default 2), and only warn above `ANALYSIS_MS` (default 45000). `make test-build` already checks the runner, so `make check` and CI need no separate run.
-- `make check`: build, gen-config, test, diagnose with the legs that can fail it, and no-cruby; run it before every push.
-- `make install`, `make pack`, `make clean`: `spin install` (into `PREFIX/bin`, printing where), `spin pack`, `spin clean`. `make clean` never touches `tmp/`.
-- `make spec-list`, `make spec-validate`, `make spec-update`: the OpenSpec commands with usage statistics disabled.
+- `make doctor`: `spinel`, `spin`, a C compiler, and `node` on the path, and `ruby: refused (stub)`; fails when any other `ruby` would be reached. `make no-cruby`: proves the guard with `spin test` on a snapshot-less program in a temporary project outside the repository.
+- `make toolchain`: fetch `SPINEL_REF` into `tmp/.spinel`, copy the vendored header in, build, and install `spinel`, `spin`, and `spinel-doctor` into `tmp/.toolchain`. Bump the pin in its own pull request after `make check` passes, regenerating the vendored header with Spinel's `tools/gen_respond_to_tables.rb` there. `make toolchain-clean` removes `tmp/`; `make spinel-rev` prints the pin, the CI cache key.
+- `make build`: `spin build` of every `bin/*.rb` into `build/bin`, printing the alias line for a shell profile. `make dev-build`: `bin/carat.rb` with the development flags (`-O TEST_OPT --incremental`, cache in `SPINEL_CACHE_DIR`) into `build/dev/carat`, with the analysis budget checked on its own report. `make run FILE=path`.
+- `make test`: `make build`, `make test-build` (every test in the runner `test/runner/run_all.rb`, compiled into `build/test/run_all` at `-O 0 --incremental`, the analysis budget checked on its report), and `make test-run` (each test, or those `TESTS` names, in its own process through `tools/run_tests.sh`, output compared byte for byte with its snapshot, exit status 0; the smoke test runs `CARAT_BIN`, default `build/bin/carat`). A test without a snapshot fails. Never call `spin test` directly.
+- `make test-one T=test/NAME.rb`: one test compiled alone and run against its snapshot. `make lint`: `make test-one T=test/lint.rb`. `make types`: the signatures Spinel inferred, where they widened to `untyped`.
+- `make diagnose`: `spinel-doctor` on every compile root; it must report clean. `make diagnose-one T=path`; `DIAGNOSE_SKIP` names the legs skipped (default `behavior`, which compares against a CRuby; `make check` also skips `build`, `inference`, and `advice`).
+- `make bench`: `bench/keys.rb` at `-O 2` and its scenarios (all, or `SCENARIOS="lh j"`) through `bench/run.sh`, pinned to one core; the map lists the scenarios per area. `make bench-budget`: fails when one key of `lh` allocates `ALLOC_BUDGET` objects or more (default 100). `make profile`: the top functions of `j` and `lh` under `perf`, when it works.
+- `make snapshots`: rewrite every `.expected` file from the runner's output; review the diff. `make gen-config`: regenerate the config mirror from `config/default.caratrc` and the plugin registry from `config/plugins.caratrc`. `make config-current`: fail when `make gen-config` rewrote either.
+- `make analysis-budget`: compile `ANALYSIS_ROOTS` (default `bin/carat.rb` and the runner) to C and fail above `ANALYSIS_ROUNDS` re-narrowing rounds (default 2), warning above `ANALYSIS_MS`; `make dev-build` and `make test-build` already check both roots.
+- `make check`: the canonical stage list `CHECK_STAGES` in order (doctor, build, dev-build, config-current, test-build, test-run, diagnose, no-cruby, bench-budget, tools-test, gates); run it before every push. `make stages` prints it, `make check-stage S=NAME` runs one stage, and the Makefile records why CI leaves out three. `make tools-test`: `tools/tools_test.sh`, the tests of `tools/ci_scope.sh`, the run state, and the gates. `make gates`: `tools/gates.sh static`.
+- `sh tools/run_state.sh`: a change's run state; `check CHANGE` runs the stages, resuming after the passed ones; `push CHANGE` pushes after the pre-push gates; `status` is `/status`.
+- `make install`, `make pack`, `make clean` (never touches `tmp/`), and `make spec-list`, `make spec-validate`, `make spec-update`, the OpenSpec commands with usage statistics disabled.
 
 ## Layout
 
@@ -253,10 +251,10 @@ Defined in `docs/architecture.md`, section 11, in the shape `spin` expects. `doc
 - `carat/`: the library: `plugin_api.rb` (the only file a plugin may require), the layers `domain/`, `ports/`, `use_cases/`, `adapters/`, and `drivers/`, the test doubles `doubles/` (required only by `carat/test_support.rb`), `plugins/` (the generated `registry.rb` and one directory per compiled plugin), `testing.rb`, `test_support.rb`, and `version.rb`.
 - `bin/`: the compile roots, `carat.rb` (entry point and composition root, the only place drivers are constructed) and `carat-gen-config.rb`.
 - `config/`: `default.caratrc` (every default option and key binding, mirrored by the generated `carat/domain/default_config.rb`) and `plugins.caratrc` (the compiled plugins in order).
-- `test/`: one test module per file with its `.expected` snapshot, and `runner/run_all.rb`. `bench/`: the key benchmark, not compiled by `spin`. `tools/`: the `noruby/ruby` stub, the vendored Spinel header, and the scripts behind the make targets and CI.
-- `docs/`: `architecture.md`, `codebase-map.md`, `compatibility.md` (every Neovim command implemented, with its test), `actions.md` (every action name a keymap may use), `plugins.md` (how to write a compiled plugin), `backlog.md` (known items left for later, each with its location and fix outline).
-- `openspec/` (specs and changes), `.claude/` (agents, settings, and the generated OpenSpec commands and skills), `.github/` (the workflow and the pull request template).
-- Ignored by git: `build/` (`spin` output, development builds, the compile cache, `build/smoke/`, and `build/stages/`), `dist/`, and `tmp/` (`tmp/.spinel` and `tmp/.toolchain`, hidden because `spin` reads every visible directory as project source, and `tmp/scout/`, the scouts' packs).
+- `test/`: one test module per file with its `.expected` snapshot, and `runner/run_all.rb`. `bench/`: the key benchmark, not compiled by `spin`. `tools/`: the `noruby/ruby` stub, the vendored Spinel header, and the scripts behind the make targets, CI, and the pipeline.
+- `docs/`: `architecture.md`, `codebase-map.md`, `goals.md`, `queue.md`, `compatibility.md` (every Neovim command implemented, with its test), `actions.md` (every action name a keymap may use), `plugins.md` (how to write a compiled plugin), `backlog.md` (known items left for later, each with its location and fix outline).
+- `openspec/` (specs and changes), `.claude/` (agents, the delivery workflow, `/deliver` and `/status`, settings, and the generated OpenSpec commands and skills), `.github/` (the workflow and the pull request template).
+- Ignored by git: `build/` (`spin` output, development builds, the compile cache, `build/smoke/`, `build/stages/`, and `build/pipeline/`), `dist/`, and `tmp/` (`tmp/.spinel` and `tmp/.toolchain`, hidden because `spin` reads every visible directory as project source, and `tmp/scout/`, the scouts' packs).
 
 ## Coding conventions
 

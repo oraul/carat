@@ -31,23 +31,26 @@ The last section, Delivered changes, lists every change merged so far in order w
 
 ## 1. Build and CI
 
-What: compiles the editor and the generator with `spin`, maps every command to a `make` target, and runs the checks in CI.
+What: builds with `spin`, maps commands to `make` targets, runs the checks locally and in CI, and keeps the pipeline's run state and gates.
 
-Flow: `make build` runs `spin build` over every `bin/*.rb` into `build/bin`; `make dev-build` compiles `bin/carat.rb` with the development flags into `build/dev/carat`; `make check` runs build, gen-config, test (test-build with the analysis budget, then test-run), diagnose, and no-cruby. CI (`.github/workflows/ci.yml`) first runs `tools/ci_scope.sh`, then the toolchain from cache, `make doctor`, `make no-cruby`, `make dev-build`, the generated-config check, `make test-build`, `make test-run CARAT_BIN=build/dev/carat`, and `make bench-budget`; a push to `main` also builds the release binary and smoke tests it.
+Flow: `make build` (release, `build/bin`) and `make dev-build` (development flags, `build/dev/carat`, analysis budget checked). `make check` runs `CHECK_STAGES`; the checker runs them one logged stage at a time through `tools/run_state.sh check`, and CI mirrors them after `tools/ci_scope.sh`, its differences recorded in the Makefile. `.claude/workflows/deliver-change.js` runs the agents; `tools/run_state.sh push` and the merger run `tools/gates.sh`.
 
 Files:
 
 - `carat.rb`: the production require graph, innermost layer first, ending with the plugin registry; requires no test double.
 - `carat/version.rb`: `Carat::VERSION`.
-- `tools/ci_scope.sh`: `documentation` (a path no test reads: Markdown other than `docs/actions.md`, `docs/compatibility.md`, and `docs/codebase-map.md`, or anything under `openspec/` or `.claude/`) and `answer`; skips the checks for documentation-only changes and for a push to `main` whose tree equals a passed pull request head.
-- `tools/analysis_budget.sh`: compiles `ANALYSIS_ROOTS` to C with `SP_TIMING=1`, prints analysis milliseconds and fixpoint and re-narrowing rounds, fails above `ANALYSIS_ROUNDS`; `--check` reads a report a build already wrote.
-- Outside the five roots: `Makefile` (the command map; `make help`), `spin.toml`, `.gitignore`, `.github/workflows/ci.yml`, `.github/pull_request_template.md`.
+- `tools/ci_scope.sh`: `documentation` (Markdown but `docs/actions.md`, `docs/compatibility.md`, and the map, or under `openspec/` or `.claude/`) and `answer`; skips documentation-only changes and a push to `main` whose tree passed as a pull request head.
+- `tools/analysis_budget.sh`: compiles `ANALYSIS_ROOTS` to C with `SP_TIMING=1`, prints analysis milliseconds and rounds, fails above `ANALYSIS_ROUNDS`; `--check` reads a report a build already wrote.
+- `tools/run_state.sh`: the one writer of `build/pipeline/<change>.json` and the stage logs; `init`, `show`, `get`, `set`, `phase`, `review`, `stage`, `check`, `push`, `status`.
+- `tools/gates.sh`: the rule gates `trailer`, `content`, `snapshots`, `docs`, `security`, `stages`, `pushes`, `pr-body`, and the groups `static`, `pre-push`, `merge`.
+- `tools/tools_test.sh`: `expect`, `fresh`; the scope, the run state, and every gate in temporary repositories.
+- Outside the five roots: `Makefile` (`make help`), `spin.toml`, `.gitignore`, `.github/workflows/ci.yml`, `.github/pull_request_template.md`, `.claude/workflows/deliver-change.js`, `.claude/agents/`, `.claude/commands/deliver.md` and `status.md`.
 
-Tests: `make check` itself; `test/smoke_editor.rb` (area 18) runs the built binary.
+Tests: `make check` itself; `tools/tools_test.sh`; `test/smoke_editor.rb` (area 18) runs the built binary.
 
-Designs: `test-build` (One runner, one process per test; Development builds; The analysis budget comes from the runner's own compile; `make diagnose` on the real roots; CI), `ci-speed-2` (The compile cache; The allocation budget at `-O 0`; The smoke test on a development build), `analysis-speed` (The budget counts re-narrowing rounds).
+Designs: `test-build` (One runner, one process per test; Development builds; The analysis budget comes from the runner's own compile; CI), `ci-speed-2` (The compile cache; The allocation budget at `-O 0`; The smoke test on a development build), `analysis-speed` (The budget counts re-narrowing rounds), `delivery-pipeline` (every section).
 
-Rules: CLAUDE.md Hard rules (only `make` runs tests, snapshots, and benchmarks) and Commands; `docs/architecture.md` sections 2 and 10. A new command gets a Makefile target and a line under Commands.
+Rules: CLAUDE.md Hard rules and Commands; `docs/architecture.md` sections 2 and 10. A new command gets a target, a Commands line, and a README line; a new stage goes into `CHECK_STAGES` and CI or the recorded reasons.
 
 ## 2. Toolchain
 
@@ -551,15 +554,16 @@ In merge order, by pull request number, with the roadmap item of `docs/architect
 - #14, item 11, `plugin-host`: the plugin API, manifest rules, the host with actions, ex commands, events, and requests, scratch buffers in side windows with their own keymaps, the generated registry, the icon table, the `hello` fixture.
 - #15, item 12, first half, `plugin-explorer`: the file tree, API 1.1 (working directory, window numbers, file requests inside a root, a prompt), `FilePort` `mkdir`, `rename`, `delete`, `cwd`. Left: `plugin-finder`, which can start on the host at any time.
 - #16, item 5, `visual-modes`, taken ahead of item 4 at the user's request: the three kinds with every motion, count, register prefix, text object, and operator, block insert and append, the blockwise register kind, the `Visual` highlight. The `'<` and `'>` marks wait for marks.
-- #17 to #21, the core-quality queue the user approved before more plugins: `edit-pipeline` (one splice, change records, transactions, derived modified flag, buffer ids), `plugin-host-hardening` (guarded calls, queued events, ids, `buffer_change` from transactions, item-by-item validation, copies, cleanup, API 1.2, request families), `dependency-injection` (action and ex tables, kinds, `Outcome` and `Reporting`, ex abbreviations, unknown actions reported at load, keyword constructors), `state-and-ports` (focused records, `CommandRunner`, `ConfigPort`, `SignalPort`, `PathInfo`, doubles out of the production graph, the shared-instance test), `render-core` (flat frames, the line cache, dirty rows, changed runs, scroll regions, `ArrangeView`, `make bench`, `make bench-budget`, `make profile`).
+- #17 to #21, the core-quality queue approved before more plugins: `edit-pipeline` (one splice, change records, transactions, derived modified flag, buffer ids), `plugin-host-hardening` (guarded calls, queued events, ids, validation, copies, cleanup, API 1.2, request families), `dependency-injection` (action and ex tables, kinds, `Outcome`, ex abbreviations, keyword constructors), `state-and-ports` (focused records, `CommandRunner`, `ConfigPort`, `SignalPort`, doubles out of the production graph), `render-core` (flat frames, the line cache, dirty rows, scroll regions, `ArrangeView`, the benchmarks).
 - #22, `no-cruby-guard`: the `tools/noruby/ruby` stub first on every target's `PATH` and `make no-cruby`.
-- #23, item 4, `undo-and-registers`, last of the queue: the undo tree with branches, `u`, `<C-r>`, `U`, `g-`, `g+`, `:undo`, `:redo`, `:undolist`, `:earlier N`, `:later N`; the dot command; numbered, small delete, black hole, and read-only registers with `E354`, `:registers`, `:display`; messages of several lines. Time and write-count arguments of `:earlier` and `:later` are in the backlog.
-- #24 `analysis-speed` and #25 `test-build`, the compile and test time effort the user asked for before syntax highlighting: typed test table values and `make analysis-budget`; one test runner, `make test-one`, `make diagnose-one`, and CI caching the units of C.
-- #26, item 8, `syntax-highlighting`: filetypes, highlight groups, the syntax cache, `HighlightView`, the themes and color depths, plugin API 1.3, the `ruby` plugin, `:syntax`, `:set filetype` and `syntax`. Range highlights, virtual text, other languages, the rest of `:set`, user themes, and semantic highlighting are in the backlog.
+- #23, item 4, `undo-and-registers`, last of the queue: the undo tree and its keys and ex commands, the dot command, the numbered, small delete, black hole, and read-only registers, `:registers`, messages of several lines. Time arguments of `:earlier` and `:later` are in the backlog.
+- #24 `analysis-speed` and #25 `test-build`, the time effort asked for before syntax highlighting: typed test table values and `make analysis-budget`; one test runner, `make test-one`, `make diagnose-one`, and CI caching the units of C.
+- #26, item 8, `syntax-highlighting`: filetypes, highlight groups, the syntax cache, `HighlightView`, themes, plugin API 1.3, the `ruby` plugin, `:syntax`, `:set filetype` and `syntax`; the rest is in the backlog.
 - #27, `ci-speed-2`, the third of the time effort: pull requests under two minutes on development builds; `main` builds and smoke tests the release binary.
 - #28, `struct-keyword-init`: every record built with keyword arguments, checked by the lint test.
-- #29, `caratrc-config`, which brings the configuration files of item 9 ahead of it: `.caratrc` lines, the user and project files, `none` to unbind, problems by file and line, plugin API 2.0, `config/plugins.caratrc`. Item 9 keeps `:set` beyond `filetype` and `syntax` and the local options.
+- #29, `caratrc-config`, item 9's files ahead of it: `.caratrc` lines, the user and project files, `none` to unbind, problems by file and line, plugin API 2.0, `config/plugins.caratrc`. Item 9 keeps the rest of `:set` and the local options.
 - #30, `use-case-boundaries`: one public `call` per use case, the many-method use cases split into 37 classes, shared logic in the domain, the lint rules. The plugin host under `use_cases/plugins/` is left for a plugin-side change.
 - `agents-and-map`: this map, its lint rule, the scout agent, the slim `CLAUDE.md`, and the contributor's instructions.
+- `delivery-pipeline`: the workflow, `/deliver`, `/status`, seven agents, run state, gates, one stage list. Next: `authoring-kit`, `planner-and-metrics`.
 
-Next in roadmap order: item 6, `search-and-substitute`; `plugin-finder` can start at any time.
+Next: `docs/queue.md`, ordered against the charter `docs/goals.md`.

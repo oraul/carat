@@ -21,6 +21,9 @@ permissions:
 jobs:
   spin:
     runs-on: ubuntu-latest
+    # The steps mirror CHECK_STAGES in the Makefile, whose comment records
+    # why CI leaves out three of them: the release build on pull requests,
+    # diagnose, and the gates.
     env:
       # The optimization level of the development builds (the editor of the
       # smoke test, the test runner, and the benchmark of the allocation
@@ -102,20 +105,27 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: make no-cruby
 
+      # The shell tools behind CI and the delivery pipeline, tested in
+      # temporary repositories: tools/ci_scope.sh, the run state, the gates.
+      - name: Tools
+        if: steps.scope.outputs.run == 'true'
+        run: make tools-test
+
       # The editor the smoke test runs, compiled with the development flags
       # (-O 0, --incremental) like the test runner: Spinel documents the
       # same answers at every level, and the C compiles in seconds instead
       # of the release build's 15 to 20. The release build at -O 2 runs on
       # every push to main and by hand, below.
+      # Its compile report is checked against the analysis budget, as the
+      # test runner's is.
       - name: Build the editor for the smoke test
         if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
         run: make dev-build
 
+      # The config mirror and the plugin registry both match config/.
       - name: Generated config is current
         if: steps.scope.outputs.run == 'true'
-        run: |
-          make gen-config
-          git diff --exit-code -- carat/domain/default_config.rb
+        run: make config-current
 
       # Every test program in one, compiled once; Spinel's analysis of it
       # must take at most ANALYSIS_ROUNDS re-narrowing rounds (see the

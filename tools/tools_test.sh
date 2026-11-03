@@ -1,0 +1,282 @@
+#!/bin/sh
+# Tests the shell tools behind CI and the delivery pipeline, each in a
+# temporary git repository outside this one: tools/ci_scope.sh (which
+# changes run the checks), tools/run_state.sh (the run state, stages,
+# resume, and the push rule), and every gate of tools/gates.sh, each
+# passing and refusing. Prints "ok   NAME" or "FAIL NAME" and the output,
+# then "P/T passed"; exits 1 when any failed. Run by make tools-test.
+#
+# Forbidden text (addresses, links, model names) is assembled from pieces
+# here, so this file does not trip the content gate it tests.
+set -u
+
+here=$(cd "$(dirname "$0")" && pwd)
+work=$(mktemp -d "${TMPDIR:-/tmp}/carat-tools-test.XXXXXX")
+trap 'rm -rf "$work"' EXIT
+TRAILER='Co-Authored-By: Claude <noreply@anthropic.com>'
+SCHEME="https:"
+LINK="$SCHEME//example.org/page"
+MAIL="someone""@""example.org"
+TIER="son""net"
+passed=0
+total=0
+
+# expect NAME STATUS PATTERN COMMAND...: COMMAND exits with STATUS and its
+# output matches the extended regular expression PATTERN.
+expect() {
+  name=$1 want=$2 pattern=$3
+  shift 3
+  total=$((total + 1))
+  out=$("$@" 2>&1)
+  got=$?
+  if [ "$got" = "$want" ] && printf '%s\n' "$out" | grep -q -E -- "$pattern"; then
+    passed=$((passed + 1))
+    echo "ok   $name"
+  else
+    echo "FAIL $name (exit $got, wanted $want and /$pattern/)"
+    printf '%s\n' "$out" | sed 's/^/  | /'
+  fi
+}
+
+git_q() {
+  git -c user.name=Claude -c user.email=noreply@anthropic.com -c init.defaultBranch=main "$@"
+}
+
+# commit MESSAGE: commit everything with MESSAGE and the trailer.
+commit() {
+  git_q add -A
+  git_q commit -q -m "$1" -m "$TRAILER"
+}
+
+# fresh NAME: a repository with a base commit on main and a branch
+# chore/NAME checked out; prints nothing, changes into it.
+fresh() {
+  cd "$work" || exit 1
+  rm -rf "$1"
+  git_q init -q "$1"
+  cd "$1" || exit 1
+  mkdir -p docs tools test
+  printf '## build: compile\nbuild:\n\ttrue\n' > Makefile
+  echo "# map" > docs/codebase-map.md
+  echo "# rules" > CLAUDE.md
+  echo "# readme" > README.md
+  echo "echo base" > tools/base.sh
+  echo build/ > .gitignore
+  commit "chore: base"
+  git_q checkout -q -b "chore/$1"
+}
+
+state() {
+  sh "$here/run_state.sh" "$@"
+}
+
+gates() {
+  BASE=main STAGES=lint sh "$here/gates.sh" "$@"
+}
+
+# ------------------------------------------------------------ ci_scope.sh
+
+scope() {
+  EVENT=$1 REPO=owner/carat SHA=$(git rev-parse HEAD) sh "$here/ci_scope.sh"
+}
+
+scope_case() {
+  fresh scope
+  mkdir -p "$(dirname "$2")"
+  echo change >> "$2"
+  commit "chore: change $2"
+  expect "ci_scope: $2 on a pull request" 0 "^run=$1" scope pull_request
+}
+
+scope_case false docs/notes.md
+scope_case false openspec/changes/x/proposal.md
+scope_case false .claude/agents/x.md
+scope_case true docs/codebase-map.md
+scope_case true docs/actions.md
+scope_case true tools/x.sh
+expect "ci_scope: a run by hand always runs" 0 "^run=true" scope workflow_dispatch
+
+mkdir -p "$work/bin"
+cat > "$work/bin/gh" <<'EOF'
+#!/bin/sh
+case "$*" in
+  *head.sha*) echo "$FAKE_HEAD" ;;
+  *number*) echo 7 ;;
+  *tree.sha*) echo "$FAKE_TREE" ;;
+  *check-runs*) echo "$FAKE_PASSED" ;;
+esac
+EOF
+chmod +x "$work/bin/gh"
+fresh push
+echo code >> tools/x.sh
+commit "chore: code"
+tree=$(git rev-parse 'HEAD^{tree}')
+expect "ci_scope: a push whose tree passed in its pull request skips" 0 "^run=false: the tree equals the head of pull request 7" \
+  env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=1 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
+expect "ci_scope: a push whose pull request did not pass runs" 0 "^run=true" \
+  env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=0 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
+
+# ----------------------------------------------------------- run_state.sh
+
+fresh state
+expect "run_state: init writes the state" 0 '"branch": "chore/state"' state init state chore/state
+expect "run_state: init again resumes" 0 "resuming state" state init state chore/state
+state set state note 'a "quoted" \ value' > /dev/null
+expect "run_state: a value round-trips through JSON escapes" 0 '^a "quoted" \\ value$' state get state note
+expect "run_state: the file is one flat object" 0 '^  "note": "a \\"quoted\\" \\\\ value"$' cat build/pipeline/state.json
+expect "run_state: a failing stage keeps its exit status" 3 "stage s: exit 3" state stage state s sh -c 'exit 3'
+expect "run_state: the stage log ends with its status" 0 "^EXIT 3$" tail -1 build/stages/state/s.log
+expect "run_state: a stage records exit, time, and commit" 0 "^3 [0-9]+s $(git rev-parse --short=12 HEAD) " state get state stage.s
+
+cat > "$work/bin/fake-make" <<'EOF'
+#!/bin/sh
+for arg in "$@"; do
+  case "$arg" in S=b) exit "${FAIL_B:-0}" ;; esac
+done
+exit 0
+EOF
+chmod +x "$work/bin/fake-make"
+expect "run_state: check stops at the first failing stage" 1 "stage b failed" \
+  env STAGES="a b" MAKE="$work/bin/fake-make" FAIL_B=2 sh "$here/run_state.sh" check state
+expect "run_state: check resumes after the passed stages" 0 "stage a: passed at .*, skipped" \
+  env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
+expect "run_state: check records the phase" 0 "^$(git rev-parse --short=12 HEAD)$" state get state phase.check
+expect "run_state: status names the running change and its next phase" 0 "next phase: implement" state status
+
+fresh pushing
+git_q init -q --bare "$work/origin.git"
+git_q remote add origin "$work/origin.git"
+git_q push -q origin main 2>/dev/null
+state init pushing chore/pushing > /dev/null
+echo more >> README.md
+commit "chore: more"
+expect "run_state: push refuses before the checks and the review" 1 "pre-push gates failed" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
+state set pushing stage.lint "0 1s $(git rev-parse --short=12 HEAD) now" > /dev/null
+state review pushing security pass "no finding" > /dev/null
+expect "run_state: push passes the gates and pushes" 0 "ok   security" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
+expect "run_state: a push is counted" 0 "^1$" state get pushing pushes
+expect "run_state: a second push is refused" 1 "refused: 1 push" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
+expect "run_state: a CI fix push needs a red CI run" 1 "needs a red CI run" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --ci-fix
+state set pushing ci "red abc" > /dev/null
+expect "run_state: a CI fix allows one more push" 0 "ok   pushes|ok   stages" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --ci-fix
+
+# ---------------------------------------------------------------- gates.sh
+
+fresh trailer
+echo x >> README.md
+commit "chore: good"
+expect "gates: trailer passes" 0 "ok   trailer: 1 commit" gates trailer
+echo y >> README.md
+git_q add -A
+git_q commit -q -m "chore: no trailer"
+expect "gates: trailer refuses a commit without it" 1 "the last line is not the co-author trailer" gates trailer
+fresh trailer2
+echo x >> README.md
+git_q add -A
+git_q commit -q -m "chore: two" -m "Signed-off-by: someone" -m "$TRAILER"
+expect "gates: trailer refuses another trailer" 1 "another trailer" gates trailer
+
+fresh content
+printf 'git -C x remote add origin "%s"\n' "$LINK" >> Makefile
+echo "$TRAILER" >> README.md
+mkdir -p .claude/agents
+printf -- '---\nmodel: %s\n---\n' "$TIER" > .claude/agents/a.md
+commit "chore: allowed"
+expect "gates: content allows the clone address, the trailer, and a tier alias in frontmatter" 0 "ok   content" gates content
+for bad in "see $LINK" "write to $MAIL" "session""_ABCDEFGHIJKLMNOPQRS" "run on $TIER" "notes: model: $TIER"; do
+  fresh content2
+  echo "$bad" >> README.md
+  commit "chore: add a line"
+  expect "gates: content refuses: $bad" 1 "FAIL content" gates content
+done
+fresh content3
+echo x >> README.md
+commit "chore: written on $TIER"
+expect "gates: content refuses a model name in a commit message" 1 "commit [0-9a-f]+.*$TIER" gates content
+
+fresh docs
+echo new > tools/new.sh
+commit "chore: tool"
+expect "gates: docs refuses a new tool without the map" 1 "docs/codebase-map.md did not change" gates docs
+echo "- tools/new.sh" >> docs/codebase-map.md
+commit "docs: map"
+expect "gates: docs passes with the map" 0 "ok   docs" gates docs
+mkdir -p .claude/agents
+echo agent > .claude/agents/new.md
+commit "chore: agent"
+expect "gates: docs refuses a new agent without CLAUDE.md" 1 "CLAUDE.md did not change" gates docs
+expect "gates: docs refuses a process change without README.md" 1 "README.md did not" gates docs
+printf '## lint: check\n' >> Makefile
+echo agents >> CLAUDE.md
+echo agents >> README.md
+commit "docs: rules"
+expect "gates: docs passes with CLAUDE.md and README.md" 0 "ok   docs" gates docs
+
+fresh snapshots
+echo out > test/gone.rb.expected
+commit "test: snapshot"
+expect "gates: snapshots refuses a snapshot without its test" 1 "has no test test/gone.rb" gates snapshots
+echo "puts 1" > test/gone.rb
+commit "test: test"
+expect "gates: snapshots refuses without the runner" 1 "build/test/run_all is missing" gates snapshots
+
+fresh security
+state init security chore/security > /dev/null
+expect "gates: security refuses when no review is recorded" 1 "no security review is recorded" gates security
+state review security security blocked "one high" > /dev/null
+expect "gates: security refuses a blocked review" 1 "did not pass" gates security
+state review security security pass "no finding" > /dev/null
+expect "gates: security passes at HEAD" 0 "ok   security: pass" gates security
+mkdir -p openspec/changes/archive/x
+echo archived > openspec/changes/archive/x/tasks.md
+commit "chore: archive"
+expect "gates: security passes after an archive only" 0 "ok   security: pass" gates security
+echo code > tools/fix.sh
+commit "fix: code"
+expect "gates: security refuses after code changed" 1 "code changed since" gates security
+expect "gates: stages refuses a stage that has not run" 1 "lint has not run" gates stages
+state set security pushes 3 > /dev/null
+expect "gates: pushes refuses more than one push per CI fix" 1 "3 pushes for 0 CI fix" gates pushes
+
+fresh body
+cat > body.md <<'EOF'
+## Summary
+
+Does a thing for a reason.
+
+---
+
+## Changes
+
+- Add a thing
+
+---
+
+## Testing
+
+- Run the security review on the committed diff, no finding
+
+---
+
+## Notes
+
+None
+EOF
+expect "gates: pr-body passes the template's shape" 0 "ok   pr-body" gates pr-body body.md
+sed 's/^None$/None/' body.md > footer.md
+printf '\nGenerated with a tool\n%s\n' "$LINK" >> footer.md
+expect "gates: pr-body refuses a footer" 1 "a footer or attribution line" gates pr-body footer.md
+sed 's/^None$/None <!-- left -->/' body.md > comment.md
+expect "gates: pr-body refuses a template comment" 1 "a comment or angle bracket" gates pr-body comment.md
+sed 's/security review/review/' body.md > nosec.md
+expect "gates: pr-body refuses a body without the security review" 1 "does not report the security review" gates pr-body nosec.md
+sed 's/^## Notes$/## Remarks/' body.md > shape.md
+expect "gates: pr-body refuses other sections" 1 "not exactly Summary" gates pr-body shape.md
+
+echo "$passed/$total passed"
+test "$passed" -eq "$total"

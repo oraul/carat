@@ -85,6 +85,20 @@ ANALYSIS_MS     ?= 45000
 # compiled, and the C compile's wall time, so a log shows how much of the
 # compile cache a build reused.
 UNIT_SUMMARY := awk '/^spinel-timing: phase=analysis / { a = $$3 } /^spinel-timing: phase=cc_compile / { sub(/^spinel-timing: phase=cc_compile /, ""); print "analysis " a ", C compile " $$0; exit }'
+# The canonical stage list: make check runs it in order, the checker agent
+# runs each stage on its own through tools/run_state.sh check (make
+# check-stage S=NAME, with the same diagnose legs), and CI runs the same
+# targets but three: the release build only on main, since pull requests
+# smoke test dev-build (ci-speed-2); diagnose, a second analysis of every
+# root, about a minute, kept off pull requests to hold them near two
+# minutes, while the checker runs it before every push; and gates, which
+# need the branch's history and its run state, which a pull request's
+# checkout lacks, so the checker and the merger run them.
+CHECK_STAGES := doctor build dev-build config-current test-build test-run diagnose no-cruby bench-budget tools-test gates
+# The spinel-doctor legs the stages skip (see DIAGNOSE_SKIP).
+CHECK_SKIP   := behavior,build,inference,advice
+# The generated files make config-current checks.
+GENERATED    := carat/domain/default_config.rb carat/plugins/registry.rb
 OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y @fission-ai/openspec@latest
 
 # tools/noruby holds a ruby that refuses to run and exits 127. It comes first
@@ -139,8 +153,10 @@ toolchain-clean:
 spinel-rev:
 	@if echo "$(SPINEL_REF)" | grep -qE '^[0-9a-f]{40}$$'; then \
 	  echo "$(SPINEL_REF)"; \
+	elif [ -d "$(SPINEL_SRC)/.git" ]; then \
+	  git -C "$(SPINEL_SRC)" ls-remote origin "$(SPINEL_REF)" | head -1 | cut -f1; \
 	else \
-	  git ls-remote "https://github.com/$(SPINEL_REPO)" "$(SPINEL_REF)" | head -1 | cut -f1; \
+	  echo "spinel-rev: SPINEL_REF=$(SPINEL_REF) is not a commit, and only the remote of the checkout make toolchain sets up can resolve it" >&2; exit 1; \
 	fi
 
 ## doctor: check that spinel, spin, a C compiler, and node for OpenSpec are available, and that the ruby every target reaches is the refusing stub in tools/noruby, never a CRuby
@@ -198,6 +214,7 @@ dev-build:
 	  status=$$?; grep -v '^spinel-timing' $(DEV_BIN).timing >&2; \
 	  if [ $$status -ne 0 ]; then echo "dev-build: bin/carat.rb did not compile" >&2; exit 1; fi
 	@$(UNIT_SUMMARY) $(DEV_BIN).timing
+	sh tools/analysis_budget.sh --check $(ANALYSIS_ROUNDS) $(ANALYSIS_MS) bin/carat.rb $(DEV_BIN).timing
 
 ## run: build and run the editor on FILE (default README.md), e.g. make run FILE=path/to/file
 run:
@@ -310,9 +327,36 @@ types:
 gen-config:
 	spin run carat-gen-config
 
-## check: everything a push needs: build, gen-config, test (with the runner's analysis budget), diagnose with the legs that can fail it (unsupported, unresolved, requires; build and test have just compiled every root), and no-cruby
-check: DIAGNOSE_SKIP = behavior,build,inference,advice
-check: build gen-config test diagnose no-cruby
+## config-current: run gen-config and fail when it changed the config mirror or the plugin registry, which were then stale
+config-current:
+	@before=$$(cat $(GENERATED) | cksum); \
+	$(MAKE) --no-print-directory gen-config || exit 1; \
+	if [ "$$(cat $(GENERATED) | cksum)" != "$$before" ]; then \
+	  echo "config-current: make gen-config rewrote $(GENERATED); commit what it wrote" >&2; exit 1; \
+	fi; \
+	echo "config-current: $(GENERATED) match config/"
+
+## tools-test: test the shell tools in temporary repositories: tools/ci_scope.sh, tools/run_state.sh, and every gate of tools/gates.sh, passing and refusing
+tools-test:
+	sh tools/tools_test.sh
+
+## gates: run the rule gates that need only git on the branch against origin/main (trailer, content, snapshots, docs); tools/gates.sh has the rest
+gates:
+	sh tools/gates.sh static
+
+## stages: print the canonical stage list, CHECK_STAGES, which make check and the checker run in order
+stages:
+	@echo $(CHECK_STAGES)
+
+## check-stage: run one stage of CHECK_STAGES as make check runs it, e.g. make check-stage S=diagnose
+check-stage: DIAGNOSE_SKIP = $(CHECK_SKIP)
+check-stage:
+	@case " $(CHECK_STAGES) " in *" $(S) "*) ;; *) echo "usage: make check-stage S=STAGE, one of: $(CHECK_STAGES)" >&2; exit 2 ;; esac
+	@$(MAKE) --no-print-directory $(S) DIAGNOSE_SKIP=$(DIAGNOSE_SKIP)
+
+## check: everything a push needs, the stages of CHECK_STAGES in order: doctor, build, dev-build and test-build with their analysis budgets, config-current, test-run, diagnose with the legs that can fail it, no-cruby, bench-budget, tools-test, and gates
+check: DIAGNOSE_SKIP = $(CHECK_SKIP)
+check: $(CHECK_STAGES)
 
 # ----------------------------------------------------------------- openspec
 
@@ -337,4 +381,4 @@ help:
 	@echo
 	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)  T=$(T)  TEST_OPT=$(TEST_OPT)  SPINEL_CACHE_DIR=$(SPINEL_CACHE_DIR)  CARAT_BIN=$(CARAT_BIN)  TESTS=$(TESTS)"
 
-.PHONY: toolchain toolchain-clean spinel-rev doctor no-cruby build dev-build run install pack clean test test-build test-run test-one lint snapshots diagnose diagnose-one bench bench-budget analysis-budget profile types gen-config check spec-list spec-validate spec-update help
+.PHONY: toolchain toolchain-clean spinel-rev doctor no-cruby build dev-build run install pack clean test test-build test-run test-one lint snapshots diagnose diagnose-one bench bench-budget analysis-budget profile types gen-config config-current tools-test gates stages check-stage check spec-list spec-validate spec-update help
