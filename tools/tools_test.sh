@@ -1,11 +1,13 @@
 #!/bin/sh
 # Tests the shell tools behind CI and the delivery pipeline, each in a
-# temporary git repository outside this one: tools/ci_scope.sh (which
-# changes run the checks), tools/metrics.sh (the measurement and the
-# comparison with main), tools/run_state.sh (the run state, stages,
-# resume, and the push rule), and every gate of tools/gates.sh, each
-# passing and refusing. Prints "ok   NAME" or "FAIL NAME" and the output,
-# then "P/T passed"; exits 1 when any failed. Run by make tools-test.
+# temporary git repository or directory outside this one:
+# tools/ci_scope.sh (which changes run the checks), tools/metrics.sh (the
+# measurement and the comparison with main), tools/run_state.sh (the run
+# state, stages, resume, and the push rule), tools/docs_lint.sh (budgets,
+# content, wraps, paths), tools/new.sh (every generator and its
+# refusals), and every gate of tools/gates.sh, each passing and refusing.
+# Prints "ok   NAME" or "FAIL NAME" and the output, then "P/T passed";
+# exits 1 when any failed. Run by make tools-test.
 #
 # Forbidden text (addresses, links, model names) is assembled from pieces
 # here, so this file does not trip the content gate it tests.
@@ -262,6 +264,122 @@ expect "run_state: review-due is not due after one quiet change" 1 "^not due: 1 
 expect "run_state: review-due is due five changes after the last review" 0 "^due: 5 changes merged" state review-due due
 row f "security=pass quality=pass" >> docs/metrics.tsv
 expect "run_state: a periodic review restarts the count" 1 "^not due: 1 of 5" state review-due due
+
+# ---------------------------------------------------------- docs_lint.sh
+
+# docs NAME: a tree of the documents docs_lint.sh reads, all passing;
+# changes into it.
+docs() {
+  cd "$work" || exit 1
+  rm -rf "$1"
+  mkdir -p "$1/docs" "$1/.claude/agents" "$1/.github" "$1/tools"
+  cd "$1" || exit 1
+  printf '# Rules\n\nSee `tools/x.sh`, `test/NAME.rb`, and `carat/<layer>/`.\n\n%s\n\n### Example\n\n```\n## Summary\n\nOne line.\n\n---\n\n- A bullet\n- Another\n```\n' "$TRAILER" > CLAUDE.md
+  echo "# readme" > README.md
+  echo "echo x" > tools/x.sh
+  printf -- '---\nname: x\nmodel: %s\n---\n\nAn agent.\n' "$TIER" > .claude/agents/x.md
+  printf '## Summary\n\n<!-- Guidance. -->\n\n---\n\n## Changes\n\n- \n' > .github/pull_request_template.md
+}
+
+doclint() {
+  sh "$here/docs_lint.sh" .
+}
+
+docs clean
+expect "docs_lint: passes a clean tree, the trailer, a tier alias in frontmatter, and placeholders" 0 "ok   paths: 1 path" doclint
+docs budget
+head -c 30721 /dev/zero | tr '\0' x >> CLAUDE.md
+expect "docs_lint: refuses CLAUDE.md over its budget" 1 "FAIL budgets: CLAUDE.md is [0-9]+ bytes, over its budget of 30720" doclint
+docs agent
+head -c 8193 /dev/zero | tr '\0' x >> .claude/agents/x.md
+expect "docs_lint: refuses an agent file over its budget" 1 "FAIL budgets: .claude/agents/x.md" doclint
+docs link
+echo "See $LINK." >> docs/notes.md
+expect "docs_lint: refuses a URL in a document" 1 "FAIL content: a URL" doclint
+docs mail
+echo "Write to $MAIL." >> README.md
+expect "docs_lint: refuses an email address" 1 "FAIL content: an email address" doclint
+docs model
+echo "Run it on $TIER." >> .claude/agents/x.md
+expect "docs_lint: refuses a model name outside the frontmatter" 1 "FAIL content: a model name" doclint
+docs wrap
+printf 'A paragraph\nwrapped by hand.\n' >> .github/pull_request_template.md
+expect "docs_lint: refuses a hard-wrapped template line" 1 "pull_request_template.md:[0-9]+: wrapped by hand" doclint
+docs example
+sed 's/^One line\.$/One line\nwrapped./' CLAUDE.md > c && mv c CLAUDE.md
+expect "docs_lint: refuses a hard-wrapped line in the example body" 1 "CLAUDE.md example:[0-9]+: wrapped" doclint
+docs dead
+echo 'See `tools/gone.sh` and `docs/x.md:12`.' >> docs/notes.md
+expect "docs_lint: refuses a dead path and names it" 1 "docs/notes.md:1:tools/gone.sh" doclint
+docs line
+echo 'See `tools/x.sh:3-9`.' >> docs/notes.md
+expect "docs_lint: reads a path with a line suffix" 0 "ok   paths: 2 path" doclint
+
+# ----------------------------------------------------------------- new.sh
+
+# kit NAME: a copy of the files tools/new.sh writes into, from this
+# repository's working tree; changes into it.
+kit() {
+  cd "$work" || exit 1
+  rm -rf "$1"
+  mkdir -p "$1"
+  (cd "$here/.." && tar -cf - carat.rb carat/adapters/editor_assembly.rb docs/codebase-map.md \
+    docs/actions.md docs/compatibility.md test/runner/run_all.rb test/lint.rb \
+    config/plugins.caratrc config/default.caratrc) | (cd "$1" && tar -xf -)
+  cd "$1" || exit 1
+}
+
+new() {
+  NEW_ROOT=. sh "$here/new.sh" "$@"
+}
+
+# has FILE TEXT: FILE holds a line equal to TEXT.
+has() {
+  grep -q -x -F -- "$2" "$1" && echo "has $2"
+}
+
+kit use
+expect "new: use-case writes the class with its signature" 0 "wrote carat/use_cases/windows/scroll_view.rb" new use-case scroll_view 11 windows
+expect "new: use-case signs call" 0 "has " has carat/use_cases/windows/scroll_view.rb "      #: (Domain::EditorState, Domain::Command) -> Outcome"
+expect "new: use-case requires it in carat.rb" 0 "has " has carat.rb 'require_relative "carat/use_cases/windows/scroll_view"'
+expect "new: use-case lists it in the map" 0 "has " has docs/codebase-map.md '- `carat/use_cases/windows/scroll_view.rb`: `ScrollView#call`; TODO: one line on what it does.'
+expect "new: refuses a NAME that exists" 2 "scroll_view.rb exists" new use-case scroll_view 11 windows
+expect "new: refuses a NAME that is not snake_case" 2 "NAME must be snake_case" new use-case ScrollView 11
+expect "new: refuses an area the map lacks" 2 "has no area 99" new use-case scroll_more 99
+
+kit action
+expect "new: action writes the handler" 0 "wrote carat/use_cases/actions/scroll_handler.rb" new action scroll scroll.down
+expect "new: action registers it" 0 "has " has carat/adapters/editor_assembly.rb "        UseCases::ScrollHandler.register(@actions)"
+expect "new: action registers it before the plugin namespace handler" 0 "ScrollHandler" sh -c "grep -E 'ScrollHandler.register|PluginActionHandler.register' carat/adapters/editor_assembly.rb | head -1"
+expect "new: action documents it" 0 "has " has docs/actions.md '| `scroll.down` | normal | TODO: the effect |'
+expect "new: refuses an action already documented" 2 "already lists tab.next" new action tabs tab.next
+expect "new: refuses a plugin action" 2 "declared in its manifest" new action tabs plugin.x.go
+
+kit ex
+expect "new: ex-command writes the handler" 0 "wrote carat/use_cases/ex/sort_command_handler.rb" new ex-command sort 'sor[t]'
+expect "new: ex-command registers its Vim name" 0 "has " has carat/use_cases/ex/sort_command_handler.rb '        table.register(SortCommandHandler.new(spec: "sor[t]"))'
+expect "new: ex-command adds its row before unknown" 0 "^unknown" sh -c "grep -A1 -F '| \`:sor[t]\` |' docs/compatibility.md | tail -1 | cut -c3-9"
+expect "new: refuses a documented ex command" 2 "already lists :new" new ex-command fresh new
+
+kit test
+expect "new: test writes the program and a snapshot of its output" 0 "wrote test/domain_widget.rb and its snapshot" new test domain_widget 6
+expect "new: test snapshot ends with the summary" 0 "has " has test/domain_widget.rb.expected "domain_widget: 2 passed, 0 failed"
+expect "new: test requires it in sorted order" 0 "domain_undo_tree.*domain_widget.*drivers_main_loop" sh -c "grep '^require_relative' test/runner/run_all.rb | tr '\n' ' '"
+expect "new: test runs it by name" 0 "has " has test/runner/run_all.rb 'when "domain_widget" then DomainWidgetTest.main'
+expect "new: test lists it on the area's Tests line" 0 '`test/domain_widget.rb`\.$' grep '^Tests: ' docs/codebase-map.md
+expect "new: refuses a test that exists" 2 "test/lint.rb exists" new test lint 18
+
+kit plugin
+expect "new: plugin writes the plugin" 0 "wrote carat/plugins/greeter/plugin.rb" new plugin greeter
+expect "new: plugin lists it for the registry" 0 "has " has config/plugins.caratrc "plugin.greeter greeter/plugin Carat::Plugins::Greeter::Plugin"
+expect "new: plugin enables it" 0 "has " has config/default.caratrc "plugin.greeter.enabled true"
+expect "new: plugin documents its action" 0 "has " has docs/actions.md '| `plugin.greeter.run` | `greeter` | none | TODO: the effect |'
+
+kit anchor
+grep -v -F 'carat/use_cases/actions/action_handler"' carat.rb > c && mv c carat.rb
+before=$(cat carat.rb docs/codebase-map.md | cksum)
+expect "new: refuses when an anchor line is gone" 2 "has no line containing" new use-case count_words 8
+expect "new: a refusal writes nothing" 0 "^same$" sh -c "[ ! -e carat/use_cases/count_words.rb ] && [ \"\$(cat carat.rb docs/codebase-map.md | cksum)\" = '$before' ] && echo same"
 
 # ---------------------------------------------------------------- gates.sh
 

@@ -10,7 +10,7 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 
 1. `make toolchain` fetches the pinned Spinel commit into `tmp/.spinel`, builds it, and installs `spinel`, `spin`, and `spinel-doctor` under `tmp/.toolchain`. Both directories are ignored by git, every `make` target finds the toolchain there on its own, and `make toolchain-clean` removes them.
 2. `make build` compiles the editor to `build/bin/carat` and prints the alias line to add to your shell profile to run it from anywhere; `make install` puts it on the `PATH` instead.
-3. `make check` runs the canonical stage list: the toolchain check, the release and development builds, the generated config's freshness, every test against its snapshot, `spinel-doctor`, the `make no-cruby` proof, the allocation budget, the tests of the shell tools, and the rule gates; run it before every push. `make test-one T=test/NAME.rb` compiles and runs one test on its own. Run tests, snapshots, and benchmarks only through `make`, never with `spin test` directly: for a test program without a snapshot, `spin test` compares against the `ruby` on your `PATH`.
+3. `make check` runs the canonical stage list: the toolchain check, the documents' size and quality, the release and development builds, the generated config's freshness, every test against its snapshot, `spinel-doctor`, the `make no-cruby` proof, the allocation budget, the tests of the shell tools, and the rule gates; run it before every push. `make test-one T=test/NAME.rb` compiles and runs one test on its own. Run tests, snapshots, and benchmarks only through `make`, never with `spin test` directly: for a test program without a snapshot, `spin test` compares against the `ruby` on your `PATH`.
 
 | Command | What it does |
 | --- | --- |
@@ -35,9 +35,11 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make snapshots` | Rebuild the test runner and rewrite every test's snapshot from it |
 | `make gen-config` | Regenerate the default config mirror and the plugin registry |
 | `make config-current` | Fail when `make gen-config` rewrote the config mirror or the plugin registry |
+| `make docs-lint` | Check the documents agents read: byte budgets (`CLAUDE.md` 30 KiB, each agent file 8 KiB, `docs/architecture.md`), no link, address, session id, or model name, no hard-wrapped pull request text, no backticked path that does not exist |
 | `make tools-test` | Test the shell tools behind CI and the delivery pipeline in temporary repositories |
 | `make gates` | Check the branch against the rules: the commit trailer, no link, address, or session id, snapshots from the runner, the docs kept current |
 | `make check` | Run every stage of `make stages` in order; `make check-stage S=NAME` runs one |
+| `make new-use-case`, `make new-action`, `make new-ex-command`, `make new-test`, `make new-plugin` | Scaffold one file of that kind from its golden example and wire it in: signatures, the code map, requires and registrations, the documentation row, the runner lines, and a snapshot; `docs/examples.md` lists the arguments |
 | `make spec-list`, `make spec-validate`, `make spec-update` | The OpenSpec commands |
 
 ## Configuration
@@ -127,7 +129,7 @@ Every change to carat, from a feature to a one-line fix, is written by Claude ag
 
 1. The planner orders the queue. Before a change starts, it reads the metrics history, the findings and proposals earlier runs left, the backlog, and the goals, and writes the next `docs/queue.md` with the evidence behind each decision: a metric, a finding, or the user's request. When a blocking security finding is still open, the run stops so its fix goes first.
 2. Scouts read the code. For each area of `docs/codebase-map.md` the change touches, a read-only scout writes a context pack of facts (files, methods, callers, tests, designs, rules) to `tmp/scout/`, and a pack still current at `main` is reused.
-3. The contributor implements. It keeps the brief it was given and plans the change with OpenSpec (the brief, a proposal, a design, and tasks under `openspec/changes/`, archived together), writes the code and its tests, and commits as it goes. It is the only agent that edits the repository.
+3. The contributor implements. It keeps the brief it was given and plans the change with OpenSpec (the brief, a proposal, a design, and tasks under `openspec/changes/`, archived together), starts each new file from its golden example in `docs/examples.md` or the `make new-*` generator that wires it in, reads the Spinel pitfalls once in `docs/spinel-notes.md`, writes the code and its tests, and commits as it goes. It is the only agent that edits the repository.
 4. The checker runs `make check` stage by stage, each with its log, and never edits.
 5. The quality reviewer reviews the committed diff for bugs and for the project's rules: idiomatic Ruby within Spinel's rules, naming, one public `call` per use case, the layers, and simple code.
 6. The security reviewer reviews the committed diff for vulnerabilities. It is the most important gate: it can never be skipped, and a High or Medium finding it is confident in blocks the merge until it is fixed.
@@ -138,6 +140,8 @@ Every change to carat, from a feature to a one-line fix, is written by Claude ag
 11. The reporter writes a report in a fixed shape that names any rule broken.
 
 Rules are checked, not remembered. `tools/gates.sh` refuses a commit without its single co-author trailer, a link, an email address, a session id, or a model name in the diff, the commits, or the pull request; a snapshot not written by the test runner; a new file missing from the code map; a new command, binding, option, make target, or process change without this README; a second push without a CI failure to fix; and a merge without a recorded security review of the reviewed commit.
+
+Documents are budgeted too. `make docs-lint`, a stage of `make check`, keeps `CLAUDE.md` within 30 KiB, each agent file within 8 KiB, and `docs/architecture.md` within its budget, because every agent reads them on every run, and refuses a link, an address, a model name, hard-wrapped pull request text, or a path that no longer exists. When `authoring-kit` introduced it, `CLAUDE.md` went from 41,066 to about 30,600 bytes and `docs/architecture.md` from 91,890 to about 87,300, the detail moving to `docs/spinel-notes.md` and `docs/examples.md`.
 
 The run state of a change, `build/pipeline/<change>.json`, records each phase and the commit it finished at, every check stage, the reviews, the pushes, the pull request, and CI. It is written only by `tools/run_state.sh`, so an interrupted run picks up where it stopped.
 

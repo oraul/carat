@@ -4,7 +4,7 @@ Everything beyond core modal editing is a plugin on one API, `carat/plugin_api.r
 
 ## The files
 
-A plugin named `thing` lives in `carat/plugins/thing/`. Its files require `carat/plugin_api.rb` (as `require_relative "../../plugin_api"`) and files in their own directory, nothing else; the `lint` test fails on any other `require_relative`. The class is `Carat::Plugins::Thing::Plugin < Carat::PluginApi::Plugin`, with inline RBS signatures on every method and instance variable like the rest of `carat/`.
+A plugin named `thing` lives in `carat/plugins/<name>/`, here `thing`. Its files require `carat/plugin_api.rb` (as `require_relative "../../plugin_api"`) and files in their own directory, nothing else; the `lint` test fails on any other `require_relative`. The class is `Carat::Plugins::Thing::Plugin < Carat::PluginApi::Plugin`, with inline RBS signatures on every method and instance variable like the rest of `carat/`.
 
 The plugin is listed in `config/plugins.caratrc`, in the order the plugins are registered, one line of the configuration format each, `plugin.<name> <path under carat/plugins/> <class>`:
 
