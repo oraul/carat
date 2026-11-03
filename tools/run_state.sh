@@ -25,7 +25,8 @@
 #
 # History: docs/metrics.tsv, one row per merged change, appended by history
 # from the run states that have none yet, so the next change carries the
-# rows of the runs before it (columns in HEADER below).
+# rows of the runs before it (columns in HEADER below). A row's estimate is
+# the size word of the change's queue item, its actual the out_tokens.
 #
 # Usage: sh tools/run_state.sh COMMAND ...
 #   init CHANGE BRANCH          create the state unless it exists, then show it
@@ -68,6 +69,9 @@
 #                               change touched a sensitive area or five changes
 #                               merged since the last periodic review; print
 #                               "not due: ..." and exit 1 otherwise
+#   budget CHANGE               print "over:", "within:", "unmeasured:", or
+#                               "no estimate:" with the change's estimate, its
+#                               budget (TOKEN_BUDGETS), and its output tokens
 #   pending                     the merged changes with no history row yet
 #   history                     append a history row for each pending change;
 #                               a gate without a stored first verdict is
@@ -100,8 +104,11 @@ TEST_ONLY='^(test/|openspec/|docs/(backlog|queue|goals)\.md$|docs/metrics\.tsv$|
 # The gates of a history row's first passes, in order, before gates.
 GATES="check quality security bench ci"
 REVIEW_KINDS="security quality bench periodic-security periodic-quality"
+# The output-token budget of each size a queue item is estimated at, as
+# docs/goals.md gives them.
+TOKEN_BUDGETS="small=300000 medium=700000 large=1200000"
 TAB=$(printf '\t')
-HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci_min${TAB}rounds${TAB}allocs${TAB}us_per_key${TAB}out_tokens${TAB}tool_calls${TAB}phases${TAB}review"
+HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci_min${TAB}rounds${TAB}allocs${TAB}us_per_key${TAB}out_tokens${TAB}tool_calls${TAB}phases${TAB}review${TAB}estimate"
 # The areas whose change makes a periodic review of the whole codebase due,
 # one "label=path pattern" per line, the first match named.
 REVIEW_AREAS='config loading=^(config/|carat/(adapters/rc_config_gateway|ports/config_port|domain/(config|default_config|manifest_check|rc_[a-z_]+))[.]rb$)
@@ -482,6 +489,53 @@ first_of() {
   read_key metric.first_pass | tr ',' '\n' | sed -n "s/^$1://p"
 }
 
+# The output tokens of the run: the sum of its metric.phase.* figures, else
+# an older run's metric.out_tokens; "-" when neither was recorded.
+out_tokens() {
+  if [ "$(group phase)" = "-" ]; then
+    value metric.out_tokens
+  else
+    keys_under metric.phase. | awk -F'[=/]' '{ n += $2 } END { print n + 0 }'
+  fi
+}
+
+# The size the change was estimated at, small, medium, or large: the
+# "estimated SIZE" of its item ("N. `CHANGE` ...") in docs/queue.md at the
+# parent of its squash commit, the queue it was delivered from; "-" when
+# it is not merged or no item of it states a size.
+estimate_of() {
+  merged=$(read_key merged)
+  valid '[0-9a-f]{7,40}' "$merged" || { echo -; return; }
+  size=$(git show "$merged^:docs/queue.md" 2>/dev/null | C="$change" awk '
+    {
+      item = $0
+      if (!sub(/^[0-9]+[.] /, "", item) || index(item, "`" ENVIRON["C"] "`") != 1) next
+      if (match(item, /estimated (small|medium|large)/)) print substr(item, RSTART + 10, RLENGTH - 10)
+      exit
+    }')
+  echo "${size:--}"
+}
+
+# The budget line: the run's output tokens against the budget of its
+# estimate (TOKEN_BUDGETS), for the retrospective to flag an overrun.
+budget_line() {
+  [ -f "$(state_file)" ] || die "no run state for $change"
+  size=$(estimate_of)
+  tokens=$(out_tokens)
+  if [ "$size" = "-" ]; then
+    echo "no estimate: no queue item of $change states a size; actual $tokens output tokens"
+    return
+  fi
+  limit=$(printf '%s\n' $TOKEN_BUDGETS | sed -n "s/^$size=//p")
+  if ! valid '[0-9]+' "$tokens"; then
+    echo "unmeasured: estimated $size, budget $limit, no output tokens recorded"
+  elif [ "$tokens" -gt "$limit" ]; then
+    echo "over: estimated $size, budget $limit, actual $tokens output tokens"
+  else
+    echo "within: estimated $size, budget $limit, actual $tokens output tokens"
+  fi
+}
+
 history_row() {
   merged=$(read_key merged)
   date=$(git log -1 --format=%cs "$merged" 2>/dev/null)
@@ -491,12 +545,11 @@ history_row() {
     [ -z "$v" ] || first="${first:+$first,}$g:$v"
   done
   phases=$(group phase)
+  tokens=$(out_tokens)
   if [ "$phases" = "-" ]; then
     phases=$(value metric.phases)
-    tokens=$(value metric.out_tokens)
     calls=$(value metric.tool_calls)
   else
-    tokens=$(keys_under metric.phase. | awk -F'[=/]' '{ n += $2 } END { print n + 0 }')
     calls=$(keys_under metric.phase. | awk -F'[=/]' '{ n += $3 } END { print n + 0 }')
   fi
   if [ "$(count pushes)" -gt 0 ]; then
@@ -511,8 +564,8 @@ history_row() {
   fi
   printf '%s\t' "$change" "${date:--}" "$merged" "$(value pr)" "$(value metric.rework)" "${first:--}" \
     "$(value metric.ci_min)" "$(group rounds)" "$(group allocs)" "$(group us)" \
-    "$tokens" "$calls" "$phases"
-  printf '%s\n' "$review"
+    "$tokens" "$calls" "$phases" "$review"
+  printf '%s\n' "$(estimate_of)"
 }
 
 append_history() {
@@ -631,6 +684,9 @@ case "$command" in
   note)
     [ $# -eq 2 ] || usage
     add_note "$1" "$2" ;;
+  budget)
+    [ $# -eq 0 ] || usage
+    budget_line ;;
   review-due)
     [ $# -eq 0 ] || usage
     review_due ;;

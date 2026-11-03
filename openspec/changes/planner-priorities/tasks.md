@@ -2,14 +2,14 @@
 
 ## 1. Queue check
 
-- [ ] 1.1 `tools/docs_lint.sh`: `check_queue` (gate `queue`) fails a numbered item of `docs/queue.md` without a tier `T0` to `T6` or without `estimated small|medium|large`, naming the line; tested by the `tools/tools_test.sh` cases "docs_lint: passes a queue whose items carry a tier and a size", "docs_lint: refuses a queue item without a tier", and "docs_lint: refuses a queue item without a size".
-- [ ] 1.2 `docs/queue.md`: take the planner's `build/plan/queue.md`; checked by `make docs-lint`.
+- [x] 1.1 `tools/docs_lint.sh`: `check_queue` (gate `queue`) fails a numbered item of `docs/queue.md` without a tier `T0` to `T6` or without `estimated small|medium|large`, naming the line; tested by the `tools/tools_test.sh` cases "docs_lint: passes a queue whose items carry a tier and a size", "docs_lint: refuses a queue item without a tier and names it", and "docs_lint: refuses a queue item without a size".
+- [x] 1.2 `docs/queue.md`: take the planner's `build/plan/queue.md`; checked by `make docs-lint`.
 
 ## 2. Estimate and budget
 
-- [ ] 2.1 `tools/run_state.sh`: `estimate_of` (the size word of the change's item at `merged^`), the `estimate` column after `review` in `HEADER` and `history_row`, `out_tokens` shared by the row and `budget`; tested by the cases "history records the estimate of the queue item", "history records no estimate without a size", and the header case.
-- [ ] 2.2 `tools/run_state.sh budget CHANGE`: `over`, `within`, or `no estimate` with the budget and the actual; tested by the cases "budget names an overrun", "budget passes a run within its budget", and "budget says when no estimate was made".
-- [ ] 2.3 `docs/metrics.tsv`: the `estimate` header and `-` in every row; checked by `awk -F'\t' '{ print NF }'` printing 15 for every line.
+- [x] 2.1 `tools/run_state.sh`: `estimate_of` (the size word of the change's item at `merged^`, `merged` checked as a commit hash first), the `estimate` column after `review` in `HEADER` and `history_row`, `out_tokens` shared by the row and `budget`; tested by the cases "history records no estimate without a queue item", "history records the estimate of the queue item", and "every history row has the header's columns".
+- [x] 2.2 `tools/run_state.sh budget CHANGE`: `over`, `within`, `unmeasured`, or `no estimate` with the budget and the actual; tested by the cases "budget names an overrun", "budget passes a run within its budget", "budget says when no estimate was made", "budget says when no output tokens were recorded", "budget reads no estimate of an unmerged change", "budget passes git only a commit hash as the merged value", and "budget refuses a change without a run state".
+- [x] 2.3 `docs/metrics.tsv`: the `estimate` header and `-` in every row; checked by `awk -F'	' '{ print NF }'` printing 15 for every line.
 
 ## 3. Charter and agents
 
