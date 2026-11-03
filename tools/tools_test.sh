@@ -217,6 +217,14 @@ expect "run_state: metric refuses a pair without a value" 1 "is not NAME=VALUE" 
 printf 'rounds.carat\t2\nallocs.lh\t27.0\nus.lh\t50.0\nallocs.j\t28.0\n' > m.tsv
 expect "run_state: metrics records a measurement" 0 "recorded 4 measurement" state metrics history m.tsv
 expect "run_state: a measurement is a metric" 0 "^28[.]0$" state get history metric.allocs.j
+state init unmeasured chore/unmeasured > /dev/null
+state metrics unmeasured m.tsv > /dev/null
+printf 'us.lh\t?\nallocs.k\t30.0\nanalysis_ms.carat\t?\n' > q.tsv
+expect "run_state: metrics skips an unmeasured value" 0 "recorded 1 measurement.*skipped 2 unmeasured" state metrics unmeasured q.tsv
+expect "run_state: metrics records the measured values beside it" 0 "^30[.]0$" state get unmeasured metric.allocs.k
+expect "run_state: metrics leaves an unmeasured value unrecorded" 0 "^$" state get unmeasured metric.analysis_ms.carat
+expect "run_state: metrics drops an earlier figure now unmeasured" 0 "^$" state get unmeasured metric.us.lh
+expect "run_state: metrics keeps the other earlier figures" 0 "^27[.]0$" state get unmeasured metric.allocs.lh
 state note history retro "drop a step; evidence: 9000 tokens" > /dev/null
 state note history security "Medium (6) tools/x.sh:3 quoting" > /dev/null
 expect "run_state: note numbers the notes" 0 "^security Medium [(]6[)]" state get history note.2

@@ -43,7 +43,8 @@
 #   metric CHANGE NAME=VALUE... record metric.NAME; names are [a-z0-9_.-], values
 #                               [A-Za-z0-9_.,:/=+-]
 #   metrics CHANGE FILE         record each "name<TAB>value" line of a
-#                               tools/metrics.sh measurement as metric.name
+#                               tools/metrics.sh measurement as metric.name,
+#                               dropping one whose value is ? (not measured)
 #   note CHANGE KIND TEXT       record note.N, the next number, as "KIND TEXT"
 #   review-due CHANGE           print "due: REASON" and exit 0 when the merged
 #                               change touched a sensitive area or five changes
@@ -118,6 +119,23 @@ write_key() {
     }
     END {
       if (!found) lines[n++] = "  \"" ENVIRON["K"] "\": \"" ENVIRON["V"] "\""
+      print "{"
+      for (i = 0; i < n; i++) print lines[i] (i < n - 1 ? "," : "")
+      print "}"
+    }' "$file" > "$file.tmp.$$" && mv "$file.tmp.$$" "$file"
+}
+
+# Remove KEY from the run state; nothing happens when it is absent.
+drop_key() {
+  file=$(state_file)
+  [ -f "$file" ] || die "no run state for $change; run init first"
+  K="$1" awk '
+    /^  "/ {
+      line = $0; sub(/,$/, "", line)
+      key = line; sub(/^  "/, "", key); sub(/".*/, "", key)
+      if (key != ENVIRON["K"]) lines[n++] = line
+    }
+    END {
       print "{"
       for (i = 0; i < n; i++) print lines[i] (i < n - 1 ? "," : "")
       print "}"
@@ -266,10 +284,23 @@ record_metric() {
 
 import_metrics() {
   [ -f "$1" ] || die "metrics: no measurement $1"
+  recorded=0
+  skipped=0
   while IFS="$TAB" read -r name value; do
-    [ -n "$name" ] && record_metric "$name=$value"
+    [ -n "$name" ] || continue
+    # tools/metrics.sh writes ? for a value it could not measure; an
+    # unmeasured value is not stored, and a figure an earlier import
+    # recorded for it is removed so it does not pass for this one.
+    if [ "$value" = "?" ]; then
+      valid '[a-z0-9_.-]+' "$name" || die "metrics: not a metric name: $name"
+      drop_key "metric.$name"
+      skipped=$((skipped + 1))
+      continue
+    fi
+    record_metric "$name=$value"
+    recorded=$((recorded + 1))
   done < "$1"
-  echo "metrics: recorded $(grep -c . "$1") measurement(s) of $change"
+  echo "metrics: recorded $recorded measurement(s) of $change, skipped $skipped unmeasured"
 }
 
 add_note() {
