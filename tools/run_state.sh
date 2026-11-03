@@ -70,8 +70,8 @@
 #                               "not due: ..." and exit 1 otherwise
 #   pending                     the merged changes with no history row yet
 #   history                     append a history row for each pending change;
-#                               a gate without a stored first verdict takes
-#                               it from the stage.*, review.*, and ci lines
+#                               a gate without a stored first verdict is
+#                               left out of its first passes
 #   status                      the queue, the running change, the last metrics
 #                               row, and the first-pass rates of the history
 #
@@ -472,19 +472,14 @@ value() {
 }
 
 # The first verdict of GATE, 1 or 0: metric.first.GATE as the workflow
-# stored it, else the gate's entry of an older run's metric.first_pass,
-# else what the run state's lines show (every stage passed, the review's
-# result, CI's color); nothing when none of them says.
+# stored it, else the gate's entry of an older run's metric.first_pass;
+# nothing when neither says. The stage.*, review.*, and ci lines hold each
+# gate's last result, which for a merged change is a pass, so they say
+# nothing about the first.
 first_of() {
   v=$(read_key "metric.first.$1")
   [ -z "$v" ] || { echo "$v"; return; }
-  v=$(read_key metric.first_pass | tr ',' '\n' | sed -n "s/^$1://p")
-  [ -z "$v" ] || { echo "$v"; return; }
-  case "$1" in
-    check) keys_under stage. | awk '{ sub(/^[^=]*=/, ""); n++; if (substr($0, 1, 2) != "0 ") bad = 1 } END { if (n) print bad ? 0 : 1 }' ;;
-    ci) case "$(read_key ci)" in green*) echo 1 ;; red*) echo 0 ;; esac ;;
-    *) case "$(read_key "review.$1")" in pass*) echo 1 ;; blocked*) echo 0 ;; esac ;;
-  esac
+  read_key metric.first_pass | tr ',' '\n' | sed -n "s/^$1://p"
 }
 
 history_row() {

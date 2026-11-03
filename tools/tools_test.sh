@@ -289,7 +289,8 @@ expect "run_state: history appends a change once" 0 "nothing pending" state hist
 expect "run_state: status prints the first-pass rates" 0 "first-pass rates over 1 change.s.: check 1/1 quality 0/1 security 1/1 gates 0/1" state status
 
 # A run state whose first passes the workflow stored only in part: the
-# history takes each missing gate from the stage, review, and ci lines.
+# stage, review, and ci lines hold each gate's last result, not its first,
+# so the history leaves a gate without a stored verdict out.
 fresh derived
 state init derived chore/derived > /dev/null
 state stage derived a true > /dev/null
@@ -301,7 +302,7 @@ state metric derived first_pass=ci:0 first.bench=0 phase.implement=1000/30 phase
 state set derived merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 state set derived pushes 1 > /dev/null
 state history > /dev/null
-expect "run_state: history derives the first passes" 0 "^check:1,quality:0,security:1,bench:0,ci:0,gates:1$" \
+expect "run_state: history takes only the stored first verdicts" 0 "^bench:0,ci:0,gates:1$" \
   awk -F'\t' 'NR == 2 { print $6 }' docs/metrics.tsv
 expect "run_state: history groups the phase figures" 0 "^implement=1000/30,check=200/10$" awk -F'\t' 'NR == 2 { print $13 }' docs/metrics.tsv
 expect "run_state: history sums the phase figures" 0 "^1200 40$" awk -F'\t' 'NR == 2 { print $11, $12 }' docs/metrics.tsv
