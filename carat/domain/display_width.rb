@@ -35,7 +35,7 @@ module Carat
 
       #: (String) -> Integer
       def self.of_char(ch)
-        of(ch.ord)
+        of(code_of(ch))
       end
 
       # The cells one character takes when it starts at display column
@@ -44,7 +44,15 @@ module Carat
       # point its display width.
       #: (String, Integer, Integer) -> Integer
       def self.cell(ch, dcol, tabstop)
-        code_cells(ch.ord, dcol, tabstop)
+        code_cells(code_of(ch), dcol, tabstop)
+      end
+
+      # The code point of the first character of ch, decoded as the screen
+      # decodes it: U+FFFD for a byte outside a well-formed sequence, where
+      # String#ord would answer the byte.
+      #: (String) -> Integer
+      def self.code_of(ch)
+        Utf8.code_at(ch, 0, Utf8.size_at(ch, 0, ch.bytesize))
       end
 
       # cell for a code point rather than a one-character string.

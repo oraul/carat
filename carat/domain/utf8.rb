@@ -10,27 +10,46 @@ module Carat
       REPLACEMENT = 0xFFFD
 
       # The number of bytes of the character at byte i of text, whose
-      # length in bytes is bytesize: the length of a well-formed sequence,
-      # 1 for a byte that does not start one.
+      # length in bytes is bytesize: the length of a well-formed sequence
+      # per RFC 3629, 1 for a byte that does not start one. The second
+      # byte's range depends on the lead byte, so no overlong form, no
+      # surrogate (U+D800 to U+DFFF), and nothing above U+10FFFF is a
+      # character; each of their bytes is one, as String#length counts.
       #: (String, Integer, Integer) -> Integer
       def self.size_at(text, i, bytesize)
         b = text.getbyte(i).to_i
         return 1 if b < 0x80
         n = 0
+        low = 0x80
+        high = 0xBF
         if b >= 0xF0
           n = 4 if b <= 0xF4
+          low = 0x90 if b == 0xF0
+          high = 0x8F if b == 0xF4
         elsif b >= 0xE0
           n = 3
+          low = 0xA0 if b == 0xE0
+          high = 0x9F if b == 0xED
         elsif b >= 0xC2
           n = 2
         end
         return 1 if n == 0 || i + n > bytesize
-        k = 1
+        second = text.getbyte(i + 1).to_i
+        return 1 if second < low || second > high
+        k = 2
         while k < n
           return 1 if (text.getbyte(i + k).to_i & 0xC0) != 0x80
           k += 1
         end
         n
+      end
+
+      # Whether code is a Unicode scalar value: 0 to U+10FFFF outside the
+      # surrogates, the only codes that have a UTF-8 form.
+      #: (Integer) -> bool
+      def self.scalar?(code)
+        return false if code < 0 || code > 0x10FFFF
+        code < 0xD800 || code > 0xDFFF
       end
 
       # The code point of the character of size bytes at byte i of text,
