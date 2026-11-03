@@ -98,8 +98,9 @@ UNIT_SUMMARY := awk '/^spinel-timing: phase=analysis / { a = $$3 } /^spinel-timi
 CHECK_STAGES := doctor docs-lint build dev-build config-current test-build test-run diagnose no-cruby bench-budget metrics tools-test gates
 # The measurement make metrics writes from the builds of dev-build,
 # test-build, and bench-budget (tools/metrics.sh), and the base make
-# metrics-compare compares it with: the benchmark agent measures main in a
-# worktree, and CI restores the measurement of the last push to main.
+# metrics-compare compares it with: tools/run_state.sh bench writes the last
+# history row there, the benchmark agent measures main in a worktree when
+# they differ, and CI restores the measurement of the last push to main.
 METRICS_OUT  := build/metrics/current.tsv
 BASE_METRICS ?= build/metrics/base.tsv
 # The spinel-doctor legs the stages skip (see DIAGNOSE_SKIP).

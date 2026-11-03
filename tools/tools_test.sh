@@ -186,6 +186,30 @@ expect "run_state: check stops at the first failing stage" 1 "stage b failed" \
 expect "run_state: check resumes after the passed stages" 0 "stage a: passed at .*, skipped" \
   env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
 expect "run_state: check records the phase" 0 "^$(git rev-parse --short=12 HEAD)$" state get state phase.check
+# A commit that changes only tests reruns the test stages and carries the
+# others; one that changes anything else reruns every stage.
+env STAGES="a b test-run diagnose metrics docs-lint" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
+before_tests=$(git rev-parse --short=12 HEAD)
+echo "check" > test/t.rb
+commit "test: t"
+env STAGES="a b test-run diagnose metrics docs-lint" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > carry.out 2>&1
+expect "run_state: check carries a stage after a test-only commit" 0 "^stage a: passed at $before_tests, carried to $(git rev-parse --short=12 HEAD)" cat carry.out
+expect "run_state: check reruns the test stages" 0 "^stage test-run: exit 0" cat carry.out
+expect "run_state: check reruns diagnose, which reads the test runner, after a test-only commit" 0 "^stage diagnose: exit 0" cat carry.out
+expect "run_state: check reruns docs-lint, which reads the docs and the test paths they name, after a test-only commit" 0 "^stage docs-lint: exit 0" cat carry.out
+expect "run_state: check reruns metrics, which reads the test runner's rounds, after a test-only commit" 0 "^stage metrics: exit 0" cat carry.out
+expect "run_state: a carried stage names its commit" 0 "^0 0s $(git rev-parse --short=12 HEAD) .* carried-from-$before_tests$" state get state stage.b
+rm carry.out
+echo "check" > tools/t.sh
+commit "chore: t"
+expect "run_state: check reruns every stage after a change outside test/" 0 "^stage a: exit 0" \
+  env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
+git_q mv tools/t.sh test/moved.sh
+commit "chore: move t"
+expect "run_state: check reruns every stage after a file moves under test/" 0 "^stage a: exit 0" \
+  env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
+state phase state report > /dev/null
+expect "run_state: phase accepts report" 0 "^$(git rev-parse --short=12 HEAD)$" state get state phase.report
 expect "run_state: status names the running change and its next phase" 0 "next phase: plan" state status
 expect "run_state: set refuses a review record" 1 "refused: review.security" state set state review.security "pass abc"
 expect "run_state: set refuses a phase record" 1 "refused: phase.plan" state set state phase.plan abc
@@ -263,6 +287,66 @@ expect "run_state: the row groups the measurements and the first passes" 0 \
   awk -F'\t' 'NR == 2 { print $8, $9, $10, $6, $13, $14 }' docs/metrics.tsv
 expect "run_state: history appends a change once" 0 "nothing pending" state history
 expect "run_state: status prints the first-pass rates" 0 "first-pass rates over 1 change.s.: check 1/1 quality 0/1 security 1/1 gates 0/1" state status
+
+# A run state whose first passes the workflow stored only in part: the
+# stage, review, and ci lines hold each gate's last result, not its first,
+# so the history leaves a gate without a stored verdict out.
+fresh derived
+state init derived chore/derived > /dev/null
+state stage derived a true > /dev/null
+state stage derived b true > /dev/null
+state review derived quality blocked "blocking=1" > /dev/null
+state review derived security pass "high=0" > /dev/null
+state set derived ci "green abc" > /dev/null
+state metric derived first_pass=ci:0 first.bench=0 phase.implement=1000/30 phase.check=200/10 rework=1 > /dev/null
+state set derived merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+state set derived pushes 1 > /dev/null
+state history > /dev/null
+expect "run_state: history takes only the stored first verdicts" 0 "^bench:0,ci:0,gates:1$" \
+  awk -F'\t' 'NR == 2 { print $6 }' docs/metrics.tsv
+expect "run_state: history groups the phase figures" 0 "^implement=1000/30,check=200/10$" awk -F'\t' 'NR == 2 { print $13 }' docs/metrics.tsv
+expect "run_state: history sums the phase figures" 0 "^1200 40$" awk -F'\t' 'NR == 2 { print $11, $12 }' docs/metrics.tsv
+
+# The benchmark from the check: the metrics stage's measurement against the
+# last history row.
+fresh bench
+state init bench chore/bench > /dev/null
+cat > "$work/bin/echo-make" <<'EOF'
+#!/bin/sh
+echo "make $*"
+EOF
+chmod +x "$work/bin/echo-make"
+bench() {
+  env MAKE="$work/bin/echo-make" sh "$here/run_state.sh" bench bench
+}
+expect "run_state: bench needs the metrics stage at HEAD" 1 "the metrics stage has not passed" bench
+state stage bench metrics true > /dev/null
+mkdir -p build/metrics
+printf 'rounds.carat\t2\nallocs.lh\t27.0\nus.lh\t60.0\n' > build/metrics/current.tsv
+{ printf 'header\n'; printf 'prev\t-\t-\t-\t-\t-\t-\tcarat=2\tlh=27\tlh=50.0\t-\t-\t-\t-\n'; } > docs/metrics.tsv
+expect "run_state: bench passes the same figures" 0 "same allocations and rounds" bench
+expect "run_state: bench compares through make metrics-compare" 0 "^make --no-print-directory metrics-compare BASE_METRICS=build/metrics/last[.]tsv$" bench
+expect "run_state: bench writes the last row as a base" 0 "^allocs[.]lh[[:space:]]27$" cat build/metrics/last.tsv
+expect "run_state: bench records the measurement" 0 "^60[.]0$" state get bench metric.us.lh
+printf 'rounds.carat\t2\nallocs.lh\t28.0\n' > build/metrics/current.tsv
+expect "run_state: bench names a differing figure" 1 "^allocs[.]lh 27 -> 28[.]0$" bench
+# A merged change without a history row yet is main's, not the last row.
+state init merged-first chore/merged-first > /dev/null
+state set merged-first merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+state metric merged-first rounds.carat=2 allocs.lh=28.0 us.lh=61.0 > /dev/null
+expect "run_state: bench compares with the merged change that has no history row" 0 "^bench: same allocations and rounds as the run state of merged-first" bench
+expect "run_state: bench writes the pending change's figures as a base" 0 "^allocs[.]lh[[:space:]]28[.]0$" cat build/metrics/last.tsv
+printf 'rounds.carat\t2\nallocs.lh\t27.0\n' > build/metrics/current.tsv
+expect "run_state: bench names a figure that differs from the pending change's" 1 "^allocs[.]lh 28[.]0 -> 27[.]0$" bench
+rm build/pipeline/merged-first.json
+state init merged-bare chore/merged-bare > /dev/null
+state set merged-bare merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: bench does not compare with a pending change without figures" 1 "has no recorded allocations or rounds" \
+  env MAKE="$work/bin/echo-make" sh "$here/run_state.sh" bench bench
+rm build/pipeline/merged-bare.json
+echo more >> README.md
+commit "docs: more"
+expect "run_state: bench refuses a measurement of another commit" 1 "passed at another commit" bench
 
 # row CHANGE REVIEW: a history row with only a change and a review column.
 row() {
@@ -347,6 +431,12 @@ expect "guard: read refuses a file outside its directory" 2 "outside tmp/scout" 
 expect "guard: read refuses a parent step out of its directory" 2 "a parent step" guard_edit read Write /w/tmp/scout/../../tools/x.sh tmp/scout
 expect "guard: merger writes the body file" 0 "^$" guard_edit merger Write /w/build/pipeline/c.body.md build/pipeline
 expect "guard: merger refuses the run state file" 2 "the run state's directory" guard_edit merger Write /w/build/pipeline/c.body.md.json build/pipeline
+expect "guard: merger refuses a path through the body file" 2 "the run state's directory" guard merger 'mkdir build/pipeline/c.body.md && cat x > build/pipeline/c.body.md/../c.json'
+expect "guard: contributor writes the body file" 0 "^$" guard_edit contributor Write /w/build/pipeline/c.body.md
+expect "guard: contributor allows the body gate" 0 "^$" guard contributor 'sh tools/gates.sh pr-body build/pipeline/c.body.md'
+expect "guard: contributor refuses a path through the body file" 2 "the run state's directory" guard_edit contributor Write /w/build/pipeline/c.body.md/../c.json
+expect "guard: contributor still refuses the run state file" 2 "the run state's directory" guard contributor 'cat build/pipeline/c.body.md build/pipeline/c.json'
+expect "guard: read refuses a metrics override of the bench" 2 "an environment override" guard read 'METRICS_OUT=x.tsv sh tools/run_state.sh bench c'
 
 # ---------------------------------------------------------- docs_lint.sh
 

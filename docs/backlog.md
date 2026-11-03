@@ -158,12 +158,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a convention that changes (a base class's constructor, an anchor's neighbor, a lint rule) could leave a generator writing code that no longer compiles or lints, and nothing would say so until an author ran it. The `authoring-kit` change compiled, linted, and tested the output of all five generators by hand in a scratch worktree (59 tests, `spinel-doctor` clean).
 - Fix outline: a `make generators-check` target that runs every generator in a temporary worktree, then `make gen-config`, `make lint`, `make test-build`, and `make test-run` there, run by the checker when `tools/new.sh`, `carat.rb`, `EditorAssembly`, the handler bases, or `test/lint.rb` change rather than on every check, since it costs a full analysis of the library.
 
-## The ci-watcher and the merger read the same pull request state twice
-
-- Where: the CI and merge phases of `.claude/workflows/deliver-change.js`, which start the `ci-watcher` agent and then the `merger` agent, the second rereading the pull request head and the CI state the first just wrote.
-- Why it matters: in `authoring-kit` the two took 17 and 11 tool calls, 28 of 272 (10.3%), and 6,305 output tokens for a CI that passed first time in 3.0 minutes with 0 CI fixes. Proposed by that run's retrospective (note 3) and left out of the queue because one green run is the only evidence and the watcher drives the CI-fix rounds, which no run has measured yet.
-- Fix outline: once `docs/metrics.tsv` holds several runs with their `ci` and `merge` phase counts, including one with a CI fix, have the merger watch CI itself when the run has no CI fix to make, keeping the watcher only for the fix loop, and compare the two phases' tool calls before and after.
-
 ## The periodic review's areas miss the entry point, the tools, and CI
 
 - Where: `REVIEW_AREAS` in `tools/run_state.sh` (line 73). `utf8-input-safety` added the domain files that keep control characters off the terminal (`frame.rb`, `display_width.rb`, `utf8.rb`, `decoded_line.rb`) to the terminal output area; `bin/carat.rb`, `tools/`, and `.github/workflows/` are still in no area. Low finding of the periodic security review at 66fd52b.
@@ -290,12 +284,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: an untested branch on hostile text is where the next crash on an illegal byte would hide.
 - Fix outline: add a `v$r` row over a line with an illegal byte.
 
-## CI took 12 minutes at untrusted-config-limits
-
-- Where: the `ci_min` figure of the run state of `untrusted-config-limits` (#37, 12.0 minutes at `8c33ffdefafe`) against 3.0 for `authoring-kit` and 4.0 for `utf8-input-safety`; the local `test-run` stage of the same commit took 26 s against 24 s, so no code location is known.
-- Why it matters: goal 2 of `docs/goals.md` keeps CI time through the history; a threefold rise that is never measured again may hide a lost cache, a slower test (the two 64 MiB strings of `test/editor_cmdline.rb:155` are a suspect), or a runner change.
-- Fix outline: compare the per-job and per-step times of the CI runs of #36 and #37 and the next two pull requests, check whether the Actions cache keyed on `make spinel-rev` hit, and if the rise holds, find the step and fix or record the cause; remove this entry when two runs are back near 4 minutes.
-
 ## The records gate passes a merge given no records
 
 - Where: `tools/gates.sh`, `gate_records`, which prints a notice and passes when `RECORDS` is empty. Left by `agent-authority`.
@@ -313,3 +301,15 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/agent_guard.sh` line 84 (the git rule) and line 122 (the gh rule), and the `Bash(gh pr merge:*)` deny rule in `.claude/settings.json`. Low (7) finding of the security review of `agent-authority` at 8bf46e4; the design lists the limit as a non-goal, and the records gate and branch protection stand behind it.
 - Why it matters: under the read profile `git 'push' origin x`, `"git" push`, and `g\it push` pass the text match, so injected text in the tree that tells an agent to quote the word gets a git write past the guard.
 - Fix outline: remove quotes and backslashes from the command text before matching (for example `tr -d "'\\\""`), refuse `eval`, `sh -c`, and `bash -c` when their argument names a refused word, and add `tools/tools_test.sh` cases for `git 'push'`, `"git" push`, and `"gh" pr merge`.
+
+## The guard lets a symlink make the body file the run state
+
+- Where: `tools/agent_guard.sh` line 105, the contributor's body-file exemption (and the merger's at line 100), and `gate_pr_body` in `tools/gates.sh`. Low (6) finding of the security review of `workflow-trim` at aa3bf07.
+- Why it matters: `ln -sf CHANGE.json build/pipeline/CHANGE.body.md` reduces to a command on the body file, which the guard allows, so a later Write or redirect to the body file overwrites `build/pipeline/CHANGE.json` and its review and phase records; the records gate at the merge still compares them with the workflow's results, so this is defense in depth.
+- Fix outline: in the contributor and merger profiles refuse `ln`, `cp -s`, and `mv` commands that name the body file, make `gate_pr_body` and the Write path refuse a body file that is a symlink (`[ -L file ]`), and add `tools/tools_test.sh` cases; or have `tools/run_state.sh` copy the body file in from a path under `tmp/`.
+
+## The run state's merged value reaches git log unchecked
+
+- Where: `tools/run_state.sh` line 374 (`newest_pending`) and line 487 (`history_row`), which pass the stored `merged` value to `git log -1` without `--end-of-options`, and `set`, which read-profile agents may call. Low (5) finding of the security review of `workflow-trim` at aa3bf07.
+- Why it matters: an injected agent could store `--output=<path>` as `merged`, and the next `bench` or `history` run would overwrite that file with a timestamp.
+- Fix outline: validate `merged` as 7 to 40 hexadecimal characters in `set`, `newest_pending`, and `history_row`, or call `git log -1 --format=%ct --end-of-options "$merged"`, with a `tools/tools_test.sh` case that stores an option-shaped value.
