@@ -22,5 +22,5 @@
 
 ## 4. Docs
 
-- [ ] 4.1 Update `CLAUDE.md` (Agents, Commands, Layout), the code map area 1, and `docs/queue.md`; verify with `make lint` and `make gates`.
-- [ ] 4.2 Extend the README section on how carat is built with AI; verify by reading it against what this change ships.
+- [x] 4.1 Update `CLAUDE.md` (Agents, Commands, Layout), the code map area 1, and `docs/queue.md`; verify with `make lint` and `make gates`.
+- [x] 4.2 Extend the README section on how carat is built with AI; verify by reading it against what this change ships.
