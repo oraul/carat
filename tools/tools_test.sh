@@ -3,9 +3,11 @@
 # temporary git repository or directory outside this one:
 # tools/ci_scope.sh (which changes run the checks), tools/metrics.sh (the
 # measurement and the comparison with main), tools/run_state.sh (the run
-# state, stages, resume, and the push rule), tools/docs_lint.sh (budgets,
-# content, wraps, paths), tools/new.sh (every generator and its
-# refusals), and every gate of tools/gates.sh, each passing and refusing.
+# state, stages, resume, the push rule, and the records only the workflow
+# writes), tools/agent_guard.sh (each profile's refusals and allowances),
+# tools/docs_lint.sh (budgets, content, wraps, paths), tools/new.sh (every
+# generator and its refusals), and every gate of tools/gates.sh, each
+# passing and refusing.
 # Prints "ok   NAME" or "FAIL NAME" and the output, then "P/T passed";
 # exits 1 when any failed. Run by make tools-test.
 #
@@ -286,6 +288,53 @@ expect "run_state: review-due is not due after one quiet change" 1 "^not due: 1 
 expect "run_state: review-due is due five changes after the last review" 0 "^due: 5 changes merged" state review-due due
 row f "security=pass quality=pass" >> docs/metrics.tsv
 expect "run_state: a periodic review restarts the count" 1 "^not due: 1 of 5" state review-due due
+
+# --------------------------------------------------------- agent_guard.sh
+
+# guard PROFILE COMMAND: the guard's answer to a Bash call of COMMAND, given
+# already escaped for JSON.
+guard() {
+  printf '{"session_id":"s","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"%s","description":"d"}}' "$2" |
+    sh "$here/agent_guard.sh" "$1"
+}
+
+# guard_edit PROFILE TOOL PATH: the guard's answer to an edit of PATH.
+guard_edit() {
+  printf '{"tool_name":"%s","tool_input":{"file_path":"%s","old_string":"a","new_string":"\\"command\\": \\"git push\\""}}' "$2" "$3" |
+    sh "$here/agent_guard.sh" "$1"
+}
+
+expect "guard: read refuses git push" 2 "refused for the read profile: a git command" guard read 'git push origin chore/x'
+expect "guard: read refuses git push after global options" 2 "a git command" guard read 'cd /w && git -C tmp/.base -c a=b push'
+expect "guard: read refuses a commit on a later line" 2 "a git command" guard read 'git status\ngit commit -m \"x\"'
+expect "guard: read allows a git read that names push" 0 "^$" guard read 'git log --oneline --grep push -5'
+expect "guard: read allows a worktree checkout" 0 "^$" guard read 'git -C tmp/.base checkout -q --detach origin/main'
+expect "guard: read refuses gh" 2 "a gh command" guard read 'gh pr merge 5 --squash'
+expect "guard: read refuses a gh api write" 2 "a gh command" guard read 'x=1; gh api -X POST repos/o/r/merges'
+expect "guard: read refuses a review record" 2 "a run state command" guard read 'sh tools/run_state.sh review c security pass \"high=0\"'
+expect "guard: read refuses a phase record" 2 "a run state command" guard read 'sh \"$PWD/tools/run_state.sh\" phase c plan'
+expect "guard: read refuses a stage record" 2 "a run state command" guard read 'sh tools/run_state.sh stage c lint true'
+expect "guard: read refuses a push" 2 "a run state command" guard read 'sh tools/run_state.sh push c'
+expect "guard: read allows the checks" 0 "^$" guard read 'sh tools/run_state.sh check c > build/stages/c/check.out 2>&1'
+expect "guard: read allows a note and the state" 0 "^$" guard read 'sh tools/run_state.sh note c security \"Low (2) x\" && sh tools/run_state.sh show c'
+expect "guard: read refuses a fake make for the checks" 2 "an environment override" guard read 'MAKE=true STAGES=lint sh tools/run_state.sh check c'
+expect "guard: read refuses an edit of the run state file" 2 "the run state's directory" guard read 'sed -i s/blocked/pass/ build/pipeline/c.json'
+expect "guard: read refuses the run state's directory from inside build" 2 "the run state's directory" guard read 'cd build && cat > pipeline/c.json'
+expect "guard: an unknown profile refuses" 2 "no such profile" guard writer 'ls'
+expect "guard: merger allows the branch deletion" 0 "^$" guard merger 'git ls-remote --heads origin chore/x && git push origin --delete chore/x'
+expect "guard: merger refuses the deletion of main" 2 "a git command" guard merger 'git push origin --delete main'
+expect "guard: merger refuses a second ref after the branch" 2 "a git command" guard merger 'git push origin --delete chore/x main'
+expect "guard: merger refuses another push" 2 "a git command" guard merger 'git push origin HEAD:main'
+expect "guard: merger allows the fast-forward of main" 0 "^$" guard merger 'git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
+expect "guard: merger allows the body file" 0 "^$" guard merger 'CHANGE=c RECORDS=\"security:pass:abc1234\" sh tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger refuses a phase record" 2 "a run state command" guard merger 'sh tools/run_state.sh phase c merge'
+expect "guard: contributor allows the gated push" 0 "^$" guard contributor 'sh tools/run_state.sh push c'
+expect "guard: contributor allows a commit and the history" 0 "^$" guard contributor 'git -c user.name=C commit -q -m x && sh tools/run_state.sh history'
+expect "guard: contributor refuses git push" 2 "refused for the contributor profile: a git command" guard contributor 'git push -u origin chore/x'
+expect "guard: contributor refuses a review record" 2 "a run state command" guard contributor 'sh tools/run_state.sh review c security pass x'
+expect "guard: contributor refuses gh" 2 "a gh command" guard contributor 'gh pr merge 5'
+expect "guard: contributor refuses an edit of the run state" 2 "the run state's directory" guard_edit contributor Edit /w/build/pipeline/c.json
+expect "guard: contributor allows an edit elsewhere, whatever its text" 0 "^$" guard_edit contributor Write /w/tools/x.sh
 
 # ---------------------------------------------------------- docs_lint.sh
 
