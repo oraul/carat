@@ -86,7 +86,7 @@ Files:
 - `carat/domain/rc_parse.rb`: `RcParse`, one parse result; `ok?`, `blank?`.
 - `carat/domain/rc_line.rb`: `RcLine`, a kept setting with file label, ordinal, line number, scope, name, and words; `from_parse`, `problem`, `order`.
 - `carat/domain/rc_value.rb`: `RcValue` bool, integer, string, and list kinds; `valid?`, `expectation`, `text`, `number?`.
-- `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `unreadable`, `line_at`, `last`, `note`, `report`; scope and language checks, the project file refused language commands and key-sequence bindings.
+- `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `refuse`, `line_at`, `last`, `note`, `report`; scope and language checks, the project file refused language commands and key-sequence bindings.
 - `carat/domain/default_config.rb`: generated, `DEFAULT_CARATRC`; never edited by hand.
 - `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, and the rest); `from_config`, `apply`, `tab_width`.
 - `carat/domain/registry_source.rb`: `RegistrySource.render`, `entry?`, `names`; the registry text from the plugin list lines.
@@ -508,7 +508,7 @@ Files:
 - `carat/drivers/main_loop.rb`: `MainLoop#run`.
 - `carat/domain/json.rb`: `Carat::Json` (`parse`, `generate`, `pretty_generate`), for JSON-RPC; the configuration is not JSON.
 
-Tests: `test/drivers_main_loop.rb` (a resize, a terminate, and `:q` over the signal double, and the driver's flags), `test/json.rb`.
+Tests: `test/drivers_main_loop.rb` (a resize, a terminate, and `:q` over the signal double, and the driver's flags), `test/json.rb`, `test/drivers_disk_files.rb`.
 
 Designs: `state-and-ports` (Signals; The stat value; Configuration), `editor-foundation` (Ports, adapters, drivers, doubles).
 

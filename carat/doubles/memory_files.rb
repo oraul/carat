@@ -5,8 +5,9 @@ require_relative "../domain/path_info"
 module Carat
   module Doubles
     # An in-memory file system: files as a hash from absolute path to text,
-    # directories as a set of absolute paths, and the paths tests marked as
-    # symbolic links. A relative path is resolved against the working
+    # directories as a set of absolute paths, the paths tests marked as
+    # symbolic links (with their targets, when a test gave one), and the
+    # files tests marked as special, a FIFO or a device. A relative path is resolved against the working
     # directory, "/project" unless a test moves it (the home directory is
     # "/home/user" unless a test moves it), so the editor's
     # relative paths and a plugin's absolute ones name the same entries.
@@ -18,6 +19,7 @@ module Carat
       # @rbs @files: Hash[String, String]
       # @rbs @dirs: Hash[String, String]
       # @rbs @links: Hash[String, String]
+      # @rbs @specials: Hash[String, String]
       # @rbs @cwd: String
       # @rbs @home: String
 
@@ -26,6 +28,7 @@ module Carat
         @files = {}
         @dirs = {}
         @links = {}
+        @specials = {}
         @unwritable = []
         @cwd = "/project"
         @home = "/home/user"
@@ -70,16 +73,37 @@ module Carat
         @links[key(path)] = ""
       end
 
+      # Marks a path a test put or made as a symbolic link to target, which
+      # real_path follows; reads and writes still use the path itself.
+      #: (String, String) -> void
+      def link_to(path, target)
+        @links[key(path)] = key(target)
+      end
+
+      # Puts an empty file at path that is not a regular one, as a FIFO or
+      # a device is: stat says so and read refuses it.
+      #: (String) -> void
+      def special(path)
+        put(path, "")
+        @specials[key(path)] = ""
+      end
+
       #: (String) -> bool
       def directory?(path)
         @dirs.key?(key(path))
       end
 
-      # Returns the file's text, raising when it is absent.
+      # Returns the file's text, raising when it is absent, a directory,
+      # special, or longer than limit, with the driver's messages.
       # @rbs path: String
-      def read(path)
-        text = @files[key(path)]
+      # @rbs limit: Integer
+      def read(path, limit)
+        k = key(path)
+        raise IOError, "Is a directory" if @dirs.key?(k)
+        text = @files[k]
         raise ArgumentError, "no such file: #{path}" if text.nil?
+        raise IOError, "Not a regular file" if @specials.key?(k)
+        raise IOError, "File too large" if text.bytesize > limit
         text
       end
 
@@ -115,10 +139,29 @@ module Carat
       def stat(path)
         k = key(path)
         link = @links.key?(k)
-        return Domain::PathInfo.new(exists: true, size: 0, mtime: 0, directory: true, symlink: link) if @dirs.key?(k)
+        return Domain::PathInfo.new(exists: true, size: 0, mtime: 0, directory: true, symlink: link, regular: false) if @dirs.key?(k)
         text = @files[k]
         return Domain::PathInfo.missing if text.nil?
-        Domain::PathInfo.new(exists: true, size: text.bytesize, mtime: 0, directory: false, symlink: link)
+        Domain::PathInfo.new(exists: true, size: text.bytesize, mtime: 0, directory: false, symlink: link, regular: !@specials.key?(k))
+      end
+
+      # Returns the path with the links a test gave targets replaced by
+      # their targets, one level each, from the root down; raises when
+      # nothing is there.
+      # @rbs path: String
+      def real_path(path)
+        current = "/"
+        rest = key(path)
+        while rest.length > 1
+          cut = rest.index("/", 1)
+          name = cut.nil? ? rest[1, rest.length - 1].to_s : rest[1, cut - 1].to_s
+          rest = cut.nil? ? "/" : rest[cut, rest.length - cut].to_s
+          current = current == "/" ? "/#{name}" : "#{current}/#{name}"
+          target = @links[current].to_s
+          current = target unless target.empty?
+        end
+        raise ArgumentError, "No such file or directory: #{path}" unless @files.key?(current) || @dirs.key?(current)
+        current
       end
 
       #: (String) -> void
@@ -139,6 +182,7 @@ module Carat
         move_keys(@files, f, t)
         move_keys(@dirs, f, t)
         move_keys(@links, f, t)
+        move_keys(@specials, f, t)
       end
 
       #: (String) -> void
@@ -153,6 +197,7 @@ module Carat
           raise ArgumentError, "No such file or directory: #{path}"
         end
         @links.delete(k)
+        @specials.delete(k)
       end
 
       # Returns the working directory.

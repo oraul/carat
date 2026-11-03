@@ -5,9 +5,14 @@ module Carat
     # The file system as the use cases see it. Errors raise StandardError
     # subclasses, which the use cases turn into Vim's messages.
     class FilePort
-      # Returns the text of the file at path.
+      # Returns the text of the regular file at path, of at most limit
+      # bytes. Raises IOError with "Is a directory" for a directory, "Not
+      # a regular file" for a FIFO, a device, or a socket, and "File too
+      # large" for a longer file; it never waits for a writer and never
+      # reads more than limit and one bytes.
       # @rbs path: String
-      def read(path)
+      # @rbs limit: Integer
+      def read(path, limit)
         raise NotImplementedError, "FilePort#read"
       end
 
@@ -29,12 +34,19 @@ module Carat
       end
 
       # Returns the Domain::PathInfo of the path: size in bytes, mtime in
-      # seconds, directory (following a link), and symlink (the path
-      # itself); PathInfo.missing when nothing is there, while a link to
+      # seconds, directory and regular (following a link), and symlink (the
+      # path itself); PathInfo.missing when nothing is there, while a link to
       # nothing exists as a link of size 0.
       # @rbs path: String
       def stat(path)
         raise NotImplementedError, "FilePort#stat"
+      end
+
+      # Returns the absolute path with every symbolic link resolved; raises
+      # when nothing is there.
+      # @rbs path: String
+      def real_path(path)
+        raise NotImplementedError, "FilePort#real_path"
       end
 
       # Creates one directory; raises when it exists or its parent does not.

@@ -109,7 +109,7 @@ module DomainRcParserTest
     config = D::Config.new
     config.read_defaults("config/default.caratrc", "option.tabstop 2\nlanguage.ruby.lsp ruby-lsp\n")
     config.read("~/.config/carat/caratrc", "option.tabstop 4\nbad line\n", true)
-    config.unreadable("extra")
+    config.refuse("extra", "cannot be read")
     config.read(".caratrc", "option.number false\nlanguage.ruby.lsp ./evil\noption.tabstop 3\n", false)
     t.assert_equal(["3", "ruby-lsp", true, false], [config.last("option.tabstop").words[0], config.last("language.ruby.lsp").words[0], config.shipped?(config.line_at(0)), config.shipped?(config.line_at(2))], "the last line of a key wins and the defaults are the shipped lines")
     t.assert_equal(true, config.last("option.wrap").nil?, "a key no line sets has no last line")
