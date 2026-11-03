@@ -184,6 +184,31 @@ module SmokeEditorTest
     t.assert_equal(0, code, "the editor exits with status 0 after :q in the file window beside the tree")
     t.assert_true(out.end_with?("\e[?1049l"), "quitting beside the tree leaves the alternate screen")
 
+    # PageDown, as the terminal sends it, scrolls a page: the window's 22
+    # text rows show lines 1 to 22, and a page of 20 rows later lines 21
+    # to 42.
+    long_path = "#{DIR}/long.txt"
+    long = +""
+    n = 1
+    while n <= 100
+      long << "line #{n}\n"
+      n += 1
+    end
+    File.write(long_path, long)
+    reader, writer, pid = PTY.spawn(BIN, long_path)
+    writer.winsize = [24, 80]
+    out = +"".b
+    settle(reader, out, 0.5)
+    t.assert_true(out.include?("100L, 792B"), "the editor drew its first frame for the page check")
+    t.assert_true(!out.include?("line 42"), "line 42 is not shown before the page")
+    mark = out.bytesize
+    writer.write("\e[6~")
+    settle(reader, out, 0.5)
+    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("line 42"), "PageDown scrolls a page down")
+    writer.write(":q\r")
+    code = finish_session(reader, out, pid)
+    t.assert_equal(0, code, "the editor exits with status 0 after the page check")
+
     # Linewise visual mode: Vj selects two lines, d deletes them, :wq writes.
     visual_path = "#{DIR}/visual.txt"
     File.write(visual_path, "one\ntwo\nthree\n")

@@ -28,6 +28,10 @@ ok   <leader>e opens the tree, titled explorer
 ok   the tree's root line has the open folder icon
 ok   the editor exits with status 0 after :q in the file window beside the tree
 ok   quitting beside the tree leaves the alternate screen
+ok   the editor drew its first frame for the page check
+ok   line 42 is not shown before the page
+ok   PageDown scrolls a page down
+ok   the editor exits with status 0 after the page check
 ok   the editor drew its first frame for the visual check
 ok   V and j show the linewise visual mode
 ok   the editor exits with status 0 after Vjd and :wq
@@ -40,4 +44,4 @@ ok   the editor exits with status 0 after the color check
 ok   the editor drew its first frame for the signal check
 ok   SIGTERM ends the editor with status 0
 ok   SIGTERM leaves the alternate screen
-smoke_editor: 42 passed, 0 failed
+smoke_editor: 46 passed, 0 failed

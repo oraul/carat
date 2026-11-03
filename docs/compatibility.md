@@ -262,6 +262,24 @@ Messages: `E36: Not enough room` when the current window has fewer than three te
 
 Differences from Neovim: `splitbelow` and `splitright` are off and not options; a window's minimum height is one text row and its minimum width one column plus the number column, with no `winminheight` or `winminwidth`; a fixed-width window (`winfixwidth`) is set by the explorer plugin and not by `:set`; `<C-w>` followed by a count (`<C-w>3j`) is not read, only a count before `<C-w>`; `<C-w>t b x r R H J K L T`, `<C-w>+ - < >`, `:resize`, `<C-w><C-w>` and the other `<C-w><C-x>` aliases, `winfixheight`, and scroll binding arrive with later changes; the neighbour for `<C-w>h j k l` is chosen by the cursor's row and code point column, not its display column.
 
+## Scrolling
+
+Each command scrolls the current window and then keeps the cursor on a line the window shows, `scrolloff` lines in from an edge that is not the start or the end of the buffer, in its wanted column. They work in normal mode and the three visual modes, where the cursor end of the selection moves; `<PageDown>` and `<PageUp>` work in insert mode too.
+
+| Keys | Action name | Behavior | Test |
+| --- | --- | --- | --- |
+| `[count]<C-f>`, `[count]<PageDown>` | `scroll.page_down` | Forward count pages of the text rows minus two; with the last line shown, the cursor goes to the last line | `editor_scroll`, `smoke_editor` |
+| `[count]<C-b>`, `[count]<PageUp>` | `scroll.page_up` | Back count pages | `editor_scroll` |
+| `[count]<C-d>` | `scroll.half_page_down` | Down by `scroll` lines, half the window when 0, the cursor moving as far; a count sets `scroll` first | `editor_scroll` |
+| `[count]<C-u>` | `scroll.half_page_up` | Up by `scroll` lines, the cursor moving as far; a count sets `scroll` first | `editor_scroll` |
+| `[count]<C-e>` | `scroll.line_down` | The view count lines down, the cursor staying on its line while it is shown | `editor_scroll` |
+| `[count]<C-y>` | `scroll.line_up` | The view count lines up, the cursor staying on its line while it is shown | `editor_scroll` |
+| `[count]zt` | `scroll.cursor_top` | The cursor line, or line count, at the top of the window, with `scrolloff` | `editor_scroll` |
+| `[count]zz` | `scroll.cursor_middle` | The cursor line, or line count, in the middle of the window | `editor_scroll` |
+| `[count]zb` | `scroll.cursor_bottom` | The cursor line, or line count, at the bottom of the window, with `scrolloff` | `editor_scroll` |
+
+Differences from Neovim: the view never scrolls past the last line, so the window never shows filler rows after the end of a buffer longer than the window, and `<C-e>` and `<C-f>` stop at the last full window (`<C-f>` there moves the cursor to the last line, where Neovim's repeated `<C-f>` ends); `<C-b>` at the first line changes nothing instead of beeping; `scroll` is global, not local to the window, and `:set scroll` is not implemented yet; `z<CR>`, `z.`, `z-`, `zh`, `zl`, `zs`, `ze`, `<S-Down>`, `<S-Up>`, and smooth scrolling are not implemented.
+
 ## Tab pages
 
 Each tab page holds its own window layout; the tab line on the top row lists them only when there is more than one, as `showtabline=1`.
@@ -302,4 +320,4 @@ The filetype of a buffer comes from its name (`ruby` for `.rb`, `.rake`, `.gemsp
 
 ## Options read so far
 
-`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scrolloff`, `timeoutlen`, `undolevels`, `icons`, and `theme`, from the `option.*` lines of the configuration files; `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `shiftwidth` of 0 uses `tabstop`, as in Neovim.
+`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `undolevels`, `icons`, and `theme`, from the `option.*` lines of the configuration files; `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.

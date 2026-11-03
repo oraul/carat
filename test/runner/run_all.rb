@@ -45,6 +45,7 @@ require_relative "../editor_plugins"
 require_relative "../editor_registers"
 require_relative "../editor_repeat"
 require_relative "../editor_screen"
+require_relative "../editor_scroll"
 require_relative "../editor_syntax"
 require_relative "../editor_tabs"
 require_relative "../editor_text_objects"
@@ -106,6 +107,7 @@ when "editor_plugins" then EditorPluginsTest.main
 when "editor_registers" then EditorRegistersTest.main
 when "editor_repeat" then EditorRepeatTest.main
 when "editor_screen" then EditorScreenTest.main
+when "editor_scroll" then EditorScrollTest.main
 when "editor_syntax" then EditorSyntaxTest.main
 when "editor_tabs" then EditorTabsTest.main
 when "editor_text_objects" then EditorTextObjectsTest.main

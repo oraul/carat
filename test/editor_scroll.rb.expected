@@ -1,0 +1,51 @@
+ok   the window has 10 text rows
+ok   Ctrl-F scrolls forward a page of the rows minus two
+ok   PageDown scrolls as Ctrl-F
+ok   Ctrl-B scrolls back a page, the cursor kept where it is in view
+ok   PageUp scrolls as Ctrl-B
+ok   a count scrolls that many pages
+ok   Ctrl-B with a count stops at the first line
+ok   Ctrl-F with the last line shown goes to the last line
+ok   Ctrl-F stops at the last full window
+ok   Ctrl-B at the first line changes nothing
+ok   Ctrl-F keeps scrolloff rows above the cursor
+ok   Ctrl-D scrolls and moves the cursor half a window
+ok   Ctrl-U scrolls and moves the cursor back
+ok   Ctrl-D at the end moves only the cursor
+ok   Ctrl-D stops at the last line
+ok   Ctrl-U at the start moves only the cursor
+ok   a count before Ctrl-D scrolls that many lines
+ok   Ctrl-E scrolls a line and the cursor stays on its line
+ok   a count before Ctrl-E scrolls that many lines
+ok   Ctrl-E pushes the cursor down when its line leaves the window
+ok   Ctrl-E pushes the cursor scrolloff rows in
+ok   Ctrl-Y pulls the cursor up when its line leaves the window
+ok   Ctrl-Y at the first line changes nothing
+ok   Ctrl-E at the last full window changes nothing
+ok   zt puts the cursor line at the top
+ok   zz puts the cursor line in the middle
+ok   zb puts the cursor line at the bottom
+ok   zt keeps scrolloff rows above
+ok   zb keeps scrolloff rows below
+ok   a count before zt goes to that line first
+ok   zt near the end stops at the last full window
+ok   zb near the start stops at the first line
+ok   zz near the start stops at the first line
+ok   Ctrl-D in visual mode moves the end of the selection
+ok   Ctrl-F in linewise visual mode
+ok   zt in blockwise visual mode keeps the selection
+ok   PageDown in insert mode
+ok   PageUp in insert mode
+ok   Ctrl-E in insert mode is not a scroll
+ok   Ctrl-E puts the cursor on the short line's last character
+ok   the wanted column survives the scroll
+ok   after $ the scroll keeps the cursor at the line end
+ok   a count before Ctrl-D sets the scroll option
+ok   the next Ctrl-D scrolls as many lines
+ok   Ctrl-U scrolls as many lines too
+ok   option.scroll sets the lines Ctrl-D scrolls
+ok   Ctrl-F in a buffer that fits goes to the last line
+ok   Ctrl-E and Ctrl-Y in a buffer that fits change nothing
+ok   a window with no height does not scroll
+ok   scrolling leaves the buffer unmodified
+editor_scroll: 50 passed, 0 failed
