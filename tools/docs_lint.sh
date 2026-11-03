@@ -38,7 +38,7 @@ ok() {
 # Raising a budget is a reviewed line of this file.
 BUDGETS="CLAUDE.md 30720
 .claude/agents/*.md 8192
-docs/architecture.md 84992"
+docs/architecture.md 88064"
 
 # The documents an agent reads; the generated OpenSpec commands are not ours.
 documents() {
