@@ -1,9 +1,10 @@
 export const meta = {
   name: 'deliver-change',
-  description: 'Deliver one change to main through fixed phases: scouts, contributor, checker, quality and security review, benchmark, package, CI, merge, report',
+  description: 'Deliver one change to main through fixed phases: plan, scouts, contributor, checker, quality and security review, benchmark, package, CI, merge, retrospective, periodic review, report',
   whenToUse: 'Every change to this repository, started by /deliver with a change name or a brief; it resumes from build/pipeline/CHANGE.json',
   phases: [
     { title: 'Resume', detail: 'branch, toolchain, and the run state' },
+    { title: 'Plan', detail: 'planner: the next queue from the metrics history; security findings first' },
     { title: 'Scout', detail: 'one scout per map area without a current pack' },
     { title: 'Implement', detail: 'contributor: propose and apply, committing early' },
     { title: 'Check', detail: 'checker: the canonical stages through make' },
@@ -13,6 +14,8 @@ export const meta = {
     { title: 'Package', detail: 'contributor: archive, gates, one push, pull request' },
     { title: 'CI', detail: 'CI watcher; red goes back to the contributor' },
     { title: 'Merge', detail: 'merger: squash with the trailer, verify main' },
+    { title: 'Retrospective', detail: 'retrospective: record the metrics, propose simplifications, decide whether a review is due' },
+    { title: 'Review', detail: 'periodic review of the whole codebase: security, never skipped, and quality' },
     { title: 'Report', detail: 'reporter: the fixed report shape' },
   ],
 }
@@ -21,13 +24,21 @@ export const meta = {
 // string that is a change name or a brief. The run state, written only by
 // tools/run_state.sh, decides which phases are already done: a phase whose
 // recorded commit is the current one is skipped, so a restart resumes and a
-// fix (a new commit) runs every later phase again.
+// fix (a new commit) runs every later phase again. The workflow also
+// measures the run (output tokens and tool calls per phase, the first
+// verdict of each gate, rework rounds, CI minutes) and hands the figures to
+// the retrospective and the reporter, which record them with
+// tools/run_state.sh metric; the script itself writes no file.
 const input = typeof args === 'string' ? { brief: args } : (args || {})
 const ROUNDS = 3
 const notes = []
 let head = ''
 let state = {}
 let stopped = ''
+const usage = {}
+const firstPass = {}
+let rework = 0
+let ciMinutes = null
 
 const STATUS = { type: 'string', enum: ['done', 'stopped'] }
 const HEAD = { type: 'string', description: 'git rev-parse --short=12 HEAD at the end' }
@@ -94,6 +105,53 @@ const MERGE = {
   required: ['merged'],
 }
 const REPORT = { type: 'object', properties: { report: { type: 'string' } }, required: ['report'] }
+const PLAN = {
+  type: 'object',
+  properties: {
+    decisions: { type: 'array', items: { type: 'object', properties: { decision: { type: 'string' }, evidence: { type: 'string' } }, required: ['decision', 'evidence'] } },
+    security_first: { ...LINES, description: 'unresolved blocking security findings the brief does not fix' },
+    files: LINES,
+  },
+  required: ['decisions', 'security_first', 'files'],
+}
+const RETRO = {
+  type: 'object',
+  properties: {
+    proposals: { type: 'array', items: { type: 'object', properties: { proposal: { type: 'string' }, evidence: { type: 'string' } }, required: ['proposal', 'evidence'] } },
+    review_due: { type: 'string', description: 'the line tools/run_state.sh review-due printed' },
+    due: { type: 'boolean' },
+  },
+  required: ['proposals', 'review_due', 'due'],
+}
+const CALLS = { type: 'integer', description: 'how many tool calls you made for this task' }
+const withCalls = (schema) => ({ ...schema, properties: { ...schema.properties, tool_calls: CALLS } })
+
+// The output tokens the runtime has counted so far; the main session is idle
+// while the workflow runs, so a difference is what the phase spent.
+const spent = () => (typeof budget !== 'undefined' && budget && budget.spent ? budget.spent() : 0)
+// Runs fn (agent calls) and adds its output tokens and reported tool calls
+// to the phase key.
+async function measured(key, fn) {
+  const before = spent()
+  const result = await fn()
+  const u = usage[key] || (usage[key] = { tokens: 0, calls: 0 })
+  u.tokens += spent() - before
+  for (const r of [].concat(result)) if (r && r.tool_calls) u.calls += r.tool_calls
+  return result
+}
+const verdict = (gate, passed) => { if (!(gate in firstPass)) firstPass[gate] = passed ? 1 : 0 }
+// The run's figures as NAME=VALUE pairs of numbers and fixed names only, so
+// the line is safe for the shell and for tools/run_state.sh metric.
+function metricLine() {
+  const keys = Object.keys(usage)
+  const total = (field) => keys.reduce((n, k) => n + usage[k][field], 0)
+  const pairs = [`rework=${rework}`, `out_tokens=${Math.round(total('tokens'))}`, `tool_calls=${total('calls')}`]
+  const first = Object.keys(firstPass).map((g) => `${g}:${firstPass[g]}`).join(',')
+  if (first) pairs.push(`first_pass=${first}`)
+  if (Number.isFinite(Number(ciMinutes)) && ciMinutes !== null) pairs.push(`ci_min=${Number(ciMinutes).toFixed(1)}`)
+  if (keys.length) pairs.push(`phases=${keys.map((k) => `${k}=${Math.round(usage[k].tokens)}/${usage[k].calls}`).join(',')}`)
+  return `sh tools/run_state.sh metric ${state.change} ${pairs.join(' ')}`
+}
 
 const at = (key) => (state[key] || '').split(' ')
 const doneAtHead = (name) => state['phase.' + name] === head
@@ -103,9 +161,11 @@ const backlog = []
 const intro = () => `Change \`${state.change}\` on branch \`${state.branch}\`.`
 
 async function contributor(mode, detail) {
-  const result = await agent(
+  if (mode === 'fix') rework++
+  const key = mode === 'implement' || mode === 'fix' ? 'implement' : 'package'
+  const result = await measured(key, () => agent(
     `${intro()} Mode: ${mode}. ${detail}\nFollow your Modes section for \`${mode}\` and return the schema.`,
-    { agentType: 'contributor', schema: WORK, label: `contributor: ${mode}` })
+    { agentType: 'contributor', schema: withCalls(WORK), label: `contributor: ${mode}` }))
   if (!result || result.status !== 'done') {
     stopped = `contributor (${mode}) stopped: ${result ? result.question || result.summary : 'no result'}`
     return false
@@ -122,26 +182,29 @@ async function verify() {
     let blocked = ''
     if (!doneAtHead('check')) {
       phase('Check')
-      const c = await agent(`${intro()} Run the checks and report.`, { agentType: 'checker', schema: CHECK, effort: 'low' })
+      const c = await measured('check', () => agent(`${intro()} Run the checks and report.`, { agentType: 'checker', schema: withCalls(CHECK), effort: 'low' }))
       if (!c) { stopped = 'the checker returned no result'; return false }
+      verdict('check', c.passed)
       note(`check at ${c.head}: ${c.passed ? 'passed' : 'failed at ' + c.failed_stage}`)
       if (c.passed) state['phase.check'] = c.head
       else blocked = `The stage ${c.failed_stage} failed; its log:\n${c.log_excerpt || ''}`
     }
     if (!blocked && !reviewedAtHead('quality')) {
       phase('Quality')
-      const q = await agent(`${intro()} Review the committed diff and record the result.`, { agentType: 'quality-reviewer', schema: QUALITY })
+      const q = await measured('quality', () => agent(`${intro()} Review the committed diff and record the result.`, { agentType: 'quality-reviewer', schema: withCalls(QUALITY) }))
       if (!q) { stopped = 'the quality reviewer returned no result'; return false }
+      verdict('quality', !q.blocking.length)
       note(`quality at ${q.head}: ${q.blocking.length} blocking, ${q.advisory.length} advisory`)
       if (q.blocking.length) blocked = `Blocking quality findings:\n- ${q.blocking.join('\n- ')}`
       else state['review.quality'] = `pass ${q.head}`
     }
     if (!blocked && !reviewedAtHead('security')) {
       phase('Security')
-      let s = await agent(`${intro()} Run the security review on the committed diff and record the result.`, { agentType: 'security-reviewer', schema: SECURITY })
-      if (!s || !s.ran) s = await agent(`${intro()} The last security review did not complete. Run it again, every sub-task inline, and record the result.`, { agentType: 'security-reviewer', schema: SECURITY, label: 'security-reviewer: retry' })
+      let s = await measured('security', () => agent(`${intro()} Run the security review on the committed diff and record the result.`, { agentType: 'security-reviewer', schema: withCalls(SECURITY) }))
+      if (!s || !s.ran) s = await measured('security', () => agent(`${intro()} The last security review did not complete. Run it again, every sub-task inline, and record the result.`, { agentType: 'security-reviewer', schema: withCalls(SECURITY), label: 'security-reviewer: retry' }))
       if (!s || !s.ran) { stopped = 'the security review did not run; it cannot be skipped'; return false }
       const blocking = s.findings.filter((f) => f.severity !== 'Low' && f.confidence >= 8 && f.in_change)
+      verdict('security', !blocking.length)
       for (const f of s.findings.filter((f) => !blocking.includes(f))) {
         const line = `security ${f.severity} (${f.confidence}) ${f.file}:${f.line || 0} ${f.title}; fix: ${f.fix}`
         if (!backlog.includes(line)) backlog.push(line)
@@ -152,8 +215,9 @@ async function verify() {
     }
     if (!blocked && !reviewedAtHead('bench')) {
       phase('Benchmark')
-      const b = await agent(`${intro()} Compare with main and record the result.`, { agentType: 'benchmark', schema: BENCH, effort: 'low' })
+      const b = await measured('bench', () => agent(`${intro()} Compare with main and record the result.`, { agentType: 'benchmark', schema: withCalls(BENCH), effort: 'low' }))
       if (!b) { stopped = 'the benchmark agent returned no result'; return false }
+      verdict('bench', !b.blocking.length)
       note(`benchmark at ${b.head}: ${b.report.join('; ')}`)
       if (b.blocking.length) blocked = `Blocking regressions:\n- ${b.blocking.join('\n- ')}`
       else state['review.bench'] = `pass ${b.head}`
@@ -182,16 +246,31 @@ if (!resume || resume.status !== 'done') {
   note(`resumed ${state.change} on ${state.branch} at ${head}`)
 }
 
+// The planner orders the queue from the metrics history before a new change
+// starts; an unresolved blocking security finding goes first.
+if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement']) {
+  phase('Plan')
+  const p = await measured('plan', () => agent(
+    `${intro()} Plan the queue for this delivery. Brief: ${input.brief || 'the existing OpenSpec change'}.`,
+    { agentType: 'planner', schema: withCalls(PLAN) }))
+  if (!p) stopped = 'the planner returned no result'
+  else {
+    note(`plan: ${p.decisions.map((d) => `${d.decision} (${d.evidence})`).join('; ') || 'no change to the queue'}`)
+    if (p.security_first.length) stopped = `security first: deliver the fix of ${p.security_first.join('; ')} before this change`
+    else state['phase.plan'] = head
+  }
+}
+
 if (!stopped && !state.merged) {
   if (!state['phase.implement']) {
     phase('Scout')
     let packs = input.packs || []
     if (!packs.length) {
-      const plan = await agent(
+      const plan = await measured('scout', () => agent(
         `List the areas of docs/codebase-map.md (by number and name) that this change touches: ${input.brief || state.change}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} For each, a pack under tmp/scout/ is current when its Commit: is origin/main or \`git diff --quiet <its commit> origin/main -- <its Files read>\` passes; list current packs by path and the areas still needing one, with the question a contributor needs answered.`,
-        { schema: SCOUT_PLAN, effort: 'low', label: 'scout plan' })
-      const fresh = plan ? await parallel(plan.needed.map((n) => () =>
-        agent(`Area: ${n.area}. Question: ${n.question}. Write the pack and return its path.`, { agentType: 'scout', schema: PACK, label: `scout: ${n.area}` }))) : []
+        { schema: withCalls(SCOUT_PLAN), effort: 'low', label: 'scout plan' }))
+      const fresh = plan ? await measured('scout', () => parallel(plan.needed.map((n) => () =>
+        agent(`Area: ${n.area}. Question: ${n.question}. Write the pack and return its path.`, { agentType: 'scout', schema: withCalls(PACK), label: `scout: ${n.area}` })))) : []
       packs = (plan ? plan.current : []).concat(fresh.filter(Boolean).map((p) => p.pack))
       note(`scout packs: ${packs.join(', ') || 'none'}`)
     }
@@ -203,7 +282,7 @@ if (!stopped && !state.merged) {
   if (!stopped && !(state['phase.package'] && state.pr)) {
     if (await verify()) {
       phase('Package')
-      const done = await contributor('package', `Non-blocking findings for docs/backlog.md:\n- ${backlog.join('\n- ') || 'none'}`)
+      const done = await contributor('package', `Non-blocking findings for docs/backlog.md:\n- ${backlog.join('\n- ') || 'none'}\nApply the planner's files under build/plan/ and append the history of the merged changes as your package step says.`)
       if (done) { state['phase.package'] = head; state.pr = String(done.pr || '') }
     }
   }
@@ -211,8 +290,10 @@ if (!stopped && !state.merged) {
   if (!stopped && !(state['phase.ci'] && at('ci')[0] === 'green')) {
     phase('CI')
     for (let round = 0; ; round++) {
-      const ci = await agent(`${intro()} Watch CI on the pull request's head and report.`, { agentType: 'ci-watcher', schema: CI, effort: 'low' })
+      const ci = await measured('ci', () => agent(`${intro()} Watch CI on the pull request's head and report.`, { agentType: 'ci-watcher', schema: withCalls(CI), effort: 'low' }))
       if (!ci) { stopped = 'the CI watcher returned no result'; break }
+      verdict('ci', ci.status === 'green')
+      if (ci.minutes) ciMinutes = ci.minutes
       note(`CI at ${ci.head}: ${ci.status}${ci.minutes ? ` in ${ci.minutes} min` : ''}`)
       if (ci.status === 'green') break
       if (ci.status !== 'red' || round >= ROUNDS) { stopped = `CI ${ci.status}${ci.step ? ' at ' + ci.step : ''}`; break }
@@ -225,14 +306,43 @@ if (!stopped && !state.merged) {
 
   if (!stopped) {
     phase('Merge')
-    const m = await agent(`${intro()} Merge the pull request if every merge gate passes.`, { agentType: 'merger', schema: MERGE, effort: 'low' })
+    const m = await measured('merge', () => agent(`${intro()} Merge the pull request if every merge gate passes.`, { agentType: 'merger', schema: withCalls(MERGE), effort: 'low' }))
     if (!m || !m.merged) stopped = `not merged: ${m ? m.problem : 'no result'}`
-    else note(`merged ${m.sha}: ${m.subject}${m.branch_deleted ? '' : ' (branch deletion refused)'}`)
+    else {
+      state.merged = m.sha
+      note(`merged ${m.sha}: ${m.subject}${m.branch_deleted ? '' : ' (branch deletion refused)'}`)
+    }
+  }
+}
+
+// After the merge: record the run's figures, learn from them, and review the
+// whole codebase when five changes merged since the last review or this one
+// touched a sensitive area. What they find waits in the run state for the
+// next change's planner.
+if (!stopped && state.merged && !state['phase.retro']) {
+  phase('Retrospective')
+  const r = await measured('retro', () => agent(
+    `${intro()} The change merged. Metric command line: \`${metricLine()}\`\nWorkflow notes:\n- ${notes.join('\n- ')}`,
+    { agentType: 'retrospective', schema: withCalls(RETRO) }))
+  if (!r) stopped = 'the retrospective returned no result'
+  else {
+    note(`retrospective: ${r.proposals.map((x) => `${x.proposal} (${x.evidence})`).join('; ') || 'no proposal'}; ${r.review_due}`)
+    if (r.due) {
+      phase('Review')
+      let p = null
+      try {
+        p = await measured('review', () => workflow({ scriptPath: '.claude/workflows/periodic-review.js' }, { change: state.change }))
+      } catch (e) {
+        note(`the periodic review failed to start: ${e.message}`)
+      }
+      if (!p || !p.ran) stopped = 'the periodic security review did not run; run /review'
+      else note(`periodic review: security ${p.security.length} finding(s), ${p.security_blocking} blocking (to the front of the queue); quality ${p.quality_blocking.length} blocking, ${p.quality_advisory} advisory`)
+    }
   }
 }
 
 phase('Report')
 const report = await agent(
-  `Change \`${state.change || input.change || 'unknown'}\`. Write the report. Workflow notes:\n- ${notes.join('\n- ')}\n${stopped ? 'The run stopped: ' + stopped : 'The run finished.'}`,
+  `Change \`${state.change || input.change || 'unknown'}\`. Write the report.${state.merged && state.change ? ` Metric command line: \`${metricLine()}\`` : ''} Workflow notes:\n- ${notes.join('\n- ')}\n${stopped ? 'The run stopped: ' + stopped : 'The run finished.'}`,
   { agentType: 'reporter', schema: REPORT, effort: 'low' })
 return report ? report.report : `No report; notes:\n${notes.join('\n')}${stopped ? '\nStopped: ' + stopped : ''}`

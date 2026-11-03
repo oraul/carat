@@ -14,11 +14,11 @@
 
 ## 3. Agents, workflows, and commands
 
-- [ ] 3.1 Add the `planner` and `retrospective` agents; verify each against its phase and that neither edits a tracked file.
-- [ ] 3.2 Add the periodic mode to the security and quality reviewers and `.claude/workflows/periodic-review.js`; verify with `node --check`.
-- [ ] 3.3 Add the Plan, Retrospective, and Review phases and the per-phase measurement to `.claude/workflows/deliver-change.js`; verify with `node --check` and by reading it against the design.
-- [ ] 3.4 Update the benchmark, contributor (brief, package records), and reporter agents; verify by reading them against `CLAUDE.md`.
-- [ ] 3.5 Add `.claude/commands/plan.md` and `review.md`; verify by reading them against the agents and the workflow.
+- [x] 3.1 Add the `planner` and `retrospective` agents; verify each against its phase and that neither edits a tracked file.
+- [x] 3.2 Add the periodic mode to the security and quality reviewers and `.claude/workflows/periodic-review.js`; verify with `node --check`.
+- [x] 3.3 Add the Plan, Retrospective, and Review phases and the per-phase measurement to `.claude/workflows/deliver-change.js`; verify with `node --check` and by reading it against the design.
+- [x] 3.4 Update the benchmark, contributor (brief, package records), and reporter agents; verify by reading them against `CLAUDE.md`.
+- [x] 3.5 Add `.claude/commands/plan.md` and `review.md`; verify by reading them against the agents and the workflow.
 
 ## 4. Docs
 
