@@ -29,12 +29,22 @@ out << "    JSON\n"
 out << "  end\n"
 out << "end\n"
 
-File.write(target, out)
-STDOUT.puts "wrote #{target} (#{text.bytesize} bytes of JSON)"
+# A file is written only when its text changes, so its time stamp, which
+# spin build and spin run compare with their outputs, moves only then.
+if File.exist?(target) && File.read(target) == out
+  STDOUT.puts "#{target} is current"
+else
+  File.write(target, out)
+  STDOUT.puts "wrote #{target} (#{text.bytesize} bytes of JSON)"
+end
 
 plugins_source = "config/plugins.json"
 registry = "carat/plugins/registry.rb"
 plugins_text = File.read(plugins_source)
 registry_text = Carat::Domain::RegistrySource.render(Carat::Json.parse(plugins_text))
-File.write(registry, registry_text)
-STDOUT.puts "wrote #{registry} (#{Carat::Domain::RegistrySource.names(Carat::Json.parse(plugins_text)).length} plugins)"
+if File.exist?(registry) && File.read(registry) == registry_text
+  STDOUT.puts "#{registry} is current"
+else
+  File.write(registry, registry_text)
+  STDOUT.puts "wrote #{registry} (#{Carat::Domain::RegistrySource.names(Carat::Json.parse(plugins_text)).length} plugins)"
+end

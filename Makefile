@@ -23,14 +23,43 @@ FILE       ?= README.md
 # The most objects one key of the cursor scenario of the benchmark may
 # allocate; make bench-budget fails at this number or above.
 ALLOC_BUDGET ?= 100
-# The analysis budget (tools/analysis_budget.sh): the compile roots it
-# analyses, the most re-narrowing rounds Spinel's analysis of each may
-# take, which fails the target, and the analysis milliseconds above which
-# it only warns, since time depends on the machine. Every root needed 2
-# rounds and about 22 to 25 seconds of analysis on a four-core machine
-# when the budget was set; a value that widens to untyped across the
-# library took 5 rounds and 40 seconds.
-ANALYSIS_ROOTS  ?= bin/carat.rb test/domain_buffer.rb
+# The test runner: every test program under test/ in one Spinel program,
+# compiled once into TEST_BIN and run once per test (test/runner/run_all.rb
+# and tools/run_tests.sh). Each test program used to be its own compile of
+# the whole library: about 25 seconds of Spinel's analysis and 10 to 40 of
+# C compile, 50 times over.
+TEST_RUNNER := test/runner/run_all.rb
+TEST_BIN    := build/test/run_all
+# The development build of the test runner, of one test (make test-one),
+# and of spinel-doctor's checks: Spinel's -O 0, and for the runner and one
+# test also --incremental, which cuts the C into units and takes the object
+# of every unit whose text did not change from SPINEL_CACHE_DIR. Both are
+# documented development modes of Spinel: the same answers, slower code.
+# The release binary, build/bin/carat, never gets them: make build compiles
+# it with spin build at -O 2. On four cores the runner's C compiled in 9 s
+# at -O 0, 30 s at -O 1, and 46 s at -O 2; a warm cache leaves about 2 s.
+TEST_OPT    ?= 0
+DEV_FLAGS   := -O $(TEST_OPT) --incremental
+export SPINEL_CACHE_DIR ?= $(CURDIR)/build/spinel-cache
+# T names the test program of make test-one and make diagnose-one.
+T          ?=
+# The spinel-doctor legs make diagnose skips. The behavior leg compares
+# against a CRuby, which this project never runs. make check runs only the
+# legs that can fail it: it skips the build leg, since make build and make
+# test-build have just compiled every root, and the inference and advice
+# legs, which report at info severity and never fail, and which cost a
+# second analysis of each root (spinel --emit-rbs); make diagnose and
+# make types print them.
+DIAGNOSE_SKIP ?= behavior
+# The analysis budget (tools/analysis_budget.sh): the most re-narrowing
+# rounds Spinel's analysis of a compile root may take, which fails, and
+# the analysis milliseconds above which it only warns, since time depends
+# on the machine. make test-build checks the test runner's own report, so
+# the budget costs no second analysis; make analysis-budget compiles
+# ANALYSIS_ROOTS to C one after another and checks them. Every root needed
+# 2 rounds and 22 to 26 seconds of analysis on a four-core machine; a value
+# that widens to untyped across the library took 5 rounds and 40 seconds.
+ANALYSIS_ROOTS  ?= bin/carat.rb $(TEST_RUNNER)
 ANALYSIS_ROUNDS ?= 2
 ANALYSIS_MS     ?= 45000
 OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y @fission-ai/openspec@latest
@@ -157,32 +186,58 @@ clean:
 
 # --------------------------------------------------------------------- test
 
-## test: build the executables (the smoke test runs build/bin/carat), then compile and run every test/*.rb against its committed snapshot
-test: build
-	spin test
+## test: compile the editor (make build; the smoke test runs build/bin/carat) and the test runner (make test-build), then run every test from the runner against its committed snapshot (make test-run); a compile failure stops before any test runs
+test: build test-build test-run
 
-## lint: run only the lint test program
-lint:
-	spin test test/lint.rb
-
-## snapshots: rebuild every test program with Spinel and rewrite its .expected snapshot from the Spinel output; review the diff before committing
-snapshots:
+## test-build: compile the test runner, every test program in one, into build/test/run_all with the development flags (-O 0, --incremental) and check its analysis against the analysis budget
+test-build:
 	@mkdir -p build/test
+	@rm -f $(TEST_BIN)
+	@echo "spinel $(TEST_RUNNER) $(DEV_FLAGS) -o $(TEST_BIN)"
+	@SP_TIMING=1 spinel $$(spin flags) $(TEST_RUNNER) $(DEV_FLAGS) -o $(TEST_BIN) 2> $(TEST_BIN).timing; \
+	  status=$$?; grep -v '^spinel-timing' $(TEST_BIN).timing >&2; \
+	  if [ $$status -ne 0 ]; then echo "test-build: $(TEST_RUNNER) did not compile; no test ran" >&2; exit 1; fi
+	sh tools/analysis_budget.sh --check $(ANALYSIS_ROUNDS) $(ANALYSIS_MS) $(TEST_RUNNER) $(TEST_BIN).timing
+
+## test-run: run every test from the compiled runner, each in its own process, and compare its output with its committed snapshot; make test-build compiles the runner
+test-run:
+	sh tools/run_tests.sh $(TEST_BIN)
+
+## test-one: compile one test program on its own with the development flags and run it against its snapshot, e.g. make test-one T=test/domain_buffer.rb; a smoke test builds the editor first
+test-one:
+	@case "$(T)" in test/*.rb) ;; *) echo "usage: make test-one T=test/NAME.rb" >&2; exit 2 ;; esac
+	@case "$(T)" in test/smoke_*) $(MAKE) --no-print-directory build ;; esac
+	@mkdir -p build/test-one
+	@rm -f build/test-one/$(basename $(notdir $(T)))
+	spinel $$(spin flags) $(T) $(DEV_FLAGS) -o build/test-one/$(basename $(notdir $(T)))
+	sh tools/run_tests.sh build/test-one/$(basename $(notdir $(T))) $(T)
+
+## lint: compile and run only the lint test program (make test-one T=test/lint.rb)
+lint:
+	@$(MAKE) --no-print-directory test-one T=test/lint.rb
+
+## snapshots: compile the editor and the test runner, then rewrite every test's .expected snapshot from the runner's output, standard output and error together as make test compares them; review the diff before committing
+snapshots: build test-build
 	@for t in test/*.rb; do \
 	  name=$$(basename $$t .rb); \
-	  spinel $$(spin flags) $$t -o build/test/$$name && build/test/$$name > $$t.expected; \
+	  $(TEST_BIN) $$name > $$t.expected 2>&1; \
 	  echo "wrote $$t.expected"; \
 	done
 	@echo "Snapshots come from the Spinel binaries, never from CRuby. Review the diff before committing."
 
-## diagnose: run spinel-doctor on every compile root (bin/*.rb and test/*.rb): unsupported constructs, unresolved calls, widened slots, boxing advice, and build. The behavior leg is skipped: it compares against a CRuby on the path, which this project never uses and which differs from Ruby 4 output
+## diagnose: run spinel-doctor on every compile root, bin/*.rb and the test runner, which holds every test program: unsupported constructs, unresolved calls, widened slots, boxing advice, and a build at -O TEST_OPT. The behavior leg is skipped: it compares against a CRuby on the path, which this project never uses and which differs from Ruby 4 output
 diagnose:
 	@status=0; \
-	for root in bin/*.rb test/*.rb; do \
+	for root in bin/*.rb $(TEST_RUNNER); do \
 	  echo "== $$root"; \
-	  spinel-doctor --quiet --skip behavior "$$root" -- $$(spin flags) || status=1; \
+	  spinel-doctor --quiet --skip $(DIAGNOSE_SKIP) "$$root" -- $$(spin flags) -O $(TEST_OPT) || status=1; \
 	done; \
 	exit $$status
+
+## diagnose-one: run spinel-doctor on one file as make diagnose does, e.g. make diagnose-one T=test/domain_buffer.rb
+diagnose-one:
+	@case "$(T)" in *.rb) ;; *) echo "usage: make diagnose-one T=path/NAME.rb" >&2; exit 2 ;; esac
+	spinel-doctor --quiet --skip $(DIAGNOSE_SKIP) "$(T)" -- $$(spin flags) -O $(TEST_OPT)
 
 ## bench: build the key benchmark bench/keys.rb into build/bench and run its scenarios (all, or SCENARIOS="lh j"): time per key for handling and rendering, the slowest key, bytes written, the collector's share, and allocations per key, pinned to one core when taskset exists
 bench:
@@ -202,7 +257,7 @@ profile:
 	spinel $$(spin flags) bench/keys.rb --profile -o build/profile/keys
 	sh bench/profile.sh build/profile/keys
 
-## analysis-budget: compile ANALYSIS_ROOTS (default bin/carat.rb and test/domain_buffer.rb) to C in parallel with SP_TIMING=1 and fail when Spinel's analysis of one needs more than ANALYSIS_ROUNDS re-narrowing rounds (default 2); warn when it takes more than ANALYSIS_MS milliseconds (default 45000); CI runs it
+## analysis-budget: compile ANALYSIS_ROOTS (default bin/carat.rb and the test runner) to C one after another with SP_TIMING=1 and fail when Spinel's analysis of one needs more than ANALYSIS_ROUNDS re-narrowing rounds (default 2); warn when it takes more than ANALYSIS_MS milliseconds (default 45000). make test-build checks the runner's own report
 analysis-budget:
 	SPIN_FLAGS="$$(spin flags)" sh tools/analysis_budget.sh $(ANALYSIS_ROUNDS) $(ANALYSIS_MS) $(ANALYSIS_ROOTS)
 
@@ -216,8 +271,9 @@ types:
 gen-config:
 	spin run carat-gen-config
 
-## check: everything a push needs: build, gen-config, analysis-budget, test, diagnose, and no-cruby
-check: build gen-config analysis-budget test diagnose no-cruby
+## check: everything a push needs: build, gen-config, test (with the runner's analysis budget), diagnose with the legs that can fail it (unsupported, unresolved, requires; build and test have just compiled every root), and no-cruby
+check: DIAGNOSE_SKIP = behavior,build,inference,advice
+check: build gen-config test diagnose no-cruby
 
 # ----------------------------------------------------------------- openspec
 
@@ -240,6 +296,6 @@ help:
 	@echo "Carat targets:"
 	@grep -E '^## [a-z-]+:' $(MAKEFILE_LIST) | sed -E 's/^## ([a-z-]+): (.*)/  \1\t\2/' | expand -t 16
 	@echo
-	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)"
+	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)  T=$(T)  TEST_OPT=$(TEST_OPT)  SPINEL_CACHE_DIR=$(SPINEL_CACHE_DIR)"
 
-.PHONY: toolchain toolchain-clean spinel-rev doctor no-cruby build run install pack clean test lint snapshots diagnose bench bench-budget analysis-budget profile types gen-config check spec-list spec-validate spec-update help
+.PHONY: toolchain toolchain-clean spinel-rev doctor no-cruby build run install pack clean test test-build test-run test-one lint snapshots diagnose diagnose-one bench bench-budget analysis-budget profile types gen-config check spec-list spec-validate spec-update help
