@@ -26,16 +26,19 @@ export const meta = {
 // done: a phase whose recorded commit is the current one is skipped, so a
 // restart resumes and a fix (a new commit) runs every later phase again. The workflow also
 // measures the run (output tokens and tool calls per phase, the first
-// verdict of each gate, rework rounds, CI minutes) and stores each figure
-// as metric.* when it changes, so a restart seeds them and tools/run_state.sh
-// history builds a whole row. The run state's phase.* and review.* lines
-// and the figures are the script's own: it builds each command from a
-// schema-checked result and one agent that reads nothing else runs them
-// (flush): at the end of verify(), since the pre-push gates read the
-// reviews, after the package step and after the merge, which cannot run
-// twice, and once at the end; tools/agent_guard.sh keeps the other agents
-// off those commands, and the merger's records gate compares the file with
-// what the script received.
+// verdict of each gate, rework rounds, CI minutes, the plan's estimate) and
+// stores every figure as metric.* in one metric line (metricLine), so a
+// restart seeds them and tools/run_state.sh history builds a whole row. The
+// run state's phase.* and review.* lines and the figures are the script's
+// own: it builds each command from a schema-checked result. One agent that
+// reads nothing else runs the queued phase and review lines with the
+// metric line (flush), twice a run: at the end of verify(), since the
+// pre-push gates read the reviews, and at the end, where the package, CI,
+// and merge phases wait (a resume reads pushed, pr, and merged instead).
+// Between them the merger and the retrospective run the metric line first.
+// tools/agent_guard.sh keeps the other agents off the phase and review
+// commands, and the merger's records gate compares the file with what the
+// script received.
 const input = typeof args === 'string' ? { brief: args } : (args || {})
 const ROUNDS = 3
 // Map areas scouted per change, and merger calls that may find CI still
@@ -50,6 +53,8 @@ const usage = {}
 const firstPass = {}
 let rework = 0
 let ciMinutes = null
+const SIZES = ['small', 'medium', 'large']
+let estimate = ''
 
 const STATUS = { type: 'string', enum: ['done', 'stopped'] }
 const HEAD = { type: 'string', description: 'git rev-parse --short=12 HEAD at the end' }
@@ -112,6 +117,7 @@ const MERGE = {
   type: 'object',
   properties: {
     ci: { type: 'string', enum: ['green', 'red', 'pending', 'stale'] }, head: HEAD, minutes: { type: 'number' },
+    waited: { type: 'number', description: 'minutes waited for CI in all' },
     step: { type: 'string' }, log_excerpt: { type: 'string' }, checks: { ...LINES, description: 'each check: name, status, conclusion' },
     merged: { type: 'boolean' }, sha: { type: 'string' }, subject: { type: 'string' }, branch_deleted: { type: 'boolean' }, problem: { type: 'string' },
   },
@@ -126,8 +132,9 @@ const PLAN = {
     security_first: { ...LINES, description: 'unresolved blocking security findings the brief does not fix' },
     notes: { ...LINES, description: 'for the contributor: findings the change only records in docs/backlog.md, and bookkeeping' },
     files: LINES,
+    estimate: { type: 'string', enum: SIZES, description: 'the size this change is estimated at' },
   },
-  required: ['decisions', 'security_first', 'notes', 'files'],
+  required: ['decisions', 'security_first', 'notes', 'files', 'estimate'],
 }
 const RETRO = {
   type: 'object',
@@ -144,26 +151,30 @@ const withCalls = (schema) => ({ ...schema, properties: { ...schema.properties, 
 // The output tokens the runtime has counted so far; the main session is idle
 // while the workflow runs, so a difference is what the phase spent.
 const spent = () => (typeof budget !== 'undefined' && budget && budget.spent ? budget.spent() : 0)
-// The figures waiting for the next flush, metric name to value: fixed
-// names and numbers only, so the command is safe for the shell and for
-// tools/run_state.sh metric.
-const figures = {}
-const figure = (name, value) => { figures[name] = String(value) }
-// Runs fn (agent calls), adds its output tokens and reported tool calls to
-// the phase key, and stores the key's total as metric.phase.KEY.
+// Runs fn (agent calls) and adds its output tokens and reported tool calls
+// to the phase key.
 async function measured(key, fn) {
   const before = spent()
   const result = await fn()
   const u = usage[key] || (usage[key] = { tokens: 0, calls: 0 })
   u.tokens += spent() - before
   for (const r of [].concat(result)) if (r && Number.isInteger(r.tool_calls)) u.calls += r.tool_calls
-  figure(`phase.${key}`, `${Math.round(u.tokens)}/${u.calls}`)
   return result
 }
 function verdict(gate, passed) {
-  if (gate in firstPass) return
-  firstPass[gate] = passed ? 1 : 0
-  figure(`first.${gate}`, firstPass[gate])
+  if (!(gate in firstPass)) firstPass[gate] = passed ? 1 : 0
+}
+// Every figure of the run as one tools/run_state.sh metric line, built from
+// what the script holds now, so the run state equals summary() once the
+// line has run: fixed names and numbers or size words only, safe for the
+// shell and for tools/run_state.sh metric. Empty without a change name.
+function metricLine() {
+  const pairs = Object.keys(usage).map((k) => `phase.${k}=${Math.round(usage[k].tokens)}/${usage[k].calls}`)
+    .concat(Object.keys(firstPass).map((g) => `first.${g}=${firstPass[g]}`), [`rework=${rework}`])
+  if (ciMinutes !== null) pairs.push(`ci_min=${Number(ciMinutes).toFixed(1)}`)
+  if (SIZES.includes(estimate)) pairs.push(`estimate=${estimate}`)
+  const safe = pairs.filter((p) => /^[a-z0-9_.-]+=([0-9./]+|small|medium|large)$/.test(p))
+  return CHANGE.test(state.change || '') ? `sh tools/run_state.sh metric ${state.change} ${safe.join(' ')}` : ''
 }
 // A restart carries on the figures the run state holds.
 function seed() {
@@ -178,17 +189,22 @@ function seed() {
   }
   rework = Number(state['metric.rework']) || 0
   if (state['metric.ci_min']) ciMinutes = Number(state['metric.ci_min'])
-  // The blocked quality review's findings, which its reviewer recorded as
-  // quality-blocking notes; kept only when all of them are there.
-  const [result, commit, count] = at('review.quality')
-  const prefix = `quality-blocking ${commit} `
-  const found = Object.keys(state).filter((k) => /^note\.[0-9]+$/.test(k))
+  if (SIZES.includes(state['metric.estimate'])) estimate = state['metric.estimate']
+  // The last quality review's findings, which its reviewer recorded as
+  // quality-blocking and quality-advisory notes; each list is kept only
+  // when all of its notes are there.
+  const [result, commit, blockingCount, advisoryCount] = at('review.quality')
+  if (!COMMIT.test(commit || '')) return
+  const notesOf = (kind) => Object.keys(state).filter((k) => /^note\.[0-9]+$/.test(k))
     .sort((a, b) => Number(a.slice(5)) - Number(b.slice(5)))
-    .map((k) => String(state[k])).filter((v) => v.startsWith(prefix)).map((v) => v.slice(prefix.length))
-  if (result === 'blocked' && COMMIT.test(commit || '') && found.length && count === `blocking=${found.length}`) {
+    .map((k) => String(state[k])).filter((v) => v.startsWith(`${kind} ${commit} `)).map((v) => v.slice(kind.length + commit.length + 2))
+  const found = notesOf('quality-blocking')
+  if (result === 'blocked' && found.length && blockingCount === `blocking=${found.length}`) {
     qualityBlocking = found
     qualityAt = commit
   }
+  const advisory = notesOf('quality-advisory')
+  if (advisoryCount === `advisory=${advisory.length}`) qualityAdvisory = advisory
 }
 // The figures in one line for the retrospective's and the reporter's
 // prompts; the run state holds the same.
@@ -218,12 +234,13 @@ function reviewed(kind, passed, commit, counts) {
   const summary = Object.keys(counts).map((k) => `${k}=${Number.isInteger(counts[k]) ? counts[k] : 0}`).join(' ')
   queue(`sh tools/run_state.sh review ${state.change} ${kind} ${result} "${summary}" ${commit}`, commit)
 }
+// Runs the queued records with the metric line through one agent; with no
+// record queued no agent starts, and the figures wait for the next line an
+// agent runs. The agent's own cost reaches the next line, so the last
+// flush's is the one figure recorded nowhere.
 async function flush() {
-  const pairs = Object.keys(figures).filter((k) => /^[a-z0-9_.-]+$/.test(k) && /^[0-9./]+$/.test(figures[k])).map((k) => `${k}=${figures[k]}`)
-  for (const k of Object.keys(figures)) delete figures[k]
-  if (pairs.length && CHANGE.test(state.change || '')) pending.push(`sh tools/run_state.sh metric ${state.change} ${pairs.join(' ')}`)
   if (!pending.length) return true
-  const command = pending.splice(0).join(' && ')
+  const command = pending.splice(0).concat([metricLine()].filter(Boolean)).join(' && ')
   const r = await measured('record', () => agent(
     `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${command}\n\nReturn ok true when it exited 0, and its output.`,
     { schema: withCalls(RECORDED), effort: 'low', label: 'record' }))
@@ -250,10 +267,12 @@ let benchSameAt = ''
 let benchReport = []
 let qualityBlocking = []
 let qualityAt = ''
+// The advisories of the last quality review, for docs/backlog.md.
+let qualityAdvisory = []
 const intro = () => `Change \`${state.change}\` on branch \`${state.branch}\`.`
 
 async function contributor(mode, detail) {
-  if (mode === 'fix') figure('rework', ++rework)
+  if (mode === 'fix') rework++
   const key = mode === 'implement' || mode === 'fix' ? 'implement' : 'package'
   const result = await measured(key, () => agent(
     `${intro()} Mode: ${mode}. ${detail}\nFollow your Modes section for \`${mode}\` and return the schema.`,
@@ -310,6 +329,7 @@ async function rounds() {
       if (!q) { stopped = 'the quality reviewer returned no result'; return false }
       qualityBlocking = q.blocking
       qualityAt = q.head
+      qualityAdvisory = q.advisory
       verdict('quality', !q.blocking.length)
       note(`quality at ${q.head}: ${q.blocking.length} blocking, ${q.advisory.length} advisory`)
       reviewed('quality', !q.blocking.length, q.head, { blocking: q.blocking.length, advisory: q.advisory.length })
@@ -391,6 +411,9 @@ if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement
   else {
     note(`plan: ${p.decisions.map((d) => `${d.decision} (${d.evidence})`).join('; ') || 'no change to the queue'}`)
     planNotes = p.notes
+    // Stored with the figures, so budget and the history row keep it after
+    // the queue item leaves the queue.
+    if (SIZES.includes(p.estimate)) estimate = p.estimate
     if (p.security_first.length) stopped = `security first: deliver the fix of ${p.security_first.join('; ')} before this change`
     else phaseDone('plan', head)
   }
@@ -417,28 +440,34 @@ if (!stopped && !state.merged) {
     if (done) phaseDone('implement', head)
   }
 
-  if (!stopped && !(state['phase.package'] && state.pr)) {
+  // A second push is refused, so a restart finds the package step done from
+  // the push and the pull request it recorded (tools/run_state.sh push and
+  // set pr); its phase line waits for the last flush.
+  if (!stopped && !(state.pushed && state.pr)) {
     if (await verify()) {
       phase('Package')
-      const done = await contributor('package', `Non-blocking findings for docs/backlog.md:\n- ${backlog.join('\n- ') || 'none'}\nApply the planner's files under build/plan/ and append the history of the merged changes as your package step says.`)
-      // A second push is refused, so a restart must find the package step.
-      if (done) { state.pr = String(done.pr || ''); phaseDone('package', head); await flush() }
+      const findings = backlog.concat(qualityAdvisory.map((a) => `quality advisory ${a}`))
+      const done = await contributor('package', `Non-blocking findings for docs/backlog.md:\n- ${findings.join('\n- ') || 'none'}\nApply the planner's files under build/plan/ and append the history of the merged changes as your package step says.`)
+      if (done) { state.pr = String(done.pr || ''); phaseDone('package', head) }
     }
   }
 
-  // One agent waits for CI and merges. Pending CI is asked again, at most
-  // WAITS times; red CI goes back to the contributor's fix loop.
+  // One agent waits for CI, up to 30 minutes a start, and merges. Pending
+  // CI is asked again, at most WAITS times; red CI goes back to the
+  // contributor's fix loop. The CI and merge phase lines wait for the last
+  // flush; a restart after the merge reads merged, which the merger wrote.
   if (!stopped) {
     phase('Merge')
     let waits = 0
     let fixes = 0
     for (;;) {
       const m = await measured('merge', () => agent(
-        `${intro()} Wait for CI at the pushed head${waits ? ' (it was still running when you last returned; keep waiting)' : ''}, then merge the pull request if CI is green and every merge gate passes. The merge gates: \`${mergeGates()}\``,
+        `${intro()} First run this line of the run's figures, exactly as written: \`${metricLine()}\`\nThen wait for CI at the pushed head${waits ? ' (it was still running when you last returned; keep waiting)' : ''}, and merge the pull request if CI is green and every merge gate passes. The merge gates: \`${mergeGates()}\``,
         { agentType: 'merger', schema: withCalls(MERGE), effort: 'low' }))
       if (!m) { stopped = 'the merger returned no result'; break }
       const checks = (m.checks || []).join('; ')
       note(`CI at ${m.head}: ${m.ci}${m.minutes ? ` in ${m.minutes} min` : ''}${m.ci === 'pending' && checks ? ` (${checks})` : ''}`)
+      if (m.ci === 'pending' && !(m.waited >= 30)) note(`the merger returned pending after waiting ${Number.isFinite(m.waited) ? m.waited : 'unknown'} of 30 minutes`)
       if (m.ci === 'pending') {
         if (++waits < WAITS) continue
         stopped = `CI stalled at ${m.head} after ${WAITS} waits of up to 30 minutes: ${checks || 'no check state returned'}`
@@ -446,12 +475,11 @@ if (!stopped && !state.merged) {
       }
       waits = 0
       if (m.ci === 'green' || m.ci === 'red') verdict('ci', m.ci === 'green')
-      if (Number.isFinite(m.minutes) && m.minutes > 0) { ciMinutes = m.minutes; figure('ci_min', m.minutes.toFixed(1)) }
+      if (Number.isFinite(m.minutes) && m.minutes > 0) ciMinutes = m.minutes
       if (m.ci === 'green') { state.ci = `green ${m.head}`; phaseDone('ci', m.head) }
       if (m.merged) {
         state.merged = m.sha
         phaseDone('merge', m.sha)
-        await flush()
         note(`merged ${m.sha}: ${m.subject}${m.branch_deleted ? '' : ' (branch deletion refused)'}`)
         break
       }
@@ -474,8 +502,12 @@ if (!stopped && !state.merged) {
 // next change's planner.
 if (!stopped && state.merged && !state['phase.retro']) {
   phase('Retrospective')
+  // The line and the summary are built from the same figures at once, so
+  // once the line has run the run state's totals equal the summary's.
+  const line = metricLine()
+  const figures = summary()
   const r = await measured('retro', () => agent(
-    `${intro()} The change merged. Its figures, also in the run state: ${summary()}.\nWorkflow notes:\n- ${notes.join('\n- ')}`,
+    `${intro()} The change merged. First run this line, which stores the figures below in the run state, exactly as written: \`${line}\`\nIts figures: ${figures}.\nWorkflow notes:\n- ${notes.join('\n- ')}`,
     { agentType: 'retrospective', schema: withCalls(RETRO) }))
   if (!r) stopped = 'the retrospective returned no result'
   else {
