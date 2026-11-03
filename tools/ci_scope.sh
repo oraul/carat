@@ -7,8 +7,9 @@
 # The checks are skipped when
 #   - every file the change touches is documentation that no test reads:
 #     a Markdown file other than docs/actions.md and docs/compatibility.md,
-#     which the action and ex tests compare with the code, or a file under
-#     openspec/ or .claude/;
+#     which the action and ex tests compare with the code, and
+#     docs/codebase-map.md, whose coverage the lint test checks, or a file
+#     under openspec/ or .claude/;
 #   - a push to main is the squash commit of a pull request whose head has
 #     the same tree and whose spin check passed: the tests ran on exactly
 #     these files already.
@@ -34,7 +35,7 @@ answer() {
 # True when a path is documentation no test reads.
 documentation() {
   case "$1" in
-    docs/actions.md|docs/compatibility.md) return 1 ;;
+    docs/actions.md|docs/compatibility.md|docs/codebase-map.md) return 1 ;;
     openspec/*|.claude/*|*.md) return 0 ;;
     *) return 1 ;;
   esac

@@ -1,7 +1,8 @@
 # Checks the rules the Spinel compiler does not enforce by itself:
 # the layer dependency rule, the plugin rule (a plugin requires only
 # carat/plugin_api.rb and its own directory; the generated registry may
-# require any plugin), forbidden constructs, and hard-coded bindings.
+# require any plugin), forbidden constructs, hard-coded bindings, and the
+# coverage of docs/codebase-map.md.
 # Prints every violation; the snapshot is the empty report.
 require_relative "../carat/testing"
 
@@ -519,6 +520,53 @@ module LintTest
     false
   end
 
+  # The code map, docs/codebase-map.md, names every file under carat/, bin/,
+  # test/, bench/, and tools/, and carat.rb, in an area; a test's snapshot
+  # is covered by its test. A path the map names under those roots exists.
+  MAP = "docs/codebase-map.md"
+  MAP_ROOTS = ["carat", "bin", "test", "bench", "tools"]
+
+  # The code spans of a Markdown text: what stands between pairs of
+  # backticks.
+  def self.map_spans(text)
+    spans = []
+    parts = text.split("`")
+    i = 1
+    while i < parts.length
+      spans << parts[i].to_s
+      i += 2
+    end
+    spans
+  end
+
+  # Whether a code span reads as a file path under the map's roots.
+  def self.map_file?(span)
+    span == "carat.rb" || span.match?(/\A(carat|bin|test|bench|tools)\/[a-z0-9_.\/-]*[a-z0-9]\z/)
+  end
+
+  # The files the map must cover, sorted.
+  def self.map_files
+    files = ["carat.rb"]
+    MAP_ROOTS.each do |root|
+      Dir.glob(root + "/**/*").each { |path| files << path.to_s unless File.directory?(path) }
+    end
+    files.sort
+  end
+
+  # One line per file in no area and per named path that does not exist.
+  def self.map_problems(files, spans)
+    problems = []
+    files.each do |path|
+      owner = path.end_with?(".rb.expected") ? path[0, path.length - ".expected".length].to_s : path
+      problems << "#{path} is in no area of #{MAP}" unless spans.include?(owner)
+    end
+    spans.each do |span|
+      next unless map_file?(span)
+      problems << "#{MAP} names #{span}, which does not exist" unless files.include?(span)
+    end
+    problems
+  end
+
   def self.main
     t = Carat::Testing.new("lint")
 
@@ -708,6 +756,9 @@ module LintTest
       end
     end
 
+    # The code map covers every file of the five roots and names no missing one.
+    map_problems(map_files, map_spans(File.read(MAP).to_s)).each { |problem| violations << problem }
+
     # Inline RBS: every method and attribute under carat/ carries a signature.
     # A def is covered when the comment block directly above it (same indent,
     # no blank line) contains a line starting with "#:" or "# @rbs".
@@ -763,6 +814,8 @@ module LintTest
     t.assert_equal([["a use case exposes only call; other is public", "a use case has no public writer (:mode)"], []], [one_call_problems(["class X\n", "attr_reader :tabs\n", "def initialize(tabs:)\n", "def call(state)\n", "def self.build(x)\n", "def other(state)\n", "attr_writer :mode\n", "private\n", "def helper\n"]), one_call_problems(["class X\n", "def call(state)\n", "private\n", "def helper(state)\n"])], "the one-call rule")
     t.assert_equal([["B is not listed in a private_constant"], []], [private_constant_problems("A = 1\nB = \"b\"\nprivate_constant :A\n"), private_constant_problems("A = 1\nB = 2\nprivate_constant :A, :B\nx = A\n")], "the private constant rule")
     t.assert_equal([true, true, false, false, false], [constant_read?("x = Operate::DELETE", "Operate", "DELETE"), constant_read?("x = UseCases::Operate::DELETE", "Operate", "DELETE"), constant_read?("x = MyOperate::DELETE", "Operate", "DELETE"), constant_read?("x = Operate::DELETED", "Operate", "DELETE"), constant_read?("x = Domain::OperatorKind::DELETE", "Operate", "DELETE")], "the constant read rule")
+    t.assert_equal(["test/b.rb is in no area of docs/codebase-map.md", "test/b.rb.expected is in no area of docs/codebase-map.md", "docs/codebase-map.md names carat/gone.rb, which does not exist"], map_problems(["carat.rb", "carat/a.rb", "test/a.rb", "test/a.rb.expected", "test/b.rb", "test/b.rb.expected"], map_spans("- `carat.rb` and `carat/a.rb`: x, `test/a.rb`, `carat/gone.rb`, `carat/use_cases/`, `test/NAME.rb`, `make test`")), "the code map rule")
+    t.assert_equal(true, map_files.include?("tools/noruby/ruby") && map_files.include?("test/runner/run_all.rb") && !map_files.include?("tools/noruby"), "the code map rule reads files in subdirectories and no directory")
     t.assert_equal(0, violations.length, "no lint violations")
     t.assert_equal(0, missing.length, "every method and attribute has an inline RBS signature")
     t.finish
