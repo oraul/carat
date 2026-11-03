@@ -185,6 +185,23 @@ expect "run_state: check resumes after the passed stages" 0 "stage a: passed at 
   env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
 expect "run_state: check records the phase" 0 "^$(git rev-parse --short=12 HEAD)$" state get state phase.check
 expect "run_state: status names the running change and its next phase" 0 "next phase: plan" state status
+expect "run_state: set refuses a review record" 1 "refused: review.security" state set state review.security "pass abc"
+expect "run_state: set refuses a phase record" 1 "refused: phase.plan" state set state phase.plan abc
+expect "run_state: set refuses a stage record" 1 "refused: stage.lint" state set state stage.lint "0 1s abc now"
+expect "run_state: phase refuses a name not in the list" 1 "not a phase: deploy" state phase state deploy
+expect "run_state: phase refuses a commit that is not hexadecimal" 1 "not a commit: HEAD" state phase state plan HEAD
+expect "run_state: phase refuses a commit that does not exist" 1 "not a commit: 0000000" state phase state plan 0000000
+base_commit=$(git rev-parse --short=12 HEAD)
+echo more >> README.md
+commit "chore: more"
+state phase state plan "$(git rev-parse --short=7 HEAD~1)" > /dev/null
+expect "run_state: phase records the given commit at twelve digits" 0 "^$base_commit$" state get state phase.plan
+expect "run_state: review refuses an unknown kind" 1 "not a review kind: style" state review state style pass "x"
+state review state quality blocked "blocking=1" > /dev/null
+expect "run_state: a blocked review records no phase" 0 "^$" state get state phase.quality
+state review state quality pass "blocking=0 advisory=2" "$base_commit" > /dev/null
+expect "run_state: review records the given commit" 0 "^pass $base_commit blocking=0 advisory=2$" state get state review.quality
+expect "run_state: a passed review records its phase at that commit" 0 "^$base_commit$" state get state phase.quality
 
 fresh pushing
 git_q init -q --bare "$work/origin.git"
@@ -196,7 +213,7 @@ commit "chore: more"
 expect "run_state: push refuses before the checks and the review" 1 "pre-push gates failed" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a refused push counts a gate failure" 0 "^1$" state get pushing gates_failed
-state set pushing stage.lint "0 1s $(git rev-parse --short=12 HEAD) now" > /dev/null
+state stage pushing lint true > /dev/null
 state review pushing security pass "no finding" > /dev/null
 expect "run_state: push passes the gates and pushes" 0 "ok   security" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
