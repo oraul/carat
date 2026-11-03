@@ -48,13 +48,13 @@ Files:
 - `tools/rules.sh`: the forbidden-content patterns (`URL_RE`, `EMAIL_RE`, `SESSION_RE`, `MODEL_RE`) and `scan`, sourced by the gates and the docs lint.
 - `tools/docs_lint.sh`: `make docs-lint`; `check_budgets` (`BUDGETS`), `check_content`, `check_wraps`, `check_paths` over the documents agents read.
 - `tools/new.sh`: the generators behind `make new-use-case`, `new-action`, `new-ex-command`, `new-test`, and `new-plugin`; `use_case`, `action`, `ex_command`, `test_program`, `plugin`, and the insertion helpers `before`, `after`, `sorted`, `map_file`, `map_test`; each checks every anchor before writing.
-- Outside the five roots: `Makefile` (`make help`), `spin.toml`, `.gitignore`, `.github/workflows/ci.yml`, `.github/pull_request_template.md`, `.claude/workflows/deliver-change.js` and `periodic-review.js`, `.claude/agents/` (the planner and the retrospective among them), `.claude/commands/deliver.md`, `status.md`, `plan.md`, and `review.md`, and `docs/metrics.tsv`, the history.
+- Outside the five roots: `Makefile` (`make help`), `spin.toml`, `.gitignore`, `.github/workflows/ci.yml`, `.github/pull_request_template.md`, `.claude/workflows/deliver-change.js` and `periodic-review.js`, `.claude/agents/` (the planner and the retrospective among them), `.claude/commands/deliver.md`, `status.md`, `plan.md`, and `review.md`, `docs/metrics.tsv`, the history, and `docs/examples.md` and `docs/spinel-notes.md`, the authoring guides the generators and the docs lint keep current.
 
 Tests: `make check` itself; `tools/tools_test.sh`; `test/smoke_editor.rb` (area 18) runs the built binary.
 
-Designs: `test-build` (One runner, one process per test; Development builds; The analysis budget comes from the runner's own compile; CI), `ci-speed-2` (The compile cache; The allocation budget at `-O 0`; The smoke test on a development build), `analysis-speed` (The budget counts re-narrowing rounds), `delivery-pipeline` (every section), `planner-and-metrics` (every section).
+Designs: `test-build` (One runner, one process per test; Development builds; The analysis budget comes from the runner's own compile; CI), `ci-speed-2` (The compile cache; The allocation budget at `-O 0`; The smoke test on a development build), `analysis-speed` (The budget counts re-narrowing rounds), `delivery-pipeline` (every section), `planner-and-metrics` (every section), `authoring-kit` (every section).
 
-Rules: CLAUDE.md Hard rules and Commands; `docs/architecture.md` sections 2 and 10. A new command gets a target, a Commands line, and a README line; a new stage goes into `CHECK_STAGES` and CI or the recorded reasons.
+Rules: CLAUDE.md Hard rules and Commands; `docs/architecture.md` sections 2 and 10. A new command gets a target, a Commands line, and a README line; a new stage goes into `CHECK_STAGES` and CI or the recorded reasons; a new generator writes the shape of its golden example in `docs/examples.md` and gets a test in `tools/tools_test.sh`.
 
 ## 2. Toolchain
 
@@ -570,5 +570,6 @@ In merge order, by pull request number, with the roadmap item of `docs/architect
 - `agents-and-map`: this map, its lint rule, the scout agent, the slim `CLAUDE.md`, and the contributor's instructions.
 - `delivery-pipeline`: the workflow, `/deliver`, `/status`, seven agents, run state, gates, one stage list. Next: `planner-and-metrics`, `authoring-kit`.
 - `planner-and-metrics`: the planner and the Plan phase, the metrics history `docs/metrics.tsv`, `make metrics` and the comparison with `main` in CI, the retrospective, periodic reviews, `/plan` and `/review`, archived briefs. Acting on what the retrospective and the reviews find is left to the queue.
+- `authoring-kit`: the golden examples `docs/examples.md`, the generators `make new-use-case`, `new-action`, `new-ex-command`, `new-test`, and `new-plugin`, the Spinel notes `docs/spinel-notes.md`, the `docs-lint` stage with its budgets, and a slimmer `CLAUDE.md` (41,066 to about 30,600 bytes) and `docs/architecture.md`. A compile of the generators' output in `make check` is left in `docs/backlog.md`.
 
 Next: `docs/queue.md`, ordered against the charter `docs/goals.md`.
