@@ -59,9 +59,9 @@ state() {
 }
 
 # True when the difference from COMMIT to HEAD touches only files no check
-# reads: the OpenSpec change (archived after the checks), the backlog, and
-# the planning records the package step writes (queue, goals, and metrics
-# history).
+# reads but docs-lint: the OpenSpec change (archived after the checks), the
+# backlog, and the planning records the package step writes (queue, goals,
+# and metrics history), whose docs-lint the package step and CI run again.
 settled_at() {
   [ -n "$1" ] || return 1
   rest=$(git diff --name-only "$1" HEAD 2>/dev/null) || return 1

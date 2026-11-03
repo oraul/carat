@@ -18,4 +18,4 @@
 
 ## 4. Docs
 
-- [ ] 4.1 `CLAUDE.md` (Agents, Commands), `README.md` (the planner, the retrospective, `make docs-lint`), `docs/codebase-map.md` (area 1 and the delivered-changes line), `tools/gates.sh` comment. Checked by `make docs-lint`, `make tools-test`, and `make gates`.
+- [x] 4.1 `CLAUDE.md` (Agents, Commands), `README.md` (the planner, the retrospective, `make docs-lint`), `docs/codebase-map.md` (area 1 and the delivered-changes line), `tools/gates.sh` comment. Checked by `make docs-lint`, `make tools-test`, and `make gates`.
