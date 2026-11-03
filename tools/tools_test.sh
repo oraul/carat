@@ -2,13 +2,13 @@
 # Tests the shell tools behind CI and the delivery pipeline, each in a
 # temporary git repository or directory outside this one:
 # tools/ci_scope.sh (which changes run the checks), tools/ci_wait.sh (the
-# merger's wait), tools/metrics.sh (the
-# measurement and the comparison with main), tools/run_state.sh (the run
-# state, stages, resume, the push rule, the records only the workflow
-# writes, the history, and the budget), tools/agent_guard.sh (each
-# profile's refusals and allowances), tools/docs_lint.sh (budgets, content,
-# wraps, paths, queue), tools/new.sh (every generator and its refusals),
-# and every gate of tools/gates.sh, each passing and refusing.
+# merger's wait), tools/metrics.sh (the measurement and the comparison with
+# main), tools/run_state.sh (the run state, stages, resume, the push rule,
+# the records only the workflow writes, the history, the budget, and the
+# review areas), tools/agent_guard.sh (each profile's refusals and
+# allowances), tools/docs_lint.sh (budgets, content, wraps, paths, queue),
+# tools/new.sh (every generator and its refusals), and every gate of
+# tools/gates.sh, each passing and refusing.
 # Prints "ok   NAME" or "FAIL NAME" and the output, then "P/T passed";
 # exits 1 when any failed. Run by make tools-test.
 #
@@ -110,6 +110,10 @@ expect "ci_wait: refuses more than 540" 2 "refused: 541 seconds" sh "$here/ci_wa
 expect "ci_wait: refuses a number past the shell's integer range" 2 "refused: 99999999999999999999999 seconds" sh "$here/ci_wait.sh" 99999999999999999999999
 expect "ci_wait: refuses a value that is not a whole number" 2 "not a whole number" sh "$here/ci_wait.sh" '1; true'
 expect "ci_wait: refuses no value" 2 "not a whole number" sh "$here/ci_wait.sh"
+mkdir -p "$work/failing"
+printf '#!/bin/sh\nexit 1\n' > "$work/failing/sleep"
+chmod +x "$work/failing/sleep"
+expect "ci_wait: fails when the sleep fails" 1 "^ci_wait: sleep failed" env PATH="$work/failing:$PATH" sh "$here/ci_wait.sh" 1
 
 mkdir -p "$work/bin"
 cat > "$work/bin/gh" <<'EOF'

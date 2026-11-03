@@ -18,8 +18,8 @@
 
 ## 4. Small fixes
 
-- [ ] 4.1 `tools/ci_wait.sh`: one refusal message, a failing `sleep` exits 1. Tested by the case "ci_wait: fails when the sleep fails" and the existing refusal cases.
-- [ ] 4.2 `Makefile`: the `tools-test` help names every tool `tools/tools_test.sh` tests; `tools/tools_test.sh` header rewrapped. Checked by `make help`.
+- [x] 4.1 `tools/ci_wait.sh`: one refusal message, a failing `sleep` exits 1. Tested by the case "ci_wait: fails when the sleep fails" and the existing refusal cases.
+- [x] 4.2 `Makefile`: the `tools-test` help names every tool `tools/tools_test.sh` tests; `tools/tools_test.sh` header rewrapped. Checked by `make help`.
 
 ## 5. Docs and records
 
