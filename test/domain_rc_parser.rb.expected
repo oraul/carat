@@ -45,6 +45,8 @@ ok   an unknown scope
 ok   a language command
 ok   an unknown language setting
 ok   an untrusted file cannot set language commands
+ok   an untrusted file binds actions and none but no key sequence
+ok   a trusted file binds a key sequence
 ok   an untrusted file sets anything else
 ok   the last line of a key wins and the defaults are the shipped lines
 ok   a key no line sets has no last line
@@ -65,4 +67,4 @@ ok   a list
 ok   an empty list
 ok   an unknown kind
 ok   each kind says what it takes
-domain_rc_parser: 67 passed, 0 failed
+domain_rc_parser: 69 passed, 0 failed

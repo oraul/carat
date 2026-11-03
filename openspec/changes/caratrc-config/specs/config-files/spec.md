@@ -145,3 +145,14 @@ A `language.*` line in the project file SHALL be reported as "language commands 
 #### Scenario: Language command in the user file
 - **WHEN** the user file holds "language.ruby.lsp ruby-lsp --debug"
 - **THEN** nothing is reported
+
+### Requirement: A project file cannot bind keys to key sequences
+A keymap line in the project file whose action is a key sequence to replay SHALL be reported as "key sequences are not read from a project file" and ignored, because a replay can run any ex command, a write to any path included. The same line in the defaults or the user file SHALL be accepted, and the project file SHALL still bind keys to action names and `none`.
+
+#### Scenario: Key sequence in the project file
+- **WHEN** the project file's first line is "keymap.normal j :e<Space>.git/config<CR>"
+- **THEN** ".caratrc:1: key sequences are not read from a project file" is reported and "j" still moves down
+
+#### Scenario: Action binding in the project file
+- **WHEN** the project file holds "keymap.normal K cursor.down"
+- **THEN** "K" moves down and nothing is reported

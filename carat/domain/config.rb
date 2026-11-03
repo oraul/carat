@@ -54,9 +54,10 @@ module Carat
       end
 
       # Reads a file's text under its label. A line that does not read,
-      # names an unknown scope, or is a language setting it may not set
-      # is noted and skipped. An untrusted file, the project's, may not
-      # set language commands, which name programs to run.
+      # names an unknown scope, or is a setting it may not make is noted
+      # and skipped. An untrusted file, the project's, may not set language
+      # commands, which name programs to run, nor bind keys to a key
+      # sequence to replay, which can run any ex command.
       #: (String, String, bool) -> void
       def read(source, text, trusted)
         file = files
@@ -159,6 +160,7 @@ module Carat
           return
         end
         return if scope == "language" && !language?(line, trusted)
+        return if scope == "keymap" && !trusted && !binding?(line)
         settings << line
       end
 
@@ -182,6 +184,20 @@ module Carat
           return false
         end
         true
+      end
+
+      # Whether an untrusted file's keymap line may be kept: one whose
+      # value is an action name or none. A key sequence to replay is noted
+      # and refused, because a replay types anything, :w with any path
+      # included, so a project file could write any file the user can.
+      #: (RcLine) -> bool
+      def binding?(line)
+        words = line.words
+        return true if line.name == "leader" || words.length != 2
+        value = words[1].to_s
+        return true if value == "none" || RcParser.key?(value, 0, value.bytesize)
+        note(line, "key sequences are not read from a project file")
+        false
       end
 
       #: (Integer, String) -> void

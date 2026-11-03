@@ -15,12 +15,12 @@ module DomainKeymapTest
   # configuration replaces or removes them and leaves the rest alone.
   PLUGIN = ["keymap.normal <leader>hh plugin.hello.greet", "keymap.normal <leader>hx plugin.hello.extra"]
 
-  # The configuration of text read as the project file, with a Space
-  # leader after it.
+  # The configuration of text read as a trusted file named .caratrc, so
+  # key sequences bind, with a Space leader after it.
   #: (String) -> Carat::Domain::Config
   def self.project(text)
     config = D::Config.new
-    config.read(".caratrc", text + "keymap.leader <Space>\n", false)
+    config.read(".caratrc", text + "keymap.leader <Space>\n", true)
     config
   end
 
@@ -169,7 +169,7 @@ module DomainKeymapTest
     # The leader: the last good keymap.leader line, Vim's backslash
     # without one; a bad one is reported and skipped.
     leaders = D::Config.new
-    leaders.read(".caratrc", "keymap.leader ,\nkeymap.leader a b\nkeymap.leader <Nope>\nkeymap.leader \"\"\n", false)
+    leaders.read(".caratrc", "keymap.leader ,\nkeymap.leader a b\nkeymap.leader <Nope>\nkeymap.leader \"\"\n", true)
     D::Keymap.new.add_checked(leaders, known)
     t.assert_equal([",", ".caratrc:2: keymap.leader takes one key", ".caratrc:3: unknown key <Nope>", ".caratrc:4: keymap.leader takes one key"], [D::Keymap.leader_from(leaders)] + leaders.report, "the leader is the last good leader line")
     t.assert_equal("\\", D::Keymap.leader_from(D::Config.new), "the leader is a backslash when no line sets it")

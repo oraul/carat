@@ -55,6 +55,21 @@ module AdaptersConfigGatewayTest
     config = load(files)
     t.assert_equal([["ruby-lsp", "--debug"], [".caratrc:1: language commands are not read from a project file"]], [config.last("language.ruby.lsp").words, config.report], "a project file cannot choose a program to run")
 
+    # Key sequences: the user file may bind them, the project file not,
+    # since a replay can write any file with :w.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(USER, "keymap.normal Q :w<CR>\n")
+    files.put(PROJECT, "keymap.normal j :e<Space>.git/config<CR>\nkeymap.normal K cursor.down\n")
+    config = load(files)
+    bound = []
+    i = 0
+    while i < config.count
+      line = config.line_at(i)
+      bound << "#{line.source} #{line.words.join(" ")}" unless config.shipped?(line)
+      i += 1
+    end
+    t.assert_equal([["~/.config/carat/caratrc Q :w<CR>", ".caratrc K cursor.down"], [".caratrc:1: key sequences are not read from a project file"]], [bound, config.report], "a project file cannot bind a key sequence, which could write any file")
+
     # No home directory, a directory named .caratrc, an unreadable file.
     files = Carat::Doubles::MemoryFiles.new
     files.put(USER, "option.tabstop 4\n")

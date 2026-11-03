@@ -89,6 +89,8 @@ module DomainRcParserTest
       config_of(text.to_s, true)
     end
     t.assert_equal([[], [".caratrc:1: language commands are not read from a project file"]], config_of("language.ruby.lsp ./evil\n", false), "an untrusted file cannot set language commands")
+    t.assert_equal([["1 keymap|normal [\"x\", \"cursor.down\"]", "2 keymap|normal [\"y\", \"none\"]", "4 keymap|leader [\",\"]", "5 keymap|normal [\"z\"]"], [".caratrc:3: key sequences are not read from a project file"]], config_of("keymap.normal x cursor.down\nkeymap.normal y none\nkeymap.normal q :e<Space>.git/config<CR>\nkeymap.leader ,\nkeymap.normal z\n", false), "an untrusted file binds actions and none but no key sequence")
+    t.assert_equal([["1 keymap|normal [\"q\", \":w<CR>\"]"], []], config_of("keymap.normal q :w<CR>\n", true), "a trusted file binds a key sequence")
     t.assert_equal([["1 option|tabstop [\"3\"]"], []], config_of("option.tabstop 3\n", false), "an untrusted file sets anything else")
 
     # Several files: load order, the last line, notes, and the order of

@@ -6,8 +6,9 @@ module Carat
   module Doubles
     # A config port that returns a configuration given to it. defaults
     # reads the shipped defaults as the editor does; with reads lines a
-    # test gives after them, as the project file .caratrc, so a test sets
-    # options and bindings with the lines a user would write.
+    # test gives after them, as the project file .caratrc, and with_user as
+    # the user file, so a test sets options and bindings with the lines a
+    # user would write.
     class FixedConfig < Ports::ConfigPort
       # @rbs @value: Domain::Config
 
@@ -29,6 +30,15 @@ module Carat
       def self.with(text)
         config = defaults
         config.read(".caratrc", text, false)
+        config
+      end
+
+      # The shipped defaults, then text as the user file
+      # ~/.config/carat/caratrc, which is trusted with key sequences.
+      #: (String) -> Domain::Config
+      def self.with_user(text)
+        config = defaults
+        config.read("~/.config/carat/caratrc", text, true)
         config
       end
 

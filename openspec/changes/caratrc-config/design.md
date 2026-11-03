@@ -53,7 +53,7 @@ The assembly reads `config.problems` after the options, plugins, and keymap have
 
 ## Risks / Trade-offs
 
-- [A malicious project `.caratrc` rebinds keys] → It can only bind keys to editor actions and replays, which the user sees; it cannot name a program (`language.*` refused) and cannot write outside what the user's keys do. Recorded for item 9 and the language services change: any future setting that runs a program must be refused in the project file too.
+- [A malicious project `.caratrc` rebinds keys] → A replay is typed as if by the user, so `keymap.normal j :e<Space>.git/config<CR>...:w<CR>` would let a cloned repository write any file the user can, such as a git hook setting, on the first `j`; the security review of this change found it. The project file therefore binds keys only to action names and `none`, which run one editor command without arguments, and a key sequence there is reported and ignored, as `language.*` is; the defaults and the user file keep replays. Any future setting that runs a program or types keys must be refused in the project file too (item 9, the language services, process plugins).
 - [Breaking plugin API] → All plugins in the repository move to 2.0 in this change; the refusal message names both versions.
 - [Users with a JSON file] → The file is no longer read and nothing warns; the project is pre-release and there were no user files before this change (item 9 had not landed), so only the defaults move.
 - [Startup cost] → The defaults are about 500 short lines; the byte parser allocates the words and one value per line, comparable to the JSON parse it replaces. Measured against c4ea5d0 before merging.

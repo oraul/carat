@@ -57,7 +57,7 @@ plugin.explorer.ignore .git build tmp
 - `option.<name>` sets an option by its Vim name (`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scrolloff`, `timeoutlen`, `undolevels`, and the others), plus Carat's `icons` and `theme`.
 - `keymap.<mode> <keys> <action>` binds keys in Vim notation in `normal`, `insert`, `visual`, `visual_line`, `visual_block`, `operator_pending`, or `cmdline` mode to an action from `docs/actions.md` or to keys to replay, such as `:w<CR>`; the action `none` removes a binding. `keymap.leader <Space>` sets what `<leader>` stands for.
 - `plugin.<name>.enabled` turns a plugin on or off, and `plugin.<name>.<option>` sets one of its options.
-- `language.<name>.lsp` and `language.<name>.formatter` name the commands the language services will run; they are read from the defaults and the user file only, never from a project's file, so opening a directory cannot choose a program to run.
+- `language.<name>.lsp` and `language.<name>.formatter` name the commands the language services will run; they are read from the defaults and the user file only, never from a project's file, so opening a directory cannot choose a program to run. For the same reason a project's file may bind keys only to actions and `none`, not to keys to replay.
 
 The files load in order, and a later line wins: the built-in defaults (`config/default.caratrc`, every option and binding Carat ships, built into the binary), then `~/.config/carat/caratrc`, then `.caratrc` in the directory Carat starts in. Every line is checked when the files load; a mistake is reported as `file:line: message`, that line is skipped and the rest still applies, and the first problem shows in the message row when Carat starts, with the number of the others.
 

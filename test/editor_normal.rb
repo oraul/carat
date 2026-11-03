@@ -116,7 +116,7 @@ module EditorNormalTest
     h.type("<Space>w")
     t.assert_equal("\"a.txt\" 1L, 3B written", h.message_row, "leader w writes the file")
     t.assert_equal("ab\n", h.files.get("a.txt"), "the file was written")
-    loop_config = Carat::Doubles::FixedConfig.with("keymap.normal q q\n")
+    loop_config = Carat::Doubles::FixedConfig.with_user("keymap.normal q q\n")
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "ab\n")
     h = H.new(files: files, config: loop_config, rows: 10, cols: 80, plugins: [])
