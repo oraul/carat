@@ -158,18 +158,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: in `authoring-kit` the two took 17 and 11 tool calls, 28 of 272 (10.3%), and 6,305 output tokens for a CI that passed first time in 3.0 minutes with 0 CI fixes. Proposed by that run's retrospective (note 3) and left out of the queue because one green run is the only evidence and the watcher drives the CI-fix rounds, which no run has measured yet.
 - Fix outline: once `docs/metrics.tsv` holds several runs with their `ci` and `merge` phase counts, including one with a CI fix, have the merger watch CI itself when the run has no CI fix to make, keeping the watcher only for the fix loop, and compare the two phases' tool calls before and after.
 
-## The project .caratrc is read without a type or size check
-
-- Where: `RcConfigGateway#read_file` in `carat/adapters/rc_config_gateway.rb` (the `@files.read(path)` at line 55), after `@files.stat(path)`, which follows a link; `DiskFiles#read` reads the whole file. Low finding of the periodic security review at 66fd52b.
-- Why it matters: the project file comes from an untrusted repository; a `.caratrc` that is a symlink to `/dev/zero` or a FIFO makes carat exhaust memory or hang at startup, before the first frame.
-- Fix outline: refuse a project file that is a symlink or not a regular file (an lstat in `PathInfo`), cap the bytes read (for example 1 MB) through a bounded read on `FilePort`, and note each refusal as a problem with its file and line 0.
-
-## tabstop and shiftwidth have no upper bound
-
-- Where: `Options#apply` in `carat/domain/options.rb` (lines 94 and 95 store `word.to_i`); `RcValue.number?` accepts up to 999999999. Low finding of the periodic security review at 66fd52b.
-- Why it matters: an untrusted project `.caratrc` can set either to 999999999, and `InsertTab` (`carat/use_cases/insert_tab.rb`) and the shift operators (`Operators.shift`, `shift_block`) then build a string of that many spaces on one Tab or `>>`, allocating gigabytes.
-- Fix outline: bound the integer options in `Options.apply` (Vim caps `tabstop` at 9999; 1 to 9999 for both, 0 still meaning "use tabstop" for `shiftwidth`), note an out-of-range value as a problem, and add rows to `test/domain_options_config.rb`.
-
 ## The periodic review's areas miss the entry point, the tools, and CI
 
 - Where: `REVIEW_AREAS` in `tools/run_state.sh` (line 73). `utf8-input-safety` added the domain files that keep control characters off the terminal (`frame.rb`, `display_width.rb`, `utf8.rb`, `decoded_line.rb`) to the terminal output area; `bin/carat.rb`, `tools/`, and `.github/workflows/` are still in no area. Low finding of the periodic security review at 66fd52b.

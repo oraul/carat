@@ -169,7 +169,7 @@ Four rules shape the classes. Each real operation with its own inputs is a use c
 ### 5.2 Files and ex commands
 
 - `OpenFile`, `SaveFile`, `SaveAll`, `Quit`, `QuitAll`: through `FilePort`, with the Vim error codes `E37`, `E212`, `E492` as response values. `SaveFile` writes one buffer and `SaveAll` calls it for every modified one.
-- `ProbePath`, `MakePath`, `RenamePath`, `DeletePath`: the file operations inside a root that the plugins request, with every check; `ProbePath` is the one place a use case asks the port about a path.
+- `ProbePath`, `MakePath`, `RenamePath`, `DeletePath`: the file operations inside a root that the plugins request, with every check; `ProbePath` is the one place a use case asks the port about a path, but for `MakePath`'s `real_path` of the parent and the root, which keeps a create from going through a link that leaves the root.
 - `ExecuteEx` (`use_cases/ex/`): parses a command line with `ExGrammar` and runs the first handler of the ex table, in registration order, whose name matches the typed one, `E492` when none does. It implements `CommandRunner`, the interface the command line and the plugin host's `run_ex` request depend on; the plugin host receives the runner already built, and the ex table is filled after it, so nothing is attached after construction. Each feature registers its ex handlers there: files (`e w wq x q qa wa saveas`), buffers and windows (`bn bp bd ls sp vs only close`), editing (`s g v d m t normal sort`), navigation (`marks registers display jumps` and a bare line number), history (`undo redo undolist earlier later`), syntax (`syntax on|enable|off`), options (`set setlocal`; today `:set` handles `filetype` and `syntax` only).
 
 ### 5.3 Windows and services
@@ -197,7 +197,7 @@ Ports to the outside are the interfaces use cases depend on. Each is a Ruby clas
 | --- | --- | --- | --- |
 | `TerminalPort` | `size`, `read_key(timeout)`, `write(bytes)`, `colors`, `enter`, `leave` | `AnsiTerminal`, which reads `COLORTERM` and `TERM` once for `colors` | `FakeTerminal` with a scripted key queue, captured output, and 256 colors |
 | `ClockPort` | `now`, `sleep(seconds)` | monotonic clock | manual clock |
-| `FilePort` | `read(path)`, `write(path, text)`, `exist?`, `list(dir)`, `stat(path)` returning the `PathInfo` value (`PathInfo.missing` for nothing there), `mkdir(path)`, `rename(from, to)`, `delete(path)` (a file or an empty directory), `cwd`, `home` (the user's home directory, `""` for none; only `DiskFiles` reads it from the environment) | `DiskFiles` | `MemoryFiles` |
+| `FilePort` | `read(path, limit)` (a regular file of at most `limit` bytes, opened without blocking), `write(path, text)`, `exist?`, `list(dir)`, `stat(path)` returning the `PathInfo` value (`PathInfo.missing` for nothing there), `real_path(path)` (every link resolved), `mkdir(path)`, `rename(from, to)`, `delete(path)` (a file or an empty directory), `cwd`, `home` (the user's home directory, `""` for none; only `DiskFiles` reads it from the environment) | `DiskFiles` | `MemoryFiles` |
 | `ConfigPort` | `load` returning the `Domain::Config` of every configuration file in load order, each line carrying its file and line number | `RcConfigGateway` | `FixedConfig`, the shipped defaults with lines a test gives |
 | `SignalPort` | `install`, `terminated?`, `resized?`, `acknowledge_resize` | `Signals` | `ManualSignals`, which a test trips |
 | `LanguageServicePort` | `start(language)`, `notify(method, params)`, `request(method, params)`, `poll` | `JsonRpcLanguageGateway` | scripted responses |
@@ -256,7 +256,7 @@ language.ruby.formatter rubocop -A --stdin {file} --stderr
 
 ### 8.3 Gateways
 
-- `RcConfigGateway`: reads the embedded defaults, then `~/.config/carat/caratrc` under `FilePort#home` and `.caratrc` under `FilePort#cwd` when a file is there, the project file untrusted, into one `Domain::Config` (section 7).
+- `RcConfigGateway`: reads the embedded defaults, then `~/.config/carat/caratrc` under `FilePort#home` and `.caratrc` under `FilePort#cwd` when a file is there, the project file untrusted, into one `Domain::Config` (section 7); a file that is not regular or holds more than 1 MiB, and a project file that is a link, are reported and not read.
 - `JsonRpcLanguageGateway`: speaks JSON-RPC over stdio to a language server started through `ProcessPort`. It translates buffer events to `didOpen`, `didChange`, `didSave`, and requests diagnostics, hover, definition, references, rename, completion, and formatting. It returns plain values: diagnostics as `(range, severity, message)`, completions as `(label, kind, insert_text)`. Use cases never see JSON.
 
 ### 8.4 Drivers

@@ -81,7 +81,8 @@ module DomainRcParserTest
       ["a surrogate", "option.theme \xED\xA0\x80", "illegal byte"],
       ["above U+10FFFF", "option.theme \xF4\x90\x80\x80", "illegal byte"],
       ["a lone continuation byte", "keymap.normal \x80 cursor.down", "illegal byte"],
-      ["four-byte UTF-8 stays", "plugin.hello.greeting \u{1F600}", ["plugin.hello.greeting", ["\u{1F600}"]]]
+      ["four-byte UTF-8 stays", "plugin.hello.greeting \u{1F600}", ["plugin.hello.greeting", ["\u{1F600}"]]],
+      ["UTF-8 in a comment stays", "option.tabstop 4 # quatre espaces, \u00E9", ["option.tabstop", ["4"]]]
     ]) do |text|
       read(text.to_s)
     end

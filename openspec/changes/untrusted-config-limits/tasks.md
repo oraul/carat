@@ -29,5 +29,5 @@
 
 ## 7. Smoke test and documentation
 
-- [ ] 7.1 `test/smoke_editor.rb`: start the release binary in a project whose `.caratrc` is a symlink to `/dev/zero`, then in one whose `.caratrc` holds an illegal byte and a huge tabstop with a home whose user file binds a value with an illegal byte; the editor starts, shows the first problem, and quits with status 0
-- [ ] 7.2 `docs/codebase-map.md` (the new test, port methods), `docs/architecture.md` (the FilePort row), `docs/backlog.md` (remove the two fixed entries, add the ci_scope word splitting and the rename through a link), and `make gates`, `make docs-lint`
+- [x] 7.1 `test/smoke_editor.rb`: start the release binary in a project whose `.caratrc` is a symlink to `/dev/zero`, then in one whose `.caratrc` holds an illegal byte and a huge tabstop with a home whose user file binds a value with an illegal byte; the editor starts, shows the first problem, and quits with status 0
+- [x] 7.2 `docs/codebase-map.md` (the new test, port methods), `docs/architecture.md` (the FilePort row), `docs/backlog.md` (remove the two fixed entries; the ci_scope word splitting and the rename and delete through a link are in the planner's `build/plan/backlog.md`, which the package step adds), and `make gates`, `make docs-lint`

@@ -1,3 +1,23 @@
-ok   an empty line has no characters
-ok   a word counts its characters
-drivers_disk_files: 2 passed, 0 failed
+ok   a regular file
+ok   an empty file
+ok   a file of exactly the limit
+ok   a file one byte over the limit
+ok   a link to a regular file
+ok   a link to /dev/zero
+ok   a FIFO with no writer
+ok   a directory
+ok   a bounded read gives UTF-8 bytes as they are
+ok   a regular file
+ok   a directory
+ok   a FIFO
+ok   a link to /dev/zero
+ok   a link to a regular file
+ok   a dangling link
+ok   nothing
+ok   real_path resolves every link
+ok   a file below a link leading out of the root
+ok   a directory below a link leading out of the root
+ok   a dangling link leading out is an existing entry
+ok   a file below a link that stays inside
+ok   a file below a linked root
+drivers_disk_files: 22 passed, 0 failed

@@ -82,15 +82,15 @@ Flow: `bin/carat.rb` builds `RcConfigGateway` over the file driver; `EditorAssem
 Files:
 
 - `bin/carat-gen-config.rb`: the generator; writes only what changed and refuses a line that does not read.
-- `carat/domain/rc_parser.rb`: `RcParser.parse`, `parse_range`, `key?`, `unquote`, `failure`; walks a line's bytes into a key and words, with quotes, escapes, and comments.
+- `carat/domain/rc_parser.rb`: `RcParser.parse`, `parse_range`, `key?`, `illegal?`, `unquote`, `failure`; walks a line's bytes into a key and words, with quotes, escapes, and comments, refusing control characters and bytes that are not UTF-8.
 - `carat/domain/rc_parse.rb`: `RcParse`, one parse result; `ok?`, `blank?`.
 - `carat/domain/rc_line.rb`: `RcLine`, a kept setting with file label, ordinal, line number, scope, name, and words; `from_parse`, `problem`, `order`.
 - `carat/domain/rc_value.rb`: `RcValue` bool, integer, string, and list kinds; `valid?`, `expectation`, `text`, `number?`.
 - `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `refuse`, `line_at`, `last`, `note`, `report`; scope and language checks, the project file refused language commands and key-sequence bindings.
 - `carat/domain/default_config.rb`: generated, `DEFAULT_CARATRC`; never edited by hand.
-- `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, and the rest); `from_config`, `apply`, `tab_width`.
+- `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, and the rest); `from_config`, `apply`, `width_problem` (tabstop 1 to 9999, shiftwidth 0 to 9999), `tab_width`.
 - `carat/domain/registry_source.rb`: `RegistrySource.render`, `entry?`, `names`; the registry text from the plugin list lines.
-- `carat/adapters/rc_config_gateway.rb`: `RcConfigGateway#load`, the `ConfigPort` driver over `FilePort` (`home`, `cwd`).
+- `carat/adapters/rc_config_gateway.rb`: `RcConfigGateway#load`, the `ConfigPort` driver over `FilePort` (`home`, `cwd`); refuses a linked project file, a file that is not regular, and one over `LIMIT`.
 - Outside the five roots: `config/default.caratrc` (every default option, binding, language command, and plugin setting) and `config/plugins.caratrc` (`plugin.<name> <path> <class>` per compiled plugin).
 
 Tests: `test/domain_rc_parser.rb`, `test/domain_options_config.rb`, `test/adapters_config_gateway.rb`, `test/config_sync.rb` (the mirror and the registry match their sources, the defaults read cleanly and bind every mode).
@@ -351,13 +351,13 @@ Files:
 - `carat/use_cases/ex/file_command_handler.rb`: `FileCommandHandler.register`.
 - `carat/use_cases/enter_command_line.rb`, `carat/use_cases/edit_command_line.rb`, `carat/use_cases/erase_command_line.rb`, `carat/use_cases/cancel_command_line.rb`, `carat/use_cases/execute_command_line.rb`: `call`.
 - `carat/use_cases/actions/command_line_handler.rb`: `CommandLineHandler.register`.
-- `carat/use_cases/files/open_file.rb`: `OpenFile#call` (`:e!` reloads through `Buffer#reload`).
+- `carat/use_cases/files/open_file.rb`: `OpenFile#call` (`:e!` reloads through `Buffer#reload`; a directory, a FIFO, a device, or a file over 64 MiB is refused).
 - `carat/use_cases/files/save_file.rb`: `SaveFile#call` (`E382` for a scratch buffer, `mark_saved`, `buffer_save` to the host).
 - `carat/use_cases/files/save_all.rb`: `SaveAll#call`, the write-all loop of `:wa`, `:wqa`, `:xa`.
 - `carat/use_cases/files/quit.rb`: `Quit#call(state, way)` with `:quit`, `:force`, or `:written`; a file window beside only side windows counts as the last.
 - `carat/use_cases/files/quit_all.rb`: `QuitAll#call` (`:qa`).
 - `carat/use_cases/files/probe_path.rb`: `ProbePath#call`, the one call of `FilePort#stat`.
-- `carat/use_cases/files/make_path.rb`, `carat/use_cases/files/rename_path.rb` (the listed buffers following), `carat/use_cases/files/delete_path.rb`: `call`; make, rename, and delete inside a root with every check, used by the plugin file requests.
+- `carat/use_cases/files/make_path.rb`, `carat/use_cases/files/rename_path.rb` (the listed buffers following), `carat/use_cases/files/delete_path.rb`: `call`; make, rename, and delete inside a root with every check, used by the plugin file requests; `MakePath` compares the real paths of the parent and the root.
 
 Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`.
 
@@ -438,7 +438,7 @@ Files:
 - `carat/plugin_api.rb`: `Carat::PluginApi` (`VERSION` 2.0, `EVENTS`, `OPTION_TYPES`, `SIDES`), the values `Manifest`, `Event`, `Context`, `Command`, `Edit`, `Response`, `WindowResponse`, `TextResponse`, `BufferView`, `FileInfo`, `Input`, the path functions `Paths` (`normalize`, `join`, `dirname`, `basename`, `relative`, `inside?`), the `Host` base class (one method per request: `read_buffer`, `edit_buffer`, `open_scratch`, `open_in_split`, `run_ex`, `list_dir`, `make_file`, `prompt`, `syntax_group`, and the rest), and the `Plugin` base class (`manifest`, `activate`, `deactivate`, `on_event`, `on_action`, `on_command`, `on_input`, `tokenize`).
 - `carat/domain/manifest_check.rb`: `ManifestCheck.check` and its `check_*` rules (API version, shapes, actions, commands, events, bindings, options, filetypes).
 - `carat/domain/path_policy.rb`: `PathPolicy`; `create_problem`, `rename_problem`, `inside?`, `shown`.
-- `carat/domain/path_info.rb`: `PathInfo` value `FilePort#stat` returns; `missing`, `real_directory?`.
+- `carat/domain/path_info.rb`: `PathInfo` value `FilePort#stat` returns (`exists`, `size`, `mtime`, `directory`, `symlink`, `regular`); `missing`, `real_directory?`.
 - `carat/domain/plugin_ui.rb`: `PluginUi`, status segments and the open prompt; `open_prompt`, `close_prompt`, `prompting?`, `segment`, `drop`.
 - `carat/domain/sign_layer.rb`: `SignLayer`, one plugin's signs in one buffer, moved with the lines; `place`, `glyph_at`.
 - `carat/use_cases/plugins/plugin_host.rb`: `PluginHost`, the facade the core calls; `register`, `activate_all`, `action`, `command?`, `command`, `answer`, `observe`, `saved`, `resized`, `option`, `enabled?`, `errors`.
@@ -498,17 +498,17 @@ Files:
 
 - `carat/ports/terminal_port.rb`: `TerminalPort`; `size`, `read_key`, `write`, `colors`, `enter`, `leave`.
 - `carat/ports/clock_port.rb`: `ClockPort`; `now`, `sleep`.
-- `carat/ports/file_port.rb`: `FilePort`; `read`, `write`, `exist?`, `list`, `stat` (a `Domain::PathInfo`), `mkdir`, `rename`, `delete`, `cwd`, `home`.
+- `carat/ports/file_port.rb`: `FilePort`; `read` (bounded, regular files only), `write`, `exist?`, `list`, `stat` (a `Domain::PathInfo`), `real_path`, `mkdir`, `rename`, `delete`, `cwd`, `home`.
 - `carat/ports/config_port.rb`: `ConfigPort#load`, the `Domain::Config` of every configuration file.
 - `carat/ports/signal_port.rb`: `SignalPort`; `install`, `terminated?`, `resized?`, `acknowledge_resize`.
 - `carat/drivers/ansi_terminal.rb`: `AnsiTerminal`; reads `COLORTERM` and `TERM` once for `colors`, the only environment read.
-- `carat/drivers/disk_files.rb`: `DiskFiles`, the `FilePort` driver.
+- `carat/drivers/disk_files.rb`: `DiskFiles`, the `FilePort` driver; `read` opens with `O_NONBLOCK` and checks the opened file.
 - `carat/drivers/monotonic_clock.rb`: `MonotonicClock`.
 - `carat/drivers/signals.rb`: `Signals`; INT and TERM terminate, WINCH resizes, flags only.
 - `carat/drivers/main_loop.rb`: `MainLoop#run`.
 - `carat/domain/json.rb`: `Carat::Json` (`parse`, `generate`, `pretty_generate`), for JSON-RPC; the configuration is not JSON.
 
-Tests: `test/drivers_main_loop.rb` (a resize, a terminate, and `:q` over the signal double, and the driver's flags), `test/json.rb`, `test/drivers_disk_files.rb`.
+Tests: `test/drivers_main_loop.rb` (a resize, a terminate, and `:q` over the signal double, and the driver's flags), `test/json.rb`, `test/drivers_disk_files.rb` (`DiskFiles` and `MakePath` over a real directory: a link to `/dev/zero`, a FIFO, files at and over a limit, links inside and outside a root).
 
 Designs: `state-and-ports` (Signals; The stat value; Configuration), `editor-foundation` (Ports, adapters, drivers, doubles).
 
@@ -526,13 +526,13 @@ Files:
 - `carat/test_support.rb`: the require graph of tests and the benchmark, `carat.rb` and the doubles.
 - `carat/doubles/fake_terminal.rb`: `FakeTerminal` (256 colors); `push`, `writes`, `last_write`, `read_key`, `write`.
 - `carat/doubles/manual_clock.rb`: `ManualClock`; `now`, `advance`, `sleep`.
-- `carat/doubles/memory_files.rb`: `MemoryFiles`, files and directories under `/project` and a home `/home/user`, both movable; `put`, `get`, `link`, `move_to`, `move_home`, and the `FilePort` methods.
+- `carat/doubles/memory_files.rb`: `MemoryFiles`, files and directories under `/project` and a home `/home/user`, both movable; `put`, `get`, `link`, `link_to`, `special`, `move_to`, `move_home`, and the `FilePort` methods.
 - `carat/doubles/fixed_config.rb`: `FixedConfig`; `defaults`, `with(text)`, `with_user`, `load`.
 - `carat/doubles/manual_signals.rb`: `ManualSignals`; `resize`, `terminate`, `resize_after`, `terminate_after`.
 - `carat/doubles/editor_harness.rb`: `EditorHarness`; `default` (no plugins), `with_plugins`, `open`, `type`, `raw`, `wait`, `resize`, `lines`, `cursor`, `mode`, `message`, `screen`, `row`, `window_count`, `tab_count`, `status_row`.
 - `test/runner/run_all.rb`: the runner; a new test file gets a `require_relative` and a `when` line here; an unknown name exits 2.
 - `test/lint.rb`: `LintTest`, the rules the compiler does not enforce (layer requires and references, plugin references, `PluginLink` coverage, concerns, naming, constructors, records, use case rules, the `lines` rule, inline RBS, and this map's coverage), each with a self-check.
-- `test/smoke_editor.rb`: the binary (`build/bin/carat` or `CARAT_BIN`) in a pseudo-terminal.
+- `test/smoke_editor.rb`: the binary (`build/bin/carat` or `CARAT_BIN`) in a pseudo-terminal, also in a hostile project and home.
 - `tools/run_tests.sh`: runs tests from a compiled runner, compares each with its snapshot, prints a diff and a summary.
 - `bench/keys.rb`: the key benchmark over the doubles at 200 by 60; `SCENARIOS` (name, keys, count, lines, setup, text kind, plugins); time per key, slowest key, bytes, collector share, open time, lines tokenized, live heap.
 - `bench/run.sh`: runs the scenarios pinned to one core with `SPINEL_ALLOC_REPORT`, allocations per key, and the budget.

@@ -66,6 +66,7 @@ ok   a name leaving the root is refused
 ok   the prompt names the directory
 ok   the directory exists on disk and no file was made
 ok   a refusal is an error
+ok   a name below a link leading out of the root is refused
 ok   the prompt starts with the current name
 ok   a rename changes the disk and the open buffer follows
 ok   the tree lists the new name, still marked, with the cursor on it
@@ -95,4 +96,4 @@ ok   the screen shows each illegal byte as one replacement character
 ok   the explorer stays enabled after listing them
 ok   Enter opens a name that is not UTF-8
 ok   the status line names the opened file with one replacement character per illegal byte
-editor_explorer: 97 passed, 0 failed
+editor_explorer: 98 passed, 0 failed
