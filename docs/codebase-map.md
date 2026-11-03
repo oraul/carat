@@ -86,7 +86,7 @@ Files:
 - `carat/domain/rc_parse.rb`: `RcParse`, one parse result; `ok?`, `blank?`.
 - `carat/domain/rc_line.rb`: `RcLine`, a kept setting with file label, ordinal, line number, scope, name, and words; `from_parse`, `problem`, `order`.
 - `carat/domain/rc_value.rb`: `RcValue` bool, integer, string, and list kinds; `valid?`, `expectation`, `text`, `number?`.
-- `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `refuse`, `line_at`, `last`, `note`, `report`; scope and language checks, the project file refused language commands and key-sequence bindings.
+- `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `refuse`, `line_at`, `last`, `note`, `report` (a stable merge of the ascending runs the readers note); scope and language checks, the project file refused language commands and key-sequence bindings.
 - `carat/domain/default_config.rb`: generated, `DEFAULT_CARATRC`; never edited by hand.
 - `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, and the rest); `from_config`, `apply`, `width_problem` (tabstop 1 to 9999, shiftwidth 0 to 9999), `tab_width`.
 - `carat/domain/registry_source.rb`: `RegistrySource.render`, `entry?`, `names`; the registry text from the plugin list lines.
@@ -136,7 +136,7 @@ Files:
 - `carat/domain/key.rb`: `Key` codes; `printable?`, `alt?`, `base`, `char`, `TIMEOUT`.
 - `carat/domain/key_notation.rb`: `KeyNotation`; `parse`, `resolve`, `format`, `control_code`, `special_name`; Vim notation such as `<C-w>`.
 - `carat/domain/mode.rb`: `Mode`; `from_name`, `name_of`, `visual?`, `visual_kind`, `for_kind`.
-- `carat/domain/keymap.rb`: `Keymap`; `action_name?`, `leader_from`, `from_lines`, `add_lines`, `add_checked` (applies the configuration's keymap lines, `none` unbinding, refuses an unknown action, notes problems), `bind`, `bind_owned`, `remove_owner`, `lookup`.
+- `carat/domain/keymap.rb`: `Keymap`; `action_name?`, `leader_from`, `from_lines`, `add_lines`, `add_checked` (applies the configuration's keymap lines, `none` unbinding, refuses an unknown action and more than `MAX_KEYS` (64) keys, notes problems), `bind`, `bind_owned`, `remove_owner`, `lookup`.
 - `carat/domain/keymap_node.rb`: `KeymapNode` trie node; `child?`, `child_for`, `child_named`, `leaf?`.
 - `carat/domain/keymap_match.rb`: `KeymapMatch` value (`kind`, `value`), a lookup result.
 - `carat/domain/command.rb`: `Command` value (`register`, `count`, `operator`, `action`, `char`, `linewise`, `keys`); `plain`, `count_or`, `operator?`.

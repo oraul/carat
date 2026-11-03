@@ -48,6 +48,11 @@ module Carat
       # The action that removes a binding.
       NONE = "none"
 
+      # The most keys one binding may hold: the trie is one node deep per
+      # key, and removing a plugin's bindings walks it recursively, so a
+      # hostile binding of a million keys would overflow the stack.
+      MAX_KEYS = 64
+
       # The leader of a configuration: the value of its last keymap.leader
       # line that is one key in notation, Vim's backslash when there is
       # none. add_checked notes the lines that are not.
@@ -150,13 +155,15 @@ module Carat
 
       # Binds keys in notation to an action name or a key sequence, or
       # unbinds them for "none", for the owner, and returns the problem, ""
-      # when there is none. A plugin's binding of keys another plugin holds
-      # is recorded in conflicts instead.
+      # when there is none, keys longer than MAX_KEYS included. A plugin's
+      # binding of keys another plugin holds is recorded in conflicts
+      # instead.
       #: (Symbol, String, String, String, String) -> String
       def bind_text(mode, keys, value, leader, owner)
         parsed = KeyNotation.parse(keys, leader)
         return parsed.error.to_s unless parsed.ok?
         return "empty key" if parsed.codes.empty?
+        return "more than #{MAX_KEYS} keys" if parsed.codes.length > MAX_KEYS
         return "empty action" if value.empty?
         holder = holder_of(mode, parsed.codes)
         if !owner.empty? && !holder.empty? && holder != owner
