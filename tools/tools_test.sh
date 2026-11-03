@@ -503,17 +503,18 @@ expect "run_state: trusted without the base still trusts the ancestors of HEAD" 
 # --------------------------------------------------------- agent_guard.sh
 
 # guard PROFILE COMMAND: the guard's answer to a Bash call of COMMAND, given
-# already escaped for JSON.
+# already escaped for JSON, in the project PROJECT (default /w).
 guard() {
   printf '{"session_id":"s","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"%s","description":"d"}}' "$2" |
-    sh "$here/agent_guard.sh" "$1"
+    CLAUDE_PROJECT_DIR=${PROJECT:-/w} sh "$here/agent_guard.sh" "$1"
 }
 
 # guard_edit PROFILE TOOL PATH [DIR]: the guard's answer to an edit of
-# PATH in the project /w, whose text names a refused command.
+# PATH in the project PROJECT (default /w), whose text names a refused
+# command.
 guard_edit() {
   printf '{"tool_name":"%s","tool_input":{"file_path":"%s","old_string":"a","new_string":"\\"command\\": \\"git push\\""}}' "$2" "$3" |
-    CLAUDE_PROJECT_DIR=/w sh "$here/agent_guard.sh" "$1" ${4:+"$4"}
+    CLAUDE_PROJECT_DIR=${PROJECT:-/w} sh "$here/agent_guard.sh" "$1" ${4:+"$4"}
 }
 
 expect "guard: read refuses git push" 2 "refused for the read profile: a git command" guard read 'git push origin chore/x'
@@ -564,6 +565,38 @@ expect "guard: contributor allows the body gate" 0 "^$" guard contributor 'sh to
 expect "guard: contributor refuses a path through the body file" 2 "the run state's directory" guard_edit contributor Write /w/build/pipeline/c.body.md/../c.json
 expect "guard: contributor still refuses the run state file" 2 "the run state's directory" guard contributor 'cat build/pipeline/c.body.md build/pipeline/c.json'
 expect "guard: read refuses a metrics override of the bench" 2 "an environment override" guard read 'METRICS_OUT=x.tsv sh tools/run_state.sh bench c'
+# The shell removes quotes and backslashes before it runs a word.
+expect "guard: read refuses a quoted git push" 2 "a git command" guard read "git 'push' origin x"
+expect "guard: read refuses a quoted git" 2 "a git command" guard read '\"git\" push'
+expect "guard: read refuses an escaped git" 2 "a git command" guard read 'g\\it pu\\sh'
+expect "guard: read refuses a split git verb" 2 "a git command" guard read "git com''mit -m x"
+expect "guard: read refuses a quoted gh" 2 "a gh command" guard read '\"gh\" pr merge 5'
+expect "guard: contributor refuses a quoted push" 2 "a git command" guard contributor 'git \"push\" -u origin chore/x'
+expect "guard: read refuses a quoted run state record" 2 "a run state command" guard read "sh tools/run_state.sh re''view c security pass x"
+expect "guard: read refuses a quoted run state path" 2 "the run state's directory" guard read 'cat build/\"pipe\"line/c.json'
+expect "guard: read allows a quoted git read" 0 "^$" guard read "git log --oneline --grep 'push' -5"
+# A real tree: a body file that is a link to the run state, a directory
+# linked to the run state's, and a link out of the scout's directory.
+proj="$work/proj"
+mkdir -p "$proj/build/pipeline" "$proj/tmp/scout" "$proj/tools"
+echo '{}' > "$proj/build/pipeline/c.json"
+ln -s c.json "$proj/build/pipeline/d.body.md"
+ln -s ../build/pipeline "$proj/tmp/run"
+ln -s ../../tools "$proj/tmp/scout/out"
+ln -s missing "$proj/tmp/gone"
+expect "guard: contributor refuses a link at the body file" 2 "a link, move, or copy onto the pull request body file" guard contributor 'ln -sf c.json build/pipeline/c.body.md'
+expect "guard: merger refuses a move onto the body file" 2 "a link, move, or copy onto the pull request body file" guard merger 'mv tmp/x build/pipeline/c.body.md'
+PROJECT=$proj
+expect "guard: contributor refuses a command on a linked body file" 2 "a pull request body file that is a link" guard contributor 'cat x > build/pipeline/d.body.md'
+expect "guard: contributor refuses a write to a linked body file" 2 "a pull request body file that is a link" guard_edit contributor Write "$proj/build/pipeline/d.body.md"
+expect "guard: merger refuses a write to a linked body file" 2 "a pull request body file that is a link" guard_edit merger Write "$proj/build/pipeline/d.body.md" build/pipeline
+expect "guard: contributor refuses a linked directory into the run state" 2 "the run state's directory through a link" guard_edit contributor Write "$proj/tmp/run/c.json"
+expect "guard: contributor refuses a path through a dangling link" 2 "a dangling link" guard_edit contributor Write "$proj/tmp/gone/x/c.json"
+expect "guard: read refuses a link out of its directory" 2 "outside tmp/scout through a link" guard_edit read Write "$proj/tmp/scout/out/x.sh" tmp/scout
+expect "guard: read allows a pack in its real directory" 0 "^$" guard_edit read Write "$proj/tmp/scout/area.md" tmp/scout
+expect "guard: contributor writes the body file in a real tree" 0 "^$" guard_edit contributor Write "$proj/build/pipeline/c.body.md"
+expect "guard: contributor allows the body gate in a real tree" 0 "^$" guard contributor 'sh tools/gates.sh pr-body build/pipeline/c.body.md'
+PROJECT=/w
 
 # ---------------------------------------------------------- docs_lint.sh
 
@@ -838,6 +871,8 @@ Does a thing for a reason.
 None
 EOF
 expect "gates: pr-body passes the template's shape" 0 "ok   pr-body" gates pr-body body.md
+ln -s body.md linked.md
+expect "gates: pr-body refuses a linked body file" 1 "the body file linked.md is a link" gates pr-body linked.md
 sed 's/^None$/None/' body.md > footer.md
 printf '\nGenerated with a tool\n%s\n' "$LINK" >> footer.md
 expect "gates: pr-body refuses a footer" 1 "a footer or attribution line" gates pr-body footer.md
