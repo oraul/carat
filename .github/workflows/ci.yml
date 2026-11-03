@@ -4,20 +4,55 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+# A newer push to the same pull request, or a newer merge to main, cancels
+# the run it supersedes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# The scope step reads the pull request of a push and its check runs.
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
 
 jobs:
   spin:
     runs-on: ubuntu-latest
+    env:
+      # The optimization level of the test runner's development build; the
+      # Makefile reads it, and it is part of the compile cache's key.
+      TEST_OPT: "0"
     steps:
       - name: Check out carat
         uses: actions/checkout@v4
+        with:
+          # The first parent too, which the scope step compares with.
+          fetch-depth: 2
+
+      # The job always runs and reports, so a required check on it passes;
+      # tools/ci_scope.sh says whether the checks below are needed. They are
+      # skipped when only documentation no test reads changed, and on a
+      # push to main whose tree is the head of a pull request that passed.
+      - name: Scope
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: sh tools/ci_scope.sh
 
       - name: Resolve the Spinel commit
         id: spinel
+        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
         run: echo "rev=$(make -s spinel-rev)" >> "$GITHUB_OUTPUT"
 
       - name: Restore the toolchain from cache
         id: toolchain-cache
+        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
         uses: actions/cache@v4
         with:
           path: tmp/.toolchain
@@ -28,38 +63,61 @@ jobs:
       # toolchain build proves that the toolchain builds with no Ruby
       # interpreter, and no later step can reach the runner's Ruby either.
       - name: Build and install the toolchain without Ruby
-        if: steps.toolchain-cache.outputs.cache-hit != 'true'
+        if: (steps.scope.outputs.run == 'true' || github.event_name == 'push') && steps.toolchain-cache.outputs.cache-hit != 'true'
         run: make toolchain
+
+      # The objects of the test runner's units of C (spinel --incremental,
+      # SPINEL_CACHE_DIR), keyed by the Spinel commit, the optimization
+      # level, and the OS, which all change the objects. The sources' hash
+      # ends the key, so every change saves its own entry, and the fallback
+      # restores the newest entry of the same compiler and level: a unit
+      # whose text did not change is not compiled again. A pull request can
+      # restore what its own runs and main's saved; a push to main always
+      # compiles the runner, so main keeps a warm entry.
+      - name: Restore the compile cache
+        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
+        uses: actions/cache@v4
+        with:
+          path: build/spinel-cache
+          key: spinel-units-${{ runner.os }}-${{ steps.spinel.outputs.rev }}-O${{ env.TEST_OPT }}-${{ hashFiles('carat.rb', 'carat/**/*.rb', 'bin/**/*.rb', 'test/**/*.rb') }}
+          restore-keys: |
+            spinel-units-${{ runner.os }}-${{ steps.spinel.outputs.rev }}-O${{ env.TEST_OPT }}-
 
       # Fails unless the ruby every make target reaches is the stub.
       - name: Doctor
+        if: steps.scope.outputs.run == 'true'
         run: make doctor
 
       # A test program without a snapshot must fail with the stub's refusal
       # instead of being compared against the runner's Ruby.
       - name: No CRuby
+        if: steps.scope.outputs.run == 'true'
         run: make no-cruby
 
       - name: Build
+        if: steps.scope.outputs.run == 'true'
         run: make build
 
       - name: Generated config is current
+        if: steps.scope.outputs.run == 'true'
         run: |
           make gen-config
           git diff --exit-code -- carat/domain/default_config.rb
 
-      # Spinel's analysis of bin/carat.rb and test/domain_buffer.rb must
-      # take at most ANALYSIS_ROUNDS re-narrowing rounds (see the
-      # Makefile): a value widened to untyped across the library fails
-      # here, before the long test step. Compiles to C only.
-      - name: Analysis budget
-        run: make analysis-budget
+      # Every test program in one, compiled once; Spinel's analysis of it
+      # must take at most ANALYSIS_ROUNDS re-narrowing rounds (see the
+      # Makefile), checked from the compile's own report.
+      - name: Compile the tests
+        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
+        run: make test-build
 
       - name: Test
-        run: make test
+        if: steps.scope.outputs.run == 'true'
+        run: make test-run
 
       # One key of the cursor scenario of the benchmark must allocate fewer
       # than ALLOC_BUDGET objects (see the Makefile); one more compile and a
       # few seconds of running.
       - name: Allocation budget
+        if: steps.scope.outputs.run == 'true'
         run: make bench-budget
