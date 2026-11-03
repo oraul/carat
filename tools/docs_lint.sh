@@ -13,6 +13,8 @@
 #             line that continues the line above it, as GitHub would show it
 #   paths     a backticked path under a tracked root names a file or directory
 #             that exists, unless it holds a placeholder
+#   queue     every numbered item of docs/queue.md names a tier T0 to T6 and
+#             "estimated small", "estimated medium", or "estimated large"
 set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -123,8 +125,25 @@ $dead"
   [ $failed -ne $start ] || ok "$(printf '%s\n' "$spans" | grep -c .) path(s) exist"
 }
 
+# The queue items, lines that start with a number and a period: each names
+# its tier and its size, as the rubric of docs/goals.md asks.
+check_queue() {
+  gate=queue
+  start=$failed
+  [ -f docs/queue.md ] || { ok "no docs/queue.md"; return; }
+  items=$(grep -n -E '^[0-9]+[.] ' docs/queue.md)
+  untiered=$(printf '%s\n' "$items" | grep . | grep -v -E '(^|[^A-Za-z0-9])T[0-6]([^0-9]|$)' | cut -c1-80)
+  unsized=$(printf '%s\n' "$items" | grep . | grep -v -E 'estimated (small|medium|large)' | cut -c1-80)
+  [ -z "$untiered" ] || bad "a queue item without a tier T0 to T6:
+$untiered"
+  [ -z "$unsized" ] || bad "a queue item without \"estimated small\", \"estimated medium\", or \"estimated large\":
+$unsized"
+  [ $failed -ne $start ] || ok "$(printf '%s\n' "$items" | grep -c .) item(s) with a tier and a size"
+}
+
 check_budgets
 check_content
 check_wraps
 check_paths
+check_queue
 [ "$failed" -eq 0 ]

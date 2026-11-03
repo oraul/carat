@@ -3,11 +3,11 @@
 # temporary git repository or directory outside this one:
 # tools/ci_scope.sh (which changes run the checks), tools/metrics.sh (the
 # measurement and the comparison with main), tools/run_state.sh (the run
-# state, stages, resume, the push rule, and the records only the workflow
-# writes), tools/agent_guard.sh (each profile's refusals and allowances),
-# tools/docs_lint.sh (budgets, content, wraps, paths), tools/new.sh (every
-# generator and its refusals), and every gate of tools/gates.sh, each
-# passing and refusing.
+# state, stages, resume, the push rule, the records only the workflow
+# writes, the history, and the budget), tools/agent_guard.sh (each
+# profile's refusals and allowances), tools/docs_lint.sh (budgets, content,
+# wraps, paths, queue), tools/new.sh (every generator and its refusals),
+# and every gate of tools/gates.sh, each passing and refusing.
 # Prints "ok   NAME" or "FAIL NAME" and the output, then "P/T passed";
 # exits 1 when any failed. Run by make tools-test.
 #
@@ -306,6 +306,35 @@ expect "run_state: history takes only the stored first verdicts" 0 "^bench:0,ci:
   awk -F'\t' 'NR == 2 { print $6 }' docs/metrics.tsv
 expect "run_state: history groups the phase figures" 0 "^implement=1000/30,check=200/10$" awk -F'\t' 'NR == 2 { print $13 }' docs/metrics.tsv
 expect "run_state: history sums the phase figures" 0 "^1200 40$" awk -F'\t' 'NR == 2 { print $11, $12 }' docs/metrics.tsv
+expect "run_state: history records no estimate without a queue item" 0 "^-$" awk -F'\t' 'NR == 2 { print $15 }' docs/metrics.tsv
+
+# The estimate: the size word of the change's item in the queue at the
+# parent of its squash commit, against the run's output tokens.
+fresh estimate
+printf '# Queue\n\n1. `sized` (T2, estimated small): one.\n2. `unsized` (T5): two, after `sized`.\n3. `large` (T4, estimated large): three.\n4. `quiet` (T6, estimated medium): four.\n5. `unmerged` (T6, estimated small): five.\n' > docs/queue.md
+commit "docs: the queue"
+echo squash >> README.md
+commit "feat: the squash commit"
+squash=$(git rev-parse --short=12 HEAD)
+for name in sized unsized large quiet unmerged; do
+  state init "$name" "chore/$name" > /dev/null
+  [ "$name" = unmerged ] || state set "$name" merged "$squash" > /dev/null
+done
+state metric sized phase.implement=250000/30 phase.check=60000/10 > /dev/null
+state metric large phase.implement=900000/30 > /dev/null
+expect "run_state: budget names an overrun" 0 "^over: estimated small, budget 300000, actual 310000 output tokens$" state budget sized
+expect "run_state: budget passes a run within its budget" 0 "^within: estimated large, budget 1200000, actual 900000 output tokens$" state budget large
+expect "run_state: budget says when no estimate was made" 0 "^no estimate: no queue item of unsized states a size" state budget unsized
+expect "run_state: budget says when no output tokens were recorded" 0 "^unmeasured: estimated medium, budget 700000" state budget quiet
+expect "run_state: budget reads no estimate of an unmerged change" 0 "^no estimate: " state budget unmerged
+state set unmerged merged 'HEAD' > /dev/null
+expect "run_state: budget passes git only a commit hash as the merged value" 0 "^no estimate: " state budget unmerged
+expect "run_state: budget refuses a change without a run state" 1 "no run state for nothing" state budget nothing
+rm build/pipeline/unmerged.json
+state history > /dev/null
+expect "run_state: history records the estimate of the queue item" 0 "^large small -$" \
+  sh -c "awk -F'\t' '\$1 == \"large\" { l = \$15 } \$1 == \"sized\" { s = \$15 } \$1 == \"unsized\" { u = \$15 } END { print l, s, u }' docs/metrics.tsv"
+expect "run_state: every history row has the header's columns" 0 "^15$" sh -c "awk -F'\t' '{ print NF }' docs/metrics.tsv | sort -u"
 
 # The benchmark from the check: the metrics stage's measurement against the
 # last history row.
@@ -487,6 +516,15 @@ expect "docs_lint: refuses a dead path and names it" 1 "docs/notes.md:1:tools/go
 docs line
 echo 'See `tools/x.sh:3-9`.' >> docs/notes.md
 expect "docs_lint: reads a path with a line suffix" 0 "ok   paths: 2 path" doclint
+docs queue
+printf '# Queue\n\n1. `a` (T2 user request, estimated small): one.\n2. `b` (T3 with T6 folded, estimated large): two.\n\n- An idea, not an item.\n' > docs/queue.md
+expect "docs_lint: passes a queue whose items carry a tier and a size" 0 "ok   queue: 2 item" doclint
+docs untiered
+printf '1. `a` (T2, estimated small): one.\n2. `b` (tier T, estimated medium): two.\n' > docs/queue.md
+expect "docs_lint: refuses a queue item without a tier and names it" 1 "^2:2[.] .b. [(]tier T, estimated medium[)]" doclint
+docs unsized
+printf '1. `a` (T2, estimated small): one.\n2. `b` (T5, large): two.\n' > docs/queue.md
+expect "docs_lint: refuses a queue item without a size" 1 "FAIL queue: a queue item without .estimated small" doclint
 
 # ----------------------------------------------------------------- new.sh
 
