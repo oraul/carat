@@ -85,10 +85,12 @@ make_cmd=${MAKE:-make}
 metrics_file=${METRICS_FILE:-docs/metrics.tsv}
 metrics_out=${METRICS_OUT:-build/metrics/current.tsv}
 PHASES="plan implement check quality security bench package ci merge retro report"
-# The stages a commit that changes only tests runs again; check carries the
-# others. TEST_ONLY: the paths such a commit may change, tests and their
-# snapshots and the paths no check reads (settled_at of tools/gates.sh).
-TEST_STAGES="test-build test-run gates"
+# The stages that read the test programs, which a commit that changes only
+# tests runs again: test-build and test-run compile and run them, diagnose
+# runs spinel-doctor on the test runner, and gates reads the commit; check
+# carries the others. TEST_ONLY: the paths such a commit may change, tests
+# and their snapshots and the paths no check reads (settled_at of tools/gates.sh).
+TEST_STAGES="test-build test-run diagnose gates"
 TEST_ONLY='^(test/|openspec/|docs/(backlog|queue|goals)\.md$|docs/metrics\.tsv$|$)'
 # The gates of a history row's first passes, in order, before gates.
 GATES="check quality security bench ci"
@@ -221,8 +223,9 @@ check_stages() {
           echo "stage $s: passed at $head, skipped"
           continue
         fi
-        # A stage no test reaches keeps its result across a commit that
-        # changes only tests; CI still runs every stage on the push.
+        # A stage that reads no test program keeps its result across a
+        # commit that changes only tests; metrics keeps the last full
+        # check's figures, which CI measures again and compares with main.
         if ! one_of "$s" "$TEST_STAGES" && tests_only_since "$at"; then
           write_key "stage.$s" "0 0s $head $(utc_now) carried-from-$at"
           echo "stage $s: passed at $at, carried to $head (only tests changed since)"

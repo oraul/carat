@@ -50,7 +50,7 @@ The retrospective and the reporter no longer receive a metric command line; they
 
 ### Test-only fix rounds
 
-`check_stages` keeps a stage passed at `HEAD` as before. A stage not in `TEST_STAGES` (`test-build test-run gates`) that passed at another commit is carried when every path of `git diff --name-only <commit> HEAD` is under `test/` or is one no check reads (`openspec/`, `docs/backlog.md`, `docs/queue.md`, `docs/goals.md`, `docs/metrics.tsv`, the `settled_at` list of `tools/gates.sh`): its record becomes `0 0s HEAD UTC carried-from-COMMIT`, so `gates.sh stages` and a restart read it as passed at `HEAD`. Anything else changed, or a stage that failed, runs.
+`check_stages` keeps a stage passed at `HEAD` as before. A stage not in `TEST_STAGES` (`test-build test-run diagnose gates`: the stages that read the test programs, `diagnose` because `make diagnose` runs `spinel-doctor` on the test runner, and the gates) that passed at another commit is carried when every path of `git diff --name-only <commit> HEAD` is under `test/` or is one no check reads (`openspec/`, `docs/backlog.md`, `docs/queue.md`, `docs/goals.md`, `docs/metrics.tsv`, the `settled_at` list of `tools/gates.sh`): its record becomes `0 0s HEAD UTC carried-from-COMMIT`, so `gates.sh stages` and a restart read it as passed at `HEAD`. Anything else changed, or a stage that failed, runs.
 
 The quality reviewer's prompt names the commit of the last quality review and its blocking findings (kept by the script); when `git diff --name-only <commit> HEAD` lists only files under `test/`, it reviews `git diff <commit> HEAD` against those findings, otherwise the whole branch diff.
 
@@ -60,7 +60,7 @@ The quality reviewer's prompt names the commit of the last quality review and it
 
 ## Risks and trade-offs
 
-- A carried stage trusts the rule that files under `test/` reach only `test-build` and `test-run`; CI still runs every stage on the pushed commit.
+- A carried stage trusts the rule that files under `test/` reach only `test-build`, `test-run`, and `diagnose`, which rerun, so the carried stages are those whose inputs a test-only commit leaves unchanged; `metrics` is the exception recorded in the proposal, and CI measures it again and compares it with `main`. The brief named three stages; `diagnose` was added because it analyzes the test runner, and CI leaves it out.
 - The history row's derived first passes overstate a run that failed and was fixed before a crash; new runs store the verdict as it happens.
 - The merger now holds the GitHub read tools for CI as well as the merge; the guard profile is unchanged apart from the body-file rule.
 
