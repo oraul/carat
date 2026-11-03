@@ -4,7 +4,7 @@
 #
 # State: build/pipeline/CHANGE.json, one flat JSON object of string values,
 # one key per line, rewritten through a temporary file and a rename:
-#   change, branch   the change and its branch
+#   change, branch   the change, its branch, and repo, the GitHub owner/name
 #   phase.NAME       the commit the phase finished at
 #   stage.NAME       "EXIT SECONDSs COMMIT UTC-TIME" of the last run
 #   review.KIND      "pass|blocked COMMIT SUMMARY" (security, quality, bench)
@@ -21,7 +21,8 @@
 #   set CHANGE KEY VALUE        write one value
 #   phase CHANGE NAME           record the phase done at HEAD
 #   review CHANGE KIND RESULT SUMMARY
-#                               record a review (RESULT pass or blocked) at HEAD
+#                               record a review (RESULT pass or blocked) at
+#                               HEAD; a pass also records phase.KIND
 #   stage CHANGE NAME CMD...    run CMD with its log and record its result
 #   check CHANGE                run the canonical stages (make -s stages) in
 #                               order, skip a stage passed at HEAD, stop at the
@@ -39,7 +40,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 state_dir=${RUN_STATE_DIR:-build/pipeline}
 stage_dir=${STAGE_DIR:-build/stages}
 make_cmd=${MAKE:-make}
-PHASES="scout implement check quality security bench package ci merge report"
+PHASES="implement check quality security bench package ci merge report"
 
 die() {
   echo "run_state: $*" >&2
@@ -216,8 +217,9 @@ case "$command" in
     if [ -f "$(state_file)" ]; then
       echo "run_state: resuming $change" >&2
     else
-      printf '{\n  "change": "%s",\n  "branch": "%s",\n  "pushes": "0",\n  "ci_fixes": "0"\n}\n' \
-        "$(escape "$change")" "$(escape "$1")" > "$(state_file)"
+      repo=$(git remote get-url origin 2>/dev/null | sed -E 's#^.*[:/]([^/]+/[^/]+)$#\1#; s#\.git$##')
+      printf '{\n  "change": "%s",\n  "branch": "%s",\n  "repo": "%s",\n  "pushes": "0",\n  "ci_fixes": "0"\n}\n' \
+        "$(escape "$change")" "$(escape "$1")" "$(escape "$repo")" > "$(state_file)"
     fi
     cat "$(state_file)" ;;
   show)
@@ -235,7 +237,8 @@ case "$command" in
   review)
     [ $# -eq 3 ] || usage
     case "$2" in pass|blocked) ;; *) die "review result is pass or blocked, not $2" ;; esac
-    write_key "review.$1" "$2 $(head_commit) $3" ;;
+    write_key "review.$1" "$2 $(head_commit) $3"
+    [ "$2" = blocked ] || write_key "phase.$1" "$(head_commit)" ;;
   stage)
     [ $# -ge 2 ] || usage
     run_stage "$@" ;;

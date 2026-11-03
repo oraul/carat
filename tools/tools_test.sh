@@ -141,7 +141,7 @@ expect "run_state: check stops at the first failing stage" 1 "stage b failed" \
 expect "run_state: check resumes after the passed stages" 0 "stage a: passed at .*, skipped" \
   env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
 expect "run_state: check records the phase" 0 "^$(git rev-parse --short=12 HEAD)$" state get state phase.check
-expect "run_state: status names the running change and its next phase" 0 "next phase: scout" state status
+expect "run_state: status names the running change and its next phase" 0 "next phase: implement" state status
 
 fresh pushing
 git_q init -q --bare "$work/origin.git"
