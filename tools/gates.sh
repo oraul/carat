@@ -19,15 +19,17 @@
 #              docs/queue.md, docs/goals.md, and docs/metrics.tsv
 #   stages     every canonical stage passed at such a commit
 #   pushes     at most one push plus one per CI fix
+#   passed     phase.check and a pass of review.quality, review.security, and
+#              review.bench, each at a commit settled at the pushed head, HEAD
 #   records    each review.KIND of the run state has the result and commit
-#              the workflow received, given as RECORDS (a notice when unset)
+#              the workflow received, given as RECORDS (refused when unset)
 #   pr-body F  the pull request body F has the template's shape, no comment,
 #              angle bracket, empty bullet, footer, URL, email, session id, or
 #              model name, and a Testing line naming the security review
 #   static     trailer, content, snapshots, docs (make gates)
 #   pre-push   static, security, stages (tools/run_state.sh push)
-#   merge F    trailer, content, security, records, pushes, pr-body F (the
-#              merger)
+#   merge F    trailer, content, security, passed, records, pushes, pr-body F
+#              (the merger)
 #
 # Environment: BASE (origin/main), CHANGE (the branch name after its type),
 # RECORDS (the workflow's review results, "KIND:RESULT:COMMIT" words),
@@ -54,6 +56,13 @@ ok() {
   echo "ok   $gate${1:+: $1}"
 }
 
+# True when VALUE is a commit hash of 7 to 40 hexadecimal digits on one
+# line, so a value read from the run state never reaches git as an option.
+hex() {
+  case "$1" in *[[:cntrl:]]*|"") return 1 ;; esac
+  printf '%s' "$1" | grep -q -x -E '[0-9a-f]{7,40}'
+}
+
 state() {
   sh "$here/run_state.sh" get "$change" "$1" 2>/dev/null
 }
@@ -63,8 +72,8 @@ state() {
 # backlog, and the planning records the package step writes (queue, goals,
 # and metrics history), whose docs-lint the package step and CI run again.
 settled_at() {
-  [ -n "$1" ] || return 1
-  rest=$(git diff --name-only "$1" HEAD 2>/dev/null) || return 1
+  hex "$1" || return 1
+  rest=$(git diff --name-only --end-of-options "$1" HEAD -- 2>/dev/null) || return 1
   [ -z "$(printf '%s\n' "$rest" | grep -v -E '^(openspec/|docs/(backlog|queue|goals)\.md$|docs/metrics\.tsv$|$)')" ]
 }
 
@@ -197,13 +206,43 @@ gate_pushes() {
   fi
 }
 
+# The pass records a merge needs, at the pushed head: phase.check and the
+# quality, security, and bench reviews, each at a commit settled at HEAD,
+# which must be the recorded push.
+gate_passed() {
+  gate=passed
+  start=$failed
+  pushed=$(state pushed)
+  head=$(git rev-parse --verify -q HEAD)
+  if ! hex "$pushed"; then
+    bad "no push is recorded for $change (pushed is \"$pushed\")"
+  elif [ "$(git rev-parse --verify -q --end-of-options "$pushed^{commit}")" != "$head" ]; then
+    bad "HEAD $(git rev-parse --short=12 HEAD) is not the pushed head $pushed"
+  fi
+  for kind in check quality security bench; do
+    if [ "$kind" = check ]; then
+      at=$(state phase.check)
+      record=${at:+pass $at}
+    else
+      record=$(state "review.$kind")
+      at=$(echo "$record" | cut -d' ' -f2)
+    fi
+    case "$record" in
+      "") bad "$kind has no pass record" ;;
+      pass\ *) settled_at "$at" || bad "$kind passed at $at, but code changed since" ;;
+      *) bad "$kind has no pass record: $record" ;;
+    esac
+  done
+  [ $failed -ne $start ] || ok "check, quality, security, and bench passed at the pushed head $pushed"
+}
+
 # The run state's review records against the results the workflow received
 # (RECORDS), so a record changed outside the workflow stops the merge.
 gate_records() {
   gate=records
   start=$failed
   if [ -z "${RECORDS:-}" ]; then
-    ok "no workflow records given (RECORDS); nothing compared"
+    bad "no workflow records given (RECORDS); the workflow passes its review results"
     return
   fi
   set -f
@@ -268,7 +307,8 @@ case "$target" in
   pr-body) gate_pr_body "$body" ;;
   static) gate_trailer; gate_content; gate_snapshots; gate_docs ;;
   pre-push) gate_trailer; gate_content; gate_snapshots; gate_docs; gate_security; gate_stages ;;
-  merge) gate_trailer; gate_content; gate_security; gate_records; gate_pushes; gate_pr_body "$body" ;;
+  passed) gate_passed ;;
+  merge) gate_trailer; gate_content; gate_security; gate_passed; gate_records; gate_pushes; gate_pr_body "$body" ;;
   *) echo "gates: unknown gate $target" >&2; exit 2 ;;
 esac
 exit $failed

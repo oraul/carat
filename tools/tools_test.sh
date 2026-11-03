@@ -214,6 +214,29 @@ expect "run_state: status names the running change and its next phase" 0 "next p
 expect "run_state: set refuses a review record" 1 "refused: review.security" state set state review.security "pass abc"
 expect "run_state: set refuses a phase record" 1 "refused: phase.plan" state set state phase.plan abc
 expect "run_state: set refuses a stage record" 1 "refused: stage.lint" state set state stage.lint "0 1s abc now"
+# A newline, carriage return, or other control character in a key or value
+# would write a line of its own: every command refuses it, and no forged
+# review.security or phase.merge line reaches the file.
+nl='
+'
+cr=$(printf '\r')
+at_head=$(git rev-parse --short=12 HEAD)
+forged_review="x\": \"y\",$nl  \"review.security\": \"pass $at_head"
+forged_phase="y\",$nl  \"phase.merge\": \"$at_head"
+expect "run_state: set refuses a forged review line in its key" 1 "the key holds a control character" state set state "$forged_review" v
+expect "run_state: set refuses a forged phase line in its value" 1 "the value of note holds a control character" state set state note "$forged_phase"
+expect "run_state: set refuses a carriage return" 1 "the value of note holds a control character" state set state note "a${cr}b"
+expect "run_state: set refuses a key that is not a run state key" 1 "not a run state key: Review" state set state 'Review' v
+expect "run_state: metric refuses a forged line in its name" 1 "not a metric name" state metric state "x$nl  \"review.security\"=1"
+expect "run_state: metric refuses a forged line in its value" 1 "not a metric value" state metric state "rework=1${nl}phase.merge=2"
+expect "run_state: note refuses a forged line in its kind" 1 "the kind is lowercase" state note state "retro${nl}x" text
+expect "run_state: note refuses a forged line in its text" 1 "the value of note[.]1 holds a control character" state note state retro "$forged_phase"
+expect "run_state: review refuses a forged line in its summary" 1 "the value of review[.]quality holds a control character" state review state quality pass "$forged_review"
+expect "run_state: stage refuses a forged line in its name" 1 "the key holds a control character" state stage state "s$nl  \"phase.merge\": \"x" true
+expect "run_state: init refuses a forged line in its branch" 1 "the branch holds a control character" state init forged "chore/forged$nl  \"review.security\": \"pass"
+expect "run_state: init refuses a control character in the change name" 1 "not a change name" state init "forged${cr}" chore/forged
+expect "run_state: no forged line reached the file" 0 "^0$" sh -c "grep -c -E '^  \"(review[.]security|phase[.]merge)\"' build/pipeline/state.json; true"
+expect "run_state: a refused init writes no state" 1 "" test -e build/pipeline/forged.json
 expect "run_state: phase refuses a name not in the list" 1 "not a phase: deploy" state phase state deploy
 expect "run_state: phase refuses a commit that is not hexadecimal" 1 "not a commit: HEAD" state phase state plan HEAD
 expect "run_state: phase refuses a commit that does not exist" 1 "not a commit: 0000000" state phase state plan 0000000
@@ -327,11 +350,20 @@ expect "run_state: budget passes a run within its budget" 0 "^within: estimated 
 expect "run_state: budget says when no estimate was made" 0 "^no estimate: no queue item of unsized states a size" state budget unsized
 expect "run_state: budget says when no output tokens were recorded" 0 "^unmeasured: estimated medium, budget 700000" state budget quiet
 expect "run_state: budget reads no estimate of an unmerged change" 0 "^no estimate: " state budget unmerged
-state set unmerged merged 'HEAD' > /dev/null
+# A merged value that is not a commit hash never reaches git, where
+# --output=FILE would write FILE: set refuses it, and one written by hand is
+# no merge.
+expect "run_state: set refuses an option-shaped merged value" 1 "merged is a commit hash" state set unmerged merged '--output=clobbered'
+expect "run_state: set refuses an option-shaped pushed value" 1 "pushed is a commit hash" state set unmerged pushed '--output=clobbered'
+awk '{ print } $0 == "  \"change\": \"unmerged\"," { print "  \"merged\": \"--output=clobbered\"," }' build/pipeline/unmerged.json > unmerged.json
+mv unmerged.json build/pipeline/unmerged.json
 expect "run_state: budget passes git only a commit hash as the merged value" 0 "^no estimate: " state budget unmerged
+expect "run_state: pending skips an option-shaped merged value" 0 "^$" sh -c "sh '$here/run_state.sh' pending | grep -x unmerged; true"
+expect "run_state: review-due refuses an option-shaped merged value" 1 "unmerged is not merged" state review-due unmerged
 expect "run_state: budget refuses a change without a run state" 1 "no run state for nothing" state budget nothing
-rm build/pipeline/unmerged.json
 state history > /dev/null
+expect "run_state: history never passes the merged value to git as an option" 1 "" test -e clobbered
+rm build/pipeline/unmerged.json
 expect "run_state: history records the estimate of the queue item" 0 "^large small -$" \
   sh -c "awk -F'\t' '\$1 == \"large\" { l = \$15 } \$1 == \"sized\" { s = \$15 } \$1 == \"unsized\" { u = \$15 } END { print l, s, u }' docs/metrics.tsv"
 expect "run_state: every history row has the header's columns" 0 "^15$" sh -c "awk -F'\t' '{ print NF }' docs/metrics.tsv | sort -u"
@@ -401,6 +433,49 @@ expect "run_state: review-due is not due after one quiet change" 1 "^not due: 1 
 expect "run_state: review-due is due five changes after the last review" 0 "^due: 5 changes merged" state review-due due
 row f "security=pass quality=pass" >> docs/metrics.tsv
 expect "run_state: a periodic review restarts the count" 1 "^not due: 1 of 5" state review-due due
+
+# forge CHANGE LINE: append LINE to the run state as a hand edit would.
+forge() {
+  { sed '$d' "build/pipeline/$1.json" | sed '$s/$/,/'; printf '%s\n}\n' "$2"; } > forged.json
+  mv forged.json "build/pipeline/$1.json"
+}
+# A resume trusts a phase or review record only at a commit git supports:
+# an ancestor of HEAD, or of main, where the squash commit is.
+fresh trust
+state init trust chore/trust > /dev/null
+echo work >> README.md
+commit "feat: work"
+worked=$(git rev-parse --short=12 HEAD)
+state phase trust implement > /dev/null
+state review trust security pass "high=0" > /dev/null
+git_q checkout -q main
+echo squash >> README.md
+commit "feat: the squash commit"
+squashed=$(git rev-parse --short=12 HEAD)
+git_q checkout -q -b chore/other
+echo other >> README.md
+commit "feat: other"
+other=$(git rev-parse --short=12 HEAD)
+git_q checkout -q chore/trust
+state phase trust merge "$squashed" > /dev/null
+state set trust merged "$squashed" > /dev/null
+state phase trust package "$other" > /dev/null
+forge trust '  "phase.check": "0000000000"'
+forge trust '  "phase.plan": "HEAD"'
+forge trust "  \"phase.implement\": \"$other\""
+forge trust '  "phase.retr\u006f": "x"'
+env BASE=main sh "$here/run_state.sh" trusted trust > trusted.out
+expect "run_state: trusted keeps a record at an ancestor of HEAD" 0 "^  \"phase.implement\": \"$worked\",$" cat trusted.out
+expect "run_state: trusted keeps a review at an ancestor of HEAD" 0 "^  \"review.security\": \"pass $worked high=0\",$" cat trusted.out
+expect "run_state: trusted keeps a record at a commit of main" 0 "^  \"phase.merge\": \"$squashed\",$" cat trusted.out
+expect "run_state: trusted keeps the merged commit on main" 0 "^  \"merged\": \"$squashed\",$" cat trusted.out
+expect "run_state: trusted leaves out a record at a commit off the branch" 1 "" grep -q '"phase.package"' trusted.out
+expect "run_state: trusted names what it left out" 0 "^  \"untrusted\": \"phase.package phase.check phase.plan phase.implement phase[.]retr[?]u006f\"$" cat trusted.out
+expect "run_state: trusted prints one flat object" 0 "^ok$" \
+  awk '{ l[NR] = $0 } END { ok = l[1] == "{" && l[NR] == "}" && l[NR - 1] !~ /,$/; for (i = 2; i < NR - 1; i++) if (l[i] !~ /^  "[a-z0-9_.-]+": ".*",$/) ok = 0; print ok ? "ok" : "bad" }' trusted.out
+expect "run_state: trusted leaves the file as it was" 0 '"phase.package"' cat build/pipeline/trust.json
+expect "run_state: trusted without the base still trusts the ancestors of HEAD" 0 "\"untrusted\": \"phase.merge merged phase.package" \
+  env BASE=nothing sh "$here/run_state.sh" trusted trust
 
 # --------------------------------------------------------- agent_guard.sh
 
@@ -670,7 +745,7 @@ expect "gates: records refuses a review the run state lacks" 1 "review.quality i
   env RECORDS="security:pass:$reviewed quality:pass:$reviewed" BASE=main sh "$here/gates.sh" records
 expect "gates: records refuses a malformed record" 1 "not a KIND:RESULT:COMMIT record: security:pass:[*]" \
   env RECORDS="security:pass:*" BASE=main sh "$here/gates.sh" records
-expect "gates: records notes when no records are given" 0 "ok   records: no workflow records given" gates records
+expect "gates: records refuses when no records are given" 1 "FAIL records: no workflow records given" gates records
 mkdir -p openspec/changes/archive/x
 echo archived > openspec/changes/archive/x/tasks.md
 commit "chore: archive"
@@ -685,6 +760,35 @@ expect "gates: security refuses after code changed" 1 "code changed since" gates
 expect "gates: stages refuses a stage that has not run" 1 "lint has not run" gates stages
 state set security pushes 3 > /dev/null
 expect "gates: pushes refuses more than one push per CI fix" 1 "3 pushes for 0 CI fix" gates pushes
+
+# The merge needs the check's and the three reviews' pass records at the
+# pushed head.
+fresh passed
+state init passed chore/passed > /dev/null
+echo code > tools/code.sh
+commit "feat: code"
+expect "gates: passed refuses a merge given no records" 1 "FAIL passed: check has no pass record" gates passed
+expect "gates: passed refuses a merge without a recorded push" 1 "FAIL passed: no push is recorded for passed" gates passed
+expect "gates: merge refuses a merge given no records" 1 "FAIL passed: quality has no pass record" gates merge body.md
+state set passed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
+state phase passed check > /dev/null
+state review passed quality pass "blocking=0" > /dev/null
+state review passed security pass "high=0" > /dev/null
+state review passed bench blocked "blocking=1" > /dev/null
+expect "gates: passed refuses a blocked review" 1 "FAIL passed: bench has no pass record: blocked" gates passed
+state review passed bench pass "blocking=0" > /dev/null
+expect "gates: passed passes the four records at the pushed head" 0 "ok   passed: check, quality, security, and bench passed at the pushed head" gates passed
+mkdir -p openspec/changes/archive/x
+echo archived > openspec/changes/archive/x/tasks.md
+echo "1. next" > docs/queue.md
+commit "docs: archive and record the queue"
+expect "gates: passed refuses when HEAD is not the pushed head" 1 "is not the pushed head" gates passed
+state set passed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "gates: passed passes after the planning records" 0 "ok   passed" gates passed
+echo more >> tools/code.sh
+commit "fix: more code"
+state set passed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "gates: passed refuses a record before a code change" 1 "FAIL passed: check passed at [0-9a-f]+, but code changed since" gates passed
 
 fresh body
 cat > body.md <<'EOF'

@@ -31,9 +31,18 @@
 # Usage: sh tools/run_state.sh COMMAND ...
 #   init CHANGE BRANCH          create the state unless it exists, then show it
 #   show CHANGE                 print the state
+#   trusted CHANGE              print the state a resume may trust: without a
+#                               phase.*, review.*, or merged record whose
+#                               commit is an ancestor of neither HEAD nor BASE,
+#                               or a line write_key would not write, those
+#                               keys named in "untrusted"
 #   get CHANGE KEY              print one value, empty when absent
 #   set CHANGE KEY VALUE        write one value; refuses review.*, phase.*,
-#                               and stage.*, which their own commands write
+#                               and stage.*, which their own commands write,
+#                               and a merged or pushed value but a commit hash
+# Every write refuses a key outside [a-z0-9_.-] and a key or value holding a
+# control character (newline, carriage return, tab, or another), so no write
+# adds a line of its own.
 #   phase CHANGE NAME [COMMIT]  record the phase (one of PHASES) done at
 #                               COMMIT, HEAD when omitted
 #   review CHANGE KIND RESULT SUMMARY [COMMIT]
@@ -79,9 +88,10 @@
 #   status                      the queue, the running change, the last metrics
 #                               row, and the first-pass rates of the history
 #
-# Environment: RUN_STATE_DIR (build/pipeline), STAGE_DIR (build/stages),
-# STAGES (the stage list; make -s stages when unset), MAKE (make),
-# METRICS_FILE (docs/metrics.tsv), METRICS_OUT (build/metrics/current.tsv).
+# Environment: BASE (origin/main), RUN_STATE_DIR (build/pipeline),
+# STAGE_DIR (build/stages), STAGES (the stage list; make -s stages when
+# unset), MAKE (make), METRICS_FILE (docs/metrics.tsv), METRICS_OUT
+# (build/metrics/current.tsv).
 set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -144,9 +154,31 @@ state_file() {
   echo "$state_dir/$change.json"
 }
 
-# One line of the state for a key and a value, escaped for JSON.
+# A value escaped for JSON; write_key and init refuse a control character
+# first, so one key is one line.
 escape() {
-  printf '%s' "$1" | tr '\n\t' '  ' | sed 's/\\/\\\\/g; s/"/\\"/g'
+  printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+# Dies unless VALUE (named by WHAT) is free of control characters: a
+# newline, carriage return, tab, escape, or any other would let a write add
+# a line of its own, such as a forged review.* or phase.* record.
+plain() {
+  case "$1" in
+    *[[:cntrl:]]*) die "refused: $2 holds a control character (newline, carriage return, tab, or another)" ;;
+  esac
+}
+
+# Dies unless KEY is a run state key: lowercase letters, digits, _, ., -.
+plain_key() {
+  plain "$1" "the key"
+  case "$1" in
+    [a-z0-9]*) ;;
+    *) die "refused: not a run state key: $1" ;;
+  esac
+  case "$1" in
+    *[!a-z0-9_.-]*) die "refused: not a run state key: $1" ;;
+  esac
 }
 
 read_key() {
@@ -165,6 +197,8 @@ read_key() {
 write_key() {
   file=$(state_file)
   [ -f "$file" ] || die "no run state for $change; run init first"
+  plain_key "$1"
+  plain "$2" "the value of $1"
   K="$1" V=$(escape "$2") awk '
     /^  "/ {
       line = $0; sub(/,$/, "", line)
@@ -339,7 +373,10 @@ rates() {
     }' "$metrics_file"
 }
 
+# True when VALUE matches PATTERN whole; a value holding a control
+# character never does, since grep -x would match it one line at a time.
 valid() {
+  case "$2" in *[[:cntrl:]]*) return 1 ;; esac
   printf '%s' "$2" | grep -q -x -E "$1"
 }
 
@@ -373,12 +410,21 @@ import_metrics() {
   echo "metrics: recorded $recorded measurement(s) of $change, skipped $skipped unmeasured"
 }
 
+# The squash commit of the change, merged, when it is 7 to 40 hexadecimal
+# digits; nothing otherwise, so no stored value reaches git as an option.
+# Every git call on it also passes it after --end-of-options.
+merged_commit() {
+  merged=$(read_key merged)
+  valid '[0-9a-f]{7,40}' "$merged" && echo "$merged"
+  return 0
+}
+
 # The newest merged change without a history row, by its squash commit's
 # time; nothing when none is pending.
 newest_pending() {
   for name in $(pending_list); do
-    merged=$(change=$name; read_key merged)
-    printf '%s %s\n' "$(git log -1 --format=%ct "$merged" 2>/dev/null || echo 0)" "$name"
+    merged=$(change=$name; merged_commit)
+    printf '%s %s\n' "$(git log -1 --format=%ct --end-of-options "$merged" -- 2>/dev/null || echo 0)" "$name"
   done | sort -n -k1,1 | tail -1 | cut -d' ' -f2
 }
 
@@ -446,12 +492,13 @@ has_row() {
   [ -f "$metrics_file" ] && awk -F'\t' -v c="$1" 'NR > 1 && $1 == c { found = 1 } END { exit !found }' "$metrics_file"
 }
 
-# The merged changes whose run state has no history row, one per line.
+# The merged changes whose run state has no history row, one per line; a
+# merged value that is not a commit hash is not a merge.
 pending_list() {
   for file in "$state_dir"/*.json; do
     [ -f "$file" ] || continue
     name=$(basename "$file" .json)
-    [ -n "$(change=$name; read_key merged)" ] || continue
+    [ -n "$(change=$name; merged_commit)" ] || continue
     has_row "$name" || echo "$name"
   done
 }
@@ -504,9 +551,9 @@ out_tokens() {
 # parent of its squash commit, the queue it was delivered from; "-" when
 # it is not merged or no item of it states a size.
 estimate_of() {
-  merged=$(read_key merged)
-  valid '[0-9a-f]{7,40}' "$merged" || { echo -; return; }
-  size=$(git show "$merged^:docs/queue.md" 2>/dev/null | C="$change" awk '
+  merged=$(merged_commit)
+  [ -n "$merged" ] || { echo -; return; }
+  size=$(git show --end-of-options "$merged^:docs/queue.md" 2>/dev/null | C="$change" awk '
     {
       item = $0
       if (!sub(/^[0-9]+[.] /, "", item) || index(item, "`" ENVIRON["C"] "`") != 1) next
@@ -537,8 +584,9 @@ budget_line() {
 }
 
 history_row() {
-  merged=$(read_key merged)
-  date=$(git log -1 --format=%cs "$merged" 2>/dev/null)
+  merged=$(merged_commit)
+  date=""
+  [ -z "$merged" ] || date=$(git log -1 --format=%cs --end-of-options "$merged" -- 2>/dev/null)
   first=""
   for g in $GATES; do
     v=$(first_of "$g")
@@ -562,7 +610,7 @@ history_row() {
   if [ -n "$security$quality" ]; then
     review="security=${security%% *} quality=${quality%% *}"
   fi
-  printf '%s\t' "$change" "${date:--}" "$merged" "$(value pr)" "$(value metric.rework)" "${first:--}" \
+  printf '%s\t' "$change" "${date:--}" "${merged:--}" "$(value pr)" "$(value metric.rework)" "${first:--}" \
     "$(value metric.ci_min)" "$(group rounds)" "$(group allocs)" "$(group us)" \
     "$tokens" "$calls" "$phases" "$review"
   printf '%s\n' "$(estimate_of)"
@@ -579,9 +627,9 @@ append_history() {
 }
 
 review_due() {
-  merged=$(read_key merged)
-  [ -n "$merged" ] || die "review-due: $change is not merged"
-  paths=$(git diff --name-only "$merged~1" "$merged" 2>/dev/null)
+  merged=$(merged_commit)
+  [ -n "$merged" ] || die "review-due: $change is not merged (no merged commit hash)"
+  paths=$(git diff --name-only --end-of-options "$merged~1" "$merged" -- 2>/dev/null)
   area=$(printf '%s\n' "$REVIEW_AREAS" | while IFS='=' read -r label pattern; do
     hit=$(printf '%s\n' "$paths" | grep -E -m 1 "$pattern")
     if [ -n "$hit" ]; then echo "$label ($hit)"; break; fi
@@ -608,6 +656,62 @@ review_due() {
   return 1
 }
 
+# True when COMMIT is 7 to 40 hexadecimal digits naming a commit that is
+# an ancestor of HEAD, or of the base (BASE, origin/main), where the merged
+# phases' squash commits are.
+supported() {
+  valid '[0-9a-f]{7,40}' "$1" || return 1
+  full=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
+  git merge-base --is-ancestor "$full" HEAD 2>/dev/null && return 0
+  [ -n "$base_commit" ] && git merge-base --is-ancestor "$full" "$base_commit" 2>/dev/null
+}
+
+# The state as a resume may trust it: one flat object of the lines
+# write_key writes, leaving out each phase.*, review.*, and merged record
+# whose commit git does not support, any line not in write_key's form (a
+# control character, an escape other than \" and \\, a key outside
+# [a-z0-9_.-]), and a key already seen, then "untrusted", the keys left out.
+trusted_state() {
+  file=$(state_file)
+  [ -f "$file" ] || die "no run state for $change"
+  base_commit=$(git rev-parse --verify -q --end-of-options "${BASE:-origin/main}^{commit}" 2>/dev/null)
+  drop=" "
+  names=""
+  listing=$(C=" $(LC_ALL=C grep -n '[[:cntrl:]]' "$file" | cut -d: -f1 | tr '\n' ' ')" awk '
+    $0 == "{" || $0 == "}" { next }
+    {
+      key = $0; sub(/^  "/, "", key); sub(/".*/, "", key); gsub(/[^a-z0-9_.-]/, "?", key)
+      if (key == "") key = "?"
+      if (index(ENVIRON["C"], " " NR " ")) { print NR, key, "bad", "-"; next }
+      if ($0 !~ /^  "[a-z0-9][a-z0-9_.-]*": "([^"\\]|\\["\\])*",?$/) { print NR, key, "bad", "-"; next }
+      if (seen[key]++) { print NR, key, "bad", "-"; next }
+      if (key == "untrusted") { print NR, key, "skip", "-"; next }
+      if (key !~ /^(phase|review)[.]/ && key != "merged") next
+      value = $0; sub(/^  "[^"]*": "/, "", value); sub(/",?$/, "", value)
+      if (key ~ /^review[.]/) { split(value, word, " "); value = word[2] }
+      gsub(/[^0-9a-zA-Z]/, "?", value)
+      print NR, key, "record", (value == "" ? "-" : value)
+    }' "$file")
+  while read -r n key kind commit; do
+    case "$kind" in
+      bad) drop="$drop$n "; names="${names:+$names }$key" ;;
+      skip) drop="$drop$n " ;;
+      record) supported "$commit" || { drop="$drop$n "; names="${names:+$names }$key"; } ;;
+    esac
+  done <<EOF_LIST
+$listing
+EOF_LIST
+  D="$drop" U="$names" awk '
+    $0 == "{" || $0 == "}" { next }
+    index(ENVIRON["D"], " " NR " ") == 0 { line = $0; sub(/,$/, "", line); lines[n++] = line }
+    END {
+      if (ENVIRON["U"] != "") lines[n++] = "  \"untrusted\": \"" ENVIRON["U"] "\""
+      print "{"
+      for (i = 0; i < n; i++) print lines[i] (i < n - 1 ? "," : "")
+      print "}"
+    }' "$file"
+}
+
 usage() {
   sed -n '/^# Usage:/,/^# Environment:/p' "$0" | sed 's/^# \{0,1\}//' >&2
   exit 2
@@ -625,7 +729,7 @@ esac
 change=$1
 shift
 case "$change" in
-  ""|*/*|.*) die "not a change name: $change" ;;
+  ""|*/*|.*|*[[:cntrl:]]*) die "not a change name: $change" ;;
 esac
 
 case "$command" in
@@ -635,7 +739,9 @@ case "$command" in
     if [ -f "$(state_file)" ]; then
       echo "run_state: resuming $change" >&2
     else
+      plain "$1" "the branch"
       repo=$(git remote get-url origin 2>/dev/null | sed -E 's#^.*[:/]([^/]+/[^/]+)$#\1#; s#\.git$##')
+      plain "$repo" "the remote's name"
       printf '{\n  "change": "%s",\n  "branch": "%s",\n  "repo": "%s",\n  "pushes": "0",\n  "ci_fixes": "0"\n}\n' \
         "$(escape "$change")" "$(escape "$1")" "$(escape "$repo")" > "$(state_file)"
     fi
@@ -643,6 +749,9 @@ case "$command" in
   show)
     [ -f "$(state_file)" ] || die "no run state for $change"
     cat "$(state_file)" ;;
+  trusted)
+    [ $# -eq 0 ] || usage
+    trusted_state ;;
   get)
     [ $# -eq 1 ] || usage
     read_key "$1" ;;
@@ -650,6 +759,7 @@ case "$command" in
     [ $# -eq 2 ] || usage
     case "$1" in
       review.*|phase.*|stage.*) die "set: refused: $1 is written only by its own command (review, phase, stage, check)" ;;
+      merged|pushed) valid '[0-9a-f]{7,40}' "$2" || die "set: refused: $1 is a commit hash of 7 to 40 hexadecimal digits, not $2" ;;
     esac
     write_key "$1" "$2" ;;
   phase)
@@ -666,6 +776,7 @@ case "$command" in
     [ "$2" = blocked ] || write_key "phase.$1" "$at" ;;
   stage)
     [ $# -ge 2 ] || usage
+    plain_key "stage.$1"
     run_stage "$@" ;;
   check)
     [ $# -eq 0 ] || usage
