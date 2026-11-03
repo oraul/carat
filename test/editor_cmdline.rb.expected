@@ -45,6 +45,12 @@ ok   edit starts a new file
 ok   edit refused while modified
 ok   forced reload discards changes
 ok   long form edit
+ok   a directory
+ok   a FIFO
+ok   a device
+ok   a file over the limit
+ok   a linked regular file opens
+ok   a file of exactly the limit opens
 ok   q with two windows closes one
 ok   q on the last window quits
 ok   wq with two windows writes and closes one
@@ -69,4 +75,4 @@ ok   xi leaves as xit does
 ok   tabfirs goes to the first tab page
 ok   a spelling shorter than the abbreviation is unknown
 ok   a spelling longer than the full name is unknown
-editor_cmdline: 71 passed, 0 failed
+editor_cmdline: 77 passed, 0 failed

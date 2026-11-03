@@ -13,10 +13,46 @@ module AdaptersConfigGatewayTest
   class UnreadableFiles < Carat::Doubles::MemoryFiles
     # Raises for the project file and reads the others.
     # @rbs path: String
-    def read(path)
+    # @rbs limit: Integer
+    def read(path, limit)
       raise ArgumentError, "Permission denied" if path == PROJECT
-      super(path)
+      super(path, limit)
     end
+  end
+
+  LIMIT = 1_048_576
+
+  # A file system holding one hostile arrangement of the user and project
+  # files, by name.
+  def self.hostile(kind)
+    files = Carat::Doubles::MemoryFiles.new
+    case kind
+    when "linked project"
+      files.put(PROJECT, "option.tabstop 3\n")
+      files.link(PROJECT)
+    when "project linked to a device"
+      files.special("/dev/zero")
+      files.put(PROJECT, "")
+      files.link_to(PROJECT, "/dev/zero")
+    when "project FIFO"
+      files.put(USER, "option.tabstop 4\n")
+      files.special(PROJECT)
+    when "user device"
+      files.special(USER)
+      files.put(PROJECT, "option.tabstop 3\n")
+    when "huge user file"
+      files.put(USER, "option.tabstop 4\n" + ("#" * LIMIT))
+      files.put(PROJECT, "option.tabstop 3\n")
+    when "user file at the limit"
+      files.put(USER, "option.tabstop 4\n" + ("#" * (LIMIT - 17)))
+    when "linked user file"
+      files.put(USER, "option.tabstop 4\n")
+      files.link(USER)
+    when "illegal bytes in both files"
+      files.put(USER, "option.tabstop 4\nkeymap.normal x a\xFF.b\n")
+      files.put(PROJECT, "option.theme caf\xE9\noption.tabstop 999999999\n")
+    end
+    files
   end
 
   # The configuration the gateway reads over the files.
@@ -82,6 +118,21 @@ module AdaptersConfigGatewayTest
     unreadable.put(PROJECT, "option.tabstop 3\n")
     unreadable.put(USER, "option.tabstop 4\n")
     t.assert_equal([4, [".caratrc: cannot be read"]], tabstop(unreadable), "a file that cannot be read is reported and skipped")
+
+    # Hostile files: rows are [label, arrangement, [tabstop, problems]].
+    t.table([
+      ["a linked project file is refused", "linked project", [2, [".caratrc: is a symbolic link, not read"]]],
+      ["a project file linked to /dev/zero is refused", "project linked to a device", [2, [".caratrc: is a symbolic link, not read"]]],
+      ["a FIFO project file is refused and the user file loads", "project FIFO", [4, [".caratrc: is not a regular file, not read"]]],
+      ["a device user file is refused and the project file loads", "user device", [3, ["~/.config/carat/caratrc: is not a regular file, not read"]]],
+      ["a file over the limit is refused", "huge user file", [3, ["~/.config/carat/caratrc: is larger than 1048576 bytes, not read"]]],
+      ["a file of exactly the limit is read", "user file at the limit", [4, []]],
+      ["a linked user file is read", "linked user file", [4, []]],
+      ["illegal bytes and a huge tabstop are lines of their files", "illegal bytes in both files", [4, ["~/.config/carat/caratrc:2: illegal byte", ".caratrc:1: illegal byte", ".caratrc:2: option.tabstop takes a number from 1 to 9999"]]]
+    ]) do |kind|
+      tabstop(hostile(kind.to_s))
+    end
+
     files = Carat::Doubles::MemoryFiles.new
     files.move_to("/work/app")
     files.move_home("/users/ada")

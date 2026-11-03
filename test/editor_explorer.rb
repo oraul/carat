@@ -227,6 +227,12 @@ module EditorExplorerTest
     t.assert_equal([true, nil], [h.files.directory?("pkg"), h.files.get("pkg")], "the directory exists on disk and no file was made")
     h = session(" ea" + "b.rb<CR>")
     t.assert_equal(true, h.state.message_error, "a refusal is an error")
+    h = editor_on("a.md", config_with("ascii", ""))
+    h.files.mkdir("/srv")
+    h.files.mkdir("out")
+    h.files.link_to("out", "/srv")
+    h.type(" egga" + "out/x.rb<CR>")
+    t.assert_equal(["Outside the tree root: out/x.rb", true, false], [h.message, h.state.message_error, h.files.exist?("out/x.rb")], "a name below a link leading out of the root is refused")
 
     # Rename.
     h = session(" ej<CR><C-w>hr")

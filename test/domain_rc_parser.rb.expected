@@ -37,6 +37,17 @@ ok   a key with a dash
 ok   a quoted key
 ok   a control character in quotes
 ok   a tab in quotes stays
+ok   a lone Latin-1 byte in a word
+ok   an illegal byte in the key
+ok   an illegal byte in quotes
+ok   an illegal byte in a comment
+ok   a truncated sequence
+ok   an overlong slash
+ok   a surrogate
+ok   above U+10FFFF
+ok   a lone continuation byte
+ok   four-byte UTF-8 stays
+ok   UTF-8 in a comment stays
 ok   comments, blanks, and settings
 ok   no final newline
 ok   carriage returns
@@ -44,6 +55,7 @@ ok   a malformed line among good ones
 ok   an unknown scope
 ok   a language command
 ok   an unknown language setting
+ok   an illegal byte in each scope
 ok   an untrusted file cannot set language commands
 ok   an untrusted file binds actions and none but no key sequence
 ok   a trusted file binds a key sequence
@@ -67,4 +79,4 @@ ok   a list
 ok   an empty list
 ok   an unknown kind
 ok   each kind says what it takes
-domain_rc_parser: 69 passed, 0 failed
+domain_rc_parser: 81 passed, 0 failed

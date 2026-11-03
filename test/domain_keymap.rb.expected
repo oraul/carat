@@ -51,4 +51,13 @@ ok   the refused binding is not added and the others are
 ok   the leader is the last good leader line
 ok   the leader is a backslash when no line sets it
 ok   an action name has namespace segments, a key sequence does not
-domain_keymap: 53 passed, 0 failed
+ok   a lone byte after a segment
+ok   a lone byte inside a name
+ok   an overlong form
+ok   UTF-8 is not an action name either
+ok   a trailing dot
+ok   an empty value
+ok   one segment and the action
+ok   a trusted binding with an illegal byte is reported and skipped
+ok   a plugin's binding with an illegal byte is an error of its line
+domain_keymap: 62 passed, 0 failed

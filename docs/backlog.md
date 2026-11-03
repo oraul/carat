@@ -158,18 +158,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: in `authoring-kit` the two took 17 and 11 tool calls, 28 of 272 (10.3%), and 6,305 output tokens for a CI that passed first time in 3.0 minutes with 0 CI fixes. Proposed by that run's retrospective (note 3) and left out of the queue because one green run is the only evidence and the watcher drives the CI-fix rounds, which no run has measured yet.
 - Fix outline: once `docs/metrics.tsv` holds several runs with their `ci` and `merge` phase counts, including one with a CI fix, have the merger watch CI itself when the run has no CI fix to make, keeping the watcher only for the fix loop, and compare the two phases' tool calls before and after.
 
-## The project .caratrc is read without a type or size check
-
-- Where: `RcConfigGateway#read_file` in `carat/adapters/rc_config_gateway.rb` (the `@files.read(path)` at line 55), after `@files.stat(path)`, which follows a link; `DiskFiles#read` reads the whole file. Low finding of the periodic security review at 66fd52b.
-- Why it matters: the project file comes from an untrusted repository; a `.caratrc` that is a symlink to `/dev/zero` or a FIFO makes carat exhaust memory or hang at startup, before the first frame.
-- Fix outline: refuse a project file that is a symlink or not a regular file (an lstat in `PathInfo`), cap the bytes read (for example 1 MB) through a bounded read on `FilePort`, and note each refusal as a problem with its file and line 0.
-
-## tabstop and shiftwidth have no upper bound
-
-- Where: `Options#apply` in `carat/domain/options.rb` (lines 94 and 95 store `word.to_i`); `RcValue.number?` accepts up to 999999999. Low finding of the periodic security review at 66fd52b.
-- Why it matters: an untrusted project `.caratrc` can set either to 999999999, and `InsertTab` (`carat/use_cases/insert_tab.rb`) and the shift operators (`Operators.shift`, `shift_block`) then build a string of that many spaces on one Tab or `>>`, allocating gigabytes.
-- Fix outline: bound the integer options in `Options.apply` (Vim caps `tabstop` at 9999; 1 to 9999 for both, 0 still meaning "use tabstop" for `shiftwidth`), note an out-of-range value as a problem, and add rows to `test/domain_options_config.rb`.
-
 ## The periodic review's areas miss the entry point, the tools, and CI
 
 - Where: `REVIEW_AREAS` in `tools/run_state.sh` (line 73). `utf8-input-safety` added the domain files that keep control characters off the terminal (`frame.rb`, `display_width.rb`, `utf8.rb`, `decoded_line.rb`) to the terminal output area; `bin/carat.rb`, `tools/`, and `.github/workflows/` are still in no area. Low finding of the periodic security review at 66fd52b.
@@ -241,3 +229,39 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `Carat::Json` in `carat/domain/json.rb` (`each_char` at line 346), and every `index` or `rindex` on text that may hold illegal bytes (`carat/domain/config.rb` line 176 on a configuration key); the pinned Spinel's `index`, `rindex`, and `each_char` group a lead byte with the bytes after it, while `length` and `[i, n]` count each byte (`docs/spinel-notes.md`).
 - Why it matters: no path sends buffer text to JSON yet, but the language server change will; a character index from `index` on such text slices the wrong bytes, and JSON needs the text valid (a language server expects UTF-8).
 - Fix outline: escape illegal bytes in `Carat::Json` by walking bytes with `Utf8` (as U+FFFD or a documented escape), replace `index` and `rindex` on untrusted text with `byteindex` and `byterindex`, report the disagreement upstream, and add hostile rows to `test/json.rb`.
+
+## Plugin rename and delete follow symlinked directories out of the tree root
+
+- Where: `RenamePath` and `DeletePath` in `carat/use_cases/files/rename_path.rb` (lines 35 and 36) and `delete_path.rb` (line 33), which check containment with the lexical `Domain::PathPolicy.inside?` only. Low (5) finding of the periodic security review at 6ea61b1, and Low (6) finding of the security review of `untrusted-config-limits`, which fixed the create half in `MakePath`.
+- Why it matters: the explorer expands a link to a directory, so in an untrusted repository with a link such as `docs` pointing to the home directory, renaming or deleting a file under `docs` in the explorer changes the real file outside the project.
+- Fix outline: reuse the `resolved_inside?` check of `MakePath` (`carat/use_cases/files/make_path.rb` line 57): resolve the root and the source's parent, and the target's parent for a rename, with `FilePort#real_path`, and refuse when the result is neither the root nor inside it; add hostile rows for a symlinked parent in `test/use_cases_plugin_files.rb`.
+
+## The CI scope script word-splits the changed paths
+
+- Where: `tools/ci_scope.sh` (line 66, the unquoted `for path in $changed`, over `git diff --name-only`). Low (3) finding of the periodic security review at 6ea61b1, and Low (5) finding of the security review of `untrusted-config-limits`; queued in `pipeline-hardening`.
+- Why it matters: the loop splits names on spaces and expands glob characters, so a pull request whose changed paths contain them, such as `a.md .claude/x`, can make a change to code read as documentation only and CI skips `spin check`.
+- Fix outline: read `git diff --name-only -z` into a `while read` loop with `IFS` unset and `set -f`, quote `"$path"`, and add a `tools/tools_test.sh` case with a spaced path and one with a glob character.
+
+## Three copies of the byte basename
+
+- Where: `Filetype.from_name` in `carat/domain/filetype.rb` (line 30) and `FramePresenter#file_name` in `carat/adapters/frame_presenter.rb` (line 660) each copy the byte basename that `PluginApi::Paths.basename` (`carat/plugin_api.rb:315`) gives and `Domain::PathPolicy.last_name` reuses, while `Filetype.base` (line 68) still uses `rindex`. Advisory of the periodic quality review at 6ea61b1.
+- Why it matters: three copies of one byte walk drift apart, and the `rindex` copy groups a lead byte with what follows on a name that is not UTF-8.
+- Fix outline: call `PluginApi::Paths.basename` in all three places.
+
+## Filetype.program_type mixes byte and character indexes
+
+- Where: `Filetype.program_type` in `carat/domain/filetype.rb` (line 75) starts at `program.length` (characters) and reads `getbyte(stop - 1)` and `program[0, stop]`. Advisory of the periodic quality review at 6ea61b1.
+- Why it matters: byte and character positions disagree on a non-ASCII program name; harmless today because no such name is in `PROGRAMS`.
+- Fix outline: use `bytesize` and `byteslice` throughout.
+
+## code_of decodes UTF-8 inside DisplayWidth
+
+- Where: `DisplayWidth.code_of` in `carat/domain/display_width.rb` (line 54); `Motions` (`carat/domain/motions.rb` lines 9 and 119) requires `display_width` only to decode a character. Advisory of the periodic quality review at 6ea61b1.
+- Why it matters: a decoding helper kept in the width table hides the dependency and invites another copy.
+- Fix outline: move it to `Utf8` (for example `Utf8.first_code`) and call it from `DisplayWidth` and `Motions.keyword?`.
+
+## Visual r over an illegal byte has no test row
+
+- Where: the `:replace` branch of `ascii_recase` in `carat/domain/operators.rb` (line 244, `char * text.length` over text that is not UTF-8), while `~`, `U`, and `u` have rows in `test/editor_registers.rb` (lines 49 to 51). Advisory of the periodic quality review at 6ea61b1.
+- Why it matters: an untested branch on hostile text is where the next crash on an illegal byte would hide.
+- Fix outline: add a `v$r` row over a line with an illegal byte.

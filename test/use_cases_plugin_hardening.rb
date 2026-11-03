@@ -262,7 +262,7 @@ module UseCasesPluginHardeningTest
     p.target = h.state.tab.layout.window_at(h.state.tab.layout.leaves[1]).id
     p.arg = "dir"
     h.type(" rp")
-    t.assert_equal([true, left], [p.log[0].start_with?("open false 0 E484"), h.state.window.id], "a failed open fails and leaves the focus where it was")
+    t.assert_equal([true, left], [p.log[0] == "open false 0 \"dir\" is a directory", h.state.window.id], "a failed open fails and leaves the focus where it was")
 
     # Splits and tab pages take the path as it is.
     p = rig("probe", "split", [])

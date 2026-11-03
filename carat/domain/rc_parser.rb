@@ -1,4 +1,5 @@
 require_relative "rc_parse"
+require_relative "utf8"
 
 module Carat
   module Domain
@@ -42,6 +43,7 @@ module Carat
       def self.parse_range(text, from, to)
         stop = to
         stop -= 1 if stop > from && text.getbyte(stop - 1).to_i == RETURN
+        return failure("illegal byte") if illegal?(text, from, stop)
         words = no_words
         key = ""
         i = from
@@ -117,6 +119,23 @@ module Carat
           b = text.getbyte(i).to_i
           return true if (b < SPACE && b != TAB) || b == DELETE
           i += 1
+        end
+        false
+      end
+
+      # Whether a byte from from up to to lies outside a well-formed UTF-8
+      # sequence; ASCII bytes cost one comparison each.
+      #: (String, Integer, Integer) -> bool
+      def self.illegal?(text, from, to)
+        i = from
+        while i < to
+          if text.getbyte(i).to_i < 0x80
+            i += 1
+          else
+            size = Utf8.size_at(text, i, to)
+            return true if size == 1
+            i += size
+          end
         end
         false
       end

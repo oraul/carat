@@ -145,6 +145,32 @@ module EditorCmdlineTest
     h.type(":edit a.txt<CR>")
     t.assert_equal(["ab"], h.lines, "long form edit")
 
+    # Paths that are not regular files of bounded size are refused and
+    # the current buffer stays: rows are [label, command, [message,
+    # error, buffer path, lines]].
+    hostile = files_with("ab\n")
+    hostile.mkdir("lib")
+    hostile.special("pipe")
+    hostile.special("/dev/zero")
+    hostile.put("big.bin", "x" * 67_108_865)
+    hostile.put("edge.bin", "x" * 67_108_864)
+    hostile.put("link.txt", "linked\n")
+    hostile.link("link.txt")
+    t.table([
+      ["a directory", ":e lib<CR>", ["\"lib\" is a directory", true, "a.txt", ["ab"]]],
+      ["a FIFO", ":e pipe<CR>", ["\"pipe\" is not a file", true, "a.txt", ["ab"]]],
+      ["a device", ":e /dev/zero<CR>", ["\"/dev/zero\" is not a file", true, "a.txt", ["ab"]]],
+      ["a file over the limit", ":e big.bin<CR>", ["E484: Can't open file big.bin: File too large", true, "a.txt", ["ab"]]],
+      ["a linked regular file opens", ":e link.txt<CR>", ["\"link.txt\" 1L, 7B", false, "link.txt", ["linked"]]]
+    ]) do |keys|
+      hh = editor(hostile)
+      hh.type(keys.to_s)
+      [hh.message_row, hh.state.message_error, hh.buffer.path, hh.lines]
+    end
+    hh = editor(hostile)
+    hh.type(":e edge.bin<CR>")
+    t.assert_equal(["edge.bin", 1, "\"edge.bin\" 1L, 67108864B"], [hh.buffer.path, hh.buffer.line_count, hh.message_row], "a file of exactly the limit opens")
+
     # Several windows and tab pages.
     h = editor(files_with("ab\n"))
     h.type("<C-w>s:q<CR>")

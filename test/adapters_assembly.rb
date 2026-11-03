@@ -81,7 +81,7 @@ module AdaptersAssemblyTest
     t.assert_equal([], strangers(a.open_side_window, [["window_requests", host.window_requests.open_side_window]]), "the open side window use case")
     t.assert_equal([], strangers(a.split_window, [["window_requests", host.window_requests.split_window]]), "the split window use case")
     t.assert_equal([], strangers(a.open_tab, [["window_requests", host.window_requests.open_tab]]), "the open tab use case")
-    t.assert_equal([], strangers(host.probe_path, [["make_path", host.make_path.probe_path], ["rename_path", host.rename_path.probe_path], ["delete_path", host.delete_path.probe_path], ["file_requests", host.file_requests.probe_path]]), "the file operations")
+    t.assert_equal([], strangers(a.probe_path, [["plugin_host", host.probe_path], ["open_file", a.open_file.probe_path], ["make_path", host.make_path.probe_path], ["rename_path", host.rename_path.probe_path], ["delete_path", host.delete_path.probe_path], ["file_requests", host.file_requests.probe_path]]), "the file operations")
     t.assert_equal([], strangers(a.handle_key, [["controller", a.controller.handle_key]]), "the key handler")
     t.assert_equal([], strangers(a.cache, [["arrange_view", a.arrange_view.cache], ["frame_presenter", a.frame_presenter.cache]]), "the line cache")
     t.assert_equal([], strangers(a.arrange_view, [["handle_key", a.handle_key.arrange_view]]), "the arrange view use case")
@@ -91,7 +91,7 @@ module AdaptersAssemblyTest
     # Each port is one instance too.
     t.assert_equal([], strangers(h.terminal, [["assembly", a.terminal], ["controller", a.controller.terminal], ["screen_presenter", a.screen_presenter.terminal]]), "the terminal port")
     t.assert_equal([], strangers(h.clock, [["assembly", a.clock], ["controller", a.controller.clock], ["dispatcher", a.dispatcher.clock], ["walk_history", a.walk_history.clock], ["list_undo", a.list_undo.clock]]), "the clock port")
-    t.assert_equal([], strangers(h.files, [["assembly", a.files], ["open_file", a.open_file.files], ["save_file", a.save_file.files], ["probe_path", host.probe_path.files], ["make_path", host.make_path.files],
+    t.assert_equal([], strangers(h.files, [["assembly", a.files], ["open_file", a.open_file.files], ["save_file", a.save_file.files], ["probe_path", a.probe_path.files], ["make_path", host.make_path.files],
       ["rename_path", host.rename_path.files], ["delete_path", host.delete_path.files], ["file_requests", host.file_requests.files],
       ["ui_requests", host.ui_requests.files], ["window_requests", host.window_requests.files]]), "the file port")
     signals = Carat::Doubles::ManualSignals.new

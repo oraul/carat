@@ -25,6 +25,8 @@ ok   a binding that is not a keymap line
 ok   binding to a foreign action
 ok   bindings that are not a list of lines
 ok   a binding that is not a string
+ok   a binding with an illegal byte
+ok   an option line with an illegal byte
 ok   option without a type
 ok   option with an unknown type
 ok   integer option with a bad default
@@ -52,4 +54,4 @@ ok   a filetype that is not a string
 ok   filetypes of the wrong type
 ok   describe returns the description
 ok   describe returns empty for an unknown action
-domain_plugin_manifest: 54 passed, 0 failed
+domain_plugin_manifest: 56 passed, 0 failed

@@ -132,6 +132,14 @@ module UseCasesPluginFilesTest
     h, fs = session.harness, session.plugin
     host = fs.host
     files = h.files
+    files.mkdir("/elsewhere")
+    files.mkdir("/w/out")
+    files.link_to("/w/out", "/elsewhere")
+    files.mkdir("/w/alias")
+    files.link_to("/w/alias", "/w/lib")
+    files.mkdir("/r")
+    files.mkdir("/real")
+    files.link_to("/r", "/real")
     t.table([
       ["a file", host.make_file("/w", "/w/new.rb"), [true, ""]],
       ["a directory", host.make_dir("/w", "/w/pkg"), [true, ""]],
@@ -143,12 +151,16 @@ module UseCasesPluginFilesTest
       ["an empty name", host.make_file("/w", "/w/lib/"), [false, "Empty name"]],
       ["an existing file", host.make_file("/w", "/w/a.txt"), [false, "Already exists: a.txt"]],
       ["an existing directory", host.make_dir("/w", "/w/lib"), [false, "Already exists: lib"]],
-      ["a missing parent", host.make_file("/w", "/w/no/x.rb"), [false, "No such directory: no"]]
+      ["a missing parent", host.make_file("/w", "/w/no/x.rb"), [false, "No such directory: no"]],
+      ["a file below a link leading out of the root", host.make_file("/w", "/w/out/x.rb"), [false, "Outside the tree root: out/x.rb"]],
+      ["a directory below a link leading out of the root", host.make_dir("/w", "/w/out/pkg"), [false, "Outside the tree root: out/pkg"]],
+      ["a file below a link that stays inside", host.make_file("/w", "/w/alias/x.rb"), [true, ""]],
+      ["a file below a linked root", host.make_file("/r", "/r/new.rb"), [true, ""]]
     ]) do |r|
       [r.ok, r.message]
     end
     t.assert_equal(["", true, "", ""], [files.get("/w/new.rb"), files.directory?("/w/pkg"), files.get("/w/lib/y.rb"), files.get("/w/lib/z.rb")], "the created entries exist")
-    t.assert_equal([false, false, false], [files.exist?("/etc/x"), files.exist?("/w/a2.txt"), files.exist?("/w/no")], "the refused ones do not")
+    t.assert_equal([false, false, false, false, false], [files.exist?("/etc/x"), files.exist?("/w/a2.txt"), files.exist?("/w/no"), files.exist?("/w/out/x.rb"), files.exist?("/w/out/pkg")], "the refused ones do not")
 
     # Renaming.
     session = editor

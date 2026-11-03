@@ -89,6 +89,7 @@ ok   forced reload discards changes
 ok   long form edit
 ok   edit with no path and no argument
 ok   edit without argument reloads
+ok   edit of a path whose stat fails after it was found is E484
 ok   sp splits
 ok   split splits
 ok   sp file shows the file
@@ -160,4 +161,4 @@ ok   se sets
 ok   sy is syntax
 ok   synt is syntax
 ok   s is not set
-use_cases_ex: 162 passed, 0 failed
+use_cases_ex: 163 passed, 0 failed

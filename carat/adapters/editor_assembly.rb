@@ -165,6 +165,7 @@ module Carat
       attr_reader :yank_selection #: UseCases::YankSelection
       attr_reader :change_selection #: UseCases::ChangeSelection
       attr_reader :put_over_selection #: UseCases::PutOverSelection
+      attr_reader :probe_path #: UseCases::ProbePath
       attr_reader :open_file #: UseCases::OpenFile
       attr_reader :save_file #: UseCases::SaveFile
       attr_reader :save_all #: UseCases::SaveAll
@@ -236,7 +237,8 @@ module Carat
         @yank_selection = UseCases::YankSelection.new(registers: @registers)
         @change_selection = UseCases::ChangeSelection.new(registers: @registers)
         @put_over_selection = UseCases::PutOverSelection.new(registers: @registers)
-        @open_file = UseCases::OpenFile.new(files: files, buffers: @buffers)
+        @probe_path = UseCases::ProbePath.new(files: files)
+        @open_file = UseCases::OpenFile.new(files: files, buffers: @buffers, probe_path: @probe_path)
         @close_window = UseCases::CloseWindow.new(buffers: @buffers, tabs: @tabs)
         @close_other_windows = UseCases::CloseOtherWindows.new(buffers: @buffers)
         @split_window = UseCases::SplitWindow.new(open_file: @open_file, buffers: @buffers, tabs: @tabs)
@@ -249,7 +251,7 @@ module Carat
         @quit_all = UseCases::QuitAll.new(buffers: @buffers)
         focus_window = UseCases::FocusWindow.new
         scroll_window = UseCases::ScrollWindow.new
-        @plugins = UseCases::PluginHost.new(state: @state, buffers: @buffers, tabs: @tabs, input: @input, plugin_ui: @plugin_ui, files: files, open_file: @open_file, split_window: @split_window, open_side_window: @open_side_window, open_tab: @open_tab, keymap: @keymap, leader: leader, runner: @runner)
+        @plugins = UseCases::PluginHost.new(state: @state, buffers: @buffers, tabs: @tabs, input: @input, plugin_ui: @plugin_ui, files: files, open_file: @open_file, probe_path: @probe_path, split_window: @split_window, open_side_window: @open_side_window, open_tab: @open_tab, keymap: @keymap, leader: leader, runner: @runner)
         i = 0
         while i < plugin_list.length
           @plugins.register(plugin_list[i])

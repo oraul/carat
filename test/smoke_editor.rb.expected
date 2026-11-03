@@ -45,7 +45,11 @@ ok   a file that is not UTF-8 opens with its first illegal line named
 ok   each illegal byte is drawn as one replacement character
 ok   writing the unedited file gives back its bytes
 ok   the editor exits with status 0 after yanking and putting an illegal line
+ok   a project .caratrc linked to /dev/zero is refused and the editor says so
+ok   the editor exits with status 0 after a linked .caratrc
+ok   illegal bytes and a huge tabstop are reported, the user file's first
+ok   the editor exits with status 0 after hostile configuration lines
 ok   the editor drew its first frame for the signal check
 ok   SIGTERM ends the editor with status 0
 ok   SIGTERM leaves the alternate screen
-smoke_editor: 50 passed, 0 failed
+smoke_editor: 54 passed, 0 failed

@@ -74,13 +74,13 @@ module Carat
         end
       end
 
-      # Notes a file that exists but could not be read, as a file of its
-      # own in load order.
-      #: (String) -> void
-      def unreadable(source)
+      # Notes a file that exists but was not read, with the reason, as a
+      # file of its own in load order: "source: reason".
+      #: (String, String) -> void
+      def refuse(source, reason)
         file = files
         self.files = file + 1
-        note_at(file * RcLine::FILE_SPAN, "#{source}: cannot be read")
+        note_at(file * RcLine::FILE_SPAN, "#{source}: #{reason}")
       end
 
       # The number of setting lines kept.

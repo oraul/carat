@@ -71,7 +71,18 @@ module DomainRcParserTest
       ["a key with a dash", "option.tab-stop 4", "invalid key"],
       ["a quoted key", "\"option.tabstop\" 4", "invalid key"],
       ["a control character in quotes", "option.clipboard \"a\tb\ec\"", "control character"],
-      ["a tab in quotes stays", "option.clipboard \"a\tb\"", ["option.clipboard", ["a\tb"]]]
+      ["a tab in quotes stays", "option.clipboard \"a\tb\"", ["option.clipboard", ["a\tb"]]],
+      ["a lone Latin-1 byte in a word", "option.theme caf\xE9", "illegal byte"],
+      ["an illegal byte in the key", "option.tab\xFFstop 4", "illegal byte"],
+      ["an illegal byte in quotes", "option.clipboard \"a\xFFb\"", "illegal byte"],
+      ["an illegal byte in a comment", "option.tabstop 4 # caf\xE9", "illegal byte"],
+      ["a truncated sequence", "option.theme \xE2\x82", "illegal byte"],
+      ["an overlong slash", "option.theme \xC0\xAF", "illegal byte"],
+      ["a surrogate", "option.theme \xED\xA0\x80", "illegal byte"],
+      ["above U+10FFFF", "option.theme \xF4\x90\x80\x80", "illegal byte"],
+      ["a lone continuation byte", "keymap.normal \x80 cursor.down", "illegal byte"],
+      ["four-byte UTF-8 stays", "plugin.hello.greeting \u{1F600}", ["plugin.hello.greeting", ["\u{1F600}"]]],
+      ["UTF-8 in a comment stays", "option.tabstop 4 # quatre espaces, \u00E9", ["option.tabstop", ["4"]]]
     ]) do |text|
       read(text.to_s)
     end
@@ -84,7 +95,8 @@ module DomainRcParserTest
       ["a malformed line among good ones", "option.tabstop 4\noption.clipboard \"x\noption.number true\n", [["1 option|tabstop [\"4\"]", "3 option|number [\"true\"]"], [".caratrc:2: unterminated quote"]]],
       ["an unknown scope", "editor.font mono\n", [[], [".caratrc:1: unknown setting editor.font"]]],
       ["a language command", "language.ruby.lsp ruby-lsp --debug\n", [["1 language|ruby.lsp [\"ruby-lsp\", \"--debug\"]"], []]],
-      ["an unknown language setting", "language.ruby.linter rubocop\nlanguage.ruby x\n", [[], [".caratrc:1: unknown language setting linter", ".caratrc:2: unknown setting language.ruby"]]]
+      ["an unknown language setting", "language.ruby.linter rubocop\nlanguage.ruby x\n", [[], [".caratrc:1: unknown language setting linter", ".caratrc:2: unknown setting language.ruby"]]],
+      ["an illegal byte in each scope", "option.theme caf\xE9\nkeymap.normal x a\xFF.b\nplugin.hello.greeting \xC0\xAF\nlanguage.ruby.lsp ruby-lsp\xFE\noption.tabstop 4\n", [["5 option|tabstop [\"4\"]"], [".caratrc:1: illegal byte", ".caratrc:2: illegal byte", ".caratrc:3: illegal byte", ".caratrc:4: illegal byte"]]]
     ]) do |text|
       config_of(text.to_s, true)
     end
@@ -98,7 +110,7 @@ module DomainRcParserTest
     config = D::Config.new
     config.read_defaults("config/default.caratrc", "option.tabstop 2\nlanguage.ruby.lsp ruby-lsp\n")
     config.read("~/.config/carat/caratrc", "option.tabstop 4\nbad line\n", true)
-    config.unreadable("extra")
+    config.refuse("extra", "cannot be read")
     config.read(".caratrc", "option.number false\nlanguage.ruby.lsp ./evil\noption.tabstop 3\n", false)
     t.assert_equal(["3", "ruby-lsp", true, false], [config.last("option.tabstop").words[0], config.last("language.ruby.lsp").words[0], config.shipped?(config.line_at(0)), config.shipped?(config.line_at(2))], "the last line of a key wins and the defaults are the shipped lines")
     t.assert_equal(true, config.last("option.wrap").nil?, "a key no line sets has no last line")

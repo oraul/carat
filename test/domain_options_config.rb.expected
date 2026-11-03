@@ -10,9 +10,15 @@ ok   a flag that is not true or false
 ok   two words for one
 ok   a bad line keeps the value before it
 ok   other scopes are not options
+ok   a huge tabstop keeps the value before it
+ok   a tabstop one above the limit
+ok   a zero tabstop
+ok   a huge shiftwidth
+ok   the limits themselves
+ok   the smallest values
 ok   the shipped defaults set Carat's options cleanly
 ok   scroll is 0 by default, half the window
 ok   scroll takes a number
 ok   scroll refuses a word
 ok   the shipped scroll is 0
-domain_options_config: 17 passed, 0 failed
+domain_options_config: 23 passed, 0 failed

@@ -2,6 +2,7 @@ require_relative "../../domain/editor_state"
 require_relative "../../domain/buffer_list"
 require_relative "../../ports/file_port"
 require_relative "../outcome"
+require_relative "probe_path"
 
 module Carat
   module UseCases
@@ -11,17 +12,27 @@ module Carat
     # for each. The current buffer's own path is reloaded in place through
     # Buffer#reload, one change that leaves it unmodified, so every window
     # showing it sees the file's text; the closed transaction keeps their
-    # cursors inside it. Any failure to read or load the file is E484, and
-    # a file that is not valid UTF-8 opens with its bytes kept and Vim's
+    # cursors inside it. A directory and anything else that is not a
+    # regular file (a FIFO, a device, a socket) are refused with Vim's
+    # messages, a file longer than LIMIT with E484, and the read itself is
+    # bounded and never waits, so no path can hang the editor or fill its
+    # memory. Any other failure to read or load the file is E484, and a
+    # file that is not valid UTF-8 opens with its bytes kept and Vim's
     # "[ILLEGAL BYTE in line N]" in the message.
     class OpenFile
+      # The most bytes a file opened in a buffer may hold, 64 MiB.
+      LIMIT = 67_108_864
+      private_constant :LIMIT
+
       attr_reader :files #: Ports::FilePort
       attr_reader :buffers #: Domain::BufferList
+      attr_reader :probe_path #: ProbePath
 
-      #: (files: Ports::FilePort, buffers: Domain::BufferList) -> void
-      def initialize(files:, buffers:)
+      #: (files: Ports::FilePort, buffers: Domain::BufferList, probe_path: ProbePath) -> void
+      def initialize(files:, buffers:, probe_path:)
         @files = files
         @buffers = buffers
+        @probe_path = probe_path
       end
 
       #: (Domain::EditorState, String) -> Outcome
@@ -32,9 +43,13 @@ module Carat
           return Outcome.success("\"#{path}\" #{listed.line_count}L, #{listed.byte_count}B")
         end
         exists = @files.exist?(path)
+        if exists
+          refused = refusal(path, @probe_path.call(path))
+          return Outcome.failure(refused) unless refused.empty?
+        end
         text = +""
         begin
-          text = @files.read(path) if exists
+          text = @files.read(path, LIMIT) if exists
           fresh = Domain::Buffer.from_text(text, path)
         rescue StandardError => e
           return Outcome.failure("E484: Can't open file #{path}: #{e.message}")
@@ -51,6 +66,19 @@ module Carat
       end
 
       private
+
+      # Vim's message for a path that is there but is not a regular file
+      # of at most LIMIT bytes, "" for one that is; a path ProbePath could
+      # not stat, as one removed after exist?, is E484. The read checks
+      # again on the opened file, for a path swapped after this stat.
+      #: (String, Domain::PathInfo) -> String
+      def refusal(path, info)
+        return "E484: Can't open file #{path}" unless info.exists
+        return "\"#{path}\" is a directory" if info.directory
+        return "\"#{path}\" is not a file" unless info.regular
+        return "E484: Can't open file #{path}: File too large" if info.size > LIMIT
+        ""
+      end
 
       # Vim's flag for a file that is not valid UTF-8, naming the first
       # line that holds a byte outside a well-formed sequence; "" for a

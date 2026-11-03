@@ -176,6 +176,30 @@ module DomainKeymapTest
 
     t.assert_equal([true, false, false], [D::Keymap.action_name?("plugin.a.b"), D::Keymap.action_name?(":w<CR>"), D::Keymap.action_name?("plain")], "an action name has namespace segments, a key sequence does not")
 
+    # Hostile bytes: the action check reads bytes and never raises, and a
+    # binding with an illegal byte is a reported line in every way
+    # bindings arrive. Rows are [label, value, action name].
+    t.table([
+      ["a lone byte after a segment", "plugin.\xFF", false],
+      ["a lone byte inside a name", "a\xFF.b", false],
+      ["an overlong form", "plugin.\xC0\xAF", false],
+      ["UTF-8 is not an action name either", "plugin.d\u00EDa", false],
+      ["a trailing dot", "plugin.", false],
+      ["an empty value", "", false],
+      ["one segment and the action", "cursor.down", true]
+    ]) do |value|
+      D::Keymap.action_name?(value.to_s)
+    end
+    hostile_known = D::Keymap.no_actions
+    hostile_known["cursor.down"] = true
+    hostile_config = D::Config.new
+    hostile_config.read("~/.config/carat/caratrc", "keymap.normal x a\xFF.b\nkeymap.normal \xE9 cursor.down\nkeymap.normal j cursor.down\n", true)
+    hostile = D::Keymap.new
+    hostile.add_checked(hostile_config, hostile_known)
+    t.assert_equal([["~/.config/carat/caratrc:1: illegal byte", "~/.config/carat/caratrc:2: illegal byte"], :none, :match], [hostile_config.report, hostile.lookup(:normal, codes("x")).kind, hostile.lookup(:normal, codes("j")).kind], "a trusted binding with an illegal byte is reported and skipped")
+    hostile_lines = D::Keymap.from_lines(["keymap.normal q plugin.p.\xFF", "keymap.normal w plugin.p.ok"], " ")
+    t.assert_equal([["keymap.normal q plugin.p.\xFF: illegal byte"], :none, "plugin.p.ok"], [hostile_lines.errors, hostile_lines.lookup(:normal, codes("q")).kind, hostile_lines.lookup(:normal, codes("w")).value], "a plugin's binding with an illegal byte is an error of its line")
+
     t.finish
   end
 end
