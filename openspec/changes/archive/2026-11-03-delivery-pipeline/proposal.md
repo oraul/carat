@@ -36,7 +36,7 @@ None. This is a tooling, agent, and documentation change with no change to the e
 
 This change is outside the roadmap of `docs/architecture.md` section 12: it is a tooling change to the delivery process that the user asked for before more features.
 
-Out of scope: golden examples, generators, Spinel notes, and the docs size gate (`authoring-kit`); the planner agent, the metrics history, the retrospective, and periodic reviews (`planner-and-metrics`); any change to the generated OpenSpec commands and skills; the planner agent that will keep `docs/queue.md`.
+Out of scope: golden examples, generators, Spinel notes, and the docs size gate (`authoring-kit`); the planner agent, the metrics history, the retrospective, and periodic reviews (`planner-and-metrics`); any change to the generated OpenSpec commands and skills.
 
 Assumptions recorded instead of asked:
 
