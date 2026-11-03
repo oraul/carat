@@ -162,7 +162,7 @@ module Carat
         if operator_count > 0
           total = count > 0 ? operator_count * count : operator_count
         end
-        command = Command.new(register, total, operator, action, argument, linewise, keys)
+        command = Command.new(register: register, count: total, operator: operator, action: action, char: argument, linewise: linewise, keys: keys)
         reset
         command
       end

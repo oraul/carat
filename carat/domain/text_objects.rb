@@ -124,7 +124,7 @@ module Carat
             n -= 1
           end
         end
-        Range.new(Position.new(row, from), Position.new(row, to), :charwise, false)
+        Range.new(from: Position.new(row: row, col: from), to: Position.new(row: row, col: to), kind: :charwise, inclusive: false)
       end
 
       # -------------------------------------------------------- sentences
@@ -148,13 +148,13 @@ module Carat
             col = from.col
             line = buffer.line(from.row)
             col -= 1 while col > 0 && Motions.blank?(line[col - 1, 1])
-            from = Position.new(from.row, col)
+            from = Position.new(row: from.row, col: col)
           end
         else
           to = inner
         end
         return nil if to == from
-        Range.new(from, to, :charwise, false)
+        Range.new(from: from, to: to, kind: :charwise, inclusive: false)
       end
 
       # The position after the last non-blank character before to, not
@@ -174,7 +174,7 @@ module Carat
             break
           end
         end
-        Position.new(row, col)
+        Position.new(row: row, col: col)
       end
 
       # ------------------------------------------------------- paragraphs
@@ -213,7 +213,7 @@ module Carat
           end
         end
         col = state.cursor.col
-        Range.new(Position.new(from, col), Position.new(to, col), :linewise, true)
+        Range.new(from: Position.new(row: from, col: col), to: Position.new(row: to, col: col), kind: :linewise, inclusive: true)
       end
 
       # The last row of the run of lines of row's kind that starts at row.
@@ -286,15 +286,15 @@ module Carat
         start = Position.sure(opener)
         stop = Position.sure(found)
         if around
-          return Range.new(start, Position.new(stop.row, stop.col + 1), :charwise, false)
+          return Range.new(from: start, to: Position.new(row: stop.row, col: stop.col + 1), kind: :charwise, inclusive: false)
         end
-        from = Position.new(start.row, start.col + 1)
+        from = Position.new(row: start.row, col: start.col + 1)
         if stop.row > start.row && buffer.line(start.row)[from.col, buffer.line(start.row).length].strip.empty? && buffer.line(stop.row)[0, stop.col].strip.empty?
           return nil if stop.row - start.row < 2
-          return Range.new(Position.new(start.row + 1, 0), Position.new(stop.row - 1, 0), :linewise, true)
+          return Range.new(from: Position.new(row: start.row + 1, col: 0), to: Position.new(row: stop.row - 1, col: 0), kind: :linewise, inclusive: true)
         end
         return nil if from == stop
-        Range.new(from, stop, :charwise, false)
+        Range.new(from: from, to: stop, kind: :charwise, inclusive: false)
       end
 
       # ---------------------------------------------------------- quotes
@@ -340,10 +340,10 @@ module Carat
           else
             from -= 1 while from > 0 && Motions.blank?(line[from - 1, 1])
           end
-          return Range.new(Position.new(row, from), Position.new(row, to), :charwise, false)
+          return Range.new(from: Position.new(row: row, col: from), to: Position.new(row: row, col: to), kind: :charwise, inclusive: false)
         end
         return nil if q2 == q1 + 1
-        Range.new(Position.new(row, q1 + 1), Position.new(row, q2), :charwise, false)
+        Range.new(from: Position.new(row: row, col: q1 + 1), to: Position.new(row: row, col: q2), kind: :charwise, inclusive: false)
       end
     end
   end

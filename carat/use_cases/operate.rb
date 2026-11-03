@@ -63,7 +63,7 @@ module Carat
       # x, s, S, C, D, and Y as an operator with a fixed motion.
       #: (Domain::EditorState, Domain::Command, String, String, bool) -> Outcome
       def fixed(state, command, operator, motion, linewise)
-        call(state, Domain::Command.new(command.register, command.count, operator, motion, "", linewise, command.keys))
+        call(state, Domain::Command.new(register: command.register, count: command.count, operator: operator, action: motion, char: "", linewise: linewise, keys: command.keys))
       end
 
       # The refusal of a write to a read-only register.
@@ -157,7 +157,7 @@ module Carat
           last = state.buffer.line_count - 1
           last_row = cursor.row + command.count_or(1) - 1
           last_row = last if last_row > last
-          return Domain::Range.new(cursor.position, Domain::Position.new(last_row, cursor.col), :linewise, true)
+          return Domain::Range.new(from: cursor.position, to: Domain::Position.new(row: last_row, col: cursor.col), kind: :linewise, inclusive: true)
         end
         action = command.action
         return Domain::TextObjects.call(state, action, command.count) if Domain::TextObjects.object?(action)
@@ -170,15 +170,15 @@ module Carat
           from = to
           to = swap
         end
-        return Domain::Range.new(from, to, :linewise, true) if motion.linewise
+        return Domain::Range.new(from: from, to: to, kind: :linewise, inclusive: true) if motion.linewise
         inclusive = motion.inclusive
         if !inclusive && to.col == 0 && to.row > from.row
           if from.col <= state.buffer.first_nonblank(from.row)
-            return Domain::Range.new(from, Domain::Position.new(to.row - 1, 0), :linewise, true)
+            return Domain::Range.new(from: from, to: Domain::Position.new(row: to.row - 1, col: 0), kind: :linewise, inclusive: true)
           end
-          to = Domain::Position.new(to.row - 1, state.buffer.line(to.row - 1).length)
+          to = Domain::Position.new(row: to.row - 1, col: state.buffer.line(to.row - 1).length)
         end
-        Domain::Range.new(from, to, :charwise, inclusive)
+        Domain::Range.new(from: from, to: to, kind: :charwise, inclusive: inclusive)
       end
 
       # The motion of an operator command; "cw" and "cW" on a non-blank

@@ -82,7 +82,7 @@ module DomainLineCacheTest
     buffer = D::Buffer.new(lines: ["one", "two"], path: "a.txt", line_ending: "\n")
     before = buffer.line(0)
     decoded_before = cache.fetch(before, 4)
-    buffer.insert(D::Position.new(0, 3), "!")
+    buffer.insert(D::Position.new(row: 0, col: 3), "!")
     after = buffer.line(0)
     t.assert_equal(false, after.equal?(before), "an edit replaces the line string")
     t.assert_equal("one", before, "and leaves the old string unchanged")

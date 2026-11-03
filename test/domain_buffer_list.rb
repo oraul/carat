@@ -8,7 +8,7 @@ module DomainBufferListTest
   D = Carat::Domain
 
   def self.pos(row, col)
-    Carat::Domain::Position.new(row, col)
+    Carat::Domain::Position.new(row: row, col: col)
   end
 
   def self.buffer_named(name)

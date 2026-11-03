@@ -13,7 +13,7 @@ module Carat
 
       #: () -> PathInfo
       def self.missing
-        PathInfo.new(false, 0, 0, false, false)
+        PathInfo.new(exists: false, size: 0, mtime: 0, directory: false, symlink: false)
       end
 
       # Whether the path is a directory and not a link to one.

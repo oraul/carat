@@ -21,7 +21,7 @@ module Carat
 
       #: () -> Selection
       def self.none
-        Selection.new(Position.new(0, 0), Position.new(0, 0), :none, false)
+        Selection.new(anchor: Position.new(row: 0, col: 0), head: Position.new(row: 0, col: 0), kind: :none, to_end: false)
       end
 
       # The cells the character at col of line takes from display column
@@ -66,7 +66,7 @@ module Carat
       # The same ends as another kind.
       #: (Symbol, bool) -> Selection
       def as(other_kind, other_to_end)
-        Selection.new(anchor, head, other_kind, other_to_end)
+        Selection.new(anchor: anchor, head: head, kind: other_kind, to_end: other_to_end)
       end
 
       # The charwise range an operator works on: inclusive of the later
@@ -79,23 +79,23 @@ module Carat
         f = finish
         len = buffer.line(f.row).length
         if f.col >= len
-          return Range.new(s, Position.new(f.row + 1, 0), :charwise, false) if f.row < buffer.line_count - 1
-          return Range.new(s, Position.new(f.row, len), :charwise, false)
+          return Range.new(from: s, to: Position.new(row: f.row + 1, col: 0), kind: :charwise, inclusive: false) if f.row < buffer.line_count - 1
+          return Range.new(from: s, to: Position.new(row: f.row, col: len), kind: :charwise, inclusive: false)
         end
-        Range.new(s, f, :charwise, true)
+        Range.new(from: s, to: f, kind: :charwise, inclusive: true)
       end
 
       # The rows of the selection as a linewise range.
       #: () -> Range
       def line_range
-        Range.new(Position.new(top, 0), Position.new(bottom, 0), :linewise, true)
+        Range.new(from: Position.new(row: top, col: 0), to: Position.new(row: bottom, col: 0), kind: :linewise, inclusive: true)
       end
 
       # Where a linewise operand starts, as Neovim computes it: column 0 of
       # the top row when the anchor is on it, the cursor otherwise.
       #: () -> Position
       def line_start
-        anchor.row <= head.row ? Position.new(anchor.row, 0) : head
+        anchor.row <= head.row ? Position.new(row: anchor.row, col: 0) : head
       end
 
       # The block in display columns: from the leftmost to the rightmost
@@ -110,7 +110,7 @@ module Carat
         h_end = h_start + Selection.cells(h_line, head.col, h_start, tabstop) - 1
         left = a_start < h_start ? a_start : h_start
         right = a_end > h_end ? a_end : h_end
-        Block.new(top, bottom, left, right, to_end)
+        Block.new(top: top, bottom: bottom, left: left, right: right, to_end: to_end)
       end
 
       # The columns of row the selection covers.
@@ -119,7 +119,7 @@ module Carat
         return Span.empty unless covers?(row)
         line = buffer.line(row)
         len = line.length
-        return Span.new(0, len, true) if kind == :linewise
+        return Span.new(from: 0, to: len, eol: true) if kind == :linewise
         return block(buffer, tabstop).span(line, tabstop) if kind == :blockwise
         s = start
         f = finish
@@ -131,7 +131,7 @@ module Carat
           eol = f.col >= len
           to = f.col + 1 unless eol
         end
-        Span.new(from, to, eol)
+        Span.new(from: from, to: to, eol: eol)
       end
     end
   end

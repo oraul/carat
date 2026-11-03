@@ -16,7 +16,7 @@ module Carat
 
       #: () -> Position
       def position
-        Position.new(row, col)
+        Position.new(row: row, col: col)
       end
 
       # Moves horizontally: the new column becomes the wanted one.

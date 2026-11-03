@@ -539,7 +539,7 @@ module Carat
         shift_signs(a, b - a, inserted.length)
         syntax_cache.shift(a, b - a, inserted.length)
         self.changes = changes + 1
-        record(ChangeRecord.new(id, a, removed, inserted))
+        record(ChangeRecord.new(buffer_id: id, row: a, removed: removed, inserted: inserted))
       end
 
       # Adds the record to the open transaction, or closes it in a
@@ -551,7 +551,7 @@ module Carat
           open.add(change, cause)
           return
         end
-        at = Position.new(change.row, 0)
+        at = Position.new(row: change.row, col: 0)
         single = Transaction.new(buffer_id: id, before: at)
         single.add(change, cause)
         close(single, at)

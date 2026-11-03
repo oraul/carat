@@ -11,7 +11,7 @@ module Carat
       # A row the selection does not reach.
       #: () -> Span
       def self.empty
-        Span.new(0, 0, false)
+        Span.new(from: 0, to: 0, eol: false)
       end
 
       #: () -> bool

@@ -202,18 +202,18 @@ module Carat
         node = root(mode)
         i = 0
         while i < codes.length
-          return KeymapMatch.new(:none, nil) unless node.child?(codes[i])
+          return KeymapMatch.new(kind: :none, value: nil) unless node.child?(codes[i])
           node = node.child_for(codes[i])
           i += 1
         end
         value = node.value
         if value.nil?
-          return KeymapMatch.new(:none, nil) if node.leaf?
-          KeymapMatch.new(:prefix, nil)
+          return KeymapMatch.new(kind: :none, value: nil) if node.leaf?
+          KeymapMatch.new(kind: :prefix, value: nil)
         elsif node.leaf?
-          KeymapMatch.new(:match, value)
+          KeymapMatch.new(kind: :match, value: value)
         else
-          KeymapMatch.new(:match_prefix, value)
+          KeymapMatch.new(kind: :match_prefix, value: value)
         end
       end
 

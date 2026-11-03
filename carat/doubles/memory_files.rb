@@ -100,10 +100,10 @@ module Carat
       def stat(path)
         k = key(path)
         link = @links.key?(k)
-        return Domain::PathInfo.new(true, 0, 0, true, link) if @dirs.key?(k)
+        return Domain::PathInfo.new(exists: true, size: 0, mtime: 0, directory: true, symlink: link) if @dirs.key?(k)
         text = @files[k]
         return Domain::PathInfo.missing if text.nil?
-        Domain::PathInfo.new(true, text.bytesize, 0, false, link)
+        Domain::PathInfo.new(exists: true, size: text.bytesize, mtime: 0, directory: false, symlink: link)
       end
 
       #: (String) -> void

@@ -23,11 +23,11 @@ module DomainSelectionTest
 
   #: (untyped) -> Carat::Domain::Position
   def self.pos(pair)
-    Carat::Domain::Position.new(pair[0].to_i, pair[1].to_i)
+    Carat::Domain::Position.new(row: pair[0].to_i, col: pair[1].to_i)
   end
 
   def self.selection_of(anchor, head, kind, to_end)
-    Carat::Domain::Selection.new(pos(anchor), pos(head), kind, to_end)
+    Carat::Domain::Selection.new(anchor: pos(anchor), head: pos(head), kind: kind, to_end: to_end)
   end
 
   def self.main

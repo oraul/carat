@@ -41,7 +41,7 @@ module UseCasesPluginHardeningTest
     # @rbs skip
     def manifest
       action = "plugin.#{@name}.go"
-      Carat::PluginApi::Manifest.new(@name, "1.0.0", "1.2", { action => "Go" }, @commands, { "normal" => { @keys => action } }, @events, {}, {}, [])
+      Carat::PluginApi::Manifest.new(name: @name, version: "1.0.0", api_version: "1.2", actions: { action => "Go" }, commands: @commands, bindings: { "normal" => { @keys => action } }, events: @events, options: {}, option_types: {}, filetypes: [])
     end
 
     #: (Carat::PluginApi::Host) -> void
@@ -88,10 +88,10 @@ module UseCasesPluginHardeningTest
       when "recurse"
         @log << deep(0).to_s
       when "edit_other"
-        r = h.edit_buffer(@target, [Carat::PluginApi::Edit.new(0, 0, 0, 0, "new\n")])
+        r = h.edit_buffer(@target, [Carat::PluginApi::Edit.new(from_row: 0, from_col: 0, to_row: 0, to_col: 0, text: "new\n")])
         @log << "edit #{r.ok}"
       when "edit_bad_last"
-        r = h.edit_buffer(0, [Carat::PluginApi::Edit.new(0, 0, 0, 1, "X"), Carat::PluginApi::Edit.new(1, 0, 1, 0, "Y"), "nope"])
+        r = h.edit_buffer(0, [Carat::PluginApi::Edit.new(from_row: 0, from_col: 0, to_row: 0, to_col: 1, text: "X"), Carat::PluginApi::Edit.new(from_row: 1, from_col: 0, to_row: 1, to_col: 0, text: "Y"), "nope"])
         @log << "edit #{r.ok} #{r.message}"
       when "litter"
         h.open_scratch("list", "left", 20, ["x"], nil)
@@ -148,7 +148,7 @@ module UseCasesPluginHardeningTest
     # Returns the manifest.
     # @rbs skip
     def manifest
-      Carat::PluginApi::Manifest.new("crooked", "1.0.0", "1.2", "nope", {}, nil, [], {}, {}, [])
+      Carat::PluginApi::Manifest.new(name: "crooked", version: "1.0.0", api_version: "1.2", actions: "nope", commands: {}, bindings: nil, events: [], options: {}, option_types: {}, filetypes: [])
     end
   end
 

@@ -30,7 +30,7 @@ module Carat
 
       #: (buffer: Buffer) -> void
       def initialize(buffer:)
-        super(buffer: buffer, cursor: Cursor.new(row: 0, col: 0), top: 0, left: 0, row: 0, col: 0, height: 0, width: 0, fixed_width: false, anchor: Position.new(0, 0), last_selection: Selection.none, id: 0)
+        super(buffer: buffer, cursor: Cursor.new(row: 0, col: 0), top: 0, left: 0, row: 0, col: 0, height: 0, width: 0, fixed_width: false, anchor: Position.new(row: 0, col: 0), last_selection: Selection.none, id: 0)
       end
 
       # Shows another buffer from its start, forgetting the last selection,

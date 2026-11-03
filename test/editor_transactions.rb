@@ -21,11 +21,11 @@ module EditorTransactionsTest
     # @rbs skip
     def manifest
       Carat::PluginApi::Manifest.new(
-        "edits", "1.0.0", "1.0",
-        { "plugin.edits.two" => "Replace two ranges" },
-        {},
-        { "normal" => { "<leader>te" => "plugin.edits.two" } },
-        [], {}, {}, []
+        name: "edits", version: "1.0.0", api_version: "1.0",
+        actions: { "plugin.edits.two" => "Replace two ranges" },
+        commands: {},
+        bindings: { "normal" => { "<leader>te" => "plugin.edits.two" } },
+        events: [], options: {}, option_types: {}, filetypes: []
       )
     end
 
@@ -45,7 +45,7 @@ module EditorTransactionsTest
     def on_action(name, context)
       host = @host
       return if host.nil?
-      host.edit_buffer(0, [A::Edit.new(0, 0, 0, 1, "X"), A::Edit.new(1, 0, 1, 1, "Y")]) if name == "plugin.edits.two"
+      host.edit_buffer(0, [A::Edit.new(from_row: 0, from_col: 0, to_row: 0, to_col: 1, text: "X"), A::Edit.new(from_row: 1, from_col: 0, to_row: 1, to_col: 1, text: "Y")]) if name == "plugin.edits.two"
     end
   end
 
@@ -111,12 +111,12 @@ module EditorTransactionsTest
     h = Carat::Doubles::EditorHarness.with_plugins(files, 10, 80, [edits])
     h.open("a.txt")
     start = h.buffer.closed_count
-    r = edits.link.edit_buffer(0, [A::Edit.new(0, 0, 0, 1, "X"), A::Edit.new(1, 0, 1, 1, "Y")])
+    r = edits.link.edit_buffer(0, [A::Edit.new(from_row: 0, from_col: 0, to_row: 0, to_col: 1, text: "X"), A::Edit.new(from_row: 1, from_col: 0, to_row: 1, to_col: 1, text: "Y")])
     t.assert_equal([true, 1, 2, ["Xb", "Yd"]], [r.ok, h.buffer.closed_count - start, h.buffer.last_transaction.size, h.lines], "a plugin edit request outside a command closes one transaction with both records")
 
     # A session left open outside insert mode is closed by the next command.
     h = editor("a\nb\n")
-    h.buffer.begin_transaction(Carat::Domain::Position.new(0, 0))
+    h.buffer.begin_transaction(Carat::Domain::Position.new(row: 0, col: 0))
     h.buffer.set_lines(0, 1, ["z"])
     start = h.buffer.closed_count
     h.type("j")

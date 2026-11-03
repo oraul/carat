@@ -8,7 +8,7 @@ module Carat
     class Range < Data.define(:from, :to, :kind, :inclusive)
       #: (Position, Position) -> Range
       def self.charwise(from, to)
-        new(from, to, :charwise, false)
+        new(from: from, to: to, kind: :charwise, inclusive: false)
       end
 
       # The range with from before to and an exclusive end.
@@ -20,8 +20,8 @@ module Carat
           a = to
           b = from
         end
-        b = Position.new(b.row, b.col + 1) if inclusive
-        Range.new(a, b, kind, false)
+        b = Position.new(row: b.row, col: b.col + 1) if inclusive
+        Range.new(from: a, to: b, kind: kind, inclusive: false)
       end
     end
   end

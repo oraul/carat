@@ -70,7 +70,7 @@ module Carat
 
       #: () -> Position
       def position
-        Position.new(row, col)
+        Position.new(row: row, col: col)
       end
     end
   end

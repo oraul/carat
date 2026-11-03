@@ -73,7 +73,7 @@ module Carat
           full = command.to_s
           short = abbreviation.to_s
           short = full if short.empty?
-          return full if Domain::ExName.new(short, full).match?(name)
+          return full if Domain::ExName.new(short: short, full: full).match?(name)
         end
         ""
       end

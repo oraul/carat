@@ -33,9 +33,9 @@ module Carat
       # @rbs path: String
       def stat(path)
         link = File.symlink?(path)
-        return Domain::PathInfo.new(true, 0, 0, false, true) if link && !File.exist?(path)
+        return Domain::PathInfo.new(exists: true, size: 0, mtime: 0, directory: false, symlink: true) if link && !File.exist?(path)
         return Domain::PathInfo.missing unless link || File.exist?(path)
-        Domain::PathInfo.new(true, File.size(path), File.mtime(path).to_i, File.directory?(path), link)
+        Domain::PathInfo.new(exists: true, size: File.size(path), mtime: File.mtime(path).to_i, directory: File.directory?(path), symlink: link)
       end
 
       #: (String) -> void

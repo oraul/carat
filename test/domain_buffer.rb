@@ -8,7 +8,7 @@ module DomainBufferTest
   D = Carat::Domain
 
   def self.pos(row, col)
-    Carat::Domain::Position.new(row, col)
+    Carat::Domain::Position.new(row: row, col: col)
   end
 
   # A table row's values are untyped; the buffer takes typed arrays, and an
@@ -30,7 +30,7 @@ module DomainBufferTest
 
   # Read helpers for operators: rows are [label, [lines, range], expected].
   def self.rng(r1, c1, r2, c2, inclusive)
-    D::Range.new(D::Position.new(r1, c1), D::Position.new(r2, c2), :charwise, inclusive)
+    D::Range.new(from: D::Position.new(row: r1, col: c1), to: D::Position.new(row: r2, col: c2), kind: :charwise, inclusive: inclusive)
   end
 
   def self.main
@@ -98,7 +98,7 @@ module DomainBufferTest
       b.lines
     end
 
-    inclusive = D::Range.new(pos(0, 1), pos(0, 2), :charwise, true)
+    inclusive = D::Range.new(from: pos(0, 1), to: pos(0, 2), kind: :charwise, inclusive: true)
     b = D::Buffer.new(lines: ["abcd"], path: nil, line_ending: "\n")
     b.delete(inclusive)
     t.assert_equal(["ad"], b.lines, "inclusive range deletes its end character")
@@ -146,7 +146,7 @@ module DomainBufferTest
     t.assert_equal([2, 4], p1.with(col: 4).to_a, "with copies a position")
     t.assert_equal([2, 3], p1.to_a, "with leaves the original unchanged")
     r1 = D::Range.charwise(pos(0, 0), pos(0, 2))
-    r2 = D::Range.new(pos(0, 0), pos(0, 2), :charwise, false)
+    r2 = D::Range.new(from: pos(0, 0), to: pos(0, 2), kind: :charwise, inclusive: false)
     t.assert_true(r1 == r2, "ranges are equal by value")
     t.assert_true(r1.frozen?, "ranges are frozen")
 
@@ -191,7 +191,7 @@ module DomainBufferTest
     # Scratch members, signs, and the change counter.
     b = D::Buffer.new(lines: ["ab"], path: nil, line_ending: "\n")
     t.assert_equal([false, "", "", true, nil, 0], [b.scratch?, b.owner, b.title, b.keymap.nil?, b.display_name, b.changes], "a file buffer has no owner, title, keymap, or changes")
-    b.insert(D::Position.new(0, 1), "x")
+    b.insert(D::Position.new(row: 0, col: 1), "x")
     b.delete(rng(0, 0, 0, 1, false))
     b.set_lines(0, 1, ["y"])
     t.assert_equal(3, b.changes, "every primitive counts one change")

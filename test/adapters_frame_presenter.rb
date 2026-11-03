@@ -59,7 +59,7 @@ module AdaptersFramePresenterTest
   def self.visual_frame(lines, mode, anchor, head)
     s = state_for(lines, "a.txt")
     s.mode = mode
-    s.window.anchor = Carat::Domain::Position.new(anchor[0], anchor[1])
+    s.window.anchor = Carat::Domain::Position.new(row: anchor[0], col: anchor[1])
     s.cursor.move_to(head[0], head[1])
     draw(s, 6, 20)
   end
@@ -257,7 +257,7 @@ module AdaptersFramePresenterTest
     # on the screen stays intact while the other is drawn.
     second = draw(s, 10, 40)
     t.assert_true(!second.equal?(f), "the next render paints the other frame")
-    s.buffer.insert(D::Position.new(0, 0), "x")
+    s.buffer.insert(D::Position.new(row: 0, col: 0), "x")
     again = draw(s, 10, 40)
     t.assert_true(again.equal?(f), "the render after that repaints the first frame again")
     t.assert_equal("  1 xab", again.row_text(0), "the reused frame shows the new text")
@@ -415,7 +415,7 @@ module AdaptersFramePresenterTest
     t.assert_equal([NOR, NOR, VIS, NOR], highlights(f, 1, 4), "the same columns on the next row")
     s = state_for(["abc", "a"], "a.txt")
     s.mode = D::Mode::VISUAL_BLOCK
-    s.window.anchor = D::Position.new(0, 1)
+    s.window.anchor = D::Position.new(row: 0, col: 1)
     s.cursor.move_to(1, 1)
     s.cursor.want_col = -1
     f = draw(s, 6, 20)
@@ -423,7 +423,7 @@ module AdaptersFramePresenterTest
     t.assert_equal([NOR, NOR, NOR], highlights(f, 1, 3), "a shorter row ends at its line end, under the cursor here")
     s = state_for(["abcd", "a", "abcd"], "a.txt")
     s.mode = D::Mode::VISUAL_BLOCK
-    s.window.anchor = D::Position.new(0, 2)
+    s.window.anchor = D::Position.new(row: 0, col: 2)
     s.cursor.move_to(2, 3)
     f = draw(s, 6, 20)
     t.assert_equal([NOR, NOR], highlights(f, 1, 2), "a row ending before the block draws nothing")
@@ -436,7 +436,7 @@ module AdaptersFramePresenterTest
     draw(s, 9, 14)
     s.tab.layout.split(0, false, 0, 5)
     s.mode = D::Mode::VISUAL_LINE
-    s.window.anchor = D::Position.new(0, 0)
+    s.window.anchor = D::Position.new(row: 0, col: 0)
     s.cursor.move_to(1, 0)
     f = draw(s, 9, 14)
     t.assert_equal([VIS, VIS, VIS], highlights(f, 4, 3), "the current window, at the bottom, draws its selection")

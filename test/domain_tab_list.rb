@@ -8,7 +8,7 @@ module DomainTabListTest
   D = Carat::Domain
 
   def self.pos(row, col)
-    Carat::Domain::Position.new(row, col)
+    Carat::Domain::Position.new(row: row, col: col)
   end
 
   def self.buffer_named(name)
@@ -115,7 +115,7 @@ module DomainTabListTest
     t.assert_equal([true, [103], false], [input.pending?, input.take_keys, input.pending?], "take_keys hands over the waiting keys and drops them")
     found = D::LastFind.new
     t.assert_equal(true, found.entry.nil?, "no find at first")
-    found.remember(D::Find.new("x", true, false))
+    found.remember(D::Find.new(char: "x", forward: true, till: false))
     t.assert_equal(["x", true], [found.entry.char, found.entry.forward], "remember keeps the find")
     ui = D::PluginUi.new
     t.assert_equal([{}, false], [ui.segments, ui.prompting?], "no status segments and no prompt at first")

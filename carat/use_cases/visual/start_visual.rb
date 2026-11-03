@@ -64,7 +64,7 @@ module Carat
         row = pos.row
         row = buffer.line_count - 1 if row > buffer.line_count - 1
         len = buffer.line(row).length
-        Domain::Position.new(row, pos.col > len ? len : pos.col)
+        Domain::Position.new(row: row, col: pos.col > len ? len : pos.col)
       end
     end
   end

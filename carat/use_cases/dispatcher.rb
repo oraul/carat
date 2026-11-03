@@ -123,7 +123,7 @@ module Carat
         first = selection.start
         return first unless selection.kind == :blockwise
         left = selection.anchor.col < selection.head.col ? selection.anchor.col : selection.head.col
-        Domain::Position.new(selection.top, left)
+        Domain::Position.new(row: selection.top, col: left)
       end
 
       # Keeps the command as the last change when it changed the text or

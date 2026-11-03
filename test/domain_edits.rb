@@ -8,7 +8,7 @@ module DomainEditsTest
   D = Carat::Domain
 
   def self.pos(row, col)
-    Carat::Domain::Position.new(row, col)
+    Carat::Domain::Position.new(row: row, col: col)
   end
 
   def self.letters(n)
@@ -169,11 +169,11 @@ module DomainEditsTest
     b.begin_transaction(pos(0, 0))
     b.last_transaction
     tx = b.transaction
-    tx.add(D::ChangeRecord.new(0, 0, [], []), "probe")
+    tx.add(D::ChangeRecord.new(buffer_id: 0, row: 0, removed: [], inserted: []), "probe")
     t.assert_equal("probe", tx.cause, "the first record gives the cause")
-    tx.add(D::ChangeRecord.new(0, 0, [], []), "probe")
+    tx.add(D::ChangeRecord.new(buffer_id: 0, row: 0, removed: [], inserted: []), "probe")
     t.assert_equal("probe", tx.cause, "records of the same cause keep it")
-    tx.add(D::ChangeRecord.new(0, 0, [], []), "")
+    tx.add(D::ChangeRecord.new(buffer_id: 0, row: 0, removed: [], inserted: []), "")
     t.assert_equal("", tx.cause, "a record of another cause makes it the editor's")
 
     # revert_to undoes the open transaction's records after a count.

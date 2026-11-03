@@ -8,7 +8,7 @@ module DomainRegistersTest
   D = Carat::Domain
 
   def self.entry(text, linewise)
-    Carat::Domain::RegisterEntry.new(text, linewise ? :linewise : :charwise)
+    Carat::Domain::RegisterEntry.new(text: text, kind: linewise ? :linewise : :charwise)
   end
 
   def self.main

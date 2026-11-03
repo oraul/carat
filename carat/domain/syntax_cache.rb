@@ -99,7 +99,7 @@ module Carat
       # Keeps the tokens of the line object for a start state.
       #: (String, Integer, Array[Integer], Integer) -> void
       def store(text, start, tokens, end_state)
-        current.store(SyntaxLine.new(text, start, tokens, end_state))
+        current.store(SyntaxLine.new(text: text, start: start, tokens: tokens, end_state: end_state))
       end
 
       # Records the end state of the row at valid and moves valid past it,

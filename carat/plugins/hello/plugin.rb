@@ -28,15 +28,16 @@ module Carat
         # @rbs skip
         def manifest
           Carat::PluginApi::Manifest.new(
-            NAME,
-            "0.1.0",
-            Carat::PluginApi::VERSION,
-            { "plugin.hello.greet" => "Show a greeting with the info icon and count it in the status line" },
-            { "Hello" => "Hel" },
-            { "normal" => { "<leader>hh" => GREET } },
-            ["buffer_open"],
-            { "greeting" => "Hello" },
-            { "greeting" => "string" }, []
+            name: NAME,
+            version: "0.1.0",
+            api_version: Carat::PluginApi::VERSION,
+            actions: { "plugin.hello.greet" => "Show a greeting with the info icon and count it in the status line" },
+            commands: { "Hello" => "Hel" },
+            bindings: { "normal" => { "<leader>hh" => GREET } },
+            events: ["buffer_open"],
+            options: { "greeting" => "Hello" },
+            option_types: { "greeting" => "string" },
+            filetypes: []
           )
         end
 

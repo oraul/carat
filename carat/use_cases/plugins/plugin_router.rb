@@ -41,7 +41,7 @@ module Carat
         actions = e.manifest.actions
         return Outcome.failure("Plugin #{plugin_name} has no action #{name}") unless actions.is_a?(Hash) && actions.key?(name)
         cursor = state.cursor
-        context = PluginApi::Context.new(command.count, command.register, state.buffer.id, state.window.id, state.buffer.path_text.dup, cursor.row, cursor.col)
+        context = PluginApi::Context.new(count: command.count, register: command.register, buffer: state.buffer.id, window: state.window.id, path: state.buffer.path_text.dup, row: cursor.row, col: cursor.col)
         guarded(e) { e.plugin.on_action(name, context) }
         Outcome.none
       end
@@ -59,7 +59,7 @@ module Carat
       def command(ex_command)
         e = @registry.owner_of_command(ex_command.name)
         return Outcome.failure("E492: Not an editor command: #{ex_command.name}") if e.nil?
-        call = PluginApi::Command.new(e.full_command(ex_command.name), ex_command.bang, ex_command.args.dup)
+        call = PluginApi::Command.new(name: e.full_command(ex_command.name), bang: ex_command.bang, args: ex_command.args.dup)
         guarded(e) { e.plugin.on_command(call) }
         Outcome.success("")
       end
@@ -74,7 +74,7 @@ module Carat
         ui.close_prompt
         e = @registry.find(owner)
         return if e.nil? || !e.enabled
-        input = PluginApi::Input.new(id, cancelled ? "" : text.dup, cancelled)
+        input = PluginApi::Input.new(id: id, text: cancelled ? "" : text.dup, cancelled: cancelled)
         guarded(e) { e.plugin.on_input(input) }
       end
 

@@ -10,7 +10,7 @@ module DomainPluginManifestTest
 
   # A manifest like the hello plugin's, with one field replaced per row.
   def self.manifest(name, api, actions, commands, bindings, events, options, types)
-    Carat::PluginApi::Manifest.new(name, "0.1.0", api, actions, commands, bindings, events, options, types, [])
+    Carat::PluginApi::Manifest.new(name: name, version: "0.1.0", api_version: api, actions: actions, commands: commands, bindings: bindings, events: events, options: options, option_types: types, filetypes: [])
   end
 
   GOOD_ACTIONS = { "plugin.hello.greet" => "Show a greeting" }
@@ -18,7 +18,7 @@ module DomainPluginManifestTest
 
   # A manifest that tokenizes the given filetypes.
   def self.tokenizer(filetypes)
-    Carat::PluginApi::Manifest.new("lang", "0.1.0", "1.3", {}, {}, nil, [], {}, {}, filetypes)
+    Carat::PluginApi::Manifest.new(name: "lang", version: "0.1.0", api_version: "1.3", actions: {}, commands: {}, bindings: nil, events: [], options: {}, option_types: {}, filetypes: filetypes)
   end
 
   def self.good

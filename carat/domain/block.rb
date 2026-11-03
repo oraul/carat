@@ -35,7 +35,7 @@ module Carat
         from = line.length if from < 0
         to = from if to < from
         width = DisplayWidth.column(line, line.length, tabstop)
-        Span.new(from, to, to_end || (width >= left && width <= right))
+        Span.new(from: from, to: to, eol: to_end || (width >= left && width <= right))
       end
 
       # Whether line ends before the block's first column, as Vim's

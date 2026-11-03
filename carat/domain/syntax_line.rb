@@ -7,7 +7,7 @@ module Carat
     # the end of the line. A Data value, never changed after it is built.
     class SyntaxLine < Data.define(:text, :start, :tokens, :end_state)
       # The entry a row without highlighting is painted with.
-      NONE = SyntaxLine.new(String.new("none"), -1, Array.new(0, 0), -1)
+      NONE = SyntaxLine.new(text: String.new("none"), start: -1, tokens: Array.new(0, 0), end_state: -1)
 
       # @rbs @text: String
       # @rbs @start: Integer

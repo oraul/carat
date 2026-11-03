@@ -28,8 +28,8 @@ module EditorPluginsTest
     # @rbs skip
     def manifest
       Carat::PluginApi::Manifest.new(
-        "side", "1.0.0", "1.0",
-        {
+        name: "side", version: "1.0.0", api_version: "1.0",
+        actions: {
           "plugin.side.open" => "Open the list on the left",
           "plugin.side.right" => "Open the list on the right",
           "plugin.side.wide" => "Open a list too wide to fit",
@@ -42,9 +42,9 @@ module EditorPluginsTest
           "plugin.side.count" => "Report the count and the register",
           "plugin.side.here" => "Open b.txt in the side window itself"
         },
-        {},
-        { "normal" => { "<leader>to" => "plugin.side.open", "<leader>tr" => "plugin.side.right", "<leader>tw" => "plugin.side.wide", "<leader>tc" => "plugin.side.close", "<leader>tl" => "plugin.side.lines", "<leader>tn" => "plugin.side.nope", "<leader>tf" => "plugin.side.file", "<leader>tx" => "plugin.side.far", "<leader>tt" => "plugin.side.count", "<leader>th" => "plugin.side.here" } },
-        [], {}, {}, []
+        commands: {},
+        bindings: { "normal" => { "<leader>to" => "plugin.side.open", "<leader>tr" => "plugin.side.right", "<leader>tw" => "plugin.side.wide", "<leader>tc" => "plugin.side.close", "<leader>tl" => "plugin.side.lines", "<leader>tn" => "plugin.side.nope", "<leader>tf" => "plugin.side.file", "<leader>tx" => "plugin.side.far", "<leader>tt" => "plugin.side.count", "<leader>th" => "plugin.side.here" } },
+        events: [], options: {}, option_types: {}, filetypes: []
       )
     end
 
@@ -141,7 +141,7 @@ module EditorPluginsTest
     # Returns the manifest.
     # @rbs skip
     def manifest
-      Carat::PluginApi::Manifest.new("boom", "1.0.0", "1.0", { "plugin.boom.go" => "Raise" }, {}, { "normal" => { " bb" => "plugin.boom.go" } }, [:cursor_move], {}, {}, [])
+      Carat::PluginApi::Manifest.new(name: "boom", version: "1.0.0", api_version: "1.0", actions: { "plugin.boom.go" => "Raise" }, commands: {}, bindings: { "normal" => { " bb" => "plugin.boom.go" } }, events: [:cursor_move], options: {}, option_types: {}, filetypes: [])
     end
 
     #: (String, Carat::PluginApi::Context) -> void

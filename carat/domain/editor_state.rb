@@ -95,7 +95,7 @@ module Carat
       # the line end. Outside the visual modes the kind is :none.
       #: () -> Selection
       def selection
-        Selection.new(window.anchor, cursor.position, Mode.visual_kind(mode), cursor.want_col < 0)
+        Selection.new(anchor: window.anchor, head: cursor.position, kind: Mode.visual_kind(mode), to_end: cursor.want_col < 0)
       end
 
       # Leaves visual mode: the selection is stored on the window for

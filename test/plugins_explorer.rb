@@ -35,7 +35,7 @@ module PluginsExplorerTest
     # @rbs path: String
     def stat(path)
       info = @files.stat(path)
-      Carat::PluginApi::FileInfo.new(info.exists, info.size, 0, info.directory, info.symlink)
+      Carat::PluginApi::FileInfo.new(ok: info.exists, size: info.size, mtime: 0, directory: info.directory, symlink: info.symlink)
     end
 
     # Returns a TextResponse with the glyph.

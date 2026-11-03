@@ -46,7 +46,7 @@ module Carat
             i += 1
           end
           buffer.set_lines(row, row, lines)
-          return Position.new(row, buffer.first_nonblank(row))
+          return Position.new(row: row, col: buffer.first_nonblank(row))
         end
         text = +""
         i = 0
@@ -57,9 +57,9 @@ module Carat
         len = buffer.line(pos.row).length
         col = after ? pos.col + 1 : pos.col
         col = len if col > len
-        buffer.insert(Position.new(pos.row, col), text)
-        return Position.new(pos.row, col) if text.include?("\n")
-        Position.new(pos.row, col + text.length - 1)
+        buffer.insert(Position.new(row: pos.row, col: col), text)
+        return Position.new(row: pos.row, col: col) if text.include?("\n")
+        Position.new(row: pos.row, col: col + text.length - 1)
       end
 
       # Joins count lines (at least two) starting at row and returns the
@@ -161,7 +161,7 @@ module Carat
           first = col if i == 0
           i += 1
         end
-        Position.new(row, first)
+        Position.new(row: row, col: first)
       end
 
       # Shifts the text of every row that goes past the block by amount

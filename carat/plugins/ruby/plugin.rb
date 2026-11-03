@@ -24,7 +24,7 @@ module Carat
         # Returns the manifest.
         # @rbs skip
         def manifest
-          Carat::PluginApi::Manifest.new(NAME, "1.0.0", Carat::PluginApi::VERSION, {}, {}, nil, [], {}, {}, ["ruby"])
+          Carat::PluginApi::Manifest.new(name: NAME, version: "1.0.0", api_version: Carat::PluginApi::VERSION, actions: {}, commands: {}, bindings: nil, events: [], options: {}, option_types: {}, filetypes: ["ruby"])
         end
 
         # Resolves the group names; a name the host does not know leaves its

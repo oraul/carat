@@ -42,7 +42,7 @@ module Carat
         recorded = last.command
         return Outcome.none if recorded.nil?
         count = command.count > 0 ? command.count : recorded.count
-        replay = Domain::Command.new(next_register(recorded.register), count, recorded.operator, recorded.action, recorded.char, recorded.linewise, recorded.keys)
+        replay = Domain::Command.new(register: next_register(recorded.register), count: count, operator: recorded.operator, action: recorded.action, char: recorded.char, linewise: recorded.linewise, keys: recorded.keys)
         last.command = replay
         handler = @actions.find(replay.operator? ? replay.operator : replay.action)
         return Outcome.none if handler.nil?
@@ -95,7 +95,7 @@ module Carat
         last_row = buffer.line_count - 1
         end_row = row + last.rows
         end_row = last_row if end_row > last_row
-        state.window.anchor = Domain::Position.new(row, col)
+        state.window.anchor = Domain::Position.new(row: row, col: col)
         kind = last.visual
         if kind == :linewise
           state.mode = Domain::Mode::VISUAL_LINE

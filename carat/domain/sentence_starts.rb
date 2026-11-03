@@ -45,7 +45,7 @@ module Carat
 
       #: (Integer) -> Position
       def position(i)
-        Position.new(row(i), col(i))
+        Position.new(row: row(i), col: col(i))
       end
 
       # Whether start i comes after pos.

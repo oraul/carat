@@ -96,7 +96,7 @@ module Carat
       def run_ex(name, text)
         return PluginApi::Response.failure(E169) if @registry.depth >= MAX_DEPTH
         outcome = @runner.call(@state, text)
-        PluginApi::Response.new(outcome.ok, outcome.message, 0, [])
+        PluginApi::Response.new(ok: outcome.ok, message: outcome.message, number: 0, lines: [])
       end
     end
   end

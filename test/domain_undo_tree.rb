@@ -14,23 +14,23 @@ module DomainUndoTreeTest
   end
 
   def self.cut(b)
-    b.begin_transaction(D::Position.new(0, 0))
-    b.delete(D::Range.charwise(D::Position.new(0, 0), D::Position.new(0, 1)))
-    b.commit_transaction(D::Position.new(0, 0))
+    b.begin_transaction(D::Position.new(row: 0, col: 0))
+    b.delete(D::Range.charwise(D::Position.new(row: 0, col: 0), D::Position.new(row: 0, col: 1)))
+    b.commit_transaction(D::Position.new(row: 0, col: 0))
   end
 
   def self.undo(b)
     tree = b.undo
-    b.begin_history(D::Position.new(0, 0))
+    b.begin_history(D::Position.new(row: 0, col: 0))
     b.revert(tree.undo_step)
-    b.commit_transaction(D::Position.new(0, 0))
+    b.commit_transaction(D::Position.new(row: 0, col: 0))
     b.settle_saved
   end
 
   def self.go(b, target)
     tree = b.undo
     path = tree.path_to(target)
-    b.begin_history(D::Position.new(0, 0))
+    b.begin_history(D::Position.new(row: 0, col: 0))
     i = 0
     while i < path.length
       step = path[i]
@@ -41,7 +41,7 @@ module DomainUndoTreeTest
       end
       i += 1
     end
-    b.commit_transaction(D::Position.new(0, 0))
+    b.commit_transaction(D::Position.new(row: 0, col: 0))
     b.settle_saved
   end
 
@@ -59,9 +59,9 @@ module DomainUndoTreeTest
     # Undo goes to the parent and redo comes back.
     undo(b)
     t.assert_equal([1, ["bcd"], 2], [tree.current, b.lines, tree.redo_seq], "undo moves to the parent and redo would come back")
-    b.begin_history(D::Position.new(0, 0))
+    b.begin_history(D::Position.new(row: 0, col: 0))
     b.reapply(tree.redo_to(tree.redo_seq))
-    b.commit_transaction(D::Position.new(0, 0))
+    b.commit_transaction(D::Position.new(row: 0, col: 0))
     t.assert_equal([2, ["cd"]], [tree.current, b.lines], "redo applies the state again")
 
     # History transactions are no states.
@@ -71,7 +71,7 @@ module DomainUndoTreeTest
     b = buffer_of(["abc"])
     cut(b)
     undo(b)
-    b.delete(D::Range.charwise(D::Position.new(0, 2), D::Position.new(0, 3)))
+    b.delete(D::Range.charwise(D::Position.new(row: 0, col: 2), D::Position.new(row: 0, col: 3)))
     tree = b.undo
     t.assert_equal([2, 0, ["ab"], 2], [tree.current, tree.parent_of(2), b.lines, tree.root_head], "the new change is state 2 beside state 1, and redo from the root follows it")
     t.assert_equal([1, 2], tree.leaves, "both branches end in a leaf")
@@ -116,7 +116,7 @@ module DomainUndoTreeTest
     tree = b.undo
     undo(b)
     undo(b)
-    b.insert(D::Position.new(0, 0), "X")
+    b.insert(D::Position.new(row: 0, col: 0), "X")
     t.assert_equal([3, 1, 3, -1, ["Xabcd"]], [tree.current, tree.live, tree.root_head, tree.slot(1), b.lines], "the old branch from the root is dropped with its states")
 
     # Levels of 0 keep nothing to undo.
@@ -143,9 +143,9 @@ module DomainUndoTreeTest
 
     # A write while the transaction is open marks the state it becomes.
     b = buffer_of(["abc"])
-    b.begin_transaction(D::Position.new(0, 0))
+    b.begin_transaction(D::Position.new(row: 0, col: 0))
     b.reload(["xyz"])
-    b.commit_transaction(D::Position.new(0, 0))
+    b.commit_transaction(D::Position.new(row: 0, col: 0))
     t.assert_equal([1, 1, false], [b.undo.current, b.undo.saved, b.modified?], "a reload inside a command is the saved state")
 
     # A fresh buffer is at its saved state; undoing to it clears the flag.
@@ -172,12 +172,12 @@ module DomainUndoTreeTest
 
     # Typing on one line keeps one record per state.
     b = buffer_of(["ab"])
-    b.begin_transaction(D::Position.new(0, 0))
-    b.insert(D::Position.new(0, 1), "x")
-    b.insert(D::Position.new(0, 2), "y")
-    b.insert(D::Position.new(0, 3), "\n")
-    b.insert(D::Position.new(1, 0), "z")
-    b.commit_transaction(D::Position.new(1, 1))
+    b.begin_transaction(D::Position.new(row: 0, col: 0))
+    b.insert(D::Position.new(row: 0, col: 1), "x")
+    b.insert(D::Position.new(row: 0, col: 2), "y")
+    b.insert(D::Position.new(row: 0, col: 3), "\n")
+    b.insert(D::Position.new(row: 1, col: 0), "z")
+    b.commit_transaction(D::Position.new(row: 1, col: 1))
     state = b.undo.transaction_at(b.undo.slot(1))
     t.assert_equal([1, ["ab"], ["axy", "zb"]], [state.size, state.record_at(0).removed, state.record_at(0).inserted], "records inside the lines the one before inserted merge into it")
     undo(b)

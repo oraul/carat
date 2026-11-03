@@ -46,7 +46,7 @@ module EditorSyntaxTest
     # Returns the manifest.
     # @rbs skip
     def manifest
-      Carat::PluginApi::Manifest.new("boom", "1.0.0", "1.3", {}, {}, nil, [], {}, {}, ["ruby"])
+      Carat::PluginApi::Manifest.new(name: "boom", version: "1.0.0", api_version: "1.3", actions: {}, commands: {}, bindings: nil, events: [], options: {}, option_types: {}, filetypes: ["ruby"])
     end
 
     # Raises.

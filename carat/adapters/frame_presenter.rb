@@ -86,7 +86,7 @@ module Carat
         @sel_to = -2
         @sel_end = -1
         @none = Domain::Selection.none
-        @no_block = Domain::Block.new(0, -1, 1, 0, false)
+        @no_block = Domain::Block.new(top: 0, bottom: -1, left: 1, right: 0, to_end: false)
       end
 
       #: (Domain::EditorState) -> Domain::Frame
