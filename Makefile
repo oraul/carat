@@ -41,6 +41,24 @@ TEST_BIN    := build/test/run_all
 TEST_OPT    ?= 0
 DEV_FLAGS   := -O $(TEST_OPT) --incremental
 export SPINEL_CACHE_DIR ?= $(CURDIR)/build/spinel-cache
+# The development build of the editor (make dev-build): bin/carat.rb with
+# DEV_FLAGS into DEV_BIN, which CI's smoke test runs on pull requests in
+# place of the release build. On four cores its C compiled in 2.5 s cold
+# against 15 s for the release build at -O 2; the analysis, about 14 s,
+# is the same for both. It is kept out of build/bin, so spin build never
+# takes it for an up to date release binary.
+DEV_BIN     := build/dev/carat
+# The editor binary the smoke test runs (test/smoke_editor.rb reads it):
+# the release build by default, DEV_BIN when CI passes CARAT_BIN.
+export CARAT_BIN ?= build/bin/carat
+# The tests make test-run runs: every test/*.rb when empty, e.g.
+# make test-run TESTS=test/smoke_editor.rb.
+TESTS      ?=
+# The benchmark binary make bench-budget builds with DEV_FLAGS: it counts
+# objects, not time, and every scenario allocated the same objects and
+# bytes per key at -O 0 as at -O 2, so it needs no release build. make
+# bench and make profile, which measure time, keep -O 2 in build/bench/keys.
+BUDGET_BIN  := build/bench/keys-budget
 # T names the test program of make test-one and make diagnose-one.
 T          ?=
 # The spinel-doctor legs make diagnose skips. The behavior leg compares
@@ -62,6 +80,11 @@ DIAGNOSE_SKIP ?= behavior
 ANALYSIS_ROOTS  ?= bin/carat.rb $(TEST_RUNNER)
 ANALYSIS_ROUNDS ?= 2
 ANALYSIS_MS     ?= 45000
+# Prints one line from the phase report of a development build: the
+# analysis time, the units of C, how many missed the cache and were
+# compiled, and the C compile's wall time, so a log shows how much of the
+# compile cache a build reused.
+UNIT_SUMMARY := awk '/^spinel-timing: phase=analysis / { a = $$3 } /^spinel-timing: phase=cc_compile / { sub(/^spinel-timing: phase=cc_compile /, ""); print "analysis " a ", C compile " $$0; exit }'
 OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y @fission-ai/openspec@latest
 
 # tools/noruby holds a ruby that refuses to run and exits 127. It comes first
@@ -166,6 +189,16 @@ build:
 	@echo "  fish:          alias carat '$(CURDIR)/build/bin/carat'"
 	@echo "Or run make install PREFIX=dir to copy it to dir/bin, a directory on your PATH, instead."
 
+## dev-build: compile the editor bin/carat.rb with the development flags (-O TEST_OPT, --incremental) into build/dev/carat, the binary CI's smoke test runs on pull requests (make test-run CARAT_BIN=build/dev/carat); make build stays the release build
+dev-build:
+	@mkdir -p $(dir $(DEV_BIN))
+	@rm -f $(DEV_BIN)
+	@echo "spinel bin/carat.rb $(DEV_FLAGS) -o $(DEV_BIN)"
+	@SP_TIMING=1 spinel $$(spin flags) bin/carat.rb $(DEV_FLAGS) -o $(DEV_BIN) 2> $(DEV_BIN).timing; \
+	  status=$$?; grep -v '^spinel-timing' $(DEV_BIN).timing >&2; \
+	  if [ $$status -ne 0 ]; then echo "dev-build: bin/carat.rb did not compile" >&2; exit 1; fi
+	@$(UNIT_SUMMARY) $(DEV_BIN).timing
+
 ## run: build and run the editor on FILE (default README.md), e.g. make run FILE=path/to/file
 run:
 	spin run carat -- "$(FILE)"
@@ -197,11 +230,12 @@ test-build:
 	@SP_TIMING=1 spinel $$(spin flags) $(TEST_RUNNER) $(DEV_FLAGS) -o $(TEST_BIN) 2> $(TEST_BIN).timing; \
 	  status=$$?; grep -v '^spinel-timing' $(TEST_BIN).timing >&2; \
 	  if [ $$status -ne 0 ]; then echo "test-build: $(TEST_RUNNER) did not compile; no test ran" >&2; exit 1; fi
+	@$(UNIT_SUMMARY) $(TEST_BIN).timing
 	sh tools/analysis_budget.sh --check $(ANALYSIS_ROUNDS) $(ANALYSIS_MS) $(TEST_RUNNER) $(TEST_BIN).timing
 
-## test-run: run every test from the compiled runner, each in its own process, and compare its output with its committed snapshot; make test-build compiles the runner
+## test-run: run every test from the compiled runner (or the TESTS named, e.g. TESTS=test/smoke_editor.rb), each in its own process, and compare its output with its committed snapshot; the smoke test runs CARAT_BIN (default build/bin/carat); make test-build compiles the runner
 test-run:
-	sh tools/run_tests.sh $(TEST_BIN)
+	sh tools/run_tests.sh $(TEST_BIN) $(TESTS)
 
 ## test-one: compile one test program on its own with the development flags and run it against its snapshot, e.g. make test-one T=test/domain_buffer.rb; a smoke test builds the editor first
 test-one:
@@ -245,11 +279,16 @@ bench:
 	spinel $$(spin flags) bench/keys.rb -o build/bench/keys
 	sh bench/run.sh $(SCENARIOS)
 
-## bench-budget: build the key benchmark and fail when one key of the cursor scenario (lh) allocates ALLOC_BUDGET objects or more (default 100); CI runs it
+## bench-budget: build the key benchmark with the development flags into build/bench/keys-budget (allocations are the same at -O 0 as at -O 2) and fail when one key of the cursor scenario (lh) allocates ALLOC_BUDGET objects or more (default 100); CI runs it
 bench-budget:
 	@mkdir -p build/bench
-	spinel $$(spin flags) bench/keys.rb -o build/bench/keys
-	sh bench/run.sh --budget lh $(ALLOC_BUDGET)
+	@rm -f $(BUDGET_BIN)
+	@echo "spinel bench/keys.rb $(DEV_FLAGS) -o $(BUDGET_BIN)"
+	@SP_TIMING=1 spinel $$(spin flags) bench/keys.rb $(DEV_FLAGS) -o $(BUDGET_BIN) 2> $(BUDGET_BIN).timing; \
+	  status=$$?; grep -v '^spinel-timing' $(BUDGET_BIN).timing >&2; \
+	  if [ $$status -ne 0 ]; then echo "bench-budget: bench/keys.rb did not compile" >&2; exit 1; fi
+	@$(UNIT_SUMMARY) $(BUDGET_BIN).timing
+	BENCH_BIN=$(BUDGET_BIN) sh bench/run.sh --budget lh $(ALLOC_BUDGET)
 
 ## profile: build the key benchmark with spinel --profile into build/profile and, when perf works (or PERF names one that does), record the j and lh scenarios and print the top functions by self time with their Ruby names
 profile:
@@ -296,6 +335,6 @@ help:
 	@echo "Carat targets:"
 	@grep -E '^## [a-z-]+:' $(MAKEFILE_LIST) | sed -E 's/^## ([a-z-]+): (.*)/  \1\t\2/' | expand -t 16
 	@echo
-	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)  T=$(T)  TEST_OPT=$(TEST_OPT)  SPINEL_CACHE_DIR=$(SPINEL_CACHE_DIR)"
+	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)  T=$(T)  TEST_OPT=$(TEST_OPT)  SPINEL_CACHE_DIR=$(SPINEL_CACHE_DIR)  CARAT_BIN=$(CARAT_BIN)  TESTS=$(TESTS)"
 
-.PHONY: toolchain toolchain-clean spinel-rev doctor no-cruby build run install pack clean test test-build test-run test-one lint snapshots diagnose diagnose-one bench bench-budget analysis-budget profile types gen-config check spec-list spec-validate spec-update help
+.PHONY: toolchain toolchain-clean spinel-rev doctor no-cruby build dev-build run install pack clean test test-build test-run test-one lint snapshots diagnose diagnose-one bench bench-budget analysis-budget profile types gen-config check spec-list spec-validate spec-update help

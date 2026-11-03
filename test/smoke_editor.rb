@@ -1,9 +1,10 @@
-# Runs build/bin/carat inside a pseudo-terminal: the usage and terminal
+# Runs the editor binary inside a pseudo-terminal: the usage and terminal
 # checks, an insert-write-quit session, a quit refused then forced, split
 # windows and a tab page, the file tree, a linewise visual delete, a
-# Ruby file in colors, and SIGTERM. Needs the binary that spin build
-# produces; make test builds it first. Prints only the harness lines so
-# the snapshot is stable.
+# Ruby file in colors, and SIGTERM. Runs build/bin/carat, the release
+# binary make test builds first, or the binary CARAT_BIN names (CI runs
+# the development build of make dev-build on pull requests). Prints only
+# the harness lines so the snapshot is stable.
 #
 # Between sending keys the test drains the editor's output until it goes
 # quiet, so the editor has finished drawing and is waiting on input before
@@ -20,7 +21,7 @@ require_relative "../carat/testing"
 # with every other test in one program; the guard at the end runs it when
 # the file is compiled on its own (make test-one).
 module SmokeEditorTest
-  BIN = "build/bin/carat"
+  BIN = ENV["CARAT_BIN"] || "build/bin/carat"
   DIR = "build/smoke"
 
   # Reads until the editor produces nothing for quiet seconds, appending to
