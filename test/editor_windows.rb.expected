@@ -42,6 +42,25 @@ ok   :vnew splits vertically with an empty buffer
 ok   :vne splits vertically with an empty buffer
 ok   :sp file splits and shows the file
 ok   nested splits
+ok   Ctrl-W Ctrl-S splits as Ctrl-W s
+ok   a count before Ctrl-W Ctrl-S sets the new window's rows
+ok   Ctrl-W Ctrl-V splits as Ctrl-W v
+ok   a count before Ctrl-W Ctrl-V sets the new window's columns
+ok   Ctrl-W Ctrl-J moves down
+ok   Ctrl-W Ctrl-K moves back up
+ok   Ctrl-W Ctrl-L moves right
+ok   Ctrl-W Ctrl-H moves back left
+ok   a count before Ctrl-W Ctrl-J moves several windows and stops at the edge
+ok   a count before Ctrl-W Ctrl-K moves several windows up
+ok   Ctrl-W Ctrl-W goes to the next window
+ok   Ctrl-W Ctrl-W wraps to the first
+ok   a count before Ctrl-W Ctrl-W picks that window
+ok   Ctrl-W Ctrl-P returns to the previous window
+ok   Ctrl-W Ctrl-O keeps only the current window
+ok   Ctrl-W Ctrl-Q closes one of two windows
+ok   a count before Ctrl-W Ctrl-Q quits that window
+ok   Ctrl-W Ctrl-C changes nothing
+ok   Ctrl-W Ctrl-C drops the count typed before it
 ok   Ctrl-W, a pause, and l move right without moving the cursor
 ok   Ctrl-W, a pause, and h move back left
 ok   Ctrl-W, a pause, and j move down
@@ -50,6 +69,10 @@ ok   Ctrl-W, a pause, and w go to the next window
 ok   Ctrl-W, a pause, and W go to the previous window
 ok   Ctrl-W, a pause, and p return to the previous window
 ok   a pause after the split itself changes nothing
+ok   Ctrl-W, a pause, and Ctrl-J move down
+ok   Ctrl-W, a pause, and Ctrl-L move right
+ok   Ctrl-W, a pause, and Ctrl-W go to the next window
+ok   j after Ctrl-W Ctrl-C moves the cursor in the same window
 ok   two text rows cannot be split
 ok   three text rows can
 ok   nine columns cannot be split with the gutter
@@ -96,6 +119,7 @@ ok   the separator moved
 ok   equalizing shares the narrower width
 ok   Ctrl-W q closes one of two windows
 ok   Ctrl-W q on the last window quits
+ok   Ctrl-W Ctrl-Q on the last window quits
 ok   Ctrl-W q on the last window refuses a modified buffer
 ok   the other window keeps showing the modified buffer
 ok   the hidden buffer blocks :qa
@@ -115,4 +139,4 @@ ok   :only keeps the current window with its buffer
 ok   :wa reports the nameless buffer and writes the others
 ok   the nameless buffer stays modified
 ok   :wqa does not quit while a buffer could not be written
-editor_windows: 117 passed, 0 failed
+editor_windows: 141 passed, 0 failed

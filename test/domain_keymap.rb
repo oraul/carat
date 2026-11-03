@@ -79,6 +79,17 @@ module DomainKeymapTest
       ["control w v splits vertically", [:normal, "<C-w>v"], [:match, "window.vsplit"]],
       ["control w equals equalizes", [:normal, "<C-w>="], [:match, "window.equalize"]],
       ["control w q quits the window", [:normal, "<C-w>q"], [:match, "window.quit"]],
+      ["control w control s splits", [:normal, "<C-w><C-s>"], [:match, "window.split"]],
+      ["control w control v splits vertically", [:normal, "<C-w><C-v>"], [:match, "window.vsplit"]],
+      ["control w control h goes left", [:normal, "<C-w><C-h>"], [:match, "window.left"]],
+      ["control w control j goes down", [:normal, "<C-w><C-j>"], [:match, "window.down"]],
+      ["control w control k goes up", [:normal, "<C-w><C-k>"], [:match, "window.up"]],
+      ["control w control l goes right", [:normal, "<C-w><C-l>"], [:match, "window.right"]],
+      ["control w control w goes to the next window", [:normal, "<C-w><C-w>"], [:match, "window.next"]],
+      ["control w control p goes to the previous window", [:normal, "<C-w><C-p>"], [:match, "window.last_accessed"]],
+      ["control w control o keeps only the window", [:normal, "<C-w><C-o>"], [:match, "window.only"]],
+      ["control w control q quits the window", [:normal, "<C-w><C-q>"], [:match, "window.quit"]],
+      ["control w control c is not bound", [:normal, "<C-w><C-c>"], [:none, nil]],
       ["gt goes to the next tab page", [:normal, "gt"], [:match, "tab.next"]],
       ["gT goes to the previous tab page", [:normal, "gT"], [:match, "tab.previous"]]
     ]) do |input|

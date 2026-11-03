@@ -123,6 +123,16 @@ keymap.normal <C-w>c window.close
 keymap.normal <C-w>o window.only
 keymap.normal <C-w>= window.equalize
 keymap.normal <C-w>q window.quit
+keymap.normal <C-w><C-s> window.split
+keymap.normal <C-w><C-v> window.vsplit
+keymap.normal <C-w><C-h> window.left
+keymap.normal <C-w><C-j> window.down
+keymap.normal <C-w><C-k> window.up
+keymap.normal <C-w><C-l> window.right
+keymap.normal <C-w><C-w> window.next
+keymap.normal <C-w><C-p> window.last_accessed
+keymap.normal <C-w><C-o> window.only
+keymap.normal <C-w><C-q> window.quit
 keymap.normal <C-f> scroll.page_down
 keymap.normal <PageDown> scroll.page_down
 keymap.normal <C-b> scroll.page_up
