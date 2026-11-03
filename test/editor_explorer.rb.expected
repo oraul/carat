@@ -90,4 +90,9 @@ ok   the tree lists both names
 ok   s opens a name with a space in a split
 ok   t opens a name with a bar in a tab page
 ok   v opens a name with a space in a vertical split
-editor_explorer: 92 passed, 0 failed
+ok   the tree lists names that are not UTF-8 as they are
+ok   the screen shows each illegal byte as one replacement character
+ok   the explorer stays enabled after listing them
+ok   Enter opens a name that is not UTF-8
+ok   the status line names the opened file with one replacement character per illegal byte
+editor_explorer: 97 passed, 0 failed

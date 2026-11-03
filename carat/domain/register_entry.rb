@@ -1,3 +1,5 @@
+require_relative "text_lines"
+
 module Carat
   module Domain
     # What a register holds: text and its kind, :charwise, :linewise, or
@@ -38,7 +40,7 @@ module Carat
       # one empty line.
       #: () -> Array[String]
       def lines
-        text.empty? ? [""] : text.split("\n", -1)
+        text.empty? ? [""] : TextLines.split(text, false)
       end
 
       # first with second added after it: charwise onto charwise joins the

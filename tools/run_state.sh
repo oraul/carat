@@ -73,7 +73,7 @@ HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci
 REVIEW_AREAS='config loading=^(config/|carat/(adapters/rc_config_gateway|ports/config_port|domain/(config|default_config|manifest_check|rc_[a-z_]+))[.]rb$)
 file access=^carat/(drivers/disk_files[.]rb|ports/file_port[.]rb|domain/path_(policy|info)[.]rb|use_cases/files/)
 plugin boundaries=^carat/(plugin_api[.]rb|plugins/|use_cases/plugins/)
-terminal output=^carat/(drivers/ansi_terminal|ports/terminal_port|adapters/(screen_presenter|frame_presenter|painted_rows|sgr_table|key_decoder))[.]rb$
+terminal output=^carat/(drivers/ansi_terminal|ports/terminal_port|adapters/(screen_presenter|frame_presenter|painted_rows|sgr_table|key_decoder)|domain/(frame|display_width|utf8|decoded_line))[.]rb$
 process spawning=^carat/drivers/'
 
 die() {

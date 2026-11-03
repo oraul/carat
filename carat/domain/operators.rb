@@ -219,15 +219,28 @@ module Carat
 
       # text changed as the visual "~", "u", "U", and "r" change it: how is
       # :toggle, :lower, :upper, or :replace, which puts char in place of
-      # every character.
+      # every character. Text that is not valid UTF-8 has only its ASCII
+      # letters changed, since swapcase, downcase, and upcase read its
+      # bytes as other characters (an overlong form becomes "/").
       #: (String, Symbol, String) -> String
       def self.recase(text, how, char)
+        return ascii_recase(text, how, char) unless text.valid_encoding?
         case how
         when :toggle then text.swapcase
         when :lower then text.downcase
         when :upper then text.upcase
         else char * text.length
         end
+      end
+
+      # recase for text that is not valid UTF-8: tr changes only the ASCII
+      # letters and keeps every other byte.
+      #: (String, Symbol, String) -> String
+      def self.ascii_recase(text, how, char)
+        return text.tr("a-zA-Z", "A-Za-z") if how == :toggle
+        return text.tr("A-Z", "a-z") if how == :lower
+        return text.tr("a-z", "A-Z") if how == :upper
+        char * text.length
       end
 
       # Shifts rows from..to by amount steps of shiftwidth: right when

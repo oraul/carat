@@ -1,5 +1,6 @@
 require_relative "../ports/terminal_port"
 require_relative "../domain/frame"
+require_relative "../domain/utf8"
 require_relative "../domain/highlight"
 require_relative "../domain/theme"
 require_relative "sgr_table"
@@ -208,7 +209,8 @@ module Carat
 
       # Positions the cursor and writes cells [from, to) of a row, the
       # highlight escape whenever the group changes, the continuation
-      # cells of wide characters skipped.
+      # cells of wide characters skipped. A code that is not a Unicode
+      # scalar value, which has no UTF-8 form, is written as U+FFFD.
       #: (Domain::Frame, Integer, Integer, Integer, String) -> void
       def write_run(frame, row, from, to, out)
         position(out, row, from)
@@ -225,7 +227,8 @@ module Carat
               out << sgr(hl)
               @hl = hl
             end
-            out << codes[i]
+            code = codes[i]
+            out << (Domain::Utf8.scalar?(code) ? code : Domain::Utf8::REPLACEMENT)
           end
           i += 1
         end

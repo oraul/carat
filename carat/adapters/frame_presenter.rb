@@ -1,5 +1,6 @@
 require_relative "../domain/editor_state"
 require_relative "../domain/frame"
+require_relative "../domain/text_lines"
 require_relative "../domain/highlight"
 require_relative "../domain/display_width"
 require_relative "../domain/decoded_line"
@@ -656,8 +657,10 @@ module Carat
       def file_name(buffer)
         path = buffer.path
         return "[No Name]" if path.nil?
-        slash = path.rindex("/")
-        slash.nil? ? path : path[slash + 1, path.length - slash - 1]
+        slash = path.byterindex("/")
+        name = path
+        name = path.byteslice(slash + 1, path.bytesize - slash - 1).to_s unless slash.nil?
+        name
       end
 
       # ":" for an ex command line, a plugin's prompt text while one is open.
@@ -686,7 +689,7 @@ module Carat
       # message row, the last ones when they do not all fit.
       #: (Domain::Frame, Domain::EditorState, Integer, Integer) -> void
       def paint_list(frame, state, rows, cols)
-        lines = state.message.split("\n", -1)
+        lines = Domain::TextLines.split(state.message, false)
         room = rows - 1
         first = lines.length > room ? lines.length - room : 0
         row = rows - 1 - (lines.length - first)

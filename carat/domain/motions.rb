@@ -6,6 +6,7 @@ require_relative "last_find"
 require_relative "walker"
 require_relative "sentence_starts"
 require_relative "motion"
+require_relative "display_width"
 
 module Carat
   module Domain
@@ -108,10 +109,14 @@ module Carat
       end
 
       # Keyword characters: ASCII letters, digits, underscore, and every
-      # code point from U+00C0 upward, until iskeyword exists.
+      # code point from U+00C0 upward, until iskeyword exists. The code
+      # point is decoded by bytes, since a regular expression raises on a
+      # byte that is not UTF-8; such a byte is U+FFFD, a keyword character
+      # as every code point above U+00C0 is.
       #: (String) -> bool
       def self.keyword?(ch)
-        ch.match?(/\A[A-Za-z0-9_]\z/) || ch.ord >= 0xC0
+        return false if ch.empty?
+        code_class(DisplayWidth.code_of(ch), false) == 2
       end
 
       # char_class for a code point: 0 for a space or a tab, then 1, or 2

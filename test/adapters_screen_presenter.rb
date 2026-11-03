@@ -120,6 +120,13 @@ module AdaptersScreenPresenterTest
     screen.present(wide)
     t.assert_true(terminal.last_write.include?("日x"), "a wide character is written once and its continuation cell skipped")
 
+    beyond = D::Frame.new(rows: 1, cols: 4)
+    beyond.put(0, 0, "abcd", D::Highlight::NORMAL)
+    beyond.put_code(0, 1, 0x110000, 1, D::Highlight::NORMAL)
+    beyond.put_code(0, 2, 0xD800, 1, D::Highlight::NORMAL)
+    screen.present(beyond)
+    t.assert_true(terminal.last_write.include?("a\u{FFFD}\u{FFFD}d"), "a code above U+10FFFF or a surrogate in a cell is written as U+FFFD")
+
     buffer = D::Buffer.new(lines: ["a\u009Bb\u009Dc"], path: "a.txt", line_ending: "\n")
     options = D::Options.new
     options.number = false

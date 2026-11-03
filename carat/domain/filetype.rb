@@ -23,16 +23,18 @@ module Carat
       end
 
       # The type of a path by its last segment: a whole name, then an
-      # extension; "" for none.
+      # extension; "" for none. Cut by bytes, so a name that is not UTF-8
+      # finds its extension.
       #: (String) -> String
       def self.from_name(path)
-        slash = path.rindex("/")
-        name = slash.nil? ? path : path[slash + 1, path.length - slash - 1]
+        slash = path.byterindex("/")
+        name = path
+        name = path.byteslice(slash + 1, path.bytesize - slash - 1).to_s unless slash.nil?
         whole = NAMES[name]
         return whole unless whole.nil?
-        dot = name.rindex(".")
+        dot = name.byterindex(".")
         return "" if dot.nil? || dot == 0
-        found = EXTENSIONS[name[dot + 1, name.length - dot - 1]]
+        found = EXTENSIONS[name.byteslice(dot + 1, name.bytesize - dot - 1).to_s]
         found.nil? ? "" : found
       end
 
@@ -42,6 +44,7 @@ module Carat
       #: (String) -> String
       def self.from_shebang(line)
         return "" unless line.start_with?("#!")
+        return "" unless line.valid_encoding?
         words = line[2, line.length - 2].split(" ")
         return "" if words.empty?
         program = base(words[0])

@@ -58,6 +58,28 @@ module DomainBufferTest
       ["empty becomes one newline", "", "\n"]
     ]) { |text| D::Buffer.from_text(text, nil).to_text }
 
+    # Bytes that are not UTF-8 load into their lines and are written back
+    # unchanged: rows are [label, text, [lines, file text]].
+    t.table([
+      ["a Latin-1 letter", "caf\xE9\n", [["caf\xE9"], "caf\xE9\n"]],
+      ["an overlong slash", "a\xC0\xAFb\n", [["a\xC0\xAFb"], "a\xC0\xAFb\n"]],
+      ["a surrogate", "\xED\xA0\x80\n", [["\xED\xA0\x80"], "\xED\xA0\x80\n"]],
+      ["above U+10FFFF", "\xF4\x90\x80\x80\n", [["\xF4\x90\x80\x80"], "\xF4\x90\x80\x80\n"]],
+      ["a truncated sequence", "\xE4\xB8\n", [["\xE4\xB8"], "\xE4\xB8\n"]],
+      ["a lone continuation byte", "\x80\n", [["\x80"], "\x80\n"]],
+      ["a NUL", "a\x00b\n", [["a\x00b"], "a\x00b\n"]],
+      ["several lines with illegal bytes", "\xFF\nok\n\xFE\xFF\n", [["\xFF", "ok", "\xFE\xFF"], "\xFF\nok\n\xFE\xFF\n"]],
+      ["windows endings with an illegal byte", "\xFFa\r\nb\r\n", [["\xFFa", "b"], "\xFFa\r\nb\r\n"]]
+    ]) do |text|
+      loaded = D::Buffer.from_text(text.to_s, nil)
+      [loaded.lines, loaded.to_text]
+    end
+    t.assert_equal("\r\n", D::Buffer.from_text("\xFFa\r\nb\r\n", nil).line_ending, "windows endings are found after an illegal byte")
+    t.assert_equal("", D::Buffer.from_text("#!/usr/bin/\xFF ruby\n", "x").filetype, "a shebang that is not UTF-8 names no filetype")
+    hostile = D::Buffer.from_text("a\xFFb\n", nil)
+    hostile.insert(pos(0, 1), "\xC0\n\xAF")
+    t.assert_equal(["a\xC0", "\xAF\xFFb"], hostile.lines, "text with illegal bytes and a newline is inserted by bytes")
+
     fresh = D::Buffer.from_text("x\n", "f.txt")
     t.assert_equal(false, fresh.modified?, "loaded buffer is unmodified")
     t.assert_equal("f.txt", fresh.path, "loaded buffer keeps its path")

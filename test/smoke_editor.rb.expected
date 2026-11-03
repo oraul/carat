@@ -41,7 +41,11 @@ ok   def is written after a color sequence
 ok   the string is written after a color sequence
 ok   :syntax off writes def in the normal group
 ok   the editor exits with status 0 after the color check
+ok   a file that is not UTF-8 opens with its first illegal line named
+ok   each illegal byte is drawn as one replacement character
+ok   writing the unedited file gives back its bytes
+ok   the editor exits with status 0 after yanking and putting an illegal line
 ok   the editor drew its first frame for the signal check
 ok   SIGTERM ends the editor with status 0
 ok   SIGTERM leaves the alternate screen
-smoke_editor: 46 passed, 0 failed
+smoke_editor: 50 passed, 0 failed

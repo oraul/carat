@@ -9,6 +9,7 @@ ok   an unknown extension
 ok   a dot file
 ok   no extension
 ok   the extension is case sensitive
+ok   a name that is not UTF-8
 ok   a ruby shebang
 ok   env ruby
 ok   env with options
@@ -26,4 +27,4 @@ ok   renaming it to a.txt clears the filetype
 ok   a shebang names the filetype
 ok   assign_filetype sets both
 ok   an empty buffer has none
-domain_filetype: 28 passed, 0 failed
+domain_filetype: 29 passed, 0 failed

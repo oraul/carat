@@ -256,6 +256,11 @@ echo api > carat/plugin_api.rb
 commit "feat: api"
 state set due merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "run_state: review-due names a sensitive area" 0 "^due: the change touched plugin boundaries [(]carat/plugin_api[.]rb[)]" state review-due due
+mkdir -p carat/domain
+echo decoder > carat/domain/utf8.rb
+commit "fix: decoder"
+state set due merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: review-due names the decoder as terminal output" 0 "^due: the change touched terminal output [(]carat/domain/utf8[.]rb[)]" state review-due due
 echo more >> README.md
 commit "docs: readme"
 state set due merged "$(git rev-parse --short=12 HEAD)" > /dev/null

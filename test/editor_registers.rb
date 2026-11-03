@@ -38,6 +38,29 @@ module EditorRegistersTest
       h.lines
     end
 
+    # Lines that are not valid UTF-8 go through the registers and the case
+    # changes with every byte kept: rows are [label, [text, start, keys],
+    # lines].
+    t.table([
+      ["yy then p copies a line with an illegal byte", ["a\xFFb\n", [0, 0], "yyp"], ["a\xFFb", "a\xFFb"]],
+      ["dd then p moves it", ["a\xFFb\nc\n", [0, 0], "ddp"], ["c", "a\xFFb"]],
+      ["a charwise yank of illegal bytes", ["\xC0\xAFx\n", [0, 0], "y$$p"], ["\xC0\xAFx\xC0\xAFx"]],
+      ["yank a word and put it after a surrogate", ["ab \xED\xA0\x80\n", [0, 0], "yw$p"], ["ab \xED\xA0\x80ab "]],
+      ["V and U change only the ASCII letters", ["a\xC0\xAFb\n", [0, 0], "VU"], ["A\xC0\xAFB"]],
+      ["V and u keep an illegal byte", ["A\xE9B\n", [0, 0], "Vu"], ["a\xE9b"]],
+      ["tilde over illegal bytes", ["a\xC0\xAFb\n", [0, 0], "~~~~"], ["A\xC0\xAFB"]],
+      ["w moves over an illegal byte as a keyword character", ["ab\xFF cd\n", [0, 0], "wx"], ["ab\xFF d"]]
+    ]) do |input|
+      h = editor(input[0].to_s)
+      h.state.cursor.move_to(input[1][0].to_i, input[1][1].to_i)
+      h.type(input[2].to_s)
+      h.lines
+    end
+
+    h = editor("a\xFFb\nc\n")
+    h.type("yj:registers<CR>")
+    t.assert_true(h.screen.join("\n").include?("a\u{FFFD}b^Jc"), ":registers lists a register holding an illegal byte")
+
     h = editor("ab\n")
     h.type("\"bp")
     t.assert_equal("E353: Nothing in register b", h.message_row, "an empty named register reports E353")

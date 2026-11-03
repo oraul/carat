@@ -1,10 +1,11 @@
 # Runs the editor binary inside a pseudo-terminal: the usage and terminal
 # checks, an insert-write-quit session, a quit refused then forced, split
 # windows and a tab page, the file tree, a linewise visual delete, a
-# Ruby file in colors, and SIGTERM. Runs build/bin/carat, the release
-# binary make test builds first, or the binary CARAT_BIN names (CI runs
-# the development build of make dev-build on pull requests). Prints only
-# the harness lines so the snapshot is stable.
+# Ruby file in colors, a file that is not UTF-8, and SIGTERM. Runs
+# build/bin/carat, the release binary make test builds first, or the
+# binary CARAT_BIN names (CI runs the development build of make dev-build
+# on pull requests). Prints only the harness lines so the snapshot is
+# stable.
 #
 # Between sending keys the test drains the editor's output until it goes
 # quiet, so the editor has finished drawing and is waiting on input before
@@ -247,6 +248,27 @@ module SmokeEditorTest
     writer.write(":q\r")
     code = finish_session(reader, out, pid)
     t.assert_equal(0, code, "the editor exits with status 0 after the color check")
+
+    # A file that is not UTF-8 opens with its first illegal line named,
+    # each illegal byte drawn as U+FFFD, and is written back byte for byte;
+    # yanking and putting such a line raises nothing.
+    hostile_path = "#{DIR}/latin1.txt"
+    hostile = "ok\ncaf\xE9 \xF4\x90\x80\x80\n\xC0\xAF\n".b
+    File.binwrite(hostile_path, hostile)
+    reader, writer, pid = PTY.spawn(BIN, hostile_path)
+    writer.winsize = [24, 80]
+    out = +"".b
+    settle(reader, out, 0.5)
+    t.assert_true(out.include?("[ILLEGAL BYTE in line 2] 3L, 16B"), "a file that is not UTF-8 opens with its first illegal line named")
+    t.assert_true(out.include?("caf\u{FFFD} \u{FFFD}\u{FFFD}\u{FFFD}\u{FFFD}".b), "each illegal byte is drawn as one replacement character")
+    writer.write(":w\r")
+    settle(reader, out, 0.5)
+    t.assert_equal(hostile, File.binread(hostile_path), "writing the unedited file gives back its bytes")
+    writer.write("jyyp")
+    settle(reader, out, 0.5)
+    writer.write(":q!\r")
+    code = finish_session(reader, out, pid)
+    t.assert_equal(0, code, "the editor exits with status 0 after yanking and putting an illegal line")
 
     # SIGTERM ends a running editor cleanly.
     reader, writer, pid = PTY.spawn(BIN, path)

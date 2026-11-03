@@ -37,6 +37,10 @@ ok   wqa with bang writes and quits
 ok   xa on a clean buffer quits without writing
 ok   edit opens another file
 ok   the screen shows the other file
+ok   edit opens a file that is not UTF-8 and names its first illegal line
+ok   the illegal byte is drawn as one replacement character
+ok   writing the unedited file gives back its bytes
+ok   an edit elsewhere keeps the illegal byte
 ok   edit starts a new file
 ok   edit refused while modified
 ok   forced reload discards changes
@@ -65,4 +69,4 @@ ok   xi leaves as xit does
 ok   tabfirs goes to the first tab page
 ok   a spelling shorter than the abbreviation is unknown
 ok   a spelling longer than the full name is unknown
-editor_cmdline: 67 passed, 0 failed
+editor_cmdline: 71 passed, 0 failed
