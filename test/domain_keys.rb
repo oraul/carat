@@ -20,6 +20,7 @@ module DomainKeysTest
       ["control key", "<C-r>", [18]],
       ["control uppercase letter", "<C-R>", [18]],
       ["control bracket", "<C-[>", [27]],
+      ["two control keys in one word", "<C-w><C-h>", [23, 8]],
       ["alt key", "<A-x>", [120 | K::ALT]],
       ["meta spelling", "<M-x>", [120 | K::ALT]],
       ["leader expands", "<leader>w", [32, 119]],

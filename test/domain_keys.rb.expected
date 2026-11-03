@@ -5,6 +5,7 @@ ok   case-insensitive name
 ok   control key
 ok   control uppercase letter
 ok   control bracket
+ok   two control keys in one word
 ok   alt key
 ok   meta spelling
 ok   leader expands
@@ -44,4 +45,4 @@ ok   alt is not printable
 ok   base strips the alt flag
 ok   alt? sees the flag
 ok   char encodes a code point
-domain_keys: 46 passed, 0 failed
+domain_keys: 47 passed, 0 failed
