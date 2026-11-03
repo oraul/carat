@@ -16,7 +16,7 @@ Input: the change being delivered and its brief, or a question from `/plan`.
 
 1. Data, read in this order and only as far as the decision needs:
    - `sh tools/run_state.sh status`: the queue, the last history row, the first-pass rate of each gate, and the rework rounds.
-   - `sh tools/run_state.sh pending`, then `sh tools/run_state.sh show <name>` for each: the metrics, the `note.*` lines (retrospective proposals and periodic review findings), and `review.periodic-*` of the runs not yet in the history.
+   - `sh tools/run_state.sh pending`, then `sh tools/run_state.sh show <name>` for each: the metrics, the `note.*` lines (retrospective proposals and periodic review findings; a `quality-blocking` note is a delivery review's finding, fixed before the merge), and `review.periodic-*` of the runs not yet in the history.
    - `docs/metrics.tsv` (the last ten rows), `docs/backlog.md`, `docs/goals.md`, and `docs/queue.md`.
 2. Decide by `docs/goals.md`, in its order of priority: security first, then performance, code quality, architecture, and the rest. Every decision cites its evidence: a metric with its value (`quality 2/5 first pass`, `lh 27.0 to 31.0 objects per key`, `implement 60% of output tokens`), a finding (`periodic security Medium (8) <file>:<line>`), a backlog entry, or the user's request. A decision without evidence is not made.
 3. Security first: a High or Medium periodic security finding at confidence 8 or above that no merged change fixed goes to the front of the queue. When the brief does not fix it, return it in `security_first`; the workflow stops so it is delivered first.

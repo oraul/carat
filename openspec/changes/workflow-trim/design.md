@@ -42,7 +42,7 @@ On a resume the script seeds `usage`, `firstPass`, `rework`, and `ciMinutes` fro
 
 `history` builds the row from the state:
 
-- first passes: for each of check, quality, security, bench, ci in that order, `metric.first.<gate>`, else that gate's entry of an older `metric.first_pass`, else derived: check from the `stage.*` lines (1 when all passed, 0 when one failed), quality, security, and bench from `review.<kind>` (`pass` 1, `blocked` 0), ci from `ci` (`green` 1, `red` 0); then `gates` as before;
+- first passes: for each of check, quality, security, bench, ci in that order, `metric.first.<gate>`, else that gate's entry of an older `metric.first_pass`, else nothing: the `stage.*`, `review.*`, and `ci` lines hold each gate's last result, which for a merged change is always a pass, so they say nothing of the first; then `gates` as before;
 - phases: `metric.phase.*` grouped as `key=tokens/calls`, else the older `metric.phases`;
 - out tokens and tool calls: the sums over `metric.phase.*`, else the older `metric.out_tokens` and `metric.tool_calls`.
 
@@ -52,7 +52,7 @@ The retrospective and the reporter no longer receive a metric command line; they
 
 `check_stages` keeps a stage passed at `HEAD` as before. A stage not in `TEST_STAGES` (`test-build test-run diagnose metrics docs-lint gates`: the stages that read the test programs, `diagnose` because `make diagnose` runs `spinel-doctor` on the test runner, `metrics` because it reads the runner's rounds from `test-build`'s report, `docs-lint` because it reads `docs/*.md`, the planning records among them, and the `test/` paths the docs name, and the gates) that passed at another commit is carried when every path of `git diff --no-renames --name-only <commit> HEAD` (both paths of a rename, so a file moved under `test/` is no test-only change) is under `test/` or is one no carried stage reads (`openspec/`, `docs/backlog.md`, `docs/queue.md`, `docs/goals.md`, `docs/metrics.tsv`): its record becomes `0 0s HEAD UTC carried-from-COMMIT`, so `gates.sh stages` and a restart read it as passed at `HEAD`. Anything else changed, or a stage that failed, runs.
 
-The quality reviewer's prompt names the commit of the last quality review and its blocking findings (kept by the script); when `git diff --name-only <commit> HEAD` lists only files under `test/`, it reviews `git diff <commit> HEAD` against those findings, otherwise the whole branch diff.
+The quality reviewer records each blocking finding as a `quality-blocking` note headed by the reviewed commit, and a resumed run seeds them when their number matches the review's `blocking=N`. The reviewer's prompt names the commit and result of the last quality review; only when that commit is not `HEAD` and its findings are known (a pass has none) does it give the findings and offer the fix diff: when `git diff --name-only <commit> HEAD` lists at least one file and only files under `test/`, it reviews `git diff <commit> HEAD` against those findings, otherwise the whole branch diff. An unknown finding list or an empty fix diff never narrows the review.
 
 ### Report phase and flushes
 
@@ -61,7 +61,7 @@ The quality reviewer's prompt names the commit of the last quality review and it
 ## Risks and trade-offs
 
 - A carried stage trusts the rule that files under `test/` and the planning records reach only `test-build`, `test-run`, `diagnose`, `metrics`, and `docs-lint`, which rerun, so the carried stages are those whose inputs a test-only commit leaves unchanged; `metrics` reruns because it reads the runner's rounds, so the benchmark never compares the figures of an earlier commit. The brief named three stages; `diagnose` was added because it analyzes the test runner, and CI leaves it out.
-- The history row's derived first passes overstate a run that failed and was fixed before a crash; new runs store the verdict as it happens.
+- A run state from before this change has no `metric.first.*` lines, so its row leaves out the gates its older `metric.first_pass` does not name; deriving them from the last results would record first passes that never happened, which the planner reads as rates.
 - The merger now holds the GitHub read tools for CI as well as the merge; the guard profile is unchanged apart from the body-file rule.
 
 ## Measuring it
@@ -71,4 +71,4 @@ The next change's history row against this one's (`plugin-path-containment`: sco
 Before and after, measured while implementing it (no real run uses the new script until the next change):
 
 - A dry run of the script at 6dfb3c4 and of this one with canned agent results: a run that passes everything first time starts 24 agents and 7 record flushes before, 18 and 4 after (one scout fewer of four asked for, no benchmark agent, one merger instead of the watcher and the merger, three record agents fewer); a quality fix round 27 and 7 before, 21 and 4 after; CI still running at the first look stopped the old run as `stalled` with no merge, the new one merges after two waits.
-- `tools/run_state.sh history` on `agent-authority`'s run state: `ci:1,gates:1` before, `check:1,quality:1,security:1,bench:1,ci:1,gates:1` after.
+- `tools/run_state.sh history` on `agent-authority`'s run state: `ci:1,gates:1` before and after; the derived `check:1,quality:1,security:1,bench:1,ci:1,gates:1` of an earlier commit of this change was dropped after review, since those lines show the last results, not the first.

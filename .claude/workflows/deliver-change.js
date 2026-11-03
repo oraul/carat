@@ -177,6 +177,17 @@ function seed() {
   }
   rework = Number(state['metric.rework']) || 0
   if (state['metric.ci_min']) ciMinutes = Number(state['metric.ci_min'])
+  // The blocked quality review's findings, which its reviewer recorded as
+  // quality-blocking notes; kept only when all of them are there.
+  const [result, commit, count] = at('review.quality')
+  const prefix = `quality-blocking ${commit} `
+  const found = Object.keys(state).filter((k) => /^note\.[0-9]+$/.test(k))
+    .sort((a, b) => Number(a.slice(5)) - Number(b.slice(5)))
+    .map((k) => String(state[k])).filter((v) => v.startsWith(prefix)).map((v) => v.slice(prefix.length))
+  if (result === 'blocked' && COMMIT.test(commit || '') && found.length && count === `blocking=${found.length}`) {
+    qualityBlocking = found
+    qualityAt = commit
+  }
 }
 // The figures in one line for the retrospective's and the reporter's
 // prompts; the run state holds the same.
@@ -232,11 +243,12 @@ const reviewedAtHead = (kind) => at('review.' + kind)[0] === 'pass' && at('revie
 const note = (line) => { notes.push(line); log(line) }
 const backlog = []
 let planNotes = []
-// The checker's word on the benchmark at a commit, and the last quality
-// review's blocking findings, for the next review of a fix.
+// The checker's word on the benchmark at a commit, and the blocking findings
+// of the quality review at qualityAt, for the next review of a fix.
 let benchSameAt = ''
 let benchReport = []
 let qualityBlocking = []
+let qualityAt = ''
 const intro = () => `Change \`${state.change}\` on branch \`${state.branch}\`.`
 
 async function contributor(mode, detail) {
@@ -263,11 +275,17 @@ async function verify() {
 
 // The quality reviewer's input after an earlier review: its commit, its
 // blocking findings, and the fix diff to review when only tests changed.
+// The fix diff is offered only for a commit other than HEAD whose findings
+// are known (a pass has none); otherwise the whole branch diff is reviewed.
 function priorQuality() {
   const [result, commit] = at('review.quality')
   if (!COMMIT.test(commit || '')) return ''
-  const findings = qualityBlocking.length ? ` Its blocking findings:\n- ${qualityBlocking.join('\n- ')}\n` : ' '
-  return `\nThe last quality review, at ${commit}, was ${result}.${findings}When \`git diff --name-only ${commit} HEAD\` lists only files under test/ (tests and their snapshots), review only \`git diff ${commit} HEAD\` against those findings and the rules; otherwise review the whole branch diff.`
+  const last = `\nThe last quality review, at ${commit}, was ${result}.`
+  const blocked = result === 'blocked'
+  const known = !blocked || (qualityAt === commit && qualityBlocking.length > 0)
+  if (commit === head || !known) return `${last} Review the whole branch diff.`
+  const findings = blocked ? ` Its blocking findings:\n- ${qualityBlocking.join('\n- ')}\n` : ' '
+  return `${last}${findings}When \`git diff --name-only ${commit} HEAD\` lists at least one file and only files under test/ (tests and their snapshots), review only \`git diff ${commit} HEAD\` against ${blocked ? 'those findings and ' : ''}the rules; otherwise review the whole branch diff.`
 }
 
 async function rounds() {
@@ -290,6 +308,7 @@ async function rounds() {
       const q = await measured('quality', () => agent(`${intro()} Review the committed diff and return the findings.${priorQuality()}`, { agentType: 'quality-reviewer', schema: withCalls(QUALITY) }))
       if (!q) { stopped = 'the quality reviewer returned no result'; return false }
       qualityBlocking = q.blocking
+      qualityAt = q.head
       verdict('quality', !q.blocking.length)
       note(`quality at ${q.head}: ${q.blocking.length} blocking, ${q.advisory.length} advisory`)
       reviewed('quality', !q.blocking.length, q.head, { blocking: q.blocking.length, advisory: q.advisory.length })
