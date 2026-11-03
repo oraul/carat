@@ -24,15 +24,19 @@ The editor SHALL draw its own parts in the groups `Normal`, `LineNr`, `SignColum
 - **THEN** the request fails with `No highlight group named StatusLine`
 
 ### Requirement: The theme option selects a shipped theme
-The top-level `theme` key of the configuration SHALL select the theme, `carat-dark` (the default) or `carat-light`; an unknown name keeps `carat-dark`. A theme gives every group a foreground and a background (or the terminal's own) and any of bold, italic, underline, and reverse; `Normal` keeps the terminal's own colors in both themes.
+The `option.theme` line of the configuration SHALL select the theme, `carat-dark` (the default) or `carat-light`; an unknown name SHALL be reported as `file:line: unknown theme NAME` and keep the theme set before it. A theme gives every group a foreground and a background (or the terminal's own) and any of bold, italic, underline, and reverse; `Normal` keeps the terminal's own colors in both themes.
 
 #### Scenario: Default theme
 - **WHEN** the editor starts with the shipped configuration
 - **THEN** the colors are those of `carat-dark`
 
 #### Scenario: Light theme
-- **WHEN** the configuration sets `"theme": "carat-light"`
+- **WHEN** a configuration line is "option.theme carat-light"
 - **THEN** the Comment group is written with `carat-light`'s comment color
+
+#### Scenario: Unknown theme
+- **WHEN** the project file's first line is "option.theme solarized"
+- **THEN** ".caratrc:1: unknown theme solarized" is reported and the colors are those of `carat-dark`
 
 ### Requirement: Editor highlights take their colors from the theme
 The status lines, the tab line, the line numbers, the sign column, the tilde rows, the selection, and error messages SHALL be written in the colors and attributes the theme gives their groups.

@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Subscriptions, bindings, and options are validated too
-Every event subscription SHALL be a known event. A manifest's default bindings SHALL be a list of configuration lines of the form `keymap.<mode> <keys> <action>`, each of which SHALL parse and name one of the plugin's own actions or a key sequence. A manifest's option defaults SHALL be a list of configuration lines of the form `plugin.<name>.<option> <value>` with the plugin's own name, one per option, each option having a type among bool, integer, string, and list and a default value of that type. A broken rule disables the plugin as any other rule does.
+Every event subscription SHALL be a known event. A manifest's default bindings SHALL be `keymap.<mode> <keys> <action>` configuration lines that parse and name one of the plugin's own actions or a key sequence. Its option defaults SHALL be `plugin.<name>.<option> <value>` lines with the plugin's own name, one per option, each option typed bool, integer, string, or list with a default of that type. A broken rule disables the plugin as any other rule does.
 
 #### Scenario: Unknown event
 - **WHEN** a plugin subscribes to "idle"
@@ -41,7 +41,7 @@ The API SHALL have a version in `major.minor` form, 2.0 since the configuration 
 - **THEN** the plugin is accepted
 
 ### Requirement: The configuration enables plugins
-A `plugin.<name>.enabled` line SHALL take `true` or `false`, the last such line winning. A plugin whose last line sets it to false, from whatever configuration file, SHALL be registered but not activated: its bindings are not merged, its actions report that the plugin is disabled, and its ex commands are unknown. A plugin no line names SHALL be enabled. A `plugin.<name>` line for a plugin that is not registered SHALL be reported as `file:line: unknown plugin NAME`, except in the shipped defaults, which name every compiled plugin.
+A `plugin.<name>.enabled` line SHALL take `true` or `false`, the last one winning. A plugin whose last line sets false, from any file, SHALL be registered but not activated: its bindings are not merged, its actions report that it is disabled, and its ex commands are unknown. A plugin no line names SHALL be enabled. A line for an unregistered plugin SHALL be reported as `file:line: unknown plugin NAME`, except in the shipped defaults.
 
 #### Scenario: Disabled in the configuration
 - **WHEN** a configuration line is "plugin.hello.enabled false" and `<leader>hh` is pressed, then ":Hello" is run

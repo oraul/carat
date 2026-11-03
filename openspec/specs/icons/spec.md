@@ -6,15 +6,15 @@ Icons are the glyphs the editor and its plugins show for folders, files, file ty
 ## Requirements
 
 ### Requirement: The icons option selects the icon set
-The option "icons" SHALL take the values "nerd", "unicode", and "ascii", "nerd" being the default, and SHALL be read from the configuration's options; any other value SHALL keep the default.
+The option "icons" SHALL take the values "nerd", "unicode", and "ascii", "nerd" being the default, and SHALL be read from the `option.icons` line of the configuration; any other value SHALL be reported as `file:line: unknown icon set NAME` and keep the set before it.
 
 #### Scenario: Default set
 - **WHEN** the shipped configuration is loaded
 - **THEN** the icons option is "nerd"
 
 #### Scenario: Invalid value
-- **WHEN** the configuration sets icons to "emoji"
-- **THEN** the icons option stays "nerd"
+- **WHEN** the project file's first line is "option.icons emoji"
+- **THEN** the icons option stays "nerd" and ".caratrc:1: unknown icon set emoji" is reported
 
 ### Requirement: The icon table maps names to one glyph per set
 The table SHALL hold, for each set, a glyph for the names folder_closed, folder_open, file, symlink, modified, current, error, warning, info, hint, ruby, json, markdown, toml, makefile, shell, c, yaml, git, lock, and default. The nerd set SHALL use Nerd Font code points in the private use areas, the unicode set SHALL use triangles, bullets, and geometric shapes outside the private use areas, and the ascii set SHALL use ASCII characters only. An unknown name SHALL yield the empty string.

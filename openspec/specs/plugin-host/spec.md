@@ -21,60 +21,76 @@ A plugin whose manifest breaks a rule SHALL be registered as disabled with a mes
 - **THEN** no rule is reported
 
 ### Requirement: Subscriptions, bindings, and options are validated too
-Every event subscription SHALL be a known event; every default binding SHALL parse and name one of the plugin's own actions or a key sequence; every option SHALL have a type among bool, integer, string, and list and a default of that type. A broken rule disables the plugin as any other rule does.
+Every event subscription SHALL be a known event. A manifest's default bindings SHALL be `keymap.<mode> <keys> <action>` configuration lines that parse and name one of the plugin's own actions or a key sequence. Its option defaults SHALL be `plugin.<name>.<option> <value>` lines with the plugin's own name, one per option, each option typed bool, integer, string, or list with a default of that type. A broken rule disables the plugin as any other rule does.
 
 #### Scenario: Unknown event
 - **WHEN** a plugin subscribes to "idle"
 - **THEN** validation reports the event
 
 #### Scenario: Binding to a foreign action
-- **WHEN** a plugin's default bindings map a key to "cursor.down"
+- **WHEN** a plugin's default bindings hold the line "keymap.normal x cursor.down"
 - **THEN** validation reports the binding
 
 #### Scenario: Option default of the wrong type
-- **WHEN** a plugin declares an integer option whose default is "many"
+- **WHEN** a plugin declares an integer option whose default line is "plugin.probe.size many"
 - **THEN** validation reports the option
 
+#### Scenario: Option default for another plugin
+- **WHEN** a plugin named "probe" gives the default line "plugin.other.size 3"
+- **THEN** validation reports the option line
+
 ### Requirement: The host refuses a newer major API version
-The API SHALL have a version in `major.minor` form, 1.3 since the syntax highlighting change added tokenizers. A manifest written against a different major version, or against the host's major version with a newer minor, SHALL be refused with a message naming the plugin, the version it needs, and the version the host has; a manifest with the same major and the host's minor or an older one SHALL be accepted.
+The API SHALL have a version in `major.minor` form, 2.0 since the configuration files change made default bindings and option defaults lists of configuration lines. A manifest written against a different major version, or against the host's major version with a newer minor, SHALL be refused with a message naming the plugin, the version it needs, and the version the host has; a manifest with the same major and the host's minor or an older one SHALL be accepted.
 
 #### Scenario: Newer major
-- **WHEN** a plugin's manifest names API version "2.0"
-- **THEN** the plugin is disabled and the host records that the plugin needs API 2.0 and the host has 1.3
+- **WHEN** a plugin's manifest names API version "3.0"
+- **THEN** the plugin is disabled and the host records that the plugin needs API 3.0 and the host has 2.0
 
 #### Scenario: Older major
-- **WHEN** a plugin's manifest names API version "0.9"
-- **THEN** the plugin is disabled and the host records that it needs API 0.9
+- **WHEN** a plugin's manifest names API version "1.3"
+- **THEN** the plugin is disabled and the host records that it needs API 1.3
 
 #### Scenario: Newer minor
-- **WHEN** a plugin's manifest names API version "1.4"
-- **THEN** the plugin is disabled and the host records that it needs API 1.4 and the host has 1.3
+- **WHEN** a plugin's manifest names API version "2.1"
+- **THEN** the plugin is disabled and the host records that it needs API 2.1 and the host has 2.0
 
 #### Scenario: Older minor
-- **WHEN** a plugin's manifest names API version "1.2"
+- **WHEN** a plugin's manifest names API version "2.0", the host's major with a minor no newer than the host's
 - **THEN** the plugin is accepted
 
 ### Requirement: The configuration enables plugins
-The `plugins` object of the configuration SHALL have one entry per plugin name with `enabled` and `options`. A plugin whose entry sets `enabled` to false, from whatever configuration file, SHALL be registered but not activated: its bindings are not merged, its actions report that the plugin is disabled, and its ex commands are unknown. A plugin with no entry SHALL be enabled.
+A `plugin.<name>.enabled` line SHALL take `true` or `false`, the last one winning. A plugin whose last line sets false, from any file, SHALL be registered but not activated: its bindings are not merged, its actions report that it is disabled, and its ex commands are unknown. A plugin no line names SHALL be enabled. A line for an unregistered plugin SHALL be reported as `file:line: unknown plugin NAME`, except in the shipped defaults.
 
 #### Scenario: Disabled in the configuration
-- **WHEN** the configuration sets plugins.hello.enabled to false and `<leader>hh` is pressed, then ":Hello" is run
+- **WHEN** a configuration line is "plugin.hello.enabled false" and `<leader>hh` is pressed, then ":Hello" is run
 - **THEN** nothing happens on the keys and the message is "E492: Not an editor command: Hello"
+
+#### Scenario: Re-enabled by a later file
+- **WHEN** the user file holds "plugin.hello.enabled false" and the project file "plugin.hello.enabled true"
+- **THEN** the hello plugin is active
 
 #### Scenario: Every plugin disabled
 - **WHEN** every plugin is disabled, a file is opened, "x" is pressed, ":w" is run, and ":q" is run
 - **THEN** the character is deleted, the file is written, and the editor quits
 
+#### Scenario: Unknown plugin
+- **WHEN** the project file's first line is "plugin.finder.enabled true" and no finder plugin is registered
+- **THEN** ".caratrc:1: unknown plugin finder" is reported
+
 ### Requirement: The configuration sets plugin options
-An option value of the right type in a plugin's `options` entry SHALL replace the manifest default; one of the wrong type SHALL keep the default and be recorded.
+A `plugin.<name>.<option> <value>` line whose value is of the option's type SHALL replace the manifest default, the last such line winning. A line of the wrong type SHALL keep the earlier value and be reported as `file:line: plugin.NAME.OPTION takes ...` with the kind it takes; a line naming an option the plugin does not declare SHALL be reported as `file:line: plugin NAME has no option OPTION`. A list value reaches the plugin as its words joined by newlines.
 
 #### Scenario: Option from the configuration
-- **WHEN** the configuration sets plugins.hello.options.greeting to "Hi" and ":Hello" is run
+- **WHEN** a configuration line is "plugin.hello.greeting Hi" and ":Hello" is run
 - **THEN** the message starts with the info icon followed by " Hi, world!"
 
 #### Scenario: Option of the wrong type
-- **WHEN** the configuration sets plugins.hello.options.greeting to 7
-- **THEN** the greeting stays "Hello" and the host records the option
+- **WHEN** the project file's first line is `plugin.hello.greeting "Good day" again`
+- **THEN** the greeting stays "Hello" and ".caratrc:1: plugin.hello.greeting takes one word" is reported
+
+#### Scenario: Unknown option
+- **WHEN** the project file's first line is "plugin.hello.volume 3"
+- **THEN** ".caratrc:1: plugin hello has no option volume" is reported
 
 ### Requirement: Plugin actions are routed to their plugin with the typed count
 An action named `plugin.<name>.<action>` SHALL complete at once in normal mode, as the other standalone actions do, and SHALL be delivered to the plugin named in it with the count and register typed before it, the current buffer and window ids, the path, and the cursor. An action for an unregistered plugin SHALL report that no such plugin exists; one for a disabled plugin SHALL report that the plugin is disabled.
@@ -244,14 +260,14 @@ When a plugin raises anything while being registered, activated, or deactivated,
 - **THEN** the plugin is disabled with "stack level too deep" and the editor keeps running
 
 ### Requirement: Built-in plugins are registered from a generated list
-The built-in plugins SHALL be listed in `config/plugins.json` in order, and the editor SHALL construct them from a generated registry with one explicit constructor per plugin. The registry SHALL be regenerated with the configuration mirror, and the test suite SHALL fail when it is out of date with `config/plugins.json`.
+The built-in plugins SHALL be listed in `config/plugins.caratrc` in order, one `plugin.<name> <path> <class>` line each, and the editor SHALL construct them from a generated registry with one explicit constructor per plugin. The registry SHALL be regenerated with the configuration mirror, and the test suite SHALL fail when it is out of date with `config/plugins.caratrc`.
 
 #### Scenario: The explorer plugin is listed
 - **WHEN** the editor starts with the shipped configuration
 - **THEN** the `explorer` plugin is registered, enabled, and its actions and ex commands are available, and no `hello` plugin is registered
 
 #### Scenario: Stale registry
-- **WHEN** `config/plugins.json` lists a plugin the generated registry does not construct
+- **WHEN** `config/plugins.caratrc` lists a plugin the generated registry does not construct
 - **THEN** the config sync test fails naming the registry
 
 ### Requirement: A plugin reads the working directory and window numbers
