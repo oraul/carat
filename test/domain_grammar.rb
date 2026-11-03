@@ -4,8 +4,22 @@ require_relative "../carat/testing"
 t = Carat::Testing.new("domain_grammar")
 D = Carat::Domain
 
+# A script step's values are untyped; the grammar takes typed key codes,
+# and an untyped argument would widen its parameters for the whole
+# program, so the codes are copied into an integer array.
+#: (untyped) -> Array[Integer]
+def ints(value)
+  out = []
+  i = 0
+  while i < value.length
+    out << value[i].to_i
+    i += 1
+  end
+  out
+end
+
 def codes(text)
-  Carat::Domain::KeyNotation.parse(text, " ").codes
+  ints(Carat::Domain::KeyNotation.parse(text, " ").codes)
 end
 
 # The kind the action table registers for each action these tests use,
@@ -30,8 +44,8 @@ def run(script)
     case step[0]
     when :digit then grammar.digit(step[1]); results << :digit
     when :char then results << grammar.char(step[1])
-    when :visual then results << grammar.accept_visual(step[1], kind(step[1]), step[2])
-    else results << grammar.accept(step[1], kind(step[1]), step[2])
+    when :visual then results << grammar.accept_visual(step[1], kind(step[1]), ints(step[2]))
+    else results << grammar.accept(step[1], kind(step[1]), ints(step[2]))
     end
   end
   command = results.last == :complete ? grammar.take : nil
