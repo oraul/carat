@@ -12,7 +12,10 @@ ok   the method name rules
 ok   the constructor rule
 ok   the double require rule
 ok   the production require graph names no double
+ok   the keyword_init rule
+ok   record_names reads Struct and Data declarations
+ok   the record construction rule
 ok   code drops strings and comments
 ok   no lint violations
 ok   every method and attribute has an inline RBS signature
-lint: 17 passed, 0 failed
+lint: 20 passed, 0 failed

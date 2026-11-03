@@ -150,9 +150,10 @@ module DomainBufferTest
     t.assert_true(r1 == r2, "ranges are equal by value")
     t.assert_true(r1.frozen?, "ranges are frozen")
 
-    # Struct semantics the mutable records rely on: positional construction,
+    # Struct semantics the mutable records rely on: keyword construction,
     # readers and writers, members, and the constructor defaults.
     c = D::Cursor.new(row: 2, col: 3)
+    t.assert_equal([true, true, true, true], [D::Cursor.keyword_init? == true, D::Buffer.keyword_init? == true, D::Cell.keyword_init? == true, D::Window.keyword_init? == true], "struct records are built with keywords")
     t.assert_equal([2, 3, 3], [c.row, c.col, c.want_col], "a cursor starts wanting its column")
     c.col = 5
     t.assert_equal(5, c.col, "a cursor member has a writer")

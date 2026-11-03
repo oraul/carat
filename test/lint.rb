@@ -352,6 +352,70 @@ module LintTest
     ""
   end
 
+  # ------------------------------------------------------------ records
+  #
+  # Every record is built with keyword arguments. A Struct record is
+  # declared with keyword_init: true, so a positional call raises when it
+  # runs; Data accepts both forms silently, so every construction of a
+  # record, Struct or Data, is read too: its arguments start with a
+  # keyword or close empty.
+
+  # Why a line of code declaring a Struct record breaks the rule, or "".
+  def self.struct_problem(code)
+    return "" unless code.include?("< Struct.new(")
+    code.include?(", keyword_init: true)") ? "" : "a Struct record is declared with keyword_init: true"
+  end
+
+  # The names of the record classes a text declares, Struct or Data.
+  def self.record_names(text)
+    names = []
+    text.each_line do |line|
+      stripped = line.strip
+      next unless stripped.start_with?("class ")
+      next unless stripped.include?("< Struct.new(") || stripped.include?("< Data.define(")
+      names << declared_name(stripped)
+    end
+    names
+  end
+
+  # Whether the arguments of a call, the code after its opening
+  # parenthesis, start with a keyword or close empty.
+  def self.keyword_arguments?(rest)
+    rest.lstrip.match?(/\A(\)|[a-z_][a-z0-9_]*: )/)
+  end
+
+  # Why a line of code builds a record with positional arguments, or "",
+  # given the record names, whether its file declares a record (where a
+  # bare new( builds one), and the next line of code, which is read when
+  # the arguments start there. A name that is the tail of a longer one,
+  # Node in LayoutNode, is not a call of that record.
+  def self.construction_problem(code, names, own, following)
+    starts = []
+    names.each do |name|
+      pattern = name + ".new("
+      at = code.index(pattern)
+      until at.nil?
+        before = at > 0 ? code[at - 1, 1].to_s : ""
+        starts << at + pattern.length unless before.match?(/[A-Za-z0-9_]/)
+        at = code.index(pattern, at + 1)
+      end
+    end
+    if own
+      at = code.index("new(")
+      until at.nil?
+        before = at > 0 ? code[at - 1, 1].to_s : ""
+        starts << at + 4 unless before.match?(/[A-Za-z0-9_.:]/)
+        at = code.index("new(", at + 1)
+      end
+    end
+    starts.each do |from|
+      rest = code[from, code.length - from].to_s
+      rest = following if rest.strip.empty?
+      return "a record is built with keyword arguments" unless keyword_arguments?(rest)
+    end
+    ""
+  end
+
   # ------------------------------------------------------------ doubles
   #
   # The test doubles are not part of the production require graph: only
@@ -387,9 +451,10 @@ module LintTest
     # A behavior class takes its collaborators as required keyword
     # arguments, built once in the composition root; a default only for a
     # collaborator that takes no arguments, keeps no state, and does no I/O.
-    # Records keep positional construction. Every behavior class follows the
-    # rule; the shared-instance test in test/adapters_assembly.rb checks that
-    # the composition root hands each shared object to all its holders.
+    # Every behavior class follows the rule, and so does every record's
+    # initialize; the shared-instance test in test/adapters_assembly.rb
+    # checks that the composition root hands each shared object to all its
+    # holders.
 
     violations = []
 
@@ -470,7 +535,7 @@ module LintTest
         declaration_problems(lines, expected[0], expected[1]).each { |problem| violations << "#{path}: #{problem}" }
       end
       record = text.include?("< Struct.new(") || text.include?("< Data.define(")
-      keywords = layer_of(path) && layer_of(path) != "plugins" && layer_of(path) != "plugin_api" && !record
+      keywords = (layer_of(path) && layer_of(path) != "plugins" && layer_of(path) != "plugin_api") || record
       lines.each_with_index do |line, i|
         stripped = line.strip
         next if stripped.start_with?("#")
@@ -499,6 +564,31 @@ module LintTest
         stripped = line.strip
         next if stripped.start_with?("#")
         violations << "#{path}:#{number}: only Buffer changes its lines; use the buffer primitives" if lines_mutation?(stripped.to_s)
+      end
+    end
+
+    # Records: keyword_init on every Struct record, and keyword arguments
+    # at every construction of a record, in the library, the executables,
+    # the tests, and the benchmark.
+    built = []
+    built.concat(source_files)
+    built.concat(Dir.glob("test/*.rb"))
+    built.concat(Dir.glob("bench/*.rb"))
+    built.sort!
+    names = []
+    built.each { |path| names.concat(record_names(File.read(path).to_s)) }
+    built.each do |path|
+      text = File.read(path).to_s
+      own = !record_names(text).empty?
+      lines = text.lines
+      lines.each_with_index do |line, i|
+        stripped = line.to_s.strip
+        next if stripped.start_with?("#")
+        code = code_of(stripped)
+        following = i + 1 < lines.length ? code_of(lines[i + 1].to_s.strip) : ""
+        problem = struct_problem(code)
+        problem = construction_problem(code, names, own, following) if problem.empty?
+        violations << "#{path}:#{i + 1}: #{problem}" unless problem.empty?
       end
     end
 
@@ -548,6 +638,9 @@ module LintTest
     t.assert_equal(["", "a constructor takes keyword arguments", "", ""], [constructor_problem("def initialize(actions:, files:)"), constructor_problem("def initialize(actions, files)"), constructor_problem("def initialize(store: Store.new)"), constructor_problem("def call(state, command)")], "the constructor rule")
     t.assert_equal(["", "only carat/doubles/ and carat/test_support.rb may require a test double", "only carat/doubles/ and carat/test_support.rb may require a test double", "", "", ""], [double_require_problem("carat/doubles/editor_harness.rb", "carat/doubles/fake_terminal.rb"), double_require_problem("carat.rb", "carat/doubles/fake_terminal.rb"), double_require_problem("bin/carat.rb", "carat/doubles/memory_files.rb"), double_require_problem("carat/test_support.rb", "carat/doubles/manual_signals.rb"), double_require_problem("carat/adapters/editor_assembly.rb", "carat/use_cases/move.rb"), double_require_problem("test/editor_normal.rb", "carat/doubles/fake_terminal.rb")], "the double require rule")
     t.assert_equal(false, File.read("carat.rb").include?("doubles/"), "the production require graph names no double")
+    t.assert_equal(["", "a Struct record is declared with keyword_init: true", ""], [struct_problem("class Cursor < Struct.new(:row, :col, keyword_init: true)"), struct_problem("class Cursor < Struct.new(:row, :col)"), struct_problem("class Position < Data.define(:row, :col)")], "the keyword_init rule")
+    t.assert_equal(["Cursor", "Position"], record_names("class Cursor < Struct.new(:row, keyword_init: true)\n  class Position < Data.define(:row)\nclass Other\n"), "record_names reads Struct and Data declarations")
+    t.assert_equal(["", "a record is built with keyword arguments", "", "a record is built with keyword arguments", "", "", "a record is built with keyword arguments", "", ""], [construction_problem("c = Cursor.new(row: 0, col: 0)", ["Cursor"], false, ""), construction_problem("c = D::Cursor.new(0, 0)", ["Cursor"], false, ""), construction_problem("n = LayoutNode.new(kind)", ["Node"], false, ""), construction_problem("new(text, codes)", ["DecodedLine"], true, ""), construction_problem("o = Options.new", ["Options"], false, ""), construction_problem("Manifest.new(", ["Manifest"], false, "name: \"\","), construction_problem("Manifest.new(", ["Manifest"], false, "\"\","), construction_problem("x = Array.new(3, 0)", ["Cursor"], true, ""), construction_problem("e = Event.new()", ["Event"], false, "")], "the record construction rule")
     t.assert_equal("x = \"\" ", code_of("x = \"Domain::Buffer\" # UseCases::"), "code drops strings and comments")
     violations.each { |v| STDOUT.puts v }
     t.assert_equal(0, violations.length, "no lint violations")
