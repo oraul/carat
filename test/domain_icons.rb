@@ -55,18 +55,21 @@ module DomainIconsTest
     t.assert_equal(true, I.set?("unicode"), "unicode is a set")
     t.assert_equal(false, I.set?("emoji"), "emoji is not a set")
 
-    # The option: rows are [label, options object, icons value].
+    # The option: rows are [label, project lines, [icons value, problems]].
     t.table([
-      ["default is nerd", {}, "nerd"],
-      ["unicode", { "icons" => "unicode" }, "unicode"],
-      ["ascii", { "icons" => "ascii" }, "ascii"],
-      ["invalid keeps the default", { "icons" => "emoji" }, "nerd"],
-      ["wrong type keeps the default", { "icons" => 3 }, "nerd"]
-    ]) do |hash|
-      D::Options.from_config({ "options" => hash }).icons
+      ["default is nerd", "", ["nerd", []]],
+      ["unicode", "option.icons unicode\n", ["unicode", []]],
+      ["ascii", "option.icons ascii\n", ["ascii", []]],
+      ["invalid keeps the set before it", "option.icons ascii\noption.icons emoji\n", ["ascii", [".caratrc:2: unknown icon set emoji"]]],
+      ["two words keep the default", "option.icons nerd font\n", ["nerd", [".caratrc:1: option.icons takes one word"]]]
+    ]) do |text|
+      config = D::Config.new
+      config.read(".caratrc", text.to_s, false)
+      [D::Options.from_config(config).icons, config.report]
     end
     t.assert_equal("nerd", D::Options.new.icons, "fresh options use nerd")
-    config = Carat::Json.parse(D::DEFAULT_CONFIG_JSON)
+    config = D::Config.new
+    config.read_defaults("config/default.caratrc", D::DEFAULT_CARATRC)
     t.assert_equal("nerd", D::Options.from_config(config).icons, "the shipped configuration selects nerd")
 
     # Display width of the private use areas, where Nerd Font glyphs live.

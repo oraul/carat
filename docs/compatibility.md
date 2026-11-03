@@ -301,4 +301,4 @@ The filetype of a buffer comes from its name (`ruby` for `.rb`, `.rake`, `.gemsp
 
 ## Options read so far
 
-`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scrolloff`, `timeoutlen`, and `theme`, from `config/default.json`; `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `shiftwidth` of 0 uses `tabstop`, as in Neovim.
+`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scrolloff`, `timeoutlen`, `undolevels`, `icons`, and `theme`, from the `option.*` lines of the configuration files; `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `shiftwidth` of 0 uses `tabstop`, as in Neovim.

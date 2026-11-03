@@ -6,7 +6,7 @@ require_relative "../carat/testing"
 # the file is compiled on its own (make test-one).
 module EditorVisualTest
   # An editor over the default options: autoindent on, shiftwidth 2,
-  # tabstop 2, expandtab on, as config/default.json sets them.
+  # tabstop 2, expandtab on, as config/default.caratrc sets them.
   def self.editor(text)
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", text)

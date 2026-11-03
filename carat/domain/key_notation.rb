@@ -1,8 +1,8 @@
 module Carat
   module Domain
-    # Converts between key codes and the Vim spelling used in JSON: plain
-    # characters, <CR>, <Esc>, <C-x>, <A-x>, <leader>, <Up>, <F5>, and so on.
-    # Names are case-insensitive.
+    # Converts between key codes and the Vim spelling used in the
+    # configuration files: plain characters, <CR>, <Esc>, <C-x>, <A-x>,
+    # <leader>, <Up>, <F5>, and so on. Names are case-insensitive.
     module KeyNotation
       # The outcome of parsing: the codes, or an error naming the bad key.
       # A Data value: equal by value and frozen.

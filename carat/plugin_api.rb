@@ -7,17 +7,18 @@ module Carat
   # JSON-RPC. The file requires nothing, so a plugin that requires only
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
-    MAJOR = 1
-    MINOR = 3
-    VERSION = "1.3"
+    MAJOR = 2
+    MINOR = 0
+    VERSION = "2.0"
 
     # The events a plugin may subscribe to, by name. idle arrives with the
     # language services change, which gives the main loop an idle tick.
     EVENTS = ["buffer_open", "buffer_change", "buffer_save", "buffer_close", "buffer_rename", "cursor_move", "mode_change", "window_focus", "resize", "quit"]
 
-    # The types an option may have; values travel as text on both sides:
-    # "true" or "false", digits, the string itself, or list items joined
-    # by newlines.
+    # The types an option may have. Defaults and settings are written as
+    # configuration lines; values reach the plugin as text: "true" or
+    # "false", digits, the word itself, or a list's words joined by
+    # newlines.
     OPTION_TYPES = ["bool", "integer", "string", "list"]
 
     # The edges of the tab page a scratch window opens at.
@@ -28,10 +29,12 @@ module Carat
     # api_version is "major.minor" of this API; actions maps
     # "plugin.<name>.<action>" to a description; commands maps an ex
     # command name, starting with an uppercase letter, to its abbreviation
-    # or ""; bindings is the JSON keymap shape, a hash from mode name to a
-    # hash from key notation to an action name or key sequence; events is
-    # the list of event names; options maps an option name to its default
-    # as text and option_types the same names to "bool", "integer",
+    # or ""; bindings is a list of configuration lines
+    # "keymap.<mode> <keys> <action>", the action being one of the
+    # plugin's actions or a key sequence (API 2.0); events is the list of
+    # event names; options is a list of configuration lines
+    # "plugin.<name>.<option> <value>", one default per option (API 2.0),
+    # and option_types maps the same option names to "bool", "integer",
     # "string", or "list"; filetypes lists the filetypes the plugin
     # tokenizes (API 1.3), each lowercase letters, digits, and underscores
     # starting with a letter, [] for none. The host also reads events and
@@ -45,9 +48,10 @@ module Carat
       # @rbs @events: untyped
       # @rbs @filetypes: untyped
       #
-      # The four hashes are not pinned: a pinned hash member refuses the
-      # empty literal a plugin passes for "no commands" or "no options",
-      # so their types are inferred from the manifests the binary holds.
+      # The three hashes and the options are not pinned: a pinned member
+      # refuses the empty literal a plugin passes for "no commands" or "no
+      # options", so their types are inferred from the manifests the
+      # binary holds.
 
       # The description of one of the plugin's actions, or "".
       #: (String) -> String
@@ -365,8 +369,8 @@ module Carat
       # Opens, or refreshes and focuses, the plugin's scratch buffer with
       # that title in a fixed-width window at the "left" or "right" edge of
       # the tab page, holding the lines, with its own keymap built from
-      # bindings in the JSON keymap shape. Returns a WindowResponse with
-      # the window's id.
+      # bindings, keymap lines "keymap.<mode> <keys> <action>" as in the
+      # manifest. Returns a WindowResponse with the window's id.
       # @rbs title: String
       # @rbs side: String
       # @rbs width: Integer

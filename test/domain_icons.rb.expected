@@ -77,8 +77,8 @@ ok   emoji is not a set
 ok   default is nerd
 ok   unicode
 ok   ascii
-ok   invalid keeps the default
-ok   wrong type keeps the default
+ok   invalid keeps the set before it
+ok   two words keep the default
 ok   fresh options use nerd
 ok   the shipped configuration selects nerd
 ok   nerd folder

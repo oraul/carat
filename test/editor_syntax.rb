@@ -46,7 +46,7 @@ module EditorSyntaxTest
     # Returns the manifest.
     # @rbs skip
     def manifest
-      Carat::PluginApi::Manifest.new(name: "boom", version: "1.0.0", api_version: "1.3", actions: {}, commands: {}, bindings: nil, events: [], options: {}, option_types: {}, filetypes: ["ruby"])
+      Carat::PluginApi::Manifest.new(name: "boom", version: "1.0.0", api_version: "2.0", actions: {}, commands: {}, bindings: [], events: [], options: [], option_types: {}, filetypes: ["ruby"])
     end
 
     # Raises.
@@ -144,8 +144,7 @@ module EditorSyntaxTest
     # A configuration that disables the plugin leaves Ruby plain.
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.rb", "def go\n")
-    config = Carat::Doubles::FixedConfig.defaults
-    config["plugins"]["ruby"] = { "enabled" => false }
+    config = Carat::Doubles::FixedConfig.with("plugin.ruby.enabled false\n")
     h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 8, cols: 40, plugins: [Carat::Plugins::Ruby::Plugin.new])
     h.open("a.rb")
     t.assert_equal("", spans(h, 0), "the ruby plugin disabled in the configuration leaves Ruby plain")

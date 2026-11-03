@@ -6,6 +6,7 @@
 # treats only test/*.rb as test programs, so this file, one directory
 # down, is not run as a test of its own.
 require_relative "../adapters_assembly"
+require_relative "../adapters_config_gateway"
 require_relative "../adapters_dirty_rows"
 require_relative "../adapters_frame_presenter"
 require_relative "../adapters_key_decoder"
@@ -23,7 +24,9 @@ require_relative "../domain_keymap"
 require_relative "../domain_keys"
 require_relative "../domain_layout"
 require_relative "../domain_line_cache"
+require_relative "../domain_options_config"
 require_relative "../domain_plugin_manifest"
+require_relative "../domain_rc_parser"
 require_relative "../domain_registers"
 require_relative "../domain_selection"
 require_relative "../domain_syntax_cache"
@@ -64,6 +67,7 @@ require_relative "../use_cases_plugins"
 
 case ARGV[0]
 when "adapters_assembly" then AdaptersAssemblyTest.main
+when "adapters_config_gateway" then AdaptersConfigGatewayTest.main
 when "adapters_dirty_rows" then AdaptersDirtyRowsTest.main
 when "adapters_frame_presenter" then AdaptersFramePresenterTest.main
 when "adapters_key_decoder" then AdaptersKeyDecoderTest.main
@@ -81,7 +85,9 @@ when "domain_keymap" then DomainKeymapTest.main
 when "domain_keys" then DomainKeysTest.main
 when "domain_layout" then DomainLayoutTest.main
 when "domain_line_cache" then DomainLineCacheTest.main
+when "domain_options_config" then DomainOptionsConfigTest.main
 when "domain_plugin_manifest" then DomainPluginManifestTest.main
+when "domain_rc_parser" then DomainRcParserTest.main
 when "domain_registers" then DomainRegistersTest.main
 when "domain_selection" then DomainSelectionTest.main
 when "domain_syntax_cache" then DomainSyntaxCacheTest.main

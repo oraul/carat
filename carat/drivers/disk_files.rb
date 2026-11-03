@@ -65,6 +65,14 @@ module Carat
       def cwd
         Dir.pwd
       end
+
+      # Returns HOME from the environment, "" when it is unset or not an
+      # absolute path.
+      # @rbs skip
+      def home
+        value = ENV["HOME"].to_s
+        value.start_with?("/") ? value : ""
+      end
     end
   end
 end

@@ -13,14 +13,40 @@ module DomainKeymapTest
 
   # A plugin's defaults go in first and the configuration last, so the
   # configuration replaces or removes them and leaves the rest alone.
-  PLUGIN = { "normal" => { "<leader>hh" => "plugin.hello.greet", "<leader>hx" => "plugin.hello.extra" } }
+  PLUGIN = ["keymap.normal <leader>hh plugin.hello.greet", "keymap.normal <leader>hx plugin.hello.extra"]
+
+  # The configuration of text read as a trusted file named .caratrc, so
+  # key sequences bind, with a Space leader after it.
+  #: (String) -> Carat::Domain::Config
+  def self.project(text)
+    config = D::Config.new
+    config.read(".caratrc", text + "keymap.leader <Space>\n", true)
+    config
+  end
+
+  # Every action name the default lines bind, so the defaults check clean
+  # against them.
+  #: (Carat::Domain::Config) -> Hash[String, bool]
+  def self.bound_actions(config)
+    known = D::Keymap.no_actions
+    i = 0
+    while i < config.count
+      line = config.line_at(i)
+      known[line.words[1].to_s] = true if line.scope == "keymap" && line.words.length == 2
+      i += 1
+    end
+    known
+  end
 
   def self.main
     t = Carat::Testing.new("domain_keymap")
 
-    config = Carat::Json.parse(D::DEFAULT_CONFIG_JSON)
-    keymap = D::Keymap.from_config(config["keymaps"], config["leader"])
-    t.assert_equal([], keymap.errors, "default configuration has no keymap errors")
+    config = D::Config.new
+    config.read("config/default.caratrc", D::DEFAULT_CARATRC, true)
+    keymap = D::Keymap.new
+    keymap.add_checked(config, bound_actions(config))
+    t.assert_equal([], config.report, "default configuration has no keymap problems")
+    t.assert_equal("<Space>", D::Keymap.leader_from(config), "the default leader is Space")
 
     # Lookups against the default configuration: rows are
     # [label, [mode, notation], [kind, value]].
@@ -61,69 +87,92 @@ module DomainKeymapTest
     end
 
     # A custom map with an ambiguous prefix.
-    custom = D::Keymap.from_config({ "normal" => { "a" => "one.a", "ab" => "one.ab", "<Nope>" => "x", "j" => "cursor.down", "k" => 5, "" => "empty" }, "bogus" => {} }, " ")
+    custom_config = project("keymap.normal a one.a\nkeymap.normal ab one.ab\nkeymap.normal <Nope> x\nkeymap.normal j cursor.down\nkeymap.normal k\nkeymap.normal \"\" empty\nkeymap.bogus x y\nkeymap.normal l \"\"\n")
+    custom = D::Keymap.new
+    known = D::Keymap.no_actions
+    known["one.a"] = true
+    known["one.ab"] = true
+    known["cursor.down"] = true
+    custom.add_checked(custom_config, known)
     t.table([
       ["a matches and is a prefix", "a", [:match_prefix, "one.a"]],
       ["ab matches", "ab", [:match, "one.ab"]],
       ["j still bound after a bad key", "j", [:match, "cursor.down"]],
-      ["k with a non-string value is unbound", "k", [:none, nil]]
+      ["k without an action is unbound", "k", [:none, nil]],
+      ["l with an empty action is unbound", "l", [:none, nil]]
     ]) do |text|
-      match = custom.lookup(:normal, codes(text))
+      match = custom.lookup(:normal, codes(text.to_s))
       [match.kind, match.value]
     end
     t.assert_equal([
-      "normal.<Nope>: unknown key <Nope>",
-      "normal.k: value must be an action name or a key sequence",
-      "normal.: empty key",
-      "bogus: unknown mode"
-    ], custom.errors, "malformed bindings are reported with mode and key")
+      ".caratrc:3: unknown key <Nope>",
+      ".caratrc:5: keymap.normal takes keys and an action",
+      ".caratrc:6: empty key",
+      ".caratrc:7: unknown mode bogus",
+      ".caratrc:8: empty action"
+    ], custom_config.report, "malformed bindings are reported with the file and line")
 
-    # Unbinding with null.
-    unbound = D::Keymap.from_config({ "normal" => { "j" => "cursor.down" } }, " ")
-    unbound.add(:normal, "j", nil, " ")
-    t.assert_equal(:none, unbound.lookup(:normal, codes("j")).kind, "null unbinds a key")
+    # Unbinding with none, and a later line winning.
+    unbound = D::Keymap.new
+    unbound.add_checked(project("keymap.normal j cursor.down\nkeymap.normal k cursor.up\nkeymap.normal j none\nkeymap.normal k cursor.down\n"), known)
+    t.assert_equal([:none, "cursor.down"], [unbound.lookup(:normal, codes("j")).kind, unbound.lookup(:normal, codes("k")).value], "none unbinds a key and a later line wins")
 
     t.table([
-      ["plugin binding stays when the configuration is silent", {}, [[:match, "plugin.hello.greet"], [:match, "plugin.hello.extra"]]],
-      ["configuration replaces the plugin binding", { "normal" => { "<leader>hh" => "cursor.down" } }, [[:match, "cursor.down"], [:match, "plugin.hello.extra"]]],
-      ["configuration removes the plugin binding", { "normal" => { "<leader>hh" => nil } }, [[:none, nil], [:match, "plugin.hello.extra"]]],
-      ["configuration adds a longer binding", { "normal" => { "<leader>hhh" => "cursor.up" } }, [[:match_prefix, "plugin.hello.greet"], [:match, "plugin.hello.extra"]]]
+      ["plugin binding stays when the configuration is silent", "", [[:match, "plugin.hello.greet"], [:match, "plugin.hello.extra"]]],
+      ["configuration replaces the plugin binding", "keymap.normal <leader>hh cursor.down\n", [[:match, "cursor.down"], [:match, "plugin.hello.extra"]]],
+      ["configuration removes the plugin binding", "keymap.normal <leader>hh none\n", [[:none, nil], [:match, "plugin.hello.extra"]]],
+      ["configuration adds a longer binding", "keymap.normal <leader>hhh cursor.up\n", [[:match_prefix, "plugin.hello.greet"], [:match, "plugin.hello.extra"]]]
     ]) do |user|
       merged = D::Keymap.new
-      merged.add_all(PLUGIN, " ")
-      merged.add_all(user, " ")
+      merged.add_lines(PLUGIN, " ", "hello")
+      user_known = D::Keymap.no_actions
+      user_known["cursor.down"] = true
+      user_known["cursor.up"] = true
+      merged.add_checked(project(user.to_s), user_known)
       a = merged.lookup(:normal, codes("<leader>hh"))
       b = merged.lookup(:normal, codes("<leader>hx"))
       [[a.kind, a.value], [b.kind, b.value]]
     end
     merged = D::Keymap.new
-    merged.add_all({ "nope" => {} }, " ")
-    merged.add_all(nil, " ")
-    t.assert_equal(["nope: unknown mode"], merged.errors, "add_all records errors and ignores a non-object")
+    merged.add_lines(["keymap.nope a b", "5", "option.x 1", "keymap.normal \"bad x.y", "# a comment", "keymap.leader x"], " ", "probe")
+    merged.add_lines(nil, " ", "probe")
+    t.assert_equal(["keymap.nope a b: unknown mode nope", "5: invalid key", "option.x 1: not a keymap line", "keymap.normal \"bad x.y: unterminated quote", "keymap.leader x: a plugin cannot set keymap.leader"], merged.errors, "add_lines records errors by line and ignores a non-list")
+    scratch = D::Keymap.from_lines(["keymap.normal <CR> plugin.probe.open", "keymap.normal q plugin.probe.close"], " ")
+    t.assert_equal([[], "plugin.probe.open", "plugin.probe.close"], [scratch.errors, scratch.lookup(:normal, codes("<CR>")).value, scratch.lookup(:normal, codes("q")).value], "from_lines builds a scratch keymap")
 
     # Owners: a plugin's bindings can be removed with it, another plugin
     # cannot take its keys, and the configuration replaces either.
     owned = D::Keymap.new
-    owned.add_owned({ "normal" => { "<leader>pp" => "plugin.probe.go", "<leader>pq" => "plugin.probe.quit" } }, " ", "probe")
-    owned.add_owned({ "normal" => { "<leader>pp" => "plugin.other.go", "<leader>oo" => "plugin.other.go" } }, " ", "other")
+    owned.add_lines(["keymap.normal <leader>pp plugin.probe.go", "keymap.normal <leader>pq plugin.probe.quit"], " ", "probe")
+    owned.add_lines(["keymap.normal <leader>pp plugin.other.go", "keymap.normal <leader>oo plugin.other.go"], " ", "other")
     t.assert_equal([["normal.<leader>pp is already bound by plugin probe"], "plugin.probe.go", "probe"], [owned.conflicts, owned.lookup(:normal, codes("<leader>pp")).value, owned.holder_of(:normal, codes("<leader>pp"))], "a second plugin's binding of held keys is refused and recorded")
     owned.remove_owner("probe")
     t.assert_equal([:none, :none, :match], [owned.lookup(:normal, codes("<leader>pp")).kind, owned.lookup(:normal, codes("<leader>p")).kind, owned.lookup(:normal, codes("<leader>oo")).kind], "removing an owner drops its bindings and the prefixes left empty, and keeps the others")
-    owned.add_owned({ "normal" => { "<leader>oo" => "cursor.down" } }, " ", "")
+    owned.add_lines(["keymap.normal <leader>oo cursor.down"], " ", "")
     owned.remove_owner("other")
     t.assert_equal([:match, "cursor.down"], [owned.lookup(:normal, codes("<leader>oo")).kind, owned.lookup(:normal, codes("<leader>oo")).value], "the configuration replaces a plugin binding and keeps it when the plugin goes")
     # Checked loading: an action name outside the known set is refused and
-    # reported with the file name and JSON path; key sequences and known
-    # actions go in, and every other problem carries the same prefix.
+    # reported with the file and line; key sequences and known actions go
+    # in, and every other problem is reported the same way.
     checked = D::Keymap.new
-    known = { "cursor.down" => true }
-    checked.add_checked({ "normal" => { "j" => "cursor.down", "zq" => "foo.bar", "zz" => ":w<CR>", "<Nope>" => "cursor.down" }, "nope" => {} }, " ", known, "config/default.json")
+    checked_known = D::Keymap.no_actions
+    checked_known["cursor.down"] = true
+    checked_config = project("keymap.normal j cursor.down\nkeymap.normal zq foo.bar\nkeymap.normal zz :w<CR>\nkeymap.normal <Nope> cursor.down\nkeymap.nope x cursor.down\n")
+    checked.add_checked(checked_config, checked_known)
     t.assert_equal([
-      "config/default.json: keymaps.normal.zq: unknown action foo.bar",
-      "config/default.json: keymaps.normal.<Nope>: unknown key <Nope>",
-      "config/default.json: keymaps.nope: unknown mode"
-    ], checked.errors, "checked loading reports unknown actions and malformed keys with the file and path")
+      ".caratrc:2: unknown action foo.bar",
+      ".caratrc:4: unknown key <Nope>",
+      ".caratrc:5: unknown mode nope"
+    ], checked_config.report, "checked loading reports unknown actions and malformed keys with the file and line")
     t.assert_equal([:match, :none, :match], [checked.lookup(:normal, codes("j")).kind, checked.lookup(:normal, codes("zq")).kind, checked.lookup(:normal, codes("zz")).kind], "the refused binding is not added and the others are")
+
+    # The leader: the last good keymap.leader line, Vim's backslash
+    # without one; a bad one is reported and skipped.
+    leaders = D::Config.new
+    leaders.read(".caratrc", "keymap.leader ,\nkeymap.leader a b\nkeymap.leader <Nope>\nkeymap.leader \"\"\n", true)
+    D::Keymap.new.add_checked(leaders, known)
+    t.assert_equal([",", ".caratrc:2: keymap.leader takes one key", ".caratrc:3: unknown key <Nope>", ".caratrc:4: keymap.leader takes one key"], [D::Keymap.leader_from(leaders)] + leaders.report, "the leader is the last good leader line")
+    t.assert_equal("\\", D::Keymap.leader_from(D::Config.new), "the leader is a backslash when no line sets it")
 
     t.assert_equal([true, false, false], [D::Keymap.action_name?("plugin.a.b"), D::Keymap.action_name?(":w<CR>"), D::Keymap.action_name?("plain")], "an action name has namespace segments, a key sequence does not")
 

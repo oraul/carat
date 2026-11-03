@@ -11,12 +11,12 @@ Goals:
 - Spinel does everything. Building, running, and testing all go through Spinel's project tool `spin`. The result is one native binary, and neither developers nor users need CRuby.
 - Be plain Ruby. Readable, testable, no native extensions, no metaprogramming tricks.
 - Follow Clean Architecture. Business rules at the center, frameworks and devices at the edge, dependencies pointing inward only.
-- Every key binding comes from JSON. There are no bindings hard-coded in Ruby.
+- Every key binding comes from the configuration files (section 7). There are no bindings hard-coded in Ruby.
 - Be extensible with plugins. Anything beyond core modal editing is built on one plugin API, and the same API is open to third parties.
 
 Non-goals:
 
-- Vimscript or Lua compatibility. Configuration is JSON.
+- Vimscript or Lua compatibility. Configuration is `.caratrc` lines of `scope.name value`.
 - Loading Ruby source at run time. A Spinel binary is fixed at compile time, so plugins are either compiled in as packages or run as separate processes (section 9). There is no `require` of a user file.
 - Byte-for-byte Neovim parity. Where Neovim behavior is obscure, Carat picks the simple, documented behavior and records it in a spec.
 - GUI front ends. The only front end is a terminal.
@@ -61,7 +61,7 @@ These come from Spinel's limitations document and from the notes gathered while 
             |   +----------------------------------------------+   |
             |   |  Interface adapters                           |   |
             |   |  InputController  Presenters (Frame, Screen)  |   |
-            |   |  JsonConfigGateway  JsonRpcLanguageGateway    |   |
+            |   |  RcConfigGateway  JsonRpcLanguageGateway      |   |
             |   |   +--------------------------------------+   |   |
             |   |   |  Use cases                            |   |   |
             |   |   |  Move  Operate  Insert  ExecuteEx     |   |   |
@@ -113,16 +113,16 @@ Pure Ruby objects with no I/O. They hold the editor's state and the rules of mod
 - `LineSplice`: the function that changes a line array in place without copying the rest of it (section 4.1); per-line integer arrays, the sign marks and the syntax end states, use its sibling `shift_marks`.
 - `Filetype`: the filetype of a path (extensions such as `.rb`, `.rake`, `.gemspec`, `.ru`, whole names such as `Gemfile`, `Rakefile`, `config.ru`) or, when the name says nothing, of a `#!` first line naming the interpreter directly or through `env`; `""` for none.
 - `Highlight`: the highlight group ids a frame cell carries, the editor's own (`Normal`, `LineNr`, `StatusLine`, `StatusLineNC`, `TabLine`, `TabLineSel`, `TabLineFill`, `Visual`, `NonText`, `ErrorMsg`, `SignColumn`) and from `SYNTAX_FIRST` the thirty syntax groups with Neovim's standard names (`Comment`, `Constant`, `String`, ... `Todo`, `Error`), with `NAMES` by id. Integers, so a frame stays three integer arrays.
-- `Theme`, `Themes`, and `ColorDepth`: a theme gives each group a 24-bit foreground and background, a foreground and background among the 16 basic colors given by hand, and attribute bits (bold, italic, underline, reverse), a `Data` value of integer arrays by group id; `Themes` holds `carat-dark` and `carat-light`, chosen by the configuration's `theme`. They are Ruby rather than JSON because they are not key bindings and the configuration only names one until user themes arrive. `ColorDepth.detect(colorterm, term)` decides truecolor, 256, or 16 colors from the environment the terminal driver reads.
+- `Theme`, `Themes`, and `ColorDepth`: a theme gives each group a 24-bit foreground and background, a foreground and background among the 16 basic colors given by hand, and attribute bits (bold, italic, underline, reverse), a `Data` value of integer arrays by group id; `Themes` holds `carat-dark` and `carat-light`, chosen by the `option.theme` line. They are Ruby rather than configuration lines because they are not key bindings and the configuration only names one until user themes arrive. `ColorDepth.detect(colorterm, term)` decides truecolor, 256, or 16 colors from the environment the terminal driver reads.
 - `SyntaxLine`, `SyntaxTable`, and `SyntaxCache`: what a tokenizer said about a buffer (section 4.2). A syntax line is one line's tokens for one start state, flat (start column, length, group id) triples in code point columns, with its end state; the table holds them by the identity of the line string, a sibling of `IdentityTable`; the cache, one per buffer, holds the end state of every row reached so far and two generations of tables for the visible lines.
 - `Transaction` and `UndoTree`: a transaction groups the change records of one command with the cursor before and after (the cursor before is moved to where an operator starts, as Vim records it at the first change) and the cause of its records, a `Struct` record; its span merges the records into one row range over the text before it, and a history transaction, the one an undo or a redo runs in, is seen by observers but kept as no state. Insert mode continues the transaction of the command that entered it and closes it on `Esc`, or on an arrow key, which starts the next. The undo tree, one per buffer and a `Struct` record, keeps every closed transaction of a file buffer as a state numbered in time order, made on the state the text showed then, so branches stay reachable and `u`, `Ctrl-R`, `g-`, `g+`, `:undo N`, `:earlier`, and `:later` behave like Vim. It is a flat table of integer arrays indexed by state number (parent, redo head, child count, depth, write number, time) with the transactions behind a typed accessor, the root standing for the text before the oldest state kept; `undolevels` trims the oldest states, merging one on the way to the current state into the root and dropping any other with its branch. It also tracks the state of the last write, so undo back to it clears the modified flag, and the line `U` restores.
 - `Registers`: named `a` to `z` with uppercase append, numbered `0` to `9` with shifting, the small delete register `-`, unnamed, black hole, and the read-only `%`, `:`, and `.` (and `/`, empty until search). Writes are named by what made them, a yank or a delete, and follow Neovim's `op_yank` and `op_delete`. Each entry stores text and a kind, charwise, linewise, or blockwise, so a linewise yank pastes as lines and a block yank as a block.
 - `LastChange`: the last change the dot command repeats, a `Struct` record: its `Command`, the size of the visual selection it acted on, and the steps of its insert session (typed text and insert actions), with the text of the session for the `.` register.
 - `Marks`: per-buffer lowercase, global uppercase, and the automatic `'`, `.`, `^`, `[`, `]`, `<`, `>`, adjusted on line insert and delete.
 - `Options`: typed global and buffer-local options with Vim names, a `Struct` record: `number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, `wrap`, `scrolloff`, `timeoutlen`, `clipboard`, `undolevels`, plus Carat's own `icons`, the icon set (`nerd`, `unicode`, or `ascii`) the `Icons` table serves to plugins by name; Nerd Font glyphs live in the private use areas, which `DisplayWidth` counts as one cell.
-- `Key`: an integer code. Printable code points are themselves, control characters are their byte, special keys (arrows, function keys, Home, End, Delete, Page Up and Down) are codes above the Unicode range, and Alt is a flag bit. `KeyNotation` converts between codes and the Vim spelling used in JSON: `<CR>`, `<Esc>`, `<C-w>`, `<A-x>`, `<leader>`, `<Up>`, `<F5>`.
+- `Key`: an integer code. Printable code points are themselves, control characters are their byte, special keys (arrows, function keys, Home, End, Delete, Page Up and Down) are codes above the Unicode range, and Alt is a flag bit. `KeyNotation` converts between codes and the Vim spelling used in the configuration files: `<CR>`, `<Esc>`, `<C-w>`, `<A-x>`, `<leader>`, `<Up>`, `<F5>`.
 - `Mode`: `normal`, `insert`, `replace`, `visual`, `visual_line`, `visual_block`, `operator_pending`, `cmdline`.
-- `Keymap`: one trie per mode from key sequences to action names, built from JSON (section 7); the keymap and its `KeymapNode` are `Struct` records. An ambiguous prefix such as `g` before `gg` waits for the next key until `timeoutlen`.
+- `Keymap`: one trie per mode from key sequences to action names, built from keymap lines (section 7); the keymap and its `KeymapNode` are `Struct` records. An ambiguous prefix such as `g` before `gg` waits for the next key until `timeoutlen`.
 - `Command`: the value the parser produces: register, count, operator, motion or text object, and the keys that formed it for the dot register.
 - `CommandGrammar`: the state machine over keys that implements
 
@@ -187,7 +187,7 @@ Each use case is one class whose entry point, `call` or a method named for what 
 
 ### 5.4 Shared library inside the inner layers
 
-- `Carat::Json`: a recursive-descent JSON reader and a writer, about two hundred lines, no dependencies, used for configuration and for the JSON-RPC gateway. It lives with the entities because both use cases and adapters need it and it has no I/O.
+- `Carat::Json`: a recursive-descent JSON reader and a writer, about two hundred lines, no dependencies, kept for the JSON-RPC gateways of the language services and process plugins; the configuration is not JSON (section 7). It lives with the entities because both use cases and adapters need it and it has no I/O.
 
 ## 6. Ports
 
@@ -201,77 +201,48 @@ Ports to the outside are the interfaces use cases depend on. Each is a Ruby clas
 | --- | --- | --- | --- |
 | `TerminalPort` | `size`, `read_key(timeout)`, `write(bytes)`, `colors`, `enter`, `leave` | `AnsiTerminal`, which reads `COLORTERM` and `TERM` once for `colors` | `FakeTerminal` with a scripted key queue, captured output, and 256 colors |
 | `ClockPort` | `now`, `sleep(seconds)` | monotonic clock | manual clock |
-| `FilePort` | `read(path)`, `write(path, text)`, `exist?`, `list(dir)`, `stat(path)` returning the `PathInfo` value (`PathInfo.missing` for nothing there), `mkdir(path)`, `rename(from, to)`, `delete(path)` (a file or an empty directory), `cwd` | `DiskFiles` | `MemoryFiles` |
-| `ConfigPort` | `load` returning the parsed config value, `source` the file name its problems are reported with | `JsonConfigGateway` | `FixedConfig` |
+| `FilePort` | `read(path)`, `write(path, text)`, `exist?`, `list(dir)`, `stat(path)` returning the `PathInfo` value (`PathInfo.missing` for nothing there), `mkdir(path)`, `rename(from, to)`, `delete(path)` (a file or an empty directory), `cwd`, `home` (the user's home directory, `""` for none; only `DiskFiles` reads it from the environment) | `DiskFiles` | `MemoryFiles` |
+| `ConfigPort` | `load` returning the `Domain::Config` of every configuration file in load order, each line carrying its file and line number | `RcConfigGateway` | `FixedConfig`, the shipped defaults with lines a test gives |
 | `SignalPort` | `install`, `terminated?`, `resized?`, `acknowledge_resize` | `Signals` | `ManualSignals`, which a test trips |
 | `LanguageServicePort` | `start(language)`, `notify(method, params)`, `request(method, params)`, `poll` | `JsonRpcLanguageGateway` | scripted responses |
 | `ProcessPort` | `spawn(argv)` returning a handle with `write`, `read_nonblock`, `wait` | `ProcessRunner` | fake handle |
 | `MessageQueuePort` | `push(message)`, `pop(timeout)` | `Queue` from the runtime | array-backed |
 
-## 7. Configuration and key maps in JSON
+## 7. Configuration and key maps in .caratrc files
 
-All key bindings come from JSON. The shipped defaults and the user's overrides use one schema, and the keymap entities are built only from that data.
+All key bindings and options come from configuration files in one line format, the `.caratrc`. The shipped defaults, the user's file, the project's file, a plugin's manifest defaults, a plugin's scratch keymap, and the list of compiled plugins are all written in it and read by one parser, and the keymap entities are built only from it.
 
-- `config/default.json` in the repository is the single source of truth for default bindings and default options. It is complete: every key Carat responds to is listed there, including `h j k l` and `:`.
-- The user file is `~/.config/carat/config.json`, with an optional project file `.carat.json` in the working directory. Loading order is default, user, project, each merged over the previous one; a later file can unbind a key by mapping it to `null`.
-- A native binary cannot read `config/default.json` from the repository at run time, so `spin run carat-gen-config` generates `carat/domain/default_config.rb` from it as a Ruby hash literal. The generated file is committed, and the `config_sync` test fails when it is out of date. The JSON file is edited; the Ruby file never is.
+- `config/default.caratrc` in the repository is the single source of truth for default bindings and default options. It is complete: every key Carat responds to is listed there, including `h j k l` and `:`.
+- The user file is `~/.config/carat/caratrc`, under the home directory the file port reports, and the project file is `.caratrc` in the working directory. Loading order is the defaults, the user file, the project file; their lines are applied in that order, so a later line of the same setting wins, within one file too. A missing file is skipped; a file that is there but cannot be read is reported.
+- A native binary cannot read `config/default.caratrc` from the repository at run time, so `spin run carat-gen-config` generates `carat/domain/default_config.rb` from it, the text embedded as `DEFAULT_CARATRC` and read at startup like any other file. The generator refuses a line that does not read before writing anything. The generated file is committed, and the `config_sync` test fails when it is out of date. The `.caratrc` file is edited; the Ruby file never is.
 
-Schema:
+The format:
 
-```json
-{
-  "leader": " ",
-  "timeoutlen": 500,
-  "options": {
-    "number": true,
-    "relativenumber": false,
-    "tabstop": 2,
-    "shiftwidth": 2,
-    "expandtab": true,
-    "scrolloff": 5
-  },
-  "keymaps": {
-    "normal": {
-      "h": "cursor.left",
-      "j": "cursor.down",
-      "dd": "operator.delete_line",
-      "gg": "cursor.buffer_start",
-      ":": "mode.cmdline",
-      "<leader>w": ":w<CR>",
-      "gd": "lsp.definition"
-    },
-    "insert": {
-      "<Esc>": "mode.normal",
-      "<CR>": "insert.newline"
-    },
-    "visual": {},
-    "visual_line": {},
-    "visual_block": {},
-    "operator_pending": {},
-    "cmdline": {}
-  },
-  "languages": {
-    "ruby": {
-      "lsp": ["ruby-lsp"],
-      "formatter": ["rubocop", "-A", "--stdin", "{file}", "--stderr"]
-    }
-  },
-  "plugins": {
-    "explorer": { "enabled": true },
-    "finder": { "enabled": true, "options": { "ignore": [".git", "build"] } },
-    "spell": { "command": ["carat-spell", "--lang", "en"] }
-  },
-  "theme": "carat-dark"
-}
+```
+# Every line is "scope.name value"; # starts a comment.
+option.number true
+option.tabstop 2
+option.theme carat-dark
+keymap.leader <Space>
+keymap.normal <leader>e plugin.explorer.toggle
+keymap.insert <C-s> <Esc>:w<CR>
+keymap.normal Q none
+keymap.normal "\"" register.select
+plugin.explorer.enabled true
+plugin.explorer.width 30
+plugin.explorer.ignore .git build tmp
+language.ruby.lsp ruby-lsp
+language.ruby.formatter rubocop -A --stdin {file} --stderr
 ```
 
-Rules of the schema:
-
-- A keymap value is either an action name in `namespace.action` form, listed in `docs/actions.md`, or a key sequence in Vim notation to remap to, such as `:w<CR>`. A value of `null` removes the binding.
+- A line is a key, two or more segments of lowercase letters, digits, and underscores joined by dots, and a value, the rest of the line split into words at spaces and tabs: one word is a word, a number, or `true` or `false`; several are a list; none is the empty list. A word that starts with a double quote runs to the next unescaped one, keeping its spaces, with `\"` and `\\` as escapes; a quote inside any other word is an ordinary character, so `i"` needs no quoting. A `#` at the start of a word starts a comment. A carriage return before the newline is ignored, and a control character other than tab makes the line malformed, so no escape sequence from a file reaches the screen.
+- `Domain::RcParser` reads a line by walking its bytes into an `RcParse` (key, words, error); `Domain::Config` holds the `RcLine` values of every file in load order, each with its file label, file ordinal, and line number, and the problems noted on them; `Domain::RcValue` holds the four value kinds, bool, integer (one to nine digits), string (one word), and list, with their messages.
+- Scopes: `option.<name>` sets an option by its Vim name, with the same kinds as `:set`: `number`, `relativenumber`, `expandtab`, `autoindent`, `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, and `wrap` take a flag; `tabstop`, `shiftwidth`, `scrolloff`, `timeoutlen`, and `undolevels` a number; `clipboard`, `icons` (`nerd`, `unicode`, or `ascii`), and `theme` (`carat-dark` or `carat-light`) one word. `keymap.leader <keys>` sets what `<leader>` stands for, a key in Vim notation, Vim's backslash when no line sets it. `keymap.<mode> <keys> <action>` binds in `normal`, `insert`, `visual`, `visual_line`, `visual_block`, `operator_pending`, or `cmdline`; the action is an action name in `namespace.action` form, listed in `docs/actions.md`, a key sequence in Vim notation to replay, such as `:w<CR>`, or `none` to unbind. `plugin.<name>.enabled` and `plugin.<name>.<option>` configure a compiled plugin. `language.<name>.lsp` and `language.<name>.formatter` name the commands the language services run, as lists.
 - Keys are written in Vim notation: plain characters, `<CR>`, `<Esc>`, `<Tab>`, `<BS>`, `<Space>`, `<Up>`, `<C-x>`, `<A-x>`, `<F1>` to `<F12>`, `<leader>`.
-- Unknown keys, unknown action names, and malformed notation are reported with the file name and the JSON path, and the rest of the file still loads: `Keymap#add_checked` refuses a binding whose action neither the action table nor a registered plugin declares, records every problem as `config/default.json: keymaps.normal.zq: unknown action foo.bar`, and the first is shown in the message row after startup with the count of the others.
-- Options in JSON use the Vim names and the same types as `:set`.
-- A `plugins` entry with `enabled` refers to a compiled plugin by name. An entry with `command` starts a process plugin. `options` is passed to the plugin unchanged. A plugin's own default bindings live in its manifest and are merged below `keymaps`, so the user file always wins.
+- Every line is validated when the files load, and every problem is reported as `file:line: message`, the files named `config/default.caratrc`, `~/.config/carat/caratrc`, and `.caratrc`; the line is skipped and the rest still loads. `Config#read` checks the form, the scope, and the language settings; `Options.from_config` the option names, kinds, icon sets, and themes; `Keymap#add_checked` the modes, the word counts, the key notation, and the action names, which the action table or a registered plugin must declare; the plugin host the plugin names (except in the shipped defaults, which name every compiled plugin and which `config_sync` checks against the registry), `enabled`, and the options and kinds each manifest declares. Each notes its problems on the `Config`, which reports them in file and line order, and the first is shown in the message row after startup with the count of the others.
+- The project file is not trusted to name a program or to type keys: a `language.*` line in it, and a keymap line whose action is a key sequence to replay (which could type `:w` to any path), are reported and ignored, so opening a directory never decides what Carat runs or writes; the project file still binds keys to action names and `none`. A later setting that names a program to run or replays keys follows the same rule.
+- A plugin's own default bindings and option defaults live in its manifest as lines of the same format and are applied before the configuration's, so the user file always wins.
+- `config/plugins.caratrc` lists the compiled plugins, one `plugin.<name> <path> <class>` line each, a file of its own so the runtime configuration holds only settings; section 9.2.
 
 ## 8. Interface adapters and drivers
 
@@ -289,7 +260,7 @@ Rules of the schema:
 
 ### 8.3 Gateways
 
-- `JsonConfigGateway`: reads the three JSON files through `FilePort`, merges them, validates against the schema, and returns a plain config value.
+- `RcConfigGateway`: reads the embedded defaults, then `~/.config/carat/caratrc` under `FilePort#home` and `.caratrc` under `FilePort#cwd` when a file is there, the project file untrusted, into one `Domain::Config` (section 7).
 - `JsonRpcLanguageGateway`: speaks JSON-RPC over stdio to a language server started through `ProcessPort`. It translates buffer events to `didOpen`, `didChange`, `didSave`, and requests diagnostics, hover, definition, references, rename, completion, and formatting. It returns plain values: diagnostics as `(range, severity, message)`, completions as `(label, kind, insert_text)`. Use cases never see JSON.
 
 ### 8.4 Drivers
@@ -314,17 +285,17 @@ What a plugin can declare, in its manifest:
 - `name`, `version`, and the API version it was written against.
 - Actions: names in `plugin.<name>.<action>` form that keymaps may bind, each with a short description for `docs/actions.md`.
 - Ex commands: names and abbreviations added to the ex registry after the core commands, recognized from the abbreviation to the full name, and routed back to the plugin.
-- Default key bindings, in the same JSON shape as `config/default.json`, merged below the user's bindings.
+- Default key bindings, as `keymap.<mode> <keys> <action>` lines of the configuration format (from API 2.0), applied below the configuration's bindings.
 - The filetypes it tokenizes, by name (from API 1.3).
 - Event subscriptions, by name: `buffer_open`, `buffer_change` (with the changed rows), `buffer_save`, `buffer_close`, `buffer_rename`, `cursor_move`, `mode_change`, `window_focus`, `idle`, `resize`, `quit`.
-- Options it accepts, with types and defaults.
+- Options it accepts, with types, and their defaults as `plugin.<name>.<option> <value>` lines of the configuration format (from API 2.0); the configuration's lines for the plugin are applied after them, and the plugin reads each value as text.
 
 What a plugin can do, through its `PluginApi::Host` (one method per request; the plugin host and explorer changes delivered the requests marked with an asterisk, the rest arrive with the changes named here):
 
 - Read a buffer: lines, cursor, path, modified flag (*); selection and marks come with a later change: the visual modes are in place, and the selection request is recorded in `docs/backlog.md`.
 - Edit a buffer: a list of `(range, text)` replacements validated as a whole and applied as one batch (*), which is one undo state, so the user undoes a plugin edit in one step.
 - Move the cursor (*); set a selection, set a mark.
-- Open a scratch buffer in a fixed-width side window at the left or right edge of the tab page, with its own keymap bound to the plugin's actions, replace its lines, close it, focus a window, open a file in a window, in a split, or in a tab page (*, the last two from the hardening change); floating windows later. This is how the explorer and the finder draw their lists: they are ordinary buffers with plugin-owned bindings, in the way Neovim's `oil` and `telescope` present text.
+- Open a scratch buffer in a fixed-width side window at the left or right edge of the tab page, with its own keymap, given as keymap lines, bound to the plugin's actions, replace its lines, close it, focus a window, open a file in a window, in a split, or in a tab page (*, the last two from the hardening change); floating windows later. This is how the explorer and the finder draw their lists: they are ordinary buffers with plugin-owned bindings, in the way Neovim's `oil` and `telescope` present text.
 - Show a message, set a status line segment, place and clear signs (*); resolve a highlight group name to its id with `syntax_group` (*, from the syntax highlighting change); virtual text and highlights for a range come later (`docs/backlog.md`).
 - Tokenize the filetypes its manifest declares (*, from the syntax highlighting change): the host calls `tokenize(filetype, text, state, tokens)` per line with a copy of the text and the state at the start of the line, the plugin appends (start column, length, group id) triples to an integer array and returns the end state, a non-negative integer the host only compares and passes on, so no per-token object crosses the boundary. The call is guarded like every other.
 - Ask for input on the command line with a prompt, the answer arriving through `on_input` (*, from the explorer change).
@@ -336,13 +307,13 @@ Every call is a request value in and a response value out, with no callbacks: th
 
 ### 9.2 Compiled plugins
 
-A compiled plugin is a `spin` package that depends on `carat` and implements one class, a subclass of `PluginApi::Plugin`, with `manifest`, `activate(host)`, `deactivate`, `on_event(event)`, `on_action(name, context)`, and `on_command(command)`. It is listed in `spin.toml` under `[dependencies]` and in `config/plugins.json` as `{"name", "path", "class"}`, from which `bin/carat-gen-config.rb` generates `carat/plugins/registry.rb` through `Domain::RegistrySource`: an explicit `require` and an explicit constructor call per plugin, in order, which the `config_sync` test renders again to catch a stale file. Spinel sees a fixed list; there is no reflection and no computed constant lookup. The built-in plugins live in `carat/plugins/` inside this repository and go through exactly the same registry, so the API is exercised by the project itself from the first plugin change; `docs/plugins.md` is the guide.
+A compiled plugin is a `spin` package that depends on `carat` and implements one class, a subclass of `PluginApi::Plugin`, with `manifest`, `activate(host)`, `deactivate`, `on_event(event)`, `on_action(name, context)`, and `on_command(command)`. It is listed in `spin.toml` under `[dependencies]` and in `config/plugins.caratrc` as a `plugin.<name> <path> <class>` line, from which `bin/carat-gen-config.rb` generates `carat/plugins/registry.rb` through `Domain::RegistrySource`: an explicit `require` and an explicit constructor call per plugin, in order, which the `config_sync` test renders again to catch a stale file. Spinel sees a fixed list; there is no reflection and no computed constant lookup. The built-in plugins live in `carat/plugins/` inside this repository and go through exactly the same registry, so the API is exercised by the project itself from the first plugin change; `docs/plugins.md` is the guide.
 
 Compiled plugins run on the editor thread and are as fast as the editor. They obey the Spinel rules of section 2.1 and the layer rule: a plugin may require only `carat/plugin_api.rb` and its own files, never the editor's entities, use cases, or drivers. The `lint` test checks this.
 
 ### 9.3 Process plugins
 
-A process plugin is any executable started with `command` from the user's config. It speaks the Carat plugin protocol over stdio: JSON-RPC framed as in the Language Server Protocol, with the same message shapes as the API above, specified in `docs/plugin-protocol.md`. On start the plugin sends its manifest; the host registers it as it would a compiled plugin. Requests from the host carry an id and expect a response; events are notifications. The host does not wait on a plugin: a slow response leaves the editor responsive, and a plugin that exits is unregistered with a message.
+A process plugin is any executable started by a command the user's configuration names (never the project's, section 7). It speaks the Carat plugin protocol over stdio: JSON-RPC framed as in the Language Server Protocol, with the same message shapes as the API above, specified in `docs/plugin-protocol.md`. On start the plugin sends its manifest; the host registers it as it would a compiled plugin. Requests from the host carry an id and expect a response; events are notifications. The host does not wait on a plugin: a slow response leaves the editor responsive, and a plugin that exits is unregistered with a message.
 
 Process plugins may be written in any language, CRuby included, so an author can prototype in CRuby with the full standard library and gems, then port to a compiled plugin for speed. The `JsonRpcLanguageGateway` and `ServiceThreads` already carry the framing, the process handle, and the queue; the plugin gateway reuses them with a different message table.
 
@@ -350,8 +321,8 @@ Process plugins may be written in any language, CRuby included, so an author can
 
 - The editor must start, edit, save, and quit with every plugin disabled. Core editing never depends on a plugin.
 - A plugin failure, anything it raises (`StandardError`, `ScriptError` such as `NotImplementedError`, or `SystemStackError`) in any call, its manifest included, is reported in the message area and disables that plugin, which takes its windows, signs, status, prompt, and bindings with it; it never ends the editor or corrupts a buffer, because every edit request is validated item by item and applied as one transaction, rolled back if it still fails. Re-entry is bounded: events are queued during plugin calls and delivered in at most eight rounds, and an ex command a plugin runs four calls deep is refused with `E169`.
-- A plugin's bindings never override a user's bindings, and `config/default.json` never contains a plugin's bindings; those belong to the plugin manifest.
-- The API is versioned, `1.3` in `PluginApi::VERSION` since the syntax highlighting change added tokenizers; a minor version adds, 1.2 also moved positions to ids and symbols to strings, and 1.3 added a manifest member, with the plugins of this repository. The host refuses a manifest written against a different major version or a newer minor and says so, and refuses a second plugin with a registered name or an ex command another plugin declared; `Domain::ManifestCheck` holds every other rule a manifest must obey: member types, name form, `plugin.<name>.<action>` action names, uppercase ex command names with prefix abbreviations, known events, bindings that parse and name the plugin's own actions, and typed options. A default binding of keys another plugin holds is reported and not added.
+- A plugin's bindings never override a user's bindings, and `config/default.caratrc` never contains a plugin's bindings; those belong to the plugin manifest.
+- The API is versioned, `2.0` in `PluginApi::VERSION` since the configuration files change made a manifest's default bindings and option defaults, and a scratch buffer's keymap, lists of configuration lines; a minor version adds, a major version changes what a plugin writes, 1.2 moved positions to ids and symbols to strings, and 1.3 added the filetypes member, each with the plugins of this repository. The host refuses a manifest written against a different major version or a newer minor and says so, and refuses a second plugin with a registered name or an ex command another plugin declared; `Domain::ManifestCheck` holds every other rule a manifest must obey: member types, name form, `plugin.<name>.<action>` action names, uppercase ex command names with prefix abbreviations, known events, keymap lines that parse and name the plugin's own actions, and typed options with one default line each. A default binding of keys another plugin holds is reported and not added.
 
 ## 10. Testing strategy
 
@@ -368,8 +339,8 @@ Every test is compiled with Spinel and run through `make`. There is no CRuby tes
 - `bench/keys.rb` is the key benchmark, a Spinel program over the doubles with a terminal that counts bytes: fixed scenarios (cursor moves, scrolling, typing, word motion, line edits on 100,000 lines, UTF-8 text, a 10,000-character line, the explorer open, undo and redo on 100,000 lines, the dot command beside the commands it repeats, and a thousand single-line edits) timed per key, with the live heap the keys left behind with the collector's share from `GC.total_time`; `bench/run.sh` adds allocations per key from Spinel's `SPINEL_ALLOC_REPORT` and checks a budget, which continuous integration enforces for the cursor scenario; `bench/profile.sh` records a `--profile` build with `perf`. `spin` compiles only `bin/` and `test/`, so `bench/` is built by `make bench`, `make bench-budget`, and `make profile` alone.
 - The test doubles are not in the production require graph: `carat.rb` leaves them out, and test and benchmark programs require `carat/test_support.rb`, which requires the library and the doubles. The `lint` test refuses a require of a double from `bin/` or `carat/` outside `carat/doubles/` and that file.
 - `test/adapters_assembly.rb` is the shared-instance guard: after building the assembly, every collaborator holding the buffer list, the tab list, the registers, the keymap, the input state, the plugin UI state, the plugin host, the command runner, and each port holds the same object, compared with `equal?`, because a keyword default would build a second one silently.
-- `test/lint.rb`: a test program that reads every source file and checks the Spinel rules of section 2.1 that the compiler does not catch on its own, the layer rule of section 3 for requires and for constant references, the plugin rule of section 9, the naming conventions of `CLAUDE.md` (one class per file named after it, namespaces by layer, case, predicates, abbreviations, the suffixes of handlers, ports, doubles, and concerns), the concern rules, keyword constructors, and the record rules (`keyword_init: true` on every `Struct.new`, keyword arguments at every record construction): no `eval` or computed `send`, no `IO.popen`, no key binding literals outside `config/default.json`. Each rule is a function asserted against a known good and a known bad case. It prints the violations, so the snapshot is the empty report.
-- `test/config_sync.rb`: parses `config/default.json` with `Carat::Json` and compares it to the generated `Carat::Domain::DEFAULT_CONFIG`, so a stale generated file fails the suite.
+- `test/lint.rb`: a test program that reads every source file and checks the Spinel rules of section 2.1 that the compiler does not catch on its own, the layer rule of section 3 for requires and for constant references, the plugin rule of section 9, the naming conventions of `CLAUDE.md` (one class per file named after it, namespaces by layer, case, predicates, abbreviations, the suffixes of handlers, ports, doubles, and concerns), the concern rules, keyword constructors, and the record rules (`keyword_init: true` on every `Struct.new`, keyword arguments at every record construction): no `eval` or computed `send`, no `IO.popen`, no key binding literals outside the configuration files. Each rule is a function asserted against a known good and a known bad case. It prints the violations, so the snapshot is the empty report.
+- `test/config_sync.rb`: compares `config/default.caratrc` with the generated `Carat::Domain::DEFAULT_CARATRC`, so a stale generated file fails the suite, checks that the defaults read cleanly and bind every mode, and renders the registry from `config/plugins.caratrc` again.
 - `test/smoke_*.rb`: start `build/bin/carat`, or the binary `CARAT_BIN` names, inside a pseudo-terminal through `Process.spawn`, send keys, and check the file written and the final screen. Few and slow.
 - Test programs pass typed values into the library. Spinel types a method's parameters once for the whole program, and every test is part of the runner, so an `untyped` table value passed to a library method widens that method for every test, and the analysis pays for the widening with extra re-narrowing rounds over the whole library: with its tables reaching `Buffer.new`, `set_lines`, and `Position.new` untyped, `test/domain_buffer.rb` needed 5 rounds and about 40 seconds of analysis instead of 2 and 23. Table values are converted with typed helpers before the call.
 - The analysis budget fails when Spinel's analysis of a compile root needs more than 2 re-narrowing rounds; the count is the same on every machine for the same sources and compiler, while the analysis time, which depends on the machine, only warns above 45 seconds. `make test-build` compiles the runner with Spinel's phase report (`SP_TIMING=1`) and checks that report through `tools/analysis_budget.sh`, so every test run checks the budget over the library and every test's calls into it at no extra cost; `make analysis-budget` compiles `bin/carat.rb` and the runner to C, one after another, and checks both.
@@ -391,8 +362,8 @@ tools/ci_scope.sh               decides whether a CI run needs the checks
 tools/spinel/                   the header Spinel generates with CRuby, vendored at the pinned commit
 tmp/                            .spinel, the Spinel checkout, and .toolchain, the installed toolchain; ignored by git, hidden from spin
 bin/carat.rb                    entry point and composition root; builds to build/bin/carat
-bin/carat-gen-config.rb         generates carat/domain/default_config.rb from config/default.json
-config/default.json             every default option and key binding
+bin/carat-gen-config.rb         generates carat/domain/default_config.rb and the plugin registry from config/
+config/default.caratrc          every default option and key binding
 carat.rb                        require graph, innermost layer first; no test double
 carat/test_support.rb           require graph of test and benchmark programs: carat.rb and the doubles
 carat/version.rb
@@ -408,7 +379,7 @@ carat/domain/                   entities
   tab_list.rb buffer_list.rb input_state.rb last_find.rb plugin_ui.rb editor_state.rb
   frame.rb cell.rb utf8.rb decoded_line.rb identity_table.rb line_cache.rb
   highlight.rb theme.rb themes.rb color_depth.rb filetype.rb syntax_line.rb syntax_table.rb syntax_cache.rb
-  json.rb default_config.rb (generated) icons.rb
+  json.rb default_config.rb (generated) rc_parse.rb rc_line.rb rc_parser.rb rc_value.rb config.rb icons.rb
   manifest_check.rb registry_source.rb
 carat/use_cases/
   handle_key.rb arrange_view.rb move.rb operate.rb enter_insert.rb insert_text.rb
@@ -420,7 +391,7 @@ carat/ports/
   language_service_port.rb process_port.rb message_queue_port.rb
 carat/adapters/
   input_controller.rb key_decoder.rb frame_presenter.rb painted_rows.rb screen_presenter.rb
-  sgr_table.rb json_config_gateway.rb
+  sgr_table.rb rc_config_gateway.rb
   json_rpc_language_gateway.rb
 carat/drivers/
   ansi_terminal.rb disk_files.rb process_runner.rb monotonic_clock.rb
@@ -431,7 +402,7 @@ carat/plugins/
   explorer/ ruby/ finder/ git_signs/  built-in compiled plugins
   hello/                        the smallest example, a test fixture outside the registry
 carat/adapters/json_rpc_plugin_gateway.rb
-config/plugins.json             the ordered list of compiled plugins
+config/plugins.caratrc          the ordered list of compiled plugins
 carat/doubles/
   fake_terminal.rb memory_files.rb manual_clock.rb fixed_config.rb manual_signals.rb
   editor_harness.rb fake_process.rb
@@ -450,17 +421,17 @@ openspec/                       specs are the behavioral source of truth
 
 Each item is one OpenSpec change and one pull request, in this order. Each leaves the editor usable, and `spin build` and `spin test` green.
 
-1. `project-skeleton`: `spin.toml`, the `carat.rb` require graph, `Carat::Testing`, the `Json` entity with its tests, `config/default.json` with the generator executable and the `config_sync` test, the `lint` test, continuous integration that builds Spinel and runs `spin build` and `spin test`, and a `bin/carat.rb` that opens a file and quits. This change proves the whole toolchain before any editing exists.
-2. `editor-foundation`: ports and drivers, `Buffer` with the four primitives, `KeyDecoder`, `Keymap` from JSON, `HandleKey`, `FramePresenter` and `ScreenPresenter` for one window, normal and insert modes with the foundation bindings, command-line mode with `:w :q :wq :e`, and the editor test harness.
+1. `project-skeleton`: `spin.toml`, the `carat.rb` require graph, `Carat::Testing`, the `Json` entity with its tests, the default configuration with the generator executable and the `config_sync` test, the `lint` test, continuous integration that builds Spinel and runs `spin build` and `spin test`, and a `bin/carat.rb` that opens a file and quits. This change proves the whole toolchain before any editing exists.
+2. `editor-foundation`: ports and drivers, `Buffer` with the four primitives, `KeyDecoder`, `Keymap` from the configuration, `HandleKey`, `FramePresenter` and `ScreenPresenter` for one window, normal and insert modes with the foundation bindings, command-line mode with `:w :q :wq :e`, and the editor test harness.
 3. `command-grammar`: `CommandGrammar`, counts, registers, the full motion set, the first operators, text objects. `docs/compatibility.md` starts here.
 4. `undo-and-registers`: `Transaction`, `UndoTree`, `u`, `Ctrl-R`, the dot command, numbered and named registers. Delivered after `visual-modes` and the core-quality queue: the undo tree with `U`, `g-`, `g+`, and the undo ex commands, the dot command over every change including the visual operators, and the numbered, small delete, black hole, and read-only registers with `:registers`.
 5. `visual-modes`: charwise, linewise, and blockwise selection with operators. Delivered ahead of item 4 at the user's request; the dot command and undo cover the visual operators since item 4 landed, and the `'<` and `'>` marks arrive with the change that brings marks, set from the selection each window already keeps.
 6. `search-and-substitute`: `/ ? n N * #`, `hlsearch`, `incsearch`, `:s`, `:g`, `:v`.
 7. `buffers-windows-tabs`: buffer list, splits, `Ctrl-W` commands, tab pages, and their ex commands. Delivered in two changes: `windows-and-splits` brought the layout, the `Ctrl-W` commands, the tab pages, and the buffer list that windows share, ahead of the plugins that need a side window; `buffer-list` brings `:ls`, `:bn`, `:bp`, `:bd`, `:b N`, and the `E162` line of `:qa`, and may land after the plugin items.
 8. `syntax-highlighting`: tokenizer interface, Ruby tokenizer, themes, color output. Delivered after the core-quality queue at the user's request, with the engine in the core and each language a plugin: filetype detection, the highlight groups, the syntax cache that the edit path invalidates, the `ruby` plugin, the two themes, and truecolor, 256-color, and 16-color output, with `:syntax` and a `:set` limited to `filetype` and `syntax`.
-9. `options-and-config`: `:set`, local options, user and project config files with merge and unbinding.
+9. `options-and-config`: `:set`, local options, user and project config files with merge and unbinding. The configuration files arrived first, outside the order, with `caratrc-config` at the user's request: the `.caratrc` format of section 7, the user file and the project file over the defaults, later lines winning, `none` to unbind, and problems by file and line. The item keeps `:set` beyond `filetype` and `syntax` and the buffer- and window-local options.
 10. `language-services`: `ProcessPort`, `ServiceThreads`, `JsonRpcLanguageGateway`, `ruby-lsp` integration, diagnostics, go-to-definition, hover, completion menu.
-11. `plugin-host`: `carat/plugin_api.rb`, the manifest, the plugin host use cases, the generated registry from `config/plugins.json`, events, scratch buffers with plugin-owned keymaps, and the lint rule for plugin dependencies. Proven by a tiny built-in `hello` plugin that adds one action and one ex command.
+11. `plugin-host`: `carat/plugin_api.rb`, the manifest, the plugin host use cases, the generated registry from the plugin list, events, scratch buffers with plugin-owned keymaps, and the lint rule for plugin dependencies. Proven by a tiny built-in `hello` plugin that adds one action and one ex command.
 12. `plugin-explorer-and-finder`: the file tree and the fuzzy finder as the first real compiled plugins. Delivered in two changes: `plugin-explorer` brought the file tree with icons and the host requests it needs (file operations inside a root and a command-line prompt); `plugin-finder` brings the fuzzy finder.
 13. `plugin-protocol`: `docs/plugin-protocol.md`, the JSON-RPC plugin gateway reusing the language service framing, and a sample process plugin written in CRuby to prove the protocol from outside the binary.
 14. `plugin-git-and-formatting`: git signs and status as a plugin; RuboCop formatting through the language service.
@@ -476,8 +447,8 @@ Before item 10 starts, a short spike verifies on Spinel that a subprocess with p
 | Test harness | Own `Carat::Testing` with snapshot output under `spin test` | `minitest`; `test-unit` | Neither framework compiles with Spinel; snapshot diffs make failures readable and the harness is tiny |
 | Lint | A Spinel-compiled `test/lint.rb` | RuboCop | RuboCop needs CRuby; the rules Carat needs are few and specific |
 | Architecture | Clean Architecture with four layers and the dependency rule | Layered MVC; hexagonal only | Entities and use cases are testable with no terminal; drivers and compilers can change at the edge |
-| Key bindings | JSON, defaults included, generated into Ruby for the binary | Ruby config file; bindings in code | One schema for defaults and users; no metaprogramming; data is diffable and validatable |
-| JSON | Own two-hundred-line reader and writer | stdlib `json`; a gem | Spinel bundles no JSON library and refuses the pure one; the subset Carat needs is small |
+| Configuration | `.caratrc` lines of `scope.name value`, defaults included, embedded in the binary; one format for files, manifests, and the plugin list | JSON (the first format, replaced at the user's request); Ruby config file; bindings in code | One line per setting is easy to write and diff, takes comments, and reports problems by file and line; no metaprogramming; one parser for every source |
+| JSON | Own two-hundred-line reader and writer, for JSON-RPC | stdlib `json`; a gem | Spinel bundles no JSON library and refuses the pure one; the subset Carat needs is small |
 | Concurrency | One editor thread, one thread per service, a queue between | Ractor; async with fibers; everything on one thread | Spinel documents threads and queues, not Ractor; fibers have no scheduler on Spinel; one thread would block on slow servers |
 | Child processes | `Process.spawn` with `IO.pipe`, `Open3` for one-shot tools | `IO.popen` | `IO.popen` is refused by Spinel at compile time |
 | Text storage | Array of line strings behind five primitives and one in-place splice | Rope; piece table | Simplest structure for the target sizes; replaceable later |

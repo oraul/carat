@@ -1,25 +1,20 @@
-ok   generated mirror matches config/default.json
-ok   config is an object
-ok   has leader
-ok   has timeoutlen
-ok   has options
-ok   has keymaps
-ok   has languages
-ok   has plugins
-ok   has theme
-ok   keymaps.normal is an object
-ok   keymaps.insert is an object
-ok   keymaps.visual is an object
-ok   keymaps.visual_line is an object
-ok   keymaps.visual_block is an object
-ok   keymaps.operator_pending is an object
-ok   keymaps.cmdline is an object
-ok   every binding is an action name, a key sequence, or null
+ok   generated mirror matches config/default.caratrc
+ok   every line of the defaults reads, in a known scope
+ok   every option line names an option with a value of its kind
 ok   the icons option names a set
-ok   config/plugins.json lists at least one plugin
-ok   every plugins.json entry has a name, a path, and a class
-ok   generated registry matches config/plugins.json
+ok   the defaults set the leader
+ok   the defaults bind keys in normal
+ok   the defaults bind keys in insert
+ok   the defaults bind keys in visual
+ok   the defaults bind keys in visual_line
+ok   the defaults bind keys in visual_block
+ok   the defaults bind keys in operator_pending
+ok   the defaults bind keys in cmdline
+ok   every line of config/plugins.caratrc reads
+ok   config/plugins.caratrc lists at least one plugin
+ok   every plugins.caratrc line has a name, a path, and a class
+ok   generated registry matches config/plugins.caratrc
 ok   the compiled registry names the same plugins
 ok   the compiled registry constructs one plugin per entry
-ok   every plugins entry of config/default.json names a listed plugin
-config_sync: 24 passed, 0 failed
+ok   every plugin line of config/default.caratrc names a listed plugin
+config_sync: 19 passed, 0 failed

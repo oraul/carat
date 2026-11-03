@@ -24,6 +24,13 @@ module DomainThemeTest
     t.assert_equal([], missing, "#{theme.name}: every other group has a color in both depths")
   end
 
+  # The options of text read as the project file.
+  def self.theme_of(text)
+    config = D::Config.new
+    config.read(".caratrc", text, false)
+    D::Options.from_config(config)
+  end
+
   def self.main
     t = Carat::Testing.new("domain_theme")
 
@@ -55,12 +62,16 @@ module DomainThemeTest
     t.assert_equal(0x8c8fa1, light.fg(H::COMMENT), "carat-light has its own comment color")
     t.assert_equal(D::Theme::BOLD, dark.attr(H::STATUS) & D::Theme::BOLD, "the status line is bold")
 
-    # Options read the theme from the top level of the configuration.
+    # Options read the theme from the option.theme line.
     t.assert_equal(["carat-dark", true], [D::Options.new.theme, D::Options.new.syntax_on], "the defaults: carat-dark, syntax on")
-    t.assert_equal("carat-light", D::Options.from_config({ "theme" => "carat-light" }).theme, "the theme key selects a theme")
-    t.assert_equal("carat-dark", D::Options.from_config({ "theme" => "solarized" }).theme, "an unknown theme keeps the default")
-    t.assert_equal("carat-dark", D::Options.from_config({ "theme" => 3 }).theme, "a theme of the wrong type keeps the default")
-    t.assert_equal("carat-dark", D::Options.from_config(Carat::Json.parse(D::DEFAULT_CONFIG_JSON)).theme, "the shipped configuration names carat-dark")
+    t.assert_equal("carat-light", theme_of("option.theme carat-light\n").theme, "the theme line selects a theme")
+    unknown = D::Config.new
+    unknown.read(".caratrc", "option.theme solarized\n", false)
+    t.assert_equal(["carat-dark", [".caratrc:1: unknown theme solarized"]], [D::Options.from_config(unknown).theme, unknown.report], "an unknown theme keeps the default and is reported")
+    t.assert_equal("carat-dark", theme_of("option.theme \"carat light\" x\n").theme, "a theme of the wrong kind keeps the default")
+    shipped = D::Config.new
+    shipped.read_defaults("config/default.caratrc", D::DEFAULT_CARATRC)
+    t.assert_equal("carat-dark", D::Options.from_config(shipped).theme, "the shipped configuration names carat-dark")
 
     # The color depth from COLORTERM and TERM.
     t.table([

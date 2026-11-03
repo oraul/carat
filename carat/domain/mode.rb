@@ -1,6 +1,6 @@
 module Carat
   module Domain
-    # The editor modes as symbols, with the names used in the JSON keymaps.
+    # The editor modes as symbols, with the names keymap lines use.
     module Mode
       NORMAL = :normal
       INSERT = :insert

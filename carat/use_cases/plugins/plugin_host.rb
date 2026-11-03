@@ -85,9 +85,9 @@ module Carat
       end
 
       # Activates every registered plugin the configuration leaves enabled.
-      #: (untyped) -> void
-      def activate_all(config_plugins)
-        @registry.activate_all(config_plugins)
+      #: (Domain::Config) -> void
+      def activate_all(config)
+        @registry.activate_all(config)
         flush
       end
 

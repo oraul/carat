@@ -99,9 +99,7 @@ module EditorNormalTest
     t.assert_equal([2, 0], h.cursor, "a lone prefix is dropped after timeoutlen")
     t.assert_equal([], h.assembly.input.pending_keys, "nothing pending after the timeout")
 
-    config = Carat::Doubles::FixedConfig.defaults
-    config["keymaps"]["normal"]["a"] = "cursor.right"
-    config["keymaps"]["normal"]["ab"] = "cursor.line_end"
+    config = Carat::Doubles::FixedConfig.with("keymap.normal a cursor.right\nkeymap.normal ab cursor.line_end\n")
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "abcdef\n")
     h = H.new(files: files, config: config, rows: 10, cols: 80, plugins: [])
@@ -118,8 +116,7 @@ module EditorNormalTest
     h.type("<Space>w")
     t.assert_equal("\"a.txt\" 1L, 3B written", h.message_row, "leader w writes the file")
     t.assert_equal("ab\n", h.files.get("a.txt"), "the file was written")
-    loop_config = Carat::Doubles::FixedConfig.defaults
-    loop_config["keymaps"]["normal"]["q"] = "q"
+    loop_config = Carat::Doubles::FixedConfig.with_user("keymap.normal q q\n")
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "ab\n")
     h = H.new(files: files, config: loop_config, rows: 10, cols: 80, plugins: [])

@@ -6,7 +6,7 @@ require_relative "../carat/testing"
 # the file is compiled on its own (make test-one).
 module EditorOperatorsTest
   # An editor over the default options with autoindent on, shiftwidth 2,
-  # tabstop 2, and expandtab on, as config/default.json sets them.
+  # tabstop 2, and expandtab on, as config/default.caratrc sets them.
   def self.editor(text)
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", text)
@@ -16,8 +16,7 @@ module EditorOperatorsTest
   end
 
   def self.editor_with(text, options)
-    config = Carat::Doubles::FixedConfig.defaults
-    options.each { |key, value| config["options"][key] = value }
+    config = Carat::Doubles::FixedConfig.with(options.to_s)
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", text)
     h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 10, cols: 80, plugins: [])
@@ -151,11 +150,11 @@ module EditorOperatorsTest
 
     # Options that change an operator: rows are [label, [text, start, options, keys], [lines, cursor]].
     t.table([
-      ["cc without autoindent", ["  ab\nc\nd\n", [0, 0], { "autoindent" => false }, "2cc"], [["", "d"], [0, 0]]],
-      [">> with tabs", ["ab\n", [0, 0], { "expandtab" => false, "shiftwidth" => 4, "tabstop" => 8 }, ">>"], [["    ab"], [0, 4]]],
-      [">> twice with tabs makes a tab", ["ab\n", [0, 0], { "expandtab" => false, "shiftwidth" => 4, "tabstop" => 8 }, ">>>>"], [["\tab"], [0, 1]]],
-      ["<< with tabs", ["\t  ab\n", [0, 0], { "expandtab" => false, "shiftwidth" => 4, "tabstop" => 8 }, "<<"], [["      ab"], [0, 6]]],
-      [">> with shiftwidth 0 uses tabstop", ["ab\n", [0, 0], { "shiftwidth" => 0, "tabstop" => 4 }, ">>"], [["    ab"], [0, 4]]]
+      ["cc without autoindent", ["  ab\nc\nd\n", [0, 0], "option.autoindent false\n", "2cc"], [["", "d"], [0, 0]]],
+      [">> with tabs", ["ab\n", [0, 0], "option.expandtab false\noption.shiftwidth 4\noption.tabstop 8\n", ">>"], [["    ab"], [0, 4]]],
+      [">> twice with tabs makes a tab", ["ab\n", [0, 0], "option.expandtab false\noption.shiftwidth 4\noption.tabstop 8\n", ">>>>"], [["\tab"], [0, 1]]],
+      ["<< with tabs", ["\t  ab\n", [0, 0], "option.expandtab false\noption.shiftwidth 4\noption.tabstop 8\n", "<<"], [["      ab"], [0, 6]]],
+      [">> with shiftwidth 0 uses tabstop", ["ab\n", [0, 0], "option.shiftwidth 0\noption.tabstop 4\n", ">>"], [["    ab"], [0, 4]]]
     ]) do |input|
       h = editor_with(input[0], input[2])
       h.state.cursor.move_to(input[1][0], input[1][1])

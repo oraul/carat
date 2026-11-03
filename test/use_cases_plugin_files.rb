@@ -22,7 +22,7 @@ module UseCasesPluginFilesTest
     # Returns the manifest.
     # @rbs skip
     def manifest
-      Carat::PluginApi::Manifest.new(name: "fs", version: "1.0.0", api_version: "1.2", actions: { "plugin.fs.list" => "Open the list" }, commands: {}, bindings: { "normal" => { "<leader>fl" => "plugin.fs.list" } }, events: [], options: {}, option_types: {}, filetypes: [])
+      Carat::PluginApi::Manifest.new(name: "fs", version: "1.0.0", api_version: "2.0", actions: { "plugin.fs.list" => "Open the list" }, commands: {}, bindings: ["keymap.normal <leader>fl plugin.fs.list"], events: [], options: [], option_types: {}, filetypes: [])
     end
 
     #: (Carat::PluginApi::Host) -> void

@@ -6,14 +6,14 @@ Key bindings come only from JSON configuration: one map per mode from a key sequ
 ## Requirements
 
 ### Requirement: Bindings are loaded from the configuration per mode
-The editor SHALL build its key bindings from the default bindings of every enabled plugin's manifest and then from the "keymaps" object of the configuration, one map per mode named there, so a configuration binding of the same keys replaces a plugin's, null removes it, and no binding comes from anywhere else. A key in Vim notation SHALL bind the sequence it denotes, with <leader> expanded from the configuration's "leader". An action name is namespace segments and the action, joined by dots.
+Key bindings SHALL come from every enabled plugin's manifest defaults and then from the `keymap.<mode> <keys> <action>` lines of the configuration files in load order, so a later binding of the same keys replaces an earlier one, `none` removes it, and no binding comes from anywhere else. Keys in Vim notation SHALL bind what they denote, <leader> being the last `keymap.leader` value or a backslash. An action name is dotted segments; any other value is keys to replay.
 
 #### Scenario: Default normal-mode binding
 - **WHEN** the default configuration is loaded and the key "j" is pressed in normal mode
 - **THEN** the action "cursor.down" is selected
 
 #### Scenario: Leader binding
-- **WHEN** the default configuration is loaded with leader " " and the keys Space then "w" are pressed in normal mode
+- **WHEN** the default configuration is loaded, which sets "keymap.leader <Space>", and the keys Space then "w" are pressed in normal mode
 - **THEN** the sequence ":w<CR>" is selected for replay
 
 #### Scenario: Insert-mode binding
@@ -25,12 +25,16 @@ The editor SHALL build its key bindings from the default bindings of every enabl
 - **THEN** the action "plugin.hello.greet" is selected
 
 #### Scenario: Configuration wins over a plugin
-- **WHEN** the configuration binds "<leader>hh" to "cursor.down" and the hello plugin is enabled
+- **WHEN** a configuration line is "keymap.normal <leader>hh cursor.down" and the hello plugin is enabled
 - **THEN** Space, "h", "h" select "cursor.down"
 
 #### Scenario: Configuration unbinds a plugin key
-- **WHEN** the configuration maps "<leader>hh" to null and the hello plugin is enabled
+- **WHEN** a configuration line is "keymap.normal <leader>hh none" and the hello plugin is enabled
 - **THEN** Space, "h", "h" are unbound
+
+#### Scenario: A later line rebinds
+- **WHEN** the user file binds "Q" in normal mode to "cursor.down" and the project file binds it to "none"
+- **THEN** "Q" is unbound
 
 ### Requirement: A multi-key binding waits for the rest of its sequence
 When the keys pressed so far are a proper prefix of a bound sequence and not themselves bound, the editor SHALL wait for the next key without dispatching anything.
@@ -73,25 +77,33 @@ A binding whose value is a key sequence in Vim notation rather than an action na
 - **THEN** the file is written exactly as if ":w" and Enter had been typed
 
 ### Requirement: Malformed bindings are reported and skipped
-A binding whose key notation cannot be parsed SHALL be reported with its mode and key, and the rest of the configuration SHALL still load.
+A keymap line that names an unknown mode, does not have exactly keys and an action, or whose key notation cannot be parsed SHALL be reported as `file:line: message` and skipped, and the rest of the configuration SHALL still load.
 
 #### Scenario: One bad key among good ones
-- **WHEN** a configuration binds "<Nope>" and "j" in normal mode
-- **THEN** loading reports an error naming normal and "<Nope>", and "j" is bound
+- **WHEN** the project file's first line binds "<Nope>" in normal mode and its second line binds "j"
+- **THEN** ".caratrc:1: unknown key <Nope>" is reported and "j" is bound
+
+#### Scenario: Unknown mode
+- **WHEN** the project file's first line is "keymap.command x cursor.down"
+- **THEN** ".caratrc:1: unknown mode command" is reported
+
+#### Scenario: Missing action
+- **WHEN** the project file's first line is "keymap.normal x"
+- **THEN** ".caratrc:1: keymap.normal takes keys and an action" is reported
 
 ### Requirement: Unknown action names are reported when the configuration loads
-When the configuration is loaded, a binding whose value is an action name that neither the editor nor a registered plugin declares SHALL be reported with the file name and the JSON path, as "config/default.json: keymaps.normal.zq: unknown action foo.bar", and SHALL not be added, while every other binding still loads. After startup the message row SHALL show the first report as an error, with the number of further reports.
+When the configuration is loaded, a binding whose value is an action name that neither the editor nor a registered plugin declares SHALL be reported as `file:line: unknown action NAME` and SHALL not be added, while every other binding still loads. After startup the message row SHALL show the first report as an error, with the number of further reports.
 
 #### Scenario: Unknown action in a binding
-- **WHEN** the configuration binds "zq" in normal mode to "foo.bar" and the editor starts on "a.txt"
-- **THEN** the message row shows "config/default.json: keymaps.normal.zq: unknown action foo.bar" as an error, and pressing "z", "q" does nothing
+- **WHEN** the project file's first line is "keymap.normal zq foo.bar" and the editor starts on "a.txt"
+- **THEN** the message row shows ".caratrc:1: unknown action foo.bar" as an error, and pressing "z", "q" does nothing
 
 #### Scenario: Several unknown actions
-- **WHEN** the configuration binds "zq" in normal mode to "foo.bar" and "zw" in insert mode to "foo.baz"
-- **THEN** both are reported and the message row shows the first followed by " (and 1 more)"
+- **WHEN** the project file binds "zq" in normal mode to "foo.bar" on line 1 and "zw" in insert mode to "foo.baz" on line 2
+- **THEN** both are reported and the message row shows ".caratrc:1: unknown action foo.bar (and 1 more)"
 
 #### Scenario: A plugin action is known
-- **WHEN** the configuration binds "zh" in normal mode to "plugin.hello.greet" and the hello plugin is registered
+- **WHEN** a configuration line binds "zh" in normal mode to "plugin.hello.greet" and the hello plugin is registered
 - **THEN** nothing is reported and "z", "h" greets
 
 #### Scenario: The default configuration is clean

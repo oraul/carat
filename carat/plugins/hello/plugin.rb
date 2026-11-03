@@ -33,9 +33,9 @@ module Carat
             api_version: Carat::PluginApi::VERSION,
             actions: { "plugin.hello.greet" => "Show a greeting with the info icon and count it in the status line" },
             commands: { "Hello" => "Hel" },
-            bindings: { "normal" => { "<leader>hh" => GREET } },
+            bindings: ["keymap.normal <leader>hh #{GREET}"],
             events: ["buffer_open"],
-            options: { "greeting" => "Hello" },
+            options: ["plugin.hello.greeting Hello"],
             option_types: { "greeting" => "string" },
             filetypes: []
           )

@@ -7,7 +7,8 @@ module Carat
     # An in-memory file system: files as a hash from absolute path to text,
     # directories as a set of absolute paths, and the paths tests marked as
     # symbolic links. A relative path is resolved against the working
-    # directory, "/project" unless a test moves it, so the editor's
+    # directory, "/project" unless a test moves it (the home directory is
+    # "/home/user" unless a test moves it), so the editor's
     # relative paths and a plugin's absolute ones name the same entries.
     # Putting or writing a file creates its directories. Paths listed in
     # unwritable raise on write, so tests can exercise E212.
@@ -18,6 +19,7 @@ module Carat
       # @rbs @dirs: Hash[String, String]
       # @rbs @links: Hash[String, String]
       # @rbs @cwd: String
+      # @rbs @home: String
 
       #: () -> void
       def initialize
@@ -26,8 +28,21 @@ module Carat
         @links = {}
         @unwritable = []
         @cwd = "/project"
+        @home = "/home/user"
         @dirs["/"] = ""
         add_dirs(@cwd)
+        add_dirs(@home)
+      end
+
+      # Makes path the home directory, creating it; "" means none.
+      #: (String) -> void
+      def move_home(path)
+        if path.empty?
+          @home = ""
+          return
+        end
+        @home = PluginApi::Paths.normalize(path)
+        add_dirs(@home)
       end
 
       # Makes path the working directory, creating it.
@@ -144,6 +159,12 @@ module Carat
       # @rbs skip
       def cwd
         @cwd
+      end
+
+      # Returns the home directory, "/home/user" unless a test moves it.
+      # @rbs skip
+      def home
+        @home
       end
 
       private

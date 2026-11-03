@@ -28,7 +28,7 @@ module EditorPluginsTest
     # @rbs skip
     def manifest
       Carat::PluginApi::Manifest.new(
-        name: "side", version: "1.0.0", api_version: "1.0",
+        name: "side", version: "1.0.0", api_version: "2.0",
         actions: {
           "plugin.side.open" => "Open the list on the left",
           "plugin.side.right" => "Open the list on the right",
@@ -43,8 +43,8 @@ module EditorPluginsTest
           "plugin.side.here" => "Open b.txt in the side window itself"
         },
         commands: {},
-        bindings: { "normal" => { "<leader>to" => "plugin.side.open", "<leader>tr" => "plugin.side.right", "<leader>tw" => "plugin.side.wide", "<leader>tc" => "plugin.side.close", "<leader>tl" => "plugin.side.lines", "<leader>tn" => "plugin.side.nope", "<leader>tf" => "plugin.side.file", "<leader>tx" => "plugin.side.far", "<leader>tt" => "plugin.side.count", "<leader>th" => "plugin.side.here" } },
-        events: [], options: {}, option_types: {}, filetypes: []
+        bindings: ["keymap.normal <leader>to plugin.side.open", "keymap.normal <leader>tr plugin.side.right", "keymap.normal <leader>tw plugin.side.wide", "keymap.normal <leader>tc plugin.side.close", "keymap.normal <leader>tl plugin.side.lines", "keymap.normal <leader>tn plugin.side.nope", "keymap.normal <leader>tf plugin.side.file", "keymap.normal <leader>tx plugin.side.far", "keymap.normal <leader>tt plugin.side.count", "keymap.normal <leader>th plugin.side.here"],
+        events: [], options: [], option_types: {}, filetypes: []
       )
     end
 
@@ -57,7 +57,7 @@ module EditorPluginsTest
     def on_action(name, context)
       host = @host
       return if host.nil?
-      keymap = { "normal" => { "<CR>" => "plugin.side.pick" } }
+      keymap = ["keymap.normal <CR> plugin.side.pick"]
       case name
       when "plugin.side.open" then report_window(host.open_scratch("list", "left", 30, LINES, keymap))
       when "plugin.side.right" then report_window(host.open_scratch("list", "right", 30, LINES, keymap))
@@ -141,7 +141,7 @@ module EditorPluginsTest
     # Returns the manifest.
     # @rbs skip
     def manifest
-      Carat::PluginApi::Manifest.new(name: "boom", version: "1.0.0", api_version: "1.0", actions: { "plugin.boom.go" => "Raise" }, commands: {}, bindings: { "normal" => { " bb" => "plugin.boom.go" } }, events: [:cursor_move], options: {}, option_types: {}, filetypes: [])
+      Carat::PluginApi::Manifest.new(name: "boom", version: "1.0.0", api_version: "2.0", actions: { "plugin.boom.go" => "Raise" }, commands: {}, bindings: ["keymap.normal <Space>bb plugin.boom.go"], events: [:cursor_move], options: [], option_types: {}, filetypes: [])
     end
 
     #: (String, Carat::PluginApi::Context) -> void
@@ -183,50 +183,43 @@ module EditorPluginsTest
     t.assert_equal("", h.message, "a window command clears the message")
 
     # The configuration: disabled, options, bindings, icons.
-    config = Carat::Doubles::FixedConfig.defaults
-    config["plugins"]["hello"] = { "enabled" => false }
+    config = Carat::Doubles::FixedConfig.with("plugin.hello.enabled false\n")
     h = editor_with(config, 24, 80)
     h.type(" hh")
     t.assert_equal(["", [0, 0]], [h.message, h.cursor], "a disabled plugin's binding does nothing")
     h.type(":Hello<CR>")
     t.assert_equal("E492: Not an editor command: Hello", h.message, "a disabled plugin's command is unknown")
     t.assert_equal(["disabled in the configuration", true], [h.plugins.reason("hello"), h.plugins.enabled?("side")], "only the disabled plugin is off")
-    config = Carat::Doubles::FixedConfig.defaults
-    config["plugins"]["hello"] = { "options" => { "greeting" => "Hi" } }
+    config = Carat::Doubles::FixedConfig.with("plugin.hello.greeting Hi\n")
     h = editor_with(config, 24, 80)
     h.type(":Hello<CR>")
     t.assert_equal("#{INFO} Hi, world! 1 buffer opened", h.message, "an option from the configuration reaches the plugin")
-    config = Carat::Doubles::FixedConfig.defaults
-    config["plugins"]["hello"] = { "options" => { "greeting" => 7 } }
+    config = Carat::Doubles::FixedConfig.with("plugin.hello.greeting \"Good day\" again\nplugin.hello.volume 3\nplugin.hello.enabled maybe\nplugin.nope.enabled true\nplugin.hello\n")
     h = editor_with(config, 24, 80)
     h.type(":Hello<CR>")
-    t.assert_equal(["#{INFO} Hello, world! 1 buffer opened", ["plugin hello: option greeting must be a string"]], [h.message, h.plugins.errors], "an option of the wrong type keeps the default and is recorded")
-    config = Carat::Doubles::FixedConfig.defaults
-    config["keymaps"]["normal"][" hh"] = "cursor.down"
+    t.assert_equal(["#{INFO} Hello, world! 1 buffer opened", [], [".caratrc:1: plugin.hello.greeting takes one word", ".caratrc:2: plugin hello has no option volume", ".caratrc:3: plugin.hello.enabled takes true or false", ".caratrc:4: unknown plugin nope", ".caratrc:5: unknown setting plugin.hello"]], [h.message, h.plugins.errors, h.assembly.config_errors], "a wrong option, an unknown option or plugin, and a bad enabled line are reported by file and line and keep the defaults")
+    config = Carat::Doubles::FixedConfig.with("plugin.hello.enabled false\nplugin.hello.enabled true\n")
+    h = editor_with(config, 24, 80)
+    t.assert_equal(true, h.plugins.enabled?("hello"), "a later enabled line wins")
+    config = Carat::Doubles::FixedConfig.with("keymap.normal <leader>hh cursor.down\n")
     h = editor_with(config, 24, 80)
     h.type(" hh")
     t.assert_equal(["", [1, 0]], [h.message, h.cursor], "a configuration binding replaces the plugin's")
-    config = Carat::Doubles::FixedConfig.defaults
-    config["keymaps"]["normal"][" hh"] = nil
+    config = Carat::Doubles::FixedConfig.with("keymap.normal <leader>hh none\n")
     h = editor_with(config, 24, 80)
     h.type(" hh")
-    t.assert_equal(["", [0, 0]], [h.message, h.cursor], "a null configuration binding removes the plugin's")
-    config = Carat::Doubles::FixedConfig.defaults
-    config["options"]["icons"] = "ascii"
+    t.assert_equal(["", [0, 0]], [h.message, h.cursor], "a none configuration binding removes the plugin's")
+    config = Carat::Doubles::FixedConfig.with("option.icons ascii\n")
     h = editor_with(config, 24, 80)
     h.type(":Hello<CR>")
     t.assert_equal("i Hello, world! 1 buffer opened", h.message, "the ascii set gives the plugin its icon")
-    config = Carat::Doubles::FixedConfig.defaults
-    config["options"]["icons"] = "unicode"
+    config = Carat::Doubles::FixedConfig.with("option.icons unicode\n")
     h = editor_with(config, 24, 80)
     h.type(":Hello<CR>")
     t.assert_equal("◆ Hello, world! 1 buffer opened", h.message, "the unicode set too")
 
     # Every plugin disabled: the editor starts, edits, saves, and quits.
-    config = Carat::Doubles::FixedConfig.defaults
-    config["plugins"]["hello"] = { "enabled" => false }
-    config["plugins"]["side"] = { "enabled" => false }
-    config["plugins"]["explorer"] = { "enabled" => false }
+    config = Carat::Doubles::FixedConfig.with("plugin.hello.enabled false\nplugin.side.enabled false\nplugin.explorer.enabled false\n")
     h = editor_with(config, 24, 80)
     t.assert_equal("\"a.txt\" 3L, 14B", h.message, "the file opens")
     h.type("x:w<CR>")
@@ -349,23 +342,19 @@ module EditorPluginsTest
     t.assert_equal(true, h.plugins.enabled?("boom") == false, "the event plugin is off again")
 
     # Configuration problems are reported when the configuration loads, with
-    # the file name and the JSON path; the binding is not added and the rest
-    # loads. A plugin's action, enabled or not, is a known name.
-    config = Carat::Doubles::FixedConfig.defaults
-    config["keymaps"]["normal"]["zq"] = "foo.bar"
-    config["keymaps"]["normal"]["zh"] = "plugin.hello.greet"
+    # the file and line; the binding is not added and the rest loads. A
+    # plugin's action, enabled or not, is a known name.
+    config = Carat::Doubles::FixedConfig.with("keymap.normal zq foo.bar\nkeymap.normal zh plugin.hello.greet\n")
     h = editor_with(config, 24, 80)
-    t.assert_equal([["config/default.json: keymaps.normal.zq: unknown action foo.bar"], "config/default.json: keymaps.normal.zq: unknown action foo.bar", true], [h.assembly.config_errors, h.message, h.state.message_error], "an unknown action is reported after startup with the file and path")
+    t.assert_equal([[".caratrc:1: unknown action foo.bar"], ".caratrc:1: unknown action foo.bar", true], [h.assembly.config_errors, h.message, h.state.message_error], "an unknown action is reported after startup with the file and line")
     h.type("zq")
     t.assert_equal([[0, 0], ""], [h.cursor, h.message], "the refused binding does nothing")
     h.type("zh")
     t.assert_equal("#{INFO} Hello, world! 1 buffer opened", h.message, "a binding of a plugin action loads")
-    config = Carat::Doubles::FixedConfig.defaults
-    config["keymaps"]["normal"]["zq"] = "foo.bar"
-    config["keymaps"]["insert"]["zw"] = "foo.baz"
+    config = Carat::Doubles::FixedConfig.with("option.theme solarized\nkeymap.normal zq foo.bar\nkeymap.insert zw foo.baz\noption.tabstop wide\n")
     h = editor_with(config, 24, 80)
-    t.assert_equal(["config/default.json: keymaps.normal.zq: unknown action foo.bar", "config/default.json: keymaps.insert.zw: unknown action foo.baz"], h.assembly.config_errors, "every unknown action is reported")
-    t.assert_equal("config/default.json: keymaps.normal.zq: unknown action foo.bar (and 1 more)", h.message, "the message row shows the first with the count of the others")
+    t.assert_equal([".caratrc:1: unknown theme solarized", ".caratrc:2: unknown action foo.bar", ".caratrc:3: unknown action foo.baz", ".caratrc:4: option.tabstop takes a number"], h.assembly.config_errors, "every problem is reported in file and line order")
+    t.assert_equal(".caratrc:1: unknown theme solarized (and 3 more)", h.message, "the message row shows the first with the count of the others")
     t.assert_equal([], editor.assembly.config_errors, "the default configuration has no problem")
 
     t.finish

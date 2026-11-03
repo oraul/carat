@@ -57,9 +57,9 @@ module Carat
               "plugin.explorer.help" => "Show the tree's keys in the message row"
             },
             commands: { "Explorer" => "", "ExplorerFind" => "" },
-            bindings: { "normal" => { "<leader>e" => "plugin.explorer.toggle" } },
+            bindings: ["keymap.normal <leader>e plugin.explorer.toggle"],
             events: ["buffer_open", "window_focus", "cursor_move"],
-            options: { "width" => "30", "side" => "left", "show_hidden" => "false", "ignore" => ".git\nbuild\ntmp" },
+            options: ["plugin.explorer.width 30", "plugin.explorer.side left", "plugin.explorer.show_hidden false", "plugin.explorer.ignore .git build tmp"],
             option_types: { "width" => "integer", "side" => "string", "show_hidden" => "bool", "ignore" => "list" },
             filetypes: []
           )
@@ -473,30 +473,28 @@ module Carat
           host.message(response.message, !response.ok) unless response.message.empty?
         end
 
-        # The tree window's own keys; the rest fall through to the normal
-        # keymap.
-        #: () -> untyped
+        # The tree window's own keys, as keymap lines; the rest fall
+        # through to the normal keymap.
+        #: () -> Array[String]
         def keymap
-          {
-            "normal" => {
-              "<CR>" => "plugin.explorer.open",
-              "l" => "plugin.explorer.open",
-              "h" => "plugin.explorer.collapse",
-              "o" => "plugin.explorer.toggle_dir",
-              "s" => "plugin.explorer.open_split",
-              "v" => "plugin.explorer.open_vsplit",
-              "t" => "plugin.explorer.open_tab",
-              "a" => "plugin.explorer.create",
-              "r" => "plugin.explorer.rename",
-              "d" => "plugin.explorer.delete",
-              "R" => "plugin.explorer.refresh",
-              "H" => "plugin.explorer.toggle_hidden",
-              "-" => "plugin.explorer.root_up",
-              "C" => "plugin.explorer.set_root",
-              "q" => "plugin.explorer.close",
-              "?" => "plugin.explorer.help"
-            }
-          }
+          [
+            "keymap.normal <CR> plugin.explorer.open",
+            "keymap.normal l plugin.explorer.open",
+            "keymap.normal h plugin.explorer.collapse",
+            "keymap.normal o plugin.explorer.toggle_dir",
+            "keymap.normal s plugin.explorer.open_split",
+            "keymap.normal v plugin.explorer.open_vsplit",
+            "keymap.normal t plugin.explorer.open_tab",
+            "keymap.normal a plugin.explorer.create",
+            "keymap.normal r plugin.explorer.rename",
+            "keymap.normal d plugin.explorer.delete",
+            "keymap.normal R plugin.explorer.refresh",
+            "keymap.normal H plugin.explorer.toggle_hidden",
+            "keymap.normal - plugin.explorer.root_up",
+            "keymap.normal C plugin.explorer.set_root",
+            "keymap.normal q plugin.explorer.close",
+            "keymap.normal ? plugin.explorer.help"
+          ]
         end
       end
     end

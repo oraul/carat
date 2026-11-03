@@ -1,5 +1,7 @@
 require_relative "../plugin_api"
 require_relative "keymap"
+require_relative "rc_parser"
+require_relative "rc_value"
 
 module Carat
   module Domain
@@ -32,7 +34,7 @@ module Carat
         problems.concat(check_commands(manifest.commands))
         problems.concat(check_events(manifest.events))
         problems.concat(check_bindings(manifest.actions, manifest.bindings))
-        problems.concat(check_options(manifest.options, manifest.option_types))
+        problems.concat(check_options(name, manifest.options, manifest.option_types))
         problems.concat(check_filetypes(manifest.filetypes))
         problems
       end
@@ -44,7 +46,8 @@ module Carat
         problems << "actions is not an object of action names" unless string_hash?(manifest.actions)
         problems << "commands is not an object of command names" unless string_hash?(manifest.commands)
         problems << "events is not a list of event names" unless manifest.events.is_a?(Array)
-        problems << "options is not an object of option defaults" unless string_hash?(manifest.options)
+        problems << "bindings is not a list of keymap lines" unless string_list?(manifest.bindings)
+        problems << "options is not a list of option lines" unless string_list?(manifest.options)
         problems << "option_types is not an object of option types" unless manifest.option_types.is_a?(Hash)
         problems << "filetypes is not a list of filetype names" unless manifest.filetypes.is_a?(Array)
         problems
@@ -64,6 +67,14 @@ module Carat
       #: (PluginApi::Manifest) -> bool
       def self.shapes_ok?(manifest)
         check_shapes(manifest).empty?
+      end
+
+      # Whether the value is a list of strings.
+      #: (untyped) -> bool
+      def self.string_list?(value)
+        return false unless value.is_a?(Array)
+        value.each { |item| return false unless item.is_a?(String) }
+        true
       end
 
       # Whether the value is a hash from strings to strings.
@@ -139,68 +150,67 @@ module Carat
         problems
       end
 
-      # The bindings must build without errors, and a value that is an
-      # action name must be one of the plugin's own actions; a key sequence
-      # to replay is accepted as it is.
+      # The bindings, keymap lines, must bind without errors, and a value
+      # that is an action name must be one of the plugin's own actions; a
+      # key sequence to replay is accepted as it is.
       #: (untyped, untyped) -> Array[String]
       def self.check_bindings(actions, bindings)
         problems = []
-        return problems if bindings.nil?
-        unless bindings.is_a?(Hash)
-          problems << "bindings is not an object of modes"
-          return problems
-        end
-        keymap = Keymap.from_config(bindings, " ")
+        keymap = Keymap.from_lines(bindings, " ")
         errors = keymap.errors
         i = 0
         while i < errors.length
           problems << "binding #{errors[i]}"
           i += 1
         end
-        bindings.each do |mode, map|
-          next unless map.is_a?(Hash)
-          map.each do |key, value|
-            next unless value.is_a?(String)
-            action = value.to_s
-            next unless Keymap.action_name?(action)
-            problems << "binding #{mode}.#{key} names #{action.inspect}, not one of the plugin's actions" unless actions.key?(action)
-          end
+        bindings.each do |item|
+          parsed = RcParser.parse(item.to_s)
+          next unless parsed.ok? && parsed.key.start_with?("keymap.") && parsed.words.length == 2
+          action = parsed.words[1].to_s
+          next unless Keymap.action_name?(action)
+          problems << "binding #{item.to_s.inspect} names #{action.inspect}, not one of the plugin's actions" unless actions.key?(action)
         end
         problems
       end
 
-      # Every option has a type among OPTION_TYPES, a string or, as API
-      # 1.1 spelled it, a symbol, and a default of that type; a typed
-      # option with no default and a default with no type are both
-      # reported.
-      #: (untyped, untyped) -> Array[String]
-      def self.check_options(options, option_types)
+      # The options are lines "plugin.<name>.<option> <value>", one per
+      # option, each option having a type among OPTION_TYPES, a string or,
+      # as API 1.1 spelled it, a symbol, and a default of that type; a line
+      # that does not read, one for another plugin, a typed option with no
+      # line, and a line with no type are all reported.
+      #: (String, untyped, untyped) -> Array[String]
+      def self.check_options(name, options, option_types)
         problems = []
-        options.each do |name, default|
-          raw = option_types[name]
+        prefix = "plugin.#{name}."
+        seen = Keymap.no_actions
+        options.each do |item|
+          text = item.to_s
+          parsed = RcParser.parse(text)
+          unless parsed.ok? && !parsed.blank?
+            problems << "option line #{text.inspect} does not read: #{parsed.ok? ? "it is empty" : parsed.error}"
+            next
+          end
+          key = parsed.key
+          option = key.start_with?(prefix) ? key[prefix.length, key.length - prefix.length].to_s : ""
+          if option.empty? || option.include?(".")
+            problems << "option line #{text.inspect} is not plugin.#{name}.<option>"
+            next
+          end
+          seen[option] = true
+          raw = option_types[option]
           type = raw.nil? ? "" : raw.to_s
           if raw.nil?
-            problems << "option #{name.inspect} has no type"
+            problems << "option #{option.inspect} has no type"
           elsif !PluginApi::OPTION_TYPES.include?(type)
-            problems << "option #{name.inspect} has the unknown type #{type}"
-          elsif !text_of_type?(default, type)
-            problems << "option #{name.inspect} default #{default.inspect} is not a #{type}"
+            problems << "option #{option.inspect} has the unknown type #{type}"
+          elsif !RcValue.valid?(parsed.words, type)
+            problems << "option #{option.inspect} default #{parsed.words.join(" ").inspect} is not a #{type}"
           end
         end
-        option_types.each_key do |name|
-          problems << "option #{name.inspect} has a type but no default" unless options.key?(name)
+        option_types.each_key do |option|
+          problems << "option #{option.to_s.inspect} has a type but no default" unless seen.key?(option.to_s)
         end
         problems
-      end
-
-      # Whether a text value is a valid representation of the type.
-      #: (String, String) -> bool
-      def self.text_of_type?(text, type)
-        case type
-        when "bool" then text == "true" || text == "false"
-        when "integer" then text.match?(/\A-?[0-9]+\z/)
-        else true
-        end
       end
     end
   end

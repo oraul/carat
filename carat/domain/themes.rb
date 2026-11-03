@@ -3,11 +3,11 @@ require_relative "theme"
 
 module Carat
   module Domain
-    # The themes Carat ships, chosen by the top-level "theme" key of the
+    # The themes Carat ships, chosen by the option.theme line of the
     # configuration: carat-dark, the default, for a dark terminal and
-    # carat-light for a light one. They are Ruby rather than JSON because
-    # they are not key bindings and the configuration only names one; user
-    # theme files arrive with the options and configuration change. Normal
+    # carat-light for a light one. They are Ruby rather than configuration
+    # lines because they are not key bindings and the configuration only
+    # names one; user themes are in the backlog. Normal
     # keeps the terminal's own colors in both, so a theme never paints the
     # empty screen. Each row is a group id, foreground, background,
     # 16-color foreground, 16-color background, and attributes.

@@ -1,10 +1,14 @@
 require_relative "keymap_node"
 require_relative "keymap_match"
+require_relative "config"
+require_relative "rc_parser"
+require_relative "rc_line"
 
 module Carat
   module Domain
     # One trie per mode from key sequences to action names or remap
-    # sequences, built only from the JSON "keymaps" object. Every binding
+    # sequences, built only from keymap lines: a plugin's defaults, then
+    # the configuration's. Every binding
     # records its owner: the plugin whose defaults added it, or "" for the
     # configuration, so a plugin's bindings can be removed with it and a
     # second plugin cannot take another's keys. A Struct record: the roots
@@ -41,116 +45,134 @@ module Carat
       # Vim's mapleader when the configuration names none.
       DEFAULT_LEADER = "\\"
 
-      # The "leader" string of a configuration value, Vim's backslash when
-      # it is missing or not a string.
-      #: (untyped) -> String
+      # The action that removes a binding.
+      NONE = "none"
+
+      # The leader of a configuration: the value of its last keymap.leader
+      # line that is one key in notation, Vim's backslash when there is
+      # none. add_checked notes the lines that are not.
+      #: (Config) -> String
       def self.leader_from(config)
-        return DEFAULT_LEADER unless config.is_a?(Hash)
-        value = config["leader"]
-        value.is_a?(String) ? value : DEFAULT_LEADER
+        leader = DEFAULT_LEADER
+        i = 0
+        n = config.count
+        while i < n
+          line = config.line_at(i)
+          leader = line.words[0].to_s if line.scope == "keymap" && line.name == "leader" && leader_problem(line.words).empty?
+          i += 1
+        end
+        leader
       end
 
-      # Builds a keymap from a "keymaps" object, expanding <leader> with
-      # the given leader. Malformed entries are recorded in errors as
-      # "mode.key: reason" and skipped.
+      # Why the words cannot be the leader, or "".
+      #: (Array[String]) -> String
+      def self.leader_problem(words)
+        return "keymap.leader takes one key" unless words.length == 1
+        parsed = KeyNotation.parse(words[0].to_s, "")
+        return parsed.error.to_s unless parsed.ok?
+        return "keymap.leader takes one key" if parsed.codes.empty?
+        ""
+      end
+
+      # Builds a keymap from keymap lines, as a plugin gives them for its
+      # scratch buffer, expanding <leader> with the given leader. Lines
+      # that do not bind are recorded in errors as "line: reason".
       #: (untyped, String) -> Keymap
-      def self.from_config(keymaps, leader)
+      def self.from_lines(lines, leader)
         keymap = Keymap.new
-        keymap.add_all(keymaps, leader)
+        keymap.add_lines(lines, leader, "")
         keymap
       end
 
-      # Adds every binding of a "keymaps" object, in the same JSON shape as
-      # the configuration, over the bindings already present: a later
-      # binding of the same keys replaces an earlier one and null removes
-      # it, which is how a plugin's defaults go in first and the
-      # configuration last.
-      #: (untyped, String) -> void
-      def add_all(keymaps, leader)
-        add_owned(keymaps, leader, "")
-      end
-
-      # Adds the bindings with their owner. A plugin's binding of keys
-      # another plugin holds is not added and is recorded in conflicts; the
-      # configuration (owner "") replaces any binding.
+      # Adds keymap lines, "keymap.<mode> <keys> <action>", with their
+      # owner, over the bindings already present, which is how a plugin's
+      # defaults go in before the configuration. A line that does not bind
+      # is recorded in errors as "line: reason"; a plugin's binding of
+      # keys another plugin holds is not added and is recorded in
+      # conflicts. Anything but a list of strings adds nothing.
       #: (untyped, String, String) -> void
-      def add_owned(keymaps, leader, owner)
-        return unless keymaps.is_a?(Hash)
-        keymaps.each do |mode_name, bindings|
-          mode = Mode.from_name(mode_name.to_s)
-          if mode.nil?
-            errors << "#{mode_name}: unknown mode"
-            next
-          end
-          next unless bindings.is_a?(Hash)
-          bindings.each do |key, value|
-            add_binding(mode, key.to_s, value, leader, owner)
+      def add_lines(lines, leader, owner)
+        return unless lines.is_a?(Array)
+        none = Keymap.no_actions
+        lines.each do |item|
+          text = item.to_s
+          parsed = RcParser.parse(text)
+          if !parsed.ok?
+            errors << "#{text}: #{parsed.error}"
+          elsif !parsed.blank?
+            line = RcLine.from_parse("", 0, 0, parsed)
+            problem = line.scope == "keymap" ? apply(line, leader, owner, none, false) : "not a keymap line"
+            errors << "#{text}: #{problem}" unless problem.empty?
           end
         end
       end
 
-      # Adds the configuration's bindings as add_all does, but refuses a
-      # value that is an action name known does not hold, and records every
-      # problem of the configuration with its file name and JSON path, as
-      # "config/default.json: keymaps.normal.zq: unknown action foo.bar".
-      # The other bindings still go in.
-      #: (untyped, String, Hash[String, bool], String) -> void
-      def add_checked(keymaps, leader, known, source)
-        from = errors.length
-        if keymaps.is_a?(Hash)
-          keymaps.each do |mode_name, bindings|
-            mode = Mode.from_name(mode_name.to_s)
-            if mode.nil?
-              errors << "#{mode_name}: unknown mode"
-              next
-            end
-            next unless bindings.is_a?(Hash)
-            bindings.each do |key, value|
-              if value.is_a?(String) && Keymap.action_name?(value) && !known.key?(value)
-                errors << "#{Mode.name_of(mode)}.#{key}: unknown action #{value}"
-              else
-                add_binding(mode, key.to_s, value, leader, "")
-              end
-            end
+      # Adds the configuration's keymap lines in order, so a later line
+      # wins and "none" removes a binding, with <leader> from the
+      # configuration. A line naming an unknown mode, without exactly keys
+      # and an action, with keys that do not parse, or binding an action
+      # name known does not hold is noted on the configuration as
+      # "file:line: message" and skipped; the other lines still go in.
+      #: (Config, Hash[String, bool]) -> void
+      def add_checked(config, known)
+        leader = Keymap.leader_from(config)
+        i = 0
+        n = config.count
+        while i < n
+          line = config.line_at(i)
+          if line.scope == "keymap"
+            problem = apply(line, leader, "", known, true)
+            config.note(line, problem) unless problem.empty?
           end
-        end
-        i = from
-        while i < errors.length
-          errors[i] = "#{source}: keymaps.#{errors[i]}"
           i += 1
         end
       end
 
-      # Adds one binding from its JSON form. A nil value unbinds.
-      #: (Symbol, String, untyped, String) -> void
-      def add(mode, key, value, leader)
-        add_binding(mode, key, value, leader, "")
+      # Applies one keymap line for the owner and returns its problem, ""
+      # when it bound or was a good leader line. Only the configuration
+      # (owner "") may set the leader; with check, an action name known
+      # does not hold is refused.
+      #: (RcLine, String, String, Hash[String, bool], bool) -> String
+      def apply(line, leader, owner, known, check)
+        name = line.name
+        words = line.words
+        if name == "leader"
+          return "a plugin cannot set keymap.leader" unless owner.empty?
+          return Keymap.leader_problem(words)
+        end
+        mode = Mode.from_name(name)
+        return "unknown mode #{name}" if mode.nil?
+        return "#{line.key} takes keys and an action" unless words.length == 2
+        value = words[1].to_s
+        return "unknown action #{value}" if check && Keymap.action_name?(value) && !known.key?(value)
+        bind_text(mode, words[0].to_s, value, leader, owner)
       end
 
-      # Adds one binding from its JSON form for the owner.
-      #: (Symbol, String, untyped, String, String) -> void
-      def add_binding(mode, key, value, leader, owner)
-        parsed = KeyNotation.parse(key, leader)
-        unless parsed.ok?
-          errors << "#{Mode.name_of(mode)}.#{key}: #{parsed.error}"
-          return
-        end
-        if parsed.codes.empty?
-          errors << "#{Mode.name_of(mode)}.#{key}: empty key"
-          return
-        end
+      # Binds keys in notation to an action name or a key sequence, or
+      # unbinds them for "none", for the owner, and returns the problem, ""
+      # when there is none. A plugin's binding of keys another plugin holds
+      # is recorded in conflicts instead.
+      #: (Symbol, String, String, String, String) -> String
+      def bind_text(mode, keys, value, leader, owner)
+        parsed = KeyNotation.parse(keys, leader)
+        return parsed.error.to_s unless parsed.ok?
+        return "empty key" if parsed.codes.empty?
+        return "empty action" if value.empty?
         holder = holder_of(mode, parsed.codes)
         if !owner.empty? && !holder.empty? && holder != owner
-          conflicts << "#{Mode.name_of(mode)}.#{key} is already bound by plugin #{holder}"
-          return
+          conflicts << "#{Mode.name_of(mode)}.#{keys} is already bound by plugin #{holder}"
+          return ""
         end
-        if value.nil?
-          bind_owned(mode, parsed.codes, nil, owner)
-        elsif value.is_a?(String) && !value.empty?
-          bind_owned(mode, parsed.codes, value, owner)
-        else
-          errors << "#{Mode.name_of(mode)}.#{key}: value must be an action name or a key sequence"
-        end
+        bind_owned(mode, parsed.codes, value == NONE ? nil : value, owner)
+        ""
+      end
+
+      # An empty action table typed as the known actions are.
+      #: () -> Hash[String, bool]
+      def self.no_actions
+        table = { "" => true }
+        table.clear
+        table
       end
 
       #: (Symbol, Array[Integer], String?) -> void

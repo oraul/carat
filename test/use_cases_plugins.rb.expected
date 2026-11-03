@@ -6,7 +6,8 @@ ok   a newer major version is refused with both versions
 ok   the refusal is recorded
 ok   a refused plugin is not activated
 ok   a newer minor version is refused
-ok   an older minor version is accepted
+ok   an older major version is refused
+ok   the host's own version is accepted
 ok   a broken manifest rule disables the plugin
 ok   a disabled entry registers without activating
 ok   an action of a disabled plugin says so
@@ -14,9 +15,11 @@ ok   a disabled plugin's command is unknown
 ok   and reports E492
 ok   a disabled plugin's bindings are not merged
 ok   options of the right type replace the defaults, as text
-ok   no option errors
+ok   no option problems
+ok   the manifest's default lines give the defaults
+ok   a list option with no words is the empty list
 ok   an option of the wrong type keeps the default
-ok   wrong types and unknown options are recorded
+ok   wrong types and unknown options are reported by file and line
 ok   the configuration's binding wins over the plugin's
 ok   a plugin with no entry is enabled
 ok   the action reaches the plugin with the count, register, buffer, window, path, and cursor
@@ -84,4 +87,4 @@ ok   a raise in an event disables the plugin and keeps the edit
 ok   a disabled plugin's requests are refused
 ok   reads, stats, and icons too
 ok   a disabled plugin's segment is dropped when it is disabled
-use_cases_plugins: 86 passed, 0 failed
+use_cases_plugins: 89 passed, 0 failed

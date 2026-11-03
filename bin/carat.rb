@@ -23,7 +23,7 @@ signals.install
 terminal = Carat::Drivers::AnsiTerminal.new(input: STDIN, output: STDOUT)
 clock = Carat::Drivers::MonotonicClock.new
 files = Carat::Drivers::DiskFiles.new
-config = Carat::Adapters::JsonConfigGateway.new
+config = Carat::Adapters::RcConfigGateway.new(files: files)
 assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: config, plugin_list: Carat::Plugins::Registry.all)
 main_loop = Carat::Drivers::MainLoop.new(assembly: assembly, terminal: terminal, signals: signals)
 

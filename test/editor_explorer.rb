@@ -21,10 +21,9 @@ module EditorExplorerTest
     files
   end
 
-  def self.config_with(icons)
-    config = Carat::Doubles::FixedConfig.defaults
-    config["options"]["icons"] = icons
-    config
+  # The shipped configuration with the icon set and further lines.
+  def self.config_with(icons, more)
+    Carat::Doubles::FixedConfig.with("option.icons #{icons}\n#{more}")
   end
 
   # An editor with the registry's plugins over the disk, on path, with the
@@ -36,7 +35,7 @@ module EditorExplorerTest
   end
 
   def self.session(keys)
-    h = editor_on("a.md", config_with("ascii"))
+    h = editor_on("a.md", config_with("ascii", ""))
     h.type(keys)
     h
   end
@@ -98,24 +97,21 @@ module EditorExplorerTest
     t.assert_equal(true, h.quit?, "quitting the last file window ends the editor with the tree open")
 
     # The configuration: the right side, and disabled.
-    config = config_with("ascii")
-    config["plugins"]["explorer"]["options"]["side"] = "right"
+    config = config_with("ascii", "plugin.explorer.side right\n")
     h = editor_on("a.md", config)
     h.type(" e")
     t.assert_equal([[[0, 49, "a.md"], [50, 30, "explorer"]], 2], [shape(h), h.window_index], "the side option puts the tree at the right")
-    config = config_with("ascii")
-    config["plugins"]["explorer"] = { "enabled" => false }
+    config = config_with("ascii", "plugin.explorer.enabled false\n")
     h = editor_on("a.md", config)
     h.type(" e:Explorer<CR>")
     t.assert_equal([1, "E492: Not an editor command: Explorer"], [h.window_count, h.message], "a disabled explorer opens nothing")
-    config = config_with("ascii")
-    config["plugins"]["explorer"]["options"]["show_hidden"] = true
+    config = config_with("ascii", "plugin.explorer.show_hidden true\n")
     h = editor_on("a.md", config)
     h.type(" e")
     t.assert_equal("   . .env", tree_lines(h)[3], "show_hidden lists dot files but not ignored names")
 
     # Follow: the current file is revealed and marked.
-    h = editor_on("lib/deep/x.rb", config_with("ascii"))
+    h = editor_on("lib/deep/x.rb", config_with("ascii", ""))
     h.type(" e")
     t.assert_equal([[" - proj", "   + docs", "   - lib", "     - deep", ">      r x.rb", "   m a.md", "   r b.rb"], [4, 0]], [tree_lines(h), h.cursor], "the directories above the current file are expanded on open and the cursor is on it")
     h = session(" e<C-w>l:e docs/guide.md<CR>")
@@ -239,7 +235,7 @@ module EditorExplorerTest
       ["unicode", "unicode", [" ▾ proj", "   ▸ docs", "   ▸ lib", "›  ¶ a.md", "   ◈ b.rb"]],
       ["nerd", "nerd", [" \u{F07C} proj", "   \u{F07B} docs", "   \u{F07B} lib", "\u{F054}  \u{E73E} a.md", "   \u{E791} b.rb"]]
     ]) do |set|
-      h = editor_on("a.md", config_with(set))
+      h = editor_on("a.md", config_with(set.to_s, ""))
       h.type(" e")
       rows = []
       i = 0
@@ -249,7 +245,7 @@ module EditorExplorerTest
       end
       rows
     end
-    h = editor_on("a.md", config_with("ascii"))
+    h = editor_on("a.md", config_with("ascii", ""))
     h.type(" e")
     t.assert_equal(["│", "~"], [h.row(0)[30, 1], h.row(5)[0, 1]], "the tree has no line numbers and a separator at its right")
 

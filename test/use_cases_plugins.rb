@@ -43,7 +43,7 @@ module UseCasesPluginsTest
     # Returns the manifest.
     # @rbs skip
     def manifest
-      Carat::PluginApi::Manifest.new(name: @name, version: "1.0.0", api_version: @api, actions: @actions, commands: @commands, bindings: @bindings, events: @events, options: { "depth" => "3", "deep" => "false", "names" => "a\nb" }, option_types: { "depth" => "integer", "deep" => "bool", "names" => "list" }, filetypes: [])
+      Carat::PluginApi::Manifest.new(name: @name, version: "1.0.0", api_version: @api, actions: @actions, commands: @commands, bindings: @bindings, events: @events, options: ["plugin.#{@name}.depth 3", "plugin.#{@name}.deep false", "plugin.#{@name}.names a b"], option_types: { "depth" => "integer", "deep" => "bool", "names" => "list" }, filetypes: [])
     end
 
     #: (Carat::PluginApi::Host) -> void
@@ -86,10 +86,10 @@ module UseCasesPluginsTest
   ALL = Carat::PluginApi::EVENTS
   ACTIONS = { "plugin.probe.go" => "Go" }
   COMMANDS = { "Probe" => "Pr" }
-  BINDINGS = { "normal" => { "<leader>pp" => "plugin.probe.go" } }
+  BINDINGS = ["keymap.normal <leader>pp plugin.probe.go"]
 
   def self.probe(events)
-    Probe.new("probe", "1.0", events, ACTIONS, COMMANDS, BINDINGS)
+    Probe.new("probe", "2.0", events, ACTIONS, COMMANDS, BINDINGS)
   end
 
   # What setup builds. An object, not an array: destructured from an
@@ -101,9 +101,11 @@ module UseCasesPluginsTest
     attr_reader :keymap #: Carat::Domain::Keymap
     attr_reader :files #: Carat::Doubles::MemoryFiles
     attr_reader :ex #: Carat::UseCases::ExecuteEx
+    attr_reader :config #: Carat::Domain::Config
 
-    #: (Carat::Domain::EditorState, Carat::UseCases::PluginHost, Carat::Domain::Keymap, Carat::Doubles::MemoryFiles, Carat::UseCases::ExecuteEx) -> void
-    def initialize(state, host, keymap, files, ex)
+    #: (Carat::Domain::EditorState, Carat::UseCases::PluginHost, Carat::Domain::Keymap, Carat::Doubles::MemoryFiles, Carat::UseCases::ExecuteEx, Carat::Domain::Config) -> void
+    def initialize(state, host, keymap, files, ex, config)
+      @config = config
       @state = state
       @host = host
       @keymap = keymap
@@ -114,7 +116,7 @@ module UseCasesPluginsTest
 
   # A state over a.txt with b.txt and c.txt on disk, a keymap, and the host
   # over it with the given plugins registered and activated.
-  def self.setup(plugins, config_plugins)
+  def self.setup(plugins, lines)
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "one\ntwo\n")
     files.put("b.txt", "zz\n")
@@ -140,12 +142,14 @@ module UseCasesPluginsTest
     Carat::UseCases::TabCommandHandler.register(commands, open_tab: open_tab, close_tab: Carat::UseCases::CloseTab.new(buffers: buffers, tabs: tabs), switch_tab: Carat::UseCases::SwitchTab.new(tabs: tabs))
     Carat::UseCases::PluginCommandHandler.register(commands, plugins: host)
     plugins.each { |p| host.register(p) }
-    host.activate_all(config_plugins)
-    keymap.add_all({ "normal" => { "<leader>pp" => "cursor.down" } }, " ")
+    config = Carat::Domain::Config.new
+    config.read(".caratrc", lines, false)
+    host.activate_all(config)
+    keymap.add_lines(["keymap.normal <leader>pp cursor.down"], " ", "")
     open_file.call(state, "a.txt")
     state.tab.layout.arrange(0, 0, 23, 80)
     host.observe
-    Rig.new(state, host, keymap, files, ex)
+    Rig.new(state, host, keymap, files, ex, config)
   end
 
   def self.codes(text)
@@ -157,37 +161,41 @@ module UseCasesPluginsTest
 
     # Registration and validation.
     p = probe(ALL)
-    rig = setup([p], {})
+    rig = setup([p], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     t.assert_equal([1, true, ""], [host.count, host.enabled?("probe"), host.reason("probe")], "a valid plugin is registered and enabled")
     t.assert_equal(["activate", "buffer_open b2 w1 a.txt 0,0", "cursor_move b2 w1 a.txt 0,0"], p.log, "activation, the open of the start file by its id, and the cursor now in it; the empty first buffer was never announced")
     t.assert_equal("Go", host.describe("plugin.probe.go"), "the host describes a plugin's action")
     t.assert_equal("", host.describe("plugin.probe.nope"), "and not another")
 
-    bad = Probe.new("probe", "2.0", [], ACTIONS, {}, nil)
-    rig = setup([bad], {})
+    bad = Probe.new("probe", "3.0", [], ACTIONS, {}, [])
+    rig = setup([bad], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 2.0, the host has 1.3"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
-    t.assert_equal(["plugin probe: needs API 2.0, the host has 1.3"], host.errors, "the refusal is recorded")
+    t.assert_equal([false, "needs API 3.0, the host has 2.0"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
+    t.assert_equal(["plugin probe: needs API 3.0, the host has 2.0"], host.errors, "the refusal is recorded")
     t.assert_equal([], bad.log, "a refused plugin is not activated")
 
-    minor = Probe.new("probe", "1.7", [], ACTIONS, {}, nil)
-    rig = setup([minor], {})
+    minor = Probe.new("probe", "2.7", [], ACTIONS, {}, [])
+    rig = setup([minor], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 1.7, the host has 1.3"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused")
-    older = Probe.new("probe", "1.0", [], ACTIONS, {}, nil)
-    rig = setup([older], {})
+    t.assert_equal([false, "needs API 2.7, the host has 2.0"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused")
+    older = Probe.new("probe", "1.3", [], ACTIONS, {}, [])
+    rig = setup([older], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal(true, host.enabled?("probe"), "an older minor version is accepted")
+    t.assert_equal([false, "needs API 1.3, the host has 2.0"], [host.enabled?("probe"), host.reason("probe")], "an older major version is refused")
+    same = Probe.new("probe", "2.0", [], ACTIONS, {}, [])
+    rig = setup([same], "")
+    state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
+    t.assert_equal(true, host.enabled?("probe"), "the host's own version is accepted")
 
-    foreign = Probe.new("probe", "1.0", [], { "plugin.other.go" => "Go" }, {}, nil)
-    rig = setup([foreign], {})
+    foreign = Probe.new("probe", "2.0", [], { "plugin.other.go" => "Go" }, {}, [])
+    rig = setup([foreign], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     t.assert_equal([false, "action \"plugin.other.go\" is not plugin.probe.<action>"], [host.enabled?("probe"), host.reason("probe")], "a broken manifest rule disables the plugin")
 
     # The configuration: disabled, options, bindings below the configuration.
     p = probe([])
-    rig = setup([p], { "probe" => { "enabled" => false } })
+    rig = setup([p], "plugin.probe.enabled false\n")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     t.assert_equal([false, "disabled in the configuration", []], [host.enabled?("probe"), host.reason("probe"), p.log], "a disabled entry registers without activating")
     outcome = host.action("plugin.probe.go", D::Command.plain("plugin.probe.go"))
@@ -197,24 +205,30 @@ module UseCasesPluginsTest
     t.assert_equal(:none, keymap.lookup(:normal, codes("<leader>px")).kind, "a disabled plugin's bindings are not merged")
 
     p = probe([])
-    rig = setup([p], { "probe" => { "options" => { "depth" => 7, "deep" => true, "names" => ["x", "y"] } } })
+    rig = setup([p], "plugin.probe.depth 7\nplugin.probe.deep true\nplugin.probe.names x \"y z\"\n")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal(["7", "true", "x\ny", "No option named nope"], [p.host.option("depth").text, p.host.option("deep").text, p.host.option("names").text, p.host.option("nope").message], "options of the right type replace the defaults, as text")
-    t.assert_equal([], host.errors, "no option errors")
+    t.assert_equal(["7", "true", "x\ny z", "No option named nope"], [p.host.option("depth").text, p.host.option("deep").text, p.host.option("names").text, p.host.option("nope").message], "options of the right type replace the defaults, as text")
+    t.assert_equal([[], []], [host.errors, rig.config.report], "no option problems")
     p = probe([])
-    rig = setup([p], { "probe" => { "options" => { "depth" => "many", "extra" => 1 } } })
+    rig = setup([p], "")
+    t.assert_equal(["3", "false", "a\nb"], [p.host.option("depth").text, p.host.option("deep").text, p.host.option("names").text], "the manifest's default lines give the defaults")
+    p = probe([])
+    rig = setup([p], "plugin.probe.names\n")
+    t.assert_equal(["", []], [p.host.option("names").text, rig.config.report], "a list option with no words is the empty list")
+    p = probe([])
+    rig = setup([p], "plugin.probe.depth many\nplugin.probe.extra 1\n")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     t.assert_equal("3", p.host.option("depth").text, "an option of the wrong type keeps the default")
-    t.assert_equal(["plugin probe: option depth must be a integer", "plugin probe: unknown option extra"], host.errors, "wrong types and unknown options are recorded")
+    t.assert_equal([[], [".caratrc:1: plugin.probe.depth takes a number", ".caratrc:2: plugin probe has no option extra"]], [host.errors, rig.config.report], "wrong types and unknown options are reported by file and line")
     t.assert_equal([:match, "cursor.down"], [keymap.lookup(:normal, codes("<leader>pp")).kind, keymap.lookup(:normal, codes("<leader>pp")).value], "the configuration's binding wins over the plugin's")
     p = probe([])
-    rig = setup([p], {})
+    rig = setup([p], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     t.assert_equal(true, host.enabled?("probe"), "a plugin with no entry is enabled")
 
     # Action routing with the context.
     p = probe([])
-    rig = setup([p], {})
+    rig = setup([p], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     state.cursor.row = 1
     host.action("plugin.probe.go", D::Command.new(register: "a", count: 3, operator: "", action: "plugin.probe.go", char: "", linewise: false, keys: []))
@@ -228,7 +242,7 @@ module UseCasesPluginsTest
 
     # Command routing by name and abbreviation.
     p = probe([])
-    rig = setup([p], {})
+    rig = setup([p], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     t.assert_equal([true, true, true, false], [host.command?("Probe"), host.command?("Pr"), host.command?("Pro"), host.command?("P")], "the name, the abbreviation, and a spelling between are known, a shorter one is not")
     r = ex.call(state, "Probe! x y")
@@ -238,7 +252,7 @@ module UseCasesPluginsTest
 
     # Events in order.
     p = probe(ALL)
-    rig = setup([p], {})
+    rig = setup([p], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     p.log.clear
     ex.call(state, "e b.txt")
@@ -298,7 +312,7 @@ module UseCasesPluginsTest
 
     # Unsubscribed events are not delivered.
     p = probe(["buffer_save"])
-    rig = setup([p], {})
+    rig = setup([p], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     state.buffer.set_lines(0, 1, ["q"])
     state.mode = D::Mode::INSERT
@@ -310,7 +324,7 @@ module UseCasesPluginsTest
 
     # Requests: reading, moving, messages, status, ex.
     p = probe([])
-    rig = setup([p], {})
+    rig = setup([p], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     h = p.host
     state.cursor.row = 1
@@ -349,7 +363,7 @@ module UseCasesPluginsTest
 
     # Requests: the edit transaction.
     p = probe([])
-    rig = setup([p], {})
+    rig = setup([p], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     h = p.host
     r = h.edit_buffer(0, [A::Edit.new(from_row: 0, from_col: 0, to_row: 0, to_col: 3, text: "ONE"), A::Edit.new(from_row: 1, from_col: 3, to_row: 1, to_col: 3, text: "!")])
@@ -375,8 +389,8 @@ module UseCasesPluginsTest
 
     # Requests: signs of two plugins.
     p = probe([])
-    q = Probe.new("other", "1.0", [], { "plugin.other.go" => "Go" }, {}, nil)
-    rig = setup([p, q], {})
+    q = Probe.new("other", "2.0", [], { "plugin.other.go" => "Go" }, {}, [])
+    rig = setup([p, q], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     r = p.host.place_sign(0, 1, "error")
     t.assert_equal([true, "\u{F057}", "probe"], [r.ok, state.buffer.sign_at(1), state.buffer.layer_at(0).owner], "a sign is the icon's glyph with its owner")
@@ -393,7 +407,7 @@ module UseCasesPluginsTest
 
     # Requests: the file system.
     p = probe([])
-    rig = setup([p], {})
+    rig = setup([p], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     h = p.host
     r = h.list_dir("dir/")
@@ -405,7 +419,7 @@ module UseCasesPluginsTest
 
     # A plugin that raises is disabled and the editor goes on.
     p = probe(ALL)
-    rig = setup([p], {})
+    rig = setup([p], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     p.raise_in_action = true
     host.action("plugin.probe.go", D::Command.plain("plugin.probe.go"))
@@ -417,7 +431,7 @@ module UseCasesPluginsTest
     outcome = host.action("plugin.probe.go", D::Command.plain("plugin.probe.go"))
     t.assert_equal("Plugin probe is disabled", outcome.message, "its action now reports it disabled")
     p = probe(ALL)
-    rig = setup([p], {})
+    rig = setup([p], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     p.raise_in_event = true
     state.buffer.set_lines(0, 1, ["x"])
@@ -427,7 +441,7 @@ module UseCasesPluginsTest
     t.assert_equal([false, "Plugin probe is disabled", {}], [r.ok, r.message, host.plugin_ui.segments], "a disabled plugin's requests are refused")
     t.assert_equal([false, false, "Plugin probe is disabled"], [p.host.read_buffer(0).ok, p.host.stat("a.txt").ok, p.host.icon("info").message], "reads, stats, and icons too")
     p = probe([])
-    rig = setup([p], {})
+    rig = setup([p], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     p.host.set_status("here")
     p.raise_in_event = false

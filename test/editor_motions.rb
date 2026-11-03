@@ -6,8 +6,7 @@ require_relative "../carat/testing"
 # the file is compiled on its own (make test-one).
 module EditorMotionsTest
   def self.editor(text, scrolloff)
-    config = Carat::Doubles::FixedConfig.defaults
-    config["options"]["scrolloff"] = scrolloff
+    config = Carat::Doubles::FixedConfig.with("option.scrolloff #{scrolloff}\n")
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", text)
     h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 10, cols: 80, plugins: [])

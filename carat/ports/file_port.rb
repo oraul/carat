@@ -61,6 +61,13 @@ module Carat
       def cwd
         raise NotImplementedError, "FilePort#cwd"
       end
+
+      # Returns the absolute path of the user's home directory, "" when
+      # there is none.
+      # @rbs skip
+      def home
+        raise NotImplementedError, "FilePort#home"
+      end
     end
   end
 end

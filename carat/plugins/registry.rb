@@ -1,5 +1,5 @@
-# Generated from config/plugins.json by bin/carat-gen-config.rb.
-# Do not edit. Change config/plugins.json and run: spin run carat-gen-config
+# Generated from config/plugins.caratrc by bin/carat-gen-config.rb.
+# Do not edit. Change config/plugins.caratrc and run: spin run carat-gen-config
 require_relative "../plugin_api"
 require_relative "explorer/plugin"
 require_relative "ruby/plugin"
