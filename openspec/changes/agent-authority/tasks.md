@@ -8,7 +8,7 @@
 ## 2. Guard
 
 - [x] 2.1 Add `tools/agent_guard.sh` with the read, contributor, and merger profiles; verify with the guard cases in `tools/tools_test.sh`.
-- [ ] 2.2 Add the guard hook to every agent under `.claude/agents/`, the contributor's `tools:` list, and the `gh pr merge` deny rule in `.claude/settings.json`; verify by reading each frontmatter against the design and `make docs-lint`.
+- [x] 2.2 Add the guard hook to every agent under `.claude/agents/`, the contributor's `tools:` list, and the `gh pr merge` deny rule in `.claude/settings.json`; verify by reading each frontmatter against the design and `make docs-lint`.
 
 ## 3. Workflows and agents
 

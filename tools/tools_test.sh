@@ -298,10 +298,11 @@ guard() {
     sh "$here/agent_guard.sh" "$1"
 }
 
-# guard_edit PROFILE TOOL PATH: the guard's answer to an edit of PATH.
+# guard_edit PROFILE TOOL PATH [DIR]: the guard's answer to an edit of
+# PATH in the project /w, whose text names a refused command.
 guard_edit() {
   printf '{"tool_name":"%s","tool_input":{"file_path":"%s","old_string":"a","new_string":"\\"command\\": \\"git push\\""}}' "$2" "$3" |
-    sh "$here/agent_guard.sh" "$1"
+    CLAUDE_PROJECT_DIR=/w sh "$here/agent_guard.sh" "$1" ${4:+"$4"}
 }
 
 expect "guard: read refuses git push" 2 "refused for the read profile: a git command" guard read 'git push origin chore/x'
@@ -335,6 +336,13 @@ expect "guard: contributor refuses a review record" 2 "a run state command" guar
 expect "guard: contributor refuses gh" 2 "a gh command" guard contributor 'gh pr merge 5'
 expect "guard: contributor refuses an edit of the run state" 2 "the run state's directory" guard_edit contributor Edit /w/build/pipeline/c.json
 expect "guard: contributor allows an edit elsewhere, whatever its text" 0 "^$" guard_edit contributor Write /w/tools/x.sh
+expect "guard: read refuses a file edit without a directory" 2 "an agent that writes no file" guard_edit read Write /w/tools/x.sh
+expect "guard: read allows a pack in its directory, whatever its text" 0 "^$" guard_edit read Write /w/tmp/scout/area.md tmp/scout
+expect "guard: read allows a relative path in its directory" 0 "^$" guard_edit read Write build/plan/queue.md build/plan
+expect "guard: read refuses a file outside its directory" 2 "outside tmp/scout" guard_edit read Write /w/tools/x.sh tmp/scout
+expect "guard: read refuses a parent step out of its directory" 2 "a parent step" guard_edit read Write /w/tmp/scout/../../tools/x.sh tmp/scout
+expect "guard: merger writes the body file" 0 "^$" guard_edit merger Write /w/build/pipeline/c.body.md build/pipeline
+expect "guard: merger refuses the run state file" 2 "the run state's directory" guard_edit merger Write /w/build/pipeline/c.body.md.json build/pipeline
 
 # ---------------------------------------------------------- docs_lint.sh
 
