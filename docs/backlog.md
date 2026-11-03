@@ -301,3 +301,15 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/agent_guard.sh` line 84 (the git rule) and line 122 (the gh rule), and the `Bash(gh pr merge:*)` deny rule in `.claude/settings.json`. Low (7) finding of the security review of `agent-authority` at 8bf46e4; the design lists the limit as a non-goal, and the records gate and branch protection stand behind it.
 - Why it matters: under the read profile `git 'push' origin x`, `"git" push`, and `g\it push` pass the text match, so injected text in the tree that tells an agent to quote the word gets a git write past the guard.
 - Fix outline: remove quotes and backslashes from the command text before matching (for example `tr -d "'\\\""`), refuse `eval`, `sh -c`, and `bash -c` when their argument names a refused word, and add `tools/tools_test.sh` cases for `git 'push'`, `"git" push`, and `"gh" pr merge`.
+
+## The guard lets a symlink make the body file the run state
+
+- Where: `tools/agent_guard.sh` line 105, the contributor's body-file exemption (and the merger's at line 100), and `gate_pr_body` in `tools/gates.sh`. Low (6) finding of the security review of `workflow-trim` at aa3bf07.
+- Why it matters: `ln -sf CHANGE.json build/pipeline/CHANGE.body.md` reduces to a command on the body file, which the guard allows, so a later Write or redirect to the body file overwrites `build/pipeline/CHANGE.json` and its review and phase records; the records gate at the merge still compares them with the workflow's results, so this is defense in depth.
+- Fix outline: in the contributor and merger profiles refuse `ln`, `cp -s`, and `mv` commands that name the body file, make `gate_pr_body` and the Write path refuse a body file that is a symlink (`[ -L file ]`), and add `tools/tools_test.sh` cases; or have `tools/run_state.sh` copy the body file in from a path under `tmp/`.
+
+## The run state's merged value reaches git log unchecked
+
+- Where: `tools/run_state.sh` line 374 (`newest_pending`) and line 487 (`history_row`), which pass the stored `merged` value to `git log -1` without `--end-of-options`, and `set`, which read-profile agents may call. Low (5) finding of the security review of `workflow-trim` at aa3bf07.
+- Why it matters: an injected agent could store `--output=<path>` as `merged`, and the next `bench` or `history` run would overwrite that file with a timestamp.
+- Fix outline: validate `merged` as 7 to 40 hexadecimal characters in `set`, `newest_pending`, and `history_row`, or call `git log -1 --format=%ct --end-of-options "$merged"`, with a `tools/tools_test.sh` case that stores an option-shaped value.
