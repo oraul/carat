@@ -48,6 +48,13 @@ jobs:
           make gen-config
           git diff --exit-code -- carat/domain/default_config.rb
 
+      # Spinel's analysis of bin/carat.rb and test/domain_buffer.rb must
+      # take at most ANALYSIS_ROUNDS re-narrowing rounds (see the
+      # Makefile): a value widened to untyped across the library fails
+      # here, before the long test step. Compiles to C only.
+      - name: Analysis budget
+        run: make analysis-budget
+
       - name: Test
         run: make test
 
