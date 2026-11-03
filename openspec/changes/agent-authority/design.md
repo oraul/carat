@@ -28,12 +28,15 @@ The workflow builds `RECORDS="security:pass:<commit> quality:pass:<commit> bench
 
 ### A guard per agent, as a PreToolUse hook
 
-Every agent file gets a `hooks:` block whose PreToolUse hook runs `sh "$CLAUDE_PROJECT_DIR/tools/agent_guard.sh" <profile>` on `Bash` (and, for the contributor, on `Edit`, `Write`, and `NotebookEdit`). The script reads the hook's JSON, takes the first `"command"` (or `"file_path"`) string and undoes its JSON escapes, and exits 2 with the reason on stderr to refuse. Rules, by profile:
+Every agent file gets a `hooks:` block whose PreToolUse hook runs `sh "$CLAUDE_PROJECT_DIR/tools/agent_guard.sh" <profile> [<dir>]` on `Bash` and on the file tools the agent has. The script reads the hook's JSON, takes the first `"tool_name"`, `"command"`, and `"file_path"` strings and undoes their JSON escapes, and exits 2 with the reason on stderr to refuse. A command's text is judged by the rules below; a file tool by its path alone, so its content may name anything. Rules, by profile:
 
 - read (scout, planner, checker, quality-reviewer, security-reviewer, benchmark, ci-watcher, reporter, retrospective): no `git` command that writes the history, the index, or a remote (`push commit add merge rebase reset tag cherry-pick revert am stash restore rm mv clean`, after any global options such as `-C dir`); no `gh` command (the agents use the GitHub tools); no `run_state.sh` `phase`, `review`, `stage`, `push`, `history`, or `init`; no `MAKE=`, `STAGES=`, `RUN_STATE_DIR=`, `STAGE_DIR=`, or `METRICS_FILE=` beside `run_state.sh` (a fake `make` would record passed stages); no command naming the run state's directory.
 - merger: the read rules, but `git merge` (the fast-forward of `main`), `git push origin --delete <type>/<name>` (a Conventional Branch, never `main`), and the body file `build/pipeline/<change>.body.md` are allowed.
 - contributor: no `git push` (it pushes through `tools/run_state.sh push`, which runs the gates first), no `gh`, no `run_state.sh` `phase`, `review`, `stage`, or `init`, no environment override, and no Bash command or file edit naming the run state's directory.
 - an unknown profile refuses everything.
+- file tools: a read or merger agent writes only under its directory (`tmp/scout` for the scout, `build/plan` for the planner, `build/pipeline` for the merger's body file), with no `..` step; the contributor anywhere but the run state's directory.
+
+The scout, the planner, and the merger get the Write tool for their one product (a pack, the next queue, the body file): written through a heredoc, a pack quoting `tools/run_state.sh` or a queue naming `git push` carries that text in the command and would be refused. The guard's message points an agent at the Write tool for that case, and the contributor at `git commit -F` for a commit message that names a refused command.
 
 Alternative: `Bash(...)` patterns. A subagent's `tools:` line lists tools, and the prefixes the agents need (git reads with options, make targets, shell pipelines for logs) would either miss commands or allow all of `git`. A deny list in `.claude/settings.json` applies to every session, the contributor and the merger included, so it holds only `Bash(gh pr merge:*)`, which no session runs (the merger merges through the GitHub tool).
 

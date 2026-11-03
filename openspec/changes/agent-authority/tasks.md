@@ -17,4 +17,4 @@
 
 ## 4. Docs
 
-- [ ] 4.1 Update `CLAUDE.md`, `README.md`, the code map area 1 and its delivered changes, and remove the three fixed `docs/backlog.md` entries, adding the one for the `records` notice; verify with `make lint`, `make docs-lint`, and `make gates`.
+- [x] 4.1 Update `CLAUDE.md`, `README.md`, the code map area 1 and its delivered changes, and remove the three fixed `docs/backlog.md` entries, adding the one for the `records` notice; verify with `make lint`, `make docs-lint`, and `make gates`.

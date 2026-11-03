@@ -176,12 +176,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: `CLAUDE.md` forbids committing secrets and relies on the gates for its rules, but nothing scans for a key or refuses an added `.env` file.
 - Fix outline: add patterns for private key headers, `ghp_`, `gho_`, `github_pat_`, `AKIA`, and `sk-` style keys to the scan and the content gate, refuse an added `.env` file, add `.env` to `.gitignore`, and cover each with a `tools/tools_test.sh` case.
 
-## The contributor agent inherits every tool
-
-- Where: the frontmatter of `.claude/agents/contributor.md` (line 1), which has no `tools:` line. Low finding of the periodic security review at 66fd52b.
-- Why it matters: the contributor inherits every tool, the pull request merge among them, so a prompt-injected contributor could merge past the merger's gates.
-- Fix outline: give it an explicit tools list (Read, Edit, Write, Glob, Grep, Bash, Skill, and the pull request create, read, and update tools only), and rely on branch protection requiring the `spin` check.
-
 ## CI actions are pinned by tag
 
 - Where: `.github/workflows/ci.yml` (line 36 `actions/checkout@v4`, and the same at lines 65, 91, 175, and 192, with `actions/cache@v4` and its `restore` and `save` forms). Low finding of the periodic security review at 66fd52b.
@@ -235,18 +229,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `Carat::Json` in `carat/domain/json.rb` (`each_char` at line 346), and every `index` or `rindex` on text that may hold illegal bytes; the pinned Spinel's `index`, `rindex`, and `each_char` group a lead byte with the bytes after it, while `length` and `[i, n]` count each byte (`docs/spinel-notes.md`).
 - Why it matters: no path sends buffer text to JSON yet, but the language server change will; a character index from `index` on such text slices the wrong bytes, and JSON needs the text valid (a language server expects UTF-8).
 - Fix outline: escape illegal bytes in `Carat::Json` by walking bytes with `Utf8` (as U+FFFD or a documented escape), replace `index` and `rindex` on untrusted text with `byteindex` and `byterindex`, report the disagreement upstream, and add hostile rows to `test/json.rb`.
-
-## The run state's review records can be written by any agent
-
-- Where: `tools/run_state.sh` line 441, the `set` subcommand, which writes any key, `review.*` and `phase.*` included, and the `review` subcommand (line 447), which takes any kind. Low (5) finding of the periodic security review at 389c118.
-- Why it matters: the pre-push and merge gates trust `review.security`, so a prompt-injected agent with Bash can record a pass for a review that never ran.
-- Fix outline: refuse `set` for `review.*` and `phase.*` keys, have the workflow script, not an agent, write the review result it received, and let the merger compare it with the workflow's state; a `tools/tools_test.sh` case for each refusal. Queued as `agent-authority`.
-
-## The read-only agents have unrestricted Bash
-
-- Where: the `tools:` line of `.claude/agents/scout.md` (line 3) and of the checker, benchmark, reporter, ci-watcher, planner, retrospective, quality-reviewer, and security-reviewer agents, each a bare `Bash`. Low (4) finding of the periodic security review at 389c118.
-- Why it matters: those agents read an untrusted tree, and text in it can make one run `git push`, `gh pr merge`, or a `gh api` write, past the gates the workflow keeps for the contributor and the merger.
-- Fix outline: permission deny rules in `.claude/settings.json` for `git push`, `gh pr merge`, and `gh api` writes outside the contributor and the merger, or a narrowed `Bash(...)` grant per agent file listing the commands its body names. Queued as `agent-authority`.
 
 ## Options repeats its bounded-number and known-name checks
 
@@ -313,3 +295,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `ci_min` figure of the run state of `untrusted-config-limits` (#37, 12.0 minutes at `8c33ffdefafe`) against 3.0 for `authoring-kit` and 4.0 for `utf8-input-safety`; the local `test-run` stage of the same commit took 26 s against 24 s, so no code location is known.
 - Why it matters: goal 2 of `docs/goals.md` keeps CI time through the history; a threefold rise that is never measured again may hide a lost cache, a slower test (the two 64 MiB strings of `test/editor_cmdline.rb:155` are a suspect), or a runner change.
 - Fix outline: compare the per-job and per-step times of the CI runs of #36 and #37 and the next two pull requests, check whether the Actions cache keyed on `make spinel-rev` hit, and if the rise holds, find the step and fix or record the cause; remove this entry when two runs are back near 4 minutes.
+
+## The records gate passes a merge given no records
+
+- Where: `tools/gates.sh`, `gate_records`, which prints a notice and passes when `RECORDS` is empty. Left by `agent-authority`.
+- Why it matters: the comparison of the run state's reviews with the workflow's only runs when the merger passes them; the notice exists so that the delivery of `agent-authority` itself, run by the workflow it replaced, could merge.
+- Fix outline: once a delivery has merged with the new workflow, make an empty `RECORDS` a `FAIL` in the `merge` group and turn the case in `tools/tools_test.sh` into a refusal.
