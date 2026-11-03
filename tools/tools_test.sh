@@ -347,9 +347,23 @@ state metric sized phase.implement=250000/30 phase.check=60000/10 > /dev/null
 state metric large phase.implement=900000/30 > /dev/null
 expect "run_state: budget names an overrun" 0 "^over: estimated small, budget 300000, actual 310000 output tokens$" state budget sized
 expect "run_state: budget passes a run within its budget" 0 "^within: estimated large, budget 1200000, actual 900000 output tokens$" state budget large
-expect "run_state: budget says when no estimate was made" 0 "^no estimate: no queue item of unsized states a size" state budget unsized
+expect "run_state: budget says when no estimate was made" 0 "^no estimate: neither the run state nor a queue item of unsized states a size" state budget unsized
 expect "run_state: budget says when no output tokens were recorded" 0 "^unmeasured: estimated medium, budget 700000" state budget quiet
 expect "run_state: budget reads no estimate of an unmerged change" 0 "^no estimate: " state budget unmerged
+# The plan's estimate, stored as metric.estimate, outlives the queue item:
+# planned is in no queue, early is not merged, and a stored size wins
+# over the queue's.
+state init planned chore/planned > /dev/null
+state set planned merged "$squash" > /dev/null
+state metric planned estimate=medium phase.implement=200000/20 > /dev/null
+state metric large estimate=medium > /dev/null
+state init early chore/early > /dev/null
+state metric early estimate=small phase.implement=1000/2 > /dev/null
+state metric quiet estimate=huge > /dev/null
+expect "run_state: budget reads the stored estimate of a change with no queue item" 0 "^within: estimated medium, budget 700000, actual 200000 output tokens$" state budget planned
+expect "run_state: the stored estimate wins over the queue item" 0 "^over: estimated medium, budget 700000, actual 900000 output tokens$" state budget large
+expect "run_state: budget reads the stored estimate before the merge" 0 "^within: estimated small, budget 300000, actual 1000 output tokens$" state budget early
+expect "run_state: a stored word that is not a size leaves the queue item's" 0 "^unmeasured: estimated medium" state budget quiet
 # A merged value that is not a commit hash never reaches git, where
 # --output=FILE would write FILE: set refuses it, and one written by hand is
 # no merge.
@@ -364,8 +378,8 @@ expect "run_state: budget refuses a change without a run state" 1 "no run state 
 state history > /dev/null
 expect "run_state: history never passes the merged value to git as an option" 1 "" test -e clobbered
 rm build/pipeline/unmerged.json
-expect "run_state: history records the estimate of the queue item" 0 "^large small -$" \
-  sh -c "awk -F'\t' '\$1 == \"large\" { l = \$15 } \$1 == \"sized\" { s = \$15 } \$1 == \"unsized\" { u = \$15 } END { print l, s, u }' docs/metrics.tsv"
+expect "run_state: history records the estimate" 0 "^medium small - medium$" \
+  sh -c "awk -F'\t' '\$1 == \"large\" { l = \$15 } \$1 == \"sized\" { s = \$15 } \$1 == \"unsized\" { u = \$15 } \$1 == \"planned\" { p = \$15 } END { print l, s, u, p }' docs/metrics.tsv"
 expect "run_state: every history row has the header's columns" 0 "^15$" sh -c "awk -F'\t' '{ print NF }' docs/metrics.tsv | sort -u"
 
 # The benchmark from the check: the metrics stage's measurement against the

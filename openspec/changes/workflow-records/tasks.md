@@ -2,7 +2,7 @@
 
 ## 1. Estimate
 
-- [ ] 1.1 `tools/run_state.sh`: `estimate_of` reads `metric.estimate` first, then the queue item at the squash commit's parent; `budget`'s no-estimate line names both. Tested by the `tools/tools_test.sh` cases "run_state: budget reads the stored estimate of a change with no queue item", "run_state: the stored estimate wins over the queue item", "run_state: budget reads the stored estimate before the merge", and "run_state: history records the stored estimate".
+- [x] 1.1 `tools/run_state.sh`: `estimate_of` reads `metric.estimate` first, then the queue item at the squash commit's parent; `budget`'s no-estimate line names both. Tested by the `tools/tools_test.sh` cases "run_state: budget reads the stored estimate of a change with no queue item", "run_state: the stored estimate wins over the queue item", "run_state: budget reads the stored estimate before the merge", "run_state: a stored word that is not a size leaves the queue item's", and "run_state: history records the estimate".
 
 ## 2. CI wait
 
