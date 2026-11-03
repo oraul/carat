@@ -6,19 +6,19 @@
 #
 # Usage: sh tools/agent_guard.sh PROFILE [DIR] < HOOK-JSON
 #   read         the agents that never edit (scout, planner, checker, the
-#                quality and security reviewers, benchmark, ci-watcher,
-#                reporter, retrospective): no git command that writes the
-#                history, the index, the tree, or a remote; no gh command; no
-#                run state command that only the workflow or the contributor
-#                runs, and no environment override of tools/run_state.sh; no
-#                command naming the run state's directory
+#                quality and security reviewers, benchmark, reporter,
+#                retrospective): no git command that writes the history, the
+#                index, the tree, or a remote; no gh command; no run state
+#                command that only the workflow or the contributor runs, and
+#                no environment override of tools/run_state.sh; no command
+#                naming the run state's directory
 #   merger       the read rules, but the fast-forward of main, the deletion of
-#                the change branch, and the merge gates' body file
+#                the change branch, and the pull request body file
 #                build/pipeline/CHANGE.body.md are allowed
 #   contributor  no git push (tools/run_state.sh push runs the gates first),
 #                no gh command, no phase, review, stage, or init of the run
 #                state, no environment override of it, and no command or file
-#                edit naming its directory
+#                edit naming its directory but the body file, which it writes
 # Any other profile refuses every call. A file tool (Write, Edit,
 # NotebookEdit) of a read or merger agent may write only under DIR of the
 # project (CLAUDE_PROJECT_DIR), none without one; the contributor's may
@@ -84,20 +84,25 @@ E='([^A-Za-z0-9_-]|$)'
 GIT="${B}git( +-{1,2}[A-Za-z][A-Za-z-]*(=[^ ;&|]*)?( +[^ ;&|-][^ ;&|]*)?)* +"
 WRITES='push|commit|add|merge|rebase|reset|tag|cherry-pick|revert|am|stash|restore|rm|mv|clean|pull|apply'
 RUN_STATE="run_state[.]sh[\"']? +[\"']?"
+# The pull request body file, the one file of the run state's directory the
+# contributor and the merger may name; never followed by a further step.
+BODY_FILE='s#build/pipeline/[a-z0-9][a-z0-9-]*[.]body[.]md([^A-Za-z0-9._/-]|$)#body-file\1#g'
 
 case "$profile" in
   read)
     git_writes=$WRITES
     run_state_writes='phase|review|stage|push|history|init' ;;
   merger)
-    # The branch deletion of the merger's step 5, a Conventional Branch
-    # alone at the end of its command, and the body file of its step 2.
+    # The branch deletion of the merger's last steps, a Conventional
+    # Branch alone at the end of its command, and the body file.
     text=$(printf '%s\n' "$text" | sed -E \
       -e 's#git +push +origin +--delete +(feature|bugfix|hotfix|release|chore)/[a-z0-9][a-z0-9-]* *([;&|)]|$)#deleted-branch \2#g' \
-      -e 's#build/pipeline/[a-z0-9][a-z0-9-]*[.]body[.]md([^A-Za-z0-9._-]|$)#body-file\1#g')
+      -e "$BODY_FILE")
     git_writes=$(printf '%s' "$WRITES" | sed 's/|merge|/|/')
     run_state_writes='phase|review|stage|push|history|init' ;;
   contributor)
+    # The body file the package step writes and the merger squashes with.
+    text=$(printf '%s\n' "$text" | sed -E -e "$BODY_FILE")
     git_writes=push
     run_state_writes='phase|review|stage|init' ;;
   *)
@@ -121,7 +126,7 @@ fi
 has "${GIT}(${git_writes})${E}" && refuse "a git command that writes the history, the index, the tree, or a remote"
 has "${B}gh +[a-z]" && refuse "a gh command; the agents use the GitHub tools they list"
 has "${RUN_STATE}(${run_state_writes})${E}" && refuse "a run state command that the workflow or the contributor runs"
-if has "run_state[.]sh" && has "${B}(MAKE|STAGES|RUN_STATE_DIR|STAGE_DIR|METRICS_FILE)="; then
+if has "run_state[.]sh" && has "${B}(MAKE|STAGES|RUN_STATE_DIR|STAGE_DIR|METRICS_FILE|METRICS_OUT)="; then
   refuse "an environment override of tools/run_state.sh"
 fi
 has "build/pipeline|pipeline/" && refuse "a command naming the run state's directory; read it with tools/run_state.sh show"

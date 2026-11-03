@@ -6,7 +6,8 @@
 # one key per line, rewritten through a temporary file and a rename:
 #   change, branch   the change, its branch, and repo, the GitHub owner/name
 #   phase.NAME       the commit the phase finished at
-#   stage.NAME       "EXIT SECONDSs COMMIT UTC-TIME" of the last run
+#   stage.NAME       "EXIT SECONDSs COMMIT UTC-TIME" of the last run, with
+#                    "carried-from-COMMIT" when check carried it (below)
 #   review.KIND      "pass|blocked COMMIT SUMMARY" (security, quality, bench,
 #                    and periodic-security and periodic-quality after a merge)
 #   pushes, ci_fixes the pushes made and the CI fixes they may answer
@@ -14,9 +15,11 @@
 #   pushed, pr, ci   the last pushed commit, the pull request number, and
 #                    "green|red COMMIT"
 #   merged           the squash commit on main
-#   metric.NAME      one measurement or figure of the run (tools/metrics.sh
-#                    names, rework, first_pass, ci_min, out_tokens,
-#                    tool_calls, phases)
+#   metric.NAME      one measurement or figure of the run: tools/metrics.sh
+#                    names, rework, ci_min, phase.KEY ("TOKENS/CALLS" of a
+#                    phase so far), and first.GATE (0 or 1, its first
+#                    verdict), stored by the workflow as they happen; older
+#                    runs stored first_pass, out_tokens, tool_calls, phases
 #   note.N           "KIND TEXT": a retrospective proposal or a finding
 # Logs: build/stages/CHANGE/STAGE.log, ending in "EXIT n".
 #
@@ -42,7 +45,14 @@
 #   stage CHANGE NAME CMD...    run CMD with its log and record its result
 #   check CHANGE                run the canonical stages (make -s stages) in
 #                               order, skip a stage passed at HEAD, stop at the
-#                               first failure, record phase.check when all pass
+#                               first failure, record phase.check when all pass;
+#                               a stage outside TEST_STAGES that passed at a
+#                               commit since which only tests changed is
+#                               carried to HEAD instead of run
+#   bench CHANGE                record the metrics stage's measurement and
+#                               compare it with the last history row through
+#                               make metrics-compare; exit 0 when allocations
+#                               and rounds equal the row's, 1 otherwise
 #   push CHANGE [--ci-fix]      run the pre-push gates, refuse a push beyond one
 #                               plus one per CI fix (a CI fix needs ci red), push
 #                               the branch with upstream tracking, and count it
@@ -57,13 +67,15 @@
 #                               merged since the last periodic review; print
 #                               "not due: ..." and exit 1 otherwise
 #   pending                     the merged changes with no history row yet
-#   history                     append a history row for each pending change
+#   history                     append a history row for each pending change;
+#                               a gate without a stored first verdict takes
+#                               it from the stage.*, review.*, and ci lines
 #   status                      the queue, the running change, the last metrics
 #                               row, and the first-pass rates of the history
 #
 # Environment: RUN_STATE_DIR (build/pipeline), STAGE_DIR (build/stages),
 # STAGES (the stage list; make -s stages when unset), MAKE (make),
-# METRICS_FILE (docs/metrics.tsv).
+# METRICS_FILE (docs/metrics.tsv), METRICS_OUT (build/metrics/current.tsv).
 set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -71,7 +83,15 @@ state_dir=${RUN_STATE_DIR:-build/pipeline}
 stage_dir=${STAGE_DIR:-build/stages}
 make_cmd=${MAKE:-make}
 metrics_file=${METRICS_FILE:-docs/metrics.tsv}
-PHASES="plan implement check quality security bench package ci merge retro"
+metrics_out=${METRICS_OUT:-build/metrics/current.tsv}
+PHASES="plan implement check quality security bench package ci merge retro report"
+# The stages a commit that changes only tests runs again; check carries the
+# others. TEST_ONLY: the paths such a commit may change, tests and their
+# snapshots and the paths no check reads (settled_at of tools/gates.sh).
+TEST_STAGES="test-build test-run gates"
+TEST_ONLY='^(test/|openspec/|docs/(backlog|queue|goals)\.md$|docs/metrics\.tsv$|$)'
+# The gates of a history row's first passes, in order, before gates.
+GATES="check quality security bench ci"
 REVIEW_KINDS="security quality bench periodic-security periodic-quality"
 TAB=$(printf '\t')
 HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci_min${TAB}rounds${TAB}allocs${TAB}us_per_key${TAB}out_tokens${TAB}tool_calls${TAB}phases${TAB}review"
@@ -183,6 +203,12 @@ run_stage() {
   return $status
 }
 
+# True when every path changed from COMMIT to HEAD matches TEST_ONLY.
+tests_only_since() {
+  rest=$(git diff --name-only "$1" HEAD 2>/dev/null) || return 1
+  [ -z "$(printf '%s\n' "$rest" | grep -v -E "$TEST_ONLY")" ]
+}
+
 check_stages() {
   stages=${STAGES:-$("$make_cmd" -s --no-print-directory stages)}
   head=$(head_commit)
@@ -190,8 +216,16 @@ check_stages() {
     record=$(read_key "stage.$s")
     case "$record" in
       "0 "*)
-        if [ "$(echo "$record" | cut -d' ' -f3)" = "$head" ]; then
+        at=$(echo "$record" | cut -d' ' -f3)
+        if [ "$at" = "$head" ]; then
           echo "stage $s: passed at $head, skipped"
+          continue
+        fi
+        # A stage no test reaches keeps its result across a commit that
+        # changes only tests; CI still runs every stage on the push.
+        if ! one_of "$s" "$TEST_STAGES" && tests_only_since "$at"; then
+          write_key "stage.$s" "0 0s $head $(utc_now) carried-from-$at"
+          echo "stage $s: passed at $at, carried to $head (only tests changed since)"
           continue
         fi ;;
     esac
@@ -324,6 +358,45 @@ import_metrics() {
   echo "metrics: recorded $recorded measurement(s) of $change, skipped $skipped unmeasured"
 }
 
+# The bench command: the metrics stage's measurement against the last
+# history row, which is main's when the branch is current.
+bench_compare() {
+  record=$(read_key stage.metrics)
+  case "$record" in
+    "0 "*) [ "$(echo "$record" | cut -d' ' -f3)" = "$(head_commit)" ] ||
+      die "bench: the metrics stage passed at another commit; run the checks first" ;;
+    *) die "bench: the metrics stage has not passed at HEAD; run the checks first" ;;
+  esac
+  import_metrics "$metrics_out"
+  if [ ! -f "$metrics_file" ] || [ "$(wc -l < "$metrics_file")" -le 1 ]; then
+    echo "bench: no history row in $metrics_file to compare with"
+    return 1
+  fi
+  last=$(dirname "$metrics_out")/last.tsv
+  tail -1 "$metrics_file" | awk -F'\t' '
+    function out(kind, list,   n, i, p, kv) {
+      if (list == "-" || list == "") return
+      n = split(list, p, ",")
+      for (i = 1; i <= n; i++) { split(p[i], kv, "="); printf "%s.%s\t%s\n", kind, kv[1], kv[2] }
+    }
+    { out("rounds", $8); out("allocs", $9); out("us", $10) }' > "$last"
+  echo "bench: comparing with the history row of $(tail -1 "$metrics_file" | cut -f1)"
+  "$make_cmd" --no-print-directory metrics-compare "BASE_METRICS=$last"
+  differ=$(awk -F'\t' '
+    NR == FNR { if ($1 ~ /^(allocs|rounds)[.]/) base[$1] = $2; next }
+    $1 ~ /^(allocs|rounds)[.]/ {
+      seen[$1] = 1
+      if (!($1 in base) || $2 == "?" || base[$1] + 0 != $2 + 0) print $1 " " ($1 in base ? base[$1] : "none") " -> " $2
+    }
+    END { for (k in base) if (!(k in seen)) print k " " base[k] " -> none" }' "$last" "$metrics_out")
+  if [ -n "$differ" ]; then
+    echo "bench: differs from the history row:"
+    printf '%s\n' "$differ"
+    return 1
+  fi
+  echo "bench: same allocations and rounds as the history row"
+}
+
 add_note() {
   valid '[a-z-]+' "$1" || die "note: the kind is lowercase words joined by hyphens, not $1"
   n=$(($(grep -c '^  "note[.]' "$(state_file)") + 1))
@@ -344,16 +417,21 @@ pending_list() {
   done
 }
 
-# metric.PREFIX.* of the run state as "suffix=value,...", "-" when none.
-group() {
-  P="metric.$1." awk '
+# The keys of the run state under PREFIX as "suffix=value" lines.
+keys_under() {
+  P="$1" awk '
     /^  "/ {
       key = $0; sub(/^  "/, "", key); sub(/".*/, "", key)
       if (index(key, ENVIRON["P"]) != 1) next
       value = $0; sub(/^  "[^"]*": "/, "", value); sub(/",?$/, "", value)
-      out = out (out == "" ? "" : ",") substr(key, length(ENVIRON["P"]) + 1) "=" value
-    }
-    END { print (out == "" ? "-" : out) }' "$(state_file)"
+      print substr(key, length(ENVIRON["P"]) + 1) "=" value
+    }' "$(state_file)"
+}
+
+# metric.PREFIX.* of the run state as "suffix=value,...", "-" when none.
+group() {
+  out=$(keys_under "metric.$1." | paste -s -d, -)
+  echo "${out:--}"
 }
 
 value() {
@@ -361,10 +439,39 @@ value() {
   echo "${v:--}"
 }
 
+# The first verdict of GATE, 1 or 0: metric.first.GATE as the workflow
+# stored it, else the gate's entry of an older run's metric.first_pass,
+# else what the run state's lines show (every stage passed, the review's
+# result, CI's color); nothing when none of them says.
+first_of() {
+  v=$(read_key "metric.first.$1")
+  [ -z "$v" ] || { echo "$v"; return; }
+  v=$(read_key metric.first_pass | tr ',' '\n' | sed -n "s/^$1://p")
+  [ -z "$v" ] || { echo "$v"; return; }
+  case "$1" in
+    check) keys_under stage. | awk '{ sub(/^[^=]*=/, ""); n++; if (substr($0, 1, 2) != "0 ") bad = 1 } END { if (n) print bad ? 0 : 1 }' ;;
+    ci) case "$(read_key ci)" in green*) echo 1 ;; red*) echo 0 ;; esac ;;
+    *) case "$(read_key "review.$1")" in pass*) echo 1 ;; blocked*) echo 0 ;; esac ;;
+  esac
+}
+
 history_row() {
   merged=$(read_key merged)
   date=$(git log -1 --format=%cs "$merged" 2>/dev/null)
-  first=$(read_key metric.first_pass)
+  first=""
+  for g in $GATES; do
+    v=$(first_of "$g")
+    [ -z "$v" ] || first="${first:+$first,}$g:$v"
+  done
+  phases=$(group phase)
+  if [ "$phases" = "-" ]; then
+    phases=$(value metric.phases)
+    tokens=$(value metric.out_tokens)
+    calls=$(value metric.tool_calls)
+  else
+    tokens=$(keys_under metric.phase. | awk -F'[=/]' '{ n += $2 } END { print n + 0 }')
+    calls=$(keys_under metric.phase. | awk -F'[=/]' '{ n += $3 } END { print n + 0 }')
+  fi
   if [ "$(count pushes)" -gt 0 ]; then
     if [ "$(count gates_failed)" -eq 0 ]; then gates=1; else gates=0; fi
     first="${first:+$first,}gates:$gates"
@@ -377,7 +484,7 @@ history_row() {
   fi
   printf '%s\t' "$change" "${date:--}" "$merged" "$(value pr)" "$(value metric.rework)" "${first:--}" \
     "$(value metric.ci_min)" "$(group rounds)" "$(group allocs)" "$(group us)" \
-    "$(value metric.out_tokens)" "$(value metric.tool_calls)" "$(value metric.phases)"
+    "$tokens" "$calls" "$phases"
   printf '%s\n' "$review"
 }
 
@@ -483,6 +590,9 @@ case "$command" in
   check)
     [ $# -eq 0 ] || usage
     check_stages ;;
+  bench)
+    [ $# -eq 0 ] || usage
+    bench_compare ;;
   push)
     push_branch "${1:-}" ;;
   metric)
