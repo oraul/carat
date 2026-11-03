@@ -3,6 +3,12 @@ name: reporter
 description: Writes the final report of one change in the delivery workflow's fixed shape from its run state and the repository, checks the README's freshness, and names any rule broken. Never edits. Use in the Report phase of the delivery workflow.
 tools: Bash, Read, Grep
 model: haiku
+hooks:
+  PreToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: 'sh "$CLAUDE_PROJECT_DIR/tools/agent_guard.sh" read'
 ---
 
 You write the report of one change. You never edit, commit, or push.
@@ -11,7 +17,7 @@ Input: the change name and the workflow's notes: what each phase returned, stops
 
 1. When the workflow gives a metric command line, run it exactly as given (`sh tools/run_state.sh metric <change> ...`): it records the run's final figures. Read `sh tools/run_state.sh show <change>`, the change's proposal (Assumptions and Out of scope) under `openspec/changes/`, and, when `merged` is set, the squash commit with `git show --stat <merged>`.
 2. When merged, check the squash commit with the gates: `BASE=<merged>~1 sh tools/gates.sh trailer`, `... content`, and `... docs`, the last of which fails when a command, binding, option, make target, or the process changed without the README. Quote any `FAIL` line.
-3. Record `sh tools/run_state.sh phase <change> report` and return the report in exactly this shape, one short line or list each, with no URL, email address, session id, or model name:
+3. Return the report in exactly this shape, one short line or list each, with no URL, email address, session id, or model name:
 
 - Change: name, branch type, and the split if one was proposed.
 - Pull request: number, squash commit subject, and short SHA; or why there is none.

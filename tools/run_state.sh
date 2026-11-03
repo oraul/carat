@@ -28,11 +28,17 @@
 #   init CHANGE BRANCH          create the state unless it exists, then show it
 #   show CHANGE                 print the state
 #   get CHANGE KEY              print one value, empty when absent
-#   set CHANGE KEY VALUE        write one value
-#   phase CHANGE NAME           record the phase done at HEAD
-#   review CHANGE KIND RESULT SUMMARY
-#                               record a review (RESULT pass or blocked) at
-#                               HEAD; a pass also records phase.KIND
+#   set CHANGE KEY VALUE        write one value; refuses review.*, phase.*,
+#                               and stage.*, which their own commands write
+#   phase CHANGE NAME [COMMIT]  record the phase (one of PHASES) done at
+#                               COMMIT, HEAD when omitted
+#   review CHANGE KIND RESULT SUMMARY [COMMIT]
+#                               record a review (KIND one of REVIEW_KINDS,
+#                               RESULT pass or blocked) at COMMIT, HEAD when
+#                               omitted; a pass also records phase.KIND
+# The delivery workflow, not its agents, runs phase and review: it builds
+# them from the results it received (tools/agent_guard.sh keeps the agents
+# off them, and the merge gate compares them with RECORDS).
 #   stage CHANGE NAME CMD...    run CMD with its log and record its result
 #   check CHANGE                run the canonical stages (make -s stages) in
 #                               order, skip a stage passed at HEAD, stop at the
@@ -65,7 +71,8 @@ state_dir=${RUN_STATE_DIR:-build/pipeline}
 stage_dir=${STAGE_DIR:-build/stages}
 make_cmd=${MAKE:-make}
 metrics_file=${METRICS_FILE:-docs/metrics.tsv}
-PHASES="plan implement check quality security bench package ci merge retro report"
+PHASES="plan implement check quality security bench package ci merge retro"
+REVIEW_KINDS="security quality bench periodic-security periodic-quality"
 TAB=$(printf '\t')
 HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci_min${TAB}rounds${TAB}allocs${TAB}us_per_key${TAB}out_tokens${TAB}tool_calls${TAB}phases${TAB}review"
 # The areas whose change makes a periodic review of the whole codebase due,
@@ -83,6 +90,20 @@ die() {
 
 head_commit() {
   git rev-parse --short=12 HEAD
+}
+
+# The twelve-digit form of COMMIT, HEAD when empty; dies unless it names a
+# commit.
+commit_at() {
+  [ -n "$1" ] || { head_commit; return; }
+  valid '[0-9a-f]{7,40}' "$1" || die "not a commit: $1"
+  git rev-parse --verify -q --short=12 "$1^{commit}" || die "not a commit: $1"
+}
+
+# True when WORD is one of the words of LIST.
+one_of() {
+  case " $2 " in *" $1 "*) return 0 ;; esac
+  return 1
 }
 
 state_file() {
@@ -440,15 +461,22 @@ case "$command" in
     read_key "$1" ;;
   set)
     [ $# -eq 2 ] || usage
+    case "$1" in
+      review.*|phase.*|stage.*) die "set: refused: $1 is written only by its own command (review, phase, stage, check)" ;;
+    esac
     write_key "$1" "$2" ;;
   phase)
-    [ $# -eq 1 ] || usage
-    write_key "phase.$1" "$(head_commit)" ;;
+    [ $# -eq 1 ] || [ $# -eq 2 ] || usage
+    one_of "$1" "$PHASES" || die "phase: not a phase: $1 (one of $PHASES)"
+    at=$(commit_at "${2:-}") || exit 1
+    write_key "phase.$1" "$at" ;;
   review)
-    [ $# -eq 3 ] || usage
+    [ $# -eq 3 ] || [ $# -eq 4 ] || usage
+    one_of "$1" "$REVIEW_KINDS" || die "review: not a review kind: $1 (one of $REVIEW_KINDS)"
     case "$2" in pass|blocked) ;; *) die "review result is pass or blocked, not $2" ;; esac
-    write_key "review.$1" "$2 $(head_commit) $3"
-    [ "$2" = blocked ] || write_key "phase.$1" "$(head_commit)" ;;
+    at=$(commit_at "${4:-}") || exit 1
+    write_key "review.$1" "$2 $at $3"
+    [ "$2" = blocked ] || write_key "phase.$1" "$at" ;;
   stage)
     [ $# -ge 2 ] || usage
     run_stage "$@" ;;

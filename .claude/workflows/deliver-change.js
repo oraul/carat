@@ -28,7 +28,12 @@ export const meta = {
 // measures the run (output tokens and tool calls per phase, the first
 // verdict of each gate, rework rounds, CI minutes) and hands the figures to
 // the retrospective and the reporter, which record them with
-// tools/run_state.sh metric; the script itself writes no file.
+// tools/run_state.sh metric. The run state's phase.* and review.* lines are
+// the script's own: it builds each command from a schema-checked result and
+// one agent that reads nothing else runs them (flush), at the end of verify()
+// for the gates and right after every other phase; tools/agent_guard.sh
+// keeps the other agents off those commands, and the merger's records gate
+// compares the file with what the script received.
 const input = typeof args === 'string' ? { brief: args } : (args || {})
 const ROUNDS = 3
 const notes = []
@@ -105,6 +110,7 @@ const MERGE = {
   required: ['merged'],
 }
 const REPORT = { type: 'object', properties: { report: { type: 'string' } }, required: ['report'] }
+const RECORDED = { type: 'object', properties: { ok: { type: 'boolean' }, output: { type: 'string' } }, required: ['ok', 'output'] }
 const PLAN = {
   type: 'object',
   properties: {
@@ -153,6 +159,48 @@ function metricLine() {
   return `sh tools/run_state.sh metric ${state.change} ${pairs.join(' ')}`
 }
 
+// The records the script writes: a phase or a review at a commit, queued as
+// command lines of fixed words, commits, and counts, then run by flush().
+const COMMIT = /^[0-9a-f]{7,40}$/
+const CHANGE = /^[a-z0-9][a-z0-9-]*$/
+const pending = []
+function queue(line, commit) {
+  if (CHANGE.test(state.change || '') && COMMIT.test(commit || '')) pending.push(line)
+  else note(`not recorded (change ${state.change}, commit ${commit}): ${line}`)
+}
+function phaseDone(name, commit) {
+  state['phase.' + name] = commit
+  queue(`sh tools/run_state.sh phase ${state.change} ${name} ${commit}`, commit)
+}
+// A phase outside verify() is recorded at once: package, CI, and the merge
+// cannot run twice (a second push is refused), so a restart must find them.
+async function recordPhase(name, commit) {
+  phaseDone(name, commit)
+  return flush()
+}
+function reviewed(kind, passed, commit, counts) {
+  const result = passed ? 'pass' : 'blocked'
+  state['review.' + kind] = `${result} ${commit}`
+  const summary = Object.keys(counts).map((k) => `${k}=${Number.isInteger(counts[k]) ? counts[k] : 0}`).join(' ')
+  queue(`sh tools/run_state.sh review ${state.change} ${kind} ${result} "${summary}" ${commit}`, commit)
+}
+async function flush() {
+  if (!pending.length) return true
+  const command = pending.splice(0).join(' && ')
+  const r = await measured('record', () => agent(
+    `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${command}\n\nReturn ok true when it exited 0, and its output.`,
+    { schema: withCalls(RECORDED), effort: 'low', label: 'record' }))
+  if (r && r.ok) return true
+  if (!stopped) stopped = `the run state records failed: ${r ? r.output : 'no result'}`
+  return false
+}
+// The merge gates with the review results the script holds, for the merger.
+function mergeGates() {
+  const records = ['security', 'quality', 'bench'].map((k) => `${k}:${at('review.' + k).slice(0, 2).join(':')}`)
+    .filter((r) => /^[a-z]+:(pass|blocked):[0-9a-f]{7,40}$/.test(r))
+  return `CHANGE=${state.change} RECORDS="${records.join(' ')}" sh tools/gates.sh merge build/pipeline/${state.change}.body.md`
+}
+
 const at = (key) => (state[key] || '').split(' ')
 const doneAtHead = (name) => state['phase.' + name] === head
 const reviewedAtHead = (kind) => at('review.' + kind)[0] === 'pass' && at('review.' + kind)[1] === head
@@ -178,6 +226,11 @@ async function contributor(mode, detail) {
 // Check, quality, security, and benchmark until all pass at one commit;
 // whatever blocks goes back to the contributor, at most ROUNDS times.
 async function verify() {
+  const passed = await rounds()
+  return (await flush()) && passed
+}
+
+async function rounds() {
   for (let round = 1; round <= ROUNDS + 1; round++) {
     let blocked = ''
     if (!doneAtHead('check')) {
@@ -191,17 +244,17 @@ async function verify() {
     }
     if (!blocked && !reviewedAtHead('quality')) {
       phase('Quality')
-      const q = await measured('quality', () => agent(`${intro()} Review the committed diff and record the result.`, { agentType: 'quality-reviewer', schema: withCalls(QUALITY) }))
+      const q = await measured('quality', () => agent(`${intro()} Review the committed diff and return the findings.`, { agentType: 'quality-reviewer', schema: withCalls(QUALITY) }))
       if (!q) { stopped = 'the quality reviewer returned no result'; return false }
       verdict('quality', !q.blocking.length)
       note(`quality at ${q.head}: ${q.blocking.length} blocking, ${q.advisory.length} advisory`)
+      reviewed('quality', !q.blocking.length, q.head, { blocking: q.blocking.length, advisory: q.advisory.length })
       if (q.blocking.length) blocked = `Blocking quality findings:\n- ${q.blocking.join('\n- ')}`
-      else state['review.quality'] = `pass ${q.head}`
     }
     if (!blocked && !reviewedAtHead('security')) {
       phase('Security')
-      let s = await measured('security', () => agent(`${intro()} Run the security review on the committed diff and record the result.`, { agentType: 'security-reviewer', schema: withCalls(SECURITY) }))
-      if (!s || !s.ran) s = await measured('security', () => agent(`${intro()} The last security review did not complete. Run it again, every sub-task inline, and record the result.`, { agentType: 'security-reviewer', schema: withCalls(SECURITY), label: 'security-reviewer: retry' }))
+      let s = await measured('security', () => agent(`${intro()} Run the security review on the committed diff and return the result.`, { agentType: 'security-reviewer', schema: withCalls(SECURITY) }))
+      if (!s || !s.ran) s = await measured('security', () => agent(`${intro()} The last security review did not complete. Run it again, every sub-task inline, and return the result.`, { agentType: 'security-reviewer', schema: withCalls(SECURITY), label: 'security-reviewer: retry' }))
       if (!s || !s.ran) { stopped = 'the security review did not run; it cannot be skipped'; return false }
       const blocking = s.findings.filter((f) => f.severity !== 'Low' && f.confidence >= 8 && f.in_change)
       verdict('security', !blocking.length)
@@ -210,17 +263,18 @@ async function verify() {
         if (!backlog.includes(line)) backlog.push(line)
       }
       note(`security at ${s.head}: ${s.findings.length} finding(s), ${blocking.length} blocking`)
+      const count = (severity) => s.findings.filter((f) => f.severity === severity).length
+      reviewed('security', !blocking.length, s.head, { high: count('High'), medium: count('Medium'), low: count('Low'), blocking: blocking.length })
       if (blocking.length) blocked = `Blocking security findings, to fix first:\n- ${blocking.map((f) => `${f.severity} (${f.confidence}) ${f.file}:${f.line || 0} ${f.title}; fix: ${f.fix}`).join('\n- ')}`
-      else state['review.security'] = `pass ${s.head}`
     }
     if (!blocked && !reviewedAtHead('bench')) {
       phase('Benchmark')
-      const b = await measured('bench', () => agent(`${intro()} Compare with main and record the result.`, { agentType: 'benchmark', schema: withCalls(BENCH), effort: 'low' }))
+      const b = await measured('bench', () => agent(`${intro()} Compare with main and return the result.`, { agentType: 'benchmark', schema: withCalls(BENCH), effort: 'low' }))
       if (!b) { stopped = 'the benchmark agent returned no result'; return false }
       verdict('bench', !b.blocking.length)
       note(`benchmark at ${b.head}: ${b.report.join('; ')}`)
+      reviewed('bench', !b.blocking.length, b.head, { blocking: b.blocking.length })
       if (b.blocking.length) blocked = `Blocking regressions:\n- ${b.blocking.join('\n- ')}`
-      else state['review.bench'] = `pass ${b.head}`
     }
     if (!blocked) return true
     if (round > ROUNDS) { stopped = `still blocked after ${ROUNDS} fix rounds: ${blocked.split('\n')[0]}`; return false }
@@ -244,6 +298,7 @@ if (!resume || resume.status !== 'done') {
   state = JSON.parse(resume.state_json)
   head = resume.head
   note(`resumed ${state.change} on ${state.branch} at ${head}`)
+  if (!CHANGE.test(state.change || '')) stopped = `not a change name: ${state.change}`
 }
 
 // The planner orders the queue from the metrics history before a new change
@@ -257,7 +312,7 @@ if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement
   else {
     note(`plan: ${p.decisions.map((d) => `${d.decision} (${d.evidence})`).join('; ') || 'no change to the queue'}`)
     if (p.security_first.length) stopped = `security first: deliver the fix of ${p.security_first.join('; ')} before this change`
-    else state['phase.plan'] = head
+    else await recordPhase('plan', head)
   }
 }
 
@@ -276,14 +331,14 @@ if (!stopped && !state.merged) {
     }
     phase('Implement')
     const done = await contributor('implement', `Brief: ${input.brief || 'the existing OpenSpec change'}. Scout packs: ${packs.join(', ') || 'none'}.`)
-    if (done) state['phase.implement'] = head
+    if (done) await recordPhase('implement', head)
   }
 
   if (!stopped && !(state['phase.package'] && state.pr)) {
     if (await verify()) {
       phase('Package')
       const done = await contributor('package', `Non-blocking findings for docs/backlog.md:\n- ${backlog.join('\n- ') || 'none'}\nApply the planner's files under build/plan/ and append the history of the merged changes as your package step says.`)
-      if (done) { state['phase.package'] = head; state.pr = String(done.pr || '') }
+      if (done) { state.pr = String(done.pr || ''); await recordPhase('package', head) }
     }
   }
 
@@ -295,7 +350,7 @@ if (!stopped && !state.merged) {
       verdict('ci', ci.status === 'green')
       if (ci.minutes) ciMinutes = ci.minutes
       note(`CI at ${ci.head}: ${ci.status}${ci.minutes ? ` in ${ci.minutes} min` : ''}`)
-      if (ci.status === 'green') break
+      if (ci.status === 'green') { state.ci = `green ${ci.head}`; await recordPhase('ci', ci.head); break }
       if (ci.status !== 'red' || round >= ROUNDS) { stopped = `CI ${ci.status}${ci.step ? ' at ' + ci.step : ''}`; break }
       if (!(await contributor('fix', `CI failed at ${ci.step}; its log:\n${ci.log_excerpt || ''}`))) break
       if (!(await verify())) break
@@ -306,10 +361,11 @@ if (!stopped && !state.merged) {
 
   if (!stopped) {
     phase('Merge')
-    const m = await measured('merge', () => agent(`${intro()} Merge the pull request if every merge gate passes.`, { agentType: 'merger', schema: withCalls(MERGE), effort: 'low' }))
+    const m = await measured('merge', () => agent(`${intro()} Merge the pull request if every merge gate passes. The merge gates: \`${mergeGates()}\``, { agentType: 'merger', schema: withCalls(MERGE), effort: 'low' }))
     if (!m || !m.merged) stopped = `not merged: ${m ? m.problem : 'no result'}`
     else {
       state.merged = m.sha
+      await recordPhase('merge', m.sha)
       note(`merged ${m.sha}: ${m.subject}${m.branch_deleted ? '' : ' (branch deletion refused)'}`)
     }
   }
@@ -326,6 +382,7 @@ if (!stopped && state.merged && !state['phase.retro']) {
     { agentType: 'retrospective', schema: withCalls(RETRO) }))
   if (!r) stopped = 'the retrospective returned no result'
   else {
+    await recordPhase('retro', state.merged)
     note(`retrospective: ${r.proposals.map((x) => `${x.proposal} (${x.evidence})`).join('; ') || 'no proposal'}; ${r.review_due}`)
     if (r.due) {
       phase('Review')
@@ -336,10 +393,14 @@ if (!stopped && state.merged && !state['phase.retro']) {
         note(`the periodic review failed to start: ${e.message}`)
       }
       if (!p || !p.ran) stopped = 'the periodic security review did not run; run /review'
-      else note(`periodic review: security ${p.security.length} finding(s), ${p.security_blocking} blocking (to the front of the queue); quality ${p.quality_blocking.length} blocking, ${p.quality_advisory} advisory`)
+      else note(`periodic review: security ${p.security.length} finding(s), ${p.security_blocking} blocking (to the front of the queue); quality ${p.quality_blocking.length} blocking, ${p.quality_advisory} advisory${p.recorded === false ? '; the results were not recorded in the run state' : ''}`)
     }
   }
 }
+
+// What the script decided since the last flush, before the reporter reads
+// the run state.
+if (state.change) await flush()
 
 phase('Report')
 const report = await agent(
