@@ -132,7 +132,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: the pinned Spinel (`SPINEL_REF` in the `Makefile`); seen in `carat/domain/rc_value.rb` and `carat/domain/config.rb` during the `caratrc-config` change. `RcValue.expectation(kind)`, written as a `case` whose branches were string literals, answered the kind itself when called with a literal; `RcValue.text(words, kind)`, written as `words.empty? ? "" : words[0].to_s`, answered the kind; and `SCOPES.include?(line.scope)` answered false for a scope the array holds, while the same call through a local answered true.
 - Why it matters: each is silent wrong code, not a compile error; only the table tests caught them. The three places are rewritten (guard returns, a local for the first word, a local for the scope), but the same shapes elsewhere could be affected.
-- Fix outline: reduce each to a minimal program (a module function with a literal-branch `case` called with a literal; a ternary of `""` and an indexed `to_s` in a two-parameter method; a constant array's `include?` of a reader called on a `Data` value), report them upstream, and recheck them when `SPINEL_REF` is bumped.
+- Fix outline: reduce each to a minimal program (a module function with a literal-branch `case` called with a literal; a ternary of `""` and an indexed `to_s` in a two-parameter method; a constant array's `include?` of a reader called on a `Data` value; a guard `return path if slash.nil?` before `path.byteslice(...).to_s`, which answered the path inside the whole program in `PluginApi::Paths.basename` during `utf8-input-safety` though not in a small probe), report them upstream, and recheck them when `SPINEL_REF` is bumped.
 
 ## The plugin host keeps many-method classes in use_cases
 
@@ -157,3 +157,87 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the CI and merge phases of `.claude/workflows/deliver-change.js`, which start the `ci-watcher` agent and then the `merger` agent, the second rereading the pull request head and the CI state the first just wrote.
 - Why it matters: in `authoring-kit` the two took 17 and 11 tool calls, 28 of 272 (10.3%), and 6,305 output tokens for a CI that passed first time in 3.0 minutes with 0 CI fixes. Proposed by that run's retrospective (note 3) and left out of the queue because one green run is the only evidence and the watcher drives the CI-fix rounds, which no run has measured yet.
 - Fix outline: once `docs/metrics.tsv` holds several runs with their `ci` and `merge` phase counts, including one with a CI fix, have the merger watch CI itself when the run has no CI fix to make, keeping the watcher only for the fix loop, and compare the two phases' tool calls before and after.
+
+## The project .caratrc is read without a type or size check
+
+- Where: `RcConfigGateway#read_file` in `carat/adapters/rc_config_gateway.rb` (the `@files.read(path)` at line 55), after `@files.stat(path)`, which follows a link; `DiskFiles#read` reads the whole file. Low finding of the periodic security review at 66fd52b.
+- Why it matters: the project file comes from an untrusted repository; a `.caratrc` that is a symlink to `/dev/zero` or a FIFO makes carat exhaust memory or hang at startup, before the first frame.
+- Fix outline: refuse a project file that is a symlink or not a regular file (an lstat in `PathInfo`), cap the bytes read (for example 1 MB) through a bounded read on `FilePort`, and note each refusal as a problem with its file and line 0.
+
+## tabstop and shiftwidth have no upper bound
+
+- Where: `Options#apply` in `carat/domain/options.rb` (lines 94 and 95 store `word.to_i`); `RcValue.number?` accepts up to 999999999. Low finding of the periodic security review at 66fd52b.
+- Why it matters: an untrusted project `.caratrc` can set either to 999999999, and `InsertTab` (`carat/use_cases/insert_tab.rb`) and the shift operators (`Operators.shift`, `shift_block`) then build a string of that many spaces on one Tab or `>>`, allocating gigabytes.
+- Fix outline: bound the integer options in `Options.apply` (Vim caps `tabstop` at 9999; 1 to 9999 for both, 0 still meaning "use tabstop" for `shiftwidth`), note an out-of-range value as a problem, and add rows to `test/domain_options_config.rb`.
+
+## The periodic review's areas miss the entry point, the tools, and CI
+
+- Where: `REVIEW_AREAS` in `tools/run_state.sh` (line 73). `utf8-input-safety` added the domain files that keep control characters off the terminal (`frame.rb`, `display_width.rb`, `utf8.rb`, `decoded_line.rb`) to the terminal output area; `bin/carat.rb`, `tools/`, and `.github/workflows/` are still in no area. Low finding of the periodic security review at 66fd52b.
+- Why it matters: a change to the composition root, the gate scripts, or the CI workflow never makes a periodic security review due, though each decides what runs and what is checked.
+- Fix outline: add `bin/carat.rb` to the process spawning area and a "tooling and CI" area for `^(tools/|\.github/workflows/)`, with a `tools/tools_test.sh` case for each.
+
+## The content gate has no secret patterns and .env is not ignored
+
+- Where: `tools/rules.sh` (line 8 starts the patterns: URLs, emails, session ids, model names) used by `tools/gates.sh`; `.gitignore`. Low finding of the periodic security review at 66fd52b.
+- Why it matters: `CLAUDE.md` forbids committing secrets and relies on the gates for its rules, but nothing scans for a key or refuses an added `.env` file.
+- Fix outline: add patterns for private key headers, `ghp_`, `gho_`, `github_pat_`, `AKIA`, and `sk-` style keys to the scan and the content gate, refuse an added `.env` file, add `.env` to `.gitignore`, and cover each with a `tools/tools_test.sh` case.
+
+## The contributor agent inherits every tool
+
+- Where: the frontmatter of `.claude/agents/contributor.md` (line 1), which has no `tools:` line. Low finding of the periodic security review at 66fd52b.
+- Why it matters: the contributor inherits every tool, the pull request merge among them, so a prompt-injected contributor could merge past the merger's gates.
+- Fix outline: give it an explicit tools list (Read, Edit, Write, Glob, Grep, Bash, Skill, and the pull request create, read, and update tools only), and rely on branch protection requiring the `spin` check.
+
+## CI actions are pinned by tag
+
+- Where: `.github/workflows/ci.yml` (line 36 `actions/checkout@v4`, and the same at lines 65, 91, 175, and 192, with `actions/cache@v4` and its `restore` and `save` forms). Low finding of the periodic security review at 66fd52b.
+- Why it matters: a tag can be moved to other code, so a compromised action release would run in CI with the repository's token.
+- Fix outline: pin each action to a full commit hash with the tag in a comment, and say in `CLAUDE.md` or the Makefile note how the pins are bumped.
+
+## The benchmark reuses one temporary report path
+
+- Where: `bench/run.sh` (line 22, `REPORT=$(mktemp "${TMPDIR:-/tmp}/carat-bench-alloc.XXXXXX")`), deleted after the first scenario and reused by name for the later ones, with no trap, and created before the binary check. Low finding of the periodic security review at 66fd52b.
+- Why it matters: on a shared `/tmp` another user can plant a symlink at the freed name, which `SPINEL_ALLOC_REPORT` then writes through.
+- Fix outline: create the file with `mktemp` inside each `per_key` call, or make a private `mktemp -d` directory removed by a `trap`, after the binary check.
+
+## A lone prefix of a user binding waits with no time limit
+
+- Where: `HandleKey` in `carat/use_cases/handle_key.rb` (line 165 answers `:waiting` for every `:prefix` in a grammar mode), and `InputController#handle`, which sets no deadline then; `timeoutlen` (`config/default.caratrc` line 28) no longer applies there. Advisory of the periodic quality review at 66fd52b, left by `window-navigation-and-scroll`.
+- Why it matters: Neovim waits without a limit only on its built-in multi-key commands and times user mappings out, so a configuration binding such as `<leader>x` with `<leader>` alone bound to nothing never resolves on its own here.
+- Fix outline: mark the keymap trie nodes that only configuration-origin (user and project) bindings pass through, and have `HandleKey` answer `:pending` for such a prefix so `timeoutlen` applies, with a row in `test/editor_normal.rb`.
+
+## ScrollHandler sets a base class trait after super
+
+- Where: `ScrollHandler#initialize` in `carat/use_cases/actions/scroll_handler.rb` (line 20 writes `@breaks_insert` after `super(kind: :action, repeat: false)`); `ActionHandler#initialize` (`carat/use_cases/actions/action_handler.rb` line 28) takes only `kind` and `repeat`. Advisory of the periodic quality review at 66fd52b.
+- Why it matters: a handler trait set in two ways (the constructor's keywords and a later write) is easy to miss when the base class changes.
+- Fix outline: add `breaks_insert:` to `ActionHandler#initialize`, pass it from every subclass, and drop the write; or document the override in `docs/examples.md`.
+
+## Half-page scroll targets have two names
+
+- Where: `ScrollHandler.register` in `carat/use_cases/actions/scroll_handler.rb` (lines 33 and 34: actions `scroll.half_page_down` and `half_page_up`, targets `:half_down` and `:half_up`), `carat/use_cases/windows/scroll_window.rb` (lines 29 and 30), and `carat/use_cases/windows/scroll_request.rb` (line 4). Advisory of the periodic quality review at 66fd52b.
+- Why it matters: one thing under two names makes a search for the action miss the code that runs it.
+- Fix outline: rename the targets `:half_page_down` and `:half_page_up` in the three files.
+
+## Two comments run past their file's wrap width
+
+- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters) and `carat/use_cases/dispatcher.rb` (line 89). Advisory of the periodic quality review at 66fd52b.
+- Why it matters: style only; the rest of each file wraps comments at the surrounding width.
+- Fix outline: rewrap both comments to the width of the lines around them.
+
+## lh time per key rose 26% at window-navigation-and-scroll
+
+- Where: the `review.bench` record of `window-navigation-and-scroll` (lh median 11.7 to 14.8 microseconds per key, allocations 27.0 unchanged); no code location is known. Advisory of the periodic quality review at 66fd52b.
+- Why it matters: goal 2 of `docs/goals.md` watches time per key; a rise reported as not blocking and never measured again may hide a cost of the prefix wait or the `breaks_insert` check.
+- Fix outline: run `make bench SCENARIOS=lh` on `main` and on its parent several times on one pinned core; if the rise holds, profile `lh` with `make profile` and fix or record the cause.
+
+## Illegal bytes are drawn as U+FFFD, not as hexadecimal markers
+
+- Where: `DecodedLine.decode` and `FramePresenter#paint_text` (`carat/domain/decoded_line.rb`, `carat/adapters/frame_presenter.rb`); `utf8-input-safety` draws each byte outside a well-formed UTF-8 sequence as one U+FFFD cell.
+- Why it matters: Neovim shows such a byte as a four-cell `<xx>` marker, so two lines that differ only in an illegal byte look alike here, and the byte cannot be read from the screen.
+- Fix outline: decode an illegal byte to a code that keeps the byte (for example a private marker range), draw it as `<xx>` the way the C1 markers are drawn, measure it as four cells in `DecodedLine`, `DisplayWidth`, and the cursor placement, and add rows to `test/domain_utf8.rb` and `test/adapters_frame_presenter.rb`.
+
+## Carat::Json and String#index on text that is not UTF-8
+
+- Where: `Carat::Json` in `carat/domain/json.rb` (`each_char` at line 346), and every `index` or `rindex` on text that may hold illegal bytes (`carat/domain/config.rb` line 176 on a configuration key); the pinned Spinel's `index`, `rindex`, and `each_char` group a lead byte with the bytes after it, while `length` and `[i, n]` count each byte (`docs/spinel-notes.md`).
+- Why it matters: no path sends buffer text to JSON yet, but the language server change will; a character index from `index` on such text slices the wrong bytes, and JSON needs the text valid (a language server expects UTF-8).
+- Fix outline: escape illegal bytes in `Carat::Json` by walking bytes with `Utf8` (as U+FFFD or a documented escape), replace `index` and `rindex` on untrusted text with `byteindex` and `byterindex`, report the disagreement upstream, and add hostile rows to `test/json.rb`.
