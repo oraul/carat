@@ -73,6 +73,7 @@ It measures the base in a worktree at `origin/main` with the change's `tools/met
 - A pending run state lives in `build/`, which a fresh workspace lacks; its history row is then lost. Committing it before the merge would need a second pull request per change.
 - Output tokens are the session's counter, not one agent's; parallel scouts share one phase total, which is how they are reported.
 - Tool calls are self-reported and approximate.
+- A run resumed after an interruption measures only the phases it ran since the restart; the workflow keeps its figures in memory, not in the run state.
 - The CI comparison passes when `main`'s cache entry is missing or evicted after seven days without a push; the benchmark agent remains the blocking comparison.
 - `make check` gains about fifteen seconds for the metrics stage.
 - The count of five is approximate when several merged run states are pending at once, since run states carry no order; the next change appends them and the count is exact again.
