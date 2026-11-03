@@ -301,3 +301,15 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/gates.sh`, `gate_records`, which prints a notice and passes when `RECORDS` is empty. Left by `agent-authority`.
 - Why it matters: the comparison of the run state's reviews with the workflow's only runs when the merger passes them; the notice exists so that the delivery of `agent-authority` itself, run by the workflow it replaced, could merge.
 - Fix outline: once a delivery has merged with the new workflow, make an empty `RECORDS` a `FAIL` in the `merge` group and turn the case in `tools/tools_test.sh` into a refusal.
+
+## File operations check containment and act in separate calls
+
+- Where: `carat/use_cases/files/resolve_inside.rb` (line 28, the real-path containment check) and the operations it guards, `carat/use_cases/files/make_path.rb` (line 90), `carat/use_cases/files/rename_path.rb` (line 151), and `carat/use_cases/files/delete_path.rb` (line 227). Low (2) finding of the periodic security review at 16cdcf7, a recorded non-goal of `plugin-path-containment`.
+- Why it matters: a directory of the tree replaced by a link pointing outward between the check and the create, rename, or delete redirects the operation outside the tree root, so the containment holds only against a tree that does not change while the explorer acts on it.
+- Fix outline: when the file port gains directory-relative operations, open the resolved directory once and act through its descriptor (`openat`, `renameat`, `unlinkat` with no-follow), with a test row in `test/drivers_disk_files.rb`; until then record in `docs/spinel-notes.md` whether the pinned Spinel exposes them.
+
+## The agent guard misses a quoted or escaped subcommand
+
+- Where: `tools/agent_guard.sh` line 84 (the git rule) and line 122 (the gh rule), and the `Bash(gh pr merge:*)` deny rule in `.claude/settings.json`. Low (7) finding of the security review of `agent-authority` at 8bf46e4; the design lists the limit as a non-goal, and the records gate and branch protection stand behind it.
+- Why it matters: under the read profile `git 'push' origin x`, `"git" push`, and `g\it push` pass the text match, so injected text in the tree that tells an agent to quote the word gets a git write past the guard.
+- Fix outline: remove quotes and backslashes from the command text before matching (for example `tr -d "'\\\""`), refuse `eval`, `sh -c`, and `bash -c` when their argument names a refused word, and add `tools/tools_test.sh` cases for `git 'push'`, `"git" push`, and `"gh" pr merge`.
