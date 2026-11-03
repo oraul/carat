@@ -470,6 +470,18 @@ state review security security blocked "one high" > /dev/null
 expect "gates: security refuses a blocked review" 1 "did not pass" gates security
 state review security security pass "no finding" > /dev/null
 expect "gates: security passes at HEAD" 0 "ok   security: pass" gates security
+reviewed=$(git rev-parse --short=12 HEAD)
+expect "gates: records passes the workflow's results" 0 "ok   records: the run state holds the workflow's 1 review" \
+  env RECORDS="security:pass:$reviewed" BASE=main sh "$here/gates.sh" records
+expect "gates: records compares the full commit" 0 "ok   records" \
+  env RECORDS="security:pass:$(git rev-parse HEAD)" BASE=main sh "$here/gates.sh" records
+expect "gates: records refuses another result" 1 "review.security is \"pass $reviewed no finding\", but the workflow received blocked" \
+  env RECORDS="security:blocked:$reviewed" BASE=main sh "$here/gates.sh" records
+expect "gates: records refuses a review the run state lacks" 1 "review.quality is \"\"" \
+  env RECORDS="security:pass:$reviewed quality:pass:$reviewed" BASE=main sh "$here/gates.sh" records
+expect "gates: records refuses a malformed record" 1 "not a KIND:RESULT:COMMIT record: security:pass:[*]" \
+  env RECORDS="security:pass:*" BASE=main sh "$here/gates.sh" records
+expect "gates: records notes when no records are given" 0 "ok   records: no workflow records given" gates records
 mkdir -p openspec/changes/archive/x
 echo archived > openspec/changes/archive/x/tasks.md
 commit "chore: archive"

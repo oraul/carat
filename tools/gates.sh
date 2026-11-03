@@ -19,14 +19,18 @@
 #              docs/queue.md, docs/goals.md, and docs/metrics.tsv
 #   stages     every canonical stage passed at such a commit
 #   pushes     at most one push plus one per CI fix
+#   records    each review.KIND of the run state has the result and commit
+#              the workflow received, given as RECORDS (a notice when unset)
 #   pr-body F  the pull request body F has the template's shape, no comment,
 #              angle bracket, empty bullet, footer, URL, email, session id, or
 #              model name, and a Testing line naming the security review
 #   static     trailer, content, snapshots, docs (make gates)
 #   pre-push   static, security, stages (tools/run_state.sh push)
-#   merge F    trailer, content, security, pushes, pr-body F (the merger)
+#   merge F    trailer, content, security, records, pushes, pr-body F (the
+#              merger)
 #
 # Environment: BASE (origin/main), CHANGE (the branch name after its type),
+# RECORDS (the workflow's review results, "KIND:RESULT:COMMIT" words),
 # TEST_BIN (build/test/run_all), STAGES (make -s stages when unset).
 set -u
 
@@ -193,6 +197,35 @@ gate_pushes() {
   fi
 }
 
+# The run state's review records against the results the workflow received
+# (RECORDS), so a record changed outside the workflow stops the merge.
+gate_records() {
+  gate=records
+  start=$failed
+  if [ -z "${RECORDS:-}" ]; then
+    ok "no workflow records given (RECORDS); nothing compared"
+    return
+  fi
+  set -f
+  for item in $RECORDS; do
+    if ! printf '%s' "$item" | grep -q -x -E '[a-z-]+:(pass|blocked):[0-9a-f]{7,40}'; then
+      bad "not a KIND:RESULT:COMMIT record: $item"
+      continue
+    fi
+    kind=${item%%:*}
+    rest=${item#*:}
+    result=${rest%%:*}
+    want=$(git rev-parse --verify -q "${rest#*:}^{commit}")
+    record=$(state "review.$kind")
+    at=$(git rev-parse --verify -q "$(echo "$record" | cut -d' ' -f2)^{commit}")
+    if [ "${record%% *}" != "$result" ] || [ -z "$want" ] || [ "$at" != "$want" ]; then
+      bad "review.$kind is \"$record\", but the workflow received $result at ${rest#*:}"
+    fi
+  done
+  set +f
+  [ $failed -ne $start ] || ok "the run state holds the workflow's $(echo $RECORDS | wc -w | tr -d ' ') review(s)"
+}
+
 gate_pr_body() {
   gate=pr-body
   start=$failed
@@ -231,10 +264,11 @@ case "$target" in
   security) gate_security ;;
   stages) gate_stages ;;
   pushes) gate_pushes ;;
+  records) gate_records ;;
   pr-body) gate_pr_body "$body" ;;
   static) gate_trailer; gate_content; gate_snapshots; gate_docs ;;
   pre-push) gate_trailer; gate_content; gate_snapshots; gate_docs; gate_security; gate_stages ;;
-  merge) gate_trailer; gate_content; gate_security; gate_pushes; gate_pr_body "$body" ;;
+  merge) gate_trailer; gate_content; gate_security; gate_records; gate_pushes; gate_pr_body "$body" ;;
   *) echo "gates: unknown gate $target" >&2; exit 2 ;;
 esac
 exit $failed

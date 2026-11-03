@@ -3,7 +3,7 @@
 ## 1. Run state and gates
 
 - [x] 1.1 In `tools/run_state.sh`, refuse `set` of `review.*`, `phase.*`, and `stage.*`, validate `phase` names and `review` kinds, take an optional commit for both, and drop `report` from `PHASES`; verify with the run state cases in `tools/tools_test.sh` (`make tools-test`).
-- [ ] 1.2 Add the `records` gate to `tools/gates.sh` and its `merge` group; verify with the gate cases in `tools/tools_test.sh`.
+- [x] 1.2 Add the `records` gate to `tools/gates.sh` and its `merge` group; verify with the gate cases in `tools/tools_test.sh`.
 
 ## 2. Guard
 
