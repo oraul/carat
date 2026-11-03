@@ -1,2 +1,3 @@
 change	date	merged	pr	rework	first_pass	ci_min	rounds	allocs	us_per_key	out_tokens	tool_calls	phases	review
 delivery-pipeline	2026-11-03	a8135cc	32	-	gates:1	-	carat=2,runner=2	lh=27.0,j=28.0,insert=35.0,ddp=59.7,undo=53.0,dot-ciw=83.0,lh-ruby=27.0,open-ruby=25.0	lh=75.0,j=360.6,insert=79.5,ddp=734.9,undo=90.7,dot-ciw=76.8,lh-ruby=86.0,open-ruby=109.5	-	-	-	-
+planner-and-metrics	2026-11-03	e0f47e68b6bb	33	-	gates:1	-	-	-	-	-	-	-	-
