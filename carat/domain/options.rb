@@ -47,6 +47,11 @@ module Carat
         "clipboard" => "string", "icons" => "string", "theme" => "string"
       }
 
+      # The largest tabstop or shiftwidth, Vim's limit for tabstop: a
+      # larger one would make one Tab or >> build a string of that many
+      # spaces.
+      WIDTH_MAX = 9999
+
       # The width a tab takes for display and block columns: tabstop, or 8
       # when tabstop is not positive.
       #: () -> Integer
@@ -71,6 +76,14 @@ module Carat
         options
       end
 
+      # Why a width option's value cannot be set, "" when it lies from low
+      # to WIDTH_MAX.
+      #: (String, Integer, Integer) -> String
+      def self.width_problem(key, value, low)
+        return "" if value >= low && value <= WIDTH_MAX
+        "#{key} takes a number from #{low} to #{WIDTH_MAX}"
+      end
+
       # Applies one option line, noting its problem on the configuration.
       #: (Config, RcLine) -> void
       def apply(config, line)
@@ -91,8 +104,20 @@ module Carat
         when "relativenumber" then self.relativenumber = word == "true"
         when "expandtab" then self.expandtab = word == "true"
         when "autoindent" then self.autoindent = word == "true"
-        when "tabstop" then self.tabstop = word.to_i
-        when "shiftwidth" then self.shiftwidth = word.to_i
+        when "tabstop"
+          problem = Options.width_problem(line.key, word.to_i, 1)
+          if problem.empty?
+            self.tabstop = word.to_i
+          else
+            config.note(line, problem)
+          end
+        when "shiftwidth"
+          problem = Options.width_problem(line.key, word.to_i, 0)
+          if problem.empty?
+            self.shiftwidth = word.to_i
+          else
+            config.note(line, problem)
+          end
         when "scroll" then self.scroll = word.to_i
         when "scrolloff" then self.scrolloff = word.to_i
         when "timeoutlen" then self.timeoutlen = word.to_i

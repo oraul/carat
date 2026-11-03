@@ -8,7 +8,7 @@
 
 ## 2. tabstop and shiftwidth bounds
 
-- [ ] 2.1 `carat/domain/options.rb`: bound tabstop to 1..9999 and shiftwidth to 0..9999 in `apply`; rows in `test/domain_options_config.rb` (999999999, 10000, 9999, 0, 1)
+- [x] 2.1 `carat/domain/options.rb`: bound tabstop to 1..9999 and shiftwidth to 0..9999 in `apply`; rows in `test/domain_options_config.rb` (999999999, 10000, 9999, 0, 1)
 
 ## 3. The file port reads only bounded regular files
 

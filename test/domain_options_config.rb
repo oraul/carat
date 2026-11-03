@@ -35,7 +35,13 @@ module DomainOptionsConfigTest
       ["a flag that is not true or false", "option.number yes\noption.wrap 1\n", [VIM, [".caratrc:1: option.number takes true or false", ".caratrc:2: option.wrap takes true or false"]]],
       ["two words for one", "option.clipboard a b\n", [VIM, [".caratrc:1: option.clipboard takes one word"]]],
       ["a bad line keeps the value before it", "option.tabstop 4\noption.tabstop -1\n", [[false, false, 4, 8, false, false, 0, 1000, 1000], [".caratrc:2: option.tabstop takes a number"]]],
-      ["other scopes are not options", "keymap.normal j cursor.down\nplugin.hello.greeting Hi\n", [VIM, []]]
+      ["other scopes are not options", "keymap.normal j cursor.down\nplugin.hello.greeting Hi\n", [VIM, []]],
+      ["a huge tabstop keeps the value before it", "option.tabstop 4\noption.tabstop 999999999\n", [[false, false, 4, 8, false, false, 0, 1000, 1000], [".caratrc:2: option.tabstop takes a number from 1 to 9999"]]],
+      ["a tabstop one above the limit", "option.tabstop 10000\n", [VIM, [".caratrc:1: option.tabstop takes a number from 1 to 9999"]]],
+      ["a zero tabstop", "option.tabstop 0\n", [VIM, [".caratrc:1: option.tabstop takes a number from 1 to 9999"]]],
+      ["a huge shiftwidth", "option.shiftwidth 999999999\noption.shiftwidth 10000\n", [VIM, [".caratrc:1: option.shiftwidth takes a number from 0 to 9999", ".caratrc:2: option.shiftwidth takes a number from 0 to 9999"]]],
+      ["the limits themselves", "option.tabstop 9999\noption.shiftwidth 9999\n", [[false, false, 9999, 9999, false, false, 0, 1000, 1000], []]],
+      ["the smallest values", "option.tabstop 1\noption.shiftwidth 0\n", [[false, false, 1, 0, false, false, 0, 1000, 1000], []]]
     ]) do |text|
       options_of(text.to_s)
     end
