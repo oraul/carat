@@ -58,6 +58,8 @@ module DomainPluginManifestTest
       ["binding to a foreign action", manifest("hello", "2.0", GOOD_ACTIONS, {}, ["keymap.normal x cursor.down"], [], [], {}), "binding \"keymap.normal x cursor.down\" names \"cursor.down\", not one of the plugin's actions"],
       ["bindings that are not a list of lines", manifest("hello", "2.0", GOOD_ACTIONS, {}, { "normal" => { "x" => "plugin.hello.greet" } }, [], [], {}), "bindings is not a list of keymap lines"],
       ["a binding that is not a string", manifest("hello", "2.0", GOOD_ACTIONS, {}, [1], [], [], {}), "bindings is not a list of keymap lines"],
+      ["a binding with an illegal byte", manifest("hello", "2.0", GOOD_ACTIONS, {}, ["keymap.normal x plugin.hello.\xFF"], [], [], {}), "binding keymap.normal x plugin.hello.\xFF: illegal byte"],
+      ["an option line with an illegal byte", manifest("hello", "2.0", GOOD_ACTIONS, {}, [], [], ["plugin.hello.depth \xC0\xAF"], { "depth" => "integer" }), "option line \"plugin.hello.depth \xC0\xAF\" does not read: illegal byte"],
       ["option without a type", manifest("hello", "2.0", GOOD_ACTIONS, {}, [], [], ["plugin.hello.depth 3"], {}), "option \"depth\" has no type"],
       ["option with an unknown type", manifest("hello", "2.0", GOOD_ACTIONS, {}, [], [], ["plugin.hello.depth 3"], { "depth" => "float" }), "option \"depth\" has the unknown type float"],
       ["integer option with a bad default", manifest("hello", "2.0", GOOD_ACTIONS, {}, [], [], ["plugin.hello.depth many"], { "depth" => "integer" }), "option \"depth\" default \"many\" is not a integer"],

@@ -2,9 +2,9 @@
 
 ## 1. Illegal bytes in configuration lines
 
-- [ ] 1.1 `carat/domain/rc_parser.rb`: refuse a line holding a byte outside a well-formed UTF-8 sequence with `illegal byte`; rows in `test/domain_rc_parser.rb` (a lone byte, a truncated sequence, an overlong form, a surrogate, in a key, a word, a quoted word, and a comment; valid UTF-8 kept)
-- [ ] 1.2 `carat/domain/keymap.rb`: `Keymap.action_name?` through `RcParser.key?`, `ACTION_NAME` removed; rows in `test/domain_keymap.rb` (illegal bytes asked of `action_name?`; an illegal byte in a binding of each config scope reported by `add_checked`, in `add_lines` and `from_lines`)
-- [ ] 1.3 Illegal bytes in each scope through the loaded configuration: rows in `test/domain_rc_parser.rb` for the `option`, `keymap`, `plugin`, and `language` scopes, and a manifest binding in `test/use_cases_plugins.rb` or `test/domain_manifest_check.rb`
+- [x] 1.1 `carat/domain/rc_parser.rb`: refuse a line holding a byte outside a well-formed UTF-8 sequence with `illegal byte`; rows in `test/domain_rc_parser.rb` (a lone byte, a truncated sequence, an overlong form, a surrogate, in a key, a word, a quoted word, and a comment; valid UTF-8 kept)
+- [x] 1.2 `carat/domain/keymap.rb`: `Keymap.action_name?` through `RcParser.key?`, `ACTION_NAME` removed; rows in `test/domain_keymap.rb` (illegal bytes asked of `action_name?`; an illegal byte in a binding of each config scope reported by `add_checked`, in `add_lines` and `from_lines`)
+- [x] 1.3 Illegal bytes in each scope through the loaded configuration: rows in `test/domain_rc_parser.rb` for the `option`, `keymap`, `plugin`, and `language` scopes, and a manifest binding and option line in `test/domain_plugin_manifest.rb`
 
 ## 2. tabstop and shiftwidth bounds
 

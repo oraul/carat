@@ -16,8 +16,6 @@ module Carat
     # conflicts between plugins collect as "mode.keys is already bound by
     # plugin name".
     class Keymap < Struct.new(:roots, :errors, :conflicts, keyword_init: true)
-      ACTION_NAME = /\A[a-z0-9_]+(\.[a-z0-9_]+)+\z/
-
       # @rbs @roots: Hash[String, KeymapNode]
       # @rbs @errors: Array[String]
       # @rbs @conflicts: Array[String]
@@ -36,10 +34,12 @@ module Carat
       # Whether a keymap value names an action: one or more namespace
       # segments and the action, in lowercase letters, digits, and
       # underscores joined by dots, as plugin.hello.greet; anything else is
-      # a key sequence to replay.
+      # a key sequence to replay. The check reads bytes, so a value that
+      # is not UTF-8 is not an action name instead of raising, as a pattern
+      # would.
       #: (String) -> bool
       def self.action_name?(value)
-        value.match?(ACTION_NAME)
+        RcParser.key?(value, 0, value.bytesize)
       end
 
       # Vim's mapleader when the configuration names none.
