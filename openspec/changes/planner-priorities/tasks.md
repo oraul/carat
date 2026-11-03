@@ -9,12 +9,12 @@
 
 - [x] 2.1 `tools/run_state.sh`: `estimate_of` (the size word of the change's item at `merged^`, `merged` checked as a commit hash first), the `estimate` column after `review` in `HEADER` and `history_row`, `out_tokens` shared by the row and `budget`; tested by the cases "history records no estimate without a queue item", "history records the estimate of the queue item", and "every history row has the header's columns".
 - [x] 2.2 `tools/run_state.sh budget CHANGE`: `over`, `within`, `unmeasured`, or `no estimate` with the budget and the actual; tested by the cases "budget names an overrun", "budget passes a run within its budget", "budget says when no estimate was made", "budget says when no output tokens were recorded", "budget reads no estimate of an unmerged change", "budget passes git only a commit hash as the merged value", and "budget refuses a change without a run state".
-- [x] 2.3 `docs/metrics.tsv`: the `estimate` header and `-` in every row; checked by `awk -F'	' '{ print NF }'` printing 15 for every line.
+- [x] 2.3 `docs/metrics.tsv`: the `estimate` header and `-` in every row; checked by `awk -F'\t' '{ print NF }'` printing 15 for every line.
 
 ## 3. Charter and agents
 
-- [ ] 3.1 `docs/goals.md`: the rubric section (tiers, value by size, quick wins, batching, budgets, size check, aging, user features, problem-first briefs).
-- [ ] 3.2 `.claude/agents/planner.md`: tier and size per item, tier and a number per decision, the size check, problem-first briefs and notes; `.claude/agents/retrospective.md`: `budget` and the `overrun` note, problem-first proposals; `.claude/agents/contributor.md`: `make docs-lint` in the package step. Checked by `make docs-lint` (budgets).
+- [x] 3.1 `docs/goals.md`: the rubric section (tiers, value by size, quick wins, batching, budgets, size check, aging, user features, problem-first briefs).
+- [x] 3.2 `.claude/agents/planner.md`: tier and size per item, tier and a number per decision, the size check, problem-first briefs and notes; `.claude/agents/retrospective.md`: `budget` and the `overrun` note, problem-first proposals; `.claude/agents/contributor.md`: `make docs-lint` in the package step. Checked by `make docs-lint` (budgets).
 
 ## 4. Docs
 
