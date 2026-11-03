@@ -10,7 +10,7 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 
 1. `make toolchain` fetches the pinned Spinel commit into `tmp/.spinel`, builds it, and installs `spinel`, `spin`, and `spinel-doctor` under `tmp/.toolchain`. Both directories are ignored by git, every `make` target finds the toolchain there on its own, and `make toolchain-clean` removes them.
 2. `make build` compiles the editor to `build/bin/carat` and prints the alias line to add to your shell profile to run it from anywhere; `make install` puts it on the `PATH` instead.
-3. `make check` builds, regenerates the config mirror, and runs the tests, `spinel-doctor`, and the `make no-cruby` proof; run it before every push. Run tests, snapshots, and benchmarks only through `make`, never with `spin test` directly: for a test program without a snapshot, `spin test` compares against the `ruby` on your `PATH`.
+3. `make check` builds, regenerates the config mirror, checks the analysis budget, and runs the tests, `spinel-doctor`, and the `make no-cruby` proof; run it before every push. Run tests, snapshots, and benchmarks only through `make`, never with `spin test` directly: for a test program without a snapshot, `spin test` compares against the `ruby` on your `PATH`.
 
 | Command | What it does |
 | --- | --- |
@@ -26,10 +26,11 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make diagnose` | Run `spinel-doctor` on every compile root |
 | `make bench` | Build and run the key benchmark: time, bytes written, collector share, and allocations per key |
 | `make bench-budget` | Fail when a key of the cursor scenario allocates 100 objects or more; CI runs it |
+| `make analysis-budget` | Fail when Spinel's analysis of `bin/carat.rb` or `test/domain_buffer.rb` needs more than 2 re-narrowing rounds, a sign that a value widened to `untyped`; CI runs it |
 | `make profile` | Build the benchmark with `spinel --profile` and print the top functions with `perf` when it works |
 | `make snapshots` | Rebuild the test programs and rewrite their snapshots |
 | `make gen-config` | Regenerate the default config mirror and the plugin registry |
-| `make check` | Build, gen-config, test, diagnose, and no-cruby |
+| `make check` | Build, gen-config, analysis-budget, test, diagnose, and no-cruby |
 | `make spec-list`, `make spec-validate`, `make spec-update` | The OpenSpec commands |
 
 ## File tree
