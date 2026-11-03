@@ -237,7 +237,7 @@ async function rounds() {
     }
     if (!blocked && !reviewedAtHead('quality')) {
       phase('Quality')
-      const q = await measured('quality', () => agent(`${intro()} Review the committed diff and record the result.`, { agentType: 'quality-reviewer', schema: withCalls(QUALITY) }))
+      const q = await measured('quality', () => agent(`${intro()} Review the committed diff and return the findings.`, { agentType: 'quality-reviewer', schema: withCalls(QUALITY) }))
       if (!q) { stopped = 'the quality reviewer returned no result'; return false }
       verdict('quality', !q.blocking.length)
       note(`quality at ${q.head}: ${q.blocking.length} blocking, ${q.advisory.length} advisory`)
@@ -246,8 +246,8 @@ async function rounds() {
     }
     if (!blocked && !reviewedAtHead('security')) {
       phase('Security')
-      let s = await measured('security', () => agent(`${intro()} Run the security review on the committed diff and record the result.`, { agentType: 'security-reviewer', schema: withCalls(SECURITY) }))
-      if (!s || !s.ran) s = await measured('security', () => agent(`${intro()} The last security review did not complete. Run it again, every sub-task inline, and record the result.`, { agentType: 'security-reviewer', schema: withCalls(SECURITY), label: 'security-reviewer: retry' }))
+      let s = await measured('security', () => agent(`${intro()} Run the security review on the committed diff and return the result.`, { agentType: 'security-reviewer', schema: withCalls(SECURITY) }))
+      if (!s || !s.ran) s = await measured('security', () => agent(`${intro()} The last security review did not complete. Run it again, every sub-task inline, and return the result.`, { agentType: 'security-reviewer', schema: withCalls(SECURITY), label: 'security-reviewer: retry' }))
       if (!s || !s.ran) { stopped = 'the security review did not run; it cannot be skipped'; return false }
       const blocking = s.findings.filter((f) => f.severity !== 'Low' && f.confidence >= 8 && f.in_change)
       verdict('security', !blocking.length)
@@ -262,7 +262,7 @@ async function rounds() {
     }
     if (!blocked && !reviewedAtHead('bench')) {
       phase('Benchmark')
-      const b = await measured('bench', () => agent(`${intro()} Compare with main and record the result.`, { agentType: 'benchmark', schema: withCalls(BENCH), effort: 'low' }))
+      const b = await measured('bench', () => agent(`${intro()} Compare with main and return the result.`, { agentType: 'benchmark', schema: withCalls(BENCH), effort: 'low' }))
       if (!b) { stopped = 'the benchmark agent returned no result'; return false }
       verdict('bench', !b.blocking.length)
       note(`benchmark at ${b.head}: ${b.report.join('; ')}`)
