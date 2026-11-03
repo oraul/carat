@@ -2,6 +2,7 @@ require_relative "../../domain/editor_state"
 require_relative "../../domain/buffer_list"
 require_relative "../../ports/file_port"
 require_relative "../outcome"
+require_relative "probe_path"
 
 module Carat
   module UseCases
@@ -25,11 +26,13 @@ module Carat
 
       attr_reader :files #: Ports::FilePort
       attr_reader :buffers #: Domain::BufferList
+      attr_reader :probe_path #: ProbePath
 
-      #: (files: Ports::FilePort, buffers: Domain::BufferList) -> void
-      def initialize(files:, buffers:)
+      #: (files: Ports::FilePort, buffers: Domain::BufferList, probe_path: ProbePath) -> void
+      def initialize(files:, buffers:, probe_path:)
         @files = files
         @buffers = buffers
+        @probe_path = probe_path
       end
 
       #: (Domain::EditorState, String) -> Outcome
@@ -41,7 +44,7 @@ module Carat
         end
         exists = @files.exist?(path)
         if exists
-          refused = refusal(path, @files.stat(path))
+          refused = refusal(path, @probe_path.call(path))
           return Outcome.failure(refused) unless refused.empty?
         end
         text = +""
@@ -65,10 +68,12 @@ module Carat
       private
 
       # Vim's message for a path that is there but is not a regular file
-      # of at most LIMIT bytes, "" for one that is. The read checks again
-      # on the opened file, for a path swapped after this stat.
+      # of at most LIMIT bytes, "" for one that is; a path ProbePath could
+      # not stat, as one removed after exist?, is E484. The read checks
+      # again on the opened file, for a path swapped after this stat.
       #: (String, Domain::PathInfo) -> String
       def refusal(path, info)
+        return "E484: Can't open file #{path}" unless info.exists
         return "\"#{path}\" is a directory" if info.directory
         return "\"#{path}\" is not a file" unless info.regular
         return "E484: Can't open file #{path}: File too large" if info.size > LIMIT

@@ -61,15 +61,15 @@ module Carat
 
       # @rbs @router: PluginRouter
 
-      # The records, the window use cases, and the runner are the editor's
-      # own, built once by the assembly; the registry, the router, the
-      # events, the path use cases, and the request families are the
-      # host's parts and built here from them.
-      #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, input: Domain::InputState, plugin_ui: Domain::PluginUi, files: Ports::FilePort, open_file: OpenFile, split_window: SplitWindow, open_side_window: OpenSideWindow, open_tab: OpenTab, keymap: Domain::Keymap, leader: String, runner: CommandRunner) -> void
-      def initialize(state:, buffers:, tabs:, input:, plugin_ui:, files:, open_file:, split_window:, open_side_window:, open_tab:, keymap:, leader:, runner:)
+      # The records, the window use cases, the path probe, and the runner
+      # are the editor's own, built once by the assembly; the registry, the
+      # router, the events, the other path use cases, and the request
+      # families are the host's parts and built here from them.
+      #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, input: Domain::InputState, plugin_ui: Domain::PluginUi, files: Ports::FilePort, open_file: OpenFile, probe_path: ProbePath, split_window: SplitWindow, open_side_window: OpenSideWindow, open_tab: OpenTab, keymap: Domain::Keymap, leader: String, runner: CommandRunner) -> void
+      def initialize(state:, buffers:, tabs:, input:, plugin_ui:, files:, open_file:, probe_path:, split_window:, open_side_window:, open_tab:, keymap:, leader:, runner:)
         @state = state
         @plugin_ui = plugin_ui
-        @probe_path = ProbePath.new(files: files)
+        @probe_path = probe_path
         @make_path = MakePath.new(files: files, probe_path: @probe_path)
         @rename_path = RenamePath.new(files: files, buffers: buffers, probe_path: @probe_path)
         @delete_path = DeletePath.new(files: files, buffers: buffers, probe_path: @probe_path)

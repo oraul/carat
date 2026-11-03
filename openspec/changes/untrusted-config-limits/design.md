@@ -36,7 +36,7 @@ See proposal.md for why. The facts that shape the approach, checked on the pinne
 
 ### OpenFile checks the kind and the size before it reads
 
-After `exist?`, `OpenFile` asks `stat` and answers Vim's `"path" is a directory` and `"path" is not a file`, and `E484: Can't open file path: File too large` above `LIMIT` (64 MiB), all as failures, so the window keeps its buffer. The read then passes the same limit, and any error it raises is still E484.
+After `exist?`, `OpenFile` asks `stat` through `ProbePath`, the one the assembly builds and the plugin host shares, so a path it cannot stat (removed after `exist?`) is `E484: Can't open file path`; it answers Vim's `"path" is a directory` and `"path" is not a file`, and `E484: Can't open file path: File too large` above `LIMIT` (64 MiB), all as failures, so the window keeps its buffer. The read then passes the same limit, and any error it raises is still E484.
 
 ### MakePath compares real paths
 

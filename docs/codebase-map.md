@@ -356,7 +356,7 @@ Files:
 - `carat/use_cases/files/save_all.rb`: `SaveAll#call`, the write-all loop of `:wa`, `:wqa`, `:xa`.
 - `carat/use_cases/files/quit.rb`: `Quit#call(state, way)` with `:quit`, `:force`, or `:written`; a file window beside only side windows counts as the last.
 - `carat/use_cases/files/quit_all.rb`: `QuitAll#call` (`:qa`).
-- `carat/use_cases/files/probe_path.rb`: `ProbePath#call`, the one call of `FilePort#stat`.
+- `carat/use_cases/files/probe_path.rb`: `ProbePath#call`, the one call of `FilePort#stat`, shared by `OpenFile` and the plugin file operations.
 - `carat/use_cases/files/make_path.rb`, `carat/use_cases/files/rename_path.rb` (the listed buffers following), `carat/use_cases/files/delete_path.rb`: `call`; make, rename, and delete inside a root with every check, used by the plugin file requests; `MakePath` compares the real paths of the parent and the root.
 
 Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`.

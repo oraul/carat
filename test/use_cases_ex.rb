@@ -8,6 +8,19 @@ module UseCasesExTest
   D = Carat::Domain
   U = Carat::UseCases
 
+  GONE = "gone.txt"
+
+  # A file system where GONE is found but its stat raises, as for a path
+  # removed between the check that it exists and the stat.
+  class VanishingFiles < Carat::Doubles::MemoryFiles
+    # Raises for GONE and stats the others.
+    # @rbs path: String
+    def stat(path)
+      raise ArgumentError, "No such file or directory" if path == GONE
+      super(path)
+    end
+  end
+
   # A state over a buffer of the lines and the path, with its own buffer
   # list and tab list, and the ex use case wired over them with a plugin
   # host with no plugins.
@@ -22,12 +35,13 @@ module UseCasesExTest
     state = D::EditorState.new(tabs: tabs, options: D::Options.new)
     commands = U::ExTable.new
     ex = U::ExecuteEx.new(commands: commands)
-    open_file = U::OpenFile.new(files: files, buffers: buffers)
+    probe_path = U::ProbePath.new(files: files)
+    open_file = U::OpenFile.new(files: files, buffers: buffers, probe_path: probe_path)
     close_window = U::CloseWindow.new(buffers: buffers, tabs: tabs)
     split_window = U::SplitWindow.new(open_file: open_file, buffers: buffers, tabs: tabs)
     open_side_window = U::OpenSideWindow.new(buffers: buffers, tabs: tabs)
     open_tab = U::OpenTab.new(open_file: open_file, buffers: buffers, tabs: tabs)
-    plugins = U::PluginHost.new(state: state, buffers: buffers, tabs: tabs, input: D::InputState.new, plugin_ui: D::PluginUi.new, files: files, open_file: open_file, split_window: split_window, open_side_window: open_side_window, open_tab: open_tab, keymap: D::Keymap.new, leader: " ", runner: ex)
+    plugins = U::PluginHost.new(state: state, buffers: buffers, tabs: tabs, input: D::InputState.new, plugin_ui: D::PluginUi.new, files: files, open_file: open_file, probe_path: probe_path, split_window: split_window, open_side_window: open_side_window, open_tab: open_tab, keymap: D::Keymap.new, leader: " ", runner: ex)
     save_file = U::SaveFile.new(files: files, plugins: plugins)
     save_all = U::SaveAll.new(save_file: save_file, buffers: buffers)
     quit = U::Quit.new(buffers: buffers, tabs: tabs)
@@ -296,6 +310,12 @@ module UseCasesExTest
     s = s_w.state
     r = s_w.ex.call(s, "e")
     t.assert_equal(["disk"], s.buffer.lines, "edit without argument reloads")
+    vanishing = VanishingFiles.new
+    vanishing.put(GONE, "gone\n")
+    s_w = world(vanishing, ["mem"], "a.txt")
+    s = s_w.state
+    r = s_w.ex.call(s, "e #{GONE}")
+    t.assert_equal([false, "E484: Can't open file #{GONE}", "a.txt", ["mem"]], [r.ok, r.message, s.buffer.path, s.buffer.lines], "edit of a path whose stat fails after it was found is E484")
 
     t.table([
       ["sp splits", "sp", [true, "", 2, 1]],
