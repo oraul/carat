@@ -23,7 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     # The steps mirror CHECK_STAGES in the Makefile, whose comment records
     # why CI leaves out three of them: the release build on pull requests,
-    # diagnose, and the gates.
+    # diagnose, and the gates. CI adds the comparison with main's
+    # measurement, which needs main's run on the same kind of runner.
     env:
       # The optimization level of the development builds (the editor of the
       # smoke test, the test runner, and the benchmark of the allocation
@@ -146,6 +147,44 @@ jobs:
       - name: Allocation budget
         if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
         run: make bench-budget
+
+      # The measurement of tools/metrics.sh from the three development
+      # builds above: re-narrowing rounds and analysis milliseconds of both
+      # roots, allocations and time per key of eight scenarios. A push to
+      # main saves it in the Actions cache; a pull request compares itself
+      # with the entry of its base commit, or the newest of main, on the
+      # same kind of runner: more allocations or rounds fail, time more
+      # than 20 percent slower warns. A pull request cannot write main's
+      # cache scope. With no entry the comparison passes with a notice;
+      # the benchmark agent of the delivery workflow still compares with
+      # main before the push.
+      - name: Measure
+        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
+        run: make metrics
+
+      - name: Restore the measurement of main
+        if: steps.scope.outputs.run == 'true' && github.event_name == 'pull_request'
+        uses: actions/cache/restore@v4
+        with:
+          path: build/metrics/main
+          key: carat-metrics-main-${{ github.event.pull_request.base.sha }}
+          restore-keys: |
+            carat-metrics-main-
+
+      - name: Compare with main
+        if: steps.scope.outputs.run == 'true' && github.event_name == 'pull_request'
+        run: make metrics-compare BASE_METRICS=build/metrics/main/current.tsv
+
+      - name: Keep the measurement of main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: mkdir -p build/metrics/main && cp build/metrics/current.tsv build/metrics/main/current.tsv
+
+      - name: Save the measurement of main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: build/metrics/main
+          key: carat-metrics-main-${{ github.sha }}
 
       # The release binary, spin build at -O 2, and the smoke test against
       # it, on every push to main and on a run by hand, so the binary make

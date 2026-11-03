@@ -1,7 +1,8 @@
 #!/bin/sh
 # Tests the shell tools behind CI and the delivery pipeline, each in a
 # temporary git repository outside this one: tools/ci_scope.sh (which
-# changes run the checks), tools/run_state.sh (the run state, stages,
+# changes run the checks), tools/metrics.sh (the measurement and the
+# comparison with main), tools/run_state.sh (the run state, stages,
 # resume, and the push rule), and every gate of tools/gates.sh, each
 # passing and refusing. Prints "ok   NAME" or "FAIL NAME" and the output,
 # then "P/T passed"; exits 1 when any failed. Run by make tools-test.
@@ -115,6 +116,45 @@ expect "ci_scope: a push whose tree passed in its pull request skips" 0 "^run=fa
   env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=1 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
 expect "ci_scope: a push whose pull request did not pass runs" 0 "^run=true" \
   env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=0 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
+
+# ------------------------------------------------------------- metrics.sh
+
+mkdir -p "$work/metrics"
+cd "$work/metrics" || exit 1
+printf 'spinel-timing: phase=analysis ms=1000.0 x=1\nspinel-timing: phase=analysis_renarrow rounds=2\n' > carat.timing
+printf 'spinel-timing: phase=analysis ms=2000.0 x=1\nspinel-timing: phase=analysis_renarrow rounds=3\n' > runner.timing
+cat > "$work/bin/fake-bench" <<'EOF'
+#!/bin/sh
+for s in "$@"; do
+  echo "$s lines=10 keys=10 handle=  1.0us render=  2.0us total=   50.0us worst= 9.0us@1 bytes=1 gc= 0.00% gc_runs=0 retained=0 open=1.0us tokenized=0.00 allocs=27.0 alloc_bytes=1616"
+done
+EOF
+chmod +x "$work/bin/fake-bench"
+measure() {
+  env CARAT_TIMING=carat.timing RUNNER_TIMING=runner.timing BENCH_RUN="$work/bin/fake-bench" sh "$here/metrics.sh" measure "$@"
+}
+expect "metrics: measure writes allocations per key" 0 "^allocs[.]lh[[:space:]]27[.]0$" measure base.tsv lh j
+expect "metrics: measure writes time per key" 0 "^us[.]j[[:space:]]50[.]0$" cat base.tsv
+expect "metrics: measure writes the rounds of each root" 0 "^rounds[.]runner[[:space:]]3$" cat base.tsv
+expect "metrics: measure writes the analysis time of each root" 0 "^analysis_ms[.]carat[[:space:]]1000[.]0$" cat base.tsv
+expect "metrics: measure refuses without the build reports" 1 "missing; make dev-build" \
+  env CARAT_TIMING=gone.timing sh "$here/metrics.sh" measure x.tsv lh
+# compare SED-EXPRESSION [VAR=VALUE...]: base.tsv against a copy edited by it.
+compare() {
+  sed "$1" base.tsv > current.tsv
+  shift
+  env "$@" sh "$here/metrics.sh" compare base.tsv current.tsv
+}
+expect "metrics: compare passes the same measurement" 0 "no allocation or analysis-round regression" compare 's/^//'
+expect "metrics: compare fails on more allocations per key" 1 "FAIL +allocs[.]lh +27[.]0 -> 27[.]5" compare 's/^allocs[.]lh\t27[.]0/allocs.lh\t27.5/'
+expect "metrics: compare fails on more analysis rounds" 1 "FAIL +rounds[.]carat +2 -> 3" compare 's/^rounds[.]carat\t2/rounds.carat\t3/'
+expect "metrics: compare fails on an unmeasured round count" 1 "not measured" compare 's/^rounds[.]carat\t2/rounds.carat\t?/'
+expect "metrics: compare passes fewer allocations" 0 "ok +allocs[.]lh +27[.]0 -> 20[.]0" compare 's/^allocs[.]lh\t27[.]0/allocs.lh\t20.0/'
+expect "metrics: compare only warns on slower time" 0 "warning +us[.]lh +50[.]0 -> 80[.]0: 60% slower" compare 's/^us[.]lh\t50[.]0/us.lh\t80.0/'
+expect "metrics: compare annotates a warning on GitHub Actions" 0 "::warning::us[.]lh is 60% slower" compare 's/^us[.]lh\t50[.]0/us.lh\t80.0/' GITHUB_ACTIONS=true
+expect "metrics: compare passes time within the tolerance" 0 "ok +us[.]lh +50[.]0 -> 55[.]0" compare 's/^us[.]lh\t50[.]0/us.lh\t55.0/'
+expect "metrics: compare passes with a notice when there is no base" 0 "no base measurement" \
+  sh "$here/metrics.sh" compare missing.tsv base.tsv
 
 # ----------------------------------------------------------- run_state.sh
 

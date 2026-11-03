@@ -17,7 +17,22 @@
 #   tools/analysis_budget.sh --check MAX_ROUNDS MAX_MS ROOT REPORT
 #       checks the report a build of ROOT already wrote, as make test-build
 #       does for the test runner, so the budget costs no second analysis
+#   tools/analysis_budget.sh --fields REPORT
+#       prints the analysis milliseconds and the re-narrowing rounds of a
+#       report, "?" for one that is absent (tools/metrics.sh reads them)
 set -eu
+
+# The value of a key=value field on the line of a phase, "?" when absent.
+field() {
+  awk -v phase="$2" -v key="$3" '
+    index($0, "phase=" phase " ") { for (i = 1; i <= NF; i++) if (index($i, key "=") == 1) { print substr($i, length(key) + 2); found = 1; exit } }
+    END { if (!found) print "?" }' "$1"
+}
+
+if [ "${1:-}" = "--fields" ] && [ "$#" -eq 2 ]; then
+  echo "$(field "$2" analysis ms) $(field "$2" analysis_renarrow rounds)"
+  exit 0
+fi
 
 check_only=0
 if [ "${1:-}" = "--check" ]; then
@@ -27,18 +42,12 @@ fi
 if [ "$#" -lt 3 ] || { [ "$check_only" -eq 1 ] && [ "$#" -ne 4 ]; }; then
   echo "usage: tools/analysis_budget.sh MAX_ROUNDS MAX_MS ROOT..." >&2
   echo "       tools/analysis_budget.sh --check MAX_ROUNDS MAX_MS ROOT REPORT" >&2
+  echo "       tools/analysis_budget.sh --fields REPORT" >&2
   exit 2
 fi
 max_rounds=$1
 max_ms=$2
 shift 2
-
-# The value of a key=value field on the line of a phase, "?" when absent.
-field() {
-  awk -v phase="$2" -v key="$3" '
-    index($0, "phase=" phase " ") { for (i = 1; i <= NF; i++) if (index($i, key "=") == 1) { print substr($i, length(key) + 2); found = 1; exit } }
-    END { if (!found) print "?" }' "$1"
-}
 
 # Checks the report of one root; returns 1 when it is over the budget.
 check() {

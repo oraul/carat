@@ -2,9 +2,9 @@
 
 ## 1. Measurement
 
-- [ ] 1.1 Add `--fields` to `tools/analysis_budget.sh` and add `tools/metrics.sh` (`measure`, `compare`); verify with `make tools-test`.
-- [ ] 1.2 Add `make metrics` to `CHECK_STAGES` and `make metrics-compare` to the Makefile; verify with `make metrics` and `make metrics-compare BASE_METRICS=build/metrics/current.tsv`.
-- [ ] 1.3 Measure on pushes to `main`, save it in the Actions cache, and compare pull requests with it in `.github/workflows/ci.yml`; verify by reading it against the Makefile and by CI on the pull request.
+- [x] 1.1 Add `--fields` to `tools/analysis_budget.sh` and add `tools/metrics.sh` (`measure`, `compare`); verify with `make tools-test`.
+- [x] 1.2 Add `make metrics` to `CHECK_STAGES` and `make metrics-compare` to the Makefile; verify with `make metrics` and `make metrics-compare BASE_METRICS=build/metrics/current.tsv`.
+- [x] 1.3 Measure on pushes to `main`, save it in the Actions cache, and compare pull requests with it in `.github/workflows/ci.yml`; verify by reading it against the Makefile and by CI on the pull request.
 
 ## 2. Run state and history
 
