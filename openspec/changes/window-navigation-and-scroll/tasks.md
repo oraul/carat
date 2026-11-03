@@ -23,7 +23,7 @@
 
 ## 4. Integration
 
-- [ ] 4.1 Run `make test`, `make diagnose`, and `make bench-budget`, and compare the allocations per key with `make metrics` against the baseline; all pass with allocations unchanged
+- [x] 4.1 Run `make test`, `make diagnose`, and `make bench-budget`, and compare the allocations per key with `make metrics` against the baseline; all pass with allocations unchanged
 
 ## Workflow follow-up
 
