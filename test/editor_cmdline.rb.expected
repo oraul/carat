@@ -75,4 +75,10 @@ ok   xi leaves as xit does
 ok   tabfirs goes to the first tab page
 ok   a spelling shorter than the abbreviation is unknown
 ok   a spelling longer than the full name is unknown
-editor_cmdline: 77 passed, 0 failed
+ok   up recalls the last command
+ok   up again recalls the one before
+ok   past the oldest nothing changes
+ok   down past the newest gives back the typed text
+ok   up recalls only commands starting with the typed text
+ok   down before any recall changes nothing
+editor_cmdline: 83 passed, 0 failed

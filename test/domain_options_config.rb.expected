@@ -21,4 +21,7 @@ ok   scroll is 0 by default, half the window
 ok   scroll takes a number
 ok   scroll refuses a word
 ok   the shipped scroll is 0
-domain_options_config: 23 passed, 0 failed
+ok   the shipped search options
+ok   Neovim's search defaults
+ok   the search options are stored
+domain_options_config: 26 passed, 0 failed

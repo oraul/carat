@@ -51,7 +51,7 @@ ok   a yank into % is refused
 ok   a visual delete into : leaves visual mode and is refused
 ok   a change into / is refused
 ok   the black hole cannot be put
-ok   the search register holds nothing yet
+ok   the search register holds nothing before a search
 ok   :registers after a line yank
 ok   the listing takes the bottom rows over the window
 ok   Enter dismisses the listing and does nothing else

@@ -31,10 +31,11 @@ ok   down comes back
 ok   past the newest the typed text returns
 ok   a prefix skips the entries that do not start with it
 ok   past the oldest match nothing moves
+ok   edited text starts a new recall with its prefix
 ok   at most fifty entries
 ok   the oldest are dropped
 ok   nothing drawn before a search
 ok   a search is drawn
 ok   noh hides it
 ok   nohlsearch draws nothing
-domain_search: 39 passed, 0 failed
+domain_search: 40 passed, 0 failed

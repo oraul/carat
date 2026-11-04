@@ -36,7 +36,7 @@ module Carat
         if older
           history.older(state.cmdline)
         else
-          history.newer
+          history.newer(state.cmdline)
         end
         return Outcome.none unless history.moved
         state.cmdline = history.recalled

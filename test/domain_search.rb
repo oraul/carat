@@ -77,18 +77,20 @@ module DomainSearchTest
     h.older("")
     t.assert_true(h.moved, "up recalls")
     t.assert_equal("a", h.recalled, "the newest first")
-    h.older("")
+    h.older("a")
     t.assert_equal("b", h.recalled, "then the older")
-    h.newer
+    h.newer("b")
     t.assert_equal("a", h.recalled, "down comes back")
-    h.newer
+    h.newer("a")
     t.assert_equal("", h.recalled, "past the newest the typed text returns")
     h.restart
     h.older("a")
     h.older("a")
     t.assert_equal("ab", h.recalled, "a prefix skips the entries that do not start with it")
-    h.older("a")
+    h.older("ab")
     t.assert_true(!h.moved, "past the oldest match nothing moves")
+    h.older("x")
+    t.assert_equal([false, "ab"], [h.moved, h.recalled], "edited text starts a new recall with its prefix")
     i = 0
     while i < 60
       h.add("e#{i}")

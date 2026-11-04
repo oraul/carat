@@ -5,7 +5,8 @@ module Carat
     # stands: <Up> and <Down> walk the entries that start with the text
     # typed before the first recall, and walking past the newest gives
     # that text back. A Struct record: mutable, with a reader and a writer
-    # per member.
+    # per member. Editing the text after a recall starts the next recall
+    # over with the edited text as the prefix.
     class History < Struct.new(:entries, :at, :prefix, :recalling, :recalled, :moved, keyword_init: true)
       # @rbs @entries: Array[String]
       # @rbs @at: Integer
@@ -61,7 +62,7 @@ module Carat
       #: (String) -> void
       def older(typed)
         self.moved = false
-        unless recalling
+        unless recalling && typed == recalled
           self.recalling = true
           self.prefix = typed
           self.at = entries.length
@@ -81,11 +82,11 @@ module Carat
 
       # Moves to the next newer entry starting with the prefix, or past
       # the newest to the typed text; recalled holds it, and moved is
-      # false before any recall.
-      #: () -> void
-      def newer
+      # false before any recall or when the text was edited since.
+      #: (String) -> void
+      def newer(typed)
         self.moved = false
-        return unless recalling
+        return unless recalling && typed == recalled
         i = at + 1
         while i < entries.length
           entry = entries[i]
