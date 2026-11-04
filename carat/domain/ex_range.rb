@@ -67,12 +67,12 @@ module Carat
           mark = text == "'<" ? selection.top + 1 : selection.bottom + 1
           return mark > line_count ? line_count : mark
         end
-        number(text)
+        line_number(text)
       end
 
       # The decimal number text holds, -1 when it holds anything else.
       #: (String) -> Integer
-      def self.number(text)
+      def self.line_number(text)
         value = 0
         i = 0
         n = text.bytesize
