@@ -38,7 +38,7 @@ module Carat
       # as Vim's regtilde does; an escaped character is kept with its
       # backslash, so "\~" stays a literal "~" for expand.
       #: (String, String, bool) -> String
-      def self.tilde(raw, previous, has_previous)
+      def self.tilde(raw, previous, previous_kept)
         return raw unless raw.include?("~")
         out = +""
         n = raw.bytesize
@@ -46,7 +46,7 @@ module Carat
         while i < n
           byte = raw.getbyte(i).to_i
           if byte == 126
-            out << previous if has_previous
+            out << previous if previous_kept
             i += 1
           elsif byte == 92 && i + 1 < n
             size = Utf8.size_at(raw, i + 1, n)

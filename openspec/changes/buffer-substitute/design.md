@@ -36,7 +36,7 @@
 - `LastSubstitute`: Vim's static memory: the last substitute pattern, the raw string `:&` reuses, the expanded string `~` inserts, and the persistent flags (`g`, `e`, `n`, case, print).
 - `Replacement`: `tilde` expands `~` as Vim's `regtilde` does; `check` refuses `\=` and `\n` before anything changes; `expand` builds the text for one match. A line break is written as `"\n"`, which no buffer line holds, so a carriage return in the matched text stays a character.
 - `Substitution.line(pattern, line, string, all, count_only, budget)`: one line's result, found with `Search.match_at` on `Search.searchable(line)` and cut from the original line by code point, so illegal bytes are kept; the empty-match rule is Vim's `do_sub` (`matchcol == prev_matchcol`).
-- `VimPattern.compile_substitute(source, ignorecase, smartcase, previous, has_previous)`: the same translation with `\(` capturing (at most nine, `E51` beyond, as Vim) and `~` as the previous string in a non-capturing group. Search keeps non-capturing groups and its E33 for `~`, since threading the substitute memory into the four search call sites is outside this change.
+- `VimPattern.compile_substitute(source, ignorecase, smartcase, previous, previous_kept)`: the same translation with `\(` capturing (at most nine, `E51` beyond, as Vim) and `~` as the previous string in a non-capturing group. Search keeps non-capturing groups and its E33 for `~`, since threading the substitute memory into the four search call sites is outside this change.
 
 ### One budget per command, and nothing changes when it runs out
 

@@ -53,7 +53,7 @@ module Carat
         memory = @last_substitute
         if args.fresh
           memory.keep_replacement(args.replacement)
-        elsif !memory.has_replacement
+        elsif !memory.replacement_kept
           return Outcome.failure(NO_SUBSTITUTE)
         end
         flags = args.flags
@@ -75,7 +75,7 @@ module Carat
         return Outcome.failure(compiled.error) unless compiled.ok?
         remember(compiled, args)
         return Outcome.failure(Domain::Replacement::TOO_LONG) if Domain::Replacement.too_long?(memory.replacement, memory.previous)
-        text = Domain::Replacement.tilde(memory.replacement, memory.previous, memory.has_previous)
+        text = Domain::Replacement.tilde(memory.replacement, memory.previous, memory.previous_kept)
         memory.keep_previous(text)
         unless memory.count_only
           refused = Domain::Replacement.check(text)
@@ -106,7 +106,7 @@ module Carat
         elsif memory.case_mode == 2
           ignorecase = false
         end
-        Domain::VimPattern.compile_substitute(source, ignorecase, smartcase, memory.previous, memory.has_previous)
+        Domain::VimPattern.compile_substitute(source, ignorecase, smartcase, memory.previous, memory.previous_kept)
       end
 
       #: (Domain::SearchPattern, Domain::SubstituteArgs) -> void

@@ -8,12 +8,12 @@ module Carat
     # case (0 by the options, 1 ignored, 2 matched), and printing (0 none,
     # 1 the line, 2 with its number). A Struct record: mutable, with a
     # reader and a writer per member.
-    class LastSubstitute < Struct.new(:pattern, :replacement, :has_replacement, :previous, :has_previous, :all, :report, :count_only, :case_mode, :print, keyword_init: true)
+    class LastSubstitute < Struct.new(:pattern, :replacement, :replacement_kept, :previous, :previous_kept, :all, :report, :count_only, :case_mode, :print, keyword_init: true)
       # @rbs @pattern: String
       # @rbs @replacement: String
-      # @rbs @has_replacement: bool
+      # @rbs @replacement_kept: bool
       # @rbs @previous: String
-      # @rbs @has_previous: bool
+      # @rbs @previous_kept: bool
       # @rbs @all: bool
       # @rbs @report: bool
       # @rbs @count_only: bool
@@ -22,7 +22,7 @@ module Carat
 
       #: () -> void
       def initialize
-        super(pattern: "", replacement: "", has_replacement: false, previous: "", has_previous: false, all: false, report: true, count_only: false, case_mode: 0, print: 0)
+        super(pattern: "", replacement: "", replacement_kept: false, previous: "", previous_kept: false, all: false, report: true, count_only: false, case_mode: 0, print: 0)
       end
 
       # Reads the flags as Vim does: without a leading "&" they start again
@@ -56,14 +56,14 @@ module Carat
       #: (String) -> void
       def keep_replacement(text)
         self.replacement = text
-        self.has_replacement = true
+        self.replacement_kept = true
       end
 
       # The string after "~" was expanded, which the next "~" inserts.
       #: (String) -> void
       def keep_previous(text)
         self.previous = text
-        self.has_previous = true
+        self.previous_kept = true
       end
     end
   end

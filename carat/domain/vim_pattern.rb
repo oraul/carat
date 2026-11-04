@@ -56,15 +56,15 @@ module Carat
       # @rbs @capture: bool
       # @rbs @groups: Integer
       # @rbs @tilde: String
-      # @rbs @has_tilde: bool
+      # @rbs @tilde_known: bool
 
-      #: (source: String, capture: bool, tilde: String, has_tilde: bool) -> void
-      def initialize(source:, capture:, tilde:, has_tilde:)
+      #: (source: String, capture: bool, tilde: String, tilde_known: bool) -> void
+      def initialize(source:, capture:, tilde:, tilde_known:)
         @source = source
         @capture = capture
         @groups = 0
         @tilde = tilde
-        @has_tilde = has_tilde
+        @tilde_known = tilde_known
         @bytes = source.bytesize
         @pos = 0
         @out = +""
@@ -89,14 +89,14 @@ module Carat
       # letter.
       #: (String, bool, bool) -> SearchPattern
       def self.compile(source, ignorecase, smartcase)
-        VimPattern.new(source: source, capture: false, tilde: "", has_tilde: false).build(ignorecase, smartcase)
+        VimPattern.new(source: source, capture: false, tilde: "", tilde_known: false).build(ignorecase, smartcase)
       end
 
       # The pattern of a substitute: as compile, with capturing groups and
-      # ~ as previous, the last replacement string, when has_previous.
+      # ~ as previous, the last replacement string, when previous_kept.
       #: (String, bool, bool, String, bool) -> SearchPattern
-      def self.compile_substitute(source, ignorecase, smartcase, previous, has_previous)
-        VimPattern.new(source: source, capture: true, tilde: previous, has_tilde: has_previous).build(ignorecase, smartcase)
+      def self.compile_substitute(source, ignorecase, smartcase, previous, previous_kept)
+        VimPattern.new(source: source, capture: true, tilde: previous, tilde_known: previous_kept).build(ignorecase, smartcase)
       end
 
       # The pattern that matches text literally, for "*" and "#": every
@@ -392,7 +392,7 @@ module Carat
       # ~: the previous replacement string, matched literally as one atom.
       #: () -> void
       def tilde
-        return refuse("E33: No previous substitute regular expression") unless @capture && @has_tilde
+        return refuse("E33: No previous substitute regular expression") unless @capture && @tilde_known
         codes = Utf8.codes(@tilde)
         text = +"(?:"
         i = 0
