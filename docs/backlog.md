@@ -343,3 +343,105 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `tools/agent_guard.sh` entry of `docs/codebase-map.md` (line 48). Quality advisory of `guard-hardening` at a272de71f10b.
 - Why it matters: the map's key methods are where a change starts; the entry omits the `body_word` and `words` helpers and the line-continuation join in `field`, which decide what the guard refuses.
 - Fix outline: add `body_word`, `words`, and the continuation join of `field` to the entry's key methods, within the map's budget. Queued in `guard-allowlist`.
+
+## The guard's git write list misses plain write forms
+
+- Where: the list of refused git subcommands in `tools/agent_guard.sh` (line 137) and the header's claim at line 10. Periodic security Medium (7) at 8c340cd, and the periodic quality finding on the same line.
+- Why it matters: under the read and contributor profiles `git -c alias.p=push p origin x`, `git send-pack`, `git update-ref`, `git branch -f` or `-D`, `git checkout -- .`, and `git config` (a hooks path or a `!` alias runs any command) all pass (probed, exit 0), so a read agent can push a branch and the contributor can push past the pre-push gates and the push limit; three changes in a row found new bypasses of the list.
+- Fix outline: judge each profile's commands against what it needs rather than against a list of refused forms, so an unlisted form fails closed; refuse `-c`, `--config-env`, and config writes; add a `tools/tools_test.sh` case for each form. Queued in `guard-allowlist`.
+
+## settled_at reads a file moved into openspec/ as settled
+
+- Where: `settled_at` in `tools/gates.sh` (line 77), which lists the changes since the reviewed commit with `git diff --name-only` and rename detection on. Periodic security Medium (6) at 8c340cd.
+- Why it matters: a file moved into `openspec/` after the review, such as the CI workflow or the Claude settings, shows only its new path, so the security, stages, and passed gates read the deletion as settled (verified in a scratch repository).
+- Fix outline: list the paths without rename detection, as `tests_only_since` does, and add a `tools/tools_test.sh` case with a code file moved under `openspec/`. Queued in `guard-allowlist`.
+
+## The agents' guard hooks fail open
+
+- Where: the PreToolUse hook line of each agent file under `.claude/agents/` (line 12), which runs the guard from the working tree. Periodic security Low (6) at 8c340cd.
+- Why it matters: Claude Code blocks a call only on exit 2, so a guard that is missing, edited by the contributor, or fails on an error (an `awk` or `sed` failure) allows every call.
+- Fix outline: make any failure of the hook command refuse the call, refuse contributor edits of the guard and the agent files unless the brief names them, and add a `tools/tools_test.sh` case for a failing guard. Queued in `guard-allowlist`.
+
+## The CI scope reads a moved code file by its new path
+
+- Where: the documentation-only test of `tools/ci_scope.sh` (line 62), which uses `git diff --name-only` with rename detection on. Periodic security Low (5) at 8c340cd.
+- Why it matters: a pull request that only moves code files to a Markdown or `openspec/` path is listed by the new paths, so CI skips `spin check`, and the push to `main` then skips it as a passed head.
+- Fix outline: list the paths without rename detection, together with the fix of the entry "The CI scope script word-splits the changed paths", and add a `tools/tools_test.sh` case. Queued in `ci-hardening`.
+
+## check trusts stage records no workflow record backs
+
+- Where: `check` in `tools/run_state.sh` (line 262), which skips every stage recorded as passed at the head, and the stages and passed gates, which trust `stage.*` and `phase.check`. Periodic security Low (5) at 8c340cd.
+- Why it matters: an agent can write those records by running a script file the guard does not read (`MAKE=true sh tools/run_state.sh check` inside a script), and the checker then runs nothing, leaving `diagnose` and `gates`, which CI leaves out, unchecked.
+- Fix outline: back the check result with a record only the workflow writes and compare it in the records gate, or give the checker a check that ignores earlier records at the head; add a `tools/tools_test.sh` case. Queued in part (b) of `workflow-cost`, which changes the same records.
+
+## The guard checks the parent step twice with different patterns
+
+- Where: `tools/agent_guard.sh` line 240, a `*..*` check for the read and merger profiles repeating the `*/../*` check of line 235. Periodic quality at 8c340cd.
+- Why it matters: one rule is written twice, and the profiles refuse different paths (a name such as `a..b`).
+- Fix outline: keep one pattern that every profile shares. Queued as a fold of `guard-allowlist`.
+
+## The code map's tools_test.sh entry omits the guard and the CI wait
+
+- Where: the `tools/tools_test.sh` entry of `docs/codebase-map.md` (line 49). Periodic quality at 8c340cd.
+- Why it matters: the entry lists the scope, the measurement, the run state, the docs lint, the generators, and the gates, but not the cases of `tools/agent_guard.sh` and `tools/ci_wait.sh`, which make up much of the file since `agent-authority`, `workflow-records`, and `guard-hardening`.
+- Fix outline: add the guard and the wait to the entry, within the map's budget. Queued as a fold of `guard-allowlist`.
+
+## The search budget charges a line's length on ASCII lines too
+
+- Where: `Carat::Domain::Search.match_at` in `carat/domain/search.rb` (line 101), which charges every match tried its line's length as a fixed cost; the risk note at line 50 of the archived design of `buffer-search` and the Search rows of `docs/compatibility.md`. Quality advisory of `buffer-search` at a36858a2bc88.
+- Why it matters: `docs/spinel-notes.md` implies the engine finds a code-point position without a scan on ASCII-only text, so the charge is needed only on other lines; as it is, `N` or `?` on a long ASCII line (minified code) with more than about 400 million divided by its length matches before the cursor stops with `E363`, a frame highlights only about 20 million divided by the length matches of such a line, and the design says only non-ASCII lines stop.
+- Fix outline: compute `text.ascii_only?` once per line beside its length and charge the fixed cost only when it is false, with a `domain_search` row of a long ASCII line of many matches searched backward; or correct the risk note in the design and `docs/compatibility.md`.
+
+## Match highlighting walks matches left of the scroll and keeps rows painted after the budget stopped
+
+- Where: `FramePresenter#paint_matches` in `carat/adapters/frame_presenter.rb` (line 569) and the back-row store of `paint_row`'s caller (line 382). Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
+- Why it matters: every match is walked from code point 0, also those left of a horizontal scroll, and a row painted after the frame budget stopped is stored with the search stamp, so it stays unhighlighted until the stamp changes.
+- Fix outline: store 0 as the stamp of a row painted under a stopped budget so the next frame retries it, and start the walk from the first match that can reach the left column, with an `adapters_frame_presenter` row for each.
+
+## A second caret after the start of a pattern is read as an anchor
+
+- Where: `VimPattern#caret` in `carat/domain/vim_pattern.rb` (line 261), which leaves `@at_start` set. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
+- Why it matters: `/^^` compiles to two anchors, where Vim reads the second `^` as a literal caret, so the search misses a line starting with `^`.
+- Fix outline: clear `@at_start` in `caret` and keep a separate flag so a `*` right after `^` stays literal, with a `domain_vim_pattern` row for `^^` and `^*`.
+
+## The search offset is found by a collection scan that differs from the compiler's
+
+- Where: `VimPattern.pattern_end` in `carat/domain/vim_pattern.rb` (line 105), which skips a collection to the first `]` after `[x`, unlike `collection_end`. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
+- Why it matters: `/[\]/]` or `/[^]/]` is cut at the inner `/`, so the rest of the collection is taken as a search offset and the pattern searched is not the one typed.
+- Fix outline: share `collection_end`'s scan (an escaped `]` and a `]` right after `[` or `[^`) with `pattern_end`, with `domain_vim_pattern` rows for both forms.
+
+## Operate passes the search outcome through an instance variable
+
+- Where: `Operate#search_motion` in `carat/use_cases/operate.rb` (line 131), which sets `@notice` deep in `motion_for` for `call` to read. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
+- Why it matters: the outcome travels by a side channel in a use case instead of a return value, which is harder to follow and easy to leave stale when another path through `motion_for` is added.
+- Fix outline: return the hit's outcome with the operand as a small result value, or have the operator handler run `FindMatch` first and pass the hit in.
+
+## REGISTER_ONE_MOTIONS repeats the search action names
+
+- Where: `REGISTER_ONE_MOTIONS` in `carat/use_cases/operate.rb` (line 47), which lists the eight search action names `Domain::Search` already lists. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
+- Why it matters: a search action added to `Domain::Search` and not to the list would delete within a line without writing register 1, unlike Vim.
+- Fix outline: keep the four sentence and paragraph motions in the list and test `Domain::Search.action?(action)` beside it.
+
+## The :noh row names a test that has no :noh case
+
+- Where: the `:noh[lsearch]` row of `docs/compatibility.md` (line 262), and task 3.2 of the archived `buffer-search` change, which say `use_cases_ex` proves `:set` and `:noh`; `test/use_cases_ex.rb` has no `:noh` or search-option case. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
+- Why it matters: the compatibility table is how a reader finds the test of a command, and this one points to a file that does not test it (`editor_search` does).
+- Fix outline: drop `use_cases_ex` from the row, or add the `:noh` and search-option cases to `test/use_cases_ex.rb`.
+
+## Visual star and hash search the word, not the selection
+
+- Where: the `keymap.visual *` and `keymap.visual "#"` lines of `config/default.caratrc` (line 213), bound to `search.word_forward` and `search.word_backward`. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
+- Why it matters: Neovim's default visual `*` and `#` search the selected text, so a user selecting part of a line gets a different search than in Neovim, and the Search rows of `docs/compatibility.md` do not say so.
+- Fix outline: list the difference under Search in `docs/compatibility.md` now, and bind the visual keys to a selection search when one is added.
+
+## Incremental search spends the full search budget on every key
+
+- Where: `PreviewSearch#call` in `carat/use_cases/search/preview_search.rb` (line 48), which resets the budget to `Domain::SearchBudget::SEARCH`. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
+- Why it matters: with `incsearch` on, a costly pattern spends about 1.5 seconds on each key typed at the prompt, so typing stalls key by key.
+- Fix outline: give the preview its own smaller `SearchBudget` constant and end the preview without a match when it stops, with a `use_cases_search` row.
+
+## Resuming a pattern prompt resets the mode a second time
+
+- Where: `HandleKey#resume` in `carat/use_cases/handle_key.rb` (line 215), which sets the mode to normal outside visual although `CancelCommandLine` and `ExecuteCommandLine` already restored the prompt's return mode. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
+- Why it matters: two places decide the mode after the prompt, so a change to the return mode of the prompt has to be made in both or the second one overrides it.
+- Fix outline: drop the line and keep the return mode the command line restores, checked by the existing `editor_search` rows.
