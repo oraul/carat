@@ -2,12 +2,12 @@
 
 ## 1. Queue budget
 
-- [x] 1.1 `tools/docs_lint.sh`: `docs/queue.md 17369` in `BUDGETS`. Tested by the `tools/tools_test.sh` case "docs_lint: refuses a queue over its budget".
+- [x] 1.1 `tools/docs_lint.sh`: `docs/queue.md 17369` in `BUDGETS`. Tested by the `tools/tools_test.sh` cases "docs_lint: passes a queue at its budget" and "docs_lint: refuses a queue over its budget".
 - [x] 1.2 `docs/queue.md`: the planner's `build/plan/queue.md` (16,921 bytes). Checked by `make docs-lint`.
 
 ## 2. Item from the file
 
-- [x] 2.1 `tools/run_state.sh`: `plan_needed` prints no `item:` line. Tested by "run_state: plan-needed prints one line" (replacing the three item-line cases) and the existing plan-needed cases.
+- [x] 2.1 `tools/run_state.sh`: `plan_needed` prints no `item:` line. Tested by the three "run_state: plan-needed prints one line" cases (replacing the three item-line cases) and the existing plan-needed cases.
 - [x] 2.2 `.claude/workflows/deliver-change.js`: the brief points to the item in `docs/queue.md`, the scouts get the brief, the resume schema's `plan` is one line. No test runs the workflow script: checked by a syntax check and a simulation of the brief's three cases.
 
 ## 3. Agent inputs
@@ -20,4 +20,4 @@
 
 - [x] 4.1 `docs/codebase-map.md` area 1 and the `tools/run_state.sh` header.
 - [x] 4.2 `docs/backlog.md`: the four entries of `build/plan/backlog.md`, the three stale figures, the queued pointers, the plan-skip entry removed, and an entry for the `CLAUDE.md` every agent receives.
-- [ ] 4.3 Run `make tools-test`, `make docs-lint`, `make gates`, and `openspec validate agent-inputs --strict --no-interactive`.
+- [x] 4.3 Run `make tools-test`, `make docs-lint`, `make gates`, and `openspec validate agent-inputs --strict --no-interactive`.
