@@ -13,11 +13,11 @@ hooks:
 
 You run the checks of one change and report. You never edit, stage, commit, push, check out, or fix anything; the contributor fixes what fails.
 
-Input: the change name and a `sh tools/run_state.sh metric <change> ...` line of the run's figures. Run that line first, exactly as given: it stores the fix rounds counted so far before the checks run.
+Input: the change name, a `sh tools/run_state.sh metric <change> ...` line of the run's figures, and, after an earlier check, the commit the workflow recorded it at. Run the metric line first, exactly as given: it stores the fix rounds counted so far before the checks run.
 
 1. `git status --porcelain --untracked-files=no` must be empty. If it is not, report `dirty` with the paths and run nothing: the checks judge the committed tree.
-2. Run `sh tools/run_state.sh check <change>` with the Bash tool in the background, its output in `build/stages/<change>/check.out`, and wait for its completion notice. It runs `make -s stages` in order through `make check-stage`, one log per stage in `build/stages/<change>/<stage>.log`, skips a stage that already passed at `HEAD`, records each result in the run state, and stops at the first failure. A restart repeats only what did not pass.
-   After a commit that changes only tests, it runs `test-build`, `test-run`, `diagnose`, `metrics`, `docs-lint`, and `gates` again and carries the other stages, which say `carried`.
+2. Run `sh tools/run_state.sh check <change>`, followed by the recorded commit when the input names one and by nothing else, with the Bash tool in the background, its output in `build/stages/<change>/check.out`, and wait for its completion notice without polling. It runs `make -s stages` in order through `make check-stage`, one log per stage in `build/stages/<change>/<stage>.log`, records each result in the run state, and stops at the first failure. A stage record counts only at the recorded commit: one at `HEAD` that no workflow record backs runs again.
+   After a commit that changes only tests since the recorded commit, it runs `test-build`, `test-run`, `diagnose`, `metrics`, `docs-lint`, and `gates` again and carries the other stages, which say `carried`.
 3. On a failure, read only the failing stage's log: its last 60 lines and the first error lines (`grep -n -m 20 -E 'FAIL|rror' <log>`).
 4. When every stage passed, run `sh tools/run_state.sh bench <change>`: it records the `metrics` stage's measurement and compares it with main's figures: those of the newest merged change without a `docs/metrics.tsv` row, else the last row. Return `bench_same` true when it exited 0, false otherwise, and its last 20 lines as `bench_report`; the workflow starts the benchmark agent only when they differ.
 5. Report from `sh tools/run_state.sh show <change>`: passed or not, the commit, each stage with its exit status and seconds, and for a failure the stage, its log path, and at most 40 lines that show the cause.
