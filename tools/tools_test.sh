@@ -547,11 +547,12 @@ expect "run_state: trusted without the base still trusts the ancestors of HEAD" 
 
 # --------------------------------------------------------- agent_guard.sh
 
-# guard PROFILE COMMAND: the guard's answer to a Bash call of COMMAND, given
-# already escaped for JSON, in the project PROJECT (default /w).
+# guard PROFILE COMMAND [DIR]: the guard's answer to a Bash call of
+# COMMAND, given already escaped for JSON, in the project PROJECT (default
+# /w).
 guard() {
   printf '{"session_id":"s","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"%s","description":"d"}}' "$2" |
-    CLAUDE_PROJECT_DIR=${PROJECT:-/w} sh "$here/agent_guard.sh" "$1"
+    CLAUDE_PROJECT_DIR=${PROJECT:-/w} sh "$here/agent_guard.sh" "$1" ${3:+"$3"}
 }
 
 # guard_edit PROFILE TOOL PATH [DIR]: the guard's answer to an edit of
@@ -562,82 +563,163 @@ guard_edit() {
     CLAUDE_PROJECT_DIR=${PROJECT:-/w} sh "$here/agent_guard.sh" "$1" ${4:+"$4"}
 }
 
-expect "guard: read refuses git push" 2 "refused for the read profile: a git command" guard read 'git push origin chore/x'
-expect "guard: read refuses git push after global options" 2 "a git command" guard read 'cd /w && git -C tmp/.base -c a=b push'
-expect "guard: read refuses git push after a long option" 2 "a git command" guard read 'git --no-pager push origin x'
-expect "guard: read refuses a commit after a long option with a value" 2 "a git command" guard read 'git --git-dir=.git commit -m x'
-expect "guard: read refuses an add after mixed global options" 2 "a git command" guard read 'git -C . --work-tree . add x'
-expect "guard: read allows a long option before a git read" 0 "^$" guard read 'git --no-pager log --oneline -5'
-expect "guard: read refuses a commit on a later line" 2 "a git command" guard read 'git status\ngit commit -m \"x\"'
-expect "guard: read allows a git read that names push" 0 "^$" guard read 'git log --oneline --grep push -5'
-expect "guard: read allows a worktree checkout" 0 "^$" guard read 'git -C tmp/.base checkout -q --detach origin/main'
-expect "guard: read refuses gh" 2 "a gh command" guard read 'gh pr merge 5 --squash'
-expect "guard: read refuses a gh api write" 2 "a gh command" guard read 'x=1; gh api -X POST repos/o/r/merges'
-expect "guard: read refuses a review record" 2 "a run state command" guard read 'sh tools/run_state.sh review c security pass \"high=0\"'
-expect "guard: read refuses a phase record" 2 "a run state command" guard read 'sh \"$PWD/tools/run_state.sh\" phase c plan'
-expect "guard: read refuses a stage record" 2 "a run state command" guard read 'sh tools/run_state.sh stage c lint true'
-expect "guard: read refuses a push" 2 "a run state command" guard read 'sh tools/run_state.sh push c'
-expect "guard: read allows the checks" 0 "^$" guard read 'sh tools/run_state.sh check c > build/stages/c/check.out 2>&1'
-expect "guard: read allows a note and the state" 0 "^$" guard read 'sh tools/run_state.sh note c security \"Low (2) x\" && sh tools/run_state.sh show c'
-expect "guard: read refuses a fake make for the checks" 2 "an environment override" guard read 'MAKE=true STAGES=lint sh tools/run_state.sh check c'
-expect "guard: read refuses an edit of the run state file" 2 "the run state's directory" guard read 'sed -i s/blocked/pass/ build/pipeline/c.json'
-expect "guard: read refuses the run state's directory from inside build" 2 "the run state's directory" guard read 'cd build && cat > pipeline/c.json'
+# Every profile refuses the forms it cannot read and the commands it does
+# not list, however they are written.
+for p in read merger contributor; do
+  expect "guard: $p allows a git read" 0 "^$" guard $p 'git --no-pager log --oneline -5 && git diff origin/main...HEAD | head -40'
+  expect "guard: $p refuses git push" 2 "refused for the $p profile: git push" guard $p 'git push origin chore/x'
+  expect "guard: $p refuses a quoted verb" 2 "git push" guard $p "git 'push' origin x"
+  expect "guard: $p refuses a quoted name" 2 "git push" guard $p '\"git\" push origin x'
+  expect "guard: $p refuses an escaped name" 2 "git push" guard $p 'g\\it pu\\sh origin x'
+  expect "guard: $p refuses a split verb" 2 "git push" guard $p "git pu''sh origin x"
+  expect "guard: $p refuses ANSI-C quoting" 2 "a [$] expansion" guard $p "git \$'\\\\x70ush' origin x"
+  expect "guard: $p refuses locale quoting" 2 "a [$] expansion" guard $p 'git $\"push\" origin x'
+  expect "guard: $p refuses a parent step" 2 "a parent step" guard $p 'cat docs/../README.md'
+  expect "guard: $p refuses a variable" 2 "a [$] expansion" guard $p 'git $V origin x'
+  expect "guard: $p refuses a variable in double quotes" 2 "inside double quotes" guard $p 'sh \"$PWD/tools/run_state.sh\" show c'
+  expect "guard: $p refuses a subshell" 2 "a subshell" guard $p '(git push origin x)'
+  expect "guard: $p refuses a command substitution" 2 "a [$] expansion" guard $p 'echo $(git push origin x)'
+  expect "guard: $p refuses a backquote substitution" 2 "a command substitution" guard $p 'echo `git push origin x`'
+  expect "guard: $p refuses env" 2 "env is not a command" guard $p 'env git push origin x'
+  expect "guard: $p refuses an environment assignment" 2 "an assignment of GIT_DIR" guard $p 'GIT_DIR=x git status'
+  expect "guard: $p refuses a fake make for the checks" 2 "an assignment of MAKE" guard $p 'MAKE=true STAGES=lint sh tools/run_state.sh check c'
+  expect "guard: $p refuses xargs" 2 "xargs is not a command" guard $p 'echo push | xargs git'
+  expect "guard: $p refuses sh -c" 2 "a shell option: sh -c" guard $p 'sh -c \"git push origin x\"'
+  expect "guard: $p refuses bash -c" 2 "bash is not a command" guard $p 'bash -c \"git push origin x\"'
+  expect "guard: $p refuses eval" 2 "eval is not a command" guard $p 'eval git push origin x'
+  expect "guard: $p refuses awk" 2 "awk is not a command" guard $p 'awk \"BEGIN { system(1) }\"'
+  expect "guard: $p refuses a glob" 2 "glob or brace character" guard $p 'git pu? origin x'
+  expect "guard: $p refuses brace expansion" 2 "glob or brace character" guard $p 'git {push,origin}'
+  expect "guard: $p refuses a here-document" 2 "a here-document" guard $p 'cat <<EOF\ngit push\nEOF'
+  expect "guard: $p refuses a command named by a path" 2 "a command named by a path" guard $p '/usr/bin/git push origin x'
+  expect "guard: $p refuses a script outside its forms" 2 "the script tmp/x.sh is not one" guard $p 'sh tmp/x.sh'
+  expect "guard: $p refuses gh" 2 "gh is not a command" guard $p 'gh pr merge 5 --squash'
+  expect "guard: $p refuses a command on a later line" 2 "git push" guard $p 'git status\ngit push origin x'
+  expect "guard: $p refuses a command after a comment" 2 "git push" guard $p 'ls # a note\ngit push origin x'
+  expect "guard: $p refuses git push over a line continuation" 2 "git push" guard $p 'git \\\npush origin x'
+  expect "guard: $p refuses a push on the line after an escaped backslash" 2 "git push" guard $p 'echo x\\\\\ngit push'
+  expect "guard: $p refuses a git alias" 2 "a git configuration override" guard $p 'git -c alias.p=push p origin x'
+  expect "guard: $p refuses a git option it does not list" 2 "the git option --git-dir" guard $p 'git --git-dir=.git log'
+  expect "guard: $p refuses update-ref" 2 "git update-ref is not" guard $p 'git update-ref refs/heads/main HEAD'
+  expect "guard: $p refuses send-pack" 2 "git send-pack is not" guard $p 'git send-pack origin HEAD:main'
+  expect "guard: $p refuses git config" 2 "git config is not" guard $p 'git config core.hooksPath tmp'
+  expect "guard: $p refuses a forced branch" 2 "git branch other than a listing" guard $p 'git branch -f main HEAD'
+  expect "guard: $p refuses a checkout of the tree" 2 "git checkout outside a worktree" guard $p 'git checkout -- .'
+  expect "guard: $p refuses a git read that writes a file" 2 "git diff --output=x" guard $p 'git diff --output=x'
+  expect "guard: $p refuses a fetch with a refspec" 2 "git fetch other than" guard $p 'git fetch origin x:refs/remotes/origin/main'
+  expect "guard: $p refuses a quoted blank in the -C path before push" 2 "git push" guard $p 'git -C \"my dir\" push origin x'
+  expect "guard: $p refuses a review record" 2 "tools/run_state.sh review" guard $p 'sh tools/run_state.sh review c security pass x HEAD'
+  expect "guard: $p refuses a quoted review record" 2 "tools/run_state.sh review" guard $p "sh tools/run_state.sh re''view c security pass x"
+  expect "guard: $p refuses a phase record" 2 "tools/run_state.sh phase" guard $p 'sh tools/run_state.sh phase c plan'
+  expect "guard: $p refuses a stage record" 2 "tools/run_state.sh stage" guard $p 'sh tools/run_state.sh stage c lint 0'
+  expect "guard: $p refuses an init" 2 "tools/run_state.sh init" guard $p 'sh tools/run_state.sh init c chore/c'
+  expect "guard: $p refuses a push count" 2 "tools/run_state.sh set" guard $p 'sh tools/run_state.sh set c pushes 0'
+  expect "guard: $p refuses the run state file" 2 "naming the run state's directory" guard $p 'cat build/pipeline/c.json'
+  expect "guard: $p refuses a quoted run state path" 2 "naming the run state's directory" guard $p 'cat build/\"pipe\"line/c.json'
+  expect "guard: $p refuses an unterminated quote" 2 "an unterminated quote" guard $p "echo 'x"
+  expect "guard: $p refuses a write outside the project" 2 "a write outside the project" guard $p 'echo x > /tmp/x'
+  expect "guard: $p refuses a write under .git" 2 "a write under .git" guard $p 'echo x > .git/hooks/pre-commit'
+  expect "guard: $p refuses a tool it does not judge" 2 "which this guard does not judge" guard_edit $p Read /w/README.md
+done
 expect "guard: an unknown profile refuses" 2 "no such profile" guard writer 'ls'
-expect "guard: merger allows the branch deletion" 0 "^$" guard merger 'git ls-remote --heads origin chore/x && git push origin --delete chore/x'
-expect "guard: merger refuses the deletion of main" 2 "a git command" guard merger 'git push origin --delete main'
-expect "guard: merger refuses a second ref after the branch" 2 "a git command" guard merger 'git push origin --delete chore/x main'
-expect "guard: merger refuses another push" 2 "a git command" guard merger 'git push origin HEAD:main'
-expect "guard: merger allows the fast-forward of main" 0 "^$" guard merger 'git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
-expect "guard: merger allows the body file" 0 "^$" guard merger 'CHANGE=c RECORDS=\"security:pass:abc1234\" sh tools/gates.sh merge build/pipeline/c.body.md'
-expect "guard: merger refuses a phase record" 2 "a run state command" guard merger 'sh tools/run_state.sh phase c merge'
-expect "guard: contributor allows the gated push" 0 "^$" guard contributor 'sh tools/run_state.sh push c'
-expect "guard: contributor allows a commit and the history" 0 "^$" guard contributor 'git -c user.name=C commit -q -m x && sh tools/run_state.sh history'
-expect "guard: contributor refuses git push" 2 "refused for the contributor profile: a git command" guard contributor 'git push -u origin chore/x'
-expect "guard: contributor refuses a review record" 2 "a run state command" guard contributor 'sh tools/run_state.sh review c security pass x'
-expect "guard: contributor refuses gh" 2 "a gh command" guard contributor 'gh pr merge 5'
-expect "guard: contributor refuses an edit of the run state" 2 "the run state's directory" guard_edit contributor Edit /w/build/pipeline/c.json
+# A dry run of each agent's commands as its file under .claude/agents/
+# names them, under its profile.
+expect "guard: scout runs its steps" 0 "^$" guard read 'git rev-parse HEAD && git rev-parse --short HEAD && git merge-base --is-ancestor HEAD origin/main && date -u +%Y%m%dT%H%M%SZ' tmp/scout
+expect "guard: scout prunes and writes its directory" 0 "^$" guard read 'mkdir -p tmp/scout && rm tmp/scout/edit-path-abc1234-x.md' tmp/scout
+expect "guard: scout reads the tree" 0 "^$" guard read 'git diff --quiet abc1234 HEAD -- tools/x.sh docs/y.md; git ls-files tools | wc -l; ls tools; grep -n \"def name\" carat/x.rb; git show --stat HEAD' tmp/scout
+expect "guard: planner reads the run states" 0 "^$" guard read 'sh tools/run_state.sh status && sh tools/run_state.sh pending && sh tools/run_state.sh show c' build/plan
+expect "guard: planner prepares its directory" 0 "^$" guard read 'mkdir -p build/plan && rm -f build/plan/goals.md' build/plan
+expect "guard: checker runs the checks" 0 "^$" guard read 'git status --porcelain --untracked-files=no && sh tools/run_state.sh check c > build/stages/c/check.out 2>&1'
+expect "guard: checker reads a failing log and compares" 0 "^$" guard read 'tail -60 build/stages/c/lint.log; grep -n -m 20 -E \"FAIL|rror\" build/stages/c/lint.log; sh tools/run_state.sh bench c; sh tools/run_state.sh show c'
+expect "guard: benchmark prepares the base" 0 "^$" guard read 'git worktree add --detach tmp/.base origin/main || git -C tmp/.base checkout -q --detach origin/main'
+expect "guard: benchmark builds the base" 0 "^$" guard read 'make -C tmp/.base dev-build test-build bench-budget PREFIX=/w/tmp/.toolchain SPINEL_CACHE_DIR=/w/build/spinel-cache'
+expect "guard: benchmark measures the base with the change's script" 0 "^$" guard read 'cd tmp/.base && sh /w/tools/metrics.sh measure build/metrics/current.tsv'
+expect "guard: benchmark compares and records" 0 "^$" guard read 'make metrics && make metrics-compare BASE_METRICS=tmp/.base/build/metrics/current.tsv && make bench SCENARIOS=\"lh j\" && sh tools/run_state.sh metrics c build/metrics/current.tsv && git worktree remove --force tmp/.base'
+expect "guard: quality reviewer reads the diff and notes" 0 "^$" guard read 'git diff origin/main...HEAD && git diff --name-only abc1234 HEAD && git rev-parse --short=12 HEAD && sh tools/run_state.sh note c quality-advisory \"abc1234 tools/x.sh:3 a reason; fix: an outline\"'
+expect "guard: quality reviewer runs the periodic mode" 0 "^$" guard read 'git fetch -q origin && git worktree add --detach tmp/.review-quality origin/main && git log --name-only -5 origin/main && git worktree remove --force tmp/.review-quality'
+expect "guard: security reviewer runs its steps" 0 "^$" guard read 'git status --porcelain --untracked-files=no && git remote set-head origin main && git fetch -q origin && git -C tmp/.review-security checkout -q --detach origin/main && sh tools/run_state.sh note c security \"Low (3) tools/x.sh:1 a title; fix: an outline\"'
+expect "guard: reporter checks the squash commit" 0 "^$" guard read 'sh tools/run_state.sh show c && git show --stat abc1234 && BASE=abc1234~1 sh tools/gates.sh trailer && BASE=abc1234~1 sh tools/gates.sh content docs'
+expect "guard: retrospective records its notes" 0 "^$" guard read 'sh tools/run_state.sh metric c phase.check=1200/5 first.check=1 rework=0 ci_min=5.0 estimate=large && sh tools/run_state.sh note c retro \"x; evidence: 3\" && sh tools/run_state.sh budget c && sh tools/run_state.sh review-due c && sh tools/run_state.sh status'
+expect "guard: merger waits and records CI" 0 "^$" guard merger 'sh tools/run_state.sh metric c rework=0 && sh tools/run_state.sh show c && sh tools/ci_wait.sh 30 && sh tools/run_state.sh set c ci \"green abc1234\"'
+expect "guard: merger runs the merge gates" 0 "^$" guard merger 'CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234\" sh tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger verifies and records the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%B origin/main && sh tools/run_state.sh set c merged abc1234 && git ls-remote --heads origin chore/x'
+expect "guard: merger deletes the branch and fast-forwards main" 0 "^$" guard merger 'git push origin --delete chore/x; git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
+expect "guard: contributor proposes and validates" 0 "^$" guard contributor 'npx -y @fission-ai/openspec@latest new change c && npx @fission-ai/openspec@latest validate \"c\" --strict --no-interactive && openspec status --change c --json'
+expect "guard: contributor generates and checks" 0 "^$" guard contributor 'make new-ex-command NAME=sort SPEC=\"sor[t]\" AREA=12 && make test-one T=test/domain_buffer.rb && make diagnose-one T=carat/domain/buffer.rb && make -s lint docs-lint gates && make snapshots'
+expect "guard: contributor commits" 0 "^$" guard contributor 'git add -A && git -c user.name=\"Claude\" -c user.email=\"noreply@anthropic.com\" commit -q -m \"feat: x\" -m \"Co-Authored-By: Claude <noreply@anthropic.com>\" && git commit -q -F tmp/message.txt'
+expect "guard: contributor records the plan" 0 "^$" guard contributor 'cp build/plan/queue.md docs/queue.md && cp build/plan/goals.md docs/goals.md && sh tools/run_state.sh history'
+expect "guard: contributor archives" 0 "^$" guard contributor 'npx @fission-ai/openspec@latest archive c -y --skip-specs && npx @fission-ai/openspec@latest validate --all --strict --no-interactive'
+expect "guard: contributor pushes and opens the pull request" 0 "^$" guard contributor 'sh tools/run_state.sh push c && sh tools/gates.sh pr-body build/pipeline/c.body.md && sh tools/run_state.sh set c pr 47 && sh tools/run_state.sh show c'
+expect "guard: contributor pushes a CI fix" 0 "^$" guard contributor 'sh tools/run_state.sh push c --ci-fix'
+expect "guard: contributor merges main" 0 "^$" guard contributor 'git fetch -q origin && git merge --no-edit origin/main'
+expect "guard: contributor moves and removes files" 0 "^$" guard contributor 'mkdir -p tools/x && git mv a.sh tools/x/a.sh && rm -f tmp/x && chmod +x tools/x/a.sh && touch tmp/y'
+expect "guard: contributor reads lines and the tree" 0 "^$" guard contributor 'cd /w && sed -n 1,70p tools/x.sh; sed -n \"300,\\$p\" docs/backlog.md; find tools -name x.sh; git status --short | head'
+
+# Each profile's own refusals.
+expect "guard: read refuses a contributor command" 2 "cp is not a command" guard read 'cp a b'
+expect "guard: read refuses a commit" 2 "git commit is not" guard read 'git commit -m x'
+expect "guard: read refuses a set" 2 "tools/run_state.sh set" guard read 'sh tools/run_state.sh set c ci \"green abc1234\"'
+expect "guard: read refuses a push through the run state" 2 "tools/run_state.sh push" guard read 'sh tools/run_state.sh push c'
+expect "guard: read refuses a make target it does not list" 2 "the make target check" guard read 'make check'
+expect "guard: read refuses a command in a make variable" 2 "a shell character in the make variable SCENARIOS" guard read 'make bench SCENARIOS=\"lh; git push\"'
+expect "guard: read refuses a toolchain elsewhere" 2 "PREFIX other than" guard read 'make -C tmp/.base dev-build PREFIX=/tmp/evil'
+expect "guard: read refuses a make outside a worktree" 2 "make -C outside a worktree" guard read 'make -C tmp/.toolchain dev-build'
+expect "guard: read refuses a cd elsewhere" 2 "cd other than" guard read 'cd build && cat pipeline/c.json'
+expect "guard: read refuses a write outside its directory" 2 "a write outside tmp/scout" guard read 'echo x > tools/x.sh' tmp/scout
+expect "guard: read refuses a removal outside its directory" 2 "a write outside tmp/scout" guard read 'rm tools/x.sh' tmp/scout
+expect "guard: read refuses a removal without a directory" 2 "a write by an agent that writes no file" guard read 'rm tmp/x'
+expect "guard: read refuses sed that writes" 2 "sed other than" guard read 'sed -i s/a/b/ x'
+expect "guard: read refuses sed that runs a command" 2 "sed other than" guard read 'sed -n \"1e git push\" x'
+expect "guard: read refuses find that runs a command" 2 "find -exec" guard read 'find . -exec git push \\;'
+expect "guard: read refuses sort that writes" 2 "sort -o" guard read 'sort -o tools/x.sh x'
+expect "guard: read refuses a metrics script of another form" 2 "tools/metrics.sh other than" guard read 'sh tools/metrics.sh shell'
+expect "guard: read refuses the merge gate" 2 "tools/gates.sh with other than gate names" guard read 'sh tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: read refuses an assignment before another script" 2 "an assignment before tools/run_state.sh" guard read 'BASE=x sh tools/run_state.sh show c'
+expect "guard: merger refuses the deletion of main" 2 "git push other than" guard merger 'git push origin --delete main'
+expect "guard: merger refuses a second ref after the branch" 2 "git push other than" guard merger 'git push origin --delete chore/x main'
+expect "guard: merger refuses another push" 2 "git push other than" guard merger 'git push origin HEAD:main'
+expect "guard: merger refuses the deletion of main locally" 2 "git branch other than" guard merger 'git branch -D main'
+expect "guard: merger refuses another merge" 2 "git merge other than" guard merger 'git merge origin/chore/x'
+expect "guard: merger refuses a pull request record" 2 "tools/run_state.sh set of pr" guard merger 'sh tools/run_state.sh set c pr 5'
+expect "guard: merger refuses a forged CI record" 2 "a CI record other than" guard merger 'sh tools/run_state.sh set c ci green'
+expect "guard: merger refuses make" 2 "make is not a command" guard merger 'make metrics'
+expect "guard: merger refuses another body" 2 "not a pull request body file" guard merger 'CHANGE=c sh tools/gates.sh merge README.md'
+expect "guard: contributor refuses git push" 2 "git push is not" guard contributor 'git push -u origin chore/x'
+expect "guard: contributor refuses a push of another form" 2 "tools/run_state.sh push other than" guard contributor 'sh tools/run_state.sh push c --force'
+expect "guard: contributor refuses a CI record" 2 "tools/run_state.sh set of ci" guard contributor 'sh tools/run_state.sh set c ci \"green abc1234\"'
+expect "guard: contributor refuses a reset" 2 "git reset is not" guard contributor 'git reset --hard HEAD~1'
+expect "guard: contributor refuses another git configuration" 2 "a git configuration override: -c core.hooksPath=tmp" guard contributor 'git -c core.hooksPath=tmp commit -m x'
+expect "guard: contributor refuses a merge of another branch" 2 "git merge other than of origin/main" guard contributor 'git merge origin/chore/x'
+expect "guard: contributor refuses a make option that runs text" 2 "the make option --eval" guard contributor 'make --eval=x lint'
+expect "guard: contributor refuses a make variable it does not list" 2 "the make variable SPIN" guard contributor 'make lint SPIN=x'
+expect "guard: contributor refuses a command in a make variable" 2 "a shell character in the make variable T" guard contributor 'make test-one T=\"x; git push\"'
+expect "guard: contributor refuses npx of another package" 2 "npx of other than" guard contributor 'npx cowsay x'
+expect "guard: contributor refuses a script by a path" 2 "a command named by a path" guard contributor './tools/run_state.sh push c'
+expect "guard: contributor refuses a link" 2 "ln is not a command" guard contributor 'ln -s c.json build/x'
+expect "guard: contributor refuses a copy into .git" 2 "a write under .git" guard contributor 'cp x .git/hooks/pre-commit'
+expect "guard: contributor refuses a long option of a writing command" 2 "the cp option --target-directory=/tmp" guard contributor 'cp --target-directory=/tmp x'
+expect "guard: contributor refuses a move onto the body file" 2 "a write to the run state's directory" guard contributor 'mv tmp/x build/pipeline/c.body.md'
+expect "guard: contributor refuses the run state file beside the body file" 2 "naming the run state's directory" guard contributor 'cat build/pipeline/c.body.md build/pipeline/c.json'
+expect "guard: contributor refuses a body gate on another file" 2 "not a pull request body file" guard contributor 'sh tools/gates.sh pr-body build/pipeline/c.json'
+expect "guard: contributor refuses a step inside the quoted body file" 2 "not a pull request body file" guard contributor 'sh tools/gates.sh pr-body \"build/pipeline/x.body.md /y\"'
+expect "guard: contributor refuses a quoted blank and a parent step after the body file" 2 "a parent step" guard contributor 'printf x > \"build/pipeline/x.body.md /../x.json\"'
+expect "guard: contributor allows the body gate by its absolute path" 0 "^$" guard contributor 'sh /w/tools/gates.sh pr-body /w/build/pipeline/c.body.md'
+
+# File tools: a write target judged by its path and its real path.
+expect "guard: contributor refuses an edit of the run state" 2 "a write to the run state's directory" guard_edit contributor Edit /w/build/pipeline/c.json
 expect "guard: contributor allows an edit elsewhere, whatever its text" 0 "^$" guard_edit contributor Write /w/tools/x.sh
-expect "guard: read refuses a file edit without a directory" 2 "an agent that writes no file" guard_edit read Write /w/tools/x.sh
+expect "guard: contributor refuses an edit outside the project" 2 "a write outside the project" guard_edit contributor Write /etc/x
+expect "guard: contributor refuses an edit of the git configuration" 2 "a write under .git" guard_edit contributor Edit /w/.git/config
+expect "guard: contributor writes the body file" 0 "^$" guard_edit contributor Write /w/build/pipeline/c.body.md
+expect "guard: contributor refuses a path through the body file" 2 "a parent step" guard_edit contributor Write /w/build/pipeline/c.body.md/../c.json
+expect "guard: read refuses a file edit without a directory" 2 "a write by an agent that writes no file" guard_edit read Write /w/tools/x.sh
 expect "guard: read allows a pack in its directory, whatever its text" 0 "^$" guard_edit read Write /w/tmp/scout/area.md tmp/scout
 expect "guard: read allows a relative path in its directory" 0 "^$" guard_edit read Write build/plan/queue.md build/plan
-expect "guard: read refuses a file outside its directory" 2 "outside tmp/scout" guard_edit read Write /w/tools/x.sh tmp/scout
+expect "guard: read refuses a file outside its directory" 2 "a write outside tmp/scout" guard_edit read Write /w/tools/x.sh tmp/scout
 expect "guard: read refuses a parent step out of its directory" 2 "a parent step" guard_edit read Write /w/tmp/scout/../../tools/x.sh tmp/scout
-expect "guard: merger writes the body file" 0 "^$" guard_edit merger Write /w/build/pipeline/c.body.md build/pipeline
-expect "guard: merger refuses the run state file" 2 "the run state's directory" guard_edit merger Write /w/build/pipeline/c.body.md.json build/pipeline
-expect "guard: merger refuses a path through the body file" 2 "the run state's directory" guard merger 'mkdir build/pipeline/c.body.md && cat x > build/pipeline/c.body.md/../c.json'
-expect "guard: contributor writes the body file" 0 "^$" guard_edit contributor Write /w/build/pipeline/c.body.md
-expect "guard: contributor allows the body gate" 0 "^$" guard contributor 'sh tools/gates.sh pr-body build/pipeline/c.body.md'
-expect "guard: contributor refuses a path through the body file" 2 "the run state's directory" guard_edit contributor Write /w/build/pipeline/c.body.md/../c.json
-expect "guard: contributor still refuses the run state file" 2 "the run state's directory" guard contributor 'cat build/pipeline/c.body.md build/pipeline/c.json'
-expect "guard: read refuses a metrics override of the bench" 2 "an environment override" guard read 'METRICS_OUT=x.tsv sh tools/run_state.sh bench c'
-# The shell removes quotes and backslashes before it runs a word.
-expect "guard: read refuses a quoted git push" 2 "a git command" guard read "git 'push' origin x"
-expect "guard: read refuses a quoted git" 2 "a git command" guard read '\"git\" push'
-expect "guard: read refuses an escaped git" 2 "a git command" guard read 'g\\it pu\\sh'
-expect "guard: read refuses a split git verb" 2 "a git command" guard read "git com''mit -m x"
-expect "guard: read refuses a quoted gh" 2 "a gh command" guard read '\"gh\" pr merge 5'
-expect "guard: contributor refuses a quoted push" 2 "a git command" guard contributor 'git \"push\" -u origin chore/x'
-expect "guard: read refuses a quoted run state record" 2 "a run state command" guard read "sh tools/run_state.sh re''view c security pass x"
-expect "guard: read refuses a quoted run state path" 2 "the run state's directory" guard read 'cat build/\"pipe\"line/c.json'
-expect "guard: read allows a quoted git read" 0 "^$" guard read "git log --oneline --grep 'push' -5"
-# A backslash before a newline continues the line; an escaped backslash
-# does not.
-expect "guard: read refuses git push over a line continuation" 2 "a git command" guard read 'git \\\npush origin x'
-expect "guard: contributor refuses git push over a line continuation" 2 "a git command" guard contributor 'git \\\npush -u origin chore/x'
-expect "guard: read refuses a review record over a line continuation" 2 "a run state command" guard read 'sh tools/run_state.sh \\\nreview c security pass x HEAD'
-expect "guard: contributor refuses a review record over a line continuation" 2 "a run state command" guard contributor 'sh tools/run_state.sh \\\nreview c security pass x HEAD'
-expect "guard: read refuses a push on the line after an escaped backslash" 2 "a git command" guard read 'echo x\\\\\ngit push'
-expect "guard: read allows a continued git read" 0 "^$" guard read 'git log \\\n--oneline -5'
-# The body file is a whole word: a quoted or escaped blank after it would
-# make a later step part of its name.
-expect "guard: contributor refuses a quoted blank and a parent step after the body file" 2 "a parent step in a command naming the run state's directory" guard contributor 'mkdir -p \"build/pipeline/x.body.md \" && printf x > \"build/pipeline/x.body.md /../x.json\"'
-expect "guard: contributor refuses an escaped blank and a parent step after the body file" 2 "a parent step in a command naming the run state's directory" guard contributor 'printf x > build/pipeline/x.body.md\\ /../x.json'
-expect "guard: merger refuses an escaped blank and a parent step after the body file" 2 "a parent step in a command naming the run state's directory" guard merger 'printf x > build/pipeline/x.body.md\\ /../x.json'
-expect "guard: contributor refuses a quoted blank after the body file" 2 "a pull request body file inside a longer word" guard contributor 'mkdir -p \"build/pipeline/x.body.md \"'
-expect "guard: contributor refuses a step after a quote closing the body file" 2 "a pull request body file that is not a whole word" guard contributor 'printf x > \"build/pipeline/x.body.md\"/y'
-expect "guard: contributor refuses an escaped blank after the body file" 2 "a pull request body file that is not a whole word" guard contributor 'printf x > build/pipeline/x.body.md\\ /y'
-expect "guard: contributor refuses a step after the body file inside quotes" 2 "a pull request body file inside a longer word" guard contributor 'printf x > \"build/pipeline/x.body.md /y\"'
-expect "guard: contributor allows the body gate by its absolute path" 0 "^$" guard contributor 'sh /w/tools/gates.sh pr-body /w/build/pipeline/c.body.md'
+expect "guard: merger refuses every file edit" 2 "a write by an agent that writes no file" guard_edit merger Write /w/tmp/x.md
+expect "guard: merger refuses the body file" 2 "a write to the run state's directory" guard_edit merger Write /w/build/pipeline/c.body.md
+
 # A real tree: a body file that is a link to the run state, a directory
 # linked to the run state's, and a link out of the scout's directory.
 proj="$work/proj"
@@ -648,23 +730,58 @@ ln -s ../build/pipeline "$proj/tmp/run"
 ln -s ../../tools "$proj/tmp/scout/out"
 ln -s missing "$proj/tmp/gone"
 ln -s nope/../run/c.json "$proj/tmp/hop"
-expect "guard: contributor refuses a link at the body file" 2 "a link, move, or copy onto the pull request body file" guard contributor 'ln -sf c.json build/pipeline/c.body.md'
-expect "guard: merger refuses a move onto the body file" 2 "a link, move, or copy onto the pull request body file" guard merger 'mv tmp/x build/pipeline/c.body.md'
+ln -s ../build/pipeline/c.body.md "$proj/tmp/body"
 PROJECT=$proj
-expect "guard: contributor refuses a command on a linked body file" 2 "a pull request body file that is a link" guard contributor 'cat x > build/pipeline/d.body.md'
+expect "guard: contributor refuses the body gate on a linked body file" 2 "a pull request body file that is a link" guard contributor 'sh tools/gates.sh pr-body build/pipeline/d.body.md'
+expect "guard: merger refuses the merge gate on a linked body file" 2 "a pull request body file that is a link" guard merger 'sh tools/gates.sh merge build/pipeline/d.body.md'
 expect "guard: contributor refuses a write to a linked body file" 2 "a pull request body file that is a link" guard_edit contributor Write "$proj/build/pipeline/d.body.md"
-expect "guard: merger refuses a write to a linked body file" 2 "a pull request body file that is a link" guard_edit merger Write "$proj/build/pipeline/d.body.md" build/pipeline
-expect "guard: contributor refuses a linked directory into the run state" 2 "the run state's directory through a link" guard_edit contributor Write "$proj/tmp/run/c.json"
+expect "guard: contributor refuses a write through a link to the body file" 2 "a write to the run state's directory" guard_edit contributor Write "$proj/tmp/body"
+expect "guard: contributor refuses a linked directory into the run state" 2 "a write to the run state's directory" guard_edit contributor Write "$proj/tmp/run/c.json"
+expect "guard: contributor refuses a redirection through a linked directory" 2 "a write to the run state's directory" guard contributor 'cat x > tmp/run/c.json'
+expect "guard: contributor refuses a copy through a linked directory" 2 "a write to the run state's directory" guard contributor 'cp x tmp/run/'
 expect "guard: contributor refuses a path through a dangling link" 2 "a dangling link" guard_edit contributor Write "$proj/tmp/gone/x/c.json"
-expect "guard: contributor refuses a parent step after a missing directory" 2 "a path with a parent step" guard_edit contributor Write "$proj/tmp/nope/../run/c.json"
-expect "guard: contributor refuses a relative parent step" 2 "a path with a parent step" guard_edit contributor Write "tmp/nope/../run/c.json"
+expect "guard: contributor refuses a parent step after a missing directory" 2 "a parent step" guard_edit contributor Write "$proj/tmp/nope/../run/c.json"
+expect "guard: contributor refuses a relative parent step" 2 "a parent step" guard_edit contributor Write "tmp/nope/../run/c.json"
 expect "guard: contributor refuses a link whose target steps back" 2 "a parent step after a missing directory" guard_edit contributor Write "$proj/tmp/hop"
 expect "guard: contributor allows a name with two dots" 0 "^$" guard_edit contributor Write "$proj/tmp/a..b.md"
-expect "guard: read refuses a link out of its directory" 2 "outside tmp/scout through a link" guard_edit read Write "$proj/tmp/scout/out/x.sh" tmp/scout
+expect "guard: read allows a name with two dots in its directory" 0 "^$" guard_edit read Write "$proj/tmp/scout/a..b.md" tmp/scout
+expect "guard: read refuses a link out of its directory" 2 "a write outside tmp/scout, links followed" guard_edit read Write "$proj/tmp/scout/out/x.sh" tmp/scout
+expect "guard: read refuses a redirection through a link out of its directory" 2 "a write outside tmp/scout, links followed" guard read 'echo x > tmp/scout/out/x.sh' tmp/scout
 expect "guard: read allows a pack in its real directory" 0 "^$" guard_edit read Write "$proj/tmp/scout/area.md" tmp/scout
 expect "guard: contributor writes the body file in a real tree" 0 "^$" guard_edit contributor Write "$proj/build/pipeline/c.body.md"
 expect "guard: contributor allows the body gate in a real tree" 0 "^$" guard contributor 'sh tools/gates.sh pr-body build/pipeline/c.body.md'
 PROJECT=/w
+
+# The hook line of every agent file runs the guard of origin/main and
+# refuses on any status but 0: a missing or failing guard refuses, and an
+# edit on the branch has no effect until it is merged.
+# hook FILE COMMAND: FILE's hook line on a Bash call of COMMAND in $hooks.
+hook() {
+  line=$(sed -n "s/^ *command: '\\(.*\\)'\$/\\1/p" "$1")
+  [ -n "$line" ] || { echo "no hook line in $1"; return 9; }
+  printf '{"tool_name":"Bash","tool_input":{"command":"%s"}}' "$2" | CLAUDE_PROJECT_DIR=$hooks sh -c "$line"
+}
+fresh hooks
+hooks=$PWD
+cp "$here/agent_guard.sh" tools/agent_guard.sh
+commit "chore: the guard"
+git_q update-ref refs/remotes/origin/main HEAD
+echo 'exit 0' > tools/agent_guard.sh
+for f in "$here"/../.claude/agents/*.md; do
+  a=$(basename "$f" .md)
+  expect "guard: the $a hook allows a git read" 0 "^$" hook "$f" 'git log --oneline -1'
+  expect "guard: the $a hook refuses with main's guard, not the branch's" 2 "git push" hook "$f" 'git push origin x'
+done
+f="$here/../.claude/agents/checker.md"
+echo 'exit 1' > tools/agent_guard.sh
+commit "chore: a failing guard"
+git_q update-ref refs/remotes/origin/main HEAD
+expect "guard: a hook refuses when the guard fails" 2 "" hook "$f" 'ls'
+git_q rm -q tools/agent_guard.sh
+commit "chore: no guard"
+git_q update-ref refs/remotes/origin/main HEAD
+expect "guard: a hook refuses when main has no guard" 2 "" hook "$f" 'ls'
+cd "$work" || exit 1
 
 # ---------------------------------------------------------- docs_lint.sh
 

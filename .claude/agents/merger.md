@@ -8,7 +8,7 @@ hooks:
     - matcher: "Bash"
       hooks:
         - type: command
-          command: 'sh "$CLAUDE_PROJECT_DIR/tools/agent_guard.sh" merger build/pipeline'
+          command: 'g=$(git -C "$CLAUDE_PROJECT_DIR" show origin/main:tools/agent_guard.sh) && sh -c "$g" agent_guard merger || exit 2'
 ---
 
 You wait for CI on one pull request and merge it. You never edit, commit, push a commit, or rerun a job.

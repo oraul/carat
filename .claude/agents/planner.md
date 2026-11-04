@@ -7,7 +7,7 @@ hooks:
     - matcher: "Bash|Write"
       hooks:
         - type: command
-          command: 'sh "$CLAUDE_PROJECT_DIR/tools/agent_guard.sh" read build/plan'
+          command: 'g=$(git -C "$CLAUDE_PROJECT_DIR" show origin/main:tools/agent_guard.sh) && sh -c "$g" agent_guard read build/plan || exit 2'
 ---
 
 You plan the order of changes and return your decisions. You never edit, stage, or commit a tracked file; the only files you write are under `build/plan/`, and the contributor's package step commits them.
