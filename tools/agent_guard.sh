@@ -8,7 +8,8 @@
 # Usage: sh tools/agent_guard.sh PROFILE [DIR] < HOOK-JSON
 #
 # A Bash command is read as the shell reads it: words with their quotes
-# and escapes removed, operators (; && || | &), and redirections. Refused
+# and escapes removed, operators (; && || | &), redirections, and
+# comments, which end at the line break with no continuation. Refused
 # outright, since the guard cannot know what they run: $ in any form
 # (variables, substitutions, ANSI-C quoting), backquotes, parentheses,
 # here-documents, unquoted * ? [ ] { }, a leading ~, a command named by a
@@ -19,20 +20,22 @@
 # pull request body file build/pipeline/NAME.body.md as the body gate's
 # argument, never a link.
 #
-# Forms of every profile: ls cat head tail wc grep diff cmp sort (no -o,
-# --output, --compress-program) uniq (one file at most) cut tr nl comm
-# basename dirname realpath readlink stat du date pwd echo printf true;
-# find without -exec -execdir -ok -okdir -delete -fprint -fprint0 -fprintf
-# -fls; sed -n with a line-number print script; cd to the project or a
-# worktree tmp/.NAME; git with the global options -C PATH and --no-pager
-# and the verbs status log show diff rev-parse merge-base ls-files ls-tree
-# cat-file blame describe shortlog rev-list grep show-ref for-each-ref
-# name-rev (none with --output, --ext-diff, --textconv, --filters,
-# --upload-pack, --receive-pack, --exec, or grep's -O), branch with listing
-# options, remote -v, remote get-url origin, remote set-head origin main,
-# fetch -q --prune origin, ls-remote origin with listing options and
-# branch names, worktree add, remove, list, and prune of a worktree
-# tmp/.NAME, and checkout -q --detach origin/main inside one (-C).
+# Forms of every profile: ls cat head tail wc grep diff cmp sort (the
+# short options of SORT_FLAGS, -k, and -t) uniq (one file at most) cut tr
+# nl comm basename dirname realpath readlink stat du date pwd echo printf
+# true; find without -exec -execdir -ok -okdir -delete -fprint -fprint0
+# -fprintf -fls; sed -n with a line-number print script; cd to the project
+# or a worktree tmp/.NAME; git with the global options -C (the project or
+# a worktree tmp/.NAME) and --no-pager and the verbs status log show diff
+# rev-parse merge-base ls-files ls-tree cat-file blame describe shortlog
+# rev-list grep show-ref for-each-ref name-rev (none with a prefix of
+# --output, --ext-diff, --textconv, --filters, --upload-pack,
+# --receive-pack, --exec, or --open-files-in-pager, nor grep with a short
+# option cluster holding O), branch with listing options, remote -v,
+# remote get-url origin, remote set-head origin main, fetch -q --prune
+# origin, ls-remote origin with listing options and branch names, worktree
+# add, remove, list, and prune of a worktree tmp/.NAME, and checkout -q
+# --detach origin/main inside one (-C).
 #   read         adds mkdir and rm under DIR; make -s, -C tmp/.NAME, the
 #                targets dev-build test-build bench-budget metrics
 #                metrics-compare bench, and PREFIX and SPINEL_CACHE_DIR at
@@ -87,14 +90,15 @@ refuse() {
 case "$profile" in read|merger|contributor) ;; *) refuse "no such profile" ;; esac
 
 # The first JSON string field KEY of the input with its escapes undone; an
-# escaped newline becomes ";", so each line reads as a command of its own,
-# but a newline after an odd run of backslashes is a line continuation the
-# shell joins, so the pair is dropped: 'git \<newline>push' is git push. A
-# \u escape of a printable ASCII character is that character, any other
-# one "?", which the lexer refuses outside quotes.
+# escaped newline becomes the character \001, which lex reads as the shell
+# reads a line break: inside single quotes a character of the word, at the
+# end of a comment its end, after a backslash elsewhere a line continuation
+# dropped with it, and otherwise the end of a command. A raw \001 becomes
+# "?". A \u escape of a printable ASCII character is that character, any
+# other one "?", which the lexer refuses outside quotes.
 field() {
-  tr '\n\r' '  ' | K="$1" awk '
-    BEGIN { HEX = "0123456789abcdef" }
+  tr '\n\r\001' '  ?' | K="$1" awk '
+    BEGIN { HEX = "0123456789abcdef"; NL = "\001" }
     {
       if (!match($0, "\"" ENVIRON["K"] "\"[ \t]*:[ \t]*\"")) exit
       s = substr($0, RSTART + RLENGTH)
@@ -106,12 +110,7 @@ field() {
         if (c == "\\") {
           i++
           c = substr(s, i, 1)
-          if (c == "n") {
-            run = 0
-            while (run < length(out) && substr(out, length(out) - run, 1) == "\\") run++
-            if (run % 2 == 1) { out = substr(out, 1, length(out) - 1); continue }
-            c = ";"
-          }
+          if (c == "n") c = NL
           else if (c == "t" || c == "r") c = " "
           else if (c == "u") {
             h = tolower(substr(s, i + 1, 4))
@@ -119,7 +118,7 @@ field() {
             c = "?"
             if (h ~ /^00[0-7][0-9a-f]$/) {
               v = (index(HEX, substr(h, 3, 1)) - 1) * 16 + index(HEX, substr(h, 4, 1)) - 1
-              if (v == 10) c = ";"
+              if (v == 10) c = NL
               else if (v == 9 || v == 13) c = " "
               else if (v >= 32 && v < 127) c = sprintf("%c", v)
             }
@@ -135,34 +134,41 @@ field() {
 # lex: the command's tokens, one a line: W and a word with its quotes and
 # escapes removed, O and an operator, R and w (a write), r (a read), or d
 # (a descriptor copy, or a write when its target is not a descriptor)
-# before the redirection's target word, or E and the reason to refuse.
+# before the redirection's target word, or E and the reason to refuse. A
+# line break (\001 from field) is a ";" between commands and inside quotes;
+# a backslash before it outside single quotes joins the lines, and it ends
+# a comment, where a backslash escapes nothing. Only a bare digit run, no
+# quote or backslash in it, is the descriptor before a redirection.
 lex() {
   awk '
     function fail(why) { print "E" why; exit }
-    function flush() { if (inw) print "W" w; w = ""; inw = 0 }
+    function flush() { if (inw) print "W" w; w = ""; inw = 0; lit = 0 }
     {
-      s = $0; n = length(s); w = ""; inw = 0; q = ""
+      NL = "\001"
+      s = $0; n = length(s); w = ""; inw = 0; lit = 0; q = ""
       for (i = 1; i <= n; i++) {
         c = substr(s, i, 1)
-        if (q == "\047") { if (c == "\047") q = ""; else w = w c; continue }
+        d = substr(s, i + 1, 1)
+        if (q == "\047") { if (c == "\047") q = ""; else w = w (c == NL ? ";" : c); continue }
         if (q == "\"") {
           if (c == "\"") { q = ""; continue }
           if (c == "$" || c == "`") fail("a $ expansion or a command substitution inside double quotes")
-          if (c == "\\" && i < n && index("\"\\$`", substr(s, i + 1, 1))) { i++; w = w substr(s, i, 1); continue }
-          w = w c
+          if (c == "\\" && d == NL) { i++; continue }
+          if (c == "\\" && i < n && index("\"\\$`", d)) { i++; w = w d; continue }
+          w = w (c == NL ? ";" : c)
           continue
         }
-        if (c == "\047" || c == "\"") { q = c; inw = 1; continue }
-        if (c == "\\") { if (i < n) { i++; w = w substr(s, i, 1) }; inw = 1; continue }
+        if (c == "\\" && d == NL) { i++; continue }
+        if (c == "\047" || c == "\"") { q = c; inw = 1; lit = 1; continue }
+        if (c == "\\") { if (i < n) { i++; w = w d }; inw = 1; lit = 1; continue }
         if (c == "$") fail("a $ expansion: a variable, a substitution, or ANSI-C quoting")
         if (c == "`") fail("a command substitution")
         if (c == "(" || c == ")") fail("a subshell, a group, or a process substitution")
         if (index("*?[]{}", c)) fail("an unquoted glob or brace character " c)
         if (c == "~" && !inw) fail("a ~ expansion")
-        if (c == "#" && !inw) { while (i < n && substr(s, i + 1, 1) != ";") i++; continue }
+        if (c == "#" && !inw) { while (i < n && substr(s, i + 1, 1) != NL) i++; continue }
         if (c == " ") { flush(); continue }
-        if (c == ";") { flush(); print "O;"; continue }
-        d = substr(s, i + 1, 1)
+        if (c == ";" || c == NL) { flush(); print "O;"; continue }
         if (c == "&") {
           flush()
           if (d == "&") { print "O&&"; i++ }
@@ -177,7 +183,7 @@ lex() {
           continue
         }
         if (c == "<" || c == ">") {
-          if (inw && w ~ /^[0-9]+$/) { w = ""; inw = 0 } else flush()
+          if (inw && !lit && w ~ /^[0-9]+$/) { w = ""; inw = 0 } else flush()
           if (c == "<" && d == "<") fail("a here-document or a here-string")
           if (d == "&") { i++; print "Rd"; continue }
           if (d == ">" || d == "|") i++
@@ -319,6 +325,14 @@ worktree() {
   case "$rel" in tmp/.toolchain|tmp/.spinel) return 1 ;; esac
 }
 
+# project_or_worktree PATH: PATH is the project or a worktree tmp/.NAME.
+project_or_worktree() {
+  case "$1" in
+    "$project"|"$project_real"|.) return 0 ;;
+  esac
+  worktree "$1"
+}
+
 # options_in LIST WORD...: every WORD is one of LIST.
 options_in() {
   list=" $1 "
@@ -333,7 +347,11 @@ git_form() {
   wt=""
   while [ $# -gt 0 ]; do
     case "$1" in
-      -C) [ $# -ge 2 ] || refuse "git -C without a path"; wt=$2; shift 2 ;;
+      -C)
+        [ $# -ge 2 ] || refuse "git -C without a path"
+        project_or_worktree "$2" || refuse "git -C other than the project or a worktree tmp/.NAME, since a repository elsewhere brings its own configuration: $2"
+        wt=$2
+        shift 2 ;;
       -c)
         [ $# -ge 2 ] || refuse "git -c without a value"
         case "$profile:$2" in
@@ -353,10 +371,14 @@ git_form() {
     status|log|show|diff|rev-parse|merge-base|ls-files|ls-tree|cat-file|blame|describe|shortlog|rev-list|grep|show-ref|for-each-ref|name-rev)
       for a in "$@"; do
         case "$a" in
-          --output*|--ext-diff|--textconv|--filters|--upload-pack*|--receive-pack*|--exec*)
-            refuse "git $verb $a, which writes or runs a command" ;;
-          -O*|--open-files-in-pager*)
-            [ "$verb" != grep ] || refuse "git grep $a, which runs a command" ;;
+          --?*)
+            name=${a#--}
+            name=${name%%=*}
+            for bad in output ext-diff textconv filters upload-pack receive-pack exec open-files-in-pager; do
+              case "$bad" in "$name"*) refuse "git $verb $a, a prefix of --$bad, which writes or runs a command" ;; esac
+              case "$name" in "$bad"*) refuse "git $verb $a, which writes or runs a command" ;; esac
+            done ;;
+          -*O*) [ "$verb" != grep ] || refuse "git grep $a, whose -O runs a command" ;;
         esac
       done ;;
     branch)
@@ -558,6 +580,39 @@ files_form() {
   done
 }
 
+# sort_form: sort with short options of SORT_FLAGS and -k -t with their
+# values only, since GNU sort clusters short options (-uo FILE) and takes
+# a long option by any unambiguous prefix (--outp, --compress-prog).
+SORT_FLAGS=bdfghiMnRrsuVzcCm
+sort_form() {
+  shift
+  value=""
+  ends=""
+  for a in "$@"; do
+    if [ -n "$value" ]; then value=""; continue; fi
+    [ -z "$ends" ] || continue
+    case "$a" in
+      --) ends=1 ;;
+      -) ;;
+      --*) refuse "the sort option $a, since a long option can write a file or run a command" ;;
+      -*)
+        rest=${a#-}
+        while [ -n "$rest" ]; do
+          ch=${rest%"${rest#?}"}
+          rest=${rest#?}
+          case "$ch" in
+            k|t) [ -n "$rest" ] || value=1; rest="" ;;
+            *)
+              case "$SORT_FLAGS" in
+                *"$ch"*) ;;
+                *) refuse "the sort option -$ch in $a; sort takes only -$SORT_FLAGS, -k, and -t" ;;
+              esac ;;
+          esac
+        done ;;
+    esac
+  done
+}
+
 # judge WORD...: one simple command, its assignments first.
 judge() {
   [ $# -gt 0 ] || return 0
@@ -584,10 +639,7 @@ judge() {
   [ -z "$envs" ] || [ "$1" = sh ] || refuse "an assignment before $1"
   case "$1" in
     ls|cat|head|tail|wc|grep|diff|cmp|cut|tr|nl|comm|basename|dirname|realpath|readlink|stat|du|date|pwd|echo|printf|true) ;;
-    sort)
-      for a in "$@"; do
-        case "$a" in -o*|--output*|--compress-program*) refuse "sort $a, which writes or runs a command" ;; esac
-      done ;;
+    sort) sort_form "$@" ;;
     uniq)
       n=0
       for a in "$@"; do case "$a" in -*) ;; *) n=$((n + 1)) ;; esac; done
@@ -602,11 +654,7 @@ judge() {
       shift 3
       for a in "$@"; do case "$a" in -*) refuse "the sed option $a" ;; esac; done ;;
     cd)
-      [ $# -eq 2 ] || refuse "cd other than to the project or a worktree tmp/.NAME"
-      case "$2" in
-        "$project"|"$project_real"|.) ;;
-        *) worktree "$2" || refuse "cd other than to the project or a worktree tmp/.NAME: $2" ;;
-      esac ;;
+      [ $# -eq 2 ] && project_or_worktree "$2" || refuse "cd other than to the project or a worktree tmp/.NAME: ${2:-}" ;;
     git) git_form "$@" ;;
     make) make_form "$@" ;;
     sh) script_form "$@" ;;

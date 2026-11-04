@@ -608,7 +608,11 @@ for p in read merger contributor; do
   expect "guard: $p refuses a git read that writes a file" 2 "git diff --output=x" guard $p 'git diff --output=x'
   expect "guard: $p refuses a fetch with a refspec" 2 "git fetch other than" guard $p 'git fetch origin x:refs/remotes/origin/main'
   expect "guard: $p refuses a remote that runs a command" 2 "git ls-remote of other than origin" guard $p 'git ls-remote --heads \"ext::sh -c x\" main'
-  expect "guard: $p refuses a quoted blank in the -C path before push" 2 "git push" guard $p 'git -C \"my dir\" push origin x'
+  expect "guard: $p refuses a -C path outside the project's worktrees" 2 "git -C other than the project or a worktree" guard $p 'git -C \"my dir\" push origin x'
+  expect "guard: $p refuses a repository of its own by -C" 2 "git -C other than the project or a worktree" guard $p 'git -C tmp/scout/ev fetch -q origin' tmp/scout
+  expect "guard: $p allows -C of the project and of a worktree" 0 "^$" guard $p 'git -C /w log -1 && git -C . status && git -C tmp/.base log -1'
+  expect "guard: $p refuses a line continuation inside a comment" 2 "git push" guard $p 'true # x \\\ngit push origin HEAD'
+  expect "guard: $p reads a comment to its line break only" 0 "^$" guard $p 'ls # a; git push \\\ngit status'
   expect "guard: $p refuses a review record" 2 "tools/run_state.sh review" guard $p 'sh tools/run_state.sh review c security pass x HEAD'
   expect "guard: $p refuses a quoted review record" 2 "tools/run_state.sh review" guard $p "sh tools/run_state.sh re''view c security pass x"
   expect "guard: $p refuses a phase record" 2 "tools/run_state.sh phase" guard $p 'sh tools/run_state.sh phase c plan'
@@ -674,7 +678,19 @@ expect "guard: read refuses a removal without a directory" 2 "a write by an agen
 expect "guard: read refuses sed that writes" 2 "sed other than" guard read 'sed -i s/a/b/ x'
 expect "guard: read refuses sed that runs a command" 2 "sed other than" guard read 'sed -n \"1e git push\" x'
 expect "guard: read refuses find that runs a command" 2 "find -exec" guard read 'find . -exec git push \\;'
-expect "guard: read refuses sort that writes" 2 "sort -o" guard read 'sort -o tools/x.sh x'
+expect "guard: read refuses sort that writes" 2 "the sort option -o" guard read 'sort -o tools/x.sh x'
+expect "guard: read refuses sort -o in a cluster" 2 "the sort option -o in -uo" guard read 'sort -uo .git/config x' tmp/scout
+expect "guard: read refuses a long sort option by its prefix" 2 "the sort option --outp=.git/config" guard read 'sort --outp=.git/config x' tmp/scout
+expect "guard: read refuses a sort compress program" 2 "the sort option -S" guard read 'sort -S 1 --compress-prog=sh x'
+expect "guard: read refuses a long sort option after its operands" 2 "the sort option --compress-prog=sh" guard read 'sort x --compress-prog=sh'
+expect "guard: read allows sort with its listed options" 0 "^$" guard read 'sort -u -k2,2 -t: -rn -k 3 x | sort -to -- -o'
+expect "guard: read refuses git grep -O in a cluster" 2 "git grep -nOCMD, whose -O runs a command" guard read 'git grep -nOCMD x'
+expect "guard: read refuses git grep's pager by a prefix" 2 "a prefix of --open-files-in-pager" guard read 'git grep --open=sh x'
+expect "guard: read refuses textconv by a prefix" 2 "a prefix of --textconv" guard read 'git cat-file --textc HEAD:a'
+expect "guard: read allows a git read with a long option" 0 "^$" guard read 'git log --no-ext-diff --exit-code --oneline -1 && git diff -O tmp/order --stat'
+expect "guard: read refuses a quoted digit before a redirection" 2 "a write outside tmp/scout, links followed: 1" guard read 'rm -rf \"1\">/dev/null' tmp/scout
+expect "guard: read refuses an escaped digit before a redirection" 2 "a write outside tmp/scout, links followed: 1" guard read 'rm -rf \\1>/dev/null' tmp/scout
+expect "guard: read takes a bare digit before a redirection as a descriptor" 0 "^$" guard read 'rm -f tmp/scout/x 2>/dev/null' tmp/scout
 expect "guard: read refuses a metrics script of another form" 2 "tools/metrics.sh other than" guard read 'sh tools/metrics.sh shell'
 expect "guard: read refuses the merge gate" 2 "tools/gates.sh with other than gate names" guard read 'sh tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: read refuses an assignment before another script" 2 "an assignment before tools/run_state.sh" guard read 'BASE=x sh tools/run_state.sh show c'
