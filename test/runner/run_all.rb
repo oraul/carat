@@ -16,6 +16,7 @@ require_relative "../domain_buffer"
 require_relative "../domain_buffer_list"
 require_relative "../domain_edits"
 require_relative "../domain_ex_grammar"
+require_relative "../domain_ex_range"
 require_relative "../domain_filetype"
 require_relative "../domain_frame"
 require_relative "../domain_grammar"
@@ -30,6 +31,7 @@ require_relative "../domain_rc_parser"
 require_relative "../domain_registers"
 require_relative "../domain_search"
 require_relative "../domain_selection"
+require_relative "../domain_substitute"
 require_relative "../domain_syntax_cache"
 require_relative "../domain_tab_list"
 require_relative "../domain_theme"
@@ -83,6 +85,7 @@ when "domain_buffer" then DomainBufferTest.main
 when "domain_buffer_list" then DomainBufferListTest.main
 when "domain_edits" then DomainEditsTest.main
 when "domain_ex_grammar" then DomainExGrammarTest.main
+when "domain_ex_range" then DomainExRangeTest.main
 when "domain_filetype" then DomainFiletypeTest.main
 when "domain_frame" then DomainFrameTest.main
 when "domain_grammar" then DomainGrammarTest.main
@@ -97,6 +100,7 @@ when "domain_rc_parser" then DomainRcParserTest.main
 when "domain_registers" then DomainRegistersTest.main
 when "domain_search" then DomainSearchTest.main
 when "domain_selection" then DomainSelectionTest.main
+when "domain_substitute" then DomainSubstituteTest.main
 when "domain_syntax_cache" then DomainSyntaxCacheTest.main
 when "domain_tab_list" then DomainTabListTest.main
 when "domain_theme" then DomainThemeTest.main

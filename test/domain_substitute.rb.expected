@@ -1,0 +1,3 @@
+ok   an empty line has no characters
+ok   a word counts its characters
+domain_substitute: 2 passed, 0 failed

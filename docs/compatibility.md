@@ -178,6 +178,7 @@ The selection runs from the anchor, where visual mode started, to the cursor, bo
 | `o` | `visual.swap_ends` | Exchange the anchor and the cursor | `editor_visual` |
 | `O` | `visual.swap_corner` | In a block, go to the other corner on the same row; otherwise as `o` | `editor_visual` |
 | `gv` | `visual.reselect` | Select the window's last selection again, clamped to the buffer; in visual mode exchange it with the current one | `editor_visual` |
+| `:` | `mode.cmdline` | Leave the visual mode and enter command-line mode with `'<,'>`, the lines of the selection | `editor_substitute` |
 | `[count]iw aw iW aW is as ip ap` and the bracket and quote objects | `textobject.*` | On one character (one row for `ip ap`) select the object; on more, words, sentences, and paragraphs extend the cursor end and brackets and quotes select the smallest larger object | `editor_visual` |
 | `["x]d`, `x`, `<Del>` | `operator.delete` | Delete the selection; the cursor goes to its start, the first non-blank for lines, the top-left for a block | `editor_visual` |
 | `["x]y` | `operator.yank` | Yank the selection; the cursor goes to its start | `editor_visual` |

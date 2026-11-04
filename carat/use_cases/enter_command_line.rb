@@ -7,9 +7,10 @@ require_relative "outcome"
 
 module Carat
   module UseCases
-    # ":": command-line mode with an empty line; a plugin's prompt or a
-    # search prompt that was open is closed, and a recall of the command
-    # history starts again.
+    # ":": command-line mode with an empty line, or from a visual mode,
+    # which it leaves as Esc does, with "'<,'>", the range of the
+    # selection; a plugin's prompt or a search prompt that was open is
+    # closed, and a recall of the command history starts again.
     class EnterCommandLine
       attr_reader :plugin_ui #: Domain::PluginUi
       attr_reader :search_prompt #: Domain::SearchPrompt
@@ -24,8 +25,10 @@ module Carat
 
       #: (Domain::EditorState) -> Outcome
       def call(state)
+        visual = Domain::Mode.visual?(state.mode)
+        state.end_visual if visual
         state.mode = Domain::Mode::CMDLINE
-        state.cmdline = ""
+        state.cmdline = visual ? "'<,'>" : ""
         @plugin_ui.close_prompt
         @search_prompt.close
         @command_history.restart

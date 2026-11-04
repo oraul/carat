@@ -377,7 +377,7 @@ Files:
 - `carat/use_cases/files/resolve_inside.rb`: `ResolveInside#call(root, dir, path)`, the one comparison of real paths (`FilePort#real_path`): `Outside the tree root: path` unless the directory with its links resolved is the resolved root or inside it; built by `PluginHost` and shared by the three.
 - `carat/use_cases/recall_history.rb`: `RecallHistory#call`, `<Up>` and `<Down>` through the prompt's `History` (`:` or search).
 
-Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`.
+Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`.
 
 Designs: `ex-write-quit-all` (all Decisions), `dependency-injection` (Ex names; ExecuteEx moves to use_cases/ex), `editor-foundation` (Use cases), `plugin-explorer` (The file requests are validated in the host), `use-case-boundaries` (The splits).
 
