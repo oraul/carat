@@ -505,3 +505,33 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `.claude/workflows/deliver-change.js` (line 477), which takes the brief from the `item:` line of `plan-needed` as the resume agent returned it. Quality advisory of `pipeline-speed` at b0df2ac092ed.
 - Why it matters: a multi-kilobyte item is re-emitted as model output on every start, spending the tokens the change exists to cut, and may come back truncated or paraphrased.
 - Fix outline: when the brief is only the change name, tell the scouts and the contributor to read the item naming the change in `docs/queue.md` themselves, and drop the `item:` line from `plan-needed` and the resume schema.
+
+## The merge gates run the branch's own scripts and nothing re-checks the pushed head
+
+- Where: step 4 of `.claude/agents/merger.md` (line 22), which runs the branch working tree's `tools/gates.sh` and `tools/run_state.sh` after the package step that follows the reviews, and `.claude/workflows/deliver-change.js` (line 480), which passes the merger no reviewed head. Periodic security Medium (7) at 598cf1b.
+- Why it matters: a contributor led astray can leave an edited gate script or a forged pushed record, and the merger squash-merges a head no review saw; confidence 7 is below the blocking bar, but it is the last check before `main`.
+- Fix outline: the merge refuses a head other than the commit the security review passed, runs gates the branch cannot have edited, and refuses a dirty tree, with a `tools/tools_test.sh` case. Queued as part (d) of `pipeline-speed-b`.
+
+## The guard skips a short cluster that names cp's target directory
+
+- Where: `files_form` in `tools/agent_guard.sh` (line 625), which skips any letters-only short cluster. Periodic security Low (7) at 598cf1b.
+- Why it matters: `cp -r -tbuild pipeline` passes the contributor profile and copies a project-root `pipeline` directory into `build/pipeline`, overwriting run state records (`stage.*`, `phase.check`, `pushed`) the guard refuses to write directly.
+- Fix outline: refuse a cluster holding `t`, `T`, or `S` for `cp` and `mv`, or judge the attached value and every operand placed under it as a write target, with a `tools/tools_test.sh` case. Queued in `guard-lows`.
+
+## The Skill tool has no hook
+
+- Where: the tools of `.claude/agents/security-reviewer.md` (line 4), the other reviewers, and the contributor, whose hooks match only Bash, Edit, and Write. Periodic security Low (4) at 598cf1b.
+- Why it matters: an agent led astray can load any listed skill, including one that changes the configuration or runs in a subagent outside its guard.
+- Fix outline: a Skill matcher whose check admits only the skills each agent needs, with a `tools/tools_test.sh` case. Queued in `guard-lows`.
+
+## The guard does not read a tilde after = or : as bash expands it
+
+- Where: the lexer of `tools/agent_guard.sh` (line 173), which refuses only a leading `~`. Periodic quality advisory at 598cf1b.
+- Why it matters: `cat a=~/x` and `BASE=~ sh tools/gates.sh trailer` pass while bash runs them with the home directory expanded, against the header's claim that a command is read as the shell reads it; harmless today, since no form takes a path value with a tilde.
+- Fix outline: refuse an unquoted `~` right after `=` or `:` in a word that starts with an identifier and `=`, with a `tools/tools_test.sh` case. Queued in `guard-advisories`.
+
+## The delivered-changes list has no line for guard-allowlist
+
+- Where: the Delivered changes list closing `docs/codebase-map.md` (line 605), which ends at `#46 buffer-search`. Periodic quality advisory at 598cf1b.
+- Why it matters: the list `CLAUDE.md` names as the record of delivered changes misses pull request 47 and the seven items it left in `docs/backlog.md`.
+- Fix outline: add the `#47` line, with the check `docs-currency` already asks for: every merged pull request of `docs/metrics.tsv` appears in the list. Queued in `docs-currency`.
