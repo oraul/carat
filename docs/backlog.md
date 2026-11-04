@@ -292,7 +292,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## CLAUDE.md has under 1,000 bytes of room in its budget
 
-- Where: `CLAUDE.md`, 30,428 of its 30,720-byte budget in `tools/docs_lint.sh` (`BUDGETS`) since `pipeline-speed`, which trimmed it from 30,719. Periodic quality advisory at df5a203; `docs/architecture.md` is at 88,054 of 88,064 and is handled by `project-config-guards`.
+- Where: `CLAUDE.md`, 30,470 of its 30,720-byte budget in `tools/docs_lint.sh` (`BUDGETS`) since `pipeline-speed-b`, whose Commands line grew it from the 30,428 `pipeline-speed` left after trimming it from 30,719. Periodic quality advisory at df5a203; `docs/architecture.md` is at 88,054 of 88,064 and is handled by `project-config-guards`.
 - Why it matters: `CLAUDE.md` requires its Commands and Layout sections to stay in sync with the code, so the next change that must add a line there fails `make docs-lint` and pays for a trim it did not plan.
 - Fix outline: the first change that needs room trims `CLAUDE.md` in the same change, moving detail to `docs/codebase-map.md` or the agents' files, rather than raising the budget; accepted when `make docs-lint` passes with `CLAUDE.md` at most 90% of its budget. Queued in `docs-currency`.
 
@@ -523,3 +523,21 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the repository root, where agents left `build_check_out_tmp` and `.err` twice; the briefs under `.claude/agents/` name no place for scratch output, and the push gates of `tools/run_state.sh push` and `tools/gates.sh` do not look at untracked files (the checker and the security reviewer test `git status --porcelain --untracked-files=no`). The user's request in the brief of `pipeline-speed-b`.
 - Why it matters: an untracked file outside `build/`, `dist/`, and `tmp/` can be staged by a later `git add` and reach a pull request, and it shows in every `git status` of the next run.
 - Fix outline: the agents' briefs send scratch output under `build/` or `tmp/`, and a push gate refuses an untracked file outside the ignored paths, with a `tools/tools_test.sh` case. Queued in `pipeline-speed-c`.
+
+## A test-only fix after a passing quality review gets the whole branch reviewed
+
+- Where: `.claude/workflows/deliver-change.js` line 375, the scope of a fix review. Quality advisory at d820b39 in `pipeline-speed-b`.
+- Why it matters: after a passing quality review followed by a bench or CI fix, `blockedAt` is not that commit, so `files` is null and a test-only fix gets the whole branch reviewed again, where the old `priorQuality` offered only the fix diff; the review costs tokens and rounds the fix does not need.
+- Fix outline: when the last quality review passed and no blocked files are recorded at it, give the scope command with no files (tests and records only), with a case in the workflow's tests.
+
+## add_note strips a leading commit with two different patterns
+
+- Where: `tools/run_state.sh` line 577, `add_note`, whose `sed` strips a leading commit as `[0-9a-f]{7,40}` while its `awk` side strips `[0-9a-f]+`. Quality advisory at d820b39 in `pipeline-speed-b`.
+- Why it matters: an advisory with no commit whose first word is made of hex letters (add, dead, decade) is never matched against the recorded notes, so it is noted twice and reaches the backlog twice.
+- Fix outline: strip the same 7-to-40 hex pattern on both sides, for example both in `awk`, with a `tools/tools_test.sh` case for a note starting with `add`.
+
+## The merge's stages gate cannot pass a renamed or removed stage
+
+- Where: `tools/gates.sh` line 195, the merge's stages gate, which reads `CHECK_STAGES` from main's Makefile with `sed`, while `tools/run_state.sh check` reads the list with `make -s stages`. Quality advisory at d820b39 in `pipeline-speed-b`; the archived design of `pipeline-speed-b` does not cover the case.
+- Why it matters: a change that renames or removes a stage cannot pass its own merge, since main's list names a stage the branch never ran, and the stage list now has two readers that can disagree.
+- Fix outline: use one reader of the list for both scripts, and accept a stage main names that the branch's `CHECK_STAGES` dropped when the branch's diff removes it from the Makefile (or record the rename in the run state), with a `tools/tools_test.sh` case.
