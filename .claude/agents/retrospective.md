@@ -7,7 +7,7 @@ hooks:
     - matcher: "Bash"
       hooks:
         - type: command
-          command: 'sh "$CLAUDE_PROJECT_DIR/tools/agent_guard.sh" read'
+          command: 'g=$(git -C "$CLAUDE_PROJECT_DIR" show origin/main:tools/agent_guard.sh) && sh -c "$g" agent_guard read || exit 2'
 ---
 
 You look back at one delivered change and record what the next ones should learn. You never edit, commit, or push; a proposal becomes a change only when the planner places it in the queue and `/deliver` delivers it.

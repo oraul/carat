@@ -308,59 +308,23 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the one-start wait holds only while the agent harness lets a foreground shell call sleep up to 540 seconds; if it refuses or shortens it, the merger falls back to returning pending, the cost of 36 to 58 merge tool calls a run that `workflow-records` set out to remove.
 - Fix outline: confirm on the first full run (`guard-hardening`) that the merger used one start with no pending note; record the harness behavior in the header and the merger's file, and if it fails, give the workflow the wait between merger starts instead. Queued as a fold of `workflow-cost`.
 
-## The guard does not refuse Bash ANSI-C quoting
-
-- Where: the command normalization of `tools/agent_guard.sh` (line 92), which strips quotes and backslashes before matching the refused commands. Security review of `guard-hardening`, Low (7); the gap predates that change.
-- Why it matters: `git $'\x70ush'` or `run_state.sh $'\x72eview'` reaches the shell as `git push` or a review record but passes the guard as an unrecognized word; the merge gate's records and branch protection stand behind it, so it is a defense-in-depth gap.
-- Fix outline: refuse any Bash command containing `$'` or `$"` for the read, merger, and contributor profiles, and add a `tools/tools_test.sh` case for each form. Queued in `guard-allowlist`.
-
-## The guard's header overstates the parent-step rule and runs past its wrap width
-
-- Where: the header of `tools/agent_guard.sh` (lines 23 to 42, the claim at line 26, the long lines 27 and 41). Quality advisory of `guard-hardening` at a272de71f10b.
-- Why it matters: the header says a path or a link target with a parent step (`..`) is refused for every profile, but `real_path` refuses a link target only when its `..` follows a missing directory, as the archived design of `guard-hardening` states exactly, so a reader of the header expects a refusal the code does not make.
-- Fix outline: word the header as the design does (a link target whose parent step follows a missing directory) and rewrap lines 23 to 42 to the header's width. Queued in `guard-allowlist`.
-
 ## Advisories repeated at a later round are recorded twice
 
 - Where: `addAdvisories` in `.claude/workflows/deliver-change.js` (line 281) and `seed` (line 200). Quality advisory of `guard-hardening` at a272de71f10b.
 - Why it matters: `addAdvisories` deduplicates by exact text, but the quality reviewer's text starts with its head commit while `seed` strips it from the run state's notes, so an advisory repeated at a later round or after a resume is handed to `docs/backlog.md` again, against the design's no-duplicates claim.
-- Fix outline: strip a leading commit hash in `addAdvisories` so both paths key on the same text, and check it with a resumed run that re-reports one advisory. Queued as part (d) of `workflow-cost`.
-
-## body_links repeats real_path's relative-to-absolute step
-
-- Where: the file-tool branch of `body_links` in `tools/agent_guard.sh` (line 154). Quality advisory of `guard-hardening` at a272de71f10b.
-- Why it matters: the branch repeats the conversion `real_path` already makes, and the real-path check of the run state's directory after `BODY_FILE` already refuses a linked body file, so two rules judge one case and can drift apart.
-- Fix outline: drop the branch, or have it call `real_path`, so one rule judges a linked body file; keep the `tools/tools_test.sh` case for a linked body file passing. Queued in `guard-allowlist`.
+- Fix outline: strip a leading commit hash in `addAdvisories` so both paths key on the same text, and check it with a resumed run that re-reports one advisory. Queued in `review-rounds`.
 
 ## priorQuality's local findings shadows the module function
 
 - Where: `priorQuality` in `.claude/workflows/deliver-change.js` (line 323), whose local `const findings` shadows the module-level `findings()` added at line 282. Quality advisory of `guard-hardening` at a272de71f10b.
 - Why it matters: a later edit inside `priorQuality` that means to call `findings()` gets the local array and fails only at run time.
-- Fix outline: rename the local, for example `listed`. Queued as a fold of `workflow-cost`.
+- Fix outline: rename the local, for example `listed`. Queued as a fold of `review-rounds`.
 
-## The code map's agent_guard.sh entry omits its new helpers
+## The contributor can edit the agent files of its own run
 
-- Where: the `tools/agent_guard.sh` entry of `docs/codebase-map.md` (line 48). Quality advisory of `guard-hardening` at a272de71f10b.
-- Why it matters: the map's key methods are where a change starts; the entry omits the `body_word` and `words` helpers and the line-continuation join in `field`, which decide what the guard refuses.
-- Fix outline: add `body_word`, `words`, and the continuation join of `field` to the entry's key methods, within the map's budget. Queued in `guard-allowlist`.
-
-## The guard's git write list misses plain write forms
-
-- Where: the list of refused git subcommands in `tools/agent_guard.sh` (line 137) and the header's claim at line 10. Periodic security Medium (7) at 8c340cd, and the periodic quality finding on the same line.
-- Why it matters: under the read and contributor profiles `git -c alias.p=push p origin x`, `git send-pack`, `git update-ref`, `git branch -f` or `-D`, `git checkout -- .`, and `git config` (a hooks path or a `!` alias runs any command) all pass (probed, exit 0), so a read agent can push a branch and the contributor can push past the pre-push gates and the push limit; three changes in a row found new bypasses of the list.
-- Fix outline: judge each profile's commands against what it needs rather than against a list of refused forms, so an unlisted form fails closed; refuse `-c`, `--config-env`, and config writes; add a `tools/tools_test.sh` case for each form. Queued in `guard-allowlist`.
-
-## settled_at reads a file moved into openspec/ as settled
-
-- Where: `settled_at` in `tools/gates.sh` (line 77), which lists the changes since the reviewed commit with `git diff --name-only` and rename detection on. Periodic security Medium (6) at 8c340cd.
-- Why it matters: a file moved into `openspec/` after the review, such as the CI workflow or the Claude settings, shows only its new path, so the security, stages, and passed gates read the deletion as settled (verified in a scratch repository).
-- Fix outline: list the paths without rename detection, as `tests_only_since` does, and add a `tools/tools_test.sh` case with a code file moved under `openspec/`. Queued in `guard-allowlist`.
-
-## The agents' guard hooks fail open
-
-- Where: the PreToolUse hook line of each agent file under `.claude/agents/` (line 12), which runs the guard from the working tree. Periodic security Low (6) at 8c340cd.
-- Why it matters: Claude Code blocks a call only on exit 2, so a guard that is missing, edited by the contributor, or fails on an error (an `awk` or `sed` failure) allows every call.
-- Fix outline: make any failure of the hook command refuse the call, refuse contributor edits of the guard and the agent files unless the brief names them, and add a `tools/tools_test.sh` case for a failing guard. Queued in `guard-allowlist`.
+- Where: the agent files under `.claude/agents/`, whose hook lines name each agent's guard profile and which the contributor's file tools may write. What remains of the periodic security Low (6) at 8c340cd after `guard-allowlist` made every hook run `origin/main`'s guard and refuse on any failure.
+- Why it matters: if the harness reads an agent file from the working tree when the workflow starts that agent, an edit on the branch (a hook line removed, a profile widened) applies to the later agents of the same run before any review.
+- Fix outline: have the workflow compare `.claude/agents/` and `.claude/settings.json` with `origin/main` before it starts each agent and stop on a difference the brief does not name, or refuse the contributor's edits of them unless a record only the workflow writes names them; add a `tools/tools_test.sh` case.
 
 ## The CI scope reads a moved code file by its new path
 
@@ -374,74 +338,134 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: an agent can write those records by running a script file the guard does not read (`MAKE=true sh tools/run_state.sh check` inside a script), and the checker then runs nothing, leaving `diagnose` and `gates`, which CI leaves out, unchecked.
 - Fix outline: back the check result with a record only the workflow writes and compare it in the records gate, or give the checker a check that ignores earlier records at the head; add a `tools/tools_test.sh` case. Queued in part (b) of `workflow-cost`, which changes the same records.
 
-## The guard checks the parent step twice with different patterns
-
-- Where: `tools/agent_guard.sh` line 240, a `*..*` check for the read and merger profiles repeating the `*/../*` check of line 235. Periodic quality at 8c340cd.
-- Why it matters: one rule is written twice, and the profiles refuse different paths (a name such as `a..b`).
-- Fix outline: keep one pattern that every profile shares. Queued as a fold of `guard-allowlist`.
-
-## The code map's tools_test.sh entry omits the guard and the CI wait
-
-- Where: the `tools/tools_test.sh` entry of `docs/codebase-map.md` (line 49). Periodic quality at 8c340cd.
-- Why it matters: the entry lists the scope, the measurement, the run state, the docs lint, the generators, and the gates, but not the cases of `tools/agent_guard.sh` and `tools/ci_wait.sh`, which make up much of the file since `agent-authority`, `workflow-records`, and `guard-hardening`.
-- Fix outline: add the guard and the wait to the entry, within the map's budget. Queued as a fold of `guard-allowlist`.
-
 ## The search budget charges a line's length on ASCII lines too
 
 - Where: `Carat::Domain::Search.match_at` in `carat/domain/search.rb` (line 101), which charges every match tried its line's length as a fixed cost; the risk note at line 50 of the archived design of `buffer-search` and the Search rows of `docs/compatibility.md`. Quality advisory of `buffer-search` at a36858a2bc88.
 - Why it matters: `docs/spinel-notes.md` implies the engine finds a code-point position without a scan on ASCII-only text, so the charge is needed only on other lines; as it is, `N` or `?` on a long ASCII line (minified code) with more than about 400 million divided by its length matches before the cursor stops with `E363`, a frame highlights only about 20 million divided by the length matches of such a line, and the design says only non-ASCII lines stop.
-- Fix outline: compute `text.ascii_only?` once per line beside its length and charge the fixed cost only when it is false, with a `domain_search` row of a long ASCII line of many matches searched backward; or correct the risk note in the design and `docs/compatibility.md`.
+- Fix outline: compute `text.ascii_only?` once per line beside its length and charge the fixed cost only when it is false, with a `domain_search` row of a long ASCII line of many matches searched backward; or correct the risk note in the design and `docs/compatibility.md`. Queued in `search-tidy`.
 
 ## Match highlighting walks matches left of the scroll and keeps rows painted after the budget stopped
 
 - Where: `FramePresenter#paint_matches` in `carat/adapters/frame_presenter.rb` (line 569) and the back-row store of `paint_row`'s caller (line 382). Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
 - Why it matters: every match is walked from code point 0, also those left of a horizontal scroll, and a row painted after the frame budget stopped is stored with the search stamp, so it stays unhighlighted until the stamp changes.
-- Fix outline: store 0 as the stamp of a row painted under a stopped budget so the next frame retries it, and start the walk from the first match that can reach the left column, with an `adapters_frame_presenter` row for each.
+- Fix outline: store 0 as the stamp of a row painted under a stopped budget so the next frame retries it, and start the walk from the first match that can reach the left column, with an `adapters_frame_presenter` row for each. Queued in `search-structure`.
 
 ## A second caret after the start of a pattern is read as an anchor
 
 - Where: `VimPattern#caret` in `carat/domain/vim_pattern.rb` (line 261), which leaves `@at_start` set. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
 - Why it matters: `/^^` compiles to two anchors, where Vim reads the second `^` as a literal caret, so the search misses a line starting with `^`.
-- Fix outline: clear `@at_start` in `caret` and keep a separate flag so a `*` right after `^` stays literal, with a `domain_vim_pattern` row for `^^` and `^*`.
+- Fix outline: clear `@at_start` in `caret` and keep a separate flag so a `*` right after `^` stays literal, with a `domain_vim_pattern` row for `^^` and `^*`. Queued in `search-tidy`.
 
 ## The search offset is found by a collection scan that differs from the compiler's
 
 - Where: `VimPattern.pattern_end` in `carat/domain/vim_pattern.rb` (line 105), which skips a collection to the first `]` after `[x`, unlike `collection_end`. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
 - Why it matters: `/[\]/]` or `/[^]/]` is cut at the inner `/`, so the rest of the collection is taken as a search offset and the pattern searched is not the one typed.
-- Fix outline: share `collection_end`'s scan (an escaped `]` and a `]` right after `[` or `[^`) with `pattern_end`, with `domain_vim_pattern` rows for both forms.
+- Fix outline: share `collection_end`'s scan (an escaped `]` and a `]` right after `[` or `[^`) with `pattern_end`, with `domain_vim_pattern` rows for both forms. Queued in `search-tidy`.
 
 ## Operate passes the search outcome through an instance variable
 
 - Where: `Operate#search_motion` in `carat/use_cases/operate.rb` (line 131), which sets `@notice` deep in `motion_for` for `call` to read. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
 - Why it matters: the outcome travels by a side channel in a use case instead of a return value, which is harder to follow and easy to leave stale when another path through `motion_for` is added.
-- Fix outline: return the hit's outcome with the operand as a small result value, or have the operator handler run `FindMatch` first and pass the hit in.
+- Fix outline: return the hit's outcome with the operand as a small result value, or have the operator handler run `FindMatch` first and pass the hit in. Queued in `search-structure`.
 
 ## REGISTER_ONE_MOTIONS repeats the search action names
 
 - Where: `REGISTER_ONE_MOTIONS` in `carat/use_cases/operate.rb` (line 47), which lists the eight search action names `Domain::Search` already lists. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
 - Why it matters: a search action added to `Domain::Search` and not to the list would delete within a line without writing register 1, unlike Vim.
-- Fix outline: keep the four sentence and paragraph motions in the list and test `Domain::Search.action?(action)` beside it.
+- Fix outline: keep the four sentence and paragraph motions in the list and test `Domain::Search.action?(action)` beside it. Queued in `search-structure`.
 
 ## The :noh row names a test that has no :noh case
 
 - Where: the `:noh[lsearch]` row of `docs/compatibility.md` (line 262), and task 3.2 of the archived `buffer-search` change, which say `use_cases_ex` proves `:set` and `:noh`; `test/use_cases_ex.rb` has no `:noh` or search-option case. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
 - Why it matters: the compatibility table is how a reader finds the test of a command, and this one points to a file that does not test it (`editor_search` does).
-- Fix outline: drop `use_cases_ex` from the row, or add the `:noh` and search-option cases to `test/use_cases_ex.rb`.
+- Fix outline: drop `use_cases_ex` from the row, or add the `:noh` and search-option cases to `test/use_cases_ex.rb`. Queued in `search-tidy`.
 
 ## Visual star and hash search the word, not the selection
 
 - Where: the `keymap.visual *` and `keymap.visual "#"` lines of `config/default.caratrc` (line 213), bound to `search.word_forward` and `search.word_backward`. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
 - Why it matters: Neovim's default visual `*` and `#` search the selected text, so a user selecting part of a line gets a different search than in Neovim, and the Search rows of `docs/compatibility.md` do not say so.
-- Fix outline: list the difference under Search in `docs/compatibility.md` now, and bind the visual keys to a selection search when one is added.
+- Fix outline: list the difference under Search in `docs/compatibility.md` now, and bind the visual keys to a selection search when one is added. Queued in `search-tidy`.
 
 ## Incremental search spends the full search budget on every key
 
 - Where: `PreviewSearch#call` in `carat/use_cases/search/preview_search.rb` (line 48), which resets the budget to `Domain::SearchBudget::SEARCH`. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
 - Why it matters: with `incsearch` on, a costly pattern spends about 1.5 seconds on each key typed at the prompt, so typing stalls key by key.
-- Fix outline: give the preview its own smaller `SearchBudget` constant and end the preview without a match when it stops, with a `use_cases_search` row.
+- Fix outline: give the preview its own smaller `SearchBudget` constant and end the preview without a match when it stops, with a `use_cases_search` row. Queued in `search-tidy`.
 
 ## Resuming a pattern prompt resets the mode a second time
 
 - Where: `HandleKey#resume` in `carat/use_cases/handle_key.rb` (line 215), which sets the mode to normal outside visual although `CancelCommandLine` and `ExecuteCommandLine` already restored the prompt's return mode. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
 - Why it matters: two places decide the mode after the prompt, so a change to the return mode of the prompt has to be made in both or the second one overrides it.
-- Fix outline: drop the line and keep the return mode the command line restores, checked by the existing `editor_search` rows.
+- Fix outline: drop the line and keep the return mode the command line restores, checked by the existing `editor_search` rows. Queued in `search-structure`.
+
+## The architecture omits three search use cases and the search options of :set
+
+- Where: `docs/architecture.md` section 5.1 (line 167), which names `FindMatch` and `JumpToMatch` but not `OpenSearchPrompt`, `PreviewSearch`, or `RecallHistory`, and line 173, which says `:set` handles filetype and syntax only. Periodic quality at 0b17324.
+- Why it matters: the architecture is binding and is where a change starts; a reader of section 5 misses three use cases and the four search options `SetCommandHandler` now takes. The file is at 88,054 of its 88,064-byte budget.
+- Fix outline: name the three use cases in 5.1 and drop the "only" clause at 173 (or list the search options), within the budget. Queued in `docs-currency`.
+
+## The pattern-source cut and the prompt prefix are written twice
+
+- Where: `VimPattern.pattern_end(text, forward ? 47 : 63)` with bare byte codes in `carat/use_cases/search/find_match.rb:68` and `carat/use_cases/search/preview_search.rb:37`, and the forward-to-`/`-or-`?` choice at `find_match.rb:159` repeating `SearchPrompt#prefix` (`carat/domain/search_prompt.rb:61`). Periodic quality at 0b17324.
+- Why it matters: two use cases decide where a pattern ends and which delimiter a direction uses, with unnamed byte codes, so a fix to one (such as the collection scan of `pattern_end`) can miss the other.
+- Fix outline: one domain function for the pattern source with named delimiter constants and one prefix helper, called from both use cases. Queued in `search-tidy`.
+
+## FindMatch re-implements the domain's character classes
+
+- Where: `FindMatch#keyword?` and `#blank?` in `carat/use_cases/search/find_match.rb` (line 129), `keyword?` through the bare class number in `Motions.code_class(code, false) == 2`. Periodic quality at 0b17324.
+- Why it matters: the word under the cursor for `*` and `#` is judged by a copy of the classes `Domain::Motions` owns, keyed on an unnamed number, so a change to the classes leaves the search motion behind.
+- Fix outline: a code-point predicate in `Domain::Motions` (or a named class constant) called from `FindMatch`, `Motions.keyword?`, and the runs scan. Queued in `search-structure`.
+
+## The local cls is the abbreviation the naming rule forbids
+
+- Where: the local `cls` in `carat/domain/text_objects.rb` (line 75) and the parameter `cls` of `Runs#add` (`carat/domain/runs.rb:18`). Periodic quality at 0b17324.
+- Why it matters: `CLAUDE.md` names `cls` as the counterexample of its naming rule (`char_class`, not `cls`).
+- Fix outline: rename both to `char_class`. Queued as a fold of `search-structure`.
+
+## FramePresenter passes the painted row through instance variables
+
+- Where: `@row_of` and `@current` in `carat/adapters/frame_presenter.rb`, set at lines 356 and 380 and read at 585 by `paint_matches`. Periodic quality at 0b17324.
+- Why it matters: the row and the window's currency reach `paint_matches` through a side channel, as the entry "Operate passes the search outcome through an instance variable" records for `Operate`, so a call order change paints with a stale row.
+- Fix outline: pass the row and the currency to `paint_row` and on to `paint_matches` as arguments and drop the two instance variables. Queued in `search-structure`, with the entry "Match highlighting walks matches left of the scroll and keeps rows painted after the budget stopped".
+
+## The guard accepts a worktree path by its name alone
+
+- Where: `worktree` in `tools/agent_guard.sh` (line 329), which admits any `tmp/.NAME` for `git -C`, `cd`, `checkout`, `make -C`, and `worktree remove`. Security Low (6) of `guard-allowlist` at 31a93d257317.
+- Why it matters: a `tmp/.NAME` that is not a worktree reaches the project repository through discovery (a read agent's `checkout -f --detach origin/main` would force-detach the main tree), or a bare repository the contributor wrote, whose configuration (`diff.external`, `remote.origin.uploadpack`) runs a command.
+- Fix outline: require `tmp/.NAME` to be an existing real directory, not a link, listed in `git worktree list --porcelain` for `-C`, `cd`, `checkout`, `make -C`, and `worktree remove`; for `worktree add`, require only that the path does not exist yet; add a `tools/tools_test.sh` case for each.
+
+## The guard does not judge input redirections
+
+- Where: `redirect` in `tools/agent_guard.sh` (line 752), which checks only write targets. Security Low (5) of `guard-allowlist` at 31a93d257317.
+- Why it matters: `< /dev/tcp/HOST/PORT` opens an outbound connection from any profile, a path for exfiltration through the hostname or DNS by an agent that text in the tree leads astray.
+- Fix outline: refuse a read target under `/dev/tcp/` or `/dev/udp/` (or allow only targets in the project and `/dev/null`), with a `tools/tools_test.sh` case.
+
+## The guard judges relative words after a cd against the project
+
+- Where: the `cd` form in `judge`, `tools/agent_guard.sh` (line 724). Quality advisory of `guard-allowlist` at a979633e8a4d and again at 31a93d257317.
+- Why it matters: `cd tmp/.base && mkdir -p tmp/scout/x` passes with DIR `tmp/scout` and writes `tmp/.base/tmp/scout/x`; benign today, since only DIR- or `build/stages`-prefixed paths inside the worktree are reachable, but the guard no longer reads the command as the shell runs it.
+- Fix outline: refuse a relative write target after a `cd` other than to the project, or resolve it against the `cd` target, with a `tools/tools_test.sh` case.
+
+## The guard admits date with any argument
+
+- Where: the shared plain tools in `judge`, `tools/agent_guard.sh` (line 710). Quality advisory of `guard-allowlist` at 31a93d257317.
+- Why it matters: `date -s 2001-01-01` passes every profile and, run as root, sets the system clock that git and the run state's timestamps read, against an allowlist of what each agent needs (the scout runs only `date -u +FORMAT`).
+- Fix outline: admit `date` only with `-u` and a `+FORMAT` word, with a refusal case in `tools/tools_test.sh`.
+
+## The guard decodes the JSON escapes \b and \f to letters
+
+- Where: `field` in `tools/agent_guard.sh` (line 114), whose else branch keeps the escaped character. Quality advisory of `guard-allowlist` at 5af7fd9d9784, 14b18734b96e, and 31a93d257317.
+- Why it matters: the guard judges the word `lsb` where bash runs `ls` and a backspace, against the header's "any other one ?"; no blank or operator diverges, since bash reads backspace and form feed as word characters, but the guard should read the command as the shell does.
+- Fix outline: decode `\b` and `\f` to `?` like `\u0008` and `\u000c`, with a `tools/tools_test.sh` case for `ls\b#; git push origin x`.
+
+## uniq -f 1 FILE is refused
+
+- Where: `uniq_form` in `tools/agent_guard.sh` (line 668). Quality advisory of `guard-allowlist` at 3efc71ba34f8 and again at 31a93d257317.
+- Why it matters: the value of `-f`, `-s`, or `-w` given as a separate word counts as an operand, so a normal read-only form is refused (it fails closed).
+- Fix outline: skip the word after `-f`, `-s`, and `-w`, with a `tools/tools_test.sh` case.
+
+## The guard header lists printf without its restriction
+
+- Where: the shared forms of the header of `tools/agent_guard.sh` (line 25). Quality advisory of `guard-allowlist` at 3efc71ba34f8 and again at 31a93d257317.
+- Why it matters: `judge` refuses `printf` with a leading option, so the header no longer says what the code allows.
+- Fix outline: write `printf (no leading option)` in the header's shared forms.

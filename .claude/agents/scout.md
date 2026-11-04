@@ -8,7 +8,7 @@ hooks:
     - matcher: "Bash|Write"
       hooks:
         - type: command
-          command: 'sh "$CLAUDE_PROJECT_DIR/tools/agent_guard.sh" read tmp/scout'
+          command: 'g=$(git -C "$CLAUDE_PROJECT_DIR" show origin/main:tools/agent_guard.sh) && sh -c "$g" agent_guard read tmp/scout || exit 2'
 ---
 
 You are a scout for this repository. You read; you never change the repository. Your one product is a context pack: a Markdown file of facts about one area of the code, which a contributor reads instead of searching the codebase itself. `CLAUDE.md` is the source of truth for the rules; you quote it, you do not reinterpret it.

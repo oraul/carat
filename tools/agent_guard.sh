@@ -1,59 +1,108 @@
 #!/bin/sh
-# The guard of the delivery agents. A PreToolUse hook in the frontmatter of
-# each agent under .claude/agents/ runs it with the agent's profile and the
-# tool call's JSON on stdin; it exits 2 with the reason on stderr to refuse
-# the call and 0 to allow it.
+# The guard of the delivery agents: an allowlist of the commands each
+# agent needs. A PreToolUse hook in the frontmatter of each agent under
+# .claude/agents/ runs the copy on origin/main with the agent's profile and
+# the tool call's JSON on stdin, and refuses the call on any status but 0;
+# the guard exits 2 with the reason on stderr to refuse and 0 to allow.
 #
 # Usage: sh tools/agent_guard.sh PROFILE [DIR] < HOOK-JSON
-#   read         the agents that never edit (scout, planner, checker, the
-#                quality and security reviewers, benchmark, reporter,
-#                retrospective): no git command that writes the history, the
-#                index, the tree, or a remote; no gh command; no run state
-#                command that only the workflow or the contributor runs, and
-#                no environment override of tools/run_state.sh; no command
-#                naming the run state's directory
-#   merger       the read rules, but the fast-forward of main, the deletion of
-#                the change branch, and the pull request body file
-#                build/pipeline/CHANGE.body.md are allowed
-#   contributor  no git push (tools/run_state.sh push runs the gates first),
-#                no gh command, no phase, review, stage, or init of the run
-#                state, no environment override of it, and no command or file
-#                edit naming its directory but the body file, which it writes
-# Any other profile refuses every call. A file tool (Write, Edit,
-# NotebookEdit) of a read or merger agent may write only under DIR of the
-# project (CLAUDE_PROJECT_DIR), none without one; the contributor's may
-# write anywhere but the run state's directory. A file edit is judged by its
-# path as written and by its real path, links resolved, and a path or a
-# link target with a parent step (..) is refused for every profile, since
-# the write resolves it lexically and the guard through links; the body
-# file is never a link, nor linked, moved, or copied onto. Text that names a refused
-# command (a pack, a queue, a commit message) goes into a file through the
-# Write tool, since a heredoc carries it in the command.
 #
-# The body file is named in a command only as a whole word of its own, and
-# a command naming the run state's directory takes no parent step.
+# A Bash command is read as the shell reads it: words with their quotes
+# and escapes removed, operators (; && || | &), redirections, and
+# comments, which end at the line break with no continuation. Refused
+# outright, since the guard cannot know what they run: $ in any form
+# (variables, substitutions, ANSI-C quoting), backquotes, parentheses,
+# here-documents, unquoted * ? [ ] { }, a leading ~, a command named by a
+# path, and an assignment before a command other than BASE, CHANGE, and
+# RECORDS before tools/gates.sh. Every simple command must then match a
+# form of its profile; every word is refused with a parent step (..) as a
+# path segment or naming the run state's directory build/pipeline, but the
+# pull request body file build/pipeline/NAME.body.md as the body gate's
+# argument, never a link.
 #
-# It reads the command's text with its quotes, backslashes, and line
-# continuations removed, as the shell joins them into one word, so it
-# stops an agent that text in the tree led astray, not one that hides a
-# command behind a variable or a glob; the merge gate's comparison with the workflow's records (tools/gates.sh
-# records) and branch protection stand behind it.
+# Forms of every profile: ls cat head tail wc grep diff cmp sort (the
+# short options of SORT_FLAGS, -k, and -t) uniq (one file at most) cut tr
+# nl comm basename dirname realpath readlink stat du date pwd echo printf
+# true; find without -exec -execdir -ok -okdir -delete -fprint -fprint0
+# -fprintf -fls; sed -n with a line-number print script; cd to the project
+# or a worktree tmp/.NAME; git with the global options -C (the project or
+# a worktree tmp/.NAME) and --no-pager and the verbs status log show diff
+# rev-parse merge-base ls-files ls-tree cat-file blame describe shortlog
+# rev-list grep show-ref for-each-ref name-rev (none with a prefix of
+# --output, --ext-diff, --textconv, --filters, --upload-pack,
+# --receive-pack, --exec, or --open-files-in-pager, nor grep with a short
+# option cluster holding O), branch with listing options, remote -v,
+# remote get-url origin, remote set-head origin main, fetch -q --prune
+# origin, ls-remote origin with listing options and branch names, worktree
+# add, remove, list, and prune of a worktree tmp/.NAME, and checkout -q
+# --detach origin/main inside one (-C).
+#   read         adds mkdir and rm under DIR; make -s, -C tmp/.NAME, the
+#                targets dev-build test-build bench-budget metrics
+#                metrics-compare bench, and PREFIX and SPINEL_CACHE_DIR at
+#                the project's tmp/.toolchain and build/spinel-cache,
+#                BASE_METRICS, SCENARIOS; sh tools/run_state.sh show status
+#                pending get trusted check bench metrics metric note budget
+#                review-due; [BASE=REV] sh tools/gates.sh GATE...; sh
+#                tools/metrics.sh measure OUT [SCENARIO...], OUT
+#                build/metrics/current.tsv of the project or a worktree
+#                tmp/.NAME with no link on its way, and compare BASE CURRENT
+#   merger       adds sh tools/run_state.sh show status get trusted metric,
+#                set CHANGE ci "red|green HEX", set CHANGE merged HEX;
+#                CHANGE=NAME RECORDS=... sh tools/gates.sh merge BODY; sh
+#                tools/ci_wait.sh N; git push origin --delete BRANCH, git
+#                checkout -q main, git merge -q --ff-only origin/main, git
+#                branch -D BRANCH, BRANCH a Conventional Branch
+#   contributor  adds git -c user.name=X -c user.email=Y, git add commit mv
+#                rm restore, git merge origin/main; make -s -k TARGET with
+#                the variables of MAKE_VARS, no shell character in a value;
+#                openspec and npx @fission-ai/openspec@latest; mkdir rm cp
+#                mv touch chmod; sh tools/run_state.sh show status pending
+#                get budget history, push CHANGE [--ci-fix], set CHANGE pr
+#                N; sh tools/gates.sh GATE... or pr-body BODY
+# Any other profile refuses every call.
+#
+# A write target (a redirection's target, a path argument of mkdir rm cp
+# mv touch chmod, a file tool's path) has no parent step, and its real
+# path, links followed, lies in the project, outside .git/, build/ itself,
+# and the run state's directory; for read and merger it lies under the
+# real path of DIR, a redirection also under build/stages/, and an agent
+# without DIR edits no file. The contributor's file tools may write the
+# body file itself, never through a link. A link target whose parent step
+# follows a missing directory is refused, since the write resolves it
+# lexically.
+#
+# The guard stops an agent that text in the tree led astray; the
+# contributor edits the scripts and the Makefile it runs, so for it the
+# reviews, the merge gate's records, and branch protection stand behind it.
 set -u
 
 profile=${1:-}
 dir=${2:-}
+project=${CLAUDE_PROJECT_DIR:-$(pwd)}
+MAKE_VARS='T S FILE TESTS SCENARIOS BASE_METRICS ALLOC_BUDGET ANALYSIS_ROUNDS DIAGNOSE_SKIP CARAT_BIN TEST_OPT NAME AREA DIR ACTION SPEC'
+BRANCH='^(feature|bugfix|hotfix|release|chore)/[a-z0-9][a-z0-9-]*$'
+CHANGE_NAME='^[a-z0-9][a-z0-9-]*$'
+BODY='^build/pipeline/[a-z0-9][a-z0-9-]*[.]body[.]md$'
 
 refuse() {
-  echo "agent_guard: refused for the $profile profile: $*. Search for text with the Grep or Read tool and write text that names such a command with the Write tool; the workflow records phases and reviews, and only the contributor pushes, through tools/run_state.sh push." >&2
+  echo "agent_guard: refused for the $profile profile: $*. Each profile runs only the commands its agent needs, listed in tools/agent_guard.sh: search with the Grep or Read tool, put text that names a refused form into a file with the Write tool, and push only through tools/run_state.sh push." >&2
   exit 2
 }
 
+case "$profile" in read|merger|contributor) ;; *) refuse "no such profile" ;; esac
+
 # The first JSON string field KEY of the input with its escapes undone; an
-# escaped newline becomes ";", so each line reads as a command of its own,
-# but a newline after an odd run of backslashes is a line continuation the
-# shell joins, so the pair is dropped: 'git \<newline>push' is git push.
+# escaped newline becomes the character \001, which lex reads as the shell
+# reads a line break: inside single quotes a character of the word, at the
+# end of a comment its end, after a backslash elsewhere a line continuation
+# dropped with it, and otherwise the end of a command. A raw \001 becomes
+# "?". An escaped carriage return becomes "?" too, since the shell reads
+# it as a character of the word, not a blank; a raw one, JSON whitespace
+# between fields, a blank. A \u escape of a printable ASCII character is
+# that character, any other one "?", which the lexer refuses outside quotes.
 field() {
-  tr '\n\r' '  ' | K="$1" awk '
+  tr '\n\r\001' '  ?' | K="$1" awk '
+    BEGIN { HEX = "0123456789abcdef"; NL = "\001" }
     {
       if (!match($0, "\"" ENVIRON["K"] "\"[ \t]*:[ \t]*\"")) exit
       s = substr($0, RSTART + RLENGTH)
@@ -65,14 +114,20 @@ field() {
         if (c == "\\") {
           i++
           c = substr(s, i, 1)
-          if (c == "n") {
-            run = 0
-            while (run < length(out) && substr(out, length(out) - run, 1) == "\\") run++
-            if (run % 2 == 1) { out = substr(out, 1, length(out) - 1); continue }
-            c = ";"
+          if (c == "n") c = NL
+          else if (c == "t") c = " "
+          else if (c == "r") c = "?"
+          else if (c == "u") {
+            h = tolower(substr(s, i + 1, 4))
+            i += 4
+            c = "?"
+            if (h ~ /^00[0-7][0-9a-f]$/) {
+              v = (index(HEX, substr(h, 3, 1)) - 1) * 16 + index(HEX, substr(h, 4, 1)) - 1
+              if (v == 10) c = NL
+              else if (v == 9) c = " "
+              else if (v >= 32 && v < 127) c = sprintf("%c", v)
+            }
           }
-          else if (c == "t" || c == "r") c = " "
-          else if (c == "u") { i += 4; c = "?" }
         }
         out = out c
       }
@@ -81,22 +136,71 @@ field() {
     }'
 }
 
-input=$(cat)
-tool=$(printf '%s' "$input" | field tool_name)
-path=$(printf '%s' "$input" | field file_path)
-[ -n "$path" ] || path=$(printf '%s' "$input" | field notebook_path)
-# A command's text without quotes and backslashes: 'pu'sh, "git", and g\it
-# are the words the shell runs. A path keeps them, as literal characters.
-if [ "$tool" = Bash ]; then
-  raw=$(printf '%s' "$input" | field command)
-  text=$(printf '%s' "$raw" | tr -d "\"'\\\\")
-else
-  raw=$path
-  text=$path
-fi
-
-has() {
-  printf '%s\n' "$text" | grep -q -E -- "$1"
+# lex: the command's tokens, one a line: W and a word with its quotes and
+# escapes removed, O and an operator, R and w (a write), r (a read), or d
+# (a descriptor copy, or a write when its target is not a descriptor)
+# before the redirection's target word, or E and the reason to refuse. A
+# line break (\001 from field) is a ";" between commands and inside quotes;
+# a backslash before it outside single quotes joins the lines, and it ends
+# a comment, where a backslash escapes nothing. Only a bare digit run, no
+# quote or backslash in it, is the descriptor before a redirection.
+lex() {
+  awk '
+    function fail(why) { print "E" why; exit }
+    function flush() { if (inw) print "W" w; w = ""; inw = 0; lit = 0 }
+    {
+      NL = "\001"
+      s = $0; n = length(s); w = ""; inw = 0; lit = 0; q = ""
+      for (i = 1; i <= n; i++) {
+        c = substr(s, i, 1)
+        d = substr(s, i + 1, 1)
+        if (q == "\047") { if (c == "\047") q = ""; else w = w (c == NL ? ";" : c); continue }
+        if (q == "\"") {
+          if (c == "\"") { q = ""; continue }
+          if (c == "$" || c == "`") fail("a $ expansion or a command substitution inside double quotes")
+          if (c == "\\" && d == NL) { i++; continue }
+          if (c == "\\" && i < n && index("\"\\$`", d)) { i++; w = w d; continue }
+          w = w (c == NL ? ";" : c)
+          continue
+        }
+        if (c == "\\" && d == NL) { i++; continue }
+        if (c == "\047" || c == "\"") { q = c; inw = 1; lit = 1; continue }
+        if (c == "\\") { if (i < n) { i++; w = w d }; inw = 1; lit = 1; continue }
+        if (c == "$") fail("a $ expansion: a variable, a substitution, or ANSI-C quoting")
+        if (c == "`") fail("a command substitution")
+        if (c == "(" || c == ")") fail("a subshell, a group, or a process substitution")
+        if (index("*?[]{}", c)) fail("an unquoted glob or brace character " c)
+        if (c == "~" && !inw) fail("a ~ expansion")
+        if (c == "#" && !inw) { while (i < n && substr(s, i + 1, 1) != NL) i++; continue }
+        if (c == " ") { flush(); continue }
+        if (c == ";" || c == NL) { flush(); print "O;"; continue }
+        if (c == "&") {
+          flush()
+          if (d == "&") { print "O&&"; i++ }
+          else if (d == ">") { i++; if (substr(s, i + 1, 1) == ">") i++; print "Rw" }
+          else print "O&"
+          continue
+        }
+        if (c == "|") {
+          flush()
+          if (d == "|") { print "O||"; i++ }
+          else { if (d == "&") i++; print "O|" }
+          continue
+        }
+        if (c == "<" || c == ">") {
+          if (inw && !lit && w ~ /^[0-9]+$/) { w = ""; inw = 0 } else flush()
+          if (c == "<" && d == "<") fail("a here-document or a here-string")
+          if (d == "&") { i++; print "Rd"; continue }
+          if (d == ">" || d == "|") i++
+          print (c == "<" && d != ">") ? "Rr" : "Rw"
+          continue
+        }
+        w = w c
+        inw = 1
+      }
+      if (q != "") fail("an unterminated quote")
+      flush()
+    }'
 }
 
 # real_path PATH: sets real to PATH, relative to the project, with a final
@@ -104,7 +208,14 @@ has() {
 # chain longer than eight or a dangling link on the way is refused.
 real_path() {
   real=$1
-  case "$real" in /*) ;; *) real="${CLAUDE_PROJECT_DIR:-$(pwd)}/$real" ;; esac
+  case "$real" in /*) ;; *) real="$project/$real" ;; esac
+  while :; do
+    case "$real" in
+      ?*/) real=${real%/} ;;
+      ?*/.) real=${real%/.} ;;
+      *) break ;;
+    esac
+  done
   hops=0
   while [ -L "$real" ]; do
     hops=$((hops + 1))
@@ -129,137 +240,560 @@ real_path() {
   case "$real" in //*) real=${real#/} ;; esac
 }
 
-# A word's start and end, and git with its global options (-C dir, -c x=y,
-# --no-pager, --git-dir=x).
-B='(^|[^A-Za-z0-9_.-])'
-E='([^A-Za-z0-9_-]|$)'
-GIT="${B}git( +-{1,2}[A-Za-z][A-Za-z-]*(=[^ ;&|]*)?( +[^ ;&|-][^ ;&|]*)?)* +"
-WRITES='push|commit|add|merge|rebase|reset|tag|cherry-pick|revert|am|stash|restore|rm|mv|clean|pull|apply'
-RUN_STATE="run_state[.]sh +"
-# The pull request body file, the one file of the run state's directory the
-# contributor and the merger may name; never followed by a further step.
-BODY_PATH='build/pipeline/[a-z0-9][a-z0-9-]*[.]body[.]md'
-BODY_FILE="s#${BODY_PATH}([^A-Za-z0-9._/-]|\$)#body-file\\1#g"
+real_path "$project"
+project_real=$real
 
-# The body file is never made a link, nor moved or copied onto, and one
-# that is a link is not named at all: a link to CHANGE.json would make every
-# write of the body file a write of the run state.
-body_links() {
-  has "$BODY_PATH" || return 0
-  if [ "$tool" = Bash ]; then
-    has "${B}(ln|link|mv|cp|install)${E}" && refuse "a link, move, or copy onto the pull request body file"
-    for f in $(printf '%s\n' "$text" | grep -o -E "$BODY_PATH"); do
-      [ ! -L "${CLAUDE_PROJECT_DIR:-.}/$f" ] || refuse "a pull request body file that is a link: $f"
-    done
-  else
-    case "$path" in
-      /*) at=$path ;;
-      *) at="${CLAUDE_PROJECT_DIR:-$(pwd)}/$path" ;;
-    esac
-    [ ! -L "$at" ] || refuse "a pull request body file that is a link: $path"
+# matches TEXT REGEX: TEXT, one line, matches the extended REGEX.
+matches() {
+  case "$1" in *"
+"*) return 1 ;; esac
+  printf '%s\n' "$1" | grep -q -E -- "$2"
+}
+
+# relative PATH: PATH without the project's prefix, as written or real.
+relative() {
+  rel=${1#"$project"/}
+  rel=${rel#"$project_real"/}
+  rel=${rel#./}
+}
+
+parent_step() {
+  case "/$1/" in */../*) refuse "a parent step (..) in $1" ;; esac
+}
+
+# The rules every word of every command obeys.
+word_rules() {
+  parent_step "$1"
+  case "$1" in
+    *build/pipeline*|*pipeline/*) refuse "a word naming the run state's directory: $1; read the run state with tools/run_state.sh show" ;;
+  esac
+}
+
+# under DIR: the real path real lies in the real path of DIR.
+under() {
+  held=$real
+  real_path "$1"
+  case "$held" in
+    "$real"|"$real"/*) real=$held; return 0 ;;
+  esac
+  real=$held
+  return 1
+}
+
+# write_target PATH KIND: KIND is redirect, command, or file. Only a
+# redirection may name /dev/null: as the operand of rm, mv, or cp it
+# would replace the device node.
+write_target() {
+  if [ "$2" = redirect ] && [ "$1" = /dev/null ]; then return 0; fi
+  parent_step "$1"
+  relative "$1"
+  case "$1" in /*) at=$1 ;; *) at="$project/$1" ;; esac
+  if matches "$rel" "$BODY" && [ -L "$at" ]; then
+    refuse "a pull request body file that is a link: $1"
   fi
-  return 0
+  written=$rel
+  real_path "$1"
+  case "$real" in
+    "$project_real"/*) ;;
+    *) refuse "a write outside the project: $1" ;;
+  esac
+  rel=${real#"$project_real"/}
+  case "/$rel/" in */.git/*) refuse "a write under .git, whose hooks and configuration run commands: $1" ;; esac
+  case "$rel" in
+    build) refuse "a write of the directory that holds the run state's: $1" ;;
+    build/pipeline|build/pipeline/*)
+      if [ "$2" = file ] && [ "$profile" = contributor ] && [ "$written" = "$rel" ] && matches "$rel" "$BODY"; then
+        return 0
+      fi
+      refuse "a write to the run state's directory: $1" ;;
+  esac
+  [ "$profile" != contributor ] || return 0
+  if [ "$2" = redirect ] && under build/stages; then return 0; fi
+  [ -n "$dir" ] || refuse "a write by an agent that writes no file: $1"
+  under "$dir" || refuse "a write outside $dir, links followed: $1"
 }
 
-# words: the shell words of the command as written, one a line, with their
-# quotes and backslashes removed, split at unquoted blanks and operators.
-words() {
-  printf '%s\n' "$raw" | awk '
-    {
-      s = $0; n = length(s); w = ""; q = ""
-      for (i = 1; i <= n; i++) {
-        c = substr(s, i, 1)
-        if (q == "\047") { if (c == "\047") q = ""; else w = w c; continue }
-        if (q == "\"") {
-          if (c == "\"") q = ""
-          else if (c == "\\" && i < n && index("\"\\$`", substr(s, i + 1, 1))) { i++; w = w substr(s, i, 1) }
-          else w = w c
-          continue
-        }
-        if (c == "\047" || c == "\"") { q = c; continue }
-        if (c == "\\") { if (i < n) { i++; w = w substr(s, i, 1) }; continue }
-        if (index(" \t;&|()<>", c)) { if (w != "") print w; w = ""; continue }
-        w = w c
-      }
-      if (w != "") print w
-    }'
+# body_arg INDEX WORD: WORD, at INDEX of the command, is the body file.
+body_arg() {
+  relative "$2"
+  matches "$rel" "$BODY" || refuse "not a pull request body file: $2"
+  [ ! -L "$project_real/$rel" ] || refuse "a pull request body file that is a link: $2"
+  body_at=$1
 }
 
-# The body file is named in a command only as a whole word: as written, it
-# is followed by a blank, an operator, or the end, never by a quote, a
-# backslash, or a further step, and every word naming it ends with it, since
-# a quoted or escaped blank after it would make a later step part of its
-# name; and a command naming the run state's directory takes no parent step.
-body_word() {
-  [ "$tool" = Bash ] || return 0
-  has "build/pipeline|pipeline/" || return 0
-  has '[.][.]' && refuse "a parent step in a command naming the run state's directory"
-  printf '%s\n' "$raw" | grep -q -E -- "${BODY_PATH}[^[:space:];&|()<>]" &&
-    refuse "a pull request body file that is not a whole word, which could name the run state's directory"
-  words | grep -E -- "$BODY_PATH" | grep -q -v -E -- "^([^ ]*[/=])?${BODY_PATH}\$" &&
-    refuse "a pull request body file inside a longer word, which could name the run state's directory"
-  return 0
+only_profiles() {
+  case " $1 " in *" $profile "*) ;; *) refuse "$2 is not a command of this profile" ;; esac
 }
 
-case "$profile" in
-  read)
-    git_writes=$WRITES
-    run_state_writes='phase|review|stage|push|history|init' ;;
-  merger)
-    # The branch deletion of the merger's last steps, a Conventional
-    # Branch alone at the end of its command, and the body file.
-    body_links
-    body_word
-    text=$(printf '%s\n' "$text" | sed -E \
-      -e 's#git +push +origin +--delete +(feature|bugfix|hotfix|release|chore)/[a-z0-9][a-z0-9-]* *([;&|)]|$)#deleted-branch \2#g' \
-      -e "$BODY_FILE")
-    git_writes=$(printf '%s' "$WRITES" | sed 's/|merge|/|/')
-    run_state_writes='phase|review|stage|push|history|init' ;;
-  contributor)
-    # The body file the package step writes and the merger squashes with.
-    body_links
-    body_word
-    text=$(printf '%s\n' "$text" | sed -E -e "$BODY_FILE")
-    git_writes=push
-    run_state_writes='phase|review|stage|init' ;;
-  *)
-    refuse "no such profile" ;;
+# worktree PATH: PATH is a worktree tmp/.NAME of the project.
+worktree() {
+  relative "$1"
+  matches "$rel" '^tmp/[.][A-Za-z0-9_-]+$' || return 1
+  case "$rel" in tmp/.toolchain|tmp/.spinel) return 1 ;; esac
+}
+
+# project_or_worktree PATH: PATH is the project or a worktree tmp/.NAME.
+project_or_worktree() {
+  case "$1" in
+    "$project"|"$project_real"|.) return 0 ;;
+  esac
+  worktree "$1"
+}
+
+# options_in LIST WORD...: every WORD is one of LIST.
+options_in() {
+  list=" $1 "
+  shift
+  for a in "$@"; do
+    case "$list" in *" $a "*) ;; *) return 1 ;; esac
+  done
+}
+
+git_form() {
+  shift
+  wt=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -C)
+        [ $# -ge 2 ] || refuse "git -C without a path"
+        project_or_worktree "$2" || refuse "git -C other than the project or a worktree tmp/.NAME, since a repository elsewhere brings its own configuration: $2"
+        wt=$2
+        shift 2 ;;
+      -c)
+        [ $# -ge 2 ] || refuse "git -c without a value"
+        case "$profile:$2" in
+          contributor:user.name=*|contributor:user.email=*) ;;
+          *) refuse "a git configuration override: -c $2" ;;
+        esac
+        shift 2 ;;
+      --no-pager|-P) shift ;;
+      -*) refuse "the git option $1" ;;
+      *) break ;;
+    esac
+  done
+  [ $# -gt 0 ] || refuse "git without a command"
+  verb=$1
+  shift
+  case "$verb" in
+    status|log|show|diff|rev-parse|merge-base|ls-files|ls-tree|cat-file|blame|describe|shortlog|rev-list|grep|show-ref|for-each-ref|name-rev)
+      for a in "$@"; do
+        case "$a" in
+          --?*)
+            name=${a#--}
+            name=${name%%=*}
+            for bad in output ext-diff textconv filters upload-pack receive-pack exec open-files-in-pager; do
+              case "$bad" in "$name"*) refuse "git $verb $a, a prefix of --$bad, which writes or runs a command" ;; esac
+              case "$name" in "$bad"*) refuse "git $verb $a, which writes or runs a command" ;; esac
+            done ;;
+          -*O*) [ "$verb" != grep ] || refuse "git grep $a, whose -O runs a command" ;;
+        esac
+      done ;;
+    branch)
+      if [ "$profile" = merger ] && [ $# -eq 2 ] && [ "$1" = -D ] && matches "$2" "$BRANCH"; then return 0; fi
+      options_in "--show-current --list -a --all -r --remotes -v -vv" "$@" || refuse "git branch other than a listing" ;;
+    remote)
+      case "$*" in
+        -v|"get-url origin"|"set-head origin main") ;;
+        *) refuse "git remote other than -v, get-url origin, and set-head origin main" ;;
+      esac ;;
+    fetch)
+      options_in "-q --quiet --prune -p origin" "$@" || refuse "git fetch other than of origin without a refspec" ;;
+    ls-remote)
+      remote=""
+      for a in "$@"; do
+        case "$a" in
+          --heads|--tags|-h|-t|-q|--quiet|--exit-code|--refs) ;;
+          -*) refuse "git ls-remote $a" ;;
+          *)
+            if [ -z "$remote" ]; then
+              [ "$a" = origin ] || refuse "git ls-remote of other than origin: $a"
+              remote=1
+            else
+              matches "$a" '^[A-Za-z0-9._/-]+$' || refuse "git ls-remote of other than branch names: $a"
+            fi ;;
+        esac
+      done ;;
+    worktree)
+      sub=${1:-}
+      [ $# -eq 0 ] || shift
+      case "$sub" in
+        add)
+          paths=0
+          for a in "$@"; do
+            case "$a" in
+              --detach|-f|--force|-q|--quiet) ;;
+              -*) refuse "git worktree add $a" ;;
+              *)
+                paths=$((paths + 1))
+                if [ $paths -eq 1 ]; then worktree "$a" || refuse "a worktree outside tmp/.NAME: $a"
+                elif [ "$a" != origin/main ] || [ $paths -gt 2 ]; then refuse "a worktree of other than origin/main: $a"
+                fi ;;
+            esac
+          done
+          [ $paths -ge 1 ] || refuse "git worktree add without a path" ;;
+        remove)
+          paths=0
+          for a in "$@"; do
+            case "$a" in
+              -f|--force) ;;
+              -*) refuse "git worktree remove $a" ;;
+              *) paths=$((paths + 1)); worktree "$a" || refuse "a worktree outside tmp/.NAME: $a" ;;
+            esac
+          done
+          [ $paths -eq 1 ] || refuse "git worktree remove of other than one worktree" ;;
+        list) options_in "--porcelain -v" "$@" || refuse "git worktree list $*" ;;
+        prune) options_in "-n -v" "$@" || refuse "git worktree prune $*" ;;
+        *) refuse "git worktree $sub" ;;
+      esac ;;
+    checkout)
+      if [ "$profile" = merger ] && [ -z "$wt" ] && [ "$*" = "-q main" ]; then return 0; fi
+      [ -n "$wt" ] && worktree "$wt" || refuse "git checkout outside a worktree tmp/.NAME"
+      options_in "-q --quiet --detach -f --force origin/main" "$@" || refuse "git checkout other than of origin/main"
+      case " $* " in *" origin/main "*) ;; *) refuse "git checkout other than of origin/main" ;; esac ;;
+    push)
+      only_profiles merger "git push"
+      [ $# -eq 3 ] && [ "$1" = origin ] && [ "$2" = --delete ] && matches "$3" "$BRANCH" ||
+        refuse "git push other than the deletion of a Conventional Branch" ;;
+    merge)
+      only_profiles "merger contributor" "git merge"
+      if [ "$profile" = merger ]; then
+        [ "$*" = "-q --ff-only origin/main" ] || [ "$*" = "--ff-only origin/main" ] ||
+          refuse "git merge other than the fast-forward of main"
+        return 0
+      fi
+      while [ $# -gt 0 ]; do
+        case "$1" in
+          -q|--quiet|--no-edit|--no-ff|--abort|--continue|origin/main) shift ;;
+          -m) [ $# -ge 2 ] || refuse "git merge -m without a message"; shift 2 ;;
+          *) refuse "git merge other than of origin/main: $1" ;;
+        esac
+      done ;;
+    add|commit|mv|rm|restore)
+      only_profiles contributor "git $verb" ;;
+    *) refuse "git $verb is not a command of this profile" ;;
+  esac
+}
+
+# make_var NAME VALUE: a variable the profile may set, with a value no
+# recipe can read as shell syntax.
+make_var() {
+  matches "$2" '^[]A-Za-z0-9._/ ,:+=@%[-]*$' || refuse "a shell character in the make variable $1"
+  case "$profile:$1" in
+    read:PREFIX) relative "$2"; [ "$rel" = tmp/.toolchain ] && [ "$2" != "$rel" ] || refuse "PREFIX other than the project's tmp/.toolchain" ;;
+    read:SPINEL_CACHE_DIR) relative "$2"; [ "$rel" = build/spinel-cache ] && [ "$2" != "$rel" ] || refuse "SPINEL_CACHE_DIR other than the project's build/spinel-cache" ;;
+    read:BASE_METRICS) ;;
+    read:SCENARIOS) matches "$2" '^[a-z0-9 -]*$' || refuse "SCENARIOS other than scenario names" ;;
+    contributor:*) case " $MAKE_VARS " in *" $1 "*) ;; *) refuse "the make variable $1" ;; esac ;;
+    *) refuse "the make variable $1" ;;
+  esac
+}
+
+make_form() {
+  only_profiles "read contributor" make
+  shift
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -s) ;;
+      -k) only_profiles contributor "make -k" ;;
+      -C) [ $# -ge 2 ] && worktree "$2" || refuse "make -C outside a worktree tmp/.NAME"; shift ;;
+      -*) refuse "the make option $1" ;;
+      *=*) make_var "${1%%=*}" "${1#*=}" ;;
+      *)
+        if [ "$profile" = read ]; then
+          options_in "dev-build test-build bench-budget metrics metrics-compare bench" "$1" || refuse "the make target $1"
+        else
+          matches "$1" '^[a-z][a-z0-9-]*$' || refuse "the make target $1"
+        fi ;;
+    esac
+    shift
+  done
+}
+
+run_state_form() {
+  verb=${1:-}
+  case "$profile:$verb" in
+    read:show|read:status|read:pending|read:get|read:trusted|read:check|read:bench|read:metrics|read:metric|read:note|read:budget|read:review-due) ;;
+    merger:show|merger:status|merger:get|merger:trusted|merger:metric) ;;
+    contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history) ;;
+    contributor:push)
+      [ $# -ge 2 ] && [ $# -le 3 ] && matches "$2" "$CHANGE_NAME" && { [ $# -eq 2 ] || [ "$3" = --ci-fix ]; } ||
+        refuse "tools/run_state.sh push other than CHANGE [--ci-fix]" ;;
+    merger:set|contributor:set)
+      [ $# -eq 4 ] && matches "$2" "$CHANGE_NAME" || refuse "tools/run_state.sh set other than CHANGE KEY VALUE"
+      case "$profile:$3" in
+        merger:ci) matches "$4" '^(red|green) [0-9a-f]{7,40}$' || refuse "a CI record other than red or green and a commit" ;;
+        merger:merged) matches "$4" '^[0-9a-f]{7,40}$' || refuse "a merged record other than a commit" ;;
+        contributor:pr) matches "$4" '^[0-9]+$' || refuse "a pull request record other than a number" ;;
+        *) refuse "tools/run_state.sh set of $3" ;;
+      esac ;;
+    *) refuse "tools/run_state.sh $verb, which the workflow or another agent runs" ;;
+  esac
+}
+
+gates_form() {
+  [ $# -gt 0 ] || refuse "tools/gates.sh without a gate"
+  case "$profile:$1" in
+    merger:merge|contributor:pr-body)
+      [ $# -eq 2 ] || refuse "tools/gates.sh $1 other than with the body file"
+      body_arg 4 "$2" ;;
+    *)
+      for a in "$@"; do
+        matches "$a" '^[a-z][a-z-]*$' || refuse "tools/gates.sh with other than gate names: $a"
+      done ;;
+  esac
+  for e in $envs; do
+    case "$profile:$e" in
+      *:BASE|merger:CHANGE|merger:RECORDS|contributor:CHANGE) ;;
+      *) refuse "an assignment of $e before tools/gates.sh" ;;
+    esac
+  done
+}
+
+# metrics_out PATH: PATH, the OUT of tools/metrics.sh measure, is
+# METRICS_OUT of the project or of a worktree tmp/.NAME, with no link on
+# its way. The guard does not follow cd, so a relative PATH is checked in
+# the project and in every worktree.
+METRICS_OUT=build/metrics/current.tsv
+metrics_out() {
+  relative "$1"
+  out=$rel
+  case "$out" in
+    "$METRICS_OUT")
+      roots=.
+      case "$1" in
+        /*) ;;
+        *)
+          # Globbing is off (set -f); a name worktree takes splits on no
+          # space.
+          for w in $(ls -A "$project_real/tmp" 2>/dev/null); do
+            [ -d "$project_real/tmp/$w" ] && worktree "tmp/$w" && roots="$roots tmp/$w"
+          done ;;
+      esac ;;
+    tmp/.*/"$METRICS_OUT")
+      roots=${out%/"$METRICS_OUT"}
+      worktree "$roots" || refuse "tools/metrics.sh measure into other than a worktree tmp/.NAME: $1" ;;
+    *) refuse "tools/metrics.sh measure into other than $METRICS_OUT of the project or a worktree tmp/.NAME: $1" ;;
+  esac
+  for r in $roots; do
+    at=$r/$METRICS_OUT
+    [ "$r" != . ] || at=$METRICS_OUT
+    real_path "$at"
+    [ "$real" = "$project_real/$at" ] || refuse "tools/metrics.sh measure into a path through a link: $1"
+  done
+}
+
+script_form() {
+  [ $# -ge 2 ] || refuse "sh without a script"
+  case "$2" in -*) refuse "a shell option: sh $2" ;; esac
+  relative "$2"
+  script=$rel
+  [ -z "$envs" ] || [ "$script" = tools/gates.sh ] || refuse "an assignment before $2"
+  shift 2
+  case "$script" in
+    tools/run_state.sh) run_state_form "$@" ;;
+    tools/gates.sh) gates_form "$@" ;;
+    tools/metrics.sh)
+      only_profiles read "tools/metrics.sh"
+      case "${1:-}" in
+        measure)
+          [ $# -ge 2 ] || refuse "tools/metrics.sh measure without OUT"
+          metrics_out "$2"
+          shift 2
+          for a in "$@"; do
+            matches "$a" '^[a-z0-9-]+$' || refuse "tools/metrics.sh measure with other than scenario names: $a"
+          done ;;
+        compare) [ $# -eq 3 ] || refuse "tools/metrics.sh compare other than BASE CURRENT" ;;
+        *) refuse "tools/metrics.sh other than measure or compare" ;;
+      esac ;;
+    tools/ci_wait.sh)
+      only_profiles merger "tools/ci_wait.sh"
+      [ $# -eq 1 ] && matches "$1" '^[0-9]+$' || refuse "tools/ci_wait.sh other than SECONDS" ;;
+    *) refuse "the script $script is not one this profile runs" ;;
+  esac
+}
+
+# files_form: mkdir rm cp mv touch chmod, every argument but a short
+# option a write target.
+files_form() {
+  cmd=$1
+  shift
+  ends=""
+  for a in "$@"; do
+    if [ -z "$ends" ]; then
+      case "$a" in
+        --) ends=1; continue ;;
+        -[A-Za-z]*) matches "$a" '^-[A-Za-z]+$' && continue; refuse "the $cmd option $a" ;;
+        -*) refuse "the $cmd option $a" ;;
+      esac
+    fi
+    write_target "$a" command
+  done
+}
+
+# sort_form: sort with short options of SORT_FLAGS and -k -t with their
+# values only, since GNU sort clusters short options (-uo FILE) and takes
+# a long option by any unambiguous prefix (--outp, --compress-prog).
+SORT_FLAGS=bdfghiMnRrsuVzcCm
+sort_form() {
+  shift
+  value=""
+  ends=""
+  for a in "$@"; do
+    if [ -n "$value" ]; then value=""; continue; fi
+    [ -z "$ends" ] || continue
+    case "$a" in
+      --) ends=1 ;;
+      -) ;;
+      --*) refuse "the sort option $a, since a long option can write a file or run a command" ;;
+      -*)
+        rest=${a#-}
+        while [ -n "$rest" ]; do
+          ch=${rest%"${rest#?}"}
+          rest=${rest#?}
+          case "$ch" in
+            k|t) [ -n "$rest" ] || value=1; rest="" ;;
+            *)
+              case "$SORT_FLAGS" in
+                *"$ch"*) ;;
+                *) refuse "the sort option -$ch in $a; sort takes only -$SORT_FLAGS, -k, and -t" ;;
+              esac ;;
+          esac
+        done ;;
+    esac
+  done
+}
+
+# uniq_form: uniq with at most one operand, `-` and the words after `--`
+# included, since a second operand is the file uniq writes.
+uniq_form() {
+  shift
+  n=0
+  ends=""
+  for a in "$@"; do
+    if [ -z "$ends" ]; then
+      case "$a" in
+        --) ends=1; continue ;;
+        -) ;;
+        -*) continue ;;
+      esac
+    fi
+    n=$((n + 1))
+  done
+  [ $n -le 1 ] || refuse "uniq with a second operand, which uniq writes as its output file"
+}
+
+# judge WORD...: one simple command, its assignments first.
+judge() {
+  [ $# -gt 0 ] || return 0
+  envs=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      BASE=*) matches "${1#*=}" '^[A-Za-z0-9._/~^-]+$' || refuse "a BASE other than a revision" ;;
+      CHANGE=*) matches "${1#*=}" "$CHANGE_NAME" || refuse "a CHANGE other than a change name" ;;
+      RECORDS=*) matches "${1#*=}" '^[a-z0-9:. -]*$' || refuse "RECORDS other than KIND:RESULT:COMMIT records" ;;
+      [A-Za-z_]*=*)
+        case "${1%%=*}" in
+          *[!A-Za-z0-9_]*) break ;;
+          *) refuse "an assignment of ${1%%=*} before a command" ;;
+        esac ;;
+      *) break ;;
+    esac
+    envs="$envs ${1%%=*}"
+    word_rules "$1"
+    shift
+  done
+  [ $# -gt 0 ] || refuse "an assignment without a command"
+  body_at=0
+  case "$1" in */*) refuse "a command named by a path: $1" ;; esac
+  [ -z "$envs" ] || [ "$1" = sh ] || refuse "an assignment before $1"
+  case "$1" in
+    ls|cat|head|tail|wc|grep|diff|cmp|cut|tr|nl|comm|basename|dirname|realpath|readlink|stat|du|date|pwd|echo|true) ;;
+    printf)
+      case "${2:-}" in -*) refuse "printf with the option ${2}, since -v assigns a variable whose subscript runs a command" ;; esac ;;
+    sort) sort_form "$@" ;;
+    uniq) uniq_form "$@" ;;
+    find)
+      for a in "$@"; do
+        case "$a" in -exec|-execdir|-ok|-okdir|-delete|-fprint|-fprint0|-fprintf|-fls) refuse "find $a, which writes or runs a command" ;; esac
+      done ;;
+    sed)
+      [ $# -ge 3 ] && [ "$2" = -n ] && matches "$3" '^([0-9]+|[$])(,([0-9]+|[$]))?p$' ||
+        refuse "sed other than sed -n with a line-number print script"
+      shift 3
+      for a in "$@"; do case "$a" in -*) refuse "the sed option $a" ;; esac; done ;;
+    cd)
+      [ $# -eq 2 ] && project_or_worktree "$2" || refuse "cd other than to the project or a worktree tmp/.NAME: ${2:-}" ;;
+    git) git_form "$@" ;;
+    make) make_form "$@" ;;
+    sh) script_form "$@" ;;
+    mkdir|rm)
+      [ "$profile" != merger ] || refuse "$1 is not a command of this profile"
+      files_form "$@" ;;
+    cp|mv|touch|chmod)
+      only_profiles contributor "$1"
+      files_form "$@" ;;
+    openspec)
+      only_profiles contributor openspec ;;
+    npx)
+      only_profiles contributor npx
+      pkg=${2:-}
+      case "$pkg" in -y|--yes) pkg=${3:-} ;; esac
+      case "$pkg" in @fission-ai/openspec|@fission-ai/openspec@latest) ;; *) refuse "npx of other than @fission-ai/openspec" ;; esac ;;
+    *) refuse "$1 is not a command of this profile" ;;
+  esac
+  i=0
+  for w in "$@"; do
+    i=$((i + 1))
+    [ $i -eq $body_at ] || word_rules "$w"
+  done
+}
+
+# redirect KIND TARGET
+redirect() {
+  word_rules "$2"
+  case "$1" in
+    r) ;;
+    d) matches "$2" '^([0-9]+|-)$' || write_target "$2" redirect ;;
+    *) write_target "$2" redirect ;;
+  esac
+}
+
+input=$(cat)
+tool=$(printf '%s' "$input" | field tool_name)
+case "$tool" in
+  Bash) ;;
+  Write|Edit|MultiEdit|NotebookEdit)
+    path=$(printf '%s' "$input" | field file_path)
+    [ -n "$path" ] || path=$(printf '%s' "$input" | field notebook_path)
+    [ -n "$path" ] || refuse "a file edit without a path"
+    write_target "$path" file
+    exit 0 ;;
+  *) refuse "the tool ${tool:-without a name}, which this guard does not judge" ;;
 esac
 
-# A file tool: the path, as written and as its real path, is all there is
-# to judge.
-if [ "$tool" != Bash ] && [ -n "$path" ]; then
-  has "build/pipeline|pipeline/" && refuse "an edit of the run state's directory: $path"
-  # A parent step resolves lexically when the file is written but through
-  # links here, so no profile names one.
-  case "/$path/" in */../*) refuse "a path with a parent step: $path" ;; esac
-  real_path "$path"
-  if [ "$profile" != contributor ]; then
-    [ -n "$dir" ] || refuse "a file edit by an agent that writes no file: $path"
-    case "$path" in
-      *..*) refuse "a path with a parent step: $path" ;;
-      "$dir"/*|"${CLAUDE_PROJECT_DIR:-.}/$dir"/*) ;;
-      *) refuse "a file edit outside $dir: $path" ;;
-    esac
-    file=$real
-    real_path "$dir"
-    case "$file" in
-      "$real"/*) ;;
-      *) refuse "a file edit outside $dir through a link: $path" ;;
-    esac
-    real=$file
-  fi
-  text=$real
-  [ "$profile" = read ] || text=$(printf '%s\n' "$text" | sed -E -e "$BODY_FILE")
-  has "build/pipeline|pipeline/" && refuse "an edit of the run state's directory through a link: $path"
-  exit 0
-fi
-
-has "${GIT}(${git_writes})${E}" && refuse "a git command that writes the history, the index, the tree, or a remote"
-has "${B}gh +[a-z]" && refuse "a gh command; the agents use the GitHub tools they list"
-has "${RUN_STATE}(${run_state_writes})${E}" && refuse "a run state command that the workflow or the contributor runs"
-if has "run_state[.]sh" && has "${B}(MAKE|STAGES|RUN_STATE_DIR|STAGE_DIR|METRICS_FILE|METRICS_OUT)="; then
-  refuse "an environment override of tools/run_state.sh"
-fi
-has "build/pipeline|pipeline/" && refuse "a command naming the run state's directory; read it with tools/run_state.sh show"
+tokens=$(printf '%s' "$input" | field command | lex)
+default_ifs=$IFS
+IFS='
+'
+set -f
+pending=""
+set --
+for t in $tokens; do
+  IFS=$default_ifs
+  case "$t" in
+    E*) refuse "${t#E}" ;;
+    W*)
+      if [ -n "$pending" ]; then
+        redirect "$pending" "${t#W}"
+        pending=""
+      else
+        set -- "$@" "${t#W}"
+      fi ;;
+    R*) [ -z "$pending" ] || refuse "a redirection without a target"; pending=${t#R} ;;
+    O*) [ -z "$pending" ] || refuse "a redirection without a target"; judge "$@"; set -- ;;
+  esac
+done
+IFS=$default_ifs
+[ -z "$pending" ] || refuse "a redirection without a target"
+judge "$@"
 exit 0

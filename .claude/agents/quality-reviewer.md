@@ -7,7 +7,7 @@ hooks:
     - matcher: "Bash"
       hooks:
         - type: command
-          command: 'sh "$CLAUDE_PROJECT_DIR/tools/agent_guard.sh" read'
+          command: 'g=$(git -C "$CLAUDE_PROJECT_DIR" show origin/main:tools/agent_guard.sh) && sh -c "$g" agent_guard read || exit 2'
 ---
 
 You review one change's committed diff and report findings. You never edit, commit, or push; the contributor fixes.

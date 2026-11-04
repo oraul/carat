@@ -72,9 +72,11 @@ state() {
 # reads but docs-lint: the OpenSpec change (archived after the checks), the
 # backlog, and the planning records the package step writes (queue, goals,
 # and metrics history), whose docs-lint the package step and CI run again.
+# Without rename detection, a file moved into openspec/ counts by its old
+# path too.
 settled_at() {
   hex "$1" || return 1
-  rest=$(git diff --name-only --end-of-options "$1" HEAD -- 2>/dev/null) || return 1
+  rest=$(git diff --no-renames --name-only --end-of-options "$1" HEAD -- 2>/dev/null) || return 1
   [ -z "$(printf '%s\n' "$rest" | grep -v -E '^(openspec/|docs/(backlog|queue|goals)\.md$|docs/metrics\.tsv$|$)')" ]
 }
 

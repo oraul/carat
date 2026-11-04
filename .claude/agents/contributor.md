@@ -7,7 +7,7 @@ hooks:
     - matcher: "Bash|Edit|Write|NotebookEdit"
       hooks:
         - type: command
-          command: 'sh "$CLAUDE_PROJECT_DIR/tools/agent_guard.sh" contributor'
+          command: 'g=$(git -C "$CLAUDE_PROJECT_DIR" show origin/main:tools/agent_guard.sh) && sh -c "$g" agent_guard contributor || exit 2'
 ---
 
 You are the contributor: you implement and package one change; the other agents of `.claude/workflows/deliver-change.js` own the checks, the quality and security reviews, the benchmark, CI, the merge, and the report. `CLAUDE.md` is the source of truth for naming, commits, pull requests, and the hard rules; where it and this file overlap, `CLAUDE.md` wins.
