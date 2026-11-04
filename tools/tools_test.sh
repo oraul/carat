@@ -702,6 +702,14 @@ expect "guard: read refuses a quoted digit before a redirection" 2 "a write outs
 expect "guard: read refuses an escaped digit before a redirection" 2 "a write outside tmp/scout, links followed: 1" guard read 'rm -rf \\1>/dev/null' tmp/scout
 expect "guard: read takes a bare digit before a redirection as a descriptor" 0 "^$" guard read 'rm -f tmp/scout/x 2>/dev/null' tmp/scout
 expect "guard: read refuses a metrics script of another form" 2 "tools/metrics.sh other than" guard read 'sh tools/metrics.sh shell'
+expect "guard: read refuses a measurement into .git" 2 "tools/metrics.sh measure into other than build/metrics/current.tsv" guard read 'sh tools/metrics.sh measure .git/config'
+expect "guard: read refuses a measurement outside the project" 2 "tools/metrics.sh measure into other than build/metrics/current.tsv" guard read 'sh tools/metrics.sh measure /tmp/x'
+expect "guard: read refuses a measurement into another project file" 2 "tools/metrics.sh measure into other than build/metrics/current.tsv" guard read 'sh tools/metrics.sh measure /w/.claude/settings.json'
+expect "guard: read refuses a measurement into the toolchain" 2 "tools/metrics.sh measure into other than a worktree" guard read 'sh tools/metrics.sh measure tmp/.toolchain/build/metrics/current.tsv'
+expect "guard: read refuses a measurement with other than scenario names" 2 "tools/metrics.sh measure with other than scenario names: /tmp/x" guard read 'sh tools/metrics.sh measure build/metrics/current.tsv lh /tmp/x'
+expect "guard: read refuses a measurement without OUT" 2 "tools/metrics.sh measure without OUT" guard read 'sh tools/metrics.sh measure'
+expect "guard: read refuses a comparison of another form" 2 "tools/metrics.sh compare other than BASE CURRENT" guard read 'sh tools/metrics.sh compare a b c'
+expect "guard: read measures into the project or a worktree and compares" 0 "^$" guard read 'sh tools/metrics.sh measure build/metrics/current.tsv lh dot-ciw && sh tools/metrics.sh measure /w/build/metrics/current.tsv && sh tools/metrics.sh measure /w/tmp/.base/build/metrics/current.tsv && sh tools/metrics.sh compare a.tsv b.tsv'
 expect "guard: read refuses the merge gate" 2 "tools/gates.sh with other than gate names" guard read 'sh tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: read refuses an assignment before another script" 2 "an assignment before tools/run_state.sh" guard read 'BASE=x sh tools/run_state.sh show c'
 expect "guard: merger refuses the deletion of main" 2 "git push other than" guard merger 'git push origin --delete main'
@@ -781,6 +789,14 @@ expect "guard: read refuses a redirection through a link out of its directory" 2
 expect "guard: read allows a pack in its real directory" 0 "^$" guard_edit read Write "$proj/tmp/scout/area.md" tmp/scout
 expect "guard: contributor writes the body file in a real tree" 0 "^$" guard_edit contributor Write "$proj/build/pipeline/c.body.md"
 expect "guard: contributor allows the body gate in a real tree" 0 "^$" guard contributor 'sh tools/gates.sh pr-body build/pipeline/c.body.md'
+# A measurement through a link into .git, in a worktree and in the project.
+mkdir -p "$proj/.git" "$proj/tmp/.base"
+ln -s ../../.git "$proj/tmp/.base/build"
+expect "guard: read refuses a measurement through a link in a worktree" 2 "a path through a link: build/metrics" guard read 'cd tmp/.base && sh tools/metrics.sh measure build/metrics/current.tsv'
+expect "guard: read refuses a measurement into a linked worktree path" 2 "a path through a link" guard read "sh tools/metrics.sh measure $proj/tmp/.base/build/metrics/current.tsv"
+expect "guard: read measures into the project in a real tree" 0 "^$" guard read "sh tools/metrics.sh measure $proj/build/metrics/current.tsv"
+ln -s ../.git "$proj/build/metrics"
+expect "guard: read refuses a measurement through a link in the project" 2 "a path through a link" guard read "sh tools/metrics.sh measure $proj/build/metrics/current.tsv"
 PROJECT=/w
 
 # The hook line of every agent file runs the guard of origin/main and

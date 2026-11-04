@@ -43,7 +43,9 @@
 #                BASE_METRICS, SCENARIOS; sh tools/run_state.sh show status
 #                pending get trusted check bench metrics metric note budget
 #                review-due; [BASE=REV] sh tools/gates.sh GATE...; sh
-#                tools/metrics.sh measure|compare
+#                tools/metrics.sh measure OUT [SCENARIO...], OUT
+#                build/metrics/current.tsv of the project or a worktree
+#                tmp/.NAME with no link on its way, and compare BASE CURRENT
 #   merger       adds sh tools/run_state.sh show status get trusted metric,
 #                set CHANGE ci "red|green HEX", set CHANGE merged HEX;
 #                CHANGE=NAME RECORDS=... sh tools/gates.sh merge BODY; sh
@@ -542,6 +544,39 @@ gates_form() {
   done
 }
 
+# metrics_out PATH: PATH, the OUT of tools/metrics.sh measure, is
+# METRICS_OUT of the project or of a worktree tmp/.NAME, with no link on
+# its way. The guard does not follow cd, so a relative PATH is checked in
+# the project and in every worktree.
+METRICS_OUT=build/metrics/current.tsv
+metrics_out() {
+  relative "$1"
+  out=$rel
+  case "$out" in
+    "$METRICS_OUT")
+      roots=.
+      case "$1" in
+        /*) ;;
+        *)
+          # Globbing is off (set -f); a name worktree takes splits on no
+          # space.
+          for w in $(ls -A "$project_real/tmp" 2>/dev/null); do
+            [ -d "$project_real/tmp/$w" ] && worktree "tmp/$w" && roots="$roots tmp/$w"
+          done ;;
+      esac ;;
+    tmp/.*/"$METRICS_OUT")
+      roots=${out%/"$METRICS_OUT"}
+      worktree "$roots" || refuse "tools/metrics.sh measure into other than a worktree tmp/.NAME: $1" ;;
+    *) refuse "tools/metrics.sh measure into other than $METRICS_OUT of the project or a worktree tmp/.NAME: $1" ;;
+  esac
+  for r in $roots; do
+    at=$r/$METRICS_OUT
+    [ "$r" != . ] || at=$METRICS_OUT
+    real_path "$at"
+    [ "$real" = "$project_real/$at" ] || refuse "tools/metrics.sh measure into a path through a link: $1"
+  done
+}
+
 script_form() {
   [ $# -ge 2 ] || refuse "sh without a script"
   case "$2" in -*) refuse "a shell option: sh $2" ;; esac
@@ -554,7 +589,17 @@ script_form() {
     tools/gates.sh) gates_form "$@" ;;
     tools/metrics.sh)
       only_profiles read "tools/metrics.sh"
-      case "${1:-}" in measure|compare) ;; *) refuse "tools/metrics.sh other than measure or compare" ;; esac ;;
+      case "${1:-}" in
+        measure)
+          [ $# -ge 2 ] || refuse "tools/metrics.sh measure without OUT"
+          metrics_out "$2"
+          shift 2
+          for a in "$@"; do
+            matches "$a" '^[a-z0-9-]+$' || refuse "tools/metrics.sh measure with other than scenario names: $a"
+          done ;;
+        compare) [ $# -eq 3 ] || refuse "tools/metrics.sh compare other than BASE CURRENT" ;;
+        *) refuse "tools/metrics.sh other than measure or compare" ;;
+      esac ;;
     tools/ci_wait.sh)
       only_profiles merger "tools/ci_wait.sh"
       [ $# -eq 1 ] && matches "$1" '^[0-9]+$' || refuse "tools/ci_wait.sh other than SECONDS" ;;
