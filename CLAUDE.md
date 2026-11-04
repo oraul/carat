@@ -15,7 +15,7 @@ Guidance for Claude Code when working in this repository.
 
 These apply to every commit, pull request, comment, file, and chat reply.
 
-- Security first. No pull request is merged without a security review of its committed diff, recorded in the run state and reported in the pull request's Testing section. A High or Medium finding at confidence 8 or above in code the change touches blocks the merge until it is fixed; security fixes go to the front of the queue.
+- Security first. No pull request is merged without a security review of its committed diff, recorded in the run state and reported in the pull request's Testing section. A High or Medium finding at confidence 8 or above in code the change touches blocks the merge until it is fixed; blocking security fixes go to the front of the queue.
 - NEVER implement a change by hand in the main Claude session. Every change to this repository, whether feature, fix, refactor, tooling, or docs, is delivered by `/deliver`, the delivery workflow under Agents, through the OpenSpec loop: propose, apply, check, review, archive, pull request, CI, merge. The main session only plans, answers questions, reviews, verifies, and starts `/deliver`. If work was started by hand, stop and hand it to `/deliver` to finish. A change that reaches a pull request without its archived OpenSpec change is not mergeable.
 - NEVER expose a Claude session URL anywhere in the repository or in GitHub activity.
 - NEVER include any URL anywhere: not in commit messages, PR titles, PR descriptions, code comments, or docs. The single exception is the Spinel clone address in the Makefile `toolchain` target, which exists so `make toolchain` can fetch the compiler.
@@ -36,7 +36,7 @@ These apply to every commit, pull request, comment, file, and chat reply.
 ## Git workflow
 
 - Work on the branch you were assigned. Never push to `main` directly.
-- Do not create a pull request unless explicitly asked; running `/deliver` or the `contributor` agent counts as being asked for the pull request and the merge.
+- Do not create a pull request unless asked; running `/deliver` or the `contributor` agent counts.
 - Do not rewrite history on a shared branch (no rebase, amend, or force-push).
 - Run `make check` before every push. Push once, plus once per CI fix; `tools/run_state.sh push` enforces it.
 
@@ -59,7 +59,7 @@ Allowed types:
 Rules:
 
 - `description` is lowercase kebab-case: letters, digits, and hyphens only. No underscores, spaces, dots, or extra slashes.
-- Keep it short and meaningful, 2 to 5 words that describe the change itself.
+- Keep it to 2 to 5 words that describe the change.
 - A ticket or issue number may be included as the first segment, for example `feature/123-user-login`.
 - Branch from `main` and open a pull request back into `main` when asked.
 - Branches are short-lived. They are squash-merged and deleted after merge.
@@ -100,19 +100,17 @@ to contact support.
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
-More subject examples: `fix(api): return 404 for missing orders`, `docs: add branch and commit conventions`, `chore: configure linter`.
-
 ## Pull requests
 
 Pull requests are **squash-merged** into `main`. Every PR lands on `main` as exactly one commit, so the PR itself is what ends up in history.
 
 - The PR title becomes the subject of the squash commit, followed by a space and the PR number in parentheses, exactly as GitHub pre-fills it, for example `feat(auth): add password reset flow (#12)`. The number is what links the commit on `main` back to the pull request. The title itself MUST follow the Conventional Commits format above.
 - The PR description becomes the body of the squash commit. Follow the "Pull request description" standard below.
-- Before merging, check the squash commit message in the merge dialog. GitHub pre-fills it from the PR title and description. Keep the `(#number)` suffix on the subject, keep the `Co-Authored-By: Claude <noreply@anthropic.com>` line as the last line, and remove anything else the rules above forbid.
-- Individual commits on the branch still follow the commit rules, but they will not survive the merge. Keep them tidy, do not spend effort rewriting them.
+- Before merging, check the squash commit message GitHub pre-fills: keep the `(#number)` suffix and the `Co-Authored-By: Claude <noreply@anthropic.com>` line last, and remove anything the rules above forbid.
+- Branch commits follow the commit rules but do not survive the merge; do not spend effort rewriting them.
 - One PR covers one logical change. If the squash commit would need more than one `type`, split the PR.
 - A breaking change is marked with `!` in the PR title, for example `feat(api)!: drop v1 endpoints`, and explained in the description.
-- Never merge a pull request yourself unless explicitly asked. Running `/deliver` or the `contributor` agent counts as being asked: the `merger` agent's merge is the workflow's last step.
+- Never merge a pull request yourself unless asked; `/deliver` counts, its `merger` merging last.
 - The source branch is deleted after merge.
 
 ## Pull request description
@@ -204,7 +202,7 @@ Agents live in `.claude/agents/` and obey this file. Agents cannot start agents,
 
 - Phases, one agent each with a schema-checked result: planner, scouts (at most three edited areas), contributor, checker, quality reviewer, security reviewer (never skipped), benchmark (when allocations or rounds differ from main's recorded figures), contributor packaging, merger (CI and merge), retrospective, periodic review when due, reporter. What blocks, a red CI included, goes back to the contributor and the later phases run again, at most three rounds, then the run stops without merging.
 - `contributor`: the only agent that edits: proposes and applies through OpenSpec, fixes what comes back, archives, pushes, and opens the pull request; stops on a materially ambiguous request, a secret, an irreversible action, or missing context. Tasks of one domain may share a change, but one change is one reviewable pull request; one that grows past that is split.
-- `planner`: orders `docs/queue.md` by `docs/goals.md` into `build/plan/`, citing its tier and a number per decision; an unresolved blocking security finding stops the run. `retrospective`: records the run's metrics, a token overrun, and at most three proposals to simplify the workflow, and runs `review-due`. Neither edits a tracked file. `/plan` previews the planner.
+- `planner`: orders `docs/queue.md` by `docs/goals.md` into `build/plan/`, citing its tier and a number per decision; an unresolved blocking security finding stops the run; it runs only when `plan-needed` finds a decision to make. `retrospective`: records the run's metrics, a total-token overrun, and at most three proposals to simplify the workflow, and runs `review-due`. Neither edits a tracked file. `/plan` previews the planner.
 - Periodic review: `.claude/workflows/periodic-review.js` (`/review`), the reviewers' periodic mode over `main`, every five merged changes and after a change to an area of `REVIEW_AREAS` in `tools/run_state.sh`.
 - `scout`: one map area at the current commit into a pack of facts in `tmp/scout/`. `checker`, `quality-reviewer`, `security-reviewer` (`security-review` on the committed diff), `benchmark`, `merger`, and `reporter` never edit; each agent's hook runs `tools/agent_guard.sh`. Mechanical agents run on the cheapest tier, the others on the session's model.
 - Run state: `build/pipeline/<change>.json`, written only by `tools/run_state.sh`, its phases, reviews, and figures only by the workflow; stage logs in `build/stages/<change>/`. `docs/metrics.tsv` gets one row per merged change from `tools/run_state.sh history` in the next change's package step, which also commits the planner's queue.
@@ -232,7 +230,7 @@ Every command is a Makefile target, `make help` prints each one's full descripti
 - Configuration: `make gen-config` (the config mirror and plugin registry from `config/`), `make config-current`.
 - Authoring: `make new-use-case`, `new-action`, `new-ex-command`, `new-test`, `new-plugin` (`tools/new.sh`, kinds in `docs/examples.md`).
 - Checks: `make check` runs `CHECK_STAGES` in order (doctor, docs-lint, build, dev-build, config-current, test-build, test-run, diagnose, no-cruby, bench-budget, metrics, tools-test, gates) before every push; `make stages`, `make check-stage S=NAME`; the Makefile records why CI leaves out three. `make docs-lint` (`tools/docs_lint.sh`: budgets, forbidden content, hard-wrapped pull request text, dead paths, untagged queue items), `make tools-test`, `make gates` (`tools/gates.sh static`).
-- `sh tools/run_state.sh`: a change's run state; `check CHANGE` runs the stages, resuming after passed ones and carrying all but the test stages past a test-only commit; `bench CHANGE` compares with main's recorded figures; `push CHANGE` pushes after the pre-push gates; `metric`, `metrics`, `note`, `budget`, `review-due`, `pending`, `history`, and `status` (`/status`).
+- `sh tools/run_state.sh`: a change's run state; `check CHANGE` runs the stages, resuming after passed ones and carrying all but the test stages past a test-only commit; `bench CHANGE` compares with main's recorded figures; `push CHANGE` pushes after the pre-push gates; `usage` (each start's total tokens and minutes, which `/deliver` records), `plan-needed`, `metric`, `metrics`, `note`, `budget`, `review-due`, `pending`, `history`, and `status` (`/status`).
 - OpenSpec: `make spec-list`, `make spec-validate`, `make spec-update`, usage statistics disabled.
 
 ## Layout

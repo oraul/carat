@@ -197,7 +197,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 ## lh time per key rose 26% at window-navigation-and-scroll
 
 - Where: the `review.bench` record of `window-navigation-and-scroll` (lh median 11.7 to 14.8 microseconds per key, allocations 27.0 unchanged); no code location is known. Advisory of the periodic quality review at 66fd52b.
-- Why it matters: goal 2 of `docs/goals.md` watches time per key; a rise reported as not blocking and never measured again may hide a cost of the prefix wait or the `breaks_insert` check.
+- Why it matters: goal 3 of `docs/goals.md` watches time per key; a rise reported as not blocking and never measured again may hide a cost of the prefix wait or the `breaks_insert` check.
 - Fix outline: run `make bench SCENARIOS=lh` on `main` and on its parent several times on one pinned core; if the rise holds, profile `lh` with `make profile` and fix or record the cause.
 
 ## Illegal bytes are drawn as U+FFFD, not as hexadecimal markers
@@ -287,12 +287,12 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 ## The README's commands table omits five make targets
 
 - Where: `README.md` line 14, the commands table, which has no row for `make clean`, `make pack`, `make install`, `make spinel-rev`, or `make help`. Periodic quality advisory at df5a203.
-- Why it matters: the map's Build and CI rule gives every command a README line, and goal 11 keeps the README current.
+- Why it matters: the map's Build and CI rule gives every command a README line, and goal 12 keeps the README current.
 - Fix outline: add one row naming the missing targets, or one row per target, checked against `make help`.
 
-## CLAUDE.md has 1 byte of room in its budget
+## CLAUDE.md has under 1,000 bytes of room in its budget
 
-- Where: `CLAUDE.md`, 30,719 of its 30,720-byte budget in `tools/docs_lint.sh` (`BUDGETS`) since `buffer-search`. Periodic quality advisory at df5a203; `docs/architecture.md` is at 88,054 of 88,064 and is handled by `project-config-guards`.
+- Where: `CLAUDE.md`, 30,428 of its 30,720-byte budget in `tools/docs_lint.sh` (`BUDGETS`) since `pipeline-speed`, which trimmed it from 30,719. Periodic quality advisory at df5a203; `docs/architecture.md` is at 88,054 of 88,064 and is handled by `project-config-guards`.
 - Why it matters: `CLAUDE.md` requires its Commands and Layout sections to stay in sync with the code, so the next change that must add a line there fails `make docs-lint` and pays for a trim it did not plan.
 - Fix outline: the first change that needs room trims `CLAUDE.md` in the same change, moving detail to `docs/codebase-map.md` or the agents' files, rather than raising the budget; accepted when `make docs-lint` passes with at least 1,000 bytes of room left.
 
@@ -300,25 +300,25 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `.claude/workflows/deliver-change.js` lines 459 to 475, which leave the package, CI, and merge phase lines to the final flush, and the next-phase loop of `tools/run_state.sh` near line 345. Advisory of the quality review of `workflow-records`.
 - Why it matters: during the CI wait `/status` prints next phase package although the pull request is open, and a run killed between the merge and the final flush never records package, ci, and merge, so its history row lacks those phases.
-- Fix outline: have `status` read `pushed`, `pr`, and `merged` as the resume does when the phase lines are absent, or record each phase as soon as its own record exists; add a `tools/tools_test.sh` case for a run state with `pushed` and `pr` but no package line. Queued as a fold of `workflow-cost`.
+- Fix outline: have `status` read `pushed`, `pr`, and `merged` as the resume does when the phase lines are absent, or record each phase as soon as its own record exists; add a `tools/tools_test.sh` case for a run state with `pushed` and `pr` but no package line. Queued in `pipeline-speed-c`.
 
 ## The merger's wait depends on the harness allowing a foreground sleep
 
 - Where: the header of `tools/ci_wait.sh` and step 2 of `.claude/agents/merger.md` (line 20). Advisory of the quality review of `workflow-records`.
 - Why it matters: the one-start wait holds only while the agent harness lets a foreground shell call sleep up to 540 seconds; if it refuses or shortens it, the merger falls back to returning pending, the cost of 36 to 58 merge tool calls a run that `workflow-records` set out to remove.
-- Fix outline: confirm on the first full run (`guard-hardening`) that the merger used one start with no pending note; record the harness behavior in the header and the merger's file, and if it fails, give the workflow the wait between merger starts instead. Queued as a fold of `workflow-cost`.
+- Fix outline: confirm on the first full run (`guard-hardening`) that the merger used one start with no pending note; record the harness behavior in the header and the merger's file, and if it fails, give the workflow the wait between merger starts instead. Queued in `pipeline-speed-c`.
 
 ## Advisories repeated at a later round are recorded twice
 
 - Where: `addAdvisories` in `.claude/workflows/deliver-change.js` (line 281) and `seed` (line 200). Quality advisory of `guard-hardening` at a272de71f10b.
 - Why it matters: `addAdvisories` deduplicates by exact text, but the quality reviewer's text starts with its head commit while `seed` strips it from the run state's notes, so an advisory repeated at a later round or after a resume is handed to `docs/backlog.md` again, against the design's no-duplicates claim.
-- Fix outline: strip a leading commit hash in `addAdvisories` so both paths key on the same text, and check it with a resumed run that re-reports one advisory. Queued in `review-rounds`.
+- Fix outline: strip a leading commit hash in `addAdvisories` so both paths key on the same text, and check it with a resumed run that re-reports one advisory. Queued in `pipeline-speed-b`.
 
 ## priorQuality's local findings shadows the module function
 
 - Where: `priorQuality` in `.claude/workflows/deliver-change.js` (line 323), whose local `const findings` shadows the module-level `findings()` added at line 282. Quality advisory of `guard-hardening` at a272de71f10b.
 - Why it matters: a later edit inside `priorQuality` that means to call `findings()` gets the local array and fails only at run time.
-- Fix outline: rename the local, for example `listed`. Queued as a fold of `review-rounds`.
+- Fix outline: rename the local, for example `listed`. Queued in `pipeline-speed-b`.
 
 ## The contributor can edit the agent files of its own run
 
@@ -336,7 +336,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `check` in `tools/run_state.sh` (line 262), which skips every stage recorded as passed at the head, and the stages and passed gates, which trust `stage.*` and `phase.check`. Periodic security Low (5) at 8c340cd.
 - Why it matters: an agent can write those records by running a script file the guard does not read (`MAKE=true sh tools/run_state.sh check` inside a script), and the checker then runs nothing, leaving `diagnose` and `gates`, which CI leaves out, unchecked.
-- Fix outline: back the check result with a record only the workflow writes and compare it in the records gate, or give the checker a check that ignores earlier records at the head; add a `tools/tools_test.sh` case. Queued in part (b) of `workflow-cost`, which changes the same records.
+- Fix outline: back the check result with a record only the workflow writes and compare it in the records gate, or give the checker a check that ignores earlier records at the head; add a `tools/tools_test.sh` case. Queued in part (c) of `pipeline-speed-b`, which changes the same records.
 
 ## The search budget charges a line's length on ASCII lines too
 
@@ -432,40 +432,40 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `worktree` in `tools/agent_guard.sh` (line 329), which admits any `tmp/.NAME` for `git -C`, `cd`, `checkout`, `make -C`, and `worktree remove`. Security Low (6) of `guard-allowlist` at 31a93d257317.
 - Why it matters: a `tmp/.NAME` that is not a worktree reaches the project repository through discovery (a read agent's `checkout -f --detach origin/main` would force-detach the main tree), or a bare repository the contributor wrote, whose configuration (`diff.external`, `remote.origin.uploadpack`) runs a command.
-- Fix outline: require `tmp/.NAME` to be an existing real directory, not a link, listed in `git worktree list --porcelain` for `-C`, `cd`, `checkout`, `make -C`, and `worktree remove`; for `worktree add`, require only that the path does not exist yet; add a `tools/tools_test.sh` case for each.
+- Fix outline: require `tmp/.NAME` to be an existing real directory, not a link, listed in `git worktree list --porcelain` for `-C`, `cd`, `checkout`, `make -C`, and `worktree remove`; for `worktree add`, require only that the path does not exist yet; add a `tools/tools_test.sh` case for each. Queued in `guard-lows`.
 
 ## The guard does not judge input redirections
 
 - Where: `redirect` in `tools/agent_guard.sh` (line 752), which checks only write targets. Security Low (5) of `guard-allowlist` at 31a93d257317.
 - Why it matters: `< /dev/tcp/HOST/PORT` opens an outbound connection from any profile, a path for exfiltration through the hostname or DNS by an agent that text in the tree leads astray.
-- Fix outline: refuse a read target under `/dev/tcp/` or `/dev/udp/` (or allow only targets in the project and `/dev/null`), with a `tools/tools_test.sh` case.
+- Fix outline: refuse a read target under `/dev/tcp/` or `/dev/udp/` (or allow only targets in the project and `/dev/null`), with a `tools/tools_test.sh` case. Queued in `guard-lows`.
 
 ## The guard judges relative words after a cd against the project
 
 - Where: the `cd` form in `judge`, `tools/agent_guard.sh` (line 724). Quality advisory of `guard-allowlist` at a979633e8a4d and again at 31a93d257317.
 - Why it matters: `cd tmp/.base && mkdir -p tmp/scout/x` passes with DIR `tmp/scout` and writes `tmp/.base/tmp/scout/x`; benign today, since only DIR- or `build/stages`-prefixed paths inside the worktree are reachable, but the guard no longer reads the command as the shell runs it.
-- Fix outline: refuse a relative write target after a `cd` other than to the project, or resolve it against the `cd` target, with a `tools/tools_test.sh` case.
+- Fix outline: refuse a relative write target after a `cd` other than to the project, or resolve it against the `cd` target, with a `tools/tools_test.sh` case. Queued in `guard-advisories`.
 
 ## The guard admits date with any argument
 
 - Where: the shared plain tools in `judge`, `tools/agent_guard.sh` (line 710). Quality advisory of `guard-allowlist` at 31a93d257317.
 - Why it matters: `date -s 2001-01-01` passes every profile and, run as root, sets the system clock that git and the run state's timestamps read, against an allowlist of what each agent needs (the scout runs only `date -u +FORMAT`).
-- Fix outline: admit `date` only with `-u` and a `+FORMAT` word, with a refusal case in `tools/tools_test.sh`.
+- Fix outline: admit `date` only with `-u` and a `+FORMAT` word, with a refusal case in `tools/tools_test.sh`. Queued in `guard-advisories`.
 
 ## The guard decodes the JSON escapes \b and \f to letters
 
 - Where: `field` in `tools/agent_guard.sh` (line 114), whose else branch keeps the escaped character. Quality advisory of `guard-allowlist` at 5af7fd9d9784, 14b18734b96e, and 31a93d257317.
 - Why it matters: the guard judges the word `lsb` where bash runs `ls` and a backspace, against the header's "any other one ?"; no blank or operator diverges, since bash reads backspace and form feed as word characters, but the guard should read the command as the shell does.
-- Fix outline: decode `\b` and `\f` to `?` like `\u0008` and `\u000c`, with a `tools/tools_test.sh` case for `ls\b#; git push origin x`.
+- Fix outline: decode `\b` and `\f` to `?` like `\u0008` and `\u000c`, with a `tools/tools_test.sh` case for `ls\b#; git push origin x`. Queued in `guard-advisories`.
 
 ## uniq -f 1 FILE is refused
 
 - Where: `uniq_form` in `tools/agent_guard.sh` (line 668). Quality advisory of `guard-allowlist` at 3efc71ba34f8 and again at 31a93d257317.
 - Why it matters: the value of `-f`, `-s`, or `-w` given as a separate word counts as an operand, so a normal read-only form is refused (it fails closed).
-- Fix outline: skip the word after `-f`, `-s`, and `-w`, with a `tools/tools_test.sh` case.
+- Fix outline: skip the word after `-f`, `-s`, and `-w`, with a `tools/tools_test.sh` case. Queued in `guard-advisories`.
 
 ## The guard header lists printf without its restriction
 
 - Where: the shared forms of the header of `tools/agent_guard.sh` (line 25). Quality advisory of `guard-allowlist` at 3efc71ba34f8 and again at 31a93d257317.
 - Why it matters: `judge` refuses `printf` with a leading option, so the header no longer says what the code allows.
-- Fix outline: write `printf (no leading option)` in the header's shared forms.
+- Fix outline: write `printf (no leading option)` in the header's shared forms. Queued in `guard-advisories`.
