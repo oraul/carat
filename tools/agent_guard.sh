@@ -14,11 +14,11 @@
 # (variables, substitutions, ANSI-C quoting), backquotes, parentheses,
 # here-documents, unquoted * ? [ ] { }, a leading ~, a command named by a
 # path, and an assignment before a command other than BASE, CHANGE, and
-# RECORDS before tools/gates.sh. Every simple command must then match a
-# form of its profile; every word is refused with a parent step (..) as a
-# path segment or naming the run state's directory build/pipeline, but the
-# pull request body file build/pipeline/NAME.body.md as the body gate's
-# argument, never a link.
+# RECORDS before tools/gates.sh or the merge gates. Every simple command
+# must then match a form of its profile; every word is refused with a
+# parent step (..) as a path segment or naming the run state's directory
+# build/pipeline, but the pull request body file build/pipeline/NAME.body.md
+# as the body gate's argument, never a link.
 #
 # Forms of every profile: ls cat head tail wc grep diff cmp sort (the
 # short options of SORT_FLAGS, -k, and -t) uniq (one file at most) cut tr
@@ -41,14 +41,15 @@
 #                metrics-compare bench, and PREFIX and SPINEL_CACHE_DIR at
 #                the project's tmp/.toolchain and build/spinel-cache,
 #                BASE_METRICS, SCENARIOS; sh tools/run_state.sh show status
-#                pending get trusted check bench metrics metric note budget
-#                review-due; [BASE=REV] sh tools/gates.sh GATE...; sh
+#                pending get trusted check scope bench metrics metric note
+#                budget review-due; [BASE=REV] sh tools/gates.sh GATE...; sh
 #                tools/metrics.sh measure OUT [SCENARIO...], OUT
 #                build/metrics/current.tsv of the project or a worktree
 #                tmp/.NAME with no link on its way, and compare BASE CURRENT
 #   merger       adds sh tools/run_state.sh show status get trusted metric,
 #                set CHANGE ci "red|green HEX", set CHANGE merged HEX;
-#                CHANGE=NAME RECORDS=... sh tools/gates.sh merge BODY; sh
+#                CHANGE=NAME RECORDS=... sh tmp/.merge-gates/tools/gates.sh
+#                merge BODY, never the branch's tools/gates.sh merge; sh
 #                tools/ci_wait.sh N; git push origin --delete BRANCH, git
 #                checkout -q main, git merge -q --ff-only origin/main, git
 #                branch -D BRANCH, BRANCH a Conventional Branch
@@ -512,7 +513,7 @@ make_form() {
 run_state_form() {
   verb=${1:-}
   case "$profile:$verb" in
-    read:show|read:status|read:pending|read:get|read:trusted|read:check|read:bench|read:metrics|read:metric|read:note|read:budget|read:review-due) ;;
+    read:show|read:status|read:pending|read:get|read:trusted|read:check|read:scope|read:bench|read:metrics|read:metric|read:note|read:budget|read:review-due) ;;
     merger:show|merger:status|merger:get|merger:trusted|merger:metric) ;;
     contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history) ;;
     contributor:push)
@@ -582,16 +583,25 @@ metrics_out() {
   done
 }
 
+# The merge gates the merger runs: those of the worktree of origin/main the
+# workflow's command adds, which the branch cannot have edited.
+MERGE_GATES=tmp/.merge-gates/tools/gates.sh
 script_form() {
   [ $# -ge 2 ] || refuse "sh without a script"
   case "$2" in -*) refuse "a shell option: sh $2" ;; esac
   relative "$2"
   script=$rel
-  [ -z "$envs" ] || [ "$script" = tools/gates.sh ] || refuse "an assignment before $2"
+  [ -z "$envs" ] || [ "$script" = tools/gates.sh ] || [ "$script" = "$MERGE_GATES" ] || refuse "an assignment before $2"
   shift 2
   case "$script" in
     tools/run_state.sh) run_state_form "$@" ;;
-    tools/gates.sh) gates_form "$@" ;;
+    tools/gates.sh)
+      [ "$profile:${1:-}" != merger:merge ] || refuse "the branch's tools/gates.sh merge; the merger runs $MERGE_GATES, the copy of origin/main"
+      gates_form "$@" ;;
+    "$MERGE_GATES")
+      only_profiles merger "$MERGE_GATES"
+      [ "${1:-}" = merge ] || refuse "$MERGE_GATES other than merge BODY"
+      gates_form "$@" ;;
     tools/metrics.sh)
       only_profiles read "tools/metrics.sh"
       case "${1:-}" in

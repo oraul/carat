@@ -59,12 +59,20 @@
 # them from the results it received (tools/agent_guard.sh keeps the agents
 # off them, and the merge gate compares them with RECORDS).
 #   stage CHANGE NAME CMD...    run CMD with its log and record its result
-#   check CHANGE                run the canonical stages (make -s stages) in
-#                               order, skip a stage passed at HEAD, stop at the
-#                               first failure, record phase.check when all pass;
-#                               a stage outside TEST_STAGES that passed at a
-#                               commit since which only tests changed is
-#                               carried to HEAD instead of run
+#   check CHANGE [COMMIT]       run the canonical stages (make -s stages) in
+#                               order, stop at the first failure, record
+#                               phase.check when all pass; a stage record
+#                               counts only at COMMIT, the last check the
+#                               workflow recorded, or carried from it: skipped
+#                               when COMMIT is HEAD, carried to HEAD for a
+#                               stage outside TEST_STAGES when only tests
+#                               changed since COMMIT
+#   scope CHANGE COMMIT [FILE...]
+#                               print "fix: ..." and exit 0 when every path
+#                               changed from COMMIT to HEAD is a FILE or
+#                               matches TEST_ONLY, so the quality review of a
+#                               fix reads only its diff; "branch: ..." and
+#                               exit 1 otherwise or when nothing changed
 #   bench CHANGE                record the metrics stage's measurement and
 #                               compare it with main's through make
 #                               metrics-compare: the newest merged change
@@ -79,7 +87,9 @@
 #   metrics CHANGE FILE         record each "name<TAB>value" line of a
 #                               tools/metrics.sh measurement as metric.name,
 #                               dropping one whose value is ? (not measured)
-#   note CHANGE KIND TEXT       record note.N, the next number, as "KIND TEXT"
+#   note CHANGE KIND TEXT       record note.N, the next number, as "KIND TEXT";
+#                               a quality-advisory whose TEXT, without its
+#                               leading commit, is already noted is not
 #   usage CHANGE TOKENS MINUTES add one start's total tokens (input plus
 #                               output) and wall minutes, as the Workflow
 #                               tool reported them, to metric.total_tokens
@@ -291,31 +301,72 @@ tests_only_since() {
   [ -z "$(printf '%s\n' "$rest" | grep -v -E "$TEST_ONLY")" ]
 }
 
+# The stages in order: a stage record counts only at BACKED, the last
+# commit whose check the workflow recorded (empty: none), or carried from
+# it, so a record at HEAD that no workflow record backs runs again. A stage
+# passed at BACKED is skipped when BACKED is HEAD, and carried to HEAD when
+# it reads no test program and only tests changed since BACKED.
 check_stages() {
   stages=${STAGES:-$("$make_cmd" -s --no-print-directory stages)}
   head=$(head_commit)
+  backed=$1
   for s in $stages; do
     record=$(read_key "stage.$s")
+    at=$(echo "$record" | cut -d' ' -f3)
+    from=$(echo "$record" | sed -n 's/.* carried-from-\([0-9a-f]*\)$/\1/p')
     case "$record" in
       "0 "*)
-        at=$(echo "$record" | cut -d' ' -f3)
-        if [ "$at" = "$head" ]; then
+        if [ -n "$backed" ] && [ "$at" = "$backed" ] && [ "$at" = "$head" ]; then
           echo "stage $s: passed at $head, skipped"
           continue
         fi
-        # A stage that reads no test program keeps its result across a
-        # commit that changes only tests.
-        if ! one_of "$s" "$TEST_STAGES" && tests_only_since "$at"; then
-          write_key "stage.$s" "0 0s $head $(utc_now) carried-from-$at"
-          echo "stage $s: passed at $at, carried to $head (only tests changed since)"
+        if [ -n "$backed" ] && { [ "$at" = "$backed" ] || [ "$from" = "$backed" ]; } &&
+            ! one_of "$s" "$TEST_STAGES" && tests_only_since "$backed"; then
+          write_key "stage.$s" "0 0s $head $(utc_now) carried-from-$backed"
+          echo "stage $s: passed at $backed, carried to $head (only tests changed since)"
           continue
         fi ;;
     esac
     run_stage "$s" "$make_cmd" --no-print-directory check-stage "S=$s" ||
       die "check: stage $s failed at $head; read $stage_dir/$change/$s.log"
   done
+  # The workflow records phase.check from the checker's result too; the
+  # merge's records gate compares this one with it.
   write_key "phase.check" "$head"
   echo "check: every stage passed at $head"
+}
+
+# scope COMMIT [FILE...]: whether the fix since COMMIT stays within the
+# files the blocking findings at COMMIT name, tests, and the OpenSpec and
+# planning records (TEST_ONLY), so the next quality review may read only
+# its diff; renames count both paths.
+fix_scope() {
+  since=$(commit_at "$1") || exit 1
+  shift
+  for f in "$@"; do
+    valid '[A-Za-z0-9_][A-Za-z0-9_./-]*' "$f" && parent_free "$f" || die "scope: not a plain relative path: $f"
+  done
+  rest=$(git diff --no-renames --name-only "$since" HEAD) || die "scope: git diff failed"
+  if [ -z "$rest" ]; then
+    echo "branch: nothing changed since $since; review the whole branch diff"
+    return 1
+  fi
+  other=$(printf '%s\n' "$rest" | while IFS= read -r path; do
+    printf '%s\n' "$path" | grep -q -E "$TEST_ONLY" && continue
+    named=0
+    for f in "$@"; do [ "$f" != "$path" ] || named=1; done
+    [ "$named" -eq 1 ] || { printf '%s\n' "$path"; break; }
+  done)
+  if [ -n "$other" ]; then
+    echo "branch: $other changed since $since and no blocking finding names it; review the whole branch diff"
+    return 1
+  fi
+  echo "fix: review only git diff $since HEAD against the findings and the rules"
+}
+
+# True when PATH has no parent step (..) as a segment.
+parent_free() {
+  case "/$1/" in */../*) return 1 ;; esac
 }
 
 count() {
@@ -517,6 +568,18 @@ bench_compare() {
 
 add_note() {
   valid '[a-z-]+' "$1" || die "note: the kind is lowercase words joined by hyphens, not $1"
+  # An advisory a later round repeats is one note: its text is compared
+  # without the leading commit of the review that found it.
+  if [ "$1" = quality-advisory ]; then
+    text=$(escape "$2" | sed -E 's/^[0-9a-f]{7,40} //')
+    if keys_under note. | T="$text" awk '
+        { sub(/^[0-9]+=/, "") }
+        sub(/^quality-advisory /, "") { sub(/^[0-9a-f]+ /, ""); if ($0 == ENVIRON["T"]) found = 1 }
+        END { exit !found }'; then
+      echo "note: the advisory is already recorded; not recorded again"
+      return 0
+    fi
+  fi
   n=$(($(grep -c '^  "note[.]' "$(state_file)") + 1))
   write_key "note.$n" "$1 $2"
 }
@@ -894,9 +957,14 @@ case "$command" in
     [ $# -ge 2 ] || usage
     plain_key "stage.$1"
     run_stage "$@" ;;
+  scope)
+    [ $# -ge 1 ] || usage
+    fix_scope "$@" ;;
   check)
-    [ $# -eq 0 ] || usage
-    check_stages ;;
+    [ $# -le 1 ] || usage
+    backed=""
+    [ $# -eq 0 ] || backed=$(commit_at "$1") || exit 1
+    check_stages "$backed" ;;
   bench)
     [ $# -eq 0 ] || usage
     bench_compare ;;
