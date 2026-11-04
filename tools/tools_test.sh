@@ -335,6 +335,10 @@ state review derived quality blocked "blocking=1" > /dev/null
 state review derived security pass "high=0" > /dev/null
 state set derived ci "green abc" > /dev/null
 state metric derived first_pass=ci:0 first.bench=0 phase.implement=1000/30 phase.check=200/10 rework=1 > /dev/null
+expect "run_state: usage adds a start's totals" 0 "^no estimate: .*actual 5000 total tokens in 3[.]5 minutes, 1200 output tokens$" state usage derived 5000 3.5
+expect "run_state: usage adds the starts' totals" 0 "actual 7500 total tokens in 4[.]5 minutes" state usage derived 2500 1
+expect "run_state: usage refuses minutes that are not a number" 1 "the wall minutes are a number, not x" state usage derived 100 'x'
+expect "run_state: usage refuses a token count that is not whole" 1 "a whole number" state usage derived 1.5 2
 state set derived merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 state set derived pushes 1 > /dev/null
 state history > /dev/null
@@ -343,9 +347,11 @@ expect "run_state: history takes only the stored first verdicts" 0 "^bench:0,ci:
 expect "run_state: history groups the phase figures" 0 "^implement=1000/30,check=200/10$" awk -F'\t' 'NR == 2 { print $13 }' docs/metrics.tsv
 expect "run_state: history sums the phase figures" 0 "^1200 40$" awk -F'\t' 'NR == 2 { print $11, $12 }' docs/metrics.tsv
 expect "run_state: history records no estimate without a queue item" 0 "^-$" awk -F'\t' 'NR == 2 { print $15 }' docs/metrics.tsv
+expect "run_state: history records the totals after the estimate" 0 "^7500 4[.]5$" awk -F'\t' 'NR == 2 { print $16, $17 }' docs/metrics.tsv
 
 # The estimate: the size word of the change's item in the queue at the
-# parent of its squash commit, against the run's output tokens.
+# parent of its squash commit, against the run's total tokens and wall
+# minutes (usage), with its output tokens beside them.
 fresh estimate
 printf '# Queue\n\n1. `sized` (T2, estimated small): one.\n2. `unsized` (T5): two, after `sized`.\n3. `large` (T4, estimated large): three.\n4. `quiet` (T6, estimated medium): four.\n5. `unmerged` (T6, estimated small): five.\n' > docs/queue.md
 commit "docs: the queue"
@@ -358,10 +364,12 @@ for name in sized unsized large quiet unmerged; do
 done
 state metric sized phase.implement=250000/30 phase.check=60000/10 > /dev/null
 state metric large phase.implement=900000/30 > /dev/null
-expect "run_state: budget names an overrun" 0 "^over: estimated small, budget 300000, actual 310000 output tokens$" state budget sized
-expect "run_state: budget passes a run within its budget" 0 "^within: estimated large, budget 1200000, actual 900000 output tokens$" state budget large
+state usage sized 610000 20 > /dev/null
+state usage large 2000000 50 > /dev/null
+expect "run_state: budget names an overrun of total tokens" 0 "^over: estimated small, budget 500000 total tokens and 25 minutes, actual 610000 total tokens in 20[.]0 minutes, 310000 output tokens$" state budget sized
+expect "run_state: budget passes a run within its budget" 0 "^within: estimated large, budget 2500000 total tokens, actual 2000000 total tokens in 50[.]0 minutes, 900000 output tokens$" state budget large
 expect "run_state: budget says when no estimate was made" 0 "^no estimate: neither the run state nor a queue item of unsized states a size" state budget unsized
-expect "run_state: budget says when no output tokens were recorded" 0 "^unmeasured: estimated medium, budget 700000" state budget quiet
+expect "run_state: budget says when no total tokens were recorded" 0 "^unmeasured: estimated medium, budget 1200000 total tokens, no total tokens recorded$" state budget quiet
 expect "run_state: budget reads no estimate of an unmerged change" 0 "^no estimate: " state budget unmerged
 # The plan's estimate, stored as metric.estimate, outlives the queue item:
 # planned is in no queue, early is not merged, and a stored size wins
@@ -373,9 +381,12 @@ state metric large estimate=medium > /dev/null
 state init early chore/early > /dev/null
 state metric early estimate=small phase.implement=1000/2 > /dev/null
 state metric quiet estimate=huge > /dev/null
-expect "run_state: budget reads the stored estimate of a change with no queue item" 0 "^within: estimated medium, budget 700000, actual 200000 output tokens$" state budget planned
-expect "run_state: the stored estimate wins over the queue item" 0 "^over: estimated medium, budget 700000, actual 900000 output tokens$" state budget large
-expect "run_state: budget reads the stored estimate before the merge" 0 "^within: estimated small, budget 300000, actual 1000 output tokens$" state budget early
+state usage planned 700000 10 > /dev/null
+state usage early 400000 20 > /dev/null
+expect "run_state: budget reads the stored estimate of a change with no queue item" 0 "^within: estimated medium, budget 1200000 total tokens, actual 700000 total tokens in 10[.]0 minutes, 200000 output tokens$" state budget planned
+expect "run_state: the stored estimate wins over the queue item" 0 "^over: estimated medium, budget 1200000 total tokens, actual 2000000 total tokens" state budget large
+expect "run_state: budget reads the stored estimate before the merge" 0 "^within: estimated small, budget 500000 total tokens and 25 minutes, actual 400000 total tokens in 20[.]0 minutes, 1000 output tokens$" state budget early
+expect "run_state: budget names an overrun of wall minutes" 0 "^over: estimated small, budget 500000 total tokens and 25 minutes, actual 400001 total tokens in 30[.]0 minutes" state usage early 1 10
 expect "run_state: a stored word that is not a size leaves the queue item's" 0 "^unmeasured: estimated medium" state budget quiet
 # A merged value that is not a commit hash never reaches git, where
 # --output=FILE would write FILE: set refuses it, and one written by hand is
@@ -393,7 +404,7 @@ expect "run_state: history never passes the merged value to git as an option" 1 
 rm build/pipeline/unmerged.json
 expect "run_state: history records the estimate" 0 "^medium small - medium$" \
   sh -c "awk -F'\t' '\$1 == \"large\" { l = \$15 } \$1 == \"sized\" { s = \$15 } \$1 == \"unsized\" { u = \$15 } \$1 == \"planned\" { p = \$15 } END { print l, s, u, p }' docs/metrics.tsv"
-expect "run_state: every history row has the header's columns" 0 "^15$" sh -c "awk -F'\t' '{ print NF }' docs/metrics.tsv | sort -u"
+expect "run_state: every history row has the header's columns" 0 "^17$" sh -c "awk -F'\t' '{ print NF }' docs/metrics.tsv | sort -u"
 
 # The benchmark from the check: the metrics stage's measurement against the
 # last history row.
@@ -477,11 +488,25 @@ state init areas chore/areas > /dev/null
 merge_touch "feat: entry" bin/carat.rb
 expect "run_state: review-due names the entry point" 0 "^due: the change touched entry point [(]bin/carat[.]rb[)]" state review-due areas
 merge_touch "chore: tool" tools/x.sh
-expect "run_state: review-due names a tool" 0 "^due: the change touched tooling and CI [(]tools/x[.]sh[)]" state review-due areas
+expect "run_state: review-due skips another tool" 1 "^not due" state review-due areas
+merge_touch "chore: guard" tools/agent_guard.sh
+expect "run_state: review-due names the guard" 0 "^due: the change touched guard and gates [(]tools/agent_guard[.]sh[)]" state review-due areas
+merge_touch "chore: gates" tools/gates.sh
+expect "run_state: review-due names the gates" 0 "^due: the change touched guard and gates [(]tools/gates[.]sh[)]" state review-due areas
+merge_touch "chore: settings" .claude/settings.json
+expect "run_state: review-due names the settings" 0 "^due: the change touched guard and gates [(][.]claude/settings[.]json[)]" state review-due areas
 merge_touch "chore: agent" .claude/agents/x.md
-expect "run_state: review-due names an agent" 0 "^due: the change touched tooling and CI [(][.]claude/agents/x[.]md[)]" state review-due areas
+expect "run_state: review-due skips an agent's prose" 1 "^not due" state review-due areas
+printf -- '---\nname: x\ntools: Bash, Read\n---\n\nProse.\n' > .claude/agents/x.md
+merge_touch "chore: agent tools" README.md
+expect "run_state: review-due names an agent's tools" 0 "^due: the change touched guard and gates [(][.]claude/agents/x[.]md, its tools or hooks[)]" state review-due areas
+printf '    - matcher: "Bash"\n' >> .claude/agents/x.md
+merge_touch "chore: agent hook" README.md
+expect "run_state: review-due names an agent's hook" 0 "its tools or hooks" state review-due areas
+merge_touch "docs: notes" docs/x.md
+expect "run_state: review-due skips a docs-only change" 1 "^not due" state review-due areas
 merge_touch "ci: workflow" .github/workflows/ci.yml
-expect "run_state: review-due names the CI workflow" 0 "^due: the change touched tooling and CI [(][.]github/workflows/ci[.]yml[)]" state review-due areas
+expect "run_state: review-due names the CI workflow" 0 "^due: the change touched guard and gates [(][.]github/workflows/ci[.]yml[)]" state review-due areas
 mkdir -p config carat/domain
 printf '# Options.\noption.tabstop 2\nkeymap.normal j cursor.down\n' > config/default.caratrc
 echo 'mirror' > carat/domain/default_config.rb
@@ -501,6 +526,36 @@ expect "run_state: review-due names a loader" 0 "^due: the change touched config
 echo 'keymap.normal l cursor.right' >> config/default.caratrc
 merge_touch "fix: generator" bin/carat-gen-config.rb
 expect "run_state: review-due names the generator" 0 "^due: the change touched config loading [(]bin/carat-gen-config[.]rb[)]" state review-due areas
+
+# The planner runs only when the queue needs a decision: the change is not
+# the queue's head, or a merged change without a history row holds a
+# proposal or finding to place.
+fresh plan
+printf '# Queue\n\n1. `next` (T1, estimated small): one, estimated large later.\n2. `later` (T5, estimated medium): two.\n' > docs/queue.md
+commit "docs: the queue"
+state init next chore/next > /dev/null
+expect "run_state: plan-needed takes the queue head as written" 1 "^not needed: next heads docs/queue[.]md, estimated small," state plan-needed next
+expect "run_state: plan-needed prints the head item as written" 1 "^item: \`next\` [(]T1, estimated small[)]: one, estimated large later[.]\$" state plan-needed next
+expect "run_state: plan-needed names a change that is not the head" 0 "^needed: later is not the head of docs/queue[.]md [(]next[)]" state plan-needed later
+# item_lines CHANGE: plan-needed's exit, then the count of its item lines.
+item_lines() {
+  out=$(state plan-needed "$1")
+  got=$?
+  echo "exit $got items $(printf '%s\n' "$out" | grep -c '^item: ')"
+}
+expect "run_state: plan-needed prints no item for a change that is not the head" 0 "^exit 0 items 0\$" item_lines later
+state init prev chore/prev > /dev/null
+state set prev merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+state note prev quality-advisory "abc1234 a name" > /dev/null
+state note prev quality-blocking "abc1234 a bug" > /dev/null
+expect "run_state: plan-needed ignores a delivery's advisories" 1 "^not needed" state plan-needed next
+state note prev retro "drop a step; evidence: 9000 tokens" > /dev/null
+expect "run_state: plan-needed names a pending proposal" 0 "^needed: prev holds 1 proposal" state plan-needed next
+expect "run_state: plan-needed prints the head item beside a pending proposal" 0 "^item: \`next\` " state plan-needed next
+state history > /dev/null
+expect "run_state: plan-needed leaves a change with a history row" 1 "^not needed" state plan-needed next
+printf '# Queue\n\n1. UI track: themes (T5, estimated medium).\n' > docs/queue.md
+expect "run_state: plan-needed names a head without a change name" 0 "^needed: next is not the head of docs/queue[.]md [(]no named item[)]" state plan-needed next
 
 # forge CHANGE LINE: append LINE to the run state as a hand edit would.
 forge() {
@@ -639,6 +694,8 @@ expect "guard: scout reads the tree" 0 "^$" guard read 'git diff --quiet abc1234
 expect "guard: planner reads the run states" 0 "^$" guard read 'sh tools/run_state.sh status && sh tools/run_state.sh pending && sh tools/run_state.sh show c' build/plan
 expect "guard: planner prepares its directory" 0 "^$" guard read 'mkdir -p build/plan && rm -f build/plan/goals.md' build/plan
 expect "guard: checker runs the checks" 0 "^$" guard read 'git status --porcelain --untracked-files=no && sh tools/run_state.sh check c > build/stages/c/check.out 2>&1'
+expect "guard: checker records the figures first" 0 "^$" guard read 'sh tools/run_state.sh metric c phase.check=1200/5 first.check=0 rework=2 extra=1 stop=none estimate=small planned=0'
+expect "guard: retrospective budgets the last row's change" 0 "^$" guard read 'tail -1 docs/metrics.tsv | cut -f1; sh tools/run_state.sh budget prev && sh tools/run_state.sh note c overrun \"prev: over: estimated small\"'
 expect "guard: checker reads a failing log and compares" 0 "^$" guard read 'tail -60 build/stages/c/lint.log; grep -n -m 20 -E \"FAIL|rror\" build/stages/c/lint.log; sh tools/run_state.sh bench c; sh tools/run_state.sh show c'
 expect "guard: benchmark prepares the base" 0 "^$" guard read 'git worktree add --detach tmp/.base origin/main || git -C tmp/.base checkout -q --detach origin/main'
 expect "guard: benchmark builds the base" 0 "^$" guard read 'make -C tmp/.base dev-build test-build bench-budget PREFIX=/w/tmp/.toolchain SPINEL_CACHE_DIR=/w/build/spinel-cache'

@@ -28,14 +28,17 @@ export const meta = {
 // measures the run (output tokens and tool calls per phase, the first
 // verdict of each gate, rework rounds, CI minutes, the plan's estimate) and
 // stores every figure as metric.* in one metric line (metricLine), so a
-// restart seeds them and tools/run_state.sh history builds a whole row. The
+// restart seeds them and tools/run_state.sh history builds a whole row;
+// the total tokens and wall minutes of each start, which only the session
+// that ran the workflow sees, /deliver adds with tools/run_state.sh usage. The
 // run state's phase.* and review.* lines and the figures are the script's
 // own: it builds each command from a schema-checked result. One agent that
 // reads nothing else runs the queued phase and review lines with the
 // metric line (flush), twice a run: at the end of verify(), since the
 // pre-push gates read the reviews, and at the end, where the package, CI,
 // and merge phases wait (a resume reads pushed, pr, and merged instead).
-// Between them the merger and the retrospective run the metric line first.
+// Between them the checker, the merger, and the retrospective run the
+// metric line first, so a fix round is counted before its check.
 // tools/agent_guard.sh keeps the other agents off the phase and review
 // commands, and the merger's records gate compares the file with what the
 // script received.
@@ -52,6 +55,17 @@ let stopped = ''
 const usage = {}
 const firstPass = {}
 let rework = 0
+// The fix rounds are counted across starts (rework, from the run state):
+// seededRework is what earlier starts spent, extra the rounds granted beyond
+// ROUNDS, lastStop the stop word the last start stored (rounds when it
+// stopped at the limit), stopKind this start's, and planned 0 when the
+// planner was skipped.
+let seededRework = 0
+let extra = 0
+let extraNow = false
+let lastStop = ''
+let stopKind = 'none'
+let planned = null
 let ciMinutes = null
 const SIZES = ['small', 'medium', 'large']
 let estimate = ''
@@ -64,6 +78,7 @@ const RESUME = {
   properties: {
     status: STATUS, change: { type: 'string' }, branch: { type: 'string' }, head: HEAD,
     state_json: { type: 'string', description: 'the output of tools/run_state.sh trusted, verbatim' },
+    plan: { type: 'string', description: 'the output of tools/run_state.sh plan-needed, verbatim: its first line, then its item: line when it printed one' },
     reason: { type: 'string' },
   },
   required: ['status', 'change', 'branch', 'head', 'state_json'],
@@ -170,10 +185,11 @@ function verdict(gate, passed) {
 // shell and for tools/run_state.sh metric. Empty without a change name.
 function metricLine() {
   const pairs = Object.keys(usage).map((k) => `phase.${k}=${Math.round(usage[k].tokens)}/${usage[k].calls}`)
-    .concat(Object.keys(firstPass).map((g) => `first.${g}=${firstPass[g]}`), [`rework=${rework}`])
+    .concat(Object.keys(firstPass).map((g) => `first.${g}=${firstPass[g]}`), [`rework=${rework}`, `extra=${extra}`, `stop=${stopKind}`])
   if (ciMinutes !== null) pairs.push(`ci_min=${Number(ciMinutes).toFixed(1)}`)
   if (SIZES.includes(estimate)) pairs.push(`estimate=${estimate}`)
-  const safe = pairs.filter((p) => /^[a-z0-9_.-]+=([0-9./]+|small|medium|large)$/.test(p))
+  if (planned !== null) pairs.push(`planned=${planned}`)
+  const safe = pairs.filter((p) => /^[a-z0-9_.-]+=([0-9./]+|small|medium|large|none|rounds)$/.test(p))
   return CHANGE.test(state.change || '') ? `sh tools/run_state.sh metric ${state.change} ${safe.join(' ')}` : ''
 }
 // A restart carries on the figures the run state holds.
@@ -188,6 +204,10 @@ function seed() {
     if (m) firstPass[m[1]] = Number(state[key]) ? 1 : 0
   }
   rework = Number(state['metric.rework']) || 0
+  seededRework = rework
+  extra = Number(state['metric.extra']) || 0
+  lastStop = /^[a-z]+$/.test(state['metric.stop'] || '') ? state['metric.stop'] : ''
+  if (/^[01]$/.test(state['metric.planned'] || '')) planned = Number(state['metric.planned'])
   if (state['metric.ci_min']) ciMinutes = Number(state['metric.ci_min'])
   if (SIZES.includes(state['metric.estimate'])) estimate = state['metric.estimate']
   // The notes in the order they were recorded. The advisories of every
@@ -218,7 +238,7 @@ function summary() {
   const keys = Object.keys(usage)
   const total = (field) => keys.reduce((n, k) => n + usage[k][field], 0)
   const first = Object.keys(firstPass).map((g) => `${g}:${firstPass[g]}`).join(',') || 'none'
-  return `output tokens ${Math.round(total('tokens'))}, tool calls ${total('calls')}; per phase ${keys.map((k) => `${k}=${Math.round(usage[k].tokens)}/${usage[k].calls}`).join(',') || 'none'}; first passes ${first}; rework ${rework}${ciMinutes !== null ? `; CI ${ciMinutes} min` : ''}`
+  return `output tokens ${Math.round(total('tokens'))}, tool calls ${total('calls')}; per phase ${keys.map((k) => `${k}=${Math.round(usage[k].tokens)}/${usage[k].calls}`).join(',') || 'none'}; first passes ${first}; rework ${rework} of ${ROUNDS + extra}${ciMinutes !== null ? `; CI ${ciMinutes} min` : ''}`
 }
 
 // The records the script writes: a phase or a review at a commit, queued as
@@ -241,12 +261,14 @@ function reviewed(kind, passed, commit, counts) {
   queue(`sh tools/run_state.sh review ${state.change} ${kind} ${result} "${summary}" ${commit}`, commit)
 }
 // Runs the queued records with the metric line through one agent; with no
-// record queued no agent starts, and the figures wait for the next line an
-// agent runs. The agent's own cost reaches the next line, so the last
-// flush's is the one figure recorded nowhere.
-async function flush() {
-  if (!pending.length) return true
+// record queued no agent starts unless force (a stopped run's stop word),
+// and the figures wait for the next line an agent runs. The agent's own
+// cost reaches the next line, so the last flush's is the one figure
+// recorded nowhere.
+async function flush(force) {
+  if (!pending.length && !force) return true
   const command = pending.splice(0).concat([metricLine()].filter(Boolean)).join(' && ')
+  if (!command) return true
   const r = await measured('record', () => agent(
     `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${command}\n\nReturn ok true when it exited 0, and its output.`,
     { schema: withCalls(RECORDED), effort: 'low', label: 'record' }))
@@ -303,7 +325,7 @@ async function contributor(mode, detail) {
 }
 
 // Check, quality, security, and benchmark until all pass at one commit;
-// whatever blocks goes back to the contributor, at most ROUNDS times.
+// whatever blocks goes back to the contributor while mayFix allows.
 async function verify() {
   const passed = await rounds()
   return (await flush()) && passed
@@ -324,12 +346,37 @@ function priorQuality() {
   return `${last}${findings}When \`git diff --name-only ${commit} HEAD\` lists at least one file and only files under test/ (tests and their snapshots), review only \`git diff ${commit} HEAD\` against ${blocked ? 'those findings and ' : ''}the rules; otherwise review the whole branch diff.`
 }
 
+// The fix rounds of the run, review and CI fixes alike, counted across
+// starts: at most ROUNDS plus the extra rounds granted. A resume of a run
+// that already spent rounds gets one extra round, once per start, when the
+// last start did not stop at the limit (a killed stage, a restarted
+// container), recorded as an extra-round note with its reason.
+function mayFix() {
+  if (rework < ROUNDS + extra) return true
+  if (!extraNow && seededRework > 0 && lastStop !== 'rounds') {
+    extraNow = true
+    extra++
+    const why = `fix round ${rework + 1} granted beyond ${ROUNDS} on a resume: the last start did not stop at the round limit (stop ${lastStop || 'unrecorded'})`
+    note(`extra round: ${why}`)
+    queue(`sh tools/run_state.sh note ${state.change} extra-round "${why}"`, head)
+    return true
+  }
+  stopKind = 'rounds'
+  return false
+}
+
+// The metric line as the first instruction of an agent that may run it.
+const figuresFirst = () => {
+  const line = metricLine()
+  return line ? ` First run this line of the run's figures, exactly as written: \`${line}\`\n` : ''
+}
+
 async function rounds() {
-  for (let round = 1; round <= ROUNDS + 1; round++) {
+  for (;;) {
     let blocked = ''
     if (!doneAtHead('check')) {
       phase('Check')
-      const c = await measured('check', () => agent(`${intro()} Run the checks and report.`, { agentType: 'checker', schema: withCalls(CHECK), effort: 'low' }))
+      const c = await measured('check', () => agent(`${intro()}${figuresFirst()} Run the checks and report.`, { agentType: 'checker', schema: withCalls(CHECK), effort: 'low' }))
       if (!c) { stopped = 'the checker returned no result'; return false }
       verdict('check', c.passed)
       note(`check at ${c.head}: ${c.passed ? 'passed' : 'failed at ' + c.failed_stage}`)
@@ -388,11 +435,10 @@ async function rounds() {
       }
     }
     if (!blocked) return true
-    if (round > ROUNDS) { stopped = `still blocked after ${ROUNDS} fix rounds: ${blocked.split('\n')[0]}`; return false }
+    if (!mayFix()) { stopped = `still blocked after ${rework} fix rounds: ${blocked.split('\n')[0]}`; return false }
     phase('Implement')
     if (!(await contributor('fix', blocked))) return false
   }
-  return false
 }
 
 phase('Resume')
@@ -401,7 +447,8 @@ const resume = await agent(
 1. \`git fetch -q origin\`. The change name is input.change, or an existing change under openspec/changes/ that the brief names, or a kebab-case name of 2 to 5 words derived from the brief.
 2. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Check it out when it exists locally or on origin; otherwise create it from origin/main, which needs a clean tree (stop with the reason when it is not).
 3. \`make doctor\`; run \`make toolchain\` when it fails and stop when that fails too.
-4. Run \`sh tools/run_state.sh init <change> <branch>\`, then \`sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git rev-parse --short=12 HEAD\` as head.`,
+4. Run \`sh tools/run_state.sh init <change> <branch>\`, then \`sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git rev-parse --short=12 HEAD\` as head.
+5. Run \`sh tools/run_state.sh plan-needed <change>\` and return its output verbatim as plan, both lines when it prints two; its exit 1 means not needed, not a failure.`,
   { schema: RESUME, effort: 'low', label: 'resume' })
 if (!resume || resume.status !== 'done') {
   stopped = `resume stopped: ${resume ? resume.reason : 'no result'}`
@@ -417,9 +464,29 @@ if (!resume || resume.status !== 'done') {
 }
 
 // The planner orders the queue from the metrics history before a new change
-// starts; an unresolved blocking security finding goes first.
+// starts; an unresolved blocking security finding goes first. It runs only
+// when the queue needs a decision: plan-needed found one (the change is not
+// the queue's head, or a proposal or finding waits), or the brief is a
+// request beyond the change's name. Otherwise the head item is taken as
+// written, with its size as the estimate. A brief that is only the change
+// name gives the scouts and the contributor nothing to work from, so the
+// queue item plan-needed printed (its item: line) is their brief.
+const planLines = resume && typeof resume.plan === 'string' ? resume.plan.split('\n') : []
+const planLine = planLines[0] || ''
+const request = typeof input.brief === 'string' && input.brief.trim() !== '' && input.brief.trim() !== state.change
+const item = (planLines.find((l) => /^item: /.test(l)) || '').slice(6).trim()
+const brief = request ? input.brief : item ? `the item of docs/queue.md for this change, as written: ${item}` : input.brief
+if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement'] && !request && /^not needed:/.test(planLine)) {
+  phase('Plan')
+  const size = /estimated (small|medium|large)\b/.exec(planLine)
+  if (size) estimate = size[1]
+  planned = 0
+  note(`plan: skipped, ${planLine}`)
+  phaseDone('plan', head)
+}
 if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement']) {
   phase('Plan')
+  planned = 1
   const p = await measured('plan', () => agent(
     `${intro()} Plan the queue for this delivery. Brief: ${input.brief || 'the existing OpenSpec change'}.`,
     { agentType: 'planner', schema: withCalls(PLAN) }))
@@ -441,7 +508,7 @@ if (!stopped && !state.merged) {
     let packs = input.packs || []
     if (!packs.length) {
       const plan = await measured('scout', () => agent(
-        `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${input.brief || state.change}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only records in docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. For each area, a pack under tmp/scout/ is current when its Commit: is origin/main or \`git diff --quiet <its commit> origin/main -- <its Files read>\` passes; list current packs by path and the areas still needing one, with the question a contributor needs answered about the code it edits.`,
+        `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${brief || state.change}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only records in docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. For each area, a pack under tmp/scout/ is current when its Commit: is origin/main or \`git diff --quiet <its commit> origin/main -- <its Files read>\` passes; list current packs by path and the areas still needing one, with the question a contributor needs answered about the code it edits.`,
         { schema: withCalls(SCOUT_PLAN), effort: 'low', label: 'scout plan' }))
       const room = plan ? Math.max(0, MAX_AREAS - plan.current.length) : 0
       const needed = plan ? plan.needed.slice(0, room) : []
@@ -452,7 +519,7 @@ if (!stopped && !state.merged) {
       note(`scout packs: ${packs.join(', ') || 'none'}`)
     }
     phase('Implement')
-    const done = await contributor('implement', `Brief: ${input.brief || 'the existing OpenSpec change'}. Scout packs: ${packs.join(', ') || 'none'}.${planNotes.length ? `\nPlan notes:\n- ${planNotes.join('\n- ')}` : ''}`)
+    const done = await contributor('implement', `Brief: ${brief || 'the existing OpenSpec change'}. Scout packs: ${packs.join(', ') || 'none'}.${planNotes.length ? `\nPlan notes:\n- ${planNotes.join('\n- ')}` : ''}`)
     if (done) phaseDone('implement', head)
   }
 
@@ -462,7 +529,10 @@ if (!stopped && !state.merged) {
   if (!stopped && !(state.pushed && state.pr)) {
     if (await verify()) {
       phase('Package')
-      const done = await contributor('package', `Non-blocking findings for docs/backlog.md:\n- ${handOver().join('\n- ') || 'none'}\nApply the planner's files under build/plan/ and append the history of the merged changes as your package step says.`)
+      const plan = planned === 0
+        ? 'The planner did not run: this change was taken from the head of docs/queue.md as written. Leave build/plan/, which holds an older run\'s files; remove this change\'s item from docs/queue.md and renumber the rest, and append the history of the merged changes as your package step says.'
+        : 'Apply the planner\'s files under build/plan/ and append the history of the merged changes as your package step says.'
+      const done = await contributor('package', `Non-blocking findings for docs/backlog.md:\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
       if (done) { state.pr = String(done.pr || ''); phaseDone('package', head) }
     }
   }
@@ -474,7 +544,6 @@ if (!stopped && !state.merged) {
   if (!stopped) {
     phase('Merge')
     let waits = 0
-    let fixes = 0
     for (;;) {
       const m = await measured('merge', () => agent(
         `${intro()} First run this line of the run's figures, exactly as written: \`${metricLine()}\`\nThen wait for CI at the pushed head${waits ? ' (it was still running when you last returned; keep waiting)' : ''}, and merge the pull request if CI is green and every merge gate passes. The merge gates: \`${mergeGates()}\``,
@@ -498,11 +567,10 @@ if (!stopped && !state.merged) {
         note(`merged ${m.sha}: ${m.subject}${m.branch_deleted ? '' : ' (branch deletion refused)'}`)
         break
       }
-      if (m.ci !== 'red' || fixes >= ROUNDS) {
-        stopped = m.ci === 'green' ? `not merged: ${m.problem || 'no reason given'}` : `CI ${m.ci}${m.step ? ' at ' + m.step : ''}${m.problem ? ': ' + m.problem : ''}`
+      if (m.ci !== 'red' || !mayFix()) {
+        stopped = m.ci === 'green' ? `not merged: ${m.problem || 'no reason given'}` : `CI ${m.ci}${m.step ? ' at ' + m.step : ''}${m.problem ? ': ' + m.problem : ''}${m.ci === 'red' ? ` after ${rework} fix rounds` : ''}`
         break
       }
-      fixes++
       if (!(await contributor('fix', `CI failed at ${m.step}; its log:\n${m.log_excerpt || ''}`))) break
       if (!(await verify())) break
       phase('Merge')
@@ -551,6 +619,6 @@ const report = await measured('report', () => agent(
 // the report, and a stopped run's records, so a restart does not repeat them.
 if (state.change) {
   if (report) phaseDone('report', state.merged || head)
-  if (!(await flush())) note(stopped)
+  if (!(await flush(Boolean(stopped)))) note(stopped)
 }
 return report ? report.report : `No report; notes:\n${notes.join('\n')}${stopped ? '\nStopped: ' + stopped : ''}`
