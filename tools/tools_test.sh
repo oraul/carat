@@ -684,6 +684,16 @@ expect "guard: read refuses a long sort option by its prefix" 2 "the sort option
 expect "guard: read refuses a sort compress program" 2 "the sort option -S" guard read 'sort -S 1 --compress-prog=sh x'
 expect "guard: read refuses a long sort option after its operands" 2 "the sort option --compress-prog=sh" guard read 'sort x --compress-prog=sh'
 expect "guard: read allows sort with its listed options" 0 "^$" guard read 'sort -u -k2,2 -t: -rn -k 3 x | sort -to -- -o'
+expect "guard: read refuses uniq writing from stdin" 2 "uniq with a second operand" guard read 'printf x | uniq - .git/config' tmp/scout
+expect "guard: read refuses uniq with an output file" 2 "uniq with a second operand" guard read 'uniq a b'
+expect "guard: read refuses uniq's output file after --" 2 "uniq with a second operand" guard read 'uniq -c -- -a Makefile'
+expect "guard: read allows uniq with one input" 0 "^$" guard read 'uniq -c a && sort a | uniq -u && uniq -d -'
+for p in read merger contributor; do
+  expect "guard: $p refuses printf -v with a subscript" 2 "printf with the option -v" guard $p "printf -v 'a[\$(id)]' x"
+  expect "guard: $p refuses printf -v PATH" 2 "printf with the option -v" guard $p 'printf -v PATH x'
+  expect "guard: $p refuses printf --" 2 "printf with the option --" guard $p 'printf -- -v x'
+done
+expect "guard: read allows printf with a format" 0 "^$" guard read "printf '%s\\\\n' a b"
 expect "guard: read refuses git grep -O in a cluster" 2 "git grep -nOCMD, whose -O runs a command" guard read 'git grep -nOCMD x'
 expect "guard: read refuses git grep's pager by a prefix" 2 "a prefix of --open-files-in-pager" guard read 'git grep --open=sh x'
 expect "guard: read refuses textconv by a prefix" 2 "a prefix of --textconv" guard read 'git cat-file --textc HEAD:a'

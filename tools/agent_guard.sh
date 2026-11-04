@@ -613,6 +613,25 @@ sort_form() {
   done
 }
 
+# uniq_form: uniq with at most one operand, `-` and the words after `--`
+# included, since a second operand is the file uniq writes.
+uniq_form() {
+  shift
+  n=0
+  ends=""
+  for a in "$@"; do
+    if [ -z "$ends" ]; then
+      case "$a" in
+        --) ends=1; continue ;;
+        -) ;;
+        -*) continue ;;
+      esac
+    fi
+    n=$((n + 1))
+  done
+  [ $n -le 1 ] || refuse "uniq with a second operand, which uniq writes as its output file"
+}
+
 # judge WORD...: one simple command, its assignments first.
 judge() {
   [ $# -gt 0 ] || return 0
@@ -638,12 +657,11 @@ judge() {
   case "$1" in */*) refuse "a command named by a path: $1" ;; esac
   [ -z "$envs" ] || [ "$1" = sh ] || refuse "an assignment before $1"
   case "$1" in
-    ls|cat|head|tail|wc|grep|diff|cmp|cut|tr|nl|comm|basename|dirname|realpath|readlink|stat|du|date|pwd|echo|printf|true) ;;
+    ls|cat|head|tail|wc|grep|diff|cmp|cut|tr|nl|comm|basename|dirname|realpath|readlink|stat|du|date|pwd|echo|true) ;;
+    printf)
+      case "${2:-}" in -*) refuse "printf with the option ${2}, since -v assigns a variable whose subscript runs a command" ;; esac ;;
     sort) sort_form "$@" ;;
-    uniq)
-      n=0
-      for a in "$@"; do case "$a" in -*) ;; *) n=$((n + 1)) ;; esac; done
-      [ $n -le 2 ] || refuse "uniq with an output file" ;;
+    uniq) uniq_form "$@" ;;
     find)
       for a in "$@"; do
         case "$a" in -exec|-execdir|-ok|-okdir|-delete|-fprint|-fprint0|-fprintf|-fls) refuse "find $a, which writes or runs a command" ;; esac
