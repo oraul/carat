@@ -995,6 +995,12 @@ echo "1. next" > docs/queue.md
 echo change > docs/metrics.tsv
 commit "docs: record the queue and the metrics"
 expect "gates: security passes after the planning records only" 0 "ok   security: pass" gates security
+mkdir -p openspec/moved
+git_q mv tools/base.sh openspec/moved/base.sh
+commit "chore: move a tool"
+expect "gates: security refuses a code file moved into openspec" 1 "code changed since" gates security
+git_q mv openspec/moved/base.sh tools/base.sh
+commit "chore: move the tool back"
 echo code > tools/fix.sh
 commit "fix: code"
 expect "gates: security refuses after code changed" 1 "code changed since" gates security
