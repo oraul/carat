@@ -22,5 +22,5 @@
 
 - [x] 4.1 `CLAUDE.md`, `README.md`, `docs/codebase-map.md` area 1, and the headers of `tools/run_state.sh` and `tools/agent_guard.sh`.
 - [x] 4.2 `docs/backlog.md`: the three entries of `build/plan/backlog.md` added; the entries this change fixes removed (the `phase.check` write, `add_note`'s two patterns, the dirty tree, and the minute dash); the six `buffer-substitute` advisories marked 'Queued in `substitute-tidy`'.
-- [ ] 4.3 Package step: the `buffer-substitute` row through `sh tools/run_state.sh history`, `build/plan/queue.md` and `goals.md` over `docs/`, and the minute-dash fold removed from the `pipeline-durability` item.
+- [x] 4.3 Package step: the `buffer-substitute` row through `sh tools/run_state.sh history`, `build/plan/queue.md` and `goals.md` over `docs/`, and the minute-dash fold removed from the `pipeline-durability` item.
 - [x] 4.4 Run `make tools-test`, `make docs-lint`, `make gates`, and `openspec validate pipeline-speed-c --strict --no-interactive`.
