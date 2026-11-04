@@ -125,7 +125,8 @@ SCENARIOS = [
   ["quote-ruby", "\"<BS>", 2_000, 10_000, "NG4jI", "ruby", "ruby"],
   ["open-plain", "l", 10, 100_000, "gg", "ruby", "none"],
   ["open-ruby", "l", 10, 100_000, "gg", "ruby", "ruby"],
-  ["G-ruby", "Ggg", 300, 100_000, "gg", "ruby", "ruby"]
+  ["G-ruby", "Ggg", 300, 100_000, "gg", "ruby", "ruby"],
+  ["n", "n", 3_000, 100_000, "gg/0 end<CR>", "code", "none"]
 ]
 
 # One block of the generated Ruby source, BLOCK lines with the block

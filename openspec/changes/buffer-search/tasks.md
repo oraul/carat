@@ -27,7 +27,7 @@
 
 ## 5. Benchmark and documents
 
-- [ ] 5.1 Add the `n` scenario to `bench/keys.rb` and check that `lh` allocates what it did on `main`, by `make bench-budget` and `make bench SCENARIOS="lh n"`
+- [x] 5.1 Add the `n` scenario to `bench/keys.rb` and check that `lh` allocates what it did on `main`, by `make bench-budget` and `make bench SCENARIOS="lh n"`
 - [ ] 5.2 Document the search rows in `docs/compatibility.md`, the engine notes in `docs/spinel-notes.md`, the files in `docs/codebase-map.md`, the backlog entries, `README.md`, and the status line of `CLAUDE.md`, checked by `make docs-lint` and `make gates`
 - [ ] 5.3 Run `make test`, `make lint`, and `make gates`, all passing
 
