@@ -23,7 +23,8 @@
 #              review.bench, each at a commit settled at the pushed head, HEAD
 #   records    each review.KIND of the run state has the result and commit
 #              the workflow received, given as RECORDS (refused when unset)
-#   pr-body F  the pull request body F has the template's shape, no comment,
+#   pr-body F  the pull request body F, a file and not a link (a link could
+#              make it the run state), has the template's shape, no comment,
 #              angle bracket, empty bullet, footer, URL, email, session id, or
 #              model name, and a Testing line naming the security review
 #   static     trailer, content, snapshots, docs (make gates)
@@ -269,6 +270,7 @@ gate_pr_body() {
   gate=pr-body
   start=$failed
   file=$1
+  [ ! -L "$file" ] || { bad "the body file $file is a link"; return; }
   [ -f "$file" ] || { bad "no body file $file"; return; }
   [ "$(sed -n 1p "$file")" = "## Summary" ] || bad "the body does not start with ## Summary"
   headings=$(grep '^## ' "$file" | tr '\n' '|')

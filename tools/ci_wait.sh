@@ -9,17 +9,24 @@
 set -u
 
 MAX=540
+
+out_of_range() {
+  echo "ci_wait: refused: $1 seconds; wait 1 to $MAX seconds at a time" >&2
+  exit 2
+}
+
 case "${1:-}" in
   ""|*[!0-9]*) echo "ci_wait: not a whole number of seconds: ${1:-}" >&2; exit 2 ;;
   # Four digits or more is past the bound; refused here, because a number
   # past the shell's integer range makes both tests below error and fail
   # open.
-  ????*) echo "ci_wait: refused: $1 seconds; wait 1 to $MAX seconds at a time" >&2; exit 2 ;;
+  ????*) out_of_range "$1" ;;
 esac
 seconds=$(expr "$1" + 0)
 if [ "$seconds" -lt 1 ] || [ "$seconds" -gt $MAX ]; then
-  echo "ci_wait: refused: $1 seconds; wait 1 to $MAX seconds at a time" >&2
-  exit 2
+  out_of_range "$1"
 fi
-sleep "$seconds"
+# A wait that did not happen is no wait: the merger would read the check
+# runs again at once.
+sleep "$seconds" || { echo "ci_wait: sleep failed after at most $seconds seconds" >&2; exit 1; }
 echo "ci_wait: waited $seconds seconds"

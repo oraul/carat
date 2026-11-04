@@ -22,14 +22,22 @@
 # Any other profile refuses every call. A file tool (Write, Edit,
 # NotebookEdit) of a read or merger agent may write only under DIR of the
 # project (CLAUDE_PROJECT_DIR), none without one; the contributor's may
-# write anywhere but the run state's directory. Text that names a refused
+# write anywhere but the run state's directory. A file edit is judged by its
+# path as written and by its real path, links resolved, and a path or a
+# link target with a parent step (..) is refused for every profile, since
+# the write resolves it lexically and the guard through links; the body
+# file is never a link, nor linked, moved, or copied onto. Text that names a refused
 # command (a pack, a queue, a commit message) goes into a file through the
 # Write tool, since a heredoc carries it in the command.
 #
-# It reads the command's text, so it stops an agent that text in the tree
-# led astray, not one that hides a command behind a variable; the merge
-# gate's comparison with the workflow's records (tools/gates.sh records) and
-# branch protection stand behind it.
+# The body file is named in a command only as a whole word of its own, and
+# a command naming the run state's directory takes no parent step.
+#
+# It reads the command's text with its quotes, backslashes, and line
+# continuations removed, as the shell joins them into one word, so it
+# stops an agent that text in the tree led astray, not one that hides a
+# command behind a variable or a glob; the merge gate's comparison with the workflow's records (tools/gates.sh
+# records) and branch protection stand behind it.
 set -u
 
 profile=${1:-}
@@ -41,7 +49,9 @@ refuse() {
 }
 
 # The first JSON string field KEY of the input with its escapes undone; an
-# escaped newline becomes ";", so each line reads as a command of its own.
+# escaped newline becomes ";", so each line reads as a command of its own,
+# but a newline after an odd run of backslashes is a line continuation the
+# shell joins, so the pair is dropped: 'git \<newline>push' is git push.
 field() {
   tr '\n\r' '  ' | K="$1" awk '
     {
@@ -55,7 +65,12 @@ field() {
         if (c == "\\") {
           i++
           c = substr(s, i, 1)
-          if (c == "n") c = ";"
+          if (c == "n") {
+            run = 0
+            while (run < length(out) && substr(out, length(out) - run, 1) == "\\") run++
+            if (run % 2 == 1) { out = substr(out, 1, length(out) - 1); continue }
+            c = ";"
+          }
           else if (c == "t" || c == "r") c = " "
           else if (c == "u") { i += 4; c = "?" }
         }
@@ -70,11 +85,48 @@ input=$(cat)
 tool=$(printf '%s' "$input" | field tool_name)
 path=$(printf '%s' "$input" | field file_path)
 [ -n "$path" ] || path=$(printf '%s' "$input" | field notebook_path)
-text=$(printf '%s' "$input" | field command)
-[ "$tool" = Bash ] || text=$path
+# A command's text without quotes and backslashes: 'pu'sh, "git", and g\it
+# are the words the shell runs. A path keeps them, as literal characters.
+if [ "$tool" = Bash ]; then
+  raw=$(printf '%s' "$input" | field command)
+  text=$(printf '%s' "$raw" | tr -d "\"'\\\\")
+else
+  raw=$path
+  text=$path
+fi
 
 has() {
   printf '%s\n' "$text" | grep -q -E -- "$1"
+}
+
+# real_path PATH: sets real to PATH, relative to the project, with a final
+# link followed and its nearest existing directory resolved (pwd -P); a link
+# chain longer than eight or a dangling link on the way is refused.
+real_path() {
+  real=$1
+  case "$real" in /*) ;; *) real="${CLAUDE_PROJECT_DIR:-$(pwd)}/$real" ;; esac
+  hops=0
+  while [ -L "$real" ]; do
+    hops=$((hops + 1))
+    [ $hops -le 8 ] || refuse "a chain of links: $1"
+    target=$(readlink -- "$real")
+    case "$target" in
+      /*) real=$target ;;
+      *) real="$(dirname -- "$real")/$target" ;;
+    esac
+  done
+  up=$(dirname -- "$real")
+  rest=$(basename -- "$real")
+  while [ ! -d "$up" ]; do
+    [ ! -L "$up" ] || refuse "a path through a dangling link: $1"
+    rest="$(basename -- "$up")/$rest"
+    up=$(dirname -- "$up")
+  done
+  # A parent step after a missing directory stays unresolved here but
+  # resolves lexically when the file is written, past any link before it.
+  case "/$rest/" in */../*) refuse "a parent step after a missing directory: $1" ;; esac
+  real="$(cd -P -- "$up" && pwd -P)/$rest"
+  case "$real" in //*) real=${real#/} ;; esac
 }
 
 # A word's start and end, and git with its global options (-C dir, -c x=y,
@@ -83,10 +135,71 @@ B='(^|[^A-Za-z0-9_.-])'
 E='([^A-Za-z0-9_-]|$)'
 GIT="${B}git( +-{1,2}[A-Za-z][A-Za-z-]*(=[^ ;&|]*)?( +[^ ;&|-][^ ;&|]*)?)* +"
 WRITES='push|commit|add|merge|rebase|reset|tag|cherry-pick|revert|am|stash|restore|rm|mv|clean|pull|apply'
-RUN_STATE="run_state[.]sh[\"']? +[\"']?"
+RUN_STATE="run_state[.]sh +"
 # The pull request body file, the one file of the run state's directory the
 # contributor and the merger may name; never followed by a further step.
-BODY_FILE='s#build/pipeline/[a-z0-9][a-z0-9-]*[.]body[.]md([^A-Za-z0-9._/-]|$)#body-file\1#g'
+BODY_PATH='build/pipeline/[a-z0-9][a-z0-9-]*[.]body[.]md'
+BODY_FILE="s#${BODY_PATH}([^A-Za-z0-9._/-]|\$)#body-file\\1#g"
+
+# The body file is never made a link, nor moved or copied onto, and one
+# that is a link is not named at all: a link to CHANGE.json would make every
+# write of the body file a write of the run state.
+body_links() {
+  has "$BODY_PATH" || return 0
+  if [ "$tool" = Bash ]; then
+    has "${B}(ln|link|mv|cp|install)${E}" && refuse "a link, move, or copy onto the pull request body file"
+    for f in $(printf '%s\n' "$text" | grep -o -E "$BODY_PATH"); do
+      [ ! -L "${CLAUDE_PROJECT_DIR:-.}/$f" ] || refuse "a pull request body file that is a link: $f"
+    done
+  else
+    case "$path" in
+      /*) at=$path ;;
+      *) at="${CLAUDE_PROJECT_DIR:-$(pwd)}/$path" ;;
+    esac
+    [ ! -L "$at" ] || refuse "a pull request body file that is a link: $path"
+  fi
+  return 0
+}
+
+# words: the shell words of the command as written, one a line, with their
+# quotes and backslashes removed, split at unquoted blanks and operators.
+words() {
+  printf '%s\n' "$raw" | awk '
+    {
+      s = $0; n = length(s); w = ""; q = ""
+      for (i = 1; i <= n; i++) {
+        c = substr(s, i, 1)
+        if (q == "\047") { if (c == "\047") q = ""; else w = w c; continue }
+        if (q == "\"") {
+          if (c == "\"") q = ""
+          else if (c == "\\" && i < n && index("\"\\$`", substr(s, i + 1, 1))) { i++; w = w substr(s, i, 1) }
+          else w = w c
+          continue
+        }
+        if (c == "\047" || c == "\"") { q = c; continue }
+        if (c == "\\") { if (i < n) { i++; w = w substr(s, i, 1) }; continue }
+        if (index(" \t;&|()<>", c)) { if (w != "") print w; w = ""; continue }
+        w = w c
+      }
+      if (w != "") print w
+    }'
+}
+
+# The body file is named in a command only as a whole word: as written, it
+# is followed by a blank, an operator, or the end, never by a quote, a
+# backslash, or a further step, and every word naming it ends with it, since
+# a quoted or escaped blank after it would make a later step part of its
+# name; and a command naming the run state's directory takes no parent step.
+body_word() {
+  [ "$tool" = Bash ] || return 0
+  has "build/pipeline|pipeline/" || return 0
+  has '[.][.]' && refuse "a parent step in a command naming the run state's directory"
+  printf '%s\n' "$raw" | grep -q -E -- "${BODY_PATH}[^[:space:];&|()<>]" &&
+    refuse "a pull request body file that is not a whole word, which could name the run state's directory"
+  words | grep -E -- "$BODY_PATH" | grep -q -v -E -- "^([^ ]*[/=])?${BODY_PATH}\$" &&
+    refuse "a pull request body file inside a longer word, which could name the run state's directory"
+  return 0
+}
 
 case "$profile" in
   read)
@@ -95,6 +208,8 @@ case "$profile" in
   merger)
     # The branch deletion of the merger's last steps, a Conventional
     # Branch alone at the end of its command, and the body file.
+    body_links
+    body_word
     text=$(printf '%s\n' "$text" | sed -E \
       -e 's#git +push +origin +--delete +(feature|bugfix|hotfix|release|chore)/[a-z0-9][a-z0-9-]* *([;&|)]|$)#deleted-branch \2#g' \
       -e "$BODY_FILE")
@@ -102,6 +217,8 @@ case "$profile" in
     run_state_writes='phase|review|stage|push|history|init' ;;
   contributor)
     # The body file the package step writes and the merger squashes with.
+    body_links
+    body_word
     text=$(printf '%s\n' "$text" | sed -E -e "$BODY_FILE")
     git_writes=push
     run_state_writes='phase|review|stage|init' ;;
@@ -109,8 +226,14 @@ case "$profile" in
     refuse "no such profile" ;;
 esac
 
-# A file tool: the path is all there is to judge.
+# A file tool: the path, as written and as its real path, is all there is
+# to judge.
 if [ "$tool" != Bash ] && [ -n "$path" ]; then
+  has "build/pipeline|pipeline/" && refuse "an edit of the run state's directory: $path"
+  # A parent step resolves lexically when the file is written but through
+  # links here, so no profile names one.
+  case "/$path/" in */../*) refuse "a path with a parent step: $path" ;; esac
+  real_path "$path"
   if [ "$profile" != contributor ]; then
     [ -n "$dir" ] || refuse "a file edit by an agent that writes no file: $path"
     case "$path" in
@@ -118,8 +241,17 @@ if [ "$tool" != Bash ] && [ -n "$path" ]; then
       "$dir"/*|"${CLAUDE_PROJECT_DIR:-.}/$dir"/*) ;;
       *) refuse "a file edit outside $dir: $path" ;;
     esac
+    file=$real
+    real_path "$dir"
+    case "$file" in
+      "$real"/*) ;;
+      *) refuse "a file edit outside $dir through a link: $path" ;;
+    esac
+    real=$file
   fi
-  has "build/pipeline|pipeline/" && refuse "an edit of the run state's directory: $path"
+  text=$real
+  [ "$profile" = read ] || text=$(printf '%s\n' "$text" | sed -E -e "$BODY_FILE")
+  has "build/pipeline|pipeline/" && refuse "an edit of the run state's directory through a link: $path"
   exit 0
 fi
 

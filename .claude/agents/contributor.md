@@ -51,7 +51,7 @@ You receive a failed stage's log, blocking findings, a regression, or a red CI l
 
 ### push
 
-After a CI fix has passed the checker and the security review: `sh tools/run_state.sh push <change> --ci-fix`, one push per CI fix. When the branch conflicts with `main`, merge `origin/main` into it (the merge commit carries the trailer) and say so; the checks run again.
+After a CI fix has passed the checker and the security review, put any non-blocking finding you were given into `docs/backlog.md` as in package and commit it, then `sh tools/run_state.sh push <change> --ci-fix`, one push per CI fix. When the branch conflicts with `main`, merge `origin/main` into it (the merge commit carries the trailer) and say so; the checks run again.
 
 ## Report
 

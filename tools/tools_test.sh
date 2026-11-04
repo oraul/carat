@@ -2,13 +2,13 @@
 # Tests the shell tools behind CI and the delivery pipeline, each in a
 # temporary git repository or directory outside this one:
 # tools/ci_scope.sh (which changes run the checks), tools/ci_wait.sh (the
-# merger's wait), tools/metrics.sh (the
-# measurement and the comparison with main), tools/run_state.sh (the run
-# state, stages, resume, the push rule, the records only the workflow
-# writes, the history, and the budget), tools/agent_guard.sh (each
-# profile's refusals and allowances), tools/docs_lint.sh (budgets, content,
-# wraps, paths, queue), tools/new.sh (every generator and its refusals),
-# and every gate of tools/gates.sh, each passing and refusing.
+# merger's wait), tools/metrics.sh (the measurement and the comparison with
+# main), tools/run_state.sh (the run state, stages, resume, the push rule,
+# the records only the workflow writes, the history, the budget, and the
+# review areas), tools/agent_guard.sh (each profile's refusals and
+# allowances), tools/docs_lint.sh (budgets, content, wraps, paths, queue),
+# tools/new.sh (every generator and its refusals), and every gate of
+# tools/gates.sh, each passing and refusing.
 # Prints "ok   NAME" or "FAIL NAME" and the output, then "P/T passed";
 # exits 1 when any failed. Run by make tools-test.
 #
@@ -110,6 +110,10 @@ expect "ci_wait: refuses more than 540" 2 "refused: 541 seconds" sh "$here/ci_wa
 expect "ci_wait: refuses a number past the shell's integer range" 2 "refused: 99999999999999999999999 seconds" sh "$here/ci_wait.sh" 99999999999999999999999
 expect "ci_wait: refuses a value that is not a whole number" 2 "not a whole number" sh "$here/ci_wait.sh" '1; true'
 expect "ci_wait: refuses no value" 2 "not a whole number" sh "$here/ci_wait.sh"
+mkdir -p "$work/failing"
+printf '#!/bin/sh\nexit 1\n' > "$work/failing/sleep"
+chmod +x "$work/failing/sleep"
+expect "ci_wait: fails when the sleep fails" 1 "^ci_wait: sleep failed" env PATH="$work/failing:$PATH" sh "$here/ci_wait.sh" 1
 
 mkdir -p "$work/bin"
 cat > "$work/bin/gh" <<'EOF'
@@ -456,6 +460,47 @@ expect "run_state: review-due is not due after one quiet change" 1 "^not due: 1 
 expect "run_state: review-due is due five changes after the last review" 0 "^due: 5 changes merged" state review-due due
 row f "security=pass quality=pass" >> docs/metrics.tsv
 expect "run_state: a periodic review restarts the count" 1 "^not due: 1 of 5" state review-due due
+# merge_touch MESSAGE PATH...: append a line to each PATH, commit, and
+# record the commit as the merged commit of the change areas.
+merge_touch() {
+  message=$1
+  shift
+  for f in "$@"; do
+    mkdir -p "$(dirname "$f")"
+    echo "# touched" >> "$f"
+  done
+  commit "$message"
+  state set areas merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+}
+fresh areas
+state init areas chore/areas > /dev/null
+merge_touch "feat: entry" bin/carat.rb
+expect "run_state: review-due names the entry point" 0 "^due: the change touched entry point [(]bin/carat[.]rb[)]" state review-due areas
+merge_touch "chore: tool" tools/x.sh
+expect "run_state: review-due names a tool" 0 "^due: the change touched tooling and CI [(]tools/x[.]sh[)]" state review-due areas
+merge_touch "chore: agent" .claude/agents/x.md
+expect "run_state: review-due names an agent" 0 "^due: the change touched tooling and CI [(][.]claude/agents/x[.]md[)]" state review-due areas
+merge_touch "ci: workflow" .github/workflows/ci.yml
+expect "run_state: review-due names the CI workflow" 0 "^due: the change touched tooling and CI [(][.]github/workflows/ci[.]yml[)]" state review-due areas
+mkdir -p config carat/domain
+printf '# Options.\noption.tabstop 2\nkeymap.normal j cursor.down\n' > config/default.caratrc
+echo 'mirror' > carat/domain/default_config.rb
+merge_touch "feat: config" README.md
+{ sed 's/^keymap.normal j .*/keymap.normal j cursor.up/' config/default.caratrc; printf '\n# Window keys.\nkeymap.normal <C-w><C-j> window.down\n'; } > rc.tmp
+mv rc.tmp config/default.caratrc
+merge_touch "feat: keys" carat/domain/default_config.rb
+expect "run_state: review-due skips a keymap-only change" 1 "^not due" state review-due areas
+echo 'option.tabstop 4' >> config/default.caratrc
+merge_touch "feat: tabstop" README.md
+expect "run_state: review-due names a changed option" 0 "^due: the change touched config loading [(]config/default[.]caratrc[)]" state review-due areas
+merge_touch "fix: mirror" carat/domain/default_config.rb
+expect "run_state: review-due names the mirror changed alone" 0 "^due: the change touched config loading [(]carat/domain/default_config[.]rb[)]" state review-due areas
+echo 'keymap.normal k cursor.up' >> config/default.caratrc
+merge_touch "fix: loader" carat/adapters/rc_config_gateway.rb
+expect "run_state: review-due names a loader" 0 "^due: the change touched config loading [(]carat/adapters/rc_config_gateway[.]rb[)]" state review-due areas
+echo 'keymap.normal l cursor.right' >> config/default.caratrc
+merge_touch "fix: generator" bin/carat-gen-config.rb
+expect "run_state: review-due names the generator" 0 "^due: the change touched config loading [(]bin/carat-gen-config[.]rb[)]" state review-due areas
 
 # forge CHANGE LINE: append LINE to the run state as a hand edit would.
 forge() {
@@ -503,17 +548,18 @@ expect "run_state: trusted without the base still trusts the ancestors of HEAD" 
 # --------------------------------------------------------- agent_guard.sh
 
 # guard PROFILE COMMAND: the guard's answer to a Bash call of COMMAND, given
-# already escaped for JSON.
+# already escaped for JSON, in the project PROJECT (default /w).
 guard() {
   printf '{"session_id":"s","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"%s","description":"d"}}' "$2" |
-    sh "$here/agent_guard.sh" "$1"
+    CLAUDE_PROJECT_DIR=${PROJECT:-/w} sh "$here/agent_guard.sh" "$1"
 }
 
 # guard_edit PROFILE TOOL PATH [DIR]: the guard's answer to an edit of
-# PATH in the project /w, whose text names a refused command.
+# PATH in the project PROJECT (default /w), whose text names a refused
+# command.
 guard_edit() {
   printf '{"tool_name":"%s","tool_input":{"file_path":"%s","old_string":"a","new_string":"\\"command\\": \\"git push\\""}}' "$2" "$3" |
-    CLAUDE_PROJECT_DIR=/w sh "$here/agent_guard.sh" "$1" ${4:+"$4"}
+    CLAUDE_PROJECT_DIR=${PROJECT:-/w} sh "$here/agent_guard.sh" "$1" ${4:+"$4"}
 }
 
 expect "guard: read refuses git push" 2 "refused for the read profile: a git command" guard read 'git push origin chore/x'
@@ -564,6 +610,61 @@ expect "guard: contributor allows the body gate" 0 "^$" guard contributor 'sh to
 expect "guard: contributor refuses a path through the body file" 2 "the run state's directory" guard_edit contributor Write /w/build/pipeline/c.body.md/../c.json
 expect "guard: contributor still refuses the run state file" 2 "the run state's directory" guard contributor 'cat build/pipeline/c.body.md build/pipeline/c.json'
 expect "guard: read refuses a metrics override of the bench" 2 "an environment override" guard read 'METRICS_OUT=x.tsv sh tools/run_state.sh bench c'
+# The shell removes quotes and backslashes before it runs a word.
+expect "guard: read refuses a quoted git push" 2 "a git command" guard read "git 'push' origin x"
+expect "guard: read refuses a quoted git" 2 "a git command" guard read '\"git\" push'
+expect "guard: read refuses an escaped git" 2 "a git command" guard read 'g\\it pu\\sh'
+expect "guard: read refuses a split git verb" 2 "a git command" guard read "git com''mit -m x"
+expect "guard: read refuses a quoted gh" 2 "a gh command" guard read '\"gh\" pr merge 5'
+expect "guard: contributor refuses a quoted push" 2 "a git command" guard contributor 'git \"push\" -u origin chore/x'
+expect "guard: read refuses a quoted run state record" 2 "a run state command" guard read "sh tools/run_state.sh re''view c security pass x"
+expect "guard: read refuses a quoted run state path" 2 "the run state's directory" guard read 'cat build/\"pipe\"line/c.json'
+expect "guard: read allows a quoted git read" 0 "^$" guard read "git log --oneline --grep 'push' -5"
+# A backslash before a newline continues the line; an escaped backslash
+# does not.
+expect "guard: read refuses git push over a line continuation" 2 "a git command" guard read 'git \\\npush origin x'
+expect "guard: contributor refuses git push over a line continuation" 2 "a git command" guard contributor 'git \\\npush -u origin chore/x'
+expect "guard: read refuses a review record over a line continuation" 2 "a run state command" guard read 'sh tools/run_state.sh \\\nreview c security pass x HEAD'
+expect "guard: contributor refuses a review record over a line continuation" 2 "a run state command" guard contributor 'sh tools/run_state.sh \\\nreview c security pass x HEAD'
+expect "guard: read refuses a push on the line after an escaped backslash" 2 "a git command" guard read 'echo x\\\\\ngit push'
+expect "guard: read allows a continued git read" 0 "^$" guard read 'git log \\\n--oneline -5'
+# The body file is a whole word: a quoted or escaped blank after it would
+# make a later step part of its name.
+expect "guard: contributor refuses a quoted blank and a parent step after the body file" 2 "a parent step in a command naming the run state's directory" guard contributor 'mkdir -p \"build/pipeline/x.body.md \" && printf x > \"build/pipeline/x.body.md /../x.json\"'
+expect "guard: contributor refuses an escaped blank and a parent step after the body file" 2 "a parent step in a command naming the run state's directory" guard contributor 'printf x > build/pipeline/x.body.md\\ /../x.json'
+expect "guard: merger refuses an escaped blank and a parent step after the body file" 2 "a parent step in a command naming the run state's directory" guard merger 'printf x > build/pipeline/x.body.md\\ /../x.json'
+expect "guard: contributor refuses a quoted blank after the body file" 2 "a pull request body file inside a longer word" guard contributor 'mkdir -p \"build/pipeline/x.body.md \"'
+expect "guard: contributor refuses a step after a quote closing the body file" 2 "a pull request body file that is not a whole word" guard contributor 'printf x > \"build/pipeline/x.body.md\"/y'
+expect "guard: contributor refuses an escaped blank after the body file" 2 "a pull request body file that is not a whole word" guard contributor 'printf x > build/pipeline/x.body.md\\ /y'
+expect "guard: contributor refuses a step after the body file inside quotes" 2 "a pull request body file inside a longer word" guard contributor 'printf x > \"build/pipeline/x.body.md /y\"'
+expect "guard: contributor allows the body gate by its absolute path" 0 "^$" guard contributor 'sh /w/tools/gates.sh pr-body /w/build/pipeline/c.body.md'
+# A real tree: a body file that is a link to the run state, a directory
+# linked to the run state's, and a link out of the scout's directory.
+proj="$work/proj"
+mkdir -p "$proj/build/pipeline" "$proj/tmp/scout" "$proj/tools"
+echo '{}' > "$proj/build/pipeline/c.json"
+ln -s c.json "$proj/build/pipeline/d.body.md"
+ln -s ../build/pipeline "$proj/tmp/run"
+ln -s ../../tools "$proj/tmp/scout/out"
+ln -s missing "$proj/tmp/gone"
+ln -s nope/../run/c.json "$proj/tmp/hop"
+expect "guard: contributor refuses a link at the body file" 2 "a link, move, or copy onto the pull request body file" guard contributor 'ln -sf c.json build/pipeline/c.body.md'
+expect "guard: merger refuses a move onto the body file" 2 "a link, move, or copy onto the pull request body file" guard merger 'mv tmp/x build/pipeline/c.body.md'
+PROJECT=$proj
+expect "guard: contributor refuses a command on a linked body file" 2 "a pull request body file that is a link" guard contributor 'cat x > build/pipeline/d.body.md'
+expect "guard: contributor refuses a write to a linked body file" 2 "a pull request body file that is a link" guard_edit contributor Write "$proj/build/pipeline/d.body.md"
+expect "guard: merger refuses a write to a linked body file" 2 "a pull request body file that is a link" guard_edit merger Write "$proj/build/pipeline/d.body.md" build/pipeline
+expect "guard: contributor refuses a linked directory into the run state" 2 "the run state's directory through a link" guard_edit contributor Write "$proj/tmp/run/c.json"
+expect "guard: contributor refuses a path through a dangling link" 2 "a dangling link" guard_edit contributor Write "$proj/tmp/gone/x/c.json"
+expect "guard: contributor refuses a parent step after a missing directory" 2 "a path with a parent step" guard_edit contributor Write "$proj/tmp/nope/../run/c.json"
+expect "guard: contributor refuses a relative parent step" 2 "a path with a parent step" guard_edit contributor Write "tmp/nope/../run/c.json"
+expect "guard: contributor refuses a link whose target steps back" 2 "a parent step after a missing directory" guard_edit contributor Write "$proj/tmp/hop"
+expect "guard: contributor allows a name with two dots" 0 "^$" guard_edit contributor Write "$proj/tmp/a..b.md"
+expect "guard: read refuses a link out of its directory" 2 "outside tmp/scout through a link" guard_edit read Write "$proj/tmp/scout/out/x.sh" tmp/scout
+expect "guard: read allows a pack in its real directory" 0 "^$" guard_edit read Write "$proj/tmp/scout/area.md" tmp/scout
+expect "guard: contributor writes the body file in a real tree" 0 "^$" guard_edit contributor Write "$proj/build/pipeline/c.body.md"
+expect "guard: contributor allows the body gate in a real tree" 0 "^$" guard contributor 'sh tools/gates.sh pr-body build/pipeline/c.body.md'
+PROJECT=/w
 
 # ---------------------------------------------------------- docs_lint.sh
 
@@ -838,6 +939,8 @@ Does a thing for a reason.
 None
 EOF
 expect "gates: pr-body passes the template's shape" 0 "ok   pr-body" gates pr-body body.md
+ln -s body.md linked.md
+expect "gates: pr-body refuses a linked body file" 1 "the body file linked.md is a link" gates pr-body linked.md
 sed 's/^None$/None/' body.md > footer.md
 printf '\nGenerated with a tool\n%s\n' "$LINK" >> footer.md
 expect "gates: pr-body refuses a footer" 1 "a footer or attribution line" gates pr-body footer.md

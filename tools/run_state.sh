@@ -122,12 +122,16 @@ TOKEN_BUDGETS="small=300000 medium=700000 large=1200000"
 TAB=$(printf '\t')
 HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci_min${TAB}rounds${TAB}allocs${TAB}us_per_key${TAB}out_tokens${TAB}tool_calls${TAB}phases${TAB}review${TAB}estimate"
 # The areas whose change makes a periodic review of the whole codebase due,
-# one "label=path pattern" per line, the first match named.
-REVIEW_AREAS='config loading=^(config/|carat/(adapters/rc_config_gateway|ports/config_port|domain/(config|default_config|manifest_check|rc_[a-z_]+))[.]rb$)
+# one "label=path pattern" per line, the first match named. An edit of
+# config/default.caratrc that adds or removes only key bindings, comments,
+# and blank lines leaves the file and its mirror out (keymap_only).
+REVIEW_AREAS='config loading=^(config/|bin/carat-gen-config[.]rb$|carat/(adapters/rc_config_gateway|ports/config_port|domain/(config|default_config|manifest_check|rc_[a-z_]+))[.]rb$)
 file access=^carat/(drivers/disk_files[.]rb|ports/file_port[.]rb|domain/path_(policy|info)[.]rb|use_cases/files/)
 plugin boundaries=^carat/(plugin_api[.]rb|plugins/|use_cases/plugins/)
 terminal output=^carat/(drivers/ansi_terminal|ports/terminal_port|adapters/(screen_presenter|frame_presenter|painted_rows|sgr_table|key_decoder)|domain/(frame|display_width|utf8|decoded_line))[.]rb$
-process spawning=^carat/drivers/'
+process spawning=^carat/drivers/
+entry point=^bin/carat[.]rb$
+tooling and CI=^(tools/|[.]claude/|[.]github/workflows/)'
 
 die() {
   echo "run_state: $*" >&2
@@ -634,10 +638,22 @@ append_history() {
   done
 }
 
+# True when the edit of config/default.caratrc in commit $1 adds or removes
+# only key bindings, comments, and blank lines; no edit is not keymap-only.
+keymap_only() {
+  lines=$(git diff --no-ext-diff --no-color -U0 --end-of-options "$1~1" "$1" -- config/default.caratrc 2>/dev/null |
+    awk '/^diff / { hunk = 0 } /^@@/ { hunk = 1; next } hunk && /^[-+]/')
+  [ -n "$lines" ] || return 1
+  [ -z "$(printf '%s\n' "$lines" | grep -v -E '^[-+](keymap[.]|#|[[:space:]]*$)')" ]
+}
+
 review_due() {
   merged=$(merged_commit)
   [ -n "$merged" ] || die "review-due: $change is not merged (no merged commit hash)"
   paths=$(git diff --name-only --end-of-options "$merged~1" "$merged" -- 2>/dev/null)
+  if keymap_only "$merged"; then
+    paths=$(printf '%s\n' "$paths" | grep -v -x -E 'config/default[.]caratrc|carat/domain/default_config[.]rb')
+  fi
   area=$(printf '%s\n' "$REVIEW_AREAS" | while IFS='=' read -r label pattern; do
     hit=$(printf '%s\n' "$paths" | grep -E -m 1 "$pattern")
     if [ -n "$hit" ]; then echo "$label ($hit)"; break; fi
