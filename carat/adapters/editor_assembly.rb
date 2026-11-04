@@ -8,6 +8,7 @@ require_relative "../domain/tab_list"
 require_relative "../domain/input_state"
 require_relative "../domain/last_find"
 require_relative "../domain/last_search"
+require_relative "../domain/last_substitute"
 require_relative "../domain/search_prompt"
 require_relative "../domain/history"
 require_relative "../domain/plugin_ui"
@@ -21,6 +22,7 @@ require_relative "../use_cases/outcome"
 require_relative "../use_cases/concerns/reporting"
 require_relative "../use_cases/move"
 require_relative "../use_cases/search/find_match"
+require_relative "../use_cases/search/substitute_lines"
 require_relative "../use_cases/search/jump_to_match"
 require_relative "../use_cases/search/open_search_prompt"
 require_relative "../use_cases/search/preview_search"
@@ -86,6 +88,7 @@ require_relative "../use_cases/ex/register_command_handler"
 require_relative "../use_cases/ex/syntax_command_handler"
 require_relative "../use_cases/ex/set_command_handler"
 require_relative "../use_cases/ex/nohlsearch_command_handler"
+require_relative "../use_cases/ex/substitute_command_handler"
 require_relative "../use_cases/ex/plugin_command_handler"
 require_relative "../use_cases/actions/action_table"
 require_relative "../use_cases/actions/motion_handler"
@@ -104,6 +107,7 @@ require_relative "../use_cases/actions/tab_handler"
 require_relative "../use_cases/actions/message_handler"
 require_relative "../use_cases/actions/history_handler"
 require_relative "../use_cases/actions/scroll_handler"
+require_relative "../use_cases/actions/substitute_handler"
 require_relative "../use_cases/actions/plugin_action_handler"
 require_relative "../use_cases/dispatcher"
 require_relative "../use_cases/handle_key"
@@ -149,6 +153,7 @@ module Carat
       attr_reader :last_change #: Domain::LastChange
       attr_reader :last_find #: Domain::LastFind
       attr_reader :last_search #: Domain::LastSearch
+      attr_reader :last_substitute #: Domain::LastSubstitute
       attr_reader :search_prompt #: Domain::SearchPrompt
       attr_reader :command_history #: Domain::History
       attr_reader :search_history #: Domain::History
@@ -162,6 +167,7 @@ module Carat
       attr_reader :runner #: UseCases::CommandRunner
       attr_reader :move #: UseCases::Move
       attr_reader :find_match #: UseCases::FindMatch
+      attr_reader :substitute_lines #: UseCases::SubstituteLines
       attr_reader :jump_to_match #: UseCases::JumpToMatch
       attr_reader :open_search_prompt #: UseCases::OpenSearchPrompt
       attr_reader :preview_search #: UseCases::PreviewSearch
@@ -229,6 +235,7 @@ module Carat
         @buffers.feed.undolevels = @state.options.undolevels
         @last_find = Domain::LastFind.new
         @last_search = Domain::LastSearch.new
+        @last_substitute = Domain::LastSubstitute.new
         @search_prompt = Domain::SearchPrompt.new
         @command_history = Domain::History.new
         @search_history = Domain::History.new
@@ -246,6 +253,7 @@ module Carat
         @jump_to_match = UseCases::JumpToMatch.new(find_match: @find_match)
         @open_search_prompt = UseCases::OpenSearchPrompt.new(search_prompt: @search_prompt, search_history: @search_history)
         @preview_search = UseCases::PreviewSearch.new(search_prompt: @search_prompt, last_search: @last_search)
+        @substitute_lines = UseCases::SubstituteLines.new(last_substitute: @last_substitute, last_search: @last_search, registers: @registers, search_history: @search_history)
         @recall_history = UseCases::RecallHistory.new(search_prompt: @search_prompt, command_history: @command_history, search_history: @search_history, plugin_ui: @plugin_ui, preview_search: @preview_search)
         @operate = UseCases::Operate.new(registers: @registers, last_find: @last_find, find_match: @find_match)
         @put_register = UseCases::PutRegister.new(registers: @registers)
@@ -297,6 +305,7 @@ module Carat
         UseCases::SyntaxCommandHandler.register(@commands)
         UseCases::SetCommandHandler.register(@commands, last_search: @last_search)
         UseCases::NohlsearchCommandHandler.register(@commands, last_search: @last_search)
+        UseCases::SubstituteCommandHandler.register(@commands, substitute_lines: @substitute_lines)
         UseCases::PluginCommandHandler.register(@commands, plugins: @plugins)
         @plugins.activate_all(value)
 
@@ -326,6 +335,7 @@ module Carat
         UseCases::WindowHandler.register(@actions, split_window: @split_window, close_window: @close_window, close_other_windows: @close_other_windows, focus_window: focus_window, quit: @quit, tabs: @tabs)
         UseCases::TabHandler.register(@actions, switch_tab: @switch_tab)
         UseCases::ScrollHandler.register(@actions, scroll_window: scroll_window)
+        UseCases::SubstituteHandler.register(@actions, substitute_lines: @substitute_lines)
         UseCases::PluginActionHandler.register(@actions, plugins: @plugins)
 
         @keymap.add_checked(value, known_actions)

@@ -23,6 +23,13 @@ module Carat
         @name.match?(typed)
       end
 
+      # Whether the command takes a range: true for a command that
+      # resolves one itself, false here, so ExecuteEx answers E481.
+      # @rbs skip
+      def ranged?
+        false
+      end
+
       # Runs the command and returns the Outcome to report.
       # @rbs state: Domain::EditorState
       # @rbs command: Domain::ExCommand

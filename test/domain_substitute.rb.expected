@@ -1,0 +1,71 @@
+ok   pattern, string, and flags
+ok   no closing delimiter
+ok   pattern only
+ok   empty pattern
+ok   another delimiter
+ok   an escaped delimiter stays escaped
+ok   a delimiter in a collection
+ok   flags and a count
+ok   keep flags first
+ok   a comment after
+ok   trailing characters
+ok   a letter delimiter
+ok   a backslash delimiter
+ok   a delimiter that is not ASCII
+ok   flags only
+ok   a count only
+ok   a zero count
+ok   nothing
+ok   the & command reads flags only
+ok   the & command refuses a pattern
+ok   a huge count
+ok   no flags start again
+ok   g switches every match on
+ok   & keeps the flags and g switches
+ok   & alone keeps them
+ok   e switches the report off
+ok   n counts
+ok   i ignores case and I matches it
+ok   p prints and # numbers
+ok   the first match
+ok   every match
+ok   no match
+ok   counting changes nothing
+ok   the whole match
+ok   backslash zero
+ok   groups
+ok   a group that did not match
+ok   a group past the pattern's
+ok   a non-capturing group is not counted
+ok   upper the next character
+ok   lower the next character
+ok   upper until \E
+ok   lower until \e
+ok   one before all
+ok   case of a literal
+ok   case of a non-ASCII letter
+ok   a line break
+ok   a tab
+ok   a literal ampersand
+ok   a literal backslash
+ok   another escaped character is itself
+ok   a trailing backslash is kept
+ok   empty matches between characters
+ok   an empty match after a match does not count
+ok   the start anchor matches once
+ok   the end anchor
+ok   non-ASCII text
+ok   tilde matches the previous string
+ok   ten groups are too many
+ok   an illegal byte is kept
+ok   no tilde
+ok   a tilde is the previous string
+ok   no previous string
+ok   an escaped tilde stays
+ok   a plain string
+ok   an expression
+ok   a NUL
+ok   an escaped backslash before n
+ok   a string whose tildes could pass a mebibyte is too long
+ok   replacement text past the budget stops it and changes nothing
+domain_substitute: 70 passed, 0 failed

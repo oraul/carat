@@ -90,7 +90,7 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `mode.insert_open_below` | normal | Open a line below and insert |
 | `mode.insert_open_above` | normal | Open a line above and insert |
 | `mode.normal` | insert, cmdline, operator_pending, visual | Back to normal mode, cancelling a pending command or leaving the selection for `gv` |
-| `mode.cmdline` | normal | Enter command-line mode |
+| `mode.cmdline` | normal, visual | Enter command-line mode; from a visual mode leave it and start the line with `'<,'>` |
 | `mode.visual` | normal, visual | Start charwise visual mode, leave it when it is current, or switch to it from another visual mode |
 | `mode.visual_line` | normal, visual | Start linewise visual mode, leave it, or switch to it |
 | `mode.visual_block` | normal, visual | Start blockwise visual mode, leave it, or switch to it |
@@ -148,6 +148,8 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `scroll.cursor_top` | normal, visual | Scroll so the cursor line, or line count, is at the top of the window, with scrolloff |
 | `scroll.cursor_middle` | normal, visual | Scroll so the cursor line, or line count, is in the middle of the window |
 | `scroll.cursor_bottom` | normal, visual | Scroll so the cursor line, or line count, is at the bottom of the window, with scrolloff |
+| `substitute.repeat` | normal | `&`: repeat the last substitute on the cursor line without its flags, on count lines with a count |
+| `substitute.repeat_all` | normal | `g&`: repeat the last substitute on every line with its flags and the last search pattern |
 
 ## Plugins
 

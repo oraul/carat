@@ -21,8 +21,11 @@ module Carat
     # escapes \e \t \r \\ \] \^ \-, \( \) \%( \|, \< and \> (both a word
     # boundary), the class escapes s S d D w W a A l L u U x X h H o O k K,
     # \t \e \r, and \c \C. Everything else Vim has answers Not
-    # implemented, and a malformed pattern Vim's error. A plain class
-    # built once per compile.
+    # implemented, and a malformed pattern Vim's error. A substitute's
+    # pattern is translated the same way except that \( captures, at most
+    # nine times as in Vim, for \1 to \9 of the replacement, and ~ matches
+    # the previous replacement string. A plain class built once per
+    # compile.
     class VimPattern
       MAX_SIZE = 2000
       MAX_BYTES = 4096
@@ -50,10 +53,18 @@ module Carat
       # @rbs @at_start: bool
       # @rbs @code: Integer
       # @rbs @kind: Integer
+      # @rbs @capture: bool
+      # @rbs @groups: Integer
+      # @rbs @tilde: String
+      # @rbs @tilde_known: bool
 
-      #: (source: String) -> void
-      def initialize(source:)
+      #: (source: String, capture: bool, tilde: String, tilde_known: bool) -> void
+      def initialize(source:, capture:, tilde:, tilde_known:)
         @source = source
+        @capture = capture
+        @groups = 0
+        @tilde = tilde
+        @tilde_known = tilde_known
         @bytes = source.bytesize
         @pos = 0
         @out = +""
@@ -78,7 +89,14 @@ module Carat
       # letter.
       #: (String, bool, bool) -> SearchPattern
       def self.compile(source, ignorecase, smartcase)
-        VimPattern.new(source: source).build(ignorecase, smartcase)
+        VimPattern.new(source: source, capture: false, tilde: "", tilde_known: false).build(ignorecase, smartcase)
+      end
+
+      # The pattern of a substitute: as compile, with capturing groups and
+      # ~ as previous, the last replacement string, when previous_kept.
+      #: (String, bool, bool, String, bool) -> SearchPattern
+      def self.compile_substitute(source, ignorecase, smartcase, previous, previous_kept)
+        VimPattern.new(source: source, capture: true, tilde: previous, tilde_known: previous_kept).build(ignorecase, smartcase)
       end
 
       # The pattern that matches text literally, for "*" and "#": every
@@ -244,8 +262,8 @@ module Carat
         when 46 then atom(".", 1)
         when 42 then star
         when 91 then collection
-        when 126 then refuse("E33: No previous substitute regular expression")
-        when 40 then open_group
+        when 126 then tilde
+        when 40 then open_group(@capture)
         when 41 then close_group
         when 124 then alternative
         when 43 then multi("+", code)
@@ -371,9 +389,31 @@ module Carat
         value
       end
 
+      # ~: the previous replacement string, matched literally as one atom.
       #: () -> void
-      def open_group
-        @out << "(?:"
+      def tilde
+        return refuse("E33: No previous substitute regular expression") unless @capture && @tilde_known
+        codes = Utf8.codes(@tilde)
+        text = +"(?:"
+        i = 0
+        while i < codes.length
+          text << literal_text(codes[i].to_i)
+          i += 1
+        end
+        text << ")"
+        atom(text, codes.length > 0 ? codes.length : 1)
+      end
+
+      # A group, capturing when capturing is true.
+      #: (bool) -> void
+      def open_group(capturing)
+        if capturing
+          @groups += 1
+          return refuse("E51: Too many #{typed(40)}") if @groups > 9
+          @out << "("
+        else
+          @out << "(?:"
+        end
         @starts << @size
         @at_start = true
         @can_multi = false
@@ -414,7 +454,7 @@ module Carat
       def percent
         if @pos < @bytes && @source.getbyte(@pos) == 40
           @pos += 1
-          open_group
+          open_group(false)
           return
         end
         refuse("Not implemented: #{typed(37)} in a pattern")

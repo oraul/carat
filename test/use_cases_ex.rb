@@ -422,7 +422,13 @@ module UseCasesExTest
     r = s_w.ex.call(s, "")
     t.assert_equal([true, ""], [r.ok, r.message], "empty command does nothing")
     r = s_w.ex.call(s, "12")
-    t.assert_equal("E492: Not an editor command: 12", r.message, "a bare number is not a command yet")
+    t.assert_equal([false, "E16: Invalid range"], [r.ok, r.message], "a bare number past the last line is an invalid range")
+    r = s_w.ex.call(s, "1")
+    t.assert_equal([true, ""], [r.ok, r.message], "a bare number in the buffer moves the cursor quietly")
+    r = s_w.ex.call(s, "12foo")
+    t.assert_equal("E492: Not an editor command: 12foo", r.message, "a range before an unknown name is unknown")
+    r = s_w.ex.call(s, "1,1w")
+    t.assert_equal([false, "E481: No range allowed"], [r.ok, r.message], "a range before a command that takes none is refused")
 
     # Scratch buffers: never written, skipped by :wa, and not unsaved work.
     files = Carat::Doubles::MemoryFiles.new
@@ -491,7 +497,7 @@ module UseCasesExTest
       ["se sets", "se", "set"],
       ["sy is syntax", "sy", "syntax"],
       ["synt is syntax", "synt", "syntax"],
-      ["s is not set", "s", ""]
+      ["s is substitute, not set", "s", "substitute"]
     ]) do |typed|
       handler = table.find(typed)
       handler.nil? ? "" : handler.name.full
