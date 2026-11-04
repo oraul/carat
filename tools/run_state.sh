@@ -17,9 +17,13 @@
 #   merged           the squash commit on main
 #   metric.NAME      one measurement or figure of the run: tools/metrics.sh
 #                    names, rework, ci_min, estimate (the plan's size), phase.KEY
-#                    ("TOKENS/CALLS" of a phase so far), and first.GATE (0 or 1,
-#                    its first verdict), stored by the workflow, every figure
-#                    in each metric line it runs; older runs stored
+#                    ("TOKENS/CALLS" of a phase so far), first.GATE (0 or 1,
+#                    its first verdict), extra (fix rounds granted beyond
+#                    three), stop (rounds when a start stopped at the
+#                    limit, else none), and planned (0 when the planner was
+#                    skipped), stored by the workflow, every figure in each
+#                    metric line it runs; total_tokens and wall_min, summed
+#                    over the starts by usage; older runs stored
 #                    first_pass, out_tokens, tool_calls, phases
 #   note.N           "KIND TEXT": a retrospective proposal or a finding
 # Logs: build/stages/CHANGE/STAGE.log, ending in "EXIT n".
@@ -28,7 +32,7 @@
 # from the run states that have none yet, so the next change carries the
 # rows of the runs before it (columns in HEADER below). A row's estimate is
 # metric.estimate, else the size word of the change's queue item, its
-# actual the out_tokens.
+# actual the total_tokens and wall_min, with out_tokens beside them.
 #
 # Usage: sh tools/run_state.sh COMMAND ...
 #   init CHANGE BRANCH          create the state unless it exists, then show it
@@ -76,13 +80,24 @@
 #                               tools/metrics.sh measurement as metric.name,
 #                               dropping one whose value is ? (not measured)
 #   note CHANGE KIND TEXT       record note.N, the next number, as "KIND TEXT"
+#   usage CHANGE TOKENS MINUTES add one start's total tokens (input plus
+#                               output) and wall minutes, as the Workflow
+#                               tool reported them, to metric.total_tokens
+#                               and metric.wall_min, then print the budget
 #   review-due CHANGE           print "due: REASON" and exit 0 when the merged
 #                               change touched a sensitive area or five changes
 #                               merged since the last periodic review; print
 #                               "not due: ..." and exit 1 otherwise
+#   plan-needed CHANGE          print "needed: REASON" and exit 0 when the
+#                               change is not the head of docs/queue.md or a
+#                               pending change holds a proposal or finding
+#                               (PLAN_NOTES) to place; print "not needed:
+#                               ..." with the head item's size and exit 1
 #   budget CHANGE               print "over:", "within:", "unmeasured:", or
 #                               "no estimate:" with the change's estimate, its
-#                               budget (TOKEN_BUDGETS), and its output tokens
+#                               budget (TOKEN_BUDGETS, MINUTE_BUDGETS), its
+#                               total tokens and wall minutes, and its output
+#                               tokens
 #   pending                     the merged changes with no history row yet
 #   history                     append a history row for each pending change;
 #                               a gate without a stored first verdict is
@@ -116,22 +131,32 @@ TEST_ONLY='^(test/|openspec/|docs/(backlog|queue|goals)\.md$|docs/metrics\.tsv$|
 # The gates of a history row's first passes, in order, before gates.
 GATES="check quality security bench ci"
 REVIEW_KINDS="security quality bench periodic-security periodic-quality"
-# The output-token budget of each size a queue item is estimated at, as
+# The total-token budget (input plus output) of each size a queue item is
+# estimated at, and the wall-minute budget of the sizes that have one, as
 # docs/goals.md gives them.
-TOKEN_BUDGETS="small=300000 medium=700000 large=1200000"
+TOKEN_BUDGETS="small=500000 medium=1200000 large=2500000"
+MINUTE_BUDGETS="small=25"
+# The note kinds of a pending change that the planner places: retrospective
+# proposals, overruns, and periodic review findings.
+PLAN_NOTES='retro|overrun|security|quality'
 TAB=$(printf '\t')
-HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci_min${TAB}rounds${TAB}allocs${TAB}us_per_key${TAB}out_tokens${TAB}tool_calls${TAB}phases${TAB}review${TAB}estimate"
+# Columns 16 and 17 came after estimate, so rates ($5, $6) and review_due
+# ($14) read the same columns in every row.
+HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci_min${TAB}rounds${TAB}allocs${TAB}us_per_key${TAB}out_tokens${TAB}tool_calls${TAB}phases${TAB}review${TAB}estimate${TAB}total_tokens${TAB}wall_min"
 # The areas whose change makes a periodic review of the whole codebase due,
 # one "label=path pattern" per line, the first match named. An edit of
 # config/default.caratrc that adds or removes only key bindings, comments,
-# and blank lines leaves the file and its mirror out (keymap_only).
+# and blank lines leaves the file and its mirror out (keymap_only); an
+# agent file counts as the guard's wiring only when its tools or hook lines
+# change (agent_hooks). Other tooling, docs, and keymap-only changes count
+# only toward the five.
 REVIEW_AREAS='config loading=^(config/|bin/carat-gen-config[.]rb$|carat/(adapters/rc_config_gateway|ports/config_port|domain/(config|default_config|manifest_check|rc_[a-z_]+))[.]rb$)
 file access=^carat/(drivers/disk_files[.]rb|ports/file_port[.]rb|domain/path_(policy|info)[.]rb|use_cases/files/)
 plugin boundaries=^carat/(plugin_api[.]rb|plugins/|use_cases/plugins/)
 terminal output=^carat/(drivers/ansi_terminal|ports/terminal_port|adapters/(screen_presenter|frame_presenter|painted_rows|sgr_table|key_decoder)|domain/(frame|display_width|utf8|decoded_line))[.]rb$
 process spawning=^carat/drivers/
 entry point=^bin/carat[.]rb$
-tooling and CI=^(tools/|[.]claude/|[.]github/workflows/)'
+guard and gates=^(tools/(agent_guard|gates|rules|ci_scope)[.]sh$|tools/noruby/|[.]claude/settings[.]json$|[.]github/workflows/)'
 
 die() {
   echo "run_state: $*" >&2
@@ -575,24 +600,45 @@ estimate_of() {
   echo "${size:--}"
 }
 
-# The budget line: the run's output tokens against the budget of its
-# estimate (TOKEN_BUDGETS), for the retrospective to flag an overrun.
+# The budget line: the run's total tokens and wall minutes against the
+# budgets of its estimate (TOKEN_BUDGETS, MINUTE_BUDGETS), its output tokens
+# beside them, for the retrospective to flag an overrun.
 budget_line() {
   [ -f "$(state_file)" ] || die "no run state for $change"
   size=$(estimate_of)
-  tokens=$(out_tokens)
+  total=$(value metric.total_tokens)
+  minutes=$(value metric.wall_min)
+  actual="actual $total total tokens in $minutes minutes, $(out_tokens) output tokens"
   if [ "$size" = "-" ]; then
-    echo "no estimate: neither the run state nor a queue item of $change states a size; actual $tokens output tokens"
+    echo "no estimate: neither the run state nor a queue item of $change states a size; $actual"
     return
   fi
   limit=$(printf '%s\n' $TOKEN_BUDGETS | sed -n "s/^$size=//p")
-  if ! valid '[0-9]+' "$tokens"; then
-    echo "unmeasured: estimated $size, budget $limit, no output tokens recorded"
-  elif [ "$tokens" -gt "$limit" ]; then
-    echo "over: estimated $size, budget $limit, actual $tokens output tokens"
+  time_limit=$(printf '%s\n' $MINUTE_BUDGETS | sed -n "s/^$size=//p")
+  budget="budget $limit total tokens${time_limit:+ and $time_limit minutes}"
+  if ! valid '[0-9]+' "$total"; then
+    echo "unmeasured: estimated $size, $budget, no total tokens recorded"
+  elif [ "$total" -gt "$limit" ] || { [ -n "$time_limit" ] && valid '[0-9]+([.][0-9]+)?' "$minutes" &&
+      awk -v m="$minutes" -v l="$time_limit" 'BEGIN { exit !(m > l) }'; }; then
+    echo "over: estimated $size, $budget, $actual"
   else
-    echo "within: estimated $size, budget $limit, actual $tokens output tokens"
+    echo "within: estimated $size, $budget, $actual"
   fi
+}
+
+# usage TOKENS MINUTES: add one start's total tokens and wall minutes to the
+# run's sums, then print the budget line.
+add_usage() {
+  valid '[0-9]+' "$1" || die "usage: the total tokens are a whole number, not $1"
+  valid '[0-9]+([.][0-9]+)?' "$2" || die "usage: the wall minutes are a number, not $2"
+  [ -f "$(state_file)" ] || die "no run state for $change"
+  tokens=$(read_key metric.total_tokens)
+  minutes=$(read_key metric.wall_min)
+  [ -z "$tokens" ] || valid '[0-9]+' "$tokens" || die "usage: the recorded total tokens are not a number: $tokens"
+  [ -z "$minutes" ] || valid '[0-9]+([.][0-9]+)?' "$minutes" || die "usage: the recorded wall minutes are not a number: $minutes"
+  write_key metric.total_tokens "$(awk -v a="${tokens:-0}" -v b="$1" 'BEGIN { printf "%.0f", a + b }')"
+  write_key metric.wall_min "$(awk -v a="${minutes:-0}" -v b="$2" 'BEGIN { printf "%.1f", a + b }')"
+  budget_line
 }
 
 history_row() {
@@ -624,8 +670,8 @@ history_row() {
   fi
   printf '%s\t' "$change" "${date:--}" "${merged:--}" "$(value pr)" "$(value metric.rework)" "${first:--}" \
     "$(value metric.ci_min)" "$(group rounds)" "$(group allocs)" "$(group us)" \
-    "$tokens" "$calls" "$phases" "$review"
-  printf '%s\n' "$(estimate_of)"
+    "$tokens" "$calls" "$phases" "$review" "$(estimate_of)" "$(value metric.total_tokens)"
+  printf '%s\n' "$(value metric.wall_min)"
 }
 
 append_history() {
@@ -647,6 +693,16 @@ keymap_only() {
   [ -z "$(printf '%s\n' "$lines" | grep -v -E '^[-+](keymap[.]|#|[[:space:]]*$)')" ]
 }
 
+# The first agent file of commit $1 whose edit adds or removes a tools line
+# or a hook line of its frontmatter, the wiring of the guard; nothing when
+# none does.
+agent_hooks() {
+  git diff --no-ext-diff --no-color -U0 --end-of-options "$1~1" "$1" -- .claude/agents 2>/dev/null | awk '
+    /^diff / { file = $NF; sub(/^b\//, "", file); next }
+    /^(---|\+\+\+) / { next }
+    /^[-+](tools:|hooks:|[[:space:]]+(PreToolUse:|- matcher:|matcher:|hooks:|- type:|type:|command:))/ { print file; exit }'
+}
+
 review_due() {
   merged=$(merged_commit)
   [ -n "$merged" ] || die "review-due: $change is not merged (no merged commit hash)"
@@ -658,6 +714,10 @@ review_due() {
     hit=$(printf '%s\n' "$paths" | grep -E -m 1 "$pattern")
     if [ -n "$hit" ]; then echo "$label ($hit)"; break; fi
   done)
+  if [ -z "$area" ]; then
+    hit=$(agent_hooks "$merged")
+    [ -z "$hit" ] || area="guard and gates ($hit, its tools or hooks)"
+  fi
   if [ -n "$area" ]; then
     echo "due: the change touched $area"
     return 0
@@ -677,6 +737,32 @@ review_due() {
     return 0
   fi
   echo "not due: $since of 5 changes merged since the last periodic review, and no sensitive area touched"
+  return 1
+}
+
+# Whether the queue needs the planner before the change starts: needed
+# when the change is not the first item of docs/queue.md, or when another
+# merged change without a history row holds a note of a PLAN_NOTES kind
+# (a retrospective proposal, an overrun, a periodic finding) that only the
+# planner places; otherwise the head item is taken as written, its size
+# printed for the run's estimate.
+plan_needed() {
+  head_item=$(sed -n 's/^1[.] //p' docs/queue.md 2>/dev/null | head -1)
+  name=$(printf '%s\n' "$head_item" | sed -n 's/^`\([a-z0-9][a-z0-9-]*\)`.*/\1/p')
+  if [ "$name" != "$change" ]; then
+    echo "needed: $change is not the head of docs/queue.md (${name:-no named item})"
+    return 0
+  fi
+  for other in $(pending_list); do
+    [ "$other" != "$change" ] || continue
+    n=$(change=$other; grep -c -E "^  \"note[.][0-9]+\": \"($PLAN_NOTES) " "$(state_file)")
+    if [ "$n" -gt 0 ]; then
+      echo "needed: $other holds $n proposal(s) or finding(s) to place"
+      return 0
+    fi
+  done
+  size=$(printf '%s\n' "$head_item" | awk 'match($0, /estimated (small|medium|large)/) { print substr($0, RSTART + 10, RLENGTH - 10) }')
+  echo "not needed: $change heads docs/queue.md, estimated ${size:--}, and no pending change holds a proposal or finding"
   return 1
 }
 
@@ -822,6 +908,12 @@ case "$command" in
   budget)
     [ $# -eq 0 ] || usage
     budget_line ;;
+  usage)
+    [ $# -eq 2 ] || usage
+    add_usage "$1" "$2" ;;
+  plan-needed)
+    [ $# -eq 0 ] || usage
+    plan_needed ;;
   review-due)
     [ $# -eq 0 ] || usage
     review_due ;;
