@@ -196,16 +196,23 @@ EOF
 chmod +x "$work/bin/fake-make"
 expect "run_state: check stops at the first failing stage" 1 "stage b failed" \
   env STAGES="a b" MAKE="$work/bin/fake-make" FAIL_B=2 sh "$here/run_state.sh" check state
-expect "run_state: check resumes after the passed stages" 0 "stage a: passed at .*, skipped" \
+# A stage record counts only at the commit the workflow backs: one at HEAD
+# without it, which any agent could have written, runs again.
+expect "run_state: check runs a stage recorded at the head that no commit backs" 0 "^stage a: exit 0" \
   env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
 expect "run_state: check records the phase" 0 "^$(git rev-parse --short=12 HEAD)$" state get state phase.check
+expect "run_state: check skips the stages passed at the backed head" 0 "stage a: passed at .*, skipped" \
+  env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD)"
+expect "run_state: check refuses a backed commit that is not one" 1 "not a commit: HEAD" \
+  env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state HEAD
 # A commit that changes only tests reruns the test stages and carries the
-# others; one that changes anything else reruns every stage.
+# others from the backed commit; one that changes anything else reruns
+# every stage.
 env STAGES="a b test-run diagnose metrics docs-lint" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
 before_tests=$(git rev-parse --short=12 HEAD)
 echo "check" > test/t.rb
 commit "test: t"
-env STAGES="a b test-run diagnose metrics docs-lint" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > carry.out 2>&1
+env STAGES="a b test-run diagnose metrics docs-lint" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$before_tests" > carry.out 2>&1
 expect "run_state: check carries a stage after a test-only commit" 0 "^stage a: passed at $before_tests, carried to $(git rev-parse --short=12 HEAD)" cat carry.out
 expect "run_state: check reruns the test stages" 0 "^stage test-run: exit 0" cat carry.out
 expect "run_state: check reruns diagnose, which reads the test runner, after a test-only commit" 0 "^stage diagnose: exit 0" cat carry.out
@@ -213,6 +220,14 @@ expect "run_state: check reruns docs-lint, which reads the docs and the test pat
 expect "run_state: check reruns metrics, which reads the test runner's rounds, after a test-only commit" 0 "^stage metrics: exit 0" cat carry.out
 expect "run_state: a carried stage names its commit" 0 "^0 0s $(git rev-parse --short=12 HEAD) .* carried-from-$before_tests$" state get state stage.b
 rm carry.out
+echo "check again" > test/t.rb
+commit "test: t again"
+expect "run_state: check carries a stage carried from the backed commit" 0 "stage a: passed at $before_tests, carried to $(git rev-parse --short=12 HEAD)" \
+  env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$before_tests"
+echo "check once more" > test/t.rb
+commit "test: t once more"
+expect "run_state: check carries nothing without a backed commit" 0 "^stage a: exit 0" \
+  env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
 echo "check" > tools/t.sh
 commit "chore: t"
 expect "run_state: check reruns every stage after a change outside test/" 0 "^stage a: exit 0" \
@@ -264,6 +279,35 @@ expect "run_state: a blocked review records no phase" 0 "^$" state get state pha
 state review state quality pass "blocking=0 advisory=2" "$base_commit" > /dev/null
 expect "run_state: review records the given commit" 0 "^pass $base_commit blocking=0 advisory=2$" state get state review.quality
 expect "run_state: a passed review records its phase at that commit" 0 "^$base_commit$" state get state phase.quality
+# The scope of a fix round's quality review: the fix since the reviewed
+# commit stays within the files the findings name, tests, and records.
+reviewed_at=$(git rev-parse --short=12 HEAD)
+echo fix >> tools/base.sh
+echo fix > test/fix.rb
+mkdir -p openspec/changes/c
+echo "- [x] 1.1" > openspec/changes/c/tasks.md
+commit "fix: a named file"
+expect "run_state: scope allows a fix of the named files and tests" 0 "^fix: review only git diff $reviewed_at HEAD" state scope state "$reviewed_at" README.md tools/base.sh
+expect "run_state: scope falls back for a file the findings do not name" 1 "^branch: tools/base.sh changed since $reviewed_at" state scope state "$reviewed_at" README.md
+expect "run_state: scope falls back without named files" 1 "^branch: tools/base.sh" state scope state "$reviewed_at"
+expect "run_state: scope falls back when nothing changed" 1 "^branch: nothing changed" state scope state "$(git rev-parse --short=12 HEAD)" tools/base.sh
+expect "run_state: scope refuses a commit that is not one" 1 "not a commit: HEAD" state scope state HEAD tools/base.sh
+expect "run_state: scope refuses a path with a parent step" 1 "not a plain relative path: tools/[.][.]/x" state scope state "$reviewed_at" tools/../x
+git_q mv tools/base.sh test/base.sh
+commit "chore: move a named file under test"
+expect "run_state: scope counts both paths of a rename" 0 "^fix: " state scope state "$reviewed_at" tools/base.sh
+expect "run_state: scope falls back for a rename the findings do not name" 1 "^branch: tools/base.sh" state scope state "$reviewed_at" README.md
+git_q mv test/base.sh tools/base.sh
+commit "chore: move it back"
+# An advisory a later round repeats is noted once.
+state note state quality-advisory "abc1234def01 tools/x.sh:3 a \"quoted\" reason; fix: an outline" > /dev/null
+expect "run_state: note keeps one advisory across commits" 0 "already recorded" state note state quality-advisory "0123456789ab tools/x.sh:3 a \"quoted\" reason; fix: an outline"
+expect "run_state: one note holds the repeated advisory" 0 "^1$" sh -c "grep -c 'tools/x.sh:3 a' build/pipeline/state.json"
+state note state quality-advisory "0123456789ab tools/x.sh:4 another reason; fix: an outline" > /dev/null
+expect "run_state: note records another advisory" 0 "^1$" sh -c "grep -c 'tools/x.sh:4 another' build/pipeline/state.json"
+state note state quality-blocking "0123456789ab tools/x.sh:3 a reason; fix: an outline" > /dev/null
+state note state quality-blocking "abc1234def01 tools/x.sh:3 a reason; fix: an outline" > /dev/null
+expect "run_state: note keeps a blocking finding at each commit" 0 "^2$" sh -c "grep -c 'quality-blocking [0-9a-f]* tools/x.sh:3' build/pipeline/state.json"
 
 fresh pushing
 git_q init -q --bare "$work/origin.git"
@@ -276,6 +320,7 @@ expect "run_state: push refuses before the checks and the review" 1 "pre-push ga
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a refused push counts a gate failure" 0 "^1$" state get pushing gates_failed
 state stage pushing lint true > /dev/null
+state phase pushing check > /dev/null
 state review pushing security pass "no finding" > /dev/null
 expect "run_state: push passes the gates and pushes" 0 "ok   security" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
@@ -702,12 +747,17 @@ expect "guard: benchmark builds the base" 0 "^$" guard read 'make -C tmp/.base d
 expect "guard: benchmark measures the base with the change's script" 0 "^$" guard read 'cd tmp/.base && sh /w/tools/metrics.sh measure build/metrics/current.tsv'
 expect "guard: benchmark compares and records" 0 "^$" guard read 'make metrics && make metrics-compare BASE_METRICS=tmp/.base/build/metrics/current.tsv && make bench SCENARIOS=\"lh j\" && sh tools/run_state.sh metrics c build/metrics/current.tsv && git worktree remove --force tmp/.base'
 expect "guard: quality reviewer reads the diff and notes" 0 "^$" guard read 'git diff origin/main...HEAD && git diff --name-only abc1234 HEAD && git rev-parse --short=12 HEAD && sh tools/run_state.sh note c quality-advisory \"abc1234 tools/x.sh:3 a reason; fix: an outline\"'
+expect "guard: quality reviewer scopes a fix round" 0 "^$" guard read 'sh tools/run_state.sh scope c abc1234 tools/x.sh carat/domain/buffer.rb && git diff abc1234 HEAD'
 expect "guard: quality reviewer runs the periodic mode" 0 "^$" guard read 'git fetch -q origin && git worktree add --detach tmp/.review-quality origin/main && git log --name-only -5 origin/main && git worktree remove --force tmp/.review-quality'
 expect "guard: security reviewer runs its steps" 0 "^$" guard read 'git status --porcelain --untracked-files=no && git remote set-head origin main && git fetch -q origin && git -C tmp/.review-security checkout -q --detach origin/main && sh tools/run_state.sh note c security \"Low (3) tools/x.sh:1 a title; fix: an outline\"'
 expect "guard: reporter checks the squash commit" 0 "^$" guard read 'sh tools/run_state.sh show c && git show --stat abc1234 && BASE=abc1234~1 sh tools/gates.sh trailer && BASE=abc1234~1 sh tools/gates.sh content docs'
 expect "guard: retrospective records its notes" 0 "^$" guard read 'sh tools/run_state.sh metric c phase.check=1200/5 first.check=1 rework=0 ci_min=5.0 estimate=large && sh tools/run_state.sh note c retro \"x; evidence: 3\" && sh tools/run_state.sh budget c && sh tools/run_state.sh review-due c && sh tools/run_state.sh status'
 expect "guard: merger waits and records CI" 0 "^$" guard merger 'sh tools/run_state.sh metric c rework=0 && sh tools/run_state.sh show c && sh tools/ci_wait.sh 30 && sh tools/run_state.sh set c ci \"green abc1234\"'
-expect "guard: merger runs the merge gates" 0 "^$" guard merger 'CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234\" sh tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger runs main's merge gates" 0 "^$" guard merger 'git worktree remove --force tmp/.merge-gates; git worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger refuses the branch's merge gates" 2 "the branch's tools/gates.sh merge" guard merger 'CHANGE=c RECORDS=\"security:pass:abc1234\" sh tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger refuses another gate of main's copy" 2 "other than merge BODY" guard merger 'sh tmp/.merge-gates/tools/gates.sh records'
+expect "guard: merger refuses another script under the worktree" 2 "the script tmp/.merge-gates/tools/run_state.sh is not one" guard merger 'sh tmp/.merge-gates/tools/run_state.sh show c'
+expect "guard: contributor refuses main's merge gates" 2 "is not a command of this profile" guard contributor 'sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: merger verifies and records the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%B origin/main && sh tools/run_state.sh set c merged abc1234 && git ls-remote --heads origin chore/x'
 expect "guard: merger deletes the branch and fast-forwards main" 0 "^$" guard merger 'git push origin --delete chore/x; git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
 expect "guard: contributor proposes and validates" 0 "^$" guard contributor 'npx -y @fission-ai/openspec@latest new change c && npx @fission-ai/openspec@latest validate \"c\" --strict --no-interactive && openspec status --change c --json'
@@ -781,7 +831,7 @@ expect "guard: merger refuses another merge" 2 "git merge other than" guard merg
 expect "guard: merger refuses a pull request record" 2 "tools/run_state.sh set of pr" guard merger 'sh tools/run_state.sh set c pr 5'
 expect "guard: merger refuses a forged CI record" 2 "a CI record other than" guard merger 'sh tools/run_state.sh set c ci green'
 expect "guard: merger refuses make" 2 "make is not a command" guard merger 'make metrics'
-expect "guard: merger refuses another body" 2 "not a pull request body file" guard merger 'CHANGE=c sh tools/gates.sh merge README.md'
+expect "guard: merger refuses another body" 2 "not a pull request body file" guard merger 'CHANGE=c sh tmp/.merge-gates/tools/gates.sh merge README.md'
 expect "guard: contributor refuses git push" 2 "git push is not" guard contributor 'git push -u origin chore/x'
 expect "guard: contributor refuses a push of another form" 2 "tools/run_state.sh push other than" guard contributor 'sh tools/run_state.sh push c --force'
 expect "guard: contributor refuses a CI record" 2 "tools/run_state.sh set of ci" guard contributor 'sh tools/run_state.sh set c ci \"green abc1234\"'
@@ -836,7 +886,7 @@ ln -s nope/../run/c.json "$proj/tmp/hop"
 ln -s ../build/pipeline/c.body.md "$proj/tmp/body"
 PROJECT=$proj
 expect "guard: contributor refuses the body gate on a linked body file" 2 "a pull request body file that is a link" guard contributor 'sh tools/gates.sh pr-body build/pipeline/d.body.md'
-expect "guard: merger refuses the merge gate on a linked body file" 2 "a pull request body file that is a link" guard merger 'sh tools/gates.sh merge build/pipeline/d.body.md'
+expect "guard: merger refuses the merge gate on a linked body file" 2 "a pull request body file that is a link" guard merger 'sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/d.body.md'
 expect "guard: contributor refuses a write to a linked body file" 2 "a pull request body file that is a link" guard_edit contributor Write "$proj/build/pipeline/d.body.md"
 expect "guard: contributor refuses a write through a link to the body file" 2 "a write to the run state's directory" guard_edit contributor Write "$proj/tmp/body"
 expect "guard: contributor refuses a linked directory into the run state" 2 "a write to the run state's directory" guard_edit contributor Write "$proj/tmp/run/c.json"
@@ -1087,7 +1137,7 @@ expect "gates: security refuses a blocked review" 1 "did not pass" gates securit
 state review security security pass "no finding" > /dev/null
 expect "gates: security passes at HEAD" 0 "ok   security: pass" gates security
 reviewed=$(git rev-parse --short=12 HEAD)
-expect "gates: records passes the workflow's results" 0 "ok   records: the run state holds the workflow's 1 review" \
+expect "gates: records passes the workflow's results" 0 "ok   records: the run state holds the workflow's 1 record" \
   env RECORDS="security:pass:$reviewed" BASE=main sh "$here/gates.sh" records
 expect "gates: records compares the full commit" 0 "ok   records" \
   env RECORDS="security:pass:$(git rev-parse HEAD)" BASE=main sh "$here/gates.sh" records
@@ -1098,6 +1148,15 @@ expect "gates: records refuses a review the run state lacks" 1 "review.quality i
 expect "gates: records refuses a malformed record" 1 "not a KIND:RESULT:COMMIT record: security:pass:[*]" \
   env RECORDS="security:pass:*" BASE=main sh "$here/gates.sh" records
 expect "gates: records refuses when no records are given" 1 "FAIL records: no workflow records given" gates records
+expect "gates: records refuses without a security record" 1 "no security record given" \
+  env RECORDS="quality:pass:$reviewed" BASE=main sh "$here/gates.sh" records
+expect "gates: records refuses a check record the run state lacks" 1 "phase.check is \"\", but the workflow received pass" \
+  env RECORDS="security:pass:$reviewed check:pass:$reviewed" BASE=main sh "$here/gates.sh" records
+state phase security check > /dev/null
+expect "gates: records compares the check record" 0 "ok   records: the run state holds the workflow's 2 record" \
+  env RECORDS="security:pass:$reviewed check:pass:$reviewed" BASE=main sh "$here/gates.sh" records
+expect "gates: records refuses a check record other than the workflow's" 1 "phase.check is \"pass $reviewed\", but the workflow received blocked" \
+  env RECORDS="security:pass:$reviewed check:blocked:$reviewed" BASE=main sh "$here/gates.sh" records
 mkdir -p openspec/changes/archive/x
 echo archived > openspec/changes/archive/x/tasks.md
 commit "chore: archive"
@@ -1115,6 +1174,7 @@ commit "chore: move the tool back"
 echo code > tools/fix.sh
 commit "fix: code"
 expect "gates: security refuses after code changed" 1 "code changed since" gates security
+expect "gates: stages refuses a check before a code change" 1 "the check passed at [0-9a-f]+, but code changed since" gates stages
 expect "gates: stages refuses a stage that has not run" 1 "lint has not run" gates stages
 state set security pushes 3 > /dev/null
 expect "gates: pushes refuses more than one push per CI fix" 1 "3 pushes for 0 CI fix" gates pushes
@@ -1147,6 +1207,46 @@ echo more >> tools/code.sh
 commit "fix: more code"
 state set passed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "gates: passed refuses a record before a code change" 1 "FAIL passed: check passed at [0-9a-f]+, but code changed since" gates passed
+state phase passed check > /dev/null
+state review passed quality pass "blocking=0" > /dev/null
+state review passed security pass "high=0" > /dev/null
+state review passed bench pass "blocking=0" > /dev/null
+echo dirty >> tools/code.sh
+expect "gates: passed refuses a dirty tree" 1 "FAIL passed: tracked files differ from HEAD:  M tools/code.sh" gates passed
+git_q checkout -q -- tools/code.sh
+expect "gates: passed passes a clean tree" 0 "ok   passed" gates passed
+
+# The stages gate counts a stage only at the check the workflow recorded,
+# and the merge runs a copy of main's gates against the branch.
+fresh staged
+state init staged chore/staged > /dev/null
+expect "gates: stages refuses without a check record" 1 "no check is recorded for staged" gates stages
+state stage staged lint true > /dev/null
+echo code > tools/code.sh
+commit "feat: code"
+state phase staged check > /dev/null
+expect "gates: stages refuses a stage at a commit the check record does not name" 1 "FAIL stages: lint passed at [0-9a-f]+, not at the recorded check" gates stages
+state stage staged lint true > /dev/null
+expect "gates: stages passes every stage at the recorded check" 0 "ok   stages: every stage passed at the recorded check" gates stages
+mkdir -p "$work/copy/tools"
+cp "$here/gates.sh" "$here/rules.sh" "$here/run_state.sh" "$work/copy/tools/"
+printf 'CHECK_STAGES := lint other\n' > "$work/copy/Makefile"
+expect "gates: stages reads the stage list beside the script" 1 "FAIL stages: other has not run" \
+  env BASE=main CHANGE=staged sh "$work/copy/tools/gates.sh" stages
+printf 'CHECK_STAGES := lint\n' > "$work/copy/Makefile"
+state set staged pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
+state review staged quality pass "blocking=0" > /dev/null
+state review staged security pass "high=0" > /dev/null
+state review staged bench pass "blocking=0" > /dev/null
+at=$(git rev-parse --short=12 HEAD)
+printf '## Summary\n\nDoes a thing.\n\n---\n\n## Changes\n\n- Add a thing\n\n---\n\n## Testing\n\n- Run the security review, no finding\n\n---\n\n## Notes\n\nNone\n' > body.md
+expect "gates: merge runs from a copy of main against the branch" 0 "ok   records" \
+  env BASE=main CHANGE=staged RECORDS="security:pass:$at quality:pass:$at bench:pass:$at check:pass:$at" sh "$work/copy/tools/gates.sh" merge body.md
+echo more >> tools/code.sh
+commit "fix: more code"
+state set staged pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "gates: merge refuses a head other than the one the security review passed" 1 "FAIL security: the review passed at $at, but code changed since" \
+  env BASE=main CHANGE=staged RECORDS="security:pass:$at quality:pass:$at bench:pass:$at check:pass:$at" sh "$work/copy/tools/gates.sh" merge body.md
 
 fresh body
 cat > body.md <<'EOF'

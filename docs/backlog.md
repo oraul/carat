@@ -292,9 +292,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## CLAUDE.md has under 1,000 bytes of room in its budget
 
-- Where: `CLAUDE.md`, 30,428 of its 30,720-byte budget in `tools/docs_lint.sh` (`BUDGETS`) since `pipeline-speed`, which trimmed it from 30,719. Periodic quality advisory at df5a203; `docs/architecture.md` is at 88,054 of 88,064 and is handled by `project-config-guards`.
+- Where: `CLAUDE.md`, 30,470 of its 30,720-byte budget in `tools/docs_lint.sh` (`BUDGETS`) since `pipeline-speed-b`, whose Commands line grew it from the 30,428 `pipeline-speed` left after trimming it from 30,719. Periodic quality advisory at df5a203; `docs/architecture.md` is at 88,054 of 88,064 and is handled by `project-config-guards`.
 - Why it matters: `CLAUDE.md` requires its Commands and Layout sections to stay in sync with the code, so the next change that must add a line there fails `make docs-lint` and pays for a trim it did not plan.
-- Fix outline: the first change that needs room trims `CLAUDE.md` in the same change, moving detail to `docs/codebase-map.md` or the agents' files, rather than raising the budget; accepted when `make docs-lint` passes with at least 1,000 bytes of room left.
+- Fix outline: the first change that needs room trims `CLAUDE.md` in the same change, moving detail to `docs/codebase-map.md` or the agents' files, rather than raising the budget; accepted when `make docs-lint` passes with `CLAUDE.md` at most 90% of its budget. Queued in `docs-currency`.
 
 ## /status and a killed run lose the package, CI, and merge phases
 
@@ -308,23 +308,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the one-start wait holds only while the agent harness lets a foreground shell call sleep up to 540 seconds; if it refuses or shortens it, the merger falls back to returning pending, the cost of 36 to 58 merge tool calls a run that `workflow-records` set out to remove.
 - Fix outline: confirm on the first full run (`guard-hardening`) that the merger used one start with no pending note; record the harness behavior in the header and the merger's file, and if it fails, give the workflow the wait between merger starts instead. Queued in `pipeline-speed-c`.
 
-## Advisories repeated at a later round are recorded twice
-
-- Where: `addAdvisories` in `.claude/workflows/deliver-change.js` (line 281) and `seed` (line 200). Quality advisory of `guard-hardening` at a272de71f10b.
-- Why it matters: `addAdvisories` deduplicates by exact text, but the quality reviewer's text starts with its head commit while `seed` strips it from the run state's notes, so an advisory repeated at a later round or after a resume is handed to `docs/backlog.md` again, against the design's no-duplicates claim.
-- Fix outline: strip a leading commit hash in `addAdvisories` so both paths key on the same text, and check it with a resumed run that re-reports one advisory. Queued in `pipeline-speed-b`.
-
-## priorQuality's local findings shadows the module function
-
-- Where: `priorQuality` in `.claude/workflows/deliver-change.js` (line 323), whose local `const findings` shadows the module-level `findings()` added at line 282. Quality advisory of `guard-hardening` at a272de71f10b.
-- Why it matters: a later edit inside `priorQuality` that means to call `findings()` gets the local array and fails only at run time.
-- Fix outline: rename the local, for example `listed`. Queued in `pipeline-speed-b`.
-
 ## The contributor can edit the agent files of its own run
 
 - Where: the agent files under `.claude/agents/`, whose hook lines name each agent's guard profile and which the contributor's file tools may write. What remains of the periodic security Low (6) at 8c340cd after `guard-allowlist` made every hook run `origin/main`'s guard and refuse on any failure.
 - Why it matters: if the harness reads an agent file from the working tree when the workflow starts that agent, an edit on the branch (a hook line removed, a profile widened) applies to the later agents of the same run before any review.
-- Fix outline: have the workflow compare `.claude/agents/` and `.claude/settings.json` with `origin/main` before it starts each agent and stop on a difference the brief does not name, or refuse the contributor's edits of them unless a record only the workflow writes names them; add a `tools/tools_test.sh` case.
+- Fix outline: have the workflow compare `.claude/agents/` and `.claude/settings.json` with `origin/main` before it starts each agent and stop on a difference the brief does not name, or refuse the contributor's edits of them unless a record only the workflow writes names them; add a `tools/tools_test.sh` case. Queued in the backlog item of `docs/queue.md` item 19 (review triggers).
 
 ## The CI scope reads a moved code file by its new path
 
@@ -332,11 +320,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a pull request that only moves code files to a Markdown or `openspec/` path is listed by the new paths, so CI skips `spin check`, and the push to `main` then skips it as a passed head.
 - Fix outline: list the paths without rename detection, together with the fix of the entry "The CI scope script word-splits the changed paths", and add a `tools/tools_test.sh` case. Queued in `ci-hardening`.
 
-## check trusts stage records no workflow record backs
+## check writes the phase.check record that backs its own stages
 
-- Where: `check` in `tools/run_state.sh` (line 262), which skips every stage recorded as passed at the head, and the stages and passed gates, which trust `stage.*` and `phase.check`. Periodic security Low (5) at 8c340cd.
-- Why it matters: an agent can write those records by running a script file the guard does not read (`MAKE=true sh tools/run_state.sh check` inside a script), and the checker then runs nothing, leaving `diagnose` and `gates`, which CI leaves out, unchecked.
-- Fix outline: back the check result with a record only the workflow writes and compare it in the records gate, or give the checker a check that ignores earlier records at the head; add a `tools/tools_test.sh` case. Queued in part (c) of `pipeline-speed-b`, which changes the same records.
+- Where: `check_stages` in `tools/run_state.sh` (line 337), which still writes `phase.check` itself, and `trusted_state`, which hands that record to a resumed run as the workflow's. What remains of the periodic security Low (5) at 8c340cd after `pipeline-speed-b` made a stage record count only at the commit passed as backed. Quality finding of `pipeline-speed-b` at d820b39b39da.
+- Why it matters: after a forged `MAKE=true sh tools/run_state.sh check CHANGE` at the head, a resumed run skips the checker (`doneAtHead`), sends `check:pass:HEAD` in `RECORDS`, which matches, and `gates.sh stages` passes on the forged stages, leaving `diagnose` and `gates`, which CI leaves out, unchecked.
+- Fix outline: once `main`'s workflow records `phase.check` from the checker's result (`phaseDone`, merged with `pipeline-speed-b`), drop the write from `check_stages`, or have `trusted` drop a `phase.check` the workflow did not record; add a `tools/tools_test.sh` case that a check run alone leaves no `phase.check`. Queued in `pipeline-speed-c`.
 
 ## The search budget charges a line's length on ASCII lines too
 
@@ -474,43 +462,37 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: the `guard and gates` pattern of `REVIEW_AREAS` in `tools/run_state.sh` (line 161). Security Low (7) of `pipeline-speed` at b0df2ac092ed.
 - Why it matters: the narrowed pattern leaves out `tools/run_state.sh` (whose review, get, trusted, and push records `tools/gates.sh` trusts), `.claude/workflows/deliver-change.js` (which runs the security reviewer and writes the review record), and the security-reviewer and merger agent bodies, so a change that weakens how the review is recorded no longer makes a whole-tree periodic review due.
-- Fix outline: add `tools/run_state[.]sh$` and `[.]claude/workflows/` to the pattern, and count an edit of `.claude/agents/security-reviewer.md` or `.claude/agents/merger.md` as due, with a `tools/tools_test.sh` case.
+- Fix outline: add `tools/run_state[.]sh$` and `[.]claude/workflows/` to the pattern, and count an edit of `.claude/agents/security-reviewer.md` or `.claude/agents/merger.md` as due, with a `tools/tools_test.sh` case. Queued in the backlog item of `docs/queue.md` item 19 (review triggers).
 
 ## agent_hooks misses frontmatter keys that widen an agent's authority
 
 - Where: `agent_hooks` in `tools/run_state.sh` (line 701), which counts only `tools` and hook lines as the guard's wiring and reads `git diff` with `2>/dev/null`. Security Low (6) of `pipeline-speed` at b0df2ac092ed, and a quality advisory at 1d187291be30.
 - Why it matters: adding `permissionMode:`, `mcpServers:`, `disallowedTools:`, or a list-form tool item to an agent does not make the periodic review due, and a failing `git diff` fails open, so the review is skipped exactly when the agent's authority changes.
-- Fix outline: treat any changed line between an agent file's frontmatter delimiters other than `name`, `description`, and `model` as guard and gates, and report the review due when the diff fails, with a `tools/tools_test.sh` case.
+- Fix outline: treat any changed line between an agent file's frontmatter delimiters other than `name`, `description`, and `model` as guard and gates, and report the review due when the diff fails, with a `tools/tools_test.sh` case. Queued in the backlog item of `docs/queue.md` item 19 (review triggers).
 
 ## A resumed run can be granted an extra fix round after stopping at the limit
 
 - Where: `stopKind` in `.claude/workflows/deliver-change.js` (line 67), which starts at `none` on every start. Quality advisory of `pipeline-speed` at 1d187291be30.
 - Why it matters: the checker's metric line (`figuresFirst`) overwrites a stored `stop=rounds` with `none` before `mayFix` runs, so a start killed after that check makes the next resume grant an extra round to a run that had stopped at the round limit.
-- Fix outline: seed `stopKind` from `lastStop` when `rework` is already at `ROUNDS` plus `extra`.
+- Fix outline: seed `stopKind` from `lastStop` when `rework` is already at `ROUNDS` plus `extra`. Queued in `pipeline-speed-c`.
 
 ## Trimming CLAUDE.md for room reworded two Git rules
 
 - Where: the Git workflow rule of `CLAUDE.md` (line 39) and its Pull requests rule (line 113), changed from "unless explicitly asked" to "unless asked". Quality advisory of `pipeline-speed` at 1d187291be30.
 - Why it matters: the bytes were taken from rules outside the change's scope, softening their wording.
-- Fix outline: restore "explicitly" on both lines and take the bytes from prose that states no rule.
+- Fix outline: restore "explicitly" on both lines and take the bytes from prose that states no rule. Queued in `docs-currency`.
 
 ## budget_line prints a dash for missing wall minutes
 
 - Where: `budget_line` in `tools/run_state.sh` (line 608). Quality advisory of `pipeline-speed` at 1d187291be30.
 - Why it matters: a run with total tokens but no wall minutes recorded reports `in - minutes`.
-- Fix outline: name the minutes only when `metric.wall_min` is set, as the budget does with `time_limit`.
+- Fix outline: name the minutes only when `metric.wall_min` is set, as the budget does with `time_limit`. Queued in `pipeline-speed-c`.
 
 ## The queue item reaches the scouts as the resume agent's copy
 
 - Where: `.claude/workflows/deliver-change.js` (line 477), which takes the brief from the `item:` line of `plan-needed` as the resume agent returned it. Quality advisory of `pipeline-speed` at b0df2ac092ed.
 - Why it matters: a multi-kilobyte item is re-emitted as model output on every start, spending the tokens the change exists to cut, and may come back truncated or paraphrased.
-- Fix outline: when the brief is only the change name, tell the scouts and the contributor to read the item naming the change in `docs/queue.md` themselves, and drop the `item:` line from `plan-needed` and the resume schema.
-
-## The merge gates run the branch's own scripts and nothing re-checks the pushed head
-
-- Where: step 4 of `.claude/agents/merger.md` (line 22), which runs the branch working tree's `tools/gates.sh` and `tools/run_state.sh` after the package step that follows the reviews, and `.claude/workflows/deliver-change.js` (line 480), which passes the merger no reviewed head. Periodic security Medium (7) at 598cf1b.
-- Why it matters: a contributor led astray can leave an edited gate script or a forged pushed record, and the merger squash-merges a head no review saw; confidence 7 is below the blocking bar, but it is the last check before `main`.
-- Fix outline: the merge refuses a head other than the commit the security review passed, runs gates the branch cannot have edited, and refuses a dirty tree, with a `tools/tools_test.sh` case. Queued as part (d) of `pipeline-speed-b`.
+- Fix outline: when the brief is only the change name, tell the scouts and the contributor to read the item naming the change in `docs/queue.md` themselves, and drop the `item:` line from `plan-needed` and the resume schema. Queued in `pipeline-speed-c`.
 
 ## The guard skips a short cluster that names cp's target directory
 
@@ -535,3 +517,27 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the Delivered changes list closing `docs/codebase-map.md` (line 605), which ends at `#46 buffer-search`. Periodic quality advisory at 598cf1b.
 - Why it matters: the list `CLAUDE.md` names as the record of delivered changes misses pull request 47 and the seven items it left in `docs/backlog.md`.
 - Fix outline: add the `#47` line, with the check `docs-currency` already asks for: every merged pull request of `docs/metrics.tsv` appears in the list. Queued in `docs-currency`.
+
+## Agents leave scratch files in the repository root
+
+- Where: the repository root, where agents left `build_check_out_tmp` and `.err` twice; the briefs under `.claude/agents/` name no place for scratch output, and the push gates of `tools/run_state.sh push` and `tools/gates.sh` do not look at untracked files (the checker and the security reviewer test `git status --porcelain --untracked-files=no`). The user's request in the brief of `pipeline-speed-b`.
+- Why it matters: an untracked file outside `build/`, `dist/`, and `tmp/` can be staged by a later `git add` and reach a pull request, and it shows in every `git status` of the next run.
+- Fix outline: the agents' briefs send scratch output under `build/` or `tmp/`, and a push gate refuses an untracked file outside the ignored paths, with a `tools/tools_test.sh` case. Queued in `pipeline-speed-c`.
+
+## A test-only fix after a passing quality review gets the whole branch reviewed
+
+- Where: `.claude/workflows/deliver-change.js` line 375, the scope of a fix review. Quality advisory at d820b39 in `pipeline-speed-b`.
+- Why it matters: after a passing quality review followed by a bench or CI fix, `blockedAt` is not that commit, so `files` is null and a test-only fix gets the whole branch reviewed again, where the old `priorQuality` offered only the fix diff; the review costs tokens and rounds the fix does not need.
+- Fix outline: when the last quality review passed and no blocked files are recorded at it, give the scope command with no files (tests and records only), with a case in the workflow's tests.
+
+## add_note strips a leading commit with two different patterns
+
+- Where: `tools/run_state.sh` line 577, `add_note`, whose `sed` strips a leading commit as `[0-9a-f]{7,40}` while its `awk` side strips `[0-9a-f]+`. Quality advisory at d820b39 in `pipeline-speed-b`.
+- Why it matters: an advisory with no commit whose first word is made of hex letters (add, dead, decade) is never matched against the recorded notes, so it is noted twice and reaches the backlog twice.
+- Fix outline: strip the same 7-to-40 hex pattern on both sides, for example both in `awk`, with a `tools/tools_test.sh` case for a note starting with `add`.
+
+## The merge's stages gate cannot pass a renamed or removed stage
+
+- Where: `tools/gates.sh` line 195, the merge's stages gate, which reads `CHECK_STAGES` from main's Makefile with `sed`, while `tools/run_state.sh check` reads the list with `make -s stages`. Quality advisory at d820b39 in `pipeline-speed-b`; the archived design of `pipeline-speed-b` does not cover the case.
+- Why it matters: a change that renames or removes a stage cannot pass its own merge, since main's list names a stage the branch never ran, and the stage list now has two readers that can disagree.
+- Fix outline: use one reader of the list for both scripts, and accept a stage main names that the branch's `CHECK_STAGES` dropped when the branch's diff removes it from the Makefile (or record the rename in the run state), with a `tools/tools_test.sh` case.
