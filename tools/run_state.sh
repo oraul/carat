@@ -27,6 +27,8 @@
 #                    first_pass, out_tokens, tool_calls, phases
 #   note.N           "KIND TEXT": a retrospective proposal or a finding
 # Logs: build/stages/CHANGE/STAGE.log, ending in "EXIT n".
+# Compile passes: build/pipeline/compiled, "STAGE KEY SUM" per stage of
+# COMPILE_STAGES, kept across changes.
 #
 # History: docs/metrics.tsv, one row per merged change, appended by history
 # from the run states that have none yet, so the next change carries the
@@ -59,14 +61,18 @@
 # them from the results it received (tools/agent_guard.sh keeps the agents
 # off them, and the merge gate compares them with RECORDS).
 #   stage CHANGE NAME CMD...    run CMD with its log and record its result
-#   check CHANGE [COMMIT]       run the canonical stages (make -s stages) in
-#                               order, stop at the first failure, record
-#                               phase.check when all pass; a stage record
+#   check CHANGE [COMMIT]       refuse a dirty tracked tree or an untracked
+#                               file under carat/ bin/ test/ bench/, then
+#                               run the canonical stages (make -s stages) in
+#                               order and stop at the first failure (the
+#                               workflow records phase.check); a stage record
 #                               counts only at COMMIT, the last check the
 #                               workflow passed, or carried from it: skipped
 #                               when COMMIT is HEAD, carried to HEAD for a
 #                               stage outside TEST_STAGES when only tests
-#                               changed since COMMIT
+#                               changed since COMMIT; a stage of
+#                               COMPILE_STAGES is skipped on the code key of
+#                               its last pass with its outputs unchanged
 #   scope CHANGE COMMIT [FILE...]
 #                               print "fix: ..." and exit 0 when every path
 #                               changed from COMMIT to HEAD is a FILE or
@@ -105,7 +111,7 @@
 #                               ..." with the head item's size and exit 1;
 #                               when the change is the head, then print
 #                               "item: TEXT", the item as written
-#   budget CHANGE               print "over:", "within:", "unmeasured:", or
+#   budget CHANGE               print "over:", "under:", "unmeasured:", or
 #                               "no estimate:" with the change's estimate, its
 #                               budget (TOKEN_BUDGETS, MINUTE_BUDGETS), its
 #                               total tokens and wall minutes, and its output
@@ -140,6 +146,16 @@ PHASES="plan implement check quality security bench package ci merge retro repor
 # no carried stage reads.
 TEST_STAGES="test-build test-run diagnose metrics docs-lint gates"
 TEST_ONLY='^(test/|openspec/|docs/(backlog|queue|goals)\.md$|docs/metrics\.tsv$|$)'
+# The compile stages, skipped when the code they read is the code of their
+# last pass and their outputs are the ones it left: the code key hashes
+# every tracked path but NOT_COMPILED, which no compile stage reads, except
+# BUILD_TOOLS, which dev-build and test-build run. COMPILED keeps each
+# stage's last pass, "STAGE KEY SUM", across changes, in the run state's
+# directory, which only this script writes.
+COMPILE_STAGES="dev-build test-build diagnose"
+NOT_COMPILED='^([.]claude/|[.]github/|docs/|openspec/|tools/[^/]+[.]sh$|[^/]+[.]md$)'
+BUILD_TOOLS='^tools/analysis_budget[.]sh$'
+compiled_file=$state_dir/compiled
 # The gates of a history row's first passes, in order, before gates.
 GATES="check quality security bench ci"
 REVIEW_KINDS="security quality bench periodic-security periodic-quality"
@@ -307,9 +323,14 @@ tests_only_since() {
 # passed at BACKED is skipped when BACKED is HEAD, and carried to HEAD when
 # it reads no test program and only tests changed since BACKED.
 check_stages() {
+  dirty=$(git status --porcelain --untracked-files=no)
+  [ -z "$dirty" ] || die "check: refused: tracked files differ from HEAD; commit them first: $(printf '%s\n' "$dirty" | head -3 | tr '\n' ' ')"
+  loose=$(git ls-files --others --exclude-standard -- carat bin test bench)
+  [ -z "$loose" ] || die "check: refused: untracked files under carat/, bin/, test/, or bench/, which spin compiles: $(printf '%s\n' "$loose" | head -3 | tr '\n' ' ')"
   stages=${STAGES:-$("$make_cmd" -s --no-print-directory stages)}
   head=$(head_commit)
   backed=$1
+  key=$(code_key)
   for s in $stages; do
     record=$(read_key "stage.$s")
     at=$(echo "$record" | cut -d' ' -f3)
@@ -327,15 +348,64 @@ check_stages() {
           continue
         fi ;;
     esac
+    if one_of "$s" "$COMPILE_STAGES" && compiled_same "$s" "$key"; then
+      write_key "stage.$s" "0 0s $head $(utc_now) compiled-$(echo "$key" | cut -c1-12)"
+      echo "stage $s: passed on the same code (key $(echo "$key" | cut -c1-12)) with its outputs unchanged, skipped"
+      continue
+    fi
+    one_of "$s" "$COMPILE_STAGES" && compiled_set "$s" ""
     run_stage "$s" "$make_cmd" --no-print-directory check-stage "S=$s" ||
       die "check: stage $s failed at $head; read $stage_dir/$change/$s.log"
+    one_of "$s" "$COMPILE_STAGES" && compiled_set "$s" "$key $(outputs_sum "$s")"
   done
-  # The workflow records phase.check from the checker's result too; the
-  # merge's records gate compares this one with it. Until this write goes,
-  # a check run outside the workflow backs its own stages on a resume
-  # (docs/backlog.md, "check writes the phase.check record").
-  write_key "phase.check" "$head"
-  echo "check: every stage passed at $head"
+  # The workflow records phase.check from the checker's result, so a check
+  # run outside it backs nothing.
+  echo "check: every stage passed at $head; the workflow records the check"
+}
+
+# The key of the code the compile stages read: the blobs of every tracked
+# path at HEAD but those NOT_COMPILED names (BUILD_TOOLS excepted), hashed.
+code_key() {
+  git ls-tree -r --full-tree HEAD |
+    awk -F'\t' -v skip="$NOT_COMPILED" -v keep="$BUILD_TOOLS" '$2 !~ skip || $2 ~ keep' |
+    git hash-object --stdin
+}
+
+# The outputs of a compile stage, which later stages read (test-run and
+# metrics), as the Makefile names them (DEV_BIN, TEST_BIN).
+compile_outputs() {
+  case "$1" in
+    dev-build) echo build/dev/carat build/dev/carat.timing ;;
+    test-build) echo build/test/run_all build/test/run_all.timing ;;
+  esac
+}
+
+# The checksum of a compile stage's outputs: "-" without outputs, "missing"
+# when one is absent.
+outputs_sum() {
+  files=$(compile_outputs "$1")
+  [ -n "$files" ] || { echo -; return; }
+  for f in $files; do [ -f "$f" ] || { echo missing; return; }; done
+  # shellcheck disable=SC2086
+  cat $files | cksum | tr ' ' '-'
+}
+
+# True when the compile stage last passed on KEY and its outputs still have
+# the checksum that pass left (COMPILED).
+compiled_same() {
+  [ -f "$compiled_file" ] || return 1
+  sum=$(outputs_sum "$1")
+  [ "$sum" != missing ] || return 1
+  awk -v s="$1" -v k="$2 $sum" '$1 == s { found = (substr($0, length(s) + 2) == k) } END { exit !found }' "$compiled_file"
+}
+
+# compiled_set STAGE VALUE: the stage's line of COMPILED, "KEY SUM", or none
+# when VALUE is empty.
+compiled_set() {
+  mkdir -p "$state_dir"
+  touch "$compiled_file"
+  awk -v s="$1" -v v="$2" '$1 != s { print } END { if (v != "") print s " " v }' "$compiled_file" > "$compiled_file.tmp.$$" &&
+    mv "$compiled_file.tmp.$$" "$compiled_file"
 }
 
 # scope COMMIT [FILE...]: whether the fix since COMMIT stays within the
@@ -572,11 +642,13 @@ add_note() {
   valid '[a-z-]+' "$1" || die "note: the kind is lowercase words joined by hyphens, not $1"
   # An advisory a later round repeats is one note: its text is compared
   # without the leading commit of the review that found it.
+  # Both sides strip one pattern, a commit of 7 to 40 hexadecimal digits,
+  # so a text starting with a word of hex letters (add, dead) is kept whole.
   if [ "$1" = quality-advisory ]; then
-    text=$(escape "$2" | sed -E 's/^[0-9a-f]{7,40} //')
-    if keys_under note. | T="$text" awk '
+    if keys_under note. | T="$(escape "$2")" awk '
+        function bare(s) { return match(s, /^[0-9a-f]+ /) && RLENGTH >= 8 && RLENGTH <= 41 ? substr(s, RLENGTH + 1) : s }
         { sub(/^[0-9]+=/, "") }
-        sub(/^quality-advisory /, "") { sub(/^[0-9a-f]+ /, ""); if ($0 == ENVIRON["T"]) found = 1 }
+        sub(/^quality-advisory /, "") { if (bare($0) == bare(ENVIRON["T"])) found = 1 }
         END { exit !found }'; then
       echo "note: the advisory is already recorded; not recorded again"
       return 0
@@ -674,8 +746,8 @@ budget_line() {
   [ -f "$(state_file)" ] || die "no run state for $change"
   size=$(estimate_of)
   total=$(value metric.total_tokens)
-  minutes=$(value metric.wall_min)
-  actual="actual $total total tokens in $minutes minutes, $(out_tokens) output tokens"
+  minutes=$(read_key metric.wall_min)
+  actual="actual $total total tokens${minutes:+ in $minutes minutes}, $(out_tokens) output tokens"
   if [ "$size" = "-" ]; then
     echo "no estimate: neither the run state nor a queue item of $change states a size; $actual"
     return
@@ -689,7 +761,7 @@ budget_line() {
       awk -v m="$minutes" -v l="$time_limit" 'BEGIN { exit !(m > l) }'; }; then
     echo "over: estimated $size, $budget, $actual"
   else
-    echo "within: estimated $size, $budget, $actual"
+    echo "under: estimated $size, $budget, $actual"
   fi
 }
 
