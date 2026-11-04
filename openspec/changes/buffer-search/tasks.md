@@ -30,6 +30,7 @@
 - [x] 5.1 Add the `n` scenario to `bench/keys.rb` and check that `lh` allocates what it did on `main`, by `make bench-budget` and `make bench SCENARIOS="lh n"`
 - [x] 5.2 Document the search rows in `docs/compatibility.md`, the engine notes in `docs/spinel-notes.md`, the files in `docs/codebase-map.md`, the backlog entries, `README.md`, and the status line of `CLAUDE.md`, checked by `make docs-lint` and `make gates`
 - [x] 5.3 Run `make test`, `make lint`, and `make gates`, all passing
+- [x] 5.4 Apply the plan's notes: the `buffer-search` entry of the map's Delivered changes, the queue pointers of the `docs/backlog.md` entries now placed, and the room left in `CLAUDE.md` and `docs/architecture.md`, checked by `make docs-lint`
 
 ## Workflow follow-up
 

@@ -30,7 +30,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `Carat::Domain::ExGrammar.parse` in `carat/domain/ex_grammar.rb` and `ExCommand` in `carat/domain/ex_command.rb`, which carry a name, a bang, and arguments only.
 - Why it matters: section 4 of `docs/architecture.md` gives `ExCommand` a range (`.`, `$`, `%`, a number, a mark, a pattern, and arithmetic, joined by `,` or `;`); without it `:` in visual mode cannot offer `:'<,'>`, and `:10,20d`, `:%s`, and a bare line number are impossible.
-- Fix outline: parse the address list in front of the name into a range value with both ends unresolved, resolve it against the buffer and the marks in `ExecuteEx`, and add the `'<` and `'>` marks with the change that brings marks.
+- Fix outline: parse the address list in front of the name into a range value with both ends unresolved, resolve it against the buffer and the marks in `ExecuteEx`, and add the `'<` and `'>` marks with the change that brings marks. Queued in `buffer-substitute`.
 
 ## Sentence motions rescan the whole buffer on every use
 
@@ -290,9 +290,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the map's Build and CI rule gives every command a README line, and goal 11 keeps the README current.
 - Fix outline: add one row naming the missing targets, or one row per target, checked against `make help`.
 
-## CLAUDE.md has 23 bytes of room in its budget
+## CLAUDE.md has 1 byte of room in its budget
 
-- Where: `CLAUDE.md`, 30,697 of its 30,720-byte budget in `tools/docs_lint.sh` (`BUDGETS`). Periodic quality advisory at df5a203; `docs/architecture.md` is at 88,063 of 88,064 and is handled by `project-config-guards`.
+- Where: `CLAUDE.md`, 30,719 of its 30,720-byte budget in `tools/docs_lint.sh` (`BUDGETS`) since `buffer-search`. Periodic quality advisory at df5a203; `docs/architecture.md` is at 88,054 of 88,064 and is handled by `project-config-guards`.
 - Why it matters: `CLAUDE.md` requires its Commands and Layout sections to stay in sync with the code, so the next change that must add a line there fails `make docs-lint` and pays for a trim it did not plan.
 - Fix outline: the first change that needs room trims `CLAUDE.md` in the same change, moving detail to `docs/codebase-map.md` or the agents' files, rather than raising the budget; accepted when `make docs-lint` passes with at least 1,000 bytes of room left.
 
@@ -306,40 +306,40 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: the header of `tools/ci_wait.sh` and step 2 of `.claude/agents/merger.md` (line 20). Advisory of the quality review of `workflow-records`.
 - Why it matters: the one-start wait holds only while the agent harness lets a foreground shell call sleep up to 540 seconds; if it refuses or shortens it, the merger falls back to returning pending, the cost of 36 to 58 merge tool calls a run that `workflow-records` set out to remove.
-- Fix outline: confirm on the first full run (`guard-hardening`) that the merger used one start with no pending note; record the harness behavior in the header and the merger's file, and if it fails, give the workflow the wait between merger starts instead. Queued as part (c) of `workflow-cost`.
+- Fix outline: confirm on the first full run (`guard-hardening`) that the merger used one start with no pending note; record the harness behavior in the header and the merger's file, and if it fails, give the workflow the wait between merger starts instead. Queued as a fold of `workflow-cost`.
 
 ## The guard does not refuse Bash ANSI-C quoting
 
 - Where: the command normalization of `tools/agent_guard.sh` (line 92), which strips quotes and backslashes before matching the refused commands. Security review of `guard-hardening`, Low (7); the gap predates that change.
 - Why it matters: `git $'\x70ush'` or `run_state.sh $'\x72eview'` reaches the shell as `git push` or a review record but passes the guard as an unrecognized word; the merge gate's records and branch protection stand behind it, so it is a defense-in-depth gap.
-- Fix outline: refuse any Bash command containing `$'` or `$"` for the read, merger, and contributor profiles, and add a `tools/tools_test.sh` case for each form.
+- Fix outline: refuse any Bash command containing `$'` or `$"` for the read, merger, and contributor profiles, and add a `tools/tools_test.sh` case for each form. Queued in `guard-allowlist`.
 
 ## The guard's header overstates the parent-step rule and runs past its wrap width
 
 - Where: the header of `tools/agent_guard.sh` (lines 23 to 42, the claim at line 26, the long lines 27 and 41). Quality advisory of `guard-hardening` at a272de71f10b.
 - Why it matters: the header says a path or a link target with a parent step (`..`) is refused for every profile, but `real_path` refuses a link target only when its `..` follows a missing directory, as the archived design of `guard-hardening` states exactly, so a reader of the header expects a refusal the code does not make.
-- Fix outline: word the header as the design does (a link target whose parent step follows a missing directory) and rewrap lines 23 to 42 to the header's width.
+- Fix outline: word the header as the design does (a link target whose parent step follows a missing directory) and rewrap lines 23 to 42 to the header's width. Queued in `guard-allowlist`.
 
 ## Advisories repeated at a later round are recorded twice
 
 - Where: `addAdvisories` in `.claude/workflows/deliver-change.js` (line 281) and `seed` (line 200). Quality advisory of `guard-hardening` at a272de71f10b.
 - Why it matters: `addAdvisories` deduplicates by exact text, but the quality reviewer's text starts with its head commit while `seed` strips it from the run state's notes, so an advisory repeated at a later round or after a resume is handed to `docs/backlog.md` again, against the design's no-duplicates claim.
-- Fix outline: strip a leading commit hash in `addAdvisories` so both paths key on the same text, and check it with a resumed run that re-reports one advisory.
+- Fix outline: strip a leading commit hash in `addAdvisories` so both paths key on the same text, and check it with a resumed run that re-reports one advisory. Queued as part (d) of `workflow-cost`.
 
 ## body_links repeats real_path's relative-to-absolute step
 
 - Where: the file-tool branch of `body_links` in `tools/agent_guard.sh` (line 154). Quality advisory of `guard-hardening` at a272de71f10b.
 - Why it matters: the branch repeats the conversion `real_path` already makes, and the real-path check of the run state's directory after `BODY_FILE` already refuses a linked body file, so two rules judge one case and can drift apart.
-- Fix outline: drop the branch, or have it call `real_path`, so one rule judges a linked body file; keep the `tools/tools_test.sh` case for a linked body file passing.
+- Fix outline: drop the branch, or have it call `real_path`, so one rule judges a linked body file; keep the `tools/tools_test.sh` case for a linked body file passing. Queued in `guard-allowlist`.
 
 ## priorQuality's local findings shadows the module function
 
 - Where: `priorQuality` in `.claude/workflows/deliver-change.js` (line 323), whose local `const findings` shadows the module-level `findings()` added at line 282. Quality advisory of `guard-hardening` at a272de71f10b.
 - Why it matters: a later edit inside `priorQuality` that means to call `findings()` gets the local array and fails only at run time.
-- Fix outline: rename the local, for example `listed`.
+- Fix outline: rename the local, for example `listed`. Queued as a fold of `workflow-cost`.
 
 ## The code map's agent_guard.sh entry omits its new helpers
 
 - Where: the `tools/agent_guard.sh` entry of `docs/codebase-map.md` (line 48). Quality advisory of `guard-hardening` at a272de71f10b.
 - Why it matters: the map's key methods are where a change starts; the entry omits the `body_word` and `words` helpers and the line-continuation join in `field`, which decide what the guard refuses.
-- Fix outline: add `body_word`, `words`, and the continuation join of `field` to the entry's key methods, within the map's budget.
+- Fix outline: add `body_word`, `words`, and the continuation join of `field` to the entry's key methods, within the map's budget. Queued in `guard-allowlist`.
