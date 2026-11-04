@@ -8,11 +8,11 @@ export const meta = {
     { title: 'Scout', detail: 'one scout per edited map area without a current pack, at most three' },
     { title: 'Implement', detail: 'contributor: propose and apply, committing early' },
     { title: 'Check', detail: 'checker: the canonical stages through make' },
-    { title: 'Quality', detail: 'quality reviewer: code-review and the repository rules' },
-    { title: 'Security', detail: 'security reviewer on the committed diff; never skipped' },
+    { title: 'Quality', detail: 'quality reviewer: code-review and the repository rules, beside security on the same commit' },
+    { title: 'Security', detail: 'security reviewer on the committed diff, beside quality; never skipped' },
     { title: 'Benchmark', detail: 'allocations and rounds against the figures recorded for main; the agent against main only when they differ' },
     { title: 'Package', detail: 'contributor: archive, gates, one push, pull request' },
-    { title: 'Merge', detail: 'merger: wait for CI, red back to the contributor; squash with the trailer, verify main' },
+    { title: 'Merge', detail: 'merger: wait for CI, red back to the contributor; main\'s merge gates, squash with the trailer, verify main' },
     { title: 'Retrospective', detail: 'retrospective: record the metrics, propose simplifications, decide whether a review is due' },
     { title: 'Review', detail: 'periodic review of the whole codebase: security, never skipped, and quality' },
     { title: 'Report', detail: 'reporter: the fixed report shape' },
@@ -230,6 +230,10 @@ function seed() {
   if (result === 'blocked' && found.length && blockingCount === `blocking=${found.length}`) {
     qualityBlocking = found
     qualityAt = commit
+    // The files they name scope the next review when the security review
+    // passed at the same commit; a blocked one's files were not recorded.
+    const [securityResult, securityAt] = at('review.security')
+    if (securityResult === 'pass' && securityAt === commit) setBlocked(commit, found.map(qualityFile))
   }
 }
 // The figures in one line for the retrospective's and the reporter's
@@ -276,11 +280,16 @@ async function flush(force) {
   if (!stopped) stopped = `the run state records failed: ${r ? r.output : 'no result'}`
   return false
 }
-// The merge gates with the review results the script holds, for the merger.
+// The merge gates with the review and check results the script holds, for
+// the merger: those of a fresh worktree of origin/main, which the branch
+// cannot have edited, run against the branch. The add fails when anything
+// but an earlier worktree stands at the path, and the gates do not run.
+const MERGE_GATES = 'tmp/.merge-gates'
 function mergeGates() {
   const records = ['security', 'quality', 'bench'].map((k) => `${k}:${at('review.' + k).slice(0, 2).join(':')}`)
+    .concat([`check:pass:${state['phase.check'] || ''}`])
     .filter((r) => /^[a-z]+:(pass|blocked):[0-9a-f]{7,40}$/.test(r))
-  return `CHANGE=${state.change} RECORDS="${records.join(' ')}" sh tools/gates.sh merge build/pipeline/${state.change}.body.md`
+  return `git worktree prune; git worktree remove --force ${MERGE_GATES}; git worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`
 }
 
 const at = (key) => (state[key] || '').split(' ')
@@ -295,12 +304,32 @@ let benchSameAt = ''
 let benchReport = []
 let qualityBlocking = []
 let qualityAt = ''
+// The files the blocking findings of the reviews at blockedAt name, null
+// when one names none, for the scope of the next quality review.
+let blockedAt = ''
+let blockedFiles = null
+// A plain relative path, no parent step: the only form passed to scope.
+const PATH = /^[A-Za-z0-9_][A-Za-z0-9_./-]*$/
+const plainPath = (p) => PATH.test(p || '') && !/(^|\/)\.\.(\/|$)/.test(p) ? p : null
+// The file of a quality finding, "<commit> <file>:<line> ...", or null.
+const qualityFile = (f) => {
+  const m = /^(?:[0-9a-f]{7,40} )?([^\s:]+):[0-9]+/.exec(f)
+  return m ? plainPath(m[1]) : null
+}
+function setBlocked(commit, files) {
+  blockedAt = commit
+  blockedFiles = files.every(Boolean) ? [...new Set(files)] : null
+}
 // The advisories of every quality review of the run, in order and without
 // duplicates, for docs/backlog.md; the findings handed to the contributor
 // so far, so a CI fix's push gets only those that arrived after them.
 let qualityAdvisory = []
 const handed = new Set()
-const addAdvisories = (list) => { for (const a of list) if (!qualityAdvisory.includes(a)) qualityAdvisory.push(a) }
+// An advisory is kept by its text without the commit of the review that
+// found it, as seed reads the notes, so a later round's repeat is one entry.
+const addAdvisories = (list) => {
+  for (const a of list.map((x) => String(x).replace(/^[0-9a-f]{7,40} /, ''))) if (!qualityAdvisory.includes(a)) qualityAdvisory.push(a)
+}
 const findings = () => backlog.concat(qualityAdvisory.map((a) => `quality advisory ${a}`))
 function handOver() {
   const fresh = findings().filter((f) => !handed.has(f))
@@ -324,26 +353,29 @@ async function contributor(mode, detail) {
   return result
 }
 
-// Check, quality, security, and benchmark until all pass at one commit;
-// whatever blocks goes back to the contributor while mayFix allows.
+// Check, the quality and security reviews in parallel, and benchmark until
+// all pass at one commit; whatever blocks goes back to the contributor while
+// mayFix allows, both reviews' findings in one round.
 async function verify() {
   const passed = await rounds()
   return (await flush()) && passed
 }
 
 // The quality reviewer's input after an earlier review: its commit, its
-// blocking findings, and the fix diff to review when only tests changed.
-// The fix diff is offered only for a commit other than HEAD whose findings
-// are known (a pass has none); otherwise the whole branch diff is reviewed.
+// blocking findings, and the scope command that allows the fix diff alone
+// when the fix since that commit changed only the files the blocking
+// findings of that round name, tests, and records. Without the findings or
+// their files, or at HEAD itself, the whole branch diff is reviewed.
 function priorQuality() {
   const [result, commit] = at('review.quality')
   if (!COMMIT.test(commit || '')) return ''
   const last = `\nThe last quality review, at ${commit}, was ${result}.`
   const blocked = result === 'blocked'
-  const known = !blocked || (qualityAt === commit && qualityBlocking.length > 0)
-  if (commit === head || !known) return `${last} Review the whole branch diff.`
-  const findings = blocked ? ` Its blocking findings:\n- ${qualityBlocking.join('\n- ')}\n` : ' '
-  return `${last}${findings}When \`git diff --name-only ${commit} HEAD\` lists at least one file and only files under test/ (tests and their snapshots), review only \`git diff ${commit} HEAD\` against ${blocked ? 'those findings and ' : ''}the rules; otherwise review the whole branch diff.`
+  const listed = !blocked ? [] : qualityAt === commit && qualityBlocking.length ? qualityBlocking : null
+  const files = blockedAt === commit ? blockedFiles : null
+  if (commit === head || !listed || !files) return `${last} Review the whole branch diff.`
+  const prior = listed.length ? ` Its blocking findings:\n- ${listed.join('\n- ')}\n` : ' '
+  return `${last}${prior}Run \`sh tools/run_state.sh scope ${state.change} ${commit}${files.map((f) => ` ${f}`).join('')}\`: when it prints fix, review only \`git diff ${commit} HEAD\` against ${blocked ? 'those findings and ' : ''}the rules; otherwise review the whole branch diff.`
 }
 
 // The fix rounds of the run, review and CI fixes alike, counted across
@@ -371,48 +403,92 @@ const figuresFirst = () => {
   return line ? ` First run this line of the run's figures, exactly as written: \`${line}\`\n` : ''
 }
 
+// The quality review at the head, with the scope priorQuality gives.
+function qualityReview(scope) {
+  return agent(`${intro()} Review the committed diff and return the findings.${scope}`,
+    { agentType: 'quality-reviewer', schema: withCalls(QUALITY), phase: 'Quality', label: 'quality-reviewer' })
+}
+function securityReview(retry) {
+  return agent(retry
+    ? `${intro()} The last security review did not complete. Run it again, every sub-task inline, and return the result.`
+    : `${intro()} Run the security review on the committed diff and return the result.`,
+  { agentType: 'security-reviewer', schema: withCalls(SECURITY), phase: 'Security', label: retry ? 'security-reviewer: retry' : 'security-reviewer' })
+}
+
+// The reviews not yet passed at the head, quality and security in parallel
+// on the same commit, so one fix round answers both. Their output tokens
+// cannot be told apart, so a pair is counted under reviews; a single review
+// keeps its own key. Returns the blocking message, '' when nothing blocks,
+// or null when a review did not run.
+async function reviews() {
+  const kinds = ['quality', 'security'].filter((k) => !reviewedAtHead(k))
+  if (!kinds.length) return ''
+  const scope = kinds.includes('quality') ? priorQuality() : ''
+  const run = { quality: () => qualityReview(scope), security: () => securityReview(false) }
+  if (kinds.length > 1) { phase('Quality'); phase('Security') } else phase(kinds[0] === 'quality' ? 'Quality' : 'Security')
+  const results = await measured(kinds.length > 1 ? 'reviews' : kinds[0], () => parallel(kinds.map((k) => run[k])))
+  const got = {}
+  kinds.forEach((k, i) => { got[k] = results[i] })
+  if (kinds.includes('security') && (!got.security || !got.security.ran)) got.security = await measured('security', () => securityReview(true))
+  const messages = []
+  const files = []
+  let commit = head
+  if (kinds.includes('security')) {
+    const s = got.security
+    if (!s || !s.ran) { stopped = 'the security review did not run; it cannot be skipped'; return null }
+    const blocking = s.findings.filter((f) => f.severity !== 'Low' && f.confidence >= 8 && f.in_change)
+    verdict('security', !blocking.length)
+    for (const f of s.findings.filter((f) => !blocking.includes(f))) {
+      const line = `security ${f.severity} (${f.confidence}) ${f.file}:${f.line || 0} ${f.title}; fix: ${f.fix}`
+      if (!backlog.includes(line)) backlog.push(line)
+    }
+    note(`security at ${s.head}: ${s.findings.length} finding(s), ${blocking.length} blocking`)
+    const count = (severity) => s.findings.filter((f) => f.severity === severity).length
+    reviewed('security', !blocking.length, s.head, { high: count('High'), medium: count('Medium'), low: count('Low'), blocking: blocking.length })
+    if (blocking.length) messages.push(`Blocking security findings, to fix first:\n- ${blocking.map((f) => `${f.severity} (${f.confidence}) ${f.file}:${f.line || 0} ${f.title}; fix: ${f.fix}`).join('\n- ')}`)
+    files.push(...blocking.map((f) => plainPath(f.file)))
+    commit = s.head
+  }
+  if (kinds.includes('quality')) {
+    const q = got.quality
+    if (!q) { stopped = 'the quality reviewer returned no result'; return null }
+    qualityBlocking = q.blocking
+    qualityAt = q.head
+    addAdvisories(q.advisory)
+    verdict('quality', !q.blocking.length)
+    note(`quality at ${q.head}: ${q.blocking.length} blocking, ${q.advisory.length} advisory`)
+    reviewed('quality', !q.blocking.length, q.head, { blocking: q.blocking.length, advisory: q.advisory.length })
+    if (q.blocking.length) messages.push(`Blocking quality findings:\n- ${q.blocking.join('\n- ')}`)
+    files.push(...q.blocking.map(qualityFile))
+    commit = q.head
+  }
+  if (messages.length) setBlocked(commit, files)
+  return messages.join('\n\n')
+}
+
 async function rounds() {
   for (;;) {
     let blocked = ''
     if (!doneAtHead('check')) {
       phase('Check')
-      const c = await measured('check', () => agent(`${intro()}${figuresFirst()} Run the checks and report.`, { agentType: 'checker', schema: withCalls(CHECK), effort: 'low' }))
+      // The check the workflow last recorded: stage records count only at
+      // it, so a record at the head that no workflow record backs runs again.
+      const backed = COMMIT.test(state['phase.check'] || '') ? state['phase.check'] : ''
+      const how = backed ? ` The last check the workflow recorded passed at ${backed}: run \`sh tools/run_state.sh check ${state.change} ${backed}\`.` : ''
+      const c = await measured('check', () => agent(`${intro()}${figuresFirst()} Run the checks and report.${how}`, { agentType: 'checker', schema: withCalls(CHECK), effort: 'low' }))
       if (!c) { stopped = 'the checker returned no result'; return false }
       verdict('check', c.passed)
       note(`check at ${c.head}: ${c.passed ? 'passed' : 'failed at ' + c.failed_stage}`)
       if (c.passed) {
-        state['phase.check'] = c.head
+        phaseDone('check', c.head)
         benchSameAt = c.bench_same ? c.head : ''
         benchReport = c.bench_report || []
       } else blocked = `The stage ${c.failed_stage} failed; its log:\n${c.log_excerpt || ''}`
     }
-    if (!blocked && !reviewedAtHead('quality')) {
-      phase('Quality')
-      const q = await measured('quality', () => agent(`${intro()} Review the committed diff and return the findings.${priorQuality()}`, { agentType: 'quality-reviewer', schema: withCalls(QUALITY) }))
-      if (!q) { stopped = 'the quality reviewer returned no result'; return false }
-      qualityBlocking = q.blocking
-      qualityAt = q.head
-      addAdvisories(q.advisory)
-      verdict('quality', !q.blocking.length)
-      note(`quality at ${q.head}: ${q.blocking.length} blocking, ${q.advisory.length} advisory`)
-      reviewed('quality', !q.blocking.length, q.head, { blocking: q.blocking.length, advisory: q.advisory.length })
-      if (q.blocking.length) blocked = `Blocking quality findings:\n- ${q.blocking.join('\n- ')}`
-    }
-    if (!blocked && !reviewedAtHead('security')) {
-      phase('Security')
-      let s = await measured('security', () => agent(`${intro()} Run the security review on the committed diff and return the result.`, { agentType: 'security-reviewer', schema: withCalls(SECURITY) }))
-      if (!s || !s.ran) s = await measured('security', () => agent(`${intro()} The last security review did not complete. Run it again, every sub-task inline, and return the result.`, { agentType: 'security-reviewer', schema: withCalls(SECURITY), label: 'security-reviewer: retry' }))
-      if (!s || !s.ran) { stopped = 'the security review did not run; it cannot be skipped'; return false }
-      const blocking = s.findings.filter((f) => f.severity !== 'Low' && f.confidence >= 8 && f.in_change)
-      verdict('security', !blocking.length)
-      for (const f of s.findings.filter((f) => !blocking.includes(f))) {
-        const line = `security ${f.severity} (${f.confidence}) ${f.file}:${f.line || 0} ${f.title}; fix: ${f.fix}`
-        if (!backlog.includes(line)) backlog.push(line)
-      }
-      note(`security at ${s.head}: ${s.findings.length} finding(s), ${blocking.length} blocking`)
-      const count = (severity) => s.findings.filter((f) => f.severity === severity).length
-      reviewed('security', !blocking.length, s.head, { high: count('High'), medium: count('Medium'), low: count('Low'), blocking: blocking.length })
-      if (blocking.length) blocked = `Blocking security findings, to fix first:\n- ${blocking.map((f) => `${f.severity} (${f.confidence}) ${f.file}:${f.line || 0} ${f.title}; fix: ${f.fix}`).join('\n- ')}`
+    if (!blocked) {
+      const r = await reviews()
+      if (r === null) return false
+      blocked = r
     }
     if (!blocked && !reviewedAtHead('bench')) {
       phase('Benchmark')
