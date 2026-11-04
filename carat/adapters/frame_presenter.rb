@@ -564,10 +564,11 @@ module Carat
         limit = left + width
         if pattern.ok?
           text = Domain::Search.searchable(line)
+          length = text.length
           budget = @budget
           from = 0
           while from <= size
-            found = Domain::Search.match_at(pattern, text, from, budget)
+            found = Domain::Search.match_at(pattern, text, length, from, budget)
             break if found.nil?
             first = found.begin(0)
             last = found.end(0)

@@ -43,7 +43,9 @@ module DomainSearchTest
       ["the line end on the last character moves on", ["ab\ncd\n", "$", 0, 1, true, 1], "1,2-2"],
       ["after an illegal byte", ["a\xFFb\n".dup.force_encoding("UTF-8"), "b", 0, 0, true, 1], "0,2-3"],
       ["U+FFFD matches an illegal byte", ["a\xFFb\n".dup.force_encoding("UTF-8"), "\u{FFFD}", 0, 0, true, 1], "0,1-2"],
-      ["a pathological pattern on a long line", [("a" * 3000) + "\n", "\\(a*\\)*b", 0, 0, true, 1], "missing"]
+      ["a pathological pattern on a long line", [("a" * 3000) + "\n", "\\(a*\\)*b", 0, 0, true, 1], "missing"],
+      ["backward over characters that are not ASCII", ["é x é é\n", "é", 0, 6, false, 1], "0,4-5"],
+      ["backward on a long non-ASCII line of many matches stops", [("é" * 200_000) + "\n", "é", 0, 199_999, false, 1], "stopped"]
     ]) do |input|
       search(input[0], input[1], input[2], input[3], input[4], input[5])
     end

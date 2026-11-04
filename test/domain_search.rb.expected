@@ -18,6 +18,8 @@ ok   the line end on the last character moves on
 ok   after an illegal byte
 ok   U+FFFD matches an illegal byte
 ok   a pathological pattern on a long line
+ok   backward over characters that are not ASCII
+ok   backward on a long non-ASCII line of many matches stops
 ok   a search stops when its budget cannot pay for a line
 ok   a charge within the budget is paid
 ok   a charge past it is refused and stops the budget
@@ -38,4 +40,4 @@ ok   nothing drawn before a search
 ok   a search is drawn
 ok   noh hides it
 ok   nohlsearch draws nothing
-domain_search: 40 passed, 0 failed
+domain_search: 42 passed, 0 failed

@@ -10,9 +10,11 @@ module Carat
     # next or previous match from a position, wrapping around the buffer,
     # and the matches of one line. Columns are code points, as
     # Regexp#match takes and gives them. Every scan is paid from a
-    # SearchBudget before the engine runs (the characters it may read
-    # times the pattern's size), so no search outlives its budget, and an
-    # error of the engine stops the budget instead of reaching the editor.
+    # SearchBudget before the engine runs (the line's length, since the
+    # engine finds a code point position from the line start, plus the
+    # characters it may read times the pattern's size), so no search
+    # outlives its budget however many matches a line has, and an error
+    # of the engine stops the budget instead of reaching the editor.
     # A line that is not valid UTF-8, on which the engine raises, is
     # matched through a copy with U+FFFD for each byte that starts no
     # character, which has exactly the line's characters.
@@ -86,15 +88,17 @@ module Carat
         out.force_encoding(Encoding::UTF_8)
       end
 
-      # The first match in text starting at the code point from or later,
-      # nil when there is none or the budget cannot pay for the scan.
-      #: (SearchPattern, String, Integer, SearchBudget) -> MatchData?
-      def self.match_at(pattern, text, from, budget)
-        length = text.length
+      # The first match in text, of length code points, starting at the
+      # code point from or later, nil when there is none or the budget
+      # cannot pay for the scan. The length is charged on every call and
+      # never refunded: finding from costs up to the line's length on text
+      # that is not ASCII (docs/spinel-notes.md), whatever the scan reads.
+      #: (SearchPattern, String, Integer, Integer, SearchBudget) -> MatchData?
+      def self.match_at(pattern, text, length, from, budget)
         return nil if from > length
         size = pattern.size
         worst = (length - from + 1) * size
-        budget.charge(worst)
+        budget.charge(length + worst)
         return nil if budget.stopped
         found = pattern.regexp.match(text, from)
         used = found.nil? ? length - from + 1 : found.end(0) - from + 1
@@ -105,14 +109,14 @@ module Carat
         nil
       end
 
-      # The start of the last match in text that starts before limit, -1
-      # when none does.
-      #: (SearchPattern, String, Integer, SearchBudget) -> Integer
-      def self.last_before(pattern, text, limit, budget)
+      # The start of the last match in text, of length code points, that
+      # starts before limit, -1 when none does.
+      #: (SearchPattern, String, Integer, Integer, SearchBudget) -> Integer
+      def self.last_before(pattern, text, length, limit, budget)
         last = -1
         from = 0
         while from < limit
-          found = match_at(pattern, text, from, budget)
+          found = match_at(pattern, text, length, from, budget)
           break if found.nil?
           start = found.begin(0)
           break if start >= limit
@@ -122,11 +126,11 @@ module Carat
         last
       end
 
-      # The end of the match that starts at col of text, col when none
-      # does.
-      #: (SearchPattern, String, Integer, SearchBudget) -> Integer
-      def self.end_at(pattern, text, col, budget)
-        found = match_at(pattern, text, col, budget)
+      # The end of the match that starts at col of text, of length code
+      # points, col when none does.
+      #: (SearchPattern, String, Integer, Integer, SearchBudget) -> Integer
+      def self.end_at(pattern, text, length, col, budget)
+        found = match_at(pattern, text, length, col, budget)
         return col if found.nil? || found.begin(0) != col
         found.end(0)
       end
@@ -150,9 +154,10 @@ module Carat
         wrapped = false
         while true
           text = searchable(buffer.line(at))
-          found = match_at(pattern, text, from, budget)
-          while !found.nil? && !wrapped && at == row && resting_col(found.begin(0), text.length) <= col
-            found = match_at(pattern, text, found.begin(0) + 1, budget)
+          length = text.length
+          found = match_at(pattern, text, length, from, budget)
+          while !found.nil? && !wrapped && at == row && resting_col(found.begin(0), length) <= col
+            found = match_at(pattern, text, length, found.begin(0) + 1, budget)
           end
           return if budget.stopped
           unless found.nil?
@@ -181,12 +186,13 @@ module Carat
         wrapped = false
         while true
           text = searchable(buffer.line(at))
-          limit = !wrapped && at == row ? col : text.length + 1
-          start = last_before(pattern, text, limit, budget)
+          length = text.length
+          limit = !wrapped && at == row ? col : length + 1
+          start = last_before(pattern, text, length, limit, budget)
           return if budget.stopped
           if start >= 0
             hit.wrapped = true if wrapped
-            hit.land(at, start, end_at(pattern, text, start, budget))
+            hit.land(at, start, end_at(pattern, text, length, start, budget))
             return
           end
           break if wrapped && at == row
