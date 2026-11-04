@@ -313,3 +313,45 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the header of `tools/ci_wait.sh` and step 2 of `.claude/agents/merger.md` (line 20). Advisory of the quality review of `workflow-records`.
 - Why it matters: the one-start wait holds only while the agent harness lets a foreground shell call sleep up to 540 seconds; if it refuses or shortens it, the merger falls back to returning pending, the cost of 36 to 58 merge tool calls a run that `workflow-records` set out to remove.
 - Fix outline: confirm on the first full run (`guard-hardening`) that the merger used one start with no pending note; record the harness behavior in the header and the merger's file, and if it fails, give the workflow the wait between merger starts instead. Queued as part (c) of `workflow-cost`.
+
+## The tools-test help and CLAUDE.md omit tools/ci_wait.sh
+
+- Where: the `tools-test` help line of `Makefile` (line 355) and the `make tools-test` line of the Commands section of `CLAUDE.md`, which name `tools/ci_scope.sh`, `tools/metrics.sh`, the run state, and the gates but not `tools/ci_wait.sh`, whose cases `tools/tools_test.sh` runs. Advisory of the quality review of `workflow-records`.
+- Why it matters: `CLAUDE.md` requires its Commands section to stay in sync with the code, and `make help` is how a reader finds what a target covers.
+- Fix outline: name `tools/ci_wait.sh` in both; `CLAUDE.md` has 23 bytes of room, so the change trims it as the entry "CLAUDE.md has 23 bytes of room in its budget" says. Queued in `docs-currency`.
+
+## The guard does not refuse Bash ANSI-C quoting
+
+- Where: the command normalization of `tools/agent_guard.sh` (line 92), which strips quotes and backslashes before matching the refused commands. Security review of `guard-hardening`, Low (7); the gap predates that change.
+- Why it matters: `git $'\x70ush'` or `run_state.sh $'\x72eview'` reaches the shell as `git push` or a review record but passes the guard as an unrecognized word; the merge gate's records and branch protection stand behind it, so it is a defense-in-depth gap.
+- Fix outline: refuse any Bash command containing `$'` or `$"` for the read, merger, and contributor profiles, and add a `tools/tools_test.sh` case for each form.
+
+## The guard's header overstates the parent-step rule and runs past its wrap width
+
+- Where: the header of `tools/agent_guard.sh` (lines 23 to 42, the claim at line 26, the long lines 27 and 41). Quality advisory of `guard-hardening` at a272de71f10b.
+- Why it matters: the header says a path or a link target with a parent step (`..`) is refused for every profile, but `real_path` refuses a link target only when its `..` follows a missing directory, as the archived design of `guard-hardening` states exactly, so a reader of the header expects a refusal the code does not make.
+- Fix outline: word the header as the design does (a link target whose parent step follows a missing directory) and rewrap lines 23 to 42 to the header's width.
+
+## Advisories repeated at a later round are recorded twice
+
+- Where: `addAdvisories` in `.claude/workflows/deliver-change.js` (line 281) and `seed` (line 200). Quality advisory of `guard-hardening` at a272de71f10b.
+- Why it matters: `addAdvisories` deduplicates by exact text, but the quality reviewer's text starts with its head commit while `seed` strips it from the run state's notes, so an advisory repeated at a later round or after a resume is handed to `docs/backlog.md` again, against the design's no-duplicates claim.
+- Fix outline: strip a leading commit hash in `addAdvisories` so both paths key on the same text, and check it with a resumed run that re-reports one advisory.
+
+## body_links repeats real_path's relative-to-absolute step
+
+- Where: the file-tool branch of `body_links` in `tools/agent_guard.sh` (line 154). Quality advisory of `guard-hardening` at a272de71f10b.
+- Why it matters: the branch repeats the conversion `real_path` already makes, and the real-path check of the run state's directory after `BODY_FILE` already refuses a linked body file, so two rules judge one case and can drift apart.
+- Fix outline: drop the branch, or have it call `real_path`, so one rule judges a linked body file; keep the `tools/tools_test.sh` case for a linked body file passing.
+
+## priorQuality's local findings shadows the module function
+
+- Where: `priorQuality` in `.claude/workflows/deliver-change.js` (line 323), whose local `const findings` shadows the module-level `findings()` added at line 282. Quality advisory of `guard-hardening` at a272de71f10b.
+- Why it matters: a later edit inside `priorQuality` that means to call `findings()` gets the local array and fails only at run time.
+- Fix outline: rename the local, for example `listed`.
+
+## The code map's agent_guard.sh entry omits its new helpers
+
+- Where: the `tools/agent_guard.sh` entry of `docs/codebase-map.md` (line 48). Quality advisory of `guard-hardening` at a272de71f10b.
+- Why it matters: the map's key methods are where a change starts; the entry omits the `body_word` and `words` helpers and the line-continuation join in `field`, which decide what the guard refuses.
+- Fix outline: add `body_word`, `words`, and the continuation join of `field` to the entry's key methods, within the map's budget.
