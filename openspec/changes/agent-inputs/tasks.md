@@ -18,6 +18,6 @@
 
 ## 4. Docs and bookkeeping
 
-- [ ] 4.1 `docs/codebase-map.md` area 1 and the `tools/run_state.sh` header.
-- [ ] 4.2 `docs/backlog.md`: the four entries of `build/plan/backlog.md`, the three stale figures, the queued pointers, the plan-skip entry removed, and an entry for the `CLAUDE.md` every agent receives.
+- [x] 4.1 `docs/codebase-map.md` area 1 and the `tools/run_state.sh` header.
+- [x] 4.2 `docs/backlog.md`: the four entries of `build/plan/backlog.md`, the three stale figures, the queued pointers, the plan-skip entry removed, and an entry for the `CLAUDE.md` every agent receives.
 - [ ] 4.3 Run `make tools-test`, `make docs-lint`, `make gates`, and `openspec validate agent-inputs --strict --no-interactive`.

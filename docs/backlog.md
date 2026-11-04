@@ -290,15 +290,15 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: `W`, `c`, and `=` have no held-Ctrl binding, and `<C-w><C-c>` deliberately cancels as in Vim (`docs/compatibility.md`), so a user following the README presses keys that do nothing or cancel.
 - Fix outline: name only the keys that `config/default.caratrc` binds in the held-Ctrl form, with the `<C-w><C-c>` difference left to `docs/compatibility.md`.
 
-## The README's commands table omits five make targets
+## The README's commands table omits four make targets
 
-- Where: `README.md` line 14, the commands table, which has no row for `make clean`, `make pack`, `make install`, `make spinel-rev`, or `make help`. Periodic quality advisory at df5a203.
+- Where: `README.md` line 14, the commands table, which has no row for `make clean`, `make pack`, `make spinel-rev`, or `make help` (line 12 now names `make install`). Periodic quality advisory at df5a203.
 - Why it matters: the map's Build and CI rule gives every command a README line, and goal 12 keeps the README current.
 - Fix outline: add one row naming the missing targets, or one row per target, checked against `make help`.
 
 ## CLAUDE.md has under 1,000 bytes of room in its budget
 
-- Where: `CLAUDE.md`, 30,470 of its 30,720-byte budget in `tools/docs_lint.sh` (`BUDGETS`) since `pipeline-speed-b`, whose Commands line grew it from the 30,428 `pipeline-speed` left after trimming it from 30,719. Periodic quality advisory at df5a203; `docs/architecture.md` is at 88,054 of 88,064 and is handled by `project-config-guards`.
+- Where: `CLAUDE.md`, 30,534 of its 30,720-byte budget (99.4%) in `tools/docs_lint.sh` (`BUDGETS`) since `pipeline-speed-c`, after 30,470 in `pipeline-speed-b`, whose Commands line grew it from the 30,428 `pipeline-speed` left after trimming it from 30,719. Periodic quality advisory at df5a203; `docs/architecture.md` is at 88,054 of 88,064 and is handled by `project-config-guards`.
 - Why it matters: `CLAUDE.md` requires its Commands and Layout sections to stay in sync with the code, so the next change that must add a line there fails `make docs-lint` and pays for a trim it did not plan.
 - Fix outline: the first change that needs room trims `CLAUDE.md` in the same change, moving detail to `docs/codebase-map.md` or the agents' files, rather than raising the budget; accepted when `make docs-lint` passes with `CLAUDE.md` at most 90% of its budget. Queued in `docs-currency`.
 
@@ -306,13 +306,13 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `.claude/workflows/deliver-change.js` lines 608 to 625, which leave the package, CI, and merge phase lines to the closing start, and the next-phase loop of `show_status` in `tools/run_state.sh` (line 489). Advisory of the quality review of `workflow-records`.
 - Why it matters: during the CI wait `/status` prints next phase package although the pull request is open, and a run killed between the merge and the closing start never records package, ci, and merge, so its history row lacks those phases.
-- Fix outline: have `status` read `pushed`, `pr`, and `merged` as the resume does when the phase lines are absent, or record each phase as soon as its own record exists; add a `tools/tools_test.sh` case for a run state with `pushed` and `pr` but no package line. Queued in `pipeline-durability`.
+- Fix outline: have `status` read `pushed`, `pr`, and `merged` as the resume does when the phase lines are absent, or record each phase as soon as its own record exists; add a `tools/tools_test.sh` case for a run state with `pushed` and `pr` but no package line. Queued in `run-resume`.
 
 ## The merger's wait depends on the harness allowing a foreground sleep
 
 - Where: the header of `tools/ci_wait.sh` and step 2 of `.claude/agents/merger.md` (line 20). Advisory of the quality review of `workflow-records`.
 - Why it matters: the one-start wait holds only while the agent harness lets a foreground shell call sleep up to 540 seconds; if it refuses or shortens it, the merger falls back to returning pending, the cost of 36 to 58 merge tool calls a run that `workflow-records` set out to remove.
-- Fix outline: confirm on the first full run (`guard-hardening`) that the merger used one start with no pending note; record the harness behavior in the header and the merger's file, and if it fails, give the workflow the wait between merger starts instead. Queued in `pipeline-durability`.
+- Fix outline: confirm on the first full run (`guard-hardening`) that the merger used one start with no pending note; record the harness behavior in the header and the merger's file, and if it fails, give the workflow the wait between merger starts instead. Queued in `run-budgets`.
 
 ## The contributor can edit the agent files of its own run
 
@@ -474,19 +474,13 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `stopKind` in `.claude/workflows/deliver-change.js` (line 67), which starts at `none` on every start. Quality advisory of `pipeline-speed` at 1d187291be30.
 - Why it matters: the checker's metric line (`figuresFirst`) overwrites a stored `stop=rounds` with `none` before `mayFix` runs, so a start killed after that check makes the next resume grant an extra round to a run that had stopped at the round limit.
-- Fix outline: seed `stopKind` from `lastStop` when `rework` is already at `ROUNDS` plus `extra`. Queued in `pipeline-durability`.
+- Fix outline: seed `stopKind` from `lastStop` when `rework` is already at `ROUNDS` plus `extra`. Queued in `run-resume`.
 
 ## Trimming CLAUDE.md for room reworded two Git rules
 
 - Where: the Git workflow rule of `CLAUDE.md` (line 39) and its Pull requests rule (line 113), changed from "unless explicitly asked" to "unless asked". Quality advisory of `pipeline-speed` at 1d187291be30.
 - Why it matters: the bytes were taken from rules outside the change's scope, softening their wording.
 - Fix outline: restore "explicitly" on both lines and take the bytes from prose that states no rule. Queued in `docs-currency`.
-
-## The queue item reaches the scouts as the resume agent's copy
-
-- Where: `.claude/workflows/deliver-change.js` (line 477), which takes the brief from the `item:` line of `plan-needed` as the resume agent returned it. Quality advisory of `pipeline-speed` at b0df2ac092ed.
-- Why it matters: a multi-kilobyte item is re-emitted as model output on every start, spending the tokens the change exists to cut, and may come back truncated or paraphrased.
-- Fix outline: when the brief is only the change name, tell the scouts and the contributor to read the item naming the change in `docs/queue.md` themselves, and drop the `item:` line from `plan-needed` and the resume schema. Queued in `agent-inputs`.
 
 ## The guard skips a short cluster that names cp's target directory
 
@@ -506,11 +500,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: `cat a=~/x` and `BASE=~ sh tools/gates.sh trailer` pass while bash runs them with the home directory expanded, against the header's claim that a command is read as the shell reads it; harmless today, since no form takes a path value with a tilde.
 - Fix outline: refuse an unquoted `~` right after `=` or `:` in a word that starts with an identifier and `=`, with a `tools/tools_test.sh` case. Queued in `guard-advisories`.
 
-## The delivered-changes list has no line for guard-allowlist
+## The delivered-changes list stops at pull request 46
 
-- Where: the Delivered changes list closing `docs/codebase-map.md` (line 605), which ends at `#46 buffer-search`. Periodic quality advisory at 598cf1b.
-- Why it matters: the list `CLAUDE.md` names as the record of delivered changes misses pull request 47 and the seven items it left in `docs/backlog.md`.
-- Fix outline: add the `#47` line, with the check `docs-currency` already asks for: every merged pull request of `docs/metrics.tsv` appears in the list. Queued in `docs-currency`.
+- Where: the Delivered changes list closing `docs/codebase-map.md` (line 605), which ends at `#46 buffer-search`. Periodic quality advisories at 598cf1b and f31f4e8.
+- Why it matters: the list `CLAUDE.md` names as the record of delivered changes misses every merged pull request from 47 to 51.
+- Fix outline: add the lines for `#47` to `#51`, with the check `docs-currency` already asks for: every merged pull request of `docs/metrics.tsv` appears in the list. Queued in `docs-currency`.
 
 ## Agents leave scratch files in the repository root
 
@@ -570,25 +564,25 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `Replacement` in `carat/domain/replacement.rb:95` (`\0` to `\9`) and line 123 (`&`). Quality advisories at 76ad185 and 127a14f.
 - Why it matters: the five lines that append a group, recased when `\u`, `\l`, `\U`, or `\L` is set and resetting the one-character case unless the group is empty, are repeated, so a fix to one can miss the other.
-- Fix outline: extract a private `insert_group(out, group, one, all)` that returns the new `one`, or read `&` as group 0 in the `\0` to `\9` branch, keeping `lh` and `j` at their figures. Queued in `substitute-tidy`.
+- Fix outline: extract a private `insert_group(out, group, one, all)` that returns the new `one`, or read `&` as group 0 in the `\0` to `\9` branch, keeping `lh` and `j` at their figures. Queued in `substitute-structure`.
 
 ## LastSubstitute holds case and print as integer codes
 
 - Where: `LastSubstitute` in `carat/domain/last_substitute.rb:11`, the members `case_mode` (0 by the options, 1 ignored, 2 matched) and `print` (0 none, 1 the line, 2 with its number). Quality advisory at 76ad185.
 - Why it matters: every reader decodes the codes by a comment, and the member `print` shadows `Kernel#print` inside the record.
-- Fix outline: hold symbols (`:options`, `:ignore`, `:match`; `:none`, `:line`, `:numbered`), as `Quit#call` takes its way, and rename the member `print_mode`. Queued in `substitute-tidy`.
+- Fix outline: hold symbols (`:options`, `:ignore`, `:match`; `:none`, `:line`, `:numbered`), as `Quit#call` takes its way, and rename the member `print_mode`. Queued in `substitute-structure`.
 
 ## ExRange keeps a given member no caller reads
 
 - Where: `ExRange` in `carat/domain/ex_range.rb:12`, whose `given` member is set on every path but read only by `test/domain_ex_range.rb`. Quality advisory at 76ad185.
 - Why it matters: a dead member costs a slot per range and suggests a behavior that does not exist.
-- Fix outline: drop `given` from `ExRange`, its map entry, and the test's columns, or use it where `buffer-global` needs to tell a default range from a given one. Queued in `substitute-tidy`.
+- Fix outline: drop `given` from `ExRange`, its map entry, and the test's columns, or use it where `buffer-global` needs to tell a default range from a given one. Queued in `substitute-structure`.
 
 ## SubstituteArgs.parse tests for a leading blank it never receives
 
 - Where: `SubstituteArgs.parse` in `carat/domain/substitute_args.rb:45`, the `first != 32 && first != 9` tests. Quality advisory at 127a14f.
 - Why it matters: `ExGrammar` strips the arguments before they reach `parse`, so the tests never decide and read as if a blank delimiter were handled.
-- Fix outline: drop the two tests, or say in the method's comment that `parse` accepts unstripped text and add a row that passes it. Queued in `substitute-tidy`.
+- Fix outline: drop the two tests, or say in the method's comment that `parse` accepts unstripped text and add a row that passes it. Queued in `substitute-structure`.
 
 ## CI failures are not classified before a fix round
 
@@ -612,34 +606,64 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `tools/run_state.sh` line 352, the compile-stage skip of `check`, and `compiled_set` and `compiled_same`, which key a pass in `build/pipeline/compiled` by the code key and the outputs only. Quality advisory at e8c5b43 in `pipeline-speed-c`.
 - Why it matters: a check run outside the workflow with `MAKE=true` records a diagnose pass that never ran diagnose, which CI does not run either, and every later change on that code key skips it, the forged-check case the design names as its risk.
-- Fix outline: fold `make_cmd` into the cached line or the key in `compiled_set` and `compiled_same`, so only a pass by the same make command skips, with a `tools/tools_test.sh` case that a pass under `MAKE=true` does not skip a later run under `make`.
+- Fix outline: fold `make_cmd` into the cached line or the key in `compiled_set` and `compiled_same`, so only a pass by the same make command skips, with a `tools/tools_test.sh` case that a pass under `MAKE=true` does not skip a later run under `make`. Queued in `check-skip`.
 
 ## A closing start that returns no result stops the run without a reason
 
 - Where: `.claude/workflows/deliver-change.js` line 686, after the closing start. Quality advisory at e8c5b43 in `pipeline-speed-c`.
 - Why it matters: the old code stopped with 'the retrospective returned no result'; now a merged run whose closing start returns nothing returns 'No report' with no reason, and a due periodic review is skipped silently.
-- Fix outline: when `close` is null, set `stopped` to 'the closing start returned no result' and keep the resume rerunning that start.
+- Fix outline: when `close` is null, set `stopped` to 'the closing start returned no result' and keep the resume rerunning that start. Queued in `run-resume`.
 
 ## The closing fallback can record a note twice
 
 - Where: `.claude/workflows/deliver-change.js` line 695, the fallback flush after a closing start that did not record, and `add_note` in `tools/run_state.sh`, which dedupes only `quality-advisory` notes. Quality advisory at e8c5b43 in `pipeline-speed-c`.
 - Why it matters: when the closing start ran part of the record line before a later command failed, the fallback reruns every line, so an extra-round note is recorded twice and the history counts it twice.
-- Fix outline: dedupe identical notes of every kind in `add_note`, or push back only the lines after the one that failed, with a `tools/tools_test.sh` case of a note recorded twice.
+- Fix outline: dedupe identical notes of every kind in `add_note`, or push back only the lines after the one that failed, with a `tools/tools_test.sh` case of a note recorded twice. Queued in `run-resume`.
 
 ## The closing phases are listed twice with no pointer between them
 
 - Where: `CLOSABLE` in `.claude/workflows/deliver-change.js` line 266 and `CLOSE_PHASES` in `tools/agent_guard.sh` line 92. Quality advisory at e8c5b43 in `pipeline-speed-c`.
 - Why it matters: a phase added to one list and not the other is refused by the guard or misrouted by the workflow.
-- Fix outline: name `tools/agent_guard.sh` `CLOSE_PHASES` in the comment above `CLOSABLE`, and the workflow's regex in the comment beside `CLOSE_PHASES`.
+- Fix outline: name `tools/agent_guard.sh` `CLOSE_PHASES` in the comment above `CLOSABLE`, and the workflow's regex in the comment beside `CLOSE_PHASES`. Queued in `run-resume`.
 
 ## The run state header omits the compiled-KEY stage suffix
 
 - Where: the `stage.NAME` line of the header of `tools/run_state.sh` (line 9), which names only the `carried-from-COMMIT` suffix. Quality advisory at e8c5b43 in `pipeline-speed-c`.
 - Why it matters: `check` now writes a `compiled-KEY` suffix too, and the header is where a reader of a run state learns its format.
-- Fix outline: add 'or compiled-KEY when check skipped a compile stage on its code key' to that line.
+- Fix outline: add 'or compiled-KEY when check skipped a compile stage on its code key' to that line. Queued in `run-resume`.
 
 ## The guard reads the shown profile name from the environment
 
 - Where: `refuse` and the profile `case` in `tools/agent_guard.sh` (line 101 in the reviewed commit), which set `shown` only for the `close` profile and print `${shown:-$profile}`. Quality advisory at e8c5b43 in `pipeline-speed-c`.
 - Why it matters: an inherited `shown` variable misnames the profile in every refusal, so a refused agent is told the wrong profile's rules.
-- Fix outline: initialize `shown=$profile` beside `closing=0` and print `$shown` in `refuse`.
+- Fix outline: initialize `shown=$profile` beside `closing=0` and print `$shown` in `refuse`. Queued in `guard-advisories`.
+
+## A substitute expands a replacement before charging the budget
+
+- Where: `carat/domain/substitution.rb` line 44, and its comment at line 12, which says each character of replacement text is charged where line 45 charges `piece.bytesize`. Periodic security Low (6) and quality advisory at f31f4e8.
+- Why it matters: `:s/.*/&&&&&&&&/`, or a replacement grown by `~` to 1 MiB of `&`, on a long line of an untrusted file (up to 64 MiB) builds replacement bytes times match length in one piece before the budget stops it, which can exhaust memory and lose unsaved buffers, against the comment's output bound.
+- Fix outline: charge each group's and literal's bytes as the expansion grows and stop once the budget runs out, with a `test/domain_substitute.rb` row for a large `&` count on a long line, and say bytes in the comment. Queued in `substitute-tidy`.
+
+## SubstituteArgs repeats the ex range number reader and the letter test
+
+- Where: `carat/domain/substitute_args.rb` line 86 (`MAX_COUNT`), repeating `ExRange.line_number` (`carat/domain/ex_range.rb` line 73, `MAX_NUMBER`), and line 46, repeating `ExGrammar.letter?`. Periodic quality advisory at f31f4e8.
+- Why it matters: two copies of one limit and one test in one domain drift apart when either changes.
+- Fix outline: one capped number reader and one letter predicate in the domain, called from both. Queued in `substitute-structure`.
+
+## dev-build's code key changes with test/ and bench/
+
+- Where: `code_key` in `tools/run_state.sh` (line 156 at f31f4e8), which hashes `test/` and `bench/` for every compile stage. Periodic quality advisory at f31f4e8.
+- Why it matters: a test-only commit on main changes the key of `dev-build`, which compiles only `bin/carat.rb`, so the next change compiles again where it could skip.
+- Fix outline: a per-stage key that leaves `test/` and `bench/` out of `dev-build`'s, with a `tools/tools_test.sh` case. Queued in `check-skip`.
+
+## The close profile records a phase for any change and commit
+
+- Where: the `close` profile of `tools/agent_guard.sh` (line 538 at f31f4e8) and `phase` in `tools/run_state.sh`. Periodic security Low (3) at f31f4e8.
+- Why it matters: the profile records phase plan, implement, package, ci, merge, retro, or report for any change name and commit, so a retrospective steered by text it reads could write `phase.implement` for another queued change and make that change's resumed run skip planning and implementation; no merge gate reads these phases.
+- Fix outline: limit the closing records to the run's own change and merged commit, or refuse a plan or implement phase from the close path, with a `tools/tools_test.sh` case. Queued in `guard-lows`.
+
+## Every agent start receives all of CLAUDE.md
+
+- Where: every agent of `.claude/agents/`, the readers that never edit included; the harness injects `CLAUDE.md` (30,534 bytes) into each custom agent's start, and no frontmatter setting of an agent file leaves it out. Found by `agent-inputs`.
+- Why it matters: input dominates a run's tokens (1.0M to 1.6M total against 0.24M to 0.40M output), and a run starts about ten agents, the checker, merger, and benchmark reading rules they never apply.
+- Fix outline: cut `CLAUDE.md` to the rules every agent needs, moving the rest to the agent files, the map, or the notes, within the 27,648 bytes `docs-currency` sets; if the harness gains a setting that leaves it out of an agent, use it for the agents that never edit. Queued in `docs-currency`.
