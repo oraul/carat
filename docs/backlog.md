@@ -304,8 +304,8 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## /status and a killed run lose the package, CI, and merge phases
 
-- Where: `.claude/workflows/deliver-change.js` lines 459 to 475, which leave the package, CI, and merge phase lines to the final flush, and the next-phase loop of `tools/run_state.sh` near line 345. Advisory of the quality review of `workflow-records`.
-- Why it matters: during the CI wait `/status` prints next phase package although the pull request is open, and a run killed between the merge and the final flush never records package, ci, and merge, so its history row lacks those phases.
+- Where: `.claude/workflows/deliver-change.js` lines 608 to 625, which leave the package, CI, and merge phase lines to the closing start, and the next-phase loop of `show_status` in `tools/run_state.sh` (line 489). Advisory of the quality review of `workflow-records`.
+- Why it matters: during the CI wait `/status` prints next phase package although the pull request is open, and a run killed between the merge and the closing start never records package, ci, and merge, so its history row lacks those phases.
 - Fix outline: have `status` read `pushed`, `pr`, and `merged` as the resume does when the phase lines are absent, or record each phase as soon as its own record exists; add a `tools/tools_test.sh` case for a run state with `pushed` and `pr` but no package line. Queued in `pipeline-durability`.
 
 ## The merger's wait depends on the harness allowing a foreground sleep
