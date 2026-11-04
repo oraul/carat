@@ -2,12 +2,12 @@
 
 ## 1. Queue budget
 
-- [ ] 1.1 `tools/docs_lint.sh`: `docs/queue.md 17369` in `BUDGETS`. Tested by the `tools/tools_test.sh` case "docs_lint: refuses a queue over its budget".
-- [ ] 1.2 `docs/queue.md`: the planner's `build/plan/queue.md` (16,921 bytes). Checked by `make docs-lint`.
+- [x] 1.1 `tools/docs_lint.sh`: `docs/queue.md 17369` in `BUDGETS`. Tested by the `tools/tools_test.sh` case "docs_lint: refuses a queue over its budget".
+- [x] 1.2 `docs/queue.md`: the planner's `build/plan/queue.md` (16,921 bytes). Checked by `make docs-lint`.
 
 ## 2. Item from the file
 
-- [ ] 2.1 `tools/run_state.sh`: `plan_needed` prints no `item:` line. Tested by "run_state: plan-needed prints one line" (replacing the three item-line cases) and the existing plan-needed cases.
+- [x] 2.1 `tools/run_state.sh`: `plan_needed` prints no `item:` line. Tested by "run_state: plan-needed prints one line" (replacing the three item-line cases) and the existing plan-needed cases.
 - [ ] 2.2 `.claude/workflows/deliver-change.js`: the brief points to the item in `docs/queue.md`, the scouts get the brief, the resume schema's `plan` is one line. No test runs the workflow script: checked by a syntax check and a simulation of the brief's three cases.
 
 ## 3. Agent inputs

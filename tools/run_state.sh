@@ -108,9 +108,7 @@
 #                               change is not the head of docs/queue.md or a
 #                               pending change holds a proposal or finding
 #                               (PLAN_NOTES) to place; print "not needed:
-#                               ..." with the head item's size and exit 1;
-#                               when the change is the head, then print
-#                               "item: TEXT", the item as written
+#                               ..." with the head item's size and exit 1
 #   budget CHANGE               print "over:", "under:", "unmeasured:", or
 #                               "no estimate:" with the change's estimate, its
 #                               budget (TOKEN_BUDGETS, MINUTE_BUDGETS), its
@@ -884,9 +882,8 @@ review_due() {
 # merged change without a history row holds a note of a PLAN_NOTES kind
 # (a retrospective proposal, an overrun, a periodic finding) that only the
 # planner places; otherwise the head item is taken as written, its size
-# printed for the run's estimate. When the change heads the queue a second
-# line, "item: TEXT", gives the item as written, the brief of a run whose
-# brief is only the change name.
+# printed for the run's estimate. It prints one line: a run whose brief is
+# only the change name has its agents read the item in docs/queue.md.
 plan_needed() {
   head_item=$(sed -n 's/^1[.] //p' docs/queue.md 2>/dev/null | head -1)
   name=$(printf '%s\n' "$head_item" | sed -n 's/^`\([a-z0-9][a-z0-9-]*\)`.*/\1/p')
@@ -899,13 +896,11 @@ plan_needed() {
     n=$(change=$other; grep -c -E "^  \"note[.][0-9]+\": \"($PLAN_NOTES) " "$(state_file)")
     if [ "$n" -gt 0 ]; then
       echo "needed: $other holds $n proposal(s) or finding(s) to place"
-      printf 'item: %s\n' "$head_item"
       return 0
     fi
   done
   size=$(printf '%s\n' "$head_item" | awk 'match($0, /estimated (small|medium|large)/) { print substr($0, RSTART + 10, RLENGTH - 10) }')
   echo "not needed: $change heads docs/queue.md, estimated ${size:--}, and no pending change holds a proposal or finding"
-  printf 'item: %s\n' "$head_item"
   return 1
 }
 
