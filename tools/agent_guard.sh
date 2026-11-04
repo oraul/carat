@@ -96,8 +96,10 @@ case "$profile" in read|merger|contributor) ;; *) refuse "no such profile" ;; es
 # reads a line break: inside single quotes a character of the word, at the
 # end of a comment its end, after a backslash elsewhere a line continuation
 # dropped with it, and otherwise the end of a command. A raw \001 becomes
-# "?". A \u escape of a printable ASCII character is that character, any
-# other one "?", which the lexer refuses outside quotes.
+# "?". An escaped carriage return becomes "?" too, since the shell reads
+# it as a character of the word, not a blank; a raw one, JSON whitespace
+# between fields, a blank. A \u escape of a printable ASCII character is
+# that character, any other one "?", which the lexer refuses outside quotes.
 field() {
   tr '\n\r\001' '  ?' | K="$1" awk '
     BEGIN { HEX = "0123456789abcdef"; NL = "\001" }
@@ -113,7 +115,8 @@ field() {
           i++
           c = substr(s, i, 1)
           if (c == "n") c = NL
-          else if (c == "t" || c == "r") c = " "
+          else if (c == "t") c = " "
+          else if (c == "r") c = "?"
           else if (c == "u") {
             h = tolower(substr(s, i + 1, 4))
             i += 4
@@ -121,7 +124,7 @@ field() {
             if (h ~ /^00[0-7][0-9a-f]$/) {
               v = (index(HEX, substr(h, 3, 1)) - 1) * 16 + index(HEX, substr(h, 4, 1)) - 1
               if (v == 10) c = NL
-              else if (v == 9 || v == 13) c = " "
+              else if (v == 9) c = " "
               else if (v >= 32 && v < 127) c = sprintf("%c", v)
             }
           }

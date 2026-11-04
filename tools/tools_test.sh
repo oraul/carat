@@ -596,6 +596,8 @@ for p in read merger contributor; do
   expect "guard: $p refuses gh" 2 "gh is not a command" guard $p 'gh pr merge 5 --squash'
   expect "guard: $p refuses a command on a later line" 2 "git push" guard $p 'git status\ngit push origin x'
   expect "guard: $p refuses a command after a comment" 2 "git push" guard $p 'ls # a note\ngit push origin x'
+  expect "guard: $p refuses a carriage return before a comment" 2 "glob or brace character" guard $p 'ls\r#; git push origin x'
+  expect "guard: $p refuses an escaped carriage return before a comment" 2 "glob or brace character" guard $p 'ls\u000d#; git push origin x'
   expect "guard: $p refuses git push over a line continuation" 2 "git push" guard $p 'git \\\npush origin x'
   expect "guard: $p refuses a push on the line after an escaped backslash" 2 "git push" guard $p 'echo x\\\\\ngit push'
   expect "guard: $p refuses a git alias" 2 "a git configuration override" guard $p 'git -c alias.p=push p origin x'
