@@ -667,3 +667,27 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: every agent of `.claude/agents/`, the readers that never edit included; the harness injects `CLAUDE.md` (30,534 bytes) into each custom agent's start, and no frontmatter setting of an agent file leaves it out. Found by `agent-inputs`.
 - Why it matters: input dominates a run's tokens (1.0M to 1.6M total against 0.24M to 0.40M output), and a run starts about ten agents, the checker, merger, and benchmark reading rules they never apply.
 - Fix outline: cut `CLAUDE.md` to the rules every agent needs, moving the rest to the agent files, the map, or the notes, within the 27,648 bytes `docs-currency` sets; if the harness gains a setting that leaves it out of an agent, use it for the agents that never edit. Queued in `docs-currency`.
+
+## The docs_lint budget comment has a sentence with no subject
+
+- Where: the comment above `BUDGETS` in `tools/docs_lint.sh` (line 40 at 3a4db08), which reads "The queue's holds what the planner rewrites". Quality advisory of `agent-inputs`.
+- Why it matters: the sentence drops its noun, so a reader raising or checking the queue's budget has to guess what it bounds.
+- Fix outline: write "The queue's budget bounds what the planner rewrites and every agent may read at a start."
+
+## The queue budget test writes its filler twice
+
+- Where: the `queuesize` case of `tools/tools_test.sh` (line 1061 at 3a4db08), whose first `head -c 17369 /dev/zero` is cut again by a second `head -c` that sets the length. Quality advisory of `agent-inputs`.
+- Why it matters: the redundant stage makes the one length that matters harder to read and to change with the budget.
+- Fix outline: `head -c "$((17369 - $(wc -c < docs/queue.md)))" /dev/zero | tr '\0' x >> docs/queue.md`.
+
+## The scout's step 8 says every Rules line names sections
+
+- Where: step 8 of `.claude/agents/scout.md` (line 38 at 3a4db08); the Rules lines of areas 6, 9, 10, 13, and 16 of `docs/codebase-map.md` name no `CLAUDE.md` or `docs/architecture.md` section. Quality advisory of `agent-inputs`.
+- Why it matters: a scout on one of those areas finds no section to point the contributor to and may open the files step 8 tells it not to.
+- Fix outline: say "the sections it names, if any", or drop the clause.
+
+## The image-viewer discussion line lost two of the user's constraints
+
+- Where: the "Under discussion" line of `docs/queue.md` (line 32 at 3a4db08), shortened for the queue budget by `agent-inputs`. Quality advisory of `agent-inputs`.
+- Why it matters: the line no longer says the image is cleared on scroll and close or that a new host request follows the plugin API rules, so a later plan or brief could leave out what the user asked for.
+- Fix outline: restore both clauses in a few words, within the queue's budget.
