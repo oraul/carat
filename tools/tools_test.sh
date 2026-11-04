@@ -703,6 +703,8 @@ expect "guard: read allows a git read with a long option" 0 "^$" guard read 'git
 expect "guard: read refuses a quoted digit before a redirection" 2 "a write outside tmp/scout, links followed: 1" guard read 'rm -rf \"1\">/dev/null' tmp/scout
 expect "guard: read refuses an escaped digit before a redirection" 2 "a write outside tmp/scout, links followed: 1" guard read 'rm -rf \\1>/dev/null' tmp/scout
 expect "guard: read takes a bare digit before a redirection as a descriptor" 0 "^$" guard read 'rm -f tmp/scout/x 2>/dev/null' tmp/scout
+expect "guard: read refuses a removal of /dev/null" 2 "a write outside the project: /dev/null" guard read 'rm -f /dev/null; echo x > /dev/null'
+expect "guard: read refuses a removal of /dev/null in its directory" 2 "a write outside the project: /dev/null" guard read 'rm /dev/null' tmp/scout
 expect "guard: read refuses a metrics script of another form" 2 "tools/metrics.sh other than" guard read 'sh tools/metrics.sh shell'
 expect "guard: read refuses a measurement into .git" 2 "tools/metrics.sh measure into other than build/metrics/current.tsv" guard read 'sh tools/metrics.sh measure .git/config'
 expect "guard: read refuses a measurement outside the project" 2 "tools/metrics.sh measure into other than build/metrics/current.tsv" guard read 'sh tools/metrics.sh measure /tmp/x'
@@ -738,6 +740,9 @@ expect "guard: contributor refuses a link" 2 "ln is not a command" guard contrib
 expect "guard: contributor refuses a copy into .git" 2 "a write under .git" guard contributor 'cp x .git/hooks/pre-commit'
 expect "guard: contributor refuses a removal of the run state's parent" 2 "the directory that holds the run state's" guard contributor 'rm -rf build'
 expect "guard: contributor refuses a removal of the project" 2 "a write outside the project" guard contributor 'rm -rf .'
+expect "guard: contributor refuses a move onto /dev/null" 2 "a write outside the project: /dev/null" guard contributor 'mv x /dev/null'
+expect "guard: contributor refuses a copy onto /dev/null" 2 "a write outside the project: /dev/null" guard contributor 'cp x /dev/null'
+expect "guard: contributor allows a redirection to /dev/null" 0 "^$" guard contributor 'ls 2>/dev/null >/dev/null'
 expect "guard: contributor refuses a long option of a writing command" 2 "the cp option --target-directory=/tmp" guard contributor 'cp --target-directory=/tmp x'
 expect "guard: contributor refuses a move onto the body file" 2 "a write to the run state's directory" guard contributor 'mv tmp/x build/pipeline/c.body.md'
 expect "guard: contributor refuses the run state file beside the body file" 2 "naming the run state's directory" guard contributor 'cat build/pipeline/c.body.md build/pipeline/c.json'

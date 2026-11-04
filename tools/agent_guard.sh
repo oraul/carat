@@ -280,9 +280,11 @@ under() {
   return 1
 }
 
-# write_target PATH KIND: KIND is redirect, command, or file.
+# write_target PATH KIND: KIND is redirect, command, or file. Only a
+# redirection may name /dev/null: as the operand of rm, mv, or cp it
+# would replace the device node.
 write_target() {
-  [ "$2" = file ] || [ "$1" != /dev/null ] || return 0
+  if [ "$2" = redirect ] && [ "$1" = /dev/null ]; then return 0; fi
   parent_step "$1"
   relative "$1"
   case "$1" in /*) at=$1 ;; *) at="$project/$1" ;; esac
