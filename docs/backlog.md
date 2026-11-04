@@ -469,3 +469,39 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the shared forms of the header of `tools/agent_guard.sh` (line 25). Quality advisory of `guard-allowlist` at 3efc71ba34f8 and again at 31a93d257317.
 - Why it matters: `judge` refuses `printf` with a leading option, so the header no longer says what the code allows.
 - Fix outline: write `printf (no leading option)` in the header's shared forms. Queued in `guard-advisories`.
+
+## The guard and gates review area leaves out the review's own record keepers
+
+- Where: the `guard and gates` pattern of `REVIEW_AREAS` in `tools/run_state.sh` (line 161). Security Low (7) of `pipeline-speed` at b0df2ac092ed.
+- Why it matters: the narrowed pattern leaves out `tools/run_state.sh` (whose review, get, trusted, and push records `tools/gates.sh` trusts), `.claude/workflows/deliver-change.js` (which runs the security reviewer and writes the review record), and the security-reviewer and merger agent bodies, so a change that weakens how the review is recorded no longer makes a whole-tree periodic review due.
+- Fix outline: add `tools/run_state[.]sh$` and `[.]claude/workflows/` to the pattern, and count an edit of `.claude/agents/security-reviewer.md` or `.claude/agents/merger.md` as due, with a `tools/tools_test.sh` case.
+
+## agent_hooks misses frontmatter keys that widen an agent's authority
+
+- Where: `agent_hooks` in `tools/run_state.sh` (line 701), which counts only `tools` and hook lines as the guard's wiring and reads `git diff` with `2>/dev/null`. Security Low (6) of `pipeline-speed` at b0df2ac092ed, and a quality advisory at 1d187291be30.
+- Why it matters: adding `permissionMode:`, `mcpServers:`, `disallowedTools:`, or a list-form tool item to an agent does not make the periodic review due, and a failing `git diff` fails open, so the review is skipped exactly when the agent's authority changes.
+- Fix outline: treat any changed line between an agent file's frontmatter delimiters other than `name`, `description`, and `model` as guard and gates, and report the review due when the diff fails, with a `tools/tools_test.sh` case.
+
+## A resumed run can be granted an extra fix round after stopping at the limit
+
+- Where: `stopKind` in `.claude/workflows/deliver-change.js` (line 67), which starts at `none` on every start. Quality advisory of `pipeline-speed` at 1d187291be30.
+- Why it matters: the checker's metric line (`figuresFirst`) overwrites a stored `stop=rounds` with `none` before `mayFix` runs, so a start killed after that check makes the next resume grant an extra round to a run that had stopped at the round limit.
+- Fix outline: seed `stopKind` from `lastStop` when `rework` is already at `ROUNDS` plus `extra`.
+
+## Trimming CLAUDE.md for room reworded two Git rules
+
+- Where: the Git workflow rule of `CLAUDE.md` (line 39) and its Pull requests rule (line 113), changed from "unless explicitly asked" to "unless asked". Quality advisory of `pipeline-speed` at 1d187291be30.
+- Why it matters: the bytes were taken from rules outside the change's scope, softening their wording.
+- Fix outline: restore "explicitly" on both lines and take the bytes from prose that states no rule.
+
+## budget_line prints a dash for missing wall minutes
+
+- Where: `budget_line` in `tools/run_state.sh` (line 608). Quality advisory of `pipeline-speed` at 1d187291be30.
+- Why it matters: a run with total tokens but no wall minutes recorded reports `in - minutes`.
+- Fix outline: name the minutes only when `metric.wall_min` is set, as the budget does with `time_limit`.
+
+## The queue item reaches the scouts as the resume agent's copy
+
+- Where: `.claude/workflows/deliver-change.js` (line 477), which takes the brief from the `item:` line of `plan-needed` as the resume agent returned it. Quality advisory of `pipeline-speed` at b0df2ac092ed.
+- Why it matters: a multi-kilobyte item is re-emitted as model output on every start, spending the tokens the change exists to cut, and may come back truncated or paraphrased.
+- Fix outline: when the brief is only the change name, tell the scouts and the contributor to read the item naming the change in `docs/queue.md` themselves, and drop the `item:` line from `plan-needed` and the resume schema.
