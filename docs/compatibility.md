@@ -111,6 +111,27 @@ Usable after an operator, in operator-pending mode, and in the visual modes (see
 
 Differences from Neovim: `is` and `as` take no count; quote objects pair quotes from the start of the line and `2i"` has no special meaning; tag objects `it at` wait for a tokenizer.
 
+## Search
+
+| Keys | Action name | Behavior | Test |
+| --- | --- | --- | --- |
+| `[count]/pattern<CR>` | `search.forward` | Open the `/` prompt, then the count-th match after the cursor; an empty pattern reuses the last one; `<Esc>` or `<BS>` on an empty prompt cancels | `editor_search`, `domain_search` |
+| `[count]?pattern<CR>` | `search.backward` | The same backward, with the `?` prompt | `editor_search`, `domain_search` |
+| `[count]n` | `search.next` | The last search again in its direction, its highlight shown again | `editor_search` |
+| `[count]N` | `search.previous` | The last search in the other direction | `editor_search` |
+| `[count]*`, `[count]#` | `search.word_forward`, `search.word_backward` | The keyword under or after the cursor as `\<word\>`, or the non-blank text there; becomes the last pattern and a history entry; ignores `smartcase` | `editor_search` |
+| `[count]g*`, `[count]g#` | `search.partial_word_forward`, `search.partial_word_backward` | The same without `\<` and `\>` | `editor_search` |
+| operator + search | any of the above | Exclusive charwise motion; a delete or change over it writes `"1`; `.` repeats it with the same pattern | `editor_search` |
+| visual mode + search | any of the above | Moves the cursor end of the selection; `<Esc>` at the prompt returns to the visual mode | `editor_search` |
+| wrap | | `search hit BOTTOM, continuing at TOP`, `search hit TOP, continuing at BOTTOM` | `editor_search`, `domain_search` |
+| errors | | `E486: Pattern not found: pat`, `E35: No previous regular expression`, `E348: No string under cursor` | `editor_search` |
+| `hlsearch`, `incsearch` | | Every match of the last pattern in the `Search` group until `:noh`; while typing, the cursor on the first match in `IncSearch`, back on `<Esc>` | `editor_search`, `adapters_frame_presenter` |
+| `ignorecase`, `smartcase`, `\c`, `\C` | | Case ignored with `ignorecase` unless `smartcase` and an uppercase letter; `\c` ignores and `\C` matches case | `editor_search`, `domain_vim_pattern` |
+
+Patterns (`domain_vim_pattern`) are Vim's magic patterns, translated for the regular expression engine Spinel bundles (`docs/spinel-notes.md`): literal text; `.`; the multis `*`, `\+`, `\=`, `\?`, `\{n,m}`, `\{n}`, `\{n,}`, `\{,m}`, `\{}`, and the lazy `\{-...}`; `^` at the start of a branch and `$` at its end; `[...]` with ranges, `^` negation, `[:alpha:]` and the other POSIX classes, and the escapes `\e \t \r \\ \] \^ \-`; `\(\)`, `\%(\)`, and `\|`; `\<` and `\>`; the classes `\s \S \d \D \w \W \a \A \l \L \u \U \x \X \h \H \o \O \k \K`; `\t \e \r`; `\c` and `\C`; and the modes `\v`, `\m`, `\M`, and `\V`. Malformed patterns give Vim's errors: `E54: Unmatched \(`, `E55: Unmatched \)`, `E61: Nested *`, `E62: Nested \+`, `E64: \+ follows nothing`, `E554: Syntax error in \{...}`, `E944: Reverse range in character class`, and `E33: No previous substitute regular expression` for `~`.
+
+Differences from Neovim: back references `\1` to `\9`, look-around `\@`, `\z`, `\%` items other than `\%(`, the `\_` classes, `\n`, `\&`, and `\i \I \f \F \p \P` answer `Not implemented: \1 in a pattern`, and search offsets (`/foo/e`) answer `Not implemented: search offset e`; `\<` and `\>` are both a word boundary, so `\<` also matches at the end of a word before a non-keyword item; `smartcase` looks for an uppercase ASCII letter; a pattern of more than 2,000 states or 4,096 bytes is refused with `E363: pattern uses more memory than 'maxmempattern'`, and a search that would scan more than its budget (the characters scanned times the pattern's size) stops with `E363: search stopped, pattern too costly here`, where Neovim has `'maxmempattern'` and `'redrawtime'`; a line that is not valid UTF-8 is matched with each illegal byte as U+FFFD; `'wrapscan'` is always on; there is no search count `[1/5]` and no `CurSearch` group; the wrap message is drawn as a plain message; under an operator the pattern is not echoed; `'history'` is 50.
+
 ## Registers
 
 | Keys | Behavior | Test |
@@ -126,10 +147,10 @@ Differences from Neovim: `is` and `as` take no count; quote objects pair quotes 
 | `".` | The text typed in the last insert session; read-only | `editor_registers`, `domain_registers` |
 | `":` | The last command line run; read-only | `editor_registers`, `domain_registers` |
 | `"%` | The current file's name; read-only | `editor_registers`, `domain_registers` |
-| `"/` | Accepted and empty until search exists; read-only | `editor_registers` |
+| `"/` | The last search pattern; read-only | `editor_registers`, `editor_search`, `domain_registers` |
 | write to `. : % /` | Refused with `E354: Invalid register name: '.'`; the text is left alone | `editor_registers` |
 
-Differences from Neovim: the registers are written as Neovim's `op_yank` and `op_delete` code does, which differs from its help text in that a big delete naming a register also writes `"1`; after an uppercase append the unnamed register holds only the new text, where Neovim's points to the whole register; a delete, change, or yank into a read-only register shows `E354`, which Neovim shows only for `:let @.`, where it beeps; a visual `p` stores the replaced text by the delete rules, as Neovim's `v_p` does; the `"#`, `"=`, `"*`, and `"+` registers and `:let @x` are not implemented, and `"/` holds nothing until search exists; any other register name drops the prefix instead of beeping.
+Differences from Neovim: the registers are written as Neovim's `op_yank` and `op_delete` code does, which differs from its help text in that a big delete naming a register also writes `"1`; after an uppercase append the unnamed register holds only the new text, where Neovim's points to the whole register; a delete, change, or yank into a read-only register shows `E354`, which Neovim shows only for `:let @.`, where it beeps; a visual `p` stores the replaced text by the delete rules, as Neovim's `v_p` does; the `"#`, `"=`, `"*`, and `"+` registers and `:let @x` are not implemented; any other register name drops the prefix instead of beeping.
 
 ## Undo and repeat
 
@@ -196,7 +217,9 @@ Differences from Neovim: there are no `'<` and `'>` marks yet and no `:'<,'>` ra
 | printable | none | Append to the command line | `editor_cmdline` |
 | `<BS>` | `cmdline.backspace` | Remove the last character; leave when empty | `editor_cmdline` |
 | `<Esc>` | `mode.normal` | Discard the command line | `editor_cmdline` |
-| `<CR>` | `cmdline.execute` | Run the command | `editor_cmdline` |
+| `<CR>` | `cmdline.execute` | Run the command, or search at a `/` or `?` prompt | `editor_cmdline`, `editor_search` |
+| `<Up>` | `cmdline.history_older` | The next older entry of the prompt's history (`:` or search) that starts with the text typed before the first recall | `editor_cmdline`, `editor_search` |
+| `<Down>` | `cmdline.history_newer` | The next newer entry, or the typed text after the newest | `editor_cmdline`, `editor_search` |
 
 ## Ex commands
 
@@ -235,12 +258,13 @@ Differences from Neovim: there are no `'<` and `'>` marks yet and no `:'<,'>` ra
 | `:sy[ntax] on`, `:sy[ntax] enable`, `:sy[ntax] off` | Turn syntax highlighting on or off for every buffer; it starts on | `E410: Invalid :syntax subcommand: x`, `Not implemented: :syntax list` | `editor_syntax`, `use_cases_ex` |
 | `:se[t] filetype=x`, `:se[t] ft=x`, `:se[t] syntax=x`, `:se[t] syn=x` | Set the current buffer's filetype and its syntax, or its syntax alone (`OFF` for none, `ON` for the filetype's); several arguments in one command | `E518: Unknown option: x`, `Not implemented: :set number` | `editor_syntax`, `use_cases_ex` |
 | `:se[t] ft?`, `:se[t] filetype` | Show the filetype or the syntax | `  filetype=ruby` | `editor_syntax` |
-| `:noh[lsearch]` | TODO: the behavior | `Not implemented: :nohlsearch` | `use_cases_ex` |
+| `:se[t] ic`, `:se[t] noscs`, `:se[t] invhls`, `:se[t] is!`, `:se[t] hls?` | Set, clear, switch, or show `ignorecase` (`ic`), `smartcase` (`scs`), `hlsearch` (`hls`), or `incsearch` (`is`) | `  hlsearch`, `nohlsearch`, `E474: Invalid argument: hls=1` | `editor_search` |
+| `:noh[lsearch]` | Stop highlighting the last search's matches until the next search, `n`, or `:set hlsearch` | | `use_cases_ex`, `editor_search` |
 | unknown | Report the command | `E492: Not an editor command: name` | `use_cases_ex`, `editor_cmdline` |
 
 Every command is recognized from its abbreviation to its full name, as the `name[suffix]` notation of the table means: `:vs`, `:vsp`, and `:vsplit` all split vertically, and `:tabf` and `:vsplitx` are unknown; the commands are tried in the order of this table, which is Vim's order where two could match, and the commands plugins declare come after them (`use_cases_ex` checks every spelling of every row, `editor_cmdline` runs `:vsp`, `:spl`, `:wr`, `:wal`, `:xi`, and `:tabfirs`).
 
-Differences from Neovim: `E141` names a buffer by its position in the list, which shifts when a buffer leaves the list, where Neovim keeps buffer numbers for the session; `:qa` on a modified buffer shows only `E37`, not Neovim's second `E162` line naming the buffer; `:wa` shows the message of the last write only; `:e` of a directory, a FIFO, or a device shows Vim's message and keeps the buffer, where Vim opens an empty buffer for a directory and reads a FIFO, and a file over 64 MiB is refused with `E484: Can't open file name: File too large`, where Vim has no limit; `:e` without a bang refuses a modified buffer even when another window shows it, as Neovim does with `'hidden'` off, while closing a window keeps a modified buffer hidden, as Neovim does with `'hidden'` on; `:x` with a file argument writes even an unmodified buffer, where Neovim writes only a changed one; `:earlier` and `:later` with a time (`10s`, `5m`, `1h`, `1d`) or a write count (`1f`) answer `Not implemented: :earlier 10s`; a listing of several lines, as `:undolist` and `:registers` print, shows its last lines when it is taller than the screen, with no `-- More --` paging and no scrolling back at the hit-enter prompt; `:tabn N`, `:Nsplit`, `:tabm[ove]`, `:ls`, `:bn`, `:bp`, `:bd`, `:b N`, ranges, `:update`, and `:saveas` arrive with later changes; `:set` handles only `filetype` and `syntax` (the options the editor has answer `Not implemented: :set name`, the rest arrives with the options change), `:setlocal` and `:filetype` do not exist yet, `:syntax` has no subcommand but `on`, `enable`, and `off`, and the syntax switch is global and not a configuration option.
+Differences from Neovim: `E141` names a buffer by its position in the list, which shifts when a buffer leaves the list, where Neovim keeps buffer numbers for the session; `:qa` on a modified buffer shows only `E37`, not Neovim's second `E162` line naming the buffer; `:wa` shows the message of the last write only; `:e` of a directory, a FIFO, or a device shows Vim's message and keeps the buffer, where Vim opens an empty buffer for a directory and reads a FIFO, and a file over 64 MiB is refused with `E484: Can't open file name: File too large`, where Vim has no limit; `:e` without a bang refuses a modified buffer even when another window shows it, as Neovim does with `'hidden'` off, while closing a window keeps a modified buffer hidden, as Neovim does with `'hidden'` on; `:x` with a file argument writes even an unmodified buffer, where Neovim writes only a changed one; `:earlier` and `:later` with a time (`10s`, `5m`, `1h`, `1d`) or a write count (`1f`) answer `Not implemented: :earlier 10s`; a listing of several lines, as `:undolist` and `:registers` print, shows its last lines when it is taller than the screen, with no `-- More --` paging and no scrolling back at the hit-enter prompt; `:tabn N`, `:Nsplit`, `:tabm[ove]`, `:ls`, `:bn`, `:bp`, `:bd`, `:b N`, ranges, `:update`, and `:saveas` arrive with later changes; `:set` handles only `filetype`, `syntax`, and the four search options (the other options the editor has answer `Not implemented: :set name`, the rest arrives with the options change), `:setlocal` and `:filetype` do not exist yet, `:syntax` has no subcommand but `on`, `enable`, and `off`, and the syntax switch is global and not a configuration option.
 
 ## Windows
 
@@ -322,4 +346,4 @@ The filetype of a buffer comes from its name (`ruby` for `.rb`, `.rake`, `.gemsp
 
 ## Options read so far
 
-`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `undolevels`, `icons`, and `theme`, from the `option.*` lines of the configuration files; `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.
+`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `undolevels`, `icons`, and `theme`, from the `option.*` lines of the configuration files; `ignorecase`, `smartcase`, `hlsearch`, and `incsearch` from those lines and `:set` (Neovim's defaults: off, off, on, on; the shipped configuration turns `smartcase` on); `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.
