@@ -12,9 +12,9 @@
 
 ## 3. Agent inputs
 
-- [ ] 3.1 `.claude/agents/planner.md`: backlog by headings, the queue within its budget, one-line decisions.
-- [ ] 3.2 `.claude/agents/scout.md` and the scout plan prompt: existing code only, no rules step, about 150 lines.
-- [ ] 3.3 `.claude/agents/contributor.md`: covered files at the lines edited, the guides for Ruby code only. Checked by `make docs-lint` (agent budget).
+- [x] 3.1 `.claude/agents/planner.md`: backlog by headings, the queue within its budget, one-line decisions.
+- [x] 3.2 `.claude/agents/scout.md` and the scout plan prompt: existing code only, no rules step, about 150 lines.
+- [x] 3.3 `.claude/agents/contributor.md`: covered files at the lines edited, the guides for Ruby code only. Checked by `make docs-lint` (agent budget).
 
 ## 4. Docs and bookkeeping
 
