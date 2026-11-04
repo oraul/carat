@@ -8,7 +8,7 @@
 ## 2. Item from the file
 
 - [x] 2.1 `tools/run_state.sh`: `plan_needed` prints no `item:` line. Tested by "run_state: plan-needed prints one line" (replacing the three item-line cases) and the existing plan-needed cases.
-- [ ] 2.2 `.claude/workflows/deliver-change.js`: the brief points to the item in `docs/queue.md`, the scouts get the brief, the resume schema's `plan` is one line. No test runs the workflow script: checked by a syntax check and a simulation of the brief's three cases.
+- [x] 2.2 `.claude/workflows/deliver-change.js`: the brief points to the item in `docs/queue.md`, the scouts get the brief, the resume schema's `plan` is one line. No test runs the workflow script: checked by a syntax check and a simulation of the brief's three cases.
 
 ## 3. Agent inputs
 
