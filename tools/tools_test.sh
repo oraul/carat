@@ -607,6 +607,7 @@ for p in read merger contributor; do
   expect "guard: $p refuses a checkout of the tree" 2 "git checkout outside a worktree" guard $p 'git checkout -- .'
   expect "guard: $p refuses a git read that writes a file" 2 "git diff --output=x" guard $p 'git diff --output=x'
   expect "guard: $p refuses a fetch with a refspec" 2 "git fetch other than" guard $p 'git fetch origin x:refs/remotes/origin/main'
+  expect "guard: $p refuses a remote that runs a command" 2 "git ls-remote of other than origin" guard $p 'git ls-remote --heads \"ext::sh -c x\" main'
   expect "guard: $p refuses a quoted blank in the -C path before push" 2 "git push" guard $p 'git -C \"my dir\" push origin x'
   expect "guard: $p refuses a review record" 2 "tools/run_state.sh review" guard $p 'sh tools/run_state.sh review c security pass x HEAD'
   expect "guard: $p refuses a quoted review record" 2 "tools/run_state.sh review" guard $p "sh tools/run_state.sh re''view c security pass x"
@@ -617,6 +618,8 @@ for p in read merger contributor; do
   expect "guard: $p refuses the run state file" 2 "naming the run state's directory" guard $p 'cat build/pipeline/c.json'
   expect "guard: $p refuses a quoted run state path" 2 "naming the run state's directory" guard $p 'cat build/\"pipe\"line/c.json'
   expect "guard: $p refuses an unterminated quote" 2 "an unterminated quote" guard $p "echo 'x"
+  expect "guard: $p reads a JSON escape as its character" 2 "inside double quotes" guard $p 'echo \"$(git push origin x)\"'
+  expect "guard: $p reads an escaped quote as a quote" 2 "git push" guard $p 'echo 'x'; git push origin x'
   expect "guard: $p refuses a write outside the project" 2 "a write outside the project" guard $p 'echo x > /tmp/x'
   expect "guard: $p refuses a write under .git" 2 "a write under .git" guard $p 'echo x > .git/hooks/pre-commit'
   expect "guard: $p refuses a tool it does not judge" 2 "which this guard does not judge" guard_edit $p Read /w/README.md
@@ -697,6 +700,8 @@ expect "guard: contributor refuses npx of another package" 2 "npx of other than"
 expect "guard: contributor refuses a script by a path" 2 "a command named by a path" guard contributor './tools/run_state.sh push c'
 expect "guard: contributor refuses a link" 2 "ln is not a command" guard contributor 'ln -s c.json build/x'
 expect "guard: contributor refuses a copy into .git" 2 "a write under .git" guard contributor 'cp x .git/hooks/pre-commit'
+expect "guard: contributor refuses a removal of the run state's parent" 2 "the directory that holds the run state's" guard contributor 'rm -rf build'
+expect "guard: contributor refuses a removal of the project" 2 "a write outside the project" guard contributor 'rm -rf .'
 expect "guard: contributor refuses a long option of a writing command" 2 "the cp option --target-directory=/tmp" guard contributor 'cp --target-directory=/tmp x'
 expect "guard: contributor refuses a move onto the body file" 2 "a write to the run state's directory" guard contributor 'mv tmp/x build/pipeline/c.body.md'
 expect "guard: contributor refuses the run state file beside the body file" 2 "naming the run state's directory" guard contributor 'cat build/pipeline/c.body.md build/pipeline/c.json'

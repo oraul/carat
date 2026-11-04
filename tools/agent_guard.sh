@@ -30,9 +30,9 @@
 # name-rev (none with --output, --ext-diff, --textconv, --filters,
 # --upload-pack, --receive-pack, --exec, or grep's -O), branch with listing
 # options, remote -v, remote get-url origin, remote set-head origin main,
-# fetch -q --prune origin, ls-remote with listing options, worktree add,
-# remove, list, and prune of a worktree tmp/.NAME, and checkout -q --detach
-# origin/main inside one (-C).
+# fetch -q --prune origin, ls-remote origin with listing options and
+# branch names, worktree add, remove, list, and prune of a worktree
+# tmp/.NAME, and checkout -q --detach origin/main inside one (-C).
 #   read         adds mkdir and rm under DIR; make -s, -C tmp/.NAME, the
 #                targets dev-build test-build bench-budget metrics
 #                metrics-compare bench, and PREFIX and SPINEL_CACHE_DIR at
@@ -58,12 +58,13 @@
 #
 # A write target (a redirection's target, a path argument of mkdir rm cp
 # mv touch chmod, a file tool's path) has no parent step, and its real
-# path, links followed, lies in the project, outside .git/ and the run
-# state's directory; for read and merger it lies under the real path of
-# DIR, a redirection also under build/stages/, and an agent without DIR
-# edits no file. The contributor's file tools may write the body file
-# itself, never through a link. A link target whose parent step follows a
-# missing directory is refused, since the write resolves it lexically.
+# path, links followed, lies in the project, outside .git/, build/ itself,
+# and the run state's directory; for read and merger it lies under the
+# real path of DIR, a redirection also under build/stages/, and an agent
+# without DIR edits no file. The contributor's file tools may write the
+# body file itself, never through a link. A link target whose parent step
+# follows a missing directory is refused, since the write resolves it
+# lexically.
 #
 # The guard stops an agent that text in the tree led astray; the
 # contributor edits the scripts and the Makefile it runs, so for it the
@@ -88,9 +89,12 @@ case "$profile" in read|merger|contributor) ;; *) refuse "no such profile" ;; es
 # The first JSON string field KEY of the input with its escapes undone; an
 # escaped newline becomes ";", so each line reads as a command of its own,
 # but a newline after an odd run of backslashes is a line continuation the
-# shell joins, so the pair is dropped: 'git \<newline>push' is git push.
+# shell joins, so the pair is dropped: 'git \<newline>push' is git push. A
+# \u escape of a printable ASCII character is that character, any other
+# one "?", which the lexer refuses outside quotes.
 field() {
   tr '\n\r' '  ' | K="$1" awk '
+    BEGIN { HEX = "0123456789abcdef" }
     {
       if (!match($0, "\"" ENVIRON["K"] "\"[ \t]*:[ \t]*\"")) exit
       s = substr($0, RSTART + RLENGTH)
@@ -109,7 +113,17 @@ field() {
             c = ";"
           }
           else if (c == "t" || c == "r") c = " "
-          else if (c == "u") { i += 4; c = "?" }
+          else if (c == "u") {
+            h = tolower(substr(s, i + 1, 4))
+            i += 4
+            c = "?"
+            if (h ~ /^00[0-7][0-9a-f]$/) {
+              v = (index(HEX, substr(h, 3, 1)) - 1) * 16 + index(HEX, substr(h, 4, 1)) - 1
+              if (v == 10) c = ";"
+              else if (v == 9 || v == 13) c = " "
+              else if (v >= 32 && v < 127) c = sprintf("%c", v)
+            }
+          }
         }
         out = out c
       }
@@ -184,7 +198,13 @@ lex() {
 real_path() {
   real=$1
   case "$real" in /*) ;; *) real="$project/$real" ;; esac
-  while :; do case "$real" in ?*/) real=${real%/} ;; *) break ;; esac; done
+  while :; do
+    case "$real" in
+      ?*/) real=${real%/} ;;
+      ?*/.) real=${real%/.} ;;
+      *) break ;;
+    esac
+  done
   hops=0
   while [ -L "$real" ]; do
     hops=$((hops + 1))
@@ -267,6 +287,7 @@ write_target() {
   rel=${real#"$project_real"/}
   case "/$rel/" in */.git/*) refuse "a write under .git, whose hooks and configuration run commands: $1" ;; esac
   case "$rel" in
+    build) refuse "a write of the directory that holds the run state's: $1" ;;
     build/pipeline|build/pipeline/*)
       if [ "$2" = file ] && [ "$profile" = contributor ] && [ "$written" = "$rel" ] && matches "$rel" "$BODY"; then
         return 0
@@ -349,10 +370,18 @@ git_form() {
     fetch)
       options_in "-q --quiet --prune -p origin" "$@" || refuse "git fetch other than of origin without a refspec" ;;
     ls-remote)
+      remote=""
       for a in "$@"; do
         case "$a" in
-          --heads|--tags|-h|-t|-q|--quiet|--exit-code|--refs|origin) ;;
+          --heads|--tags|-h|-t|-q|--quiet|--exit-code|--refs) ;;
           -*) refuse "git ls-remote $a" ;;
+          *)
+            if [ -z "$remote" ]; then
+              [ "$a" = origin ] || refuse "git ls-remote of other than origin: $a"
+              remote=1
+            else
+              matches "$a" '^[A-Za-z0-9._/-]+$' || refuse "git ls-remote of other than branch names: $a"
+            fi ;;
         esac
       done ;;
     worktree)
