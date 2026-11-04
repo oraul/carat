@@ -136,6 +136,17 @@ module DomainGrammarTest
     t.assert_equal("", g.take.register, "take resets the register")
     t.assert_equal(["", 0, "", :none, false, [], ""], [g.operator, g.count, g.register, g.want, g.linewise, g.keys, g.typed], "take resets everything")
     t.assert_true(!g.pending?, "nothing pending after take")
+    g = D::CommandGrammar.new
+    g.digit(50)
+    g.accept("operator.delete", :operator, codes("d"))
+    t.assert_equal(:prompt, g.accept("search.forward", :search, codes("/")), "a search under an operator wants a pattern")
+    t.assert_true(g.wants_pattern? && !g.wants_char?, "the pattern is typed on the command line, not read as a key")
+    c = g.pattern("foo")
+    t.assert_equal([2, "operator.delete", "search.forward", "foo"], [c.count, c.operator, c.action, c.char], "the pattern completes the command as its argument")
+    t.assert_true(!g.wants_pattern?, "the grammar is reset after the pattern")
+    g = D::CommandGrammar.new
+    t.assert_equal(:prompt, g.accept_visual("search.backward", :search, codes("?")), "a visual search wants a pattern")
+    t.assert_equal(:cancel, g.accept_visual("cursor.down", :motion, codes("j")), "a key while a pattern is wanted cancels")
     t.assert_equal("<Esc>", D::CommandGrammar.display(27), "a special key displays in notation")
     t.assert_equal("é", D::CommandGrammar.display(233), "a printable key displays itself")
 

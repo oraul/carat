@@ -1,0 +1,81 @@
+ok   a word
+ok   parentheses are literal
+ok   plus, question mark, and braces are literal
+ok   a bar is literal
+ok   an escaped slash
+ok   an escaped backslash
+ok   non-ASCII text
+ok   dot
+ok   star
+ok   star at the start is literal
+ok   star after a caret is literal
+ok   backslash plus
+ok   backslash equals
+ok   backslash question mark
+ok   count
+ok   count range
+ok   count with a closing backslash
+ok   open count
+ok   count up to
+ok   reversed count
+ok   empty count is a star
+ok   lazy count
+ok   caret anchors at the start
+ok   caret inside is literal
+ok   dollar anchors at the end
+ok   dollar inside is literal
+ok   dollar before a bar anchors
+ok   collection
+ok   range
+ok   negated
+ok   bracket first is a member
+ok   escaped bracket
+ok   dash last is a member
+ok   ampersands are members
+ok   POSIX class
+ok   an unclosed bracket is literal
+ok   reverse range
+ok   group with a multi
+ok   alternation
+ok   percent group
+ok   word start
+ok   whole word
+ok   digits
+ok   white space
+ok   word characters
+ok   keyword characters
+ok   uppercase
+ok   tab
+ok   very magic
+ok   very magic word boundaries
+ok   nomagic dot is literal
+ok   nomagic escaped dot
+ok   very nomagic
+ok   unmatched open
+ok   unmatched close
+ok   nested star
+ok   nested plus
+ok   plus follows nothing
+ok   bad count
+ok   tilde
+ok   back reference
+ok   look-around
+ok   end of line item
+ok   underscore classes
+ok   percent items
+ok   very magic look-around
+ok   too large
+ok   a count past the limit
+ok   too long
+ok   an illegal byte is U+FFFD
+ok   case matched by default
+ok   ignorecase
+ok   smartcase with an uppercase letter
+ok   smartcase without one
+ok   an escaped letter is not uppercase
+ok   backslash c ignores case
+ok   backslash C matches case
+ok   an uppercase letter in a collection counts
+ok   escape for a literal search
+ok   an escaped text matches itself
+domain_vim_pattern: 80 passed, 0 failed

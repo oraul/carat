@@ -235,6 +235,7 @@ Differences from Neovim: there are no `'<` and `'>` marks yet and no `:'<,'>` ra
 | `:sy[ntax] on`, `:sy[ntax] enable`, `:sy[ntax] off` | Turn syntax highlighting on or off for every buffer; it starts on | `E410: Invalid :syntax subcommand: x`, `Not implemented: :syntax list` | `editor_syntax`, `use_cases_ex` |
 | `:se[t] filetype=x`, `:se[t] ft=x`, `:se[t] syntax=x`, `:se[t] syn=x` | Set the current buffer's filetype and its syntax, or its syntax alone (`OFF` for none, `ON` for the filetype's); several arguments in one command | `E518: Unknown option: x`, `Not implemented: :set number` | `editor_syntax`, `use_cases_ex` |
 | `:se[t] ft?`, `:se[t] filetype` | Show the filetype or the syntax | `  filetype=ruby` | `editor_syntax` |
+| `:noh[lsearch]` | TODO: the behavior | `Not implemented: :nohlsearch` | `use_cases_ex` |
 | unknown | Report the command | `E492: Not an editor command: name` | `use_cases_ex`, `editor_cmdline` |
 
 Every command is recognized from its abbreviation to its full name, as the `name[suffix]` notation of the table means: `:vs`, `:vsp`, and `:vsplit` all split vertically, and `:tabf` and `:vsplitx` are unknown; the commands are tried in the order of this table, which is Vim's order where two could match, and the commands plugins declare come after them (`use_cases_ex` checks every spelling of every row, `editor_cmdline` runs `:vsp`, `:spl`, `:wr`, `:wal`, `:xi`, and `:tabfirs`).

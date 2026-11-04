@@ -106,6 +106,8 @@ module DomainRegistersTest
     r.inserted = "typed"
     r.command_line = "w"
     t.assert_equal(["typed", "w", "a.txt", nil], [r.read(".").text, r.read(":").text, r.read_with_file("%", "a.txt").text, r.read_with_file("%", "")], "they read the inserted text, the command line, and the file name")
+    r.search = "pat"
+    t.assert_equal("pat", r.read("/").text, "the search register reads the last pattern")
     t.assert_equal([true, true, true, true, false, false], [D::Registers.read_only?("."), D::Registers.read_only?(":"), D::Registers.read_only?("%"), D::Registers.read_only?("/"), D::Registers.read_only?("a"), D::Registers.read_only?("")], "which names are read-only")
 
     t.finish

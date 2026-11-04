@@ -5,6 +5,7 @@ require_relative "../domain/key"
 require_relative "../domain/key_notation"
 require_relative "../domain/command"
 require_relative "../domain/command_grammar"
+require_relative "../domain/search_prompt"
 require_relative "outcome"
 require_relative "concerns/reporting"
 require_relative "actions/action_table"
@@ -13,6 +14,7 @@ require_relative "insert_text"
 require_relative "edit_command_line"
 require_relative "plugins/plugin_host"
 require_relative "arrange_view"
+require_relative "search/open_search_prompt"
 
 module Carat
   module UseCases
@@ -37,7 +39,11 @@ module Carat
     # key sees current geometry. It owns the input state: the keys
     # the keymap waits on and the grammar. A key arriving while a message
     # of several lines shows dismisses it; Enter and Space do nothing
-    # else, as at Neovim's hit-enter prompt.
+    # else, as at Neovim's hit-enter prompt. A search action makes the
+    # grammar wait for a pattern: OpenSearchPrompt opens the command line,
+    # and once a command-line action closed the prompt the text entered
+    # completes the command, which is dispatched, or the command is dropped
+    # when the prompt was cancelled.
     class HandleKey
       include Reporting
 
@@ -48,6 +54,8 @@ module Carat
       attr_reader :input #: Domain::InputState
       attr_reader :plugins #: PluginHost
       attr_reader :arrange_view #: ArrangeView
+      attr_reader :search_prompt #: Domain::SearchPrompt
+      attr_reader :open_search_prompt #: OpenSearchPrompt
 
       # @rbs @actions: ActionTable
       # @rbs @dispatcher: Dispatcher
@@ -55,8 +63,8 @@ module Carat
       # @rbs @command_line: EditCommandLine
       # @rbs @replays: Integer
 
-      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, plugins: PluginHost, arrange_view: ArrangeView) -> void
-      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, plugins:, arrange_view:)
+      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, plugins: PluginHost, arrange_view: ArrangeView, search_prompt: Domain::SearchPrompt, open_search_prompt: OpenSearchPrompt) -> void
+      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, plugins:, arrange_view:, search_prompt:, open_search_prompt:)
         @keymap = keymap
         @input = input
         @actions = actions
@@ -65,6 +73,8 @@ module Carat
         @command_line = command_line
         @plugins = plugins
         @arrange_view = arrange_view
+        @search_prompt = search_prompt
+        @open_search_prompt = open_search_prompt
         @replays = 0
       end
 
@@ -186,11 +196,29 @@ module Carat
           finish(state, @input.grammar.accept(value, @actions.kind_of(value), keys))
         else
           @dispatcher.call(state, Domain::Command.plain(value))
+          resume(state) if state.mode != Domain::Mode::CMDLINE && @input.grammar.wants_pattern?
         end
       end
 
+      # The search prompt has closed: the text entered finishes the
+      # waiting search command, which is dispatched in the mode the prompt
+      # returned to; a cancelled prompt drops the command.
+      #: (Domain::EditorState) -> void
+      def resume(state)
+        grammar = @input.grammar
+        prompt = @search_prompt
+        unless prompt.entered
+          grammar.reset
+          return
+        end
+        command = grammar.pattern(prompt.take_text)
+        state.mode = Domain::Mode::NORMAL unless Domain::Mode.visual?(state.mode)
+        @dispatcher.call(state, command)
+      end
+
       # Acts on what the grammar said: an operator switches to
-      # operator-pending mode, a complete command returns to normal mode
+      # operator-pending mode, a search opens its prompt, a complete
+      # command returns to normal mode
       # and is dispatched (the command itself may enter insert mode), a
       # cancel returns to normal mode, and pending waits. In a visual mode
       # the mode stays: the dispatched command decides what comes next.
@@ -200,6 +228,8 @@ module Carat
         case result
         when :operator
           state.mode = Domain::Mode::OPERATOR_PENDING
+        when :prompt
+          @open_search_prompt.call(state, @input.grammar.action)
         when :complete
           state.mode = Domain::Mode::NORMAL unless visual
           @dispatcher.call(state, @input.grammar.take)

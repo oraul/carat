@@ -68,12 +68,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: Neovim's `:earlier 10m` and `:later 1f` move through the undo tree by time and by file writes, the quickest way back to the text of an earlier session of work; the `undo-and-registers` change implemented counts of changes only.
 - Fix outline: give `UndoTree` a `seq_at_time(time, older)` that returns the last state made at or before (or the first after) a time, and a `seq_at_save(n, older)` over the write numbers, both over the flat arrays the tree already keeps; have the handler convert `Ns`, `Nm`, `Nh`, and `Nd` to seconds from the clock port and call `Undo#to` with the state found, and `Nf` count writes as Neovim does (`:earlier 1f` goes to the last write, or before the first change when there is none); move the tests in `test/editor_undo.rb` from the "Not implemented" message to the states reached.
 
-## The search register holds nothing
-
-- Where: `Carat::Domain::Registers#read` in `carat/domain/registers.rb`, which answers nil for `/`.
-- Why it matters: `"/p` and `:registers` should show the last search pattern; search arrives with `search-and-substitute`, roadmap item 6.
-- Fix outline: when the search use cases land, store the last pattern in `Registers` (a `search` member like `command_line`), read it for `/`, and add `/` to the order of `RegisterCommandHandler::ORDER`.
-
 ## Plugins cannot highlight ranges or add virtual text
 
 - Where: the plugin API in `carat/plugin_api.rb` and the frame presenter in `carat/adapters/frame_presenter.rb`; `syntax-highlighting` gave plugins tokenizers for whole filetypes and `Host#syntax_group`, but no request to color an arbitrary range of a buffer or to show text that is not in it.
@@ -86,11 +80,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: section 8.2 of `docs/architecture.md` names Markdown, JSON, and YAML too; every other file is drawn plain.
 - Fix outline: one compiled plugin per language under `carat/plugins/<language>/` with its own tokenizer and state encoding, its extensions added to the `Filetype` tables, listed in `config/plugins.caratrc` and `config/default.caratrc`; the tokenizer test table of `test/plugins_ruby.rb` is the model.
 
-## :set handles only filetype and syntax
+## :set handles only filetype, syntax, and the search options
 
-- Where: `Carat::UseCases::SetCommandHandler` in `carat/use_cases/ex/set_command_handler.rb`, which answers `Not implemented: :set name` for the options the editor already has and `E518` for the rest; no `:setlocal`, no `:filetype`.
+- Where: `Carat::UseCases::SetCommandHandler` in `carat/use_cases/ex/set_command_handler.rb`, which handles `filetype`, `syntax`, and the booleans `ignorecase`, `smartcase`, `hlsearch`, and `incsearch` (since `buffer-search`), answers `Not implemented: :set name` for the other options the editor already has and `E518` for the rest; no `:setlocal`, no `:filetype`.
 - Why it matters: `:set number`, `:set ts=4`, `:set nowrap`, and the rest of Neovim's option commands are roadmap item 9, `options-and-config`.
-- Fix outline: grow the handler into the option table that item brings (names, abbreviations, types, global or local), keeping the `filetype` and `syntax` answers; add `:setlocal` and the `no`, `inv`, `!`, `&`, `+=`, `-=` forms there.
+- Fix outline: grow the handler into the option table that item brings (names, abbreviations, types, global or local), keeping the `filetype`, `syntax`, and search answers; add `:setlocal` and the `&`, `+=`, `-=` forms there, with `no`, `inv`, `!`, and `?` moved from the search booleans to every boolean.
 
 ## Themes are fixed in the binary
 
@@ -313,12 +307,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the header of `tools/ci_wait.sh` and step 2 of `.claude/agents/merger.md` (line 20). Advisory of the quality review of `workflow-records`.
 - Why it matters: the one-start wait holds only while the agent harness lets a foreground shell call sleep up to 540 seconds; if it refuses or shortens it, the merger falls back to returning pending, the cost of 36 to 58 merge tool calls a run that `workflow-records` set out to remove.
 - Fix outline: confirm on the first full run (`guard-hardening`) that the merger used one start with no pending note; record the harness behavior in the header and the merger's file, and if it fails, give the workflow the wait between merger starts instead. Queued as part (c) of `workflow-cost`.
-
-## The tools-test help and CLAUDE.md omit tools/ci_wait.sh
-
-- Where: the `tools-test` help line of `Makefile` (line 355) and the `make tools-test` line of the Commands section of `CLAUDE.md`, which name `tools/ci_scope.sh`, `tools/metrics.sh`, the run state, and the gates but not `tools/ci_wait.sh`, whose cases `tools/tools_test.sh` runs. Advisory of the quality review of `workflow-records`.
-- Why it matters: `CLAUDE.md` requires its Commands section to stay in sync with the code, and `make help` is how a reader finds what a target covers.
-- Fix outline: name `tools/ci_wait.sh` in both; `CLAUDE.md` has 23 bytes of room, so the change trims it as the entry "CLAUDE.md has 23 bytes of room in its budget" says. Queued in `docs-currency`.
 
 ## The guard does not refuse Bash ANSI-C quoting
 

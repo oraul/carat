@@ -18,42 +18,44 @@ module Carat
       TAB_LINE_FILL = 8
       VISUAL = 9
       SIGN_COLUMN = 10
+      SEARCH = 11
+      INC_SEARCH = 12
 
-      SYNTAX_FIRST = 11
-      COMMENT = 11
-      CONSTANT = 12
-      STRING = 13
-      CHARACTER = 14
-      NUMBER = 15
-      BOOLEAN = 16
-      FLOAT = 17
-      IDENTIFIER = 18
-      FUNCTION = 19
-      STATEMENT = 20
-      CONDITIONAL = 21
-      REPEAT = 22
-      LABEL = 23
-      OPERATOR = 24
-      KEYWORD = 25
-      EXCEPTION = 26
-      PRE_PROC = 27
-      INCLUDE = 28
-      DEFINE = 29
-      MACRO = 30
-      TYPE = 31
-      STORAGE_CLASS = 32
-      STRUCTURE = 33
-      TYPEDEF = 34
-      SPECIAL = 35
-      SPECIAL_CHAR = 36
-      DELIMITER = 37
-      SPECIAL_COMMENT = 38
-      TODO = 39
-      ERROR = 40
-      COUNT = 41
+      SYNTAX_FIRST = 13
+      COMMENT = 13
+      CONSTANT = 14
+      STRING = 15
+      CHARACTER = 16
+      NUMBER = 17
+      BOOLEAN = 18
+      FLOAT = 19
+      IDENTIFIER = 20
+      FUNCTION = 21
+      STATEMENT = 22
+      CONDITIONAL = 23
+      REPEAT = 24
+      LABEL = 25
+      OPERATOR = 26
+      KEYWORD = 27
+      EXCEPTION = 28
+      PRE_PROC = 29
+      INCLUDE = 30
+      DEFINE = 31
+      MACRO = 32
+      TYPE = 33
+      STORAGE_CLASS = 34
+      STRUCTURE = 35
+      TYPEDEF = 36
+      SPECIAL = 37
+      SPECIAL_CHAR = 38
+      DELIMITER = 39
+      SPECIAL_COMMENT = 40
+      TODO = 41
+      ERROR = 42
+      COUNT = 43
 
       NAMES = [
-        "Normal", "LineNr", "StatusLine", "ErrorMsg", "NonText", "StatusLineNC", "TabLine", "TabLineSel", "TabLineFill", "Visual", "SignColumn",
+        "Normal", "LineNr", "StatusLine", "ErrorMsg", "NonText", "StatusLineNC", "TabLine", "TabLineSel", "TabLineFill", "Visual", "SignColumn", "Search", "IncSearch",
         "Comment", "Constant", "String", "Character", "Number", "Boolean", "Float", "Identifier", "Function",
         "Statement", "Conditional", "Repeat", "Label", "Operator", "Keyword", "Exception",
         "PreProc", "Include", "Define", "Macro",

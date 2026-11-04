@@ -2,7 +2,7 @@
 
 The action names a keymap value may use, in `namespace.action` form, or `plugin.<name>.<action>` for a plugin's action. A keymap value that is not an action name is a key sequence in Vim notation to replay. Actions that `config/default.caratrc` already binds but that a later roadmap item implements are listed under Reserved; pressing their keys shows "Not implemented: name". Every name under Implemented and Reserved is registered in the editor's action table, and `test/use_cases_actions.rb` fails when the table and this file differ. A binding whose value is an action name that neither this file nor a registered plugin declares is reported when the configuration loads, with its file and line, as `.caratrc:3: unknown action foo.bar`, and is not added. A binding is a line `keymap.<mode> <keys> <action>` of a configuration file, and the action `none` removes the binding instead.
 
-In normal, operator-pending, and the visual modes the command grammar reads an action by the kind of the handler the action table registered for it: `cursor.*` and `motion.*` are motions, which move the cursor on their own and give an operator its range; `operator.delete`, `operator.change`, `operator.yank`, `operator.indent`, and `operator.dedent` are the pending operators, which wait for a motion, a text object, or themselves again for a linewise command; `textobject.*` actions are text objects, usable after an operator or in a visual mode; `register.select`, the four find motions, and `visual.replace` read one more key; every other action, the `window.*`, `scroll.*`, `tab.*`, `visual.*`, and `plugin.*` actions included, completes at once with the count and register typed before it. In a visual mode the five operators do not wait: they act on the selection at once, and a motion moves the cursor end of the selection.
+In normal, operator-pending, and the visual modes the command grammar reads an action by the kind of the handler the action table registered for it: `cursor.*` and `motion.*` are motions, which move the cursor on their own and give an operator its range; `operator.delete`, `operator.change`, `operator.yank`, `operator.indent`, and `operator.dedent` are the pending operators, which wait for a motion, a text object, or themselves again for a linewise command; `textobject.*` actions are text objects, usable after an operator or in a visual mode; `register.select`, the four find motions, and `visual.replace` read one more key; `search.forward` and `search.backward` read a pattern on the command line and are then motions; every other action, the `window.*`, `scroll.*`, `tab.*`, `visual.*`, and `plugin.*` actions included, completes at once with the count and register typed before it. In a visual mode the five operators do not wait: they act on the selection at once, and a motion moves the cursor end of the selection.
 
 In the Modes column, `visual` stands for the three visual maps, `visual`, `visual_line`, and `visual_block`, which bind the same keys. A `plugin.<name>.<action>` action is routed to the plugin that declared it in its manifest; a plugin's default bindings live in its manifest, not in `config/default.caratrc`, and a user binding of the same keys replaces them.
 
@@ -43,6 +43,14 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `motion.screen_top` | normal, operator_pending, visual | Line count from the top of the window; linewise |
 | `motion.screen_middle` | normal, operator_pending, visual | Middle of the visible lines; linewise |
 | `motion.screen_bottom` | normal, operator_pending, visual | Line count from the bottom of the window; linewise |
+| `search.forward` | normal, operator_pending, visual | `/`: read a pattern on the command line, then the count-th match after the cursor; exclusive |
+| `search.backward` | normal, operator_pending, visual | `?`: read a pattern, then the count-th match before the cursor; exclusive |
+| `search.next` | normal, operator_pending, visual | `n`: the last search again in its direction; exclusive |
+| `search.previous` | normal, operator_pending, visual | `N`: the last search in the other direction; exclusive |
+| `search.word_forward` | normal, operator_pending, visual | `*`: the next match of the keyword under or after the cursor as a whole word; exclusive |
+| `search.word_backward` | normal, operator_pending, visual | `#`: the previous match of that word; exclusive |
+| `search.partial_word_forward` | normal, operator_pending, visual | `g*`: as `*` without the word boundaries |
+| `search.partial_word_backward` | normal, operator_pending, visual | `g#`: as `#` without the word boundaries |
 | `operator.delete` | normal, operator_pending, visual | Delete the range into the register; doubled, count lines; in visual mode on the selection at once |
 | `operator.change` | normal, operator_pending, visual | Delete the range into the register and enter insert mode; doubled, count lines; in visual mode on the selection at once |
 | `operator.yank` | normal, operator_pending, visual | Copy the range into the register; doubled, count lines; in visual mode on the selection at once |
@@ -110,6 +118,8 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `insert.tab` | insert | Insert a tab or spaces |
 | `cmdline.execute` | cmdline | Run the command line |
 | `cmdline.backspace` | cmdline | Remove the last character, or leave when empty |
+| `cmdline.history_older` | cmdline | Recall the next older entry of the prompt's history that starts with the typed text |
+| `cmdline.history_newer` | cmdline | Recall the next newer entry, or the typed text after the newest |
 | `message.quit_hint` | normal | Show the quit hint |
 | `history.undo` | normal | Undo count states along the current branch of the undo tree |
 | `history.redo` | normal | Redo count states along the current branch |
@@ -165,4 +175,4 @@ The keys marked "in the tree" are bound in the tree window's own keymap, which t
 
 ## Reserved
 
-`search.forward`, `search.backward`, `search.next`, `search.previous`.
+None: every action `config/default.caratrc` binds is implemented.

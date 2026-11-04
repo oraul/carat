@@ -37,5 +37,5 @@ ok   the table holds every core action
 ok   the plugin namespace handler returns the host's refusal as an Outcome
 ok   the action table and docs/actions.md list the same actions
 ok   a drift is reported in both directions
-ok   the Plugins section is not read as core actions and the Reserved one is
+ok   the Plugins section is not read as core actions and the Implemented one is
 use_cases_actions: 40 passed, 0 failed

@@ -135,4 +135,12 @@ ok   normal mode draws no selection
 ok   the current window, at the bottom, draws its selection
 ok   the other window on the same buffer draws none
 ok   on any row
-adapters_frame_presenter: 137 passed, 0 failed
+ok   nothing is highlighted before a search
+ok   every match is in the Search group
+ok   the row is repainted when the highlight appears
+ok   a hidden highlight is not drawn
+ok   nohlsearch draws nothing
+ok   an empty match is not drawn, a longer one is
+ok   the previewed match is in the IncSearch group
+ok   a backward search prompt shows a question mark
+adapters_frame_presenter: 145 passed, 0 failed

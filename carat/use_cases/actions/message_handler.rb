@@ -3,16 +3,12 @@ require_relative "action_table"
 
 module Carat
   module UseCases
-    # An action that only answers a message: the quit hint on <C-c>, the
-    # register prefix (which the grammar consumes, so it is never run),
-    # and the actions config/default.caratrc binds but a later roadmap item
-    # implements, which answer "Not implemented: name".
+    # An action that only answers a message: the quit hint on <C-c> and
+    # the register prefix (which the grammar consumes, so it is never
+    # run).
     class MessageHandler < ActionHandler
       QUIT_HINT = "Type  :q!  and press <Enter> to abandon all changes and exit Carat"
-
-      # The reserved actions, listed under Reserved in docs/actions.md.
-      RESERVED = ["search.forward", "search.backward", "search.next", "search.previous"]
-      private_constant :QUIT_HINT, :RESERVED
+      private_constant :QUIT_HINT
 
       # @rbs @text: String
 
@@ -33,12 +29,6 @@ module Carat
       def self.register(table)
         table.register("message.quit_hint", MessageHandler.new(text: QUIT_HINT, kind: :action))
         table.register("register.select", MessageHandler.new(text: "", kind: :register))
-        i = 0
-        while i < RESERVED.length
-          name = RESERVED[i]
-          table.register(name, MessageHandler.new(text: "Not implemented: #{name}", kind: :action))
-          i += 1
-        end
       end
     end
   end

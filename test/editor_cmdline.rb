@@ -252,6 +252,21 @@ module EditorCmdlineTest
     h.type(":vsplitx<CR>")
     t.assert_equal("E492: Not an editor command: vsplitx", h.message_row, "a spelling longer than the full name is unknown")
 
+    # The command history: <Up> and <Down> recall by the typed prefix.
+    h = editor(files_with("ab\n"))
+    h.type(":set ft?<CR>:tabf<CR>:<Up>")
+    t.assert_equal(":tabf", h.message_row, "up recalls the last command")
+    h.type("<Up>")
+    t.assert_equal(":set ft?", h.message_row, "up again recalls the one before")
+    h.type("<Up>")
+    t.assert_equal(":set ft?", h.message_row, "past the oldest nothing changes")
+    h.type("<Down><Down>")
+    t.assert_equal(":", h.message_row, "down past the newest gives back the typed text")
+    h.type("s<Up>")
+    t.assert_equal(":set ft?", h.message_row, "up recalls only commands starting with the typed text")
+    h.type("<Esc>:<Down>")
+    t.assert_equal(":", h.message_row, "down before any recall changes nothing")
+
     t.finish
   end
 end

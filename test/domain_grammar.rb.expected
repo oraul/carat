@@ -42,6 +42,12 @@ ok   typed shows the character
 ok   take resets the register
 ok   take resets everything
 ok   nothing pending after take
+ok   a search under an operator wants a pattern
+ok   the pattern is typed on the command line, not read as a key
+ok   the pattern completes the command as its argument
+ok   the grammar is reset after the pattern
+ok   a visual search wants a pattern
+ok   a key while a pattern is wanted cancels
 ok   a special key displays in notation
 ok   a printable key displays itself
 ok   cursor and motion actions are listed as motions
@@ -53,4 +59,4 @@ ok   count_or with no count
 ok   count_or with a count
 ok   a plain command has no operator
 ok   reversed flips the direction
-domain_grammar: 55 passed, 0 failed
+domain_grammar: 61 passed, 0 failed

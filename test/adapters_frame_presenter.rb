@@ -10,7 +10,9 @@ module AdaptersFramePresenterTest
   UI = Carat::Domain::PluginUi.new
   CACHE = Carat::Domain::LineCache.new
   ARRANGE = Carat::UseCases::ArrangeView.new(cache: CACHE)
-  P = Carat::Adapters::FramePresenter.new(input: INPUT, plugin_ui: UI, cache: CACHE)
+  LAST = Carat::Domain::LastSearch.new
+  PROMPT = Carat::Domain::SearchPrompt.new
+  P = Carat::Adapters::FramePresenter.new(input: INPUT, plugin_ui: UI, cache: CACHE, last_search: LAST, search_prompt: PROMPT)
 
   # Draws the state at a size as the editor does: the size goes into the
   # state, ArrangeView lays the windows out, and the presenter reads it.
@@ -442,6 +444,39 @@ module AdaptersFramePresenterTest
     t.assert_equal([VIS, VIS, VIS], highlights(f, 4, 3), "the current window, at the bottom, draws its selection")
     t.assert_equal([NOR, NOR, NOR], highlights(f, 0, 3), "the other window on the same buffer draws none")
     t.assert_equal([NOR, NOR, NOR], highlights(f, 1, 3), "on any row")
+
+    # Search matches: the Search group on every non-empty match while
+    # hlsearch is on and the matches are shown, IncSearch on the preview.
+    sea = D::Highlight::SEARCH
+    s = state_for(["a ba", "xyz"], "a.txt")
+    f = draw(s, 6, 20)
+    t.assert_equal([NOR, NOR, NOR, NOR], highlights(f, 0, 4), "nothing is highlighted before a search")
+    LAST.remember(D::VimPattern.compile("a", false, false), true)
+    f = draw(s, 6, 20)
+    t.assert_equal([sea, NOR, NOR, sea], highlights(f, 0, 4), "every match is in the Search group")
+    t.assert_equal(true, f.dirty[0] == 1, "the row is repainted when the highlight appears")
+    LAST.hide
+    f = draw(s, 6, 20)
+    t.assert_equal([NOR, NOR, NOR, NOR], highlights(f, 0, 4), "a hidden highlight is not drawn")
+    LAST.show
+    s.options.hlsearch = false
+    f = draw(s, 6, 20)
+    t.assert_equal([NOR, NOR, NOR, NOR], highlights(f, 0, 4), "nohlsearch draws nothing")
+    s.options.hlsearch = true
+    LAST.remember(D::VimPattern.compile("x*", false, false), true)
+    f = draw(s, 6, 20)
+    t.assert_equal([sea, NOR, NOR], highlights(f, 1, 3), "an empty match is not drawn, a longer one is")
+    LAST.preview_at(D::VimPattern.compile("y", false, false), 1, 1, 2)
+    f = draw(s, 6, 20)
+    t.assert_equal([NOR, D::Highlight::INC_SEARCH, NOR], highlights(f, 1, 3), "the previewed match is in the IncSearch group")
+    LAST.end_preview
+    LAST.hide
+    PROMPT.open(false, D::Mode::NORMAL, 0, 0, 0, 0)
+    s.mode = D::Mode::CMDLINE
+    s.cmdline = "ab"
+    f = draw(s, 6, 20)
+    t.assert_equal("?ab", f.row_text(5), "a backward search prompt shows a question mark")
+    PROMPT.close
 
     t.finish
   end

@@ -134,7 +134,7 @@ module AdaptersScreenPresenterTest
     cache = D::LineCache.new
     state.resize(3, 12)
     Carat::UseCases::ArrangeView.new(cache: cache).call(state)
-    drawn = Carat::Adapters::FramePresenter.new(input: D::InputState.new, plugin_ui: D::PluginUi.new, cache: cache).call(state)
+    drawn = Carat::Adapters::FramePresenter.new(input: D::InputState.new, plugin_ui: D::PluginUi.new, cache: cache, last_search: D::LastSearch.new, search_prompt: D::SearchPrompt.new).call(state)
     screen.present(drawn)
     bytes = terminal.last_write
     t.assert_true(bytes.include?("a<9b>b<9d>c"), "C1 controls are written as markers")
@@ -220,7 +220,7 @@ module AdaptersScreenPresenterTest
     state = D::EditorState.new(tabs: D::TabList.new(window: D::Window.new(buffer: D::Buffer.new(lines: lines, path: "a.txt", line_ending: "\n"))), options: options)
     cache = D::LineCache.new
     arrange = Carat::UseCases::ArrangeView.new(cache: cache)
-    frames = Carat::Adapters::FramePresenter.new(input: D::InputState.new, plugin_ui: D::PluginUi.new, cache: cache)
+    frames = Carat::Adapters::FramePresenter.new(input: D::InputState.new, plugin_ui: D::PluginUi.new, cache: cache, last_search: D::LastSearch.new, search_prompt: D::SearchPrompt.new)
     clock = Carat::Doubles::ManualClock.new
     terminal = Carat::Doubles::FakeTerminal.new(clock: clock, rows: 5, cols: 20)
     screen = presenter(terminal)
