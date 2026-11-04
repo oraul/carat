@@ -326,12 +326,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a pull request that only moves code files to a Markdown or `openspec/` path is listed by the new paths, so CI skips `spin check`, and the push to `main` then skips it as a passed head.
 - Fix outline: list the paths without rename detection, together with the fix of the entry "The CI scope script word-splits the changed paths", and add a `tools/tools_test.sh` case. Queued in `ci-hardening`.
 
-## check writes the phase.check record that backs its own stages
-
-- Where: `check_stages` in `tools/run_state.sh` (line 337), which still writes `phase.check` itself, and `trusted_state`, which hands that record to a resumed run as the workflow's. What remains of the periodic security Low (5) at 8c340cd after `pipeline-speed-b` made a stage record count only at the commit passed as backed. Quality finding of `pipeline-speed-b` at d820b39b39da.
-- Why it matters: after a forged `MAKE=true sh tools/run_state.sh check CHANGE` at the head, a resumed run skips the checker (`doneAtHead`), sends `check:pass:HEAD` in `RECORDS`, which matches, and `gates.sh stages` passes on the forged stages, leaving `diagnose` and `gates`, which CI leaves out, unchecked.
-- Fix outline: once `main`'s workflow records `phase.check` from the checker's result (`phaseDone`, merged with `pipeline-speed-b`), drop the write from `check_stages`, or have `trusted` drop a `phase.check` the workflow did not record; add a `tools/tools_test.sh` case that a check run alone leaves no `phase.check`. Queued in `pipeline-speed-c`.
-
 ## The search budget charges a line's length on ASCII lines too
 
 - Where: `Carat::Domain::Search.match_at` in `carat/domain/search.rb` (line 101), which charges every match tried its line's length as a fixed cost; the risk note at line 50 of the archived design of `buffer-search` and the Search rows of `docs/compatibility.md`. Quality advisory of `buffer-search` at a36858a2bc88.
@@ -488,12 +482,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the bytes were taken from rules outside the change's scope, softening their wording.
 - Fix outline: restore "explicitly" on both lines and take the bytes from prose that states no rule. Queued in `docs-currency`.
 
-## budget_line prints a dash for missing wall minutes
-
-- Where: `budget_line` in `tools/run_state.sh` (line 608). Quality advisory of `pipeline-speed` at 1d187291be30.
-- Why it matters: a run with total tokens but no wall minutes recorded reports `in - minutes`.
-- Fix outline: name the minutes only when `metric.wall_min` is set, as the budget does with `time_limit`. Queued in `pipeline-durability`.
-
 ## The queue item reaches the scouts as the resume agent's copy
 
 - Where: `.claude/workflows/deliver-change.js` (line 477), which takes the brief from the `item:` line of `plan-needed` as the resume agent returned it. Quality advisory of `pipeline-speed` at b0df2ac092ed.
@@ -536,12 +524,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: after a passing quality review followed by a bench or CI fix, `blockedAt` is not that commit, so `files` is null and a test-only fix gets the whole branch reviewed again, where the old `priorQuality` offered only the fix diff; the review costs tokens and rounds the fix does not need.
 - Fix outline: when the last quality review passed and no blocked files are recorded at it, give the scope command with no files (tests and records only), with a case in the workflow's tests. Queued in `implement-contracts`.
 
-## add_note strips a leading commit with two different patterns
-
-- Where: `tools/run_state.sh` line 577, `add_note`, whose `sed` strips a leading commit as `[0-9a-f]{7,40}` while its `awk` side strips `[0-9a-f]+`. Quality advisory at d820b39 in `pipeline-speed-b`.
-- Why it matters: an advisory with no commit whose first word is made of hex letters (add, dead, decade) is never matched against the recorded notes, so it is noted twice and reaches the backlog twice.
-- Fix outline: strip the same 7-to-40 hex pattern on both sides, for example both in `awk`, with a `tools/tools_test.sh` case for a note starting with `add`. Queued in `pipeline-speed-c`.
-
 ## The merge's stages gate cannot pass a renamed or removed stage
 
 - Where: `tools/gates.sh` line 195, the merge's stages gate, which reads `CHECK_STAGES` from main's Makefile with `sed`, while `tools/run_state.sh check` reads the list with `make -s stages`. Quality advisory at d820b39 in `pipeline-speed-b`; the archived design of `pipeline-speed-b` does not cover the case.
@@ -572,44 +554,56 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: both patterns refuse a leading dot, so a blocking finding in `.claude/` or `.github/`, the files pipeline changes edit, always sends the next quality review to the whole branch.
 - Fix outline: admit a leading-dot segment other than `..` in both patterns, keeping the parent-step check, with a `tools/tools_test.sh` scope case for an agent file under `.claude/agents/`. Queued in `implement-contracts`.
 
-## check records stages on a dirty tree
-
-- Where: `check_stages` in `tools/run_state.sh` line 309. Periodic security Low (4) at e20c83c.
-- Why it matters: stages are recorded at HEAD without refusing modified tracked files or untracked sources `spin` compiles, so a passing record can describe code that is not the commit; only the checker's instructions prevent it.
-- Fix outline: refuse when `git status --porcelain --untracked-files=no` is non-empty or an untracked file lies under `carat/`, `bin/`, `test/`, or `bench/`, with a `tools/tools_test.sh` case. Queued in `pipeline-speed-c`.
-
 ## n and N after :s with the i or I flag keep the flag's case
 
 - Where: `SubstituteLines#remember` in `carat/use_cases/search/substitute_lines.rb:116`, which hands `LastSearch` the pattern compiled under the substitute's `i` or `I` flag. Quality advisory at 76ad185.
 - Why it matters: after `:s/A/x/i`, `n`, `N`, and hlsearch ignore case where Vim's `n` follows `ignorecase` and `smartcase`, so the next search finds other matches than Vim's.
-- Fix outline: compile the search copy with `VimPattern.compile` under the options before `remember`, with a row in `test/editor_substitute.rb` that runs `n` after `:s/A/x/i` with `noignorecase`.
+- Fix outline: compile the search copy with `VimPattern.compile` under the options before `remember`, with a row in `test/editor_substitute.rb` that runs `n` after `:s/A/x/i` with `noignorecase`. Queued in `substitute-tidy`.
 
 ## :s with the c or l flag keeps its replacement before refusing
 
 - Where: `SubstituteLines#call` in `carat/use_cases/search/substitute_lines.rb:55`, where `keep_replacement` runs before the `c` and `l` flags are refused at line 60. Quality advisory at 127a14f.
 - Why it matters: `:s/a/b/c` answers `Not implemented: :s flag c` but the next `:&` substitutes `b` with the previous pattern, a substitute the user never ran.
-- Fix outline: refuse `c` and `l` before keeping the replacement, with a row that runs `:&` after a refused `:s/a/b/c`.
+- Fix outline: refuse `c` and `l` before keeping the replacement, with a row that runs `:&` after a refused `:s/a/b/c`. Queued in `substitute-tidy`.
 
 ## Replacement inserts a group in two copies of the same block
 
 - Where: `Replacement` in `carat/domain/replacement.rb:95` (`\0` to `\9`) and line 123 (`&`). Quality advisories at 76ad185 and 127a14f.
 - Why it matters: the five lines that append a group, recased when `\u`, `\l`, `\U`, or `\L` is set and resetting the one-character case unless the group is empty, are repeated, so a fix to one can miss the other.
-- Fix outline: extract a private `insert_group(out, group, one, all)` that returns the new `one`, or read `&` as group 0 in the `\0` to `\9` branch, keeping `lh` and `j` at their figures.
+- Fix outline: extract a private `insert_group(out, group, one, all)` that returns the new `one`, or read `&` as group 0 in the `\0` to `\9` branch, keeping `lh` and `j` at their figures. Queued in `substitute-tidy`.
 
 ## LastSubstitute holds case and print as integer codes
 
 - Where: `LastSubstitute` in `carat/domain/last_substitute.rb:11`, the members `case_mode` (0 by the options, 1 ignored, 2 matched) and `print` (0 none, 1 the line, 2 with its number). Quality advisory at 76ad185.
 - Why it matters: every reader decodes the codes by a comment, and the member `print` shadows `Kernel#print` inside the record.
-- Fix outline: hold symbols (`:options`, `:ignore`, `:match`; `:none`, `:line`, `:numbered`), as `Quit#call` takes its way, and rename the member `print_mode`.
+- Fix outline: hold symbols (`:options`, `:ignore`, `:match`; `:none`, `:line`, `:numbered`), as `Quit#call` takes its way, and rename the member `print_mode`. Queued in `substitute-tidy`.
 
 ## ExRange keeps a given member no caller reads
 
 - Where: `ExRange` in `carat/domain/ex_range.rb:12`, whose `given` member is set on every path but read only by `test/domain_ex_range.rb`. Quality advisory at 76ad185.
 - Why it matters: a dead member costs a slot per range and suggests a behavior that does not exist.
-- Fix outline: drop `given` from `ExRange`, its map entry, and the test's columns, or use it where `buffer-global` needs to tell a default range from a given one.
+- Fix outline: drop `given` from `ExRange`, its map entry, and the test's columns, or use it where `buffer-global` needs to tell a default range from a given one. Queued in `substitute-tidy`.
 
 ## SubstituteArgs.parse tests for a leading blank it never receives
 
 - Where: `SubstituteArgs.parse` in `carat/domain/substitute_args.rb:45`, the `first != 32 && first != 9` tests. Quality advisory at 127a14f.
 - Why it matters: `ExGrammar` strips the arguments before they reach `parse`, so the tests never decide and read as if a blank delimiter were handled.
-- Fix outline: drop the two tests, or say in the method's comment that `parse` accepts unstripped text and add a row that passes it.
+- Fix outline: drop the two tests, or say in the method's comment that `parse` accepts unstripped text and add a row that passes it. Queued in `substitute-tidy`.
+
+## CI failures are not classified before a fix round
+
+- Where: the CI step of `.claude/workflows/deliver-change.js` and the merger's brief under `.claude/agents/`, where a red CI goes back to the contributor as a fix round whatever its cause. From the user's insights review in the brief of `pipeline-speed-c`.
+- Why it matters: a flaky test or an infrastructure failure (a runner, a cache, a network fetch) would cost a contributor round and a push of the one-push budget for a commit that changes nothing. Low value now: CI passed first in 17 of 17 recorded runs, so no round has been lost to it yet.
+- Fix outline: have the CI result name its class (flaky, infrastructure, or code) from the failing step and log, retry the first two once without a fix round or a push, and count only a code failure as rework, with a `tools/tools_test.sh` case per class. Queue it when a CI first pass fails for a cause other than code.
+
+## Changes are delivered one at a time in one tree
+
+- Where: `/deliver` and `.claude/workflows/deliver-change.js`, which run one change per checkout. From the user's insights review in the brief of `pipeline-speed-c`.
+- Why it matters: parallel delivery in separate git worktrees would cut wall time (`buffer-substitute` took 114.4 minutes) but not tokens, goal 1's first measure, and nearly every feature edits the same files (`config/default.caratrc`, `docs/actions.md`, `docs/compatibility.md`, `docs/codebase-map.md`, and `docs/queue.md`), so two parallel features would conflict at the merge and each would need its checks again.
+- Fix outline: first measure how often two consecutive queue items share no edited file; if enough do, run such pairs in separate worktrees with separate run states and serialize their merges, each rebuilt and checked against the merged `main`.
+
+## The pipeline has no replay benchmark
+
+- Where: the pipeline as a whole; its only measures are the per-run rows of `docs/metrics.tsv`. From the user's insights review in the brief of `pipeline-speed-c`.
+- Why it matters: a workflow change is judged on the next live runs, whose changes differ, so its effect on tokens and rounds is mixed with the change's own size; a replay of a fixed past change would isolate it, but at about 1M total tokens per replay, near a medium budget each, a self-tuning loop of replays costs more than the runs it would tune.
+- Fix outline: once the per-run figures settle, replay one small recorded change at a pinned commit after a workflow change that claims a saving, and compare its total tokens, calls, and rounds with the recorded row; no automatic tuning loop.
