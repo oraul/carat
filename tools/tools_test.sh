@@ -812,7 +812,21 @@ expect "guard: planner reads the run states" 0 "^$" guard read 'sh tools/run_sta
 expect "guard: planner prepares its directory" 0 "^$" guard read 'mkdir -p build/plan && rm -f build/plan/goals.md' build/plan
 expect "guard: checker runs the checks" 0 "^$" guard read 'git status --porcelain --untracked-files=no && sh tools/run_state.sh check c > build/stages/c/check.out 2>&1'
 expect "guard: checker records the figures first" 0 "^$" guard read 'sh tools/run_state.sh metric c phase.check=1200/5 first.check=0 rework=2 extra=1 stop=none estimate=small planned=0'
-expect "guard: retrospective budgets the last row's change" 0 "^$" guard read 'tail -1 docs/metrics.tsv | cut -f1; sh tools/run_state.sh budget prev && sh tools/run_state.sh note c overrun \"prev: over: estimated small\"'
+expect "guard: retrospective budgets the last row's change" 0 "^$" guard close 'tail -1 docs/metrics.tsv | cut -f1; sh tools/run_state.sh budget prev && sh tools/run_state.sh note c overrun \"prev: over: estimated small\"'
+expect "guard: retrospective checks the squash commit" 0 "^$" guard close 'sh tools/run_state.sh show c && git show --stat abc1234 && BASE=abc1234~1 sh tools/gates.sh trailer && BASE=abc1234~1 sh tools/gates.sh content docs'
+expect "guard: retrospective records its notes" 0 "^$" guard close 'sh tools/run_state.sh note c retro \"x; evidence: 3\" && sh tools/run_state.sh budget c && sh tools/run_state.sh review-due c && sh tools/run_state.sh status'
+# The closing start runs the run's last records: the phases no merge gate
+# reads, notes, and the figures, never a review or a gated phase.
+expect "guard: close records a closing phase" 0 "^$" guard close 'sh tools/run_state.sh phase c package abc1234 && sh tools/run_state.sh phase c ci abc1234 && sh tools/run_state.sh phase c merge abc1234 && sh tools/run_state.sh phase c retro abc1234 && sh tools/run_state.sh phase c report abc1234 && sh tools/run_state.sh note c extra-round \"why\" && sh tools/run_state.sh metric c phase.check=1200/5 first.check=1 rework=0 stop=none'
+for gated in check quality security bench; do
+  expect "guard: close refuses a $gated phase" 2 "the close profile records only" guard close "sh tools/run_state.sh phase c $gated abc1234"
+done
+expect "guard: close refuses a phase without its commit" 2 "the close profile records only" guard close 'sh tools/run_state.sh phase c report'
+expect "guard: close refuses a phase at a word that is not a commit" 2 "the close profile records only" guard close 'sh tools/run_state.sh phase c report HEAD'
+expect "guard: close refuses a review record" 2 "tools/run_state.sh review" guard close 'sh tools/run_state.sh review c security pass x abc1234'
+expect "guard: close refuses a push" 2 "git push" guard close 'git push origin x'
+expect "guard: close names its profile" 2 "refused for the close profile" guard close 'sh tools/run_state.sh set c pushes 0'
+expect "guard: read refuses a closing phase" 2 "the close profile records only" guard read 'sh tools/run_state.sh phase c report abc1234'
 expect "guard: checker reads a failing log and compares" 0 "^$" guard read 'tail -60 build/stages/c/lint.log; grep -n -m 20 -E \"FAIL|rror\" build/stages/c/lint.log; sh tools/run_state.sh bench c; sh tools/run_state.sh show c'
 expect "guard: benchmark prepares the base" 0 "^$" guard read 'git worktree add --detach tmp/.base origin/main || git -C tmp/.base checkout -q --detach origin/main'
 expect "guard: benchmark builds the base" 0 "^$" guard read 'make -C tmp/.base dev-build test-build bench-budget PREFIX=/w/tmp/.toolchain SPINEL_CACHE_DIR=/w/build/spinel-cache'
@@ -822,8 +836,6 @@ expect "guard: quality reviewer reads the diff and notes" 0 "^$" guard read 'git
 expect "guard: quality reviewer scopes a fix round" 0 "^$" guard read 'sh tools/run_state.sh scope c abc1234 tools/x.sh carat/domain/buffer.rb && git diff abc1234 HEAD'
 expect "guard: quality reviewer runs the periodic mode" 0 "^$" guard read 'git fetch -q origin && git worktree add --detach tmp/.review-quality origin/main && git log --name-only -5 origin/main && git worktree remove --force tmp/.review-quality'
 expect "guard: security reviewer runs its steps" 0 "^$" guard read 'git status --porcelain --untracked-files=no && git remote set-head origin main && git fetch -q origin && git -C tmp/.review-security checkout -q --detach origin/main && sh tools/run_state.sh note c security \"Low (3) tools/x.sh:1 a title; fix: an outline\"'
-expect "guard: reporter checks the squash commit" 0 "^$" guard read 'sh tools/run_state.sh show c && git show --stat abc1234 && BASE=abc1234~1 sh tools/gates.sh trailer && BASE=abc1234~1 sh tools/gates.sh content docs'
-expect "guard: retrospective records its notes" 0 "^$" guard read 'sh tools/run_state.sh metric c phase.check=1200/5 first.check=1 rework=0 ci_min=5.0 estimate=large && sh tools/run_state.sh note c retro \"x; evidence: 3\" && sh tools/run_state.sh budget c && sh tools/run_state.sh review-due c && sh tools/run_state.sh status'
 expect "guard: merger waits and records CI" 0 "^$" guard merger 'sh tools/run_state.sh metric c rework=0 && sh tools/run_state.sh show c && sh tools/ci_wait.sh 30 && sh tools/run_state.sh set c ci \"green abc1234\"'
 expect "guard: merger runs main's merge gates" 0 "^$" guard merger 'git worktree remove --force tmp/.merge-gates; git worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: merger refuses the branch's merge gates" 2 "the branch's tools/gates.sh merge" guard merger 'CHANGE=c RECORDS=\"security:pass:abc1234\" sh tools/gates.sh merge build/pipeline/c.body.md'

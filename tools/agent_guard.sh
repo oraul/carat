@@ -60,6 +60,11 @@
 #                mv touch chmod; sh tools/run_state.sh show status pending
 #                get budget history, push CHANGE [--ci-fix], set CHANGE pr
 #                N; sh tools/gates.sh GATE... or pr-body BODY
+#   close        the read profile, plus sh tools/run_state.sh phase CHANGE
+#                NAME COMMIT with NAME one of CLOSE_PHASES, the phases
+#                no merge gate reads: the retrospective's closing start
+#                runs the run's last records, never review and never the
+#                phase of check, quality, security, or bench
 # Any other profile refuses every call.
 #
 # A write target (a redirection's target, a path argument of mkdir rm cp
@@ -84,13 +89,16 @@ MAKE_VARS='T S FILE TESTS SCENARIOS BASE_METRICS ALLOC_BUDGET ANALYSIS_ROUNDS DI
 BRANCH='^(feature|bugfix|hotfix|release|chore)/[a-z0-9][a-z0-9-]*$'
 CHANGE_NAME='^[a-z0-9][a-z0-9-]*$'
 BODY='^build/pipeline/[a-z0-9][a-z0-9-]*[.]body[.]md$'
+CLOSE_PHASES='plan implement package ci merge retro report'
 
 refuse() {
-  echo "agent_guard: refused for the $profile profile: $*. Each profile runs only the commands its agent needs, listed in tools/agent_guard.sh: search with the Grep or Read tool, put text that names a refused form into a file with the Write tool, and push only through tools/run_state.sh push." >&2
+  echo "agent_guard: refused for the ${shown:-$profile} profile: $*. Each profile runs only the commands its agent needs, listed in tools/agent_guard.sh: search with the Grep or Read tool, put text that names a refused form into a file with the Write tool, and push only through tools/run_state.sh push." >&2
   exit 2
 }
 
-case "$profile" in read|merger|contributor) ;; *) refuse "no such profile" ;; esac
+# close is the read profile with the closing phase records (run_state_form).
+closing=0
+case "$profile" in read|merger|contributor) ;; close) shown=close closing=1 profile=read ;; *) refuse "no such profile" ;; esac
 
 # The first JSON string field KEY of the input with its escapes undone; an
 # escaped newline becomes the character \001, which lex reads as the shell
@@ -527,6 +535,9 @@ run_state_form() {
         contributor:pr) matches "$4" '^[0-9]+$' || refuse "a pull request record other than a number" ;;
         *) refuse "tools/run_state.sh set of $3" ;;
       esac ;;
+    read:phase)
+      [ "$closing" = 1 ] && [ $# -eq 4 ] && matches "$2" "$CHANGE_NAME" && options_in "$CLOSE_PHASES" "$3" && matches "$4" '^[0-9a-f]{7,40}$' ||
+        refuse "tools/run_state.sh phase, which the workflow runs; the close profile records only CHANGE NAME COMMIT, NAME one of $CLOSE_PHASES" ;;
     *) refuse "tools/run_state.sh $verb, which the workflow or another agent runs" ;;
   esac
 }
