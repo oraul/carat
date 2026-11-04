@@ -397,3 +397,75 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `HandleKey#resume` in `carat/use_cases/handle_key.rb` (line 215), which sets the mode to normal outside visual although `CancelCommandLine` and `ExecuteCommandLine` already restored the prompt's return mode. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
 - Why it matters: two places decide the mode after the prompt, so a change to the return mode of the prompt has to be made in both or the second one overrides it.
 - Fix outline: drop the line and keep the return mode the command line restores, checked by the existing `editor_search` rows. Queued in `search-structure`.
+
+## The architecture omits three search use cases and the search options of :set
+
+- Where: `docs/architecture.md` section 5.1 (line 167), which names `FindMatch` and `JumpToMatch` but not `OpenSearchPrompt`, `PreviewSearch`, or `RecallHistory`, and line 173, which says `:set` handles filetype and syntax only. Periodic quality at 0b17324.
+- Why it matters: the architecture is binding and is where a change starts; a reader of section 5 misses three use cases and the four search options `SetCommandHandler` now takes. The file is at 88,054 of its 88,064-byte budget.
+- Fix outline: name the three use cases in 5.1 and drop the "only" clause at 173 (or list the search options), within the budget. Queued in `docs-currency`.
+
+## The pattern-source cut and the prompt prefix are written twice
+
+- Where: `VimPattern.pattern_end(text, forward ? 47 : 63)` with bare byte codes in `carat/use_cases/search/find_match.rb:68` and `carat/use_cases/search/preview_search.rb:37`, and the forward-to-`/`-or-`?` choice at `find_match.rb:159` repeating `SearchPrompt#prefix` (`carat/domain/search_prompt.rb:61`). Periodic quality at 0b17324.
+- Why it matters: two use cases decide where a pattern ends and which delimiter a direction uses, with unnamed byte codes, so a fix to one (such as the collection scan of `pattern_end`) can miss the other.
+- Fix outline: one domain function for the pattern source with named delimiter constants and one prefix helper, called from both use cases. Queued in `search-tidy`.
+
+## FindMatch re-implements the domain's character classes
+
+- Where: `FindMatch#keyword?` and `#blank?` in `carat/use_cases/search/find_match.rb` (line 129), `keyword?` through the bare class number in `Motions.code_class(code, false) == 2`. Periodic quality at 0b17324.
+- Why it matters: the word under the cursor for `*` and `#` is judged by a copy of the classes `Domain::Motions` owns, keyed on an unnamed number, so a change to the classes leaves the search motion behind.
+- Fix outline: a code-point predicate in `Domain::Motions` (or a named class constant) called from `FindMatch`, `Motions.keyword?`, and the runs scan. Queued in `search-structure`.
+
+## The local cls is the abbreviation the naming rule forbids
+
+- Where: the local `cls` in `carat/domain/text_objects.rb` (line 75) and the parameter `cls` of `Runs#add` (`carat/domain/runs.rb:18`). Periodic quality at 0b17324.
+- Why it matters: `CLAUDE.md` names `cls` as the counterexample of its naming rule (`char_class`, not `cls`).
+- Fix outline: rename both to `char_class`. Queued as a fold of `search-structure`.
+
+## FramePresenter passes the painted row through instance variables
+
+- Where: `@row_of` and `@current` in `carat/adapters/frame_presenter.rb`, set at lines 356 and 380 and read at 585 by `paint_matches`. Periodic quality at 0b17324.
+- Why it matters: the row and the window's currency reach `paint_matches` through a side channel, as the entry "Operate passes the search outcome through an instance variable" records for `Operate`, so a call order change paints with a stale row.
+- Fix outline: pass the row and the currency to `paint_row` and on to `paint_matches` as arguments and drop the two instance variables. Queued in `search-structure`, with the entry "Match highlighting walks matches left of the scroll and keeps rows painted after the budget stopped".
+
+## The guard accepts a worktree path by its name alone
+
+- Where: `worktree` in `tools/agent_guard.sh` (line 329), which admits any `tmp/.NAME` for `git -C`, `cd`, `checkout`, `make -C`, and `worktree remove`. Security Low (6) of `guard-allowlist` at 31a93d257317.
+- Why it matters: a `tmp/.NAME` that is not a worktree reaches the project repository through discovery (a read agent's `checkout -f --detach origin/main` would force-detach the main tree), or a bare repository the contributor wrote, whose configuration (`diff.external`, `remote.origin.uploadpack`) runs a command.
+- Fix outline: require `tmp/.NAME` to be an existing real directory, not a link, listed in `git worktree list --porcelain` for `-C`, `cd`, `checkout`, `make -C`, and `worktree remove`; for `worktree add`, require only that the path does not exist yet; add a `tools/tools_test.sh` case for each.
+
+## The guard does not judge input redirections
+
+- Where: `redirect` in `tools/agent_guard.sh` (line 752), which checks only write targets. Security Low (5) of `guard-allowlist` at 31a93d257317.
+- Why it matters: `< /dev/tcp/HOST/PORT` opens an outbound connection from any profile, a path for exfiltration through the hostname or DNS by an agent that text in the tree leads astray.
+- Fix outline: refuse a read target under `/dev/tcp/` or `/dev/udp/` (or allow only targets in the project and `/dev/null`), with a `tools/tools_test.sh` case.
+
+## The guard judges relative words after a cd against the project
+
+- Where: the `cd` form in `judge`, `tools/agent_guard.sh` (line 724). Quality advisory of `guard-allowlist` at a979633e8a4d and again at 31a93d257317.
+- Why it matters: `cd tmp/.base && mkdir -p tmp/scout/x` passes with DIR `tmp/scout` and writes `tmp/.base/tmp/scout/x`; benign today, since only DIR- or `build/stages`-prefixed paths inside the worktree are reachable, but the guard no longer reads the command as the shell runs it.
+- Fix outline: refuse a relative write target after a `cd` other than to the project, or resolve it against the `cd` target, with a `tools/tools_test.sh` case.
+
+## The guard admits date with any argument
+
+- Where: the shared plain tools in `judge`, `tools/agent_guard.sh` (line 710). Quality advisory of `guard-allowlist` at 31a93d257317.
+- Why it matters: `date -s 2001-01-01` passes every profile and, run as root, sets the system clock that git and the run state's timestamps read, against an allowlist of what each agent needs (the scout runs only `date -u +FORMAT`).
+- Fix outline: admit `date` only with `-u` and a `+FORMAT` word, with a refusal case in `tools/tools_test.sh`.
+
+## The guard decodes the JSON escapes \b and \f to letters
+
+- Where: `field` in `tools/agent_guard.sh` (line 114), whose else branch keeps the escaped character. Quality advisory of `guard-allowlist` at 5af7fd9d9784, 14b18734b96e, and 31a93d257317.
+- Why it matters: the guard judges the word `lsb` where bash runs `ls` and a backspace, against the header's "any other one ?"; no blank or operator diverges, since bash reads backspace and form feed as word characters, but the guard should read the command as the shell does.
+- Fix outline: decode `\b` and `\f` to `?` like `\u0008` and `\u000c`, with a `tools/tools_test.sh` case for `ls\b#; git push origin x`.
+
+## uniq -f 1 FILE is refused
+
+- Where: `uniq_form` in `tools/agent_guard.sh` (line 668). Quality advisory of `guard-allowlist` at 3efc71ba34f8 and again at 31a93d257317.
+- Why it matters: the value of `-f`, `-s`, or `-w` given as a separate word counts as an operand, so a normal read-only form is refused (it fails closed).
+- Fix outline: skip the word after `-f`, `-s`, and `-w`, with a `tools/tools_test.sh` case.
+
+## The guard header lists printf without its restriction
+
+- Where: the shared forms of the header of `tools/agent_guard.sh` (line 25). Quality advisory of `guard-allowlist` at 3efc71ba34f8 and again at 31a93d257317.
+- Why it matters: `judge` refuses `printf` with a leading option, so the header no longer says what the code allows.
+- Fix outline: write `printf (no leading option)` in the header's shared forms.
