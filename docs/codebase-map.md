@@ -159,9 +159,9 @@ Rules: CLAUDE.md Coding conventions (bindings in `config/default.caratrc` only; 
 
 ## 6. Motions and text objects
 
-What: every motion as a function of state and count, and the text objects as ranges.
+What: every motion as a function of state and count, the text objects as ranges, and pattern search.
 
-Flow: `MotionHandler` (kind `:motion` or `:find`) calls `Move#call`, which asks `Motions.call` for a target and moves the cursor; an operator's motion or `TextObjectHandler`'s object reaches `Operate` (area 7); `;` and `,` repeat through `LastFind`.
+Flow: `MotionHandler` (kind `:motion` or `:find`) calls `Move#call`, which asks `Motions.call` for a target and moves the cursor; an operator's motion or `TextObjectHandler`'s object reaches `Operate` (area 7); `;` and `,` repeat through `LastFind`. Search: `/` and `?` (kind `:search`) make the grammar wait for a pattern; `HandleKey` opens the prompt through `OpenSearchPrompt`, and when Enter closed it hands the text to the grammar, whose command `SearchHandler` runs through `JumpToMatch` or `Operate` through `FindMatch`; `n N * # g* g#` are `:motion` actions on the same path. `VimPattern` translates the pattern for Spinel's engine and `Search` matches line by line under a `SearchBudget` (`docs/spinel-notes.md`).
 
 Files:
 
@@ -176,14 +176,28 @@ Files:
 - `carat/use_cases/move.rb`: `Move#call`.
 - `carat/use_cases/actions/motion_handler.rb`: `MotionHandler.register`, registers `Motions::NAMES` and `FIND_NAMES`.
 - `carat/use_cases/actions/text_object_handler.rb`: `TextObjectHandler.register`, registers `TextObjects::NAMES`.
+- `carat/domain/vim_pattern.rb`: `VimPattern`; `compile`, `escape`, `pattern_end`; the magic modes, Vim's errors, `MAX_SIZE`, and no backtracking construct.
+- `carat/domain/search_pattern.rb`: `SearchPattern` value (`source`, `regexp`, `size`, `error`); `ok?`, `refused`, `none`.
+- `carat/domain/search.rb`: `Search`; `find`, `match_at`, `last_before`, `searchable` (U+FFFD for illegal bytes), `action?`, `PROMPT_NAMES`, `MOTION_NAMES`, and the messages.
+- `carat/domain/search_budget.rb`: `SearchBudget`, the work a search (`SEARCH`) or a frame (`FRAME`) may do; `charge`, `refund`, `reset`.
+- `carat/domain/search_hit.rb`: `SearchHit`, where a search landed, its status and message; `land`, `refused`.
+- `carat/domain/last_search.rb`: `LastSearch`, the pattern `n` repeats and what is highlighted; `remember`, `hide`, `show`, `recompile`, `preview_at`, `highlighted`, `drawn`.
+- `carat/domain/search_prompt.rb`: `SearchPrompt`, the open `/` or `?` prompt; `open`, `restore`, `enter`, `take_text`.
+- `carat/domain/history.rb`: `History`, a prompt's entries; `add`, `older`, `newer`, `restart`.
+- `carat/use_cases/search/find_match.rb`: `FindMatch#call`, a search command to a `SearchHit`, remembering the pattern, the `/` register, and the history.
+- `carat/use_cases/search/jump_to_match.rb`: `JumpToMatch#call`, moves the cursor to the hit.
+- `carat/use_cases/search/open_search_prompt.rb`: `OpenSearchPrompt#call`, opens the prompt for the grammar.
+- `carat/use_cases/search/preview_search.rb`: `PreviewSearch#call`, incsearch.
+- `carat/use_cases/actions/search_handler.rb`: `SearchHandler.register`, registers `Search::PROMPT_NAMES` (`:search`) and `MOTION_NAMES` (`:motion`).
+- `carat/use_cases/ex/nohlsearch_command_handler.rb`: `NohlsearchCommandHandler.register` (`:noh[lsearch]`), hides the highlight.
 
-Tests: `test/editor_motions.rb`, `test/editor_text_objects.rb`.
+Tests: `test/editor_motions.rb`, `test/editor_text_objects.rb`, `test/domain_vim_pattern.rb`, `test/domain_search.rb`, `test/editor_search.rb`.
 
-Designs: `command-grammar` (Motions return a target with its kind; Text objects return a range).
+Designs: `command-grammar` (Motions return a target with its kind; Text objects return a range); `buffer-search` (Translate to Spinel's engine; Charge a budget before the engine runs; The grammar reads a pattern).
 
 Rules: a new motion needs a binding in `normal`, `operator_pending`, `visual`, `visual_line`, and `visual_block`, a row in `docs/compatibility.md`, and a table-driven test.
 
-Bench: `lh`, `j`, `w`, `lh-utf8`, `j-utf8`, `long-ascii`, `long-utf8`.
+Bench: `lh`, `j`, `w`, `lh-utf8`, `j-utf8`, `long-ascii`, `long-utf8`, `n`.
 
 ## 7. Operators and registers
 
@@ -361,6 +375,7 @@ Files:
 - `carat/use_cases/files/probe_path.rb`: `ProbePath#call`, the one call of `FilePort#stat`, shared by `OpenFile` and the plugin file operations.
 - `carat/use_cases/files/make_path.rb`, `carat/use_cases/files/rename_path.rb` (the listed buffers following), `carat/use_cases/files/delete_path.rb`: `call`; make, rename, and delete inside a root with every check, used by the plugin file requests, each refusing a parent (create) or an entry's directory (rename, delete) that `ResolveInside` places outside the root.
 - `carat/use_cases/files/resolve_inside.rb`: `ResolveInside#call(root, dir, path)`, the one comparison of real paths (`FilePort#real_path`): `Outside the tree root: path` unless the directory with its links resolved is the resolved root or inside it; built by `PluginHost` and shared by the three.
+- `carat/use_cases/recall_history.rb`: `RecallHistory#call`, `<Up>` and `<Down>` through the prompt's `History` (`:` or search).
 
 Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`.
 
@@ -587,5 +602,6 @@ In merge order, by pull request number, with the roadmap item of `docs/architect
 - `window-ctrl-keys`, the user's request and the every-three rule's feature: `<C-w><C-s> <C-v> <C-h> <C-j> <C-k> <C-l> <C-w> <C-p> <C-o> <C-q>` bound in `config/default.caratrc` to the actions of their plain forms, counts included, in file windows and the explorer tree; `<C-w><C-c>` left unbound because the `<C-c>` cancels, as in Vim; the every-three rule clarified in `docs/goals.md` and the planner. Left for later: the held-Ctrl forms of the window commands not yet implemented.
 - `workflow-records`: each quality advisory kept as a `quality-advisory` note and handed to the package step for `docs/backlog.md`; the merger's wait through `tools/ci_wait.sh` until 30 minutes; two record starts a run, the package, CI, and merge phases recorded at the end and a resume reading `pushed`, `pr`, and `merged`; every figure in each metric line, which the merger and the retrospective run, so the run state's totals equal the workflow's; the plan's estimate stored as `metric.estimate`.
 - `guard-hardening`: the agent guard matches a command with its quotes and backslashes removed, judges a file edit by its real path, and never lets the body file be or become a link, which `pr-body` refuses too; `REVIEW_AREAS` gains the entry point and the tooling and CI, and a keymap-only edit of `config/default.caratrc` is not config loading; the quality advisories of every round reach `docs/backlog.md`, a CI fix's through its push; `tools/ci_wait.sh` fails on a failed `sleep`. Left for later: the `/status` phase display and the merger's foreground sleep (`docs/backlog.md`).
+- #46, `buffer-search`, the every-three rule's feature and the search half of roadmap item 6: `/`, `?`, `n`, `N`, `*`, `#`, `g*`, and `g#` with counts, wrapping, operators, and the visual modes; Vim's magic pattern basics translated by `VimPattern` into constructs the engine matches without backtracking, under a size cap and a per-line work budget; the `/` register, the `:` and search histories on `<Up>` and `<Down>`, `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, `:noh`, and the `Search` and `IncSearch` groups. Left for later: `:s`, `:g`, `:v`, and ex ranges (`buffer-substitute`), search offsets, and the match count.
 
 Next: `docs/queue.md`, ordered against the charter `docs/goals.md`.

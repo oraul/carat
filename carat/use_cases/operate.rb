@@ -8,7 +8,11 @@ require_relative "../domain/registers"
 require_relative "../domain/last_find"
 require_relative "../domain/operator_kind"
 require_relative "../domain/messages"
+require_relative "../domain/search"
+require_relative "../domain/position"
+require_relative "../domain/motion"
 require_relative "outcome"
+require_relative "search/find_match"
 
 module Carat
   module UseCases
@@ -21,20 +25,30 @@ module Carat
     # their own (PutRegister, JoinLines, ReplaceChars, ToggleCase). Deletes and
     # changes write the registers by Vim's delete rules and yanks by its
     # yank rules; naming a read-only register refuses the command with
-    # E354.
+    # E354. A search is an exclusive charwise motion found by FindMatch,
+    # whose message the outcome carries.
     class Operate
       attr_reader :registers #: Domain::Registers
       attr_reader :last_find #: Domain::LastFind
+      attr_reader :find_match #: FindMatch
 
-      #: (registers: Domain::Registers, last_find: Domain::LastFind) -> void
-      def initialize(registers:, last_find:)
+      # @rbs @notice: Outcome
+
+      #: (registers: Domain::Registers, last_find: Domain::LastFind, find_match: FindMatch) -> void
+      def initialize(registers:, last_find:, find_match:)
         @registers = registers
         @last_find = last_find
+        @find_match = find_match
+        @notice = Outcome.none
       end
 
       # The motions after which a delete writes register 1 even within a
-      # line, as Vim's use_reg_one; search and marks arrive later.
-      REGISTER_ONE_MOTIONS = ["motion.sentence_forward", "motion.sentence_backward", "motion.paragraph_forward", "motion.paragraph_backward"]
+      # line, as Vim's use_reg_one; marks arrive later.
+      REGISTER_ONE_MOTIONS = [
+        "motion.sentence_forward", "motion.sentence_backward", "motion.paragraph_forward", "motion.paragraph_backward",
+        "search.forward", "search.backward", "search.next", "search.previous",
+        "search.word_forward", "search.word_backward", "search.partial_word_forward", "search.partial_word_backward"
+      ]
       private_constant :REGISTER_ONE_MOTIONS
 
       #: (Domain::EditorState, Domain::Command) -> Outcome
@@ -44,8 +58,9 @@ module Carat
         if Domain::Registers.read_only?(register) && (operator == Domain::OperatorKind::DELETE || operator == Domain::OperatorKind::CHANGE || operator == Domain::OperatorKind::YANK)
           return Outcome.failure(Domain::Messages.read_only_register(register))
         end
+        @notice = Outcome.none
         range = operand(state, command)
-        return Outcome.none if range.nil?
+        return @notice if range.nil?
         state.buffer.start_at(range.normalized.from) unless range.kind == :linewise
         case command.operator
         when Domain::OperatorKind::DELETE then delete(state, command, range)
@@ -54,7 +69,7 @@ module Carat
         when Domain::OperatorKind::INDENT then shift(state, range, 1)
         when Domain::OperatorKind::DEDENT then shift(state, range, -1)
         end
-        Outcome.none
+        @notice
       end
 
       private
@@ -96,6 +111,7 @@ module Carat
       #: (Domain::EditorState, Domain::Command) -> Domain::Motion?
       def motion_for(state, command)
         action = command.action
+        return search_motion(state, command) if Domain::Search.action?(action)
         if command.operator == Domain::OperatorKind::CHANGE && (action == "motion.word_forward" || action == "motion.big_word_forward")
           line = state.current_line
           col = state.cursor.col
@@ -104,6 +120,17 @@ module Carat
           end
         end
         Domain::Motions.for_command(state, @last_find, command, true)
+      end
+
+      # A search as an exclusive charwise motion to the start of its match;
+      # the error or the wrap message becomes the outcome, while the echo
+      # of the pattern is left out so a change shows its insert mode.
+      #: (Domain::EditorState, Domain::Command) -> Domain::Motion?
+      def search_motion(state, command)
+        hit = @find_match.call(state, command)
+        @notice = Outcome.new(ok: hit.found?, message: hit.message) if !hit.found? || hit.wrapped
+        return nil unless hit.found?
+        Domain::Motion.new(target: Domain::Position.new(row: hit.row, col: hit.col), linewise: false, inclusive: false, want: :set)
       end
 
       #: (Domain::EditorState, Domain::Command, Domain::Range) -> void

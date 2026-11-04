@@ -7,9 +7,9 @@ module Carat
     # registers 0 to 9 (Array[untyped] of ten entries or nil, read through
     # numbered_at), the small delete register "-", and the read-only
     # registers "." (the text typed in the last insert session), ":" (the
-    # last command line run), and "%" (the current file's name, which the
-    # caller passes to read_with_file). The black hole "_" takes nothing,
-    # and "/" waits for search and holds nothing.
+    # last command line run), "/" (the last search pattern), and "%" (the
+    # current file's name, which the caller passes to read_with_file).
+    # The black hole "_" takes nothing.
     #
     # Writes are named by what made them, following Neovim's op_yank and
     # op_delete: a yank writes the named register, or "0 when none is
@@ -18,13 +18,14 @@ module Carat
     # line, or a motion Vim lists), and writes "- when it is small and no
     # register is named. Both write the unnamed register with the new
     # text. A Struct record.
-    class Registers < Struct.new(:unnamed, :named, :numbered, :small, :inserted, :command_line, keyword_init: true)
+    class Registers < Struct.new(:unnamed, :named, :numbered, :small, :inserted, :command_line, :search, keyword_init: true)
       # @rbs @unnamed: RegisterEntry?
       # @rbs @named: Hash[String, RegisterEntry]
       # @rbs @numbered: Array[untyped]
       # @rbs @small: RegisterEntry?
       # @rbs @inserted: String
       # @rbs @command_line: String
+      # @rbs @search: String
 
       # Every register empty.
       #: () -> void
@@ -41,6 +42,7 @@ module Carat
         self.small = nil
         self.inserted = ""
         self.command_line = ""
+        self.search = ""
       end
 
       # A register name the grammar accepts after the quote key: the
@@ -113,7 +115,8 @@ module Carat
         return small if name == "-"
         return text_entry(inserted) if name == "."
         return text_entry(command_line) if name == ":"
-        return nil if name == "_" || name == "/" || name == "%"
+        return text_entry(search) if name == "/"
+        return nil if name == "_" || name == "%"
         named[name.downcase]
       end
 

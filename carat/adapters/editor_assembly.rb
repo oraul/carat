@@ -7,6 +7,9 @@ require_relative "../domain/buffer_list"
 require_relative "../domain/tab_list"
 require_relative "../domain/input_state"
 require_relative "../domain/last_find"
+require_relative "../domain/last_search"
+require_relative "../domain/search_prompt"
+require_relative "../domain/history"
 require_relative "../domain/plugin_ui"
 require_relative "../domain/registers"
 require_relative "../domain/last_change"
@@ -17,6 +20,11 @@ require_relative "../domain/themes"
 require_relative "../use_cases/outcome"
 require_relative "../use_cases/concerns/reporting"
 require_relative "../use_cases/move"
+require_relative "../use_cases/search/find_match"
+require_relative "../use_cases/search/jump_to_match"
+require_relative "../use_cases/search/open_search_prompt"
+require_relative "../use_cases/search/preview_search"
+require_relative "../use_cases/recall_history"
 require_relative "../use_cases/operate"
 require_relative "../use_cases/replace_chars"
 require_relative "../use_cases/toggle_case"
@@ -77,9 +85,11 @@ require_relative "../use_cases/ex/history_command_handler"
 require_relative "../use_cases/ex/register_command_handler"
 require_relative "../use_cases/ex/syntax_command_handler"
 require_relative "../use_cases/ex/set_command_handler"
+require_relative "../use_cases/ex/nohlsearch_command_handler"
 require_relative "../use_cases/ex/plugin_command_handler"
 require_relative "../use_cases/actions/action_table"
 require_relative "../use_cases/actions/motion_handler"
+require_relative "../use_cases/actions/search_handler"
 require_relative "../use_cases/actions/operator_handler"
 require_relative "../use_cases/actions/edit_handler"
 require_relative "../use_cases/actions/text_object_handler"
@@ -138,6 +148,10 @@ module Carat
       attr_reader :registers #: Domain::Registers
       attr_reader :last_change #: Domain::LastChange
       attr_reader :last_find #: Domain::LastFind
+      attr_reader :last_search #: Domain::LastSearch
+      attr_reader :search_prompt #: Domain::SearchPrompt
+      attr_reader :command_history #: Domain::History
+      attr_reader :search_history #: Domain::History
       attr_reader :input #: Domain::InputState
       attr_reader :plugin_ui #: Domain::PluginUi
       attr_reader :cache #: Domain::LineCache
@@ -147,6 +161,11 @@ module Carat
       attr_reader :commands #: UseCases::ExTable
       attr_reader :runner #: UseCases::CommandRunner
       attr_reader :move #: UseCases::Move
+      attr_reader :find_match #: UseCases::FindMatch
+      attr_reader :jump_to_match #: UseCases::JumpToMatch
+      attr_reader :open_search_prompt #: UseCases::OpenSearchPrompt
+      attr_reader :preview_search #: UseCases::PreviewSearch
+      attr_reader :recall_history #: UseCases::RecallHistory
       attr_reader :operate #: UseCases::Operate
       attr_reader :put_register #: UseCases::PutRegister
       attr_reader :insert_text #: UseCases::InsertText
@@ -209,6 +228,10 @@ module Carat
         @last_change = Domain::LastChange.new
         @buffers.feed.undolevels = @state.options.undolevels
         @last_find = Domain::LastFind.new
+        @last_search = Domain::LastSearch.new
+        @search_prompt = Domain::SearchPrompt.new
+        @command_history = Domain::History.new
+        @search_history = Domain::History.new
         @input = Domain::InputState.new
         @plugin_ui = Domain::PluginUi.new
         @cache = Domain::LineCache.new
@@ -219,7 +242,12 @@ module Carat
         @config_errors = []
 
         @move = UseCases::Move.new(last_find: @last_find)
-        @operate = UseCases::Operate.new(registers: @registers, last_find: @last_find)
+        @find_match = UseCases::FindMatch.new(last_search: @last_search, registers: @registers, search_history: @search_history)
+        @jump_to_match = UseCases::JumpToMatch.new(find_match: @find_match)
+        @open_search_prompt = UseCases::OpenSearchPrompt.new(search_prompt: @search_prompt, search_history: @search_history)
+        @preview_search = UseCases::PreviewSearch.new(search_prompt: @search_prompt, last_search: @last_search)
+        @recall_history = UseCases::RecallHistory.new(search_prompt: @search_prompt, command_history: @command_history, search_history: @search_history, plugin_ui: @plugin_ui, preview_search: @preview_search)
+        @operate = UseCases::Operate.new(registers: @registers, last_find: @last_find, find_match: @find_match)
         @put_register = UseCases::PutRegister.new(registers: @registers)
         @insert_text = UseCases::InsertText.new(last_change: @last_change)
         @break_line = UseCases::BreakLine.new(last_change: @last_change)
@@ -267,21 +295,23 @@ module Carat
         UseCases::HistoryCommandHandler.register(@commands, undo_step: @undo_step, redo_step: @redo_step, undo_to_state: @undo_to_state, travel_history: @travel_history, list_undo: @list_undo)
         UseCases::RegisterCommandHandler.register(@commands, registers: @registers)
         UseCases::SyntaxCommandHandler.register(@commands)
-        UseCases::SetCommandHandler.register(@commands)
+        UseCases::SetCommandHandler.register(@commands, last_search: @last_search)
+        UseCases::NohlsearchCommandHandler.register(@commands, last_search: @last_search)
         UseCases::PluginCommandHandler.register(@commands, plugins: @plugins)
         @plugins.activate_all(value)
 
-        @enter_command_line = UseCases::EnterCommandLine.new(plugin_ui: @plugin_ui)
-        @edit_command_line = UseCases::EditCommandLine.new
-        @cancel_command_line = UseCases::CancelCommandLine.new(plugins: @plugins, plugin_ui: @plugin_ui)
-        @execute_command_line = UseCases::ExecuteCommandLine.new(runner: @runner, plugins: @plugins, plugin_ui: @plugin_ui, registers: @registers)
-        erase_command_line = UseCases::EraseCommandLine.new(cancel_command_line: @cancel_command_line)
+        @enter_command_line = UseCases::EnterCommandLine.new(plugin_ui: @plugin_ui, search_prompt: @search_prompt, command_history: @command_history)
+        @edit_command_line = UseCases::EditCommandLine.new(preview_search: @preview_search)
+        @cancel_command_line = UseCases::CancelCommandLine.new(plugins: @plugins, plugin_ui: @plugin_ui, search_prompt: @search_prompt, last_search: @last_search)
+        @execute_command_line = UseCases::ExecuteCommandLine.new(runner: @runner, plugins: @plugins, plugin_ui: @plugin_ui, registers: @registers, search_prompt: @search_prompt, last_search: @last_search, command_history: @command_history, search_history: @search_history)
+        erase_command_line = UseCases::EraseCommandLine.new(cancel_command_line: @cancel_command_line, preview_search: @preview_search)
         start_visual = UseCases::StartVisual.new
         reselect_visual = UseCases::ReselectVisual.new
         extend_visual = UseCases::ExtendVisual.new
         swap_visual_ends = UseCases::SwapVisualEnds.new
         shift_selection = UseCases::ShiftSelection.new
         UseCases::MotionHandler.register(@actions, move: @move)
+        UseCases::SearchHandler.register(@actions, jump_to_match: @jump_to_match)
         UseCases::OperatorHandler.register(@actions, operate: @operate, delete_selection: @delete_selection, yank_selection: @yank_selection, change_selection: @change_selection, shift_selection: shift_selection)
         UseCases::EditHandler.register(@actions, operate: @operate, replace_chars: UseCases::ReplaceChars.new, toggle_case: UseCases::ToggleCase.new, put_register: @put_register, join_lines: UseCases::JoinLines.new)
         UseCases::TextObjectHandler.register(@actions, extend_visual: extend_visual)
@@ -289,7 +319,7 @@ module Carat
         UseCases::NormalModeHandler.register(@actions, leave_insert: @leave_insert, cancel_command_line: @cancel_command_line)
         UseCases::VisualModeHandler.register(@actions, start_visual: start_visual, reselect_visual: reselect_visual)
         UseCases::SelectionHandler.register(@actions, delete_selection: @delete_selection, yank_selection: @yank_selection, change_selection: @change_selection, join_selection: UseCases::JoinSelection.new, recase_selection: UseCases::RecaseSelection.new, insert_at_selection: UseCases::InsertAtSelection.new, put_over_selection: @put_over_selection, swap_visual_ends: swap_visual_ends)
-        UseCases::CommandLineHandler.register(@actions, enter_command_line: @enter_command_line, execute_command_line: @execute_command_line, erase_command_line: erase_command_line)
+        UseCases::CommandLineHandler.register(@actions, enter_command_line: @enter_command_line, execute_command_line: @execute_command_line, erase_command_line: erase_command_line, recall_history: @recall_history)
         UseCases::InsertTextHandler.register(@actions, break_line: @break_line, erase_character: @erase_character, insert_tab: @insert_tab)
         UseCases::MessageHandler.register(@actions)
         UseCases::HistoryHandler.register(@actions, undo_step: @undo_step, redo_step: @redo_step, restore_line: UseCases::RestoreLine.new, travel_history: @travel_history, repeat_last: @repeat_last)
@@ -307,9 +337,9 @@ module Carat
         end
 
         @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
-        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, plugins: @plugins, arrange_view: @arrange_view)
+        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt)
         @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input)
-        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache)
+        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt)
         @screen_presenter = ScreenPresenter.new(terminal: terminal, theme: Domain::Themes.find(@state.options.theme), colors: terminal.colors)
       end
 

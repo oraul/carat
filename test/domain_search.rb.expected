@@ -1,0 +1,43 @@
+ok   forward on the line
+ok   forward skips the match under the cursor
+ok   forward to a later line
+ok   forward wraps to the top
+ok   forward finds the only match under the cursor
+ok   forward with a count
+ok   a count past the last match wraps
+ok   backward on the line
+ok   backward to an earlier line
+ok   backward wraps to the bottom
+ok   backward takes the last match of a line
+ok   backward with a count
+ok   not found
+ok   not found backward
+ok   an empty line
+ok   the line start moves to the next line
+ok   the line end on the last character moves on
+ok   after an illegal byte
+ok   U+FFFD matches an illegal byte
+ok   a pathological pattern on a long line
+ok   backward over characters that are not ASCII
+ok   backward on a long non-ASCII line of many matches stops
+ok   a search stops when its budget cannot pay for a line
+ok   a charge within the budget is paid
+ok   a charge past it is refused and stops the budget
+ok   an illegal byte becomes U+FFFD
+ok   a valid line is matched as it is
+ok   a repeated entry moves to the newest
+ok   up recalls
+ok   the newest first
+ok   then the older
+ok   down comes back
+ok   past the newest the typed text returns
+ok   a prefix skips the entries that do not start with it
+ok   past the oldest match nothing moves
+ok   edited text starts a new recall with its prefix
+ok   at most fifty entries
+ok   the oldest are dropped
+ok   nothing drawn before a search
+ok   a search is drawn
+ok   noh hides it
+ok   nohlsearch draws nothing
+domain_search: 42 passed, 0 failed

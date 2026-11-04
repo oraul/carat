@@ -91,13 +91,6 @@ Pressing Ctrl-C in normal mode SHALL show the message "Type  :q!  and press <Ent
 - **WHEN** Ctrl-C is pressed in normal mode
 - **THEN** the message row shows the quit hint and the buffer, cursor, and mode are unchanged
 
-### Requirement: Unimplemented actions report themselves
-Pressing a key bound in the default configuration to an action no roadmap item has implemented yet SHALL show the message "Not implemented: " followed by the action name, and change nothing else.
-
-#### Scenario: / before search exists
-- **WHEN** "/" is pressed in normal mode
-- **THEN** the message is "Not implemented: search.forward" and the buffer is unchanged
-
 ### Requirement: r replaces characters
 Pressing "r" and a character SHALL replace count characters from the cursor with that character, leaving the cursor on the last replaced one; when fewer than count characters remain on the line nothing SHALL change.
 

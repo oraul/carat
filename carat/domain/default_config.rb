@@ -73,6 +73,14 @@ module Carat
       keymap.normal ) motion.sentence_forward
       keymap.normal { motion.paragraph_backward
       keymap.normal } motion.paragraph_forward
+      keymap.normal / search.forward
+      keymap.normal ? search.backward
+      keymap.normal n search.next
+      keymap.normal N search.previous
+      keymap.normal * search.word_forward
+      keymap.normal "#" search.word_backward
+      keymap.normal g* search.partial_word_forward
+      keymap.normal g# search.partial_word_backward
       keymap.normal H motion.screen_top
       keymap.normal M motion.screen_middle
       keymap.normal L motion.screen_bottom
@@ -110,10 +118,6 @@ module Carat
       keymap.normal <C-v> mode.visual_block
       keymap.normal gv visual.reselect
       keymap.normal : mode.cmdline
-      keymap.normal / search.forward
-      keymap.normal ? search.backward
-      keymap.normal n search.next
-      keymap.normal N search.previous
       keymap.normal <C-c> message.quit_hint
       keymap.normal <C-w>s window.split
       keymap.normal <C-w>v window.vsplit
@@ -207,6 +211,14 @@ module Carat
       keymap.visual ) motion.sentence_forward
       keymap.visual { motion.paragraph_backward
       keymap.visual } motion.paragraph_forward
+      keymap.visual / search.forward
+      keymap.visual ? search.backward
+      keymap.visual n search.next
+      keymap.visual N search.previous
+      keymap.visual * search.word_forward
+      keymap.visual "#" search.word_backward
+      keymap.visual g* search.partial_word_forward
+      keymap.visual g# search.partial_word_backward
       keymap.visual H motion.screen_top
       keymap.visual M motion.screen_middle
       keymap.visual L motion.screen_bottom
@@ -324,6 +336,14 @@ module Carat
       keymap.visual_line ) motion.sentence_forward
       keymap.visual_line { motion.paragraph_backward
       keymap.visual_line } motion.paragraph_forward
+      keymap.visual_line / search.forward
+      keymap.visual_line ? search.backward
+      keymap.visual_line n search.next
+      keymap.visual_line N search.previous
+      keymap.visual_line * search.word_forward
+      keymap.visual_line "#" search.word_backward
+      keymap.visual_line g* search.partial_word_forward
+      keymap.visual_line g# search.partial_word_backward
       keymap.visual_line H motion.screen_top
       keymap.visual_line M motion.screen_middle
       keymap.visual_line L motion.screen_bottom
@@ -441,6 +461,14 @@ module Carat
       keymap.visual_block ) motion.sentence_forward
       keymap.visual_block { motion.paragraph_backward
       keymap.visual_block } motion.paragraph_forward
+      keymap.visual_block / search.forward
+      keymap.visual_block ? search.backward
+      keymap.visual_block n search.next
+      keymap.visual_block N search.previous
+      keymap.visual_block * search.word_forward
+      keymap.visual_block "#" search.word_backward
+      keymap.visual_block g* search.partial_word_forward
+      keymap.visual_block g# search.partial_word_backward
       keymap.visual_block H motion.screen_top
       keymap.visual_block M motion.screen_middle
       keymap.visual_block L motion.screen_bottom
@@ -554,6 +582,14 @@ module Carat
       keymap.operator_pending ) motion.sentence_forward
       keymap.operator_pending { motion.paragraph_backward
       keymap.operator_pending } motion.paragraph_forward
+      keymap.operator_pending / search.forward
+      keymap.operator_pending ? search.backward
+      keymap.operator_pending n search.next
+      keymap.operator_pending N search.previous
+      keymap.operator_pending * search.word_forward
+      keymap.operator_pending "#" search.word_backward
+      keymap.operator_pending g* search.partial_word_forward
+      keymap.operator_pending g# search.partial_word_backward
       keymap.operator_pending H motion.screen_top
       keymap.operator_pending M motion.screen_middle
       keymap.operator_pending L motion.screen_bottom
@@ -601,6 +637,8 @@ module Carat
       keymap.cmdline <Esc> mode.normal
       keymap.cmdline <CR> cmdline.execute
       keymap.cmdline <BS> cmdline.backspace
+      keymap.cmdline <Up> cmdline.history_older
+      keymap.cmdline <Down> cmdline.history_newer
 
       # Language commands: language.<name>.lsp and language.<name>.formatter.
       language.ruby.lsp ruby-lsp

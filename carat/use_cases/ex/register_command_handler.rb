@@ -8,7 +8,7 @@ require_relative "ex_table"
 module Carat
   module UseCases
     # :reg[isters] and :di[splay]: Neovim's listing of the registers that
-    # hold text, in the order unnamed, 0 to 9, a to z, -, ., :, %, under
+    # hold text, in the order unnamed, 0 to 9, a to z, -, ., :, %, /, under
     # the line "Type Name Content". Each line is two spaces, the kind (c,
     # l, or b), two spaces, the quote and the name, three spaces, and the
     # text with ^J for each line break and after linewise text, cut to the
@@ -16,7 +16,7 @@ module Carat
     # those registers.
     class RegisterCommandHandler < ExHandler
       TITLE = "Type Name Content"
-      ORDER = "\"0123456789abcdefghijklmnopqrstuvwxyz-.:%"
+      ORDER = "\"0123456789abcdefghijklmnopqrstuvwxyz-.:%/"
       private_constant :TITLE, :ORDER
 
       attr_reader :registers #: Domain::Registers

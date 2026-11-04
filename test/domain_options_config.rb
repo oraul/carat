@@ -62,6 +62,19 @@ module DomainOptionsConfigTest
       [D::Options.from_config(config).scroll, config.report]
     end
     t.assert_equal(0, options.scroll, "the shipped scroll is 0")
+    t.assert_equal([false, true, true, true], [options.ignorecase, options.smartcase, options.hlsearch, options.incsearch], "the shipped search options")
+
+    # The search options: rows are [label, project lines, [ignorecase,
+    # smartcase, hlsearch, incsearch]].
+    t.table([
+      ["Neovim's search defaults", "", [false, false, true, true]],
+      ["the search options are stored", "option.ignorecase true\noption.smartcase true\noption.hlsearch false\noption.incsearch false\n", [true, true, false, false]]
+    ]) do |text|
+      config = D::Config.new
+      config.read(".caratrc", text.to_s, false)
+      read = D::Options.from_config(config)
+      [read.ignorecase, read.smartcase, read.hlsearch, read.incsearch]
+    end
 
     t.finish
   end

@@ -16,7 +16,9 @@ module Carat
     # action table registered for it: :register (the register prefix,
     # which reads a register name), :operator (waits for a motion, a text
     # object, or itself), :find and :char (read one more key), :motion,
-    # :text_object (only under an operator or in a visual mode), and
+    # :text_object (only under an operator or in a visual mode), :search
+    # (reads a pattern on the command line: the grammar answers :prompt,
+    # keeps what it has, and takes the pattern through pattern), and
     # :action (completes at once). It knows no action name of its own.
     # A Struct record whose fields persist between keys.
     class CommandGrammar < Struct.new(:register, :count, :operator, :operator_count, :want, :action, :argument, :linewise, :keys, :typed, keyword_init: true)
@@ -60,7 +62,22 @@ module Carat
       # rather than a key to look up.
       #: () -> bool
       def wants_char?
-        want != :none
+        want == :register || want == :char
+      end
+
+      # Whether the command waits for a pattern typed on the command line.
+      #: () -> bool
+      def wants_pattern?
+        want == :pattern
+      end
+
+      # Takes the pattern a search action was waiting for and finishes
+      # the command with it as the argument.
+      #: (String) -> Command
+      def pattern(text)
+        self.argument = text
+        self.want = :none
+        take
       end
 
       #: () -> bool
@@ -115,15 +132,20 @@ module Carat
 
       # Takes the action the keymap resolved for codes, with its kind.
       # Returns :pending (more keys wanted), :operator (an operator is now
-      # pending), :complete (take the command), or :cancel (reset, nothing
-      # to do).
+      # pending), :prompt (a pattern is wanted on the command line),
+      # :complete (take the command), or :cancel (reset, nothing to do).
       #: (String, Symbol, Array[Integer]) -> Symbol
       def accept(action, kind, codes)
-        if wants_char?
+        if want != :none
           reset
           return :cancel
         end
         remember(codes)
+        if kind == :search
+          self.action = action
+          self.want = :pattern
+          return :prompt
+        end
         if operator.empty?
           accept_in_normal(action, kind)
         else
@@ -134,15 +156,21 @@ module Carat
       # Takes the action the keymap resolved in a visual mode, where an
       # operator acts on the selection at once instead of waiting for a
       # motion: a register prefix and the actions that want a character
-      # (the find motions and "r") return :pending, every other action
-      # :complete, and a key arriving while a character was wanted :cancel.
+      # (the find motions and "r") return :pending, a search :prompt,
+      # every other action :complete, and a key arriving while a
+      # character was wanted :cancel.
       #: (String, Symbol, Array[Integer]) -> Symbol
       def accept_visual(action, kind, codes)
-        if wants_char?
+        if want != :none
           reset
           return :cancel
         end
         remember(codes)
+        if kind == :search
+          self.action = action
+          self.want = :pattern
+          return :prompt
+        end
         if kind == :register
           self.want = :register
           return :pending

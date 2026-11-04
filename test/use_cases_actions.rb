@@ -181,7 +181,7 @@ module UseCasesActionsTest
     doc_names = documented(File.read("docs/actions.md"))
     t.assert_equal([[], []], drift(names, doc_names), "the action table and docs/actions.md list the same actions")
     t.assert_equal([["a.one"], ["b.two"]], drift(["a.one", "c.three"], ["b.two", "c.three"]), "a drift is reported in both directions")
-    t.assert_equal([false, true], [doc_names.include?("plugin.explorer.toggle"), doc_names.include?("search.forward")], "the Plugins section is not read as core actions and the Reserved one is")
+    t.assert_equal([false, true], [doc_names.include?("plugin.explorer.toggle"), doc_names.include?("search.forward")], "the Plugins section is not read as core actions and the Implemented one is")
 
     t.finish
   end

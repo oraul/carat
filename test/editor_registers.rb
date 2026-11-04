@@ -136,7 +136,7 @@ module EditorRegistersTest
     h.type("\"_p")
     t.assert_equal("E353: Nothing in register _", h.message, "the black hole cannot be put")
     h.type("\"/p")
-    t.assert_equal("E353: Nothing in register /", h.message, "the search register holds nothing yet")
+    t.assert_equal("E353: Nothing in register /", h.message, "the search register holds nothing before a search")
 
     # :registers and :display list the registers that hold text.
     h = editor("one\n")

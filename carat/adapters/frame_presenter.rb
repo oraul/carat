@@ -11,6 +11,11 @@ require_relative "../domain/selection"
 require_relative "../domain/input_state"
 require_relative "../domain/plugin_ui"
 require_relative "../domain/command_grammar"
+require_relative "../domain/last_search"
+require_relative "../domain/search_prompt"
+require_relative "../domain/search"
+require_relative "../domain/search_budget"
+require_relative "../domain/search_pattern"
 require_relative "painted_rows"
 
 module Carat
@@ -28,8 +33,13 @@ module Carat
     # command at its right edge. In a visual mode the current window draws
     # its selection with the Visual highlight, leaving the cell under the
     # cursor in its own highlight (its token's group or the normal one)
-    # so the cursor shows on top. The cursor is
-    # placed in the current window.
+    # so the cursor shows on top. With hlsearch the matches of the last
+    # search, or of the pattern a search prompt previews, are drawn in the
+    # Search group after the tokens and the previewed match in IncSearch;
+    # a frame's matching runs under its own budget and stops highlighting
+    # rows when it is spent, and a row records the last search's stamp, 0
+    # when nothing is highlighted, so a frame without search does no
+    # other work. The cursor is placed in the current window.
     #
     # Two frames are kept and painted in turn, so the one the screen shows
     # stays intact while the other is drawn; they are reallocated only when
@@ -57,6 +67,8 @@ module Carat
       attr_reader :input #: Domain::InputState
       attr_reader :plugin_ui #: Domain::PluginUi
       attr_reader :cache #: Domain::LineCache
+      attr_reader :last_search #: Domain::LastSearch
+      attr_reader :search_prompt #: Domain::SearchPrompt
 
       # @rbs @front: Domain::Frame
       # @rbs @back: Domain::Frame
@@ -70,12 +82,24 @@ module Carat
       # @rbs @sel_end: Integer
       # @rbs @none: Domain::Selection
       # @rbs @no_block: Domain::Block
+      # @rbs @budget: Domain::SearchBudget
+      # @rbs @pattern: Domain::SearchPattern
+      # @rbs @drawn: Integer
+      # @rbs @row_of: Integer
+      # @rbs @current: bool
 
-      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache) -> void
-      def initialize(input:, plugin_ui:, cache:)
+      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt) -> void
+      def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:)
         @input = input
         @plugin_ui = plugin_ui
         @cache = cache
+        @last_search = last_search
+        @search_prompt = search_prompt
+        @budget = Domain::SearchBudget.new(left: Domain::SearchBudget::FRAME)
+        @pattern = Domain::SearchPattern.none
+        @drawn = 0
+        @row_of = -1
+        @current = false
         @front = Domain::Frame.new(rows: 1, cols: 1)
         @back = Domain::Frame.new(rows: 1, cols: 1)
         @front_rows = PaintedRows.new(rows: 1, slots: 1)
@@ -126,6 +150,11 @@ module Carat
         end
         visual = Domain::Mode.visual?(state.mode)
         selection = visual ? state.selection : @none
+        @drawn = @last_search.drawn(options)
+        if @drawn > 0
+          @pattern = @last_search.highlighted(options)
+          @budget.reset(Domain::SearchBudget::FRAME)
+        end
         i = 0
         while i < ids.length
           id = ids[i]
@@ -323,6 +352,8 @@ module Carat
         frame.add_scroll(wrow, wrow + height - 1, delta) if delta != 0
         signs = buffer.signs?
         highlights = buffer.syntax_cache
+        search = @drawn
+        @current = current
         count = buffer.line_count
         i = 0
         while i < height
@@ -345,9 +376,10 @@ module Carat
             cur = cursor.col if row == cursor.row
             select_columns(selection, buffer, row, line, tabstop, block) if selecting
           end
-          unless @back_rows.same?(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, syntax)
+          unless @back_rows.same?(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, syntax, search)
+            @row_of = row
             paint_row(frame, frame_row, x, width, gutter, line, number, sign, signs, text_width, left, tabstop, syntax)
-            @back_rows.store(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, syntax)
+            @back_rows.store(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, syntax, search)
           end
           @back_rows.place(seg, window.id, top)
           if base_same
@@ -357,7 +389,7 @@ module Carat
               source = j >= 0 && j < height ? wrow + j : -1
               frame.sources[frame_row] = source
             end
-            frame.dirty[frame_row] = 1 if source < 0 || !@front_rows.same?(@front_rows.index(source, slot), line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, syntax)
+            frame.dirty[frame_row] = 1 if source < 0 || !@front_rows.same?(@front_rows.index(source, slot), line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, syntax, search)
           end
           i += 1
         end
@@ -435,6 +467,7 @@ module Carat
         decoded = @cache.fetch(line, tabstop)
         paint_text(frame, frame_row, x + gutter, decoded, text_width, left)
         paint_tokens(frame, frame_row, x + gutter, decoded, text_width, left, syntax.tokens) unless syntax.tokens.empty?
+        paint_matches(frame, frame_row, x + gutter, decoded, text_width, left, line) if @drawn > 0
         paint_selection(frame, frame_row, x + gutter, text_width, left) if @sel_from <= @sel_to || @sel_end >= 0
       end
 
@@ -517,6 +550,54 @@ module Carat
           end
           i += 3
         end
+      end
+
+      # Gives the matches of the highlighted pattern on the row being
+      # painted the Search group, up to the right edge of the window and
+      # while the frame's budget lasts, and the match a search prompt
+      # previews on it, in the current window, IncSearch. An empty match
+      # is not drawn.
+      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer, String) -> void
+      def paint_matches(frame, frame_row, col, decoded, width, left, line)
+        pattern = @pattern
+        size = decoded.size
+        limit = left + width
+        if pattern.ok?
+          text = Domain::Search.searchable(line)
+          length = text.length
+          budget = @budget
+          from = 0
+          while from <= size
+            found = Domain::Search.match_at(pattern, text, length, from, budget)
+            break if found.nil?
+            first = found.begin(0)
+            last = found.end(0)
+            break if first >= size || decoded.col(first) >= limit
+            if last > first
+              fill_columns(frame, frame_row, col, decoded, left, limit, first, last, Domain::Highlight::SEARCH)
+              from = last
+            else
+              from = first + 1
+            end
+          end
+        end
+        search = @last_search
+        return unless @current && search.preview_row == @row_of && search.preview_end > search.preview_col
+        fill_columns(frame, frame_row, col, decoded, left, limit, search.preview_col, search.preview_end, Domain::Highlight::INC_SEARCH)
+      end
+
+      # Gives the code points from first up to last of a decoded line the
+      # group, over the display columns inside [left, limit).
+      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer, Integer, Integer, Integer) -> void
+      def fill_columns(frame, frame_row, col, decoded, left, limit, first, last, group)
+        size = decoded.size
+        last = size if last > size
+        return if first >= last
+        from = decoded.col(first)
+        to = decoded.col(last)
+        from = left if from < left
+        to = limit if to > limit
+        frame.fill(frame_row, col + from - left, col + to - left, group) if from < to
       end
 
       # The code point of a lowercase hexadecimal digit.
@@ -663,11 +744,13 @@ module Carat
         name
       end
 
-      # ":" for an ex command line, a plugin's prompt text while one is open.
+      # ":" for an ex command line, "/" or "?" for a search prompt, a
+      # plugin's prompt text while one is open.
       #: (Domain::EditorState) -> String
       def command_prefix(state)
         ui = @plugin_ui
-        ui.prompting? ? ui.prompt : ":"
+        return ui.prompt if ui.prompting?
+        @search_prompt.active ? @search_prompt.prefix : ":"
       end
 
       # The keys of the command being typed, for the pending-keys display:

@@ -76,11 +76,11 @@ module EditorNormalTest
     t.assert_equal("Type  :q!  and press <Enter> to abandon all changes and exit Carat", h.message_row, "ctrl-c shows the quit hint")
     t.assert_equal([["ab"], [0, 0], :normal], [h.lines, h.cursor, h.mode], "ctrl-c changes nothing else")
 
-    # Actions from later roadmap items.
+    # A message stays until the next key.
     h = editor("ab\n")
-    h.type("/")
-    t.assert_equal("Not implemented: search.forward", h.message_row, "/ reports itself")
-    t.assert_equal(["ab"], h.lines, "/ changes nothing")
+    h.type(":foo<CR>")
+    t.assert_equal("E492: Not an editor command: foo", h.message_row, "an error shows in the message row")
+    t.assert_equal(["ab"], h.lines, "and changes nothing")
     h.type("l")
     t.assert_equal("", h.message_row, "the message clears on the next key")
 

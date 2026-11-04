@@ -1,0 +1,75 @@
+ok   / moves to the next match
+ok   ? moves to the previous match
+ok   an empty pattern reuses the last one
+ok   an empty pattern before any search
+ok   escape cancels the search
+ok   backspace on an empty prompt cancels
+ok   a search offset is not implemented
+ok   a slash in a collection is not the delimiter
+ok   n repeats forward
+ok   N reverses
+ok   n after ? goes backward
+ok   n before any search
+ok   a count with n
+ok   a count with /
+ok   wrap at the bottom
+ok   wrap at the top
+ok   pattern not found
+ok   a match at the line end rests on the last character
+ok   n from a line end goes to the next one
+ok   star finds the next whole word
+ok   g star finds part of a word
+ok   hash searches backward from the word start
+ok   star takes the keyword after the cursor
+ok   star on punctuation takes the non-blank text
+ok   no string under the cursor
+ok   star then n repeats the word
+ok   d/ deletes up to the match
+ok   dn deletes up to the next match
+ok   cn changes up to the next match
+ok   d? deletes back to the match
+ok   d* deletes to the next word
+ok   the dot repeats with the same pattern
+ok   d/ with no match changes nothing
+ok   d/ escaped changes nothing
+ok   a visual search extends the selection
+ok   visual n extends to the next match
+ok   magic characters
+ok   an unmatched group
+ok   a nested multi
+ok   a back reference
+ok   an oversized pattern
+ok   a line with an illegal byte
+ok   case matches by default
+ok   ignorecase with smartcase from the configuration
+ok   ignorecase without smartcase
+ok   backslash c
+ok   star ignores smartcase
+ok   the / register puts the last pattern
+ok   the / register is read-only
+ok   registers lists the search register
+ok   up recalls the last pattern
+ok   up again recalls the one before
+ok   down past the newest returns the typed text
+ok   up recalls by prefix
+ok   star adds its pattern to the history
+ok   the command line has its own history
+ok   slash opens the search prompt
+ok   incsearch moves the cursor to the first match
+ok   the previewed match is drawn in IncSearch
+ok   with no match the cursor goes back
+ok   escape puts the cursor back
+ok   and ends the preview
+ok   without incsearch the cursor stays while typing
+ok   a visual search previews too
+ok   escape returns to visual mode
+ok   hlsearch draws every match
+ok   and nothing else
+ok   :noh hides the highlight
+ok   n shows it again
+ok   :set hlsearch shows it again
+ok   :set nohlsearch hides it
+ok   :set hls? shows the option
+ok   inv switches it
+ok   a boolean takes no value
+editor_search: 74 passed, 0 failed

@@ -28,12 +28,14 @@ require_relative "../domain_options_config"
 require_relative "../domain_plugin_manifest"
 require_relative "../domain_rc_parser"
 require_relative "../domain_registers"
+require_relative "../domain_search"
 require_relative "../domain_selection"
 require_relative "../domain_syntax_cache"
 require_relative "../domain_tab_list"
 require_relative "../domain_theme"
 require_relative "../domain_undo_tree"
 require_relative "../domain_utf8"
+require_relative "../domain_vim_pattern"
 require_relative "../drivers_disk_files"
 require_relative "../drivers_main_loop"
 require_relative "../editor_cmdline"
@@ -48,6 +50,7 @@ require_relative "../editor_registers"
 require_relative "../editor_repeat"
 require_relative "../editor_screen"
 require_relative "../editor_scroll"
+require_relative "../editor_search"
 require_relative "../editor_syntax"
 require_relative "../editor_tabs"
 require_relative "../editor_text_objects"
@@ -92,12 +95,14 @@ when "domain_options_config" then DomainOptionsConfigTest.main
 when "domain_plugin_manifest" then DomainPluginManifestTest.main
 when "domain_rc_parser" then DomainRcParserTest.main
 when "domain_registers" then DomainRegistersTest.main
+when "domain_search" then DomainSearchTest.main
 when "domain_selection" then DomainSelectionTest.main
 when "domain_syntax_cache" then DomainSyntaxCacheTest.main
 when "domain_tab_list" then DomainTabListTest.main
 when "domain_theme" then DomainThemeTest.main
 when "domain_undo_tree" then DomainUndoTreeTest.main
 when "domain_utf8" then DomainUtf8Test.main
+when "domain_vim_pattern" then DomainVimPatternTest.main
 when "drivers_disk_files" then DriversDiskFilesTest.main
 when "drivers_main_loop" then DriversMainLoopTest.main
 when "editor_cmdline" then EditorCmdlineTest.main
@@ -112,6 +117,7 @@ when "editor_registers" then EditorRegistersTest.main
 when "editor_repeat" then EditorRepeatTest.main
 when "editor_screen" then EditorScreenTest.main
 when "editor_scroll" then EditorScrollTest.main
+when "editor_search" then EditorSearchTest.main
 when "editor_syntax" then EditorSyntaxTest.main
 when "editor_tabs" then EditorTabsTest.main
 when "editor_text_objects" then EditorTextObjectsTest.main
