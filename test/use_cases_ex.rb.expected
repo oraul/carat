@@ -163,5 +163,5 @@ ok   ne is not new
 ok   se sets
 ok   sy is syntax
 ok   synt is syntax
-FAIL s is not set: expected "", got "substitute"
-use_cases_ex: 165 passed, 1 failed
+ok   s is substitute, not set
+use_cases_ex: 166 passed, 0 failed
