@@ -22,7 +22,7 @@ The compiled size is estimated during translation (an atom is 1, a counted repet
 
 ### Charge a budget before the engine runs
 
-`Domain::Search` matches line by line. Before each `Regexp#match` it charges the worst case, the characters left on the line times the pattern's size, to a `SearchBudget`; when the budget cannot pay, the search stops with "E363: search stopped, pattern too costly here". A search has 400 million units (about 1.5 s at the measured rate for the largest pattern, and 130 million characters for a small one); a frame's highlighting has 20 million and stops highlighting rows when spent, never the editor. `RegexpError` and `ArgumentError` from the engine are rescued and become the same stop. A line that is not valid UTF-8 is matched through a copy with U+FFFD for each illegal byte, built by `Utf8` so it has exactly the line's characters.
+`Domain::Search` matches line by line. Before each `Regexp#match` it charges the worst case, the line's length (the engine finds a code point position from the line start, so a line of many matches searched backward costs its length per match) plus the characters left on the line times the pattern's size, to a `SearchBudget`, and refunds only the scan it did not use; when the budget cannot pay, the search stops with "E363: search stopped, pattern too costly here". A search has 400 million units (about 1.5 s at the measured rate for the largest pattern, and 130 million characters for a small one); a frame's highlighting has 20 million and stops highlighting rows when spent, never the editor. `RegexpError` and `ArgumentError` from the engine are rescued and become the same stop. A line that is not valid UTF-8 is matched through a copy with U+FFFD for each illegal byte, built by `Utf8` so it has exactly the line's characters.
 
 A timeout through `ClockPort` was considered: it would make the tests depend on time and the domain on a port; the budget is deterministic and needs neither.
 
@@ -47,6 +47,6 @@ Two editor groups, `Search` and `IncSearch`, take ids 11 and 12; the syntax grou
 ## Risks / Trade-offs
 
 - `\<` and `\>` both become `\b`, so `\<` also matches at the end of a word when the next item is not a keyword character; `*` and `#` always put a keyword after it, where the two agree. Recorded in `docs/compatibility.md`.
-- The budget charges the worst case, so a very large buffer searched with a large pattern can stop where Vim would finish; the limits allow 130 million characters for a plain word.
+- The budget charges the worst case, so a very large buffer searched with a large pattern can stop where Vim would finish; the limits allow 130 million characters for a plain word, and a backward search over a long non-ASCII line of many matches stops after about 400 million divided by the line's length matches.
 - Renumbering the syntax ids changes no name a plugin sees (plugins ask by name), but any snapshot printing an id changes; the theme tests cover the ids.
 - The wrap message is a plain message, since Carat has no `WarningMsg` group yet.

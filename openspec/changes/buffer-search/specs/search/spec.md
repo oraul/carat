@@ -137,7 +137,7 @@ With "ignorecase" off a pattern SHALL match case. With it on a pattern SHALL ign
 - **THEN** the cursor is at row 0, column 2
 
 ### Requirement: An untrusted pattern never crashes or hangs the editor
-A pattern SHALL only reach the matching engine in a form it matches without backtracking, and one whose compiled size passes the limit SHALL show "E363: pattern uses more memory than 'maxmempattern'". A search SHALL stop with an error before its work passes its budget, and a frame SHALL stop highlighting when its own budget is spent. A line that is not valid UTF-8 SHALL be searched with each illegal byte as U+FFFD.
+A pattern SHALL only reach the matching engine in a form it matches without backtracking, and one whose compiled size passes the limit SHALL show "E363: pattern uses more memory than 'maxmempattern'". A search SHALL stop with an error before its work passes its budget, every match it tries counted at no less than its line's length, and a frame SHALL stop highlighting when its own budget is spent. A line that is not valid UTF-8 SHALL be searched with each illegal byte as U+FFFD.
 
 #### Scenario: Illegal byte in the line
 - **WHEN** "/", "b", Enter are pressed on a line holding "a", the byte 0xFF, and "b"
@@ -146,6 +146,10 @@ A pattern SHALL only reach the matching engine in a form it matches without back
 #### Scenario: Oversized pattern
 - **WHEN** "/", "\", "(", "a", "\", "{", "9", "9", "9", "}", "\", ")", "\", "{", "9", "9", "9", "}", Enter are pressed
 - **THEN** the message is the error "E363: pattern uses more memory than 'maxmempattern'"
+
+#### Scenario: Many matches on a long line searched backward
+- **WHEN** "é" is searched backward from the end of a line of 200,000 "é"
+- **THEN** the search stops with "E363: search stopped, pattern too costly here" instead of trying every match
 
 ### Requirement: The search history is recalled on the command line
 Each pattern entered at a search prompt and each "*", "#", "g*", or "g#" pattern SHALL be added to the search history, the newest last, without duplicates and at most 50 entries. At a search prompt "<Up>" SHALL replace the text with the next older entry that starts with what was typed before the first recall, and "<Down>" with the next newer one, returning to the typed text after the newest.
