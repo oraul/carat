@@ -18,8 +18,8 @@
 
 ## 4. Planner only when needed
 
-- [x] 4.1 `tools/run_state.sh`: `plan-needed CHANGE`. Tested by "run_state: plan-needed takes the queue head as written", "... names a change that is not the head", "... names a pending proposal", "... ignores a delivery's advisories", "... leaves a change with a history row", and "... names a head without a change name".
-- [x] 4.2 `.claude/workflows/deliver-change.js`: the resume runs `plan-needed`; the planner runs only when it says needed or for a brief beyond the change name; `planned` stored; the package prompt for a skipped plan. `.claude/agents/contributor.md` package step 2 and `.claude/agents/planner.md` step 3.
+- [x] 4.1 `tools/run_state.sh`: `plan-needed CHANGE`. Tested by "run_state: plan-needed takes the queue head as written", "... names a change that is not the head", "... names a pending proposal", "... ignores a delivery's advisories", "... leaves a change with a history row", and "... names a head without a change name"; the `item:` line by "... prints the head item as written", "... prints no item for a change that is not the head", and "... prints the head item beside a pending proposal".
+- [x] 4.2 `.claude/workflows/deliver-change.js`: the resume runs `plan-needed`; the planner runs only when it says needed or for a brief beyond the change name; `planned` stored; the package prompt for a skipped plan; the queue item as the brief of the scouts and the contributor when the brief is only the change name. `.claude/agents/contributor.md` package step 2 and `.claude/agents/planner.md` step 3.
 
 ## 5. Retrospective, deliver command, and docs
 

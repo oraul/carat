@@ -78,7 +78,7 @@ const RESUME = {
   properties: {
     status: STATUS, change: { type: 'string' }, branch: { type: 'string' }, head: HEAD,
     state_json: { type: 'string', description: 'the output of tools/run_state.sh trusted, verbatim' },
-    plan: { type: 'string', description: 'the line tools/run_state.sh plan-needed printed' },
+    plan: { type: 'string', description: 'the output of tools/run_state.sh plan-needed, verbatim: its first line, then its item: line when it printed one' },
     reason: { type: 'string' },
   },
   required: ['status', 'change', 'branch', 'head', 'state_json'],
@@ -448,7 +448,7 @@ const resume = await agent(
 2. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Check it out when it exists locally or on origin; otherwise create it from origin/main, which needs a clean tree (stop with the reason when it is not).
 3. \`make doctor\`; run \`make toolchain\` when it fails and stop when that fails too.
 4. Run \`sh tools/run_state.sh init <change> <branch>\`, then \`sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git rev-parse --short=12 HEAD\` as head.
-5. Run \`sh tools/run_state.sh plan-needed <change>\` and return the line it printed as plan; its exit 1 means not needed, not a failure.`,
+5. Run \`sh tools/run_state.sh plan-needed <change>\` and return its output verbatim as plan, both lines when it prints two; its exit 1 means not needed, not a failure.`,
   { schema: RESUME, effort: 'low', label: 'resume' })
 if (!resume || resume.status !== 'done') {
   stopped = `resume stopped: ${resume ? resume.reason : 'no result'}`
@@ -468,9 +468,14 @@ if (!resume || resume.status !== 'done') {
 // when the queue needs a decision: plan-needed found one (the change is not
 // the queue's head, or a proposal or finding waits), or the brief is a
 // request beyond the change's name. Otherwise the head item is taken as
-// written, with its size as the estimate.
-const planLine = resume && typeof resume.plan === 'string' ? resume.plan : ''
+// written, with its size as the estimate. A brief that is only the change
+// name gives the scouts and the contributor nothing to work from, so the
+// queue item plan-needed printed (its item: line) is their brief.
+const planLines = resume && typeof resume.plan === 'string' ? resume.plan.split('\n') : []
+const planLine = planLines[0] || ''
 const request = typeof input.brief === 'string' && input.brief.trim() !== '' && input.brief.trim() !== state.change
+const item = (planLines.find((l) => /^item: /.test(l)) || '').slice(6).trim()
+const brief = request ? input.brief : item ? `the item of docs/queue.md for this change, as written: ${item}` : input.brief
 if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement'] && !request && /^not needed:/.test(planLine)) {
   phase('Plan')
   const size = /estimated (small|medium|large)\b/.exec(planLine)
@@ -503,7 +508,7 @@ if (!stopped && !state.merged) {
     let packs = input.packs || []
     if (!packs.length) {
       const plan = await measured('scout', () => agent(
-        `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${input.brief || state.change}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only records in docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. For each area, a pack under tmp/scout/ is current when its Commit: is origin/main or \`git diff --quiet <its commit> origin/main -- <its Files read>\` passes; list current packs by path and the areas still needing one, with the question a contributor needs answered about the code it edits.`,
+        `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${brief || state.change}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only records in docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. For each area, a pack under tmp/scout/ is current when its Commit: is origin/main or \`git diff --quiet <its commit> origin/main -- <its Files read>\` passes; list current packs by path and the areas still needing one, with the question a contributor needs answered about the code it edits.`,
         { schema: withCalls(SCOUT_PLAN), effort: 'low', label: 'scout plan' }))
       const room = plan ? Math.max(0, MAX_AREAS - plan.current.length) : 0
       const needed = plan ? plan.needed.slice(0, room) : []
@@ -514,7 +519,7 @@ if (!stopped && !state.merged) {
       note(`scout packs: ${packs.join(', ') || 'none'}`)
     }
     phase('Implement')
-    const done = await contributor('implement', `Brief: ${input.brief || 'the existing OpenSpec change'}. Scout packs: ${packs.join(', ') || 'none'}.${planNotes.length ? `\nPlan notes:\n- ${planNotes.join('\n- ')}` : ''}`)
+    const done = await contributor('implement', `Brief: ${brief || 'the existing OpenSpec change'}. Scout packs: ${packs.join(', ') || 'none'}.${planNotes.length ? `\nPlan notes:\n- ${planNotes.join('\n- ')}` : ''}`)
     if (done) phaseDone('implement', head)
   }
 

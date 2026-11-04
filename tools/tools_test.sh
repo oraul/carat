@@ -535,7 +535,15 @@ printf '# Queue\n\n1. `next` (T1, estimated small): one, estimated large later.\
 commit "docs: the queue"
 state init next chore/next > /dev/null
 expect "run_state: plan-needed takes the queue head as written" 1 "^not needed: next heads docs/queue[.]md, estimated small," state plan-needed next
+expect "run_state: plan-needed prints the head item as written" 1 "^item: \`next\` [(]T1, estimated small[)]: one, estimated large later[.]\$" state plan-needed next
 expect "run_state: plan-needed names a change that is not the head" 0 "^needed: later is not the head of docs/queue[.]md [(]next[)]" state plan-needed later
+# item_lines CHANGE: plan-needed's exit, then the count of its item lines.
+item_lines() {
+  out=$(state plan-needed "$1")
+  got=$?
+  echo "exit $got items $(printf '%s\n' "$out" | grep -c '^item: ')"
+}
+expect "run_state: plan-needed prints no item for a change that is not the head" 0 "^exit 0 items 0\$" item_lines later
 state init prev chore/prev > /dev/null
 state set prev merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 state note prev quality-advisory "abc1234 a name" > /dev/null
@@ -543,6 +551,7 @@ state note prev quality-blocking "abc1234 a bug" > /dev/null
 expect "run_state: plan-needed ignores a delivery's advisories" 1 "^not needed" state plan-needed next
 state note prev retro "drop a step; evidence: 9000 tokens" > /dev/null
 expect "run_state: plan-needed names a pending proposal" 0 "^needed: prev holds 1 proposal" state plan-needed next
+expect "run_state: plan-needed prints the head item beside a pending proposal" 0 "^item: \`next\` " state plan-needed next
 state history > /dev/null
 expect "run_state: plan-needed leaves a change with a history row" 1 "^not needed" state plan-needed next
 printf '# Queue\n\n1. UI track: themes (T5, estimated medium).\n' > docs/queue.md
