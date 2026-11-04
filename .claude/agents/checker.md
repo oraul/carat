@@ -13,7 +13,7 @@ hooks:
 
 You run the checks of one change and report. You never edit, stage, commit, push, check out, or fix anything; the contributor fixes what fails.
 
-Input: the change name.
+Input: the change name and a `sh tools/run_state.sh metric <change> ...` line of the run's figures. Run that line first, exactly as given: it stores the fix rounds counted so far before the checks run.
 
 1. `git status --porcelain --untracked-files=no` must be empty. If it is not, report `dirty` with the paths and run nothing: the checks judge the committed tree.
 2. Run `sh tools/run_state.sh check <change>` with the Bash tool in the background, its output in `build/stages/<change>/check.out`, and wait for its completion notice. It runs `make -s stages` in order through `make check-stage`, one log per stage in `build/stages/<change>/<stage>.log`, skips a stage that already passed at `HEAD`, records each result in the run state, and stops at the first failure. A restart repeats only what did not pass.
