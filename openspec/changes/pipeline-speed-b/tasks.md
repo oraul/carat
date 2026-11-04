@@ -21,5 +21,5 @@
 ## 4. Docs and bookkeeping
 
 - [x] 4.1 `README.md`, `CLAUDE.md` (the `check` and `scope` commands, the bytes partly taken from the restated `usage` note), `docs/codebase-map.md` area 1 and its delivered-changes line, the headers of `tools/run_state.sh`, `tools/gates.sh`, and `tools/agent_guard.sh`.
-- [x] 4.2 `docs/backlog.md`: the plan notes (the scratch-file entry added; the four entries this change fixes removed; the Queued lines added).
+- [x] 4.2 `docs/backlog.md`: the plan notes (the scratch-file entry added; the four entries this change fixes removed; the Queued lines added), and the narrowed entry for the `phase.check` that `check` still writes, queued in `pipeline-speed-c`.
 - [x] 4.3 Run `make tools-test`, `make docs-lint`, `make gates`, and `openspec validate pipeline-speed-b --strict --no-interactive`.

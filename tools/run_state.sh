@@ -63,7 +63,7 @@
 #                               order, stop at the first failure, record
 #                               phase.check when all pass; a stage record
 #                               counts only at COMMIT, the last check the
-#                               workflow recorded, or carried from it: skipped
+#                               workflow passed, or carried from it: skipped
 #                               when COMMIT is HEAD, carried to HEAD for a
 #                               stage outside TEST_STAGES when only tests
 #                               changed since COMMIT
@@ -331,7 +331,9 @@ check_stages() {
       die "check: stage $s failed at $head; read $stage_dir/$change/$s.log"
   done
   # The workflow records phase.check from the checker's result too; the
-  # merge's records gate compares this one with it.
+  # merge's records gate compares this one with it. Until this write goes,
+  # a check run outside the workflow backs its own stages on a resume
+  # (docs/backlog.md, "check writes the phase.check record").
   write_key "phase.check" "$head"
   echo "check: every stage passed at $head"
 }

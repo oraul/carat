@@ -320,6 +320,12 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a pull request that only moves code files to a Markdown or `openspec/` path is listed by the new paths, so CI skips `spin check`, and the push to `main` then skips it as a passed head.
 - Fix outline: list the paths without rename detection, together with the fix of the entry "The CI scope script word-splits the changed paths", and add a `tools/tools_test.sh` case. Queued in `ci-hardening`.
 
+## check writes the phase.check record that backs its own stages
+
+- Where: `check_stages` in `tools/run_state.sh` (line 337), which still writes `phase.check` itself, and `trusted_state`, which hands that record to a resumed run as the workflow's. What remains of the periodic security Low (5) at 8c340cd after `pipeline-speed-b` made a stage record count only at the commit passed as backed. Quality finding of `pipeline-speed-b` at d820b39b39da.
+- Why it matters: after a forged `MAKE=true sh tools/run_state.sh check CHANGE` at the head, a resumed run skips the checker (`doneAtHead`), sends `check:pass:HEAD` in `RECORDS`, which matches, and `gates.sh stages` passes on the forged stages, leaving `diagnose` and `gates`, which CI leaves out, unchecked.
+- Fix outline: once `main`'s workflow records `phase.check` from the checker's result (`phaseDone`, merged with `pipeline-speed-b`), drop the write from `check_stages`, or have `trusted` drop a `phase.check` the workflow did not record; add a `tools/tools_test.sh` case that a check run alone leaves no `phase.check`. Queued in `pipeline-speed-c`.
+
 ## The search budget charges a line's length on ASCII lines too
 
 - Where: `Carat::Domain::Search.match_at` in `carat/domain/search.rb` (line 101), which charges every match tried its line's length as a fixed cost; the risk note at line 50 of the archived design of `buffer-search` and the Search rows of `docs/compatibility.md`. Quality advisory of `buffer-search` at a36858a2bc88.
