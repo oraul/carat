@@ -17,11 +17,15 @@ The editor SHALL know the syntax groups `Comment`, `Constant`, `String`, `Charac
 - **THEN** the request fails with `No highlight group named Banana`
 
 ### Requirement: The editor's own highlights are groups too
-The editor SHALL draw its own parts in the groups `Normal`, `LineNr`, `SignColumn`, `StatusLine`, `StatusLineNC`, `TabLine`, `TabLineSel`, `TabLineFill`, `Visual`, `NonText`, and `ErrorMsg`, which a theme colors like the syntax groups and which a plugin cannot use for tokens.
+The editor SHALL draw its own parts in the groups `Normal`, `LineNr`, `SignColumn`, `StatusLine`, `StatusLineNC`, `TabLine`, `TabLineSel`, `TabLineFill`, `Visual`, `NonText`, `ErrorMsg`, `Search`, and `IncSearch`, which a theme colors like the syntax groups and which a plugin cannot use for tokens.
 
 #### Scenario: A plugin asks for an editor group
 - **WHEN** a plugin asks for the group `StatusLine`
 - **THEN** the request fails with `No highlight group named StatusLine`
+
+#### Scenario: The search groups have colors
+- **WHEN** either shipped theme is chosen
+- **THEN** `Search` and `IncSearch` have a background color in both color depths
 
 ### Requirement: The theme option selects a shipped theme
 The `option.theme` line of the configuration SHALL select the theme, `carat-dark` (the default) or `carat-light`; an unknown name SHALL be reported as `file:line: unknown theme NAME` and keep the theme set before it. A theme gives every group a foreground and a background (or the terminal's own) and any of bold, italic, underline, and reverse; `Normal` keeps the terminal's own colors in both themes.
