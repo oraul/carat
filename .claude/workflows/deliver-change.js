@@ -1,6 +1,6 @@
 export const meta = {
   name: 'deliver-change',
-  description: 'Deliver one change to main through fixed phases: plan, scouts, contributor, checker, quality and security review, benchmark, package, CI and merge, retrospective, periodic review, report',
+  description: 'Deliver one change to main through fixed phases: plan, scouts, contributor, checker, quality and security review, benchmark, package, CI and merge, close (records, retrospective, and report in one start), periodic review',
   whenToUse: 'Every change to this repository, started by /deliver with a change name or a brief; it resumes from build/pipeline/CHANGE.json',
   phases: [
     { title: 'Resume', detail: 'branch, toolchain, and the run state' },
@@ -13,9 +13,8 @@ export const meta = {
     { title: 'Benchmark', detail: 'allocations and rounds against the figures recorded for main; the agent against main only when they differ' },
     { title: 'Package', detail: 'contributor: archive, gates, one push, pull request' },
     { title: 'Merge', detail: 'merger: wait for CI, red back to the contributor; main\'s merge gates, squash with the trailer, verify main' },
-    { title: 'Retrospective', detail: 'retrospective: record the metrics, propose simplifications, decide whether a review is due' },
+    { title: 'Close', detail: 'retrospective: the last records, the proposals, the budget and review-due lines, and the report, in one start' },
     { title: 'Review', detail: 'periodic review of the whole codebase: security, never skipped, and quality' },
-    { title: 'Report', detail: 'reporter: the fixed report shape' },
   ],
 }
 
@@ -34,11 +33,12 @@ export const meta = {
 // run state's phase.* and review.* lines and the figures are the script's
 // own: it builds each command from a schema-checked result. One agent that
 // reads nothing else runs the queued phase and review lines with the
-// metric line (flush), twice a run: at the end of verify(), since the
-// pre-push gates read the reviews, and at the end, where the package, CI,
-// and merge phases wait (a resume reads pushed, pr, and merged instead).
-// Between them the checker, the merger, and the retrospective run the
-// metric line first, so a fix round is counted before its check.
+// metric line (flush) at the end of verify(), since the pre-push gates
+// read the reviews; the closing start runs those left at the end, where
+// the package, CI, and merge phases wait (a resume reads pushed, pr, and
+// merged instead), under the guard's close profile, which allows only the
+// phases no merge gate reads. The checker and the merger run the metric
+// line first, so a fix round is counted before its check.
 // tools/agent_guard.sh keeps the other agents off the phase and review
 // commands, and the merger's records gate compares the file with what the
 // script received.
@@ -138,7 +138,6 @@ const MERGE = {
   },
   required: ['ci', 'head', 'merged'],
 }
-const REPORT = { type: 'object', properties: { report: { type: 'string' } }, required: ['report'] }
 const RECORDED = { type: 'object', properties: { ok: { type: 'boolean' }, output: { type: 'string' } }, required: ['ok', 'output'] }
 const PLAN = {
   type: 'object',
@@ -151,14 +150,17 @@ const PLAN = {
   },
   required: ['decisions', 'security_first', 'notes', 'files', 'estimate'],
 }
-const RETRO = {
+const CLOSE = {
   type: 'object',
   properties: {
     proposals: { type: 'array', items: { type: 'object', properties: { proposal: { type: 'string' }, evidence: { type: 'string' } }, required: ['proposal', 'evidence'] } },
-    review_due: { type: 'string', description: 'the line tools/run_state.sh review-due printed' },
+    review_due: { type: 'string', description: 'the line tools/run_state.sh review-due printed, empty without the retrospective steps' },
     due: { type: 'boolean' },
+    recorded: { type: 'boolean', description: 'the record line exited 0' },
+    record_output: { type: 'string' },
+    report: { type: 'string' },
   },
-  required: ['proposals', 'review_due', 'due'],
+  required: ['proposals', 'due', 'recorded', 'report'],
 }
 const CALLS = { type: 'integer', description: 'how many tool calls you made for this task' }
 const withCalls = (schema) => ({ ...schema, properties: { ...schema.properties, tool_calls: CALLS }, required: [...schema.required, 'tool_calls'] })
@@ -236,8 +238,8 @@ function seed() {
     if (securityResult === 'pass' && securityAt === commit) setBlocked(commit, found.map(qualityFile))
   }
 }
-// The figures in one line for the retrospective's and the reporter's
-// prompts; the run state holds the same.
+// The figures in one line for the closing start's prompt; the run state
+// holds the same.
 function summary() {
   const keys = Object.keys(usage)
   const total = (field) => keys.reduce((n, k) => n + usage[k][field], 0)
@@ -254,10 +256,14 @@ function queue(line, commit) {
   if (CHANGE.test(state.change || '') && COMMIT.test(commit || '')) pending.push(line)
   else note(`not recorded (change ${state.change}, commit ${commit}): ${line}`)
 }
+const phaseLine = (name, commit) => `sh tools/run_state.sh phase ${state.change} ${name} ${commit}`
 function phaseDone(name, commit) {
   state['phase.' + name] = commit
-  queue(`sh tools/run_state.sh phase ${state.change} ${name} ${commit}`, commit)
+  queue(phaseLine(name, commit), commit)
 }
+// The queued lines the closing start may run under the guard's close
+// profile: the phases no merge gate reads, and notes.
+const CLOSABLE = /^sh tools\/run_state\.sh (phase [a-z0-9-]+ (plan|implement|package|ci|merge|retro|report) [0-9a-f]{7,40}|note [a-z0-9-]+ [a-z-]+ "[^"]*")$/
 function reviewed(kind, passed, commit, counts) {
   const result = passed ? 'pass' : 'blocked'
   state['review.' + kind] = `${result} ${commit}`
@@ -656,45 +662,51 @@ if (!stopped && !state.merged) {
   }
 }
 
-// After the merge: record the run's figures, learn from them, and review the
-// whole codebase when five changes merged since the last review or this one
-// touched a sensitive area. What they find waits in the run state for the
-// next change's planner.
-if (!stopped && state.merged && !state['phase.retro']) {
-  phase('Retrospective')
-  // The line and the summary are built from the same figures at once, so
-  // once the line has run the run state's totals equal the summary's.
-  const line = metricLine()
-  const figures = summary()
-  const r = await measured('retro', () => agent(
-    `${intro()} The change merged. First run this line, which stores the figures below in the run state, exactly as written: \`${line}\`\nIts figures: ${figures}.\nWorkflow notes:\n- ${notes.join('\n- ')}`,
-    { agentType: 'retrospective', schema: withCalls(RETRO) }))
-  if (!r) stopped = 'the retrospective returned no result'
-  else {
-    phaseDone('retro', state.merged)
-    note(`retrospective: ${r.proposals.map((x) => `${x.proposal} (${x.evidence})`).join('; ') || 'no proposal'}; ${r.review_due}`)
-    if (r.due) {
-      phase('Review')
-      let p = null
-      try {
-        p = await measured('review', () => workflow({ scriptPath: '.claude/workflows/periodic-review.js' }, { change: state.change }))
-      } catch (e) {
-        note(`the periodic review failed to start: ${e.message}`)
-      }
-      if (!p || !p.ran) stopped = 'the periodic security review did not run; run /review'
-      else note(`periodic review: security ${p.security.length} finding(s), ${p.security_blocking} blocking (to the front of the queue); quality ${p.quality_blocking.length} blocking, ${p.quality_advisory} advisory${p.recorded === false ? '; the results were not recorded in the run state' : ''}`)
-    }
+// The close, one retrospective start in every run: it runs the records left
+// since the last flush with this start's own phase lines and the metric
+// line, looks back when the change merged and no retrospective ran yet,
+// says whether a periodic review is due, and writes the report. The line
+// and the summary are built from the same figures at once, so once the line
+// has run the run state's totals equal the summary's; this start's own cost
+// is the one figure recorded nowhere. When the start did not record, its
+// lines go to one record start, as a run whose hooks still load the old
+// profile needs. The periodic review, when due, runs after it; what the
+// reviews find waits in the run state for the next change's planner.
+const looking = !stopped && Boolean(state.merged) && !state['phase.retro']
+phase('Close')
+// A line the close profile refuses (none is left after verify()'s flush,
+// but a stop could leave one) goes through the record agent first.
+if (pending.some((l) => !CLOSABLE.test(l)) && !(await flush())) note(stopped)
+const closeAt = state.merged || head
+const own = CHANGE.test(state.change || '') && COMMIT.test(closeAt || '')
+  ? (looking ? ['retro', 'report'] : ['report']).map((n) => phaseLine(n, closeAt)) : []
+const left = pending.splice(0)
+const records = left.concat(own, [metricLine()].filter(Boolean)).join(' && ')
+const figures = summary()
+const close = await measured('close', () => agent(
+  `Change \`${state.change || input.change || 'unknown'}\`${state.branch ? ` on branch \`${state.branch}\`` : ''}. ${state.merged ? `It merged as ${state.merged}.` : 'It did not merge.'} ${looking ? 'Run the retrospective steps, then the report steps.' : 'Skip the retrospective steps; run the report steps.'}\nThe record line: ${records ? `\`${records}\`` : 'none; skip that step and return recorded true.'}\nThe run's figures: ${figures}.\nWorkflow notes:\n- ${notes.join('\n- ')}\n${stopped ? 'The run stopped: ' + stopped : 'The run finished.'}`,
+  { agentType: 'retrospective', schema: withCalls(CLOSE) }))
+if (close && looking) {
+  state['phase.retro'] = closeAt
+  note(`retrospective: ${close.proposals.map((x) => `${x.proposal} (${x.evidence})`).join('; ') || 'no proposal'}; ${close.review_due || 'review-due not read'}`)
+}
+if (records && (!close || !close.recorded)) {
+  note(`the closing start did not record the run${close && close.record_output ? `: ${close.record_output}` : ''}; one record start runs its lines`)
+  pending.push(...left, ...(close ? own : []))
+  if (!(await flush(true))) note(stopped)
+}
+let periodic = ''
+if (close && looking && close.due) {
+  phase('Review')
+  let p = null
+  try {
+    p = await measured('review', () => workflow({ scriptPath: '.claude/workflows/periodic-review.js' }, { change: state.change }))
+  } catch (e) {
+    note(`the periodic review failed to start: ${e.message}`)
   }
+  if (!p || !p.ran) stopped = 'the periodic security review did not run; run /review'
+  else periodic = `periodic review: security ${p.security.length} finding(s), ${p.security_blocking} blocking (to the front of the queue); quality ${p.quality_blocking.length} blocking, ${p.quality_advisory} advisory${p.recorded === false ? '; the results were not recorded in the run state' : ''}`
+  if (periodic) note(periodic)
 }
-
-phase('Report')
-const report = await measured('report', () => agent(
-  `Change \`${state.change || input.change || 'unknown'}\`. Write the report. Figures: ${summary()}.\nWorkflow notes:\n- ${notes.join('\n- ')}\n${stopped ? 'The run stopped: ' + stopped : 'The run finished.'}`,
-  { agentType: 'reporter', schema: withCalls(REPORT), effort: 'low' }))
-// Everything the script decided since the last flush: the retrospective,
-// the report, and a stopped run's records, so a restart does not repeat them.
-if (state.change) {
-  if (report) phaseDone('report', state.merged || head)
-  if (!(await flush(Boolean(stopped)))) note(stopped)
-}
-return report ? report.report : `No report; notes:\n${notes.join('\n')}${stopped ? '\nStopped: ' + stopped : ''}`
+const after = `${periodic ? `\n- Periodic review: ${periodic.replace(/^periodic review: /, '')}` : ''}${stopped && looking ? `\n- Stopped after the close: ${stopped}` : ''}`
+return close ? `${close.report}${after}` : `No report; notes:\n${notes.join('\n')}${stopped ? '\nStopped: ' + stopped : ''}`

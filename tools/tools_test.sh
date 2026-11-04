@@ -200,7 +200,7 @@ expect "run_state: check stops at the first failing stage" 1 "stage b failed" \
 # without it, which any agent could have written, runs again.
 expect "run_state: check runs a stage recorded at the head that no commit backs" 0 "^stage a: exit 0" \
   env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
-expect "run_state: check records the phase" 0 "^$(git rev-parse --short=12 HEAD)$" state get state phase.check
+expect "run_state: check leaves phase.check to the workflow" 0 "^$" state get state phase.check
 expect "run_state: check skips the stages passed at the backed head" 0 "stage a: passed at .*, skipped" \
   env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD)"
 expect "run_state: check refuses a backed commit that is not one" 1 "not a commit: HEAD" \
@@ -236,6 +236,17 @@ git_q mv tools/t.sh test/moved.sh
 commit "chore: move t"
 expect "run_state: check reruns every stage after a file moves under test/" 0 "^stage a: exit 0" \
   env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
+# The checks judge the commit: a modified tracked file or an untracked
+# source spin would compile is refused before any stage runs.
+echo dirty >> README.md
+expect "run_state: check refuses modified tracked files" 1 "refused: tracked files differ from HEAD" \
+  env STAGES="a" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
+git_q checkout -q README.md
+mkdir -p carat
+echo loose > carat/loose.rb
+expect "run_state: check refuses an untracked source" 1 "refused: untracked files under carat/, bin/, test/, or bench/" \
+  env STAGES="a" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
+rm -r carat
 state phase state report > /dev/null
 expect "run_state: phase accepts report" 0 "^$(git rev-parse --short=12 HEAD)$" state get state phase.report
 expect "run_state: status names the running change and its next phase" 0 "next phase: plan" state status
@@ -308,6 +319,63 @@ expect "run_state: note records another advisory" 0 "^1$" sh -c "grep -c 'tools/
 state note state quality-blocking "0123456789ab tools/x.sh:3 a reason; fix: an outline" > /dev/null
 state note state quality-blocking "abc1234def01 tools/x.sh:3 a reason; fix: an outline" > /dev/null
 expect "run_state: note keeps a blocking finding at each commit" 0 "^2$" sh -c "grep -c 'quality-blocking [0-9a-f]* tools/x.sh:3' build/pipeline/state.json"
+# A text whose first word is made of hex letters is no commit on either side.
+state note state quality-advisory "add a reason; fix: an outline" > /dev/null
+expect "run_state: note keeps one advisory starting with a hex word" 0 "already recorded" state note state quality-advisory "add a reason; fix: an outline"
+expect "run_state: note matches a hex word after a commit" 0 "already recorded" state note state quality-advisory "0123456789ab add a reason; fix: an outline"
+
+# The compile stages skip the code they last passed while their outputs
+# are the ones that pass left; a change to the code they read, to their
+# outputs, or a failure runs them again.
+fresh compiled
+mkdir -p carat
+echo code > carat/x.rb
+echo budget > tools/analysis_budget.sh
+commit "feat: code"
+state init compiled chore/compiled > /dev/null
+cat > "$work/bin/build-make" <<'EOF'
+#!/bin/sh
+for arg in "$@"; do
+  case "$arg" in
+    S=dev-build) mkdir -p build/dev && echo editor > build/dev/carat && echo report > build/dev/carat.timing ;;
+    S=test-build) mkdir -p build/test && echo runner > build/test/run_all && echo report > build/test/run_all.timing; exit "${FAIL_TB:-0}" ;;
+  esac
+done
+exit 0
+EOF
+chmod +x "$work/bin/build-make"
+compile_check() {
+  env STAGES="a dev-build test-build diagnose" MAKE="$work/bin/build-make" "$@" sh "$here/run_state.sh" check compiled
+}
+compile_check > "$work/compiled.out" 2>&1
+expect "run_state: check runs the compile stages on code it never passed" 0 "^stage dev-build: exit 0" cat "$work/compiled.out"
+echo tooling >> tools/base.sh
+echo notes > docs/notes.md
+commit "chore: tooling"
+compile_check > "$work/compiled.out" 2>&1
+expect "run_state: check skips a compile stage on the code it passed" 0 "^stage dev-build: passed on the same code .* skipped" cat "$work/compiled.out"
+expect "run_state: a tooling commit keeps the code key" 0 "^stage diagnose: passed on the same code .* skipped" cat "$work/compiled.out"
+expect "run_state: check runs the other stages on a tooling commit" 0 "^stage a: exit 0" cat "$work/compiled.out"
+expect "run_state: a skipped compile stage passes at the head" 0 "^0 0s $(git rev-parse --short=12 HEAD) [^ ]+ compiled-[0-9a-f]{12}$" state get compiled stage.test-build
+echo rebuilt > build/test/run_all
+compile_check > "$work/compiled.out" 2>&1
+expect "run_state: check runs a compile stage whose outputs changed" 0 "^stage test-build: exit 0" cat "$work/compiled.out"
+expect "run_state: check keeps the skip of a stage whose outputs did not change" 0 "^stage dev-build: passed on the same code" cat "$work/compiled.out"
+echo more code > carat/x.rb
+commit "feat: more code"
+compile_check > "$work/compiled.out" 2>&1
+expect "run_state: check runs a compile stage after a code change" 0 "^stage diagnose: exit 0" cat "$work/compiled.out"
+echo even more code > carat/x.rb
+commit "feat: even more code"
+expect "run_state: a compile stage can fail" 1 "stage test-build failed" compile_check FAIL_TB=1
+compile_check > "$work/compiled.out" 2>&1
+expect "run_state: a failed compile stage keeps no pass" 0 "^stage test-build: exit 0" cat "$work/compiled.out"
+expect "run_state: the stage before the failure keeps its pass" 0 "^stage dev-build: passed on the same code" cat "$work/compiled.out"
+echo budget again > tools/analysis_budget.sh
+commit "chore: the analysis budget"
+compile_check > "$work/compiled.out" 2>&1
+expect "run_state: check runs a compile stage after a change to the script it runs" 0 "^stage dev-build: exit 0" cat "$work/compiled.out"
+rm "$work/compiled.out"
 
 fresh pushing
 git_q init -q --bare "$work/origin.git"
@@ -412,7 +480,7 @@ state metric large phase.implement=900000/30 > /dev/null
 state usage sized 610000 20 > /dev/null
 state usage large 2000000 50 > /dev/null
 expect "run_state: budget names an overrun of total tokens" 0 "^over: estimated small, budget 500000 total tokens and 25 minutes, actual 610000 total tokens in 20[.]0 minutes, 310000 output tokens$" state budget sized
-expect "run_state: budget passes a run within its budget" 0 "^within: estimated large, budget 2500000 total tokens, actual 2000000 total tokens in 50[.]0 minutes, 900000 output tokens$" state budget large
+expect "run_state: budget passes a run under its budget" 0 "^under: estimated large, budget 2500000 total tokens, actual 2000000 total tokens in 50[.]0 minutes, 900000 output tokens$" state budget large
 expect "run_state: budget says when no estimate was made" 0 "^no estimate: neither the run state nor a queue item of unsized states a size" state budget unsized
 expect "run_state: budget says when no total tokens were recorded" 0 "^unmeasured: estimated medium, budget 1200000 total tokens, no total tokens recorded$" state budget quiet
 expect "run_state: budget reads no estimate of an unmerged change" 0 "^no estimate: " state budget unmerged
@@ -428,11 +496,15 @@ state metric early estimate=small phase.implement=1000/2 > /dev/null
 state metric quiet estimate=huge > /dev/null
 state usage planned 700000 10 > /dev/null
 state usage early 400000 20 > /dev/null
-expect "run_state: budget reads the stored estimate of a change with no queue item" 0 "^within: estimated medium, budget 1200000 total tokens, actual 700000 total tokens in 10[.]0 minutes, 200000 output tokens$" state budget planned
+expect "run_state: budget reads the stored estimate of a change with no queue item" 0 "^under: estimated medium, budget 1200000 total tokens, actual 700000 total tokens in 10[.]0 minutes, 200000 output tokens$" state budget planned
 expect "run_state: the stored estimate wins over the queue item" 0 "^over: estimated medium, budget 1200000 total tokens, actual 2000000 total tokens" state budget large
-expect "run_state: budget reads the stored estimate before the merge" 0 "^within: estimated small, budget 500000 total tokens and 25 minutes, actual 400000 total tokens in 20[.]0 minutes, 1000 output tokens$" state budget early
+expect "run_state: budget reads the stored estimate before the merge" 0 "^under: estimated small, budget 500000 total tokens and 25 minutes, actual 400000 total tokens in 20[.]0 minutes, 1000 output tokens$" state budget early
 expect "run_state: budget names an overrun of wall minutes" 0 "^over: estimated small, budget 500000 total tokens and 25 minutes, actual 400001 total tokens in 30[.]0 minutes" state usage early 1 10
 expect "run_state: a stored word that is not a size leaves the queue item's" 0 "^unmeasured: estimated medium" state budget quiet
+state init minuteless chore/minuteless > /dev/null
+state metric minuteless estimate=small total_tokens=1000 > /dev/null
+expect "run_state: budget names no minutes when none were recorded" 0 "^under: estimated small, budget 500000 total tokens and 25 minutes, actual 1000 total tokens, " state budget minuteless
+rm build/pipeline/minuteless.json
 # A merged value that is not a commit hash never reaches git, where
 # --output=FILE would write FILE: set refuses it, and one written by hand is
 # no merge.
@@ -740,7 +812,21 @@ expect "guard: planner reads the run states" 0 "^$" guard read 'sh tools/run_sta
 expect "guard: planner prepares its directory" 0 "^$" guard read 'mkdir -p build/plan && rm -f build/plan/goals.md' build/plan
 expect "guard: checker runs the checks" 0 "^$" guard read 'git status --porcelain --untracked-files=no && sh tools/run_state.sh check c > build/stages/c/check.out 2>&1'
 expect "guard: checker records the figures first" 0 "^$" guard read 'sh tools/run_state.sh metric c phase.check=1200/5 first.check=0 rework=2 extra=1 stop=none estimate=small planned=0'
-expect "guard: retrospective budgets the last row's change" 0 "^$" guard read 'tail -1 docs/metrics.tsv | cut -f1; sh tools/run_state.sh budget prev && sh tools/run_state.sh note c overrun \"prev: over: estimated small\"'
+expect "guard: retrospective budgets the last row's change" 0 "^$" guard close 'tail -1 docs/metrics.tsv | cut -f1; sh tools/run_state.sh budget prev && sh tools/run_state.sh note c overrun \"prev: over: estimated small\"'
+expect "guard: retrospective checks the squash commit" 0 "^$" guard close 'sh tools/run_state.sh show c && git show --stat abc1234 && BASE=abc1234~1 sh tools/gates.sh trailer && BASE=abc1234~1 sh tools/gates.sh content docs'
+expect "guard: retrospective records its notes" 0 "^$" guard close 'sh tools/run_state.sh note c retro \"x; evidence: 3\" && sh tools/run_state.sh budget c && sh tools/run_state.sh review-due c && sh tools/run_state.sh status'
+# The closing start runs the run's last records: the phases no merge gate
+# reads, notes, and the figures, never a review or a gated phase.
+expect "guard: close records a closing phase" 0 "^$" guard close 'sh tools/run_state.sh phase c package abc1234 && sh tools/run_state.sh phase c ci abc1234 && sh tools/run_state.sh phase c merge abc1234 && sh tools/run_state.sh phase c retro abc1234 && sh tools/run_state.sh phase c report abc1234 && sh tools/run_state.sh note c extra-round \"why\" && sh tools/run_state.sh metric c phase.check=1200/5 first.check=1 rework=0 stop=none'
+for gated in check quality security bench; do
+  expect "guard: close refuses a $gated phase" 2 "the close profile records only" guard close "sh tools/run_state.sh phase c $gated abc1234"
+done
+expect "guard: close refuses a phase without its commit" 2 "the close profile records only" guard close 'sh tools/run_state.sh phase c report'
+expect "guard: close refuses a phase at a word that is not a commit" 2 "the close profile records only" guard close 'sh tools/run_state.sh phase c report HEAD'
+expect "guard: close refuses a review record" 2 "tools/run_state.sh review" guard close 'sh tools/run_state.sh review c security pass x abc1234'
+expect "guard: close refuses a push" 2 "git push" guard close 'git push origin x'
+expect "guard: close names its profile" 2 "refused for the close profile" guard close 'sh tools/run_state.sh set c pushes 0'
+expect "guard: read refuses a closing phase" 2 "the close profile records only" guard read 'sh tools/run_state.sh phase c report abc1234'
 expect "guard: checker reads a failing log and compares" 0 "^$" guard read 'tail -60 build/stages/c/lint.log; grep -n -m 20 -E \"FAIL|rror\" build/stages/c/lint.log; sh tools/run_state.sh bench c; sh tools/run_state.sh show c'
 expect "guard: benchmark prepares the base" 0 "^$" guard read 'git worktree add --detach tmp/.base origin/main || git -C tmp/.base checkout -q --detach origin/main'
 expect "guard: benchmark builds the base" 0 "^$" guard read 'make -C tmp/.base dev-build test-build bench-budget PREFIX=/w/tmp/.toolchain SPINEL_CACHE_DIR=/w/build/spinel-cache'
@@ -750,8 +836,6 @@ expect "guard: quality reviewer reads the diff and notes" 0 "^$" guard read 'git
 expect "guard: quality reviewer scopes a fix round" 0 "^$" guard read 'sh tools/run_state.sh scope c abc1234 tools/x.sh carat/domain/buffer.rb && git diff abc1234 HEAD'
 expect "guard: quality reviewer runs the periodic mode" 0 "^$" guard read 'git fetch -q origin && git worktree add --detach tmp/.review-quality origin/main && git log --name-only -5 origin/main && git worktree remove --force tmp/.review-quality'
 expect "guard: security reviewer runs its steps" 0 "^$" guard read 'git status --porcelain --untracked-files=no && git remote set-head origin main && git fetch -q origin && git -C tmp/.review-security checkout -q --detach origin/main && sh tools/run_state.sh note c security \"Low (3) tools/x.sh:1 a title; fix: an outline\"'
-expect "guard: reporter checks the squash commit" 0 "^$" guard read 'sh tools/run_state.sh show c && git show --stat abc1234 && BASE=abc1234~1 sh tools/gates.sh trailer && BASE=abc1234~1 sh tools/gates.sh content docs'
-expect "guard: retrospective records its notes" 0 "^$" guard read 'sh tools/run_state.sh metric c phase.check=1200/5 first.check=1 rework=0 ci_min=5.0 estimate=large && sh tools/run_state.sh note c retro \"x; evidence: 3\" && sh tools/run_state.sh budget c && sh tools/run_state.sh review-due c && sh tools/run_state.sh status'
 expect "guard: merger waits and records CI" 0 "^$" guard merger 'sh tools/run_state.sh metric c rework=0 && sh tools/run_state.sh show c && sh tools/ci_wait.sh 30 && sh tools/run_state.sh set c ci \"green abc1234\"'
 expect "guard: merger runs main's merge gates" 0 "^$" guard merger 'git worktree remove --force tmp/.merge-gates; git worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: merger refuses the branch's merge gates" 2 "the branch's tools/gates.sh merge" guard merger 'CHANGE=c RECORDS=\"security:pass:abc1234\" sh tools/gates.sh merge build/pipeline/c.body.md'
