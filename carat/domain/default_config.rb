@@ -107,6 +107,8 @@ module Carat
       keymap.normal g- history.older
       keymap.normal g+ history.newer
       keymap.normal . history.repeat
+      keymap.normal & substitute.repeat
+      keymap.normal g& substitute.repeat_all
       keymap.normal i mode.insert
       keymap.normal a mode.insert_after
       keymap.normal I mode.insert_line_start
@@ -226,6 +228,7 @@ module Carat
       keymap.visual o visual.swap_ends
       keymap.visual O visual.swap_corner
       keymap.visual gv visual.reselect
+      keymap.visual : mode.cmdline
       keymap.visual d operator.delete
       keymap.visual x operator.delete
       keymap.visual <Del> operator.delete
@@ -351,6 +354,7 @@ module Carat
       keymap.visual_line o visual.swap_ends
       keymap.visual_line O visual.swap_corner
       keymap.visual_line gv visual.reselect
+      keymap.visual_line : mode.cmdline
       keymap.visual_line d operator.delete
       keymap.visual_line x operator.delete
       keymap.visual_line <Del> operator.delete
@@ -476,6 +480,7 @@ module Carat
       keymap.visual_block o visual.swap_ends
       keymap.visual_block O visual.swap_corner
       keymap.visual_block gv visual.reselect
+      keymap.visual_block : mode.cmdline
       keymap.visual_block d operator.delete
       keymap.visual_block x operator.delete
       keymap.visual_block <Del> operator.delete

@@ -148,6 +148,8 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `scroll.cursor_top` | normal, visual | Scroll so the cursor line, or line count, is at the top of the window, with scrolloff |
 | `scroll.cursor_middle` | normal, visual | Scroll so the cursor line, or line count, is in the middle of the window |
 | `scroll.cursor_bottom` | normal, visual | Scroll so the cursor line, or line count, is at the bottom of the window, with scrolloff |
+| `substitute.repeat` | normal | `&`: repeat the last substitute on the cursor line without its flags, on count lines with a count |
+| `substitute.repeat_all` | normal | `g&`: repeat the last substitute on every line with its flags and the last search pattern |
 
 ## Plugins
 
