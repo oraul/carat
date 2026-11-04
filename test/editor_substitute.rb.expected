@@ -1,3 +1,71 @@
-ok   an empty line has no characters
-ok   a word counts its characters
-editor_substitute: 2 passed, 0 failed
+ok   no range is the cursor line
+ok   percent is every line
+ok   two numbers
+ok   dot to dollar
+ok   the visual marks
+ok   colon in visual mode starts the range
+ok   colon in charwise visual mode
+ok   past the last line
+ok   backwards
+ok   no selection for the marks
+ok   arithmetic is not implemented
+ok   a range before a command that takes none
+ok   a number moves the cursor
+ok   dollar moves to the last line
+ok   the end mark alone moves there
+ok   the first match
+ok   every match
+ok   the long name
+ok   another delimiter
+ok   no closing delimiter deletes
+ok   empty matches
+ok   the cursor goes to the first non-blank
+ok   a count from the cursor line
+ok   a count from the range's last line
+ok   a count past the end stops at the last line
+ok   a zero count
+ok   a letter is no delimiter
+ok   trailing characters
+ok   a bang
+ok   not found
+ok   a bad pattern
+ok   an empty pattern is the last search
+ok   an empty pattern with no search
+ok   the whole match
+ok   groups
+ok   case
+ok   line breaks
+ok   line breaks on several lines
+ok   the previous string
+ok   tilde in the pattern
+ok   a literal ampersand
+ok   an expression
+ok   ignore case
+ok   match case over ignorecase
+ok   count only
+ok   one match
+ok   no error
+ok   confirm
+ok   print
+ok   print with the number
+ok   many substitutions
+ok   & repeats on the cursor line
+ok   & drops the flags
+ok   a count with &
+ok   a count with & past the end
+ok   :&& keeps the flags
+ok   :& with a range
+ok   :s alone repeats
+ok   :s with flags repeats
+ok   the r flag uses the last search
+ok   g& repeats everywhere with the flags
+ok   g& uses the last search
+ok   & before any substitute
+ok   :& before any substitute
+ok   g& before any search
+ok   one undo step
+ok   undo a line break
+ok   dot does not repeat it
+ok   n searches the pattern
+ok   the search register holds it
+editor_substitute: 70 passed, 0 failed

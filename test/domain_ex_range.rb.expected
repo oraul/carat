@@ -1,3 +1,23 @@
-ok   an empty line has no characters
-ok   a word counts its characters
-domain_ex_range: 2 passed, 0 failed
+ok   no range is the cursor line
+ok   percent is every line
+ok   dot is the cursor line
+ok   dollar is the last line
+ok   a number
+ok   two numbers
+ok   dot to dollar
+ok   blanks around the addresses
+ok   an empty first address is the cursor line
+ok   an empty second address is the cursor line
+ok   line 0 is line 1
+ok   of three addresses the last two count
+ok   the visual marks
+ok   a mark past the end is the last line
+ok   past the last line
+ok   a huge number
+ok   backwards
+ok   no selection for the marks
+ok   another mark
+ok   arithmetic
+ok   a semicolon
+ok   percent with another address
+domain_ex_range: 22 passed, 0 failed

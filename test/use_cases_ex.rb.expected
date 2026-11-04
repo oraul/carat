@@ -134,7 +134,10 @@ ok   wqa writes the other tab page's buffer and quits
 ok   unknown command
 ok   unknown command keeps its argument text
 ok   empty command does nothing
-ok   a bare number is not a command yet
+ok   a bare number past the last line is an invalid range
+ok   a bare number in the buffer moves the cursor quietly
+ok   a range before an unknown name is unknown
+ok   a range before a command that takes none is refused
 ok   write on a scratch buffer reports E382
 ok   write-all skips the scratch buffer and writes the file
 ok   quit-all ignores the scratch buffer's changes
@@ -160,5 +163,5 @@ ok   ne is not new
 ok   se sets
 ok   sy is syntax
 ok   synt is syntax
-ok   s is not set
-use_cases_ex: 163 passed, 0 failed
+FAIL s is not set: expected "", got "substitute"
+use_cases_ex: 165 passed, 1 failed

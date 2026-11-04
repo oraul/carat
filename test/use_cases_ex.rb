@@ -497,7 +497,7 @@ module UseCasesExTest
       ["se sets", "se", "set"],
       ["sy is syntax", "sy", "syntax"],
       ["synt is syntax", "synt", "syntax"],
-      ["s is not set", "s", ""]
+      ["s is substitute, not set", "s", "substitute"]
     ]) do |typed|
       handler = table.find(typed)
       handler.nil? ? "" : handler.name.full

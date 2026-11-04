@@ -8,4 +8,14 @@ ok   unknown word
 ok   number only
 ok   empty
 ok   double colon
-domain_ex_grammar: 10 passed, 0 failed
+ok   percent range
+ok   two numbers
+ok   visual marks
+ok   dot and dollar with blanks
+ok   arithmetic is read as range
+ok   a mark at the end
+ok   ampersand is a name
+ok   ampersand with a range
+ok   s with a delimiter
+ok   letters after s are the name
+domain_ex_grammar: 20 passed, 0 failed
