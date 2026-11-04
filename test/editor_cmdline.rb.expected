@@ -80,5 +80,6 @@ ok   up again recalls the one before
 ok   past the oldest nothing changes
 ok   down past the newest gives back the typed text
 ok   up recalls only commands starting with the typed text
+ok   down returns to the typed text
 ok   down before any recall changes nothing
-editor_cmdline: 83 passed, 0 failed
+editor_cmdline: 84 passed, 0 failed

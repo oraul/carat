@@ -264,6 +264,8 @@ module EditorCmdlineTest
     t.assert_equal(":", h.message_row, "down past the newest gives back the typed text")
     h.type("s<Up>")
     t.assert_equal(":set ft?", h.message_row, "up recalls only commands starting with the typed text")
+    h.type("<Down>")
+    t.assert_equal(":s", h.message_row, "down returns to the typed text")
     h.type("<Esc>:<Down>")
     t.assert_equal(":", h.message_row, "down before any recall changes nothing")
 
