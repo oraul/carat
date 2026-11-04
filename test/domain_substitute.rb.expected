@@ -66,5 +66,6 @@ ok   a plain string
 ok   an expression
 ok   a NUL
 ok   an escaped backslash before n
+ok   a string whose tildes could pass a mebibyte is too long
 ok   replacement text past the budget stops it and changes nothing
-domain_substitute: 69 passed, 0 failed
+domain_substitute: 70 passed, 0 failed

@@ -136,6 +136,9 @@ module DomainSubstituteTest
       D::Replacement.check(text.to_s)
     end
 
+    big = "x" * 600_000
+    t.assert_equal([false, true], [D::Replacement.too_long?("~", big), D::Replacement.too_long?("~~", big)], "a string whose tildes could pass a mebibyte is too long")
+
     # The budget: replacement text is charged, so a long string stops it.
     budget = D::SearchBudget.new(left: 1000)
     compiled = D::VimPattern.compile_substitute("a", false, false, "", false)

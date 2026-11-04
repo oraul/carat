@@ -74,6 +74,7 @@ module Carat
         compiled = compile(state, source)
         return Outcome.failure(compiled.error) unless compiled.ok?
         remember(compiled, args)
+        return Outcome.failure(Domain::Replacement::TOO_LONG) if Domain::Replacement.too_long?(memory.replacement, memory.previous)
         text = Domain::Replacement.tilde(memory.replacement, memory.previous, memory.has_previous)
         memory.keep_previous(text)
         unless memory.count_only

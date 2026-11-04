@@ -15,6 +15,24 @@ module Carat
     # kept.
     module Replacement
       BREAK = "\n"
+      # The longest string "~" may expand to, so repeating "~~" cannot
+      # double it without end.
+      MAX_BYTES = 1 << 20
+      TOO_LONG = "E1240: Resulting text too long"
+
+      # Whether raw with every "~" replaced by previous could pass
+      # MAX_BYTES; counted before anything is built.
+      #: (String, String) -> bool
+      def self.too_long?(raw, previous)
+        tildes = 0
+        n = raw.bytesize
+        i = 0
+        while i < n
+          tildes += 1 if raw.getbyte(i) == 126
+          i += 1
+        end
+        n + tildes * previous.bytesize > MAX_BYTES
+      end
 
       # "~" replaced by the previous string (nothing when there is none),
       # as Vim's regtilde does; an escaped character is kept with its
