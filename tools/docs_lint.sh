@@ -37,10 +37,12 @@ ok() {
 }
 
 # "PATTERN BYTES" lines: every file the pattern matches is at most BYTES.
-# Raising a budget is a reviewed line of this file.
+# Raising a budget is a reviewed line of this file. The queue's holds what
+# the planner rewrites and every agent may read at a start.
 BUDGETS="CLAUDE.md 30720
 .claude/agents/*.md 8192
-docs/architecture.md 88064"
+docs/architecture.md 88064
+docs/queue.md 17369"
 
 # The documents an agent reads; the generated OpenSpec commands are not ours.
 documents() {

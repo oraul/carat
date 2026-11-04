@@ -652,15 +652,15 @@ printf '# Queue\n\n1. `next` (T1, estimated small): one, estimated large later.\
 commit "docs: the queue"
 state init next chore/next > /dev/null
 expect "run_state: plan-needed takes the queue head as written" 1 "^not needed: next heads docs/queue[.]md, estimated small," state plan-needed next
-expect "run_state: plan-needed prints the head item as written" 1 "^item: \`next\` [(]T1, estimated small[)]: one, estimated large later[.]\$" state plan-needed next
 expect "run_state: plan-needed names a change that is not the head" 0 "^needed: later is not the head of docs/queue[.]md [(]next[)]" state plan-needed later
-# item_lines CHANGE: plan-needed's exit, then the count of its item lines.
-item_lines() {
+# plan_lines CHANGE: plan-needed's exit, then the count of its lines.
+plan_lines() {
   out=$(state plan-needed "$1")
   got=$?
-  echo "exit $got items $(printf '%s\n' "$out" | grep -c '^item: ')"
+  echo "exit $got lines $(printf '%s\n' "$out" | grep -c .)"
 }
-expect "run_state: plan-needed prints no item for a change that is not the head" 0 "^exit 0 items 0\$" item_lines later
+expect "run_state: plan-needed prints one line for the head" 0 "^exit 1 lines 1\$" plan_lines next
+expect "run_state: plan-needed prints one line for a change that is not the head" 0 "^exit 0 lines 1\$" plan_lines later
 state init prev chore/prev > /dev/null
 state set prev merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 state note prev quality-advisory "abc1234 a name" > /dev/null
@@ -668,7 +668,7 @@ state note prev quality-blocking "abc1234 a bug" > /dev/null
 expect "run_state: plan-needed ignores a delivery's advisories" 1 "^not needed" state plan-needed next
 state note prev retro "drop a step; evidence: 9000 tokens" > /dev/null
 expect "run_state: plan-needed names a pending proposal" 0 "^needed: prev holds 1 proposal" state plan-needed next
-expect "run_state: plan-needed prints the head item beside a pending proposal" 0 "^item: \`next\` " state plan-needed next
+expect "run_state: plan-needed prints one line beside a pending proposal" 0 "^exit 0 lines 1\$" plan_lines next
 state history > /dev/null
 expect "run_state: plan-needed leaves a change with a history row" 1 "^not needed" state plan-needed next
 printf '# Queue\n\n1. UI track: themes (T5, estimated medium).\n' > docs/queue.md
@@ -1056,6 +1056,12 @@ expect "docs_lint: refuses CLAUDE.md over its budget" 1 "FAIL budgets: CLAUDE.md
 docs agent
 head -c 8193 /dev/zero | tr '\0' x >> .claude/agents/x.md
 expect "docs_lint: refuses an agent file over its budget" 1 "FAIL budgets: .claude/agents/x.md" doclint
+docs queuesize
+printf '# Queue\n\n1. `a` (T2, estimated small): one.\n' > docs/queue.md
+head -c 17369 /dev/zero | tr '\0' x | head -c "$((17369 - $(wc -c < docs/queue.md)))" >> docs/queue.md
+expect "docs_lint: passes a queue at its budget" 0 "ok   budgets: 3 file" doclint
+echo x >> docs/queue.md
+expect "docs_lint: refuses a queue over its budget" 1 "FAIL budgets: docs/queue.md is 17371 bytes, over its budget of 17369" doclint
 docs link
 echo "See $LINK." >> docs/notes.md
 expect "docs_lint: refuses a URL in a document" 1 "FAIL content: a URL" doclint

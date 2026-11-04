@@ -22,7 +22,7 @@ Never skip, disable, weaken, or quarantine a test. Never record a phase or a rev
 
 ## Context
 
-Read in this order and stop once you know what the change touches: the scout packs you were given (or a current one under `tmp/scout/`: its `Commit:` is `origin/main` or its `Files read` are unchanged); the map sections of the touched areas in `docs/codebase-map.md`; the files, tests, and archived design sections they name; only the touched sections of `docs/architecture.md`. For code, read `docs/examples.md` (golden file, wiring, and generator per kind) and `docs/spinel-notes.md` before searching the tree. A brief's findings are re-verified against `main` first; say which no longer hold and why.
+Read in this order and stop once you know what the change touches: the scout packs you were given (or a current one under `tmp/scout/`: its `Commit:` is `origin/main` or its `Files read` are unchanged), trusting its lines: open a file it covers only at the lines you edit; the map sections of the touched areas in `docs/codebase-map.md`; the files, tests, and archived design sections they name; only the touched sections of `docs/architecture.md`. For Ruby code, read `docs/examples.md` (golden file, wiring, and generator per kind) and `docs/spinel-notes.md` before searching the tree. A brief's findings are re-verified against `main` first; say which no longer hold and why.
 
 ## Modes
 
