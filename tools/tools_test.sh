@@ -5,10 +5,10 @@
 # merger's wait), tools/metrics.sh (the measurement and the comparison with
 # main), tools/run_state.sh (the run state, stages, resume, the push rule,
 # the records only the workflow writes, the history, the budget, and the
-# review areas), tools/agent_guard.sh (each profile's refusals and
-# allowances), tools/docs_lint.sh (budgets, content, wraps, paths, queue),
-# tools/new.sh (every generator and its refusals), and every gate of
-# tools/gates.sh, each passing and refusing.
+# review areas), tools/agent_guard.sh (each profile's forms and refusals,
+# and the agents' hook lines), tools/docs_lint.sh (budgets, content, wraps,
+# paths, queue), tools/new.sh (every generator and its refusals), and
+# every gate of tools/gates.sh, each passing and refusing.
 # Prints "ok   NAME" or "FAIL NAME" and the output, then "P/T passed";
 # exits 1 when any failed. Run by make tools-test.
 #
