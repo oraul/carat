@@ -290,6 +290,13 @@ env SLOW=5 CHECK_WAIT=1 STAGES=slow MAKE="$work/bin/stop-make" sh "$here/run_sta
 git_q commit -q --allow-empty -m "chore: newer" -m "$TRAILER"
 expect "run_state: a check at a newer head supersedes the running one" 0 "the superseded check: check: stage slow superseded at $at" stop_check "slow"
 expect "run_state: the newer check runs at the newer head" 0 "^check: every stage passed at $(git rev-parse --short=12 HEAD)" tail -1 build/stages/state/check.log
+# The workflow reruns a check whose verdict says it did not finish, and
+# sends only a failure to a fix round: its RERUN_WORDS are this script's.
+rerun=$(grep -E '^const RERUN_WORDS = ' "$here/../.claude/workflows/deliver-change.js")
+for word in killed superseded running none; do
+  expect "run_state: the workflow reruns a $word check with no fix round" 0 "[(|]$word[|)]" echo "$rerun"
+done
+expect "run_state: the workflow sends only a failed check to a fix round" 1 "^0$" sh -c 'printf "%s\n" "$1" | grep -c -E "failed|passed"' _ "$rerun"
 state phase state report > /dev/null
 expect "run_state: phase accepts report" 0 "^$(git rev-parse --short=12 HEAD)$" state get state phase.report
 expect "run_state: status names the running change and its next phase" 0 "next phase: plan" state status
@@ -853,7 +860,8 @@ expect "guard: scout prunes and writes its directory" 0 "^$" guard read 'mkdir -
 expect "guard: scout reads the tree" 0 "^$" guard read 'git diff --quiet abc1234 HEAD -- tools/x.sh docs/y.md; git ls-files tools | wc -l; ls tools; grep -n \"def name\" carat/x.rb; git show --stat HEAD' tmp/scout
 expect "guard: planner reads the run states" 0 "^$" guard read 'sh tools/run_state.sh status && sh tools/run_state.sh pending && sh tools/run_state.sh show c' build/plan
 expect "guard: planner prepares its directory" 0 "^$" guard read 'mkdir -p build/plan && rm -f build/plan/goals.md' build/plan
-expect "guard: checker runs the checks" 0 "^$" guard read 'git status --porcelain --untracked-files=no && sh tools/run_state.sh check c > build/stages/c/check.out 2>&1'
+expect "guard: checker runs the checks" 0 "^$" guard read 'sh tools/run_state.sh check c abc1234; sh tools/run_state.sh check c'
+expect "guard: checker never starts the runner" 2 "tools/run_state.sh check-run" guard read 'sh tools/run_state.sh check-run c'
 expect "guard: checker records the figures first" 0 "^$" guard read 'sh tools/run_state.sh metric c phase.check=1200/5 first.check=0 rework=2 extra=1 stop=none estimate=small planned=0'
 expect "guard: retrospective budgets the last row's change" 0 "^$" guard close 'tail -1 docs/metrics.tsv | cut -f1; sh tools/run_state.sh budget prev && sh tools/run_state.sh note c overrun \"prev: over: estimated small\"'
 expect "guard: retrospective checks the squash commit" 0 "^$" guard close 'sh tools/run_state.sh show c && git show --stat abc1234 && BASE=abc1234~1 sh tools/gates.sh trailer && BASE=abc1234~1 sh tools/gates.sh content docs'
@@ -870,7 +878,7 @@ expect "guard: close refuses a review record" 2 "tools/run_state.sh review" guar
 expect "guard: close refuses a push" 2 "git push" guard close 'git push origin x'
 expect "guard: close names its profile" 2 "refused for the close profile" guard close 'sh tools/run_state.sh set c pushes 0'
 expect "guard: read refuses a closing phase" 2 "the close profile records only" guard read 'sh tools/run_state.sh phase c report abc1234'
-expect "guard: checker reads a failing log and compares" 0 "^$" guard read 'tail -60 build/stages/c/lint.log; grep -n -m 20 -E \"FAIL|rror\" build/stages/c/lint.log; sh tools/run_state.sh bench c; sh tools/run_state.sh show c'
+expect "guard: checker reads a failing log and compares" 0 "^$" guard read 'tail -60 build/stages/c/lint.log; grep -n -m 20 -E \"FAIL|rror|KILLED\" build/stages/c/lint.log; sh tools/run_state.sh bench c; sh tools/run_state.sh show c'
 expect "guard: benchmark prepares the base" 0 "^$" guard read 'git worktree add --detach tmp/.base origin/main || git -C tmp/.base checkout -q --detach origin/main'
 expect "guard: benchmark builds the base" 0 "^$" guard read 'make -C tmp/.base dev-build test-build bench-budget PREFIX=/w/tmp/.toolchain SPINEL_CACHE_DIR=/w/build/spinel-cache'
 expect "guard: benchmark measures the base with the change's script" 0 "^$" guard read 'cd tmp/.base && sh /w/tools/metrics.sh measure build/metrics/current.tsv'

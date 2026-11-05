@@ -48,6 +48,10 @@ const ROUNDS = 3
 // running (each waits up to 30 minutes) before the run stops as stalled.
 const MAX_AREAS = 3
 const WAITS = 4
+// Checker starts in a row that may end without a verdict at the head (a
+// killed, superseded, or unfinished check) before the run stops; such a
+// start is rerun with no fix round.
+const RERUNS = 2
 const notes = []
 let head = ''
 let state = {}
@@ -101,9 +105,10 @@ const CHECK = {
   type: 'object',
   properties: {
     passed: { type: 'boolean' }, head: HEAD, stages: LINES, failed_stage: { type: 'string' }, log_excerpt: { type: 'string' },
+    verdict: { type: 'string', description: 'the last line tools/run_state.sh check printed, verbatim; empty when it printed none' },
     bench_same: { type: 'boolean', description: 'tools/run_state.sh bench exited 0' }, bench_report: LINES,
   },
-  required: ['passed', 'head', 'stages'],
+  required: ['passed', 'head', 'stages', 'verdict'],
 }
 const FINDING = {
   type: 'object',
@@ -384,6 +389,28 @@ function priorQuality() {
   return `${last}${prior}Run \`sh tools/run_state.sh scope ${state.change} ${commit}${files.map((f) => ` ${f}`).join('')}\`: when it prints fix, review only \`git diff ${commit} HEAD\` against ${blocked ? 'those findings and ' : ''}the rules; otherwise review the whole branch diff.`
 }
 
+// The verdict line of tools/run_state.sh check, which the checker returns
+// verbatim: passed or failed (a refusal is a failure the contributor fixes)
+// at a commit; killed, superseded, and running mean the check did not
+// finish, and any other line is none. The words are the script's verdicts,
+// which tools/tools_test.sh compares with RERUN_WORDS.
+const RERUN_WORDS = /^(killed|superseded|running|none)$/
+function checkVerdict(line) {
+  const text = String(line || '').trim().replace(/^run_state: /, '')
+  let m = /^check: every stage passed at ([0-9a-f]{7,40})(;|$)/.exec(text)
+  if (m) return { kind: 'passed', at: m[1], stage: '', log: '' }
+  m = /^check: stage ([a-z0-9-]+) (failed|killed|superseded) at ([0-9a-f]{7,40}); read ([A-Za-z0-9_./-]+)$/.exec(text)
+  if (m) return { kind: m[2], at: m[3], stage: m[1], log: m[4] }
+  m = /^check: refused: (.+)$/.exec(text)
+  if (m) return { kind: 'failed', at: head, stage: 'refused', log: m[1] }
+  m = /^check: still running at ([0-9a-f]{7,40})/.exec(text)
+  if (m) return { kind: 'running', at: m[1], stage: '', log: '' }
+  return { kind: 'none', at: '', stage: '', log: '' }
+}
+const sameCommit = (a, b) => COMMIT.test(a || '') && COMMIT.test(b || '') && (a.startsWith(b) || b.startsWith(a))
+let reruns = 0
+let rerunWhy = ''
+
 // The fix rounds of the run, review and CI fixes alike, counted across
 // starts: at most ROUNDS plus the extra rounds granted. A resume of a run
 // that already spent rounds gets one extra round, once per start, when the
@@ -481,15 +508,30 @@ async function rounds() {
       // it, so a record at the head that no workflow record backs runs again.
       const backed = COMMIT.test(state['phase.check'] || '') ? state['phase.check'] : ''
       const how = backed ? ` The last check the workflow recorded passed at ${backed}: run \`sh tools/run_state.sh check ${state.change} ${backed}\`.` : ''
-      const c = await measured('check', () => agent(`${intro()}${figuresFirst()} Run the checks and report.${how}`, { agentType: 'checker', schema: withCalls(CHECK), effort: 'low' }))
+      const again = rerunWhy ? ` The last check did not finish (${rerunWhy}); run it again: a check still running at this commit is rejoined.` : ''
+      const c = await measured('check', () => agent(`${intro()}${figuresFirst()} Run the checks and report.${how}${again}`, { agentType: 'checker', schema: withCalls(CHECK), effort: 'low' }))
       if (!c) { stopped = 'the checker returned no result'; return false }
-      verdict('check', c.passed)
-      note(`check at ${c.head}: ${c.passed ? 'passed' : 'failed at ' + c.failed_stage}`)
-      if (c.passed) {
-        phaseDone('check', c.head)
-        benchSameAt = c.bench_same ? c.head : ''
+      // Only a pass or a failure at the head is a result: a check that did
+      // not finish, or one at another commit, runs again with no fix round.
+      const v = checkVerdict(c.verdict)
+      if (RERUN_WORDS.test(v.kind) || !sameCommit(v.at, head)) {
+        const where = v.stage ? ` at stage ${v.stage}, log ${v.log}` : ''
+        const why = v.kind === 'none' ? 'no verdict line' : `${v.kind}${where} at ${v.at}${sameCommit(v.at, head) ? '' : `, not the head ${head}`}`
+        if (++reruns > RERUNS) { stopped = `the check did not finish at ${head} in ${reruns} starts: ${why}`; return false }
+        rerunWhy = why
+        note(`check rerun ${reruns} of ${RERUNS}, no fix round: ${why}`)
+        continue
+      }
+      reruns = 0
+      rerunWhy = ''
+      const passed = v.kind === 'passed'
+      verdict('check', passed)
+      note(`check at ${v.at}: ${passed ? 'passed' : `failed at stage ${v.stage}; ${v.log}`}`)
+      if (passed) {
+        phaseDone('check', head)
+        benchSameAt = c.bench_same ? head : ''
         benchReport = c.bench_report || []
-      } else blocked = `The stage ${c.failed_stage} failed; its log:\n${c.log_excerpt || ''}`
+      } else blocked = v.stage === 'refused' ? `The check refused to run: ${v.log}` : `The stage ${v.stage} failed; its log, ${v.log}:\n${c.log_excerpt || ''}`
     }
     if (!blocked) {
       const r = await reviews()
@@ -527,7 +569,7 @@ phase('Resume')
 const resume = await agent(
   `Prepare the delivery of one change. Input: ${JSON.stringify(input)}.
 1. \`git fetch -q origin\`. The change name is input.change, or an existing change under openspec/changes/ that the brief names, or a kebab-case name of 2 to 5 words derived from the brief.
-2. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Check it out when it exists locally or on origin; otherwise create it from origin/main, which needs a clean tree (stop with the reason when it is not).
+2. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Check it out when it exists locally or on origin; otherwise run \`sh tools/run_state.sh restore <branch>\` and check it out when that exited 0 (it created the branch from the backup of a reclaimed run's commits); otherwise create it from origin/main, which needs a clean tree (stop with the reason when it is not).
 3. \`make doctor\`; run \`make toolchain\` when it fails and stop when that fails too.
 4. Run \`sh tools/run_state.sh init <change> <branch>\`, then \`sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git rev-parse --short=12 HEAD\` as head.
 5. Run \`sh tools/run_state.sh plan-needed <change>\` and return its one line verbatim as plan; its exit 1 means not needed, not a failure.`,
