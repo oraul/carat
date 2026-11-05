@@ -20,5 +20,5 @@
 ## 4. Docs and bookkeeping
 
 - [x] 4.1 `README.md`, `docs/codebase-map.md` area 1, and the headers of `tools/run_state.sh` and `tools/gates.sh` (`abandon`, `base`, the base ref, the secret patterns). Checked by `make docs-lint` and `make gates`.
-- [ ] 4.2 `docs/backlog.md`: remove the two entries fixed here, append the six entries of `build/plan/backlog.md`, update the figures of the `CLAUDE.md` budget entry (to `docs-currency`) and the delivered-changes entry (to `docs-index`), and add the limits of the secret patterns; `docs/queue.md` from `build/plan/queue.md`. Checked by `make docs-lint`.
+- [x] 4.2 `docs/backlog.md`: remove the two entries fixed here, append the six entries of `build/plan/backlog.md`, update the figures of the `CLAUDE.md` budget entry (to `docs-currency`) and the delivered-changes entry (to `docs-index`), and add the limits of the secret patterns; `docs/queue.md` from `build/plan/queue.md`. Checked by `make docs-lint`.
 - [ ] 4.3 Run `make tools-test`, `make docs-lint`, `make gates`, and `openspec validate backup-secret-scan --strict --no-interactive`.
