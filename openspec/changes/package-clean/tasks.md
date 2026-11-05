@@ -17,4 +17,4 @@
 
 - [x] 4.1 `CLAUDE.md` (the trailer rule and the `spec-validate` command), `README.md` (`make spec-validate`), and `docs/codebase-map.md` area 1 (`tools/spec_validate.sh`, the `attribution` gate, `.claude/settings.json`).
 - [x] 4.2 `docs/backlog.md`: the five entries of `build/plan/backlog.md`.
-- [ ] 4.3 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`.
+- [x] 4.3 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`.
