@@ -2,19 +2,17 @@
 
 The planner's charter: what every change and every place in the queue serves, in order of priority, and the rubric that places each item. Every queue decision in `docs/queue.md` cites its tier and the data behind it: a benchmark, a CI time, a gate result, a token count, a wall time, a finding, or the user's request.
 
-1. Token and pipeline efficiency: a change delivered in few tokens and little wall time, CI kept fast, by a pipeline that never forgets and improves itself (the retrospective may also simplify the workflow or improve its script), with agents effective at writing code. The user made this goal 1 in `pipeline-speed`, when a change took about an hour and 1.1M to 1.7M total tokens.
-2. Security. No merge without the security review of the committed diff and its result in the pull request, never skipped; a High or Medium finding at confidence 8 or above blocks the merge, and blocking security fixes go to the front of the queue. A review of the whole codebase runs every five merged changes and after any change to config loading, file access, plugin boundaries, terminal output, process spawning, the entry point, or the agent guard and the gates; not after a docs-only, keymap-only, or other tooling change.
-3. Performance at run time, kept by the benchmark and a history of benchmark results.
-4. Code quality the Ruby way, within Spinel's rules.
-5. Clean Architecture that is easy to extend.
-6. Code simple and elegant for the people who read it.
-7. Neovim command support.
-8. UX.
-9. UI with readable color contrast.
-10. Highlights.
-11. Autocomplete.
-12. The README kept current, including how carat is built with AI.
-13. Documentation size and quality controlled.
+1. UI: UX, readable color contrast, and highlights. The user put the UI first at `cursor-shapes`, in this order: the buffer list; the bars (a global status bar with the mode pill and the reserved `lsp` slot, buffer tabs); the leader layout; floating windows; then, after code intelligence, the rest of the UI track, `markdown-preview`, `csv-viewer`, and `indent-guides`.
+2. Code intelligence, second at the user's request: the language server client with diagnostics filling the bar's `lsp` slot; completion as you type (fuzzy matching, kind icons, the type on the right, Enter inserts and Tab replaces); the highlighted item's documentation beside the list, fetched lazily; K quick documentation in a scrollable popup with markdown rendered and a key to pin it into a split; parameter info; go to and peek definition; buffer-word completion with Ctrl-N and Ctrl-P. Requests and documentation text from a language server are untrusted: escape sequences are stripped before the terminal, requests are asynchronous and cancelled when stale, and a key pays no cost for them.
+3. Security, never traded for the goals above: no merge without the security review of the committed diff and its result in the pull request, never skipped; a High or Medium finding at confidence 8 or above blocks the merge, and blocking security fixes go to the front of the queue (T0) whatever the order of the goals. A review of the whole codebase runs every five merged changes and after any change to config loading, file access, plugin boundaries, terminal output, process spawning, the entry point, or the agent guard and the gates; not after a docs-only, keymap-only, or other tooling change.
+4. Token and pipeline efficiency: a change delivered in few tokens and little wall time, CI kept fast, by a pipeline that never forgets and improves itself (the retrospective may also simplify the workflow or improve its script), with agents effective at writing code. The user made this goal 1 in `pipeline-speed`, when a change took about an hour and 1.1M to 1.7M total tokens, and moved it below the UI and code intelligence at `cursor-shapes`: pipeline items yield to features (the rubric).
+5. Performance at run time, kept by the benchmark and a history of benchmark results.
+6. Code quality the Ruby way, within Spinel's rules.
+7. Clean Architecture that is easy to extend.
+8. Code simple and elegant for the people who read it.
+9. Neovim command support.
+10. The README kept current, including how carat is built with AI.
+11. Documentation size and quality controlled.
 
 ## The rubric
 
@@ -26,5 +24,5 @@ Every item of `docs/queue.md` names its tier and its size, as `(T2 user request,
 - Size check before a change starts: a brief with more than about four separate fixes, or estimated large outside the roadmap, is split into balanced changes. `workflow-trim` bundled seven fixes and needed four quality rounds across two runs; `guard-allowlist`, three fixes with four folds, took 5 rework rounds and 860,176 output tokens.
 - The planner runs when the queue needs a decision: a new finding, a user request, or a split; otherwise the next item is taken as written.
 - Aging: an item records how often it was pushed back; at three it rises one tier or gets a written reason.
-- At least one user-requested feature in every three changes, counted over consecutive merged changes: at most two pipeline, tooling, security, or tidy-up changes run between two features, T0 items excepted, which go first and do not count (the user's rule, recorded at `start-screen` after `theme-tokens` asked). A user-requested feature is a now-request of the user, a feature the user requested or scheduled, or a user-visible roadmap feature the user approved, such as `search-and-substitute` (goal 7); pipeline, tooling, security, and tidy-up changes do not count. To keep the rule a feature may pass T1 to T6 items, which otherwise keep their order; it never passes a T0 item nor the track it depends on (`markdown-preview` and `csv-viewer` stay after the UI track); when no feature is ready or T0 items fill three changes in a row, a plan decision says so.
+- Features first (the user's rule at `cursor-shapes`, replacing the rule of at most two other changes between two features): counted over consecutive merged changes, at most one non-feature change (pipeline, tooling, security Low, or tidy-up) runs per three features. Only T0 items and T1 defects that stall runs jump ahead, and they do not count. A feature is a now-request of the user, a feature the user requested or scheduled, or a user-visible roadmap feature the user approved, such as `search-and-substitute`. A feature passes T1 to T6 items, which otherwise keep their order among themselves; it never passes a T0 item nor the track it depends on (code intelligence after floating windows; `markdown-preview` and `csv-viewer` after the UI track); when no feature is ready, a plan decision says so and the next non-feature item runs.
 - A brief part, plan note, or proposal states the problem, its numbers, and the acceptance check, never the implementation, which the contributor chooses. In `workflow-trim` a blocking quality finding reversed the approach a brief part, a retrospective note, and a plan note had all prescribed.
