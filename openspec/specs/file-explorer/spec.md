@@ -87,12 +87,20 @@ The line of the file shown in the current window SHALL carry the `current` icon 
 - **WHEN** the tree is open and ":e docs/guide.md" is run in the file window
 - **THEN** "docs" is expanded and the line of "guide.md" is marked
 
-### Requirement: Enter and l open a file or expand a directory
-`<CR>` and `l` on a file SHALL show it in the previously used window that shows a file, or the first such window in layout order, make that window current, and show the opened message; on a directory they SHALL expand it. `o` SHALL toggle a directory and open a file as `<CR>` does. When no window of the tab page shows a file, the file SHALL be shown in a new window beside the tree, which keeps its width.
+### Requirement: Enter toggles a directory and l expands one, both open a file
+`<CR>` and `l` on a file SHALL show it in the previously used window that shows a file, or the first such window in layout order, make that window current, and show the opened message; when no window of the tab page shows a file, it SHALL be shown in a new window beside the tree, which keeps its width. On a collapsed directory both SHALL expand it; on an expanded one `<CR>` SHALL collapse it and `l` SHALL leave it expanded. `o` SHALL act as `<CR>`. On the root line all three SHALL do nothing.
 
 #### Scenario: Open a file
 - **WHEN** the cursor in the tree is on "b.rb" and `<CR>` is pressed
 - **THEN** the file window shows "b.rb", is current, and the tree is still open
+
+#### Scenario: Enter toggles a directory
+- **WHEN** `<CR>` is pressed twice on "docs"
+- **THEN** "docs" is expanded after the first and collapsed after the second, and the cursor is on the line of "docs" after each
+
+#### Scenario: l leaves an expanded directory expanded
+- **WHEN** `l` is pressed twice on "docs"
+- **THEN** "docs" is expanded after each, and the cursor is on the line of "docs"
 
 #### Scenario: Expand and collapse with o
 - **WHEN** `o` is pressed twice on "docs"
@@ -103,15 +111,19 @@ The line of the file shown in the current window SHALL carry the `current` icon 
 - **THEN** there are two windows, the tree is 30 columns wide, and the other window shows "b.rb"
 
 ### Requirement: h collapses or moves to the parent
-`h` on an expanded directory SHALL collapse it; on a file or a collapsed directory it SHALL move the cursor to the line of its parent directory; on the root line it SHALL do nothing.
+`h` on an expanded directory SHALL collapse it and keep the cursor on its line; on a file or a collapsed directory it SHALL move the cursor to the line of its parent directory; on the root line it SHALL do nothing.
 
 #### Scenario: Collapse
 - **WHEN** "docs" is expanded and `h` is pressed on it
-- **THEN** "docs" is collapsed
+- **THEN** "docs" is collapsed and the cursor is on its line
 
 #### Scenario: Parent
 - **WHEN** the cursor is on "guide.md" inside "docs" and `h` is pressed
 - **THEN** the cursor is on the line of "docs"
+
+#### Scenario: Parent of a collapsed directory
+- **WHEN** "lib" is expanded, the cursor is on the collapsed "deep" inside it, and `h` is pressed
+- **THEN** the cursor is on the line of "lib" and "deep" stays collapsed
 
 ### Requirement: Files open in splits and tab pages
 `s` and `v` on a file SHALL open it in a new window split horizontally or vertically from the previously used file window, and `t` SHALL open it in a new tab page; on a directory they SHALL do nothing. A file name holding a space or a `|` SHALL open as it is named, since the tree opens files without building an ex command line.
@@ -209,7 +221,7 @@ The line of the file shown in the current window SHALL carry the `current` icon 
 
 #### Scenario: Help
 - **WHEN** `?` is pressed in the tree
-- **THEN** the message row starts with "<CR>/l open"
+- **THEN** the message row starts with "<CR>/o toggle"
 
 #### Scenario: Movement falls through
 - **WHEN** `j` is pressed on the root line
@@ -257,3 +269,14 @@ The tree's icons SHALL be drawn plain while syntax highlighting is off.
 #### Scenario: Syntax on again
 - **WHEN** `:syntax on` follows `:syntax off` with the tree shown
 - **THEN** the cell of "◈" on the "b.rb" line is in DevIconRb again
+
+### Requirement: A toggled directory keeps the cursor
+After `<CR>`, `l`, `h`, or `o` expands or collapses a directory, the cursor SHALL stay on that directory's line, for a directory nested in another too and when the tree was made current with a window command.
+
+#### Scenario: A nested directory
+- **WHEN** "lib" is expanded and `<CR>` is pressed twice on "deep" inside it
+- **THEN** "deep" is expanded after the first and collapsed after the second, "lib" stays expanded, and the cursor is on the line of "deep" after each
+
+#### Scenario: The tree reached with Ctrl-W
+- **WHEN** the tree is left with `<C-w>l`, entered again with `<C-w>h`, and `<CR>` is pressed twice on "docs"
+- **THEN** "docs" is expanded after the first and collapsed after the second, and the cursor is on the line of "docs"
