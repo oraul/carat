@@ -1003,3 +1003,27 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `LEGEND` and `PLAIN_GLYPHS` in `carat/domain/start_art.rb` (line 130 at `start-screen`), arrays of byte codes such as 47 and 92, while `GEM` is strings read with `getbyte`. Periodic quality at 5ac9674.
 - Why it matters: the legend the `GEM` comment describes cannot be read against the table, so a glyph change is checked by decoding numbers.
 - Fix outline: hold both as strings read with `getbyte`, as `GEM` is.
+
+## The gates header says pre-push runs static
+
+- Where: the mode list at the top of `tools/gates.sh` (line 41 at `package-clean`), which says pre-push is static, security, stages. Quality advisory of `package-clean`.
+- Why it matters: static now adds the attribution gate, which pre-push deliberately leaves out (the gates stage runs it), so a reader trusting the header expects a check the push never makes.
+- Fix outline: list pre-push as trailer, content, snapshots, docs, security, stages, noting attribution runs through the gates stage.
+
+## The spec preview of a failed change is deleted by the next change's
+
+- Where: the loop over `openspec/changes/` in `tools/spec_validate.sh` (line 25 at `package-clean`), which empties `build/spec-preview` for each active change while the header and the failure message promise a failed preview is kept. Quality advisory of `package-clean`.
+- Why it matters: with two active changes, the first one's failed preview is gone before anyone reads it, so the message points at a directory holding the wrong change.
+- Fix outline: preview each change under `build/spec-preview/<name>`, or stop after the first failure.
+
+## The contributor's implement step validates the change twice
+
+- Where: implement steps 2 and 6 of `.claude/agents/contributor.md` (line 34 at `package-clean`), which run `openspec validate <change> --strict` and then `make spec-validate`, whose `validate --all --strict` already covers the change. Quality advisory of `package-clean`.
+- Why it matters: two ways to do one check cost a tool call each run and can drift apart.
+- Fix outline: keep only `make spec-validate`.
+
+## The attribution gate matches its values anywhere in the settings file
+
+- Where: `gate_attribution` in `tools/gates.sh` (line 336 at `package-clean`), which greps the three values as fixed strings over the whole of `.claude/settings.json`. Quality advisory of `package-clean`.
+- Why it matters: a matching `pr` or `sessionUrl` line outside the attribution object passes while the attribution object itself could still allow pull request text or a session link.
+- Fix outline: cut the attribution block by its lines (a sed range from the attribution line to its closing brace) and run the greps on that block, with a `tools/tools_test.sh` case of a value outside it.
