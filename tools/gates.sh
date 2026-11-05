@@ -33,6 +33,7 @@
 #              model name, and a Testing line naming the security review
 #   static     trailer, content, snapshots, docs (make gates)
 #   pre-push   static, security, stages (tools/run_state.sh push)
+#   backup     trailer, content (tools/run_state.sh backup)
 #   merge F    trailer, content, security, stages, passed, records, pushes,
 #              pr-body F (the merger, from a worktree of origin/main at
 #              tmp/.merge-gates, so the branch cannot have edited the gates)
@@ -351,6 +352,7 @@ case "$target" in
   pr-body) gate_pr_body "$body" ;;
   static) gate_trailer; gate_content; gate_snapshots; gate_docs ;;
   pre-push) gate_trailer; gate_content; gate_snapshots; gate_docs; gate_security; gate_stages ;;
+  backup) gate_trailer; gate_content ;;
   passed) gate_passed ;;
   merge) gate_trailer; gate_content; gate_security; gate_stages; gate_passed; gate_records; gate_pushes; gate_pr_body "$body" ;;
   *) echo "gates: unknown gate $target" >&2; exit 2 ;;

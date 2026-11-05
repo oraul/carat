@@ -6,14 +6,19 @@
 # one key per line, rewritten through a temporary file and a rename:
 #   change, branch   the change, its branch, and repo, the GitHub owner/name
 #   phase.NAME       the commit the phase finished at
-#   stage.NAME       "EXIT SECONDSs COMMIT UTC-TIME" of the last run, with
-#                    "carried-from-COMMIT" when check carried it (below)
+#   stage.NAME       "EXIT SECONDSs COMMIT UTC-TIME" of the last run at the
+#                    commit it started on, with "carried-from-COMMIT" when
+#                    check carried it (below); EXIT is "running" while it
+#                    runs, "killed" when a signal ended it, "superseded"
+#                    when HEAD moved while it ran
 #   review.KIND      "pass|blocked COMMIT SUMMARY" (security, quality, bench,
 #                    and periodic-security and periodic-quality after a merge)
 #   pushes, ci_fixes the pushes made and the CI fixes they may answer
 #   gates_failed     the push attempts the pre-push gates refused
 #   pushed, pr, ci   the last pushed commit, the pull request number, and
 #                    "green|red COMMIT"
+#   backup           the commit last pushed to refs/backup/BRANCH, until
+#                    the branch's push deletes that ref
 #   merged           the squash commit on main
 #   metric.NAME      one measurement or figure of the run: tools/metrics.sh
 #                    names, rework, ci_min, estimate (the plan's size), phase.KEY
@@ -26,7 +31,9 @@
 #                    over the starts by usage; older runs stored
 #                    first_pass, out_tokens, tool_calls, phases
 #   note.N           "KIND TEXT": a retrospective proposal or a finding
-# Logs: build/stages/CHANGE/STAGE.log, ending in "EXIT n".
+# Logs: build/stages/CHANGE/STAGE.log, ending in "EXIT n", "KILLED: ...",
+# or "SUPERSEDED: ..."; check.log, the runner's output, ending in its
+# verdict line, and check.pid, "PID COMMIT" while the runner runs.
 # Compile passes: build/pipeline/compiled, "STAGE KEY SUM" per stage of
 # COMPILE_STAGES, kept across changes.
 #
@@ -72,7 +79,16 @@
 #                               stage outside TEST_STAGES when only tests
 #                               changed since COMMIT; a stage of
 #                               COMPILE_STAGES is skipped on the code key of
-#                               its last pass with its outputs unchanged
+#                               its last pass with its outputs unchanged. The
+#                               stages run in a runner (check-run, no agent's)
+#                               detached from the caller, rejoined by a check
+#                               at the same HEAD and stopped by one at another;
+#                               check waits CHECK_WAIT seconds, prints its log,
+#                               and exits 0 on a pass, 1 otherwise, 3 while it
+#                               runs; the last line is the verdict: "check:
+#                               every stage passed at C", "check: stage S
+#                               failed|killed|superseded at C; read LOG" (S
+#                               none before a stage), or "check: still running"
 #   scope CHANGE COMMIT [FILE...]
 #                               print "fix: ..." and exit 0 when every path
 #                               changed from COMMIT to HEAD is a FILE or
@@ -87,7 +103,14 @@
 #                               them, 1 otherwise
 #   push CHANGE [--ci-fix]      run the pre-push gates, refuse a push beyond one
 #                               plus one per CI fix (a CI fix needs ci red), push
-#                               the branch with upstream tracking, and count it
+#                               the branch with upstream tracking, and count it;
+#                               then delete the branch's backup ref
+#   backup CHANGE               before the branch's push, run the trailer and
+#                               content gates and push HEAD to
+#                               refs/backup/BRANCH on origin, no branch, so a
+#                               reclaimed container loses no commit
+#   restore BRANCH              create BRANCH from refs/backup/BRANCH on origin
+#                               when it exists neither here nor on origin
 #   metric CHANGE NAME=VALUE... record metric.NAME; names are [a-z0-9_.-], values
 #                               [A-Za-z0-9_.,:/=+-]
 #   metrics CHANGE FILE         record each "name<TAB>value" line of a
@@ -124,7 +147,7 @@
 # Environment: BASE (origin/main), RUN_STATE_DIR (build/pipeline),
 # STAGE_DIR (build/stages), STAGES (the stage list; make -s stages when
 # unset), MAKE (make), METRICS_FILE (docs/metrics.tsv), METRICS_OUT
-# (build/metrics/current.tsv).
+# (build/metrics/current.tsv), CHECK_WAIT (540, seconds check waits).
 set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -154,6 +177,9 @@ COMPILE_STAGES="dev-build test-build diagnose"
 NOT_COMPILED='^([.]claude/|[.]github/|docs/|openspec/|tools/[^/]+[.]sh$|[^/]+[.]md$)'
 BUILD_TOOLS='^tools/analysis_budget[.]sh$'
 compiled_file=$state_dir/compiled
+# A Conventional Branch, as CLAUDE.md names them: the only branches backup
+# and restore take.
+BRANCH_PATTERN='(feature|bugfix|hotfix|release|chore)/[a-z0-9][a-z0-9-]*'
 # The gates of a history row's first passes, in order, before gates.
 GATES="check quality security bench ci"
 REVIEW_KINDS="security quality bench periodic-security periodic-quality"
@@ -656,6 +682,52 @@ push_branch() {
   write_key pushes $((pushes + 1))
   write_key ci_fixes "$fixes"
   write_key pushed "$(head_commit)"
+  # The pushed branch holds every commit the backup held.
+  if [ -n "$(read_key backup)" ] &&
+      git push -q origin --delete "refs/backup/$branch" > /dev/null 2>&1; then
+    drop_key backup
+    echo "push: deleted the backup refs/backup/$branch"
+  fi
+}
+
+# backup: push HEAD of the change's branch, not pushed yet, to
+# refs/backup/BRANCH on origin after the trailer and content gates, so a
+# reclaimed container loses no commit. The ref is no branch: no pull
+# request or CI run starts from it. A plain push, since the branch's
+# history only grows.
+backup_branch() {
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  [ "$branch" != main ] && [ "$branch" = "$(read_key branch)" ] ||
+    die "backup: refused: HEAD is on $branch, not the change's branch $(read_key branch)"
+  valid "$BRANCH_PATTERN" "$branch" || die "backup: refused: not a Conventional Branch: $branch"
+  if [ "$(count pushes)" -gt 0 ]; then
+    echo "backup: $branch is on origin since its push; nothing to back up"
+    return 0
+  fi
+  CHANGE=$change sh "$here/gates.sh" backup || die "backup: refused: the backup gates failed"
+  git push -q origin "HEAD:refs/backup/$branch" || die "backup: git push failed"
+  write_key backup "$(head_commit)"
+  echo "backup: $(head_commit) at refs/backup/$branch on origin"
+}
+
+# restore BRANCH: create BRANCH from its backup on origin when it exists
+# neither here nor on origin; exit 1 with the reason otherwise.
+restore_branch() {
+  valid "$BRANCH_PATTERN" "$1" || die "restore: not a Conventional Branch: $1"
+  if git rev-parse --verify -q "refs/heads/$1" > /dev/null; then
+    echo "restore: $1 exists here; nothing to restore"
+    return 1
+  fi
+  if git ls-remote --exit-code origin "refs/heads/$1" > /dev/null 2>&1; then
+    echo "restore: $1 is on origin; check it out from there"
+    return 1
+  fi
+  if ! git fetch -q origin "refs/backup/$1" 2> /dev/null; then
+    echo "restore: no backup of $1 on origin"
+    return 1
+  fi
+  git branch "$1" FETCH_HEAD || die "restore: git branch failed"
+  echo "restore: $1 created from its backup at $(git rev-parse --short=12 "$1")"
 }
 
 show_status() {
@@ -1162,6 +1234,10 @@ case "$command" in
   status) show_status; exit 0 ;;
   pending) pending_list; exit 0 ;;
   history) append_history; exit 0 ;;
+  restore)
+    [ $# -eq 1 ] || usage
+    restore_branch "$1"
+    exit $? ;;
 esac
 [ $# -ge 1 ] || usage
 change=$1
@@ -1232,6 +1308,9 @@ case "$command" in
     bench_compare ;;
   push)
     push_branch "${1:-}" ;;
+  backup)
+    [ $# -eq 0 ] || usage
+    backup_branch ;;
   metric)
     [ $# -ge 1 ] || usage
     for pair in "$@"; do record_metric "$pair"; done ;;

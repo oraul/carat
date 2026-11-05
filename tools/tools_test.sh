@@ -434,6 +434,29 @@ git_q push -q origin main 2>/dev/null
 state init pushing chore/pushing > /dev/null
 echo more >> README.md
 commit "chore: more"
+# Before its push a run's commits survive a reclaimed container in a backup
+# ref, which no pull request or CI run reads, restored where the branch
+# exists neither in the clone nor on origin.
+backup() {
+  env BASE=main sh "$here/run_state.sh" backup pushing
+}
+expect "run_state: backup pushes the branch to its backup ref" 0 "^backup: $(git rev-parse --short=12 HEAD) at refs/backup/chore/pushing on origin$" backup
+expect "run_state: the backup ref holds the branch's head" 0 "^$(git rev-parse HEAD)[[:space:]]refs/backup/chore/pushing$" git ls-remote origin refs/backup/chore/pushing
+expect "run_state: no branch is pushed with the backup" 0 "^$" git ls-remote origin refs/heads/chore/pushing
+git_q commit -q --allow-empty -m "chore: no trailer"
+expect "run_state: backup runs the trailer gate" 1 "refused: the backup gates failed" backup
+git_q reset -q --hard HEAD~1
+git_q checkout -q main
+expect "run_state: backup refuses another branch than the change's" 1 "refused: HEAD is on main" backup
+git_q checkout -q chore/pushing
+git_q clone -q "$work/origin.git" "$work/reclaimed"
+expect "run_state: restore creates the branch from its backup" 0 "^restore: chore/pushing created from its backup at $(git rev-parse --short=12 HEAD)$" \
+  sh -c 'cd "$1" && sh "$2/run_state.sh" restore chore/pushing' _ "$work/reclaimed" "$here"
+expect "run_state: restore leaves a branch that exists" 1 "exists here" state restore chore/pushing
+expect "run_state: restore says when there is no backup" 1 "no backup of chore/other" \
+  sh -c 'cd "$1" && sh "$2/run_state.sh" restore chore/other' _ "$work/reclaimed" "$here"
+expect "run_state: restore refuses a name that is no branch" 1 "not a Conventional Branch" state restore ../x
+rm -rf "$work/reclaimed"
 expect "run_state: push refuses before the checks and the review" 1 "pre-push gates failed" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a refused push counts a gate failure" 0 "^1$" state get pushing gates_failed
@@ -443,6 +466,9 @@ state review pushing security pass "no finding" > /dev/null
 expect "run_state: push passes the gates and pushes" 0 "ok   security" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a push is counted" 0 "^1$" state get pushing pushes
+expect "run_state: push deletes the backup ref" 0 "^$" git ls-remote origin refs/backup/chore/pushing
+expect "run_state: push drops the backup record" 0 "^$" state get pushing backup
+expect "run_state: backup after the push has nothing to do" 0 "nothing to back up" backup
 expect "run_state: a second push is refused" 1 "refused: 1 push" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a CI fix push needs a red CI run" 1 "needs a red CI run" \
@@ -862,6 +888,9 @@ expect "guard: planner reads the run states" 0 "^$" guard read 'sh tools/run_sta
 expect "guard: planner prepares its directory" 0 "^$" guard read 'mkdir -p build/plan && rm -f build/plan/goals.md' build/plan
 expect "guard: checker runs the checks" 0 "^$" guard read 'sh tools/run_state.sh check c abc1234; sh tools/run_state.sh check c'
 expect "guard: checker never starts the runner" 2 "tools/run_state.sh check-run" guard read 'sh tools/run_state.sh check-run c'
+expect "guard: contributor backs up the branch" 0 "^$" guard contributor 'sh tools/run_state.sh backup c'
+expect "guard: contributor backup takes only the change" 2 "backup other than CHANGE" guard contributor 'sh tools/run_state.sh backup c origin'
+expect "guard: read refuses a backup" 2 "tools/run_state.sh backup" guard read 'sh tools/run_state.sh backup c'
 expect "guard: checker records the figures first" 0 "^$" guard read 'sh tools/run_state.sh metric c phase.check=1200/5 first.check=0 rework=2 extra=1 stop=none estimate=small planned=0'
 expect "guard: retrospective budgets the last row's change" 0 "^$" guard close 'tail -1 docs/metrics.tsv | cut -f1; sh tools/run_state.sh budget prev && sh tools/run_state.sh note c overrun \"prev: over: estimated small\"'
 expect "guard: retrospective checks the squash commit" 0 "^$" guard close 'sh tools/run_state.sh show c && git show --stat abc1234 && BASE=abc1234~1 sh tools/gates.sh trailer && BASE=abc1234~1 sh tools/gates.sh content docs'
@@ -1243,6 +1272,11 @@ fresh content3
 echo x >> README.md
 commit "chore: written on $TIER"
 expect "gates: content refuses a model name in a commit message" 1 "commit [0-9a-f]+.*$TIER" gates content
+expect "gates: backup refuses forbidden content" 1 "FAIL content" gates backup
+fresh backup
+echo x >> README.md
+commit "chore: clean"
+expect "gates: backup passes a clean branch" 0 "ok   content" gates backup
 
 fresh docs
 echo new > tools/new.sh
