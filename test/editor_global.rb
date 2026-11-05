@@ -64,6 +64,8 @@ module EditorGlobalTest
       # Memory, undo, and repeat.
       ["n searches the pattern", ["ab b\n", [0, 0], ":g/b<CR>n"], [[0, 1], "/b", "ab b"]],
       [":s reuses the pattern", ["ab\n", [0, 0], ":g/b<CR>:s//c/<CR>"], [[0, 0], "", "ac"]],
+      ["the search history holds it", ["ab b\n", [0, 0], ":g/b<CR>/<Up><CR>"], [[0, 1], "/b", "ab b"]],
+      [":& uses it as the last substitute pattern", ["ab\n", [0, 0], ":s/a/x/<CR>:g/b<CR>:&<CR>"], [[0, 0], "", "xx"]],
       ["the search register holds it", ["ab\n", [0, 0], ":g/b<CR>\"/P"], [[0, 0], "", "bab"]],
       ["one undo step", ["a\nb\na\n", [0, 0], ":g/a/d<CR>u"], [[0, 0], "2 more lines; before #1  0 seconds ago", "a|b|a"]],
       ["dot does not repeat it", ["abc\nabc\nabc\n", [0, 0], "x:2g/b/s/b/X/<CR>j."], [[2, 0], "", "bc|aXc|bc"]],
@@ -94,6 +96,12 @@ module EditorGlobalTest
     h = editor("#{"a" * 250_000}\nb\n", 0, 0)
     h.type(":g/a\\{1900}b/d<CR>")
     t.assert_equal(["E363: search stopped, pattern too costly here", 2], [h.message, h.lines.length], "a global whose scan runs out of budget changes nothing")
+
+    # A command that leaves the buffer stops the global: one tab page
+    # opened, not one per marked line.
+    h = editor("a\na\na\n", 0, 0)
+    h.type(":g/a/tabnew<CR>")
+    t.assert_equal(2, h.state.tabs.tab_count, "a command that leaves the buffer stops the global")
 
     t.finish
   end

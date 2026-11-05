@@ -27,6 +27,8 @@ ok   a failing command stops after the lines before it
 ok   the last message a command gave
 ok   n searches the pattern
 ok   :s reuses the pattern
+ok   the search history holds it
+ok   :& uses it as the last substitute pattern
 ok   the search register holds it
 ok   one undo step
 ok   dot does not repeat it
@@ -47,4 +49,5 @@ ok   :d takes no bang
 ok   :d of the only line
 ok   :d is one undo step
 ok   a global whose scan runs out of budget changes nothing
-editor_global: 49 passed, 0 failed
+ok   a command that leaves the buffer stops the global
+editor_global: 52 passed, 0 failed
