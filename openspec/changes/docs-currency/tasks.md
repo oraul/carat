@@ -18,4 +18,4 @@
 
 ## 4. Gates
 
-- [ ] 4.1 `make gates` and `make docs-lint` pass.
+- [x] 4.1 `make gates` and `make docs-lint` pass.
