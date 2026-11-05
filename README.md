@@ -37,10 +37,10 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make config-current` | Fail when `make gen-config` rewrote the config mirror or the plugin registry |
 | `make docs-lint` | Check the documents agents read: byte budgets (`CLAUDE.md` 30 KiB, each agent file 8 KiB, `docs/architecture.md`, `docs/queue.md`), no link, address, session id, or model name, no hard-wrapped pull request text, no backticked path that does not exist, every item of `docs/queue.md` tagged with a tier and a size |
 | `make tools-test` | Test the shell tools behind CI and the delivery pipeline in temporary repositories |
-| `make gates` | Check the branch against the rules: the commit trailer, no link, address, or session id, snapshots from the runner, the docs kept current |
+| `make gates` | Check the branch against the rules: the commit trailer, no link, address, or session id, snapshots from the runner, the docs kept current, and the attribution settings |
 | `make check` | Run every stage of `make stages` in order; `make check-stage S=NAME` runs one |
 | `make new-use-case`, `make new-action`, `make new-ex-command`, `make new-test`, `make new-plugin` | Scaffold one file of that kind from its golden example and wire it in: signatures, the code map, requires and registrations, the documentation row, the runner lines, and a snapshot; `docs/examples.md` lists the arguments |
-| `make spec-list`, `make spec-validate`, `make spec-update` | The OpenSpec commands |
+| `make spec-list`, `make spec-validate`, `make spec-update` | The OpenSpec commands; `spec-validate` also validates each active change as its archive would leave the specs |
 
 ## Starting
 
