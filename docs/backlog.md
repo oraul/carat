@@ -290,12 +290,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the map's Build and CI rule gives every command a README line, and goal 12 keeps the README current.
 - Fix outline: add one row naming the missing targets, or one row per target, checked against `make help`.
 
-## CLAUDE.md has under 1,000 bytes of room in its budget
-
-- Where: `CLAUDE.md`, 30,682 of its 30,720-byte budget (99.9%, 38 bytes left) in `tools/docs_lint.sh` (`BUDGETS`) at eb0f1be, after 30,534 in `pipeline-speed-c`. Periodic quality advisory at df5a203, blocking in the periodic quality review at eb0f1be; `docs/architecture.md` is at 88,054 of 88,064 and is handled by `docs-currency` too.
-- Why it matters: `CLAUDE.md` requires its Commands and Layout sections to stay in sync with the code, so the next change that must add a line there fails `make docs-lint` and pays for a trim it did not plan.
-- Fix outline: the first change that needs room trims `CLAUDE.md` in the same change, moving detail to `docs/codebase-map.md` or the agents' files, rather than raising the budget; accepted when `make docs-lint` passes with `CLAUDE.md` at most 90% of its budget. Queued in `docs-currency`.
-
 ## /status and a killed run lose the package, CI, and merge phases
 
 - Where: `.claude/workflows/deliver-change.js` lines 608 to 625, which leave the package, CI, and merge phase lines to the closing start, and the next-phase loop of `show_status` in `tools/run_state.sh` (line 489). Advisory of the quality review of `workflow-records`.
@@ -312,7 +306,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: the agent files under `.claude/agents/`, whose hook lines name each agent's guard profile and which the contributor's file tools may write. What remains of the periodic security Low (6) at 8c340cd after `guard-allowlist` made every hook run `origin/main`'s guard and refuse on any failure.
 - Why it matters: if the harness reads an agent file from the working tree when the workflow starts that agent, an edit on the branch (a hook line removed, a profile widened) applies to the later agents of the same run before any review.
-- Fix outline: have the workflow compare `.claude/agents/` and `.claude/settings.json` with `origin/main` before it starts each agent and stop on a difference the brief does not name, or refuse the contributor's edits of them unless a record only the workflow writes names them; add a `tools/tools_test.sh` case. Queued in the backlog item of `docs/queue.md` item 19 (review triggers).
+- Fix outline: have the workflow compare `.claude/agents/` and `.claude/settings.json` with `origin/main` before it starts each agent and stop on a difference the brief does not name, or refuse the contributor's edits of them unless a record only the workflow writes names them; add a `tools/tools_test.sh` case. Queued in the backlog-items change of `docs/queue.md` (review triggers).
 
 ## The CI scope reads a moved code file by its new path
 
@@ -456,25 +450,19 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: the `guard and gates` pattern of `REVIEW_AREAS` in `tools/run_state.sh` (line 161). Security Low (7) of `pipeline-speed` at b0df2ac092ed.
 - Why it matters: the narrowed pattern leaves out `tools/run_state.sh` (whose review, get, trusted, and push records `tools/gates.sh` trusts), `.claude/workflows/deliver-change.js` (which runs the security reviewer and writes the review record), and the security-reviewer and merger agent bodies, so a change that weakens how the review is recorded no longer makes a whole-tree periodic review due.
-- Fix outline: add `tools/run_state[.]sh$` and `[.]claude/workflows/` to the pattern, and count an edit of `.claude/agents/security-reviewer.md` or `.claude/agents/merger.md` as due, with a `tools/tools_test.sh` case. Queued in the backlog item of `docs/queue.md` item 19 (review triggers).
+- Fix outline: add `tools/run_state[.]sh$` and `[.]claude/workflows/` to the pattern, and count an edit of `.claude/agents/security-reviewer.md` or `.claude/agents/merger.md` as due, with a `tools/tools_test.sh` case. Queued in the backlog-items change of `docs/queue.md` (review triggers).
 
 ## agent_hooks misses frontmatter keys that widen an agent's authority
 
 - Where: `agent_hooks` in `tools/run_state.sh` (line 701), which counts only `tools` and hook lines as the guard's wiring and reads `git diff` with `2>/dev/null`. Security Low (6) of `pipeline-speed` at b0df2ac092ed, and a quality advisory at 1d187291be30.
 - Why it matters: adding `permissionMode:`, `mcpServers:`, `disallowedTools:`, or a list-form tool item to an agent does not make the periodic review due, and a failing `git diff` fails open, so the review is skipped exactly when the agent's authority changes.
-- Fix outline: treat any changed line between an agent file's frontmatter delimiters other than `name`, `description`, and `model` as guard and gates, and report the review due when the diff fails, with a `tools/tools_test.sh` case. Queued in the backlog item of `docs/queue.md` item 19 (review triggers).
+- Fix outline: treat any changed line between an agent file's frontmatter delimiters other than `name`, `description`, and `model` as guard and gates, and report the review due when the diff fails, with a `tools/tools_test.sh` case. Queued in the backlog-items change of `docs/queue.md` (review triggers).
 
 ## A resumed run can be granted an extra fix round after stopping at the limit
 
 - Where: `stopKind` in `.claude/workflows/deliver-change.js` (line 67), which starts at `none` on every start. Quality advisory of `pipeline-speed` at 1d187291be30.
 - Why it matters: the checker's metric line (`figuresFirst`) overwrites a stored `stop=rounds` with `none` before `mayFix` runs, so a start killed after that check makes the next resume grant an extra round to a run that had stopped at the round limit.
 - Fix outline: seed `stopKind` from `lastStop` when `rework` is already at `ROUNDS` plus `extra`. Queued in `run-resume`.
-
-## Trimming CLAUDE.md for room reworded two Git rules
-
-- Where: the Git workflow rule of `CLAUDE.md` (line 39) and its Pull requests rule (line 113), changed from "unless explicitly asked" to "unless asked". Quality advisory of `pipeline-speed` at 1d187291be30.
-- Why it matters: the bytes were taken from rules outside the change's scope, softening their wording.
-- Fix outline: restore "explicitly" on both lines and take the bytes from prose that states no rule. Queued in `docs-currency`.
 
 ## The guard skips a short cluster that names cp's target directory
 
@@ -496,9 +484,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The delivered-changes list stops at pull request 46
 
-- Where: the Delivered changes list closing `docs/codebase-map.md` (line 605), which ends at `#46 buffer-search`. Periodic quality advisories at 598cf1b and f31f4e8.
-- Why it matters: the list `CLAUDE.md` names as the record of delivered changes misses every merged pull request from 47 to 54.
-- Fix outline: add the lines for `#47` to `#54`, with the check `docs-index` asks for: every merged pull request of `docs/metrics.tsv` appears in the list. Queued in `docs-index`.
+- Where: the Delivered changes list closing `docs/codebase-map.md`, whose last numbered line is `#46 buffer-search`: lines 623 to 625 list `pipeline-speed`, `pipeline-speed-b`, and `pipeline-speed-c` without their numbers (#48, #49, #51), and #47, #50, and #52 to #55 are missing. Periodic quality advisories at 598cf1b, f31f4e8, and d386c74.
+- Why it matters: the list `CLAUDE.md` names as the record of delivered changes misses six merged pull requests and cannot be matched to three others.
+- Fix outline: number the three lines and add #47, #50, and #52 to #55, with the check `docs-index` asks for: every merged pull request of `docs/metrics.tsv` appears in the list. Queued in `docs-index`.
 
 ## Agents leave scratch files in the repository root
 
@@ -684,7 +672,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `carat/use_cases/ex/` and `docs/compatibility.md` Global; `buffer-global` brought `:g`, `:v`, and `:d` without `:m`, `:t`, `:normal`, and `:p`, which `docs/architecture.md` section 5.2 lists with them.
 - Why it matters: `:g/x/m0` (reverse the matching lines), `:g/x/t$` (copy them to the end), and `:g/x/normal Ax` are common globals, and they answer E492 today.
-- Fix outline: add each as an `ExHandler` with its use case over `Buffer#set_lines`, registered in Vim's order, with rows in `docs/compatibility.md` and `test/editor_global.rb`; `:m` and `:t` share `ExRange` for their destination address, and `:normal` feeds keys through `HandleKey` inside the global's transaction. Queued in the backlog items of docs/queue.md item 27.
+- Fix outline: add each as an `ExHandler` with its use case over `Buffer#set_lines`, registered in Vim's order, with rows in `docs/compatibility.md` and `test/editor_global.rb`; `:m` and `:t` share `ExRange` for their destination address, and `:normal` feeds keys through `HandleKey` inside the global's transaction. Queued in the backlog-items change of `docs/queue.md`.
 
 ## :d and :s each compute a count's range
 
@@ -752,12 +740,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: one fact reported two ways can disagree, and the workflow routes only by the verdict.
 - Fix outline: drop `failed_stage` and `passed` from `CHECK` and checker step 5's passed-or-not, keeping `verdict` as the one answer.
 
-## CLAUDE.md says restore checks out the backup
-
-- Where: the `sh tools/run_state.sh` bullet of the Commands section of `CLAUDE.md`, while `restore_branch` only creates the branch and the resume step checks it out. Quality advisory of `pipeline-durability`.
-- Why it matters: an agent reading it expects the tree to be switched and may act on the wrong branch.
-- Fix outline: say that `restore BRANCH` recreates the branch from its backup when the branch is gone.
-
 ## The workflow's verdict parsing has no test case
 
 - Where: `tools/tools_test.sh` line 295 covers the routing only by grepping the `RERUN_WORDS` source line of `.claude/workflows/deliver-change.js`; `checkVerdict`'s parsing (the `run_state:` prefix, a refusal, a verdict at another commit) has no case. Quality advisory of `pipeline-durability`.
@@ -794,23 +776,17 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a plugin edit rolled back while a `:g` runs leaves the marks on rows the command never matched, so the global runs its command on the wrong lines.
 - Fix outline: shift `global_marks` beside the other two shifts in `revert_to` and add a `test/domain_global.rb` row. Queued in `global-tidy`.
 
-## Section 5.1 names a Substitute use case and omits DeleteLines
-
-- Where: `docs/architecture.md` line 167 names `Substitute`, while the class is `SubstituteLines` in `carat/use_cases/search/substitute_lines.rb`, and omits `DeleteLines`, added for `:d`. Periodic quality advisory at eb0f1be.
-- Why it matters: the architecture is binding and is where a change starts; a reader looks for a class that does not exist and misses one that does.
-- Fix outline: rename it to `SubstituteLines` and add `DeleteLines` within the budget `docs-currency` frees. Queued in `docs-currency`.
-
 ## The secret patterns miss unquoted assignments and unlisted token shapes
 
 - Where: `tools/rules.sh` (`ASSIGN_RE` takes only a quoted literal; `TOKEN_RE` lists the shapes of AWS, GitHub, GitLab, Slack, Google API, `sk-` keys, Stripe live, and npm). Limit accepted by `backup-secret-scan`.
 - Why it matters: `password = hunter2hunter2` in a YAML or shell file, or a token of another platform, reaches the backup ref and the branch; the security review still reads the diff before the push, but not before the backup.
-- Fix outline: add a shape when a platform the project uses appears, and refuse an unquoted assignment in configuration files only (`*.yml`, `*.toml`, `*.sh`, `.caratrc`), where ordinary code does not assign `token = name`, each with a `tools/tools_test.sh` case.
+- Fix outline: add a shape when a platform the project uses appears, and refuse an unquoted assignment in configuration files only (`*.yml`, `*.toml`, `*.sh`, `.caratrc`), where ordinary code does not assign `token = name`, each with a `tools/tools_test.sh` case. Queued in `content-gate-gaps`.
 
 ## The content gate skips files git treats as binary
 
 - Where: `tools/gates.sh` line 126 (`gate_content` reads `git log -p`, which prints no lines for a file with a NUL byte or one `.gitattributes` marks `-diff` or `binary`, and the merge gates run from the branch's checkout, so the branch can set them). Security Low (6) of `backup-secret-scan`.
 - Why it matters: a committed secret in such a file passes the secret, URL, email, and model checks.
-- Fix outline: pass `--text` and `--no-textconv` to the `git log -p` scan, or refuse an added binary file and a `.gitattributes` change setting `diff`, `binary`, or `textconv` unless a reviewer allows it, with a `tools/tools_test.sh` case.
+- Fix outline: pass `--text` and `--no-textconv` to the `git log -p` scan, or refuse an added binary file and a `.gitattributes` change setting `diff`, `binary`, or `textconv` unless a reviewer allows it, with a `tools/tools_test.sh` case. Queued in `content-gate-gaps`.
 
 ## The URL, email, and session checks print the whole matching line
 
@@ -822,7 +798,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `.claude/workflows/deliver-change.js` line 718 (the close note says the backup stays on origin whenever a run stops unmerged, even after the push deleted it or when no backup was made). Quality advisory of `backup-secret-scan`.
 - Why it matters: the report sends the user to `abandon` a backup that does not exist.
-- Fix outline: also require `state.backup`, the record `backup_branch` writes and `drop_backup` drops.
+- Fix outline: also require `state.backup`, the record `backup_branch` writes and `drop_backup` drops. Queued in `backup-records`.
 
 ## Recording merged deletes refs on origin from the generic key writer
 
@@ -841,3 +817,63 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/run_state.sh` line 716 (`$(echo $refs)` outside the line the SC2086 disable covers). Quality advisory of `backup-secret-scan`.
 - Why it matters: a glob character in a ref name would expand against the working directory, and the disable comment hides the intent.
 - Fix outline: print the names with `printf '%s ' $refs` under the disable, or `tr '\n' ' '`.
+
+## The content gate reads an added line starting with ++ as a path header
+
+- Where: `tools/gates.sh` line 127 (an added line whose text starts with `++ ` shows as `+++ ` in the diff and is taken for a path header, so the content gate never scans it). Periodic security Low (8) at d386c74.
+- Why it matters: a secret, URL, email address, or model name on such a line passes the gate into a public branch.
+- Fix outline: treat `+++ ` as a header only between a `diff --git` line and the first `@@` hunk line, with a `tools/tools_test.sh` case. Queued in `content-gate-gaps`.
+
+## The .env check misses a path git quotes
+
+- Where: `tools/gates.sh` line 129 (git quotes a path with a non-ASCII or special byte, as `"\303\251/.env"`, so the `.env` match fails on an added `.env` under such a directory). Periodic security Low (7) at d386c74.
+- Why it matters: an `.env` file with secrets reaches the branch unrefused.
+- Fix outline: list names with `git -c core.quotePath=false` and `-z` (or unquote them) before matching, with a `tools/tools_test.sh` case. Queued in `content-gate-gaps`.
+
+## No case covers a secret only in a merge resolution
+
+- Where: `tools/gates.sh` line 126 (the content gate scans with `-m` so a merge's resolution is read) and `tools/tools_test.sh` lines 1324 to 1351 (every secret case is a linear commit). Periodic quality advisory at d386c74.
+- Why it matters: dropping `-m` would let a secret introduced while resolving a merge pass `make tools-test`.
+- Fix outline: add a case where the secret appears only in a merge commit's resolution and the gate refuses it. Queued in `content-gate-gaps`.
+
+## abandon reports no backup left when origin is unreachable
+
+- Where: `tools/run_state.sh` line 708 (`drop_backup` ignores a failed `git ls-remote`, the pipeline's status being awk's) and line 1352 (`abandon` then prints that no backup of the branch is left on origin). Periodic quality blocking at d386c74.
+- Why it matters: with origin unreachable the record is dropped and the user is told nothing is left, while refs holding unreviewed commits may stay on the public origin.
+- Fix outline: take `ls-remote`'s output and status separately; on failure keep the record, return 1, and name `abandon` in the message, with a `tools/tools_test.sh` case against an unreachable origin. Queued in `backup-records`.
+
+## The backup's base record outlives the backup
+
+- Where: `tools/run_state.sh` line 753 (`backup` writes `base` before the gates and the push) and line 718 (`drop_backup` drops only `backup`). Periodic quality advisory at d386c74.
+- Why it matters: `base` survives a refused backup, the push, the merge, and `abandon`, naming a ref that no longer exists.
+- Fix outline: write `base` after the push succeeds and drop it beside `backup`. Queued in `backup-records`.
+
+## The backup runs the branch's own gates
+
+- Where: `tools/run_state.sh` line 754 (`backup` runs the branch's `tools/gates.sh` and `tools/rules.sh`, which the run may have edited before any review). Periodic security Low (5) at d386c74.
+- Why it matters: a weakened secret pattern on the branch lets a secret reach the backup ref unchecked.
+- Fix outline: run the backup gates from a worktree of `origin/main`, as the merge gates do, with the base and change passed in. Queued in `backup-records`.
+
+## A refused backup push is retried and protects nothing here
+
+- Where: the backup step of `.claude/workflows/deliver-change.js` and `backup` in `tools/run_state.sh`; this environment's git proxy refuses a push to `refs/backup/` with HTTP 403. Retrospective proposal of `backup-secret-scan`, recorded here by the user's decision rather than queued.
+- Why it matters: in `backup-secret-scan` 2 of 2 backup pushes were refused and 0 backup refs reached origin, so the step spent tokens and changed no decision, and the run state holds no backup record to tell the report so.
+- Fix outline: record a refused backup push once in the run state, make no later backup attempt in that run, and have the report say no backup exists, with a `tools/tools_test.sh` case for a refused push.
+
+## The roadmap's progress is readable nowhere in one place
+
+- Where: the Status line of `CLAUDE.md` (line 9), which since `docs-currency` points to `docs/architecture.md` section 12, and section 12, which marks only items 4, 5, 7, 8, and 12 as delivered. Quality advisory of `docs-currency` at 19e41a9.
+- Why it matters: items 1, 2, 3, 6 (but `:g` and `:v`), 11, and the configuration files of 9 are done too, so an agent planning from section 12 sees less progress than there is, and the short list that said so left `CLAUDE.md`.
+- Fix outline: mark each delivered item, and the delivered half of 6, 7, 9, and 12, in section 12, or restore the short item list to the Status line.
+
+## Section 11 names only some of the documents and no agent or CI directory
+
+- Where: the tree of `docs/architecture.md` section 11 (its `docs/` line near line 398), now the stated home of the layout detail `CLAUDE.md` dropped in `docs-currency`. Quality advisory at 13473da.
+- Why it matters: its `docs/` line names 4 of the 12 documents, one of them, `plugin-protocol.md`, not yet written, and the tree omits `.claude/`, `.github/`, and `dist/`, so neither file lists where the documents, the agents, and CI live.
+- Fix outline: list the documents and the `.claude/`, `.github/`, and `dist/` directories in the tree, or have the Layout section of `CLAUDE.md` point to the map for `docs/`.
+
+## The run_state.sh bullet reads as if it listed every command
+
+- Where: the Commands bullet of `sh tools/run_state.sh` in `CLAUDE.md` (line 231), "every command in the script's header:" followed by seven commands. Quality advisory of `docs-currency` at 13473da.
+- Why it matters: a reader takes the seven for the whole set and misses `scope`, `bench`, `usage`, `plan-needed`, and the others the header lists.
+- Fix outline: reword it to "a change's run state, every command listed in the script's header; those an agent acts on:" before the list, within the file's budget.

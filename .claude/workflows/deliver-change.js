@@ -41,7 +41,9 @@ export const meta = {
 // line first, so a fix round is counted before its check.
 // tools/agent_guard.sh keeps the other agents off the phase and review
 // commands, and the merger's records gate compares the file with what the
-// script received.
+// script received. Mechanical agents (scout, checker, benchmark, merger)
+// run on the cheapest tier, the model: line of their frontmatter; the
+// others on the session's model.
 const input = typeof args === 'string' ? { brief: args } : (args || {})
 const ROUNDS = 3
 // Map areas scouted per change, and merger calls that may find CI still

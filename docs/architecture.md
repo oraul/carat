@@ -164,7 +164,7 @@ Four rules shape the classes. Each real operation with its own inputs is a use c
 - `EnterCommandLine`, `EditCommandLine`, `EraseCommandLine`, `CancelCommandLine`, `ExecuteCommandLine`: `:`, typed text, Backspace (which cancels on an empty line), Escape, and Enter, which runs the line through the `CommandRunner` or hands it to a plugin's prompt.
 - `UndoStep`, `RedoStep`, `UndoToState`, `TravelHistory`, `RestoreLine`, `ListUndo`, `WalkHistory`, and `RepeatLast`: `u`, `Ctrl-R` and `:redo`, `:undo N`, `g-`, `g+`, `:earlier`, and `:later` each build a path through the buffer's undo tree and hand it to `WalkHistory`, which replays it inside a history transaction with Neovim's cursor rule and messages and answers `Already at oldest change` or `Already at newest change` for an empty one; `U` is `RestoreLine` and `:undolist` is `ListUndo`. `RepeatLast` runs the last change again for `.`, its handler, insert steps, and visual region rebuilt from `LastChange`. The dispatcher records the last change: a command of a handler that declares itself a change (`ActionHandler#repeat`) that changed the text or entered insert mode.
 - `StartVisual`, `ReselectVisual`, `ExtendVisual`, `SwapVisualEnds`, and the selection operations `DeleteSelection`, `YankSelection`, `ChangeSelection`, `ShiftSelection`, `JoinSelection`, `RecaseSelection`, `InsertAtSelection`, `PutOverSelection`: entering, switching, and leaving the visual modes and `gv`; the text objects, `o`, and `O` on a selection; and every operator on the selection, with the uppercase keys as a shape or a flag of the operation's call. Visual keys go through the same keymap and `CommandGrammar` as normal keys, with operators completing at once on the selection, and every operator leaves visual mode first so the window keeps the selection for `gv`; `Escape` leaves through `NormalModeHandler`.
-- `FindMatch`, `JumpToMatch`, `Substitute`, `GlobalCommand`: pattern work; `Domain::VimPattern` translates Vim's patterns for Spinel's engine.
+- `OpenSearchPrompt`, `PreviewSearch`, `FindMatch`, `JumpToMatch`, `SubstituteLines`, `GlobalCommand`, `DeleteLines`: the `/` and `?` prompt, `incsearch`, pattern work, `:s`, `:g`, and `:d`; `Domain::VimPattern` translates Vim's patterns for Spinel's engine. `RecallHistory` is `<Up>` and `<Down>` on the command line.
 
 ### 5.2 Files and ex commands
 
@@ -174,7 +174,7 @@ Four rules shape the classes. Each real operation with its own inputs is a use c
 
 ### 5.3 Windows and services
 
-- `SplitWindow`, `OpenSideWindow`, `CloseWindow`, `CloseOtherWindows`, `FocusWindow`, `OpenTab`, `CloseTab`, `CloseOtherTabs`, `SwitchTab`; `WindowHandler` equalizes the sizes itself, and removing a window or a tab page is `BufferList#close_window` and `#close_tab`, which `Quit` applies for the `:q` rule: close the window when another exists anywhere, else end the editor unless a listed buffer is modified.
+- `SplitWindow`, `OpenSideWindow`, `CloseWindow`, `CloseOtherWindows`, `FocusWindow`, `OpenTab`, `CloseTab`, `CloseOtherTabs`, `SwitchTab`, `ScrollWindow` (`<C-f>`, `<C-d>`, `<C-e>`, `zt`, and the rest); `WindowHandler` equalizes the sizes itself, and removing a window or a tab page is `BufferList#close_window` and `#close_tab`, which `Quit` applies for the `:q` rule: close the window when another exists anywhere, else end the editor unless a listed buffer is modified.
 - `ArrangeView`: lays out the current tab page for the screen size in the state (the tab line and the message row reserved) and scrolls every window to its cursor, vertically with `scrolloff` and horizontally to the cursor's display column from the line cache. `HandleKey` runs it after every key it takes from its queue and after the plugins observe the state, the assembly after opening a file and before every render, so the geometry the use cases read (`Layout#split`, `neighbour`, the minimum width of a split, `H M L`) is always that of the next frame.
 - `RequestCompletion`, `RequestDefinition`, `RequestHover`, `RequestReferences`, `Rename`, `FormatBuffer`, `ApplyDiagnostics`: each talks to `LanguageServicePort`. They are written so that a port that reports no service available produces an empty response and a message, never an error.
 - `HighlightView` (`use_cases/syntax/`): run before every render after `ArrangeView`, it brings the syntax cache of every buffer shown in the current tab page up to date for its window (section 4.2): it finds the plugin that tokenizes the buffer's syntax, drops the cache when there is none or syntax is off, advances the end states to the last visible row, tokenizing rows above the window for their end states only, and makes sure every visible row has its tokens, so the frame presenter only reads them. A plugin whose tokenizer raises is disabled and its buffer drawn plain, or taken over by the next plugin that declares the syntax, in the same frame.
@@ -344,7 +344,7 @@ Every test is compiled with Spinel and run through `make`. There is no CRuby tes
 
 ## 11. Repository layout
 
-The layout is the one `spin` expects: a manifest, a library file with a directory of the same name, `bin/` compile roots, and `test/` programs.
+The layout is the one `spin` expects: a manifest, a library file with a directory of the same name, `bin/` compile roots, and `test/` programs. The tree names the directories and the files outside them; `docs/codebase-map.md` places every file.
 
 ```
 spin.toml                       manifest: package name, version, no dependencies
@@ -363,46 +363,18 @@ carat.rb                        require graph, innermost layer first; no test do
 carat/test_support.rb           require graph of test and benchmark programs: carat.rb and the doubles
 carat/version.rb
 carat/testing.rb                assertion harness used by test/*.rb
-carat/domain/                   entities
-  buffer.rb line_splice.rb change_record.rb transaction.rb buffer_feed.rb buffer_notice.rb
-  sign_layer.rb path_policy.rb path_info.rb position.rb range.rb cursor.rb
-  selection.rb span.rb block.rb block_insert.rb
-  undo_tree.rb last_change.rb register_entry.rb registers.rb marks.rb options.rb key.rb key_notation.rb
-  mode.rb keymap_node.rb keymap_match.rb keymap.rb find.rb command.rb command_grammar.rb
-  walker.rb sentence_starts.rb motion.rb motions.rb runs.rb text_objects.rb
-  operators.rb selection_cut.rb operator_kind.rb messages.rb ex_command.rb ex_grammar.rb ex_name.rb window.rb layout_node.rb layout.rb tab_page.rb
-  tab_list.rb buffer_list.rb input_state.rb last_find.rb plugin_ui.rb editor_state.rb
-  frame.rb cell.rb utf8.rb decoded_line.rb identity_table.rb line_cache.rb
-  highlight.rb theme.rb themes.rb color_depth.rb filetype.rb syntax_line.rb syntax_table.rb syntax_cache.rb
-  json.rb default_config.rb (generated) rc_parse.rb rc_line.rb rc_parser.rb rc_value.rb config.rb icons.rb
-  manifest_check.rb registry_source.rb
-carat/use_cases/
-  handle_key.rb arrange_view.rb dispatcher.rb outcome.rb move.rb operate.rb replace_chars.rb
-  toggle_case.rb put_register.rb join_lines.rb insert_text.rb break_line.rb erase_character.rb
-  insert_tab.rb leave_insert.rb repeat_last.rb enter_command_line.rb edit_command_line.rb
-  erase_command_line.rb cancel_command_line.rb execute_command_line.rb
-  actions/*.rb (the action handlers and table) ex/*.rb (execute_ex.rb, the ex handlers and table)
-  history/*.rb visual/*.rb search/*.rb files/*.rb windows/*.rb plugins/*.rb syntax/*.rb language/*.rb concerns/*.rb
-carat/ports/
-  terminal_port.rb clock_port.rb file_port.rb config_port.rb signal_port.rb
-  language_service_port.rb process_port.rb message_queue_port.rb
-carat/adapters/
-  input_controller.rb key_decoder.rb frame_presenter.rb painted_rows.rb screen_presenter.rb
-  sgr_table.rb rc_config_gateway.rb
-  json_rpc_language_gateway.rb
-carat/drivers/
-  ansi_terminal.rb disk_files.rb process_runner.rb monotonic_clock.rb
-  signals.rb main_loop.rb service_threads.rb
+carat/domain/                   entities, json.rb, and the generated default_config.rb
+carat/use_cases/                use cases, with actions/ and ex/ (the handlers and their tables), feature directories, plugins/, and concerns/
+carat/ports/                    the port interfaces of section 6
+carat/adapters/                 controllers, presenters, and gateways, the plugin gateway included
+carat/drivers/                  terminal, files, processes, clock, signals, the main loop, and the service threads
 carat/plugin_api.rb             the only file a plugin may require; the innermost ring beside the entities
 carat/plugins/
   registry.rb (generated)       explicit require and constructor per plugin
   explorer/ ruby/ finder/ git_signs/  built-in compiled plugins
   hello/                        the smallest example, a test fixture outside the registry
-carat/adapters/json_rpc_plugin_gateway.rb
 config/plugins.caratrc          the ordered list of compiled plugins
-carat/doubles/
-  fake_terminal.rb memory_files.rb manual_clock.rb fixed_config.rb manual_signals.rb
-  editor_harness.rb fake_process.rb
+carat/doubles/                  the test doubles of section 10
 bench/                          keys.rb, the key benchmark; run.sh, allocations and the budget; profile.sh
 test/                           one module per file, each with a committed .expected
   domain_buffer.rb domain_motions.rb ... use_cases_*.rb adapters_*.rb
