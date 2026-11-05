@@ -18,5 +18,5 @@
 
 ## 4. Documentation and checks
 
-- [x] 4.1 `README.md`, `docs/compatibility.md` (Start screen), `docs/codebase-map.md` (new files and tests), `docs/backlog.md` (`NO_COLOR` for the rest of the editor); `make docs-lint` passes.
+- [x] 4.1 `README.md`, `docs/architecture.md` (section 6, the `TerminalPort` row), `docs/compatibility.md` (Start screen), `docs/codebase-map.md` (new files and tests), `docs/backlog.md` (`NO_COLOR` for the rest of the editor); `make docs-lint` passes.
 - [x] 4.2 `make gates`, `make lint`, and the bench allocations of `lh` unchanged (`make bench-budget`).

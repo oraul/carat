@@ -195,7 +195,7 @@ Ports to the outside are the interfaces use cases depend on. Each is a Ruby clas
 
 | Port | Methods | Driver | Test double |
 | --- | --- | --- | --- |
-| `TerminalPort` | `size`, `read_key(timeout)`, `write(bytes)`, `colors`, `enter`, `leave` | `AnsiTerminal`, which reads `COLORTERM` and `TERM` once for `colors` | `FakeTerminal` with a scripted key queue, captured output, and 256 colors |
+| `TerminalPort` | `size`, `read_key(timeout)`, `write(bytes)`, `colors`, `no_color?`, `enter`, `leave` | `AnsiTerminal`, which reads `COLORTERM` and `TERM` once for `colors` and `NO_COLOR` once for `no_color?` | `FakeTerminal` with a scripted key queue, captured output, 256 colors, and a `no_color` writer (false by default) |
 | `ClockPort` | `now`, `sleep(seconds)` | monotonic clock | manual clock |
 | `FilePort` | `read(path, limit)` (a regular file of at most `limit` bytes, opened without blocking), `write(path, text)`, `exist?`, `list(dir)`, `stat(path)` returning the `PathInfo` value (`PathInfo.missing` for nothing there), `real_path(path)` (every link resolved), `mkdir(path)`, `rename(from, to)`, `delete(path)` (a file or an empty directory), `cwd`, `home` (the user's home directory, `""` for none; only `DiskFiles` reads it from the environment) | `DiskFiles` | `MemoryFiles` |
 | `ConfigPort` | `load` returning the `Domain::Config` of every configuration file in load order, each line carrying its file and line number | `RcConfigGateway` | `FixedConfig`, the shipped defaults with lines a test gives |
