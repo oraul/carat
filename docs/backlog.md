@@ -672,22 +672,22 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: the comment above `BUDGETS` in `tools/docs_lint.sh` (line 40 at 3a4db08), which reads "The queue's holds what the planner rewrites". Quality advisory of `agent-inputs`.
 - Why it matters: the sentence drops its noun, so a reader raising or checking the queue's budget has to guess what it bounds.
-- Fix outline: write "The queue's budget bounds what the planner rewrites and every agent may read at a start."
+- Fix outline: write "The queue's budget bounds what the planner rewrites and every agent may read at a start." Queued in `phase-shares`.
 
 ## The queue budget test writes its filler twice
 
 - Where: the `queuesize` case of `tools/tools_test.sh` (line 1061 at 3a4db08), whose first `head -c 17369 /dev/zero` is cut again by a second `head -c` that sets the length. Quality advisory of `agent-inputs`.
 - Why it matters: the redundant stage makes the one length that matters harder to read and to change with the budget.
-- Fix outline: `head -c "$((17369 - $(wc -c < docs/queue.md)))" /dev/zero | tr '\0' x >> docs/queue.md`.
+- Fix outline: `head -c "$((17369 - $(wc -c < docs/queue.md)))" /dev/zero | tr '\0' x >> docs/queue.md`. Queued in `phase-shares`.
 
 ## The scout's step 8 says every Rules line names sections
 
 - Where: step 8 of `.claude/agents/scout.md` (line 38 at 3a4db08); the Rules lines of areas 6, 9, 10, 13, and 16 of `docs/codebase-map.md` name no `CLAUDE.md` or `docs/architecture.md` section. Quality advisory of `agent-inputs`.
 - Why it matters: a scout on one of those areas finds no section to point the contributor to and may open the files step 8 tells it not to.
-- Fix outline: say "the sections it names, if any", or drop the clause.
+- Fix outline: say "the sections it names, if any", or drop the clause. Queued in `phase-shares`.
 
-## The image-viewer discussion line lost two of the user's constraints
+## The ex commands a global most often runs besides :s and :d
 
-- Where: the "Under discussion" line of `docs/queue.md` (line 32 at 3a4db08), shortened for the queue budget by `agent-inputs`. Quality advisory of `agent-inputs`.
-- Why it matters: the line no longer says the image is cleared on scroll and close or that a new host request follows the plugin API rules, so a later plan or brief could leave out what the user asked for.
-- Fix outline: restore both clauses in a few words, within the queue's budget.
+- Where: `carat/use_cases/ex/` and `docs/compatibility.md` Global; `buffer-global` brought `:g`, `:v`, and `:d` without `:m`, `:t`, `:normal`, and `:p`, which `docs/architecture.md` section 5.2 lists with them.
+- Why it matters: `:g/x/m0` (reverse the matching lines), `:g/x/t$` (copy them to the end), and `:g/x/normal Ax` are common globals, and they answer E492 today.
+- Fix outline: add each as an `ExHandler` with its use case over `Buffer#set_lines`, registered in Vim's order, with rows in `docs/compatibility.md` and `test/editor_global.rb`; `:m` and `:t` share `ExRange` for their destination address, and `:normal` feeds keys through `HandleKey` inside the global's transaction.
