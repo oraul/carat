@@ -27,3 +27,7 @@
 - [x] 5.1 Update `docs/compatibility.md` (status bar, buffer tabs, tab pages, windows), `docs/architecture.md` sections 8.2 and 9.1, `docs/plugins.md`, `docs/codebase-map.md`, and `README.md`.
 - [x] 5.2 Record the plan notes' entries in `docs/backlog.md`.
 - [x] 5.3 Run `make bench` for `lh`, `j`, and `insert` against main's figures, `make gates`, and `make spec-validate`.
+
+## 6. Allocations
+
+- [x] 6.1 Keep the UTF-8 text of each code point of 0x80 or more in `ScreenPresenter#glyph`, up to `GLYPH_LIMIT`, so rewriting the bar's icons costs no string and `ddp` and `undo` allocate no more per key than on main; prove it in `test/adapters_screen_presenter.rb` and with `make bench`.

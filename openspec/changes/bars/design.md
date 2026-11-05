@@ -50,6 +50,10 @@ The table that maps a file name to an icon name and an icon name to its group mo
 
 `set_segment(text, priority)` is a `Host` method, a `PluginLink` override, and `UiRequests#set_segment`, so `MINOR` becomes 2 and `VERSION` "2.2"; a 2.1 manifest is still accepted, `set_status` stays.
 
+### Icon cells cost no string when rewritten
+
+The bar puts icons, code points of 0x80 or more, on a row that changes with the mode and the edits, so the screen presenter writes them often; appending such a code to the output built a string each time, which raised the allocations per key of `ddp` and `undo` above main's. `ScreenPresenter#glyph` builds the UTF-8 text of each such code once and keeps it, for at most 4096 code points so a file of many distinct characters cannot grow the table without bound; past them a code is built each time, as before.
+
 ## Risks / Trade-offs
 
 - [Non-current windows lose their own file name line] → as in Neovim with `laststatus=3`; a winbar is a later change of the UI track.
