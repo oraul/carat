@@ -2,9 +2,9 @@
 
 ## 1. CLAUDE.md
 
-- [ ] 1.1 `CLAUDE.md` Commands: every target named, each description left to `make help`, every rule kept; the `run_state.sh` bullet pointing to the script's header, with `restore` recreating a missing branch and `abandon` named. Checked by `make docs-lint` (budgets, dead paths) and `make gates` (docs).
-- [ ] 1.2 `CLAUDE.md` Git workflow and Pull requests: "unless explicitly asked" on both rules. Checked by reading the diff: no other rule line changes.
-- [ ] 1.3 `CLAUDE.md` at most 27,648 bytes. Checked by `wc -c` and `make docs-lint`.
+- [x] 1.1 `CLAUDE.md` Commands: every target named, each description left to `make help`, every rule kept; the `run_state.sh` bullet pointing to the script's header, with `restore` recreating a missing branch and `abandon` named. Checked by `make docs-lint` (budgets, dead paths) and `make gates` (docs).
+- [x] 1.2 `CLAUDE.md` Git workflow and Pull requests: "unless explicitly asked" on both rules. Checked by reading the diff: no other rule line changes.
+- [x] 1.3 `CLAUDE.md` at most 27,648 bytes. Checked by `wc -c` and `make docs-lint`.
 
 ## 2. docs/architecture.md
 
