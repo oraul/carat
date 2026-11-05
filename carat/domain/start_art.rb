@@ -114,8 +114,8 @@ module Carat
           line = GEM[r]
           c = 0
           while c < line.bytesize
-            entry = LEGEND.index(line.getbyte(c).to_i)
-            if !entry.nil? && STAGES[entry] <= frame
+            entry = StartArt.entry_of(line.getbyte(c).to_i)
+            if entry >= 0 && STAGES[entry] <= frame
               index = base + (GEM_TOP + r) * WIDTH + GEM_LEFT + c
               StartArt.place(codes, hls, index, plain ? PLAIN_GLYPHS[entry] : GLYPHS[entry], plain ? Highlight::NORMAL : GROUPS[entry])
             end
@@ -123,6 +123,17 @@ module Carat
           end
           r += 1
         end
+      end
+
+      # The index of a legend byte, -1 for a byte not in the legend.
+      #: (Integer) -> Integer
+      def self.entry_of(byte)
+        i = 0
+        while i < LEGEND.length
+          return i if LEGEND[i] == byte
+          i += 1
+        end
+        -1
       end
 
       # ASCII text from index, its spaces in the text's group too, so a
