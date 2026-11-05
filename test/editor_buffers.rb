@@ -144,6 +144,13 @@ module EditorBuffersTest
     t.assert_equal(["a.txt", [2, 0]], [path(h), h.cursor], "the buffer shown in place of the deleted one gets its cursor back")
     h = session(":e b.txt<CR>:bd 1<CR>:e a.txt<CR>")
     t.assert_equal(3, h.buffer.id, "a file opened again after :bd gets a new number")
+    h = session(":e b.txt<CR>:new<CR>ix<Esc>:bd 1<CR>:wa<CR>")
+    t.assert_equal("E141: No file name for buffer 3", h.message, "E141 names the buffer number, which does not shift when a buffer leaves")
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.txt", "one\n")
+    h = Carat::Doubles::EditorHarness.default(files, 24, 80)
+    h.type(":e a.txt<CR>:ls<CR>")
+    t.assert_equal(A1, h.message, "a file opened over the empty startup buffer is buffer 1")
 
     # Quitting over unsaved changes names the buffer and goes to it: rows
     # are [label, keys, [message, quit, path, tab page]].

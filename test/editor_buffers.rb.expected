@@ -69,6 +69,8 @@ ok   the new empty buffer gets a new number
 ok   a file opened over it takes that number
 ok   the buffer shown in place of the deleted one gets its cursor back
 ok   a file opened again after :bd gets a new number
+ok   E141 names the buffer number, which does not shift when a buffer leaves
+ok   a file opened over the empty startup buffer is buffer 1
 ok   :qa names the current buffer
 ok   :qa shows a hidden buffer
 ok   :qa goes to the tab page showing it
@@ -83,4 +85,4 @@ ok   :q! twice ends the editor
 ok   :x names a hidden buffer
 ok   :wq names a hidden buffer
 ok   :q! over a hidden buffer discards the current buffer's changes
-editor_buffers: 85 passed, 0 failed
+editor_buffers: 87 passed, 0 failed
