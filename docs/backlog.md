@@ -884,6 +884,12 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the plugin already knows the column when it builds the line (1 + 2 * depth), so the byte walk is cleverness the task did not need and a second place to change when the line's layout does.
 - Fix outline: record the icon column beside the group in `tree_lines` (or take it from `Tree`'s depth) and drop the byte walk.
 
+## The explorer's token table is keyed by whole tree lines
+
+- Where: `tokenize` and the `@line_groups` table in `carat/plugins/explorer/plugin.rb` (lines 139 and 467 at `theme-tokens`), rebuilt by `tree_lines` on every refresh. Periodic quality at 4c65f4e.
+- Why it matters: a line's tokens depend on plugin state instead of the line, though every icon the tree draws has its own glyph in each icon set, so the table is state the plugin need not keep.
+- Fix outline: build a glyph-to-group table once in `activate` from `host.icon` and `FileIcons::GROUPS`, look up the glyph at the icon column in `tokenize`, and drop `@line_groups` and `tree_lines`, together with the byte-walk entry above it. Queued in `theme-tidy`.
+
 ## Themes.palette repeats NAMES as an if chain
 
 - Where: `palette(key)` in `carat/domain/themes.rb` (line 363 at `theme-tokens`).
@@ -919,3 +925,15 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/domain/themes.rb` (line 332 at `theme-tokens`): no blank line between the `LIGHT_PLUS` table and the `known?` comment, and `background?` has no comment unlike its neighbours.
 - Why it matters: the file's layout is otherwise consistent, and the missing comment leaves `background?`'s meaning to its body.
 - Fix outline: add the blank line and a one-line comment above `background?`.
+
+## The architecture gives the plugin API as 2.0
+
+- Where: the plugin API version sentence of `docs/architecture.md` (line 321 at `theme-tokens`) and its `syntax_group` and `tokenize` bullets near lines 295 to 296, while `carat/plugin_api.rb` (line 12) and `docs/plugins.md` (line 23) give 2.1. Periodic quality at 4c65f4e.
+- Why it matters: the binding architecture lists changes only through 1.3 and misses 2.1's file-icon groups in `syntax_group` and tokens and a scratch buffer's syntax named after its plugin, so a plugin author reading it targets an older API.
+- Fix outline: say 2.1 and add the 2.1 additions to the version sentence and to the `syntax_group` and `tokenize` bullets, within the file's budget. Queued in `docs-index`.
+
+## Operate and RepeatLast each copy EditorState#clamp_col
+
+- Where: the private `clamp(state, row, col)` in `carat/use_cases/operate.rb` (line 202 at `theme-tokens`) and `carat/use_cases/repeat_last.rb` (line 117), each `EditorState#clamp_col` in `carat/domain/editor_state.rb` (line 94) line for line. Periodic quality at 4c65f4e.
+- Why it matters: three copies of one clamp must change together, and a fix to the domain's misses the two use cases.
+- Fix outline: call `state.clamp_col(row, col)` at the six call sites and delete both private methods. Listed in the queue's backlog item.
