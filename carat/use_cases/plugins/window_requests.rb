@@ -54,7 +54,8 @@ module Carat
       # Opens the plugin's scratch buffer with that title in a fixed-width
       # window at the edge of the tab page, or refreshes and focuses the
       # one already shown there; one shown only in another tab page gets a
-      # side window here too.
+      # side window here too. A new buffer takes the syntax named after
+      # the plugin when the plugin tokenizes that filetype.
       #: (String, String, String, Integer, Array[String], untyped) -> PluginApi::WindowResponse
       def open_scratch(name, title, side, width, lines, bindings)
         return PluginApi::WindowResponse.failure("No side #{side}: left or right") unless PluginApi::SIDES.include?(side)
@@ -77,6 +78,8 @@ module Carat
         buffer = Domain::Buffer.new(lines: Boundary.copied_lines(lines), path: nil, line_ending: "\n")
         buffer.owner = name
         buffer.title = title
+        entry = @registry.find(name)
+        buffer.syntax = name if !entry.nil? && entry.tokenizes?(name)
         keymap = Domain::Keymap.from_lines(bindings, @registry.leader)
         errors = keymap.errors
         i = 0

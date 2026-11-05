@@ -3,7 +3,8 @@ module Carat
     module Explorer
       # Chooses the icon name of a tree line from the host's icon table:
       # a folder closed or open for a directory, symlink for a link, and
-      # for a file the icon of its type, by name or extension.
+      # for a file the icon of its type, by name or extension. GROUPS names
+      # the file-icon highlight group each icon is drawn in.
       module FileIcons
         NAMES = {
           "Makefile" => "makefile",
@@ -25,6 +26,23 @@ module Carat
           "yml" => "yaml",
           "yaml" => "yaml",
           "lock" => "lock"
+        }
+
+        GROUPS = {
+          "folder_closed" => "DevIconFolder",
+          "folder_open" => "DevIconFolder",
+          "symlink" => "DevIconSymlink",
+          "ruby" => "DevIconRb",
+          "json" => "DevIconJson",
+          "markdown" => "DevIconMd",
+          "toml" => "DevIconToml",
+          "makefile" => "DevIconMakefile",
+          "shell" => "DevIconSh",
+          "c" => "DevIconC",
+          "yaml" => "DevIconYml",
+          "git" => "DevIconGitIgnore",
+          "lock" => "DevIconLock",
+          "default" => "DevIconDefault"
         }
 
         #: (String, bool, bool, bool) -> String

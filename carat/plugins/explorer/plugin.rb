@@ -20,6 +20,8 @@ module Carat
         # @rbs @cwd: String
         # @rbs @followed: String
         # @rbs @pending: String
+        # @rbs @icon_groups: Hash[String, Integer]
+        # @rbs @line_groups: Hash[String, Integer]
 
         #: () -> void
         def initialize
@@ -28,6 +30,8 @@ module Carat
           @cwd = ""
           @followed = ""
           @pending = ""
+          @icon_groups = {}
+          @line_groups = {}
         end
 
         # Returns the manifest.
@@ -61,13 +65,14 @@ module Carat
             events: ["buffer_open", "window_focus", "cursor_move"],
             options: ["plugin.explorer.width 30", "plugin.explorer.side left", "plugin.explorer.show_hidden false", "plugin.explorer.ignore .git build tmp"],
             option_types: { "width" => "integer", "side" => "string", "show_hidden" => "bool", "ignore" => "list" },
-            filetypes: []
+            filetypes: ["explorer"]
           )
         end
 
         #: (Carat::PluginApi::Host) -> void
         def activate(host)
           @host = host
+          @icon_groups = icon_groups(host)
         end
 
         #: () -> void
@@ -123,6 +128,30 @@ module Carat
           end
         end
 
+        # Colors the icon of a tree line: one token over the icon's cell, in
+        # the file-icon group the line's entry was drawn with. The marker
+        # takes one code point and the indentation is spaces, so the icon's
+        # column is one past them. Returns 0: a tree line carries no state.
+        # @rbs filetype: String
+        # @rbs text: String
+        # @rbs state: Integer
+        # @rbs tokens: Array[Integer]
+        def tokenize(filetype, text, state, tokens)
+          group = @line_groups[text]
+          return 0 if group.nil? || text.empty?
+          lead = text.getbyte(0).to_i
+          i = lead < 0x80 ? 1 : (lead < 0xe0 ? 2 : (lead < 0xf0 ? 3 : 4))
+          column = 1
+          while i < text.bytesize && text.getbyte(i) == 32
+            i += 1
+            column += 1
+          end
+          tokens << column
+          tokens << 1
+          tokens << group
+          0
+        end
+
         private
 
         # ---------------------------------------------------------- opening
@@ -157,7 +186,7 @@ module Carat
           tree.mark(@followed)
           tree.reveal(@followed) unless @followed.empty?
           tree.build(host)
-          opened = host.open_scratch(TITLE, side(host), width(host), tree.lines(host), keymap)
+          opened = host.open_scratch(TITLE, side(host), width(host), tree_lines(host, tree), keymap)
           unless opened.ok
             report_window(host, opened)
             return
@@ -274,7 +303,7 @@ module Carat
           return unless opened.ok
           tree = tree_of(host)
           tree.build(host)
-          again = host.open_scratch(TITLE, side(host), width(host), tree.lines(host), keymap)
+          again = host.open_scratch(TITLE, side(host), width(host), tree_lines(host, tree), keymap)
           return unless again.ok
           host.focus_window(host.editing_window.window)
         end
@@ -415,6 +444,39 @@ module Carat
 
         # ------------------------------------------------------- helpers
 
+        # The id of each icon's file-icon group, resolved once.
+        #: (Carat::PluginApi::Host) -> Hash[String, Integer]
+        def icon_groups(host)
+          ids = {}
+          icons = FileIcons::GROUPS.keys
+          i = 0
+          while i < icons.length
+            icon = icons[i].to_s
+            found = host.syntax_group(FileIcons::GROUPS[icon].to_s)
+            number = found.number.to_i
+            ids[icon] = number if found.ok
+            i += 1
+          end
+          ids
+        end
+
+        # The tree's lines, each recorded with its icon's group for
+        # tokenize; equal lines show the same entry kind and name, so the
+        # same icon.
+        #: (Carat::PluginApi::Host, Tree) -> Array[String]
+        def tree_lines(host, tree)
+          lines = tree.lines(host)
+          groups = {}
+          i = 0
+          while i < lines.length
+            group = @icon_groups[tree.icon_name(i)]
+            groups[lines[i]] = group unless group.nil?
+            i += 1
+          end
+          @line_groups = groups
+          lines
+        end
+
         #: (Carat::PluginApi::Host) -> Tree
         def tree_of(host)
           tree = @tree
@@ -428,7 +490,7 @@ module Carat
         #: (Carat::PluginApi::Host, Tree) -> void
         def refresh(host, tree)
           tree.build(host)
-          host.set_scratch_lines(TITLE, tree.lines(host))
+          host.set_scratch_lines(TITLE, tree_lines(host, tree))
         end
 
         #: (Carat::PluginApi::Host) -> String

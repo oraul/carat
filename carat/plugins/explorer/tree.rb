@@ -157,6 +157,13 @@ module Carat
           row_of(PluginApi::Paths.dirname(n.path))
         end
 
+        # The icon name of the entry on row i.
+        #: (Integer) -> String
+        def icon_name(i)
+          n = node(i)
+          FileIcons.name_for(n.name, n.directory, expanded?(n.path), n.symlink)
+        end
+
         # The lines: a marker column holding the current icon on the marked
         # entry, two spaces per level, the icon, a space, and the name.
         #: (PluginApi::Host) -> Array[String]
@@ -167,7 +174,7 @@ module Carat
           while i < @nodes.length
             n = node(i)
             mark = n.path == @marked ? current : " "
-            icon = host.icon(FileIcons.name_for(n.name, n.directory, expanded?(n.path), n.symlink)).text
+            icon = host.icon(icon_name(i)).text
             out << mark + ("  " * n.depth) + icon + " " + n.name
             i += 1
           end

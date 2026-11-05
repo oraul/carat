@@ -40,9 +40,13 @@ module UseCasesPluginSyntaxTest
       good = host.syntax_group("Comment")
       editor = host.syntax_group("StatusLine")
       bad = host.syntax_group("Banana")
+      icon = host.syntax_group("DevIconRb")
+      ui = host.syntax_group("CursorLine")
       @log << "Comment=#{good.ok} #{good.number}"
       @log << "StatusLine=#{editor.ok} #{editor.message}"
       @log << "Banana=#{bad.ok} #{bad.message}"
+      @log << "DevIconRb=#{icon.ok} #{icon.number}"
+      @log << "CursorLine=#{ui.ok} #{ui.message}"
     end
 
     # Returns the fixed end state.
@@ -80,7 +84,7 @@ module UseCasesPluginSyntaxTest
     h = Carat::Doubles::EditorHarness.with_plugins(files, 8, 40, [first, second, Lazy.new])
     h.open("a.txt")
     syntax = h.plugins.syntax
-    t.assert_equal(["Comment=true #{H::COMMENT}", "StatusLine=false No highlight group named StatusLine", "Banana=false No highlight group named Banana"], first.log, "syntax_group answers syntax groups by name and refuses others")
+    t.assert_equal(["Comment=true #{H::COMMENT}", "StatusLine=false No highlight group named StatusLine", "Banana=false No highlight group named Banana", "DevIconRb=true #{H::ICON_RUBY}", "CursorLine=false No highlight group named CursorLine"], first.log, "syntax_group answers syntax and file-icon groups by name and refuses others")
 
     # The provider: the first enabled plugin that declares the syntax.
     names = ["toy", "other", "lazy", "ruby"].map do |type|
@@ -91,13 +95,13 @@ module UseCasesPluginSyntaxTest
     t.assert_equal([["toy"], ["toy", "other"]], [h.plugins.entry(0).filetypes, h.plugins.entry(1).filetypes], "the entries hold the declared filetypes")
 
     # A call: the copy of the text, the start state, the tokens, the state.
-    first.tokens = [0, 2, H::COMMENT, -1, 2, H::STRING, 0, 0, H::STRING, 1, 2, 9999, 2, 1, H::NORMAL, 1, 1, H::STRING]
+    first.tokens = [0, 2, H::COMMENT, -1, 2, H::STRING, 0, 0, H::STRING, 1, 2, 9999, 2, 1, H::NORMAL, 2, 1, H::CURSOR_LINE, 1, 1, H::STRING, 2, 1, H::ICON_RUBY]
     first.finish = 7
     line = "one"
     entry = syntax.provider("toy")
     t.assert_equal(7, syntax.tokenize(entry, "toy", line, 3), "the end state is returned")
     t.assert_equal("toy one 3", first.log.last, "the plugin gets the filetype, the text, and the start state")
-    t.assert_equal([0, 2, H::COMMENT, 1, 1, H::STRING], syntax.copied_tokens, "a negative start, an empty token, an editor group, and an unknown id are dropped")
+    t.assert_equal([0, 2, H::COMMENT, 1, 1, H::STRING, 2, 1, H::ICON_RUBY], syntax.copied_tokens, "a negative start, an empty token, a UI group, and an unknown id are dropped; a file-icon group is kept")
     first.finish = -5
     t.assert_equal(0, syntax.tokenize(entry, "toy", line, 0), "a negative state counts as 0")
     first.tokens = Array.new(0, 0)

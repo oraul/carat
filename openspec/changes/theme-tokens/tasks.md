@@ -12,8 +12,8 @@
 
 ## 3. File-icon colors
 
-- [ ] 3.1 `carat/use_cases/plugins/ui_requests.rb` and `plugin_syntax.rb` take the file-icon groups; `window_requests.rb` gives a plugin's scratch buffer its filetype; `carat/plugin_api.rb` 2.1; `test/domain_plugin_manifest.rb` and `test/editor_plugins.rb` rows.
-- [ ] 3.2 `carat/plugins/explorer/`: the `explorer` filetype, the icon groups, `tokenize`; `test/editor_explorer.rb` rows for the icon cells and `:syntax off`.
+- [x] 3.1 `carat/use_cases/plugins/ui_requests.rb` and `plugin_syntax.rb` take the file-icon groups; `window_requests.rb` gives a plugin's scratch buffer its filetype; `carat/plugin_api.rb` 2.1; `test/domain_plugin_manifest.rb` and `test/editor_plugins.rb` rows.
+- [x] 3.2 `carat/plugins/explorer/`: the `explorer` filetype, the icon groups, `tokenize`; `test/editor_explorer.rb` rows for the icon cells and `:syntax off`.
 
 ## 4. Documentation
 
