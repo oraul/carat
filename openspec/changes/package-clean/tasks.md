@@ -11,7 +11,7 @@
 
 ## 3. The contributor
 
-- [ ] 3.1 `.claude/agents/contributor.md`: `make spec-validate` in implement steps 2 and 6 and in fix; package step 5 a check that edits only a line the contributor did not write, and reports it. Tested by `make docs-lint` (the agent file's budget) and "guard: contributor generates and checks" with `make spec-validate`.
+- [x] 3.1 `.claude/agents/contributor.md`: `make spec-validate` in implement steps 2 and 6, in fix, and in package step 1 in place of its `openspec validate --all --strict`; package step 5 a check that edits only a line the contributor did not write, and reports it. Tested by `make docs-lint` (the agent file's budget) and "guard: contributor generates and checks" with `make spec-validate`.
 
 ## 4. Docs and bookkeeping
 

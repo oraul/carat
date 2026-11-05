@@ -26,7 +26,7 @@ Rejected: `"attribution": false`, which hides everything in one value but makes 
 
 `tools/spec_validate.sh`, behind `make spec-validate`, runs `openspec validate --all --strict --no-interactive` in the tree, then for each directory of `openspec/changes/` but `archive`: copies `openspec/` to `build/spec-preview/openspec`, runs `openspec archive NAME -y` there (with `--skip-specs` when the change's `.openspec.yaml` sets `skip_specs: true`), and validates the copy strictly. A failure names the change and keeps the preview for reading; the real tree is never written. `OPENSPEC` overrides the command, which the tools test sets to a stub, so the script is tested without the network. Archiving with `-y` proceeds past incomplete tasks, so the preview works in the middle of implement.
 
-The contributor runs `make spec-validate` at implement step 2 (after proposing, beside the change's own validation) and before it finishes implement and fix, so a spec the archive would reject is fixed before the checker and the reviewers see it, and package's archive edits no spec.
+The contributor runs `make spec-validate` at implement step 2 (after proposing, beside the change's own validation) and before it finishes implement and fix, so a spec the archive would reject is fixed before the checker and the reviewers see it, and package's archive edits no spec. Package step 1 runs it after the archive in place of `openspec validate --all --strict`, which it includes, so the agent file stays within its 8 KiB budget.
 
 Rejected: a requirement-length check of our own over the delta files. It would cover the one rule seen so far and drift from OpenSpec's validator; the preview applies whatever the archive and the strict validation apply.
 
