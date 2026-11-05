@@ -6,11 +6,11 @@ Screen rendering turns the editor state into a frame of cells for one window and
 ## Requirements
 
 ### Requirement: Frame layout for one window
-A frame of R rows and C columns showing one tab page with one window SHALL use rows 0 to R-3 for the window, row R-2 for the status line, and row R-1 for the command line or message. Every window row SHALL start with a line number gutter, right-aligned numbers of width max(3, digits of the line count) followed by one space, when the number option is on, and no gutter otherwise. Rows past the end of the buffer SHALL show "~" in column 0.
+A frame of R rows and C columns showing one tab page with one window and no buffer tabs row SHALL use rows 0 to R-3 for the window, row R-2 for the status bar, and row R-1 for the command line or message. Every window row SHALL start with a line number gutter, right-aligned numbers of width max(3, digits of the line count) followed by one space, when the number option is on, and no gutter otherwise. Rows past the end of the buffer SHALL show "~" in column 0.
 
 #### Scenario: Three lines in a six-row frame
 - **WHEN** the lines ["one", "two", "three"] are rendered in 6 rows and 12 columns with number on
-- **THEN** rows 0 to 2 read "  1 one", "  2 two", "  3 three", row 3 reads "~", row 4 is the status line, and row 5 is the message row
+- **THEN** rows 0 to 2 read "  1 one", "  2 two", "  3 three", row 3 reads "~", row 4 is the status bar, and row 5 is the message row
 
 #### Scenario: Number off
 - **WHEN** the same lines are rendered with number off
@@ -26,25 +26,6 @@ When the relativenumber option is on, every row other than the cursor row SHALL 
 #### Scenario: Relative numbers around the cursor
 - **WHEN** three lines are rendered with number and relativenumber on and the cursor on row 1
 - **THEN** the gutters read "  1 ", "  2 ", "  1 " for rows 0, 1, and 2 respectively, with row 1 showing the absolute number 2
-
-### Requirement: Status line content
-The status line of a window SHALL show the buffer path, or the title of a scratch buffer, or "[No Name]" when there is neither, followed by " [+]" when the buffer is modified, then on the current window's status line the status segments of the plugins in registration order separated by one space after two spaces, and SHALL show at its right end that window's cursor as "row,col" using 1-based numbers followed by the window position "All", "Top", "Bot", or a percentage.
-
-#### Scenario: Modified buffer
-- **WHEN** the buffer for "a.txt" is modified and the cursor is at (1, 2) in a short buffer
-- **THEN** the status line starts with "a.txt [+]" and ends with "2,3 All"
-
-#### Scenario: Unnamed buffer
-- **WHEN** a buffer with no path is rendered
-- **THEN** the status line starts with "[No Name]"
-
-#### Scenario: Scratch buffer
-- **WHEN** a scratch buffer titled "list" is rendered
-- **THEN** its status line starts with "list"
-
-#### Scenario: Status segment
-- **WHEN** the hello plugin has set the segment "hello 1" and the current window shows "a.txt"
-- **THEN** the current window's status line starts with "a.txt  hello 1" and another window's status line does not show the segment
 
 ### Requirement: Message row content
 The message row SHALL show, in priority order, the command line prefixed by ":" in command-line mode, or by a plugin's prompt text in place of ":" while a plugin prompt is open, the pending message if one was set by the last action, or "-- INSERT --" in insert mode, "-- VISUAL --", "-- VISUAL LINE --", or "-- VISUAL BLOCK --" in the visual modes, and SHALL be blank otherwise. A message SHALL stay until the next key is handled. The cursor SHALL be placed after the command line text.
@@ -119,7 +100,7 @@ Each frame SHALL be written to the terminal in one write. The first frame and an
 
 #### Scenario: Moving the cursor writes only the ruler
 - **WHEN** "l" is pressed in a buffer of 200-column lines shown in a 200-column terminal
-- **THEN** the write contains the changed cursor column of the status line and no text of the buffer
+- **THEN** the write contains the changed cursor column of the status bar and no text of the buffer
 
 #### Scenario: A wide character is rewritten whole
 - **WHEN** a row shows "中b" and the next frame shows "ab" in its place
@@ -137,7 +118,7 @@ When the terminal size changes between keys the next frame SHALL use the new siz
 
 #### Scenario: Terminal shrinks
 - **WHEN** the terminal reports 24 rows and then 10 rows
-- **THEN** the next frame has 10 rows and the status line is on row 8
+- **THEN** the next frame has 10 rows and the status bar is on row 8
 
 #### Scenario: Split windows after a resize
 - **WHEN** a window is split vertically in an 80-column terminal and the terminal becomes 40 columns wide
@@ -174,22 +155,15 @@ No cell of a frame SHALL hold a code point below 32, U+007F, or U+0080 to U+009F
 - **THEN** the bytes written contain the markers "<9b>" and "<9d>" and, outside the presenter's own escape sequences, no byte sequence encoding a code point from U+0080 to U+009F
 
 ### Requirement: Frame layout for several windows
-The frame SHALL show every window of the current tab page in its own rectangle: a horizontal split stacks the windows with a status line under each, a vertical split places them side by side with one separator column between them in the status line highlight, showing the vertical bar character on every text row. Each window SHALL have its own line number gutter and text area, and rows past the end of its buffer SHALL show "~". The command line or message row SHALL stay the last row of the frame.
+The frame SHALL show every window of the current tab page in its own rectangle: a horizontal split stacks the windows, each window above another ending in a separator row of "─" across its width; a vertical split places them side by side with one separator column of "│" between them, down to the status bar. Every separator SHALL be in `WinSeparator`. Each window SHALL have its own gutter and text area, rows past the end of its buffer SHALL show "~", and the message row SHALL stay the last row.
 
 #### Scenario: Two stacked windows
 - **WHEN** the lines ["one", "two", "three"] are shown in a window split horizontally in a 9-row, 14-column frame
-- **THEN** rows 0 to 2 read "  1 one", "  2 two", "  3 three", row 3 is a status line, rows 4 to 6 read the same three lines, row 7 is a status line, and row 8 is the message row
+- **THEN** rows 0 to 2 read "  1 one", "  2 two", "  3 three", row 3 is a separator row of "─" in `WinSeparator`, rows 4 to 6 read the same three lines, row 7 is the status bar, and row 8 is the message row
 
 #### Scenario: Two windows side by side
 - **WHEN** the lines ["one", "two"] are shown in a window split vertically in a 6-row, 21-column frame
-- **THEN** row 0 reads "  1 one   │  1 one", with the separator at column 10 carrying the status line highlight, row 4 holds both status lines, and row 5 is the message row
-
-### Requirement: Every window has a status line
-Each window SHALL have a status line under its text rows showing its buffer's path, or "[No Name]", " [+]" when the buffer is modified, and at its right end that window's cursor as "row,col" followed by the position, dropped when it would touch the path. The current window's status line SHALL use the status line highlight and the other windows' status lines the inactive status line highlight.
-
-#### Scenario: Status lines of two windows
-- **WHEN** "a.txt" is split horizontally and the bottom window's cursor is on (1, 0) while the top window is current at (0, 0)
-- **THEN** the top status line starts with "a.txt" and ends with "1,1 All" in the status highlight, and the bottom one ends with "2,1 All" in the inactive status highlight
+- **THEN** row 0 reads "  1 one   │  1 one", with the separator at column 10 in `WinSeparator`, row 4 is the status bar across all 21 columns, and row 5 is the message row
 
 ### Requirement: The cursor is placed in the current window
 The frame cursor SHALL be placed inside the current window's rectangle, after its gutter, by display width, and each window SHALL scroll on its own to keep its cursor visible with scrolloff.
@@ -197,13 +171,6 @@ The frame cursor SHALL be placed inside the current window's rectangle, after it
 #### Scenario: Cursor in the bottom window
 - **WHEN** a window is split horizontally in a 9-row frame and the bottom window is current with its cursor at (1, 0) and the number column shown
 - **THEN** the frame cursor is at row 5, column 4
-
-### Requirement: The tab line takes the top row when there are several tab pages
-When more than one tab page exists, row 0 SHALL be the tab line and the windows SHALL be laid out from row 1; with one tab page the windows SHALL start at row 0.
-
-#### Scenario: Two tab pages
-- **WHEN** two tab pages exist, the first showing "a.txt" and current, the second "b.txt", in a 7-row frame
-- **THEN** row 0 reads " 1 a.txt  2 b.txt " with " 1 a.txt " in the selected tab line highlight, " 2 b.txt " in the tab line highlight, the rest of the row in the tab line fill highlight, row 1 is the first text row, and row 5 is the status line
 
 ### Requirement: Signs take a column before the line numbers
 A buffer with at least one sign SHALL be drawn with a sign column two cells wide at the left of its windows, before the line numbers, holding each sign's glyph on its row and blanks elsewhere; a buffer with no signs SHALL have no sign column.
