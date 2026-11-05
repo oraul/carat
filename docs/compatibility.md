@@ -340,7 +340,7 @@ Differences from Neovim: `\/`, `\?`, and `\&` as the delimiter and a delimiter t
 
 ## Windows
 
-Every window shows one buffer from the buffer list with its own cursor and scroll position, and has a status line; windows side by side are separated by one column. A count before `<C-w>` is taken where Neovim takes one.
+Every window shows one buffer from the buffer list with its own cursor and scroll position; a window above another ends in a separator row and windows side by side are separated by one column, both in `WinSeparator`, and one status bar serves them all (Status bar and buffer tabs below). A count before `<C-w>` is taken where Neovim takes one.
 
 | Keys | Action name | Behavior | Test |
 | --- | --- | --- | --- |
@@ -380,16 +380,33 @@ Differences from Neovim: the view never scrolls past the last line, so the windo
 
 ## Tab pages
 
-Each tab page holds its own window layout; the tab line on the top row lists them only when there is more than one, as `showtabline=1`.
+Each tab page holds its own window layout; from two tab pages their numbers stand at the right end of the buffer tabs row (Status bar and buffer tabs below).
 
 | Keys | Action name | Behavior | Test |
 | --- | --- | --- | --- |
 | `[count]gt` | `tab.next` | Next tab page, wrapping; with a count, tab page count, or nothing when there is none | `editor_tabs`, `domain_layout` |
 | `[count]gT` | `tab.previous` | Count tab pages back, wrapping | `editor_tabs`, `domain_layout` |
 
-The tab line label of a tab page is a space, its number, a space, the file name of its current window's buffer or `[No Name]`, ` [+]` when that buffer is modified, and a space; the current label is highlighted (`editor_tabs`, `adapters_frame_presenter`).
+Each tab page's number is a space, the number, and a space, the current one in `TabLineSel` (`editor_tabs`, `adapters_tab_bar`).
 
-Differences from Neovim: the label shows the tab number instead of the window count, and never the count of windows; `:tabm[ove]`, `:tabn N`, `:tabs`, and `:tabdo` arrive with later changes.
+Differences from Neovim: the top row lists buffers rather than tab pages, as bufferline plugins do, and a tab page shows only its number; `:tabm[ove]`, `:tabn N`, `:tabs`, and `:tabdo` arrive with later changes.
+
+## Status bar and buffer tabs
+
+One status bar on the row above the message row serves every window, as `laststatus=3`, and the top row lists the buffers, as the bufferline plugins do; neither is an option yet.
+
+| Part | Behavior | Test |
+| --- | --- | --- |
+| Mode pill | `NORMAL`, `INSERT`, `VISUAL`, `V-LINE`, `V-BLOCK`, `REPLACE`, `O-PENDING`, or `COMMAND` in `StatusLineModeNormal`, `Insert`, `Visual`, `Replace`, or `Command`; priority 100 | `adapters_status_bar` |
+| File | The path, the scratch title, or `[No Name]`, and the `modified` icon when modified; priority 90, cut last | `adapters_status_bar`, `editor_screen` |
+| Branch, diagnostics, `lsp` | Empty until git and language services fill them, then the branch after the `git` icon (40), each count above zero after its icon in its `Diagnostic` group (70), and the server's name in `StatusLineLspStarting`, `Ready`, or `Error` (60) | `adapters_status_bar` |
+| Plugin segments | In the order first set, before the `lsp` slot, each at its own priority, 10 for `set_status` | `adapters_status_bar`, `editor_plugins` |
+| File type, encoding | The filetype when there is one (30) and `utf-8` (20) | `adapters_status_bar` |
+| Position, percent | `row:col` (80) and `All`, `Top`, `Bot`, or `N%` (50) | `adapters_status_bar`, `editor_screen` |
+| Narrow bar | Whole segments dropped, lowest priority first and the later of equals first, until the rest fit | `adapters_status_bar` |
+| Buffer tabs | From two listed file buffers or two tab pages: a tab per file buffer with its icon, name, and modified icon, the current window's in `TabLineSel`; the tabs that do not fit counted as ` <N ` and ` N> `; the tab-page numbers at the right end | `adapters_tab_bar`, `editor_tabs` |
+
+Differences from Neovim: there is no `laststatus`, `showtabline`, `statusline`, or `tabline` option, no winbar, and no per-window status line; tabs are not clickable and equal file names are not told apart; the encoding is always `utf-8`.
 
 ## File explorer
 

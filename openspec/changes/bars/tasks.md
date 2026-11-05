@@ -24,6 +24,6 @@
 
 ## 5. Docs and records
 
-- [ ] 5.1 Update `docs/compatibility.md` (status bar, buffer tabs, tab pages, windows), `docs/architecture.md` sections 8.2 and 9.1, `docs/plugins.md`, `docs/codebase-map.md`, and `README.md`.
-- [ ] 5.2 Record the plan notes' entries in `docs/backlog.md`.
+- [x] 5.1 Update `docs/compatibility.md` (status bar, buffer tabs, tab pages, windows), `docs/architecture.md` sections 8.2 and 9.1, `docs/plugins.md`, `docs/codebase-map.md`, and `README.md`.
+- [x] 5.2 Record the plan notes' entries in `docs/backlog.md`.
 - [ ] 5.3 Run `make bench` for `lh`, `j`, and `insert` against main's figures, `make gates`, and `make spec-validate`.
