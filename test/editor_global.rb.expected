@@ -1,0 +1,53 @@
+ok   a substitute on the matching lines
+ok   the long name
+ok   a range limits the marked lines
+ok   a range past the last line
+ok   v runs on the lines that do not match
+ok   vglobal is v
+ok   g! is v
+ok   v takes no bang
+ok   deleting every matching line
+ok   a marked line deleted before its turn is not visited
+ok   inserted lines are not visited
+ok   inserted lines above move the marks
+ok   another delimiter
+ok   a blank before the delimiter
+ok   an empty pattern is the last search
+ok   no previous pattern
+ok   no argument
+ok   a letter as delimiter
+ok   a bad pattern
+ok   smartcase keeps an uppercase pattern exact
+ok   ignorecase without smartcase
+ok   without a command the lines are listed
+ok   nothing matches
+ok   every line matches
+ok   a failing command stops it
+ok   a failing command stops after the lines before it
+ok   the last message a command gave
+ok   n searches the pattern
+ok   :s reuses the pattern
+ok   the search history holds it
+ok   :& uses it as the last substitute pattern
+ok   the search register holds it
+ok   one undo step
+ok   dot does not repeat it
+ok   a nested global acts on the cursor line
+ok   a nested global with a range
+ok   :d deletes the cursor line
+ok   :d leaves the cursor on the first non-blank
+ok   :d of the last lines
+ok   :d with a count
+ok   :d with a count past the end
+ok   :d into a register
+ok   :d into the unnamed register
+ok   :d shifts the numbered registers
+ok   :d into the black hole
+ok   :d of a read-only register
+ok   :d with a zero count
+ok   :d takes no bang
+ok   :d of the only line
+ok   :d is one undo step
+ok   a global whose scan runs out of budget changes nothing
+ok   a command that leaves the buffer stops the global
+editor_global: 52 passed, 0 failed

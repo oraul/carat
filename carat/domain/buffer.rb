@@ -5,6 +5,7 @@ require_relative "change_record"
 require_relative "transaction"
 require_relative "undo_tree"
 require_relative "sign_layer"
+require_relative "global_marks"
 require_relative "buffer_feed"
 require_relative "filetype"
 require_relative "syntax_cache"
@@ -42,9 +43,10 @@ module Carat
     # when the buffer is made and when it is renamed ("" for none); syntax
     # is the name that chooses the tokenizer, set with the filetype and
     # changed alone by :set syntax; syntax_cache keeps what the tokenizer
-    # said, and every splice moves it with the rows. A Struct record:
+    # said, and every splice moves it with the rows, as it moves
+    # global_marks, the lines a running :global marked. A Struct record:
     # mutable, with a reader and a writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, keyword_init: true)
+    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, keyword_init: true)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
@@ -63,6 +65,7 @@ module Carat
       # @rbs @filetype: String
       # @rbs @syntax: String
       # @rbs @syntax_cache: SyntaxCache
+      # @rbs @global_marks: GlobalMarks
 
       # Every member is stored through its writer after super(), so the
       # empty sign list takes the pinned type: Spinel's keyword super of a
@@ -91,6 +94,7 @@ module Carat
         self.filetype = type
         self.syntax = type
         self.syntax_cache = SyntaxCache.new
+        self.global_marks = GlobalMarks.new
       end
 
       # Whether an edit changed the text since the last load, reload, or
@@ -541,6 +545,7 @@ module Carat
         LineSplice.apply(lines, a, b, inserted)
         shift_signs(a, b - a, inserted.length)
         syntax_cache.shift(a, b - a, inserted.length)
+        global_marks.shift(a, b - a, inserted.length)
         self.changes = changes + 1
         record(ChangeRecord.new(buffer_id: id, row: a, removed: removed, inserted: inserted))
       end

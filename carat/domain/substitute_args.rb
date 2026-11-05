@@ -1,4 +1,4 @@
-require_relative "vim_pattern"
+require_relative "delimited_pattern"
 
 module Carat
   module Domain
@@ -43,19 +43,13 @@ module Carat
         size = text.bytesize
         first = size > 0 ? text.getbyte(0).to_i : 0
         return tail(false, "", "", text) unless allow_pattern && size > 0 && first != 32 && first != 9 && !listed?(NOT_DELIMITERS, first)
-        letter = (first >= 65 && first <= 90) || (first >= 97 && first <= 122)
-        return refused("E146: Regular expressions can't be delimited by letters") if letter
-        return refused("Not implemented: \\ as the delimiter of :s") if first == 92
-        return refused("Not implemented: a delimiter that is not ASCII") if first >= 128
-        rest = text.byteslice(1, size - 1).to_s
-        stop = VimPattern.pattern_end(rest, first)
-        pattern = rest.byteslice(0, stop).to_s
-        return tail(true, pattern, "", "") if stop >= rest.bytesize
-        after = rest.byteslice(stop + 1, rest.bytesize - stop - 1).to_s
+        delimited = DelimitedPattern.parse(text, ":s")
+        return refused(delimited.error) unless delimited.ok?
+        after = delimited.rest
         cut = string_end(after, first)
         replacement = after.byteslice(0, cut).to_s
         flags = cut < after.bytesize ? after.byteslice(cut + 1, after.bytesize - cut - 1).to_s : ""
-        tail(true, pattern, replacement, flags)
+        tail(true, delimited.pattern, replacement, flags)
       end
 
       # The byte where the string ends: the first delimiter no backslash

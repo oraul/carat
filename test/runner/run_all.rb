@@ -19,6 +19,7 @@ require_relative "../domain_ex_grammar"
 require_relative "../domain_ex_range"
 require_relative "../domain_filetype"
 require_relative "../domain_frame"
+require_relative "../domain_global"
 require_relative "../domain_grammar"
 require_relative "../domain_icons"
 require_relative "../domain_keymap"
@@ -42,6 +43,7 @@ require_relative "../drivers_disk_files"
 require_relative "../drivers_main_loop"
 require_relative "../editor_cmdline"
 require_relative "../editor_explorer"
+require_relative "../editor_global"
 require_relative "../editor_grammar"
 require_relative "../editor_insert"
 require_relative "../editor_motions"
@@ -89,6 +91,7 @@ when "domain_ex_grammar" then DomainExGrammarTest.main
 when "domain_ex_range" then DomainExRangeTest.main
 when "domain_filetype" then DomainFiletypeTest.main
 when "domain_frame" then DomainFrameTest.main
+when "domain_global" then DomainGlobalTest.main
 when "domain_grammar" then DomainGrammarTest.main
 when "domain_icons" then DomainIconsTest.main
 when "domain_keymap" then DomainKeymapTest.main
@@ -112,6 +115,7 @@ when "drivers_disk_files" then DriversDiskFilesTest.main
 when "drivers_main_loop" then DriversMainLoopTest.main
 when "editor_cmdline" then EditorCmdlineTest.main
 when "editor_explorer" then EditorExplorerTest.main
+when "editor_global" then EditorGlobalTest.main
 when "editor_grammar" then EditorGrammarTest.main
 when "editor_insert" then EditorInsertTest.main
 when "editor_motions" then EditorMotionsTest.main

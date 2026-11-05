@@ -351,7 +351,7 @@ Rules: CLAUDE.md Coding conventions (variants through one `call`, as a `Data` re
 
 ## 12. Ex commands, the command line, and files
 
-What: command-line mode, the ex grammar, ranges, and names, the ex table, the file commands (`:w`, `:q`, `:e`, and their families), and substitute (`:s`, `:&`, `&`, `g&`).
+What: command-line mode, the ex grammar, ranges, and names, the ex table, the file commands (`:w`, `:q`, `:e`, and their families), substitute (`:s`, `:&`, `&`, `g&`), the global commands (`:g`, `:g!`, `:v`), and `:d`.
 
 Flow: `CommandLineHandler` runs `EnterCommandLine` (`:`), `EditCommandLine` (typed text), `EraseCommandLine`, `CancelCommandLine`, and `ExecuteCommandLine` (Enter; a plugin's open prompt gets Enter and cancel; an executed line becomes the `:` register); `ExecuteCommandLine` calls the `CommandRunner`, `ExecuteEx#call`, which parses with `ExGrammar.parse` into an `ExCommand`, finds the first handler whose `ExName` matches in the `ExTable` (`E492` otherwise), and runs `ExHandler#call(state, ex_command)`; a range before a handler whose `ranged?` is false is `E481`, and a range alone moves the cursor. A ranged handler resolves `ExCommand#range` with `ExRange.resolve`. Substitute: `SubstituteCommandHandler` (`:s`, `:&`) and `SubstituteHandler` (`&`, `g&`) parse `SubstituteArgs` and call `SubstituteLines`, which applies the flags to `LastSubstitute`, compiles with `VimPattern.compile_substitute`, runs `Substitution.line` per row under one `SearchBudget`, and replaces the changed span in one `set_lines`. `FileCommandHandler` runs `OpenFile`, `SaveFile`, `SaveAll`, `Quit`, and `QuitAll`.
 
@@ -360,11 +360,15 @@ Files:
 - `carat/domain/ex_command.rb`: `ExCommand` value (`range`, `name`, `bang`, `args`).
 - `carat/domain/ex_grammar.rb`: `ExGrammar.parse`, `range_end`, `letter?`; the `&` name.
 - `carat/domain/ex_range.rb`: `ExRange` value (`first`, `last`, `given`, `error`); `resolve` (`%`, `.`, `$`, numbers, `'<`, `'>`, `E16`, `E20`, `E493`).
+- `carat/domain/delimited_pattern.rb`: `DelimitedPattern` value; `parse` (the delimiter and pattern of `:s`, `:g`, and `:v`; `E146`), the one reader `SubstituteArgs` and `GlobalArgs` call.
 - `carat/domain/substitute_args.rb`: `SubstituteArgs` value; `parse` (delimiter, pattern, string, flags, count; `E146`, `E488`).
 - `carat/domain/last_substitute.rb`: `LastSubstitute`, what the next substitute reuses; `apply_flags`, `keep_replacement`, `keep_previous`.
 - `carat/domain/replacement.rb`: `Replacement`; `tilde`, `check`, `expand` (the string's special characters; a line break as `BREAK`).
 - `carat/domain/substituted_line.rb`: `SubstitutedLine` value (`text`, `count`); `changed?`.
 - `carat/domain/substitution.rb`: `Substitution.line`, one line under the budget, Vim's empty-match rule, `OUTPUT_COST` per character of replacement.
+- `carat/domain/global_args.rb`: `GlobalArgs` value; `parse` (delimiter, pattern, command; `E146`, `E148`).
+- `carat/domain/global_marks.rb`: `GlobalMarks`, a running global's marked lines, moved by `Buffer#splice` through `LineSplice.shift_marks`; `mark`, `take`, `shift`, `clear`.
+- `carat/domain/register_count.rb`: `RegisterCount` value; `parse` (`[x] [count]` of a line command; `E488`, `E939`).
 - `carat/domain/ex_name.rb`: `ExName` in Vim's `name[suffix]` notation; `parse`, `match?`, `to_s`; the one matcher for core and plugin commands.
 - `carat/use_cases/ex/command_runner.rb`: `CommandRunner`, the interface the command line and the plugin host depend on.
 - `carat/use_cases/ex/execute_ex.rb`: `ExecuteEx#call`.
@@ -372,6 +376,10 @@ Files:
 - `carat/use_cases/ex/ex_table.rb`: `ExTable`, handlers in order of precedence; `register`, `find`, `names`.
 - `carat/use_cases/ex/file_command_handler.rb`: `FileCommandHandler.register`.
 - `carat/use_cases/ex/substitute_command_handler.rb`: `SubstituteCommandHandler.register` (`:s[ubstitute]`, `:&`), `ranged?`.
+- `carat/use_cases/ex/global_command_handler.rb`: `GlobalCommandHandler.register` (`:g[lobal]`, `:g!`, `:v[global]`), `ranged?`; every line without a range.
+- `carat/use_cases/ex/delete_command_handler.rb`: `DeleteCommandHandler.register` (`:d[elete] [x] [count]`), `ranged?`.
+- `carat/use_cases/search/global_command.rb`: `GlobalCommand#call(state, first, last, text, invert)`: marks under the budget, remembers the pattern, runs the command per marked line through the `CommandRunner` in one transaction, lists without one, `E147` when nested with a range.
+- `carat/use_cases/delete_lines.rb`: `DeleteLines#call(state, first, last, register)`, the linewise delete into a register.
 - `carat/use_cases/search/substitute_lines.rb`: `SubstituteLines#call(state, first, last, args)`, the one substitute use case.
 - `carat/use_cases/actions/substitute_handler.rb`: `SubstituteHandler.register` (`substitute.repeat`, `substitute.repeat_all`).
 - `carat/use_cases/enter_command_line.rb`, `carat/use_cases/edit_command_line.rb`, `carat/use_cases/erase_command_line.rb`, `carat/use_cases/cancel_command_line.rb`, `carat/use_cases/execute_command_line.rb`: `call`.
@@ -386,9 +394,9 @@ Files:
 - `carat/use_cases/files/resolve_inside.rb`: `ResolveInside#call(root, dir, path)`, the one comparison of real paths (`FilePort#real_path`): `Outside the tree root: path` unless the directory with its links resolved is the resolved root or inside it; built by `PluginHost` and shared by the three.
 - `carat/use_cases/recall_history.rb`: `RecallHistory#call`, `<Up>` and `<Down>` through the prompt's `History` (`:` or search).
 
-Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`.
+Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`.
 
-Designs: `ex-write-quit-all` (all Decisions), `dependency-injection` (Ex names; ExecuteEx moves to use_cases/ex), `editor-foundation` (Use cases), `plugin-explorer` (The file requests are validated in the host), `use-case-boundaries` (The splits), `buffer-substitute` (all Decisions).
+Designs: `ex-write-quit-all` (all Decisions), `dependency-injection` (Ex names; ExecuteEx moves to use_cases/ex), `editor-foundation` (Use cases), `plugin-explorer` (The file requests are validated in the host), `use-case-boundaries` (The splits), `buffer-substitute` (all Decisions), `buffer-global` (all Decisions).
 
 Rules: CLAUDE.md Coding conventions (a new ex command is an `ExHandler` registered in the order of `docs/compatibility.md`; every Neovim command gets a row there and a table-driven test); `docs/architecture.md` section 5.2.
 
