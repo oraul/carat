@@ -158,12 +158,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a convention that changes (a base class's constructor, an anchor's neighbor, a lint rule) could leave a generator writing code that no longer compiles or lints, and nothing would say so until an author ran it. The `authoring-kit` change compiled, linted, and tested the output of all five generators by hand in a scratch worktree (59 tests, `spinel-doctor` clean).
 - Fix outline: a `make generators-check` target that runs every generator in a temporary worktree, then `make gen-config`, `make lint`, `make test-build`, and `make test-run` there, run by the checker when `tools/new.sh`, `carat.rb`, `EditorAssembly`, the handler bases, or `test/lint.rb` change rather than on every check, since it costs a full analysis of the library.
 
-## The content gate has no secret patterns and .env is not ignored
-
-- Where: `tools/rules.sh` (line 8 starts the patterns: URLs, emails, session ids, model names) used by `tools/gates.sh`; `.gitignore`. Low finding of the periodic security review at 66fd52b.
-- Why it matters: `CLAUDE.md` forbids committing secrets and relies on the gates for its rules, but nothing scans for a key or refuses an added `.env` file.
-- Fix outline: add patterns for private key headers, `ghp_`, `gho_`, `github_pat_`, `AKIA`, and `sk-` style keys to the scan and the content gate, refuse an added `.env` file, add `.env` to `.gitignore`, and cover each with a `tools/tools_test.sh` case.
-
 ## CI actions are pinned by tag
 
 - Where: `.github/workflows/ci.yml` (line 36 `actions/checkout@v4`, and the same at lines 65, 91, 175, and 192, with `actions/cache@v4` and its `restore` and `save` forms). Low finding of the periodic security review at 66fd52b.
@@ -298,7 +292,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## CLAUDE.md has under 1,000 bytes of room in its budget
 
-- Where: `CLAUDE.md`, 30,534 of its 30,720-byte budget (99.4%) in `tools/docs_lint.sh` (`BUDGETS`) since `pipeline-speed-c`, after 30,470 in `pipeline-speed-b`, whose Commands line grew it from the 30,428 `pipeline-speed` left after trimming it from 30,719. Periodic quality advisory at df5a203; `docs/architecture.md` is at 88,054 of 88,064 and is handled by `project-config-guards`.
+- Where: `CLAUDE.md`, 30,682 of its 30,720-byte budget (99.9%, 38 bytes left) in `tools/docs_lint.sh` (`BUDGETS`) at eb0f1be, after 30,534 in `pipeline-speed-c`. Periodic quality advisory at df5a203, blocking in the periodic quality review at eb0f1be; `docs/architecture.md` is at 88,054 of 88,064 and is handled by `docs-currency` too.
 - Why it matters: `CLAUDE.md` requires its Commands and Layout sections to stay in sync with the code, so the next change that must add a line there fails `make docs-lint` and pays for a trim it did not plan.
 - Fix outline: the first change that needs room trims `CLAUDE.md` in the same change, moving detail to `docs/codebase-map.md` or the agents' files, rather than raising the budget; accepted when `make docs-lint` passes with `CLAUDE.md` at most 90% of its budget. Queued in `docs-currency`.
 
@@ -503,8 +497,8 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 ## The delivered-changes list stops at pull request 46
 
 - Where: the Delivered changes list closing `docs/codebase-map.md` (line 605), which ends at `#46 buffer-search`. Periodic quality advisories at 598cf1b and f31f4e8.
-- Why it matters: the list `CLAUDE.md` names as the record of delivered changes misses every merged pull request from 47 to 51.
-- Fix outline: add the lines for `#47` to `#51`, with the check `docs-currency` already asks for: every merged pull request of `docs/metrics.tsv` appears in the list. Queued in `docs-currency`.
+- Why it matters: the list `CLAUDE.md` names as the record of delivered changes misses every merged pull request from 47 to 54.
+- Fix outline: add the lines for `#47` to `#54`, with the check `docs-index` asks for: every merged pull request of `docs/metrics.tsv` appears in the list. Queued in `docs-index`.
 
 ## Agents leave scratch files in the repository root
 
@@ -740,12 +734,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: in `buffer-global` a quality-only fix that moved parser code into one domain reader got a second full security review that found 0 again; reviews took 60,085 of 244,038 output tokens (24.6%) and 56 calls over two rounds, and 87,179 of 403,796 (21.6%) in `buffer-substitute` with rework 2.
 - Fix outline: after a fix round, the security review covers only the fix diff unless the fix touches an input path (config loading, file access, plugin boundaries, terminal output, process spawning, the entry point, the guard and gates), recorded with its range, with a case in the workflow's tests. Queued in `implement-contracts`.
 
-## The backup ref publishes unreviewed commits and outlives a stopped run
-
-- Where: `tools/run_state.sh` line 708 (`backup`, pushing every commit to `refs/backup/BRANCH` on origin before the security review) and line 722 (nothing deletes the ref). Security Medium at confidence 5 and a quality advisory of `pipeline-durability`; see also the content gate entry above.
-- Why it matters: the backup is gated only by the trailer and content gates, which have no secret patterns, so a committed token is published to origin before any review and left in a hidden ref when the run stops without pushing; abandoned refs also pile up under `refs/backup/`.
-- Fix outline: add secret patterns (token prefixes, private-key headers, `.env` files) to `tools/rules.sh` or a secrets gate run by `gates.sh backup`; delete `refs/backup/BRANCH` in a stopped run's close or the retrospective when the branch was never pushed, or list stale ones in `status`; or keep the backup off origin (a local bundle under `build/` or a private remote).
-
 ## check_lost and check_wait re-read the run state and the pid file inline
 
 - Where: `tools/run_state.sh` line 485 (`check_lost` greps and seds the state file, duplicating `keys_under` at line 937) and line 517 (`check_wait` reads the pid file although `read_pid` at line 569 does, and the lost-runner path removes it twice, lines 530 and 533). Quality advisories of `pipeline-durability`.
@@ -775,3 +763,81 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/tools_test.sh` line 295 covers the routing only by grepping the `RERUN_WORDS` source line of `.claude/workflows/deliver-change.js`; `checkVerdict`'s parsing (the `run_state:` prefix, a refusal, a verdict at another commit) has no case. Quality advisory of `pipeline-durability`.
 - Why it matters: a change to the verdict regexes could misroute a killed or superseded check into a fix round, or a failure into a rerun, without a test failing.
 - Fix outline: extract the verdict regexes into a contract the shell test feeds sample verdict lines through.
+
+## The run state's writer has no lock beside the detached check runner
+
+- Where: `tools/run_state.sh` line 280 (`write_key`, a read-modify-rename with no lock, and `drop_key`), written by the detached runner (`check_run`, `run_stage` at a stage's start and end) while the checker's metric line on a rerun and `check_lost` in the waiter also write. Periodic quality advisory at eb0f1be.
+- Why it matters: two writers at once can drop each other's key, so the run state forgets a stage record, a metric, or a phase, and a resume or gate acts on a wrong picture.
+- Fix outline: take a lock around `write_key` and `drop_key` (a lock directory with retry, or `flock` where present), or have the runner write stage records only to its own file that `check` reads. Queued in `check-runner-safety`.
+
+## A lost check runner leaves its make running while a second one starts
+
+- Where: `tools/run_state.sh` line 530 (`check_lost` records the stage as killed but leaves the stage's make and compilers in the dead runner's process group) and line 517 (the superseded branch starts a new runner when the old one has not stopped after 150 pauses). Periodic quality advisory at eb0f1be.
+- Why it matters: two builds write the same `build/` directories at once, so a stage can pass or fail on the other runner's output.
+- Fix outline: stop the dead runner's process group in `check_lost`, and refuse or wait instead of starting a second runner while the old one is alive. Queued in `check-runner-safety`.
+
+## A detached check runner outlives a stopped run and shares build/
+
+- Where: `tools/run_state.sh` line 536 (the runner of one change keeps running after its run stops, and a check of another change builds into the same `build/`). Security Low (4) of the periodic review at eb0f1be.
+- Why it matters: a stale runner can overwrite another change's build outputs or stage records, so a check passes on code it did not build.
+- Fix outline: one check pid file for every change, so a new check stops any live runner, and record the stage as superseded when the tracked tree (git status or a tree hash), not only HEAD, changed while it ran. Queued in `check-runner-safety`.
+
+## The check verdict is read from a log read agents can write
+
+- Where: `tools/run_state.sh` line 439 (the verdict is the last line of `build/stages/CHANGE/check.log`, inside the redirect-writable `build/stages/`). Security Low (3) of the periodic review at eb0f1be.
+- Why it matters: a read-profile agent can append a forged pass line so `check` exits 0; the stages gates still need the records, which limits it.
+- Fix outline: keep `check.log` and `check.pid` outside `build/stages/`, or derive the verdict from the run state's stage records. Queued in `check-runner-safety`.
+
+## A rollback during :g leaves the global marks on the wrong rows
+
+- Where: `carat/domain/buffer.rb` line 512 (`revert_to` undoes records with `LineSplice.apply` and shifts the signs and the syntax cache but not `global_marks`, unlike `splice` at line 548). Periodic quality advisory at eb0f1be.
+- Why it matters: a plugin edit rolled back while a `:g` runs leaves the marks on rows the command never matched, so the global runs its command on the wrong lines.
+- Fix outline: shift `global_marks` beside the other two shifts in `revert_to` and add a `test/domain_global.rb` row. Queued in `global-tidy`.
+
+## Section 5.1 names a Substitute use case and omits DeleteLines
+
+- Where: `docs/architecture.md` line 167 names `Substitute`, while the class is `SubstituteLines` in `carat/use_cases/search/substitute_lines.rb`, and omits `DeleteLines`, added for `:d`. Periodic quality advisory at eb0f1be.
+- Why it matters: the architecture is binding and is where a change starts; a reader looks for a class that does not exist and misses one that does.
+- Fix outline: rename it to `SubstituteLines` and add `DeleteLines` within the budget `docs-currency` frees. Queued in `docs-currency`.
+
+## The secret patterns miss unquoted assignments and unlisted token shapes
+
+- Where: `tools/rules.sh` (`ASSIGN_RE` takes only a quoted literal; `TOKEN_RE` lists the shapes of AWS, GitHub, GitLab, Slack, Google API, `sk-` keys, Stripe live, and npm). Limit accepted by `backup-secret-scan`.
+- Why it matters: `password = hunter2hunter2` in a YAML or shell file, or a token of another platform, reaches the backup ref and the branch; the security review still reads the diff before the push, but not before the backup.
+- Fix outline: add a shape when a platform the project uses appears, and refuse an unquoted assignment in configuration files only (`*.yml`, `*.toml`, `*.sh`, `.caratrc`), where ordinary code does not assign `token = name`, each with a `tools/tools_test.sh` case.
+
+## The content gate skips files git treats as binary
+
+- Where: `tools/gates.sh` line 126 (`gate_content` reads `git log -p`, which prints no lines for a file with a NUL byte or one `.gitattributes` marks `-diff` or `binary`, and the merge gates run from the branch's checkout, so the branch can set them). Security Low (6) of `backup-secret-scan`.
+- Why it matters: a committed secret in such a file passes the secret, URL, email, and model checks.
+- Fix outline: pass `--text` and `--no-textconv` to the `git log -p` scan, or refuse an added binary file and a `.gitattributes` change setting `diff`, `binary`, or `textconv` unless a reviewer allows it, with a `tools/tools_test.sh` case.
+
+## The URL, email, and session checks print the whole matching line
+
+- Where: `tools/rules.sh` line 34 (`scan` prints each hit's full line for the URL, email, and session checks, while the secret checks print a label only). Security Low (5) of `backup-secret-scan`.
+- Why it matters: a credential inside a URL (a token before the host) appears in the gate output, the stage logs, and CI.
+- Fix outline: mask whatever matches `KEY_RE`, `TOKEN_RE`, or `ASSIGN_RE` with `[secret]` (a sed replacement) before printing any hit, with a `tools/tools_test.sh` case.
+
+## The close note names the backup when there was none
+
+- Where: `.claude/workflows/deliver-change.js` line 718 (the close note says the backup stays on origin whenever a run stops unmerged, even after the push deleted it or when no backup was made). Quality advisory of `backup-secret-scan`.
+- Why it matters: the report sends the user to `abandon` a backup that does not exist.
+- Fix outline: also require `state.backup`, the record `backup_branch` writes and `drop_backup` drops.
+
+## Recording merged deletes refs on origin from the generic key writer
+
+- Where: `tools/run_state.sh` line 1344 (`set CHANGE merged` pushes a ref deletion to origin, a network side effect hidden in the plain key writer beside the `push` and `abandon` paths). Quality advisory of `backup-secret-scan`.
+- Why it matters: a reader of `set` does not expect a push, and a failed deletion surfaces in a step that only records.
+- Fix outline: keep `set` a plain write and have the merger call `abandon` (or a `merged` command) explicitly after recording `merged`.
+
+## The backup's kept base and a failed backup deletion have no case
+
+- Where: `tools/tools_test.sh` line 443 (`branch_base` says a later merge of `origin/main` keeps the base, and `drop_backup` reports a failed deletion, but neither path is tested). Quality advisory of `backup-secret-scan`.
+- Why it matters: a regression in either path passes `make tools-test`, and a wrong base lets the gates read too much or too little of the branch.
+- Fix outline: add a backup after merging a new main commit (the base unchanged) and a `drop_backup` against an unreachable origin (exit 1, the message naming `abandon`).
+
+## drop_backup joins the ref names by unquoted word splitting
+
+- Where: `tools/run_state.sh` line 716 (`$(echo $refs)` outside the line the SC2086 disable covers). Quality advisory of `backup-secret-scan`.
+- Why it matters: a glob character in a ref name would expand against the working directory, and the disable comment hides the intent.
+- Fix outline: print the names with `printf '%s ' $refs` under the disable, or `tr '\n' ' '`.

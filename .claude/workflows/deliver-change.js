@@ -713,6 +713,9 @@ if (!stopped && !state.merged) {
 // lines go to one record start, as a run whose hooks still load the old
 // profile needs. The periodic review, when due, runs after it; what the
 // reviews find waits in the run state for the next change's planner.
+// A stopped run keeps its backup on origin for a resume; only the user
+// abandons a run, which deletes it.
+if (stopped && !state.merged && CHANGE.test(state.change || '')) note(`the backup of an unpushed branch stays on origin for a resume; \`sh tools/run_state.sh abandon ${state.change}\` deletes it when the run will not resume`)
 const looking = !stopped && Boolean(state.merged) && !state['phase.retro']
 phase('Close')
 // A line the close profile refuses (none is left after verify()'s flush,
