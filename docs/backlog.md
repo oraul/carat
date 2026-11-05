@@ -973,3 +973,33 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `NO_COLOR` read in `carat/drivers/ansi_terminal.rb` (line 24 at `start-screen`); the start screen tests set only the `FakeTerminal` writer. Quality review of `start-screen`.
 - Why it matters: a regression in the driver's read would show the colored glyphs to a user who set `NO_COLOR` with every test still passing.
 - Fix outline: a `test/smoke_editor.rb` session spawned with `NO_COLOR=1` asserting the output holds no U+25E2 and still shows the hints.
+
+## ExtendVisual keeps a private tabstop_of with no caller
+
+- Where: the private `tabstop_of` of `carat/use_cases/visual/extend_visual.rb` (line 53 at `start-screen`), uncalled since #30 split the visual use cases. Periodic quality at 5ac9674.
+- Why it matters: dead code a reader must check before trusting the class's tab handling, and a second place a tab rule could drift.
+- Fix outline: delete the method.
+
+## DisplayWidth.of_char has no caller
+
+- Where: `DisplayWidth.of_char` in `carat/domain/display_width.rb` (line 37 at `start-screen`), called nowhere in `carat/`, `bin/`, `test/`, or `bench/`, yet named as a key method on the map's `display_width.rb` line. Periodic quality at 5ac9674.
+- Why it matters: the map points readers at a method nothing uses, and it can drift from the width rule the callers rely on.
+- Fix outline: delete it and drop it from the map's line.
+
+## The architecture's InputController and FramePresenter bullets omit the start screen
+
+- Where: the binding `InputController` and `FramePresenter` bullets of `docs/architecture.md` (lines 247 and 252 at `start-screen`); only the `TerminalPort` row (line 198) was updated. Periodic quality at 5ac9674.
+- Why it matters: the controller now shortens its read timeout for the next frame, advances the start screen in `tick`, and dismisses it on a key, and the presenter paints `StartArt` over the current window and repaints every row after it, none of which the binding document says.
+- Fix outline: one clause in each bullet, within the file's budget.
+
+## StartArt's LAST restates FRAMES - 1
+
+- Where: `LAST = 5` in `carat/domain/start_art.rb` (line 105 at `start-screen`), which `StartScreen`, `paint`, and `from_plain` rely on beside `FRAMES`. Periodic quality at 5ac9674.
+- Why it matters: two constants to keep in step; a frame added to one and not the other paints past the table or never shows the last frame.
+- Fix outline: derive `LAST` from `FRAMES`.
+
+## StartArt's LEGEND and PLAIN_GLYPHS spell characters as decimal codes
+
+- Where: `LEGEND` and `PLAIN_GLYPHS` in `carat/domain/start_art.rb` (line 130 at `start-screen`), arrays of byte codes such as 47 and 92, while `GEM` is strings read with `getbyte`. Periodic quality at 5ac9674.
+- Why it matters: the legend the `GEM` comment describes cannot be read against the table, so a glyph change is checked by decoding numbers.
+- Fix outline: hold both as strings read with `getbyte`, as `GEM` is.
