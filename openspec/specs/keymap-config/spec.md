@@ -13,8 +13,8 @@ Key bindings SHALL come from every enabled plugin's manifest defaults and then f
 - **THEN** the action "cursor.down" is selected
 
 #### Scenario: Leader binding
-- **WHEN** the default configuration is loaded, which sets "keymap.leader <Space>", and the keys Space then "w" are pressed in normal mode
-- **THEN** the sequence ":w<CR>" is selected for replay
+- **WHEN** the default configuration is loaded, which sets "keymap.leader <Space>", and the keys Space, "w", "s" are pressed in normal mode
+- **THEN** the action "window.split" is selected, and Space then "w" alone is a prefix
 
 #### Scenario: Insert-mode binding
 - **WHEN** the default configuration is loaded and Escape is pressed in insert mode
@@ -85,7 +85,7 @@ When the keys pressed so far match no binding and are a prefix of none, the edit
 A binding whose value is a key sequence in Vim notation rather than an action name SHALL replay those keys through the keymap of the current mode as if typed. Replay SHALL stop after 100 nested replays so a self-referencing binding cannot loop forever.
 
 #### Scenario: Leader w writes the file
-- **WHEN** Space then "w" are pressed in normal mode on a buffer with a path
+- **WHEN** the user file holds "keymap.normal <leader>w :w<CR>", as the old default did, and Space then "w" are pressed in normal mode on a buffer with a path
 - **THEN** the file is written exactly as if ":w" and Enter had been typed
 
 ### Requirement: Malformed bindings are reported and skipped
@@ -147,3 +147,14 @@ A keymap line whose key notation reads as more than 64 keys SHALL be reported as
 #### Scenario: A plugin's long binding
 - **WHEN** a plugin's default bindings hold a line of 65 keys and a line of 64, and the plugin's bindings are then removed
 - **THEN** the long line is recorded as an error of the plugin's bindings and is not bound, and the removal drops the 64-key binding
+
+### Requirement: Every core action carries a short description
+Every action the editor's core registers SHALL carry a description of 1 to 32 characters saying what it does, for the key hints to show beside its keys; an action name no core handler registers SHALL have the empty description, a plugin's actions keeping the descriptions of their manifest.
+
+#### Scenario: A window action is described
+- **WHEN** the editor starts with the default configuration
+- **THEN** "window.split" is described as "Split window" and "file.save" as "Save file"
+
+#### Scenario: Every core action is described
+- **WHEN** the editor starts with the default configuration
+- **THEN** every registered core action has a description of 1 to 32 characters, and an unregistered name has the empty description

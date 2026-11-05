@@ -33,7 +33,7 @@ module Carat
         names = Domain::TextObjects::NAMES
         i = 0
         while i < names.length
-          table.register(names[i], handler)
+          table.register(names[i], handler, Domain::TextObjects::DESCRIPTIONS[i])
           i += 1
         end
       end

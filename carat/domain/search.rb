@@ -26,6 +26,9 @@ module Carat
       # operator.
       PROMPT_NAMES = ["search.forward", "search.backward"]
       MOTION_NAMES = ["search.next", "search.previous", "search.word_forward", "search.word_backward", "search.partial_word_forward", "search.partial_word_backward"]
+      # The short descriptions of both, in the same order, for the key hints.
+      PROMPT_DESCRIPTIONS = ["Search forward", "Search backward"]
+      MOTION_DESCRIPTIONS = ["Next match", "Previous match", "Word under cursor forward", "Word under cursor backward", "Partial word forward", "Partial word backward"]
 
       BOTTOM = "search hit BOTTOM, continuing at TOP"
       TOP = "search hit TOP, continuing at BOTTOM"

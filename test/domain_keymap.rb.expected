@@ -7,7 +7,14 @@ ok   colon in normal
 ok   g is a prefix
 ok   gg completes
 ok   leader is a prefix
-ok   leader w remaps
+ok   leader w is the window group's prefix
+ok   leader w s splits
+ok   leader q is the quit group's prefix
+ok   leader q q quits all
+ok   leader f s saves
+ok   leader b n goes to the next buffer
+ok   control s saves in normal mode
+ok   control s saves in insert mode
 ok   unbound key
 ok   unbound after prefix
 ok   mode with no bindings
@@ -74,4 +81,4 @@ ok   a plugin's binding with an illegal byte is an error of its line
 ok   a binding of 65 keys is reported and skipped, one of 64 is bound
 ok   a plugin's binding of 65 keys is an error of its line and nothing of it is bound
 ok   removing the plugin drops its 64-key binding and every prefix of it
-domain_keymap: 76 passed, 0 failed
+domain_keymap: 83 passed, 0 failed

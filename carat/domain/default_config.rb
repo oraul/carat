@@ -161,8 +161,25 @@ module Carat
       keymap.normal zb scroll.cursor_bottom
       keymap.normal gt tab.next
       keymap.normal gT tab.previous
-      keymap.normal <leader>w :w<CR>
-      keymap.normal <leader>q :q<CR>
+      keymap.normal <C-s> file.save
+      # The leader groups: w windows, q quit, f files, b buffers; e is the
+      # explorer plugin's.
+      keymap.normal <leader>ws window.split
+      keymap.normal <leader>wv window.vsplit
+      keymap.normal <leader>wh window.left
+      keymap.normal <leader>wj window.down
+      keymap.normal <leader>wk window.up
+      keymap.normal <leader>wl window.right
+      keymap.normal <leader>wc window.close
+      keymap.normal <leader>wo window.only
+      keymap.normal <leader>qq quit.all
+      keymap.normal <leader>qw quit.write_all
+      keymap.normal <leader>fs file.save
+      keymap.normal <leader>ff file.find
+      keymap.normal <leader>bb buffer.list
+      keymap.normal <leader>bn buffer.next
+      keymap.normal <leader>bp buffer.previous
+      keymap.normal <leader>bd buffer.delete
 
       # Insert mode.
       keymap.insert <Esc> mode.normal
@@ -176,6 +193,7 @@ module Carat
       keymap.insert <Right> cursor.right
       keymap.insert <PageDown> scroll.page_down
       keymap.insert <PageUp> scroll.page_up
+      keymap.insert <C-s> file.save
 
       # Visual mode.
       keymap.visual <Esc> mode.normal

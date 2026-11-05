@@ -32,14 +32,14 @@ module Carat
         names = Domain::Motions::NAMES
         i = 0
         while i < names.length
-          table.register(names[i], motion)
+          table.register(names[i], motion, Domain::Motions::DESCRIPTIONS[i])
           i += 1
         end
         find = MotionHandler.new(move: move, kind: :find)
         names = Domain::Motions::FIND_NAMES
         i = 0
         while i < names.length
-          table.register(names[i], find)
+          table.register(names[i], find, Domain::Motions::FIND_DESCRIPTIONS[i])
           i += 1
         end
       end

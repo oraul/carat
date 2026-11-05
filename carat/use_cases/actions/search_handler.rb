@@ -33,14 +33,14 @@ module Carat
         names = Domain::Search::PROMPT_NAMES
         i = 0
         while i < names.length
-          table.register(names[i], prompt)
+          table.register(names[i], prompt, Domain::Search::PROMPT_DESCRIPTIONS[i])
           i += 1
         end
         motion = SearchHandler.new(jump_to_match: jump_to_match, kind: :motion)
         names = Domain::Search::MOTION_NAMES
         i = 0
         while i < names.length
-          table.register(names[i], motion)
+          table.register(names[i], motion, Domain::Search::MOTION_DESCRIPTIONS[i])
           i += 1
         end
       end

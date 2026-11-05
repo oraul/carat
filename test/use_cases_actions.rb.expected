@@ -4,6 +4,7 @@ ok   an unknown name has no handler and reads as a plain action
 ok   one namespace handler registers
 ok   a name under the namespace finds its handler and a near miss does not
 ok   names lists the registered names in order
+ok   describe answers the first registration's description, and nothing for an unknown or namespace name
 ok   a spec with a suffix
 ok   the full name
 ok   a spelling between
@@ -34,8 +35,20 @@ ok   a plugin action completes at once
 ok   an unknown name completes at once
 ok   every registered action handler returns an Outcome
 ok   the table holds every core action
+ok   every core action has a description of 1 to 32 characters
+ok   a window action
+ok   a motion from the domain's list
+ok   a find motion
+ok   a search motion
+ok   the last text object
+ok   an operator
+ok   the save action
+ok   the quit all action
+ok   a buffer action
+ok   a plugin action has no core description
+ok   an unknown name has none
 ok   the plugin namespace handler returns the host's refusal as an Outcome
 ok   the action table and docs/actions.md list the same actions
 ok   a drift is reported in both directions
 ok   the Plugins section is not read as core actions and the Implemented one is
-use_cases_actions: 40 passed, 0 failed
+use_cases_actions: 53 passed, 0 failed

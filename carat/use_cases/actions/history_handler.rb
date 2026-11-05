@@ -49,9 +49,10 @@ module Carat
       def self.register(table, undo_step:, redo_step:, restore_line:, travel_history:, repeat_last:)
         names = ["history.undo", "history.redo", "history.undo_line", "history.older", "history.newer", "history.repeat"]
         variants = [:undo, :redo, :undo_line, :older, :newer, :repeat]
+        descriptions = ["Undo", "Redo", "Undo line", "Older text state", "Newer text state", "Repeat last change"]
         i = 0
         while i < names.length
-          table.register(names[i], HistoryHandler.new(undo_step: undo_step, redo_step: redo_step, restore_line: restore_line, travel_history: travel_history, repeat_last: repeat_last, variant: variants[i]))
+          table.register(names[i], HistoryHandler.new(undo_step: undo_step, redo_step: redo_step, restore_line: restore_line, travel_history: travel_history, repeat_last: repeat_last, variant: variants[i]), descriptions[i])
           i += 1
         end
       end

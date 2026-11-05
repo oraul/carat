@@ -114,7 +114,7 @@ module Carat
           cancel(state)
           insert_literal(state, keys)
         else
-          dispatch(state, value, keys, queue)
+          queue = dispatch(state, value, keys, queue)
         end
         until queue.empty?
           @arrange_view.call(state)
@@ -183,13 +183,15 @@ module Carat
         end
       end
 
-      #: (Domain::EditorState, String?, Array[Integer], Array[Integer]) -> void
+      # Runs the binding's value: an action through the grammar or the
+      # dispatcher, a key sequence by putting its keys at the front of the
+      # queue. Returns the queue, which the caller assigns: on the pinned
+      # Spinel the appends to an array the caller created as [] are lost
+      # (docs/spinel-notes.md), as the timeout's queue is.
+      #: (Domain::EditorState, String?, Array[Integer], Array[Integer]) -> Array[Integer]
       def dispatch(state, value, keys, queue)
-        return if value.nil?
-        unless Domain::Keymap.action_name?(value)
-          replay(state, value, queue)
-          return
-        end
+        return queue if value.nil?
+        return replay(state, value, queue) unless Domain::Keymap.action_name?(value)
         if Domain::Mode.visual?(state.mode)
           finish(state, @input.grammar.accept_visual(value, @actions.kind_of(value), keys))
         elsif grammar_mode?(state)
@@ -198,6 +200,7 @@ module Carat
           @dispatcher.call(state, Domain::Command.plain(value))
           resume(state) if state.mode != Domain::Mode::CMDLINE && @input.grammar.wants_pattern?
         end
+        queue
       end
 
       # The search prompt has closed: the text entered finishes the
@@ -247,18 +250,19 @@ module Carat
         state.mode = Domain::Mode::NORMAL unless Domain::Mode.visual?(state.mode)
       end
 
-      #: (Domain::EditorState, String, Array[Integer]) -> void
+      # Puts the sequence's keys at the front of the queue and returns it.
+      #: (Domain::EditorState, String, Array[Integer]) -> Array[Integer]
       def replay(state, sequence, queue)
         @replays += 1
         if @replays > MAX_REPLAYS
           report(state, Outcome.failure("E223: Recursive mapping"))
           queue.clear
-          return
+          return queue
         end
         parsed = Domain::KeyNotation.parse(sequence, "")
         unless parsed.ok?
           report(state, Outcome.failure("Bad mapping: #{sequence}"))
-          return
+          return queue
         end
         codes = parsed.codes
         i = codes.length - 1
@@ -266,6 +270,7 @@ module Carat
           queue.unshift(codes[i])
           i -= 1
         end
+        queue
       end
 
       #: (Domain::EditorState, Array[Integer]) -> void

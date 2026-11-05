@@ -1,7 +1,7 @@
 # Runs the editor binary inside a pseudo-terminal: the usage and terminal
-# checks, an insert-write-quit session, a quit refused then forced, split
-# windows and a tab page, the file tree, a linewise visual delete, a
-# Ruby file in colors, a file that is not UTF-8, a hostile project and
+# checks, an insert-write-quit session, Ctrl-S and <leader>qq, a quit
+# refused then forced, split windows and a tab page, the file tree, a
+# linewise visual delete, a Ruby file in colors, a file that is not UTF-8, a hostile project and
 # home directory, and SIGTERM and SIGINT, each exit restoring the cursor.
 # Runs build/bin/carat, the release binary make test builds first, or the
 # binary CARAT_BIN names (CI runs the development build of make dev-build
@@ -143,6 +143,28 @@ module SmokeEditorTest
     t.assert_equal(0, code, "the editor exits with status 0 after :wq")
     t.assert_equal("hello\n", File.read(path), "the file holds the typed text")
     t.assert_true(out.end_with?(RESTORED), "after :wq the output ends with the terminal's cursor restored and the alternate screen left")
+
+    # Ctrl-S, the flow-control stop byte 0x13, reaches the editor in raw
+    # mode and writes in insert mode; <leader>qq then quits.
+    saved = "#{DIR}/saved.txt"
+    File.delete(saved) if File.exist?(saved)
+    reader, writer, pid = PTY.spawn(BIN, saved)
+    writer.winsize = [24, 80]
+    out = +"".b
+    settle(reader, out, 0.5)
+    writer.write("isaved")
+    settle(reader, out, 0.5)
+    mark = out.bytesize
+    writer.write("\x13")
+    settle(reader, out, 0.5)
+    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("written"), "Ctrl-S in insert mode shows the written message")
+    t.assert_equal("saved\n", File.exist?(saved) ? File.read(saved) : "", "Ctrl-S in insert mode writes the typed text")
+    writer.write("\e")
+    settle(reader, out, 0.5)
+    writer.write(" qq")
+    code = finish_session(reader, out, pid)
+    t.assert_equal(0, code, "the editor exits with status 0 after <leader>qq")
+    t.assert_true(out.end_with?(RESTORED), "after <leader>qq the output ends with the terminal's cursor restored and the alternate screen left")
 
     # Quit refused, then forced, on the existing file.
     reader, writer, pid = PTY.spawn(BIN, path)

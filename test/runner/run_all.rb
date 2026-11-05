@@ -49,6 +49,7 @@ require_relative "../editor_explorer"
 require_relative "../editor_global"
 require_relative "../editor_grammar"
 require_relative "../editor_insert"
+require_relative "../editor_leader"
 require_relative "../editor_motions"
 require_relative "../editor_normal"
 require_relative "../editor_operators"
@@ -125,6 +126,7 @@ when "editor_explorer" then EditorExplorerTest.main
 when "editor_global" then EditorGlobalTest.main
 when "editor_grammar" then EditorGrammarTest.main
 when "editor_insert" then EditorInsertTest.main
+when "editor_leader" then EditorLeaderTest.main
 when "editor_motions" then EditorMotionsTest.main
 when "editor_normal" then EditorNormalTest.main
 when "editor_operators" then EditorOperatorsTest.main

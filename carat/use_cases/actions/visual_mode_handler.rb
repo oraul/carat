@@ -36,9 +36,10 @@ module Carat
       def self.register(table, start_visual:, reselect_visual:)
         names = ["mode.visual", "mode.visual_line", "mode.visual_block", "visual.reselect"]
         variants = [:charwise, :linewise, :blockwise, :reselect]
+        descriptions = ["Visual mode", "Visual line mode", "Visual block mode", "Reselect last selection"]
         i = 0
         while i < names.length
-          table.register(names[i], VisualModeHandler.new(start_visual: start_visual, reselect_visual: reselect_visual, variant: variants[i]))
+          table.register(names[i], VisualModeHandler.new(start_visual: start_visual, reselect_visual: reselect_visual, variant: variants[i]), descriptions[i])
           i += 1
         end
       end

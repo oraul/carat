@@ -40,9 +40,10 @@ module Carat
       def self.register(table, break_line:, erase_character:, insert_tab:)
         names = ["insert.newline", "insert.backspace", "insert.delete", "insert.tab"]
         variants = [:newline, :backspace, :delete, :tab]
+        descriptions = ["Break line", "Erase before cursor", "Erase under cursor", "Insert tab"]
         i = 0
         while i < names.length
-          table.register(names[i], InsertTextHandler.new(break_line: break_line, erase_character: erase_character, insert_tab: insert_tab, variant: variants[i]))
+          table.register(names[i], InsertTextHandler.new(break_line: break_line, erase_character: erase_character, insert_tab: insert_tab, variant: variants[i]), descriptions[i])
           i += 1
         end
       end

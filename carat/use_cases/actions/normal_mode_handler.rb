@@ -37,7 +37,7 @@ module Carat
 
       #: (ActionTable, leave_insert: LeaveInsert, cancel_command_line: CancelCommandLine) -> void
       def self.register(table, leave_insert:, cancel_command_line:)
-        table.register("mode.normal", NormalModeHandler.new(leave_insert: leave_insert, cancel_command_line: cancel_command_line))
+        table.register("mode.normal", NormalModeHandler.new(leave_insert: leave_insert, cancel_command_line: cancel_command_line), "Normal mode")
       end
     end
   end

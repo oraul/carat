@@ -71,10 +71,11 @@ module Carat
       def self.register(table, delete_selection:, yank_selection:, change_selection:, join_selection:, recase_selection:, insert_at_selection:, put_over_selection:, swap_visual_ends:)
         names = ["visual.join", "visual.join_raw", "visual.put", "visual.put_keep", "visual.replace", "visual.toggle_case", "visual.lowercase", "visual.uppercase", "visual.delete_lines", "visual.delete_to_end", "visual.change_lines", "visual.change_to_end", "visual.yank_lines", "visual.insert", "visual.append", "visual.swap_ends", "visual.swap_corner"]
         variants = [:join, :join_raw, :put, :put_keep, :replace, :toggle_case, :lowercase, :uppercase, :delete_lines, :delete_to_end, :change_lines, :change_to_end, :yank_lines, :insert, :append, :swap_ends, :swap_corner]
+        descriptions = ["Join lines", "Join lines without spaces", "Put over selection", "Put, keeping registers", "Replace selection", "Toggle case", "Lowercase", "Uppercase", "Delete lines", "Delete to line end", "Change lines", "Change to line end", "Yank lines", "Insert before selection", "Append after selection", "Other end of selection", "Other corner of block"]
         i = 0
         while i < names.length
           kind = variants[i] == :replace ? :char : :action
-          table.register(names[i], SelectionHandler.new(delete_selection: delete_selection, yank_selection: yank_selection, change_selection: change_selection, join_selection: join_selection, recase_selection: recase_selection, insert_at_selection: insert_at_selection, put_over_selection: put_over_selection, swap_visual_ends: swap_visual_ends, variant: variants[i], kind: kind))
+          table.register(names[i], SelectionHandler.new(delete_selection: delete_selection, yank_selection: yank_selection, change_selection: change_selection, join_selection: join_selection, recase_selection: recase_selection, insert_at_selection: insert_at_selection, put_over_selection: put_over_selection, swap_visual_ends: swap_visual_ends, variant: variants[i], kind: kind), descriptions[i])
           i += 1
         end
       end

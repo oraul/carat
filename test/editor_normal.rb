@@ -96,8 +96,6 @@ module EditorNormalTest
     h.type("G")
     h.type("g")
     h.wait
-    h.wait
-    h.wait
     t.assert_equal([[2, 0], [103]], [h.cursor, h.assembly.input.pending_keys], "a lone prefix still waits after timeoutlen has passed")
     h.type("g")
     t.assert_equal([[0, 0], []], [h.cursor, h.assembly.input.pending_keys], "the second key completes the command however late it comes")
@@ -133,11 +131,18 @@ module EditorNormalTest
     h.type("ab")
     t.assert_equal([0, 5], h.cursor, "longer binding fires when completed in time")
 
-    # Remaps.
-    h = editor("ab\n")
-    h.type("<Space>w")
-    t.assert_equal("\"a.txt\" 1L, 3B written", h.message_row, "leader w writes the file")
-    t.assert_equal("ab\n", h.files.get("a.txt"), "the file was written")
+    # Remaps: the user line that brings back the old leader w replays :w,
+    # after timeoutlen, since the window group's keys begin with it.
+    remap_files = Carat::Doubles::MemoryFiles.new
+    remap_files.put("a.txt", "ab\n")
+    h = H.new(files: remap_files, config: Carat::Doubles::FixedConfig.with_user("keymap.normal <leader>w :w<CR>\n"), rows: 10, cols: 80, plugins: [])
+    h.open("a.txt")
+    h.type("x<Space>w")
+    h.wait
+    h.wait
+    h.wait
+    t.assert_equal("\"a.txt\" 1L, 2B written", h.message_row, "a user binding of leader w to :w<CR> writes the file after timeoutlen, as the window group's keys follow it")
+    t.assert_equal("b\n", h.files.get("a.txt"), "the file was written")
     loop_config = Carat::Doubles::FixedConfig.with_user("keymap.normal q q\n")
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "ab\n")

@@ -45,7 +45,7 @@ ok   the insert-mode binding completes in time
 ok   ambiguous prefix waits
 ok   shorter binding fires after timeoutlen
 ok   longer binding fires when completed in time
-ok   leader w writes the file
+ok   a user binding of leader w to :w<CR> writes the file after timeoutlen, as the window group's keys follow it
 ok   the file was written
 ok   a self-referencing remap stops
 editor_normal: 50 passed, 0 failed
