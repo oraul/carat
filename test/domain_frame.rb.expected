@@ -17,6 +17,7 @@ ok   the whole gutter takes the highlight
 ok   a number wider than its field keeps every digit
 ok   only the visible cells of a cut gutter are written
 ok   fill sets the highlight of a span of cells
+ok   lift puts a span on the layer once and stops at the right edge
 ok   blank stops at the right edge
 ok   rows are compared cell by cell, from any row of another frame
 ok   a different highlight is a different row
@@ -25,4 +26,4 @@ ok   a paint starts with every row clean
 ok   a scroll is three integers
 ok   marking every row dirty drops the scrolls
 ok   a frame of another size has arrays of its size
-domain_frame: 27 passed, 0 failed
+domain_frame: 28 passed, 0 failed

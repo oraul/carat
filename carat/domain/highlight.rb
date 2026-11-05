@@ -99,6 +99,13 @@ module Carat
       ICON_LOCK = 83
       COUNT = 84
 
+      # A cell on the cursor line carries its group's id plus this layer:
+      # the group drawn over the CursorLine background, unless it has a
+      # background of its own. Ids below LIMIT are the ones a frame cell
+      # may carry.
+      CURSOR_LINE_LAYER = COUNT
+      LIMIT = COUNT * 2
+
       NAMES = [
         "Normal", "LineNr", "StatusLine", "ErrorMsg", "NonText", "StatusLineNC", "TabLine", "TabLineSel", "TabLineFill", "Visual", "SignColumn", "Search", "IncSearch",
         "CurSearch", "CursorLine", "CursorLineNr", "ColorColumn", "EndOfBuffer", "WinSeparator", "Directory", "Title", "WarningMsg", "ModeMsg", "MoreMsg", "Question", "MatchParen",
@@ -138,6 +145,12 @@ module Carat
       def self.name_of(id)
         return "" if id < 0 || id >= COUNT
         NAMES[id]
+      end
+
+      # The group of a cell's id, without the cursor-line layer.
+      #: (Integer) -> Integer
+      def self.base(id)
+        id >= CURSOR_LINE_LAYER ? id - CURSOR_LINE_LAYER : id
       end
     end
   end

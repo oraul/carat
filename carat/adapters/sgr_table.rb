@@ -4,7 +4,8 @@ require_relative "../domain/color_depth"
 
 module Carat
   module Adapters
-    # The SGR sequence that starts a cell of each highlight group, built
+    # The SGR sequence that starts a cell of each highlight group, and of
+    # each group on the cursor line (Highlight::CURSOR_LINE_LAYER), built
     # once from the theme for the terminal's color depth: 24-bit colors as
     # 38;2 and 48;2, 256 colors as 38;5 and 48;5 with each 24-bit color
     # mapped to the nearest of the 6x6x6 cube and the gray ramp, and the
@@ -28,7 +29,7 @@ module Carat
       def self.from_theme(theme, colors)
         codes = []
         id = 0
-        while id < Domain::Highlight::COUNT
+        while id < Domain::Highlight::LIMIT
           codes << sequence(theme, id, colors)
           id += 1
         end

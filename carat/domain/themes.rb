@@ -369,7 +369,10 @@ module Carat
 
       # Resolves every group's roles against a palette. Without a painted
       # background the roles BG and FG are the terminal's own; with it a
-      # group's missing foreground or background is the palette's.
+      # group's missing foreground or background is the palette's. Each
+      # group's cursor-line id takes its foreground and attributes and,
+      # unless the group has a background of its own, the CursorLine
+      # background, or at 16 colors CursorLine's attributes.
       #: (String, Array[Integer], bool) -> Theme
       def self.from_palette(name, palette, painted)
         rgbs = Array.new(ROLES, -1)
@@ -389,14 +392,14 @@ module Carat
           indexes16[BG] = -1
           indexes16[FG] = -1
         end
-        fgs = Array.new(Highlight::COUNT, -1)
-        bgs = Array.new(Highlight::COUNT, -1)
-        fgs256 = Array.new(Highlight::COUNT, -1)
-        bgs256 = Array.new(Highlight::COUNT, -1)
-        fgs16 = Array.new(Highlight::COUNT, -1)
-        bgs16 = Array.new(Highlight::COUNT, -1)
-        attrs = Array.new(Highlight::COUNT, 0)
-        attrs16 = Array.new(Highlight::COUNT, 0)
+        fgs = Array.new(Highlight::LIMIT, -1)
+        bgs = Array.new(Highlight::LIMIT, -1)
+        fgs256 = Array.new(Highlight::LIMIT, -1)
+        bgs256 = Array.new(Highlight::LIMIT, -1)
+        fgs16 = Array.new(Highlight::LIMIT, -1)
+        bgs16 = Array.new(Highlight::LIMIT, -1)
+        attrs = Array.new(Highlight::LIMIT, 0)
+        attrs16 = Array.new(Highlight::LIMIT, 0)
         i = 0
         while i + 4 < GROUPS.length
           id = GROUPS[i]
@@ -416,6 +419,22 @@ module Carat
           end
           attrs[id] = GROUPS[i + 3]
           attrs16[id] = GROUPS[i + 4]
+          i += 5
+        end
+        line16 = attrs16[Highlight::CURSOR_LINE]
+        i = 0
+        while i + 4 < GROUPS.length
+          id = GROUPS[i]
+          lit = id + Highlight::CURSOR_LINE_LAYER
+          fgs[lit] = fgs[id]
+          fgs256[lit] = fgs256[id]
+          fgs16[lit] = fgs16[id]
+          attrs[lit] = attrs[id]
+          own = GROUPS[i + 2] >= 0 && GROUPS[i + 2] != BG
+          bgs[lit] = own ? bgs[id] : rgbs[CURSOR_LINE]
+          bgs256[lit] = own ? bgs256[id] : indexes256[CURSOR_LINE]
+          bgs16[lit] = own ? bgs16[id] : indexes16[CURSOR_LINE]
+          attrs16[lit] = own ? attrs16[id] : attrs16[id] | line16
           i += 5
         end
         Theme.new(name: name, fgs: fgs, bgs: bgs, fgs256: fgs256, bgs256: bgs256, fgs16: fgs16, bgs16: bgs16, attrs: attrs, attrs16: attrs16)

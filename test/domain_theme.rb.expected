@@ -46,6 +46,18 @@ ok   dark_plus at 24 bits
 ok   dark_plus at 256 colors
 ok   light_plus at 24 bits
 ok   light_plus at 256 colors
+ok   one_dark on the cursor line at 24 bits
+ok   one_dark on the cursor line at 256 colors
+ok   one_light on the cursor line at 24 bits
+ok   one_light on the cursor line at 256 colors
+ok   dark_plus on the cursor line at 24 bits
+ok   dark_plus on the cursor line at 256 colors
+ok   light_plus on the cursor line at 24 bits
+ok   light_plus on the cursor line at 256 colors
+ok   a group on the cursor line keeps its color and attributes over CursorLine's background
+ok   a group with a background of its own keeps it on the cursor line
+ok   at 16 colors the cursor line underlines a group without a background
+ok   base strips the cursor-line layer
 ok   one_dark comments are readable
 ok   the contrast of WCAG's lightest AA gray on white and of a color on itself
 ok   the defaults: one_dark on the terminal's background, syntax on
@@ -66,4 +78,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 68 passed, 0 failed
+domain_theme: 80 passed, 0 failed
