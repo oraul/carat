@@ -14,7 +14,7 @@
 
 ## 3. docs/backlog.md
 
-- [ ] 3.1 Remove the four entries this change fixes; add the seven entries of `build/plan/backlog.md`; queue the secret-pattern and binary-file entries in `content-gate-gaps` and the close-note entry in `backup-records`; restate the delivered-changes entry; name the backlog-items change in the review-area entry. Checked by `make docs-lint` (untagged queue items, content).
+- [x] 3.1 Remove the four entries this change fixes; add the seven entries of `build/plan/backlog.md`; queue the secret-pattern and binary-file entries in `content-gate-gaps` and the close-note entry in `backup-records`; restate the delivered-changes entry; name the backlog-items change in the review-area entry. Checked by `make docs-lint` (untagged queue items, content).
 
 ## 4. Gates
 
