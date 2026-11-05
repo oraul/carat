@@ -47,6 +47,11 @@ module DomainGlobalTest
     [a.pattern, a.command, a.error]
   end
 
+  def self.delimited(text)
+    a = D::DelimitedPattern.parse(text.to_s, ":s")
+    [a.pattern, a.rest, a.error]
+  end
+
   def self.register_count(text)
     a = D::RegisterCount.parse(text.to_s)
     [a.register, a.count, a.error]
@@ -95,6 +100,21 @@ module DomainGlobalTest
       ["not ASCII", "éaéd", ["", "", "Not implemented: a delimiter that is not ASCII"]]
     ]) do |text|
       global(text)
+    end
+
+    # Rows are [label, text, [pattern, rest, error]], read for :s.
+    t.table([
+      ["a pattern and the rest", "/a/b/g", ["a", "b/g", ""]],
+      ["no closing delimiter", "#a", ["a", "", ""]],
+      ["a closing delimiter and nothing after", "/a/", ["a", "", ""]],
+      ["an escaped delimiter", "/a\\/b/c", ["a\\/b", "c", ""]],
+      ["a delimiter in a collection", "/[/]/c", ["[/]", "c", ""]],
+      ["nothing", "", ["", "", ""]],
+      ["a letter", "aba", ["", "", "E146: Regular expressions can't be delimited by letters"]],
+      ["a backslash names the command", "\\/a", ["", "", "Not implemented: \\ as the delimiter of :s"]],
+      ["not ASCII", "éaé", ["", "", "Not implemented: a delimiter that is not ASCII"]]
+    ]) do |text|
+      delimited(text)
     end
 
     # Rows are [label, argument, [register, count, error]].

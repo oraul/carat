@@ -5,6 +5,7 @@
 - [x] 1.1 Add `Domain::GlobalMarks` and the `Buffer#global_marks` member shifted in `Buffer#splice`, proven by `test/domain_global.rb` (marks through inserts and deletes, `take`, `clear`)
 - [x] 1.2 Add `Domain::GlobalArgs.parse` (delimiter, pattern, command, E146, E148, Not implemented), proven by `test/domain_global.rb`
 - [x] 1.3 Add `Domain::RegisterCount.parse` (`[x] [count]`, E488, E939), proven by `test/domain_global.rb`
+- [x] 1.4 Add `Domain::DelimitedPattern.parse`, the one reader of the delimiter and pattern that `GlobalArgs.parse` and `SubstituteArgs.parse` call, proven by `test/domain_global.rb`, `test/domain_substitute.rb`, and `test/editor_substitute.rb`
 
 ## 2. Commands
 

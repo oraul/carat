@@ -1,4 +1,4 @@
-require_relative "vim_pattern"
+require_relative "delimited_pattern"
 
 module Carat
   module Domain
@@ -29,19 +29,10 @@ module Carat
       # Parses text, the argument after the name.
       #: (String) -> GlobalArgs
       def self.parse(text)
-        size = text.bytesize
-        return refused(MISSING) if size == 0
-        first = text.getbyte(0).to_i
-        letter = (first >= 65 && first <= 90) || (first >= 97 && first <= 122)
-        return refused("E146: Regular expressions can't be delimited by letters") if letter
-        return refused("Not implemented: \\ as the delimiter of :g") if first == 92
-        return refused("Not implemented: a delimiter that is not ASCII") if first >= 128
-        rest = text.byteslice(1, size - 1).to_s
-        stop = VimPattern.pattern_end(rest, first)
-        pattern = rest.byteslice(0, stop).to_s
-        return GlobalArgs.new(pattern: pattern, command: "", error: "") if stop >= rest.bytesize
-        command = rest.byteslice(stop + 1, rest.bytesize - stop - 1).to_s
-        GlobalArgs.new(pattern: pattern, command: command, error: "")
+        return refused(MISSING) if text.empty?
+        delimited = DelimitedPattern.parse(text, ":g")
+        return refused(delimited.error) unless delimited.ok?
+        GlobalArgs.new(pattern: delimited.pattern, command: delimited.rest, error: "")
       end
     end
   end

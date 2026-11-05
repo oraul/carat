@@ -360,6 +360,7 @@ Files:
 - `carat/domain/ex_command.rb`: `ExCommand` value (`range`, `name`, `bang`, `args`).
 - `carat/domain/ex_grammar.rb`: `ExGrammar.parse`, `range_end`, `letter?`; the `&` name.
 - `carat/domain/ex_range.rb`: `ExRange` value (`first`, `last`, `given`, `error`); `resolve` (`%`, `.`, `$`, numbers, `'<`, `'>`, `E16`, `E20`, `E493`).
+- `carat/domain/delimited_pattern.rb`: `DelimitedPattern` value; `parse` (the delimiter and pattern of `:s`, `:g`, and `:v`; `E146`), the one reader `SubstituteArgs` and `GlobalArgs` call.
 - `carat/domain/substitute_args.rb`: `SubstituteArgs` value; `parse` (delimiter, pattern, string, flags, count; `E146`, `E488`).
 - `carat/domain/last_substitute.rb`: `LastSubstitute`, what the next substitute reuses; `apply_flags`, `keep_replacement`, `keep_previous`.
 - `carat/domain/replacement.rb`: `Replacement`; `tilde`, `check`, `expand` (the string's special characters; a line break as `BREAK`).
