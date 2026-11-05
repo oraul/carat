@@ -18,7 +18,7 @@ module EditorScreenTest
     t.assert_equal("\"a.txt\" 3L", h.message_row[0, 10], "message row shows the opened message")
     t.assert_true(h.terminal.output.start_with?("\e[?1049h"), "output begins with the alternate screen")
     t.assert_true(h.terminal.output.include?("\e[1;1H"), "first frame paints row 1")
-    t.assert_true(h.terminal.output.include?("  1 \e[0mone"), "first frame carries the gutter and the text")
+    t.assert_true(h.terminal.output.include?("  2 \e[0mtwo"), "first frame carries the gutter and the text")
     t.assert_equal(1, h.terminal.entered, "terminal entered once")
 
     before = h.terminal.writes.length
@@ -27,6 +27,8 @@ module EditorScreenTest
     last = h.terminal.last_write
     t.assert_equal(false, last.include?("  1 one"), "unchanged text row is not rewritten")
     t.assert_true(last.include?("\e[2;5H"), "cursor moved to row 2 after the gutter")
+    layer = Carat::Domain::Highlight::CURSOR_LINE_LAYER
+    t.assert_equal([false, true], [h.frame.hl_at(0, 4) >= layer, h.frame.hl_at(1, 4) >= layer], "the shipped cursor line moves with the cursor")
 
     h.type("i")
     t.assert_true(h.terminal.last_write.include?("\e[6 q"), "insert mode switches to the bar cursor")
@@ -59,6 +61,7 @@ module EditorScreenTest
 
     h.assembly.screen_presenter.leave
     t.assert_true(h.terminal.output.end_with?("\e[?1049l"), "leaving restores the main screen last")
+    t.assert_true(h.terminal.output.end_with?("\e[0 q\e[?25h\e[?1049l"), "leaving gives the cursor back the terminal's own shape and shows it")
     t.assert_equal(1, h.terminal.left, "terminal left once")
 
     t.finish

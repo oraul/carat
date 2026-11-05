@@ -12,7 +12,8 @@ module Carat
     # past the end of the buffer, UNSET for nothing painted), the window's
     # horizontal scroll, width, and gutter width, the line number and the
     # sign shown, the selected display columns and the line end cell, the
-    # cursor's column on the cursor row, the syntax entry whose tokens
+    # cursor's column on the cursor row, the highlight layer it was
+    # lifted onto (0 for none), the syntax entry whose tokens
     # it was painted with (by identity, SyntaxLine::NONE for none), and
     # the stamp of the search highlighting it shows (0 for none); and,
     # to recognize a scroll, the window id and its first visible row.
@@ -33,6 +34,7 @@ module Carat
       # @rbs @sel_tos: Array[Integer]
       # @rbs @sel_ends: Array[Integer]
       # @rbs @cursors: Array[Integer]
+      # @rbs @layers: Array[Integer]
       # @rbs @owners: Array[Integer]
       # @rbs @tops: Array[Integer]
       # @rbs @syntaxes: Array[untyped]
@@ -53,6 +55,7 @@ module Carat
         @sel_tos = Array.new(size, 0)
         @sel_ends = Array.new(size, 0)
         @cursors = Array.new(size, 0)
+        @layers = Array.new(size, 0)
         @owners = Array.new(size, 0)
         @tops = Array.new(size, 0)
         @syntaxes = Array.new(size, Domain::SyntaxLine::NONE)
@@ -77,11 +80,11 @@ module Carat
       end
 
       # Whether segment i shows exactly this.
-      #: (Integer, String, Integer, Integer, Integer, Integer, String, Integer, Integer, Integer, Integer, Domain::SyntaxLine, Integer) -> bool
-      def same?(i, line, left, width, gutter, number, sign, sel_from, sel_to, sel_end, cursor, syntax, search)
+      #: (Integer, String, Integer, Integer, Integer, Integer, String, Integer, Integer, Integer, Integer, Integer, Domain::SyntaxLine, Integer) -> bool
+      def same?(i, line, left, width, gutter, number, sign, sel_from, sel_to, sel_end, cursor, layer, syntax, search)
         @lines[i].equal?(line) && @lefts[i] == left && @widths[i] == width && @gutters[i] == gutter &&
           @numbers[i] == number && @sel_froms[i] == sel_from && @sel_tos[i] == sel_to && @sel_ends[i] == sel_end &&
-          @cursors[i] == cursor && @signs[i] == sign && syntax_at(i).equal?(syntax) && @searches[i] == search
+          @cursors[i] == cursor && @layers[i] == layer && @signs[i] == sign && syntax_at(i).equal?(syntax) && @searches[i] == search
       end
 
       # The syntax entry segment i was painted with.
@@ -91,8 +94,8 @@ module Carat
       end
 
       # Records what segment i shows.
-      #: (Integer, String, Integer, Integer, Integer, Integer, String, Integer, Integer, Integer, Integer, Domain::SyntaxLine, Integer) -> void
-      def store(i, line, left, width, gutter, number, sign, sel_from, sel_to, sel_end, cursor, syntax, search)
+      #: (Integer, String, Integer, Integer, Integer, Integer, String, Integer, Integer, Integer, Integer, Integer, Domain::SyntaxLine, Integer) -> void
+      def store(i, line, left, width, gutter, number, sign, sel_from, sel_to, sel_end, cursor, layer, syntax, search)
         @lines[i] = line
         @lefts[i] = left
         @widths[i] = width
@@ -103,6 +106,7 @@ module Carat
         @sel_tos[i] = sel_to
         @sel_ends[i] = sel_end
         @cursors[i] = cursor
+        @layers[i] = layer
         @syntaxes[i] = syntax
         @searches[i] = search
       end

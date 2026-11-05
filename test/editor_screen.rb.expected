@@ -8,6 +8,7 @@ ok   terminal entered once
 ok   one write per frame
 ok   unchanged text row is not rewritten
 ok   cursor moved to row 2 after the gutter
+ok   the shipped cursor line moves with the cursor
 ok   insert mode switches to the bar cursor
 ok   message row shows insert
 ok   normal mode switches back to the block cursor
@@ -22,5 +23,6 @@ ok   position is Top
 ok   cursor on row 8
 ok   window scrolled with scrolloff capped at half the window
 ok   leaving restores the main screen last
+ok   leaving gives the cursor back the terminal's own shape and shows it
 ok   terminal left once
-editor_screen: 25 passed, 0 failed
+editor_screen: 27 passed, 0 failed

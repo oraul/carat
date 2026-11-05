@@ -3,7 +3,9 @@
 # argument the path is empty and the editor starts on the start screen.
 # Argument checks and the terminal check happen before anything touches
 # the terminal; signals are trapped before the loop starts; the raw block
-# holds a single call; the screen is restored in an ensure.
+# holds a single call; the screen and the terminal's own cursor are
+# restored in an ensure that covers entering the screen, opening the
+# file, and the loop, so every exit path, an error included, reaches it.
 require "io/console"
 require_relative "../carat"
 
@@ -28,9 +30,9 @@ config = Carat::Adapters::RcConfigGateway.new(files: files)
 assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: config, plugin_list: Carat::Plugins::Registry.all)
 main_loop = Carat::Drivers::MainLoop.new(assembly: assembly, terminal: terminal, signals: signals)
 
-assembly.screen_presenter.enter
-assembly.open(path)
 begin
+  assembly.screen_presenter.enter
+  assembly.open(path)
   STDIN.raw { |io| main_loop.run }
 ensure
   assembly.screen_presenter.leave

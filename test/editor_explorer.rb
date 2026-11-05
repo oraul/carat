@@ -325,7 +325,7 @@ module EditorExplorerTest
     # Icons in their file type's color, through the tree's own syntax.
     h = editor_on("a.md", config_with("unicode", ""))
     h.type(" e")
-    t.assert_equal([H::ICON_FOLDER, H::ICON_FOLDER, H::ICON_MARKDOWN, H::ICON_RUBY], [h.frame.hl_at(0, 1), h.frame.hl_at(1, 3), h.frame.hl_at(3, 3), h.frame.hl_at(4, 3)], "each icon is drawn in its file type's group, after a marker of any width")
+    t.assert_equal([H::ICON_FOLDER, H::ICON_FOLDER, H::ICON_MARKDOWN, H::ICON_RUBY], [h.frame.hl_at(0, 1), h.frame.hl_at(1, 3), H.base(h.frame.hl_at(3, 3)), h.frame.hl_at(4, 3)], "each icon is drawn in its file type's group, after a marker of any width")
     t.assert_equal([H::NORMAL, H::NORMAL, H::NORMAL], [h.frame.hl_at(4, 0), h.frame.hl_at(4, 4), h.frame.hl_at(4, 5)], "the rest of the line keeps the normal group")
     h.type(":set syntax?<CR>")
     t.assert_equal("  syntax=explorer", h.message, "the tree buffer takes the explorer's filetype")

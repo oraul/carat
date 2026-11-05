@@ -72,4 +72,10 @@ ok   :set nohlsearch hides it
 ok   :set hls? shows the option
 ok   inv switches it
 ok   a boolean takes no value
-editor_search: 74 passed, 0 failed
+ok   cul? shows it on, as shipped
+ok   nocul turns it off
+ok   invcul switches it
+ok   cul! switches it twice back on
+ok   cul turns it back on
+ok   a value is E474
+editor_search: 80 passed, 0 failed

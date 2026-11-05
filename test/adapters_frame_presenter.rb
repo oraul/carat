@@ -78,6 +78,68 @@ module AdaptersFramePresenterTest
     out
   end
 
+  # The cursor-line layer of highlight ids.
+  LIT = D::Highlight::CURSOR_LINE_LAYER
+
+  # For the first rows of a frame, 1 where the cell at column col is on
+  # the cursor-line layer and 0 elsewhere.
+  def self.lit_rows(frame, rows, col)
+    out = []
+    r = 0
+    while r < rows
+      out << (frame.cell(r, col).hl >= LIT ? 1 : 0)
+      r += 1
+    end
+    out
+  end
+
+  # The cursor line in one case, by name: which of the first rows are lit
+  # at a column, after the steps the case takes.
+  def self.cursor_line(name)
+    s = state_for(["one", "two", "three"], "a.txt")
+    s.options.cursorline = name != "off"
+    s.cursor.move_to(1, 0)
+    case name
+    when "the gutter"
+      return lit_rows(draw(s, 6, 14), 4, 0)
+    when "the blanks after the text"
+      return lit_rows(draw(s, 6, 14), 4, 13)
+    when "j"
+      s.cursor.move_to(0, 0)
+      draw(s, 6, 14)
+      draw(s, 6, 14)
+      s.cursor.move_to(1, 0)
+      draw(s, 6, 14)
+      return lit_rows(draw(s, 6, 14), 4, 4)
+    when "turned off"
+      draw(s, 6, 14)
+      draw(s, 6, 14)
+      s.options.cursorline = false
+      draw(s, 6, 14)
+      return lit_rows(draw(s, 6, 14), 4, 4)
+    when "stacked", "stacked, top focused"
+      draw(s, 9, 14)
+      top = s.tab.layout.split(0, false, 0, 5)
+      s.tab.focus(top) if name == "stacked, top focused"
+      s.window.cursor.move_to(0, 0)
+      return lit_rows(draw(s, 9, 14), 8, 4)
+    when "side by side"
+      draw(s, 6, 21)
+      s.tab.layout.split(0, true, 0, 5)
+      s.window.cursor.move_to(0, 0)
+      f = draw(s, 6, 21)
+      return [lit_rows(f, 1, 4)[0], lit_rows(f, 1, 9)[0], lit_rows(f, 1, 15)[0], lit_rows(f, 1, 20)[0]]
+    end
+    lit_rows(draw(s, 6, 14), 4, 4)
+  end
+
+  # The cursor shape of a frame drawn in a mode, by its keymap name.
+  def self.shape_in(mode)
+    s = state_for(["one"], "a.txt")
+    s.mode = D::Mode.from_name(mode) || D::Mode::NORMAL
+    draw(s, 6, 14).cursor_shape
+  end
+
   def self.main
     t = Carat::Testing.new("adapters_frame_presenter")
 
@@ -477,6 +539,46 @@ module AdaptersFramePresenterTest
     f = draw(s, 6, 20)
     t.assert_equal("?ab", f.row_text(5), "a backward search prompt shows a question mark")
     PROMPT.close
+
+    # The cursor line: the cursor's row of the current window, from the
+    # end of the gutter to the window's edge, follows the cursor, the
+    # focus, and the option.
+    t.table([
+      ["the cursor's row of the current window is lit", "on", [0, 1, 0, 0]],
+      ["the blanks after the text are lit to the window's edge", "the blanks after the text", [0, 1, 0, 0]],
+      ["the gutter is not lifted", "the gutter", [0, 0, 0, 0]],
+      ["with the option off no row is lit", "off", [0, 0, 0, 0]],
+      ["the lit row follows j", "j", [0, 1, 0, 0]],
+      ["turning the option off repaints the row", "turned off", [0, 0, 0, 0]],
+      ["only the current window, at the bottom, is lit", "stacked", [0, 0, 0, 0, 1, 0, 0, 0]],
+      ["focus moves the lit row to the top window", "stacked, top focused", [1, 0, 0, 0, 0, 0, 0, 0]],
+      ["side by side, only the right window's row is lit, to its edge", "side by side", [0, 0, 1, 1]]
+    ]) { |name| cursor_line(name.to_s) }
+    s = state_for(["one", "two", "three"], "a.txt")
+    s.options.cursorline = true
+    s.cursor.move_to(1, 0)
+    f = draw(s, 6, 14)
+    t.assert_equal([D::Highlight::LINE_NUMBER, D::Highlight::CURSOR_LINE_NUMBER, D::Highlight::LINE_NUMBER], [f.cell(0, 2).hl, f.cell(1, 2).hl, f.cell(2, 2).hl], "the cursor line's number is in CursorLineNr")
+    t.assert_equal([NOR + LIT, NOR + LIT, D::Highlight::STATUS], [f.cell(1, 4).hl, f.cell(1, 13).hl, f.cell(4, 4).hl], "the text takes its group on the layer, the status line keeps its own")
+    s = state_for(["abc", "def"], "a.txt")
+    s.options.cursorline = true
+    s.mode = D::Mode::VISUAL
+    s.window.anchor = D::Position.new(row: 0, col: 0)
+    s.cursor.move_to(0, 2)
+    f = draw(s, 6, 20)
+    t.assert_equal([VIS + LIT, VIS + LIT, NOR + LIT, NOR + LIT], highlights(f, 0, 4), "a selection on the cursor line keeps the Visual group on the layer, the cursor cell its own")
+
+    # The cursor shape per mode.
+    t.table([
+      ["a block in normal mode", "normal", :block],
+      ["a bar in insert mode", "insert", :bar],
+      ["an underline in replace mode", "replace", :underline],
+      ["a block in visual mode", "visual", :block],
+      ["a block in visual line mode", "visual_line", :block],
+      ["a block in visual block mode", "visual_block", :block],
+      ["a block while an operator waits", "operator_pending", :block],
+      ["a block on the command line", "cmdline", :block]
+    ]) { |mode| shape_in(mode.to_s) }
 
     t.finish
   end
