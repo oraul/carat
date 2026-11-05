@@ -164,4 +164,9 @@ ok   se sets
 ok   sy is syntax
 ok   synt is syntax
 ok   s is substitute, not set
-use_cases_ex: 166 passed, 0 failed
+ok   g is global
+ok   v is vglobal, not vsplit
+ok   vg is vglobal
+ok   d is delete, not display
+ok   di is display
+use_cases_ex: 171 passed, 0 failed

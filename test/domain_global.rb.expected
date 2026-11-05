@@ -1,3 +1,39 @@
-ok   an empty line has no characters
-ok   a word counts its characters
-domain_global: 2 passed, 0 failed
+ok   the marked rows in order
+ok   no marks
+ok   deleting each taken row
+ok   deleting a marked row below loses its mark
+ok   inserted rows are not marked
+ok   many inserted rows move the marks
+ok   an edit above the scan start lowers it
+ok   clearing the whole buffer drops every mark
+ok   a buffer starts with no marks
+ok   an edit with no global running marks nothing
+ok   marking makes the marks active
+ok   clear drops the marks
+ok   pattern and command
+ok   a command with its own delimiters
+ok   no closing delimiter lists
+ok   an empty command lists
+ok   an empty pattern
+ok   another delimiter
+ok   an escaped delimiter
+ok   a delimiter in a collection
+ok   a digit delimiter
+ok   no argument
+ok   a letter
+ok   a backslash
+ok   not ASCII
+ok   nothing
+ok   a register
+ok   a count
+ok   a register and a count
+ok   a register right before a count
+ok   the unnamed register
+ok   the black hole
+ok   an uppercase register appends
+ok   a read-only register
+ok   a zero count
+ok   something after the count
+ok   two registers
+ok   blanks after the count
+domain_global: 38 passed, 0 failed
