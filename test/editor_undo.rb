@@ -182,7 +182,7 @@ module EditorUndoTest
     h.type("jdd")
     count = fixer.seen.length
     h.type("u")
-    t.assert_equal([count + 1, "buffer_change b2 w1 a.txt 1,0 -0 +1"], [fixer.seen.length, fixer.seen[fixer.seen.length - 1]], "the undo reaches the plugin as one buffer_change with its rows")
+    t.assert_equal([count + 1, "buffer_change b1 w1 a.txt 1,0 -0 +1"], [fixer.seen.length, fixer.seen[fixer.seen.length - 1]], "the undo reaches the plugin as one buffer_change with its rows")
     h.type(":w<CR>")
     t.assert_equal(["X", "Y", "c"], h.lines, "the plugin edits two rows after the write")
     h.type("u")

@@ -30,7 +30,7 @@ ok   x on a clean buffer quits without writing
 ok   long form exit with bang
 ok   wa writes the modified buffer and stays
 ok   wa on a clean buffer shows nothing
-ok   qa refused while modified
+ok   qa refused while modified names the buffer
 ok   long form qa refused too
 ok   forced qa does not write
 ok   wqa with bang writes and quits
@@ -55,13 +55,14 @@ ok   q with two windows closes one
 ok   q on the last window quits
 ok   wq with two windows writes and closes one
 ok   x with two windows writes and closes one
-ok   e shows the listed buffer in the window and drops the one no window shows
+ok   e shows the listed buffer in the window and keeps the one it left hidden
 ok   both windows share one buffer
-ok   e a.txt reads the file again after its buffer left the list
+ok   e a.txt shows the hidden buffer without reading the file again
+ok   e! reads it again
 ok   e reloads the file for every window showing it
 ok   wa writes every buffer in every tab page
 ok   qa quits with several windows and tab pages
-ok   qa is refused by a modified buffer in another tab page
+ok   qa is refused by a modified buffer in another tab page and goes there
 ok   wqa writes the buffers of both tab pages and quits
 ok   leader q quits
 ok   message shown
@@ -82,4 +83,4 @@ ok   down past the newest gives back the typed text
 ok   up recalls only commands starting with the typed text
 ok   down returns to the typed text
 ok   down before any recall changes nothing
-editor_cmdline: 84 passed, 0 failed
+editor_cmdline: 85 passed, 0 failed

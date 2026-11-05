@@ -34,6 +34,10 @@ module EditorTabsTest
     out
   end
 
+  def self.unsaved(name)
+    "E37: No write since last change\nE162: No write since last change for buffer \"#{name}\""
+  end
+
   def self.main
     t = Carat::Testing.new("editor_tabs")
 
@@ -102,15 +106,15 @@ module EditorTabsTest
 
     # Hidden buffers after closing tab pages.
     h = session(":tabe b.txt<CR>x:tabclose<CR>:qa<CR>")
-    t.assert_equal([false, E37, ["a.txt", "b.txt"]], [h.quit?, h.message_row, h.buffer_paths], "a modified buffer in a closed tab page stays hidden and blocks :qa")
+    t.assert_equal([false, unsaved("b.txt"), ["a.txt", "b.txt"], "b.txt"], [h.quit?, h.message, h.buffer_paths, h.buffer.path], "a modified buffer in a closed tab page stays hidden and blocks :qa, which shows it")
     h = session(":tabe b.txt<CR>x:tabfir<CR>:tabonly<CR>")
     t.assert_equal([1, ["a.txt", "b.txt"]], [h.tab_count, h.buffer_paths], ":tabonly keeps the modified buffer hidden")
     h.type(":qa!<CR>")
     t.assert_equal(true, h.quit?, ":qa! ends the editor")
     h = session(":tabe b.txt<CR>:tabclose<CR>")
-    t.assert_equal(["a.txt"], h.buffer_paths, "a clean buffer leaves the list with its tab page")
+    t.assert_equal(["a.txt", "b.txt"], h.buffer_paths, "a clean buffer stays listed, hidden, when its tab page closes")
     h = session(":tabe b.txt<CR>xgt:qa<CR>")
-    t.assert_equal([false, E37, 1], [h.quit?, h.message_row, h.tab_index], ":qa is refused by a modified buffer in another tab page")
+    t.assert_equal([false, unsaved("b.txt"), 2], [h.quit?, h.message, h.tab_index], ":qa is refused by a modified buffer in another tab page and goes there")
     h = session(":tabe b.txt<CR>xgtx:wa<CR>")
     t.assert_equal(["ne\ntwo\nthree\n", "z\n", false], [h.files.get("a.txt"), h.files.get("b.txt"), h.assembly.buffers.any_modified?], ":wa writes the buffers of every tab page")
     h = session("x:tabe b.txt<CR>x:wqa<CR>")

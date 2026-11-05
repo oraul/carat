@@ -27,6 +27,28 @@ module DomainBufferListTest
     Lists.new(tabs: tabs, buffers: buffers, state: D::EditorState.new(tabs: tabs, options: D::Options.new))
   end
 
+  def self.ints(values)
+    out = []
+    values.each { |v| out << v.to_i }
+    out
+  end
+
+  # The buffer steps places from the one at index.
+  def self.step(list, index, steps)
+    list.step_from(list.buffer_at(index), steps)
+  end
+
+  def self.feed_lines(feed)
+    lines = []
+    i = 0
+    while i < feed.count
+      n = feed.notice_at(i)
+      lines << "#{n.kind} #{n.buffer_id} #{n.path} #{n.row} -#{n.removed} +#{n.inserted}"
+      i += 1
+    end
+    lines
+  end
+
   def self.main
     t = Carat::Testing.new("domain_buffer_list")
 
@@ -46,23 +68,93 @@ module DomainBufferListTest
     t.assert_equal([1, 2], [list.index_of(one), list.index_of(two)], "two unnamed buffers are told apart by identity")
     t.assert_equal([false, false], [w.tabs.shown?(one), w.tabs.shown?(two)], "neither unnamed buffer is shown")
     list.release(one)
-    t.assert_equal(2, list.count, "a clean unshown buffer leaves the list when released")
+    t.assert_equal(3, list.count, "a clean unshown file buffer stays listed, hidden")
     two.mark_unsaved
     list.release(two)
-    t.assert_equal(2, list.count, "a modified unshown buffer stays hidden")
+    t.assert_equal(3, list.count, "a modified unshown buffer stays hidden")
     t.assert_true(list.hidden_modified.equal?(two), "it is the hidden modified buffer")
     t.assert_true(list.any_modified?, "the list has a modified buffer")
     list.release(a)
-    t.assert_equal(2, list.count, "a shown buffer stays")
+    t.assert_equal(3, list.count, "a shown buffer stays")
     b = buffer_named("b.txt")
     list.load(b)
-    t.assert_equal([true, 2, -1], [s.buffer.equal?(b), list.count, list.index_of(a)], "loading replaces the window's buffer and drops the one no window shows")
+    t.assert_equal([true, 4, 0], [s.buffer.equal?(b), list.count, list.index_of(a)], "loading replaces the window's buffer and keeps the one it showed")
     t.assert_true(list.for_path("b.txt").equal?(b), "a listed buffer is found by path")
-    t.assert_equal(nil, list.for_path("a.txt"), "a dropped buffer is not")
+    t.assert_true(list.for_path("a.txt").equal?(a), "so is the buffer left")
     s.cursor.move_to(2, 0)
     c = D::Buffer.from_text("x\n", "b.txt")
     b.reload(c.lines)
     t.assert_equal([0, 0], s.cursor.to_a, "the closed reload pulls the cursors on the buffer back inside it")
+
+    # The empty unnamed buffer of one window is replaced under its number;
+    # a buffer shown again gets its cursor back.
+    empty = D::Buffer.from_text("", nil)
+    w = lists_over(empty)
+    s = w.state
+    list = w.buffers
+    a = buffer_named("a.txt")
+    list.load(a)
+    t.assert_equal([1, 1, -1], [list.count, a.id, list.index_of(empty)], "a file opened over the empty buffer takes its number")
+    t.assert_equal(["open 1  0 -0 +0", "close 1  0 -0 +0", "open 1 a.txt 0 -0 +0"], feed_lines(list.feed), "the empty buffer closes before the file opens")
+    s.cursor.move_to(2, 0)
+    b = buffer_named("b.txt")
+    list.load(b)
+    t.assert_equal([2, [2, 0], [0, 0]], [b.id, a.last_cursor.to_a, s.cursor.to_a], "the buffer left remembers the cursor and a fresh one starts at the top")
+    s.cursor.move_to(1, 2)
+    list.load(a)
+    t.assert_equal([2, 0], s.cursor.to_a, "a buffer shown again gets its cursor back")
+    a.set_lines(1, 3, [])
+    list.load(b)
+    t.assert_equal([1, 0], s.cursor.to_a, "the remembered cursor of b is kept inside its text")
+    list.load(a)
+    t.assert_equal([0, 0], s.cursor.to_a, "a remembered row past the end lands on the last line")
+    other = D::Buffer.from_text("", nil)
+    list.load(other)
+    blank = D::Buffer.from_text("", nil)
+    list.load(blank)
+    t.assert_equal([3, -1], [blank.id, list.index_of(other)], "a second empty buffer is replaced too")
+
+    # Moving through the list skips scratch buffers and wraps.
+    a = buffer_named("a.txt")
+    w = lists_over(a)
+    list = w.buffers
+    scratch = D::Buffer.new(lines: ["l"], path: nil, line_ending: "\n")
+    scratch.owner = "hello"
+    b = buffer_named("b.txt")
+    c = buffer_named("c.txt")
+    list.add(scratch)
+    list.add(b)
+    list.add(c)
+    t.table([
+      ["one forward skips the scratch buffer", [0, 1], 2],
+      ["forward from the last wraps", [3, 1], 0],
+      ["back from the first wraps", [0, -1], 3],
+      ["0 stays on a file buffer", [0, 0], 0],
+      ["0 from a scratch buffer goes to the next file buffer", [1, 0], 2],
+      ["a count wraps past the end", [0, 4], 2],
+      ["back two", [3, -2], 0]
+    ]) { |input| list.index_of(step(list, ints(input)[0], ints(input)[1])) }
+    t.assert_equal([3, 2, 2], [list.index_of(list.replacement_for(b)), list.index_of(list.replacement_for(c)), list.index_of(list.replacement_for(scratch))], "the replacement is the next file buffer, or the one before it for the last")
+    w = lists_over(scratch)
+    t.assert_true(w.buffers.step_from(scratch, 1).nil?, "no file buffer to move to")
+    t.assert_true(w.buffers.replacement_for(scratch).nil?, "nor to replace it with")
+
+    # The unsaved buffer quitting names, in Neovim's order.
+    a = buffer_named("a.txt")
+    w = lists_over(a)
+    list = w.buffers
+    b = buffer_named("b.txt")
+    c = buffer_named("c.txt")
+    list.add(b)
+    list.add(c)
+    t.assert_true(list.first_unsaved(false).nil?, "nothing unsaved")
+    c.set_lines(0, 1, ["z"])
+    b.set_lines(0, 1, ["z"])
+    t.assert_true(list.first_unsaved(false).equal?(b), "a hidden buffer in list order")
+    a.set_lines(0, 1, ["z"])
+    t.assert_equal([true, true], [list.first_unsaved(false).equal?(a), list.first_unsaved(true).equal?(b)], "the current buffer first, and only the hidden ones when asked")
+    list.bring(c)
+    t.assert_true(w.state.buffer.equal?(c), "bringing a hidden buffer shows it in the current window")
 
     # Scratch buffers are not unsaved work and leave the list when unshown.
     w = lists_over(D::Buffer.new(lines: ["one"], path: "a.txt", line_ending: "\n"))

@@ -86,11 +86,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: section 8.2 of `docs/architecture.md` names Markdown, JSON, and YAML too; every other file is drawn plain.
 - Fix outline: one compiled plugin per language under `carat/plugins/<language>/` with its own tokenizer and state encoding, its extensions added to the `Filetype` tables, listed in `config/plugins.caratrc` and `config/default.caratrc`; the tokenizer test table of `test/plugins_ruby.rb` is the model.
 
-## :set handles only filetype, syntax, and the search options
+## :set handles only filetype, syntax, the search options, and cursorline
 
-- Where: `Carat::UseCases::SetCommandHandler` in `carat/use_cases/ex/set_command_handler.rb`, which handles `filetype`, `syntax`, and the booleans `ignorecase`, `smartcase`, `hlsearch`, and `incsearch` (since `buffer-search`), answers `Not implemented: :set name` for the other options the editor already has and `E518` for the rest; no `:setlocal`, no `:filetype`.
+- Where: `Carat::UseCases::SetCommandHandler` in `carat/use_cases/ex/set_command_handler.rb`, which handles `filetype`, `syntax`, and the booleans `ignorecase`, `smartcase`, `hlsearch`, and `incsearch` (since `buffer-search`) and `cursorline` (`cul`, since `cursor-shapes`), answers `Not implemented: :set name` for the other options the editor already has and `E518` for the rest; no `:setlocal`, no `:filetype`.
 - Why it matters: `:set number`, `:set ts=4`, `:set nowrap`, and the rest of Neovim's option commands are roadmap item 9, `options-and-config`.
-- Fix outline: grow the handler into the option table that item brings (names, abbreviations, types, global or local), keeping the `filetype`, `syntax`, and search answers; add `:setlocal` and the `&`, `+=`, `-=` forms there, with `no`, `inv`, `!`, and `?` moved from the search booleans to every boolean.
+- Fix outline: grow the handler into the option table that item brings (names, abbreviations, types, global or local), keeping the `filetype`, `syntax`, and search answers; add `:setlocal` and the `&`, `+=`, `-=` forms there, with `no`, `inv`, `!`, and `?` moved from the booleans to every boolean.
 
 ## Themes are chosen only at startup and cannot be tuned
 
@@ -188,11 +188,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: one thing under two names makes a search for the action miss the code that runs it.
 - Fix outline: rename the targets `:half_page_down` and `:half_page_up` in the three files.
 
-## Seven comments break their file's wrap width
+## Eight comments break their file's wrap width
 
-- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters), advisory of the periodic quality review at 66fd52b, the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118, the class comment of `carat/ports/terminal_port.rb` (line 4, 130 characters), advisory of the periodic quality review at 5b128b5, the class comments of `carat/use_cases/plugins/window_requests.rb` (line 23, 104 characters) and `carat/adapters/frame_presenter.rb` (line 48 at 3a99ddd, 105 characters, the line about one segment per row and window), advisories of the periodic quality review at 3a99ddd, and, quality advisories of `cursor-shapes`, the class comment of `carat/use_cases/ex/set_command_handler.rb` (line 17, 94 characters) and the class comment of `carat/domain/frame.rb` (line 15, a short ragged line of 37 characters). Line 37 of `carat/use_cases/dispatcher.rb`, once listed here, is the one-line signature of the constructor, not a comment to rewrap (quality advisory of `explorer-folder-toggle`).
+- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters), advisory of the periodic quality review at 66fd52b, the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118, the class comment of `carat/ports/terminal_port.rb` (line 4, 130 characters), advisory of the periodic quality review at 5b128b5, the class comments of `carat/use_cases/plugins/window_requests.rb` (line 23, 104 characters) and `carat/adapters/frame_presenter.rb` (line 48 at 3a99ddd, 105 characters, the line about one segment per row and window), advisories of the periodic quality review at 3a99ddd, and, quality advisories of `cursor-shapes`, the class comment of `carat/use_cases/ex/set_command_handler.rb` (line 17, 94 characters) the class comment of `carat/domain/frame.rb` (line 15, a short ragged line of 37 characters), and the class comment of `carat/domain/options.rb` (line 21, 77 characters), advisory of the periodic quality review at d5036f4. The class comment of `carat/use_cases/ex/set_command_handler.rb` (line 16) also still says "The four search options" although it now covers `cursorline`. Line 37 of `carat/use_cases/dispatcher.rb`, once listed here, is the one-line signature of the constructor, not a comment to rewrap (quality advisory of `explorer-folder-toggle`).
 - Why it matters: style only; the rest of each file wraps comments at the surrounding width.
-- Fix outline: rewrap the seven comments to the width of the lines around them.
+- Fix outline: rewrap the eight comments to the width of the lines around them, and say "The boolean options" in the `SetCommandHandler` class comment.
 
 ## lh time per key rose 26% at window-navigation-and-scroll
 
@@ -1080,19 +1080,19 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: the `CURSOR_LINE` role of the four palettes in `carat/domain/themes.rb`, measured by the cursor-line table of `test/domain_theme.rb`, which holds the cursor line to 3:1 as the selection is. At `cursor-shapes`: one_dark's keyword groups at 4.42:1 (24 bits), one_light's constants at 4.27:1 and its green groups at 4.05:1 (256 colors), dark_plus's comments and error groups at 3.99 to 4.43:1, light_plus's numbers at 3.90:1 (256 colors).
 - Why it matters: goal 1 asks for readable contrast; the line the user reads most is a little below WCAG AA for normal text in those groups.
-- Fix outline: tune each palette's cursor-line color, and its 256-color index (one_light and light_plus round to gray 255 at 256 colors), or the few foregrounds, until the table passes at 4.5:1 for text, then raise the threshold in the test.
+- Fix outline: tune each palette's cursor-line color, and its 256-color index (one_light and light_plus round to gray 255 at 256 colors), or the few foregrounds, until the table passes at 4.5:1 for text, then raise the threshold in the test. Queued in `cursor-line-contrast`.
 
 ## The default cursor line keeps the terminal's foreground over a dark stripe
 
 - Where: `config/default.caratrc` (line 22 at `cursor-shapes`) turns `cursorline` on with `one_dark` and `option.background terminal`, so in `carat/domain/themes.rb` the lit cells of groups without a foreground keep the terminal's own foreground over the fixed `CURSOR_LINE` stripe (0x2c313c). Quality advisory of `cursor-shapes`.
 - Why it matters: on a light terminal, plain text on the cursor line becomes dark on dark and unreadable, and the cursor-line contrast table of `test/domain_theme.rb` checks only `background theme`.
-- Fix outline: give lit cells the palette's foreground when the stripe is painted over the terminal's background, with a contrast row for `background terminal`, or ship `cursorline` off until the theme follows the terminal's background.
+- Fix outline: give lit cells the palette's foreground when the stripe is painted over the terminal's background, with a contrast row for `background terminal`, or ship `cursorline` off until the theme follows the terminal's background. Queued in `cursor-line-contrast`.
 
 ## The presenter passes the number's group to paint_row through an instance variable
 
 - Where: `@number_hl` in `carat/adapters/frame_presenter.rb` (line 420 at `cursor-shapes`), set just before the call to `paint_row`, although it is derivable from the layer. Quality advisory of `cursor-shapes`.
 - Why it matters: a hidden coupling: any other caller of `paint_row` inherits a stale group.
-- Fix outline: pass the group, or the layer, to `paint_row` as a parameter and drop the instance variable and its RBS line.
+- Fix outline: pass the group, or the layer, to `paint_row` as a parameter and drop the instance variable and its RBS line. Queued in `search-structure`.
 
 ## The boolean options of :set are three parallel switches with a silent default
 
@@ -1110,4 +1110,52 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `lit16` in `carat/domain/themes.rb` (line 428 at `cursor-shapes`) holds the `CURSOR_LINE` role's 16-color background index, while `lit` in the same loop is a layered group id. Quality advisory of `cursor-shapes`.
 - Why it matters: the names suggest one is the 16-color form of the other.
-- Fix outline: rename `lit16` to `line_bg16` beside `line16`.
+- Fix outline: rename `lit16` to `line_bg16` beside `line16`. Queued in `cursor-line-contrast`.
+
+## A test helper's comment sits above the wrong method
+
+- Where: `test/editor_search.rb`, the comment of the `editor` helper (lines 8 and 9 at d5036f4) now sits above the `group` helper `cursor-shapes` added, with `def self.editor` at line 16. Advisory of the periodic quality review at d5036f4.
+- Why it matters: the two comments read as one comment for `group`, and `editor` has none.
+- Fix outline: move the `editor` comment above `def self.editor`. Queued in the backlog item of `docs/queue.md` with the comment-wrap entry.
+
+## BufferList keeps any_modified? and number_of with no production caller
+
+- Where: `any_modified?` (line 115 at `buffer-list`) and `number_of` (line 61) in `carat/domain/buffer_list.rb`, both still named in `docs/codebase-map.md`. Quality advisory of `buffer-list`.
+- Why it matters: `Quit` and `QuitAll` now use `first_unsaved`, so `any_modified?` is dead code, and `number_of` returns a list position that is no longer the buffer number, which misleads a future caller.
+- Fix outline: remove both, use `modified_buffer.nil?` in the tests, and drop them from the map.
+
+## BufferList#first_unsaved takes a boolean flag argument
+
+- Where: `first_unsaved(hidden_only)` in `carat/domain/buffer_list.rb` (line 124 at `buffer-list`), called by `Quit` and `QuitAll`. Quality advisory of `buffer-list`.
+- Why it matters: a flag argument hides two behaviors behind one name; `Quit` reaches it with one file window whose buffer `:quit` already checked, so `first_unsaved(false)` equals `hidden_modified` there.
+- Fix outline: have `Quit` call `@buffers.hidden_modified` and drop the parameter, leaving `first_unsaved` for `QuitAll`.
+
+## BufferCommandHandler#digits? duplicates HistoryCommandHandler.digits?
+
+- Where: `digits?` in `carat/use_cases/ex/buffer_command_handler.rb` (line 98 at `buffer-list`) and `HistoryCommandHandler.digits?` in `carat/use_cases/ex/history_command_handler.rb` (line 65). Quality advisory of `buffer-list`.
+- Why it matters: two copies of one check drift apart.
+- Fix outline: keep one shared helper and call it from both handlers.
+
+## A buffer number with leading zeros past nine bytes reads as the largest
+
+- Where: `number_in` in `carat/use_cases/ex/buffer_command_handler.rb` (line 92 at `buffer-list`). Quality advisory of `buffer-list`.
+- Why it matters: any argument over 9 bytes maps to `LARGEST`, so `:b 0000000001` reports E86 and `:bn 0000000002` steps a wrong count, unlike Neovim.
+- Fix outline: skip leading zeros before the length check, with a table row for each spelling.
+
+## BufferRequest's :current target exists only to return no outcome
+
+- Where: `carat/use_cases/buffers/buffer_request.rb` (line 5 at `buffer-list`), `SwitchBuffer` in `carat/use_cases/buffers/switch_buffer.rb` (line 29), and its one producer in `BufferCommandHandler` (line 66). Quality advisory of `buffer-list`.
+- Why it matters: a request target with no behavior widens the use case's input for one handler's empty-argument case.
+- Fix outline: return `Outcome.none` in `BufferCommandHandler#number` for `:b` without a number and drop `:current` from `BufferRequest` and `SwitchBuffer`.
+
+## BufferList#step_from is hard to verify and exposes file_count for it
+
+- Where: `step_from` (line 145 at `buffer-list`) and `file_count` (line 169) in `carat/domain/buffer_list.rb`. Quality advisory of `buffer-list`.
+- Why it matters: a modulo shortcut combined with a sentinel-reset loop makes `:bn` and `:bp` with a count hard to check by reading, and `file_count` is public only for it.
+- Fix outline: gather the file-buffer indices once and index them modulo their count from the target's position, and make `file_count` private or fold it in, keeping the `test/domain_buffer_list.rb` rows.
+
+## CloseOtherWindows clears tab.previous a second time
+
+- Where: `tab.previous = -1` in `carat/use_cases/windows/close_other_windows.rb` (line 34 at `buffer-list`). Quality advisory of `buffer-list`.
+- Why it matters: `BufferList#close_window` already clears `previous` when it names a closed window, and `previous` never names the current one, so the line reads as a needed step it is not.
+- Fix outline: drop the line, or keep it with a comment if it is meant to clear a stale id.

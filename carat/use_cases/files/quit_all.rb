@@ -5,8 +5,11 @@ require_relative "../outcome"
 
 module Carat
   module UseCases
-    # :qa and :qa!: ends the editor at once, unless a listed buffer has
-    # unsaved changes and no bang was given.
+    # :qa and :qa!: ends the editor at once, unless a listed file buffer
+    # has unsaved changes and no bang was given: then the first of them in
+    # Neovim's order is named with E37 and E162 and brought to the user,
+    # its window focused or, when none shows it, shown in the current
+    # window.
     class QuitAll
       attr_reader :buffers #: Domain::BufferList
 
@@ -17,7 +20,13 @@ module Carat
 
       #: (Domain::EditorState, bool) -> Outcome
       def call(state, bang)
-        return Outcome.failure(Domain::Messages::E37) if !bang && @buffers.any_modified?
+        unless bang
+          unsaved = @buffers.first_unsaved(false)
+          unless unsaved.nil?
+            @buffers.bring(unsaved)
+            return Outcome.failure(Domain::Messages.unsaved_buffer(unsaved.path_text))
+          end
+        end
         state.quit = true
         Outcome.success("")
       end

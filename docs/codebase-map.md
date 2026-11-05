@@ -244,7 +244,7 @@ Files:
 - `carat/domain/transaction.rb`: `Transaction` (records, cursor before and after, cause, merged row span, history flag); `add`, `seal`, `truncate`, `span`, `record_at`, `empty?`.
 - `carat/domain/buffer_feed.rb`: `BufferFeed`, the one sink of opens, closes, renames, and closed transactions, carrying the command's time and `undolevels`; `push`, `notice_at`, `count`, `clear`, `note`.
 - `carat/domain/buffer_notice.rb`: `BufferNotice`; `change?`.
-- `carat/domain/buffer_list.rb`: `BufferList` (listed buffers, their ids, the feed, keep or release policy); `add`, `remove`, `release`, `load`, `for_path`, `with_id`, `scratch_for`, `hidden_modified`, `any_modified?`, `close_window`, `close_tab`.
+- `carat/domain/buffer_list.rb`: `BufferList` (listed buffers, their ids, the feed, keep or release policy: file buffers stay until `:bd`); `add`, `remove`, `release`, `load` (the empty buffer's number reused, the cursor remembered and restored), `for_path`, `with_id`, `scratch_for`, `hidden_modified`, `any_modified?`, `first_unsaved`, `bring`, `step_from`, `file_count`, `replacement_for`, `close_window`, `close_tab`, `close_windows_of`.
 - `carat/use_cases/insert_text.rb`: `InsertText#call`.
 - `carat/use_cases/break_line.rb`: `BreakLine#call` (Enter).
 - `carat/use_cases/erase_character.rb`: `EraseCharacter#call(state, forward)` (Backspace, Delete).
@@ -319,9 +319,9 @@ Rules: the visual keys whose meaning differs are `visual.*` actions; motions bin
 
 ## 11. Windows and tabs
 
-What: the split layout per tab page, the `<C-w>` commands, scrolling a window, tab pages, and their ex commands.
+What: the split layout per tab page, the `<C-w>` commands, scrolling a window, tab pages, the buffer list commands, and their ex commands.
 
-Flow: `WindowHandler` (`<C-w>` keys, equalizing itself) and `WindowCommandHandler` (`:sp`, `:vs`, `:new`, `:vnew`, `:close`, `:only`) run `SplitWindow`, `CloseWindow`, `CloseOtherWindows`, and `FocusWindow` with a `FocusRequest`; `ScrollHandler` (`<C-f> <C-b> <C-d> <C-u> <C-e> <C-y> zt zz zb <PageDown> <PageUp>`) runs `ScrollWindow` with a `ScrollRequest`, which moves `Window#top` and the cursor; `TabHandler` (`gt`, `gT`) and `TabCommandHandler` (the `:tab*` commands) run `OpenTab`, `CloseTab`, `CloseOtherTabs`, and `SwitchTab` with a `TabRequest`. They change `Layout` (`split`, `split_edge`, `close`, `neighbour`, `equalize`) in the current `TabPage` and `TabList`; `BufferList#close_window` lets go of buffers. `ArrangeView#call` runs after every key and before every render: `Layout#arrange` for the screen size and every window scrolled to its cursor.
+Flow: `WindowHandler` (`<C-w>` keys, equalizing itself) and `WindowCommandHandler` (`:sp`, `:vs`, `:new`, `:vnew`, `:close`, `:only`) run `SplitWindow`, `CloseWindow`, `CloseOtherWindows`, and `FocusWindow` with a `FocusRequest`; `ScrollHandler` (`<C-f> <C-b> <C-d> <C-u> <C-e> <C-y> zt zz zb <PageDown> <PageUp>`) runs `ScrollWindow` with a `ScrollRequest`, which moves `Window#top` and the cursor; `TabHandler` (`gt`, `gT`) and `TabCommandHandler` (the `:tab*` commands) run `OpenTab`, `CloseTab`, `CloseOtherTabs`, and `SwitchTab` with a `TabRequest`; `BufferCommandHandler` runs `ListBuffers`, `SwitchBuffer` with a `BufferRequest`, and `DeleteBuffer` over `BufferList`. They change `Layout` (`split`, `split_edge`, `close`, `neighbour`, `equalize`) in the current `TabPage` and `TabList`; `BufferList#close_window` lets go of buffers. `ArrangeView#call` runs after every key and before every render: `Layout#arrange` for the screen size and every window scrolled to its cursor.
 
 Files:
 
@@ -329,7 +329,7 @@ Files:
 - `carat/domain/layout_node.rb`: `LayoutNode`; `leaf?`.
 - `carat/domain/layout.rb`: `Layout`, a flat node table; `split`, `split_edge`, `close`, `leaves`, `leaf_of`, `neighbour`, `equalize`, `arrange`, `number_of`, `first_leaf`, `fixed_width?`.
 - `carat/domain/tab_page.rb`: `TabPage`; `window`, `window_count`, `focus`, `previous?`.
-- `carat/domain/tab_list.rb`: `TabList`; `tab`, `window`, `add_tab`, `remove_tab`, `next_tab`, `previous_tab`, `adopt`, `window_tab`, `total_windows`, `shown?`, `clamp_cursors`.
+- `carat/domain/tab_list.rb`: `TabList`; `tab`, `window`, `add_tab`, `remove_tab`, `next_tab`, `previous_tab`, `adopt`, `window_tab`, `total_windows`, `shown?`, `windows_showing`, `focus_buffer`, `modified_in_windows`, `clamp_cursors`.
 - `carat/use_cases/arrange_view.rb`: `ArrangeView#call`.
 - `carat/use_cases/windows/split_window.rb`: `SplitWindow#call`; every new window gets its id.
 - `carat/use_cases/windows/open_side_window.rb`: `OpenSideWindow#call`, a plugin's fixed-width side window.
@@ -343,12 +343,17 @@ Files:
 - `carat/use_cases/actions/scroll_handler.rb`: `ScrollHandler.register`, the nine `scroll.*` actions, each a `ScrollRequest` target for `ScrollWindow`.
 - `carat/use_cases/ex/window_command_handler.rb`: `WindowCommandHandler.register`.
 - `carat/use_cases/ex/tab_command_handler.rb`: `TabCommandHandler.register`.
+- `carat/use_cases/buffers/buffer_request.rb`: `BufferRequest` (target, count, bang); `steps`.
+- `carat/use_cases/buffers/list_buffers.rb`: `ListBuffers#call(state, flags, bang)`, the `:ls` listing with Neovim's columns and flag filters.
+- `carat/use_cases/buffers/switch_buffer.rb`: `SwitchBuffer#call(state, request)`, `:bn`, `:bp`, `:bN`, `:b N` (`E37`, `E85`, `E86`).
+- `carat/use_cases/buffers/delete_buffer.rb`: `DeleteBuffer#call(state, number, bang, typed)`, `:bd` in the order of Neovim's `do_buffer` (`E89`, `E516`).
+- `carat/use_cases/ex/buffer_command_handler.rb`: `BufferCommandHandler.register` (`:ls`, `:buffers`, `:files`, `:b[uffer]`, `:bn[ext]`, `:bp[revious]`, `:bN[ext]`, `:bd[elete]`), the number and count arguments.
 
-Tests: `test/domain_layout.rb`, `test/domain_tab_list.rb`, `test/use_cases_arrange_view.rb`, `test/editor_windows.rb`, `test/editor_tabs.rb`, `test/editor_scroll.rb`.
+Tests: `test/domain_layout.rb`, `test/domain_tab_list.rb`, `test/use_cases_arrange_view.rb`, `test/editor_windows.rb`, `test/editor_tabs.rb`, `test/editor_scroll.rb`, `test/editor_buffers.rb`.
 
-Designs: `windows-and-splits` (all Decisions), `render-core` (ArrangeView and the screen size), `use-case-boundaries` (Variants).
+Designs: `windows-and-splits` (all Decisions), `buffer-list` (all Decisions), `render-core` (ArrangeView and the screen size), `use-case-boundaries` (Variants).
 
-Rules: CLAUDE.md Coding conventions (variants through one `call`, as a `Data` request when they carry a count). The buffer list commands are still to come (Delivered changes).
+Rules: CLAUDE.md Coding conventions (variants through one `call`, as a `Data` request when they carry a count).
 
 ## 12. Ex commands, the command line, and files
 
@@ -626,5 +631,6 @@ In merge order, by pull request number, with the roadmap item of `docs/architect
 - `pipeline-speed`, part A of the user's decision that token and pipeline efficiency is goal 1 and security goal 2: each start's total tokens and wall minutes recorded by `/deliver` (`tools/run_state.sh usage`) and budgeted (small 500k and 25 minutes, medium 1.2M, large 2.5M); the three fix rounds counted across starts, one more after a restart the limit did not cause; the periodic review due after the agent guard and the gates, not other tooling; the planner only when `plan-needed` finds a decision.
 - `pipeline-speed-b`, part B: the quality and security reviews in parallel on one commit, both answered in one fix round; a fix round's quality review scoped to the fix by `tools/run_state.sh scope`; stage records counted only at the check the workflow recorded, which the `stages` and `records` gates compare; the merge gates run from a worktree of `origin/main`; one note per repeated advisory.
 - `pipeline-speed-c`: `dev-build`, `test-build`, and `diagnose` skipped on the code they last passed with their outputs unchanged; `check` refuses a dirty tree and leaves `phase.check` to the workflow; the retrospective closes a run in one start, its last records, proposals, and the report, under the guard's `close` profile, the reporter gone; the budget line starts `under:` or `over:`.
+- `buffer-list`, item 7, second half: file buffers stay listed until `:bd` with stable numbers and a remembered cursor, the startup buffer's number reused; `:ls`, `:bn`, `:bp`, `:bN`, `:b N`, `:bd`; `E162` naming and showing the buffer that refuses `:qa`, `:q`, `:wq`, and `:x`. Left: `:b name`, ranges and several numbers for `:bd`, the alternate buffer, `:badd`, `:bwipeout`, and the split forms.
 
 Next: `docs/queue.md`, ordered against the charter `docs/goals.md`.

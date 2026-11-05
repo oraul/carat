@@ -44,9 +44,11 @@ module Carat
     # is the name that chooses the tokenizer, set with the filetype and
     # changed alone by :set syntax; syntax_cache keeps what the tokenizer
     # said, and every splice moves it with the rows, as it moves
-    # global_marks, the lines a running :global marked. A Struct record:
+    # global_marks, the lines a running :global marked. last_cursor is
+    # where the cursor was when a window last stopped showing the buffer,
+    # where the next window to show it puts its cursor. A Struct record:
     # mutable, with a reader and a writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, keyword_init: true)
+    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, keyword_init: true)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
@@ -66,6 +68,7 @@ module Carat
       # @rbs @syntax: String
       # @rbs @syntax_cache: SyntaxCache
       # @rbs @global_marks: GlobalMarks
+      # @rbs @last_cursor: Position
 
       # Every member is stored through its writer after super(), so the
       # empty sign list takes the pinned type: Spinel's keyword super of a
@@ -95,6 +98,7 @@ module Carat
         self.syntax = type
         self.syntax_cache = SyntaxCache.new
         self.global_marks = GlobalMarks.new
+        self.last_cursor = Position.new(row: 0, col: 0)
       end
 
       # Whether an edit changed the text since the last load, reload, or

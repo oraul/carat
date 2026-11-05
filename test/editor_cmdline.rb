@@ -19,6 +19,10 @@ module EditorCmdlineTest
 
   E37 = "E37: No write since last change (add ! to override)"
 
+  def self.unsaved(name)
+    "E37: No write since last change\nE162: No write since last change for buffer \"#{name}\""
+  end
+
   def self.main
     t = Carat::Testing.new("editor_cmdline")
 
@@ -108,7 +112,7 @@ module EditorCmdlineTest
     t.assert_equal(["", false], [h.message_row, h.quit?], "wa on a clean buffer shows nothing")
     h = editor(files_with("ab\n"))
     h.type("ix<Esc>:qa<CR>")
-    t.assert_equal([false, E37, :normal], [h.quit?, h.message_row, h.mode], "qa refused while modified")
+    t.assert_equal([false, unsaved("a.txt"), :normal], [h.quit?, h.message, h.mode], "qa refused while modified names the buffer")
     h.type(":quitall<CR>")
     t.assert_equal(false, h.quit?, "long form qa refused too")
     h.type(":qa!<CR>")
@@ -187,11 +191,13 @@ module EditorCmdlineTest
     files.put("b.txt", "zz\n")
     h = editor(files)
     h.type(":sp b.txt<CR><C-w>j:e b.txt<CR>")
-    t.assert_equal([["zz"], ["b.txt", "b.txt"], ["b.txt"]], [h.lines, [h.windows[0][4], h.windows[1][4]], h.buffer_paths], "e shows the listed buffer in the window and drops the one no window shows")
+    t.assert_equal([["zz"], ["b.txt", "b.txt"], ["a.txt", "b.txt"]], [h.lines, [h.windows[0][4], h.windows[1][4]], h.buffer_paths], "e shows the listed buffer in the window and keeps the one it left hidden")
     t.assert_true(h.state.tab.layout.window_at(h.state.tab.current).buffer.equal?(h.state.tab.layout.window_at(h.state.tab.previous).buffer), "both windows share one buffer")
     files.put("a.txt", "fresh\n")
     h.type(":e a.txt<CR>")
-    t.assert_equal(["fresh"], h.lines, "e a.txt reads the file again after its buffer left the list")
+    t.assert_equal(["ab"], h.lines, "e a.txt shows the hidden buffer without reading the file again")
+    h.type(":e!<CR>")
+    t.assert_equal(["fresh"], h.lines, "e! reads it again")
     files = files_with("ab\n")
     h = editor(files)
     h.type("<C-w>s")
@@ -211,8 +217,8 @@ module EditorCmdlineTest
     files.put("b.txt", "zz\n")
     h = editor(files)
     h.type(":tabe b.txt<CR>xgt:qa<CR>")
-    t.assert_equal([false, E37], [h.quit?, h.message_row], "qa is refused by a modified buffer in another tab page")
-    h.type("x:wqa<CR>")
+    t.assert_equal([false, unsaved("b.txt"), 2], [h.quit?, h.message, h.tab_index], "qa is refused by a modified buffer in another tab page and goes there")
+    h.type("gtx:wqa<CR>")
     t.assert_equal(["b\n", "z\n", true], [h.files.get("a.txt"), h.files.get("b.txt"), h.quit?], "wqa writes the buffers of both tab pages and quits")
 
     # Leader mappings go through the same path.

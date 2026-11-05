@@ -274,7 +274,7 @@ module EditorExplorerTest
     h = session(" ej<CR><C-w>hr")
     t.assert_equal("Rename to: b.rb", h.message_row.rstrip, "the prompt starts with the current name")
     h.type("<BS><BS><BS><BS>c.rb<CR>")
-    t.assert_equal([nil, "puts 1\n", ["", "c.rb"], "Renamed b.rb to c.rb"], [h.files.get("b.rb"), h.files.get("c.rb"), h.buffer_paths, h.message], "a rename changes the disk and the open buffer follows")
+    t.assert_equal([nil, "puts 1\n", ["a.md", "", "c.rb"], "Renamed b.rb to c.rb"], [h.files.get("b.rb"), h.files.get("c.rb"), h.buffer_paths, h.message], "a rename changes the disk and the open buffer follows")
     t.assert_equal([">  r c.rb", [4, 0]], [tree_lines(h)[4], h.cursor], "the tree lists the new name, still marked, with the cursor on it")
     h = session(" er<BS><BS><BS><BS>x/y.md<CR>")
     t.assert_equal(["Name contains a path separator: x/y.md", "alpha\n"], [h.message, h.files.get("a.md")], "a separator is refused")

@@ -8,10 +8,9 @@ module Carat
     # :wa, and the writes of :wqa and :xa: every modified buffer written to
     # its own path through SaveFile, in list order, reporting the last
     # write or the first failure: a modified buffer with no name reports
-    # E141 with its list position, and the other buffers are still
+    # E141 with its buffer number, and the other buffers are still
     # written, as Neovim's do_wqall goes on after an error. A scratch
-    # buffer is skipped. A hidden buffer that is clean after its write
-    # leaves the list.
+    # buffer is skipped.
     class SaveAll
       attr_reader :save_file #: SaveFile
       attr_reader :buffers #: Domain::BufferList
@@ -30,7 +29,7 @@ module Carat
         while i < @buffers.count
           buffer = @buffers.buffer_at(i)
           if buffer.modified? && !buffer.scratch?
-            written = buffer.path.nil? ? Outcome.failure("E141: No file name for buffer #{i + 1}") : @save_file.call(buffer, "")
+            written = buffer.path.nil? ? Outcome.failure("E141: No file name for buffer #{buffer.id}") : @save_file.call(buffer, "")
             if !written.ok && !failed
               result = written
               failed = true
@@ -39,11 +38,6 @@ module Carat
             end
           end
           i += 1
-        end
-        i = @buffers.count - 1
-        while i >= 0
-          @buffers.release(@buffers.buffer_at(i))
-          i -= 1
         end
         result
       end

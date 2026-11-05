@@ -141,7 +141,7 @@ module EditorPluginsTest
     # Returns the manifest.
     # @rbs skip
     def manifest
-      Carat::PluginApi::Manifest.new(name: "boom", version: "1.0.0", api_version: "2.0", actions: { "plugin.boom.go" => "Raise" }, commands: {}, bindings: ["keymap.normal <Space>bb plugin.boom.go"], events: [:cursor_move], options: [], option_types: {}, filetypes: [])
+      Carat::PluginApi::Manifest.new(name: "boom", version: "1.0.0", api_version: "2.0", actions: { "plugin.boom.go" => "Raise" }, commands: {}, bindings: ["keymap.normal <Space>bb plugin.boom.go"], events: [:cursor_move, :buffer_open], options: [], option_types: {}, filetypes: [])
     end
 
     #: (String, Carat::PluginApi::Context) -> void
@@ -167,8 +167,8 @@ module EditorPluginsTest
       ["the argument is the name", ":Hello Ada<CR>", "#{INFO} Hello, Ada! 1 buffer opened"],
       ["a partial abbreviation is unknown", ":He<CR>", "E492: Not an editor command: He"],
       ["buffer opens are counted", ":e b.txt<CR> hh", "#{INFO} Hello, world! 2 buffers opened"],
-      ["a count reaches the plugin", "3 tt", "count 3 register \"\" buffer 2"],
-      ["a register reaches the plugin", "\"a tt", "count 0 register \"a\" buffer 2"],
+      ["a count reaches the plugin", "3 tt", "count 3 register \"\" buffer 1"],
+      ["a register reaches the plugin", "\"a tt", "count 0 register \"a\" buffer 1"],
       ["an unknown plugin action reports it", ":Nope<CR>", "E492: Not an editor command: Nope"]
     ]) do |keys|
       session(keys).message
@@ -308,7 +308,7 @@ module EditorPluginsTest
 
     # The open file request and scratch buffers across tab pages.
     h = session(" to<C-w>lx<C-w>h tf")
-    t.assert_equal([["zz"], ["", "b.txt", "a.txt"], true], [h.lines, h.buffer_paths, h.assembly.buffers.buffer_at(2).modified?], "opening over a modified buffer keeps it hidden in the list")
+    t.assert_equal([["zz"], ["a.txt", "", "b.txt"], true], [h.lines, h.buffer_paths, h.assembly.buffers.buffer_at(0).modified?], "opening over a modified buffer keeps it hidden in the list")
     h = session(" to th")
     t.assert_equal([["zz"], false, 2], [h.lines, h.state.window.fixed_width, h.window_count], "a side window that takes a file loses its fixed width")
     h = session(" to tfx tf")

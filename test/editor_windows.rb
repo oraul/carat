@@ -75,6 +75,10 @@ module EditorWindowsTest
   STACKED = [[0, 0, 11, 80], [12, 0, 10, 80]]
   BESIDE = [[0, 0, 22, 40], [0, 41, 22, 39]]
 
+  def self.unsaved(name)
+    "E37: No write since last change\nE162: No write since last change for buffer \"#{name}\""
+  end
+
   def self.main
     t = Carat::Testing.new("editor_windows")
 
@@ -276,24 +280,26 @@ module EditorWindowsTest
 
     # A modified buffer whose last window closes stays hidden.
     h = session(":sp b.txt<CR>x<C-w>c:qa<CR>")
-    t.assert_equal([false, E37, ["a.txt"]], [h.quit?, h.message_row, paths(h)], "the hidden buffer blocks :qa")
+    t.assert_equal([false, unsaved("b.txt"), ["b.txt"]], [h.quit?, h.message, paths(h)], "the hidden buffer blocks :qa, which shows it")
     t.assert_equal(["a.txt", "b.txt"], h.buffer_paths, "the hidden buffer is still listed")
     h.type(":wa<CR>")
     t.assert_equal(["z\n", "\"b.txt\" 1L, 2B written"], [h.files.get("b.txt"), h.message_row], ":wa writes the hidden buffer")
-    t.assert_equal(["a.txt"], h.buffer_paths, "a clean hidden buffer leaves the list")
+    t.assert_equal(["a.txt", "b.txt"], h.buffer_paths, "the written hidden buffer stays listed")
     h.type(":qa<CR>")
     t.assert_equal(true, h.quit?, ":qa then ends the editor")
     h = session(":sp b.txt<CR>x<C-w>c:e b.txt<CR>")
     t.assert_equal([["z"], true, "\"b.txt\" 1L, 2B"], [h.lines, h.buffer.modified?, h.message_row], ":e brings the hidden buffer back without reading the file")
     h = session(":sp b.txt<CR><C-w>c")
-    t.assert_equal(["a.txt"], h.buffer_paths, "a clean buffer leaves the list when its window closes")
+    t.assert_equal(["a.txt", "b.txt"], h.buffer_paths, "a clean buffer stays listed when its window closes")
     h = session(":sp b.txt<CR>x:q<CR>")
     t.assert_equal([1, "a.txt", false], [h.window_count, h.buffer.path, h.quit?], ":q closes the window and keeps the buffer")
     h.type(":qa<CR>")
-    t.assert_equal([false, E37], [h.quit?, h.message_row], "and :qa is refused")
+    t.assert_equal([false, unsaved("b.txt"), "b.txt"], [h.quit?, h.message, h.buffer.path], "and :qa is refused, showing it")
     h.type(":q<CR>")
-    t.assert_equal([false, E37], [h.quit?, h.message_row], ":q on the last window is refused by the hidden buffer")
-    h.type(":q!<CR>")
+    t.assert_equal([false, E37], [h.quit?, h.message_row], ":q on the last window is refused by the modified buffer it shows")
+    h.type(":b! 1<CR>:q<CR>")
+    t.assert_equal([false, unsaved("b.txt"), "b.txt"], [h.quit?, h.message, h.buffer.path], ":q on the last window is refused by the hidden buffer and shows it")
+    h.type(":b! 1<CR>:q!<CR>")
     t.assert_equal([false, "b.txt", ["z"]], [h.quit?, h.buffer.path, h.lines], ":q! shows the hidden buffer instead of quitting")
     h.type(":q!<CR>")
     t.assert_equal(true, h.quit?, "a second :q! quits")

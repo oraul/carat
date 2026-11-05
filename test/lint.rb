@@ -209,6 +209,7 @@ module LintTest
     "decode_utf8" => "decodes a UTF-8 sequence",
     "reveal" => "expands the tree down to a path",
     "next_tab" => "moves to the next tab page",
+    "focus_buffer" => "focuses the first window showing a buffer",
     "flag" => "reads a boolean option from the configuration",
     "forward_word" => "a word motion step",
     "backward_word" => "a word motion step",

@@ -122,16 +122,17 @@ ok   Ctrl-W q on the last window quits
 ok   Ctrl-W Ctrl-Q on the last window quits
 ok   Ctrl-W q on the last window refuses a modified buffer
 ok   the other window keeps showing the modified buffer
-ok   the hidden buffer blocks :qa
+ok   the hidden buffer blocks :qa, which shows it
 ok   the hidden buffer is still listed
 ok   :wa writes the hidden buffer
-ok   a clean hidden buffer leaves the list
+ok   the written hidden buffer stays listed
 ok   :qa then ends the editor
 ok   :e brings the hidden buffer back without reading the file
-ok   a clean buffer leaves the list when its window closes
+ok   a clean buffer stays listed when its window closes
 ok   :q closes the window and keeps the buffer
-ok   and :qa is refused
-ok   :q on the last window is refused by the hidden buffer
+ok   and :qa is refused, showing it
+ok   :q on the last window is refused by the modified buffer it shows
+ok   :q on the last window is refused by the hidden buffer and shows it
 ok   :q! shows the hidden buffer instead of quitting
 ok   a second :q! quits
 ok   Ctrl-W o reports one window
@@ -139,4 +140,4 @@ ok   :only keeps the current window with its buffer
 ok   :wa reports the nameless buffer and writes the others
 ok   the nameless buffer stays modified
 ok   :wqa does not quit while a buffer could not be written
-editor_windows: 141 passed, 0 failed
+editor_windows: 142 passed, 0 failed

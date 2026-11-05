@@ -187,7 +187,7 @@ module DomainBufferTest
     t.assert_equal([0, 0, 0, "w.txt", [0, 0], false], [w.top, w.left, w.height, w.buffer.path, w.cursor.to_a, w.fixed_width], "a window starts at the origin with no height, showing its buffer from the start")
     w.top = 7
     t.assert_equal(7, w.top, "a window member has a writer")
-    t.assert_equal([:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks], D::Buffer.members, "buffer members in constructor order")
+    t.assert_equal([:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor], D::Buffer.members, "buffer members in constructor order")
     t.assert_equal([:code, :width, :hl], D::Cell.members, "cell members")
     o = D::Options.new
     t.assert_equal([false, 8, 0], [o.number, o.tabstop, o.scrolloff], "options start with Vim's defaults")

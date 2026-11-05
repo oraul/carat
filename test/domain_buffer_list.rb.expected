@@ -3,15 +3,36 @@ ok   the current window shows the buffer
 ok   a buffer is listed once
 ok   two unnamed buffers are told apart by identity
 ok   neither unnamed buffer is shown
-ok   a clean unshown buffer leaves the list when released
+ok   a clean unshown file buffer stays listed, hidden
 ok   a modified unshown buffer stays hidden
 ok   it is the hidden modified buffer
 ok   the list has a modified buffer
 ok   a shown buffer stays
-ok   loading replaces the window's buffer and drops the one no window shows
+ok   loading replaces the window's buffer and keeps the one it showed
 ok   a listed buffer is found by path
-ok   a dropped buffer is not
+ok   so is the buffer left
 ok   the closed reload pulls the cursors on the buffer back inside it
+ok   a file opened over the empty buffer takes its number
+ok   the empty buffer closes before the file opens
+ok   the buffer left remembers the cursor and a fresh one starts at the top
+ok   a buffer shown again gets its cursor back
+ok   the remembered cursor of b is kept inside its text
+ok   a remembered row past the end lands on the last line
+ok   a second empty buffer is replaced too
+ok   one forward skips the scratch buffer
+ok   forward from the last wraps
+ok   back from the first wraps
+ok   0 stays on a file buffer
+ok   0 from a scratch buffer goes to the next file buffer
+ok   a count wraps past the end
+ok   back two
+ok   the replacement is the next file buffer, or the one before it for the last
+ok   no file buffer to move to
+ok   nor to replace it with
+ok   nothing unsaved
+ok   a hidden buffer in list order
+ok   the current buffer first, and only the hidden ones when asked
+ok   bringing a hidden buffer shows it in the current window
 ok   a changed scratch buffer is not unsaved work
 ok   number_of is the list position from 1
 ok   an unlisted buffer has number 0
@@ -25,4 +46,4 @@ ok   records carry the buffer's id
 ok   a buffer is found by its id
 ok   every listed buffer's events are in the feed in order, with the cause at the time
 ok   the feed reports to the list's tab list
-domain_buffer_list: 27 passed, 0 failed
+domain_buffer_list: 48 passed, 0 failed

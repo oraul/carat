@@ -1,0 +1,89 @@
+ok   one buffer
+ok   :buffers lists the same
+ok   :files lists the same
+ok   the buffer left stays listed, hidden, with its line
+ok   modified buffers carry +
+ok   a buffer another window shows is active
+ok   the current line of the current buffer
+ok   h keeps the hidden buffers
+ok   a keeps the active buffers
+ok   % keeps the current buffer
+ok   + keeps the modified buffers
+ok   flags combine
+ok   # keeps none, as no buffer is alternate
+ok   - keeps none
+ok   u keeps only scratch buffers
+ok   other characters are ignored
+ok   a long name is followed by one space
+ok   a scratch buffer is left out
+ok   :ls! lists it, flagged u, by its title
+ok   :ls u lists only it
+ok   :bn skips it
+ok   :b N does not show it
+ok   :bd N does not delete it
+ok   :bn wraps to the first buffer
+ok   :bp goes back
+ok   :bp wraps to the last buffer
+ok   :bN goes back
+ok   :bnext
+ok   :bprevious
+ok   :bNext
+ok   :bn with a count
+ok   :bp with a count wraps
+ok   :bn with a count past the end wraps around
+ok   :bn 0 stays
+ok   :bn with a huge count does not hang
+ok   :bn with one buffer stays
+ok   :bn with a word
+ok   :b N shows the buffer
+ok   :buffer N
+ok   :b of the current buffer stays
+ok   :b alone stays
+ok   :b of no buffer
+ok   :b 0 names no buffer
+ok   :b with a name
+ok   the cursor comes back
+ok   the cursor comes back through :e
+ok   the cursor comes back after :only
+ok   a modified buffer refuses
+ok   the bang keeps it hidden
+ok   a count before the command is refused
+ok   the buffer left with the bang is hidden and modified
+ok   its changes come back with it
+ok   :bd shows the next buffer
+ok   :bd of the last in the list shows the one before
+ok   :bdelete
+ok   :bd of the only buffer shows a new empty one
+ok   :bd N of a hidden buffer
+ok   :bd N closes the windows showing it
+ok   :bd in a split closes the window
+ok   :bd of a buffer two windows show closes both but the last
+ok   :bd of the only buffer in a split leaves one empty window
+ok   :bd closes a tab page with its last window
+ok   :bd N closes another tab page showing it
+ok   :bd of a modified buffer is refused
+ok   :bd! discards the changes
+ok   :bd N of no buffer
+ok   :bdelete! N of no buffer names the command as typed
+ok   :bd with a name
+ok   the new empty buffer gets a new number
+ok   a file opened over it takes that number
+ok   the buffer shown in place of the deleted one gets its cursor back
+ok   a file opened again after :bd gets a new number
+ok   E141 names the buffer number, which does not shift when a buffer leaves
+ok   a file opened over the empty startup buffer is buffer 1
+ok   :qa names the current buffer
+ok   :qa shows a hidden buffer
+ok   :qa goes to the tab page showing it
+ok   :qa goes to the window showing it
+ok   :qa prefers the current buffer
+ok   :qa names an unnamed buffer
+ok   :qa! ends the editor
+ok   :q on a modified current buffer keeps one line
+ok   :q names a hidden buffer
+ok   :q! names a hidden buffer
+ok   :q! twice ends the editor
+ok   :x names a hidden buffer
+ok   :wq names a hidden buffer
+ok   :q! over a hidden buffer discards the current buffer's changes
+editor_buffers: 88 passed, 0 failed
