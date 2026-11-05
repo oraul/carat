@@ -39,11 +39,6 @@ module Carat
           @marked
         end
 
-        #: () -> bool
-        def show_hidden?
-          @show_hidden
-        end
-
         #: () -> void
         def toggle_hidden
           @show_hidden = !@show_hidden

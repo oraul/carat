@@ -394,9 +394,9 @@ The built-in `explorer` plugin is Carat's own, not part of Neovim; its keys foll
 | --- | --- | --- | --- |
 | `<leader>e`, `:Explorer` | normal mode | `plugin.explorer.toggle` | Open the tree at the configured side and width, focus it when it is open, close it when it is current |
 | `:ExplorerFind` | command line | none | Open or focus the tree with the current file revealed and the cursor on it |
-| `<CR>`, `l` | tree | `plugin.explorer.open` | Open the file in the previously used file window, or expand the directory |
+| `l` | tree | `plugin.explorer.open` | Open the file in the previously used file window, or expand the directory and leave an expanded one expanded |
 | `h` | tree | `plugin.explorer.collapse` | Collapse the directory, or go to the parent's line |
-| `o` | tree | `plugin.explorer.toggle_dir` | Toggle the directory, or open the file |
+| `<CR>`, `o` | tree | `plugin.explorer.toggle_dir` | Toggle the directory, or open the file in the previously used file window |
 | `s`, `v`, `t` | tree | `plugin.explorer.open_split`, `open_vsplit`, `open_tab` | Open the file in a horizontal split, a vertical split, or a new tab page |
 | `a` | tree | `plugin.explorer.create` | Prompt for a name and create a file, or a directory when it ends with `/`, in the entry's directory |
 | `r` | tree | `plugin.explorer.rename` | Prompt for a new name, starting from the current one, and rename in place |

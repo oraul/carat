@@ -114,7 +114,7 @@ Carat writes 24-bit colors when the terminal sets `COLORTERM` to `truecolor` or 
 
 `<leader>e` (Space, then `e`) or `:Explorer` opens a file tree in a 30-column window at the left, rooted at the directory you started Carat in, with the current file revealed and marked; the same key focuses the tree when it is open and closes it when it is focused. `:ExplorerFind` reveals the current file in the tree. Inside the tree:
 
-- `<CR>` or `l` opens a file in the window you came from, or expands a directory; `h` collapses or goes to the parent; `o` toggles a directory.
+- `<CR>` or `l` opens a file in the window you came from; on a directory `<CR>` and `o` toggle it, `l` expands it, and `h` collapses it or goes to the parent.
 - `s`, `v`, and `t` open the file in a horizontal split, a vertical split, or a new tab page.
 - `a` creates a file next to the entry, or a directory when the name ends with `/`; `r` renames; `d` deletes a file or an empty directory after asking `y` or `n`. The name is typed on the command line, Enter confirms, Escape cancels.
 - `R` refreshes, `H` shows dot files, `-` moves the root up, `C` makes the directory under the cursor the root, `q` closes the tree, and `?` shows these keys.

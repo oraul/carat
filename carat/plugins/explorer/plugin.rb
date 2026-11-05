@@ -13,7 +13,7 @@ module Carat
       class Plugin < Carat::PluginApi::Plugin
         NAME = "explorer"
         TITLE = "explorer"
-        HELP = "<CR>/l open  h close  o toggle  s/v/t split/vsplit/tab  a add  r rename  d delete  R refresh  H hidden  - up  C root  q quit"
+        HELP = "<CR>/o toggle  l open  h close  s/v/t split/vsplit/tab  a add  r rename  d delete  R refresh  H hidden  - up  C root  q quit"
 
         # @rbs @host: Carat::PluginApi::Host?
         # @rbs @tree: Tree?
@@ -250,8 +250,8 @@ module Carat
           end
         end
 
-        # A directory expands (or toggles with o); a file opens in the
-        # editing window, a split, or a tab page.
+        # A directory expands (l) or toggles (<CR> and o); a file opens
+        # in the editing window, a split, or a tab page.
         #: (Carat::PluginApi::Host, Tree, Integer, Symbol) -> void
         def open_entry(host, tree, row, how)
           n = tree.at(row)
@@ -540,7 +540,7 @@ module Carat
         #: () -> Array[String]
         def keymap
           [
-            "keymap.normal <CR> plugin.explorer.open",
+            "keymap.normal <CR> plugin.explorer.toggle_dir",
             "keymap.normal l plugin.explorer.open",
             "keymap.normal h plugin.explorer.collapse",
             "keymap.normal o plugin.explorer.toggle_dir",

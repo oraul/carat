@@ -157,9 +157,9 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | --- | --- | --- | --- |
 | `plugin.explorer.toggle` | `explorer` | `<leader>e` | Open the file tree, focus it, or close it when it is focused |
 | `plugin.explorer.focus` | `explorer` | none | Open the file tree or focus it |
-| `plugin.explorer.open` | `explorer` | `<CR>`, `l` in the tree | Open the file under the cursor in the editing window, or expand the directory |
+| `plugin.explorer.open` | `explorer` | `l` in the tree | Open the file under the cursor in the editing window, or expand the directory |
 | `plugin.explorer.collapse` | `explorer` | `h` in the tree | Collapse the directory under the cursor, or go to its parent |
-| `plugin.explorer.toggle_dir` | `explorer` | `o` in the tree | Expand or collapse the directory under the cursor, or open the file |
+| `plugin.explorer.toggle_dir` | `explorer` | `<CR>`, `o` in the tree | Expand or collapse the directory under the cursor, or open the file |
 | `plugin.explorer.open_split` | `explorer` | `s` in the tree | Open the file under the cursor in a horizontal split |
 | `plugin.explorer.open_vsplit` | `explorer` | `v` in the tree | Open the file under the cursor in a vertical split |
 | `plugin.explorer.open_tab` | `explorer` | `t` in the tree | Open the file under the cursor in a new tab page |

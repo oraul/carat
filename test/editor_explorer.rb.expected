@@ -41,6 +41,8 @@ ok   :ExplorerFind opens a closed tree
 ok   Enter opens the file in the editing window
 ok   l opens it too
 ok   o on a file opens it too
+ok   Enter on a file in an expanded directory opens it
+ok   Enter on a file in a nested directory opens it
 ok   s opens it in a horizontal split
 ok   v opens it in a vertical split
 ok   t opens it in a new tab page
@@ -50,13 +52,34 @@ ok   Enter opens in the window used before the tree
 ok   the new tree is fixed-width and the file window is not
 ok   Enter expands a directory
 ok   l expands it too
-ok   Enter leaves an expanded directory expanded
+ok   Enter closes an expanded directory
+ok   Enter closes a directory l expanded
+ok   l leaves an expanded directory expanded
+ok   l leaves a directory Enter expanded expanded
+ok   o expands a directory
 ok   o toggles it closed again
+ok   o closes a directory Enter expanded
 ok   h collapses an expanded directory
+ok   h collapses a directory Enter expanded
+ok   h on a collapsed directory goes to the root line
+ok   Enter expands a nested directory
+ok   Enter closes a nested directory
+ok   l leaves a nested directory expanded
+ok   o toggles a nested directory
+ok   h collapses an expanded nested directory
+ok   h on a collapsed nested directory goes to its parent
+ok   Enter expands a directory in the tree reached through Ctrl-W
+ok   Enter closes it there
+ok   l leaves it expanded there
+ok   o toggles it there
+ok   h collapses it there
+ok   Enter toggles in the tree reached through Ctrl-W w
 ok   h on a file goes to its parent
 ok   h on a top-level entry goes to the root line
 ok   h on the root line does nothing
 ok   Enter on the root line does nothing
+ok   l on the root line does nothing
+ok   o on the root line does nothing
 ok   H shows hidden files but not ignored ones
 ok   H again hides them
 ok   - moves the root up and keeps the old root expanded
@@ -110,4 +133,4 @@ ok   the screen shows each illegal byte as one replacement character
 ok   the explorer stays enabled after listing them
 ok   Enter opens a name that is not UTF-8
 ok   the status line names the opened file with one replacement character per illegal byte
-editor_explorer: 112 passed, 0 failed
+editor_explorer: 135 passed, 0 failed
