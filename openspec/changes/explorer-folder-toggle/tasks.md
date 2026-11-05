@@ -12,4 +12,4 @@
 ## 3. Documentation and checks
 
 - [x] 3.1 `docs/actions.md`: `<CR>` moves from the `plugin.explorer.open` row to the `plugin.explorer.toggle_dir` row, and the action descriptions match the manifest; the actions test in `make test-one T=test/lint.rb` and `make docs-lint` pass.
-- [ ] 3.2 `make gates` and `make spec-validate` pass.
+- [x] 3.2 `make gates` and `make spec-validate` pass.
