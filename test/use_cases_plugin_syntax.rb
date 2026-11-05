@@ -110,19 +110,19 @@ module UseCasesPluginSyntaxTest
     # Highlighting a buffer through it: :set ft=toy.
     first.tokens = [0, 3, H::COMMENT]
     h.type(":set ft=toy<CR>")
-    t.assert_equal([H::COMMENT, H::COMMENT, H::NORMAL], [h.frame.hl_at(0, 4), h.frame.hl_at(0, 6), h.frame.hl_at(0, 7)], "the tokens color the text")
+    t.assert_equal([H::COMMENT, H::COMMENT, H::NORMAL], [H.base(h.frame.hl_at(0, 4)), H.base(h.frame.hl_at(0, 6)), H.base(h.frame.hl_at(0, 7))], "the tokens color the text")
     t.assert_equal(["toy one 0", "toy two 1"], first.log.last(2), "each line starts in the state the line before ended in")
 
     # A plugin that declares a filetype without a tokenizer is disabled when
     # it is first asked.
     h.type(":set ft=lazy<CR>")
     t.assert_equal([false, true], [h.plugins.enabled?("lazy"), h.message.start_with?("Plugin lazy disabled:")], "a missing tokenize disables the plugin")
-    t.assert_equal(H::NORMAL, h.frame.hl_at(0, 4), "and the buffer is plain")
+    t.assert_equal(H::NORMAL, H.base(h.frame.hl_at(0, 4)), "and the buffer is plain")
 
     # A token with an id out of range is dropped from the frame too.
     first.tokens = [0, 1, 9999]
     h.type(":set ft=toy<CR>")
-    t.assert_equal(H::NORMAL, h.frame.hl_at(0, 4), "an out of range id is drawn normal")
+    t.assert_equal(H::NORMAL, H.base(h.frame.hl_at(0, 4)), "an out of range id is drawn normal")
 
     t.finish
   end

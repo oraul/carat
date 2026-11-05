@@ -24,6 +24,7 @@ module Carat
       option.smartcase true
       option.hlsearch true
       option.incsearch true
+      option.cursorline true
       option.wrap false
       option.scroll 0
       option.scrolloff 5

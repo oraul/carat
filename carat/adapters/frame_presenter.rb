@@ -40,7 +40,12 @@ module Carat
     # a frame's matching runs under its own budget and stops highlighting
     # rows when it is spent, and a row records the last search's stamp, 0
     # when nothing is highlighted, so a frame without search does no
-    # other work. The cursor is placed in the current window.
+    # other work. With cursorline the cursor's row of the current window
+    # is lifted onto the cursor-line layer of groups from the end of its
+    # gutter to its right edge, its number in CursorLineNr, the layer
+    # being an input of the row like its cursor column. The cursor is
+    # placed in the current window, a bar in insert mode, an underline in
+    # replace mode, and a block otherwise.
     #
     # Two frames are kept and painted in turn, so the one the screen shows
     # stays intact while the other is drawn; they are reallocated only when
@@ -94,6 +99,7 @@ module Carat
       # @rbs @drawn: Integer
       # @rbs @row_of: Integer
       # @rbs @current: bool
+      # @rbs @number_hl: Integer
 
       #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, start_screen: Domain::StartScreen) -> void
       def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, start_screen:)
@@ -108,6 +114,7 @@ module Carat
         @drawn = 0
         @row_of = -1
         @current = false
+        @number_hl = Domain::Highlight::LINE_NUMBER
         @front = Domain::Frame.new(rows: 1, cols: 1)
         @back = Domain::Frame.new(rows: 1, cols: 1)
         @front_rows = PaintedRows.new(rows: 1, slots: 1)
@@ -319,12 +326,22 @@ module Carat
           col = clamp(window.col + gutter + cursor_dcol - window.left, cols - 1)
           frame.cursor_row = row
           frame.cursor_col = col
-          if visual && frame.hl_at(row, col) == Domain::Highlight::VISUAL
+          hl = frame.hl_at(row, col)
+          if visual && Domain::Highlight.base(hl) == Domain::Highlight::VISUAL
             line = window.buffer.line(cursor.row)
-            frame.set_hl(row, col, token_group(window.buffer.syntax_cache.lookup(cursor.row, line).tokens, cursor.col))
+            frame.set_hl(row, col, token_group(window.buffer.syntax_cache.lookup(cursor.row, line).tokens, cursor.col) + hl - Domain::Highlight::VISUAL)
           end
         end
-        frame.cursor_shape = state.mode == Domain::Mode::INSERT ? :bar : :block
+        frame.cursor_shape = shape_of(state.mode)
+      end
+
+      # The cursor shape of a mode: a bar in insert mode, an underline in
+      # replace mode, a block in every other.
+      #: (Symbol) -> Symbol
+      def shape_of(mode)
+        return :bar if mode == Domain::Mode::INSERT
+        return :underline if mode == Domain::Mode::REPLACE
+        :block
       end
 
       # The group of the token covering a code point column, the normal
@@ -371,6 +388,7 @@ module Carat
         highlights = buffer.syntax_cache
         search = @drawn
         @current = current
+        lit = current && options.cursorline ? Domain::Highlight::CURSOR_LINE_LAYER : 0
         count = buffer.line_count
         i = 0
         while i < height
@@ -382,6 +400,7 @@ module Carat
           number = -1
           sign = ""
           cur = -1
+          layer = 0
           @sel_from = -1
           @sel_to = -2
           @sel_end = -1
@@ -390,13 +409,18 @@ module Carat
             syntax = highlights.lookup(row, line)
             number = number_shown(row, cursor.row, options, gutter, signs)
             sign = buffer.sign_at(row) if signs
-            cur = cursor.col if row == cursor.row
+            if row == cursor.row
+              cur = cursor.col
+              layer = lit
+            end
             select_columns(selection, buffer, row, line, tabstop, block) if selecting
           end
-          unless @back_rows.same?(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, syntax, search)
+          unless @back_rows.same?(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search)
             @row_of = row
+            @number_hl = layer > 0 ? Domain::Highlight::CURSOR_LINE_NUMBER : Domain::Highlight::LINE_NUMBER
             paint_row(frame, frame_row, x, width, gutter, line, number, sign, signs, text_width, left, tabstop, syntax)
-            @back_rows.store(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, syntax, search)
+            frame.lift(frame_row, x + gutter, x + width, layer) if layer > 0
+            @back_rows.store(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search)
           end
           @back_rows.place(seg, window.id, top)
           if base_same
@@ -406,7 +430,7 @@ module Carat
               source = j >= 0 && j < height ? wrow + j : -1
               frame.sources[frame_row] = source
             end
-            frame.dirty[frame_row] = 1 if source < 0 || !@front_rows.same?(@front_rows.index(source, slot), line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, syntax, search)
+            frame.dirty[frame_row] = 1 if source < 0 || !@front_rows.same?(@front_rows.index(source, slot), line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search)
           end
           i += 1
         end
@@ -478,7 +502,7 @@ module Carat
           end
           if number >= 0
             visible = numbers > width ? width : numbers
-            frame.put_number(frame_row, start, numbers - 1, number, visible, Domain::Highlight::LINE_NUMBER)
+            frame.put_number(frame_row, start, numbers - 1, number, visible, @number_hl)
           end
         end
         decoded = @cache.fetch(line, tabstop)

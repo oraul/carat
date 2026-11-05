@@ -2,8 +2,8 @@
 # checks, an insert-write-quit session, a quit refused then forced, split
 # windows and a tab page, the file tree, a linewise visual delete, a
 # Ruby file in colors, a file that is not UTF-8, a hostile project and
-# home directory, and SIGTERM. Runs
-# build/bin/carat, the release binary make test builds first, or the
+# home directory, and SIGTERM and SIGINT, each exit restoring the cursor.
+# Runs build/bin/carat, the release binary make test builds first, or the
 # binary CARAT_BIN names (CI runs the development build of make dev-build
 # on pull requests). Prints only the harness lines so the snapshot is
 # stable.
@@ -25,6 +25,9 @@ require_relative "../carat/testing"
 module SmokeEditorTest
   BIN = ENV["CARAT_BIN"] || "build/bin/carat"
   DIR = "build/smoke"
+  # The last bytes of every exit: the terminal's own cursor shape, the
+  # cursor shown, and the main screen.
+  RESTORED = "\e[0 q\e[?25h\e[?1049l"
 
   # Reads until the editor produces nothing for quiet seconds, appending to
   # out, so the next write lands while the editor is waiting on input.
@@ -114,6 +117,7 @@ module SmokeEditorTest
     writer.write(":q\r")
     code = finish_session(reader, out, pid)
     t.assert_equal(0, code, "the editor started without a file exits with status 0 after :q")
+    t.assert_true(out.end_with?(RESTORED), "after :q the output ends with the terminal's cursor restored and the alternate screen left")
 
     # Insert, write, quit on a new file.
     path = "#{DIR}/fresh.txt"
@@ -138,7 +142,7 @@ module SmokeEditorTest
     code = finish_session(reader, out, pid)
     t.assert_equal(0, code, "the editor exits with status 0 after :wq")
     t.assert_equal("hello\n", File.read(path), "the file holds the typed text")
-    t.assert_true(out.end_with?("\e[?1049l"), "the output ends with leaving the alternate screen")
+    t.assert_true(out.end_with?(RESTORED), "after :wq the output ends with the terminal's cursor restored and the alternate screen left")
 
     # Quit refused, then forced, on the existing file.
     reader, writer, pid = PTY.spawn(BIN, path)
@@ -184,7 +188,7 @@ module SmokeEditorTest
     writer.write(":q\r")
     code = finish_session(reader, out, pid)
     t.assert_equal(0, code, "the editor exits with status 0 after closing the tab page, a window, and the last window")
-    t.assert_true(out.end_with?("\e[?1049l"), "closing the last window leaves the alternate screen")
+    t.assert_true(out.end_with?(RESTORED), "closing the last window restores the cursor and leaves the alternate screen")
 
     # <C-w> waits for its second key past timeoutlen (500 ms in the
     # shipped configuration): after a vertical split, <C-w>, a pause, and
@@ -227,7 +231,7 @@ module SmokeEditorTest
     writer.write(":q\r")
     code = finish_session(reader, out, pid)
     t.assert_equal(0, code, "the editor exits with status 0 after :q in the file window beside the tree")
-    t.assert_true(out.end_with?("\e[?1049l"), "quitting beside the tree leaves the alternate screen")
+    t.assert_true(out.end_with?(RESTORED), "quitting beside the tree restores the cursor and leaves the alternate screen")
 
     # PageDown, as the terminal sends it, scrolls a page: the window's 22
     # text rows show lines 1 to 22, and a page of 20 rows later lines 21
@@ -285,6 +289,8 @@ module SmokeEditorTest
     t.assert_true(out.include?("3L, 18B"), "the editor drew its first frame for the color check")
     t.assert_true(out.match?(/\e\[0;[0-9;]+mdef/), "def is written after a color sequence")
     t.assert_true(out.match?(/\e\[0;[0-9;]+m"hi"/), "the string is written after a color sequence")
+    writer.write(":set nocul\r")
+    settle(reader, out, 0.5)
     mark = out.bytesize
     writer.write(":syntax off\r")
     settle(reader, out, 0.5)
@@ -347,7 +353,21 @@ module SmokeEditorTest
     Process.kill("TERM", pid)
     code = finish_session(reader, out, pid)
     t.assert_equal(0, code, "SIGTERM ends the editor with status 0")
-    t.assert_true(out.end_with?("\e[?1049l"), "SIGTERM leaves the alternate screen")
+    t.assert_true(out.end_with?(RESTORED), "SIGTERM restores the cursor and leaves the alternate screen")
+
+    # SIGINT, sent from outside since raw mode reads Ctrl-C as a key, ends
+    # it the same way, from insert mode with the bar cursor.
+    reader, writer, pid = PTY.spawn(BIN, path)
+    writer.winsize = [24, 80]
+    out = +"".b
+    settle(reader, out, 0.5)
+    writer.write("i")
+    settle(reader, out, 0.5)
+    t.assert_true(out.include?("\e[6 q"), "the editor shows the bar cursor before the interrupt")
+    Process.kill("INT", pid)
+    code = finish_session(reader, out, pid)
+    t.assert_equal(0, code, "SIGINT ends the editor with status 0")
+    t.assert_true(out.end_with?(RESTORED), "SIGINT restores the cursor and leaves the alternate screen")
 
     t.finish
   end

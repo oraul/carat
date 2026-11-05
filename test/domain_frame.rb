@@ -43,6 +43,10 @@ module DomainFrameTest
     g.blank(1, 0, 8)
     g.fill(1, 2, 5, H::VISUAL)
     t.assert_equal([H::NORMAL, H::VISUAL, H::VISUAL, H::NORMAL], [g.hl_at(1, 1), g.hl_at(1, 2), g.hl_at(1, 4), g.hl_at(1, 5)], "fill sets the highlight of a span of cells")
+    g.lift(1, 1, 4, H::CURSOR_LINE_LAYER)
+    g.lift(1, 3, 99, H::CURSOR_LINE_LAYER)
+    layer = H::CURSOR_LINE_LAYER
+    t.assert_equal([H::NORMAL, H::VISUAL + layer, H::NORMAL + layer, H::NORMAL + layer], [g.hl_at(1, 0), g.hl_at(1, 2), g.hl_at(1, 5), g.hl_at(1, 7)], "lift puts a span on the layer once and stops at the right edge")
     g.blank(1, 0, 99)
     t.assert_equal(H::NORMAL, g.hl_at(1, 7), "blank stops at the right edge")
 

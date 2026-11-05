@@ -65,21 +65,23 @@ module DomainThemeTest
 
   # The groups of a theme drawn with its background whose foreground
   # falls below WCAG AA on their background, 4.5:1 for text and 3:1 for
-  # decorations, at 24 bits or at 256 colors, each with its ratio.
-  #: (Carat::Domain::Theme, bool) -> Array[String]
-  def self.low_contrast(theme, at256)
+  # decorations, at 24 bits or at 256 colors, each with its ratio; with
+  # layer H::CURSOR_LINE_LAYER, each group as drawn on the cursor line,
+  # held to 3:1 as the selection's background is.
+  #: (Carat::Domain::Theme, bool, Integer) -> Array[String]
+  def self.low_contrast(theme, at256, layer)
     out = []
     id = 0
     while id < H::COUNT
       unless NO_TEXT.include?(id)
-        fg = theme.fg(id)
-        bg = theme.bg(id)
+        fg = theme.fg(id + layer)
+        bg = theme.bg(id + layer)
         if at256
-          fg = shown_256(fg, theme.fg256(id))
-          bg = shown_256(bg, theme.bg256(id))
+          fg = shown_256(fg, theme.fg256(id + layer))
+          bg = shown_256(bg, theme.bg256(id + layer))
         end
         ratio = contrast(fg, bg)
-        out << "#{H::NAMES[id]} #{ratio}" if ratio < (decoration?(id) ? 300 : 450)
+        out << "#{H::NAMES[id]} #{ratio}" if ratio < (decoration?(id) || layer > 0 ? 300 : 450)
       end
       id += 1
     end
@@ -180,7 +182,30 @@ module DomainThemeTest
       ["dark_plus at 256 colors", ["dark_plus", "256"], []],
       ["light_plus at 24 bits", ["light_plus", "24"], []],
       ["light_plus at 256 colors", ["light_plus", "256"], []]
-    ]) { |input| low_contrast(D::Themes.find(input[0].to_s, "theme"), input[1].to_s == "256") }
+    ]) { |input| low_contrast(D::Themes.find(input[0].to_s, "theme"), input[1].to_s == "256", 0) }
+
+    # On the cursor line, over CursorLine's background where a group has
+    # none of its own, every group keeps 3:1.
+    t.table([
+      ["one_dark on the cursor line at 24 bits", ["one_dark", "24"], []],
+      ["one_dark on the cursor line at 256 colors", ["one_dark", "256"], []],
+      ["one_light on the cursor line at 24 bits", ["one_light", "24"], []],
+      ["one_light on the cursor line at 256 colors", ["one_light", "256"], []],
+      ["dark_plus on the cursor line at 24 bits", ["dark_plus", "24"], []],
+      ["dark_plus on the cursor line at 256 colors", ["dark_plus", "256"], []],
+      ["light_plus on the cursor line at 24 bits", ["light_plus", "24"], []],
+      ["light_plus on the cursor line at 256 colors", ["light_plus", "256"], []]
+    ]) { |input| low_contrast(D::Themes.find(input[0].to_s, "theme"), input[1].to_s == "256", H::CURSOR_LINE_LAYER) }
+    lit = H::CURSOR_LINE_LAYER
+    t.assert_equal([painted.fg(H::COMMENT), painted.bg(H::CURSOR_LINE), dark.bg(H::CURSOR_LINE), painted.attr(H::COMMENT)], [painted.fg(H::COMMENT + lit), painted.bg(H::COMMENT + lit), dark.bg(H::NORMAL + lit), painted.attr(H::COMMENT + lit)], "a group on the cursor line keeps its color and attributes over CursorLine's background")
+    t.assert_equal([dark.bg(H::VISUAL), dark.bg16(H::SEARCH), dark.attr16(H::VISUAL)], [dark.bg(H::VISUAL + lit), dark.bg16(H::SEARCH + lit), dark.attr16(H::VISUAL + lit)], "a group with a background of its own keeps it on the cursor line")
+    t.assert_equal([D::Theme::ITALIC | D::Theme::UNDERLINE, D::Theme::UNDERLINE], [dark.attr16(H::COMMENT + lit), dark.attr16(H::NORMAL + lit)], "at 16 colors the cursor line underlines a group without a background")
+    t.assert_equal([painted.bg16(H::NORMAL), painted.bg16(H::NORMAL), painted.fg16(H::NORMAL), D::Theme::UNDERLINE], [painted.bg16(H::NORMAL + lit), painted.bg16(H::COMMENT + lit), painted.fg16(H::NORMAL + lit), painted.attr16(H::NORMAL + lit)], "at 16 colors a painted theme keeps Normal's background on the cursor line")
+    PALETTES.each do |name|
+      theme = D::Themes.find(name, "theme")
+      t.assert_true(theme.bg16(H::NORMAL + lit) >= 0 && theme.bg16(H::COMMENT + lit) == theme.bg16(H::NORMAL), "#{name}: at 16 colors the painted cursor line keeps the background")
+    end
+    t.assert_equal([H::COMMENT, H::COMMENT, H::NORMAL, 2 * H::COUNT], [H.base(H::COMMENT), H.base(H::COMMENT + lit), H.base(lit), H::LIMIT], "base strips the cursor-line layer")
     t.assert_true(contrast(painted.fg(H::COMMENT), painted.bg(H::COMMENT)) >= 450, "one_dark comments are readable")
     t.assert_equal([454, 100], [contrast(0x767676, 0xffffff), contrast(0x777777, 0x777777)], "the contrast of WCAG's lightest AA gray on white and of a color on itself")
 

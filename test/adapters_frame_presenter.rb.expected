@@ -143,4 +143,24 @@ ok   nohlsearch draws nothing
 ok   an empty match is not drawn, a longer one is
 ok   the previewed match is in the IncSearch group
 ok   a backward search prompt shows a question mark
-adapters_frame_presenter: 145 passed, 0 failed
+ok   the cursor's row of the current window is lit
+ok   the blanks after the text are lit to the window's edge
+ok   the gutter is not lifted
+ok   with the option off no row is lit
+ok   the lit row follows j
+ok   turning the option off repaints the row
+ok   only the current window, at the bottom, is lit
+ok   focus moves the lit row to the top window
+ok   side by side, only the right window's row is lit, to its edge
+ok   the cursor line's number is in CursorLineNr
+ok   the text takes its group on the layer, the status line keeps its own
+ok   a selection on the cursor line keeps the Visual group on the layer, the cursor cell its own
+ok   a block in normal mode
+ok   a bar in insert mode
+ok   an underline in replace mode
+ok   a block in visual mode
+ok   a block in visual line mode
+ok   a block in visual block mode
+ok   a block while an operator waits
+ok   a block on the command line
+adapters_frame_presenter: 165 passed, 0 failed

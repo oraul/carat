@@ -7,6 +7,12 @@ require_relative "../carat/testing"
 module EditorSearchTest
   # The editor over text with the default configuration and an extra
   # configuration line, the cursor at (row, col).
+  # The group of a cell, without the cursor-line layer the shipped
+  # cursorline puts it on.
+  def self.group(h, row, col)
+    Carat::Domain::Highlight.base(h.frame.cell(row, col).hl)
+  end
+
   def self.editor(text, row, col)
     config = Carat::Doubles::FixedConfig.with("option.number false\noption.relativenumber false\n")
     files = Carat::Doubles::MemoryFiles.new
@@ -122,12 +128,12 @@ module EditorSearchTest
     t.assert_equal([:cmdline, "/"], [h.mode, h.screen[9].strip], "slash opens the search prompt")
     h.type("b")
     t.assert_equal([0, 2], h.cursor, "incsearch moves the cursor to the first match")
-    t.assert_equal(Carat::Domain::Highlight::INC_SEARCH, h.frame.cell(0, 2).hl, "the previewed match is drawn in IncSearch")
+    t.assert_equal(Carat::Domain::Highlight::INC_SEARCH, group(h, 0, 2), "the previewed match is drawn in IncSearch")
     h.type("x")
     t.assert_equal([0, 0], h.cursor, "with no match the cursor goes back")
     h.type("<Esc>")
     t.assert_equal([[0, 0], :normal], [h.cursor, h.mode], "escape puts the cursor back")
-    t.assert_equal(Carat::Domain::Highlight::NORMAL, h.frame.cell(0, 2).hl, "and ends the preview")
+    t.assert_equal(Carat::Domain::Highlight::NORMAL, group(h, 0, 2), "and ends the preview")
     h.type(":set nois<CR>/b")
     t.assert_equal([0, 0], h.cursor, "without incsearch the cursor stays while typing")
     h.type("<Esc>")
@@ -141,22 +147,38 @@ module EditorSearchTest
     h = editor("a b a\n", 0, 0)
     h.type("/a<CR>")
     sea = Carat::Domain::Highlight::SEARCH
-    t.assert_equal([sea, sea], [h.frame.cell(0, 0).hl, h.frame.cell(0, 4).hl], "hlsearch draws every match")
-    t.assert_true(h.frame.cell(0, 2).hl != sea, "and nothing else")
+    t.assert_equal([sea, sea], [group(h, 0, 0), group(h, 0, 4)], "hlsearch draws every match")
+    t.assert_true(group(h, 0, 2) != sea, "and nothing else")
     h.type(":noh<CR>")
-    t.assert_true(h.frame.cell(0, 4).hl != sea, ":noh hides the highlight")
+    t.assert_true(group(h, 0, 4) != sea, ":noh hides the highlight")
     h.type("n")
-    t.assert_equal(sea, h.frame.cell(0, 4).hl, "n shows it again")
+    t.assert_equal(sea, group(h, 0, 4), "n shows it again")
     h.type(":nohlsearch<CR>:set hls<CR>")
-    t.assert_equal(sea, h.frame.cell(0, 4).hl, ":set hlsearch shows it again")
+    t.assert_equal(sea, group(h, 0, 4), ":set hlsearch shows it again")
     h.type(":set nohls<CR>")
-    t.assert_true(h.frame.cell(0, 4).hl != sea, ":set nohlsearch hides it")
+    t.assert_true(group(h, 0, 4) != sea, ":set nohlsearch hides it")
     h.type(":set hls?<CR>")
     t.assert_equal("nohlsearch", h.message, ":set hls? shows the option")
     h.type(":set invhls<CR>:set hlsearch?<CR>")
     t.assert_equal("  hlsearch", h.message, "inv switches it")
     h.type(":set hls=1<CR>")
     t.assert_equal("E474: Invalid argument: hls=1", h.message, "a boolean takes no value")
+
+    # :set cursorline (cul) takes the same boolean forms; the shipped
+    # configuration turns it on. Rows are [label, keys, [message, whether
+    # the cursor's line is lit]].
+    t.table([
+      ["cul? shows it on, as shipped", ":set cul?<CR>", ["  cursorline", true]],
+      ["nocul turns it off", ":set nocul<CR>:set cursorline?<CR>", ["nocursorline", false]],
+      ["invcul switches it", ":set invcul<CR>:set cul?<CR>", ["nocursorline", false]],
+      ["cul! switches it twice back on", ":set cul!<CR>:set cul!<CR>:set cul?<CR>", ["  cursorline", true]],
+      ["cul turns it back on", ":set nocul<CR>:set cul<CR>:set cul?<CR>", ["  cursorline", true]],
+      ["a value is E474", ":set cul=1<CR>", ["E474: Invalid argument: cul=1", true]]
+    ]) do |keys|
+      h = editor("ab\n", 0, 0)
+      h.type(keys.to_s)
+      [h.message, h.frame.hl_at(0, 0) >= Carat::Domain::Highlight::CURSOR_LINE_LAYER]
+    end
 
     t.finish
   end

@@ -14,6 +14,8 @@ ok   unchanged shape is not repeated
 ok   changed row is written with its highlight
 ok   unchanged row is not written
 ok   bar shape is emitted when it changes
+ok   the underline shape is emitted when it changes
+ok   an unchanged underline is not repeated
 ok   a size change clears the screen
 ok   a size change repaints every row
 ok   a wide character is written once and its continuation cell skipped
@@ -23,7 +25,7 @@ ok   the output holds no C0 or C1 code point outside the escape sequences
 ok   no raw CSI introducer is written
 ok   no raw OSC introducer is written
 ok   leave reaches the terminal
-ok   leave restores the block cursor and the main screen last
+ok   leave restores the terminal's own cursor shape, shows it, and restores the main screen last
 ok   output begins with the alternate screen
 ok   inactive status lines have the theme's StatusLineNC
 ok   tab line labels have TabLine
@@ -56,6 +58,7 @@ ok   a window beside another scrolls by rows, without a region
 ok   and writes the rows that changed
 ok   j at the bottom scrolls the window with a region
 ok   and writes fewer than 500 bytes
+ok   with the cursor line j also rewrites the two lines it moves between, fewer than 1500 bytes
 ok   l writes no buffer text
 ok   l writes only the changed cell of the ruler
 ok   the painted Normal is one_dark's text color on its background
@@ -82,6 +85,12 @@ ok   dark_plus's keyword
 ok   light_plus's comment
 ok   a file-icon group
 ok   Normal is a bare reset
+ok   Normal on the cursor line takes its background
+ok   a comment on the cursor line keeps its color
+ok   a 256-color comment on the cursor line
+ok   a 16-color comment on the cursor line is underlined
+ok   a selection on the cursor line keeps its background
+ok   a 16-color selection on the cursor line is not underlined
 ok   the nearest palette colors: cube corners and grays
 ok   an id out of range is drawn as Normal
-adapters_screen_presenter: 86 passed, 0 failed
+adapters_screen_presenter: 95 passed, 0 failed

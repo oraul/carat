@@ -107,6 +107,15 @@ module AdaptersScreenPresenterTest
     t.assert_true(third.include?("\e[3;1H#{sgr256(H::STATUS)}three"), "changed row is written with its highlight")
     t.assert_equal(false, third.include?("hello"), "unchanged row is not written")
     t.assert_true(third.include?("\e[6 q"), "bar shape is emitted when it changes")
+    changed.cursor_shape = :underline
+    changed.serial += 1
+    screen.present(changed)
+    t.assert_true(terminal.last_write.include?("\e[4 q"), "the underline shape is emitted when it changes")
+    screen.present(changed)
+    t.assert_equal(false, terminal.last_write.include?(" q"), "an unchanged underline is not repeated")
+    changed.cursor_shape = :bar
+    changed.serial += 1
+    screen.present(changed)
 
     resized = D::Frame.new(rows: 2, cols: 6)
     resized.put(0, 0, "hello", D::Highlight::NORMAL)
@@ -144,7 +153,7 @@ module AdaptersScreenPresenterTest
 
     screen.leave
     t.assert_equal(1, terminal.left, "leave reaches the terminal")
-    t.assert_true(terminal.output.end_with?("\e[0m\e[2 q\e[?25h\e[?1049l"), "leave restores the block cursor and the main screen last")
+    t.assert_true(terminal.output.end_with?("\e[0m\e[0 q\e[?25h\e[?1049l"), "leave restores the terminal's own cursor shape, shows it, and restores the main screen last")
     t.assert_true(terminal.output.start_with?("\e[?1049h"), "output begins with the alternate screen")
 
     # The window and tab line highlights have their own sequences.
@@ -288,11 +297,16 @@ module AdaptersScreenPresenterTest
     files.put("a.txt", text)
     h = Carat::Doubles::EditorHarness.default(files, 60, 200)
     h.open("a.txt")
-    h.type("60G")
+    h.type(":set nocul<CR>60G")
     h.type("j")
     out = h.terminal.last_write
     t.assert_true(scroll_region?(out), "j at the bottom scrolls the window with a region")
     t.assert_true(out.bytesize < 500, "and writes fewer than 500 bytes")
+    h.type(":set cul<CR>k")
+    h.type("j")
+    out = h.terminal.last_write
+    t.assert_true(out.bytesize < 1500, "with the cursor line j also rewrites the two lines it moves between, fewer than 1500 bytes")
+    h.type(":set nocul<CR>")
     h.type("l")
     out = h.terminal.last_write
     t.assert_equal(false, out.include?("method"), "l writes no buffer text")
@@ -342,10 +356,16 @@ module AdaptersScreenPresenterTest
       ["dark_plus's keyword", [T, "dark_plus", H::KEYWORD], "\e[0;38;2;86;156;214m"],
       ["light_plus's comment", [T, "light_plus", H::COMMENT], "\e[0;3;38;2;0;128;0m"],
       ["a file-icon group", [T, "one_dark", H::ICON_RUBY], "\e[0;38;2;232;117;126m"],
-      ["Normal is a bare reset", [T, "one_dark", H::NORMAL], "\e[0m"]
+      ["Normal is a bare reset", [T, "one_dark", H::NORMAL], "\e[0m"],
+      ["Normal on the cursor line takes its background", [T, "one_dark", H::NORMAL + H::CURSOR_LINE_LAYER], "\e[0;48;2;44;49;60m"],
+      ["a comment on the cursor line keeps its color", [T, "one_dark", H::COMMENT + H::CURSOR_LINE_LAYER], "\e[0;3;38;2;149;156;168;48;2;44;49;60m"],
+      ["a 256-color comment on the cursor line", [C256, "one_dark", H::COMMENT + H::CURSOR_LINE_LAYER], "\e[0;3;38;5;247;48;5;236m"],
+      ["a 16-color comment on the cursor line is underlined", [C16, "one_dark", H::COMMENT + H::CURSOR_LINE_LAYER], "\e[0;3;4;90m"],
+      ["a selection on the cursor line keeps its background", [T, "one_dark", H::VISUAL + H::CURSOR_LINE_LAYER], "\e[0;48;2;62;68;82m"],
+      ["a 16-color selection on the cursor line is not underlined", [C16, "one_dark", H::VISUAL + H::CURSOR_LINE_LAYER], "\e[0;7m"]
     ]) { |input| written(input[0].to_i, input[1].to_s, input[2].to_i) }
     t.assert_equal([16, 231, 232, 255, 103], [Carat::Adapters::SgrTable.index_256(0x000000), Carat::Adapters::SgrTable.index_256(0xffffff), Carat::Adapters::SgrTable.index_256(0x080808), Carat::Adapters::SgrTable.index_256(0xeeeeee), Carat::Adapters::SgrTable.index_256(0x7f849c)], "the nearest palette colors: cube corners and grays")
-    t.assert_equal(Carat::Adapters::SgrTable.sequence(DARK, H::NORMAL, C256), Carat::Adapters::SgrTable.from_theme(DARK, C256).at(99), "an id out of range is drawn as Normal")
+    t.assert_equal(Carat::Adapters::SgrTable.sequence(DARK, H::NORMAL, C256), Carat::Adapters::SgrTable.from_theme(DARK, C256).at(H::LIMIT), "an id out of range is drawn as Normal")
 
     t.finish
   end

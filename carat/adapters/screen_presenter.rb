@@ -9,7 +9,8 @@ module Carat
   module Adapters
     # Writes frames to the terminal as ANSI bytes, one write per frame,
     # sending only the runs of cells that changed, with the cursor shape
-    # per mode and the alternate screen on enter and leave.
+    # per mode and the alternate screen on enter and leave, leave giving
+    # the cursor back the terminal's own shape.
     #
     # It keeps the last frame it presented and the serial that frame had
     # then. A frame drawn after that one (its base serial is that serial)
@@ -27,7 +28,9 @@ module Carat
     # the terminal fills the cleared cells with the palette's background.
     class ScreenPresenter
       ENTER = "\e[?1049h\e[H\e[2J"
-      LEAVE = "\e[0m\e[2 q\e[?25h\e[?1049l"
+      # Leaving resets the colors, gives the cursor back the terminal's
+      # own shape (DECSCUSR 0), shows it, and restores the main screen.
+      LEAVE = "\e[0m\e[0 q\e[?25h\e[?1049l"
       # Unchanged cells fewer than this between two changed runs of a row
       # are written again to join the runs, which costs no more than the
       # cursor position between them.
@@ -89,7 +92,7 @@ module Carat
         out << "\e[0m" if @hl >= 0
         position(out, frame.cursor_row, frame.cursor_col)
         if frame.cursor_shape != @shape
-          out << (frame.cursor_shape == :bar ? "\e[6 q" : "\e[2 q")
+          out << shape_sequence(frame.cursor_shape)
           @shape = frame.cursor_shape
         end
         out << "\e[?25h"
@@ -263,6 +266,15 @@ module Carat
         out << 48 + value / 100 % 10 if value >= 100
         out << 48 + value / 10 % 10 if value >= 10
         out << 48 + value % 10
+      end
+
+      # The DECSCUSR sequence of a cursor shape: a steady bar, underline,
+      # or block.
+      #: (Symbol) -> String
+      def shape_sequence(shape)
+        return "\e[6 q" if shape == :bar
+        return "\e[4 q" if shape == :underline
+        "\e[2 q"
       end
 
       #: (Integer) -> String

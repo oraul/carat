@@ -16,10 +16,11 @@ module Carat
     # background, and syntax_on is the switch of :syntax on and :syntax
     # off, on from the start as in Neovim. startscreen shows the start
     # screen when the editor starts without a file, and reducedmotion
-    # shows its last frame without the animation. All but
-    # syntax_on come from option lines of the configuration. A Struct
+    # shows its last frame without the animation. cursorline draws the
+    # cursor's line in the current window over the CursorLine background.
+    # All but syntax_on come from option lines of the configuration. A Struct
     # record: mutable, with a reader and a writer per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, keyword_init: true)
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, keyword_init: true)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -40,14 +41,16 @@ module Carat
       # @rbs @incsearch: bool
       # @rbs @startscreen: bool
       # @rbs @reducedmotion: bool
+      # @rbs @cursorline: bool
 
       # Vim's defaults, the nerd icon set, the default theme on the
       # terminal's background, syntax highlighting on, and Neovim's search
       # defaults: hlsearch and incsearch on, ignorecase and smartcase off;
-      # the start screen on, with its animation.
+      # the start screen on, with its animation; cursorline off, as in
+      # Neovim.
       #: () -> void
       def initialize
-        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false)
+        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false)
       end
 
       # The options a configuration line may set, by name, with the kind
@@ -56,7 +59,7 @@ module Carat
       KINDS = {
         "number" => "bool", "relativenumber" => "bool", "expandtab" => "bool", "autoindent" => "bool",
         "ignorecase" => "bool", "smartcase" => "bool", "hlsearch" => "bool", "incsearch" => "bool", "wrap" => "bool",
-        "startscreen" => "bool", "reducedmotion" => "bool",
+        "startscreen" => "bool", "reducedmotion" => "bool", "cursorline" => "bool",
         "tabstop" => "integer", "shiftwidth" => "integer", "scroll" => "integer", "scrolloff" => "integer", "timeoutlen" => "integer", "undolevels" => "integer",
         "clipboard" => "string", "icons" => "string", "theme" => "string", "background" => "string"
       }
@@ -124,6 +127,7 @@ module Carat
         when "incsearch" then self.incsearch = word == "true"
         when "startscreen" then self.startscreen = word == "true"
         when "reducedmotion" then self.reducedmotion = word == "true"
+        when "cursorline" then self.cursorline = word == "true"
         when "tabstop"
           problem = Options.width_problem(line.key, word.to_i, 1)
           if problem.empty?

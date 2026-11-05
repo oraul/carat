@@ -90,6 +90,21 @@ module DomainOptionsConfigTest
     end
     t.assert_equal([true, false], [options.startscreen, options.reducedmotion], "the shipped start screen options")
 
+    # The cursorline option: rows are [label, project lines, [cursorline,
+    # problems]].
+    t.table([
+      ["off by default, as in Neovim", "", [false, []]],
+      ["turned on", "option.cursorline true\n", [true, []]],
+      ["a later line wins", "option.cursorline true\noption.cursorline false\n", [false, []]],
+      ["takes true or false", "option.cursorline yes\n", [false, [".caratrc:1: option.cursorline takes true or false"]]]
+    ]) do |text|
+      config = D::Config.new
+      config.read(".caratrc", text.to_s, false)
+      read = D::Options.from_config(config)
+      [read.cursorline, config.report]
+    end
+    t.assert_equal(true, options.cursorline, "the shipped configuration turns the cursor line on")
+
     t.finish
   end
 end

@@ -4,6 +4,7 @@ ok   piped input is refused
 ok   piped input exits with status 1
 ok   no argument shows the start screen with its hints
 ok   the editor started without a file exits with status 0 after :q
+ok   after :q the output ends with the terminal's cursor restored and the alternate screen left
 ok   the editor enters the alternate screen
 ok   the editor shows the new file message
 ok   typed text is drawn
@@ -11,7 +12,7 @@ ok   insert mode uses the bar cursor
 ok   escape returns to the block cursor
 ok   the editor exits with status 0 after :wq
 ok   the file holds the typed text
-ok   the output ends with leaving the alternate screen
+ok   after :wq the output ends with the terminal's cursor restored and the alternate screen left
 ok   the editor shows the existing file message
 ok   x deletes a character and marks the buffer modified
 ok   quit is refused with E37
@@ -21,7 +22,7 @@ ok   the editor drew its first frame for the windows check
 ok   vsplit draws the separator column
 ok   tabnew draws the tab line
 ok   the editor exits with status 0 after closing the tab page, a window, and the last window
-ok   closing the last window leaves the alternate screen
+ok   closing the last window restores the cursor and leaves the alternate screen
 ok   the editor drew its first frame for the slow window move
 ok   <C-w>, a pause past timeoutlen, and l move to the right window
 ok   the editor exits with status 0 after the slow window move
@@ -29,7 +30,7 @@ ok   the editor drew its first frame for the tree check
 ok   <leader>e opens the tree, titled explorer
 ok   the tree's root line has the open folder icon
 ok   the editor exits with status 0 after :q in the file window beside the tree
-ok   quitting beside the tree leaves the alternate screen
+ok   quitting beside the tree restores the cursor and leaves the alternate screen
 ok   the editor drew its first frame for the page check
 ok   line 42 is not shown before the page
 ok   PageDown scrolls a page down
@@ -53,5 +54,8 @@ ok   illegal bytes and a huge tabstop are reported, the user file's first
 ok   the editor exits with status 0 after hostile configuration lines
 ok   the editor drew its first frame for the signal check
 ok   SIGTERM ends the editor with status 0
-ok   SIGTERM leaves the alternate screen
-smoke_editor: 56 passed, 0 failed
+ok   SIGTERM restores the cursor and leaves the alternate screen
+ok   the editor shows the bar cursor before the interrupt
+ok   SIGINT ends the editor with status 0
+ok   SIGINT restores the cursor and leaves the alternate screen
+smoke_editor: 60 passed, 0 failed

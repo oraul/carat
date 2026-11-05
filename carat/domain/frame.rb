@@ -10,7 +10,9 @@ module Carat
     # it. The cells are three flat integer arrays indexed row * cols + col:
     # the code point, its display width (2 for the first cell of a wide
     # character, 0 for the continuation cell after it, which holds code
-    # 0), and the highlight group id. Integers only, so a frame never
+    # 0), and the highlight group id, plus Highlight::CURSOR_LINE_LAYER on
+    # the cursor line. The cursor shape is :block, :bar, or :underline.
+    # Integers only, so a frame never
     # aliases a buffer line's storage and Spinel reads every cell unboxed.
     #
     # A frame also says how it differs from the frame it was drawn after,
@@ -82,6 +84,21 @@ module Carat
       #: (Integer, Integer, Integer) -> void
       def set_hl(row, col, hl)
         hls[row * cols + col] = hl
+      end
+
+      # Adds layer to the highlight of the cells [from, to) of a row whose
+      # group is below it, as the presenter puts a row on the cursor line.
+      #: (Integer, Integer, Integer, Integer) -> void
+      def lift(row, from, to, layer)
+        return if row < 0 || row >= rows
+        stop = to < cols ? to : cols
+        c = from < 0 ? 0 : from
+        i = row * cols + c
+        last = row * cols + stop
+        while i < last
+          hls[i] += layer if hls[i] < layer
+          i += 1
+        end
       end
 
       # Blanks the cells [from, to) of a row: a space of width 1 in the

@@ -13,8 +13,8 @@ module Carat
     # shows "  name=value", several in one command. filetype=x sets the
     # filetype and the syntax with it; syntax=x sets the syntax alone,
     # OFF for none and ON for the filetype's. The four search options
-    # ignorecase (ic), smartcase (scs), hlsearch (hls), and incsearch (is)
-    # take Vim's boolean forms: name, noname, invname, name!, and name?,
+    # ignorecase (ic), smartcase (scs), hlsearch (hls), and incsearch (is),
+    # and cursorline (cul), take Vim's boolean forms: name, noname, invname, name!, and name?,
     # which shows "  name" or "noname"; a value is E474. Changing the case
     # options compiles the last pattern again, and setting hlsearch shows
     # its matches again after :noh. The rest of :set arrives with the
@@ -82,7 +82,7 @@ module Carat
 
       private
 
-      # The full name of the search option a word sets, with or without
+      # The full name of the boolean option a word sets, with or without
       # no, inv, a trailing ! or ?, or a value; "" for another word.
       #: (String) -> String
       def boolean_name(word)
@@ -102,10 +102,11 @@ module Carat
         return "smartcase" if name == "smartcase" || name == "scs"
         return "hlsearch" if name == "hlsearch" || name == "hls"
         return "incsearch" if name == "incsearch" || name == "is"
+        return "cursorline" if name == "cursorline" || name == "cul"
         ""
       end
 
-      # Sets a search option as the word asks: on, off with no, or
+      # Sets a boolean option as the word asks: on, off with no, or
       # switched with inv or a trailing !.
       #: (Domain::Options, String, String) -> void
       def set_boolean(options, word, name)
@@ -117,6 +118,7 @@ module Carat
         when "ignorecase" then options.ignorecase = value
         when "smartcase" then options.smartcase = value
         when "hlsearch" then options.hlsearch = value
+        when "cursorline" then options.cursorline = value
         else options.incsearch = value
         end
         @last_search.recompile(options) if name == "ignorecase" || name == "smartcase"
@@ -129,6 +131,7 @@ module Carat
         when "ignorecase" then options.ignorecase
         when "smartcase" then options.smartcase
         when "hlsearch" then options.hlsearch
+        when "cursorline" then options.cursorline
         else options.incsearch
         end
       end
