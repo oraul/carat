@@ -43,6 +43,7 @@ require_relative "../drivers_disk_files"
 require_relative "../drivers_main_loop"
 require_relative "../editor_cmdline"
 require_relative "../editor_explorer"
+require_relative "../editor_global"
 require_relative "../editor_grammar"
 require_relative "../editor_insert"
 require_relative "../editor_motions"
@@ -114,6 +115,7 @@ when "drivers_disk_files" then DriversDiskFilesTest.main
 when "drivers_main_loop" then DriversMainLoopTest.main
 when "editor_cmdline" then EditorCmdlineTest.main
 when "editor_explorer" then EditorExplorerTest.main
+when "editor_global" then EditorGlobalTest.main
 when "editor_grammar" then EditorGrammarTest.main
 when "editor_insert" then EditorInsertTest.main
 when "editor_motions" then EditorMotionsTest.main

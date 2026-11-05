@@ -89,6 +89,8 @@ require_relative "../use_cases/ex/syntax_command_handler"
 require_relative "../use_cases/ex/set_command_handler"
 require_relative "../use_cases/ex/nohlsearch_command_handler"
 require_relative "../use_cases/ex/substitute_command_handler"
+require_relative "../use_cases/ex/global_command_handler"
+require_relative "../use_cases/ex/delete_command_handler"
 require_relative "../use_cases/ex/plugin_command_handler"
 require_relative "../use_cases/actions/action_table"
 require_relative "../use_cases/actions/motion_handler"
@@ -168,6 +170,8 @@ module Carat
       attr_reader :move #: UseCases::Move
       attr_reader :find_match #: UseCases::FindMatch
       attr_reader :substitute_lines #: UseCases::SubstituteLines
+      attr_reader :global_command #: UseCases::GlobalCommand
+      attr_reader :delete_lines #: UseCases::DeleteLines
       attr_reader :jump_to_match #: UseCases::JumpToMatch
       attr_reader :open_search_prompt #: UseCases::OpenSearchPrompt
       attr_reader :preview_search #: UseCases::PreviewSearch
@@ -254,6 +258,8 @@ module Carat
         @open_search_prompt = UseCases::OpenSearchPrompt.new(search_prompt: @search_prompt, search_history: @search_history)
         @preview_search = UseCases::PreviewSearch.new(search_prompt: @search_prompt, last_search: @last_search)
         @substitute_lines = UseCases::SubstituteLines.new(last_substitute: @last_substitute, last_search: @last_search, registers: @registers, search_history: @search_history)
+        @global_command = UseCases::GlobalCommand.new(runner: @runner, last_search: @last_search, last_substitute: @last_substitute, registers: @registers, search_history: @search_history)
+        @delete_lines = UseCases::DeleteLines.new(registers: @registers)
         @recall_history = UseCases::RecallHistory.new(search_prompt: @search_prompt, command_history: @command_history, search_history: @search_history, plugin_ui: @plugin_ui, preview_search: @preview_search)
         @operate = UseCases::Operate.new(registers: @registers, last_find: @last_find, find_match: @find_match)
         @put_register = UseCases::PutRegister.new(registers: @registers)
@@ -306,6 +312,8 @@ module Carat
         UseCases::SetCommandHandler.register(@commands, last_search: @last_search)
         UseCases::NohlsearchCommandHandler.register(@commands, last_search: @last_search)
         UseCases::SubstituteCommandHandler.register(@commands, substitute_lines: @substitute_lines)
+        UseCases::GlobalCommandHandler.register(@commands, global_command: @global_command)
+        UseCases::DeleteCommandHandler.register(@commands, delete_lines: @delete_lines)
         UseCases::PluginCommandHandler.register(@commands, plugins: @plugins)
         @plugins.activate_all(value)
 

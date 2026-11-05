@@ -52,7 +52,8 @@ module AdaptersAssemblyTest
     t.assert_equal([], strangers(a.registers, [
       ["operate", a.operate.registers], ["put_register", a.put_register.registers], ["delete_selection", a.delete_selection.registers],
       ["yank_selection", a.yank_selection.registers], ["change_selection", a.change_selection.registers], ["put_over_selection", a.put_over_selection.registers],
-      ["execute_command_line", a.execute_command_line.registers], ["leave_insert", a.repeat_last.leave_insert.registers], ["substitute_lines", a.substitute_lines.registers]
+      ["execute_command_line", a.execute_command_line.registers], ["leave_insert", a.repeat_last.leave_insert.registers], ["substitute_lines", a.substitute_lines.registers],
+      ["global_command", a.global_command.registers], ["delete_lines", a.delete_lines.registers]
     ]), "the registers")
     t.assert_equal([], strangers(a.last_change, [
       ["dispatcher", a.dispatcher.last_change], ["repeat_last", a.repeat_last.last_change],
@@ -75,7 +76,7 @@ module AdaptersAssemblyTest
     action = a.actions.find("plugin.hello.greet")
     command = a.commands.find("Hello")
     t.assert_equal([true, true], [action.is_a?(Carat::UseCases::PluginActionHandler), command.is_a?(Carat::UseCases::PluginCommandHandler)], "the plugin handlers are registered")
-    t.assert_equal([], strangers(a.runner, [["execute_command_line", a.execute_command_line.runner], ["ui_requests", host.ui_requests.runner]]), "the command runner")
+    t.assert_equal([], strangers(a.runner, [["execute_command_line", a.execute_command_line.runner], ["ui_requests", host.ui_requests.runner], ["global_command", a.global_command.runner]]), "the command runner")
     t.assert_true(a.runner.is_a?(Carat::UseCases::ExecuteEx), "the command runner is the ex runner")
     t.assert_equal([], strangers(a.open_file, [["split_window", a.split_window.open_file], ["open_tab", a.open_tab.open_file]]), "the open file use case")
     t.assert_equal([], strangers(a.open_side_window, [["window_requests", host.window_requests.open_side_window]]), "the open side window use case")
@@ -84,15 +85,23 @@ module AdaptersAssemblyTest
     t.assert_equal([], strangers(a.probe_path, [["plugin_host", host.probe_path], ["open_file", a.open_file.probe_path], ["make_path", host.make_path.probe_path], ["rename_path", host.rename_path.probe_path], ["delete_path", host.delete_path.probe_path], ["file_requests", host.file_requests.probe_path]]), "the file operations")
     t.assert_equal([], strangers(host.make_path.resolve_inside, [["rename_path", host.rename_path.resolve_inside], ["delete_path", host.delete_path.resolve_inside]]), "the containment check of the file operations")
     t.assert_equal([], strangers(a.handle_key, [["controller", a.controller.handle_key]]), "the key handler")
-    t.assert_equal([], strangers(a.last_substitute, [["substitute_lines", a.substitute_lines.last_substitute]]), "the last substitute")
-    t.assert_equal([], strangers(a.last_search, [["find_match", a.find_match.last_search], ["substitute_lines", a.substitute_lines.last_search]]), "the last search, in the searches and the substitute")
-    t.assert_equal([], strangers(a.search_history, [["find_match", a.find_match.search_history], ["substitute_lines", a.substitute_lines.search_history]]), "the search history, in the searches and the substitute")
+    t.assert_equal([], strangers(a.last_substitute, [["substitute_lines", a.substitute_lines.last_substitute], ["global_command", a.global_command.last_substitute]]), "the last substitute")
+    t.assert_equal([], strangers(a.last_search, [["find_match", a.find_match.last_search], ["substitute_lines", a.substitute_lines.last_search], ["global_command", a.global_command.last_search]]), "the last search, in the searches and the substitute")
+    t.assert_equal([], strangers(a.search_history, [["find_match", a.find_match.search_history], ["substitute_lines", a.substitute_lines.search_history], ["global_command", a.global_command.search_history]]), "the search history, in the searches and the substitute")
     substitute = a.commands.find("s")
     repeat = a.actions.find("substitute.repeat")
     shared = []
     shared << "s" unless substitute.is_a?(Carat::UseCases::SubstituteCommandHandler) && substitute.substitute_lines.equal?(a.substitute_lines)
     shared << "&" unless repeat.is_a?(Carat::UseCases::SubstituteHandler) && repeat.substitute_lines.equal?(a.substitute_lines)
     t.assert_equal([], shared, "the substitute use case behind :s and &")
+    global_handler = a.commands.find("g")
+    vglobal = a.commands.find("v")
+    delete = a.commands.find("d")
+    shared = []
+    shared << "g" unless global_handler.is_a?(Carat::UseCases::GlobalCommandHandler) && global_handler.global_command.equal?(a.global_command)
+    shared << "v" unless vglobal.is_a?(Carat::UseCases::GlobalCommandHandler) && vglobal.global_command.equal?(a.global_command)
+    shared << "d" unless delete.is_a?(Carat::UseCases::DeleteCommandHandler) && delete.delete_lines.equal?(a.delete_lines)
+    t.assert_equal([], shared, "the global and delete use cases behind :g, :v, and :d")
     t.assert_equal([], strangers(a.cache, [["arrange_view", a.arrange_view.cache], ["frame_presenter", a.frame_presenter.cache]]), "the line cache")
     t.assert_equal([], strangers(a.arrange_view, [["handle_key", a.handle_key.arrange_view]]), "the arrange view use case")
     t.assert_equal([], strangers(a.plugins.syntax, [["highlight_view", a.highlight_view.syntax]]), "the plugins as tokenizers")

@@ -497,7 +497,12 @@ module UseCasesExTest
       ["se sets", "se", "set"],
       ["sy is syntax", "sy", "syntax"],
       ["synt is syntax", "synt", "syntax"],
-      ["s is substitute, not set", "s", "substitute"]
+      ["s is substitute, not set", "s", "substitute"],
+      ["g is global", "g", "global"],
+      ["v is vglobal, not vsplit", "v", "vglobal"],
+      ["vg is vglobal", "vg", "vglobal"],
+      ["d is delete, not display", "d", "delete"],
+      ["di is display", "di", "display"]
     ]) do |typed|
       handler = table.find(typed)
       handler.nil? ? "" : handler.name.full
