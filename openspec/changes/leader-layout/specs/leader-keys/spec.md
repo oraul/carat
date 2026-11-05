@@ -86,8 +86,8 @@ With the default configuration, Ctrl-S SHALL write the current buffer as `:w` do
 - **THEN** the file holds "hello", the mode is still insert, and the cursor is after "hello"
 
 #### Scenario: Ctrl-S on a real terminal
-- **WHEN** the editor binary runs on a pseudo-terminal, "ihello" is typed, and the byte 0x13 is sent
-- **THEN** the file on disk holds "hello"
+- **WHEN** the editor binary runs on a pseudo-terminal, "isaved" is typed, and the byte 0x13 is sent
+- **THEN** the file on disk holds "saved"
 
 ### Requirement: Leader e opens the explorer as before
 `<leader>e` SHALL keep toggling the file tree as the explorer plugin binds it.
