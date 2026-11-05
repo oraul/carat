@@ -40,7 +40,7 @@ Priorities: mode 100, file 90, position 80, diagnostics 70, `lsp` 60, percent 50
 
 ### Theme groups and a role for text on accents
 
-Twelve UI groups follow `DiagnosticHint` (ids 41 to 52), moving the syntax groups to 53 and the file-icon groups to 83; every reference is by constant or by name, so only the count test changes. The mode pills need light text on the light palettes' dark accents and dark text on the dark palettes' light accents, which no role gives, so the palettes gain `ON_STRONG` (each palette's background color, kept when the terminal paints the background). The diagnostics and `lsp` groups put the accent on `PANEL_NC`, where every palette's accents reach 4.5:1, rather than on `PANEL`, where One Dark's red and blue do not.
+Eight UI groups follow `DiagnosticHint` (ids 41 to 48), moving the syntax groups to 49 and the file-icon groups to 79; every reference is by constant or by name, so only the count test changes. The mode pills need light text on the light palettes' dark accents and dark text on the dark palettes' light accents, which no role gives, so the palettes gain `ON_STRONG` (each palette's background color, kept when the terminal paints the background). The diagnostics counts reuse the `Diagnostic*` groups and the `lsp` groups put their accent on the editor's background as those do, so they read like cut-outs of the bar: on `PANEL` One Dark's red and blue fall under 4.5:1, and on `PANEL_NC` Dark+'s red and the light palettes' green at 256 colors do.
 
 ### One file-icon table in the plugin API
 
@@ -53,6 +53,6 @@ The table that maps a file name to an icon name and an icon name to its group mo
 ## Risks / Trade-offs
 
 - [Non-current windows lose their own file name line] → as in Neovim with `laststatus=3`; a winbar is a later change of the UI track.
-- [Twelve new groups shift the syntax ids] → nothing stores ids across runs; plugins resolve groups by name.
+- [Eight new groups shift the syntax ids] → nothing stores ids across runs; plugins resolve groups by name.
 - [Tests that open a second file see their rows move down one] → the snapshot diffs are reviewed; the behavior is the new spec.
 - [Equal base names show twice] → disambiguation is out of scope and noted in `docs/compatibility.md`.

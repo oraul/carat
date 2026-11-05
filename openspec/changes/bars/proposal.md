@@ -11,7 +11,7 @@ Every window draws its own status line with the path, a `[+]`, and the ruler, th
 - Windows stacked above others end in a flat horizontal separator row instead of a status line, and every separator, vertical or horizontal, is drawn in `WinSeparator`; segments are separated by spacing only, no powerline glyphs.
 - Buffer tabs on the top row whenever two or more file buffers are listed or two or more tab pages exist: one tab per listed file buffer with its file icon, name, and modified dot, the current window's buffer selected, counts of the tabs that do not fit at either end, and from two tab pages the tab-page numbers at the right end. With one file buffer and one tab page there is no top row, as before.
 - A host request `set_segment(text, priority)` lets a plugin place a status bar segment with a priority from 0 to 99; `set_status(text)` keeps working at priority 10. The API becomes 2.2.
-- New theme groups for the mode pills, the diagnostics counts, and the `lsp` states, in every palette, with a new palette role for text on a strong accent; every new text group meets WCAG AA.
+- New theme groups for the mode pills and the `lsp` states, the counts drawn in the diagnostic groups, in every palette, with a new palette role for text on a strong accent; every new text group meets WCAG AA.
 - The status and tab lines paint without allocating: no joined segment string and no per-tab label string per frame.
 - The file icon table moves into the plugin API so the explorer and the buffer tabs share it, and a buffer remembers its icon name with its filetype.
 - The planner's records: the `docs/backlog.md` entries from the plan notes.

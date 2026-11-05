@@ -132,7 +132,9 @@ module DomainThemeTest
     # The group table: UI groups first, then the thirty syntax groups,
     # then the file-icon groups.
     t.assert_equal(H::COUNT, H::NAMES.length, "every id has a name")
-    t.assert_equal([41, 30, 13], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::COUNT - H::ICON_FIRST], "41 UI groups, thirty syntax groups, thirteen file-icon groups")
+    t.assert_equal([49, 30, 13], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::COUNT - H::ICON_FIRST], "49 UI groups, thirty syntax groups, thirteen file-icon groups")
+    t.assert_equal(["StatusLineModeNormal", "StatusLineLspError"], [H.name_of(H::STATUS_MODE_NORMAL), H.name_of(H::STATUS_LSP_ERROR)], "the status bar's groups follow Neovim's")
+
     t.assert_equal(["Comment", "Error", "SignColumn", "CursorLine", "DiagnosticHint", "DevIconRb"], [H::NAMES[H::COMMENT], H::NAMES[H::ERROR], H::NAMES[H::SIGN_COLUMN], H::NAMES[H::CURSOR_LINE], H::NAMES[H::DIAGNOSTIC_HINT], H::NAMES[H::ICON_RUBY]], "names by id")
     t.table([
       ["Comment", "Comment", H::COMMENT],
@@ -156,6 +158,21 @@ module DomainThemeTest
     t.assert_equal([true, true, false], [D::Themes.background?("terminal"), D::Themes.background?("theme"), D::Themes.background?("dark")], "background?")
     dark = D::Themes.find("one_dark", "terminal")
     painted = D::Themes.find("one_dark", "theme")
+    # The status bar's groups per mode and state: the pills' text on the
+    # mode's accent, bold, the lsp slot's accent on the editor's background.
+    t.table([
+      ["normal pill", [H::STATUS_MODE_NORMAL], [0x282c34, 0x61afef, D::Theme::BOLD, 0, 12]],
+      ["insert pill", [H::STATUS_MODE_INSERT], [0x282c34, 0x98c379, D::Theme::BOLD, 0, 10]],
+      ["visual pill", [H::STATUS_MODE_VISUAL], [0x282c34, 0xc678dd, D::Theme::BOLD, 0, 13]],
+      ["replace pill", [H::STATUS_MODE_REPLACE], [0x282c34, 0xe8757e, D::Theme::BOLD, 0, 9]],
+      ["command pill", [H::STATUS_MODE_COMMAND], [0x282c34, 0xe5c07b, D::Theme::BOLD, 0, 11]],
+      ["lsp starting", [H::STATUS_LSP_STARTING], [0xe5c07b, -1, 0, 11, -1]],
+      ["lsp ready", [H::STATUS_LSP_READY], [0x98c379, -1, 0, 10, -1]],
+      ["lsp error", [H::STATUS_LSP_ERROR], [0xe8757e, -1, D::Theme::BOLD, 9, -1]]
+    ]) { |input| id = input[0].to_i; [dark.fg(id), dark.bg(id), dark.attr(id), dark.fg16(id), dark.bg16(id)] }
+    light = D::Themes.find("one_light", "terminal")
+    t.assert_equal([0xfafafa, 0x2f63d6, 15, 4], [light.fg(H::STATUS_MODE_NORMAL), light.bg(H::STATUS_MODE_NORMAL), light.fg16(H::STATUS_MODE_NORMAL), light.bg16(H::STATUS_MODE_NORMAL)], "a light palette's pill is light text on its dark accent, even with the terminal's background")
+
     t.assert_equal([-1, -1, -1, -1, -1, -1, 0, false], [dark.fg(H::NORMAL), dark.bg(H::NORMAL), dark.fg256(H::NORMAL), dark.bg256(H::NORMAL), dark.fg16(H::NORMAL), dark.bg16(H::NORMAL), dark.attr(H::NORMAL), dark.paints_background?], "with the terminal's background Normal keeps the terminal's colors")
     t.assert_equal([0xabb2bf, 0x282c34, 7, 0, true], [painted.fg(H::NORMAL), painted.bg(H::NORMAL), painted.fg16(H::NORMAL), painted.bg16(H::NORMAL), painted.paints_background?], "with the theme's background Normal is the palette's")
     t.assert_equal([-1, 0x282c34], [dark.bg(H::COMMENT), painted.bg(H::COMMENT)], "a group without a background of its own is drawn on the painted one")

@@ -2,8 +2,8 @@
 
 ## 1. Theme groups and frame helpers
 
-- [ ] 1.1 Add the twelve status bar groups to `carat/domain/highlight.rb` and the `ON_STRONG` role with each palette's value and the groups' rows to `carat/domain/themes.rb`; prove it in `test/domain_theme.rb` (the group count, the contrast tables, a row per mode and state pinning its roles).
-- [ ] 1.2 Add `DisplayWidth.text_width(text, from)` and `Frame#put_from(row, col, text, from, hl, limit)`; prove them in `test/domain_frame.rb`.
+- [x] 1.1 Add the eight status bar groups to `carat/domain/highlight.rb` and the `ON_STRONG` role with each palette's value and the groups' rows to `carat/domain/themes.rb`; prove it in `test/domain_theme.rb` (the group count, the contrast tables, a row per mode and state pinning its roles).
+- [x] 1.2 Add `DisplayWidth.text_width(text, from)` and `Frame#put_from(row, col, text, from, hl, limit)`; prove them in `test/domain_frame.rb`.
 
 ## 2. Shared state
 

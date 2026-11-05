@@ -1,8 +1,9 @@
 module Carat
   module Domain
     # Highlight group ids carried by frame cells; a theme maps each to its
-    # colors. The editor's own UI groups come first, with Neovim's names;
-    # then the syntax groups, from SYNTAX_FIRST on, with Neovim's standard
+    # colors. The editor's own UI groups come first, with Neovim's names,
+    # the status bar's mode pills and slots after them; then the syntax
+    # groups, from SYNTAX_FIRST on, with Neovim's standard
     # names in the order of its group-name help; then the file-icon groups,
     # from ICON_FIRST on, named as nvim-web-devicons names them. A plugin's
     # tokens may carry a syntax or a file-icon group. NAMES is indexed by
@@ -50,54 +51,62 @@ module Carat
       DIAGNOSTIC_WARN = 38
       DIAGNOSTIC_INFO = 39
       DIAGNOSTIC_HINT = 40
+      STATUS_MODE_NORMAL = 41
+      STATUS_MODE_INSERT = 42
+      STATUS_MODE_VISUAL = 43
+      STATUS_MODE_REPLACE = 44
+      STATUS_MODE_COMMAND = 45
+      STATUS_LSP_STARTING = 46
+      STATUS_LSP_READY = 47
+      STATUS_LSP_ERROR = 48
 
-      SYNTAX_FIRST = 41
-      COMMENT = 41
-      CONSTANT = 42
-      STRING = 43
-      CHARACTER = 44
-      NUMBER = 45
-      BOOLEAN = 46
-      FLOAT = 47
-      IDENTIFIER = 48
-      FUNCTION = 49
-      STATEMENT = 50
-      CONDITIONAL = 51
-      REPEAT = 52
-      LABEL = 53
-      OPERATOR = 54
-      KEYWORD = 55
-      EXCEPTION = 56
-      PRE_PROC = 57
-      INCLUDE = 58
-      DEFINE = 59
-      MACRO = 60
-      TYPE = 61
-      STORAGE_CLASS = 62
-      STRUCTURE = 63
-      TYPEDEF = 64
-      SPECIAL = 65
-      SPECIAL_CHAR = 66
-      DELIMITER = 67
-      SPECIAL_COMMENT = 68
-      TODO = 69
-      ERROR = 70
+      SYNTAX_FIRST = 49
+      COMMENT = 49
+      CONSTANT = 50
+      STRING = 51
+      CHARACTER = 52
+      NUMBER = 53
+      BOOLEAN = 54
+      FLOAT = 55
+      IDENTIFIER = 56
+      FUNCTION = 57
+      STATEMENT = 58
+      CONDITIONAL = 59
+      REPEAT = 60
+      LABEL = 61
+      OPERATOR = 62
+      KEYWORD = 63
+      EXCEPTION = 64
+      PRE_PROC = 65
+      INCLUDE = 66
+      DEFINE = 67
+      MACRO = 68
+      TYPE = 69
+      STORAGE_CLASS = 70
+      STRUCTURE = 71
+      TYPEDEF = 72
+      SPECIAL = 73
+      SPECIAL_CHAR = 74
+      DELIMITER = 75
+      SPECIAL_COMMENT = 76
+      TODO = 77
+      ERROR = 78
 
-      ICON_FIRST = 71
-      ICON_DEFAULT = 71
-      ICON_FOLDER = 72
-      ICON_SYMLINK = 73
-      ICON_RUBY = 74
-      ICON_JSON = 75
-      ICON_MARKDOWN = 76
-      ICON_TOML = 77
-      ICON_MAKEFILE = 78
-      ICON_SHELL = 79
-      ICON_C = 80
-      ICON_YAML = 81
-      ICON_GIT = 82
-      ICON_LOCK = 83
-      COUNT = 84
+      ICON_FIRST = 79
+      ICON_DEFAULT = 79
+      ICON_FOLDER = 80
+      ICON_SYMLINK = 81
+      ICON_RUBY = 82
+      ICON_JSON = 83
+      ICON_MARKDOWN = 84
+      ICON_TOML = 85
+      ICON_MAKEFILE = 86
+      ICON_SHELL = 87
+      ICON_C = 88
+      ICON_YAML = 89
+      ICON_GIT = 90
+      ICON_LOCK = 91
+      COUNT = 92
 
       # A cell on the cursor line carries its group's id plus this layer:
       # the group drawn over the CursorLine background, unless it has a
@@ -111,6 +120,8 @@ module Carat
         "CurSearch", "CursorLine", "CursorLineNr", "ColorColumn", "EndOfBuffer", "WinSeparator", "Directory", "Title", "WarningMsg", "ModeMsg", "MoreMsg", "Question", "MatchParen",
         "Pmenu", "PmenuSel", "PmenuSbar", "PmenuThumb", "NormalFloat", "FloatBorder", "DiffAdd", "DiffChange", "DiffDelete", "DiffText", "Whitespace",
         "DiagnosticError", "DiagnosticWarn", "DiagnosticInfo", "DiagnosticHint",
+        "StatusLineModeNormal", "StatusLineModeInsert", "StatusLineModeVisual", "StatusLineModeReplace", "StatusLineModeCommand",
+        "StatusLineLspStarting", "StatusLineLspReady", "StatusLineLspError",
         "Comment", "Constant", "String", "Character", "Number", "Boolean", "Float", "Identifier", "Function",
         "Statement", "Conditional", "Repeat", "Label", "Operator", "Keyword", "Exception",
         "PreProc", "Include", "Define", "Macro",
