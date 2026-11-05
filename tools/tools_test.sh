@@ -7,7 +7,8 @@
 # the records only the workflow writes, the history, the budget, and the
 # review areas), tools/agent_guard.sh (each profile's forms and refusals,
 # and the agents' hook lines), tools/docs_lint.sh (budgets, content, wraps,
-# paths, queue), tools/new.sh (every generator and its refusals), and
+# paths, queue), tools/new.sh (every generator and its refusals),
+# tools/spec_validate.sh (the archive preview, with a stub openspec), and
 # every gate of tools/gates.sh, each passing and refusing.
 # Prints "ok   NAME" or "FAIL NAME" and the output, then "P/T passed";
 # exits 1 when any failed. Run by make tools-test.
@@ -964,7 +965,7 @@ expect "guard: contributor refuses main's merge gates" 2 "is not a command of th
 expect "guard: merger verifies and records the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%B origin/main && sh tools/run_state.sh set c merged abc1234 && git ls-remote --heads origin chore/x'
 expect "guard: merger deletes the branch and fast-forwards main" 0 "^$" guard merger 'git push origin --delete chore/x; git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
 expect "guard: contributor proposes and validates" 0 "^$" guard contributor 'npx -y @fission-ai/openspec@latest new change c && npx @fission-ai/openspec@latest validate \"c\" --strict --no-interactive && openspec status --change c --json'
-expect "guard: contributor generates and checks" 0 "^$" guard contributor 'make new-ex-command NAME=sort SPEC=\"sor[t]\" AREA=12 && make test-one T=test/domain_buffer.rb && make diagnose-one T=carat/domain/buffer.rb && make -s lint docs-lint gates && make snapshots'
+expect "guard: contributor generates and checks" 0 "^$" guard contributor 'make new-ex-command NAME=sort SPEC=\"sor[t]\" AREA=12 && make test-one T=test/domain_buffer.rb && make diagnose-one T=carat/domain/buffer.rb && make -s lint docs-lint gates && make snapshots && make spec-validate'
 expect "guard: contributor commits" 0 "^$" guard contributor 'git add -A && git -c user.name=\"Claude\" -c user.email=\"noreply@anthropic.com\" commit -q -m \"feat: x\" -m \"Co-Authored-By: Claude <noreply@anthropic.com>\" && git commit -q -F tmp/message.txt'
 expect "guard: contributor records the plan" 0 "^$" guard contributor 'cp build/plan/queue.md docs/queue.md && cp build/plan/goals.md docs/goals.md && sh tools/run_state.sh history'
 expect "guard: contributor archives" 0 "^$" guard contributor 'npx @fission-ai/openspec@latest archive c -y --skip-specs && npx @fission-ai/openspec@latest validate --all --strict --no-interactive'
@@ -1277,6 +1278,38 @@ grep -v -F 'carat/use_cases/actions/action_handler"' carat.rb > c && mv c carat.
 before=$(cat carat.rb docs/codebase-map.md | cksum)
 expect "new: refuses when an anchor line is gone" 2 "has no line containing" new use-case count_words 8
 expect "new: a refusal writes nothing" 0 "^same$" sh -c "[ ! -e carat/use_cases/count_words.rb ] && [ \"\$(cat carat.rb docs/codebase-map.md | cksum)\" = '$before' ] && echo same"
+
+# ------------------------------------------------------- spec_validate.sh
+
+# A stub openspec: archive merges the change's specs into openspec/specs and
+# moves the change under archive; validate fails on a spec holding TOO LONG,
+# which only the merge brings into openspec/specs.
+cd "$work" || exit 1
+rm -rf specv
+mkdir -p specv/openspec/specs/a specv/openspec/changes/good specv/openspec/changes/long/specs/a
+cat > stub_openspec <<'EOF'
+echo "$*" >> "$STUB_LOG"
+case "$1" in
+  archive)
+    [ ! -d "openspec/changes/$2/specs" ] || cp -R "openspec/changes/$2/specs/." openspec/specs/
+    mkdir -p openspec/changes/archive
+    mv "openspec/changes/$2" "openspec/changes/archive/x-$2" ;;
+  validate) ! grep -r -q "TOO LONG" openspec/specs ;;
+esac
+EOF
+echo short > specv/openspec/specs/a/spec.md
+echo "skip_specs: true" > specv/openspec/changes/good/.openspec.yaml
+echo "TOO LONG" > specv/openspec/changes/long/specs/a/spec.md
+specv() {
+  (cd "$work/specv" && STUB_LOG="$work/specv.log" OPENSPEC_CMD="sh $work/stub_openspec" sh "$here/spec_validate.sh")
+}
+: > specv.log
+expect "spec_validate: refuses a change whose archive leaves an invalid spec" 1 "archiving long leaves fail strict validation" specv
+expect "spec_validate: passes a change whose archive leaves valid specs" 1 "good as archived passes strict validation" specv
+expect "spec_validate: archives a change without specs with --skip-specs" 0 "^archive good -y --skip-specs$" cat specv.log
+expect "spec_validate: leaves the real tree as it was" 0 "^short$" sh -c "[ -d specv/openspec/changes/long ] && [ ! -d specv/openspec/changes/archive ] && cat specv/openspec/specs/a/spec.md"
+rm -rf specv/openspec/changes/long
+expect "spec_validate: passes when every change as archived is valid" 0 "good as archived passes strict validation" specv
 
 # ---------------------------------------------------------------- gates.sh
 

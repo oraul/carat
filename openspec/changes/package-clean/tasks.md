@@ -7,7 +7,7 @@
 
 ## 2. The archive preview
 
-- [ ] 2.1 `tools/spec_validate.sh` (new) and the `spec-validate` target of the `Makefile`. Tested by "spec_validate: passes a change whose archive leaves valid specs", "spec_validate: refuses a change whose archive leaves an invalid spec", "spec_validate: archives a change without specs with --skip-specs", and "spec_validate: leaves the real tree as it was".
+- [x] 2.1 `tools/spec_validate.sh` (new) and the `spec-validate` target of the `Makefile`. Tested by "spec_validate: passes a change whose archive leaves valid specs", "spec_validate: refuses a change whose archive leaves an invalid spec", "spec_validate: archives a change without specs with --skip-specs", "spec_validate: leaves the real tree as it was", and "spec_validate: passes when every change as archived is valid".
 
 ## 3. The contributor
 
