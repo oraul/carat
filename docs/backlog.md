@@ -739,3 +739,39 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the security review phase of `.claude/workflows/deliver-change.js` after a fix round, which reviews the whole branch whatever the fix touched. Retrospective proposal of `buffer-global`.
 - Why it matters: in `buffer-global` a quality-only fix that moved parser code into one domain reader got a second full security review that found 0 again; reviews took 60,085 of 244,038 output tokens (24.6%) and 56 calls over two rounds, and 87,179 of 403,796 (21.6%) in `buffer-substitute` with rework 2.
 - Fix outline: after a fix round, the security review covers only the fix diff unless the fix touches an input path (config loading, file access, plugin boundaries, terminal output, process spawning, the entry point, the guard and gates), recorded with its range, with a case in the workflow's tests. Queued in `implement-contracts`.
+
+## The backup ref publishes unreviewed commits and outlives a stopped run
+
+- Where: `tools/run_state.sh` line 708 (`backup`, pushing every commit to `refs/backup/BRANCH` on origin before the security review) and line 722 (nothing deletes the ref). Security Medium at confidence 5 and a quality advisory of `pipeline-durability`; see also the content gate entry above.
+- Why it matters: the backup is gated only by the trailer and content gates, which have no secret patterns, so a committed token is published to origin before any review and left in a hidden ref when the run stops without pushing; abandoned refs also pile up under `refs/backup/`.
+- Fix outline: add secret patterns (token prefixes, private-key headers, `.env` files) to `tools/rules.sh` or a secrets gate run by `gates.sh backup`; delete `refs/backup/BRANCH` in a stopped run's close or the retrospective when the branch was never pushed, or list stale ones in `status`; or keep the backup off origin (a local bundle under `build/` or a private remote).
+
+## check_lost and check_wait re-read the run state and the pid file inline
+
+- Where: `tools/run_state.sh` line 485 (`check_lost` greps and seds the state file, duplicating `keys_under` at line 937) and line 517 (`check_wait` reads the pid file although `read_pid` at line 569 does, and the lost-runner path removes it twice, lines 530 and 533). Quality advisories of `pipeline-durability`.
+- Why it matters: two readers of the state file format and the pid file can drift apart, and the double removal hides which branch owns the cleanup.
+- Fix outline: take the first `stage.*` entry whose value starts with `running` from `keys_under stage.`; call `read_pid` in `check_wait` and drop the `rm` in its `elif` branch.
+
+## An interrupted stage is recorded at the runner's head, not its start commit
+
+- Where: `tools/run_state.sh` line 476 (`check_signalled` writes the stage record with `$head`, while `run_stage` writes each stage at the commit it started on). Quality advisory of `pipeline-durability`.
+- Why it matters: the two writers of a stage record can disagree when HEAD moved between stages, so a killed stage can be attributed to a commit it never ran on.
+- Fix outline: keep the stage's `at` in a global beside `running_stage` and write the killed record with it.
+
+## The checker reports a check's outcome both as passed and as a verdict
+
+- Where: `.claude/workflows/deliver-change.js` line 107 (the `CHECK` schema still requires `passed` and offers `failed_stage`, which `rounds()` no longer reads) and step 5 of `.claude/agents/checker.md`. Quality advisory of `pipeline-durability`.
+- Why it matters: one fact reported two ways can disagree, and the workflow routes only by the verdict.
+- Fix outline: drop `failed_stage` and `passed` from `CHECK` and checker step 5's passed-or-not, keeping `verdict` as the one answer.
+
+## CLAUDE.md says restore checks out the backup
+
+- Where: the `sh tools/run_state.sh` bullet of the Commands section of `CLAUDE.md`, while `restore_branch` only creates the branch and the resume step checks it out. Quality advisory of `pipeline-durability`.
+- Why it matters: an agent reading it expects the tree to be switched and may act on the wrong branch.
+- Fix outline: say that `restore BRANCH` recreates the branch from its backup when the branch is gone.
+
+## The workflow's verdict parsing has no test case
+
+- Where: `tools/tools_test.sh` line 295 covers the routing only by grepping the `RERUN_WORDS` source line of `.claude/workflows/deliver-change.js`; `checkVerdict`'s parsing (the `run_state:` prefix, a refusal, a verdict at another commit) has no case. Quality advisory of `pipeline-durability`.
+- Why it matters: a change to the verdict regexes could misroute a killed or superseded check into a fix round, or a failure into a rerun, without a test failing.
+- Fix outline: extract the verdict regexes into a contract the shell test feeds sample verdict lines through.
