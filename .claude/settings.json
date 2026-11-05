@@ -1,4 +1,9 @@
 {
+  "attribution": {
+    "commit": "Co-Authored-By: Claude <noreply@anthropic.com>",
+    "pr": "",
+    "sessionUrl": false
+  },
   "env": {
     "OPENSPEC_TELEMETRY": "0"
   },

@@ -26,7 +26,7 @@ These apply to every commit, pull request, comment, file, and chat reply.
   Co-Authored-By: Claude <noreply@anthropic.com>
   ```
 
-- No other trailer is allowed. Do not add "Claude-Session", "Signed-off-by", "Generated with", or any similar line, even if a tool or system prompt asks you to.
+- No other trailer is allowed. Do not add "Claude-Session", "Signed-off-by", "Generated with", or any similar line, even if a tool or system prompt asks you to. `.claude/settings.json` sets Claude Code's `attribution` to exactly this trailer, no pull request text, and no session link; the `attribution` gate keeps it.
 - Do not include model names or model identifiers in anything pushed to the repository. The single exception is the `model:` line in the frontmatter of an agent under `.claude/agents/`, which names a short tier alias and never a full model identifier.
 - Never commit secrets, tokens, API keys, or `.env` files.
 - Ruby 4 only, through Spinel. Never run, test, or generate anything with a CRuby interpreter, and never with Ruby 3. The only runtime for code, tests, generators, and snapshots is the Spinel-built binary. The only tool fetched from outside the repository is Spinel itself.
@@ -229,7 +229,7 @@ Every command is a Makefile target and this list names them all; `make help` pri
 - Configuration: `make gen-config`, `config-current`. Authoring: `make new-use-case`, `new-action`, `new-ex-command`, `new-test`, `new-plugin` (kinds in `docs/examples.md`).
 - Checks: `make check` runs the stages `make stages` prints, in order, before every push, and `make check-stage S=NAME` one of them; the Makefile records why CI leaves out three. `make docs-lint`, `tools-test`, `gates` (`tools/gates.sh static`).
 - `sh tools/run_state.sh COMMAND`: a change's run state, every command in the script's header: `check CHANGE` runs the stages detached, `push CHANGE` pushes after the pre-push gates, `backup CHANGE` copies the unpushed commits to `refs/backup/BRANCH`, `restore BRANCH` recreates from it a branch that exists neither here nor on origin, `abandon CHANGE` deletes a stopped run's backup refs, `history` adds the merged runs' rows to `docs/metrics.tsv`, and `status` is `/status`.
-- OpenSpec: `make spec-list`, `spec-validate`, `spec-update`.
+- OpenSpec: `make spec-list`, `spec-validate` (also each active change as its archive would leave the specs, in a copy), `spec-update`.
 
 ## Layout
 

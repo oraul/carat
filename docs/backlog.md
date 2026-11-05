@@ -973,3 +973,57 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `NO_COLOR` read in `carat/drivers/ansi_terminal.rb` (line 24 at `start-screen`); the start screen tests set only the `FakeTerminal` writer. Quality review of `start-screen`.
 - Why it matters: a regression in the driver's read would show the colored glyphs to a user who set `NO_COLOR` with every test still passing.
 - Fix outline: a `test/smoke_editor.rb` session spawned with `NO_COLOR=1` asserting the output holds no U+25E2 and still shows the hints.
+
+## ExtendVisual keeps a private tabstop_of with no caller
+
+- Where: the private `tabstop_of` of `carat/use_cases/visual/extend_visual.rb` (line 53 at `start-screen`), uncalled since #30 split the visual use cases. Periodic quality at 5ac9674.
+- Why it matters: dead code a reader must check before trusting the class's tab handling, and a second place a tab rule could drift.
+- Fix outline: delete the method.
+
+## DisplayWidth.of_char has no caller
+
+- Where: `DisplayWidth.of_char` in `carat/domain/display_width.rb` (line 37 at `start-screen`), called nowhere in `carat/`, `bin/`, `test/`, or `bench/`, yet named as a key method on the map's `display_width.rb` line. Periodic quality at 5ac9674.
+- Why it matters: the map points readers at a method nothing uses, and it can drift from the width rule the callers rely on.
+- Fix outline: delete it and drop it from the map's line.
+
+## The architecture's InputController and FramePresenter bullets omit the start screen
+
+- Where: the binding `InputController` and `FramePresenter` bullets of `docs/architecture.md` (lines 247 and 252 at `start-screen`); only the `TerminalPort` row (line 198) was updated. Periodic quality at 5ac9674.
+- Why it matters: the controller now shortens its read timeout for the next frame, advances the start screen in `tick`, and dismisses it on a key, and the presenter paints `StartArt` over the current window and repaints every row after it, none of which the binding document says.
+- Fix outline: one clause in each bullet, within the file's budget.
+
+## StartArt's LAST restates FRAMES - 1
+
+- Where: `LAST = 5` in `carat/domain/start_art.rb` (line 105 at `start-screen`), which `StartScreen`, `paint`, and `from_plain` rely on beside `FRAMES`. Periodic quality at 5ac9674.
+- Why it matters: two constants to keep in step; a frame added to one and not the other paints past the table or never shows the last frame.
+- Fix outline: derive `LAST` from `FRAMES`.
+
+## StartArt's LEGEND and PLAIN_GLYPHS spell characters as decimal codes
+
+- Where: `LEGEND` and `PLAIN_GLYPHS` in `carat/domain/start_art.rb` (line 130 at `start-screen`), arrays of byte codes such as 47 and 92, while `GEM` is strings read with `getbyte`. Periodic quality at 5ac9674.
+- Why it matters: the legend the `GEM` comment describes cannot be read against the table, so a glyph change is checked by decoding numbers.
+- Fix outline: hold both as strings read with `getbyte`, as `GEM` is.
+
+## The gates header says pre-push runs static
+
+- Where: the mode list at the top of `tools/gates.sh` (line 41 at `package-clean`), which says pre-push is static, security, stages. Quality advisory of `package-clean`.
+- Why it matters: static now adds the attribution gate, which pre-push deliberately leaves out (the gates stage runs it), so a reader trusting the header expects a check the push never makes.
+- Fix outline: list pre-push as trailer, content, snapshots, docs, security, stages, noting attribution runs through the gates stage.
+
+## The spec preview of a failed change is deleted by the next change's
+
+- Where: the loop over `openspec/changes/` in `tools/spec_validate.sh` (line 25 at `package-clean`), which empties `build/spec-preview` for each active change while the header and the failure message promise a failed preview is kept. Quality advisory of `package-clean`.
+- Why it matters: with two active changes, the first one's failed preview is gone before anyone reads it, so the message points at a directory holding the wrong change.
+- Fix outline: preview each change under `build/spec-preview/<name>`, or stop after the first failure.
+
+## The contributor's implement step validates the change twice
+
+- Where: implement steps 2 and 6 of `.claude/agents/contributor.md` (line 34 at `package-clean`), which run `openspec validate <change> --strict` and then `make spec-validate`, whose `validate --all --strict` already covers the change. Quality advisory of `package-clean`.
+- Why it matters: two ways to do one check cost a tool call each run and can drift apart.
+- Fix outline: keep only `make spec-validate`.
+
+## The attribution gate matches its values anywhere in the settings file
+
+- Where: `gate_attribution` in `tools/gates.sh` (line 336 at `package-clean`), which greps the three values as fixed strings over the whole of `.claude/settings.json`. Quality advisory of `package-clean`.
+- Why it matters: a matching `pr` or `sessionUrl` line outside the attribution object passes while the attribution object itself could still allow pull request text or a session link.
+- Fix outline: cut the attribution block by its lines (a sed range from the attribution line to its closing brace) and run the greps on that block, with a `tools/tools_test.sh` case of a value outside it.

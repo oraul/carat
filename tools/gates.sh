@@ -17,6 +17,9 @@
 #              code map; make targets or agent, command, or workflow files
 #              added or removed need CLAUDE.md; the default configuration, the
 #              compatibility table, make targets, or process files need README.md
+#   attribution  .claude/settings.json sets Claude Code's attribution to
+#              exactly the trailer on commits, no pull request text, and no
+#              session link
 #   security   the security review is recorded as pass at a commit whose
 #              difference to HEAD touches only openspec/, docs/backlog.md,
 #              docs/queue.md, docs/goals.md, and docs/metrics.tsv
@@ -34,7 +37,7 @@
 #              make it the run state), has the template's shape, no comment,
 #              angle bracket, empty bullet, footer, URL, email, session id, or
 #              model name, and a Testing line naming the security review
-#   static     trailer, content, snapshots, docs (make gates)
+#   static     trailer, content, snapshots, docs, attribution (make gates)
 #   pre-push   static, security, stages (tools/run_state.sh push)
 #   backup     trailer, content (tools/run_state.sh backup, with BASE the
 #              branch's base, so every commit the backup publishes)
@@ -320,6 +323,21 @@ gate_records() {
   [ $failed -ne $start ] || ok "the run state holds the workflow's $(echo $RECORDS | wc -w | tr -d ' ') record(s)"
 }
 
+# Claude Code's attribution, set in .claude/settings.json at the top of the
+# work tree: exactly the trailer on commits, no text added to a pull
+# request, and no session link in either. Fixed-string matches: the file is
+# small and hand-written, and the shell has no JSON tool.
+gate_attribution() {
+  gate=attribution
+  start=$failed
+  file="$(git rev-parse --show-toplevel)/.claude/settings.json"
+  [ -f "$file" ] || { bad "no .claude/settings.json"; return; }
+  for want in '"attribution": {' "\"commit\": \"$TRAILER\"" '"pr": ""' '"sessionUrl": false'; do
+    grep -q -F -e "$want" "$file" || bad ".claude/settings.json lacks the line $want"
+  done
+  [ $failed -ne $start ] || ok "the trailer only, no pull request text, no session link"
+}
+
 gate_pr_body() {
   gate=pr-body
   start=$failed
@@ -356,12 +374,13 @@ case "$target" in
   content) gate_content ;;
   snapshots) gate_snapshots ;;
   docs) gate_docs ;;
+  attribution) gate_attribution ;;
   security) gate_security ;;
   stages) gate_stages ;;
   pushes) gate_pushes ;;
   records) gate_records ;;
   pr-body) gate_pr_body "$body" ;;
-  static) gate_trailer; gate_content; gate_snapshots; gate_docs ;;
+  static) gate_trailer; gate_content; gate_snapshots; gate_docs; gate_attribution ;;
   pre-push) gate_trailer; gate_content; gate_snapshots; gate_docs; gate_security; gate_stages ;;
   backup) gate_trailer; gate_content ;;
   passed) gate_passed ;;
