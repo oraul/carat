@@ -8,9 +8,9 @@
 
 ## 2. docs/architecture.md
 
-- [ ] 2.1 Section 11: the directory tree kept, the per-file lists of the layers replaced by a pointer to `docs/codebase-map.md`. Checked by `make docs-lint` (dead paths).
-- [ ] 2.2 Sections 5.1 and 5.3: `SubstituteLines`, `DeleteLines`, `OpenSearchPrompt`, `PreviewSearch`, `RecallHistory`, and `ScrollWindow` named; checked by a scan that every plain use case class under `carat/use_cases/` (handlers, requests, records, and the plugin host aside) is named in the document.
-- [ ] 2.3 `docs/architecture.md` at most 87,064 bytes. Checked by `wc -c` and `make docs-lint`.
+- [x] 2.1 Section 11: the directory tree kept, the per-file lists of the layers replaced by a pointer to `docs/codebase-map.md`. Checked by `make docs-lint` (dead paths).
+- [x] 2.2 Sections 5.1 and 5.3: `SubstituteLines`, `DeleteLines`, `OpenSearchPrompt`, `PreviewSearch`, `RecallHistory`, and `ScrollWindow` named; checked by a scan that every plain use case class under `carat/use_cases/` (handlers, requests, records, and the plugin host aside) is named in the document.
+- [x] 2.3 `docs/architecture.md` at most 87,064 bytes. Checked by `wc -c` and `make docs-lint`.
 
 ## 3. docs/backlog.md
 
