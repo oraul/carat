@@ -1,3 +1,7 @@
+## Purpose
+
+The status bar is the one row above the message row that shows the mode, the current buffer, the cursor, the plugins' segments, and the slots git and language services fill, dropping segments by priority when the terminal is narrow.
+
 ## ADDED Requirements
 
 ### Requirement: One status bar for the tab page

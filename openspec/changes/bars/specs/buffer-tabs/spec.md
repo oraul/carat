@@ -1,3 +1,7 @@
+## Purpose
+
+The buffer tabs are the top row that lists the listed file buffers with their icons and modified dots, counts the ones that do not fit, and numbers the tab pages at its right end.
+
 ## ADDED Requirements
 
 ### Requirement: Buffer tabs take the top row from two buffers or two tab pages

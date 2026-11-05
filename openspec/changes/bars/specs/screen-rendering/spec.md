@@ -16,7 +16,7 @@ A frame of R rows and C columns showing one tab page with one window and no buff
 - **THEN** the gutter is five columns wide and row 0 reads "   1 " followed by the text
 
 ### Requirement: Frame layout for several windows
-The frame SHALL show every window of the current tab page in its own rectangle: a horizontal split stacks the windows, each window above another ending in a separator row of horizontal lines across its width, and the bottom windows reaching the status bar; a vertical split places them side by side with one separator column between them showing the vertical bar character down to the status bar. Every separator SHALL be drawn in the `WinSeparator` group. Each window SHALL have its own line number gutter and text area, and rows past the end of its buffer SHALL show "~". The command line or message row SHALL stay the last row of the frame.
+The frame SHALL show every window of the current tab page in its own rectangle: a horizontal split stacks the windows, each window above another ending in a separator row of "─" across its width; a vertical split places them side by side with one separator column of "│" between them, down to the status bar. Every separator SHALL be in `WinSeparator`. Each window SHALL have its own gutter and text area, rows past the end of its buffer SHALL show "~", and the message row SHALL stay the last row.
 
 #### Scenario: Two stacked windows
 - **WHEN** the lines ["one", "two", "three"] are shown in a window split horizontally in a 9-row, 14-column frame
