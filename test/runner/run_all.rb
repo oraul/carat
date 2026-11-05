@@ -19,6 +19,7 @@ require_relative "../domain_ex_grammar"
 require_relative "../domain_ex_range"
 require_relative "../domain_filetype"
 require_relative "../domain_frame"
+require_relative "../domain_global"
 require_relative "../domain_grammar"
 require_relative "../domain_icons"
 require_relative "../domain_keymap"
@@ -89,6 +90,7 @@ when "domain_ex_grammar" then DomainExGrammarTest.main
 when "domain_ex_range" then DomainExRangeTest.main
 when "domain_filetype" then DomainFiletypeTest.main
 when "domain_frame" then DomainFrameTest.main
+when "domain_global" then DomainGlobalTest.main
 when "domain_grammar" then DomainGrammarTest.main
 when "domain_icons" then DomainIconsTest.main
 when "domain_keymap" then DomainKeymapTest.main
