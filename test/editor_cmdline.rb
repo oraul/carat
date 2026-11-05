@@ -223,8 +223,8 @@ module EditorCmdlineTest
 
     # Leader mappings go through the same path.
     h = editor(files_with("ab\n"))
-    h.type(" q")
-    t.assert_equal(true, h.quit?, "leader q quits")
+    h.type(" qq")
+    t.assert_equal(true, h.quit?, "leader q q quits")
 
     # A message stays until the next key.
     h = editor(files_with("ab\n"))

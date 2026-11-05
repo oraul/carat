@@ -278,12 +278,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a directory of the tree replaced by a link pointing outward between the check and the create, rename, or delete redirects the operation outside the tree root, so the containment holds only against a tree that does not change while the explorer acts on it.
 - Fix outline: when the file port gains directory-relative operations, open the resolved directory once and act through its descriptor (`openat`, `renameat`, `unlinkat` with no-follow), with a test row in `test/drivers_disk_files.rb`; until then record in `docs/spinel-notes.md` whether the pinned Spinel exposes them.
 
-## The README names held-Ctrl forms the window keys do not have
-
-- Where: `README.md` line 5, which says the window commands `s v h j k l w W p c o = q` work with Ctrl held on the second key. Periodic quality advisory at df5a203.
-- Why it matters: `W`, `c`, and `=` have no held-Ctrl binding, and `<C-w><C-c>` deliberately cancels as in Vim (`docs/compatibility.md`), so a user following the README presses keys that do nothing or cancel.
-- Fix outline: name only the keys that `config/default.caratrc` binds in the held-Ctrl form, with the `<C-w><C-c>` difference left to `docs/compatibility.md`.
-
 ## The README's commands table omits four make targets
 
 - Where: `README.md` line 14, the commands table, which has no row for `make clean`, `make pack`, `make spinel-rev`, or `make help` (line 12 now names `make install`). Periodic quality advisory at df5a203.

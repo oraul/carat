@@ -13,6 +13,10 @@ ok   escape returns to the block cursor
 ok   the editor exits with status 0 after :wq
 ok   the file holds the typed text
 ok   after :wq the output ends with the terminal's cursor restored and the alternate screen left
+ok   Ctrl-S in insert mode shows the written message
+ok   Ctrl-S in insert mode writes the typed text
+ok   the editor exits with status 0 after <leader>qq
+ok   after <leader>qq the output ends with the terminal's cursor restored and the alternate screen left
 ok   the editor shows the existing file message
 ok   x deletes a character and the status bar marks the buffer modified
 ok   quit is refused with E37
@@ -58,4 +62,4 @@ ok   SIGTERM restores the cursor and leaves the alternate screen
 ok   the editor shows the bar cursor before the interrupt
 ok   SIGINT ends the editor with status 0
 ok   SIGINT restores the cursor and leaves the alternate screen
-smoke_editor: 60 passed, 0 failed
+smoke_editor: 64 passed, 0 failed

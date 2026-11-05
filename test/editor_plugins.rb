@@ -141,7 +141,7 @@ module EditorPluginsTest
     # Returns the manifest.
     # @rbs skip
     def manifest
-      Carat::PluginApi::Manifest.new(name: "boom", version: "1.0.0", api_version: "2.0", actions: { "plugin.boom.go" => "Raise" }, commands: {}, bindings: ["keymap.normal <Space>bb plugin.boom.go"], events: [:cursor_move, :buffer_open], options: [], option_types: {}, filetypes: [])
+      Carat::PluginApi::Manifest.new(name: "boom", version: "1.0.0", api_version: "2.0", actions: { "plugin.boom.go" => "Raise" }, commands: {}, bindings: ["keymap.normal <Space>kk plugin.boom.go"], events: [:cursor_move, :buffer_open], options: [], option_types: {}, filetypes: [])
     end
 
     #: (String, Carat::PluginApi::Context) -> void
@@ -334,7 +334,7 @@ module EditorPluginsTest
     h = Carat::Doubles::EditorHarness.with_plugins(files, 24, 80, [Boom.new])
     h.open("a.txt")
     t.assert_equal(["Plugin boom disabled: event boom", true], [h.message, h.state.message_error], "a raise in an event at startup disables the plugin")
-    h.type(" bb")
+    h.type(" kk")
     t.assert_equal(["", [0, 0]], [h.message, h.cursor], "its binding went with it")
     h.type("x")
     t.assert_equal([["ne", "two"], ""], [h.lines, h.message], "the editor goes on editing")

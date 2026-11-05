@@ -61,8 +61,11 @@ Differences from Neovim: a different operator after a pending one cancels silent
 | `O` | `mode.insert_open_above` | Open a line above, with autoindent | `editor_normal` |
 | `:` | `mode.cmdline` | Enter command-line mode | `editor_cmdline` |
 | `<C-c>` | `message.quit_hint` | Show how to quit with unsaved changes | `editor_normal` |
-| `<leader>w` | `:w<CR>` | Write the file | `editor_normal` |
-| `<leader>q` | `:q<CR>` | Quit | `editor_cmdline` |
+| `[count]<leader>ws`, `[count]<leader>wv`, `[count]<leader>wh`, `wj`, `wk`, `wl`, `[count]<leader>wc`, `<leader>wo` | `window.*` | Carat's window group: as `<C-w>` with the same last key | `editor_leader`, `domain_keymap` |
+| `<leader>qq`, `<leader>qw` | `quit.all`, `quit.write_all` | Carat's quit group: `:qa`, and `:wqa` | `editor_leader`, `editor_cmdline`, `smoke_editor` |
+| `<leader>fs`, `<C-s>` | `file.save` | Carat's file group and save key: `:w`, Ctrl-S also in insert mode, staying in it | `editor_leader`, `smoke_editor` |
+| `<leader>ff` | `file.find` | Reserved for the finder: "Not implemented: file.find" | `editor_leader` |
+| `<leader>bb`, `[count]<leader>bn`, `[count]<leader>bp`, `[count]<leader>bd` | `buffer.*` | Carat's buffer group: `:ls`, `:bn`, `:bp`, `:bd` or `:bd N` | `editor_leader` |
 
 Differences from Neovim: `startofline` is off, so `gg G H M L` keep the wanted column; keyword characters are ASCII letters, digits, underscore, and every code point from U+00C0 upward until `iskeyword` exists; sentence ends are `. ! ?` with optional `) ] " '` before a blank or the line end, and paragraph boundaries are empty lines only (no nroff macros, no form feeds); `H` and `L` take `scrolloff` into account when moving the cursor and ignore it under an operator, as Neovim does; the quit hint names `:q!` as Neovim does for the last window.
 

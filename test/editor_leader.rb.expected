@@ -1,0 +1,34 @@
+ok   leader w s splits
+ok   a count before leader w s sets the new window's rows
+ok   leader w v splits vertically
+ok   leader w j moves down
+ok   leader w k moves back up
+ok   leader w l moves right
+ok   leader w h moves back left
+ok   leader w c closes the window
+ok   leader w o keeps only the current window
+ok   leader w alone waits and changes nothing
+ok   leader f s writes the file
+ok   Ctrl-S writes the file in normal mode
+ok   Ctrl-S in insert mode writes and stays in insert mode
+ok   typing after Ctrl-S in insert mode modifies the buffer again
+ok   leader w no longer writes
+ok   leader f f is reserved for the finder
+ok   Ctrl-S as the raw byte 0x13 writes the file
+ok   undo after Ctrl-S in insert mode takes the insert back and the buffer differs from the file
+ok   leader q q quits
+ok   leader q q is refused by unsaved work
+ok   leader q w writes and quits
+ok   leader q alone does not quit
+ok   leader q q refused shows what :qa shows
+ok   leader b n goes to the next buffer
+ok   leader b p goes back
+ok   leader b p wraps to the last buffer
+ok   a count before leader b n steps that many
+ok   leader b d deletes the current buffer
+ok   a count before leader b d deletes that buffer
+ok   leader b d is refused by a change
+ok   leader b d refused shows what :bd shows
+ok   leader b d with a count of no buffer shows E516
+ok   leader b b lists the buffers as :ls does
+editor_leader: 33 passed, 0 failed

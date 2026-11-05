@@ -64,7 +64,7 @@ ok   wa writes every buffer in every tab page
 ok   qa quits with several windows and tab pages
 ok   qa is refused by a modified buffer in another tab page and goes there
 ok   wqa writes the buffers of both tab pages and quits
-ok   leader q quits
+ok   leader q q quits
 ok   message shown
 ok   message stays while idle
 ok   message clears on the next key

@@ -221,7 +221,7 @@ option.tabstop 2
 option.theme one_dark
 keymap.leader <Space>
 keymap.normal <leader>e plugin.explorer.toggle
-keymap.insert <C-s> <Esc>:w<CR>
+keymap.normal <leader>w :w<CR>
 keymap.normal Q none
 keymap.normal "\"" register.select
 plugin.explorer.enabled true

@@ -6,11 +6,11 @@
 
 ## 2. File and quit actions
 
-- [ ] 2.1 `carat/use_cases/actions/file_handler.rb` (`file.save`, `file.find`, `quit.all`, `quit.write_all`) from `make new-action`, wired in `carat.rb` and `carat/adapters/editor_assembly.rb`; `docs/actions.md` rows (`file.find` under Reserved); holder rows in `test/adapters_assembly.rb`; verified by `make test-one T=test/use_cases_actions.rb`.
+- [ ] 2.1 `carat/use_cases/actions/file_handler.rb` (`file.save`, `file.find`, `quit.all`, `quit.write_all`) from `make new-action`, wired in `carat.rb` and `carat/adapters/editor_assembly.rb`; `docs/actions.md` rows (`file.find` under Reserved); the handler gets the one `SaveFile`, `SaveAll`, and `QuitAll` the ex commands use; verified by `make test-one T=test/use_cases_actions.rb` (every handler returns an `Outcome`, the table matches `docs/actions.md`).
 
 ## 3. Buffer actions
 
-- [ ] 3.1 `carat/use_cases/actions/buffer_handler.rb` (`buffer.list`, `buffer.next`, `buffer.previous`, `buffer.delete`) from `make new-action`, wired in `carat.rb` and `carat/adapters/editor_assembly.rb`; `docs/actions.md` rows; holder rows in `test/adapters_assembly.rb`; verified by `make test-one T=test/use_cases_actions.rb`.
+- [ ] 3.1 `carat/use_cases/actions/buffer_handler.rb` (`buffer.list`, `buffer.next`, `buffer.previous`, `buffer.delete`) from `make new-action`, wired in `carat.rb` and `carat/adapters/editor_assembly.rb`; `docs/actions.md` rows; the handler gets the one `ListBuffers`, `SwitchBuffer`, and `DeleteBuffer` the ex commands use; verified by `make test-one T=test/use_cases_actions.rb` (every handler returns an `Outcome`, the table matches `docs/actions.md`).
 
 ## 4. The leader layout and Ctrl-S
 
@@ -18,6 +18,7 @@
 - [ ] 4.2 `test/editor_leader.rb` (new, table-driven): a row per new binding, the old keys no longer writing or quitting, Ctrl-S in insert mode staying in insert mode, and Ctrl-S as the raw byte 0x13; verified by `make test-one T=test/editor_leader.rb`.
 - [ ] 4.3 The tests of the moved keys: `test/domain_keymap.rb` (leader w a prefix, leader ws the split), `test/editor_normal.rb` (a user replay binding writes), `test/editor_cmdline.rb` (leader qq quits); verified by `make test-one` on each.
 - [ ] 4.4 `test/smoke_editor.rb`: Ctrl-S in insert mode writes the file over a pseudo-terminal and `<leader>qq` quits; verified by `make test-one T=test/smoke_editor.rb` after `make build`.
+- [ ] 4.5 `carat/use_cases/handle_key.rb`: a key-sequence value resolved after `timeoutlen` replays (the timeout's queue returned and assigned); verified by the user-binding row of `test/editor_normal.rb`.
 
 ## 5. Documentation and checks
 

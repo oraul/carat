@@ -2,7 +2,7 @@
 
 A terminal IDE written in Ruby with Neovim's modal editing model, built, tested, and shipped with Spinel. `docs/architecture.md` holds the design and the roadmap; `docs/codebase-map.md` places every source file in its area; `CLAUDE.md` holds the commands and conventions.
 
-Today it is an editor with split windows, tab pages, a plugin host, and a file tree: normal, insert, operator-pending, command-line, and the charwise, linewise, and blockwise visual modes (`v V <C-v>`, `o O gv`, every motion and text object, and `d x y c s > < J gJ p P r ~ u U X D C S R Y I A` on the selection); counts, the `"x` register prefix, and Neovim's `[count] operator [count] motion` grammar; the motions `h l 0 ^ $ f F t T ; , j k G gg + - _ w W b B e E ge gE ( ) { } H M L`; search with `/ ? n N * # g* g#`, also under an operator and in the visual modes; substitute with `:s`, `:&`, `&`, `g&`, and the ranges `% . $ N '<,'>`; the global commands `:g`, `:g!`, and `:v`, and `:d`; the text objects `iw aw iW aW is as ip ap` and the bracket and quote objects; the operators `d c y > <` with `dd cc yy >> <<` and `x s S C D Y J p P r ~`; undo and redo with branches (`u`, `<C-r>`, `U`, `g-`, `g+`, `:undo`, `:redo`, `:undolist`, `:earlier`, `:later`) and the dot command `.`; the unnamed, named, numbered, small delete, black hole, and read-only registers with `:registers`; insert-mode editing; the window commands `<C-w>s v h j k l w W p c o = q`, also with Ctrl held on the second key, which wait for their second key however long it takes, `gt`, and `gT`; scrolling with `<C-f> <C-b> <PageDown> <PageUp> <C-d> <C-u> <C-e> <C-y> zt zz zb` and the `scroll` option; and the ex commands `:w :q :wq :x :wa :qa :wqa :xa :e :sp :vs :new :vnew :close :only`, the buffer list commands `:ls :buffers :files :bnext :bprevious :bNext :buffer N :bdelete`, and `:tabnew :tabedit :tabclose :tabonly :tabnext :tabprevious :tabfirst :tablast`. Ruby files are highlighted in color, and `:syntax on`, `:syntax off`, `:set filetype=`, and `:set syntax=` switch it. `:e` refuses a directory, a FIFO, a device, or a file over 64 MiB with Vim's message and keeps the current buffer. A file that is not valid UTF-8 opens with its bytes kept and written back as they were, `[ILLEGAL BYTE in line N]` naming its first such line and each illegal byte drawn as one U+FFFD cell. Compiled plugins add actions, ex commands, side windows, and tokenizers through the API in `docs/plugins.md`; the built-in `explorer` plugin, the file tree below, and the built-in `ruby` plugin, the Ruby tokenizer, are built on it. `docs/compatibility.md` lists every Neovim command it implements with its test, and `docs/backlog.md` the known items left for later changes.
+Today it is an editor with split windows, tab pages, a plugin host, and a file tree: normal, insert, operator-pending, command-line, and the charwise, linewise, and blockwise visual modes (`v V <C-v>`, `o O gv`, every motion and text object, and `d x y c s > < J gJ p P r ~ u U X D C S R Y I A` on the selection); counts, the `"x` register prefix, and Neovim's `[count] operator [count] motion` grammar; the motions `h l 0 ^ $ f F t T ; , j k G gg + - _ w W b B e E ge gE ( ) { } H M L`; search with `/ ? n N * # g* g#`, also under an operator and in the visual modes; substitute with `:s`, `:&`, `&`, `g&`, and the ranges `% . $ N '<,'>`; the global commands `:g`, `:g!`, and `:v`, and `:d`; the text objects `iw aw iW aW is as ip ap` and the bracket and quote objects; the operators `d c y > <` with `dd cc yy >> <<` and `x s S C D Y J p P r ~`; undo and redo with branches (`u`, `<C-r>`, `U`, `g-`, `g+`, `:undo`, `:redo`, `:undolist`, `:earlier`, `:later`) and the dot command `.`; the unnamed, named, numbered, small delete, black hole, and read-only registers with `:registers`; insert-mode editing; the window commands `<C-w>s v h j k l w W p c o = q`, also with Ctrl held on `s v h j k l w p o q`, which wait for their second key however long it takes, `gt`, and `gT`; scrolling with `<C-f> <C-b> <PageDown> <PageUp> <C-d> <C-u> <C-e> <C-y> zt zz zb` and the `scroll` option; and the ex commands `:w :q :wq :x :wa :qa :wqa :xa :e :sp :vs :new :vnew :close :only`, the buffer list commands `:ls :buffers :files :bnext :bprevious :bNext :buffer N :bdelete`, and `:tabnew :tabedit :tabclose :tabonly :tabnext :tabprevious :tabfirst :tablast`. Ruby files are highlighted in color, and `:syntax on`, `:syntax off`, `:set filetype=`, and `:set syntax=` switch it. `:e` refuses a directory, a FIFO, a device, or a file over 64 MiB with Vim's message and keeps the current buffer. A file that is not valid UTF-8 opens with its bytes kept and written back as they were, `[ILLEGAL BYTE in line N]` naming its first such line and each illegal byte drawn as one U+FFFD cell. Compiled plugins add actions, ex commands, side windows, and tokenizers through the API in `docs/plugins.md`; the built-in `explorer` plugin, the file tree below, and the built-in `ruby` plugin, the Ruby tokenizer, are built on it. `docs/compatibility.md` lists every Neovim command it implements with its test, and `docs/backlog.md` the known items left for later changes.
 
 ## Building
 
@@ -48,6 +48,20 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 
 The cursor is a block in normal mode, a bar in insert mode, and an underline in replace mode, and the current window highlights the cursor's line (`option.cursorline false` or `:set nocul` turns it off). However carat ends, `:q`, a signal, or an error, the terminal gets its own cursor shape and its main screen back.
 
+## Leader keys
+
+The leader is Space. Its keys come in groups named by their first letter, and each group key waits for the next key however long it takes; Escape cancels it.
+
+- `<leader>w` windows: `ws` split, `wv` split vertically, `wh` `wj` `wk` `wl` go to the window left, below, above, or right, `wc` close, `wo` keep only this one; a count works as with `<C-w>`.
+- `<leader>q` quit: `qq` quits as `:qa` does, `qw` writes every changed buffer and quits as `:wqa` does.
+- `<leader>f` files: `fs` saves as `:w` does; `ff` will open the finder and says "Not implemented" until it arrives.
+- `<leader>b` buffers: `bb` lists them as `:ls` does, `bn` and `bp` go to the next and previous one, `bd` deletes this one, or with a count the buffer of that number.
+- `<leader>e` opens the file tree, as before.
+
+Ctrl-S saves in normal and in insert mode, where you stay in insert mode. Carat runs the terminal in raw mode, so flow control is off and Ctrl-S reaches it instead of freezing the screen.
+
+These keys moved: `<leader>w` used to write the file and `<leader>q` to quit the window. Press `<leader>fs` or Ctrl-S to write, and `:q` or `<C-w>q` to close a window, or `<leader>qq` to quit. To get the old keys back, add `keymap.normal <leader>w :w<CR>` and `keymap.normal <leader>q :q<CR>` to `~/.config/carat/caratrc`. Every action has a short description in the editor, which the coming key hints will show.
+
 ## Configuration
 
 Carat reads its settings from plain text files of one setting per line, `scope.name value`: the first word is a dotted key, and the rest of the line is the value, a word, a number, `true` or `false`, or a list of words separated by spaces. A word containing spaces goes in double quotes (`\"` and `\\` inside them stand for a quote and a backslash), `#` starts a comment, and blank lines are ignored.
@@ -58,7 +72,7 @@ option.number true
 option.tabstop 2
 option.theme one_dark
 keymap.normal <leader>e plugin.explorer.toggle
-keymap.insert <C-s> <Esc>:w<CR>
+keymap.normal <leader>w :w<CR>
 keymap.normal Q none
 plugin.explorer.enabled true
 plugin.explorer.width 30

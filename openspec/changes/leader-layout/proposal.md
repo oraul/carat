@@ -14,6 +14,7 @@ The leader key holds two unrelated replays today, `<leader>w` for `:w` and `<lea
 - Ctrl-S writes the current buffer in normal mode and in insert mode, where it stays in insert mode.
 - `<leader>e` opens the explorer as today.
 - New actions `file.save`, `file.find`, `quit.all`, `quit.write_all`, `buffer.list`, `buffer.delete`, `buffer.next`, `buffer.previous`, each with a `docs/actions.md` row.
+- A key-sequence binding that begins longer bindings now replays after `timeoutlen`; it was dropped, which the migration line `keymap.normal <leader>w :w<CR>` would have met.
 - Every core action carries a short description of at most 32 characters, registered with it, for the key hints.
 
 Out of scope: the key hints popup itself, the finder behind `<leader>ff` and a buffer picker behind `<leader>bb`, Ctrl-S in the visual and command-line modes, groups for tabs, search, or code, and any change to the `<C-w>` keys.
@@ -31,7 +32,7 @@ Out of scope: the key hints popup itself, the finder behind `<leader>ff` and a b
 ## Impact
 
 - Configuration: `config/default.caratrc` loses `<leader>w :w<CR>` and `<leader>q :q<CR>` and gains the groups and Ctrl-S; `carat/domain/default_config.rb` is regenerated.
-- Use cases: new `FileHandler` and `BufferHandler` under `carat/use_cases/actions/`, wired in `EditorAssembly` and `carat.rb`; `ActionTable#register` takes a description and `ActionTable#describe` answers it; every core handler's `register` passes one; the `make new-action` template follows.
-- Tests: a new table-driven `test/editor_leader.rb`; `test/use_cases_actions.rb` (descriptions), `test/domain_keymap.rb`, `test/editor_normal.rb`, `test/editor_cmdline.rb` (the moved keys), `test/smoke_editor.rb` (Ctrl-S and `<leader>qq` on a real terminal).
+- Use cases: new `FileHandler` and `BufferHandler` under `carat/use_cases/actions/`, wired in `EditorAssembly` and `carat.rb`; `ActionTable#register` takes a description and `ActionTable#describe` answers it; every core handler's `register` passes one, the motion, search, and text object lists of the domain carrying theirs; the `make new-action` template follows; `HandleKey`'s timeout path keeps the replayed keys.
+- Tests: a new table-driven `test/editor_leader.rb`; `test/use_cases_actions.rb` (descriptions), `test/domain_keymap.rb`, `test/editor_normal.rb`, `test/editor_cmdline.rb` (the moved keys), `test/editor_plugins.rb` (a fixture plugin's binding moved off `<leader>bb`, which the buffer group now holds), `test/smoke_editor.rb` (Ctrl-S and `<leader>qq` on a real terminal).
 - Docs: `docs/actions.md`, `docs/codebase-map.md`, `README.md` (the leader layout and what moved), `CLAUDE.md` status where it names the next change, `docs/backlog.md` (the README's held-Ctrl entry, fixed by the README update).
 - Assumptions: `<leader>qw` is `:wqa` rather than `:wq`, since the quit group quits the editor as `<leader>qq` does; `<leader>bb` lists rather than picks until the finder; Ctrl-S in insert mode stays in insert mode, as editors with that key do; a count before `<leader>bd` names the buffer number as `:bd N` does.
