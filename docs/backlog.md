@@ -943,3 +943,33 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `TerminalPort#no_color?` (`carat/ports/terminal_port.rb`), read only by `EditorAssembly#open` for the start screen's glyphs (`start-screen`); `SgrTable.from_theme` and `ScreenPresenter` color every other cell from the theme.
 - Why it matters: the `NO_COLOR` convention asks a program to add no ANSI color at all, so a user who sets it still gets syntax, status line, and message colors.
 - Fix outline: a color depth of none in `Domain::ColorDepth` chosen by `AnsiTerminal` when `NO_COLOR` is set, for which `SgrTable.sequence` emits attributes only (bold, reverse, underline), with rows in `test/adapters_screen_presenter.rb` and `docs/compatibility.md`.
+
+## FramePresenter clears the layout twice for the hit-enter prompt and the start screen
+
+- Where: the `if start` block of `carat/adapters/frame_presenter.rb` (line 201 at `start-screen`), which repeats the `if listed` block's `back.layout.clear` and `@back_rows.invalidate` line for line. Quality review of `start-screen`.
+- Why it matters: two copies of the full-repaint step must change together, and a fix to one misses the other.
+- Fix outline: clear the layout and invalidate the rows once under `if listed || start`, and keep only the two cursor lines under `if listed`.
+
+## InputController calls handle twice in pump and checks animating? twice in tick
+
+- Where: `pump` in `carat/adapters/input_controller.rb` (line 62 at `start-screen`) calls `handle(state, @decoder.feed(bytes))` in two branches, and `tick` (line 96) checks `animating?`, which `due?` checks again. Quality review of `start-screen`.
+- Why it matters: the duplicated call and guard are more code to keep in step on the per-key path.
+- Fix outline: set `shown = @start_screen.showing`, dismiss, then `return handle(...) || shown`, and drop `tick`'s `animating?` guard.
+
+## StartArt#paint clamps a step no caller passes out of range
+
+- Where: the two clamp lines of `paint` in `carat/domain/start_art.rb` (line 167 at `start-screen`); `StartScreen` only ever holds a step in 0..LAST. Quality review of `start-screen`.
+- Why it matters: defensive code no caller needs hides the invariant `StartScreen` keeps.
+- Fix outline: drop the two clamp lines.
+
+## StartArt.from_plain bends the from_x naming
+
+- Where: `StartArt.from_plain(bool)` in `carat/domain/start_art.rb` (line 73 at `start-screen`), while the archived change's `design.md` and task 3.1 call it `StartArt.build(plain)`. Quality review of `start-screen`.
+- Why it matters: `from_x` names a conversion from an x value, and a flag is not one, so the name misleads and the design record disagrees with the code.
+- Fix outline: rename it to `build(plain)` at its call sites and tests.
+
+## No test reads NO_COLOR through AnsiTerminal
+
+- Where: the `NO_COLOR` read in `carat/drivers/ansi_terminal.rb` (line 24 at `start-screen`); the start screen tests set only the `FakeTerminal` writer. Quality review of `start-screen`.
+- Why it matters: a regression in the driver's read would show the colored glyphs to a user who set `NO_COLOR` with every test still passing.
+- Fix outline: a `test/smoke_editor.rb` session spawned with `NO_COLOR=1` asserting the output holds no U+25E2 and still shows the hints.
