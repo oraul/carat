@@ -11,7 +11,7 @@
 
 ## 3. Buffer list commands
 
-- [x] 3.1 `carat/domain/buffer_list.rb` `step_from`, `first_unsaved`, `bring`, `other_listed?`, `carat/domain/tab_list.rb` `focus_buffer`; rows in `test/domain_buffer_list.rb`.
+- [x] 3.1 `carat/domain/buffer_list.rb` `step_from`, `file_count`, `replacement_for`, `first_unsaved`, `bring`, `close_windows_of`, `carat/domain/tab_list.rb` `windows_showing`, `focus_buffer`, `modified_in_windows`; rows in `test/domain_buffer_list.rb`.
 - [x] 3.2 `carat/use_cases/buffers/list_buffers.rb` (`:ls`, `:buffers`, `:files`, the bang and flags); rows in `test/editor_buffers.rb`.
 - [x] 3.3 `carat/use_cases/buffers/buffer_request.rb` and `carat/use_cases/buffers/switch_buffer.rb` (`:bn`, `:bp`, `:bN`, `:b N`); rows in `test/editor_buffers.rb`.
 - [x] 3.4 `carat/use_cases/buffers/delete_buffer.rb` (`:bd`); rows in `test/editor_buffers.rb`.
@@ -23,5 +23,5 @@
 
 ## 5. Documentation and checks
 
-- [x] 5.1 `docs/compatibility.md` (the rows, `:qa`, `:wa`, the differences), `docs/codebase-map.md` (new files, test, area 11, the delivered change), `docs/architecture.md` (item 7, `BufferList`), `CLAUDE.md` status, `README.md` where it lists commands; `make docs-lint` passes.
+- [x] 5.1 `docs/compatibility.md` (the rows, `:qa`, `:wa`, the differences), `docs/codebase-map.md` (new files, test, area 11, the delivered change), `docs/architecture.md` (item 7, `BufferList`), `README.md` where it lists commands; `make docs-lint` passes.
 - [x] 5.2 `make gates`, `make lint`, `make spec-validate`, `make diagnose`, and `make bench-budget` pass.
