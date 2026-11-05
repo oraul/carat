@@ -15,10 +15,10 @@
 
 - [x] 3.1 `tools/run_state.sh` `drop_backup`, used by `push` (always, reported), `set CHANGE merged`, and the new `abandon CHANGE`. Tested by "run_state: push deletes the backup refs", "run_state: recording merged deletes the backup refs", "run_state: abandon deletes the backup refs", and "run_state: abandon says when there is no backup".
 - [x] 3.2 `tools/agent_guard.sh` refuses `abandon` to every profile (its default). Tested by "guard: contributor never abandons a run".
-- [ ] 3.3 `.claude/workflows/deliver-change.js` notes `abandon` when a run stops; `.claude/agents/merger.md` says recording `merged` deletes the backup refs. Checked with `node --check` when a runtime is present, else by reading.
+- [x] 3.3 `.claude/workflows/deliver-change.js` notes `abandon` when a run stops; `.claude/agents/merger.md` says recording `merged` deletes the backup refs. Checked with `node --check` when a runtime is present, else by reading.
 
 ## 4. Docs and bookkeeping
 
-- [ ] 4.1 `README.md`, `docs/codebase-map.md` area 1, and the headers of `tools/run_state.sh` and `tools/gates.sh` (`abandon`, `base`, the base ref, the secret patterns). Checked by `make docs-lint` and `make gates`.
+- [x] 4.1 `README.md`, `docs/codebase-map.md` area 1, and the headers of `tools/run_state.sh` and `tools/gates.sh` (`abandon`, `base`, the base ref, the secret patterns). Checked by `make docs-lint` and `make gates`.
 - [ ] 4.2 `docs/backlog.md`: remove the two entries fixed here, append the six entries of `build/plan/backlog.md`, update the figures of the `CLAUDE.md` budget entry (to `docs-currency`) and the delivered-changes entry (to `docs-index`), and add the limits of the secret patterns; `docs/queue.md` from `build/plan/queue.md`. Checked by `make docs-lint`.
 - [ ] 4.3 Run `make tools-test`, `make docs-lint`, `make gates`, and `openspec validate backup-secret-scan --strict --no-interactive`.
