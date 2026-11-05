@@ -91,7 +91,7 @@ Files:
 - `carat/domain/rc_value.rb`: `RcValue` bool, integer, string, and list kinds; `valid?`, `expectation`, `text`, `number?`.
 - `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `refuse`, `line_at`, `last`, `note`, `report` (a stable merge of the ascending runs the readers note); scope and language checks, the project file refused language commands and key-sequence bindings.
 - `carat/domain/default_config.rb`: generated, `DEFAULT_CARATRC`; never edited by hand.
-- `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, and the rest); `from_config`, `apply`, `width_problem` (tabstop 1 to 9999, shiftwidth 0 to 9999), `tab_width`.
+- `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, `cursorline`, and the rest); `from_config`, `apply`, `width_problem` (tabstop 1 to 9999, shiftwidth 0 to 9999), `tab_width`.
 - `carat/domain/registry_source.rb`: `RegistrySource.render`, `entry?`, `names`; the registry text from the plugin list lines.
 - `carat/adapters/rc_config_gateway.rb`: `RcConfigGateway#load`, the `ConfigPort` driver over `FilePort` (`home`, `cwd`); refuses a linked project file, a file that is not regular, and one over `LIMIT`.
 - Outside the five roots: `config/default.caratrc` (every default option, binding, language command, and plugin setting) and `config/plugins.caratrc` (`plugin.<name> <path> <class>` per compiled plugin).
@@ -110,7 +110,7 @@ Flow: `bin/carat.rb` checks the arguments and the terminal, installs `Signals`, 
 
 Files:
 
-- `bin/carat.rb`: entry point and the only place drivers are constructed; runs `MainLoop` inside the single-call `STDIN.raw` block.
+- `bin/carat.rb`: entry point and the only place drivers are constructed; runs `MainLoop` inside the single-call `STDIN.raw` block, entering the screen and opening the file inside the `ensure` that leaves it.
 - `carat/adapters/editor_assembly.rb`: `EditorAssembly`; `initialize` (reads the configuration once, builds records and collaborators with a reader for each, builds the ex table and runner before the plugin host, has each feature `register` its handlers, core ex commands before plugin commands, registers and activates plugins, then adds the configuration's bindings with `add_checked`), `open`, `render` (resize, `PluginHost#resized`, `ArrangeView`, `HighlightView`, `FramePresenter`, `ScreenPresenter#present`), `config_errors`.
 - `carat/domain/editor_state.rb`: `EditorState`, the thin aggregate of the current view (tab list, mode, options, command line, message, quit flag, pending block insert, screen size); `resize`, `tab`, `window`, `buffer`, `cursor`, `current_line`, `max_col`, `clamp_col`, `selection`, `end_visual`, `show`, `list_message?`, `clear_message`.
 - `carat/domain/position.rb`: `Position` value; `sure`, `before?`, `to_a`.
@@ -409,10 +409,10 @@ Flow: `EditorAssembly#render` runs `ArrangeView` and `HighlightView`, then `Fram
 
 Files:
 
-- `carat/adapters/frame_presenter.rb`: `FramePresenter#call`, `display_col`, `display_width`; reads the state only; a message of several lines over the bottom rows with the hit-enter line.
-- `carat/adapters/painted_rows.rb`: `PaintedRows`, what every window row segment of a frame shows; `same?`, `store`, `invalidate`, `painted?`.
-- `carat/adapters/screen_presenter.rb`: `ScreenPresenter`; `enter`, `leave`, `present`; a cell code that is not a scalar value is written as U+FFFD; a theme that paints the background has Normal in effect at each clear and scroll.
-- `carat/domain/frame.rb`: `Frame`, cells in three flat integer arrays; `put`, `put_code`, `put_within`, `fill`, `blank`, `set_hl`, `same_row?`, `dirty?`, `dirty_rows`, `reset_rows`, `mark_all_dirty`, `add_scroll`, `row_text`.
+- `carat/adapters/frame_presenter.rb`: `FramePresenter#call`, `display_col`, `display_width`; reads the state only; a message of several lines over the bottom rows with the hit-enter line; the current window's cursor line lifted onto the cursor-line layer, and `shape_of` the mode.
+- `carat/adapters/painted_rows.rb`: `PaintedRows`, what every window row segment of a frame shows, its cursor-line layer included; `same?`, `store`, `invalidate`, `painted?`.
+- `carat/adapters/screen_presenter.rb`: `ScreenPresenter`; `enter`, `leave` (the terminal's own cursor shape back), `present` (`shape_sequence`: block, bar, underline); a cell code that is not a scalar value is written as U+FFFD; a theme that paints the background has Normal in effect at each clear and scroll.
+- `carat/domain/frame.rb`: `Frame`, cells in three flat integer arrays; `put`, `put_code`, `put_within`, `fill`, `blank`, `set_hl`, `lift`, `same_row?`, `dirty?`, `dirty_rows`, `reset_rows`, `mark_all_dirty`, `add_scroll`, `row_text`.
 - `carat/domain/cell.rb`: `Cell`, a value view of one cell for tests.
 - `carat/domain/start_art.rb`: `StartArt`, the start screen's six frames and wordmark computed once from the gem's legend, Unicode in the theme's groups or ASCII in Normal; `from_plain`, `none`, `paint` (centred in a window, the wordmark alone when it does not fit).
 - `carat/domain/start_screen.rb`: `StartScreen` record (`showing`, `step`, `started`, `art`); `start`, `animating?`, `due?`, `advance`, `wait`, `dismiss`, `paint`; the input controller advances it on the clock and dismisses it on a key, the frame presenter paints it over the current window.
@@ -424,7 +424,7 @@ Files:
 
 Tests: `test/domain_frame.rb`, `test/domain_line_cache.rb`, `test/adapters_frame_presenter.rb`, `test/adapters_dirty_rows.rb`, `test/adapters_screen_presenter.rb`, `test/editor_screen.rb`, `test/domain_utf8.rb` (hostile byte sequences through the decoder, display width, `TextLines`, and the plugin API's path segments), `test/editor_start_screen.rb` (every start screen frame, in color and plain, in its snapshot; the options, `NO_COLOR`, small windows, and the key that ends it).
 
-Designs: `render-core` (all Decisions; Measured result), `escape-c1-control-codes` (all Decisions), `windows-and-splits` (Rendering), `visual-modes` (Rendering).
+Designs: `render-core` (all Decisions; Measured result), `escape-c1-control-codes` (all Decisions), `windows-and-splits` (Rendering), `visual-modes` (Rendering), `cursor-shapes` (all Decisions).
 
 Rules: the presenters read the state only; `docs/architecture.md` section 8.2.
 
@@ -438,9 +438,9 @@ Flow: a buffer detects its `filetype` when made or renamed (`Filetype.detect`); 
 
 Files:
 
-- `carat/domain/highlight.rb`: `Highlight` group ids (41 UI groups, thirty syntax groups from `SYNTAX_FIRST`, thirteen file-icon groups from `ICON_FIRST`, with Neovim's `NAMES`); `token_id`, `token?`, `name_of`.
+- `carat/domain/highlight.rb`: `Highlight` group ids (41 UI groups, thirty syntax groups from `SYNTAX_FIRST`, thirteen file-icon groups from `ICON_FIRST`, with Neovim's `NAMES`, and each again from `CURSOR_LINE_LAYER` below `LIMIT` on the cursor line); `token_id`, `token?`, `name_of`, `base`.
 - `carat/domain/theme.rb`: `Theme`, per group 24-bit, 256-color, and 16-color colors and attributes; `fg`, `bg`, `fg256`, `bg256`, `fg16`, `bg16`, `attr`, `attr16`, `paints_background?`.
-- `carat/domain/themes.rb`: `Themes`, the palettes as colors per role and `GROUPS`, the roles of every group; `known?`, `background?`, `canonical`, `find`, `palette`, `from_palette` (`one_dark`, `one_light`, `dark_plus`, `light_plus`, aliases `carat-dark`, `carat-light`).
+- `carat/domain/themes.rb`: `Themes`, the palettes as colors per role and `GROUPS`, the roles of every group; `known?`, `background?`, `canonical`, `find`, `palette`, `from_palette` (the cursor-line layer included; `one_dark`, `one_light`, `dark_plus`, `light_plus`, aliases `carat-dark`, `carat-light`).
 - `carat/domain/color_depth.rb`: `ColorDepth.detect` from `COLORTERM` and `TERM`.
 - `carat/domain/filetype.rb`: `Filetype`; `detect`, `from_name`, `from_shebang`.
 - `carat/domain/syntax_line.rb`: `SyntaxLine`, one line's tokens for a start state with its end state.
@@ -449,7 +449,7 @@ Files:
 - `carat/use_cases/syntax/highlight_view.rb`: `HighlightView#call`, `tokenized` (read by the benchmark); a failing plugin's buffer dropped or taken over by the next plugin in the same frame.
 - `carat/use_cases/plugins/plugin_syntax.rb`: `PluginSyntax`; `provider`, `tokenize`, `copied_tokens`.
 - `carat/use_cases/ex/syntax_command_handler.rb`: `SyntaxCommandHandler` (`:syntax on`, `enable`, `off`).
-- `carat/use_cases/ex/set_command_handler.rb`: `SetCommandHandler` (`:set` for `filetype` and `syntax` only).
+- `carat/use_cases/ex/set_command_handler.rb`: `SetCommandHandler` (`:set` for `filetype`, `syntax`, the four search options, and `cursorline`).
 - `carat/adapters/sgr_table.rb`: `SgrTable`; `from_theme`, `at`, `sequence`, `index_256`.
 - `carat/plugins/ruby/plugin.rb`: `Ruby::Plugin`; `manifest`, `activate`, `tokenize`.
 - `carat/plugins/ruby/tokenizer.rb`: `Tokenizer#call`, the Ruby tokenizer.
@@ -459,7 +459,7 @@ Files:
 
 Tests: `test/domain_filetype.rb`, `test/domain_theme.rb`, `test/domain_syntax_cache.rb`, `test/use_cases_plugin_syntax.rb`, `test/plugins_ruby.rb`, `test/editor_syntax.rb`.
 
-Designs: `syntax-highlighting` (all ten Decisions).
+Designs: `syntax-highlighting` (all ten Decisions), `cursor-shapes` (The cursor line is a layer of group ids).
 
 Rules: `docs/architecture.md` section 4.2; the plugin rules of area 15. Range highlights, virtual text, other languages, the rest of `:set`, user themes, and semantic highlighting are in `docs/backlog.md`.
 
@@ -548,7 +548,7 @@ Files:
 
 Tests: `test/drivers_main_loop.rb` (a resize, a terminate, and `:q` over the signal double, and the driver's flags), `test/json.rb`, `test/drivers_disk_files.rb` (`DiskFiles`, `MakePath`, `RenamePath`, and `DeletePath` over a real directory: a link to `/dev/zero`, a FIFO, files at and over a limit, links inside and outside a root).
 
-Designs: `state-and-ports` (Signals; The stat value; Configuration), `editor-foundation` (Ports, adapters, drivers, doubles).
+Designs: `state-and-ports` (Signals; The stat value; Configuration), `editor-foundation` (Ports, adapters, drivers, doubles), `cursor-shapes` (Every exit path).
 
 Rules: `docs/architecture.md` sections 2.1 (signal handlers set a flag; `STDIN.raw` single call; `Process.spawn` with `IO.pipe`), 6, and 8.4. An overridden port method carries `# @rbs` parameter lines, not an applied return type.
 
