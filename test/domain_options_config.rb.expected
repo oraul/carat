@@ -28,4 +28,9 @@ ok   the start screen on, with its animation, by default
 ok   both are stored
 ok   each takes true or false
 ok   the shipped start screen options
-domain_options_config: 30 passed, 0 failed
+ok   off by default, as in Neovim
+ok   turned on
+ok   a later line wins
+ok   takes true or false
+ok   the shipped configuration turns the cursor line on
+domain_options_config: 35 passed, 0 failed
