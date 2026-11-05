@@ -188,11 +188,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: one thing under two names makes a search for the action miss the code that runs it.
 - Fix outline: rename the targets `:half_page_down` and `:half_page_up` in the three files.
 
-## Five comments run past their file's wrap width
+## Seven comments break their file's wrap width
 
-- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters), advisory of the periodic quality review at 66fd52b, the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118, the class comment of `carat/ports/terminal_port.rb` (line 4, 130 characters), advisory of the periodic quality review at 5b128b5, and the class comments of `carat/use_cases/plugins/window_requests.rb` (line 23, 104 characters) and `carat/adapters/frame_presenter.rb` (line 48 at 3a99ddd, 105 characters, the line about one segment per row and window), advisories of the periodic quality review at 3a99ddd. Line 37 of `carat/use_cases/dispatcher.rb`, once listed here, is the one-line signature of the constructor, not a comment to rewrap (quality advisory of `explorer-folder-toggle`).
+- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters), advisory of the periodic quality review at 66fd52b, the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118, the class comment of `carat/ports/terminal_port.rb` (line 4, 130 characters), advisory of the periodic quality review at 5b128b5, the class comments of `carat/use_cases/plugins/window_requests.rb` (line 23, 104 characters) and `carat/adapters/frame_presenter.rb` (line 48 at 3a99ddd, 105 characters, the line about one segment per row and window), advisories of the periodic quality review at 3a99ddd, and, quality advisories of `cursor-shapes`, the class comment of `carat/use_cases/ex/set_command_handler.rb` (line 17, 94 characters) and the class comment of `carat/domain/frame.rb` (line 15, a short ragged line of 37 characters). Line 37 of `carat/use_cases/dispatcher.rb`, once listed here, is the one-line signature of the constructor, not a comment to rewrap (quality advisory of `explorer-folder-toggle`).
 - Why it matters: style only; the rest of each file wraps comments at the surrounding width.
-- Fix outline: rewrap the five comments to the width of the lines around them.
+- Fix outline: rewrap the seven comments to the width of the lines around them.
 
 ## lh time per key rose 26% at window-navigation-and-scroll
 
@@ -1081,3 +1081,33 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `CURSOR_LINE` role of the four palettes in `carat/domain/themes.rb`, measured by the cursor-line table of `test/domain_theme.rb`, which holds the cursor line to 3:1 as the selection is. At `cursor-shapes`: one_dark's keyword groups at 4.42:1 (24 bits), one_light's constants at 4.27:1 and its green groups at 4.05:1 (256 colors), dark_plus's comments and error groups at 3.99 to 4.43:1, light_plus's numbers at 3.90:1 (256 colors).
 - Why it matters: goal 1 asks for readable contrast; the line the user reads most is a little below WCAG AA for normal text in those groups.
 - Fix outline: tune each palette's cursor-line color, and its 256-color index (one_light and light_plus round to gray 255 at 256 colors), or the few foregrounds, until the table passes at 4.5:1 for text, then raise the threshold in the test.
+
+## The default cursor line keeps the terminal's foreground over a dark stripe
+
+- Where: `config/default.caratrc` (line 22 at `cursor-shapes`) turns `cursorline` on with `one_dark` and `option.background terminal`, so in `carat/domain/themes.rb` the lit cells of groups without a foreground keep the terminal's own foreground over the fixed `CURSOR_LINE` stripe (0x2c313c). Quality advisory of `cursor-shapes`.
+- Why it matters: on a light terminal, plain text on the cursor line becomes dark on dark and unreadable, and the cursor-line contrast table of `test/domain_theme.rb` checks only `background theme`.
+- Fix outline: give lit cells the palette's foreground when the stripe is painted over the terminal's background, with a contrast row for `background terminal`, or ship `cursorline` off until the theme follows the terminal's background.
+
+## The presenter passes the number's group to paint_row through an instance variable
+
+- Where: `@number_hl` in `carat/adapters/frame_presenter.rb` (line 420 at `cursor-shapes`), set just before the call to `paint_row`, although it is derivable from the layer. Quality advisory of `cursor-shapes`.
+- Why it matters: a hidden coupling: any other caller of `paint_row` inherits a stale group.
+- Fix outline: pass the group, or the layer, to `paint_row` as a parameter and drop the instance variable and its RBS line.
+
+## The boolean options of :set are three parallel switches with a silent default
+
+- Where: `full_boolean`, `set_boolean`, and `on?` in `carat/use_cases/ex/set_command_handler.rb` (line 122 at `cursor-shapes`); `set_boolean` and `on?` fall through to `incsearch` in their `else`. Quality advisory of `cursor-shapes`.
+- Why it matters: a fourth boolean option needs an edit in each of the three, and a missed branch silently reads or writes `incsearch`.
+- Fix outline: one table of name, abbreviation, and `Options` member read by all three, or an explicit `incsearch` branch with no silent `else`.
+
+## The cursor line doubles the highlight group-id space
+
+- Where: `LIMIT = COUNT * 2` in `carat/domain/highlight.rb` (line 107 at `cursor-shapes`), which doubles every theme array and `SgrTable` entry with it. Quality advisory of `cursor-shapes`.
+- Why it matters: a one-off layer: a second overlay such as ColorColumn or CursorColumn would have to multiply the space again.
+- Fix outline: when the next overlay arrives, generalize to `id = base + layer * COUNT` with a layer count, or record the limit in the design.
+
+## A 16-color background index is named like a group id in the theme build
+
+- Where: `lit16` in `carat/domain/themes.rb` (line 428 at `cursor-shapes`) holds the `CURSOR_LINE` role's 16-color background index, while `lit` in the same loop is a layered group id. Quality advisory of `cursor-shapes`.
+- Why it matters: the names suggest one is the 16-color form of the other.
+- Fix outline: rename `lit16` to `line_bg16` beside `line16`.
