@@ -2,7 +2,7 @@
 
 ## 1. Planner records
 
-- [ ] 1.1 `docs/queue.md` from `build/plan/queue.md`, the four entries of `build/plan/backlog.md` in `docs/backlog.md`, and the wrap-width entry of `docs/backlog.md` corrected to four comments (`carat/ports/terminal_port.rb` line 4, `carat/use_cases/dispatcher.rb` line 37); verified by `make docs-lint`.
+- [x] 1.1 `docs/queue.md` from `build/plan/queue.md`, the four entries of `build/plan/backlog.md` in `docs/backlog.md`, and the wrap-width entry of `docs/backlog.md` corrected to four comments (`carat/ports/terminal_port.rb` line 4, `carat/use_cases/dispatcher.rb` line 37); verified by `make docs-lint`.
 
 ## 2. The tree keys
 

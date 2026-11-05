@@ -188,11 +188,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: one thing under two names makes a search for the action miss the code that runs it.
 - Fix outline: rename the targets `:half_page_down` and `:half_page_up` in the three files.
 
-## Three comments run past their file's wrap width
+## Four comments run past their file's wrap width
 
-- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters) and `carat/use_cases/dispatcher.rb` (line 89), advisories of the periodic quality review at 66fd52b, and the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118.
+- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters) and `carat/use_cases/dispatcher.rb` (line 37), advisories of the periodic quality review at 66fd52b, the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118, and the class comment of `carat/ports/terminal_port.rb` (line 4, 130 characters), advisory of the periodic quality review at 5b128b5.
 - Why it matters: style only; the rest of each file wraps comments at the surrounding width.
-- Fix outline: rewrap the three comments to the width of the lines around them.
+- Fix outline: rewrap the four comments to the width of the lines around them.
 
 ## lh time per key rose 26% at window-navigation-and-scroll
 
@@ -1027,3 +1027,27 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `gate_attribution` in `tools/gates.sh` (line 336 at `package-clean`), which greps the three values as fixed strings over the whole of `.claude/settings.json`. Quality advisory of `package-clean`.
 - Why it matters: a matching `pr` or `sessionUrl` line outside the attribution object passes while the attribution object itself could still allow pull request text or a session link.
 - Fix outline: cut the attribution block by its lines (a sed range from the attribution line to its closing brace) and run the greps on that block, with a `tools/tools_test.sh` case of a value outside it.
+
+## TabRequest#counted? and CommandGrammar#operator_pending? have no caller
+
+- Where: `TabRequest#counted?` in `carat/use_cases/windows/tab_request.rb` (line 13 at 5b128b5) and `CommandGrammar#operator_pending?` in `carat/domain/command_grammar.rb` (line 84), called nowhere in `carat/`, `bin/`, `test/`, or `bench/`, yet named as key methods on lines 146 and 340 of `docs/codebase-map.md`. Periodic quality at 5b128b5.
+- Why it matters: the map points readers at methods nothing uses, and dead predicates can drift from the state they describe.
+- Fix outline: delete both methods and drop them from the two map lines.
+
+## FakeTerminal#input? is called by no test
+
+- Where: `FakeTerminal#input?` in `carat/doubles/fake_terminal.rb` (line 55 at 5b128b5). Periodic quality at 5b128b5.
+- Why it matters: dead code in a double a reader must check before trusting what the tests exercise.
+- Fix outline: delete it.
+
+## Section 7 of the architecture omits startscreen and reducedmotion
+
+- Where: the flag options of the option scope in section 7 of `docs/architecture.md` (line 236 at 5b128b5), while `config/default.caratrc` (lines 31 and 32), `README.md` (line 66), and `docs/compatibility.md` carry both. Periodic quality at 5b128b5.
+- Why it matters: the binding document lists fewer options than the code accepts, so a change planned from it misses two.
+- Fix outline: add both to the flag list within the file's budget, beside the start-screen bullets.
+
+## The roadmap asks for a CRuby sample plugin
+
+- Where: roadmap item 13 of `docs/architecture.md` (line 405 at 5b128b5), and line 314, which invites CRuby process plugins. Periodic quality at 5b128b5.
+- Why it matters: the hard rules forbid running or testing anything with a CRuby interpreter, so the item cannot be delivered as written.
+- Fix outline: make the sample a Spinel-compiled program or a shell script, and say CRuby process plugins are the author's choice, never built or tested here.
