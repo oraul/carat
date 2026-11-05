@@ -85,6 +85,9 @@ module EditorExplorerTest
 
   TREE = [" - proj", "   + docs", "   + lib", ">  m a.md", "   r b.rb"]
   OPEN = [[0, 30, "explorer"], [31, 49, "a.md"]]
+  DOCS = [" - proj", "   - docs", "     m guide.md", "   + lib", ">  m a.md", "   r b.rb"]
+  LIB = [" - proj", "   + docs", "   - lib", "     + deep", ">  m a.md", "   r b.rb"]
+  DEEP = [" - proj", "   + docs", "   - lib", "     - deep", "       r x.rb", ">  m a.md", "   r b.rb"]
 
   def self.main
     t = Carat::Testing.new("editor_explorer")
@@ -174,6 +177,8 @@ module EditorExplorerTest
       ["Enter opens the file in the editing window", " ej<CR>", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]],
       ["l opens it too", " ejl", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]],
       ["o on a file opens it too", " ejo", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]],
+      ["Enter on a file in an expanded directory opens it", " eggj<CR>j<CR>", [[[0, 30, "explorer"], [31, 49, "docs/guide.md"]], 2, 1, "docs/guide.md", "\"docs/guide.md\" 1L, 6B"]],
+      ["Enter on a file in a nested directory opens it", " eggjjlj<CR>j<CR>", [[[0, 30, "explorer"], [31, 49, "lib/deep/x.rb"]], 2, 1, "lib/deep/x.rb", "\"lib/deep/x.rb\" 1L, 2B"]],
       ["s opens it in a horizontal split", " ejs", [[[0, 30, "explorer"], [31, 49, "b.rb"], [31, 49, "a.md"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]],
       ["v opens it in a vertical split", " ejv", [[[0, 30, "explorer"], [31, 24, "b.rb"], [56, 24, "a.md"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]],
       ["t opens it in a new tab page", " ejt", [[[0, 80, "b.rb"]], 1, 2, "b.rb", "\"b.rb\" 1L, 7B"]],
@@ -193,13 +198,34 @@ module EditorExplorerTest
     t.table([
       ["Enter expands a directory", " eggj<CR>", [[" - proj", "   - docs", "     m guide.md", "   + lib", ">  m a.md", "   r b.rb"], [1, 0]]],
       ["l expands it too", " eggjl", [[" - proj", "   - docs", "     m guide.md", "   + lib", ">  m a.md", "   r b.rb"], [1, 0]]],
-      ["Enter leaves an expanded directory expanded", " eggj<CR><CR>", [[" - proj", "   - docs", "     m guide.md", "   + lib", ">  m a.md", "   r b.rb"], [1, 0]]],
+      ["Enter closes an expanded directory", " eggj<CR><CR>", [TREE, [1, 0]]],
+      ["Enter closes a directory l expanded", " eggjl<CR>", [TREE, [1, 0]]],
+      ["l leaves an expanded directory expanded", " eggjll", [DOCS, [1, 0]]],
+      ["l leaves a directory Enter expanded expanded", " eggj<CR>l", [DOCS, [1, 0]]],
+      ["o expands a directory", " eggjo", [DOCS, [1, 0]]],
       ["o toggles it closed again", " eggjoo", [TREE, [1, 0]]],
+      ["o closes a directory Enter expanded", " eggj<CR>o", [TREE, [1, 0]]],
       ["h collapses an expanded directory", " eggjlh", [TREE, [1, 0]]],
+      ["h collapses a directory Enter expanded", " eggj<CR>h", [TREE, [1, 0]]],
+      ["h on a collapsed directory goes to the root line", " eggjh", [TREE, [0, 0]]],
+      ["Enter expands a nested directory", " eggjjlj<CR>", [DEEP, [3, 0]]],
+      ["Enter closes a nested directory", " eggjjlj<CR><CR>", [LIB, [3, 0]]],
+      ["l leaves a nested directory expanded", " eggjjljll", [DEEP, [3, 0]]],
+      ["o toggles a nested directory", " eggjjljoo", [LIB, [3, 0]]],
+      ["h collapses an expanded nested directory", " eggjjlj<CR>h", [LIB, [3, 0]]],
+      ["h on a collapsed nested directory goes to its parent", " eggjjljh", [LIB, [2, 0]]],
+      ["Enter expands a directory in the tree reached through Ctrl-W", " e<C-w>l<C-w>hggj<CR>", [DOCS, [1, 0]]],
+      ["Enter closes it there", " e<C-w>l<C-w>hggj<CR><CR>", [TREE, [1, 0]]],
+      ["l leaves it expanded there", " e<C-w>l<C-w>hggjll", [DOCS, [1, 0]]],
+      ["o toggles it there", " e<C-w>l<C-w>hggjoo", [TREE, [1, 0]]],
+      ["h collapses it there", " e<C-w>l<C-w>hggj<CR>h", [TREE, [1, 0]]],
+      ["Enter toggles in the tree reached through Ctrl-W w", " e<C-w>w<C-w>wggjjlj<CR><CR>", [LIB, [3, 0]]],
       ["h on a file goes to its parent", " eggjljh", [[" - proj", "   - docs", "     m guide.md", "   + lib", ">  m a.md", "   r b.rb"], [1, 0]]],
       ["h on a top-level entry goes to the root line", " eh", [TREE, [0, 0]]],
       ["h on the root line does nothing", " eggh", [TREE, [0, 0]]],
       ["Enter on the root line does nothing", " egg<CR>", [TREE, [0, 0]]],
+      ["l on the root line does nothing", " eggl", [TREE, [0, 0]]],
+      ["o on the root line does nothing", " eggo", [TREE, [0, 0]]],
       ["H shows hidden files but not ignored ones", " eH", [[" - proj", "   + docs", "   + lib", "   . .env", ">  m a.md", "   r b.rb"], [3, 0]]],
       ["H again hides them", " eHH", [TREE, [3, 0]]],
       ["- moves the root up and keeps the old root expanded", " e-", [[" - ada", "   - proj", "     + docs", "     + lib", ">    m a.md", "     r b.rb"], [1, 0]]],
@@ -215,7 +241,7 @@ module EditorExplorerTest
     h.type("R")
     t.assert_equal("   r z.rb", tree_lines(h)[5], "R lists the directories again")
     h.type("?")
-    t.assert_equal("<CR>/l open", h.message[0, 11], "? shows the keys in the message row")
+    t.assert_equal("<CR>/o toggle", h.message[0, 13], "? shows the keys in the message row")
 
     # Create: rows are [label, keys, [tree lines, cursor, message, mode]].
     t.table([
