@@ -93,6 +93,7 @@ require_relative "../use_cases/ex/nohlsearch_command_handler"
 require_relative "../use_cases/ex/substitute_command_handler"
 require_relative "../use_cases/ex/global_command_handler"
 require_relative "../use_cases/ex/delete_command_handler"
+require_relative "../use_cases/ex/buffer_command_handler"
 require_relative "../use_cases/ex/plugin_command_handler"
 require_relative "../use_cases/actions/action_table"
 require_relative "../use_cases/actions/motion_handler"
@@ -211,6 +212,9 @@ module Carat
       attr_reader :close_tab #: UseCases::CloseTab
       attr_reader :close_other_tabs #: UseCases::CloseOtherTabs
       attr_reader :switch_tab #: UseCases::SwitchTab
+      attr_reader :list_buffers #: UseCases::ListBuffers
+      attr_reader :switch_buffer #: UseCases::SwitchBuffer
+      attr_reader :delete_buffer #: UseCases::DeleteBuffer
       attr_reader :plugins #: UseCases::PluginHost
       attr_reader :enter_command_line #: UseCases::EnterCommandLine
       attr_reader :edit_command_line #: UseCases::EditCommandLine
@@ -292,6 +296,9 @@ module Carat
         @close_tab = UseCases::CloseTab.new(buffers: @buffers, tabs: @tabs)
         @close_other_tabs = UseCases::CloseOtherTabs.new(buffers: @buffers, tabs: @tabs)
         @switch_tab = UseCases::SwitchTab.new(tabs: @tabs)
+        @list_buffers = UseCases::ListBuffers.new(buffers: @buffers)
+        @switch_buffer = UseCases::SwitchBuffer.new(buffers: @buffers)
+        @delete_buffer = UseCases::DeleteBuffer.new(buffers: @buffers)
         @quit = UseCases::Quit.new(buffers: @buffers, tabs: @tabs)
         @quit_all = UseCases::QuitAll.new(buffers: @buffers)
         focus_window = UseCases::FocusWindow.new
@@ -309,6 +316,7 @@ module Carat
         UseCases::FileCommandHandler.register(@commands, save_file: @save_file, save_all: @save_all, quit: @quit, quit_all: @quit_all, open_file: @open_file)
         UseCases::WindowCommandHandler.register(@commands, split_window: @split_window, close_window: @close_window, close_other_windows: @close_other_windows)
         UseCases::TabCommandHandler.register(@commands, open_tab: @open_tab, close_tab: @close_tab, close_other_tabs: @close_other_tabs, switch_tab: @switch_tab)
+        UseCases::BufferCommandHandler.register(@commands, list_buffers: @list_buffers, switch_buffer: @switch_buffer, delete_buffer: @delete_buffer)
         UseCases::HistoryCommandHandler.register(@commands, undo_step: @undo_step, redo_step: @redo_step, undo_to_state: @undo_to_state, travel_history: @travel_history, list_undo: @list_undo)
         UseCases::RegisterCommandHandler.register(@commands, registers: @registers)
         UseCases::SyntaxCommandHandler.register(@commands)

@@ -7,6 +7,15 @@ module Carat
       E36 = "E36: Not enough room"
       E37 = "E37: No write since last change (add ! to override)"
 
+      # The two lines of Neovim's check_changed_any, which refuses to quit
+      # over another buffer's unsaved changes: E37 without the hint, then
+      # E162 naming the buffer by its path, "" for [No Name].
+      #: (String) -> String
+      def self.unsaved_buffer(path)
+        name = path.empty? ? "[No Name]" : path
+        "E37: No write since last change\nE162: No write since last change for buffer \"#{name}\""
+      end
+
       # The refusal of a write to a read-only register.
       #: (String) -> String
       def self.read_only_register(name)

@@ -37,7 +37,8 @@ module AdaptersAssemblyTest
       ["open_side_window", a.open_side_window.buffers], ["open_tab", a.open_tab.buffers], ["close_tab", a.close_tab.buffers],
       ["close_other_tabs", a.close_other_tabs.buffers], ["rename_path", host.rename_path.buffers], ["delete_path", host.delete_path.buffers],
       ["registry", host.registry.buffers], ["events", host.events.buffers], ["buffer_requests", host.buffer_requests.buffers],
-      ["window_requests", host.window_requests.buffers]
+      ["window_requests", host.window_requests.buffers], ["list_buffers", a.list_buffers.buffers], ["switch_buffer", a.switch_buffer.buffers],
+      ["delete_buffer", a.delete_buffer.buffers]
     ]), "the buffer list")
     t.assert_equal([], strangers(a.tabs, [
       ["state", a.state.tabs], ["buffers", a.buffers.tabs], ["feed", a.buffers.feed.tabs], ["quit", a.quit.tabs],

@@ -123,10 +123,10 @@ ok   tablast with one tab page stays
 ok   sp with two text rows reports E36
 ok   q with two windows closes one and keeps the buffer
 ok   close keeps the modified buffer hidden
-ok   qa is refused by the hidden buffer
-ok   wa writes the hidden buffer, reports the write, and drops it once clean
-ok   q! on the last window shows the hidden modified buffer and abandons the clean one
-ok   e brings a hidden buffer back without reading it, dropping the clean one
+ok   qa names the modified current buffer before the hidden one
+ok   wa writes the hidden buffer, reports the write, and keeps it listed
+ok   q! on the last window names and shows the hidden modified buffer and keeps the clean one
+ok   e brings a hidden buffer back without reading it, keeping the clean one hidden
 ok   wq with two windows writes and closes one
 ok   x on the last window writes and quits
 ok   qa is refused by a modified buffer in another tab page

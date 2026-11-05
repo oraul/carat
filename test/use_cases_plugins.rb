@@ -266,15 +266,15 @@ module UseCasesPluginsTest
     state.buffer.set_lines(0, 1, ["z"])
     state.cursor.col = 0
     host.observe
-    t.assert_equal(["buffer_change b3 w1 b.txt 0,0 -1 +1"], p.log, "an edit at the same cursor delivers buffer_change only, with its rows")
+    t.assert_equal(["buffer_change b2 w1 b.txt 0,0 -1 +1"], p.log, "an edit at the same cursor delivers buffer_change only, with its rows")
     p.log.clear
     state.cursor.col = 1
     host.observe
-    t.assert_equal(["cursor_move b3 w1 b.txt 0,1"], p.log, "a cursor move delivers cursor_move")
+    t.assert_equal(["cursor_move b2 w1 b.txt 0,1"], p.log, "a cursor move delivers cursor_move")
     p.log.clear
     state.mode = D::Mode::INSERT
     host.observe
-    t.assert_equal(["mode_change b3 w1 b.txt 0,1 insert"], p.log, "a mode change carries the mode name")
+    t.assert_equal(["mode_change b2 w1 b.txt 0,1 insert"], p.log, "a mode change carries the mode name")
     state.mode = D::Mode::NORMAL
     host.observe
     p.log.clear
@@ -282,26 +282,26 @@ module UseCasesPluginsTest
     state.cursor.col = 0
     state.mode = D::Mode::INSERT
     host.observe
-    t.assert_equal(["buffer_change b3 w1 b.txt 0,0 -1 +1", "cursor_move b3 w1 b.txt 0,0", "mode_change b3 w1 b.txt 0,0 insert"], p.log, "several differences come in the fixed order")
+    t.assert_equal(["buffer_change b2 w1 b.txt 0,0 -1 +1", "cursor_move b2 w1 b.txt 0,0", "mode_change b2 w1 b.txt 0,0 insert"], p.log, "several differences come in the fixed order")
     state.mode = D::Mode::NORMAL
     host.observe
     p.log.clear
     ex.call(state, "e!")
     host.observe
-    t.assert_equal(["buffer_change b3 w1 b.txt 0,0 -1 +1"], p.log, "reloading the current buffer delivers buffer_change")
+    t.assert_equal(["buffer_change b2 w1 b.txt 0,0 -1 +1"], p.log, "reloading the current buffer delivers buffer_change")
     p.log.clear
     ex.call(state, "w")
     t.assert_equal([], p.log, "a write queues buffer_save")
     host.observe
-    t.assert_equal(["buffer_save b3 w1 b.txt 0,0"], p.log, "and the end of the key delivers it, and nothing else changed")
+    t.assert_equal(["buffer_save b2 w1 b.txt 0,0"], p.log, "and the end of the key delivers it, and nothing else changed")
     p.log.clear
     ex.call(state, "sp")
     host.observe
-    t.assert_equal(["window_focus b3 w2 b.txt 0,0"], p.log, "a split focuses the new window, which has the next id")
+    t.assert_equal(["window_focus b2 w2 b.txt 0,0"], p.log, "a split focuses the new window, which has the next id")
     p.log.clear
     ex.call(state, "q")
     host.observe
-    t.assert_equal(["window_focus b3 w1 b.txt 0,0"], p.log, "closing it focuses the one left")
+    t.assert_equal(["window_focus b2 w1 b.txt 0,0"], p.log, "closing it focuses the one left")
     p.log.clear
     host.resized(24, 80)
     host.resized(24, 80)
@@ -311,7 +311,7 @@ module UseCasesPluginsTest
     ex.call(state, "q")
     host.observe
     host.observe
-    t.assert_equal(["quit b3 w1 b.txt 0,0", "deactivate"], p.log, "quit is delivered once, then deactivate")
+    t.assert_equal(["quit b2 w1 b.txt 0,0", "deactivate"], p.log, "quit is delivered once, then deactivate")
     t.assert_equal(true, p.deactivated, "the plugin was deactivated")
 
     # Unsubscribed events are not delivered.

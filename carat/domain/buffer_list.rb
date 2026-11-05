@@ -149,6 +149,8 @@ module Carat
         i = 0 if i < 0
         forward = steps >= 0
         count = forward ? steps : -steps
+        files = file_count
+        count = (count - 1) % files + 1 if files > 0 && count > files
         start = -1
         while count > 0 || buffer_at(i).scratch?
           start = i if start < 0
@@ -160,6 +162,18 @@ module Carat
           return nil if i == start
         end
         buffer_at(i)
+      end
+
+      # How many file buffers the list holds, scratch buffers left out.
+      #: () -> Integer
+      def file_count
+        total = 0
+        i = 0
+        while i < buffers.length
+          total += 1 unless buffer_at(i).scratch?
+          i += 1
+        end
+        total
       end
 
       # The listed file buffer after target in the list, or the last one

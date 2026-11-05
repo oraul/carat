@@ -41,6 +41,7 @@ require_relative "../domain_utf8"
 require_relative "../domain_vim_pattern"
 require_relative "../drivers_disk_files"
 require_relative "../drivers_main_loop"
+require_relative "../editor_buffers"
 require_relative "../editor_cmdline"
 require_relative "../editor_explorer"
 require_relative "../editor_global"
@@ -114,6 +115,7 @@ when "domain_utf8" then DomainUtf8Test.main
 when "domain_vim_pattern" then DomainVimPatternTest.main
 when "drivers_disk_files" then DriversDiskFilesTest.main
 when "drivers_main_loop" then DriversMainLoopTest.main
+when "editor_buffers" then EditorBuffersTest.main
 when "editor_cmdline" then EditorCmdlineTest.main
 when "editor_explorer" then EditorExplorerTest.main
 when "editor_global" then EditorGlobalTest.main

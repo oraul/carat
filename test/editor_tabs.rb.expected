@@ -44,11 +44,11 @@ ok   the text starts under the tab line
 ok   the first tab page kept its cursor
 ok   :tabnew shows an unnamed empty buffer
 ok   both buffers are listed and each tab page has a window
-ok   a modified buffer in a closed tab page stays hidden and blocks :qa
+ok   a modified buffer in a closed tab page stays hidden and blocks :qa, which shows it
 ok   :tabonly keeps the modified buffer hidden
 ok   :qa! ends the editor
-ok   a clean buffer leaves the list with its tab page
-ok   :qa is refused by a modified buffer in another tab page
+ok   a clean buffer stays listed, hidden, when its tab page closes
+ok   :qa is refused by a modified buffer in another tab page and goes there
 ok   :wa writes the buffers of every tab page
 ok   :wqa writes every tab page's buffer and quits
 ok   :qa quits with several windows and tab pages

@@ -19,6 +19,10 @@ module EditorCmdlineTest
 
   E37 = "E37: No write since last change (add ! to override)"
 
+  def self.unsaved(name)
+    "E37: No write since last change\nE162: No write since last change for buffer \"#{name}\""
+  end
+
   def self.main
     t = Carat::Testing.new("editor_cmdline")
 
@@ -108,7 +112,7 @@ module EditorCmdlineTest
     t.assert_equal(["", false], [h.message_row, h.quit?], "wa on a clean buffer shows nothing")
     h = editor(files_with("ab\n"))
     h.type("ix<Esc>:qa<CR>")
-    t.assert_equal([false, E37, :normal], [h.quit?, h.message_row, h.mode], "qa refused while modified")
+    t.assert_equal([false, unsaved("a.txt"), :normal], [h.quit?, h.message, h.mode], "qa refused while modified names the buffer")
     h.type(":quitall<CR>")
     t.assert_equal(false, h.quit?, "long form qa refused too")
     h.type(":qa!<CR>")
@@ -213,8 +217,8 @@ module EditorCmdlineTest
     files.put("b.txt", "zz\n")
     h = editor(files)
     h.type(":tabe b.txt<CR>xgt:qa<CR>")
-    t.assert_equal([false, E37], [h.quit?, h.message_row], "qa is refused by a modified buffer in another tab page")
-    h.type("x:wqa<CR>")
+    t.assert_equal([false, unsaved("b.txt"), 2], [h.quit?, h.message, h.tab_index], "qa is refused by a modified buffer in another tab page and goes there")
+    h.type("gtx:wqa<CR>")
     t.assert_equal(["b\n", "z\n", true], [h.files.get("a.txt"), h.files.get("b.txt"), h.quit?], "wqa writes the buffers of both tab pages and quits")
 
     # Leader mappings go through the same path.

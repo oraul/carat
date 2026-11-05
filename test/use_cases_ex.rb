@@ -70,6 +70,9 @@ module UseCasesExTest
   end
 
   E37 = "E37: No write since last change (add ! to override)"
+  E162_A = "E37: No write since last change\nE162: No write since last change for buffer \"a.txt\""
+  E162_B = "E37: No write since last change\nE162: No write since last change for buffer \"b.txt\""
+  E162_NO_NAME = "E37: No write since last change\nE162: No write since last change for buffer \"[No Name]\""
   E141 = "E141: No file name for buffer 1"
   E212 = "E212: Can't open file for writing: Permission denied"
   WRITTEN = "\"a.txt\" 1L, 4B written"
@@ -223,19 +226,19 @@ module UseCasesExTest
     # Quit-all.
     t.table([
       ["qa on a clean buffer quits", ["qa", :clean], [true, "", true, "old\n", false]],
-      ["qa refused while modified", ["qa", :modified], [false, E37, false, "old\n", true]],
-      ["qa refused on a modified unnamed buffer", ["qa", :unnamed], [false, E37, false, "old\n", true]],
+      ["qa refused while modified", ["qa", :modified], [false, E162_A, false, "old\n", true]],
+      ["qa refused on a modified unnamed buffer", ["qa", :unnamed], [false, E162_NO_NAME, false, "old\n", true]],
       ["qa! on a clean buffer quits", ["qa!", :clean], [true, "", true, "old\n", false]],
       ["qa! discards changes", ["qa!", :modified], [true, "", true, "old\n", true]],
       ["qa! discards an unnamed buffer", ["qa!", :unnamed], [true, "", true, "old\n", true]],
       ["qall on a clean buffer quits", ["qall", :clean], [true, "", true, "old\n", false]],
-      ["qall refused while modified", ["qall", :modified], [false, E37, false, "old\n", true]],
+      ["qall refused while modified", ["qall", :modified], [false, E162_A, false, "old\n", true]],
       ["qall! discards changes", ["qall!", :modified], [true, "", true, "old\n", true]],
       ["quita on a clean buffer quits", ["quita", :clean], [true, "", true, "old\n", false]],
-      ["quita refused while modified", ["quita", :modified], [false, E37, false, "old\n", true]],
+      ["quita refused while modified", ["quita", :modified], [false, E162_A, false, "old\n", true]],
       ["quita! discards changes", ["quita!", :modified], [true, "", true, "old\n", true]],
       ["quitall on a clean buffer quits", ["quitall", :clean], [true, "", true, "old\n", false]],
-      ["quitall refused while modified", ["quitall", :modified], [false, E37, false, "old\n", true]],
+      ["quitall refused while modified", ["quitall", :modified], [false, E162_A, false, "old\n", true]],
       ["quitall! discards changes", ["quitall!", :modified], [true, "", true, "old\n", true]]
     ]) do |input|
       run_ex(input[0], input[1])
@@ -373,7 +376,7 @@ module UseCasesExTest
     r = s_w.ex.call(s, "close")
     t.assert_equal([1, "a.txt", 2], [s.tab.window_count, s.buffer.path, s_w.buffers.count], "close keeps the modified buffer hidden")
     r = s_w.ex.call(s, "qa")
-    t.assert_equal([false, E37, false], [r.ok, r.message, s.quit], "qa is refused by the hidden buffer")
+    t.assert_equal([false, E162_A, false], [r.ok, r.message, s.quit], "qa names the modified current buffer before the hidden one")
     r = s_w.ex.call(s, "wa")
     t.assert_equal([true, "\"b.txt\" 1L, 3B written", "zz\n", 2], [r.ok, r.message, files.get("b.txt"), s_w.buffers.count], "wa writes the hidden buffer, reports the write, and keeps it listed")
     s_w = world(files, ["mem"], "a.txt")
@@ -383,7 +386,7 @@ module UseCasesExTest
     s.buffer.mark_unsaved
     s_w.ex.call(s, "close")
     r = s_w.ex.call(s, "q!")
-    t.assert_equal([true, false, "b.txt", 1], [r.ok, s.quit, s.buffer.path, s_w.buffers.count], "q! on the last window shows the hidden modified buffer and abandons the clean one")
+    t.assert_equal([false, E162_B, false, "b.txt", 2], [r.ok, r.message, s.quit, s.buffer.path, s_w.buffers.count], "q! on the last window names and shows the hidden modified buffer and keeps the clean one")
     s_w = world(files, ["mem"], "a.txt")
     s = s_w.state
     s.tab.layout.arrange(0, 0, 23, 80)
@@ -410,7 +413,7 @@ module UseCasesExTest
     s.buffer.mark_unsaved
     s_w.ex.call(s, "tabfir")
     r = s_w.ex.call(s, "qa")
-    t.assert_equal([false, E37], [r.ok, r.message], "qa is refused by a modified buffer in another tab page")
+    t.assert_equal([false, E162_B], [r.ok, r.message], "qa is refused by a modified buffer in another tab page")
     r = s_w.ex.call(s, "wqa")
     t.assert_equal([true, true, "zz\n"], [r.ok, s.quit, files.get("b.txt")], "wqa writes the other tab page's buffer and quits")
 

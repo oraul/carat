@@ -13,7 +13,7 @@ ok   a bad last item refuses the request before any edit lands
 ok   a window id still names the same window after another closed
 ok   a new window gets an id never given before
 ok   an unknown window id fails
-ok   a buffer that left the list loses its id for good and the reopened file gets a new one
+ok   a buffer deleted from the list loses its id for good and the reopened file gets a new one
 ok   a buffer that is not current is read by its id
 ok   focusing a window of another tab page goes to that tab page
 ok   a failed open fails and leaves the focus where it was
@@ -25,7 +25,8 @@ ok   dd on row 1 reports row 1, one row removed
 ok   an insert session reports once, when it ends
 ok   another plugin hears the change of a buffer that is not current, with its rows
 ok   the plugin that edited does not
-ok   closing the window of a clean buffer closes the buffer
+ok   closing the window of a clean buffer keeps the buffer
+ok   deleting the buffer closes it
 ok   a renamed file's buffer follows it and the rename is an event with the old path
 ok   changing a read line or path changes nothing in the buffer
 ok   changing a given scratch line changes nothing in the buffer
@@ -42,4 +43,4 @@ ok   and the first plugin keeps the keys
 ok   a line opened above moves the sign down
 ok   deleting its line removes it
 ok   a plugin runs an ex command in activate
-use_cases_plugin_hardening: 44 passed, 0 failed
+use_cases_plugin_hardening: 45 passed, 0 failed
