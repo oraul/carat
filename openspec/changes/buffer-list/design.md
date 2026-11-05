@@ -22,7 +22,7 @@
 
 ### The remembered cursor is a `Buffer` member
 
-`Buffer#last_cursor`, a `Position`, set by `load` from the window's cursor before it shows another buffer and by `close_window` and `close_tab` before a window goes; `load` puts the cursor of the window back at the target's `last_cursor`, clamped to the text, after `Window#show`. One position per buffer, where Neovim keeps one per window with a fallback to the most recent; the difference shows only when two windows left the same buffer at different places. `:ls` reads it for every buffer but the current one.
+`Buffer#last_cursor`, a `Position`, set by `load` from the window's cursor before it shows another buffer and by `close_window` (which `CloseWindow`, `CloseOtherWindows`, and `Quit` go through) and `close_tab` before a window goes; `load` puts the cursor of the window back at the target's `last_cursor`, clamped to the text, after `Window#show`. One position per buffer, where Neovim keeps one per window with a fallback to the most recent; the difference shows only when two windows left the same buffer at different places. `:ls` reads it for every buffer but the current one.
 
 ### Use cases under `carat/use_cases/buffers/`
 

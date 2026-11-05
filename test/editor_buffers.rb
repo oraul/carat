@@ -102,6 +102,7 @@ module EditorBuffersTest
       [":b with a name", ":b b.txt<CR>", ["a.txt", [0, 0], "Not implemented: :buffer b.txt"]],
       ["the cursor comes back", "jjl:e b.txt<CR>:b 1<CR>", ["a.txt", [2, 1], ""]],
       ["the cursor comes back through :e", "jj:e b.txt<CR>:e a.txt<CR>", ["a.txt", [2, 0], "\"a.txt\" 3L, 14B"]],
+      ["the cursor comes back after :only", ":sp b.txt<CR><C-w>jjj<C-w>k:only<CR>:b 1<CR>", ["a.txt", [2, 0], ""]],
       ["a modified buffer refuses", ":e b.txt<CR>:b 1<CR>x:bn<CR>", ["a.txt", [0, 0], E37]],
       ["the bang keeps it hidden", ":e b.txt<CR>:b 1<CR>x:bn!<CR>", ["b.txt", [0, 0], ""]],
       ["a count before the command is refused", ":e b.txt<CR>:2bn<CR>", ["b.txt", [0, 0], "E481: No range allowed"]]

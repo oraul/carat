@@ -44,6 +44,7 @@ ok   :b 0 names no buffer
 ok   :b with a name
 ok   the cursor comes back
 ok   the cursor comes back through :e
+ok   the cursor comes back after :only
 ok   a modified buffer refuses
 ok   the bang keeps it hidden
 ok   a count before the command is refused
@@ -85,4 +86,4 @@ ok   :q! twice ends the editor
 ok   :x names a hidden buffer
 ok   :wq names a hidden buffer
 ok   :q! over a hidden buffer discards the current buffer's changes
-editor_buffers: 87 passed, 0 failed
+editor_buffers: 88 passed, 0 failed
