@@ -43,5 +43,6 @@ The alternative was a per-row span on the frame that the screen presenter would 
 ## Risks / Trade-offs
 
 - [Tests that read a cell's group on the cursor row see the layered id under the shipped option] → those reads compare `Highlight.base` of the cell, or the test turns the option off when the row is not what it checks; no check is dropped.
+- [Text on the cursor line falls below 4.5:1 in some groups of every palette, down to 3.90:1, since `CursorLine` is lighter (or darker) than the background] → the cursor line is held to 3:1, as text on the selection already is, which `test/domain_theme.rb` checks for every group; tuning the palettes to 4.5:1 is in `docs/backlog.md`, since it changes the colors the user chose with `theme-tokens`.
 - [A terminal that ignores `DECSCUSR` 0] → it keeps whatever shape it had, as it would have with 2; no terminal known to the project mishandles 0.
 - [The output of a lit row is longer by one background per run] → the row was rewritten anyway; allocations per key are unchanged, which `make bench-budget` and the `lh`, `j`, and `insert` figures check.

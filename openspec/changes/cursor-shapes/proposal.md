@@ -22,11 +22,11 @@ None.
 
 - `screen-rendering`: the cursor shape requirement gains replace mode's underline and the other modes; leaving the screen restores the terminal's own cursor; a new requirement draws the current line of the current window.
 - `editor-startup`: every exit path, an error while opening the file included, restores the terminal's cursor and screen.
-- `color-themes`: text groups on the cursor line meet the same contrast as on the background.
+- `color-themes`: every group on the cursor line keeps 3:1 contrast, as on the selection, and is underlined at 16 colors.
 
 ## Impact
 
 - Code: `carat/domain/highlight.rb` (the cursor-line layer of ids), `carat/domain/themes.rb` (the layer's colors), `carat/domain/options.rb` (`cursorline`), `carat/domain/frame.rb` (lifting a span of cells onto the layer), `carat/adapters/sgr_table.rb` (sequences for the layer), `carat/adapters/painted_rows.rb` (the layer as an input of a segment), `carat/adapters/frame_presenter.rb` (painting the line, the shape per mode), `carat/adapters/screen_presenter.rb` (the underline and the reset), `carat/use_cases/ex/set_command_handler.rb` (`:set cursorline`), `bin/carat.rb` (the `ensure`), `config/default.caratrc` and its generated mirror.
-- Tests: `test/adapters_frame_presenter.rb`, `test/adapters_screen_presenter.rb`, `test/domain_theme.rb`, `test/domain_options_config.rb`, `test/use_cases_set_command.rb` or its equivalent, `test/smoke_editor.rb`, and the tests whose cursor row changes group under the shipped option.
-- Docs: `docs/compatibility.md`, `README.md`, `docs/architecture.md` section 8.2, `docs/codebase-map.md`, `docs/backlog.md`.
+- Tests: `test/adapters_frame_presenter.rb`, `test/adapters_screen_presenter.rb`, `test/domain_theme.rb`, `test/domain_options_config.rb`, `test/domain_frame.rb`, `test/editor_search.rb` (`:set cursorline`), `test/editor_screen.rb`, `test/smoke_editor.rb`, and the tests whose cursor row changes group under the shipped option (`test/editor_syntax.rb`, `test/editor_explorer.rb`, `test/use_cases_plugin_syntax.rb`).
+- Docs: `docs/compatibility.md`, `README.md`, `docs/architecture.md` sections 4, 7, and 8.2, `docs/codebase-map.md`, `docs/backlog.md`.
 - Per key: no new allocation; a row is painted only when it was already repainted for the cursor's column or row.
