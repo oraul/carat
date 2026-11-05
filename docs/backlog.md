@@ -805,3 +805,39 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/rules.sh` (`ASSIGN_RE` takes only a quoted literal; `TOKEN_RE` lists the shapes of AWS, GitHub, GitLab, Slack, Google API, `sk-` keys, Stripe live, and npm). Limit accepted by `backup-secret-scan`.
 - Why it matters: `password = hunter2hunter2` in a YAML or shell file, or a token of another platform, reaches the backup ref and the branch; the security review still reads the diff before the push, but not before the backup.
 - Fix outline: add a shape when a platform the project uses appears, and refuse an unquoted assignment in configuration files only (`*.yml`, `*.toml`, `*.sh`, `.caratrc`), where ordinary code does not assign `token = name`, each with a `tools/tools_test.sh` case.
+
+## The content gate skips files git treats as binary
+
+- Where: `tools/gates.sh` line 126 (`gate_content` reads `git log -p`, which prints no lines for a file with a NUL byte or one `.gitattributes` marks `-diff` or `binary`, and the merge gates run from the branch's checkout, so the branch can set them). Security Low (6) of `backup-secret-scan`.
+- Why it matters: a committed secret in such a file passes the secret, URL, email, and model checks.
+- Fix outline: pass `--text` and `--no-textconv` to the `git log -p` scan, or refuse an added binary file and a `.gitattributes` change setting `diff`, `binary`, or `textconv` unless a reviewer allows it, with a `tools/tools_test.sh` case.
+
+## The URL, email, and session checks print the whole matching line
+
+- Where: `tools/rules.sh` line 34 (`scan` prints each hit's full line for the URL, email, and session checks, while the secret checks print a label only). Security Low (5) of `backup-secret-scan`.
+- Why it matters: a credential inside a URL (a token before the host) appears in the gate output, the stage logs, and CI.
+- Fix outline: mask whatever matches `KEY_RE`, `TOKEN_RE`, or `ASSIGN_RE` with `[secret]` (a sed replacement) before printing any hit, with a `tools/tools_test.sh` case.
+
+## The close note names the backup when there was none
+
+- Where: `.claude/workflows/deliver-change.js` line 718 (the close note says the backup stays on origin whenever a run stops unmerged, even after the push deleted it or when no backup was made). Quality advisory of `backup-secret-scan`.
+- Why it matters: the report sends the user to `abandon` a backup that does not exist.
+- Fix outline: also require `state.backup`, the record `backup_branch` writes and `drop_backup` drops.
+
+## Recording merged deletes refs on origin from the generic key writer
+
+- Where: `tools/run_state.sh` line 1344 (`set CHANGE merged` pushes a ref deletion to origin, a network side effect hidden in the plain key writer beside the `push` and `abandon` paths). Quality advisory of `backup-secret-scan`.
+- Why it matters: a reader of `set` does not expect a push, and a failed deletion surfaces in a step that only records.
+- Fix outline: keep `set` a plain write and have the merger call `abandon` (or a `merged` command) explicitly after recording `merged`.
+
+## The backup's kept base and a failed backup deletion have no case
+
+- Where: `tools/tools_test.sh` line 443 (`branch_base` says a later merge of `origin/main` keeps the base, and `drop_backup` reports a failed deletion, but neither path is tested). Quality advisory of `backup-secret-scan`.
+- Why it matters: a regression in either path passes `make tools-test`, and a wrong base lets the gates read too much or too little of the branch.
+- Fix outline: add a backup after merging a new main commit (the base unchanged) and a `drop_backup` against an unreachable origin (exit 1, the message naming `abandon`).
+
+## drop_backup joins the ref names by unquoted word splitting
+
+- Where: `tools/run_state.sh` line 716 (`$(echo $refs)` outside the line the SC2086 disable covers). Quality advisory of `backup-secret-scan`.
+- Why it matters: a glob character in a ref name would expand against the working directory, and the disable comment hides the intent.
+- Fix outline: print the names with `printf '%s ' $refs` under the disable, or `tr '\n' ' '`.
