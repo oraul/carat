@@ -1,0 +1,20 @@
+# Tasks
+
+## 1. Attribution off in the project settings
+
+- [ ] 1.1 `.claude/settings.json`: `attribution` with `commit` the trailer, `pr` empty, and `sessionUrl` false. Tested by the gate of 1.2 on this tree (`make gates`).
+- [ ] 1.2 `tools/gates.sh`: `gate_attribution` in the `static` group and the header. Tested by the `tools/tools_test.sh` cases "gates: attribution passes the trailer, no pull request text, and no session link", "gates: attribution refuses a session link", "gates: attribution refuses another commit trailer", and "gates: attribution refuses a missing settings file".
+
+## 2. The archive preview
+
+- [ ] 2.1 `tools/spec_validate.sh` (new) and the `spec-validate` target of the `Makefile`. Tested by "spec_validate: passes a change whose archive leaves valid specs", "spec_validate: refuses a change whose archive leaves an invalid spec", "spec_validate: archives a change without specs with --skip-specs", and "spec_validate: leaves the real tree as it was".
+
+## 3. The contributor
+
+- [ ] 3.1 `.claude/agents/contributor.md`: `make spec-validate` in implement steps 2 and 6 and in fix; package step 5 a check that edits only a line the contributor did not write, and reports it. Tested by `make docs-lint` (the agent file's budget) and "guard: contributor generates and checks" with `make spec-validate`.
+
+## 4. Docs and bookkeeping
+
+- [ ] 4.1 `CLAUDE.md` (the trailer rule and the `spec-validate` command), `README.md` (`make spec-validate`), and `docs/codebase-map.md` area 1 (`tools/spec_validate.sh`, the `attribution` gate, `.claude/settings.json`).
+- [ ] 4.2 `docs/backlog.md`: the five entries of `build/plan/backlog.md`.
+- [ ] 4.3 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`.
