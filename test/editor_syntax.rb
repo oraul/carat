@@ -20,7 +20,7 @@ module EditorSyntaxTest
     col = 0
     while col < frame.cols
       hl = frame.hl_at(row, col)
-      hl = -1 unless H.syntax?(hl) || hl == H::VISUAL
+      hl = -1 unless H.token?(hl) || hl == H::VISUAL
       if hl != group
         words << "#{H.name_of(group)}:#{text}" if group >= 0
         text = +""

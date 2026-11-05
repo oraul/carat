@@ -1,10 +1,12 @@
 module Carat
   module Domain
     # Highlight group ids carried by frame cells; a theme maps each to its
-    # colors. The editor's own groups come first, then the syntax groups a
-    # tokenizer may give its tokens, from SYNTAX_FIRST on, with Neovim's
-    # standard names in the order of its group-name help. NAMES is
-    # indexed by id. Ids are integers so a frame stays three integer
+    # colors. The editor's own UI groups come first, with Neovim's names;
+    # then the syntax groups, from SYNTAX_FIRST on, with Neovim's standard
+    # names in the order of its group-name help; then the file-icon groups,
+    # from ICON_FIRST on, named as nvim-web-devicons names them. A plugin's
+    # tokens may carry a syntax or a file-icon group. NAMES is indexed by
+    # id. Ids are integers so a frame stays three integer
     # arrays and a theme a few arrays indexed by id.
     module Highlight
       NORMAL = 0
@@ -20,54 +22,102 @@ module Carat
       SIGN_COLUMN = 10
       SEARCH = 11
       INC_SEARCH = 12
+      CURRENT_SEARCH = 13
+      CURSOR_LINE = 14
+      CURSOR_LINE_NUMBER = 15
+      COLOR_COLUMN = 16
+      END_OF_BUFFER = 17
+      WINDOW_SEPARATOR = 18
+      DIRECTORY = 19
+      TITLE = 20
+      MESSAGE_WARNING = 21
+      MESSAGE_MODE = 22
+      MESSAGE_MORE = 23
+      QUESTION = 24
+      MATCH_PAREN = 25
+      POPUP_MENU = 26
+      POPUP_MENU_SELECTED = 27
+      POPUP_MENU_SCROLLBAR = 28
+      POPUP_MENU_THUMB = 29
+      NORMAL_FLOAT = 30
+      FLOAT_BORDER = 31
+      DIFF_ADD = 32
+      DIFF_CHANGE = 33
+      DIFF_DELETE = 34
+      DIFF_TEXT = 35
+      WHITESPACE = 36
+      DIAGNOSTIC_ERROR = 37
+      DIAGNOSTIC_WARN = 38
+      DIAGNOSTIC_INFO = 39
+      DIAGNOSTIC_HINT = 40
 
-      SYNTAX_FIRST = 13
-      COMMENT = 13
-      CONSTANT = 14
-      STRING = 15
-      CHARACTER = 16
-      NUMBER = 17
-      BOOLEAN = 18
-      FLOAT = 19
-      IDENTIFIER = 20
-      FUNCTION = 21
-      STATEMENT = 22
-      CONDITIONAL = 23
-      REPEAT = 24
-      LABEL = 25
-      OPERATOR = 26
-      KEYWORD = 27
-      EXCEPTION = 28
-      PRE_PROC = 29
-      INCLUDE = 30
-      DEFINE = 31
-      MACRO = 32
-      TYPE = 33
-      STORAGE_CLASS = 34
-      STRUCTURE = 35
-      TYPEDEF = 36
-      SPECIAL = 37
-      SPECIAL_CHAR = 38
-      DELIMITER = 39
-      SPECIAL_COMMENT = 40
-      TODO = 41
-      ERROR = 42
-      COUNT = 43
+      SYNTAX_FIRST = 41
+      COMMENT = 41
+      CONSTANT = 42
+      STRING = 43
+      CHARACTER = 44
+      NUMBER = 45
+      BOOLEAN = 46
+      FLOAT = 47
+      IDENTIFIER = 48
+      FUNCTION = 49
+      STATEMENT = 50
+      CONDITIONAL = 51
+      REPEAT = 52
+      LABEL = 53
+      OPERATOR = 54
+      KEYWORD = 55
+      EXCEPTION = 56
+      PRE_PROC = 57
+      INCLUDE = 58
+      DEFINE = 59
+      MACRO = 60
+      TYPE = 61
+      STORAGE_CLASS = 62
+      STRUCTURE = 63
+      TYPEDEF = 64
+      SPECIAL = 65
+      SPECIAL_CHAR = 66
+      DELIMITER = 67
+      SPECIAL_COMMENT = 68
+      TODO = 69
+      ERROR = 70
+
+      ICON_FIRST = 71
+      ICON_DEFAULT = 71
+      ICON_FOLDER = 72
+      ICON_SYMLINK = 73
+      ICON_RUBY = 74
+      ICON_JSON = 75
+      ICON_MARKDOWN = 76
+      ICON_TOML = 77
+      ICON_MAKEFILE = 78
+      ICON_SHELL = 79
+      ICON_C = 80
+      ICON_YAML = 81
+      ICON_GIT = 82
+      ICON_LOCK = 83
+      COUNT = 84
 
       NAMES = [
         "Normal", "LineNr", "StatusLine", "ErrorMsg", "NonText", "StatusLineNC", "TabLine", "TabLineSel", "TabLineFill", "Visual", "SignColumn", "Search", "IncSearch",
+        "CurSearch", "CursorLine", "CursorLineNr", "ColorColumn", "EndOfBuffer", "WinSeparator", "Directory", "Title", "WarningMsg", "ModeMsg", "MoreMsg", "Question", "MatchParen",
+        "Pmenu", "PmenuSel", "PmenuSbar", "PmenuThumb", "NormalFloat", "FloatBorder", "DiffAdd", "DiffChange", "DiffDelete", "DiffText", "Whitespace",
+        "DiagnosticError", "DiagnosticWarn", "DiagnosticInfo", "DiagnosticHint",
         "Comment", "Constant", "String", "Character", "Number", "Boolean", "Float", "Identifier", "Function",
         "Statement", "Conditional", "Repeat", "Label", "Operator", "Keyword", "Exception",
         "PreProc", "Include", "Define", "Macro",
         "Type", "StorageClass", "Structure", "Typedef",
         "Special", "SpecialChar", "Delimiter", "SpecialComment",
-        "Todo", "Error"
+        "Todo", "Error",
+        "DevIconDefault", "DevIconFolder", "DevIconSymlink", "DevIconRb", "DevIconJson", "DevIconMd", "DevIconToml", "DevIconMakefile", "DevIconSh", "DevIconC", "DevIconYml", "DevIconGitIgnore", "DevIconLock"
       ]
 
-      # The id of the syntax group with that name, -1 for an editor group
-      # or an unknown name.
+      # The id of the group a plugin token may carry, a syntax or a
+      # file-icon group, with that name; -1 for a UI group or an unknown
+      # name.
       #: (String) -> Integer
-      def self.syntax_id(name)
+      def self.token_id(name)
         i = SYNTAX_FIRST
         while i < COUNT
           return i if NAMES[i] == name
@@ -76,9 +126,10 @@ module Carat
         -1
       end
 
-      # Whether id is a syntax group, one a token may carry.
+      # Whether id is a group a plugin token may carry: a syntax or a
+      # file-icon group.
       #: (Integer) -> bool
-      def self.syntax?(id)
+      def self.token?(id)
         id >= SYNTAX_FIRST && id < COUNT
       end
 

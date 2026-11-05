@@ -1,6 +1,7 @@
 ok   the hello manifest breaks no rule
 ok   symbols for events and types are read as names
 ok   the host's own version is accepted
+ok   an older minor is accepted
 ok   a newer minor is refused
 ok   a newer major is refused with both versions
 ok   an older major is refused
@@ -54,4 +55,4 @@ ok   a filetype that is not a string
 ok   filetypes of the wrong type
 ok   describe returns the description
 ok   describe returns empty for an unknown action
-domain_plugin_manifest: 56 passed, 0 failed
+domain_plugin_manifest: 57 passed, 0 failed

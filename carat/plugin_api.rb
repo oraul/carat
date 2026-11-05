@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 0
-    VERSION = "2.0"
+    MINOR = 1
+    VERSION = "2.1"
 
     # The events a plugin may subscribe to, by name. idle arrives with the
     # language services change, which gives the main loop an idle tick.
@@ -377,7 +377,9 @@ module Carat
       # that title in a fixed-width window at the "left" or "right" edge of
       # the tab page, holding the lines, with its own keymap built from
       # bindings, keymap lines "keymap.<mode> <keys> <action>" as in the
-      # manifest. Returns a WindowResponse with the window's id.
+      # manifest. A new buffer's syntax is the plugin's name when the
+      # manifest declares that filetype (API 2.1), so the plugin tokenizes
+      # its own lines. Returns a WindowResponse with the window's id.
       # @rbs title: String
       # @rbs side: String
       # @rbs width: Integer
@@ -572,10 +574,11 @@ module Carat
       end
 
       # Returns a Response whose number is the id of the syntax highlight
-      # group with that name ("Comment", "String", ... "Todo", "Error"),
-      # failed with "No highlight group named x" for any other name. A
-      # tokenizer resolves its groups once, in activate, and gives the ids
-      # in its tokens.
+      # group ("Comment", "String", ... "Todo", "Error") or the file-icon
+      # group ("DevIconDefault", "DevIconRb", ... "DevIconLock", API 2.1)
+      # with that name, failed with "No highlight group named x" for any
+      # other name. A tokenizer resolves its groups once, in activate, and
+      # gives the ids in its tokens.
       # @rbs name: String
       def syntax_group(name)
         raise NotImplementedError, "Host#syntax_group"

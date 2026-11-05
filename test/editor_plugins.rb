@@ -250,6 +250,8 @@ module EditorPluginsTest
     # The scratch keymap, its fallback, and its scope.
     h = session(" to")
     t.assert_equal(Side::LINES, h.lines, "the side window shows the plugin's lines")
+    h.type(":set syntax?<CR>")
+    t.assert_equal("  syntax=", h.message, "a plugin that declares no filetype of its name leaves its scratch buffer without syntax")
     t.assert_equal("list", h.status_row[0, 4], "its status line shows the title")
     h.type("jj<CR>")
     t.assert_equal([[2, 0], "picked row 2 in window 2"], [h.cursor, h.message], "j falls through to the mode's keymap and Enter runs the plugin's action")

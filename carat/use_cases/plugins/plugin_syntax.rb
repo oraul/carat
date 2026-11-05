@@ -66,7 +66,7 @@ module Carat
       end
 
       # A copy of the valid triples of the last call: a start of 0 or
-      # more, a length of 1 or more, and a syntax group id.
+      # more, a length of 1 or more, and a syntax or file-icon group id.
       #: () -> Array[Integer]
       def copied_tokens
         copy = Array.new(0, 0)
@@ -76,7 +76,7 @@ module Carat
           from = tokens[i]
           length = tokens[i + 1]
           group = tokens[i + 2]
-          if from >= 0 && length > 0 && Domain::Highlight.syntax?(group)
+          if from >= 0 && length > 0 && Domain::Highlight.token?(group)
             copy << from
             copy << length
             copy << group

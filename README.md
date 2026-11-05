@@ -50,7 +50,7 @@ Carat reads its settings from plain text files of one setting per line, `scope.n
 # ~/.config/carat/caratrc
 option.number true
 option.tabstop 2
-option.theme carat-dark
+option.theme one_dark
 keymap.normal <leader>e plugin.explorer.toggle
 keymap.insert <C-s> <Esc>:w<CR>
 keymap.normal Q none
@@ -97,10 +97,11 @@ Carat highlights the files whose filetype a plugin tokenizes; the built-in `ruby
 - `:syntax off` draws every buffer plain and `:syntax on` brings the colors back.
 - `:set filetype=ruby` (or `:set ft=ruby`) highlights the current buffer as Ruby, `:set syntax=OFF` turns one buffer plain, and `:set ft?` shows the filetype.
 
-The colors come from a theme, chosen by the `option.theme` line of the configuration: `carat-dark`, the default, for a dark terminal background, or `carat-light` for a light one. Both leave the background of the text to the terminal and color the status lines, the tab line, the line numbers, the selection, and the messages as well.
+The colors come from a palette, chosen by the `option.theme` line of the configuration: `one_dark`, the default, or `dark_plus` (Visual Studio Code's Dark+) for a dark terminal, and `one_light` or `light_plus` for a light one; `carat-dark` and `carat-light` still work and name the One palettes. Each palette has its own syntax colors and colors the status lines, the tab line, the line numbers, the selection, the search matches, the messages, and the file tree's icons as well, and every text color in it is readable on its background at WCAG AA contrast. The terminal keeps its own background unless `option.background theme` asks the palette to paint it, which needs a terminal that clears with the current background color, as most do.
 
 ```
-option.theme carat-light
+option.theme light_plus
+option.background theme
 ```
 
 Carat writes 24-bit colors when the terminal sets `COLORTERM` to `truecolor` or `24bit` (most modern terminals do), the 256-color palette otherwise, and the 16 basic colors when `TERM` names a terminal that has only those, such as the Linux console (`linux`). To turn the Ruby highlighting off, add the line `plugin.ruby.enabled false`.

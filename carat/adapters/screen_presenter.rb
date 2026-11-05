@@ -22,7 +22,9 @@ module Carat
     # holds what it showed, and drawn in full otherwise, as is the first
     # frame and every frame after a size change. A cell's highlight group
     # is written as the SGR sequence the theme gives it at the terminal's
-    # color depth, built once.
+    # color depth, built once. A theme that paints the background has its
+    # Normal sequence in effect when the screen is cleared or scrolled, so
+    # the terminal fills the cleared cells with the palette's background.
     class ScreenPresenter
       ENTER = "\e[?1049h\e[H\e[2J"
       LEAVE = "\e[0m\e[2 q\e[?25h\e[?1049l"
@@ -38,11 +40,13 @@ module Carat
       # @rbs @shadow_serial: Integer
       # @rbs @shape: Symbol
       # @rbs @hl: Integer
+      # @rbs @painted: bool
 
       #: (terminal: Ports::TerminalPort, theme: Domain::Theme, colors: Integer) -> void
       def initialize(terminal:, theme:, colors:)
         @terminal = terminal
         @sgr_table = SgrTable.from_theme(theme, colors)
+        @painted = theme.paints_background?
         @shadow = nil
         @shadow_serial = 0
         @shape = :none
@@ -96,9 +100,15 @@ module Carat
 
       private
 
-      # Clears the screen and writes every row.
+      # Clears the screen and writes every row. A theme that paints the
+      # background has its Normal sequence written first, so the clear
+      # fills the screen with it.
       #: (Domain::Frame, String) -> void
       def full(frame, out)
+        if @painted
+          out << sgr(Domain::Highlight::NORMAL)
+          @hl = Domain::Highlight::NORMAL
+        end
         out << "\e[2J"
         row = 0
         while row < frame.rows
@@ -117,8 +127,8 @@ module Carat
           first = scrolls[i]
           last = scrolls[i + 1]
           delta = scrolls[i + 2]
-          out << "\e[0m" if @hl != 0
-          @hl = 0
+          out << sgr(Domain::Highlight::NORMAL) if @hl != Domain::Highlight::NORMAL
+          @hl = Domain::Highlight::NORMAL
           out << "\e["
           number(out, first + 1)
           out << ";"

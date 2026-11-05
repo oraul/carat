@@ -71,11 +71,11 @@ module Carat
         PluginApi::TextResponse.success(glyph)
       end
 
-      # The id of a syntax highlight group by its name, as the number of a
+      # The id of a syntax or file-icon group by its name, as the number of a
       # response.
       #: (String, String) -> PluginApi::Response
       def syntax_group(name, group)
-        id = Domain::Highlight.syntax_id(group)
+        id = Domain::Highlight.token_id(group)
         return PluginApi::Response.failure("No highlight group named #{group}") if id < 0
         PluginApi::Response.success("", id)
       end

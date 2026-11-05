@@ -1,9 +1,9 @@
-ok   syntax_group answers syntax groups by name and refuses others
+ok   syntax_group answers syntax and file-icon groups by name and refuses others
 ok   the first registered plugin declaring a syntax tokenizes it
 ok   the entries hold the declared filetypes
 ok   the end state is returned
 ok   the plugin gets the filetype, the text, and the start state
-ok   a negative start, an empty token, an editor group, and an unknown id are dropped
+ok   a negative start, an empty token, a UI group, and an unknown id are dropped; a file-icon group is kept
 ok   a negative state counts as 0
 ok   the tokens color the text
 ok   each line starts in the state the line before ended in

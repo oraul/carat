@@ -6,6 +6,7 @@ require_relative "../carat/testing"
 # the file is compiled on its own (make test-one).
 module EditorExplorerTest
   ROOT = "/home/ada/proj"
+  H = Carat::Domain::Highlight
 
   # /home/ada/proj with two files, a docs directory, a nested lib
   # directory, and hidden entries.
@@ -295,6 +296,18 @@ module EditorExplorerTest
       end
       rows
     end
+    # Icons in their file type's color, through the tree's own syntax.
+    h = editor_on("a.md", config_with("unicode", ""))
+    h.type(" e")
+    t.assert_equal([H::ICON_FOLDER, H::ICON_FOLDER, H::ICON_MARKDOWN, H::ICON_RUBY], [h.frame.hl_at(0, 1), h.frame.hl_at(1, 3), h.frame.hl_at(3, 3), h.frame.hl_at(4, 3)], "each icon is drawn in its file type's group, after a marker of any width")
+    t.assert_equal([H::NORMAL, H::NORMAL, H::NORMAL], [h.frame.hl_at(4, 0), h.frame.hl_at(4, 4), h.frame.hl_at(4, 5)], "the rest of the line keeps the normal group")
+    h.type(":set syntax?<CR>")
+    t.assert_equal("  syntax=explorer", h.message, "the tree buffer takes the explorer's filetype")
+    h.type(":syntax off<CR>")
+    t.assert_equal(H::NORMAL, h.frame.hl_at(4, 3), ":syntax off draws the icons plain")
+    h.type(":syntax on<CR>")
+    t.assert_equal(H::ICON_RUBY, h.frame.hl_at(4, 3), ":syntax on colors them again")
+
     h = editor_on("a.md", config_with("ascii", ""))
     h.type(" e")
     t.assert_equal(["│", "~"], [h.row(0)[30, 1], h.row(5)[0, 1]], "the tree has no line numbers and a separator at its right")

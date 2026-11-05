@@ -7,14 +7,14 @@ require_relative "../carat/testing"
 module AdaptersScreenPresenterTest
   D = Carat::Domain
   H = D::Highlight
-  DARK = D::Themes.find("carat-dark")
+  DARK = D::Themes.find("one_dark", "terminal")
 
-  # A presenter with carat-dark at 256 colors, as on most terminals.
+  # A presenter with one_dark at 256 colors, as on most terminals.
   def self.presenter(terminal)
     Carat::Adapters::ScreenPresenter.new(terminal: terminal, theme: DARK, colors: Carat::Domain::ColorDepth::COLORS_256)
   end
 
-  # The sequence carat-dark gives a group at 256 colors.
+  # The sequence one_dark gives a group at 256 colors.
   def self.sgr256(id)
     Carat::Adapters::SgrTable.sequence(DARK, id, Carat::Domain::ColorDepth::COLORS_256)
   end
@@ -43,7 +43,7 @@ module AdaptersScreenPresenterTest
   def self.written(colors, theme, id)
     clock = Carat::Doubles::ManualClock.new
     terminal = Carat::Doubles::FakeTerminal.new(clock: clock, rows: 1, cols: 6)
-    screen = Carat::Adapters::ScreenPresenter.new(terminal: terminal, theme: Carat::Domain::Themes.find(theme), colors: colors)
+    screen = Carat::Adapters::ScreenPresenter.new(terminal: terminal, theme: Carat::Domain::Themes.find(theme, "terminal"), colors: colors)
     frame = Carat::Domain::Frame.new(rows: 1, cols: 6)
     frame.put(0, 0, "x", id)
     screen.present(frame)
@@ -78,7 +78,7 @@ module AdaptersScreenPresenterTest
     t.assert_true(first.include?("\e[2J"), "first frame clears the screen")
     t.assert_true(first.include?("\e[1;1H\e[0mhello"), "first frame writes row 1 with the normal highlight")
     t.assert_true(first.include?("\e[2;1H#{sgr256(H::LINE_NUMBER)}two"), "line number highlight is emitted before the text")
-    t.assert_equal("\e[0;38;5;243m", sgr256(H::LINE_NUMBER), "the line numbers are carat-dark's gray at 256 colors")
+    t.assert_equal("\e[0;38;5;247m", sgr256(H::LINE_NUMBER), "the line numbers are one_dark's gray at 256 colors")
     t.assert_equal(false, first.include?("\e[3;1H"), "first frame skips a blank row, which the clear already drew")
     t.assert_true(first.end_with?("\e[2;3H\e[2 q\e[?25h"), "cursor position, block shape, and cursor shown last")
     t.assert_true(first.start_with?("\e[?25l"), "cursor hidden while drawing")
@@ -162,7 +162,7 @@ module AdaptersScreenPresenterTest
     t.assert_true(out.include?("#{sgr256(H::TAB_LINE)}tab"), "tab line labels have TabLine")
     t.assert_true(out.include?("#{sgr256(H::TAB_LINE_SELECTED)}sel"), "the selected label has TabLineSel")
     t.assert_true(out.include?("#{sgr256(H::TAB_LINE_FILL)}fill"), "the tab line fill has TabLineFill")
-    t.assert_equal(["\e[0;38;5;146;48;5;237m", "\e[0;1;38;5;189m", "\e[0;48;5;237m"], [sgr256(H::TAB_LINE), sgr256(H::TAB_LINE_SELECTED), sgr256(H::TAB_LINE_FILL)], "the tab line sequences at 256 colors")
+    t.assert_equal(["\e[0;38;5;247;48;5;235m", "\e[0;1m", "\e[0;48;5;235m"], [sgr256(H::TAB_LINE), sgr256(H::TAB_LINE_SELECTED), sgr256(H::TAB_LINE_FILL)], "the tab line sequences at 256 colors")
 
     # The visual selection has the theme's Visual background.
     selected = D::Frame.new(rows: 1, cols: 8)
@@ -296,20 +296,53 @@ module AdaptersScreenPresenterTest
     h.type("l")
     out = h.terminal.last_write
     t.assert_equal(false, out.include?("method"), "l writes no buffer text")
-    t.assert_true(out.match?(/\e\[59;\d+H\e\[0;1;38;5;189;48;5;239m2\e\[0m/), "l writes only the changed cell of the ruler")
+    t.assert_true(out.match?(/\e\[59;\d+H\e\[0;1;38;5;253;48;5;238m2\e\[0m/), "l writes only the changed cell of the ruler")
+
+    # The theme's background: the Normal sequence is in effect when the
+    # screen is cleared and when a region scrolls, so the terminal fills
+    # the cleared cells with the palette's background.
+    lines_text = +""
+    i = 0
+    while i < 30
+      lines_text << "line #{i}\n"
+      i += 1
+    end
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.txt", lines_text)
+    painted = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with("option.background theme\n"), rows: 10, cols: 40, plugins: [])
+    normal = Carat::Adapters::SgrTable.sequence(D::Themes.find("one_dark", "theme"), H::NORMAL, C256)
+    painted.open("a.txt")
+    t.assert_equal("\e[0;38;5;249;48;5;236m", normal, "the painted Normal is one_dark's text color on its background")
+    t.assert_true(painted.terminal.last_write.include?("#{normal}\e[2J"), "the screen is cleared after the painted Normal sequence")
+    first = painted.terminal.last_write
+    t.assert_true(first.include?("#{normal}line 0") || first.include?("#{normal} line 0"), "a Normal cell is written in the palette's colors")
+    painted.type("jjjjjjjj")
+    t.assert_true(painted.terminal.last_write.include?("#{normal}\e[1;8r\e[1S"), "a region scrolls after the painted Normal sequence")
+    h = Carat::Doubles::EditorHarness.default(files, 10, 40)
+    h.open("a.txt")
+    t.assert_equal(false, h.terminal.last_write.include?("\e[0m\e[2J"), "the terminal's background clears the screen as before")
+    h.type("jjjjjjjj")
+    t.assert_true(h.terminal.last_write.include?("\e[0m\e[1;8r\e[1S"), "and scrolls after the bare reset as before")
 
     t.table([
-      ["a truecolor comment", [T, "carat-dark", H::COMMENT], "\e[0;3;38;2;127;132;156m"],
-      ["a 256-color comment", [C256, "carat-dark", H::COMMENT], "\e[0;3;38;5;103m"],
-      ["a 16-color comment", [C16, "carat-dark", H::COMMENT], "\e[0;3;90m"],
-      ["a truecolor status line", [T, "carat-dark", H::STATUS], "\e[0;1;38;2;205;214;244;48;2;69;71;90m"],
-      ["a 16-color status line", [C16, "carat-dark", H::STATUS], "\e[0;1;30;47m"],
-      ["a 16-color error message", [C16, "carat-dark", H::MESSAGE_ERROR], "\e[0;1;97;41m"],
-      ["a truecolor string", [T, "carat-dark", H::STRING], "\e[0;38;2;166;227;161m"],
-      ["a 16-color Todo", [C16, "carat-dark", H::TODO], "\e[0;1;30;103m"],
-      ["carat-light's comment", [T, "carat-light", H::COMMENT], "\e[0;3;38;2;140;143;161m"],
-      ["carat-light's string at 256 colors", [C256, "carat-light", H::STRING], "\e[0;38;5;70m"],
-      ["Normal is a bare reset", [T, "carat-dark", H::NORMAL], "\e[0m"]
+      ["a truecolor comment", [T, "one_dark", H::COMMENT], "\e[0;3;38;2;149;156;168m"],
+      ["a 256-color comment, the nearest index", [C256, "one_dark", H::COMMENT], "\e[0;3;38;5;247m"],
+      ["a 16-color comment", [C16, "one_dark", H::COMMENT], "\e[0;3;90m"],
+      ["a truecolor status line", [T, "one_dark", H::STATUS], "\e[0;1;38;2;215;218;224;48;2;62;68;82m"],
+      ["a 16-color status line", [C16, "one_dark", H::STATUS], "\e[0;1;30;47m"],
+      ["a 16-color error message", [C16, "one_dark", H::MESSAGE_ERROR], "\e[0;1;91m"],
+      ["a truecolor string", [T, "one_dark", H::STRING], "\e[0;38;2;152;195;121m"],
+      ["a 16-color Todo", [C16, "one_dark", H::TODO], "\e[0;1;30;103m"],
+      ["a 16-color selection is reverse video", [C16, "one_dark", H::VISUAL], "\e[0;7m"],
+      ["a 16-color cursor line is underlined", [C16, "one_dark", H::CURSOR_LINE], "\e[0;4m"],
+      ["a 256-color search", [C256, "one_dark", H::SEARCH], "\e[0;38;5;236;48;5;180m"],
+      ["carat-light is one_light's comment", [T, "carat-light", H::COMMENT], "\e[0;3;38;2;105;108;119m"],
+      ["one_light's string at its own 256-color index", [C256, "one_light", H::STRING], "\e[0;38;5;28m"],
+      ["dark_plus's comment at its own 256-color index", [C256, "dark_plus", H::COMMENT], "\e[0;3;38;5;71m"],
+      ["dark_plus's keyword", [T, "dark_plus", H::KEYWORD], "\e[0;38;2;86;156;214m"],
+      ["light_plus's comment", [T, "light_plus", H::COMMENT], "\e[0;3;38;2;0;128;0m"],
+      ["a file-icon group", [T, "one_dark", H::ICON_RUBY], "\e[0;38;2;232;117;126m"],
+      ["Normal is a bare reset", [T, "one_dark", H::NORMAL], "\e[0m"]
     ]) { |input| written(input[0].to_i, input[1].to_s, input[2].to_i) }
     t.assert_equal([16, 231, 232, 255, 103], [Carat::Adapters::SgrTable.index_256(0x000000), Carat::Adapters::SgrTable.index_256(0xffffff), Carat::Adapters::SgrTable.index_256(0x080808), Carat::Adapters::SgrTable.index_256(0xeeeeee), Carat::Adapters::SgrTable.index_256(0x7f849c)], "the nearest palette colors: cube corners and grays")
     t.assert_equal(Carat::Adapters::SgrTable.sequence(DARK, H::NORMAL, C256), Carat::Adapters::SgrTable.from_theme(DARK, C256).at(99), "an id out of range is drawn as Normal")
