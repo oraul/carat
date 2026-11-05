@@ -292,19 +292,52 @@ utc_now() {
   date -u +%Y-%m-%dT%H:%M:%SZ
 }
 
+# run_stage NAME CMD...: run CMD with its log and record its result at the
+# commit it started on. The record reads "running" while it runs; its first
+# word is then the exit status, "killed" when a signal ended the command
+# (KILLED_STATUSES: a hang-up, interrupt, kill, or terminate), or
+# "superseded" when HEAD moved while it ran, and the log's last line says
+# which. The command runs in the background and is waited for, so a signal
+# the check traps interrupts the wait at once (check_signalled). Sets
+# stage_word to the record's first word; returns the status, 1 for a
+# superseded stage that exited 0.
+KILLED_STATUSES="129 130 137 143"
 run_stage() {
   name=$1
   shift
   dir=$stage_dir/$change
   mkdir -p "$dir"
   log=$dir/$name.log
+  at=$(head_commit)
   start=$(date +%s)
-  "$@" > "$log" 2>&1
+  write_key "stage.$name" "running 0s $at $(utc_now)"
+  running_stage=$name
+  "$@" > "$log" 2>&1 < /dev/null &
+  child=$!
+  wait "$child"
   status=$?
+  child=''
+  running_stage=''
   secs=$(( $(date +%s) - start ))
-  echo "EXIT $status" >> "$log"
-  write_key "stage.$name" "$status ${secs}s $(head_commit) $(utc_now)"
-  echo "stage $name: exit $status in ${secs}s, log $log"
+  now=$(head_commit)
+  stage_word=$status
+  if [ "$now" != "$at" ]; then
+    stage_word=superseded
+    echo "EXIT $status" >> "$log"
+    echo "SUPERSEDED: HEAD moved from $at to $now while the stage ran" >> "$log"
+  elif one_of "$status" "$KILLED_STATUSES"; then
+    stage_word=killed
+    echo "KILLED: exit $status, a signal ended the stage" >> "$log"
+  else
+    echo "EXIT $status" >> "$log"
+  fi
+  write_key "stage.$name" "$stage_word ${secs}s $at $(utc_now)"
+  if [ "$stage_word" = "$status" ]; then
+    echo "stage $name: exit $status in ${secs}s, log $log"
+  else
+    echo "stage $name: $stage_word (exit $status) in ${secs}s, log $log"
+  fi
+  [ "$stage_word" != superseded ] || [ "$status" -ne 0 ] || return 1
   return $status
 }
 
@@ -320,13 +353,10 @@ tests_only_since() {
 # it, so a record at HEAD that no workflow record backs runs again. A stage
 # passed at BACKED is skipped when BACKED is HEAD, and carried to HEAD when
 # it reads no test program and only tests changed since BACKED.
+# The runner (check-run) runs them detached from the waiter (check_wait);
+# each stage that does not pass ends the run with its verdict line.
 check_stages() {
-  dirty=$(git status --porcelain --untracked-files=no)
-  [ -z "$dirty" ] || die "check: refused: tracked files differ from HEAD; commit them first: $(printf '%s\n' "$dirty" | head -3 | tr '\n' ' ')"
-  loose=$(git ls-files --others --exclude-standard -- carat bin test bench)
-  [ -z "$loose" ] || die "check: refused: untracked files under carat/, bin/, test/, or bench/, which spin compiles: $(printf '%s\n' "$loose" | head -3 | tr '\n' ' ')"
   stages=${STAGES:-$("$make_cmd" -s --no-print-directory stages)}
-  head=$(head_commit)
   backed=$1
   key=$(code_key)
   for s in $stages; do
@@ -352,13 +382,173 @@ check_stages() {
       continue
     fi
     one_of "$s" "$COMPILE_STAGES" && compiled_set "$s" ""
-    run_stage "$s" "$make_cmd" --no-print-directory check-stage "S=$s" ||
-      die "check: stage $s failed at $head; read $stage_dir/$change/$s.log"
+    if ! run_stage "$s" "$make_cmd" --no-print-directory check-stage "S=$s"; then
+      case "$stage_word" in killed|superseded) word=$stage_word ;; *) word=failed ;; esac
+      echo "check: stage $s $word at $head; read $stage_dir/$change/$s.log"
+      exit 1
+    fi
     one_of "$s" "$COMPILE_STAGES" && compiled_set "$s" "$key $(outputs_sum "$s")"
   done
   # The workflow records phase.check from the checker's result, so a check
   # run outside it backs nothing.
   echo "check: every stage passed at $head; the workflow records the check"
+}
+
+# The check's files: the runner's pid file, "PID COMMIT", while it runs,
+# and its output, which ends with its verdict line.
+check_pid_file() {
+  echo "$stage_dir/$change/check.pid"
+}
+check_log() {
+  echo "$stage_dir/$change/check.log"
+}
+
+# True when PID is a live check runner (a reused pid is another program).
+runner_alive() {
+  [ -n "$1" ] && kill -0 "$1" 2>/dev/null &&
+    ps -p "$1" -o args= 2>/dev/null | grep -q 'run_state[.]sh check-run'
+}
+
+# The verdict line ending the runner's output, empty while it has none.
+check_verdict() {
+  last=$(tail -1 "$(check_log)" 2>/dev/null)
+  case "$last" in "check: "*) echo "$last" ;; esac
+}
+
+# check-run BACKED: the runner, started detached by check_wait. It writes
+# the pid file, removes it on exit while it still names it, and on a
+# hang-up, interrupt, or terminate signal records its running stage as
+# killed, or superseded when HEAD moved, and prints that verdict.
+check_run() {
+  head=$(head_commit)
+  pid_file=$(check_pid_file)
+  echo "$$ $head" > "$pid_file"
+  running_stage=''
+  child=''
+  trap 'check_signalled HUP' HUP
+  trap 'check_signalled INT' INT
+  trap 'check_signalled TERM' TERM
+  trap 'own=$(cut -d" " -f1 "$pid_file" 2>/dev/null); [ "$own" != "$$" ] || rm -f "$pid_file"' EXIT
+  check_stages "$1"
+}
+
+check_signalled() {
+  trap '' HUP INT TERM
+  [ -z "$child" ] || kill -TERM "$child" 2>/dev/null
+  # Detached by setsid, the runner leads its process group: the stage's
+  # make and compilers stop with it.
+  [ "$(ps -o pgid= -p $$ 2>/dev/null | tr -d ' ')" != "$$" ] || kill -TERM 0 2>/dev/null
+  word=killed
+  [ "$(head_commit)" = "$head" ] || word=superseded
+  if [ -n "$running_stage" ]; then
+    log=$stage_dir/$change/$running_stage.log
+    echo "KILLED: the check received SIG$1 during the stage" >> "$log"
+    write_key "stage.$running_stage" "$word $(( $(date +%s) - start ))s $head $(utc_now)"
+    echo "check: stage $running_stage $word at $head; read $log"
+  else
+    echo "check: stage none $word at $head; read $(check_log)"
+  fi
+  exit 1
+}
+
+# A runner gone without a verdict (killed by a signal it cannot trap):
+# its running stage, if any, is recorded as killed and its log says so;
+# prints the verdict line and appends it to the runner's output.
+check_lost() {
+  at=$1
+  lost=$(grep -E '^  "stage\.[^"]*": "running ' "$(state_file)" | head -1 | sed 's/^  "stage\.\([^"]*\)": "running \(.*\)",*$/\1 \2/')
+  if [ -n "$lost" ]; then
+    s=${lost%% *}
+    rest=${lost#* }
+    log=$stage_dir/$change/$s.log
+    echo "KILLED: the check ended without a verdict during the stage" >> "$log"
+    write_key "stage.$s" "killed $rest"
+    line="check: stage $s killed at $at; read $log"
+  else
+    line="check: stage none killed at $at; read $(check_log)"
+  fi
+  echo "$line" >> "$(check_log)"
+  echo "$line"
+}
+
+# check BACKED: refuse a dirty tree, then rejoin the runner running at
+# HEAD, stop one at another commit (its verdict reads superseded), or
+# start one detached from this shell (setsid), so the end of the caller's
+# turn or tool call cannot kill the stages. Waits at most CHECK_WAIT
+# seconds: prints the runner's output and exits 0 when every stage
+# passed, 1 otherwise, and 3 while it still runs.
+check_wait() {
+  dirty=$(git status --porcelain --untracked-files=no)
+  [ -z "$dirty" ] || die "check: refused: tracked files differ from HEAD; commit them first: $(printf '%s\n' "$dirty" | head -3 | tr '\n' ' ')"
+  loose=$(git ls-files --others --exclude-standard -- carat bin test bench)
+  [ -z "$loose" ] || die "check: refused: untracked files under carat/, bin/, test/, or bench/, which spin compiles: $(printf '%s\n' "$loose" | head -3 | tr '\n' ' ')"
+  [ -f "$(state_file)" ] || die "no run state for $change; run init first"
+  mkdir -p "$stage_dir/$change"
+  head=$(head_commit)
+  pid_file=$(check_pid_file)
+  pid=''
+  at=''
+  [ ! -f "$pid_file" ] || read -r pid at < "$pid_file"
+  joined=0
+  if runner_alive "$pid" && [ "$at" = "$head" ]; then
+    echo "check: rejoining the check running at $head (pid $pid)"
+    joined=1
+  elif runner_alive "$pid"; then
+    echo "check: the check running at $at is superseded by $head; stopping it"
+    kill -TERM "$pid" 2>/dev/null
+    n=0
+    while runner_alive "$pid" && [ $n -lt 150 ]; do pause; n=$((n + 1)); done
+    echo "the superseded check: $(check_verdict)"
+  elif [ -f "$pid_file" ]; then
+    [ -n "$(check_verdict)" ] || echo "the last check: $(check_lost "$at")"
+    rm -f "$pid_file"
+  fi
+  if [ "$joined" = 0 ]; then
+    rm -f "$pid_file"
+    : > "$(check_log)"
+    if command -v setsid > /dev/null 2>&1; then
+      setsid -f sh "$here/run_state.sh" check-run "$change" ${1:+"$1"} > "$(check_log)" 2>&1 < /dev/null
+    else
+      (sh "$here/run_state.sh" check-run "$change" ${1:+"$1"} > "$(check_log)" 2>&1 < /dev/null &)
+    fi
+  fi
+  begun=$(date +%s)
+  limit=${CHECK_WAIT:-540}
+  seen=$joined
+  while :; do
+    verdict=$(check_verdict)
+    [ -z "$verdict" ] || break
+    read_pid
+    if runner_alive "$pid"; then
+      seen=1
+    elif [ -n "$pid" ] || [ "$seen" = 1 ] || [ $(( $(date +%s) - begun )) -ge 10 ]; then
+      # Gone, or never started, without a verdict: the pid file holds
+      # only the runner started or rejoined here.
+      [ -n "$(check_verdict)" ] || check_lost "$head" > /dev/null
+      rm -f "$pid_file"
+      continue
+    fi
+    if [ $(( $(date +%s) - begun )) -ge "$limit" ]; then
+      echo "check: still running at $head (pid $pid, $(( $(date +%s) - begun ))s waited); run the same command again to wait"
+      exit 3
+    fi
+    pause
+  done
+  cat "$(check_log)"
+  case "$verdict" in "check: every stage passed at "*) return 0 ;; esac
+  return 1
+}
+
+# The pid file's runner and commit as pid and at, empty without one.
+read_pid() {
+  pid=''
+  at=''
+  [ ! -f "$pid_file" ] || read -r pid at 2>/dev/null < "$pid_file" || true
+}
+
+# A fifth of a second, or a second where sleep takes whole seconds only.
+pause() {
+  sleep 0.2 2>/dev/null || sleep 1
 }
 
 # The key of the code the compile stages read: the blobs of every tracked
@@ -1033,7 +1223,10 @@ case "$command" in
     [ $# -le 1 ] || usage
     backed=""
     [ $# -eq 0 ] || backed=$(commit_at "$1") || exit 1
-    check_stages "$backed" ;;
+    check_wait "$backed" ;;
+  check-run)
+    [ $# -le 1 ] || usage
+    check_run "${1:-}" ;;
   bench)
     [ $# -eq 0 ] || usage
     bench_compare ;;

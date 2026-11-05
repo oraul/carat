@@ -247,6 +247,49 @@ echo loose > carat/loose.rb
 expect "run_state: check refuses an untracked source" 1 "refused: untracked files under carat/, bin/, test/, or bench/" \
   env STAGES="a" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
 rm -r carat
+# A check that did not finish says so: a stage ended by a signal, its own
+# or the runner's, is killed; one during which HEAD moved is superseded at
+# the commit it ran on; a runner killed past its trap is reported by the
+# next check. The runner is detached, so a check still running exits 3 and
+# the next check at the same head rejoins it.
+cat > "$work/bin/stop-make" <<'EOF'
+#!/bin/sh
+for arg in "$@"; do
+  case "$arg" in
+    S=own) kill -TERM $$ ;;
+    S=runner) kill -TERM $PPID; sleep 5 ;;
+    S=hard) kill -KILL $PPID ;;
+    S=moves) git -c user.name=Claude -c user.email=noreply@anthropic.com commit -q --allow-empty -m "chore: moved" -m "Co-Authored-By: Claude <noreply@anthropic.com>" ;;
+    S=slow) sleep "${SLOW:-0}" ;;
+  esac
+done
+exit 0
+EOF
+chmod +x "$work/bin/stop-make"
+stop_check() {
+  env STAGES="$1" MAKE="$work/bin/stop-make" sh "$here/run_state.sh" check state
+}
+at=$(git rev-parse --short=12 HEAD)
+expect "run_state: a stage killed by a signal is recorded as killed" 143 "^stage c: killed [(]exit 143[)]" state stage state c sh -c 'kill -TERM $$'
+expect "run_state: a killed stage's log says so" 0 "^KILLED: exit 143" tail -1 build/stages/state/c.log
+expect "run_state: a check whose stage a signal ended names it killed" 1 "^check: stage own killed at $at; read build/stages/state/own[.]log$" stop_check "a own b"
+expect "run_state: a check killed by a signal names its stage and log" 1 "^check: stage runner killed at $at; read build/stages/state/runner[.]log$" stop_check "a runner b"
+expect "run_state: a killed check records its stage as killed" 0 "^killed [0-9]+s $at " state get state stage.runner
+expect "run_state: a killed check's log says so" 0 "^KILLED: the check received SIGTERM" tail -1 build/stages/state/runner.log
+expect "run_state: a hard-killed check is reported killed by the next check" 1 "^check: stage hard killed at $at; read build/stages/state/hard[.]log$" stop_check "a hard b"
+expect "run_state: a hard-killed check's stage is recorded as killed" 0 "^killed 0s $at " state get state stage.hard
+expect "run_state: a check leaves no runner behind" 1 "" test -e build/stages/state/check.pid
+expect "run_state: a stage during which HEAD moved is superseded at the commit it ran on" 1 "^check: stage moves superseded at $at; read" stop_check "a moves b"
+expect "run_state: a superseded stage is recorded at its own commit" 0 "^superseded [0-9]+s $at " state get state stage.moves
+at=$(git rev-parse --short=12 HEAD)
+expect "run_state: a check still running exits 3" 3 "^check: still running at $at" \
+  env SLOW=3 CHECK_WAIT=1 STAGES=slow MAKE="$work/bin/stop-make" sh "$here/run_state.sh" check state
+expect "run_state: a second check at the same head rejoins the running one" 0 "^check: rejoining the check running at $at.*" stop_check "slow"
+expect "run_state: a rejoined check ends with the runner's verdict" 0 "^check: every stage passed at $at" tail -1 build/stages/state/check.log
+env SLOW=5 CHECK_WAIT=1 STAGES=slow MAKE="$work/bin/stop-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
+git_q commit -q --allow-empty -m "chore: newer" -m "$TRAILER"
+expect "run_state: a check at a newer head supersedes the running one" 0 "the superseded check: check: stage slow superseded at $at" stop_check "slow"
+expect "run_state: the newer check runs at the newer head" 0 "^check: every stage passed at $(git rev-parse --short=12 HEAD)" tail -1 build/stages/state/check.log
 state phase state report > /dev/null
 expect "run_state: phase accepts report" 0 "^$(git rev-parse --short=12 HEAD)$" state get state phase.report
 expect "run_state: status names the running change and its next phase" 0 "next phase: plan" state status
