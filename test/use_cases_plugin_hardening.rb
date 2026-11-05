@@ -204,7 +204,7 @@ module UseCasesPluginHardeningTest
     w = rig("writer", "save_writes", ["buffer_save"])
     h = editor([w])
     h.type("x:w<CR>")
-    t.assert_equal([["buffer_save b2 w1 a.txt 0,0"], "ne\ntwo\nthree\n", true], [w.log, h.files.get("a.txt"), h.plugins.enabled?("writer")], "a plugin writing on a save hears only the user's save, not its own")
+    t.assert_equal([["buffer_save b1 w1 a.txt 0,0"], "ne\ntwo\nthree\n", true], [w.log, h.files.get("a.txt"), h.plugins.enabled?("writer")], "a plugin writing on a save hears only the user's save, not its own")
     w1 = rig("one", "save_writes", ["buffer_save"])
     w2 = rig("two", "save_writes", ["buffer_save"])
     h = editor([w1, w2])
@@ -240,8 +240,8 @@ module UseCasesPluginHardeningTest
     r = rig("reader", "", [])
     h = editor([r])
     a_id = h.buffer.id
-    h.type(":e b.txt<CR>:e a.txt<CR>")
-    t.assert_equal([false, true, ["one", "two", "three"]], [r.host.read_buffer(a_id).ok, h.buffer.id > a_id, r.host.read_buffer(h.buffer.id).lines], "a buffer that left the list loses its id for good and the reopened file gets a new one")
+    h.type(":e b.txt<CR>:bd #{a_id}<CR>:e a.txt<CR>")
+    t.assert_equal([false, true, ["one", "two", "three"]], [r.host.read_buffer(a_id).ok, h.buffer.id > a_id, r.host.read_buffer(h.buffer.id).lines], "a buffer deleted from the list loses its id for good and the reopened file gets a new one")
     h.type(":sp b.txt<CR>")
     b_id = h.buffer.id
     h.type("<C-w>j")
@@ -286,10 +286,10 @@ module UseCasesPluginHardeningTest
     listener = rig("listener", "", ["buffer_change"])
     h = editor([listener])
     h.type("jdd")
-    t.assert_equal(["buffer_change b2 w1 a.txt 1,0 -1 +0"], listener.log, "dd on row 1 reports row 1, one row removed")
+    t.assert_equal(["buffer_change b1 w1 a.txt 1,0 -1 +0"], listener.log, "dd on row 1 reports row 1, one row removed")
     listener.log.clear
     h.type("ix<Esc>")
-    t.assert_equal(["buffer_change b2 w1 a.txt 1,0 -1 +1"], listener.log, "an insert session reports once, when it ends")
+    t.assert_equal(["buffer_change b1 w1 a.txt 1,0 -1 +1"], listener.log, "an insert session reports once, when it ends")
     editor_rig = rig("editor", "edit_other", [])
     other = rig("other", "", ["buffer_change"])
     h = editor([editor_rig, other])
@@ -312,10 +312,12 @@ module UseCasesPluginHardeningTest
     h.type(":sp b.txt<CR>")
     b_id = h.buffer.id
     h.type(":q<CR>")
-    t.assert_equal(["buffer_close b#{b_id} w1 b.txt 0,0"], watcher.log, "closing the window of a clean buffer closes the buffer")
+    t.assert_equal([], watcher.log, "closing the window of a clean buffer keeps the buffer")
+    h.type(":bd #{b_id}<CR>")
+    t.assert_equal(["buffer_close b#{b_id} w1 b.txt 0,0"], watcher.log, "deleting the buffer closes it")
     watcher.log.clear
     h.type(" rr")
-    t.assert_equal([["rename true"], "c.txt", ["buffer_rename b2 w1 c.txt 0,0 a.txt"]], [renamer.log, h.buffer.path, watcher.log], "a renamed file's buffer follows it and the rename is an event with the old path")
+    t.assert_equal([["rename true"], "c.txt", ["buffer_rename b1 w1 c.txt 0,0 a.txt"]], [renamer.log, h.buffer.path, watcher.log], "a renamed file's buffer follows it and the rename is an event with the old path")
 
     # Strings at the boundary are copies.
     m = rig("mutator", "read_mutate", [])

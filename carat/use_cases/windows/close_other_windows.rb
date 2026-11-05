@@ -5,8 +5,8 @@ require_relative "../outcome"
 module Carat
   module UseCases
     # :only and Ctrl-W o: closes every other window of the current tab
-    # page. The buffer a closed window showed stays listed while it is
-    # modified, hidden, and leaves the list otherwise.
+    # page. The file buffer a closed window showed stays listed, hidden
+    # when no other window shows it.
     class CloseOtherWindows
       ONLY_ONE = "Already only one window"
       private_constant :ONLY_ONE

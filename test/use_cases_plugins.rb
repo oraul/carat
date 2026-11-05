@@ -168,7 +168,7 @@ module UseCasesPluginsTest
     rig = setup([p], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     t.assert_equal([1, true, ""], [host.count, host.enabled?("probe"), host.reason("probe")], "a valid plugin is registered and enabled")
-    t.assert_equal(["activate", "buffer_open b2 w1 a.txt 0,0", "cursor_move b2 w1 a.txt 0,0"], p.log, "activation, the open of the start file by its id, and the cursor now in it; the empty first buffer was never announced")
+    t.assert_equal(["activate", "buffer_open b1 w1 a.txt 0,0"], p.log, "activation and the open of the start file, which takes the number of the empty first buffer; the empty buffer was never announced")
     t.assert_equal("Go", host.describe("plugin.probe.go"), "the host describes a plugin's action")
     t.assert_equal("", host.describe("plugin.probe.nope"), "and not another")
 
@@ -236,7 +236,7 @@ module UseCasesPluginsTest
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     state.cursor.row = 1
     host.action("plugin.probe.go", D::Command.new(register: "a", count: 3, operator: "", action: "plugin.probe.go", char: "", linewise: false, keys: []))
-    t.assert_equal(["activate", "action plugin.probe.go c3 r\"a\" b2 w1 a.txt 1,0"], p.log, "the action reaches the plugin with the count, register, buffer, window, path, and cursor")
+    t.assert_equal(["activate", "action plugin.probe.go c3 r\"a\" b1 w1 a.txt 1,0"], p.log, "the action reaches the plugin with the count, register, buffer, window, path, and cursor")
     outcome = host.action("plugin.nope.go", D::Command.plain("plugin.nope.go"))
     t.assert_equal("No plugin named nope", outcome.message, "an action for an unregistered plugin says so")
     outcome = host.action("plugin.probe.other", D::Command.plain("plugin.probe.other"))
@@ -261,7 +261,7 @@ module UseCasesPluginsTest
     p.log.clear
     ex.call(state, "e b.txt")
     host.observe
-    t.assert_equal(["buffer_open b3 w1 b.txt 0,0", "buffer_close b2 w1 a.txt 0,0", "cursor_move b3 w1 b.txt 0,0"], p.log, "opening a file delivers buffer_open, buffer_close for the clean buffer it replaced, then cursor_move")
+    t.assert_equal(["buffer_open b2 w1 b.txt 0,0", "cursor_move b2 w1 b.txt 0,0"], p.log, "opening a file delivers buffer_open, then cursor_move; the clean buffer it replaced stays listed")
     p.log.clear
     state.buffer.set_lines(0, 1, ["z"])
     state.cursor.col = 0
@@ -324,7 +324,7 @@ module UseCasesPluginsTest
     t.assert_equal(["activate"], p.log, "a plugin subscribed to buffer_save alone hears nothing of edits or modes")
     ex.call(state, "w")
     host.observe
-    t.assert_equal(["activate", "buffer_save b2 w1 a.txt 0,0"], p.log, "but hears the save")
+    t.assert_equal(["activate", "buffer_save b1 w1 a.txt 0,0"], p.log, "but hears the save")
 
     # Requests: reading, moving, messages, status, ex.
     p = probe([])

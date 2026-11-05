@@ -108,7 +108,7 @@ module EditorTabsTest
     h.type(":qa!<CR>")
     t.assert_equal(true, h.quit?, ":qa! ends the editor")
     h = session(":tabe b.txt<CR>:tabclose<CR>")
-    t.assert_equal(["a.txt"], h.buffer_paths, "a clean buffer leaves the list with its tab page")
+    t.assert_equal(["a.txt", "b.txt"], h.buffer_paths, "a clean buffer stays listed, hidden, when its tab page closes")
     h = session(":tabe b.txt<CR>xgt:qa<CR>")
     t.assert_equal([false, E37, 1], [h.quit?, h.message_row, h.tab_index], ":qa is refused by a modified buffer in another tab page")
     h = session(":tabe b.txt<CR>xgtx:wa<CR>")

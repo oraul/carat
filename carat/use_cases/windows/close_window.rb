@@ -8,9 +8,8 @@ module Carat
     # :close and Ctrl-W c: closes window number n of the current tab page,
     # or the current window when n is 0, giving its space to a neighbour
     # and closing its tab page when it was the last one there; the last
-    # window of the last tab page stays (E444). The buffer the window
-    # showed stays listed while it is modified, hidden, and leaves the
-    # list otherwise.
+    # window of the last tab page stays (E444). The file buffer the
+    # window showed stays listed, hidden when no other window shows it.
     class CloseWindow
       E444 = "E444: Cannot close last window"
       private_constant :E444

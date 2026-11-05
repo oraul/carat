@@ -140,6 +140,66 @@ module Carat
         false
       end
 
+      # How many windows of every tab page show the buffer.
+      #: (Buffer) -> Integer
+      def windows_showing(target)
+        total = 0
+        t = 0
+        while t < pages.length
+          layout = tab_at(t).layout
+          ids = layout.leaves
+          i = 0
+          while i < ids.length
+            total += 1 if layout.window_at(ids[i]).buffer.equal?(target)
+            i += 1
+          end
+          t += 1
+        end
+        total
+      end
+
+      # Makes the first window showing the buffer current, and its tab
+      # page, walking the tab pages in order; false when none shows it.
+      #: (Buffer) -> bool
+      def focus_buffer(target)
+        t = 0
+        while t < pages.length
+          page = tab_at(t)
+          ids = page.layout.leaves
+          i = 0
+          while i < ids.length
+            if page.layout.window_at(ids[i]).buffer.equal?(target)
+              self.tab_index = t
+              page.focus(ids[i])
+              return true
+            end
+            i += 1
+          end
+          t += 1
+        end
+        false
+      end
+
+      # The first modified file buffer a window shows: the current
+      # window's, then the current tab page's in layout order, then those
+      # of the other tab pages in order. Nil when none.
+      #: () -> Buffer?
+      def modified_in_windows
+        own = window.buffer
+        return own if own.modified? && !own.scratch?
+        found = modified_in_page(tab_index)
+        return found unless found.nil?
+        t = 0
+        while t < pages.length
+          if t != tab_index
+            found = modified_in_page(t)
+            return found unless found.nil?
+          end
+          t += 1
+        end
+        nil
+      end
+
       # Keeps the cursor of every window showing the buffer with the id
       # inside its text after a change from row on: a cursor on or below
       # that row moves onto the last line and the line's last character
@@ -164,6 +224,19 @@ module Carat
       end
 
       private
+
+      #: (Integer) -> Buffer?
+      def modified_in_page(index)
+        layout = tab_at(index).layout
+        ids = layout.leaves
+        i = 0
+        while i < ids.length
+          candidate = layout.window_at(ids[i]).buffer
+          return candidate if candidate.modified? && !candidate.scratch?
+          i += 1
+        end
+        nil
+      end
 
       #: (Window, Buffer) -> void
       def clamp_window(current, target)

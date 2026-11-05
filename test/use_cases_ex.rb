@@ -375,7 +375,7 @@ module UseCasesExTest
     r = s_w.ex.call(s, "qa")
     t.assert_equal([false, E37, false], [r.ok, r.message, s.quit], "qa is refused by the hidden buffer")
     r = s_w.ex.call(s, "wa")
-    t.assert_equal([true, "\"b.txt\" 1L, 3B written", "zz\n", 1], [r.ok, r.message, files.get("b.txt"), s_w.buffers.count], "wa writes the hidden buffer, reports the write, and drops it once clean")
+    t.assert_equal([true, "\"b.txt\" 1L, 3B written", "zz\n", 2], [r.ok, r.message, files.get("b.txt"), s_w.buffers.count], "wa writes the hidden buffer, reports the write, and keeps it listed")
     s_w = world(files, ["mem"], "a.txt")
     s = s_w.state
     s.tab.layout.arrange(0, 0, 23, 80)
@@ -391,7 +391,7 @@ module UseCasesExTest
     s.buffer.mark_unsaved
     s_w.ex.call(s, "close")
     r = s_w.ex.call(s, "e b.txt")
-    t.assert_equal([true, "\"b.txt\" 1L, 3B", true, 1], [r.ok, r.message, s.buffer.modified?, s_w.buffers.count], "e brings a hidden buffer back without reading it, dropping the clean one")
+    t.assert_equal([true, "\"b.txt\" 1L, 3B", true, 2], [r.ok, r.message, s.buffer.modified?, s_w.buffers.count], "e brings a hidden buffer back without reading it, keeping the clean one hidden")
     s_w = world(files, ["mem"], "a.txt")
     s = s_w.state
     s.tab.layout.arrange(0, 0, 23, 80)
