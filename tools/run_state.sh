@@ -6,14 +6,19 @@
 # one key per line, rewritten through a temporary file and a rename:
 #   change, branch   the change, its branch, and repo, the GitHub owner/name
 #   phase.NAME       the commit the phase finished at
-#   stage.NAME       "EXIT SECONDSs COMMIT UTC-TIME" of the last run, with
-#                    "carried-from-COMMIT" when check carried it (below)
+#   stage.NAME       "EXIT SECONDSs COMMIT UTC-TIME" of the last run at the
+#                    commit it started on, with "carried-from-COMMIT" when
+#                    check carried it (below); EXIT is "running" while it
+#                    runs, "killed" when a signal ended it, "superseded"
+#                    when HEAD moved while it ran
 #   review.KIND      "pass|blocked COMMIT SUMMARY" (security, quality, bench,
 #                    and periodic-security and periodic-quality after a merge)
 #   pushes, ci_fixes the pushes made and the CI fixes they may answer
 #   gates_failed     the push attempts the pre-push gates refused
 #   pushed, pr, ci   the last pushed commit, the pull request number, and
 #                    "green|red COMMIT"
+#   backup           the commit last pushed to refs/backup/BRANCH, until
+#                    the branch's push deletes that ref
 #   merged           the squash commit on main
 #   metric.NAME      one measurement or figure of the run: tools/metrics.sh
 #                    names, rework, ci_min, estimate (the plan's size), phase.KEY
@@ -26,7 +31,9 @@
 #                    over the starts by usage; older runs stored
 #                    first_pass, out_tokens, tool_calls, phases
 #   note.N           "KIND TEXT": a retrospective proposal or a finding
-# Logs: build/stages/CHANGE/STAGE.log, ending in "EXIT n".
+# Logs: build/stages/CHANGE/STAGE.log, ending in "EXIT n", "KILLED: ...",
+# or "SUPERSEDED: ..."; check.log, the runner's output, ending in its
+# verdict line, and check.pid, "PID COMMIT" while the runner runs.
 # Compile passes: build/pipeline/compiled, "STAGE KEY SUM" per stage of
 # COMPILE_STAGES, kept across changes.
 #
@@ -72,7 +79,16 @@
 #                               stage outside TEST_STAGES when only tests
 #                               changed since COMMIT; a stage of
 #                               COMPILE_STAGES is skipped on the code key of
-#                               its last pass with its outputs unchanged
+#                               its last pass with its outputs unchanged. The
+#                               stages run in a runner (check-run, no agent's)
+#                               detached from the caller, rejoined by a check
+#                               at the same HEAD and stopped by one at another;
+#                               check waits CHECK_WAIT seconds, prints its log,
+#                               and exits 0 on a pass, 1 otherwise, 3 while it
+#                               runs; the last line is the verdict: "check:
+#                               every stage passed at C", "check: stage S
+#                               failed|killed|superseded at C; read LOG" (S
+#                               none before a stage), or "check: still running"
 #   scope CHANGE COMMIT [FILE...]
 #                               print "fix: ..." and exit 0 when every path
 #                               changed from COMMIT to HEAD is a FILE or
@@ -87,7 +103,14 @@
 #                               them, 1 otherwise
 #   push CHANGE [--ci-fix]      run the pre-push gates, refuse a push beyond one
 #                               plus one per CI fix (a CI fix needs ci red), push
-#                               the branch with upstream tracking, and count it
+#                               the branch with upstream tracking, and count it;
+#                               then delete the branch's backup ref
+#   backup CHANGE               before the branch's push, run the trailer and
+#                               content gates and push HEAD to
+#                               refs/backup/BRANCH on origin, no branch, so a
+#                               reclaimed container loses no commit
+#   restore BRANCH              create BRANCH from refs/backup/BRANCH on origin
+#                               when it exists neither here nor on origin
 #   metric CHANGE NAME=VALUE... record metric.NAME; names are [a-z0-9_.-], values
 #                               [A-Za-z0-9_.,:/=+-]
 #   metrics CHANGE FILE         record each "name<TAB>value" line of a
@@ -124,7 +147,7 @@
 # Environment: BASE (origin/main), RUN_STATE_DIR (build/pipeline),
 # STAGE_DIR (build/stages), STAGES (the stage list; make -s stages when
 # unset), MAKE (make), METRICS_FILE (docs/metrics.tsv), METRICS_OUT
-# (build/metrics/current.tsv).
+# (build/metrics/current.tsv), CHECK_WAIT (540, seconds check waits).
 set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -154,6 +177,9 @@ COMPILE_STAGES="dev-build test-build diagnose"
 NOT_COMPILED='^([.]claude/|[.]github/|docs/|openspec/|tools/[^/]+[.]sh$|[^/]+[.]md$)'
 BUILD_TOOLS='^tools/analysis_budget[.]sh$'
 compiled_file=$state_dir/compiled
+# A Conventional Branch, as CLAUDE.md names them: the only branches backup
+# and restore take.
+BRANCH_PATTERN='(feature|bugfix|hotfix|release|chore)/[a-z0-9][a-z0-9-]*'
 # The gates of a history row's first passes, in order, before gates.
 GATES="check quality security bench ci"
 REVIEW_KINDS="security quality bench periodic-security periodic-quality"
@@ -292,19 +318,52 @@ utc_now() {
   date -u +%Y-%m-%dT%H:%M:%SZ
 }
 
+# run_stage NAME CMD...: run CMD with its log and record its result at the
+# commit it started on. The record reads "running" while it runs; its first
+# word is then the exit status, "killed" when a signal ended the command
+# (KILLED_STATUSES: a hang-up, interrupt, kill, or terminate), or
+# "superseded" when HEAD moved while it ran, and the log's last line says
+# which. The command runs in the background and is waited for, so a signal
+# the check traps interrupts the wait at once (check_signalled). Sets
+# stage_word to the record's first word; returns the status, 1 for a
+# superseded stage that exited 0.
+KILLED_STATUSES="129 130 137 143"
 run_stage() {
   name=$1
   shift
   dir=$stage_dir/$change
   mkdir -p "$dir"
   log=$dir/$name.log
+  at=$(head_commit)
   start=$(date +%s)
-  "$@" > "$log" 2>&1
+  write_key "stage.$name" "running 0s $at $(utc_now)"
+  running_stage=$name
+  "$@" > "$log" 2>&1 < /dev/null &
+  child=$!
+  wait "$child"
   status=$?
+  child=''
+  running_stage=''
   secs=$(( $(date +%s) - start ))
-  echo "EXIT $status" >> "$log"
-  write_key "stage.$name" "$status ${secs}s $(head_commit) $(utc_now)"
-  echo "stage $name: exit $status in ${secs}s, log $log"
+  now=$(head_commit)
+  stage_word=$status
+  if [ "$now" != "$at" ]; then
+    stage_word=superseded
+    echo "EXIT $status" >> "$log"
+    echo "SUPERSEDED: HEAD moved from $at to $now while the stage ran" >> "$log"
+  elif one_of "$status" "$KILLED_STATUSES"; then
+    stage_word=killed
+    echo "KILLED: exit $status, a signal ended the stage" >> "$log"
+  else
+    echo "EXIT $status" >> "$log"
+  fi
+  write_key "stage.$name" "$stage_word ${secs}s $at $(utc_now)"
+  if [ "$stage_word" = "$status" ]; then
+    echo "stage $name: exit $status in ${secs}s, log $log"
+  else
+    echo "stage $name: $stage_word (exit $status) in ${secs}s, log $log"
+  fi
+  [ "$stage_word" != superseded ] || [ "$status" -ne 0 ] || return 1
   return $status
 }
 
@@ -320,13 +379,10 @@ tests_only_since() {
 # it, so a record at HEAD that no workflow record backs runs again. A stage
 # passed at BACKED is skipped when BACKED is HEAD, and carried to HEAD when
 # it reads no test program and only tests changed since BACKED.
+# The runner (check-run) runs them detached from the waiter (check_wait);
+# each stage that does not pass ends the run with its verdict line.
 check_stages() {
-  dirty=$(git status --porcelain --untracked-files=no)
-  [ -z "$dirty" ] || die "check: refused: tracked files differ from HEAD; commit them first: $(printf '%s\n' "$dirty" | head -3 | tr '\n' ' ')"
-  loose=$(git ls-files --others --exclude-standard -- carat bin test bench)
-  [ -z "$loose" ] || die "check: refused: untracked files under carat/, bin/, test/, or bench/, which spin compiles: $(printf '%s\n' "$loose" | head -3 | tr '\n' ' ')"
   stages=${STAGES:-$("$make_cmd" -s --no-print-directory stages)}
-  head=$(head_commit)
   backed=$1
   key=$(code_key)
   for s in $stages; do
@@ -352,13 +408,173 @@ check_stages() {
       continue
     fi
     one_of "$s" "$COMPILE_STAGES" && compiled_set "$s" ""
-    run_stage "$s" "$make_cmd" --no-print-directory check-stage "S=$s" ||
-      die "check: stage $s failed at $head; read $stage_dir/$change/$s.log"
+    if ! run_stage "$s" "$make_cmd" --no-print-directory check-stage "S=$s"; then
+      case "$stage_word" in killed|superseded) word=$stage_word ;; *) word=failed ;; esac
+      echo "check: stage $s $word at $head; read $stage_dir/$change/$s.log"
+      exit 1
+    fi
     one_of "$s" "$COMPILE_STAGES" && compiled_set "$s" "$key $(outputs_sum "$s")"
   done
   # The workflow records phase.check from the checker's result, so a check
   # run outside it backs nothing.
   echo "check: every stage passed at $head; the workflow records the check"
+}
+
+# The check's files: the runner's pid file, "PID COMMIT", while it runs,
+# and its output, which ends with its verdict line.
+check_pid_file() {
+  echo "$stage_dir/$change/check.pid"
+}
+check_log() {
+  echo "$stage_dir/$change/check.log"
+}
+
+# True when PID is a live check runner (a reused pid is another program).
+runner_alive() {
+  [ -n "$1" ] && kill -0 "$1" 2>/dev/null &&
+    ps -p "$1" -o args= 2>/dev/null | grep -q 'run_state[.]sh check-run'
+}
+
+# The verdict line ending the runner's output, empty while it has none.
+check_verdict() {
+  last=$(tail -1 "$(check_log)" 2>/dev/null)
+  case "$last" in "check: "*) echo "$last" ;; esac
+}
+
+# check-run BACKED: the runner, started detached by check_wait. It writes
+# the pid file, removes it on exit while it still names it, and on a
+# hang-up, interrupt, or terminate signal records its running stage as
+# killed, or superseded when HEAD moved, and prints that verdict.
+check_run() {
+  head=$(head_commit)
+  pid_file=$(check_pid_file)
+  echo "$$ $head" > "$pid_file"
+  running_stage=''
+  child=''
+  trap 'check_signalled HUP' HUP
+  trap 'check_signalled INT' INT
+  trap 'check_signalled TERM' TERM
+  trap 'own=$(cut -d" " -f1 "$pid_file" 2>/dev/null); [ "$own" != "$$" ] || rm -f "$pid_file"' EXIT
+  check_stages "$1"
+}
+
+check_signalled() {
+  trap '' HUP INT TERM
+  [ -z "$child" ] || kill -TERM "$child" 2>/dev/null
+  # Detached by setsid, the runner leads its process group: the stage's
+  # make and compilers stop with it.
+  [ "$(ps -o pgid= -p $$ 2>/dev/null | tr -d ' ')" != "$$" ] || kill -TERM 0 2>/dev/null
+  word=killed
+  [ "$(head_commit)" = "$head" ] || word=superseded
+  if [ -n "$running_stage" ]; then
+    log=$stage_dir/$change/$running_stage.log
+    echo "KILLED: the check received SIG$1 during the stage" >> "$log"
+    write_key "stage.$running_stage" "$word $(( $(date +%s) - start ))s $head $(utc_now)"
+    echo "check: stage $running_stage $word at $head; read $log"
+  else
+    echo "check: stage none $word at $head; read $(check_log)"
+  fi
+  exit 1
+}
+
+# A runner gone without a verdict (killed by a signal it cannot trap):
+# its running stage, if any, is recorded as killed and its log says so;
+# prints the verdict line and appends it to the runner's output.
+check_lost() {
+  at=$1
+  lost=$(grep -E '^  "stage\.[^"]*": "running ' "$(state_file)" | head -1 | sed 's/^  "stage\.\([^"]*\)": "running \(.*\)",*$/\1 \2/')
+  if [ -n "$lost" ]; then
+    s=${lost%% *}
+    rest=${lost#* }
+    log=$stage_dir/$change/$s.log
+    echo "KILLED: the check ended without a verdict during the stage" >> "$log"
+    write_key "stage.$s" "killed $rest"
+    line="check: stage $s killed at $at; read $log"
+  else
+    line="check: stage none killed at $at; read $(check_log)"
+  fi
+  echo "$line" >> "$(check_log)"
+  echo "$line"
+}
+
+# check BACKED: refuse a dirty tree, then rejoin the runner running at
+# HEAD, stop one at another commit (its verdict reads superseded), or
+# start one detached from this shell (setsid), so the end of the caller's
+# turn or tool call cannot kill the stages. Waits at most CHECK_WAIT
+# seconds: prints the runner's output and exits 0 when every stage
+# passed, 1 otherwise, and 3 while it still runs.
+check_wait() {
+  dirty=$(git status --porcelain --untracked-files=no)
+  [ -z "$dirty" ] || die "check: refused: tracked files differ from HEAD; commit them first: $(printf '%s\n' "$dirty" | head -3 | tr '\n' ' ')"
+  loose=$(git ls-files --others --exclude-standard -- carat bin test bench)
+  [ -z "$loose" ] || die "check: refused: untracked files under carat/, bin/, test/, or bench/, which spin compiles: $(printf '%s\n' "$loose" | head -3 | tr '\n' ' ')"
+  [ -f "$(state_file)" ] || die "no run state for $change; run init first"
+  mkdir -p "$stage_dir/$change"
+  head=$(head_commit)
+  pid_file=$(check_pid_file)
+  pid=''
+  at=''
+  [ ! -f "$pid_file" ] || read -r pid at < "$pid_file"
+  joined=0
+  if runner_alive "$pid" && [ "$at" = "$head" ]; then
+    echo "check: rejoining the check running at $head (pid $pid)"
+    joined=1
+  elif runner_alive "$pid"; then
+    echo "check: the check running at $at is superseded by $head; stopping it"
+    kill -TERM "$pid" 2>/dev/null
+    n=0
+    while runner_alive "$pid" && [ $n -lt 150 ]; do pause; n=$((n + 1)); done
+    echo "the superseded check: $(check_verdict)"
+  elif [ -f "$pid_file" ]; then
+    [ -n "$(check_verdict)" ] || echo "the last check: $(check_lost "$at")"
+    rm -f "$pid_file"
+  fi
+  if [ "$joined" = 0 ]; then
+    rm -f "$pid_file"
+    : > "$(check_log)"
+    if command -v setsid > /dev/null 2>&1; then
+      setsid -f sh "$here/run_state.sh" check-run "$change" ${1:+"$1"} > "$(check_log)" 2>&1 < /dev/null
+    else
+      (sh "$here/run_state.sh" check-run "$change" ${1:+"$1"} > "$(check_log)" 2>&1 < /dev/null &)
+    fi
+  fi
+  begun=$(date +%s)
+  limit=${CHECK_WAIT:-540}
+  seen=$joined
+  while :; do
+    verdict=$(check_verdict)
+    [ -z "$verdict" ] || break
+    read_pid
+    if runner_alive "$pid"; then
+      seen=1
+    elif [ -n "$pid" ] || [ "$seen" = 1 ] || [ $(( $(date +%s) - begun )) -ge 10 ]; then
+      # Gone, or never started, without a verdict: the pid file holds
+      # only the runner started or rejoined here.
+      [ -n "$(check_verdict)" ] || check_lost "$head" > /dev/null
+      rm -f "$pid_file"
+      continue
+    fi
+    if [ $(( $(date +%s) - begun )) -ge "$limit" ]; then
+      echo "check: still running at $head (pid $pid, $(( $(date +%s) - begun ))s waited); run the same command again to wait"
+      exit 3
+    fi
+    pause
+  done
+  cat "$(check_log)"
+  case "$verdict" in "check: every stage passed at "*) return 0 ;; esac
+  return 1
+}
+
+# The pid file's runner and commit as pid and at, empty without one.
+read_pid() {
+  pid=''
+  at=''
+  [ ! -f "$pid_file" ] || read -r pid at 2>/dev/null < "$pid_file" || true
+}
+
+# A fifth of a second, or a second where sleep takes whole seconds only.
+pause() {
+  sleep 0.2 2>/dev/null || sleep 1
 }
 
 # The key of the code the compile stages read: the blobs of every tracked
@@ -466,6 +682,52 @@ push_branch() {
   write_key pushes $((pushes + 1))
   write_key ci_fixes "$fixes"
   write_key pushed "$(head_commit)"
+  # The pushed branch holds every commit the backup held.
+  if [ -n "$(read_key backup)" ] &&
+      git push -q origin --delete "refs/backup/$branch" > /dev/null 2>&1; then
+    drop_key backup
+    echo "push: deleted the backup refs/backup/$branch"
+  fi
+}
+
+# backup: push HEAD of the change's branch, not pushed yet, to
+# refs/backup/BRANCH on origin after the trailer and content gates, so a
+# reclaimed container loses no commit. The ref is no branch: no pull
+# request or CI run starts from it. A plain push, since the branch's
+# history only grows.
+backup_branch() {
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  [ "$branch" != main ] && [ "$branch" = "$(read_key branch)" ] ||
+    die "backup: refused: HEAD is on $branch, not the change's branch $(read_key branch)"
+  valid "$BRANCH_PATTERN" "$branch" || die "backup: refused: not a Conventional Branch: $branch"
+  if [ "$(count pushes)" -gt 0 ]; then
+    echo "backup: $branch is on origin since its push; nothing to back up"
+    return 0
+  fi
+  CHANGE=$change sh "$here/gates.sh" backup || die "backup: refused: the backup gates failed"
+  git push -q origin "HEAD:refs/backup/$branch" || die "backup: git push failed"
+  write_key backup "$(head_commit)"
+  echo "backup: $(head_commit) at refs/backup/$branch on origin"
+}
+
+# restore BRANCH: create BRANCH from its backup on origin when it exists
+# neither here nor on origin; exit 1 with the reason otherwise.
+restore_branch() {
+  valid "$BRANCH_PATTERN" "$1" || die "restore: not a Conventional Branch: $1"
+  if git rev-parse --verify -q "refs/heads/$1" > /dev/null; then
+    echo "restore: $1 exists here; nothing to restore"
+    return 1
+  fi
+  if git ls-remote --exit-code origin "refs/heads/$1" > /dev/null 2>&1; then
+    echo "restore: $1 is on origin; check it out from there"
+    return 1
+  fi
+  if ! git fetch -q origin "refs/backup/$1" 2> /dev/null; then
+    echo "restore: no backup of $1 on origin"
+    return 1
+  fi
+  git branch "$1" FETCH_HEAD || die "restore: git branch failed"
+  echo "restore: $1 created from its backup at $(git rev-parse --short=12 "$1")"
 }
 
 show_status() {
@@ -972,6 +1234,10 @@ case "$command" in
   status) show_status; exit 0 ;;
   pending) pending_list; exit 0 ;;
   history) append_history; exit 0 ;;
+  restore)
+    [ $# -eq 1 ] || usage
+    restore_branch "$1"
+    exit $? ;;
 esac
 [ $# -ge 1 ] || usage
 change=$1
@@ -1033,12 +1299,18 @@ case "$command" in
     [ $# -le 1 ] || usage
     backed=""
     [ $# -eq 0 ] || backed=$(commit_at "$1") || exit 1
-    check_stages "$backed" ;;
+    check_wait "$backed" ;;
+  check-run)
+    [ $# -le 1 ] || usage
+    check_run "${1:-}" ;;
   bench)
     [ $# -eq 0 ] || usage
     bench_compare ;;
   push)
     push_branch "${1:-}" ;;
+  backup)
+    [ $# -eq 0 ] || usage
+    backup_branch ;;
   metric)
     [ $# -ge 1 ] || usage
     for pair in "$@"; do record_metric "$pair"; done ;;

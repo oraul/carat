@@ -58,8 +58,8 @@
 #                the variables of MAKE_VARS, no shell character in a value;
 #                openspec and npx @fission-ai/openspec@latest; mkdir rm cp
 #                mv touch chmod; sh tools/run_state.sh show status pending
-#                get budget history, push CHANGE [--ci-fix], set CHANGE pr
-#                N; sh tools/gates.sh GATE... or pr-body BODY
+#                get budget history, push CHANGE [--ci-fix], backup CHANGE,
+#                set CHANGE pr N; sh tools/gates.sh GATE... or pr-body BODY
 #   close        the read profile, plus sh tools/run_state.sh phase CHANGE
 #                NAME COMMIT with NAME one of CLOSE_PHASES, the phases
 #                no merge gate reads: the retrospective's closing start
@@ -527,6 +527,8 @@ run_state_form() {
     contributor:push)
       [ $# -ge 2 ] && [ $# -le 3 ] && matches "$2" "$CHANGE_NAME" && { [ $# -eq 2 ] || [ "$3" = --ci-fix ]; } ||
         refuse "tools/run_state.sh push other than CHANGE [--ci-fix]" ;;
+    contributor:backup)
+      [ $# -eq 2 ] && matches "$2" "$CHANGE_NAME" || refuse "tools/run_state.sh backup other than CHANGE" ;;
     merger:set|contributor:set)
       [ $# -eq 4 ] && matches "$2" "$CHANGE_NAME" || refuse "tools/run_state.sh set other than CHANGE KEY VALUE"
       case "$profile:$3" in

@@ -247,6 +247,56 @@ echo loose > carat/loose.rb
 expect "run_state: check refuses an untracked source" 1 "refused: untracked files under carat/, bin/, test/, or bench/" \
   env STAGES="a" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
 rm -r carat
+# A check that did not finish says so: a stage ended by a signal, its own
+# or the runner's, is killed; one during which HEAD moved is superseded at
+# the commit it ran on; a runner killed past its trap is reported by the
+# next check. The runner is detached, so a check still running exits 3 and
+# the next check at the same head rejoins it.
+cat > "$work/bin/stop-make" <<'EOF'
+#!/bin/sh
+for arg in "$@"; do
+  case "$arg" in
+    S=own) kill -TERM $$ ;;
+    S=runner) kill -TERM $PPID; sleep 5 ;;
+    S=hard) kill -KILL $PPID ;;
+    S=moves) git -c user.name=Claude -c user.email=noreply@anthropic.com commit -q --allow-empty -m "chore: moved" -m "Co-Authored-By: Claude <noreply@anthropic.com>" ;;
+    S=slow) sleep "${SLOW:-0}" ;;
+  esac
+done
+exit 0
+EOF
+chmod +x "$work/bin/stop-make"
+stop_check() {
+  env STAGES="$1" MAKE="$work/bin/stop-make" sh "$here/run_state.sh" check state
+}
+at=$(git rev-parse --short=12 HEAD)
+expect "run_state: a stage killed by a signal is recorded as killed" 143 "^stage c: killed [(]exit 143[)]" state stage state c sh -c 'kill -TERM $$'
+expect "run_state: a killed stage's log says so" 0 "^KILLED: exit 143" tail -1 build/stages/state/c.log
+expect "run_state: a check whose stage a signal ended names it killed" 1 "^check: stage own killed at $at; read build/stages/state/own[.]log$" stop_check "a own b"
+expect "run_state: a check killed by a signal names its stage and log" 1 "^check: stage runner killed at $at; read build/stages/state/runner[.]log$" stop_check "a runner b"
+expect "run_state: a killed check records its stage as killed" 0 "^killed [0-9]+s $at " state get state stage.runner
+expect "run_state: a killed check's log says so" 0 "^KILLED: the check received SIGTERM" tail -1 build/stages/state/runner.log
+expect "run_state: a hard-killed check is reported killed by the next check" 1 "^check: stage hard killed at $at; read build/stages/state/hard[.]log$" stop_check "a hard b"
+expect "run_state: a hard-killed check's stage is recorded as killed" 0 "^killed 0s $at " state get state stage.hard
+expect "run_state: a check leaves no runner behind" 1 "" test -e build/stages/state/check.pid
+expect "run_state: a stage during which HEAD moved is superseded at the commit it ran on" 1 "^check: stage moves superseded at $at; read" stop_check "a moves b"
+expect "run_state: a superseded stage is recorded at its own commit" 0 "^superseded [0-9]+s $at " state get state stage.moves
+at=$(git rev-parse --short=12 HEAD)
+expect "run_state: a check still running exits 3" 3 "^check: still running at $at" \
+  env SLOW=3 CHECK_WAIT=1 STAGES=slow MAKE="$work/bin/stop-make" sh "$here/run_state.sh" check state
+expect "run_state: a second check at the same head rejoins the running one" 0 "^check: rejoining the check running at $at.*" stop_check "slow"
+expect "run_state: a rejoined check ends with the runner's verdict" 0 "^check: every stage passed at $at" tail -1 build/stages/state/check.log
+env SLOW=5 CHECK_WAIT=1 STAGES=slow MAKE="$work/bin/stop-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
+git_q commit -q --allow-empty -m "chore: newer" -m "$TRAILER"
+expect "run_state: a check at a newer head supersedes the running one" 0 "the superseded check: check: stage slow superseded at $at" stop_check "slow"
+expect "run_state: the newer check runs at the newer head" 0 "^check: every stage passed at $(git rev-parse --short=12 HEAD)" tail -1 build/stages/state/check.log
+# The workflow reruns a check whose verdict says it did not finish, and
+# sends only a failure to a fix round: its RERUN_WORDS are this script's.
+rerun=$(grep -E '^const RERUN_WORDS = ' "$here/../.claude/workflows/deliver-change.js")
+for word in killed superseded running none; do
+  expect "run_state: the workflow reruns a $word check with no fix round" 0 "[(|]$word[|)]" echo "$rerun"
+done
+expect "run_state: the workflow sends only a failed check to a fix round" 1 "^0$" sh -c 'printf "%s\n" "$1" | grep -c -E "failed|passed"' _ "$rerun"
 state phase state report > /dev/null
 expect "run_state: phase accepts report" 0 "^$(git rev-parse --short=12 HEAD)$" state get state phase.report
 expect "run_state: status names the running change and its next phase" 0 "next phase: plan" state status
@@ -384,6 +434,29 @@ git_q push -q origin main 2>/dev/null
 state init pushing chore/pushing > /dev/null
 echo more >> README.md
 commit "chore: more"
+# Before its push a run's commits survive a reclaimed container in a backup
+# ref, which no pull request or CI run reads, restored where the branch
+# exists neither in the clone nor on origin.
+backup() {
+  env BASE=main sh "$here/run_state.sh" backup pushing
+}
+expect "run_state: backup pushes the branch to its backup ref" 0 "^backup: $(git rev-parse --short=12 HEAD) at refs/backup/chore/pushing on origin$" backup
+expect "run_state: the backup ref holds the branch's head" 0 "^$(git rev-parse HEAD)[[:space:]]refs/backup/chore/pushing$" git ls-remote origin refs/backup/chore/pushing
+expect "run_state: no branch is pushed with the backup" 0 "^$" git ls-remote origin refs/heads/chore/pushing
+git_q commit -q --allow-empty -m "chore: no trailer"
+expect "run_state: backup runs the trailer gate" 1 "refused: the backup gates failed" backup
+git_q reset -q --hard HEAD~1
+git_q checkout -q main
+expect "run_state: backup refuses another branch than the change's" 1 "refused: HEAD is on main" backup
+git_q checkout -q chore/pushing
+git_q clone -q "$work/origin.git" "$work/reclaimed"
+expect "run_state: restore creates the branch from its backup" 0 "^restore: chore/pushing created from its backup at $(git rev-parse --short=12 HEAD)$" \
+  sh -c 'cd "$1" && sh "$2/run_state.sh" restore chore/pushing' _ "$work/reclaimed" "$here"
+expect "run_state: restore leaves a branch that exists" 1 "exists here" state restore chore/pushing
+expect "run_state: restore says when there is no backup" 1 "no backup of chore/other" \
+  sh -c 'cd "$1" && sh "$2/run_state.sh" restore chore/other' _ "$work/reclaimed" "$here"
+expect "run_state: restore refuses a name that is no branch" 1 "not a Conventional Branch" state restore ../x
+rm -rf "$work/reclaimed"
 expect "run_state: push refuses before the checks and the review" 1 "pre-push gates failed" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a refused push counts a gate failure" 0 "^1$" state get pushing gates_failed
@@ -393,6 +466,9 @@ state review pushing security pass "no finding" > /dev/null
 expect "run_state: push passes the gates and pushes" 0 "ok   security" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a push is counted" 0 "^1$" state get pushing pushes
+expect "run_state: push deletes the backup ref" 0 "^$" git ls-remote origin refs/backup/chore/pushing
+expect "run_state: push drops the backup record" 0 "^$" state get pushing backup
+expect "run_state: backup after the push has nothing to do" 0 "nothing to back up" backup
 expect "run_state: a second push is refused" 1 "refused: 1 push" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a CI fix push needs a red CI run" 1 "needs a red CI run" \
@@ -810,7 +886,11 @@ expect "guard: scout prunes and writes its directory" 0 "^$" guard read 'mkdir -
 expect "guard: scout reads the tree" 0 "^$" guard read 'git diff --quiet abc1234 HEAD -- tools/x.sh docs/y.md; git ls-files tools | wc -l; ls tools; grep -n \"def name\" carat/x.rb; git show --stat HEAD' tmp/scout
 expect "guard: planner reads the run states" 0 "^$" guard read 'sh tools/run_state.sh status && sh tools/run_state.sh pending && sh tools/run_state.sh show c' build/plan
 expect "guard: planner prepares its directory" 0 "^$" guard read 'mkdir -p build/plan && rm -f build/plan/goals.md' build/plan
-expect "guard: checker runs the checks" 0 "^$" guard read 'git status --porcelain --untracked-files=no && sh tools/run_state.sh check c > build/stages/c/check.out 2>&1'
+expect "guard: checker runs the checks" 0 "^$" guard read 'sh tools/run_state.sh check c abc1234; sh tools/run_state.sh check c'
+expect "guard: checker never starts the runner" 2 "tools/run_state.sh check-run" guard read 'sh tools/run_state.sh check-run c'
+expect "guard: contributor backs up the branch" 0 "^$" guard contributor 'sh tools/run_state.sh backup c'
+expect "guard: contributor backup takes only the change" 2 "backup other than CHANGE" guard contributor 'sh tools/run_state.sh backup c origin'
+expect "guard: read refuses a backup" 2 "tools/run_state.sh backup" guard read 'sh tools/run_state.sh backup c'
 expect "guard: checker records the figures first" 0 "^$" guard read 'sh tools/run_state.sh metric c phase.check=1200/5 first.check=0 rework=2 extra=1 stop=none estimate=small planned=0'
 expect "guard: retrospective budgets the last row's change" 0 "^$" guard close 'tail -1 docs/metrics.tsv | cut -f1; sh tools/run_state.sh budget prev && sh tools/run_state.sh note c overrun \"prev: over: estimated small\"'
 expect "guard: retrospective checks the squash commit" 0 "^$" guard close 'sh tools/run_state.sh show c && git show --stat abc1234 && BASE=abc1234~1 sh tools/gates.sh trailer && BASE=abc1234~1 sh tools/gates.sh content docs'
@@ -827,7 +907,7 @@ expect "guard: close refuses a review record" 2 "tools/run_state.sh review" guar
 expect "guard: close refuses a push" 2 "git push" guard close 'git push origin x'
 expect "guard: close names its profile" 2 "refused for the close profile" guard close 'sh tools/run_state.sh set c pushes 0'
 expect "guard: read refuses a closing phase" 2 "the close profile records only" guard read 'sh tools/run_state.sh phase c report abc1234'
-expect "guard: checker reads a failing log and compares" 0 "^$" guard read 'tail -60 build/stages/c/lint.log; grep -n -m 20 -E \"FAIL|rror\" build/stages/c/lint.log; sh tools/run_state.sh bench c; sh tools/run_state.sh show c'
+expect "guard: checker reads a failing log and compares" 0 "^$" guard read 'tail -60 build/stages/c/lint.log; grep -n -m 20 -E \"FAIL|rror|KILLED\" build/stages/c/lint.log; sh tools/run_state.sh bench c; sh tools/run_state.sh show c'
 expect "guard: benchmark prepares the base" 0 "^$" guard read 'git worktree add --detach tmp/.base origin/main || git -C tmp/.base checkout -q --detach origin/main'
 expect "guard: benchmark builds the base" 0 "^$" guard read 'make -C tmp/.base dev-build test-build bench-budget PREFIX=/w/tmp/.toolchain SPINEL_CACHE_DIR=/w/build/spinel-cache'
 expect "guard: benchmark measures the base with the change's script" 0 "^$" guard read 'cd tmp/.base && sh /w/tools/metrics.sh measure build/metrics/current.tsv'
@@ -1192,6 +1272,11 @@ fresh content3
 echo x >> README.md
 commit "chore: written on $TIER"
 expect "gates: content refuses a model name in a commit message" 1 "commit [0-9a-f]+.*$TIER" gates content
+expect "gates: backup refuses forbidden content" 1 "FAIL content" gates backup
+fresh backup
+echo x >> README.md
+commit "chore: clean"
+expect "gates: backup passes a clean branch" 0 "ok   content" gates backup
 
 fresh docs
 echo new > tools/new.sh
