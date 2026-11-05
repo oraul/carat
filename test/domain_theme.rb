@@ -200,6 +200,11 @@ module DomainThemeTest
     t.assert_equal([painted.fg(H::COMMENT), painted.bg(H::CURSOR_LINE), dark.bg(H::CURSOR_LINE), painted.attr(H::COMMENT)], [painted.fg(H::COMMENT + lit), painted.bg(H::COMMENT + lit), dark.bg(H::NORMAL + lit), painted.attr(H::COMMENT + lit)], "a group on the cursor line keeps its color and attributes over CursorLine's background")
     t.assert_equal([dark.bg(H::VISUAL), dark.bg16(H::SEARCH), dark.attr16(H::VISUAL)], [dark.bg(H::VISUAL + lit), dark.bg16(H::SEARCH + lit), dark.attr16(H::VISUAL + lit)], "a group with a background of its own keeps it on the cursor line")
     t.assert_equal([D::Theme::ITALIC | D::Theme::UNDERLINE, D::Theme::UNDERLINE], [dark.attr16(H::COMMENT + lit), dark.attr16(H::NORMAL + lit)], "at 16 colors the cursor line underlines a group without a background")
+    t.assert_equal([painted.bg16(H::NORMAL), painted.bg16(H::NORMAL), painted.fg16(H::NORMAL), D::Theme::UNDERLINE], [painted.bg16(H::NORMAL + lit), painted.bg16(H::COMMENT + lit), painted.fg16(H::NORMAL + lit), painted.attr16(H::NORMAL + lit)], "at 16 colors a painted theme keeps Normal's background on the cursor line")
+    PALETTES.each do |name|
+      theme = D::Themes.find(name, "theme")
+      t.assert_true(theme.bg16(H::NORMAL + lit) >= 0 && theme.bg16(H::COMMENT + lit) == theme.bg16(H::NORMAL), "#{name}: at 16 colors the painted cursor line keeps the background")
+    end
     t.assert_equal([H::COMMENT, H::COMMENT, H::NORMAL, 2 * H::COUNT], [H.base(H::COMMENT), H.base(H::COMMENT + lit), H.base(lit), H::LIMIT], "base strips the cursor-line layer")
     t.assert_true(contrast(painted.fg(H::COMMENT), painted.bg(H::COMMENT)) >= 450, "one_dark comments are readable")
     t.assert_equal([454, 100], [contrast(0x767676, 0xffffff), contrast(0x777777, 0x777777)], "the contrast of WCAG's lightest AA gray on white and of a color on itself")

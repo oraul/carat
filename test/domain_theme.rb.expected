@@ -57,6 +57,11 @@ ok   light_plus on the cursor line at 256 colors
 ok   a group on the cursor line keeps its color and attributes over CursorLine's background
 ok   a group with a background of its own keeps it on the cursor line
 ok   at 16 colors the cursor line underlines a group without a background
+ok   at 16 colors a painted theme keeps Normal's background on the cursor line
+ok   one_dark: at 16 colors the painted cursor line keeps the background
+ok   one_light: at 16 colors the painted cursor line keeps the background
+ok   dark_plus: at 16 colors the painted cursor line keeps the background
+ok   light_plus: at 16 colors the painted cursor line keeps the background
 ok   base strips the cursor-line layer
 ok   one_dark comments are readable
 ok   the contrast of WCAG's lightest AA gray on white and of a color on itself
@@ -78,4 +83,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 80 passed, 0 failed
+domain_theme: 85 passed, 0 failed

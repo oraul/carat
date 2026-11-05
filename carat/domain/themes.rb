@@ -422,6 +422,10 @@ module Carat
           i += 5
         end
         line16 = attrs16[Highlight::CURSOR_LINE]
+        # No palette has a 16-color CursorLine background, which the
+        # underline stands in for: a group without its own background
+        # keeps the one it has off the line, the painted Normal's included.
+        lit16 = indexes16[CURSOR_LINE]
         i = 0
         while i + 4 < GROUPS.length
           id = GROUPS[i]
@@ -433,7 +437,7 @@ module Carat
           own = GROUPS[i + 2] >= 0 && GROUPS[i + 2] != BG
           bgs[lit] = own ? bgs[id] : rgbs[CURSOR_LINE]
           bgs256[lit] = own ? bgs256[id] : indexes256[CURSOR_LINE]
-          bgs16[lit] = own ? bgs16[id] : indexes16[CURSOR_LINE]
+          bgs16[lit] = own || lit16 < 0 ? bgs16[id] : lit16
           attrs16[lit] = own ? attrs16[id] : attrs16[id] | line16
           i += 5
         end
