@@ -16,6 +16,8 @@
 
 - [x] 3.1 Remove the four entries this change fixes; add the seven entries of `build/plan/backlog.md`; queue the secret-pattern and binary-file entries in `content-gate-gaps` and the close-note entry in `backup-records`; restate the delivered-changes entry; name the backlog-items change in the review-area entry. Checked by `make docs-lint` (untagged queue items, content).
 
+- [x] 3.2 The agent tier rule stated in the header of `.claude/workflows/deliver-change.js` and in `README.md`'s pipeline section, so no rule leaves `CLAUDE.md` without another file stating it. Checked by `make gates` (docs: a workflow file changed, so `README.md` must).
+
 ## 4. Gates
 
 - [x] 4.1 `make gates` and `make docs-lint` pass.
