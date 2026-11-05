@@ -71,8 +71,8 @@ The `option.background` line SHALL take `terminal` (the default) or `theme`. Wit
 - **THEN** the cell is preceded by `\e[0m`
 
 #### Scenario: The theme paints
-- **WHEN** a configuration line is "option.background theme", the theme is `one_dark`, and a frame is first written in truecolor
-- **THEN** the screen is cleared after `48;2;40;44;52`, the palette's background, and a Normal cell is preceded by the palette's foreground and background
+- **WHEN** a configuration line is "option.background theme", the theme is `one_dark`, and a frame is first written at 256 colors
+- **THEN** the screen is cleared after `\e[0;38;5;249;48;5;236m`, the palette's text color and background, and a Normal cell is preceded by the same sequence
 
 #### Scenario: Scrolled-in rows are painted
 - **WHEN** the background is `theme` and a window scrolls by a line

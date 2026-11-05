@@ -55,5 +55,5 @@ A scratch buffer opened by a plugin whose manifest declares a filetype equal to 
 - **THEN** the tree buffer's syntax is `explorer`
 
 #### Scenario: A plugin without its own filetype
-- **WHEN** the hello plugin opens a scratch buffer
-- **THEN** the buffer's syntax is empty
+- **WHEN** a plugin that declares no filetype opens a scratch buffer
+- **THEN** `:set syntax?` in it shows an empty syntax
