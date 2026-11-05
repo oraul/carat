@@ -1237,3 +1237,45 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `state` parameter of `lsp_group` in `carat/adapters/status_bar.rb` (line 122 at `bars`), beside methods whose `state` is the `EditorState`, and `@owners` (line 55), which holds plugin indexes while `PluginUi#owners` holds names. Quality advisory of `bars`.
 - Why it matters: one name for two kinds of value in one file misleads the reader.
 - Fix outline: rename them `lsp_state` and `@plugin_indexes`.
+
+## The leader's write-quit-all copies the ex command's
+
+- Where: `write_quit_all` in `carat/use_cases/actions/file_handler.rb` (line 60 at `leader-layout`) repeats `FileCommandHandler#write_quit_all` in `carat/use_cases/ex/file_command_handler.rb` (line 85) line for line. Quality advisory of `leader-layout`.
+- Why it matters: `:wqa` and leader `q w` agree by copy rather than by construction, against `docs/architecture.md` section 5 (shared logic stays a use case the others call), so a fix to one can miss the other.
+- Fix outline: extract a `WriteQuitAll` use case over `SaveAll` and `QuitAll`, build it once in `EditorAssembly`, and inject it into both handlers.
+
+## The generated action description passes the length check
+
+- Where: `tools/new.sh` (line 221 at `leader-layout`) writes the placeholder description `TODO: short description`, 23 characters, which the 1-to-32-character check of `test/use_cases_actions.rb` accepts. Quality advisory of `leader-layout`.
+- Why it matters: a forgotten description passes every check and ships to the key hints.
+- Fix outline: have the test reject a description starting with `TODO`, or generate an empty one so the check fails until it is written.
+
+## The action handler wiring omits the description
+
+- Where: the action handler wiring list of `docs/examples.md` (line 27 at `leader-layout`) does not say that `register` now takes a short description, at most 32 characters, checked by `test/use_cases_actions.rb`. Quality advisory of `leader-layout`.
+- Why it matters: an author wiring a handler by hand learns of the description only from a failing test.
+- Fix outline: add the description to the wiring sentence for the by-hand path.
+
+## The lone-prefix timeout check lost two of its waits
+
+- Where: the 'a lone prefix still waits after timeoutlen has passed' check in `test/editor_normal.rb` (line 98 at `leader-layout`), which now calls `h.wait` once instead of three times. Quality advisory of `leader-layout`.
+- Why it matters: a regression check unrelated to the change is weaker, and the design does not explain why.
+- Fix outline: restore the three waits and keep the snapshot unchanged.
+
+## HandleKey#step discards the queue dispatch returns
+
+- Where: `step` in `carat/use_cases/handle_key.rb` (line 172 at `leader-layout`) ignores the queue `dispatch` returns, though `dispatch`'s comment says the caller assigns it; it works only because `call`'s queue starts as the one key. Quality advisory of `leader-layout`.
+- Why it matters: the two call sites follow different rules, so a later change to the queue in `step` can silently drop or replay keys.
+- Fix outline: assign the result in `step` too, or narrow the comment to the timeout path.
+
+## Two documents count 41 UI highlight groups against the code's 49
+
+- Where: the `Highlight` bullet of `docs/architecture.md` (line 106 at 22a5de0) and the highlight paragraph of `docs/compatibility.md` (line 438), against `SYNTAX_FIRST = 49` in `carat/domain/highlight.rb` (line 63) since `bars` added five `STATUS_MODE` and three `STATUS_LSP` groups. Periodic quality at 22a5de0.
+- Why it matters: both documents describe the frame's group ids by a count that no longer matches the code, and the next group added drifts them again.
+- Fix outline: say 49 UI groups in both, or name the groups without a count so a new group cannot drift them.
+
+## StatusLineNC is themed but painted by nothing
+
+- Where: `STATUS_NC` in `carat/domain/highlight.rb` (line 18 at 22a5de0), its color in `carat/domain/themes.rb` (line 87), and the message of `test/adapters_screen_presenter.rb` (line 181) saying inactive status lines take it. Periodic quality at 22a5de0.
+- Why it matters: `bars` removed the per-window status line, so the group, its theme row, and the test message describe a row that no longer exists.
+- Fix outline: keep it as a name-only Neovim group with a comment saying so and reword the test message, or drop the group, its theme row, and the test row.
