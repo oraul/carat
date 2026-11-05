@@ -18,6 +18,8 @@ require_relative "../domain/keymap"
 require_relative "../domain/options"
 require_relative "../domain/line_cache"
 require_relative "../domain/themes"
+require_relative "../domain/start_art"
+require_relative "../domain/start_screen"
 require_relative "../use_cases/outcome"
 require_relative "../use_cases/concerns/reporting"
 require_relative "../use_cases/move"
@@ -162,6 +164,7 @@ module Carat
       attr_reader :input #: Domain::InputState
       attr_reader :plugin_ui #: Domain::PluginUi
       attr_reader :cache #: Domain::LineCache
+      attr_reader :start_screen #: Domain::StartScreen
       attr_reader :arrange_view #: UseCases::ArrangeView
       attr_reader :highlight_view #: UseCases::HighlightView
       attr_reader :actions #: UseCases::ActionTable
@@ -356,18 +359,28 @@ module Carat
 
         @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
         @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt)
-        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input)
-        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt)
+        @start_screen = Domain::StartScreen.new
+        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen)
+        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, start_screen: @start_screen)
         @screen_presenter = ScreenPresenter.new(terminal: terminal, theme: Domain::Themes.find(@state.options.theme, @state.options.background), colors: terminal.colors)
       end
 
-      # Opens the file to edit, shows its message, lets the plugins see the
-      # buffer open, lays out the windows, and then shows the first
+      # Opens the file to edit and shows its message, or, for an empty
+      # path or a directory with the startscreen option on, starts the
+      # start screen over the empty buffer instead (at its last frame with
+      # reducedmotion, in plain glyphs when the terminal wants no color);
+      # an empty path otherwise opens nothing. Then lets the plugins see
+      # the buffer open, lays out the windows, and shows the first
       # configuration problem, if there is one, with the count of the
       # others.
       #: (String) -> void
       def open(path)
-        report(@state, @open_file.call(@state, path))
+        options = @state.options
+        if options.startscreen && (path.empty? || @files.stat(path).directory)
+          @start_screen.start(@clock.now, !options.reducedmotion, Domain::StartArt.from_plain(@terminal.no_color?))
+        elsif !path.empty?
+          report(@state, @open_file.call(@state, path))
+        end
         @plugins.observe
         @arrange_view.call(@state)
         return if @config_errors.empty?

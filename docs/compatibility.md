@@ -422,6 +422,18 @@ The editor knows 41 UI groups by Neovim's names (`Normal`, `LineNr`, `StatusLine
 
 Differences from Neovim: `background` in Neovim names `dark` or `light` and lets a color scheme choose; Carat's names who paints the background, since `theme` chooses the palette. Neither is set by `:set` yet (`Not implemented: :set background`). The theme is read once at startup; there is no `:colorscheme` or `:highlight`.
 
+## Start screen
+
+Started with no argument or on a directory, Carat shows a start screen over the empty buffer in place of Neovim's intro message: a point, the gem's table, crown, and pavilion, a sparkle at its top, and then `c a r a t` with three key hints, six frames 0.125 s apart, the last staying until a key, which ends the screen and is handled as usual (`editor_start_screen`, every frame in its snapshot).
+
+| Option | Values | Effect | Problem | Tests |
+| --- | --- | --- | --- | --- |
+| `option.startscreen` | `true` (default), `false` | Whether the start screen shows; off, the editor starts on the empty buffer and a directory argument is refused as by `:e` | `file:line: option.startscreen takes true or false` | `editor_start_screen`, `domain_options_config` |
+| `option.reducedmotion` | `false` (default), `true` | Shows the last frame at once, with no animation | `file:line: option.reducedmotion takes true or false` | `editor_start_screen`, `domain_options_config` |
+| `NO_COLOR` (environment) | set and not empty | The start screen in ASCII glyphs and the `Normal` group; the rest of the editor keeps the theme | none | `editor_start_screen` |
+
+The gem takes the theme's `Operator`, `Function`, and `Keyword` colors, the sparkle `Type`, the wordmark `Title`, and the hints `Special` and `Comment`. A window smaller than 20 columns or 15 rows shows only the wordmark. Differences from Neovim: there is no `:intro`, and the intro's `shortmess` flag `I` is `option.startscreen`; neither option is set by `:set` yet (`Not implemented: :set startscreen`).
+
 ## Options read so far
 
-`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `undolevels`, `icons`, `theme`, and `background` (Themes), from the `option.*` lines of the configuration files; `ignorecase`, `smartcase`, `hlsearch`, and `incsearch` from those lines and `:set` (Neovim's defaults: off, off, on, on; the shipped configuration turns `smartcase` on); `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.
+`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `undolevels`, `icons`, `theme`, and `background` (Themes), `startscreen` and `reducedmotion` (Start screen), from the `option.*` lines of the configuration files; `ignorecase`, `smartcase`, `hlsearch`, and `incsearch` from those lines and `:set` (Neovim's defaults: off, off, on, on; the shipped configuration turns `smartcase` on); `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.

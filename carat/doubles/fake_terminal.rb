@@ -10,6 +10,7 @@ module Carat
       attr_reader :output #: String
       attr_accessor :rows #: Integer
       attr_accessor :cols #: Integer
+      attr_writer :no_color #: bool
       attr_reader :entered #: Integer
       attr_reader :left #: Integer
 
@@ -17,6 +18,7 @@ module Carat
       # @rbs @clock: ManualClock
       # @rbs @writes: Array[String]
       # @rbs @colors: Integer
+      # @rbs @no_color: bool
 
       #: (clock: ManualClock, rows: Integer, cols: Integer) -> void
       def initialize(clock:, rows:, cols:)
@@ -29,6 +31,13 @@ module Carat
         @entered = 0
         @left = 0
         @colors = 256
+        @no_color = false
+      end
+
+      # Returns false unless a test set no_color.
+      # @rbs skip
+      def no_color?
+        @no_color
       end
 
       # Returns 256, the depth of most terminals.

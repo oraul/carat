@@ -1,0 +1,219 @@
+frame 0:
+  |
+  |
+  |
+  |
+  |         •
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+ok   no argument shows the first frame at once
+ok   the first frame is the point alone
+frame 1:
+  |
+  |      ███████
+  |       █████
+  |        ███
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+frame 2:
+  |
+  |     ◢███████◣
+  |   ◢███████████◣
+  | ◢███████████████◣
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+frame 3:
+  |
+  |     ◢███████◣
+  |   ◢███████████◣
+  | ◢███████████████◣
+  | ◥███████████████◤
+  |   ◥███████████◤
+  |     ◥███████◤
+  |       ◥███◤
+  |         ▼
+  |
+  |
+  |
+  |
+  |
+  |
+frame 4:
+  |              ✦
+  |     ◢███████◣
+  |   ◢███████████◣
+  | ◢███████████████◣
+  | ◥███████████████◤
+  |   ◥███████████◤
+  |     ◥███████◤
+  |       ◥███◤
+  |         ▼
+  |
+  |
+  |
+  |
+  |
+  |
+frame 5:
+  |              ✦
+  |     ◢███████◣
+  |   ◢███████████◣
+  | ◢███████████████◣
+  | ◥███████████████◤
+  |   ◥███████████◤
+  |     ◥███████◤
+  |       ◥███◤
+  |         ▼
+  |
+  |     c a r a t
+  |
+  |i        insert text
+  |:e file  open a file
+  |:q       quit
+ok   each frame comes 0.125 s after the one before, the last at 0.625 s
+ok   the wordmark and the key hints under it
+ok   the last frame stays, the loop back at its idle wait
+ok   wordmark, sparkle, table, crown, hint key, and hint text in their groups
+ok   the sparkle, a facet, and an edge
+ok   every glyph takes one cell
+ok   six frames of the canvas and the wordmark, computed once
+ok   the status line and the message row are the editor's
+ok   a key during the animation ends it, enters insert mode, and the window shows the buffer
+ok   with the screen gone the loop waits its idle time
+ok   a key after the animation ends it and reaches the command line
+ok   the window is drawn in full after the screen
+ok   startscreen false starts on the empty buffer
+ok   reducedmotion shows the last frame at once
+ok   with reducedmotion the clock brings no other frame
+plain frame 0:
+  |
+  |
+  |
+  |
+  |         .
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+plain frame 1:
+  |
+  |      =======
+  |       =====
+  |        ===
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+plain frame 2:
+  |
+  |     /=======\
+  |   /:::=====:::\
+  | /::::::===::::::\
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+  |
+plain frame 3:
+  |
+  |     /=======\
+  |   /:::=====:::\
+  | /::::::===::::::\
+  | \......|||....../
+  |   \....|||..../
+  |     \..|||../
+  |       \|||/
+  |         v
+  |
+  |
+  |
+  |
+  |
+  |
+plain frame 4:
+  |              *
+  |     /=======\
+  |   /:::=====:::\
+  | /::::::===::::::\
+  | \......|||....../
+  |   \....|||..../
+  |     \..|||../
+  |       \|||/
+  |         v
+  |
+  |
+  |
+  |
+  |
+  |
+plain frame 5:
+  |              *
+  |     /=======\
+  |   /:::=====:::\
+  | /::::::===::::::\
+  | \......|||....../
+  |   \....|||..../
+  |     \..|||../
+  |       \|||/
+  |         v
+  |
+  |     c a r a t
+  |
+  |i        insert text
+  |:e file  open a file
+  |:q       quit
+ok   NO_COLOR draws ASCII glyphs in the Normal group
+ok   the plain wordmark
+ok   a 10 by 40 terminal shows only the wordmark on the window's middle row
+ok   every frame shows it
+ok   a larger terminal shows the picture again
+ok   a narrow window cuts the wordmark
+ok   a directory shows the start screen over an empty buffer
+ok   with startscreen off a directory is refused as before
+ok   a file shows no start screen
+editor_start_screen: 26 passed, 0 failed

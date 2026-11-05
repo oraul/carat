@@ -6,11 +6,15 @@ Editor startup is how `carat FILE` becomes a running editor on a terminal and ho
 ## Requirements
 
 ### Requirement: The executable takes exactly one file argument
-`carat` SHALL take one argument, the path of the file to edit. With no argument or more than one it SHALL print "usage: carat FILE" to standard error and exit with status 1 without touching the terminal.
+`carat` SHALL take at most one argument, the path of the file or directory to edit. With more than one it SHALL print "usage: carat [FILE]" to standard error and exit with status 1 without touching the terminal. With none it SHALL start on an empty buffer with no name.
 
 #### Scenario: No argument
-- **WHEN** `carat` is run without arguments
-- **THEN** standard error reads "usage: carat FILE" and the exit status is 1
+- **WHEN** `carat` is run without arguments in a pseudo-terminal and ":q" Enter is typed after the start screen
+- **THEN** the screen showed the start screen and the process exits with status 0
+
+#### Scenario: Two arguments
+- **WHEN** `carat a.txt b.txt` is run
+- **THEN** standard error reads "usage: carat [FILE]" and the exit status is 1
 
 ### Requirement: The editor opens the file or starts a new one
 On start the editor SHALL load the file into the buffer when it exists and show the message with its line and byte counts, and SHALL start an empty unmodified buffer with that path and show the "[New]" message when it does not.

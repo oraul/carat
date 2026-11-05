@@ -884,6 +884,12 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the plugin already knows the column when it builds the line (1 + 2 * depth), so the byte walk is cleverness the task did not need and a second place to change when the line's layout does.
 - Fix outline: record the icon column beside the group in `tree_lines` (or take it from `Tree`'s depth) and drop the byte walk.
 
+## The explorer's token table is keyed by whole tree lines
+
+- Where: `tokenize` and the `@line_groups` table in `carat/plugins/explorer/plugin.rb` (lines 139 and 467 at `theme-tokens`), rebuilt by `tree_lines` on every refresh. Periodic quality at 4c65f4e.
+- Why it matters: a line's tokens depend on plugin state instead of the line, though every icon the tree draws has its own glyph in each icon set, so the table is state the plugin need not keep.
+- Fix outline: build a glyph-to-group table once in `activate` from `host.icon` and `FileIcons::GROUPS`, look up the glyph at the icon column in `tokenize`, and drop `@line_groups` and `tree_lines`, together with the byte-walk entry above it. Queued in `theme-tidy`.
+
 ## Themes.palette repeats NAMES as an if chain
 
 - Where: `palette(key)` in `carat/domain/themes.rb` (line 363 at `theme-tokens`).
@@ -919,3 +925,51 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/domain/themes.rb` (line 332 at `theme-tokens`): no blank line between the `LIGHT_PLUS` table and the `known?` comment, and `background?` has no comment unlike its neighbours.
 - Why it matters: the file's layout is otherwise consistent, and the missing comment leaves `background?`'s meaning to its body.
 - Fix outline: add the blank line and a one-line comment above `background?`.
+
+## The architecture gives the plugin API as 2.0
+
+- Where: the plugin API version sentence of `docs/architecture.md` (line 321 at `theme-tokens`) and its `syntax_group` and `tokenize` bullets near lines 295 to 296, while `carat/plugin_api.rb` (line 12) and `docs/plugins.md` (line 23) give 2.1. Periodic quality at 4c65f4e.
+- Why it matters: the binding architecture lists changes only through 1.3 and misses 2.1's file-icon groups in `syntax_group` and tokens and a scratch buffer's syntax named after its plugin, so a plugin author reading it targets an older API.
+- Fix outline: say 2.1 and add the 2.1 additions to the version sentence and to the `syntax_group` and `tokenize` bullets, within the file's budget. Queued in `docs-index`.
+
+## Operate and RepeatLast each copy EditorState#clamp_col
+
+- Where: the private `clamp(state, row, col)` in `carat/use_cases/operate.rb` (line 202 at `theme-tokens`) and `carat/use_cases/repeat_last.rb` (line 117), each `EditorState#clamp_col` in `carat/domain/editor_state.rb` (line 94) line for line. Periodic quality at 4c65f4e.
+- Why it matters: three copies of one clamp must change together, and a fix to the domain's misses the two use cases.
+- Fix outline: call `state.clamp_col(row, col)` at the six call sites and delete both private methods. Listed in the queue's backlog item.
+
+## NO_COLOR reaches only the start screen
+
+- Where: `TerminalPort#no_color?` (`carat/ports/terminal_port.rb`), read only by `EditorAssembly#open` for the start screen's glyphs (`start-screen`); `SgrTable.from_theme` and `ScreenPresenter` color every other cell from the theme.
+- Why it matters: the `NO_COLOR` convention asks a program to add no ANSI color at all, so a user who sets it still gets syntax, status line, and message colors.
+- Fix outline: a color depth of none in `Domain::ColorDepth` chosen by `AnsiTerminal` when `NO_COLOR` is set, for which `SgrTable.sequence` emits attributes only (bold, reverse, underline), with rows in `test/adapters_screen_presenter.rb` and `docs/compatibility.md`.
+
+## FramePresenter clears the layout twice for the hit-enter prompt and the start screen
+
+- Where: the `if start` block of `carat/adapters/frame_presenter.rb` (line 201 at `start-screen`), which repeats the `if listed` block's `back.layout.clear` and `@back_rows.invalidate` line for line. Quality review of `start-screen`.
+- Why it matters: two copies of the full-repaint step must change together, and a fix to one misses the other.
+- Fix outline: clear the layout and invalidate the rows once under `if listed || start`, and keep only the two cursor lines under `if listed`.
+
+## InputController calls handle twice in pump and checks animating? twice in tick
+
+- Where: `pump` in `carat/adapters/input_controller.rb` (line 62 at `start-screen`) calls `handle(state, @decoder.feed(bytes))` in two branches, and `tick` (line 96) checks `animating?`, which `due?` checks again. Quality review of `start-screen`.
+- Why it matters: the duplicated call and guard are more code to keep in step on the per-key path.
+- Fix outline: set `shown = @start_screen.showing`, dismiss, then `return handle(...) || shown`, and drop `tick`'s `animating?` guard.
+
+## StartArt#paint clamps a step no caller passes out of range
+
+- Where: the two clamp lines of `paint` in `carat/domain/start_art.rb` (line 167 at `start-screen`); `StartScreen` only ever holds a step in 0..LAST. Quality review of `start-screen`.
+- Why it matters: defensive code no caller needs hides the invariant `StartScreen` keeps.
+- Fix outline: drop the two clamp lines.
+
+## StartArt.from_plain bends the from_x naming
+
+- Where: `StartArt.from_plain(bool)` in `carat/domain/start_art.rb` (line 73 at `start-screen`), while the archived change's `design.md` and task 3.1 call it `StartArt.build(plain)`. Quality review of `start-screen`.
+- Why it matters: `from_x` names a conversion from an x value, and a flag is not one, so the name misleads and the design record disagrees with the code.
+- Fix outline: rename it to `build(plain)` at its call sites and tests.
+
+## No test reads NO_COLOR through AnsiTerminal
+
+- Where: the `NO_COLOR` read in `carat/drivers/ansi_terminal.rb` (line 24 at `start-screen`); the start screen tests set only the `FakeTerminal` writer. Quality review of `start-screen`.
+- Why it matters: a regression in the driver's read would show the colored glyphs to a user who set `NO_COLOR` with every test still passing.
+- Fix outline: a `test/smoke_editor.rb` session spawned with `NO_COLOR=1` asserting the output holds no U+25E2 and still shows the hints.

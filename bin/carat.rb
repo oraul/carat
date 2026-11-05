@@ -1,13 +1,14 @@
 # Carat entry point and composition root: the only place drivers are
-# constructed and the only place the plugin registry is read. Argument
-# checks and the terminal check happen before anything touches the
-# terminal; signals are trapped before the loop starts; the raw block holds
-# a single call; the screen is restored in an ensure.
+# constructed and the only place the plugin registry is read. With no
+# argument the path is empty and the editor starts on the start screen.
+# Argument checks and the terminal check happen before anything touches
+# the terminal; signals are trapped before the loop starts; the raw block
+# holds a single call; the screen is restored in an ensure.
 require "io/console"
 require_relative "../carat"
 
-if ARGV.length != 1
-  STDERR.puts "usage: carat FILE"
+if ARGV.length > 1
+  STDERR.puts "usage: carat [FILE]"
   exit 1
 end
 
@@ -16,7 +17,7 @@ unless STDIN.tty?
   exit 1
 end
 
-path = ARGV[0]
+path = ARGV.length == 1 ? ARGV[0].to_s : ""
 signals = Carat::Drivers::Signals.new
 signals.install
 

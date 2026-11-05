@@ -33,6 +33,8 @@ module Carat
       option.timeoutlen 500
       option.theme one_dark
       option.background terminal
+      option.startscreen true
+      option.reducedmotion false
 
       # Key bindings: keymap.<mode> <keys> <action>, the keys in Vim notation
       # and the action an action name, a key sequence to replay, or none to

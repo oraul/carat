@@ -12,7 +12,7 @@ module AdaptersFramePresenterTest
   ARRANGE = Carat::UseCases::ArrangeView.new(cache: CACHE)
   LAST = Carat::Domain::LastSearch.new
   PROMPT = Carat::Domain::SearchPrompt.new
-  P = Carat::Adapters::FramePresenter.new(input: INPUT, plugin_ui: UI, cache: CACHE, last_search: LAST, search_prompt: PROMPT)
+  P = Carat::Adapters::FramePresenter.new(input: INPUT, plugin_ui: UI, cache: CACHE, last_search: LAST, search_prompt: PROMPT, start_screen: Carat::Domain::StartScreen.new)
 
   # Draws the state at a size as the editor does: the size goes into the
   # state, ArrangeView lays the windows out, and the presenter reads it.

@@ -24,4 +24,8 @@ ok   the shipped scroll is 0
 ok   the shipped search options
 ok   Neovim's search defaults
 ok   the search options are stored
-domain_options_config: 26 passed, 0 failed
+ok   the start screen on, with its animation, by default
+ok   both are stored
+ok   each takes true or false
+ok   the shipped start screen options
+domain_options_config: 30 passed, 0 failed
