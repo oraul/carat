@@ -29,4 +29,4 @@ None: the change touches documents only and no editor behavior, so it sets `skip
 
 ## Impact
 
-- `CLAUDE.md` (Commands, Git workflow, Pull requests), `docs/architecture.md` (sections 5.1, 5.3, and 11), `docs/backlog.md`; `docs/queue.md` and `docs/metrics.tsv` at the package step.
+- `CLAUDE.md` (Project, Git workflow, Pull requests, Agents, Stack, Commands, Layout, Coding conventions), `.claude/workflows/deliver-change.js` (the agent tier rule in its header), `README.md` (the same rule beside the pipeline), `docs/architecture.md` (sections 5.1, 5.3, and 11), `docs/backlog.md`; `docs/queue.md` and `docs/metrics.tsv` at the package step.

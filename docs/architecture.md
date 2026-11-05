@@ -366,14 +366,13 @@ carat/testing.rb                assertion harness used by test/*.rb
 carat/domain/                   entities, json.rb, and the generated default_config.rb
 carat/use_cases/                use cases, with actions/ and ex/ (the handlers and their tables), feature directories, plugins/, and concerns/
 carat/ports/                    the port interfaces of section 6
-carat/adapters/                 controllers, presenters, and gateways
+carat/adapters/                 controllers, presenters, and gateways, the plugin gateway included
 carat/drivers/                  terminal, files, processes, clock, signals, the main loop, and the service threads
 carat/plugin_api.rb             the only file a plugin may require; the innermost ring beside the entities
 carat/plugins/
   registry.rb (generated)       explicit require and constructor per plugin
   explorer/ ruby/ finder/ git_signs/  built-in compiled plugins
   hello/                        the smallest example, a test fixture outside the registry
-carat/adapters/json_rpc_plugin_gateway.rb
 config/plugins.caratrc          the ordered list of compiled plugins
 carat/doubles/                  the test doubles of section 10
 bench/                          keys.rb, the key benchmark; run.sh, allocations and the budget; profile.sh
