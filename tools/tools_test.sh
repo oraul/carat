@@ -443,6 +443,13 @@ backup() {
 expect "run_state: backup pushes the branch to its backup ref" 0 "^backup: $(git rev-parse --short=12 HEAD) at refs/backup/chore/pushing on origin$" backup
 expect "run_state: the backup ref holds the branch's head" 0 "^$(git rev-parse HEAD)[[:space:]]refs/backup/chore/pushing$" git ls-remote origin refs/backup/chore/pushing
 expect "run_state: no branch is pushed with the backup" 0 "^$" git ls-remote origin refs/heads/chore/pushing
+expect "run_state: backup records the branch's base" 0 "^$(git rev-parse --short=12 main)$" state get pushing base
+expect "run_state: backup pushes the base ref" 0 "^$(git rev-parse main)[[:space:]]refs/backup-base/chore/pushing$" git ls-remote origin refs/backup-base/chore/pushing
+echo "aws_id = AK""IAABCDEFGHIJKLMNOP" >> README.md
+commit "chore: a key"
+expect "run_state: backup refuses a secret" 1 "refused: the backup gates failed" backup
+expect "run_state: a refused backup pushes nothing" 0 "^$(git rev-parse HEAD~1)[[:space:]]" git ls-remote origin refs/backup/chore/pushing
+git_q reset -q --hard HEAD~1
 git_q commit -q --allow-empty -m "chore: no trailer"
 expect "run_state: backup runs the trailer gate" 1 "refused: the backup gates failed" backup
 git_q reset -q --hard HEAD~1
@@ -456,6 +463,20 @@ expect "run_state: restore leaves a branch that exists" 1 "exists here" state re
 expect "run_state: restore says when there is no backup" 1 "no backup of chore/other" \
   sh -c 'cd "$1" && sh "$2/run_state.sh" restore chore/other' _ "$work/reclaimed" "$here"
 expect "run_state: restore refuses a name that is no branch" 1 "not a Conventional Branch" state restore ../x
+# A backup restores only a history rooted at its recorded base, a commit of
+# main: none without a base, a base off main, or a commit from elsewhere.
+foreign=$(printf '100644 blob %s\tforeign.txt\n' "$(echo foreign | git hash-object -w --stdin)" | git mktree)
+foreign=$(git_q commit-tree "$foreign" -m "chore: foreign" -m "$TRAILER")
+mixed=$(git_q commit-tree "main^{tree}" -p main -p "$foreign" -m "chore: merge" -m "$TRAILER")
+git_q push -q origin "$foreign:refs/backup/chore/nobase" "$foreign:refs/backup/chore/offmain" "$foreign:refs/backup-base/chore/offmain" \
+  "$mixed:refs/backup/chore/mixed" "main:refs/backup-base/chore/mixed" 2> /dev/null
+restore() {
+  sh -c 'cd "$1" && sh "$2/run_state.sh" restore "$3"' _ "$work/reclaimed" "$here" "$1"
+}
+expect "run_state: restore refuses a backup without a recorded base" 1 "refused: the backup of chore/nobase has no recorded base" restore chore/nobase
+expect "run_state: restore refuses a base not on main" 1 "refused: the recorded base [0-9a-f]+ of chore/offmain is not on origin/main" restore chore/offmain
+expect "run_state: restore refuses commits not descended from the base" 1 "refused: the backup of chore/mixed holds commits that do not descend" restore chore/mixed
+expect "run_state: a refused restore creates no branch" 1 "^$" sh -c 'cd "$1" && git rev-parse --verify -q refs/heads/chore/mixed' _ "$work/reclaimed"
 rm -rf "$work/reclaimed"
 expect "run_state: push refuses before the checks and the review" 1 "pre-push gates failed" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
@@ -467,6 +488,7 @@ expect "run_state: push passes the gates and pushes" 0 "ok   security" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a push is counted" 0 "^1$" state get pushing pushes
 expect "run_state: push deletes the backup ref" 0 "^$" git ls-remote origin refs/backup/chore/pushing
+expect "run_state: push deletes the base ref" 0 "^$" git ls-remote origin refs/backup-base/chore/pushing
 expect "run_state: push drops the backup record" 0 "^$" state get pushing backup
 expect "run_state: backup after the push has nothing to do" 0 "nothing to back up" backup
 expect "run_state: a second push is refused" 1 "refused: 1 push" \
@@ -476,6 +498,21 @@ expect "run_state: a CI fix push needs a red CI run" 1 "needs a red CI run" \
 state set pushing ci "red abc" > /dev/null
 expect "run_state: a CI fix allows one more push" 0 "ok   pushes|ok   stages" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --ci-fix
+
+# A run that merges or is abandoned leaves no backup on origin.
+fresh leaving
+git_q remote add origin "$work/origin.git"
+state init leaving chore/leaving > /dev/null
+echo more >> README.md
+commit "chore: more"
+env BASE=main sh "$here/run_state.sh" backup leaving > /dev/null 2>&1
+expect "run_state: abandon deletes the backup refs" 0 "^abandon: deleted the backup of chore/leaving" state abandon leaving
+expect "run_state: abandon leaves no backup ref" 0 "^$" git ls-remote origin refs/backup/chore/leaving refs/backup-base/chore/leaving
+expect "run_state: abandon says when there is no backup" 0 "^abandon: no backup of chore/leaving is left on origin$" state abandon leaving
+env BASE=main sh "$here/run_state.sh" backup leaving > /dev/null 2>&1
+expect "run_state: recording merged deletes the backup refs" 0 "deleted the backup of chore/leaving" state set leaving merged "$(git rev-parse --short=12 HEAD)"
+expect "run_state: recording merged leaves no backup ref" 0 "^$" git ls-remote origin refs/backup/chore/leaving refs/backup-base/chore/leaving
+expect "run_state: recording merged drops the backup record" 0 "^$" state get leaving backup
 
 fresh history
 state init history chore/history > /dev/null
@@ -890,6 +927,8 @@ expect "guard: checker runs the checks" 0 "^$" guard read 'sh tools/run_state.sh
 expect "guard: checker never starts the runner" 2 "tools/run_state.sh check-run" guard read 'sh tools/run_state.sh check-run c'
 expect "guard: contributor backs up the branch" 0 "^$" guard contributor 'sh tools/run_state.sh backup c'
 expect "guard: contributor backup takes only the change" 2 "backup other than CHANGE" guard contributor 'sh tools/run_state.sh backup c origin'
+expect "guard: contributor never abandons a run" 2 "run_state.sh abandon" guard contributor 'sh tools/run_state.sh abandon c'
+expect "guard: merger never abandons a run" 2 "run_state.sh abandon" guard merger 'sh tools/run_state.sh abandon c'
 expect "guard: read refuses a backup" 2 "tools/run_state.sh backup" guard read 'sh tools/run_state.sh backup c'
 expect "guard: checker records the figures first" 0 "^$" guard read 'sh tools/run_state.sh metric c phase.check=1200/5 first.check=0 rework=2 extra=1 stop=none estimate=small planned=0'
 expect "guard: retrospective budgets the last row's change" 0 "^$" guard close 'tail -1 docs/metrics.tsv | cut -f1; sh tools/run_state.sh budget prev && sh tools/run_state.sh note c overrun \"prev: over: estimated small\"'

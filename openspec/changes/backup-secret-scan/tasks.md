@@ -8,13 +8,13 @@
 
 ## 2. The backup's base and the restore
 
-- [ ] 2.1 `tools/run_state.sh` `branch_base` and `backup_branch`: the base recorded, checked, given to the gates, and pushed with the head atomically. Tested by "run_state: backup records the branch's base", "run_state: backup pushes the base ref", "run_state: backup refuses a secret and pushes nothing", and the existing backup cases.
-- [ ] 2.2 `tools/run_state.sh` `restore_branch`: refuses a backup without a base ref, one whose base is not on main, and one with a commit not descended from the base. Tested by "run_state: restore refuses a backup without a recorded base", "run_state: restore refuses a base not on main", "run_state: restore refuses commits not descended from the base", and "run_state: restore creates the branch from its backup".
+- [x] 2.1 `tools/run_state.sh` `branch_base` and `backup_branch`: the base recorded, checked, given to the gates, and pushed with the head atomically. Tested by "run_state: backup records the branch's base", "run_state: backup pushes the base ref", "run_state: backup refuses a secret and pushes nothing", and the existing backup cases.
+- [x] 2.2 `tools/run_state.sh` `restore_branch`: refuses a backup without a base ref, one whose base is not on main, and one with a commit not descended from the base. Tested by "run_state: restore refuses a backup without a recorded base", "run_state: restore refuses a base not on main", "run_state: restore refuses commits not descended from the base", and "run_state: restore creates the branch from its backup".
 
 ## 3. Deleting the backup refs
 
-- [ ] 3.1 `tools/run_state.sh` `drop_backup`, used by `push` (always, reported), `set CHANGE merged`, and the new `abandon CHANGE`. Tested by "run_state: push deletes the backup refs", "run_state: recording merged deletes the backup refs", "run_state: abandon deletes the backup refs", and "run_state: abandon says when there is no backup".
-- [ ] 3.2 `tools/agent_guard.sh` refuses `abandon` to every profile (its default). Tested by "guard: contributor never abandons a run".
+- [x] 3.1 `tools/run_state.sh` `drop_backup`, used by `push` (always, reported), `set CHANGE merged`, and the new `abandon CHANGE`. Tested by "run_state: push deletes the backup refs", "run_state: recording merged deletes the backup refs", "run_state: abandon deletes the backup refs", and "run_state: abandon says when there is no backup".
+- [x] 3.2 `tools/agent_guard.sh` refuses `abandon` to every profile (its default). Tested by "guard: contributor never abandons a run".
 - [ ] 3.3 `.claude/workflows/deliver-change.js` notes `abandon` when a run stops; `.claude/agents/merger.md` says recording `merged` deletes the backup refs. Checked with `node --check` when a runtime is present, else by reading.
 
 ## 4. Docs and bookkeeping
