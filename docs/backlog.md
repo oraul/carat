@@ -92,11 +92,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: `:set number`, `:set ts=4`, `:set nowrap`, and the rest of Neovim's option commands are roadmap item 9, `options-and-config`.
 - Fix outline: grow the handler into the option table that item brings (names, abbreviations, types, global or local), keeping the `filetype`, `syntax`, and search answers; add `:setlocal` and the `&`, `+=`, `-=` forms there, with `no`, `inv`, `!`, and `?` moved from the search booleans to every boolean.
 
-## Themes are fixed in the binary
+## Themes are chosen only at startup and cannot be tuned
 
-- Where: `Carat::Domain::Themes` in `carat/domain/themes.rb` holds `carat-dark` and `carat-light`, chosen once at startup by the `option.theme` line; there is no `:colorscheme`, no `:highlight`, and no theme file.
-- Why it matters: users expect to pick or tune a color scheme without rebuilding; the user and project configuration files are in place since `caratrc-config`, but they can only name a shipped theme.
-- Fix outline: read `theme.<name>.<group>` lines from the configuration files (foreground, background, 16-color values, and attributes as words, applied over a shipped theme), add `:colorscheme name` that rebuilds the screen presenter's SGR table and redraws, and `:highlight Group guifg=... ctermfg=...` for single groups.
+- Where: `Carat::Domain::Themes` in `carat/domain/themes.rb` holds the four palettes since `theme-tokens`, chosen once at startup by the `option.theme` and `option.background` lines; there is no `:colorscheme`, no `:highlight`, no `:set background`, and no theme lines in the configuration.
+- Why it matters: users expect to switch or tune a color scheme without restarting or rebuilding; the user and project configuration files can only name a shipped palette.
+- Fix outline: read `theme.<name>.<group>` lines from the configuration files (foreground, background, 256-color and 16-color values, and attributes as words, applied over a shipped palette), add `:colorscheme name` and `:set background=` that rebuild the screen presenter's SGR table and redraw, and `:highlight Group guifg=... ctermfg=...` for single groups.
 
 ## No semantic highlighting from the language server
 
@@ -857,7 +857,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 ## A refused backup push is retried and protects nothing here
 
 - Where: the backup step of `.claude/workflows/deliver-change.js` and `backup` in `tools/run_state.sh`; this environment's git proxy refuses a push to `refs/backup/` with HTTP 403. Retrospective proposal of `backup-secret-scan`, recorded here by the user's decision rather than queued.
-- Why it matters: in `backup-secret-scan` 2 of 2 backup pushes were refused and 0 backup refs reached origin, so the step spent tokens and changed no decision, and the run state holds no backup record to tell the report so.
+- Why it matters: in `backup-secret-scan` 2 of 2 backup pushes were refused and 0 backup refs reached origin, so the step spent tokens and changed no decision, and the run state holds no backup record to tell the report so; `docs-currency` made 7 more attempts, and 0 of 9 across the two runs reached origin (its retrospective). Kept here by the user's earlier decision, which the user may want to revisit.
 - Fix outline: record a refused backup push once in the run state, make no later backup attempt in that run, and have the report say no backup exists, with a `tools/tools_test.sh` case for a refused push.
 
 ## The roadmap's progress is readable nowhere in one place

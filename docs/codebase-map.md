@@ -410,7 +410,7 @@ Files:
 
 - `carat/adapters/frame_presenter.rb`: `FramePresenter#call`, `display_col`, `display_width`; reads the state only; a message of several lines over the bottom rows with the hit-enter line.
 - `carat/adapters/painted_rows.rb`: `PaintedRows`, what every window row segment of a frame shows; `same?`, `store`, `invalidate`, `painted?`.
-- `carat/adapters/screen_presenter.rb`: `ScreenPresenter`; `enter`, `leave`, `present`; a cell code that is not a scalar value is written as U+FFFD.
+- `carat/adapters/screen_presenter.rb`: `ScreenPresenter`; `enter`, `leave`, `present`; a cell code that is not a scalar value is written as U+FFFD; a theme that paints the background has Normal in effect at each clear and scroll.
 - `carat/domain/frame.rb`: `Frame`, cells in three flat integer arrays; `put`, `put_code`, `put_within`, `fill`, `blank`, `set_hl`, `same_row?`, `dirty?`, `dirty_rows`, `reset_rows`, `mark_all_dirty`, `add_scroll`, `row_text`.
 - `carat/domain/cell.rb`: `Cell`, a value view of one cell for tests.
 - `carat/domain/utf8.rb`: `Utf8`; `size_at` (RFC 3629, every other byte one U+FFFD character, as `String#length` counts), `code_at`, `codes`, `scalar?`; decodes by walking bytes.
@@ -435,9 +435,9 @@ Flow: a buffer detects its `filetype` when made or renamed (`Filetype.detect`); 
 
 Files:
 
-- `carat/domain/highlight.rb`: `Highlight` group ids (editor groups, `SIGN_COLUMN`, thirty syntax groups from `SYNTAX_FIRST` with Neovim's `NAMES`); `syntax_id`, `syntax?`, `name_of`.
-- `carat/domain/theme.rb`: `Theme`, per group 24-bit and 16-color colors and attributes; `from_rows`, `fg`, `bg`, `fg16`, `bg16`, `attr`.
-- `carat/domain/themes.rb`: `Themes`; `known?`, `find`, `dark`, `light` (`carat-dark`, `carat-light`).
+- `carat/domain/highlight.rb`: `Highlight` group ids (41 UI groups, thirty syntax groups from `SYNTAX_FIRST`, thirteen file-icon groups from `ICON_FIRST`, with Neovim's `NAMES`); `token_id`, `token?`, `name_of`.
+- `carat/domain/theme.rb`: `Theme`, per group 24-bit, 256-color, and 16-color colors and attributes; `fg`, `bg`, `fg256`, `bg256`, `fg16`, `bg16`, `attr`, `attr16`, `paints_background?`.
+- `carat/domain/themes.rb`: `Themes`, the palettes as colors per role and `GROUPS`, the roles of every group; `known?`, `background?`, `canonical`, `find`, `palette`, `build` (`one_dark`, `one_light`, `dark_plus`, `light_plus`, aliases `carat-dark`, `carat-light`).
 - `carat/domain/color_depth.rb`: `ColorDepth.detect` from `COLORTERM` and `TERM`.
 - `carat/domain/filetype.rb`: `Filetype`; `detect`, `from_name`, `from_shebang`.
 - `carat/domain/syntax_line.rb`: `SyntaxLine`, one line's tokens for a start state with its end state.
@@ -509,10 +509,10 @@ Flow: `<leader>e`, `:Explorer`, or `:ExplorerFind` reach `Explorer::Plugin#on_ac
 
 Files:
 
-- `carat/plugins/explorer/plugin.rb`: `Explorer::Plugin`; `manifest`, `activate`, `deactivate`, `on_event`, `on_action`, `on_command`, `on_input`.
-- `carat/plugins/explorer/tree.rb`: `Tree`; `build`, `lines`, `expand`, `collapse`, `toggle`, `reroot`, `reveal`, `mark`, `moved`, `toggle_hidden`, `at`, `row_of`, `parent_row`.
+- `carat/plugins/explorer/plugin.rb`: `Explorer::Plugin`; `manifest`, `activate`, `deactivate`, `on_event`, `on_action`, `on_command`, `on_input`, `tokenize` (the icon colors of the tree's `explorer` syntax).
+- `carat/plugins/explorer/tree.rb`: `Tree`; `build`, `lines`, `expand`, `collapse`, `toggle`, `reroot`, `reveal`, `mark`, `moved`, `toggle_hidden`, `at`, `row_of`, `parent_row`, `icon_name`.
 - `carat/plugins/explorer/node.rb`: `Node` record; `root?`.
-- `carat/plugins/explorer/file_icons.rb`: `FileIcons`; `name_for`, `file_type`.
+- `carat/plugins/explorer/file_icons.rb`: `FileIcons`; `name_for`, `file_type`, `GROUPS` (each icon's file-icon group).
 - `carat/domain/icons.rb`: `Icons`, the icon table per set and the `icons` option; `glyph`, `table`, `set?`.
 
 Tests: `test/domain_icons.rb`, `test/plugins_explorer.rb` (the tree over a fake host), `test/editor_explorer.rb` (every key of the file tree).

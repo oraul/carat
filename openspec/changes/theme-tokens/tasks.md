@@ -17,5 +17,5 @@
 
 ## 4. Documentation
 
-- [ ] 4.1 `docs/compatibility.md` rows for `theme` and `background`, `docs/plugins.md` (2.1, icon groups, scratch filetype), `docs/architecture.md` entities and configuration, the README, `docs/codebase-map.md`, and `docs/backlog.md` (the themes entry narrowed, the backup evidence added).
+- [x] 4.1 `docs/compatibility.md` rows for `theme` and `background`, `docs/plugins.md` (2.1, icon groups, scratch filetype), `docs/architecture.md` entities and configuration, the README, `docs/codebase-map.md`, and `docs/backlog.md` (the themes entry narrowed, the backup evidence added).
 - [ ] 4.2 `make gates`, `make docs-lint`, and the bench figures for `lh`, `j`, and `insert`.
