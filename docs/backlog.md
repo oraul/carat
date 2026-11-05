@@ -188,11 +188,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: one thing under two names makes a search for the action miss the code that runs it.
 - Fix outline: rename the targets `:half_page_down` and `:half_page_up` in the three files.
 
-## Four comments run past their file's wrap width
+## Three comments run past their file's wrap width
 
-- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters) and `carat/use_cases/dispatcher.rb` (line 37), advisories of the periodic quality review at 66fd52b, the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118, and the class comment of `carat/ports/terminal_port.rb` (line 4, 130 characters), advisory of the periodic quality review at 5b128b5.
+- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters), advisory of the periodic quality review at 66fd52b, the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118, and the class comment of `carat/ports/terminal_port.rb` (line 4, 130 characters), advisory of the periodic quality review at 5b128b5. Line 37 of `carat/use_cases/dispatcher.rb`, once listed here, is the one-line signature of the constructor, not a comment to rewrap (quality advisory of `explorer-folder-toggle`).
 - Why it matters: style only; the rest of each file wraps comments at the surrounding width.
-- Fix outline: rewrap the four comments to the width of the lines around them.
+- Fix outline: rewrap the three comments to the width of the lines around them.
 
 ## lh time per key rose 26% at window-navigation-and-scroll
 
@@ -1051,3 +1051,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: roadmap item 13 of `docs/architecture.md` (line 405 at 5b128b5), and line 314, which invites CRuby process plugins. Periodic quality at 5b128b5.
 - Why it matters: the hard rules forbid running or testing anything with a CRuby interpreter, so the item cannot be delivered as written.
 - Fix outline: make the sample a Spinel-compiled program or a shell script, and say CRuby process plugins are the author's choice, never built or tested here.
+
+## Three explorer test rows spell out the DOCS tree inline
+
+- Where: the rows 'Enter expands a directory', 'l expands it too', and 'h on a file goes to its parent' of `test/editor_explorer.rb` (lines 199, 200, and 224 at 136cc84) repeat the literal of the `DOCS` constant (line 88). Quality advisory of `explorer-folder-toggle`.
+- Why it matters: a change to the tree's rendering must be made in four places instead of one, and a missed copy reads as a different expected tree.
+- Fix outline: use `DOCS` in the three rows; the snapshot does not change.
