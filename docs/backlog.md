@@ -1117,3 +1117,45 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `test/editor_search.rb`, the comment of the `editor` helper (lines 8 and 9 at d5036f4) now sits above the `group` helper `cursor-shapes` added, with `def self.editor` at line 16. Advisory of the periodic quality review at d5036f4.
 - Why it matters: the two comments read as one comment for `group`, and `editor` has none.
 - Fix outline: move the `editor` comment above `def self.editor`. Queued in the backlog item of `docs/queue.md` with the comment-wrap entry.
+
+## BufferList keeps any_modified? and number_of with no production caller
+
+- Where: `any_modified?` (line 115 at `buffer-list`) and `number_of` (line 61) in `carat/domain/buffer_list.rb`, both still named in `docs/codebase-map.md`. Quality advisory of `buffer-list`.
+- Why it matters: `Quit` and `QuitAll` now use `first_unsaved`, so `any_modified?` is dead code, and `number_of` returns a list position that is no longer the buffer number, which misleads a future caller.
+- Fix outline: remove both, use `modified_buffer.nil?` in the tests, and drop them from the map.
+
+## BufferList#first_unsaved takes a boolean flag argument
+
+- Where: `first_unsaved(hidden_only)` in `carat/domain/buffer_list.rb` (line 124 at `buffer-list`), called by `Quit` and `QuitAll`. Quality advisory of `buffer-list`.
+- Why it matters: a flag argument hides two behaviors behind one name; `Quit` reaches it with one file window whose buffer `:quit` already checked, so `first_unsaved(false)` equals `hidden_modified` there.
+- Fix outline: have `Quit` call `@buffers.hidden_modified` and drop the parameter, leaving `first_unsaved` for `QuitAll`.
+
+## BufferCommandHandler#digits? duplicates HistoryCommandHandler.digits?
+
+- Where: `digits?` in `carat/use_cases/ex/buffer_command_handler.rb` (line 98 at `buffer-list`) and `HistoryCommandHandler.digits?` in `carat/use_cases/ex/history_command_handler.rb` (line 65). Quality advisory of `buffer-list`.
+- Why it matters: two copies of one check drift apart.
+- Fix outline: keep one shared helper and call it from both handlers.
+
+## A buffer number with leading zeros past nine bytes reads as the largest
+
+- Where: `number_in` in `carat/use_cases/ex/buffer_command_handler.rb` (line 92 at `buffer-list`). Quality advisory of `buffer-list`.
+- Why it matters: any argument over 9 bytes maps to `LARGEST`, so `:b 0000000001` reports E86 and `:bn 0000000002` steps a wrong count, unlike Neovim.
+- Fix outline: skip leading zeros before the length check, with a table row for each spelling.
+
+## BufferRequest's :current target exists only to return no outcome
+
+- Where: `carat/use_cases/buffers/buffer_request.rb` (line 5 at `buffer-list`), `SwitchBuffer` in `carat/use_cases/buffers/switch_buffer.rb` (line 29), and its one producer in `BufferCommandHandler` (line 66). Quality advisory of `buffer-list`.
+- Why it matters: a request target with no behavior widens the use case's input for one handler's empty-argument case.
+- Fix outline: return `Outcome.none` in `BufferCommandHandler#number` for `:b` without a number and drop `:current` from `BufferRequest` and `SwitchBuffer`.
+
+## BufferList#step_from is hard to verify and exposes file_count for it
+
+- Where: `step_from` (line 145 at `buffer-list`) and `file_count` (line 169) in `carat/domain/buffer_list.rb`. Quality advisory of `buffer-list`.
+- Why it matters: a modulo shortcut combined with a sentinel-reset loop makes `:bn` and `:bp` with a count hard to check by reading, and `file_count` is public only for it.
+- Fix outline: gather the file-buffer indices once and index them modulo their count from the target's position, and make `file_count` private or fold it in, keeping the `test/domain_buffer_list.rb` rows.
+
+## CloseOtherWindows clears tab.previous a second time
+
+- Where: `tab.previous = -1` in `carat/use_cases/windows/close_other_windows.rb` (line 34 at `buffer-list`). Quality advisory of `buffer-list`.
+- Why it matters: `BufferList#close_window` already clears `previous` when it names a closed window, and `previous` never names the current one, so the line reads as a needed step it is not.
+- Fix outline: drop the line, or keep it with a comment if it is meant to clear a stale id.
