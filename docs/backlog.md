@@ -1183,3 +1183,63 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `DeleteBuffer` (`carat/use_cases/buffers/delete_buffer.rb`, line 31 at 68eb750) and `ListBuffers` (`carat/use_cases/buffers/list_buffers.rb`, lines 56 and 73) use `@buffers.tabs`, while `CloseTab`, `CloseOtherTabs`, and `Quit` take `tabs:` from `EditorAssembly`. Periodic quality advisory at 68eb750.
 - Why it matters: two routes to one collaborator leave no one clear way, and `test/adapters_assembly.rb` checks only the injected one.
 - Fix outline: inject `tabs:` into both as their siblings do, or document `BufferList#tabs` as the one route. Queued as `buffer-list-structure` in `docs/queue.md`.
+
+## StatusBar requires the plugin API it does not use
+
+- Where: `require_relative "../plugin_api"` on line 1 of `carat/adapters/status_bar.rb`. Quality advisory of `bars`.
+- Why it matters: `StatusBar` names no `PluginApi` constant, so the require is dead and suggests a dependency the adapter does not have.
+- Fix outline: drop the require and rebuild with `make dev-build`.
+
+## FramePresenter reaches through TabBar to ask whether the tab row shows
+
+- Where: `@tab_bar.buffers.tab_row?(state.tabs.tab_count)` in `carat/adapters/frame_presenter.rb` (line 157 at `bars`), while `ArrangeView` (`carat/use_cases/arrange_view.rb`, line 37) asks `BufferList#tab_row?` directly. Quality advisory of `bars`, raised twice.
+- Why it matters: the presenter reaches through a collaborator, and two routes to one rule can drift apart.
+- Fix outline: give `TabBar` a `showing?(tab_count)` predicate and call it once in the presenter, or hand the presenter the buffer list, with the presenter test rows unchanged.
+
+## The [No Name] text is defined in both bars
+
+- Where: `NO_NAME` in `carat/adapters/tab_bar.rb` (line 23 at `bars`) and again in `carat/adapters/status_bar.rb` (line 46). Quality advisory of `bars`, raised twice.
+- Why it matters: one user-visible text has two owners that can drift apart.
+- Fix outline: keep one constant, for example beside `Buffer#display_name`, and reference it from both bars.
+
+## PluginUi keeps each segment in three structures
+
+- Where: the `segments` Hash of `carat/domain/plugin_ui.rb` (lines 12 to 25 and `text_at`, line 61 at `bars`), keyed by the names `owners` already holds in order, beside `priorities`. Quality advisory of `bars`, raised twice.
+- Why it matters: the text is read only as `segments[owners[i]]`, so `remove_segment` has to keep three structures in step for one ordered list.
+- Fix outline: keep the texts in an array parallel to `owners` and `priorities`, drop the Hash, and update the tests that compare `segments`.
+
+## Four comments of bars break their file's wrap width
+
+- Where: `carat/domain/plugin_ui.rb` (line 7, 92 characters) and `carat/use_cases/plugins/ui_requests.rb` (line 15, 91 characters) run past the width; `carat/adapters/frame_presenter.rb` (line 63) and `carat/domain/highlight.rb` (line 6) end ragged. Quality advisory of `bars`.
+- Why it matters: style only; the rest of each file wraps comments at the surrounding width.
+- Fix outline: rewrap the four comments to the width of the lines around them, together with the nine-comment entry above.
+
+## The status bar's branch, diagnostics, and lsp slots have no writer
+
+- Where: `carat/domain/status_slots.rb` (line 8 at `bars`), the `BRANCH`, `DIAGNOSTICS`, and `LSP` paths of `carat/adapters/status_bar.rb`, and the three `StatusLineLsp` groups. Quality advisory of `bars`.
+- Why it matters: nothing in the code writes the branch, the diagnostics counts, or the lsp slot, so this code is reachable only from tests until the git and language-service changes fill it.
+- Fix outline: `lsp-diagnostics` in `docs/queue.md` fills the lsp slot and the counts; the change that shows the git branch fills `branch`. If either is dropped from the queue, remove its slot and paths with their test rows.
+
+## TabBar#icon_group scans every group name on each frame
+
+- Where: `icon_group` in `carat/adapters/tab_bar.rb` (line 136 at `bars`) calls `Highlight.token_id` over every syntax and icon name each time it draws the selected tab, while the `bars` design says the group is resolved once per name. Quality advisory of `bars`.
+- Why it matters: a linear scan per frame for a value that changes only with the buffer's icon, and the design text no longer matches the code.
+- Fix outline: resolve the group once per icon name (a small Hash, or an id kept beside `Buffer#icon`), or correct the design text, with the tab bar test rows unchanged.
+
+## The explorer keeps an alias of the file-icon groups
+
+- Where: `GROUPS = Carat::PluginApi::FileIcons::GROUPS` in `carat/plugins/explorer/file_icons.rb` (line 12 at `bars`), and `carat/plugins/explorer/plugin.rb` (line 455) repeating `group_of` as `FileIcons::GROUPS[icon].to_s`. Quality advisory of `bars`.
+- Why it matters: an alias kept for one caller and a copy of the API's lookup are two more places to change when the groups do.
+- Fix outline: call `PluginApi::FileIcons.group_of` in the explorer, drop the alias, and drop the `Carat::` prefix, which `PluginApi` resolves without.
+
+## Two comments still call the row under a window its status line
+
+- Where: `carat/domain/layout_node.rb` (line 8 at `bars`) describes the row under a column as its status line, and `carat/domain/buffer.rb` (line 145) says `display_name` is what the status line shows. Quality advisory of `bars`.
+- Why it matters: since `bars` the row under a window is a separator and the one status bar sits above the message row, so the comments describe a layout that is gone.
+- Fix outline: say the separator row, and the name the status bar shows.
+
+## StatusBar names a Symbol state and plugin indexes owners
+
+- Where: the `state` parameter of `lsp_group` in `carat/adapters/status_bar.rb` (line 122 at `bars`), beside methods whose `state` is the `EditorState`, and `@owners` (line 55), which holds plugin indexes while `PluginUi#owners` holds names. Quality advisory of `bars`.
+- Why it matters: one name for two kinds of value in one file misleads the reader.
+- Fix outline: rename them `lsp_state` and `@plugin_indexes`.
