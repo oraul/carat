@@ -15,7 +15,7 @@
 
 - [x] 3.1 Document `:g`, `:g!`, `:v`, `:d`, and their differences in `docs/compatibility.md`, the files in `docs/codebase-map.md`, `README.md`, and the status line of `CLAUDE.md`, checked by `make docs-lint` and `make gates`
 - [x] 3.2 Apply the plan notes to `docs/backlog.md` (remove the image-viewer entry, end three fix outlines with the `phase-shares` line) and add the `:m`, `:t`, `:normal`, `:p` follow-up entry, checked by `make docs-lint`
-- [ ] 3.3 Check that `lh`, `j`, `insert`, and `undo` hold 27.0, 28.0, 35.0, and 53.0 objects per key with `make bench-budget` and `make metrics`, and run `make lint`, `make test`, `make diagnose`, and `make gates`, all passing
+- [x] 3.3 Check that `lh`, `j`, `insert`, and `undo` hold 27.0, 28.0, 35.0, and 53.0 objects per key with `make bench-budget` and `make metrics`, and run `make lint`, `make test`, `make diagnose`, and `make gates`, all passing
 
 ## Workflow follow-up
 
