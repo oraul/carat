@@ -43,9 +43,10 @@ module Carat
       def self.register(table, enter_command_line:, execute_command_line:, erase_command_line:, recall_history:)
         names = ["mode.cmdline", "cmdline.execute", "cmdline.backspace", "cmdline.history_older", "cmdline.history_newer"]
         variants = [:start, :execute, :backspace, :older, :newer]
+        descriptions = ["Command line", "Run command line", "Erase character", "Older history entry", "Newer history entry"]
         i = 0
         while i < names.length
-          table.register(names[i], CommandLineHandler.new(enter_command_line: enter_command_line, execute_command_line: execute_command_line, erase_command_line: erase_command_line, recall_history: recall_history, variant: variants[i]))
+          table.register(names[i], CommandLineHandler.new(enter_command_line: enter_command_line, execute_command_line: execute_command_line, erase_command_line: erase_command_line, recall_history: recall_history, variant: variants[i]), descriptions[i])
           i += 1
         end
       end

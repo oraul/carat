@@ -81,7 +81,7 @@ module UseCasesActionsTest
     # ------------------------------------------------------------ action table
 
     table = U::ActionTable.new
-    t.assert_equal([true, true, false], [table.register("probe.one", EchoHandler.new("one", :motion)), table.register("probe.two", EchoHandler.new("two", :action)), table.register("probe.one", EchoHandler.new("again", :action))], "a name registers once and a second registration is refused")
+    t.assert_equal([true, true, false], [table.register("probe.one", EchoHandler.new("one", :motion), "Probe one"), table.register("probe.two", EchoHandler.new("two", :action), "Probe two"), table.register("probe.one", EchoHandler.new("again", :action), "Probe again")], "a name registers once and a second registration is refused")
     found = table.find("probe.one")
     t.assert_equal(["one", :motion], [found.nil? ? "" : found.call(state, D::Command.plain("probe.one")).message, found.nil? ? :none : found.kind], "find returns the first handler registered for the name")
     t.assert_equal([true, :action], [table.find("probe.three").nil?, table.kind_of("probe.three")], "an unknown name has no handler and reads as a plain action")
@@ -89,6 +89,7 @@ module UseCasesActionsTest
     via = table.find("plugin.any.thing")
     t.assert_equal(["plugin", true], [via.nil? ? "" : via.call(state, D::Command.plain("plugin.any.thing")).message, table.find("plugins.any").nil?], "a name under the namespace finds its handler and a near miss does not")
     t.assert_equal([["probe.one", "probe.two"], 2], [table.names, table.count], "names lists the registered names in order")
+    t.assert_equal(["Probe one", "Probe two", "", ""], [table.describe("probe.one"), table.describe("probe.two"), table.describe("probe.three"), table.describe("plugin.any.thing")], "describe answers the first registration's description, and nothing for an unknown or namespace name")
 
     # ---------------------------------------------------------------- ex names
 
@@ -172,6 +173,32 @@ module UseCasesActionsTest
     end
     t.assert_equal([], wrong, "every registered action handler returns an Outcome")
     t.assert_true(names.length >= 100, "the table holds every core action")
+
+    # Every core action is described in 1 to 32 characters for the key
+    # hints.
+    undescribed = []
+    i = 0
+    while i < names.length
+      text = actions.describe(names[i])
+      undescribed << "#{names[i]}: #{text}" if text.empty? || text.length > 32
+      i += 1
+    end
+    t.assert_equal([], undescribed, "every core action has a description of 1 to 32 characters")
+    t.table([
+      ["a window action", "window.split", "Split window"],
+      ["a motion from the domain's list", "motion.word_forward", "Next word"],
+      ["a find motion", "motion.till_backward", "Till character backward"],
+      ["a search motion", "search.partial_word_backward", "Partial word backward"],
+      ["the last text object", "textobject.a_backtick", "Around backticks"],
+      ["an operator", "operator.dedent", "Dedent"],
+      ["the save action", "file.save", "Save file"],
+      ["the quit all action", "quit.all", "Quit all"],
+      ["a buffer action", "buffer.delete", "Delete buffer"],
+      ["a plugin action has no core description", "plugin.explorer.toggle", ""],
+      ["an unknown name has none", "nothing.here", ""]
+    ]) do |name|
+      actions.describe(name.to_s)
+    end
     plugin = actions.find("plugin.none.go")
     outcome = plugin.nil? ? U::Outcome.none : plugin.call(h.state, D::Command.plain("plugin.none.go"))
     t.assert_equal([false, "No plugin named none"], [outcome.ok, outcome.message], "the plugin namespace handler returns the host's refusal as an Outcome")

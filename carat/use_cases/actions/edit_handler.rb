@@ -55,10 +55,11 @@ module Carat
       def self.register(table, operate:, replace_chars:, toggle_case:, put_register:, join_lines:)
         names = ["operator.delete_char", "operator.substitute_char", "operator.substitute_line", "operator.change_to_end", "operator.delete_to_end", "operator.yank_to_end", "operator.join", "operator.put_after", "operator.put_before", "operator.replace_char", "operator.toggle_case"]
         variants = [:delete_char, :substitute_char, :substitute_line, :change_to_end, :delete_to_end, :yank_to_end, :join, :put_after, :put_before, :replace_char, :toggle_case]
+        descriptions = ["Delete character", "Substitute character", "Substitute line", "Change to line end", "Delete to line end", "Yank to line end", "Join lines", "Put after cursor", "Put before cursor", "Replace character", "Toggle case"]
         i = 0
         while i < names.length
           kind = variants[i] == :replace_char ? :char : :action
-          table.register(names[i], EditHandler.new(operate: operate, replace_chars: replace_chars, toggle_case: toggle_case, put_register: put_register, join_lines: join_lines, variant: variants[i], kind: kind))
+          table.register(names[i], EditHandler.new(operate: operate, replace_chars: replace_chars, toggle_case: toggle_case, put_register: put_register, join_lines: join_lines, variant: variants[i], kind: kind), descriptions[i])
           i += 1
         end
       end

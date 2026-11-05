@@ -114,6 +114,8 @@ require_relative "../use_cases/actions/message_handler"
 require_relative "../use_cases/actions/history_handler"
 require_relative "../use_cases/actions/scroll_handler"
 require_relative "../use_cases/actions/substitute_handler"
+require_relative "../use_cases/actions/file_handler"
+require_relative "../use_cases/actions/buffer_handler"
 require_relative "../use_cases/actions/plugin_action_handler"
 require_relative "../use_cases/dispatcher"
 require_relative "../use_cases/handle_key"
@@ -358,6 +360,8 @@ module Carat
         UseCases::TabHandler.register(@actions, switch_tab: @switch_tab)
         UseCases::ScrollHandler.register(@actions, scroll_window: scroll_window)
         UseCases::SubstituteHandler.register(@actions, substitute_lines: @substitute_lines)
+        UseCases::FileHandler.register(@actions, save_file: @save_file, save_all: @save_all, quit_all: @quit_all)
+        UseCases::BufferHandler.register(@actions, list_buffers: @list_buffers, switch_buffer: @switch_buffer, delete_buffer: @delete_buffer)
         UseCases::PluginActionHandler.register(@actions, plugins: @plugins)
 
         @keymap.add_checked(value, known_actions)

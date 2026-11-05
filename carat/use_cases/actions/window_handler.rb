@@ -55,9 +55,10 @@ module Carat
       def self.register(table, split_window:, close_window:, close_other_windows:, focus_window:, quit:, tabs:)
         names = ["window.split", "window.vsplit", "window.left", "window.down", "window.up", "window.right", "window.next", "window.previous", "window.last_accessed", "window.close", "window.only", "window.equalize", "window.quit"]
         variants = [:split, :vsplit, :left, :down, :up, :right, :next, :previous, :last_accessed, :close, :only, :equalize, :quit]
+        descriptions = ["Split window", "Split window vertically", "Window left", "Window below", "Window above", "Window right", "Next window", "Previous window", "Last used window", "Close window", "Close other windows", "Equalize windows", "Quit window"]
         i = 0
         while i < names.length
-          table.register(names[i], WindowHandler.new(split_window: split_window, close_window: close_window, close_other_windows: close_other_windows, focus_window: focus_window, quit: quit, tabs: tabs, variant: variants[i]))
+          table.register(names[i], WindowHandler.new(split_window: split_window, close_window: close_window, close_other_windows: close_other_windows, focus_window: focus_window, quit: quit, tabs: tabs, variant: variants[i]), descriptions[i])
           i += 1
         end
       end

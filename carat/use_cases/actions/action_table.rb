@@ -6,11 +6,15 @@ module Carat
     # from action name to position. A name is registered once; a second
     # registration is refused. One namespace handler may stand for every
     # name under a prefix that no exact entry takes, which is how the
-    # plugin.<name>.<action> actions reach the plugin host.
+    # plugin.<name>.<action> actions reach the plugin host. Each name is
+    # registered with a short description of what it does, which the key
+    # hints show beside its keys; a plugin's actions are described by its
+    # manifest instead.
     class ActionTable
       # @rbs @handlers: Array[untyped]
       # @rbs @index: Hash[String, Integer]
       # @rbs @names: Array[String]
+      # @rbs @descriptions: Array[String]
       # @rbs @prefix: String
       # @rbs @namespace: ActionHandler?
 
@@ -19,18 +23,20 @@ module Carat
         @handlers = []
         @index = {}
         @names = []
+        @descriptions = []
         @prefix = ""
         @namespace = nil
       end
 
-      # Registers the handler under the name; false, and nothing added,
-      # when the name is already registered.
-      #: (String, ActionHandler) -> bool
-      def register(name, handler)
+      # Registers the handler under the name with its description; false,
+      # and nothing added, when the name is already registered.
+      #: (String, ActionHandler, String) -> bool
+      def register(name, handler, description)
         return false if @index.key?(name)
         @index[name] = @handlers.length
         @handlers << handler
         @names << name
+        @descriptions << description
         true
       end
 
@@ -59,6 +65,15 @@ module Carat
       def kind_of(name)
         handler = find(name)
         handler.nil? ? :action : handler.kind
+      end
+
+      # The description the name was registered with, or "" for a name
+      # with no entry of its own.
+      #: (String) -> String
+      def describe(name)
+        at = @index[name]
+        return "" if at.nil?
+        @descriptions[at]
       end
 
       #: (String) -> bool

@@ -22,6 +22,8 @@ module Carat
       # The motions that read one more key, the character to find; the
       # action table registers them with the kind :find.
       FIND_NAMES = ["motion.find_forward", "motion.find_backward", "motion.till_forward", "motion.till_backward"]
+      # Their short descriptions, in the same order, for the key hints.
+      FIND_DESCRIPTIONS = ["Find character forward", "Find character backward", "Till character forward", "Till character backward"]
 
       # Every other motion this module implements, in the order of the
       # case statements below; the action table registers them with the
@@ -35,6 +37,19 @@ module Carat
         "motion.word_end", "motion.big_word_end", "motion.word_end_backward", "motion.big_word_end_backward",
         "motion.sentence_forward", "motion.sentence_backward", "motion.paragraph_forward", "motion.paragraph_backward",
         "motion.screen_top", "motion.screen_middle", "motion.screen_bottom"
+      ]
+
+      # The short descriptions of NAMES, in the same order, for the key
+      # hints.
+      DESCRIPTIONS = [
+        "Repeat last find", "Repeat find reversed",
+        "Move left", "Move right", "Move up", "Move down", "Line start", "First non-blank",
+        "Line end", "First line", "Last line",
+        "Next line start", "Previous line start", "Line first non-blank",
+        "Next word", "Next WORD", "Previous word", "Previous WORD",
+        "End of word", "End of WORD", "End of previous word", "End of previous WORD",
+        "Next sentence", "Previous sentence", "Next paragraph", "Previous paragraph",
+        "Top of window", "Middle of window", "Bottom of window"
       ]
 
       # The motion a command asks for. This is the one entry point with a

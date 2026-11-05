@@ -39,8 +39,8 @@ module Carat
 
       #: (ActionTable, substitute_lines: SubstituteLines) -> void
       def self.register(table, substitute_lines:)
-        table.register("substitute.repeat", SubstituteHandler.new(substitute_lines: substitute_lines, variant: :line))
-        table.register("substitute.repeat_all", SubstituteHandler.new(substitute_lines: substitute_lines, variant: :all))
+        table.register("substitute.repeat", SubstituteHandler.new(substitute_lines: substitute_lines, variant: :line), "Repeat substitute on line")
+        table.register("substitute.repeat_all", SubstituteHandler.new(substitute_lines: substitute_lines, variant: :all), "Repeat substitute everywhere")
       end
     end
   end

@@ -1,6 +1,6 @@
 # Actions
 
-The action names a keymap value may use, in `namespace.action` form, or `plugin.<name>.<action>` for a plugin's action. A keymap value that is not an action name is a key sequence in Vim notation to replay. Actions that `config/default.caratrc` already binds but that a later roadmap item implements are listed under Reserved; pressing their keys shows "Not implemented: name". Every name under Implemented and Reserved is registered in the editor's action table, and `test/use_cases_actions.rb` fails when the table and this file differ. A binding whose value is an action name that neither this file nor a registered plugin declares is reported when the configuration loads, with its file and line, as `.caratrc:3: unknown action foo.bar`, and is not added. A binding is a line `keymap.<mode> <keys> <action>` of a configuration file, and the action `none` removes the binding instead.
+The action names a keymap value may use, in `namespace.action` form, or `plugin.<name>.<action>` for a plugin's action. A keymap value that is not an action name is a key sequence in Vim notation to replay. Actions that `config/default.caratrc` already binds but that a later roadmap item implements are listed under Reserved; pressing their keys shows "Not implemented: name". Every name under Implemented and Reserved is registered in the editor's action table, and `test/use_cases_actions.rb` fails when the table and this file differ. A binding whose value is an action name that neither this file nor a registered plugin declares is reported when the configuration loads, with its file and line, as `.caratrc:3: unknown action foo.bar`, and is not added. A binding is a line `keymap.<mode> <keys> <action>` of a configuration file, and the action `none` removes the binding instead. Every core action is registered with a short description, at most 32 characters, which the key hints show beside its keys; a plugin's come from its manifest.
 
 In normal, operator-pending, and the visual modes the command grammar reads an action by the kind of the handler the action table registered for it: `cursor.*` and `motion.*` are motions, which move the cursor on their own and give an operator its range; `operator.delete`, `operator.change`, `operator.yank`, `operator.indent`, and `operator.dedent` are the pending operators, which wait for a motion, a text object, or themselves again for a linewise command; `textobject.*` actions are text objects, usable after an operator or in a visual mode; `register.select`, the four find motions, and `visual.replace` read one more key; `search.forward` and `search.backward` read a pattern on the command line and are then motions; every other action, the `window.*`, `scroll.*`, `tab.*`, `visual.*`, and `plugin.*` actions included, completes at once with the count and register typed before it. In a visual mode the five operators do not wait: they act on the selection at once, and a motion moves the cursor end of the selection.
 
@@ -150,6 +150,13 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `scroll.cursor_bottom` | normal, visual | Scroll so the cursor line, or line count, is at the bottom of the window, with scrolloff |
 | `substitute.repeat` | normal | `&`: repeat the last substitute on the cursor line without its flags, on count lines with a count |
 | `substitute.repeat_all` | normal | `g&`: repeat the last substitute on every line with its flags and the last search pattern |
+| `file.save` | normal, insert | Write the current buffer as `:w` does; in insert mode stay in insert mode |
+| `quit.all` | normal | Quit as `:qa` does, refused by unsaved work with its messages |
+| `quit.write_all` | normal | Write every modified buffer and quit as `:wqa` does |
+| `buffer.list` | normal | List the buffers as `:ls` does |
+| `buffer.next` | normal | Go to the next listed buffer as `:bn` does, count buffers on |
+| `buffer.previous` | normal | Go to the previous listed buffer as `:bp` does, count buffers back |
+| `buffer.delete` | normal | Delete the current buffer as `:bd` does, or with a count the buffer of that number |
 
 ## Plugins
 
@@ -177,4 +184,4 @@ The keys marked "in the tree" are bound in the tree window's own keymap, which t
 
 ## Reserved
 
-None: every action `config/default.caratrc` binds is implemented.
+`file.find`, bound to `<leader>ff`, opens the finder when it arrives; until then it shows "Not implemented: file.find" and changes nothing.

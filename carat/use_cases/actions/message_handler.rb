@@ -27,8 +27,8 @@ module Carat
 
       #: (ActionTable) -> void
       def self.register(table)
-        table.register("message.quit_hint", MessageHandler.new(text: QUIT_HINT, kind: :action))
-        table.register("register.select", MessageHandler.new(text: "", kind: :register))
+        table.register("message.quit_hint", MessageHandler.new(text: QUIT_HINT, kind: :action), "Show how to quit")
+        table.register("register.select", MessageHandler.new(text: "", kind: :register), "Select register")
       end
     end
   end

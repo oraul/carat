@@ -45,12 +45,12 @@ module Carat
 
       #: (ActionTable) -> void
       def self.register(table)
-        table.register("mode.insert", InsertModeHandler.new(where: :before))
-        table.register("mode.insert_after", InsertModeHandler.new(where: :after))
-        table.register("mode.insert_line_start", InsertModeHandler.new(where: :line_start))
-        table.register("mode.insert_line_end", InsertModeHandler.new(where: :line_end))
-        table.register("mode.insert_open_below", InsertModeHandler.new(where: :open_below))
-        table.register("mode.insert_open_above", InsertModeHandler.new(where: :open_above))
+        table.register("mode.insert", InsertModeHandler.new(where: :before), "Insert before cursor")
+        table.register("mode.insert_after", InsertModeHandler.new(where: :after), "Insert after cursor")
+        table.register("mode.insert_line_start", InsertModeHandler.new(where: :line_start), "Insert at line start")
+        table.register("mode.insert_line_end", InsertModeHandler.new(where: :line_end), "Insert at line end")
+        table.register("mode.insert_open_below", InsertModeHandler.new(where: :open_below), "Open line below")
+        table.register("mode.insert_open_above", InsertModeHandler.new(where: :open_above), "Open line above")
       end
     end
   end

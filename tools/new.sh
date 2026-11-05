@@ -218,7 +218,7 @@ module Carat
 
       #: (ActionTable) -> void
       def self.register(table)
-        table.register("@ACTION@", @CLASS@.new)
+        table.register("@ACTION@", @CLASS@.new, "TODO: short description")
       end
     end
   end

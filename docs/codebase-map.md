@@ -148,11 +148,13 @@ Files:
 - `carat/use_cases/handle_key.rb`: `HandleKey#call`.
 - `carat/use_cases/dispatcher.rb`: `Dispatcher#call`; an arrow key in insert mode closes the session's undo state and opens the next.
 - `carat/use_cases/actions/action_handler.rb`: `ActionHandler`, the input port of an action: `kind`, `repeat`, `call(state, command)`.
-- `carat/use_cases/actions/action_table.rb`: `ActionTable`; `register`, `register_namespace` (for `plugin.`), `find`, `kind_of`, `include?`, `names`.
+- `carat/use_cases/actions/action_table.rb`: `ActionTable`; `register` (with the action's short description), `describe`, `register_namespace` (for `plugin.`), `find`, `kind_of`, `include?`, `names`.
 - `carat/use_cases/actions/normal_mode_handler.rb`: `NormalModeHandler`, leaving a visual mode itself.
 - `carat/use_cases/actions/message_handler.rb`: `MessageHandler`, the quit hint and the reserved actions.
+- `carat/use_cases/actions/file_handler.rb`: `FileHandler.register` (`file.save`, `file.find`, `quit.all`, `quit.write_all`); `:w`, `:qa`, and `:wqa` through `SaveFile`, `SaveAll`, and `QuitAll` for the leader groups and Ctrl-S; `file.find` answers "Not implemented" until the finder.
+- `carat/use_cases/actions/buffer_handler.rb`: `BufferHandler.register` (`buffer.list`, `buffer.next`, `buffer.previous`, `buffer.delete`); `:ls`, `:bn`, `:bp`, and `:bd` through the buffer use cases, a count stepping or naming the buffer.
 
-Tests: `test/domain_keys.rb`, `test/domain_keymap.rb`, `test/domain_grammar.rb`, `test/adapters_key_decoder.rb`, `test/use_cases_actions.rb` (the tables, the kinds, every handler returning an `Outcome`, the action table against `docs/actions.md`), `test/editor_grammar.rb`.
+Tests: `test/domain_keys.rb`, `test/domain_keymap.rb`, `test/domain_grammar.rb`, `test/adapters_key_decoder.rb`, `test/use_cases_actions.rb` (the tables, the kinds, every handler returning an `Outcome`, the action table against `docs/actions.md`), `test/editor_grammar.rb`, `test/editor_leader.rb`.
 
 Designs: `command-grammar` (The grammar sits between the keymap and the dispatcher; Counts are optional; Dispatcher receives a Command; Bindings), `dependency-injection` (Input ports; The grammar reads kinds), `editor-foundation` (Use cases).
 

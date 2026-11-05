@@ -53,9 +53,10 @@ module Carat
       def self.register(table, operate:, delete_selection:, yank_selection:, change_selection:, shift_selection:)
         names = [Domain::OperatorKind::DELETE, Domain::OperatorKind::CHANGE, Domain::OperatorKind::YANK, Domain::OperatorKind::INDENT, Domain::OperatorKind::DEDENT]
         variants = [:delete, :change, :yank, :indent, :dedent]
+        descriptions = ["Delete", "Change", "Yank", "Indent", "Dedent"]
         i = 0
         while i < names.length
-          table.register(names[i], OperatorHandler.new(operate: operate, delete_selection: delete_selection, yank_selection: yank_selection, change_selection: change_selection, shift_selection: shift_selection, variant: variants[i]))
+          table.register(names[i], OperatorHandler.new(operate: operate, delete_selection: delete_selection, yank_selection: yank_selection, change_selection: change_selection, shift_selection: shift_selection, variant: variants[i]), descriptions[i])
           i += 1
         end
       end

@@ -26,6 +26,17 @@ module Carat
         "textobject.a_single_quote", "textobject.inner_backtick", "textobject.a_backtick"
       ]
 
+      # The short descriptions of NAMES, in the same order, for the key
+      # hints.
+      DESCRIPTIONS = [
+        "Inner word", "A word", "Inner WORD", "A WORD",
+        "Inner sentence", "A sentence", "Inner paragraph", "A paragraph",
+        "Inside ()", "Around ()", "Inside []", "Around []",
+        "Inside {}", "Around {}", "Inside <>", "Around <>",
+        "Inside double quotes", "Around double quotes", "Inside single quotes",
+        "Around single quotes", "Inside backticks", "Around backticks"
+      ]
+
       # Whether the action names a text object.
       #: (String) -> bool
       def self.object?(action)

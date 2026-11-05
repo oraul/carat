@@ -25,8 +25,8 @@ module Carat
 
       #: (ActionTable, switch_tab: SwitchTab) -> void
       def self.register(table, switch_tab:)
-        table.register("tab.next", TabHandler.new(switch_tab: switch_tab, target: :next))
-        table.register("tab.previous", TabHandler.new(switch_tab: switch_tab, target: :previous))
+        table.register("tab.next", TabHandler.new(switch_tab: switch_tab, target: :next), "Next tab page")
+        table.register("tab.previous", TabHandler.new(switch_tab: switch_tab, target: :previous), "Previous tab page")
       end
     end
   end
