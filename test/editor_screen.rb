@@ -14,7 +14,7 @@ module EditorScreenTest
     h.open("a.txt")
 
     t.assert_equal(["  1 one", "  2 two", "  3 three", "~"], h.screen[0, 4], "three lines with numbers and a tilde")
-    t.assert_equal("a.txt", h.status_row[0, 5], "status line names the file")
+    t.assert_equal(" NORMAL  a.t", h.status_row, "the status bar shows the mode and the file, cut at 12 columns")
     t.assert_equal("\"a.txt\" 3L", h.message_row[0, 10], "message row shows the opened message")
     t.assert_true(h.terminal.output.start_with?("\e[?1049h"), "output begins with the alternate screen")
     t.assert_true(h.terminal.output.include?("\e[1;1H"), "first frame paints row 1")
@@ -38,10 +38,10 @@ module EditorScreenTest
 
     h.resize(10, 20)
     t.assert_equal(10, h.frame.rows, "frame has 10 rows after resizing")
-    t.assert_equal("a.txt", h.row(8)[0, 5], "status line moved to row 8")
+    t.assert_equal("a.txt", h.row(8)[9, 5], "the status bar moved to row 8")
     t.assert_true(h.terminal.last_write.include?("\e[2J"), "resize repaints in full")
     h.resize(24, 80)
-    t.assert_equal("a.txt", h.row(22)[0, 5], "status line on row 22 at 24 rows")
+    t.assert_equal("a.txt", h.row(22)[9, 5], "the status bar on row 22 at 24 rows")
 
     # Scrolling through a long file with the default scrolloff of 5.
     lines = +""
@@ -51,10 +51,12 @@ module EditorScreenTest
     h.open("long.txt")
     h.type("G")
     t.assert_equal(" 30 line 30", h.row(9), "G shows the last line at the bottom of the window")
+    h.resize(12, 40)
     t.assert_equal("Bot", h.status_row[-3, 3], "position is Bot")
     h.type("gg")
     t.assert_equal("  1 line 1", h.row(0), "gg scrolls back to the top")
     t.assert_equal("Top", h.status_row[-3, 3], "position is Top")
+    h.resize(12, 20)
     h.type("jjjjjjjj")
     t.assert_equal([8, 0], h.cursor, "cursor on row 8")
     t.assert_equal(" 4 line 4", h.row(0)[1, 9], "window scrolled with scrolloff capped at half the window")

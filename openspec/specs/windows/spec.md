@@ -6,7 +6,7 @@ Windows let the user look at several buffers, or several places of one buffer, a
 ## Requirements
 
 ### Requirement: Split opens a window above showing the same buffer
-`<C-w>s`, `:sp`, and `:split` SHALL split the current window horizontally: the new window appears above the current one, shows the same buffer with the same cursor and scroll position, and becomes the current window. The new window SHALL get half of the current window's text rows rounded down and the current window SHALL keep the rest minus its status line.
+`<C-w>s`, `:sp`, and `:split` SHALL split the current window horizontally: the new window appears above the current one, shows the same buffer with the same cursor and scroll position, and becomes the current window. The new window SHALL get half of the current window's text rows rounded down and the current window SHALL keep the rest minus the separator row between them.
 
 #### Scenario: Split a single window
 - **WHEN** the editor shows "a.txt" in one window of a 24-row terminal and `<C-w>s` is pressed
@@ -22,7 +22,7 @@ Windows let the user look at several buffers, or several places of one buffer, a
 
 #### Scenario: Edits are shared
 - **WHEN** a window is split and "x" is pressed
-- **THEN** both windows show the line with the character removed and both status lines carry the modified marker
+- **THEN** both windows show the line with the character removed and the status bar carries the modified icon
 
 ### Requirement: Vertical split opens a window to the left showing the same buffer
 `<C-w>v`, `:vs`, and `:vsplit` SHALL split the current window vertically: the new window appears to the left, shows the same buffer with the same cursor and scroll position, and becomes the current window. The new window SHALL get half of the current window's columns rounded down and the current window SHALL keep the rest minus the separator column.

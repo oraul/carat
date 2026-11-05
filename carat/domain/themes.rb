@@ -64,7 +64,10 @@ module Carat
       SPECIAL = 34
       IDENTIFIER = 35
       ESCAPE = 36
-      ROLES = 37
+      # Text on a strong accent, the mode pills': the palette's background
+      # color, kept when the terminal paints its own background.
+      ON_STRONG = 37
+      ROLES = 38
       NONE = -1
 
       BOLD = Theme::BOLD
@@ -117,6 +120,14 @@ module Carat
         Highlight::DIAGNOSTIC_WARN, YELLOW, NONE, 0, 0,
         Highlight::DIAGNOSTIC_INFO, BLUE, NONE, 0, 0,
         Highlight::DIAGNOSTIC_HINT, CYAN, NONE, 0, 0,
+        Highlight::STATUS_MODE_NORMAL, ON_STRONG, BLUE, BOLD, BOLD,
+        Highlight::STATUS_MODE_INSERT, ON_STRONG, GREEN, BOLD, BOLD,
+        Highlight::STATUS_MODE_VISUAL, ON_STRONG, PURPLE, BOLD, BOLD,
+        Highlight::STATUS_MODE_REPLACE, ON_STRONG, RED, BOLD, BOLD,
+        Highlight::STATUS_MODE_COMMAND, ON_STRONG, YELLOW, BOLD, BOLD,
+        Highlight::STATUS_LSP_STARTING, YELLOW, NONE, 0, 0,
+        Highlight::STATUS_LSP_READY, GREEN, NONE, 0, 0,
+        Highlight::STATUS_LSP_ERROR, RED, NONE, BOLD, BOLD,
         Highlight::COMMENT, COMMENT, NONE, ITALIC, ITALIC,
         Highlight::CONSTANT, CONSTANT, NONE, 0, 0,
         Highlight::STRING, STRING, NONE, 0, 0,
@@ -178,6 +189,7 @@ module Carat
         SEARCH, 0xe5c07b, -1, 11,
         INC_SEARCH, 0xd19a66, -1, 9,
         ON_ACCENT, 0x282c34, -1, 0,
+        ON_STRONG, 0x282c34, -1, 0,
         RED, 0xe8757e, -1, 9,
         ORANGE, 0xd19a66, -1, 11,
         YELLOW, 0xe5c07b, -1, 11,
@@ -220,6 +232,7 @@ module Carat
         SEARCH, 0xf2dc96, -1, 11,
         INC_SEARCH, 0xeeb36c, -1, 9,
         ON_ACCENT, 0x383a42, -1, 0,
+        ON_STRONG, 0xfafafa, -1, 15,
         RED, 0xca1243, 125, 1,
         ORANGE, 0x986801, -1, 3,
         YELLOW, 0x8a6300, -1, 3,
@@ -262,6 +275,7 @@ module Carat
         SEARCH, 0x613214, -1, 3,
         INC_SEARCH, 0x9e5a0a, -1, 1,
         ON_ACCENT, 0xffffff, -1, 15,
+        ON_STRONG, 0x1e1e1e, -1, 0,
         RED, 0xf44747, -1, 9,
         ORANGE, 0xce9178, -1, 11,
         YELLOW, 0xcca700, -1, 11,
@@ -304,6 +318,7 @@ module Carat
         SEARCH, 0xf8c9ab, -1, 11,
         INC_SEARCH, 0xf5a970, -1, 9,
         ON_ACCENT, 0x000000, -1, 0,
+        ON_STRONG, 0xffffff, -1, 15,
         RED, 0xb52a2a, -1, 1,
         ORANGE, 0xa31515, -1, 3,
         YELLOW, 0x8a6400, -1, 3,

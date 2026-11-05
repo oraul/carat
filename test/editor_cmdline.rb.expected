@@ -14,7 +14,7 @@ ok   E492 is shown as an error
 ok   write shows the written message
 ok   write stores the buffer text
 ok   write clears the modified flag
-ok   status line no longer shows [+]
+ok   the status bar no longer shows the modified icon
 ok   long form write
 ok   write to another path
 ok   written message names the other path
@@ -36,7 +36,7 @@ ok   forced qa does not write
 ok   wqa with bang writes and quits
 ok   xa on a clean buffer quits without writing
 ok   edit opens another file
-ok   the screen shows the other file
+ok   the screen shows the other file under the buffer tabs
 ok   edit opens a file that is not UTF-8 and names its first illegal line
 ok   the illegal byte is drawn as one replacement character
 ok   writing the unedited file gives back its bytes

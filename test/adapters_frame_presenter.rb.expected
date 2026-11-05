@@ -1,10 +1,10 @@
 ok   window rows with numbers and a tilde
-ok   status line starts with the path
-ok   status line ends with the cursor and position
+ok   the status bar keeps the mode and the file at 14 columns
 ok   message row is blank
-ok   status line uses the status highlight
-ok   status highlight fills the row
-ok   the ruler is dropped when it would touch the path
+ok   the pill in the mode's group, the file in the status highlight
+ok   a wide bar ends with the encoding, the position, and the percent
+ok   the status highlight fills the row between
+ok   the file is cut at the edge of a narrow bar
 ok   gutter uses the line number highlight
 ok   tilde uses the non-text highlight
 ok   cursor sits after the gutter
@@ -15,8 +15,8 @@ ok   gutter widens to the digits of the line count
 ok   position is Top at the start of a long buffer
 ok   relative numbers around the cursor with the absolute number on its row
 ok   cursor row shows 0 when number is off
-ok   modified buffer shows [+]
-ok   status line shows row,col and All
+ok   a modified buffer shows the modified icon
+ok   the bar shows row:col and All
 ok   unnamed buffer
 ok   insert indicator
 ok   bar cursor in insert mode
@@ -59,55 +59,53 @@ ok   put stores the replacement character for C0 and delete
 ok   a frame written to directly holds no control code point
 ok   frame has 24 rows
 ok   frame has 10 rows after shrinking
-ok   status line moved to row 8
+ok   the status bar moved to row 8
 ok   the next render paints the other frame
 ok   the render after that repaints the first frame again
 ok   the reused frame shows the new text
 ok   the other frame still shows what it showed
 ok   the top window shows the lines
-ok   row 3 is the top window's status line
+ok   row 3 is a separator row under the top window
+ok   the separator row is in WinSeparator
 ok   the bottom window shows the same lines
-ok   row 7 is the bottom window's status line
+ok   row 7 is the status bar
 ok   row 8 is the message row
-ok   the current window's status line is highlighted, the other inactive
+ok   the bar shows the current window's cursor
 ok   the cursor is placed in the bottom window
-ok   each status line shows its own cursor
 ok   focusing the top window moves the cursor there
-ok   the highlights follow the current window
+ok   the bar follows the current window
 ok   both windows on row 0 with the separator at column 10
 ok   row 1 too
 ok   tilde rows in both windows
-ok   the separator carries the status highlight
+ok   the separator is in WinSeparator
 ok   the tilde keeps its highlight
-ok   row 4 holds both status lines
-ok   the separator continues through the status row
+ok   row 4 is one status bar
+ok   the separator stops above the bar
 ok   row 5 is the message row
 ok   the cursor is in the right window, which stayed current
-ok   a status line clipped to its window still shows the marker
-ok   the left status line stops before the separator
+ok   the modified icon stays when the rest is dropped
 ok   each window shows what fits before its edge
-ok   the tab line lists both tab pages
-ok   selected, plain, and fill highlights
+ok   the tab-page numbers stand at the right end
+ok   fill, selected, and plain highlights
 ok   the first text row is row 1
-ok   the status line is on row 5
+ok   the status bar is on row 5
 ok   the message row stays last
-ok   the cursor is under the tab line
-ok   the modified marker shows in the label
-ok   the second label is selected now
+ok   the cursor is under the tabs row
+ok   the second number is selected now
 ok   the second tab page's window is drawn
-ok   with one tab page there is no tab line
+ok   with one tab page and no files listed there is no tabs row
+ok   two listed files show their tabs, the current one selected
+ok   the selected tab's icon takes its file-icon group
 ok   no sign column without signs
 ok   the sign sits in its column and the numbers move right
 ok   the sign column carries the SignColumn highlight
 ok   the cursor moves right with the gutter
 ok   the sign column stays when numbers are off
 ok   clearing the signs removes the column
-ok   the side window's status line shows the scratch title
-ok   the file window keeps its path
-ok   the current window's status line shows the segments in order
-ok   the other window's does not
-ok   the segments follow the current window, clipped to the window
-ok   the modified marker comes before the segments
+ok   the bar shows the current file window
+ok   the plugins' segments stand in order before the position, the encoding dropped first
+ok   a segment of priority 5 is dropped before the encoding
+ok   the bar follows the current window to the scratch title
 ok   the side window has no line numbers while the file window keeps them
 ok   its sign column still shows
 ok   the prompt row and the cursor after it
@@ -153,7 +151,7 @@ ok   only the current window, at the bottom, is lit
 ok   focus moves the lit row to the top window
 ok   side by side, only the right window's row is lit, to its edge
 ok   the cursor line's number is in CursorLineNr
-ok   the text takes its group on the layer, the status line keeps its own
+ok   the text takes its group on the layer, the status bar keeps its own
 ok   a selection on the cursor line keeps the Visual group on the layer, the cursor cell its own
 ok   a block in normal mode
 ok   a bar in insert mode
@@ -163,4 +161,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   a block on the command line
-adapters_frame_presenter: 165 passed, 0 failed
+adapters_frame_presenter: 163 passed, 0 failed

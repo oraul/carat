@@ -92,17 +92,13 @@ Windows split in one tab page SHALL NOT appear in another, and switching back to
 - **WHEN** `<C-w>s` splits the window, ":tabnew" is run, and "gt" returns to the first tab page
 - **THEN** the second tab page had one window and the first again shows two
 
-### Requirement: The tab line lists the tab pages when there are several
-When more than one tab page exists the top row of the screen SHALL be the tab line and the windows SHALL use the rows below it; with one tab page there SHALL be no tab line. Each label SHALL be a space, the tab number, a space, the file name of its current window's buffer or "[No Name]", " [+]" when that buffer is modified, and a space; the current label SHALL use the selected tab line highlight, the others the tab line highlight, and the rest of the row the fill highlight.
+### Requirement: The tab pages are numbered at the right of the top row
+When two or more tab pages exist, the top row SHALL show the buffer tabs and, at its right end, the tab-page numbers with the current one selected; with one tab page and one listed file buffer there SHALL be no top row.
 
 #### Scenario: Two tab pages
 - **WHEN** "a.txt" is shown and ":tabe b.txt" is run
-- **THEN** row 0 reads " 1 a.txt  2 b.txt " and the first text row of the window is row 1
+- **THEN** row 0 shows a tab for "a.txt" and a selected tab for "b.txt", ends with " 1  2 " with " 2 " selected, and the first text row of the window is row 1
 
-#### Scenario: Modified marker and unnamed buffer
-- **WHEN** ":tabnew" is run and "x" is pressed in the first tab page, which shows "a.txt"
-- **THEN** the tab line reads " 1 a.txt [+]  2 [No Name] "
-
-#### Scenario: One tab page has no tab line
-- **WHEN** ":tabnew" then ":tabclose" are run
-- **THEN** row 0 is the first text row of the window
+#### Scenario: Back to one tab page
+- **WHEN** ":tabnew" then ":tabclose" are run while "a.txt" is shown
+- **THEN** row 0 still shows the tabs of "a.txt" and the listed empty buffer, with no tab-page numbers

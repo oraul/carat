@@ -117,6 +117,29 @@ module Carat
         line.length
       end
 
+      # The cells text takes from byte from to its end as Frame#put writes
+      # it: each code point its width, a control one cell, as the
+      # replacement character it becomes. Walked by bytes, so nothing is
+      # allocated.
+      #: (String, Integer) -> Integer
+      def self.text_width(text, from)
+        bytes = text.bytesize
+        i = from < 0 ? 0 : from
+        total = 0
+        while i < bytes
+          code = text.getbyte(i).to_i
+          if code < 0x80
+            i += 1
+          else
+            size = Utf8.size_at(text, i, bytes)
+            code = Utf8.code_at(text, i, size)
+            i += size
+          end
+          total += control?(code) ? 1 : of(code)
+        end
+        total
+      end
+
       # True for the code points no cell may hold raw: the C0 controls
       # below 32, delete (U+007F), and the C1 controls U+0080 to U+009F,
       # whose UTF-8 forms some terminals read as escape introducers.

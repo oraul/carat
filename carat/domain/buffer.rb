@@ -1,3 +1,4 @@
+require_relative "../plugin_api"
 require_relative "position"
 require_relative "range"
 require_relative "line_splice"
@@ -46,9 +47,10 @@ module Carat
     # said, and every splice moves it with the rows, as it moves
     # global_marks, the lines a running :global marked. last_cursor is
     # where the cursor was when a window last stopped showing the buffer,
-    # where the next window to show it puts its cursor. A Struct record:
+    # where the next window to show it puts its cursor. icon is the icon
+    # name of its file, found with the filetype. A Struct record:
     # mutable, with a reader and a writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, keyword_init: true)
+    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, keyword_init: true)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
@@ -69,6 +71,7 @@ module Carat
       # @rbs @syntax_cache: SyntaxCache
       # @rbs @global_marks: GlobalMarks
       # @rbs @last_cursor: Position
+      # @rbs @icon: String
 
       # Every member is stored through its writer after super(), so the
       # empty sign list takes the pinned type: Spinel's keyword super of a
@@ -99,6 +102,7 @@ module Carat
         self.syntax_cache = SyntaxCache.new
         self.global_marks = GlobalMarks.new
         self.last_cursor = Position.new(row: 0, col: 0)
+        self.icon = Buffer.icon_of(path)
       end
 
       # Whether an edit changed the text since the last load, reload, or
@@ -171,6 +175,26 @@ module Carat
         type = Filetype.detect(path, line(0))
         self.filetype = type
         self.syntax = type
+        self.icon = Buffer.icon_of(path)
+      end
+
+      # The icon name of a path's last segment from the plugin API's
+      # file-icon table, "default" without a path. Kept in icon so the
+      # buffer tabs draw it without cutting the path every frame.
+      #: (String?) -> String
+      def self.icon_of(path)
+        return "default" if path.nil?
+        PluginApi::FileIcons.file_type(PluginApi::Paths.basename(path))
+      end
+
+      # The byte where the last segment of the path starts, 0 without a
+      # path or a slash.
+      #: () -> Integer
+      def name_start
+        current = path
+        return 0 if current.nil?
+        slash = current.byterindex("/")
+        slash.nil? ? 0 : slash + 1
       end
 
       # Sets the filetype and the syntax with it, as :set filetype does.

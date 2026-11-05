@@ -20,6 +20,7 @@ ok   a size change clears the screen
 ok   a size change repaints every row
 ok   a wide character is written once and its continuation cell skipped
 ok   a code above U+10FFFF or a surrogate in a cell is written as U+FFFD
+ok   a code point written before is written again from its kept text, a surrogate still as U+FFFD
 ok   C1 controls are written as markers
 ok   the output holds no C0 or C1 code point outside the escape sequences
 ok   no raw CSI introducer is written
@@ -93,4 +94,4 @@ ok   a selection on the cursor line keeps its background
 ok   a 16-color selection on the cursor line is not underlined
 ok   the nearest palette colors: cube corners and grays
 ok   an id out of range is drawn as Normal
-adapters_screen_presenter: 95 passed, 0 failed
+adapters_screen_presenter: 96 passed, 0 failed

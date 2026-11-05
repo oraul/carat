@@ -35,10 +35,14 @@ module Carat
       # are written again to join the runs, which costs no more than the
       # cursor position between them.
       JOIN = 8
+      # The most code points of 0x80 or more whose UTF-8 text is kept;
+      # one past them is built each time it is written.
+      GLYPH_LIMIT = 4096
 
       attr_reader :terminal #: Ports::TerminalPort
       attr_reader :sgr_table #: SgrTable
 
+      # @rbs @glyphs: Hash[Integer, String]
       # @rbs @shadow: Domain::Frame?
       # @rbs @shadow_serial: Integer
       # @rbs @shape: Symbol
@@ -50,6 +54,7 @@ module Carat
         @terminal = terminal
         @sgr_table = SgrTable.from_theme(theme, colors)
         @painted = theme.paints_background?
+        @glyphs = {}
         @shadow = nil
         @shadow_serial = 0
         @shape = :none
@@ -241,10 +246,29 @@ module Carat
               @hl = hl
             end
             code = codes[i]
-            out << (Domain::Utf8.scalar?(code) ? code : Domain::Utf8::REPLACEMENT)
+            if code < 0x80
+              out << code
+            else
+              out << glyph(code)
+            end
           end
           i += 1
         end
+      end
+
+      # The UTF-8 text of a code point of 0x80 or more, U+FFFD's for one
+      # that is not a scalar value, built the first time and kept for the
+      # first GLYPH_LIMIT code points, so a frame that rewrites a cell of
+      # the status bar's icons or of non-ASCII text costs no string.
+      #: (Integer) -> String
+      def glyph(code)
+        glyphs = @glyphs
+        kept = glyphs[code]
+        return kept unless kept.nil?
+        text = +""
+        text << (Domain::Utf8.scalar?(code) ? code : Domain::Utf8::REPLACEMENT)
+        glyphs[code] = text if glyphs.size < GLYPH_LIMIT
+        text
       end
 
       # Appends the cursor position sequence for a 0-based row and column.

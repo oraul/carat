@@ -12,6 +12,14 @@ ok   put stores one cell per control code point
 ok   a C1 control is stored as U+FFFD
 ok   C0 controls and delete are stored as U+FFFD
 ok   a combining mark takes no cell
+ok   put_from starts at the byte after the slash
+ok   put_from stops at its limit
+ok   ascii from 0
+ok   a wide character
+ok   from a byte offset
+ok   a combining mark
+ok   a control as its replacement
+ok   past the end
 ok   a number right-aligned in its field and a space
 ok   the whole gutter takes the highlight
 ok   a number wider than its field keeps every digit
@@ -26,4 +34,4 @@ ok   a paint starts with every row clean
 ok   a scroll is three integers
 ok   marking every row dirty drops the scrolls
 ok   a frame of another size has arrays of its size
-domain_frame: 28 passed, 0 failed
+domain_frame: 36 passed, 0 failed

@@ -176,10 +176,10 @@ module EditorPluginsTest
 
     h = session(" hh")
     t.assert_equal({ "hello" => "hello 1" }, h.assembly.plugin_ui.segments, "greeting sets the status segment")
-    t.assert_equal("a.txt  hello 1", h.status_row[0, 14], "the segment shows on the status line")
+    t.assert_equal("hello 1  utf-8  1:1  All", h.status_row[-24, 24], "the segment shows on the status bar before the encoding")
     h.type(" hh<C-w>v")
-    t.assert_equal("a.txt  hello 2", h.row(22)[0, 14], "the current window shows the segment")
-    t.assert_equal("a.txt   ", h.row(22)[41, 8], "the other window does not")
+    t.assert_equal("hello 2  utf-8  1:1  All", h.row(22)[-24, 24], "the bar shows the segment")
+    t.assert_equal(h.row(22).index("hello"), h.row(22).rindex("hello"), "one bar under both windows shows it once")
     t.assert_equal("", h.message, "a window command clears the message")
 
     # The configuration: disabled, options, bindings, icons.
@@ -240,7 +240,7 @@ module EditorPluginsTest
       ["closing a list that is not shown fails", " tc", ["failed 0 No window shows list", [[0, 0, 22, 80, "a.txt"]], 1]],
       [":q closes the side window", " to:q<CR>", ["", [[0, 0, 22, 80, "a.txt"]], 1]],
       ["Ctrl-W q closes the side window", " to<C-w>q", ["", [[0, 0, 22, 80, "a.txt"]], 1]],
-      ["open a file in the file window, id 1", " to tf", ["ok 1 \"b.txt\" 1L, 3B", [[0, 0, 22, 30, "list"], [0, 31, 22, 49, "b.txt"]], 2]],
+      ["open a file in the file window, id 1", " to tf", ["ok 1 \"b.txt\" 1L, 3B", [[1, 0, 21, 30, "list"], [1, 31, 21, 49, "b.txt"]], 2]],
       ["focusing a missing window fails", " to tx", ["failed 0 No window 9", LEFT, 1]]
     ]) do |keys|
       h = session(keys)
@@ -252,13 +252,13 @@ module EditorPluginsTest
     t.assert_equal(Side::LINES, h.lines, "the side window shows the plugin's lines")
     h.type(":set syntax?<CR>")
     t.assert_equal("  syntax=", h.message, "a plugin that declares no filetype of its name leaves its scratch buffer without syntax")
-    t.assert_equal("list", h.status_row[0, 4], "its status line shows the title")
+    t.assert_equal("list", h.status_row[9, 4], "the status bar shows its title")
     h.type("jj<CR>")
     t.assert_equal([[2, 0], "picked row 2 in window 2"], [h.cursor, h.message], "j falls through to the mode's keymap and Enter runs the plugin's action")
     h.type("<C-w>l<CR>")
     t.assert_equal(["", 2], [h.message, h.window_index], "the scratch keymap does not apply in the file window")
     h.type("<C-w>h")
-    t.assert_equal("list", h.status_row[0, 4], "back in the side window")
+    t.assert_equal("list", h.status_row[9, 4], "back in the side window")
     t.assert_equal(["a.txt", ""], h.buffer_paths, "the scratch buffer is listed without a path")
     h.type(":q<CR>")
     t.assert_equal([["a.txt"], 1], [h.buffer_paths, h.window_count], "quitting the side window drops the scratch buffer")
@@ -267,7 +267,7 @@ module EditorPluginsTest
     h = session(" to5j")
     t.assert_equal([5, 0], h.cursor, "the cursor is on row 5 of the list")
     h.type(" tl")
-    t.assert_equal([["x"], [0, 0], "ok 0", "list  "], [h.lines, h.cursor, h.message, h.status_row[0, 6]], "the lines are replaced, the cursor clamped, and the buffer unmodified")
+    t.assert_equal([["x"], [0, 0], "ok 0", " NORMAL  list "], [h.lines, h.cursor, h.message, h.status_row[0, 14]], "the lines are replaced, the cursor clamped, and the buffer unmodified")
     h.type(" tn")
     t.assert_equal("failed 0 No scratch buffer nope", h.message, "an unknown title fails")
     h.type(":w<CR>")

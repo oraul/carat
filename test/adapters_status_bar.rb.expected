@@ -1,0 +1,40 @@
+ok   the mode and the file
+ok   the modified icon after the file
+ok   an unnamed buffer
+ok   a scratch title
+ok   the file type
+ok   the git branch
+ok   the counts above zero
+ok   every count in order
+ok   the lsp slot
+ok   the lsp slot after the plugins' segments
+ok   the position and Top
+ok   a percentage
+ok   Bot
+ok   an lsp state without a server name shows nothing
+ok   40 columns keep every segment
+ok   30 columns drop the encoding
+ok   25 columns drop the file type
+ok   22 columns drop the percent
+ok   17 columns drop the position
+ok   12 columns cut the file
+ok   6 columns cut the pill
+ok   at 40 columns the counts stay with the position
+ok   both segments in the order they were set
+ok   the segment of priority 10 goes before the encoding
+ok   the segment of priority 95 outlasts the position
+ok   normal
+ok   insert
+ok   visual
+ok   visual line
+ok   visual block
+ok   replace
+ok   operator pending
+ok   command line
+ok   the pill ends at its closing space and the status group fills the rest
+ok   starting
+ok   ready
+ok   error
+ok   each count in its diagnostic group, the closing space in the last one's
+ok   new slots are empty
+adapters_status_bar: 39 passed, 0 failed

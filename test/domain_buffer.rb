@@ -76,6 +76,10 @@ module DomainBufferTest
     end
     t.assert_equal("\r\n", D::Buffer.from_text("\xFFa\r\nb\r\n", nil).line_ending, "windows endings are found after an illegal byte")
     t.assert_equal("", D::Buffer.from_text("#!/usr/bin/\xFF ruby\n", "x").filetype, "a shebang that is not UTF-8 names no filetype")
+    renamed = D::Buffer.from_text("x\n", "src/a.rb")
+    icons = [renamed.icon, renamed.name_start]
+    renamed.rename("Makefile")
+    t.assert_equal([["ruby", 4], ["makefile", 0], "default"], [icons, [renamed.icon, renamed.name_start], D::Buffer.from_text("", nil).icon], "the icon name follows the file name, and the name starts after the last slash")
     hostile = D::Buffer.from_text("a\xFFb\n", nil)
     hostile.insert(pos(0, 1), "\xC0\n\xAF")
     t.assert_equal(["a\xC0", "\xAF\xFFb"], hostile.lines, "text with illegal bytes and a newline is inserted by bytes")
@@ -187,7 +191,7 @@ module DomainBufferTest
     t.assert_equal([0, 0, 0, "w.txt", [0, 0], false], [w.top, w.left, w.height, w.buffer.path, w.cursor.to_a, w.fixed_width], "a window starts at the origin with no height, showing its buffer from the start")
     w.top = 7
     t.assert_equal(7, w.top, "a window member has a writer")
-    t.assert_equal([:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor], D::Buffer.members, "buffer members in constructor order")
+    t.assert_equal([:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon], D::Buffer.members, "buffer members in constructor order")
     t.assert_equal([:code, :width, :hl], D::Cell.members, "cell members")
     o = D::Options.new
     t.assert_equal([false, 8, 0], [o.number, o.tabstop, o.scrolloff], "options start with Vim's defaults")

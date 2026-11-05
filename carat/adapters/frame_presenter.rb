@@ -18,18 +18,22 @@ require_relative "../domain/search_budget"
 require_relative "../domain/search_pattern"
 require_relative "../domain/start_screen"
 require_relative "painted_rows"
+require_relative "status_bar"
+require_relative "tab_bar"
 
 module Carat
   module Adapters
     # Draws the editor state into a Frame, reading the state and changing
     # nothing in it: ArrangeView has already laid out the windows and
     # scrolled them for the screen size the state holds. The frame shows
-    # the tab line when there is more than one tab page, every window of
-    # the current tab page in its rectangle (sign column, line number
-    # gutter, text with tabs expanded and unprintable code points as
-    # markers, tilde rows, a status line under it with the plugins'
-    # segments on the current window's), a separator column between
-    # windows side by side, and the message or command line row (a
+    # the buffer tabs on the top row when two file buffers are listed or
+    # two tab pages exist (TabBar), every window of the current tab page
+    # in its rectangle (sign column, line number gutter, text with tabs
+    # expanded and unprintable code points as markers, tilde rows), a
+    # separator row under each window above another and a separator
+    # column between windows side by side, both in WinSeparator, the one
+    # status bar of the current window on the row above the last
+    # (StatusBar), and the message or command line row (a
     # plugin's prompt in place of the colon) with the keys of a pending
     # command at its right edge. In a visual mode the current window draws
     # its selection with the Visual highlight, leaving the cell under the
@@ -54,8 +58,9 @@ module Carat
     # what that frame already holds, and is marked dirty when it differs
     # from the frame drawn before. A full-width window whose first visible
     # row moved by less than its height records a scroll, its rows sourced
-    # from where they were. The status lines, the tab line, and the message
-    # row are painted every time and compared cell by cell. Lines are drawn
+    # from where they were. The separator rows, the status bar, the tab
+    # row, and the message row are painted every time and compared cell
+    # by cell. Lines are drawn
     # from the shared line cache, which turns once per frame.
     #
     # A message of several lines is painted over the rows above the
@@ -73,6 +78,7 @@ module Carat
       SHOWCMD_WIDTH = 10
       HIT_ENTER = "Press ENTER or type command to continue"
       SEPARATOR = "│"
+      ROW_SEPARATOR = "─"
       FAR = 1 << 30
 
       attr_reader :input #: Domain::InputState
@@ -81,6 +87,8 @@ module Carat
       attr_reader :last_search #: Domain::LastSearch
       attr_reader :search_prompt #: Domain::SearchPrompt
       attr_reader :start_screen #: Domain::StartScreen
+      attr_reader :status_bar #: StatusBar
+      attr_reader :tab_bar #: TabBar
 
       # @rbs @front: Domain::Frame
       # @rbs @back: Domain::Frame
@@ -101,14 +109,16 @@ module Carat
       # @rbs @current: bool
       # @rbs @number_hl: Integer
 
-      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, start_screen: Domain::StartScreen) -> void
-      def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, start_screen:)
+      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar) -> void
+      def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, start_screen:, status_bar:, tab_bar:)
         @input = input
         @plugin_ui = plugin_ui
         @cache = cache
         @last_search = last_search
         @search_prompt = search_prompt
         @start_screen = start_screen
+        @status_bar = status_bar
+        @tab_bar = tab_bar
         @budget = Domain::SearchBudget.new(left: Domain::SearchBudget::FRAME)
         @pattern = Domain::SearchPattern.none
         @drawn = 0
@@ -144,7 +154,7 @@ module Carat
         back.base_serial = based ? base.serial : -1
         options = state.options
         tabstop = options.tabstop > 0 ? options.tabstop : 8
-        tabline = state.tabs.tab_count > 1 ? 1 : 0
+        tabline = @tab_bar.buffers.tab_row?(state.tabs.tab_count) ? 1 : 0
         tab = state.tab
         layout = tab.layout
         ids = layout.leaves
@@ -159,8 +169,7 @@ module Carat
         @chrome.clear
 
         if tabline == 1
-          back.blank(0, 0, cols)
-          paint_tabline(back, state, cols)
+          @tab_bar.paint(back, state, cols)
           @chrome << 0
         end
         visual = Domain::Mode.visual?(state.mode)
@@ -170,14 +179,19 @@ module Carat
           @pattern = @last_search.highlighted(options)
           @budget.reset(Domain::SearchBudget::FRAME)
         end
+        bar = rows - 2
         i = 0
         while i < ids.length
           id = ids[i]
           current = id == tab.current
-          paint_window(back, layout.window_at(id), i, current, options, tabstop, @plugin_ui.segments, current ? selection : @none, cols, base_same)
+          paint_window(back, layout.window_at(id), i, current, options, tabstop, bar, current ? selection : @none, cols, base_same)
           i += 1
         end
         paint_separators(back, layout, layout.root)
+        if bar >= tabline
+          @status_bar.paint(back, bar, cols, state)
+          @chrome << bar
+        end
         start = @start_screen.showing
         if start
           window = state.window
@@ -359,9 +373,10 @@ module Carat
 
       # One window: each text row painted when what it shows changed and
       # marked dirty when it differs from the base frame's, a scroll
-      # recorded for a full-width window, then the status line.
-      #: (Domain::Frame, Domain::Window, Integer, bool, Domain::Options, Integer, Hash[String, String], Domain::Selection, Integer, bool) -> void
-      def paint_window(frame, window, slot, current, options, tabstop, segments, selection, cols, base_same)
+      # recorded for a full-width window, then the separator row under it
+      # unless that row is the status bar's, bar.
+      #: (Domain::Frame, Domain::Window, Integer, bool, Domain::Options, Integer, Integer, Domain::Selection, Integer, bool) -> void
+      def paint_window(frame, window, slot, current, options, tabstop, bar, selection, cols, base_same)
         buffer = window.buffer
         cursor = window.cursor
         gutter = window.gutter_width(options)
@@ -434,10 +449,15 @@ module Carat
           end
           i += 1
         end
-        status_row = wrow + height
-        frame.blank(status_row, x, x + width)
-        paint_status(frame, status_row, x, width, window, current, segments)
-        @chrome << status_row
+        below = wrow + height
+        return if below == bar
+        frame.blank(below, x, x + width)
+        c = x
+        while c < x + width
+          frame.put(below, c, ROW_SEPARATOR, Domain::Highlight::WINDOW_SEPARATOR)
+          c += 1
+        end
+        @chrome << below
       end
 
       # The line number a row shows, -1 when the window has no number
@@ -664,74 +684,6 @@ module Carat
         frame.put(frame_row, col + eol - left, " ", Domain::Highlight::VISUAL)
       end
 
-      # The status line of a window across its width: the path, or the
-      # scratch title, and the modified marker at the left, the plugins'
-      # segments after them on the current window, the cursor and the
-      # position at the right when they fit, in the status highlight for
-      # the current window and the inactive one otherwise. The pieces are
-      # written one after the other and the numbers digit by digit, so a
-      # status line costs no string unless plugins have segments.
-      #: (Domain::Frame, Integer, Integer, Integer, Domain::Window, bool, Hash[String, String]) -> void
-      def paint_status(frame, frame_row, col, width, window, current, segments)
-        hl = current ? Domain::Highlight::STATUS : Domain::Highlight::STATUS_NC
-        buffer = window.buffer
-        name = buffer.display_name
-        limit = col + width
-        frame.fill(frame_row, col, limit, hl)
-        shown = name.nil? ? "[No Name]" : name
-        left = shown.length
-        at = frame.put_within(frame_row, col, shown, hl, limit)
-        if buffer.modified?
-          at = frame.put_within(frame_row, at, " [+]", hl, limit)
-          left += 4
-        end
-        if current && !segments.empty?
-          joined = segments.values.join(" ")
-          at = frame.put_within(frame_row, at, "  ", hl, limit)
-          frame.put_within(frame_row, at, joined, hl, limit)
-          left += 2 + joined.length
-        end
-        left = width if left > width
-        paint_ruler(frame, frame_row, col, width, window, left, hl)
-      end
-
-      # The cursor as row,col and the position, All, Top, Bot, or a
-      # percentage, at the right of a status line when they leave a blank
-      # after the left part.
-      #: (Domain::Frame, Integer, Integer, Integer, Domain::Window, Integer, Integer) -> void
-      def paint_ruler(frame, frame_row, col, width, window, left, hl)
-        cursor = window.cursor
-        row = cursor.row + 1
-        column = cursor.col + 1
-        count = window.buffer.line_count
-        top = window.top
-        height = window.height
-        word = ""
-        percent = -1
-        if count <= height
-          word = "All"
-        elsif top == 0
-          word = "Top"
-        elsif top + height >= count
-          word = "Bot"
-        else
-          percent = top * 100 / (count - height)
-        end
-        length = Domain::Frame.digits(row) + Domain::Frame.digits(column) + 2 + (percent >= 0 ? Domain::Frame.digits(percent) + 1 : word.length)
-        start = width - length
-        return unless start >= left + 1
-        at = frame.put_digits(frame_row, col + start, row, hl)
-        at = frame.put(frame_row, at, ",", hl)
-        at = frame.put_digits(frame_row, at, column, hl)
-        at = frame.put(frame_row, at, " ", hl)
-        if percent >= 0
-          at = frame.put_digits(frame_row, at, percent, hl)
-          frame.put(frame_row, at, "%", hl)
-        else
-          frame.put(frame_row, at, word, hl)
-        end
-      end
-
       # A separator column after every child of a row but the last, over
       # the row's whole height, then the same inside nested splits.
       #: (Domain::Frame, Domain::Layout, Integer) -> void
@@ -746,43 +698,13 @@ module Carat
             sep = child.col + child.width
             r = current.row
             while r < current.row + current.height
-              frame.put(r, sep, SEPARATOR, Domain::Highlight::STATUS)
+              frame.put(r, sep, SEPARATOR, Domain::Highlight::WINDOW_SEPARATOR)
               r += 1
             end
           end
           paint_separators(frame, layout, children[i])
           i += 1
         end
-      end
-
-      # The tab line: one label per tab page with its number, the file name
-      # of its current window's buffer, and the modified marker, the current
-      # one in the selected highlight, the rest of the row in the fill.
-      #: (Domain::Frame, Domain::EditorState, Integer) -> void
-      def paint_tabline(frame, state, cols)
-        frame.fill(0, 0, cols, Domain::Highlight::TAB_LINE_FILL)
-        col = 0
-        tabs = state.tabs
-        t = 0
-        while t < tabs.tab_count
-          buffer = tabs.tab_at(t).window.buffer
-          label = " #{t + 1} #{file_name(buffer)}#{buffer.modified? ? " [+]" : ""} "
-          hl = t == tabs.tab_index ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE
-          col = frame.put(0, col, label, hl)
-          break if col >= cols
-          t += 1
-        end
-      end
-
-      # The last path segment, or [No Name].
-      #: (Domain::Buffer) -> String
-      def file_name(buffer)
-        path = buffer.path
-        return "[No Name]" if path.nil?
-        slash = path.byterindex("/")
-        name = path
-        name = path.byteslice(slash + 1, path.bytesize - slash - 1).to_s unless slash.nil?
-        name
       end
 
       # ":" for an ex command line, "/" or "?" for a search prompt, a

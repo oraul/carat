@@ -1,6 +1,9 @@
 ok   before the size is known the window keeps no rectangle
 ok   the size is recorded in the state
 ok   one window takes the rows above its status line and the message row
+ok   one tab page and no files has no tabs row, two tab pages have one
+ok   one file and a scratch buffer have no tabs row
+ok   with two files listed the window starts under the tabs row
 ok   a cursor below the window scrolls it down until the cursor is on the last row
 ok   a cursor above the window scrolls it up until the cursor is on the first row
 ok   scrolloff keeps rows below the cursor
@@ -19,4 +22,4 @@ ok   two splits typed with no frame between them give 5, 5, and 10 text rows
 ok   the top window is current
 ok   no split reported E36
 ok   H after 30G goes to line 23, the top line the window shows after the jump
-use_cases_arrange_view: 21 passed, 0 failed
+use_cases_arrange_view: 24 passed, 0 failed

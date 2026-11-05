@@ -176,6 +176,13 @@ module Carat
         total
       end
 
+      # Whether the top row of buffer tabs shows: from two listed file
+      # buffers or two tab pages.
+      #: (Integer) -> bool
+      def tab_row?(tab_count)
+        tab_count > 1 || file_count > 1
+      end
+
       # The listed file buffer after target in the list, or the last one
       # before it, which :bd shows in place of target; nil when target is
       # the only one.

@@ -1,5 +1,6 @@
 ok   every id has a name
-ok   41 UI groups, thirty syntax groups, thirteen file-icon groups
+ok   49 UI groups, thirty syntax groups, thirteen file-icon groups
+ok   the status bar's groups follow Neovim's
 ok   names by id
 ok   Comment
 ok   String
@@ -17,6 +18,15 @@ ok   name_of
 ok   find, the aliases, and one_dark for an unknown name
 ok   known?
 ok   background?
+ok   normal pill
+ok   insert pill
+ok   visual pill
+ok   replace pill
+ok   command pill
+ok   lsp starting
+ok   lsp ready
+ok   lsp error
+ok   a light palette's pill is light text on its dark accent, even with the terminal's background
 ok   with the terminal's background Normal keeps the terminal's colors
 ok   with the theme's background Normal is the palette's
 ok   a group without a background of its own is drawn on the painted one
@@ -83,4 +93,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 85 passed, 0 failed
+domain_theme: 95 passed, 0 failed

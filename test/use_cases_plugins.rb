@@ -175,18 +175,18 @@ module UseCasesPluginsTest
     bad = Probe.new("probe", "3.0", [], ACTIONS, {}, [])
     rig = setup([bad], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 3.0, the host has 2.1"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
-    t.assert_equal(["plugin probe: needs API 3.0, the host has 2.1"], host.errors, "the refusal is recorded")
+    t.assert_equal([false, "needs API 3.0, the host has 2.2"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
+    t.assert_equal(["plugin probe: needs API 3.0, the host has 2.2"], host.errors, "the refusal is recorded")
     t.assert_equal([], bad.log, "a refused plugin is not activated")
 
     minor = Probe.new("probe", "2.7", [], ACTIONS, {}, [])
     rig = setup([minor], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 2.7, the host has 2.1"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused")
+    t.assert_equal([false, "needs API 2.7, the host has 2.2"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused")
     older = Probe.new("probe", "1.3", [], ACTIONS, {}, [])
     rig = setup([older], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 1.3, the host has 2.1"], [host.enabled?("probe"), host.reason("probe")], "an older major version is refused")
+    t.assert_equal([false, "needs API 1.3, the host has 2.2"], [host.enabled?("probe"), host.reason("probe")], "an older major version is refused")
     same = Probe.new("probe", "2.0", [], ACTIONS, {}, [])
     rig = setup([same], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
@@ -354,8 +354,14 @@ module UseCasesPluginsTest
     t.assert_equal(["bad", true], [state.message, state.message_error], "message shows an error")
     h.set_status("probe 1")
     t.assert_equal({ "probe" => "probe 1" }, host.plugin_ui.segments, "set_status keeps the segment by plugin name")
+    t.assert_equal([["probe"], [10]], [host.plugin_ui.owners, host.plugin_ui.priorities], "set_status gives the segment priority 10")
+    r = h.set_segment("probe 2", 95)
+    t.assert_equal([true, "probe 2", [95]], [r.ok, host.plugin_ui.text_at(0), host.plugin_ui.priorities], "set_segment replaces the text and the priority in place")
+    r = h.set_segment("x", 100)
+    t.assert_equal([false, "priority must be 0 to 99", "probe 2"], [r.ok, r.message, host.plugin_ui.text_at(0)], "a priority above 99 is refused and changes nothing")
+    t.assert_equal(false, h.set_segment("x", -1).ok, "a negative priority is refused")
     h.set_status("")
-    t.assert_equal({}, host.plugin_ui.segments, "empty text removes it")
+    t.assert_equal([{}, [], []], [host.plugin_ui.segments, host.plugin_ui.owners, host.plugin_ui.priorities], "empty text removes it with its place and priority")
     state.buffer.set_lines(0, 1, ["edited"])
     r = h.run_ex("w")
     t.assert_equal([true, "\"a.txt\" 2L, 11B written", "edited\ntwo\n"], [r.ok, r.message, files.get("a.txt")], "run_ex runs the command and returns its outcome")

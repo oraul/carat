@@ -74,6 +74,9 @@ module EditorWindowsTest
   ONE = [[0, 0, 22, 80]]
   STACKED = [[0, 0, 11, 80], [12, 0, 10, 80]]
   BESIDE = [[0, 0, 22, 40], [0, 41, 22, 39]]
+  # The same with a second file listed, under the buffer tabs row.
+  TABBED_STACKED = [[1, 0, 11, 80], [13, 0, 9, 80]]
+  TABBED_BESIDE = [[1, 0, 21, 40], [1, 41, 21, 39]]
 
   def self.unsaved(name)
     "E37: No write since last change\nE162: No write since last change for buffer \"#{name}\""
@@ -123,10 +126,10 @@ module EditorWindowsTest
       ["Ctrl-W q closes one of two windows", "<C-w>s<C-w>q", [1, 1, ONE]],
       ["a count before Ctrl-W q quits that window", "<C-w>s<C-w>s3<C-w>q", [2, 1, [[0, 0, 5, 80], [6, 0, 16, 80]]]],
       [":q closes one of two windows", "<C-w>v:q<CR>", [1, 1, ONE]],
-      [":new splits with an empty buffer", ":new<CR>", [2, 1, STACKED]],
-      [":vnew splits vertically with an empty buffer", ":vnew<CR>", [2, 1, BESIDE]],
-      [":vne splits vertically with an empty buffer", ":vne<CR>", [2, 1, BESIDE]],
-      [":sp file splits and shows the file", ":sp b.txt<CR>", [2, 1, STACKED]],
+      [":new splits with an empty buffer", ":new<CR>", [2, 1, TABBED_STACKED]],
+      [":vnew splits vertically with an empty buffer", ":vnew<CR>", [2, 1, TABBED_BESIDE]],
+      [":vne splits vertically with an empty buffer", ":vne<CR>", [2, 1, TABBED_BESIDE]],
+      [":sp file splits and shows the file", ":sp b.txt<CR>", [2, 1, TABBED_STACKED]],
       ["nested splits", "<C-w>v<C-w>l<C-w>s", [3, 2, [[0, 0, 22, 40], [0, 41, 11, 39], [12, 41, 10, 39]]]],
       ["Ctrl-W Ctrl-S splits as Ctrl-W s", "<C-w><C-s>", [2, 1, STACKED]],
       ["a count before Ctrl-W Ctrl-S sets the new window's rows", "5<C-w><C-s>", [2, 1, [[0, 0, 5, 80], [6, 0, 16, 80]]]],
@@ -211,18 +214,18 @@ module EditorWindowsTest
     h = session("<C-w>sx")
     t.assert_equal(["ne", "two", "three"], h.lines, "x deletes in the shared buffer")
     t.assert_equal(["  1 ne", "  1 ne"], [h.row(0), h.row(12)], "both windows show the edit")
-    t.assert_equal(["a.txt [+]", "a.txt [+]"], [h.row(11)[0, 9], h.row(22)[0, 9]], "both status lines carry the marker")
+    t.assert_equal(["\u2500" * 80, " NORMAL  a.txt \u{F111}"], [h.row(11), h.row(22)[0, 16]], "a separator row between the windows and the status bar carries the modified icon")
 
-    # Status lines and the separator.
+    # The status bar and the separators.
     h = session("<C-w>s<C-w>jj")
-    t.assert_equal(["1,1 All", "2,1 All"], [h.row(11)[-7, 7], h.row(22)[-7, 7]], "each status line shows its own cursor")
-    t.assert_equal([D::Highlight::STATUS_NC, D::Highlight::STATUS], [h.frame.cell(11, 0).hl, h.frame.cell(22, 0).hl], "the current window's status line is highlighted, the other inactive")
+    t.assert_equal("2:1  All", h.row(22)[-8, 8], "the status bar shows the current window's cursor")
+    t.assert_equal([D::Highlight::WINDOW_SEPARATOR, D::Highlight::STATUS_MODE_NORMAL], [h.frame.cell(11, 0).hl, h.frame.cell(22, 0).hl], "the separator row in WinSeparator, the bar's pill in its mode's group")
     t.assert_equal([13, 4], [h.frame.cursor_row, h.frame.cursor_col], "the cursor is in the bottom window")
     h = session("<C-w>v")
     t.assert_equal("│", h.frame.cell(0, 40).char, "a separator column between the windows")
-    t.assert_equal(D::Highlight::STATUS, h.frame.cell(0, 40).hl, "the separator uses the status highlight")
+    t.assert_equal(D::Highlight::WINDOW_SEPARATOR, h.frame.cell(0, 40).hl, "the separator uses WinSeparator")
     t.assert_equal("  1 one", h.row(0)[41, 7], "the right window starts after the separator")
-    t.assert_equal("a.txt", h.row(22)[41, 5], "the right window's status line starts after the separator")
+    t.assert_equal([" NORMAL  a.txt ", " "], [h.row(22)[0, 15], h.frame.cell(22, 40).char], "one status bar runs under both windows")
     t.assert_equal([0, 4], [h.frame.cursor_row, h.frame.cursor_col], "the cursor is in the left window")
     h.type("<C-w>l")
     t.assert_equal([0, 45], [h.frame.cursor_row, h.frame.cursor_col], "the cursor moves to the right window")
@@ -258,7 +261,7 @@ module EditorWindowsTest
     h = session("<C-w>s")
     h.resize(20, 80)
     t.assert_equal([[0, 0, 11, 80], [12, 0, 6, 80]], shape(h)[2], "the bottom window absorbs the lost rows")
-    t.assert_equal("a.txt", h.row(18)[0, 5], "the bottom status line is on row 18")
+    t.assert_equal("a.txt", h.row(18)[9, 5], "the status bar is on row 18")
     h = session("<C-w>v")
     h.resize(24, 40)
     t.assert_equal([[0, 0, 22, 38], [0, 39, 22, 1]], shape(h)[2], "the right window gives up its columns first, down to one")

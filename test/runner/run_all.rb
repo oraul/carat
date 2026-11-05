@@ -11,6 +11,8 @@ require_relative "../adapters_dirty_rows"
 require_relative "../adapters_frame_presenter"
 require_relative "../adapters_key_decoder"
 require_relative "../adapters_screen_presenter"
+require_relative "../adapters_status_bar"
+require_relative "../adapters_tab_bar"
 require_relative "../config_sync"
 require_relative "../domain_buffer"
 require_relative "../domain_buffer_list"
@@ -85,6 +87,8 @@ when "adapters_dirty_rows" then AdaptersDirtyRowsTest.main
 when "adapters_frame_presenter" then AdaptersFramePresenterTest.main
 when "adapters_key_decoder" then AdaptersKeyDecoderTest.main
 when "adapters_screen_presenter" then AdaptersScreenPresenterTest.main
+when "adapters_status_bar" then AdaptersStatusBarTest.main
+when "adapters_tab_bar" then AdaptersTabBarTest.main
 when "config_sync" then ConfigSyncTest.main
 when "domain_buffer" then DomainBufferTest.main
 when "domain_buffer_list" then DomainBufferListTest.main

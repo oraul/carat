@@ -31,6 +31,19 @@ module DomainFrameTest
     t.assert_equal([D::Frame::REPLACEMENT, D::Frame::REPLACEMENT], [f.code_at(2, 0), f.code_at(2, 1)], "C0 controls and delete are stored as U+FFFD")
     t.assert_equal(2, f.put(2, 0, "éx", H::NORMAL), "a combining mark takes no cell")
 
+    # put_from writes a tail from a byte offset, text_width measures it.
+    p = D::Frame.new(rows: 1, cols: 8)
+    t.assert_equal([3, "b中"], [p.put_from(0, 0, "a/b中", 2, H::NORMAL, 8), p.row_text(0)], "put_from starts at the byte after the slash")
+    t.assert_equal(2, p.put_from(0, 0, "abcdef", 1, H::NORMAL, 2), "put_from stops at its limit")
+    t.table([
+      ["ascii from 0", ["abc", 0], 3],
+      ["a wide character", ["a中", 0], 3],
+      ["from a byte offset", ["src/a.rb", 4], 4],
+      ["a combining mark", ["e\u0301", 0], 1],
+      ["a control as its replacement", ["a\u0001", 0], 2],
+      ["past the end", ["ab", 5], 0]
+    ]) { |input| D::DisplayWidth.text_width(input[0].to_s, input[1].to_i) }
+
     # Line numbers, blanks, and highlights.
     g = D::Frame.new(rows: 2, cols: 8)
     g.put_number(0, 0, 3, 42, 4, H::LINE_NUMBER)

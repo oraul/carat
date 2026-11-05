@@ -55,17 +55,16 @@ ok   :qa quits with several windows and tab pages
 ok   the new tab page has one window
 ok   the first tab page still has two
 ok   the first tab page remembers its current window
-ok   the tab line lists the tab pages with their files
-ok   the current label is selected, the rest filled
-ok   the fill reaches the right edge
-ok   the window starts under the tab line with one row less
-ok   the status line is above the message row
-ok   the cursor is under the tab line
-ok   a modified buffer is marked in its label
-ok   the first label is now selected
+ok   the tabs row lists the files and numbers the tab pages at its right end
+ok   the current file and tab page selected, the rest plain or filled
+ok   the window starts under the tabs row with one row less
+ok   the status bar is above the message row
+ok   the cursor is under the tabs row
+ok   a modified buffer is marked in its tab
+ok   the first file and tab page are now selected
 ok   an unnamed buffer shows as [No Name]
-ok   one tab page has no tab line
-ok   the window takes the top row again
-ok   a label shows the file name without its directory
-ok   the status line path is untouched
-editor_tabs: 70 passed, 0 failed
+ok   the listed empty buffer keeps the row, without tab-page numbers
+ok   one file in one tab page has no tabs row
+ok   a tab shows the file name without its directory
+ok   the path is untouched
+editor_tabs: 69 passed, 0 failed

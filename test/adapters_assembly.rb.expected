@@ -9,6 +9,7 @@ ok   the last find
 ok   the keymap
 ok   the input state
 ok   the plugin UI state
+ok   the status slots
 ok   the plugin host
 ok   the plugin handlers are registered
 ok   the command runner
@@ -40,4 +41,4 @@ ok   the gateway reads the shipped defaults through the file port it was given
 ok   the assembly and the gateway hold the one file port
 ok   a configuration without lines falls back to Vim's defaults
 ok   a configuration problem names its file and line
-adapters_assembly: 42 passed, 0 failed
+adapters_assembly: 43 passed, 0 failed

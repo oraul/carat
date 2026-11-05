@@ -38,7 +38,7 @@ module AdaptersAssemblyTest
       ["close_other_tabs", a.close_other_tabs.buffers], ["rename_path", host.rename_path.buffers], ["delete_path", host.delete_path.buffers],
       ["registry", host.registry.buffers], ["events", host.events.buffers], ["buffer_requests", host.buffer_requests.buffers],
       ["window_requests", host.window_requests.buffers], ["list_buffers", a.list_buffers.buffers], ["switch_buffer", a.switch_buffer.buffers],
-      ["delete_buffer", a.delete_buffer.buffers]
+      ["delete_buffer", a.delete_buffer.buffers], ["arrange_view", a.arrange_view.buffers], ["tab_bar", a.frame_presenter.tab_bar.buffers]
     ]), "the buffer list")
     t.assert_equal([], strangers(a.tabs, [
       ["state", a.state.tabs], ["buffers", a.buffers.tabs], ["feed", a.buffers.feed.tabs], ["quit", a.quit.tabs],
@@ -68,8 +68,9 @@ module AdaptersAssemblyTest
     t.assert_equal([], strangers(a.plugin_ui, [
       ["host", host.plugin_ui], ["registry", host.registry.plugin_ui], ["ui_requests", host.ui_requests.plugin_ui],
       ["enter_command_line", a.enter_command_line.plugin_ui], ["cancel_command_line", a.cancel_command_line.plugin_ui],
-      ["execute_command_line", a.execute_command_line.plugin_ui], ["frame_presenter", a.frame_presenter.plugin_ui]
+      ["execute_command_line", a.execute_command_line.plugin_ui], ["frame_presenter", a.frame_presenter.plugin_ui], ["status_bar", a.frame_presenter.status_bar.plugin_ui]
     ]), "the plugin UI state")
+    t.assert_equal([], strangers(a.status_slots, [["status_bar", a.frame_presenter.status_bar.slots]]), "the status slots")
     t.assert_equal([], strangers(host, [
       ["save_file", a.save_file.plugins], ["cancel_command_line", a.cancel_command_line.plugins],
       ["execute_command_line", a.execute_command_line.plugins], ["handle_key", a.handle_key.plugins]

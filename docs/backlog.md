@@ -188,11 +188,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: one thing under two names makes a search for the action miss the code that runs it.
 - Fix outline: rename the targets `:half_page_down` and `:half_page_up` in the three files.
 
-## Eight comments break their file's wrap width
+## Nine comments break their file's wrap width
 
-- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters), advisory of the periodic quality review at 66fd52b, the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118, the class comment of `carat/ports/terminal_port.rb` (line 4, 130 characters), advisory of the periodic quality review at 5b128b5, the class comments of `carat/use_cases/plugins/window_requests.rb` (line 23, 104 characters) and `carat/adapters/frame_presenter.rb` (line 48 at 3a99ddd, 105 characters, the line about one segment per row and window), advisories of the periodic quality review at 3a99ddd, and, quality advisories of `cursor-shapes`, the class comment of `carat/use_cases/ex/set_command_handler.rb` (line 17, 94 characters) the class comment of `carat/domain/frame.rb` (line 15, a short ragged line of 37 characters), and the class comment of `carat/domain/options.rb` (line 21, 77 characters), advisory of the periodic quality review at d5036f4. The class comment of `carat/use_cases/ex/set_command_handler.rb` (line 16) also still says "The four search options" although it now covers `cursorline`. Line 37 of `carat/use_cases/dispatcher.rb`, once listed here, is the one-line signature of the constructor, not a comment to rewrap (quality advisory of `explorer-folder-toggle`).
+- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters), advisory of the periodic quality review at 66fd52b, the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118, the class comment of `carat/ports/terminal_port.rb` (line 4, 130 characters), advisory of the periodic quality review at 5b128b5, the class comments of `carat/use_cases/plugins/window_requests.rb` (line 23, 104 characters) and `carat/adapters/frame_presenter.rb` (line 48 at 3a99ddd, 105 characters, the line about one segment per row and window), advisories of the periodic quality review at 3a99ddd, and, quality advisories of `cursor-shapes`, the class comment of `carat/use_cases/ex/set_command_handler.rb` (line 17, 94 characters) the class comment of `carat/domain/frame.rb` (line 15, a short ragged line of 37 characters), and the class comment of `carat/domain/options.rb` (line 21, 77 characters), advisory of the periodic quality review at d5036f4, and the class comment of `carat/domain/buffer_list.rb` (line 15 at 68eb750, which breaks after "The feed" at about 51 characters), advisory of the periodic quality review at 68eb750. The class comment of `carat/use_cases/ex/set_command_handler.rb` (line 16) also still says "The four search options" although it now covers `cursorline`. Line 37 of `carat/use_cases/dispatcher.rb`, once listed here, is the one-line signature of the constructor, not a comment to rewrap (quality advisory of `explorer-folder-toggle`).
 - Why it matters: style only; the rest of each file wraps comments at the surrounding width.
-- Fix outline: rewrap the eight comments to the width of the lines around them, and say "The boolean options" in the `SetCommandHandler` class comment.
+- Fix outline: rewrap the nine comments to the width of the lines around them, and say "The boolean options" in the `SetCommandHandler` class comment.
 
 ## lh time per key rose 26% at window-navigation-and-scroll
 
@@ -857,7 +857,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 ## A refused backup push is retried and protects nothing here
 
 - Where: the backup step of `.claude/workflows/deliver-change.js` and `backup` in `tools/run_state.sh`; this environment's git proxy refuses a push to `refs/backup/` with HTTP 403. Retrospective proposal of `backup-secret-scan`, recorded here by the user's decision rather than queued.
-- Why it matters: in `backup-secret-scan` 2 of 2 backup pushes were refused and 0 backup refs reached origin, so the step spent tokens and changed no decision, and the run state holds no backup record to tell the report so; `docs-currency` made 7 more attempts, and 0 of 9 across the two runs reached origin (its retrospective). Kept here by the user's earlier decision, which the user may want to revisit.
+- Why it matters: in `backup-secret-scan` 2 of 2 backup pushes were refused and 0 backup refs reached origin, so the step spent tokens and changed no decision, and the run state holds no backup record to tell the report so; `docs-currency` made 7 more attempts, and 0 of 9 across the two runs reached origin (its retrospective); in `buffer-list` the implement and fix pushes all failed, 0 `refs/backup` refs reached origin, and 7 commits stayed local until the package push (retrospective note 11). Kept here by the user's earlier decision, which the user may want to revisit.
 - Fix outline: record a refused backup push once in the run state, make no later backup attempt in that run, and have the report say no backup exists, with a `tools/tools_test.sh` case for a refused push.
 
 ## The roadmap's progress is readable nowhere in one place
@@ -1122,40 +1122,124 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `any_modified?` (line 115 at `buffer-list`) and `number_of` (line 61) in `carat/domain/buffer_list.rb`, both still named in `docs/codebase-map.md`. Quality advisory of `buffer-list`.
 - Why it matters: `Quit` and `QuitAll` now use `first_unsaved`, so `any_modified?` is dead code, and `number_of` returns a list position that is no longer the buffer number, which misleads a future caller.
-- Fix outline: remove both, use `modified_buffer.nil?` in the tests, and drop them from the map.
+- Fix outline: remove both, use `modified_buffer.nil?` in the tests, and drop them from the map. Queued as `buffer-list-tidy` in `docs/queue.md`.
 
 ## BufferList#first_unsaved takes a boolean flag argument
 
 - Where: `first_unsaved(hidden_only)` in `carat/domain/buffer_list.rb` (line 124 at `buffer-list`), called by `Quit` and `QuitAll`. Quality advisory of `buffer-list`.
 - Why it matters: a flag argument hides two behaviors behind one name; `Quit` reaches it with one file window whose buffer `:quit` already checked, so `first_unsaved(false)` equals `hidden_modified` there.
-- Fix outline: have `Quit` call `@buffers.hidden_modified` and drop the parameter, leaving `first_unsaved` for `QuitAll`.
+- Fix outline: have `Quit` call `@buffers.hidden_modified` and drop the parameter, leaving `first_unsaved` for `QuitAll`. Queued as `buffer-list-structure` in `docs/queue.md`.
 
 ## BufferCommandHandler#digits? duplicates HistoryCommandHandler.digits?
 
 - Where: `digits?` in `carat/use_cases/ex/buffer_command_handler.rb` (line 98 at `buffer-list`) and `HistoryCommandHandler.digits?` in `carat/use_cases/ex/history_command_handler.rb` (line 65). Quality advisory of `buffer-list`.
 - Why it matters: two copies of one check drift apart.
-- Fix outline: keep one shared helper and call it from both handlers.
+- Fix outline: keep one shared helper and call it from both handlers. Queued as `buffer-list-structure` in `docs/queue.md`.
 
 ## A buffer number with leading zeros past nine bytes reads as the largest
 
 - Where: `number_in` in `carat/use_cases/ex/buffer_command_handler.rb` (line 92 at `buffer-list`). Quality advisory of `buffer-list`.
 - Why it matters: any argument over 9 bytes maps to `LARGEST`, so `:b 0000000001` reports E86 and `:bn 0000000002` steps a wrong count, unlike Neovim.
-- Fix outline: skip leading zeros before the length check, with a table row for each spelling.
+- Fix outline: skip leading zeros before the length check, with a table row for each spelling. Queued as `buffer-list-tidy` in `docs/queue.md`.
 
 ## BufferRequest's :current target exists only to return no outcome
 
 - Where: `carat/use_cases/buffers/buffer_request.rb` (line 5 at `buffer-list`), `SwitchBuffer` in `carat/use_cases/buffers/switch_buffer.rb` (line 29), and its one producer in `BufferCommandHandler` (line 66). Quality advisory of `buffer-list`.
 - Why it matters: a request target with no behavior widens the use case's input for one handler's empty-argument case.
-- Fix outline: return `Outcome.none` in `BufferCommandHandler#number` for `:b` without a number and drop `:current` from `BufferRequest` and `SwitchBuffer`.
+- Fix outline: return `Outcome.none` in `BufferCommandHandler#number` for `:b` without a number and drop `:current` from `BufferRequest` and `SwitchBuffer`. Queued as `buffer-list-tidy` in `docs/queue.md`.
 
 ## BufferList#step_from is hard to verify and exposes file_count for it
 
 - Where: `step_from` (line 145 at `buffer-list`) and `file_count` (line 169) in `carat/domain/buffer_list.rb`. Quality advisory of `buffer-list`.
 - Why it matters: a modulo shortcut combined with a sentinel-reset loop makes `:bn` and `:bp` with a count hard to check by reading, and `file_count` is public only for it.
-- Fix outline: gather the file-buffer indices once and index them modulo their count from the target's position, and make `file_count` private or fold it in, keeping the `test/domain_buffer_list.rb` rows.
+- Fix outline: gather the file-buffer indices once and index them modulo their count from the target's position, and make `file_count` private or fold it in, keeping the `test/domain_buffer_list.rb` rows. Since `bars`, `BufferList#tab_row?` and the buffer tabs also count file buffers, so `file_count` stays public or gives way to a shared walk. Queued as `buffer-list-structure` in `docs/queue.md`.
 
 ## CloseOtherWindows clears tab.previous a second time
 
 - Where: `tab.previous = -1` in `carat/use_cases/windows/close_other_windows.rb` (line 34 at `buffer-list`). Quality advisory of `buffer-list`.
 - Why it matters: `BufferList#close_window` already clears `previous` when it names a closed window, and `previous` never names the current one, so the line reads as a needed step it is not.
-- Fix outline: drop the line, or keep it with a comment if it is meant to clear a stale id.
+- Fix outline: drop the line, or keep it with a comment if it is meant to clear a stale id. Queued as `buffer-list-structure` in `docs/queue.md`.
+
+## :ls and E162 show a newline in a file name as a line break
+
+- Where: `ListBuffers#name_of` in `carat/use_cases/buffers/list_buffers.rb` (line 72 at 68eb750) and `Messages.unsaved_buffer` in `carat/domain/messages.rb` (line 16), whose message the frame presenter splits on line breaks. Periodic security Low (4) at 68eb750.
+- Why it matters: a file in an untrusted repository whose name holds a newline, opened from the explorer, forges extra `:ls` lines (a fake buffer number, flags, or line) and extra E162 lines; `Frame#put` already shows other control bytes safely.
+- Fix outline: show a buffer name in a message with control characters escaped as the painter does, with a `test/editor_buffers.rb` row for a name holding a newline. Queued as `buffer-list-tidy` in `docs/queue.md`.
+
+## Three window closers still say only a modified buffer stays listed
+
+- Where: the comments of `CloseTab` (`carat/use_cases/windows/close_tab.rb`, lines 8 to 10 at 68eb750), `CloseOtherTabs` (`carat/use_cases/windows/close_other_tabs.rb`, lines 8 and 9), and `WindowRequests#open_in` (`carat/use_cases/plugins/window_requests.rb`, lines 124 and 125). Periodic quality advisory at 68eb750.
+- Why it matters: since `buffer-list` every file buffer stays listed until `:bd`, so the comments read as if a clean buffer left the list; `CloseWindow` and `CloseOtherWindows` already say so correctly.
+- Fix outline: say the file buffer stays listed, hidden when no other window shows it, as `close_window.rb` does. Queued as `buffer-list-structure` in `docs/queue.md`.
+
+## Five methods walk every window of every tab page
+
+- Where: `shown?` (line 128 at 68eb750), `windows_showing` (line 145), `focus_buffer` (line 164), and the private `modified_in_page` (line 229) in `carat/domain/tab_list.rb`, and `BufferList#close_windows_of` in `carat/domain/buffer_list.rb` (line 308). Periodic quality advisory at 68eb750.
+- Why it matters: a change to how windows are enumerated has to land five times.
+- Fix outline: answer each question through one walk, for example `shown?` from `windows_showing`, with the `test/` rows unchanged. Queued as `buffer-list-structure` in `docs/queue.md`.
+
+## DeleteBuffer and ListBuffers reach TabList through BufferList
+
+- Where: `DeleteBuffer` (`carat/use_cases/buffers/delete_buffer.rb`, line 31 at 68eb750) and `ListBuffers` (`carat/use_cases/buffers/list_buffers.rb`, lines 56 and 73) use `@buffers.tabs`, while `CloseTab`, `CloseOtherTabs`, and `Quit` take `tabs:` from `EditorAssembly`. Periodic quality advisory at 68eb750.
+- Why it matters: two routes to one collaborator leave no one clear way, and `test/adapters_assembly.rb` checks only the injected one.
+- Fix outline: inject `tabs:` into both as their siblings do, or document `BufferList#tabs` as the one route. Queued as `buffer-list-structure` in `docs/queue.md`.
+
+## StatusBar requires the plugin API it does not use
+
+- Where: `require_relative "../plugin_api"` on line 1 of `carat/adapters/status_bar.rb`. Quality advisory of `bars`.
+- Why it matters: `StatusBar` names no `PluginApi` constant, so the require is dead and suggests a dependency the adapter does not have.
+- Fix outline: drop the require and rebuild with `make dev-build`.
+
+## FramePresenter reaches through TabBar to ask whether the tab row shows
+
+- Where: `@tab_bar.buffers.tab_row?(state.tabs.tab_count)` in `carat/adapters/frame_presenter.rb` (line 157 at `bars`), while `ArrangeView` (`carat/use_cases/arrange_view.rb`, line 37) asks `BufferList#tab_row?` directly. Quality advisory of `bars`, raised twice.
+- Why it matters: the presenter reaches through a collaborator, and two routes to one rule can drift apart.
+- Fix outline: give `TabBar` a `showing?(tab_count)` predicate and call it once in the presenter, or hand the presenter the buffer list, with the presenter test rows unchanged.
+
+## The [No Name] text is defined in both bars
+
+- Where: `NO_NAME` in `carat/adapters/tab_bar.rb` (line 23 at `bars`) and again in `carat/adapters/status_bar.rb` (line 46). Quality advisory of `bars`, raised twice.
+- Why it matters: one user-visible text has two owners that can drift apart.
+- Fix outline: keep one constant, for example beside `Buffer#display_name`, and reference it from both bars.
+
+## PluginUi keeps each segment in three structures
+
+- Where: the `segments` Hash of `carat/domain/plugin_ui.rb` (lines 12 to 25 and `text_at`, line 61 at `bars`), keyed by the names `owners` already holds in order, beside `priorities`. Quality advisory of `bars`, raised twice.
+- Why it matters: the text is read only as `segments[owners[i]]`, so `remove_segment` has to keep three structures in step for one ordered list.
+- Fix outline: keep the texts in an array parallel to `owners` and `priorities`, drop the Hash, and update the tests that compare `segments`.
+
+## Four comments of bars break their file's wrap width
+
+- Where: `carat/domain/plugin_ui.rb` (line 7, 92 characters) and `carat/use_cases/plugins/ui_requests.rb` (line 15, 91 characters) run past the width; `carat/adapters/frame_presenter.rb` (line 63) and `carat/domain/highlight.rb` (line 6) end ragged. Quality advisory of `bars`.
+- Why it matters: style only; the rest of each file wraps comments at the surrounding width.
+- Fix outline: rewrap the four comments to the width of the lines around them, together with the nine-comment entry above.
+
+## The status bar's branch, diagnostics, and lsp slots have no writer
+
+- Where: `carat/domain/status_slots.rb` (line 8 at `bars`), the `BRANCH`, `DIAGNOSTICS`, and `LSP` paths of `carat/adapters/status_bar.rb`, and the three `StatusLineLsp` groups. Quality advisory of `bars`.
+- Why it matters: nothing in the code writes the branch, the diagnostics counts, or the lsp slot, so this code is reachable only from tests until the git and language-service changes fill it.
+- Fix outline: `lsp-diagnostics` in `docs/queue.md` fills the lsp slot and the counts; the change that shows the git branch fills `branch`. If either is dropped from the queue, remove its slot and paths with their test rows.
+
+## TabBar#icon_group scans every group name on each frame
+
+- Where: `icon_group` in `carat/adapters/tab_bar.rb` (line 136 at `bars`) calls `Highlight.token_id` over every syntax and icon name each time it draws the selected tab, while the `bars` design says the group is resolved once per name. Quality advisory of `bars`.
+- Why it matters: a linear scan per frame for a value that changes only with the buffer's icon, and the design text no longer matches the code.
+- Fix outline: resolve the group once per icon name (a small Hash, or an id kept beside `Buffer#icon`), or correct the design text, with the tab bar test rows unchanged.
+
+## The explorer keeps an alias of the file-icon groups
+
+- Where: `GROUPS = Carat::PluginApi::FileIcons::GROUPS` in `carat/plugins/explorer/file_icons.rb` (line 12 at `bars`), and `carat/plugins/explorer/plugin.rb` (line 455) repeating `group_of` as `FileIcons::GROUPS[icon].to_s`. Quality advisory of `bars`.
+- Why it matters: an alias kept for one caller and a copy of the API's lookup are two more places to change when the groups do.
+- Fix outline: call `PluginApi::FileIcons.group_of` in the explorer, drop the alias, and drop the `Carat::` prefix, which `PluginApi` resolves without.
+
+## Two comments still call the row under a window its status line
+
+- Where: `carat/domain/layout_node.rb` (line 8 at `bars`) describes the row under a column as its status line, and `carat/domain/buffer.rb` (line 145) says `display_name` is what the status line shows. Quality advisory of `bars`.
+- Why it matters: since `bars` the row under a window is a separator and the one status bar sits above the message row, so the comments describe a layout that is gone.
+- Fix outline: say the separator row, and the name the status bar shows.
+
+## StatusBar names a Symbol state and plugin indexes owners
+
+- Where: the `state` parameter of `lsp_group` in `carat/adapters/status_bar.rb` (line 122 at `bars`), beside methods whose `state` is the `EditorState`, and `@owners` (line 55), which holds plugin indexes while `PluginUi#owners` holds names. Quality advisory of `bars`.
+- Why it matters: one name for two kinds of value in one file misleads the reader.
+- Fix outline: rename them `lsp_state` and `@plugin_indexes`.

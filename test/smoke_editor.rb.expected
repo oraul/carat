@@ -14,13 +14,13 @@ ok   the editor exits with status 0 after :wq
 ok   the file holds the typed text
 ok   after :wq the output ends with the terminal's cursor restored and the alternate screen left
 ok   the editor shows the existing file message
-ok   x deletes a character and marks the buffer modified
+ok   x deletes a character and the status bar marks the buffer modified
 ok   quit is refused with E37
 ok   the editor exits with status 0 after :q!
 ok   the forced quit did not write
 ok   the editor drew its first frame for the windows check
 ok   vsplit draws the separator column
-ok   tabnew draws the tab line
+ok   tabnew draws the new buffer's tab
 ok   the editor exits with status 0 after closing the tab page, a window, and the last window
 ok   closing the last window restores the cursor and leaves the alternate screen
 ok   the editor drew its first frame for the slow window move

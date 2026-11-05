@@ -79,7 +79,7 @@ module EditorInsertTest
     h = editor("ab\n", false, true)
     h.type("ihello ")
     t.assert_equal("  1 hello ab", h.row(0), "typed text appears on the screen")
-    t.assert_equal("a.txt [+]", h.status_row[0, 9], "status line shows the buffer as modified")
+    t.assert_equal(" INSERT  a.txt \u{F111}", h.status_row[0, 16], "the status bar shows the mode and the buffer as modified")
 
     t.finish
   end

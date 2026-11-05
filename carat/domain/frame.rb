@@ -165,10 +165,17 @@ module Carat
       # comes first.
       #: (Integer, Integer, String, Integer, Integer) -> Integer
       def put_within(row, col, text, hl, limit)
+        put_from(row, col, text, 0, hl, limit)
+      end
+
+      # put_within of the text from byte from on, so a tail such as a
+      # path's last segment is written without cutting a string.
+      #: (Integer, Integer, String, Integer, Integer, Integer) -> Integer
+      def put_from(row, col, text, from, hl, limit)
         return col if row < 0 || row >= rows
         limit = cols if limit > cols
         bytes = text.bytesize
-        i = 0
+        i = from < 0 ? 0 : from
         while i < bytes
           raw = text.getbyte(i).to_i
           if raw < 0x80

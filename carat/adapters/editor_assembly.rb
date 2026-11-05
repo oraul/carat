@@ -12,6 +12,7 @@ require_relative "../domain/last_substitute"
 require_relative "../domain/search_prompt"
 require_relative "../domain/history"
 require_relative "../domain/plugin_ui"
+require_relative "../domain/status_slots"
 require_relative "../domain/registers"
 require_relative "../domain/last_change"
 require_relative "../domain/keymap"
@@ -166,6 +167,7 @@ module Carat
       attr_reader :plugin_ui #: Domain::PluginUi
       attr_reader :cache #: Domain::LineCache
       attr_reader :start_screen #: Domain::StartScreen
+      attr_reader :status_slots #: Domain::StatusSlots
       attr_reader :arrange_view #: UseCases::ArrangeView
       attr_reader :highlight_view #: UseCases::HighlightView
       attr_reader :actions #: UseCases::ActionTable
@@ -253,7 +255,8 @@ module Carat
         @input = Domain::InputState.new
         @plugin_ui = Domain::PluginUi.new
         @cache = Domain::LineCache.new
-        @arrange_view = UseCases::ArrangeView.new(cache: @cache)
+        @status_slots = Domain::StatusSlots.new
+        @arrange_view = UseCases::ArrangeView.new(cache: @cache, buffers: @buffers)
         @actions = UseCases::ActionTable.new
         @commands = UseCases::ExTable.new
         @runner = UseCases::ExecuteEx.new(commands: @commands)
@@ -369,7 +372,7 @@ module Carat
         @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt)
         @start_screen = Domain::StartScreen.new
         @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen)
-        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, start_screen: @start_screen)
+        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers))
         @screen_presenter = ScreenPresenter.new(terminal: terminal, theme: Domain::Themes.find(@state.options.theme, @state.options.background), colors: terminal.colors)
       end
 
