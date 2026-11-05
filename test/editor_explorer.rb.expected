@@ -28,7 +28,7 @@ ok   Ctrl-W Ctrl-W twice cycles back to the tree
 ok   Ctrl-W Ctrl-P goes back to the file window
 ok   Ctrl-W Ctrl-P from the file window returns to the tree
 ok   the root, the directories, then the files, the current file marked
-ok   the tree's status line shows its title and the width option is 30
+ok   the status bar shows the tree's title and the width option is 30
 ok   quitting the last file window ends the editor with the tree open
 ok   the side option puts the tree at the right
 ok   a disabled explorer opens nothing

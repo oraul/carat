@@ -119,9 +119,9 @@ module DomainTabListTest
     t.assert_equal(["x", true], [found.entry.char, found.entry.forward], "remember keeps the find")
     ui = D::PluginUi.new
     t.assert_equal([{}, false], [ui.segments, ui.prompting?], "no status segments and no prompt at first")
-    ui.segment("hello", "hi")
-    ui.segment("other", "x")
-    ui.segment("other", "")
+    ui.segment("hello", "hi", 10)
+    ui.segment("other", "x", 10)
+    ui.segment("other", "", 10)
     ui.open_prompt("hello", "rename", "Name: ")
     t.assert_equal([{ "hello" => "hi" }, true, "Name: ", "rename"], [ui.segments, ui.prompting?, ui.prompt, ui.prompt_id], "segments by plugin, empty text removes one, and an open prompt")
     ui.drop("other")

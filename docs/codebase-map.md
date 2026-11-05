@@ -237,14 +237,14 @@ Flow: a use case calls a `Buffer` primitive (`insert`, `delete`, `replace`, `set
 
 Files:
 
-- `carat/domain/buffer.rb`: `Buffer` record; the primitives `insert`, `delete`, `replace`, `set_lines`, `reload`; `begin_transaction`, `commit_transaction`, `transaction_open?`, `begin_history`, `start_at`, `transaction_mark`; `revert`, `reapply`, `revert_to`; `modified?`, `mark_saved`, `mark_unsaved`, `settle_saved`; `rename`, `detect_filetype`, `assign_filetype`; `from_text`, `to_text`, `line`, `line_count`, `text_of`, `lines_of`, `first_nonblank`, `indent_of`; `place_sign`, `clear_signs`, `sign_at`; `scratch?`.
+- `carat/domain/buffer.rb`: `Buffer` record; the primitives `insert`, `delete`, `replace`, `set_lines`, `reload`; `begin_transaction`, `commit_transaction`, `transaction_open?`, `begin_history`, `start_at`, `transaction_mark`; `revert`, `reapply`, `revert_to`; `modified?`, `mark_saved`, `mark_unsaved`, `settle_saved`; `rename`, `detect_filetype`, `assign_filetype`, `icon_of` and `icon` (the file's icon name), `name_start`; `from_text`, `to_text`, `line`, `line_count`, `text_of`, `lines_of`, `first_nonblank`, `indent_of`; `place_sign`, `clear_signs`, `sign_at`; `scratch?`.
 - `carat/domain/text_lines.rb`: `TextLines.split`, text cut at its newlines by bytes, so bytes that are not UTF-8 stay in their lines; used by `from_text`, `joined`, `RegisterEntry#lines`, `:registers`, and messages of several lines.
 - `carat/domain/line_splice.rb`: `LineSplice.apply` (per-line `insert` and `delete_at` up to `SMALL` lines, one tail move above) and `shift_marks`.
 - `carat/domain/change_record.rb`: `ChangeRecord` (buffer id, row, removed and inserted lines sharing the buffer's strings); `delta`.
 - `carat/domain/transaction.rb`: `Transaction` (records, cursor before and after, cause, merged row span, history flag); `add`, `seal`, `truncate`, `span`, `record_at`, `empty?`.
 - `carat/domain/buffer_feed.rb`: `BufferFeed`, the one sink of opens, closes, renames, and closed transactions, carrying the command's time and `undolevels`; `push`, `notice_at`, `count`, `clear`, `note`.
 - `carat/domain/buffer_notice.rb`: `BufferNotice`; `change?`.
-- `carat/domain/buffer_list.rb`: `BufferList` (listed buffers, their ids, the feed, keep or release policy: file buffers stay until `:bd`); `add`, `remove`, `release`, `load` (the empty buffer's number reused, the cursor remembered and restored), `for_path`, `with_id`, `scratch_for`, `hidden_modified`, `any_modified?`, `first_unsaved`, `bring`, `step_from`, `file_count`, `replacement_for`, `close_window`, `close_tab`, `close_windows_of`.
+- `carat/domain/buffer_list.rb`: `BufferList` (listed buffers, their ids, the feed, keep or release policy: file buffers stay until `:bd`); `add`, `remove`, `release`, `load` (the empty buffer's number reused, the cursor remembered and restored), `for_path`, `with_id`, `scratch_for`, `hidden_modified`, `any_modified?`, `first_unsaved`, `bring`, `step_from`, `file_count`, `tab_row?`, `replacement_for`, `close_window`, `close_tab`, `close_windows_of`.
 - `carat/use_cases/insert_text.rb`: `InsertText#call`.
 - `carat/use_cases/break_line.rb`: `BreakLine#call` (Enter).
 - `carat/use_cases/erase_character.rb`: `EraseCharacter#call(state, forward)` (Backspace, Delete).
@@ -330,7 +330,7 @@ Files:
 - `carat/domain/layout.rb`: `Layout`, a flat node table; `split`, `split_edge`, `close`, `leaves`, `leaf_of`, `neighbour`, `equalize`, `arrange`, `number_of`, `first_leaf`, `fixed_width?`.
 - `carat/domain/tab_page.rb`: `TabPage`; `window`, `window_count`, `focus`, `previous?`.
 - `carat/domain/tab_list.rb`: `TabList`; `tab`, `window`, `add_tab`, `remove_tab`, `next_tab`, `previous_tab`, `adopt`, `window_tab`, `total_windows`, `shown?`, `windows_showing`, `focus_buffer`, `modified_in_windows`, `clamp_cursors`.
-- `carat/use_cases/arrange_view.rb`: `ArrangeView#call`.
+- `carat/use_cases/arrange_view.rb`: `ArrangeView#call`; the top row goes to the buffer tabs when `BufferList#tab_row?`.
 - `carat/use_cases/windows/split_window.rb`: `SplitWindow#call`; every new window gets its id.
 - `carat/use_cases/windows/open_side_window.rb`: `OpenSideWindow#call`, a plugin's fixed-width side window.
 - `carat/use_cases/windows/close_window.rb`, `carat/use_cases/windows/close_other_windows.rb`: `call`.
@@ -410,26 +410,29 @@ Rules: CLAUDE.md Coding conventions (a new ex command is an `ExHandler` register
 
 What: paints the state into flat frames from decoded lines and writes only the changed cells to the terminal.
 
-Flow: `EditorAssembly#render` runs `ArrangeView` and `HighlightView`, then `FramePresenter#call(state)` paints every window of the current tab page (sign column, scratch title, status segments, the visual selection, the syntax tokens from `SyntaxCache#lookup`), the tab line, and the message row from decoded lines (`LineCache#fetch`, `DecodedLine.decode`) into one of two `Frame`s in turn, painting a row only when `PaintedRows` says what it shows changed and recording dirty rows and a full-width window's scroll; `ScreenPresenter#present(frame)` writes the changed runs of the dirty rows, scroll regions, or a full redraw, in one `TerminalPort#write`, each group in its `SgrTable` sequence. While the `StartScreen` shows, the presenter paints its `StartArt` frame over the current window after the windows.
+Flow: `EditorAssembly#render` runs `ArrangeView` and `HighlightView`, then `FramePresenter#call(state)` paints every window of the current tab page (sign column, the visual selection, the syntax tokens from `SyntaxCache#lookup`) with a `WinSeparator` row under each window above another, the buffer tabs row through `TabBar#paint` when `BufferList#tab_row?`, the one status bar through `StatusBar#paint`, and the message row from decoded lines (`LineCache#fetch`, `DecodedLine.decode`) into one of two `Frame`s in turn, painting a row only when `PaintedRows` says what it shows changed and recording dirty rows and a full-width window's scroll; `ScreenPresenter#present(frame)` writes the changed runs of the dirty rows, scroll regions, or a full redraw, in one `TerminalPort#write`, each group in its `SgrTable` sequence. While the `StartScreen` shows, the presenter paints its `StartArt` frame over the current window after the windows.
 
 Files:
 
 - `carat/adapters/frame_presenter.rb`: `FramePresenter#call`, `display_col`, `display_width`; reads the state only; a message of several lines over the bottom rows with the hit-enter line; the current window's cursor line lifted onto the cursor-line layer, and `shape_of` the mode.
+- `carat/adapters/status_bar.rb`: `StatusBar#paint`, the global bar: the mode pill, file, branch, diagnostics, plugin segments, `lsp` slot, file type, encoding, position, and percent, dropped by `PRIORITIES` when narrow without allocating; `mode_name`, `mode_group`, `lsp_group`.
+- `carat/adapters/tab_bar.rb`: `TabBar#paint`, a tab per listed file buffer with its icon and modified dot, overflow counts, and the tab-page numbers at the right end, without allocating.
+- `carat/domain/status_slots.rb`: `StatusSlots` record (`branch`, the diagnostics counts, `lsp_name`, `lsp_state`), empty until git and language services fill it; `diagnostics?`, `lsp?`.
 - `carat/adapters/painted_rows.rb`: `PaintedRows`, what every window row segment of a frame shows, its cursor-line layer included; `same?`, `store`, `invalidate`, `painted?`.
 - `carat/adapters/screen_presenter.rb`: `ScreenPresenter`; `enter`, `leave` (the terminal's own cursor shape back), `present` (`shape_sequence`: block, bar, underline); a cell code that is not a scalar value is written as U+FFFD; a theme that paints the background has Normal in effect at each clear and scroll.
-- `carat/domain/frame.rb`: `Frame`, cells in three flat integer arrays; `put`, `put_code`, `put_within`, `fill`, `blank`, `set_hl`, `lift`, `same_row?`, `dirty?`, `dirty_rows`, `reset_rows`, `mark_all_dirty`, `add_scroll`, `row_text`.
+- `carat/domain/frame.rb`: `Frame`, cells in three flat integer arrays; `put`, `put_code`, `put_within`, `put_from`, `fill`, `blank`, `set_hl`, `lift`, `same_row?`, `dirty?`, `dirty_rows`, `reset_rows`, `mark_all_dirty`, `add_scroll`, `row_text`.
 - `carat/domain/cell.rb`: `Cell`, a value view of one cell for tests.
 - `carat/domain/start_art.rb`: `StartArt`, the start screen's six frames and wordmark computed once from the gem's legend, Unicode in the theme's groups or ASCII in Normal; `from_plain`, `none`, `paint` (centred in a window, the wordmark alone when it does not fit).
 - `carat/domain/start_screen.rb`: `StartScreen` record (`showing`, `step`, `started`, `art`); `start`, `animating?`, `due?`, `advance`, `wait`, `dismiss`, `paint`; the input controller advances it on the clock and dismisses it on a key, the frame presenter paints it over the current window.
 - `carat/domain/utf8.rb`: `Utf8`; `size_at` (RFC 3629, every other byte one U+FFFD character, as `String#length` counts), `code_at`, `codes`, `scalar?`; decodes by walking bytes.
-- `carat/domain/display_width.rb`: `DisplayWidth`; `of`, `of_char`, `cell`, `code_of`, `column`, `col_at`, `private_use?`, `control?`; the private use areas are one cell wide.
+- `carat/domain/display_width.rb`: `DisplayWidth`; `of`, `of_char`, `text_width`, `cell`, `code_of`, `column`, `col_at`, `private_use?`, `control?`; the private use areas are one cell wide.
 - `carat/domain/decoded_line.rb`: `DecodedLine`, a line's code points and display columns; `decode`, `plain?`, `code`, `col`, `width`, `index_at`.
 - `carat/domain/identity_table.rb`: `IdentityTable`, keyed by object identity; `find`, `store`, `clear`.
 - `carat/domain/line_cache.rb`: `LineCache`, decoded lines of the visible rows in two generations, shared by `ArrangeView` and the presenter; `fetch`, `turn`, `holds?`.
 
-Tests: `test/domain_frame.rb`, `test/domain_line_cache.rb`, `test/adapters_frame_presenter.rb`, `test/adapters_dirty_rows.rb`, `test/adapters_screen_presenter.rb`, `test/editor_screen.rb`, `test/domain_utf8.rb` (hostile byte sequences through the decoder, display width, `TextLines`, and the plugin API's path segments), `test/editor_start_screen.rb` (every start screen frame, in color and plain, in its snapshot; the options, `NO_COLOR`, small windows, and the key that ends it), `test/adapters_status_bar.rb`, `test/adapters_tab_bar.rb`.
+Tests: `test/domain_frame.rb`, `test/domain_line_cache.rb`, `test/adapters_frame_presenter.rb`, `test/adapters_dirty_rows.rb`, `test/adapters_screen_presenter.rb`, `test/editor_screen.rb`, `test/domain_utf8.rb` (hostile byte sequences through the decoder, display width, `TextLines`, and the plugin API's path segments), `test/editor_start_screen.rb` (every start screen frame, in color and plain, in its snapshot; the options, `NO_COLOR`, small windows, and the key that ends it), `test/adapters_status_bar.rb` (each segment, each width, the pills and the `lsp` states), `test/adapters_tab_bar.rb` (tabs, overflow, tab-page numbers).
 
-Designs: `render-core` (all Decisions; Measured result), `escape-c1-control-codes` (all Decisions), `windows-and-splits` (Rendering), `visual-modes` (Rendering), `cursor-shapes` (all Decisions).
+Designs: `render-core` (all Decisions; Measured result), `escape-c1-control-codes` (all Decisions), `windows-and-splits` (Rendering), `visual-modes` (Rendering), `cursor-shapes` (all Decisions), `bars` (all Decisions).
 
 Rules: the presenters read the state only; `docs/architecture.md` section 8.2.
 
@@ -443,7 +446,7 @@ Flow: a buffer detects its `filetype` when made or renamed (`Filetype.detect`); 
 
 Files:
 
-- `carat/domain/highlight.rb`: `Highlight` group ids (41 UI groups, thirty syntax groups from `SYNTAX_FIRST`, thirteen file-icon groups from `ICON_FIRST`, with Neovim's `NAMES`, and each again from `CURSOR_LINE_LAYER` below `LIMIT` on the cursor line); `token_id`, `token?`, `name_of`, `base`.
+- `carat/domain/highlight.rb`: `Highlight` group ids (49 UI groups, the status bar's last, thirty syntax groups from `SYNTAX_FIRST`, thirteen file-icon groups from `ICON_FIRST`, with Neovim's `NAMES`, and each again from `CURSOR_LINE_LAYER` below `LIMIT` on the cursor line); `token_id`, `token?`, `name_of`, `base`.
 - `carat/domain/theme.rb`: `Theme`, per group 24-bit, 256-color, and 16-color colors and attributes; `fg`, `bg`, `fg256`, `bg256`, `fg16`, `bg16`, `attr`, `attr16`, `paints_background?`.
 - `carat/domain/themes.rb`: `Themes`, the palettes as colors per role and `GROUPS`, the roles of every group; `known?`, `background?`, `canonical`, `find`, `palette`, `from_palette` (the cursor-line layer included; `one_dark`, `one_light`, `dark_plus`, `light_plus`, aliases `carat-dark`, `carat-light`).
 - `carat/domain/color_depth.rb`: `ColorDepth.detect` from `COLORTERM` and `TERM`.
@@ -478,11 +481,11 @@ Flow: `EditorAssembly` registers `Plugins::Registry.all` with `PluginHost#regist
 
 Files:
 
-- `carat/plugin_api.rb`: `Carat::PluginApi` (`VERSION` 2.0, `EVENTS`, `OPTION_TYPES`, `SIDES`), the values `Manifest`, `Event`, `Context`, `Command`, `Edit`, `Response`, `WindowResponse`, `TextResponse`, `BufferView`, `FileInfo`, `Input`, the path functions `Paths` (`normalize`, `join`, `dirname`, `basename`, `relative`, `inside?`), the `Host` base class (one method per request: `read_buffer`, `edit_buffer`, `open_scratch`, `open_in_split`, `run_ex`, `list_dir`, `make_file`, `prompt`, `syntax_group`, and the rest), and the `Plugin` base class (`manifest`, `activate`, `deactivate`, `on_event`, `on_action`, `on_command`, `on_input`, `tokenize`).
+- `carat/plugin_api.rb`: `Carat::PluginApi` (`VERSION` 2.2, `STATUS_PRIORITY`, `PRIORITY_MAX`, `EVENTS`, `OPTION_TYPES`, `SIDES`), the values `Manifest`, `Event`, `Context`, `Command`, `Edit`, `Response`, `WindowResponse`, `TextResponse`, `BufferView`, `FileInfo`, `Input`, the path functions `Paths` (`normalize`, `join`, `dirname`, `basename`, `relative`, `inside?`), the file-icon table `FileIcons` (`file_type`, `group_of`, shared by the explorer and the buffer tabs), the `Host` base class (one method per request: `read_buffer`, `edit_buffer`, `open_scratch`, `open_in_split`, `run_ex`, `list_dir`, `make_file`, `prompt`, `syntax_group`, `set_segment`, and the rest), and the `Plugin` base class (`manifest`, `activate`, `deactivate`, `on_event`, `on_action`, `on_command`, `on_input`, `tokenize`).
 - `carat/domain/manifest_check.rb`: `ManifestCheck.check` and its `check_*` rules (API version, shapes, actions, commands, events, bindings, options, filetypes).
 - `carat/domain/path_policy.rb`: `PathPolicy`; `create_problem`, `rename_problem`, `inside?`, `shown`.
 - `carat/domain/path_info.rb`: `PathInfo` value `FilePort#stat` returns (`exists`, `size`, `mtime`, `directory`, `symlink`, `regular`); `missing`, `real_directory?`.
-- `carat/domain/plugin_ui.rb`: `PluginUi`, status segments and the open prompt; `open_prompt`, `close_prompt`, `prompting?`, `segment`, `drop`.
+- `carat/domain/plugin_ui.rb`: `PluginUi`, status segments with their order (`owners`) and `priorities`, and the open prompt; `open_prompt`, `close_prompt`, `prompting?`, `segment`, `text_at`, `remove_segment`, `drop`.
 - `carat/domain/sign_layer.rb`: `SignLayer`, one plugin's signs in one buffer, moved with the lines; `place`, `glyph_at`.
 - `carat/use_cases/plugins/plugin_host.rb`: `PluginHost`, the facade the core calls; `register`, `activate_all`, `action`, `command?`, `command`, `answer`, `observe`, `saved`, `resized`, `option`, `enabled?`, `errors`.
 - `carat/use_cases/plugins/plugin_registry.rb`: `PluginRegistry`; `register`, `activate_all`, `deactivate_all`, `disable` (cleanup), `refusal`, `enter`, `leave`, `depth`, `busy?`, `cause`, `owner_of_command`.
@@ -495,7 +498,7 @@ Files:
 - `carat/use_cases/plugins/buffer_requests.rb`: `BufferRequests`; `read_buffer`, `edit_buffer` (validated item by item, one transaction), `move_cursor`, `place_sign`, `clear_signs`.
 - `carat/use_cases/plugins/window_requests.rb`: `WindowRequests`; `open_scratch`, `set_scratch_lines`, `close_scratch`, `focus_window`, `open_file`, `open_in_split`, `open_in_tab`, `editing_window`, `scratch_window`.
 - `carat/use_cases/plugins/file_requests.rb`: `FileRequests`; `list_dir`, `stat`, `make_file`, `make_dir`, `rename_path`, `delete_path`.
-- `carat/use_cases/plugins/ui_requests.rb`: `UiRequests`; `message`, `set_status`, `prompt`, `icon`, `syntax_group`, `option`, `working_directory`, `run_ex`.
+- `carat/use_cases/plugins/ui_requests.rb`: `UiRequests`; `message`, `set_status`, `set_segment`, `prompt`, `icon`, `syntax_group`, `option`, `working_directory`, `run_ex`.
 - `carat/use_cases/plugins/boundary.rb`: `Boundary.copied_lines`, the copies of strings crossing the boundary.
 - `carat/use_cases/concerns/guarded.rb`: `Guarded#guarded`, the one guarded path into a plugin.
 - `carat/use_cases/actions/plugin_action_handler.rb`: `PluginActionHandler.register`.
@@ -520,7 +523,7 @@ Files:
 - `carat/plugins/explorer/plugin.rb`: `Explorer::Plugin`; `manifest`, `activate`, `deactivate`, `on_event`, `on_action`, `on_command`, `on_input`, `tokenize` (the icon colors of the tree's `explorer` syntax).
 - `carat/plugins/explorer/tree.rb`: `Tree`; `build`, `lines`, `expand`, `collapse`, `toggle`, `reroot`, `reveal`, `mark`, `moved`, `toggle_hidden`, `at`, `row_of`, `parent_row`, `icon_name`.
 - `carat/plugins/explorer/node.rb`: `Node` record; `root?`.
-- `carat/plugins/explorer/file_icons.rb`: `FileIcons`; `name_for`, `file_type`, `GROUPS` (each icon's file-icon group).
+- `carat/plugins/explorer/file_icons.rb`: `FileIcons`; `name_for`, the file case from `PluginApi::FileIcons`, `GROUPS` (each icon's file-icon group).
 - `carat/domain/icons.rb`: `Icons`, the icon table per set and the `icons` option; `glyph`, `table`, `set?`.
 
 Tests: `test/domain_icons.rb`, `test/plugins_explorer.rb` (the tree over a fake host), `test/editor_explorer.rb` (every key of the file tree).

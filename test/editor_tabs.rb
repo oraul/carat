@@ -130,29 +130,31 @@ module EditorTabsTest
     h.type("<C-w>j:tabnew<CR>gT")
     t.assert_equal(2, h.window_index, "the first tab page remembers its current window")
 
-    # The tab line.
+    # The buffer tabs row: a tab per listed file, the current window's
+    # selected, and the tab-page numbers at its right end.
     h = session(":tabe b.txt<CR>")
-    t.assert_equal(" 1 a.txt  2 b.txt", h.row(0), "the tab line lists the tab pages with their files")
-    t.assert_equal([D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE_FILL], [h.frame.cell(0, 0).hl, h.frame.cell(0, 9).hl, h.frame.cell(0, 18).hl], "the current label is selected, the rest filled")
-    t.assert_equal(D::Highlight::TAB_LINE_FILL, h.frame.cell(0, 79).hl, "the fill reaches the right edge")
-    t.assert_equal([1, 0, 21, 80], h.windows[0][0, 4], "the window starts under the tab line with one row less")
-    t.assert_equal("b.txt", h.row(22)[0, 5], "the status line is above the message row")
-    t.assert_equal([1, 4], [h.frame.cursor_row, h.frame.cursor_col], "the cursor is under the tab line")
+    row = h.row(0)
+    t.assert_equal([" \u{F016} a.txt    \u{F016} b.txt", " 1  2"], [row[0, 19], row[-5, 5]], "the tabs row lists the files and numbers the tab pages at its right end")
+    t.assert_equal([D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE_FILL, D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_SELECTED], [h.frame.cell(0, 0).hl, h.frame.cell(0, 11).hl, h.frame.cell(0, 30).hl, h.frame.cell(0, 75).hl, h.frame.cell(0, 78).hl], "the current file and tab page selected, the rest plain or filled")
+    t.assert_equal([1, 0, 21, 80], h.windows[0][0, 4], "the window starts under the tabs row with one row less")
+    t.assert_equal("b.txt", h.row(22)[9, 5], "the status bar is above the message row")
+    t.assert_equal([1, 4], [h.frame.cursor_row, h.frame.cursor_col], "the cursor is under the tabs row")
     h.type("gtx")
-    t.assert_equal(" 1 a.txt [+]  2 b.txt", h.row(0), "a modified buffer is marked in its label")
-    t.assert_equal([D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE], [h.frame.cell(0, 0).hl, h.frame.cell(0, 13).hl], "the first label is now selected")
+    t.assert_equal(" \u{F016} a.txt \u{F111}  \u{F016} b.txt", h.row(0)[0, 19], "a modified buffer is marked in its tab")
+    t.assert_equal([D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_SELECTED], [h.frame.cell(0, 0).hl, h.frame.cell(0, 11).hl, h.frame.cell(0, 75).hl], "the first file and tab page are now selected")
     h = session(":tabnew<CR>")
-    t.assert_equal(" 1 a.txt  2 [No Name]", h.row(0), "an unnamed buffer shows as [No Name]")
+    t.assert_equal([" \u{F016} [No Name]", " 1  2"], [h.row(0)[11, 12], h.row(0)[-5, 5]], "an unnamed buffer shows as [No Name]")
     h.type(":tabclose<CR>")
-    t.assert_equal("  1 one", h.row(0), "one tab page has no tab line")
-    t.assert_equal([0, 0, 22, 80], h.windows[0][0, 4], "the window takes the top row again")
+    t.assert_equal([" \u{F016} [No Name]", "]"], [h.row(0)[11, 12], h.row(0)[-1, 1]], "the listed empty buffer keeps the row, without tab-page numbers")
+    h = session("")
+    t.assert_equal(["  1 one", [0, 0, 22, 80]], [h.row(0), h.windows[0][0, 4]], "one file in one tab page has no tabs row")
     files = Carat::Doubles::MemoryFiles.new
     files.put("dir/sub/deep.txt", "d\n")
     h = Carat::Doubles::EditorHarness.default(files, 24, 80)
     h.open("dir/sub/deep.txt")
     h.type(":tabnew<CR>")
-    t.assert_equal(" 1 deep.txt  2 [No Name]", h.row(0), "a label shows the file name without its directory")
-    t.assert_equal("dir/sub/deep.txt", h.assembly.tabs.tab_at(0).window.buffer.path, "the status line path is untouched")
+    t.assert_equal(" \u{F016} deep.txt ", h.row(0)[0, 12], "a tab shows the file name without its directory")
+    t.assert_equal("dir/sub/deep.txt", h.assembly.tabs.tab_at(0).window.buffer.path, "the path is untouched")
 
     t.finish
   end

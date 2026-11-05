@@ -26,5 +26,5 @@ ok   bar cursor in insert mode
 ok   indicator cleared in normal mode
 ok   block cursor in normal mode
 ok   typed text appears on the screen
-ok   status line shows the buffer as modified
+ok   the status bar shows the mode and the buffer as modified
 editor_insert: 29 passed, 0 failed

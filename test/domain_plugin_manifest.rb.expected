@@ -1,6 +1,6 @@
 ok   the hello manifest breaks no rule
 ok   symbols for events and types are read as names
-ok   the host's own version is accepted
+ok   the host's own version and 2.1 are accepted
 ok   an older minor is accepted
 ok   a newer minor is refused
 ok   a newer major is refused with both versions

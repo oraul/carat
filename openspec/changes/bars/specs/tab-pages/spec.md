@@ -14,5 +14,5 @@ When two or more tab pages exist, the top row SHALL show the buffer tabs and, at
 - **THEN** row 0 shows a tab for "a.txt" and a selected tab for "b.txt", ends with " 1  2 " with " 2 " selected, and the first text row of the window is row 1
 
 #### Scenario: Back to one tab page
-- **WHEN** ":tabnew" then ":tabclose" are run with only "a.txt" listed
-- **THEN** row 0 is the first text row of the window
+- **WHEN** ":tabnew" then ":tabclose" are run while "a.txt" is shown
+- **THEN** row 0 still shows the tabs of "a.txt" and the listed empty buffer, with no tab-page numbers

@@ -136,11 +136,12 @@ module EditorSyntaxTest
     h.type(":set bogus<CR>")
     t.assert_equal("E518: Unknown option: bogus", h.message, "an unknown option")
     h.type(":e notes.txt<CR>")
-    t.assert_equal(["", ""], [spans(h, 0), h.buffer.filetype], "a text file is plain")
+    # With a second file listed the buffer tabs take row 0.
+    t.assert_equal(["", ""], [spans(h, 1), h.buffer.filetype], "a text file is plain")
     h.type(":se ft=ruby<CR>")
-    t.assert_equal(["Define:def Function:go", "ruby", "ruby"], [spans(h, 0), h.buffer.filetype, h.buffer.syntax], ":se ft=ruby highlights it and sets the syntax")
+    t.assert_equal(["Define:def Function:go", "ruby", "ruby"], [spans(h, 1), h.buffer.filetype, h.buffer.syntax], ":se ft=ruby highlights it and sets the syntax")
     h.type(":set ft= syn?<CR>")
-    t.assert_equal(["", "  syntax="], [spans(h, 0), h.message], "several arguments: the filetype emptied, then the syntax shown")
+    t.assert_equal(["", "  syntax="], [spans(h, 1), h.message], "several arguments: the filetype emptied, then the syntax shown")
 
     # A configuration that disables the plugin leaves Ruby plain.
     files = Carat::Doubles::MemoryFiles.new

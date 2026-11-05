@@ -21,6 +21,7 @@ ok   several lines with illegal bytes
 ok   windows endings with an illegal byte
 ok   windows endings are found after an illegal byte
 ok   a shebang that is not UTF-8 names no filetype
+ok   the icon name follows the file name, and the name starts after the last slash
 ok   text with illegal bytes and a newline is inserted by bytes
 ok   loaded buffer is unmodified
 ok   loaded buffer keeps its path
@@ -90,4 +91,4 @@ ok   a scratch buffer is named by its title
 ok   a file buffer is named by its path
 ok   no signs at first
 ok   a sign is placed on its row
-domain_buffer: 92 passed, 0 failed
+domain_buffer: 93 passed, 0 failed

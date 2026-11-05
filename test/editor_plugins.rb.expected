@@ -9,9 +9,9 @@ ok   a count reaches the plugin
 ok   a register reaches the plugin
 ok   an unknown plugin action reports it
 ok   greeting sets the status segment
-ok   the segment shows on the status line
-ok   the current window shows the segment
-ok   the other window does not
+ok   the segment shows on the status bar before the encoding
+ok   the bar shows the segment
+ok   one bar under both windows shows it once
 ok   a window command clears the message
 ok   a disabled plugin's binding does nothing
 ok   a disabled plugin's command is unknown
@@ -42,7 +42,7 @@ ok   open a file in the file window, id 1
 ok   focusing a missing window fails
 ok   the side window shows the plugin's lines
 ok   a plugin that declares no filetype of its name leaves its scratch buffer without syntax
-ok   its status line shows the title
+ok   the status bar shows its title
 ok   j falls through to the mode's keymap and Enter runs the plugin's action
 ok   the scratch keymap does not apply in the file window
 ok   back in the side window

@@ -54,7 +54,11 @@ ok   and the row into the buffer
 ok   message shows plain text
 ok   message shows an error
 ok   set_status keeps the segment by plugin name
-ok   empty text removes it
+ok   set_status gives the segment priority 10
+ok   set_segment replaces the text and the priority in place
+ok   a priority above 99 is refused and changes nothing
+ok   a negative priority is refused
+ok   empty text removes it with its place and priority
 ok   run_ex runs the command and returns its outcome
 ok   a failed ex command is a failed response
 ok   icon reads the nerd set by default
@@ -87,4 +91,4 @@ ok   a raise in an event disables the plugin and keeps the edit
 ok   a disabled plugin's requests are refused
 ok   reads, stats, and icons too
 ok   a disabled plugin's segment is dropped when it is disabled
-use_cases_plugins: 89 passed, 0 failed
+use_cases_plugins: 93 passed, 0 failed

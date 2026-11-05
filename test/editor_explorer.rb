@@ -140,7 +140,7 @@ module EditorExplorerTest
 
     h = session(" e")
     t.assert_equal(TREE, tree_lines(h), "the root, the directories, then the files, the current file marked")
-    t.assert_equal(["explorer", "30"], [h.status_row[0, 8], h.plugins.option("explorer", "width")], "the tree's status line shows its title and the width option is 30")
+    t.assert_equal(["explorer", "30"], [h.status_row[9, 8], h.plugins.option("explorer", "width")], "the status bar shows the tree's title and the width option is 30")
     h.type("<C-w>l:q<CR>")
     t.assert_equal(true, h.quit?, "quitting the last file window ends the editor with the tree open")
 

@@ -153,7 +153,7 @@ module SmokeEditorTest
     mark = out.bytesize
     writer.write("x")
     settle(reader, out, 0.5)
-    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("[+]"), "x deletes a character and marks the buffer modified")
+    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("\u{F111}".b), "x deletes a character and the status bar marks the buffer modified")
     writer.write("A!")
     settle(reader, out, 0.5)
     writer.write("\e")
@@ -180,7 +180,7 @@ module SmokeEditorTest
     mark = out.bytesize
     writer.write(":tabnew\r")
     settle(reader, out, 0.5)
-    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?(" 2 [No Name] "), "tabnew draws the tab line")
+    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("[No Name] ".b), "tabnew draws the new buffer's tab")
     writer.write(":q\r")
     settle(reader, out, 0.5)
     writer.write(":q\r")

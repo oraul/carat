@@ -1,3 +1,13 @@
-ok   an empty line has no characters
-ok   a word counts its characters
-adapters_tab_bar: 2 passed, 0 failed
+ok   a tab per file with its icon and modified dot
+ok   an unnamed buffer
+ok   a scratch buffer has no tab
+ok   the tab-page numbers at the right end
+ok   tab pages without a second file
+ok   the first current
+ok   the sixth current
+ok   the last current
+ok   a wider row starts its run as early as the current tab allows
+ok   a row narrower than the counts still shows the current tab, cut
+ok   selected tab, ruby icon, plain tab and its icon, fill, and the tab-page numbers
+ok   the counts are plain
+adapters_tab_bar: 12 passed, 0 failed

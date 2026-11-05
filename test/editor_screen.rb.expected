@@ -1,5 +1,5 @@
 ok   three lines with numbers and a tilde
-ok   status line names the file
+ok   the status bar shows the mode and the file, cut at 12 columns
 ok   message row shows the opened message
 ok   output begins with the alternate screen
 ok   first frame paints row 1
@@ -13,9 +13,9 @@ ok   insert mode switches to the bar cursor
 ok   message row shows insert
 ok   normal mode switches back to the block cursor
 ok   frame has 10 rows after resizing
-ok   status line moved to row 8
+ok   the status bar moved to row 8
 ok   resize repaints in full
-ok   status line on row 22 at 24 rows
+ok   the status bar on row 22 at 24 rows
 ok   G shows the last line at the bottom of the window
 ok   position is Bot
 ok   gg scrolls back to the top
