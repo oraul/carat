@@ -70,7 +70,7 @@ module Carat
 
       # The six frames and the wordmark, in ASCII and Normal when plain.
       #: (bool) -> StartArt
-      def self.build(plain)
+      def self.from_plain(plain)
         size = HEIGHT * WIDTH
         codes = Array.new(FRAMES * size, 0)
         hls = Array.new(FRAMES * size, Highlight::NORMAL)
@@ -125,13 +125,13 @@ module Carat
         end
       end
 
-      # ASCII text from index, its spaces left blank.
+      # ASCII text from index, its spaces in the text's group too, so a
+      # run of text is written in one group.
       #: (Array[Integer], Array[Integer], Integer, String, Integer) -> void
       def self.write(codes, hls, index, text, hl)
         i = 0
         while i < text.bytesize
-          byte = text.getbyte(i).to_i
-          StartArt.place(codes, hls, index + i, byte, hl) unless byte == 32
+          StartArt.place(codes, hls, index + i, text.getbyte(i).to_i, hl)
           i += 1
         end
       end

@@ -937,3 +937,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the private `clamp(state, row, col)` in `carat/use_cases/operate.rb` (line 202 at `theme-tokens`) and `carat/use_cases/repeat_last.rb` (line 117), each `EditorState#clamp_col` in `carat/domain/editor_state.rb` (line 94) line for line. Periodic quality at 4c65f4e.
 - Why it matters: three copies of one clamp must change together, and a fix to the domain's misses the two use cases.
 - Fix outline: call `state.clamp_col(row, col)` at the six call sites and delete both private methods. Listed in the queue's backlog item.
+
+## NO_COLOR reaches only the start screen
+
+- Where: `TerminalPort#no_color?` (`carat/ports/terminal_port.rb`), read only by `EditorAssembly#open` for the start screen's glyphs (`start-screen`); `SgrTable.from_theme` and `ScreenPresenter` color every other cell from the theme.
+- Why it matters: the `NO_COLOR` convention asks a program to add no ANSI color at all, so a user who sets it still gets syntax, status line, and message colors.
+- Fix outline: a color depth of none in `Domain::ColorDepth` chosen by `AnsiTerminal` when `NO_COLOR` is set, for which `SgrTable.sequence` emits attributes only (bold, reverse, underline), with rows in `test/adapters_screen_presenter.rb` and `docs/compatibility.md`.

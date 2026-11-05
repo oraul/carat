@@ -105,7 +105,7 @@ Rules: CLAUDE.md Coding conventions (key bindings are never hard-coded; regenera
 
 What: builds every record and collaborator once and wires them; the editor state the use cases share.
 
-Flow: `bin/carat.rb` checks the arguments and the terminal, installs `Signals`, builds the drivers and the gateway, and hands them to `EditorAssembly.new`; `EditorAssembly#open` opens the file; `MainLoop#run` calls `EditorAssembly#render` and `InputController#pump`. Every handler returns an `Outcome`, shown through `Reporting#report`.
+Flow: `bin/carat.rb` checks the arguments and the terminal, installs `Signals`, builds the drivers and the gateway, and hands them to `EditorAssembly.new`; `EditorAssembly#open` opens the file, or starts the `StartScreen` for no file or a directory; `MainLoop#run` calls `EditorAssembly#render` and `InputController#pump`. Every handler returns an `Outcome`, shown through `Reporting#report`.
 
 Files:
 
@@ -134,7 +134,7 @@ Flow: `InputController#pump` reads bytes, `KeyDecoder#feed` turns them into key 
 Files:
 
 - `carat/adapters/key_decoder.rb`: `KeyDecoder`; `feed`, `flush`, `pending?`, `encode`.
-- `carat/adapters/input_controller.rb`: `InputController`; `pump` (the `timeoutlen` wait from the options), `decoder`.
+- `carat/adapters/input_controller.rb`: `InputController`; `pump` (the `timeoutlen` wait from the options; the start screen's next frame, `tick`, and its dismissal on a key), `decoder`.
 - `carat/domain/key.rb`: `Key` codes; `printable?`, `alt?`, `base`, `char`, `TIMEOUT`.
 - `carat/domain/key_notation.rb`: `KeyNotation`; `parse`, `resolve`, `format`, `control_code`, `special_name`; Vim notation such as `<C-w>`.
 - `carat/domain/mode.rb`: `Mode`; `from_name`, `name_of`, `visual?`, `visual_kind`, `for_kind`.
@@ -404,7 +404,7 @@ Rules: CLAUDE.md Coding conventions (a new ex command is an `ExHandler` register
 
 What: paints the state into flat frames from decoded lines and writes only the changed cells to the terminal.
 
-Flow: `EditorAssembly#render` runs `ArrangeView` and `HighlightView`, then `FramePresenter#call(state)` paints every window of the current tab page (sign column, scratch title, status segments, the visual selection, the syntax tokens from `SyntaxCache#lookup`), the tab line, and the message row from decoded lines (`LineCache#fetch`, `DecodedLine.decode`) into one of two `Frame`s in turn, painting a row only when `PaintedRows` says what it shows changed and recording dirty rows and a full-width window's scroll; `ScreenPresenter#present(frame)` writes the changed runs of the dirty rows, scroll regions, or a full redraw, in one `TerminalPort#write`, each group in its `SgrTable` sequence.
+Flow: `EditorAssembly#render` runs `ArrangeView` and `HighlightView`, then `FramePresenter#call(state)` paints every window of the current tab page (sign column, scratch title, status segments, the visual selection, the syntax tokens from `SyntaxCache#lookup`), the tab line, and the message row from decoded lines (`LineCache#fetch`, `DecodedLine.decode`) into one of two `Frame`s in turn, painting a row only when `PaintedRows` says what it shows changed and recording dirty rows and a full-width window's scroll; `ScreenPresenter#present(frame)` writes the changed runs of the dirty rows, scroll regions, or a full redraw, in one `TerminalPort#write`, each group in its `SgrTable` sequence. While the `StartScreen` shows, the presenter paints its `StartArt` frame over the current window after the windows.
 
 Files:
 
@@ -413,13 +413,15 @@ Files:
 - `carat/adapters/screen_presenter.rb`: `ScreenPresenter`; `enter`, `leave`, `present`; a cell code that is not a scalar value is written as U+FFFD; a theme that paints the background has Normal in effect at each clear and scroll.
 - `carat/domain/frame.rb`: `Frame`, cells in three flat integer arrays; `put`, `put_code`, `put_within`, `fill`, `blank`, `set_hl`, `same_row?`, `dirty?`, `dirty_rows`, `reset_rows`, `mark_all_dirty`, `add_scroll`, `row_text`.
 - `carat/domain/cell.rb`: `Cell`, a value view of one cell for tests.
+- `carat/domain/start_art.rb`: `StartArt`, the start screen's six frames and wordmark computed once from the gem's legend, Unicode in the theme's groups or ASCII in Normal; `from_plain`, `none`, `paint` (centred in a window, the wordmark alone when it does not fit).
+- `carat/domain/start_screen.rb`: `StartScreen` record (`showing`, `step`, `started`, `art`); `start`, `animating?`, `due?`, `advance`, `wait`, `dismiss`, `paint`; the input controller advances it on the clock and dismisses it on a key, the frame presenter paints it over the current window.
 - `carat/domain/utf8.rb`: `Utf8`; `size_at` (RFC 3629, every other byte one U+FFFD character, as `String#length` counts), `code_at`, `codes`, `scalar?`; decodes by walking bytes.
 - `carat/domain/display_width.rb`: `DisplayWidth`; `of`, `of_char`, `cell`, `code_of`, `column`, `col_at`, `private_use?`, `control?`; the private use areas are one cell wide.
 - `carat/domain/decoded_line.rb`: `DecodedLine`, a line's code points and display columns; `decode`, `plain?`, `code`, `col`, `width`, `index_at`.
 - `carat/domain/identity_table.rb`: `IdentityTable`, keyed by object identity; `find`, `store`, `clear`.
 - `carat/domain/line_cache.rb`: `LineCache`, decoded lines of the visible rows in two generations, shared by `ArrangeView` and the presenter; `fetch`, `turn`, `holds?`.
 
-Tests: `test/domain_frame.rb`, `test/domain_line_cache.rb`, `test/adapters_frame_presenter.rb`, `test/adapters_dirty_rows.rb`, `test/adapters_screen_presenter.rb`, `test/editor_screen.rb`, `test/domain_utf8.rb` (hostile byte sequences through the decoder, display width, `TextLines`, and the plugin API's path segments), `test/editor_start_screen.rb`.
+Tests: `test/domain_frame.rb`, `test/domain_line_cache.rb`, `test/adapters_frame_presenter.rb`, `test/adapters_dirty_rows.rb`, `test/adapters_screen_presenter.rb`, `test/editor_screen.rb`, `test/domain_utf8.rb` (hostile byte sequences through the decoder, display width, `TextLines`, and the plugin API's path segments), `test/editor_start_screen.rb` (every start screen frame, in color and plain, in its snapshot; the options, `NO_COLOR`, small windows, and the key that ends it).
 
 Designs: `render-core` (all Decisions; Measured result), `escape-c1-control-codes` (all Decisions), `windows-and-splits` (Rendering), `visual-modes` (Rendering).
 
@@ -531,12 +533,12 @@ Flow: each port is a class whose methods raise `NotImplementedError`; drivers su
 
 Files:
 
-- `carat/ports/terminal_port.rb`: `TerminalPort`; `size`, `read_key`, `write`, `colors`, `enter`, `leave`.
+- `carat/ports/terminal_port.rb`: `TerminalPort`; `size`, `read_key`, `write`, `colors`, `no_color?`, `enter`, `leave`.
 - `carat/ports/clock_port.rb`: `ClockPort`; `now`, `sleep`.
 - `carat/ports/file_port.rb`: `FilePort`; `read` (bounded, regular files only), `write`, `exist?`, `list`, `stat` (a `Domain::PathInfo`), `real_path`, `mkdir`, `rename`, `delete`, `cwd`, `home`.
 - `carat/ports/config_port.rb`: `ConfigPort#load`, the `Domain::Config` of every configuration file.
 - `carat/ports/signal_port.rb`: `SignalPort`; `install`, `terminated?`, `resized?`, `acknowledge_resize`.
-- `carat/drivers/ansi_terminal.rb`: `AnsiTerminal`; reads `COLORTERM` and `TERM` once for `colors`, the only environment read.
+- `carat/drivers/ansi_terminal.rb`: `AnsiTerminal`; reads `COLORTERM` and `TERM` once for `colors` and `NO_COLOR` for `no_color?`, the only environment reads.
 - `carat/drivers/disk_files.rb`: `DiskFiles`, the `FilePort` driver; `read` opens with `O_NONBLOCK` and checks the opened file.
 - `carat/drivers/monotonic_clock.rb`: `MonotonicClock`.
 - `carat/drivers/signals.rb`: `Signals`; INT and TERM terminate, WINCH resizes, flags only.
@@ -559,7 +561,7 @@ Files:
 
 - `carat/testing.rb`: `Carat::Testing`; `assert_equal`, `assert_true`, `assert_raises`, `table`, `finish`.
 - `carat/test_support.rb`: the require graph of tests and the benchmark, `carat.rb` and the doubles.
-- `carat/doubles/fake_terminal.rb`: `FakeTerminal` (256 colors); `push`, `writes`, `last_write`, `read_key`, `write`.
+- `carat/doubles/fake_terminal.rb`: `FakeTerminal` (256 colors, `no_color=`); `push`, `writes`, `last_write`, `read_key`, `write`.
 - `carat/doubles/manual_clock.rb`: `ManualClock`; `now`, `advance`, `sleep`.
 - `carat/doubles/memory_files.rb`: `MemoryFiles`, files and directories under `/project` and a home `/home/user`, both movable; `put`, `get`, `link`, `link_to`, `special`, `move_to`, `move_home`, and the `FilePort` methods.
 - `carat/doubles/fixed_config.rb`: `FixedConfig`; `defaults`, `with(text)`, `with_user`, `load`.

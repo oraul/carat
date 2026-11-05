@@ -100,11 +100,11 @@ module EditorStartScreenTest
       [h.frame.hl_at(13, 35), h.frame.hl_at(3, 44), h.frame.hl_at(4, 36), h.frame.hl_at(6, 32), h.frame.hl_at(6, 46), h.frame.hl_at(15, 30), h.frame.hl_at(15, 39)],
       "wordmark, sparkle, table, crown, hint key, and hint text in their groups")
     t.assert_equal([D::StartArt::SPARKLE, 0x2588, 0x25E2], [h.frame.code_at(3, 44), h.frame.code_at(4, 36), h.frame.code_at(4, 35)], "the sparkle, a facet, and an edge")
-    art = D::StartArt.build(false)
+    art = D::StartArt.from_plain(false)
     wide = []
     art.codes.each { |code| wide << code if code != 0 && D::DisplayWidth.of(code) != 1 }
     t.assert_equal([], wide, "every glyph takes one cell")
-    plain = D::StartArt.build(true)
+    plain = D::StartArt.from_plain(true)
     t.assert_equal([D::StartArt::FRAMES * D::StartArt::HEIGHT * D::StartArt::WIDTH, 9], [plain.codes.length, plain.mark_codes.length], "six frames of the canvas and the wordmark, computed once")
 
     # The status line and the message row stay as they are.

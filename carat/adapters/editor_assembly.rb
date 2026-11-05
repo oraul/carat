@@ -377,7 +377,7 @@ module Carat
       def open(path)
         options = @state.options
         if options.startscreen && (path.empty? || @files.stat(path).directory)
-          @start_screen.start(@clock.now, !options.reducedmotion, Domain::StartArt.build(@terminal.no_color?))
+          @start_screen.start(@clock.now, !options.reducedmotion, Domain::StartArt.from_plain(@terminal.no_color?))
         elsif !path.empty?
           report(@state, @open_file.call(@state, path))
         end

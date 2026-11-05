@@ -42,6 +42,10 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make new-use-case`, `make new-action`, `make new-ex-command`, `make new-test`, `make new-plugin` | Scaffold one file of that kind from its golden example and wire it in: signatures, the code map, requires and registrations, the documentation row, the runner lines, and a snapshot; `docs/examples.md` lists the arguments |
 | `make spec-list`, `make spec-validate`, `make spec-update` | The OpenSpec commands |
 
+## Starting
+
+`carat FILE` opens a file, or starts a new one when nothing is there. `carat` with no argument, or with a directory, starts on an empty buffer and shows the start screen: a gem forms from a point in about 0.6 seconds, a sparkle lights its top, and `c a r a t` appears with the keys to insert text, open a file, and quit. Any key ends it and does what it always does. `option.startscreen false` turns it off, `option.reducedmotion true` shows the finished picture without the animation, a terminal too small for the gem shows only the wordmark, and with the `NO_COLOR` environment variable set the picture is drawn in plain ASCII without colors of its own.
+
 ## Configuration
 
 Carat reads its settings from plain text files of one setting per line, `scope.name value`: the first word is a dotted key, and the rest of the line is the value, a word, a number, `true` or `false`, or a list of words separated by spaces. A word containing spaces goes in double quotes (`\"` and `\\` inside them stand for a quote and a backslash), `#` starts a comment, and blank lines are ignored.
@@ -59,7 +63,7 @@ plugin.explorer.width 30
 plugin.explorer.ignore .git build tmp
 ```
 
-- `option.<name>` sets an option by its Vim name (`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `undolevels`, and the others), plus Carat's `icons` and `theme`; `tabstop` takes 1 to 9999 and `shiftwidth` 0 to 9999, as in Vim.
+- `option.<name>` sets an option by its Vim name (`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `undolevels`, and the others), plus Carat's `icons`, `theme`, `background`, `startscreen`, and `reducedmotion`; `tabstop` takes 1 to 9999 and `shiftwidth` 0 to 9999, as in Vim.
 - `keymap.<mode> <keys> <action>` binds keys in Vim notation in `normal`, `insert`, `visual`, `visual_line`, `visual_block`, `operator_pending`, or `cmdline` mode to an action from `docs/actions.md` or to keys to replay, such as `:w<CR>`; the action `none` removes a binding. `keymap.leader <Space>` sets what `<leader>` stands for.
 - `plugin.<name>.enabled` turns a plugin on or off, and `plugin.<name>.<option>` sets one of its options.
 - `language.<name>.lsp` and `language.<name>.formatter` name the commands the language services will run; they are read from the defaults and the user file only, never from a project's file, so opening a directory cannot choose a program to run. For the same reason a project's file may bind keys only to actions and `none`, not to keys to replay.

@@ -1,7 +1,9 @@
-ok   no argument prints the usage
-ok   no argument exits with status 1
+ok   two arguments print the usage
+ok   two arguments exit with status 1
 ok   piped input is refused
 ok   piped input exits with status 1
+ok   no argument shows the start screen with its hints
+ok   the editor started without a file exits with status 0 after :q
 ok   the editor enters the alternate screen
 ok   the editor shows the new file message
 ok   typed text is drawn
@@ -52,4 +54,4 @@ ok   the editor exits with status 0 after hostile configuration lines
 ok   the editor drew its first frame for the signal check
 ok   SIGTERM ends the editor with status 0
 ok   SIGTERM leaves the alternate screen
-smoke_editor: 54 passed, 0 failed
+smoke_editor: 56 passed, 0 failed

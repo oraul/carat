@@ -26,6 +26,7 @@ ok   the search history, in the searches and the substitute
 ok   the substitute use case behind :s and &
 ok   the global and delete use cases behind :g, :v, and :d
 ok   the line cache
+ok   the start screen
 ok   the arrange view use case
 ok   the plugins as tokenizers
 ok   the plugin registry, in the tokenizer part
@@ -39,4 +40,4 @@ ok   the gateway reads the shipped defaults through the file port it was given
 ok   the assembly and the gateway hold the one file port
 ok   a configuration without lines falls back to Vim's defaults
 ok   a configuration problem names its file and line
-adapters_assembly: 41 passed, 0 failed
+adapters_assembly: 42 passed, 0 failed
