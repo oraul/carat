@@ -877,3 +877,45 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the Commands bullet of `sh tools/run_state.sh` in `CLAUDE.md` (line 231), "every command in the script's header:" followed by seven commands. Quality advisory of `docs-currency` at 13473da.
 - Why it matters: a reader takes the seven for the whole set and misses `scope`, `bench`, `usage`, `plan-needed`, and the others the header lists.
 - Fix outline: reword it to "a change's run state, every command listed in the script's header; those an agent acts on:" before the list, within the file's budget.
+
+## The explorer's tokenize walks bytes to find an icon column it already knows
+
+- Where: `tokenize` in `carat/plugins/explorer/plugin.rb` (line 143 at `theme-tokens`), which re-decodes the marker's UTF-8 length with a nested ternary and counts spaces to find the icon's column.
+- Why it matters: the plugin already knows the column when it builds the line (1 + 2 * depth), so the byte walk is cleverness the task did not need and a second place to change when the line's layout does.
+- Fix outline: record the icon column beside the group in `tree_lines` (or take it from `Tree`'s depth) and drop the byte walk.
+
+## Themes.palette repeats NAMES as an if chain
+
+- Where: `palette(key)` in `carat/domain/themes.rb` (line 363 at `theme-tokens`).
+- Why it matters: a new palette must be added both to `NAMES` and to the chain, and forgetting the chain silently falls back to the default.
+- Fix outline: one `PALETTES` hash of name to rows, with `NAMES = PALETTES.keys` and `palette` a lookup with `ONE_DARK` as its fallback.
+
+## from_palette leaves the 256-color background and foreground when the terminal paints
+
+- Where: `from_palette` in `carat/domain/themes.rb` (line 386 at `theme-tokens`).
+- Why it matters: without a painted background it clears the 24-bit and 16-color values of `BG` and `FG` but not `indexes256`; it is harmless only because every palette gives -1 there and `SgrTable.color` returns early on a negative color, so a palette giving its own index would paint the background at 256 colors.
+- Fix outline: also set `indexes256[BG]` and `indexes256[FG]` to -1.
+
+## The background option's values are bare literals
+
+- Where: `Options#initialize` in `carat/domain/options.rb` (line 45 at `theme-tokens`), `Themes.find` (`"theme"`), and `BACKGROUNDS` in `carat/domain/themes.rb`, while the theme's default is `Themes::DEFAULT`.
+- Why it matters: the default and the painted value are spelled in three places, so renaming or adding a value can leave one behind.
+- Fix outline: add `Themes::DEFAULT_BACKGROUND` and a `PAINTED` constant and use them in `Options#initialize` and `Themes.find`.
+
+## The screen presenter's first painted row test accepts two outputs
+
+- Where: `test/adapters_screen_presenter.rb` (line 318 at `theme-tokens`), whose assertion joins two expected sequences with `||`.
+- Why it matters: the test does not pin what the presenter writes for the first painted row, so a regression to the other sequence passes.
+- Fix outline: assert the one exact sequence the snapshot shows.
+
+## The theme test lists the palettes a second time
+
+- Where: `PALETTES` in `test/domain_theme.rb` (line 11 at `theme-tokens`), which repeats `D::Themes::NAMES`.
+- Why it matters: a fifth palette would escape the contrast and coverage checks.
+- Fix outline: iterate `D::Themes::NAMES`.
+
+## Themes misses a blank line and a comment near known?
+
+- Where: `carat/domain/themes.rb` (line 332 at `theme-tokens`): no blank line between the `LIGHT_PLUS` table and the `known?` comment, and `background?` has no comment unlike its neighbours.
+- Why it matters: the file's layout is otherwise consistent, and the missing comment leaves `background?`'s meaning to its body.
+- Fix outline: add the blank line and a one-line comment above `background?`.
