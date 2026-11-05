@@ -2,8 +2,8 @@
 
 ## 1. Attribution off in the project settings
 
-- [ ] 1.1 `.claude/settings.json`: `attribution` with `commit` the trailer, `pr` empty, and `sessionUrl` false. Tested by the gate of 1.2 on this tree (`make gates`).
-- [ ] 1.2 `tools/gates.sh`: `gate_attribution` in the `static` group and the header. Tested by the `tools/tools_test.sh` cases "gates: attribution passes the trailer, no pull request text, and no session link", "gates: attribution refuses a session link", "gates: attribution refuses another commit trailer", and "gates: attribution refuses a missing settings file".
+- [x] 1.1 `.claude/settings.json`: `attribution` with `commit` the trailer, `pr` empty, and `sessionUrl` false. Tested by the gate of 1.2 on this tree (`make gates`).
+- [x] 1.2 `tools/gates.sh`: `gate_attribution` in the `static` group and the header. Tested by the `tools/tools_test.sh` cases "gates: attribution passes the trailer, no pull request text, and no session link", "gates: attribution refuses a session link", "gates: attribution refuses another commit trailer", "gates: attribution refuses pull request text", and "gates: attribution refuses a missing settings file".
 
 ## 2. The archive preview
 

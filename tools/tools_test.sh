@@ -1533,5 +1533,22 @@ expect "gates: pr-body refuses a body without the security review" 1 "does not r
 sed 's/^## Notes$/## Remarks/' body.md > shape.md
 expect "gates: pr-body refuses other sections" 1 "not exactly Summary" gates pr-body shape.md
 
+# attribution: Claude Code's attribution in .claude/settings.json.
+settings() {
+  mkdir -p .claude
+  printf '{\n  "attribution": {\n    "commit": "%s",\n    "pr": "%s",\n    "sessionUrl": %s\n  }\n}\n' "$1" "$2" "$3" > .claude/settings.json
+}
+fresh attribution
+settings "$TRAILER" "" false
+expect "gates: attribution passes the trailer, no pull request text, and no session link" 0 "ok   attribution" gates attribution
+settings "$TRAILER" "" true
+expect "gates: attribution refuses a session link" 1 'lacks the line "sessionUrl": false' gates attribution
+settings "Co-Authored-By: Claude Code <noreply@anthropic.com>" "" false
+expect "gates: attribution refuses another commit trailer" 1 'lacks the line "commit"' gates attribution
+settings "$TRAILER" "Generated with a tool" false
+expect "gates: attribution refuses pull request text" 1 'lacks the line "pr": ""' gates attribution
+rm -f .claude/settings.json
+expect "gates: attribution refuses a missing settings file" 1 "no .claude/settings.json" gates attribution
+
 echo "$passed/$total passed"
 test "$passed" -eq "$total"
