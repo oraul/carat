@@ -6,8 +6,11 @@
 # Usage: sh tools/gates.sh GATE|GROUP [PR-BODY-FILE]
 #   trailer    every branch commit ends with the co-author trailer, once, after
 #              a blank line, and has no other trailer line
-#   content    the diff's added lines and the commit messages hold no URL, no
-#              email address but the trailer's, no session id, no model name
+#   content    the added lines of every branch commit, against each parent,
+#              and the commit messages hold no URL, no email address but the
+#              trailer's, no session id, no model name, and no secret (a
+#              private key, a platform token, a literal password or token);
+#              no commit adds a .env or .env.* file
 #   snapshots  a changed test/*.rb.expected has its test and equals the
 #              runner's output (build/test/run_all, from make test-build)
 #   docs       files added, moved, or removed under the source roots need the
@@ -33,7 +36,8 @@
 #              model name, and a Testing line naming the security review
 #   static     trailer, content, snapshots, docs (make gates)
 #   pre-push   static, security, stages (tools/run_state.sh push)
-#   backup     trailer, content (tools/run_state.sh backup)
+#   backup     trailer, content (tools/run_state.sh backup, with BASE the
+#              branch's base, so every commit the backup publishes)
 #   merge F    trailer, content, security, stages, passed, records, pushes,
 #              pr-body F (the merger, from a worktree of origin/main at
 #              tmp/.merge-gates, so the branch cannot have edited the gates)
@@ -113,15 +117,22 @@ gate_trailer() {
   [ $failed -ne $start ] || ok "$(printf '%s\n' "$commits" | grep -c .) commit(s)"
 }
 
+# A push publishes every commit, not the net diff: the added lines of each
+# commit against each of its parents (-m, so a merge's resolution too), and
+# every added .env or .env.* file.
 gate_content() {
   gate=content
   start=$failed
-  scan "$(git diff -U0 --no-color "$base...HEAD" |
-    awk '/^\+\+\+ / { path = substr($0, 7); next } /^\+/ { print path "\t" substr($0, 2) }')"
+  scan "$(git log -p -m -U0 --no-color --no-renames --format= "$base..HEAD" |
+    awk '/^\+\+\+ / { path = substr($0, 7); next } /^\+/ { print path "\t" substr($0, 2) }' | sort -u)"
+  envs=$(git log -m --no-renames --diff-filter=A --name-only --format= "$base..HEAD" |
+    grep -E '(^|/)\.env(\.[^/]*)?$' | sort -u)
+  [ -z "$envs" ] || bad "an added .env file (secrets stay out of the repository):
+$envs"
   scan "$(for c in $(git rev-list "$base..HEAD"); do
     git log -1 --format=%B "$c" | sed "s/^/commit $(git rev-parse --short "$c")$TAB/"
   done)"
-  [ $failed -ne $start ] || ok "diff and commit messages"
+  [ $failed -ne $start ] || ok "every commit's added lines and files, and commit messages"
 }
 
 gate_snapshots() {

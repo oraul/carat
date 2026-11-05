@@ -1277,6 +1277,40 @@ fresh backup
 echo x >> README.md
 commit "chore: clean"
 expect "gates: backup passes a clean branch" 0 "ok   content" gates backup
+# Secrets, each assembled from pieces like the forbidden text above.
+KEY_LINE="-----BEGIN ""RSA PRIVATE KEY-----"
+AWS_KEY="AK""IAABCDEFGHIJKLMNOP"
+for kind in "key:$KEY_LINE" "aws:aws_id = $AWS_KEY" "github:GH=gh""p_abcdefghijklmnopqrstuvwxyz0123456789" \
+    "slack:hook xo""xb-1234567890-abcdef" "sk:export KEY=s""k-abcdefghijklmnopqrstuvwx" \
+    "password:db_pass""word = \"hunter2hunter2\"" "secret:client_sec""ret: 'abcdefghijkl'" \
+    "token:\"to""ken\": \"0123456789abcdef\"" "api_key:API_""KEY => 'abcdefgh12345678'"; do
+  fresh secret
+  echo "${kind#*:}" >> README.md
+  commit "chore: add a line"
+  expect "gates: content refuses a secret: ${kind%%:*}" 1 "FAIL content: a secret .*" gates content
+done
+expect "gates: content does not print the secret" 0 "^0$" sh -c 'BASE=main STAGES=lint sh "$1/gates.sh" content | grep -c -F "$2"; true' _ "$here" "abcdefgh12345678"
+fresh secret2
+printf '%s\n' 'token = ENV.fetch("CARAT_TOKEN")' 'password = read_password(prompt)' 'export SECRET=$secret_value' >> README.md
+commit "chore: read a token"
+expect "gates: content allows a token read from a variable" 0 "ok   content" gates content
+fresh secret3
+echo "aws_id = $AWS_KEY" >> README.md
+commit "chore: add a key"
+git_q show HEAD~1:README.md > README.md
+commit "chore: remove the key"
+expect "gates: content refuses a secret a later commit removed" 1 "FAIL content: a secret .*" gates content
+expect "gates: backup refuses a secret" 1 "FAIL content: a secret .*" gates backup
+fresh dotenv
+echo "X=1" > .env
+commit "chore: add an env file"
+expect "gates: content refuses an added .env file" 1 "FAIL content: an added .env file" gates content
+fresh dotenv2
+mkdir -p config
+echo "X=1" > config/.env.local
+commit "chore: add an env file"
+expect "gates: content refuses an added .env.local in a directory" 1 "config/\.env\.local" gates content
+expect "repository: .gitignore ignores .env files" 0 "config/\.env\.local" sh -c 'cd "$1/.." && git check-ignore .env config/.env.local' _ "$here"
 
 fresh docs
 echo new > tools/new.sh

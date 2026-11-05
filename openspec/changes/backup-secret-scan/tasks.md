@@ -2,9 +2,9 @@
 
 ## 1. The secret patterns and the content gate
 
-- [ ] 1.1 `tools/rules.sh`: `KEY_RE`, `TOKEN_RE`, `ASSIGN_RE` in `scan`, reported by label only. Tested by the `tools/tools_test.sh` cases "gates: content refuses a secret: KIND" for a private key block, an AWS key id, a GitHub token, a Slack token, an `sk-` key, and a password, secret, token, and API key assigned a literal, "gates: content does not print the secret", and "gates: content allows a token read from a variable".
-- [ ] 1.2 `tools/gates.sh` `gate_content`: every commit's added lines against each parent, and an added `.env` file refused. Tested by "gates: content refuses a secret a later commit removed", "gates: content refuses an added .env file", "gates: content refuses an added .env.local in a directory", and the existing content cases unchanged.
-- [ ] 1.3 `.gitignore`: `.env` and `.env.*`. Tested by "repository: .gitignore ignores .env files".
+- [x] 1.1 `tools/rules.sh`: `KEY_RE`, `TOKEN_RE`, `ASSIGN_RE` in `scan`, reported by label only. Tested by the `tools/tools_test.sh` cases "gates: content refuses a secret: KIND" for a private key block, an AWS key id, a GitHub token, a Slack token, an `sk-` key, and a password, secret, token, and API key assigned a literal, "gates: content does not print the secret", and "gates: content allows a token read from a variable".
+- [x] 1.2 `tools/gates.sh` `gate_content`: every commit's added lines against each parent, and an added `.env` file refused. Tested by "gates: content refuses a secret a later commit removed", "gates: content refuses an added .env file", "gates: content refuses an added .env.local in a directory", and the existing content cases unchanged.
+- [x] 1.3 `.gitignore`: `.env` and `.env.*`. Tested by "repository: .gitignore ignores .env files".
 
 ## 2. The backup's base and the restore
 
