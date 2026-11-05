@@ -73,6 +73,11 @@ class NullTerminal < Carat::Ports::TerminalPort
     256
   end
 
+  # @rbs skip
+  def no_color?
+    false
+  end
+
   #: () -> void
   def enter
   end

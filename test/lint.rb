@@ -201,6 +201,7 @@ module LintTest
   # says whether the command did something.
   BOOL_COMMANDS = {
     "pump" => "reads and handles the keys that are ready",
+    "tick" => "moves the start screen to the frame of the clock",
     "handle" => "handles decoded keys",
     "begin_transaction" => "opens a transaction",
     "decode_escape" => "decodes an escape sequence",

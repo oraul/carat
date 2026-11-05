@@ -7,18 +7,28 @@ module Carat
     # The real terminal: window size through io/console, byte reads with
     # IO.select and readpartial so no bytes hide in a stdio buffer, and
     # flushed writes. Raw mode is entered by bin/carat.rb around the loop.
-    # The color depth comes from COLORTERM and TERM, read once here: the
-    # drivers are the only place the environment is read.
+    # The color depth comes from COLORTERM and TERM and the wish for no
+    # color from NO_COLOR, read once here: the drivers are the only place
+    # the environment is read.
     class AnsiTerminal < Ports::TerminalPort
       # @rbs @input: IO
       # @rbs @output: IO
       # @rbs @colors: Integer
+      # @rbs @no_color: bool
 
       #: (input: IO, output: IO) -> void
       def initialize(input:, output:)
         @input = input
         @output = output
         @colors = Domain::ColorDepth.detect(environment("COLORTERM"), environment("TERM"))
+        @no_color = !environment("NO_COLOR").empty?
+      end
+
+      # Returns true when NO_COLOR was set and not empty when the driver
+      # was made.
+      # @rbs skip
+      def no_color?
+        @no_color
       end
 
       # Returns the color depth decided when the driver was made.

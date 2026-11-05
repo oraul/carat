@@ -16,6 +16,7 @@ require_relative "../domain/search_prompt"
 require_relative "../domain/search"
 require_relative "../domain/search_budget"
 require_relative "../domain/search_pattern"
+require_relative "../domain/start_screen"
 require_relative "painted_rows"
 
 module Carat
@@ -58,6 +59,11 @@ module Carat
     # rows are compared cell by cell like the rest of the chrome, and the
     # frame forgets its layout key and painted rows, so the next frames
     # repaint every window row and are compared in full.
+    #
+    # While the start screen shows, its frame is painted over the current
+    # window's text rows after the windows, and the frame forgets its
+    # layout key and painted rows the same way, so the start frames are
+    # compared in full and the first frame after them repaints the window.
     class FramePresenter
       SHOWCMD_WIDTH = 10
       HIT_ENTER = "Press ENTER or type command to continue"
@@ -69,6 +75,7 @@ module Carat
       attr_reader :cache #: Domain::LineCache
       attr_reader :last_search #: Domain::LastSearch
       attr_reader :search_prompt #: Domain::SearchPrompt
+      attr_reader :start_screen #: Domain::StartScreen
 
       # @rbs @front: Domain::Frame
       # @rbs @back: Domain::Frame
@@ -88,13 +95,14 @@ module Carat
       # @rbs @row_of: Integer
       # @rbs @current: bool
 
-      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt) -> void
-      def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:)
+      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, start_screen: Domain::StartScreen) -> void
+      def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, start_screen:)
         @input = input
         @plugin_ui = plugin_ui
         @cache = cache
         @last_search = last_search
         @search_prompt = search_prompt
+        @start_screen = start_screen
         @budget = Domain::SearchBudget.new(left: Domain::SearchBudget::FRAME)
         @pattern = Domain::SearchPattern.none
         @drawn = 0
@@ -163,6 +171,11 @@ module Carat
           i += 1
         end
         paint_separators(back, layout, layout.root)
+        start = @start_screen.showing
+        if start
+          window = state.window
+          @start_screen.paint(back, window.row, window.col, window.height, window.width)
+        end
         back.blank(rows - 1, 0, cols)
         paint_message(back, rows - 1, cols, state)
         @chrome << rows - 1
@@ -182,6 +195,10 @@ module Carat
         if listed
           back.cursor_row = rows - 1
           back.cursor_col = clamp(HIT_ENTER.length, cols - 1)
+          back.layout.clear
+          @back_rows.invalidate
+        end
+        if start
           back.layout.clear
           @back_rows.invalidate
         end

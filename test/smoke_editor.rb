@@ -98,12 +98,22 @@ module SmokeEditorTest
     Dir.mkdir(DIR) unless File.directory?(DIR)
 
     # Usage and terminal checks run without a pseudo-terminal.
-    _out, err, status = Open3.capture3(BIN)
-    t.assert_equal("usage: carat FILE\n", err, "no argument prints the usage")
-    t.assert_equal(1, status.exitstatus, "no argument exits with status 1")
+    _out, err, status = Open3.capture3(BIN, "a.txt", "b.txt")
+    t.assert_equal("usage: carat [FILE]\n", err, "two arguments print the usage")
+    t.assert_equal(1, status.exitstatus, "two arguments exit with status 1")
     _out, err, status = Open3.capture3(BIN, "#{DIR}/x.txt", stdin_data: "")
     t.assert_equal("carat: standard input is not a terminal\n", err, "piped input is refused")
     t.assert_equal(1, status.exitstatus, "piped input exits with status 1")
+
+    # No argument: the start screen, then :q.
+    reader, writer, pid = PTY.spawn(BIN)
+    writer.winsize = [24, 80]
+    out = +"".b
+    settle(reader, out, 0.5)
+    t.assert_true(out.include?("insert text"), "no argument shows the start screen with its hints")
+    writer.write(":q\r")
+    code = finish_session(reader, out, pid)
+    t.assert_equal(0, code, "the editor started without a file exits with status 0 after :q")
 
     # Insert, write, quit on a new file.
     path = "#{DIR}/fresh.txt"

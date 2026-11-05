@@ -76,6 +76,20 @@ module DomainOptionsConfigTest
       [read.ignorecase, read.smartcase, read.hlsearch, read.incsearch]
     end
 
+    # The start screen options: rows are [label, project lines,
+    # [startscreen, reducedmotion, problems]].
+    t.table([
+      ["the start screen on, with its animation, by default", "", [true, false, []]],
+      ["both are stored", "option.startscreen false\noption.reducedmotion true\n", [false, true, []]],
+      ["each takes true or false", "option.startscreen yes\noption.reducedmotion 1\n", [true, false, [".caratrc:1: option.startscreen takes true or false", ".caratrc:2: option.reducedmotion takes true or false"]]]
+    ]) do |text|
+      config = D::Config.new
+      config.read(".caratrc", text.to_s, false)
+      read = D::Options.from_config(config)
+      [read.startscreen, read.reducedmotion, config.report]
+    end
+    t.assert_equal([true, false], [options.startscreen, options.reducedmotion], "the shipped start screen options")
+
     t.finish
   end
 end

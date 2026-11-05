@@ -3,6 +3,7 @@ require_relative "../ports/clock_port"
 require_relative "../domain/editor_state"
 require_relative "../domain/input_state"
 require_relative "../domain/key"
+require_relative "../domain/start_screen"
 require_relative "../use_cases/handle_key"
 require_relative "key_decoder"
 
@@ -12,7 +13,10 @@ module Carat
     # timeout, decodes them, feeds each key through HandleKey, and resolves
     # the escape and timeoutlen waits with the clock. Keys HandleKey keeps
     # :pending get a deadline of timeoutlen; keys it keeps :waiting get
-    # none and wait for the next key however long it takes.
+    # none and wait for the next key however long it takes. While the
+    # start screen animates, a read waits no longer than its next frame,
+    # and a read that times out advances it; any key read dismisses it and
+    # is handled as usual.
     class InputController
       ESCAPE_TIMEOUT = 0.05
       IDLE_TIMEOUT = 0.25
@@ -21,18 +25,20 @@ module Carat
       attr_reader :clock #: Ports::ClockPort
       attr_reader :handle_key #: UseCases::HandleKey
       attr_reader :input #: Domain::InputState
+      attr_reader :start_screen #: Domain::StartScreen
 
       # @rbs @decoder: KeyDecoder
       # @rbs @wait_until: Float
       # @rbs @deadline: bool
 
-      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState) -> void
-      def initialize(terminal:, clock:, decoder:, handle_key:, input:)
+      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState, start_screen: Domain::StartScreen) -> void
+      def initialize(terminal:, clock:, decoder:, handle_key:, input:, start_screen:)
         @terminal = terminal
         @clock = clock
         @decoder = decoder
         @handle_key = handle_key
         @input = input
+        @start_screen = start_screen
         @wait_until = 0.0
         @deadline = false
       end
@@ -50,7 +56,13 @@ module Carat
             @handle_key.call(state, Domain::Key::TIMEOUT)
             return true
           end
-          return false
+          return tick
+        end
+        start = @start_screen
+        if start.showing
+          start.dismiss
+          handle(state, @decoder.feed(bytes))
+          return true
         end
         handle(state, @decoder.feed(bytes))
       end
@@ -69,7 +81,23 @@ module Carat
           remaining = @wait_until - @clock.now
           return remaining > 0.0 ? remaining : 0.0
         end
+        if @start_screen.animating?
+          frame = @start_screen.wait(@clock.now)
+          return frame if frame < IDLE_TIMEOUT
+        end
         IDLE_TIMEOUT
+      end
+
+      # Moves the start screen to the frame of the clock when its next one
+      # is due; true when it moved and the screen should be redrawn.
+      #: () -> bool
+      def tick
+        start = @start_screen
+        return false unless start.animating?
+        now = @clock.now
+        return false unless start.due?(now)
+        start.advance(now)
+        true
       end
 
       #: (Domain::EditorState, Array[Integer]) -> bool
