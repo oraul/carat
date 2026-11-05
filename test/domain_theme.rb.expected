@@ -1,30 +1,61 @@
 ok   every id has a name
-ok   thirty syntax groups
+ok   41 UI groups, thirty syntax groups, thirteen file-icon groups
 ok   names by id
 ok   Comment
 ok   String
 ok   Define
 ok   Todo
-ok   an editor group is not a syntax group
+ok   a file-icon group
+ok   the last file-icon group
+ok   a UI group is not a token group
+ok   nor is a new UI group
 ok   Normal is not either
 ok   an unknown name
 ok   names are case sensitive
-ok   syntax? covers the syntax ids only
+ok   token? covers the syntax and file-icon ids only
 ok   name_of
-ok   find, carat-dark for an unknown name
+ok   find, the aliases, and one_dark for an unknown name
 ok   known?
-ok   carat-dark: Normal keeps the terminal's colors
-ok   carat-dark: every other group has a color in both depths
-ok   carat-light: Normal keeps the terminal's colors
-ok   carat-light: every other group has a color in both depths
-ok   carat-dark comments are grey and italic
-ok   carat-light has its own comment color
+ok   background?
+ok   with the terminal's background Normal keeps the terminal's colors
+ok   with the theme's background Normal is the palette's
+ok   a group without a background of its own is drawn on the painted one
+ok   a group without a foreground of its own takes the palette's text color when painted
+ok   one_dark: every group has a 24-bit foreground and background on the theme's background
+ok   one_dark: every group but Normal and Delimiter shows at 16 colors
+ok   one_dark: Search, IncSearch, and CurSearch have a background at every depth
+ok   one_light: every group has a 24-bit foreground and background on the theme's background
+ok   one_light: every group but Normal and Delimiter shows at 16 colors
+ok   one_light: Search, IncSearch, and CurSearch have a background at every depth
+ok   dark_plus: every group has a 24-bit foreground and background on the theme's background
+ok   dark_plus: every group but Normal and Delimiter shows at 16 colors
+ok   dark_plus: Search, IncSearch, and CurSearch have a background at every depth
+ok   light_plus: every group has a 24-bit foreground and background on the theme's background
+ok   light_plus: every group but Normal and Delimiter shows at 16 colors
+ok   light_plus: Search, IncSearch, and CurSearch have a background at every depth
+ok   one_dark comments are gray and italic
+ok   palettes have their own syntax colors
+ok   a palette gives a 256-color index only where it needs one
+ok   16-color attributes stand in for the selection and cursor line colors
 ok   the status line is bold
-ok   the defaults: carat-dark, syntax on
-ok   the theme line selects a theme
+ok   one_dark at 24 bits
+ok   one_dark at 256 colors
+ok   one_light at 24 bits
+ok   one_light at 256 colors
+ok   dark_plus at 24 bits
+ok   dark_plus at 256 colors
+ok   light_plus at 24 bits
+ok   light_plus at 256 colors
+ok   one_dark comments are readable
+ok   the contrast of WCAG's lightest AA gray on white and of a color on itself
+ok   the defaults: one_dark on the terminal's background, syntax on
+ok   the theme line selects a palette
+ok   an alias is accepted
 ok   an unknown theme keeps the default and is reported
 ok   a theme of the wrong kind keeps the default
-ok   the shipped configuration names carat-dark
+ok   the background line paints the background
+ok   an unknown background keeps the default and is reported
+ok   the shipped configuration names one_dark on the terminal's background
 ok   truecolor
 ok   24bit
 ok   256 colors
@@ -35,4 +66,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 37 passed, 0 failed
+domain_theme: 68 passed, 0 failed

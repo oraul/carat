@@ -95,6 +95,11 @@ ok   the root is not deleted
 ok   ascii
 ok   unicode
 ok   nerd
+ok   each icon is drawn in its file type's group, after a marker of any width
+ok   the rest of the line keeps the normal group
+ok   the tree buffer takes the explorer's filetype
+ok   :syntax off draws the icons plain
+ok   :syntax on colors them again
 ok   the tree has no line numbers and a separator at its right
 ok   the tree lists both names
 ok   s opens a name with a space in a split
@@ -105,4 +110,4 @@ ok   the screen shows each illegal byte as one replacement character
 ok   the explorer stays enabled after listing them
 ok   Enter opens a name that is not UTF-8
 ok   the status line names the opened file with one replacement character per illegal byte
-editor_explorer: 107 passed, 0 failed
+editor_explorer: 112 passed, 0 failed

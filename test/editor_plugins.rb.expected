@@ -41,6 +41,7 @@ ok   Ctrl-W q closes the side window
 ok   open a file in the file window, id 1
 ok   focusing a missing window fails
 ok   the side window shows the plugin's lines
+ok   a plugin that declares no filetype of its name leaves its scratch buffer without syntax
 ok   its status line shows the title
 ok   j falls through to the mode's keymap and Enter runs the plugin's action
 ok   the scratch keymap does not apply in the file window
@@ -84,4 +85,4 @@ ok   a binding of a plugin action loads
 ok   every problem is reported in file and line order
 ok   the message row shows the first with the count of the others
 ok   the default configuration has no problem
-editor_plugins: 86 passed, 0 failed
+editor_plugins: 87 passed, 0 failed

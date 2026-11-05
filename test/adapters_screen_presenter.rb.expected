@@ -3,7 +3,7 @@ ok   enter switches to the alternate screen and clears it
 ok   first frame clears the screen
 ok   first frame writes row 1 with the normal highlight
 ok   line number highlight is emitted before the text
-ok   the line numbers are carat-dark's gray at 256 colors
+ok   the line numbers are one_dark's gray at 256 colors
 ok   first frame skips a blank row, which the clear already drew
 ok   cursor position, block shape, and cursor shown last
 ok   cursor hidden while drawing
@@ -58,17 +58,30 @@ ok   j at the bottom scrolls the window with a region
 ok   and writes fewer than 500 bytes
 ok   l writes no buffer text
 ok   l writes only the changed cell of the ruler
+ok   the painted Normal is one_dark's text color on its background
+ok   the screen is cleared after the painted Normal sequence
+ok   a Normal cell is written in the palette's colors
+ok   a region scrolls after the painted Normal sequence
+ok   the terminal's background clears the screen as before
+ok   and scrolls after the bare reset as before
 ok   a truecolor comment
-ok   a 256-color comment
+ok   a 256-color comment, the nearest index
 ok   a 16-color comment
 ok   a truecolor status line
 ok   a 16-color status line
 ok   a 16-color error message
 ok   a truecolor string
 ok   a 16-color Todo
-ok   carat-light's comment
-ok   carat-light's string at 256 colors
+ok   a 16-color selection is reverse video
+ok   a 16-color cursor line is underlined
+ok   a 256-color search
+ok   carat-light is one_light's comment
+ok   one_light's string at its own 256-color index
+ok   dark_plus's comment at its own 256-color index
+ok   dark_plus's keyword
+ok   light_plus's comment
+ok   a file-icon group
 ok   Normal is a bare reset
 ok   the nearest palette colors: cube corners and grays
 ok   an id out of range is drawn as Normal
-adapters_screen_presenter: 73 passed, 0 failed
+adapters_screen_presenter: 86 passed, 0 failed

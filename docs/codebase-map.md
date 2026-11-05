@@ -437,7 +437,7 @@ Files:
 
 - `carat/domain/highlight.rb`: `Highlight` group ids (41 UI groups, thirty syntax groups from `SYNTAX_FIRST`, thirteen file-icon groups from `ICON_FIRST`, with Neovim's `NAMES`); `token_id`, `token?`, `name_of`.
 - `carat/domain/theme.rb`: `Theme`, per group 24-bit, 256-color, and 16-color colors and attributes; `fg`, `bg`, `fg256`, `bg256`, `fg16`, `bg16`, `attr`, `attr16`, `paints_background?`.
-- `carat/domain/themes.rb`: `Themes`, the palettes as colors per role and `GROUPS`, the roles of every group; `known?`, `background?`, `canonical`, `find`, `palette`, `build` (`one_dark`, `one_light`, `dark_plus`, `light_plus`, aliases `carat-dark`, `carat-light`).
+- `carat/domain/themes.rb`: `Themes`, the palettes as colors per role and `GROUPS`, the roles of every group; `known?`, `background?`, `canonical`, `find`, `palette`, `from_palette` (`one_dark`, `one_light`, `dark_plus`, `light_plus`, aliases `carat-dark`, `carat-light`).
 - `carat/domain/color_depth.rb`: `ColorDepth.detect` from `COLORTERM` and `TERM`.
 - `carat/domain/filetype.rb`: `Filetype`; `detect`, `from_name`, `from_shebang`.
 - `carat/domain/syntax_line.rb`: `SyntaxLine`, one line's tokens for a start state with its end state.

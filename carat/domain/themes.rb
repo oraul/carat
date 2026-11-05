@@ -356,7 +356,7 @@ module Carat
       #: (String, String) -> Theme
       def self.find(name, background)
         key = canonical(name)
-        build(key, palette(key), background == "theme")
+        from_palette(key, palette(key), background == "theme")
       end
 
       #: (String) -> Array[Integer]
@@ -371,7 +371,7 @@ module Carat
       # background the roles BG and FG are the terminal's own; with it a
       # group's missing foreground or background is the palette's.
       #: (String, Array[Integer], bool) -> Theme
-      def self.build(name, palette, painted)
+      def self.from_palette(name, palette, painted)
         rgbs = Array.new(ROLES, -1)
         indexes256 = Array.new(ROLES, -1)
         indexes16 = Array.new(ROLES, -1)
