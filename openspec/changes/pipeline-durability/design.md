@@ -41,4 +41,5 @@ The guard admits `tools/run_state.sh backup CHANGE` to the contributor and nothi
 
 - A runner left alive by a waiter that is never called again keeps running to its end, writing records only under its own change; the next check rejoins or supersedes it.
 - `setsid -f` is util-linux; elsewhere the subshell fallback leaves the runner in the caller's process group, as before this change.
+- `check.pid` and `check.log` lie under `build/stages/`, where the read profile may redirect output. A forged pid file can only make the waiter wait on, or stop, a process that is a check runner (`runner_alive` reads its command line), and a forged verdict decides no gate: the stages gate and the merge gate read the stage records, which only `tools/run_state.sh` writes, as before.
 - `refs/backup/*` refs of runs that never pushed stay on origin until deleted by hand; `push` deletes the ref of every run that reaches its push.
