@@ -25,7 +25,7 @@ Tab pages hold independent window layouts that the user switches between with ex
 - **THEN** the new tab page is the second of four and is current
 
 ### Requirement: Closing tab pages
-":tabc" and ":tabclose" SHALL close the current tab page and make the one before it current, or the first when the first was closed; on the last tab page the message SHALL be "E784: Cannot close last tab page". ":tabo" and ":tabonly" SHALL close every other tab page; with one tab page the message SHALL be "Already only one tab page". A modified buffer shown only in a closed tab page SHALL stay hidden in the buffer list.
+":tabc" and ":tabclose" SHALL close the current tab page and make the one before it current, or the first when the first was closed; on the last tab page the message SHALL be "E784: Cannot close last tab page". ":tabo" and ":tabonly" SHALL close every other tab page; with one tab page the message SHALL be "Already only one tab page". A file buffer shown only in a closed tab page SHALL stay hidden in the buffer list, with its changes.
 
 #### Scenario: Tab close
 - **WHEN** ":tabnew" then ":tabclose" are run
@@ -49,7 +49,7 @@ Tab pages hold independent window layouts that the user switches between with ex
 
 #### Scenario: Hidden buffer after tab close
 - **WHEN** ":tabe b.txt" is run, "x" is pressed, ":tabclose" is run, and ":qa" is run
-- **THEN** the editor stays and the message is "E37: No write since last change (add ! to override)"
+- **THEN** the editor stays, the message is "E37: No write since last change" and "E162: No write since last change for buffer "b.txt"" on two lines, and the window shows "b.txt"
 
 ### Requirement: Closing the last window of a tab page closes it
 ":q", `<C-w>q`, and `<C-w>c` on the only window of a tab page SHALL close that tab page when another tab page exists, and SHALL end the editor or report E444 as they do for the last window only when it is the last window of the last tab page.
