@@ -9,10 +9,12 @@ module AdaptersFramePresenterTest
   INPUT = Carat::Domain::InputState.new
   UI = Carat::Domain::PluginUi.new
   CACHE = Carat::Domain::LineCache.new
-  ARRANGE = Carat::UseCases::ArrangeView.new(cache: CACHE)
+  SLOTS = Carat::Domain::StatusSlots.new
+  LISTED = Carat::Domain::BufferList.new(tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: Carat::Domain::Buffer.new(lines: [""], path: nil, line_ending: "\n"))))
+  ARRANGE = Carat::UseCases::ArrangeView.new(cache: CACHE, buffers: LISTED)
   LAST = Carat::Domain::LastSearch.new
   PROMPT = Carat::Domain::SearchPrompt.new
-  P = Carat::Adapters::FramePresenter.new(input: INPUT, plugin_ui: UI, cache: CACHE, last_search: LAST, search_prompt: PROMPT, start_screen: Carat::Domain::StartScreen.new)
+  P = Carat::Adapters::FramePresenter.new(input: INPUT, plugin_ui: UI, cache: CACHE, last_search: LAST, search_prompt: PROMPT, start_screen: Carat::Domain::StartScreen.new, status_bar: Carat::Adapters::StatusBar.new(plugin_ui: UI, slots: SLOTS), tab_bar: Carat::Adapters::TabBar.new(buffers: LISTED))
 
   # Draws the state at a size as the editor does: the size goes into the
   # state, ArrangeView lays the windows out, and the presenter reads it.
@@ -31,6 +33,8 @@ module AdaptersFramePresenterTest
     options.number = true
     options.tabstop = 4
     UI.segments.clear
+    UI.owners.clear
+    UI.priorities.clear
     UI.close_prompt
     Carat::Domain::EditorState.new(tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: buffer)), options: options)
   end
@@ -147,13 +151,14 @@ module AdaptersFramePresenterTest
     s = state_for(["one", "two", "three"], "a.txt")
     f = draw(s, 6, 14)
     t.assert_equal(["  1 one", "  2 two", "  3 three", "~"], f.text_rows[0, 4], "window rows with numbers and a tilde")
-    t.assert_equal("a.txt", f.row_text(4)[0, 5], "status line starts with the path")
-    t.assert_equal("1,1 All", f.row_text(4)[-7, 7], "status line ends with the cursor and position")
+    t.assert_equal(" NORMAL  a.txt", f.row_text(4), "the status bar keeps the mode and the file at 14 columns")
     t.assert_equal("", f.row_text(5), "message row is blank")
-    t.assert_equal(D::Highlight::STATUS, f.cell(4, 0).hl, "status line uses the status highlight")
-    t.assert_equal(D::Highlight::STATUS, f.cell(4, 13).hl, "status highlight fills the row")
+    t.assert_equal([D::Highlight::STATUS_MODE_NORMAL, D::Highlight::STATUS], [f.cell(4, 0).hl, f.cell(4, 13).hl], "the pill in the mode's group, the file in the status highlight")
+    wide = draw(s, 6, 40)
+    t.assert_equal("utf-8  1:1  All", wide.row_text(4)[-15, 15], "a wide bar ends with the encoding, the position, and the percent")
+    t.assert_equal(D::Highlight::STATUS, wide.cell(4, 20).hl, "the status highlight fills the row between")
     narrow = draw(s, 6, 12)
-    t.assert_equal("a.txt", narrow.row_text(4), "the ruler is dropped when it would touch the path")
+    t.assert_equal(" NORMAL  a.t", narrow.row_text(4), "the file is cut at the edge of a narrow bar")
     t.assert_equal(D::Highlight::LINE_NUMBER, f.cell(0, 0).hl, "gutter uses the line number highlight")
     t.assert_equal(D::Highlight::NON_TEXT, f.cell(3, 0).hl, "tilde uses the non-text highlight")
     t.assert_equal([0, 4], [f.cursor_row, f.cursor_col], "cursor sits after the gutter")
@@ -169,7 +174,7 @@ module AdaptersFramePresenterTest
     s = state_for(big, "big.txt")
     f = draw(s, 6, 20)
     t.assert_equal("   1 L1", f.row_text(0), "gutter widens to the digits of the line count")
-    t.assert_equal("Top", f.row_text(4)[-3, 3], "position is Top at the start of a long buffer")
+    t.assert_equal("Top", draw(s, 6, 40).row_text(4)[-3, 3], "position is Top at the start of a long buffer")
 
     # Relative numbers.
     s = state_for(["a", "b", "c"], "a.txt")
@@ -181,16 +186,17 @@ module AdaptersFramePresenterTest
     f = draw(s, 6, 12)
     t.assert_equal("  0 b", f.row_text(1), "cursor row shows 0 when number is off")
 
-    # Status line content.
+    # Status bar content.
     s = state_for(["ab", "cdef"], "a.txt")
+    s.options.icons = "unicode"
     s.buffer.mark_unsaved
     s.cursor.move_to(1, 2)
     f = draw(s, 6, 30)
-    t.assert_equal("a.txt [+]", f.row_text(4)[0, 9], "modified buffer shows [+]")
-    t.assert_equal("2,3 All", f.row_text(4)[-7, 7], "status line shows row,col and All")
+    t.assert_equal(" NORMAL  a.txt ●", f.row_text(4)[0, 16], "a modified buffer shows the modified icon")
+    t.assert_equal("2:3  All", f.row_text(4)[-8, 8], "the bar shows row:col and All")
     s = state_for([""], nil)
     f = draw(s, 6, 30)
-    t.assert_equal("[No Name]", f.row_text(4)[0, 9], "unnamed buffer")
+    t.assert_equal(" NORMAL  [No Name]", f.row_text(4)[0, 18], "unnamed buffer")
 
     # Message row priorities.
     s = state_for(["ab"], "a.txt")
@@ -225,11 +231,11 @@ module AdaptersFramePresenterTest
     t.assert_equal("line 8", f.row_text(0), "first window row shows line 8 after moving to row 10")
     t.assert_equal(3, f.cursor_row, "cursor row is third from the bottom of the six window rows")
     t.assert_equal(7, s.window.top, "window top is 7")
-    t.assert_equal("50%", f.row_text(6)[-3, 3], "position shows a percentage")
+    t.assert_equal("50%", draw(s, 8, 40).row_text(6)[-3, 3], "position shows a percentage")
     s.cursor.move_to(19, 0)
     f = draw(s, 8, 20)
     t.assert_equal("line 20", f.row_text(5), "last line at the bottom when the cursor reaches it")
-    t.assert_equal("Bot", f.row_text(6)[-3, 3], "position is Bot at the end")
+    t.assert_equal("Bot", draw(s, 8, 40).row_text(6)[-3, 3], "position is Bot at the end")
     s.cursor.move_to(0, 0)
     f = draw(s, 8, 20)
     t.assert_equal("line 1", f.row_text(0), "scrolls back up to the start")
@@ -315,7 +321,7 @@ module AdaptersFramePresenterTest
     t.assert_equal(24, f.rows, "frame has 24 rows")
     f = draw(s, 10, 40)
     t.assert_equal(10, f.rows, "frame has 10 rows after shrinking")
-    t.assert_equal("a.txt", f.row_text(8)[0, 5], "status line moved to row 8")
+    t.assert_equal(" NORMAL  a.txt", f.row_text(8)[0, 14], "the status bar moved to row 8")
 
     # Reuse: renders of the same size paint two frames in turn, so the frame
     # on the screen stays intact while the other is drawn.
@@ -334,19 +340,20 @@ module AdaptersFramePresenterTest
     top = s.tab.layout.split(0, false, 0, 5)
     f = draw(s, 9, 14)
     t.assert_equal(["  1 one", "  2 two", "  3 three"], f.text_rows[0, 3], "the top window shows the lines")
-    t.assert_equal("a.txt", f.row_text(3)[0, 5], "row 3 is the top window's status line")
+    t.assert_equal("─" * 14, f.row_text(3), "row 3 is a separator row under the top window")
+    t.assert_equal([D::Highlight::WINDOW_SEPARATOR, D::Highlight::WINDOW_SEPARATOR], [f.cell(3, 0).hl, f.cell(3, 13).hl], "the separator row is in WinSeparator")
     t.assert_equal(["  1 one", "  2 two", "  3 three"], f.text_rows[4, 3], "the bottom window shows the same lines")
-    t.assert_equal("a.txt", f.row_text(7)[0, 5], "row 7 is the bottom window's status line")
+    t.assert_equal(" NORMAL  a.txt", f.row_text(7), "row 7 is the status bar")
     t.assert_equal("", f.row_text(8), "row 8 is the message row")
-    t.assert_equal([D::Highlight::STATUS_NC, D::Highlight::STATUS], [f.cell(3, 0).hl, f.cell(7, 0).hl], "the current window's status line is highlighted, the other inactive")
     s.window.cursor.move_to(1, 0)
+    f = draw(s, 22, 40)
+    t.assert_equal("2:1  All", f.row_text(20)[-8, 8], "the bar shows the current window's cursor")
     f = draw(s, 9, 14)
     t.assert_equal([5, 4], [f.cursor_row, f.cursor_col], "the cursor is placed in the bottom window")
-    t.assert_equal(["1,1 All", "2,1 All"], [f.row_text(3)[-7, 7], f.row_text(7)[-7, 7]], "each status line shows its own cursor")
     s.tab.focus(top)
     f = draw(s, 9, 14)
     t.assert_equal([0, 4], [f.cursor_row, f.cursor_col], "focusing the top window moves the cursor there")
-    t.assert_equal([D::Highlight::STATUS, D::Highlight::STATUS_NC], [f.cell(3, 0).hl, f.cell(7, 0).hl], "the highlights follow the current window")
+    t.assert_equal("1:1  All", draw(s, 22, 40).row_text(20)[-8, 8], "the bar follows the current window")
 
     # Two windows side by side with the separator between them.
     s = state_for(["one", "two"], "a.txt")
@@ -356,16 +363,15 @@ module AdaptersFramePresenterTest
     t.assert_equal("  1 one   \u2502  1 one", f.row_text(0), "both windows on row 0 with the separator at column 10")
     t.assert_equal("  2 two   \u2502  2 two", f.row_text(1), "row 1 too")
     t.assert_equal("~         \u2502~", f.row_text(2), "tilde rows in both windows")
-    t.assert_equal(D::Highlight::STATUS, f.cell(0, 10).hl, "the separator carries the status highlight")
+    t.assert_equal(D::Highlight::WINDOW_SEPARATOR, f.cell(0, 10).hl, "the separator is in WinSeparator")
     t.assert_equal(D::Highlight::NON_TEXT, f.cell(2, 0).hl, "the tilde keeps its highlight")
-    t.assert_equal(["a.txt", "a.txt"], [f.row_text(4)[0, 5], f.row_text(4)[11, 5]], "row 4 holds both status lines")
-    t.assert_equal(D::Highlight::STATUS, f.cell(4, 10).hl, "the separator continues through the status row")
+    t.assert_equal(" NORMAL  a.txt", f.row_text(4)[0, 14], "row 4 is one status bar")
+    t.assert_equal([D::Highlight::STATUS, "."], [f.cell(4, 10).hl, f.cell(4, 10).char], "the separator stops above the bar")
     t.assert_equal("", f.row_text(5), "row 5 is the message row")
     t.assert_equal([0, 15], [f.cursor_row, f.cursor_col], "the cursor is in the right window, which stayed current")
     s.buffer.mark_unsaved
     f = draw(s, 6, 21)
-    t.assert_equal("a.txt [+]", f.row_text(4)[0, 9], "a status line clipped to its window still shows the marker")
-    t.assert_equal(" ", f.cell(4, 9).char, "the left status line stops before the separator")
+    t.assert_equal(" NORMAL  a.txt \u{F111}", f.row_text(4), "the modified icon stays when the rest is dropped")
 
     # A long line is clipped at the window's edge.
     s = state_for(["abcdefghijklmnopqrstuvwxyz"], "a.txt")
@@ -375,27 +381,34 @@ module AdaptersFramePresenterTest
     f = draw(s, 4, 11)
     t.assert_equal("abcde\u2502abcde", f.row_text(0), "each window shows what fits before its edge")
 
-    # Two tab pages: the tab line takes the top row.
+    # Two tab pages: the tabs row takes the top row, with the tab-page
+    # numbers at its right end; the list here has no file buffer.
     s = state_for(["one", "two", "three"], "a.txt")
     other = D::Buffer.new(lines: ["zz"], path: "b.txt", line_ending: "\n")
     s.tabs.add_tab(D::TabPage.new(window: D::Window.new(buffer: other)))
     s.tabs.tab_index = 0
     f = draw(s, 7, 30)
-    t.assert_equal(" 1 a.txt  2 b.txt", f.row_text(0), "the tab line lists both tab pages")
-    t.assert_equal([D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_FILL], [f.cell(0, 0).hl, f.cell(0, 9).hl, f.cell(0, 18).hl], "selected, plain, and fill highlights")
+    t.assert_equal("                         1  2", f.row_text(0), "the tab-page numbers stand at the right end")
+    t.assert_equal([D::Highlight::TAB_LINE_FILL, D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE], [f.cell(0, 0).hl, f.cell(0, 25).hl, f.cell(0, 28).hl], "fill, selected, and plain highlights")
     t.assert_equal("  1 one", f.row_text(1), "the first text row is row 1")
-    t.assert_equal("a.txt", f.row_text(5)[0, 5], "the status line is on row 5")
+    t.assert_equal(" NORMAL  a.txt", f.row_text(5)[0, 14], "the status bar is on row 5")
     t.assert_equal("", f.row_text(6), "the message row stays last")
-    t.assert_equal([1, 4], [f.cursor_row, f.cursor_col], "the cursor is under the tab line")
+    t.assert_equal([1, 4], [f.cursor_row, f.cursor_col], "the cursor is under the tabs row")
     s.tabs.tab_index = 1
-    other.mark_unsaved
     f = draw(s, 7, 30)
-    t.assert_equal(" 1 a.txt  2 b.txt [+]", f.row_text(0), "the modified marker shows in the label")
-    t.assert_equal([D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_SELECTED], [f.cell(0, 0).hl, f.cell(0, 9).hl], "the second label is selected now")
+    t.assert_equal([D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_SELECTED], [f.cell(0, 25).hl, f.cell(0, 28).hl], "the second number is selected now")
     t.assert_equal("  1 zz", f.row_text(1), "the second tab page's window is drawn")
     s.tabs.remove_tab(1)
     f = draw(s, 7, 30)
-    t.assert_equal("  1 one", f.row_text(0), "with one tab page there is no tab line")
+    t.assert_equal("  1 one", f.row_text(0), "with one tab page and no files listed there is no tabs row")
+    LISTED.add(s.buffer)
+    LISTED.add(other)
+    s.options.icons = "unicode"
+    f = draw(s, 7, 30)
+    t.assert_equal(" • a.txt    • b.txt", f.row_text(0), "two listed files show their tabs, the current one selected")
+    t.assert_equal([D::Highlight::TAB_LINE_SELECTED, D::Highlight::ICON_DEFAULT, D::Highlight::TAB_LINE], [f.cell(0, 0).hl, f.cell(0, 1).hl, f.cell(0, 11).hl], "the selected tab's icon takes its file-icon group")
+    LISTED.remove(other)
+    LISTED.remove(s.buffer)
 
     # The sign column: two cells before the numbers while the buffer has signs.
     s = state_for(["one", "two", "three"], "a.txt")
@@ -413,8 +426,8 @@ module AdaptersFramePresenterTest
     f = draw(s, 6, 20)
     t.assert_equal("one", f.row_text(0), "clearing the signs removes the column")
 
-    # A scratch buffer's status line shows its title; the current window's
-    # shows the plugins' segments.
+    # The bar shows the current window's buffer, a scratch title too, and
+    # the plugins' segments.
     s = state_for(["one"], "a.txt")
     scratch = D::Buffer.new(lines: ["item"], path: nil, line_ending: "\n")
     scratch.owner = "test"
@@ -424,19 +437,16 @@ module AdaptersFramePresenterTest
     side.fixed_width = true
     id = s.tab.layout.split_edge(side, 12, true)
     f = draw(s, 6, 40)
-    t.assert_equal("list", f.row_text(4)[0, 4], "the side window's status line shows the scratch title")
-    t.assert_equal("a.txt", f.row_text(4)[13, 5], "the file window keeps its path")
-    UI.segments["hello"] = "hello 1"
-    UI.segments["other"] = "x"
+    t.assert_equal(" NORMAL  a.txt ", f.row_text(4)[0, 15], "the bar shows the current file window")
+    UI.segment("hello", "hello 1", 25)
+    UI.segment("other", "x", 25)
     f = draw(s, 6, 40)
-    t.assert_equal("a.txt  hello 1 x", f.row_text(4)[13, 16], "the current window's status line shows the segments in order")
-    t.assert_equal(["list", false], [f.row_text(4)[0, 4], f.row_text(4)[0, 12].include?("hello")], "the other window's does not")
+    t.assert_equal(" NORMAL  a.txt     hello 1  x  1:1  All", f.row_text(4), "the plugins' segments stand in order before the position, the encoding dropped first")
+    UI.segment("other", "x", 5)
+    t.assert_equal(" NORMAL  a.txt" + (" " * 8) + "hello 1  1:1  All", draw(s, 6, 40).row_text(4), "a segment of priority 5 is dropped before the encoding")
     s.tab.focus(id)
     f = draw(s, 6, 40)
-    t.assert_equal(["list  hello ", "a.txt   "], [f.row_text(4)[0, 12], f.row_text(4)[13, 8]], "the segments follow the current window, clipped to the window")
-    scratch.mark_unsaved
-    f = draw(s, 6, 40)
-    t.assert_equal("list [+]  he", f.row_text(4)[0, 12], "the modified marker comes before the segments")
+    t.assert_equal(" NORMAL  list ", f.row_text(4)[0, 14], "the bar follows the current window to the scratch title")
     t.assert_equal(["item", "  1 one"], [f.row_text(0)[0, 4], f.row_text(0)[13, 7]], "the side window has no line numbers while the file window keeps them")
     scratch.place_sign("test", 0, 0, "!")
     f = draw(s, 6, 40)
@@ -559,7 +569,7 @@ module AdaptersFramePresenterTest
     s.cursor.move_to(1, 0)
     f = draw(s, 6, 14)
     t.assert_equal([D::Highlight::LINE_NUMBER, D::Highlight::CURSOR_LINE_NUMBER, D::Highlight::LINE_NUMBER], [f.cell(0, 2).hl, f.cell(1, 2).hl, f.cell(2, 2).hl], "the cursor line's number is in CursorLineNr")
-    t.assert_equal([NOR + LIT, NOR + LIT, D::Highlight::STATUS], [f.cell(1, 4).hl, f.cell(1, 13).hl, f.cell(4, 4).hl], "the text takes its group on the layer, the status line keeps its own")
+    t.assert_equal([NOR + LIT, NOR + LIT, D::Highlight::STATUS_MODE_NORMAL], [f.cell(1, 4).hl, f.cell(1, 13).hl, f.cell(4, 4).hl], "the text takes its group on the layer, the status bar keeps its own")
     s = state_for(["abc", "def"], "a.txt")
     s.options.cursorline = true
     s.mode = D::Mode::VISUAL

@@ -34,7 +34,8 @@ module UseCasesArrangeViewTest
   def self.main
     t = Carat::Testing.new("use_cases_arrange_view")
 
-    arrange = Carat::UseCases::ArrangeView.new(cache: D::LineCache.new)
+    listed = D::BufferList.new(tabs: D::TabList.new(window: D::Window.new(buffer: D::Buffer.new(lines: [""], path: nil, line_ending: "\n"))))
+    arrange = Carat::UseCases::ArrangeView.new(cache: D::LineCache.new, buffers: listed)
 
     # Nothing happens before the size is known.
     s = state_for(numbered(40))
@@ -46,6 +47,21 @@ module UseCasesArrangeViewTest
     # The layout gets every row but the message row.
     arrange.call(s)
     t.assert_equal([0, 0, 8, 40], rect(s.window), "one window takes the rows above its status line and the message row")
+
+    # Two listed file buffers, or two tab pages, give the top row to the
+    # buffer tabs; a scratch buffer does not count.
+    t.assert_equal([false, false, true], [listed.tab_row?(1), listed.tab_row?(0), listed.tab_row?(2)], "one tab page and no files has no tabs row, two tab pages have one")
+    listed.add(D::Buffer.new(lines: [""], path: "a.txt", line_ending: "\n"))
+    scratch = D::Buffer.new(lines: [""], path: nil, line_ending: "\n")
+    scratch.owner = "tree"
+    scratch.title = "tree"
+    listed.add(scratch)
+    t.assert_equal(false, listed.tab_row?(1), "one file and a scratch buffer have no tabs row")
+    listed.add(D::Buffer.new(lines: [""], path: "b.txt", line_ending: "\n"))
+    arrange.call(s)
+    t.assert_equal([1, 0, 7, 40], rect(s.window), "with two files listed the window starts under the tabs row")
+    listed.remove(listed.buffer_at(2))
+    arrange.call(s)
 
     # Vertical scrolling to the cursor, both ways, with scrolloff.
     s.cursor.move_to(20, 0)

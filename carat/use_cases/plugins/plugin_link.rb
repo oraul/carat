@@ -144,6 +144,15 @@ module Carat
       end
 
       # Returns a Response.
+      # @rbs text: String
+      # @rbs priority: Integer
+      def set_segment(text, priority)
+        why = refusal
+        return PluginApi::Response.failure(why) unless why.empty?
+        @ui.set_segment(@name, text, priority)
+      end
+
+      # Returns a Response.
       # @rbs buffer: Integer
       # @rbs row: Integer
       # @rbs icon: String

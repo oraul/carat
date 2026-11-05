@@ -12,7 +12,7 @@ require_relative "plugin_registry"
 module Carat
   module UseCases
     # The requests of the plugin API about the editor around the text: a
-    # message, the plugin's status segment, a prompt, an icon, a highlight
+    # message, the plugin's status segment and its priority, a prompt, an icon, a highlight
     # group's id, the plugin's options, the working directory, and running an ex command
     # line, which is refused with E169 when plugin calls are already
     # nested MAX_DEPTH deep. The command runner is given at construction,
@@ -48,7 +48,14 @@ module Carat
 
       #: (String, String) -> PluginApi::Response
       def set_status(name, text)
-        @plugin_ui.segment(name, text.dup)
+        set_segment(name, text, PluginApi::STATUS_PRIORITY)
+      end
+
+      # Sets the plugin's segment with its priority, refused out of range.
+      #: (String, String, Integer) -> PluginApi::Response
+      def set_segment(name, text, priority)
+        return PluginApi::Response.failure("priority must be 0 to #{PluginApi::PRIORITY_MAX}") if priority < 0 || priority > PluginApi::PRIORITY_MAX
+        @plugin_ui.segment(name, text.dup, priority)
         PluginApi::Response.success("", 0)
       end
 

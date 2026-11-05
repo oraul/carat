@@ -8,8 +8,15 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 1
-    VERSION = "2.1"
+    MINOR = 2
+    VERSION = "2.2"
+
+    # The priority of a status bar segment set with set_status, and the
+    # highest a plugin may give with set_segment (from 2.2). When the bar
+    # is narrow, segments of lower priority are dropped first; the
+    # editor's own run from 20 (the encoding) to 100 (the mode).
+    STATUS_PRIORITY = 10
+    PRIORITY_MAX = 99
 
     # The events a plugin may subscribe to, by name. idle arrives with the
     # language services change, which gives the main loop an idle tick.
@@ -343,6 +350,72 @@ module Carat
       end
     end
 
+    # The file-icon table, for plugins and the host alike: the icon name
+    # of a file by its whole name, then by the text after its last dot,
+    # "default" otherwise, and the file-icon highlight group each icon is
+    # drawn in. The explorer draws its tree with it and the buffer tabs
+    # their icons. The dot is found by bytes, so a name that is not UTF-8
+    # finds its extension.
+    module FileIcons
+      NAMES = {
+        "Makefile" => "makefile",
+        "makefile" => "makefile",
+        "GNUmakefile" => "makefile",
+        ".gitignore" => "git",
+        ".gitattributes" => "git",
+        ".gitmodules" => "git"
+      }
+
+      EXTENSIONS = {
+        "rb" => "ruby",
+        "json" => "json",
+        "md" => "markdown",
+        "toml" => "toml",
+        "sh" => "shell",
+        "c" => "c",
+        "h" => "c",
+        "yml" => "yaml",
+        "yaml" => "yaml",
+        "lock" => "lock"
+      }
+
+      GROUPS = {
+        "folder_closed" => "DevIconFolder",
+        "folder_open" => "DevIconFolder",
+        "symlink" => "DevIconSymlink",
+        "ruby" => "DevIconRb",
+        "json" => "DevIconJson",
+        "markdown" => "DevIconMd",
+        "toml" => "DevIconToml",
+        "makefile" => "DevIconMakefile",
+        "shell" => "DevIconSh",
+        "c" => "DevIconC",
+        "yaml" => "DevIconYml",
+        "git" => "DevIconGitIgnore",
+        "lock" => "DevIconLock",
+        "default" => "DevIconDefault"
+      }
+
+      # The icon name of a file name, the last segment of a path.
+      #: (String) -> String
+      def self.file_type(name)
+        whole = NAMES[name]
+        return whole unless whole.nil?
+        dot = name.byterindex(".")
+        return "default" if dot.nil? || dot == 0
+        by_extension = EXTENSIONS[name.byteslice(dot + 1, name.bytesize - dot - 1).to_s]
+        by_extension.nil? ? "default" : by_extension
+      end
+
+      # The name of the file-icon group of an icon name, DevIconDefault
+      # for one without its own.
+      #: (String) -> String
+      def self.group_of(icon)
+        group = GROUPS[icon]
+        group.nil? ? "DevIconDefault" : group
+      end
+    end
+
     # The requests a plugin can make, one method each. The host hands every
     # plugin its own instance at activation, so the host knows which plugin
     # owns a scratch buffer, a sign, a status segment, or an option. Every
@@ -445,11 +518,20 @@ module Carat
         raise NotImplementedError, "Host#message"
       end
 
-      # Sets the plugin's status line segment, "" removing it, and returns
-      # a Response.
+      # Sets the plugin's status bar segment at STATUS_PRIORITY, ""
+      # removing it, and returns a Response.
       # @rbs text: String
       def set_status(text)
         raise NotImplementedError, "Host#set_status"
+      end
+
+      # Sets the plugin's status bar segment with a priority from 0 to
+      # PRIORITY_MAX, "" removing it, and returns a Response, failed for a
+      # priority out of range (from 2.2).
+      # @rbs text: String
+      # @rbs priority: Integer
+      def set_segment(text, priority)
+        raise NotImplementedError, "Host#set_segment"
       end
 
       # Places the icon named icon as the plugin's sign on row of the

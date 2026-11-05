@@ -22,7 +22,7 @@ The API SHALL have a version in `major.minor` form, 2.2 since the `set_segment` 
 ## ADDED Requirements
 
 ### Requirement: A plugin sets its status bar segment with a priority
-A plugin SHALL set its own status bar segment with a text and a priority from 0 to 99 through `set_segment`; an empty text SHALL remove the segment, a priority outside 0 to 99 SHALL fail with "priority must be 0 to 99" and change nothing, and `set_status` SHALL set the segment at priority 10. The segments SHALL be shown in plugin registration order and dropped by their priorities when the bar is narrow, and a disabled plugin's segment SHALL be removed.
+A plugin SHALL set its own status bar segment with a text and a priority from 0 to 99 through `set_segment`; an empty text SHALL remove the segment, a priority outside 0 to 99 SHALL fail with "priority must be 0 to 99" and change nothing, and `set_status` SHALL set the segment at priority 10. The segments SHALL be shown in the order the plugins first set them and dropped by their priorities when the bar is narrow, and a disabled plugin's segment SHALL be removed.
 
 #### Scenario: A segment with a priority
 - **WHEN** a test plugin sets the segment "probe" with priority 95

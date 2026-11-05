@@ -2,14 +2,16 @@ require_relative "../domain/editor_state"
 require_relative "../domain/window"
 require_relative "../domain/options"
 require_relative "../domain/line_cache"
+require_relative "../domain/buffer_list"
 
 module Carat
   module UseCases
     # Lays out the current tab page for the screen size the state holds
     # and scrolls each of its windows to its cursor, so the geometry the
     # use cases read (split sizes, neighbours, H, M, and L) is the one the
-    # next frame will show. The top row is the tab line when there are
-    # several tab pages and the last row the message row; the layout gets
+    # next frame will show. The top row holds the buffer tabs when two
+    # file buffers are listed or two tab pages exist, the row above the
+    # last the status bar, and the last row the message row; the layout gets
     # the rows between. Each window scrolls vertically to keep its cursor
     # row visible with scrolloff and horizontally to keep the display
     # column of its cursor visible, read from the shared line cache. It
@@ -17,10 +19,12 @@ module Carat
     # file is opened, and before every render.
     class ArrangeView
       attr_reader :cache #: Domain::LineCache
+      attr_reader :buffers #: Domain::BufferList
 
-      #: (cache: Domain::LineCache) -> void
-      def initialize(cache:)
+      #: (cache: Domain::LineCache, buffers: Domain::BufferList) -> void
+      def initialize(cache:, buffers:)
         @cache = cache
+        @buffers = buffers
       end
 
       #: (Domain::EditorState) -> void
@@ -30,7 +34,7 @@ module Carat
         return if rows <= 0 || cols <= 0
         options = state.options
         tabstop = options.tabstop > 0 ? options.tabstop : 8
-        tabline = state.tabs.tab_count > 1 ? 1 : 0
+        tabline = @buffers.tab_row?(state.tabs.tab_count) ? 1 : 0
         area = rows - 1 - tabline
         area = 1 if area < 1
         layout = state.tab.layout
