@@ -26,7 +26,7 @@ The ids are renumbered: 41 UI groups from 0 (the thirteen of today keep their or
 
 `Themes` names 37 color roles (`BG`, `FG`, `DIM`, `FAINT`, `PANEL`, `FLOAT`, `SELECTION`, `SEARCH`, the seven accents, the four diff backgrounds, and thirteen syntax roles such as `COMMENT`, `KEYWORD`, `CONTROL`, `FUNCTION`, `TYPE`, `STRING`). A palette is rows of four integers per role: the 24-bit color, its 256-color index or -1 to take the nearest, and its 16-color index or -1 for none. One shared table gives each group a foreground role, a background role (-1 for none), its attributes, and its attributes at 16 colors. Per-palette syntax colors come from the roles: `one_dark`'s `KEYWORD` and `CONTROL` are both purple, `dark_plus`'s are blue and pink. Alternative: rows per group per palette as today (four tables of 84 rows); rejected as four times the data with nothing to keep the palettes consistent.
 
-The 16-color indices are given by hand per role and palette, as Vim themes give `ctermfg`, since the nearest basic color to a pastel is white. The 256-color index is given only where the nearest one fails the contrast test (seven roles in three palettes).
+The 16-color indices are given by hand per role and palette, as Vim themes give `ctermfg`, since the nearest basic color to a pastel is white. The 256-color index is given only where the nearest one fails the contrast test or loses the hue (fifteen roles in the four palettes, also where the nearest index of a green or a diff background is a gray).
 
 ### 3. Theme gets 256-color and 16-color-attribute arrays
 

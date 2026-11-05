@@ -8,20 +8,113 @@ module DomainThemeTest
   D = Carat::Domain
   H = D::Highlight
 
-  # Every group of a theme but Normal has a color in both depths, and
-  # Normal keeps the terminal's colors. A method rather than a block, so
-  # Spinel types the theme.
-  #: (Carat::Testing, Carat::Domain::Theme) -> void
-  def self.check_theme(t, theme)
-    t.assert_equal([-1, -1, -1, -1, 0], [theme.fg(H::NORMAL), theme.bg(H::NORMAL), theme.fg16(H::NORMAL), theme.bg16(H::NORMAL), theme.attr(H::NORMAL)], "#{theme.name}: Normal keeps the terminal's colors")
-    missing = []
-    id = 1
+  PALETTES = ["one_dark", "one_light", "dark_plus", "light_plus"]
+
+  # The groups drawn as decorations, held to 3:1 rather than 4.5:1, and
+  # the groups that carry no text, exempt from the contrast rule.
+  DECORATIONS = [H::NON_TEXT, H::END_OF_BUFFER, H::WINDOW_SEPARATOR, H::FLOAT_BORDER, H::WHITESPACE, H::SIGN_COLUMN]
+  NO_TEXT = [H::TAB_LINE_FILL, H::POPUP_MENU_SCROLLBAR, H::POPUP_MENU_THUMB]
+
+  # The linear light of one sRGB component, WCAG 2's formula.
+  #: (Integer) -> Float
+  def self.channel(value)
+    c = value / 255.0
+    c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055)**2.4
+  end
+
+  #: (Integer) -> Float
+  def self.luminance(rgb)
+    0.2126 * channel((rgb >> 16) & 255) + 0.7152 * channel((rgb >> 8) & 255) + 0.0722 * channel(rgb & 255)
+  end
+
+  # The WCAG contrast ratio of two 24-bit colors, times 100 and rounded
+  # down, so 4.5:1 is 450.
+  #: (Integer, Integer) -> Integer
+  def self.contrast(a, b)
+    la = luminance(a)
+    lb = luminance(b)
+    high = la > lb ? la : lb
+    low = la > lb ? lb : la
+    ((high + 0.05) / (low + 0.05) * 100).floor
+  end
+
+  # The 24-bit color of a 256-color index above the basic 16: a color of
+  # the 6x6x6 cube or a gray of the ramp.
+  #: (Integer) -> Integer
+  def self.rgb_256(index)
+    if index >= 232
+      gray = 8 + 10 * (index - 232)
+      return (gray << 16) | (gray << 8) | gray
+    end
+    cube = Carat::Adapters::SgrTable::CUBE
+    i = index - 16
+    (cube[i / 36] << 16) | (cube[(i / 6) % 6] << 8) | cube[i % 6]
+  end
+
+  # The 24-bit color the terminal shows for a color at 256 colors: the
+  # palette's own index, or the nearest one SgrTable writes.
+  #: (Integer, Integer) -> Integer
+  def self.shown_256(rgb, index)
+    rgb_256(index < 0 ? Carat::Adapters::SgrTable.index_256(rgb) : index)
+  end
+
+  #: (Integer) -> bool
+  def self.decoration?(id)
+    DECORATIONS.include?(id) || id >= H::ICON_FIRST
+  end
+
+  # The groups of a theme drawn with its background whose foreground
+  # falls below WCAG AA on their background, 4.5:1 for text and 3:1 for
+  # decorations, at 24 bits or at 256 colors, each with its ratio.
+  #: (Carat::Domain::Theme, bool) -> Array[String]
+  def self.low_contrast(theme, at256)
+    out = []
+    id = 0
     while id < H::COUNT
-      missing << H::NAMES[id] if theme.fg(id) < 0 && theme.bg(id) < 0
-      missing << "#{H::NAMES[id]} (16)" if theme.fg16(id) < 0 && theme.bg16(id) < 0
+      unless NO_TEXT.include?(id)
+        fg = theme.fg(id)
+        bg = theme.bg(id)
+        if at256
+          fg = shown_256(fg, theme.fg256(id))
+          bg = shown_256(bg, theme.bg256(id))
+        end
+        ratio = contrast(fg, bg)
+        out << "#{H::NAMES[id]} #{ratio}" if ratio < (decoration?(id) ? 300 : 450)
+      end
       id += 1
     end
-    t.assert_equal([], missing, "#{theme.name}: every other group has a color in both depths")
+    out
+  end
+
+  # The groups of a theme with no 24-bit foreground or background.
+  #: (Carat::Domain::Theme) -> Array[String]
+  def self.uncolored(theme)
+    out = []
+    id = 0
+    while id < H::COUNT
+      out << H::NAMES[id] if theme.fg(id) < 0 || theme.bg(id) < 0
+      id += 1
+    end
+    out
+  end
+
+  # The groups of a theme that would look like Normal text at 16 colors:
+  # no basic color and no attribute.
+  #: (Carat::Domain::Theme) -> Array[String]
+  def self.plain_16(theme)
+    out = []
+    id = 0
+    while id < H::COUNT
+      out << H::NAMES[id] if theme.fg16(id) < 0 && theme.bg16(id) < 0 && theme.attr16(id) == 0
+      id += 1
+    end
+    out
+  end
+
+  # Whether the three search groups have a background at every depth.
+  #: (Carat::Domain::Theme) -> bool
+  def self.search_backgrounds?(theme)
+    [H::SEARCH, H::INC_SEARCH, H::CURRENT_SEARCH].all? { |id| theme.bg(id) >= 0 && theme.bg16(id) >= 0 }
   end
 
   # The options of text read as the project file.
@@ -34,44 +127,79 @@ module DomainThemeTest
   def self.main
     t = Carat::Testing.new("domain_theme")
 
-    # The group table: editor groups first, the thirty syntax groups after.
+    # The group table: UI groups first, then the thirty syntax groups,
+    # then the file-icon groups.
     t.assert_equal(H::COUNT, H::NAMES.length, "every id has a name")
-    t.assert_equal(30, H::COUNT - H::SYNTAX_FIRST, "thirty syntax groups")
-    t.assert_equal(["Comment", "Error", "SignColumn"], [H::NAMES[H::COMMENT], H::NAMES[H::ERROR], H::NAMES[H::SIGN_COLUMN]], "names by id")
+    t.assert_equal([41, 30, 13], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::COUNT - H::ICON_FIRST], "41 UI groups, thirty syntax groups, thirteen file-icon groups")
+    t.assert_equal(["Comment", "Error", "SignColumn", "CursorLine", "DiagnosticHint", "DevIconRb"], [H::NAMES[H::COMMENT], H::NAMES[H::ERROR], H::NAMES[H::SIGN_COLUMN], H::NAMES[H::CURSOR_LINE], H::NAMES[H::DIAGNOSTIC_HINT], H::NAMES[H::ICON_RUBY]], "names by id")
     t.table([
       ["Comment", "Comment", H::COMMENT],
       ["String", "String", H::STRING],
       ["Define", "Define", H::DEFINE],
       ["Todo", "Todo", H::TODO],
-      ["an editor group is not a syntax group", "StatusLine", -1],
+      ["a file-icon group", "DevIconRb", H::ICON_RUBY],
+      ["the last file-icon group", "DevIconLock", H::ICON_LOCK],
+      ["a UI group is not a token group", "StatusLine", -1],
+      ["nor is a new UI group", "CursorLine", -1],
       ["Normal is not either", "Normal", -1],
       ["an unknown name", "Banana", -1],
       ["names are case sensitive", "comment", -1]
-    ]) { |name| H.syntax_id(name.to_s) }
-    t.assert_equal([false, true, true, false], [H.syntax?(H::VISUAL), H.syntax?(H::COMMENT), H.syntax?(H::ERROR), H.syntax?(H::COUNT)], "syntax? covers the syntax ids only")
+    ]) { |name| H.token_id(name.to_s) }
+    t.assert_equal([false, true, true, true, false], [H.token?(H::VISUAL), H.token?(H::COMMENT), H.token?(H::ERROR), H.token?(H::ICON_LOCK), H.token?(H::COUNT)], "token? covers the syntax and file-icon ids only")
     t.assert_equal(["Visual", ""], [H.name_of(H::VISUAL), H.name_of(99)], "name_of")
 
-    # The themes: every group of both themes, Normal left to the terminal.
-    dark = D::Themes.find("carat-dark")
-    light = D::Themes.find("carat-light")
-    t.assert_equal(["carat-dark", "carat-light", "carat-dark"], [dark.name, light.name, D::Themes.find("nope").name], "find, carat-dark for an unknown name")
-    t.assert_equal([true, true, false], [D::Themes.known?("carat-dark"), D::Themes.known?("carat-light"), D::Themes.known?("nope")], "known?")
-    check_theme(t, dark)
-    check_theme(t, light)
-    t.assert_equal([0x7f849c, D::Theme::ITALIC], [dark.fg(H::COMMENT), dark.attr(H::COMMENT)], "carat-dark comments are grey and italic")
-    t.assert_equal(0x8c8fa1, light.fg(H::COMMENT), "carat-light has its own comment color")
+    # The palettes, their aliases, and the backgrounds.
+    t.assert_equal(["one_dark", "one_light", "dark_plus", "light_plus", "one_dark", "one_light", "one_dark"], [D::Themes.find("one_dark", "terminal").name, D::Themes.find("one_light", "terminal").name, D::Themes.find("dark_plus", "terminal").name, D::Themes.find("light_plus", "terminal").name, D::Themes.find("carat-dark", "terminal").name, D::Themes.find("carat-light", "terminal").name, D::Themes.find("nope", "terminal").name], "find, the aliases, and one_dark for an unknown name")
+    t.assert_equal([true, true, true, true, true, true, false, false], [D::Themes.known?("one_dark"), D::Themes.known?("one_light"), D::Themes.known?("dark_plus"), D::Themes.known?("light_plus"), D::Themes.known?("carat-dark"), D::Themes.known?("carat-light"), D::Themes.known?("nope"), D::Themes.known?("One_Dark")], "known?")
+    t.assert_equal([true, true, false], [D::Themes.background?("terminal"), D::Themes.background?("theme"), D::Themes.background?("dark")], "background?")
+    dark = D::Themes.find("one_dark", "terminal")
+    painted = D::Themes.find("one_dark", "theme")
+    t.assert_equal([-1, -1, -1, -1, -1, -1, 0, false], [dark.fg(H::NORMAL), dark.bg(H::NORMAL), dark.fg256(H::NORMAL), dark.bg256(H::NORMAL), dark.fg16(H::NORMAL), dark.bg16(H::NORMAL), dark.attr(H::NORMAL), dark.paints_background?], "with the terminal's background Normal keeps the terminal's colors")
+    t.assert_equal([0xabb2bf, 0x282c34, 7, 0, true], [painted.fg(H::NORMAL), painted.bg(H::NORMAL), painted.fg16(H::NORMAL), painted.bg16(H::NORMAL), painted.paints_background?], "with the theme's background Normal is the palette's")
+    t.assert_equal([-1, 0x282c34], [dark.bg(H::COMMENT), painted.bg(H::COMMENT)], "a group without a background of its own is drawn on the painted one")
+    t.assert_equal([-1, 0xabb2bf], [dark.fg(H::VISUAL), painted.fg(H::VISUAL)], "a group without a foreground of its own takes the palette's text color when painted")
+    PALETTES.each do |name|
+      t.assert_equal([], uncolored(D::Themes.find(name, "theme")), "#{name}: every group has a 24-bit foreground and background on the theme's background")
+      t.assert_equal(["Normal", "Delimiter"], plain_16(D::Themes.find(name, "terminal")), "#{name}: every group but Normal and Delimiter shows at 16 colors")
+      t.assert_true(search_backgrounds?(D::Themes.find(name, "terminal")), "#{name}: Search, IncSearch, and CurSearch have a background at every depth")
+    end
+    t.assert_equal([0x959ca8, D::Theme::ITALIC], [dark.fg(H::COMMENT), dark.attr(H::COMMENT)], "one_dark comments are gray and italic")
+    t.assert_true(dark.fg(H::KEYWORD) != D::Themes.find("dark_plus", "terminal").fg(H::KEYWORD), "palettes have their own syntax colors")
+    t.assert_equal([-1, 71], [dark.fg256(H::COMMENT), D::Themes.find("dark_plus", "terminal").fg256(H::COMMENT)], "a palette gives a 256-color index only where it needs one")
+    t.assert_equal([0, D::Theme::REVERSE, 0, D::Theme::UNDERLINE], [dark.attr(H::VISUAL), dark.attr16(H::VISUAL), dark.attr(H::CURSOR_LINE), dark.attr16(H::CURSOR_LINE)], "16-color attributes stand in for the selection and cursor line colors")
     t.assert_equal(D::Theme::BOLD, dark.attr(H::STATUS) & D::Theme::BOLD, "the status line is bold")
 
-    # Options read the theme from the option.theme line.
-    t.assert_equal(["carat-dark", true], [D::Options.new.theme, D::Options.new.syntax_on], "the defaults: carat-dark, syntax on")
-    t.assert_equal("carat-light", theme_of("option.theme carat-light\n").theme, "the theme line selects a theme")
+    # WCAG AA: 4.5:1 for text, 3:1 for decorations, on the theme's
+    # background, at 24 bits and at the 256 colors written.
+    t.table([
+      ["one_dark at 24 bits", ["one_dark", "24"], []],
+      ["one_dark at 256 colors", ["one_dark", "256"], []],
+      ["one_light at 24 bits", ["one_light", "24"], []],
+      ["one_light at 256 colors", ["one_light", "256"], []],
+      ["dark_plus at 24 bits", ["dark_plus", "24"], []],
+      ["dark_plus at 256 colors", ["dark_plus", "256"], []],
+      ["light_plus at 24 bits", ["light_plus", "24"], []],
+      ["light_plus at 256 colors", ["light_plus", "256"], []]
+    ]) { |input| low_contrast(D::Themes.find(input[0].to_s, "theme"), input[1].to_s == "256") }
+    t.assert_true(contrast(painted.fg(H::COMMENT), painted.bg(H::COMMENT)) >= 450, "one_dark comments are readable")
+    t.assert_equal([454, 100], [contrast(0x767676, 0xffffff), contrast(0x777777, 0x777777)], "the contrast of WCAG's lightest AA gray on white and of a color on itself")
+
+    # Options read the theme from the option.theme line and the
+    # background from the option.background line.
+    t.assert_equal(["one_dark", "terminal", true], [D::Options.new.theme, D::Options.new.background, D::Options.new.syntax_on], "the defaults: one_dark on the terminal's background, syntax on")
+    t.assert_equal("light_plus", theme_of("option.theme light_plus\n").theme, "the theme line selects a palette")
+    t.assert_equal("carat-light", theme_of("option.theme carat-light\n").theme, "an alias is accepted")
     unknown = D::Config.new
     unknown.read(".caratrc", "option.theme solarized\n", false)
-    t.assert_equal(["carat-dark", [".caratrc:1: unknown theme solarized"]], [D::Options.from_config(unknown).theme, unknown.report], "an unknown theme keeps the default and is reported")
-    t.assert_equal("carat-dark", theme_of("option.theme \"carat light\" x\n").theme, "a theme of the wrong kind keeps the default")
+    t.assert_equal(["one_dark", [".caratrc:1: unknown theme solarized"]], [D::Options.from_config(unknown).theme, unknown.report], "an unknown theme keeps the default and is reported")
+    t.assert_equal("one_dark", theme_of("option.theme \"carat light\" x\n").theme, "a theme of the wrong kind keeps the default")
+    t.assert_equal("theme", theme_of("option.background theme\n").background, "the background line paints the background")
+    background = D::Config.new
+    background.read(".caratrc", "option.background dark\n", false)
+    t.assert_equal(["terminal", [".caratrc:1: unknown background dark"]], [D::Options.from_config(background).background, background.report], "an unknown background keeps the default and is reported")
     shipped = D::Config.new
     shipped.read_defaults("config/default.caratrc", D::DEFAULT_CARATRC)
-    t.assert_equal("carat-dark", D::Options.from_config(shipped).theme, "the shipped configuration names carat-dark")
+    t.assert_equal(["one_dark", "terminal"], [D::Options.from_config(shipped).theme, D::Options.from_config(shipped).background], "the shipped configuration names one_dark on the terminal's background")
 
     # The color depth from COLORTERM and TERM.
     t.table([

@@ -11,11 +11,13 @@ module Carat
     # scroll is the lines <C-d> and <C-u> scroll, half the window when 0.
     # Only the ones the editor reads are members; :set and local options
     # arrive with the options change. undolevels is how many undo states a
-    # buffer keeps. theme names the theme, and syntax_on is the switch of
-    # :syntax on and :syntax off, on from the start as in Neovim. All but
+    # buffer keeps. theme names the palette, background says whether the
+    # terminal ("terminal") or the palette ("theme") paints the
+    # background, and syntax_on is the switch of :syntax on and :syntax
+    # off, on from the start as in Neovim. All but
     # syntax_on come from option lines of the configuration. A Struct
     # record: mutable, with a reader and a writer per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, keyword_init: true)
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, keyword_init: true)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -28,18 +30,19 @@ module Carat
       # @rbs @timeoutlen: Integer
       # @rbs @undolevels: Integer
       # @rbs @theme: String
+      # @rbs @background: String
       # @rbs @syntax_on: bool
       # @rbs @ignorecase: bool
       # @rbs @smartcase: bool
       # @rbs @hlsearch: bool
       # @rbs @incsearch: bool
 
-      # Vim's defaults, the nerd icon set, the default theme, syntax
-      # highlighting on, and Neovim's search defaults: hlsearch and
-      # incsearch on, ignorecase and smartcase off.
+      # Vim's defaults, the nerd icon set, the default theme on the
+      # terminal's background, syntax highlighting on, and Neovim's search
+      # defaults: hlsearch and incsearch on, ignorecase and smartcase off.
       #: () -> void
       def initialize
-        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true)
+        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true)
       end
 
       # The options a configuration line may set, by name, with the kind
@@ -49,7 +52,7 @@ module Carat
         "number" => "bool", "relativenumber" => "bool", "expandtab" => "bool", "autoindent" => "bool",
         "ignorecase" => "bool", "smartcase" => "bool", "hlsearch" => "bool", "incsearch" => "bool", "wrap" => "bool",
         "tabstop" => "integer", "shiftwidth" => "integer", "scroll" => "integer", "scrolloff" => "integer", "timeoutlen" => "integer", "undolevels" => "integer",
-        "clipboard" => "string", "icons" => "string", "theme" => "string"
+        "clipboard" => "string", "icons" => "string", "theme" => "string", "background" => "string"
       }
 
       # The largest tabstop or shiftwidth, Vim's limit for tabstop: a
@@ -66,7 +69,7 @@ module Carat
 
       # Builds options from the option lines of a configuration, applied
       # in order so a later line wins. An unknown option, a value of the
-      # wrong kind, an unknown icon set, or an unknown theme is noted on
+      # wrong kind, an unknown icon set, theme, or background is noted on
       # the configuration and keeps the value before it.
       #: (Config) -> Options
       def self.from_config(config)
@@ -142,6 +145,12 @@ module Carat
             self.theme = word
           else
             config.note(line, "unknown theme #{word}")
+          end
+        when "background"
+          if Themes.background?(word)
+            self.background = word
+          else
+            config.note(line, "unknown background #{word}")
           end
         end
       end

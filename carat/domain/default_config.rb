@@ -31,7 +31,8 @@ module Carat
       option.icons nerd
       option.undolevels 1000
       option.timeoutlen 500
-      option.theme carat-dark
+      option.theme one_dark
+      option.background terminal
 
       # Key bindings: keymap.<mode> <keys> <action>, the keys in Vim notation
       # and the action an action name, a key sequence to replay, or none to

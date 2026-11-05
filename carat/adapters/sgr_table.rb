@@ -9,9 +9,11 @@ module Carat
     # 38;2 and 48;2, 256 colors as 38;5 and 48;5 with each 24-bit color
     # mapped to the nearest of the 6x6x6 cube and the gray ramp, and the
     # 16 basic colors as 30-37, 90-97, 40-47, and 100-107 from the theme's
-    # own 16-color values. Every sequence resets first (0), so a group
-    # never inherits the attributes of the one before; Normal is the bare
-    # reset, which leaves the terminal's own colors.
+    # own 16-color values with its 16-color attributes. A palette may give
+    # its own 256-color index where the nearest would lose contrast. Every
+    # sequence resets first (0), so a group never inherits the attributes
+    # of the one before; Normal is the bare reset, which leaves the
+    # terminal's own colors, unless the theme paints the background.
     class SgrTable
       CUBE = [0, 95, 135, 175, 215, 255]
 
@@ -40,21 +42,23 @@ module Carat
         @codes[id]
       end
 
-      # The sequence of one group at a color depth.
+      # The sequence of one group at a color depth: at 16 colors the
+      # group's 16-color attributes and basic colors.
       #: (Domain::Theme, Integer, Integer) -> String
       def self.sequence(theme, id, colors)
         out = +"\e[0"
-        attr = theme.attr(id)
+        basic16 = colors == Domain::ColorDepth::COLORS_16
+        attr = basic16 ? theme.attr16(id) : theme.attr(id)
         out << ";1" if attr & Domain::Theme::BOLD != 0
         out << ";3" if attr & Domain::Theme::ITALIC != 0
         out << ";4" if attr & Domain::Theme::UNDERLINE != 0
         out << ";7" if attr & Domain::Theme::REVERSE != 0
-        if colors == Domain::ColorDepth::COLORS_16
+        if basic16
           basic(out, theme.fg16(id), 30, 90)
           basic(out, theme.bg16(id), 40, 100)
         else
-          color(out, theme.fg(id), "38", colors)
-          color(out, theme.bg(id), "48", colors)
+          color(out, theme.fg(id), theme.fg256(id), "38", colors)
+          color(out, theme.bg(id), theme.bg256(id), "48", colors)
         end
         out << "m"
         out
@@ -68,16 +72,18 @@ module Carat
         out << (index < 8 ? low + index : high + index - 8).to_s
       end
 
-      # Appends a 24-bit color as 2;r;g;b, or as 5;n at 256 colors, after
-      # the selector, 38 for the foreground and 48 for the background.
-      #: (String, Integer, String, Integer) -> void
-      def self.color(out, rgb, selector, colors)
+      # Appends a 24-bit color as 2;r;g;b, or as 5;n at 256 colors, the
+      # palette's own index when it gives one (index 0 or more) and the
+      # nearest otherwise, after the selector, 38 for the foreground and
+      # 48 for the background.
+      #: (String, Integer, Integer, String, Integer) -> void
+      def self.color(out, rgb, index, selector, colors)
         return if rgb < 0
         out << ";" << selector
         if colors == Domain::ColorDepth::TRUECOLOR
           out << ";2;" << ((rgb >> 16) & 255).to_s << ";" << ((rgb >> 8) & 255).to_s << ";" << (rgb & 255).to_s
         else
-          out << ";5;" << index_256(rgb).to_s
+          out << ";5;" << (index < 0 ? index_256(rgb) : index).to_s
         end
       end
 
