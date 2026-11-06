@@ -341,6 +341,14 @@ expect "run_state: a blocked review records no phase" 0 "^$" state get state pha
 state review state quality pass "blocking=0 advisory=2" "$base_commit" > /dev/null
 expect "run_state: review records the given commit" 0 "^pass $base_commit blocking=0 advisory=2$" state get state review.quality
 expect "run_state: a passed review records its phase at that commit" 0 "^$base_commit$" state get state phase.quality
+expect "run_state: a diff review refuses a not-run result" 1 "pass or blocked, not not-run" state review state security not-run "no result"
+state review state periodic-security not-run "no result after the retry" > /dev/null
+expect "run_state: a periodic security review without a result is recorded as not run" 0 "^not-run [0-9a-f]* no result after the retry$" state get state review.periodic-security
+expect "run_state: a periodic review not run records no phase" 0 "^$" state get state phase.periodic-security
+state review state periodic-quality partial "blocking=0 advisory=1 not_reviewed=13,14" "$base_commit" > /dev/null
+expect "run_state: a partial periodic review names what it did not review" 0 "^partial $base_commit blocking=0 advisory=1 not_reviewed=13,14$" state get state review.periodic-quality
+expect "run_state: a partial periodic review records no phase" 0 "^$" state get state phase.periodic-quality
+expect "run_state: a periodic review refuses another result" 1 "pass, blocked, partial, or not-run, not skipped" state review state periodic-security skipped "x"
 # The scope of a fix round's quality review: the fix since the reviewed
 # commit stays within the files the findings name, tests, and records.
 reviewed_at=$(git rev-parse --short=12 HEAD)
@@ -722,8 +730,17 @@ state set due merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "run_state: review-due is not due after one quiet change" 1 "^not due: 1 of 5" state review-due due
 { printf 'header\n'; row a "security=pass quality=pass"; row b -; row c -; row d -; row e -; } > docs/metrics.tsv
 expect "run_state: review-due is due five changes after the last review" 0 "^due: 5 changes merged" state review-due due
+{ printf 'header\n'; row a "security=pass quality=pass"; row b -; row c -; row d -; row e "security=not-run quality=pass"; } > docs/metrics.tsv
+expect "run_state: review-due does not count a periodic review not run" 0 "^due: 5 changes merged" state review-due due
+{ printf 'header\n'; row a "security=pass quality=pass"; row b -; row c -; row d -; row e "security=partial quality=pass"; } > docs/metrics.tsv
+expect "run_state: review-due does not count a partial periodic review" 0 "^due: 5 changes merged" state review-due due
 row f "security=pass quality=pass" >> docs/metrics.tsv
 expect "run_state: a periodic review restarts the count" 1 "^not due: 1 of 5" state review-due due
+{ printf 'header\n'; row a "security=pass quality=pass"; row b -; row c -; row d -; row e -; } > docs/metrics.tsv
+state review due periodic-security not-run "no result after the retry" > /dev/null
+expect "run_state: review-due does not count a pending periodic review not run" 0 "^due: 5 changes merged" state review-due due
+state review due periodic-security blocked "high=1 medium=0 low=0 blocking=1" > /dev/null
+expect "run_state: review-due counts a pending blocked periodic review" 1 "^not due: 0 of 5" state review-due due
 # merge_touch MESSAGE PATH...: append a line to each PATH, commit, and
 # record the commit as the merged commit of the change areas.
 merge_touch() {
@@ -1658,6 +1675,23 @@ for pair in benchmark:bench checker:checker contributor:implement,fix,package,pu
   expect "caps: the $agent file's maxTurns is its large cap and the margin" 0 "^maxTurns: $want$" grep -E '^maxTurns: ' "$agents/$agent.md"
 done
 expect "caps: the merger file's maxTurns is its ceiling" 0 "^maxTurns: $(($(cap_of merger) + 14 + margin))$" grep -E '^maxTurns: ' "$agents/merger.md"
+# The periodic review's starts: a fixed cap stated in every start, which
+# leaves the margin under both reviewers' maxTurns, and the record start's
+# the record cap; a security review without a result is retried once and
+# recorded as not run.
+pwf="$here/../.claude/workflows/periodic-review.js"
+pcap=$(sed -n 's/^const PERIODIC_CAP = \([0-9]*\)$/\1/p' "$pwf")
+for agent in quality-reviewer security-reviewer; do
+  expect "caps: the periodic cap leaves the margin under the $agent file's maxTurns" 0 "^within$" \
+    sh -c '[ -n "$1" ] && [ $(($1 + $2)) -le "$(sed -n "s/^maxTurns: //p" "$3")" ] && echo within' _ "$pcap" "$margin" "$agents/$agent.md"
+done
+expect "caps: the periodic record start has the record cap" 0 "^const RECORD_CAP = $(cap_of record)$" grep '^const RECORD_CAP = ' "$pwf"
+unstated=$(grep -n -A1 'agent(' "$pwf" | awk '/agent\(/ { if (line != "" && !ok) bad = bad " " line; line = $0; ok = ($0 ~ /agent\(task|capLine\(/); next } { if ($0 ~ /capLine\(/) ok = 1 } END { if (line != "" && !ok) bad = bad " " line; print bad == "" ? "none" : bad }')
+expect "caps: every periodic start states its cap" 0 "^none$" echo "$unstated"
+expect "caps: the periodic task line states the periodic cap" 0 "capLine[(]PERIODIC_CAP[)]" grep '^const task = ' "$pwf"
+expect "periodic: a security review without a commit head is retried" 0 "s[.]ran && isCommit[(]s[.]head[)]" grep 'if (s && s.ran' "$pwf"
+expect "periodic: a security review without a result is recorded as not run" 0 "^[}] else record[(]'periodic-security', 'not-run'" grep "record('periodic-security', 'not-run'" "$pwf"
+expect "periodic: a review with areas not reviewed is recorded as partial" 0 "missed[.]length [?] 'partial'" grep '^const result = ' "$pwf"
 # A first green: the merger file's calls of one each and two waits of two
 # calls stay within its cap of at most 10.
 calls=$(grep -o '(one call)' "$agents/merger.md" | wc -l | tr -d ' ')
