@@ -819,8 +819,12 @@ if (close && looking && close.due) {
   } catch (e) {
     note(`the periodic review failed to start: ${e.message}`)
   }
+  // The periodic review records its own overrun notes; the workflow notes
+  // them beside its result.
+  for (const text of (p && p.over) || []) note(`over the call cap: ${text}`)
+  const missed = (areas) => (areas && areas.length ? `, partial: not reviewed ${areas.join(', ')}` : '')
   if (!p || !p.ran) stopped = 'the periodic security review did not run; run /review'
-  else periodic = `periodic review: security ${p.security.length} finding(s), ${p.security_blocking} blocking (to the front of the queue); quality ${p.quality_blocking.length} blocking, ${p.quality_advisory} advisory${p.recorded === false ? '; the results were not recorded in the run state' : ''}`
+  else periodic = `periodic review: security ${p.security.length} finding(s), ${p.security_blocking} blocking (to the front of the queue)${missed(p.security_not_reviewed)}; quality ${p.quality_blocking.length} blocking, ${p.quality_advisory} advisory${missed(p.quality_not_reviewed)}${p.recorded === false ? '; the results were not recorded in the run state' : ''}`
   if (periodic) note(periodic)
 }
 const after = `${periodic ? `\n- Periodic review: ${periodic.replace(/^periodic review: /, '')}` : ''}${stopped && looking ? `\n- Stopped after the close: ${stopped}` : ''}`

@@ -7,9 +7,9 @@
 
 ## 2. Periodic review caps and results
 
-- [ ] 2.1 `.claude/workflows/periodic-review.js`: state `PERIODIC_CAP` in each reviewer start and the retry and `RECORD_CAP` in the record start; add the required `not_reviewed` fields; retry a security start without a result or a commit head; record `partial` and `not-run`; return each start's calls and the cap; proven by the `tools/tools_test.sh` caps cases for the periodic review.
-- [ ] 2.2 `.claude/workflows/deliver-change.js`: note a periodic start over its cap and a partial review's areas; covered by the same caps cases.
-- [ ] 2.3 `.claude/agents/security-reviewer.md` and `quality-reviewer.md`: the Periodic mode stops at the stated cap and returns `not_reviewed`; checked by `make docs-lint`.
+- [x] 2.1 `.claude/workflows/periodic-review.js`: state `PERIODIC_CAP` in each reviewer start and the retry and `RECORD_CAP` in the record start; add the required `not_reviewed` fields; retry a security start without a result or a commit head; record `partial` and `not-run`; return each start's calls and the cap; proven by the `tools/tools_test.sh` caps cases for the periodic review.
+- [x] 2.2 `.claude/workflows/deliver-change.js`: note a periodic start over its cap and a partial review's areas; covered by the same caps cases.
+- [x] 2.3 `.claude/agents/security-reviewer.md` and `quality-reviewer.md`: the Periodic mode stops at the stated cap and returns `not_reviewed`; checked by `make docs-lint`.
 
 ## 3. Test restoration and docs
 

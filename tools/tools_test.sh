@@ -1675,6 +1675,23 @@ for pair in benchmark:bench checker:checker contributor:implement,fix,package,pu
   expect "caps: the $agent file's maxTurns is its large cap and the margin" 0 "^maxTurns: $want$" grep -E '^maxTurns: ' "$agents/$agent.md"
 done
 expect "caps: the merger file's maxTurns is its ceiling" 0 "^maxTurns: $(($(cap_of merger) + 14 + margin))$" grep -E '^maxTurns: ' "$agents/merger.md"
+# The periodic review's starts: a fixed cap stated in every start, which
+# leaves the margin under both reviewers' maxTurns, and the record start's
+# the record cap; a security review without a result is retried once and
+# recorded as not run.
+pwf="$here/../.claude/workflows/periodic-review.js"
+pcap=$(sed -n 's/^const PERIODIC_CAP = \([0-9]*\)$/\1/p' "$pwf")
+for agent in quality-reviewer security-reviewer; do
+  expect "caps: the periodic cap leaves the margin under the $agent file's maxTurns" 0 "^within$" \
+    sh -c '[ -n "$1" ] && [ $(($1 + $2)) -le "$(sed -n "s/^maxTurns: //p" "$3")" ] && echo within' _ "$pcap" "$margin" "$agents/$agent.md"
+done
+expect "caps: the periodic record start has the record cap" 0 "^const RECORD_CAP = $(cap_of record)$" grep '^const RECORD_CAP = ' "$pwf"
+unstated=$(grep -n -A1 'agent(' "$pwf" | awk '/agent\(/ { if (line != "" && !ok) bad = bad " " line; line = $0; ok = ($0 ~ /agent\(task|capLine\(/); next } { if ($0 ~ /capLine\(/) ok = 1 } END { if (line != "" && !ok) bad = bad " " line; print bad == "" ? "none" : bad }')
+expect "caps: every periodic start states its cap" 0 "^none$" echo "$unstated"
+expect "caps: the periodic task line states the periodic cap" 0 "capLine[(]PERIODIC_CAP[)]" grep '^const task = ' "$pwf"
+expect "periodic: a security review without a commit head is retried" 0 "s[.]ran && isCommit[(]s[.]head[)]" grep 'if (s && s.ran' "$pwf"
+expect "periodic: a security review without a result is recorded as not run" 0 "^[}] else record[(]'periodic-security', 'not-run'" grep "record('periodic-security', 'not-run'" "$pwf"
+expect "periodic: a review with areas not reviewed is recorded as partial" 0 "missed[.]length [?] 'partial'" grep '^const result = ' "$pwf"
 # A first green: the merger file's calls of one each and two waits of two
 # calls stay within its cap of at most 10.
 calls=$(grep -o '(one call)' "$agents/merger.md" | wc -l | tr -d ' ')
