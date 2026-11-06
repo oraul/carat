@@ -1256,12 +1256,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: an author wiring a handler by hand learns of the description only from a failing test.
 - Fix outline: add the description to the wiring sentence for the by-hand path.
 
-## The lone-prefix timeout check lost two of its waits
-
-- Where: the 'a lone prefix still waits after timeoutlen has passed' check in `test/editor_normal.rb` (line 98 at `leader-layout`), which now calls `h.wait` once instead of three times. Quality advisory of `leader-layout`.
-- Why it matters: a regression check unrelated to the change is weaker, and the design does not explain why.
-- Fix outline: restore the three waits and keep the snapshot unchanged.
-
 ## HandleKey#step discards the queue dispatch returns
 
 - Where: `step` in `carat/use_cases/handle_key.rb` (line 172 at `leader-layout`) ignores the queue `dispatch` returns, though `dispatch`'s comment says the caller assigns it; it works only because `call`'s queue starts as the one key. Quality advisory of `leader-layout`.

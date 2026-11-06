@@ -96,6 +96,8 @@ module EditorNormalTest
     h.type("G")
     h.type("g")
     h.wait
+    h.wait
+    h.wait
     t.assert_equal([[2, 0], [103]], [h.cursor, h.assembly.input.pending_keys], "a lone prefix still waits after timeoutlen has passed")
     h.type("g")
     t.assert_equal([[0, 0], []], [h.cursor, h.assembly.input.pending_keys], "the second key completes the command however late it comes")
