@@ -290,12 +290,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: during the CI wait `/status` prints next phase package although the pull request is open, and a run killed between the merge and the closing start never records package, ci, and merge, so its history row lacks those phases.
 - Fix outline: have `status` read `pushed`, `pr`, and `merged` as the resume does when the phase lines are absent, or record each phase as soon as its own record exists; add a `tools/tools_test.sh` case for a run state with `pushed` and `pr` but no package line. Queued in `run-resume`.
 
-## The merger's wait depends on the harness allowing a foreground sleep
-
-- Where: the header of `tools/ci_wait.sh` and step 2 of `.claude/agents/merger.md` (line 20). Advisory of the quality review of `workflow-records`.
-- Why it matters: the one-start wait holds only while the agent harness lets a foreground shell call sleep up to 540 seconds; if it refuses or shortens it, the merger falls back to returning pending, the cost of 36 to 58 merge tool calls a run that `workflow-records` set out to remove.
-- Fix outline: confirm on the first full run (`guard-hardening`) that the merger used one start with no pending note; record the harness behavior in the header and the merger's file, and if it fails, give the workflow the wait between merger starts instead. Queued in `run-budgets`.
-
 ## The contributor can edit the agent files of its own run
 
 - Where: the agent files under `.claude/agents/`, whose hook lines name each agent's guard profile and which the contributor's file tools may write. What remains of the periodic security Low (6) at 8c340cd after `guard-allowlist` made every hook run `origin/main`'s guard and refuse on any failure.
@@ -851,8 +845,14 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 ## A refused backup push is retried and protects nothing here
 
 - Where: the backup step of `.claude/workflows/deliver-change.js` and `backup` in `tools/run_state.sh`; this environment's git proxy refuses a push to `refs/backup/` with HTTP 403. Retrospective proposal of `backup-secret-scan`, recorded here by the user's decision rather than queued.
-- Why it matters: in `backup-secret-scan` 2 of 2 backup pushes were refused and 0 backup refs reached origin, so the step spent tokens and changed no decision, and the run state holds no backup record to tell the report so; `docs-currency` made 7 more attempts, and 0 of 9 across the two runs reached origin (its retrospective); in `buffer-list` the implement and fix pushes all failed, 0 `refs/backup` refs reached origin, and 7 commits stayed local until the package push (retrospective note 11). Kept here by the user's earlier decision, which the user may want to revisit.
+- Why it matters: in `backup-secret-scan` 2 of 2 backup pushes were refused and 0 backup refs reached origin, so the step spent tokens and changed no decision, and the run state holds no backup record to tell the report so; `docs-currency` made 7 more attempts, and 0 of 9 across the two runs reached origin (its retrospective); in `buffer-list` the implement and fix pushes all failed, 0 `refs/backup` refs reached origin, and 7 commits stayed local until the package push (retrospective note 11); in `leader-layout` 2 of 2 backup tries were refused (retrospective note 8), so no backup has reached origin in four runs. Kept here by the user's earlier decision, which the user may want to revisit.
 - Fix outline: record a refused backup push once in the run state, make no later backup attempt in that run, and have the report say no backup exists, with a `tools/tools_test.sh` case for a refused push.
+
+## Pull requests are created with a session-link footer the settings turn off
+
+- Where: step 4 of the package step in `.claude/agents/contributor.md`, which opens the pull request with the GitHub tools, and its step 5 removal edit; `.claude/settings.json` sets the attribution `pr` empty and `sessionUrl` false. Retrospective proposal of `leader-layout`, queued as `pr-footer`.
+- Why it matters: PR 64 was created with a footer holding a session link and needed a removal edit, as were PRs 57 to 60 (4 of 4); PRs 61 to 63 left no record. The edit history keeps the link, against the hard rule that no session URL appears in GitHub activity, and `package-clean`'s acceptance (the next five clean) fails at PR 64.
+- Fix outline: create the pull request on a path that sends exactly the body file, record in the run state whether it was created clean, and have the history count clean creations N of M.
 
 ## The roadmap's progress is readable nowhere in one place
 
