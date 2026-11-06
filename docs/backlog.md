@@ -290,12 +290,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: during the CI wait `/status` prints next phase package although the pull request is open, and a run killed between the merge and the closing start never records package, ci, and merge, so its history row lacks those phases.
 - Fix outline: have `status` read `pushed`, `pr`, and `merged` as the resume does when the phase lines are absent, or record each phase as soon as its own record exists; add a `tools/tools_test.sh` case for a run state with `pushed` and `pr` but no package line. Queued in `run-resume`.
 
-## The merger's wait depends on the harness allowing a foreground sleep
-
-- Where: the header of `tools/ci_wait.sh` and step 2 of `.claude/agents/merger.md` (line 20). Advisory of the quality review of `workflow-records`.
-- Why it matters: the one-start wait holds only while the agent harness lets a foreground shell call sleep up to 540 seconds; if it refuses or shortens it, the merger falls back to returning pending, the cost of 36 to 58 merge tool calls a run that `workflow-records` set out to remove.
-- Fix outline: confirm on the first full run (`guard-hardening`) that the merger used one start with no pending note; record the harness behavior in the header and the merger's file, and if it fails, give the workflow the wait between merger starts instead. Queued in `run-budgets`.
-
 ## The contributor can edit the agent files of its own run
 
 - Where: the agent files under `.claude/agents/`, whose hook lines name each agent's guard profile and which the contributor's file tools may write. What remains of the periodic security Low (6) at 8c340cd after `guard-allowlist` made every hook run `origin/main`'s guard and refuse on any failure.
@@ -851,8 +845,14 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 ## A refused backup push is retried and protects nothing here
 
 - Where: the backup step of `.claude/workflows/deliver-change.js` and `backup` in `tools/run_state.sh`; this environment's git proxy refuses a push to `refs/backup/` with HTTP 403. Retrospective proposal of `backup-secret-scan`, recorded here by the user's decision rather than queued.
-- Why it matters: in `backup-secret-scan` 2 of 2 backup pushes were refused and 0 backup refs reached origin, so the step spent tokens and changed no decision, and the run state holds no backup record to tell the report so; `docs-currency` made 7 more attempts, and 0 of 9 across the two runs reached origin (its retrospective); in `buffer-list` the implement and fix pushes all failed, 0 `refs/backup` refs reached origin, and 7 commits stayed local until the package push (retrospective note 11). Kept here by the user's earlier decision, which the user may want to revisit.
+- Why it matters: in `backup-secret-scan` 2 of 2 backup pushes were refused and 0 backup refs reached origin, so the step spent tokens and changed no decision, and the run state holds no backup record to tell the report so; `docs-currency` made 7 more attempts, and 0 of 9 across the two runs reached origin (its retrospective); in `buffer-list` the implement and fix pushes all failed, 0 `refs/backup` refs reached origin, and 7 commits stayed local until the package push (retrospective note 11); in `leader-layout` 2 of 2 backup tries were refused (retrospective note 8), so no backup has reached origin in four runs. Kept here by the user's earlier decision, which the user may want to revisit.
 - Fix outline: record a refused backup push once in the run state, make no later backup attempt in that run, and have the report say no backup exists, with a `tools/tools_test.sh` case for a refused push.
+
+## Pull requests are created with a session-link footer the settings turn off
+
+- Where: step 4 of the package step in `.claude/agents/contributor.md`, which opens the pull request with the GitHub tools, and its step 5 removal edit; `.claude/settings.json` sets the attribution `pr` empty and `sessionUrl` false. Retrospective proposal of `leader-layout`, queued as `pr-footer`.
+- Why it matters: PR 64 was created with a footer holding a session link and needed a removal edit, as were PRs 57 to 60 (4 of 4); PRs 61 to 63 left no record. The edit history keeps the link, against the hard rule that no session URL appears in GitHub activity, and `package-clean`'s acceptance (the next five clean) fails at PR 64.
+- Fix outline: create the pull request on a path that sends exactly the body file, record in the run state whether it was created clean, and have the history count clean creations N of M.
 
 ## The roadmap's progress is readable nowhere in one place
 
@@ -1279,3 +1279,63 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `STATUS_NC` in `carat/domain/highlight.rb` (line 18 at 22a5de0), its color in `carat/domain/themes.rb` (line 87), and the message of `test/adapters_screen_presenter.rb` (line 181) saying inactive status lines take it. Periodic quality at 22a5de0.
 - Why it matters: `bars` removed the per-window status line, so the group, its theme row, and the test message describe a row that no longer exists.
 - Fix outline: keep it as a name-only Neovim group with a comment saying so and reword the test message, or drop the group, its theme row, and the test row.
+
+## The merger's expected head is the reported head, never checked against the pushed one
+
+- Where: `mergeLines` and the merge prompt of `.claude/workflows/deliver-change.js` (lines 359 and 743 at `run-budgets`), which build the green and red lines and the expected merge head from the `head` of the contributor's or resume agent's result. Security Low (3) of `run-budgets`.
+- Why it matters: the head is never compared with `COMMIT` or the run state's `pushed`; `tools/agent_guard.sh` (no substitution in double quotes, a hex commit for `set ci`) and `gates.sh merge` (local `HEAD` equals `pushed`) limit it, but a contributor reporting a head other than the one it pushed could have the merger accept, as the expected head, a pull request head the gates and reviews did not cover.
+- Fix outline: in `mergeLines` and before the merge prompt require `COMMIT.test(head)` and `head` equal to the run state's `pushed`, stopping the run otherwise; or have the green line print the `HEAD` the gates checked and the merger pass that value as the expected head.
+
+## The merger passes a short sha as GitHub's expected head
+
+- Where: step 5 of `.claude/agents/merger.md` (line 23 at `run-budgets`), which passes the pushed head, the 12-character short sha of the prompt, as the merge's expected head. Quality advisory of `run-budgets`.
+- Why it matters: GitHub matches the expected head against the full sha, so a merger that follows the step literally can see the merge refused.
+- Fix outline: pass the full head sha read in step 1 once it starts with the pushed head, and say so in step 5.
+
+## run_state.sh became executable in run-budgets
+
+- Where: `tools/run_state.sh`, whose mode changed from 100644 to 100755 in `run-budgets`, unmentioned in its proposal. Quality advisory of `run-budgets`, raised twice.
+- Why it matters: it is always run as `sh tools/run_state.sh`, so the mode change is unrelated noise that the next diff of the file carries.
+- Fix outline: restore mode 100644 with `git update-index --chmod=-x`.
+
+## spent_line repeats budget_line's budget lookup
+
+- Where: `spent_line` in `tools/run_state.sh` (line 1138 at `run-budgets`) repeats the size-to-budget lookup of `budget_line` (line 1092, `printf TOKEN_BUDGETS | sed`). Quality advisory of `run-budgets`.
+- Why it matters: two copies of one table lookup drift when the table's format changes.
+- Fix outline: extract one `budget_of SIZE` helper that both call, covered by the existing `tools/tools_test.sh` cases.
+
+## The README says the merger runs the metric line before its work
+
+- Where: `README.md` (line 192 at `run-budgets`). Quality advisory of `run-budgets`, raised twice.
+- Why it matters: since `run-budgets` the merger runs the metric line only inside the green and red lines after CI, and not at all on a pending or stale return, so the README misdescribes when the figures are recorded.
+- Fix outline: reword the sentence to say the green and red lines record the figures.
+
+## The merger's call ceiling misstates its arithmetic
+
+- Where: the merger ceiling `cap+14` in `tools/tools_test.sh` (comment at line 1624, check at line 1660 at `run-budgets`) and its comment in `.claude/workflows/deliver-change.js` (line 88). Quality advisory of `run-budgets`, raised twice.
+- Why it matters: it counts two calls for each of seven waits although the first-green cap of 10 already holds two waits (a 30-minute start is 6 + 2 * 7 = 20 calls), so the comments explain a number that is partly margin as if it were exact.
+- Fix outline: state the ceiling as 20 calls plus the return margin, or say the extra is margin, in both comments.
+
+## The code map's tools_test.sh entry omits the call caps
+
+- Where: the `tools/tools_test.sh` entry of `docs/codebase-map.md` (line 49 at `run-budgets`). Quality advisory of `run-budgets`, raised twice.
+- Why it matters: the entry lists what the file covers but not the call-caps section `run-budgets` added (`CALL_CAPS`, `FIXED_CAPS`, `maxTurns`, the merger's call count), so a reader looking for that check is not sent there.
+- Fix outline: add the call caps to the entry.
+
+## The CI wait's header and the merger's step 2 carry run history
+
+- Where: the header of `tools/ci_wait.sh` (lines 6 to 8 at `run-budgets`) and step 2 of `.claude/agents/merger.md` (line 20), which the merger reads on every start. Quality advisory of `run-budgets`, raised twice.
+- Why it matters: they record every run since `guard-hardening` (3,476 to 6,841 output tokens), which goes stale, duplicates the archived design, and costs input tokens on every merger start.
+- Fix outline: keep only the 180, 240, 300 schedule and the harness behavior in both, the history in the archived design.
+
+## Three places repeat the estimate test of sizeWord
+
+- Where: `capLine` (line 96 at `run-budgets`) and `overCap` (line 220) in `.claude/workflows/deliver-change.js` repeat the `SIZES.includes(estimate)` test beside `sizeWord` (line 94). Quality advisory of `run-budgets`.
+- Why it matters: three copies of one validity test drift when the sizes change.
+- Fix outline: one `hasEstimate` helper used by all three.
+
+## A tools test case repeats the spent-over case
+
+- Where: the case 'spent never stops a run' in `tools/tools_test.sh` (line 635 at `run-budgets`) repeats the exit-0 over case at line 629. Quality advisory of `run-budgets`.
+- Why it matters: the duplicate adds run time and a second place to update without covering anything more.
+- Fix outline: drop the case.

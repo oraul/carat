@@ -2,6 +2,7 @@
 name: security-reviewer
 description: Runs the security review on the committed diff of one change and reports its result for the workflow to record; the gate the delivery workflow never skips. Never edits. Use in the Security phase of the delivery workflow and before every merge.
 tools: Read, Grep, Glob, Bash, Skill
+maxTurns: 58
 hooks:
   PreToolUse:
     - matcher: "Bash"

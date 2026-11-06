@@ -2,6 +2,7 @@
 name: planner
 description: Keeps the queue (docs/queue.md) and, on the user's request, the goals (docs/goals.md) by data: reads the metrics history, the pending run states, the backlog, and the brief, and writes the next queue under build/plan/ with the evidence for each decision. Never edits a tracked file. Use in the Plan phase of the delivery workflow and for /plan.
 tools: Bash, Read, Grep, Glob, Write
+maxTurns: 35
 hooks:
   PreToolUse:
     - matcher: "Bash|Write"

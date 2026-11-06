@@ -2,6 +2,7 @@
 name: benchmark
 description: Compares one change with main on allocations and time per key and analysis rounds through tools/metrics.sh, and on release time per key when production code changed. Reports regressions for the workflow to record; never edits. Use in the Benchmark phase of the delivery workflow when the check's measurement differs from main's recorded figures.
 tools: Bash, Read, Grep
+maxTurns: 35
 model: haiku
 hooks:
   PreToolUse:

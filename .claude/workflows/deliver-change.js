@@ -75,6 +75,28 @@ let planned = null
 let ciMinutes = null
 const SIZES = ['small', 'medium', 'large']
 let estimate = ''
+// Tool calls per agent start. CALL_CAPS holds a start's cap at a medium
+// estimate, from the history's calls per phase; CALL_SCALE scales it by the
+// estimate, rounded up, the medium figure applying while no estimate exists
+// (the planner's start). FIXED_CAPS holds the starts whose work does not
+// grow with the change (areas is the scout plan); the merger's grows by 2
+// for each CI wait beyond the second (mergerCap). The prompt states the cap
+// (capLine) and the agent stops at it; a start that reports more calls is
+// noted and leaves an overrun note for the planner (measured). The hard
+// ceiling is each agent file's maxTurns, its largest cap at a large
+// estimate plus a return margin of 5 turns (the merger's: its cap and 2
+// for each of the seven waits of 30 minutes, plus the margin), so a start
+// whose capped calls take one turn each can still commit, back up, and
+// return the schema; tools/tools_test.sh compares them with these lines.
+const CALL_CAPS = { planner: 20, scout: 30, implement: 90, fix: 40, package: 30, push: 15, checker: 20, quality: 35, security: 35, bench: 20, close: 25 }
+const CALL_SCALE = { small: 0.5, medium: 1, large: 1.5 }
+const FIXED_CAPS = { resume: 12, areas: 10, record: 3, merger: 10 }
+const sizeWord = () => (SIZES.includes(estimate) ? estimate : 'medium')
+const callCap = (kind) => (kind in FIXED_CAPS ? FIXED_CAPS[kind] : Math.ceil(CALL_CAPS[kind] * CALL_SCALE[sizeWord()]))
+const capLine = (kind) => `\nTool calls: at most ${callCap(kind)} in this start (${kind in FIXED_CAPS ? 'a fixed cap' : `the ${kind} cap at ${SIZES.includes(estimate) ? `the ${estimate} estimate` : 'the medium figure, with no estimate yet'}`}). Count them; on reaching the cap, stop and return the schema with what is done, saying the cap stopped you.`
+// The merger's waits are 3, 4, then 5 minutes (.claude/agents/merger.md), so
+// the minutes it waited give the waits beyond the second.
+const mergerCap = (r) => FIXED_CAPS.merger + 2 * (Number(r.waited) > 7 ? Math.ceil((Number(r.waited) - 7) / 5) : 0)
 
 const STATUS = { type: 'string', enum: ['done', 'stopped'] }
 const HEAD = { type: 'string', description: 'git rev-parse --short=12 HEAD at the end' }
@@ -109,6 +131,7 @@ const CHECK = {
     passed: { type: 'boolean' }, head: HEAD, stages: LINES, failed_stage: { type: 'string' }, log_excerpt: { type: 'string' },
     verdict: { type: 'string', description: 'the last line tools/run_state.sh check printed, verbatim; empty when it printed none' },
     bench_same: { type: 'boolean', description: 'tools/run_state.sh bench exited 0' }, bench_report: LINES,
+    budget: { type: 'string', description: 'the line tools/run_state.sh spent printed, verbatim; empty when the check did not pass' },
   },
   required: ['passed', 'head', 'stages', 'verdict'],
 }
@@ -176,14 +199,40 @@ const withCalls = (schema) => ({ ...schema, properties: { ...schema.properties, 
 // while the workflow runs, so a difference is what the phase spent.
 const spent = () => (typeof budget !== 'undefined' && budget && budget.spent ? budget.spent() : 0)
 // Runs fn (agent calls) and adds its output tokens and reported tool calls
-// to the phase key.
-async function measured(key, fn) {
+// to the phase key; a result reporting more calls than cap (a number, or a
+// function of the result) is an overrun.
+async function measured(key, fn, cap) {
   const before = spent()
   const result = await fn()
   const u = usage[key] || (usage[key] = { tokens: 0, calls: 0 })
   u.tokens += spent() - before
-  for (const r of [].concat(result)) if (r && Number.isInteger(r.tool_calls)) u.calls += r.tool_calls
+  for (const r of [].concat(result)) {
+    if (!r || !Number.isInteger(r.tool_calls)) continue
+    u.calls += r.tool_calls
+    const limit = typeof cap === 'function' ? cap(r) : cap
+    if (Number.isInteger(limit) && r.tool_calls > limit) overCap(key, r.tool_calls, limit)
+  }
   return result
+}
+// An overrun of a start's cap: a workflow note, and a run state note of
+// fixed words and numbers for the planner.
+function overCap(key, calls, cap) {
+  const text = `${key} made ${calls} tool calls in one start, over its cap of ${cap} with the estimate ${SIZES.includes(estimate) ? estimate : 'none'}`
+  note(`over the call cap: ${text}`)
+  queue(`sh tools/run_state.sh note ${state.change} overrun "${text}"`, head)
+}
+// The line tools/run_state.sh spent prints, which the checker returns after
+// a pass; tools/tools_test.sh matches the script's output with it.
+const SPENT_LINE = /^(under|over): ([0-9]+) output tokens so far, budget ([0-9]+) output tokens for (small|medium|large) \([0-9]+ total tokens at [0-9]+ per output token\); ([0-9]+) total tokens recorded by earlier starts, budget ([0-9]+)$/
+const NO_ESTIMATE_LINE = /^no estimate: [0-9]+ output tokens so far; [0-9]+ total tokens recorded by earlier starts; /
+// Notes the checker's budget line at a pass, and an overrun note on over:,
+// built from its numbers; never a stop.
+function budgetAtCheck(line, at) {
+  const text = String(line || '').trim()
+  const m = SPENT_LINE.exec(text)
+  if (!m && !NO_ESTIMATE_LINE.test(text)) { note(`budget at the check pass ${at}: no spent line returned`); return }
+  note(`budget at the check pass ${at}: ${text}`)
+  if (m && m[1] === 'over') queue(`sh tools/run_state.sh note ${state.change} overrun "the check passed at ${at} with ${m[2]} output tokens spent against the ${m[4]} output budget of ${m[3]}, and ${m[5]} total tokens recorded by earlier starts against ${m[6]}"`, at)
 }
 function verdict(gate, passed) {
   if (!(gate in firstPass)) firstPass[gate] = passed ? 1 : 0
@@ -287,22 +336,39 @@ async function flush(force) {
   const command = pending.splice(0).concat([metricLine()].filter(Boolean)).join(' && ')
   if (!command) return true
   const r = await measured('record', () => agent(
-    `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${command}\n\nReturn ok true when it exited 0, and its output.`,
-    { schema: withCalls(RECORDED), effort: 'low', label: 'record' }))
+    `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${command}\n\nReturn ok true when it exited 0, and its output.${capLine('record')}`,
+    { schema: withCalls(RECORDED), effort: 'low', label: 'record' }), callCap('record'))
   if (r && r.ok) return true
   if (!stopped) stopped = `the run state records failed: ${r ? r.output : 'no result'}`
   return false
 }
-// The merge gates with the review and check results the script holds, for
-// the merger: those of a fresh worktree of origin/main, which the branch
-// cannot have edited, run against the branch. The add fails when anything
-// but an earlier worktree stands at the path, and the gates do not run.
+// The merger's two record lines at the pushed head, each one Bash call that
+// starts with the run's figures. green records CI green and runs the merge
+// gates with the review and check results the script holds: those of a
+// fresh worktree of origin/main, which the branch cannot have edited, run
+// against the branch. The removal of an earlier worktree stays outside the
+// && chain, since it fails when none stands; in the chain a failed record
+// runs no gate, and the add fails when anything but an earlier worktree
+// stands at the path. red records CI red.
 const MERGE_GATES = 'tmp/.merge-gates'
-function mergeGates() {
+function mergeLines() {
   const records = ['security', 'quality', 'bench'].map((k) => `${k}:${at('review.' + k).slice(0, 2).join(':')}`)
     .concat([`check:pass:${state['phase.check'] || ''}`])
     .filter((r) => /^[a-z]+:(pass|blocked):[0-9a-f]{7,40}$/.test(r))
-  return `git worktree prune; git worktree remove --force ${MERGE_GATES}; git worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`
+  const first = (line) => [metricLine(), line].filter(Boolean).join(' && ')
+  const ci = (result) => `sh tools/run_state.sh set ${state.change} ci "${result} ${head}"`
+  return {
+    green: `git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && git worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
+    red: first(ci('red')),
+  }
+}
+// The pull request, the repository, and the branch, when the script holds
+// them in their plain forms, so the merger need not read the run state.
+function mergeTarget() {
+  const pr = /^[0-9]+$/.test(state.pr || '') ? state.pr : ''
+  const repo = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(state.repo || '') ? state.repo : ''
+  const branch = /^(feature|bugfix|hotfix|release|chore)\/[a-z0-9][a-z0-9-]*$/.test(state.branch || '') ? state.branch : ''
+  return pr && repo && branch ? ` Pull request ${pr} of ${repo}, branch ${branch}.` : ' Read the pull request, the repository, and the branch with the show command.'
 }
 
 const at = (key) => (state[key] || '').split(' ')
@@ -355,8 +421,8 @@ async function contributor(mode, detail) {
   if (mode === 'fix') rework++
   const key = mode === 'implement' || mode === 'fix' ? 'implement' : 'package'
   const result = await measured(key, () => agent(
-    `${intro()} Mode: ${mode}. ${detail}\nFollow your Modes section for \`${mode}\` and return the schema.`,
-    { agentType: 'contributor', schema: withCalls(WORK), label: `contributor: ${mode}` }))
+    `${intro()} Mode: ${mode}. ${detail}\nFollow your Modes section for \`${mode}\` and return the schema.${capLine(mode)}`,
+    { agentType: 'contributor', schema: withCalls(WORK), label: `contributor: ${mode}` }), callCap(mode))
   if (!result || result.status !== 'done') {
     stopped = `contributor (${mode}) stopped: ${result ? result.question || result.summary : 'no result'}`
     return false
@@ -440,13 +506,13 @@ const figuresFirst = () => {
 
 // The quality review at the head, with the scope priorQuality gives.
 function qualityReview(scope) {
-  return agent(`${intro()} Review the committed diff and return the findings.${scope}`,
+  return agent(`${intro()} Review the committed diff and return the findings.${scope}${capLine('quality')}`,
     { agentType: 'quality-reviewer', schema: withCalls(QUALITY), phase: 'Quality', label: 'quality-reviewer' })
 }
 function securityReview(retry) {
   return agent(retry
-    ? `${intro()} The last security review did not complete. Run it again, every sub-task inline, and return the result.`
-    : `${intro()} Run the security review on the committed diff and return the result.`,
+    ? `${intro()} The last security review did not complete. Run it again, every sub-task inline, and return the result.${capLine('security')}`
+    : `${intro()} Run the security review on the committed diff and return the result.${capLine('security')}`,
   { agentType: 'security-reviewer', schema: withCalls(SECURITY), phase: 'Security', label: retry ? 'security-reviewer: retry' : 'security-reviewer' })
 }
 
@@ -461,10 +527,11 @@ async function reviews() {
   const scope = kinds.includes('quality') ? priorQuality() : ''
   const run = { quality: () => qualityReview(scope), security: () => securityReview(false) }
   if (kinds.length > 1) { phase('Quality'); phase('Security') } else phase(kinds[0] === 'quality' ? 'Quality' : 'Security')
-  const results = await measured(kinds.length > 1 ? 'reviews' : kinds[0], () => parallel(kinds.map((k) => run[k])))
+  const reviewCap = (r) => callCap('ran' in r ? 'security' : 'quality')
+  const results = await measured(kinds.length > 1 ? 'reviews' : kinds[0], () => parallel(kinds.map((k) => run[k])), reviewCap)
   const got = {}
   kinds.forEach((k, i) => { got[k] = results[i] })
-  if (kinds.includes('security') && (!got.security || !got.security.ran)) got.security = await measured('security', () => securityReview(true))
+  if (kinds.includes('security') && (!got.security || !got.security.ran)) got.security = await measured('security', () => securityReview(true), callCap('security'))
   const messages = []
   const files = []
   let commit = head
@@ -511,7 +578,7 @@ async function rounds() {
       const backed = COMMIT.test(state['phase.check'] || '') ? state['phase.check'] : ''
       const how = backed ? ` The last check the workflow recorded passed at ${backed}: run \`sh tools/run_state.sh check ${state.change} ${backed}\`.` : ''
       const again = rerunWhy ? ` The last check did not finish (${rerunWhy}); run it again: a check still running at this commit is rejoined.` : ''
-      const c = await measured('check', () => agent(`${intro()}${figuresFirst()} Run the checks and report.${how}${again}`, { agentType: 'checker', schema: withCalls(CHECK), effort: 'low' }))
+      const c = await measured('check', () => agent(`${intro()}${figuresFirst()} Run the checks and report.${how}${again}${capLine('checker')}`, { agentType: 'checker', schema: withCalls(CHECK), effort: 'low' }), callCap('checker'))
       if (!c) { stopped = 'the checker returned no result'; return false }
       // Only a pass or a failure at the head is a result: a check that did
       // not finish, or one at another commit, runs again with no fix round.
@@ -531,6 +598,7 @@ async function rounds() {
       note(`check at ${v.at}: ${passed ? 'passed' : `failed at stage ${v.stage}; ${v.log}`}`)
       if (passed) {
         phaseDone('check', head)
+        budgetAtCheck(c.budget, head)
         benchSameAt = c.bench_same ? head : ''
         benchReport = c.bench_report || []
       } else blocked = v.stage === 'refused' ? `The check refused to run: ${v.log}` : `The stage ${v.stage} failed; its log, ${v.log}:\n${c.log_excerpt || ''}`
@@ -551,8 +619,8 @@ async function rounds() {
         reviewed('bench', true, benchSameAt, { blocking: 0 })
       } else {
         const b = await measured('bench', () => agent(
-          `${intro()} The check's measurement differs from main's recorded figures, or was not compared:\n- ${benchReport.join('\n- ') || 'no comparison'}\nCompare with main and return the result. Build the base with PREFIX=$PWD/tmp/.toolchain SPINEL_CACHE_DIR=$PWD/build/spinel-cache, as your step 1 says.`,
-          { agentType: 'benchmark', schema: withCalls(BENCH), effort: 'low' }))
+          `${intro()} The check's measurement differs from main's recorded figures, or was not compared:\n- ${benchReport.join('\n- ') || 'no comparison'}\nCompare with main and return the result. Build the base with PREFIX=$PWD/tmp/.toolchain SPINEL_CACHE_DIR=$PWD/build/spinel-cache, as your step 1 says.${capLine('bench')}`,
+          { agentType: 'benchmark', schema: withCalls(BENCH), effort: 'low' }), callCap('bench'))
         if (!b) { stopped = 'the benchmark agent returned no result'; return false }
         verdict('bench', !b.blocking.length)
         note(`benchmark at ${b.head}: ${b.report.join('; ')}`)
@@ -574,7 +642,7 @@ const resume = await agent(
 2. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Check it out when it exists locally or on origin; otherwise run \`sh tools/run_state.sh restore <branch>\` and check it out when that exited 0 (it created the branch from the backup of a reclaimed run's commits); otherwise create it from origin/main, which needs a clean tree (stop with the reason when it is not).
 3. \`make doctor\`; run \`make toolchain\` when it fails and stop when that fails too.
 4. Run \`sh tools/run_state.sh init <change> <branch>\`, then \`sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git rev-parse --short=12 HEAD\` as head.
-5. Run \`sh tools/run_state.sh plan-needed <change>\` and return its one line verbatim as plan; its exit 1 means not needed, not a failure.`,
+5. Run \`sh tools/run_state.sh plan-needed <change>\` and return its one line verbatim as plan; its exit 1 means not needed, not a failure.${capLine('resume')}`,
   { schema: RESUME, effort: 'low', label: 'resume' })
 if (!resume || resume.status !== 'done') {
   stopped = `resume stopped: ${resume ? resume.reason : 'no result'}`
@@ -613,8 +681,8 @@ if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement
   phase('Plan')
   planned = 1
   const p = await measured('plan', () => agent(
-    `${intro()} Plan the queue for this delivery. Brief: ${input.brief || 'the existing OpenSpec change'}.`,
-    { agentType: 'planner', schema: withCalls(PLAN) }))
+    `${intro()} Plan the queue for this delivery. Brief: ${input.brief || 'the existing OpenSpec change'}.${capLine('planner')}`,
+    { agentType: 'planner', schema: withCalls(PLAN) }), callCap('planner'))
   if (!p) stopped = 'the planner returned no result'
   else {
     note(`plan: ${p.decisions.map((d) => `${d.decision} (${d.evidence})`).join('; ') || 'no change to the queue'}`)
@@ -633,13 +701,13 @@ if (!stopped && !state.merged) {
     let packs = input.packs || []
     if (!packs.length) {
       const plan = await measured('scout', () => agent(
-        `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${brief}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only records in docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. For each area, a pack under tmp/scout/ is current when its Commit: is origin/main or \`git diff --quiet <its commit> origin/main -- <its Files read>\` passes; list current packs by path and the areas still needing one, with the question a contributor needs answered about the existing code it edits or hooks into (callers, registration, tests), never about code the change will add, which does not exist yet; an area whose only edits are new files needs no pack.`,
-        { schema: withCalls(SCOUT_PLAN), effort: 'low', label: 'scout plan' }))
+        `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${brief}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only records in docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. For each area, a pack under tmp/scout/ is current when its Commit: is origin/main or \`git diff --quiet <its commit> origin/main -- <its Files read>\` passes; list current packs by path and the areas still needing one, with the question a contributor needs answered about the existing code it edits or hooks into (callers, registration, tests), never about code the change will add, which does not exist yet; an area whose only edits are new files needs no pack.${capLine('areas')}`,
+        { schema: withCalls(SCOUT_PLAN), effort: 'low', label: 'scout plan' }), callCap('areas'))
       const room = plan ? Math.max(0, MAX_AREAS - plan.current.length) : 0
       const needed = plan ? plan.needed.slice(0, room) : []
       if (plan && plan.needed.length > room) note(`not scouted, beyond ${MAX_AREAS} areas: ${plan.needed.slice(room).map((n) => n.area).join(', ')}`)
       const fresh = plan ? await measured('scout', () => parallel(needed.map((n) => () =>
-        agent(`Area: ${n.area}. Question: ${n.question}. The change, for scope only: ${brief}. Write the pack and return its path.`, { agentType: 'scout', schema: withCalls(PACK), label: `scout: ${n.area}` })))) : []
+        agent(`Area: ${n.area}. Question: ${n.question}. The change, for scope only: ${brief}. Write the pack and return its path.${capLine('scout')}`, { agentType: 'scout', schema: withCalls(PACK), label: `scout: ${n.area}` }))), callCap('scout')) : []
       packs = (plan ? plan.current : []).concat(fresh.filter(Boolean).map((p) => p.pack))
       note(`scout packs: ${packs.join(', ') || 'none'}`)
     }
@@ -670,9 +738,10 @@ if (!stopped && !state.merged) {
     phase('Merge')
     let waits = 0
     for (;;) {
+      const lines = mergeLines()
       const m = await measured('merge', () => agent(
-        `${intro()} First run this line of the run's figures, exactly as written: \`${metricLine()}\`\nThen wait for CI at the pushed head${waits ? ' (it was still running when you last returned; keep waiting)' : ''}, and merge the pull request if CI is green and every merge gate passes. The merge gates: \`${mergeGates()}\``,
-        { agentType: 'merger', schema: withCalls(MERGE), effort: 'low' }))
+        `${intro()}${mergeTarget()} The pushed head is ${head}. Wait for CI at it${waits ? ' (it was still running when you last returned; keep waiting)' : ''}, and merge the pull request if CI is green and every merge gate passes.\nThe green line: \`${lines.green}\`\nThe red line: \`${lines.red}\`\nTool calls: at most ${FIXED_CAPS.merger} in this start when CI passes within your first two waits, and 2 more for each later wait.`,
+        { agentType: 'merger', schema: withCalls(MERGE), effort: 'low' }), mergerCap)
       if (!m) { stopped = 'the merger returned no result'; break }
       const checks = (m.checks || []).join('; ')
       note(`CI at ${m.head}: ${m.ci}${m.minutes ? ` in ${m.minutes} min` : ''}${m.ci === 'pending' && checks ? ` (${checks})` : ''}`)
@@ -730,8 +799,8 @@ const left = pending.splice(0)
 const records = left.concat(own, [metricLine()].filter(Boolean)).join(' && ')
 const figures = summary()
 const close = await measured('close', () => agent(
-  `Change \`${state.change || input.change || 'unknown'}\`${state.branch ? ` on branch \`${state.branch}\`` : ''}. ${state.merged ? `It merged as ${state.merged}.` : 'It did not merge.'} ${looking ? 'Run the retrospective steps, then the report steps.' : 'Skip the retrospective steps; run the report steps.'}\nThe record line: ${records ? `\`${records}\`` : 'none; skip that step and return recorded true.'}\nThe run's figures: ${figures}.\nWorkflow notes:\n- ${notes.join('\n- ')}\n${stopped ? 'The run stopped: ' + stopped : 'The run finished.'}`,
-  { agentType: 'retrospective', schema: withCalls(CLOSE) }))
+  `Change \`${state.change || input.change || 'unknown'}\`${state.branch ? ` on branch \`${state.branch}\`` : ''}. ${state.merged ? `It merged as ${state.merged}.` : 'It did not merge.'} ${looking ? 'Run the retrospective steps, then the report steps.' : 'Skip the retrospective steps; run the report steps.'}\nThe record line: ${records ? `\`${records}\`` : 'none; skip that step and return recorded true.'}\nThe run's figures: ${figures}.\nWorkflow notes:\n- ${notes.join('\n- ')}\n${stopped ? 'The run stopped: ' + stopped : 'The run finished.'}${capLine('close')}`,
+  { agentType: 'retrospective', schema: withCalls(CLOSE) }), callCap('close'))
 if (close && looking) {
   state['phase.retro'] = closeAt
   note(`retrospective: ${close.proposals.map((x) => `${x.proposal} (${x.evidence})`).join('; ') || 'no proposal'}; ${close.review_due || 'review-due not read'}`)
