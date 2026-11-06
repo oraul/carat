@@ -11,8 +11,8 @@
 #                    check carried it (below); EXIT is "running" while it
 #                    runs, "killed" when a signal ended it, "superseded"
 #                    when HEAD moved while it ran
-#   review.KIND      "pass|blocked COMMIT SUMMARY" (security, quality, bench,
-#                    and periodic-security and periodic-quality after a merge)
+#   review.KIND      "RESULT COMMIT SUMMARY" (security, quality, bench, and
+#                    periodic-security and periodic-quality after a merge)
 #   pushes, ci_fixes the pushes made and the CI fixes they may answer
 #   gates_failed     the push attempts the pre-push gates refused
 #   pushed, pr, ci   the last pushed commit, the pull request number, and
@@ -64,7 +64,9 @@
 #                               COMMIT, HEAD when omitted
 #   review CHANGE KIND RESULT SUMMARY [COMMIT]
 #                               record a review (KIND one of REVIEW_KINDS,
-#                               RESULT pass or blocked) at COMMIT, HEAD when
+#                               RESULT pass or blocked, and for the periodic
+#                               kinds also partial, some areas not reviewed,
+#                               or not-run, no result) at COMMIT, HEAD when
 #                               omitted; a pass also records phase.KIND
 # The delivery workflow, not its agents, runs phase and review: it builds
 # them from the results it received (tools/agent_guard.sh keeps the agents
@@ -1204,6 +1206,12 @@ agent_hooks() {
     /^[-+](tools:|hooks:|[[:space:]]+(PreToolUse:|- matcher:|matcher:|hooks:|- type:|type:|command:))/ { print file; exit }'
 }
 
+# periodic_done RESULT: a periodic security result that counts as a review
+# done; a partial or missing one keeps the next review due.
+periodic_done() {
+  [ "$1" = pass ] || [ "$1" = blocked ]
+}
+
 review_due() {
   merged=$(merged_commit)
   [ -n "$merged" ] || die "review-due: $change is not merged (no merged commit hash)"
@@ -1224,11 +1232,12 @@ review_due() {
     return 0
   fi
   rows=0
-  [ ! -f "$metrics_file" ] || rows=$(awk -F'\t' 'NR > 1 { n = ($14 == "-" || $14 == "") ? n + 1 : 0 } END { print n + 0 }' "$metrics_file")
+  [ ! -f "$metrics_file" ] || rows=$(awk -F'\t' 'NR > 1 { n = ($14 ~ /^security=(pass|blocked)( |$)/) ? 0 : n + 1 } END { print n + 0 }' "$metrics_file")
   waiting=0
   reviewed=0
   for name in $(pending_list); do
-    if [ -n "$(change=$name; read_key review.periodic-security)" ]; then reviewed=1
+    security=$(change=$name; read_key review.periodic-security)
+    if periodic_done "${security%% *}"; then reviewed=1
     else waiting=$((waiting + 1)); fi
   done
   [ "$reviewed" -eq 0 ] || rows=0
@@ -1394,10 +1403,12 @@ case "$command" in
   review)
     [ $# -eq 3 ] || [ $# -eq 4 ] || usage
     one_of "$1" "$REVIEW_KINDS" || die "review: not a review kind: $1 (one of $REVIEW_KINDS)"
-    case "$2" in pass|blocked) ;; *) die "review result is pass or blocked, not $2" ;; esac
+    case "$1:$2" in *:pass|*:blocked|periodic-*:partial|periodic-*:not-run) ;;
+      periodic-*) die "review result is pass, blocked, partial, or not-run, not $2" ;;
+      *) die "review result is pass or blocked, not $2" ;; esac
     at=$(commit_at "${4:-}") || exit 1
     write_key "review.$1" "$2 $at $3"
-    [ "$2" = blocked ] || write_key "phase.$1" "$at" ;;
+    [ "$2" != pass ] || write_key "phase.$1" "$at" ;;
   stage)
     [ $# -ge 2 ] || usage
     plain_key "stage.$1"

@@ -2,8 +2,8 @@
 
 ## 1. Run state results
 
-- [ ] 1.1 `tools/run_state.sh` `review`: admit `partial` and `not-run` for the `periodic-*` kinds only, neither writing a phase; update the header; proven by new `tools/tools_test.sh` run_state cases.
-- [ ] 1.2 `tools/run_state.sh` `review-due`: count a periodic review as done only when its security result is `pass` or `blocked`, in the run state and the history rows; proven by new `tools/tools_test.sh` review-due cases.
+- [x] 1.1 `tools/run_state.sh` `review`: admit `partial` and `not-run` for the `periodic-*` kinds only, neither writing a phase; update the header; proven by new `tools/tools_test.sh` run_state cases.
+- [x] 1.2 `tools/run_state.sh` `review-due`: count a periodic review as done only when its security result is `pass` or `blocked`, in the run state and the history rows; proven by new `tools/tools_test.sh` review-due cases.
 
 ## 2. Periodic review caps and results
 
