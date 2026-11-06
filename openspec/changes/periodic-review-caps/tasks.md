@@ -14,4 +14,4 @@
 ## 3. Test restoration and docs
 
 - [x] 3.1 `test/editor_normal.rb`: restore the two `h.wait` calls of the lone-prefix check, snapshot unchanged; proven by `make test-one T=test/editor_normal.rb`; remove its `docs/backlog.md` entry.
-- [ ] 3.2 `CLAUDE.md` and `README.md`: say the periodic starts have a fixed cap and a partial or missing result is recorded; checked by `make gates` and `make docs-lint`.
+- [x] 3.2 `CLAUDE.md` and `README.md`: say the periodic starts have a fixed cap and a partial or missing result is recorded; checked by `make gates` and `make docs-lint`.
