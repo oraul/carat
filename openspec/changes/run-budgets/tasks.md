@@ -21,4 +21,4 @@
 
 - [x] 4.1 `CLAUDE.md`, `README.md`, `docs/codebase-map.md` area 1, and the headers of `tools/run_state.sh` and `tools/agent_guard.sh`.
 - [x] 4.2 `docs/backlog.md`: the `pr-footer` entry of `build/plan/backlog.md` added; `leader-layout`'s evidence in the refused-backup entry; the foreground-wait entry removed.
-- [ ] 4.3 Run `make tools-test`, `make docs-lint`, `make gates`, `make spec-validate`, and `openspec validate run-budgets --strict --no-interactive`.
+- [x] 4.3 Run `make tools-test`, `make docs-lint`, `make gates`, `make spec-validate`, and `openspec validate run-budgets --strict --no-interactive`.
