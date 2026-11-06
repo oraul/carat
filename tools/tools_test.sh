@@ -619,6 +619,28 @@ state init minuteless chore/minuteless > /dev/null
 state metric minuteless estimate=small total_tokens=1000 > /dev/null
 expect "run_state: budget names no minutes when none were recorded" 0 "^under: estimated small, budget 500000 total tokens and 25 minutes, actual 1000 total tokens, " state budget minuteless
 rm build/pipeline/minuteless.json
+# spent, which the checker prints after a passing check: the output tokens
+# so far against the output budget (TOKEN_BUDGETS / OUTPUT_SHARE) and the
+# earlier starts' total tokens against the total budget, never a stop.
+state init spending chore/spending > /dev/null
+state metric spending estimate=medium phase.plan=20000/10 phase.implement=150000/60 > /dev/null
+expect "run_state: spent passes a run under its budget" 0 "^under: 170000 output tokens so far, budget 200000 output tokens for medium [(]1200000 total tokens at 6 per output token[)]; 0 total tokens recorded by earlier starts, budget 1200000$" state spent spending
+state metric spending phase.check=40000/12 > /dev/null
+expect "run_state: spent names output tokens over the budget" 0 "^over: 210000 output tokens so far, budget 200000 output tokens for medium" state spent spending
+state metric spending estimate=large > /dev/null
+state usage spending 2600000 40 > /dev/null
+expect "run_state: spent names earlier starts over the total budget" 0 "^over: 210000 output tokens so far, budget 416666 output tokens for large .*; 2600000 total tokens recorded by earlier starts, budget 2500000$" state spent spending
+state init sizeless chore/sizeless > /dev/null
+expect "run_state: spent says when no estimate was made" 0 "^no estimate: 0 output tokens so far; 0 total tokens recorded by earlier starts; neither the run state nor a queue item of sizeless states a size$" state spent sizeless
+expect "run_state: spent never stops a run" 0 "^over: " state spent spending
+expect "run_state: spent refuses a change with no run state" 1 "no run state for absent" state spent absent
+# The workflow takes the line only in the shape it parses (SPENT_LINE,
+# NO_ESTIMATE_LINE), written so grep -E reads it alike.
+spent_re=$(sed -n 's/^const SPENT_LINE = \/\(.*\)\/$/\1/p' "$here/../.claude/workflows/deliver-change.js")
+expect "run_state: the workflow reads the spent line" 0 "${spent_re:-no SPENT_LINE in the workflow}" state spent spending
+none_re=$(sed -n 's/^const NO_ESTIMATE_LINE = \/\(.*\)\/$/\1/p' "$here/../.claude/workflows/deliver-change.js")
+expect "run_state: the workflow reads the spent line without an estimate" 0 "${none_re:-no NO_ESTIMATE_LINE in the workflow}" state spent sizeless
+rm build/pipeline/spending.json build/pipeline/sizeless.json
 # A merged value that is not a commit hash never reaches git, where
 # --output=FILE would write FILE: set refuses it, and one written by hand is
 # no merge.
@@ -948,6 +970,8 @@ expect "guard: close refuses a push" 2 "git push" guard close 'git push origin x
 expect "guard: close names its profile" 2 "refused for the close profile" guard close 'sh tools/run_state.sh set c pushes 0'
 expect "guard: read refuses a closing phase" 2 "the close profile records only" guard read 'sh tools/run_state.sh phase c report abc1234'
 expect "guard: checker reads a failing log and compares" 0 "^$" guard read 'tail -60 build/stages/c/lint.log; grep -n -m 20 -E \"FAIL|rror|KILLED\" build/stages/c/lint.log; sh tools/run_state.sh bench c; sh tools/run_state.sh show c'
+expect "guard: checker notes the tokens spent" 0 "^$" guard read 'sh tools/run_state.sh spent c && sh tools/run_state.sh bench c'
+expect "guard: merger refuses spent" 2 "tools/run_state.sh spent" guard merger 'sh tools/run_state.sh spent c'
 expect "guard: benchmark prepares the base" 0 "^$" guard read 'git worktree add --detach tmp/.base origin/main || git -C tmp/.base checkout -q --detach origin/main'
 expect "guard: benchmark builds the base" 0 "^$" guard read 'make -C tmp/.base dev-build test-build bench-budget PREFIX=/w/tmp/.toolchain SPINEL_CACHE_DIR=/w/build/spinel-cache'
 expect "guard: benchmark measures the base with the change's script" 0 "^$" guard read 'cd tmp/.base && sh /w/tools/metrics.sh measure build/metrics/current.tsv'
@@ -964,6 +988,14 @@ expect "guard: merger refuses another script under the worktree" 2 "the script t
 expect "guard: contributor refuses main's merge gates" 2 "is not a command of this profile" guard contributor 'sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: merger verifies and records the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%B origin/main && sh tools/run_state.sh set c merged abc1234 && git ls-remote --heads origin chore/x'
 expect "guard: merger deletes the branch and fast-forwards main" 0 "^$" guard merger 'git push origin --delete chore/x; git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
+# The merger's first green: the green and red lines as the workflow builds
+# them (mergeLines), and its two closing calls, each one call the guard
+# admits.
+expect "guard: merger runs the green line" 0 "^$" guard merger 'git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && git worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger records red CI" 0 "^$" guard merger 'sh tools/run_state.sh metric c rework=1 && sh tools/run_state.sh set c ci \"red abc1234\"'
+expect "guard: merger waits as its file says" 0 "^$" guard merger 'sh tools/ci_wait.sh 180 && sh tools/ci_wait.sh 240 && sh tools/ci_wait.sh 300'
+expect "guard: merger verifies the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%H%n%B origin/main'
+expect "guard: merger records the merge and cleans up" 0 "^$" guard merger 'sh tools/run_state.sh set c merged abc1234 && git ls-remote --heads origin chore/x && git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
 expect "guard: contributor proposes and validates" 0 "^$" guard contributor 'npx -y @fission-ai/openspec@latest new change c && npx @fission-ai/openspec@latest validate \"c\" --strict --no-interactive && openspec status --change c --json'
 expect "guard: contributor generates and checks" 0 "^$" guard contributor 'make new-ex-command NAME=sort SPEC=\"sor[t]\" AREA=12 && make test-one T=test/domain_buffer.rb && make diagnose-one T=carat/domain/buffer.rb && make -s lint docs-lint gates && make snapshots && make spec-validate'
 expect "guard: contributor commits" 0 "^$" guard contributor 'git add -A && git -c user.name=\"Claude\" -c user.email=\"noreply@anthropic.com\" commit -q -m \"feat: x\" -m \"Co-Authored-By: Claude <noreply@anthropic.com>\" && git commit -q -F tmp/message.txt'
@@ -1582,6 +1614,50 @@ settings "$TRAILER" "Generated with a tool" false
 expect "gates: attribution refuses pull request text" 1 'lacks the line "pr": ""' gates attribution
 rm -f .claude/settings.json
 expect "gates: attribution refuses a missing settings file" 1 "no .claude/settings.json" gates attribution
+
+# ------------------------------------------------------------ call caps
+# The workflow's tool-call caps (CALL_CAPS at a medium estimate, scaled by
+# CALL_SCALE; FIXED_CAPS) and the hard ceiling of each agent file, its
+# maxTurns: the largest cap of its starts at a large estimate; the
+# merger's is its first-green cap and 2 for each of the seven waits of its
+# 30 minutes.
+wf="$here/../.claude/workflows/deliver-change.js"
+agents="$here/../.claude/agents"
+table() {
+  sed -n "s/^const $1 = { \\(.*\\) }\$/\\1/p" "$wf" | tr -d " '" | tr ',' '\n'
+}
+caps=$(table CALL_CAPS)
+fixed=$(table FIXED_CAPS)
+scale=$(table CALL_SCALE)
+cap_of() {
+  printf '%s\n' "$caps" "$fixed" | sed -n "s/^$1://p"
+}
+missing=""
+for kind in planner scout implement fix package push checker quality security bench close resume areas record merger; do
+  cap_of "$kind" | grep -q -E '^[0-9]+$' || missing="$missing $kind"
+done
+for kind in $(grep -o -E "(capLine|callCap)\\('[a-z]+'\\)" "$wf" | sed "s/.*('\\(.*\\)')/\\1/" | sort -u); do
+  cap_of "$kind" | grep -q -E '^[0-9]+$' || missing="$missing $kind"
+done
+expect "caps: every kind of start has a cap" 0 "^none$" echo "${missing:-none}"
+expect "caps: a larger estimate never lowers a cap" 0 "^rising$" sh -c 'printf "%s\n" "$1" | awk -F: "{ s[\$1] = \$2 } END { print (s[\"small\"] < s[\"medium\"] && s[\"medium\"] == 1 && s[\"medium\"] < s[\"large\"]) ? \"rising\" : \"not rising\" }"' _ "$scale"
+large=$(printf '%s\n' "$scale" | sed -n 's/^large:\([0-9.]*\)$/\1/p')
+# turns AGENT KIND...: the largest cap of KIND... at a large estimate.
+turns() {
+  agent=$1
+  shift
+  for kind in "$@"; do cap_of "$kind"; done | awk -v l="$large" '{ v = $1 * l; if (v > int(v)) v = int(v) + 1; if (v > m) m = v } END { print m }'
+}
+for pair in benchmark:bench checker:checker contributor:implement,fix,package,push planner:planner quality-reviewer:quality retrospective:close scout:scout security-reviewer:security; do
+  agent=${pair%%:*}
+  want=$(turns "$agent" $(echo "${pair#*:}" | tr ',' ' '))
+  expect "caps: the $agent file's maxTurns is its large cap" 0 "^maxTurns: $want$" grep -E '^maxTurns: ' "$agents/$agent.md"
+done
+expect "caps: the merger file's maxTurns is its ceiling" 0 "^maxTurns: $(($(cap_of merger) + 14))$" grep -E '^maxTurns: ' "$agents/merger.md"
+# A first green: the merger file's calls of one each and two waits of two
+# calls stay within its cap of at most 10.
+calls=$(grep -o '(one call)' "$agents/merger.md" | wc -l | tr -d ' ')
+expect "caps: the merger's first green is at most 10 calls" 0 "^within$" sh -c '[ "$1" -le 10 ] && [ $(($2 + 4)) -le "$1" ] && echo within' _ "$(cap_of merger)" "$calls"
 
 echo "$passed/$total passed"
 test "$passed" -eq "$total"

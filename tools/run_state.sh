@@ -148,6 +148,13 @@
 #                               budget (TOKEN_BUDGETS, MINUTE_BUDGETS), its
 #                               total tokens and wall minutes, and its output
 #                               tokens
+#   spent CHANGE                print "under:", "over:", or "no estimate:" with
+#                               the output tokens spent so far against the
+#                               output budget of the change's estimate
+#                               (TOKEN_BUDGETS / OUTPUT_SHARE) and the total
+#                               tokens earlier starts recorded against
+#                               TOKEN_BUDGETS; a note after a passing check,
+#                               always exit 0
 #   pending                     the merged changes with no history row yet
 #   history                     append a history row for each pending change;
 #                               a gate without a stored first verdict is
@@ -199,6 +206,10 @@ REVIEW_KINDS="security quality bench periodic-security periodic-quality"
 # docs/goals.md gives them.
 TOKEN_BUDGETS="small=500000 medium=1200000 large=2500000"
 MINUTE_BUDGETS="small=25"
+# The total tokens per output token that a run's output budget assumes,
+# for spent: the median of the history's rows with both figures was 5.5
+# (4.1 to 9.1), rounded up so the note comes early rather than late.
+OUTPUT_SHARE=6
 # The note kinds of a pending change that the planner places: retrospective
 # proposals, overruns, and periodic review findings.
 PLAN_NOTES='retro|overrun|security|quality'
@@ -1106,6 +1117,31 @@ add_usage() {
   budget_line
 }
 
+# The tokens spent so far against the budget, which the checker prints
+# after a passing check: the output tokens of the phases the metric line
+# stored (every start's, this one's up to the check) against the size's
+# output budget, its total-token budget divided by OUTPUT_SHARE, and the
+# total tokens earlier starts recorded through usage against the total
+# budget. A note for the workflow, never a stop: it exits 0.
+spent_line() {
+  [ -f "$(state_file)" ] || die "no run state for $change"
+  size=$(estimate_of)
+  out=$(out_tokens)
+  valid '[0-9]+' "$out" || out=0
+  total=$(read_key metric.total_tokens)
+  valid '[0-9]+' "$total" || total=0
+  earlier="$total total tokens recorded by earlier starts"
+  if [ "$size" = "-" ]; then
+    echo "no estimate: $out output tokens so far; $earlier; neither the run state nor a queue item of $change states a size"
+    return
+  fi
+  limit=$(printf '%s\n' $TOKEN_BUDGETS | sed -n "s/^$size=//p")
+  out_limit=$((limit / OUTPUT_SHARE))
+  word=under
+  if [ "$out" -gt "$out_limit" ] || [ "$total" -gt "$limit" ]; then word=over; fi
+  echo "$word: $out output tokens so far, budget $out_limit output tokens for $size ($limit total tokens at $OUTPUT_SHARE per output token); $earlier, budget $limit"
+}
+
 history_row() {
   merged=$(merged_commit)
   date=""
@@ -1397,6 +1433,9 @@ case "$command" in
   budget)
     [ $# -eq 0 ] || usage
     budget_line ;;
+  spent)
+    [ $# -eq 0 ] || usage
+    spent_line ;;
   usage)
     [ $# -eq 2 ] || usage
     add_usage "$1" "$2" ;;

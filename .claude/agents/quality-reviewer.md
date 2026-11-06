@@ -2,6 +2,7 @@
 name: quality-reviewer
 description: Reviews the committed diff of one change for correctness and code quality against this repository's rules, and reports blocking and advisory findings for the workflow to record. Never edits. Use in the Quality phase of the delivery workflow.
 tools: Read, Grep, Glob, Bash, Skill
+maxTurns: 53
 hooks:
   PreToolUse:
     - matcher: "Bash"

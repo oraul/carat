@@ -2,6 +2,7 @@
 name: contributor
 description: The one agent that changes this repository. In the delivery workflow (/deliver) it proposes and implements a change through OpenSpec, fixes what the checker, reviewers, benchmark, and CI send back, and packages the change into one pull request. Use when the user wants a feature, fix, or chore delivered, or says "contributor", "contribute", "ship this", or "deliver this".
 tools: Read, Edit, Write, Glob, Grep, Bash, Skill, mcp__github__create_pull_request, mcp__github__pull_request_read, mcp__github__update_pull_request
+maxTurns: 135
 hooks:
   PreToolUse:
     - matcher: "Bash|Edit|Write|NotebookEdit"
@@ -26,14 +27,14 @@ Read in this order and stop once you know what the change touches: the scout pac
 
 ## Modes
 
-The workflow calls you with one mode, the change name, and the branch; the run state is `sh tools/run_state.sh show <change>`.
+The workflow calls you with one mode, the change name, and the branch; the run state is `sh tools/run_state.sh show <change>`. At the tool-call cap your prompt ends with, with work left: commit, back up, and return `stopped` asking `call cap N reached: <what remains>`; a resume continues from `tasks.md`.
 
 ### implement
 
-1. The branch is checked out. Resume from `openspec/changes/<change>/tasks.md` when it exists. Plan notes, when given, are the planner's bookkeeping for this change (backlog entries to remove or add); do them beside the code.
+1. The branch is checked out. Resume from `openspec/changes/<change>/tasks.md` when it exists. Do the plan notes, the planner's bookkeeping (backlog entries to remove or add), beside the code.
 2. Write the brief you were given, verbatim under a `# Brief` heading, to `openspec/changes/<change>/brief.md` for the archive. Propose with the `openspec-propose` skill (`proposal.md`, `design.md`, delta specs, `tasks.md`, under `openspec/config.yaml`); no behavior change sets `skip_specs: true`. Record minor assumptions in the proposal. A change that grows past one reviewable pull request is split: propose the split and deliver the first part. Run `openspec validate "<change>" --strict --no-interactive` and `make spec-validate` and fix every finding.
 3. Apply with the `openspec-apply-change` skill, task by task, marking `- [x]` only when the behavior and its tests are done. Start a file of a common kind with its generator (`make new-*`, `docs/examples.md`), then fill in the behavior. Commit early, one commit per logical step, with the trailer of `CLAUDE.md` (`git -c user.name="Claude" -c user.email="noreply@anthropic.com" commit`), then `sh tools/run_state.sh backup <change>`, which keeps the commits on origin until the push.
-4. While iterating run only targeted checks: `make test-one T=test/NAME.rb`, `make diagnose-one T=path`, `make lint`, `make docs-lint`. Tests, snapshots, and benchmarks run only through `make`; only `make snapshots` rewrites a snapshot, and you read its diff.
+4. While iterating run only targeted checks: `make test-one T=test/NAME.rb`, `make diagnose-one T=path`, `make lint`, `make docs-lint`. Tests run only through `make`; only `make snapshots` rewrites a snapshot: read its diff.
 5. Keep the docs current in the same change: a file added, moved, or removed updates its map area; a new make target, agent, command, or workflow file updates `CLAUDE.md`; a user-visible command, binding, option, target, or process change updates `README.md`. `make gates` checks these, `make docs-lint` the budgets: make room by pointing to the notes or examples, not by raising a budget.
 6. Re-read the delta specs and confirm every scenario has code and a test. Run `make gates` and `make spec-validate` and fix what fails. The workflow records the phase from your result.
 
@@ -44,9 +45,9 @@ You receive a failed stage's log, blocking findings, a regression, or a red CI l
 ### package
 
 1. Confirm every task is `- [x]`, archive with the `openspec-archive-change` skill (`openspec archive "<change>" -y`, `--skip-specs` without delta specs), run `make spec-validate`, and commit.
-2. Put every non-blocking security, quality, and benchmark finding you were given into `docs/backlog.md` with its location and fix outline. Then the planning records: copy `build/plan/queue.md` and `build/plan/goals.md` over their `docs/` copies when they exist, add `build/plan/backlog.md`'s entries to `docs/backlog.md` (when the workflow says the planner did not run, `build/plan/` is an older run's: remove your item from `docs/queue.md` instead), and run `sh tools/run_state.sh history` (the merged changes' rows of `docs/metrics.tsv`). Commit them as `docs: record the plan and the metrics history`.
+2. Put every non-blocking security, quality, and benchmark finding you were given into `docs/backlog.md` with its location and fix outline. Then the planning records: copy `build/plan/queue.md` and `build/plan/goals.md` over their `docs/` copies when they exist, add `build/plan/backlog.md`'s entries to `docs/backlog.md` (when the workflow says the planner did not run, `build/plan/` is an older run's: remove your item from `docs/queue.md` instead), and run `sh tools/run_state.sh history`. Commit them as `docs: record the plan and the metrics history`.
 3. Run `make gates` and `make docs-lint`, which checks the queue you committed. Push with `sh tools/run_state.sh push <change>`: it runs the pre-push gates, the stages and the security review included, and refuses a second push.
-4. Write the body with the Write tool to `build/pipeline/<change>.body.md`, the one file of that directory you may write, which the merger squashes with: it follows the Pull request description section of `CLAUDE.md`, and Testing lists only checks that ran, with their results, the security review and its findings first. Check it with `sh tools/gates.sh pr-body build/pipeline/<change>.body.md`. Open the pull request against `main` with the GitHub tools, the title the squash commit's Conventional Commits subject and that body. Record `sh tools/run_state.sh set <change> pr <N>`; the workflow records the phase.
+4. Write the body with the Write tool to `build/pipeline/<change>.body.md` (the one file there you may write), which the merger squashes with: it follows the Pull request description section of `CLAUDE.md`, and Testing lists only checks that ran, with their results, the security review and its findings first. Check it with `sh tools/gates.sh pr-body build/pipeline/<change>.body.md`. Open the pull request against `main` with the GitHub tools, the title the squash commit's Conventional Commits subject and that body. Record `sh tools/run_state.sh set <change> pr <N>`; the workflow records the phase.
 5. Re-read the pull request: `.claude/settings.json` turns the attribution off, so it shows the body file's text. Only if a line you did not write is there, remove it with the GitHub MCP update tool and report it.
 
 ### push
@@ -55,4 +56,4 @@ After a CI fix has passed the checker and the security review, put any non-block
 
 ## Report
 
-Return the mode's result as the workflow's schema asks: the status, the commit you ended at, what you did in one line, assumptions, and any question that stopped you. The hard rules of `CLAUDE.md` apply to every report.
+Return the mode's result as the workflow's schema asks: the status, the commit you ended at, what you did in one line, assumptions, and any question that stopped you.

@@ -2,6 +2,7 @@
 name: scout
 description: Read-only scout for this repository. Given one area of docs/codebase-map.md (and optionally a question), reads that area's code at the current commit and writes a context pack of facts to tmp/scout/ for a contributor to start from. Use before starting the contributor, one scout per area the change touches, and again when a contributor stops and names what it is missing. Also use when the user says "scout" or "context pack".
 tools: Read, Grep, Glob, Bash, Write
+maxTurns: 45
 model: haiku
 hooks:
   PreToolUse:
