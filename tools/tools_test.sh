@@ -1618,9 +1618,12 @@ expect "gates: attribution refuses a missing settings file" 1 "no .claude/settin
 # ------------------------------------------------------------ call caps
 # The workflow's tool-call caps (CALL_CAPS at a medium estimate, scaled by
 # CALL_SCALE; FIXED_CAPS) and the hard ceiling of each agent file, its
-# maxTurns: the largest cap of its starts at a large estimate; the
-# merger's is its first-green cap and 2 for each of the seven waits of its
-# 30 minutes.
+# maxTurns: the largest cap of its starts at a large estimate plus a
+# return margin, so a start that makes its capped calls one per turn still
+# has turns to commit, back up, and return the schema; the merger's is its
+# first-green cap, 2 for each of the seven waits of its 30 minutes, and the
+# margin.
+margin=5
 wf="$here/../.claude/workflows/deliver-change.js"
 agents="$here/../.claude/agents"
 table() {
@@ -1642,18 +1645,19 @@ done
 expect "caps: every kind of start has a cap" 0 "^none$" echo "${missing:-none}"
 expect "caps: a larger estimate never lowers a cap" 0 "^rising$" sh -c 'printf "%s\n" "$1" | awk -F: "{ s[\$1] = \$2 } END { print (s[\"small\"] < s[\"medium\"] && s[\"medium\"] == 1 && s[\"medium\"] < s[\"large\"]) ? \"rising\" : \"not rising\" }"' _ "$scale"
 large=$(printf '%s\n' "$scale" | sed -n 's/^large:\([0-9.]*\)$/\1/p')
-# turns AGENT KIND...: the largest cap of KIND... at a large estimate.
+# turns AGENT KIND...: the largest cap of KIND... at a large estimate,
+# plus the margin.
 turns() {
   agent=$1
   shift
-  for kind in "$@"; do cap_of "$kind"; done | awk -v l="$large" '{ v = $1 * l; if (v > int(v)) v = int(v) + 1; if (v > m) m = v } END { print m }'
+  for kind in "$@"; do cap_of "$kind"; done | awk -v l="$large" -v r="$margin" '{ v = $1 * l; if (v > int(v)) v = int(v) + 1; if (v > m) m = v } END { print m + r }'
 }
 for pair in benchmark:bench checker:checker contributor:implement,fix,package,push planner:planner quality-reviewer:quality retrospective:close scout:scout security-reviewer:security; do
   agent=${pair%%:*}
   want=$(turns "$agent" $(echo "${pair#*:}" | tr ',' ' '))
-  expect "caps: the $agent file's maxTurns is its large cap" 0 "^maxTurns: $want$" grep -E '^maxTurns: ' "$agents/$agent.md"
+  expect "caps: the $agent file's maxTurns is its large cap and the margin" 0 "^maxTurns: $want$" grep -E '^maxTurns: ' "$agents/$agent.md"
 done
-expect "caps: the merger file's maxTurns is its ceiling" 0 "^maxTurns: $(($(cap_of merger) + 14))$" grep -E '^maxTurns: ' "$agents/merger.md"
+expect "caps: the merger file's maxTurns is its ceiling" 0 "^maxTurns: $(($(cap_of merger) + 14 + margin))$" grep -E '^maxTurns: ' "$agents/merger.md"
 # A first green: the merger file's calls of one each and two waits of two
 # calls stay within its cap of at most 10.
 calls=$(grep -o '(one call)' "$agents/merger.md" | wc -l | tr -d ' ')

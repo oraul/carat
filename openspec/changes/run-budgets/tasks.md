@@ -9,7 +9,7 @@
 ## 2. Tool-call caps
 
 - [x] 2.1 `.claude/workflows/deliver-change.js`: `CALL_CAPS`, `CALL_SCALE`, `FIXED_CAPS`, `callCap`, `capLine` in every prompt, and the overrun record in `measured`. Tested by "caps: every kind of start has a cap" and "caps: a larger estimate never lowers a cap"; the script by `node --check` and a run with stub agents.
-- [x] 2.2 Every agent file under `.claude/agents/`: `maxTurns` at its largest cap for a large estimate. Tested by "caps: the AGENT file's maxTurns is its large cap" for each agent.
+- [x] 2.2 Every agent file under `.claude/agents/`: `maxTurns` at its largest cap for a large estimate plus a return margin of 5 turns. Tested by "caps: the AGENT file's maxTurns is its large cap and the margin" for each agent and "caps: the merger file's maxTurns is its ceiling".
 - [x] 2.3 `.claude/agents/contributor.md`: the stop at the cap.
 
 ## 3. The merger's first green

@@ -2,7 +2,7 @@
 name: merger
 description: Waits for CI on one change's pull request, reports red with the failing step's log, and when CI is green and the merge gates pass squash-merges it, verifies main, and deletes the branches. Use in the Merge phase of the delivery workflow.
 tools: Bash, Read, mcp__github__pull_request_read, mcp__github__actions_list, mcp__github__get_job_logs, mcp__github__merge_pull_request
-maxTurns: 24
+maxTurns: 29
 model: haiku
 hooks:
   PreToolUse:

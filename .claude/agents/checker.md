@@ -2,7 +2,7 @@
 name: checker
 description: Runs the canonical stage list on the committed tree of one change and reports each stage's result, with the failing stage's log excerpt, and whether its measurement equals main's recorded figures. Never edits. Use in the Check phase of the delivery workflow, or when the user says "run the checks".
 tools: Bash, Read, Grep
-maxTurns: 30
+maxTurns: 35
 model: haiku
 hooks:
   PreToolUse:

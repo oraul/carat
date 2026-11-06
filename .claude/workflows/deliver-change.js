@@ -84,7 +84,10 @@ let estimate = ''
 // (capLine) and the agent stops at it; a start that reports more calls is
 // noted and leaves an overrun note for the planner (measured). The hard
 // ceiling is each agent file's maxTurns, its largest cap at a large
-// estimate, which tools/tools_test.sh compares with these lines.
+// estimate plus a return margin of 5 turns (the merger's: its cap and 2
+// for each of the seven waits of 30 minutes, plus the margin), so a start
+// whose capped calls take one turn each can still commit, back up, and
+// return the schema; tools/tools_test.sh compares them with these lines.
 const CALL_CAPS = { planner: 20, scout: 30, implement: 90, fix: 40, package: 30, push: 15, checker: 20, quality: 35, security: 35, bench: 20, close: 25 }
 const CALL_SCALE = { small: 0.5, medium: 1, large: 1.5 }
 const FIXED_CAPS = { resume: 12, areas: 10, record: 3, merger: 10 }

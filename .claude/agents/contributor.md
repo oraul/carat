@@ -2,7 +2,7 @@
 name: contributor
 description: The one agent that changes this repository. In the delivery workflow (/deliver) it proposes and implements a change through OpenSpec, fixes what the checker, reviewers, benchmark, and CI send back, and packages the change into one pull request. Use when the user wants a feature, fix, or chore delivered, or says "contributor", "contribute", "ship this", or "deliver this".
 tools: Read, Edit, Write, Glob, Grep, Bash, Skill, mcp__github__create_pull_request, mcp__github__pull_request_read, mcp__github__update_pull_request
-maxTurns: 135
+maxTurns: 140
 hooks:
   PreToolUse:
     - matcher: "Bash|Edit|Write|NotebookEdit"

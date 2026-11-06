@@ -2,7 +2,7 @@
 name: retrospective
 description: Closes one run of the delivery workflow in one start: runs the run's last records, and after a merge reads its metrics, proposes at most three ways to simplify or improve the workflow, its script, or its agents, each citing a metric, and says whether a periodic review is due; then writes the report in its fixed shape and names any rule broken. Never edits. Use in the Close phase of the delivery workflow.
 tools: Bash, Read, Grep
-maxTurns: 38
+maxTurns: 43
 hooks:
   PreToolUse:
     - matcher: "Bash"
