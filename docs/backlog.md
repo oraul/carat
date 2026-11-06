@@ -1333,3 +1333,21 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the case 'spent never stops a run' in `tools/tools_test.sh` (line 635 at `run-budgets`) repeats the exit-0 over case at line 629. Quality advisory of `run-budgets`.
 - Why it matters: the duplicate adds run time and a second place to update without covering anything more.
 - Fix outline: drop the case.
+
+## The security reviewer's not-run order reads reversed
+
+- Where: `.claude/agents/security-reviewer.md` line 33 at `periodic-review-caps`. Quality advisory of `periodic-review-caps`.
+- Why it matters: the line says a review without a result is recorded not-run and only then started once more, the reverse of what the periodic workflow does, so an agent following it literally could record not-run before the retry.
+- Fix outline: write that a review without a result is started once more, then recorded as not-run, never as passed.
+
+## The periodic review caps design names the wrong owner of the overrun notes
+
+- Where: `openspec/changes/archive/2026-11-06-periodic-review-caps/design.md` line 20, against `.claude/workflows/periodic-review.js` lines 96 to 97 and `.claude/workflows/deliver-change.js`. Quality advisory of `periodic-review-caps`.
+- Why it matters: the decision says the periodic result returns the cap and the delivery workflow notes overruns with its `overCap`, but the periodic workflow writes the overrun notes itself and returns `over`, and the delivery workflow only logs them, so the archived record misleads the next change to this code.
+- Fix outline: add a note to the next change touching the periodic workflow's caps that corrects the decision (the archived design is not edited), or move the noting into the delivery workflow so the design holds.
+
+## The periodic review's missed check accepts either kind's values
+
+- Where: `missedOf` in `.claude/workflows/periodic-review.js` line 85 at `periodic-review-caps`. Quality advisory of `periodic-review-caps`.
+- Why it matters: it accepts the security and the quality values for both results, although the design says the schema keeps the line safe, and it is recomputed four times per run.
+- Fix outline: compute `securityMissed` and `qualityMissed` once and drop the filter, or filter by each kind's own values.
