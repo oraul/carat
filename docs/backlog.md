@@ -1828,7 +1828,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The completion resolve timeout restarts with every pick
 
-- Where: `carat/adapters/json_rpc_language_gateway.rb` line 562 at 925d759, which measures the resolve timeout from `docs.due`. Quality advisory in `completion-docs`.
+- Where: `carat/adapters/json_rpc_language_gateway.rb` line 562 at 925d759 (558 at d46ecff), which measures the resolve timeout from `docs.due`, which a new pick resets. Quality advisory in `completion-docs`, raised again at d46ecff.
 - Why it matters: every new pick during the flight moves `docs.due` forward, so a server that never answers is not cancelled while the selection keeps moving.
 - Fix outline: keep the send time (or a deadline) of the request in flight and time it out from that, with a case in `test/adapters_server_completions.rb` that keeps moving the selection. Queued in `completion-tidy-b`.
 
@@ -1840,9 +1840,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## ShowCompletionDocs recomputes the cursor's screen row
 
-- Where: `carat/use_cases/completion/show_completion_docs.rb` line 88 at 925d759, which computes the row as `ShowCompletion#row_offset` does, and takes `below = popup.row > 0`. Quality advisory in `completion-docs`.
+- Where: `carat/use_cases/completion/show_completion_docs.rb` line 88 at 925d759, which computes the row as `ShowCompletion#row_offset` does, and takes `below = popup.row > 0`, and line 102, which computes the column through `DisplayWidth.column` where `ArrangeView#place_floats` uses the line cache. Quality advisory in `completion-docs`, raised again at d46ecff.
 - Why it matters: the two copies and the sign convention couple the documentation float to the popup's layout, so a change to one silently misplaces the other.
-- Fix outline: derive the documentation float's vertical placement from the popup spec alone (row and height), or share one helper. Queued in `completion-tidy-b`.
+- Fix outline: derive the documentation float's vertical placement from the popup spec alone (row and height), or share one helper for the cursor's screen cell with `ArrangeView` and `ShowCompletion`. Queued in `completion-tidy-b`.
 
 ## The gateway repeats the markdown size limit as a literal
 
@@ -1867,3 +1867,21 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `test/adapters_server_completions.rb` line 384 at e1a647c: the two cancellation cases repeat the resolve case's setup (a rig with `resolveProvider`, type `ifi`, answer three described items, `<C-n><C-n>`, wait for `completionItem/resolve`). Quality advisory in `completion-docs`.
 - Why it matters: a change to the resolve flow has to be made three times in the test.
 - Fix outline: extract a helper such as `resolving(r)` returning the rig with a resolve in flight, beside `completing`. Queued in `completion-tidy-b`.
+
+## Completion resolve state outlives a switch of completion language
+
+- Where: `complete` in `carat/adapters/json_rpc_language_gateway.rb` line 498 at d46ecff, which sets `ask.language` to the new request's server but leaves `@items` and `docs` alone, and `resolve`, `cancel_resolve`, and the answer match (lines 552 to 558), which read `@completion.language`. Low (3) finding of the security review of `completion-docs`, and a quality advisory there.
+- Why it matters: after a completion request for a file of another type, a pending pick can send server A's raw completion item to server B as `completionItem/resolve`, the `$/cancelRequest` for A's request id reaches B, and A's real answer is dropped; a minor cross-server leak between servers that can already read the workspace, plus a misrouted cancel.
+- Fix outline: record the answer's language in `CompletionDocs` in `completed` and use it for `resolve`, `cancel_resolve`, and the answer match, or call `cancel_resolve` then clear `docs` and `@items` in `complete` before `ask.language` changes; add a case in `test/adapters_server_completions.rb` that completes in two file types with a resolve in flight.
+
+## A server crash during a resolve has no test
+
+- Where: `forget_completion` in `carat/adapters/json_rpc_language_gateway.rb` line 455 at d46ecff, which now resets `docs.sent_id` and drops the language from `@resolvers`. Quality advisory in `completion-docs`.
+- Why it matters: the crash path of the resolve flow can regress, leaving `waiting?` true or sending a resolve to a restarted server, without a test failing.
+- Fix outline: in `test/adapters_server_completions.rb`, crash the server while a resolve is in flight and assert `waiting?` is false and no resolve is sent after.
+
+## The tools test's wait for the runner's stage fails silently
+
+- Where: `tools/tools_test.sh` line 323 at d46ecff, the loop that waits for `stage.slow` to read `running` before superseding the runner. Quality advisory in `completion-docs`.
+- Why it matters: after 20 tries the loop falls through, so a slow runner surfaces as an unrelated supersede failure.
+- Fix outline: fail with a message naming the stage when `stage.slow` never reads `running`.
