@@ -21,7 +21,7 @@ While the completion popup shows and its selected item has documentation, the ed
 
 #### Scenario: Long documentation
 - **WHEN** an item's documentation is one paragraph of 300 characters
-- **THEN** the float is 60 columns wide and shows the paragraph wrapped at word boundaries
+- **THEN** the float is at most 60 columns wide and shows the paragraph wrapped at word boundaries
 
 ### Requirement: Documentation is fetched lazily when the selection settles
 When an item's documentation was not in the completion answer and the server advertised `resolveProvider`, the editor SHALL send `completionItem/resolve` with the item as the server gave it once the selection has stayed on the item for 0.1 seconds, without making any key wait, and SHALL show the answer's documentation at the next idle tick with no key pressed. Items the selection passes over within 0.1 seconds SHALL be asked nothing.

@@ -24,8 +24,9 @@ ok   an illegal byte reads as U+FFFD
 ok   a long row wraps at its last space
 ok   a word longer than the width is cut
 ok   wide characters wrap by cells
+ok   a document reads as plain rows
 ok   a megabyte of short lines keeps at most 100 rows, no blank last
 ok   at most 16,384 bytes are read
 ok   a long line wraps to at most 100 rows
 ok   an empty document has no rows
-domain_markdown_text: 30 passed, 0 failed
+domain_markdown_text: 31 passed, 0 failed

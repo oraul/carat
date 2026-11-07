@@ -44,7 +44,8 @@ module DomainMarkdownTextTest
       ["an illegal byte reads as U+FFFD", "a\xFFb", "a\u{FFFD}b"],
       ["a long row wraps at its last space", "one two three four five six seven eight nine ten", "one two three four five six seven eight|nine ten"],
       ["a word longer than the width is cut", "x" * 50, "x" * 40 + "|" + "x" * 10],
-      ["wide characters wrap by cells", "\u{6F22}" * 25, "\u{6F22}" * 20 + "|" + "\u{6F22}" * 5]
+      ["wide characters wrap by cells", "\u{6F22}" * 25, "\u{6F22}" * 20 + "|" + "\u{6F22}" * 5],
+      ["a document reads as plain rows", "# Title\n\nUse **`map`** or [each](#each).\n\n- one\n\n```ruby\nx = 1\n```", "Title||Use map or each.||• one||  x = 1"]
     ]) do |text|
       rows(text)
     end
