@@ -44,6 +44,10 @@ module DomainMarkdownTextTest
       ["an illegal byte reads as U+FFFD", "a\xFFb", "a\u{FFFD}b"],
       ["a long row wraps at its last space", "one two three four five six seven eight nine ten", "one two three four five six seven eight|nine ten"],
       ["a word longer than the width is cut", "x" * 50, "x" * 40 + "|" + "x" * 10],
+      ["a code row before a long word is cut on a character, not its indent", "```\n" + "y" * 45 + "\n```", "  " + "y" * 38 + "|" + "y" * 7],
+      ["a bullet stays with the long word after it", "- " + "z" * 45, "• " + "z" * 38 + "|" + "z" * 7],
+      ["a quote bar stays with the long word after it", "> " + "w" * 45, "│ " + "w" * 38 + "|" + "w" * 7],
+      ["a bullet's text still wraps at a space", "- " + "a" * 30 + " " + "b" * 20, "• " + "a" * 30 + "|" + "b" * 20],
       ["wide characters wrap by cells", "\u{6F22}" * 25, "\u{6F22}" * 20 + "|" + "\u{6F22}" * 5],
       ["a document reads as plain rows", "# Title\n\nUse **`map`** or [each](#each).\n\n- one\n\n```ruby\nx = 1\n```", "Title||Use map or each.||• one||  x = 1"]
     ]) do |text|
