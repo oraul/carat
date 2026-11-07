@@ -164,15 +164,27 @@ module AdaptersLanguageGatewayTest
     notify(h, "textDocument/publishDiagnostics", { "uri" => uri, "diagnostics" => two })
     got = h.assembly.services.diagnostics(path)
     t.assert_equal([2, 2, 4, 1, "bad[31m", 4], [got.length, got[0].row, got[0].col, got[0].severity, got[0].message, got[1].severity], "diagnostics are kept stripped, the severity bounded")
+    slots = h.assembly.status_slots
+    hint = Carat::Domain::Icons.glyph("hint", h.state.options.icons)
+    t.assert_equal([hint, "x", 1, 0, 1], [h.buffer.sign_at(0), h.buffer.diagnostic_at(0).message, slots.errors, slots.warnings, slots.hints], "a publish is drawn at the idle tick: a sign on a row inside the buffer, its message, and the counts")
     notify(h, "textDocument/publishDiagnostics", { "uri" => uri, "diagnostics" => [{ "range" => { "start" => { "line" => 5, "character" => 1 } }, "message" => "only" }] })
     got = h.assembly.services.diagnostics(path)
     t.assert_equal([1, 5, "only", 1], [got.length, got[0].row, got[0].message, got[0].severity], "a later publish replaces the file's diagnostics, an error when no severity is given")
+    t.assert_equal([false, true, 1, 0], [h.buffer.signs?, h.buffer.diagnostic_at(0).nil?, slots.errors, slots.hints], "the later publish replaces the signs and the counts, a row past the end counted but not drawn")
     t.assert_equal([true, false], [Carat::Domain::Diagnostic.new(row: 0, col: 0, severity: 1, message: "").error?, Carat::Domain::Diagnostic.new(row: 0, col: 0, severity: 2, message: "").error?], "a diagnostic of severity 1 is an error")
     many = []
     1100.times { many << { "range" => { "start" => { "line" => 0, "character" => 0 } }, "message" => "m" * 600 } }
     notify(h, "textDocument/publishDiagnostics", { "uri" => uri, "diagnostics" => many })
     got = h.assembly.services.diagnostics(path)
     t.assert_equal([1000, 500], [got.length, got[0].message.bytesize], "at most 1,000 diagnostics of at most 500 bytes")
+    notify(h, "textDocument/publishDiagnostics", { "uri" => uri, "diagnostics" => [] })
+    t.assert_equal([false, false, true], [h.buffer.signs?, slots.diagnostics?, h.buffer.diagnostic_at(0).nil?], "an empty publish clears the signs and the counts")
+    notify(h, "textDocument/publishDiagnostics", { "uri" => uri + "x", "diagnostics" => two })
+    t.assert_equal([false, false], [h.buffer.signs?, slots.diagnostics?], "a publish for a file no buffer shows draws nothing")
+    notify(h, "textDocument/publishDiagnostics", { "uri" => uri, "diagnostics" => two })
+    h.type(":LspRestart<CR>")
+    h.wait
+    t.assert_equal([false, false], [h.buffer.signs?, slots.diagnostics?], "a restart clears the drawn diagnostics")
 
     # Hostile output.
     h = editor(true)

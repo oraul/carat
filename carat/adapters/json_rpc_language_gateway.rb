@@ -16,7 +16,10 @@ module Carat
     # and didClose when the buffer is gone. Its output is untrusted: a body
     # that is not a JSON object is dropped, at most DRAIN_LIMIT messages are
     # read per tick, and the name and every diagnostic message are stripped
-    # of control characters and capped (Domain::ControlText).
+    # of control characters and capped (Domain::ControlText). A publish is
+    # handed at the next idle tick to the buffers of its file, which draw
+    # it as signs and the cursor line's message, and the current buffer's
+    # counts go to the bar's diagnostics slot.
     class JsonRpcLanguageGateway < Ports::LanguageServicePort
       DRAIN_LIMIT = 64
       NAME_LIMIT = 32
@@ -32,6 +35,7 @@ module Carat
       # @rbs @refused: Array[String]
       # @rbs @saves: Array[Integer]
       # @rbs @trust: Symbol
+      # @rbs @published: Array[String]
 
       attr_reader :processes #: Ports::ProcessPort
       attr_reader :messages #: Ports::MessageQueuePort
@@ -52,11 +56,14 @@ module Carat
         @refused = []
         @saves = []
         @trust = :unknown
+        @published = []
       end
 
       # @rbs state: Domain::EditorState
       def poll(state)
         changed = drain
+        apply(state.options.icons)
+        changed = @slots.count_diagnostics(state.buffer.diagnostics) || changed
         language = state.buffer.filetype
         current = server_for(language)
         held = false
@@ -94,6 +101,7 @@ module Carat
         server = server_for(language)
         if !server.nil? && server.handle == 0
           forget(language)
+          clear_shown(language)
           server = nil
         end
         if server.nil?
@@ -112,6 +120,11 @@ module Carat
       # @rbs state: Domain::EditorState
       def restart(state)
         stop
+        i = 0
+        while i < @servers.length
+          clear_shown(server_at(i).language)
+          i += 1
+        end
         @servers.clear
         @refused.clear
         language = state.buffer.filetype
@@ -143,7 +156,12 @@ module Carat
       # The diagnostics a server published for a path, in its order.
       #: (String) -> Array[untyped]
       def diagnostics(path)
-        uri = uri_of(path)
+        listed(uri_of(path))
+      end
+
+      # The diagnostics a server published for a URI, [] for none.
+      #: (String) -> Array[untyped]
+      def listed(uri)
         i = 0
         while i < @servers.length
           list = server_at(i).diagnostics[uri]
@@ -413,6 +431,44 @@ module Carat
           values << diagnostic unless diagnostic.nil?
         end
         server.diagnostics[uri.to_s] = values
+        @published << uri.to_s unless @published.include?(uri.to_s)
+      end
+
+      # Hands each file published since the last tick to the buffers whose
+      # path makes its URI, the signs in the icon set's glyphs.
+      #: (String) -> void
+      def apply(set)
+        return if @published.empty?
+        glyphs = [Domain::Icons.glyph("error", set), Domain::Icons.glyph("warning", set), Domain::Icons.glyph("info", set), Domain::Icons.glyph("hint", set)]
+        i = 0
+        while i < @buffers.count
+          buffer = @buffers.buffer_at(i)
+          i += 1
+          path = buffer.path_text
+          next if path.empty?
+          uri = uri_of(path)
+          next unless @published.include?(uri)
+          list = listed(uri)
+          if list.empty?
+            buffer.clear_diagnostics
+          else
+            buffer.set_diagnostics(list, glyphs)
+          end
+        end
+        @published.clear
+        nil
+      end
+
+      # Removes the drawn diagnostics of a file type's buffers, whose server
+      # is gone.
+      #: (String) -> void
+      def clear_shown(language)
+        i = 0
+        while i < @buffers.count
+          buffer = @buffers.buffer_at(i)
+          buffer.clear_diagnostics if buffer.filetype == language && !buffer.diagnostics.empty?
+          i += 1
+        end
       end
 
       #: (untyped) -> Domain::Diagnostic?
@@ -423,7 +479,7 @@ module Carat
         return nil unless start.is_a?(Hash)
         severity = item["severity"]
         message = item["message"]
-        Domain::Diagnostic.new(row: count_of(start["line"]), col: count_of(start["character"]), severity: severity.is_a?(Integer) ? bounded(severity.to_i, 1, 4) : 1, message: message.is_a?(String) ? Domain::ControlText.strip(message.to_s, MESSAGE_LIMIT) : "")
+        Domain::Diagnostic.new(row: count_of(start["line"]), col: count_of(start["character"]), severity: severity.is_a?(Integer) ? bounded(severity.to_i, 1, 4) : 1, message: message.is_a?(String) ? Domain::ControlText.line(message.to_s, MESSAGE_LIMIT) : "")
       end
 
       #: (Integer, Integer, Integer) -> Integer

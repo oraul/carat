@@ -205,6 +205,7 @@ module LintTest
     "hold" => "shows a language server waiting for :LspStart on the bar, answering whether the slot changed",
     "drain" => "handles the queued messages of the language servers, answering whether any",
     "set_lsp" => "sets the lsp slot, answering whether it changed",
+    "count_diagnostics" => "counts a buffer's diagnostics into the diagnostics slot, answering whether a count changed",
     "read_header" => "reads a frame's headers, answering whether they are complete",
     "refuse" => "refuses a server's stream, answering false for the caller",
     "write_bytes" => "writes to a child's input, answering whether it took them",

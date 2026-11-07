@@ -46,4 +46,7 @@ ok   stopped
 ok   crashed
 ok   each count in its diagnostic group, the closing space in the last one's
 ok   new slots are empty
-adapters_status_bar: 48 passed, 0 failed
+ok   a buffer's diagnostics are counted by severity
+ok   counting the same again changes nothing, another list replaces the counts
+ok   no diagnostics empty the slot
+adapters_status_bar: 51 passed, 0 failed

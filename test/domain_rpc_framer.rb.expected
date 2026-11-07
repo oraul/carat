@@ -20,4 +20,7 @@ ok   an illegal byte becomes U+FFFD
 ok   UTF-8 is kept
 ok   the cut keeps whole characters
 ok   the limit in bytes
-domain_rpc_framer: 22 passed, 0 failed
+ok   breaks and tabs become spaces
+ok   an escape sequence still loses its escape
+ok   the cut counts the spaces
+domain_rpc_framer: 25 passed, 0 failed

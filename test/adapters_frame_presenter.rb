@@ -198,6 +198,22 @@ module AdaptersFramePresenterTest
     f = draw(s, 6, 30)
     t.assert_equal(" NORMAL  [No Name]", f.row_text(4)[0, 18], "unnamed buffer")
 
+    # The cursor line's diagnostic in the message row.
+    s = state_for(["ab", "cd"], "a.rb")
+    s.buffer.set_diagnostics([D::Diagnostic.new(row: 0, col: 0, severity: 2, message: "unused"), D::Diagnostic.new(row: 1, col: 0, severity: 1, message: "x" * 80)], ["X", "!", "i", "?"])
+    f = draw(s, 6, 30)
+    t.assert_equal(["unused", D::Highlight::DIAGNOSTIC_WARN, "! "], [f.row_text(5).strip, f.cell(5, 0).hl, f.row_text(0)[0, 2]], "the cursor line's diagnostic in its severity's group, its sign in the gutter")
+    s.window.cursor.row = 1
+    f = draw(s, 6, 30)
+    t.assert_equal(["x" * 30, D::Highlight::DIAGNOSTIC_ERROR], [f.row_text(5), f.cell(5, 29).hl], "a long message is cut at the screen's width")
+    s.show("written", false)
+    f = draw(s, 6, 30)
+    t.assert_equal("written", f.row_text(5).strip, "a pending message wins over the diagnostic")
+    s.clear_message
+    s.mode = D::Mode::INSERT
+    f = draw(s, 6, 30)
+    t.assert_equal("-- INSERT --", f.row_text(5).strip, "the insert indicator wins over the diagnostic")
+
     # Message row priorities.
     s = state_for(["ab"], "a.txt")
     s.mode = D::Mode::INSERT

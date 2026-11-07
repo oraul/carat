@@ -18,6 +18,10 @@ ok   cursor row shows 0 when number is off
 ok   a modified buffer shows the modified icon
 ok   the bar shows row:col and All
 ok   unnamed buffer
+ok   the cursor line's diagnostic in its severity's group, its sign in the gutter
+ok   a long message is cut at the screen's width
+ok   a pending message wins over the diagnostic
+ok   the insert indicator wins over the diagnostic
 ok   insert indicator
 ok   bar cursor in insert mode
 ok   message replaces the indicator
@@ -161,4 +165,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   a block on the command line
-adapters_frame_presenter: 163 passed, 0 failed
+adapters_frame_presenter: 167 passed, 0 failed

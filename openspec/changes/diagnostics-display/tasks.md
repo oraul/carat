@@ -7,8 +7,8 @@
 
 ## 2. Gateway and presenter
 
-- [ ] 2.1 `carat/adapters/json_rpc_language_gateway.rb`: messages through `ControlText.line`, a publish applied to its buffers at the idle tick, the counts written, a restart and a start after a crash clearing the file type's buffers. Tested by `test/adapters_language_gateway.rb`.
-- [ ] 2.2 `carat/adapters/frame_presenter.rb` `paint_message`: the cursor line's diagnostic in normal mode in its severity's group. Tested by `test/adapters_frame_presenter.rb` and the drawn editor in `test/editor_lsp.rb` (signs, message row, counts, restart).
+- [x] 2.1 `carat/adapters/json_rpc_language_gateway.rb`: messages through `ControlText.line`, a publish applied to its buffers at the idle tick, the counts written, a restart and a start after a crash clearing the file type's buffers. Tested by `test/adapters_language_gateway.rb`.
+- [x] 2.2 `carat/adapters/frame_presenter.rb` `paint_message`: the cursor line's diagnostic in normal mode in its severity's group. Tested by `test/adapters_frame_presenter.rb` and the drawn editor in `test/editor_lsp.rb` (signs, message row, counts, restart).
 
 ## 3. Docs and records
 
