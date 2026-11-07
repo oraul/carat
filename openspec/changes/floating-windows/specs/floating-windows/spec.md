@@ -12,8 +12,8 @@ A float SHALL show its buffer in a box of the given text rows and columns, with 
 - **THEN** rows 2 to 5 from column 4 to 15 show a rounded border with "doc" on its top edge and the float's two lines inside it, and the rest of the rows show the window under it
 
 #### Scenario: Cursor-anchored float
-- **WHEN** a float without a border is opened at row 1, column 0 from the cursor while the cursor is on screen row 3, column 5
-- **THEN** the float's first line starts on screen row 4 at column 5
+- **WHEN** a float without a border is opened at row 1, column 0 from the cursor while the cursor is on screen row 2, column 8
+- **THEN** the float's first line starts on screen row 3 at column 8
 
 #### Scenario: A float too large for the screen is cut and moved in
 - **WHEN** a float of 30 rows by 100 columns is opened at row 5, column 50 in a 40 by 12 editor
