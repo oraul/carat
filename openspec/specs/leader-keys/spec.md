@@ -94,3 +94,10 @@ With the default configuration, Ctrl-S SHALL write the current buffer as `:w` do
 #### Scenario: Explorer key unchanged
 - **WHEN** Space then "e" are typed with the explorer enabled
 - **THEN** the file tree opens at the left, focused
+
+### Requirement: Leader d is the docs group
+With the default configuration, in normal mode, `<leader>dp` SHALL pin the documentation float `K` opened into a split, as the hover documentation requirements describe.
+
+#### Scenario: Pin
+- **WHEN** the documentation float shows and Space, "d", "p" are typed
+- **THEN** a split shows the documentation and the float is closed
