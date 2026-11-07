@@ -18,4 +18,4 @@
 
 - [x] 4.1 Map entries, the area 17 Flow sentence, and the Designs lines of areas 13 and 17 in `docs/codebase-map.md`
 - [x] 4.2 Backlog: update the PR footer entry, remove the Frame comment entry, extend the Designs and `ControlText.cleaned` entries, add the nine plan entries in `docs/backlog.md`
-- [ ] 4.3 Run `make gates`, `make spec-validate`, `make docs-lint`, and the `insert` benchmark held at 35.0
+- [x] 4.3 Run `make gates`, `make spec-validate`, `make docs-lint`, and the `insert` benchmark held at 35.0
