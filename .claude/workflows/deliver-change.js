@@ -84,13 +84,14 @@ let estimate = ''
 // (capLine) and the agent stops at it; a start that reports more calls is
 // noted and leaves an overrun note for the planner (measured). The hard
 // ceiling is each agent file's maxTurns, its largest cap at a large
-// estimate plus a return margin of 5 turns (the merger's: its cap and 2
-// for each of the seven waits of 30 minutes, plus the margin), so a start
+// estimate plus a return margin of 5 turns (the merger's: its cap, which
+// holds two waits, 2 for each of the other five of its 30 minutes, and the
+// margin), so a start
 // whose capped calls take one turn each can still commit, back up, and
 // return the schema; tools/tools_test.sh compares them with these lines.
 const CALL_CAPS = { planner: 20, scout: 30, implement: 90, fix: 40, package: 30, push: 15, checker: 20, quality: 35, security: 35, bench: 20, close: 25 }
 const CALL_SCALE = { small: 0.5, medium: 1, large: 1.5 }
-const FIXED_CAPS = { resume: 12, areas: 10, record: 3, merger: 10 }
+const FIXED_CAPS = { resume: 12, areas: 10, record: 3, merger: 12 }
 const sizeWord = () => (SIZES.includes(estimate) ? estimate : 'medium')
 const callCap = (kind) => (kind in FIXED_CAPS ? FIXED_CAPS[kind] : Math.ceil(CALL_CAPS[kind] * CALL_SCALE[sizeWord()]))
 const capLine = (kind) => `\nTool calls: at most ${callCap(kind)} in this start (${kind in FIXED_CAPS ? 'a fixed cap' : `the ${kind} cap at ${SIZES.includes(estimate) ? `the ${estimate} estimate` : 'the medium figure, with no estimate yet'}`}). Count them; on reaching the cap, stop and return the schema with what is done, saying the cap stopped you.`
@@ -99,6 +100,7 @@ const capLine = (kind) => `\nTool calls: at most ${callCap(kind)} in this start 
 const mergerCap = (r) => FIXED_CAPS.merger + 2 * (Number(r.waited) > 7 ? Math.ceil((Number(r.waited) - 7) / 5) : 0)
 
 const STATUS = { type: 'string', enum: ['done', 'stopped'] }
+const WORK_STATUS = { type: 'string', enum: ['done', 'partial', 'stopped'], description: 'partial: the cap stopped you with the work committed and backed up' }
 const HEAD = { type: 'string', description: 'git rev-parse --short=12 HEAD at the end' }
 const LINES = { type: 'array', items: { type: 'string' } }
 const RESUME = {
@@ -122,7 +124,11 @@ const SCOUT_PLAN = {
 const PACK = { type: 'object', properties: { pack: { type: 'string' } }, required: ['pack'] }
 const WORK = {
   type: 'object',
-  properties: { status: STATUS, head: HEAD, summary: { type: 'string' }, question: { type: 'string' }, assumptions: LINES, pr: { type: 'integer' } },
+  properties: {
+    status: WORK_STATUS, head: HEAD, summary: { type: 'string' }, question: { type: 'string' }, assumptions: LINES, pr: { type: 'integer' },
+    remaining: { ...LINES, description: 'with status partial: each task or step left, one line each' },
+    pushed: { type: 'string', description: 'after a push: the full sha it recorded, sh tools/run_state.sh get <change> pushed' },
+  },
   required: ['status', 'head', 'summary'],
 }
 const CHECK = {
@@ -143,14 +149,15 @@ const FINDING = {
   },
   required: ['severity', 'confidence', 'file', 'in_change', 'title', 'fix'],
 }
+const NOT_REVIEWED = { ...LINES, description: 'the files of the diff you did not review when the cap stopped you, empty when none' }
 const QUALITY = {
   type: 'object',
-  properties: { head: HEAD, blocking: LINES, advisory: LINES },
+  properties: { head: HEAD, blocking: LINES, advisory: LINES, not_reviewed: NOT_REVIEWED },
   required: ['head', 'blocking', 'advisory'],
 }
 const SECURITY = {
   type: 'object',
-  properties: { ran: { type: 'boolean' }, head: HEAD, findings: { type: 'array', items: FINDING } },
+  properties: { ran: { type: 'boolean' }, head: HEAD, findings: { type: 'array', items: FINDING }, not_reviewed: NOT_REVIEWED },
   required: ['ran', 'head', 'findings'],
 }
 const BENCH = {
@@ -194,6 +201,59 @@ const CLOSE = {
 }
 const CALLS = { type: 'integer', description: 'how many tool calls you made for this task' }
 const withCalls = (schema) => ({ ...schema, properties: { ...schema.properties, tool_calls: CALLS }, required: [...schema.required, 'tool_calls'] })
+
+// A start that reaches its stated cap returns what it left; one that
+// reaches its agent file's maxTurns returns nothing. Either is continued by
+// another start told what is left, at most CONTINUES in a row, so the run
+// resumes from the committed work instead of failing; a result that
+// stopped on its own (a contributor's question) stops the run. rest is the
+// kind's list of what is left: empty when nothing is, null when the start
+// stopped on its own. tools/tools_test.sh runs these helpers.
+const CONTINUES = 2
+function continuation(result, rest, count) {
+  if (result && rest && !rest.length) return { next: 'done', left: [] }
+  if (result && !rest) return { next: 'stop', left: [] }
+  return { next: count < CONTINUES ? 'continue' : 'stop', left: result ? rest : [] }
+}
+// A contributor's work left: its remaining tasks when partial (the
+// unchecked tasks when it named none), null when it stopped.
+function workLeft(r) {
+  if (r.status === 'done') return []
+  if (r.status !== 'partial') return null
+  const rest = Array.isArray(r.remaining) ? r.remaining.filter(Boolean) : []
+  return rest.length ? rest : ['the unchecked tasks of tasks.md']
+}
+// A review's files left; a security review that did not run is left whole.
+function reviewLeft(r) {
+  if ('ran' in r && !r.ran) return ['the whole diff']
+  return Array.isArray(r.not_reviewed) ? r.not_reviewed.filter(Boolean) : []
+}
+// A continued review's result: the later start's head and coverage, the
+// findings of both without duplicates.
+function combineReviews(a, b) {
+  if (!a || !b) return b || a
+  const out = { ...b }
+  for (const key of ['findings', 'blocking', 'advisory']) {
+    if (!Array.isArray(a[key]) || !Array.isArray(b[key])) continue
+    const seen = new Set()
+    out[key] = a[key].concat(b[key]).filter((f) => { const k = JSON.stringify(f); return seen.has(k) ? false : seen.add(k) })
+  }
+  return out
+}
+// The full sha the push recorded, kept only when it is 40 digits beginning
+// with the head the contributor reported; '' otherwise, which stops the
+// merge before the merger starts.
+function pushedHead(pushed, head) {
+  const full = String(pushed || '')
+  return /^[0-9a-f]{40}$/.test(full) && /^[0-9a-f]{7,40}$/.test(head || '') && full.startsWith(head) ? full : ''
+}
+// The pushed sha after one start of a package or push call: the start's own
+// when it reported one, else the one kept from an earlier start, so a start
+// capped after its push keeps it when the continuation, refused a second
+// push, reports none.
+function keepPushed(mode, pushed, result) {
+  return (mode === 'package' || mode === 'push') && result && result.pushed ? result.pushed : pushed
+}
 
 // The output tokens the runtime has counted so far; the main session is idle
 // while the workflow runs, so a difference is what the phase spent.
@@ -420,12 +480,24 @@ const intro = () => `Change \`${state.change}\` on branch \`${state.branch}\`.`
 async function contributor(mode, detail) {
   if (mode === 'fix') rework++
   const key = mode === 'implement' || mode === 'fix' ? 'implement' : 'package'
-  const result = await measured(key, () => agent(
-    `${intro()} Mode: ${mode}. ${detail}\nFollow your Modes section for \`${mode}\` and return the schema.${capLine(mode)}`,
-    { agentType: 'contributor', schema: withCalls(WORK), label: `contributor: ${mode}` }), callCap(mode))
-  if (!result || result.status !== 'done') {
-    stopped = `contributor (${mode}) stopped: ${result ? result.question || result.summary : 'no result'}`
-    return false
+  let result = null
+  let more = ''
+  for (let count = 0; ; count++) {
+    result = await measured(key, () => agent(
+      `${intro()} Mode: ${mode}. ${detail}${more}\nFollow your Modes section for \`${mode}\` and return the schema.${capLine(mode)}`,
+      { agentType: 'contributor', schema: withCalls(WORK), label: `contributor: ${mode}${count ? ', continued' : ''}` }), callCap(mode))
+    state.pushed = keepPushed(mode, state.pushed, result)
+    const step = continuation(result, result ? workLeft(result) : null, count)
+    if (step.next === 'done') break
+    if (step.next === 'stop') {
+      stopped = `contributor (${mode}) stopped${count ? ` after ${count + 1} starts` : ''}: ${result ? result.question || result.summary : 'no result'}`
+      return false
+    }
+    if (result && /^[0-9a-f]{7,40}$/.test(result.head || '')) head = result.head
+    const why = result ? 'reached its cap' : 'returned no result'
+    note(`contributor (${mode}) ${why}${result ? `, left: ${step.left.join('; ')}` : ''}; continued`)
+    queue(`sh tools/run_state.sh note ${state.change} overrun "contributor ${mode} start ${count + 1} ${why} and was continued"`, head)
+    more = `\nThis continues a start that ${result ? `reached its cap. It left:\n- ${step.left.join('\n- ')}` : 'returned no result, having reached its turn ceiling'}\nResume from the branch's commits, tasks.md, and the run state; redo nothing already committed or recorded.${mode === 'package' || mode === 'push' ? `\nWhen this mode's push already ran, which a second push refuses, return \`sh tools/run_state.sh get ${state.change} pushed\` as \`pushed\`.` : ''}`
   }
   head = result.head
   note(`contributor (${mode}): ${result.summary}`)
@@ -505,15 +577,34 @@ const figuresFirst = () => {
 }
 
 // The quality review at the head, with the scope priorQuality gives.
-function qualityReview(scope) {
-  return agent(`${intro()} Review the committed diff and return the findings.${scope}${capLine('quality')}`,
-    { agentType: 'quality-reviewer', schema: withCalls(QUALITY), phase: 'Quality', label: 'quality-reviewer' })
+function qualityReview(scope, more) {
+  return agent(`${intro()} Review the committed diff and return the findings.${more || scope}${capLine('quality')}`,
+    { agentType: 'quality-reviewer', schema: withCalls(QUALITY), phase: 'Quality', label: more ? 'quality-reviewer: continued' : 'quality-reviewer' })
 }
-function securityReview(retry) {
-  return agent(retry
-    ? `${intro()} The last security review did not complete. Run it again, every sub-task inline, and return the result.${capLine('security')}`
+function securityReview(more) {
+  return agent(more
+    ? `${intro()} The last security review did not complete.${more} Run it, every sub-task inline, and return the result.${capLine('security')}`
     : `${intro()} Run the security review on the committed diff and return the result.${capLine('security')}`,
-  { agentType: 'security-reviewer', schema: withCalls(SECURITY), phase: 'Security', label: retry ? 'security-reviewer: retry' : 'security-reviewer' })
+  { agentType: 'security-reviewer', schema: withCalls(SECURITY), phase: 'Security', label: more ? 'security-reviewer: continued' : 'security-reviewer' })
+}
+// What a continued review is told: the files the last start left, or the
+// whole diff when it returned nothing.
+const reviewMore = (r, left) => (r && left.length && left[0] !== 'the whole diff'
+  ? `\nThe last start reached its cap and left these files of the diff; review only them against the rules, and return their findings:\n- ${left.join('\n- ')}`
+  : '\nThe last start returned no result or did not run; review the whole committed diff.')
+// A review continued while it left files or returned nothing, at most
+// CONTINUES more starts, the findings of every start kept.
+async function continueReview(kind, scope, first) {
+  let all = first
+  let r = first
+  for (let count = 0; ; count++) {
+    const step = continuation(r, r ? reviewLeft(r) : null, count)
+    if (step.next !== 'continue') return all
+    note(`${kind} review ${r ? 'reached its cap' : 'returned no result'}; continued`)
+    const more = reviewMore(r, step.left)
+    r = await measured(kind, () => (kind === 'quality' ? qualityReview(scope, more) : securityReview(more)), callCap(kind))
+    all = r && all && (!('ran' in all) || all.ran) ? combineReviews(all, r) : r || all
+  }
 }
 
 // The reviews not yet passed at the head, quality and security in parallel
@@ -525,19 +616,21 @@ async function reviews() {
   const kinds = ['quality', 'security'].filter((k) => !reviewedAtHead(k))
   if (!kinds.length) return ''
   const scope = kinds.includes('quality') ? priorQuality() : ''
-  const run = { quality: () => qualityReview(scope), security: () => securityReview(false) }
+  const run = { quality: () => qualityReview(scope, ''), security: () => securityReview('') }
   if (kinds.length > 1) { phase('Quality'); phase('Security') } else phase(kinds[0] === 'quality' ? 'Quality' : 'Security')
   const reviewCap = (r) => callCap('ran' in r ? 'security' : 'quality')
   const results = await measured(kinds.length > 1 ? 'reviews' : kinds[0], () => parallel(kinds.map((k) => run[k])), reviewCap)
   const got = {}
   kinds.forEach((k, i) => { got[k] = results[i] })
-  if (kinds.includes('security') && (!got.security || !got.security.ran)) got.security = await measured('security', () => securityReview(true), callCap('security'))
+  // A review that left files or returned nothing is continued over what it
+  // left; a security review never passes with anything left.
+  for (const k of kinds) got[k] = await continueReview(k, scope, got[k])
   const messages = []
   const files = []
   let commit = head
   if (kinds.includes('security')) {
     const s = got.security
-    if (!s || !s.ran) { stopped = 'the security review did not run; it cannot be skipped'; return null }
+    if (!s || reviewLeft(s).length) { stopped = `the security review did not ${s && s.ran ? `cover ${reviewLeft(s).join(', ')}` : 'run'}; it cannot be skipped`; return null }
     const blocking = s.findings.filter((f) => f.severity !== 'Low' && f.confidence >= 8 && f.in_change)
     verdict('security', !blocking.length)
     for (const f of s.findings.filter((f) => !blocking.includes(f))) {
@@ -554,6 +647,7 @@ async function reviews() {
   if (kinds.includes('quality')) {
     const q = got.quality
     if (!q) { stopped = 'the quality reviewer returned no result'; return null }
+    if (reviewLeft(q).length) { stopped = `the quality review did not cover ${reviewLeft(q).join(', ')}`; return null }
     qualityBlocking = q.blocking
     qualityAt = q.head
     addAdvisories(q.advisory)
@@ -738,9 +832,13 @@ if (!stopped && !state.merged) {
     phase('Merge')
     let waits = 0
     for (;;) {
+      // GitHub matches the expected head against the full sha, and only the
+      // head the push recorded is the one the reviews and gates covered.
+      const pushed = pushedHead(state.pushed, head)
+      if (!pushed) { stopped = `the pushed head ${state.pushed || 'none'} is not a full sha beginning with the reported head ${head}`; break }
       const lines = mergeLines()
       const m = await measured('merge', () => agent(
-        `${intro()}${mergeTarget()} The pushed head is ${head}. Wait for CI at it${waits ? ' (it was still running when you last returned; keep waiting)' : ''}, and merge the pull request if CI is green and every merge gate passes.\nThe green line: \`${lines.green}\`\nThe red line: \`${lines.red}\`\nTool calls: at most ${FIXED_CAPS.merger} in this start when CI passes within your first two waits, and 2 more for each later wait.`,
+        `${intro()}${mergeTarget()} The pushed head is ${pushed}. Wait for CI at it${waits ? ' (it was still running when you last returned; keep waiting)' : ''}, and merge the pull request if CI is green and every merge gate passes.\nThe green line: \`${lines.green}\`\nThe red line: \`${lines.red}\`\nTool calls: at most ${FIXED_CAPS.merger} in this start when CI passes within your first two waits, and 2 more for each later wait.`,
         { agentType: 'merger', schema: withCalls(MERGE), effort: 'low' }), mergerCap)
       if (!m) { stopped = 'the merger returned no result'; break }
       const checks = (m.checks || []).join('; ')
