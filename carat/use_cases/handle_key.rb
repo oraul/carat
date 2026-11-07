@@ -18,6 +18,8 @@ require_relative "plugins/plugin_host"
 require_relative "arrange_view"
 require_relative "search/open_search_prompt"
 require_relative "docs/follow_hover"
+require_relative "docs/request_signature"
+require_relative "docs/follow_signature"
 
 module Carat
   module UseCases
@@ -51,7 +53,11 @@ module Carat
     # layer; a typed character and, while the popup shows, every key end
     # in ShowCompletion, which opens, filters, or closes the popup. While
     # a documentation float shows, every key ends in FollowHover, which
-    # closes it when the cursor moved; with none, one comparison.
+    # closes it when the cursor moved; with none, one comparison. A typed
+    # `(` or `,` in insert mode ends in RequestSignature, and while a call
+    # is followed every key ends in FollowSignature, which asks again as
+    # the cursor moves through the call and closes the signature float
+    # outside it; with none, one comparison.
     class HandleKey
       include Reporting
 
@@ -67,6 +73,9 @@ module Carat
       attr_reader :search_prompt #: Domain::SearchPrompt
       attr_reader :open_search_prompt #: OpenSearchPrompt
       attr_reader :follow_hover #: FollowHover
+      attr_reader :request_signature #: RequestSignature
+      attr_reader :follow_signature #: FollowSignature
+      attr_reader :signature #: Domain::SignatureRequest
       attr_reader :actions #: ActionTable
       attr_reader :dispatcher #: Dispatcher
       attr_reader :insert_text #: InsertText
@@ -75,8 +84,11 @@ module Carat
       # @rbs @replays: Integer
       # @rbs @hover: Domain::HoverRequest
 
-      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, completion: Domain::CompletionMenu, show_completion: ShowCompletion, plugins: PluginHost, arrange_view: ArrangeView, search_prompt: Domain::SearchPrompt, open_search_prompt: OpenSearchPrompt, follow_hover: FollowHover) -> void
-      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, completion:, show_completion:, plugins:, arrange_view:, search_prompt:, open_search_prompt:, follow_hover:)
+      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, completion: Domain::CompletionMenu, show_completion: ShowCompletion, plugins: PluginHost, arrange_view: ArrangeView, search_prompt: Domain::SearchPrompt, open_search_prompt: OpenSearchPrompt, follow_hover: FollowHover, request_signature: RequestSignature, follow_signature: FollowSignature, signature: Domain::SignatureRequest) -> void
+      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, completion:, show_completion:, plugins:, arrange_view:, search_prompt:, open_search_prompt:, follow_hover:, request_signature:, follow_signature:, signature:)
+        @request_signature = request_signature
+        @follow_signature = follow_signature
+        @signature = signature
         @keymap = keymap
         @input = input
         @actions = actions
@@ -108,6 +120,7 @@ module Carat
         end
         @show_completion.call(state, false) if @completion.showing?
         @follow_hover.call(state) if @hover.float_id != 0
+        @follow_signature.call(state) if @signature.active?
         @plugins.observe
         @arrange_view.call(state)
         result
@@ -138,6 +151,7 @@ module Carat
           @arrange_view.call(state)
           step(state, queue.shift, queue)
         end
+        @follow_signature.call(state) if @signature.active?
         @plugins.observe
         @arrange_view.call(state)
         :handled
@@ -319,6 +333,7 @@ module Carat
             if mode == Domain::Mode::INSERT
               report(state, @insert_text.call(state, text))
               @show_completion.call(state, true)
+              @request_signature.call(state) if code == 40 || code == 44
             else
               @command_line.call(state, text)
             end

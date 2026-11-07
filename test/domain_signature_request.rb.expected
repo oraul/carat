@@ -1,0 +1,22 @@
+ok   no parenthesis
+ok   just after the open parenthesis
+ok   after an argument
+ok   a closed call before the cursor
+ok   a closed inner call is skipped
+ok   inside the inner call
+ok   before the parenthesis
+ok   the cursor past the line reads to its end
+ok   a column of 0
+ok   at most 1,024 bytes are scanned
+ok   a multibyte argument
+ok   a parameter in the middle
+ok   no parameter marks nothing
+ok   an empty answer
+ok   escape sequences and controls are dropped
+ok   a line feed reads as a space
+ok   a parameter past the cap is not marked
+ok   a new request follows no call and owes nothing
+ok   an ask follows the call at the cursor and is owed
+ok   a new ask drops the answer not yet shown
+ok   stop follows no call under a new serial
+domain_signature_request: 21 passed, 0 failed

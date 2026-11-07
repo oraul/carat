@@ -130,6 +130,10 @@ require_relative "../use_cases/docs/request_hover"
 require_relative "../use_cases/docs/show_hover"
 require_relative "../use_cases/docs/follow_hover"
 require_relative "../use_cases/docs/pin_hover"
+require_relative "../domain/signature_request"
+require_relative "../use_cases/docs/request_signature"
+require_relative "../use_cases/docs/show_signature"
+require_relative "../use_cases/docs/follow_signature"
 require_relative "../use_cases/actions/docs_handler"
 require_relative "../use_cases/actions/plugin_action_handler"
 require_relative "../use_cases/dispatcher"
@@ -258,6 +262,10 @@ module Carat
       attr_reader :show_hover #: UseCases::ShowHover
       attr_reader :follow_hover #: UseCases::FollowHover
       attr_reader :pin_hover #: UseCases::PinHover
+      attr_reader :signature #: Domain::SignatureRequest
+      attr_reader :request_signature #: UseCases::RequestSignature
+      attr_reader :show_signature #: UseCases::ShowSignature
+      attr_reader :follow_signature #: UseCases::FollowSignature
 
       #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, files: Ports::FilePort, config: Ports::ConfigPort, processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, completions: Ports::CompletionPort, plugin_list: Array[untyped]) -> void
       def initialize(terminal:, clock:, files:, config:, processes:, messages:, completions:, plugin_list:)
@@ -290,7 +298,8 @@ module Carat
         @cache = Domain::LineCache.new
         @status_slots = Domain::StatusSlots.new
         @hover = Domain::HoverRequest.new
-        @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots, completion: completions.request, clock: clock, hover: @hover)
+        @signature = Domain::SignatureRequest.new
+        @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots, completion: completions.request, clock: clock, hover: @hover, signature: @signature)
         @arrange_view = UseCases::ArrangeView.new(cache: @cache, buffers: @buffers)
         @actions = UseCases::ActionTable.new
         @commands = UseCases::ExTable.new
@@ -340,6 +349,9 @@ module Carat
         @show_hover = UseCases::ShowHover.new(hover: @hover, open_float: @open_float, close_float: @close_float)
         @follow_hover = UseCases::FollowHover.new(hover: @hover, close_float: @close_float)
         @pin_hover = UseCases::PinHover.new(hover: @hover, split_window: @split_window, buffers: @buffers, close_float: @close_float)
+        @request_signature = UseCases::RequestSignature.new(signature: @signature)
+        @show_signature = UseCases::ShowSignature.new(signature: @signature, open_float: @open_float, close_float: @close_float)
+        @follow_signature = UseCases::FollowSignature.new(signature: @signature, close_float: @close_float)
         select_completion = UseCases::SelectCompletion.new(menu: @completion_menu)
         accept_completion = UseCases::AcceptCompletion.new(menu: @completion_menu, last_change: @last_change, close_completion: close_completion)
         @open_tab = UseCases::OpenTab.new(open_file: @open_file, buffers: @buffers, tabs: @tabs)
@@ -423,9 +435,9 @@ module Carat
         end
 
         @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
-        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover)
+        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover, request_signature: @request_signature, follow_signature: @follow_signature, signature: @signature)
         @start_screen = Domain::StartScreen.new
-        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover)
+        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover, show_signature: @show_signature, signature: @signature)
         @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers))
         @screen_presenter = ScreenPresenter.new(terminal: terminal, theme: Domain::Themes.find(@state.options.theme, @state.options.background), colors: terminal.colors)
       end
