@@ -10,9 +10,16 @@ module EditorCompletionTest
   # A 12 by 40 editor on "a.txt" with the text, the ascii icons, and the
   # source holding the given [label, kind, detail] candidates.
   def self.editor(text, candidates)
+    editor_with(text, candidates, "")
+  end
+
+  # The same editor with more configuration lines, and "b.txt" reading
+  # "fi" to switch to.
+  def self.editor_with(text, candidates, lines)
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", text.to_s)
-    config = Carat::Doubles::FixedConfig.with("option.icons ascii\n")
+    files.put("b.txt", "fi\n")
+    config = Carat::Doubles::FixedConfig.with("option.icons ascii\n" + lines.to_s)
     h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 12, cols: 40, plugins: [])
     candidates.each { |c| h.completions.add(c[0].to_s, c[1].to_s, c[2].to_s, "") }
     h.open("a.txt")
@@ -63,6 +70,20 @@ module EditorCompletionTest
     ]) do |row|
       after(row[0], row[1])
     end
+
+    # Leaving the word's row or buffer with a key that is not typed text.
+    h = editor_with("_tail\nfi_x\n", three, "keymap.insert <C-j> cursor.down\n")
+    h.type("ifi<C-j>")
+    t.assert_equal([1, 2, false, 0, 1], [h.state.cursor.row, h.state.cursor.col, h.assembly.completion_menu.showing?, h.state.tab.floats.count, h.completions.asked], "a cursor binding moving to another row closes the popup without asking the source")
+    h = editor("_tail\nfi_x\n", three)
+    h.type("ifi<PageDown>")
+    t.assert_equal([1, false, 0], [h.state.cursor.row, h.assembly.completion_menu.showing?, h.state.tab.floats.count], "PageDown to another row closes the popup")
+    h = editor_with("_tail\n", three, "keymap.insert <C-l> buffer.next\n")
+    h.open("b.txt")
+    h.type("A<Esc>")
+    h.open("a.txt")
+    h.type("ifi<C-s><C-l>")
+    t.assert_equal(["b.txt", 0, 1, false, 0], [h.state.buffer.path.to_s, h.state.cursor.row, h.state.cursor.col, h.assembly.completion_menu.showing?, h.state.tab.floats.count], "switching to another buffer after a word closes the popup")
 
     # No ready source: typing behaves as without completion.
     h = editor("_tail\n", [])

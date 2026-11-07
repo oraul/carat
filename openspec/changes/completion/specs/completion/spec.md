@@ -85,6 +85,14 @@ While the popup shows, typing or erasing in the word SHALL filter the candidates
 - **WHEN** the popup shows and a space is typed
 - **THEN** the popup closes
 
+#### Scenario: Moving to another row closes
+- **WHEN** the popup shows for "fi" on the first line and a cursor key bound in insert mode moves the cursor to the second line, after another "fi"
+- **THEN** the popup closes and the source is not asked again
+
+#### Scenario: Switching to another buffer closes
+- **WHEN** the popup shows and a key bound in insert mode switches to another buffer whose cursor follows a word
+- **THEN** the popup closes
+
 ### Requirement: An accepted item belongs to the insert session
 An accepted item SHALL be part of the insert session: undo SHALL remove the typed text and the item together, the dot command SHALL repeat the session with the item's text, and the `.` register SHALL hold the text as it reads after the item.
 

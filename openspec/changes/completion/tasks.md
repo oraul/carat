@@ -16,6 +16,7 @@
 - [x] 3.2 Add `Domain::CompletionMenu` and the use cases `ShowCompletion`, `SelectCompletion`, `AcceptCompletion`, `CloseCompletion` under `carat/use_cases/completion/`, and `CompletionHandler`
 - [x] 3.3 Add the `completion` keymap layer to `Mode`, its lookup and the refresh in `HandleKey`, the bindings in `config/default.caratrc` and `make gen-config`, and the wiring in `EditorAssembly`
 - [x] 3.4 Add `test/editor_completion.rb`: a row per key (Enter, Tab, Ctrl-N, Ctrl-P, Down, Up, Esc), opening, filtering, closing, placement above, the row's cells and groups, undo, dot, the `.` register, untrusted text, and the candidate bound
+- [x] 3.5 Close the popup when a key that is not typed text leaves the word (another row or buffer), asking the source only for a typed character; rows for a cursor binding, `<PageDown>`, and a buffer switch
 
 ## 4. Docs
 

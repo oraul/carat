@@ -28,7 +28,9 @@ module Carat
     # there): each row the kind's icon, the label, and the detail on the
     # right, at most MAX_ROWS rows shown, the first selected. An unchanged
     # typed part keeps the popup and its selection; an empty word, no
-    # match, or another mode closes it.
+    # match, or another mode closes it, and so does a key that is not
+    # typed text and leaves the word, such as one moving to another row
+    # or buffer: only a typed character asks the source again.
     class ShowCompletion
       MAX_ROWS = 10
       LABEL_WIDTH = 40
@@ -74,7 +76,7 @@ module Carat
         if menu.for_word?(buffer.id, cursor.row, col)
           return if showing && prefix == menu.prefix
         else
-          unless @source.ready?(buffer)
+          unless typed && @source.ready?(buffer)
             @close_completion.call(state)
             return
           end
