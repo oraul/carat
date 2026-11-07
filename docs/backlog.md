@@ -1351,3 +1351,51 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `missedOf` in `.claude/workflows/periodic-review.js` line 85 at `periodic-review-caps`. Quality advisory of `periodic-review-caps`.
 - Why it matters: it accepts the security and the quality values for both results, although the design says the schema keeps the line safe, and it is recomputed four times per run.
 - Fix outline: compute `securityMissed` and `qualityMissed` once and drop the filter, or filter by each kind's own values.
+
+## Float offsets are not range-checked at the plugin boundary
+
+- Where: `FloatWindow#shift` and `#place` in `carat/domain/float_window.rb` line 74, `FloatSpec.refusal`, `WindowRequests#move_float` in `carat/use_cases/plugins/window_requests.rb`, and `FramePresenter#paint_floats` in `carat/adapters/frame_presenter.rb` line 450 at `floating-windows`. Security Low (3) of `floating-windows`.
+- Why it matters: a row or column offset from `open_float` or `move_float` near the integer maximum could wrap in Spinel's 64-bit arithmetic, so `shift` skips its clamp, the box's right edge wraps negative, the on-screen check passes, and frame cells are read and written far outside the frame. Only compiled-in, trusted plugins supply these offsets today and no `.caratrc` or file text reaches them, so this is defense in depth.
+- Fix outline: refuse a row or column whose absolute value is above a bound such as `1 << 20` in `FloatSpec.refusal` and in `move_float`, or clamp the offset in `FloatWindow#place` before adding it to the anchor; also check that the box's right edge is past its left and its bottom past its top in `paint_floats`.
+
+## Four float layer methods are exempt from the predicate rule by name
+
+- Where: `BOOL_COMMANDS` in `test/lint.rb` line 212, and `FloatLayer#add`, `#enter`, `#move`, and `#close_top` in `carat/domain/float_layer.rb` at `floating-windows`. Quality advisory of `floating-windows`.
+- Why it matters: the table is keyed by bare method name, so `add`, `close`, `enter`, and `move` are now exempt from the predicate rule in every file, while the bool results of those four methods are read only by tests (`OpenFloat` checks `full?` first, `WindowRequests` checks the float's tab first).
+- Fix outline: make the four return void, update the tests to check the layer's state instead, and drop their entries, keeping `close` and `close_focused`.
+
+## A refused split leaves the focused float
+
+- Where: `SplitWindow` in `carat/use_cases/windows/split_window.rb` line 32, and `open_in_split`, which restores `tab.current` but not the float focus, at `floating-windows`. Quality advisory of `floating-windows`.
+- Why it matters: a split refused with E36 has already called `tab.floats.leave`, so the user loses the float's focus although nothing changed.
+- Fix outline: read `tab.layout_window` for the gutter width and call `tab.floats.leave` only after the split succeeds, with a test row for E36 from a float.
+
+## A buffer shown only in a float counts as hidden
+
+- Where: `shown?`, `windows_showing`, and `modified_in_windows` in `carat/domain/tab_list.rb` line 140 at `floating-windows`. Quality advisory of `floating-windows`.
+- Why it matters: they walk only the layout's windows, so after `:e` in a float a file buffer shown only there counts as hidden, which changes what `:q`, `:bd`, and the modified checks answer.
+- Fix outline: include each page's float windows in the three walks, or refuse `:e` and `:b` in a float, with a test row either way.
+
+## A disabled plugin's floats stay open
+
+- Where: `PluginRegistry#disable` in `carat/use_cases/plugins/plugin_registry.rb` line 259, and the floats `WindowRequests#open_float` opens for a plugin; the `floating-windows` design (Risks) defers it here. Quality advisory of `floating-windows`.
+- Why it matters: a plugin disabled after it raised leaves its floats on the screen, owned by a plugin that can no longer move or close them; only Esc or a close command removes them.
+- Fix outline: when a plugin is disabled, close every float it owns in every tab page through the float layer, with a test that a raising plugin's float is gone.
+
+## The float behavior of the close and focus commands has no compatibility row
+
+- Where: `docs/compatibility.md`, for `:q`, `:close`, Ctrl-W c, the Ctrl-W focus commands, and normal-mode Esc in a float, at `floating-windows`. Quality advisory of `floating-windows`.
+- Why it matters: in a float these close or leave only the float, and Esc closing floats is not Neovim's behavior, but no row records either, so the difference is invisible to a reader of the table.
+- Fix outline: add rows naming `test/editor_floats.rb` for each, marking Esc as a difference from Neovim.
+
+## :close in a float is not tested
+
+- Where: `test/editor_floats.rb` line 116 at `floating-windows`. Quality advisory of `floating-windows`.
+- Why it matters: the spec requires `:close` in a float to close only the float, but only `:q` and Ctrl-W c are tested, so a regression of `:close` would pass.
+- Fix outline: add a `:close` case beside the `:q` and Ctrl-W c cases.
+
+## WindowRequests#in_window keeps a dead local and an unobservable restore
+
+- Where: `in_window` in `carat/use_cases/plugins/window_requests.rb` lines 293 and 304 at `floating-windows`. Quality advisory of `floating-windows`.
+- Why it matters: it assigns `state = @state` and never reads it (the block captures `open_file`'s own state), and it restores the float focus although its only caller, `open_file`, then calls `focus_at`, whose `TabPage#focus` leaves the float again, so the restore is never observable.
+- Fix outline: delete the dead line, and drop `saved_float` and its `enter`, or document that `in_window` keeps the focus for callers that do not refocus.
