@@ -1718,6 +1718,12 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the hook takes its guard from a local `origin/main`; when that copy predates the tool name, the hook allows the merge instead of refusing it, and branch code can make the local copy stale.
 - Fix outline: refuse when the guard read from the pinned main does not name the merge tool, run it unconditionally as the Bash hook does, and drop the bootstrap case from the hook tests, with a `tools/tools_test.sh` case. Queued in `pinned-main`.
 
+## A check stage can still write the delivery clone by an absolute path
+
+- Where: `clone_make` in `tools/run_state.sh` (the symbolic links to `tmp/.toolchain` and `tmp/.spinel`), and the benchmark's `make metrics` and `make bench` in the delivery clone (`.claude/agents/benchmark.md`). Residual risk of `check-isolation`.
+- Why it matters: the check clone separates what a stage writes in its own directory, but a process of the same user can find the delivery clone (the toolchain links, the runner's working directory) and write its `.git`, `build/pipeline`, or the shared Spinel binaries the next check and the contributor run; the benchmark still runs branch code in the delivery clone. The origin gate, the guard's refusals, and the green line's url check are the second line.
+- Fix outline: run the stages and the benchmark under an operating-system sandbox (a user namespace or another user) with the delivery clone read-only and a private copy of the toolchain, or check the toolchain's hash before each check and run the benchmark in a check clone, each with a `tools/tools_test.sh` case.
+
 ## merge-gate-integrity's open quality advisories
 
 - Where: at e368486 on the unpushed commits: `tools/gates.sh` line 436 (the gated failures report under an empty or the `pr-body` gate), line 136 (a hosted origin judged by a denylist while `tools/agent_guard.sh` line 347 and `.claude/workflows/deliver-change.js` line 438 use other forms), line 41 (the origin gate's header line stops mid-phrase); `docs/codebase-map.md` line 50 (the `rules.sh` entry lost its separator). Quality advisories in `merge-gate-integrity`.
