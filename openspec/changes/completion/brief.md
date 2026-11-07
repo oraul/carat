@@ -1,0 +1,11 @@
+# Brief
+
+completion: docs/queue.md item 2 as the planner wrote it (T5 user request, estimated large), taken ahead of merge-gate-integrity by the main session under the one-pipeline-per-three-features rule (partial-results was the pipeline change; its security Mediums are below the blocking confidence of 8). Completion as you type in insert mode from the language server: a popup in a floating window, fuzzy matching (fn_na finds file_name), kind icons by name, the detail or type on the right, Enter inserts and Tab replaces the word, Ctrl-N and Ctrl-P and the arrows move, Esc closes; requests asynchronous, debounced, and cancelled when stale; no per-key cost while typing when no popup shows, allocations per key unchanged with no server; completion text is untrusted (escape sequences stripped, lengths bounded). If the size rule needs it, the planner splits the popup and matching from the server request. Continuous loop. Security review is never skipped.
+
+Plan notes:
+
+- The completion change fixes and removes the docs/backlog.md entry 'A float reopened at the same box keeps the old float's text' (heading at line 1373, `build_float_key` in carat/adapters/frame_presenter.rb, periodic quality blocking at 803fe6e).
+- In docs/backlog.md, change the entry 'A failed initialize marks the language server ready' (heading at line 1463) from 'Queued in `completion`' to 'Queued in `completion-request`'. Leave it open: the split moves it to queue item 1.
+- Retrospective notes 26 to 28 and overrun note 29 of `partial-results` are placed in queue items 21, 9, 14, and 17. The seven `partial-results` quality advisories are already in docs/backlog.md (headings at lines 1583 to 1619) and are now queue item 45. No new backlog entries, so build/plan/backlog.md was removed.
+- The delivered part's acceptance check: a docs row and a table-driven test for each key (Enter, Tab, Ctrl-N, Ctrl-P, the arrows, Esc) and for matching (fn_na finds file_name). Item text is stripped of escape sequences and bounded in length. `insert` stays at 35.0 allocations per key, and a key pays no cost when no popup shows. A float reopened at the same box repaints. The popup is tested with a double as its source; the language server request is item 1.
+- The queue is 17,337 bytes against the docs-lint budget of 17,369.
