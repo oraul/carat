@@ -67,3 +67,10 @@ Opening, scrolling, moving, or closing a float SHALL repaint no window row outsi
 #### Scenario: No scroll region under a float
 - **WHEN** a float covers part of a full-width window and j scrolls that window by one line
 - **THEN** the terminal receives no scroll region and the float is still drawn at its place
+
+### Requirement: A float reopened at the same box shows its own text
+A float closed and replaced by another float at the same box, both showing buffers with no edits, SHALL be drawn with the new float's text, so the screen equals a full repaint.
+
+#### Scenario: Reopened at one box
+- **WHEN** a float showing "one" is closed and a float showing "two" opens at the same box, after two redraws
+- **THEN** the box shows "two" and the screen equals a full repaint
