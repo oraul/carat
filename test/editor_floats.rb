@@ -169,6 +169,18 @@ module EditorFloatsTest
     t.assert_equal([true, 1, "b.txt", "pick"], [opened.ok, h.state.window.id, h.state.buffer.path_text, float_window.buffer.line(0)], "a file opened in the layout window while a float is focused goes to that window")
     t.assert_equal(true, h.plugins.window_requests.close_float("test", id).ok, "the float it left is still the plugin's")
 
+    # A float closed and replaced by another at the same box.
+    h = editor
+    open(h, options("editor", 2, 4, 2, 10, true, "one", 50, false), ["first", "rows"])
+    h.redraw
+    h.plugins.window_requests.close_float("test", h.state.tab.floats.at(0).id)
+    open(h, options("editor", 2, 4, 2, 10, true, "two", 50, false), ["other", "text"])
+    h.redraw
+    reopened = rows(h, 2, 5)
+    shown = h.screen
+    h.resize(12, 40)
+    t.assert_equal([true, shown], [reopened[1].include?("other") && reopened[0].include?("two"), h.screen], "a float reopened at the same box shows its own text and equals a full repaint")
+
     # A float showing a file keeps its cursor inside the text.
     h = editor
     open(h, options("editor", 1, 2, 3, 12, false, "", 50, true), ["x"])

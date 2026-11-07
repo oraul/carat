@@ -45,12 +45,15 @@ module DomainIconsTest
       ["nerd closed folder", ["folder_closed", "nerd"], "\u{F07B}"],
       ["unknown name", ["nope", "nerd"], ""],
       ["unknown name in ascii", ["nope", "ascii"], ""],
-      ["unknown set reads as nerd", ["folder_closed", "emoji"], "\u{F07B}"]
+      ["unknown set reads as nerd", ["folder_closed", "emoji"], "\u{F07B}"],
+      ["ascii function kind", ["kind_function", "ascii"], "f"],
+      ["ascii variable kind", ["kind_variable", "ascii"], "v"],
+      ["unicode class kind", ["kind_class", "unicode"], "◈"]
     ]) do |pair|
       I.glyph(pair[0], pair[1])
     end
 
-    t.assert_equal(21, I::NAMES.length, "twenty-one icon names")
+    t.assert_equal(33, I::NAMES.length, "thirty-three icon names, twelve of them completion kinds")
     t.assert_equal(">", I.glyph("current", "ascii"), "the ascii current marker is >")
     t.assert_equal(true, I.set?("unicode"), "unicode is a set")
     t.assert_equal(false, I.set?("emoji"), "emoji is not a set")

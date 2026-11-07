@@ -24,9 +24,11 @@ module Carat
     # it moved up (negative for down). serial numbers the paint, and
     # base_serial is the serial of the base, -1 for none. layout is the
     # key of the geometry the frame was painted with, and floats the boxes
-    # of the floating windows painted over it, four integers each: top
+    # of the floating windows painted over it, ten integers each: top
     # row, the row after the bottom, left column, the column after the
-    # right. A fresh frame is
+    # right, then what the float shows (its first row and column, its
+    # buffer's change counters, its window id, and its selected menu row).
+    # A fresh frame is
     # blank with every row dirty and no base. A Struct record, repainted
     # in place and reallocated only when the size changes.
     class Frame < Struct.new(:rows, :cols, :cursor_row, :cursor_col, :cursor_shape, :codes, :widths, :hls, :dirty, :sources, :scrolls, :serial, :base_serial, :layout, :floats, keyword_init: true)

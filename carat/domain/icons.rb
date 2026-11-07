@@ -10,7 +10,7 @@ module Carat
     module Icons
       SETS = ["nerd", "unicode", "ascii"]
 
-      NAMES = ["folder_closed", "folder_open", "file", "symlink", "modified", "current", "error", "warning", "info", "hint", "ruby", "json", "markdown", "toml", "makefile", "shell", "c", "yaml", "git", "lock", "default"]
+      NAMES = ["folder_closed", "folder_open", "file", "symlink", "modified", "current", "error", "warning", "info", "hint", "ruby", "json", "markdown", "toml", "makefile", "shell", "c", "yaml", "git", "lock", "default", "kind_text", "kind_method", "kind_function", "kind_constructor", "kind_field", "kind_variable", "kind_class", "kind_module", "kind_property", "kind_keyword", "kind_snippet", "kind_constant"]
 
       NERD = {
         "folder_closed" => "\u{F07B}",
@@ -33,7 +33,19 @@ module Carat
         "yaml" => "\u{E6A8}",
         "git" => "\u{E702}",
         "lock" => "\u{F023}",
-        "default" => "\u{F016}"
+        "default" => "\u{F016}",
+        "kind_text" => "\u{EA93}",
+        "kind_method" => "\u{EA8C}",
+        "kind_function" => "\u{EA8C}",
+        "kind_constructor" => "\u{EA8C}",
+        "kind_field" => "\u{EB5F}",
+        "kind_variable" => "\u{EA88}",
+        "kind_class" => "\u{EB5B}",
+        "kind_module" => "\u{EA8B}",
+        "kind_property" => "\u{EB65}",
+        "kind_keyword" => "\u{EB62}",
+        "kind_snippet" => "\u{EB66}",
+        "kind_constant" => "\u{EB5D}"
       }
 
       UNICODE = {
@@ -57,7 +69,19 @@ module Carat
         "yaml" => "▥",
         "git" => "±",
         "lock" => "⊘",
-        "default" => "•"
+        "default" => "•",
+        "kind_text" => "≡",
+        "kind_method" => "◊",
+        "kind_function" => "◊",
+        "kind_constructor" => "◘",
+        "kind_field" => "▪",
+        "kind_variable" => "▫",
+        "kind_class" => "◈",
+        "kind_module" => "▣",
+        "kind_property" => "▸",
+        "kind_keyword" => "◇",
+        "kind_snippet" => "‣",
+        "kind_constant" => "◆"
       }
 
       ASCII = {
@@ -81,7 +105,19 @@ module Carat
         "yaml" => "y",
         "git" => "g",
         "lock" => "#",
-        "default" => "."
+        "default" => ".",
+        "kind_text" => "T",
+        "kind_method" => "m",
+        "kind_function" => "f",
+        "kind_constructor" => "n",
+        "kind_field" => "d",
+        "kind_variable" => "v",
+        "kind_class" => "C",
+        "kind_module" => "M",
+        "kind_property" => "p",
+        "kind_keyword" => "k",
+        "kind_snippet" => "s",
+        "kind_constant" => "K"
       }
 
       # The glyph for a name in a set, "" for an unknown name; an unknown

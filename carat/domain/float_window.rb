@@ -6,15 +6,24 @@ module Carat
     # A window drawn over the layout of its tab page, with the spec that
     # places it. The window's rectangle is the float's text area, set by
     # place at every arrange; the border, when the spec asks for one,
-    # takes one cell around it. A Struct record: mutable, with a reader
-    # and a writer per member.
-    class FloatWindow < Struct.new(:window, :spec, keyword_init: true)
+    # takes one cell around it. A float that is a menu (the completion
+    # popup) has its selected row in selected, drawn in PmenuSel and its
+    # other rows in Pmenu; any other float has -1 there. A Struct record:
+    # mutable, with a reader and a writer per member.
+    class FloatWindow < Struct.new(:window, :spec, :selected, keyword_init: true)
       # @rbs @window: Window
       # @rbs @spec: FloatSpec
+      # @rbs @selected: Integer
 
       #: (window: Window, spec: FloatSpec) -> void
       def initialize(window:, spec:)
-        super(window: window, spec: spec)
+        super(window: window, spec: spec, selected: -1)
+      end
+
+      # Whether the float is a menu with a selected row.
+      #: () -> bool
+      def menu?
+        selected >= 0
       end
 
       #: () -> Integer

@@ -72,7 +72,8 @@ module Carat
     #
     # The floating windows of the tab page are painted last, by z, over
     # the windows, the status bar, and the start screen: their text in
-    # NormalFloat, a rounded border in FloatBorder with the title in
+    # NormalFloat (a menu's in Pmenu, its selected row in PmenuSel), a
+    # rounded border in FloatBorder with the title in
     # Title. A frame keeps the boxes it was painted with; when they
     # differ from the ones to paint, the frame forgets the window rows the
     # old boxes covered, so those are repainted, and every row a box
@@ -90,7 +91,7 @@ module Carat
       SEPARATOR = "│"
       ROW_SEPARATOR = "─"
       FAR = 1 << 30
-      FLOAT_STRIDE = 8
+      FLOAT_STRIDE = 10
 
       attr_reader :input #: Domain::InputState
       attr_reader :plugin_ui #: Domain::PluginUi
@@ -360,7 +361,9 @@ module Carat
 
       # What the floats to paint show, FLOAT_STRIDE integers each: the box
       # (top, the row after it, left, the column after it), the first
-      # row and column the float shows, and its buffer's change counters.
+      # row and column the float shows, its buffer's change counters, its
+      # window id, so a float reopened at the same box repaints, and its
+      # selected menu row.
       #: (Domain::FloatLayer) -> void
       def build_float_key(floats)
         key = @float_key
@@ -378,6 +381,8 @@ module Carat
           key << window.left
           key << buffer.closed_count
           key << buffer.changes
+          key << window.id
+          key << float.selected
           i += 1
         end
       end
@@ -474,9 +479,17 @@ module Carat
           else
             frame.blank(r, x, x + width)
           end
-          frame.fill(r, x, x + width, Domain::Highlight::NORMAL_FLOAT)
+          frame.fill(r, x, x + width, float_group(float, row))
         end
         paint_border_row(frame, float, r) if float.spec.border
+      end
+
+      # The group of a float's text row: NormalFloat, or for a menu Pmenu
+      # and PmenuSel on its selected row.
+      #: (Domain::FloatWindow, Integer) -> Integer
+      def float_group(float, row)
+        return Domain::Highlight::NORMAL_FLOAT unless float.menu?
+        row == float.selected ? Domain::Highlight::POPUP_MENU_SELECTED : Domain::Highlight::POPUP_MENU
       end
 
       # Blanks the halves of wide characters a box cuts at its edges, so
