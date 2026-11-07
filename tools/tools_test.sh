@@ -1526,6 +1526,30 @@ fresh backup
 echo x >> README.md
 commit "chore: clean"
 expect "gates: backup passes a clean branch" 0 "ok   content" gates backup
+
+fresh cases
+echo "echo changed" >> tools/base.sh
+commit "chore: change a tool"
+expect "gates: cases refuses a changed tool without a case" 1 "FAIL cases: tools/base.sh changed code" gates cases
+expect "gates: static runs cases" 1 "FAIL cases: tools/base.sh" gates static
+printf 'expect "x" 0 "y" true\n' > tools/tools_test.sh
+commit "test: add a case"
+expect "gates: cases passes a changed tool with a case" 0 "ok   cases: tools/base.sh$" gates cases
+fresh cases2
+printf '\n# a note\n  # indented\n' >> tools/base.sh
+commit "docs: comment a tool"
+expect "gates: cases passes a comment-only tool change" 0 "ok   cases: no tool changed$" gates cases
+fresh cases3
+echo x >> README.md
+commit "chore: no tool"
+expect "gates: cases leaves a branch without tools alone" 0 "ok   cases: no tool changed$" gates cases
+fresh cases4
+echo "echo new" > tools/new.sh
+mkdir -p tools/spinel
+echo "int x;" > tools/spinel/x.h
+printf '# a comment only\n' > tools/tools_test.sh
+commit "chore: add a tool"
+expect "gates: cases reads shell scripts only and wants an expect line" 1 "FAIL cases: tools/new.sh changed code but" gates cases
 # Secrets, each assembled from pieces like the forbidden text above.
 KEY_LINE="-----BEGIN ""RSA PRIVATE KEY-----"
 AWS_KEY="AK""IAABCDEFGHIJKLMNOP"

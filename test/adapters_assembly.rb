@@ -38,7 +38,7 @@ module AdaptersAssemblyTest
       ["close_other_tabs", a.close_other_tabs.buffers], ["rename_path", host.rename_path.buffers], ["delete_path", host.delete_path.buffers],
       ["registry", host.registry.buffers], ["events", host.events.buffers], ["buffer_requests", host.buffer_requests.buffers],
       ["window_requests", host.window_requests.buffers], ["list_buffers", a.list_buffers.buffers], ["switch_buffer", a.switch_buffer.buffers],
-      ["delete_buffer", a.delete_buffer.buffers], ["arrange_view", a.arrange_view.buffers], ["tab_bar", a.frame_presenter.tab_bar.buffers]
+      ["delete_buffer", a.delete_buffer.buffers], ["arrange_view", a.arrange_view.buffers], ["tab_bar", a.frame_presenter.tab_bar.buffers], ["pin_hover", a.pin_hover.buffers]
     ]), "the buffer list")
     t.assert_equal([], strangers(a.completion_menu, [
       ["handle_key", a.handle_key.completion], ["show_completion", a.show_completion.menu], ["close_completion", a.show_completion.close_completion.menu], ["show_docs", a.show_completion.show_docs.menu]
@@ -65,7 +65,7 @@ module AdaptersAssemblyTest
       ["operate", a.operate.registers], ["put_register", a.put_register.registers], ["delete_selection", a.delete_selection.registers],
       ["yank_selection", a.yank_selection.registers], ["change_selection", a.change_selection.registers], ["put_over_selection", a.put_over_selection.registers],
       ["execute_command_line", a.execute_command_line.registers], ["leave_insert", a.repeat_last.leave_insert.registers], ["substitute_lines", a.substitute_lines.registers],
-      ["global_command", a.global_command.registers], ["delete_lines", a.delete_lines.registers]
+      ["global_command", a.global_command.registers], ["delete_lines", a.delete_lines.registers], ["find_match", a.find_match.registers]
     ]), "the registers")
     t.assert_equal([], strangers(a.last_change, [
       ["dispatcher", a.dispatcher.last_change], ["repeat_last", a.repeat_last.last_change],
@@ -79,7 +79,7 @@ module AdaptersAssemblyTest
     t.assert_equal([], strangers(a.plugin_ui, [
       ["host", host.plugin_ui], ["registry", host.registry.plugin_ui], ["ui_requests", host.ui_requests.plugin_ui],
       ["enter_command_line", a.enter_command_line.plugin_ui], ["cancel_command_line", a.cancel_command_line.plugin_ui],
-      ["execute_command_line", a.execute_command_line.plugin_ui], ["frame_presenter", a.frame_presenter.plugin_ui], ["status_bar", a.frame_presenter.status_bar.plugin_ui]
+      ["execute_command_line", a.execute_command_line.plugin_ui], ["frame_presenter", a.frame_presenter.plugin_ui], ["status_bar", a.frame_presenter.status_bar.plugin_ui], ["recall_history", a.recall_history.plugin_ui]
     ]), "the plugin UI state")
     t.assert_equal([], strangers(a.status_slots, [["status_bar", a.frame_presenter.status_bar.slots]]), "the status slots")
     t.assert_equal([], strangers(host, [
@@ -93,15 +93,15 @@ module AdaptersAssemblyTest
     t.assert_true(a.runner.is_a?(Carat::UseCases::ExecuteEx), "the command runner is the ex runner")
     t.assert_equal([], strangers(a.open_file, [["split_window", a.split_window.open_file], ["open_tab", a.open_tab.open_file]]), "the open file use case")
     t.assert_equal([], strangers(a.open_side_window, [["window_requests", host.window_requests.open_side_window]]), "the open side window use case")
-    t.assert_equal([], strangers(a.split_window, [["window_requests", host.window_requests.split_window]]), "the split window use case")
+    t.assert_equal([], strangers(a.split_window, [["window_requests", host.window_requests.split_window], ["pin_hover", a.pin_hover.split_window]]), "the split window use case")
     t.assert_equal([], strangers(a.open_tab, [["window_requests", host.window_requests.open_tab]]), "the open tab use case")
     t.assert_equal([], strangers(a.tabs, [["open_float", a.open_float.tabs], ["close_float", a.close_float.tabs]]), "the float use cases hold the tab list")
     t.assert_equal([], strangers(a.probe_path, [["plugin_host", host.probe_path], ["open_file", a.open_file.probe_path], ["make_path", host.make_path.probe_path], ["rename_path", host.rename_path.probe_path], ["delete_path", host.delete_path.probe_path], ["file_requests", host.file_requests.probe_path]]), "the file operations")
     t.assert_equal([], strangers(host.make_path.resolve_inside, [["rename_path", host.rename_path.resolve_inside], ["delete_path", host.delete_path.resolve_inside]]), "the containment check of the file operations")
     t.assert_equal([], strangers(a.handle_key, [["controller", a.controller.handle_key]]), "the key handler")
     t.assert_equal([], strangers(a.last_substitute, [["substitute_lines", a.substitute_lines.last_substitute], ["global_command", a.global_command.last_substitute]]), "the last substitute")
-    t.assert_equal([], strangers(a.last_search, [["find_match", a.find_match.last_search], ["substitute_lines", a.substitute_lines.last_search], ["global_command", a.global_command.last_search]]), "the last search, in the searches and the substitute")
-    t.assert_equal([], strangers(a.search_history, [["find_match", a.find_match.search_history], ["substitute_lines", a.substitute_lines.search_history], ["global_command", a.global_command.search_history]]), "the search history, in the searches and the substitute")
+    t.assert_equal([], strangers(a.last_search, [["find_match", a.find_match.last_search], ["substitute_lines", a.substitute_lines.last_search], ["global_command", a.global_command.last_search], ["preview_search", a.preview_search.last_search], ["cancel_command_line", a.cancel_command_line.last_search], ["execute_command_line", a.execute_command_line.last_search], ["frame_presenter", a.frame_presenter.last_search]]), "the last search, in the searches and the substitute")
+    t.assert_equal([], strangers(a.search_history, [["find_match", a.find_match.search_history], ["substitute_lines", a.substitute_lines.search_history], ["global_command", a.global_command.search_history], ["open_search_prompt", a.open_search_prompt.search_history], ["recall_history", a.recall_history.search_history], ["execute_command_line", a.execute_command_line.search_history]]), "the search history, in the searches and the substitute")
     substitute = a.commands.find("s")
     repeat = a.actions.find("substitute.repeat")
     shared = []
@@ -116,6 +116,23 @@ module AdaptersAssemblyTest
     shared << "v" unless vglobal.is_a?(Carat::UseCases::GlobalCommandHandler) && vglobal.global_command.equal?(a.global_command)
     shared << "d" unless delete.is_a?(Carat::UseCases::DeleteCommandHandler) && delete.delete_lines.equal?(a.delete_lines)
     t.assert_equal([], shared, "the global and delete use cases behind :g, :v, and :d")
+    t.assert_equal([], strangers(a.command_history, [["recall_history", a.recall_history.command_history], ["enter_command_line", a.enter_command_line.command_history], ["execute_command_line", a.execute_command_line.command_history]]), "the command history")
+    t.assert_equal([], strangers(a.search_prompt, [
+      ["open_search_prompt", a.open_search_prompt.search_prompt], ["preview_search", a.preview_search.search_prompt], ["recall_history", a.recall_history.search_prompt],
+      ["enter_command_line", a.enter_command_line.search_prompt], ["cancel_command_line", a.cancel_command_line.search_prompt], ["execute_command_line", a.execute_command_line.search_prompt],
+      ["handle_key", a.handle_key.search_prompt], ["frame_presenter", a.frame_presenter.search_prompt]
+    ]), "the search prompt")
+    t.assert_equal([], strangers(a.preview_search, [["recall_history", a.recall_history.preview_search], ["edit_command_line", a.edit_command_line.preview_search]]), "the search preview use case")
+    t.assert_equal([], strangers(a.open_search_prompt, [["handle_key", a.handle_key.open_search_prompt]]), "the open search prompt use case")
+    t.assert_equal([], strangers(a.find_match, [["jump_to_match", a.jump_to_match.find_match], ["operate", a.operate.find_match]]), "the find match use case")
+    t.assert_equal([], strangers(a.walk_history, [["undo_step", a.undo_step.walk_history], ["redo_step", a.redo_step.walk_history], ["undo_to_state", a.undo_to_state.walk_history], ["travel_history", a.travel_history.walk_history]]), "the undo history walk")
+    t.assert_equal([], strangers(a.save_file, [["save_all", a.save_all.save_file]]), "the save file use case")
+    t.assert_equal([], strangers(a.open_float, [["show_hover", a.show_hover.open_float]]), "the open float use case, in the hover")
+    t.assert_equal([], strangers(a.close_float, [["show_hover", a.show_hover.close_float], ["follow_hover", a.follow_hover.close_float], ["pin_hover", a.pin_hover.close_float]]), "the close float use case, in the hover")
+    t.assert_equal([], strangers(a.actions, [["dispatcher", a.dispatcher.actions], ["handle_key", a.handle_key.actions], ["repeat_last", a.repeat_last.actions]]), "the action table")
+    t.assert_equal([], strangers(a.dispatcher, [["handle_key", a.handle_key.dispatcher]]), "the dispatcher")
+    t.assert_equal([], strangers(a.insert_text, [["handle_key", a.handle_key.insert_text], ["repeat_last", a.repeat_last.insert_text]]), "the insert text use case")
+    t.assert_equal([], strangers(a.edit_command_line, [["handle_key", a.handle_key.command_line]]), "the command line editor")
     t.assert_equal([], strangers(a.cache, [["arrange_view", a.arrange_view.cache], ["frame_presenter", a.frame_presenter.cache]]), "the line cache")
     t.assert_equal([], strangers(a.start_screen, [["controller", a.controller.start_screen], ["frame_presenter", a.frame_presenter.start_screen]]), "the start screen")
     t.assert_equal([], strangers(a.arrange_view, [["handle_key", a.handle_key.arrange_view]]), "the arrange view use case")
@@ -124,7 +141,7 @@ module AdaptersAssemblyTest
 
     # Each port is one instance too.
     t.assert_equal([], strangers(h.terminal, [["assembly", a.terminal], ["controller", a.controller.terminal], ["screen_presenter", a.screen_presenter.terminal]]), "the terminal port")
-    t.assert_equal([], strangers(h.clock, [["assembly", a.clock], ["controller", a.controller.clock], ["dispatcher", a.dispatcher.clock], ["walk_history", a.walk_history.clock], ["list_undo", a.list_undo.clock]]), "the clock port")
+    t.assert_equal([], strangers(h.clock, [["assembly", a.clock], ["controller", a.controller.clock], ["dispatcher", a.dispatcher.clock], ["walk_history", a.walk_history.clock], ["list_undo", a.list_undo.clock], ["services", a.services.clock]]), "the clock port")
     t.assert_equal([], strangers(h.files, [["assembly", a.files], ["open_file", a.open_file.files], ["save_file", a.save_file.files], ["probe_path", a.probe_path.files], ["make_path", host.make_path.files],
       ["resolve_inside", host.make_path.resolve_inside.files], ["rename_path", host.rename_path.files], ["delete_path", host.delete_path.files], ["file_requests", host.file_requests.files],
       ["ui_requests", host.ui_requests.files], ["window_requests", host.window_requests.files]]), "the file port")

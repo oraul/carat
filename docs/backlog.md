@@ -1766,12 +1766,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: two lookups and two popup refreshes per key on the insert hot path, the line sliced twice.
 - Fix outline: look up once and dispatch that match; run ShowCompletion once per key, and ShowCompletionDocs with it, which `completion-docs` added beside it and which also runs twice per typed character (quality advisory in `completion-docs` at `carat/use_cases/completion/show_completion.rb` line 72 at 925d759). Queued in `completion-tidy`.
 
-## The dispatcher and HandleKey hold shared objects without readers
-
-- Where: `carat/use_cases/dispatcher.rb` line 35 and `carat/use_cases/handle_key.rb` line 67 at cd87445 (the shared `ActionTable`, and HandleKey's Dispatcher, InsertText, and EditCommandLine). Periodic quality at cd87445, again after 5722559.
-- Why it matters: `test/adapters_assembly.rb` cannot check every holder got the one instance, as the constructors rule of CLAUDE.md requires.
-- Fix outline: add the readers and a strangers row over the dispatcher and HandleKey. Queued in `completion-tidy`.
-
 ## The map's area 8 omits the completion popup
 
 - Where: `docs/codebase-map.md` line 236 at cd87445: area 8's What and Flow lines never mention the six popup files (lines 257 to 265), its Designs line (269) omits `completion` and `completion-request`, its Bench line names no completion scenario. Periodic quality at cd87445, again after 5722559.
@@ -1892,12 +1886,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: each looks up the server, sends `$/cancelRequest`, and zeroes the id, so a fix to one (a crashed server, a stale id) can miss the other two.
 - Fix outline: one private `cancel_request(language, id)` that the three call, with the hover, completion, and resolve cancellation rows in `test/adapters_hover.rb` and `test/adapters_server_completions.rb` unchanged.
 
-## The hover owner is spelled in two use cases
-
-- Where: `OWNER = ":docs"` in `carat/use_cases/docs/show_hover.rb` line 28 at 78078ad, repeated in `carat/use_cases/docs/pin_hover.rb` line 19. Quality advisory in `quick-docs`.
-- Why it matters: `docs/architecture.md` section 5 puts a constant several use cases need in the domain; two copies can drift, and the float and the pinned buffer then stop matching.
-- Fix outline: one domain constant both read, or drop the owner from the pinned buffer if nothing reads it.
-
 ## The documentation floats copy the widest-row loop
 
 - Where: `carat/use_cases/docs/show_hover.rb` line 84 at 78078ad, a copy of `carat/use_cases/completion/show_completion_docs.rb` line 98 and of `carat/domain/operators.rb` line 139. Quality advisory in `quick-docs`.
@@ -1969,3 +1957,33 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `runner_finish` fix in `tools/run_state.sh` line 697 at 41297d6 (commit 13de267, with its `tools/tools_test.sh` case), on `feature/quick-docs`. Two quality advisories in `quick-docs`.
 - Why it matters: CLAUDE.md asks one logical change and one type per squash commit; the CI fix the branch needed is a `fix` of the tooling inside a `feat` pull request, so its history is hidden under the hover change. The pull request's Notes name it as that CI fix.
 - Fix outline: when a CI fix touches tooling outside the change, deliver it as its own change ahead of the feature, or have the push step name it in the pull request's Notes as this one does.
+
+## The cases gate passes every changed tool script on one added case
+
+- Where: `gate_cases` in `tools/gates.sh` (line 242, the check at line 253 at 4f653d2) and its comment, which say a case per script, and the row in `README.md` line 40 that says a case for every changed tool script. Two quality advisories in `implement-contracts`.
+- Why it matters: the gate names the changed scripts one by one, but one added `expect` line for any script satisfies all of them, so a branch changing `gates.sh` and `run_state.sh` passes with only a gates case, and the README and the comment promise more than the gate checks.
+- Fix outline: for each changed script require an added `expect` line whose command word is the script's basename, with a case in `tools/tools_test.sh`; or reword the README row and the comment to an added case when a tool script changes.
+
+## The holder check counts every assembly reader type as shared
+
+- Where: the `shared` list in `test/lint.rb` line 946 at 4f653d2, which takes the type of every `EditorAssembly` reader. Two quality advisories in `implement-contracts`.
+- Why it matters: generics count too (`config_errors` is `Array[String]`), and a namespaced generic such as `Array[Domain::X]` is cut to `X]`, so a holder reader typed `Array[String]` would be demanded a row in `test/adapters_assembly.rb` as if it were a shared object.
+- Fix outline: keep only types with a home class under `carat/` (the `homes` the check already builds), or skip types containing a bracket, with a lint case.
+
+## The holder check matches a reader with no right boundary
+
+- Where: the `.holder.reader` substring match in `test/lint.rb` line 735 at 4f653d2. Quality advisory in `implement-contracts`.
+- Why it matters: a reader counts as checked when the assembly test names a longer reader with the same prefix (`.handle_key.command_line` inside `.handle_key.command_line_x`), so a missing holder row can pass.
+- Fix outline: require a non-word character (or the end of the line) after the match, with a lint case for the prefix.
+
+## Two lint checks parse constructor keywords with copied slicing
+
+- Where: `holder_problems` in `test/lint.rb` line 719 and `constructor_problem` at line 365 at 4f653d2, both slicing `stripped[15, ...]` after `def initialize(`. Quality advisory in `implement-contracts`.
+- Why it matters: the parser is copied with a bare 15, and both read only one-line constructors, so a fix to one misses the other and a wrapped signature is skipped silently.
+- Fix outline: one `keyword_names(stripped)` helper both call, the 15 spelled as the prefix's length.
+
+## Two assembly test labels name too few holders
+
+- Where: the labels `the last search, in the searches and the substitute` and `the search history, in the searches and the substitute` in `test/adapters_assembly.rb` lines 103 and 104 at 4f653d2. Two quality advisories in `implement-contracts`.
+- Why it matters: the rows now also check the command line, the prompt, and the frame presenter, so the labels mislead a reader of a failure.
+- Fix outline: shorten them to `the last search` and `the search history` and rewrite the snapshot with `make snapshots`.

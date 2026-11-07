@@ -33,6 +33,19 @@ ok   the last search, in the searches and the substitute
 ok   the search history, in the searches and the substitute
 ok   the substitute use case behind :s and &
 ok   the global and delete use cases behind :g, :v, and :d
+ok   the command history
+ok   the search prompt
+ok   the search preview use case
+ok   the open search prompt use case
+ok   the find match use case
+ok   the undo history walk
+ok   the save file use case
+ok   the open float use case, in the hover
+ok   the close float use case, in the hover
+ok   the action table
+ok   the dispatcher
+ok   the insert text use case
+ok   the command line editor
 ok   the line cache
 ok   the start screen
 ok   the arrange view use case
@@ -54,4 +67,4 @@ ok   the gateway reads the shipped defaults through the file port it was given
 ok   the assembly and the gateway hold the one file port
 ok   a configuration without lines falls back to Vim's defaults
 ok   a configuration problem names its file and line
-adapters_assembly: 56 passed, 0 failed
+adapters_assembly: 69 passed, 0 failed

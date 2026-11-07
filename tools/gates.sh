@@ -17,6 +17,9 @@
 #              code map; make targets or agent, command, or workflow files
 #              added or removed need CLAUDE.md; the default configuration, the
 #              compatibility table, make targets, or process files need README.md
+#   cases      a branch changing a code line (not blank, not a comment) of a
+#              shell script under tools/ other than tools_test.sh adds or
+#              changes an expect case in tools/tools_test.sh
 #   attribution  .claude/settings.json sets Claude Code's attribution to
 #              exactly the trailer on commits, no pull request text, and no
 #              session link
@@ -37,7 +40,7 @@
 #              make it the run state), has the template's shape, no comment,
 #              angle bracket, empty bullet, footer, URL, email, session id, or
 #              model name, and a Testing line naming the security review
-#   static     trailer, content, snapshots, docs, attribution (make gates)
+#   static     trailer, content, snapshots, docs, cases, attribution (make gates)
 #   origin     no risky configuration key; an origin/ base equal to origin's
 #   pre-push   origin, static, security, stages (tools/run_state.sh push)
 #   backup     trailer, content (tools/run_state.sh backup, with BASE the
@@ -236,6 +239,25 @@ gate_docs() {
   [ $failed -ne $start ] || ok "map, CLAUDE.md, and README.md"
 }
 
+# The shell scripts under tools/ whose diff from the base changes a line that is
+# not blank and not a comment, beside tools/tools_test.sh, need a case: the
+# diff of tools/tools_test.sh adds an expect line. Per script, since the
+# cases call the scripts by subcommand, not by function.
+gate_cases() {
+  gate=cases
+  scripts=$(git diff --name-only "$base...HEAD" -- tools/ | grep -E "\.sh\$" | grep -v -x "tools/tools_test.sh" |
+    while read -r path; do
+      git diff -U0 "$base...HEAD" -- "$path" | grep -E "^[-+]" | grep -v -E "^(\+\+\+ (b/|/dev/null)|--- (a/|/dev/null))" |
+        grep -q -v -E "^[-+][[:space:]]*(#.*)?$" && printf "%s " "$path"
+    done)
+  if [ -n "$scripts" ] && ! git diff -U0 "$base...HEAD" -- tools/tools_test.sh | grep -q -E "^\+[[:space:]]*expect "; then
+    bad "${scripts% } changed code but tools/tools_test.sh adds or changes no expect case"
+    return
+  fi
+  [ -n "$scripts" ] || scripts="no tool changed "
+  ok "${scripts% }"
+}
+
 gate_security() {
   gate=security
   record=$(state review.security)
@@ -421,6 +443,7 @@ case "$target" in
   content) gate_content ;;
   snapshots) gate_snapshots ;;
   docs) gate_docs ;;
+  cases) gate_cases ;;
   attribution) gate_attribution ;;
   origin) gate_origin ;;
   security) gate_security ;;
@@ -428,8 +451,8 @@ case "$target" in
   pushes) gate_pushes ;;
   records) gate_records ;;
   pr-body) gate_pr_body "$body" ;;
-  static) gate_trailer; gate_content; gate_snapshots; gate_docs; gate_attribution ;;
-  pre-push) gate_origin; gate_trailer; gate_content; gate_snapshots; gate_docs; gate_security; gate_stages ;;
+  static) gate_trailer; gate_content; gate_snapshots; gate_docs; gate_cases; gate_attribution ;;
+  pre-push) gate_origin; gate_trailer; gate_content; gate_snapshots; gate_docs; gate_cases; gate_security; gate_stages ;;
   backup) gate_trailer; gate_content ;;
   passed) gate_passed ;;
   merge)
