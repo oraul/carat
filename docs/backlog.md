@@ -827,7 +827,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 ## A refused backup push is retried and protects nothing here
 
 - Where: the backup step of `.claude/workflows/deliver-change.js` and `backup` in `tools/run_state.sh`; this environment's git proxy refuses a push to `refs/backup/` with HTTP 403. Retrospective proposal of `backup-secret-scan`, recorded here by the user's decision rather than queued.
-- Why it matters: in `backup-secret-scan` 2 of 2 backup pushes were refused and 0 backup refs reached origin, so the step spent tokens and changed no decision, and the run state holds no backup record to tell the report so; `docs-currency` made 7 more attempts, and 0 of 9 across the two runs reached origin (its retrospective); in `buffer-list` the implement and fix pushes all failed, 0 `refs/backup` refs reached origin, and 7 commits stayed local until the package push (retrospective note 11); in `leader-layout` 2 of 2 backup tries were refused (retrospective note 8), so no backup has reached origin in four runs; in `lsp-diagnostics` 8 attempts over 3 contributor starts were refused and no `refs/backup` ref reached origin (retrospective note 18), and in `diagnostics-display` all 6 implement commits and 3 more tries were refused, no restore being used; the first backup of `partial-results` was refused the same way. Kept here by the user's earlier decision, which the user may want to revisit.
+- Why it matters: in `backup-secret-scan` 2 of 2 backup pushes were refused and 0 backup refs reached origin, so the step spent tokens and changed no decision, and the run state holds no backup record to tell the report so; `docs-currency` made 7 more attempts, and 0 of 9 across the two runs reached origin (its retrospective); in `buffer-list` the implement and fix pushes all failed, 0 `refs/backup` refs reached origin, and 7 commits stayed local until the package push (retrospective note 11); in `leader-layout` 2 of 2 backup tries were refused (retrospective note 8), so no backup has reached origin in four runs; in `lsp-diagnostics` 8 attempts over 3 contributor starts were refused and no `refs/backup` ref reached origin (retrospective note 18), and in `diagnostics-display` all 6 implement commits and 3 more tries were refused, no restore being used; the first backup of `partial-results` was refused the same way; in `check-isolation` 3 of 3 backup pushes were refused, and 7 runs' retrospectives have recorded the same proposal. Kept here by the user's earlier decision, which the user may want to revisit; queued in `backup-records`.
 - Fix outline: record a refused backup push once in the run state, make no later backup attempt in that run, and have the report say no backup exists, with a `tools/tools_test.sh` case for a refused push.
 
 ## Pull requests are created with a session-link footer the settings turn off
@@ -1096,9 +1096,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## BufferList keeps any_modified? and number_of with no production caller
 
-- Where: `any_modified?` (line 115 at `buffer-list`) and `number_of` (line 61) in `carat/domain/buffer_list.rb`, both still named in `docs/codebase-map.md`. Quality advisory of `buffer-list`.
+- Where: `any_modified?` (line 115 at cd87445) in `carat/domain/buffer_list.rb`, still named in the map's `buffer_list.rb` line, and `number_of` (line 61), whose only caller is `test/domain_buffer_list.rb` line 169. Quality advisory of `buffer-list`; reworded by the periodic quality review at cd87445.
 - Why it matters: `Quit` and `QuitAll` now use `first_unsaved`, so `any_modified?` is dead code, and `number_of` returns a list position that is no longer the buffer number, which misleads a future caller.
-- Fix outline: remove both, use `modified_buffer.nil?` in the tests, and drop them from the map. Queued as `buffer-list-tidy` in `docs/queue.md`.
+- Fix outline: remove both, use `modified_buffer.nil?` in the tests, and drop `any_modified?` from the map. Queued in `docs-index`.
 
 ## BufferList#first_unsaved takes a boolean flag argument
 
@@ -1624,9 +1624,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Four use cases inline the tab width Options already answers
 
-- Where: `carat/use_cases/leave_insert.rb:69`, `carat/use_cases/insert_tab.rb:22`, `carat/use_cases/repeat_last.rb:105`, `carat/use_cases/arrange_view.rb:39` (periodic quality at 5722559).
-- Why it matters: `tabstop > 0 ? tabstop : 8` is copied four times beside `Options#tab_width` (`carat/domain/options.rb:75`), so a rule change misses copies.
-- Fix outline: call `state.options.tab_width` in the four and drop the inline copies.
+- Where: `carat/use_cases/leave_insert.rb:69`, `carat/use_cases/insert_tab.rb:22`, `carat/use_cases/repeat_last.rb:105`, `carat/use_cases/arrange_view.rb:39` (periodic quality at 5722559), and `carat/adapters/frame_presenter.rb:174`, `carat/use_cases/visual/extend_visual.rb:54`, `carat/use_cases/dispatcher.rb:113` (periodic quality at cd87445).
+- Why it matters: `tabstop > 0 ? tabstop : 8` is copied seven times beside `Options#tab_width` (`carat/domain/options.rb:75`), so a rule change misses copies.
+- Fix outline: call `options.tab_width` in the seven and drop the inline copies.
 
 ## ChangeRecord#delta and UndoTree#redo_seq have no production caller
 
@@ -1720,9 +1720,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## A check stage can still write the delivery clone by an absolute path
 
-- Where: `clone_make` in `tools/run_state.sh` (the symbolic links to `tmp/.toolchain` and `tmp/.spinel`), and the benchmark's `make metrics` and `make bench` in the delivery clone (`.claude/agents/benchmark.md`). Residual risk of `check-isolation`, reported again in its delivery review as security Medium (6) and Low (5) at `tools/run_state.sh` line 529.
+- Where: `clone_make` in `tools/run_state.sh` (the symbolic links to `tmp/.toolchain` and `tmp/.spinel`), and the benchmark's `make metrics` and `make bench` in the delivery clone (`.claude/agents/benchmark.md`). Residual risk of `check-isolation`, reported again in its delivery review as security Medium (6) and Low (5) at `tools/run_state.sh` line 529, and by the periodic security review at cd87445 as Low (5) at the same line (the toolchain links the check clone shares).
 - Why it matters: the check clone separates what a stage writes in its own directory, but a process of the same user can find the delivery clone (the toolchain links, the runner's working directory) and write its `.git`, `build/pipeline`, or the shared Spinel binaries the next check and the contributor run; the benchmark still runs branch code in the delivery clone. The origin gate, the guard's refusals, and the green line's url check are the second line.
-- Fix outline: run the stages and the benchmark under an operating-system sandbox (a user namespace or another user) with the delivery clone read-only and a private copy of the toolchain, or check the toolchain's hash before each check and run the benchmark in a check clone, each with a `tools/tools_test.sh` case.
+- Fix outline: run the stages and the benchmark under an operating-system sandbox (a user namespace or another user) with the delivery clone read-only and a private copy of the toolchain, or check the toolchain's hash before each check and run the benchmark in a check clone, each with a `tools/tools_test.sh` case. Queued in `check-runner-safety`.
 
 ## merge-gate-integrity's open quality advisories
 
@@ -1752,4 +1752,70 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `README.md` line 180, the checker sentence; `openspec/changes/archive/2026-11-07-check-isolation/design.md` line 53, the Risks bullet; `passedAt` in `.claude/workflows/deliver-change.js` line 482; the header comment of `tools/agent_guard.sh` lines 28 to 40. Quality advisories in `check-isolation`; its `tools/gates.sh` line 436 and `docs/codebase-map.md` line 50 advisories are those of `merge-gate-integrity` above.
 - Why it matters: the README says branch code cannot write the hooks, git configuration, or run states the gates read, while the design and the entry above record that it still can by an absolute path; the archived Risks bullet still calls the clone the longer-term fix it now is; `passedAt` names a phase record's commit `result` and compares `result === head`, which reads as a bug; one header line runs far past the comment's width.
-- Fix outline: say "through the paths it is given" in the README as the design does; leave the archived design as the record and point the next design at the absolute-path residual risk; name the parts `first` and `second` or split the phase and review comparisons; rewrap the header comment.
+- Fix outline: say "through the paths it is given" in the README as the design does; leave the archived design as the record and point the next design at the absolute-path residual risk; name the parts `first` and `second` or split the phase and review comparisons; rewrap the header comment. Queued in `check-runner-safety`.
+
+## A gate after a failed one prints its ok line
+
+- Where: `tools/gates.sh` line 122 at cd87445: each gate takes `start=$failed` and prints ok unless `failed` changed, while `bad` sets `failed=1`. Periodic quality at cd87445.
+- Why it matters: after one gate of a group (pre-push, merge) fails, every later gate prints ok even when it also failed, so the output contradicts itself and hides a second failure.
+- Fix outline: count failures in `bad` or keep a per-gate flag, with a `tools/tools_test.sh` case of two failing gates. Queued in `merge-gate-tidy`.
+
+## The completion layer is looked up twice per key and ShowCompletion runs twice per typed character
+
+- Where: `carat/use_cases/handle_key.rb` line 166 at cd87445 (`completion_key?` at line 201, then `complete` at line 208, each allocating `[code]`; `insert_literal` line 313, then `call` line 102). Periodic quality at cd87445, again after 5722559.
+- Why it matters: two lookups and two popup refreshes per key on the insert hot path, the line sliced twice.
+- Fix outline: look up once and dispatch that match; run ShowCompletion once per key. Queued in `completion-tidy`.
+
+## The dispatcher and HandleKey hold shared objects without readers
+
+- Where: `carat/use_cases/dispatcher.rb` line 35 and `carat/use_cases/handle_key.rb` line 67 at cd87445 (the shared `ActionTable`, and HandleKey's Dispatcher, InsertText, and EditCommandLine). Periodic quality at cd87445, again after 5722559.
+- Why it matters: `test/adapters_assembly.rb` cannot check every holder got the one instance, as the constructors rule of CLAUDE.md requires.
+- Fix outline: add the readers and a strangers row over the dispatcher and HandleKey. Queued in `completion-tidy`.
+
+## The map's area 8 omits the completion popup
+
+- Where: `docs/codebase-map.md` line 236 at cd87445: area 8's What and Flow lines never mention the six popup files (lines 257 to 265), its Designs line (269) omits `completion` and `completion-request`, its Bench line names no completion scenario. Periodic quality at cd87445, again after 5722559.
+- Why it matters: a change to the popup finds neither its flow nor its decisions in the map.
+- Fix outline: name the popup in What, add one Flow sentence and the two designs, or move the completion files to an area of their own. Queued in `completion-tidy`.
+
+## CompletionMenu cleans every candidate the gateway already cleaned
+
+- Where: `carat/domain/completion_menu.rb` line 57 at cd87445 (`fill` runs `CompletionItem.from_source` over items `json_rpc_language_gateway.rb` line 521 built with it). Periodic quality at cd87445.
+- Why it matters: up to 200 items are cleaned twice per new word, two boundaries owning one rule.
+- Fix outline: clean at one boundary, the doubles doing the same. Queued in `completion-tidy-b`.
+
+## CompletionList#add returns a bool nobody reads
+
+- Where: `carat/domain/completion_list.rb` line 146 at cd87445; it escapes the predicate rule only because `BOOL_COMMANDS` lists `add` for `FloatLayer` (`test/lint.rb` line 220). Periodic quality at cd87445.
+- Why it matters: an unread result invites a caller to rely on it and hides behind another class's exemption.
+- Fix outline: make it return nothing. Queued in `completion-tidy-b`.
+
+## CompletionPort carries the server source's request record
+
+- Where: `carat/ports/completion_port.rb` line 29 at cd87445 (`request`), `carat/doubles/fixed_completions.rb` line 50, and `carat/adapters/server_completions.rb` line 23, which builds the shared `Domain::CompletionRequest`. Periodic quality at cd87445; related to the entry on the input controller reaching through ShowCompletion.
+- Why it matters: the double carries a record nobody fills, and the one shared record is built inside an adapter instead of once beside the other shared objects.
+- Fix outline: build the record once at the composition root, keep it in an assembly reader for its users, and drop it from the port. Queued in `completion-tidy-b`.
+
+## The server completions test copies EditorHarness
+
+- Where: `test/adapters_server_completions.rb` line 17 at cd87445 (the `Rig` class copies `type`, `wait`, and `pump` because `carat/doubles/editor_harness.rb` line 38 hard-wires `FixedCompletions`), and its `CompletionRequest` record table (lines 154 to 173). Periodic quality at cd87445.
+- Why it matters: two harnesses drift, and a domain record is tested in an adapter test.
+- Fix outline: let the harness take any completion port and drive the test through it; move the record table to a domain test. Queued in `completion-tidy-b`.
+
+## LspStart and LspRestart handlers are copies
+
+- Where: `carat/use_cases/ex/lsp_start_command_handler.rb` line 25 and `lsp_restart_command_handler.rb` line 65 at cd87445, differing only in `start` or `restart`. Periodic quality at cd87445; the restart half is the entry on `LanguageServer#words`.
+- Why it matters: a fix to one command misses the other.
+- Fix outline: one handler with a start and a restart variant registered twice, as CompletionHandler does. Queued in `lsp-client-tidy`.
+
+## ProcessRunner compiles only through carat.rb's require order
+
+- Where: `carat/drivers/process_runner.rb` line 1 at cd87445 requires only the process port yet builds `Domain::RpcFramer` and `Domain::ServiceMessage`. Periodic quality at cd87445.
+- Why it matters: requiring the file alone fails, unlike DiskFiles, which requires its domain record.
+- Fix outline: require both domain files. Queued in `lsp-client-tidy`.
+
+## The bench scenario list has drifted from the scenarios
+
+- Where: `bench/run.sh` line 69 at cd87445 copies the `SCENARIOS` of `bench/keys.rb` line 104 and omits `lh-float` and `n`. Periodic quality at cd87445.
+- Why it matters: `make bench` never runs area 13's float benchmark or `n`, so a regression there goes unmeasured.
+- Fix outline: take the names from the bench binary or one shared list, with a case that every scenario runs. Queued in the backlog items worth a change.
