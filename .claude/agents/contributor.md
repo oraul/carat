@@ -27,7 +27,7 @@ Read in this order and stop once you know what the change touches: the scout pac
 
 ## Modes
 
-The workflow calls you with one mode, the change name, and the branch; the run state is `sh tools/run_state.sh show <change>`. At the tool-call cap your prompt ends with, with work left: commit, back up, and return `stopped` asking `call cap N reached: <what remains>`; a resume continues from `tasks.md`.
+The workflow calls you with one mode, the change name, and the branch; the run state is `sh tools/run_state.sh show <change>`. At the tool-call cap your prompt ends with, with work left: commit, back up, and return `partial` with `remaining`, one line per task or step left; the workflow continues with another start told what is left, as it does when a start reaches its turn ceiling and returns nothing, so such a start resumes from `tasks.md`, the commits, and the run state and redoes nothing done. `stopped` is only for the stops below.
 
 ### implement
 
@@ -47,12 +47,12 @@ You receive a failed stage's log, blocking findings, a regression, or a red CI l
 1. Confirm every task is `- [x]`, archive with the `openspec-archive-change` skill (`openspec archive "<change>" -y`, `--skip-specs` without delta specs), run `make spec-validate`, and commit.
 2. Put every non-blocking security, quality, and benchmark finding you were given into `docs/backlog.md` with its location and fix outline. Then the planning records: copy `build/plan/queue.md` and `build/plan/goals.md` over their `docs/` copies when they exist, add `build/plan/backlog.md`'s entries to `docs/backlog.md` (when the workflow says the planner did not run, `build/plan/` is an older run's: remove your item from `docs/queue.md` instead), and run `sh tools/run_state.sh history`. Commit them as `docs: record the plan and the metrics history`.
 3. Run `make gates` and `make docs-lint`, which checks the queue you committed. Push with `sh tools/run_state.sh push <change>`: it runs the pre-push gates, the stages and the security review included, and refuses a second push.
-4. Write the body with the Write tool to `build/pipeline/<change>.body.md` (the one file there you may write), which the merger squashes with: it follows the Pull request description section of `CLAUDE.md`, and Testing lists only checks that ran, with their results, the security review and its findings first. Check it with `sh tools/gates.sh pr-body build/pipeline/<change>.body.md`. Open the pull request against `main` with the GitHub tools, the title the squash commit's Conventional Commits subject and that body. Record `sh tools/run_state.sh set <change> pr <N>`; the workflow records the phase.
+4. Write the body with the Write tool to `build/pipeline/<change>.body.md` (the one file there you may write), which the merger squashes with: it follows the Pull request description section of `CLAUDE.md`, and Testing lists only checks that ran, with their results, the security review and its findings first. Check it with `sh tools/gates.sh pr-body build/pipeline/<change>.body.md`. Open the pull request against `main` with the GitHub tools, the title the squash commit's Conventional Commits subject and that body. Record `sh tools/run_state.sh set <change> pr <N>`; the workflow records the phase. Return as `pushed` the full sha `sh tools/run_state.sh get <change> pushed` prints, which the merger passes as the expected head.
 5. Re-read the pull request: `.claude/settings.json` turns the attribution off, so it shows the body file's text. Only if a line you did not write is there, remove it with the GitHub MCP update tool and report it.
 
 ### push
 
-After a CI fix has passed the checker and the security review, put any non-blocking finding you were given into `docs/backlog.md` as in package and commit it, then `sh tools/run_state.sh push <change> --ci-fix`, one push per CI fix. When the branch conflicts with `main`, merge `origin/main` into it (the merge commit carries the trailer) and say so; the checks run again.
+After a CI fix has passed the checker and the security review, put any non-blocking finding you were given into `docs/backlog.md` as in package and commit it, then `sh tools/run_state.sh push <change> --ci-fix`, one push per CI fix, and return its `pushed` as in package. When the branch conflicts with `main`, merge `origin/main` into it (the merge commit carries the trailer) and say so; the checks run again.
 
 ## Report
 

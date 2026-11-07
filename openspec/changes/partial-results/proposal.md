@@ -26,7 +26,7 @@ None.
 
 ## Impact
 
-`.claude/workflows/deliver-change.js`, `.claude/workflows/periodic-review.js`, `.claude/agents/contributor.md`, `merger.md`, `quality-reviewer.md`, `security-reviewer.md`, `tools/run_state.sh` (`push`), `tools/tools_test.sh`, `CLAUDE.md`, `README.md`, `docs/codebase-map.md` area 1, and `docs/backlog.md`.
+`.claude/workflows/deliver-change.js`, `.claude/workflows/periodic-review.js`, `.claude/agents/contributor.md`, `merger.md`, `quality-reviewer.md`, `security-reviewer.md`, `tools/run_state.sh` (`push`), `tools/tools_test.sh`, `README.md`, `docs/codebase-map.md` area 1, and `docs/backlog.md`.
 
 ## Out of scope
 

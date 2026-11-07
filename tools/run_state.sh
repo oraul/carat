@@ -15,7 +15,9 @@
 #                    periodic-security and periodic-quality after a merge)
 #   pushes, ci_fixes the pushes made and the CI fixes they may answer
 #   gates_failed     the push attempts the pre-push gates refused
-#   pushed, pr, ci   the last pushed commit, the pull request number, and
+#   pushed, pr, ci   the full sha of the last pushed commit, which the
+#                    merger passes as the expected head, the pull
+#                    request number, and
 #                    "green|red COMMIT"
 #   backup, base     the commit last pushed to refs/backup/BRANCH, until
 #                    the branch's push, the merge, or abandon deletes that
@@ -705,7 +707,7 @@ push_branch() {
   git push -u origin "$branch" || die "push: git push failed"
   write_key pushes $((pushes + 1))
   write_key ci_fixes "$fixes"
-  write_key pushed "$(head_commit)"
+  write_key pushed "$(git rev-parse HEAD)"
   # The pushed branch holds every commit the backup held, whichever run
   # state made it; a deletion that fails is reported, and recording merged
   # tries it again.

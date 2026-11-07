@@ -496,6 +496,8 @@ state review pushing security pass "no finding" > /dev/null
 expect "run_state: push passes the gates and pushes" 0 "ok   security" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a push is counted" 0 "^1$" state get pushing pushes
+expect "run_state: push records the full sha as pushed" 0 "^full$" \
+  sh -c 'p=$(sh "$1/run_state.sh" get pushing pushed) && [ "$p" = "$(git rev-parse HEAD)" ] && [ ${#p} -eq 40 ] && echo full' _ "$here"
 expect "run_state: push deletes the backup ref" 0 "^$" git ls-remote origin refs/backup/chore/pushing
 expect "run_state: push deletes the base ref" 0 "^$" git ls-remote origin refs/backup-base/chore/pushing
 expect "run_state: push drops the backup record" 0 "^$" state get pushing backup
@@ -1638,8 +1640,8 @@ expect "gates: attribution refuses a missing settings file" 1 "no .claude/settin
 # maxTurns: the largest cap of its starts at a large estimate plus a
 # return margin, so a start that makes its capped calls one per turn still
 # has turns to commit, back up, and return the schema; the merger's is its
-# first-green cap, 2 for each of the seven waits of its 30 minutes, and the
-# margin.
+# first-green cap, which holds two waits, 2 for each of the other five of
+# its 30 minutes, and the margin.
 margin=5
 wf="$here/../.claude/workflows/deliver-change.js"
 agents="$here/../.claude/agents"
@@ -1674,7 +1676,7 @@ for pair in benchmark:bench checker:checker contributor:implement,fix,package,pu
   want=$(turns "$agent" $(echo "${pair#*:}" | tr ',' ' '))
   expect "caps: the $agent file's maxTurns is its large cap and the margin" 0 "^maxTurns: $want$" grep -E '^maxTurns: ' "$agents/$agent.md"
 done
-expect "caps: the merger file's maxTurns is its ceiling" 0 "^maxTurns: $(($(cap_of merger) + 14 + margin))$" grep -E '^maxTurns: ' "$agents/merger.md"
+expect "caps: the merger file's maxTurns is its ceiling" 0 "^maxTurns: $(($(cap_of merger) + 10 + margin))$" grep -E '^maxTurns: ' "$agents/merger.md"
 # The periodic review's starts: a fixed cap stated in every start, which
 # leaves the margin under both reviewers' maxTurns, and the record start's
 # the record cap; a security review without a result is retried once and
@@ -1692,10 +1694,65 @@ expect "caps: the periodic task line states the periodic cap" 0 "capLine[(]PERIO
 expect "periodic: a security review without a commit head is retried" 0 "s[.]ran && isCommit[(]s[.]head[)]" grep 'if (s && s.ran' "$pwf"
 expect "periodic: a security review without a result is recorded as not run" 0 "^[}] else record[(]'periodic-security', 'not-run'" grep "record('periodic-security', 'not-run'" "$pwf"
 expect "periodic: a review with areas not reviewed is recorded as partial" 0 "missed[.]length [?] 'partial'" grep '^const result = ' "$pwf"
-# A first green: the merger file's calls of one each and two waits of two
-# calls stay within its cap of at most 10.
+# A first green: the merger file's calls of one each, the branch deletion
+# among them, and two waits of two calls stay within its cap of at most 12.
 calls=$(grep -o '(one call)' "$agents/merger.md" | wc -l | tr -d ' ')
-expect "caps: the merger's first green is at most 10 calls" 0 "^within$" sh -c '[ "$1" -le 10 ] && [ $(($2 + 4)) -le "$1" ] && echo within' _ "$(cap_of merger)" "$calls"
+expect "caps: the merger's first green fits its cap" 0 "^within$" sh -c '[ "$1" -le 12 ] && [ "$2" -ge 7 ] && [ $(($2 + 4)) -le "$1" ] && echo within' _ "$(cap_of merger)" "$calls"
+expect "caps: the merger counts the branch deletion" 0 "push origin --delete <branch>. [(]one call[)]" grep -o 'push origin --delete <branch>. (one call)' "$agents/merger.md"
+
+# ------------------------------------------------------------ workflow helpers
+# The workflows' pure helpers, run by node (which make doctor requires for
+# OpenSpec): js FILE NAMES EXPRESSION prints EXPRESSION as JSON after the
+# named top-level functions and one-line constants of FILE.
+js() {
+  file=$1 names=$2 expr=$3
+  {
+    for n in $names; do
+      awk -v n="$n" 'index($0, "function " n "(") == 1 || index($0, "async function " n "(") == 1 { on = 1 }
+        on { print; if ($0 == "}") exit; next }
+        index($0, "const " n " = ") == 1 { print; exit }' "$file"
+    done
+    printf 'console.log(JSON.stringify(%s))\n' "$expr"
+  } | node -
+}
+work_js() {
+  js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead" "$1"
+}
+expect "workflow: a contributor that finished is done" 0 '^[{]"next":"done","left":\[\][}]$' \
+  work_js "(r => continuation(r, workLeft(r), 0))({ status: 'done' })"
+expect "workflow: a capped contributor start is continued with what it left" 0 '^[{]"next":"continue","left":\["4.2 the docs"\][}]$' \
+  work_js "(r => continuation(r, workLeft(r), 0))({ status: 'partial', remaining: ['4.2 the docs'] })"
+expect "workflow: a capped contributor naming nothing left resumes from tasks.md" 0 '"left":\["the unchecked tasks of tasks.md"\]' \
+  work_js "(r => continuation(r, workLeft(r), 1))({ status: 'partial', remaining: [] })"
+expect "workflow: a contributor start with no result is continued" 0 '^[{]"next":"continue","left":\[\][}]$' \
+  work_js "continuation(null, null, 0)"
+expect "workflow: a contributor with a question stops" 0 '^[{]"next":"stop"' \
+  work_js "(r => continuation(r, workLeft(r), 0))({ status: 'stopped', question: 'which scope?' })"
+expect "workflow: a start still unfinished after the continuations stops" 0 '^\["stop","stop",2\]$' \
+  work_js "[continuation(null, null, CONTINUES).next, continuation({ status: 'partial', remaining: ['x'] }, ['x'], CONTINUES).next, CONTINUES]"
+expect "workflow: a capped review is continued over the files it left" 0 '^[{]"next":"continue","left":\["tools/gates.sh"\][}]$' \
+  work_js "(r => continuation(r, reviewLeft(r), 0))({ head: 'abc1234', blocking: [], advisory: [], not_reviewed: ['tools/gates.sh'] })"
+expect "workflow: a security review that did not run is continued whole" 0 '^[{]"next":"continue","left":\["the whole diff"\][}]$' \
+  work_js "(r => continuation(r, reviewLeft(r), 0))({ ran: false, head: 'abc1234', findings: [] })"
+expect "workflow: a covered review is done" 0 '^[{]"next":"done"' \
+  work_js "(r => continuation(r, reviewLeft(r), 0))({ ran: true, head: 'abc1234', findings: [], not_reviewed: [] })"
+expect "workflow: a continued review keeps the findings of both starts" 0 '^[{]"head":"abc1234","blocking":\["a","c"\],"advisory":\["b"\],"not_reviewed":\[\][}]$' \
+  work_js "combineReviews({ head: 'abc1234', blocking: ['a'], advisory: ['b'], not_reviewed: ['f'] }, { head: 'abc1234', blocking: ['c'], advisory: ['b'], not_reviewed: [] })"
+expect "workflow: a security review with files left never passes" 0 "if [(]!s [|][|] reviewLeft[(]s[)][.]length[)]" grep -F 'if (!s || reviewLeft(s).length)' "$wf"
+full=abcdef0123456789abcdef0123456789abcdef01
+expect "workflow: the merger gets the full pushed sha" 0 "^\"$full\"$" work_js "pushedHead('$full', 'abcdef012345')"
+expect "workflow: a pushed sha other than the reported head is refused" 0 '^\["","",""\]$' \
+  work_js "[pushedHead('1bcdef0123456789abcdef0123456789abcdef01', 'abcdef012345'), pushedHead('abcdef012345', 'abcdef012345'), pushedHead('$full', '')]"
+expect "workflow: the merge prompt names the checked pushed sha" 0 'The pushed head is [$][{]pushed[}]' grep -F 'The pushed head is ${pushed}' "$wf"
+expect "workflow: the merge stops before the merger without a checked sha" 0 "if [(]!pushed[)]" grep -F 'if (!pushed) { stopped' "$wf"
+areas=$(grep -c -E '^## [0-9]+[.] ' "$here/../docs/codebase-map.md")
+expect "periodic: MAP_AREAS is the map's count of areas" 0 "^const MAP_AREAS = $areas$" grep '^const MAP_AREAS = ' "$pwf"
+expect "periodic: the quality slices cover every area once" 0 '^true$' \
+  js "$pwf" "MAP_AREAS QUALITY_SLICES areaSlices" "(a => a.length === QUALITY_SLICES && a.flat().join(',') === Array.from({ length: MAP_AREAS }, (_, i) => i + 1).join(','))(areaSlices(MAP_AREAS, QUALITY_SLICES))"
+expect "periodic: the areas left are kept to the start's slice" 0 '^\[\[3\],\[1,2,3\],\[\]\]$' \
+  js "$pwf" "areasLeft" "[areasLeft({ head: 'abc1234', not_reviewed: [3, 9] }, [1, 2, 3]), areasLeft(null, [1, 2, 3]), areasLeft({ head: 'abc1234', not_reviewed: [] }, [1, 2, 3])]"
+expect "periodic: each quality start has its own worktree" 0 'tmp/[.]review-quality-[$][{]n[}]' grep '^const taskAreas = ' "$pwf"
+expect "periodic: the quality record states its coverage" 0 'covered=[$][{]MAP_AREAS - ' grep -F 'covered=${MAP_AREAS - ' "$pwf"
 
 echo "$passed/$total passed"
 test "$passed" -eq "$total"
