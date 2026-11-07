@@ -136,7 +136,7 @@ module UseCasesPluginsTest
     split_window = Carat::UseCases::SplitWindow.new(open_file: open_file, buffers: buffers, tabs: tabs)
     open_side_window = Carat::UseCases::OpenSideWindow.new(buffers: buffers, tabs: tabs)
     open_tab = Carat::UseCases::OpenTab.new(open_file: open_file, buffers: buffers, tabs: tabs)
-    host = Carat::UseCases::PluginHost.new(state: state, buffers: buffers, tabs: tabs, input: Carat::Domain::InputState.new, plugin_ui: Carat::Domain::PluginUi.new, files: files, open_file: open_file, probe_path: probe_path, split_window: split_window, open_side_window: open_side_window, open_tab: open_tab, keymap: keymap, leader: " ", runner: ex)
+    host = Carat::UseCases::PluginHost.new(state: state, buffers: buffers, tabs: tabs, input: Carat::Domain::InputState.new, plugin_ui: Carat::Domain::PluginUi.new, files: files, open_file: open_file, probe_path: probe_path, split_window: split_window, open_side_window: open_side_window, open_float: Carat::UseCases::OpenFloat.new(tabs: tabs), close_float: Carat::UseCases::CloseFloat.new(tabs: tabs), open_tab: open_tab, keymap: keymap, leader: " ", runner: ex)
     save_file = Carat::UseCases::SaveFile.new(files: files, plugins: host)
     save_all = Carat::UseCases::SaveAll.new(save_file: save_file, buffers: buffers)
     quit = Carat::UseCases::Quit.new(buffers: buffers, tabs: tabs)

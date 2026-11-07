@@ -20,6 +20,7 @@ require_relative "../domain_edits"
 require_relative "../domain_ex_grammar"
 require_relative "../domain_ex_range"
 require_relative "../domain_filetype"
+require_relative "../domain_float_layer"
 require_relative "../domain_frame"
 require_relative "../domain_global"
 require_relative "../domain_grammar"
@@ -97,6 +98,7 @@ when "domain_edits" then DomainEditsTest.main
 when "domain_ex_grammar" then DomainExGrammarTest.main
 when "domain_ex_range" then DomainExRangeTest.main
 when "domain_filetype" then DomainFiletypeTest.main
+when "domain_float_layer" then DomainFloatLayerTest.main
 when "domain_frame" then DomainFrameTest.main
 when "domain_global" then DomainGlobalTest.main
 when "domain_grammar" then DomainGrammarTest.main

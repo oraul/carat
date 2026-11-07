@@ -161,6 +161,7 @@ module Carat
       keymap.normal zb scroll.cursor_bottom
       keymap.normal gt tab.next
       keymap.normal gT tab.previous
+      keymap.normal <Esc> float.close
       keymap.normal <C-s> file.save
       # The leader groups: w windows, q quit, f files, b buffers; e is the
       # explorer plugin's.

@@ -139,6 +139,7 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `window.quit` | normal | `:q` on the window, or on window count |
 | `tab.next` | normal | Next tab page, wrapping; a count is a tab page number |
 | `tab.previous` | normal | Count tab pages back, wrapping |
+| `float.close` | normal | Close the topmost floating window of the tab page; nothing when none is open |
 | `scroll.page_down` | normal, visual, insert | Scroll forward count pages of the window's text rows minus two, the cursor kept in view; with the last line shown, go to the last line |
 | `scroll.page_up` | normal, visual, insert | Scroll back count pages, the cursor kept in view |
 | `scroll.half_page_down` | normal, visual | Scroll down and move the cursor down by the `scroll` option, half the window when 0; a count sets the option first |

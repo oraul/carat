@@ -29,6 +29,7 @@ module Carat
       #: (Domain::EditorState, bool, Integer, String, bool) -> Outcome
       def call(state, vertical, size, path, fresh)
         tab = state.tab
+        tab.floats.leave
         min_width = state.window.gutter_width(state.options) + 1
         id = tab.layout.split(tab.current, vertical, size, min_width)
         return Outcome.failure(Domain::Messages::E36) if id < 0

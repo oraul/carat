@@ -20,7 +20,7 @@ module Carat
     # buffer's changes; and :written after the write of :wq and :x, which
     # also checks only the hidden buffers: the buffer just written is not
     # checked, since a write to another path leaves it modified on
-    # purpose.
+    # purpose. In a floating window :q closes the float and nothing else.
     class Quit
       attr_reader :buffers #: Domain::BufferList
       attr_reader :tabs #: Domain::TabList
@@ -33,6 +33,7 @@ module Carat
 
       #: (Domain::EditorState, Symbol) -> Outcome
       def call(state, way)
+        return Outcome.none if state.tab.floats.close_focused
         if @tabs.total_windows > 1
           return close_current(state) unless beside_side_windows?(state)
           return close_page(state) if @tabs.tab_count > 1

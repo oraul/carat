@@ -14,7 +14,10 @@ module Carat
     # last the status bar, and the last row the message row; the layout gets
     # the rows between. Each window scrolls vertically to keep its cursor
     # row visible with scrolloff and horizontally to keep the display
-    # column of its cursor visible, read from the shared line cache. It
+    # column of its cursor visible, read from the shared line cache. The
+    # floats of the tab page are then placed over the rows above the
+    # message row, from the editor's top-left cell or the cursor cell of
+    # the layout's current window, and scroll like windows. It
     # does nothing before the size is known. Run after every key, after a
     # file is opened, and before every render.
     class ArrangeView
@@ -44,9 +47,31 @@ module Carat
           scroll(layout.window_at(id), options, tabstop) if layout.node(id).leaf?
           id += 1
         end
+        floats = state.tab.floats
+        place_floats(state, floats, rows - 1, cols, options, tabstop) if floats.count > 0
       end
 
       private
+
+      #: (Domain::EditorState, Domain::FloatLayer, Integer, Integer, Domain::Options, Integer) -> void
+      def place_floats(state, floats, rows, cols, options, tabstop)
+        window = state.tab.layout_window
+        cursor = window.cursor
+        dcol = @cache.fetch(window.buffer.line(cursor.row), tabstop).col(cursor.col)
+        cursor_row = window.row + cursor.row - window.top
+        cursor_col = window.col + window.gutter_width(options) + dcol - window.left
+        i = 0
+        while i < floats.count
+          float = floats.at(i)
+          if float.spec.cursor_anchored?
+            float.place(cursor_row, cursor_col, rows, cols)
+          else
+            float.place(0, 0, rows, cols)
+          end
+          scroll(float.window, options, tabstop)
+          i += 1
+        end
+      end
 
       #: (Domain::Window, Domain::Options, Integer) -> void
       def scroll(window, options, tabstop)

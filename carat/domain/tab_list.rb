@@ -111,6 +111,18 @@ module Carat
         -1
       end
 
+      # The index of the tab page holding the float with the window id, or
+      # -1.
+      #: (Integer) -> Integer
+      def float_tab(id)
+        t = 0
+        while t < pages.length
+          return t if tab_at(t).floats.index_of(id) >= 0
+          t += 1
+        end
+        -1
+      end
+
       # The number of windows over every tab page.
       #: () -> Integer
       def total_windows

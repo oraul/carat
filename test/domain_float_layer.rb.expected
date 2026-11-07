@@ -1,0 +1,27 @@
+ok   a bordered box sits at its offset, the text one cell inside
+ok   a cursor offset counts from the anchor cell
+ok   a box larger than the area is cut to it and moved in
+ok   a box past the bottom right corner moves up and left
+ok   an area too small for the border keeps a one-cell text area and overflows it
+ok   editor is an anchor
+ok   cursor is an anchor
+ok   window is not
+ok   no rows
+ok   no columns
+ok   a negative z
+ok   a z past the top
+ok   moving keeps the size
+ok   lower z first, a later float above an earlier one of its z
+ok   entering focuses the new float
+ok   a float added below keeps the focus on its float
+ok   closing the focused topmost float gives the focus back
+ok   the topmost is gone
+ok   a float is entered by its id
+ok   closing a float below keeps the focus
+ok   an unknown id is refused
+ok   leaving gives the focus to the layout
+ok   moving changes the offset
+ok   a layer holds sixteen floats
+ok   the focused float is the current window and is found by its id
+ok   focusing a leaf leaves the float
+domain_float_layer: 26 passed, 0 failed

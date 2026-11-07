@@ -323,18 +323,22 @@ Rules: the visual keys whose meaning differs are `visual.*` actions; motions bin
 
 What: the split layout per tab page, the `<C-w>` commands, scrolling a window, tab pages, the buffer list commands, and their ex commands.
 
-Flow: `WindowHandler` (`<C-w>` keys, equalizing itself) and `WindowCommandHandler` (`:sp`, `:vs`, `:new`, `:vnew`, `:close`, `:only`) run `SplitWindow`, `CloseWindow`, `CloseOtherWindows`, and `FocusWindow` with a `FocusRequest`; `ScrollHandler` (`<C-f> <C-b> <C-d> <C-u> <C-e> <C-y> zt zz zb <PageDown> <PageUp>`) runs `ScrollWindow` with a `ScrollRequest`, which moves `Window#top` and the cursor; `TabHandler` (`gt`, `gT`) and `TabCommandHandler` (the `:tab*` commands) run `OpenTab`, `CloseTab`, `CloseOtherTabs`, and `SwitchTab` with a `TabRequest`; `BufferCommandHandler` runs `ListBuffers`, `SwitchBuffer` with a `BufferRequest`, and `DeleteBuffer` over `BufferList`. They change `Layout` (`split`, `split_edge`, `close`, `neighbour`, `equalize`) in the current `TabPage` and `TabList`; `BufferList#close_window` lets go of buffers. `ArrangeView#call` runs after every key and before every render: `Layout#arrange` for the screen size and every window scrolled to its cursor.
+Flow: `WindowHandler` (`<C-w>` keys, equalizing itself) and `WindowCommandHandler` (`:sp`, `:vs`, `:new`, `:vnew`, `:close`, `:only`) run `SplitWindow`, `CloseWindow`, `CloseOtherWindows`, and `FocusWindow` with a `FocusRequest`; `ScrollHandler` (`<C-f> <C-b> <C-d> <C-u> <C-e> <C-y> zt zz zb <PageDown> <PageUp>`) runs `ScrollWindow` with a `ScrollRequest`, which moves `Window#top` and the cursor; `TabHandler` (`gt`, `gT`) and `TabCommandHandler` (the `:tab*` commands) run `OpenTab`, `CloseTab`, `CloseOtherTabs`, and `SwitchTab` with a `TabRequest`; `BufferCommandHandler` runs `ListBuffers`, `SwitchBuffer` with a `BufferRequest`, and `DeleteBuffer` over `BufferList`. They change `Layout` (`split`, `split_edge`, `close`, `neighbour`, `equalize`) in the current `TabPage` and `TabList`; `BufferList#close_window` lets go of buffers. `ArrangeView#call` runs after every key and before every render: `Layout#arrange` for the screen size, every window scrolled to its cursor, then each float of the `FloatLayer` placed and scrolled. A focused float is `TabPage#window`; `FocusWindow` leaves it, `CloseWindow` and `Quit` close it, and `FloatHandler` (normal `<Esc>`) runs `CloseFloat` on the topmost.
 
 Files:
 
 - `carat/domain/window.rb`: `Window` record (id, buffer, cursor, scroll, rectangle, fixed width, visual anchor, last selection); `show`, `copy_from`, `gutter_width`, `scroll_to_row`, `scroll_top_to`, `max_top`, `margin` (the clamp and scrolloff cap `ArrangeView` and `ScrollWindow` share), `scroll_to_col`.
 - `carat/domain/layout_node.rb`: `LayoutNode`; `leaf?`.
 - `carat/domain/layout.rb`: `Layout`, a flat node table; `split`, `split_edge`, `close`, `leaves`, `leaf_of`, `neighbour`, `equalize`, `arrange`, `number_of`, `first_leaf`, `fixed_width?`.
-- `carat/domain/tab_page.rb`: `TabPage`; `window`, `window_count`, `focus`, `previous?`.
-- `carat/domain/tab_list.rb`: `TabList`; `tab`, `window`, `add_tab`, `remove_tab`, `next_tab`, `previous_tab`, `adopt`, `window_tab`, `total_windows`, `shown?`, `windows_showing`, `focus_buffer`, `modified_in_windows`, `clamp_cursors`.
+- `carat/domain/tab_page.rb`: `TabPage` with its `FloatLayer`; `window` (the focused float first), `layout_window`, `window_count`, `focus` (leaves a float), `previous?`.
+- `carat/domain/float_spec.rb`: `FloatSpec` (anchor, offset, size, border, title, z); `edge`, `moved`, `refusal`.
+- `carat/domain/float_window.rb`: `FloatWindow` (a window and its spec); `place` clamps the box to the screen, `box_top`, `box_bottom`, `box_left`, `box_right`.
+- `carat/domain/float_layer.rb`: `FloatLayer`, a tab page's floats by z with the focused index, at most 16; `add`, `close`, `close_top`, `close_focused`, `enter`, `leave`, `move`.
+- `carat/domain/tab_list.rb`: `TabList`; `tab`, `window`, `add_tab`, `remove_tab`, `next_tab`, `previous_tab`, `adopt`, `window_tab`, `float_tab`, `total_windows`, `shown?`, `windows_showing`, `focus_buffer`, `modified_in_windows`, `clamp_cursors`.
 - `carat/use_cases/arrange_view.rb`: `ArrangeView#call`; the top row goes to the buffer tabs when `BufferList#tab_row?`.
 - `carat/use_cases/windows/split_window.rb`: `SplitWindow#call`; every new window gets its id.
 - `carat/use_cases/windows/open_side_window.rb`: `OpenSideWindow#call`, a plugin's fixed-width side window.
+- `carat/use_cases/windows/open_float.rb`, `carat/use_cases/windows/close_float.rb`: `OpenFloat#call` (the id, the layer, enter), `CloseFloat#call` (the topmost for 0, else by id in any tab page).
 - `carat/use_cases/windows/close_window.rb`, `carat/use_cases/windows/close_other_windows.rb`: `call`.
 - `carat/use_cases/windows/focus_window.rb`: `FocusWindow#call`; `carat/use_cases/windows/focus_request.rb`: `FocusRequest` (target, count); `steps`.
 - `carat/use_cases/windows/scroll_window.rb`: `ScrollWindow#call`, the page, half-page, line, and `zt zz zb` scrolls of the current window, the cursor kept in view with scrolloff and its wanted column; `carat/use_cases/windows/scroll_request.rb`: `ScrollRequest` (target, count); `steps`.
@@ -342,6 +346,7 @@ Files:
 - `carat/use_cases/windows/switch_tab.rb`: `SwitchTab#call`; `carat/use_cases/windows/tab_request.rb`: `TabRequest`; `counted?`.
 - `carat/use_cases/actions/window_handler.rb`: `WindowHandler.register`.
 - `carat/use_cases/actions/tab_handler.rb`: `TabHandler.register`.
+- `carat/use_cases/actions/float_handler.rb`: `FloatHandler.register`, `float.close` (normal-mode `<Esc>`).
 - `carat/use_cases/actions/scroll_handler.rb`: `ScrollHandler.register`, the nine `scroll.*` actions, each a `ScrollRequest` target for `ScrollWindow`.
 - `carat/use_cases/ex/window_command_handler.rb`: `WindowCommandHandler.register`.
 - `carat/use_cases/ex/tab_command_handler.rb`: `TabCommandHandler.register`.
@@ -351,9 +356,9 @@ Files:
 - `carat/use_cases/buffers/delete_buffer.rb`: `DeleteBuffer#call(state, number, bang, typed)`, `:bd` in the order of Neovim's `do_buffer` (`E89`, `E516`).
 - `carat/use_cases/ex/buffer_command_handler.rb`: `BufferCommandHandler.register` (`:ls`, `:buffers`, `:files`, `:b[uffer]`, `:bn[ext]`, `:bp[revious]`, `:bN[ext]`, `:bd[elete]`), the number and count arguments.
 
-Tests: `test/domain_layout.rb`, `test/domain_tab_list.rb`, `test/use_cases_arrange_view.rb`, `test/editor_windows.rb`, `test/editor_tabs.rb`, `test/editor_scroll.rb`, `test/editor_buffers.rb`.
+Tests: `test/domain_layout.rb`, `test/domain_tab_list.rb`, `test/use_cases_arrange_view.rb`, `test/editor_windows.rb`, `test/editor_tabs.rb`, `test/editor_scroll.rb`, `test/editor_buffers.rb`, `test/domain_float_layer.rb`.
 
-Designs: `windows-and-splits` (all Decisions), `buffer-list` (all Decisions), `render-core` (ArrangeView and the screen size), `use-case-boundaries` (Variants).
+Designs: `windows-and-splits` (all Decisions), `buffer-list` (all Decisions), `render-core` (ArrangeView and the screen size), `use-case-boundaries` (Variants), `floating-windows` (all Decisions).
 
 Rules: CLAUDE.md Coding conventions (variants through one `call`, as a `Data` request when they carry a count).
 

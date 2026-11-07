@@ -234,6 +234,33 @@ module Carat
         @windows.scratch_window(@name, title)
       end
 
+      # Returns a WindowResponse.
+      # @rbs options: PluginApi::FloatOptions
+      # @rbs lines: Array[String]
+      def open_float(options, lines)
+        why = refusal
+        return PluginApi::WindowResponse.failure(why) unless why.empty?
+        @windows.open_float(@name, options, lines)
+      end
+
+      # Returns a Response.
+      # @rbs window: Integer
+      # @rbs row: Integer
+      # @rbs col: Integer
+      def move_float(window, row, col)
+        why = refusal
+        return PluginApi::Response.failure(why) unless why.empty?
+        @windows.move_float(@name, window, row, col)
+      end
+
+      # Returns a Response.
+      # @rbs window: Integer
+      def close_float(window)
+        why = refusal
+        return PluginApi::Response.failure(why) unless why.empty?
+        @windows.close_float(@name, window)
+      end
+
       # Returns a Response.
       # @rbs root: String
       # @rbs path: String
