@@ -369,6 +369,26 @@ module LintTest
     ""
   end
 
+  # Why a line names a member or a keyword like a predicate, or "": an
+  # attribute, a Struct or Data member, or a def's keyword parameter
+  # starting with get_, is_, or has_, as the method rule refuses for defs.
+  def self.member_problem(stripped)
+    reason = "a member or keyword is named for its value, not with get_, is_, or has_"
+    if stripped.match?(/\Aattr_(reader|writer|accessor) /) || stripped.include?("< Struct.new(") || stripped.include?("< Data.define(")
+      declared = stripped.split("#:")[0].to_s
+      return reason if declared.match?(/:(get|is|has)_[a-z0-9_]/)
+      return ""
+    end
+    return "" unless stripped.start_with?("def ")
+    open = stripped.index("(")
+    return "" if open.nil?
+    inner = stripped[open + 1, stripped.length - open - 1].split(")")[0].to_s
+    inner.split(",").each do |param|
+      return reason if param.strip.match?(/\A(get|is|has)_[a-z0-9_]*:/)
+    end
+    ""
+  end
+
   # ------------------------------------------------------------ records
   #
   # Every record is built with keyword arguments. A Struct record is
@@ -583,6 +603,140 @@ module LintTest
     problems
   end
 
+  # ------------------------------------------------------------- ports
+  #
+  # The port table of docs/architecture.md section 6 names every method of
+  # every port under carat/ports/, and only those: it is the contract an
+  # agent reads.
+  ARCHITECTURE = "docs/architecture.md"
+
+  # The rows of the port table: the port's name, then the method names the
+  # code spans of its second cell give, each cut at its parenthesis; a span
+  # that is no method name (a value, a constant) is left out.
+  def self.port_rows(text)
+    rows = []
+    inside = false
+    text.each_line do |line|
+      stripped = line.strip
+      inside = stripped.start_with?("## 6. ") if stripped.start_with?("## ")
+      next unless inside && stripped.start_with?("| `")
+      cells = stripped.split("|")
+      row = [cells[1].to_s.delete("`").strip]
+      top_spans(cells[2].to_s).each do |span|
+        name = span.split("(")[0].to_s.strip
+        row << name if name.match?(/\A[a-z_][a-z0-9_]*[?!=]?\z/)
+      end
+      rows << row
+    end
+    rows
+  end
+
+  # The code spans of a table cell outside the parentheses of its prose,
+  # so a parameter a note names is no method.
+  def self.top_spans(cell)
+    spans = []
+    depth = 0
+    inside = false
+    current = ""
+    cell.each_char do |char|
+      if char == "`"
+        spans << current if inside && depth == 0
+        inside = !inside
+        current = ""
+      elsif inside
+        current += char
+      elsif char == "("
+        depth += 1
+      elsif char == ")" && depth > 0
+        depth -= 1
+      end
+    end
+    spans
+  end
+
+  # One line per port without a row, per method the row misses, and per
+  # method the row names that the port does not define; a port is its
+  # name, then its methods.
+  def self.port_problems(ports, rows)
+    problems = []
+    ports.each do |port|
+      name = port[0].to_s
+      listed = []
+      rows.each { |row| listed = row if row[0].to_s == name }
+      if listed.empty?
+        problems << "#{ARCHITECTURE} section 6 has no row for #{name}"
+        next
+      end
+      i = 1
+      while i < port.length
+        problems << "#{name}##{port[i]} is missing from the port table of #{ARCHITECTURE} section 6" unless listed.include?(port[i].to_s)
+        i += 1
+      end
+      i = 1
+      while i < listed.length
+        problems << "the port table of #{ARCHITECTURE} section 6 names #{name}##{listed[i]}, which #{name} does not define" unless port.include?(listed[i].to_s)
+        i += 1
+      end
+    end
+    problems
+  end
+
+  # ----------------------------------------------------------- holders
+  #
+  # A class the composition root keeps in a reader keeps every shared
+  # object it stores (one of a type the assembly keeps in a reader) in a
+  # reader too, and the assembly test checks each such reader by identity,
+  # naming it after its holder: .holder.reader.
+  ASSEMBLY = "carat/adapters/editor_assembly.rb"
+  ASSEMBLY_TEST = "test/adapters_assembly.rb"
+
+  # The typed readers of a text, each its name and its bare type, from
+  # attr_reader lines of one name and a trailing #: type.
+  def self.typed_readers(text)
+    readers = []
+    text.each_line do |line|
+      stripped = line.strip
+      next unless stripped.start_with?("attr_reader :") && stripped.include?("#:")
+      name = stripped.split("#:")[0].to_s.sub("attr_reader :", "").strip
+      next if name.include?(",")
+      readers << [name, stripped.split("#:")[1].to_s.strip.split("::").last.to_s]
+    end
+    readers
+  end
+
+  # One line per shared keyword the holder's text stores without a reader
+  # and per shared reader the assembly test's text never names after the
+  # holder.
+  def self.holder_problems(holder, text, shared, named)
+    problems = []
+    readers = typed_readers(text)
+    reader_names = []
+    readers.each { |pair| reader_names << pair[0].to_s }
+    keywords = []
+    text.each_line do |line|
+      stripped = line.strip
+      next unless stripped.start_with?("def initialize(")
+      inner = stripped[15, stripped.length - 15].split(")")[0].to_s
+      inner.split(",").each { |param| keywords << param.split(":")[0].to_s.strip }
+    end
+    keywords.each do |keyword|
+      next if reader_names.include?(keyword) || !text.include?("@#{keyword} = #{keyword}\n")
+      text.each_line do |line|
+        stripped = line.strip
+        next unless stripped.start_with?("# @rbs @#{keyword}: ")
+        type = stripped.split(": ")[1].to_s.strip.split("::").last.to_s
+        problems << "#{holder} stores the shared #{type} #{keyword} without a reader" if shared.include?(type)
+      end
+    end
+    readers.each do |pair|
+      reader = pair[0].to_s
+      type = pair[1].to_s
+      next unless shared.include?(type)
+      problems << "#{ASSEMBLY_TEST} never checks #{holder}.#{reader}, a shared #{type}" unless named.include?(".#{holder}.#{reader}")
+    end
+    problems
+  end
+
   def self.main
     t = Carat::Testing.new("lint")
 
@@ -701,6 +855,7 @@ module LintTest
           problem = method_problem(path, stripped, returns, text)
           problem = constructor_problem(stripped) if problem.empty? && keywords
         end
+        problem = member_problem(stripped) if problem.empty?
         violations << "#{path}:#{i + 1}: #{problem}" unless problem.empty?
       end
     end
@@ -772,6 +927,35 @@ module LintTest
       end
     end
 
+    # The port table names every port's methods, and only those.
+    ports = []
+    Dir.glob("carat/ports/*.rb").sort.each do |path|
+      expected = expected_declaration(path)
+      next if expected.empty?
+      name = expected[1].to_s
+      port = [name]
+      defs_of(File.read(path).to_s, "class #{name}").each { |method| port << method.to_s unless method.to_s == "initialize" }
+      ports << port
+    end
+    port_problems(ports, port_rows(File.read(ARCHITECTURE).to_s)).each { |problem| violations << problem }
+
+    # Every holder the assembly keeps reads its shared objects out, and the
+    # assembly test checks each one; the test calls the plugin host host.
+    assembly = typed_readers(File.read(ASSEMBLY).to_s)
+    shared = []
+    assembly.each { |pair| shared << pair[1].to_s }
+    homes = {}
+    Dir.glob("carat/**/*.rb").sort.each do |path|
+      expected = expected_declaration(path)
+      homes[expected[1].to_s] = path unless expected.empty?
+    end
+    named = File.read(ASSEMBLY_TEST).to_s.gsub("host.", "a.plugins.")
+    assembly.each do |pair|
+      home = homes[pair[1].to_s]
+      next if home.nil?
+      holder_problems(pair[0].to_s, File.read(home.to_s).to_s, shared, named).each { |problem| violations << "#{home}: #{problem}" }
+    end
+
     # The code map covers every file of the five roots and names no missing one.
     map_problems(map_files, map_spans(File.read(MAP).to_s)).each { |problem| violations << problem }
 
@@ -819,6 +1003,14 @@ module LintTest
     t.assert_equal(["", "constants are upper snake case", ""], [constant_problem("MAX_DEPTH = 4"), constant_problem("MaxDepth = 4"), constant_problem("x = MAX_DEPTH")], "the constant rule")
     t.assert_equal(["", "cls is an unclear abbreviation", "a predicate ends in ? instead of starting with get_, is_, or has_", "a predicate returns bool", "a method returning bool is a predicate ending in ?, or a command listed in BOOL_COMMANDS", "", "child! has no safe twin child", "", "a setter of one value is name=, not set_name", "", "an alternate constructor is a from_ class method", "", "method names are snake_case"], [method_problem("x.rb", "def char_class(big)", "Integer", ""), method_problem("x.rb", "def cls(big)", "Integer", ""), method_problem("x.rb", "def is_open", "bool", ""), method_problem("x.rb", "def open?", "Integer", ""), method_problem("x.rb", "def open", "bool", ""), method_problem("x.rb", "def pump(state)", "bool", ""), method_problem("x.rb", "def child!(code)", "KeymapNode", "def child!(code)\n"), method_problem("x.rb", "def save!", "void", "def save\ndef save!\n"), method_problem("x.rb", "def set_root(path)", "void", ""), method_problem("x.rb", "def set_lines(from, to, lines)", "void", ""), method_problem("x.rb", "def self.build(keymaps, leader)", "Keymap", ""), method_problem("x.rb", "def self.from_config(keymaps, leader)", "Keymap", ""), method_problem("x.rb", "def readLine", "String", "")], "the method name rules")
     t.assert_equal(["", "a constructor takes keyword arguments", "", ""], [constructor_problem("def initialize(actions:, files:)"), constructor_problem("def initialize(actions, files)"), constructor_problem("def initialize(store: Store.new)"), constructor_problem("def call(state, command)")], "the constructor rule")
+    member = "a member or keyword is named for its value, not with get_, is_, or has_"
+    t.assert_equal([member, member, member, member, "", "", "", ""], [member_problem("attr_reader :has_text #: bool"), member_problem("class Mark < Struct.new(:row, :is_open, keyword_init: true)"), member_problem("class Pair < Data.define(:get_x)"), member_problem("def initialize(row:, has_x:)"), member_problem("class LastSubstitute < Struct.new(:pattern, :replacement_kept, keyword_init: true)"), member_problem("def initialize(history:, actions:)"), member_problem("def find(is_x, count)"), member_problem("attr_reader :text #: String")], "the member and keyword name rule")
+    table = "## 6. Ports\n\n| Port | Methods |\n| --- | --- |\n| `ClockPort` | `now`, `sleep(seconds)` returning `Time` or `\"\"` |\n| `FilePort` | `read(path)` (at most `limit` bytes), `gone` |\n\n## 7. Next\n\n| `SignalPort` | `install` |\n"
+    t.assert_equal([["ClockPort", "now", "sleep"], ["FilePort", "read", "gone"]], port_rows(table), "the port table rows read the method spans of section 6")
+    t.assert_equal(["FilePort#write is missing from the port table of docs/architecture.md section 6", "the port table of docs/architecture.md section 6 names FilePort#gone, which FilePort does not define", "docs/architecture.md section 6 has no row for SignalPort"], port_problems([["ClockPort", "now", "sleep"], ["FilePort", "read", "write"], ["SignalPort", "install"]], port_rows(table)), "the port table rule")
+    holder = "class X\n  attr_reader :clock #: Ports::ClockPort\n  attr_reader :feed #: Domain::BufferFeed\n  attr_reader :depth #: Integer\n  # @rbs @actions: ActionTable\n  # @rbs @cache: Domain::LineCache\n  def initialize(actions:, clock:, feed:, cache:, depth:)\n    @actions = actions\n    @cache = cache\n"
+    t.assert_equal(["dispatcher stores the shared ActionTable actions without a reader", "test/adapters_assembly.rb never checks dispatcher.feed, a shared BufferFeed"], holder_problems("dispatcher", holder, ["ActionTable", "ClockPort", "BufferFeed"], "strangers(a.clock, [[\"dispatcher\", a.dispatcher.clock]])"), "the shared holder rule")
+    t.assert_equal([["clock", "ClockPort"], ["depth", "Integer"]], typed_readers("attr_reader :clock #: Ports::ClockPort\nattr_reader :a, :b #: Integer\nattr_reader :depth #: Integer\nattr_reader :plain\n"), "typed_readers reads one-name readers with a type")
     t.assert_equal(["", "only carat/doubles/ and carat/test_support.rb may require a test double", "only carat/doubles/ and carat/test_support.rb may require a test double", "", "", ""], [double_require_problem("carat/doubles/editor_harness.rb", "carat/doubles/fake_terminal.rb"), double_require_problem("carat.rb", "carat/doubles/fake_terminal.rb"), double_require_problem("bin/carat.rb", "carat/doubles/memory_files.rb"), double_require_problem("carat/test_support.rb", "carat/doubles/manual_signals.rb"), double_require_problem("carat/adapters/editor_assembly.rb", "carat/use_cases/move.rb"), double_require_problem("test/editor_normal.rb", "carat/doubles/fake_terminal.rb")], "the double require rule")
     t.assert_equal(false, File.read("carat.rb").include?("doubles/"), "the production require graph names no double")
     t.assert_equal(["", "a Struct record is declared with keyword_init: true", ""], [struct_problem("class Cursor < Struct.new(:row, :col, keyword_init: true)"), struct_problem("class Cursor < Struct.new(:row, :col)"), struct_problem("class Position < Data.define(:row, :col)")], "the keyword_init rule")

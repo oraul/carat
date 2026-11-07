@@ -10,6 +10,11 @@ ok   the class name rules
 ok   the constant rule
 ok   the method name rules
 ok   the constructor rule
+ok   the member and keyword name rule
+ok   the port table rows read the method spans of section 6
+ok   the port table rule
+ok   the shared holder rule
+ok   typed_readers reads one-name readers with a type
 ok   the double require rule
 ok   the production require graph names no double
 ok   the keyword_init rule
@@ -24,4 +29,4 @@ ok   the code map rule
 ok   the code map rule reads files in subdirectories and no directory
 ok   no lint violations
 ok   every method and attribute has an inline RBS signature
-lint: 26 passed, 0 failed
+lint: 31 passed, 0 failed
