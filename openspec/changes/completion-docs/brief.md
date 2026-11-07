@@ -1,0 +1,3 @@
+# Brief
+
+completion-docs: docs/queue.md item 1 as the planner wrote it (T5 user request, estimated medium): the highlighted completion item's documentation in a float beside the list, fetched lazily through completionItem/resolve when the selection settles, at most one request per settled item, markdown shown as plain styled text, the text untrusted (escape sequences stripped, size and nesting capped), closed with the list. Continuous loop; features come next under the one-pipeline-per-three-features rule, since the last three changes were pipeline work, so the main session moves quick-docs ahead of pinned-main. Security review is never skipped.
