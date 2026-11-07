@@ -75,6 +75,13 @@ module EditorLspTest
       h.type(":LspStart<CR>")
       h.wait
       return "#{h.processes.spawned.join(",")} #{h.message}|#{h.assembly.status_slots.lsp_label}"
+    when "start after a crash"
+      h = editor("a.rb", true)
+      h.messages.push(Carat::Domain::ServiceMessage.new(handle: 1, kind: "exit", text: ""))
+      h.wait
+      h.type(":LspStart<CR>")
+      h.wait
+      return "#{h.processes.spawned.length} #{h.message}|#{h.assembly.status_slots.lsp_label}"
     when "start a text buffer"
       h = untrusted("b.txt")
       h.type(":LspStart<CR>")
@@ -112,6 +119,7 @@ module EditorLspTest
       ["an untrusted directory starts nothing and names :LspStart", "untrusted", "0|NORMAL  a.rb  ruby-lsp untrusted :LspStart  ruby  1:1  All"],
       [":LspStart starts the server in an untrusted directory", "start untrusted", "ruby-lsp |ruby-lsp starting"],
       [":LspStart leaves a running server alone", "start a running server", "ruby-lsp |ruby-lsp starting"],
+      [":LspStart starts the server again after a crash", "start after a crash", "2 |ruby-lsp starting"],
       [":LspStart on a buffer without a server", "start a text buffer", "No language server for this buffer|NORMAL  b.txt                              utf-8  1:1  All"],
       [":LspStart refuses arguments", "start arguments", "E488: Trailing characters: x|NORMAL  a.rb  ruby-lsp untrusted :LspStart  ruby  1:1  All"]
     ]) { |name| run(name) }

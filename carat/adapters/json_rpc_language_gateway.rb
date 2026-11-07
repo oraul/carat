@@ -80,8 +80,10 @@ module Carat
 
       # Starts the current buffer's server when none runs for its
       # language, in any directory: the explicit start an untrusted
-      # directory waits for. Answers the message to show, "" when a server
-      # starts or already runs.
+      # directory waits for. A server that crashed or was stopped (handle
+      # 0) runs no more: its entry is dropped and a new one launched.
+      # Answers the message to show, "" when a server starts or already
+      # runs.
       # @rbs state: Domain::EditorState
       def start(state)
         language = state.buffer.filetype
@@ -90,6 +92,10 @@ module Carat
           return "No language server for this buffer"
         end
         server = server_for(language)
+        if !server.nil? && server.handle == 0
+          forget(language)
+          server = nil
+        end
         if server.nil?
           @refused.delete(language)
           server = launch(language)
@@ -159,6 +165,19 @@ module Carat
       end
 
       private
+
+      # Drops a language's server entry, which runs no more.
+      #: (String) -> void
+      def forget(language)
+        i = 0
+        while i < @servers.length
+          if server_at(i).language == language
+            @servers.delete_at(i)
+            return
+          end
+          i += 1
+        end
+      end
 
       # The server at an index, typed: the list is Array[untyped].
       #: (Integer) -> Domain::LanguageServer

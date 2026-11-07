@@ -38,11 +38,15 @@ A language server runs the project's own code, so in a working directory under n
 - **THEN** no process is started
 
 ### Requirement: :LspStart starts the current buffer's server
-`:LspStart` SHALL start the current buffer's server when none runs for its file type, whether or not the directory is trusted, and SHALL leave a running server alone. With no server configured for the current buffer it SHALL report so; arguments SHALL be refused.
+`:LspStart` SHALL start the current buffer's server when none runs for its file type, a crashed or stopped server counting as none, whether or not the directory is trusted, and SHALL leave a running server alone. With no server configured for the current buffer it SHALL report so; arguments SHALL be refused.
 
 #### Scenario: :LspStart in an untrusted directory
 - **WHEN** `a.rb` is opened in an untrusted directory and `:LspStart` is entered
 - **THEN** `ruby-lsp` is started and the slot reads "ruby-lsp starting"
+
+#### Scenario: :LspStart after a crash
+- **WHEN** the server of `a.rb` ended on its own and `:LspStart` is entered
+- **THEN** a new `ruby-lsp` process is started and the slot reads "ruby-lsp starting"
 
 #### Scenario: :LspStart on a text file
 - **WHEN** `b.txt` is the current buffer and `:LspStart` is entered
