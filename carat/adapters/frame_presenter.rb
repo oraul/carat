@@ -942,6 +942,24 @@ module Carat
         end
       end
 
+      # The message of the diagnostic shown on the cursor's line of the
+      # window, in its severity's group; nothing for none.
+      #: (Domain::Frame, Integer, Domain::Window) -> void
+      def paint_diagnostic(frame, frame_row, window)
+        diagnostic = window.buffer.diagnostic_at(window.cursor.row)
+        return if diagnostic.nil?
+        frame.put(frame_row, 0, diagnostic.message, FramePresenter.diagnostic_group(diagnostic.severity))
+      end
+
+      # The highlight group of a diagnostic severity.
+      #: (Integer) -> Integer
+      def self.diagnostic_group(severity)
+        return Domain::Highlight::DIAGNOSTIC_ERROR if severity == 1
+        return Domain::Highlight::DIAGNOSTIC_WARN if severity == 2
+        return Domain::Highlight::DIAGNOSTIC_INFO if severity == 3
+        Domain::Highlight::DIAGNOSTIC_HINT
+      end
+
       #: (Domain::Frame, Integer, Integer, Domain::EditorState) -> void
       def paint_message(frame, frame_row, cols, state)
         if state.mode == Domain::Mode::CMDLINE
@@ -962,6 +980,8 @@ module Carat
           frame.put(frame_row, 0, "-- VISUAL LINE --", Domain::Highlight::NORMAL)
         elsif state.mode == Domain::Mode::VISUAL_BLOCK
           frame.put(frame_row, 0, "-- VISUAL BLOCK --", Domain::Highlight::NORMAL)
+        elsif state.mode == Domain::Mode::NORMAL
+          paint_diagnostic(frame, frame_row, state.window)
         end
         showcmd = showcmd_text
         return if showcmd.empty?

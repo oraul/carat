@@ -91,4 +91,12 @@ ok   a scratch buffer is named by its title
 ok   a file buffer is named by its path
 ok   no signs at first
 ok   a sign is placed on its row
-domain_buffer: 93 passed, 0 failed
+ok   a row shows its most severe diagnostic over a plugin's sign
+ok   a row's diagnostic is the first of the most severe, one past the end is kept unmarked
+ok   no diagnostic outside the buffer
+ok   an inserted line moves the signs and the messages down
+ok   a deleted line moves them up
+ok   a later list replaces the earlier one
+ok   an empty list clears the diagnostics and keeps the plugin's signs
+ok   clearing removes the signs and the messages
+domain_buffer: 101 passed, 0 failed

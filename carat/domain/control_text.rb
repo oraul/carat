@@ -12,13 +12,27 @@ module Carat
       # The text without control characters, at most limit bytes.
       #: (String, Integer) -> String
       def self.strip(text, limit)
+        cleaned(text, limit, false)
+      end
+
+      # The text as one line: each line feed, carriage return, or tab is a
+      # space, every other control dropped, at most limit bytes.
+      #: (String, Integer) -> String
+      def self.line(text, limit)
+        cleaned(text, limit, true)
+      end
+
+      # The kept characters up to limit bytes, a break or tab as a space
+      # when spaces is true.
+      #: (String, Integer, bool) -> String
+      def self.cleaned(text, limit, spaces)
         out = +""
         len = text.bytesize
         i = 0
         while i < len
           b = text.getbyte(i).to_i
           size = b < 0x80 ? 1 : Utf8.size_at(text, i, len)
-          piece = piece_at(text, i, b, size)
+          piece = spaces && (b == 0x0A || b == 0x0D || b == 0x09) ? " " : piece_at(text, i, b, size)
           break if out.bytesize + piece.bytesize > limit
           out << piece
           i += size

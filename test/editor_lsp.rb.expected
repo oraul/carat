@@ -11,5 +11,9 @@ ok   :LspStart starts the server in an untrusted directory
 ok   :LspStart leaves a running server alone
 ok   :LspStart starts the server again after a crash
 ok   :LspStart on a buffer without a server
+ok   a published error is drawn as a sign, the cursor line's message, and a count
+ok   the sign and the message move with an inserted line
+ok   another buffer shows its own counts, none
+ok   a start after a crash clears the drawn diagnostics
 ok   :LspStart refuses arguments
-editor_lsp: 14 passed, 0 failed
+editor_lsp: 18 passed, 0 failed

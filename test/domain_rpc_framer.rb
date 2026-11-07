@@ -28,6 +28,10 @@ module DomainRpcFramerTest
     D::ControlText.strip(text.to_s, limit.to_i)
   end
 
+  def self.line(text, limit)
+    D::ControlText.line(text.to_s, limit.to_i)
+  end
+
   def self.main
     t = Carat::Testing.new("domain_rpc_framer")
 
@@ -67,6 +71,12 @@ module DomainRpcFramerTest
       ["the cut keeps whole characters", ["abé", 3], "ab"],
       ["the limit in bytes", ["abcdef", 4], "abcd"]
     ]) { |args| strip(args[0], args[1]) }
+
+    t.table([
+      ["breaks and tabs become spaces", ["expected end\nfound EOF\r\tx", 64], "expected end found EOF  x"],
+      ["an escape sequence still loses its escape", ["a\n\e[31mb", 32], "a [31mb"],
+      ["the cut counts the spaces", ["ab\ncd", 3], "ab "]
+    ]) { |args| line(args[0], args[1]) }
 
     t.finish
   end

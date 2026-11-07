@@ -10,7 +10,9 @@ require_relative "global_marks"
 require_relative "buffer_feed"
 require_relative "filetype"
 require_relative "syntax_cache"
+require_relative "diagnostic_list"
 require_relative "text_lines"
+require_relative "diagnostic"
 
 module Carat
   module Domain
@@ -48,9 +50,14 @@ module Carat
     # global_marks, the lines a running :global marked. last_cursor is
     # where the cursor was when a window last stopped showing the buffer,
     # where the next window to show it puts its cursor. icon is the icon
-    # name of its file, found with the filetype. A Struct record:
+    # name of its file, found with the filetype. diagnostics is the list a
+    # language server last published for the file, drawn as the signs of
+    # the DIAGNOSTIC_OWNER layer, and diagnostic_marks holds one mark per
+    # line (none while the list is empty), 0 or the 1-based index of the
+    # line's most severe diagnostic, moved with the lines as the signs
+    # are. A Struct record:
     # mutable, with a reader and a writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, keyword_init: true)
+    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks, keyword_init: true)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
@@ -72,6 +79,8 @@ module Carat
       # @rbs @global_marks: GlobalMarks
       # @rbs @last_cursor: Position
       # @rbs @icon: String
+      # @rbs @diagnostics: DiagnosticList
+      # @rbs @diagnostic_marks: Array[Integer]
 
       # Every member is stored through its writer after super(), so the
       # empty sign list takes the pinned type: Spinel's keyword super of a
@@ -103,6 +112,8 @@ module Carat
         self.global_marks = GlobalMarks.new
         self.last_cursor = Position.new(row: 0, col: 0)
         self.icon = Buffer.icon_of(path)
+        self.diagnostics = DiagnosticList.new
+        self.diagnostic_marks = []
       end
 
       # Whether an edit changed the text since the last load, reload, or
@@ -206,6 +217,11 @@ module Carat
 
       # ------------------------------------------------------------- signs
 
+      # The sign layer of the diagnostics: a dot no plugin name has, and a
+      # priority below every plugin's position, so it wins on a shared row.
+      DIAGNOSTIC_OWNER = "lsp.diagnostics"
+      DIAGNOSTIC_PRIORITY = -1
+
       # Whether any sign is placed on the buffer.
       #: () -> bool
       def signs?
@@ -253,6 +269,61 @@ module Carat
           i += 1
         end
         0
+      end
+
+      # Shows a language server's diagnostics for the file: keeps the list,
+      # marks each row inside the buffer with its most severe diagnostic
+      # (the lowest severity number, the first on a tie), and places that
+      # one's glyph, glyphs[severity - 1], as the row's diagnostic sign.
+      #: (DiagnosticList, Array[String]) -> void
+      def set_diagnostics(list, glyphs)
+        clear_diagnostics
+        return if list.empty?
+        marks = []
+        n = lines.length
+        i = 0
+        while i < n
+          marks << 0
+          i += 1
+        end
+        k = 0
+        while k < list.count
+          diagnostic = list.at(k)
+          row = diagnostic.row
+          if row < n
+            mark = marks[row]
+            marks[row] = k + 1 if mark == 0 || diagnostic.severity < list.at(mark - 1).severity
+          end
+          k += 1
+        end
+        self.diagnostics = list
+        self.diagnostic_marks = marks
+        row = 0
+        while row < n
+          mark = marks[row]
+          place_sign(DIAGNOSTIC_OWNER, DIAGNOSTIC_PRIORITY, row, glyphs[list.at(mark - 1).severity - 1]) if mark > 0
+          row += 1
+        end
+        nil
+      end
+
+      # Shows no diagnostics: the list, the marks, and their signs go.
+      #: () -> void
+      def clear_diagnostics
+        self.diagnostics = DiagnosticList.new
+        self.diagnostic_marks = []
+        clear_signs(DIAGNOSTIC_OWNER)
+        nil
+      end
+
+      # The diagnostic shown on the row, nil for none.
+      #: (Integer) -> Diagnostic?
+      def diagnostic_at(row)
+        marks = diagnostic_marks
+        return nil if row < 0 || row >= marks.length
+        mark = marks[row]
+        return nil if mark == 0
+        diagnostics.at(mark - 1)
       end
 
       # The glyph shown on the row: the mark of the layer with the highest
@@ -626,8 +697,8 @@ module Carat
         sink.push(notice)
       end
 
-      # Moves every sign layer by an edit at row that replaced removed rows
-      # with inserted ones.
+      # Moves every sign layer, and the diagnostic marks, by an edit at row
+      # that replaced removed rows with inserted ones.
       #: (Integer, Integer, Integer) -> void
       def shift_signs(row, removed, inserted)
         i = 0
@@ -635,6 +706,7 @@ module Carat
           LineSplice.shift_marks(layer_at(i).marks, row, removed, inserted)
           i += 1
         end
+        LineSplice.shift_marks(diagnostic_marks, row, removed, inserted) unless diagnostic_marks.empty?
       end
 
       # head, then text, then tail, split into lines at each newline of

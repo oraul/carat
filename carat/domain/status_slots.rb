@@ -1,3 +1,5 @@
+require_relative "diagnostic_list"
+
 module Carat
   module Domain
     # What git and the language services report on the status bar, empty
@@ -50,6 +52,29 @@ module Carat
         return "#{name} #{CRASH_HINT}" if state == :crashed
         return "#{name} #{UNTRUSTED_HINT}" if state == :untrusted
         name
+      end
+
+      # Counts a buffer's diagnostics by severity into the four counts;
+      # answers whether a count changed.
+      #: (DiagnosticList) -> bool
+      def count_diagnostics(list)
+        counts = [0, 0, 0, 0, 0]
+        i = 0
+        while i < list.count
+          diagnostic = list.at(i)
+          if diagnostic.error?
+            counts[1] += 1
+          else
+            counts[diagnostic.severity] += 1
+          end
+          i += 1
+        end
+        return false if counts[1] == errors && counts[2] == warnings && counts[3] == infos && counts[4] == hints
+        self.errors = counts[1]
+        self.warnings = counts[2]
+        self.infos = counts[3]
+        self.hints = counts[4]
+        true
       end
 
       # Whether any diagnostics count is above zero.
