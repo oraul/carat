@@ -1615,3 +1615,33 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `tools-test` help line of the `Makefile` (line 355 at 594dd35) lists the shell tools but not the workflow helpers it now runs with node; `.claude/commands/review.md` (line 8) says the quality reviewer reviews the whole tree; the guard case of `tools/tools_test.sh` (line 1000) still uses `tmp/.review-quality` while the workflow names `tmp/.review-quality-N`. Quality advisories in `partial-results`.
 - Why it matters: `make help` and `/review` describe what no longer runs, and the guard case tests a path the workflow no longer uses.
 - Fix outline: add the workflows' pure helpers (node) to the help line, say the security reviewer and three quality starts over the code map areas in `review.md`, and use `tmp/.review-quality-1` in the guard case.
+
+## Fuzzy completion matching reuses letters and matches a word of underscores
+
+- Where: `Carat::Domain::FuzzyMatch` in `carat/domain/fuzzy_match.rb` (line 32 at 334d899), where each part's anchor is searched only after the previous part's anchor. Quality advisory in `completion`.
+- Why it matters: a later part can reuse letters the previous part already matched, so `fa_a` matches `file_a` with one `a`, and a typed word of only underscores matches every candidate, which fills the popup with noise.
+- Fix outline: start the next part's anchor search after the previous part's last matched byte and answer -1 when the pattern has no letters, with a table row for each in `test/domain_fuzzy_match.rb`.
+
+## The completion ranking table checks a copy of the ranking
+
+- Where: `ranked` in `test/domain_fuzzy_match.rb` (line 17 at 334d899) copies the insertion sort of `ShowCompletion#ranked` in `carat/use_cases/completion/show_completion.rb`. Quality advisory in `completion`.
+- Why it matters: the ranking table checks the test's copy, not the production order, so a change to `ShowCompletion`'s ranking passes the test unseen.
+- Fix outline: move the ranking into the domain (`FuzzyMatch.rank` or `CompletionMenu#rank`), call it from `ShowCompletion`, and point the table at it.
+
+## A multi-key keymap.completion line loads and never fires
+
+- Where: `completion_key?` in `carat/use_cases/handle_key.rb` (line 201 at 334d899) answers only a single-key `:match`, while `Keymap#add_checked` accepts any `keymap.completion` line. Quality advisory in `completion`.
+- Why it matters: a multi-key completion binding, or a single key that also starts a longer one, loads with no reported problem and silently does nothing, against the rule that every configuration problem is reported as `file:line: message`.
+- Fix outline: report such `keymap.completion` lines as `file:line` problems in `add_checked`, with a configuration test row.
+
+## Completion code style advisories
+
+- Where: `CompletionHandler.register` in `carat/use_cases/actions/completion_handler.rb` (line 45 at 334d899) repeats the five-keyword constructor five times; the `completion` keyword and reader of `HandleKey` in `carat/use_cases/handle_key.rb` (line 60) hold a `Domain::CompletionMenu` that the assembly and every use case call `completion_menu` or `menu`; `row_offset` in `carat/use_cases/completion/show_completion.rb` (line 145) subtracts an unexplained 2 from `screen_rows`; the `paint_float_row` comment in `carat/adapters/frame_presenter.rb` (line 466) still says the text is drawn in NormalFloat though a menu's rows are Pmenu and PmenuSel; the PageDown row of `test/editor_completion.rb` (line 81) asserts only the row and the closed popup. Quality advisories in `completion`.
+- Why it matters: the register and reader names differ from the style of their neighbours, the 2 and the comment mislead a reader of the layout and the paint path, and the PageDown row would pass with an empty word at column 0, so it does not show the not-typed branch ran.
+- Fix outline: loop over parallel names, variants, and descriptions arrays as `BufferHandler.register` does; rename the keyword and reader to `completion_menu`; name the reserved rows in a private constant or read the free rows from the layout area `ArrangeView` uses; say "its text in float_group's group"; assert the cursor column 2 and `h.completions.asked == 1` in the PageDown row as the cursor-binding row does.
+
+## Completion docs advisories
+
+- Where: `README.md` (line 63 at 334d899), where the raw-mode sentence explaining why Ctrl-S works moved to the end of the completion paragraph; the language-services area of `docs/codebase-map.md` (line 593) names only `test/domain_rpc_framer.rb` for `ControlText`, though `test/domain_fuzzy_match.rb` (line 267 of the map) also holds the `ControlText.plain`, `CompletionItem`, and `CompletionList` tables; the 5.3 bullet of `docs/architecture.md` (line 180) says these use cases answer an unavailable service with an empty response and a message, while completion with no ready source opens nothing and reports nothing. Quality advisories in `completion`.
+- Why it matters: the README sentence no longer follows the Ctrl-S sentence it explains, the map hides where the `ControlText.plain` table lives, and the architecture contradicts the completion spec (typing behaves as without completion).
+- Fix outline: put the raw-mode sentence back after "Ctrl-S saves ... stay in insert mode." and keep the completion paragraph on its own; name `test/domain_fuzzy_match.rb` for `ControlText.plain` in the language-services line or move those tables to a test named after them; say completion stays silent when its source is not ready, or state the `CompletionPort` route in the 5.1 completion bullet instead.
