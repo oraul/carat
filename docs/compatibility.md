@@ -230,6 +230,16 @@ A typed character opens the popup when the completion source is ready and the cu
 
 The selected item's documentation shows in a float beside the popup, as Neovim's `completeopt=popup` does: on its right, or its left without the room, at most 60 columns and 12 rows, markdown read as plain text, closed with the popup. A language server's item documented only through `completionItem/resolve` is resolved once the selection rests on it for 0.1 seconds, at most once per item of an answer (`editor_completion`, `adapters_server_completions`).
 
+### Parameter info
+
+Neovim shows signature help on request (`vim.lsp.buf.signature_help()`, `<C-s>` in insert mode since 0.11); Carat shows it as the common signature plugins do, with no key, and keeps `<C-s>` for saving.
+
+| Keys | Action name | Behavior | Test |
+| --- | --- | --- | --- |
+| `(`, `,` | none | Inserted; inside a call on the row, when the buffer's language server gives signature help, its signature shows in a one-row float above the cursor, the active parameter in `Visual` (Neovim's `LspSignatureActiveParameter` link), asked once typing pauses for 0.1 seconds | `adapters_signature` |
+| any key in the call | none | Asks again so the mark follows the cursor; the float closes past the call's `)`, before its `(`, on another row, window, or buffer, and on an empty answer | `adapters_signature` |
+| `<Esc>` | `mode.normal` | Leaves insert mode and closes the float | `adapters_signature` |
+
 ## Command-line mode
 
 | Keys | Action name | Behavior | Test |

@@ -754,7 +754,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The content gate skips files git treats as binary
 
-- Where: `tools/gates.sh` line 126 (`gate_content` reads `git log -p`, which prints no lines for a file with a NUL byte or one `.gitattributes` marks `-diff` or `binary`, and the merge gates run from the branch's checkout, so the branch can set them). Security Low (6) of `backup-secret-scan`.
+- Where: `tools/gates.sh` line 126 (`gate_content` reads `git log -p`, which prints no lines for a file with a NUL byte or one `.gitattributes` marks `-diff` or `binary`, and the merge gates run from the branch's checkout, so the branch can set them). Security Low (6) of `backup-secret-scan`; raised to periodic security Medium (7) at b0dd342 (`tools/gates.sh` line 179).
 - Why it matters: a committed secret in such a file passes the secret, URL, email, and model checks.
 - Fix outline: pass `--text` and `--no-textconv` to the `git log -p` scan, or refuse an added binary file and a `.gitattributes` change setting `diff`, `binary`, or `textconv` unless a reviewer allows it, with a `tools/tools_test.sh` case. Queued in `content-gate-gaps`.
 
@@ -1486,9 +1486,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## ControlText.cleaned is public with a flag argument
 
-- Where: `ControlText.cleaned` in `carat/domain/control_text.rb` (line 28 at 38d8c47), used only by `strip` and `line`; also `RAW_LIMIT` declared between methods (line 27 at 5722559) and the helpers `without_sequences`, `sequence_end`, and `string_end` left public. Quality advisory at `diagnostics-display`, periodic quality at 5722559.
+- Where: `ControlText.cleaned` in `carat/domain/control_text.rb` (line 28 at 38d8c47), used only by `strip` and `line`; also `RAW_LIMIT` declared between methods (line 27 at 5722559) and the helpers `sequence_end` and `string_end` left public (`without_sequences` is now called by `MarkdownText.rows`, line 34, so it stays public). Quality advisory at `diagnostics-display`, periodic quality at 5722559.
 - Why it matters: a public module function taking a bool flag invites callers outside the module to depend on a helper of its two entry points, and the other helpers and the constant's place read as API.
-- Fix outline: mark `cleaned`, `without_sequences`, `sequence_end`, and `string_end` `private_class_method`, and move `RAW_LIMIT` beside `REPLACEMENT` at the top.
+- Fix outline: mark `cleaned`, `sequence_end`, and `string_end` `private_class_method`, and move `RAW_LIMIT` beside `REPLACEMENT` at the top.
 
 ## Diagnostic marks moving on undo, redo, and reload have no test
 
@@ -1624,7 +1624,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Four use cases inline the tab width Options already answers
 
-- Where: `carat/use_cases/leave_insert.rb:69`, `carat/use_cases/insert_tab.rb:22`, `carat/use_cases/repeat_last.rb:105`, `carat/use_cases/arrange_view.rb:39` (periodic quality at 5722559), and `carat/adapters/frame_presenter.rb:174`, `carat/use_cases/visual/extend_visual.rb:54`, `carat/use_cases/dispatcher.rb:113` (periodic quality at cd87445).
+- Where: `carat/use_cases/leave_insert.rb:69`, `carat/use_cases/insert_tab.rb:22`, `carat/use_cases/repeat_last.rb:104` (at b0dd342), `carat/use_cases/arrange_view.rb:39` (periodic quality at 5722559), and `carat/adapters/frame_presenter.rb:174`, `carat/use_cases/visual/extend_visual.rb:54`, `carat/use_cases/dispatcher.rb:113` (periodic quality at cd87445).
 - Why it matters: `tabstop > 0 ? tabstop : 8` is copied seven times beside `Options#tab_width` (`carat/domain/options.rb:75`), so a rule change misses copies.
 - Fix outline: call `options.tab_width` in the seven and drop the inline copies.
 
@@ -1804,7 +1804,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## ProcessRunner compiles only through carat.rb's require order
 
-- Where: `carat/drivers/process_runner.rb` line 1 at cd87445 requires only the process port yet builds `Domain::RpcFramer` and `Domain::ServiceMessage`. Periodic quality at cd87445.
+- Where: `carat/drivers/process_runner.rb` line 1 at cd87445 requires only the process port yet builds `Domain::RpcFramer` and `Domain::ServiceMessage`. Periodic quality at cd87445; `carat/drivers/runtime_queue.rb` also builds `Domain::ServiceMessage` without requiring it, still present at b0dd342.
 - Why it matters: requiring the file alone fails, unlike DiskFiles, which requires its domain record.
 - Fix outline: require both domain files. Queued in `lsp-client-tidy`.
 
@@ -1882,9 +1882,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The gateway cancels a request in three copies
 
-- Where: `cancel_hover` in `carat/adapters/json_rpc_language_gateway.rb` line 663 at 78078ad, beside `cancel` and `cancel_resolve`. Quality advisory in `quick-docs`.
+- Where: `cancel_hover` in `carat/adapters/json_rpc_language_gateway.rb` line 663 at 78078ad, beside `cancel` and `cancel_resolve`. Quality advisory in `quick-docs`. `parameter-info` added the shared private `cancel_request(language, id)`, which its `cancel_signature` calls; the three older copies do not yet.
 - Why it matters: each looks up the server, sends `$/cancelRequest`, and zeroes the id, so a fix to one (a crashed server, a stale id) can miss the other two.
-- Fix outline: one private `cancel_request(language, id)` that the three call, with the hover, completion, and resolve cancellation rows in `test/adapters_hover.rb` and `test/adapters_server_completions.rb` unchanged.
+- Fix outline: call the existing `cancel_request(language, id)` from the three, with the hover, completion, and resolve cancellation rows in `test/adapters_hover.rb` and `test/adapters_server_completions.rb` unchanged.
 
 ## The documentation floats copy the widest-row loop
 
@@ -1987,3 +1987,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the labels `the last search, in the searches and the substitute` and `the search history, in the searches and the substitute` in `test/adapters_assembly.rb` lines 103 and 104 at 4f653d2. Two quality advisories in `implement-contracts`.
 - Why it matters: the rows now also check the command line, the prompt, and the frame presenter, so the labels mislead a reader of a failure.
 - Fix outline: shorten them to `the last search` and `the search history` and rewrite the snapshot with `make snapshots`.
+
+## Parameter info follows a call on one row only
+
+- Where: `FollowSignature` in `carat/use_cases/docs/follow_signature.rb` and `SignatureRequest.open_paren` in `carat/domain/signature_request.rb` (`parameter-info`): the call is the innermost `(` left open before the cursor on its row, scanned as plain bytes.
+- Why it matters: a call whose arguments span several rows closes the float at the first line break, and a `(` inside a string or comment can start a follow the server then answers empty.
+- Fix outline: keep following across rows while the server answers a signature (stop on an empty answer rather than on a row change), and skip strings and comments with the syntax cache's tokens when the buffer has them, with rows in `test/adapters_signature.rb`.
