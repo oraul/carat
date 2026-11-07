@@ -55,6 +55,8 @@ require_relative "../use_cases/files/quit"
 require_relative "../use_cases/files/quit_all"
 require_relative "../use_cases/windows/split_window"
 require_relative "../use_cases/windows/open_side_window"
+require_relative "../use_cases/windows/open_float"
+require_relative "../use_cases/windows/close_float"
 require_relative "../use_cases/windows/close_window"
 require_relative "../use_cases/windows/close_other_windows"
 require_relative "../use_cases/windows/focus_window"
@@ -110,6 +112,7 @@ require_relative "../use_cases/actions/selection_handler"
 require_relative "../use_cases/actions/command_line_handler"
 require_relative "../use_cases/actions/window_handler"
 require_relative "../use_cases/actions/tab_handler"
+require_relative "../use_cases/actions/float_handler"
 require_relative "../use_cases/actions/message_handler"
 require_relative "../use_cases/actions/history_handler"
 require_relative "../use_cases/actions/scroll_handler"
@@ -212,6 +215,8 @@ module Carat
       attr_reader :close_other_windows #: UseCases::CloseOtherWindows
       attr_reader :split_window #: UseCases::SplitWindow
       attr_reader :open_side_window #: UseCases::OpenSideWindow
+      attr_reader :open_float #: UseCases::OpenFloat
+      attr_reader :close_float #: UseCases::CloseFloat
       attr_reader :open_tab #: UseCases::OpenTab
       attr_reader :close_tab #: UseCases::CloseTab
       attr_reader :close_other_tabs #: UseCases::CloseOtherTabs
@@ -297,6 +302,8 @@ module Carat
         @close_other_windows = UseCases::CloseOtherWindows.new(buffers: @buffers)
         @split_window = UseCases::SplitWindow.new(open_file: @open_file, buffers: @buffers, tabs: @tabs)
         @open_side_window = UseCases::OpenSideWindow.new(buffers: @buffers, tabs: @tabs)
+        @open_float = UseCases::OpenFloat.new(tabs: @tabs)
+        @close_float = UseCases::CloseFloat.new(tabs: @tabs)
         @open_tab = UseCases::OpenTab.new(open_file: @open_file, buffers: @buffers, tabs: @tabs)
         @close_tab = UseCases::CloseTab.new(buffers: @buffers, tabs: @tabs)
         @close_other_tabs = UseCases::CloseOtherTabs.new(buffers: @buffers, tabs: @tabs)
@@ -308,7 +315,7 @@ module Carat
         @quit_all = UseCases::QuitAll.new(buffers: @buffers)
         focus_window = UseCases::FocusWindow.new
         scroll_window = UseCases::ScrollWindow.new
-        @plugins = UseCases::PluginHost.new(state: @state, buffers: @buffers, tabs: @tabs, input: @input, plugin_ui: @plugin_ui, files: files, open_file: @open_file, probe_path: @probe_path, split_window: @split_window, open_side_window: @open_side_window, open_tab: @open_tab, keymap: @keymap, leader: leader, runner: @runner)
+        @plugins = UseCases::PluginHost.new(state: @state, buffers: @buffers, tabs: @tabs, input: @input, plugin_ui: @plugin_ui, files: files, open_file: @open_file, probe_path: @probe_path, split_window: @split_window, open_side_window: @open_side_window, open_float: @open_float, close_float: @close_float, open_tab: @open_tab, keymap: @keymap, leader: leader, runner: @runner)
         i = 0
         while i < plugin_list.length
           @plugins.register(plugin_list[i])
@@ -358,6 +365,7 @@ module Carat
         UseCases::HistoryHandler.register(@actions, undo_step: @undo_step, redo_step: @redo_step, restore_line: UseCases::RestoreLine.new, travel_history: @travel_history, repeat_last: @repeat_last)
         UseCases::WindowHandler.register(@actions, split_window: @split_window, close_window: @close_window, close_other_windows: @close_other_windows, focus_window: focus_window, quit: @quit, tabs: @tabs)
         UseCases::TabHandler.register(@actions, switch_tab: @switch_tab)
+        UseCases::FloatHandler.register(@actions, close_float: @close_float)
         UseCases::ScrollHandler.register(@actions, scroll_window: scroll_window)
         UseCases::SubstituteHandler.register(@actions, substitute_lines: @substitute_lines)
         UseCases::FileHandler.register(@actions, save_file: @save_file, save_all: @save_all, quit_all: @quit_all)

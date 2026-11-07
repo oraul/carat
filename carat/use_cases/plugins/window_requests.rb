@@ -5,11 +5,16 @@ require_relative "../../domain/tab_list"
 require_relative "../../domain/buffer"
 require_relative "../../domain/keymap"
 require_relative "../../domain/position"
+require_relative "../../domain/float_spec"
+require_relative "../../domain/float_window"
+require_relative "../../domain/window"
 require_relative "../files/open_file"
 require_relative "../../ports/file_port"
 require_relative "../windows/split_window"
 require_relative "../windows/open_tab"
 require_relative "../windows/open_side_window"
+require_relative "../windows/open_float"
+require_relative "../windows/close_float"
 require_relative "boundary"
 require_relative "plugin_registry"
 
@@ -17,7 +22,9 @@ module Carat
   module UseCases
     # The window requests of the plugin API: scratch buffers in side
     # windows, focusing a window, opening a file in a window, in a split,
-    # or in a tab page, and the windows a plugin opens files in. Windows
+    # or in a tab page, the windows a plugin opens files in, and floats
+    # over the layout (OpenFloat, CloseFloat), which a plugin moves and
+    # closes only when it opened them. Windows
     # are addressed by id, 0 for the current one, in any tab page. The
     # rules are the core use cases': side windows go through
     # OpenSideWindow, files through OpenFile, SplitWindow, and OpenTab. The plugin link has checked that
@@ -35,11 +42,14 @@ module Carat
       attr_reader :open_side_window #: OpenSideWindow
       attr_reader :files #: Ports::FilePort
 
-      # open_file is also the name of a request, so it has no reader.
+      # open_file, open_float, and close_float are also the names of
+      # requests, so they have no reader.
       # @rbs @open_file: OpenFile
+      # @rbs @open_float: OpenFloat
+      # @rbs @close_float: CloseFloat
 
-      #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, registry: PluginRegistry, open_file: OpenFile, split_window: SplitWindow, open_tab: OpenTab, open_side_window: OpenSideWindow, files: Ports::FilePort) -> void
-      def initialize(state:, buffers:, tabs:, registry:, open_file:, split_window:, open_tab:, open_side_window:, files:)
+      #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, registry: PluginRegistry, open_file: OpenFile, split_window: SplitWindow, open_tab: OpenTab, open_side_window: OpenSideWindow, open_float: OpenFloat, close_float: CloseFloat, files: Ports::FilePort) -> void
+      def initialize(state:, buffers:, tabs:, registry:, open_file:, split_window:, open_tab:, open_side_window:, open_float:, close_float:, files:)
         @state = state
         @buffers = buffers
         @tabs = tabs
@@ -48,6 +58,8 @@ module Carat
         @split_window = split_window
         @open_tab = open_tab
         @open_side_window = open_side_window
+        @open_float = open_float
+        @close_float = close_float
         @files = files
       end
 
@@ -110,12 +122,19 @@ module Carat
         PluginApi::Response.success("", 0)
       end
 
-      # Makes the window current, switching to its tab page first.
+      # Makes the window current, switching to its tab page first; a
+      # float's window is entered.
       #: (String, Integer) -> PluginApi::WindowResponse
       def focus_window(name, id)
         target = window_or_current(id)
         tab_index = @tabs.window_tab(target)
-        return PluginApi::WindowResponse.failure("No window #{id}") if tab_index < 0
+        if tab_index < 0
+          tab_index = @tabs.float_tab(target)
+          return PluginApi::WindowResponse.failure("No window #{id}") if tab_index < 0
+          @tabs.tab_index = tab_index
+          @tabs.tab.floats.enter(target)
+          return PluginApi::WindowResponse.success("", target)
+        end
         focus_at(tab_index, target)
         PluginApi::WindowResponse.success("", target)
       end
@@ -207,7 +226,51 @@ module Carat
         PluginApi::WindowResponse.success("", leaf < 0 ? 0 : layout.window_at(leaf).id)
       end
 
+      # Opens a float over the current tab page showing a copy of the
+      # lines in a scratch buffer the plugin owns, outside the buffer list.
+      #: (String, PluginApi::FloatOptions, Array[String]) -> PluginApi::WindowResponse
+      def open_float(name, options, lines)
+        why = Domain::FloatSpec.refusal(options.anchor.to_s, options.height.to_i, options.width.to_i, options.z.to_i)
+        return PluginApi::WindowResponse.failure(why) unless why.empty?
+        buffer = Domain::Buffer.new(lines: Boundary.copied_lines(lines), path: nil, line_ending: "\n")
+        buffer.owner = name
+        title = String.new(options.title.to_s)
+        buffer.title = title
+        spec = Domain::FloatSpec.new(anchor: String.new(options.anchor.to_s), row: options.row.to_i, col: options.col.to_i, height: options.height.to_i, width: options.width.to_i, border: options.border == true, title: title, z: options.z.to_i)
+        float = Domain::FloatWindow.new(window: Domain::Window.new(buffer: buffer), spec: spec)
+        outcome = @open_float.call(@state, float, options.enter == true)
+        return PluginApi::WindowResponse.failure(outcome.message) unless outcome.ok
+        PluginApi::WindowResponse.success("", float.id)
+      end
+
+      #: (String, Integer, Integer, Integer) -> PluginApi::Response
+      def move_float(name, id, row, col)
+        index = own_float_tab(name, id)
+        return PluginApi::Response.failure("No float #{id}") if index < 0
+        @tabs.tab_at(index).floats.move(window_or_current(id), row, col)
+        PluginApi::Response.success("", 0)
+      end
+
+      #: (String, Integer) -> PluginApi::Response
+      def close_float(name, id)
+        return PluginApi::Response.failure("No float #{id}") if own_float_tab(name, id) < 0
+        outcome = @close_float.call(@state, window_or_current(id))
+        return PluginApi::Response.failure(outcome.message) unless outcome.ok
+        PluginApi::Response.success("", 0)
+      end
+
       private
+
+      # The index of the tab page holding the float with the id, 0 for the
+      # current window, when the plugin opened it; -1 otherwise.
+      #: (String, Integer) -> Integer
+      def own_float_tab(name, id)
+        target = window_or_current(id)
+        index = @tabs.float_tab(target)
+        return -1 if index < 0
+        floats = @tabs.tab_at(index).floats
+        floats.at(floats.index_of(target)).window.buffer.owner == name ? index : -1
+      end
 
       #: (Integer) -> Integer
       def window_or_current(id)
@@ -223,17 +286,22 @@ module Carat
       end
 
       # Runs the block with the leaf of that tab page standing as the
-      # current window, then puts the current tab page and window back.
+      # current window, a focused float left for it, then puts the
+      # current tab page, window, and float focus back.
       # @rbs skip
       def in_window(tab_index, leaf)
         state = @state
         tab = @tabs.tab_at(tab_index)
+        floats = tab.floats
         saved_tab = @tabs.tab_index
         saved_current = tab.current
+        saved_float = floats.focused? ? floats.focused.id : -1
         @tabs.tab_index = tab_index
+        floats.leave
         tab.current = leaf
         result = yield
         tab.current = saved_current
+        floats.enter(saved_float) if saved_float >= 0
         @tabs.tab_index = saved_tab
         result
       end

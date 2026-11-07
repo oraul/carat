@@ -136,7 +136,7 @@ module UseCasesPluginsTest
     split_window = Carat::UseCases::SplitWindow.new(open_file: open_file, buffers: buffers, tabs: tabs)
     open_side_window = Carat::UseCases::OpenSideWindow.new(buffers: buffers, tabs: tabs)
     open_tab = Carat::UseCases::OpenTab.new(open_file: open_file, buffers: buffers, tabs: tabs)
-    host = Carat::UseCases::PluginHost.new(state: state, buffers: buffers, tabs: tabs, input: Carat::Domain::InputState.new, plugin_ui: Carat::Domain::PluginUi.new, files: files, open_file: open_file, probe_path: probe_path, split_window: split_window, open_side_window: open_side_window, open_tab: open_tab, keymap: keymap, leader: " ", runner: ex)
+    host = Carat::UseCases::PluginHost.new(state: state, buffers: buffers, tabs: tabs, input: Carat::Domain::InputState.new, plugin_ui: Carat::Domain::PluginUi.new, files: files, open_file: open_file, probe_path: probe_path, split_window: split_window, open_side_window: open_side_window, open_float: Carat::UseCases::OpenFloat.new(tabs: tabs), close_float: Carat::UseCases::CloseFloat.new(tabs: tabs), open_tab: open_tab, keymap: keymap, leader: " ", runner: ex)
     save_file = Carat::UseCases::SaveFile.new(files: files, plugins: host)
     save_all = Carat::UseCases::SaveAll.new(save_file: save_file, buffers: buffers)
     quit = Carat::UseCases::Quit.new(buffers: buffers, tabs: tabs)
@@ -175,18 +175,18 @@ module UseCasesPluginsTest
     bad = Probe.new("probe", "3.0", [], ACTIONS, {}, [])
     rig = setup([bad], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 3.0, the host has 2.2"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
-    t.assert_equal(["plugin probe: needs API 3.0, the host has 2.2"], host.errors, "the refusal is recorded")
+    t.assert_equal([false, "needs API 3.0, the host has 2.3"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
+    t.assert_equal(["plugin probe: needs API 3.0, the host has 2.3"], host.errors, "the refusal is recorded")
     t.assert_equal([], bad.log, "a refused plugin is not activated")
 
     minor = Probe.new("probe", "2.7", [], ACTIONS, {}, [])
     rig = setup([minor], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 2.7, the host has 2.2"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused")
+    t.assert_equal([false, "needs API 2.7, the host has 2.3"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused")
     older = Probe.new("probe", "1.3", [], ACTIONS, {}, [])
     rig = setup([older], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 1.3, the host has 2.2"], [host.enabled?("probe"), host.reason("probe")], "an older major version is refused")
+    t.assert_equal([false, "needs API 1.3, the host has 2.3"], [host.enabled?("probe"), host.reason("probe")], "an older major version is refused")
     same = Probe.new("probe", "2.0", [], ACTIONS, {}, [])
     rig = setup([same], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex

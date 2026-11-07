@@ -23,10 +23,13 @@ module Carat
     # integers per scroll of a region: first row, last row, and the rows
     # it moved up (negative for down). serial numbers the paint, and
     # base_serial is the serial of the base, -1 for none. layout is the
-    # key of the geometry the frame was painted with. A fresh frame is
+    # key of the geometry the frame was painted with, and floats the boxes
+    # of the floating windows painted over it, four integers each: top
+    # row, the row after the bottom, left column, the column after the
+    # right. A fresh frame is
     # blank with every row dirty and no base. A Struct record, repainted
     # in place and reallocated only when the size changes.
-    class Frame < Struct.new(:rows, :cols, :cursor_row, :cursor_col, :cursor_shape, :codes, :widths, :hls, :dirty, :sources, :scrolls, :serial, :base_serial, :layout, keyword_init: true)
+    class Frame < Struct.new(:rows, :cols, :cursor_row, :cursor_col, :cursor_shape, :codes, :widths, :hls, :dirty, :sources, :scrolls, :serial, :base_serial, :layout, :floats, keyword_init: true)
       SPACE = 32
       REPLACEMENT = 0xFFFD
 
@@ -44,11 +47,12 @@ module Carat
       # @rbs @serial: Integer
       # @rbs @base_serial: Integer
       # @rbs @layout: Array[Integer]
+      # @rbs @floats: Array[Integer]
 
       #: (rows: Integer, cols: Integer) -> void
       def initialize(rows:, cols:)
         n = rows * cols
-        super(rows: rows, cols: cols, cursor_row: 0, cursor_col: 0, cursor_shape: :block, codes: Array.new(n, SPACE), widths: Array.new(n, 1), hls: Array.new(n, Highlight::NORMAL), dirty: Array.new(rows, 1), sources: Array.new(rows, 0), scrolls: [], serial: 0, base_serial: -1, layout: [])
+        super(rows: rows, cols: cols, cursor_row: 0, cursor_col: 0, cursor_shape: :block, codes: Array.new(n, SPACE), widths: Array.new(n, 1), hls: Array.new(n, Highlight::NORMAL), dirty: Array.new(rows, 1), sources: Array.new(rows, 0), scrolls: [], serial: 0, base_serial: -1, layout: [], floats: [])
         reset_sources
       end
 
@@ -296,6 +300,25 @@ module Carat
           return false if codes[i] != their_codes[j] || widths[i] != their_widths[j] || hls[i] != their_hls[j]
           i += 1
           j += 1
+        end
+        true
+      end
+
+      # Whether the cells of row from column from up to to hold the same
+      # as in the same row of other, a frame of the same size; the columns
+      # are clamped to the row.
+      #: (Integer, Integer, Integer, Frame) -> bool
+      def same_cells?(row, from, to, other)
+        return false unless other.cols == cols
+        base = row * cols
+        i = base + (from < 0 ? 0 : from)
+        last = base + (to > cols ? cols : to)
+        their_codes = other.codes
+        their_widths = other.widths
+        their_hls = other.hls
+        while i < last
+          return false if codes[i] != their_codes[i] || widths[i] != their_widths[i] || hls[i] != their_hls[i]
+          i += 1
         end
         true
       end

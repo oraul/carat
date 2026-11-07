@@ -1,0 +1,45 @@
+ok   the float's window gets the next window id
+ok   a bordered float with its title over the window
+ok   the border, the title, and the text have the float groups
+ok   the float is not a layout window and the file window stays current
+ok   Esc closes the topmost float
+ok   closing dirties the rows it covered and the message row only
+ok   Esc with no float does nothing
+ok   a cursor float starts below the cursor cell
+ok   a float larger than the screen fills it above the message row
+ok   its bottom border is on the row above the message row
+ok   a higher z is drawn over a lower one opened later
+ok   Esc closes the topmost, the higher z
+ok   entering makes the float current with the cursor in it
+ok   j scrolls the float with scrolloff and the window under it stays
+ok   Ctrl-W p goes back to the window under it, the float stays
+ok   a plugin focuses a float by id
+ok   the float is current again
+ok   :q in a float closes only the float
+ok   Ctrl-W c in a float closes the float
+ok   a split leaves the float and splits the window under it
+ok   another tab page shows no float
+ok   the first tab page shows its float again
+ok   a window under a float scrolls by rows, the float stays
+ok   with the float closed the next scroll is a region again
+ok   an edit under a float keeps the float drawn
+ok   after edits and moves under a float the screen equals a full repaint
+ok   with two windows under a float the screen equals a full repaint
+ok   a plugin's float shows its lines and is current
+ok   a plugin moves its float
+ok   the rows it left show the window again
+ok   another plugin's float cannot be closed
+ok   nor moved
+ok   the plugin closes its current float with 0
+ok   the window under it is current
+ok   a file opened in the layout window while a float is focused goes to that window
+ok   the float it left is still the plugin's
+ok   a float loads a file and goes to its last line
+ok   lines deleted in the layout window pull the float's cursor onto the last line
+ok   the float's text equals a full repaint after the delete
+ok   an unknown anchor
+ok   no rows
+ok   a z out of range
+ok   a tab page holds sixteen floats
+ok   the plugin API is 2.3
+editor_floats: 44 passed, 0 failed

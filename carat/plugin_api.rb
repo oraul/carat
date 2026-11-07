@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 2
-    VERSION = "2.2"
+    MINOR = 3
+    VERSION = "2.3"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -184,6 +184,31 @@ module Carat
       #: (String) -> WindowResponse
       def self.failure(message)
         WindowResponse.new(ok: false, message: message, window: 0)
+      end
+    end
+
+    # Where and how a float opens (from 2.3): anchor "editor" counts row
+    # and col from the screen's top-left cell, "cursor" from the cursor
+    # cell; height and width are its text rows and columns, at least 1;
+    # border draws a one-cell border with the title on its top edge; z
+    # from 0 to 1000 stacks it, higher on top; enter makes it the current
+    # window. A box larger than the screen is cut to it. A Data value.
+    class FloatOptions < Data.define(:anchor, :row, :col, :height, :width, :border, :title, :z, :enter)
+      # @rbs @anchor: String
+      # @rbs @row: Integer
+      # @rbs @col: Integer
+      # @rbs @height: Integer
+      # @rbs @width: Integer
+      # @rbs @border: bool
+      # @rbs @title: String
+      # @rbs @z: Integer
+      # @rbs @enter: bool
+
+      # Options at an offset from the editor's corner with a border, no
+      # title, z 50, not entered.
+      #: (Integer, Integer, Integer, Integer) -> FloatOptions
+      def self.at(row, col, height, width)
+        FloatOptions.new(anchor: "editor", row: row, col: col, height: height, width: width, border: true, title: "", z: 50, enter: false)
       end
     end
 
@@ -605,6 +630,34 @@ module Carat
       # @rbs title: String
       def scratch_window(title)
         raise NotImplementedError, "Host#scratch_window"
+      end
+
+      # Opens a float (from 2.3) showing the lines in a scratch buffer the
+      # plugin owns, never listed nor written, placed as the FloatOptions
+      # say over the current tab page, and returns a WindowResponse with
+      # its window id; refused for an unknown anchor, a size below 1, a z
+      # out of range, or a tab page holding 16 floats.
+      # @rbs options: FloatOptions
+      # @rbs lines: Array[String]
+      def open_float(options, lines)
+        raise NotImplementedError, "Host#open_float"
+      end
+
+      # Moves the plugin's float with the window id to another offset from
+      # its anchor and returns a Response (from 2.3).
+      # @rbs window: Integer
+      # @rbs row: Integer
+      # @rbs col: Integer
+      def move_float(window, row, col)
+        raise NotImplementedError, "Host#move_float"
+      end
+
+      # Closes the plugin's float with the window id, 0 for the current
+      # window, and returns a Response (from 2.3); the window under a
+      # focused float becomes current.
+      # @rbs window: Integer
+      def close_float(window)
+        raise NotImplementedError, "Host#close_float"
       end
 
       # Creates an empty file at path, which must lie strictly inside root,

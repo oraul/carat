@@ -8,11 +8,16 @@ module Carat
     # a neighbour in a direction, stopping at the edge of the layout; to
     # the next or previous window in layout order, wrapping, or to a
     # numbered one, the last when the number is larger; or back to the
-    # previously used window, if it still exists.
+    # previously used window, if it still exists. In a floating window
+    # any request goes back to the window under it.
     class FocusWindow
       #: (Domain::EditorState, FocusRequest) -> Outcome
       def call(state, request)
         tab = state.tab
+        if tab.floats.focused?
+          tab.floats.leave
+          return Outcome.none
+        end
         case request.target
         when :next then cycle(state, true, request.count)
         when :previous then cycle(state, false, request.count)

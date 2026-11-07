@@ -323,18 +323,22 @@ Rules: the visual keys whose meaning differs are `visual.*` actions; motions bin
 
 What: the split layout per tab page, the `<C-w>` commands, scrolling a window, tab pages, the buffer list commands, and their ex commands.
 
-Flow: `WindowHandler` (`<C-w>` keys, equalizing itself) and `WindowCommandHandler` (`:sp`, `:vs`, `:new`, `:vnew`, `:close`, `:only`) run `SplitWindow`, `CloseWindow`, `CloseOtherWindows`, and `FocusWindow` with a `FocusRequest`; `ScrollHandler` (`<C-f> <C-b> <C-d> <C-u> <C-e> <C-y> zt zz zb <PageDown> <PageUp>`) runs `ScrollWindow` with a `ScrollRequest`, which moves `Window#top` and the cursor; `TabHandler` (`gt`, `gT`) and `TabCommandHandler` (the `:tab*` commands) run `OpenTab`, `CloseTab`, `CloseOtherTabs`, and `SwitchTab` with a `TabRequest`; `BufferCommandHandler` runs `ListBuffers`, `SwitchBuffer` with a `BufferRequest`, and `DeleteBuffer` over `BufferList`. They change `Layout` (`split`, `split_edge`, `close`, `neighbour`, `equalize`) in the current `TabPage` and `TabList`; `BufferList#close_window` lets go of buffers. `ArrangeView#call` runs after every key and before every render: `Layout#arrange` for the screen size and every window scrolled to its cursor.
+Flow: `WindowHandler` (`<C-w>` keys, equalizing itself) and `WindowCommandHandler` (`:sp`, `:vs`, `:new`, `:vnew`, `:close`, `:only`) run `SplitWindow`, `CloseWindow`, `CloseOtherWindows`, and `FocusWindow` with a `FocusRequest`; `ScrollHandler` (`<C-f> <C-b> <C-d> <C-u> <C-e> <C-y> zt zz zb <PageDown> <PageUp>`) runs `ScrollWindow` with a `ScrollRequest`, which moves `Window#top` and the cursor; `TabHandler` (`gt`, `gT`) and `TabCommandHandler` (the `:tab*` commands) run `OpenTab`, `CloseTab`, `CloseOtherTabs`, and `SwitchTab` with a `TabRequest`; `BufferCommandHandler` runs `ListBuffers`, `SwitchBuffer` with a `BufferRequest`, and `DeleteBuffer` over `BufferList`. They change `Layout` (`split`, `split_edge`, `close`, `neighbour`, `equalize`) in the current `TabPage` and `TabList`; `BufferList#close_window` lets go of buffers. `ArrangeView#call` runs after every key and before every render: `Layout#arrange` for the screen size, every window scrolled to its cursor, then each float of the `FloatLayer` placed and scrolled. A focused float is `TabPage#window`; `FocusWindow` leaves it, `CloseWindow` and `Quit` close it, and `FloatHandler` (normal `<Esc>`) runs `CloseFloat` on the topmost.
 
 Files:
 
 - `carat/domain/window.rb`: `Window` record (id, buffer, cursor, scroll, rectangle, fixed width, visual anchor, last selection); `show`, `copy_from`, `gutter_width`, `scroll_to_row`, `scroll_top_to`, `max_top`, `margin` (the clamp and scrolloff cap `ArrangeView` and `ScrollWindow` share), `scroll_to_col`.
 - `carat/domain/layout_node.rb`: `LayoutNode`; `leaf?`.
 - `carat/domain/layout.rb`: `Layout`, a flat node table; `split`, `split_edge`, `close`, `leaves`, `leaf_of`, `neighbour`, `equalize`, `arrange`, `number_of`, `first_leaf`, `fixed_width?`.
-- `carat/domain/tab_page.rb`: `TabPage`; `window`, `window_count`, `focus`, `previous?`.
-- `carat/domain/tab_list.rb`: `TabList`; `tab`, `window`, `add_tab`, `remove_tab`, `next_tab`, `previous_tab`, `adopt`, `window_tab`, `total_windows`, `shown?`, `windows_showing`, `focus_buffer`, `modified_in_windows`, `clamp_cursors`.
+- `carat/domain/tab_page.rb`: `TabPage` with its `FloatLayer`; `window` (the focused float first), `layout_window`, `window_count`, `focus` (leaves a float), `previous?`.
+- `carat/domain/float_spec.rb`: `FloatSpec` (anchor, offset, size, border, title, z); `edge`, `moved`, `refusal`.
+- `carat/domain/float_window.rb`: `FloatWindow` (a window and its spec); `place` clamps the box to the screen, `box_top`, `box_bottom`, `box_left`, `box_right`.
+- `carat/domain/float_layer.rb`: `FloatLayer`, a tab page's floats by z with the focused index, at most 16; `add`, `close`, `close_top`, `close_focused`, `enter`, `leave`, `move`.
+- `carat/domain/tab_list.rb`: `TabList`; `tab`, `window`, `add_tab`, `remove_tab`, `next_tab`, `previous_tab`, `adopt`, `window_tab`, `float_tab`, `total_windows`, `shown?`, `windows_showing`, `focus_buffer`, `modified_in_windows`, `clamp_cursors`.
 - `carat/use_cases/arrange_view.rb`: `ArrangeView#call`; the top row goes to the buffer tabs when `BufferList#tab_row?`.
 - `carat/use_cases/windows/split_window.rb`: `SplitWindow#call`; every new window gets its id.
 - `carat/use_cases/windows/open_side_window.rb`: `OpenSideWindow#call`, a plugin's fixed-width side window.
+- `carat/use_cases/windows/open_float.rb`, `carat/use_cases/windows/close_float.rb`: `OpenFloat#call` (the id, the layer, enter), `CloseFloat#call` (the topmost for 0, else by id in any tab page).
 - `carat/use_cases/windows/close_window.rb`, `carat/use_cases/windows/close_other_windows.rb`: `call`.
 - `carat/use_cases/windows/focus_window.rb`: `FocusWindow#call`; `carat/use_cases/windows/focus_request.rb`: `FocusRequest` (target, count); `steps`.
 - `carat/use_cases/windows/scroll_window.rb`: `ScrollWindow#call`, the page, half-page, line, and `zt zz zb` scrolls of the current window, the cursor kept in view with scrolloff and its wanted column; `carat/use_cases/windows/scroll_request.rb`: `ScrollRequest` (target, count); `steps`.
@@ -342,6 +346,7 @@ Files:
 - `carat/use_cases/windows/switch_tab.rb`: `SwitchTab#call`; `carat/use_cases/windows/tab_request.rb`: `TabRequest`; `counted?`.
 - `carat/use_cases/actions/window_handler.rb`: `WindowHandler.register`.
 - `carat/use_cases/actions/tab_handler.rb`: `TabHandler.register`.
+- `carat/use_cases/actions/float_handler.rb`: `FloatHandler.register`, `float.close` (normal-mode `<Esc>`).
 - `carat/use_cases/actions/scroll_handler.rb`: `ScrollHandler.register`, the nine `scroll.*` actions, each a `ScrollRequest` target for `ScrollWindow`.
 - `carat/use_cases/ex/window_command_handler.rb`: `WindowCommandHandler.register`.
 - `carat/use_cases/ex/tab_command_handler.rb`: `TabCommandHandler.register`.
@@ -351,9 +356,9 @@ Files:
 - `carat/use_cases/buffers/delete_buffer.rb`: `DeleteBuffer#call(state, number, bang, typed)`, `:bd` in the order of Neovim's `do_buffer` (`E89`, `E516`).
 - `carat/use_cases/ex/buffer_command_handler.rb`: `BufferCommandHandler.register` (`:ls`, `:buffers`, `:files`, `:b[uffer]`, `:bn[ext]`, `:bp[revious]`, `:bN[ext]`, `:bd[elete]`), the number and count arguments.
 
-Tests: `test/domain_layout.rb`, `test/domain_tab_list.rb`, `test/use_cases_arrange_view.rb`, `test/editor_windows.rb`, `test/editor_tabs.rb`, `test/editor_scroll.rb`, `test/editor_buffers.rb`.
+Tests: `test/domain_layout.rb`, `test/domain_tab_list.rb`, `test/use_cases_arrange_view.rb`, `test/editor_windows.rb`, `test/editor_tabs.rb`, `test/editor_scroll.rb`, `test/editor_buffers.rb`, `test/domain_float_layer.rb`, `test/editor_floats.rb`.
 
-Designs: `windows-and-splits` (all Decisions), `buffer-list` (all Decisions), `render-core` (ArrangeView and the screen size), `use-case-boundaries` (Variants).
+Designs: `windows-and-splits` (all Decisions), `buffer-list` (all Decisions), `render-core` (ArrangeView and the screen size), `use-case-boundaries` (Variants), `floating-windows` (all Decisions).
 
 Rules: CLAUDE.md Coding conventions (variants through one `call`, as a `Data` request when they carry a count).
 
@@ -416,13 +421,13 @@ Flow: `EditorAssembly#render` runs `ArrangeView` and `HighlightView`, then `Fram
 
 Files:
 
-- `carat/adapters/frame_presenter.rb`: `FramePresenter#call`, `display_col`, `display_width`; reads the state only; a message of several lines over the bottom rows with the hit-enter line; the current window's cursor line lifted onto the cursor-line layer, and `shape_of` the mode.
+- `carat/adapters/frame_presenter.rb`: `FramePresenter#call`, `display_col`, `display_width`; reads the state only; the floats of the tab page by z over everything but the message row (`paint_floats`, `paint_float_row`, `paint_border_row`, `mend_edges`), their boxes kept as the frame's float key (`build_float_key`, `forget_rows`, `compare_boxes`, `clear_repainted`, `under_float?`: no scroll under a float); a message of several lines over the bottom rows with the hit-enter line; the current window's cursor line lifted onto the cursor-line layer, and `shape_of` the mode.
 - `carat/adapters/status_bar.rb`: `StatusBar#paint`, the global bar: the mode pill, file, branch, diagnostics, plugin segments, `lsp` slot, file type, encoding, position, and percent, dropped by `PRIORITIES` when narrow without allocating; `mode_name`, `mode_group`, `lsp_group`.
 - `carat/adapters/tab_bar.rb`: `TabBar#paint`, a tab per listed file buffer with its icon and modified dot, overflow counts, and the tab-page numbers at the right end, without allocating.
 - `carat/domain/status_slots.rb`: `StatusSlots` record (`branch`, the diagnostics counts, `lsp_name`, `lsp_state`), empty until git and language services fill it; `diagnostics?`, `lsp?`.
-- `carat/adapters/painted_rows.rb`: `PaintedRows`, what every window row segment of a frame shows, its cursor-line layer included; `same?`, `store`, `invalidate`, `painted?`.
+- `carat/adapters/painted_rows.rb`: `PaintedRows`, what every window row segment of a frame shows, its cursor-line layer included; `same?`, `store`, `invalidate`, `forget` (one row), `painted?`.
 - `carat/adapters/screen_presenter.rb`: `ScreenPresenter`; `enter`, `leave` (the terminal's own cursor shape back), `present` (`shape_sequence`: block, bar, underline); a cell code that is not a scalar value is written as U+FFFD, and one of 0x80 or more from the UTF-8 text `glyph` keeps for it (`GLYPH_LIMIT`); a theme that paints the background has Normal in effect at each clear and scroll.
-- `carat/domain/frame.rb`: `Frame`, cells in three flat integer arrays; `put`, `put_code`, `put_within`, `put_from`, `fill`, `blank`, `set_hl`, `lift`, `same_row?`, `dirty?`, `dirty_rows`, `reset_rows`, `mark_all_dirty`, `add_scroll`, `row_text`.
+- `carat/domain/frame.rb`: `Frame`, cells in three flat integer arrays, the layout key and the float key; `put`, `put_code`, `put_within`, `put_from`, `fill`, `blank`, `set_hl`, `lift`, `same_row?`, `dirty?`, `dirty_rows`, `reset_rows`, `mark_all_dirty`, `add_scroll`, `row_text`.
 - `carat/domain/cell.rb`: `Cell`, a value view of one cell for tests.
 - `carat/domain/start_art.rb`: `StartArt`, the start screen's six frames and wordmark computed once from the gem's legend, Unicode in the theme's groups or ASCII in Normal; `from_plain`, `none`, `paint` (centred in a window, the wordmark alone when it does not fit).
 - `carat/domain/start_screen.rb`: `StartScreen` record (`showing`, `step`, `started`, `art`); `start`, `animating?`, `due?`, `advance`, `wait`, `dismiss`, `paint`; the input controller advances it on the clock and dismisses it on a key, the frame presenter paints it over the current window.
@@ -434,11 +439,11 @@ Files:
 
 Tests: `test/domain_frame.rb`, `test/domain_line_cache.rb`, `test/adapters_frame_presenter.rb`, `test/adapters_dirty_rows.rb`, `test/adapters_screen_presenter.rb`, `test/editor_screen.rb`, `test/domain_utf8.rb` (hostile byte sequences through the decoder, display width, `TextLines`, and the plugin API's path segments), `test/editor_start_screen.rb` (every start screen frame, in color and plain, in its snapshot; the options, `NO_COLOR`, small windows, and the key that ends it), `test/adapters_status_bar.rb` (each segment, each width, the pills and the `lsp` states), `test/adapters_tab_bar.rb` (tabs, overflow, tab-page numbers).
 
-Designs: `render-core` (all Decisions; Measured result), `escape-c1-control-codes` (all Decisions), `windows-and-splits` (Rendering), `visual-modes` (Rendering), `cursor-shapes` (all Decisions), `bars` (all Decisions).
+Designs: `render-core` (all Decisions; Measured result), `escape-c1-control-codes` (all Decisions), `windows-and-splits` (Rendering), `visual-modes` (Rendering), `cursor-shapes` (all Decisions), `bars` (all Decisions), `floating-windows` (Painting by z with a float key).
 
 Rules: the presenters read the state only; `docs/architecture.md` section 8.2.
 
-Bench: `lh`, `j`, `long-ascii`, `long-utf8`, `open-plain`; `make profile` for `j` and `lh`; `make bench-budget` on `lh`.
+Bench: `lh`, `j`, `long-ascii`, `long-utf8`, `open-plain`, `lh-float` (a 60 by 15 float open); `make profile` for `j` and `lh`; `make bench-budget` on `lh`.
 
 ## 14. Syntax highlighting
 
@@ -483,7 +488,7 @@ Flow: `EditorAssembly` registers `Plugins::Registry.all` with `PluginHost#regist
 
 Files:
 
-- `carat/plugin_api.rb`: `Carat::PluginApi` (`VERSION` 2.2, `STATUS_PRIORITY`, `PRIORITY_MAX`, `EVENTS`, `OPTION_TYPES`, `SIDES`), the values `Manifest`, `Event`, `Context`, `Command`, `Edit`, `Response`, `WindowResponse`, `TextResponse`, `BufferView`, `FileInfo`, `Input`, the path functions `Paths` (`normalize`, `join`, `dirname`, `basename`, `relative`, `inside?`), the file-icon table `FileIcons` (`file_type`, `group_of`, shared by the explorer and the buffer tabs), the `Host` base class (one method per request: `read_buffer`, `edit_buffer`, `open_scratch`, `open_in_split`, `run_ex`, `list_dir`, `make_file`, `prompt`, `syntax_group`, `set_segment`, and the rest), and the `Plugin` base class (`manifest`, `activate`, `deactivate`, `on_event`, `on_action`, `on_command`, `on_input`, `tokenize`).
+- `carat/plugin_api.rb`: `Carat::PluginApi` (`VERSION` 2.3, `STATUS_PRIORITY`, `PRIORITY_MAX`, `EVENTS`, `OPTION_TYPES`, `SIDES`), the values `Manifest`, `Event`, `Context`, `Command`, `Edit`, `Response`, `WindowResponse`, `FloatOptions` (`at`), `TextResponse`, `BufferView`, `FileInfo`, `Input`, the path functions `Paths` (`normalize`, `join`, `dirname`, `basename`, `relative`, `inside?`), the file-icon table `FileIcons` (`file_type`, `group_of`, shared by the explorer and the buffer tabs), the `Host` base class (one method per request: `read_buffer`, `edit_buffer`, `open_scratch`, `open_in_split`, `run_ex`, `list_dir`, `make_file`, `prompt`, `syntax_group`, `set_segment`, and the rest), and the `Plugin` base class (`manifest`, `activate`, `deactivate`, `on_event`, `on_action`, `on_command`, `on_input`, `tokenize`).
 - `carat/domain/manifest_check.rb`: `ManifestCheck.check` and its `check_*` rules (API version, shapes, actions, commands, events, bindings, options, filetypes).
 - `carat/domain/path_policy.rb`: `PathPolicy`; `create_problem`, `rename_problem`, `inside?`, `shown`.
 - `carat/domain/path_info.rb`: `PathInfo` value `FilePort#stat` returns (`exists`, `size`, `mtime`, `directory`, `symlink`, `regular`); `missing`, `real_directory?`.
@@ -498,7 +503,7 @@ Files:
 - `carat/use_cases/plugins/pending_event.rb`: `PendingEvent`; `for?`.
 - `carat/use_cases/plugins/plugin_link.rb`: `PluginLink`, the per-plugin `Host`; one override per `Host` method.
 - `carat/use_cases/plugins/buffer_requests.rb`: `BufferRequests`; `read_buffer`, `edit_buffer` (validated item by item, one transaction), `move_cursor`, `place_sign`, `clear_signs`.
-- `carat/use_cases/plugins/window_requests.rb`: `WindowRequests`; `open_scratch`, `set_scratch_lines`, `close_scratch`, `focus_window`, `open_file`, `open_in_split`, `open_in_tab`, `editing_window`, `scratch_window`.
+- `carat/use_cases/plugins/window_requests.rb`: `WindowRequests`; `open_scratch`, `set_scratch_lines`, `close_scratch`, `focus_window`, `open_file`, `open_in_split`, `open_in_tab`, `editing_window`, `scratch_window`, `open_float`, `move_float`, `close_float` (a plugin's own floats only, `own_float_tab`); `focus_window` enters a float.
 - `carat/use_cases/plugins/file_requests.rb`: `FileRequests`; `list_dir`, `stat`, `make_file`, `make_dir`, `rename_path`, `delete_path`.
 - `carat/use_cases/plugins/ui_requests.rb`: `UiRequests`; `message`, `set_status`, `set_segment`, `prompt`, `icon`, `syntax_group`, `option`, `working_directory`, `run_ex`.
 - `carat/use_cases/plugins/boundary.rb`: `Boundary.copied_lines`, the copies of strings crossing the boundary.

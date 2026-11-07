@@ -10,6 +10,7 @@ module Carat
     # and closing its tab page when it was the last one there; the last
     # window of the last tab page stays (E444). The file buffer the
     # window showed stays listed, hidden when no other window shows it.
+    # In a floating window it closes the float, never a layout window.
     class CloseWindow
       E444 = "E444: Cannot close last window"
       private_constant :E444
@@ -25,6 +26,7 @@ module Carat
 
       #: (Domain::EditorState, Integer) -> Outcome
       def call(state, n)
+        return Outcome.none if n == 0 && state.tab.floats.close_focused
         return Outcome.failure(E444) if @tabs.total_windows <= 1
         tab = state.tab
         id = n > 0 ? tab.layout.leaf_number(n) : tab.current
