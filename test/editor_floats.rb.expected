@@ -22,6 +22,9 @@ ok   another tab page shows no float
 ok   the first tab page shows its float again
 ok   a window under a float scrolls by rows, the float stays
 ok   with the float closed the next scroll is a region again
+ok   an edit under a float keeps the float drawn
+ok   after edits and moves under a float the screen equals a full repaint
+ok   with two windows under a float the screen equals a full repaint
 ok   a plugin's float shows its lines and is current
 ok   a plugin moves its float
 ok   the rows it left show the window again
@@ -34,4 +37,4 @@ ok   no rows
 ok   a z out of range
 ok   a tab page holds sixteen floats
 ok   the plugin API is 2.3
-editor_floats: 36 passed, 0 failed
+editor_floats: 39 passed, 0 failed
