@@ -4,6 +4,7 @@ require_relative "../domain/completion_request"
 require_relative "../domain/completion_list"
 require_relative "../domain/completion_item"
 require_relative "../domain/mode"
+require_relative "../domain/fuzzy_match"
 
 module Carat
   module Adapters
@@ -437,7 +438,8 @@ module Carat
 
       # Sends the wanted word's completion request once no other word was
       # wanted for DEBOUNCE seconds, when the current buffer, row, and mode
-      # still hold the word and its server completes; a newer want cancels
+      # still hold the word, the cursor ends a word of at least one byte
+      # that starts at the wanted column, and its server completes; a newer want cancels
       # the request in flight, and so does an answer overdue.
       #: (Domain::EditorState) -> void
       def complete(state)
@@ -458,13 +460,16 @@ module Carat
         ask.sent = ask.want
         buffer = state.buffer
         cursor = state.cursor
-        return unless state.mode == Domain::Mode::INSERT && buffer.id == ask.buffer_id && cursor.row == ask.row && cursor.col >= ask.col
+        return unless state.mode == Domain::Mode::INSERT && buffer.id == ask.buffer_id && cursor.row == ask.row && cursor.col > ask.col
+        line = buffer.line(cursor.row)[0, cursor.col].to_s
+        start = Domain::FuzzyMatch.word_start(line)
+        typed = line.byteslice(start, line.bytesize - start).to_s
+        return if typed.empty? || cursor.col - typed.length != ask.col
         server = server_for(buffer.filetype)
         return if server.nil? || !server.running? || !ask.completes?(server.language) || buffer.path.empty?
-        line = buffer.line(cursor.row)[0, cursor.col].to_s
         position = { "line" => cursor.row, "character" => utf16_length(line) }
         params = { "textDocument" => { "uri" => uri_of(buffer.path) }, "position" => position, "context" => { "triggerKind" => 1 } }
-        ask.word = line[ask.col, cursor.col - ask.col].to_s
+        ask.word = typed
         ask.language = server.language
         ask.sent_id = request(server, "textDocument/completion", params)
       end

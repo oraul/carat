@@ -2,6 +2,7 @@ ok   asking the same word twice is one want, unanswered and waiting
 ok   another word is a new want
 ok   the answer serves the word while it begins with the typed part it was sent for
 ok   another word typed at the same start is a new want
+ok   an answer for no typed text serves no word
 ok   a want marked sent with no request in flight and no answer is asked again
 ok   a server without a completion provider is not ready
 ok   typing with no completing server asks nothing and shows no popup
@@ -30,10 +31,13 @@ ok   a second word typed at the same column sends a request of its own
 ok   the second word's answer fills the popup, not the first word's
 ok   leaving insert mode within the debounce sends no request
 ok   typing the word again asks the server
+ok   a word deleted within the debounce sends no request
+ok   the word typed next at the same column asks the server
+ok   its answer fills the popup
 ok   an unanswered request is cancelled after two seconds and waits no more
 ok   an error answer opens no popup
 ok   escape sequences are dropped, each string is cut, an unknown kind is text, and an item without a label is skipped
 ok   the text edit's new text is the text inserted
 ok   at most 200 items of an answer are kept
 ok   a crashed server's language is not ready
-adapters_server_completions: 38 passed, 0 failed
+adapters_server_completions: 42 passed, 0 failed

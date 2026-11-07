@@ -26,6 +26,10 @@ A server's answer SHALL serve only a word at the same start that begins with the
 - **WHEN** "fi" was answered, deleted with backspace, and "ba" is typed at the same column
 - **THEN** a second completion request is sent and its answer fills the popup
 
+#### Scenario: A word deleted within the debounce asks nothing
+- **WHEN** "x" is typed and deleted with backspace within 0.1 seconds, then "fi" is typed at the same column
+- **THEN** no completion request is sent for the empty text, and one request is sent for "fi" whose answer fills the popup
+
 #### Scenario: A request skipped by leaving insert mode
 - **WHEN** "fi" is typed and Esc pressed within 0.1 seconds, then insert mode is entered again and "l" typed
 - **THEN** a completion request is sent for the word

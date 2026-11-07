@@ -16,6 +16,8 @@
 
 - [x] 3.2 Serve a held answer only to a word that begins with the typed part it was sent for (`CompletionRequest#word`, set at the send), and ask again for a want neither waiting nor answered; rows typing a second word at the same column and leaving insert mode within the debounce in `test/adapters_server_completions.rb`
 
+- [x] 3.3 Send only when the cursor ends a non-empty word starting at the wanted column, and serve no answer held for empty typed text; a row typing x<BS> within the debounce and then a word at the same column in `test/adapters_server_completions.rb`
+
 ## 4. Docs and records
 
 - [x] 4.1 Map entries, the area 17 Flow sentence, and the Designs lines of areas 13 and 17 in `docs/codebase-map.md`

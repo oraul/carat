@@ -164,6 +164,10 @@ module AdaptersServerCompletionsTest
     t.assert_equal([true, true, false, false], [q.answer_for?(1, 0, 4, "a = fi"), q.answer_for?(1, 0, 4, "a = fil"), q.answer_for?(1, 0, 4, "a = ba"), q.answer_for?(1, 0, 4, "a = f")], "the answer serves the word while it begins with the typed part it was sent for")
     q.ask(1, 0, 4)
     t.assert_equal([3, true], [q.want, q.waiting?], "another word typed at the same start is a new want")
+    q.answered = 3
+    q.word = ""
+    t.assert_equal(false, q.answer_for?(1, 0, 4, "a = ba"), "an answer for no typed text serves no word")
+    q.answered = 2
     q.sent = 3
     q.ask(1, 0, 4)
     t.assert_equal(4, q.want, "a want marked sent with no request in flight and no answer is asked again")
@@ -274,6 +278,20 @@ module AdaptersServerCompletionsTest
     r.type("al")
     until_sent(r, "textDocument/completion", 20)
     t.assert_equal(1, count_of(r, "textDocument/completion"), "typing the word again asks the server")
+
+    # A word deleted before the debounce ends sends no request for the
+    # empty text, and the word typed next at the same column asks.
+    r = completing
+    r.type("ix<BS>")
+    10.times { r.wait }
+    t.assert_equal(0, count_of(r, "textDocument/completion"), "a word deleted within the debounce sends no request")
+    r.type("fi")
+    until_sent(r, "textDocument/completion", 20)
+    asked = last_of(r, "textDocument/completion")
+    t.assert_equal([1, 2], [count_of(r, "textDocument/completion"), asked["params"]["position"]["character"]], "the word typed next at the same column asks the server")
+    answer(r, 2, three)
+    r.wait
+    t.assert_equal(["final", "filter", "file_name"], r.popup, "its answer fills the popup")
 
     # A request left unanswered is cancelled after two seconds.
     r = completing

@@ -68,11 +68,13 @@ module Carat
       end
 
       # Whether list holds the answer for the word, the one wanted, whose
-      # text on the line still begins with the typed part it was sent for.
+      # text on the line still begins with the typed part it was sent for,
+      # never empty: an answer for no typed text serves no word.
       #: (Integer, Integer, Integer, String) -> bool
       def answer_for?(id, at_row, at_col, line)
         return false unless answered == want && wanted?(id, at_row, at_col)
         typed = word
+        return false if typed.empty?
         line[at_col, typed.length].to_s == typed
       end
 
