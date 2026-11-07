@@ -304,6 +304,25 @@ module Carat
         true
       end
 
+      # Whether the cells of row from column from up to to hold the same
+      # as in the same row of other, a frame of the same size; the columns
+      # are clamped to the row.
+      #: (Integer, Integer, Integer, Frame) -> bool
+      def same_cells?(row, from, to, other)
+        return false unless other.cols == cols
+        base = row * cols
+        i = base + (from < 0 ? 0 : from)
+        last = base + (to > cols ? cols : to)
+        their_codes = other.codes
+        their_widths = other.widths
+        their_hls = other.hls
+        while i < last
+          return false if codes[i] != their_codes[i] || widths[i] != their_widths[i] || hls[i] != their_hls[i]
+          i += 1
+        end
+        true
+      end
+
       #: (Integer) -> bool
       def dirty?(row)
         dirty[row] != 0

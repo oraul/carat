@@ -134,6 +134,21 @@ module EditorFloatsTest
     h.type("<Esc>j")
     t.assert_equal(1, h.frame.scroll_count, "with the float closed the next scroll is a region again")
 
+    # Painting under a float: each frame equals a full repaint.
+    h = editor
+    open(h, options("editor", 1, 2, 2, 8, true, "t", 50, false), ["AAAA", "BBBB"])
+    h.type("2Gx")
+    t.assert_equal(["ine 2", "│AAAA"], [h.lines[1], h.row(2)[2, 5]], "an edit under a float keeps the float drawn")
+    h.type("jxkxu")
+    shown = h.screen
+    h.resize(12, 40)
+    t.assert_equal(shown, h.screen, "after edits and moves under a float the screen equals a full repaint")
+    h.type("<C-w>v")
+    h.type("x")
+    shown = h.screen
+    h.resize(12, 40)
+    t.assert_equal(shown, h.screen, "with two windows under a float the screen equals a full repaint")
+
     # Plugin requests.
     h = editor
     id = open(h, options("editor", 1, 2, 2, 8, false, "", 50, true), ["one", "two"])
