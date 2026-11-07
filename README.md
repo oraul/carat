@@ -58,7 +58,9 @@ The leader is Space. Its keys come in groups named by their first letter, and ea
 - `<leader>b` buffers: `bb` lists them as `:ls` does, `bn` and `bp` go to the next and previous one, `bd` deletes this one, or with a count the buffer of that number.
 - `<leader>e` opens the file tree, as before.
 
-Ctrl-S saves in normal and in insert mode, where you stay in insert mode. Carat runs the terminal in raw mode, so flow control is off and Ctrl-S reaches it instead of freezing the screen.
+Ctrl-S saves in normal and in insert mode, where you stay in insert mode.
+
+In insert mode a completion popup lists the names the language server offers for the word before the cursor, matched fuzzily (`fn_na` finds `file_name`), each with its kind's icon and its type on the right: Ctrl-N and Down select the next, Ctrl-P and Up the previous, Enter inserts the item over what you typed, Tab replaces the whole word, and Esc closes the popup. The language server's answers arrive in a coming change; until then the popup stays closed. Carat runs the terminal in raw mode, so flow control is off and Ctrl-S reaches it instead of freezing the screen.
 
 These keys moved: `<leader>w` used to write the file and `<leader>q` to quit the window. Press `<leader>fs` or Ctrl-S to write, and `:q` or `<C-w>q` to close a window, or `<leader>qq` to quit. To get the old keys back, add `keymap.normal <leader>w :w<CR>` and `keymap.normal <leader>q :q<CR>` to `~/.config/carat/caratrc`. Every action has a short description in the editor, which the coming key hints will show.
 
@@ -80,7 +82,7 @@ plugin.explorer.ignore .git build tmp
 ```
 
 - `option.<name>` sets an option by its Vim name (`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `undolevels`, `cursorline`, and the others), plus Carat's `icons`, `theme`, `background`, `startscreen`, and `reducedmotion`; `tabstop` takes 1 to 9999 and `shiftwidth` 0 to 9999, as in Vim.
-- `keymap.<mode> <keys> <action>` binds keys in Vim notation in `normal`, `insert`, `visual`, `visual_line`, `visual_block`, `operator_pending`, or `cmdline` mode to an action from `docs/actions.md` or to keys to replay, such as `:w<CR>`; the action `none` removes a binding. `keymap.leader <Space>` sets what `<leader>` stands for.
+- `keymap.<mode> <keys> <action>` binds keys in Vim notation in `normal`, `insert`, `visual`, `visual_line`, `visual_block`, `operator_pending`, or `cmdline` mode, or in the `completion` layer that answers first while the completion popup shows, to an action from `docs/actions.md` or to keys to replay, such as `:w<CR>`; the action `none` removes a binding. `keymap.leader <Space>` sets what `<leader>` stands for.
 - `plugin.<name>.enabled` turns a plugin on or off, and `plugin.<name>.<option>` sets one of its options.
 - `language.<name>.lsp` and `language.<name>.formatter` name the commands the language services run: opening a file of a language whose `lsp` command is installed starts that server when Carat runs in a directory under a root of `language.trusted_roots` (for example `language.trusted_roots ~/src`, set in the user file, none by default), since a server such as ruby-lsp runs the project's own code; anywhere else the status bar reads `untrusted :LspStart` and `:LspStart` starts it. The bar shows the server's name and state (starting, indexing with a percent, stopped, or crashed, which `:LspRestart` restarts), and the server is told about the open files. Its diagnostics show as signs before the line numbers, the cursor line's message in the bottom row in normal mode, and the counts of errors, warnings, infos, and hints on the bar. They are read from the defaults and the user file only, never from a project's file, so opening a directory cannot choose a program to run. For the same reason a project's file may bind keys only to actions and `none`, not to keys to replay.
 

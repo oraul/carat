@@ -30,7 +30,7 @@ files = Carat::Drivers::DiskFiles.new
 config = Carat::Adapters::RcConfigGateway.new(files: files)
 messages = Carat::Drivers::RuntimeQueue.new
 processes = Carat::Drivers::ProcessRunner.new(messages: messages)
-assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: config, processes: processes, messages: messages, plugin_list: Carat::Plugins::Registry.all)
+assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: config, processes: processes, messages: messages, completions: Carat::Adapters::ServerCompletions.new, plugin_list: Carat::Plugins::Registry.all)
 main_loop = Carat::Drivers::MainLoop.new(assembly: assembly, terminal: terminal, signals: signals)
 
 begin

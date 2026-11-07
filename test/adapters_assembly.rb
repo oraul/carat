@@ -40,6 +40,10 @@ module AdaptersAssemblyTest
       ["window_requests", host.window_requests.buffers], ["list_buffers", a.list_buffers.buffers], ["switch_buffer", a.switch_buffer.buffers],
       ["delete_buffer", a.delete_buffer.buffers], ["arrange_view", a.arrange_view.buffers], ["tab_bar", a.frame_presenter.tab_bar.buffers]
     ]), "the buffer list")
+    t.assert_equal([], strangers(a.completion_menu, [
+      ["handle_key", a.handle_key.completion], ["show_completion", a.show_completion.menu], ["close_completion", a.show_completion.close_completion.menu]
+    ]), "the completion menu")
+    t.assert_equal([true, true], [a.handle_key.show_completion.equal?(a.show_completion), a.show_completion.source.equal?(h.completions)], "the key handler holds the one ShowCompletion, over the source the harness gave")
     t.assert_equal([], strangers(a.tabs, [
       ["state", a.state.tabs], ["buffers", a.buffers.tabs], ["feed", a.buffers.feed.tabs], ["quit", a.quit.tabs],
       ["close_window", a.close_window.tabs], ["split_window", a.split_window.tabs], ["open_side_window", a.open_side_window.tabs],
@@ -136,7 +140,7 @@ module AdaptersAssemblyTest
     t.assert_equal([500, "<Space>"], [a.state.options.timeoutlen, Carat::Domain::Keymap.leader_from(a.config.load)], "the assembly reads timeoutlen and the leader from the port")
     gateway = Carat::Adapters::RcConfigGateway.new(files: files)
     t.assert_equal([true, 500], [gateway.files.equal?(files), Carat::Domain::Options.from_config(gateway.load).timeoutlen], "the gateway reads the shipped defaults through the file port it was given")
-    through = Carat::Adapters::EditorAssembly.new(terminal: h.terminal, clock: h.clock, files: files, config: gateway, processes: h.processes, messages: h.messages, plugin_list: [])
+    through = Carat::Adapters::EditorAssembly.new(terminal: h.terminal, clock: h.clock, files: files, config: gateway, processes: h.processes, messages: h.messages, completions: h.completions, plugin_list: [])
     t.assert_equal([true, true], [through.config.equal?(gateway), through.files.equal?(gateway.files)], "the assembly and the gateway hold the one file port")
     bare = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Domain::Config.new, rows: 10, cols: 40, plugins: [])
     t.assert_equal([1000, "\\", false, 1000, 1000], [bare.state.options.timeoutlen, Carat::Domain::Keymap.leader_from(Carat::Domain::Config.new), bare.state.options.number, bare.state.options.undolevels, bare.assembly.buffers.feed.undolevels], "a configuration without lines falls back to Vim's defaults")

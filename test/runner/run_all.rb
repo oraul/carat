@@ -23,6 +23,7 @@ require_relative "../domain_ex_range"
 require_relative "../domain_filetype"
 require_relative "../domain_float_layer"
 require_relative "../domain_frame"
+require_relative "../domain_fuzzy_match"
 require_relative "../domain_global"
 require_relative "../domain_grammar"
 require_relative "../domain_icons"
@@ -49,6 +50,7 @@ require_relative "../drivers_main_loop"
 require_relative "../drivers_process_runner"
 require_relative "../editor_buffers"
 require_relative "../editor_cmdline"
+require_relative "../editor_completion"
 require_relative "../editor_explorer"
 require_relative "../editor_floats"
 require_relative "../editor_global"
@@ -106,6 +108,7 @@ when "domain_ex_range" then DomainExRangeTest.main
 when "domain_filetype" then DomainFiletypeTest.main
 when "domain_float_layer" then DomainFloatLayerTest.main
 when "domain_frame" then DomainFrameTest.main
+when "domain_fuzzy_match" then DomainFuzzyMatchTest.main
 when "domain_global" then DomainGlobalTest.main
 when "domain_grammar" then DomainGrammarTest.main
 when "domain_icons" then DomainIconsTest.main
@@ -132,6 +135,7 @@ when "drivers_main_loop" then DriversMainLoopTest.main
 when "drivers_process_runner" then DriversProcessRunnerTest.main
 when "editor_buffers" then EditorBuffersTest.main
 when "editor_cmdline" then EditorCmdlineTest.main
+when "editor_completion" then EditorCompletionTest.main
 when "editor_explorer" then EditorExplorerTest.main
 when "editor_floats" then EditorFloatsTest.main
 when "editor_global" then EditorGlobalTest.main

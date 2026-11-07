@@ -4,7 +4,7 @@ The action names a keymap value may use, in `namespace.action` form, or `plugin.
 
 In normal, operator-pending, and the visual modes the command grammar reads an action by the kind of the handler the action table registered for it: `cursor.*` and `motion.*` are motions, which move the cursor on their own and give an operator its range; `operator.delete`, `operator.change`, `operator.yank`, `operator.indent`, and `operator.dedent` are the pending operators, which wait for a motion, a text object, or themselves again for a linewise command; `textobject.*` actions are text objects, usable after an operator or in a visual mode; `register.select`, the four find motions, and `visual.replace` read one more key; `search.forward` and `search.backward` read a pattern on the command line and are then motions; every other action, the `window.*`, `scroll.*`, `tab.*`, `visual.*`, and `plugin.*` actions included, completes at once with the count and register typed before it. In a visual mode the five operators do not wait: they act on the selection at once, and a motion moves the cursor end of the selection.
 
-In the Modes column, `visual` stands for the three visual maps, `visual`, `visual_line`, and `visual_block`, which bind the same keys. A `plugin.<name>.<action>` action is routed to the plugin that declared it in its manifest; a plugin's default bindings live in its manifest, not in `config/default.caratrc`, and a user binding of the same keys replaces them.
+In the Modes column, `visual` stands for the three visual maps, `visual`, `visual_line`, and `visual_block`, which bind the same keys, and `completion` for the keymap layer looked up first in insert mode while the completion popup shows. A `plugin.<name>.<action>` action is routed to the plugin that declared it in its manifest; a plugin's default bindings live in its manifest, not in `config/default.caratrc`, and a user binding of the same keys replaces them.
 
 ## Implemented
 
@@ -116,6 +116,11 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `insert.backspace` | insert | Delete before the cursor |
 | `insert.delete` | insert | Delete under the cursor |
 | `insert.tab` | insert | Insert a tab or spaces |
+| `completion.next` | completion | Select the next row of the completion popup, wrapping |
+| `completion.previous` | completion | Select the previous row of the completion popup, wrapping |
+| `completion.insert` | completion | Put the selected completion in place of the typed part |
+| `completion.replace` | completion | Put the selected completion in place of the whole word |
+| `completion.close` | completion | Close the completion popup, staying in insert mode |
 | `cmdline.execute` | cmdline | Run the command line |
 | `cmdline.backspace` | cmdline | Remove the last character, or leave when empty |
 | `cmdline.history_older` | cmdline | Recall the next older entry of the prompt's history that starts with the typed text |

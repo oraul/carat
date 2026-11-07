@@ -1,0 +1,41 @@
+ok   fn_na finds file_name
+ok   fn_na finds fn_name
+ok   fn_na does not find final
+ok   fn_na does not find name
+ok   a prefix matches
+ok   a subsequence from the start matches
+ok   a part starting mid-word does not match
+ok   a later part matches at its start
+ok   case is ignored
+ok   a case change starts a part
+ok   a lowercase run is no part start
+ok   a leading underscore word
+ok   the parts keep their order
+ok   a trailing underscore is ignored
+ok   a letter missing
+ok   an empty pattern matches nothing
+ok   bytes beyond ASCII match exactly
+ok   a prefix comes first
+ok   runs beat gaps
+ok   shorter first among equals
+ok   equal words keep their order
+ok   CSI sequences are dropped whole
+ok   an OSC title ended by BEL
+ok   an OSC ended by ESC backslash
+ok   a two-character escape
+ok   C1 CSI is dropped whole
+ok   C1 OSC ended by C1 ST
+ok   an unterminated OSC drops the rest
+ok   a lone ESC at the end
+ok   other controls are dropped, breaks are spaces
+ok   an illegal byte is U+FFFD
+ok   cut at the limit
+ok   cut at a character boundary
+ok   a label of 500 letters is cut to 80 bytes
+ok   an insert text is cut to 200 bytes
+ok   a detail is cut to 80 bytes
+ok   plain reads at most 4096 raw bytes
+ok   an escape-laden label is cleaned and an unknown kind reads as text
+ok   an empty insert text is the label
+ok   a list keeps 200 candidates
+domain_fuzzy_match: 40 passed, 0 failed

@@ -1370,12 +1370,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: it assigns `state = @state` and never reads it (the block captures `open_file`'s own state), and it restores the float focus although its only caller, `open_file`, then calls `focus_at`, whose `TabPage#focus` leaves the float again, so the restore is never observable.
 - Fix outline: delete the dead line, and drop `saved_float` and its `enter`, or document that `in_window` keeps the focus for callers that do not refocus. Queued in `float-tidy` with the other `floating-windows` notes.
 
-## A float reopened at the same box keeps the old float's text
-
-- Where: `build_float_key` in `carat/adapters/frame_presenter.rb` (line 365 at `floating-windows`) and the `floats` comment of `carat/domain/frame.rb`. Periodic quality blocking at 803fe6e.
-- Why it matters: the key holds only the box, the scroll, and the buffer's change counters, so a float closed and replaced by a new one at the same box (fresh scratch buffers both at changes 0 and closed_count 0) gives the same key; with one layout window and the float not entered the rows under it are not repainted and the screen keeps the old text and title. Completion's list is the first consumer that reopens a float at one box.
-- Fix outline: add the float's window id to the key (a stride of 9, with the Frame comment), and a test in `test/editor_floats.rb` that closes and reopens a float at the same box with other lines after two redraws and compares the screen with a full repaint. Queued in `completion`.
-
 ## Branch code can forge a security pass the resume trusts
 
 - Where: `trusted_state` in `tools/run_state.sh` (line 1295 at 803fe6e). Periodic security Medium (5); found again at eb63fb4 as Medium (6) (`lsp-diagnostics`' retrospective note 21).
@@ -1464,7 +1458,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: the initialize response handling of `carat/adapters/json_rpc_language_gateway.rb` (line 341 at eb63fb4). Periodic quality blocking at eb63fb4.
 - Why it matters: an error response to `initialize` takes the ready path, so the server is marked ready, `initialized` and then `didOpen` for every document are sent against the protocol, and the bar shows the server ready instead of failed; no test covers it, and the next language features send requests on that state.
-- Fix outline: treat a response carrying an error or no object result as a failed start, shown with the `:LspRestart` hint, with a gateway row for an initialize error. Queued in `completion`.
+- Fix outline: treat a response carrying an error or no object result as a failed start, shown with the `:LspRestart` hint, with a gateway row for an initialize error. Queued in `completion-request`.
 
 ## A save while the language server starts is never sent
 
@@ -1621,3 +1615,33 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `tools-test` help line of the `Makefile` (line 355 at 594dd35) lists the shell tools but not the workflow helpers it now runs with node; `.claude/commands/review.md` (line 8) says the quality reviewer reviews the whole tree; the guard case of `tools/tools_test.sh` (line 1000) still uses `tmp/.review-quality` while the workflow names `tmp/.review-quality-N`. Quality advisories in `partial-results`.
 - Why it matters: `make help` and `/review` describe what no longer runs, and the guard case tests a path the workflow no longer uses.
 - Fix outline: add the workflows' pure helpers (node) to the help line, say the security reviewer and three quality starts over the code map areas in `review.md`, and use `tmp/.review-quality-1` in the guard case.
+
+## Fuzzy completion matching reuses letters and matches a word of underscores
+
+- Where: `Carat::Domain::FuzzyMatch` in `carat/domain/fuzzy_match.rb` (line 32 at 334d899), where each part's anchor is searched only after the previous part's anchor. Quality advisory in `completion`.
+- Why it matters: a later part can reuse letters the previous part already matched, so `fa_a` matches `file_a` with one `a`, and a typed word of only underscores matches every candidate, which fills the popup with noise.
+- Fix outline: start the next part's anchor search after the previous part's last matched byte and answer -1 when the pattern has no letters, with a table row for each in `test/domain_fuzzy_match.rb`.
+
+## The completion ranking table checks a copy of the ranking
+
+- Where: `ranked` in `test/domain_fuzzy_match.rb` (line 17 at 334d899) copies the insertion sort of `ShowCompletion#ranked` in `carat/use_cases/completion/show_completion.rb`. Quality advisory in `completion`.
+- Why it matters: the ranking table checks the test's copy, not the production order, so a change to `ShowCompletion`'s ranking passes the test unseen.
+- Fix outline: move the ranking into the domain (`FuzzyMatch.rank` or `CompletionMenu#rank`), call it from `ShowCompletion`, and point the table at it.
+
+## A multi-key keymap.completion line loads and never fires
+
+- Where: `completion_key?` in `carat/use_cases/handle_key.rb` (line 201 at 334d899) answers only a single-key `:match`, while `Keymap#add_checked` accepts any `keymap.completion` line. Quality advisory in `completion`.
+- Why it matters: a multi-key completion binding, or a single key that also starts a longer one, loads with no reported problem and silently does nothing, against the rule that every configuration problem is reported as `file:line: message`.
+- Fix outline: report such `keymap.completion` lines as `file:line` problems in `add_checked`, with a configuration test row.
+
+## Completion code style advisories
+
+- Where: `CompletionHandler.register` in `carat/use_cases/actions/completion_handler.rb` (line 45 at 334d899) repeats the five-keyword constructor five times; the `completion` keyword and reader of `HandleKey` in `carat/use_cases/handle_key.rb` (line 60) hold a `Domain::CompletionMenu` that the assembly and every use case call `completion_menu` or `menu`; `row_offset` in `carat/use_cases/completion/show_completion.rb` (line 145) subtracts an unexplained 2 from `screen_rows`; the `paint_float_row` comment in `carat/adapters/frame_presenter.rb` (line 466) still says the text is drawn in NormalFloat though a menu's rows are Pmenu and PmenuSel; the PageDown row of `test/editor_completion.rb` (line 81) asserts only the row and the closed popup. Quality advisories in `completion`.
+- Why it matters: the register and reader names differ from the style of their neighbours, the 2 and the comment mislead a reader of the layout and the paint path, and the PageDown row would pass with an empty word at column 0, so it does not show the not-typed branch ran.
+- Fix outline: loop over parallel names, variants, and descriptions arrays as `BufferHandler.register` does; rename the keyword and reader to `completion_menu`; name the reserved rows in a private constant or read the free rows from the layout area `ArrangeView` uses; say "its text in float_group's group"; assert the cursor column 2 and `h.completions.asked == 1` in the PageDown row as the cursor-binding row does.
+
+## Completion docs advisories
+
+- Where: `README.md` (line 63 at 334d899), where the raw-mode sentence explaining why Ctrl-S works moved to the end of the completion paragraph; the language-services area of `docs/codebase-map.md` (line 593) names only `test/domain_rpc_framer.rb` for `ControlText`, though `test/domain_fuzzy_match.rb` (line 267 of the map) also holds the `ControlText.plain`, `CompletionItem`, and `CompletionList` tables; the 5.3 bullet of `docs/architecture.md` (line 180) says these use cases answer an unavailable service with an empty response and a message, while completion with no ready source opens nothing and reports nothing. Quality advisories in `completion`.
+- Why it matters: the README sentence no longer follows the Ctrl-S sentence it explains, the map hides where the `ControlText.plain` table lives, and the architecture contradicts the completion spec (typing behaves as without completion).
+- Fix outline: put the raw-mode sentence back after "Ctrl-S saves ... stay in insert mode." and keep the completion paragraph on its own; name `test/domain_fuzzy_match.rb` for `ControlText.plain` in the language-services line or move those tables to a test named after them; say completion stays silent when its source is not ready, or state the `CompletionPort` route in the 5.1 completion bullet instead.
