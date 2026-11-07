@@ -1720,7 +1720,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## A check stage can still write the delivery clone by an absolute path
 
-- Where: `clone_make` in `tools/run_state.sh` (the symbolic links to `tmp/.toolchain` and `tmp/.spinel`), and the benchmark's `make metrics` and `make bench` in the delivery clone (`.claude/agents/benchmark.md`). Residual risk of `check-isolation`.
+- Where: `clone_make` in `tools/run_state.sh` (the symbolic links to `tmp/.toolchain` and `tmp/.spinel`), and the benchmark's `make metrics` and `make bench` in the delivery clone (`.claude/agents/benchmark.md`). Residual risk of `check-isolation`, reported again in its delivery review as security Medium (6) and Low (5) at `tools/run_state.sh` line 529.
 - Why it matters: the check clone separates what a stage writes in its own directory, but a process of the same user can find the delivery clone (the toolchain links, the runner's working directory) and write its `.git`, `build/pipeline`, or the shared Spinel binaries the next check and the contributor run; the benchmark still runs branch code in the delivery clone. The origin gate, the guard's refusals, and the green line's url check are the second line.
 - Fix outline: run the stages and the benchmark under an operating-system sandbox (a user namespace or another user) with the delivery clone read-only and a private copy of the toolchain, or check the toolchain's hash before each check and run the benchmark in a check clone, each with a `tools/tools_test.sh` case.
 
@@ -1741,3 +1741,15 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/goals.md` line 34, the calibration's reasons. Quality advisory in `agent-calibration` (reported at lines 187 and 34 across its rounds).
 - Why it matters: the reasons say "the four with an agent file on the cheap tier" after listing six mechanical starts of which only three (checker, benchmark, merger) have an agent file; the fourth cheap start, the scouts, is not in the list, so the rule misreads.
 - Fix outline: say "the three with an agent file", or add the scouts to the list of mechanical starts.
+
+## The green line fetches main by the configured refspec
+
+- Where: `.claude/workflows/deliver-change.js` line 475, the green line's forced fetch of main, and `RISKY_CONFIG` in `tools/agent_guard.sh` and `originCheck` in the workflow, which do not check `remote.origin.fetch`. Security Medium (7) and Medium (6) in the `check-isolation` delivery review; it reopens the removed entry on branch code rewriting the `origin/main` the merge gates trust.
+- Why it matters: branch code that writes the delivery clone's `.git/config` by an absolute path, or the branch's Makefile the benchmark runs there on a resume past the push, can map its own branch onto `refs/remotes/origin/main`; the merge-gates worktree and the merge-tool guard then come from that ref, and the origin gate checks it only after the fetch, inside gates from the fetched main.
+- Fix outline: fetch with the explicit refspec `+refs/heads/main:refs/remotes/origin/main` in the green line, and have the guard and `originCheck` refuse a `remote.origin.fetch` other than the default before any fetch, with a `tools/tools_test.sh` case. Queued in `pinned-main`.
+
+## check-isolation's open quality advisories
+
+- Where: `README.md` line 180, the checker sentence; `openspec/changes/archive/2026-11-07-check-isolation/design.md` line 53, the Risks bullet; `passedAt` in `.claude/workflows/deliver-change.js` line 482; the header comment of `tools/agent_guard.sh` lines 28 to 40. Quality advisories in `check-isolation`; its `tools/gates.sh` line 436 and `docs/codebase-map.md` line 50 advisories are those of `merge-gate-integrity` above.
+- Why it matters: the README says branch code cannot write the hooks, git configuration, or run states the gates read, while the design and the entry above record that it still can by an absolute path; the archived Risks bullet still calls the clone the longer-term fix it now is; `passedAt` names a phase record's commit `result` and compares `result === head`, which reads as a bug; one header line runs far past the comment's width.
+- Fix outline: say "through the paths it is given" in the README as the design does; leave the archived design as the record and point the next design at the absolute-path residual risk; name the parts `first` and `second` or split the phase and review comparisons; rewrap the header comment.
