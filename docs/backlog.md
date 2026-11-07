@@ -1712,14 +1712,26 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: `receive` now crashes the server unless the result is a Hash, so the guards are dead and mislead; the long lines break the files' wrap; the test's wait is a no-op and the `10.times` fallback does the waiting; the architecture row disagrees with the port and the map.
 - Fix outline: read `result["serverInfo"]` and `result["capabilities"]` directly; rewrap both comment paragraphs; wait until `count_of` reaches 2 with a bounded helper and drop the no-op call; add `start(state)` to the row.
 
-## The merge-tool hook defers to a guard that does not judge the merge tool
+## The merge-tool hook allows a merge when the guard read from origin/main lacks the tool
 
-- Where: the second hook line of `.claude/agents/merger.md`, which runs `main`'s guard for `mcp__github__merge_pull_request` only when its text names the tool. Left by `merge-gate-integrity`, whose own merge ran `main`'s older guard.
-- Why it matters: the clause is needed only for that one merge; kept, it is a branch in the hook no test needs, and a reader may take it for a fallback.
-- Fix outline: run `main`'s guard unconditionally, as the Bash hook does, and drop the bootstrap case from the hook tests. Queued in `merge-gate-tidy`.
+- Where: `.claude/agents/merger.md` line 16 at e368486, the merge-tool hook, on the same unpushed commits. Security Low (5) in the stopped `merge-gate-integrity` delivery review.
+- Why it matters: the hook takes its guard from a local `origin/main`; when that copy predates the tool name, the hook allows the merge instead of refusing it, and branch code can make the local copy stale.
+- Fix outline: refuse when the guard read from the pinned main does not name the merge tool, run it unconditionally as the Bash hook does, and drop the bootstrap case from the hook tests, with a `tools/tools_test.sh` case. Queued in `pinned-main`.
 
-## The hooks read origin/main without comparing it with origin
+## merge-gate-integrity's open quality advisories
 
-- Where: every agent's hook line under `.claude/agents/`, which runs `git show origin/main:tools/agent_guard.sh`; `merge-gate-integrity` compares the ref with `git ls-remote` only in the push and merge gates and the merge tool's check. What remains of the periodic security Medium (6) at e20c83c.
-- Why it matters: branch code run by the checks can point `refs/remotes/origin/main` at a commit holding a permissive guard, which the other agents' hooks then run until the next fetch, and the checks' `.git` and home directory stay writable.
-- Fix outline: run the checks in a clone whose `.git` the stages cannot write, or have each start's first call fetch and compare the ref with origin before the guard is read, with a `tools/tools_test.sh` case. Queued in `merge-gate-tidy`.
+- Where: at e368486 on the unpushed commits: `tools/gates.sh` line 436 (the gated failures report under an empty or the `pr-body` gate), line 136 (a hosted origin judged by a denylist while `tools/agent_guard.sh` line 347 and `.claude/workflows/deliver-change.js` line 438 use other forms), line 41 (the origin gate's header line stops mid-phrase); `docs/codebase-map.md` line 50 (the `rules.sh` entry lost its separator). Quality advisories in `merge-gate-integrity`.
+- Why it matters: a failed gated write names the wrong gate, one origin rule has three diverging definitions, and two documents misread.
+- Fix outline: set the gate name before each gated call, keep one allowlist pattern in `tools/rules.sh` used by all three, and repair both lines. Queued in `pinned-main`.
+
+## The close start's calibration profile is never recorded
+
+- Where: `.claude/workflows/deliver-change.js` line 924, where `records` takes `metricLine()`, before `calibrate('close', ...)` runs at line 928. Quality advisory in `agent-calibration` (reported at lines 915 and 924 across its rounds).
+- Why it matters: the close start's line is the run's last metric line, so `metric.calib.close` never reaches the run state or the history's calibration column, unlike the design's profile recorded for every kind started; the close start's tier and effort cannot be compared against its outcome.
+- Fix outline: build the close start's options with `calibrate('close', ...)` before computing `records`, and pass the built options to `agent`, with a `tools/tools_test.sh` case that the close profile is in the record line.
+
+## The calibration reasons miscount the cheap-tier starts
+
+- Where: `docs/goals.md` line 34, the calibration's reasons. Quality advisory in `agent-calibration` (reported at lines 187 and 34 across its rounds).
+- Why it matters: the reasons say "the four with an agent file on the cheap tier" after listing six mechanical starts of which only three (checker, benchmark, merger) have an agent file; the fourth cheap start, the scouts, is not in the list, so the rule misreads.
+- Fix outline: say "the three with an agent file", or add the scouts to the list of mechanical starts.
