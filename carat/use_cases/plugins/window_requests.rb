@@ -40,12 +40,13 @@ module Carat
       attr_reader :split_window #: SplitWindow
       attr_reader :open_tab #: OpenTab
       attr_reader :open_side_window #: OpenSideWindow
-      attr_reader :open_float #: OpenFloat
-      attr_reader :close_float #: CloseFloat
       attr_reader :files #: Ports::FilePort
 
-      # open_file is also the name of a request, so it has no reader.
+      # open_file, open_float, and close_float are also the names of
+      # requests, so they have no reader.
       # @rbs @open_file: OpenFile
+      # @rbs @open_float: OpenFloat
+      # @rbs @close_float: CloseFloat
 
       #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, registry: PluginRegistry, open_file: OpenFile, split_window: SplitWindow, open_tab: OpenTab, open_side_window: OpenSideWindow, open_float: OpenFloat, close_float: CloseFloat, files: Ports::FilePort) -> void
       def initialize(state:, buffers:, tabs:, registry:, open_file:, split_window:, open_tab:, open_side_window:, open_float:, close_float:, files:)
