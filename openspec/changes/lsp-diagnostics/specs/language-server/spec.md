@@ -1,3 +1,7 @@
+## Purpose
+
+The language server client: which server runs for a buffer, what it is told about the documents, its states on the bar, its diagnostics as values, its restart, and the limits on what it may send.
+
 ## ADDED Requirements
 
 ### Requirement: A server starts for the current buffer's language
