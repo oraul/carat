@@ -1728,7 +1728,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: at e368486 on the unpushed commits: `tools/gates.sh` line 436 (the gated failures report under an empty or the `pr-body` gate), line 136 (a hosted origin judged by a denylist while `tools/agent_guard.sh` line 347 and `.claude/workflows/deliver-change.js` line 438 use other forms), line 41 (the origin gate's header line stops mid-phrase); `docs/codebase-map.md` line 50 (the `rules.sh` entry lost its separator). Quality advisories in `merge-gate-integrity`.
 - Why it matters: a failed gated write names the wrong gate, one origin rule has three diverging definitions, and two documents misread.
-- Fix outline: set the gate name before each gated call, keep one allowlist pattern in `tools/rules.sh` used by all three, and repair both lines. Queued in `pinned-main`.
+- Fix outline: set the gate name before each gated call, keep one allowlist pattern in `tools/rules.sh` used by all three, and repair both lines. Queued in item 45 of `docs/queue.md`, the batch of backlog items.
 
 ## The close start's calibration profile is never recorded
 
@@ -1820,68 +1820,68 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: `make bench` never runs area 13's float benchmark or `n`, so a regression there goes unmeasured.
 - Fix outline: take the names from the bench binary or one shared list, with a case that every scenario runs. Queued in the backlog items worth a change.
 
-## Wrapped markdown rows break inside their own prefix
-
-- Where: `wrapped` in `carat/domain/markdown_text.rb` line 240 at 925d759. Quality advisory in `completion-docs`.
-- Why it matters: a code row (two-space indent), a bullet, or a quote bar followed by one word wider than the width cuts at that prefix space, giving an empty row (code) or an orphan bullet or bar row before the word.
-- Fix outline: take a space as a break point only when non-space text precedes it in the segment, else cut on the character boundary, with a table row in `test/domain_markdown_text.rb`. Queued in `completion-tidy-b`.
-
 ## The completion resolve timeout restarts with every pick
 
 - Where: `carat/adapters/json_rpc_language_gateway.rb` line 562 at 925d759 (558 at d46ecff), which measures the resolve timeout from `docs.due`, which a new pick resets. Quality advisory in `completion-docs`, raised again at d46ecff.
 - Why it matters: every new pick during the flight moves `docs.due` forward, so a server that never answers is not cancelled while the selection keeps moving.
-- Fix outline: keep the send time (or a deadline) of the request in flight and time it out from that, with a case in `test/adapters_server_completions.rb` that keeps moving the selection. Queued in `completion-tidy-b`.
+- Fix outline: keep the send time (or a deadline) of the request in flight and time it out from that, with a case in `test/adapters_server_completions.rb` that keeps moving the selection. Queued in `completion-docs-tidy`.
 
 ## ServerCompletions#documentation records the pick inside a query
 
 - Where: `documentation` in `carat/adapters/server_completions.rb` line 50 at 925d759, which sets `docs.pick` and which `ShowCompletionDocs` calls on every key. Quality advisory in `completion-docs`.
 - Why it matters: a command hidden in a reader makes the port's contract misleading and the call order load-bearing.
-- Fix outline: split it into a `pick(list, index)` command and a `documentation` query, or name it for both, and update `CompletionPort` and `FixedCompletions`. Queued in `completion-tidy-b`.
+- Fix outline: split it into a `pick(list, index)` command and a `documentation` query, or name it for both, and update `CompletionPort` and `FixedCompletions`. Queued in `completion-docs-tidy`.
 
 ## ShowCompletionDocs recomputes the cursor's screen row
 
 - Where: `carat/use_cases/completion/show_completion_docs.rb` line 88 at 925d759, which computes the row as `ShowCompletion#row_offset` does, and takes `below = popup.row > 0`, and line 102, which computes the column through `DisplayWidth.column` where `ArrangeView#place_floats` uses the line cache. Quality advisory in `completion-docs`, raised again at d46ecff.
 - Why it matters: the two copies and the sign convention couple the documentation float to the popup's layout, so a change to one silently misplaces the other.
-- Fix outline: derive the documentation float's vertical placement from the popup spec alone (row and height), or share one helper for the cursor's screen cell with `ArrangeView` and `ShowCompletion`. Queued in `completion-tidy-b`.
+- Fix outline: derive the documentation float's vertical placement from the popup spec alone (row and height), or share one helper for the cursor's screen cell with `ArrangeView` and `ShowCompletion`. Queued in `completion-docs-tidy`.
 
 ## The gateway repeats the markdown size limit as a literal
 
 - Where: `DOCUMENT_LIMIT` in `carat/adapters/json_rpc_language_gateway.rb` line 60 at 925d759 repeats `MarkdownText::RAW_LIMIT` (16_384). Quality advisory in `completion-docs`.
 - Why it matters: two literals for one bound drift apart when one is changed.
-- Fix outline: use `Domain::MarkdownText::RAW_LIMIT` in the gateway, or say in a comment why the two differ. Queued in `completion-tidy-b`.
+- Fix outline: use `Domain::MarkdownText::RAW_LIMIT` in the gateway, or say in a comment why the two differ. Queued in `completion-docs-tidy`.
 
 ## The architecture's RequestDefinition line was reworded out of scope
 
 - Where: `docs/architecture.md` line 180 at 925d759, reworded by `completion-docs` with no connection to completion documentation. Quality advisory in `completion-docs`.
 - Why it matters: an unrelated rewording widens the change and hides what the architecture said before.
-- Fix outline: restore the original sentence and keep only the `CompletionPort` and `ShowCompletionDocs` edits. Queued in `completion-tidy-b`.
+- Fix outline: restore the original sentence and keep only the `CompletionPort` and `ShowCompletionDocs` edits. Queued in `completion-docs-tidy`.
 
 ## CompletionMenu#chosen repeats the chosen index
 
 - Where: `chosen` in `carat/domain/completion_menu.rb` line 88 at 925d759, which repeats `matches[selected]` beside the new `chosen_index`. Quality advisory in `completion-docs`.
 - Why it matters: two spellings of the same choice can drift.
-- Fix outline: answer `candidates.at(chosen_index)`. Queued in `completion-tidy-b`.
+- Fix outline: answer `candidates.at(chosen_index)`. Queued in `completion-docs-tidy`.
 
 ## The resolve cases repeat their setup three times
 
 - Where: `test/adapters_server_completions.rb` line 384 at e1a647c: the two cancellation cases repeat the resolve case's setup (a rig with `resolveProvider`, type `ifi`, answer three described items, `<C-n><C-n>`, wait for `completionItem/resolve`). Quality advisory in `completion-docs`.
 - Why it matters: a change to the resolve flow has to be made three times in the test.
-- Fix outline: extract a helper such as `resolving(r)` returning the rig with a resolve in flight, beside `completing`. Queued in `completion-tidy-b`.
+- Fix outline: extract a helper such as `resolving(r)` returning the rig with a resolve in flight, beside `completing`. Queued in `completion-docs-tidy`.
 
 ## Completion resolve state outlives a switch of completion language
 
 - Where: `complete` in `carat/adapters/json_rpc_language_gateway.rb` line 498 at d46ecff, which sets `ask.language` to the new request's server but leaves `@items` and `docs` alone, and `resolve`, `cancel_resolve`, and the answer match (lines 552 to 558), which read `@completion.language`. Low (3) finding of the security review of `completion-docs`, and a quality advisory there.
 - Why it matters: after a completion request for a file of another type, a pending pick can send server A's raw completion item to server B as `completionItem/resolve`, the `$/cancelRequest` for A's request id reaches B, and A's real answer is dropped; a minor cross-server leak between servers that can already read the workspace, plus a misrouted cancel.
-- Fix outline: record the answer's language in `CompletionDocs` in `completed` and use it for `resolve`, `cancel_resolve`, and the answer match, or call `cancel_resolve` then clear `docs` and `@items` in `complete` before `ask.language` changes; add a case in `test/adapters_server_completions.rb` that completes in two file types with a resolve in flight.
+- Fix outline: record the answer's language in `CompletionDocs` in `completed` and use it for `resolve`, `cancel_resolve`, and the answer match, or call `cancel_resolve` then clear `docs` and `@items` in `complete` before `ask.language` changes; add a case in `test/adapters_server_completions.rb` that completes in two file types with a resolve in flight. Queued in `completion-docs-tidy`.
 
 ## A server crash during a resolve has no test
 
 - Where: `forget_completion` in `carat/adapters/json_rpc_language_gateway.rb` line 455 at d46ecff, which now resets `docs.sent_id` and drops the language from `@resolvers`. Quality advisory in `completion-docs`.
 - Why it matters: the crash path of the resolve flow can regress, leaving `waiting?` true or sending a resolve to a restarted server, without a test failing.
-- Fix outline: in `test/adapters_server_completions.rb`, crash the server while a resolve is in flight and assert `waiting?` is false and no resolve is sent after.
+- Fix outline: in `test/adapters_server_completions.rb`, crash the server while a resolve is in flight and assert `waiting?` is false and no resolve is sent after. Queued in `completion-docs-tidy`.
 
 ## The tools test's wait for the runner's stage fails silently
 
 - Where: `tools/tools_test.sh` line 323 at d46ecff, the loop that waits for `stage.slow` to read `running` before superseding the runner. Quality advisory in `completion-docs`.
 - Why it matters: after 20 tries the loop falls through, so a slow runner surfaces as an unrelated supersede failure.
-- Fix outline: fail with a message naming the stage when `stage.slow` never reads `running`.
+- Fix outline: fail with a message naming the stage when `stage.slow` never reads `running`. Queued in `check-runner-safety`.
+
+## The documentation floats paint one group
+
+- Where: `ShowHover` (`carat/use_cases/docs/show_hover.rb`), `PinHover`, and `ShowCompletionDocs` show documentation as plain rows from `MarkdownText.rows`, and `FramePresenter#paint_float_row` paints a float's text in `NormalFloat` only. Split out of `quick-docs`, whose brief asked for rendered markdown with fenced code through the highlighter.
+- Why it matters: headings, emphasis, code spans, and fenced code read the same as prose, so a long hover is harder to scan than in Neovim, and the pinned split loses the code's colors too.
+- Fix outline: `quick-docs-styles`: have `MarkdownText` return each row's spans (heading as `Title`, code spans and fenced code through `PluginSyntax#tokenize` for the fence's language, emphasis as bold or italic groups added to the themes), keep them in the buffer's `SyntaxCache` as a fixed entry that `HighlightView` leaves alone, paint a float's tokens over its background through a float layer of groups like `CURSOR_LINE_LAYER` in `SgrTable`, and test the cells' groups in `test/adapters_hover.rb` and the contrast table.
