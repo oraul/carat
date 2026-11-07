@@ -39,9 +39,13 @@
 #   note.N           "KIND TEXT": a retrospective proposal or a finding
 # Logs: build/stages/CHANGE/STAGE.log, ending in "EXIT n", "KILLED: ...",
 # or "SUPERSEDED: ..."; check.log, the runner's output, ending in its
-# verdict line, and check.pid, "PID COMMIT" while the runner runs.
+# verdict line, and check.pid, "PID COMMIT CLONE" while the runner runs.
 # Compile passes: build/pipeline/compiled, "STAGE KEY SUM" per stage of
 # COMPILE_STAGES, kept across changes.
+# The check clone: a repository the runner makes outside the delivery
+# clone for each check (TMPDIR) and removes on exit; every stage runs in
+# it. build/stages/CHANGE/carry keeps its build/ between checks (without
+# pipeline, stages, and plan) and METRICS_OUT gets its metrics.
 #
 # History: docs/metrics.tsv, one row per merged change, appended by history
 # from the run states that have none yet, so the next change carries the
@@ -82,7 +86,8 @@
 #   check CHANGE [COMMIT]       refuse a dirty tracked tree or an untracked
 #                               file under carat/ bin/ test/ bench/, then
 #                               run the canonical stages (make -s stages) in
-#                               order and stop at the first failure (the
+#                               order in the check clone (below) and stop
+#                               at the first failure (the
 #                               workflow records phase.check); a stage record
 #                               counts only at COMMIT, the last check the
 #                               workflow passed, or carried from it: skipped
@@ -413,7 +418,7 @@ tests_only_since() {
 # The runner (check-run) runs them detached from the waiter (check_wait);
 # each stage that does not pass ends the run with its verdict line.
 check_stages() {
-  stages=${STAGES:-$("$make_cmd" -s --no-print-directory stages)}
+  stages=${STAGES:-$(in_clone "$make_cmd" -s --no-print-directory stages)}
   backed=$1
   key=$(code_key)
   for s in $stages; do
@@ -439,7 +444,7 @@ check_stages() {
       continue
     fi
     one_of "$s" "$COMPILE_STAGES" && compiled_set "$s" ""
-    if ! run_stage "$s" "$make_cmd" --no-print-directory check-stage "S=$s"; then
+    if ! run_stage "$s" sh -c "$CLONE_EXEC" in_clone "$check_root" "$make_cmd" --no-print-directory check-stage "S=$s"; then
       case "$stage_word" in killed|superseded) word=$stage_word ;; *) word=failed ;; esac
       echo "check: stage $s $word at $head; read $stage_dir/$change/$s.log"
       exit 1
@@ -451,7 +456,7 @@ check_stages() {
   echo "check: every stage passed at $head; the workflow records the check"
 }
 
-# The check's files: the runner's pid file, "PID COMMIT", while it runs,
+# The check's files: the runner's pid file, "PID COMMIT CLONE", while it runs,
 # and its output, which ends with its verdict line.
 check_pid_file() {
   echo "$stage_dir/$change/check.pid"
@@ -475,18 +480,100 @@ check_verdict() {
 # check-run BACKED: the runner, started detached by check_wait. It writes
 # the pid file, removes it on exit while it still names it, and on a
 # hang-up, interrupt, or terminate signal records its running stage as
-# killed, or superseded when HEAD moved, and prints that verdict.
+# killed, or superseded when HEAD moved, and prints that verdict. The
+# stages run in the check clone, which it makes first and drops on exit.
 check_run() {
   head=$(head_commit)
   pid_file=$(check_pid_file)
   echo "$$ $head" > "$pid_file"
   running_stage=''
   child=''
+  check_root=''
   trap 'check_signalled HUP' HUP
   trap 'check_signalled INT' INT
   trap 'check_signalled TERM' TERM
-  trap 'own=$(cut -d" " -f1 "$pid_file" 2>/dev/null); [ "$own" != "$$" ] || rm -f "$pid_file"' EXIT
+  trap 'clone_drop; own=$(cut -d" " -f1 "$pid_file" 2>/dev/null); [ "$own" != "$$" ] || rm -f "$pid_file"' EXIT
+  clone_make
   check_stages "$1"
+}
+
+# The gates' git: no global or system configuration and no hook.
+pinned_git() {
+  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null "$@"
+}
+
+# The check clone: a new repository under TMPDIR, outside the delivery
+# clone, holding HEAD on the branch's name and origin/main by one fetch
+# (objects copied into a pack: no hard link, no alternates, no remote, the
+# sample hooks only), the toolchain linked, and build/ from the carry.
+# What a stage writes in its directory (hooks, configuration, refs,
+# build/pipeline) stays in it and is removed with it.
+clone_make() {
+  top=$(pwd -P)
+  check_root=$(mktemp -d "${TMPDIR:-/tmp}/carat-check.XXXXXX") ||
+    clone_refused "mktemp failed"
+  echo "$$ $head $check_root" > "$pid_file"
+  branch=$(git symbolic-ref -q --short HEAD) || branch=check
+  refs="+HEAD:refs/heads/$branch"
+  ! git rev-parse -q --verify refs/remotes/origin/main > /dev/null ||
+    refs="$refs +refs/remotes/origin/main:refs/remotes/origin/main"
+  pinned_git init -q "$check_root/repo" > /dev/null 2>&1 || clone_refused "git init failed"
+  check_root=$check_root/repo
+  # shellcheck disable=SC2086
+  pinned_git -C "$check_root" fetch -q --no-tags "$top" $refs 2>&1 || clone_refused "the fetch failed"
+  [ "$(git -C "$check_root" rev-parse -q --verify --short=12 "refs/heads/$branch")" = "$head" ] ||
+    clone_refused "HEAD moved from $head"
+  pinned_git -C "$check_root" checkout -q "$branch" 2>&1 || clone_refused "the checkout failed"
+  mkdir -p "$check_root/tmp" "$check_root/build"
+  for t in .toolchain .spinel; do
+    [ ! -e "$top/tmp/$t" ] || ln -s "$top/tmp/$t" "$check_root/tmp/$t"
+  done
+  carry=$stage_dir/$change/carry
+  [ ! -d "$carry" ] || cp -RP "$carry/." "$check_root/build/"
+}
+
+clone_refused() {
+  echo "check: the check clone could not be made: $1"
+  echo "check: stage none failed at $head; read $(check_log)"
+  exit 1
+}
+
+# in_clone COMMAND...: runs COMMAND in the check clone, with no path to
+# the delivery clone's run state, stages, or project in its environment;
+# sh execs it, so a stage's parent stays the runner.
+CLONE_EXEC='cd "$1" && shift && unset RUN_STATE_DIR STAGE_DIR METRICS_OUT CLAUDE_PROJECT_DIR && exec "$@"'
+in_clone() {
+  sh -c "$CLONE_EXEC" in_clone "$check_root" "$@"
+}
+
+# Removes the clone a runner gone past its trap left, named by its pid
+# file, only when it is a check clone under TMPDIR.
+clone_lost() {
+  lost_root=$(cut -d' ' -f3 "$(check_pid_file)" 2> /dev/null)
+  case "${lost_root#"${TMPDIR:-/tmp}/carat-check."}" in
+    "$lost_root"|''|*[!A-Za-z0-9]*) return 0 ;;
+  esac
+  chmod -R u+w "$lost_root" 2> /dev/null
+  rm -rf "$lost_root"
+}
+
+# Keeps the clone's build/ in the carry, without the records a stage could
+# have planted, and its metrics in METRICS_OUT, then removes the clone.
+clone_drop() {
+  [ -n "$check_root" ] || return 0
+  root=${check_root%/repo}
+  check_root=''
+  if [ -d "$root/repo/build" ]; then
+    carry=$stage_dir/$change/carry
+    rm -rf "$carry"
+    mkdir -p "$carry" && cp -RP "$root/repo/build/." "$carry/" 2> /dev/null
+    rm -rf "$carry/pipeline" "$carry/stages" "$carry/plan"
+    if [ -f "$root/repo/build/metrics/current.tsv" ]; then
+      mkdir -p "$(dirname "$metrics_out")" && cp "$root/repo/build/metrics/current.tsv" "$metrics_out"
+    fi
+  fi
+  chmod -R u+w "$root" 2> /dev/null
+  rm -rf "$root"
 }
 
 check_signalled() {
@@ -513,6 +600,7 @@ check_signalled() {
 # prints the verdict line and appends it to the runner's output.
 check_lost() {
   at=$1
+  clone_lost
   lost=$(grep -E '^  "stage\.[^"]*": "running ' "$(state_file)" | head -1 | sed 's/^  "stage\.\([^"]*\)": "running \(.*\)",*$/\1 \2/')
   if [ -n "$lost" ]; then
     s=${lost%% *}
@@ -545,7 +633,7 @@ check_wait() {
   pid_file=$(check_pid_file)
   pid=''
   at=''
-  [ ! -f "$pid_file" ] || read -r pid at < "$pid_file"
+  [ ! -f "$pid_file" ] || read -r pid at _ < "$pid_file"
   joined=0
   if runner_alive "$pid" && [ "$at" = "$head" ]; then
     echo "check: rejoining the check running at $head (pid $pid)"
@@ -600,7 +688,7 @@ check_wait() {
 read_pid() {
   pid=''
   at=''
-  [ ! -f "$pid_file" ] || read -r pid at 2>/dev/null < "$pid_file" || true
+  [ ! -f "$pid_file" ] || read -r pid at _ 2>/dev/null < "$pid_file" || true
 }
 
 # A fifth of a second, or a second where sleep takes whole seconds only.
@@ -630,9 +718,9 @@ compile_outputs() {
 outputs_sum() {
   files=$(compile_outputs "$1")
   [ -n "$files" ] || { echo -; return; }
-  for f in $files; do [ -f "$f" ] || { echo missing; return; }; done
+  for f in $files; do [ -f "${check_root:-.}/$f" ] || { echo missing; return; }; done
   # shellcheck disable=SC2086
-  cat $files | cksum | tr ' ' '-'
+  (cd "${check_root:-.}" && cat $files) | cksum | tr ' ' '-'
 }
 
 # True when the compile stage last passed on KEY and its outputs still have
