@@ -1453,3 +1453,33 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `JsonRpcLanguageGateway#diagnostic_of` at `lsp-diagnostics`: `Diagnostic#col` keeps the server's `character`, counted in UTF-16 units, the protocol's default.
 - Why it matters: on a line with characters outside the ASCII range the column differs from the code point column the editor uses, so a sign or a jump would land on the wrong character.
 - Fix outline: convert with the line's text when the diagnostic is drawn, or negotiate `utf-32` through `general.positionEncodings`, in `diagnostics-display`, with a row on a line holding a character outside the BMP.
+
+## Language servers are told about files outside the trusted root
+
+- Where: `JsonRpcLanguageGateway#sync` and `#poll` in `carat/adapters/json_rpc_language_gateway.rb` (lines 205 and 430 at `lsp-diagnostics`), which decide trust by the working directory only and then send `didOpen`, `didChange`, and `didSave` for every buffer of the server's file type. Security Lows (3) and (4) of `lsp-diagnostics`.
+- Why it matters: in a trusted root a user who opens `/tmp/evil/x.rb` hands that file to ruby-lsp, whose RuboCop pass may load the `.rubocop.yml` beside it, and its `require:` entries run code from a directory nobody trusted.
+- Fix outline: send document notifications only for buffers whose absolute path is under the working directory or a trusted root; show such a buffer as untrusted until `:LspStart`; add a gateway test with a buffer outside the root.
+
+## ProcessRunner#write answers true after its writer stopped
+
+- Where: `ProcessRunner#write` in `carat/drivers/process_runner.rb` (line 55 at `lsp-diagnostics`): only `stop` clears `@open`, so after the writer thread ends on a broken pipe `write` still answers true. Quality advisory of `lsp-diagnostics`.
+- Why it matters: it breaks `ProcessPort#write`'s contract (whether the child still takes input), the outbox grows unread, and the gateway's broken-input path runs only with `FakeProcesses`.
+- Fix outline: report the writer's end through a queue the editor thread checks in `write`, or reword the port to whether the handle is open and rely on the reader's `exit` message.
+
+## The language server client repeats itself and names little of what it uses
+
+- Where: `carat/adapters/json_rpc_language_gateway.rb` at `lsp-diagnostics`: `start` and `restart` (lines 88 and 112 to 118) repeat the no-server message and the Cannot start tail; `hold` (line 228) repeats `launch`'s name computation (line 242); the private `forget(language)` (line 171) shares its name with `LanguageServer#forget(uri)` (line 455) and rescans the list `server_for` just scanned. `LspStartCommandHandler#call` (`carat/use_cases/ex/lsp_start_command_handler.rb` line 24) copies `LspRestartCommandHandler#call`. `Json` has the same plain ASCII byte predicate three times (`ascii_text?` line 234, `plain?` line 413, inlined in `write_string` line 392). Quality advisories of `lsp-diagnostics`.
+- Why it matters: duplication and a shared name for two different operations make the next change to one copy miss the other.
+- Fix outline: one private helper answering the start message, one `name_of(words)`, `forget` renamed `drop_server` taking the index `start` holds, one `Json` module function for the byte test; keep the two ex handlers separate if section 5 asks one handler per command, else share the argument check and the outcome mapping.
+
+## The language server client has loose ends
+
+- Where: at `lsp-diagnostics`: `LanguageServer#words` (`carat/domain/language_server.rb` line 11) is stored and never read; `Diagnostic#error?` (`carat/domain/diagnostic.rb` line 16) has only a test caller; `LspRestartCommandHandler.register(table, services)` (`carat/use_cases/ex/lsp_restart_command_handler.rb` line 35) takes its collaborator positionally; `RpcFramer#refuse` (`carat/domain/rpc_framer.rb` line 82) answers false only for `return refuse`, which needs a `BOOL_COMMANDS` entry in `test/lint.rb`; `json_rpc_language_gateway.rb`, `editor_assembly.rb`, `input_controller.rb`, `lsp_restart_command_handler.rb`, and `process_runner.rb` omit `require_relative` lines for files they name. Quality advisories of `lsp-diagnostics`.
+- Why it matters: dead code, an odd signature, and a lint exemption that exists for an idiom each mislead the next reader; sibling files require what they name.
+- Fix outline: drop `words` or use it for the restart message; drop `error?` and its row until `diagnostics-display` needs it; `register(table, services:)` with `services: @services` in `EditorAssembly`; make `refuse` void, return false after it, and drop the lint entry; add the missing `require_relative` lines.
+
+## No test shows a refused language server spawn is not retried
+
+- Where: `test/adapters_language_gateway.rb` line 173 at `lsp-diagnostics`: `FakeProcesses#spawn` records only installed commands, so the missing-command case cannot see a retried spawn, and the refusal kept in `@refused` until `:LspStart` or `:LspRestart` is untested. Quality advisory of `lsp-diagnostics`.
+- Why it matters: a regression that retries the spawn on every idle tick, spawning a process four times a second, would pass.
+- Fix outline: count attempted spawns in `FakeProcesses` and assert one attempt after two idle ticks.
