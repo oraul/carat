@@ -28,7 +28,7 @@ When the relativenumber option is on, every row other than the cursor row SHALL 
 - **THEN** the gutters read "  1 ", "  2 ", "  1 " for rows 0, 1, and 2 respectively, with row 1 showing the absolute number 2
 
 ### Requirement: Message row content
-The message row SHALL show, in priority order, the command line prefixed by ":" in command-line mode, or by a plugin's prompt text in place of ":" while a plugin prompt is open, the pending message if one was set by the last action, or "-- INSERT --" in insert mode, "-- VISUAL --", "-- VISUAL LINE --", or "-- VISUAL BLOCK --" in the visual modes, and SHALL be blank otherwise. A message SHALL stay until the next key is handled. The cursor SHALL be placed after the command line text.
+The message row SHALL show, in priority order: the command line after ":" in command-line mode, or after a plugin's prompt text while one is open; the pending message set by the last action; the mode indicator "-- INSERT --", "-- VISUAL --", "-- VISUAL LINE --", or "-- VISUAL BLOCK --"; in normal mode the message of the most severe diagnostic on the cursor's line; else blank. A message SHALL stay until the next key is handled. The cursor SHALL be placed after the command line text.
 
 #### Scenario: Message replaces the mode indicator
 - **WHEN** ":q" is run on a modified buffer
@@ -45,6 +45,14 @@ The message row SHALL show, in priority order, the command line prefixed by ":" 
 #### Scenario: Visual block indicator
 - **WHEN** "<C-v>" is pressed in normal mode
 - **THEN** the message row reads "-- VISUAL BLOCK --"
+
+#### Scenario: The cursor line's diagnostic
+- **WHEN** the cursor is in normal mode on a line with a warning "unused" and no message is pending
+- **THEN** the message row reads "unused" in the `DiagnosticWarn` group
+
+#### Scenario: A pending message wins over the diagnostic
+- **WHEN** the cursor is on a line with a diagnostic and the last action set a message
+- **THEN** the message row shows the message
 
 ### Requirement: The window scrolls to keep the cursor visible with scrolloff
 The window SHALL scroll so the cursor row is on screen with at least scrolloff rows above and below it where the buffer allows, and SHALL scroll horizontally so the cursor column is visible when a line is wider than the text area.
