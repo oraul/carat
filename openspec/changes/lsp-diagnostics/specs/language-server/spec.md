@@ -5,7 +5,7 @@ The language server client: which server runs for a buffer, what it is told abou
 ## ADDED Requirements
 
 ### Requirement: A server starts for the current buffer's language
-When the editor is idle, the current buffer's file type names a `language.<name>.lsp` command, and the working directory is, or is under, a root of `language.trusted_roots`, the editor SHALL start that command once as a language server and send it `initialize`, then `initialized` when it answers. A command that cannot start SHALL leave the `lsp` slot empty and SHALL NOT be tried again until `:LspRestart`. No key SHALL wait on a server: messages are read and sent only when no key is waiting.
+When the editor is idle, the current buffer's file type names a `language.<name>.lsp` command, and the working directory is, or is under, a root of `language.trusted_roots`, the editor SHALL start that command once as a language server and send it `initialize`, then `initialized` when it answers. A command that cannot start SHALL leave the `lsp` slot empty and SHALL NOT be tried again until `:LspStart` or `:LspRestart`. No key SHALL wait on a server: messages are read and sent only when no key is waiting.
 
 #### Scenario: Opening a Ruby file starts ruby-lsp
 - **WHEN** `a.rb` is opened in a directory under a trusted root and the editor is idle
