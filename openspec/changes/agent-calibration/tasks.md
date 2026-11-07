@@ -12,5 +12,5 @@
 
 ## 3. Docs and bookkeeping
 
-- [ ] 3.1 `docs/goals.md`: the Calibration section with the table's reasons and the keep-or-revert rule; `make docs-lint` passes.
+- [x] 3.1 `docs/goals.md`: the Calibration section with the table's reasons and the keep-or-revert rule; `make docs-lint` passes.
 - [ ] 3.2 `docs/backlog.md`: the stopped `merge-gate-integrity` run's three findings, and its queued entries moved to `check-isolation`.
