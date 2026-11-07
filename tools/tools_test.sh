@@ -464,7 +464,23 @@ echo budget again > tools/analysis_budget.sh
 commit "chore: the analysis budget"
 compile_check > "$work/compiled.out" 2>&1
 expect "run_state: check runs a compile stage after a change to the script it runs" 0 "^stage dev-build: exit 0" cat "$work/compiled.out"
-rm "$work/compiled.out"
+# The metrics stage writes its figures in the clone, where METRICS_OUT is
+# unset; the check copies them to the delivery clone's METRICS_OUT, which
+# bench and the benchmark read.
+cat > "$work/bin/metrics-make" <<'EOF'
+#!/bin/sh
+for arg in "$@"; do
+  case "$arg" in
+    S=metrics) [ -z "$METRICS_OUT" ] || exit 3; mkdir -p build/metrics && printf 'rounds\t7\n' > build/metrics/current.tsv ;;
+  esac
+done
+exit 0
+EOF
+chmod +x "$work/bin/metrics-make"
+env STAGES="metrics" MAKE="$work/bin/metrics-make" METRICS_OUT="$work/metrics/out.tsv" sh "$here/run_state.sh" check compiled > "$work/compiled.out" 2>&1
+expect "run_state: check runs the metrics stage in its clone without METRICS_OUT" 0 "^stage metrics: exit 0" cat "$work/compiled.out"
+expect "run_state: check copies the clone's metrics to METRICS_OUT" 0 "^rounds	7$" cat "$work/metrics/out.tsv"
+rm -rf "$work/compiled.out" "$work/metrics"
 
 fresh pushing
 git_q init -q --bare "$work/origin.git"
