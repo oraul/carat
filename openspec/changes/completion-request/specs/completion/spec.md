@@ -19,6 +19,17 @@ When the current buffer's language server runs and advertised a completion provi
 - **WHEN** the server advertised no completion provider and "fi" is typed
 - **THEN** no completion request is sent and no popup shows
 
+### Requirement: A completion answer serves only the word it was asked for
+A server's answer SHALL serve only a word at the same start that begins with the typed part the request was sent for; another word typed there later, or a word whose request was never sent or never answered, SHALL be asked again.
+
+#### Scenario: Another word at the same start asks again
+- **WHEN** "fi" was answered, deleted with backspace, and "ba" is typed at the same column
+- **THEN** a second completion request is sent and its answer fills the popup
+
+#### Scenario: A request skipped by leaving insert mode
+- **WHEN** "fi" is typed and Esc pressed within 0.1 seconds, then insert mode is entered again and "l" typed
+- **THEN** a completion request is sent for the word
+
 ### Requirement: A stale completion request is cancelled
 When another word is wanted while a completion request is in flight, the editor SHALL send `$/cancelRequest` for it and SHALL drop its answer; an answer to no request in flight SHALL change nothing.
 

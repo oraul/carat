@@ -8,10 +8,11 @@ module Carat
     # through the Domain::CompletionRequest it shares with the language
     # gateway. Ready for a buffer whose file type's server runs and
     # completes. Asked for a word it answers the server's answer when the
-    # request holds it, else it records the word as wanted, for the
-    # gateway to send at an idle tick, and answers an empty list at once,
-    # so no key waits; the arrival refreshes the popup. With no server a
-    # typed key costs one include? on an empty array.
+    # request holds it for the word as now typed, else it records the
+    # word as wanted, for the gateway to send at an idle tick, and answers
+    # an empty list at once, so no key waits; the arrival refreshes the
+    # popup. With no server a typed key costs one include? on an empty
+    # array.
     class ServerCompletions < Ports::CompletionPort
       # @rbs @none: Domain::CompletionList
       # @rbs @request: Domain::CompletionRequest
@@ -36,7 +37,7 @@ module Carat
       # @rbs col: Integer
       def candidates(buffer, row, col)
         request = @request
-        return request.list if request.answer_for?(buffer.id, row, col)
+        return request.list if request.answer_for?(buffer.id, row, col, buffer.line(row))
         request.ask(buffer.id, row, col)
         @none
       end

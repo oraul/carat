@@ -155,9 +155,18 @@ module AdaptersServerCompletionsTest
     q = D::CompletionRequest.new
     q.ask(1, 0, 2)
     q.ask(1, 0, 2)
-    t.assert_equal([1, true, false, true], [q.want, q.wanted?(1, 0, 2), q.answer_for?(1, 0, 2), q.waiting?], "asking the same word twice is one want, unanswered and waiting")
+    t.assert_equal([1, true, false, true], [q.want, q.wanted?(1, 0, 2), q.answer_for?(1, 0, 2, "a fi"), q.waiting?], "asking the same word twice is one want, unanswered and waiting")
     q.ask(1, 0, 4)
     t.assert_equal([2, false], [q.want, q.wanted?(1, 0, 2)], "another word is a new want")
+    q.sent = 2
+    q.word = "fi"
+    q.answered = 2
+    t.assert_equal([true, true, false, false], [q.answer_for?(1, 0, 4, "a = fi"), q.answer_for?(1, 0, 4, "a = fil"), q.answer_for?(1, 0, 4, "a = ba"), q.answer_for?(1, 0, 4, "a = f")], "the answer serves the word while it begins with the typed part it was sent for")
+    q.ask(1, 0, 4)
+    t.assert_equal([3, true], [q.want, q.waiting?], "another word typed at the same start is a new want")
+    q.sent = 3
+    q.ask(1, 0, 4)
+    t.assert_equal(4, q.want, "a want marked sent with no request in flight and no answer is asked again")
 
     # No completing server: typing costs nothing more.
     r = rig({})
@@ -238,6 +247,33 @@ module AdaptersServerCompletionsTest
     answer(r, 9, three)
     r.wait
     t.assert_equal(["bar", "baz"], r.popup, "an answer to no request in flight changes nothing")
+
+    # Another word typed later at the same start asks again.
+    r = completing
+    r.type("ifi")
+    until_sent(r, "textDocument/completion", 20)
+    answer(r, 2, three)
+    r.wait
+    r.type("<BS><BS>")
+    t.assert_equal([], r.popup, "deleting the word closes the popup")
+    r.type("ba")
+    until_sent(r, "textDocument/completion", 20)
+    10.times { r.wait } if count_of(r, "textDocument/completion") < 2
+    asked = last_of(r, "textDocument/completion")
+    t.assert_equal([2, 2], [count_of(r, "textDocument/completion"), asked["params"]["position"]["character"]], "a second word typed at the same column sends a request of its own")
+    answer(r, 3, [item("bar", 6), item("baz", 6)])
+    r.wait
+    t.assert_equal(["bar", "baz"], r.popup, "the second word's answer fills the popup, not the first word's")
+
+    # A want whose send was skipped, the mode left within the debounce,
+    # is asked again by the next typed key.
+    r = completing
+    r.type("ifi<Esc>")
+    10.times { r.wait }
+    t.assert_equal(0, count_of(r, "textDocument/completion"), "leaving insert mode within the debounce sends no request")
+    r.type("al")
+    until_sent(r, "textDocument/completion", 20)
+    t.assert_equal(1, count_of(r, "textDocument/completion"), "typing the word again asks the server")
 
     # A request left unanswered is cancelled after two seconds.
     r = completing

@@ -6,11 +6,15 @@ module Carat
     # services. The source records the wanted word (buffer id, row, and
     # start column) under a new serial, want; the gateway schedules it
     # (seen, due), sends it (sent, the request id in flight sent_id, 0 for
-    # none, and its server's language), and keeps the answer of serial
-    # answered in list, setting arrived for the editor to refresh the
-    # popup. languages are those whose running server completes. A Struct
-    # record built with no arguments.
-    class CompletionRequest < Struct.new(:buffer_id, :row, :col, :want, :seen, :due, :sent, :sent_id, :language, :answered, :list, :arrived, :languages, keyword_init: true)
+    # none, its server's language, and word, the typed part of the word it
+    # was sent for), and keeps the answer of serial answered in list,
+    # setting arrived for the editor to refresh the popup. The answer
+    # serves only a word at the same start that begins with word, so
+    # another word typed there later (one deleted and retyped, a line
+    # changed and typed again) asks again, and so does a word whose
+    # request was never sent or never answered. languages are those whose
+    # running server completes. A Struct record built with no arguments.
+    class CompletionRequest < Struct.new(:buffer_id, :row, :col, :want, :seen, :due, :sent, :sent_id, :language, :word, :answered, :list, :arrived, :languages, keyword_init: true)
       # @rbs @buffer_id: Integer
       # @rbs @row: Integer
       # @rbs @col: Integer
@@ -20,6 +24,7 @@ module Carat
       # @rbs @sent: Integer
       # @rbs @sent_id: Integer
       # @rbs @language: String
+      # @rbs @word: String
       # @rbs @answered: Integer
       # @rbs @list: CompletionList
       # @rbs @arrived: bool
@@ -37,6 +42,7 @@ module Carat
         self.sent = 0
         self.sent_id = 0
         self.language = ""
+        self.word = ""
         self.answered = 0
         self.list = CompletionList.new
         self.arrived = false
@@ -45,10 +51,10 @@ module Carat
       end
 
       # Records the word as wanted under a new serial, unless it is the
-      # word already wanted.
+      # word already wanted and its request is still to send or in flight.
       #: (Integer, Integer, Integer) -> void
       def ask(id, at_row, at_col)
-        return if wanted?(id, at_row, at_col)
+        return if wanted?(id, at_row, at_col) && waiting?
         self.buffer_id = id
         self.row = at_row
         self.col = at_col
@@ -61,10 +67,13 @@ module Carat
         want > 0 && buffer_id == id && row == at_row && col == at_col
       end
 
-      # Whether list holds the answer for the word, the one wanted.
-      #: (Integer, Integer, Integer) -> bool
-      def answer_for?(id, at_row, at_col)
-        answered == want && wanted?(id, at_row, at_col)
+      # Whether list holds the answer for the word, the one wanted, whose
+      # text on the line still begins with the typed part it was sent for.
+      #: (Integer, Integer, Integer, String) -> bool
+      def answer_for?(id, at_row, at_col, line)
+        return false unless answered == want && wanted?(id, at_row, at_col)
+        typed = word
+        line[at_col, typed.length].to_s == typed
       end
 
       # Whether a running server of the language completes.

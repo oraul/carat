@@ -464,6 +464,7 @@ module Carat
         line = buffer.line(cursor.row)[0, cursor.col].to_s
         position = { "line" => cursor.row, "character" => utf16_length(line) }
         params = { "textDocument" => { "uri" => uri_of(buffer.path) }, "position" => position, "context" => { "triggerKind" => 1 } }
+        ask.word = line[ask.col, cursor.col - ask.col].to_s
         ask.language = server.language
         ask.sent_id = request(server, "textDocument/completion", params)
       end
