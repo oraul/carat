@@ -25,8 +25,7 @@ module Carat
       attr_reader :last_change #: Domain::LastChange
       attr_reader :insert_text #: InsertText
       attr_reader :leave_insert #: LeaveInsert
-
-      # @rbs @actions: ActionTable
+      attr_reader :actions #: ActionTable
 
       #: (last_change: Domain::LastChange, actions: ActionTable, insert_text: InsertText, leave_insert: LeaveInsert) -> void
       def initialize(last_change:, actions:, insert_text:, leave_insert:)

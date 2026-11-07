@@ -67,11 +67,11 @@ module Carat
       attr_reader :search_prompt #: Domain::SearchPrompt
       attr_reader :open_search_prompt #: OpenSearchPrompt
       attr_reader :follow_hover #: FollowHover
+      attr_reader :actions #: ActionTable
+      attr_reader :dispatcher #: Dispatcher
+      attr_reader :insert_text #: InsertText
+      attr_reader :command_line #: EditCommandLine
 
-      # @rbs @actions: ActionTable
-      # @rbs @dispatcher: Dispatcher
-      # @rbs @insert_text: InsertText
-      # @rbs @command_line: EditCommandLine
       # @rbs @replays: Integer
       # @rbs @hover: Domain::HoverRequest
 

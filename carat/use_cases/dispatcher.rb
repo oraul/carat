@@ -31,8 +31,7 @@ module Carat
       attr_reader :last_change #: Domain::LastChange
       attr_reader :clock #: Ports::ClockPort
       attr_reader :feed #: Domain::BufferFeed
-
-      # @rbs @actions: ActionTable
+      attr_reader :actions #: ActionTable
 
       #: (actions: ActionTable, last_change: Domain::LastChange, clock: Ports::ClockPort, feed: Domain::BufferFeed) -> void
       def initialize(actions:, last_change:, clock:, feed:)
