@@ -21,4 +21,4 @@
 
 - [x] 4.1 `docs/codebase-map.md`, `docs/architecture.md` sections 6 and 8, `README.md`, `docs/compatibility.md` bar row. Checked by `make gates` and `make docs-lint`.
 - [x] 4.2 `docs/backlog.md`: remove the Json entry, narrow the slots entry, add the plan's seven entries (so the package step adds none of `build/plan/backlog.md` again), update the plugin API and delivered-list entries, queue the `in_window` notes in `float-tidy`, and add this change's three follow-ups. Checked by `make docs-lint`.
-- [ ] 4.3 `make gates`, `make spec-validate`, bench `lh` allocations unchanged.
+- [x] 4.3 `make gates`, `make spec-validate`, bench `lh` allocations unchanged.
