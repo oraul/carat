@@ -38,6 +38,13 @@ module DomainBufferTest
     D::Diagnostic.new(row: row.to_i, col: 0, severity: severity.to_i, message: message.to_s)
   end
 
+  # A published list of the diagnostics.
+  def self.listed(items)
+    list = D::DiagnosticList.new
+    items.each { |item| list.add(item) }
+    list
+  end
+
   def self.main
     t = Carat::Testing.new("domain_buffer")
 
@@ -243,20 +250,20 @@ module DomainBufferTest
     d.place_sign("git", 0, 1, "+")
     d.place_sign("git", 0, 2, "+")
     glyphs = ["E", "W", "I", "H"]
-    list = [diag(1, 4, "hint"), diag(1, 2, "warn"), diag(0, 1, "err"), diag(1, 2, "later"), diag(9, 1, "past the end")]
+    list = listed([diag(1, 4, "hint"), diag(1, 2, "warn"), diag(0, 1, "err"), diag(1, 2, "later"), diag(9, 1, "past the end")])
     d.set_diagnostics(list, glyphs)
     t.assert_equal(["E", "W", "+"], [d.sign_at(0), d.sign_at(1), d.sign_at(2)], "a row shows its most severe diagnostic over a plugin's sign")
-    t.assert_equal(["err", "warn", true, 5], [d.diagnostic_at(0).message, d.diagnostic_at(1).message, d.diagnostic_at(2).nil?, d.diagnostics.length], "a row's diagnostic is the first of the most severe, one past the end is kept unmarked")
+    t.assert_equal(["err", "warn", true, 5], [d.diagnostic_at(0).message, d.diagnostic_at(1).message, d.diagnostic_at(2).nil?, d.diagnostics.count], "a row's diagnostic is the first of the most severe, one past the end is kept unmarked")
     t.assert_equal([true, true], [d.diagnostic_at(-1).nil?, d.diagnostic_at(9).nil?], "no diagnostic outside the buffer")
     d.set_lines(0, 0, ["new"])
     t.assert_equal(["", "E", "W", "warn"], [d.sign_at(0), d.sign_at(1), d.sign_at(2), d.diagnostic_at(2).message], "an inserted line moves the signs and the messages down")
     d.set_lines(0, 1, strings([]))
     t.assert_equal(["E", "err"], [d.sign_at(0), d.diagnostic_at(0).message], "a deleted line moves them up")
-    d.set_diagnostics([diag(2, 3, "info")], glyphs)
+    d.set_diagnostics(listed([diag(2, 3, "info")]), glyphs)
     t.assert_equal(["", "+", "I", true], [d.sign_at(0), d.sign_at(1), d.sign_at(2), d.diagnostic_at(0).nil?], "a later list replaces the earlier one")
-    d.set_diagnostics([], glyphs)
+    d.set_diagnostics(D::DiagnosticList.new, glyphs)
     t.assert_equal(["+", true, 0], [d.sign_at(2), d.diagnostic_at(2).nil?, d.diagnostic_marks.length], "an empty list clears the diagnostics and keeps the plugin's signs")
-    d.set_diagnostics([diag(0, 1, "x")], glyphs)
+    d.set_diagnostics(listed([diag(0, 1, "x")]), glyphs)
     d.clear_diagnostics
     t.assert_equal(["", true], [d.sign_at(0), d.diagnostic_at(0).nil?], "clearing removes the signs and the messages")
 

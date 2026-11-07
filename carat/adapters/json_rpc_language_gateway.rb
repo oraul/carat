@@ -154,13 +154,14 @@ module Carat
       end
 
       # The diagnostics a server published for a path, in its order.
-      #: (String) -> Array[untyped]
+      #: (String) -> Domain::DiagnosticList
       def diagnostics(path)
         listed(uri_of(path))
       end
 
-      # The diagnostics a server published for a URI, [] for none.
-      #: (String) -> Array[untyped]
+      # The diagnostics a server published for a URI, an empty list for
+      # none.
+      #: (String) -> Domain::DiagnosticList
       def listed(uri)
         i = 0
         while i < @servers.length
@@ -168,7 +169,7 @@ module Carat
           return list unless list.nil?
           i += 1
         end
-        []
+        Domain::DiagnosticList.new
       end
 
       # The server of a language, or nil.
@@ -424,11 +425,11 @@ module Carat
       #: (Domain::LanguageServer, untyped, untyped) -> void
       def published(server, uri, list)
         return unless uri.is_a?(String) && list.is_a?(Array)
-        values = []
+        values = Domain::DiagnosticList.new
         list.each do |item|
-          break if values.length >= DIAGNOSTIC_LIMIT
+          break if values.count >= DIAGNOSTIC_LIMIT
           diagnostic = diagnostic_of(item)
-          values << diagnostic unless diagnostic.nil?
+          values.add(diagnostic) unless diagnostic.nil?
         end
         server.diagnostics[uri.to_s] = values
         @published << uri.to_s unless @published.include?(uri.to_s)

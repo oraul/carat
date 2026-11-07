@@ -15,3 +15,7 @@
 - [x] 3.1 `docs/codebase-map.md`, `docs/architecture.md` language services, `README.md`. Checked by `make gates` and `make docs-lint`.
 - [x] 3.2 Plan notes: `build/plan/queue.md` as `docs/queue.md`, the six `build/plan/backlog.md` entries in `docs/backlog.md`, the listed entry updates, the UTF-16 columns entry reworded and the `error?` part of the loose ends entry removed, a follow-up entry for the left-out display parts. Checked by `make docs-lint`.
 - [x] 3.3 `make gates`, `make spec-validate`, `make test`, and `make metrics-compare` with allocations per key unchanged.
+
+## 4. Review fixes
+
+- [x] 4.1 `carat/domain/diagnostic_list.rb` `DiagnosticList` (a pinned list with the typed readers `at` and `count`), built once per publish by the gateway and stored in `Buffer#diagnostics`, passed to `StatusSlots#count_diagnostics`, replacing both `diagnostic_in` cast helpers. Tested by `test/domain_buffer.rb`, `test/adapters_status_bar.rb`, `test/adapters_frame_presenter.rb`, and `test/adapters_language_gateway.rb`.

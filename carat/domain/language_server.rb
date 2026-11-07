@@ -1,3 +1,5 @@
+require_relative "diagnostic_list"
+
 module Carat
   module Domain
     # One language server the gateway runs: its language, the command's
@@ -23,7 +25,7 @@ module Carat
       # @rbs @closed: Hash[String, Integer]
       # @rbs @seen: Hash[String, Integer]
       # @rbs @tick: Integer
-      # @rbs @diagnostics: Hash[String, Array[untyped]]
+      # @rbs @diagnostics: Hash[String, DiagnosticList]
 
       #: (language: String, words: Array[String], name: String, handle: Integer) -> void
       def initialize(language:, words:, name:, handle:)

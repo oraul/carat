@@ -124,6 +124,13 @@ module AdaptersStatusBarTest
     D::Diagnostic.new(row: 0, col: 0, severity: severity.to_i, message: "m")
   end
 
+  # A published list of the diagnostics of the severities.
+  def self.listed(severities)
+    list = D::DiagnosticList.new
+    severities.each { |severity| list.add(diag(severity)) }
+    list
+  end
+
   def self.main
     t = Carat::Testing.new("adapters_status_bar")
     right = " utf-8  1:1  All "
@@ -234,12 +241,12 @@ module AdaptersStatusBarTest
     # The slots are empty until a service fills them.
     empty = D::StatusSlots.new
     t.assert_equal(["", false, false, :none], [empty.branch, empty.diagnostics?, empty.lsp?, empty.lsp_state], "new slots are empty")
-    list = [diag(1), diag(1), diag(2), diag(4)]
+    list = listed([1, 1, 2, 4])
     t.assert_equal([true, 2, 1, 0, 1, true], [empty.count_diagnostics(list), empty.errors, empty.warnings, empty.infos, empty.hints, empty.diagnostics?], "a buffer's diagnostics are counted by severity")
     again = empty.count_diagnostics(list)
-    other = empty.count_diagnostics([diag(3)])
+    other = empty.count_diagnostics(listed([3]))
     t.assert_equal([false, true, 0, 1], [again, other, empty.errors, empty.infos], "counting the same again changes nothing, another list replaces the counts")
-    none = empty.count_diagnostics(list.take(0))
+    none = empty.count_diagnostics(D::DiagnosticList.new)
     t.assert_equal([true, false], [none, empty.diagnostics?], "no diagnostics empty the slot")
 
     t.finish

@@ -10,6 +10,7 @@ require_relative "global_marks"
 require_relative "buffer_feed"
 require_relative "filetype"
 require_relative "syntax_cache"
+require_relative "diagnostic_list"
 require_relative "text_lines"
 require_relative "diagnostic"
 
@@ -78,7 +79,7 @@ module Carat
       # @rbs @global_marks: GlobalMarks
       # @rbs @last_cursor: Position
       # @rbs @icon: String
-      # @rbs @diagnostics: Array[untyped]
+      # @rbs @diagnostics: DiagnosticList
       # @rbs @diagnostic_marks: Array[Integer]
 
       # Every member is stored through its writer after super(), so the
@@ -111,7 +112,7 @@ module Carat
         self.global_marks = GlobalMarks.new
         self.last_cursor = Position.new(row: 0, col: 0)
         self.icon = Buffer.icon_of(path)
-        self.diagnostics = []
+        self.diagnostics = DiagnosticList.new
         self.diagnostic_marks = []
       end
 
@@ -274,7 +275,7 @@ module Carat
       # marks each row inside the buffer with its most severe diagnostic
       # (the lowest severity number, the first on a tie), and places that
       # one's glyph, glyphs[severity - 1], as the row's diagnostic sign.
-      #: (Array[untyped], Array[String]) -> void
+      #: (DiagnosticList, Array[String]) -> void
       def set_diagnostics(list, glyphs)
         clear_diagnostics
         return if list.empty?
@@ -286,12 +287,12 @@ module Carat
           i += 1
         end
         k = 0
-        while k < list.length
-          diagnostic = Buffer.diagnostic_in(list, k)
+        while k < list.count
+          diagnostic = list.at(k)
           row = diagnostic.row
           if row < n
             mark = marks[row]
-            marks[row] = k + 1 if mark == 0 || diagnostic.severity < Buffer.diagnostic_in(list, mark - 1).severity
+            marks[row] = k + 1 if mark == 0 || diagnostic.severity < list.at(mark - 1).severity
           end
           k += 1
         end
@@ -300,7 +301,7 @@ module Carat
         row = 0
         while row < n
           mark = marks[row]
-          place_sign(DIAGNOSTIC_OWNER, DIAGNOSTIC_PRIORITY, row, glyphs[Buffer.diagnostic_in(list, mark - 1).severity - 1]) if mark > 0
+          place_sign(DIAGNOSTIC_OWNER, DIAGNOSTIC_PRIORITY, row, glyphs[list.at(mark - 1).severity - 1]) if mark > 0
           row += 1
         end
         nil
@@ -309,7 +310,7 @@ module Carat
       # Shows no diagnostics: the list, the marks, and their signs go.
       #: () -> void
       def clear_diagnostics
-        self.diagnostics = []
+        self.diagnostics = DiagnosticList.new
         self.diagnostic_marks = []
         clear_signs(DIAGNOSTIC_OWNER)
         nil
@@ -322,12 +323,7 @@ module Carat
         return nil if row < 0 || row >= marks.length
         mark = marks[row]
         return nil if mark == 0
-        Buffer.diagnostic_in(diagnostics, mark - 1)
-      end
-
-      #: (Array[untyped], Integer) -> Diagnostic
-      def self.diagnostic_in(list, i)
-        list[i]
+        diagnostics.at(mark - 1)
       end
 
       # The glyph shown on the row: the mark of the layer with the highest

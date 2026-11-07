@@ -1,4 +1,4 @@
-require_relative "diagnostic"
+require_relative "diagnostic_list"
 
 module Carat
   module Domain
@@ -56,12 +56,12 @@ module Carat
 
       # Counts a buffer's diagnostics by severity into the four counts;
       # answers whether a count changed.
-      #: (Array[untyped]) -> bool
+      #: (DiagnosticList) -> bool
       def count_diagnostics(list)
         counts = [0, 0, 0, 0, 0]
         i = 0
-        while i < list.length
-          diagnostic = StatusSlots.diagnostic_in(list, i)
+        while i < list.count
+          diagnostic = list.at(i)
           if diagnostic.error?
             counts[1] += 1
           else
@@ -75,11 +75,6 @@ module Carat
         self.infos = counts[3]
         self.hints = counts[4]
         true
-      end
-
-      #: (Array[untyped], Integer) -> Diagnostic
-      def self.diagnostic_in(list, i)
-        list[i]
       end
 
       # Whether any diagnostics count is above zero.

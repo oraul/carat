@@ -571,6 +571,7 @@ Files:
 - `carat/domain/control_text.rb`: `ControlText.strip`, server text without controls, capped on a character boundary; `ControlText.line`, the same with breaks and tabs as spaces.
 - `carat/domain/service_message.rb`: `ServiceMessage`, a body, `exit`, or `overflow` from a reader thread.
 - `carat/domain/diagnostic.rb`: `Diagnostic`, a published diagnostic as a value.
+- `carat/domain/diagnostic_list.rb`: `DiagnosticList`, a file's published diagnostics with a typed reader, built once per publish and shared by the server, its buffers, and the counts; `add`, `at`, `count`, `empty?`.
 - `carat/domain/language_server.rb`: `LanguageServer`, one server's state, documents, and diagnostics.
 - `carat/adapters/json_rpc_language_gateway.rb`: `JsonRpcLanguageGateway`; `poll` (a publish handed to its buffers and the current buffer's counts to the slot at the idle tick), `restart`, `saved`, `stop`, `diagnostics`, `server_for`.
 - `carat/doubles/fake_processes.rb`: `FakeProcesses`; `install`, `break_input`, `spawned`, `bodies`, `methods_sent`, `stopped`.
