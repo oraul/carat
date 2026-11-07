@@ -6,7 +6,7 @@ module Carat
     # service thread and the editor thread both hold. One consumer, the
     # editor thread, so a pop after empty? never waits.
     class RuntimeQueue < Ports::MessageQueuePort
-      # @rbs @queue: Queue
+      # @rbs @queue: untyped
 
       #: () -> void
       def initialize

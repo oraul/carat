@@ -87,7 +87,7 @@ module Carat
         Thread.new { pump(handle, output) }
       end
 
-      #: (IO, Queue) -> void
+      #: (IO, untyped) -> void
       def write_input(input, outbox)
         Thread.new { drain(input, outbox) }
       end
@@ -125,7 +125,7 @@ module Carat
 
       # The writer thread: writes the outbox until a nil or a broken pipe,
       # then closes the child's input.
-      #: (IO, Queue) -> void
+      #: (IO, untyped) -> void
       def drain(input, outbox)
         while true
           bytes = outbox.pop
