@@ -527,7 +527,7 @@ expect "run_state: recording merged drops the backup record" 0 "^$" state get le
 
 fresh history
 state init history chore/history > /dev/null
-state metric history rework=1 first_pass=check:1,quality:0,security:1 ci_min=2.5 out_tokens=1200 tool_calls=40 phases=implement=1000/30,check=200/10 > /dev/null
+state metric history rework=1 first_pass=check:1,quality:0,security:1 ci_min=2.5 out_tokens=1200 tool_calls=40 phases=implement=1000/30,check=200/10 calib.scout=cheap/low calib.security=session/session > /dev/null
 expect "run_state: metric records a value" 0 "^check:1,quality:0,security:1$" state get history metric.first_pass
 expect "run_state: metric refuses a value with a space" 1 "not a metric value" state metric history 'rework=1 2'
 expect "run_state: metric refuses a value with a shell character" 1 "not a metric value" state metric history 'rework=$(x)'
@@ -558,6 +558,7 @@ expect "run_state: the history starts with its header" 0 "^change[[:space:]]date
 expect "run_state: the row groups the measurements and the first passes" 0 \
   "^carat=2 lh=27[.]0,j=28[.]0 lh=50[.]0 check:1,quality:0,security:1,gates:0 implement=1000/30,check=200/10 -$" \
   awk -F'\t' 'NR == 2 { print $8, $9, $10, $6, $13, $14 }' docs/metrics.tsv
+expect "run_state: history records the profiles" 0 "^scout=cheap/low,security=session/session$" awk -F'\t' 'NR == 2 { print $18 }' docs/metrics.tsv
 expect "run_state: history appends a change once" 0 "nothing pending" state history
 expect "run_state: status prints the first-pass rates" 0 "first-pass rates over 1 change.s.: check 1/1 quality 0/1 security 1/1 gates 0/1" state status
 
@@ -667,7 +668,7 @@ expect "run_state: history never passes the merged value to git as an option" 1 
 rm build/pipeline/unmerged.json
 expect "run_state: history records the estimate" 0 "^medium small - medium$" \
   sh -c "awk -F'\t' '\$1 == \"large\" { l = \$15 } \$1 == \"sized\" { s = \$15 } \$1 == \"unsized\" { u = \$15 } \$1 == \"planned\" { p = \$15 } END { print l, s, u, p }' docs/metrics.tsv"
-expect "run_state: every history row has the header's columns" 0 "^17$" sh -c "awk -F'\t' '{ print NF }' docs/metrics.tsv | sort -u"
+expect "run_state: every history row has the header's columns" 0 "^18$" sh -c "awk -F'\t' '{ print NF }' docs/metrics.tsv | sort -u"
 
 # The benchmark from the check: the metrics stage's measurement against the
 # last history row.
@@ -1700,6 +1701,33 @@ calls=$(grep -o '(one call)' "$agents/merger.md" | wc -l | tr -d ' ')
 expect "caps: the merger's first green fits its cap" 0 "^within$" sh -c '[ "$1" -le 12 ] && [ "$2" -ge 7 ] && [ $(($2 + 4)) -le "$1" ] && echo within' _ "$(cap_of merger)" "$calls"
 expect "caps: the merger counts the branch deletion" 0 "push origin --delete <branch>. [(]one call[)]" grep -o 'push origin --delete <branch>. (one call)' "$agents/merger.md"
 
+# ------------------------------------------------------------ calibration
+# CALIBRATION: every kind of start's TIER/EFFORT, every agent start taking
+# its options from it; the cheap tier is exactly the agent files with a
+# model: line, the kinds with no agent file run on the session's tier, and
+# the security reviewer keeps the session's tier and effort.
+calib=$(table CALIBRATION)
+profile_of() {
+  printf '%s\n' "$calib" | sed -n "s/^$1://p"
+}
+missing=""
+for kind in resume planner areas scout contributor checker quality security bench record merger close $(grep -o -E "calibrate\\('[a-z]+'" "$wf" | sed "s/.*('//; s/'//" | sort -u); do
+  profile_of "$kind" | grep -q -E '^(cheap|session)/(low|session)$' || missing="$missing $kind"
+done
+expect "calibration: every kind of start has a profile" 0 "^none$" echo "${missing:-none}"
+expect "calibration: every agent start takes its options from the table" 0 "^same$" \
+  sh -c '[ "$(grep -c "agent(" "$1")" -eq "$(grep -c "calibrate(.[a-z]*., [{]" "$1")" ] && ! grep -q "effort: .low." "$1" && echo same' _ "$wf"
+wrong=""
+for pair in benchmark:bench checker:checker contributor:contributor merger:merger planner:planner quality-reviewer:quality retrospective:close scout:scout security-reviewer:security; do
+  if grep -q -E '^model: ' "$agents/${pair%%:*}.md"; then tier=cheap; else tier=session; fi
+  case "$(profile_of "${pair#*:}")" in "$tier"/*) ;; *) wrong="$wrong ${pair#*:}" ;; esac
+done
+for kind in resume areas record; do
+  case "$(profile_of "$kind")" in session/*) ;; *) wrong="$wrong $kind" ;; esac
+done
+expect "calibration: the cheap tier is the agent files' model lines" 0 "^none$" echo "${wrong:-none}"
+expect "calibration: the security reviewer keeps the session's tier and effort" 0 "^session/session$" profile_of security
+
 # ------------------------------------------------------------ workflow helpers
 # The workflows' pure helpers, run by node (which make doctor requires for
 # OpenSpec): js FILE NAMES EXPRESSION prints EXPRESSION as JSON after the
@@ -1718,6 +1746,13 @@ js() {
 work_js() {
   js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead keepPushed" "$1"
 }
+calib_js() {
+  js "$wf" "SIZES CHANGE CALIBRATION calibrated calibrate usage firstPass metricLine" "$1"
+}
+expect "workflow: calibrate passes a low effort and records the profile" 0 '^\[[{]"schema":1,"effort":"low"[}],[{]"schema":1[}],[{]"scout":"cheap/low","planner":"session/session"[}]\]$' \
+  calib_js "[calibrate('scout', { schema: 1 }), calibrate('planner', { schema: 1 }), calibrated]"
+expect "workflow: the metric line carries the profiles" 0 ' calib[.]scout=cheap/low calib[.]security=session/session"$' \
+  calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; estimate = ''; planned = null; state = { change: 'c' }; calibrate('scout', {}); calibrate('security', {}); return metricLine() })()"
 expect "workflow: a contributor that finished is done" 0 '^[{]"next":"done","left":\[\][}]$' \
   work_js "(r => continuation(r, workLeft(r), 0))({ status: 'done' })"
 expect "workflow: a capped contributor start is continued with what it left" 0 '^[{]"next":"continue","left":\["4.2 the docs"\][}]$' \
