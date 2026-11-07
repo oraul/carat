@@ -1885,3 +1885,57 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `ShowHover` (`carat/use_cases/docs/show_hover.rb`), `PinHover`, and `ShowCompletionDocs` show documentation as plain rows from `MarkdownText.rows`, and `FramePresenter#paint_float_row` paints a float's text in `NormalFloat` only. Split out of `quick-docs`, whose brief asked for rendered markdown with fenced code through the highlighter.
 - Why it matters: headings, emphasis, code spans, and fenced code read the same as prose, so a long hover is harder to scan than in Neovim, and the pinned split loses the code's colors too.
 - Fix outline: `quick-docs-styles`: have `MarkdownText` return each row's spans (heading as `Title`, code spans and fenced code through `PluginSyntax#tokenize` for the fence's language, emphasis as bold or italic groups added to the themes), keep them in the buffer's `SyntaxCache` as a fixed entry that `HighlightView` leaves alone, paint a float's tokens over its background through a float layer of groups like `CURSOR_LINE_LAYER` in `SgrTable`, and test the cells' groups in `test/adapters_hover.rb` and the contrast table.
+
+## The gateway cancels a request in three copies
+
+- Where: `cancel_hover` in `carat/adapters/json_rpc_language_gateway.rb` line 663 at 78078ad, beside `cancel` and `cancel_resolve`. Quality advisory in `quick-docs`.
+- Why it matters: each looks up the server, sends `$/cancelRequest`, and zeroes the id, so a fix to one (a crashed server, a stale id) can miss the other two.
+- Fix outline: one private `cancel_request(language, id)` that the three call, with the hover, completion, and resolve cancellation rows in `test/adapters_hover.rb` and `test/adapters_server_completions.rb` unchanged.
+
+## The hover owner is spelled in two use cases
+
+- Where: `OWNER = ":docs"` in `carat/use_cases/docs/show_hover.rb` line 28 at 78078ad, repeated in `carat/use_cases/docs/pin_hover.rb` line 19. Quality advisory in `quick-docs`.
+- Why it matters: `docs/architecture.md` section 5 puts a constant several use cases need in the domain; two copies can drift, and the float and the pinned buffer then stop matching.
+- Fix outline: one domain constant both read, or drop the owner from the pinned buffer if nothing reads it.
+
+## The documentation floats copy the widest-row loop
+
+- Where: `carat/use_cases/docs/show_hover.rb` line 84 at 78078ad, a copy of `carat/use_cases/completion/show_completion_docs.rb` line 98 and of `carat/domain/operators.rb` line 139. Quality advisory in `quick-docs`.
+- Why it matters: the float width is computed three ways, so a fix for wide or combining characters lands in one float only.
+- Fix outline: a `DisplayWidth.widest(rows)` helper used by both floats and the operator, with the hover and completion-docs rows unchanged.
+
+## The K tests are one scripted sequence
+
+- Where: `test/adapters_hover.rb` line 176 at 78078ad. Quality advisory in `quick-docs`.
+- Why it matters: CLAUDE.md asks a Neovim command for a table-driven test; the hover contents shapes are covered only along one script, so a new shape or a regression in one is hard to add or see.
+- Fix outline: drive the contents shapes (string, markup, language pair, list, null, error) and their expected rows from a table converted with typed helpers.
+
+## Hover paths in the spec or the code have no test
+
+- Where: `test/adapters_hover.rb` line 232 at 78078ad, the cancellation block; `forget_hover` and the `hoverProvider` check in `carat/adapters/json_rpc_language_gateway.rb`, and the float's close in `carat/use_cases/docs/show_hover.rb`. Quality advisory in `quick-docs`.
+- Why it matters: `forget_hover` on a crash or stop with a hover in flight, `hoverProvider` given as an object, and the float closing on `:q`, a window switch, or a buffer change can regress without a test failing.
+- Fix outline: add those cases beside the cancellation block.
+
+## Plaintext hover text is read as markdown
+
+- Where: the MarkupContent reader in `carat/adapters/json_rpc_language_gateway.rb` line 706 at 78078ad. Quality advisory in `quick-docs`.
+- Why it matters: a MarkupContent of kind `plaintext` is passed to `MarkdownText` as markdown, so underscores and asterisks in plain hover text (identifiers such as `snake_case_name`) are taken as emphasis.
+- Fix outline: fence or escape the value when the kind is `plaintext`, with a row in the hover contents table.
+
+## The hover-docs spec and the code place the float differently
+
+- Where: the placement in `carat/use_cases/docs/show_hover.rb` line 76 at 78078ad, and the placement requirement of `openspec/specs/hover-docs/spec.md`. Quality advisory in `quick-docs`.
+- Why it matters: the code puts the float above when below lacks the rows and above has more, while the spec says above only when only above has the room; the spec no longer tells a reader what the editor does.
+- Fix outline: align the spec wording with the code through a proposal, with a row for each placement.
+
+## CLAUDE.md cites the wrong architecture section for concerns
+
+- Where: the concerns bullet of Coding conventions in `CLAUDE.md` (line 247 at 78078ad) cites `docs/architecture.md` section 5.4, but the concerns rule is the last bullet of section 5.3 (`docs/architecture.md` line 184). Quality advisory in `quick-docs`.
+- Why it matters: an agent following the citation reads the wrong section and misses the concerns rule.
+- Fix outline: cite section 5.3 in `CLAUDE.md`, or move the concerns bullet under 5.4.
+
+## The architecture's hover sentence reads as a wait for idle
+
+- Where: `docs/architecture.md` line 181 at 78078ad, "sends RequestHover's ask and reads the answer when idle". Quality advisory in `quick-docs`.
+- Why it matters: it reads as if the answer waits for idle, while the gateway sends the ask at the next idle tick and reads only the answer to the request in flight.
+- Fix outline: reword it to "which sends RequestHover's ask at the next idle tick and reads only its answer".
