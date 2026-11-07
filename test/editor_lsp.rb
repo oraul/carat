@@ -110,6 +110,12 @@ module EditorLspTest
       h.type("j")
       h.redraw
       return "#{above}|#{h.message_row.strip}"
+    when "diagnostics in another buffer"
+      h = published
+      h.type(":e b.txt<CR>")
+      h.wait
+      h.redraw
+      return "#{h.message_row.strip}|#{h.status_row.strip}"
     when "diagnostics after a crash and a start"
       h = published
       h.messages.push(Carat::Domain::ServiceMessage.new(handle: 1, kind: "exit", text: ""))
@@ -161,6 +167,7 @@ module EditorLspTest
       [":LspStart on a buffer without a server", "start a text buffer", "No language server for this buffer|NORMAL  b.txt                              utf-8  1:1  All"],
       ["a published error is drawn as a sign, the cursor line's message, and a count", "diagnostics", "expected end found EOF[31m|X   1 |NORMAL  a.rb  X 1 ? 1      ruby-lsp  ruby  utf-8  1:1  All"],
       ["the sign and the message move with an inserted line", "diagnostics after an edit", "|    1|X   2 |expected end found EOF[31m"],
+      ["another buffer shows its own counts, none", "diagnostics in another buffer", "\"b.txt\" 1L, 5B|NORMAL  b.txt                              utf-8  1:1  All"],
       ["a start after a crash clears the drawn diagnostics", "diagnostics after a crash and a start", "X   1 |  1 x |NORMAL  a.rb      ruby-lsp starting  ruby  utf-8  1:1  All"],
       [":LspStart refuses arguments", "start arguments", "E488: Trailing characters: x|NORMAL  a.rb  ruby-lsp untrusted :LspStart  ruby  1:1  All"]
     ]) { |name| run(name) }
