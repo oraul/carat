@@ -25,9 +25,10 @@
 # nl comm basename dirname realpath readlink stat du date pwd echo printf
 # true; find without -exec -execdir -ok -okdir -delete -fprint -fprint0
 # -fprintf -fls; sed -n with a line-number print script; cd to the project
-# or a worktree tmp/.NAME; git with the global options -C (the project or
-# a worktree tmp/.NAME) and --no-pager and the verbs status log show diff
-# rev-parse merge-base ls-files ls-tree cat-file blame describe shortlog
+# or a worktree tmp/.NAME; git, after GIT_CONFIG_GLOBAL=/dev/null and
+# GIT_CONFIG_NOSYSTEM=1 at most, with the global options -C (the project
+# or a worktree tmp/.NAME), -c core.hooksPath=/dev/null, and --no-pager,
+# and the verbs status log show diff rev-parse merge-base ls-files ls-tree cat-file blame describe shortlog
 # rev-list grep show-ref for-each-ref name-rev (none with a prefix of
 # --output, --ext-diff, --textconv, --filters, --upload-pack,
 # --receive-pack, --exec, or --open-files-in-pager, nor grep with a short
@@ -373,7 +374,7 @@ git_form() {
       -c)
         [ $# -ge 2 ] || refuse "git -c without a value"
         case "$profile:$2" in
-          contributor:user.name=*|contributor:user.email=*) ;;
+          contributor:user.name=*|contributor:user.email=*|*:core.hooksPath=/dev/null) ;;
           *) refuse "a git configuration override: -c $2" ;;
         esac
         shift 2 ;;
@@ -716,6 +717,8 @@ judge() {
       BASE=*) matches "${1#*=}" '^[A-Za-z0-9._/~^-]+$' || refuse "a BASE other than a revision" ;;
       CHANGE=*) matches "${1#*=}" "$CHANGE_NAME" || refuse "a CHANGE other than a change name" ;;
       RECORDS=*) matches "${1#*=}" '^[a-z0-9:. -]*$' || refuse "RECORDS other than KIND:RESULT:COMMIT records" ;;
+      GIT_CONFIG_GLOBAL=*) [ "${1#*=}" = /dev/null ] || refuse "a GIT_CONFIG_GLOBAL other than /dev/null" ;;
+      GIT_CONFIG_NOSYSTEM=*) [ "${1#*=}" = 1 ] || refuse "a GIT_CONFIG_NOSYSTEM other than 1" ;;
       [A-Za-z_]*=*)
         case "${1%%=*}" in
           *[!A-Za-z0-9_]*) break ;;
@@ -730,7 +733,11 @@ judge() {
   [ $# -gt 0 ] || refuse "an assignment without a command"
   body_at=0
   case "$1" in */*) refuse "a command named by a path: $1" ;; esac
-  [ -z "$envs" ] || [ "$1" = sh ] || refuse "an assignment before $1"
+  case "$1:$envs" in
+    sh:*|*:) ;;
+    git:*) for e in $envs; do case "$e" in GIT_CONFIG_GLOBAL|GIT_CONFIG_NOSYSTEM) ;; *) refuse "an assignment of $e before git" ;; esac; done ;;
+    *) refuse "an assignment before $1" ;;
+  esac
   case "$1" in
     ls|cat|head|tail|wc|grep|diff|cmp|cut|tr|nl|comm|basename|dirname|realpath|readlink|stat|du|date|pwd|echo|true) ;;
     printf)
@@ -790,9 +797,20 @@ redirect() {
 # which branch code run by the checks can write, every call is refused, so
 # no git command an agent runs starts a command the branch chose.
 RISKY_CONFIG='^(core\.(fsmonitor|hookspath|sshcommand|gitproxy|pager|editor|askpass|alternaterefscommand|worktree)|diff\.external|diff\..+\.(textconv|command)|filter\..+|merge\..+\.driver|sequence\.editor|credential\..+|gpg\..+|uploadpack\..+|url\..+\.(insteadof|pushinsteadof)|remote\.origin\.(pushurl|uploadpack|receivepack|proxy|vcs)|http\..+|protocol\..+|include\..+|includeif\..+|extensions\.worktreeconfig)$'
+# The guard's git reads no global or system configuration, which branch
+# code can write too (a global insteadOf would answer for a fake origin).
+GIT_CONFIG_GLOBAL=/dev/null
+GIT_CONFIG_NOSYSTEM=1
+export GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM
 project_dir=${CLAUDE_PROJECT_DIR:-.}
 risky=$(git -C "$project_dir" config --local --name-only --list 2>/dev/null | grep -i -E "$RISKY_CONFIG" | sort -u | tr '\n' ' ')
 [ -z "$risky" ] || refuse "every call while the repository configuration sets ${risky% }, which runs a command or redirects origin"
+# A hook in the hooks directory runs on a checkout, a fetch, or a commit
+# as surely as a configured one: while one other than a sample is there,
+# every call is refused.
+hooks=$(git -C "$project_dir" rev-parse --path-format=absolute --git-path hooks 2>/dev/null)
+planted=$([ -z "$hooks" ] || ! [ -d "$hooks" ] || ls -A "$hooks" | grep -v -E "[.]sample\$" | tr "\n" " "; true)
+[ -z "$planted" ] || refuse "every call while the hooks directory holds ${planted% }, which git runs; remove it"
 
 # The merge tool, for the merger only: a squash whose expected head (sha,
 # all 40 digits) a run state under build/pipeline/ holds both as pushed and

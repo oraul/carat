@@ -490,12 +490,14 @@ rm -rf "$work/reclaimed"
 expect "run_state: push refuses before the checks and the review" 1 "pre-push gates failed" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a refused push counts a gate failure" 0 "^1$" state get pushing gates_failed
+sh "$here/run_state.sh" gated pushing pass > /dev/null
 state stage pushing lint true > /dev/null
 state phase pushing check > /dev/null
 state review pushing security pass "no finding" > /dev/null
 expect "run_state: push passes the gates and pushes" 0 "ok   security" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a push is counted" 0 "^1$" state get pushing pushes
+expect "run_state: push clears a gated marker recorded before it" 0 "^none$" state get pushing gated
 expect "run_state: push records the full sha as pushed" 0 "^full$" \
   sh -c 'p=$(sh "$1/run_state.sh" get pushing pushed) && [ "$p" = "$(git rev-parse HEAD)" ] && [ ${#p} -eq 40 ] && echo full' _ "$here"
 expect "run_state: push deletes the backup ref" 0 "^$" git ls-remote origin refs/backup/chore/pushing
@@ -1010,7 +1012,10 @@ expect "guard: merger deletes the branch and fast-forwards main" 0 "^$" guard me
 # The merger's first green: the green and red lines as the workflow builds
 # them (mergeLines), and its two closing calls, each one call the guard
 # admits.
-expect "guard: merger runs the green line" 0 "^$" guard merger 'git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && git fetch -q --prune origin && git worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger runs the green line" 0 "^$" guard merger 'git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null fetch -q --prune origin && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger refuses another global configuration before git" 2 "a GIT_CONFIG_GLOBAL other than /dev/null" guard merger 'GIT_CONFIG_GLOBAL=tmp/g git fetch -q --prune origin'
+expect "guard: merger refuses a pinned configuration before another command" 2 "an assignment before ls" guard merger 'GIT_CONFIG_NOSYSTEM=1 ls'
+expect "guard: merger refuses another assignment before git" 2 "an assignment of BASE before git" guard merger 'BASE=main git fetch -q --prune origin'
 expect "guard: merger records red CI" 0 "^$" guard merger 'sh tools/run_state.sh metric c rework=1 && sh tools/run_state.sh set c ci \"red abc1234\"'
 expect "guard: merger waits as its file says" 0 "^$" guard merger 'sh tools/ci_wait.sh 180 && sh tools/ci_wait.sh 240 && sh tools/ci_wait.sh 300'
 expect "guard: merger verifies the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%H%n%B origin/main'
@@ -1636,7 +1641,12 @@ expect "gates: a failed merge leaves gated cleared" 0 "^none$" state get staged 
 # origin, and an origin/ base equal to origin's branch, from a hosted origin
 # with the default fetch refspec.
 fresh origined
-expect "gates: origin passes a clean configuration with a local base" 0 "ok   origin: the configuration sets no risky key$" gates origin
+expect "gates: origin passes a clean configuration with a local base" 0 "ok   origin: the configuration sets no risky key and no hook$" gates origin
+printf '#!/bin/sh\ntouch planted\n' > .git/hooks/post-checkout
+expect "gates: origin refuses a hook in the hooks directory" 1 "FAIL origin: the hooks directory holds post-checkout" gates origin
+expect "guard: a planted hook refuses every call" 2 "every call while the hooks directory holds post-checkout" \
+  env PROJECT="$PWD" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
+rm .git/hooks/post-checkout
 git_q config core.fsmonitor "touch planted"
 expect "gates: origin refuses a key that runs a command" 1 "FAIL origin: the repository configuration sets core.fsmonitor" gates origin
 expect "gates: pre-push runs the origin gate" 1 "FAIL origin: the repository configuration sets core.fsmonitor" gates pre-push
@@ -1655,6 +1665,16 @@ expect "gates: origin refuses an origin/main other than origin's main" 1 "FAIL o
   env BASE=origin/main sh "$here/gates.sh" origin
 git_q fetch -q origin
 expect "gates: a fetch restores origin/main" 0 "^0$" sh -c 'BASE=origin/main sh "$1/gates.sh" origin | grep -c rewritten; true' _ "$here"
+# A global insteadOf, which branch code can write to ~/.gitconfig, does
+# not let a fake origin answer for the real one: the gates read no global
+# configuration.
+git_q init -q --bare "$work/fake.git"
+git_q push -q "$work/fake.git" HEAD:refs/heads/main 2>/dev/null
+printf '[url "%s"]\n\tinsteadOf = %s\n' "$work/fake.git" "$work/origined.git" > "$work/global.gitconfig"
+git_q update-ref refs/remotes/origin/main HEAD
+expect "gates: origin ignores a global insteadOf" 1 "FAIL origin: origin/main is [0-9a-f]{40}, but origin's main is [0-9a-f]{40}: fetch, or the ref was rewritten" \
+  env GIT_CONFIG_GLOBAL="$work/global.gitconfig" BASE=origin/main sh "$here/gates.sh" origin
+git_q fetch -q origin
 expect "gates: origin refuses a local origin repository" 1 "FAIL origin: origin is \".*origined[.]git\", a local repository" \
   env BASE=origin/main sh "$here/gates.sh" origin
 git_q config remote.origin.fetch "+refs/heads/x:refs/remotes/origin/main"
@@ -1841,7 +1861,11 @@ expect "workflow: only phaseDone and reviewed write this start's records" 0 "^2$
 expect "workflow: the merge gates' records come from this start's alone" 0 '^\[\[\],\["security:pass:abc1234","check:pass:abc1234"\]\]$' \
   js "$wf" "mergeRecords" "[mergeRecords({}), mergeRecords({ 'review.security': 'pass abc1234', 'phase.check': 'abc1234' })]"
 expect "workflow: the merge lines use this start's records" 0 "const records = mergeRecords[(]ran[)]" grep -F 'const records = mergeRecords(ran)' "$wf"
-expect "workflow: a resume past the push checks and reviews again" 0 "every[(]reviewedAtHead[)] [|][|] !doneAtHead" grep -F "every(reviewedAtHead) || !doneAtHead('check')" "$wf"
+expect "workflow: a resume past the push checks and reviews again unless this start ran them" 0 '^\[false,false,true\]$' \
+  js "$wf" "ranAll" "[ranAll({}), ranAll({ 'review.quality': 'pass a', 'review.security': 'pass a', 'phase.check': 'a' }), ranAll({ 'review.quality': 'pass a', 'review.security': 'blocked b', 'review.bench': 'pass a', 'phase.check': 'a' })]"
+expect "workflow: the resume check reads this start's records" 0 "if [(]!ranAll[(]ran[)][)]" grep -F "if (!ranAll(ran))" "$wf"
+expect "workflow: the resume check runs no fix round" 0 "verify[(]false[)]" grep -F "verify(false)" "$wf"
+expect "workflow: the green line fetches and adds the copy with no global configuration or hook" 0 "^2$" sh -c 'grep -c -F -e "const PINNED_GIT = '\''GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null'\''" -e "&& \${PINNED_GIT} fetch -q --prune origin && \${PINNED_GIT} worktree add -q --detach" "$1"' _ "$wf"
 areas=$(grep -c -E '^## [0-9]+[.] ' "$here/../docs/codebase-map.md")
 expect "periodic: MAP_AREAS is the map's count of areas" 0 "^const MAP_AREAS = $areas$" grep '^const MAP_AREAS = ' "$pwf"
 expect "periodic: the quality slices cover every area once" 0 '^true$' \

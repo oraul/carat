@@ -52,6 +52,13 @@
 # words), TEST_BIN (build/test/run_all), STAGES (the Makefile's when unset).
 set -u
 
+# The gates' git reads no global or system configuration, which branch
+# code run by the checks can write as well as .git/config: a global
+# insteadOf would let a fake origin answer for the real one.
+GIT_CONFIG_GLOBAL=/dev/null
+GIT_CONFIG_NOSYSTEM=1
+export GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM
+
 here=$(cd "$(dirname "$0")" && pwd)
 base=${BASE:-origin/main}
 change=${CHANGE:-$(git rev-parse --abbrev-ref HEAD | sed 's|.*/||')}
@@ -104,6 +111,7 @@ require_base() {
 
 # The repository the gates read: branch code run by the checks can write
 # .git/config and the ref origin/main, so no key of RISKY_CONFIG is set,
+# no hook other than a sample is in the hooks directory,
 # and an origin/NAME base is origin's NAME: the default fetch refspec (a
 # fetch restores the ref), an origin that is not a local repository (whose
 # fake branch ls-remote would report), and the ref equal to the branch
@@ -114,6 +122,9 @@ gate_origin() {
   start=$failed
   keys=$(git config --local --name-only --list 2>/dev/null | grep -i -E "$RISKY_CONFIG" | sort -u | tr '\n' ' ')
   [ -z "$keys" ] || bad "the repository configuration sets ${keys% }, which runs a command or redirects origin; remove it from .git/config"
+  hooks=$(git rev-parse --path-format=absolute --git-path hooks 2>/dev/null)
+  planted=$([ -z "$hooks" ] || ! [ -d "$hooks" ] || ls -A "$hooks" | grep -v -E "[.]sample\$" | tr "\n" " "; true)
+  [ -z "$planted" ] || bad "the hooks directory holds ${planted% }, which git runs on a checkout or a fetch; remove it"
   case "$base" in
     origin/*)
       name=${base#origin/}
@@ -133,7 +144,7 @@ gate_origin() {
         bad "$base is $local_ref, but origin's $name is $remote: fetch, or the ref was rewritten"
       fi ;;
   esac
-  [ $failed -ne $start ] || ok "the configuration sets no risky key${remote:+, and $base is origin's $name}"
+  [ $failed -ne $start ] || ok "the configuration sets no risky key and no hook${remote:+, and $base is origin's $name}"
 }
 
 gate_trailer() {

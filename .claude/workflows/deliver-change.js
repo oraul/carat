@@ -419,14 +419,18 @@ async function flush(force) {
 // merge gates' origin gate compares the two). The removal of an earlier
 // worktree stays outside the && chain, since it fails when none stands; in
 // the chain a failed record runs no gate, and the add fails when anything
-// but an earlier worktree stands at the path. red records CI red.
+// but an earlier worktree stands at the path. red records CI red. The
+// fetch and the add read no global or system configuration and run no
+// hook, both of which branch code run by the checks can write: a global
+// insteadOf would fetch a forged main, a hook would rewrite the copy.
 const MERGE_GATES = 'tmp/.merge-gates'
+const PINNED_GIT = 'GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null'
 function mergeLines() {
   const records = mergeRecords(ran)
   const first = (line) => [metricLine(), line].filter(Boolean).join(' && ')
   const ci = (result) => `sh tools/run_state.sh set ${state.change} ci "${result} ${head}"`
   return {
-    green: `git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && git fetch -q --prune origin && git worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
+    green: `git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${PINNED_GIT} fetch -q --prune origin && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
     red: first(ci('red')),
   }
 }
@@ -435,6 +439,11 @@ function mergeLines() {
 function passedAt(records, key, head) {
   const [result, commit] = String(records[key] || '').split(' ')
   return key.startsWith('phase.') ? !!head && result === head : result === 'pass' && !!head && commit === head
+}
+// Whether RECORDS (this start's, ran) hold a check and every review of
+// this start, whatever their commit or result.
+function ranAll(records) {
+  return ['quality', 'security', 'bench'].every((k) => !!records['review.' + k]) && !!records['phase.check']
 }
 // The merge gates' RECORDS words, KIND:RESULT:COMMIT, from this start's
 // records alone, so no record branch code wrote in the run state reaches
@@ -529,8 +538,8 @@ async function contributor(mode, detail) {
 // Check, the quality and security reviews in parallel, and benchmark until
 // all pass at one commit; whatever blocks goes back to the contributor while
 // mayFix allows, both reviews' findings in one round.
-async function verify() {
-  const passed = await rounds()
+async function verify(fixes = true) {
+  const passed = await rounds(fixes)
   return (await flush()) && passed
 }
 
@@ -684,7 +693,7 @@ async function reviews() {
   return messages.join('\n\n')
 }
 
-async function rounds() {
+async function rounds(fixes = true) {
   for (;;) {
     let blocked = ''
     if (!doneAtHead('check')) {
@@ -745,6 +754,7 @@ async function rounds() {
       }
     }
     if (!blocked) return true
+    if (!fixes) { stopped = `blocked at ${head} on resume, where no fix can be pushed: ${blocked.split('\n')[0]}`; return false }
     if (!mayFix()) { stopped = `still blocked after ${rework} fix rounds: ${blocked.split('\n')[0]}`; return false }
     phase('Implement')
     if (!(await contributor('fix', blocked))) return false
@@ -855,11 +865,13 @@ if (!stopped && !state.merged) {
     let waits = 0
     // A resume past the push holds no check or review of this start, and
     // the run state's could be branch-written: they run again at the head.
-    // A fix there moves the head off the pushed sha, which stops the run
-    // before the merger.
-    if (!['quality', 'security', 'bench'].every(reviewedAtHead) || !doneAtHead('check')) {
+    // A start that ran them all keeps its records, though the package step
+    // committed after them: the merge gates' settled_at allows that
+    // records-only diff. The resume runs no fix round, since a fix commit
+    // could not be pushed; a blocking finding stops the run.
+    if (!ranAll(ran)) {
       note('resumed past the push: the check and the reviews run again at the head')
-      if (!(await verify()) && !stopped) stopped = `the check or a review did not pass at ${head} on resume`
+      if (!(await verify(false)) && !stopped) stopped = `the check or a review did not pass at ${head} on resume`
       phase('Merge')
     }
     for (; !stopped;) {
