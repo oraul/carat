@@ -28,8 +28,9 @@
 #                    ("TOKENS/CALLS" of a phase so far), first.GATE (0 or 1,
 #                    its first verdict), extra (fix rounds granted beyond
 #                    three), stop (rounds when a start stopped at the
-#                    limit, else none), and planned (0 when the planner was
-#                    skipped), stored by the workflow, every figure in each
+#                    limit, else none), planned (0 when the planner was
+#                    skipped), and calib.KIND ("TIER/EFFORT" of a kind of
+#                    agent start), stored by the workflow, every figure in each
 #                    metric line it runs; total_tokens and wall_min, summed
 #                    over the starts by usage; older runs stored
 #                    first_pass, out_tokens, tool_calls, phases
@@ -220,7 +221,7 @@ PLAN_NOTES='retro|overrun|security|quality'
 TAB=$(printf '\t')
 # Columns 16 and 17 came after estimate, so rates ($5, $6) and review_due
 # ($14) read the same columns in every row.
-HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci_min${TAB}rounds${TAB}allocs${TAB}us_per_key${TAB}out_tokens${TAB}tool_calls${TAB}phases${TAB}review${TAB}estimate${TAB}total_tokens${TAB}wall_min"
+HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci_min${TAB}rounds${TAB}allocs${TAB}us_per_key${TAB}out_tokens${TAB}tool_calls${TAB}phases${TAB}review${TAB}estimate${TAB}total_tokens${TAB}wall_min${TAB}calibration"
 # The areas whose change makes a periodic review of the whole codebase due,
 # one "label=path pattern" per line, the first match named. An edit of
 # config/default.caratrc that adds or removes only key bindings, comments,
@@ -1176,7 +1177,8 @@ history_row() {
   printf '%s\t' "$change" "${date:--}" "${merged:--}" "$(value pr)" "$(value metric.rework)" "${first:--}" \
     "$(value metric.ci_min)" "$(group rounds)" "$(group allocs)" "$(group us)" \
     "$tokens" "$calls" "$phases" "$review" "$(estimate_of)" "$(value metric.total_tokens)"
-  printf '%s\n' "$(value metric.wall_min)"
+  printf '%s\t' "$(value metric.wall_min)"
+  printf '%s\n' "$(group calib)"
 }
 
 append_history() {

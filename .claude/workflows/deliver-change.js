@@ -41,9 +41,8 @@ export const meta = {
 // line first, so a fix round is counted before its check.
 // tools/agent_guard.sh keeps the other agents off the phase and review
 // commands, and the merger's records gate compares the file with what the
-// script received. Mechanical agents (scout, checker, benchmark, merger)
-// run on the cheapest tier, the model: line of their frontmatter; the
-// others on the session's model.
+// script received. Each start's model tier and effort come from
+// CALIBRATION, and the run state records them beside its figures.
 const input = typeof args === 'string' ? { brief: args } : (args || {})
 const ROUNDS = 3
 // Map areas scouted per change, and merger calls that may find CI still
@@ -98,6 +97,32 @@ const capLine = (kind) => `\nTool calls: at most ${callCap(kind)} in this start 
 // The merger's waits are 3, 4, then 5 minutes (.claude/agents/merger.md), so
 // the minutes it waited give the waits beyond the second.
 const mergerCap = (r) => FIXED_CAPS.merger + 2 * (Number(r.waited) > 7 ? Math.ceil((Number(r.waited) - 7) / 5) : 0)
+// The model tier and reasoning effort of each kind of agent start, as
+// TIER/EFFORT, set from the history's figures (docs/goals.md, Calibration).
+// The tier is cheap, the model: line of the agent's file, the only place a
+// tier is named (tools/tools_test.sh compares them), or session, the
+// session's model; the effort is low, or session, none passed. One kind
+// moves at a time, kept only when the first-pass rates and the rework do
+// not get worse over the next runs; the security reviewer never moves.
+// calibrate gives a start its options and records its profile, which the
+// metric line stores as calib.KIND beside the tokens, calls, and verdicts.
+const CALIBRATION = { resume: 'session/low', planner: 'session/session', areas: 'session/low', scout: 'cheap/low', contributor: 'session/session', checker: 'cheap/low', quality: 'session/session', security: 'session/session', bench: 'cheap/low', record: 'session/low', merger: 'cheap/low', close: 'session/session' }
+const calibrated = {}
+function calibrate(kind, opts) {
+  calibrated[kind] = CALIBRATION[kind]
+  const effort = CALIBRATION[kind].split('/')[1]
+  return effort === 'session' ? opts : Object.assign({}, opts, { effort })
+}
+// A restart carries on the profiles an earlier start recorded as
+// metric.calib.KIND, for the kinds this start has not used yet; a value
+// outside the table's form is dropped.
+function restoreCalibration(saved, used) {
+  for (const key of Object.keys(saved)) {
+    const m = /^metric\.calib\.([a-z]+)$/.exec(key)
+    if (m && !(m[1] in used) && /^(cheap|session)\/(low|session)$/.test(saved[key])) used[m[1]] = saved[key]
+  }
+  return used
+}
 
 const STATUS = { type: 'string', enum: ['done', 'stopped'] }
 const WORK_STATUS = { type: 'string', enum: ['done', 'partial', 'stopped'], description: 'partial: the cap stopped you with the work committed and backed up' }
@@ -307,7 +332,8 @@ function metricLine() {
   if (ciMinutes !== null) pairs.push(`ci_min=${Number(ciMinutes).toFixed(1)}`)
   if (SIZES.includes(estimate)) pairs.push(`estimate=${estimate}`)
   if (planned !== null) pairs.push(`planned=${planned}`)
-  const safe = pairs.filter((p) => /^[a-z0-9_.-]+=([0-9./]+|small|medium|large|none|rounds)$/.test(p))
+  for (const k of Object.keys(calibrated)) pairs.push(`calib.${k}=${calibrated[k]}`)
+  const safe = pairs.filter((p) => /^[a-z0-9_.-]+=([0-9./]+|small|medium|large|none|rounds|(cheap|session)\/(low|session))$/.test(p))
   return CHANGE.test(state.change || '') ? `sh tools/run_state.sh metric ${state.change} ${safe.join(' ')}` : ''
 }
 // A restart carries on the figures the run state holds.
@@ -321,6 +347,7 @@ function seed() {
     m = /^metric\.first\.([a-z]+)$/.exec(key)
     if (m) firstPass[m[1]] = Number(state[key]) ? 1 : 0
   }
+  restoreCalibration(state, calibrated)
   rework = Number(state['metric.rework']) || 0
   seededRework = rework
   extra = Number(state['metric.extra']) || 0
@@ -397,7 +424,7 @@ async function flush(force) {
   if (!command) return true
   const r = await measured('record', () => agent(
     `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${command}\n\nReturn ok true when it exited 0, and its output.${capLine('record')}`,
-    { schema: withCalls(RECORDED), effort: 'low', label: 'record' }), callCap('record'))
+    calibrate('record', { schema: withCalls(RECORDED), label: 'record' })), callCap('record'))
   if (r && r.ok) return true
   if (!stopped) stopped = `the run state records failed: ${r ? r.output : 'no result'}`
   return false
@@ -485,7 +512,7 @@ async function contributor(mode, detail) {
   for (let count = 0; ; count++) {
     result = await measured(key, () => agent(
       `${intro()} Mode: ${mode}. ${detail}${more}\nFollow your Modes section for \`${mode}\` and return the schema.${capLine(mode)}`,
-      { agentType: 'contributor', schema: withCalls(WORK), label: `contributor: ${mode}${count ? ', continued' : ''}` }), callCap(mode))
+      calibrate('contributor', { agentType: 'contributor', schema: withCalls(WORK), label: `contributor: ${mode}${count ? ', continued' : ''}` })), callCap(mode))
     state.pushed = keepPushed(mode, state.pushed, result)
     const step = continuation(result, result ? workLeft(result) : null, count)
     if (step.next === 'done') break
@@ -579,13 +606,13 @@ const figuresFirst = () => {
 // The quality review at the head, with the scope priorQuality gives.
 function qualityReview(scope, more) {
   return agent(`${intro()} Review the committed diff and return the findings.${more || scope}${capLine('quality')}`,
-    { agentType: 'quality-reviewer', schema: withCalls(QUALITY), phase: 'Quality', label: more ? 'quality-reviewer: continued' : 'quality-reviewer' })
+    calibrate('quality', { agentType: 'quality-reviewer', schema: withCalls(QUALITY), phase: 'Quality', label: more ? 'quality-reviewer: continued' : 'quality-reviewer' }))
 }
 function securityReview(more) {
   return agent(more
     ? `${intro()} The last security review did not complete.${more} Run it, every sub-task inline, and return the result.${capLine('security')}`
     : `${intro()} Run the security review on the committed diff and return the result.${capLine('security')}`,
-  { agentType: 'security-reviewer', schema: withCalls(SECURITY), phase: 'Security', label: more ? 'security-reviewer: continued' : 'security-reviewer' })
+  calibrate('security', { agentType: 'security-reviewer', schema: withCalls(SECURITY), phase: 'Security', label: more ? 'security-reviewer: continued' : 'security-reviewer' }))
 }
 // What a continued review is told: the files the last start left, or the
 // whole diff when it returned nothing.
@@ -672,7 +699,7 @@ async function rounds() {
       const backed = COMMIT.test(state['phase.check'] || '') ? state['phase.check'] : ''
       const how = backed ? ` The last check the workflow recorded passed at ${backed}: run \`sh tools/run_state.sh check ${state.change} ${backed}\`.` : ''
       const again = rerunWhy ? ` The last check did not finish (${rerunWhy}); run it again: a check still running at this commit is rejoined.` : ''
-      const c = await measured('check', () => agent(`${intro()}${figuresFirst()} Run the checks and report.${how}${again}${capLine('checker')}`, { agentType: 'checker', schema: withCalls(CHECK), effort: 'low' }), callCap('checker'))
+      const c = await measured('check', () => agent(`${intro()}${figuresFirst()} Run the checks and report.${how}${again}${capLine('checker')}`, calibrate('checker', { agentType: 'checker', schema: withCalls(CHECK) })), callCap('checker'))
       if (!c) { stopped = 'the checker returned no result'; return false }
       // Only a pass or a failure at the head is a result: a check that did
       // not finish, or one at another commit, runs again with no fix round.
@@ -714,7 +741,7 @@ async function rounds() {
       } else {
         const b = await measured('bench', () => agent(
           `${intro()} The check's measurement differs from main's recorded figures, or was not compared:\n- ${benchReport.join('\n- ') || 'no comparison'}\nCompare with main and return the result. Build the base with PREFIX=$PWD/tmp/.toolchain SPINEL_CACHE_DIR=$PWD/build/spinel-cache, as your step 1 says.${capLine('bench')}`,
-          { agentType: 'benchmark', schema: withCalls(BENCH), effort: 'low' }), callCap('bench'))
+          calibrate('bench', { agentType: 'benchmark', schema: withCalls(BENCH) })), callCap('bench'))
         if (!b) { stopped = 'the benchmark agent returned no result'; return false }
         verdict('bench', !b.blocking.length)
         note(`benchmark at ${b.head}: ${b.report.join('; ')}`)
@@ -737,7 +764,7 @@ const resume = await agent(
 3. \`make doctor\`; run \`make toolchain\` when it fails and stop when that fails too.
 4. Run \`sh tools/run_state.sh init <change> <branch>\`, then \`sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git rev-parse --short=12 HEAD\` as head.
 5. Run \`sh tools/run_state.sh plan-needed <change>\` and return its one line verbatim as plan; its exit 1 means not needed, not a failure.${capLine('resume')}`,
-  { schema: RESUME, effort: 'low', label: 'resume' })
+  calibrate('resume', { schema: RESUME, label: 'resume' }))
 if (!resume || resume.status !== 'done') {
   stopped = `resume stopped: ${resume ? resume.reason : 'no result'}`
 } else {
@@ -776,7 +803,7 @@ if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement
   planned = 1
   const p = await measured('plan', () => agent(
     `${intro()} Plan the queue for this delivery. Brief: ${input.brief || 'the existing OpenSpec change'}.${capLine('planner')}`,
-    { agentType: 'planner', schema: withCalls(PLAN) }), callCap('planner'))
+    calibrate('planner', { agentType: 'planner', schema: withCalls(PLAN) })), callCap('planner'))
   if (!p) stopped = 'the planner returned no result'
   else {
     note(`plan: ${p.decisions.map((d) => `${d.decision} (${d.evidence})`).join('; ') || 'no change to the queue'}`)
@@ -796,12 +823,12 @@ if (!stopped && !state.merged) {
     if (!packs.length) {
       const plan = await measured('scout', () => agent(
         `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${brief}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only records in docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. For each area, a pack under tmp/scout/ is current when its Commit: is origin/main or \`git diff --quiet <its commit> origin/main -- <its Files read>\` passes; list current packs by path and the areas still needing one, with the question a contributor needs answered about the existing code it edits or hooks into (callers, registration, tests), never about code the change will add, which does not exist yet; an area whose only edits are new files needs no pack.${capLine('areas')}`,
-        { schema: withCalls(SCOUT_PLAN), effort: 'low', label: 'scout plan' }), callCap('areas'))
+        calibrate('areas', { schema: withCalls(SCOUT_PLAN), label: 'scout plan' })), callCap('areas'))
       const room = plan ? Math.max(0, MAX_AREAS - plan.current.length) : 0
       const needed = plan ? plan.needed.slice(0, room) : []
       if (plan && plan.needed.length > room) note(`not scouted, beyond ${MAX_AREAS} areas: ${plan.needed.slice(room).map((n) => n.area).join(', ')}`)
       const fresh = plan ? await measured('scout', () => parallel(needed.map((n) => () =>
-        agent(`Area: ${n.area}. Question: ${n.question}. The change, for scope only: ${brief}. Write the pack and return its path.${capLine('scout')}`, { agentType: 'scout', schema: withCalls(PACK), label: `scout: ${n.area}` }))), callCap('scout')) : []
+        agent(`Area: ${n.area}. Question: ${n.question}. The change, for scope only: ${brief}. Write the pack and return its path.${capLine('scout')}`, calibrate('scout', { agentType: 'scout', schema: withCalls(PACK), label: `scout: ${n.area}` })))), callCap('scout')) : []
       packs = (plan ? plan.current : []).concat(fresh.filter(Boolean).map((p) => p.pack))
       note(`scout packs: ${packs.join(', ') || 'none'}`)
     }
@@ -839,7 +866,7 @@ if (!stopped && !state.merged) {
       const lines = mergeLines()
       const m = await measured('merge', () => agent(
         `${intro()}${mergeTarget()} The pushed head is ${pushed}. Wait for CI at it${waits ? ' (it was still running when you last returned; keep waiting)' : ''}, and merge the pull request if CI is green and every merge gate passes.\nThe green line: \`${lines.green}\`\nThe red line: \`${lines.red}\`\nTool calls: at most ${FIXED_CAPS.merger} in this start when CI passes within your first two waits, and 2 more for each later wait.`,
-        { agentType: 'merger', schema: withCalls(MERGE), effort: 'low' }), mergerCap)
+        calibrate('merger', { agentType: 'merger', schema: withCalls(MERGE) })), mergerCap)
       if (!m) { stopped = 'the merger returned no result'; break }
       const checks = (m.checks || []).join('; ')
       note(`CI at ${m.head}: ${m.ci}${m.minutes ? ` in ${m.minutes} min` : ''}${m.ci === 'pending' && checks ? ` (${checks})` : ''}`)
@@ -898,7 +925,7 @@ const records = left.concat(own, [metricLine()].filter(Boolean)).join(' && ')
 const figures = summary()
 const close = await measured('close', () => agent(
   `Change \`${state.change || input.change || 'unknown'}\`${state.branch ? ` on branch \`${state.branch}\`` : ''}. ${state.merged ? `It merged as ${state.merged}.` : 'It did not merge.'} ${looking ? 'Run the retrospective steps, then the report steps.' : 'Skip the retrospective steps; run the report steps.'}\nThe record line: ${records ? `\`${records}\`` : 'none; skip that step and return recorded true.'}\nThe run's figures: ${figures}.\nWorkflow notes:\n- ${notes.join('\n- ')}\n${stopped ? 'The run stopped: ' + stopped : 'The run finished.'}${capLine('close')}`,
-  { agentType: 'retrospective', schema: withCalls(CLOSE) }), callCap('close'))
+  calibrate('close', { agentType: 'retrospective', schema: withCalls(CLOSE) })), callCap('close'))
 if (close && looking) {
   state['phase.retro'] = closeAt
   note(`retrospective: ${close.proposals.map((x) => `${x.proposal} (${x.evidence})`).join('; ') || 'no proposal'}; ${close.review_due || 'review-due not read'}`)
