@@ -15,9 +15,9 @@ module Carat
     # markup (backticks, emphasis at word boundaries, a link or an image as
     # its text, a backslash escape as its character). Runs of blank rows
     # read as one, none leads or trails, and a row wider than the width
-    # wraps at its last space, or on a character boundary when it has
-    # none. One pass over the bytes, nothing recursive, so nesting costs
-    # nothing beyond its cap.
+    # wraps at its last space after text, or on a character boundary when
+    # it has none, never inside its prefix. One pass over the bytes,
+    # nothing recursive, so nesting costs nothing beyond its cap.
     module MarkdownText
       RAW_LIMIT = 16_384
       ROW_LIMIT = 100
@@ -223,15 +223,39 @@ module Carat
         (b >= 0x30 && b <= 0x39) || (b >= 0x41 && b <= 0x5A) || (b >= 0x61 && b <= 0x7A) || b >= 0x80
       end
 
+      # The bytes of the row's prefix: its leading spaces, bars, and
+      # bullet.
+      #: (String) -> Integer
+      def self.prefix_size(row)
+        len = row.bytesize
+        i = 0
+        while i < len
+          if row.getbyte(i).to_i == 0x20
+            i += 1
+          elsif row.byteslice(i, BAR.bytesize).to_s == BAR
+            i += BAR.bytesize
+          elsif row.byteslice(i, BULLET.bytesize).to_s == BULLET
+            i += BULLET.bytesize
+          else
+            return i
+          end
+        end
+        i
+      end
+
       # The rows with the row added, wrapped at width cells: at its last
-      # space before the width, or on a character boundary when it has
-      # none.
+      # space before the width that follows text of the segment, or on a
+      # character boundary when it has none. The row's prefix (its leading
+      # spaces, bars, and bullet) is not text, so a code indent, a bullet,
+      # or a bar is never left alone on a row.
       #: (String, Integer, Array[String]) -> Array[String]
       def self.wrapped(row, width, out)
         len = row.bytesize
+        prefix = prefix_size(row)
         start = 0
         used = 0
         space = -1
+        seen = false
         i = 0
         while i < len
           size = Utf8.size_at(row, i, len)
@@ -244,9 +268,15 @@ module Carat
             i = start
             used = 0
             space = -1
+            seen = false
             next
           end
-          space = i if row.getbyte(i).to_i == 0x20
+          b = row.getbyte(i).to_i
+          if b == 0x20
+            space = i if seen
+          elsif i >= prefix
+            seen = true
+          end
           used += cells
           i += size
         end

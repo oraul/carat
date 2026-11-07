@@ -163,6 +163,8 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `buffer.next` | normal | Go to the next listed buffer as `:bn` does, count buffers on |
 | `buffer.previous` | normal | Go to the previous listed buffer as `:bp` does, count buffers back |
 | `buffer.delete` | normal | Delete the current buffer as `:bd` does, or with a count the buffer of that number |
+| `docs.hover` | normal | Ask the language server for the documentation under the cursor and show it in a float; while the float shows, enter it |
+| `docs.pin` | normal | Pin the documentation float into a horizontal split over a scratch copy, closing the float |
 
 ## Plugins
 

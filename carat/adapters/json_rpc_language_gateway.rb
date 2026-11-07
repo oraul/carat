@@ -1,6 +1,8 @@
 require_relative "../ports/language_service_port"
 require_relative "../ports/clock_port"
 require_relative "../domain/completion_request"
+require_relative "../domain/hover_request"
+require_relative "../domain/markdown_text"
 require_relative "../domain/completion_list"
 require_relative "../domain/completion_item"
 require_relative "../domain/mode"
@@ -43,7 +45,14 @@ module Carat
     # answer, one in flight, cancelled when unanswered ANSWER_LIMIT
     # seconds past its deadline or when a new answer comes; only the
     # answer to the request in flight is read, and its documentation is
-    # marked arrived for the float.
+    # marked arrived for the float. The hover ask K records
+    # (Domain::HoverRequest) is sent as textDocument/hover at the next
+    # idle tick when the cursor is still where K was typed and the
+    # server advertised hoverProvider, one request in flight, cancelled by
+    # a newer ask or when unanswered ANSWER_LIMIT seconds after it was
+    # sent; only the answer to it is read, its contents joined into one
+    # markdown text of at most PART_LIMIT parts and
+    # MarkdownText::RAW_LIMIT bytes, untrusted, and marked arrived.
     class JsonRpcLanguageGateway < Ports::LanguageServicePort
       DRAIN_LIMIT = 64
       NAME_LIMIT = 32
@@ -58,6 +67,7 @@ module Carat
       ANSWER_LIMIT = 2.0
       SETTLE = 0.1
       DOCUMENT_LIMIT = 16_384
+      PART_LIMIT = 16
       # The menu kind of each LSP CompletionItemKind, by number: interface,
       # enum, and struct read as class; value and enum member as constant.
       KIND_NAMES = ["text", "text", "method", "function", "constructor", "field", "variable", "class", "class", "module", "property", "text", "constant", "class", "keyword", "snippet", "text", "text", "text", "text", "constant", "constant", "class", "text", "text", "text"]
@@ -78,9 +88,11 @@ module Carat
       attr_reader :slots #: Domain::StatusSlots
       attr_reader :completion #: Domain::CompletionRequest
       attr_reader :clock #: Ports::ClockPort
+      attr_reader :hover #: Domain::HoverRequest
 
-      #: (processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, files: Ports::FilePort, buffers: Domain::BufferList, config: Domain::Config, slots: Domain::StatusSlots, completion: Domain::CompletionRequest, clock: Ports::ClockPort) -> void
-      def initialize(processes:, messages:, files:, buffers:, config:, slots:, completion:, clock:)
+      #: (processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, files: Ports::FilePort, buffers: Domain::BufferList, config: Domain::Config, slots: Domain::StatusSlots, completion: Domain::CompletionRequest, clock: Ports::ClockPort, hover: Domain::HoverRequest) -> void
+      def initialize(processes:, messages:, files:, buffers:, config:, slots:, completion:, clock:, hover:)
+        @hover = hover
         @processes = processes
         @messages = messages
         @files = files
@@ -123,6 +135,7 @@ module Carat
         @saves.clear
         complete(state)
         resolve
+        send_hover(state)
         return hold(language) || changed if held
         show(current) || changed
       end
@@ -154,11 +167,12 @@ module Carat
         server.nil? ? "Cannot start #{words_of(language).join(" ")}" : ""
       end
 
-      # Answers whether a wanted completion or a picked candidate's
-      # documentation is not yet sent or a request is in flight.
+      # Answers whether a wanted completion, a picked candidate's
+      # documentation, or a hover ask is not yet sent or a request is in
+      # flight.
       # @rbs skip
       def waiting?
-        @completion.waiting? || @completion.docs.waiting?
+        @completion.waiting? || @completion.docs.waiting? || @hover.waiting?
       end
 
       #: (Domain::Buffer) -> void
@@ -194,6 +208,7 @@ module Carat
           i += 1
           next if server.handle == 0
           forget_completion(server)
+          forget_hover(server)
           request(server, "shutdown", nil)
           notify(server, "exit", nil)
           @processes.stop(server.handle)
@@ -340,7 +355,8 @@ module Carat
         sync = { "didSave" => true, "dynamicRegistration" => false }
         item = { "snippetSupport" => false, "documentationFormat" => ["markdown", "plaintext"], "resolveSupport" => { "properties" => ["documentation"] } }
         completion = { "completionItem" => item, "contextSupport" => true }
-        document = { "synchronization" => sync, "publishDiagnostics" => { "relatedInformation" => false }, "completion" => completion }
+        hover = { "contentFormat" => ["markdown", "plaintext"], "dynamicRegistration" => false }
+        document = { "synchronization" => sync, "publishDiagnostics" => { "relatedInformation" => false }, "completion" => completion, "hover" => hover }
         capabilities = { "textDocument" => document, "window" => { "workDoneProgress" => true } }
         { "processId" => nil, "clientInfo" => { "name" => "carat" }, "rootUri" => root, "capabilities" => capabilities, "workspaceFolders" => [{ "uri" => root, "name" => File.basename(@files.cwd) }] }
       end
@@ -393,6 +409,7 @@ module Carat
       #: (Domain::LanguageServer) -> void
       def crash(server)
         forget_completion(server)
+        forget_hover(server)
         @processes.stop(server.handle)
         server.handle = 0
         server.state = :crashed
@@ -421,6 +438,8 @@ module Carat
           completed(value.key?("error") ? nil : value["result"])
         elsif @completion.docs.sent_id != 0 && value["id"] == @completion.docs.sent_id && server.language == @completion.language
           resolved(value.key?("error") ? nil : value["result"])
+        elsif @hover.sent_id != 0 && value["id"] == @hover.sent_id && server.language == @hover.language
+          hovered(value.key?("error") ? nil : value["result"])
         end
       end
 
@@ -445,6 +464,8 @@ module Carat
         provider = caps.is_a?(Hash) ? caps["completionProvider"] : nil
         @completion.languages << server.language if provider.is_a?(Hash) && !@completion.completes?(server.language)
         @resolvers << server.language if provider.is_a?(Hash) && provider["resolveProvider"] == true && !@resolvers.include?(server.language)
+        hovers = caps.is_a?(Hash) ? caps["hoverProvider"] : nil
+        @hover.languages << server.language if (hovers == true || hovers.is_a?(Hash)) && !@hover.hovers?(server.language)
         server.state = :ready
         notify(server, "initialized", {})
       end
@@ -596,6 +617,103 @@ module Carat
         docs.texts[index] = text
         docs.known[index] = Domain::CompletionDocs::HELD
         docs.arrived = true unless text.empty?
+      end
+
+      # A server that runs no more hovers no more, and its request in
+      # flight is forgotten.
+      #: (Domain::LanguageServer) -> void
+      def forget_hover(server)
+        ask = @hover
+        ask.languages.delete(server.language)
+        ask.sent_id = 0 if ask.language == server.language
+      end
+
+      # Sends the latest hover ask once, when the layout window, its
+      # buffer, the cursor, and normal mode are still where K was typed
+      # and the buffer's server hovers; a newer ask cancels the request in
+      # flight, and so does an answer overdue.
+      #: (Domain::EditorState) -> void
+      def send_hover(state)
+        ask = @hover
+        return unless ask.waiting?
+        if ask.sent_id != 0
+          if ask.sent == ask.want
+            cancel_hover if @clock.now > ask.deadline
+            return
+          end
+          cancel_hover
+        end
+        return if ask.sent == ask.want
+        ask.sent = ask.want
+        window = state.tab.layout_window
+        buffer = window.buffer
+        cursor = window.cursor
+        return unless state.mode == Domain::Mode::NORMAL && ask.at?(window.id, buffer.id, cursor.row, cursor.col)
+        server = server_for(buffer.filetype)
+        return if server.nil? || !server.running? || !ask.hovers?(server.language) || buffer.path.empty?
+        line = buffer.line(cursor.row)[0, cursor.col].to_s
+        params = { "textDocument" => { "uri" => uri_of(buffer.path) }, "position" => { "line" => cursor.row, "character" => utf16_length(line) } }
+        ask.language = server.language
+        ask.deadline = @clock.now + ANSWER_LIMIT
+        ask.sent_id = request(server, "textDocument/hover", params)
+      end
+
+      # Cancels the hover request in flight, whose answer is then dropped.
+      #: () -> void
+      def cancel_hover
+        ask = @hover
+        return if ask.sent_id == 0
+        server = server_for(ask.language)
+        notify(server, "$/cancelRequest", { "id" => ask.sent_id }) unless server.nil?
+        ask.sent_id = 0
+      end
+
+      # Keeps the hover answer's contents as one markdown text, "" for an
+      # error or none, marked arrived.
+      #: (untyped) -> void
+      def hovered(result)
+        ask = @hover
+        ask.sent_id = 0
+        ask.text = hover_text(result.is_a?(Hash) ? result["contents"] : nil)
+        ask.arrived = true
+      end
+
+      # The markdown of hover contents: a markup content, a marked string,
+      # or a list of at most PART_LIMIT marked strings joined by blank
+      # lines, cut to MarkdownText::RAW_LIMIT bytes as it grows.
+      #: (untyped) -> String
+      def hover_text(contents)
+        limit = Domain::MarkdownText::RAW_LIMIT
+        return markdown_of(contents, limit) unless contents.is_a?(Array)
+        out = +""
+        count = contents.length
+        count = PART_LIMIT if count > PART_LIMIT
+        i = 0
+        while i < count && out.bytesize < limit
+          piece = markdown_of(contents[i], limit - out.bytesize)
+          i += 1
+          next if piece.strip.empty?
+          out << "\n\n" unless out.empty?
+          out << piece
+        end
+        out.bytesize > limit ? out.byteslice(0, limit).to_s : out
+      end
+
+      # One part's markdown, at most limit bytes: a string, a markup
+      # content's value, or a language and value pair as a fenced block
+      # whose language is stripped of controls; "" for anything else.
+      #: (untyped, Integer) -> String
+      def markdown_of(part, limit)
+        text = ""
+        if part.is_a?(String)
+          text = part.to_s
+        elsif part.is_a?(Hash) && part["value"].is_a?(String)
+          text = part["value"].to_s
+          language = part["language"]
+          text = "```" + Domain::ControlText.strip(language.to_s, NAME_LIMIT) + "\n" + text + "\n```" if language.is_a?(String)
+        end
+        return text if text.bytesize <= limit
+        text.byteslice(0, limit).to_s
       end
 
       # The documentation of a server's item: a string or a markup

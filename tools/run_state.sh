@@ -634,6 +634,7 @@ check_wait() {
   pid=''
   at=''
   [ ! -f "$pid_file" ] || read -r pid at _ < "$pid_file"
+  runner_finish "$pid"
   joined=0
   if runner_alive "$pid" && [ "$at" = "$head" ]; then
     echo "check: rejoining the check running at $head (pid $pid)"
@@ -679,6 +680,8 @@ check_wait() {
     fi
     pause
   done
+  read_pid
+  runner_finish "$pid"
   cat "$(check_log)"
   case "$verdict" in "check: every stage passed at "*) return 0 ;; esac
   return 1
@@ -689,6 +692,15 @@ read_pid() {
   pid=''
   at=''
   [ ! -f "$pid_file" ] || read -r pid at _ 2>/dev/null < "$pid_file" || true
+}
+
+# runner_finish PID: a runner prints its verdict, then drops its clone and
+# its pid file; waits, at most 30 seconds, for one that printed its verdict
+# to exit, so a check returns with no runner behind it and the next check
+# neither rejoins a finished runner nor shares the carry it still writes.
+runner_finish() {
+  n=0
+  while runner_alive "$1" && [ -n "$(check_verdict)" ] && [ $n -lt 150 ]; do pause; n=$((n + 1)); done
 }
 
 # A fifth of a second, or a second where sleep takes whole seconds only.

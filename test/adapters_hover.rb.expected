@@ -1,0 +1,30 @@
+ok   initialize advertises hover with markdown content
+ok   K with no hovering server is refused and asks nothing
+ok   K records the ask and no key waits on the server
+ok   the next idle tick sends the document and the cursor
+ok   the answer opens the float at the next idle tick with no key, its markup laid out
+ok   the float is bordered below the cursor and nothing waits
+ok   moving the cursor closes the float
+ok   K again asks again
+ok   Esc closes the float
+ok   leaving normal mode closes the float
+ok   an empty answer shows a message and no float
+ok   an error answer shows the same message
+ok   an answer after the cursor moved opens no float
+ok   an ask the cursor left before the tick is not sent
+ok   a new K cancels the request in flight by its id and sends another
+ok   the cancelled request's answer is dropped
+ok   an unanswered request is cancelled after two seconds and waits no more
+ok   the timeout counts from the sending
+ok   a long document shows its first rows
+ok   K while the float shows enters it
+ok   G in the float shows the last row and keeps the float
+ok   Esc in the float closes it
+ok   with no float the pin key is refused
+ok   the pin key opens the rows in a scratch split and closes the float
+ok   the pinned split stays after Esc and a move
+ok   escape sequences are dropped, nesting capped, rows capped
+ok   no escape reaches the screen
+ok   a marked string with a language is fenced code and at most 16 parts are read
+ok   the joined text stops at 16,384 bytes
+adapters_hover: 29 passed, 0 failed

@@ -324,6 +324,15 @@ until state get state stage.slow 2>/dev/null | grep -q '^running ' || [ $n -ge 2
 git_q commit -q --allow-empty -m "chore: newer" -m "$TRAILER"
 expect "run_state: a check at a newer head supersedes the running one" 0 "the superseded check: check: stage slow superseded at $at" stop_check "slow"
 expect "run_state: the newer check runs at the newer head" 0 "^check: every stage passed at $(git rev-parse --short=12 HEAD)" tail -1 build/stages/state/check.log
+# A runner prints its verdict before it drops its clone and pid file: a
+# check started meanwhile at the same head waits for it to exit and runs,
+# rather than rejoining a finished check.
+at=$(git rev-parse --short=12 HEAD)
+sh -c 'sleep 2; :' "run_state.sh check-run" > /dev/null 2>&1 &
+echo "$! $at" > build/stages/state/check.pid
+echo "check: every stage passed at $at" > build/stages/state/check.log
+expect "run_state: a check waits for a runner past its verdict instead of rejoining it" 0 "^stage settle: exit 0" stop_check "settle"
+expect "run_state: the check after a finishing runner leaves no runner behind" 1 "" test -e build/stages/state/check.pid
 # The workflow reruns a check whose verdict says it did not finish, and
 # sends only a failure to a fix round: its RERUN_WORDS are this script's.
 rerun=$(grep -E '^const RERUN_WORDS = ' "$here/../.claude/workflows/deliver-change.js")

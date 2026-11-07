@@ -9,6 +9,7 @@ require_relative "../adapters_assembly"
 require_relative "../adapters_config_gateway"
 require_relative "../adapters_dirty_rows"
 require_relative "../adapters_frame_presenter"
+require_relative "../adapters_hover"
 require_relative "../adapters_key_decoder"
 require_relative "../adapters_language_gateway"
 require_relative "../adapters_screen_presenter"
@@ -96,6 +97,7 @@ when "adapters_assembly" then AdaptersAssemblyTest.main
 when "adapters_config_gateway" then AdaptersConfigGatewayTest.main
 when "adapters_dirty_rows" then AdaptersDirtyRowsTest.main
 when "adapters_frame_presenter" then AdaptersFramePresenterTest.main
+when "adapters_hover" then AdaptersHoverTest.main
 when "adapters_key_decoder" then AdaptersKeyDecoderTest.main
 when "adapters_language_gateway" then AdaptersLanguageGatewayTest.main
 when "adapters_screen_presenter" then AdaptersScreenPresenterTest.main

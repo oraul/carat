@@ -46,6 +46,11 @@ module AdaptersAssemblyTest
     t.assert_equal([true, true], [a.handle_key.show_completion.equal?(a.show_completion), a.show_completion.source.equal?(h.completions)], "the key handler holds the one ShowCompletion, over the source the harness gave")
     t.assert_equal([true, true, true], [a.show_completion.show_docs.source.equal?(h.completions), a.show_completion.show_docs.open_float.equal?(a.show_completion.open_float), a.show_completion.show_docs.close_float.equal?(a.show_completion.close_float)], "the documentation float shares the popup's source and float use cases")
     t.assert_equal([true, true], [a.controller.show_completion.equal?(a.show_completion), a.services.completion.equal?(h.completions.request)], "the input controller holds the one ShowCompletion and the gateway the source's request")
+    t.assert_equal([], strangers(a.hover, [
+      ["services", a.services.hover], ["request_hover", a.request_hover.hover], ["show_hover", a.show_hover.hover],
+      ["follow_hover", a.follow_hover.hover], ["pin_hover", a.pin_hover.hover]
+    ]), "the hover request")
+    t.assert_equal([true, true], [a.controller.show_hover.equal?(a.show_hover), a.handle_key.follow_hover.equal?(a.follow_hover)], "the input controller holds the one ShowHover and the key handler the one FollowHover")
     t.assert_equal([], strangers(a.tabs, [
       ["state", a.state.tabs], ["buffers", a.buffers.tabs], ["feed", a.buffers.feed.tabs], ["quit", a.quit.tabs],
       ["close_window", a.close_window.tabs], ["split_window", a.split_window.tabs], ["open_side_window", a.open_side_window.tabs],

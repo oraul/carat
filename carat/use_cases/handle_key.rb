@@ -17,6 +17,7 @@ require_relative "edit_command_line"
 require_relative "plugins/plugin_host"
 require_relative "arrange_view"
 require_relative "search/open_search_prompt"
+require_relative "docs/follow_hover"
 
 module Carat
   module UseCases
@@ -48,7 +49,9 @@ module Carat
     # when the prompt was cancelled. While the completion popup shows in
     # insert mode, a key is looked up first in the completion keymap
     # layer; a typed character and, while the popup shows, every key end
-    # in ShowCompletion, which opens, filters, or closes the popup.
+    # in ShowCompletion, which opens, filters, or closes the popup. While
+    # a documentation float shows, every key ends in FollowHover, which
+    # closes it when the cursor moved; with none, one comparison.
     class HandleKey
       include Reporting
 
@@ -63,15 +66,17 @@ module Carat
       attr_reader :arrange_view #: ArrangeView
       attr_reader :search_prompt #: Domain::SearchPrompt
       attr_reader :open_search_prompt #: OpenSearchPrompt
+      attr_reader :follow_hover #: FollowHover
 
       # @rbs @actions: ActionTable
       # @rbs @dispatcher: Dispatcher
       # @rbs @insert_text: InsertText
       # @rbs @command_line: EditCommandLine
       # @rbs @replays: Integer
+      # @rbs @hover: Domain::HoverRequest
 
-      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, completion: Domain::CompletionMenu, show_completion: ShowCompletion, plugins: PluginHost, arrange_view: ArrangeView, search_prompt: Domain::SearchPrompt, open_search_prompt: OpenSearchPrompt) -> void
-      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, completion:, show_completion:, plugins:, arrange_view:, search_prompt:, open_search_prompt:)
+      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, completion: Domain::CompletionMenu, show_completion: ShowCompletion, plugins: PluginHost, arrange_view: ArrangeView, search_prompt: Domain::SearchPrompt, open_search_prompt: OpenSearchPrompt, follow_hover: FollowHover) -> void
+      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, completion:, show_completion:, plugins:, arrange_view:, search_prompt:, open_search_prompt:, follow_hover:)
         @keymap = keymap
         @input = input
         @actions = actions
@@ -84,6 +89,8 @@ module Carat
         @arrange_view = arrange_view
         @search_prompt = search_prompt
         @open_search_prompt = open_search_prompt
+        @follow_hover = follow_hover
+        @hover = follow_hover.hover
         @replays = 0
       end
 
@@ -100,6 +107,7 @@ module Carat
           @arrange_view.call(state) unless queue.empty?
         end
         @show_completion.call(state, false) if @completion.showing?
+        @follow_hover.call(state) if @hover.float_id != 0
         @plugins.observe
         @arrange_view.call(state)
         result
