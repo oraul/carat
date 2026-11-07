@@ -1,16 +1,18 @@
 require_relative "../ports/completion_port"
 require_relative "../domain/completion_list"
 require_relative "../domain/completion_item"
+require_relative "../domain/completion_request"
 
 module Carat
   module Doubles
     # A completion source with a fixed list a test fills: ready once it
     # holds a candidate, the same candidates for every word, and a count
-    # of the times it was asked. Its strings are kept as given, untrusted,
+    # of the times it was asked, and a request no service fills. Its strings are kept as given, untrusted,
     # for the menu to clean.
     class FixedCompletions < Ports::CompletionPort
       # @rbs @list: Domain::CompletionList
       # @rbs @asked: Integer
+      # @rbs @request: Domain::CompletionRequest
 
       attr_reader :asked #: Integer
 
@@ -18,6 +20,7 @@ module Carat
       def initialize
         @list = Domain::CompletionList.new
         @asked = 0
+        @request = Domain::CompletionRequest.new
       end
 
       # Adds a candidate as a source would give it.
@@ -40,6 +43,12 @@ module Carat
       def candidates(buffer, row, col)
         @asked += 1
         @list
+      end
+
+      # Answers a request nobody fills: the double answers at once.
+      # @rbs skip
+      def request
+        @request
       end
     end
   end

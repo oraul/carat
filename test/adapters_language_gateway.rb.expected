@@ -3,6 +3,12 @@ ok   initialize names the root and the progress capability
 ok   the next idle tick starts nothing more and sends nothing before the answer
 ok   the answer makes it ready and opens the buffer
 ok   didOpen carries the language, version 1, the text, and the file URI
+ok   initialize advertises completion without snippets
+ok   a result makes the server ready
+ok   an initialize error stops the server as crashed and sends nothing more
+ok   an error beside a result is still an error
+ok   a null result is a crash
+ok   an answer to another id changes nothing
 ok   no trusted_roots line spawns nothing
 ok   the root itself
 ok   a directory under a root
@@ -42,4 +48,4 @@ ok   a broken input crashes the server
 ok   stop sends shutdown and exit and stops the child
 ok   a missing command leaves the slot empty
 ok   a text file starts nothing
-adapters_language_gateway: 44 passed, 0 failed
+adapters_language_gateway: 50 passed, 0 failed

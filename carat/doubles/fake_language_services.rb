@@ -37,6 +37,12 @@ module Carat
         @saves << buffer.id
       end
 
+      # Answers false: nothing waits.
+      # @rbs skip
+      def waiting?
+        false
+      end
+
       #: () -> void
       def stop
       end

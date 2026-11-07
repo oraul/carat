@@ -1,0 +1,31 @@
+ok   asking the same word twice is one want, unanswered and waiting
+ok   another word is a new want
+ok   a server without a completion provider is not ready
+ok   typing with no completing server asks nothing and shows no popup
+ok   with nothing wanted an idle read waits 0.25 seconds
+ok   a server with a completion provider is ready for its file type
+ok   typing records the word and no key waits on the server
+ok   while a word is wanted an idle read waits 0.02 seconds
+ok   the first idle tick only starts the debounce
+ok   the request names the document and the cursor after 0.1 seconds
+ok   the typed text is sent before the request
+ok   while a request is in flight an idle read waits 0.02 seconds
+ok   the answer fills the popup at the next idle tick with no key
+ok   the LSP kinds read as the menu's kinds
+ok   an answered request waits no more
+ok   typing on ranks the answer again without another request
+ok   Enter inserts the server's item
+ok   an answer arriving after a key shows within 0.02 seconds, before the next key
+ok   words typed within the debounce send one request, for the last
+ok   another word cancels the request in flight
+ok   the cancelled request's answer opens no popup
+ok   the new word is asked once the debounce passed
+ok   the new word's answer fills the popup
+ok   an answer to no request in flight changes nothing
+ok   an unanswered request is cancelled after two seconds and waits no more
+ok   an error answer opens no popup
+ok   escape sequences are dropped, each string is cut, an unknown kind is text, and an item without a label is skipped
+ok   the text edit's new text is the text inserted
+ok   at most 200 items of an answer are kept
+ok   a crashed server's language is not ready
+adapters_server_completions: 30 passed, 0 failed

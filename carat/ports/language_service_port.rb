@@ -34,6 +34,13 @@ module Carat
         raise NotImplementedError, "LanguageServicePort#saved"
       end
 
+      # Answers whether the services owe a tick soon: a wanted completion
+      # not yet sent or a request in flight, so the input waits less.
+      # @rbs skip
+      def waiting?
+        raise NotImplementedError, "LanguageServicePort#waiting?"
+      end
+
       # Asks every server to shut down and exit, without waiting.
       #: () -> void
       def stop
