@@ -46,7 +46,7 @@ Every Spinel pitfall this project has met, once, at the pinned compiler (`SPINEL
 - Open: values destructured from an array inside a method (`a, b = helper`) lose their types; in one test the generated C did not compile. A helper returning several values returns an object with typed readers (backlog: "Spinel loses the types of an array destructured inside a method").
 - A module function sharing its name with a reader that some call reaches through a receiver of several classes can leave that call unresolved (`make diagnose` reports it): `ExRange.number` beside `PluginApi::Response#number` did, until it became `line_number`. Give such a function a longer name.
 - `NameTest.main if __FILE__ == $0` is folded at compile time: true when the file is the compile root (`make test-one`), false inside the runner.
-- `-O 0` and `--incremental` are development modes with the same answers and slower code; the release binary is always `spin build` at `-O 2`. Allocations per key are the same at every level, so the allocation budget builds at `-O 0`.
+- `-O 0` and `--incremental` are development modes with the same answers and slower code; the release binary is always `spin build` at `-O 2`. On four cores the runner's C compiles in about 9 seconds at `-O 0`, 30 at `-O 1`, and 46 at `-O 2`. Allocations per key are the same at every level, so the allocation budget builds at `-O 0`.
 
 ## Known miscompilations
 
