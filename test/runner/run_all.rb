@@ -32,6 +32,7 @@ require_relative "../domain_keymap"
 require_relative "../domain_keys"
 require_relative "../domain_layout"
 require_relative "../domain_line_cache"
+require_relative "../domain_markdown_text"
 require_relative "../domain_options_config"
 require_relative "../domain_plugin_manifest"
 require_relative "../domain_rc_parser"
@@ -118,6 +119,7 @@ when "domain_keymap" then DomainKeymapTest.main
 when "domain_keys" then DomainKeysTest.main
 when "domain_layout" then DomainLayoutTest.main
 when "domain_line_cache" then DomainLineCacheTest.main
+when "domain_markdown_text" then DomainMarkdownTextTest.main
 when "domain_options_config" then DomainOptionsConfigTest.main
 when "domain_plugin_manifest" then DomainPluginManifestTest.main
 when "domain_rc_parser" then DomainRcParserTest.main
