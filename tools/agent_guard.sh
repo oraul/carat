@@ -34,8 +34,9 @@
 # --receive-pack, --exec, or --open-files-in-pager, nor grep with a short
 # option cluster holding O), branch with listing options, remote -v,
 # remote get-url origin, remote set-head origin main, fetch -q --prune
-# origin, ls-remote origin with listing options and branch names, worktree
-# add, remove, list, and prune of a worktree tmp/.NAME, and checkout -q
+# origin (not while origin is a local repository, local_origin),
+# ls-remote origin with listing options and branch names, worktree add,
+# remove, list, and prune of a worktree tmp/.NAME, and checkout -q
 # --detach origin/main inside one (-C).
 #   read         adds mkdir and rm under DIR; make -s, -C tmp/.NAME, the
 #                targets dev-build test-build bench-budget metrics
@@ -337,6 +338,17 @@ only_profiles() {
   case " $1 " in *" $profile "*) ;; *) refuse "$2 is not a command of this profile" ;; esac
 }
 
+# Whether origin's url, as git resolves it with its lines joined, is set
+# and names no hosted repository: a path, file:, or a remote helper's
+# X::. Branch code run by the checks can point remote.origin.url at a
+# repository it built, whose main a fetch would make origin/main, bringing
+# its own gates and the guard the hooks read from it; the green line also
+# checks the url before its fetch. An unset url fails any fetch anyway.
+local_origin() {
+  origin_url=$(git -C "$project_dir" remote get-url origin 2>/dev/null | tr -d '\n')
+  [ -n "$origin_url" ] && ! matches "$origin_url" '^((https?|ssh|git)://[^/]|[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:[^/])'
+}
+
 # worktree PATH: PATH is a worktree tmp/.NAME of the project.
 worktree() {
   relative "$1"
@@ -409,7 +421,8 @@ git_form() {
         *) refuse "git remote other than -v, get-url origin, and set-head origin main" ;;
       esac ;;
     fetch)
-      options_in "-q --quiet --prune -p origin" "$@" || refuse "git fetch other than of origin without a refspec" ;;
+      options_in "-q --quiet --prune -p origin" "$@" || refuse "git fetch other than of origin without a refspec"
+      local_origin && refuse "git fetch while origin is \"$origin_url\", a local repository or a remote helper, not a hosted one" ;;
     ls-remote)
       remote=""
       for a in "$@"; do

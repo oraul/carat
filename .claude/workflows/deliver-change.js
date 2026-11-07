@@ -423,14 +423,29 @@ async function flush(force) {
 // fetch and the add read no global or system configuration and run no
 // hook, both of which branch code run by the checks can write: a global
 // insteadOf would fetch a forged main, a hook would rewrite the copy.
+// Before the fetch, originCheck holds origin to the hosted repository.
 const MERGE_GATES = 'tmp/.merge-gates'
 const PINNED_GIT = 'GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null'
+// The green line's origin check, before its fetch: origin's url, as git
+// resolves it (insteadOf included) and with its lines joined, is REPO
+// (owner/name, the run state's, no part only dots) on GitHub over https
+// or ssh.
+// Branch code run by the checks can point remote.origin.url at a local
+// repository or a server of its own, whose main the forced fetch would
+// make origin/main, bringing its own gates and the guard the merge hook
+// reads; the check is the script's, which no fetch replaces. A REPO of
+// another form matches nothing (a^b).
+function originCheck(repo) {
+  const valid = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo || '') && !/(^|\/)\.+(\/|$)/.test(repo)
+  const name = valid ? repo.replace(/\./g, '[.]') : 'a^b'
+  return `${PINNED_GIT} remote get-url origin | tr -d '\\n' | grep -q -x -E '(https[:]//([^/@]+@)?github[.]com/|(ssh[:]//)?git@github[.]com[:/])${name}([.]git)?/?'`
+}
 function mergeLines() {
   const records = mergeRecords(ran)
   const first = (line) => [metricLine(), line].filter(Boolean).join(' && ')
   const ci = (result) => `sh tools/run_state.sh set ${state.change} ci "${result} ${head}"`
   return {
-    green: `git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${PINNED_GIT} fetch -q --prune origin && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
+    green: `git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck(state.repo)} && ${PINNED_GIT} fetch -q --prune origin && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
     red: first(ci('red')),
   }
 }

@@ -1012,7 +1012,7 @@ expect "guard: merger deletes the branch and fast-forwards main" 0 "^$" guard me
 # The merger's first green: the green and red lines as the workflow builds
 # them (mergeLines), and its two closing calls, each one call the guard
 # admits.
-expect "guard: merger runs the green line" 0 "^$" guard merger 'git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null fetch -q --prune origin && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger runs the green line" 0 "^$" guard merger 'git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | grep -q -x -E '\''(https[:]//([^/@]+@)?github[.]com/|(ssh[:]//)?git@github[.]com[:/])o/r([.]git)?/?'\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null fetch -q --prune origin && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: merger refuses another global configuration before git" 2 "a GIT_CONFIG_GLOBAL other than /dev/null" guard merger 'GIT_CONFIG_GLOBAL=tmp/g git fetch -q --prune origin'
 expect "guard: merger refuses a pinned configuration before another command" 2 "an assignment before ls" guard merger 'GIT_CONFIG_NOSYSTEM=1 ls'
 expect "guard: merger refuses another assignment before git" 2 "an assignment of BASE before git" guard merger 'BASE=main git fetch -q --prune origin'
@@ -1877,6 +1877,38 @@ expect "workflow: a resume past the push checks and reviews again unless this st
 expect "workflow: the resume check reads this start's records" 0 "if [(]!ranAll[(]ran[)][)]" grep -F "if (!ranAll(ran))" "$wf"
 expect "workflow: the resume check runs no fix round" 0 "verify[(]false[)]" grep -F "verify(false)" "$wf"
 expect "workflow: the green line fetches and adds the copy with no global configuration or hook" 0 "^2$" sh -c 'grep -c -F -e "const PINNED_GIT = '\''GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null'\''" -e "&& \${PINNED_GIT} fetch -q --prune origin && \${PINNED_GIT} worktree add -q --detach" "$1"' _ "$wf"
+# A local bare origin planted after the push, by branch code the checks
+# ran: the green line's origin check, the script's, fails before the
+# fetch, whose main would bring its own gates and guard, and main's guard
+# refuses the fetch; the hosted repository passes both.
+expect "workflow: the green line checks origin before its fetch" 0 "originCheck" grep -F '&& ${originCheck(state.repo)} && ${PINNED_GIT} fetch -q --prune origin' "$wf"
+origin_check=$(js "$wf" "PINNED_GIT originCheck" "originCheck('o/r.x')" | sed 's/^"//; s/"$//; s/\\\\/\\/g')
+fresh planted
+gh="https:/""/github.com"
+git_q remote add origin "$gh"/o/r.x.git
+expect "workflow: the origin check passes the hosted repository" 0 "^ok$" sh -c "$origin_check && echo ok"
+PROJECT=$PWD
+expect "guard: merger fetches from the hosted repository" 0 "^$" guard merger 'git fetch -q --prune origin'
+git_q init -q --bare "$work/planted.git"
+git_q push -q "$work/planted.git" HEAD:refs/heads/main 2>/dev/null
+git_q remote set-url origin "$work/planted.git"
+expect "workflow: the origin check fails a local bare origin planted after the push" 1 "^$" sh -c "$origin_check"
+expect "guard: merger refuses a fetch from a planted local origin" 2 "a local repository or a remote helper" guard merger 'git fetch -q --prune origin'
+expect "guard: the security reviewer refuses a fetch from a planted local origin" 2 "a local repository or a remote helper" guard read 'git fetch -q origin'
+git_q remote set-url origin "file:/""/$work/planted.git"
+expect "workflow: the origin check fails a file: origin" 1 "^$" sh -c "$origin_check"
+git_q remote set-url origin "ext::sh -c true"
+expect "guard: merger refuses a fetch through a remote helper" 2 "a local repository or a remote helper" guard merger 'git fetch -q --prune origin'
+git_q remote set-url origin "$gh"/o/r.x.git
+git_q config url."$work/planted.git".insteadOf "$gh"/o/r.x.git
+expect "workflow: the origin check fails an insteadOf to a local origin" 1 "^$" sh -c "$origin_check"
+git_q config --unset url."$work/planted.git".insteadOf
+git_q remote set-url origin "$gh"/o/rex.git
+expect "workflow: the origin check fails another repository" 1 "^$" sh -c "$origin_check"
+unset PROJECT
+expect "workflow: a run state's repository of another form matches nothing" 0 '^\[true,true,true,false\]$' \
+  js "$wf" "PINNED_GIT originCheck" "['../x', 'o/..', 'o/r x', 'o/r.x'].map((r) => originCheck(r).includes(')a^b('))"
+cd "$work" || exit 1
 areas=$(grep -c -E '^## [0-9]+[.] ' "$here/../docs/codebase-map.md")
 expect "periodic: MAP_AREAS is the map's count of areas" 0 "^const MAP_AREAS = $areas$" grep '^const MAP_AREAS = ' "$pwf"
 expect "periodic: the quality slices cover every area once" 0 '^true$' \
