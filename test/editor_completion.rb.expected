@@ -39,4 +39,20 @@ ok   escape sequences are dropped, an unknown kind reads as text, and a long lab
 ok   no escape reaches the screen
 ok   200 candidates are kept and ten rows show
 ok   the popup scrolls to the selected row
-editor_completion: 41 passed, 0 failed
+ok   the selected item's documentation opens a second float
+ok   the float shows the markdown as plain rows at the popup's rows on its right
+ok   the documentation is drawn beside the list
+ok   the documentation stands under the popup
+ok   the popup and its documentation equal a full repaint
+ok   an item without documentation shows no float
+ok   the float follows the selection back
+ok   filtering moves the float with the popup
+ok   Esc closes the documentation with the popup
+ok   <CR> closes the documentation with the popup
+ok     closes the documentation with the popup
+ok   above the word the float ends on the row above the cursor
+ok   with no room on the right the float stands on the popup's left
+ok   a long paragraph wraps at word boundaries within 60 columns
+ok   escape sequences are dropped and nesting is capped at four levels
+ok   no escape of the documentation reaches the screen
+editor_completion: 57 passed, 0 failed
