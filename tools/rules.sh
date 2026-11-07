@@ -48,3 +48,10 @@ $hits"
   [ -z "$hits" ] || bad "a secret (a private key, a platform token, or a password, secret, token, or API key assigned a literal; the line is not shown) in:
 $hits"
 }
+
+# Repository configuration keys that run a command or redirect origin or
+# the files git reads, matched without case against the names of
+# git config --local --name-only --list: the origin gate refuses them, and
+# tools/agent_guard.sh holds a copy (a tools/tools_test.sh case keeps the
+# two equal), since branch code run by the checks can write .git/config.
+RISKY_CONFIG='^(core\.(fsmonitor|hookspath|sshcommand|gitproxy|pager|editor|askpass|alternaterefscommand|worktree)|diff\.external|diff\..+\.(textconv|command)|filter\..+|merge\..+\.driver|sequence\.editor|credential\..+|gpg\..+|uploadpack\..+|url\..+\.(insteadof|pushinsteadof)|remote\.origin\.(pushurl|uploadpack|receivepack|proxy|vcs)|http\..+|protocol\..+|include\..+|includeif\..+|extensions\.worktreeconfig)$'

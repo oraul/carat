@@ -1,0 +1,56 @@
+# Design
+
+## Context
+
+The pipeline's trust rests on three things branch code can reach: the local ref `refs/remotes/origin/main` and `.git/config` (the merge gates' worktree, the hooks' `git show origin/main:tools/agent_guard.sh`), the run state file (the resume's `trusted` output, which keeps any record at a supported commit), and the merger's instructions (the merge tool has no hook). The checker runs `make` on the branch outside the guard, so any of them may have been rewritten before the reviews and the merge. The first five decisions below come from the stopped `merge-gate-integrity` delivery; its last review found a fourth path through local git state (the configured fetch refspec), which the check clone closes at the cause.
+
+## Goals / Non-Goals
+
+Goals: detect a rewritten `origin/main` or a configuration key that runs a command before a gate or the guard relies on them; a review pass read from a file never skips a review; the merge tool refuses a merge the merge gates did not pass at that head.
+
+Goals, added: no check stage can write the delivery clone's `.git`, refs, configuration, hooks, or `build/pipeline` through the paths it is given.
+
+Non-goals: the pinned main fetch and the merge-tool hook reading its guard from it (`pinned-main`); confining a process that writes by an absolute path (an operating-system sandbox); signing run-state records; the backup's gates.
+
+## Decisions
+
+### One list of risky configuration keys
+
+`RISKY_CONFIG` in `tools/rules.sh`, matched case-insensitively against `git config --local --name-only --list`: keys that run a command (`core.fsmonitor`, `core.hooksPath`, `core.sshCommand`, `core.gitProxy`, `core.pager`, `core.editor`, `core.askPass`, `core.alternateRefsCommand`, `diff.external`, `diff.*.textconv`, `diff.*.command`, `filter.*`, `merge.*.driver`, `sequence.editor`, `credential.*`, `gpg.*`, `uploadpack.*`), redirect origin or the files git reads (`url.*.insteadOf`, `url.*.pushInsteadOf`, `remote.origin.pushurl`, `remote.origin.uploadpack`, `remote.origin.receivepack`, `remote.origin.proxy`, `remote.origin.vcs`, `http.*`, `protocol.*`, `include.*`, `includeIf.*`, `core.worktree`, `extensions.worktreeConfig`). The guard is read from main as a string and cannot source `rules.sh`, so it holds a copy; a `tools/tools_test.sh` case keeps the two equal. Alternative considered: a hash of `.git/config` recorded at the start; rejected, since the record would sit where branch code writes.
+
+### The origin gate
+
+For any base, the configuration list. For a base `origin/NAME` (the default): `remote.origin.fetch` exactly `+refs/heads/*:refs/remotes/origin/*`, so a fetch restores a rewritten ref; an origin URL that is not a local repository (a path, `file:`, or `ext::`), since a fake bare repository would answer `ls-remote` with the fake commit; and `git ls-remote origin refs/heads/NAME` equal to the base's commit, with "fetch, or the ref was rewritten" as the remedy. It runs first in `pre-push` and `merge`; the green line fetches before it adds the worktree, so a stale ref is never the reason. A local base (the tests' `BASE=main`) checks the configuration only.
+
+### The guard's configuration check
+
+Before it judges a call, the guard of every profile lists the project's configuration (`git -C "$CLAUDE_PROJECT_DIR"`) and refuses on a risky key; a directory that is not a repository lists nothing. One local `git config` per call; no network.
+
+### Records this start made
+
+`ran` holds the `phase.*` and `review.*` values `phaseDone` and `reviewed` set in this start. `doneAtHead` and `reviewedAtHead` read `ran` through the pure `passedAt(records, key, head)`; `mergeRecords(ran)` builds the merge gates' `RECORDS`. `state` still carries the file's records for the notes, the quality scope, and the figures. A resume past the push runs `verify()` before the merger when the check, a review, or the benchmark has no pass of this start at the head; a fix there moves the head off the pushed sha, which stops the run before the merger. Alternative considered: authenticating records with a key only the workflow holds; the workflow has no secret store, and the review is cheaper than the risk.
+
+### The merge-tool hook
+
+`gates.sh merge` runs `run_state.sh gated CHANGE clear` first, which resets `gated` to `none` in every run state under `build/pipeline/` holding another value (`gated_clear`), not only the change's, and `gated CHANGE pass` (the full HEAD) when every gate passed; `push` writes `gated` as `none`; `set` refuses `gated`, and no guard profile runs `gated`. The merger's hook adds a matcher for `mcp__github__merge_pull_request`; main's guard refuses that tool for any profile but the merger, and for the merger unless `merge_method` is `squash`, `sha` is 40 hexadecimal digits that exactly one run state under `build/pipeline/` names, holding it as both `pushed` and `gated`, and `origin/main` equals origin's `main`. The change's own run state always names its pushed head, so a run state branch code planted to name it too makes two and is refused, and the merge gates' clear removes a planted marker before they judge; the push clears only the change's own run state. Alternative considered: reading only the change's run state, which the hook cannot name, since the tool input carries the pull request number and not its branch.
+
+Bootstrap: this change's merge runs main's older guard, which refuses any tool it does not judge. The merge hook line runs main's guard for the merge tool only when that guard's text names `mcp__github__merge_pull_request`, and allows the call otherwise; a rewritten `origin/main` already controls the guard either way. The backlog entry removes the clause after this merge.
+
+### The check clone
+
+`check_run` makes the clone before the first stage: `mktemp -d` under `TMPDIR`, outside the delivery clone, then `git init` and one `git fetch` from the delivery clone of `HEAD` into the branch's name and of `refs/remotes/origin/main` into the same ref, with the delivery clone's git run with no global or system configuration and no hook, as the gates run theirs. A fetch copies the objects into a pack: no hard link, no alternates, no remote in the new configuration, and only the sample hooks `git init` writes. The fetched head must equal the runner's head, or the check stops. `tmp/.toolchain` and `tmp/.spinel` are symbolic links to the delivery clone's, since a check cannot rebuild Spinel. `make -s stages` and every `make check-stage` run with the clone as their directory; `run_stage` still writes the log and the record from the delivery clone, so a stage's output reaches only its log. The runner's exit trap carries the clone's `build/` back to `build/stages/CHANGE/carry` (without `pipeline`, `stages`, and `plan`) and its `build/metrics/current.tsv` to `METRICS_OUT`, then removes the clone, on a pass, a failure, or a trapped signal.
+
+Carrying the build: the compile skip compares a stage's outputs with the sum it recorded, so the outputs must outlive the clone; the next clone starts from the carry, read from the clone's directory by `outputs_sum`. The benchmark's `run_state.sh bench` reads `METRICS_OUT`, so the metrics stage's file is copied back. Both are build products branch code wrote before; no gate and no hook reads them.
+
+Alternatives considered: `git worktree add`, which shares `.git`, its configuration, and its hooks; `git clone --local`, which hard-links the objects and records the delivery clone as `origin`; a persistent clone, which a stage could leave configured for the next check; and an operating-system sandbox (a user namespace or another user), which the toolchain does not need elsewhere and which is not available on every host the checks run on.
+
+## Risks / Trade-offs
+
+- The clone separates what a stage writes in its own directory. A process of the same user can still write the delivery clone, the shared toolchain, or the home directory by an absolute path; the origin gate, the guard's refusals, and the green line's url check stay as the second line, and `docs/backlog.md` records the rest.
+- A check's first stage now pays one fetch of the history (about a second here) and, after a change of `CHANGE`, one cold build; the carry keeps the compile skip.
+
+- A resume reruns the reviews when this start holds no record of a kind: more tokens on a resume, with no fix round, since a fix commit could not be pushed; a blocking finding there stops the run. A start that ran them keeps its records past the package step's records-only commits, which the merge gates' settled_at allows.
+- The gates, the guard, and the green line's fetch and worktree add read no global or system configuration and run no hook, since branch code run by the checks can write `~/.gitconfig` and `.git/hooks`; a hook other than a sample refuses every call and fails the origin gate. The stages still run with a writable `.git` and home directory; running them in a clone they cannot write is the longer-term fix, in the backlog entry on the guard read from `origin/main`.
+- Branch code can point `remote.origin.url` at a repository it built, local or served on the loopback, whose main a forced fetch would make `origin/main`, bringing its own gates and the guard the hooks read. The green line checks the url before its fetch, in script code no fetch replaces: it must name the run state's repository on GitHub over https or ssh, as git resolves it. A merge from a clone whose origin is a proxy or a mirror fails closed there. The guard read from `origin/main` also refuses a fetch while the url names no hosted repository; it does not judge a hosted url, since the run state it would compare with is writable too.
+- `pre-push` now needs the network and a current `origin/main`; the contributor fetches before the push.
+- A marker written by `run_state.sh gated` outside the merge gates is still possible for code that runs between the push and the merge; none of the branch's runs there.

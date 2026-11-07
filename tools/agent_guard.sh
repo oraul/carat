@@ -25,16 +25,18 @@
 # nl comm basename dirname realpath readlink stat du date pwd echo printf
 # true; find without -exec -execdir -ok -okdir -delete -fprint -fprint0
 # -fprintf -fls; sed -n with a line-number print script; cd to the project
-# or a worktree tmp/.NAME; git with the global options -C (the project or
-# a worktree tmp/.NAME) and --no-pager and the verbs status log show diff
-# rev-parse merge-base ls-files ls-tree cat-file blame describe shortlog
+# or a worktree tmp/.NAME; git, after GIT_CONFIG_GLOBAL=/dev/null and
+# GIT_CONFIG_NOSYSTEM=1 at most, with the global options -C (the project
+# or a worktree tmp/.NAME), -c core.hooksPath=/dev/null, and --no-pager,
+# and the verbs status log show diff rev-parse merge-base ls-files ls-tree cat-file blame describe shortlog
 # rev-list grep show-ref for-each-ref name-rev (none with a prefix of
 # --output, --ext-diff, --textconv, --filters, --upload-pack,
 # --receive-pack, --exec, or --open-files-in-pager, nor grep with a short
 # option cluster holding O), branch with listing options, remote -v,
 # remote get-url origin, remote set-head origin main, fetch -q --prune
-# origin, ls-remote origin with listing options and branch names, worktree
-# add, remove, list, and prune of a worktree tmp/.NAME, and checkout -q
+# origin (not while origin is a local repository, local_origin),
+# ls-remote origin with listing options and branch names, worktree add,
+# remove, list, and prune of a worktree tmp/.NAME, and checkout -q
 # --detach origin/main inside one (-C).
 #   read         adds mkdir and rm under DIR; make -s, -C tmp/.NAME, the
 #                targets dev-build test-build bench-budget metrics
@@ -65,7 +67,9 @@
 #                no merge gate reads: the retrospective's closing start
 #                runs the run's last records, never review and never the
 #                phase of check, quality, security, or bench
-# Any other profile refuses every call.
+# The merger alone may call the GitHub merge tool (merge_tool, below). Any
+# other profile refuses every call, and every profile refuses every call
+# while .git/config sets a RISKY_CONFIG key.
 #
 # A write target (a redirection's target, a path argument of mkdir rm cp
 # mv touch chmod, a file tool's path) has no parent step, and its real
@@ -334,6 +338,17 @@ only_profiles() {
   case " $1 " in *" $profile "*) ;; *) refuse "$2 is not a command of this profile" ;; esac
 }
 
+# Whether origin's url, as git resolves it with its lines joined, is set
+# and names no hosted repository: a path, file:, or a remote helper's
+# X::. Branch code run by the checks can point remote.origin.url at a
+# repository it built, whose main a fetch would make origin/main, bringing
+# its own gates and the guard the hooks read from it; the green line also
+# checks the url before its fetch. An unset url fails any fetch anyway.
+local_origin() {
+  origin_url=$(git -C "$project_dir" remote get-url origin 2>/dev/null | tr -d '\n')
+  [ -n "$origin_url" ] && ! matches "$origin_url" '^((https?|ssh|git)://[^/]|[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:[^/])'
+}
+
 # worktree PATH: PATH is a worktree tmp/.NAME of the project.
 worktree() {
   relative "$1"
@@ -371,7 +386,7 @@ git_form() {
       -c)
         [ $# -ge 2 ] || refuse "git -c without a value"
         case "$profile:$2" in
-          contributor:user.name=*|contributor:user.email=*) ;;
+          contributor:user.name=*|contributor:user.email=*|*:core.hooksPath=/dev/null) ;;
           *) refuse "a git configuration override: -c $2" ;;
         esac
         shift 2 ;;
@@ -406,7 +421,8 @@ git_form() {
         *) refuse "git remote other than -v, get-url origin, and set-head origin main" ;;
       esac ;;
     fetch)
-      options_in "-q --quiet --prune -p origin" "$@" || refuse "git fetch other than of origin without a refspec" ;;
+      options_in "-q --quiet --prune -p origin" "$@" || refuse "git fetch other than of origin without a refspec"
+      local_origin && refuse "git fetch while origin is \"$origin_url\", a local repository or a remote helper, not a hosted one" ;;
     ls-remote)
       remote=""
       for a in "$@"; do
@@ -714,6 +730,8 @@ judge() {
       BASE=*) matches "${1#*=}" '^[A-Za-z0-9._/~^-]+$' || refuse "a BASE other than a revision" ;;
       CHANGE=*) matches "${1#*=}" "$CHANGE_NAME" || refuse "a CHANGE other than a change name" ;;
       RECORDS=*) matches "${1#*=}" '^[a-z0-9:. -]*$' || refuse "RECORDS other than KIND:RESULT:COMMIT records" ;;
+      GIT_CONFIG_GLOBAL=*) [ "${1#*=}" = /dev/null ] || refuse "a GIT_CONFIG_GLOBAL other than /dev/null" ;;
+      GIT_CONFIG_NOSYSTEM=*) [ "${1#*=}" = 1 ] || refuse "a GIT_CONFIG_NOSYSTEM other than 1" ;;
       [A-Za-z_]*=*)
         case "${1%%=*}" in
           *[!A-Za-z0-9_]*) break ;;
@@ -728,7 +746,11 @@ judge() {
   [ $# -gt 0 ] || refuse "an assignment without a command"
   body_at=0
   case "$1" in */*) refuse "a command named by a path: $1" ;; esac
-  [ -z "$envs" ] || [ "$1" = sh ] || refuse "an assignment before $1"
+  case "$1:$envs" in
+    sh:*|*:) ;;
+    git:*) for e in $envs; do case "$e" in GIT_CONFIG_GLOBAL|GIT_CONFIG_NOSYSTEM) ;; *) refuse "an assignment of $e before git" ;; esac; done ;;
+    *) refuse "an assignment before $1" ;;
+  esac
   case "$1" in
     ls|cat|head|tail|wc|grep|diff|cmp|cut|tr|nl|comm|basename|dirname|realpath|readlink|stat|du|date|pwd|echo|true) ;;
     printf)
@@ -781,10 +803,62 @@ redirect() {
   esac
 }
 
+# Repository configuration keys that run a command or redirect origin or
+# the files git reads: a copy of RISKY_CONFIG in tools/rules.sh, which this
+# script, read from main as a string, cannot source (a tools/tools_test.sh
+# case keeps the two equal). While the project's .git/config sets one,
+# which branch code run by the checks can write, every call is refused, so
+# no git command an agent runs starts a command the branch chose.
+RISKY_CONFIG='^(core\.(fsmonitor|hookspath|sshcommand|gitproxy|pager|editor|askpass|alternaterefscommand|worktree)|diff\.external|diff\..+\.(textconv|command)|filter\..+|merge\..+\.driver|sequence\.editor|credential\..+|gpg\..+|uploadpack\..+|url\..+\.(insteadof|pushinsteadof)|remote\.origin\.(pushurl|uploadpack|receivepack|proxy|vcs)|http\..+|protocol\..+|include\..+|includeif\..+|extensions\.worktreeconfig)$'
+# The guard's git reads no global or system configuration, which branch
+# code can write too (a global insteadOf would answer for a fake origin).
+GIT_CONFIG_GLOBAL=/dev/null
+GIT_CONFIG_NOSYSTEM=1
+export GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM
+project_dir=${CLAUDE_PROJECT_DIR:-.}
+risky=$(git -C "$project_dir" config --local --name-only --list 2>/dev/null | grep -i -E "$RISKY_CONFIG" | sort -u | tr '\n' ' ')
+[ -z "$risky" ] || refuse "every call while the repository configuration sets ${risky% }, which runs a command or redirects origin"
+# A hook in the hooks directory runs on a checkout, a fetch, or a commit
+# as surely as a configured one: while one other than a sample is there,
+# every call is refused.
+hooks=$(git -C "$project_dir" rev-parse --path-format=absolute --git-path hooks 2>/dev/null)
+planted=$([ -z "$hooks" ] || ! [ -d "$hooks" ] || ls -A "$hooks" | grep -v -E "[.]sample\$" | tr "\n" " "; true)
+[ -z "$planted" ] || refuse "every call while the hooks directory holds ${planted% }, which git runs; remove it"
+
+# The merge tool, for the merger only: a squash whose expected head (sha,
+# all 40 digits) exactly one run state under build/pipeline/ names, holding
+# it both as pushed and as gated, which only main's merge gates write when
+# every gate passed and every push clears, while origin/main is the main
+# origin reports. The change's own run state names its pushed head, so a
+# run state branch code planted to name that head too makes two and is
+# refused; the merge gates also reset every run state's gated first.
+merge_tool() {
+  only_profiles merger "the merge tool"
+  [ "$(printf '%s' "$input" | field merge_method)" = squash ] || refuse "a merge other than a squash"
+  sha=$(printf '%s' "$input" | field sha)
+  matches "$sha" '^[0-9a-f]{40}$' || refuse "a merge without the pushed head as its expected head (sha, 40 digits)"
+  naming=$(grep -s -l -F "$sha" "$project_dir"/build/pipeline/*.json | wc -l | tr -d ' ')
+  [ "$naming" -le 1 ] || refuse "a merge of $sha, which $naming run states name: remove the one the change did not write"
+  found=""
+  for f in "$project_dir"/build/pipeline/*.json; do
+    [ -f "$f" ] && [ ! -L "$f" ] || continue
+    grep -q -E "^  \"pushed\": \"$sha\",?$" "$f" || continue
+    grep -q -E "^  \"gated\": \"$sha\",?\$" "$f" && found=$f
+  done
+  [ -n "$found" ] || refuse "a merge of $sha, at which no run state records both the push and the merge gates' pass (gated)"
+  local_main=$(git -C "$project_dir" rev-parse --verify -q 'origin/main^{commit}')
+  remote_main=$(git -C "$project_dir" ls-remote origin refs/heads/main 2>/dev/null | cut -f1)
+  [ -n "$remote_main" ] && [ "$local_main" = "$remote_main" ] ||
+    refuse "a merge while origin/main is ${local_main:-missing} and origin's main ${remote_main:-unknown}: fetch, or the ref was rewritten"
+}
+
 input=$(cat)
 tool=$(printf '%s' "$input" | field tool_name)
 case "$tool" in
   Bash) ;;
+  mcp__github__merge_pull_request)
+    merge_tool
+    exit 0 ;;
   Write|Edit|MultiEdit|NotebookEdit)
     path=$(printf '%s' "$input" | field file_path)
     [ -n "$path" ] || path=$(printf '%s' "$input" | field notebook_path)

@@ -248,6 +248,34 @@ echo loose > carat/loose.rb
 expect "run_state: check refuses an untracked source" 1 "refused: untracked files under carat/, bin/, test/, or bench/" \
   env STAGES="a" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
 rm -r carat
+# The stages run in a throwaway clone outside the delivery clone: a stage
+# that plants a hook, rewrites origin's url or fetch refspec, and writes a
+# run state changes nothing the gates and the guard read here, and the
+# clone is gone after the check.
+fresh isolated
+git_q remote add origin host:o/r.git
+state init isolated chore/isolated > /dev/null
+mkdir -p "$work/checks"
+cat > "$work/bin/plant-make" <<'EOF'
+#!/bin/sh
+pwd -P > "$PLANT_OUT"
+printf '#!/bin/sh\nexit 0\n' > .git/hooks/post-checkout && chmod +x .git/hooks/post-checkout
+git config remote.origin.url "$PWD/fake.git"
+git config remote.origin.fetch +refs/heads/forged:refs/remotes/origin/main
+mkdir -p build/pipeline && printf '{\n  "review.security": "pass 0"\n}\n' > build/pipeline/isolated.json
+exit 0
+EOF
+chmod +x "$work/bin/plant-make"
+expect "run_state: check runs a stage that plants a hook, origin's url and refspec, and a run state" 0 "every stage passed" \
+  env STAGES="plant" MAKE="$work/bin/plant-make" PLANT_OUT="$work/plant.out" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
+expect "run_state: a check stage runs in a clone outside the delivery clone" 0 "^$work/checks/carat-check[.][^/]+/repo$" cat "$work/plant.out"
+expect "run_state: a hook a check stage plants leaves the origin gate passing" 0 "ok   origin: the configuration sets no risky key and no hook$" gates origin
+expect "run_state: a check stage leaves origin's url" 0 "^host:o/r[.]git$" git config --get-all remote.origin.url
+expect "run_state: a check stage leaves origin's fetch refspec" 0 "^[+]refs/heads/[*]:refs/remotes/origin/[*]$" git config --get-all remote.origin.fetch
+expect "run_state: a run state a check stage writes is not the delivery clone's" 0 "^$" state get isolated review.security
+expect "run_state: check removes its clone" 0 "^$" ls -A "$work/checks"
+rm "$work/plant.out"
+cd "$work/state" || exit 1
 # A check that did not finish says so: a stage ended by a signal, its own
 # or the runner's, is killed; one during which HEAD moved is superseded at
 # the commit it ran on; a runner killed past its trap is reported by the
@@ -260,7 +288,7 @@ for arg in "$@"; do
     S=own) kill -TERM $$ ;;
     S=runner) kill -TERM $PPID; sleep 5 ;;
     S=hard) kill -KILL $PPID ;;
-    S=moves) git -c user.name=Claude -c user.email=noreply@anthropic.com commit -q --allow-empty -m "chore: moved" -m "Co-Authored-By: Claude <noreply@anthropic.com>" ;;
+    S=moves) git -C "$MOVE_IN" -c user.name=Claude -c user.email=noreply@anthropic.com commit -q --allow-empty -m "chore: moved" -m "Co-Authored-By: Claude <noreply@anthropic.com>" ;;
     S=slow) sleep "${SLOW:-0}" ;;
   esac
 done
@@ -268,7 +296,7 @@ exit 0
 EOF
 chmod +x "$work/bin/stop-make"
 stop_check() {
-  env STAGES="$1" MAKE="$work/bin/stop-make" sh "$here/run_state.sh" check state
+  env STAGES="$1" MAKE="$work/bin/stop-make" MOVE_IN="$work/state" TMPDIR="$work/checks" sh "$here/run_state.sh" check state
 }
 at=$(git rev-parse --short=12 HEAD)
 expect "run_state: a stage killed by a signal is recorded as killed" 143 "^stage c: killed [(]exit 143[)]" state stage state c sh -c 'kill -TERM $$'
@@ -279,6 +307,7 @@ expect "run_state: a killed check records its stage as killed" 0 "^killed [0-9]+
 expect "run_state: a killed check's log says so" 0 "^KILLED: the check received SIGTERM" tail -1 build/stages/state/runner.log
 expect "run_state: a hard-killed check is reported killed by the next check" 1 "^check: stage hard killed at $at; read build/stages/state/hard[.]log$" stop_check "a hard b"
 expect "run_state: a hard-killed check's stage is recorded as killed" 0 "^killed 0s $at " state get state stage.hard
+expect "run_state: a hard-killed check's clone is removed" 0 "^$" ls -A "$work/checks"
 expect "run_state: a check leaves no runner behind" 1 "" test -e build/stages/state/check.pid
 expect "run_state: a stage during which HEAD moved is superseded at the commit it ran on" 1 "^check: stage moves superseded at $at; read" stop_check "a moves b"
 expect "run_state: a superseded stage is recorded at its own commit" 0 "^superseded [0-9]+s $at " state get state stage.moves
@@ -416,7 +445,8 @@ expect "run_state: check skips a compile stage on the code it passed" 0 "^stage 
 expect "run_state: a tooling commit keeps the code key" 0 "^stage diagnose: passed on the same code .* skipped" cat "$work/compiled.out"
 expect "run_state: check runs the other stages on a tooling commit" 0 "^stage a: exit 0" cat "$work/compiled.out"
 expect "run_state: a skipped compile stage passes at the head" 0 "^0 0s $(git rev-parse --short=12 HEAD) [^ ]+ compiled-[0-9a-f]{12}$" state get compiled stage.test-build
-echo rebuilt > build/test/run_all
+expect "run_state: check carries the compile outputs out of its clone" 0 "^runner$" cat build/stages/compiled/carry/test/run_all
+echo rebuilt > build/stages/compiled/carry/test/run_all
 compile_check > "$work/compiled.out" 2>&1
 expect "run_state: check runs a compile stage whose outputs changed" 0 "^stage test-build: exit 0" cat "$work/compiled.out"
 expect "run_state: check keeps the skip of a stage whose outputs did not change" 0 "^stage dev-build: passed on the same code" cat "$work/compiled.out"
@@ -434,7 +464,23 @@ echo budget again > tools/analysis_budget.sh
 commit "chore: the analysis budget"
 compile_check > "$work/compiled.out" 2>&1
 expect "run_state: check runs a compile stage after a change to the script it runs" 0 "^stage dev-build: exit 0" cat "$work/compiled.out"
-rm "$work/compiled.out"
+# The metrics stage writes its figures in the clone, where METRICS_OUT is
+# unset; the check copies them to the delivery clone's METRICS_OUT, which
+# bench and the benchmark read.
+cat > "$work/bin/metrics-make" <<'EOF'
+#!/bin/sh
+for arg in "$@"; do
+  case "$arg" in
+    S=metrics) [ -z "$METRICS_OUT" ] || exit 3; mkdir -p build/metrics && printf 'rounds\t7\n' > build/metrics/current.tsv ;;
+  esac
+done
+exit 0
+EOF
+chmod +x "$work/bin/metrics-make"
+env STAGES="metrics" MAKE="$work/bin/metrics-make" METRICS_OUT="$work/metrics/out.tsv" sh "$here/run_state.sh" check compiled > "$work/compiled.out" 2>&1
+expect "run_state: check runs the metrics stage in its clone without METRICS_OUT" 0 "^stage metrics: exit 0" cat "$work/compiled.out"
+expect "run_state: check copies the clone's metrics to METRICS_OUT" 0 "^rounds	7$" cat "$work/metrics/out.tsv"
+rm -rf "$work/compiled.out" "$work/metrics"
 
 fresh pushing
 git_q init -q --bare "$work/origin.git"
@@ -490,12 +536,14 @@ rm -rf "$work/reclaimed"
 expect "run_state: push refuses before the checks and the review" 1 "pre-push gates failed" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a refused push counts a gate failure" 0 "^1$" state get pushing gates_failed
+sh "$here/run_state.sh" gated pushing pass > /dev/null
 state stage pushing lint true > /dev/null
 state phase pushing check > /dev/null
 state review pushing security pass "no finding" > /dev/null
 expect "run_state: push passes the gates and pushes" 0 "ok   security" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a push is counted" 0 "^1$" state get pushing pushes
+expect "run_state: push clears a gated marker recorded before it" 0 "^none$" state get pushing gated
 expect "run_state: push records the full sha as pushed" 0 "^full$" \
   sh -c 'p=$(sh "$1/run_state.sh" get pushing pushed) && [ "$p" = "$(git rev-parse HEAD)" ] && [ ${#p} -eq 40 ] && echo full' _ "$here"
 expect "run_state: push deletes the backup ref" 0 "^$" git ls-remote origin refs/backup/chore/pushing
@@ -1011,7 +1059,10 @@ expect "guard: merger deletes the branch and fast-forwards main" 0 "^$" guard me
 # The merger's first green: the green and red lines as the workflow builds
 # them (mergeLines), and its two closing calls, each one call the guard
 # admits.
-expect "guard: merger runs the green line" 0 "^$" guard merger 'git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && git worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger runs the green line" 0 "^$" guard merger 'git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | grep -q -x -E '\''(https[:]//([^/@]+@)?github[.]com/|(ssh[:]//)?git@github[.]com[:/])o/r([.]git)?/?'\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null fetch -q --prune origin && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger refuses another global configuration before git" 2 "a GIT_CONFIG_GLOBAL other than /dev/null" guard merger 'GIT_CONFIG_GLOBAL=tmp/g git fetch -q --prune origin'
+expect "guard: merger refuses a pinned configuration before another command" 2 "an assignment before ls" guard merger 'GIT_CONFIG_NOSYSTEM=1 ls'
+expect "guard: merger refuses another assignment before git" 2 "an assignment of BASE before git" guard merger 'BASE=main git fetch -q --prune origin'
 expect "guard: merger records red CI" 0 "^$" guard merger 'sh tools/run_state.sh metric c rework=1 && sh tools/run_state.sh set c ci \"red abc1234\"'
 expect "guard: merger waits as its file says" 0 "^$" guard merger 'sh tools/ci_wait.sh 180 && sh tools/ci_wait.sh 240 && sh tools/ci_wait.sh 300'
 expect "guard: merger verifies the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%H%n%B origin/main'
@@ -1174,7 +1225,7 @@ PROJECT=/w
 # edit on the branch has no effect until it is merged.
 # hook FILE COMMAND: FILE's hook line on a Bash call of COMMAND in $hooks.
 hook() {
-  line=$(sed -n "s/^ *command: '\\(.*\\)'\$/\\1/p" "$1")
+  line=$(sed -n "s/^ *command: '\\(.*\\)'\$/\\1/p" "$1" | sed -n 1p)
   [ -n "$line" ] || { echo "no hook line in $1"; return 9; }
   printf '{"tool_name":"Bash","tool_input":{"command":"%s"}}' "$2" | CLAUDE_PROJECT_DIR=$hooks sh -c "$line"
 }
@@ -1198,6 +1249,67 @@ git_q rm -q tools/agent_guard.sh
 commit "chore: no guard"
 git_q update-ref refs/remotes/origin/main HEAD
 expect "guard: a hook refuses when main has no guard" 2 "" hook "$f" 'ls'
+cd "$work" || exit 1
+
+# The merge tool's hook: main's guard admits only the merger's squash at a
+# head a run state records both as pushed and as gated, while origin/main
+# is origin's main; and every call is refused while the configuration sets
+# a risky key.
+merge_call() {
+  printf '{"tool_name":"mcp__github__merge_pull_request","tool_input":{"owner":"o","repo":"r","pullNumber":7,"merge_method":"%s","sha":"%s"}}' "$3" "$2" |
+    CLAUDE_PROJECT_DIR=$PWD sh "$here/agent_guard.sh" "$1"
+}
+merge_hook() {
+  line=$(sed -n "s/^ *command: '\\(.*\\)'\$/\\1/p" "$here/../.claude/agents/merger.md" | sed -n 2p)
+  printf '{"tool_name":"mcp__github__merge_pull_request","tool_input":{"merge_method":"squash","sha":"%s"}}' "$1" |
+    CLAUDE_PROJECT_DIR=$PWD sh -c "$line"
+}
+fresh mtool
+git_q init -q --bare "$work/mtool.git"
+git_q remote add origin "$work/mtool.git"
+git_q push -q origin main 2>/dev/null
+git_q fetch -q origin
+echo code > tools/code.sh
+commit "feat: code"
+sha=$(git rev-parse HEAD)
+state init mtool chore/mtool > /dev/null
+state set mtool pushed "$sha" > /dev/null
+expect "guard: the merge tool refuses another profile" 2 "refused for the contributor profile: the merge tool" merge_call contributor "$sha" squash
+expect "guard: the merge tool refuses a merge other than a squash" 2 "a merge other than a squash" merge_call merger "$sha" merge
+expect "guard: the merge tool refuses a short expected head" 2 "without the pushed head" merge_call merger "$(git rev-parse --short=12 HEAD)" squash
+expect "guard: the merge tool refuses a head the merge gates did not pass" 2 "no run state records both the push and the merge gates' pass" merge_call merger "$sha" squash
+sh "$here/run_state.sh" gated mtool pass > /dev/null
+expect "guard: the merge tool allows the gated pushed head" 0 "^$" merge_call merger "$sha" squash
+# A run state branch code planted naming the head too: the hook refuses
+# while two run states name it, and the merge gates' clear resets every
+# run state's gated, the planted one's included.
+printf '{\n  "pushed": "%s",\n  "gated": "%s"\n}\n' "$sha" "$sha" > build/pipeline/planted.json
+expect "guard: the merge tool refuses a head two run states name" 2 "which 2 run states name" merge_call merger "$sha" squash
+sh "$here/run_state.sh" gated mtool clear > /dev/null
+expect "run_state: gated clear resets a planted run state's gated" 0 "^none$" state get planted gated
+expect "run_state: gated clear resets the change's own gated" 0 "^none$" state get mtool gated
+rm -f build/pipeline/planted.json
+sh "$here/run_state.sh" gated mtool pass > /dev/null
+expect "guard: the merge tool allows the gated head again" 0 "^$" merge_call merger "$sha" squash
+expect "guard: the merge tool refuses another head than the gated one" 2 "no run state records" merge_call merger "$(git rev-parse HEAD~1)" squash
+git_q update-ref refs/remotes/origin/main HEAD
+expect "guard: the merge tool refuses a rewritten origin/main" 2 "fetch, or the ref was rewritten" merge_call merger "$sha" squash
+git_q fetch -q origin
+expect "run_state: set refuses gated" 1 "gated is written only by its own command" state set mtool gated "$sha"
+expect "guard: no profile records gated" 2 "gated" guard merger 'sh tools/run_state.sh gated c pass'
+expect "guard: the contributor does not record gated" 2 "gated" guard contributor 'sh tools/run_state.sh gated c pass'
+expect "guard: the merger hook matches the merge tool" 0 'matcher: "mcp__github__merge_pull_request"' grep -F 'matcher: "mcp__github__merge_pull_request"' "$here/../.claude/agents/merger.md"
+cp "$here/agent_guard.sh" tools/agent_guard.sh
+commit "chore: main's guard"
+git_q push -q origin HEAD:main 2>/dev/null
+git_q fetch -q origin
+expect "guard: the merge hook refuses with main's guard" 2 "no run state records" merge_hook "$(git rev-parse HEAD)"
+git_q config core.hooksPath "$work"
+expect "guard: a risky configuration key refuses every call" 2 "every call while the repository configuration sets core.hookspath" \
+  env PROJECT="$PWD" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
+git_q config --unset core.hooksPath
+expect "guard: the guard's risky keys are the gates'" 0 "^same$" \
+  sh -c '[ "$(grep "^RISKY_CONFIG=" "$1/agent_guard.sh")" = "$(grep "^RISKY_CONFIG=" "$1/rules.sh")" ] && echo same' _ "$here"
 cd "$work" || exit 1
 
 # ---------------------------------------------------------- docs_lint.sh
@@ -1575,11 +1687,57 @@ at=$(git rev-parse --short=12 HEAD)
 printf '## Summary\n\nDoes a thing.\n\n---\n\n## Changes\n\n- Add a thing\n\n---\n\n## Testing\n\n- Run the security review, no finding\n\n---\n\n## Notes\n\nNone\n' > body.md
 expect "gates: merge runs from a copy of main against the branch" 0 "ok   records" \
   env BASE=main CHANGE=staged RECORDS="security:pass:$at quality:pass:$at bench:pass:$at check:pass:$at" sh "$work/copy/tools/gates.sh" merge body.md
+expect "gates: merge records the head it passed at as gated" 0 "^$(git rev-parse HEAD)$" state get staged gated
 echo more >> tools/code.sh
 commit "fix: more code"
 state set staged pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "gates: merge refuses a head other than the one the security review passed" 1 "FAIL security: the review passed at $at, but code changed since" \
   env BASE=main CHANGE=staged RECORDS="security:pass:$at quality:pass:$at bench:pass:$at check:pass:$at" sh "$work/copy/tools/gates.sh" merge body.md
+expect "gates: a failed merge leaves gated cleared" 0 "^none$" state get staged gated
+
+# The origin gate: no configuration key that runs a command or redirects
+# origin, and an origin/ base equal to origin's branch, from a hosted origin
+# with the default fetch refspec.
+fresh origined
+expect "gates: origin passes a clean configuration with a local base" 0 "ok   origin: the configuration sets no risky key and no hook$" gates origin
+printf '#!/bin/sh\ntouch planted\n' > .git/hooks/post-checkout
+expect "gates: origin refuses a hook in the hooks directory" 1 "FAIL origin: the hooks directory holds post-checkout" gates origin
+expect "guard: a planted hook refuses every call" 2 "every call while the hooks directory holds post-checkout" \
+  env PROJECT="$PWD" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
+rm .git/hooks/post-checkout
+git_q config core.fsmonitor "touch planted"
+expect "gates: origin refuses a key that runs a command" 1 "FAIL origin: the repository configuration sets core.fsmonitor" gates origin
+expect "gates: pre-push runs the origin gate" 1 "FAIL origin: the repository configuration sets core.fsmonitor" gates pre-push
+git_q config --unset core.fsmonitor
+git_q config "url.$work/fake.git.insteadOf" "$work/origined.git"
+expect "gates: origin refuses a rewritten origin address" 1 "FAIL origin: the repository configuration sets url[.].*[.]insteadof" gates origin
+git_q config --remove-section "url.$work/fake.git"
+git_q init -q --bare "$work/origined.git"
+git_q remote add origin "$work/origined.git"
+git_q push -q origin main 2>/dev/null
+git_q fetch -q origin
+echo more >> README.md
+commit "chore: more"
+git_q update-ref refs/remotes/origin/main HEAD
+expect "gates: origin refuses an origin/main other than origin's main" 1 "FAIL origin: origin/main is [0-9a-f]{40}, but origin's main is [0-9a-f]{40}: fetch, or the ref was rewritten" \
+  env BASE=origin/main sh "$here/gates.sh" origin
+git_q fetch -q origin
+expect "gates: a fetch restores origin/main" 0 "^0$" sh -c 'BASE=origin/main sh "$1/gates.sh" origin | grep -c rewritten; true' _ "$here"
+# A global insteadOf, which branch code can write to ~/.gitconfig, does
+# not let a fake origin answer for the real one: the gates read no global
+# configuration.
+git_q init -q --bare "$work/fake.git"
+git_q push -q "$work/fake.git" HEAD:refs/heads/main 2>/dev/null
+printf '[url "%s"]\n\tinsteadOf = %s\n' "$work/fake.git" "$work/origined.git" > "$work/global.gitconfig"
+git_q update-ref refs/remotes/origin/main HEAD
+expect "gates: origin ignores a global insteadOf" 1 "FAIL origin: origin/main is [0-9a-f]{40}, but origin's main is [0-9a-f]{40}: fetch, or the ref was rewritten" \
+  env GIT_CONFIG_GLOBAL="$work/global.gitconfig" BASE=origin/main sh "$here/gates.sh" origin
+git_q fetch -q origin
+expect "gates: origin refuses a local origin repository" 1 "FAIL origin: origin is \".*origined[.]git\", a local repository" \
+  env BASE=origin/main sh "$here/gates.sh" origin
+git_q config remote.origin.fetch "+refs/heads/x:refs/remotes/origin/main"
+expect "gates: origin refuses a fetch refspec other than the default" 1 "FAIL origin: remote[.]origin[.]fetch is .*not the default refspec" \
+  env BASE=origin/main sh "$here/gates.sh" origin
 
 fresh body
 cat > body.md <<'EOF'
@@ -1790,6 +1948,50 @@ expect "workflow: every contributor start's pushed sha is kept" 0 "state[.]pushe
 expect "workflow: a continued package or push start returns the recorded pushed sha" 0 'get [$][{]state[.]change[}] pushed' grep -F 'get ${state.change} pushed\` as \`pushed\`' "$wf"
 expect "workflow: the package step returns the recorded pushed sha" 0 'get <change> pushed`, the full sha, as `pushed`' grep -F 'Return `sh tools/run_state.sh get <change> pushed`, the full sha, as `pushed`' "$agents/contributor.md"
 expect "workflow: the push mode returns the pushed sha" 0 'returning `pushed` as in package' grep -F -- '--ci-fix`, one push per CI fix, returning `pushed` as in package' "$agents/contributor.md"
+expect "workflow: a forged record in the run state skips nothing" 0 '^\[false,false,true,true,false\]$' \
+  js "$wf" "passedAt" "[passedAt({}, 'review.security', 'abc1234'), passedAt({ 'review.security': 'blocked abc1234' }, 'review.security', 'abc1234'), passedAt({ 'review.security': 'pass abc1234' }, 'review.security', 'abc1234'), passedAt({ 'phase.check': 'abc1234' }, 'phase.check', 'abc1234'), passedAt({}, 'phase.check', '')]"
+expect "workflow: the skips read only this start's records" 0 "^2$" sh -c 'grep -c -E "^const (doneAtHead|reviewedAtHead) = .*=> passedAt[(]ran, " "$1"' _ "$wf"
+expect "workflow: only phaseDone and reviewed write this start's records" 0 "^2$" sh -c 'grep -c -E "^ *ran\[" "$1"' _ "$wf"
+expect "workflow: the merge gates' records come from this start's alone" 0 '^\[\[\],\["security:pass:abc1234","check:pass:abc1234"\]\]$' \
+  js "$wf" "mergeRecords" "[mergeRecords({}), mergeRecords({ 'review.security': 'pass abc1234', 'phase.check': 'abc1234' })]"
+expect "workflow: the merge lines use this start's records" 0 "const records = mergeRecords[(]ran[)]" grep -F 'const records = mergeRecords(ran)' "$wf"
+expect "workflow: a resume past the push checks and reviews again unless this start ran them" 0 '^\[false,false,true\]$' \
+  js "$wf" "ranAll" "[ranAll({}), ranAll({ 'review.quality': 'pass a', 'review.security': 'pass a', 'phase.check': 'a' }), ranAll({ 'review.quality': 'pass a', 'review.security': 'blocked b', 'review.bench': 'pass a', 'phase.check': 'a' })]"
+expect "workflow: the resume check reads this start's records" 0 "if [(]!ranAll[(]ran[)][)]" grep -F "if (!ranAll(ran))" "$wf"
+expect "workflow: the resume check runs no fix round" 0 "verify[(]false[)]" grep -F "verify(false)" "$wf"
+expect "workflow: the green line fetches and adds the copy with no global configuration or hook" 0 "^2$" sh -c 'grep -c -F -e "const PINNED_GIT = '\''GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null'\''" -e "&& \${PINNED_GIT} fetch -q --prune origin && \${PINNED_GIT} worktree add -q --detach" "$1"' _ "$wf"
+# A local bare origin planted after the push, by branch code the checks
+# ran: the green line's origin check, the script's, fails before the
+# fetch, whose main would bring its own gates and guard, and main's guard
+# refuses the fetch; the hosted repository passes both.
+expect "workflow: the green line checks origin before its fetch" 0 "originCheck" grep -F '&& ${originCheck(state.repo)} && ${PINNED_GIT} fetch -q --prune origin' "$wf"
+origin_check=$(js "$wf" "PINNED_GIT originCheck" "originCheck('o/r.x')" | sed 's/^"//; s/"$//; s/\\\\/\\/g')
+fresh planted
+gh="https:/""/github.com"
+git_q remote add origin "$gh"/o/r.x.git
+expect "workflow: the origin check passes the hosted repository" 0 "^ok$" sh -c "$origin_check && echo ok"
+PROJECT=$PWD
+expect "guard: merger fetches from the hosted repository" 0 "^$" guard merger 'git fetch -q --prune origin'
+git_q init -q --bare "$work/planted.git"
+git_q push -q "$work/planted.git" HEAD:refs/heads/main 2>/dev/null
+git_q remote set-url origin "$work/planted.git"
+expect "workflow: the origin check fails a local bare origin planted after the push" 1 "^$" sh -c "$origin_check"
+expect "guard: merger refuses a fetch from a planted local origin" 2 "a local repository or a remote helper" guard merger 'git fetch -q --prune origin'
+expect "guard: the security reviewer refuses a fetch from a planted local origin" 2 "a local repository or a remote helper" guard read 'git fetch -q origin'
+git_q remote set-url origin "file:/""/$work/planted.git"
+expect "workflow: the origin check fails a file: origin" 1 "^$" sh -c "$origin_check"
+git_q remote set-url origin "ext::sh -c true"
+expect "guard: merger refuses a fetch through a remote helper" 2 "a local repository or a remote helper" guard merger 'git fetch -q --prune origin'
+git_q remote set-url origin "$gh"/o/r.x.git
+git_q config url."$work/planted.git".insteadOf "$gh"/o/r.x.git
+expect "workflow: the origin check fails an insteadOf to a local origin" 1 "^$" sh -c "$origin_check"
+git_q config --unset url."$work/planted.git".insteadOf
+git_q remote set-url origin "$gh"/o/rex.git
+expect "workflow: the origin check fails another repository" 1 "^$" sh -c "$origin_check"
+unset PROJECT
+expect "workflow: a run state's repository of another form matches nothing" 0 '^\[true,true,true,false\]$' \
+  js "$wf" "PINNED_GIT originCheck" "['../x', 'o/..', 'o/r x', 'o/r.x'].map((r) => originCheck(r).includes(')a^b('))"
+cd "$work" || exit 1
 areas=$(grep -c -E '^## [0-9]+[.] ' "$here/../docs/codebase-map.md")
 expect "periodic: MAP_AREAS is the map's count of areas" 0 "^const MAP_AREAS = $areas$" grep '^const MAP_AREAS = ' "$pwf"
 expect "periodic: the quality slices cover every area once" 0 '^true$' \

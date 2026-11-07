@@ -468,7 +468,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: the repository root, where agents left `build_check_out_tmp` and `.err` twice; the briefs under `.claude/agents/` name no place for scratch output, and the push gates of `tools/run_state.sh push` and `tools/gates.sh` do not look at untracked files (the checker and the security reviewer test `git status --porcelain --untracked-files=no`). The user's request in the brief of `pipeline-speed-b`.
 - Why it matters: an untracked file outside `build/`, `dist/`, and `tmp/` can be staged by a later `git add` and reach a pull request, and it shows in every `git status` of the next run.
-- Fix outline: the agents' briefs send scratch output under `build/` or `tmp/`, and a push gate refuses an untracked file outside the ignored paths, with a `tools/tools_test.sh` case. Queued in `check-isolation`.
+- Fix outline: the agents' briefs send scratch output under `build/` or `tmp/`, and a push gate refuses an untracked file outside the ignored paths, with a `tools/tools_test.sh` case. Queued in `merge-gate-tidy`.
 
 ## A test-only fix after a passing quality review gets the whole branch reviewed
 
@@ -480,25 +480,19 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `tools/gates.sh` line 195, the merge's stages gate, which reads `CHECK_STAGES` from main's Makefile with `sed`, while `tools/run_state.sh check` reads the list with `make -s stages`. Quality advisory at d820b39 in `pipeline-speed-b`; the archived design of `pipeline-speed-b` does not cover the case.
 - Why it matters: a change that renames or removes a stage cannot pass its own merge, since main's list names a stage the branch never ran, and the stage list now has two readers that can disagree.
-- Fix outline: use one reader of the list for both scripts, and accept a stage main names that the branch's `CHECK_STAGES` dropped when the branch's diff removes it from the Makefile (or record the rename in the run state), with a `tools/tools_test.sh` case. Queued in `check-isolation`.
-
-## Branch code can rewrite the origin/main the merge gates trust
-
-- Where: `.claude/workflows/deliver-change.js` line 292, the merge-gates command, and every hook's `origin/main` check. Periodic security Medium (6) at e20c83c.
-- Why it matters: make recipes and test programs the checker runs on the branch, outside the guard, can rewrite `refs/remotes/origin/main` or `.git/config`, so the merge-gates worktree of `origin/main` and the hooks' comparisons come from the branch, not from main.
-- Fix outline: pin main's commit from the remote at the start of the merge step, verify `origin/main` equals it before `git worktree add`, add the worktree at that hash, run the gates' git with `core.fsmonitor` and `core.hooksPath` neutralized, and longer term run the checks in a clone whose `.git` the stages cannot write. Queued in `check-isolation`.
+- Fix outline: use one reader of the list for both scripts, and accept a stage main names that the branch's `CHECK_STAGES` dropped when the branch's diff removes it from the Makefile (or record the rename in the run state), with a `tools/tools_test.sh` case. Queued in `merge-gate-tidy`.
 
 ## The merge-gates worktree is never removed
 
 - Where: `.claude/workflows/deliver-change.js` line 292 and step 8 of `.claude/agents/merger.md`. Periodic quality advisory at e20c83c.
 - Why it matters: the command removes `tmp/.merge-gates` before adding it but nothing removes it after the merge, so the first run prints a git error into the gate output the merger reads and every later run finds a stale worktree.
-- Fix outline: send the remove's error to `/dev/null` and remove the worktree after the merge. Queued in `check-isolation`.
+- Fix outline: send the remove's error to `/dev/null` and remove the worktree after the merge. Queued in `merge-gate-tidy`.
 
 ## The guard case for the merge gates leaves out the worktree prune
 
 - Where: `tools/tools_test.sh` line 756. Periodic quality advisory at e20c83c.
 - Why it matters: the case omits the leading `git worktree prune;` that `mergeGates` sends, so the exact command the merger is told to run is not the one tested.
-- Fix outline: test the full string `mergeGates` builds, prune included. Queued in `check-isolation`.
+- Fix outline: test the full string `mergeGates` builds, prune included. Queued in `merge-gate-tidy`.
 
 ## A fix review is never scoped for a finding in a dot directory
 
@@ -1370,18 +1364,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: it assigns `state = @state` and never reads it (the block captures `open_file`'s own state), and it restores the float focus although its only caller, `open_file`, then calls `focus_at`, whose `TabPage#focus` leaves the float again, so the restore is never observable.
 - Fix outline: delete the dead line, and drop `saved_float` and its `enter`, or document that `in_window` keeps the focus for callers that do not refocus. Queued in `float-tidy` with the other `floating-windows` notes.
 
-## Branch code can forge a security pass the resume trusts
-
-- Where: `trusted_state` in `tools/run_state.sh` (line 1295 at 803fe6e). Periodic security Medium (5); found again at eb63fb4 as Medium (6) (`lsp-diagnostics`' retrospective note 21).
-- Why it matters: branch code run by `make` in the check phase, before the security review, can write `review.security pass HEAD` into `build/pipeline/CHANGE.json`; a resume accepts it since only the commit is checked, so the security phase is skipped and the merge records carry the forged pass.
-- Fix outline: keep review records where branch code cannot write them, or authenticate them with a key only the workflow holds, and rerun the security review on resume rather than trust a file record. Queued in `check-isolation`.
-
-## The merge tool has no hook
-
-- Where: the tools of `.claude/agents/merger.md` (line 4 at 803fe6e), whose PreToolUse hook matches Bash only. Periodic security Medium (5).
-- Why it matters: the merge gate runs only because the merger's instructions say so, so a merger steered by branch-controlled CI log text can merge without it.
-- Fix outline: hook the merge tool with a check, from `origin/main`, that `gates.sh merge` left a pass marker at the expected head, and require the spin check by branch protection. Queued in `check-isolation`.
-
 ## FloatLayer is a plain class among the mutable records
 
 - Where: `carat/domain/float_layer.rb` line 10 at 803fe6e. Periodic quality advisory.
@@ -1730,23 +1712,23 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: `receive` now crashes the server unless the result is a Hash, so the guards are dead and mislead; the long lines break the files' wrap; the test's wait is a no-op and the `10.times` fallback does the waiting; the architecture row disagrees with the port and the map.
 - Fix outline: read `result["serverInfo"]` and `result["capabilities"]` directly; rewrap both comment paragraphs; wait until `count_of` reaches 2 with a bounded helper and drop the no-op call; add `start(state)` to the row.
 
-## The green line's fetch trusts the configured fetch refspec
-
-- Where: `.claude/workflows/deliver-change.js` line 448 at e368486, on the unpushed `bugfix/merge-gate-integrity` commits ba37bef to e368486, not on main. Security Medium (8) in the stopped `merge-gate-integrity` delivery review.
-- Why it matters: the fetch that settles main for the green line reads `remote.origin.fetch` from a `.git/config` branch code can write, so a check stage can point the fetch at a ref it controls and the gates compare the branch with a forged main; it is the fourth bypass in a row through local git state.
-- Fix outline: read main by a pinned remote read that names the ref explicitly, before any branch code runs, and run the check stages in a throwaway clone whose `.git` the delivery clone never shares. Queued in `check-isolation`.
-
 ## The merge-tool hook allows a merge when the guard read from origin/main lacks the tool
 
 - Where: `.claude/agents/merger.md` line 16 at e368486, the merge-tool hook, on the same unpushed commits. Security Low (5) in the stopped `merge-gate-integrity` delivery review.
 - Why it matters: the hook takes its guard from a local `origin/main`; when that copy predates the tool name, the hook allows the merge instead of refusing it, and branch code can make the local copy stale.
-- Fix outline: refuse when the guard read from main does not name the merge tool, with a `tools/tools_test.sh` case. Queued in `check-isolation`.
+- Fix outline: refuse when the guard read from the pinned main does not name the merge tool, run it unconditionally as the Bash hook does, and drop the bootstrap case from the hook tests, with a `tools/tools_test.sh` case. Queued in `pinned-main`.
+
+## A check stage can still write the delivery clone by an absolute path
+
+- Where: `clone_make` in `tools/run_state.sh` (the symbolic links to `tmp/.toolchain` and `tmp/.spinel`), and the benchmark's `make metrics` and `make bench` in the delivery clone (`.claude/agents/benchmark.md`). Residual risk of `check-isolation`, reported again in its delivery review as security Medium (6) and Low (5) at `tools/run_state.sh` line 529.
+- Why it matters: the check clone separates what a stage writes in its own directory, but a process of the same user can find the delivery clone (the toolchain links, the runner's working directory) and write its `.git`, `build/pipeline`, or the shared Spinel binaries the next check and the contributor run; the benchmark still runs branch code in the delivery clone. The origin gate, the guard's refusals, and the green line's url check are the second line.
+- Fix outline: run the stages and the benchmark under an operating-system sandbox (a user namespace or another user) with the delivery clone read-only and a private copy of the toolchain, or check the toolchain's hash before each check and run the benchmark in a check clone, each with a `tools/tools_test.sh` case.
 
 ## merge-gate-integrity's open quality advisories
 
 - Where: at e368486 on the unpushed commits: `tools/gates.sh` line 436 (the gated failures report under an empty or the `pr-body` gate), line 136 (a hosted origin judged by a denylist while `tools/agent_guard.sh` line 347 and `.claude/workflows/deliver-change.js` line 438 use other forms), line 41 (the origin gate's header line stops mid-phrase); `docs/codebase-map.md` line 50 (the `rules.sh` entry lost its separator). Quality advisories in `merge-gate-integrity`.
 - Why it matters: a failed gated write names the wrong gate, one origin rule has three diverging definitions, and two documents misread.
-- Fix outline: set the gate name before each gated call, keep one allowlist pattern in `tools/rules.sh` used by all three, and repair both lines. Queued in `check-isolation`.
+- Fix outline: set the gate name before each gated call, keep one allowlist pattern in `tools/rules.sh` used by all three, and repair both lines. Queued in `pinned-main`.
 
 ## The close start's calibration profile is never recorded
 
@@ -1759,3 +1741,15 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/goals.md` line 34, the calibration's reasons. Quality advisory in `agent-calibration` (reported at lines 187 and 34 across its rounds).
 - Why it matters: the reasons say "the four with an agent file on the cheap tier" after listing six mechanical starts of which only three (checker, benchmark, merger) have an agent file; the fourth cheap start, the scouts, is not in the list, so the rule misreads.
 - Fix outline: say "the three with an agent file", or add the scouts to the list of mechanical starts.
+
+## The green line fetches main by the configured refspec
+
+- Where: `.claude/workflows/deliver-change.js` line 475, the green line's forced fetch of main, and `RISKY_CONFIG` in `tools/agent_guard.sh` and `originCheck` in the workflow, which do not check `remote.origin.fetch`. Security Medium (7) and Medium (6) in the `check-isolation` delivery review; it reopens the removed entry on branch code rewriting the `origin/main` the merge gates trust.
+- Why it matters: branch code that writes the delivery clone's `.git/config` by an absolute path, or the branch's Makefile the benchmark runs there on a resume past the push, can map its own branch onto `refs/remotes/origin/main`; the merge-gates worktree and the merge-tool guard then come from that ref, and the origin gate checks it only after the fetch, inside gates from the fetched main.
+- Fix outline: fetch with the explicit refspec `+refs/heads/main:refs/remotes/origin/main` in the green line, and have the guard and `originCheck` refuse a `remote.origin.fetch` other than the default before any fetch, with a `tools/tools_test.sh` case. Queued in `pinned-main`.
+
+## check-isolation's open quality advisories
+
+- Where: `README.md` line 180, the checker sentence; `openspec/changes/archive/2026-11-07-check-isolation/design.md` line 53, the Risks bullet; `passedAt` in `.claude/workflows/deliver-change.js` line 482; the header comment of `tools/agent_guard.sh` lines 28 to 40. Quality advisories in `check-isolation`; its `tools/gates.sh` line 436 and `docs/codebase-map.md` line 50 advisories are those of `merge-gate-integrity` above.
+- Why it matters: the README says branch code cannot write the hooks, git configuration, or run states the gates read, while the design and the entry above record that it still can by an absolute path; the archived Risks bullet still calls the clone the longer-term fix it now is; `passedAt` names a phase record's commit `result` and compares `result === head`, which reads as a bug; one header line runs far past the comment's width.
+- Fix outline: say "through the paths it is given" in the README as the design does; leave the archived design as the record and point the next design at the absolute-path residual risk; name the parts `first` and `second` or split the phase and review comparisons; rewrap the header comment.

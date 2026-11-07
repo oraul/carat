@@ -23,7 +23,9 @@ export const meta = {
 // tools/run_state.sh and read through its trusted command (only the records
 // at a commit of the branch or of main), decides which phases are already
 // done: a phase whose recorded commit is the current one is skipped, so a
-// restart resumes and a fix (a new commit) runs every later phase again. The workflow also
+// restart resumes and a fix (a new commit) runs every later phase again;
+// the check, the reviews, and the benchmark are skipped only on a pass this
+// start recorded (ran), so a resume runs them again. The workflow also
 // measures the run (output tokens and tool calls per phase, the first
 // verdict of each gate, rework rounds, CI minutes, the plan's estimate) and
 // stores every figure as metric.* in one metric line (metricLine), so a
@@ -56,6 +58,11 @@ const RERUNS = 2
 const notes = []
 let head = ''
 let state = {}
+// The phase and review records this start made. A skip and the merge
+// gates' records read only these, never the run state's, which branch code
+// run by the checks can write: a resume runs the check and the reviews
+// again at the head.
+const ran = {}
 let stopped = ''
 const usage = {}
 const firstPass = {}
@@ -402,6 +409,7 @@ function queue(line, commit) {
 const phaseLine = (name, commit) => `sh tools/run_state.sh phase ${state.change} ${name} ${commit}`
 function phaseDone(name, commit) {
   state['phase.' + name] = commit
+  ran['phase.' + name] = commit
   queue(phaseLine(name, commit), commit)
 }
 // The queued lines the closing start may run under the guard's close
@@ -410,6 +418,7 @@ const CLOSABLE = /^sh tools\/run_state\.sh (phase [a-z0-9-]+ (plan|implement|pac
 function reviewed(kind, passed, commit, counts) {
   const result = passed ? 'pass' : 'blocked'
   state['review.' + kind] = `${result} ${commit}`
+  ran['review.' + kind] = `${result} ${commit}`
   const summary = Object.keys(counts).map((k) => `${k}=${Number.isInteger(counts[k]) ? counts[k] : 0}`).join(' ')
   queue(`sh tools/run_state.sh review ${state.change} ${kind} ${result} "${summary}" ${commit}`, commit)
 }
@@ -433,21 +442,58 @@ async function flush(force) {
 // starts with the run's figures. green records CI green and runs the merge
 // gates with the review and check results the script holds: those of a
 // fresh worktree of origin/main, which the branch cannot have edited, run
-// against the branch. The removal of an earlier worktree stays outside the
-// && chain, since it fails when none stands; in the chain a failed record
-// runs no gate, and the add fails when anything but an earlier worktree
-// stands at the path. red records CI red.
+// against the branch, after a fetch, so origin/main is origin's main (the
+// merge gates' origin gate compares the two). The removal of an earlier
+// worktree stays outside the && chain, since it fails when none stands; in
+// the chain a failed record runs no gate, and the add fails when anything
+// but an earlier worktree stands at the path. red records CI red. The
+// fetch and the add read no global or system configuration and run no
+// hook, both of which branch code run by the checks can write: a global
+// insteadOf would fetch a forged main, a hook would rewrite the copy.
+// Before the fetch, originCheck holds origin to the hosted repository.
 const MERGE_GATES = 'tmp/.merge-gates'
+const PINNED_GIT = 'GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null'
+// The green line's origin check, before its fetch: origin's url, as git
+// resolves it (insteadOf included) and with its lines joined, is REPO
+// (owner/name, the run state's, no part only dots) on GitHub over https
+// or ssh.
+// Branch code run by the checks can point remote.origin.url at a local
+// repository or a server of its own, whose main the forced fetch would
+// make origin/main, bringing its own gates and the guard the merge hook
+// reads; the check is the script's, which no fetch replaces. A REPO of
+// another form matches nothing (a^b).
+function originCheck(repo) {
+  const valid = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo || '') && !/(^|\/)\.+(\/|$)/.test(repo)
+  const name = valid ? repo.replace(/\./g, '[.]') : 'a^b'
+  return `${PINNED_GIT} remote get-url origin | tr -d '\\n' | grep -q -x -E '(https[:]//([^/@]+@)?github[.]com/|(ssh[:]//)?git@github[.]com[:/])${name}([.]git)?/?'`
+}
 function mergeLines() {
-  const records = ['security', 'quality', 'bench'].map((k) => `${k}:${at('review.' + k).slice(0, 2).join(':')}`)
-    .concat([`check:pass:${state['phase.check'] || ''}`])
-    .filter((r) => /^[a-z]+:(pass|blocked):[0-9a-f]{7,40}$/.test(r))
+  const records = mergeRecords(ran)
   const first = (line) => [metricLine(), line].filter(Boolean).join(' && ')
   const ci = (result) => `sh tools/run_state.sh set ${state.change} ci "${result} ${head}"`
   return {
-    green: `git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && git worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
+    green: `git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck(state.repo)} && ${PINNED_GIT} fetch -q --prune origin && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
     red: first(ci('red')),
   }
+}
+// Whether RECORDS (this start's, ran) hold a pass of KEY at HEAD: a
+// phase.NAME record is the commit, a review.KIND record "RESULT COMMIT".
+function passedAt(records, key, head) {
+  const [result, commit] = String(records[key] || '').split(' ')
+  return key.startsWith('phase.') ? !!head && result === head : result === 'pass' && !!head && commit === head
+}
+// Whether RECORDS (this start's, ran) hold a check and every review of
+// this start, whatever their commit or result.
+function ranAll(records) {
+  return ['quality', 'security', 'bench'].every((k) => !!records['review.' + k]) && !!records['phase.check']
+}
+// The merge gates' RECORDS words, KIND:RESULT:COMMIT, from this start's
+// records alone, so no record branch code wrote in the run state reaches
+// the records gate.
+function mergeRecords(records) {
+  return ['security', 'quality', 'bench'].map((k) => `${k}:${String(records['review.' + k] || '').split(' ').slice(0, 2).join(':')}`)
+    .concat([`check:pass:${records['phase.check'] || ''}`])
+    .filter((r) => /^[a-z]+:(pass|blocked):[0-9a-f]{7,40}$/.test(r))
 }
 // The pull request, the repository, and the branch, when the script holds
 // them in their plain forms, so the merger need not read the run state.
@@ -459,8 +505,8 @@ function mergeTarget() {
 }
 
 const at = (key) => (state[key] || '').split(' ')
-const doneAtHead = (name) => state['phase.' + name] === head
-const reviewedAtHead = (kind) => at('review.' + kind)[0] === 'pass' && at('review.' + kind)[1] === head
+const doneAtHead = (name) => passedAt(ran, 'phase.' + name, head)
+const reviewedAtHead = (kind) => passedAt(ran, 'review.' + kind, head)
 const note = (line) => { notes.push(line); log(line) }
 const backlog = []
 let planNotes = []
@@ -534,8 +580,8 @@ async function contributor(mode, detail) {
 // Check, the quality and security reviews in parallel, and benchmark until
 // all pass at one commit; whatever blocks goes back to the contributor while
 // mayFix allows, both reviews' findings in one round.
-async function verify() {
-  const passed = await rounds()
+async function verify(fixes = true) {
+  const passed = await rounds(fixes)
   return (await flush()) && passed
 }
 
@@ -689,7 +735,7 @@ async function reviews() {
   return messages.join('\n\n')
 }
 
-async function rounds() {
+async function rounds(fixes = true) {
   for (;;) {
     let blocked = ''
     if (!doneAtHead('check')) {
@@ -750,6 +796,7 @@ async function rounds() {
       }
     }
     if (!blocked) return true
+    if (!fixes) { stopped = `blocked at ${head} on resume, where no fix can be pushed: ${blocked.split('\n')[0]}`; return false }
     if (!mayFix()) { stopped = `still blocked after ${rework} fix rounds: ${blocked.split('\n')[0]}`; return false }
     phase('Implement')
     if (!(await contributor('fix', blocked))) return false
@@ -858,7 +905,18 @@ if (!stopped && !state.merged) {
   if (!stopped) {
     phase('Merge')
     let waits = 0
-    for (;;) {
+    // A resume past the push holds no check or review of this start, and
+    // the run state's could be branch-written: they run again at the head.
+    // A start that ran them all keeps its records, though the package step
+    // committed after them: the merge gates' settled_at allows that
+    // records-only diff. The resume runs no fix round, since a fix commit
+    // could not be pushed; a blocking finding stops the run.
+    if (!ranAll(ran)) {
+      note('resumed past the push: the check and the reviews run again at the head')
+      if (!(await verify(false)) && !stopped) stopped = `the check or a review did not pass at ${head} on resume`
+      phase('Merge')
+    }
+    for (; !stopped;) {
       // GitHub matches the expected head against the full sha, and only the
       // head the push recorded is the one the reviews and gates covered.
       const pushed = pushedHead(state.pushed, head)

@@ -1,0 +1,34 @@
+# Tasks
+
+## 1. The origin gate and the guard's configuration check
+
+- [x] 1.1 `tools/rules.sh` and `tools/gates.sh`: `RISKY_CONFIG` and the `origin` gate, first in `pre-push` and `merge`. Tested by the "gates: origin" cases (a risky key, a fetch refspec, a local origin, a rewritten ref, a clean local base).
+- [x] 1.2 `tools/agent_guard.sh`: refuse every call while the configuration sets a risky key; the copy of the list equal to `rules.sh`'s. Tested by "guard: a risky configuration key refuses every call" and "guard: the guard's risky keys are the gates'".
+
+## 2. Records this start made
+
+- [x] 2.1 `.claude/workflows/deliver-change.js`: `ran`, `passedAt`, `mergeRecords`, the skip helpers on `ran`, the merge records from `ran`, `verify()` before the merger on a resume past the push. Tested by the "workflow: a forged record" cases.
+
+## 3. The merge-tool hook
+
+- [x] 3.1 `tools/run_state.sh`: `gated CHANGE clear|pass`, `set` refusing `gated`, `push` writing `gated none`. Tested by the "run_state: gated" cases.
+- [x] 3.2 `tools/gates.sh`: the merge group clears and records `gated`. Tested by "gates: merge records the head it passed at".
+- [x] 3.3 `tools/agent_guard.sh` and `.claude/agents/merger.md`: the merge tool's check and its hook matcher; the green line fetches first. Tested by the "guard: merge tool" cases and "guard: merger runs the green line".
+
+## 4. Docs and bookkeeping
+
+- [x] 4.1 `README.md`, `docs/codebase-map.md` area 1, `.claude/agents/contributor.md` (fetch before the push), and `docs/backlog.md` (the three entries removed, the residual risks added).
+
+## 5. Review fixes
+
+- [x] 5.1 `tools/gates.sh` and `tools/agent_guard.sh`: refuse a hook other than a sample in the hooks directory, and run their git with `GIT_CONFIG_GLOBAL=/dev/null` and `GIT_CONFIG_NOSYSTEM=1`. Tested by "gates: origin refuses a hook in the hooks directory", "guard: a planted hook refuses every call", and "gates: origin ignores a global insteadOf".
+- [x] 5.2 `.claude/workflows/deliver-change.js` and `tools/agent_guard.sh`: the green line's fetch and worktree add run with no global or system configuration and no hook (`PINNED_GIT`), which the guard admits before git only with those exact values. Tested by "guard: merger runs the green line", the three "guard: merger refuses" assignment cases, and "workflow: the green line fetches and adds the copy".
+- [x] 5.3 `.claude/workflows/deliver-change.js`: the resume check runs again only when this start holds no check or review record of a kind (`ranAll`), and without fix rounds (`verify(false)`), so the package step's records-only commits do not rerun the reviews. Tested by "workflow: a resume past the push checks and reviews again unless this start ran them".
+- [x] 5.4 `tools/tools_test.sh`: "run_state: push clears a gated marker recorded before it".
+- [x] 5.5 `tools/agent_guard.sh` and `tools/run_state.sh`: the merge tool refuses a head two run states name, and `gated CHANGE clear` resets every run state's `gated` (`gated_clear`), so a run state branch code planted under `build/pipeline/` admits no merge. Tested by "guard: the merge tool refuses a head two run states name" and the two "run_state: gated clear resets" cases.
+- [x] 5.6 `.claude/workflows/deliver-change.js` and `tools/agent_guard.sh`: the green line checks origin's url before its fetch (`originCheck`: the run state's repository on GitHub over https or ssh, as git resolves it, insteadOf included), and the guard refuses a fetch while origin's url is set and names no hosted repository (`local_origin`), so a local bare origin branch code planted after the push brings neither its gates nor its guard. Tested by "workflow: the green line checks origin before its fetch", the "workflow: the origin check" cases, "guard: merger refuses a fetch from a planted local origin", and "workflow: a run state's repository of another form matches nothing".
+
+## 6. The check clone
+
+- [x] 6.1 `tools/run_state.sh`: `check_run` makes the throwaway clone, runs `make -s stages` and each `make check-stage` in it, carries the build and the metrics back, and removes it on every exit, a hard-killed runner's clone removed by the waiter (`clone_lost`); `outputs_sum` reads the clone. Tested by "run_state: a check stage runs in a clone outside the delivery clone", "run_state: a hook a check stage plants leaves the origin gate passing", "run_state: a check stage leaves origin's url", "run_state: a check stage leaves origin's fetch refspec", "run_state: a run state a check stage writes is not the delivery clone's", "run_state: check removes its clone", "run_state: a hard-killed check's clone is removed", and "run_state: check carries the compile outputs out of its clone" with the compile-skip cases on the carry.
+- [x] 6.2 `docs/codebase-map.md` area 1, `docs/backlog.md` (the two entries this closes removed, the residual risk recorded, the split items queued in `pinned-main`), `README.md` (the checker's clone), and the header of `tools/run_state.sh`.
