@@ -7,6 +7,8 @@ require_relative "../domain/start_screen"
 require_relative "../use_cases/handle_key"
 require_relative "../use_cases/completion/show_completion"
 require_relative "../use_cases/docs/show_hover"
+require_relative "../use_cases/docs/show_signature"
+require_relative "../domain/signature_request"
 require_relative "key_decoder"
 
 module Carat
@@ -21,7 +23,7 @@ module Carat
     # is handled as usual. While the language services wait (a wanted
     # completion or a request in flight) a read waits at most
     # SERVICE_TIMEOUT, so an answer arriving between two keys is read and
-    # shown before the next one.
+    # shown before the next one; so is a signature answer, in its float.
     class InputController
       ESCAPE_TIMEOUT = 0.05
       IDLE_TIMEOUT = 0.25
@@ -35,13 +37,17 @@ module Carat
       attr_reader :services #: Ports::LanguageServicePort
       attr_reader :show_completion #: UseCases::ShowCompletion
       attr_reader :show_hover #: UseCases::ShowHover
+      attr_reader :show_signature #: UseCases::ShowSignature
+      attr_reader :signature #: Domain::SignatureRequest
 
       # @rbs @decoder: KeyDecoder
       # @rbs @wait_until: Float
       # @rbs @deadline: bool
 
-      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState, start_screen: Domain::StartScreen, services: Ports::LanguageServicePort, show_completion: UseCases::ShowCompletion, show_hover: UseCases::ShowHover) -> void
-      def initialize(terminal:, clock:, decoder:, handle_key:, input:, start_screen:, services:, show_completion:, show_hover:)
+      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState, start_screen: Domain::StartScreen, services: Ports::LanguageServicePort, show_completion: UseCases::ShowCompletion, show_hover: UseCases::ShowHover, show_signature: UseCases::ShowSignature, signature: Domain::SignatureRequest) -> void
+      def initialize(terminal:, clock:, decoder:, handle_key:, input:, start_screen:, services:, show_completion:, show_hover:, show_signature:, signature:)
+        @show_signature = show_signature
+        @signature = signature
         @services = services
         @show_hover = show_hover
         @show_completion = show_completion
@@ -80,6 +86,10 @@ module Carat
           end
           if @show_hover.hover.arrived
             @show_hover.call(state)
+            served = true
+          end
+          if @signature.arrived
+            @show_signature.call(state)
             served = true
           end
           return tick || served

@@ -754,7 +754,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The content gate skips files git treats as binary
 
-- Where: `tools/gates.sh` line 126 (`gate_content` reads `git log -p`, which prints no lines for a file with a NUL byte or one `.gitattributes` marks `-diff` or `binary`, and the merge gates run from the branch's checkout, so the branch can set them). Security Low (6) of `backup-secret-scan`.
+- Where: `tools/gates.sh` line 126 (`gate_content` reads `git log -p`, which prints no lines for a file with a NUL byte or one `.gitattributes` marks `-diff` or `binary`, and the merge gates run from the branch's checkout, so the branch can set them). Security Low (6) of `backup-secret-scan`; raised to periodic security Medium (7) at b0dd342 (`tools/gates.sh` line 179).
 - Why it matters: a committed secret in such a file passes the secret, URL, email, and model checks.
 - Fix outline: pass `--text` and `--no-textconv` to the `git log -p` scan, or refuse an added binary file and a `.gitattributes` change setting `diff`, `binary`, or `textconv` unless a reviewer allows it, with a `tools/tools_test.sh` case. Queued in `content-gate-gaps`.
 
@@ -1486,9 +1486,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## ControlText.cleaned is public with a flag argument
 
-- Where: `ControlText.cleaned` in `carat/domain/control_text.rb` (line 28 at 38d8c47), used only by `strip` and `line`; also `RAW_LIMIT` declared between methods (line 27 at 5722559) and the helpers `without_sequences`, `sequence_end`, and `string_end` left public. Quality advisory at `diagnostics-display`, periodic quality at 5722559.
+- Where: `ControlText.cleaned` in `carat/domain/control_text.rb` (line 28 at 38d8c47), used only by `strip` and `line`; also `RAW_LIMIT` declared between methods (line 27 at 5722559) and the helpers `sequence_end` and `string_end` left public (`without_sequences` is now called by `MarkdownText.rows`, line 34, so it stays public). Quality advisory at `diagnostics-display`, periodic quality at 5722559.
 - Why it matters: a public module function taking a bool flag invites callers outside the module to depend on a helper of its two entry points, and the other helpers and the constant's place read as API.
-- Fix outline: mark `cleaned`, `without_sequences`, `sequence_end`, and `string_end` `private_class_method`, and move `RAW_LIMIT` beside `REPLACEMENT` at the top.
+- Fix outline: mark `cleaned`, `sequence_end`, and `string_end` `private_class_method`, and move `RAW_LIMIT` beside `REPLACEMENT` at the top.
 
 ## Diagnostic marks moving on undo, redo, and reload have no test
 
@@ -1624,7 +1624,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Four use cases inline the tab width Options already answers
 
-- Where: `carat/use_cases/leave_insert.rb:69`, `carat/use_cases/insert_tab.rb:22`, `carat/use_cases/repeat_last.rb:105`, `carat/use_cases/arrange_view.rb:39` (periodic quality at 5722559), and `carat/adapters/frame_presenter.rb:174`, `carat/use_cases/visual/extend_visual.rb:54`, `carat/use_cases/dispatcher.rb:113` (periodic quality at cd87445).
+- Where: `carat/use_cases/leave_insert.rb:69`, `carat/use_cases/insert_tab.rb:22`, `carat/use_cases/repeat_last.rb:104` (at b0dd342), `carat/use_cases/arrange_view.rb:39` (periodic quality at 5722559), and `carat/adapters/frame_presenter.rb:174`, `carat/use_cases/visual/extend_visual.rb:54`, `carat/use_cases/dispatcher.rb:113` (periodic quality at cd87445).
 - Why it matters: `tabstop > 0 ? tabstop : 8` is copied seven times beside `Options#tab_width` (`carat/domain/options.rb:75`), so a rule change misses copies.
 - Fix outline: call `options.tab_width` in the seven and drop the inline copies.
 
@@ -1804,7 +1804,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## ProcessRunner compiles only through carat.rb's require order
 
-- Where: `carat/drivers/process_runner.rb` line 1 at cd87445 requires only the process port yet builds `Domain::RpcFramer` and `Domain::ServiceMessage`. Periodic quality at cd87445.
+- Where: `carat/drivers/process_runner.rb` line 1 at cd87445 requires only the process port yet builds `Domain::RpcFramer` and `Domain::ServiceMessage`. Periodic quality at cd87445; `carat/drivers/runtime_queue.rb` also builds `Domain::ServiceMessage` without requiring it, still present at b0dd342.
 - Why it matters: requiring the file alone fails, unlike DiskFiles, which requires its domain record.
 - Fix outline: require both domain files. Queued in `lsp-client-tidy`.
 
@@ -1882,9 +1882,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The gateway cancels a request in three copies
 
-- Where: `cancel_hover` in `carat/adapters/json_rpc_language_gateway.rb` line 663 at 78078ad, beside `cancel` and `cancel_resolve`. Quality advisory in `quick-docs`.
+- Where: `cancel_hover` in `carat/adapters/json_rpc_language_gateway.rb` line 663 at 78078ad, beside `cancel` and `cancel_resolve`. Quality advisory in `quick-docs`. `parameter-info` added the shared private `cancel_request(language, id)`, which its `cancel_signature` calls; the three older copies do not yet.
 - Why it matters: each looks up the server, sends `$/cancelRequest`, and zeroes the id, so a fix to one (a crashed server, a stale id) can miss the other two.
-- Fix outline: one private `cancel_request(language, id)` that the three call, with the hover, completion, and resolve cancellation rows in `test/adapters_hover.rb` and `test/adapters_server_completions.rb` unchanged.
+- Fix outline: call the existing `cancel_request(language, id)` from the three, with the hover, completion, and resolve cancellation rows in `test/adapters_hover.rb` and `test/adapters_server_completions.rb` unchanged.
 
 ## The documentation floats copy the widest-row loop
 
@@ -1987,3 +1987,135 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the labels `the last search, in the searches and the substitute` and `the search history, in the searches and the substitute` in `test/adapters_assembly.rb` lines 103 and 104 at 4f653d2. Two quality advisories in `implement-contracts`.
 - Why it matters: the rows now also check the command line, the prompt, and the frame presenter, so the labels mislead a reader of a failure.
 - Fix outline: shorten them to `the last search` and `the search history` and rewrite the snapshot with `make snapshots`.
+
+## Parameter info follows a call on one row only
+
+- Where: `FollowSignature` in `carat/use_cases/docs/follow_signature.rb` and `SignatureRequest.open_paren` in `carat/domain/signature_request.rb` (`parameter-info`): the call is the innermost `(` left open before the cursor on its row, scanned as plain bytes.
+- Why it matters: a call whose arguments span several rows closes the float at the first line break, and a `(` inside a string or comment can start a follow the server then answers empty.
+- Fix outline: keep following across rows while the server answers a signature (stop on an empty answer rather than on a row change), and skip strings and comments with the syntax cache's tokens when the buffer has them, with rows in `test/adapters_signature.rb`.
+
+## The signature request is passed beside the use case that holds it
+
+- Where: the `signature:` keyword of `HandleKey` in `carat/use_cases/handle_key.rb` line 88 and of `InputController` in `carat/adapters/input_controller.rb` line 48 at c59a43d, while the same constructors read the hover request from its use case (`follow_hover.hover`, `show_hover.hover`). Quality advisory in `parameter-info`.
+- Why it matters: two ways to reach the same kind of shared request in one constructor, so a reader cannot tell which is the rule; the hover entry above asks the opposite direction for hover, so both should end the same way.
+- Fix outline: settle one way for hover and signature together: either drop the `signature:` keywords and read `follow_signature.signature` and `show_signature.signature`, removing their two assembly rows, or pass both requests from `EditorAssembly` as the hover entry proposes.
+
+## The signature float's placement below the cursor is untested
+
+- Where: `ShowSignature` in `carat/use_cases/docs/show_signature.rb` line 66 at c59a43d, which puts the float below the cursor (row 1) when the cursor's screen row is under 3; `test/adapters_signature.rb` has no row for it. Quality advisory in `parameter-info`.
+- Why it matters: a regression in the below-the-cursor branch, the one taken on a window's first rows, would pass every test.
+- Fix outline: add a row typing `(` on the window's first screen row and assert the bordered float drawn below the cursor.
+
+## The signature gateway's forget and activeSignature paths are untested
+
+- Where: `forget_signature` in `carat/adapters/json_rpc_language_gateway.rb` line 743 (dropping the language and the request in flight on a crash, `:LspStop`, or `:LspRestart`) and the in-range `activeSignature` choice at line 818, at c59a43d. Quality advisory in `parameter-info`.
+- Why it matters: a server crash with a signature request in flight, or a server that names a later signature as active, takes a path no test runs, so a stale request or the wrong signature could ship unnoticed.
+- Fix outline: add rows to `test/adapters_signature.rb` for a server crashing while a signature request is in flight and for an answer with `activeSignature` 1 of two signatures.
+
+## Roadmap item 10 lost the changes that delivered it
+
+- Where: item 10 of the roadmap in `docs/architecture.md` line 405 at c59a43d, which now reads `Delivered but go-to-definition (map).`. Quality advisory in `parameter-info`.
+- Why it matters: the other items keep the changes that delivered them, this one drops `lsp-diagnostics` and `diagnostics-display`, and `(map)` does not say what it points to.
+- Fix outline: restore the delivering changes, add `completion`, `quick-docs`, and `parameter-info`, and name go-to-definition as what remains.
+
+## K shows an older request's hover answer at the new anchor
+
+- Where: `hovered` in `carat/adapters/json_rpc_language_gateway.rb` line 674 at b0dd342; `test/adapters_hover.rb` covers only an answer arriving after the cancel. Periodic quality, blocking. Queued in `hover-tidy`.
+- Why it matters: K at one position, a cursor move, and K again while the first request is in flight: the first answer drained in the next poll before the cancel is marked arrived, so `ShowHover` shows the old position's documentation at the new anchor and keeps it when the new request times out.
+- Fix outline: drop an answer whose request is not the one last asked, as the completion path does for its serial, with a hover row queuing the first answer after the second K and before its idle tick.
+
+## The markdown text comment names only completion items
+
+- Where: the module comment of `carat/domain/markdown_text.rb` line 7 at b0dd342. Periodic quality. Queued in `hover-tidy`.
+- Why it matters: `ShowHover` reads hover contents through it too, so the comment misleads a reader.
+- Fix outline: say a completion item's or a hover answer's documentation.
+
+## The hover request holders are reached through other use cases
+
+- Where: `carat/adapters/input_controller.rb` line 81 reads the shared `HoverRequest` through `show_hover.hover`, and `carat/use_cases/handle_key.rb` line 93 through `follow_hover.hover`, at b0dd342. Periodic quality. Queued in `hover-tidy`.
+- Why it matters: the holder rule and `test/adapters_assembly.rb` never see these holders, so a second instance would pass.
+- Fix outline: pass the request from `EditorAssembly` to both, with readers checked in the assembly test.
+
+## The completion close use case is shared through a local
+
+- Where: `close_completion` in `carat/adapters/editor_assembly.rb` line 336 at b0dd342, shared by `ShowCompletion` (338), `AcceptCompletion` (344), and `CompletionHandler` (413). Periodic quality, blocking. Queued in `completion-tidy-b`.
+- Why it matters: CLAUDE.md asks everything shared to be kept in an assembly reader so the assembly test checks every holder; only `show_completion.close_completion` is checked.
+- Fix outline: keep it in a reader and assert that the other two holders hold that one object.
+
+## The documentation float's keep test and close are copied
+
+- Where: the five-condition keep test in `carat/use_cases/completion/show_completion_docs.rb` line 66 reaching four `CompletionMenu` docs members, and `CloseCompletion#call` (`close_completion.rb` line 24) repeating `ShowCompletionDocs#close`, at b0dd342. Periodic quality. Queued in `completion-docs-tidy`.
+- Why it matters: a change to when the float is kept or closed must be made in two places.
+- Fix outline: one `CompletionMenu` question for the keep test and one owner of closing the docs float, the `floats.index_of` check kept at the call site.
+
+## CompletionMenu's constructor repeats clear
+
+- Where: `carat/domain/completion_menu.rb` lines 37 to 45 against 96 to 103 at b0dd342. Periodic quality. Queued in `completion-docs-tidy`.
+- Why it matters: a new member must be reset in two places.
+- Fix outline: set the two lists in the constructor, then call `clear`.
+
+## The CI scope asks the same API twice
+
+- Where: the push branch of `tools/ci_scope.sh` lines 47 and 48 at b0dd342. Periodic quality. Queued in `ci-hardening`.
+- Why it matters: two calls for one commit's head and number double the rate-limited requests and can disagree.
+- Fix outline: one call printing both fields, read once.
+
+## The guard admits any hidden tmp repository for git
+
+- Where: `worktree()` in `tools/agent_guard.sh` line 353 at b0dd342; the risky-config and hooks checks read only the project's `.git`. Periodic security Medium (6). Queued in `pinned-main`.
+- Why it matters: a repository branch code planted at `tmp/.NAME` (an fsmonitor setting, a checkout hook, a forged `origin/main`) runs its command on a reviewer's `git -C tmp/.NAME` and can feed the periodic reviews a forged tree.
+- Fix outline: admit only a linked worktree of the project, run the config and hooks checks on that repository, and have reviewers recreate their worktree as the merge gates do.
+
+## A link planted in the check clone's build directory survives
+
+- Where: `clone_drop` in `tools/run_state.sh` line 566 at b0dd342 copies `build/` into the carry with `cp -RP`. Periodic security Low (5). Queued in `check-runner-safety`.
+- Why it matters: a symbolic link a stage plants in `build/` reaches `build/stages/CHANGE/carry` and the next clone, so the clone is isolated by environment only.
+- Fix outline: drop links from the carry or refuse them when copying, with a case.
+
+## The merge tool hook allows the merge when the guard is unnamed
+
+- Where: `.claude/agents/merger.md` line 15 at b0dd342, the case with no default branch. Periodic security Low (4). Queued in `pinned-main`.
+- Why it matters: when the guard on `origin/main` does not contain the merge tool's name, the merge runs unguarded.
+- Fix outline: refuse in a default case, with a case in `tools/tools_test.sh`.
+
+## WalkHistory keeps one walk's counts in instance variables
+
+- Where: `@gone`, `@back`, and `@empty_before` in `carat/use_cases/history/walk_history.rb` lines 32, 80, and 109 at b0dd342. Periodic quality. Queued in `search-tidy`.
+- Why it matters: the use case is built once in `EditorAssembly`, so state carries between calls and a nested or interrupted walk reads stale counts, the side channel already listed for `Operate`'s notice.
+- Fix outline: return the counts from the step or hold them in a record made per call, passed to the finish.
+
+## Motions.keyword? and Motions.char_class have no caller
+
+- Where: `carat/domain/motions.rb` lines 132 and 149 at b0dd342. Periodic quality. Queued in the backlog item batch.
+- Why it matters: dead code a reader must check, beside the live `code_class` path.
+- Fix outline: delete both, updating the entries that name `Motions.keyword?`.
+
+## Walker depends on Motions through require order
+
+- Where: `carat/domain/walker.rb` line 63 calls `Motions.code_class` without requiring `motions.rb`, which requires `walker.rb`, at b0dd342. Periodic quality. Queued in the backlog item batch beside the ProcessRunner entry.
+- Why it matters: a hidden require cycle that works only by load order.
+- Fix outline: move the class lookup into `Walker` or `Utf8` and call it there from `Motions`, `TextObjects`, and `FindMatch`.
+
+## Two classes declare a collaborator twice or by hand
+
+- Where: `carat/adapters/rc_config_gateway.rb` line 33 (an `attr_reader` with its type beside a `# @rbs @files` line) and `carat/adapters/input_controller.rb` line 96 (a hand-written `decoder` reader) at b0dd342. Periodic quality. Queued in the backlog item batch.
+- Why it matters: the pair #77 removed elsewhere; two declarations can drift.
+- Fix outline: drop the `@rbs` line and use `attr_reader :decoder`.
+
+## Keymap exposes helpers and the map misses methods
+
+- Where: `apply`, `bind_text`, and `holder_of` in `carat/domain/keymap.rb` lines 141, 162, and 205 are public with no outside caller; `leader_problem` and `no_actions` are missing from the map's `Keymap` entry; the `CommandGrammar` entry (`docs/codebase-map.md` line 146) omits `digit?`, `digit`, `char`, `wants_pattern?`, and `pattern`; the `Paths` list (line 503) omits `absolute` (`carat/plugin_api.rb` line 356), at b0dd342. Periodic quality. Queued in `docs-index`.
+- Why it matters: the map is the entry point for every change; missing methods send a reader to the code.
+- Fix outline: make the three instance methods private and name the missing methods in their entries.
+
+## Config predicates note problems and repeat the none word
+
+- Where: `language?` and `binding?` in `carat/domain/config.rb` lines 185 and 210 at b0dd342. Periodic quality. Queued in the backlog item batch.
+- Why it matters: a predicate with a side effect breaks the naming rule, and `binding?` repeats `Keymap::NONE` and the action-name check.
+- Fix outline: answer only, note at the caller, and name the none word once in a domain constant.
+
+## Vim messages are spelled in several files
+
+- Where: E477 in `delete_command_handler.rb` line 34, `substitute_command_handler.rb` line 37, `global_command_handler.rb` line 35; E488 in five files; E486, E492, E32, E33, E363, E444, E474, E939 in two or more, at b0dd342. Periodic quality. Queued in the backlog item batch.
+- Why it matters: `docs/architecture.md` section 5 puts a message several use cases need in `Domain::Messages`; copies drift from Neovim's text.
+- Fix outline: constants or builders in `Domain::Messages` called from every site.

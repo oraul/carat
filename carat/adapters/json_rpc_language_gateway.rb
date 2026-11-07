@@ -2,6 +2,7 @@ require_relative "../ports/language_service_port"
 require_relative "../ports/clock_port"
 require_relative "../domain/completion_request"
 require_relative "../domain/hover_request"
+require_relative "../domain/signature_request"
 require_relative "../domain/markdown_text"
 require_relative "../domain/completion_list"
 require_relative "../domain/completion_item"
@@ -52,7 +53,17 @@ module Carat
     # a newer ask or when unanswered ANSWER_LIMIT seconds after it was
     # sent; only the answer to it is read, its contents joined into one
     # markdown text of at most PART_LIMIT parts and
-    # MarkdownText::RAW_LIMIT bytes, untrusted, and marked arrived.
+    # MarkdownText::RAW_LIMIT bytes, untrusted, and marked arrived. The
+    # signature ask insert mode records while it follows a call
+    # (Domain::SignatureRequest) is sent as textDocument/signatureHelp
+    # once no newer ask was recorded for DEBOUNCE seconds, when the cursor
+    # is still where it was asked and the server advertised
+    # signatureHelpProvider, one request in flight, cancelled by a newer
+    # ask or when unanswered ANSWER_LIMIT seconds after it was sent; an
+    # answer is read only for the request in flight and only when no newer
+    # ask was recorded since it was sent, its active signature cut around
+    # its active parameter and kept cleaned and bounded, and marked
+    # arrived.
     class JsonRpcLanguageGateway < Ports::LanguageServicePort
       DRAIN_LIMIT = 64
       NAME_LIMIT = 32
@@ -89,10 +100,12 @@ module Carat
       attr_reader :completion #: Domain::CompletionRequest
       attr_reader :clock #: Ports::ClockPort
       attr_reader :hover #: Domain::HoverRequest
+      attr_reader :signature #: Domain::SignatureRequest
 
-      #: (processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, files: Ports::FilePort, buffers: Domain::BufferList, config: Domain::Config, slots: Domain::StatusSlots, completion: Domain::CompletionRequest, clock: Ports::ClockPort, hover: Domain::HoverRequest) -> void
-      def initialize(processes:, messages:, files:, buffers:, config:, slots:, completion:, clock:, hover:)
+      #: (processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, files: Ports::FilePort, buffers: Domain::BufferList, config: Domain::Config, slots: Domain::StatusSlots, completion: Domain::CompletionRequest, clock: Ports::ClockPort, hover: Domain::HoverRequest, signature: Domain::SignatureRequest) -> void
+      def initialize(processes:, messages:, files:, buffers:, config:, slots:, completion:, clock:, hover:, signature:)
         @hover = hover
+        @signature = signature
         @processes = processes
         @messages = messages
         @files = files
@@ -136,6 +149,7 @@ module Carat
         complete(state)
         resolve
         send_hover(state)
+        send_signature(state)
         return hold(language) || changed if held
         show(current) || changed
       end
@@ -168,11 +182,11 @@ module Carat
       end
 
       # Answers whether a wanted completion, a picked candidate's
-      # documentation, or a hover ask is not yet sent or a request is in
-      # flight.
+      # documentation, a hover ask, or a signature ask is not yet sent or a
+      # request is in flight.
       # @rbs skip
       def waiting?
-        @completion.waiting? || @completion.docs.waiting? || @hover.waiting?
+        @completion.waiting? || @completion.docs.waiting? || @hover.waiting? || @signature.waiting?
       end
 
       #: (Domain::Buffer) -> void
@@ -209,6 +223,7 @@ module Carat
           next if server.handle == 0
           forget_completion(server)
           forget_hover(server)
+          forget_signature(server)
           request(server, "shutdown", nil)
           notify(server, "exit", nil)
           @processes.stop(server.handle)
@@ -356,7 +371,8 @@ module Carat
         item = { "snippetSupport" => false, "documentationFormat" => ["markdown", "plaintext"], "resolveSupport" => { "properties" => ["documentation"] } }
         completion = { "completionItem" => item, "contextSupport" => true }
         hover = { "contentFormat" => ["markdown", "plaintext"], "dynamicRegistration" => false }
-        document = { "synchronization" => sync, "publishDiagnostics" => { "relatedInformation" => false }, "completion" => completion, "hover" => hover }
+        signature_help = { "signatureInformation" => { "parameterInformation" => { "labelOffsetSupport" => true }, "activeParameterSupport" => true }, "dynamicRegistration" => false }
+        document = { "synchronization" => sync, "publishDiagnostics" => { "relatedInformation" => false }, "completion" => completion, "hover" => hover, "signatureHelp" => signature_help }
         capabilities = { "textDocument" => document, "window" => { "workDoneProgress" => true } }
         { "processId" => nil, "clientInfo" => { "name" => "carat" }, "rootUri" => root, "capabilities" => capabilities, "workspaceFolders" => [{ "uri" => root, "name" => File.basename(@files.cwd) }] }
       end
@@ -410,6 +426,7 @@ module Carat
       def crash(server)
         forget_completion(server)
         forget_hover(server)
+        forget_signature(server)
         @processes.stop(server.handle)
         server.handle = 0
         server.state = :crashed
@@ -440,6 +457,8 @@ module Carat
           resolved(value.key?("error") ? nil : value["result"])
         elsif @hover.sent_id != 0 && value["id"] == @hover.sent_id && server.language == @hover.language
           hovered(value.key?("error") ? nil : value["result"])
+        elsif @signature.sent_id != 0 && value["id"] == @signature.sent_id && server.language == @signature.language
+          signed(value.key?("error") ? nil : value["result"])
         end
       end
 
@@ -466,6 +485,8 @@ module Carat
         @resolvers << server.language if provider.is_a?(Hash) && provider["resolveProvider"] == true && !@resolvers.include?(server.language)
         hovers = caps.is_a?(Hash) ? caps["hoverProvider"] : nil
         @hover.languages << server.language if (hovers == true || hovers.is_a?(Hash)) && !@hover.hovers?(server.language)
+        helps = caps.is_a?(Hash) ? caps["signatureHelpProvider"] : nil
+        @signature.languages << server.language if helps.is_a?(Hash) && !@signature.helps?(server.language)
         server.state = :ready
         notify(server, "initialized", {})
       end
@@ -714,6 +735,146 @@ module Carat
         end
         return text if text.bytesize <= limit
         text.byteslice(0, limit).to_s
+      end
+
+      # A server that runs no more gives signature help no more, and its
+      # request in flight is forgotten.
+      #: (Domain::LanguageServer) -> void
+      def forget_signature(server)
+        ask = @signature
+        ask.languages.delete(server.language)
+        ask.sent_id = 0 if ask.language == server.language
+      end
+
+      # Sends the latest signature ask once no newer ask was recorded for
+      # DEBOUNCE seconds, when insert mode, the layout window, its buffer,
+      # the row, and the cursor column are still where it was asked and the
+      # buffer's server gives signature help; a newer ask cancels the
+      # request in flight, a stopped one is handled at once, and an answer
+      # overdue is cancelled at its deadline.
+      #: (Domain::EditorState) -> void
+      def send_signature(state)
+        ask = @signature
+        return unless ask.waiting?
+        now = @clock.now
+        if ask.want != ask.seen
+          ask.seen = ask.want
+          ask.due = now + DEBOUNCE
+          cancel_signature
+          ask.sent = ask.want unless ask.active?
+          return
+        end
+        if ask.sent_id != 0
+          cancel_signature if now > ask.deadline
+          return
+        end
+        return if now < ask.due
+        ask.sent = ask.want
+        window = state.tab.layout_window
+        buffer = window.buffer
+        cursor = window.cursor
+        return unless state.mode == Domain::Mode::INSERT && ask.at?(window.id, buffer.id, cursor.row, cursor.col)
+        server = server_for(buffer.filetype)
+        return if server.nil? || !server.running? || !ask.helps?(server.language) || buffer.path.empty?
+        line = buffer.line(cursor.row)[0, cursor.col].to_s
+        params = { "textDocument" => { "uri" => uri_of(buffer.path) }, "position" => { "line" => cursor.row, "character" => utf16_length(line) } }
+        ask.language = server.language
+        ask.deadline = now + ANSWER_LIMIT
+        ask.sent_id = request(server, "textDocument/signatureHelp", params)
+      end
+
+      # Cancels the signature request in flight, whose answer is then
+      # dropped.
+      #: () -> void
+      def cancel_signature
+        ask = @signature
+        cancel_request(ask.language, ask.sent_id)
+        ask.sent_id = 0
+      end
+
+      # Sends $/cancelRequest for the id to the running server of the
+      # language; nothing for id 0 or no server.
+      #: (String, Integer) -> void
+      def cancel_request(language, id)
+        return if id == 0
+        server = server_for(language)
+        notify(server, "$/cancelRequest", { "id" => id }) unless server.nil?
+      end
+
+      # Keeps the signature answer for the request in flight, unless a
+      # newer ask was recorded after it was sent: the active signature's
+      # label cut around its active parameter, "" for an error, null, or
+      # no signature, marked arrived.
+      #: (untyped) -> void
+      def signed(result)
+        ask = @signature
+        ask.sent_id = 0
+        return if ask.sent != ask.want
+        signatures = result.is_a?(Hash) ? result["signatures"] : nil
+        unless signatures.is_a?(Array) && !signatures.empty?
+          ask.keep("", "", "")
+          return
+        end
+        active = index_in(result["activeSignature"], signatures.length)
+        chosen = signatures[active < 0 ? 0 : active]
+        label = chosen.is_a?(Hash) ? chosen["label"] : nil
+        unless label.is_a?(String)
+          ask.keep("", "", "")
+          return
+        end
+        text = label.to_s
+        parameters = chosen["parameters"]
+        count = parameters.is_a?(Array) ? parameters.length : 0
+        wanted = chosen.key?("activeParameter") ? chosen["activeParameter"] : result["activeParameter"]
+        index = index_in(wanted.nil? ? 0 : wanted, count)
+        part = index < 0 ? nil : parameters[index]
+        part = part["label"] if part.is_a?(Hash)
+        from = -1
+        to = -1
+        if part.is_a?(String) && !part.to_s.empty?
+          found = text.byteindex(part.to_s)
+          unless found.nil?
+            from = found.to_i
+            to = from + part.to_s.bytesize
+          end
+        elsif part.is_a?(Array) && part.length == 2 && part[0].is_a?(Integer) && part[1].is_a?(Integer)
+          from = utf16_offset(text, part[0].to_i)
+          to = utf16_offset(text, part[1].to_i)
+          from = -1 if to < from
+        end
+        if from < 0 || to < 0
+          ask.keep(text, "", "")
+        else
+          ask.keep(text.byteslice(0, from).to_s, text.byteslice(from, to - from).to_s, text.byteslice(to, text.bytesize - to).to_s)
+        end
+      end
+
+      # The value as an index into a list of count items, -1 when it is
+      # no integer within the list.
+      #: (untyped, Integer) -> Integer
+      def index_in(value, count)
+        return -1 unless value.is_a?(Integer)
+        number = value.to_i
+        number >= 0 && number < count ? number : -1
+      end
+
+      # The byte offset of the UTF-16 code unit offset units in the text,
+      # -1 when it is negative, past the text, or inside a character.
+      #: (String, Integer) -> Integer
+      def utf16_offset(text, units)
+        return -1 if units < 0
+        count = 0
+        i = 0
+        while i < text.bytesize
+          b = text.getbyte(i).to_i
+          if (b & 0xC0) != 0x80
+            return i if count == units
+            return -1 if count > units
+            count += b >= 0xF0 ? 2 : 1
+          end
+          i += 1
+        end
+        count == units ? i : -1
       end
 
       # The documentation of a server's item: a string or a markup

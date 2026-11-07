@@ -50,6 +50,11 @@ module AdaptersAssemblyTest
       ["services", a.services.hover], ["request_hover", a.request_hover.hover], ["show_hover", a.show_hover.hover],
       ["follow_hover", a.follow_hover.hover], ["pin_hover", a.pin_hover.hover]
     ]), "the hover request")
+    t.assert_equal([], strangers(a.signature, [
+      ["services", a.services.signature], ["request_signature", a.request_signature.signature], ["show_signature", a.show_signature.signature],
+      ["follow_signature", a.follow_signature.signature], ["handle_key", a.handle_key.signature], ["controller", a.controller.signature]
+    ]), "the signature request")
+    t.assert_equal([true, true, true], [a.controller.show_signature.equal?(a.show_signature), a.handle_key.request_signature.equal?(a.request_signature), a.handle_key.follow_signature.equal?(a.follow_signature)], "the input controller holds the one ShowSignature and the key handler the one RequestSignature and FollowSignature")
     t.assert_equal([true, true], [a.controller.show_hover.equal?(a.show_hover), a.handle_key.follow_hover.equal?(a.follow_hover)], "the input controller holds the one ShowHover and the key handler the one FollowHover")
     t.assert_equal([], strangers(a.tabs, [
       ["state", a.state.tabs], ["buffers", a.buffers.tabs], ["feed", a.buffers.feed.tabs], ["quit", a.quit.tabs],
@@ -128,6 +133,8 @@ module AdaptersAssemblyTest
     t.assert_equal([], strangers(a.walk_history, [["undo_step", a.undo_step.walk_history], ["redo_step", a.redo_step.walk_history], ["undo_to_state", a.undo_to_state.walk_history], ["travel_history", a.travel_history.walk_history]]), "the undo history walk")
     t.assert_equal([], strangers(a.save_file, [["save_all", a.save_all.save_file]]), "the save file use case")
     t.assert_equal([], strangers(a.open_float, [["show_hover", a.show_hover.open_float]]), "the open float use case, in the hover")
+    t.assert_equal([], strangers(a.open_float, [["show_signature", a.show_signature.open_float]]), "the open float use case, in the signature")
+    t.assert_equal([], strangers(a.close_float, [["show_signature", a.show_signature.close_float], ["follow_signature", a.follow_signature.close_float]]), "the close float use case, in the signature")
     t.assert_equal([], strangers(a.close_float, [["show_hover", a.show_hover.close_float], ["follow_hover", a.follow_hover.close_float], ["pin_hover", a.pin_hover.close_float]]), "the close float use case, in the hover")
     t.assert_equal([], strangers(a.actions, [["dispatcher", a.dispatcher.actions], ["handle_key", a.handle_key.actions], ["repeat_last", a.repeat_last.actions]]), "the action table")
     t.assert_equal([], strangers(a.dispatcher, [["handle_key", a.handle_key.dispatcher]]), "the dispatcher")

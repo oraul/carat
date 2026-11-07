@@ -8,16 +8,27 @@ module Carat
     # place at every arrange; the border, when the spec asks for one,
     # takes one cell around it. A float that is a menu (the completion
     # popup) has its selected row in selected, drawn in PmenuSel and its
-    # other rows in Pmenu; any other float has -1 there. A Struct record:
-    # mutable, with a reader and a writer per member.
-    class FloatWindow < Struct.new(:window, :spec, :selected, keyword_init: true)
+    # other rows in Pmenu; any other float has -1 there. A float may mark
+    # the display columns mark_from up to mark_to of its buffer's first
+    # row (the active parameter of a signature), drawn in Visual; -1 for
+    # none. A Struct record: mutable, with a reader and a writer per
+    # member.
+    class FloatWindow < Struct.new(:window, :spec, :selected, :mark_from, :mark_to, keyword_init: true)
       # @rbs @window: Window
       # @rbs @spec: FloatSpec
       # @rbs @selected: Integer
+      # @rbs @mark_from: Integer
+      # @rbs @mark_to: Integer
 
       #: (window: Window, spec: FloatSpec) -> void
       def initialize(window:, spec:)
-        super(window: window, spec: spec, selected: -1)
+        super(window: window, spec: spec, selected: -1, mark_from: -1, mark_to: -1)
+      end
+
+      # Whether the float marks columns of its first row.
+      #: () -> bool
+      def marked?
+        mark_from >= 0 && mark_to > mark_from
       end
 
       # Whether the float is a menu with a selected row.

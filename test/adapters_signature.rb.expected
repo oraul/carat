@@ -1,0 +1,27 @@
+ok   initialize advertises signature help with label offsets
+ok   with no server giving signature help ( asks nothing
+ok   other characters ask nothing
+ok   ( records the ask and the first idle tick only starts the debounce
+ok   the request is sent once the debounce passed, at the cursor
+ok   the answer opens the float with no key, the first parameter marked
+ok   the float is bordered above the cursor
+ok   the marked parameter is drawn in Visual, the rest in NormalFloat
+ok   typing an argument asks again and the float stays until the answer
+ok   the answer moves the mark to the second parameter, given as offsets
+ok   an inner call is followed
+ok   closing the inner call follows the outer one again
+ok   closing the call closes the float
+ok   Esc leaves insert mode and closes the float
+ok   another row closes the float
+ok   erasing the parenthesis closes the float
+ok   a null answer closes the float with no message
+ok   an empty list closes the float
+ok   a newer ask cancels the request in flight and sends its own
+ok   an older answer arriving after the newer request was sent is dropped
+ok   the newer answer is shown
+ok   an older answer arriving before the newer request was sent is dropped
+ok   the newer request is sent once the debounce passed
+ok   an unanswered request is cancelled after two seconds and waits no more
+ok   escape sequences are dropped, the label capped, and offsets past it mark nothing
+ok   no escape reaches the screen
+adapters_signature: 26 passed, 0 failed

@@ -14,6 +14,7 @@ require_relative "../adapters_key_decoder"
 require_relative "../adapters_language_gateway"
 require_relative "../adapters_screen_presenter"
 require_relative "../adapters_server_completions"
+require_relative "../adapters_signature"
 require_relative "../adapters_status_bar"
 require_relative "../adapters_tab_bar"
 require_relative "../config_sync"
@@ -41,6 +42,7 @@ require_relative "../domain_registers"
 require_relative "../domain_rpc_framer"
 require_relative "../domain_search"
 require_relative "../domain_selection"
+require_relative "../domain_signature_request"
 require_relative "../domain_substitute"
 require_relative "../domain_syntax_cache"
 require_relative "../domain_tab_list"
@@ -102,6 +104,7 @@ when "adapters_key_decoder" then AdaptersKeyDecoderTest.main
 when "adapters_language_gateway" then AdaptersLanguageGatewayTest.main
 when "adapters_screen_presenter" then AdaptersScreenPresenterTest.main
 when "adapters_server_completions" then AdaptersServerCompletionsTest.main
+when "adapters_signature" then AdaptersSignatureTest.main
 when "adapters_status_bar" then AdaptersStatusBarTest.main
 when "adapters_tab_bar" then AdaptersTabBarTest.main
 when "config_sync" then ConfigSyncTest.main
@@ -129,6 +132,7 @@ when "domain_registers" then DomainRegistersTest.main
 when "domain_rpc_framer" then DomainRpcFramerTest.main
 when "domain_search" then DomainSearchTest.main
 when "domain_selection" then DomainSelectionTest.main
+when "domain_signature_request" then DomainSignatureRequestTest.main
 when "domain_substitute" then DomainSubstituteTest.main
 when "domain_syntax_cache" then DomainSyntaxCacheTest.main
 when "domain_tab_list" then DomainTabListTest.main

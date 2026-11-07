@@ -480,8 +480,21 @@ module Carat
             frame.blank(r, x, x + width)
           end
           frame.fill(r, x, x + width, float_group(float, row))
+          paint_mark(frame, float, r, x, width) if row == 0 && float.marked?
         end
         paint_border_row(frame, float, r) if float.spec.border
+      end
+
+      # The marked columns of a float's first row in Visual, within its
+      # text area of width cells from x.
+      #: (Domain::Frame, Domain::FloatWindow, Integer, Integer, Integer) -> void
+      def paint_mark(frame, float, r, x, width)
+        left = float.window.left
+        from = x + float.mark_from - left
+        to = x + float.mark_to - left
+        from = x if from < x
+        to = x + width if to > x + width
+        frame.fill(r, from, to, Domain::Highlight::VISUAL) if to > from
       end
 
       # The group of a float's text row: NormalFloat, or for a menu Pmenu
