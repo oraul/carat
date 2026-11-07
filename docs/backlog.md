@@ -1525,3 +1525,45 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `diagnostics-display` (`Buffer#set_diagnostics`, `FramePresenter#paint_diagnostic`). Left out of the change by its proposal.
 - Why it matters: Neovim users expect `]d` and `[d` to move between diagnostics and a float with the full message of several lines; the signs are drawn in the one `SignColumn` group, not in `DiagnosticSignError` and its siblings, so an error and a hint differ only by glyph; signs keep the icon set in force when they were published until the next publish.
 - Fix outline: two motions over the buffer's marks bound in the five modes; a float showing the message; a group per mark in `SignLayer`, compared in `PaintedRows`; signs redrawn when `icons` changes. Each with a table row.
+
+## StatusSlots counts an error in a needless branch
+
+- Where: `count_diagnostics` in `carat/domain/status_slots.rb` (line 65 at 38d8c47). Quality advisory at `diagnostics-display`, reported twice.
+- Why it matters: `error?` is `severity == 1`, so both arms add one to `counts[severity]`; the branch reads as if errors were counted apart.
+- Fix outline: drop the `if` and keep `counts[diagnostic.severity] += 1`.
+
+## The diagnostic highlight group is a public class method of the presenter
+
+- Where: `FramePresenter.diagnostic_group` in `carat/adapters/frame_presenter.rb` (line 956 at 38d8c47), called only by `paint_diagnostic`. Quality advisory at `diagnostics-display`, reported twice.
+- Why it matters: the mapping from severity to group is a property of the domain value, kept as public API of an adapter that only its own painter uses.
+- Fix outline: move it to `Domain::Diagnostic#group` (or `Highlight.diagnostic_group`) and call it from `paint_diagnostic`; failing that, make it a private instance method beside `paint_diagnostic`.
+
+## The gateway's apply has an unclear name and a needless branch
+
+- Where: `apply(set)` in `carat/adapters/json_rpc_language_gateway.rb` (lines 440 and 453 at 38d8c47). Quality advisory at `diagnostics-display`.
+- Why it matters: the name says neither what is applied nor that `set` is the icon set name, and the `list.empty?` branch calls `clear_diagnostics`, which `Buffer#set_diagnostics` already does for an empty list.
+- Fix outline: rename it `show_published(icon_set)` at its call sites and call `buffer.set_diagnostics(list, glyphs)` unconditionally.
+
+## ControlText.cleaned is public with a flag argument
+
+- Where: `ControlText.cleaned` in `carat/domain/control_text.rb` (line 28 at 38d8c47), used only by `strip` and `line`. Quality advisory at `diagnostics-display`.
+- Why it matters: a public module function taking a bool flag invites callers outside the module to depend on a helper of its two entry points.
+- Fix outline: mark it `private_class_method :cleaned`.
+
+## Diagnostic marks moving on undo, redo, and reload have no test
+
+- Where: `shift_signs` in `revert` and `reapply` and the reload path of `carat/domain/buffer.rb` (line 623 at 38d8c47); `test/domain_buffer.rb` covers only `set_lines`. Quality advisory at `diagnostics-display`.
+- Why it matters: the marks now move on `u`, `<C-r>`, and reload, but a regression there would draw a sign on the wrong row without a failing test.
+- Fix outline: add rows for `u` and `<C-r>` over a line inserted above a marked row and one for reload.
+
+## Buffer requires diagnostic twice
+
+- Where: `require_relative "diagnostic"` in `carat/domain/buffer.rb` (line 15 at 38d8c47). Quality advisory at `diagnostics-display`.
+- Why it matters: `diagnostic_list.rb` already requires it, and the line sits apart from the other new require.
+- Fix outline: remove the line.
+
+## The published helper's comment in the LSP test is wrapped unevenly
+
+- Where: the comment above `published` in `test/editor_lsp.rb` (line 36 at 38d8c47). Quality advisory at `diagnostics-display`.
+- Why it matters: one line runs past 90 columns and the next holds a single word, unlike the rest of the file.
+- Fix outline: rewrap it to the file's width.
