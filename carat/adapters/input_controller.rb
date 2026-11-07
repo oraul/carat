@@ -66,9 +66,11 @@ module Carat
             return true
           end
           # Idle: the language services read and send here, never while a
-          # key waits; a completion answer they kept fills the popup.
+          # key waits; a completion answer they kept fills the popup, and
+          # resolved documentation the float beside it.
           served = @services.poll(state)
-          if @show_completion.source.request.arrived
+          request = @show_completion.source.request
+          if request.arrived || request.docs.arrived
             @show_completion.call(state, false)
             served = true
           end

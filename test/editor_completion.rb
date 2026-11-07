@@ -139,6 +139,67 @@ module EditorCompletionTest
     h.type("<C-p>")
     t.assert_equal([199, 190], [float.selected, float.window.top], "the popup scrolls to the selected row")
 
+
+    # The documentation beside the popup.
+    h = editor("_tail\n", three)
+    h.completions.document(2, "# final\n\nEnds the **block**.")
+    h.type("ifi")
+    floats = h.state.tab.floats
+    menu = h.assembly.completion_menu
+    t.assert_equal([2, "final"], [floats.count, menu.chosen.label], "the selected item's documentation opens a second float")
+    docs = floats.at(floats.index_of(menu.docs_float_id))
+    popup = floats.at(floats.index_of(menu.float_id))
+    t.assert_equal([["final", "", "Ends the block."], 1, popup.spec.col + popup.spec.width, 15, 3], [docs.window.buffer.lines.dup, docs.spec.row, docs.spec.col, docs.spec.width, docs.spec.height], "the float shows the markdown as plain rows at the popup's rows on its right")
+    t.assert_equal(["final", "Ends the block."], [h.row(1)[22, 5].to_s, h.row(3)[22, 15].to_s], "the documentation is drawn beside the list")
+    t.assert_equal(true, docs.spec.z < popup.spec.z, "the documentation stands under the popup")
+    shown = h.screen
+    h.resize(12, 40)
+    t.assert_equal(shown, h.screen, "the popup and its documentation equal a full repaint")
+    h.type("<C-n>")
+    t.assert_equal([1, 0], [floats.count, menu.docs_float_id], "an item without documentation shows no float")
+    h.type("<C-p>")
+    t.assert_equal([2, "final"], [floats.count, floats.at(floats.index_of(menu.docs_float_id)).window.buffer.line(0)], "the float follows the selection back")
+    h.type("n")
+    t.assert_equal([2, menu.float_id], [floats.count, menu.docs_beside], "filtering moves the float with the popup")
+    h.type("<Esc>")
+    t.assert_equal([0, 0, :insert], [floats.count, menu.docs_float_id, h.mode], "Esc closes the documentation with the popup")
+    ["<CR>", " "].each do |key|
+      h = editor("_tail\n", three)
+      h.completions.document(2, "Ends the block.")
+      h.type("ifi" + key.to_s)
+      t.assert_equal(0, h.state.tab.floats.count, "#{key} closes the documentation with the popup")
+    end
+
+    # Placement: above the word, on the left, and wrapped.
+    h = editor("a\nb\nc\nd\ne\nf\ng\nh\ni\n_tail\n", three)
+    h.completions.document(2, "Ends the block.")
+    h.type("10Gifi")
+    menu = h.assembly.completion_menu
+    docs = h.state.tab.floats.at(h.state.tab.floats.index_of(menu.docs_float_id))
+    t.assert_equal([-1, 8], [docs.spec.row, docs.box_top], "above the word the float ends on the row above the cursor")
+    h = editor(" " * 24 + "\n", three)
+    h.completions.document(2, "Ends the block.")
+    h.type("Afi")
+    menu = h.assembly.completion_menu
+    floats = h.state.tab.floats
+    docs = floats.at(floats.index_of(menu.docs_float_id))
+    popup = floats.at(floats.index_of(menu.float_id))
+    t.assert_equal(popup.spec.col - 15, docs.spec.col, "with no room on the right the float stands on the popup's left")
+    h = editor("_tail\n", three)
+    h.completions.document(2, "abcdefghi " * 30)
+    h.type("ifi")
+    menu = h.assembly.completion_menu
+    docs = h.state.tab.floats.at(h.state.tab.floats.index_of(menu.docs_float_id))
+    t.assert_equal([59, 5, "abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi"], [docs.spec.width, docs.window.buffer.line_count, docs.window.buffer.line(4)], "a long paragraph wraps at word boundaries within 60 columns")
+
+    # Untrusted documentation.
+    h = editor("_tail\n", three)
+    h.completions.document(2, "\e[31mred\e[0m\e]0;title\a" + "\n" + ">" * 10_000 + "x")
+    h.type("ifi")
+    menu = h.assembly.completion_menu
+    docs = h.state.tab.floats.at(h.state.tab.floats.index_of(menu.docs_float_id))
+    t.assert_equal(["red", "│ │ │ │ x"], [docs.window.buffer.line(0), docs.window.buffer.line(1)], "escape sequences are dropped and nesting is capped at four levels")
+    t.assert_equal(false, h.screen.join("\n").include?("\e"), "no escape of the documentation reaches the screen")
     t.finish
   end
 end

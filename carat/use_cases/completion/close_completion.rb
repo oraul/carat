@@ -6,8 +6,8 @@ require_relative "../outcome"
 module Carat
   module UseCases
     # Closes the completion popup (Esc while it shows, completion.close)
-    # and forgets its candidates, so the next word asks the source again;
-    # the mode stays.
+    # with the documentation float beside it, and forgets its candidates,
+    # so the next word asks the source again; the mode stays.
     class CloseCompletion
       attr_reader :menu #: Domain::CompletionMenu
       attr_reader :close_float #: CloseFloat
@@ -22,6 +22,7 @@ module Carat
       def call(state)
         menu = @menu
         @close_float.call(state, menu.float_id) if menu.showing?
+        @close_float.call(state, menu.docs_float_id) if menu.docs_float_id != 0
         menu.clear
         Outcome.none
       end

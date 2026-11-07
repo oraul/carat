@@ -8,9 +8,14 @@ module Carat
     # with buffer_id, cleaned; the typed part they were matched against;
     # the indices of the matching candidates in order (matches); the
     # selected one's position in matches; and the id of the float that
-    # shows them, 0 when no popup shows. A Struct record: mutable, with a
-    # reader and a writer per member.
-    class CompletionMenu < Struct.new(:candidates, :matches, :selected, :buffer_id, :row, :col, :prefix, :float_id, keyword_init: true)
+    # shows them, 0 when no popup shows; origin, the source's list they
+    # were copied from, by which the source knows its candidates; and the
+    # float beside the popup showing the selected candidate's
+    # documentation (docs_float_id, 0 for none), with what it shows: the
+    # candidate (docs_index), its text as the source gave it (docs_text),
+    # and the popup float it stands beside (docs_beside). A Struct record:
+    # mutable, with a reader and a writer per member.
+    class CompletionMenu < Struct.new(:candidates, :matches, :selected, :buffer_id, :row, :col, :prefix, :float_id, :origin, :docs_float_id, :docs_index, :docs_text, :docs_beside, keyword_init: true)
       # @rbs @candidates: CompletionList
       # @rbs @matches: Array[Integer]
       # @rbs @selected: Integer
@@ -19,6 +24,11 @@ module Carat
       # @rbs @col: Integer
       # @rbs @prefix: String
       # @rbs @float_id: Integer
+      # @rbs @origin: CompletionList
+      # @rbs @docs_float_id: Integer
+      # @rbs @docs_index: Integer
+      # @rbs @docs_text: String
+      # @rbs @docs_beside: Integer
 
       #: () -> void
       def initialize
@@ -31,6 +41,8 @@ module Carat
         self.col = -1
         self.prefix = ""
         self.float_id = 0
+        self.origin = candidates
+        forget_docs
       end
 
       # Whether the popup shows.
@@ -61,6 +73,13 @@ module Carat
         self.row = at_row
         self.col = at_col
         self.prefix = ""
+        self.origin = list
+      end
+
+      # The index in candidates of the selected one.
+      #: () -> Integer
+      def chosen_index
+        matches[selected]
       end
 
       # The selected candidate.
@@ -80,6 +99,17 @@ module Carat
         self.col = -1
         self.prefix = ""
         self.float_id = 0
+        self.origin = candidates
+        forget_docs
+      end
+
+      # Forgets the documentation float, once it is closed.
+      #: () -> void
+      def forget_docs
+        self.docs_float_id = 0
+        self.docs_index = -1
+        self.docs_text = ""
+        self.docs_beside = 0
       end
     end
   end

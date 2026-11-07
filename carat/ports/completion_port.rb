@@ -22,6 +22,17 @@ module Carat
         raise NotImplementedError, "CompletionPort#candidates"
       end
 
+      # Answers the documentation the source holds for the candidate at
+      # index of list, a Domain::CompletionList it answered, "" when it
+      # holds none yet; a source that asks a server records the candidate
+      # as picked, for the services to resolve once the pick settles. The
+      # text is untrusted markdown.
+      # @rbs list: Domain::CompletionList
+      # @rbs index: Integer
+      def documentation(list, index)
+        raise NotImplementedError, "CompletionPort#documentation"
+      end
+
       # Answers the Domain::CompletionRequest the source shares with the
       # language services, which send its wanted word and keep the answer;
       # a source that answers at once holds one nobody fills.

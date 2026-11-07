@@ -322,7 +322,8 @@ module Carat
         @close_float = UseCases::CloseFloat.new(tabs: @tabs)
         @completion_menu = Domain::CompletionMenu.new
         close_completion = UseCases::CloseCompletion.new(menu: @completion_menu, close_float: @close_float)
-        @show_completion = UseCases::ShowCompletion.new(menu: @completion_menu, source: completions, open_float: @open_float, close_float: @close_float, close_completion: close_completion)
+        show_docs = UseCases::ShowCompletionDocs.new(menu: @completion_menu, source: completions, open_float: @open_float, close_float: @close_float)
+        @show_completion = UseCases::ShowCompletion.new(menu: @completion_menu, source: completions, open_float: @open_float, close_float: @close_float, close_completion: close_completion, show_docs: show_docs)
         select_completion = UseCases::SelectCompletion.new(menu: @completion_menu)
         accept_completion = UseCases::AcceptCompletion.new(menu: @completion_menu, last_change: @last_change, close_completion: close_completion)
         @open_tab = UseCases::OpenTab.new(open_file: @open_file, buffers: @buffers, tabs: @tabs)
