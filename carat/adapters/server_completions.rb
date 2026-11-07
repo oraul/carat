@@ -42,6 +42,19 @@ module Carat
         @none
       end
 
+      # Answers the documentation held for the candidate of the request's
+      # list, recording it as picked; "" for another list, such as one the
+      # menu still filters after the word was asked again.
+      # @rbs list: Domain::CompletionList
+      # @rbs index: Integer
+      def documentation(list, index)
+        request = @request
+        return "" unless list.equal?(request.list)
+        docs = request.docs
+        docs.pick(index)
+        docs.text_at(index)
+      end
+
       # Answers the request shared with the language gateway.
       # @rbs skip
       def request

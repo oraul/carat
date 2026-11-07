@@ -40,4 +40,21 @@ ok   escape sequences are dropped, each string is cut, an unknown kind is text, 
 ok   the text edit's new text is the text inserted
 ok   at most 200 items of an answer are kept
 ok   a crashed server's language is not ready
-adapters_server_completions: 42 passed, 0 failed
+ok   initialize advertises markdown documentation resolved lazily
+ok   an item without documentation in the answer shows no float at first
+ok   one request is sent, for the settled item as the server gave it
+ok   while a resolve is in flight the services wait
+ok   an answer to no resolve in flight changes nothing
+ok   the resolved documentation shows at the next idle tick with no key, its escapes dropped
+ok   a resolved item waits no more and no escape of it reaches the terminal
+ok   returning to a resolved item sends nothing and shows it again
+ok   another settled item sends its own request
+ok   Esc closes the documentation with the popup
+ok   an unanswered resolve is cancelled by its id after two seconds and waits no more
+ok   the cancelled resolve's answer shows nothing and the item is not asked again
+ok   a new word is asked while the resolve stays in flight
+ok   the new word's answer cancels the resolve in flight by its id
+ok   the cancelled resolve's late answer changes no float
+ok   documentation in the answer shows with no request
+ok   a server without resolveProvider is asked nothing and no float shows
+adapters_server_completions: 59 passed, 0 failed

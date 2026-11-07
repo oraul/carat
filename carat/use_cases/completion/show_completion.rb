@@ -15,6 +15,7 @@ require_relative "../../ports/completion_port"
 require_relative "../windows/open_float"
 require_relative "../windows/close_float"
 require_relative "close_completion"
+require_relative "show_completion_docs"
 
 module Carat
   module UseCases
@@ -33,6 +34,9 @@ module Carat
     # typed text and leaves the word, such as one moving to another row
     # or buffer: only a typed character asks the source again, or an
     # answer the source's request marks arrived, which counts as typed.
+    # Whenever it leaves the popup showing, ShowCompletionDocs shows the
+    # selected candidate's documentation beside it; documentation the
+    # request marks arrived refreshes it too.
     class ShowCompletion
       MAX_ROWS = 10
       LABEL_WIDTH = 40
@@ -46,14 +50,16 @@ module Carat
       attr_reader :open_float #: OpenFloat
       attr_reader :close_float #: CloseFloat
       attr_reader :close_completion #: CloseCompletion
+      attr_reader :show_docs #: ShowCompletionDocs
 
-      #: (menu: Domain::CompletionMenu, source: Ports::CompletionPort, open_float: OpenFloat, close_float: CloseFloat, close_completion: CloseCompletion) -> void
-      def initialize(menu:, source:, open_float:, close_float:, close_completion:)
+      #: (menu: Domain::CompletionMenu, source: Ports::CompletionPort, open_float: OpenFloat, close_float: CloseFloat, close_completion: CloseCompletion, show_docs: ShowCompletionDocs) -> void
+      def initialize(menu:, source:, open_float:, close_float:, close_completion:, show_docs:)
         @menu = menu
         @source = source
         @open_float = open_float
         @close_float = close_float
         @close_completion = close_completion
+        @show_docs = show_docs
       end
 
       #: (Domain::EditorState, bool) -> void
@@ -62,9 +68,20 @@ module Carat
         showing = menu.showing?
         request = @source.request
         arrived = request.arrived
+        docs = request.docs
+        docs.arrived = false if docs.arrived
         return unless showing || arrived || (typed && @source.ready?(state.buffer))
         request.arrived = false if arrived
-        asked = typed || arrived
+        refresh(state, menu, showing, typed || arrived)
+        @show_docs.call(state) if menu.showing?
+      end
+
+      private
+
+      # Opens, filters, or closes the popup; asked is whether a character
+      # was typed or an answer arrived.
+      #: (Domain::EditorState, Domain::CompletionMenu, bool, bool) -> void
+      def refresh(state, menu, showing, asked)
         if state.mode != Domain::Mode::INSERT || (showing && state.tab.floats.index_of(menu.float_id) < 0)
           @close_completion.call(state)
           return
@@ -97,8 +114,6 @@ module Carat
         menu.selected = 0
         reopen(state, menu, Domain::DisplayWidth.text_width(prefix, 0))
       end
-
-      private
 
       # The indices of the candidates matching the prefix, the best score
       # first, equal scores in the source's order.
@@ -140,7 +155,7 @@ module Carat
         if @open_float.call(state, float, false).ok
           menu.float_id = float.id
         else
-          menu.clear
+          @close_completion.call(state)
         end
       end
 

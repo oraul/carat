@@ -41,9 +41,10 @@ module AdaptersAssemblyTest
       ["delete_buffer", a.delete_buffer.buffers], ["arrange_view", a.arrange_view.buffers], ["tab_bar", a.frame_presenter.tab_bar.buffers]
     ]), "the buffer list")
     t.assert_equal([], strangers(a.completion_menu, [
-      ["handle_key", a.handle_key.completion], ["show_completion", a.show_completion.menu], ["close_completion", a.show_completion.close_completion.menu]
+      ["handle_key", a.handle_key.completion], ["show_completion", a.show_completion.menu], ["close_completion", a.show_completion.close_completion.menu], ["show_docs", a.show_completion.show_docs.menu]
     ]), "the completion menu")
     t.assert_equal([true, true], [a.handle_key.show_completion.equal?(a.show_completion), a.show_completion.source.equal?(h.completions)], "the key handler holds the one ShowCompletion, over the source the harness gave")
+    t.assert_equal([true, true, true], [a.show_completion.show_docs.source.equal?(h.completions), a.show_completion.show_docs.open_float.equal?(a.show_completion.open_float), a.show_completion.show_docs.close_float.equal?(a.show_completion.close_float)], "the documentation float shares the popup's source and float use cases")
     t.assert_equal([true, true], [a.controller.show_completion.equal?(a.show_completion), a.services.completion.equal?(h.completions.request)], "the input controller holds the one ShowCompletion and the gateway the source's request")
     t.assert_equal([], strangers(a.tabs, [
       ["state", a.state.tabs], ["buffers", a.buffers.tabs], ["feed", a.buffers.feed.tabs], ["quit", a.quit.tabs],

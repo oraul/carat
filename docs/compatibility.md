@@ -226,6 +226,8 @@ A typed character opens the popup when the completion source is ready and the cu
 | `<Tab>` | `completion.replace` | Put the selected item in place of the whole word under the cursor | `editor_completion` |
 | `<Esc>` | `completion.close` | Close the popup and stay in insert mode; Neovim's `<Esc>` also leaves insert mode | `editor_completion` |
 
+The selected item's documentation shows in a float beside the popup, as Neovim's `completeopt=popup` does: on its right, or its left without the room, at most 60 columns and 12 rows, markdown read as plain text, closed with the popup. A language server's item documented only through `completionItem/resolve` is resolved once the selection rests on it for 0.1 seconds, at most once per item of an answer (`editor_completion`, `adapters_server_completions`).
+
 ## Command-line mode
 
 | Keys | Action name | Behavior | Test |

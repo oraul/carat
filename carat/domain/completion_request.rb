@@ -1,4 +1,5 @@
 require_relative "completion_list"
+require_relative "completion_docs"
 
 module Carat
   module Domain
@@ -13,8 +14,9 @@ module Carat
     # another word typed there later (one deleted and retyped, a line
     # changed and typed again) asks again, and so does a word whose
     # request was never sent or never answered. languages are those whose
-    # running server completes. A Struct record built with no arguments.
-    class CompletionRequest < Struct.new(:buffer_id, :row, :col, :want, :seen, :due, :sent, :sent_id, :language, :word, :answered, :list, :arrived, :languages, keyword_init: true)
+    # running server completes. docs holds the documentation of the answer's
+    # candidates. A Struct record built with no arguments.
+    class CompletionRequest < Struct.new(:buffer_id, :row, :col, :want, :seen, :due, :sent, :sent_id, :language, :word, :answered, :list, :arrived, :languages, :docs, keyword_init: true)
       # @rbs @buffer_id: Integer
       # @rbs @row: Integer
       # @rbs @col: Integer
@@ -29,6 +31,7 @@ module Carat
       # @rbs @list: CompletionList
       # @rbs @arrived: bool
       # @rbs @languages: Array[String]
+      # @rbs @docs: CompletionDocs
 
       #: () -> void
       def initialize
@@ -48,6 +51,7 @@ module Carat
         self.arrived = false
         self.languages = [""]
         languages.clear
+        self.docs = CompletionDocs.new
       end
 
       # Records the word as wanted under a new serial, unless it is the

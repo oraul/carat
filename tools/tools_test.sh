@@ -317,6 +317,10 @@ expect "run_state: a check still running exits 3" 3 "^check: still running at $a
 expect "run_state: a second check at the same head rejoins the running one" 0 "^check: rejoining the check running at $at.*" stop_check "slow"
 expect "run_state: a rejoined check ends with the runner's verdict" 0 "^check: every stage passed at $at" tail -1 build/stages/state/check.log
 env SLOW=5 CHECK_WAIT=1 STAGES=slow MAKE="$work/bin/stop-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
+# HEAD moves only once the runner is in its stage: a commit while it still
+# makes its clone refuses the clone, and nothing is left to supersede.
+n=0
+until state get state stage.slow 2>/dev/null | grep -q '^running ' || [ $n -ge 20 ]; do sleep 1; n=$((n + 1)); done
 git_q commit -q --allow-empty -m "chore: newer" -m "$TRAILER"
 expect "run_state: a check at a newer head supersedes the running one" 0 "the superseded check: check: stage slow superseded at $at" stop_check "slow"
 expect "run_state: the newer check runs at the newer head" 0 "^check: every stage passed at $(git rev-parse --short=12 HEAD)" tail -1 build/stages/state/check.log
