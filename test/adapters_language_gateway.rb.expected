@@ -16,7 +16,8 @@ ok   progress reports a percent
 ok   a percent over 100 is capped
 ok   progress ends
 ok   diagnostics are kept stripped, the severity bounded
-ok   a later publish replaces the file's diagnostics
+ok   a later publish replaces the file's diagnostics, an error when no severity is given
+ok   a diagnostic of severity 1 is an error
 ok   at most 1,000 diagnostics of at most 500 bytes
 ok   malformed bodies are dropped, another handle is ignored, and the name loses its controls
 ok   one idle tick reads at most 64 messages
@@ -27,4 +28,4 @@ ok   a broken input crashes the server
 ok   stop sends shutdown and exit and stops the child
 ok   a missing command leaves the slot empty
 ok   a text file starts nothing
-adapters_language_gateway: 29 passed, 0 failed
+adapters_language_gateway: 30 passed, 0 failed
