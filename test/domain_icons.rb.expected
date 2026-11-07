@@ -19,6 +19,18 @@ ok   nerd yaml is a pua glyph
 ok   nerd git is a pua glyph
 ok   nerd lock is a pua glyph
 ok   nerd default is a pua glyph
+ok   nerd kind_text is a pua glyph
+ok   nerd kind_method is a pua glyph
+ok   nerd kind_function is a pua glyph
+ok   nerd kind_constructor is a pua glyph
+ok   nerd kind_field is a pua glyph
+ok   nerd kind_variable is a pua glyph
+ok   nerd kind_class is a pua glyph
+ok   nerd kind_module is a pua glyph
+ok   nerd kind_property is a pua glyph
+ok   nerd kind_keyword is a pua glyph
+ok   nerd kind_snippet is a pua glyph
+ok   nerd kind_constant is a pua glyph
 ok   unicode folder_closed is a unicode glyph
 ok   unicode folder_open is a unicode glyph
 ok   unicode file is a unicode glyph
@@ -40,6 +52,18 @@ ok   unicode yaml is a unicode glyph
 ok   unicode git is a unicode glyph
 ok   unicode lock is a unicode glyph
 ok   unicode default is a unicode glyph
+ok   unicode kind_text is a unicode glyph
+ok   unicode kind_method is a unicode glyph
+ok   unicode kind_function is a unicode glyph
+ok   unicode kind_constructor is a unicode glyph
+ok   unicode kind_field is a unicode glyph
+ok   unicode kind_variable is a unicode glyph
+ok   unicode kind_class is a unicode glyph
+ok   unicode kind_module is a unicode glyph
+ok   unicode kind_property is a unicode glyph
+ok   unicode kind_keyword is a unicode glyph
+ok   unicode kind_snippet is a unicode glyph
+ok   unicode kind_constant is a unicode glyph
 ok   ascii folder_closed is a ascii glyph
 ok   ascii folder_open is a ascii glyph
 ok   ascii file is a ascii glyph
@@ -61,6 +85,18 @@ ok   ascii yaml is a ascii glyph
 ok   ascii git is a ascii glyph
 ok   ascii lock is a ascii glyph
 ok   ascii default is a ascii glyph
+ok   ascii kind_text is a ascii glyph
+ok   ascii kind_method is a ascii glyph
+ok   ascii kind_function is a ascii glyph
+ok   ascii kind_constructor is a ascii glyph
+ok   ascii kind_field is a ascii glyph
+ok   ascii kind_variable is a ascii glyph
+ok   ascii kind_class is a ascii glyph
+ok   ascii kind_module is a ascii glyph
+ok   ascii kind_property is a ascii glyph
+ok   ascii kind_keyword is a ascii glyph
+ok   ascii kind_snippet is a ascii glyph
+ok   ascii kind_constant is a ascii glyph
 ok   ascii closed folder
 ok   ascii open folder
 ok   ascii error
@@ -70,7 +106,10 @@ ok   nerd closed folder
 ok   unknown name
 ok   unknown name in ascii
 ok   unknown set reads as nerd
-ok   twenty-one icon names
+ok   ascii function kind
+ok   ascii variable kind
+ok   unicode class kind
+ok   thirty-three icon names, twelve of them completion kinds
 ok   the ascii current marker is >
 ok   unicode is a set
 ok   emoji is not a set
@@ -91,4 +130,4 @@ ok   a wide character is still wide
 ok   a unicode icon
 ok   private_use? for a nerd glyph
 ok   private_use? for a letter
-domain_icons: 93 passed, 0 failed
+domain_icons: 132 passed, 0 failed

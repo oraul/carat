@@ -10,8 +10,11 @@ module Carat
       VISUAL_BLOCK = :visual_block
       OPERATOR_PENDING = :operator_pending
       CMDLINE = :cmdline
+      # A keymap layer, never the editor's mode: the bindings consulted
+      # first in insert mode while the completion popup shows.
+      COMPLETION = :completion
 
-      NAMES = ["normal", "insert", "replace", "visual", "visual_line", "visual_block", "operator_pending", "cmdline"]
+      NAMES = ["normal", "insert", "replace", "visual", "visual_line", "visual_block", "operator_pending", "cmdline", "completion"]
 
       #: (String) -> Symbol?
       def self.from_name(name)
@@ -24,6 +27,7 @@ module Carat
         when "visual_block" then VISUAL_BLOCK
         when "operator_pending" then OPERATOR_PENDING
         when "cmdline" then CMDLINE
+        when "completion" then COMPLETION
         else nil
         end
       end

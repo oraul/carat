@@ -9,7 +9,7 @@ In insert mode, typing a character SHALL, when the completion source is ready fo
 
 #### Scenario: Typing opens the popup
 - **WHEN** the source holds "file_name" and "filter", and "fi" is typed after i on an empty line
-- **THEN** a popup under the line shows both, "file_name" selected
+- **THEN** a popup under the line shows both, "filter" first and selected
 
 #### Scenario: A source that is not ready
 - **WHEN** the source holds nothing and "fi" is typed
@@ -89,11 +89,11 @@ While the popup shows, typing or erasing in the word SHALL filter the candidates
 An accepted item SHALL be part of the insert session: undo SHALL remove the typed text and the item together, the dot command SHALL repeat the session with the item's text, and the `.` register SHALL hold the text as it reads after the item.
 
 #### Scenario: Undo and repeat
-- **WHEN** "ofi" is typed, "file_name" accepted with Enter, Esc pressed twice, then "j." and "u" are used
+- **WHEN** "ofi" is typed, "file_name" accepted with Enter, Esc pressed, then "j." and "u" are used
 - **THEN** "j." adds a line "file_name" below the next line and "u" removes it
 
 #### Scenario: The dot register
-- **WHEN** "ifi", Enter on "file_name", and Esc twice are typed
+- **WHEN** "ifi", Enter on "file_name", and Esc are typed
 - **THEN** the `.` register holds "file_name"
 
 ### Requirement: Completion text is untrusted

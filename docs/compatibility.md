@@ -214,6 +214,18 @@ Differences from Neovim: there are no `'<` and `'>` marks yet and no `:'<,'>` ra
 | `<Tab>` | `insert.tab` | Spaces to the next tabstop with expandtab, else a tab | `editor_insert` |
 | `<Left>`, `<Right>`, `<Up>`, `<Down>` | `cursor.*` | Move, allowing the column after the last character | `editor_insert` |
 
+### Completion popup
+
+A typed character opens the popup when the completion source is ready and the cursor follows word characters (ASCII letters, digits, `_`, any non-ASCII character); typing and `<BS>` filter it again, an empty word or no match closes it. Matching cuts the typed part at `_` into parts, each part's first letter starting a part of the candidate (its start, after a non-word character, or an uppercase letter after a lowercase one) after the previous part's, its other letters following in order, ASCII case ignored: `fn_na` finds `file_name`, which Neovim's prefix matching does not. Labels starting with the typed text come first. While the popup shows, these `keymap.completion` keys answer first:
+
+| Keys | Action name | Behavior | Test |
+| --- | --- | --- | --- |
+| `<C-n>`, `<Down>` | `completion.next` | Select the next row, wrapping; unlike Neovim the item is not inserted yet (`completeopt=noinsert`) | `editor_completion` |
+| `<C-p>`, `<Up>` | `completion.previous` | Select the previous row, wrapping | `editor_completion` |
+| `<CR>` | `completion.insert` | Put the selected item in place of the typed part | `editor_completion` |
+| `<Tab>` | `completion.replace` | Put the selected item in place of the whole word under the cursor | `editor_completion` |
+| `<Esc>` | `completion.close` | Close the popup and stay in insert mode; Neovim's `<Esc>` also leaves insert mode | `editor_completion` |
+
 ## Command-line mode
 
 | Keys | Action name | Behavior | Test |

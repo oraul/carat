@@ -98,6 +98,24 @@ module Carat
         before >= 0x61 && before <= 0x7A && here >= 0x41 && here <= 0x5A
       end
 
+      # The byte where the word that ends the text starts: the text's
+      # length when it ends in no word byte.
+      #: (String) -> Integer
+      def self.word_start(text)
+        i = text.bytesize
+        i -= 1 while i > 0 && word_byte?(text.getbyte(i - 1).to_i)
+        i
+      end
+
+      # The bytes of the word the text starts with.
+      #: (String) -> Integer
+      def self.word_length(text)
+        n = text.bytesize
+        i = 0
+        i += 1 while i < n && word_byte?(text.getbyte(i).to_i)
+        i
+      end
+
       # Whether the byte belongs to a word: an ASCII letter or digit, an
       # underscore, or a byte of 0x80 or more.
       #: (Integer) -> bool

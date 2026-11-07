@@ -50,6 +50,7 @@ require_relative "../drivers_main_loop"
 require_relative "../drivers_process_runner"
 require_relative "../editor_buffers"
 require_relative "../editor_cmdline"
+require_relative "../editor_completion"
 require_relative "../editor_explorer"
 require_relative "../editor_floats"
 require_relative "../editor_global"
@@ -134,6 +135,7 @@ when "drivers_main_loop" then DriversMainLoopTest.main
 when "drivers_process_runner" then DriversProcessRunnerTest.main
 when "editor_buffers" then EditorBuffersTest.main
 when "editor_cmdline" then EditorCmdlineTest.main
+when "editor_completion" then EditorCompletionTest.main
 when "editor_explorer" then EditorExplorerTest.main
 when "editor_floats" then EditorFloatsTest.main
 when "editor_global" then EditorGlobalTest.main

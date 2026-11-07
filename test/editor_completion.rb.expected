@@ -1,0 +1,39 @@
+ok   typing opens the popup, the best first
+ok   Ctrl-N selects the next row
+ok   Down selects the next row
+ok   Ctrl-P wraps to the last row
+ok   Up selects the previous row
+ok   Ctrl-N wraps to the first row
+ok   Enter puts the item over the typed part
+ok   Tab puts the item over the whole word
+ok   Tab keeps what follows the word
+ok   Esc closes the popup and stays in insert mode
+ok   a second Esc leaves insert mode
+ok   Enter without a popup splits the line
+ok   typing narrows, a prefix first
+ok   typing narrows further
+ok   Backspace filters again
+ok   a space closes the popup
+ok   a typed part matching nothing closes it
+ok   Left filters on the part before the cursor
+ok   fn_na finds file_name
+ok   fn_na then Enter
+ok   a key bound only in insert mode keeps the popup
+ok   with no ready source no popup opens, the source is not asked, and Ctrl-N inserts nothing
+ok   each row is the kind icon, the label, and the detail on the right
+ok   the popup stands under the line, its labels under the word
+ok   the rows are drawn in Pmenu and the selected one in PmenuSel
+ok   the source is asked once for the word
+ok   filtering asks the source no more
+ok   the popup equals a full repaint
+ok   closing removes the float and repaints its rows
+ok   on the last text row the popup ends on the row above the cursor
+ok   the item joins the typed text and the . register reads as the line
+ok   the dot command repeats the session with the item's text
+ok   undo removes the repeat
+ok   undo removes the typed text and the item together
+ok   escape sequences are dropped, an unknown kind reads as text, and a long label is cut to 80 bytes
+ok   no escape reaches the screen
+ok   200 candidates are kept and ten rows show
+ok   the popup scrolls to the selected row
+editor_completion: 38 passed, 0 failed

@@ -6,11 +6,13 @@ require_relative "../domain/key_notation"
 require_relative "../domain/command"
 require_relative "../domain/command_grammar"
 require_relative "../domain/search_prompt"
+require_relative "../domain/completion_menu"
 require_relative "outcome"
 require_relative "concerns/reporting"
 require_relative "actions/action_table"
 require_relative "dispatcher"
 require_relative "insert_text"
+require_relative "completion/show_completion"
 require_relative "edit_command_line"
 require_relative "plugins/plugin_host"
 require_relative "arrange_view"
@@ -43,7 +45,10 @@ module Carat
     # grammar wait for a pattern: OpenSearchPrompt opens the command line,
     # and once a command-line action closed the prompt the text entered
     # completes the command, which is dispatched, or the command is dropped
-    # when the prompt was cancelled.
+    # when the prompt was cancelled. While the completion popup shows in
+    # insert mode, a key is looked up first in the completion keymap
+    # layer; a typed character and, while the popup shows, every key end
+    # in ShowCompletion, which opens, filters, or closes the popup.
     class HandleKey
       include Reporting
 
@@ -52,6 +57,8 @@ module Carat
 
       attr_reader :keymap #: Domain::Keymap
       attr_reader :input #: Domain::InputState
+      attr_reader :completion #: Domain::CompletionMenu
+      attr_reader :show_completion #: ShowCompletion
       attr_reader :plugins #: PluginHost
       attr_reader :arrange_view #: ArrangeView
       attr_reader :search_prompt #: Domain::SearchPrompt
@@ -63,14 +70,16 @@ module Carat
       # @rbs @command_line: EditCommandLine
       # @rbs @replays: Integer
 
-      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, plugins: PluginHost, arrange_view: ArrangeView, search_prompt: Domain::SearchPrompt, open_search_prompt: OpenSearchPrompt) -> void
-      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, plugins:, arrange_view:, search_prompt:, open_search_prompt:)
+      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, completion: Domain::CompletionMenu, show_completion: ShowCompletion, plugins: PluginHost, arrange_view: ArrangeView, search_prompt: Domain::SearchPrompt, open_search_prompt: OpenSearchPrompt) -> void
+      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, completion:, show_completion:, plugins:, arrange_view:, search_prompt:, open_search_prompt:)
         @keymap = keymap
         @input = input
         @actions = actions
         @dispatcher = dispatcher
         @insert_text = insert_text
         @command_line = command_line
+        @completion = completion
+        @show_completion = show_completion
         @plugins = plugins
         @arrange_view = arrange_view
         @search_prompt = search_prompt
@@ -90,6 +99,7 @@ module Carat
           result = step(state, queue.shift, queue)
           @arrange_view.call(state) unless queue.empty?
         end
+        @show_completion.call(state, false) if @completion.showing?
         @plugins.observe
         @arrange_view.call(state)
         result
@@ -153,6 +163,7 @@ module Carat
         end
         state.clear_message
         input = @input
+        return complete(state, code, queue) if @completion.showing? && state.mode == Domain::Mode::INSERT && input.pending_keys.empty? && completion_key?(code)
         if grammar_mode?(state)
           grammar = input.grammar
           if grammar.wants_char?
@@ -181,6 +192,21 @@ module Carat
           insert_literal(state, keys)
           :handled
         end
+      end
+
+      # Whether the key is bound in the completion layer, which answers
+      # first while the popup shows; only single keys bind there.
+      #: (Integer) -> bool
+      def completion_key?(code)
+        @keymap.lookup(Domain::Mode::COMPLETION, [code]).kind == :match
+      end
+
+      # Runs the completion layer's binding of the key.
+      #: (Domain::EditorState, Integer, Array[Integer]) -> Symbol
+      def complete(state, code, queue)
+        keys = [code]
+        dispatch(state, @keymap.lookup(Domain::Mode::COMPLETION, keys).value, keys, queue)
+        :handled
       end
 
       # Runs the binding's value: an action through the grammar or the
@@ -284,6 +310,7 @@ module Carat
             text = Domain::Key.char(code)
             if mode == Domain::Mode::INSERT
               report(state, @insert_text.call(state, text))
+              @show_completion.call(state, true)
             else
               @command_line.call(state, text)
             end

@@ -5,6 +5,7 @@ require_relative "fake_terminal"
 require_relative "manual_clock"
 require_relative "memory_files"
 require_relative "fixed_config"
+require_relative "fixed_completions"
 
 module Carat
   module Doubles
@@ -12,7 +13,9 @@ module Carat
     # frame, the buffer, the cursor, the mode, the message, and the files.
     # It pumps the input controller exactly as MainLoop does. The plugins
     # are a parameter because the doubles may not require the registry;
-    # default runs with none, with_plugins with the list given.
+    # default runs with none, with_plugins with the list given. The
+    # completion source is a FixedCompletions, not ready until a test adds
+    # a candidate.
     class EditorHarness
       attr_reader :terminal #: FakeTerminal
       attr_reader :clock #: ManualClock
@@ -21,6 +24,7 @@ module Carat
       attr_reader :frame #: Domain::Frame
       attr_reader :processes #: FakeProcesses
       attr_reader :messages #: MemoryQueue
+      attr_reader :completions #: FixedCompletions
 
       # config is the Domain::Config, which the harness serves
       # through a FixedConfig.
@@ -31,7 +35,8 @@ module Carat
         @terminal = FakeTerminal.new(clock: @clock, rows: rows, cols: cols)
         @processes = FakeProcesses.new
         @messages = MemoryQueue.new
-        @assembly = Adapters::EditorAssembly.new(terminal: @terminal, clock: @clock, files: @files, config: FixedConfig.new(value: config), processes: @processes, messages: @messages, plugin_list: plugins)
+        @completions = FixedCompletions.new
+        @assembly = Adapters::EditorAssembly.new(terminal: @terminal, clock: @clock, files: @files, config: FixedConfig.new(value: config), processes: @processes, messages: @messages, completions: @completions, plugin_list: plugins)
         @frame = Domain::Frame.new(rows: rows, cols: cols)
       end
 

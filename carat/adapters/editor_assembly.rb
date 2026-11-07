@@ -2,6 +2,9 @@ require_relative "../ports/terminal_port"
 require_relative "../ports/clock_port"
 require_relative "../ports/file_port"
 require_relative "../ports/config_port"
+require_relative "../ports/completion_port"
+require_relative "../domain/completion_menu"
+require_relative "../use_cases/completion/show_completion"
 require_relative "../domain/editor_state"
 require_relative "../domain/buffer_list"
 require_relative "../domain/tab_list"
@@ -121,6 +124,7 @@ require_relative "../use_cases/actions/scroll_handler"
 require_relative "../use_cases/actions/substitute_handler"
 require_relative "../use_cases/actions/file_handler"
 require_relative "../use_cases/actions/buffer_handler"
+require_relative "../use_cases/actions/completion_handler"
 require_relative "../use_cases/actions/plugin_action_handler"
 require_relative "../use_cases/dispatcher"
 require_relative "../use_cases/handle_key"
@@ -240,15 +244,19 @@ module Carat
       attr_reader :processes #: Ports::ProcessPort
       attr_reader :messages #: Ports::MessageQueuePort
       attr_reader :services #: JsonRpcLanguageGateway
+      attr_reader :completions #: Ports::CompletionPort
+      attr_reader :completion_menu #: Domain::CompletionMenu
+      attr_reader :show_completion #: UseCases::ShowCompletion
 
-      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, files: Ports::FilePort, config: Ports::ConfigPort, processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, plugin_list: Array[untyped]) -> void
-      def initialize(terminal:, clock:, files:, config:, processes:, messages:, plugin_list:)
+      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, files: Ports::FilePort, config: Ports::ConfigPort, processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, completions: Ports::CompletionPort, plugin_list: Array[untyped]) -> void
+      def initialize(terminal:, clock:, files:, config:, processes:, messages:, completions:, plugin_list:)
         @terminal = terminal
         @clock = clock
         @files = files
         @config = config
         @processes = processes
         @messages = messages
+        @completions = completions
         value = config.load
         leader = Domain::Keymap.leader_from(value)
         first = Domain::Buffer.from_text("", nil)
@@ -312,6 +320,11 @@ module Carat
         @open_side_window = UseCases::OpenSideWindow.new(buffers: @buffers, tabs: @tabs)
         @open_float = UseCases::OpenFloat.new(tabs: @tabs)
         @close_float = UseCases::CloseFloat.new(tabs: @tabs)
+        @completion_menu = Domain::CompletionMenu.new
+        close_completion = UseCases::CloseCompletion.new(menu: @completion_menu, close_float: @close_float)
+        @show_completion = UseCases::ShowCompletion.new(menu: @completion_menu, source: completions, open_float: @open_float, close_float: @close_float, close_completion: close_completion)
+        select_completion = UseCases::SelectCompletion.new(menu: @completion_menu)
+        accept_completion = UseCases::AcceptCompletion.new(menu: @completion_menu, last_change: @last_change, close_completion: close_completion)
         @open_tab = UseCases::OpenTab.new(open_file: @open_file, buffers: @buffers, tabs: @tabs)
         @close_tab = UseCases::CloseTab.new(buffers: @buffers, tabs: @tabs)
         @close_other_tabs = UseCases::CloseOtherTabs.new(buffers: @buffers, tabs: @tabs)
@@ -380,6 +393,7 @@ module Carat
         UseCases::SubstituteHandler.register(@actions, substitute_lines: @substitute_lines)
         UseCases::FileHandler.register(@actions, save_file: @save_file, save_all: @save_all, quit_all: @quit_all)
         UseCases::BufferHandler.register(@actions, list_buffers: @list_buffers, switch_buffer: @switch_buffer, delete_buffer: @delete_buffer)
+        UseCases::CompletionHandler.register(@actions, select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion)
         UseCases::PluginActionHandler.register(@actions, plugins: @plugins)
 
         @keymap.add_checked(value, known_actions)
@@ -391,7 +405,7 @@ module Carat
         end
 
         @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
-        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt)
+        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt)
         @start_screen = Domain::StartScreen.new
         @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services)
         @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers))

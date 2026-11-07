@@ -1370,12 +1370,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: it assigns `state = @state` and never reads it (the block captures `open_file`'s own state), and it restores the float focus although its only caller, `open_file`, then calls `focus_at`, whose `TabPage#focus` leaves the float again, so the restore is never observable.
 - Fix outline: delete the dead line, and drop `saved_float` and its `enter`, or document that `in_window` keeps the focus for callers that do not refocus. Queued in `float-tidy` with the other `floating-windows` notes.
 
-## A float reopened at the same box keeps the old float's text
-
-- Where: `build_float_key` in `carat/adapters/frame_presenter.rb` (line 365 at `floating-windows`) and the `floats` comment of `carat/domain/frame.rb`. Periodic quality blocking at 803fe6e.
-- Why it matters: the key holds only the box, the scroll, and the buffer's change counters, so a float closed and replaced by a new one at the same box (fresh scratch buffers both at changes 0 and closed_count 0) gives the same key; with one layout window and the float not entered the rows under it are not repainted and the screen keeps the old text and title. Completion's list is the first consumer that reopens a float at one box.
-- Fix outline: add the float's window id to the key (a stride of 9, with the Frame comment), and a test in `test/editor_floats.rb` that closes and reopens a float at the same box with other lines after two redraws and compares the screen with a full repaint. Queued in `completion`.
-
 ## Branch code can forge a security pass the resume trusts
 
 - Where: `trusted_state` in `tools/run_state.sh` (line 1295 at 803fe6e). Periodic security Medium (5); found again at eb63fb4 as Medium (6) (`lsp-diagnostics`' retrospective note 21).
@@ -1464,7 +1458,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: the initialize response handling of `carat/adapters/json_rpc_language_gateway.rb` (line 341 at eb63fb4). Periodic quality blocking at eb63fb4.
 - Why it matters: an error response to `initialize` takes the ready path, so the server is marked ready, `initialized` and then `didOpen` for every document are sent against the protocol, and the bar shows the server ready instead of failed; no test covers it, and the next language features send requests on that state.
-- Fix outline: treat a response carrying an error or no object result as a failed start, shown with the `:LspRestart` hint, with a gateway row for an initialize error. Queued in `completion`.
+- Fix outline: treat a response carrying an error or no object result as a failed start, shown with the `:LspRestart` hint, with a gateway row for an initialize error. Queued in `completion-request`.
 
 ## A save while the language server starts is never sent
 

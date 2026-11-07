@@ -254,8 +254,17 @@ Files:
 - `carat/use_cases/leave_insert.rb`: `LeaveInsert#call`.
 - `carat/use_cases/actions/insert_mode_handler.rb`: `InsertModeHandler`, entering insert mode itself (`i a I A o O`).
 - `carat/use_cases/actions/insert_text_handler.rb`: `InsertTextHandler`.
+- `carat/domain/completion_item.rb`: `CompletionItem` (label, kind, detail, insert text); `from_source` drops escape sequences and controls and bounds each string, `icon_name`.
+- `carat/domain/completion_list.rb`: `CompletionList`, at most 200 candidates; `add`, `at`, `count`, `clear`.
+- `carat/domain/completion_menu.rb`: `CompletionMenu`, the popup's state (cleaned candidates of a word, matches, selection, float id); `showing?`, `for_word?`, `fill`, `chosen`, `clear`.
+- `carat/domain/fuzzy_match.rb`: `FuzzyMatch.score` (underscore parts anchored at the word's part starts, in order), `word_start`, `word_length`.
+- `carat/use_cases/completion/show_completion.rb`: `ShowCompletion#call(state, typed)`, after a typed character or any key while the popup shows: asks the source, filters, ranks, and reopens the popup float, or closes it; no allocation when no popup shows and the source is not ready.
+- `carat/use_cases/completion/select_completion.rb`: `SelectCompletion#call(state, step)`, Ctrl-N, Ctrl-P, and the arrows, wrapping.
+- `carat/use_cases/completion/accept_completion.rb`: `AcceptCompletion#call(state, replace)`, Enter over the typed part and Tab over the word, in the insert session with its `LastChange` steps.
+- `carat/use_cases/completion/close_completion.rb`: `CloseCompletion#call`, Esc while the popup shows.
+- `carat/use_cases/actions/completion_handler.rb`: `CompletionHandler.register` (`completion.next`, `completion.previous`, `completion.insert`, `completion.replace`, `completion.close`), bound in the `keymap.completion` layer that `HandleKey` consults first while the popup shows.
 
-Tests: `test/domain_buffer.rb`, `test/domain_edits.rb` (splice, records, transactions, derived modified flag), `test/domain_buffer_list.rb`, `test/editor_insert.rb`, `test/editor_transactions.rb` (one transaction per command, insert session, reload, and plugin edit).
+Tests: `test/domain_buffer.rb`, `test/domain_edits.rb` (splice, records, transactions, derived modified flag), `test/domain_buffer_list.rb`, `test/editor_insert.rb`, `test/editor_transactions.rb` (one transaction per command, insert session, reload, and plugin edit), `test/domain_fuzzy_match.rb` (matching, escape sequences, bounds), `test/editor_completion.rb` (every popup key, filtering, placement, the session, untrusted text).
 
 Designs: `edit-pipeline` (all Decisions; Measured result), `state-and-ports` (Cursor clamping from the change records), `plugin-host-hardening` (Events from the edit path).
 
@@ -332,7 +341,7 @@ Files:
 - `carat/domain/layout.rb`: `Layout`, a flat node table; `split`, `split_edge`, `close`, `leaves`, `leaf_of`, `neighbour`, `equalize`, `arrange`, `number_of`, `first_leaf`, `fixed_width?`.
 - `carat/domain/tab_page.rb`: `TabPage` with its `FloatLayer`; `window` (the focused float first), `layout_window`, `window_count`, `focus` (leaves a float), `previous?`.
 - `carat/domain/float_spec.rb`: `FloatSpec` (anchor, offset, size, border, title, z); `edge`, `moved`, `refusal`.
-- `carat/domain/float_window.rb`: `FloatWindow` (a window and its spec); `place` clamps the box to the screen, `box_top`, `box_bottom`, `box_left`, `box_right`.
+- `carat/domain/float_window.rb`: `FloatWindow` (a window, its spec, and `selected`, a menu's selected row or -1); `menu?`, `place` clamps the box to the screen, `box_top`, `box_bottom`, `box_left`, `box_right`.
 - `carat/domain/float_layer.rb`: `FloatLayer`, a tab page's floats by z with the focused index, at most 16; `add`, `close`, `close_top`, `close_focused`, `enter`, `leave`, `move`.
 - `carat/domain/tab_list.rb`: `TabList`; `tab`, `window`, `add_tab`, `remove_tab`, `next_tab`, `previous_tab`, `adopt`, `window_tab`, `float_tab`, `total_windows`, `shown?`, `windows_showing`, `focus_buffer`, `modified_in_windows`, `clamp_cursors`.
 - `carat/use_cases/arrange_view.rb`: `ArrangeView#call`; the top row goes to the buffer tabs when `BufferList#tab_row?`.
@@ -565,10 +574,11 @@ Files:
 - `carat/ports/process_port.rb`: `ProcessPort`; `spawn` (a handle, 0 when the command cannot start), `write`, `stop`.
 - `carat/ports/message_queue_port.rb`: `MessageQueuePort`; `push`, `pop` (nil at once when empty).
 - `carat/ports/language_service_port.rb`: `LanguageServicePort`; `poll`, `restart`, `saved`, `stop`.
+- `carat/ports/completion_port.rb`: `CompletionPort`, the completion source that never waits; `ready?`, `candidates`.
 - `carat/drivers/process_runner.rb`: `ProcessRunner`; `Process.spawn` over `IO.pipe` pairs, a reader thread (`pump`) and a writer thread (`drain`) per child, the only threads; `Process.detach` reaps.
 - `carat/drivers/runtime_queue.rb`: `RuntimeQueue`, the runtime's `Queue`.
 - `carat/domain/rpc_framer.rb`: `RpcFramer`; `frame`, `feed`, `next_body`, `refused?`; `HEADER_LIMIT` and `BODY_LIMIT`.
-- `carat/domain/control_text.rb`: `ControlText.strip`, server text without controls, capped on a character boundary; `ControlText.line`, the same with breaks and tabs as spaces.
+- `carat/domain/control_text.rb`: `ControlText.strip`, server text without controls, capped on a character boundary; `ControlText.line`, the same with breaks and tabs as spaces; `ControlText.plain`, whole escape sequences dropped first.
 - `carat/domain/service_message.rb`: `ServiceMessage`, a body, `exit`, or `overflow` from a reader thread.
 - `carat/domain/diagnostic.rb`: `Diagnostic`, a published diagnostic as a value.
 - `carat/domain/diagnostic_list.rb`: `DiagnosticList`, a file's published diagnostics with a typed reader, built once per publish and shared by the server, its buffers, and the counts; `add`, `at`, `count`, `empty?`.
@@ -577,6 +587,8 @@ Files:
 - `carat/doubles/fake_processes.rb`: `FakeProcesses`; `install`, `break_input`, `spawned`, `bodies`, `methods_sent`, `stopped`.
 - `carat/doubles/memory_queue.rb`: `MemoryQueue`; `body`, `count`.
 - `carat/doubles/fake_language_services.rb`: `FakeLanguageServices`, no server, the writes recorded in `saves`, for use cases built by hand.
+- `carat/adapters/server_completions.rb`: `ServerCompletions`, the editor's completion source, never ready until `completion-request` asks the server.
+- `carat/doubles/fixed_completions.rb`: `FixedCompletions`, a source a test fills with `add`, ready once it holds a candidate, counting `asked`.
 
 Tests: `test/drivers_main_loop.rb` (a resize, a terminate, and `:q` over the signal double, and the driver's flags), `test/json.rb`, `test/drivers_disk_files.rb` (`DiskFiles`, `MakePath`, `RenamePath`, and `DeletePath` over a real directory: a link to `/dev/zero`, a FIFO, files at and over a limit, links inside and outside a root), `test/domain_rpc_framer.rb` (frames, their limits, and `ControlText`), `test/drivers_process_runner.rb` (`cat` and `sh` as children), `test/adapters_language_gateway.rb` (the lifecycle, trusted roots, progress, diagnostics and their signs and counts, hostile output over the doubles), `test/editor_lsp.rb` (`:LspStart`, `:LspRestart`, the drawn slot, and the drawn diagnostics).
 
