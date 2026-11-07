@@ -33,6 +33,11 @@ module DomainBufferTest
     D::Range.new(from: D::Position.new(row: r1, col: c1), to: D::Position.new(row: r2, col: c2), kind: :charwise, inclusive: inclusive)
   end
 
+  # A diagnostic on a row.
+  def self.diag(row, severity, message)
+    D::Diagnostic.new(row: row.to_i, col: 0, severity: severity.to_i, message: message.to_s)
+  end
+
   def self.main
     t = Carat::Testing.new("domain_buffer")
 
@@ -191,7 +196,7 @@ module DomainBufferTest
     t.assert_equal([0, 0, 0, "w.txt", [0, 0], false], [w.top, w.left, w.height, w.buffer.path, w.cursor.to_a, w.fixed_width], "a window starts at the origin with no height, showing its buffer from the start")
     w.top = 7
     t.assert_equal(7, w.top, "a window member has a writer")
-    t.assert_equal([:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon], D::Buffer.members, "buffer members in constructor order")
+    t.assert_equal([:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks], D::Buffer.members, "buffer members in constructor order")
     t.assert_equal([:code, :width, :hl], D::Cell.members, "cell members")
     o = D::Options.new
     t.assert_equal([false, 8, 0], [o.number, o.tabstop, o.scrolloff], "options start with Vim's defaults")
@@ -232,6 +237,28 @@ module DomainBufferTest
     t.assert_equal(false, b.signs?, "no signs at first")
     b.place_sign("hello", 0, 0, "X")
     t.assert_equal([true, "X", ""], [b.signs?, b.sign_at(0), b.sign_at(1)], "a sign is placed on its row")
+
+    # Diagnostics: the most severe per row, drawn over a plugin's sign.
+    d = D::Buffer.new(lines: ["a", "b", "c"], path: "a.rb", line_ending: "\n")
+    d.place_sign("git", 0, 1, "+")
+    d.place_sign("git", 0, 2, "+")
+    glyphs = ["E", "W", "I", "H"]
+    list = [diag(1, 4, "hint"), diag(1, 2, "warn"), diag(0, 1, "err"), diag(1, 2, "later"), diag(9, 1, "past the end")]
+    d.set_diagnostics(list, glyphs)
+    t.assert_equal(["E", "W", "+"], [d.sign_at(0), d.sign_at(1), d.sign_at(2)], "a row shows its most severe diagnostic over a plugin's sign")
+    t.assert_equal(["err", "warn", true, 5], [d.diagnostic_at(0).message, d.diagnostic_at(1).message, d.diagnostic_at(2).nil?, d.diagnostics.length], "a row's diagnostic is the first of the most severe, one past the end is kept unmarked")
+    t.assert_equal([true, true], [d.diagnostic_at(-1).nil?, d.diagnostic_at(9).nil?], "no diagnostic outside the buffer")
+    d.set_lines(0, 0, ["new"])
+    t.assert_equal(["", "E", "W", "warn"], [d.sign_at(0), d.sign_at(1), d.sign_at(2), d.diagnostic_at(2).message], "an inserted line moves the signs and the messages down")
+    d.set_lines(0, 1, strings([]))
+    t.assert_equal(["E", "err"], [d.sign_at(0), d.diagnostic_at(0).message], "a deleted line moves them up")
+    d.set_diagnostics([diag(2, 3, "info")], glyphs)
+    t.assert_equal(["", "+", "I", true], [d.sign_at(0), d.sign_at(1), d.sign_at(2), d.diagnostic_at(0).nil?], "a later list replaces the earlier one")
+    d.set_diagnostics([], glyphs)
+    t.assert_equal(["+", true, 0], [d.sign_at(2), d.diagnostic_at(2).nil?, d.diagnostic_marks.length], "an empty list clears the diagnostics and keeps the plugin's signs")
+    d.set_diagnostics([diag(0, 1, "x")], glyphs)
+    d.clear_diagnostics
+    t.assert_equal(["", true], [d.sign_at(0), d.diagnostic_at(0).nil?], "clearing removes the signs and the messages")
 
     t.finish
   end

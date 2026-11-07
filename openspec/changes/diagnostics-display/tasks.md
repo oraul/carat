@@ -2,8 +2,8 @@
 
 ## 1. Domain
 
-- [ ] 1.1 `carat/domain/buffer.rb`: `diagnostics`, `diagnostic_marks`, `set_diagnostics`, `clear_diagnostics`, `diagnostic_at`, the marks moved by `shift_signs`, the `lsp.diagnostics` sign layer at priority -1. Tested by `test/domain_buffer.rb` (most severe per row, sign over a plugin's, past the end, moved by an insert, cleared).
-- [ ] 1.2 `carat/domain/control_text.rb` `line` (breaks and tabs as spaces) and `carat/domain/status_slots.rb` `count_diagnostics`. Tested by `test/domain_rpc_framer.rb` and `test/adapters_status_bar.rb`.
+- [x] 1.1 `carat/domain/buffer.rb`: `diagnostics`, `diagnostic_marks`, `set_diagnostics`, `clear_diagnostics`, `diagnostic_at`, the marks moved by `shift_signs`, the `lsp.diagnostics` sign layer at priority -1. Tested by `test/domain_buffer.rb` (most severe per row, sign over a plugin's, past the end, moved by an insert, cleared).
+- [x] 1.2 `carat/domain/control_text.rb` `line` (breaks and tabs as spaces) and `carat/domain/status_slots.rb` `count_diagnostics`. Tested by `test/domain_rpc_framer.rb` and `test/adapters_status_bar.rb`.
 
 ## 2. Gateway and presenter
 
