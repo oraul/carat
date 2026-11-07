@@ -65,7 +65,9 @@
 #                no merge gate reads: the retrospective's closing start
 #                runs the run's last records, never review and never the
 #                phase of check, quality, security, or bench
-# Any other profile refuses every call.
+# The merger alone may call the GitHub merge tool (merge_tool, below). Any
+# other profile refuses every call, and every profile refuses every call
+# while .git/config sets a RISKY_CONFIG key.
 #
 # A write target (a redirection's target, a path argument of mkdir rm cp
 # mv touch chmod, a file tool's path) has no parent step, and its real

@@ -17,4 +17,4 @@
 
 ## 4. Docs and bookkeeping
 
-- [ ] 4.1 `README.md`, `docs/codebase-map.md` area 1, `.claude/agents/contributor.md` (fetch before the push), and `docs/backlog.md` (the three entries removed, the residual risks added).
+- [x] 4.1 `README.md`, `docs/codebase-map.md` area 1, `.claude/agents/contributor.md` (fetch before the push), and `docs/backlog.md` (the three entries removed, the residual risks added).
