@@ -160,7 +160,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## CI actions are pinned by tag
 
-- Where: `.github/workflows/ci.yml` (line 36 `actions/checkout@v4`, and the same at lines 65, 91, 175, and 192, with `actions/cache@v4` and its `restore` and `save` forms). Low finding of the periodic security review at 66fd52b.
+- Where: `.github/workflows/ci.yml` (line 36 `actions/checkout@v4`, and the same at lines 65, 91, 175, and 192, with `actions/cache@v4` and its `restore` and `save` forms). Low finding of the periodic security review at 66fd52b; at eb63fb4 the periodic security review found line 24 too, Low (3).
 - Why it matters: a tag can be moved to other code, so a compromised action release would run in CI with the repository's token.
 - Fix outline: pin each action to a full commit hash with the tag in a comment, and say in `CLAUDE.md` or the Makefile note how the pins are bumped.
 
@@ -244,7 +244,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Three copies of the byte basename
 
-- Where: `Filetype.from_name` in `carat/domain/filetype.rb` (line 30) and `FramePresenter#file_name` in `carat/adapters/frame_presenter.rb` (line 660) each copy the byte basename that `PluginApi::Paths.basename` (`carat/plugin_api.rb:315`) gives and `Domain::PathPolicy.last_name` reuses, while `Filetype.base` (line 68) still uses `rindex`. Advisory of the periodic quality review at 6ea61b1.
+- Where: `Filetype.from_name` in `carat/domain/filetype.rb` (line 30) and `FramePresenter#file_name` in `carat/adapters/frame_presenter.rb` (line 660) each copy the byte basename that `PluginApi::Paths.basename` (`carat/plugin_api.rb:315`) gives and `Domain::PathPolicy.last_name` reuses, while `Filetype.base` (line 68) still uses `rindex`; `hold`, `launch`, and `initialize_params` in `carat/adapters/json_rpc_language_gateway.rb` (lines 247, 261, and 274 at eb63fb4) call `File.basename` on a server's command or the working directory. Advisory of the periodic quality review at 6ea61b1, the gateway's of `lsp-diagnostics`' retrospective.
 - Why it matters: three copies of one byte walk drift apart, and the `rindex` copy groups a lead byte with what follows on a name that is not UTF-8.
 - Fix outline: call `PluginApi::Paths.basename` in all three places.
 
@@ -839,7 +839,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 ## A refused backup push is retried and protects nothing here
 
 - Where: the backup step of `.claude/workflows/deliver-change.js` and `backup` in `tools/run_state.sh`; this environment's git proxy refuses a push to `refs/backup/` with HTTP 403. Retrospective proposal of `backup-secret-scan`, recorded here by the user's decision rather than queued.
-- Why it matters: in `backup-secret-scan` 2 of 2 backup pushes were refused and 0 backup refs reached origin, so the step spent tokens and changed no decision, and the run state holds no backup record to tell the report so; `docs-currency` made 7 more attempts, and 0 of 9 across the two runs reached origin (its retrospective); in `buffer-list` the implement and fix pushes all failed, 0 `refs/backup` refs reached origin, and 7 commits stayed local until the package push (retrospective note 11); in `leader-layout` 2 of 2 backup tries were refused (retrospective note 8), so no backup has reached origin in four runs. Kept here by the user's earlier decision, which the user may want to revisit.
+- Why it matters: in `backup-secret-scan` 2 of 2 backup pushes were refused and 0 backup refs reached origin, so the step spent tokens and changed no decision, and the run state holds no backup record to tell the report so; `docs-currency` made 7 more attempts, and 0 of 9 across the two runs reached origin (its retrospective); in `buffer-list` the implement and fix pushes all failed, 0 `refs/backup` refs reached origin, and 7 commits stayed local until the package push (retrospective note 11); in `leader-layout` 2 of 2 backup tries were refused (retrospective note 8), so no backup has reached origin in four runs; in `lsp-diagnostics` 8 attempts over 3 contributor starts were refused and no `refs/backup` ref reached origin (retrospective note 18), and the first two of `diagnostics-display` were refused the same way. Kept here by the user's earlier decision, which the user may want to revisit.
 - Fix outline: record a refused backup push once in the run state, make no later backup attempt in that run, and have the report say no backup exists, with a `tools/tools_test.sh` case for a refused push.
 
 ## Pull requests are created with a session-link footer the settings turn off
@@ -1202,11 +1202,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: style only; the rest of each file wraps comments at the surrounding width.
 - Fix outline: rewrap the four comments to the width of the lines around them, together with the nine-comment entry above.
 
-## The status bar's branch and diagnostics slots have no writer
+## The status bar's branch slot has no writer
 
-- Where: `carat/domain/status_slots.rb` (line 8 at `bars`) and the `BRANCH` and `DIAGNOSTICS` paths of `carat/adapters/status_bar.rb`. Quality advisory of `bars`; `lsp-diagnostics` writes the lsp slot.
-- Why it matters: nothing in the code writes the branch or the diagnostics counts, so this code is reachable only from tests until the git and diagnostics changes fill it.
-- Fix outline: `diagnostics-display` in `docs/queue.md` fills the counts from the diagnostics `JsonRpcLanguageGateway` keeps; the change that shows the git branch fills `branch`. If either is dropped from the queue, remove its slot and paths with their test rows.
+- Where: `carat/domain/status_slots.rb` (line 8 at `bars`) and the `BRANCH` path of `carat/adapters/status_bar.rb`. Quality advisory of `bars`; `lsp-diagnostics` writes the lsp slot and `diagnostics-display` the diagnostics counts.
+- Why it matters: nothing in the code writes the branch, so this code is reachable only from tests until the git change fills it.
+- Fix outline: the change that shows the git branch fills `branch`. If it is dropped from the queue, remove the slot and its path with their test rows.
 
 ## TabBar#icon_group scans every group name on each frame
 
@@ -1402,7 +1402,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Branch code can forge a security pass the resume trusts
 
-- Where: `trusted_state` in `tools/run_state.sh` (line 1295 at 803fe6e). Periodic security Medium (5).
+- Where: `trusted_state` in `tools/run_state.sh` (line 1295 at 803fe6e). Periodic security Medium (5); found again at eb63fb4 as Medium (6) (`lsp-diagnostics`' retrospective note 21).
 - Why it matters: branch code run by `make` in the check phase, before the security review, can write `review.security pass HEAD` into `build/pipeline/CHANGE.json`; a resume accepts it since only the commit is checked, so the security phase is skipped and the merge records carry the forged pass.
 - Fix outline: keep review records where branch code cannot write them, or authenticate them with a key only the workflow holds, and rerun the security review on resume rather than trust a file record. Queued in `merge-gate-integrity`.
 
@@ -1438,9 +1438,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## A language server that ignores the end of its input outlives the editor
 
-- Where: `ProcessRunner#stop` in `carat/drivers/process_runner.rb` at `lsp-diagnostics`.
+- Where: `ProcessRunner#stop` in `carat/drivers/process_runner.rb` at `lsp-diagnostics`. Periodic security Low (5) at eb63fb4.
 - Why it matters: stop closes the child's input after `shutdown` and `exit` and detaches it without a signal, so a server that neither exits on `exit` nor on the end of its input keeps running after the editor ends; ruby-lsp exits on both.
-- Fix outline: after closing the input, send `TERM` from the writer thread when the child has not ended within a second, and `KILL` a second later, with a test over a child that ignores its input.
+- Fix outline: after closing the input, send `TERM` from the writer thread when the child has not ended within a second, and `KILL` a second later, with a test over a child that ignores its input. Queued in `lsp-client-tidy`.
 
 ## didChange sends the whole text of a changed buffer
 
@@ -1451,8 +1451,8 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 ## Diagnostic columns are UTF-16 units
 
 - Where: `JsonRpcLanguageGateway#diagnostic_of` at `lsp-diagnostics`: `Diagnostic#col` keeps the server's `character`, counted in UTF-16 units, the protocol's default.
-- Why it matters: on a line with characters outside the ASCII range the column differs from the code point column the editor uses, so a sign or a jump would land on the wrong character.
-- Fix outline: convert with the line's text when the diagnostic is drawn, or negotiate `utf-32` through `general.positionEncodings`, in `diagnostics-display`, with a row on a line holding a character outside the BMP.
+- Why it matters: on a line with characters outside the ASCII range the column differs from the code point column the editor uses, so a jump would land on the wrong character. `diagnostics-display` draws by row only (the sign and the message row), so nothing reads the column yet.
+- Fix outline: convert with the line's text when a position is used, or negotiate `utf-32` through `general.positionEncodings`, in the later `definitions` change, whose jumps are the first to read a column, with a row on a line holding a character outside the BMP.
 
 ## Language servers are told about files outside the trusted root
 
@@ -1464,22 +1464,64 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `ProcessRunner#write` in `carat/drivers/process_runner.rb` (line 55 at `lsp-diagnostics`): only `stop` clears `@open`, so after the writer thread ends on a broken pipe `write` still answers true. Quality advisory of `lsp-diagnostics`.
 - Why it matters: it breaks `ProcessPort#write`'s contract (whether the child still takes input), the outbox grows unread, and the gateway's broken-input path runs only with `FakeProcesses`.
-- Fix outline: report the writer's end through a queue the editor thread checks in `write`, or reword the port to whether the handle is open and rely on the reader's `exit` message.
+- Fix outline: report the writer's end through a queue the editor thread checks in `write`, or reword the port to whether the handle is open and rely on the reader's `exit` message. Queued in `lsp-client-tidy`.
 
 ## The language server client repeats itself and names little of what it uses
 
 - Where: `carat/adapters/json_rpc_language_gateway.rb` at `lsp-diagnostics`: `start` and `restart` (lines 88 and 112 to 118) repeat the no-server message and the Cannot start tail; `hold` (line 228) repeats `launch`'s name computation (line 242); the private `forget(language)` (line 171) shares its name with `LanguageServer#forget(uri)` (line 455) and rescans the list `server_for` just scanned. `LspStartCommandHandler#call` (`carat/use_cases/ex/lsp_start_command_handler.rb` line 24) copies `LspRestartCommandHandler#call`. `Json` has the same plain ASCII byte predicate three times (`ascii_text?` line 234, `plain?` line 413, inlined in `write_string` line 392). Quality advisories of `lsp-diagnostics`.
 - Why it matters: duplication and a shared name for two different operations make the next change to one copy miss the other.
-- Fix outline: one private helper answering the start message, one `name_of(words)`, `forget` renamed `drop_server` taking the index `start` holds, one `Json` module function for the byte test; keep the two ex handlers separate if section 5 asks one handler per command, else share the argument check and the outcome mapping.
+- Fix outline: one private helper answering the start message, one `name_of(words)`, `forget` renamed `drop_server` taking the index `start` holds, one `Json` module function for the byte test; keep the two ex handlers separate if section 5 asks one handler per command, else share the argument check and the outcome mapping. Queued in `lsp-client-tidy`.
 
 ## The language server client has loose ends
 
-- Where: at `lsp-diagnostics`: `LanguageServer#words` (`carat/domain/language_server.rb` line 11) is stored and never read; `Diagnostic#error?` (`carat/domain/diagnostic.rb` line 16) has only a test caller; `LspRestartCommandHandler.register(table, services)` (`carat/use_cases/ex/lsp_restart_command_handler.rb` line 35) takes its collaborator positionally; `RpcFramer#refuse` (`carat/domain/rpc_framer.rb` line 82) answers false only for `return refuse`, which needs a `BOOL_COMMANDS` entry in `test/lint.rb`; `json_rpc_language_gateway.rb`, `editor_assembly.rb`, `input_controller.rb`, `lsp_restart_command_handler.rb`, and `process_runner.rb` omit `require_relative` lines for files they name. Quality advisories of `lsp-diagnostics`.
+- Where: at `lsp-diagnostics`: `LanguageServer#words` (`carat/domain/language_server.rb` line 11) is stored and never read; `LspRestartCommandHandler.register(table, services)` (`carat/use_cases/ex/lsp_restart_command_handler.rb` line 35) takes its collaborator positionally; `RpcFramer#refuse` (`carat/domain/rpc_framer.rb` line 82) answers false only for `return refuse`, which needs a `BOOL_COMMANDS` entry in `test/lint.rb`; `json_rpc_language_gateway.rb`, `editor_assembly.rb`, `input_controller.rb`, `lsp_restart_command_handler.rb`, and `process_runner.rb` omit `require_relative` lines for files they name. Quality advisories of `lsp-diagnostics`.
 - Why it matters: dead code, an odd signature, and a lint exemption that exists for an idiom each mislead the next reader; sibling files require what they name.
-- Fix outline: drop `words` or use it for the restart message; drop `error?` and its row until `diagnostics-display` needs it; `register(table, services:)` with `services: @services` in `EditorAssembly`; make `refuse` void, return false after it, and drop the lint entry; add the missing `require_relative` lines.
+- Fix outline: drop `words` or use it for the restart message; `register(table, services:)` with `services: @services` in `EditorAssembly`; make `refuse` void, return false after it, and drop the lint entry; add the missing `require_relative` lines. Queued in `lsp-client-tidy`.
 
 ## No test shows a refused language server spawn is not retried
 
 - Where: `test/adapters_language_gateway.rb` line 173 at `lsp-diagnostics`: `FakeProcesses#spawn` records only installed commands, so the missing-command case cannot see a retried spawn, and the refusal kept in `@refused` until `:LspStart` or `:LspRestart` is untested. Quality advisory of `lsp-diagnostics`.
 - Why it matters: a regression that retries the spawn on every idle tick, spawning a process four times a second, would pass.
-- Fix outline: count attempted spawns in `FakeProcesses` and assert one attempt after two idle ticks.
+- Fix outline: count attempted spawns in `FakeProcesses` and assert one attempt after two idle ticks. Queued in `lsp-client-tidy`.
+
+## A failed initialize marks the language server ready
+
+- Where: the initialize response handling of `carat/adapters/json_rpc_language_gateway.rb` (line 341 at eb63fb4). Periodic quality blocking at eb63fb4.
+- Why it matters: an error response to `initialize` takes the ready path, so the server is marked ready, `initialized` and then `didOpen` for every document are sent against the protocol, and the bar shows the server ready instead of failed; no test covers it, and the next language features send requests on that state.
+- Fix outline: treat a response carrying an error or no object result as a failed start, shown with the `:LspRestart` hint, with a gateway row for an initialize error. Queued in `completion`.
+
+## A save while the language server starts is never sent
+
+- Where: `poll` in `carat/adapters/json_rpc_language_gateway.rb` (line 76 at eb63fb4) clears the pending saves on every tick, while `sync_buffer` sends `didSave` only to running servers. Periodic quality at eb63fb4.
+- Why it matters: a write while the server is starting or crashed is dropped without a `didSave`, so the server keeps working from the state before the save.
+- Fix outline: clear only the saves a running server of the buffer's language was told, with a gateway row for a save during starting. Queued in `lsp-client-tidy`.
+
+## A write to another path is reported to the language server as a save
+
+- Where: `SaveFile` in `carat/use_cases/files/save_file.rb` (line 52 at eb63fb4). Periodic quality at eb63fb4.
+- Why it matters: `:w other_path` reports the buffer saved, so `didSave` goes out for a document whose own file was not written.
+- Fix outline: report the save only when the written path is the buffer's own, with a row for `:w` to another path. Queued in `lsp-client-tidy`.
+
+## The language server outbox has no bound
+
+- Where: the per-child outbox queue in `carat/drivers/process_runner.rb` (line 58 at eb63fb4). Periodic security Low (5).
+- Why it matters: a server that stops reading its input makes every `didOpen` and `didChange` body accumulate in editor memory.
+- Fix outline: count the queued bytes per handle and treat the server as crashed past a cap, with a driver test over a child that never reads. Queued in `lsp-client-tidy`.
+
+## Published diagnostics keep any number of URIs
+
+- Where: the `publishDiagnostics` handling of `carat/adapters/json_rpc_language_gateway.rb` (line 415 at eb63fb4). Periodic security Low (4).
+- Why it matters: a server publishing for many distinct URIs grows the map without limit.
+- Fix outline: keep only the documents the gateway opened, or cap the map and drop the oldest, with a gateway row. Queued in `lsp-client-tidy`.
+
+## The architecture omits the language service start, trusted roots, and the writer thread
+
+- Where: `docs/architecture.md` at eb63fb4: the section 6 port table (line 203), the section 7 Scopes sentence (line 236), and the service threads bullet (line 268); `docs/codebase-map.md` lines 567 and 577. Periodic quality at eb63fb4.
+- Why it matters: `LanguageServicePort` declares `start`, which `:LspStart` calls, but the table and the map omit it; the Scopes sentence omits `language.trusted_roots`, its word format, and that only the defaults and the user file set it; the bullet names only the reader thread while the code starts a reader and a writer per child.
+- Fix outline: add `start(state)` to the table row and both map lines, `trusted_roots` to the Scopes sentence, and the writer thread to the bullet, within the file's budget. Queued in `architecture-drift`.
+
+## The diagnostics display leaves out navigation, the full text, and colors
+
+- Where: `diagnostics-display` (`Buffer#set_diagnostics`, `FramePresenter#paint_diagnostic`). Left out of the change by its proposal.
+- Why it matters: Neovim users expect `]d` and `[d` to move between diagnostics and a float with the full message of several lines; the signs are drawn in the one `SignColumn` group, not in `DiagnosticSignError` and its siblings, so an error and a hint differ only by glyph; signs keep the icon set in force when they were published until the next publish.
+- Fix outline: two motions over the buffer's marks bound in the five modes; a float showing the message; a group per mark in `SignLayer`, compared in `PaintedRows`; signs redrawn when `icons` changes. Each with a table row.
