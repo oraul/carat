@@ -213,7 +213,7 @@ Decided in `docs/architecture.md` sections 2 and 13, which give the reasons.
 
 - Language: Ruby 4, compiled with Spinel at the commit pinned as `SPINEL_REF` in the Makefile. No CRuby anywhere, not even to build Spinel (its one generated header is vendored under `tools/spinel/`): a clone needs a C compiler, `make`, `git`, and `curl`, and every target and CI run with `tools/noruby/` first on the `PATH`, whose `ruby` exits 127. `make toolchain` installs `spin`, `spinel`, and `spinel-doctor`; no Rakefile, no Bundler.
 - Dependencies: none beyond what Spinel bundles (`io/console` in the terminal driver, `pty` and `open3` in the smoke test); JSON is `Carat::Json`; tests use `Carat::Testing` with committed snapshots, compiled into one runner.
-- Terminal I/O: `io/console` and `IO.select`, no curses. Child processes: `Process.spawn` with `IO.pipe`, never `IO.popen`. One editor thread plus one per language server, joined by a `Queue`; no Ractor.
+- Terminal I/O: `io/console` and `IO.select`, no curses. Child processes: `Process.spawn` with `IO.pipe`, never `IO.popen`. One editor thread plus a reader and a writer thread per language server, joined by a `Queue`; no Ractor.
 - Configuration: `.caratrc` lines of `scope.name value`: `config/default.caratrc` (embedded), then `~/.config/carat/caratrc`, then the project's `.caratrc`, a later line winning, every problem reported as `file:line: message`.
 - IDE services: `ruby-lsp` and RuboCop as subprocesses over JSON-RPC and stdio.
 
