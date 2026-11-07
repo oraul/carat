@@ -78,8 +78,8 @@ While the popup shows, a key SHALL be looked up first in the `keymap.completion`
 While the popup shows, typing or erasing in the word SHALL filter the candidates again from those the source gave for the word, closing the popup when none matches or the word before the cursor is empty; moving to another line, another buffer, or out of insert mode SHALL close it.
 
 #### Scenario: Typing narrows
-- **WHEN** the popup shows "file_name" and "filter" for "fi" and "l" then "e" are typed
-- **THEN** after "e" only "file_name" shows
+- **WHEN** the popup shows "final", "filter", and "file_name" for "fi" and "l" then "e" are typed
+- **THEN** after "e" "file_name" is first and "final" no longer shows
 
 #### Scenario: A non-word character closes
 - **WHEN** the popup shows and a space is typed
