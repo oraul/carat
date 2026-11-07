@@ -162,9 +162,10 @@ module Carat
       keymap.normal gt tab.next
       keymap.normal gT tab.previous
       keymap.normal <Esc> float.close
+      keymap.normal K docs.hover
       keymap.normal <C-s> file.save
-      # The leader groups: w windows, q quit, f files, b buffers; e is the
-      # explorer plugin's.
+      # The leader groups: w windows, q quit, f files, b buffers, d docs; e
+      # is the explorer plugin's.
       keymap.normal <leader>ws window.split
       keymap.normal <leader>wv window.vsplit
       keymap.normal <leader>wh window.left
@@ -181,6 +182,7 @@ module Carat
       keymap.normal <leader>bn buffer.next
       keymap.normal <leader>bp buffer.previous
       keymap.normal <leader>bd buffer.delete
+      keymap.normal <leader>dp docs.pin
 
       # Insert mode.
       keymap.insert <Esc> mode.normal

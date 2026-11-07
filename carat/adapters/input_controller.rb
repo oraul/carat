@@ -6,6 +6,7 @@ require_relative "../domain/key"
 require_relative "../domain/start_screen"
 require_relative "../use_cases/handle_key"
 require_relative "../use_cases/completion/show_completion"
+require_relative "../use_cases/docs/show_hover"
 require_relative "key_decoder"
 
 module Carat
@@ -33,14 +34,16 @@ module Carat
       attr_reader :start_screen #: Domain::StartScreen
       attr_reader :services #: Ports::LanguageServicePort
       attr_reader :show_completion #: UseCases::ShowCompletion
+      attr_reader :show_hover #: UseCases::ShowHover
 
       # @rbs @decoder: KeyDecoder
       # @rbs @wait_until: Float
       # @rbs @deadline: bool
 
-      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState, start_screen: Domain::StartScreen, services: Ports::LanguageServicePort, show_completion: UseCases::ShowCompletion) -> void
-      def initialize(terminal:, clock:, decoder:, handle_key:, input:, start_screen:, services:, show_completion:)
+      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState, start_screen: Domain::StartScreen, services: Ports::LanguageServicePort, show_completion: UseCases::ShowCompletion, show_hover: UseCases::ShowHover) -> void
+      def initialize(terminal:, clock:, decoder:, handle_key:, input:, start_screen:, services:, show_completion:, show_hover:)
         @services = services
+        @show_hover = show_hover
         @show_completion = show_completion
         @terminal = terminal
         @clock = clock
@@ -67,11 +70,16 @@ module Carat
           end
           # Idle: the language services read and send here, never while a
           # key waits; a completion answer they kept fills the popup, and
-          # resolved documentation the float beside it.
+          # resolved documentation the float beside it, and a hover answer
+          # the documentation float.
           served = @services.poll(state)
           request = @show_completion.source.request
           if request.arrived || request.docs.arrived
             @show_completion.call(state, false)
+            served = true
+          end
+          if @show_hover.hover.arrived
+            @show_hover.call(state)
             served = true
           end
           return tick || served

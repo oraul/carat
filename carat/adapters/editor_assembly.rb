@@ -125,6 +125,12 @@ require_relative "../use_cases/actions/substitute_handler"
 require_relative "../use_cases/actions/file_handler"
 require_relative "../use_cases/actions/buffer_handler"
 require_relative "../use_cases/actions/completion_handler"
+require_relative "../domain/hover_request"
+require_relative "../use_cases/docs/request_hover"
+require_relative "../use_cases/docs/show_hover"
+require_relative "../use_cases/docs/follow_hover"
+require_relative "../use_cases/docs/pin_hover"
+require_relative "../use_cases/actions/docs_handler"
 require_relative "../use_cases/actions/plugin_action_handler"
 require_relative "../use_cases/dispatcher"
 require_relative "../use_cases/handle_key"
@@ -247,6 +253,11 @@ module Carat
       attr_reader :completions #: Ports::CompletionPort
       attr_reader :completion_menu #: Domain::CompletionMenu
       attr_reader :show_completion #: UseCases::ShowCompletion
+      attr_reader :hover #: Domain::HoverRequest
+      attr_reader :request_hover #: UseCases::RequestHover
+      attr_reader :show_hover #: UseCases::ShowHover
+      attr_reader :follow_hover #: UseCases::FollowHover
+      attr_reader :pin_hover #: UseCases::PinHover
 
       #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, files: Ports::FilePort, config: Ports::ConfigPort, processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, completions: Ports::CompletionPort, plugin_list: Array[untyped]) -> void
       def initialize(terminal:, clock:, files:, config:, processes:, messages:, completions:, plugin_list:)
@@ -278,7 +289,8 @@ module Carat
         @plugin_ui = Domain::PluginUi.new
         @cache = Domain::LineCache.new
         @status_slots = Domain::StatusSlots.new
-        @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots, completion: completions.request, clock: clock)
+        @hover = Domain::HoverRequest.new
+        @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots, completion: completions.request, clock: clock, hover: @hover)
         @arrange_view = UseCases::ArrangeView.new(cache: @cache, buffers: @buffers)
         @actions = UseCases::ActionTable.new
         @commands = UseCases::ExTable.new
@@ -324,6 +336,10 @@ module Carat
         close_completion = UseCases::CloseCompletion.new(menu: @completion_menu, close_float: @close_float)
         show_docs = UseCases::ShowCompletionDocs.new(menu: @completion_menu, source: completions, open_float: @open_float, close_float: @close_float)
         @show_completion = UseCases::ShowCompletion.new(menu: @completion_menu, source: completions, open_float: @open_float, close_float: @close_float, close_completion: close_completion, show_docs: show_docs)
+        @request_hover = UseCases::RequestHover.new(hover: @hover)
+        @show_hover = UseCases::ShowHover.new(hover: @hover, open_float: @open_float, close_float: @close_float)
+        @follow_hover = UseCases::FollowHover.new(hover: @hover, close_float: @close_float)
+        @pin_hover = UseCases::PinHover.new(hover: @hover, split_window: @split_window, buffers: @buffers, close_float: @close_float)
         select_completion = UseCases::SelectCompletion.new(menu: @completion_menu)
         accept_completion = UseCases::AcceptCompletion.new(menu: @completion_menu, last_change: @last_change, close_completion: close_completion)
         @open_tab = UseCases::OpenTab.new(open_file: @open_file, buffers: @buffers, tabs: @tabs)
@@ -395,6 +411,7 @@ module Carat
         UseCases::FileHandler.register(@actions, save_file: @save_file, save_all: @save_all, quit_all: @quit_all)
         UseCases::BufferHandler.register(@actions, list_buffers: @list_buffers, switch_buffer: @switch_buffer, delete_buffer: @delete_buffer)
         UseCases::CompletionHandler.register(@actions, select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion)
+        UseCases::DocsHandler.register(@actions, request_hover: @request_hover, pin_hover: @pin_hover)
         UseCases::PluginActionHandler.register(@actions, plugins: @plugins)
 
         @keymap.add_checked(value, known_actions)
@@ -406,9 +423,9 @@ module Carat
         end
 
         @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
-        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt)
+        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover)
         @start_screen = Domain::StartScreen.new
-        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion)
+        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover)
         @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers))
         @screen_presenter = ScreenPresenter.new(terminal: terminal, theme: Domain::Themes.find(@state.options.theme, @state.options.background), colors: terminal.colors)
       end

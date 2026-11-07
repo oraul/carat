@@ -65,6 +65,8 @@ Differences from Neovim: a different operator after a pending one cancels silent
 | `<leader>qq`, `<leader>qw` | `quit.all`, `quit.write_all` | Carat's quit group: `:qa`, and `:wqa` | `editor_leader`, `editor_cmdline`, `smoke_editor` |
 | `<leader>fs`, `<C-s>` | `file.save` | Carat's file group and save key: `:w`, Ctrl-S also in insert mode, staying in it | `editor_leader`, `smoke_editor` |
 | `<leader>ff` | `file.find` | Reserved for the finder: "Not implemented: file.find" | `editor_leader` |
+| `K` | `docs.hover` | The language server's hover documentation under the cursor in a bordered float, its markdown as plain rows; `K` again enters it, `Esc` or a cursor move closes it; with no server Neovim runs `keywordprg` instead, Carat says `No hover provider for this buffer` | `adapters_hover` |
+| `<leader>dp` | `docs.pin` | Carat's docs group: the documentation float pinned into a split | `adapters_hover` |
 | `<leader>bb`, `[count]<leader>bn`, `[count]<leader>bp`, `[count]<leader>bd` | `buffer.*` | Carat's buffer group: `:ls`, `:bn`, `:bp`, `:bd` or `:bd N` | `editor_leader` |
 
 Differences from Neovim: `startofline` is off, so `gg G H M L` keep the wanted column; keyword characters are ASCII letters, digits, underscore, and every code point from U+00C0 upward until `iskeyword` exists; sentence ends are `. ! ?` with optional `) ] " '` before a blank or the line end, and paragraph boundaries are empty lines only (no nroff macros, no form feeds); `H` and `L` take `scrolloff` into account when moving the cursor and ignore it under an operator, as Neovim does; the quit hint names `:q!` as Neovim does for the last window.
