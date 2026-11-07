@@ -143,6 +143,21 @@ module AdaptersServerCompletionsTest
     [item("file_name", 6), item("filter", 3), item("final", 14)]
   end
 
+  # An item with data the server wants back when resolving.
+  def self.described(label, kind, n)
+    { "label" => label.to_s, "kind" => kind.to_i, "data" => { "n" => n.to_i } }
+  end
+
+  # The rows of the documentation float, empty when none shows.
+  def self.docs_lines(r)
+    menu = r.assembly.completion_menu
+    floats = r.assembly.state.tab.floats
+    out = [""]
+    out.clear
+    return out if menu.docs_float_id == 0 || floats.index_of(menu.docs_float_id) < 0
+    floats.at(floats.index_of(menu.docs_float_id)).window.buffer.lines.dup
+  end
+
   # How many times a method was sent.
   def self.count_of(r, name)
     r.sent.count(name.to_s)
@@ -334,6 +349,53 @@ module AdaptersServerCompletionsTest
     r.wait
     t.assert_equal(false, r.completions.ready?(r.assembly.state.buffer), "a crashed server's language is not ready")
 
+
+    # Documentation: in the answer, or resolved once the selection settles.
+    r = rig({ "completionProvider" => { "resolveProvider" => true } })
+    item = last_of(r, "initialize")["params"]["capabilities"]["textDocument"]["completion"]["completionItem"]
+    t.assert_equal([["markdown", "plaintext"], ["documentation"]], [item["documentationFormat"], item["resolveSupport"]["properties"]], "initialize advertises markdown documentation resolved lazily")
+    r.type("ifi")
+    until_sent(r, "textDocument/completion", 20)
+    answer(r, last_of(r, "textDocument/completion")["id"], [described("file_name", 6, 0), described("filter", 3, 1), described("final", 14, 2)])
+    r.wait
+    t.assert_equal(["final", 1], [r.assembly.completion_menu.chosen.label, r.assembly.state.tab.floats.count], "an item without documentation in the answer shows no float at first")
+    r.type("<C-n><C-n>")
+    until_sent(r, "completionItem/resolve", 20)
+    asked = last_of(r, "completionItem/resolve")
+    t.assert_equal([1, "file_name", 0], [count_of(r, "completionItem/resolve"), asked["params"]["label"], asked["params"]["data"]["n"]], "one request is sent, for the settled item as the server gave it")
+    t.assert_equal(true, r.assembly.services.waiting?, "while a resolve is in flight the services wait")
+    r.messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => 999, "result" => { "label" => "x", "documentation" => "stray" } }))
+    r.wait
+    t.assert_equal([], docs_lines(r), "an answer to no resolve in flight changes nothing")
+    r.messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => asked["id"].to_i, "result" => { "label" => "file_name", "documentation" => { "kind" => "markdown", "value" => "# file_name\n\nThe \e[31mname\e[0m." } } }))
+    r.wait
+    t.assert_equal(["file_name", "", "The name."], docs_lines(r), "the resolved documentation shows at the next idle tick with no key, its escapes dropped")
+    t.assert_equal([false, false], [r.assembly.services.waiting?, r.terminal.output.include?("\e[31mname")], "a resolved item waits no more and no escape of it reaches the terminal")
+    r.type("<C-p><C-n>")
+    10.times { r.wait }
+    t.assert_equal([1, ["file_name", "", "The name."]], [count_of(r, "completionItem/resolve"), docs_lines(r)], "returning to a resolved item sends nothing and shows it again")
+    r.type("<C-p>")
+    10.times { r.wait }
+    t.assert_equal(2, count_of(r, "completionItem/resolve"), "another settled item sends its own request")
+    r.type("<Esc>")
+    t.assert_equal(0, r.assembly.state.tab.floats.count, "Esc closes the documentation with the popup")
+
+    # Documentation in the answer, and a server that does not resolve.
+    r = rig({ "completionProvider" => { "resolveProvider" => true } })
+    r.type("ifi")
+    until_sent(r, "textDocument/completion", 20)
+    answer(r, last_of(r, "textDocument/completion")["id"], [{ "label" => "final", "kind" => 14, "documentation" => "Ends the block." }])
+    r.wait
+    10.times { r.wait }
+    t.assert_equal([["Ends the block."], 0], [docs_lines(r), count_of(r, "completionItem/resolve")], "documentation in the answer shows with no request")
+    r = completing
+    r.type("ifi")
+    until_sent(r, "textDocument/completion", 20)
+    answer(r, last_of(r, "textDocument/completion")["id"], three)
+    r.wait
+    r.type("<C-n>")
+    10.times { r.wait }
+    t.assert_equal([0, [], false], [count_of(r, "completionItem/resolve"), docs_lines(r), r.assembly.services.waiting?], "a server without resolveProvider is asked nothing and no float shows")
     t.finish
   end
 end

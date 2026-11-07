@@ -33,7 +33,17 @@ module Carat
     # ANSWER_LIMIT seconds past its deadline, is cancelled, and an answer
     # to no request in flight is dropped. An answer is bounded and cleaned
     # (at most CompletionList::LIMIT items through
-    # CompletionItem.from_source) and marked arrived for the popup.
+    # CompletionItem.from_source) and marked arrived for the popup; the
+    # server's items are kept beside it, and so is each item's
+    # documentation (Domain::CompletionDocs), cut to DOCUMENT_LIMIT bytes,
+    # untrusted. The candidate the popup picks is sent as
+    # completionItem/resolve once no other was picked for SETTLE seconds,
+    # when its server advertised resolveProvider and its documentation was
+    # neither in the answer nor asked for: one request per candidate of an
+    # answer, one in flight, cancelled when unanswered ANSWER_LIMIT
+    # seconds past its deadline or when a new answer comes; only the
+    # answer to the request in flight is read, and its documentation is
+    # marked arrived for the float.
     class JsonRpcLanguageGateway < Ports::LanguageServicePort
       DRAIN_LIMIT = 64
       NAME_LIMIT = 32
@@ -46,6 +56,8 @@ module Carat
       NULL_REQUESTS = ["window/workDoneProgress/create", "client/registerCapability", "client/unregisterCapability"]
       DEBOUNCE = 0.1
       ANSWER_LIMIT = 2.0
+      SETTLE = 0.1
+      DOCUMENT_LIMIT = 16_384
       # The menu kind of each LSP CompletionItemKind, by number: interface,
       # enum, and struct read as class; value and enum member as constant.
       KIND_NAMES = ["text", "text", "method", "function", "constructor", "field", "variable", "class", "class", "module", "property", "text", "constant", "class", "keyword", "snippet", "text", "text", "text", "text", "constant", "constant", "class", "text", "text", "text"]
@@ -55,6 +67,8 @@ module Carat
       # @rbs @saves: Array[Integer]
       # @rbs @trust: Symbol
       # @rbs @published: Array[String]
+      # @rbs @items: Array[untyped]
+      # @rbs @resolvers: Array[String]
 
       attr_reader :processes #: Ports::ProcessPort
       attr_reader :messages #: Ports::MessageQueuePort
@@ -80,6 +94,9 @@ module Carat
         @saves = []
         @trust = :unknown
         @published = []
+        @items = []
+        @resolvers = [""]
+        @resolvers.clear
       end
 
       # @rbs state: Domain::EditorState
@@ -105,6 +122,7 @@ module Carat
         end
         @saves.clear
         complete(state)
+        resolve
         return hold(language) || changed if held
         show(current) || changed
       end
@@ -136,11 +154,11 @@ module Carat
         server.nil? ? "Cannot start #{words_of(language).join(" ")}" : ""
       end
 
-      # Answers whether a wanted completion is not yet sent or a request is
-      # in flight.
+      # Answers whether a wanted completion or a picked candidate's
+      # documentation is not yet sent or a request is in flight.
       # @rbs skip
       def waiting?
-        @completion.waiting?
+        @completion.waiting? || @completion.docs.waiting?
       end
 
       #: (Domain::Buffer) -> void
@@ -320,7 +338,8 @@ module Carat
       def initialize_params
         root = uri_of(@files.cwd)
         sync = { "didSave" => true, "dynamicRegistration" => false }
-        completion = { "completionItem" => { "snippetSupport" => false }, "contextSupport" => true }
+        item = { "snippetSupport" => false, "documentationFormat" => ["markdown", "plaintext"], "resolveSupport" => { "properties" => ["documentation"] } }
+        completion = { "completionItem" => item, "contextSupport" => true }
         document = { "synchronization" => sync, "publishDiagnostics" => { "relatedInformation" => false }, "completion" => completion }
         capabilities = { "textDocument" => document, "window" => { "workDoneProgress" => true } }
         { "processId" => nil, "clientInfo" => { "name" => "carat" }, "rootUri" => root, "capabilities" => capabilities, "workspaceFolders" => [{ "uri" => root, "name" => File.basename(@files.cwd) }] }
@@ -400,6 +419,8 @@ module Carat
           end
         elsif @completion.sent_id != 0 && value["id"] == @completion.sent_id && server.language == @completion.language
           completed(value.key?("error") ? nil : value["result"])
+        elsif @completion.docs.sent_id != 0 && value["id"] == @completion.docs.sent_id && server.language == @completion.language
+          resolved(value.key?("error") ? nil : value["result"])
         end
       end
 
@@ -423,6 +444,7 @@ module Carat
         caps = result.is_a?(Hash) ? result["capabilities"] : nil
         provider = caps.is_a?(Hash) ? caps["completionProvider"] : nil
         @completion.languages << server.language if provider.is_a?(Hash) && !@completion.completes?(server.language)
+        @resolvers << server.language if provider.is_a?(Hash) && provider["resolveProvider"] == true && !@resolvers.include?(server.language)
         server.state = :ready
         notify(server, "initialized", {})
       end
@@ -433,7 +455,10 @@ module Carat
       def forget_completion(server)
         ask = @completion
         ask.languages.delete(server.language)
-        ask.sent_id = 0 if ask.language == server.language
+        @resolvers.delete(server.language)
+        return unless ask.language == server.language
+        ask.sent_id = 0
+        ask.docs.sent_id = 0
       end
 
       # Sends the wanted word's completion request once no other word was
@@ -487,23 +512,102 @@ module Carat
 
       # Keeps a completion answer for the word it was sent for: at most
       # CompletionList::LIMIT items with a string label, each cleaned and
-      # bounded; an error or another value is an empty answer.
+      # bounded, the server's item and its documentation beside each; an
+      # error or another value is an empty answer. The resolve request in
+      # flight is for the answer replaced, so it is cancelled.
       #: (untyped) -> void
       def completed(result)
         ask = @completion
+        docs = ask.docs
+        cancel_resolve
+        docs.clear
+        @items.clear
+        resolves = @resolvers.include?(ask.language)
         items = result.is_a?(Hash) ? result["items"] : result
         list = Domain::CompletionList.new
         if items.is_a?(Array)
           items.each do |item|
             break if list.count >= Domain::CompletionList::LIMIT
             candidate = candidate_of(item)
-            list.add(candidate) unless candidate.nil?
+            next if candidate.nil?
+            list.add(candidate)
+            @items << item
+            text = document_of(item)
+            docs.add(text, text.empty? && resolves ? Domain::CompletionDocs::TO_RESOLVE : Domain::CompletionDocs::HELD)
           end
         end
         ask.list = list
         ask.answered = ask.sent
         ask.sent_id = 0
         ask.arrived = true
+      end
+
+      # Sends the picked candidate's completionItem/resolve once no other
+      # was picked for SETTLE seconds, when its documentation is still to
+      # resolve, no resolve is in flight, and the answer's server runs and
+      # resolves; the candidate is then asked, never sent again for this
+      # answer. A request unanswered ANSWER_LIMIT seconds past its
+      # deadline is cancelled; a new pick waits for the one in flight.
+      #: () -> void
+      def resolve
+        docs = @completion.docs
+        return unless docs.waiting?
+        now = @clock.now
+        if docs.want != docs.seen
+          docs.seen = docs.want
+          docs.due = now + SETTLE
+          return
+        end
+        if docs.sent_id != 0
+          cancel_resolve if now > docs.due + ANSWER_LIMIT
+          return
+        end
+        return if now < docs.due
+        docs.sent = docs.want
+        index = docs.index
+        return unless docs.to_resolve?(index) && index < @items.length
+        server = server_for(@completion.language)
+        return if server.nil? || !server.running? || !@resolvers.include?(server.language)
+        docs.known[index] = Domain::CompletionDocs::ASKED
+        docs.sent_index = index
+        docs.sent_id = request(server, "completionItem/resolve", @items[index])
+      end
+
+      # Cancels the resolve request in flight, whose answer is then dropped.
+      #: () -> void
+      def cancel_resolve
+        docs = @completion.docs
+        return if docs.sent_id == 0
+        server = server_for(@completion.language)
+        notify(server, "$/cancelRequest", { "id" => docs.sent_id }) unless server.nil?
+        docs.sent_id = 0
+      end
+
+      # Keeps the documentation of a resolve answer for the candidate it was
+      # sent for, marked arrived when there is any; an error or another
+      # value holds none.
+      #: (untyped) -> void
+      def resolved(result)
+        docs = @completion.docs
+        index = docs.sent_index
+        docs.sent_id = 0
+        return if index < 0 || index >= docs.texts.length
+        text = document_of(result)
+        docs.texts[index] = text
+        docs.known[index] = Domain::CompletionDocs::HELD
+        docs.arrived = true unless text.empty?
+      end
+
+      # The documentation of a server's item: a string or a markup
+      # content's value, cut to DOCUMENT_LIMIT bytes; "" for none.
+      #: (untyped) -> String
+      def document_of(item)
+        return "" unless item.is_a?(Hash)
+        value = item["documentation"]
+        value = value["value"] if value.is_a?(Hash)
+        return "" unless value.is_a?(String)
+        text = value.to_s
+        text.bytesize > DOCUMENT_LIMIT ? text.byteslice(0, DOCUMENT_LIMIT).to_s : text
       end
 
       # A completion item as a candidate, nil without a string label.
