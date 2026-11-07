@@ -8,7 +8,7 @@
 
 ## 2. Periodic quality by area
 
-- [x] 2.1 `.claude/workflows/periodic-review.js`: `MAP_AREAS`, `QUALITY_SLICES`, `areaSlices`, the quality starts by slice with their worktrees, one continuation of the areas left, and `covered=N/18` in the record. Tested by "periodic: the map has MAP_AREAS areas", "periodic: the quality slices cover every area once", "periodic: the areas left are kept to the start's slice", and the existing partial and cap cases.
+- [x] 2.1 `.claude/workflows/periodic-review.js`: `MAP_AREAS`, `QUALITY_SLICES`, `areaSlices`, the quality starts by slice with their worktrees, one continuation of the areas left, and `covered=N/18` in the record. Tested by "periodic: MAP_AREAS is the map's count of areas", "periodic: the quality slices cover every area once", "periodic: the areas left are kept to the start's slice", and the existing partial and cap cases.
 - [x] 2.2 `.claude/agents/quality-reviewer.md`: the periodic mode reads the areas and the worktree the input names.
 
 ## 3. The merger's head and cap
@@ -19,6 +19,6 @@
 
 ## 4. Docs and bookkeeping
 
-- [ ] 4.1 `README.md` (the continued starts, the periodic quality slices, the merger's cap and full sha) and `docs/codebase-map.md` area 1 (the `tools/tools_test.sh` entry with the call caps and the workflow helpers); `CLAUDE.md` stays true as written.
-- [ ] 4.2 `docs/backlog.md`: the six planner entries added, the search-options entry removed, the CLAUDE.md-per-start entry pointed at `docs-index`, the refused-backup evidence added, and the three merger entries removed.
-- [ ] 4.3 Run `make tools-test`, `make docs-lint`, `make gates`, `make spec-validate`, and `openspec validate partial-results --strict --no-interactive`.
+- [x] 4.1 `README.md` (the continued starts, the periodic quality slices, the merger's cap and full sha) and `docs/codebase-map.md` area 1 (the `tools/tools_test.sh` entry with the call caps and the workflow helpers); `CLAUDE.md` stays true as written.
+- [x] 4.2 `docs/backlog.md`: the six planner entries added, the search-options entry removed, the CLAUDE.md-per-start entry pointed at `docs-index`, the refused-backup evidence added, and the three merger entries removed.
+- [x] 4.3 Run `make tools-test`, `make docs-lint`, `make gates`, `make spec-validate`, and `openspec validate partial-results --strict --no-interactive`.
