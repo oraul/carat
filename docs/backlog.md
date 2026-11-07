@@ -1919,8 +1919,8 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 ## Plaintext hover text is read as markdown
 
 - Where: the MarkupContent reader in `carat/adapters/json_rpc_language_gateway.rb` line 706 at 78078ad. Quality advisory in `quick-docs`.
-- Why it matters: a MarkupContent of kind `plaintext` is passed to `MarkdownText` as markdown, so underscores and asterisks in plain hover text (identifiers such as `snake_case_name`) are taken as emphasis.
-- Fix outline: fence or escape the value when the kind is `plaintext`, with a row in the hover contents table.
+- Why it matters: a MarkupContent of kind `plaintext` is passed to `MarkdownText` as markdown, so underscores, asterisks, and backslashes in plain hover text (identifiers such as `snake_case_name`) are taken as markup; the client advertises `plaintext`, so a server may answer with it.
+- Fix outline: wrap a `plaintext` value in a fence before `MarkdownText` reads it, with a row in the hover contents table.
 
 ## The hover-docs spec and the code place the float differently
 
@@ -1939,3 +1939,33 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/architecture.md` line 181 at 78078ad, "sends RequestHover's ask and reads the answer when idle". Quality advisory in `quick-docs`.
 - Why it matters: it reads as if the answer waits for idle, while the gateway sends the ask at the next idle tick and reads only the answer to the request in flight.
 - Fix outline: reword it to "which sends RequestHover's ask at the next idle tick and reads only its answer".
+
+## The hover poll keeps a return that never fires
+
+- Where: `return if ask.sent == ask.want` in `carat/adapters/json_rpc_language_gateway.rb` line 646 at 41297d6. Quality advisory in `quick-docs`.
+- Why it matters: after the in-flight block the equal case has already returned, so the line is dead and suggests a path the poll does not have.
+- Fix outline: drop the line, with the hover rows of `test/adapters_hover.rb` unchanged.
+
+## A key resolved by timeoutlen leaves the hover float off its anchor
+
+- Where: `HandleKey#timeout` in `carat/use_cases/handle_key.rb` line 122 at 41297d6. Quality advisory in `quick-docs`.
+- Why it matters: `call` runs `FollowHover` after a key, but `timeout` dispatches the pending keys' shorter binding without it, so a cursor move resolved by `timeoutlen` leaves the documentation float open away from the cursor until the next key.
+- Fix outline: end `timeout` with the same `@follow_hover.call(state) if @hover.float_id != 0` that `call` has, with a row in `test/adapters_hover.rb` that moves the cursor through a timed-out prefix.
+
+## The hover placement counts rows with bare numbers
+
+- Where: `below = state.screen_rows - 4 - screen_row` and `above = screen_row - 2` in `ShowHover#open`, `carat/use_cases/docs/show_hover.rb` line 72 at 41297d6. Quality advisory in `quick-docs`.
+- Why it matters: the 4 and the 2 are the float's two border rows and the status and command lines, which a reader has to reconstruct, and a change to the bars or the border would miss them.
+- Fix outline: name them (a `BORDER` of 2 and the rows the bars take) in private constants, or say so in a comment.
+
+## The hover float above the cursor and a refused pin have no test
+
+- Where: `ShowHover#open`'s `up` branch in `carat/use_cases/docs/show_hover.rb` and `PinHover` in `carat/use_cases/docs/pin_hover.rb`; the tests are `test/adapters_hover.rb` line 176 at 41297d6. Quality advisory in `quick-docs`; the crash with a hover in flight is the entry Hover paths in the spec or the code have no test.
+- Why it matters: the float placed above the cursor and a split refused for lack of room, which must keep the float, can regress without a test failing.
+- Fix outline: add a case with the cursor on the last screen rows and one pressing the pin key in a window too small to split.
+
+## A pipeline fix rode in the hover pull request
+
+- Where: the `runner_finish` fix in `tools/run_state.sh` line 697 at 41297d6 (commit 13de267, with its `tools/tools_test.sh` case), on `feature/quick-docs`. Two quality advisories in `quick-docs`.
+- Why it matters: CLAUDE.md asks one logical change and one type per squash commit; the CI fix the branch needed is a `fix` of the tooling inside a `feat` pull request, so its history is hidden under the hover change. The pull request's Notes name it as that CI fix.
+- Fix outline: when a CI fix touches tooling outside the change, deliver it as its own change ahead of the feature, or have the push step name it in the pull request's Notes as this one does.
