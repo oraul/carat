@@ -2,6 +2,7 @@ require_relative "../../domain/buffer"
 require_relative "../../ports/file_port"
 require_relative "../outcome"
 require_relative "../plugins/plugin_host"
+require_relative "../../ports/language_service_port"
 
 module Carat
   module UseCases
@@ -10,7 +11,8 @@ module Carat
     # E212, and E382 for a scratch buffer, which is never written. An
     # unnamed buffer takes the path it is written to, and the buffer is
     # unmodified after a write to its own path. A write is reported to the
-    # plugins as a buffer_save event. :w writes the current buffer; SaveAll
+    # plugins as a buffer_save event and to the language services, which
+    # send didSave at their next poll. :w writes the current buffer; SaveAll
     # writes every modified one this way.
     class SaveFile
       E382 = "E382: Cannot write, 'buftype' option is set"
@@ -18,11 +20,13 @@ module Carat
 
       attr_reader :files #: Ports::FilePort
       attr_reader :plugins #: PluginHost
+      attr_reader :services #: Ports::LanguageServicePort
 
-      #: (files: Ports::FilePort, plugins: PluginHost) -> void
-      def initialize(files:, plugins:)
+      #: (files: Ports::FilePort, plugins: PluginHost, services: Ports::LanguageServicePort) -> void
+      def initialize(files:, plugins:, services:)
         @files = files
         @plugins = plugins
+        @services = services
       end
 
       # path_arg is the command argument; empty means the buffer's own
@@ -45,6 +49,7 @@ module Carat
         end
         buffer.mark_saved if path == own
         @plugins.saved(buffer)
+        @services.saved(buffer)
         Outcome.success("\"#{path}\" #{buffer.line_count}L, #{text.bytesize}B written")
       end
     end

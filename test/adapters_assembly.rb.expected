@@ -35,6 +35,12 @@ ok   the plugin registry, in the tokenizer part
 ok   the terminal port
 ok   the clock port
 ok   the file port
+ok   the process port
+ok   the message queue port
+ok   the language services
+ok   the status slots, in the language services
+ok   the buffer list, in the language services
+ok   the file port, in the language services
 ok   the main loop holds the assembly, the terminal, and the signal port it was given
 ok   the fixed config serves the shipped defaults
 ok   the assembly reads timeoutlen and the leader from the port
@@ -42,4 +48,4 @@ ok   the gateway reads the shipped defaults through the file port it was given
 ok   the assembly and the gateway hold the one file port
 ok   a configuration without lines falls back to Vim's defaults
 ok   a configuration problem names its file and line
-adapters_assembly: 44 passed, 0 failed
+adapters_assembly: 50 passed, 0 failed

@@ -11,6 +11,7 @@ Every Spinel pitfall this project has met, once, at the pinned compiler (`SPINEL
 - String literals are frozen with no opt-out; a mutable string is `+""`, `String.new`, or `dup`. Line arrays hold only strings, and a cell array holds one type.
 - Every instance variable is assigned in `initialize`: a call through an unassigned one crashes a release build.
 - A method does not both take a block and call itself.
+- An exception raised under about 64 nested `loop do` blocks ends the program with `SystemStackError`, so a recursive parser loops with `while true`, as `Carat::Json` does.
 - `require_relative` is inlined at compile time, so a missing file is a compile error and the require graph is the module graph.
 - `STDIN.raw { }` is the only raw-mode form, and its block holds a single call: Spinel rewrites a short raw block and skips a long one.
 - A signal handler sets a flag only, since it runs where Ruby code may run, not inside a blocking call; the loop polls with a timeout. `SIGINT` and `SIGTERM` are trapped before the first thread starts, because once a thread runs an untrapped signal ends the process with no `ensure`, leaving the terminal raw.

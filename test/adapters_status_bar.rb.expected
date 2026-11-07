@@ -12,6 +12,13 @@ ok   the position and Top
 ok   a percentage
 ok   Bot
 ok   an lsp state without a server name shows nothing
+ok   ready shows the name
+ok   starting
+ok   indexing with its percent
+ok   stopped
+ok   crashed names the restart command
+ok   untrusted names the start command
+ok   setting the same server again changes nothing
 ok   40 columns keep every segment
 ok   30 columns drop the encoding
 ok   25 columns drop the file type
@@ -34,7 +41,9 @@ ok   command line
 ok   the pill ends at its closing space and the status group fills the rest
 ok   starting
 ok   ready
-ok   error
+ok   indexing
+ok   stopped
+ok   crashed
 ok   each count in its diagnostic group, the closing space in the last one's
 ok   new slots are empty
-adapters_status_bar: 39 passed, 0 failed
+adapters_status_bar: 48 passed, 0 failed

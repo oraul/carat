@@ -1,0 +1,15 @@
+ok   the bar shows the server starting
+ok   the bar shows the ready server by name
+ok   the bar names the restart after a crash, the encoding dropped at 60 columns
+ok   :LspRestart starts the server again
+ok   :LspRestart stops a running server first
+ok   :LspRestart on a buffer without a server
+ok   :LspRestart with a command that cannot start
+ok   :LspRestart refuses arguments
+ok   an untrusted directory starts nothing and names :LspStart
+ok   :LspStart starts the server in an untrusted directory
+ok   :LspStart leaves a running server alone
+ok   :LspStart starts the server again after a crash
+ok   :LspStart on a buffer without a server
+ok   :LspStart refuses arguments
+editor_lsp: 14 passed, 0 failed

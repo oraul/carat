@@ -1,0 +1,23 @@
+ok   one frame
+ok   two frames in one chunk
+ok   a frame split in the header and the body
+ok   the name in any case and a Content-Type header
+ok   the length counts bytes
+ok   an empty body
+ok   a missing length refuses
+ok   a length that is not digits refuses
+ok   ten digits refuse
+ok   a body over the limit refuses
+ok   a header over the limit refuses
+ok   nothing after a refusal
+ok   an incomplete body waits
+ok   a frame counts the body's bytes
+ok   many frames through one framer
+ok   plain text stays
+ok   an escape sequence loses its escape
+ok   C0, DEL, and C1 controls are dropped
+ok   an illegal byte becomes U+FFFD
+ok   UTF-8 is kept
+ok   the cut keeps whole characters
+ok   the limit in bytes
+domain_rpc_framer: 22 passed, 0 failed

@@ -1,3 +1,5 @@
+require_relative "utf8"
+
 module Carat
   # A small JSON reader and writer. Spinel bundles no json library, so this is
   # the only JSON code in the project. It handles the full JSON grammar except
@@ -6,7 +8,15 @@ module Carat
   #
   # Values map to Hash (string keys), Array, String, Integer, Float, true,
   # false and nil. Errors raise Carat::Json::Error with a byte offset.
+  #
+  # Text from a language server is untrusted: arrays and objects nest at
+  # most MAX_DEPTH deep, so a hostile body cannot exhaust the stack, and a
+  # byte outside a well-formed UTF-8 sequence reads and writes as U+FFFD,
+  # walked with Domain::Utf8 since Spinel's each_char and index group such bytes.
   module Json
+    MAX_DEPTH = 64
+    REPLACEMENT = "\u{FFFD}"
+
     class Error < StandardError
     end
 
@@ -33,12 +43,14 @@ module Carat
       # @rbs @text: String
       # @rbs @pos: Integer
       # @rbs @len: Integer
+      # @rbs @depth: Integer
 
       #: (text: String) -> void
       def initialize(text:)
         @text = text
         @pos = 0
         @len = text.bytesize
+        @depth = 0
       end
 
       #: () -> untyped
@@ -105,16 +117,24 @@ module Carat
         end
       end
 
+      #: () -> void
+      def descend
+        @depth += 1
+        error("nesting too deep") if @depth > MAX_DEPTH
+      end
+
       #: () -> Hash[String, untyped]
       def parse_object
         @pos += 1
+        descend
         result = {}
         skip_whitespace
         if peek == 125 # }
           @pos += 1
+          @depth -= 1
           return result
         end
-        loop do
+        while true
           skip_whitespace
           error("expected string key") unless peek == 34
           key = parse_string
@@ -129,6 +149,7 @@ module Carat
             @pos += 1
           elsif b == 125 # }
             @pos += 1
+            @depth -= 1
             return result
           else
             error("expected comma or closing brace")
@@ -139,13 +160,15 @@ module Carat
       #: () -> Array[untyped]
       def parse_array
         @pos += 1
+        descend
         result = []
         skip_whitespace
         if peek == 93 # ]
           @pos += 1
+          @depth -= 1
           return result
         end
-        loop do
+        while true
           skip_whitespace
           result << parse_value
           skip_whitespace
@@ -154,6 +177,7 @@ module Carat
             @pos += 1
           elsif b == 93 # ]
             @pos += 1
+            @depth -= 1
             return result
           else
             error("expected comma or closing bracket")
@@ -165,7 +189,7 @@ module Carat
       def parse_string
         @pos += 1
         out = +""
-        loop do
+        while true
           error("unterminated string") if @pos >= @len
           b = @text.getbyte(@pos)
           if b == 34 # "
@@ -187,14 +211,28 @@ module Carat
             elsif e == 117 then out << parse_unicode_escape
             else error("bad escape")
             end
+          elsif b >= 0x80
+            size = Domain::Utf8.size_at(@text, @pos, @len)
+            if size == 1
+              out << REPLACEMENT
+            else
+              out << @text.byteslice(@pos, size).to_s
+            end
+            @pos += size
           else
             error("control character in string") if b < 32
             start = @pos
             @pos += 1
-            @pos += 1 while @pos < @len && @text.getbyte(@pos) != 34 && @text.getbyte(@pos) != 92 && @text.getbyte(@pos) >= 32
+            @pos += 1 while @pos < @len && ascii_text?(@text.getbyte(@pos).to_i)
             out << @text.byteslice(start, @pos - start)
           end
         end
+      end
+
+      # Whether a byte continues a run of plain ASCII string text.
+      #: (Integer) -> bool
+      def ascii_text?(b)
+        b >= 32 && b < 0x80 && b != 34 && b != 92
       end
 
       #: () -> String
@@ -208,6 +246,7 @@ module Carat
           error("bad low surrogate") unless low >= 0xDC00 && low <= 0xDFFF
           code = 0x10000 + ((code - 0xD800) << 10) + (low - 0xDC00)
         end
+        return REPLACEMENT unless Domain::Utf8.scalar?(code)
         [code].pack("U")
       end
 
@@ -340,22 +379,54 @@ module Carat
         @out << "}"
       end
 
+      # Walks the bytes: a run of plain ASCII is copied at once, a
+      # well-formed UTF-8 sequence as it is, and any other byte as U+FFFD.
       #: (String) -> void
       def write_string(s)
         @out << "\""
-        s.each_char do |c|
-          if c == "\"" then @out << "\\\""
-          elsif c == "\\" then @out << "\\\\"
-          elsif c == "\n" then @out << "\\n"
-          elsif c == "\r" then @out << "\\r"
-          elsif c == "\t" then @out << "\\t"
-          elsif c == "\b" then @out << "\\b"
-          elsif c == "\f" then @out << "\\f"
-          elsif c.ord < 32 then @out << format("\\u%04x", c.ord)
-          else @out << c
+        len = s.bytesize
+        i = 0
+        while i < len
+          b = s.getbyte(i).to_i
+          if b >= 32 && b < 0x80 && b != 34 && b != 92
+            start = i
+            i += 1
+            i += 1 while i < len && plain?(s.getbyte(i).to_i)
+            @out << s.byteslice(start, i - start).to_s
+          elsif b >= 0x80
+            size = Domain::Utf8.size_at(s, i, len)
+            if size == 1
+              @out << REPLACEMENT
+            else
+              @out << s.byteslice(i, size).to_s
+            end
+            i += size
+          else
+            write_escape(b)
+            i += 1
           end
         end
         @out << "\""
+      end
+
+      # Whether a byte is plain ASCII string text, copied as it is.
+      #: (Integer) -> bool
+      def plain?(b)
+        b >= 32 && b < 0x80 && b != 34 && b != 92
+      end
+
+      # Writes the escape of a quote, a backslash, or a control byte.
+      #: (Integer) -> void
+      def write_escape(b)
+        if b == 34 then @out << "\\\""
+        elsif b == 92 then @out << "\\\\"
+        elsif b == 10 then @out << "\\n"
+        elsif b == 13 then @out << "\\r"
+        elsif b == 9 then @out << "\\t"
+        elsif b == 8 then @out << "\\b"
+        elsif b == 12 then @out << "\\f"
+        else @out << format("\\u%04x", b)
+        end
       end
     end
   end

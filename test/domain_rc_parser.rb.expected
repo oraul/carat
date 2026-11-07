@@ -54,9 +54,11 @@ ok   carriage returns
 ok   a malformed line among good ones
 ok   an unknown scope
 ok   a language command
+ok   the trusted roots
 ok   an unknown language setting
 ok   an illegal byte in each scope
 ok   an untrusted file cannot set language commands
+ok   an untrusted file cannot trust a directory
 ok   an untrusted file binds actions and none but no key sequence
 ok   a trusted file binds a key sequence
 ok   an untrusted file sets anything else
@@ -81,4 +83,4 @@ ok   a list
 ok   an empty list
 ok   an unknown kind
 ok   each kind says what it takes
-domain_rc_parser: 83 passed, 0 failed
+domain_rc_parser: 85 passed, 0 failed

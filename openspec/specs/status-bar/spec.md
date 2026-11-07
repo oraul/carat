@@ -38,7 +38,7 @@ The file SHALL be the buffer's path, the scratch title, or `[No Name]`, followed
 - **THEN** the bar starts with " INSERT  a.rb ● " and ends with " ruby  utf-8  3:5  All "
 
 ### Requirement: The reserved slots stay empty until a service fills them
-The git branch, the diagnostics counts, and the `lsp` slot SHALL take no cells while empty and keep their place in the order. A branch SHALL show as the `git` icon, a space, and the name. The diagnostics counts SHALL show each count above zero as its icon (`error`, `warning`, `info`, `hint`), a space, and the number, in that order, each in its own group. The `lsp` slot SHALL show the server's name in the group of its state: starting, ready, or error.
+The git branch, the diagnostics counts, and the `lsp` slot SHALL take no cells while empty and keep their place in the order. A branch SHALL show as the `git` icon, a space, and the name. The diagnostics counts SHALL show each count above zero as its icon (`error`, `warning`, `info`, `hint`), a space, and the number, in that order, each in its own group. The `lsp` slot SHALL show the server's name and its state (requirement "The lsp slot names the state").
 
 #### Scenario: Empty slots take no room
 - **WHEN** no branch, no diagnostics, and no server are set
@@ -71,8 +71,15 @@ The mode pill SHALL be drawn in `StatusLineModeNormal` in normal and operator-pe
 - **THEN** the pill's cells carry the group of that mode
 
 ### Requirement: The slots' colors follow their kind and state
-The diagnostics counts SHALL be drawn in `DiagnosticError`, `DiagnosticWarn`, `DiagnosticInfo`, and `DiagnosticHint`, the `lsp` slot in `StatusLineLspStarting`, `StatusLineLspReady`, or `StatusLineLspError` by its state, and every other segment in `StatusLine`.
+The diagnostics counts SHALL be drawn in `DiagnosticError`, `DiagnosticWarn`, `DiagnosticInfo`, and `DiagnosticHint`, the `lsp` slot in `StatusLineLspStarting` while starting or indexing, `StatusLineLspReady` when ready, `StatusLineLspError` when crashed, and `StatusLine` when stopped or untrusted, and every other segment in `StatusLine`.
 
 #### Scenario: A row per state
 - **WHEN** the bar is drawn with the server in each state and with a count of each kind
 - **THEN** the slot's cells and each count's cells carry the group of that state or kind
+
+### Requirement: The lsp slot names the state
+The `lsp` slot SHALL show the server's name followed by its state's text: nothing when ready, "starting", "indexing" and a percent, "stopped", "crashed :LspRestart", or "untrusted :LspStart".
+
+#### Scenario: The slot names the state
+- **WHEN** the server "ruby-lsp" is indexing at 42 percent
+- **THEN** the slot reads " ruby-lsp indexing 42% "

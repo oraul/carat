@@ -26,8 +26,7 @@ module AdaptersStatusBarTest
     SLOTS.warnings = 0
     SLOTS.infos = 0
     SLOTS.hints = 0
-    SLOTS.lsp_name = ""
-    SLOTS.lsp_state = :none
+    SLOTS.set_lsp("", :none, 0)
     UI.segments.clear
     UI.owners.clear
     UI.priorities.clear
@@ -52,7 +51,10 @@ module AdaptersStatusBarTest
     case name.to_s
     when "starting" then :starting
     when "ready" then :ready
-    when "error" then :error
+    when "indexing" then :indexing
+    when "stopped" then :stopped
+    when "crashed" then :crashed
+    when "untrusted" then :untrusted
     else :none
     end
   end
@@ -91,13 +93,12 @@ module AdaptersStatusBarTest
       s
     when "lsp"
       s = state_for("a.txt", 3)
-      SLOTS.lsp_name = "ruby-lsp"
-      SLOTS.lsp_state = :ready
+      SLOTS.set_lsp("ruby-lsp", :ready, 0)
       s
     when "plugin and lsp"
       s = state_for("a.txt", 3)
       UI.segment("probe", "x", 10)
-      SLOTS.lsp_name = "ruby-lsp"
+      SLOTS.set_lsp("ruby-lsp", :ready, 0)
       s
     when "cursor at the top"
       s = state_for("a.txt", 100)
@@ -141,8 +142,25 @@ module AdaptersStatusBarTest
 
     # Empty slots take no cells: the bar is the same as without them.
     plain = paint(scenario("plain"), 60).row_text(0)
-    SLOTS.lsp_state = :error
+    SLOTS.set_lsp("", :crashed, 0)
     t.assert_equal(plain, paint(scenario("plain"), 60).row_text(0), "an lsp state without a server name shows nothing")
+
+    # The slot names the state after the server's name.
+    t.table([
+      ["ready shows the name", "ready", " ruby-lsp "],
+      ["starting", "starting", " ruby-lsp starting "],
+      ["indexing with its percent", "indexing", " ruby-lsp indexing 42% "],
+      ["stopped", "stopped", " ruby-lsp stopped "],
+      ["crashed names the restart command", "crashed", " ruby-lsp crashed :LspRestart "],
+      ["untrusted names the start command", "untrusted", " ruby-lsp untrusted :LspStart "]
+    ]) do |state|
+      s = scenario("plain")
+      SLOTS.set_lsp("ruby-lsp", lsp_state_of(state), 42)
+      text = paint(s, 80).row_text(0)
+      at = text.index(" ruby-lsp").to_i
+      text[at, text.index("  utf-8").to_i - at + 1]
+    end
+    t.assert_equal([true, false], [SLOTS.set_lsp("x", :ready, 0), SLOTS.set_lsp("x", :ready, 0)], "setting the same server again changes nothing")
 
     # One row per width: segments go by priority, the file is cut last.
     t.table([
@@ -157,7 +175,7 @@ module AdaptersStatusBarTest
 
     # The diagnostics outlast the lsp slot, the percent, and the branch.
     s = scenario("four counts")
-    SLOTS.lsp_name = "ruby-lsp"
+    SLOTS.set_lsp("ruby-lsp", :ready, 0)
     SLOTS.branch = "main"
     t.assert_equal(pad(" NORMAL  a.txt  ✖ 1 ▲ 2 ◆ 3 ◇ 4 ", " 1:1 ", 40), paint(s, 40).row_text(0), "at 40 columns the counts stay with the position")
 
@@ -194,10 +212,12 @@ module AdaptersStatusBarTest
     t.table([
       ["starting", "starting", H::STATUS_LSP_STARTING],
       ["ready", "ready", H::STATUS_LSP_READY],
-      ["error", "error", H::STATUS_LSP_ERROR]
+      ["indexing", "indexing", H::STATUS_LSP_STARTING],
+      ["stopped", "stopped", H::STATUS],
+      ["crashed", "crashed", H::STATUS_LSP_ERROR]
     ]) do |state|
       s = scenario("lsp")
-      SLOTS.lsp_state = lsp_state_of(state)
+      SLOTS.set_lsp("ruby-lsp", lsp_state_of(state), 5)
       f = paint(s, 60)
       at = f.row_text(0).index("ruby-lsp").to_i
       [f.cell(0, at - 1).hl, f.cell(0, at).hl, f.cell(0, at + 8).hl].uniq.length == 1 ? f.cell(0, at).hl : -1

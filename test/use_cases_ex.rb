@@ -42,7 +42,7 @@ module UseCasesExTest
     open_side_window = U::OpenSideWindow.new(buffers: buffers, tabs: tabs)
     open_tab = U::OpenTab.new(open_file: open_file, buffers: buffers, tabs: tabs)
     plugins = U::PluginHost.new(state: state, buffers: buffers, tabs: tabs, input: D::InputState.new, plugin_ui: D::PluginUi.new, files: files, open_file: open_file, probe_path: probe_path, split_window: split_window, open_side_window: open_side_window, open_float: U::OpenFloat.new(tabs: tabs), close_float: U::CloseFloat.new(tabs: tabs), open_tab: open_tab, keymap: D::Keymap.new, leader: " ", runner: ex)
-    save_file = U::SaveFile.new(files: files, plugins: plugins)
+    save_file = U::SaveFile.new(files: files, plugins: plugins, services: Carat::Doubles::FakeLanguageServices.new)
     save_all = U::SaveAll.new(save_file: save_file, buffers: buffers)
     quit = U::Quit.new(buffers: buffers, tabs: tabs)
     quit_all = U::QuitAll.new(buffers: buffers)

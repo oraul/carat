@@ -5,7 +5,8 @@
 # the terminal; signals are trapped before the loop starts; the raw block
 # holds a single call; the screen and the terminal's own cursor are
 # restored in an ensure that covers entering the screen, opening the
-# file, and the loop, so every exit path, an error included, reaches it.
+# file, and the loop, so every exit path, an error included, reaches it,
+# and then asks the language servers to exit without waiting for them.
 require "io/console"
 require_relative "../carat"
 
@@ -27,7 +28,9 @@ terminal = Carat::Drivers::AnsiTerminal.new(input: STDIN, output: STDOUT)
 clock = Carat::Drivers::MonotonicClock.new
 files = Carat::Drivers::DiskFiles.new
 config = Carat::Adapters::RcConfigGateway.new(files: files)
-assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: config, plugin_list: Carat::Plugins::Registry.all)
+messages = Carat::Drivers::RuntimeQueue.new
+processes = Carat::Drivers::ProcessRunner.new(messages: messages)
+assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: config, processes: processes, messages: messages, plugin_list: Carat::Plugins::Registry.all)
 main_loop = Carat::Drivers::MainLoop.new(assembly: assembly, terminal: terminal, signals: signals)
 
 begin
@@ -36,4 +39,5 @@ begin
   STDIN.raw { |io| main_loop.run }
 ensure
   assembly.screen_presenter.leave
+  assembly.services.stop
 end

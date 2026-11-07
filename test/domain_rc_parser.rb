@@ -95,12 +95,14 @@ module DomainRcParserTest
       ["a malformed line among good ones", "option.tabstop 4\noption.clipboard \"x\noption.number true\n", [["1 option|tabstop [\"4\"]", "3 option|number [\"true\"]"], [".caratrc:2: unterminated quote"]]],
       ["an unknown scope", "editor.font mono\n", [[], [".caratrc:1: unknown setting editor.font"]]],
       ["a language command", "language.ruby.lsp ruby-lsp --debug\n", [["1 language|ruby.lsp [\"ruby-lsp\", \"--debug\"]"], []]],
+      ["the trusted roots", "language.trusted_roots ~/src /work\n", [["1 language|trusted_roots [\"~/src\", \"/work\"]"], []]],
       ["an unknown language setting", "language.ruby.linter rubocop\nlanguage.ruby x\n", [[], [".caratrc:1: unknown language setting linter", ".caratrc:2: unknown setting language.ruby"]]],
       ["an illegal byte in each scope", "option.theme caf\xE9\nkeymap.normal x a\xFF.b\nplugin.hello.greeting \xC0\xAF\nlanguage.ruby.lsp ruby-lsp\xFE\noption.tabstop 4\n", [["5 option|tabstop [\"4\"]"], [".caratrc:1: illegal byte", ".caratrc:2: illegal byte", ".caratrc:3: illegal byte", ".caratrc:4: illegal byte"]]]
     ]) do |text|
       config_of(text.to_s, true)
     end
     t.assert_equal([[], [".caratrc:1: language commands are not read from a project file"]], config_of("language.ruby.lsp ./evil\n", false), "an untrusted file cannot set language commands")
+    t.assert_equal([[], [".caratrc:1: language commands are not read from a project file"]], config_of("language.trusted_roots /\n", false), "an untrusted file cannot trust a directory")
     t.assert_equal([["1 keymap|normal [\"x\", \"cursor.down\"]", "2 keymap|normal [\"y\", \"none\"]", "4 keymap|leader [\",\"]", "5 keymap|normal [\"z\"]"], [".caratrc:3: key sequences are not read from a project file"]], config_of("keymap.normal x cursor.down\nkeymap.normal y none\nkeymap.normal q :e<Space>.git/config<CR>\nkeymap.leader ,\nkeymap.normal z\n", false), "an untrusted file binds actions and none but no key sequence")
     t.assert_equal([["1 keymap|normal [\"q\", \":w<CR>\"]"], []], config_of("keymap.normal q :w<CR>\n", true), "a trusted file binds a key sequence")
     t.assert_equal([["1 option|tabstop [\"3\"]"], []], config_of("option.tabstop 3\n", false), "an untrusted file sets anything else")

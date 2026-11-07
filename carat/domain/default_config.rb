@@ -669,6 +669,9 @@ module Carat
       keymap.cmdline <Down> cmdline.history_newer
 
       # Language commands: language.<name>.lsp and language.<name>.formatter.
+      # A server starts on its own only in a directory under a root of
+      # language.trusted_roots, set in the user file, as
+      # language.trusted_roots ~/src /work; elsewhere :LspStart starts it.
       language.ruby.lsp ruby-lsp
       language.ruby.formatter rubocop -A --stdin {file} --stderr
 

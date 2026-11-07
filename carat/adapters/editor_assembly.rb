@@ -97,6 +97,8 @@ require_relative "../use_cases/ex/substitute_command_handler"
 require_relative "../use_cases/ex/global_command_handler"
 require_relative "../use_cases/ex/delete_command_handler"
 require_relative "../use_cases/ex/buffer_command_handler"
+require_relative "../use_cases/ex/lsp_start_command_handler"
+require_relative "../use_cases/ex/lsp_restart_command_handler"
 require_relative "../use_cases/ex/plugin_command_handler"
 require_relative "../use_cases/actions/action_table"
 require_relative "../use_cases/actions/motion_handler"
@@ -235,13 +237,18 @@ module Carat
       attr_reader :frame_presenter #: FramePresenter
       attr_reader :screen_presenter #: ScreenPresenter
       attr_reader :config_errors #: Array[String]
+      attr_reader :processes #: Ports::ProcessPort
+      attr_reader :messages #: Ports::MessageQueuePort
+      attr_reader :services #: JsonRpcLanguageGateway
 
-      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, files: Ports::FilePort, config: Ports::ConfigPort, plugin_list: Array[untyped]) -> void
-      def initialize(terminal:, clock:, files:, config:, plugin_list:)
+      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, files: Ports::FilePort, config: Ports::ConfigPort, processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, plugin_list: Array[untyped]) -> void
+      def initialize(terminal:, clock:, files:, config:, processes:, messages:, plugin_list:)
         @terminal = terminal
         @clock = clock
         @files = files
         @config = config
+        @processes = processes
+        @messages = messages
         value = config.load
         leader = Domain::Keymap.leader_from(value)
         first = Domain::Buffer.from_text("", nil)
@@ -263,6 +270,7 @@ module Carat
         @plugin_ui = Domain::PluginUi.new
         @cache = Domain::LineCache.new
         @status_slots = Domain::StatusSlots.new
+        @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots)
         @arrange_view = UseCases::ArrangeView.new(cache: @cache, buffers: @buffers)
         @actions = UseCases::ActionTable.new
         @commands = UseCases::ExTable.new
@@ -321,7 +329,7 @@ module Carat
           @plugins.register(plugin_list[i])
           i += 1
         end
-        @save_file = UseCases::SaveFile.new(files: files, plugins: @plugins)
+        @save_file = UseCases::SaveFile.new(files: files, plugins: @plugins, services: @services)
         @save_all = UseCases::SaveAll.new(save_file: @save_file, buffers: @buffers)
         @highlight_view = UseCases::HighlightView.new(syntax: @plugins.syntax)
 
@@ -337,6 +345,8 @@ module Carat
         UseCases::SubstituteCommandHandler.register(@commands, substitute_lines: @substitute_lines)
         UseCases::GlobalCommandHandler.register(@commands, global_command: @global_command)
         UseCases::DeleteCommandHandler.register(@commands, delete_lines: @delete_lines)
+        UseCases::LspStartCommandHandler.register(@commands, @services)
+        UseCases::LspRestartCommandHandler.register(@commands, @services)
         UseCases::PluginCommandHandler.register(@commands, plugins: @plugins)
         @plugins.activate_all(value)
 
@@ -383,7 +393,7 @@ module Carat
         @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
         @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt)
         @start_screen = Domain::StartScreen.new
-        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen)
+        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services)
         @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers))
         @screen_presenter = ScreenPresenter.new(terminal: terminal, theme: Domain::Themes.find(@state.options.theme, @state.options.background), colors: terminal.colors)
       end

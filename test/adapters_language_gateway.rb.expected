@@ -1,0 +1,40 @@
+ok   a Ruby buffer starts ruby-lsp and sends initialize
+ok   initialize names the root and the progress capability
+ok   the next idle tick starts nothing more and sends nothing before the answer
+ok   the answer makes it ready and opens the buffer
+ok   didOpen carries the language, version 1, the text, and the file URI
+ok   no trusted_roots line spawns nothing
+ok   the root itself
+ok   a directory under a root
+ok   a sibling sharing the prefix
+ok   a root under the home
+ok   a relative root is no root
+ok   a root with a .. segment is no root
+ok   the filesystem root trusts everything
+ok   a project file cannot trust its own directory
+ok   an unchanged buffer sends nothing
+ok   an edit sends the whole text at the next idle tick with version 2
+ok   an undo is a change with a higher version
+ok   a write sends didSave
+ok   a text buffer hides the slot and keeps the server
+ok   closing the buffer sends didClose
+ok   a progress token request gets a null result
+ok   another request is refused as not found
+ok   progress begins
+ok   progress reports a percent
+ok   a percent over 100 is capped
+ok   progress ends
+ok   diagnostics are kept stripped, the severity bounded
+ok   a later publish replaces the file's diagnostics, an error when no severity is given
+ok   a diagnostic of severity 1 is an error
+ok   at most 1,000 diagnostics of at most 500 bytes
+ok   malformed bodies are dropped, another handle is ignored, and the name loses its controls
+ok   one idle tick reads at most 64 messages
+ok   output that ends crashes the server
+ok   a crashed server is not started again on its own
+ok   an oversized frame crashes the server
+ok   a broken input crashes the server
+ok   stop sends shutdown and exit and stops the child
+ok   a missing command leaves the slot empty
+ok   a text file starts nothing
+adapters_language_gateway: 39 passed, 0 failed
