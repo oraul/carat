@@ -1579,3 +1579,45 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the reader thread in `carat/drivers/process_runner.rb` (line 106 at fb09c6b). Periodic security Low (4) at fb09c6b.
 - Why it matters: it queues every framed body of up to `BODY_LIMIT` with no bound while the gateway drains 64 per idle tick, so a flooding language server can exhaust the editor's memory.
 - Fix outline: cap the queued bodies or bytes per handle and stop the server with an overflow message past the cap, with a driver row. Queued in `lsp-client-tidy`.
+
+## The workflows repeat the commit pattern
+
+- Where: `.claude/workflows/deliver-change.js` repeats the `COMMIT` pattern (line 368 at 594dd35) inline in `pushedHead` (line 248) and in the head check of a capped start (line 496); `.claude/workflows/periodic-review.js` repeats its `isCommit` (line 58) in `areasLeft` (line 74) and computes `areaSlices(MAP_AREAS, QUALITY_SLICES)` twice (lines 103 and 117). Quality advisories in `partial-results`.
+- Why it matters: a change to the accepted commit form or to the slicing has to be made in each copy, and nothing fails when one is missed.
+- Fix outline: define `COMMIT` above the helpers and use `COMMIT.test` in both places, use `isCommit` in `areasLeft`, keep the slices in one const, and add `COMMIT` and `isCommit` to the js helper names in `tools/tools_test.sh`.
+
+## A continued fix-round quality review is told to review the whole diff
+
+- Where: `qualityReview` in `.claude/workflows/deliver-change.js` (line 581 at 594dd35) uses `more || scope`, so the continuation replaces the prior-review scope; the sentinel `the whole diff` is produced by `reviewLeft` (line 228) and compared in `reviewMore` (line 592). Quality advisories in `partial-results`.
+- Why it matters: a capped or empty fix-round quality review is continued over the whole committed diff instead of the fix diff, spending review tokens the `review-scope` item is meant to save, and the sentinel string has two owners.
+- Fix outline: append `more` to `scope` and say the files left are of that scope; name the sentinel once as a constant, or have `reviewLeft` signal a whole-diff rerun separately.
+
+## The review continuations run one after the other
+
+- Where: the loop `for (const k of kinds) got[k] = await continueReview(k, scope, got[k])` in `.claude/workflows/deliver-change.js` (line 627 at 594dd35). Quality advisory in `partial-results`.
+- Why it matters: after the parallel first starts, a capped security review waits for the quality continuation to finish, lengthening the round.
+- Fix outline: run `continueReview` for each kind with `parallel`.
+
+## The continued security prompt joins its sentence to the last file left
+
+- Where: the continued security prompt in `.claude/workflows/deliver-change.js` (line 586 at 594dd35) appends `Run it, every sub-task inline` right after the last bullet of `reviewMore`. Quality advisory in `partial-results`.
+- Why it matters: the last file left reads as that file followed by the sentence, so the reviewer may misread the path.
+- Fix outline: start the sentence on its own line.
+
+## The CALL_CAPS comment has a short line
+
+- Where: the comment above `CALL_CAPS` in `.claude/workflows/deliver-change.js` (line 89 at 594dd35) leaves the short line `// margin), so a start` before the paragraph continues. Quality advisory in `partial-results`.
+- Why it matters: the comment reads as broken and differs from the file's width.
+- Fix outline: rewrap the comment to the file's width.
+
+## The periodic quality slices count a repeated finding twice
+
+- Where: the slice results in `.claude/workflows/periodic-review.js` (lines 94, 115, and 116 at 594dd35) merge blocking and advisory findings with `flatMap`. Quality advisory in `partial-results`.
+- Why it matters: a continued start that repeats a finding of its first start counts it twice in the recorded results the planner reads.
+- Fix outline: drop duplicates as `combineReviews` in `.claude/workflows/deliver-change.js` does.
+
+## The docs of tools-test and /review lag the workflows
+
+- Where: the `tools-test` help line of the `Makefile` (line 355 at 594dd35) lists the shell tools but not the workflow helpers it now runs with node; `.claude/commands/review.md` (line 8) says the quality reviewer reviews the whole tree; the guard case of `tools/tools_test.sh` (line 1000) still uses `tmp/.review-quality` while the workflow names `tmp/.review-quality-N`. Quality advisories in `partial-results`.
+- Why it matters: `make help` and `/review` describe what no longer runs, and the guard case tests a path the workflow no longer uses.
+- Fix outline: add the workflows' pure helpers (node) to the help line, say the security reviewer and three quality starts over the code map areas in `review.md`, and use `tmp/.review-quality-1` in the guard case.
