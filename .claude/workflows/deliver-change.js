@@ -247,6 +247,13 @@ function pushedHead(pushed, head) {
   const full = String(pushed || '')
   return /^[0-9a-f]{40}$/.test(full) && /^[0-9a-f]{7,40}$/.test(head || '') && full.startsWith(head) ? full : ''
 }
+// The pushed sha after one start of a package or push call: the start's own
+// when it reported one, else the one kept from an earlier start, so a start
+// capped after its push keeps it when the continuation, refused a second
+// push, reports none.
+function keepPushed(mode, pushed, result) {
+  return (mode === 'package' || mode === 'push') && result && result.pushed ? result.pushed : pushed
+}
 
 // The output tokens the runtime has counted so far; the main session is idle
 // while the workflow runs, so a difference is what the phase spent.
@@ -479,6 +486,7 @@ async function contributor(mode, detail) {
     result = await measured(key, () => agent(
       `${intro()} Mode: ${mode}. ${detail}${more}\nFollow your Modes section for \`${mode}\` and return the schema.${capLine(mode)}`,
       { agentType: 'contributor', schema: withCalls(WORK), label: `contributor: ${mode}${count ? ', continued' : ''}` }), callCap(mode))
+    state.pushed = keepPushed(mode, state.pushed, result)
     const step = continuation(result, result ? workLeft(result) : null, count)
     if (step.next === 'done') break
     if (step.next === 'stop') {
@@ -489,10 +497,9 @@ async function contributor(mode, detail) {
     const why = result ? 'reached its cap' : 'returned no result'
     note(`contributor (${mode}) ${why}${result ? `, left: ${step.left.join('; ')}` : ''}; continued`)
     queue(`sh tools/run_state.sh note ${state.change} overrun "contributor ${mode} start ${count + 1} ${why} and was continued"`, head)
-    more = `\nThis continues a start that ${result ? `reached its cap. It left:\n- ${step.left.join('\n- ')}` : 'returned no result, having reached its turn ceiling'}\nResume from the branch's commits, tasks.md, and the run state; redo nothing already committed or recorded.`
+    more = `\nThis continues a start that ${result ? `reached its cap. It left:\n- ${step.left.join('\n- ')}` : 'returned no result, having reached its turn ceiling'}\nResume from the branch's commits, tasks.md, and the run state; redo nothing already committed or recorded.${mode === 'package' || mode === 'push' ? `\nWhen this mode's push already ran, which a second push refuses, return \`sh tools/run_state.sh get ${state.change} pushed\` as \`pushed\`.` : ''}`
   }
   head = result.head
-  if ((mode === 'package' || mode === 'push') && result.pushed) state.pushed = result.pushed
   note(`contributor (${mode}): ${result.summary}`)
   return result
 }

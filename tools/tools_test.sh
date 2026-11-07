@@ -1716,7 +1716,7 @@ js() {
   } | node -
 }
 work_js() {
-  js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead" "$1"
+  js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead keepPushed" "$1"
 }
 expect "workflow: a contributor that finished is done" 0 '^[{]"next":"done","left":\[\][}]$' \
   work_js "(r => continuation(r, workLeft(r), 0))({ status: 'done' })"
@@ -1745,6 +1745,12 @@ expect "workflow: a pushed sha other than the reported head is refused" 0 '^\[""
   work_js "[pushedHead('1bcdef0123456789abcdef0123456789abcdef01', 'abcdef012345'), pushedHead('abcdef012345', 'abcdef012345'), pushedHead('$full', '')]"
 expect "workflow: the merge prompt names the checked pushed sha" 0 'The pushed head is [$][{]pushed[}]' grep -F 'The pushed head is ${pushed}' "$wf"
 expect "workflow: the merge stops before the merger without a checked sha" 0 "if [(]!pushed[)]" grep -F 'if (!pushed) { stopped' "$wf"
+expect "workflow: a continued package start keeps the sha its capped start pushed" 0 "^\[\"$full\",\"$full\",\"\"\]$" \
+  work_js "[keepPushed('package', '', { status: 'partial', pushed: '$full' }), keepPushed('package', '$full', { status: 'done' }), keepPushed('fix', '', { status: 'done', pushed: '$full' })]"
+expect "workflow: a later push start's sha replaces the kept one" 0 '^"1bcdef0123456789abcdef0123456789abcdef01"$' \
+  work_js "keepPushed('push', '$full', { status: 'done', pushed: '1bcdef0123456789abcdef0123456789abcdef01' })"
+expect "workflow: every contributor start's pushed sha is kept" 0 "state[.]pushed = keepPushed[(]mode, state[.]pushed, result[)]" grep -F 'state.pushed = keepPushed(mode, state.pushed, result)' "$wf"
+expect "workflow: a continued package or push start returns the recorded pushed sha" 0 'get [$][{]state[.]change[}] pushed' grep -F 'get ${state.change} pushed\` as \`pushed\`' "$wf"
 expect "workflow: the package step returns the recorded pushed sha" 0 'get <change> pushed`, the full sha, as `pushed`' grep -F 'Return `sh tools/run_state.sh get <change> pushed`, the full sha, as `pushed`' "$agents/contributor.md"
 expect "workflow: the push mode returns the pushed sha" 0 'returning `pushed` as in package' grep -F -- '--ci-fix`, one push per CI fix, returning `pushed` as in package' "$agents/contributor.md"
 areas=$(grep -c -E '^## [0-9]+[.] ' "$here/../docs/codebase-map.md")
