@@ -380,6 +380,43 @@ module AdaptersServerCompletionsTest
     r.type("<Esc>")
     t.assert_equal(0, r.assembly.state.tab.floats.count, "Esc closes the documentation with the popup")
 
+    # A resolve left unanswered is cancelled two seconds past its deadline.
+    r = rig({ "completionProvider" => { "resolveProvider" => true } })
+    r.type("ifi")
+    until_sent(r, "textDocument/completion", 20)
+    answer(r, last_of(r, "textDocument/completion")["id"], [described("file_name", 6, 0), described("filter", 3, 1), described("final", 14, 2)])
+    r.wait
+    r.type("<C-n><C-n>")
+    until_sent(r, "completionItem/resolve", 20)
+    asked = last_of(r, "completionItem/resolve")
+    110.times { r.wait }
+    cancel = last_of(r, "$/cancelRequest")
+    t.assert_equal([1, asked["id"].to_i, false], [count_of(r, "$/cancelRequest"), cancel.nil? ? 0 : cancel["params"]["id"], r.assembly.services.waiting?], "an unanswered resolve is cancelled by its id after two seconds and waits no more")
+    r.messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => asked["id"].to_i, "result" => { "label" => "file_name", "documentation" => "late" } }))
+    r.wait
+    t.assert_equal([1, []], [count_of(r, "completionItem/resolve"), docs_lines(r)], "the cancelled resolve's answer shows nothing and the item is not asked again")
+
+    # A new completion answer cancels the resolve in flight.
+    r = rig({ "completionProvider" => { "resolveProvider" => true } })
+    r.type("ifi")
+    until_sent(r, "textDocument/completion", 20)
+    answer(r, last_of(r, "textDocument/completion")["id"], [described("file_name", 6, 0), described("filter", 3, 1), described("final", 14, 2)])
+    r.wait
+    r.type("<C-n><C-n>")
+    until_sent(r, "completionItem/resolve", 20)
+    asked = last_of(r, "completionItem/resolve")
+    r.type(" ba")
+    until_sent(r, "textDocument/completion", 20)
+    10.times { r.wait } if count_of(r, "textDocument/completion") < 2
+    t.assert_equal([2, 0], [count_of(r, "textDocument/completion"), count_of(r, "$/cancelRequest")], "a new word is asked while the resolve stays in flight")
+    answer(r, last_of(r, "textDocument/completion")["id"], [item("bar", 6), item("baz", 6)])
+    r.wait
+    cancel = last_of(r, "$/cancelRequest")
+    t.assert_equal([1, asked["id"].to_i, ["bar", "baz"]], [count_of(r, "$/cancelRequest"), cancel.nil? ? 0 : cancel["params"]["id"], r.popup], "the new word's answer cancels the resolve in flight by its id")
+    r.messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => asked["id"].to_i, "result" => { "label" => "file_name", "documentation" => "late" } }))
+    10.times { r.wait }
+    t.assert_equal([], docs_lines(r), "the cancelled resolve's late answer changes no float")
+
     # Documentation in the answer, and a server that does not resolve.
     r = rig({ "completionProvider" => { "resolveProvider" => true } })
     r.type("ifi")
