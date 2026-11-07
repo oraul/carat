@@ -3,7 +3,7 @@
 ## 1. The calibration table
 
 - [x] 1.1 `.claude/workflows/deliver-change.js`: `CALIBRATION`, `calibrated`, and `calibrate()`, every agent start taking its options from it, the scouts at `cheap/low`. Tested by "calibration: every kind of start has a profile", "calibration: the cheap tier is the agent files' model lines", "calibration: the security reviewer keeps the session's tier and effort", and "workflow: calibrate passes a low effort and records the profile".
-- [x] 1.2 `.claude/workflows/deliver-change.js`: `metricLine()` writes `calib.KIND=TIER/EFFORT`, `seed()` reads it back. Tested by "workflow: the metric line carries the profiles".
+- [x] 1.2 `.claude/workflows/deliver-change.js`: `metricLine()` writes `calib.KIND=TIER/EFFORT`, `seed()` reads it back through `restoreCalibration()`, keeping a kind this start already used and dropping a value outside the table's form. Tested by "workflow: the metric line carries the profiles" and "workflow: a restart restores the recorded profiles of the kinds not used yet".
 
 ## 2. The history column
 

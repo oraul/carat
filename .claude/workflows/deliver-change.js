@@ -113,6 +113,16 @@ function calibrate(kind, opts) {
   const effort = CALIBRATION[kind].split('/')[1]
   return effort === 'session' ? opts : Object.assign({}, opts, { effort })
 }
+// A restart carries on the profiles an earlier start recorded as
+// metric.calib.KIND, for the kinds this start has not used yet; a value
+// outside the table's form is dropped.
+function restoreCalibration(saved, used) {
+  for (const key of Object.keys(saved)) {
+    const m = /^metric\.calib\.([a-z]+)$/.exec(key)
+    if (m && !(m[1] in used) && /^(cheap|session)\/(low|session)$/.test(saved[key])) used[m[1]] = saved[key]
+  }
+  return used
+}
 
 const STATUS = { type: 'string', enum: ['done', 'stopped'] }
 const WORK_STATUS = { type: 'string', enum: ['done', 'partial', 'stopped'], description: 'partial: the cap stopped you with the work committed and backed up' }
@@ -336,9 +346,8 @@ function seed() {
     }
     m = /^metric\.first\.([a-z]+)$/.exec(key)
     if (m) firstPass[m[1]] = Number(state[key]) ? 1 : 0
-    m = /^metric\.calib\.([a-z]+)$/.exec(key)
-    if (m && !(m[1] in calibrated) && /^(cheap|session)\/(low|session)$/.test(state[key])) calibrated[m[1]] = state[key]
   }
+  restoreCalibration(state, calibrated)
   rework = Number(state['metric.rework']) || 0
   seededRework = rework
   extra = Number(state['metric.extra']) || 0
