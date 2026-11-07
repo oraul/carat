@@ -10,7 +10,7 @@
 
 ## 3. Documentation records and the source
 
-- [x] 3.1 `Domain::CompletionDocs` held by `CompletionRequest#docs`, with `pick`, `text_at`, `waiting?`, `clear` (`test/adapters_server_completions.rb`, the record rows)
+- [x] 3.1 `Domain::CompletionDocs` held by `CompletionRequest#docs`, with `pick`, `text_at`, `waiting?`, `clear` (the resolve rows of `test/adapters_server_completions.rb`)
 - [x] 3.2 `CompletionPort#documentation(list, index)`, `ServerCompletions`, `FixedCompletions#document`; `CompletionMenu#origin` and the documentation float members (`test/editor_completion.rb`)
 
 ## 4. The float
@@ -24,4 +24,4 @@
 ## 6. Docs and checks
 
 - [x] 6.1 `docs/codebase-map.md`, `docs/architecture.md` port table, `docs/compatibility.md`, `README.md` (`make docs-lint`, `make gates`)
-- [ ] 6.2 `make lint`, `make diagnose`, `make test`, `make spec-validate` pass
+- [x] 6.2 `make lint`, `make diagnose`, `make test`, `make spec-validate` pass
