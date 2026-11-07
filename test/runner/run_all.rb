@@ -10,6 +10,7 @@ require_relative "../adapters_config_gateway"
 require_relative "../adapters_dirty_rows"
 require_relative "../adapters_frame_presenter"
 require_relative "../adapters_key_decoder"
+require_relative "../adapters_language_gateway"
 require_relative "../adapters_screen_presenter"
 require_relative "../adapters_status_bar"
 require_relative "../adapters_tab_bar"
@@ -33,6 +34,7 @@ require_relative "../domain_options_config"
 require_relative "../domain_plugin_manifest"
 require_relative "../domain_rc_parser"
 require_relative "../domain_registers"
+require_relative "../domain_rpc_framer"
 require_relative "../domain_search"
 require_relative "../domain_selection"
 require_relative "../domain_substitute"
@@ -44,6 +46,7 @@ require_relative "../domain_utf8"
 require_relative "../domain_vim_pattern"
 require_relative "../drivers_disk_files"
 require_relative "../drivers_main_loop"
+require_relative "../drivers_process_runner"
 require_relative "../editor_buffers"
 require_relative "../editor_cmdline"
 require_relative "../editor_explorer"
@@ -52,6 +55,7 @@ require_relative "../editor_global"
 require_relative "../editor_grammar"
 require_relative "../editor_insert"
 require_relative "../editor_leader"
+require_relative "../editor_lsp"
 require_relative "../editor_motions"
 require_relative "../editor_normal"
 require_relative "../editor_operators"
@@ -89,6 +93,7 @@ when "adapters_config_gateway" then AdaptersConfigGatewayTest.main
 when "adapters_dirty_rows" then AdaptersDirtyRowsTest.main
 when "adapters_frame_presenter" then AdaptersFramePresenterTest.main
 when "adapters_key_decoder" then AdaptersKeyDecoderTest.main
+when "adapters_language_gateway" then AdaptersLanguageGatewayTest.main
 when "adapters_screen_presenter" then AdaptersScreenPresenterTest.main
 when "adapters_status_bar" then AdaptersStatusBarTest.main
 when "adapters_tab_bar" then AdaptersTabBarTest.main
@@ -112,6 +117,7 @@ when "domain_options_config" then DomainOptionsConfigTest.main
 when "domain_plugin_manifest" then DomainPluginManifestTest.main
 when "domain_rc_parser" then DomainRcParserTest.main
 when "domain_registers" then DomainRegistersTest.main
+when "domain_rpc_framer" then DomainRpcFramerTest.main
 when "domain_search" then DomainSearchTest.main
 when "domain_selection" then DomainSelectionTest.main
 when "domain_substitute" then DomainSubstituteTest.main
@@ -123,6 +129,7 @@ when "domain_utf8" then DomainUtf8Test.main
 when "domain_vim_pattern" then DomainVimPatternTest.main
 when "drivers_disk_files" then DriversDiskFilesTest.main
 when "drivers_main_loop" then DriversMainLoopTest.main
+when "drivers_process_runner" then DriversProcessRunnerTest.main
 when "editor_buffers" then EditorBuffersTest.main
 when "editor_cmdline" then EditorCmdlineTest.main
 when "editor_explorer" then EditorExplorerTest.main
@@ -131,6 +138,7 @@ when "editor_global" then EditorGlobalTest.main
 when "editor_grammar" then EditorGrammarTest.main
 when "editor_insert" then EditorInsertTest.main
 when "editor_leader" then EditorLeaderTest.main
+when "editor_lsp" then EditorLspTest.main
 when "editor_motions" then EditorMotionsTest.main
 when "editor_normal" then EditorNormalTest.main
 when "editor_operators" then EditorOperatorsTest.main

@@ -22,7 +22,7 @@ Areas:
 14. Syntax highlighting
 15. Plugin host and API
 16. Explorer plugin
-17. Ports and drivers
+17. Ports, drivers, and language services
 18. Tests and benchmarks
 
 The last section, Delivered changes, lists every change merged so far in order with what it left for later.
@@ -406,6 +406,7 @@ Files:
 - `carat/use_cases/files/make_path.rb`, `carat/use_cases/files/rename_path.rb` (the listed buffers following), `carat/use_cases/files/delete_path.rb`: `call`; make, rename, and delete inside a root with every check, used by the plugin file requests, each refusing a parent (create) or an entry's directory (rename, delete) that `ResolveInside` places outside the root.
 - `carat/use_cases/files/resolve_inside.rb`: `ResolveInside#call(root, dir, path)`, the one comparison of real paths (`FilePort#real_path`): `Outside the tree root: path` unless the directory with its links resolved is the resolved root or inside it; built by `PluginHost` and shared by the three.
 - `carat/use_cases/recall_history.rb`: `RecallHistory#call`, `<Up>` and `<Down>` through the prompt's `History` (`:` or search).
+- `carat/use_cases/ex/lsp_restart_command_handler.rb`: `LspRestartCommandHandler.register` (`:LspRestart`): stops every language server and starts the current buffer's again through `LanguageServicePort#restart`.
 
 Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`.
 
@@ -541,11 +542,11 @@ Rules: the plugin rules of area 15; its actions are in `docs/actions.md` and its
 
 Bench: `lh-explorer`, `j-explorer`.
 
-## 17. Ports and drivers
+## 17. Ports, drivers, and language services
 
-What: the interfaces the core uses to reach the terminal, files, clock, configuration, and signals, and the drivers that implement them.
+What: the interfaces the core uses to reach the terminal, files, clock, configuration, signals, child processes, and language servers, the drivers that implement them, and the language server client.
 
-Flow: each port is a class whose methods raise `NotImplementedError`; drivers subclass them and are built only in `bin/carat.rb`; doubles (area 18) subclass them for tests. `MainLoop#run` polls the `SignalPort` (terminate, resize), renders on a resize, and pumps input.
+Flow: each port is a class whose methods raise `NotImplementedError`; drivers subclass them and are built only in `bin/carat.rb`; doubles (area 18) subclass them for tests. `MainLoop#run` polls the `SignalPort` (terminate, resize), renders on a resize, and pumps input. On an idle read `InputController#pump` calls `LanguageServicePort#poll`: `JsonRpcLanguageGateway` drains at most 64 queued `ServiceMessage` values that `ProcessRunner`'s reader threads framed with `RpcFramer`, starts the current buffer's server, sends `didOpen`, `didChange`, `didSave` (reported by `SaveFile`), and `didClose`, and writes the `lsp` slot through `StatusSlots#set_lsp`; `bin/carat.rb` calls `stop` in its `ensure`.
 
 Files:
 
@@ -559,11 +560,25 @@ Files:
 - `carat/drivers/monotonic_clock.rb`: `MonotonicClock`.
 - `carat/drivers/signals.rb`: `Signals`; INT and TERM terminate, WINCH resizes, flags only.
 - `carat/drivers/main_loop.rb`: `MainLoop#run`.
-- `carat/domain/json.rb`: `Carat::Json` (`parse`, `generate`, `pretty_generate`), for JSON-RPC; the configuration is not JSON.
+- `carat/domain/json.rb`: `Carat::Json` (`parse`, `generate`, `pretty_generate`), for JSON-RPC; the configuration is not JSON. Nesting is capped at `MAX_DEPTH`, illegal UTF-8 bytes read and write as U+FFFD.
+- `carat/ports/process_port.rb`: `ProcessPort`; `spawn` (a handle, 0 when the command cannot start), `write`, `stop`.
+- `carat/ports/message_queue_port.rb`: `MessageQueuePort`; `push`, `pop` (nil at once when empty).
+- `carat/ports/language_service_port.rb`: `LanguageServicePort`; `poll`, `restart`, `saved`, `stop`.
+- `carat/drivers/process_runner.rb`: `ProcessRunner`; `Process.spawn` over `IO.pipe` pairs, a reader thread (`pump`) and a writer thread (`drain`) per child, the only threads; `Process.detach` reaps.
+- `carat/drivers/runtime_queue.rb`: `RuntimeQueue`, the runtime's `Queue`.
+- `carat/domain/rpc_framer.rb`: `RpcFramer`; `frame`, `feed`, `next_body`, `refused?`; `HEADER_LIMIT` and `BODY_LIMIT`.
+- `carat/domain/control_text.rb`: `ControlText.strip`, server text without controls, capped on a character boundary.
+- `carat/domain/service_message.rb`: `ServiceMessage`, a body, `exit`, or `overflow` from a reader thread.
+- `carat/domain/diagnostic.rb`: `Diagnostic`, a published diagnostic as a value.
+- `carat/domain/language_server.rb`: `LanguageServer`, one server's state, documents, and diagnostics.
+- `carat/adapters/json_rpc_language_gateway.rb`: `JsonRpcLanguageGateway`; `poll`, `restart`, `saved`, `stop`, `diagnostics`, `server_for`.
+- `carat/doubles/fake_processes.rb`: `FakeProcesses`; `install`, `break_input`, `spawned`, `bodies`, `methods_sent`, `stopped`.
+- `carat/doubles/memory_queue.rb`: `MemoryQueue`; `body`, `count`.
+- `carat/doubles/fake_language_services.rb`: `FakeLanguageServices`, no server, the writes recorded in `saves`, for use cases built by hand.
 
-Tests: `test/drivers_main_loop.rb` (a resize, a terminate, and `:q` over the signal double, and the driver's flags), `test/json.rb`, `test/drivers_disk_files.rb` (`DiskFiles`, `MakePath`, `RenamePath`, and `DeletePath` over a real directory: a link to `/dev/zero`, a FIFO, files at and over a limit, links inside and outside a root).
+Tests: `test/drivers_main_loop.rb` (a resize, a terminate, and `:q` over the signal double, and the driver's flags), `test/json.rb`, `test/drivers_disk_files.rb` (`DiskFiles`, `MakePath`, `RenamePath`, and `DeletePath` over a real directory: a link to `/dev/zero`, a FIFO, files at and over a limit, links inside and outside a root), `test/domain_rpc_framer.rb` (frames, their limits, and `ControlText`), `test/drivers_process_runner.rb` (`cat` and `sh` as children), `test/adapters_language_gateway.rb` (the lifecycle, progress, diagnostics, hostile output over the doubles), `test/editor_lsp.rb` (`:LspRestart` and the drawn slot).
 
-Designs: `state-and-ports` (Signals; The stat value; Configuration), `editor-foundation` (Ports, adapters, drivers, doubles), `cursor-shapes` (Every exit path).
+Designs: `state-and-ports` (Signals; The stat value; Configuration), `editor-foundation` (Ports, adapters, drivers, doubles), `cursor-shapes` (Every exit path), `lsp-diagnostics` (Spike; Three ports, two drivers, two doubles; The gateway works only on idle ticks; Untrusted output).
 
 Rules: `docs/architecture.md` sections 2.1 (signal handlers set a flag; `STDIN.raw` single call; `Process.spawn` with `IO.pipe`), 6, and 8.4. An overridden port method carries `# @rbs` parameter lines, not an applied return type.
 

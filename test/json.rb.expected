@@ -19,11 +19,25 @@ ok   unterminated string
 ok   bad literal
 ok   leading zero
 ok   missing colon
+ok   an illegal byte reads as U+FFFD
+ok   a high surrogate's bytes read as three U+FFFD
+ok   a well-formed sequence is kept
+ok   a lone low surrogate escape reads as U+FFFD
+ok   a truncated sequence at the end
+ok   shallow nesting reads
+ok   nesting at the limit reads
+ok   nesting past the limit
+ok   deep object nesting
+ok   a hundred thousand brackets
 ok   write null
 ok   write number
 ok   write string
 ok   write array
 ok   write object
+ok   write an illegal byte as U+FFFD
+ok   write a truncated sequence as U+FFFD
+ok   write UTF-8 and a control byte
+ok   write every short escape
 ok   pretty print
 ok   round trip
-json: 28 passed, 0 failed
+json: 42 passed, 0 failed

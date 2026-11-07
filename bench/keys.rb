@@ -234,7 +234,7 @@ def run(scenario, count, size)
   list = []
   list = Carat::Plugins::Registry.all if plugins == "explorer"
   list << Carat::Plugins::Ruby::Plugin.new if plugins == "ruby"
-  assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: Carat::Doubles::FixedConfig.new(value: Carat::Doubles::FixedConfig.defaults), plugin_list: list)
+  assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: Carat::Doubles::FixedConfig.new(value: Carat::Doubles::FixedConfig.defaults), processes: Carat::Doubles::FakeProcesses.new, messages: Carat::Doubles::MemoryQueue.new, plugin_list: list)
   assembly.screen_presenter.enter
   opened = now
   assembly.open("a.rb")

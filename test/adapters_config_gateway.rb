@@ -148,7 +148,7 @@ module AdaptersConfigGatewayTest
     files.put(PROJECT, "keymap.normal zq foo.bar\noption.tabstop 3\n")
     clock = Carat::Doubles::ManualClock.new
     terminal = Carat::Doubles::FakeTerminal.new(clock: clock, rows: 10, cols: 60)
-    editor = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: Carat::Adapters::RcConfigGateway.new(files: files), plugin_list: [])
+    editor = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: Carat::Adapters::RcConfigGateway.new(files: files), processes: Carat::Doubles::FakeProcesses.new, messages: Carat::Doubles::MemoryQueue.new, plugin_list: [])
     editor.open("a.txt")
     t.assert_equal([3, false, "~/.config/carat/caratrc:2: unknown theme solarized (and 1 more)", true], [editor.state.options.tabstop, editor.state.options.number, editor.state.message, editor.state.message_error], "the editor applies the files and shows the first problem with the count of the others")
 

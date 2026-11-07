@@ -1,0 +1,13 @@
+ok   an empty queue answers nil at once
+ok   the first child's handle is 1
+ok   a running child takes input
+ok   the reader thread frames the echo
+ok   two frames in one write
+ok   a stopped child's output ends
+ok   a stopped child takes no input
+ok   a missing command does not start
+ok   no words start nothing
+ok   an unknown handle takes no input
+ok   sh starts
+ok   an oversized frame stops the reading
+drivers_process_runner: 12 passed, 0 failed

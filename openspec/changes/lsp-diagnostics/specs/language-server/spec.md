@@ -38,7 +38,7 @@ The `lsp` slot SHALL show the server's name when ready, "starting" after it whil
 - **THEN** the slot reads "ruby-lsp crashed :LspRestart" in the error group
 
 ### Requirement: :LspRestart restarts the servers
-`:LspRestart` SHALL stop every server, forget commands that could not start, and start the current buffer's server again at the next idle tick, which reopens its documents. With no server configured for the current buffer it SHALL report so.
+`:LspRestart` SHALL stop every server, forget commands that could not start, and start the current buffer's server again, which reopens its documents once it answers. With no server configured for the current buffer it SHALL report so.
 
 #### Scenario: Restart after a crash
 - **WHEN** the server crashed and `:LspRestart` is entered

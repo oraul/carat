@@ -117,12 +117,13 @@ module Carat
         Domain::Highlight::STATUS_MODE_NORMAL
       end
 
-      # The group of the lsp slot in a state.
+      # The group of the lsp slot in a state: starting and indexing share
+      # one, a crash is an error, and a stopped server is plain.
       #: (Symbol) -> Integer
       def self.lsp_group(state)
-        return Domain::Highlight::STATUS_LSP_STARTING if state == :starting
+        return Domain::Highlight::STATUS_LSP_STARTING if state == :starting || state == :indexing
         return Domain::Highlight::STATUS_LSP_READY if state == :ready
-        return Domain::Highlight::STATUS_LSP_ERROR if state == :error
+        return Domain::Highlight::STATUS_LSP_ERROR if state == :crashed
         Domain::Highlight::STATUS
       end
 
@@ -153,7 +154,7 @@ module Carat
           add(PLUGIN, text_width(ui.text_at(k)) + 2, k)
           k += 1
         end
-        add(LSP, text_width(slots.lsp_name) + 2, -1) if slots.lsp?
+        add(LSP, text_width(slots.lsp_label) + 2, -1) if slots.lsp?
         add(FILETYPE, text_width(buffer.filetype) + 2, -1) unless buffer.filetype.empty?
         add(ENCODING, ENCODING_TEXT.length + 2, -1)
         cursor = window.cursor
@@ -234,7 +235,7 @@ module Carat
         elsif kind == LSP
           hl = StatusBar.lsp_group(slots.lsp_state)
           x = frame.put_within(row, x, " ", hl, limit)
-          x = frame.put_within(row, x, slots.lsp_name, hl, limit)
+          x = frame.put_within(row, x, slots.lsp_label, hl, limit)
         elsif kind == FILETYPE
           x = frame.put_within(row, x, " ", hl, limit)
           x = frame.put_within(row, x, buffer.filetype, hl, limit)

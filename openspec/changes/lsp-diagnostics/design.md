@@ -20,12 +20,12 @@ Section 12 asks for a spike before item 10. On the pinned Spinel a program spawn
 
 - `ProcessPort`: `spawn(argv)` answers a handle number, 0 when the command cannot start; `write(handle, bytes)` answers whether the bytes went; `stop(handle)` closes stdin, sends `TERM`, and detaches the child. `ProcessRunner` implements it and starts the one reader thread per child, which reads chunks, frames them with `RpcFramer`, and pushes each body, then an `exit` message at EOF or an `overflow` message when the framer refuses, on the queue. The section 8.4 `ServiceThreads` is folded into it: the thread is a dozen lines and needs the child's pipe, and the driver stays the only place a thread starts.
 - `MessageQueuePort`: `push(message)` and `pop`, which answers nil at once when empty: the editor never blocks on it, so the section 6 `pop(timeout)` is not needed. `RuntimeQueue` wraps the runtime's `Queue`, the only object both threads hold.
-- `LanguageServicePort`: `poll(state)`, `restart(state)`, `stop`; the core (the input controller, `:LspRestart`, and the composition root) sees only it, so no use case sees JSON.
+- `LanguageServicePort`: `poll(state)`, `restart(state)`, `saved(buffer)`, `stop`; the core (the input controller, `SaveFile`, `:LspRestart`, and the composition root) sees only it, so no use case sees JSON. `FakeLanguageServices` serves use cases a test builds by hand.
 - `FakeProcesses` records spawns and written frames and can refuse a command; `MemoryQueue` is an array. Tests push bodies on the queue as a server's thread would.
 
 ### The gateway works only on idle ticks
 
-`InputController#pump` calls `services.poll(state)` when the read returns nothing, after the escape flush and the key deadline; a key never reaches it, so the per-key path is unchanged. `JsonRpcLanguageGateway#poll` drains at most 64 messages, then syncs documents: for the current buffer's file type it starts the server once (a refused spawn is remembered until `:LspRestart`); for each buffer of a running server's file type with a path it sends `didOpen` once, `didChange` with the whole text and the next version when `changes` or `closed_count` moved (`changes` alone goes back on undo), and `didSave` when `saved_change` moved; a document whose buffer is gone or renamed gets `didClose`. Documents are sent only once the server answered `initialize`. The slot is written from the current buffer's server at the same tick, through `StatusSlots#set_lsp`, which builds the label once, so a render allocates nothing for it.
+`InputController#pump` calls `services.poll(state)` when the read returns nothing, after the escape flush and the key deadline; a key never reaches it, so the per-key path is unchanged. `JsonRpcLanguageGateway#poll` drains at most 64 messages, then syncs documents: for the current buffer's file type it starts the server once (a refused spawn is remembered until `:LspRestart`); for each buffer of a running server's file type with a path it sends `didOpen` once, `didChange` with the whole text and the next version when `changes` or `closed_count` moved (`changes` alone goes back on undo), and `didSave` for a buffer `SaveFile` reported since the last tick (`saved_change` also moves on an undo back to the saved text, so it cannot tell a write); a document whose buffer is gone or renamed gets `didClose`. Documents are sent only once the server answered `initialize`. `JsonRpcLanguageGateway` keeps its servers in an `Array[untyped]` read through a typed `server_at`, as `make diagnose` asks. The slot is written from the current buffer's server at the same tick, through `StatusSlots#set_lsp`, which builds the label once, so a render allocates nothing for it.
 
 ### States and the slot
 
@@ -37,7 +37,7 @@ Section 12 asks for a spike before item 10. On the pinned Spinel a program spawn
 
 ### Lifecycle at the edges
 
-`bin/carat.rb` calls `services.stop` in its `ensure`, which sends `shutdown` and `exit` to each running server and stops the child without waiting for answers, so quitting never waits on a server. `:LspRestart` stops every server and forgets refused spawns; the next idle tick starts the current buffer's server again and reopens its documents.
+`bin/carat.rb` calls `services.stop` in its `ensure`, which sends `shutdown` and `exit` to each running server and stops the child without waiting for answers, so quitting never waits on a server. `:LspRestart` stops every server, forgets refused spawns, and starts the current buffer's server at once; its documents are reopened once it answers `initialize`.
 
 ## Risks / Trade-offs
 

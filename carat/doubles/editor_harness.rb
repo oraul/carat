@@ -19,6 +19,8 @@ module Carat
       attr_reader :files #: MemoryFiles
       attr_reader :assembly #: Adapters::EditorAssembly
       attr_reader :frame #: Domain::Frame
+      attr_reader :processes #: FakeProcesses
+      attr_reader :messages #: MemoryQueue
 
       # config is the Domain::Config, which the harness serves
       # through a FixedConfig.
@@ -27,7 +29,9 @@ module Carat
         @files = files
         @clock = ManualClock.new
         @terminal = FakeTerminal.new(clock: @clock, rows: rows, cols: cols)
-        @assembly = Adapters::EditorAssembly.new(terminal: @terminal, clock: @clock, files: @files, config: FixedConfig.new(value: config), plugin_list: plugins)
+        @processes = FakeProcesses.new
+        @messages = MemoryQueue.new
+        @assembly = Adapters::EditorAssembly.new(terminal: @terminal, clock: @clock, files: @files, config: FixedConfig.new(value: config), processes: @processes, messages: @messages, plugin_list: plugins)
         @frame = Domain::Frame.new(rows: rows, cols: cols)
       end
 

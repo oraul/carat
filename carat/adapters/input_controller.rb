@@ -26,13 +26,15 @@ module Carat
       attr_reader :handle_key #: UseCases::HandleKey
       attr_reader :input #: Domain::InputState
       attr_reader :start_screen #: Domain::StartScreen
+      attr_reader :services #: Ports::LanguageServicePort
 
       # @rbs @decoder: KeyDecoder
       # @rbs @wait_until: Float
       # @rbs @deadline: bool
 
-      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState, start_screen: Domain::StartScreen) -> void
-      def initialize(terminal:, clock:, decoder:, handle_key:, input:, start_screen:)
+      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState, start_screen: Domain::StartScreen, services: Ports::LanguageServicePort) -> void
+      def initialize(terminal:, clock:, decoder:, handle_key:, input:, start_screen:, services:)
+        @services = services
         @terminal = terminal
         @clock = clock
         @decoder = decoder
@@ -56,7 +58,10 @@ module Carat
             @handle_key.call(state, Domain::Key::TIMEOUT)
             return true
           end
-          return tick
+          # Idle: the language services read and send here, never while a
+          # key waits.
+          served = @services.poll(state)
+          return tick || served
         end
         start = @start_screen
         if start.showing

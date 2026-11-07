@@ -15,7 +15,7 @@ Carat has no language server client: the bar's `lsp` slot has no writer and noth
 
 Out of scope: drawing diagnostics (`diagnostics-display`); requests with responses the user sees (completion, hover, definition) and their cancellation (`completion`); an automatic restart loop; a stderr log file (stderr goes to the null device); more than one server per language.
 
-Assumptions: restarting after a crash is the user's `:LspRestart`, named after nvim-lspconfig's command, which the crashed state's hint names; a missing server command leaves the slot empty, as Neovim without a configured server, and `:LspRestart` reports it; `didSave` is sent when an idle tick finds the buffer's saved mark moved, so a write of an unmodified buffer sends none.
+Assumptions: restarting after a crash is the user's `:LspRestart`, named after nvim-lspconfig's command, which the crashed state's hint names; a missing server command leaves the slot empty, as Neovim without a configured server, and `:LspRestart` reports it; `didSave` is reported by `SaveFile` through the services port and sent at the next idle tick, since the buffer's saved mark also moves on an undo back to the saved text.
 
 ## Capabilities
 
@@ -30,7 +30,7 @@ Assumptions: restarting after a crash is the user's `:LspRestart`, named after n
 ## Impact
 
 - Domain: new `RpcFramer`, `ServiceMessage`, `Diagnostic`, `LanguageServer`, `ControlText`; `StatusSlots` gains `lsp_label` and `set_lsp`; `Json` gains the depth limit and the UTF-8 handling.
-- Ports: new `ProcessPort`, `MessageQueuePort`, `LanguageServicePort`. Drivers: new `ProcessRunner` (the spawn and the reader thread) and `RuntimeQueue`. Doubles: new `FakeProcesses`, `MemoryQueue`.
+- Ports: new `ProcessPort`, `MessageQueuePort`, `LanguageServicePort`. Drivers: new `ProcessRunner` (the spawn and the reader thread) and `RuntimeQueue`. Doubles: new `FakeProcesses`, `MemoryQueue`, `FakeLanguageServices`.
 - Adapters: new `JsonRpcLanguageGateway`; `EditorAssembly` takes `processes:` and `messages:`; `InputController` polls the services on an idle tick; `StatusBar` draws the label and the new states.
-- Use cases: new `LspRestartHandler` for `:LspRestart`. `bin/carat.rb` builds the drivers and stops the services in its `ensure`.
+- Use cases: new `LspRestartCommandHandler` for `:LspRestart`; `SaveFile` reports a write to the services. `bin/carat.rb` builds the drivers and stops the services in its `ensure`.
 - Docs: `docs/compatibility.md`, `docs/codebase-map.md`, `docs/architecture.md` sections 6 and 8, `README.md`, `docs/backlog.md`.

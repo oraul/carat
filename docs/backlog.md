@@ -206,12 +206,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: Neovim shows such a byte as a four-cell `<xx>` marker, so two lines that differ only in an illegal byte look alike here, and the byte cannot be read from the screen.
 - Fix outline: decode an illegal byte to a code that keeps the byte (for example a private marker range), draw it as `<xx>` the way the C1 markers are drawn, measure it as four cells in `DecodedLine`, `DisplayWidth`, and the cursor placement, and add rows to `test/domain_utf8.rb` and `test/adapters_frame_presenter.rb`.
 
-## Carat::Json and String#index on text that is not UTF-8
-
-- Where: `Carat::Json` in `carat/domain/json.rb` (`each_char` at line 346), and every `index` or `rindex` on text that may hold illegal bytes; the pinned Spinel's `index`, `rindex`, and `each_char` group a lead byte with the bytes after it, while `length` and `[i, n]` count each byte (`docs/spinel-notes.md`).
-- Why it matters: no path sends buffer text to JSON yet, but the language server change will; a character index from `index` on such text slices the wrong bytes, and JSON needs the text valid (a language server expects UTF-8).
-- Fix outline: escape illegal bytes in `Carat::Json` by walking bytes with `Utf8` (as U+FFFD or a documented escape), replace `index` and `rindex` on untrusted text with `byteindex` and `byterindex`, report the disagreement upstream, and add hostile rows to `test/json.rb`.
-
 ## Options repeats its bounded-number and known-name checks
 
 - Where: `Options#apply` in `carat/domain/options.rb`: the `tabstop` and `shiftwidth` blocks (lines 107 to 120) and the `icons` and `theme` blocks (lines 125 to 136) are each the same check-then-set-or-note shape. Advisory of the periodic quality review at 389c118.
@@ -472,9 +466,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The delivered-changes list stops at pull request 46
 
-- Where: the Delivered changes list closing `docs/codebase-map.md`, whose last numbered line is `#46 buffer-search`: lines 623 to 625 list `pipeline-speed`, `pipeline-speed-b`, and `pipeline-speed-c` without their numbers (#48, #49, #51), and #47, #50, and #52 to #60 are missing. Periodic quality advisories at 598cf1b, f31f4e8, d386c74, and 3a99ddd.
-- Why it matters: the list `CLAUDE.md` names as the record of delivered changes misses eleven merged pull requests and cannot be matched to three others.
-- Fix outline: number the three lines and add #47, #50, and #52 to #60, with the check `docs-index` asks for: every merged pull request of `docs/metrics.tsv` appears in the list. Queued in `docs-index`.
+- Where: the Delivered changes list closing `docs/codebase-map.md`, whose last numbered line is `#46 buffer-search`: lines 623 to 625 list `pipeline-speed`, `pipeline-speed-b`, and `pipeline-speed-c` without their numbers (#48, #49, #51), and #47, #50, and #52 to #67 are missing. Periodic quality advisories at 598cf1b, f31f4e8, d386c74, 3a99ddd, and 803fe6e (notes 24 and 25).
+- Why it matters: the list `CLAUDE.md` names as the record of delivered changes misses eighteen merged pull requests and cannot be matched to three others.
+- Fix outline: number the three lines and add #47, #50, and #52 to #67, with the check `docs-index` asks for: every merged pull request of `docs/metrics.tsv` appears in the list. Queued in `docs-index`.
 
 ## Agents leave scratch files in the repository root
 
@@ -922,9 +916,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The architecture gives the plugin API as 2.0
 
-- Where: the plugin API version sentence of `docs/architecture.md` (line 321 at `theme-tokens`) and its `syntax_group` and `tokenize` bullets near lines 295 to 296, while `carat/plugin_api.rb` (line 12) and `docs/plugins.md` (line 23) give 2.1. Periodic quality at 4c65f4e.
-- Why it matters: the binding architecture lists changes only through 1.3 and misses 2.1's file-icon groups in `syntax_group` and tokens and a scratch buffer's syntax named after its plugin, so a plugin author reading it targets an older API.
-- Fix outline: say 2.1 and add the 2.1 additions to the version sentence and to the `syntax_group` and `tokenize` bullets, within the file's budget. Queued in `docs-index`.
+- Where: the plugin API version sentence of `docs/architecture.md` (line 321 at `theme-tokens`) and its `syntax_group` and `tokenize` bullets near lines 295 to 296, while `carat/plugin_api.rb` (line 12) and `docs/plugins.md` (line 23) give 2.3 at 803fe6e. Periodic quality at 4c65f4e and 803fe6e.
+- Why it matters: the binding architecture lists changes only through 1.3 and misses 2.1's file-icon groups in `syntax_group` and tokens and a scratch buffer's syntax named after its plugin, 2.2's `set_segment` and `PluginApi::FileIcons`, and 2.3's floats (`open_float`, `move_float`, `close_float`, `FloatOptions`), so a plugin author reading it targets an older API.
+- Fix outline: say 2.3 and add the 2.1, 2.2, and 2.3 additions to the version sentence and to the `syntax_group`, `tokenize`, and window request bullets, within the file's budget. Queued in `docs-index`.
 
 ## Operate and RepeatLast each copy EditorState#clamp_col
 
@@ -1208,11 +1202,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: style only; the rest of each file wraps comments at the surrounding width.
 - Fix outline: rewrap the four comments to the width of the lines around them, together with the nine-comment entry above.
 
-## The status bar's branch, diagnostics, and lsp slots have no writer
+## The status bar's branch and diagnostics slots have no writer
 
-- Where: `carat/domain/status_slots.rb` (line 8 at `bars`), the `BRANCH`, `DIAGNOSTICS`, and `LSP` paths of `carat/adapters/status_bar.rb`, and the three `StatusLineLsp` groups. Quality advisory of `bars`.
-- Why it matters: nothing in the code writes the branch, the diagnostics counts, or the lsp slot, so this code is reachable only from tests until the git and language-service changes fill it.
-- Fix outline: `lsp-diagnostics` in `docs/queue.md` fills the lsp slot and the counts; the change that shows the git branch fills `branch`. If either is dropped from the queue, remove its slot and paths with their test rows.
+- Where: `carat/domain/status_slots.rb` (line 8 at `bars`) and the `BRANCH` and `DIAGNOSTICS` paths of `carat/adapters/status_bar.rb`. Quality advisory of `bars`; `lsp-diagnostics` writes the lsp slot.
+- Why it matters: nothing in the code writes the branch or the diagnostics counts, so this code is reachable only from tests until the git and diagnostics changes fill it.
+- Fix outline: `diagnostics-display` in `docs/queue.md` fills the counts from the diagnostics `JsonRpcLanguageGateway` keeps; the change that shows the git branch fills `branch`. If either is dropped from the queue, remove its slot and paths with their test rows.
 
 ## TabBar#icon_group scans every group name on each frame
 
@@ -1398,4 +1392,64 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `in_window` in `carat/use_cases/plugins/window_requests.rb` lines 293 and 304 at `floating-windows`. Quality advisory of `floating-windows`.
 - Why it matters: it assigns `state = @state` and never reads it (the block captures `open_file`'s own state), and it restores the float focus although its only caller, `open_file`, then calls `focus_at`, whose `TabPage#focus` leaves the float again, so the restore is never observable.
-- Fix outline: delete the dead line, and drop `saved_float` and its `enter`, or document that `in_window` keeps the focus for callers that do not refocus.
+- Fix outline: delete the dead line, and drop `saved_float` and its `enter`, or document that `in_window` keeps the focus for callers that do not refocus. Queued in `float-tidy` with the other `floating-windows` notes.
+
+## A float reopened at the same box keeps the old float's text
+
+- Where: `build_float_key` in `carat/adapters/frame_presenter.rb` (line 365 at `floating-windows`) and the `floats` comment of `carat/domain/frame.rb`. Periodic quality blocking at 803fe6e.
+- Why it matters: the key holds only the box, the scroll, and the buffer's change counters, so a float closed and replaced by a new one at the same box (fresh scratch buffers both at changes 0 and closed_count 0) gives the same key; with one layout window and the float not entered the rows under it are not repainted and the screen keeps the old text and title. Completion's list is the first consumer that reopens a float at one box.
+- Fix outline: add the float's window id to the key (a stride of 9, with the Frame comment), and a test in `test/editor_floats.rb` that closes and reopens a float at the same box with other lines after two redraws and compares the screen with a full repaint. Queued in `completion`.
+
+## Branch code can forge a security pass the resume trusts
+
+- Where: `trusted_state` in `tools/run_state.sh` (line 1295 at 803fe6e). Periodic security Medium (5).
+- Why it matters: branch code run by `make` in the check phase, before the security review, can write `review.security pass HEAD` into `build/pipeline/CHANGE.json`; a resume accepts it since only the commit is checked, so the security phase is skipped and the merge records carry the forged pass.
+- Fix outline: keep review records where branch code cannot write them, or authenticate them with a key only the workflow holds, and rerun the security review on resume rather than trust a file record. Queued in `merge-gate-integrity`.
+
+## The merge tool has no hook
+
+- Where: the tools of `.claude/agents/merger.md` (line 4 at 803fe6e), whose PreToolUse hook matches Bash only. Periodic security Medium (5).
+- Why it matters: the merge gate runs only because the merger's instructions say so, so a merger steered by branch-controlled CI log text can merge without it.
+- Fix outline: hook the merge tool with a check, from `origin/main`, that `gates.sh merge` left a pass marker at the expected head, and require the spin check by branch protection. Queued in `merge-gate-integrity`.
+
+## FloatLayer is a plain class among the mutable records
+
+- Where: `carat/domain/float_layer.rb` line 10 at 803fe6e. Periodic quality advisory.
+- Why it matters: `CLAUDE.md` makes mutable records `Struct` subclasses with pinned members; `TabPage`, `TabList`, `LastFind`, and `StatusSlots` follow it, `FloatLayer` does not.
+- Fix outline: a `Struct` with `floats` and `focus` pinned, readers and `self.member =` writers, built with keywords in `TabPage`. Queued in `float-tidy`.
+
+## The Frame comment gives four integers per float
+
+- Where: the `floats` comment of `carat/domain/frame.rb` (line 26 at 803fe6e) against `FLOAT_STRIDE` in `carat/adapters/frame_presenter.rb`. Periodic quality advisory.
+- Why it matters: the presenter writes eight integers per float (the box, the window's top and left, the buffer's closed_count and changes), so the comment misleads a reader of the key.
+- Fix outline: describe `floats` as the presenter's float key of `FLOAT_STRIDE` integers per float, or name each. Queued in `float-tidy`.
+
+## move_float bypasses the float use cases
+
+- Where: `WindowRequests#move_float` in `carat/use_cases/plugins/window_requests.rb` (line 247 at 803fe6e). Periodic quality advisory.
+- Why it matters: `open_float` and `close_float` go through `OpenFloat` and `CloseFloat` as section 5.3 asks of request families, while `move_float` writes the tab page's `FloatLayer` directly and ignores the result of `move`.
+- Fix outline: a `MoveFloat` use case beside the other two, or a class comment saying a move is a domain write needing none, with `FloatLayer#move` made void. Queued in `float-tidy`.
+
+## The architecture names no float
+
+- Where: `docs/architecture.md` at 803fe6e: the Window, Layout, TabPage bullet (line 129), the Frame bullet (line 130), section 5.3 (line 177), and the ArrangeView bullet (line 178). Periodic quality advisory.
+- Why it matters: the binding architecture omits `FloatSpec`, `FloatWindow`, `FloatLayer`, `TabPage#window` answering the focused float first, `OpenFloat`, `CloseFloat`, float placement, and the float key.
+- Fix outline: add the three entities to section 4, the two use cases and the placement to section 5.3, and the key to the Frame bullet, within the file's budget. Queued in `architecture-drift`.
+
+## A language server that ignores the end of its input outlives the editor
+
+- Where: `ProcessRunner#stop` in `carat/drivers/process_runner.rb` at `lsp-diagnostics`.
+- Why it matters: stop closes the child's input after `shutdown` and `exit` and detaches it without a signal, so a server that neither exits on `exit` nor on the end of its input keeps running after the editor ends; ruby-lsp exits on both.
+- Fix outline: after closing the input, send `TERM` from the writer thread when the child has not ended within a second, and `KILL` a second later, with a test over a child that ignores its input.
+
+## didChange sends the whole text of a changed buffer
+
+- Where: `JsonRpcLanguageGateway#sync_buffer` in `carat/adapters/json_rpc_language_gateway.rb` at `lsp-diagnostics`.
+- Why it matters: every idle tick after an edit copies and encodes the buffer's whole text, which for a file of megabytes is a visible pause after typing stops.
+- Fix outline: send incremental changes built from the buffer's change records since the last version when the server asks for incremental sync, with a gateway test of an edit in the middle of a long file. Fits `completion`, which needs fresh text often.
+
+## Diagnostic columns are UTF-16 units
+
+- Where: `JsonRpcLanguageGateway#diagnostic_of` at `lsp-diagnostics`: `Diagnostic#col` keeps the server's `character`, counted in UTF-16 units, the protocol's default.
+- Why it matters: on a line with characters outside the ASCII range the column differs from the code point column the editor uses, so a sign or a jump would land on the wrong character.
+- Fix outline: convert with the line's text when the diagnostic is drawn, or negotiate `utf-32` through `general.positionEncodings`, in `diagnostics-display`, with a row on a line holding a character outside the BMP.
