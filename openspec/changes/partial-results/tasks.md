@@ -16,6 +16,7 @@
 - [x] 3.1 `tools/run_state.sh`: `push` records the full sha. Tested by "run_state: push records the full sha as pushed".
 - [x] 3.2 `.claude/workflows/deliver-change.js`: `pushed` in the work result, `pushedHead`, and the merge prompt with the full sha. Tested by "workflow: the merger gets the full pushed sha" and "workflow: a pushed sha other than the reported head is refused".
 - [x] 3.3 `.claude/agents/merger.md` and `FIXED_CAPS.merger`: the full sha in steps 1 and 5, the counted branch deletion, the cap of 12, and `maxTurns` 27. Tested by "caps: the merger's first green fits its cap" and "caps: the merger file's maxTurns is its ceiling".
+- [x] 3.4 `.claude/agents/contributor.md`: package step 3 and the push mode return `pushed` from `sh tools/run_state.sh get <change> pushed`. Tested by "workflow: the package step returns the recorded pushed sha" and "workflow: the push mode returns the pushed sha".
 
 ## 4. Docs and bookkeeping
 

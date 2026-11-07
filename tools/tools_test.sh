@@ -1745,6 +1745,8 @@ expect "workflow: a pushed sha other than the reported head is refused" 0 '^\[""
   work_js "[pushedHead('1bcdef0123456789abcdef0123456789abcdef01', 'abcdef012345'), pushedHead('abcdef012345', 'abcdef012345'), pushedHead('$full', '')]"
 expect "workflow: the merge prompt names the checked pushed sha" 0 'The pushed head is [$][{]pushed[}]' grep -F 'The pushed head is ${pushed}' "$wf"
 expect "workflow: the merge stops before the merger without a checked sha" 0 "if [(]!pushed[)]" grep -F 'if (!pushed) { stopped' "$wf"
+expect "workflow: the package step returns the recorded pushed sha" 0 'get <change> pushed`, the full sha, as `pushed`' grep -F 'Return `sh tools/run_state.sh get <change> pushed`, the full sha, as `pushed`' "$agents/contributor.md"
+expect "workflow: the push mode returns the pushed sha" 0 'returning `pushed` as in package' grep -F -- '--ci-fix`, one push per CI fix, returning `pushed` as in package' "$agents/contributor.md"
 areas=$(grep -c -E '^## [0-9]+[.] ' "$here/../docs/codebase-map.md")
 expect "periodic: MAP_AREAS is the map's count of areas" 0 "^const MAP_AREAS = $areas$" grep '^const MAP_AREAS = ' "$pwf"
 expect "periodic: the quality slices cover every area once" 0 '^true$' \
