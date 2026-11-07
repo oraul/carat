@@ -8,8 +8,8 @@ Completion as you type in insert mode: a popup of the candidates a completion so
 In insert mode, typing a character SHALL, when the completion source is ready for the buffer and the cursor follows word characters (ASCII letters, digits, underscore, or any non-ASCII character), show the source's candidates for that word that match the typed part in a popup of at most ten rows, the first selected. With no match or no ready source, no popup SHALL show and the key SHALL behave and cost as without completion.
 
 #### Scenario: Typing opens the popup
-- **WHEN** the source holds "file_name" and "filter", and "fi" is typed after i on an empty line
-- **THEN** a popup under the line shows both, "filter" first and selected
+- **WHEN** the source holds "file_name", "filter", and "final", and "fi" is typed after i on an empty line
+- **THEN** a popup under the line shows all three, "final" first and selected
 
 #### Scenario: A source that is not ready
 - **WHEN** the source holds nothing and "fi" is typed
