@@ -18,6 +18,7 @@ module EditorFloatsTest
       i += 1
     end
     files.put("a.txt", text)
+    files.put("b.txt", "bee\n")
     h = Carat::Doubles::EditorHarness.default(files, 12, 40)
     h.open("a.txt")
     h
@@ -161,6 +162,24 @@ module EditorFloatsTest
     t.assert_equal(false, h.plugins.window_requests.move_float("other", id, 0, 0).ok, "nor moved")
     t.assert_equal(true, h.plugins.window_requests.close_float("test", 0).ok, "the plugin closes its current float with 0")
     t.assert_equal([1, 0], [h.state.window.id, h.state.tab.floats.count], "the window under it is current")
+    id = open(h, options("editor", 1, 2, 2, 8, false, "", 50, true), ["pick"])
+    opened = h.plugins.window_requests.open_file("test", 1, "b.txt")
+    h.redraw
+    float_window = h.state.tab.floats.at(0).window
+    t.assert_equal([true, 1, "b.txt", "pick"], [opened.ok, h.state.window.id, h.state.buffer.path_text, float_window.buffer.line(0)], "a file opened in the layout window while a float is focused goes to that window")
+    t.assert_equal(true, h.plugins.window_requests.close_float("test", id).ok, "the float it left is still the plugin's")
+
+    # A float showing a file keeps its cursor inside the text.
+    h = editor
+    open(h, options("editor", 1, 2, 3, 12, false, "", 50, true), ["x"])
+    h.type(":e a.txt<CR>G")
+    float_window = h.state.window
+    t.assert_equal([true, 39], [h.state.tab.floats.focused?, float_window.cursor.row], "a float loads a file and goes to its last line")
+    h.type("<C-w>pgg30dd")
+    t.assert_equal([1, 9], [h.state.window.id, float_window.cursor.row], "lines deleted in the layout window pull the float's cursor onto the last line")
+    shown = h.screen
+    h.resize(12, 40)
+    t.assert_equal(shown, h.screen, "the float's text equals a full repaint after the delete")
     t.table([
       ["an unknown anchor", ["window", 1, 1, 50], "No anchor window: editor or cursor"],
       ["no rows", ["editor", 0, 1, 50], "A float needs at least one row and one column"],

@@ -286,17 +286,22 @@ module Carat
       end
 
       # Runs the block with the leaf of that tab page standing as the
-      # current window, then puts the current tab page and window back.
+      # current window, a focused float left for it, then puts the
+      # current tab page, window, and float focus back.
       # @rbs skip
       def in_window(tab_index, leaf)
         state = @state
         tab = @tabs.tab_at(tab_index)
+        floats = tab.floats
         saved_tab = @tabs.tab_index
         saved_current = tab.current
+        saved_float = floats.focused? ? floats.focused.id : -1
         @tabs.tab_index = tab_index
+        floats.leave
         tab.current = leaf
         result = yield
         tab.current = saved_current
+        floats.enter(saved_float) if saved_float >= 0
         @tabs.tab_index = saved_tab
         result
       end

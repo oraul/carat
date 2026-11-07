@@ -217,18 +217,24 @@ module Carat
       # that row moves onto the last line and the line's last character
       # when it is past them, and a scroll position past the end returns
       # to the top. Cursors above the row stay, since their lines did not
-      # change. The buffer feed calls it for every closed transaction.
+      # change. The floats of every tab page are walked with its layout.
+      # The buffer feed calls it for every closed transaction.
       #: (Integer, Integer) -> void
       def clamp_cursors(buffer_id, row)
         t = 0
         while t < pages.length
-          layout = tab_at(t).layout
+          page = tab_at(t)
+          layout = page.layout
           ids = layout.leaves
           i = 0
           while i < ids.length
-            current = layout.window_at(ids[i])
-            target = current.buffer
-            clamp_window(current, target) if target.id == buffer_id && current.cursor.row >= row
+            clamp_if_shown(layout.window_at(ids[i]), buffer_id, row)
+            i += 1
+          end
+          floats = page.floats
+          i = 0
+          while i < floats.count
+            clamp_if_shown(floats.at(i).window, buffer_id, row)
             i += 1
           end
           t += 1
@@ -236,6 +242,14 @@ module Carat
       end
 
       private
+
+      # Clamps the window's cursor when it shows the buffer with the id
+      # and its cursor is on or below the changed row.
+      #: (Window, Integer, Integer) -> void
+      def clamp_if_shown(window, buffer_id, row)
+        target = window.buffer
+        clamp_window(window, target) if target.id == buffer_id && window.cursor.row >= row
+      end
 
       #: (Integer) -> Buffer?
       def modified_in_page(index)

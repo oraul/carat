@@ -32,9 +32,14 @@ ok   another plugin's float cannot be closed
 ok   nor moved
 ok   the plugin closes its current float with 0
 ok   the window under it is current
+ok   a file opened in the layout window while a float is focused goes to that window
+ok   the float it left is still the plugin's
+ok   a float loads a file and goes to its last line
+ok   lines deleted in the layout window pull the float's cursor onto the last line
+ok   the float's text equals a full repaint after the delete
 ok   an unknown anchor
 ok   no rows
 ok   a z out of range
 ok   a tab page holds sixteen floats
 ok   the plugin API is 2.3
-editor_floats: 39 passed, 0 failed
+editor_floats: 44 passed, 0 failed
