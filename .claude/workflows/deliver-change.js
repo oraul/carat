@@ -23,7 +23,9 @@ export const meta = {
 // tools/run_state.sh and read through its trusted command (only the records
 // at a commit of the branch or of main), decides which phases are already
 // done: a phase whose recorded commit is the current one is skipped, so a
-// restart resumes and a fix (a new commit) runs every later phase again. The workflow also
+// restart resumes and a fix (a new commit) runs every later phase again;
+// the check, the reviews, and the benchmark are skipped only on a pass this
+// start recorded (ran), so a resume runs them again. The workflow also
 // measures the run (output tokens and tool calls per phase, the first
 // verdict of each gate, rework rounds, CI minutes, the plan's estimate) and
 // stores every figure as metric.* in one metric line (metricLine), so a
@@ -57,6 +59,11 @@ const RERUNS = 2
 const notes = []
 let head = ''
 let state = {}
+// The phase and review records this start made. A skip and the merge
+// gates' records read only these, never the run state's, which branch code
+// run by the checks can write: a resume runs the check and the reviews
+// again at the head.
+const ran = {}
 let stopped = ''
 const usage = {}
 const firstPass = {}
@@ -375,6 +382,7 @@ function queue(line, commit) {
 const phaseLine = (name, commit) => `sh tools/run_state.sh phase ${state.change} ${name} ${commit}`
 function phaseDone(name, commit) {
   state['phase.' + name] = commit
+  ran['phase.' + name] = commit
   queue(phaseLine(name, commit), commit)
 }
 // The queued lines the closing start may run under the guard's close
@@ -383,6 +391,7 @@ const CLOSABLE = /^sh tools\/run_state\.sh (phase [a-z0-9-]+ (plan|implement|pac
 function reviewed(kind, passed, commit, counts) {
   const result = passed ? 'pass' : 'blocked'
   state['review.' + kind] = `${result} ${commit}`
+  ran['review.' + kind] = `${result} ${commit}`
   const summary = Object.keys(counts).map((k) => `${k}=${Number.isInteger(counts[k]) ? counts[k] : 0}`).join(' ')
   queue(`sh tools/run_state.sh review ${state.change} ${kind} ${result} "${summary}" ${commit}`, commit)
 }
@@ -406,21 +415,34 @@ async function flush(force) {
 // starts with the run's figures. green records CI green and runs the merge
 // gates with the review and check results the script holds: those of a
 // fresh worktree of origin/main, which the branch cannot have edited, run
-// against the branch. The removal of an earlier worktree stays outside the
-// && chain, since it fails when none stands; in the chain a failed record
-// runs no gate, and the add fails when anything but an earlier worktree
-// stands at the path. red records CI red.
+// against the branch, after a fetch, so origin/main is origin's main (the
+// merge gates' origin gate compares the two). The removal of an earlier
+// worktree stays outside the && chain, since it fails when none stands; in
+// the chain a failed record runs no gate, and the add fails when anything
+// but an earlier worktree stands at the path. red records CI red.
 const MERGE_GATES = 'tmp/.merge-gates'
 function mergeLines() {
-  const records = ['security', 'quality', 'bench'].map((k) => `${k}:${at('review.' + k).slice(0, 2).join(':')}`)
-    .concat([`check:pass:${state['phase.check'] || ''}`])
-    .filter((r) => /^[a-z]+:(pass|blocked):[0-9a-f]{7,40}$/.test(r))
+  const records = mergeRecords(ran)
   const first = (line) => [metricLine(), line].filter(Boolean).join(' && ')
   const ci = (result) => `sh tools/run_state.sh set ${state.change} ci "${result} ${head}"`
   return {
-    green: `git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && git worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
+    green: `git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && git fetch -q --prune origin && git worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
     red: first(ci('red')),
   }
+}
+// Whether RECORDS (this start's, ran) hold a pass of KEY at HEAD: a
+// phase.NAME record is the commit, a review.KIND record "RESULT COMMIT".
+function passedAt(records, key, head) {
+  const [result, commit] = String(records[key] || '').split(' ')
+  return key.startsWith('phase.') ? !!head && result === head : result === 'pass' && !!head && commit === head
+}
+// The merge gates' RECORDS words, KIND:RESULT:COMMIT, from this start's
+// records alone, so no record branch code wrote in the run state reaches
+// the records gate.
+function mergeRecords(records) {
+  return ['security', 'quality', 'bench'].map((k) => `${k}:${String(records['review.' + k] || '').split(' ').slice(0, 2).join(':')}`)
+    .concat([`check:pass:${records['phase.check'] || ''}`])
+    .filter((r) => /^[a-z]+:(pass|blocked):[0-9a-f]{7,40}$/.test(r))
 }
 // The pull request, the repository, and the branch, when the script holds
 // them in their plain forms, so the merger need not read the run state.
@@ -432,8 +454,8 @@ function mergeTarget() {
 }
 
 const at = (key) => (state[key] || '').split(' ')
-const doneAtHead = (name) => state['phase.' + name] === head
-const reviewedAtHead = (kind) => at('review.' + kind)[0] === 'pass' && at('review.' + kind)[1] === head
+const doneAtHead = (name) => passedAt(ran, 'phase.' + name, head)
+const reviewedAtHead = (kind) => passedAt(ran, 'review.' + kind, head)
 const note = (line) => { notes.push(line); log(line) }
 const backlog = []
 let planNotes = []
@@ -831,7 +853,16 @@ if (!stopped && !state.merged) {
   if (!stopped) {
     phase('Merge')
     let waits = 0
-    for (;;) {
+    // A resume past the push holds no check or review of this start, and
+    // the run state's could be branch-written: they run again at the head.
+    // A fix there moves the head off the pushed sha, which stops the run
+    // before the merger.
+    if (!['quality', 'security', 'bench'].every(reviewedAtHead) || !doneAtHead('check')) {
+      note('resumed past the push: the check and the reviews run again at the head')
+      if (!(await verify()) && !stopped) stopped = `the check or a review did not pass at ${head} on resume`
+      phase('Merge')
+    }
+    for (; !stopped;) {
       // GitHub matches the expected head against the full sha, and only the
       // head the push recorded is the one the reviews and gates covered.
       const pushed = pushedHead(state.pushed, head)

@@ -38,11 +38,13 @@
 #              angle bracket, empty bullet, footer, URL, email, session id, or
 #              model name, and a Testing line naming the security review
 #   static     trailer, content, snapshots, docs, attribution (make gates)
-#   pre-push   static, security, stages (tools/run_state.sh push)
+#   origin     no risky configuration key; an origin/ base equal to origin's
+#   pre-push   origin, static, security, stages (tools/run_state.sh push)
 #   backup     trailer, content (tools/run_state.sh backup, with BASE the
 #              branch's base, so every commit the backup publishes)
-#   merge F    trailer, content, security, stages, passed, records, pushes,
-#              pr-body F (the merger, from a worktree of origin/main at
+#   merge F    origin, trailer, content, security, stages, passed, records,
+#              pushes, pr-body F, then gated: the head they passed at
+#              (the merger, from a worktree of origin/main at
 #              tmp/.merge-gates, so the branch cannot have edited the gates)
 #
 # Environment: BASE (origin/main), CHANGE (the branch name after its type),
@@ -98,6 +100,40 @@ require_base() {
     echo "FAIL gates: the base $base does not exist; fetch it or set BASE"
     exit 1
   }
+}
+
+# The repository the gates read: branch code run by the checks can write
+# .git/config and the ref origin/main, so no key of RISKY_CONFIG is set,
+# and an origin/NAME base is origin's NAME: the default fetch refspec (a
+# fetch restores the ref), an origin that is not a local repository (whose
+# fake branch ls-remote would report), and the ref equal to the branch
+# git ls-remote reports. A local base checks the configuration only.
+gate_origin() {
+  gate=origin
+  remote=""
+  start=$failed
+  keys=$(git config --local --name-only --list 2>/dev/null | grep -i -E "$RISKY_CONFIG" | sort -u | tr '\n' ' ')
+  [ -z "$keys" ] || bad "the repository configuration sets ${keys% }, which runs a command or redirects origin; remove it from .git/config"
+  case "$base" in
+    origin/*)
+      name=${base#origin/}
+      fetch=$(git config --local --get-all remote.origin.fetch 2>/dev/null)
+      [ "$fetch" = '+refs/heads/*:refs/remotes/origin/*' ] ||
+        bad "remote.origin.fetch is \"$(printf '%s' "$fetch" | tr '\n' ' ')\", not the default refspec, so a fetch cannot restore $base"
+      url=$(git config --local --get remote.origin.url 2>/dev/null)
+      case "$url" in
+        ""|/*|.*|file:*|ext::*|[A-Za-z]:*) bad "origin is \"$url\", a local repository or none, not the hosted one" ;;
+        *) [ ! -d "$url" ] || bad "origin is \"$url\", a local repository, not the hosted one" ;;
+      esac
+      remote=$(git ls-remote origin "refs/heads/$name" 2>/dev/null | cut -f1)
+      local_ref=$(git rev-parse --verify -q "$base^{commit}")
+      if [ -z "$remote" ]; then
+        bad "origin has no branch $name, or ls-remote failed"
+      elif [ "$remote" != "$local_ref" ]; then
+        bad "$base is $local_ref, but origin's $name is $remote: fetch, or the ref was rewritten"
+      fi ;;
+  esac
+  [ $failed -ne $start ] || ok "the configuration sets no risky key${remote:+, and $base is origin's $name}"
 }
 
 gate_trailer() {
@@ -375,16 +411,22 @@ case "$target" in
   snapshots) gate_snapshots ;;
   docs) gate_docs ;;
   attribution) gate_attribution ;;
+  origin) gate_origin ;;
   security) gate_security ;;
   stages) gate_stages ;;
   pushes) gate_pushes ;;
   records) gate_records ;;
   pr-body) gate_pr_body "$body" ;;
   static) gate_trailer; gate_content; gate_snapshots; gate_docs; gate_attribution ;;
-  pre-push) gate_trailer; gate_content; gate_snapshots; gate_docs; gate_security; gate_stages ;;
+  pre-push) gate_origin; gate_trailer; gate_content; gate_snapshots; gate_docs; gate_security; gate_stages ;;
   backup) gate_trailer; gate_content ;;
   passed) gate_passed ;;
-  merge) gate_trailer; gate_content; gate_security; gate_stages; gate_passed; gate_records; gate_pushes; gate_pr_body "$body" ;;
+  merge)
+    sh "$here/run_state.sh" gated "$change" clear >/dev/null || bad "the merge record gated could not be cleared"
+    gate_origin; gate_trailer; gate_content; gate_security; gate_stages; gate_passed; gate_records; gate_pushes; gate_pr_body "$body"
+    # The head every merge gate passed at, which the merge tool's hook in
+    # tools/agent_guard.sh requires as the expected head.
+    [ $failed -ne 0 ] || sh "$here/run_state.sh" gated "$change" pass >/dev/null || bad "the merge record gated could not be written" ;;
   *) echo "gates: unknown gate $target" >&2; exit 2 ;;
 esac
 exit $failed

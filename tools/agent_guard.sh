@@ -781,10 +781,46 @@ redirect() {
   esac
 }
 
+# Repository configuration keys that run a command or redirect origin or
+# the files git reads: a copy of RISKY_CONFIG in tools/rules.sh, which this
+# script, read from main as a string, cannot source (a tools/tools_test.sh
+# case keeps the two equal). While the project's .git/config sets one,
+# which branch code run by the checks can write, every call is refused, so
+# no git command an agent runs starts a command the branch chose.
+RISKY_CONFIG='^(core\.(fsmonitor|hookspath|sshcommand|gitproxy|pager|editor|askpass|alternaterefscommand|worktree)|diff\.external|diff\..+\.(textconv|command)|filter\..+|merge\..+\.driver|sequence\.editor|credential\..+|gpg\..+|uploadpack\..+|url\..+\.(insteadof|pushinsteadof)|remote\.origin\.(pushurl|uploadpack|receivepack|proxy|vcs)|http\..+|protocol\..+|include\..+|includeif\..+|extensions\.worktreeconfig)$'
+project_dir=${CLAUDE_PROJECT_DIR:-.}
+risky=$(git -C "$project_dir" config --local --name-only --list 2>/dev/null | grep -i -E "$RISKY_CONFIG" | sort -u | tr '\n' ' ')
+[ -z "$risky" ] || refuse "every call while the repository configuration sets ${risky% }, which runs a command or redirects origin"
+
+# The merge tool, for the merger only: a squash whose expected head (sha,
+# all 40 digits) a run state under build/pipeline/ holds both as pushed and
+# as gated, which only main's merge gates write when every gate passed and
+# every push clears, while origin/main is the main origin reports.
+merge_tool() {
+  only_profiles merger "the merge tool"
+  [ "$(printf '%s' "$input" | field merge_method)" = squash ] || refuse "a merge other than a squash"
+  sha=$(printf '%s' "$input" | field sha)
+  matches "$sha" '^[0-9a-f]{40}$' || refuse "a merge without the pushed head as its expected head (sha, 40 digits)"
+  found=""
+  for f in "$project_dir"/build/pipeline/*.json; do
+    [ -f "$f" ] && [ ! -L "$f" ] || continue
+    grep -q -E "^  \"pushed\": \"$sha\",?$" "$f" || continue
+    grep -q -E "^  \"gated\": \"$sha\",?\$" "$f" && found=$f
+  done
+  [ -n "$found" ] || refuse "a merge of $sha, at which no run state records both the push and the merge gates' pass (gated)"
+  local_main=$(git -C "$project_dir" rev-parse --verify -q 'origin/main^{commit}')
+  remote_main=$(git -C "$project_dir" ls-remote origin refs/heads/main 2>/dev/null | cut -f1)
+  [ -n "$remote_main" ] && [ "$local_main" = "$remote_main" ] ||
+    refuse "a merge while origin/main is ${local_main:-missing} and origin's main ${remote_main:-unknown}: fetch, or the ref was rewritten"
+}
+
 input=$(cat)
 tool=$(printf '%s' "$input" | field tool_name)
 case "$tool" in
   Bash) ;;
+  mcp__github__merge_pull_request)
+    merge_tool
+    exit 0 ;;
   Write|Edit|MultiEdit|NotebookEdit)
     path=$(printf '%s' "$input" | field file_path)
     [ -n "$path" ] || path=$(printf '%s' "$input" | field notebook_path)

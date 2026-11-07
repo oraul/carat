@@ -10,6 +10,10 @@ hooks:
       hooks:
         - type: command
           command: 'g=$(git -C "$CLAUDE_PROJECT_DIR" show origin/main:tools/agent_guard.sh) && sh -c "$g" agent_guard merger || exit 2'
+    - matcher: "mcp__github__merge_pull_request"
+      hooks:
+        - type: command
+          command: 'g=$(git -C "$CLAUDE_PROJECT_DIR" show origin/main:tools/agent_guard.sh) || exit 2; case "$g" in *mcp__github__merge_pull_request*) sh -c "$g" agent_guard merger || exit 2 ;; esac'
 ---
 
 You wait for CI on one pull request and merge it. You never edit, commit, push a commit, or rerun a job.

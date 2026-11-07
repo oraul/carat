@@ -15,6 +15,8 @@
 #                    periodic-security and periodic-quality after a merge)
 #   pushes, ci_fixes the pushes made and the CI fixes they may answer
 #   gates_failed     the push attempts the pre-push gates refused
+#   gated            the full sha every merge gate passed at, which the
+#                    merge tool's hook requires; "none" after a push
 #   pushed, pr, ci   the full sha of the last pushed commit, which the
 #                    merger passes as the expected head, the pull
 #                    request number, and
@@ -55,7 +57,8 @@
 #                               or a line write_key would not write, those
 #                               keys named in "untrusted"
 #   get CHANGE KEY              print one value, empty when absent
-#   set CHANGE KEY VALUE        write one value; refuses review.*, phase.*,
+#   gated CHANGE clear|pass     the merge gates' record: none, or HEAD's full sha
+#   set CHANGE KEY VALUE        write one value; refuses review.*, phase.*, gated,
 #                               and stage.*, which their own commands write,
 #                               and a merged or pushed value but a commit hash;
 #                               merged also deletes the backup refs
@@ -708,6 +711,9 @@ push_branch() {
   write_key pushes $((pushes + 1))
   write_key ci_fixes "$fixes"
   write_key pushed "$(git rev-parse HEAD)"
+  # A new head needs the merge gates again, and a marker branch code
+  # planted before the push is gone.
+  write_key gated none
   # The pushed branch holds every commit the backup held, whichever run
   # state made it; a deletion that fails is reported, and recording merged
   # tries it again.
@@ -1385,7 +1391,7 @@ case "$command" in
   set)
     [ $# -eq 2 ] || usage
     case "$1" in
-      review.*|phase.*|stage.*) die "set: refused: $1 is written only by its own command (review, phase, stage, check)" ;;
+      review.*|phase.*|stage.*|gated) die "set: refused: $1 is written only by its own command (review, phase, stage, check, gated)" ;;
       merged|pushed) valid '[0-9a-f]{7,40}' "$2" || die "set: refused: $1 is a commit hash of 7 to 40 hexadecimal digits, not $2" ;;
     esac
     write_key "$1" "$2"
@@ -1429,6 +1435,13 @@ case "$command" in
   bench)
     [ $# -eq 0 ] || usage
     bench_compare ;;
+  gated)
+    [ $# -eq 1 ] || usage
+    case "$1" in
+      clear) write_key gated none ;;
+      pass) write_key gated "$(git rev-parse HEAD)" ;;
+      *) usage ;;
+    esac ;;
   push)
     push_branch "${1:-}" ;;
   backup)
