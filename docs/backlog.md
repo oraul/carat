@@ -1687,3 +1687,45 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/architecture.md:92` (periodic quality at 5722559).
 - Why it matters: `CompletionMenu`, `CompletionItem`, `CompletionList`, and `FuzzyMatch` are missing from Entities though section 5.1 names their use cases.
 - Fix outline: one section 4 bullet for the four within the file's budget, in the queued `architecture-drift` change.
+
+## A failed completion send leaves the input polling
+
+- Where: `complete` in `carat/adapters/json_rpc_language_gateway.rb` (line 474 at 376d264). Quality advisory in `completion-request`.
+- Why it matters: a write failure inside `request` crashes the server and `forget_completion` zeroes `sent_id`, but the returned id is then assigned to `sent_id`, so `waiting?` stays true and the input polls every 0.02 s until `ANSWER_LIMIT`.
+- Fix outline: `id = request(...)`, then `ask.sent_id = server.running? ? id : 0`, with a gateway row whose server fails the write.
+
+## The input controller reaches through ShowCompletion for an arrival
+
+- Where: `carat/adapters/input_controller.rb` (line 71 at 376d264), which reads `@show_completion.source.request.arrived`, three objects deep. Quality advisory in `completion-request`, reported twice.
+- Why it matters: the adapter depends on the use case's source and its request record, so a change to either breaks the controller.
+- Fix outline: inject the shared `Domain::CompletionRequest` (`completions.request` in `EditorAssembly`, checked in `test/adapters_assembly.rb`), or call the show-completion use case unconditionally, since it returns at once when nothing shows or arrived.
+
+## UTF-16 length is computed in the language gateway
+
+- Where: `utf16_length` in `carat/adapters/json_rpc_language_gateway.rb` (line 521 at 376d264); only an ASCII column is tested. Quality advisory in `completion-request`.
+- Why it matters: pure encoding math sits in an adapter beside protocol code, and a multibyte or non-BMP character before the cursor sends an untested column.
+- Fix outline: move it to `Domain::Utf8` beside the other code-unit helpers, with rows for a multibyte and a non-BMP character in `test/domain_utf8.rb`.
+
+## Completion text edits ignore their range
+
+- Where: `candidate_of` in `carat/adapters/json_rpc_language_gateway.rb` (line 519 at 376d264), which takes `textEdit.newText` and drops the edit's range, while the menu replaces only the word from `FuzzyMatch.word_start`. Quality advisory in `completion-request`; the design leaves range edits out of scope.
+- Why it matters: an edit whose range starts before the word, such as ruby-lsp's `@ivar` or `Foo::Bar` constant edits, inserts `@@foo` or `Foo::Foo::Bar`.
+- Fix outline: use `newText` only when the edit's range starts at the word's start column (else `insertText`, else the label) now; later carry the range in `CompletionItem` and apply it through the `Buffer` primitives, with gateway and editor rows for both edits.
+
+## An incomplete completion answer is never asked again
+
+- Where: `completed` in `carat/adapters/json_rpc_language_gateway.rb` (line 492 at 376d264), which ignores `isIncomplete` and keeps the first `CompletionList::LIMIT` items, and `answer_for?`, which serves that list to every longer word at the same start. Quality advisory in `completion-request`; the design's non-goal.
+- Why it matters: a match outside the first 200 items of an incomplete answer is never offered, however much more of the word is typed.
+- Fix outline: record `isIncomplete` in `Domain::CompletionRequest` and ask again when the typed part grows past an incomplete answer, with a gateway row.
+
+## The typed part before the cursor is computed twice
+
+- Where: `carat/adapters/json_rpc_language_gateway.rb` (line 463 at 376d264) repeats `ShowCompletion`'s slice, `word_start`, `byteslice`, and `col - length` (`carat/use_cases/completion/show_completion.rb`, lines 74 to 77). Quality advisory in `completion-request`.
+- Why it matters: a change to how the word is found must be made in both places or the request and the menu disagree on the word.
+- Fix outline: one domain helper (for example in `FuzzyMatch`) answering the typed part and its start column before a column, used by both, with a table row.
+
+## Completion-request style and docs advisories
+
+- Where: the `result.is_a?(Hash)` guards of `initialized` in `carat/adapters/json_rpc_language_gateway.rb` (lines 417 and 423 at 376d264); the comment of `complete` in the same file (line 441) and the class comment of `carat/doubles/fixed_completions.rb` (line 10), each with a line past the file's wrap; `until_sent` in `test/adapters_server_completions.rb` (line 263), which returns at once because the first request is already sent; the `LanguageServicePort` row of `docs/architecture.md` (line 204), which omits `start`. Quality advisories in `completion-request`.
+- Why it matters: `receive` now crashes the server unless the result is a Hash, so the guards are dead and mislead; the long lines break the files' wrap; the test's wait is a no-op and the `10.times` fallback does the waiting; the architecture row disagrees with the port and the map.
+- Fix outline: read `result["serverInfo"]` and `result["capabilities"]` directly; rewrap both comment paragraphs; wait until `count_of` reaches 2 with a bounded helper and drop the no-op call; add `start(state)` to the row.
