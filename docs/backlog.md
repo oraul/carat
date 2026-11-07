@@ -1764,7 +1764,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `carat/use_cases/handle_key.rb` line 166 at cd87445 (`completion_key?` at line 201, then `complete` at line 208, each allocating `[code]`; `insert_literal` line 313, then `call` line 102). Periodic quality at cd87445, again after 5722559.
 - Why it matters: two lookups and two popup refreshes per key on the insert hot path, the line sliced twice.
-- Fix outline: look up once and dispatch that match; run ShowCompletion once per key. Queued in `completion-tidy`.
+- Fix outline: look up once and dispatch that match; run ShowCompletion once per key, and ShowCompletionDocs with it, which `completion-docs` added beside it and which also runs twice per typed character (quality advisory in `completion-docs` at `carat/use_cases/completion/show_completion.rb` line 72 at 925d759). Queued in `completion-tidy`.
 
 ## The dispatcher and HandleKey hold shared objects without readers
 
@@ -1794,7 +1794,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `carat/ports/completion_port.rb` line 29 at cd87445 (`request`), `carat/doubles/fixed_completions.rb` line 50, and `carat/adapters/server_completions.rb` line 23, which builds the shared `Domain::CompletionRequest`. Periodic quality at cd87445; related to the entry on the input controller reaching through ShowCompletion.
 - Why it matters: the double carries a record nobody fills, and the one shared record is built inside an adapter instead of once beside the other shared objects.
-- Fix outline: build the record once at the composition root, keep it in an assembly reader for its users, and drop it from the port. Queued in `completion-tidy-b`.
+- Fix outline: build the record once at the composition root, keep it in an assembly reader for its users, and drop it from the port; `completion-docs` deepened it, since `ShowCompletion` (`carat/use_cases/completion/show_completion.rb` line 72 at 925d759) and `InputController` now read `request.docs`, so move the documentation state out of the server record with it. Queued in `completion-tidy-b`.
 
 ## The server completions test copies EditorHarness
 
@@ -1819,3 +1819,51 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `bench/run.sh` line 69 at cd87445 copies the `SCENARIOS` of `bench/keys.rb` line 104 and omits `lh-float` and `n`. Periodic quality at cd87445.
 - Why it matters: `make bench` never runs area 13's float benchmark or `n`, so a regression there goes unmeasured.
 - Fix outline: take the names from the bench binary or one shared list, with a case that every scenario runs. Queued in the backlog items worth a change.
+
+## Wrapped markdown rows break inside their own prefix
+
+- Where: `wrapped` in `carat/domain/markdown_text.rb` line 240 at 925d759. Quality advisory in `completion-docs`.
+- Why it matters: a code row (two-space indent), a bullet, or a quote bar followed by one word wider than the width cuts at that prefix space, giving an empty row (code) or an orphan bullet or bar row before the word.
+- Fix outline: take a space as a break point only when non-space text precedes it in the segment, else cut on the character boundary, with a table row in `test/domain_markdown_text.rb`. Queued in `completion-tidy-b`.
+
+## The completion resolve timeout restarts with every pick
+
+- Where: `carat/adapters/json_rpc_language_gateway.rb` line 562 at 925d759, which measures the resolve timeout from `docs.due`. Quality advisory in `completion-docs`.
+- Why it matters: every new pick during the flight moves `docs.due` forward, so a server that never answers is not cancelled while the selection keeps moving.
+- Fix outline: keep the send time (or a deadline) of the request in flight and time it out from that, with a case in `test/adapters_server_completions.rb` that keeps moving the selection. Queued in `completion-tidy-b`.
+
+## ServerCompletions#documentation records the pick inside a query
+
+- Where: `documentation` in `carat/adapters/server_completions.rb` line 50 at 925d759, which sets `docs.pick` and which `ShowCompletionDocs` calls on every key. Quality advisory in `completion-docs`.
+- Why it matters: a command hidden in a reader makes the port's contract misleading and the call order load-bearing.
+- Fix outline: split it into a `pick(list, index)` command and a `documentation` query, or name it for both, and update `CompletionPort` and `FixedCompletions`. Queued in `completion-tidy-b`.
+
+## ShowCompletionDocs recomputes the cursor's screen row
+
+- Where: `carat/use_cases/completion/show_completion_docs.rb` line 88 at 925d759, which computes the row as `ShowCompletion#row_offset` does, and takes `below = popup.row > 0`. Quality advisory in `completion-docs`.
+- Why it matters: the two copies and the sign convention couple the documentation float to the popup's layout, so a change to one silently misplaces the other.
+- Fix outline: derive the documentation float's vertical placement from the popup spec alone (row and height), or share one helper. Queued in `completion-tidy-b`.
+
+## The gateway repeats the markdown size limit as a literal
+
+- Where: `DOCUMENT_LIMIT` in `carat/adapters/json_rpc_language_gateway.rb` line 60 at 925d759 repeats `MarkdownText::RAW_LIMIT` (16_384). Quality advisory in `completion-docs`.
+- Why it matters: two literals for one bound drift apart when one is changed.
+- Fix outline: use `Domain::MarkdownText::RAW_LIMIT` in the gateway, or say in a comment why the two differ. Queued in `completion-tidy-b`.
+
+## The architecture's RequestDefinition line was reworded out of scope
+
+- Where: `docs/architecture.md` line 180 at 925d759, reworded by `completion-docs` with no connection to completion documentation. Quality advisory in `completion-docs`.
+- Why it matters: an unrelated rewording widens the change and hides what the architecture said before.
+- Fix outline: restore the original sentence and keep only the `CompletionPort` and `ShowCompletionDocs` edits. Queued in `completion-tidy-b`.
+
+## CompletionMenu#chosen repeats the chosen index
+
+- Where: `chosen` in `carat/domain/completion_menu.rb` line 88 at 925d759, which repeats `matches[selected]` beside the new `chosen_index`. Quality advisory in `completion-docs`.
+- Why it matters: two spellings of the same choice can drift.
+- Fix outline: answer `candidates.at(chosen_index)`. Queued in `completion-tidy-b`.
+
+## The resolve cases repeat their setup three times
+
+- Where: `test/adapters_server_completions.rb` line 384 at e1a647c: the two cancellation cases repeat the resolve case's setup (a rig with `resolveProvider`, type `ifi`, answer three described items, `<C-n><C-n>`, wait for `completionItem/resolve`). Quality advisory in `completion-docs`.
+- Why it matters: a change to the resolve flow has to be made three times in the test.
+- Fix outline: extract a helper such as `resolving(r)` returning the rig with a resolve in flight, beside `completing`. Queued in `completion-tidy-b`.
