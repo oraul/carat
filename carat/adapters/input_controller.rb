@@ -5,6 +5,7 @@ require_relative "../domain/input_state"
 require_relative "../domain/key"
 require_relative "../domain/start_screen"
 require_relative "../use_cases/handle_key"
+require_relative "../use_cases/completion/show_completion"
 require_relative "key_decoder"
 
 module Carat
@@ -16,10 +17,14 @@ module Carat
     # none and wait for the next key however long it takes. While the
     # start screen animates, a read waits no longer than its next frame,
     # and a read that times out advances it; any key read dismisses it and
-    # is handled as usual.
+    # is handled as usual. While the language services wait (a wanted
+    # completion or a request in flight) a read waits at most
+    # SERVICE_TIMEOUT, so an answer arriving between two keys is read and
+    # shown before the next one.
     class InputController
       ESCAPE_TIMEOUT = 0.05
       IDLE_TIMEOUT = 0.25
+      SERVICE_TIMEOUT = 0.02
 
       attr_reader :terminal #: Ports::TerminalPort
       attr_reader :clock #: Ports::ClockPort
@@ -27,14 +32,16 @@ module Carat
       attr_reader :input #: Domain::InputState
       attr_reader :start_screen #: Domain::StartScreen
       attr_reader :services #: Ports::LanguageServicePort
+      attr_reader :show_completion #: UseCases::ShowCompletion
 
       # @rbs @decoder: KeyDecoder
       # @rbs @wait_until: Float
       # @rbs @deadline: bool
 
-      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState, start_screen: Domain::StartScreen, services: Ports::LanguageServicePort) -> void
-      def initialize(terminal:, clock:, decoder:, handle_key:, input:, start_screen:, services:)
+      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState, start_screen: Domain::StartScreen, services: Ports::LanguageServicePort, show_completion: UseCases::ShowCompletion) -> void
+      def initialize(terminal:, clock:, decoder:, handle_key:, input:, start_screen:, services:, show_completion:)
         @services = services
+        @show_completion = show_completion
         @terminal = terminal
         @clock = clock
         @decoder = decoder
@@ -59,8 +66,12 @@ module Carat
             return true
           end
           # Idle: the language services read and send here, never while a
-          # key waits.
+          # key waits; a completion answer they kept fills the popup.
           served = @services.poll(state)
+          if @show_completion.source.request.arrived
+            @show_completion.call(state, false)
+            served = true
+          end
           return tick || served
         end
         start = @start_screen
@@ -90,6 +101,7 @@ module Carat
           frame = @start_screen.wait(@clock.now)
           return frame if frame < IDLE_TIMEOUT
         end
+        return SERVICE_TIMEOUT if @services.waiting?
         IDLE_TIMEOUT
       end
 

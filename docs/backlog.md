@@ -839,8 +839,8 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 ## Pull requests are created with a session-link footer the settings turn off
 
 - Where: step 4 of the package step in `.claude/agents/contributor.md`, which opens the pull request with the GitHub tools, and its step 5 removal edit; `.claude/settings.json` sets the attribution `pr` empty and `sessionUrl` false. Retrospective proposal of `leader-layout`, queued as `pr-footer`.
-- Why it matters: PR 64 was created with a footer holding a session link and needed a removal edit, as were PRs 57 to 60 (4 of 4); PRs 61 to 63 left no record. The edit history keeps the link, against the hard rule that no session URL appears in GitHub activity, and `package-clean`'s acceptance (the next five clean) fails at PR 64.
-- Fix outline: create the pull request on a path that sends exactly the body file, record in the run state whether it was created clean, and have the history count clean creations N of M.
+- Why it matters: 7 of 7 recorded pull requests were created with a footer holding a session link despite main's attribution settings, each needing a removal edit; the edit history keeps the link, against the hard rule that no session URL appears in GitHub activity. The footer is added by the pull request tool outside the repository, so no repository change has prevented it; the `pr-footer` queue item was dropped as not fixable from the repository.
+- Fix outline: none from the repository; keep the package step's immediate removal edit (step 5) and report each removal. Revisit if the tool gains a setting that the attribution keys reach.
 
 ## The roadmap's progress is readable nowhere in one place
 
@@ -1042,7 +1042,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The map's Designs lines omit the last features
 
-- Where: the Designs lines of `docs/codebase-map.md` (line 523 at 3a99ddd and the others): area 16 lacks `explorer-folder-toggle` and `theme-tokens`, areas 3 and 13 lack `theme-tokens`, and areas 13 and 17 lack `start-screen`. Periodic quality at 3a99ddd.
+- Where: the Designs lines of `docs/codebase-map.md` (line 523 at 3a99ddd and the others): area 16 lacks `explorer-folder-toggle` and `theme-tokens`, areas 3 and 13 lack `theme-tokens`, and areas 13 and 17 lack `start-screen`. Periodic quality at 3a99ddd; `completion-request` added `completion` and `diagnostics-display` to areas 13 and 17 (periodic quality at 5722559).
 - Why it matters: the Designs line is where a change finds the archived decisions of its area, so a reader of these areas misses why the code looks as it does.
 - Fix outline: add each change with the sections that touch the area, within the map's budget. Queued in `architecture-drift`.
 
@@ -1388,12 +1388,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: `CLAUDE.md` makes mutable records `Struct` subclasses with pinned members; `TabPage`, `TabList`, `LastFind`, and `StatusSlots` follow it, `FloatLayer` does not.
 - Fix outline: a `Struct` with `floats` and `focus` pinned, readers and `self.member =` writers, built with keywords in `TabPage`. Queued in `float-tidy`.
 
-## The Frame comment gives four integers per float
-
-- Where: the `floats` comment of `carat/domain/frame.rb` (line 26 at 803fe6e) against `FLOAT_STRIDE` in `carat/adapters/frame_presenter.rb`. Periodic quality advisory.
-- Why it matters: the presenter writes eight integers per float (the box, the window's top and left, the buffer's closed_count and changes), so the comment misleads a reader of the key.
-- Fix outline: describe `floats` as the presenter's float key of `FLOAT_STRIDE` integers per float, or name each. Queued in `float-tidy`.
-
 ## move_float bypasses the float use cases
 
 - Where: `WindowRequests#move_float` in `carat/use_cases/plugins/window_requests.rb` (line 247 at 803fe6e). Periodic quality advisory.
@@ -1454,12 +1448,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a regression that retries the spawn on every idle tick, spawning a process four times a second, would pass.
 - Fix outline: count attempted spawns in `FakeProcesses` and assert one attempt after two idle ticks. Queued in `lsp-client-tidy`.
 
-## A failed initialize marks the language server ready
-
-- Where: the initialize response handling of `carat/adapters/json_rpc_language_gateway.rb` (line 341 at eb63fb4). Periodic quality blocking at eb63fb4.
-- Why it matters: an error response to `initialize` takes the ready path, so the server is marked ready, `initialized` and then `didOpen` for every document are sent against the protocol, and the bar shows the server ready instead of failed; no test covers it, and the next language features send requests on that state.
-- Fix outline: treat a response carrying an error or no object result as a failed start, shown with the `:LspRestart` hint, with a gateway row for an initialize error. Queued in `completion-request`.
-
 ## A save while the language server starts is never sent
 
 - Where: `poll` in `carat/adapters/json_rpc_language_gateway.rb` (line 76 at eb63fb4) clears the pending saves on every tick, while `sync_buffer` sends `didSave` only to running servers. Periodic quality at eb63fb4.
@@ -1516,9 +1504,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## ControlText.cleaned is public with a flag argument
 
-- Where: `ControlText.cleaned` in `carat/domain/control_text.rb` (line 28 at 38d8c47), used only by `strip` and `line`. Quality advisory at `diagnostics-display`.
-- Why it matters: a public module function taking a bool flag invites callers outside the module to depend on a helper of its two entry points.
-- Fix outline: mark it `private_class_method :cleaned`.
+- Where: `ControlText.cleaned` in `carat/domain/control_text.rb` (line 28 at 38d8c47), used only by `strip` and `line`; also `RAW_LIMIT` declared between methods (line 27 at 5722559) and the helpers `without_sequences`, `sequence_end`, and `string_end` left public. Quality advisory at `diagnostics-display`, periodic quality at 5722559.
+- Why it matters: a public module function taking a bool flag invites callers outside the module to depend on a helper of its two entry points, and the other helpers and the constant's place read as API.
+- Fix outline: mark `cleaned`, `without_sequences`, `sequence_end`, and `string_end` `private_class_method`, and move `RAW_LIMIT` beside `REPLACEMENT` at the top.
 
 ## Diagnostic marks moving on undo, redo, and reload have no test
 
@@ -1645,3 +1633,99 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `README.md` (line 63 at 334d899), where the raw-mode sentence explaining why Ctrl-S works moved to the end of the completion paragraph; the language-services area of `docs/codebase-map.md` (line 593) names only `test/domain_rpc_framer.rb` for `ControlText`, though `test/domain_fuzzy_match.rb` (line 267 of the map) also holds the `ControlText.plain`, `CompletionItem`, and `CompletionList` tables; the 5.3 bullet of `docs/architecture.md` (line 180) says these use cases answer an unavailable service with an empty response and a message, while completion with no ready source opens nothing and reports nothing. Quality advisories in `completion`.
 - Why it matters: the README sentence no longer follows the Ctrl-S sentence it explains, the map hides where the `ControlText.plain` table lives, and the architecture contradicts the completion spec (typing behaves as without completion).
 - Fix outline: put the raw-mode sentence back after "Ctrl-S saves ... stay in insert mode." and keep the completion paragraph on its own; name `test/domain_fuzzy_match.rb` for `ControlText.plain` in the language-services line or move those tables to a test named after them; say completion stays silent when its source is not ready, or state the `CompletionPort` route in the 5.1 completion bullet instead.
+
+## tools_test cases grep the workflow source instead of testing behavior
+
+- Where: `tools/tools_test.sh:1741`, also 1694-1696, 1746-1747, 1752-1755, 1762-1763 (periodic quality at 5722559).
+- Why it matters: the cases grep exact lines of `deliver-change.js`, `periodic-review.js`, and the agent files, so they pass whatever those lines do and fail on any rewording.
+- Fix outline: move each decision (security pass with files left, merge stop without a checked sha, partial periodic record, worktree name) into a pure helper run through js, and drop the source greps.
+
+## Four use cases inline the tab width Options already answers
+
+- Where: `carat/use_cases/leave_insert.rb:69`, `carat/use_cases/insert_tab.rb:22`, `carat/use_cases/repeat_last.rb:105`, `carat/use_cases/arrange_view.rb:39` (periodic quality at 5722559).
+- Why it matters: `tabstop > 0 ? tabstop : 8` is copied four times beside `Options#tab_width` (`carat/domain/options.rb:75`), so a rule change misses copies.
+- Fix outline: call `state.options.tab_width` in the four and drop the inline copies.
+
+## ChangeRecord#delta and UndoTree#redo_seq have no production caller
+
+- Where: `carat/domain/change_record.rb:18`, `carat/domain/undo_tree.rb:179` (periodic quality at 5722559).
+- Why it matters: dead code read only by `test/domain_edits.rb` and `test/domain_undo_tree.rb`, and the map lists `redo_seq` as API.
+- Fix outline: drop both, assert the record's removed and inserted lengths and the redo path in the tests, and remove `redo_seq` from area 9 of the map.
+
+## The explorer queries the current window with focus_window
+
+- Where: `carat/plugins/explorer/plugin.rb:202` (periodic quality at 5722559).
+- Why it matters: `host.focus_window(0)` has effects (sets the tab page, re-enters a focused float) but is used as a query.
+- Fix outline: a read-only host request for the current window (Host method, PluginLink override, WindowRequests method, minor version bump) or the window in `PluginApi::Command`, called here.
+
+## focus_window enters floats the plugin does not own
+
+- Where: `carat/use_cases/plugins/window_requests.rb:132` (periodic quality at 5722559).
+- Why it matters: a plugin can enter the core's completion popup or another plugin's floats, while `move_float` and `close_float` refuse them through `own_float_tab`.
+- Fix outline: refuse what `own_float_tab` rejects with `No window N`, with a row in `test/use_cases_plugins.rb`.
+
+## Icons sit in the explorer's map area
+
+- Where: `docs/codebase-map.md:545` (periodic quality at 5722559).
+- Why it matters: `carat/domain/icons.rb` and `test/domain_icons.rb` are in area 16, but the explorer never calls `Icons`; its callers are the bars, the gateway's signs, the plugin requests, and the completion kind icons.
+- Fix outline: move both entries to area 13 Rendering.
+
+## Map method lists lag the code
+
+- Where: `docs/codebase-map.md:502`, 438, 435, 614 (periodic quality at 5722559).
+- Why it matters: `PluginApi::Paths` omits `absolute`, `StatusSlots` omits `set_lsp` and `label`, `FramePresenter` omits `float_group`, `EditorHarness` omits `completions`.
+- Fix outline: add the four names.
+
+## Tab with expandtab pads by character column
+
+- Where: `carat/use_cases/insert_tab.rb:23` (periodic quality at 5722559).
+- Why it matters: after a tab or a wide character before the cursor the spaces stop short of or past the next tab stop, unlike Vim's virtual-column rule; `test/editor_insert.rb:64` checks only an ASCII line.
+- Fix outline: take the display column with `Domain::DisplayWidth.column` and pad to the next multiple of the tab width, with rows after a tab and after a wide character.
+
+## Architecture section 4 names no completion domain object
+
+- Where: `docs/architecture.md:92` (periodic quality at 5722559).
+- Why it matters: `CompletionMenu`, `CompletionItem`, `CompletionList`, and `FuzzyMatch` are missing from Entities though section 5.1 names their use cases.
+- Fix outline: one section 4 bullet for the four within the file's budget, in the queued `architecture-drift` change.
+
+## A failed completion send leaves the input polling
+
+- Where: `complete` in `carat/adapters/json_rpc_language_gateway.rb` (line 474 at 376d264). Quality advisory in `completion-request`.
+- Why it matters: a write failure inside `request` crashes the server and `forget_completion` zeroes `sent_id`, but the returned id is then assigned to `sent_id`, so `waiting?` stays true and the input polls every 0.02 s until `ANSWER_LIMIT`.
+- Fix outline: `id = request(...)`, then `ask.sent_id = server.running? ? id : 0`, with a gateway row whose server fails the write.
+
+## The input controller reaches through ShowCompletion for an arrival
+
+- Where: `carat/adapters/input_controller.rb` (line 71 at 376d264), which reads `@show_completion.source.request.arrived`, three objects deep. Quality advisory in `completion-request`, reported twice.
+- Why it matters: the adapter depends on the use case's source and its request record, so a change to either breaks the controller.
+- Fix outline: inject the shared `Domain::CompletionRequest` (`completions.request` in `EditorAssembly`, checked in `test/adapters_assembly.rb`), or call the show-completion use case unconditionally, since it returns at once when nothing shows or arrived.
+
+## UTF-16 length is computed in the language gateway
+
+- Where: `utf16_length` in `carat/adapters/json_rpc_language_gateway.rb` (line 521 at 376d264); only an ASCII column is tested. Quality advisory in `completion-request`.
+- Why it matters: pure encoding math sits in an adapter beside protocol code, and a multibyte or non-BMP character before the cursor sends an untested column.
+- Fix outline: move it to `Domain::Utf8` beside the other code-unit helpers, with rows for a multibyte and a non-BMP character in `test/domain_utf8.rb`.
+
+## Completion text edits ignore their range
+
+- Where: `candidate_of` in `carat/adapters/json_rpc_language_gateway.rb` (line 519 at 376d264), which takes `textEdit.newText` and drops the edit's range, while the menu replaces only the word from `FuzzyMatch.word_start`. Quality advisory in `completion-request`; the design leaves range edits out of scope.
+- Why it matters: an edit whose range starts before the word, such as ruby-lsp's `@ivar` or `Foo::Bar` constant edits, inserts `@@foo` or `Foo::Foo::Bar`.
+- Fix outline: use `newText` only when the edit's range starts at the word's start column (else `insertText`, else the label) now; later carry the range in `CompletionItem` and apply it through the `Buffer` primitives, with gateway and editor rows for both edits.
+
+## An incomplete completion answer is never asked again
+
+- Where: `completed` in `carat/adapters/json_rpc_language_gateway.rb` (line 492 at 376d264), which ignores `isIncomplete` and keeps the first `CompletionList::LIMIT` items, and `answer_for?`, which serves that list to every longer word at the same start. Quality advisory in `completion-request`; the design's non-goal.
+- Why it matters: a match outside the first 200 items of an incomplete answer is never offered, however much more of the word is typed.
+- Fix outline: record `isIncomplete` in `Domain::CompletionRequest` and ask again when the typed part grows past an incomplete answer, with a gateway row.
+
+## The typed part before the cursor is computed twice
+
+- Where: `carat/adapters/json_rpc_language_gateway.rb` (line 463 at 376d264) repeats `ShowCompletion`'s slice, `word_start`, `byteslice`, and `col - length` (`carat/use_cases/completion/show_completion.rb`, lines 74 to 77). Quality advisory in `completion-request`.
+- Why it matters: a change to how the word is found must be made in both places or the request and the menu disagree on the word.
+- Fix outline: one domain helper (for example in `FuzzyMatch`) answering the typed part and its start column before a column, used by both, with a table row.
+
+## Completion-request style and docs advisories
+
+- Where: the `result.is_a?(Hash)` guards of `initialized` in `carat/adapters/json_rpc_language_gateway.rb` (lines 417 and 423 at 376d264); the comment of `complete` in the same file (line 441) and the class comment of `carat/doubles/fixed_completions.rb` (line 10), each with a line past the file's wrap; `until_sent` in `test/adapters_server_completions.rb` (line 263), which returns at once because the first request is already sent; the `LanguageServicePort` row of `docs/architecture.md` (line 204), which omits `start`. Quality advisories in `completion-request`.
+- Why it matters: `receive` now crashes the server unless the result is a Hash, so the guards are dead and mislead; the long lines break the files' wrap; the test's wait is a no-op and the `10.times` fallback does the waiting; the architecture row disagrees with the port and the map.
+- Fix outline: read `result["serverInfo"]` and `result["capabilities"]` directly; rewrap both comment paragraphs; wait until `count_of` reaches 2 with a bounded helper and drop the no-op call; add `start(state)` to the row.

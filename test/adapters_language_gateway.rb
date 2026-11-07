@@ -66,6 +66,19 @@ module AdaptersLanguageGatewayTest
     h.assembly.status_slots.lsp_label
   end
 
+  # What an initialize answer leaves after a typed key and an idle tick:
+  # the slot, the methods sent, and the handles stopped.
+  def self.after_init(body)
+    h = editor(true)
+    h.open("a.rb")
+    h.wait
+    h.messages.body(1, body.to_s)
+    h.wait
+    h.type("ix")
+    h.wait
+    "#{label(h)}|#{h.processes.methods_sent.join(",")}|#{h.processes.stopped.join(",")}"
+  end
+
   def self.notify(h, method, params)
     h.messages.body(1, J.generate({ "jsonrpc" => "2.0", "method" => method, "params" => params }))
     h.wait
@@ -88,6 +101,17 @@ module AdaptersLanguageGatewayTest
     t.assert_equal([["initialize", "initialized", "textDocument/didOpen"], "ruby-lsp"], [h.processes.methods_sent, label(h)], "the answer makes it ready and opens the buffer")
     opened = last_body(h)["params"]["textDocument"]
     t.assert_equal(["ruby", 1, "x = 1\n", true], [opened["languageId"], opened["version"], opened["text"], opened["uri"].to_s.end_with?("/a.rb")], "didOpen carries the language, version 1, the text, and the file URI")
+    t.assert_equal([false, true], [init["params"]["capabilities"]["textDocument"]["completion"]["completionItem"]["snippetSupport"], init["params"]["capabilities"]["textDocument"]["completion"]["contextSupport"]], "initialize advertises completion without snippets")
+
+    # A failed initialize is a crash: nothing more is sent. Rows are
+    # [label, the answer, "slot|methods sent|handles stopped"].
+    t.table([
+      ["a result makes the server ready", INIT, "ruby-lsp|initialize,initialized,textDocument/didOpen,textDocument/didChange|"],
+      ["an initialize error stops the server as crashed and sends nothing more", "{\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32603,\"message\":\"boom\"}}", "ruby-lsp crashed :LspRestart|initialize|1"],
+      ["an error beside a result is still an error", "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{},\"error\":{\"code\":1}}", "ruby-lsp crashed :LspRestart|initialize|1"],
+      ["a null result is a crash", "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":null}", "ruby-lsp crashed :LspRestart|initialize|1"],
+      ["an answer to another id changes nothing", "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":1}}", "ruby-lsp starting|initialize|"]
+    ]) { |body| after_init(body.to_s) }
 
     # Trust: a server starts on its own only under a trusted root, which a
     # project file cannot set. Rows are [label, "cwd|roots", what opening

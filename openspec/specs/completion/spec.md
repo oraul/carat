@@ -122,3 +122,55 @@ A label or a detail SHALL be cut at a character boundary to at most 80 bytes and
 #### Scenario: Too many candidates
 - **WHEN** the source gives 300 candidates that all match
 - **THEN** 200 are kept
+
+### Requirement: The language server is the editor's completion source
+When the current buffer's language server runs and advertised a completion provider, typing a word in insert mode SHALL ask that server for the word's completions without making any key wait: the request SHALL be sent at an idle tick once no other word was wanted for 0.1 seconds, after the server was told the buffer's text, and the popup SHALL fill from the answer when it arrives, with no key pressed. With no completing server, typing SHALL behave and cost as without completion.
+
+#### Scenario: The answer fills the popup with no key
+- **WHEN** ruby-lsp completes, "fi" is typed in a Ruby buffer, the editor stays idle, and the server answers "file_name", "filter", and "final"
+- **THEN** the popup shows all three, "final" first, without another key
+
+#### Scenario: An answer between keys
+- **WHEN** a completion request is in flight and its answer arrives 0.1 seconds after a key, before the next key
+- **THEN** the popup shows before the next key is read
+
+#### Scenario: Requests are debounced
+- **WHEN** "a b c" is typed with less than 0.1 seconds between the words
+- **THEN** one completion request is sent, for the word "c"
+
+#### Scenario: No completing server
+- **WHEN** the server advertised no completion provider and "fi" is typed
+- **THEN** no completion request is sent and no popup shows
+
+### Requirement: A completion answer serves only the word it was asked for
+A server's answer SHALL serve only a word at the same start that begins with the typed part the request was sent for; another word typed there later, or a word whose request was never sent or never answered, SHALL be asked again.
+
+#### Scenario: Another word at the same start asks again
+- **WHEN** "fi" was answered, deleted with backspace, and "ba" is typed at the same column
+- **THEN** a second completion request is sent and its answer fills the popup
+
+#### Scenario: A word deleted within the debounce asks nothing
+- **WHEN** "x" is typed and deleted with backspace within 0.1 seconds, then "fi" is typed at the same column
+- **THEN** no completion request is sent for the empty text, and one request is sent for "fi" whose answer fills the popup
+
+#### Scenario: A request skipped by leaving insert mode
+- **WHEN** "fi" is typed and Esc pressed within 0.1 seconds, then insert mode is entered again and "l" typed
+- **THEN** a completion request is sent for the word
+
+### Requirement: A stale completion request is cancelled
+When another word is wanted while a completion request is in flight, the editor SHALL send `$/cancelRequest` for it and SHALL drop its answer; an answer to no request in flight SHALL change nothing.
+
+#### Scenario: Typing another word cancels
+- **WHEN** a request for "fi" is in flight and " ba" is typed
+- **THEN** a cancel for the first request is sent and its answer, when it arrives, opens no popup
+
+### Requirement: A server's completions are bounded and untrusted
+The editor SHALL read at most 200 items of an answer, and SHALL drop escape sequences and controls from each label, detail, and insert text and cut them to their limits before keeping them; an item without a string label SHALL be skipped and an unknown kind SHALL read as text.
+
+#### Scenario: An escape-laden, oversized item
+- **WHEN** the server answers an item whose label holds an escape sequence and is 5,000 bytes long
+- **THEN** the popup's label holds no escape character and is at most 80 bytes
+
+#### Scenario: Too many items
+- **WHEN** the server answers 300 items
+- **THEN** 200 are kept

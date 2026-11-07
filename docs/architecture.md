@@ -201,8 +201,8 @@ Ports to the outside are the interfaces use cases depend on. Each is a Ruby clas
 | `FilePort` | `read(path, limit)` (a regular file of at most `limit` bytes, opened without blocking), `write(path, text)`, `exist?`, `list(dir)`, `stat(path)` returning the `PathInfo` value (`PathInfo.missing` for nothing there), `real_path(path)` (every link resolved), `mkdir(path)`, `rename(from, to)`, `delete(path)` (a file or an empty directory), `cwd`, `home` (the user's home directory, `""` for none; only `DiskFiles` reads it from the environment) | `DiskFiles` | `MemoryFiles` |
 | `ConfigPort` | `load` returning the `Domain::Config` of every configuration file in load order, each line carrying its file and line number | `RcConfigGateway` | `FixedConfig`, the shipped defaults with lines a test gives |
 | `SignalPort` | `install`, `terminated?`, `resized?`, `acknowledge_resize` | `Signals` | `ManualSignals`, which a test trips |
-| `LanguageServicePort` | `poll(state)` on an idle read, `restart(state)`, `saved(buffer)`, `stop` | `JsonRpcLanguageGateway` | `FakeLanguageServices` |
-| `CompletionPort` | `ready?(buffer)`, `candidates(buffer, row, col)`, never waiting | `ServerCompletions` | `FixedCompletions` |
+| `LanguageServicePort` | `poll(state)` when idle, `restart(state)`, `saved(buffer)`, `waiting?`, `stop` | `JsonRpcLanguageGateway` | `FakeLanguageServices` |
+| `CompletionPort` | `ready?(buffer)`, `candidates(buffer, row, col)`, `request`, never waits | `ServerCompletions` | `FixedCompletions` |
 | `ProcessPort` | `spawn(argv)` returning a handle (0 when it cannot start), `write(handle, bytes)`, `stop(handle)`; output comes on the queue | `ProcessRunner` | `FakeProcesses` |
 | `MessageQueuePort` | `push(message)`, `pop` (nil at once when empty) | `RuntimeQueue` | `MemoryQueue` |
 

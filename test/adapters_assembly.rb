@@ -44,6 +44,7 @@ module AdaptersAssemblyTest
       ["handle_key", a.handle_key.completion], ["show_completion", a.show_completion.menu], ["close_completion", a.show_completion.close_completion.menu]
     ]), "the completion menu")
     t.assert_equal([true, true], [a.handle_key.show_completion.equal?(a.show_completion), a.show_completion.source.equal?(h.completions)], "the key handler holds the one ShowCompletion, over the source the harness gave")
+    t.assert_equal([true, true], [a.controller.show_completion.equal?(a.show_completion), a.services.completion.equal?(h.completions.request)], "the input controller holds the one ShowCompletion and the gateway the source's request")
     t.assert_equal([], strangers(a.tabs, [
       ["state", a.state.tabs], ["buffers", a.buffers.tabs], ["feed", a.buffers.feed.tabs], ["quit", a.quit.tabs],
       ["close_window", a.close_window.tabs], ["split_window", a.split_window.tabs], ["open_side_window", a.open_side_window.tabs],

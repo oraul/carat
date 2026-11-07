@@ -135,7 +135,7 @@ Flow: `InputController#pump` reads bytes, `KeyDecoder#feed` turns them into key 
 Files:
 
 - `carat/adapters/key_decoder.rb`: `KeyDecoder`; `feed`, `flush`, `pending?`, `encode`.
-- `carat/adapters/input_controller.rb`: `InputController`; `pump` (the `timeoutlen` wait from the options; the start screen's next frame, `tick`, and its dismissal on a key), `decoder`.
+- `carat/adapters/input_controller.rb`: `InputController`; `pump` (the `timeoutlen` wait from the options; the start screen's next frame, `tick`, and its dismissal on a key; a 0.02 second wait while the language services wait, and the popup refreshed when a completion answer arrived at the idle tick), `decoder`.
 - `carat/domain/key.rb`: `Key` codes; `printable?`, `alt?`, `base`, `char`, `TIMEOUT`.
 - `carat/domain/key_notation.rb`: `KeyNotation`; `parse`, `resolve`, `format`, `control_code`, `special_name`; Vim notation such as `<C-w>`.
 - `carat/domain/mode.rb`: `Mode`; `from_name`, `name_of`, `visual?`, `visual_kind`, `for_kind`.
@@ -258,7 +258,7 @@ Files:
 - `carat/domain/completion_list.rb`: `CompletionList`, at most 200 candidates; `add`, `at`, `count`, `clear`.
 - `carat/domain/completion_menu.rb`: `CompletionMenu`, the popup's state (cleaned candidates of a word, matches, selection, float id); `showing?`, `for_word?`, `fill`, `chosen`, `clear`.
 - `carat/domain/fuzzy_match.rb`: `FuzzyMatch.score` (underscore parts anchored at the word's part starts, in order), `word_start`, `word_length`.
-- `carat/use_cases/completion/show_completion.rb`: `ShowCompletion#call(state, typed)`, after a typed character or any key while the popup shows: asks the source, filters, ranks, and reopens the popup float, or closes it; no allocation when no popup shows and the source is not ready.
+- `carat/use_cases/completion/show_completion.rb`: `ShowCompletion#call(state, typed)`, after a typed character, any key while the popup shows, or an answer the source's request marks arrived: asks the source, filters, ranks, and reopens the popup float, or closes it; no allocation when no popup shows and the source is not ready.
 - `carat/use_cases/completion/select_completion.rb`: `SelectCompletion#call(state, step)`, Ctrl-N, Ctrl-P, and the arrows, wrapping.
 - `carat/use_cases/completion/accept_completion.rb`: `AcceptCompletion#call(state, replace)`, Enter over the typed part and Tab over the word, in the insert session with its `LastChange` steps.
 - `carat/use_cases/completion/close_completion.rb`: `CloseCompletion#call`, Esc while the popup shows.
@@ -450,7 +450,7 @@ Files:
 
 Tests: `test/domain_frame.rb`, `test/domain_line_cache.rb`, `test/adapters_frame_presenter.rb`, `test/adapters_dirty_rows.rb`, `test/adapters_screen_presenter.rb`, `test/editor_screen.rb`, `test/domain_utf8.rb` (hostile byte sequences through the decoder, display width, `TextLines`, and the plugin API's path segments), `test/editor_start_screen.rb` (every start screen frame, in color and plain, in its snapshot; the options, `NO_COLOR`, small windows, and the key that ends it), `test/adapters_status_bar.rb` (each segment, each width, the pills and the `lsp` states), `test/adapters_tab_bar.rb` (tabs, overflow, tab-page numbers).
 
-Designs: `render-core` (all Decisions; Measured result), `escape-c1-control-codes` (all Decisions), `windows-and-splits` (Rendering), `visual-modes` (Rendering), `cursor-shapes` (all Decisions), `bars` (all Decisions), `floating-windows` (Painting by z with a float key).
+Designs: `render-core` (all Decisions; Measured result), `escape-c1-control-codes` (all Decisions), `windows-and-splits` (Rendering), `visual-modes` (Rendering), `cursor-shapes` (all Decisions), `bars` (all Decisions), `floating-windows` (Painting by z with a float key), `diagnostics-display` (The message row), `completion` (The popup is a float).
 
 Rules: the presenters read the state only; `docs/architecture.md` section 8.2.
 
@@ -556,7 +556,7 @@ Bench: `lh-explorer`, `j-explorer`.
 
 What: the interfaces the core uses to reach the terminal, files, clock, configuration, signals, child processes, and language servers, the drivers that implement them, and the language server client.
 
-Flow: each port is a class whose methods raise `NotImplementedError`; drivers subclass them and are built only in `bin/carat.rb`; doubles (area 18) subclass them for tests. `MainLoop#run` polls the `SignalPort` (terminate, resize), renders on a resize, and pumps input. On an idle read `InputController#pump` calls `LanguageServicePort#poll`: `JsonRpcLanguageGateway` drains at most 64 queued `ServiceMessage` values that `ProcessRunner`'s reader threads framed with `RpcFramer`, starts the current buffer's server when the working directory is under a root of `language.trusted_roots` (else the slot reads `untrusted :LspStart`), sends `didOpen`, `didChange`, `didSave` (reported by `SaveFile`), and `didClose`, and writes the `lsp` slot through `StatusSlots#set_lsp`; `bin/carat.rb` calls `stop` in its `ensure`.
+Flow: each port is a class whose methods raise `NotImplementedError`; drivers subclass them and are built only in `bin/carat.rb`; doubles (area 18) subclass them for tests. `MainLoop#run` polls the `SignalPort` (terminate, resize), renders on a resize, and pumps input. On an idle read `InputController#pump` calls `LanguageServicePort#poll`: `JsonRpcLanguageGateway` drains at most 64 queued `ServiceMessage` values that `ProcessRunner`'s reader threads framed with `RpcFramer`, starts the current buffer's server when the working directory is under a root of `language.trusted_roots` (else the slot reads `untrusted :LspStart`), sends `didOpen`, `didChange`, `didSave` (reported by `SaveFile`), and `didClose`, and writes the `lsp` slot through `StatusSlots#set_lsp`; `bin/carat.rb` calls `stop` in its `ensure`. The completion source `ServerCompletions` records the wanted word in the `CompletionRequest` it shares with the gateway, which sends `textDocument/completion` after a 0.1 second debounce, cancels a stale request, and keeps the bounded answer for the popup.
 
 Files:
 
@@ -573,8 +573,9 @@ Files:
 - `carat/domain/json.rb`: `Carat::Json` (`parse`, `generate`, `pretty_generate`), for JSON-RPC; the configuration is not JSON. Nesting is capped at `MAX_DEPTH`, illegal UTF-8 bytes read and write as U+FFFD.
 - `carat/ports/process_port.rb`: `ProcessPort`; `spawn` (a handle, 0 when the command cannot start), `write`, `stop`.
 - `carat/ports/message_queue_port.rb`: `MessageQueuePort`; `push`, `pop` (nil at once when empty).
-- `carat/ports/language_service_port.rb`: `LanguageServicePort`; `poll`, `restart`, `saved`, `stop`.
-- `carat/ports/completion_port.rb`: `CompletionPort`, the completion source that never waits; `ready?`, `candidates`.
+- `carat/ports/language_service_port.rb`: `LanguageServicePort`; `poll`, `start`, `restart`, `saved`, `waiting?`, `stop`.
+- `carat/ports/completion_port.rb`: `CompletionPort`, the completion source that never waits; `ready?`, `candidates`, `request`.
+- `carat/domain/completion_request.rb`: `CompletionRequest`, the asynchronous ask a source shares with the gateway (wanted word, debounce, request in flight, answer, `arrived`, completing languages); `ask`, `wanted?`, `answer_for?`, `completes?`, `waiting?`.
 - `carat/drivers/process_runner.rb`: `ProcessRunner`; `Process.spawn` over `IO.pipe` pairs, a reader thread (`pump`) and a writer thread (`drain`) per child, the only threads; `Process.detach` reaps.
 - `carat/drivers/runtime_queue.rb`: `RuntimeQueue`, the runtime's `Queue`.
 - `carat/domain/rpc_framer.rb`: `RpcFramer`; `frame`, `feed`, `next_body`, `refused?`; `HEADER_LIMIT` and `BODY_LIMIT`.
@@ -583,16 +584,16 @@ Files:
 - `carat/domain/diagnostic.rb`: `Diagnostic`, a published diagnostic as a value.
 - `carat/domain/diagnostic_list.rb`: `DiagnosticList`, a file's published diagnostics with a typed reader, built once per publish and shared by the server, its buffers, and the counts; `add`, `at`, `count`, `empty?`.
 - `carat/domain/language_server.rb`: `LanguageServer`, one server's state, documents, and diagnostics.
-- `carat/adapters/json_rpc_language_gateway.rb`: `JsonRpcLanguageGateway`; `poll` (a publish handed to its buffers and the current buffer's counts to the slot at the idle tick), `restart`, `saved`, `stop`, `diagnostics`, `server_for`.
+- `carat/adapters/json_rpc_language_gateway.rb`: `JsonRpcLanguageGateway`; `poll` (a publish handed to its buffers and the current buffer's counts to the slot at the idle tick, then the debounced completion request), `start`, `restart`, `saved`, `waiting?`, `stop`, `diagnostics`, `server_for`; a failed initialize is a crash.
 - `carat/doubles/fake_processes.rb`: `FakeProcesses`; `install`, `break_input`, `spawned`, `bodies`, `methods_sent`, `stopped`.
 - `carat/doubles/memory_queue.rb`: `MemoryQueue`; `body`, `count`.
-- `carat/doubles/fake_language_services.rb`: `FakeLanguageServices`, no server, the writes recorded in `saves`, for use cases built by hand.
-- `carat/adapters/server_completions.rb`: `ServerCompletions`, the editor's completion source, never ready until `completion-request` asks the server.
-- `carat/doubles/fixed_completions.rb`: `FixedCompletions`, a source a test fills with `add`, ready once it holds a candidate, counting `asked`.
+- `carat/doubles/fake_language_services.rb`: `FakeLanguageServices`, no server, never `waiting?`, the writes recorded in `saves`, for use cases built by hand.
+- `carat/adapters/server_completions.rb`: `ServerCompletions`, the editor's completion source: ready for a completing server's file type, the answer held for the word or the word recorded as wanted; `request`.
+- `carat/doubles/fixed_completions.rb`: `FixedCompletions`, a source a test fills with `add`, ready once it holds a candidate, counting `asked`, its `request` filled by nobody.
 
-Tests: `test/drivers_main_loop.rb` (a resize, a terminate, and `:q` over the signal double, and the driver's flags), `test/json.rb`, `test/drivers_disk_files.rb` (`DiskFiles`, `MakePath`, `RenamePath`, and `DeletePath` over a real directory: a link to `/dev/zero`, a FIFO, files at and over a limit, links inside and outside a root), `test/domain_rpc_framer.rb` (frames, their limits, and `ControlText`), `test/drivers_process_runner.rb` (`cat` and `sh` as children), `test/adapters_language_gateway.rb` (the lifecycle, trusted roots, progress, diagnostics and their signs and counts, hostile output over the doubles), `test/editor_lsp.rb` (`:LspStart`, `:LspRestart`, the drawn slot, and the drawn diagnostics).
+Tests: `test/drivers_main_loop.rb` (a resize, a terminate, and `:q` over the signal double, and the driver's flags), `test/json.rb`, `test/drivers_disk_files.rb` (`DiskFiles`, `MakePath`, `RenamePath`, and `DeletePath` over a real directory: a link to `/dev/zero`, a FIFO, files at and over a limit, links inside and outside a root), `test/domain_rpc_framer.rb` (frames, their limits, and `ControlText`), `test/drivers_process_runner.rb` (`cat` and `sh` as children), `test/adapters_language_gateway.rb` (the lifecycle, trusted roots, progress, diagnostics and their signs and counts, hostile output over the doubles), `test/editor_lsp.rb` (`:LspStart`, `:LspRestart`, the drawn slot, and the drawn diagnostics), `test/adapters_server_completions.rb` (the server as the completion source: debounce, cancellation, the answer with no key, the short wait, hostile and oversized answers).
 
-Designs: `state-and-ports` (Signals; The stat value; Configuration), `editor-foundation` (Ports, adapters, drivers, doubles), `cursor-shapes` (Every exit path), `lsp-diagnostics` (Spike; Three ports, two drivers, two doubles; The gateway works only on idle ticks; Untrusted output), `diagnostics-display` (The buffer keeps what is shown; The gateway applies a publish at the idle tick).
+Designs: `state-and-ports` (Signals; The stat value; Configuration), `editor-foundation` (Ports, adapters, drivers, doubles), `cursor-shapes` (Every exit path), `lsp-diagnostics` (Spike; Three ports, two drivers, two doubles; The gateway works only on idle ticks; Untrusted output), `diagnostics-display` (The buffer keeps what is shown; The gateway applies a publish at the idle tick), `completion` (A source port that never waits), `completion-request` (all Decisions).
 
 Rules: `docs/architecture.md` sections 2.1 (signal handlers set a flag; `STDIN.raw` single call; `Process.spawn` with `IO.pipe`), 6, and 8.4. An overridden port method carries `# @rbs` parameter lines, not an applied return type.
 

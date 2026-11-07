@@ -1,4 +1,10 @@
 require_relative "../ports/language_service_port"
+require_relative "../ports/clock_port"
+require_relative "../domain/completion_request"
+require_relative "../domain/completion_list"
+require_relative "../domain/completion_item"
+require_relative "../domain/mode"
+require_relative "../domain/fuzzy_match"
 
 module Carat
   module Adapters
@@ -19,7 +25,15 @@ module Carat
     # of control characters and capped (Domain::ControlText). A publish is
     # handed at the next idle tick to the buffers of its file, which draw
     # it as signs and the cursor line's message, and the current buffer's
-    # counts go to the bar's diagnostics slot.
+    # counts go to the bar's diagnostics slot. A server whose initialize
+    # failed is stopped as crashed. The completion source's wanted word
+    # (Domain::CompletionRequest) is sent as textDocument/completion once
+    # no other word was wanted for DEBOUNCE seconds, after the document
+    # sync; a request for a word no longer wanted, or unanswered
+    # ANSWER_LIMIT seconds past its deadline, is cancelled, and an answer
+    # to no request in flight is dropped. An answer is bounded and cleaned
+    # (at most CompletionList::LIMIT items through
+    # CompletionItem.from_source) and marked arrived for the popup.
     class JsonRpcLanguageGateway < Ports::LanguageServicePort
       DRAIN_LIMIT = 64
       NAME_LIMIT = 32
@@ -30,6 +44,11 @@ module Carat
       # Server requests answered with a null result; any other gets
       # METHOD_NOT_FOUND.
       NULL_REQUESTS = ["window/workDoneProgress/create", "client/registerCapability", "client/unregisterCapability"]
+      DEBOUNCE = 0.1
+      ANSWER_LIMIT = 2.0
+      # The menu kind of each LSP CompletionItemKind, by number: interface,
+      # enum, and struct read as class; value and enum member as constant.
+      KIND_NAMES = ["text", "text", "method", "function", "constructor", "field", "variable", "class", "class", "module", "property", "text", "constant", "class", "keyword", "snippet", "text", "text", "text", "text", "constant", "constant", "class", "text", "text", "text"]
 
       # @rbs @servers: Array[untyped]
       # @rbs @refused: Array[String]
@@ -43,15 +62,19 @@ module Carat
       attr_reader :buffers #: Domain::BufferList
       attr_reader :config #: Domain::Config
       attr_reader :slots #: Domain::StatusSlots
+      attr_reader :completion #: Domain::CompletionRequest
+      attr_reader :clock #: Ports::ClockPort
 
-      #: (processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, files: Ports::FilePort, buffers: Domain::BufferList, config: Domain::Config, slots: Domain::StatusSlots) -> void
-      def initialize(processes:, messages:, files:, buffers:, config:, slots:)
+      #: (processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, files: Ports::FilePort, buffers: Domain::BufferList, config: Domain::Config, slots: Domain::StatusSlots, completion: Domain::CompletionRequest, clock: Ports::ClockPort) -> void
+      def initialize(processes:, messages:, files:, buffers:, config:, slots:, completion:, clock:)
         @processes = processes
         @messages = messages
         @files = files
         @buffers = buffers
         @config = config
         @slots = slots
+        @completion = completion
+        @clock = clock
         @servers = []
         @refused = []
         @saves = []
@@ -81,6 +104,7 @@ module Carat
           i += 1
         end
         @saves.clear
+        complete(state)
         return hold(language) || changed if held
         show(current) || changed
       end
@@ -110,6 +134,13 @@ module Carat
         end
         show(server)
         server.nil? ? "Cannot start #{words_of(language).join(" ")}" : ""
+      end
+
+      # Answers whether a wanted completion is not yet sent or a request is
+      # in flight.
+      # @rbs skip
+      def waiting?
+        @completion.waiting?
       end
 
       #: (Domain::Buffer) -> void
@@ -144,6 +175,7 @@ module Carat
           server = server_at(i)
           i += 1
           next if server.handle == 0
+          forget_completion(server)
           request(server, "shutdown", nil)
           notify(server, "exit", nil)
           @processes.stop(server.handle)
@@ -288,7 +320,8 @@ module Carat
       def initialize_params
         root = uri_of(@files.cwd)
         sync = { "didSave" => true, "dynamicRegistration" => false }
-        document = { "synchronization" => sync, "publishDiagnostics" => { "relatedInformation" => false } }
+        completion = { "completionItem" => { "snippetSupport" => false }, "contextSupport" => true }
+        document = { "synchronization" => sync, "publishDiagnostics" => { "relatedInformation" => false }, "completion" => completion }
         capabilities = { "textDocument" => document, "window" => { "workDoneProgress" => true } }
         { "processId" => nil, "clientInfo" => { "name" => "carat" }, "rootUri" => root, "capabilities" => capabilities, "workspaceFolders" => [{ "uri" => root, "name" => File.basename(@files.cwd) }] }
       end
@@ -340,6 +373,7 @@ module Carat
       # limit: its process is stopped and the bar names the restart.
       #: (Domain::LanguageServer) -> void
       def crash(server)
+        forget_completion(server)
         @processes.stop(server.handle)
         server.handle = 0
         server.state = :crashed
@@ -358,7 +392,14 @@ module Carat
             notified(server, name.to_s, value["params"])
           end
         elsif value["id"] == server.init_id && server.state == :starting
-          initialized(server, value["result"])
+          result = value["result"]
+          if value.key?("error") || !result.is_a?(Hash)
+            crash(server)
+          else
+            initialized(server, result)
+          end
+        elsif @completion.sent_id != 0 && value["id"] == @completion.sent_id && server.language == @completion.language
+          completed(value.key?("error") ? nil : value["result"])
         end
       end
 
@@ -379,8 +420,120 @@ module Carat
           stripped = Domain::ControlText.strip(name.to_s, NAME_LIMIT)
           server.name = stripped unless stripped.empty?
         end
+        caps = result.is_a?(Hash) ? result["capabilities"] : nil
+        provider = caps.is_a?(Hash) ? caps["completionProvider"] : nil
+        @completion.languages << server.language if provider.is_a?(Hash) && !@completion.completes?(server.language)
         server.state = :ready
         notify(server, "initialized", {})
+      end
+
+      # A server that runs no more completes no more, and its request in
+      # flight is forgotten.
+      #: (Domain::LanguageServer) -> void
+      def forget_completion(server)
+        ask = @completion
+        ask.languages.delete(server.language)
+        ask.sent_id = 0 if ask.language == server.language
+      end
+
+      # Sends the wanted word's completion request once no other word was
+      # wanted for DEBOUNCE seconds, when the current buffer, row, and mode
+      # still hold the word, the cursor ends a word of at least one byte
+      # that starts at the wanted column, and its server completes; a newer want cancels
+      # the request in flight, and so does an answer overdue.
+      #: (Domain::EditorState) -> void
+      def complete(state)
+        ask = @completion
+        return unless ask.waiting?
+        now = @clock.now
+        if ask.want != ask.seen
+          ask.seen = ask.want
+          ask.due = now + DEBOUNCE
+          cancel
+          return
+        end
+        if ask.sent_id != 0
+          cancel if now > ask.due + ANSWER_LIMIT
+          return
+        end
+        return if now < ask.due
+        ask.sent = ask.want
+        buffer = state.buffer
+        cursor = state.cursor
+        return unless state.mode == Domain::Mode::INSERT && buffer.id == ask.buffer_id && cursor.row == ask.row && cursor.col > ask.col
+        line = buffer.line(cursor.row)[0, cursor.col].to_s
+        start = Domain::FuzzyMatch.word_start(line)
+        typed = line.byteslice(start, line.bytesize - start).to_s
+        return if typed.empty? || cursor.col - typed.length != ask.col
+        server = server_for(buffer.filetype)
+        return if server.nil? || !server.running? || !ask.completes?(server.language) || buffer.path.empty?
+        position = { "line" => cursor.row, "character" => utf16_length(line) }
+        params = { "textDocument" => { "uri" => uri_of(buffer.path) }, "position" => position, "context" => { "triggerKind" => 1 } }
+        ask.word = typed
+        ask.language = server.language
+        ask.sent_id = request(server, "textDocument/completion", params)
+      end
+
+      # Cancels the completion request in flight, whose answer is then
+      # dropped.
+      #: () -> void
+      def cancel
+        ask = @completion
+        return if ask.sent_id == 0
+        server = server_for(ask.language)
+        notify(server, "$/cancelRequest", { "id" => ask.sent_id }) unless server.nil?
+        ask.sent_id = 0
+      end
+
+      # Keeps a completion answer for the word it was sent for: at most
+      # CompletionList::LIMIT items with a string label, each cleaned and
+      # bounded; an error or another value is an empty answer.
+      #: (untyped) -> void
+      def completed(result)
+        ask = @completion
+        items = result.is_a?(Hash) ? result["items"] : result
+        list = Domain::CompletionList.new
+        if items.is_a?(Array)
+          items.each do |item|
+            break if list.count >= Domain::CompletionList::LIMIT
+            candidate = candidate_of(item)
+            list.add(candidate) unless candidate.nil?
+          end
+        end
+        ask.list = list
+        ask.answered = ask.sent
+        ask.sent_id = 0
+        ask.arrived = true
+      end
+
+      # A completion item as a candidate, nil without a string label.
+      #: (untyped) -> Domain::CompletionItem?
+      def candidate_of(item)
+        return nil unless item.is_a?(Hash)
+        label = item["label"]
+        return nil unless label.is_a?(String)
+        number = item["kind"]
+        kind = number.is_a?(Integer) && number.to_i > 0 && number.to_i < KIND_NAMES.length ? KIND_NAMES[number.to_i].to_s : "text"
+        detail = item["detail"]
+        edit = item["textEdit"]
+        text = edit.is_a?(Hash) ? edit["newText"] : nil
+        text = item["insertText"] unless text.is_a?(String)
+        Domain::CompletionItem.from_source(label.to_s, kind, detail.is_a?(String) ? detail.to_s : "", text.is_a?(String) ? text.to_s : "")
+      end
+
+      # The UTF-16 code units of a text: one per character, two for one
+      # outside the basic plane (a four-byte UTF-8 sequence).
+      #: (String) -> Integer
+      def utf16_length(text)
+        count = 0
+        i = 0
+        while i < text.bytesize
+          b = text.getbyte(i).to_i
+          count += 1 if (b & 0xC0) != 0x80
+          count += 1 if b >= 0xF0
+          i += 1
+        end
+        count
       end
 
       # Answers a server's request, so a server waiting on it goes on.

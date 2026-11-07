@@ -1,6 +1,7 @@
 require_relative "../../domain/editor_state"
 require_relative "../../domain/completion_menu"
 require_relative "../../domain/completion_list"
+require_relative "../../domain/completion_request"
 require_relative "../../domain/fuzzy_match"
 require_relative "../../domain/display_width"
 require_relative "../../domain/utf8"
@@ -30,7 +31,8 @@ module Carat
     # typed part keeps the popup and its selection; an empty word, no
     # match, or another mode closes it, and so does a key that is not
     # typed text and leaves the word, such as one moving to another row
-    # or buffer: only a typed character asks the source again.
+    # or buffer: only a typed character asks the source again, or an
+    # answer the source's request marks arrived, which counts as typed.
     class ShowCompletion
       MAX_ROWS = 10
       LABEL_WIDTH = 40
@@ -58,7 +60,11 @@ module Carat
       def call(state, typed)
         menu = @menu
         showing = menu.showing?
-        return unless showing || (typed && @source.ready?(state.buffer))
+        request = @source.request
+        arrived = request.arrived
+        return unless showing || arrived || (typed && @source.ready?(state.buffer))
+        request.arrived = false if arrived
+        asked = typed || arrived
         if state.mode != Domain::Mode::INSERT || (showing && state.tab.floats.index_of(menu.float_id) < 0)
           @close_completion.call(state)
           return
@@ -76,7 +82,7 @@ module Carat
         if menu.for_word?(buffer.id, cursor.row, col)
           return if showing && prefix == menu.prefix
         else
-          unless typed && @source.ready?(buffer)
+          unless asked && @source.ready?(buffer)
             @close_completion.call(state)
             return
           end
