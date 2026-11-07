@@ -1957,3 +1957,33 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `runner_finish` fix in `tools/run_state.sh` line 697 at 41297d6 (commit 13de267, with its `tools/tools_test.sh` case), on `feature/quick-docs`. Two quality advisories in `quick-docs`.
 - Why it matters: CLAUDE.md asks one logical change and one type per squash commit; the CI fix the branch needed is a `fix` of the tooling inside a `feat` pull request, so its history is hidden under the hover change. The pull request's Notes name it as that CI fix.
 - Fix outline: when a CI fix touches tooling outside the change, deliver it as its own change ahead of the feature, or have the push step name it in the pull request's Notes as this one does.
+
+## The cases gate passes every changed tool script on one added case
+
+- Where: `gate_cases` in `tools/gates.sh` (line 242, the check at line 253 at 4f653d2) and its comment, which say a case per script, and the row in `README.md` line 40 that says a case for every changed tool script. Two quality advisories in `implement-contracts`.
+- Why it matters: the gate names the changed scripts one by one, but one added `expect` line for any script satisfies all of them, so a branch changing `gates.sh` and `run_state.sh` passes with only a gates case, and the README and the comment promise more than the gate checks.
+- Fix outline: for each changed script require an added `expect` line whose command word is the script's basename, with a case in `tools/tools_test.sh`; or reword the README row and the comment to an added case when a tool script changes.
+
+## The holder check counts every assembly reader type as shared
+
+- Where: the `shared` list in `test/lint.rb` line 946 at 4f653d2, which takes the type of every `EditorAssembly` reader. Two quality advisories in `implement-contracts`.
+- Why it matters: generics count too (`config_errors` is `Array[String]`), and a namespaced generic such as `Array[Domain::X]` is cut to `X]`, so a holder reader typed `Array[String]` would be demanded a row in `test/adapters_assembly.rb` as if it were a shared object.
+- Fix outline: keep only types with a home class under `carat/` (the `homes` the check already builds), or skip types containing a bracket, with a lint case.
+
+## The holder check matches a reader with no right boundary
+
+- Where: the `.holder.reader` substring match in `test/lint.rb` line 735 at 4f653d2. Quality advisory in `implement-contracts`.
+- Why it matters: a reader counts as checked when the assembly test names a longer reader with the same prefix (`.handle_key.command_line` inside `.handle_key.command_line_x`), so a missing holder row can pass.
+- Fix outline: require a non-word character (or the end of the line) after the match, with a lint case for the prefix.
+
+## Two lint checks parse constructor keywords with copied slicing
+
+- Where: `holder_problems` in `test/lint.rb` line 719 and `constructor_problem` at line 365 at 4f653d2, both slicing `stripped[15, ...]` after `def initialize(`. Quality advisory in `implement-contracts`.
+- Why it matters: the parser is copied with a bare 15, and both read only one-line constructors, so a fix to one misses the other and a wrapped signature is skipped silently.
+- Fix outline: one `keyword_names(stripped)` helper both call, the 15 spelled as the prefix's length.
+
+## Two assembly test labels name too few holders
+
+- Where: the labels `the last search, in the searches and the substitute` and `the search history, in the searches and the substitute` in `test/adapters_assembly.rb` lines 103 and 104 at 4f653d2. Two quality advisories in `implement-contracts`.
+- Why it matters: the rows now also check the command line, the prompt, and the frame presenter, so the labels mislead a reader of a failure.
+- Fix outline: shorten them to `the last search` and `the search history` and rewrite the snapshot with `make snapshots`.
