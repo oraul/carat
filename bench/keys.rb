@@ -98,8 +98,9 @@ COLS = 200
 # name, keys typed in a loop, default key count, default lines, setup keys
 # (with N for the middle line number, H for a heredoc body line near the
 # middle, S for the middle line of a multi-line string near it), text
-# kind, plugins ("none", "explorer" opened in a side window, or "ruby",
-# the ruby plugin alone)
+# kind, plugins ("none", "explorer" opened in a side window, "ruby",
+# the ruby plugin alone, or "float", no plugin and a 60 by 15 bordered
+# float over the middle of the window)
 SCENARIOS = [
   ["lh", "lh", 10_000, 10_000, "NG", "code", "none"],
   ["j", "j", 9_000, 10_000, "gg", "code", "none"],
@@ -111,6 +112,7 @@ SCENARIOS = [
   ["long-ascii", "hl", 2_000, 500, "NG$", "long-ascii", "none"],
   ["long-utf8", "hl", 2_000, 500, "NG$", "long-utf8", "none"],
   ["lh-explorer", "lh", 10_000, 10_000, "NG", "code", "explorer"],
+  ["lh-float", "lh", 10_000, 10_000, "NG", "code", "float"],
   ["j-explorer", "j", 9_000, 10_000, "gg", "code", "explorer"],
   ["undo", "u<C-r>", 4_000, 100_000, "NGx", "code", "none"],
   ["undo-line", "u<C-r>", 4_000, 100_000, "NGdd", "code", "none"],
@@ -246,6 +248,18 @@ def run(scenario, count, size)
       assembly.render(ROWS, COLS)
       i += 1
     end
+  end
+  if plugins == "float"
+    rows = []
+    r = 0
+    while r < 15
+      rows << "float row #{r} " + "x" * 40
+      r += 1
+    end
+    spec = Carat::Domain::FloatSpec.new(anchor: "editor", row: 20, col: 70, height: 15, width: 60, border: true, title: "bench", z: 50)
+    float = Carat::Domain::FloatWindow.new(window: Carat::Domain::Window.new(buffer: Carat::Domain::Buffer.new(lines: rows, path: nil, line_ending: "\n")), spec: spec)
+    assembly.open_float.call(assembly.state, float, false)
+    assembly.render(ROWS, COLS)
   end
   middle = lines / 2 / BLOCK * BLOCK
   prelude = encode(setup.sub("N", (lines / 2 + 1).to_s).sub("H", (middle + HEREDOC_ROW + 1).to_s).sub("S", (middle + STRING_ROW + 1).to_s))

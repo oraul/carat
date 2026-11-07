@@ -70,6 +70,16 @@ module Carat
     # frame forgets its layout key and painted rows, so the next frames
     # repaint every window row and are compared in full.
     #
+    # The floating windows of the tab page are painted last, by z, over
+    # the windows, the status bar, and the start screen: their text in
+    # NormalFloat, a rounded border in FloatBorder with the title in
+    # Title. A frame keeps the boxes it was painted with; when they
+    # differ from the ones to paint, the frame forgets the window rows the
+    # old boxes covered, so those are repainted, and every row a box
+    # covers in this frame or in the frame shown is compared cell by cell.
+    # A window under any of those boxes records no scroll. With no float
+    # in the tab page or either frame none of this runs.
+    #
     # While the start screen shows, its frame is painted over the current
     # window's text rows after the windows, and the frame forgets its
     # layout key and painted rows the same way, so the start frames are
@@ -108,6 +118,8 @@ module Carat
       # @rbs @row_of: Integer
       # @rbs @current: bool
       # @rbs @number_hl: Integer
+      # @rbs @float_key: Array[Integer]
+      # @rbs @floating: bool
 
       #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar) -> void
       def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, start_screen:, status_bar:, tab_bar:)
@@ -125,6 +137,8 @@ module Carat
         @row_of = -1
         @current = false
         @number_hl = Domain::Highlight::LINE_NUMBER
+        @float_key = []
+        @floating = false
         @front = Domain::Frame.new(rows: 1, cols: 1)
         @back = Domain::Frame.new(rows: 1, cols: 1)
         @front_rows = PaintedRows.new(rows: 1, slots: 1)
@@ -160,11 +174,21 @@ module Carat
         ids = layout.leaves
         ensure_slots(rows, ids.length)
         build_key(rows, cols, tabline, tabstop, layout, ids)
-        unless same_key?(back.layout)
+        unless same_ints?(@key, back.layout)
           @back_rows.invalidate
-          copy_key(back.layout)
+          copy_ints(@key, back.layout)
         end
-        base_same = based && same_key?(base.layout)
+        base_same = based && same_ints?(@key, base.layout)
+        floats = tab.floats
+        in_float = floats.focused?
+        @floating = floats.count > 0 || back.floats.length > 0 || base.floats.length > 0
+        if @floating
+          build_float_key(floats)
+          unless same_ints?(@float_key, back.floats)
+            forget_rows(back.floats, rows)
+            copy_ints(@float_key, back.floats)
+          end
+        end
         back.reset_rows
         @chrome.clear
 
@@ -183,7 +207,7 @@ module Carat
         i = 0
         while i < ids.length
           id = ids[i]
-          current = id == tab.current
+          current = id == tab.current && !in_float
           paint_window(back, layout.window_at(id), i, current, options, tabstop, bar, current ? selection : @none, cols, base_same)
           i += 1
         end
@@ -196,6 +220,11 @@ module Carat
         if start
           window = state.window
           @start_screen.paint(back, window.row, window.col, window.height, window.width)
+        end
+        if @floating
+          paint_floats(back, floats, tabstop, rows, cols)
+          chrome_rows(@float_key, rows)
+          chrome_rows(base.floats, rows) unless same_ints?(@float_key, base.floats)
         end
         back.blank(rows - 1, 0, cols)
         paint_message(back, rows - 1, cols, state)
@@ -297,9 +326,8 @@ module Carat
         end
       end
 
-      #: (Array[Integer]) -> bool
-      def same_key?(other)
-        key = @key
+      #: (Array[Integer], Array[Integer]) -> bool
+      def same_ints?(key, other)
         return false unless other.length == key.length
         i = 0
         while i < key.length
@@ -309,15 +337,154 @@ module Carat
         true
       end
 
-      #: (Array[Integer]) -> void
-      def copy_key(target)
+      #: (Array[Integer], Array[Integer]) -> void
+      def copy_ints(key, target)
         target.clear
-        key = @key
         i = 0
         while i < key.length
           target << key[i]
           i += 1
         end
+      end
+
+      # The boxes of the floats to paint, four integers each.
+      #: (Domain::FloatLayer) -> void
+      def build_float_key(floats)
+        key = @float_key
+        key.clear
+        i = 0
+        while i < floats.count
+          float = floats.at(i)
+          key << float.box_top
+          key << float.box_bottom
+          key << float.box_left
+          key << float.box_right
+          i += 1
+        end
+      end
+
+      # Forgets the window rows the boxes of a key cover.
+      #: (Array[Integer], Integer) -> void
+      def forget_rows(key, rows)
+        i = 0
+        while i < key.length
+          r = key[i] < 0 ? 0 : key[i]
+          last = key[i + 1] > rows ? rows : key[i + 1]
+          while r < last
+            @back_rows.forget(r)
+            r += 1
+          end
+          i += 4
+        end
+      end
+
+      # Adds the rows the boxes of a key cover to the rows compared cell
+      # by cell.
+      #: (Array[Integer], Integer) -> void
+      def chrome_rows(key, rows)
+        i = 0
+        while i < key.length
+          r = key[i] < 0 ? 0 : key[i]
+          last = key[i + 1] > rows ? rows : key[i + 1]
+          while r < last
+            @chrome << r
+            r += 1
+          end
+          i += 4
+        end
+      end
+
+      # Whether a float box to paint or one of the frame shown meets the
+      # rows from top to the row before bottom.
+      #: (Integer, Integer) -> bool
+      def under_float?(top, bottom)
+        covers?(@float_key, top, bottom) || covers?(@front.floats, top, bottom)
+      end
+
+      #: (Array[Integer], Integer, Integer) -> bool
+      def covers?(key, top, bottom)
+        i = 0
+        while i < key.length
+          return true if key[i] < bottom && key[i + 1] > top
+          i += 4
+        end
+        false
+      end
+
+      # Each float in drawing order, one whose box leaves the screen above
+      # the message row skipped.
+      #: (Domain::Frame, Domain::FloatLayer, Integer, Integer, Integer) -> void
+      def paint_floats(frame, floats, tabstop, rows, cols)
+        i = 0
+        while i < floats.count
+          float = floats.at(i)
+          fits = float.box_top >= 0 && float.box_left >= 0 && float.box_bottom < rows && float.box_right <= cols
+          paint_float(frame, float, tabstop, cols) if fits
+          i += 1
+        end
+      end
+
+      # One float: its text rows in NormalFloat, then its border and title.
+      #: (Domain::Frame, Domain::FloatWindow, Integer, Integer) -> void
+      def paint_float(frame, float, tabstop, cols)
+        window = float.window
+        buffer = window.buffer
+        x = window.col
+        width = window.width
+        count = buffer.line_count
+        r = float.box_top
+        while r < float.box_bottom
+          mend_edges(frame, r, float.box_left, float.box_right, cols)
+          r += 1
+        end
+        i = 0
+        while i < window.height
+          frame_row = window.row + i
+          row = window.top + i
+          if row < count
+            paint_text(frame, frame_row, x, @cache.fetch(buffer.line(row), tabstop), width, window.left)
+          else
+            frame.blank(frame_row, x, x + width)
+          end
+          frame.fill(frame_row, x, x + width, Domain::Highlight::NORMAL_FLOAT)
+          i += 1
+        end
+        paint_border(frame, float) if float.spec.border
+      end
+
+      # Blanks the halves of wide characters a box cuts at its edges, so
+      # no cell is left holding half of one.
+      #: (Domain::Frame, Integer, Integer, Integer, Integer) -> void
+      def mend_edges(frame, row, left, right, cols)
+        frame.blank(row, left - 1, left) if left > 0 && frame.width_at(row, left - 1) == 2
+        frame.blank(row, right, right + 1) if right < cols && frame.width_at(row, right) == 0
+      end
+
+      #: (Domain::Frame, Domain::FloatWindow) -> void
+      def paint_border(frame, float)
+        top = float.box_top
+        bottom = float.box_bottom - 1
+        left = float.box_left
+        right = float.box_right - 1
+        hl = Domain::Highlight::FLOAT_BORDER
+        frame.put_code(top, left, 0x256D, 1, hl)
+        frame.put_code(top, right, 0x256E, 1, hl)
+        frame.put_code(bottom, left, 0x2570, 1, hl)
+        frame.put_code(bottom, right, 0x256F, 1, hl)
+        c = left + 1
+        while c < right
+          frame.put_code(top, c, 0x2500, 1, hl)
+          frame.put_code(bottom, c, 0x2500, 1, hl)
+          c += 1
+        end
+        r = top + 1
+        while r < bottom
+          frame.put_code(r, left, 0x2502, 1, hl)
+          frame.put_code(r, right, 0x2502, 1, hl)
+          r += 1
+        end
+        title = float.spec.title
+        frame.put_within(top, left + 1, title, Domain::Highlight::TITLE, right) unless title.empty?
       end
 
       #: (Integer, Integer) -> Integer
@@ -391,7 +558,7 @@ module Carat
         selecting = selection.kind != :none
         block = selection.kind == :blockwise ? selection.block(buffer, tabstop) : @no_block
         delta = 0
-        if base_same && x == 0 && width == cols && height > 1
+        if base_same && x == 0 && width == cols && height > 1 && !(@floating && under_float?(wrow, wrow + height))
           first = @front_rows.index(wrow, slot)
           if @front_rows.painted?(first) && @front_rows.owner(first) == window.id
             moved = top - @front_rows.top(first)

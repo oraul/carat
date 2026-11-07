@@ -76,6 +76,13 @@ module Carat
         end
       end
 
+      # Draws a frame with no key, as after a change made outside the keys
+      # (a float opened by a request).
+      #: () -> void
+      def redraw
+        render
+      end
+
       # Pushes raw bytes as one read, as a terminal would deliver a sequence.
       #: (String) -> void
       def raw(bytes)

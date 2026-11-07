@@ -35,7 +35,7 @@ A float opened with enter SHALL become the current window: keys move its cursor 
 
 #### Scenario: Moving in a focused float scrolls it
 - **WHEN** a float of 3 rows showing 10 lines is focused and j is pressed four times
-- **THEN** the float's cursor is on its fifth line, the float shows lines 3 to 5, and the window under it has not moved
+- **THEN** the float's cursor is on its fifth line, the float shows lines 4 to 6 (scrolloff capped at half its height), and the window under it has not moved
 
 #### Scenario: Ctrl-W p leaves the float
 - **WHEN** a float is focused and Ctrl-W p is pressed

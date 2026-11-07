@@ -79,6 +79,17 @@ module Carat
         end
       end
 
+      # Forgets the segments of one frame row, as after a float covered it.
+      #: (Integer) -> void
+      def forget(row)
+        i = row * @slots
+        last = i + @slots
+        while i < last
+          @lines[i] = UNSET
+          i += 1
+        end
+      end
+
       # Whether segment i shows exactly this.
       #: (Integer, String, Integer, Integer, Integer, Integer, String, Integer, Integer, Integer, Integer, Integer, Domain::SyntaxLine, Integer) -> bool
       def same?(i, line, left, width, gutter, number, sign, sel_from, sel_to, sel_end, cursor, layer, syntax, search)

@@ -23,7 +23,7 @@ module Carat
 
       #: (ActionTable, close_float: CloseFloat) -> void
       def self.register(table, close_float:)
-        table.register("float.close", FloatHandler.new(close_float: close_float), "Close the topmost floating window")
+        table.register("float.close", FloatHandler.new(close_float: close_float), "Close the topmost float")
       end
     end
   end
