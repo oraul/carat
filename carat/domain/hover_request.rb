@@ -25,6 +25,10 @@ module Carat
       # @rbs @languages: Array[String]
       # @rbs @float_id: Integer
 
+      # The owner of the scratch buffers the documentation is shown in,
+      # the hover float's and the pinned split's.
+      OWNER = ":docs"
+
       #: () -> void
       def initialize
         super()

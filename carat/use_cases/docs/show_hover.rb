@@ -25,9 +25,8 @@ module Carat
       WIDTH = 80
       MAX_ROWS = 20
       Z = 50
-      OWNER = ":docs"
       NO_INFORMATION = "No information available"
-      private_constant :WIDTH, :MAX_ROWS, :Z, :OWNER, :NO_INFORMATION
+      private_constant :WIDTH, :MAX_ROWS, :Z, :NO_INFORMATION
 
       attr_reader :hover #: Domain::HoverRequest
       attr_reader :open_float #: OpenFloat
@@ -86,7 +85,7 @@ module Carat
         end
         spec = Domain::FloatSpec.new(anchor: "cursor", row: up ? -(height + 2) : 1, col: 0, height: height, width: width, border: true, title: "", z: Z)
         buffer = Domain::Buffer.new(lines: rows, path: nil, line_ending: "\n")
-        buffer.owner = OWNER
+        buffer.owner = Domain::HoverRequest::OWNER
         float = Domain::FloatWindow.new(window: Domain::Window.new(buffer: buffer), spec: spec)
         @hover.float_id = float.id if @open_float.call(state, float, false).ok
       end

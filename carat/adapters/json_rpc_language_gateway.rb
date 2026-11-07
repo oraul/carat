@@ -135,7 +135,7 @@ module Carat
         @saves.clear
         complete(state)
         resolve
-        hover(state)
+        send_hover(state)
         return hold(language) || changed if held
         show(current) || changed
       end
@@ -633,7 +633,7 @@ module Carat
       # and the buffer's server hovers; a newer ask cancels the request in
       # flight, and so does an answer overdue.
       #: (Domain::EditorState) -> void
-      def hover(state)
+      def send_hover(state)
         ask = @hover
         return unless ask.waiting?
         if ask.sent_id != 0

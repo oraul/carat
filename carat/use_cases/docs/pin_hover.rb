@@ -16,10 +16,9 @@ module Carat
     # refused, and a refused split keeps the float.
     class PinHover
       MAX_HEIGHT = 10
-      OWNER = ":docs"
       TITLE = "[docs]"
       NOTHING = "No documentation to pin"
-      private_constant :MAX_HEIGHT, :OWNER, :TITLE, :NOTHING
+      private_constant :MAX_HEIGHT, :TITLE, :NOTHING
 
       attr_reader :hover #: Domain::HoverRequest
       attr_reader :split_window #: SplitWindow
@@ -53,7 +52,7 @@ module Carat
         outcome = @split_window.call(state, false, count > MAX_HEIGHT ? MAX_HEIGHT : count, "", false)
         return outcome unless outcome.ok
         buffer = Domain::Buffer.new(lines: lines, path: nil, line_ending: "\n")
-        buffer.owner = OWNER
+        buffer.owner = Domain::HoverRequest::OWNER
         buffer.title = TITLE
         @buffers.load(buffer)
         @close_float.call(state, id)
