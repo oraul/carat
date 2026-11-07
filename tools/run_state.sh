@@ -57,7 +57,8 @@
 #                               or a line write_key would not write, those
 #                               keys named in "untrusted"
 #   get CHANGE KEY              print one value, empty when absent
-#   gated CHANGE clear|pass     the merge gates' record: none, or HEAD's full sha
+#   gated CHANGE clear|pass     the merge gates' record: none (in every run
+#                               state), or HEAD's full sha
 #   set CHANGE KEY VALUE        write one value; refuses review.*, phase.*, gated,
 #                               and stage.*, which their own commands write,
 #                               and a merged or pushed value but a commit hash;
@@ -689,6 +690,18 @@ count() {
   echo "${value:-0}"
 }
 
+# The merge gates' first step: every run state under the run state's
+# directory holding a gated value other than none, not only this change's,
+# gets none, since the merge tool's hook reads them all and branch code run
+# by the checks can plant one. A file that cannot be rewritten fails it.
+gated_clear() {
+  for other in "$state_dir"/*.json; do
+    grep -s '"gated"' "$other" | grep -q -v -E '^  "gated": "none",?$' || continue
+    (change=$(basename "$other" .json) && write_key gated none) || return 1
+  done
+  write_key gated none
+}
+
 push_branch() {
   pushes=$(count pushes)
   fixes=$(count ci_fixes)
@@ -712,7 +725,8 @@ push_branch() {
   write_key ci_fixes "$fixes"
   write_key pushed "$(git rev-parse HEAD)"
   # A new head needs the merge gates again, and a marker branch code
-  # planted before the push is gone.
+  # planted in this run state before the push is gone; the merge gates
+  # clear every other run state's (gated_clear).
   write_key gated none
   # The pushed branch holds every commit the backup held, whichever run
   # state made it; a deletion that fails is reported, and recording merged
@@ -1438,7 +1452,7 @@ case "$command" in
   gated)
     [ $# -eq 1 ] || usage
     case "$1" in
-      clear) write_key gated none ;;
+      clear) gated_clear ;;
       pass) write_key gated "$(git rev-parse HEAD)" ;;
       *) usage ;;
     esac ;;

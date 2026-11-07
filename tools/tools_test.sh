@@ -1233,6 +1233,17 @@ expect "guard: the merge tool refuses a short expected head" 2 "without the push
 expect "guard: the merge tool refuses a head the merge gates did not pass" 2 "no run state records both the push and the merge gates' pass" merge_call merger "$sha" squash
 sh "$here/run_state.sh" gated mtool pass > /dev/null
 expect "guard: the merge tool allows the gated pushed head" 0 "^$" merge_call merger "$sha" squash
+# A run state branch code planted naming the head too: the hook refuses
+# while two run states name it, and the merge gates' clear resets every
+# run state's gated, the planted one's included.
+printf '{\n  "pushed": "%s",\n  "gated": "%s"\n}\n' "$sha" "$sha" > build/pipeline/planted.json
+expect "guard: the merge tool refuses a head two run states name" 2 "which 2 run states name" merge_call merger "$sha" squash
+sh "$here/run_state.sh" gated mtool clear > /dev/null
+expect "run_state: gated clear resets a planted run state's gated" 0 "^none$" state get planted gated
+expect "run_state: gated clear resets the change's own gated" 0 "^none$" state get mtool gated
+rm -f build/pipeline/planted.json
+sh "$here/run_state.sh" gated mtool pass > /dev/null
+expect "guard: the merge tool allows the gated head again" 0 "^$" merge_call merger "$sha" squash
 expect "guard: the merge tool refuses another head than the gated one" 2 "no run state records" merge_call merger "$(git rev-parse HEAD~1)" squash
 git_q update-ref refs/remotes/origin/main HEAD
 expect "guard: the merge tool refuses a rewritten origin/main" 2 "fetch, or the ref was rewritten" merge_call merger "$sha" squash

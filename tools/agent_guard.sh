@@ -813,14 +813,19 @@ planted=$([ -z "$hooks" ] || ! [ -d "$hooks" ] || ls -A "$hooks" | grep -v -E "[
 [ -z "$planted" ] || refuse "every call while the hooks directory holds ${planted% }, which git runs; remove it"
 
 # The merge tool, for the merger only: a squash whose expected head (sha,
-# all 40 digits) a run state under build/pipeline/ holds both as pushed and
-# as gated, which only main's merge gates write when every gate passed and
-# every push clears, while origin/main is the main origin reports.
+# all 40 digits) exactly one run state under build/pipeline/ names, holding
+# it both as pushed and as gated, which only main's merge gates write when
+# every gate passed and every push clears, while origin/main is the main
+# origin reports. The change's own run state names its pushed head, so a
+# run state branch code planted to name that head too makes two and is
+# refused; the merge gates also reset every run state's gated first.
 merge_tool() {
   only_profiles merger "the merge tool"
   [ "$(printf '%s' "$input" | field merge_method)" = squash ] || refuse "a merge other than a squash"
   sha=$(printf '%s' "$input" | field sha)
   matches "$sha" '^[0-9a-f]{40}$' || refuse "a merge without the pushed head as its expected head (sha, 40 digits)"
+  naming=$(grep -s -l -F "$sha" "$project_dir"/build/pipeline/*.json | wc -l | tr -d ' ')
+  [ "$naming" -le 1 ] || refuse "a merge of $sha, which $naming run states name: remove the one the change did not write"
   found=""
   for f in "$project_dir"/build/pipeline/*.json; do
     [ -f "$f" ] && [ ! -L "$f" ] || continue
