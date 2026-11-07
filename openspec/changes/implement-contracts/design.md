@@ -22,7 +22,7 @@ The tree today has six stored shared keywords without a reader (`Dispatcher` and
 
 ### Changed tools need a case
 
-`gate_cases` lists the scripts under `tools/` other than `tools/tools_test.sh` whose diff from the base adds or removes a line that is not blank and not a comment, and fails when `tools/tools_test.sh`'s diff adds no line starting with `expect `. It works per script: the cases call the scripts through their subcommands, so a function name is not something a case names. It joins `static` and `pre-push`; the merge group leaves it out, since the merge runs after the push gates.
+`gate_cases` lists the shell scripts (`.sh`) under `tools/` other than `tools/tools_test.sh` whose diff from the base adds or removes a line that is not blank and not a comment, and fails when `tools/tools_test.sh`'s diff adds no line starting with `expect `. It works per script: the cases call the scripts through their subcommands, so a function name is not something a case names. It joins `static` and `pre-push`; the merge group leaves it out, since the merge runs after the push gates.
 
 ## Risks
 

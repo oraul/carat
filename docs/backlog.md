@@ -1766,12 +1766,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: two lookups and two popup refreshes per key on the insert hot path, the line sliced twice.
 - Fix outline: look up once and dispatch that match; run ShowCompletion once per key, and ShowCompletionDocs with it, which `completion-docs` added beside it and which also runs twice per typed character (quality advisory in `completion-docs` at `carat/use_cases/completion/show_completion.rb` line 72 at 925d759). Queued in `completion-tidy`.
 
-## The dispatcher and HandleKey hold shared objects without readers
-
-- Where: `carat/use_cases/dispatcher.rb` line 35 and `carat/use_cases/handle_key.rb` line 67 at cd87445 (the shared `ActionTable`, and HandleKey's Dispatcher, InsertText, and EditCommandLine). Periodic quality at cd87445, again after 5722559.
-- Why it matters: `test/adapters_assembly.rb` cannot check every holder got the one instance, as the constructors rule of CLAUDE.md requires.
-- Fix outline: add the readers and a strangers row over the dispatcher and HandleKey. Queued in `completion-tidy`.
-
 ## The map's area 8 omits the completion popup
 
 - Where: `docs/codebase-map.md` line 236 at cd87445: area 8's What and Flow lines never mention the six popup files (lines 257 to 265), its Designs line (269) omits `completion` and `completion-request`, its Bench line names no completion scenario. Periodic quality at cd87445, again after 5722559.
@@ -1891,12 +1885,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `cancel_hover` in `carat/adapters/json_rpc_language_gateway.rb` line 663 at 78078ad, beside `cancel` and `cancel_resolve`. Quality advisory in `quick-docs`.
 - Why it matters: each looks up the server, sends `$/cancelRequest`, and zeroes the id, so a fix to one (a crashed server, a stale id) can miss the other two.
 - Fix outline: one private `cancel_request(language, id)` that the three call, with the hover, completion, and resolve cancellation rows in `test/adapters_hover.rb` and `test/adapters_server_completions.rb` unchanged.
-
-## The hover owner is spelled in two use cases
-
-- Where: `OWNER = ":docs"` in `carat/use_cases/docs/show_hover.rb` line 28 at 78078ad, repeated in `carat/use_cases/docs/pin_hover.rb` line 19. Quality advisory in `quick-docs`.
-- Why it matters: `docs/architecture.md` section 5 puts a constant several use cases need in the domain; two copies can drift, and the float and the pinned buffer then stop matching.
-- Fix outline: one domain constant both read, or drop the owner from the pinned buffer if nothing reads it.
 
 ## The documentation floats copy the widest-row loop
 
