@@ -12,6 +12,6 @@
 
 ## 3. Docs and records
 
-- [ ] 3.1 `docs/codebase-map.md`, `docs/architecture.md` language services, `README.md`. Checked by `make gates` and `make docs-lint`.
+- [x] 3.1 `docs/codebase-map.md`, `docs/architecture.md` language services, `README.md`. Checked by `make gates` and `make docs-lint`.
 - [ ] 3.2 Plan notes: `build/plan/queue.md` as `docs/queue.md`, the six `build/plan/backlog.md` entries in `docs/backlog.md`, the listed entry updates, the UTF-16 columns entry reworded and the `error?` part of the loose ends entry removed, a follow-up entry for the left-out display parts. Checked by `make docs-lint`.
 - [ ] 3.3 `make gates`, `make spec-validate`, `make test`, and `make metrics-compare` with allocations per key unchanged.
