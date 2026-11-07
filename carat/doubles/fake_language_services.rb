@@ -22,6 +22,12 @@ module Carat
 
       # Answers that no server is configured.
       # @rbs state: Domain::EditorState
+      def start(state)
+        "No language server for this buffer"
+      end
+
+      # Answers that no server is configured.
+      # @rbs state: Domain::EditorState
       def restart(state)
         "No language server for this buffer"
       end

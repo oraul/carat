@@ -22,3 +22,8 @@
 - [x] 4.1 `docs/codebase-map.md`, `docs/architecture.md` sections 6 and 8, `README.md`, `docs/compatibility.md` bar row. Checked by `make gates` and `make docs-lint`.
 - [x] 4.2 `docs/backlog.md`: remove the Json entry, narrow the slots entry, add the plan's seven entries (so the package step adds none of `build/plan/backlog.md` again), update the plugin API and delivered-list entries, queue the `in_window` notes in `float-tidy`, and add this change's three follow-ups. Checked by `make docs-lint`.
 - [x] 4.3 `make gates`, `make spec-validate`, bench `lh` allocations unchanged.
+
+## 5. Review fixes
+
+- [x] 5.1 Security: a server starts on its own only under a root of `language.trusted_roots` (defaults and user file only, `Domain::Config::TRUSTED_ROOTS`); elsewhere the slot reads `untrusted :LspStart`, and `carat/use_cases/ex/lsp_start_command_handler.rb` adds `:LspStart` through `LanguageServicePort#start`. Tested by `test/adapters_language_gateway.rb` (an untrusted directory spawns nothing, the roots), `test/editor_lsp.rb`, `test/domain_rc_parser.rb`, and `test/adapters_status_bar.rb`.
+- [x] 5.2 Quality: `CLAUDE.md` Stack and `docs/architecture.md` section 13 say a reader and a writer thread per language server. Checked by `make gates`.

@@ -4,12 +4,14 @@ module Carat
     # until they fill it: the current branch ("" for none), the current
     # buffer's diagnostics counts by severity, and the language server's
     # name ("" for none) with its state, :none, :starting, :ready,
-    # :indexing, :stopped, or :crashed, and the label the bar draws, built
+    # :indexing, :stopped, :crashed, or :untrusted (configured but not
+    # started, the directory not trusted), and the label the bar draws, built
     # once by set_lsp so a render allocates nothing for it. The status bar
     # draws an empty slot in no cells. A Struct record: mutable, with a
     # reader and a writer per member.
     class StatusSlots < Struct.new(:branch, :errors, :warnings, :infos, :hints, :lsp_name, :lsp_state, :lsp_label, keyword_init: true)
       CRASH_HINT = "crashed :LspRestart"
+      UNTRUSTED_HINT = "untrusted :LspStart"
 
       # @rbs @branch: String
       # @rbs @errors: Integer
@@ -46,6 +48,7 @@ module Carat
         return "#{name} indexing #{percent}%" if state == :indexing
         return "#{name} stopped" if state == :stopped
         return "#{name} #{CRASH_HINT}" if state == :crashed
+        return "#{name} #{UNTRUSTED_HINT}" if state == :untrusted
         name
       end
 

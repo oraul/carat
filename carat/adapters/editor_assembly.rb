@@ -97,6 +97,7 @@ require_relative "../use_cases/ex/substitute_command_handler"
 require_relative "../use_cases/ex/global_command_handler"
 require_relative "../use_cases/ex/delete_command_handler"
 require_relative "../use_cases/ex/buffer_command_handler"
+require_relative "../use_cases/ex/lsp_start_command_handler"
 require_relative "../use_cases/ex/lsp_restart_command_handler"
 require_relative "../use_cases/ex/plugin_command_handler"
 require_relative "../use_cases/actions/action_table"
@@ -344,6 +345,7 @@ module Carat
         UseCases::SubstituteCommandHandler.register(@commands, substitute_lines: @substitute_lines)
         UseCases::GlobalCommandHandler.register(@commands, global_command: @global_command)
         UseCases::DeleteCommandHandler.register(@commands, delete_lines: @delete_lines)
+        UseCases::LspStartCommandHandler.register(@commands, @services)
         UseCases::LspRestartCommandHandler.register(@commands, @services)
         UseCases::PluginCommandHandler.register(@commands, plugins: @plugins)
         @plugins.activate_all(value)

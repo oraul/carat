@@ -118,7 +118,8 @@ module Carat
       end
 
       # The group of the lsp slot in a state: starting and indexing share
-      # one, a crash is an error, and a stopped server is plain.
+      # one, a crash is an error, and a stopped server or one waiting in an
+      # untrusted directory is plain.
       #: (Symbol) -> Integer
       def self.lsp_group(state)
         return Domain::Highlight::STATUS_LSP_STARTING if state == :starting || state == :indexing

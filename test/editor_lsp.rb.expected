@@ -6,4 +6,9 @@ ok   :LspRestart stops a running server first
 ok   :LspRestart on a buffer without a server
 ok   :LspRestart with a command that cannot start
 ok   :LspRestart refuses arguments
-editor_lsp: 8 passed, 0 failed
+ok   an untrusted directory starts nothing and names :LspStart
+ok   :LspStart starts the server in an untrusted directory
+ok   :LspStart leaves a running server alone
+ok   :LspStart on a buffer without a server
+ok   :LspStart refuses arguments
+editor_lsp: 13 passed, 0 failed

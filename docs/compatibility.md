@@ -275,6 +275,7 @@ Differences from Neovim: there are no `'<` and `'>` marks yet and no `:'<,'>` ra
 | `:g[lobal]!` | As `:v` | as `:v` | `editor_global` |
 | `:v[global]` | `:[range]v/{pattern}/[cmd]`: as `:g` on the lines that do not match | `Pattern found in every line: pat`, as `:g`, `E477` | `editor_global`, `use_cases_ex` |
 | `:d[elete]` | `:[range]d [x] [count]`: delete the lines of the range (the cursor line without one), or count lines from its last line, into register x or the unnamed one, shifting the numbered registers; the cursor to the first non-blank of the line after them | `E488: Trailing characters: x`, `E939`, `E477` | `editor_global`, `domain_global`, `use_cases_ex` |
+| `:LspStart` | nvim-lspconfig's command: starts the current buffer's language server when none runs for its file type, in any directory, the start a directory outside `language.trusted_roots` waits for; the `lsp` slot reads `starting` | `No language server for this buffer`, `Cannot start ruby-lsp`, `E488: Trailing characters: x` | `editor_lsp`, `use_cases_ex` |
 | `:LspRestart` | nvim-lspconfig's command: stops every language server and starts the current buffer's again; the `lsp` slot reads `starting` | `No language server for this buffer`, `Cannot start ruby-lsp`, `E488: Trailing characters: x` | `editor_lsp`, `use_cases_ex` |
 | unknown | Report the command | `E492: Not an editor command: name` | `use_cases_ex`, `editor_cmdline` |
 
@@ -403,7 +404,7 @@ One status bar on the row above the message row serves every window, as `laststa
 | --- | --- | --- |
 | Mode pill | `NORMAL`, `INSERT`, `VISUAL`, `V-LINE`, `V-BLOCK`, `REPLACE`, `O-PENDING`, or `COMMAND` in `StatusLineModeNormal`, `Insert`, `Visual`, `Replace`, or `Command`; priority 100 | `adapters_status_bar` |
 | File | The path, the scratch title, or `[No Name]`, and the `modified` icon when modified; priority 90, cut last | `adapters_status_bar`, `editor_screen` |
-| Branch, diagnostics, `lsp` | Empty until git and language services fill them, then the branch after the `git` icon (40), each count above zero after its icon in its `Diagnostic` group (70), and the server's name with its state (`starting`, `indexing 42%`, `stopped`, `crashed :LspRestart`, nothing when ready) in `StatusLineLspStarting` (starting, indexing), `Ready`, `Error` (crashed), or `StatusLine` (stopped) (60) | `adapters_status_bar`, `editor_lsp` |
+| Branch, diagnostics, `lsp` | Empty until git and language services fill them, then the branch after the `git` icon (40), each count above zero after its icon in its `Diagnostic` group (70), and the server's name with its state (`starting`, `indexing 42%`, `stopped`, `crashed :LspRestart`, `untrusted :LspStart`, nothing when ready) in `StatusLineLspStarting` (starting, indexing), `Ready`, `Error` (crashed), or `StatusLine` (stopped, untrusted) (60) | `adapters_status_bar`, `editor_lsp` |
 | Plugin segments | In the order first set, before the `lsp` slot, each at its own priority, 10 for `set_status` | `adapters_status_bar`, `editor_plugins` |
 | File type, encoding | The filetype when there is one (30) and `utf-8` (20) | `adapters_status_bar` |
 | Position, percent | `row:col` (80) and `All`, `Top`, `Bot`, or `N%` (50) | `adapters_status_bar`, `editor_screen` |

@@ -202,6 +202,7 @@ module LintTest
   BOOL_COMMANDS = {
     "pump" => "reads and handles the keys that are ready",
     "show" => "shows a language server on the bar, answering whether the slot changed",
+    "hold" => "shows a language server waiting for :LspStart on the bar, answering whether the slot changed",
     "drain" => "handles the queued messages of the language servers, answering whether any",
     "set_lsp" => "sets the lsp slot, answering whether it changed",
     "read_header" => "reads a frame's headers, answering whether they are complete",

@@ -1,7 +1,8 @@
 module Carat
   module Ports
     # The language services as the core sees them: polled when the editor
-    # is idle, restarted by :LspRestart, and stopped when the editor ends.
+    # is idle, started by :LspStart, restarted by :LspRestart, and stopped
+    # when the editor ends.
     # No JSON crosses it.
     class LanguageServicePort
       # Reads what the servers sent and tells them about the documents;
@@ -9,6 +10,14 @@ module Carat
       # @rbs state: Domain::EditorState
       def poll(state)
         raise NotImplementedError, "LanguageServicePort#poll"
+      end
+
+      # Starts the current buffer's server if none runs for its language,
+      # whether or not the directory is trusted; answers the message to
+      # show, "" when a server starts or runs.
+      # @rbs state: Domain::EditorState
+      def start(state)
+        raise NotImplementedError, "LanguageServicePort#start"
       end
 
       # Stops every server and starts the current buffer's again; answers

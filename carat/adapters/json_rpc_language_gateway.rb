@@ -7,8 +7,11 @@ module Carat
     # threads queued, only when the editor is idle (InputController's tick),
     # so a key never waits on a server or pays for one. A server starts for
     # the current buffer's file type when language.<type>.lsp names a
-    # command; once it answered initialize it is told about each buffer of
-    # its file type with a path: didOpen, didChange with the whole text when
+    # command and the working directory is under a trusted root (trusted?),
+    # since a server such as ruby-lsp runs the project's own code; in any
+    # other directory the lsp slot reads untrusted until :LspStart. Once a
+    # server answered initialize it is told about each buffer of its file
+    # type with a path: didOpen, didChange with the whole text when
     # the buffer's change counters moved, didSave after SaveFile wrote it,
     # and didClose when the buffer is gone. Its output is untrusted: a body
     # that is not a JSON object is dropped, at most DRAIN_LIMIT messages are
@@ -28,6 +31,7 @@ module Carat
       # @rbs @servers: Array[untyped]
       # @rbs @refused: Array[String]
       # @rbs @saves: Array[Integer]
+      # @rbs @trust: Symbol
 
       attr_reader :processes #: Ports::ProcessPort
       attr_reader :messages #: Ports::MessageQueuePort
@@ -47,6 +51,7 @@ module Carat
         @servers = []
         @refused = []
         @saves = []
+        @trust = :unknown
       end
 
       # @rbs state: Domain::EditorState
@@ -54,7 +59,14 @@ module Carat
         changed = drain
         language = state.buffer.filetype
         current = server_for(language)
-        current = start(language) if current.nil? && command?(language) && !@refused.include?(language)
+        held = false
+        if current.nil? && command?(language) && !@refused.include?(language)
+          if trusted?
+            current = launch(language)
+          else
+            held = true
+          end
+        end
         i = 0
         while i < @servers.length
           server = server_at(i)
@@ -62,7 +74,28 @@ module Carat
           i += 1
         end
         @saves.clear
+        return hold(language) || changed if held
         show(current) || changed
+      end
+
+      # Starts the current buffer's server when none runs for its
+      # language, in any directory: the explicit start an untrusted
+      # directory waits for. Answers the message to show, "" when a server
+      # starts or already runs.
+      # @rbs state: Domain::EditorState
+      def start(state)
+        language = state.buffer.filetype
+        unless command?(language)
+          show(nil)
+          return "No language server for this buffer"
+        end
+        server = server_for(language)
+        if server.nil?
+          @refused.delete(language)
+          server = launch(language)
+        end
+        show(server)
+        server.nil? ? "Cannot start #{words_of(language).join(" ")}" : ""
       end
 
       #: (Domain::Buffer) -> void
@@ -80,7 +113,7 @@ module Carat
           show(nil)
           return "No language server for this buffer"
         end
-        server = start(language)
+        server = launch(language)
         show(server)
         server.nil? ? "Cannot start #{words_of(language).join(" ")}" : ""
       end
@@ -144,10 +177,62 @@ module Carat
         line.nil? ? [] : line.words
       end
 
+      # Whether servers may start on their own in the working directory:
+      # it is, or is under, a root of language.trusted_roots, which only
+      # the defaults and the user file set. A root is an absolute path or
+      # ~/ under the home directory; any other word is no root. The answer
+      # is kept, since neither the directory nor the configuration changes.
+      #: () -> bool
+      def trusted?
+        @trust = trust_of(@files.cwd) if @trust == :unknown
+        @trust == :trusted
+      end
+
+      #: (String) -> Symbol
+      def trust_of(cwd)
+        line = @config.last(Domain::Config::TRUSTED_ROOTS)
+        return :untrusted if line.nil? || !cwd.start_with?("/")
+        words = line.words
+        i = 0
+        while i < words.length
+          root = root_of(words[i].to_s)
+          i += 1
+          next if root.empty?
+          return :trusted if root == "/" || cwd == root || cwd.start_with?("#{root}/")
+        end
+        :untrusted
+      end
+
+      # A root word as an absolute path without a trailing slash, "" when
+      # it is not absolute, names no home, or holds a . or .. segment.
+      #: (String) -> String
+      def root_of(word)
+        path = word
+        if word == "~" || word.start_with?("~/")
+          home = @files.home
+          return "" if home.empty?
+          path = "#{home}#{word[1, word.length - 1]}"
+        end
+        return "" unless path.start_with?("/")
+        return "" if "#{path}/".include?("/./") || "#{path}/".include?("/../")
+        while path.length > 1 && path.end_with?("/")
+          path = path[0, path.length - 1].to_s
+        end
+        path
+      end
+
+      # Shows a language's server as waiting for an explicit start in an
+      # untrusted directory; answers whether the slot changed.
+      #: (String) -> bool
+      def hold(language)
+        name = Domain::ControlText.strip(File.basename(words_of(language)[0].to_s), NAME_LIMIT)
+        @slots.set_lsp(name, :untrusted, 0)
+      end
+
       # Starts a language's server and sends initialize; nil when the
       # command cannot start, remembered until a restart.
       #: (String) -> Domain::LanguageServer?
-      def start(language)
+      def launch(language)
         words = words_of(language)
         handle = @processes.spawn(words)
         if handle == 0

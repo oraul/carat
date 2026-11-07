@@ -6,16 +6,16 @@ Carat has no language server client: the bar's `lsp` slot has no writer and noth
 
 ## What Changes
 
-- A language server starts when a buffer whose file type names a `language.<name>.lsp` command is current at an idle tick, as a subprocess through `Process.spawn` with `IO.pipe` pairs, read by one thread per server that frames JSON-RPC messages and pushes them on a `Queue`; the editor drains the queue only at idle ticks, never while keys are waiting.
+- A language server starts when a buffer whose file type names a `language.<name>.lsp` command is current at an idle tick and the working directory is under a root of `language.trusted_roots` (defaults and user file only, none shipped), or on `:LspStart` in any directory, as a subprocess through `Process.spawn` with `IO.pipe` pairs, with a reader thread per server that frames JSON-RPC messages and pushes them on a `Queue` and a writer thread; the editor drains the queue only at idle ticks, never while keys are waiting.
 - The lifecycle: `initialize` and `initialized`, `textDocument/didOpen`, `didChange` (the whole text, once per idle tick that finds the buffer changed), `didSave`, `didClose`, `shutdown` and `exit` when the editor ends, and `:LspRestart`, which restarts the servers after a crash or a stop.
-- The bar's `lsp` slot shows the server's name and state: `starting`, ready (the name alone), `indexing` with a percent from `$/progress`, `stopped`, and `crashed :LspRestart`.
+- The bar's `lsp` slot shows the server's name and state: `starting`, ready (the name alone), `indexing` with a percent from `$/progress`, `stopped`, `crashed :LspRestart`, and `untrusted :LspStart` in an untrusted directory.
 - `textDocument/publishDiagnostics` is kept as plain diagnostic values per file (row, column, severity, message), for `diagnostics-display` to draw.
 - Server output is untrusted: a frame header over 1 KiB or a body over 8 MiB ends the server as crashed, a body that is not JSON is dropped, the server's name and every message are capped and stripped of control characters, and `Carat::Json` refuses nesting deeper than 64 and writes and reads illegal UTF-8 bytes as U+FFFD.
 - `Carat::Json` fixes the backlog entry on text that is not UTF-8.
 
 Out of scope: drawing diagnostics (`diagnostics-display`); requests with responses the user sees (completion, hover, definition) and their cancellation (`completion`); an automatic restart loop; a stderr log file (stderr goes to the null device); more than one server per language.
 
-Assumptions: restarting after a crash is the user's `:LspRestart`, named after nvim-lspconfig's command, which the crashed state's hint names; a missing server command leaves the slot empty, as Neovim without a configured server, and `:LspRestart` reports it; `didSave` is reported by `SaveFile` through the services port and sent at the next idle tick, since the buffer's saved mark also moves on an undo back to the saved text.
+Assumptions: restarting after a crash is the user's `:LspRestart`, named after nvim-lspconfig's command, which the crashed state's hint names; a missing server command leaves the slot empty, as Neovim without a configured server, and `:LspRestart` reports it; `didSave` is reported by `SaveFile` through the services port and sent at the next idle tick, since the buffer's saved mark also moves on an undo back to the saved text. Trust is a list of roots in the user file rather than a per-directory prompt with a persisted store, which can come later; a root is matched as a string against the resolved working directory, so a root written through a symbolic link fails closed.
 
 ## Capabilities
 

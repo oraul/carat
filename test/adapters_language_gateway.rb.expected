@@ -3,6 +3,15 @@ ok   initialize names the root and the progress capability
 ok   the next idle tick starts nothing more and sends nothing before the answer
 ok   the answer makes it ready and opens the buffer
 ok   didOpen carries the language, version 1, the text, and the file URI
+ok   no trusted_roots line spawns nothing
+ok   the root itself
+ok   a directory under a root
+ok   a sibling sharing the prefix
+ok   a root under the home
+ok   a relative root is no root
+ok   a root with a .. segment is no root
+ok   the filesystem root trusts everything
+ok   a project file cannot trust its own directory
 ok   an unchanged buffer sends nothing
 ok   an edit sends the whole text at the next idle tick with version 2
 ok   an undo is a change with a higher version
@@ -28,4 +37,4 @@ ok   a broken input crashes the server
 ok   stop sends shutdown and exit and stops the child
 ok   a missing command leaves the slot empty
 ok   a text file starts nothing
-adapters_language_gateway: 30 passed, 0 failed
+adapters_language_gateway: 39 passed, 0 failed

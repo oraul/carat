@@ -17,6 +17,7 @@ ok   starting
 ok   indexing with its percent
 ok   stopped
 ok   crashed names the restart command
+ok   untrusted names the start command
 ok   setting the same server again changes nothing
 ok   40 columns keep every segment
 ok   30 columns drop the encoding
@@ -45,4 +46,4 @@ ok   stopped
 ok   crashed
 ok   each count in its diagnostic group, the closing space in the last one's
 ok   new slots are empty
-adapters_status_bar: 47 passed, 0 failed
+adapters_status_bar: 48 passed, 0 failed

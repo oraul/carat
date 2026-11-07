@@ -12,14 +12,34 @@ module AdaptersLanguageGatewayTest
   J = Carat::Json
   INIT = "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{},\"serverInfo\":{\"name\":\"ruby-lsp\"}}}"
 
-  # An editor over a.rb, with ruby-lsp installed when installed is true.
+  # An editor over a.rb in /project, a trusted root, with ruby-lsp
+  # installed when installed is true.
   def self.editor(installed)
+    in_dir("/project", "/project", installed)
+  end
+
+  # An editor over a.rb in a working directory, the user file trusting
+  # roots ("" for no trusted_roots line).
+  def self.in_dir(cwd, roots, installed)
     files = Carat::Doubles::MemoryFiles.new
+    files.move_to(cwd.to_s)
     files.put("a.rb", "x = 1\n")
     files.put("b.txt", "text\n")
-    h = Carat::Doubles::EditorHarness.default(files, 10, 60)
+    user = roots.to_s.empty? ? "" : "language.trusted_roots #{roots}\n"
+    config = Carat::Doubles::FixedConfig.with_user(user)
+    h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 10, cols: 60, plugins: [])
     h.processes.install("ruby-lsp") if installed
     h
+  end
+
+  # What opening a.rb in a directory starts: the commands spawned and the
+  # slot.
+  def self.opened(cwd, roots)
+    h = in_dir(cwd, roots, true)
+    h.open("a.rb")
+    h.wait
+    h.wait
+    "#{h.processes.spawned.join(",")}|#{label(h)}"
   end
 
   # An editor whose server answered initialize.
@@ -68,6 +88,31 @@ module AdaptersLanguageGatewayTest
     t.assert_equal([["initialize", "initialized", "textDocument/didOpen"], "ruby-lsp"], [h.processes.methods_sent, label(h)], "the answer makes it ready and opens the buffer")
     opened = last_body(h)["params"]["textDocument"]
     t.assert_equal(["ruby", 1, "x = 1\n", true], [opened["languageId"], opened["version"], opened["text"], opened["uri"].to_s.end_with?("/a.rb")], "didOpen carries the language, version 1, the text, and the file URI")
+
+    # Trust: a server starts on its own only under a trusted root, which a
+    # project file cannot set. Rows are [label, "cwd|roots", what opening
+    # a.rb starts].
+    untrusted = "|ruby-lsp untrusted :LspStart"
+    t.table([
+      ["no trusted_roots line spawns nothing", "/project|", untrusted],
+      ["the root itself", "/project|/project", "ruby-lsp|ruby-lsp starting"],
+      ["a directory under a root", "/project/app|/other /project/", "ruby-lsp|ruby-lsp starting"],
+      ["a sibling sharing the prefix", "/projectx|/project", untrusted],
+      ["a root under the home", "/home/user/src/app|~/src", "ruby-lsp|ruby-lsp starting"],
+      ["a relative root is no root", "/project|project", untrusted],
+      ["a root with a .. segment is no root", "/etc|/project/..", untrusted],
+      ["the filesystem root trusts everything", "/project|/", "ruby-lsp|ruby-lsp starting"]
+    ]) do |dirs|
+      parts = dirs.to_s.split("|", -1)
+      opened(parts[0].to_s, parts[1].to_s)
+    end
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.rb", "x = 1\n")
+    h = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with("language.trusted_roots /project\n"), rows: 10, cols: 60, plugins: [])
+    h.processes.install("ruby-lsp")
+    h.open("a.rb")
+    h.wait
+    t.assert_equal([[], "ruby-lsp untrusted :LspStart"], [h.processes.spawned, label(h)], "a project file cannot trust its own directory")
 
     # Change, save, close.
     h = ready

@@ -54,6 +54,7 @@ module AdaptersStatusBarTest
     when "indexing" then :indexing
     when "stopped" then :stopped
     when "crashed" then :crashed
+    when "untrusted" then :untrusted
     else :none
     end
   end
@@ -150,7 +151,8 @@ module AdaptersStatusBarTest
       ["starting", "starting", " ruby-lsp starting "],
       ["indexing with its percent", "indexing", " ruby-lsp indexing 42% "],
       ["stopped", "stopped", " ruby-lsp stopped "],
-      ["crashed names the restart command", "crashed", " ruby-lsp crashed :LspRestart "]
+      ["crashed names the restart command", "crashed", " ruby-lsp crashed :LspRestart "],
+      ["untrusted names the start command", "untrusted", " ruby-lsp untrusted :LspStart "]
     ]) do |state|
       s = scenario("plain")
       SLOTS.set_lsp("ruby-lsp", lsp_state_of(state), 42)

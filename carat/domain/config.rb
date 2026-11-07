@@ -20,6 +20,10 @@ module Carat
       # run, each a list of words.
       LANGUAGE_SETTINGS = ["lsp", "formatter"]
 
+      # The key of the directories whose language servers start on their
+      # own: a language line, so only the defaults and the user file set it.
+      TRUSTED_ROOTS = "language.trusted_roots"
+
       # @rbs @settings: Array[untyped]
       # @rbs @problems: Array[String]
       # @rbs @orders: Array[Integer]
@@ -175,7 +179,8 @@ module Carat
       end
 
       # Whether a language line may be kept: from a trusted file, as
-      # language.<name>.<setting> with a known setting. Notes why not.
+      # language.<name>.<setting> with a known setting or as
+      # language.trusted_roots. Notes why not.
       #: (RcLine, bool) -> bool
       def language?(line, trusted)
         unless trusted
@@ -183,6 +188,7 @@ module Carat
           return false
         end
         name = line.name
+        return true if line.key == TRUSTED_ROOTS
         dot = name.index(".")
         if dot.nil?
           note(line, "unknown setting #{line.key}")
