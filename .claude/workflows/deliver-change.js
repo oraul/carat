@@ -442,8 +442,9 @@ async function flush(force) {
 // starts with the run's figures. green records CI green and runs the merge
 // gates with the review and check results the script holds: those of a
 // fresh worktree of origin/main, which the branch cannot have edited, run
-// against the branch, after a fetch, so origin/main is origin's main (the
-// merge gates' origin gate compares the two). The removal of an earlier
+// against the branch, after a fetch of main by its own refspec, reading no
+// configured one (--refmap=), so origin/main is origin's main (the merge
+// gates' origin gate compares the two). The removal of an earlier
 // worktree stays outside the && chain, since it fails when none stands; in
 // the chain a failed record runs no gate, and the add fails when anything
 // but an earlier worktree stands at the path. red records CI red. The
@@ -472,7 +473,7 @@ function mergeLines() {
   const first = (line) => [metricLine(), line].filter(Boolean).join(' && ')
   const ci = (result) => `sh tools/run_state.sh set ${state.change} ci "${result} ${head}"`
   return {
-    green: `git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck(state.repo)} && ${PINNED_GIT} fetch -q --prune origin && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
+    green: `git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck(state.repo)} && ${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
     red: first(ci('red')),
   }
 }
