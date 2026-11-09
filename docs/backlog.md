@@ -1616,11 +1616,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the cases grep exact lines of `deliver-change.js`, `periodic-review.js`, and the agent files, so they pass whatever those lines do and fail on any rewording.
 - Fix outline: move each decision (security pass with files left, merge stop without a checked sha, partial periodic record, worktree name) into a pure helper run through js, and drop the source greps.
 
-## Four use cases inline the tab width Options already answers
+## Seven files inline the tab width Options already answers
 
-- Where: `carat/use_cases/leave_insert.rb:69`, `carat/use_cases/insert_tab.rb:22`, `carat/use_cases/repeat_last.rb:104` (at b0dd342), `carat/use_cases/arrange_view.rb:39` (periodic quality at 5722559), and `carat/adapters/frame_presenter.rb:174`, `carat/use_cases/visual/extend_visual.rb:54`, `carat/use_cases/dispatcher.rb:113` (periodic quality at cd87445); six now at b76b722, adding `carat/use_cases/dispatcher.rb` line 112 and `carat/use_cases/visual/extend_visual.rb` line 54 (periodic quality).
+- Where: at the `pinned-main` change, `carat/use_cases/leave_insert.rb:69`, `carat/use_cases/insert_tab.rb:22`, `carat/use_cases/repeat_last.rb:104`, `carat/use_cases/arrange_view.rb:40`, `carat/use_cases/dispatcher.rb:112`, `carat/use_cases/visual/extend_visual.rb:54`, and `carat/adapters/frame_presenter.rb:178` (periodic quality at b0dd342, 5722559, cd87445, and b76b722).
 - Why it matters: `tabstop > 0 ? tabstop : 8` is copied seven times beside `Options#tab_width` (`carat/domain/options.rb:75`), so a rule change misses copies.
-- Fix outline: call `options.tab_width` in the seven and drop the inline copies.
+- Fix outline: call `options.tab_width` in the seven files and drop the inline copies.
 
 ## ChangeRecord#delta and UndoTree#redo_seq have no production caller
 
@@ -2492,3 +2492,21 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a repeated dispatch, a require graph that no longer names every file, a 16-fold copy, a compile that depends on require order, the `from_x` naming rule bent, dead code, and a wrong comment.
 - Fix outline: case on the bound operator and use `move_to`; add the require; one `ActionTable` method taking names, handler, and descriptions; `require_relative "utf8"`; rename the Filetype helpers and make them private; drop `size`; say the table grows up to its cap.
 
+
+## The pinned fetch is matched on the joined arguments
+
+- Where: the `fetch` case of `tools/agent_guard.sh` line 456 at the `pinned-main` change; security Low (5) and a quality advisory of `pinned-main`.
+- Why it matters: the rule compares the joined `$*`, so a quoted word can regroup the arguments: `git fetch -q --refmap= 'origin +refs/heads/main:refs/remotes/origin/main'` passes, and git reads the quoted word as a local-path repository and fetches from it, which `local_origin` misses since it checks only origin's URL. The impact is limited (only `FETCH_HEAD` is written, `origin/main` is not updated, and the planted directory must exist first). The rule also admits the fetch without `-q`, a second form the header at line 37 does not name.
+- Fix outline: compare by count and position, admitting only the green line's four words: `[ $# -eq 4 ] && [ "$1" = -q ] && [ "$2" = --refmap= ] && [ "$3" = origin ] && [ "$4" = "$MAIN_REFSPEC" ]`, and add `tools/tools_test.sh` cases refusing the quoted regroupings and the form without `-q`.
+
+## The guard's worktree check resolves the common directory on every call
+
+- Where: `worktree` in `tools/agent_guard.sh` line 381 at the `pinned-main` change, called once per `tmp` entry in `metrics_out`'s loop (line 633); quality advisory of `pinned-main`.
+- Why it matters: each call spawns `git rev-parse` and a `cd`, so a guard run over many entries repeats the same lookup.
+- Fix outline: resolve the common directory once beside `project_real` and reuse it in `worktree`.
+
+## A tools test rebuilds the forged .git file by a round trip
+
+- Where: `tools/tools_test.sh` lines 1261 to 1263 at the `pinned-main` change; quality advisory of `pinned-main`.
+- Why it matters: a `cat`, `sed`, and `printf` round trip with a temporary file and `mv` does what one copy does, which makes the case harder to read.
+- Fix outline: `rm -rf "$proj/tmp/.planted/.git"`, then `cp "$proj/tmp/.base/.git" "$proj/tmp/.planted/.git"`.
