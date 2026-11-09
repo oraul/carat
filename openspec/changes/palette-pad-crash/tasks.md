@@ -12,5 +12,9 @@
 
 ## 3. Records
 
-- [ ] 3.1 Update the map (`display_width.rb` entry, the new test on the render area's Tests line) and the backlog bookkeeping of the plan notes in `docs/backlog.md`, proved by `make docs-lint` and `make lint`
+- [x] 3.1 Update the map (`display_width.rb` entry, the new test on the render area's Tests line) and the backlog bookkeeping of the plan notes in `docs/backlog.md`, proved by `make docs-lint` and `make lint`
 - [ ] 3.2 Run `make gates`, `make spec-validate`, and the targeted tests; `make bench` shows `lh` allocations per key unchanged
+
+## Workflow follow-up
+
+- The plan's backlog entries (`build/plan/backlog.md`) and queue (`build/plan/queue.md`) are already in `docs/backlog.md` and `docs/queue.md`, with item 36's cut-by-characters defect dropped; the package step re-copies only a newer plan and runs `tools/run_state.sh history`.
