@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: A plugin opens a scratch buffer in a side window
-A plugin SHALL open a scratch buffer, titled and holding the lines it gives, in the current tab page's slot its side names: `left` and `right` for the sidebars, spanning the full height with the given width, and `bottom` (API 2.4) for the panel with the given height, unless the slot's size option is positive. The window SHALL become current and keep its size when the terminal is resized or the windows are equalized. When the layout has no room for it, the request SHALL fail with "E36: Not enough room" and nothing changes.
+A plugin SHALL open a scratch buffer, titled and holding the given lines, in the tab page's slot its side names: `left` and `right` for the sidebars, spanning the full height with the given width, and `bottom` for the panel with the given height, unless the slot's size option is positive. The window SHALL become current and keep its size when the terminal is resized or the windows are equalized. When the layout has no room for it, the request SHALL fail with "E36: Not enough room" and nothing changes.
 
 #### Scenario: Left side window
 - **WHEN** a test plugin opens the scratch buffer "list" 30 columns wide on the left of an 80-column editor showing "a.txt"
