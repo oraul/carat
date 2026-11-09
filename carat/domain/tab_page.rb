@@ -40,6 +40,30 @@ module Carat
         layout.leaf_count
       end
 
+      # The layout's windows showing a buffer that is not a scratch
+      # buffer, slot and plugin windows left out; walks the node table, so
+      # nothing is allocated.
+      #: () -> Integer
+      def file_window_count
+        count = 0
+        id = 0
+        while id < layout.node_count
+          count += 1 if layout.node(id).leaf? && !layout.window_at(id).buffer.scratch?
+          id += 1
+        end
+        count
+      end
+
+      # Whether the file windows show a winbar under the breadcrumbs mode
+      # (Options::BREADCRUMBS): never, always, or with two or more file
+      # windows.
+      #: (String) -> bool
+      def winbar?(mode)
+        return false if mode == "never"
+        return true if mode == "always"
+        file_window_count > 1
+      end
+
       # The slot at a side: :left, :right, or :bottom.
       #: (Symbol) -> Slot
       def slot(side)

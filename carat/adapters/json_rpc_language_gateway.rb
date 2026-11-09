@@ -3,6 +3,8 @@ require_relative "../ports/clock_port"
 require_relative "../domain/completion_request"
 require_relative "../domain/hover_request"
 require_relative "../domain/signature_request"
+require_relative "../domain/symbol_request"
+require_relative "symbol_outline"
 require_relative "../domain/markdown_text"
 require_relative "../domain/completion_list"
 require_relative "../domain/completion_item"
@@ -63,7 +65,11 @@ module Carat
     # answer is read only for the request in flight and only when no newer
     # ask was recorded since it was sent, its active signature cut around
     # its active parameter and kept cleaned and bounded, and marked
-    # arrived.
+    # arrived. While a winbar shows, the layout window's buffer is sent
+    # as textDocument/documentSymbol once per text when its server
+    # advertised documentSymbolProvider (Domain::SymbolRequest), one
+    # request in flight, cancelled when unanswered ANSWER_LIMIT seconds
+    # after it was sent; only its answer is read, by SymbolOutline.
     class JsonRpcLanguageGateway < Ports::LanguageServicePort
       DRAIN_LIMIT = 64
       NAME_LIMIT = 32
@@ -101,9 +107,11 @@ module Carat
       attr_reader :clock #: Ports::ClockPort
       attr_reader :hover #: Domain::HoverRequest
       attr_reader :signature #: Domain::SignatureRequest
+      attr_reader :symbols #: Domain::SymbolRequest
 
-      #: (processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, files: Ports::FilePort, buffers: Domain::BufferList, config: Domain::Config, slots: Domain::StatusSlots, completion: Domain::CompletionRequest, clock: Ports::ClockPort, hover: Domain::HoverRequest, signature: Domain::SignatureRequest) -> void
-      def initialize(processes:, messages:, files:, buffers:, config:, slots:, completion:, clock:, hover:, signature:)
+      #: (processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, files: Ports::FilePort, buffers: Domain::BufferList, config: Domain::Config, slots: Domain::StatusSlots, completion: Domain::CompletionRequest, clock: Ports::ClockPort, hover: Domain::HoverRequest, signature: Domain::SignatureRequest, symbols: Domain::SymbolRequest) -> void
+      def initialize(processes:, messages:, files:, buffers:, config:, slots:, completion:, clock:, hover:, signature:, symbols:)
+        @symbols = symbols
         @hover = hover
         @signature = signature
         @processes = processes
@@ -150,6 +158,7 @@ module Carat
         resolve
         send_hover(state)
         send_signature(state)
+        send_symbols(state)
         return hold(language) || changed if held
         show(current) || changed
       end
@@ -183,10 +192,10 @@ module Carat
 
       # Answers whether a wanted completion, a picked candidate's
       # documentation, a hover ask, or a signature ask is not yet sent or a
-      # request is in flight.
+      # request is in flight, a symbol request included.
       # @rbs skip
       def waiting?
-        @completion.waiting? || @completion.docs.waiting? || @hover.waiting? || @signature.waiting?
+        @completion.waiting? || @completion.docs.waiting? || @hover.waiting? || @signature.waiting? || @symbols.waiting?
       end
 
       #: (Domain::Buffer) -> void
@@ -372,7 +381,7 @@ module Carat
         completion = { "completionItem" => item, "contextSupport" => true }
         hover = { "contentFormat" => ["markdown", "plaintext"], "dynamicRegistration" => false }
         signature_help = { "signatureInformation" => { "parameterInformation" => { "labelOffsetSupport" => true }, "activeParameterSupport" => true }, "dynamicRegistration" => false }
-        document = { "synchronization" => sync, "publishDiagnostics" => { "relatedInformation" => false }, "completion" => completion, "hover" => hover, "signatureHelp" => signature_help }
+        document = { "synchronization" => sync, "publishDiagnostics" => { "relatedInformation" => false }, "completion" => completion, "hover" => hover, "signatureHelp" => signature_help, "documentSymbol" => { "hierarchicalDocumentSymbolSupport" => true, "dynamicRegistration" => false } }
         capabilities = { "textDocument" => document, "window" => { "workDoneProgress" => true } }
         { "processId" => nil, "clientInfo" => { "name" => "carat" }, "rootUri" => root, "capabilities" => capabilities, "workspaceFolders" => [{ "uri" => root, "name" => File.basename(@files.cwd) }] }
       end
@@ -427,6 +436,7 @@ module Carat
         forget_completion(server)
         forget_hover(server)
         forget_signature(server)
+        forget_symbols(server)
         @processes.stop(server.handle)
         server.handle = 0
         server.state = :crashed
@@ -459,6 +469,8 @@ module Carat
           hovered(value.key?("error") ? nil : value["result"])
         elsif @signature.sent_id != 0 && value["id"] == @signature.sent_id && server.language == @signature.language
           signed(value.key?("error") ? nil : value["result"])
+        elsif @symbols.sent_id != 0 && value["id"] == @symbols.sent_id && server.language == @symbols.language
+          outlined(value.key?("error") ? nil : value["result"])
         end
       end
 
@@ -487,6 +499,8 @@ module Carat
         @hover.languages << server.language if (hovers == true || hovers.is_a?(Hash)) && !@hover.hovers?(server.language)
         helps = caps.is_a?(Hash) ? caps["signatureHelpProvider"] : nil
         @signature.languages << server.language if helps.is_a?(Hash) && !@signature.helps?(server.language)
+        outlines = caps.is_a?(Hash) ? caps["documentSymbolProvider"] : nil
+        @symbols.languages << server.language if (outlines == true || outlines.is_a?(Hash)) && !@symbols.offers?(server.language)
         server.state = :ready
         notify(server, "initialized", {})
       end
@@ -735,6 +749,55 @@ module Carat
         end
         return text if text.bytesize <= limit
         text.byteslice(0, limit).to_s
+      end
+
+      # A server that runs no more gives symbols no more, and its request
+      # in flight is forgotten.
+      #: (Domain::LanguageServer) -> void
+      def forget_symbols(server)
+        ask = @symbols
+        ask.languages.delete(server.language)
+        ask.sent_id = 0 if ask.language == server.language
+      end
+
+      # Asks for the symbols of the layout window's buffer while a winbar
+      # shows, once per text, when its running server offers them: a
+      # request in flight is only cancelled at its deadline, so a text
+      # changed meanwhile is asked at the next tick after the answer.
+      #: (Domain::EditorState) -> void
+      def send_symbols(state)
+        ask = @symbols
+        if ask.sent_id != 0
+          cancel_symbols if @clock.now > ask.deadline
+          return
+        end
+        tab = state.tab
+        return unless tab.winbar?(state.options.breadcrumbs)
+        buffer = tab.layout_window.buffer
+        return if ask.asked?(buffer.id, buffer.changes, buffer.closed_count)
+        server = server_for(buffer.filetype)
+        path = buffer.path_text
+        return if server.nil? || !server.running? || !ask.offers?(server.language) || path.empty?
+        ask.ask(buffer.id, buffer.changes, buffer.closed_count)
+        ask.language = server.language
+        ask.deadline = @clock.now + ANSWER_LIMIT
+        ask.sent_id = request(server, "textDocument/documentSymbol", { "textDocument" => { "uri" => uri_of(path) } })
+      end
+
+      # Cancels the symbol request in flight, whose answer is then dropped.
+      #: () -> void
+      def cancel_symbols
+        ask = @symbols
+        server = server_for(ask.language)
+        notify(server, "$/cancelRequest", { "id" => ask.sent_id }) unless server.nil?
+        ask.sent_id = 0
+      end
+
+      # Keeps the symbols of the answer for the buffer asked.
+      #: (untyped) -> void
+      def outlined(result)
+        @symbols.sent_id = 0
+        SymbolOutline.read(result, @symbols)
       end
 
       # A server that runs no more gives signature help no more, and its

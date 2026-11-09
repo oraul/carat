@@ -14,7 +14,7 @@ module AdaptersFramePresenterTest
   ARRANGE = Carat::UseCases::ArrangeView.new(cache: CACHE, buffers: LISTED)
   LAST = Carat::Domain::LastSearch.new
   PROMPT = Carat::Domain::SearchPrompt.new
-  P = Carat::Adapters::FramePresenter.new(input: INPUT, plugin_ui: UI, cache: CACHE, last_search: LAST, search_prompt: PROMPT, palette: Carat::Domain::Palette.new, start_screen: Carat::Domain::StartScreen.new, status_bar: Carat::Adapters::StatusBar.new(plugin_ui: UI, slots: SLOTS), tab_bar: Carat::Adapters::TabBar.new(buffers: LISTED))
+  P = Carat::Adapters::FramePresenter.new(input: INPUT, plugin_ui: UI, cache: CACHE, last_search: LAST, search_prompt: PROMPT, palette: Carat::Domain::Palette.new, start_screen: Carat::Domain::StartScreen.new, status_bar: Carat::Adapters::StatusBar.new(plugin_ui: UI, slots: SLOTS), tab_bar: Carat::Adapters::TabBar.new(buffers: LISTED), winbar: Carat::Adapters::Winbar.new(symbols: Carat::Domain::SymbolRequest.new))
 
   # Draws the state at a size as the editor does: the size goes into the
   # state, ArrangeView lays the windows out, and the presenter reads it.
@@ -26,12 +26,14 @@ module AdaptersFramePresenterTest
   end
 
   # A state over one window showing the lines; the plugins' segments and
-  # prompt start empty.
+  # prompt start empty. The window rows these checks pin are those of no
+  # winbar; test/editor_breadcrumbs.rb draws the winbars.
   def self.state_for(lines, path)
     buffer = Carat::Domain::Buffer.new(lines: lines, path: path, line_ending: "\n")
     options = Carat::Domain::Options.new
     options.number = true
     options.tabstop = 4
+    options.breadcrumbs = "never"
     UI.segments.clear
     UI.owners.clear
     UI.priorities.clear

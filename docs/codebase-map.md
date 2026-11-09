@@ -91,7 +91,7 @@ Files:
 - `carat/domain/rc_value.rb`: `RcValue` bool, integer, string, and list kinds; `valid?`, `expectation`, `text`, `number?`.
 - `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `refuse`, `line_at`, `last`, `note`, `report` (a stable merge of the ascending runs the readers note); scope and language checks, the project file refused language commands and key-sequence bindings.
 - `carat/domain/default_config.rb`: generated, `DEFAULT_CARATRC`; never edited by hand.
-- `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, `cursorline`, `keyhints_delay` (0 to 10000), and the rest); `from_config`, `apply`, `width_problem` (tabstop 1 to 9999, shiftwidth 0 to 9999), `tab_width`.
+- `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, `cursorline`, `keyhints_delay` (0 to 10000), `breadcrumbs` (`auto`, `always`, `never`), and the rest); `from_config`, `apply`, `width_problem` (tabstop 1 to 9999, shiftwidth 0 to 9999), `tab_width`.
 - `carat/domain/registry_source.rb`: `RegistrySource.render`, `entry?`, `names`; the registry text from the plugin list lines.
 - `carat/adapters/rc_config_gateway.rb`: `RcConfigGateway#load`, the `ConfigPort` driver over `FilePort` (`home`, `cwd`); refuses a linked project file, a file that is not regular, and one over `LIMIT`.
 - Outside the five roots: `config/default.caratrc` (every default option, binding, language command, and plugin setting) and `config/plugins.caratrc` (`plugin.<name> <path> <class>` per compiled plugin).
@@ -347,14 +347,14 @@ Files:
 - `carat/domain/window.rb`: `Window` record (id, buffer, cursor, scroll, rectangle, fixed width and height, visual anchor, last selection); `show`, `copy_from`, `unfix_size`, `gutter_width`, `scroll_to_row`, `scroll_top_to`, `max_top`, `margin` (the clamp and scrolloff cap `ArrangeView` and `ScrollWindow` share), `scroll_to_col`.
 - `carat/domain/layout_node.rb`: `LayoutNode`; `leaf?`.
 - `carat/domain/layout.rb`: `Layout`, a flat node table; `split`, `split_edge`, `split_bottom` (the panel between the sidebars), `place_slot`, `close`, `leaves`, `leaf_of`, `leaf_holding`, `neighbour` (by node rectangles), `equalize`, `arrange`, `number_of`, `first_leaf`, `fixed_width?`, `fixed?`.
-- `carat/domain/tab_page.rb`: `TabPage` with its `FloatLayer` and three slots; `window` (the focused float first), `layout_window`, `window_count`, `focus` (leaves a float), `previous?`, `slot`, `slot_at`, `keeps?`.
+- `carat/domain/tab_page.rb`: `TabPage` with its `FloatLayer` and three slots; `window` (the focused float first), `layout_window`, `window_count`, `file_window_count`, `winbar?` (the breadcrumbs mode), `focus` (leaves a float), `previous?`, `slot`, `slot_at`, `keeps?`.
 - `carat/domain/slot.rb`: `Slot` record (side, views, window, hidden, size), a sidebar or the panel; `occupied?`, `view_window`, `shown?`, `kept?`, `keeps?`, `sidebar?`, `attach`, `add_view`, `hide`, `clear`.
 - `carat/domain/float_spec.rb`: `FloatSpec` (anchor, offset, size, border, title, z); `edge`, `moved`, `refusal`.
 - `carat/domain/float_window.rb`: `FloatWindow` (a window, its spec, `selected`, a menu's selected row or -1, and `mark_from` and `mark_to`, marked display columns of the first row); `menu?`, `marked?`, `place` clamps the box to the screen, `box_top`, `box_bottom`, `box_left`, `box_right`.
 - `carat/domain/float_layer.rb`: `FloatLayer`, a tab page's floats by z with the focused index, at most 16; `add`, `close`, `close_top`, `close_focused`, `enter`, `leave`, `move`.
 - `carat/domain/tab_list.rb`: `TabList`; `tab`, `window`, `add_tab`, `remove_tab`, `next_tab`, `previous_tab`, `adopt`, `window_tab`, `float_tab`, `total_windows`, `shown?`, `windows_showing`, `focus_buffer`, `modified_in_windows`, `clamp_cursors`.
-- `carat/use_cases/arrange_view.rb`: `ArrangeView#call`; the top row goes to the buffer tabs when `BufferList#tab_row?`, and each shown slot window's first row to its header.
-- `carat/use_cases/windows/split_window.rb`: `SplitWindow#call`; every new window gets its id.
+- `carat/use_cases/arrange_view.rb`: `ArrangeView#call`; the top row goes to the buffer tabs when `BufferList#tab_row?`, and each shown slot window's first row to its header, and with winbars (`TabPage#winbar?`) each file window's first row to its winbar (`reserve_winbars`).
+- `carat/use_cases/windows/split_window.rb`: `SplitWindow#call`; every new window gets its id; a row count gets one row more when the windows will show winbars.
 - `carat/use_cases/windows/open_side_window.rb`: `OpenSideWindow#call`, a plugin's view into its slot: the slot's window reused, a hidden one placed again, or a new one at the configured size.
 - `carat/use_cases/windows/open_float.rb`, `carat/use_cases/windows/close_float.rb`: `OpenFloat#call` (the id, the layer, enter), `CloseFloat#call` (the topmost for 0, else by id in any tab page).
 - `carat/use_cases/windows/close_window.rb`, `carat/use_cases/windows/close_other_windows.rb`: `call`.
@@ -376,7 +376,7 @@ Files:
 - `carat/use_cases/windows/toggle_slot.rb`: `ToggleSlot#call`, hides a shown slot keeping its window or shows a hidden one; "No view in", E444, E36.
 - `carat/use_cases/actions/layout_handler.rb`: `LayoutHandler.register` (`layout.toggle_sidebar`, `layout.toggle_right_sidebar`, `layout.toggle_panel`), each a side for `ToggleSlot`.
 
-Tests: `test/domain_layout.rb`, `test/domain_tab_list.rb`, `test/use_cases_arrange_view.rb`, `test/editor_windows.rb`, `test/editor_tabs.rb`, `test/editor_scroll.rb`, `test/editor_buffers.rb`, `test/domain_float_layer.rb`, `test/editor_floats.rb`, `test/domain_slot.rb`, `test/editor_slots.rb`.
+Tests: `test/domain_layout.rb`, `test/domain_tab_list.rb`, `test/use_cases_arrange_view.rb`, `test/editor_windows.rb`, `test/editor_tabs.rb`, `test/editor_scroll.rb`, `test/editor_buffers.rb`, `test/domain_float_layer.rb`, `test/editor_floats.rb`, `test/domain_slot.rb`, `test/editor_slots.rb`, `test/editor_breadcrumbs.rb` (winbars, the option, and the symbol path through a fake server).
 
 Designs: `windows-and-splits` (all Decisions), `buffer-list` (all Decisions), `render-core` (ArrangeView and the screen size), `use-case-boundaries` (Variants), `floating-windows` (all Decisions).
 
@@ -443,8 +443,9 @@ Flow: `EditorAssembly#render` runs `ArrangeView` and `HighlightView`, then `Fram
 
 Files:
 
-- `carat/adapters/frame_presenter.rb`: `FramePresenter#call`, `display_col`, `display_width`; reads the state only; each shown slot's header row (`paint_headers`, `paint_header`); the floats of the tab page by z over everything but the message row (`paint_floats`, `paint_float_row`, `paint_mark` in Visual, `paint_border_row`, `mend_edges`), their boxes kept as the frame's float key (`build_float_key`, `forget_rows`, `compare_boxes`, `clear_repainted`, `under_float?`: no scroll under a float); a message of several lines over the bottom rows with the hit-enter line; in normal mode with no message the cursor line's diagnostic (`paint_diagnostic`, `diagnostic_group`); the current window's cursor line lifted onto the cursor-line layer, and `shape_of` the mode.
+- `carat/adapters/frame_presenter.rb`: `FramePresenter#call`, `display_col`, `display_width`; reads the state only; each shown slot's header row (`paint_headers`, `paint_header`); each file window's winbar (`paint_winbars`); the floats of the tab page by z over everything but the message row (`paint_floats`, `paint_float_row`, `paint_mark` in Visual, `paint_border_row`, `mend_edges`), their boxes kept as the frame's float key (`build_float_key`, `forget_rows`, `compare_boxes`, `clear_repainted`, `under_float?`: no scroll under a float); a message of several lines over the bottom rows with the hit-enter line; in normal mode with no message the cursor line's diagnostic (`paint_diagnostic`, `diagnostic_group`); the current window's cursor line lifted onto the cursor-line layer, and `shape_of` the mode.
 - `carat/adapters/status_bar.rb`: `StatusBar#paint`, the global bar: the mode pill, file, branch, diagnostics, plugin segments, `lsp` slot, file type, encoding, position, and percent, dropped by `PRIORITIES` when narrow without allocating; `mode_name`, `mode_group`, `lsp_group`.
+- `carat/adapters/winbar.rb`: `Winbar#paint`, a file window's winbar: its path and the held symbols spanning its cursor row, without allocating.
 - `carat/adapters/tab_bar.rb`: `TabBar#paint`, a tab per listed file buffer with its icon and modified dot, overflow counts, and the tab-page numbers at the right end, without allocating.
 - `carat/domain/status_slots.rb`: `StatusSlots` record (`branch`, the diagnostics counts, `lsp_name`, `lsp_state`), empty until git and language services fill it; `count_diagnostics`, `diagnostics?`, `lsp?`.
 - `carat/adapters/painted_rows.rb`: `PaintedRows`, what every window row segment of a frame shows, its cursor-line layer included; `same?`, `store`, `invalidate`, `forget` (one row), `painted?`.
@@ -465,7 +466,7 @@ Designs: `render-core` (all Decisions; Measured result), `escape-c1-control-code
 
 Rules: the presenters read the state only; `docs/architecture.md` section 8.2.
 
-Bench: `lh`, `j`, `long-ascii`, `long-utf8`, `open-plain`, `lh-float` (a 60 by 15 float open); `make profile` for `j` and `lh`; `make bench-budget` on `lh`.
+Bench: `lh`, `j`, `long-ascii`, `long-utf8`, `open-plain`, `lh-float` (a 60 by 15 float open), `lh-winbar` (two file windows with winbars, as many allocations per key as two without); `make profile` for `j` and `lh`; `make bench-budget` on `lh`.
 
 ## 14. Syntax highlighting
 
@@ -587,6 +588,7 @@ Files:
 - `carat/ports/language_service_port.rb`: `LanguageServicePort`; `poll`, `start`, `restart`, `saved`, `waiting?`, `stop`.
 - `carat/ports/completion_port.rb`: `CompletionPort`, the completion source that never waits; `ready?`, `candidates`, `documentation`, `request`.
 - `carat/domain/hover_request.rb`: `HoverRequest`, the hover ask K shares with the gateway (the anchor, the serial, the request in flight and its deadline, the markdown answer, `arrived`, hovering languages, the float id); `ask`, `at?`, `hovers?`, `waiting?`.
+- `carat/domain/symbol_request.rb`: `SymbolRequest`, the document symbols the gateway shares with the winbar (offering languages, the text last asked, the request in flight, the held names and row spans); `offers?`, `waiting?`, `asked?`, `ask`, `restart`, `add`, `held?`, `spans?`.
 - `carat/domain/signature_request.rb`: `SignatureRequest`, the signature ask insert mode shares with the gateway (the followed call, the serials and debounce, the request in flight and its deadline, the cleaned label and its marked parameter, `arrived`, the languages giving signature help, the float id); `ask`, `stop`, `active?`, `on?`, `at?`, `helps?`, `waiting?`, `keep`, `open_paren`.
 - `carat/domain/completion_request.rb`: `CompletionRequest`, the asynchronous ask a source shares with the gateway (wanted word, debounce, request in flight, answer, `arrived`, completing languages, the answer's documentation in `docs`); `ask`, `wanted?`, `answer_for?`, `completes?`, `waiting?`.
 - `carat/domain/completion_docs.rb`: `CompletionDocs`, the documentation of the held answer's candidates (texts and states), the picked candidate, the resolve debounce and request in flight, `arrived`; `pick`, `to_resolve?`, `text_at`, `add`, `waiting?`, `clear`.
@@ -599,7 +601,8 @@ Files:
 - `carat/domain/diagnostic.rb`: `Diagnostic`, a published diagnostic as a value.
 - `carat/domain/diagnostic_list.rb`: `DiagnosticList`, a file's published diagnostics with a typed reader, built once per publish and shared by the server, its buffers, and the counts; `add`, `at`, `count`, `empty?`.
 - `carat/domain/language_server.rb`: `LanguageServer`, one server's state, documents, and diagnostics.
-- `carat/adapters/json_rpc_language_gateway.rb`: `JsonRpcLanguageGateway`; `poll` (a publish handed to its buffers and the current buffer's counts to the slot at the idle tick, then the debounced completion request, the settled pick's `completionItem/resolve`, and the hover ask's `textDocument/hover`, its contents read as bounded markdown), and the debounced `textDocument/signatureHelp` of the followed call, an older answer dropped (`send_signature`, `signed`, `cancel_request`), `start`, `restart`, `saved`, `waiting?`, `stop`, `diagnostics`, `server_for`; a failed initialize is a crash.
+- `carat/adapters/symbol_outline.rb`: `SymbolOutline.read`, a document-symbol answer (hierarchical or flat) into the shared `SymbolRequest`, at most 500 symbols, 8 levels, names cleaned and cut to 40 bytes.
+- `carat/adapters/json_rpc_language_gateway.rb`: `JsonRpcLanguageGateway`; `poll` (a publish handed to its buffers and the current buffer's counts to the slot at the idle tick, then the debounced completion request, the settled pick's `completionItem/resolve`, and the hover ask's `textDocument/hover`, its contents read as bounded markdown), and the debounced `textDocument/signatureHelp` of the followed call, an older answer dropped (`send_signature`, `signed`, `cancel_request`), and, while a winbar shows, `textDocument/documentSymbol` once per text of the layout window's buffer, one in flight (`send_symbols`, `cancel_symbols`, `outlined`), `start`, `restart`, `saved`, `waiting?`, `stop`, `diagnostics`, `server_for`; a failed initialize is a crash.
 - `carat/doubles/fake_processes.rb`: `FakeProcesses`; `install`, `break_input`, `spawned`, `bodies`, `methods_sent`, `stopped`.
 - `carat/doubles/memory_queue.rb`: `MemoryQueue`; `body`, `count`.
 - `carat/doubles/fake_language_services.rb`: `FakeLanguageServices`, no server, never `waiting?`, the writes recorded in `saves`, for use cases built by hand.

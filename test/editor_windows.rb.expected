@@ -13,6 +13,9 @@ ok   Ctrl-W l moves right
 ok   Ctrl-W h moves back left
 ok   Ctrl-W l with nothing to the right stays
 ok   a count moves several windows and stops at the edge
+ok   Ctrl-W l picks the neighbour by layout rectangles: on the first row, the upper right window
+ok   Ctrl-W l picks the neighbour by layout rectangles: lower on the screen, the lower right window
+ok   Ctrl-W h from a right window whose rectangle abuts the left one goes there
 ok   Ctrl-W w goes to the next window
 ok   Ctrl-W w wraps to the first
 ok   Ctrl-W W wraps to the last
@@ -140,4 +143,4 @@ ok   :only keeps the current window with its buffer
 ok   :wa reports the nameless buffer and writes the others
 ok   the nameless buffer stays modified
 ok   :wqa does not quit while a buffer could not be written
-editor_windows: 142 passed, 0 failed
+editor_windows: 145 passed, 0 failed

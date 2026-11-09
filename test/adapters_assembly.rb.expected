@@ -5,6 +5,7 @@ ok   the key handler holds the one ShowCompletion, over the source the harness g
 ok   the documentation float shares the popup's source and float use cases
 ok   the input controller holds the one ShowCompletion and the gateway the source's request
 ok   the hover request
+ok   the symbol request
 ok   the signature request
 ok   the input controller holds the one ShowSignature and the key handler the one RequestSignature and FollowSignature
 ok   the input controller holds the one ShowHover and the key handler the one FollowHover
@@ -83,4 +84,4 @@ ok   the gateway reads the shipped defaults through the file port it was given
 ok   the assembly and the gateway hold the one file port
 ok   a configuration without lines falls back to Vim's defaults
 ok   a configuration problem names its file and line
-adapters_assembly: 85 passed, 0 failed
+adapters_assembly: 86 passed, 0 failed

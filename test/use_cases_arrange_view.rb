@@ -131,7 +131,7 @@ module UseCasesArrangeViewTest
       heights << windows[i][2]
       i += 1
     end
-    t.assert_equal([5, 5, 10], heights, "two splits typed with no frame between them give 5, 5, and 10 text rows")
+    t.assert_equal([4, 4, 9], heights, "two splits typed with no frame between them give 4, 4, and 9 text rows under their winbars")
     t.assert_equal(1, h.window_index, "the top window is current")
     t.assert_equal("", h.message, "no split reported E36")
 

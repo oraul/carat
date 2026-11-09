@@ -31,7 +31,7 @@ ok   every plugin was off
 ok   a side window on the left, with its window id
 ok   a side window on the right
 ok   the width survives equalize
-ok   the width survives a split of the other window
+ok   the width survives a split of the other window, the file windows under their winbars
 ok   reopening focuses the side window
 ok   no room reports E36
 ok   the plugin closes its window
@@ -41,7 +41,7 @@ ok   Ctrl-W q closes the side window
 ok   open a file in the file window, id 1
 ok   focusing a missing window fails
 ok   a panel at the bottom, its header on its first row
-ok   the panel keeps its height through a split and equalize
+ok   the panel keeps its height through a split and equalize, the file windows under their winbars
 ok   the panel goes between a sidebar and the edge
 ok   a sidebar beside the panel leaves it under the file
 ok   a second view takes the left slot's window

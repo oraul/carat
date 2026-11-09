@@ -28,7 +28,7 @@ ok   tabnew draws the new buffer's tab
 ok   the editor exits with status 0 after closing the tab page, a window, and the last window
 ok   closing the last window restores the cursor and leaves the alternate screen
 ok   the editor drew its first frame for the slow window move
-ok   <C-w>, a pause past timeoutlen, and l move to the right window
+ok   <C-w>, a pause past timeoutlen, and l move to the right window, under its winbar
 ok   the editor exits with status 0 after the slow window move
 ok   the editor drew its first frame for the tree check
 ok   <leader>e opens the tree, titled explorer

@@ -40,6 +40,9 @@ module Carat
       option.layout.left_width 0
       option.layout.right_width 0
       option.layout.panel_height 0
+      # When file windows show a winbar with their path and the cursor's
+      # symbols: auto (with two or more file windows), always, or never.
+      option.breadcrumbs auto
       option.theme one_dark
       option.background terminal
       option.startscreen true

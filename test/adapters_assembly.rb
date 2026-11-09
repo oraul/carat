@@ -50,6 +50,9 @@ module AdaptersAssemblyTest
       ["services", a.services.hover], ["request_hover", a.request_hover.hover], ["show_hover", a.show_hover.hover],
       ["follow_hover", a.follow_hover.hover], ["pin_hover", a.pin_hover.hover]
     ]), "the hover request")
+    t.assert_equal([], strangers(a.symbols, [
+      ["services", a.services.symbols], ["winbar", a.frame_presenter.winbar.symbols]
+    ]), "the symbol request")
     t.assert_equal([], strangers(a.signature, [
       ["services", a.services.signature], ["request_signature", a.request_signature.signature], ["show_signature", a.show_signature.signature],
       ["follow_signature", a.follow_signature.signature], ["handle_key", a.handle_key.signature], ["controller", a.controller.signature]

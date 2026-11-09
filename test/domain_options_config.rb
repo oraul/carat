@@ -129,6 +129,22 @@ module DomainOptionsConfigTest
       [[read.slot_size(:left), read.slot_size(:right), read.slot_size(:bottom)], config.report]
     end
 
+    # option.breadcrumbs: when file windows show a winbar. Rows are
+    # [label, project lines, [mode, problems]].
+    t.table([
+      ["auto by default", "", ["auto", []]],
+      ["always is stored", "option.breadcrumbs always\n", ["always", []]],
+      ["never is stored", "option.breadcrumbs never\n", ["never", []]],
+      ["a later line wins", "option.breadcrumbs never\noption.breadcrumbs auto\n", ["auto", []]],
+      ["an unknown mode is refused and keeps auto", "option.breadcrumbs sometimes\n", ["auto", [".caratrc:1: unknown breadcrumbs mode sometimes"]]]
+    ]) do |text|
+      config = D::Config.new
+      config.read(".caratrc", text.to_s, false)
+      read = D::Options.from_config(config)
+      [read.breadcrumbs, config.report]
+    end
+    t.assert_equal("auto", options.breadcrumbs, "the shipped configuration shows breadcrumbs with two or more file windows")
+
     t.finish
   end
 end

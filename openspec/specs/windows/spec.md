@@ -84,6 +84,10 @@ A horizontal split SHALL fail with "E36: Not enough room" when the current windo
 - **WHEN** three windows are stacked, the top one is current, and "5<C-w>j" is typed
 - **THEN** the bottom window is current
 
+#### Scenario: Neighbour by layout rectangles
+- **WHEN** a window is split with `<C-w>v`, the right window is split with `<C-w>s`, and in the left window `<C-w>l` is pressed with the cursor on the first row, or in another editor with the cursor on a row below the upper right window's rectangle
+- **THEN** the upper right window is current, or the lower right window, since each is the window whose layout rectangle abuts the left window's and overlaps the cursor's screen row; from either right window `<C-w>h` makes the left window current
+
 ### Requirement: Cycling through the windows
 `<C-w>w` SHALL make the next window in layout order current, wrapping from the last to the first, and `<C-w>W` the previous one, wrapping from the first to the last. Layout order SHALL be top to bottom and left to right. With a count both SHALL go to the window with that number, or to the last window when the count is larger.
 

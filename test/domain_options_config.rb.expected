@@ -38,4 +38,10 @@ ok   the slots keep the view's size by default
 ok   each slot takes its size
 ok   a size above 500 is refused
 ok   a word is refused
-domain_options_config: 40 passed, 0 failed
+ok   auto by default
+ok   always is stored
+ok   never is stored
+ok   a later line wins
+ok   an unknown mode is refused and keeps auto
+ok   the shipped configuration shows breadcrumbs with two or more file windows
+domain_options_config: 46 passed, 0 failed
