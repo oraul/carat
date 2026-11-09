@@ -1844,12 +1844,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: after 20 tries the loop falls through, so a slow runner surfaces as an unrelated supersede failure.
 - Fix outline: fail with a message naming the stage when `stage.slow` never reads `running`. Queued in `check-runner-safety`.
 
-## The documentation floats paint one group
-
-- Where: `ShowHover` (`carat/use_cases/docs/show_hover.rb`), `PinHover`, and `ShowCompletionDocs` show documentation as plain rows from `MarkdownText.rows`, and `FramePresenter#paint_float_row` paints a float's text in `NormalFloat` only. Split out of `quick-docs`, whose brief asked for rendered markdown with fenced code through the highlighter.
-- Why it matters: headings, emphasis, code spans, and fenced code read the same as prose, so a long hover is harder to scan than in Neovim, and the pinned split loses the code's colors too.
-- Fix outline: `quick-docs-styles`: have `MarkdownText` return each row's spans (heading as `Title`, code spans and fenced code through `PluginSyntax#tokenize` for the fence's language, emphasis as bold or italic groups added to the themes), keep them in the buffer's `SyntaxCache` as a fixed entry that `HighlightView` leaves alone, paint a float's tokens over its background through a float layer of groups like `CURSOR_LINE_LAYER` in `SgrTable`, and test the cells' groups in `test/adapters_hover.rb` and the contrast table.
-
 ## The gateway cancels a request in three copies
 
 - Where: `cancel_hover` in `carat/adapters/json_rpc_language_gateway.rb` line 663 at 78078ad, beside `cancel` and `cancel_resolve`. Quality advisory in `quick-docs`. `parameter-info` added the shared private `cancel_request(language, id)`, which its `cancel_signature` calls; the three older copies do not yet. Raised again at 38628bb (periodic quality). Queued in `signature-tidy`.
@@ -2906,3 +2900,39 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the visual-mode cursor cell in `FramePresenter` (`token_group` over `buffer.syntax_cache.lookup`, `carat/adapters/frame_presenter.rb` near line 692), which reads only the syntax cache, at the `quick-docs-styles` change.
 - Why it matters: in the pinned `[docs]` split, the cell under the cursor in visual mode takes the plain text's group instead of its markup group, unlike the cells around it.
 - Fix outline: fall back to `buffer.style_at(row, line)` when the cache is inactive and the buffer is styled, as `paint_window` does, with a row in `test/adapters_hover.rb`.
+
+## A fence's short name is never highlighted
+
+- Where: `carat/use_cases/docs/format_docs.rb` line 49, at the `quick-docs-styles` change, where the fence's word goes straight to `PluginSyntax#provider` as a filetype. Quality advisory in `quick-docs-styles`.
+- Why it matters: common fences such as `rb` (the parse test itself uses one), `sh`, or `bash` are never highlighted though a plugin tokenizes their filetype.
+- Fix outline: resolve a name that is not a filetype through `Filetype`'s extension table before asking for a provider, with a row in `test/adapters_hover.rb`.
+
+## Fenced code paths in the documentation formatter have no test
+
+- Where: `carat/use_cases/docs/format_docs.rb` line 40, at the `quick-docs-styles` change: the path where the tokenizer raises (block left plain, plugin disabled), and the tokenizer state carried across a block's rows and reset per block. Quality advisory in `quick-docs-styles`.
+- Why it matters: a regression in either path would show wrong colors or keep a failing plugin enabled, unnoticed.
+- Fix outline: add `test/adapters_hover.rb` rows with a raising tokenizer double, and with a fenced Ruby string spanning two lines followed by a second block.
+
+## MarkdownText.rows is public surface only a test calls
+
+- Where: `MarkdownText.rows` in `carat/domain/markdown_text.rb` line 35, called only by `test/domain_markdown_text.rb` since `quick-docs-styles`, production going through `FormatDocs` (parse then wrap). Quality advisory in `quick-docs-styles`; part of the public helpers no other file calls.
+- Why it matters: dead public surface invites callers that bypass the owner.
+- Fix outline: move it into the test as a typed helper over `wrap(parse(text), width).texts` and drop it from the module.
+
+## Comments name only the cursor-line layer
+
+- Where: the `SgrTable` class comment in `carat/adapters/sgr_table.rb` line 8, `Frame`'s comment in `carat/domain/frame.rb` line 13, and `docs/architecture.md` line 260, at the `quick-docs-styles` change. Quality advisory in `quick-docs-styles`.
+- Why it matters: cells and sequences now also carry `Highlight::FLOAT_LAYER`, so the comments mislead a reader adding a layer.
+- Fix outline: mention the float layer in all three.
+
+## The MarkdownText comment still says plain rows
+
+- Where: the module comment of `carat/domain/markdown_text.rb` line 10, at the `quick-docs-styles` change. Quality advisory in `quick-docs-styles`.
+- Why it matters: `parse` now also keeps markup spans and each fence's language and block number, which the comment does not say.
+- Fix outline: add a sentence on `parse`, `wrap`, and the spans they keep.
+
+## Documentation formatting scans every token quad per row
+
+- Where: `tokens_of` in `carat/domain/docs_text.rb` line 111 (per row, from styles) and `copy_spans` at line 83 (per wrapped piece), at the `quick-docs-styles` change. Quality advisory in `quick-docs-styles`.
+- Why it matters: formatting costs rows times spans, up to 100 rows times thousands of token quads, on every completion selection change.
+- Fix outline: walk the quads once with a cursor, since `wrap` appends them in row order, or keep a per-row start index.
