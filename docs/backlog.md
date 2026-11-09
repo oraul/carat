@@ -3134,3 +3134,21 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the class comment of `carat/use_cases/completion/show_completion.rb` line 25 at eb0b1ae runs past the file's wrap width; the section 5.1 completion list of `docs/architecture.md` line 167 names `CompleteWord` but not the shared `OpenCompletionPopup`. Quality advisories in `word-completion`.
 - Why it matters: the long line breaks the file's style, and a reader of section 5.1 cannot find the use case that opens the popup float both completion paths share.
 - Fix outline: rewrap the paragraph, and add `OpenCompletionPopup` to the 5.1 list as the popup float `ShowCompletion` and `CompleteWord` share. Queued in `completion-tidy`.
+
+## Keyword completion skips the word right after the cursor on an empty prefix
+
+- Where: `carat/domain/buffer_words.rb` line 64 at 8f486e0, where the scan of the cursor's line starts at `start + 1` and the final `0...start` slice ends before `start`. Quality advisory in `word-completion`.
+- Why it matters: with no word before the cursor, the word starting at the cursor column is never offered from that spot, though the completion spec says every word matches with an empty prefix.
+- Fix outline: scan from `start` rather than `start + 1` when the prefix is empty (or narrow the spec wording to match Neovim), with a table row for a cursor placed before a word.
+
+## Typing after Ctrl-P selects the farthest match
+
+- Where: `carat/use_cases/completion/show_completion.rb` line 98 at 8f486e0, which refilters the reversed word list of a Ctrl-P menu and selects row 0. Quality advisory in `word-completion`.
+- Why it matters: the Ctrl-P popup selects the nearest match, but after one typed character the selection jumps to the farthest one.
+- Fix outline: keep the last row selected when the menu was filled backward, through a direction flag on the menu set by `CompleteWord`, with a row for Ctrl-P followed by a typed character.
+
+## No test pins that typing with no popup costs nothing more
+
+- Where: `test/editor_word_completion.rb` at 8f486e0 has no row for the spec scenario Typing costs nothing more (no buffer scan and no extra allocation per key with no popup). Quality advisory in `word-completion`.
+- Why it matters: a change that scans the buffer on every insert-mode key would pass the suite unseen.
+- Fix outline: assert that typing in insert mode with no popup leaves the menu unfilled, or add a bench scenario row that pins the allocations.
