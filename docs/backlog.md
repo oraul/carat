@@ -2663,7 +2663,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The presenter and the arranger each decide which windows get a winbar
 
-- Where: `paint_winbars` in `carat/adapters/frame_presenter.rb` line 723 and `reserve_winbars` in `carat/use_cases/windows/arrange_view.rb` line 89, at 7711421. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Where: `paint_winbars` in `carat/adapters/frame_presenter.rb` line 723 and `reserve_winbars` in `carat/use_cases/arrange_view.rb` line 89, at 7711421. Periodic quality. Queue item `breadcrumbs-tidy`.
 - Why it matters: two rules in two layers (geometry against scratch and height) must stay in step.
 - Fix outline: one predicate or a flag set by the arranger that the presenter reads.
 
