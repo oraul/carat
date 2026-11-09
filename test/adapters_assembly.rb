@@ -160,7 +160,8 @@ module AdaptersAssemblyTest
     t.assert_equal([], strangers(a.notices, [["controller", a.controller.notices], ["frame_presenter", a.frame_presenter.notices], ["services", a.services.notices]]), "the notifications")
     t.assert_equal(true, a.notices.history.equal?(a.state.history), "the notifications keep the state's history")
     t.assert_equal([], strangers(a.arrange_view, [["handle_key", a.handle_key.arrange_view]]), "the arrange view use case")
-    t.assert_equal([], strangers(a.plugins.syntax, [["highlight_view", a.highlight_view.syntax]]), "the plugins as tokenizers")
+    t.assert_equal([], strangers(a.plugins.syntax, [["highlight_view", a.highlight_view.syntax], ["format_docs", a.format_docs.syntax]]), "the plugins as tokenizers")
+    t.assert_equal([], strangers(a.format_docs, [["show_hover", a.show_hover.format_docs], ["show_docs", a.show_completion.show_docs.format_docs]]), "the one documentation formatter")
     t.assert_equal([], strangers(a.plugins.registry, [["plugin_syntax", a.plugins.syntax.registry]]), "the plugin registry, in the tokenizer part")
 
     # Each port is one instance too.

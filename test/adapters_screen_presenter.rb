@@ -362,7 +362,7 @@ module AdaptersScreenPresenterTest
       ["a 16-color cursor line is underlined", [C16, "one_dark", H::CURSOR_LINE], "\e[0;4m"],
       ["a 256-color search", [C256, "one_dark", H::SEARCH], "\e[0;38;5;236;48;5;180m"],
       ["carat-light is one_light's comment", [T, "carat-light", H::COMMENT], "\e[0;3;38;2;105;108;119m"],
-      ["one_light's string at its own 256-color index", [C256, "one_light", H::STRING], "\e[0;38;5;28m"],
+      ["one_light's string at its own 256-color index", [C256, "one_light", H::STRING], "\e[0;38;5;22m"],
       ["dark_plus's comment at its own 256-color index", [C256, "dark_plus", H::COMMENT], "\e[0;3;38;5;71m"],
       ["dark_plus's keyword", [T, "dark_plus", H::KEYWORD], "\e[0;38;2;86;156;214m"],
       ["light_plus's comment", [T, "light_plus", H::COMMENT], "\e[0;3;38;2;0;128;0m"],

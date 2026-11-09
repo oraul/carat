@@ -1,6 +1,5 @@
 require_relative "../../domain/editor_state"
 require_relative "../../domain/completion_menu"
-require_relative "../../domain/markdown_text"
 require_relative "../../domain/display_width"
 require_relative "../../domain/buffer"
 require_relative "../../domain/window"
@@ -9,6 +8,7 @@ require_relative "../../domain/float_window"
 require_relative "../../ports/completion_port"
 require_relative "../windows/open_float"
 require_relative "../windows/close_float"
+require_relative "../docs/format_docs"
 
 module Carat
   module UseCases
@@ -21,8 +21,8 @@ module Carat
     # server which candidate is picked; with none the float closes. When
     # the float shows that candidate's same text beside the same popup it
     # stays, so moving the selection costs one comparison. Otherwise the
-    # float is replaced: the text read as plain rows (MarkdownText) at most
-    # WIDTH cells wide, at most MAX_ROWS rows and the rows free on the
+    # float is replaced: the text read as rows with their markup styles
+    # (FormatDocs, kept on the float's buffer) at most WIDTH cells wide, at most MAX_ROWS rows and the rows free on the
     # popup's side shown, at the popup's rows (from its first row below
     # the cursor, ending on the row above it above), on the popup's right,
     # or on its left when the right lacks the room and the left has it,
@@ -39,13 +39,15 @@ module Carat
       attr_reader :source #: Ports::CompletionPort
       attr_reader :open_float #: OpenFloat
       attr_reader :close_float #: CloseFloat
+      attr_reader :format_docs #: FormatDocs
 
-      #: (menu: Domain::CompletionMenu, source: Ports::CompletionPort, open_float: OpenFloat, close_float: CloseFloat) -> void
-      def initialize(menu:, source:, open_float:, close_float:)
+      #: (menu: Domain::CompletionMenu, source: Ports::CompletionPort, open_float: OpenFloat, close_float: CloseFloat, format_docs: FormatDocs) -> void
+      def initialize(menu:, source:, open_float:, close_float:, format_docs:)
         @menu = menu
         @source = source
         @open_float = open_float
         @close_float = close_float
+        @format_docs = format_docs
       end
 
       #: (Domain::EditorState) -> void
@@ -81,7 +83,8 @@ module Carat
       # Opens the float of the text beside the popup's spec.
       #: (Domain::EditorState, Domain::CompletionMenu, Domain::FloatSpec, Integer, String) -> void
       def open_beside(state, menu, popup, index, text)
-        rows = Domain::MarkdownText.rows(text, WIDTH)
+        docs = @format_docs.call(state, text, WIDTH)
+        rows = docs.texts
         return if rows.empty?
         window = state.tab.layout_window
         cursor = window.cursor
@@ -105,6 +108,7 @@ module Carat
         spec = Domain::FloatSpec.new(anchor: "cursor", row: below ? 1 : -height, col: col, height: height, width: width, border: false, title: "", z: Z)
         buffer = Domain::Buffer.new(lines: rows, path: nil, line_ending: "\n")
         buffer.owner = OWNER
+        buffer.styles = docs.styles
         float = Domain::FloatWindow.new(window: Domain::Window.new(buffer: buffer), spec: spec)
         return unless @open_float.call(state, float, false).ok
         menu.docs_float_id = float.id

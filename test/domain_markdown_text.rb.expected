@@ -29,8 +29,21 @@ ok   a quote bar stays with the long word after it
 ok   a bullet's text still wraps at a space
 ok   wide characters wrap by cells
 ok   a document reads as plain rows
+ok   a heading
+ok   strong and emphasized runs
+ok   a code span
+ok   a link's and an image's text
+ok   emphasis inside a code span is no run
+ok   a run left open has no span
+ok   a heading's run over the heading
+ok   a bullet's and a quote's runs after their prefix
+ok   fenced code rows after a gap
+ok   a run cut where its row wraps
+ok   characters, not bytes
+ok   a fence's first word is its language, and each fenced block has its number
+ok   styles gives each row its tokens, kept for the row's own string
 ok   a megabyte of short lines keeps at most 100 rows, no blank last
 ok   at most 16,384 bytes are read
 ok   a long line wraps to at most 100 rows
 ok   an empty document has no rows
-domain_markdown_text: 35 passed, 0 failed
+domain_markdown_text: 48 passed, 0 failed

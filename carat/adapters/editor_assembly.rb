@@ -203,6 +203,7 @@ module Carat
       attr_reader :notices #: Domain::Notices
       attr_reader :arrange_view #: UseCases::ArrangeView
       attr_reader :highlight_view #: UseCases::HighlightView
+      attr_reader :format_docs #: UseCases::FormatDocs
       attr_reader :actions #: UseCases::ActionTable
       attr_reader :commands #: UseCases::ExTable
       attr_reader :runner #: UseCases::CommandRunner
@@ -368,10 +369,7 @@ module Carat
         @close_float = UseCases::CloseFloat.new(tabs: @tabs)
         @completion_menu = Domain::CompletionMenu.new
         close_completion = UseCases::CloseCompletion.new(menu: @completion_menu, close_float: @close_float)
-        show_docs = UseCases::ShowCompletionDocs.new(menu: @completion_menu, source: completions, open_float: @open_float, close_float: @close_float)
-        @show_completion = UseCases::ShowCompletion.new(menu: @completion_menu, source: completions, open_float: @open_float, close_float: @close_float, close_completion: close_completion, show_docs: show_docs)
         @request_hover = UseCases::RequestHover.new(hover: @hover)
-        @show_hover = UseCases::ShowHover.new(hover: @hover, open_float: @open_float, close_float: @close_float)
         @follow_hover = UseCases::FollowHover.new(hover: @hover, close_float: @close_float)
         @pin_hover = UseCases::PinHover.new(hover: @hover, split_window: @split_window, buffers: @buffers, close_float: @close_float)
         @request_signature = UseCases::RequestSignature.new(signature: @signature)
@@ -399,6 +397,10 @@ module Carat
         @save_file = UseCases::SaveFile.new(files: files, plugins: @plugins, services: @services)
         @save_all = UseCases::SaveAll.new(save_file: @save_file, buffers: @buffers)
         @highlight_view = UseCases::HighlightView.new(syntax: @plugins.syntax)
+        @format_docs = UseCases::FormatDocs.new(syntax: @plugins.syntax)
+        show_docs = UseCases::ShowCompletionDocs.new(menu: @completion_menu, source: completions, open_float: @open_float, close_float: @close_float, format_docs: @format_docs)
+        @show_completion = UseCases::ShowCompletion.new(menu: @completion_menu, source: completions, open_float: @open_float, close_float: @close_float, close_completion: close_completion, show_docs: show_docs)
+        @show_hover = UseCases::ShowHover.new(hover: @hover, open_float: @open_float, close_float: @close_float, format_docs: @format_docs)
 
         UseCases::FileCommandHandler.register(@commands, save_file: @save_file, save_all: @save_all, quit: @quit, quit_all: @quit_all, open_file: @open_file)
         UseCases::WindowCommandHandler.register(@commands, split_window: @split_window, close_window: @close_window, close_other_windows: @close_other_windows)
