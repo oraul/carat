@@ -14,7 +14,7 @@
 
 ## 3. Symbols
 
-- [x] 3.1 Advertise and record `documentSymbolProvider`, send `textDocument/documentSymbol` at idle ticks from `JsonRpcLanguageGateway`, cancel overdue requests, and read answers with `SymbolOutline`, proven by `test/editor_breadcrumbs.rb` and `test/adapters_language_gateway.rb`
+- [x] 3.1 Advertise and record `documentSymbolProvider`, send `textDocument/documentSymbol` at idle ticks from `JsonRpcLanguageGateway`, cancel overdue requests, and read answers with `SymbolOutline`, proven by `test/editor_breadcrumbs.rb` (the initialize capability, the requests, and the answers)
 
 ## 4. Neighbours by rectangles
 
