@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 3
-    VERSION = "2.3"
+    MINOR = 4
+    VERSION = "2.4"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -28,8 +28,9 @@ module Carat
     # newlines.
     OPTION_TYPES = ["bool", "integer", "string", "list"]
 
-    # The edges of the tab page a scratch window opens at.
-    SIDES = ["left", "right"]
+    # The slots of the tab page a scratch window opens in: the left and
+    # right sidebars and the bottom panel (2.4).
+    SIDES = ["left", "right", "bottom"]
 
     # What a plugin declares. name is lowercase letters, digits, and
     # underscores starting with a letter; version is the plugin's own;
@@ -472,10 +473,11 @@ module Carat
       end
 
       # Opens, or refreshes and focuses, the plugin's scratch buffer with
-      # that title in a fixed-width window at the "left" or "right" edge of
-      # the tab page, holding the lines, with its own keymap built from
-      # bindings, keymap lines "keymap.<mode> <keys> <action>" as in the
-      # manifest. A new buffer's syntax is the plugin's name when the
+      # that title in the tab page's "left" or "right" sidebar, width
+      # columns wide, or its "bottom" panel (2.4), width rows high, unless
+      # the slot's size option is set, holding the lines, with its own
+      # keymap built from bindings, keymap lines
+      # "keymap.<mode> <keys> <action>" as in the manifest. A new buffer's syntax is the plugin's name when the
       # manifest declares that filetype (API 2.1), so the plugin tokenizes
       # its own lines. Returns a WindowResponse with the window's id.
       # @rbs title: String

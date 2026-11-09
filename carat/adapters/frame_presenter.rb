@@ -224,6 +224,7 @@ module Carat
           i += 1
         end
         paint_separators(back, layout, layout.root)
+        paint_headers(back, tab)
         if bar >= tabline
           @status_bar.paint(back, bar, cols, state)
           @chrome << bar
@@ -680,6 +681,47 @@ module Carat
           c += 1
         end
         @chrome << below
+      end
+
+      # The header row above each shown slot window that ArrangeView gave
+      # one: the titles of the slot's views, each between spaces, the
+      # shown one in TabLineSel and the others in TabLine, the rest of the
+      # row in TabLineFill. The titles are the strings the slot holds, so
+      # nothing is allocated.
+      #: (Domain::Frame, Domain::TabPage) -> void
+      def paint_headers(frame, tab)
+        layout = tab.layout
+        i = 0
+        while i < Domain::TabPage::SLOT_COUNT
+          slot = tab.slot_at(i)
+          if slot.shown?(layout)
+            window = slot.view_window
+            row = window.row - 1
+            paint_header(frame, slot, window, row) if layout.node(layout.leaf_holding(window)).row == row
+          end
+          i += 1
+        end
+      end
+
+      #: (Domain::Frame, Domain::Slot, Domain::Window, Integer) -> void
+      def paint_header(frame, slot, window, row)
+        x = window.col
+        limit = x + window.width
+        frame.blank(row, x, limit)
+        frame.fill(row, x, limit, Domain::Highlight::TAB_LINE_FILL)
+        shown = window.buffer.title
+        views = slot.views
+        c = x
+        k = 0
+        while k < views.length && c < limit
+          hl = views[k] == shown ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE
+          c = frame.put_within(row, c, " ", hl, limit)
+          c = frame.put_within(row, c, views[k], hl, limit)
+          c = frame.put_within(row, c, " ", hl, limit)
+          k += 1
+        end
+        @repainted[row] = 1 if @floating
+        @chrome << row
       end
 
       # The line number a row shows, -1 when the window has no number

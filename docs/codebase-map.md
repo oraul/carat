@@ -372,6 +372,8 @@ Files:
 - `carat/use_cases/buffers/switch_buffer.rb`: `SwitchBuffer#call(state, request)`, `:bn`, `:bp`, `:bN`, `:b N` (`E37`, `E85`, `E86`).
 - `carat/use_cases/buffers/delete_buffer.rb`: `DeleteBuffer#call(state, number, bang, typed)`, `:bd` in the order of Neovim's `do_buffer` (`E89`, `E516`).
 - `carat/use_cases/ex/buffer_command_handler.rb`: `BufferCommandHandler.register` (`:ls`, `:buffers`, `:files`, `:b[uffer]`, `:bn[ext]`, `:bp[revious]`, `:bN[ext]`, `:bd[elete]`), the number and count arguments.
+- `carat/use_cases/windows/toggle_slot.rb`: `ToggleSlot#call`; TODO: one line on what it does.
+- `carat/use_cases/actions/layout_handler.rb`: `LayoutHandler.register` (`layout.toggle_sidebar`); TODO: one line on what it does.
 
 Tests: `test/domain_layout.rb`, `test/domain_tab_list.rb`, `test/use_cases_arrange_view.rb`, `test/editor_windows.rb`, `test/editor_tabs.rb`, `test/editor_scroll.rb`, `test/editor_buffers.rb`, `test/domain_float_layer.rb`, `test/editor_floats.rb`, `test/domain_slot.rb`, `test/editor_slots.rb`.
 

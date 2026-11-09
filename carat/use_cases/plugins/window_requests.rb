@@ -63,14 +63,14 @@ module Carat
         @files = files
       end
 
-      # Opens the plugin's scratch buffer with that title in a fixed-width
-      # window at the edge of the tab page, or refreshes and focuses the
-      # one already shown there; one shown only in another tab page gets a
-      # side window here too. A new buffer takes the syntax named after
+      # Opens the plugin's scratch buffer with that title in the tab page's
+      # slot its side names (OpenSideWindow), or refreshes and focuses the
+      # one already shown there; one shown only in another tab page, or
+      # kept by a hidden slot, is shown in the slot here too. A new buffer takes the syntax named after
       # the plugin when the plugin tokenizes that filetype.
       #: (String, String, String, Integer, Array[String], untyped) -> PluginApi::WindowResponse
       def open_scratch(name, title, side, width, lines, bindings)
-        return PluginApi::WindowResponse.failure("No side #{side}: left or right") unless PluginApi::SIDES.include?(side)
+        return PluginApi::WindowResponse.failure("No side #{side}: left, right, or bottom") unless PluginApi::SIDES.include?(side)
         state = @state
         layout = state.tab.layout
         existing = @buffers.scratch_for(name, title)
@@ -314,10 +314,12 @@ module Carat
         PluginApi::Paths.absolute(here, a) == PluginApi::Paths.absolute(here, b)
       end
 
-      # Adds the side window through OpenSideWindow.
+      # Shows the buffer in the slot the side names through
+      # OpenSideWindow: left, right, or bottom.
       #: (Domain::Buffer, String, Integer) -> PluginApi::WindowResponse
       def place_side(buffer, side, width)
-        outcome = @open_side_window.call(@state, buffer, width, side == "left")
+        slot = side == "left" ? :left : (side == "right" ? :right : :bottom)
+        outcome = @open_side_window.call(@state, buffer, width, slot)
         return PluginApi::WindowResponse.failure(outcome.message) unless outcome.ok
         PluginApi::WindowResponse.success("", @state.window.id)
       end

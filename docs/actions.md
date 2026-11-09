@@ -140,7 +140,7 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `window.last_accessed` | normal | Back to the previously used window |
 | `window.close` | normal | Close the window, or window count; the last window of the last tab page reports E444 |
 | `window.only` | normal | Close every other window of the tab page |
-| `window.equalize` | normal | Make the windows of every split the same size, fixed-width windows kept |
+| `window.equalize` | normal | Make the windows of every split the same size, the sidebars' widths and the panel's height kept |
 | `window.quit` | normal | `:q` on the window, or on window count |
 | `tab.next` | normal | Next tab page, wrapping; a count is a tab page number |
 | `tab.previous` | normal | Count tab pages back, wrapping |
@@ -168,6 +168,9 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `palette.open` | normal | Open the command palette: every action and ex command with its key and description, filtered as you type at the `>` prompt, Enter runs the selected one |
 | `palette.next` | cmdline | Select the next palette entry; nothing outside the palette |
 | `palette.previous` | cmdline | Select the previous palette entry; nothing outside the palette |
+| `layout.toggle_sidebar` | normal | Hide the left sidebar, keeping its view, or show it again with its size and cursor; "No view in the left sidebar" when empty |
+| `layout.toggle_right_sidebar` | normal | Hide or show the right sidebar as `layout.toggle_sidebar` does the left |
+| `layout.toggle_panel` | normal | Hide or show the bottom panel as `layout.toggle_sidebar` does the left sidebar |
 
 ## Plugins
 

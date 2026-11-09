@@ -248,22 +248,23 @@ module Carat
         ccol = window.col + window.cursor.col - window.left
         ccol = window.col if ccol < window.col
         ccol = window.col + window.width - 1 if ccol > window.col + window.width - 1
+        own = node(id)
         all = leaves
         i = 0
         while i < all.length
           other = all[i]
           if other != id
-            candidate = window_at(other)
+            candidate = node(other)
             found = false
             case direction
             when :right
-              found = candidate.col == window.col + window.width + 1 && crow >= candidate.row && crow <= candidate.row + candidate.height
+              found = candidate.col == own.col + own.width + 1 && crow >= candidate.row && crow < candidate.row + candidate.height
             when :left
-              found = candidate.col + candidate.width + 1 == window.col && crow >= candidate.row && crow <= candidate.row + candidate.height
+              found = candidate.col + candidate.width + 1 == own.col && crow >= candidate.row && crow < candidate.row + candidate.height
             when :down
-              found = candidate.row == window.row + window.height + 1 && ccol >= candidate.col && ccol <= candidate.col + candidate.width
+              found = candidate.row == own.row + own.height && ccol >= candidate.col && ccol <= candidate.col + candidate.width
             when :up
-              found = candidate.row + candidate.height + 1 == window.row && ccol >= candidate.col && ccol <= candidate.col + candidate.width
+              found = candidate.row + candidate.height == own.row && ccol >= candidate.col && ccol <= candidate.col + candidate.width
             end
             return other if found
           end

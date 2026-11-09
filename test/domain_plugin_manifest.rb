@@ -30,9 +30,9 @@ module DomainPluginManifestTest
 
     t.assert_equal([], M.check(good), "the hello manifest breaks no rule")
     t.assert_equal([], M.check(manifest("hello", "2.0", GOOD_ACTIONS, {}, [], [:buffer_open, :buffer_close], ["plugin.hello.n 1"], { "n" => :integer })), "symbols for events and types are read as names")
-    t.assert_equal(["", ""], [M.refusal("2.3"), M.refusal("2.1")], "the host's own version and 2.1 are accepted")
+    t.assert_equal(["", ""], [M.refusal("2.4"), M.refusal("2.1")], "the host's own version and 2.1 are accepted")
     t.assert_equal("", M.refusal("2.0"), "an older minor is accepted")
-    t.assert_equal("needs API 2.4, the host has 2.3", M.refusal("2.4"), "a newer minor is refused")
+    t.assert_equal("needs API 2.5, the host has 2.4", M.refusal("2.5"), "a newer minor is refused")
     t.assert_equal("needs API 3.0, the host has 2.3", M.refusal("3.0"), "a newer major is refused with both versions")
     t.assert_equal("needs API 1.3, the host has 2.3", M.refusal("1.3"), "an older major is refused")
     t.assert_equal("", M.refusal("x"), "a malformed version is not a refusal")

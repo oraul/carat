@@ -142,6 +142,7 @@ require_relative "../use_cases/discovery/open_palette"
 require_relative "../use_cases/discovery/follow_palette"
 require_relative "../use_cases/actions/docs_handler"
 require_relative "../use_cases/actions/palette_handler"
+require_relative "../use_cases/actions/layout_handler"
 require_relative "../use_cases/actions/plugin_action_handler"
 require_relative "../use_cases/dispatcher"
 require_relative "../use_cases/handle_key"
@@ -235,6 +236,7 @@ module Carat
       attr_reader :quit #: UseCases::Quit
       attr_reader :quit_all #: UseCases::QuitAll
       attr_reader :close_window #: UseCases::CloseWindow
+      attr_reader :toggle_slot #: UseCases::ToggleSlot
       attr_reader :close_other_windows #: UseCases::CloseOtherWindows
       attr_reader :split_window #: UseCases::SplitWindow
       attr_reader :open_side_window #: UseCases::OpenSideWindow
@@ -351,6 +353,7 @@ module Carat
         @probe_path = UseCases::ProbePath.new(files: files)
         @open_file = UseCases::OpenFile.new(files: files, buffers: @buffers, probe_path: @probe_path)
         @close_window = UseCases::CloseWindow.new(buffers: @buffers, tabs: @tabs)
+        @toggle_slot = UseCases::ToggleSlot.new(buffers: @buffers)
         @close_other_windows = UseCases::CloseOtherWindows.new(buffers: @buffers)
         @split_window = UseCases::SplitWindow.new(open_file: @open_file, buffers: @buffers, tabs: @tabs)
         @open_side_window = UseCases::OpenSideWindow.new(buffers: @buffers, tabs: @tabs)
@@ -441,6 +444,7 @@ module Carat
         UseCases::DocsHandler.register(@actions, request_hover: @request_hover, pin_hover: @pin_hover)
         @open_palette = UseCases::OpenPalette.new(actions: @actions, commands: @commands, keymap: @keymap, plugins: @plugins, palette: @palette, plugin_ui: @plugin_ui, search_prompt: @search_prompt)
         UseCases::PaletteHandler.register(@actions, open_palette: @open_palette, palette: @palette)
+        UseCases::LayoutHandler.register(@actions, toggle_slot: @toggle_slot)
         UseCases::PluginActionHandler.register(@actions, plugins: @plugins)
 
         @keymap.add_checked(value, known_actions)
