@@ -86,8 +86,10 @@ module DomainMarkdownTextTest
     end
     doc = D::MarkdownText.parse("```ruby\nx = 1\n```\n\n~~~ rb extra\ny\n~~~\n```\nz\n```")
     t.assert_equal([4, "ruby", 1, "", 0, "rb", 2, "", 3], [doc.count, doc.syntax(0), doc.block(0), doc.syntax(1), doc.block(1), doc.syntax(2), doc.block(2), doc.syntax(3), doc.block(3)], "a fence's first word is its language, and each fenced block has its number")
-    styled = D::MarkdownText.wrap(D::MarkdownText.parse("# T\n\nx"), 40).styles
-    t.assert_equal([3, [0, 1, D::Highlight::MARKUP_HEADING], 0, "x"], [styled.length, styled[0].tokens, styled[2].tokens.length, styled[2].text], "styles gives each row its string and tokens")
+    styled = D::MarkdownText.wrap(D::MarkdownText.parse("# T\n\nx"), 40)
+    buffer = D::Buffer.new(lines: styled.texts, path: nil, line_ending: "\n")
+    buffer.styles = styled.styles
+    t.assert_equal([true, [0, 1, D::Highlight::MARKUP_HEADING], 0, false], [buffer.styled?, buffer.style_at(0, buffer.line(0)).tokens, buffer.style_at(2, buffer.line(2)).tokens.length, buffer.style_at(0, "T").equal?(buffer.style_at(0, buffer.line(0)))], "styles gives each row its tokens, kept for the row's own string")
 
     kept = D::MarkdownText.rows("a\n\n" * 400_000, 40)
     t.assert_equal([99, "a"], [kept.length, kept[kept.length - 1].to_s], "a megabyte of short lines keeps at most 100 rows, no blank last")
