@@ -553,9 +553,10 @@ module Carat
         typed = line.byteslice(start, line.bytesize - start).to_s
         return if typed.empty? || cursor.col - typed.length != ask.col
         server = server_for(buffer.filetype)
-        return if server.nil? || !server.running? || !ask.completes?(server.language) || buffer.path.empty?
+        path = buffer.path_text
+        return if server.nil? || !server.running? || !ask.completes?(server.language) || path.empty?
         position = { "line" => cursor.row, "character" => utf16_length(line) }
-        params = { "textDocument" => { "uri" => uri_of(buffer.path) }, "position" => position, "context" => { "triggerKind" => 1 } }
+        params = { "textDocument" => { "uri" => uri_of(path) }, "position" => position, "context" => { "triggerKind" => 1 } }
         ask.word = typed
         ask.language = server.language
         ask.sent_id = request(server, "textDocument/completion", params)
@@ -691,9 +692,10 @@ module Carat
         cursor = window.cursor
         return unless state.mode == Domain::Mode::NORMAL && ask.at?(window.id, buffer.id, cursor.row, cursor.col)
         server = server_for(buffer.filetype)
-        return if server.nil? || !server.running? || !ask.hovers?(server.language) || buffer.path.empty?
+        path = buffer.path_text
+        return if server.nil? || !server.running? || !ask.hovers?(server.language) || path.empty?
         line = buffer.line(cursor.row)[0, cursor.col].to_s
-        params = { "textDocument" => { "uri" => uri_of(buffer.path) }, "position" => { "line" => cursor.row, "character" => utf16_length(line) } }
+        params = { "textDocument" => { "uri" => uri_of(path) }, "position" => { "line" => cursor.row, "character" => utf16_length(line) } }
         ask.language = server.language
         ask.deadline = @clock.now + ANSWER_LIMIT
         ask.sent_id = request(server, "textDocument/hover", params)
@@ -844,9 +846,10 @@ module Carat
         cursor = window.cursor
         return unless state.mode == Domain::Mode::INSERT && ask.at?(window.id, buffer.id, cursor.row, cursor.col)
         server = server_for(buffer.filetype)
-        return if server.nil? || !server.running? || !ask.helps?(server.language) || buffer.path.empty?
+        path = buffer.path_text
+        return if server.nil? || !server.running? || !ask.helps?(server.language) || path.empty?
         line = buffer.line(cursor.row)[0, cursor.col].to_s
-        params = { "textDocument" => { "uri" => uri_of(buffer.path) }, "position" => { "line" => cursor.row, "character" => utf16_length(line) } }
+        params = { "textDocument" => { "uri" => uri_of(path) }, "position" => { "line" => cursor.row, "character" => utf16_length(line) } }
         ask.language = server.language
         ask.deadline = now + ANSWER_LIMIT
         ask.sent_id = request(server, "textDocument/signatureHelp", params)
@@ -1128,7 +1131,7 @@ module Carat
         i = 0
         while i < @buffers.count
           buffer = @buffers.buffer_at(i)
-          sync_buffer(server, buffer) if buffer.filetype == server.language && !buffer.path.empty?
+          sync_buffer(server, buffer) if buffer.filetype == server.language
           i += 1
         end
         server.versions.keys.each do |uri|
@@ -1140,7 +1143,9 @@ module Carat
 
       #: (Domain::LanguageServer, Domain::Buffer) -> void
       def sync_buffer(server, buffer)
-        uri = uri_of(buffer.path)
+        path = buffer.path_text
+        return if path.empty?
+        uri = uri_of(path)
         server.seen[uri] = server.tick
         version = server.versions[uri]
         if version.nil?

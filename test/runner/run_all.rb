@@ -12,6 +12,7 @@ require_relative "../adapters_frame_presenter"
 require_relative "../adapters_hover"
 require_relative "../adapters_key_decoder"
 require_relative "../adapters_language_gateway"
+require_relative "../adapters_pathless_language"
 require_relative "../adapters_screen_presenter"
 require_relative "../adapters_server_completions"
 require_relative "../adapters_signature"
@@ -110,6 +111,7 @@ when "adapters_frame_presenter" then AdaptersFramePresenterTest.main
 when "adapters_hover" then AdaptersHoverTest.main
 when "adapters_key_decoder" then AdaptersKeyDecoderTest.main
 when "adapters_language_gateway" then AdaptersLanguageGatewayTest.main
+when "adapters_pathless_language" then AdaptersPathlessLanguageTest.main
 when "adapters_screen_presenter" then AdaptersScreenPresenterTest.main
 when "adapters_server_completions" then AdaptersServerCompletionsTest.main
 when "adapters_signature" then AdaptersSignatureTest.main
