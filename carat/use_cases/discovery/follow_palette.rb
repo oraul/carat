@@ -21,7 +21,8 @@ module Carat
     # selects the first, and a changed text or selection reopens the
     # float: a bordered menu titled "Commands" near the top of the editor,
     # the rows around the selection, each the name, the key, and the
-    # description in columns, "No match" when nothing matches.
+    # description in columns measured in cells, "No match" when nothing
+    # matches.
     class FollowPalette
       Z = 960
       MAX_ROWS = 15
@@ -149,25 +150,19 @@ module Carat
           line << pad(palette.names[entry], NAME_WIDTH)
           line << pad(palette.keys[entry], KEY_WIDTH)
           line << palette.descriptions[entry]
-          lines << cut(line, width)
+          lines << Domain::DisplayWidth.cut(line, width)
           r += 1
         end
         lines
       end
 
-      # The text cut to the width less one, then padded with spaces to
-      # the width.
+      # The text cut to the width less one in cells, then padded with
+      # spaces to the width, so at least one space follows it.
       #: (String, Integer) -> String
       def pad(text, width)
-        cell = cut(text, width - 1)
-        used = Domain::DisplayWidth.text_width(cell, 0)
-        cell + " " * (width - used)
-      end
-
-      #: (String, Integer) -> String
-      def cut(text, width)
-        return text if Domain::DisplayWidth.text_width(text, 0) <= width
-        text[0, width].to_s
+        cell = Domain::DisplayWidth.fit(text, width - 1)
+        cell << " "
+        cell
       end
     end
   end

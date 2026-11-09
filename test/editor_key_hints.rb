@@ -60,6 +60,19 @@ module EditorKeyHintsTest
     false
   end
 
+  # The cells of the float's widest row.
+  def self.widest(h)
+    lines = hint_lines(h)
+    most = 0
+    i = 0
+    while i < lines.length
+      w = Carat::Domain::DisplayWidth.text_width(lines[i].to_s, 0)
+      most = w if w > most
+      i += 1
+    end
+    most
+  end
+
   def self.main
     t = Carat::Testing.new("editor_key_hints")
 
@@ -106,6 +119,20 @@ module EditorKeyHintsTest
     h = session("", 12, "<C-w>", 1)
     floats = h.state.tab.floats
     t.assert_equal([1, 9, true], [floats.count, floats.at(0).window.height, floats.at(0).window.width > 40], "Ctrl-W hints fill several columns of the room")
+
+    # A hint row of wide or combining characters is cut to the float's
+    # width in cells, a wide character that would pass it dropped (77 of
+    # 78 cells after "y  "); a group name is the text, since a project file
+    # reads no remap. Rows are [label, the group name of <leader>xy,
+    # [the widest row's cells, the float's width, floats]].
+    t.table([
+      ["a group name of fifty wide characters", "あ" * 50, [77, 78, 1]],
+      ["a group name of wide characters with combining marks", "あ\u0301" * 50, [77, 78, 1]],
+      ["a group name of letters with combining marks fits whole", "e\u0301" * 30, [33, 33, 1]]
+    ]) do |name|
+      h = session("keymap.normal <leader>xya cursor.up\nkeymap.normal <leader>xb cursor.down\nkeymap.group <leader>xy " + name.to_s, 24, "<Space>x", 1)
+      [widest(h), h.state.tab.floats.count == 0 ? 0 : h.state.tab.floats.at(0).window.width, h.state.tab.floats.count]
+    end
 
     h = session("keymap.normal <leader>x cursor.down\nkeymap.normal <leader>xa cursor.up", 24, "<Space>x", 1)
     t.assert_equal([0, 1], [h.state.tab.floats.count, h.state.window.cursor.row], "a prefix that is also bound shows no hints and timeoutlen resolves it")
