@@ -1648,6 +1648,52 @@ echo agents >> README.md
 commit "docs: rules"
 expect "gates: docs passes with CLAUDE.md and README.md" 0 "ok   docs" gates docs
 
+# A spec change touches README.md and docs/architecture.md, a process
+# change CLAUDE.md, or the proposal says why each stays.
+spec_file() {
+  mkdir -p "$1"
+  printf '## ADDED Requirements\n\n### Requirement: Ghosts\n\n#### Scenario: Lint refuses a ghost\n\n#### Scenario: Tab completes a word\n\n## REMOVED Requirements\n\n### Requirement: Old\n\n#### Scenario: An old thing\n' > "$1/spec.md"
+}
+fresh docspec
+spec_file openspec/changes/c/specs/a
+echo "# Proposal" > openspec/changes/c/proposal.md
+commit "feat: spec"
+expect "gates: docs refuses a spec change without README.md" 1 "a spec changed, but README.md did not" gates docs
+expect "gates: docs refuses a spec change without docs/architecture.md" 1 "a spec changed, but docs/architecture.md did not" gates docs
+printf -- '- README.md: unchanged,\n' >> openspec/changes/c/proposal.md
+commit "docs: no reason"
+expect "gates: docs refuses an unchanged line without a reason" 1 "a spec changed, but README.md did not" gates docs
+printf -- '- README.md: unchanged, no key changes\n- `docs/architecture.md`: unchanged, no layer changes\n' >> openspec/changes/c/proposal.md
+commit "docs: say why"
+expect "gates: docs passes a spec change whose proposal says why each doc stays" 0 "ok   docs" gates docs
+fresh docspec2
+spec_file openspec/changes/archive/2026-01-01-c/specs/a
+echo x >> README.md
+echo x > docs/architecture.md
+commit "feat: archived spec with docs"
+expect "gates: docs passes an archived spec change with README.md and docs/architecture.md" 0 "ok   docs" gates docs
+fresh docproc
+echo "# a note" >> Makefile
+commit "build: note"
+expect "gates: docs refuses a process file change without CLAUDE.md" 1 "a process file changed, but CLAUDE.md did not" gates docs
+mkdir -p openspec/changes/c
+printf '# Proposal\n\n- CLAUDE.md: unchanged, a comment only\n' > openspec/changes/c/proposal.md
+commit "docs: say why"
+expect "gates: docs passes a process file change whose proposal says why CLAUDE.md stays" 0 "ok   docs" gates docs
+
+fresh scenarios
+spec_file openspec/changes/c/specs/a
+echo 't.assert_equal(1, 1, "lint refuses a ghost")' > test/a.rb
+commit "feat: spec"
+expect "gates: scenarios refuses a scenario no test names and names it" 1 'scenario "Tab completes a word" is named by no test' gates scenarios
+echo "# Scenario: Tab completes a word" >> tools/tools_test.sh
+commit "test: name it"
+expect "gates: scenarios passes when tests name each added scenario, a removed one left out" 0 "ok   scenarios: 2 scenarios named by tests" gates scenarios
+fresh scenarios2
+spec_file openspec/changes/archive/2026-01-01-c/specs/a
+commit "feat: archived spec"
+expect "gates: scenarios reads an archived delta spec" 1 'scenario "Lint refuses a ghost" is named by no test' gates scenarios
+
 fresh snapshots
 echo out > test/gone.rb.expected
 commit "test: snapshot"

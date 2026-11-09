@@ -16,7 +16,13 @@
 #   docs       files added, moved, or removed under the source roots need the
 #              code map; make targets or agent, command, or workflow files
 #              added or removed need CLAUDE.md; the default configuration, the
-#              compatibility table, make targets, or process files need README.md
+#              compatibility table, make targets, or process files need README.md;
+#              a spec change needs README.md and docs/architecture.md, and a
+#              change to agents, workflows, commands, the Makefile, or the
+#              gates, run state, or guard script needs CLAUDE.md, unless a
+#              proposal in the diff holds "- DOC: unchanged, REASON"
+#   scenarios  every ADDED or MODIFIED scenario of a delta spec in the diff is
+#              named, in any case, by a file under test/ or tools/tools_test.sh
 #   cases      a branch changing a code line (not blank, not a comment) of a
 #              shell script under tools/ other than tools_test.sh adds or
 #              changes an expect case in tools/tools_test.sh
@@ -40,7 +46,8 @@
 #              make it the run state), has the template's shape, no comment,
 #              angle bracket, empty bullet, footer, URL, email, session id, or
 #              model name, and a Testing line naming the security review
-#   static     trailer, content, snapshots, docs, cases, attribution (make gates)
+#   static     trailer, content, snapshots, docs, scenarios, cases, attribution
+#              (make gates)
 #   origin     no risky configuration key; an origin/ base equal to origin's
 #   pre-push   origin, static, security, stages (tools/run_state.sh push)
 #   backup     trailer, content (tools/run_state.sh backup, with BASE the
@@ -236,7 +243,54 @@ gate_docs() {
   if { [ $target_change -eq 1 ] || [ -n "$visible" ]; } && ! has README.md; then
     bad "a command, binding, option, make target, or the process changed, but README.md did not"
   fi
+  # Doc prose a change leaves behind: a spec change touches README.md and
+  # docs/architecture.md, a process change CLAUDE.md, or a proposal in the
+  # diff says why one stays ("- README.md: unchanged, REASON").
+  proposals=$(printf '%s\n' "$names" | grep -E '^openspec/changes/(archive/)?[^/]+/proposal\.md$')
+  stays() {
+    for p in $proposals; do
+      git show "HEAD:$p" 2>/dev/null | grep -q -E "^- \`?$(printf '%s' "$1" | sed 's/\./\\./g')\`?: unchanged, [^ ]" && return 0
+    done
+    return 1
+  }
+  specs=$(printf '%s\n' "$names" | grep -E '^openspec/(specs/[^/]+/spec\.md|changes/.+/specs/.+\.md)$')
+  if [ -n "$specs" ]; then
+    for doc in README.md docs/architecture.md; do
+      has "$doc" || stays "$doc" ||
+        bad "a spec changed, but $doc did not; update it or say why in the proposal: - $doc: unchanged, REASON"
+    done
+  fi
+  process_change=$(printf '%s\n' "$names" |
+    grep -E '^(\.claude/(agents/|workflows/|commands/[^/]*$)|Makefile$|tools/(gates|run_state|agent_guard)\.sh$)')
+  if [ -n "$process_change" ] && ! has CLAUDE.md && ! stays CLAUDE.md; then
+    bad "a process file changed, but CLAUDE.md did not; update it or say why in the proposal: - CLAUDE.md: unchanged, REASON"
+  fi
   [ $failed -ne $start ] || ok "map, CLAUDE.md, and README.md"
+}
+
+# Every ADDED or MODIFIED scenario of a delta spec in the diff, archived or
+# not, is named (in any case) by a file under test/ or by tools/tools_test.sh
+# at HEAD, in a label or a comment.
+gate_scenarios() {
+  gate=scenarios
+  start=$failed
+  count=0
+  deltas=$(git diff --name-only "$base...HEAD" | grep -E '^openspec/changes/.+/specs/.+\.md$')
+  for spec in $deltas; do
+    found=$(git show "HEAD:$spec" 2>/dev/null | awk '
+      /^## / { keep = ($0 ~ /^## (ADDED|MODIFIED) /) }
+      keep && /^#### Scenario:/ { sub(/^#### Scenario:[ \t]*/, ""); sub(/[ \t]+$/, ""); print }')
+    [ -n "$found" ] || continue
+    while IFS= read -r scenario; do
+      [ -n "$scenario" ] || continue
+      count=$((count + 1))
+      git grep -q -i -F -e "$scenario" HEAD -- test tools/tools_test.sh 2>/dev/null ||
+        bad "$spec: scenario \"$scenario\" is named by no test under test/ or in tools/tools_test.sh"
+    done <<EOF
+$found
+EOF
+  done
+  [ $failed -ne $start ] || ok "$count scenarios named by tests"
 }
 
 # The shell scripts under tools/ whose diff from the base changes a line that is
@@ -443,6 +497,7 @@ case "$target" in
   content) gate_content ;;
   snapshots) gate_snapshots ;;
   docs) gate_docs ;;
+  scenarios) gate_scenarios ;;
   cases) gate_cases ;;
   attribution) gate_attribution ;;
   origin) gate_origin ;;
@@ -451,8 +506,8 @@ case "$target" in
   pushes) gate_pushes ;;
   records) gate_records ;;
   pr-body) gate_pr_body "$body" ;;
-  static) gate_trailer; gate_content; gate_snapshots; gate_docs; gate_cases; gate_attribution ;;
-  pre-push) gate_origin; gate_trailer; gate_content; gate_snapshots; gate_docs; gate_cases; gate_security; gate_stages ;;
+  static) gate_trailer; gate_content; gate_snapshots; gate_docs; gate_scenarios; gate_cases; gate_attribution ;;
+  pre-push) gate_origin; gate_trailer; gate_content; gate_snapshots; gate_docs; gate_scenarios; gate_cases; gate_security; gate_stages ;;
   backup) gate_trailer; gate_content ;;
   passed) gate_passed ;;
   merge)

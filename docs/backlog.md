@@ -972,7 +972,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: the mode list at the top of `tools/gates.sh` (line 41 at `package-clean`), which says pre-push is static, security, stages. Quality advisory of `package-clean`. At 38628bb the header still omits that `gate_attribution` is left out of the pre-push group (`tools/gates.sh` line 455, periodic quality). Queued in `merge-gate-tidy`.
 - Why it matters: static now adds the attribution gate, which pre-push deliberately leaves out (the gates stage runs it), so a reader trusting the header expects a check the push never makes.
-- Fix outline: list pre-push as trailer, content, snapshots, docs, security, stages, noting attribution runs through the gates stage.
+- Fix outline: list pre-push as origin, trailer, content, snapshots, docs, scenarios, cases, security, stages, noting attribution runs through the gates stage.
 
 ## The spec preview of a failed change is deleted by the next change's
 
@@ -1844,11 +1844,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: after 20 tries the loop falls through, so a slow runner surfaces as an unrelated supersede failure.
 - Fix outline: fail with a message naming the stage when `stage.slow` never reads `running`. Queued in `check-runner-safety`.
 
-## The gateway cancels a request in three copies
+## The gateway cancels a request in four copies
 
-- Where: `cancel_hover` in `carat/adapters/json_rpc_language_gateway.rb` line 663 at 78078ad, beside `cancel` and `cancel_resolve`. Quality advisory in `quick-docs`. `parameter-info` added the shared private `cancel_request(language, id)`, which its `cancel_signature` calls; the three older copies do not yet. Raised again at 38628bb (periodic quality). Queued in `signature-tidy`.
-- Why it matters: each looks up the server, sends `$/cancelRequest`, and zeroes the id, so a fix to one (a crashed server, a stale id) can miss the other two.
-- Fix outline: call the existing `cancel_request(language, id)` from the three, with the hover, completion, and resolve cancellation rows in `test/adapters_hover.rb` and `test/adapters_server_completions.rb` unchanged.
+- Where: four copies in `carat/adapters/json_rpc_language_gateway.rb`: `cancel_hover` (line 663 at 78078ad), `cancel`, `cancel_resolve`, and `cancel_symbols` (line 795 at df4654c), beside the shared private `cancel_request(language, id)` (line 867 at df4654c) that `parameter-info` added for `cancel_signature`; none of the four calls it yet. Quality advisory in `quick-docs` and in `breadcrumbs`, raised again at 38628bb and df4654c (periodic quality). Queued in `signature-tidy`.
+- Why it matters: each looks up the server, sends `$/cancelRequest`, and zeroes the id, so a fix to one (a crashed server, a stale id) can miss the other three.
+- Fix outline: call the existing `cancel_request(language, id)` from the four (`cancel_request(ask.language, ask.sent_id)` then clearing `sent_id` in `cancel_symbols`), with the hover, completion, and resolve cancellation rows in `test/adapters_hover.rb` and `test/adapters_server_completions.rb` unchanged.
 
 ## The documentation floats copy the widest-row loop
 
@@ -2080,7 +2080,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The signature gateway copies the hover forget and position steps
 
-- Where: `carat/adapters/json_rpc_language_gateway.rb` line 743 (forget_signature against forget_hover at 646) and line 780 (send_signature's position params against send_hover's at 676), at c1b3a12. Queued in `signature-tidy`, beside the entry The gateway cancels a request in three copies. Raised again at 38628bb (periodic quality).
+- Where: `carat/adapters/json_rpc_language_gateway.rb` line 743 (forget_signature against forget_hover at 646) and line 780 (send_signature's position params against send_hover's at 676), at c1b3a12. Queued in `signature-tidy`, beside the entry The gateway cancels a request in four copies. Raised again at 38628bb (periodic quality).
 - Why it matters: two copies of the same steps drift when one request's lifecycle changes.
 - Fix outline: one private position-params step for both sends and one forget step for both requests.
 
@@ -2583,12 +2583,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: both compare the same string literals for the mode, so a new mode or rule must change two layers.
 - Fix outline: one `TabPage` predicate taking the extra file window count (`winbar?(mode, added)`), called from both, comparing against named constants beside `Options::BREADCRUMBS`.
 
-## The symbol cancel repeats the gateway's cancel_request
-
-- Where: `cancel_symbols` in `carat/adapters/json_rpc_language_gateway.rb` line 789 at the `breadcrumbs` change, beside `cancel_request` (line 861) that `cancel_signature` uses; quality advisory of `breadcrumbs`.
-- Why it matters: it inlines the server lookup and the `$/cancelRequest` notify, two places to change.
-- Fix outline: call `cancel_request(ask.language, ask.sent_id)`, then clear `sent_id`.
-
 ## A restarted server is never asked again for the same text's symbols
 
 - Where: `forget_symbols` in `carat/adapters/json_rpc_language_gateway.rb` line 757 at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
@@ -2936,3 +2930,69 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tokens_of` in `carat/domain/docs_text.rb` line 111 (per row, from styles) and `copy_spans` at line 83 (per wrapped piece), at the `quick-docs-styles` change. Quality advisory in `quick-docs-styles`.
 - Why it matters: formatting costs rows times spans, up to 100 rows times thousands of token quads, on every completion selection change.
 - Fix outline: walk the quads once with a cursor, since `wrap` appends them in row order, or keep a per-row start index.
+
+## A pathless buffer reaches nil.empty? in the language gateway
+
+- Where: `carat/adapters/json_rpc_language_gateway.rb` lines 556, 694, 847, and 1131 (`buffer.path.empty?` and `uri_of(buffer.path)`), where `Buffer#path` is `String?` (`carat/domain/buffer.rb` line 63), at df4654c. Periodic quality. Queue item `docs-nil-path` (T0).
+- Why it matters: a pinned docs split or a scratch given `:set filetype=ruby` while a ruby server runs calls `empty?` on nil at the next sync or request, a crash; `send_symbols` and `RequestHover` already use `path_text`.
+- Fix outline: read `path_text` at the four sites, with an `adapters_language_gateway` row setting the filetype in a pinned docs buffer.
+
+## Lint does not catch a message literal in a second file or a def shadowing a reader
+
+- Where: `test/lint.rb`; instances at `carat/use_cases/plugins/plugin_router.rb` line 61 and `carat/use_cases/ex/execute_ex.rb` line 61 (the E492 literal, periodic df4654c), and the private `def hover` over `attr_reader :hover` in the gateway (blocker at 13de2674e59f). Queue item `implement-contracts-c`.
+- Why it matters: each reached the quality review as a blocker or advisory, at quality first pass 17 of 49.
+- Fix outline: a lint rule per pattern with a case each; move E492 to `Domain::Messages`.
+
+## The documentation formatter's periodic findings
+
+- Where, at df4654c: `carat/domain/markdown_text.rb` line 299 (`inline` drops emphasis markers inside a code span; `test/domain_markdown_text.rb` line 80 asserts the garbled span), line 66 with line 76 and `carat/use_cases/docs/format_docs.rb` line 19 (the two-column fence indent spelled three times), line 202 (`heading?` and `heading_text` repeat a scan), line 35 (`rows` used only by its test, module comment at line 9 and `docs/codebase-map.md` line 602 stale), line 387 (`wrapped` mutates and returns `out`); `carat/domain/docs_text.rb` line 111 and line 83 (rows times quads, the existing scan entry); `carat/domain/buffer.rb` line 85 (`styles` a bare `Array[untyped]` shared by reference from `show_completion_docs.rb` line 111, `show_hover.rb` line 94, `pin_hover.rb` line 57, which also repeat the float buffer build); comment wraps at `show_completion_docs.rb` line 25, `show_hover.rb` line 21, `pin_hover.rb` line 15. Periodic quality, one blocking. Queue item `hover-tidy`.
+- Why it matters: `**kwargs` in a code span shows as kwargs; the indent must agree in three places for tokens to land; formatting is quadratic on every selection change.
+- Fix outline: keep marker bytes literal inside a code span and fix the row, one `CODE_INDENT`, one heading helper, drop `rows` into the test, a `SyntaxLines` list and one `Buffer.from_docs` (then drop the `styles` line of `UNTYPED_SHARED` in `test/lint.rb`, which exempts it from the shared list rule), rewrap the comments.
+
+## The map and architecture lag plugin API 2.4, FormatDocs, and Config
+
+- Where, at df4654c: `docs/codebase-map.md` line 92 (Config lacks `count`), line 517 (VERSION 2.3, `carat/plugin_api.rb` line 12 is 2.4), line 523 and the area 15 and 16 bullets (PluginHost, Paths, PluginEntries, PluginEntry, Tree methods); `docs/architecture.md` line 181 (5.3 lacks `FormatDocs`, `MarkdownText`, `DocsText`). Periodic quality. Queue item `docs-index`.
+- Why it matters: CLAUDE.md keeps both in sync; drift here caused 9 of 47 quality blockers.
+- Fix outline: update the bullets and the 5.3 docs line.
+
+## The winbar rule restated in SplitWindow
+
+- Where: `winbar_after?` in `carat/use_cases/windows/split_window.rb` line 55 beside `TabPage#winbar?` (`carat/domain/tab_page.rb` line 61), at df4654c. Periodic quality. Queue item `breadcrumbs-tidy` (the untested scratch split, `test/editor_breadcrumbs.rb` line 188, is already there).
+- Why it matters: a breadcrumbs mode change must be made twice.
+- Fix outline: one `TabPage` predicate taking the mode and the windows to add.
+
+## The message history name and a doubled clear
+
+- Where: `carat/domain/editor_state.rb` line 20 and `carat/domain/notices.rb` line 76 (`history` holds a `MessageHistory`), `carat/use_cases/handle_key.rb` line 201 (`clear_message` twice per key), at df4654c. Periodic quality. Queue item `messages-tidy`.
+- Why it matters: `state.history` reads as the command history; the clear runs twice on every key.
+- Fix outline: rename to `message_history`; read the flag, clear once.
+
+## Plugin, grammar, and generator findings at df4654c
+
+- Where: `carat/use_cases/plugins/plugin_router.rb` line 44 (the register string passed uncopied), `carat/domain/manifest_check.rb` line 32 (shapes checked twice, a dead guard at line 145), `carat/use_cases/plugins/plugin_registry.rb` line 175 (`leave` repeats `cause`), `carat/use_cases/plugins/plugin_events.rb` line 142 (a resize event built with no subscriber), `carat/plugins/hello/plugin.rb` line 11 (stale comment, the action spelled beside `GREET`), `carat/plugins/registry.rb` line 2 and the `default_config.rb` header (generator names `spin run`), `test/lint.rb` line 845 (plugins exempt from keyword constructors, unstated in CLAUDE.md), comment wraps at `carat/plugin_api.rb` line 480 and 732, `window_requests.rb` lines 28 and 67, `ui_requests.rb` line 15, `carat/domain/plugin_ui.rb` line 7; `carat/domain/command_grammar.rb` line 138 (`accept` and `accept_visual` repeat a prefix), `carat/adapters/input_controller.rb` line 137 (`next_timeout` ignores `state`). Periodic quality advisories. Queue item 39 (backlog items by domain).
+- Why it matters: the router breaks the strings-copied plugin rule; the rest are copies, dead code, and drift.
+- Fix outline: `command.register.dup`; one shapes result; pop then set from `cause`; return unless `wanted?("resize")`; reword and key by `GREET`; generator writes `make gen-config`; state the exemption or give `Tree` keywords; rewrap; one shared grammar step; drop the parameter.
+
+## The merger profile may set BASE before the merge gates
+
+- Where: `tools/agent_guard.sh` line 610, at df4654c. Periodic security Low (6). Queue item `guard-lows`.
+- Why it matters: `BASE=HEAD` skips the origin ref check and empties the trailer and content scans while the gate still records gated.
+- Fix outline: admit `BASE` only for the read profile and have the merge group refuse a base other than `origin/main`, with a `tools/tools_test.sh` case.
+
+## The lint rules of implement-contracts-b rescan and reread
+
+- Where: `test/lint.rb` at the `implement-contracts-b` change: line 1120 reads `File.read(MAP)` again right after `map_problems` read it; line 1139 skips `carat/domain/default_config.rb` in the untyped parameter and shared list rules with no stated reason; line 1145 dedupes the shared list names with `pinned_names.index(name) == j` and rescans every owner per match over parallel arrays; line 1150 rescans `pinned_names` and `pinned_owners` for every assigning line and name. Quality advisories of `implement-contracts-b`.
+- Why it matters: the scans are quadratic in names per line and harder to read than the rule they enforce, the map is parsed twice per run, and an unexplained skip invites a wrong copy.
+- Fix outline: read the map once into a local passed to both checks; comment that `default_config.rb` is generated, or drop the skip if it holds neither shape; after the pin scan build one Hash from name to its owner paths (or a unique name list and `path + name` owner keys) and test membership in it in both the shared and the owned loops.
+
+## The tools test leaves the MODIFIED scenario and archived attestation paths untested
+
+- Where: `spec_file` in `tools/tools_test.sh` (line 1652 at the `implement-contracts-b` change) has no MODIFIED section, and no case attests a scenario in an archived proposal. Quality advisory of `implement-contracts-b`.
+- Why it matters: the MODIFIED branch of `gate_scenarios` and the archive path of the stays attestation in `gate_docs` can break without a failing case.
+- Fix outline: add a MODIFIED scenario to `spec_file` and a case whose attestation lives in an archived proposal under `openspec/changes/archive/`.
+
+## Architecture section 10 omits the map method-list lint rule
+
+- Where: `docs/architecture.md` line 343 at the `implement-contracts-b` change, which lists what `test/lint.rb` checks as the code map's coverage only. Quality advisory of `implement-contracts-b`.
+- Why it matters: the lint test now also checks the map's method lists, so a reader of section 10 misses why a renamed method fails lint.
+- Fix outline: say the code map's coverage and method lists.
