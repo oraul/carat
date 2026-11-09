@@ -34,10 +34,12 @@
 # --receive-pack, --exec, or --open-files-in-pager, nor grep with a short
 # option cluster holding O), branch with listing options, remote -v,
 # remote get-url origin, remote set-head origin main, fetch -q --prune
-# origin (not while origin is a local repository, local_origin),
+# origin or -q --refmap= origin MAIN_REFSPEC (not while origin is a local
+# repository, local_origin),
 # ls-remote origin with listing options and branch names, worktree add,
 # remove, list, and prune of a worktree tmp/.NAME, and checkout -q
-# --detach origin/main inside one (-C).
+# --detach origin/main inside one (-C). A tmp/.NAME that exists is a
+# worktree only when it is a linked worktree of the project (worktree).
 #   read         adds mkdir and rm under DIR; make -s, -C tmp/.NAME, the
 #                targets dev-build test-build bench-budget metrics
 #                metrics-compare bench, and PREFIX and SPINEL_CACHE_DIR at
@@ -69,7 +71,8 @@
 #                phase of check, quality, security, or bench
 # The merger alone may call the GitHub merge tool (merge_tool, below). Any
 # other profile refuses every call, and every profile refuses every call
-# while .git/config sets a RISKY_CONFIG key.
+# while .git/config sets a RISKY_CONFIG key or a fetch refspec other than
+# a clone's.
 #
 # A write target (a redirection's target, a path argument of mkdir rm cp
 # mv touch chmod, a file tool's path) has no parent step, and its real
@@ -94,6 +97,10 @@ BRANCH='^(feature|bugfix|hotfix|release|chore)/[a-z0-9][a-z0-9-]*$'
 CHANGE_NAME='^[a-z0-9][a-z0-9-]*$'
 BODY='^build/pipeline/[a-z0-9][a-z0-9-]*[.]body[.]md$'
 CLOSE_PHASES='plan implement package ci merge retro report'
+# The refspec of the green line's one fetch of main, and the fetch refspec
+# a clone sets, the one under which origin/main is origin's main.
+MAIN_REFSPEC='+refs/heads/main:refs/remotes/origin/main'
+DEFAULT_FETCH='+refs/heads/*:refs/remotes/origin/*'
 
 refuse() {
   echo "agent_guard: refused for the ${shown:-$profile} profile: $*. Each profile runs only the commands its agent needs, listed in tools/agent_guard.sh: search with the Grep or Read tool, put text that names a refused form into a file with the Write tool, and push only through tools/run_state.sh push." >&2
@@ -349,11 +356,33 @@ local_origin() {
   [ -n "$origin_url" ] && ! matches "$origin_url" '^((https?|ssh|git)://[^/]|[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:[^/])'
 }
 
-# worktree PATH: PATH is a worktree tmp/.NAME of the project.
-worktree() {
+# worktree_name PATH: PATH is named tmp/.NAME, as a worktree of the
+# project is; git worktree add and remove need no more, since git adds
+# over no repository and removes only a worktree it lists.
+worktree_name() {
   relative "$1"
   matches "$rel" '^tmp/[.][A-Za-z0-9_-]+$' || return 1
   case "$rel" in tmp/.toolchain|tmp/.spinel) return 1 ;; esac
+}
+
+# worktree PATH: PATH is a worktree tmp/.NAME of the project, where git and
+# make may run. When it exists it must be a directory, not a link, whose
+# .git file, not a link, names a worktree record of the project's own
+# repository that names it back, so it shares the project's configuration
+# and hooks, which the checks below judge: a repository branch code
+# planted at tmp/.NAME would run its own. A path absent when the guard
+# judges is admitted, so one call can add a worktree and use it; read and
+# merger create nothing there but by git worktree add.
+worktree() {
+  worktree_name "$1" || return 1
+  at=$project_real/$rel
+  [ -e "$at" ] || [ -L "$at" ] || return 0
+  [ -d "$at" ] && [ ! -L "$at" ] && [ -f "$at/.git" ] && [ ! -L "$at/.git" ] || return 1
+  common=$(git -C "$project_dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)
+  [ -n "$common" ] && common=$(cd "$common" 2>/dev/null && pwd -P) || return 1
+  record=$(sed -n '1s/^gitdir: //p' "$at/.git")
+  matches "${record#"$common"/worktrees/}" '^[A-Za-z0-9_-][A-Za-z0-9._-]*$' && [ "$record" != "${record#"$common"/worktrees/}" ] || return 1
+  [ ! -L "$record" ] && [ "$(cat "$record/gitdir" 2>/dev/null)" = "$at/.git" ] && [ "$(cat "$record/commondir" 2>/dev/null)" = ../.. ]
 }
 
 # project_or_worktree PATH: PATH is the project or a worktree tmp/.NAME.
@@ -421,7 +450,12 @@ git_form() {
         *) refuse "git remote other than -v, get-url origin, and set-head origin main" ;;
       esac ;;
     fetch)
-      options_in "-q --quiet --prune -p origin" "$@" || refuse "git fetch other than of origin without a refspec"
+      # Without a refspec, or the pinned fetch of main with no configured
+      # refspec read (--refmap=), as the green line runs it.
+      case " $* " in
+        *" $MAIN_REFSPEC "*) [ "$*" = "-q --refmap= origin $MAIN_REFSPEC" ] || [ "$*" = "--refmap= origin $MAIN_REFSPEC" ] ;;
+        *) options_in "-q --quiet --prune -p origin" "$@" ;;
+      esac || refuse "git fetch other than of origin without a refspec, or -q --refmap= origin $MAIN_REFSPEC"
       local_origin && refuse "git fetch while origin is \"$origin_url\", a local repository or a remote helper, not a hosted one" ;;
     ls-remote)
       remote=""
@@ -450,7 +484,7 @@ git_form() {
               -*) refuse "git worktree add $a" ;;
               *)
                 paths=$((paths + 1))
-                if [ $paths -eq 1 ]; then worktree "$a" || refuse "a worktree outside tmp/.NAME: $a"
+                if [ $paths -eq 1 ]; then worktree_name "$a" || refuse "a worktree outside tmp/.NAME: $a"
                 elif [ "$a" != origin/main ] || [ $paths -gt 2 ]; then refuse "a worktree of other than origin/main: $a"
                 fi ;;
             esac
@@ -462,7 +496,7 @@ git_form() {
             case "$a" in
               -f|--force) ;;
               -*) refuse "git worktree remove $a" ;;
-              *) paths=$((paths + 1)); worktree "$a" || refuse "a worktree outside tmp/.NAME: $a" ;;
+              *) paths=$((paths + 1)); worktree_name "$a" || refuse "a worktree outside tmp/.NAME: $a" ;;
             esac
           done
           [ $paths -eq 1 ] || refuse "git worktree remove of other than one worktree" ;;
@@ -818,6 +852,12 @@ export GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM
 project_dir=${CLAUDE_PROJECT_DIR:-.}
 risky=$(git -C "$project_dir" config --local --name-only --list 2>/dev/null | grep -i -E "$RISKY_CONFIG" | sort -u | tr '\n' ' ')
 [ -z "$risky" ] || refuse "every call while the repository configuration sets ${risky% }, which runs a command or redirects origin"
+# A fetch refspec other than a clone's maps another ref onto origin/main,
+# whose guard the hooks and whose gates the merge read: every call is
+# refused while one is set, before any fetch can use it.
+fetch_spec=$(git -C "$project_dir" config --local --get-all remote.origin.fetch 2>/dev/null)
+[ -z "$fetch_spec" ] || [ "$fetch_spec" = "$DEFAULT_FETCH" ] ||
+  refuse "every call while remote.origin.fetch is \"$(printf '%s' "$fetch_spec" | tr '\n' ' ')\", not $DEFAULT_FETCH; restore it with git config"
 # A hook in the hooks directory runs on a checkout, a fetch, or a commit
 # as surely as a configured one: while one other than a sample is there,
 # every call is refused.
