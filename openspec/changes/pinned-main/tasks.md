@@ -19,5 +19,5 @@
 
 ## 5. Records
 
-- [ ] 5.1 `docs/backlog.md`: remove the entries this change fixes and add the planner's entries from `build/plan/backlog.md`, with its extensions of four existing entries. Checked by `make docs-lint`.
-- [ ] 5.2 `tools/agent_guard.sh` header and the docs that describe the worktree rule, the fetch, and the merge hook. Checked by `make gates` and `make docs-lint`.
+- [x] 5.1 `docs/backlog.md`: remove the entries this change fixes and add the planner's entries from `build/plan/backlog.md`, with its extensions of four existing entries. Checked by `make docs-lint`.
+- [x] 5.2 `tools/agent_guard.sh` header and the docs that describe the worktree rule, the fetch, and the merge hook. Checked by `make gates` and `make docs-lint`.
