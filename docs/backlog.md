@@ -902,9 +902,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: three copies of one clamp must change together, and a fix to the domain's misses the two use cases.
 - Fix outline: call `state.clamp_col(row, col)` at the six call sites and delete both private methods. Listed in the queue's backlog item.
 
-## NO_COLOR reaches only the start screen
+## NO_COLOR leaves syntax, bars, and messages colored
 
-- Where: `TerminalPort#no_color?` (`carat/ports/terminal_port.rb`), read only by `EditorAssembly#open` for the start screen's glyphs (`start-screen`); `SgrTable.from_theme` and `ScreenPresenter` color every other cell from the theme.
+- Where: `TerminalPort#no_color?` (`carat/ports/terminal_port.rb`), read by `EditorAssembly#open` for the start screen's glyphs (`start-screen`) and, through `FramePresenter#plain=` (`carat/adapters/editor_assembly.rb` line 489 at 5e4c140), for the ASCII notification boxes and progress, the plain status bar, and the uncolored documentation floats and pinned split (`quick-docs-styles`); `SgrTable.from_theme` and `ScreenPresenter` color every other cell from the theme.
 - Why it matters: the `NO_COLOR` convention asks a program to add no ANSI color at all, so a user who sets it still gets syntax, status line, and message colors.
 - Fix outline: a color depth of none in `Domain::ColorDepth` chosen by `AnsiTerminal` when `NO_COLOR` is set, for which `SgrTable.sequence` emits attributes only (bold, reverse, underline), with rows in `test/adapters_screen_presenter.rb` and `docs/compatibility.md`.
 
@@ -1432,7 +1432,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Published diagnostics keep any number of URIs
 
-- Where: the `publishDiagnostics` handling of `carat/adapters/json_rpc_language_gateway.rb` (line 415 at eb63fb4). Periodic security Low (4).
+- Where: the `publishDiagnostics` handling of `carat/adapters/json_rpc_language_gateway.rb` (line 1059 at 5e4c140). Periodic security Low (4) at eb63fb4, confirmed again as a periodic security Low (3) at 5e4c140.
 - Why it matters: a server publishing for many distinct URIs grows the map without limit.
 - Fix outline: keep only the documents the gateway opened, or cap the map and drop the oldest, with a gateway row. Queued in `lsp-client-tidy`.
 
@@ -2828,3 +2828,81 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `DisplayWidth.bytes_within` in `carat/domain/display_width.rb` line 148, called only by `cut` and a test, at 6141633. Quality advisory of `palette-pad-crash`. Queue item: backlog items, needless public methods.
 - Why it matters: needless public surface, the same kind as the entry Seven more methods are public with no outside caller.
 - Fix outline: move the stray-byte rows of its test to `cut` and make `bytes_within` private to `DisplayWidth`.
+
+## A project .caratrc sets timeoutlen and undolevels without an upper bound
+
+- Where: `carat/domain/options.rb` line 187, at 5e4c140. Periodic security Low (4). Queue item `project-config-guards`.
+- Why it matters: a cloned project's `.caratrc` can set either to nine digits, so every pending key sequence waits about eleven days and undo states grow without limit.
+- Fix outline: bound both with `range_problem` as `keyhints.delay` is, or refuse them from the project file, with rows in `test/domain_options_config.rb`.
+
+## The project .caratrc is read by path after its link check
+
+- Where: `carat/adapters/rc_config_gateway.rb` line 59 (the stat refusing a link) and line 68 (the read by path), at 5e4c140. Periodic security Low (2). Queue item `project-config-guards`.
+- Why it matters: a link swapped in between the stat and the read is followed.
+- Fix outline: open once without following links and check the opened file, as `DiskFiles#read` checks regular files, with a case in `test/drivers_disk_files.rb`.
+
+## A none unbinding turns an unbound key into an empty prefix
+
+- Where: `carat/domain/keymap.rb` line 181 (`bind_owned` through `child_for`), at 5e4c140. Periodic quality blocking. Queue item `project-config-guards`.
+- Why it matters: `keymap.normal QQ none` makes an unbound `Q` a prefix, so `HandleKey` answers waiting with no deadline and `ShowKeyHints` lists `Q` with no meaning; unbinding a group's last child leaves the group waiting.
+- Fix outline: for `none` walk the path with `child?` and stop where it ends, then drop nodes left with no value and no children as `clear_owner` does, with a `test/domain_keymap.rb` row for `QQ none`.
+
+## The backlog has no byte budget
+
+- Where: `docs/backlog.md` (301 KB, 471 entries at 5e4c140, up from 151 KB over 20 changes) and `BUDGETS` in `tools/docs_lint.sh`. Periodic quality. Queue item `docs-index`.
+- Why it matters: no agent can read it whole to find fixed entries or avoid recording a finding twice.
+- Fix outline: give it a budget in `BUDGETS` and fold its entries per area, removing those no longer true.
+
+## Key hints repeat the grammar-mode test
+
+- Where: `carat/use_cases/discovery/show_key_hints.rb` line 61 and `HandleKey#grammar_mode?` in `carat/use_cases/handle_key.rb` line 195, at 5e4c140. Periodic quality. Queue item `discoverability-tidy`.
+- Why it matters: a mode added to one test and not the other shows hints that disagree with the grammar.
+- Fix outline: one `Mode.grammar?(mode)` in `carat/domain/mode.rb` called by both.
+
+## The map names EditorState's show twice and lacks Tree readers
+
+- Where: `docs/codebase-map.md` line 117 (a second `show` before `list_message?`) and line 558 (area 16's Tree line without `expanded?`, `root`, `marked`, `count`, `node`), at 5e4c140. Periodic quality. Queue item `docs-index`.
+- Why it matters: the map is where every agent starts.
+- Fix outline: drop the second `show`; name the readers or say the list is the operations only.
+
+## FramePresenter keeps two dead width wrappers
+
+- Where: `display_col` and `display_width` in `carat/adapters/frame_presenter.rb` line 299, called only by `test/adapters_frame_presenter.rb` line 317, at 5e4c140. Periodic quality. Queue item 38 (dead public methods).
+- Why it matters: public surface the paint path never uses.
+- Fix outline: delete both and have the test call `DisplayWidth.column(line, line.length, 4)`.
+
+## The window requests comments are stale since the slots change
+
+- Where: `open_file` in `carat/use_cases/plugins/window_requests.rb` line 145 and the class comment, lines 24 to 32, at 5e4c140. Periodic quality. Queue item `slots-tidy`.
+- Why it matters: `unfix_size` at line 162 also drops a bottom panel's fixed height, and scratch buffers no longer open only in side windows.
+- Fix outline: say the slot window loses its fixed size and rewrap the class comment.
+
+## :registers cuts wide text by characters
+
+- Where: `carat/use_cases/ex/register_command_handler.rb` line 70, at 5e4c140; `test/editor_registers.rb` has no wide-text row. Periodic quality. Queue item `buffer-list-tidy`.
+- Why it matters: a register of wide characters runs to twice the screen width, the mistake `palette-pad-crash` fixed in the palette.
+- Fix outline: cut with `Domain::DisplayWidth.cut` and count down by `DisplayWidth.text_width`, with a wide-register row.
+
+## Explorer and icon tests pass raw table cells
+
+- Where: `test/editor_explorer.rb` lines 114, 188, 235, 257, 297; `test/plugins_explorer.rb` lines 152 and 162; `test/domain_icons.rb` lines 53 and 89, at 5e4c140. Periodic quality. Queue item 38 (test hygiene).
+- Why it matters: the CLAUDE.md typed-table rule; line 137 of the first file already converts.
+- Fix outline: convert each cell with `.to_s`, `.to_i`, or `== true` before it reaches the library.
+
+## The explorer keeps a stale followed path after a directory rename
+
+- Where: `finish_rename` in `carat/plugins/explorer/plugin.rb` line 420, against `Tree#moved` in `tree.rb` line 107; the duplicate `tree.mark(@followed)` in `show_tree` line 186, at 5e4c140. Periodic quality. Queue item 38 (explorer).
+- Why it matters: renaming the open file's directory leaves the old, missing path marked and revealed until a focus event; the mark has two owners.
+- Fix outline: apply the prefix rule to `@followed` or set it from `tree.marked`, drop the duplicate mark, with an `editor_explorer` row.
+
+## Explorer test helpers and icon tables
+
+- Where: `tree_over` in `test/plugins_explorer.rb` line 64 (unused parameter; an assignment inside an argument at 127; a ternary assert at 85); `Icons.table` and `NAMES` in `carat/domain/icons.rb` lines 132 and 13; DisplayWidth rows in `test/domain_icons.rb` lines 78 to 92, at 5e4c140. Periodic quality. Queue item 38.
+- Why it matters: a key added to a table without `NAMES` goes untested; tests of one module sit in another's file.
+- Fix outline: drop the parameter and split the statements; make `table` private and derive names from the tables; move the rows to `test/domain_display_width.rb`.
+
+## The visual cursor cell ignores documentation styles
+
+- Where: the visual-mode cursor cell in `FramePresenter` (`token_group` over `buffer.syntax_cache.lookup`, `carat/adapters/frame_presenter.rb` near line 692), which reads only the syntax cache, at the `quick-docs-styles` change.
+- Why it matters: in the pinned `[docs]` split, the cell under the cursor in visual mode takes the plain text's group instead of its markup group, unlike the cells around it.
+- Fix outline: fall back to `buffer.style_at(row, line)` when the cache is inactive and the buffer is styled, as `paint_window` does, with a row in `test/adapters_hover.rb`.
