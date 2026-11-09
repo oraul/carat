@@ -33,4 +33,5 @@ ok   turned on
 ok   a later line wins
 ok   takes true or false
 ok   the shipped configuration turns the cursor line on
-domain_options_config: 35 passed, 0 failed
+ok   keyhints.delay takes 0 to 10000 and keeps the earlier value otherwise
+domain_options_config: 36 passed, 0 failed

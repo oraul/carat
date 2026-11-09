@@ -165,6 +165,9 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `buffer.delete` | normal | Delete the current buffer as `:bd` does, or with a count the buffer of that number |
 | `docs.hover` | normal | Ask the language server for the documentation under the cursor and show it in a float; while the float shows, enter it |
 | `docs.pin` | normal | Pin the documentation float into a horizontal split over a scratch copy, closing the float |
+| `palette.open` | normal | Open the command palette: every action and ex command with its key and description, filtered as you type at the `>` prompt, Enter runs the selected one |
+| `palette.next` | cmdline | Select the next palette entry; nothing outside the palette |
+| `palette.previous` | cmdline | Select the previous palette entry; nothing outside the palette |
 
 ## Plugins
 

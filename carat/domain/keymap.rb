@@ -48,6 +48,9 @@ module Carat
       # The action that removes a binding.
       NONE = "none"
 
+      # The keymap line that names a normal-mode prefix for the key hints.
+      GROUP = "group"
+
       # The most keys one binding may hold: the trie is one node deep per
       # key, and removing a plugin's bindings walks it recursively, so a
       # hostile binding of a million keys would overflow the stack.
@@ -145,6 +148,7 @@ module Carat
           return "a plugin cannot set keymap.leader" unless owner.empty?
           return Keymap.leader_problem(words)
         end
+        return name_group(line, leader) if name == GROUP
         mode = Mode.from_name(name)
         return "unknown mode #{name}" if mode.nil?
         return "#{line.key} takes keys and an action" unless words.length == 2
@@ -226,6 +230,20 @@ module Carat
         end
       end
 
+      # The node the keys lead to in the mode's trie, an empty node when
+      # they lead nowhere, so the answer is never nil.
+      #: (Symbol, Array[Integer]) -> KeymapNode
+      def node_at(mode, codes)
+        node = root(mode)
+        i = 0
+        while i < codes.length
+          return KeymapNode.new unless node.child?(codes[i])
+          node = node.child_for(codes[i])
+          i += 1
+        end
+        node
+      end
+
       #: (Symbol, Array[Integer]) -> KeymapMatch
       def lookup(mode, codes)
         node = root(mode)
@@ -247,6 +265,27 @@ module Carat
       end
 
       private
+
+      # Names the normal-mode prefix of a keymap.group line, creating its
+      # nodes, and returns the problem, "" when there is none.
+      #: (RcLine, String) -> String
+      def name_group(line, leader)
+        words = line.words
+        return "#{line.key} takes keys and a name" unless words.length == 2
+        parsed = KeyNotation.parse(words[0].to_s, leader)
+        return parsed.error.to_s unless parsed.ok?
+        return "empty key" if parsed.codes.empty?
+        return "more than #{MAX_KEYS} keys" if parsed.codes.length > MAX_KEYS
+        node = root(Mode::NORMAL)
+        codes = parsed.codes
+        i = 0
+        while i < codes.length
+          node = node.child_for(codes[i])
+          i += 1
+        end
+        node.group = words[1].to_s
+        ""
+      end
 
       #: (KeymapNode, String) -> void
       def clear_owner(node, owner)

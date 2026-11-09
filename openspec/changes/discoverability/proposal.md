@@ -6,7 +6,7 @@ Carat has over 250 actions, 45 ex commands, and leader, `g`, `z`, and `Ctrl-W` k
 
 ## What Changes
 
-- Key hints: when a key that begins longer bindings waits `option.keyhints.delay` milliseconds (300 by default, 0 turns hints off) with no further key, a bordered float at the bottom right lists each next key with its action's description, or the group name of a key that begins more bindings, in columns when the list is taller than the screen. The next key, Esc included, closes it and is handled as usual; a binding still pending after it waits the delay again.
+- Key hints: when keys that only begin longer bindings (the lone prefixes that wait with no time limit) wait `option.keyhints.delay` milliseconds (300 by default, 0 turns hints off) with no further key, a bordered float at the bottom right lists each next key with its action's description, or the group name of a key that begins more bindings, in columns when the list is taller than the screen. The next key, Esc included, closes it and is handled as usual; a binding still pending after it waits the delay again.
 - Group names: a new configuration line `keymap.group <keys> <name>` names a normal-mode prefix for the hints; the shipped defaults name the leader groups (windows, quit, files, buffers, docs), `g`, `z`, and `Ctrl-W`.
 - Command palette: `<leader>p` and `<F1>` in normal mode open a prompt `>` on the command line and a float listing every action (the core's and the enabled plugins') and every ex command, each with its normal-mode key and its description. Typing filters the list by a fuzzy match on the name and the description, best match first; `Ctrl-N` and `Ctrl-P` move the selection; Enter runs the selected entry as if its key had been pressed (an ex command as if typed after `:`), and Esc closes the palette.
 - Ex commands get a short description each, as the actions have, held beside the ex command table.
@@ -32,7 +32,7 @@ None.
 
 ## Impact
 
-- Domain: `KeymapNode` gains a group name and a list of its child keys; `Keymap` reads `keymap.group` lines and answers the node of a prefix; `Options` gains `keyhints_delay`; new `KeyHints`, `Palette`, and `FuzzyMatch`.
+- Domain: `KeymapNode` gains a group name and a list of its child keys; `Keymap` reads `keymap.group` lines and answers the node of a prefix; `Options` gains `keyhints_delay`; new `KeyHints` and `Palette`; the palette reuses the completion popup's `FuzzyMatch`.
 - Use cases: new `ShowKeyHints`, `HideKeyHints`, `OpenPalette`, `FollowPalette`, `PaletteHandler`; `HandleKey` closes the hints and follows the palette; `ExecuteCommandLine` runs the palette's entry; `ExTable` describes each command.
 - Adapters: `InputController` times the hints; `FramePresenter` shows the `>` prompt; `EditorAssembly` wires the pieces.
 - Configuration: `config/default.caratrc` (the option, the group lines, three bindings) and its generated mirror.

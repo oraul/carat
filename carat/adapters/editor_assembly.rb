@@ -131,10 +131,17 @@ require_relative "../use_cases/docs/show_hover"
 require_relative "../use_cases/docs/follow_hover"
 require_relative "../use_cases/docs/pin_hover"
 require_relative "../domain/signature_request"
+require_relative "../domain/key_hints"
+require_relative "../domain/palette"
 require_relative "../use_cases/docs/request_signature"
 require_relative "../use_cases/docs/show_signature"
 require_relative "../use_cases/docs/follow_signature"
+require_relative "../use_cases/discovery/show_key_hints"
+require_relative "../use_cases/discovery/hide_key_hints"
+require_relative "../use_cases/discovery/open_palette"
+require_relative "../use_cases/discovery/follow_palette"
 require_relative "../use_cases/actions/docs_handler"
+require_relative "../use_cases/actions/palette_handler"
 require_relative "../use_cases/actions/plugin_action_handler"
 require_relative "../use_cases/dispatcher"
 require_relative "../use_cases/handle_key"
@@ -266,6 +273,12 @@ module Carat
       attr_reader :request_signature #: UseCases::RequestSignature
       attr_reader :show_signature #: UseCases::ShowSignature
       attr_reader :follow_signature #: UseCases::FollowSignature
+      attr_reader :key_hints #: Domain::KeyHints
+      attr_reader :show_key_hints #: UseCases::ShowKeyHints
+      attr_reader :hide_key_hints #: UseCases::HideKeyHints
+      attr_reader :palette #: Domain::Palette
+      attr_reader :open_palette #: UseCases::OpenPalette
+      attr_reader :follow_palette #: UseCases::FollowPalette
 
       #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, files: Ports::FilePort, config: Ports::ConfigPort, processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, completions: Ports::CompletionPort, plugin_list: Array[untyped]) -> void
       def initialize(terminal:, clock:, files:, config:, processes:, messages:, completions:, plugin_list:)
@@ -299,6 +312,8 @@ module Carat
         @status_slots = Domain::StatusSlots.new
         @hover = Domain::HoverRequest.new
         @signature = Domain::SignatureRequest.new
+        @key_hints = Domain::KeyHints.new
+        @palette = Domain::Palette.new
         @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots, completion: completions.request, clock: clock, hover: @hover, signature: @signature)
         @arrange_view = UseCases::ArrangeView.new(cache: @cache, buffers: @buffers)
         @actions = UseCases::ActionTable.new
@@ -395,7 +410,7 @@ module Carat
         @enter_command_line = UseCases::EnterCommandLine.new(plugin_ui: @plugin_ui, search_prompt: @search_prompt, command_history: @command_history)
         @edit_command_line = UseCases::EditCommandLine.new(preview_search: @preview_search)
         @cancel_command_line = UseCases::CancelCommandLine.new(plugins: @plugins, plugin_ui: @plugin_ui, search_prompt: @search_prompt, last_search: @last_search)
-        @execute_command_line = UseCases::ExecuteCommandLine.new(runner: @runner, plugins: @plugins, plugin_ui: @plugin_ui, registers: @registers, search_prompt: @search_prompt, last_search: @last_search, command_history: @command_history, search_history: @search_history)
+        @execute_command_line = UseCases::ExecuteCommandLine.new(runner: @runner, plugins: @plugins, plugin_ui: @plugin_ui, registers: @registers, search_prompt: @search_prompt, last_search: @last_search, command_history: @command_history, search_history: @search_history, palette: @palette)
         erase_command_line = UseCases::EraseCommandLine.new(cancel_command_line: @cancel_command_line, preview_search: @preview_search)
         start_visual = UseCases::StartVisual.new
         reselect_visual = UseCases::ReselectVisual.new
@@ -424,6 +439,8 @@ module Carat
         UseCases::BufferHandler.register(@actions, list_buffers: @list_buffers, switch_buffer: @switch_buffer, delete_buffer: @delete_buffer)
         UseCases::CompletionHandler.register(@actions, select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion)
         UseCases::DocsHandler.register(@actions, request_hover: @request_hover, pin_hover: @pin_hover)
+        @open_palette = UseCases::OpenPalette.new(actions: @actions, commands: @commands, keymap: @keymap, plugins: @plugins, palette: @palette, plugin_ui: @plugin_ui, search_prompt: @search_prompt)
+        UseCases::PaletteHandler.register(@actions, open_palette: @open_palette, palette: @palette)
         UseCases::PluginActionHandler.register(@actions, plugins: @plugins)
 
         @keymap.add_checked(value, known_actions)
@@ -434,11 +451,14 @@ module Carat
           i += 1
         end
 
+        @hide_key_hints = UseCases::HideKeyHints.new(hints: @key_hints, close_float: @close_float)
+        @show_key_hints = UseCases::ShowKeyHints.new(keymap: @keymap, input: @input, actions: @actions, plugins: @plugins, hints: @key_hints, open_float: @open_float, close_float: @close_float)
+        @follow_palette = UseCases::FollowPalette.new(palette: @palette, open_float: @open_float, close_float: @close_float)
         @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
-        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover, request_signature: @request_signature, follow_signature: @follow_signature, signature: @signature)
+        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover, request_signature: @request_signature, follow_signature: @follow_signature, signature: @signature, key_hints: @key_hints, hide_key_hints: @hide_key_hints, palette: @palette, follow_palette: @follow_palette)
         @start_screen = Domain::StartScreen.new
-        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover, show_signature: @show_signature, signature: @signature)
-        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers))
+        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover, show_signature: @show_signature, signature: @signature, show_key_hints: @show_key_hints)
+        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, palette: @palette, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers))
         @screen_presenter = ScreenPresenter.new(terminal: terminal, theme: Domain::Themes.find(@state.options.theme, @state.options.background), colors: terminal.colors)
       end
 

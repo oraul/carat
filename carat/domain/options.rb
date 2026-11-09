@@ -14,13 +14,15 @@ module Carat
     # buffer keeps. theme names the palette, background says whether the
     # terminal ("terminal") or the palette ("theme") paints the
     # background, and syntax_on is the switch of :syntax on and :syntax
-    # off, on from the start as in Neovim. startscreen shows the start
+    # off, on from the start as in Neovim. keyhints_delay is the
+    # milliseconds a waiting prefix waits before its key hints show, 0
+    # for none. startscreen shows the start
     # screen when the editor starts without a file, and reducedmotion
     # shows its last frame without the animation. cursorline draws the
     # cursor's line in the current window over the CursorLine background.
     # All but syntax_on come from option lines of the configuration. A Struct
     # record: mutable, with a reader and a writer per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, keyword_init: true)
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, keyword_init: true)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -42,6 +44,7 @@ module Carat
       # @rbs @startscreen: bool
       # @rbs @reducedmotion: bool
       # @rbs @cursorline: bool
+      # @rbs @keyhints_delay: Integer
 
       # Vim's defaults, the nerd icon set, the default theme on the
       # terminal's background, syntax highlighting on, and Neovim's search
@@ -50,7 +53,7 @@ module Carat
       # Neovim.
       #: () -> void
       def initialize
-        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false)
+        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: 300)
       end
 
       # The options a configuration line may set, by name, with the kind
@@ -60,9 +63,14 @@ module Carat
         "number" => "bool", "relativenumber" => "bool", "expandtab" => "bool", "autoindent" => "bool",
         "ignorecase" => "bool", "smartcase" => "bool", "hlsearch" => "bool", "incsearch" => "bool", "wrap" => "bool",
         "startscreen" => "bool", "reducedmotion" => "bool", "cursorline" => "bool",
-        "tabstop" => "integer", "shiftwidth" => "integer", "scroll" => "integer", "scrolloff" => "integer", "timeoutlen" => "integer", "undolevels" => "integer",
+        "tabstop" => "integer", "shiftwidth" => "integer", "scroll" => "integer", "scrolloff" => "integer", "timeoutlen" => "integer", "undolevels" => "integer", "keyhints.delay" => "integer",
         "clipboard" => "string", "icons" => "string", "theme" => "string", "background" => "string"
       }
+
+      # The key hints' default wait in milliseconds and the longest one; 0
+      # turns the hints off.
+      KEYHINTS_DELAY = 300
+      KEYHINTS_DELAY_MAX = 10_000
 
       # The largest tabstop or shiftwidth, Vim's limit for tabstop: a
       # larger one would make one Tab or >> build a string of that many
@@ -145,6 +153,13 @@ module Carat
         when "scroll" then self.scroll = word.to_i
         when "scrolloff" then self.scrolloff = word.to_i
         when "timeoutlen" then self.timeoutlen = word.to_i
+        when "keyhints.delay"
+          delay = word.to_i
+          if delay >= 0 && delay <= KEYHINTS_DELAY_MAX
+            self.keyhints_delay = delay
+          else
+            config.note(line, "#{line.key} takes a number from 0 to #{KEYHINTS_DELAY_MAX}")
+          end
         when "undolevels" then self.undolevels = word.to_i
         when "icons"
           if Icons.set?(word)

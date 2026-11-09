@@ -184,6 +184,19 @@ module UseCasesActionsTest
       i += 1
     end
     t.assert_equal([], undescribed, "every core action has a description of 1 to 32 characters")
+
+    # Every named ex command is described in 1 to 32 characters for the
+    # command palette.
+    full = h.assembly.commands.full_names
+    plain = []
+    i = 0
+    while i < full.length
+      text = h.assembly.commands.describe(full[i])
+      plain << "#{full[i]}: #{text}" if text.empty? || text.length > 32
+      i += 1
+    end
+    t.assert_equal([], plain, "every ex command has a description of 1 to 32 characters")
+    t.assert_true(full.length >= 40, "the ex table lists every named command")
     t.table([
       ["a window action", "window.split", "Split window"],
       ["a motion from the domain's list", "motion.word_forward", "Next word"],

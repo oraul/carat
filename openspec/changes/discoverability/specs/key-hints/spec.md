@@ -5,7 +5,7 @@ The key hints of normal, visual, and operator-pending modes: after a key that be
 ## ADDED Requirements
 
 ### Requirement: A waiting prefix shows the next keys
-In normal, visual, and operator-pending mode, when the keys typed so far begin at least one longer binding of the mode's keymap and no further key arrives for `option.keyhints.delay` milliseconds, the editor SHALL show a bordered float titled with the keys typed so far, at the bottom right of the editor above the message row, with one row per key that may follow, in the keymap's order.
+In normal, visual, and operator-pending mode, when the keys typed so far begin at least one longer binding of the mode's keymap and are not bound themselves (so they wait with no time limit), and no further key arrives for `option.keyhints.delay` milliseconds, the editor SHALL show a bordered float titled with the keys typed so far, at the bottom right of the editor above the message row, with one row per key that may follow, in the keymap's order.
 
 #### Scenario: Leader hints
 - **WHEN** the default configuration is loaded on "a.txt" in a 24-row terminal, Space is typed, and the delay passes with no key
@@ -31,7 +31,7 @@ Each hint row SHALL show the key in Vim notation, then the description of the ac
 - **THEN** the float lists every `<C-w>` key in more than one column
 
 ### Requirement: The next key closes the hints
-The hints float SHALL close on the next key, which is then handled as it would be with no float: it completes, continues, or cancels the binding, and Esc cancels the pending keys. When the keys still begin a longer binding after it, the hints SHALL show again for the longer keys once the delay passes. A binding resolved by `timeoutlen` SHALL close the float as well.
+The hints float SHALL close on the next key, which is then handled as it would be with no float: it completes, continues, or cancels the binding, and Esc cancels the pending keys. When the keys still begin a longer binding after it, the hints SHALL show again for the longer keys once the delay passes.
 
 #### Scenario: A key completes the binding
 - **WHEN** the leader hints show and "w", then "s" are typed
@@ -44,6 +44,13 @@ The hints float SHALL close on the next key, which is then handled as it would b
 #### Scenario: The next level shows after the delay
 - **WHEN** the leader hints show, "w" is typed, and the delay passes again
 - **THEN** a float titled with the leader and "w" lists the window keys
+
+### Requirement: A bound prefix waits for timeoutlen without hints
+Keys that are bound and also begin a longer binding SHALL show no hints; `timeoutlen` SHALL resolve them as before.
+
+#### Scenario: Bound prefix
+- **WHEN** the configuration binds `<leader>x` and `<leader>xa`, Space and "x" are typed, and `timeoutlen` passes
+- **THEN** no float showed and the action of `<leader>x` ran
 
 ### Requirement: keyhints.delay sets the wait
 `option.keyhints.delay` SHALL take a number of milliseconds from 0 to 10000, 300 by default; 0 SHALL turn the hints off. A value of another kind or outside the range SHALL be reported as `file:line: option.keyhints.delay takes a number from 0 to 10000` and leave the value before it.

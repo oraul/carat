@@ -5,6 +5,7 @@ require_relative "../domain/registers"
 require_relative "../domain/history"
 require_relative "../domain/search_prompt"
 require_relative "../domain/last_search"
+require_relative "../domain/palette"
 require_relative "ex/command_runner"
 require_relative "plugins/plugin_host"
 require_relative "outcome"
@@ -19,7 +20,11 @@ module Carat
     # command history. At a search prompt the text joins the search
     # history, the cursor and view go back where the prompt opened, the
     # mode returns to the one it came from, and the prompt keeps the text,
-    # which HandleKey hands to the search command as its pattern.
+    # which HandleKey hands to the search command as its pattern. At the
+    # command palette's prompt the selected entry runs instead: an ex
+    # command through the command runner, as typed after ":" (not joining
+    # the history), an action left in the palette for HandleKey to
+    # dispatch; with nothing selected the palette only closes.
     class ExecuteCommandLine
       attr_reader :runner #: CommandRunner
       attr_reader :plugins #: PluginHost
@@ -29,9 +34,11 @@ module Carat
       attr_reader :last_search #: Domain::LastSearch
       attr_reader :command_history #: Domain::History
       attr_reader :search_history #: Domain::History
+      attr_reader :palette #: Domain::Palette
 
-      #: (runner: CommandRunner, plugins: PluginHost, plugin_ui: Domain::PluginUi, registers: Domain::Registers, search_prompt: Domain::SearchPrompt, last_search: Domain::LastSearch, command_history: Domain::History, search_history: Domain::History) -> void
-      def initialize(runner:, plugins:, plugin_ui:, registers:, search_prompt:, last_search:, command_history:, search_history:)
+      #: (runner: CommandRunner, plugins: PluginHost, plugin_ui: Domain::PluginUi, registers: Domain::Registers, search_prompt: Domain::SearchPrompt, last_search: Domain::LastSearch, command_history: Domain::History, search_history: Domain::History, palette: Domain::Palette) -> void
+      def initialize(runner:, plugins:, plugin_ui:, registers:, search_prompt:, last_search:, command_history:, search_history:, palette:)
+        @palette = palette
         @runner = runner
         @plugins = plugins
         @plugin_ui = plugin_ui
@@ -47,6 +54,7 @@ module Carat
         text = state.cmdline
         state.cmdline = ""
         state.mode = Domain::Mode::NORMAL
+        return pick(state) if @palette.active
         prompt = @search_prompt
         if @plugin_ui.prompting?
           prompt.close
@@ -67,6 +75,22 @@ module Carat
         @registers.command_line = text
         @command_history.add(text)
         outcome
+      end
+
+      private
+
+      # Runs the palette's selected entry: an ex command now, an action
+      # through HandleKey after this key.
+      #: (Domain::EditorState) -> Outcome
+      def pick(state)
+        palette = @palette
+        palette.active = false
+        entry = palette.selected_entry
+        return Outcome.none if entry < 0
+        name = palette.names[entry]
+        return @runner.call(state, name.byteslice(1, name.bytesize - 1).to_s) if name.start_with?(":")
+        palette.chosen = name
+        Outcome.none
       end
     end
   end

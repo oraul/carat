@@ -231,6 +231,19 @@ module DomainKeymapTest
     long_owned.remove_owner("probe")
     t.assert_equal([:none, :none], [long_owned.lookup(:normal, codes("y" * 64)).kind, long_owned.lookup(:normal, codes("y")).kind], "removing the plugin drops its 64-key binding and every prefix of it")
 
+    # keymap.group names a normal-mode prefix; the node of keys lists its
+    # children in the order bound.
+    grouped = D::Keymap.new
+    grouped_config = project("keymap.normal <leader>ws window.split\nkeymap.normal <leader>wv window.vsplit\nkeymap.group <leader>w windows\nkeymap.group <leader>w panes\nkeymap.group <leader>w\n")
+    grouped.add_checked(grouped_config, bound_actions(grouped_config))
+    node = grouped.node_at(:normal, codes(" w"))
+    t.assert_equal(["panes", ["115", "118"], 2], [node.group, node.child_keys, node.binding_count], "a later group line wins and the node lists its children in order")
+    t.assert_equal([".caratrc:5: keymap.group takes keys and a name"], grouped_config.report, "a group line without a name is reported")
+    t.assert_equal([true, ""], [grouped.node_at(:normal, codes("zq")).leaf?, grouped.node_at(:visual, codes(" w")).group], "keys that lead nowhere answer an empty node and a group names only the normal prefix")
+    untrusted = D::Config.new
+    untrusted.read(".caratrc", "keymap.group <leader>w panes\n", false)
+    t.assert_equal([], untrusted.report, "a project file's group line is read")
+
     t.finish
   end
 end

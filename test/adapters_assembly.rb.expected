@@ -46,6 +46,18 @@ ok   the open float use case, in the hover
 ok   the open float use case, in the signature
 ok   the close float use case, in the signature
 ok   the close float use case, in the hover
+ok   the key hints
+ok   the command palette
+ok   the key handler holds the one HideKeyHints and FollowPalette, the input controller the one ShowKeyHints
+ok   the keymap, in the key hints and the palette
+ok   the input state, in the key hints
+ok   the plugin host, in the key hints and the palette
+ok   the ex table, in the palette
+ok   the plugin UI, in the palette
+ok   the search prompt, in the palette
+ok   the open float use case, in the key hints and the palette
+ok   the close float use case, in the key hints and the palette
+ok   the action table, in the key hints and the palette
 ok   the action table
 ok   the dispatcher
 ok   the insert text use case
@@ -71,4 +83,4 @@ ok   the gateway reads the shipped defaults through the file port it was given
 ok   the assembly and the gateway hold the one file port
 ok   a configuration without lines falls back to Vim's defaults
 ok   a configuration problem names its file and line
-adapters_assembly: 73 passed, 0 failed
+adapters_assembly: 85 passed, 0 failed

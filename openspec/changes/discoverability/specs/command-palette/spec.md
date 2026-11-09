@@ -20,7 +20,7 @@ With the default configuration, in normal mode, `<leader>p` and `<F1>` SHALL ope
 - **THEN** the row of ":nohlsearch" shows with its description
 
 ### Requirement: Typing filters the list
-Each character typed at the palette's prompt SHALL filter the list to the entries whose name or description holds the typed characters in order, ignoring ASCII case, and Backspace SHALL widen it again. A text no entry matches SHALL show an empty float reading "No match". The first entry SHALL be selected after every change of the text.
+Each character typed at the palette's prompt SHALL filter the list to the entries whose name or description holds the typed characters in order, the first of them (and the first after each `_` typed) starting a word or a dotted segment, ignoring ASCII case and a leading `:`, as the completion popup filters; Backspace SHALL widen it again. A text no entry matches SHALL show an empty float reading "No match". The first entry SHALL be selected after every change of the text.
 
 #### Scenario: Fuzzy match
 - **WHEN** the palette is open and "wsp" is typed
@@ -35,7 +35,7 @@ Each character typed at the palette's prompt SHALL filter the list to the entrie
 - **THEN** the float reads "No match"
 
 ### Requirement: The best match comes first
-The filtered list SHALL put a match of consecutive characters and of characters at the start of a word or a dotted segment first, a shorter text first on a tie, and equal matches in the table's order.
+The filtered list SHALL put an entry whose name or description starts with the typed text first, then one matching more typed characters consecutively, then the shorter text, and equal matches in the table's order.
 
 #### Scenario: Segment starts win
 - **WHEN** the palette is open and "ws" is typed

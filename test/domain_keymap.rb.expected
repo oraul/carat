@@ -81,4 +81,8 @@ ok   a plugin's binding with an illegal byte is an error of its line
 ok   a binding of 65 keys is reported and skipped, one of 64 is bound
 ok   a plugin's binding of 65 keys is an error of its line and nothing of it is bound
 ok   removing the plugin drops its 64-key binding and every prefix of it
-domain_keymap: 83 passed, 0 failed
+ok   a later group line wins and the node lists its children in order
+ok   a group line without a name is reported
+ok   keys that lead nowhere answer an empty node and a group names only the normal prefix
+ok   a project file's group line is read
+domain_keymap: 87 passed, 0 failed
