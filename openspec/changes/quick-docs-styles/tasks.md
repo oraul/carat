@@ -18,4 +18,4 @@
 ## 4. Docs and checks
 
 - [x] 4.1 Update `docs/codebase-map.md`, `docs/architecture.md` where it lists the group ranges, and `docs/backlog.md` (the twelve planned entries, the NO_COLOR entry, the diagnostics URI entry); prove with `make docs-lint` and `make gates`
-- [ ] 4.2 Run `make bench SCENARIOS="lh lh-float"` and compare allocations per key with main's figures, then `make gates` and `make spec-validate`
+- [x] 4.2 Run `make bench SCENARIOS="lh lh-float"` and compare allocations per key with main's figures, then `make gates` and `make spec-validate`
