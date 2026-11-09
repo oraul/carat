@@ -31,8 +31,10 @@ rules:
   proposal:
     - Name which roadmap item from docs/architecture.md the change delivers, or say it is outside the roadmap and why
     - State what is out of scope
+    - 'When the change has delta specs, name README.md and docs/architecture.md under Impact, each as changed or as "- README.md: unchanged, REASON"; a change to agents, workflows, commands, the Makefile, or the gates, run state, or guard script does the same for CLAUDE.md (make gates checks it)'
   specs:
     - Write requirements in terms of keys pressed and observable editor state, not implementation
+    - Give each scenario a name the test that proves it can carry in its label or a comment; make gates refuses an ADDED or MODIFIED scenario no test names
   tasks:
     - Each task names the module it touches and the test that proves it
     - Keep the editor usable after every task
