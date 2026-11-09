@@ -34,10 +34,12 @@
 # --receive-pack, --exec, or --open-files-in-pager, nor grep with a short
 # option cluster holding O), branch with listing options, remote -v,
 # remote get-url origin, remote set-head origin main, fetch -q --prune
-# origin (not while origin is a local repository, local_origin),
+# origin or -q --refmap= origin MAIN_REFSPEC (not while origin is a local
+# repository, local_origin),
 # ls-remote origin with listing options and branch names, worktree add,
 # remove, list, and prune of a worktree tmp/.NAME, and checkout -q
-# --detach origin/main inside one (-C).
+# --detach origin/main inside one (-C). A tmp/.NAME that exists is a
+# worktree only when it is a linked worktree of the project (worktree).
 #   read         adds mkdir and rm under DIR; make -s, -C tmp/.NAME, the
 #                targets dev-build test-build bench-budget metrics
 #                metrics-compare bench, and PREFIX and SPINEL_CACHE_DIR at
@@ -69,7 +71,8 @@
 #                phase of check, quality, security, or bench
 # The merger alone may call the GitHub merge tool (merge_tool, below). Any
 # other profile refuses every call, and every profile refuses every call
-# while .git/config sets a RISKY_CONFIG key.
+# while .git/config sets a RISKY_CONFIG key or a fetch refspec other than
+# a clone's.
 #
 # A write target (a redirection's target, a path argument of mkdir rm cp
 # mv touch chmod, a file tool's path) has no parent step, and its real
