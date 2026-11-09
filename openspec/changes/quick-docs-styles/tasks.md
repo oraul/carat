@@ -7,7 +7,7 @@
 
 ## 2. Reading markdown with spans
 
-- [ ] 2.1 Add `Domain::DocsText` (`carat/domain/docs_text.rb`) and `MarkdownText.parse` and `wrap` keeping heading, strong, italic, code span, link, and fenced spans and the fence language; prove with span rows in `test/domain_markdown_text.rb`, the existing rows unchanged
+- [x] 2.1 Add `Domain::DocsText` (`carat/domain/docs_text.rb`) and `MarkdownText.parse` and `wrap` keeping heading, strong, italic, code span, link, and fenced spans and the fence language; prove with span rows in `test/domain_markdown_text.rb`, the existing rows unchanged
 
 ## 3. Fenced code and the floats
 
