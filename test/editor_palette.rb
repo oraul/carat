@@ -85,6 +85,9 @@ module EditorPaletteTest
     h.type("<C-p><C-p>")
     t.assert_equal(name_at(h, 0), selected_name(h), "the selection stops at the top")
 
+    h = session("<Space>p" + "<C-n>" * 20)
+    t.assert_equal([h.assembly.actions.names[20], 14], [selected_name(h), h.state.tab.floats.at(0).selected], "the list scrolls to keep the selection shown")
+
     h = session("<Space>pwsp<CR>")
     t.assert_equal([2, :normal], [h.window_count, h.mode], "Enter runs the selected action")
 

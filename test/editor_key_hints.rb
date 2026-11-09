@@ -56,10 +56,10 @@ module EditorKeyHintsTest
       ["the leader hints name the quit group", ["", 24, "<Space>", 1, "q  quit"], [1, "<Space>", true]],
       ["the leader hints name the docs group", ["", 24, "<Space>", 1, "d  docs"], [1, "<Space>", true]],
       ["the leader hints describe the palette", ["", 24, "<Space>", 1, "p  Command palette"], [1, "<Space>", true]],
-      ["a group lists its actions", ["", 24, "<Space>w", 1, "s  Split window"], [1, "<Space>w", true]],
-      ["a group lists the vertical split", ["", 24, "<Space>w", 1, "v  Split window vertically"], [1, "<Space>w", true]],
-      ["g lists the tab keys", ["", 24, "g", 1, "t  Next tab page"], [1, "g", true]],
-      ["Ctrl-W names its keys in notation", ["", 24, "<C-w>", 1, "<C-s>  Split window"], [1, "<C-w>", true]],
+      ["a group lists its actions", ["", 24, "<Space>w", 1, "s  Split window"], [1, "<Space>w windows", true]],
+      ["a group lists the vertical split", ["", 24, "<Space>w", 1, "v  Split window vertically"], [1, "<Space>w windows", true]],
+      ["g lists the tab keys", ["", 24, "g", 1, "t  Next tab page"], [1, "g goto", true]],
+      ["Ctrl-W names its keys in notation", ["", 24, "<C-w>", 1, "<C-s>  Split window"], [1, "<C-w> window", true]],
       ["no hint before the delay", ["", 24, "<Space>", 0, "w  windows"], [0, "", false]],
       ["a user names a group", ["keymap.group <leader>w panes", 24, "<Space>", 1, "w  panes"], [1, "<Space>", true]],
       ["a prefix without a group counts its bindings", ["keymap.normal <leader>xa cursor.up\nkeymap.normal <leader>xb cursor.down", 24, "<Space>", 1, "x  +2"], [1, "<Space>", true]],
@@ -82,7 +82,7 @@ module EditorKeyHintsTest
     h.type("w")
     t.assert_equal(0, h.state.tab.floats.count, "the next key closes the hints at once")
     h.wait
-    t.assert_equal([1, "<Space>w"], [h.state.tab.floats.count, title(h)], "the next level shows after the delay")
+    t.assert_equal([1, "<Space>w windows"], [h.state.tab.floats.count, title(h)], "the next level shows after the delay")
 
     h = session("", 12, "<C-w>", 1)
     floats = h.state.tab.floats

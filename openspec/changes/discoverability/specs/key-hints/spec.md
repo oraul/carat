@@ -5,7 +5,7 @@ The key hints of normal, visual, and operator-pending modes: after a key that be
 ## ADDED Requirements
 
 ### Requirement: A waiting prefix shows the next keys
-In normal, visual, and operator-pending mode, when the keys typed so far begin at least one longer binding of the mode's keymap and are not bound themselves (so they wait with no time limit), and no further key arrives for `option.keyhints.delay` milliseconds, the editor SHALL show a bordered float titled with the keys typed so far, at the bottom right of the editor above the message row, with one row per key that may follow, in the keymap's order.
+In normal, visual, and operator-pending mode, when the keys typed so far begin at least one longer binding of the mode's keymap and are not bound themselves (so they wait with no time limit), and no further key arrives for `option.keyhints.delay` milliseconds, the editor SHALL show a bordered float titled with the keys typed so far and the prefix's group name when it has one, at the bottom right of the editor above the message row, with one row per key that may follow, in the keymap's order.
 
 #### Scenario: Leader hints
 - **WHEN** the default configuration is loaded on "a.txt" in a 24-row terminal, Space is typed, and the delay passes with no key
@@ -43,7 +43,7 @@ The hints float SHALL close on the next key, which is then handled as it would b
 
 #### Scenario: The next level shows after the delay
 - **WHEN** the leader hints show, "w" is typed, and the delay passes again
-- **THEN** a float titled with the leader and "w" lists the window keys
+- **THEN** a float titled with the leader, "w", and "windows" lists the window keys
 
 ### Requirement: A bound prefix waits for timeoutlen without hints
 Keys that are bound and also begin a longer binding SHALL show no hints; `timeoutlen` SHALL resolve them as before.
@@ -79,7 +79,7 @@ The default configuration SHALL name the leader groups `w` windows, `q` quit, `f
 
 #### Scenario: Shipped groups
 - **WHEN** `g` is typed with the default configuration and the delay passes
-- **THEN** the float's title is "g" and the leader hints, opened later, show "w  windows"
+- **THEN** the float's title is "g goto" and the leader hints, opened later, show "w  windows"
 
 ### Requirement: Hints cost nothing while none shows
 A key typed while no hints float shows and no key is pending SHALL allocate nothing more than before this capability, and the editor SHALL read the clock for the hints only when a key is pending.

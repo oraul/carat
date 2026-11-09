@@ -500,7 +500,7 @@ The gem takes the theme's `Operator`, `Function`, and `Keyword` colors, the spar
 
 ## Key hints and command palette
 
-Carat's own, in place of the which-key and command palette plugins Neovim users add. Keys that only begin bindings (the leader, `g`, `z`, `<C-w>`), left with no key for `option.keyhints.delay` milliseconds, show a bordered float at the bottom right titled with the keys, one row per next key: its action's description, a group's name, `+` and the count of bindings under an unnamed prefix, or the keys a remap replays, in columns when taller than the screen. The next key closes it and is handled as usual. A prefix that is bound itself shows no hints, as `timeoutlen` resolves it; insert and command-line modes show none (`editor_key_hints`, `domain_keymap`).
+Carat's own, in place of the which-key and command palette plugins Neovim users add. Keys that only begin bindings (the leader, `g`, `z`, `<C-w>`), left with no key for `option.keyhints.delay` milliseconds, show a bordered float at the bottom right titled with the keys and their group name, one row per next key: its action's description, a group's name, `+` and the count of bindings under an unnamed prefix, or the keys a remap replays, in columns when taller than the screen. The next key closes it and is handled as usual. A prefix that is bound itself shows no hints, as `timeoutlen` resolves it; insert and command-line modes show none (`editor_key_hints`, `domain_keymap`).
 
 | Keys or line | Action name | Behavior | Problem | Tests |
 | --- | --- | --- | --- | --- |

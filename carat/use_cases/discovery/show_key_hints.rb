@@ -20,7 +20,7 @@ module Carat
     # Shows the key hints once a waiting prefix has waited keyhints.delay:
     # in normal, visual, and operator-pending mode, when the pending keys
     # lead to a node of the mode's keymap with children, a bordered float
-    # titled with the keys lists each child's key and what it does (the
+    # titled with the keys and the prefix's group name lists each child's key and what it does (the
     # action's description, its plugin's for a plugin action, the keys a
     # remap replays, or the group name of a prefix, "+" and its count of
     # bindings when unnamed), in columns when taller than the room, at the
@@ -64,7 +64,9 @@ module Carat
         node = @keymap.node_at(mode, keys)
         return if node.leaf?
         rows = entries(node)
-        open(state, title(keys), rows)
+        name = title(keys)
+        name = "#{name} #{node.group}" unless node.group.empty?
+        open(state, name, rows)
       end
 
       private
