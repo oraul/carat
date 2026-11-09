@@ -58,12 +58,15 @@ The leader is Space. Its keys come in groups named by their first letter, and ea
 - `<leader>b` buffers: `bb` lists them as `:ls` does, `bn` and `bp` go to the next and previous one, `bd` deletes this one, or with a count the buffer of that number.
 - `<leader>d` docs: `dp` pins the documentation float `K` opened into a split.
 - `<leader>e` opens the file tree, as before.
+- `<leader>p` (or F1) opens the command palette: every action and ex command with its key and description, filtered as you type; Ctrl-N and Ctrl-P move the selection, Enter runs it, Escape closes it.
+
+Pause after a group key, or after `g`, `z`, or `<C-w>`, and a float at the bottom right lists the keys that may follow and what each does. `option.keyhints.delay` sets the pause in milliseconds (300; 0 turns the hints off), and `keymap.group <keys> <name>` names a group of your own, as `keymap.group <leader>w panes`.
 
 Ctrl-S saves in normal and in insert mode, where you stay in insert mode.
 
 In insert mode a completion popup lists the names the language server offers for the word before the cursor, matched fuzzily (`fn_na` finds `file_name`), each with its kind's icon and its type on the right: Ctrl-N and Down select the next, Ctrl-P and Up the previous, Enter inserts the item over what you typed, Tab replaces the whole word, and Esc closes the popup. The names come from the file type's language server when it offers completion: Carat asks it once you pause for a tenth of a second, without making a key wait, cancels a question about a word you have left, and fills the popup when the answer arrives. The selected name's documentation shows beside the popup as plain text, from the answer or asked for once the selection rests on it for a tenth of a second, once per name. In normal mode `K` asks the language server for the documentation under the cursor and shows it in a bordered float when the answer arrives, its markdown laid out as plain text; `K` again enters the float so the usual keys scroll it, `Esc` or moving the cursor closes it, and `<leader>dp` keeps it in a split. Carat runs the terminal in raw mode, so flow control is off and Ctrl-S reaches it instead of freezing the screen. Typing `(` or `,` inside a call asks the language server for its signature, shown in a small float above the cursor with the argument you are at highlighted; it follows the cursor from argument to argument and closes when you leave the call or press Esc.
 
-These keys moved: `<leader>w` used to write the file and `<leader>q` to quit the window. Press `<leader>fs` or Ctrl-S to write, and `:q` or `<C-w>q` to close a window, or `<leader>qq` to quit. To get the old keys back, add `keymap.normal <leader>w :w<CR>` and `keymap.normal <leader>q :q<CR>` to `~/.config/carat/caratrc`. Every action has a short description in the editor, which the coming key hints will show.
+These keys moved: `<leader>w` used to write the file and `<leader>q` to quit the window. Press `<leader>fs` or Ctrl-S to write, and `:q` or `<C-w>q` to close a window, or `<leader>qq` to quit. To get the old keys back, add `keymap.normal <leader>w :w<CR>` and `keymap.normal <leader>q :q<CR>` to `~/.config/carat/caratrc`.
 
 ## Configuration
 
