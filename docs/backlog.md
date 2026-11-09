@@ -2498,3 +2498,147 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/tools_test.sh` lines 1261 to 1263 at the `pinned-main` change; quality advisory of `pinned-main`.
 - Why it matters: a `cat`, `sed`, and `printf` round trip with a temporary file and `mv` does what one copy does, which makes the case harder to read.
 - Fix outline: `rm -rf "$proj/tmp/.planted/.git"`, then `cp "$proj/tmp/.base/.git" "$proj/tmp/.planted/.git"`.
+
+## The mouse is not supported
+
+- Where: the terminal driver and the key decoder; roadmap UI item `mouse`, moved here from `docs/queue.md` by the user's decision at `breadcrumbs`.
+- Why it matters: not needed yet; carat never enables mouse reporting, so leaving it out breaks nothing. When it is done, three known risks: Shift-drag must still select text in the terminal, the reporting mode must be restored on every exit path (quit, crash, suspend, a raising plugin), and mouse sequences must be decoded so they never reach the keymap as typed keys.
+- Fix outline: clicks, drags, and the wheel acting on windows, bars, and floats as in Neovim, each with a `docs/compatibility.md` row, with a case per exit path restoring the mode, a decoder case that no mouse sequence reaches the keymap, and a key costing nothing more. Not queued until the user asks.
+
+## A hidden slot's window keeps its cursor past a shrunk buffer
+
+- Where: `clamp_cursors` in `carat/domain/tab_list.rb` line 225 at 847851d; reached by `set_scratch_lines` and the explorer's follow while its sidebar is hidden, shown again by `ToggleSlot` or `OpenSideWindow`. Periodic quality at 847851d (the review's one blocking finding, as read by the planner). Queue item `slots-tidy`.
+- Why it matters: the window shows again with its cursor and top past the buffer's end, against the invariant area 8's Flow promises.
+- Fix outline: clamp the windows kept by hidden slots too, with an `editor_slots` row shrinking a hidden explorer and toggling it back.
+
+## toolchain-clean deletes all of tmp/ and ignores its overrides
+
+- Where: `toolchain-clean` in the `Makefile` line 158, its help line 156, and `README.md` line 20 at 847851d. Periodic quality. Queue item `check-runner-safety`.
+- Why it matters: it removes the scout packs and the merge-gates and review worktrees, leaving stale worktree records, yet ignores the `SPINEL_SRC` and `PREFIX` overrides that `docs/architecture.md` section 2 says it removes.
+- Fix outline: remove only the two toolchain paths, and say so in the help line and the README row.
+
+## The map's agent_guard.sh bullet omits two helpers
+
+- Where: `docs/codebase-map.md` line 48 at 847851d: no `local_origin` nor `worktree_name`, both added or used by `pinned-main`. Periodic quality. Queue item `docs-index`.
+- Why it matters: the bullet names the guard's other helpers, so a reader misses two refusals.
+- Fix outline: add `local_origin` to the git clause and `worktree_name` beside `worktree`.
+
+## The map's area 10 Flow names the wrong handlers
+
+- Where: `docs/codebase-map.md` lines 316 and 320 at 847851d. Periodic quality. Queue item `docs-index`.
+- Why it matters: `SwapVisualEnds` is `SelectionHandler`'s, `ExtendVisual` is `TextObjectHandler`'s, and the five operators reach their use cases through `OperatorHandler`; the selection line omits `Selection#numbered_delete?`, `as`, and `line_start`, which architecture section 5 names.
+- Fix outline: name the handler per use case and add the three methods.
+
+## A plugin's resize event is built with no subscriber
+
+- Where: `resized` in `carat/use_cases/plugins/plugin_events.rb` line 142 at 847851d; `queue` (line 200) skips unwanted events. Periodic quality. Queue item: backlog items, plugin host classes.
+- Why it matters: an event is built for nobody on every resize.
+- Fix outline: update the last size, then return unless a plugin wants `resize`.
+
+## Two plugin host classes look up an option the same way
+
+- Where: `PluginHost#option` in `carat/use_cases/plugins/plugin_host.rb` line 140 and `UiRequests#option` in `carat/use_cases/plugins/ui_requests.rb` line 91 at 847851d. Periodic quality. Queue item: backlog items, plugin host classes.
+- Why it matters: duplication, two places to change.
+- Fix outline: one `PluginRegistry` method answering the value or nil, called by both.
+
+## Plugin entries and edits are named e
+
+- Where: `carat/use_cases/plugins/plugin_events.rb` lines 213 and 227, `plugin_host.rb` lines 95 and 141, `buffer_requests.rb` line 61 at 847851d, beside the queued `ui_requests.rb` line 92. Periodic quality. Queue item: backlog items, plugin host classes.
+- Why it matters: CLAUDE.md naming forbids unclear abbreviations.
+- Fix outline: rename them `entry` and `edit` with the `ui_requests` fix.
+
+## Plugin directory reads skip the tree-root check
+
+- Where: `list_dir` and `stat` in `carat/use_cases/plugins/file_requests.rb` line 34 at 847851d. Periodic security Low (3). Queue item: backlog items, plugin host classes.
+- Why it matters: unlike the write requests through `ResolveInside`, a plugin can list and probe directories anywhere.
+- Fix outline: pass the root and resolve the read requests inside it, with a refusal row.
+
+## The test rig's fail shadows Kernel#fail
+
+- Where: the private `fail` of `carat/testing.rb` line 74 and `assert_raises` line 38 at 847851d. Periodic quality. Queue item: backlog items.
+- Why it matters: `assert_raises` rescues only `StandardError`, so `assert_raises(NotImplementedError)`, the error every port method raises, ends the test program instead of passing.
+- Fix outline: rename the helper `record_failure` and rescue `StandardError` and `ScriptError`, with a rig case.
+
+## The explorer's sort downcases both names per comparison
+
+- Where: `sorted` in `carat/plugins/explorer/tree.rb` line 252 at 847851d. Periodic quality. Queue item: backlog items, the explorer.
+- Why it matters: about 2n log n strings per listing on every tree build.
+- Fix outline: compute each lowercase key once and sort by it.
+
+## A block's top-left column is computed in six places
+
+- Where: `carat/domain/selection_cut.rb` line 30 and `carat/use_cases/visual/` `yank_selection.rb` line 39, `shift_selection.rb` line 22, `change_selection.rb` line 53, `put_over_selection.rb` line 39, `insert_at_selection.rb` line 46 at 847851d. Periodic quality. Queue item: backlog items, copies.
+- Why it matters: architecture section 5 moves logic several use cases share into the domain.
+- Fix outline: one `Block` method beside `reaching_rows`, called from the six places.
+
+## Buffer#blanks is public with callers only in its file
+
+- Where: `carat/domain/buffer.rb` line 438 at 847851d. Periodic quality. Queue item: backlog items, needless public methods.
+- Why it matters: a needless public method widens `Buffer`'s surface.
+- Fix outline: move it below `private`.
+
+## The palette's prompt recalls the command history
+
+- Where: `carat/use_cases/recall_history.rb` line 34 at 847851d; `keymap.cmdline` binds `<Up>` and `<Down>` to `cmdline.history_older` and `cmdline.history_newer`. Periodic quality. Queue item `discoverability-tidy`.
+- Why it matters: at the palette's prompt they put `:` history into the filter text; the command-palette spec says nothing of history.
+- Fix outline: answer nothing or move the selection while the palette is active, with an `editor_palette` row for `<Up>`.
+
+## The docs float repeats the completion popup's row arithmetic
+
+- Where: `carat/use_cases/completion/show_completion_docs.rb` line 88 and `ShowCompletion#row_offset` in `show_completion.rb` line 167 at 847851d. Periodic quality. Queue item `completion-docs-tidy`.
+- Why it matters: the unexplained 2 already in the backlog lives in two places.
+- Fix outline: one domain helper for the cursor's screen row and the rows free below it, the 2 named.
+
+## CompletionList#add answers a bool its caller ignores
+
+- Where: `carat/domain/completion_list.rb` line 60, the `add` exemption in `test/lint.rb` line 220, and the caller `carat/adapters/json_rpc_language_gateway.rb` line 572 at 847851d. Periodic quality. Queue item `completion-tidy`.
+- Why it matters: the exemption's reason is about floats, and the gateway re-checks `LIMIT` itself.
+- Fix outline: break on a false `add` and drop the gateway's check, or make `add` return void, and word the exemption for both.
+
+## A project .caratrc can bind a key to a write or quit
+
+- Where: keymap lines in `carat/domain/config.rb` line 213 at 847851d. Periodic security Low (4). Queue item `project-config-guards`.
+- Why it matters: a cloned project can turn an everyday keystroke into `quit.write_all` or `file.save`.
+- Fix outline: refuse project keymap lines whose action writes or quits, or read project bindings only under `language.trusted_roots`, with a `file:line` problem row.
+
+## Creating a file follows a link that appears after the probe
+
+- Where: `carat/use_cases/files/make_path.rb` line 47 at 847851d: an existence probe, then `FilePort#write`. Periodic security Low (3). Queue item `file-access-tidy`.
+- Why it matters: a file or link appearing between the probe and the write is truncated or followed.
+- Fix outline: a create that fails on an existing path or link, used here, with a case.
+
+## The winbar's never, always, and auto policy lives in two layers
+
+- Where: `winbar_after?` in `carat/use_cases/windows/split_window.rb` line 55 and `TabPage#winbar?` in `carat/domain/tab_page.rb` line 61 at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
+- Why it matters: both compare the same string literals for the mode, so a new mode or rule must change two layers.
+- Fix outline: one `TabPage` predicate taking the extra file window count (`winbar?(mode, added)`), called from both, comparing against named constants beside `Options::BREADCRUMBS`.
+
+## The symbol cancel repeats the gateway's cancel_request
+
+- Where: `cancel_symbols` in `carat/adapters/json_rpc_language_gateway.rb` line 789 at the `breadcrumbs` change, beside `cancel_request` (line 861) that `cancel_signature` uses; quality advisory of `breadcrumbs`.
+- Why it matters: it inlines the server lookup and the `$/cancelRequest` notify, two places to change.
+- Fix outline: call `cancel_request(ask.language, ask.sent_id)`, then clear `sent_id`.
+
+## A restarted server is never asked again for the same text's symbols
+
+- Where: `forget_symbols` in `carat/adapters/json_rpc_language_gateway.rb` line 757 at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
+- Why it matters: it clears the request in flight but keeps `asked_buffer` and `asked_changes`, so after a crash and restart the winbar shows no symbols until an edit or a buffer switch.
+- Fix outline: reset the asked text (`asked_changes = -1`) in `forget_symbols`, with an `editor_breadcrumbs` row for a restart.
+
+## SymbolOutline's comment says characters where the cut is in bytes
+
+- Where: the class comment of `carat/adapters/symbol_outline.rb` line 12 at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
+- Why it matters: `ControlText.strip` cuts at a byte limit, as the map, `docs/compatibility.md`, and the test say, so the comment misleads.
+- Fix outline: say bytes in the comment.
+
+## FramePresenter's class comment breaks its wrap width
+
+- Where: the class comment of `carat/adapters/frame_presenter.rb` line 40 at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
+- Why it matters: the edit left a three-word line mid-sentence, which reads as a broken paragraph.
+- Fix outline: rewrap the paragraph.
+
+## The map misses SymbolRequest methods and the breadcrumbs test
+
+- Where: `docs/codebase-map.md` line 591 and the render and language areas' Tests lines at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
+- Why it matters: the entry omits `count` and `name_at`, and the Tests lines do not name `test/editor_breadcrumbs.rb` though it covers `winbar.rb`, `symbol_outline.rb`, and `symbol_request.rb`.
+- Fix outline: add the two methods to the entry and the test to both areas' Tests lines.
