@@ -60,7 +60,32 @@ module DomainThemeTest
 
   #: (Integer) -> bool
   def self.decoration?(id)
-    DECORATIONS.include?(id) || id >= H::ICON_FIRST
+    DECORATIONS.include?(id) || (id >= H::ICON_FIRST && id < H::MARKUP_FIRST)
+  end
+
+  # The syntax and markup groups of a theme drawn inside a float, over
+  # NormalFloat's background unless they have their own, whose foreground
+  # falls below 4.5:1 there, at 24 bits or at 256 colors, each with its
+  # ratio.
+  #: (Carat::Domain::Theme, bool) -> Array[String]
+  def self.float_low_contrast(theme, at256)
+    out = []
+    id = H::SYNTAX_FIRST
+    while id < H::COUNT
+      if id < H::ICON_FIRST || id >= H::MARKUP_FIRST
+        inside = id + H::FLOAT_LAYER
+        fg = theme.fg(inside)
+        bg = theme.bg(inside)
+        if at256
+          fg = shown_256(fg, theme.fg256(inside))
+          bg = shown_256(bg, theme.bg256(inside))
+        end
+        ratio = contrast(fg, bg)
+        out << "#{H::NAMES[id]} #{ratio}" if ratio < 450
+      end
+      id += 1
+    end
+    out
   end
 
   # The groups of a theme drawn with its background whose foreground
@@ -132,7 +157,8 @@ module DomainThemeTest
     # The group table: UI groups first, then the thirty syntax groups,
     # then the file-icon groups.
     t.assert_equal(H::COUNT, H::NAMES.length, "every id has a name")
-    t.assert_equal([49, 30, 13], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::COUNT - H::ICON_FIRST], "49 UI groups, thirty syntax groups, thirteen file-icon groups")
+    t.assert_equal([49, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "49 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
+    t.assert_equal(["@markup.heading", "@markup.strong", "@markup.italic", "@markup.raw", "@markup.link.label", "@markup.raw.block"], [H::NAMES[H::MARKUP_HEADING], H::NAMES[H::MARKUP_STRONG], H::NAMES[H::MARKUP_ITALIC], H::NAMES[H::MARKUP_RAW], H::NAMES[H::MARKUP_LINK], H::NAMES[H::MARKUP_RAW_BLOCK]], "the markup groups after the file-icon groups")
     t.assert_equal(["StatusLineModeNormal", "StatusLineLspError"], [H.name_of(H::STATUS_MODE_NORMAL), H.name_of(H::STATUS_LSP_ERROR)], "the status bar's groups follow Neovim's")
 
     t.assert_equal(["Comment", "Error", "SignColumn", "CursorLine", "DiagnosticHint", "DevIconRb"], [H::NAMES[H::COMMENT], H::NAMES[H::ERROR], H::NAMES[H::SIGN_COLUMN], H::NAMES[H::CURSOR_LINE], H::NAMES[H::DIAGNOSTIC_HINT], H::NAMES[H::ICON_RUBY]], "names by id")
@@ -143,13 +169,15 @@ module DomainThemeTest
       ["Todo", "Todo", H::TODO],
       ["a file-icon group", "DevIconRb", H::ICON_RUBY],
       ["the last file-icon group", "DevIconLock", H::ICON_LOCK],
+      ["a markup group", "@markup.heading", H::MARKUP_HEADING],
+      ["the last markup group", "@markup.raw.block", H::MARKUP_RAW_BLOCK],
       ["a UI group is not a token group", "StatusLine", -1],
       ["nor is a new UI group", "CursorLine", -1],
       ["Normal is not either", "Normal", -1],
       ["an unknown name", "Banana", -1],
       ["names are case sensitive", "comment", -1]
     ]) { |name| H.token_id(name.to_s) }
-    t.assert_equal([false, true, true, true, false], [H.token?(H::VISUAL), H.token?(H::COMMENT), H.token?(H::ERROR), H.token?(H::ICON_LOCK), H.token?(H::COUNT)], "token? covers the syntax and file-icon ids only")
+    t.assert_equal([false, true, true, true, false], [H.token?(H::VISUAL), H.token?(H::COMMENT), H.token?(H::ERROR), H.token?(H::MARKUP_RAW_BLOCK), H.token?(H::COUNT)], "token? covers the syntax, file-icon, and markup ids only")
     t.assert_equal(["Visual", ""], [H.name_of(H::VISUAL), H.name_of(99)], "name_of")
 
     # The palettes, their aliases, and the backgrounds.
@@ -222,7 +250,28 @@ module DomainThemeTest
       theme = D::Themes.find(name, "theme")
       t.assert_true(theme.bg16(H::NORMAL + lit) >= 0 && theme.bg16(H::COMMENT + lit) == theme.bg16(H::NORMAL), "#{name}: at 16 colors the painted cursor line keeps the background")
     end
-    t.assert_equal([H::COMMENT, H::COMMENT, H::NORMAL, 2 * H::COUNT], [H.base(H::COMMENT), H.base(H::COMMENT + lit), H.base(lit), H::LIMIT], "base strips the cursor-line layer")
+    t.assert_equal([H::COMMENT, H::COMMENT, H::NORMAL, 3 * H::COUNT], [H.base(H::COMMENT), H.base(H::COMMENT + lit), H.base(lit), H::LIMIT], "base strips the cursor-line layer")
+    inside = H::FLOAT_LAYER
+    t.assert_equal([H::MARKUP_HEADING, H::NORMAL, 2 * H::COUNT], [H.base(H::MARKUP_HEADING + inside), H.base(inside), inside], "base strips the float layer")
+
+    # Inside a float a group keeps its foreground and attributes over
+    # NormalFloat's background, at every depth, unless it has its own.
+    t.assert_equal([dark.fg(H::COMMENT), dark.bg(H::NORMAL_FLOAT), dark.bg256(H::NORMAL_FLOAT), dark.bg16(H::NORMAL_FLOAT), dark.attr(H::COMMENT)], [dark.fg(H::COMMENT + inside), dark.bg(H::COMMENT + inside), dark.bg256(H::COMMENT + inside), dark.bg16(H::COMMENT + inside), dark.attr(H::COMMENT + inside)], "a group in a float is drawn over NormalFloat's background")
+    t.assert_equal([dark.bg(H::TODO), dark.fg(H::NORMAL_FLOAT)], [dark.bg(H::TODO + inside), dark.fg(H::MARKUP_STRONG + inside)], "a group with a background of its own keeps it in a float, one without a foreground takes NormalFloat's")
+    t.assert_equal([0x61afef, D::Theme::BOLD, 0xabb2bf, D::Theme::BOLD, D::Theme::ITALIC, 0x98c379, 0x56b6c2, D::Theme::UNDERLINE, 0x959ca8], [painted.fg(H::MARKUP_HEADING), painted.attr(H::MARKUP_HEADING), painted.fg(H::MARKUP_STRONG), painted.attr(H::MARKUP_STRONG), painted.attr(H::MARKUP_ITALIC), painted.fg(H::MARKUP_RAW), painted.fg(H::MARKUP_LINK), painted.attr(H::MARKUP_LINK), painted.fg(H::MARKUP_RAW_BLOCK)], "one_dark's markup groups: blue bold headings, bold and italic text, green code, underlined cyan links, gray blocks")
+
+    # WCAG AA inside a float: every syntax and markup group at 4.5:1 over
+    # NormalFloat's background, at 24 bits and at the 256 colors written.
+    t.table([
+      ["one_dark in a float at 24 bits", ["one_dark", "24"], []],
+      ["one_dark in a float at 256 colors", ["one_dark", "256"], []],
+      ["one_light in a float at 24 bits", ["one_light", "24"], []],
+      ["one_light in a float at 256 colors", ["one_light", "256"], []],
+      ["dark_plus in a float at 24 bits", ["dark_plus", "24"], []],
+      ["dark_plus in a float at 256 colors", ["dark_plus", "256"], []],
+      ["light_plus in a float at 24 bits", ["light_plus", "24"], []],
+      ["light_plus in a float at 256 colors", ["light_plus", "256"], []]
+    ]) { |input| float_low_contrast(D::Themes.find(input[0].to_s, "theme"), input[1].to_s == "256") }
     t.assert_true(contrast(painted.fg(H::COMMENT), painted.bg(H::COMMENT)) >= 450, "one_dark comments are readable")
     t.assert_equal([454, 100], [contrast(0x767676, 0xffffff), contrast(0x777777, 0x777777)], "the contrast of WCAG's lightest AA gray on white and of a color on itself")
 

@@ -5,8 +5,10 @@ module Carat
     # the status bar's mode pills and slots after them; then the syntax
     # groups, from SYNTAX_FIRST on, with Neovim's standard
     # names in the order of its group-name help; then the file-icon groups,
-    # from ICON_FIRST on, named as nvim-web-devicons names them. A plugin's
-    # tokens may carry a syntax or a file-icon group. NAMES is indexed by
+    # from ICON_FIRST on, named as nvim-web-devicons names them; then the
+    # documentation markup groups, from MARKUP_FIRST on, named as Neovim's
+    # tree-sitter captures. A plugin's tokens may carry a syntax, a
+    # file-icon, or a markup group. NAMES is indexed by
     # id. Ids are integers so a frame stays three integer
     # arrays and a theme a few arrays indexed by id.
     module Highlight
@@ -106,14 +108,27 @@ module Carat
       ICON_YAML = 89
       ICON_GIT = 90
       ICON_LOCK = 91
-      COUNT = 92
+
+      MARKUP_FIRST = 92
+      MARKUP_HEADING = 92
+      MARKUP_STRONG = 93
+      MARKUP_ITALIC = 94
+      MARKUP_RAW = 95
+      MARKUP_LINK = 96
+      MARKUP_RAW_BLOCK = 97
+      COUNT = 98
 
       # A cell on the cursor line carries its group's id plus this layer:
       # the group drawn over the CursorLine background, unless it has a
       # background of its own. Ids below LIMIT are the ones a frame cell
       # may carry.
       CURSOR_LINE_LAYER = COUNT
-      LIMIT = COUNT * 2
+
+      # A cell inside a float carries its group's id plus this layer: the
+      # group drawn over NormalFloat's background, unless it has a
+      # background of its own.
+      FLOAT_LAYER = COUNT * 2
+      LIMIT = COUNT * 3
 
       NAMES = [
         "Normal", "LineNr", "StatusLine", "ErrorMsg", "NonText", "StatusLineNC", "TabLine", "TabLineSel", "TabLineFill", "Visual", "SignColumn", "Search", "IncSearch",
@@ -128,11 +143,12 @@ module Carat
         "Type", "StorageClass", "Structure", "Typedef",
         "Special", "SpecialChar", "Delimiter", "SpecialComment",
         "Todo", "Error",
-        "DevIconDefault", "DevIconFolder", "DevIconSymlink", "DevIconRb", "DevIconJson", "DevIconMd", "DevIconToml", "DevIconMakefile", "DevIconSh", "DevIconC", "DevIconYml", "DevIconGitIgnore", "DevIconLock"
+        "DevIconDefault", "DevIconFolder", "DevIconSymlink", "DevIconRb", "DevIconJson", "DevIconMd", "DevIconToml", "DevIconMakefile", "DevIconSh", "DevIconC", "DevIconYml", "DevIconGitIgnore", "DevIconLock",
+        "@markup.heading", "@markup.strong", "@markup.italic", "@markup.raw", "@markup.link.label", "@markup.raw.block"
       ]
 
-      # The id of the group a plugin token may carry, a syntax or a
-      # file-icon group, with that name; -1 for a UI group or an unknown
+      # The id of the group a plugin token may carry, a syntax, a
+      # file-icon, or a markup group, with that name; -1 for a UI group or an unknown
       # name.
       #: (String) -> Integer
       def self.token_id(name)
@@ -144,8 +160,8 @@ module Carat
         -1
       end
 
-      # Whether id is a group a plugin token may carry: a syntax or a
-      # file-icon group.
+      # Whether id is a group a plugin token may carry: a syntax, a
+      # file-icon, or a markup group.
       #: (Integer) -> bool
       def self.token?(id)
         id >= SYNTAX_FIRST && id < COUNT
@@ -158,9 +174,10 @@ module Carat
         NAMES[id]
       end
 
-      # The group of a cell's id, without the cursor-line layer.
+      # The group of a cell's id, without the cursor-line or float layer.
       #: (Integer) -> Integer
       def self.base(id)
+        return id - FLOAT_LAYER if id >= FLOAT_LAYER
         id >= CURSOR_LINE_LAYER ? id - CURSOR_LINE_LAYER : id
       end
     end

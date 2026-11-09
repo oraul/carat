@@ -2,8 +2,8 @@
 
 ## 1. Groups and themes
 
-- [ ] 1.1 Add the six markup groups and `FLOAT_LAYER` to `carat/domain/highlight.rb`, `base` stripping either layer; prove with `test/domain_theme.rb` (names, counts, token ids, base, LIMIT)
-- [ ] 1.2 Color the markup groups and fill the float layer in `carat/domain/themes.rb`; prove with the float-layer contrast table and the 16-color and uncolored checks in `test/domain_theme.rb`
+- [x] 1.1 Add the six markup groups and `FLOAT_LAYER` to `carat/domain/highlight.rb`, `base` stripping either layer; prove with `test/domain_theme.rb` (names, counts, token ids, base, LIMIT)
+- [x] 1.2 Color the markup groups and fill the float layer in `carat/domain/themes.rb`; prove with the float-layer contrast table and the 16-color and uncolored checks in `test/domain_theme.rb`
 
 ## 2. Reading markdown with spans
 
