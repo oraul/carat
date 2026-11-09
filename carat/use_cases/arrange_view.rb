@@ -12,7 +12,8 @@ module Carat
     # next frame will show. The top row holds the buffer tabs when two
     # file buffers are listed or two tab pages exist, the row above the
     # last the status bar, and the last row the message row; the layout gets
-    # the rows between. Each window scrolls vertically to keep its cursor
+    # the rows between, and each shown slot window gives its first row to
+    # the slot's header. Each window scrolls vertically to keep its cursor
     # row visible with scrolloff and horizontally to keep the display
     # column of its cursor visible, read from the shared line cache. The
     # floats of the tab page are then placed over the rows above the
@@ -42,6 +43,7 @@ module Carat
         area = 1 if area < 1
         layout = state.tab.layout
         layout.arrange(tabline, 0, area, cols)
+        reserve_headers(state.tab)
         id = 0
         while id < layout.node_count
           scroll(layout.window_at(id), options, tabstop) if layout.node(id).leaf?
@@ -52,6 +54,25 @@ module Carat
       end
 
       private
+
+      # Gives each shown slot window's first row to its header: the window
+      # starts a row lower, a row shorter, when it has two rows or more.
+      #: (Domain::TabPage) -> void
+      def reserve_headers(tab)
+        layout = tab.layout
+        i = 0
+        while i < Domain::TabPage::SLOT_COUNT
+          slot = tab.slot_at(i)
+          if slot.shown?(layout)
+            window = slot.view_window
+            if window.height > 1
+              window.row = window.row + 1
+              window.height = window.height - 1
+            end
+          end
+          i += 1
+        end
+      end
 
       #: (Domain::EditorState, Domain::FloatLayer, Integer, Integer, Domain::Options, Integer) -> void
       def place_floats(state, floats, rows, cols, options, tabstop)

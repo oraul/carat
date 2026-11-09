@@ -16,13 +16,15 @@ module Carat
     # background, and syntax_on is the switch of :syntax on and :syntax
     # off, on from the start as in Neovim. keyhints_delay is the
     # milliseconds a waiting prefix waits before its key hints show, 0
-    # for none. startscreen shows the start
+    # for none. layout_left_width, layout_right_width, and
+    # layout_panel_height size the slots of every tab page, 0 keeping the
+    # size the view asks for. startscreen shows the start
     # screen when the editor starts without a file, and reducedmotion
     # shows its last frame without the animation. cursorline draws the
     # cursor's line in the current window over the CursorLine background.
     # All but syntax_on come from option lines of the configuration. A Struct
     # record: mutable, with a reader and a writer per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, keyword_init: true)
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, keyword_init: true)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -45,6 +47,9 @@ module Carat
       # @rbs @reducedmotion: bool
       # @rbs @cursorline: bool
       # @rbs @keyhints_delay: Integer
+      # @rbs @layout_left_width: Integer
+      # @rbs @layout_right_width: Integer
+      # @rbs @layout_panel_height: Integer
 
       # Vim's defaults, the nerd icon set, the default theme on the
       # terminal's background, syntax highlighting on, and Neovim's search
@@ -53,7 +58,7 @@ module Carat
       # Neovim.
       #: () -> void
       def initialize
-        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: 300)
+        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: 300, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0)
       end
 
       # The options a configuration line may set, by name, with the kind
@@ -64,6 +69,7 @@ module Carat
         "ignorecase" => "bool", "smartcase" => "bool", "hlsearch" => "bool", "incsearch" => "bool", "wrap" => "bool",
         "startscreen" => "bool", "reducedmotion" => "bool", "cursorline" => "bool",
         "tabstop" => "integer", "shiftwidth" => "integer", "scroll" => "integer", "scrolloff" => "integer", "timeoutlen" => "integer", "undolevels" => "integer", "keyhints.delay" => "integer",
+        "layout.left_width" => "integer", "layout.right_width" => "integer", "layout.panel_height" => "integer",
         "clipboard" => "string", "icons" => "string", "theme" => "string", "background" => "string"
       }
 
@@ -71,6 +77,9 @@ module Carat
       # turns the hints off.
       KEYHINTS_DELAY = 300
       KEYHINTS_DELAY_MAX = 10_000
+
+      # The largest slot size, in columns or rows.
+      SLOT_SIZE_MAX = 500
 
       # The largest tabstop or shiftwidth, Vim's limit for tabstop: a
       # larger one would make one Tab or >> build a string of that many
@@ -107,6 +116,22 @@ module Carat
       def self.width_problem(key, value, low)
         return "" if value >= low && value <= WIDTH_MAX
         "#{key} takes a number from #{low} to #{WIDTH_MAX}"
+      end
+
+      # Why a number option's value cannot be set, "" when it lies from 0
+      # to max.
+      #: (String, Integer, Integer) -> String
+      def self.range_problem(key, value, max)
+        return "" if value >= 0 && value <= max
+        "#{key} takes a number from 0 to #{max}"
+      end
+
+      # The size option of a slot's side (:left, :right, or :bottom).
+      #: (Symbol) -> Integer
+      def slot_size(side)
+        return layout_left_width if side == :left
+        return layout_right_width if side == :right
+        layout_panel_height
       end
 
       # Applies one option line, noting its problem on the configuration.
@@ -154,11 +179,18 @@ module Carat
         when "scrolloff" then self.scrolloff = word.to_i
         when "timeoutlen" then self.timeoutlen = word.to_i
         when "keyhints.delay"
-          delay = word.to_i
-          if delay >= 0 && delay <= KEYHINTS_DELAY_MAX
-            self.keyhints_delay = delay
+          problem = Options.range_problem(line.key, word.to_i, KEYHINTS_DELAY_MAX)
+          if problem.empty?
+            self.keyhints_delay = word.to_i
           else
-            config.note(line, "#{line.key} takes a number from 0 to #{KEYHINTS_DELAY_MAX}")
+            config.note(line, problem)
+          end
+        when "layout.left_width", "layout.right_width", "layout.panel_height"
+          problem = Options.range_problem(line.key, word.to_i, SLOT_SIZE_MAX)
+          if problem.empty?
+            set_slot_size(name, word.to_i)
+          else
+            config.note(line, problem)
           end
         when "undolevels" then self.undolevels = word.to_i
         when "icons"
@@ -179,6 +211,19 @@ module Carat
           else
             config.note(line, "unknown background #{word}")
           end
+        end
+      end
+
+      private
+
+      #: (String, Integer) -> void
+      def set_slot_size(name, size)
+        if name == "layout.left_width"
+          self.layout_left_width = size
+        elsif name == "layout.right_width"
+          self.layout_right_width = size
+        else
+          self.layout_panel_height = size
         end
       end
     end

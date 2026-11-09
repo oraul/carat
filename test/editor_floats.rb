@@ -205,7 +205,7 @@ module EditorFloatsTest
       i += 1
     end
     t.assert_equal("Too many floating windows", h.plugins.window_requests.open_float("test", API::FloatOptions.at(0, 0, 1, 1), ["x"]).message, "a tab page holds sixteen floats")
-    t.assert_equal("2.3", API::VERSION, "the plugin API is 2.3")
+    t.assert_equal("2.4", API::VERSION, "the plugin API is 2.4")
 
     t.finish
   end

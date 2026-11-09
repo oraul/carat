@@ -135,7 +135,8 @@ module Carat
         total
       end
 
-      # Whether some window of some tab page shows the buffer.
+      # Whether some window of some tab page shows the buffer, a hidden
+      # slot's window included.
       #: (Buffer) -> bool
       def shown?(target)
         t = 0
@@ -147,6 +148,7 @@ module Carat
             return true if layout.window_at(ids[i]).buffer.equal?(target)
             i += 1
           end
+          return true if tab_at(t).keeps?(target)
           t += 1
         end
         false

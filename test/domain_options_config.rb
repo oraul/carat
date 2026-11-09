@@ -116,6 +116,19 @@ module DomainOptionsConfigTest
     end
     t.assert_equal([[300, 0, 10000, 300, 300], [0, 0, 0, 1, 1]], [delays, reports], "keyhints.delay takes 0 to 10000 and keeps the earlier value otherwise")
 
+    # option.layout.*: the slot sizes, 0 to 500, 0 by default.
+    t.table([
+      ["the slots keep the view's size by default", "", [[0, 0, 0], []]],
+      ["each slot takes its size", "option.layout.left_width 24\noption.layout.right_width 40\noption.layout.panel_height 500\n", [[24, 40, 500], []]],
+      ["a size above 500 is refused", "option.layout.panel_height 501\n", [[0, 0, 0], [".caratrc:1: option.layout.panel_height takes a number from 0 to 500"]]],
+      ["a word is refused", "option.layout.left_width wide\n", [[0, 0, 0], [".caratrc:1: option.layout.left_width takes a number"]]]
+    ]) do |text|
+      config = D::Config.new
+      config.read(".caratrc", text.to_s, false)
+      read = D::Options.from_config(config)
+      [[read.slot_size(:left), read.slot_size(:right), read.slot_size(:bottom)], config.report]
+    end
+
     t.finish
   end
 end

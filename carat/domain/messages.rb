@@ -6,6 +6,7 @@ module Carat
     module Messages
       E36 = "E36: Not enough room"
       E37 = "E37: No write since last change (add ! to override)"
+      E444 = "E444: Cannot close last window"
 
       # The two lines of Neovim's check_changed_any, which refuses to quit
       # over another buffer's unsaved changes: E37 without the hint, then

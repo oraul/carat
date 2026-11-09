@@ -40,10 +40,13 @@ module EditorPluginsTest
           "plugin.side.file" => "Open b.txt in the editing window",
           "plugin.side.far" => "Focus window id 9",
           "plugin.side.count" => "Report the count and the register",
-          "plugin.side.here" => "Open b.txt in the side window itself"
+          "plugin.side.here" => "Open b.txt in the side window itself",
+          "plugin.side.panel" => "Open the log in the bottom panel",
+          "plugin.side.other" => "Open another view on the left",
+          "plugin.side.top" => "Open the list at a side that does not exist"
         },
         commands: {},
-        bindings: ["keymap.normal <leader>to plugin.side.open", "keymap.normal <leader>tr plugin.side.right", "keymap.normal <leader>tw plugin.side.wide", "keymap.normal <leader>tc plugin.side.close", "keymap.normal <leader>tl plugin.side.lines", "keymap.normal <leader>tn plugin.side.nope", "keymap.normal <leader>tf plugin.side.file", "keymap.normal <leader>tx plugin.side.far", "keymap.normal <leader>tt plugin.side.count", "keymap.normal <leader>th plugin.side.here"],
+        bindings: ["keymap.normal <leader>to plugin.side.open", "keymap.normal <leader>tr plugin.side.right", "keymap.normal <leader>tw plugin.side.wide", "keymap.normal <leader>tc plugin.side.close", "keymap.normal <leader>tl plugin.side.lines", "keymap.normal <leader>tn plugin.side.nope", "keymap.normal <leader>tf plugin.side.file", "keymap.normal <leader>tx plugin.side.far", "keymap.normal <leader>tt plugin.side.count", "keymap.normal <leader>th plugin.side.here", "keymap.normal <leader>tb plugin.side.panel", "keymap.normal <leader>tv plugin.side.other", "keymap.normal <leader>tu plugin.side.top"],
         events: [], options: [], option_types: {}, filetypes: []
       )
     end
@@ -69,6 +72,9 @@ module EditorPluginsTest
       when "plugin.side.file" then report_window(host.open_file(host.editing_window.window, "b.txt"))
       when "plugin.side.far" then report_window(host.focus_window(9))
       when "plugin.side.here" then report_window(host.open_file(host.scratch_window("list").window, "b.txt"))
+      when "plugin.side.panel" then report_window(host.open_scratch("log", "bottom", 6, LINES, nil))
+      when "plugin.side.other" then report_window(host.open_scratch("other", "left", 20, LINES, nil))
+      when "plugin.side.top" then report_window(host.open_scratch("list", "top", 30, LINES, nil))
       when "plugin.side.count" then host.message("count #{context.count} register #{context.register.inspect} buffer #{context.buffer}", false)
       end
     end
@@ -131,10 +137,11 @@ module EditorPluginsTest
     out
   end
 
-  # Plugin windows: rows are [label, keys, [message, windows]].
-  LEFT = [[0, 0, 22, 30, "list"], [0, 31, 22, 49, "a.txt"]]
+  # Plugin windows: rows are [label, keys, [message, windows]]. A side
+  # window is a sidebar slot's, its first row the slot's header.
+  LEFT = [[1, 0, 21, 30, "list"], [0, 31, 22, 49, "a.txt"]]
 
-  RIGHT = [[0, 0, 22, 49, "a.txt"], [0, 50, 22, 30, "list"]]
+  RIGHT = [[0, 0, 22, 49, "a.txt"], [1, 50, 21, 30, "list"]]
 
   # A plugin that raises is disabled in the running editor.
   class Boom < Carat::PluginApi::Plugin
@@ -233,19 +240,34 @@ module EditorPluginsTest
       ["a side window on the left, with its window id", " to", ["ok 2", LEFT, 1]],
       ["a side window on the right", " tr", ["ok 2", RIGHT, 2]],
       ["the width survives equalize", " to<C-w>=", ["", LEFT, 1]],
-      ["the width survives a split of the other window", " to<C-w>l<C-w>v<C-w>=", ["", [[0, 0, 22, 30, "list"], [0, 31, 22, 24, "a.txt"], [0, 56, 22, 24, "a.txt"]], 2]],
+      ["the width survives a split of the other window", " to<C-w>l<C-w>v<C-w>=", ["", [[1, 0, 21, 30, "list"], [0, 31, 22, 24, "a.txt"], [0, 56, 22, 24, "a.txt"]], 2]],
       ["reopening focuses the side window", " to<C-w>l to", ["ok 2", LEFT, 1]],
       ["no room reports E36", " tw", ["failed 0 #{E36}", [[0, 0, 22, 80, "a.txt"]], 1]],
       ["the plugin closes its window", " to tc", ["ok 0", [[0, 0, 22, 80, "a.txt"]], 1]],
       ["closing a list that is not shown fails", " tc", ["failed 0 No window shows list", [[0, 0, 22, 80, "a.txt"]], 1]],
       [":q closes the side window", " to:q<CR>", ["", [[0, 0, 22, 80, "a.txt"]], 1]],
       ["Ctrl-W q closes the side window", " to<C-w>q", ["", [[0, 0, 22, 80, "a.txt"]], 1]],
-      ["open a file in the file window, id 1", " to tf", ["ok 1 \"b.txt\" 1L, 3B", [[1, 0, 21, 30, "list"], [1, 31, 21, 49, "b.txt"]], 2]],
-      ["focusing a missing window fails", " to tx", ["failed 0 No window 9", LEFT, 1]]
+      ["open a file in the file window, id 1", " to tf", ["ok 1 \"b.txt\" 1L, 3B", [[2, 0, 20, 30, "list"], [1, 31, 21, 49, "b.txt"]], 2]],
+      ["focusing a missing window fails", " to tx", ["failed 0 No window 9", LEFT, 1]],
+      ["a panel at the bottom, its header on its first row", " tb", ["ok 2", [[0, 0, 16, 80, "a.txt"], [18, 0, 4, 80, "log"]], 2]],
+      ["the panel keeps its height through a split and equalize", " tb<C-w>k<C-w>s<C-w>=", ["", [[0, 0, 8, 80, "a.txt"], [9, 0, 7, 80, "a.txt"], [18, 0, 4, 80, "log"]], 1]],
+      ["the panel goes between a sidebar and the edge", " to tb", ["ok 3", [[1, 0, 21, 30, "list"], [0, 31, 16, 49, "a.txt"], [18, 31, 4, 49, "log"]], 3]],
+      ["a sidebar beside the panel leaves it under the file", " tb to", ["ok 3", [[1, 0, 21, 30, "list"], [0, 31, 16, 49, "a.txt"], [18, 31, 4, 49, "log"]], 1]],
+      ["a second view takes the left slot's window", " to tv", ["ok 2", [[1, 0, 21, 30, "other"], [0, 31, 22, 49, "a.txt"]], 1]],
+      ["the first view comes back in the same window", " to tv to", ["ok 2", LEFT, 1]],
+      ["an unknown side is refused", " tu", ["failed 0 No side top: left, right, or bottom", [[0, 0, 22, 80, "a.txt"]], 1]],
+      ["the panel toggles off and on", " tb<C-w>k lp lp", ["", [[0, 0, 16, 80, "a.txt"], [18, 0, 4, 80, "log"]], 1]],
+      ["a closed slot window empties the slot", " to:q<CR> ls", ["No view in the left sidebar", [[0, 0, 22, 80, "a.txt"]], 1]]
     ]) do |keys|
       h = session(keys)
       [h.message, shape(h), h.window_index]
     end
+    h = session(" to tv")
+    t.assert_equal([" list  other", Carat::Domain::Highlight::TAB_LINE, Carat::Domain::Highlight::TAB_LINE_SELECTED], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 7)], "the header lists both views, the shown one selected")
+    t.assert_equal(true, h.assembly.buffers.scratch_for("side", "list").nil?, "the view let go leaves the buffer list")
+    h = editor_with(Carat::Doubles::FixedConfig.with("option.layout.left_width 24\noption.layout.panel_height 4\n"), 24, 80)
+    h.type(" to tb")
+    t.assert_equal([[1, 0, 21, 24, "list"], [0, 25, 18, 55, "a.txt"], [20, 25, 2, 55, "log"]], shape(h), "the configured sizes win over the sizes the views ask for")
 
     # The scratch keymap, its fallback, and its scope.
     h = session(" to")
@@ -327,7 +349,7 @@ module EditorPluginsTest
 
     # A side window has no line numbers.
     h = session(" to")
-    t.assert_equal(["l0", "l1"], [h.row(0)[0, 2], h.row(1)[0, 2]], "the side window's rows start at its first column")
+    t.assert_equal([" list", "l0", "l1"], [h.row(0)[0, 5], h.row(1)[0, 2], h.row(2)[0, 2]], "the side window's rows start at its first column, under its header")
 
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "one\ntwo\n")

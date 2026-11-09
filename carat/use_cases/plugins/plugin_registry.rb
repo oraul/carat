@@ -363,7 +363,7 @@ module Carat
                 fresh = Domain::Buffer.from_text("", nil)
                 @buffers.add(fresh)
                 window.show(fresh)
-                window.fixed_width = false
+                window.unfix_size
               end
             end
             k -= 1

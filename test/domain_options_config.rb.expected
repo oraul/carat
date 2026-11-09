@@ -34,4 +34,8 @@ ok   a later line wins
 ok   takes true or false
 ok   the shipped configuration turns the cursor line on
 ok   keyhints.delay takes 0 to 10000 and keeps the earlier value otherwise
-domain_options_config: 36 passed, 0 failed
+ok   the slots keep the view's size by default
+ok   each slot takes its size
+ok   a size above 500 is refused
+ok   a word is refused
+domain_options_config: 40 passed, 0 failed
