@@ -1936,9 +1936,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## A key resolved by timeoutlen leaves the hover float off its anchor
 
-- Where: `HandleKey#timeout` in `carat/use_cases/handle_key.rb` line 122 at 41297d6. Quality advisory in `quick-docs`. At c1b3a12 `timeout` copies the after-key tail of `call` (line 154: `FollowSignature`, the plugin observe, `ArrangeView`) without `FollowHover` (periodic quality); one shared tail would close both gaps.
-- Why it matters: `call` runs `FollowHover` after a key, but `timeout` dispatches the pending keys' shorter binding without it, so a cursor move resolved by `timeoutlen` leaves the documentation float open away from the cursor until the next key.
-- Fix outline: end `timeout` with the same `@follow_hover.call(state) if @hover.float_id != 0` that `call` has, with a row in `test/adapters_hover.rb` that moves the cursor through a timed-out prefix.
+- Where: `HandleKey#timeout` in `carat/use_cases/handle_key.rb` line 122 at 41297d6. Quality advisory in `quick-docs`. At c1b3a12 `timeout` copies the after-key tail of `call` (line 154: `FollowSignature`, the plugin observe, `ArrangeView`) without `FollowHover` (periodic quality); one shared tail would close both gaps. At d828abb `timeout` (line 154) also skips `FollowPalette` and `HideKeyHints` (quality advisory in `discoverability`).
+- Why it matters: `call` runs `FollowHover` after a key, but `timeout` dispatches the pending keys' shorter binding without it, so a cursor move resolved by `timeoutlen` leaves the documentation float open away from the cursor until the next key; likewise `palette.open` resolved by `timeoutlen` (a user binding under `<leader>p`) opens the `>` prompt with no list until the next key.
+- Fix outline: share the after-key tail of `call` with `timeout` (`FollowHover`, `FollowSignature`, `FollowPalette`, `HideKeyHints`, the plugin observe, `ArrangeView`), with a row in `test/adapters_hover.rb` that moves the cursor through a timed-out prefix and one in `test/editor_palette.rb` that opens the palette through a timed-out user binding.
 
 ## The hover placement counts rows with bare numbers
 
@@ -2144,11 +2144,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: codes 40 and 44 hide the characters the text already holds.
 - Fix outline: compare the text with ( and , directly.
 
-## Scratch floats of plain lines are built five ways
+## Scratch floats of plain lines are built seven ways
 
-- Where: `carat/use_cases/completion/show_completion.rb` line 151, `carat/use_cases/completion/show_completion_docs.rb` line 106, `carat/use_cases/docs/show_hover.rb` line 86, `carat/use_cases/docs/show_signature.rb` line 66, `carat/use_cases/plugins/window_requests.rb` line 235, at c1b3a12 (periodic quality). Queued in `hover-tidy`.
-- Why it matters: each builds the same buffer, owner, window, and float steps, so a change to an owned float must be made five times.
-- Fix outline: one alternate constructor of a float from lines, owner, and spec, used by the five.
+- Where: `carat/use_cases/completion/show_completion.rb` line 151, `carat/use_cases/completion/show_completion_docs.rb` line 106, `carat/use_cases/docs/show_hover.rb` line 86, `carat/use_cases/docs/show_signature.rb` line 66, `carat/use_cases/plugins/window_requests.rb` line 235, at c1b3a12 (periodic quality), and `carat/use_cases/discovery/show_key_hints.rb` line 137 and `carat/use_cases/discovery/follow_palette.rb` line 124 at d828abb (quality advisories in `discoverability`). Queued in `hover-tidy`.
+- Why it matters: each builds the same buffer, owner, window, and float steps, so a change to an owned float must be made seven times.
+- Fix outline: one alternate constructor of a float from lines, owner, and spec, used by the seven.
 
 ## A long insert copies its typed text on every key
 
@@ -2215,3 +2215,69 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the Calibration rule of `docs/goals.md`; the retrospective of `parameter-info` (#78). The plan of `discoverability` dropped `scout-effort-revert` by this reading; the goals text waits for the user.
 - Why it matters: low-effort scout rows #74 to #78 passed CI first 3 of 5, both reds a timed runner case (`check-runner-safety`), 5 of 5 counting own-diff reds, rework 7 against 7; the literal rule would revert a move that did no harm.
 - Fix outline: count only first-pass reds whose recorded cause is in the change's own diff, with the cause recorded in the run state.
+
+## The palette lists and replays unchecked plugin action names
+
+- Where: `carat/use_cases/discovery/open_palette.rb` line 79, which lists every `plugin.<name>.<action>` of an enabled plugin's manifest, and `carat/use_cases/handle_key.rb` line 269, which replays a chosen name that is not an action name as keys, at d828abb. Security Low findings (confidence 3 and 5) in `discoverability`.
+- Why it matters: a compiled-in plugin whose manifest fails `ManifestCheck` can declare an action such as `plugin.explorer.:w ~/.bashrc<CR>`, which is listed because the plugin is enabled, and Enter on it types the keys. No new capability, since a plugin can already bind replays in its manifest defaults, but the palette should only ever dispatch actions.
+- Fix outline: build the plugin entries from a registry method returning the enabled plugins' checked action names (only those for which `Domain::Keymap.action_name?` holds), and in `HandleKey` dispatch the palette's chosen name only when `Domain::Keymap.action_name?` holds, never through replay, with a row in `test/editor_palette.rb` for a refused name.
+
+## OpenPalette re-parses plugin action names
+
+- Where: `plugin_of` in `carat/use_cases/discovery/open_palette.rb` line 91 against `PluginRouter` line 36, and the one-line single-use `palette_add_plugin` at line 85, at d828abb. Quality advisories in `discoverability`.
+- Why it matters: two parsers of `plugin.<name>.<action>` can drift, and the wrapper adds a hop for one call.
+- Fix outline: have `PluginRegistry` return the enabled plugins' action names (the same method the palette entry above needs) and inline `@palette.add` into `add_plugin_actions`.
+
+## KEYHINTS_DELAY is never read
+
+- Where: `carat/domain/options.rb` line 72 at d828abb; `initialize` (line 56) repeats the literal 300. Quality advisory in `discoverability`, raised twice.
+- Why it matters: a constant beside a duplicated literal invites changing one and not the other.
+- Fix outline: use `KEYHINTS_DELAY` in `initialize`, or drop the constant.
+
+## The key hints and the palette cut text by characters, in two copies
+
+- Where: `cut` in `carat/use_cases/discovery/show_key_hints.rb` line 175 and its copy in `carat/use_cases/discovery/follow_palette.rb` line 168, with `pad` at line 161, at d828abb. Quality advisories in `discoverability`, raised twice.
+- Why it matters: a description holding wide characters overflows the float, and `pad` can be asked to repeat a space a negative number of times, while `ShowCompletion#fit` already cuts by cells.
+- Fix outline: one cell-aware domain helper cutting at `DisplayWidth.col_at(text, width, 1)` used by the key hints, the palette, and the completion menu, with a row holding a wide-character description.
+
+## ShowKeyHints copies HideKeyHints' close
+
+- Where: `carat/use_cases/discovery/show_key_hints.rb` line 56 at d828abb. Quality advisory in `discoverability`.
+- Why it matters: two copies of closing the hints float drift when the float's lifecycle changes.
+- Fix outline: have `ShowKeyHints` call `HideKeyHints` instead of holding `close_float`.
+
+## Three discovery comments are stale or break their wrap
+
+- Where: the class comment of `carat/use_cases/discovery/hide_key_hints.rb` (line 8), the class comment of `carat/use_cases/discovery/show_key_hints.rb` (line 23, longer than its neighbors), and the comment at `carat/use_cases/handle_key.rb` line 66 (breaks after "While the"), at d828abb. Quality advisories in `discoverability`.
+- Why it matters: the first says a binding resolved by `timeoutlen` closes the hints, but `timeout` never calls `HideKeyHints` and the hints never show over a `:pending` key; the others are style only.
+- Fix outline: drop the clause from the `HideKeyHints` comment and rewrap the other two to the width of the lines around them.
+
+## Ex command descriptions live apart from their registrations
+
+- Where: the description hash of `carat/use_cases/ex/ex_table.rb` line 20 at d828abb. Quality advisory in `discoverability`.
+- Why it matters: unlike `ActionTable.register`, which takes the description, each new ex command is edited in two places.
+- Fix outline: pass the description to `ExTable#register` from each handler's `register` and drop the hash.
+
+## The palette runs ex commands that need an argument bare
+
+- Where: `carat/use_cases/execute_command_line.rb` line 91 at d828abb. Quality advisory in `discoverability`.
+- Why it matters: picking `:edit`, `:buffer`, `:substitute`, or `:set` in the palette runs it without an argument and only reports an error.
+- Fix outline: for a command that takes an argument, leave `:name ` on the command line instead of running it, with a row in `test/editor_palette.rb`, or note the behavior in `docs/compatibility.md`.
+
+## A disabled plugin's group names stay in the keymap
+
+- Where: `name_group` in `carat/domain/keymap.rb` line 285 at d828abb. Quality advisory in `discoverability`.
+- Why it matters: the group name ignores the line's owner, so `remove_owner` keeps a disabled plugin's group names and a prefix it shared still shows that title over the key hints.
+- Fix outline: record the owner with each group name and drop it in `remove_owner`, or refuse `keymap.group` from a plugin, with a row in `test/editor_key_hints.rb`.
+
+## The discovery tests copy their session helper
+
+- Where: `plugin_session` in `test/editor_key_hints.rb` line 27 and in `test/editor_palette.rb` line 21, each repeating its file's `session` but for the plugin list, and the magic slice `row_of(...)[0, 55]` in `test/editor_palette.rb` line 96, at d828abb. Quality advisories in `discoverability`.
+- Why it matters: two copies of the same setup drift, and a slice at a counted width breaks silently when a description changes.
+- Fix outline: give each `session` a `plugins` argument (`plugins: []` at the existing rows) and drop `plugin_session`; assert `start_with?` on the expected prefix, or compare the whole rstripped row.
+
+## The architecture's group example names a bound prefix
+
+- Where: `docs/architecture.md` line 230 at d828abb, the section 7 example. Quality advisory in `discoverability`.
+- Why it matters: the example names `keymap.group <leader>w windows` while the same example binds `keymap.normal <leader>w :w<CR>`, so that prefix is bound and its hints never show, since a bound prefix resolves by `timeoutlen`.
+- Fix outline: name a group for an unbound prefix in the example, such as `keymap.group <leader>f files`.
