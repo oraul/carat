@@ -200,6 +200,8 @@ module LintTest
   # Methods that return bool but are commands, not questions: the result
   # says whether the command did something.
   BOOL_COMMANDS = {
+    "expire" => "drops the notifications whose time has come, answering whether any went",
+    "clear_progress" => "ends the long work on the bar, answering whether some was shown",
     "pump" => "reads and handles the keys that are ready",
     "show" => "shows a language server on the bar, answering whether the slot changed",
     "hold" => "shows a language server waiting for :LspStart on the bar, answering whether the slot changed",

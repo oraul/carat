@@ -180,6 +180,25 @@ module AdaptersLanguageGatewayTest
     t.assert_equal("ruby-lsp indexing 100%", label(h), "a percent over 100 is capped")
     notify(h, "$/progress", { "token" => "t", "value" => { "kind" => "end" } })
     t.assert_equal("ruby-lsp", label(h), "progress ends")
+    slots = h.assembly.status_slots
+    notify(h, "$/progress", { "token" => "t", "value" => { "kind" => "begin", "title" => "Indexing", "percentage" => 10 } })
+    notify(h, "$/progress", { "token" => "t", "value" => { "kind" => "report", "message" => "3/7 files", "percentage" => 42 } })
+    t.assert_equal([true, "Indexing 3/7 files", 42], [slots.progress?, slots.progress_label, slots.progress_percent], "the progress segment takes the title, the message, and the percent")
+    notify(h, "$/progress", { "token" => "t", "value" => { "kind" => "report", "message" => "\e[31mred\e[0m\nnext" } })
+    t.assert_equal(["Indexing red next", 42], [slots.progress_label, slots.progress_percent], "a message is one line without escape sequences, the percent kept")
+    notify(h, "$/progress", { "token" => "t", "value" => { "kind" => "end" } })
+    t.assert_equal([false, false], [slots.progress?, h.status_row.include?("Indexing")], "the progress segment goes at the end")
+
+    # Server messages as notifications.
+    notices = h.assembly.notices
+    notify(h, "window/showMessage", { "type" => 1, "message" => "Bundle failed" })
+    notify(h, "window/showMessage", { "type" => 2, "message" => "slow \e]0;title\a disk\nnow" })
+    notify(h, "window/showMessage", { "type" => 9, "message" => "x" * 300 })
+    t.assert_equal([3, "Bundle failed", 2, "slow  disk now", 1, 200, 0], [notices.count, notices.text_at(0), notices.level_at(0), notices.text_at(1), notices.level_at(1), notices.text_at(2).length, notices.level_at(2)], "type 1 an error, 2 a warning, another info, on one line without sequences, cut at 200")
+    t.assert_true(h.state.history.to_s.include?("Bundle failed"), "a server message is kept in the history")
+    notify(h, "window/showMessage", { "type" => 1, "message" => 7 })
+    notify(h, "window/showMessage", { "type" => 1, "message" => "  " })
+    t.assert_equal([3, "Bundle failed"], [notices.count, notices.text_at(0)], "a message that is not text, or blank, shows nothing")
 
     # Diagnostics as values.
     path = h.buffer.path

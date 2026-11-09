@@ -157,6 +157,8 @@ module AdaptersAssemblyTest
     t.assert_equal([], strangers(a.edit_command_line, [["handle_key", a.handle_key.command_line]]), "the command line editor")
     t.assert_equal([], strangers(a.cache, [["arrange_view", a.arrange_view.cache], ["frame_presenter", a.frame_presenter.cache]]), "the line cache")
     t.assert_equal([], strangers(a.start_screen, [["controller", a.controller.start_screen], ["frame_presenter", a.frame_presenter.start_screen]]), "the start screen")
+    t.assert_equal([], strangers(a.notices, [["controller", a.controller.notices], ["frame_presenter", a.frame_presenter.notices], ["services", a.services.notices]]), "the notifications")
+    t.assert_equal(true, a.notices.history.equal?(a.state.history), "the notifications keep the state's history")
     t.assert_equal([], strangers(a.arrange_view, [["handle_key", a.handle_key.arrange_view]]), "the arrange view use case")
     t.assert_equal([], strangers(a.plugins.syntax, [["highlight_view", a.highlight_view.syntax]]), "the plugins as tokenizers")
     t.assert_equal([], strangers(a.plugins.registry, [["plugin_syntax", a.plugins.syntax.registry]]), "the plugin registry, in the tokenizer part")
