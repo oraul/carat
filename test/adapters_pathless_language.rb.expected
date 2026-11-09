@@ -1,0 +1,7 @@
+ok   sync: a pathless buffer is never opened on the server
+ok   completion: a word typed in a pathless buffer asks no completion
+ok   hover: K in a pathless buffer asks no hover
+ok   signature: an open paren in a pathless buffer asks no signature help
+ok   diagnostics: a publish draws nothing on a pathless buffer
+ok   control: a pathless buffer written to a name is opened
+adapters_pathless_language: 6 passed, 0 failed
