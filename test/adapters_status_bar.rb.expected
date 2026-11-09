@@ -49,4 +49,16 @@ ok   new slots are empty
 ok   a buffer's diagnostics are counted by severity
 ok   counting the same again changes nothing, another list replaces the counts
 ok   no diagnostics empty the slot
-adapters_status_bar: 51 passed, 0 failed
+ok   a bar at a percent
+ok   a percent rounds down to whole cells
+ok   without a percent three cells move per report
+ok   a report without a percent keeps the last
+ok   reduced motion leaves out a bar without a percent
+ok   reduced motion keeps a bar with a percent
+ok   a plain bar under NO_COLOR
+ok   no title, the bar alone
+ok   done cells in StatusLineLspReady, the rest in StatusLine
+ok   plain done cells in StatusLine
+ok   a narrow bar drops the progress (35) before the branch (40)
+ok   clearing ends the progress once
+adapters_status_bar: 63 passed, 0 failed

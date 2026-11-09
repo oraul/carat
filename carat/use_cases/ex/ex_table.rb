@@ -34,7 +34,7 @@ module Carat
         "syntax" => "Syntax highlighting on or off", "set" => "Set an option", "nohlsearch" => "Clear search highlight",
         "substitute" => "Substitute in lines", "&" => "Repeat last substitute", "global" => "Run on matching lines",
         "vglobal" => "Run on other lines", "delete" => "Delete lines", "LspStart" => "Start language server",
-        "LspRestart" => "Restart language servers"
+        "LspRestart" => "Restart language servers", "messages" => "Show the message history"
       }
       private_constant :DESCRIPTIONS
 

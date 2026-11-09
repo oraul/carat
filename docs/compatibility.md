@@ -304,6 +304,7 @@ Neovim shows signature help on request (`vim.lsp.buf.signature_help()`, `<C-s>` 
 | `:d[elete]` | `:[range]d [x] [count]`: delete the lines of the range (the cursor line without one), or count lines from its last line, into register x or the unnamed one, shifting the numbered registers; the cursor to the first non-blank of the line after them | `E488: Trailing characters: x`, `E939`, `E477` | `editor_global`, `domain_global`, `use_cases_ex` |
 | `:LspStart` | nvim-lspconfig's command: starts the current buffer's language server when none runs for its file type, in any directory, the start a directory outside `language.trusted_roots` waits for; the `lsp` slot reads `starting` | `No language server for this buffer`, `Cannot start ruby-lsp`, `E488: Trailing characters: x` | `editor_lsp`, `use_cases_ex` |
 | `:LspRestart` | nvim-lspconfig's command: stops every language server, clears their drawn diagnostics, and starts the current buffer's again; the `lsp` slot reads `starting` | `No language server for this buffer`, `Cannot start ruby-lsp`, `E488: Trailing characters: x` | `editor_lsp`, `use_cases_ex` |
+| `:mes[sages]`, `:mes[sages] clear` | Show the message history (Messages and notifications): one entry on the message row, several as a listing with the hit-enter prompt, none as nothing; `clear` empties it | `E474: Invalid argument` | `editor_messages`, `use_cases_ex` |
 | unknown | Report the command | `E492: Not an editor command: name` | `use_cases_ex`, `editor_cmdline` |
 
 Every command is recognized from its abbreviation to its full name, as the `name[suffix]` notation of the table means: `:vs`, `:vsp`, and `:vsplit` all split vertically, and `:tabf` and `:vsplitx` are unknown; the commands are tried in the order of this table, which is Vim's order where two could match, and the commands plugins declare come after them (`use_cases_ex` checks every spelling of every row, `editor_cmdline` runs `:vsp`, `:spl`, `:wr`, `:wal`, `:xi`, and `:tabfirs`).
@@ -370,6 +371,22 @@ Differences from Neovim: the `c` and `l` flags, `\=` expressions, and `\n` in th
 
 Differences from Neovim: `\/`, `\?`, and `\&` as the delimiter and a delimiter that is not ASCII answer `Not implemented`; `:m`, `:t`, `:normal`, and `:p` do not exist yet, so a global runs the other ex commands Carat has; after a global the message is the last one its command gave, not Vim's totals (`N substitutions on M lines` over every line, `N fewer lines`); a command that switches to another buffer stops the global, where Vim goes on there; a command that closes the undo step, as `:undo` does, splits the global into more than one; Ctrl-C does not interrupt it; `:d` reports no line count, as `dd` reports none.
 
+## Messages and notifications
+
+Every kind of message, where it shows, when it goes, and whether `:messages` keeps it.
+
+| Kind | Placement | Expiry | History | Test |
+| --- | --- | --- | --- | --- |
+| Information | The message row in `Normal` (a file written, `Not implemented: name`, a plugin's message) | The next key | Kept, the oldest past 500 dropped | `domain_messages`, `editor_messages` |
+| Error | The message row in `ErrorMsg` (`E492`, a plugin disabled) | The next key | Kept | `domain_messages`, `editor_messages` |
+| Listing | The rows above the message row with the hit-enter prompt (`:registers`, `:ls`, `:undolist`, `:messages`) | Enter or Space, or any other key run as a command | Not kept | `domain_messages`, `editor_messages` |
+| Info notification | A box at the top right, from the row under the buffer tabs, its right edge one column in, `Info` on its top border in `DiagnosticInfo`, the text in `NormalFloat`; at most three stacked oldest first, a fourth replacing the oldest, none reaching the status bar or on a screen under 8 columns | 3 seconds | Kept | `domain_messages`, `editor_messages` |
+| Warning notification | As info, `Warning` in `DiagnosticWarn` (a language server's `window/showMessage` of type 2) | 5 seconds | Kept | `domain_messages`, `editor_messages`, `adapters_language_gateway` |
+| Error notification | As info, `Error` in `DiagnosticError` (`window/showMessage` of type 1; other types are info) | 8 seconds | Kept | `domain_messages`, `editor_messages`, `adapters_language_gateway` |
+| Progress | The status bar's progress segment (Status bar and buffer tabs) | The work's end, or its server stopping | Not kept | `adapters_status_bar`, `adapters_language_gateway` |
+
+Notifications never animate, so `option.reducedmotion` changes only the progress bar; under `NO_COLOR` a box is `+`, `-`, and `|` in `Normal`. A server's message is one line without control characters or escape sequences, cut at 200 bytes. Differences from Neovim: `:{count}messages` is refused with `E481`, the history is not colored, `messagesopt` is not an option, notifications are not dismissed by a key and come only from language servers (no plugin request yet), and `window/showMessageRequest` and `window/logMessage` show nothing.
+
 ## Windows
 
 Every window shows one buffer from the buffer list with its own cursor and scroll position; a window above another ends in a separator row and windows side by side are separated by one column, both in `WinSeparator`, and one status bar serves them all (Status bar and buffer tabs below). A count before `<C-w>` is taken where Neovim takes one.
@@ -433,6 +450,7 @@ One status bar on the row above the message row serves every window, as `laststa
 | File | The path, the scratch title, or `[No Name]`, and the `modified` icon when modified; priority 90, cut last | `adapters_status_bar`, `editor_screen` |
 | Branch, diagnostics, `lsp` | Empty until git and language services fill them, then the branch after the `git` icon (40), each count above zero after its icon in its `Diagnostic` group (70, the current buffer's at the idle tick), and the server's name with its state (`starting`, `indexing 42%`, `stopped`, `crashed :LspRestart`, `untrusted :LspStart`, nothing when ready) in `StatusLineLspStarting` (starting, indexing), `Ready`, `Error` (crashed), or `StatusLine` (stopped, untrusted) (60) | `adapters_status_bar`, `editor_lsp` |
 | Plugin segments | In the order first set, before the `lsp` slot, each at its own priority, 10 for `set_status` | `adapters_status_bar`, `editor_plugins` |
+| Progress | While long work runs (a language server's `$/progress`), its title and message (40 bytes) and a ten-cell bar before the `lsp` slot: a `━` per ten percent in `StatusLineLspReady`, the rest `─`; without a percent three cells moving one per report, left out under `option.reducedmotion true`; `#` and `-` in `StatusLine` under `NO_COLOR` (35) | `adapters_status_bar`, `adapters_language_gateway` |
 | File type, encoding | The filetype when there is one (30) and `utf-8` (20) | `adapters_status_bar` |
 | Position, percent | `row:col` (80) and `All`, `Top`, `Bot`, or `N%` (50) | `adapters_status_bar`, `editor_screen` |
 | Narrow bar | Whole segments dropped, lowest priority first and the later of equals first, until the rest fit | `adapters_status_bar` |

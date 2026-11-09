@@ -1,0 +1,23 @@
+ok   an error is kept after the next key
+ok   the abbreviation
+ok   a listing is not kept
+ok   no history shows nothing
+ok   clear empties the history
+ok   another argument is refused
+ok   the output of :messages is not kept
+ok   several entries are listed in order with the hit-enter prompt
+ok   the refusal is an error
+ok   a warning box ends one column before the right edge
+ok   the last column and the window beside the box are kept
+ok   the border, the title in its severity's group, the text in NormalFloat
+ok   a notification is kept in the history
+ok   keys move the cursor and the box stays
+ok   a scroll under the box keeps it drawn
+ok   three boxes, two after 4 seconds, one after 6, none after 9
+ok   the rows under a box that left show the window again
+ok   a fourth replaces the oldest
+ok   a plain box in ASCII, at least 20 columns wide
+ok   a plain box is all in Normal
+ok   a short warning draws its whole title
+ok   a short error draws its whole title
+editor_messages: 22 passed, 0 failed

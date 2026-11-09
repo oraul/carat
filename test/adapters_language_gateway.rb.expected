@@ -30,6 +30,12 @@ ok   progress begins
 ok   progress reports a percent
 ok   a percent over 100 is capped
 ok   progress ends
+ok   the progress segment takes the title, the message, and the percent
+ok   a message is one line without escape sequences, the percent kept
+ok   the progress segment goes at the end
+ok   type 1 an error, 2 a warning, another info, on one line without sequences, cut at 200
+ok   a server message is kept in the history
+ok   a message that is not text, or blank, shows nothing
 ok   diagnostics are kept stripped, the severity bounded
 ok   a publish is drawn at the idle tick: a sign on a row inside the buffer, its message, and the counts
 ok   a later publish replaces the file's diagnostics, an error when no severity is given
@@ -48,4 +54,4 @@ ok   a broken input crashes the server
 ok   stop sends shutdown and exit and stops the child
 ok   a missing command leaves the slot empty
 ok   a text file starts nothing
-adapters_language_gateway: 50 passed, 0 failed
+adapters_language_gateway: 56 passed, 0 failed

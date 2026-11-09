@@ -1,4 +1,5 @@
 require_relative "diagnostic_list"
+require_relative "control_text"
 
 module Carat
   module Domain
@@ -8,12 +9,16 @@ module Carat
     # name ("" for none) with its state, :none, :starting, :ready,
     # :indexing, :stopped, :crashed, or :untrusted (configured but not
     # started, the directory not trusted), and the label the bar draws, built
-    # once by set_lsp so a render allocates nothing for it. The status bar
+    # once by set_lsp so a render allocates nothing for it, and the long
+    # work that runs: its title, the label drawn (the title and its
+    # message, built once per report), its percent (-1 for none), and the
+    # reports counted, the step of a bar without a percent. The status bar
     # draws an empty slot in no cells. A Struct record: mutable, with a
     # reader and a writer per member.
-    class StatusSlots < Struct.new(:branch, :errors, :warnings, :infos, :hints, :lsp_name, :lsp_state, :lsp_label, keyword_init: true)
+    class StatusSlots < Struct.new(:branch, :errors, :warnings, :infos, :hints, :lsp_name, :lsp_state, :lsp_label, :progress_title, :progress_label, :progress_percent, :progress_step, keyword_init: true)
       CRASH_HINT = "crashed :LspRestart"
       UNTRUSTED_HINT = "untrusted :LspStart"
+      PROGRESS_LIMIT = 40
 
       # @rbs @branch: String
       # @rbs @errors: Integer
@@ -23,11 +28,15 @@ module Carat
       # @rbs @lsp_name: String
       # @rbs @lsp_state: Symbol
       # @rbs @lsp_label: String
+      # @rbs @progress_title: String
+      # @rbs @progress_label: String
+      # @rbs @progress_percent: Integer
+      # @rbs @progress_step: Integer
 
       # Every slot empty.
       #: () -> void
       def initialize
-        super(branch: "", errors: 0, warnings: 0, infos: 0, hints: 0, lsp_name: "", lsp_state: :none, lsp_label: "")
+        super(branch: "", errors: 0, warnings: 0, infos: 0, hints: 0, lsp_name: "", lsp_state: :none, lsp_label: "", progress_title: "", progress_label: "", progress_percent: -1, progress_step: 0)
       end
 
       # Shows a server's name in a state, with the percent when indexing;
@@ -40,6 +49,36 @@ module Carat
         self.lsp_state = name.empty? ? :none : state
         self.lsp_label = label
         true
+      end
+
+      # Shows long work: an empty title keeps the last one, a percent below
+      # 0 keeps the last percent; the label is the title, then the message
+      # when there is one, on one line without escape sequences, cut to
+      # PROGRESS_LIMIT bytes.
+      #: (String, String, Integer) -> void
+      def set_progress(title, message, percent)
+        self.progress_title = title unless title.empty?
+        label = message.empty? ? progress_title : "#{progress_title} #{message}"
+        self.progress_label = ControlText.plain(label, PROGRESS_LIMIT).strip
+        self.progress_percent = percent > 100 ? 100 : percent if percent >= 0
+        self.progress_step = progress_step + 1
+      end
+
+      # Ends the long work; answers whether some was shown.
+      #: () -> bool
+      def clear_progress
+        return false unless progress?
+        self.progress_title = ""
+        self.progress_label = ""
+        self.progress_percent = -1
+        self.progress_step = 0
+        true
+      end
+
+      # Whether long work is shown.
+      #: () -> bool
+      def progress?
+        progress_step > 0
       end
 
       # The text of the lsp slot: the name, then the state's words.

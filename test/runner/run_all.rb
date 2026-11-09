@@ -35,6 +35,7 @@ require_relative "../domain_keys"
 require_relative "../domain_layout"
 require_relative "../domain_line_cache"
 require_relative "../domain_markdown_text"
+require_relative "../domain_messages"
 require_relative "../domain_options_config"
 require_relative "../domain_plugin_manifest"
 require_relative "../domain_rc_parser"
@@ -65,6 +66,7 @@ require_relative "../editor_insert"
 require_relative "../editor_key_hints"
 require_relative "../editor_leader"
 require_relative "../editor_lsp"
+require_relative "../editor_messages"
 require_relative "../editor_motions"
 require_relative "../editor_normal"
 require_relative "../editor_operators"
@@ -130,6 +132,7 @@ when "domain_keys" then DomainKeysTest.main
 when "domain_layout" then DomainLayoutTest.main
 when "domain_line_cache" then DomainLineCacheTest.main
 when "domain_markdown_text" then DomainMarkdownTextTest.main
+when "domain_messages" then DomainMessagesTest.main
 when "domain_options_config" then DomainOptionsConfigTest.main
 when "domain_plugin_manifest" then DomainPluginManifestTest.main
 when "domain_rc_parser" then DomainRcParserTest.main
@@ -160,6 +163,7 @@ when "editor_insert" then EditorInsertTest.main
 when "editor_key_hints" then EditorKeyHintsTest.main
 when "editor_leader" then EditorLeaderTest.main
 when "editor_lsp" then EditorLspTest.main
+when "editor_messages" then EditorMessagesTest.main
 when "editor_motions" then EditorMotionsTest.main
 when "editor_normal" then EditorNormalTest.main
 when "editor_operators" then EditorOperatorsTest.main

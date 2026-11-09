@@ -18,6 +18,7 @@ require_relative "../domain/search"
 require_relative "../domain/search_budget"
 require_relative "../domain/search_pattern"
 require_relative "../domain/start_screen"
+require_relative "../domain/notices"
 require_relative "painted_rows"
 require_relative "status_bar"
 require_relative "tab_bar"
@@ -97,6 +98,13 @@ module Carat
       ROW_SEPARATOR = "─"
       FAR = 1 << 30
       FLOAT_STRIDE = 10
+      # The title of a notification box by its level.
+      NOTICE_TITLES = ["Info", "Warning", "Error"]
+      # The rows of a notification box and its narrowest width.
+      NOTICE_HEIGHT = 3
+      NOTICE_MIN_WIDTH = 20
+      # The narrowest screen that draws notification boxes.
+      NOTICE_NARROWEST = 8
 
       attr_reader :input #: Domain::InputState
       attr_reader :plugin_ui #: Domain::PluginUi
@@ -108,6 +116,8 @@ module Carat
       attr_reader :status_bar #: StatusBar
       attr_reader :tab_bar #: TabBar
       attr_reader :winbar #: Winbar
+      attr_reader :notices #: Domain::Notices
+      attr_reader :plain #: bool
 
       # @rbs @front: Domain::Frame
       # @rbs @back: Domain::Frame
@@ -130,10 +140,14 @@ module Carat
       # @rbs @float_key: Array[Integer]
       # @rbs @floating: bool
       # @rbs @repainted: Array[Integer]
+      # @rbs @notice_from: Integer
 
-      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, palette: Domain::Palette, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar, winbar: Winbar) -> void
-      def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, palette:, start_screen:, status_bar:, tab_bar:, winbar:)
+      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, palette: Domain::Palette, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar, winbar: Winbar, notices: Domain::Notices) -> void
+      def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, palette:, start_screen:, status_bar:, tab_bar:, winbar:, notices:)
         @winbar = winbar
+        @notices = notices
+        @plain = false
+        @notice_from = 0
         @palette = palette
         @input = input
         @plugin_ui = plugin_ui
@@ -194,10 +208,11 @@ module Carat
         base_same = based && same_ints?(@key, base.layout)
         floats = tab.floats
         in_float = floats.focused?
-        @floating = floats.count > 0 || back.floats.length > 0 || base.floats.length > 0
+        @floating = floats.count > 0 || @notices.count > 0 || back.floats.length > 0 || base.floats.length > 0
         full_floats = false
         if @floating
           build_float_key(floats)
+          add_notice_boxes(rows, cols, tabline)
           full_floats = !same_ints?(@float_key, back.floats) || ids.length > 1 || in_float
           unless same_ints?(@float_key, back.floats)
             forget_rows(back.floats, rows)
@@ -243,6 +258,7 @@ module Carat
         end
         if @floating
           paint_floats(back, floats, tabstop, rows, cols, full_floats || start)
+          paint_notices(back, cols, full_floats || start)
           unless based && same_ints?(@float_key, base.floats)
             compare_boxes(back, base, @float_key)
             compare_boxes(back, base, base.floats)
@@ -287,6 +303,14 @@ module Carat
       #: (String, Integer) -> Integer
       def display_width(text, tabstop)
         display_col(text, text.length, tabstop)
+      end
+
+      # Draws the notification boxes and the status bar's progress with
+      # ASCII glyphs and no color when plain, as NO_COLOR asks.
+      #: (bool) -> void
+      def plain=(value)
+        @plain = value
+        @status_bar.plain = value
       end
 
       private
@@ -396,6 +420,101 @@ module Carat
           key << float.selected
           i += 1
         end
+      end
+
+      # Appends to the float key a box per notification, oldest first from
+      # the row under the buffer tabs down, its right edge one column from
+      # the screen's, as wide as its text and its border, at least
+      # NOTICE_MIN_WIDTH so the title fits, within half the screen; a box
+      # reaching the status bar and those after it are left out, and every
+      # box on a screen narrower than NOTICE_NARROWEST. Its serial and
+      # level follow the box, so a new notification repaints.
+      #: (Integer, Integer, Integer) -> void
+      def add_notice_boxes(rows, cols, tabline)
+        key = @float_key
+        @notice_from = key.length
+        notices = @notices
+        widest = cols / 2
+        widest = NOTICE_MIN_WIDTH if widest < NOTICE_MIN_WIDTH
+        right = cols - 1
+        return if cols < NOTICE_NARROWEST
+        i = 0
+        while i < notices.count
+          top = tabline + i * NOTICE_HEIGHT
+          return if top + NOTICE_HEIGHT > rows - 2
+          width = Domain::DisplayWidth.text_width(notices.text_at(i), 0) + 4
+          width = NOTICE_MIN_WIDTH if width < NOTICE_MIN_WIDTH
+          width = widest if width > widest
+          left = right - width
+          left = 0 if left < 0
+          key << top
+          key << top + NOTICE_HEIGHT
+          key << left
+          key << right
+          key << notices.serial_at(i)
+          key << notices.level_at(i)
+          key << 0
+          key << 0
+          key << 0
+          key << -1
+          i += 1
+        end
+      end
+
+      # Each notification box of the float key: every row when full, else
+      # only the rows painted again under it in this frame.
+      #: (Domain::Frame, Integer, bool) -> void
+      def paint_notices(frame, cols, full)
+        key = @float_key
+        i = @notice_from
+        n = 0
+        while i < key.length
+          r = key[i]
+          while r < key[i + 1]
+            paint_notice_row(frame, n, r, key[i], key[i + 2], key[i + 3], cols) if full || @repainted[r] == 1
+            r += 1
+          end
+          i += FLOAT_STRIDE
+          n += 1
+        end
+      end
+
+      # One row of notification n's box from left to the column before
+      # right: the border with its level's title on top, or its text.
+      #: (Domain::Frame, Integer, Integer, Integer, Integer, Integer, Integer) -> void
+      def paint_notice_row(frame, n, r, top, left, right, cols)
+        mend_edges(frame, r, left, right, cols)
+        plain = @plain
+        last = right - 1
+        level = @notices.level_at(n)
+        border = plain ? Domain::Highlight::NORMAL : Domain::Highlight::FLOAT_BORDER
+        if r == top || r == top + NOTICE_HEIGHT - 1
+          corner_left = plain ? 0x2B : (r == top ? 0x256D : 0x2570)
+          corner_right = plain ? 0x2B : (r == top ? 0x256E : 0x256F)
+          frame.put_code(r, left, corner_left, 1, border)
+          frame.put_code(r, last, corner_right, 1, border)
+          c = left + 1
+          while c < last
+            frame.put_code(r, c, plain ? 0x2D : 0x2500, 1, border)
+            c += 1
+          end
+          frame.put_within(r, left + 1, NOTICE_TITLES[level], plain ? Domain::Highlight::NORMAL : notice_group(level), last) if r == top
+        else
+          text = plain ? Domain::Highlight::NORMAL : Domain::Highlight::NORMAL_FLOAT
+          frame.put_code(r, left, plain ? 0x7C : 0x2502, 1, border)
+          frame.blank(r, left + 1, last)
+          frame.fill(r, left + 1, last, text)
+          frame.put_within(r, left + 2, @notices.text_at(n), text, last - 1)
+          frame.put_code(r, last, plain ? 0x7C : 0x2502, 1, border)
+        end
+      end
+
+      # The diagnostic group of a notification level's title.
+      #: (Integer) -> Integer
+      def notice_group(level)
+        return Domain::Highlight::DIAGNOSTIC_ERROR if level == Domain::MessageHistory::ERROR
+        return Domain::Highlight::DIAGNOSTIC_WARN if level == Domain::MessageHistory::WARNING
+        Domain::Highlight::DIAGNOSTIC_INFO
       end
 
       # Forgets the window rows the boxes of a key cover.

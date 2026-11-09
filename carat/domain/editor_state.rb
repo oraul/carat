@@ -3,26 +3,28 @@ require_relative "options"
 require_relative "selection"
 require_relative "block_insert"
 require_relative "tab_list"
+require_relative "message_history"
 
 module Carat
   module Domain
     # The current view the use cases and the presenter share: the tab
     # list, through which the current tab page, window, buffer, cursor, and
     # visual selection are reached, the mode, the options, the command
-    # line, the message, the quit flag, and the repetition a blockwise
+    # line, the message and the history of those shown, the quit flag, and the repetition a blockwise
     # insert owes when insert mode is left, and the size of the screen
     # in rows and columns, 0 before the first render. The rest of the editor's state
     # lives in focused records the composition root hands to the use cases
     # that need them: the buffer list, the input state, the registers, the
     # last find, and the plugins' segments and prompt. A Struct record:
     # mutable, with a reader and a writer per member.
-    class EditorState < Struct.new(:tabs, :mode, :options, :cmdline, :message, :message_error, :quit, :block_insert, :screen_rows, :screen_cols, keyword_init: true)
+    class EditorState < Struct.new(:tabs, :mode, :options, :cmdline, :message, :message_error, :history, :quit, :block_insert, :screen_rows, :screen_cols, keyword_init: true)
       # @rbs @tabs: TabList
       # @rbs @mode: Symbol
       # @rbs @options: Options
       # @rbs @cmdline: String
       # @rbs @message: String
       # @rbs @message_error: bool
+      # @rbs @history: MessageHistory
       # @rbs @quit: bool
       # @rbs @block_insert: BlockInsert
       # @rbs @screen_rows: Integer
@@ -37,6 +39,7 @@ module Carat
         self.cmdline = ""
         self.message = ""
         self.message_error = false
+        self.history = MessageHistory.new
         self.quit = false
         self.block_insert = BlockInsert.new
         self.screen_rows = 0
@@ -123,10 +126,20 @@ module Carat
 
       # ----------------------------------------------------------- messages
 
+      # Shows a message, an error when error, and keeps it in the history
+      # when it is one line.
       #: (String, bool) -> void
       def show(text, error)
         self.message = text
         self.message_error = error
+        history.add(text, error ? MessageHistory::ERROR : MessageHistory::INFO)
+      end
+
+      # Shows command output the history does not keep, as :messages.
+      #: (String) -> void
+      def show_output(text)
+        self.message = text
+        self.message_error = false
       end
 
       # Whether the message has several lines, shown over the bottom rows

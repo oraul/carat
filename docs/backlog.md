@@ -40,7 +40,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Sentence motions rescan the whole buffer on every use
 
-- Where: `Carat::Domain::Motions.sentence_starts` in `carat/domain/motions.rb` (about line 499), called by `(` and `)` and by the `is` and `as` text objects in `carat/domain/text_objects.rb` (about line 171).
+- Where: `Carat::Domain::Motions.sentence_starts` in `carat/domain/motions.rb` (line 416 at 7711421), called by `(` and `)` and by the `is` and `as` text objects in `carat/domain/text_objects.rb` (line 150 at 7711421).
 - Why it matters: every use builds the list of sentence starts for the whole buffer, so one `)` takes about 96 ms on 100,000 lines, and a count or a repeated key multiplies it.
 - Fix outline: scan outward from the cursor, backward to the start of the current sentence and forward to the start of the next, stopping at a paragraph boundary, and reuse that walker for the text objects.
 
@@ -208,7 +208,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Options repeats its bounded-number and known-name checks
 
-- Where: `Options#apply` in `carat/domain/options.rb`: the `tabstop` and `shiftwidth` blocks (lines 107 to 120) and the `icons` and `theme` blocks (lines 125 to 136) are each the same check-then-set-or-note shape. Advisory of the periodic quality review at 389c118. At 38628bb `keyhints.delay` (line 156) repeated the shape too (periodic quality); `layout-slots` shares `Options.range_problem` between it and the three slot sizes, leaving `tabstop`, `shiftwidth`, `icons`, and `theme`.
+- Where: `Options#apply` in `carat/domain/options.rb`: the `tabstop` and `shiftwidth` blocks (lines 107 to 120) and the `icons` and `theme` blocks (lines 125 to 136) are each the same check-then-set-or-note shape. Advisory of the periodic quality review at 389c118. At 38628bb `keyhints.delay` (line 156) repeated the shape too (periodic quality), and at 7711421 the `breadcrumbs` block (line 221, periodic quality); `layout-slots` shares `Options.range_problem` between it and the three slot sizes, leaving `tabstop`, `shiftwidth`, `icons`, and `theme`.
 - Why it matters: a third bounded option copies the block again, and a fix to one copy can miss the other.
 - Fix outline: one private helper that takes the line, the value, and the low bound and returns whether to set (or a `width_value?` check both call), and one for a name checked against a known set; the rows of `test/domain_options_config.rb` stay as they are.
 
@@ -256,9 +256,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## code_of decodes UTF-8 inside DisplayWidth
 
-- Where: `DisplayWidth.code_of` in `carat/domain/display_width.rb` (line 54); `Motions` (`carat/domain/motions.rb` lines 9 and 119) requires `display_width` only to decode a character. Advisory of the periodic quality review at 6ea61b1.
+- Where: `DisplayWidth.code_of` in `carat/domain/display_width.rb` (line 54), a decoding helper in the width table. Advisory of the periodic quality review at 6ea61b1; `feedback` deleted its only `Motions` caller, the dead `Motions.keyword?` and `char_class`, with the `display_width` require.
 - Why it matters: a decoding helper kept in the width table hides the dependency and invites another copy.
-- Fix outline: move it to `Utf8` (for example `Utf8.first_code`) and call it from `DisplayWidth` and `Motions.keyword?`.
+- Fix outline: move it to `Utf8` (for example `Utf8.first_code`) and call it from `DisplayWidth`.
 
 ## Visual r over an illegal byte has no test row
 
@@ -454,9 +454,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The delivered-changes list stops at pull request 46
 
-- Where: the Delivered changes list closing `docs/codebase-map.md`, whose last numbered line is `#46 buffer-search`: lines 623 to 625 list `pipeline-speed`, `pipeline-speed-b`, and `pipeline-speed-c` without their numbers (#48, #49, #51), and #47, #50, and #52 to #67 are missing. Periodic quality advisories at 598cf1b, f31f4e8, d386c74, 3a99ddd, and 803fe6e (notes 24 and 25).
-- Why it matters: the list `CLAUDE.md` names as the record of delivered changes misses eighteen merged pull requests and cannot be matched to three others.
-- Fix outline: number the three lines and add #47, #50, and #52 to #67, with the check `docs-index` asks for: every merged pull request of `docs/metrics.tsv` appears in the list. Queued in `docs-index`.
+- Where: the Delivered changes list closing `docs/codebase-map.md`, whose last numbered line is `#46 buffer-search`: lines 623 to 625 list `pipeline-speed`, `pipeline-speed-b`, and `pipeline-speed-c` without their numbers (#48, #49, #51), and #47, #50, and #52 to #82 are missing. Periodic quality advisories at 598cf1b, f31f4e8, d386c74, 3a99ddd, 803fe6e (notes 24 and 25), and 7711421 (note 22).
+- Why it matters: the list `CLAUDE.md` names as the record of delivered changes misses thirty-three merged pull requests and cannot be matched to three others.
+- Fix outline: number the three lines and add #47, #50, and #52 to #82, with the check `docs-index` asks for: every merged pull request of `docs/metrics.tsv` appears in the list. Queued in `docs-index`.
 
 ## Agents leave scratch files in the repository root
 
@@ -478,7 +478,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The merge-gates worktree is never removed
 
-- Where: `.claude/workflows/deliver-change.js` line 292 and step 8 of `.claude/agents/merger.md`. Periodic quality advisory at e20c83c.
+- Where: the merge-gates worktree command in `.claude/workflows/deliver-change.js` (about line 476, beside `MERGE_GATES` at line 455), which now prunes first, and step 8 of `.claude/agents/merger.md`. Periodic quality advisory at e20c83c, again at 7711421 (note 23).
 - Why it matters: the command removes `tmp/.merge-gates` before adding it but nothing removes it after the merge, so the first run prints a git error into the gate output the merger reads and every later run finds a stale worktree.
 - Fix outline: send the remove's error to `/dev/null` and remove the worktree after the merge. Queued in `merge-gate-tidy`.
 
@@ -820,9 +820,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Pull requests are created with a session-link footer the settings turn off
 
-- Where: step 4 of the package step in `.claude/agents/contributor.md`, which opens the pull request with the GitHub tools, and its step 5 removal edit; `.claude/settings.json` sets the attribution `pr` empty and `sessionUrl` false. Retrospective proposal of `leader-layout`, queued as `pr-body-footer`.
-- Why it matters: 9 of 52 run states record a pull request created with a footer holding a session link (pull requests 57 to 60, 64, 73, 76, 77, and 81) despite main's attribution settings, each needing a removal edit; the edit history keeps the link, against the hard rule that no session URL appears in GitHub activity. The footer is added by the pull request tool outside the repository, so no repository change has prevented it.
-- Fix outline: a merge-gate acceptance check that refuses a pull request body or squash message holding a session link, beside the package step's immediate removal edit (step 5), each removal reported. Queued as `pr-body-footer`.
+- Where: step 4 of the package step in `.claude/agents/contributor.md`, which opens the pull request with the GitHub tools, and its step 5 removal edit; `.claude/settings.json` sets the attribution `pr` empty and `sessionUrl` false. Retrospective proposal of `leader-layout`.
+- Why it matters: 10 of 53 run states record a pull request created with a footer holding a session link (pull requests 57 to 60, 64, 73, 76, 77, and 81) despite main's attribution settings, each needing a removal edit; the edit history keeps the link, against the hard rule that no session URL appears in GitHub activity. The footer is added by the pull request tool outside the repository, so no repository change has prevented it.
+- Fix outline: a merge-gate acceptance check that refuses a pull request body or squash message holding a session link, beside the package step's immediate removal edit (step 5), each removal reported. The main session concluded at `feedback` that the footer cannot be fixed from the repository (it reached 10 of 53 pull requests with main's attribution settings on), so only the package step's removal remains; the entry stays here, out of the queue, until a repository-side cause is found.
 
 ## The roadmap's progress is readable nowhere in one place
 
@@ -1162,7 +1162,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The [No Name] text is defined in both bars
 
-- Where: `NO_NAME` in `carat/adapters/tab_bar.rb` (line 23 at `bars`) and again in `carat/adapters/status_bar.rb` (line 46). Quality advisory of `bars`, raised twice.
+- Where: `NO_NAME` in `carat/adapters/tab_bar.rb` (line 23 at `bars`) and again in `carat/adapters/status_bar.rb` (line 46); at 7711421 also `carat/adapters/winbar.rb` line 17, `carat/use_cases/buffers/list_buffers.rb` line 20, and `carat/domain/messages.rb` line 16 (periodic quality note 33). Quality advisory of `bars`, raised twice.
 - Why it matters: one user-visible text has two owners that can drift apart.
 - Fix outline: keep one constant, for example beside `Buffer#display_name`, and reference it from both bars.
 
@@ -1768,7 +1768,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The server completions test copies EditorHarness
 
-- Where: `test/adapters_server_completions.rb` line 17 at cd87445 (the `Rig` class copies `type`, `wait`, and `pump` because `carat/doubles/editor_harness.rb` line 38 hard-wires `FixedCompletions`), and its `CompletionRequest` record table (lines 154 to 173). Periodic quality at cd87445. At c1b3a12 there are three rig copies: `test/adapters_signature.rb` line 17, `test/adapters_hover.rb`, and `test/adapters_server_completions.rb` (periodic quality).
+- Where: `test/adapters_server_completions.rb` line 17 at cd87445 (the `Rig` class copies `type`, `wait`, and `pump` because `carat/doubles/editor_harness.rb` line 38 hard-wires `FixedCompletions`), and its `CompletionRequest` record table (lines 154 to 173). Periodic quality at cd87445. At c1b3a12 there are three rig copies: `test/adapters_signature.rb` line 17, `test/adapters_hover.rb`, and `test/adapters_server_completions.rb` (periodic quality); at 7711421 four, with `test/editor_breadcrumbs.rb` line 24 (note 34).
 - Why it matters: two harnesses drift, and a domain record is tested in an adapter test.
 - Fix outline: let the harness take any completion port and drive the test through it; move the record table to a domain test. Queued in `completion-tidy`.
 
@@ -2032,7 +2032,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The CI scope asks the same API twice
 
-- Where: the push branch of `tools/ci_scope.sh` lines 47 and 48 at b0dd342. Periodic quality. Queued in `ci-hardening`. At 38628bb the header also omits `docs/metrics.tsv` (`tools/ci_scope.sh` lines 8 and 95, periodic quality).
+- Where: the push branch of `tools/ci_scope.sh` lines 47 and 48 at b0dd342. Periodic quality. Queued in `ci-hardening`. At 38628bb the header also omits `docs/metrics.tsv` (`tools/ci_scope.sh` lines 8 and 95, periodic quality), still at 7711421 (header lines 8 to 12, note 47).
 - Why it matters: two calls for one commit's head and number double the rate-limited requests and can disagree.
 - Fix outline: one call printing both fields, read once.
 
@@ -2642,3 +2642,123 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/codebase-map.md` line 591 and the render and language areas' Tests lines at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
 - Why it matters: the entry omits `count` and `name_at`, and the Tests lines do not name `test/editor_breadcrumbs.rb` though it covers `winbar.rb`, `symbol_outline.rb`, and `symbol_request.rb`.
 - Fix outline: add the two methods to the entry and the test to both areas' Tests lines.
+
+## The palette's pad raises on a wide bound key
+
+- Where: `pad` in `carat/use_cases/discovery/follow_palette.rb` line 164, at 7711421. Periodic quality. Queue item `palette-pad-crash`.
+- Why it matters: `cut` keeps width less one characters, not cells, so a bound key of seven or more wide characters measures over the column and `pad` multiplies a space by a negative count, which raises on the key path (T0, a crash).
+- Fix outline: cut to at most N cells and clamp the pad at 0, shared with the copy in `show_key_hints.rb`, with an `editor_palette` row for a wide key.
+
+## The palette's name column cuts five shipped action names
+
+- Where: `NAME_WIDTH` in `carat/use_cases/discovery/follow_palette.rb` line 29, at 7711421. Periodic quality. Queue item `discoverability-tidy`.
+- Why it matters: 28 cuts `textobject.inner_single_quote`, `textobject.inner_double_quote`, `plugin.explorer.toggle_hidden`, `search.partial_word_backward`, and `motion.big_word_end_backward` to 27 characters.
+- Fix outline: size the column from the longest name capped by the float width, with a row showing a 29-character name whole.
+
+## :LspRestart lets a stale symbol answer replace the outline
+
+- Where: `stop` in `carat/adapters/json_rpc_language_gateway.rb` line 227, at 7711421; `crash` (line 439) forgets the symbol request, `stop` does not. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Why it matters: a documentSymbol request in flight keeps its id across a restart, so `waiting?` holds until the deadline, the cancel goes to the new server for an id it never issued, and the new server's answer to a reused id is read as the outline.
+- Fix outline: forget the symbol request in `stop` beside the other three, with an `editor_breadcrumbs` row for `:LspRestart` with a symbol request in flight.
+
+## The presenter and the arranger each decide which windows get a winbar
+
+- Where: `paint_winbars` in `carat/adapters/frame_presenter.rb` line 723 and `reserve_winbars` in `carat/use_cases/arrange_view.rb` line 89, at 7711421. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Why it matters: two rules in two layers (geometry against scratch and height) must stay in step.
+- Fix outline: one predicate or a flag set by the arranger that the presenter reads.
+
+## Layout's split and attach copy the inner-split block
+
+- Where: `carat/domain/layout.rb` lines 153 to 168 (`split`) and 351 to 368 (`attach`), at 7711421. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Why it matters: allocating the split, copying size and rectangle, replacing the target, and reparenting are written twice.
+- Fix outline: one private helper returning the inner id, called by both.
+
+## Quit walks the leaves to count file windows
+
+- Where: `beside_side_windows?` in `carat/use_cases/files/quit.rb` line 66, at 7711421. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Why it matters: it repeats `TabPage#file_window_count`.
+- Fix outline: call `file_window_count`.
+
+## TabPage#previous? reads the node array directly
+
+- Where: `carat/domain/tab_page.rb` line 103, at 7711421. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Why it matters: every other walker uses `layout.node_count`.
+- Fix outline: use `node_count`.
+
+## A split from a scratch window has no winbar row
+
+- Where: `winbar_after?` in `carat/use_cases/windows/split_window.rb` line 59, at 7711421; `test/editor_breadcrumbs.rb` splits only file windows. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Why it matters: the branch adding no file window for a scratch split is untested.
+- Fix outline: rows splitting a slot or plugin window with a count under `auto` and `always`.
+
+## The docs deny or omit the winbar
+
+- Where: `docs/compatibility.md` line 441 (Bars says no winbar, against Breadcrumbs at line 518); `docs/architecture.md` line 257 (the FramePresenter bullet omits the winbar row and its painter), at 7711421. Periodic quality. Queue items `docs-index` and `architecture-drift`.
+- Why it matters: two documents contradict the delivered feature.
+- Fix outline: drop the denial or point to Breadcrumbs; name the winbar and `Winbar` in the bullet.
+
+## The map omits Layout and search methods other files call
+
+- Where: `docs/codebase-map.md` line 349 (Layout without `leaf_showing`, `leaf_number`, `leaf_count`, `node`, `node_count`, `window_at`), line 189 (VimPattern without `compile_substitute`), line 194 (LastSearch without `any?`, `end_preview`), line 195 (SearchPrompt without `close`, `prefix`), at 7711421. Periodic quality. Queue item `docs-index`.
+- Why it matters: callers look up a method the map does not name.
+- Fix outline: name them on those lines.
+
+## ExTable keeps unread positions and an uncalled count
+
+- Where: `carat/use_cases/ex/ex_table.rb` lines 16 and 56 (`@index` positions never read), 98 (`count`, no caller), 104 (`handler_at`, public only for `find`), at 7711421. Periodic quality. Queue item 41.
+- Why it matters: dead API, and the comment reads the index as a lookup though it only refuses duplicates.
+- Fix outline: delete `count`, make `handler_at` private, keep a set of taken names, and say so in the comment.
+
+## Motions repeats its row clamp and paragraph walk
+
+- Where: `carat/domain/motions.rb` line 246 (`line_down` repeats `vertical`'s checks at lines 215 to 222, `to_row` clamps again), lines 540 and 562 (`paragraph_forward` and `paragraph_backward` share one loop), at 7711421. Periodic quality. Queue item `search-tidy`.
+- Why it matters: three clamps and two walks to keep in step.
+- Fix outline: one private row clamp and one paragraph walker taking the step.
+
+## GlobalCommand#remember repeats SubstituteLines#remember
+
+- Where: `carat/use_cases/search/global_command.rb` line 81 and `carat/use_cases/search/substitute_lines.rb` line 113, at 7711421. Periodic quality. Queue item `substitute-tidy`.
+- Why it matters: the same four writes of a used pattern, so a fix to one misses the other.
+- Fix outline: one domain function both call.
+
+## Small code findings of the 7711421 periodic review
+
+- Where: `carat/use_cases/search/find_match.rb` line 163 and `substitute_lines.rb` line 143 (E486 as a literal, not a `Search` constant); `carat/use_cases/actions/motion_handler.rb` line 52 (a comment missing words) and `carat/domain/find.rb` line 3 (describes `LastFind`'s role); `carat/domain/vim_pattern.rb` line 23 (three escapes listed twice). Queue item `search-tidy`.
+- Why it matters: a message spelled twice and three wrong comments.
+- Fix outline: `Search::NOT_FOUND` used by both; reword the two comments; drop the second mention.
+
+## The progress segment bounds its percent twice and follows any server
+
+- Where: `carat/adapters/json_rpc_language_gateway.rb` lines 1037 to 1045 (`set_progress`), against `show` at line 397, at the `feedback` change. Quality advisories of `feedback`.
+- Why it matters: the percent is bounded once as given and again for `server.percent`; and any running server's `$/progress` overwrites the title and label, while `show` follows only the current buffer's server, so a second server's report can relabel the current one's indexing.
+- Fix outline: `server.percent = given if given >= 0`; call `set_progress` only for the server `show` follows, or keep the progress per server, with an `editor_messages` row for two servers reporting at once.
+
+## MessageHistory stores levels nothing outside the tests reads
+
+- Where: `carat/domain/message_history.rb` line 8, at the `feedback` change. Quality advisory of `feedback`.
+- Why it matters: speculative generality: levels are kept per entry, but only tests read `level_at`, since `:messages` is not colored (`docs/compatibility.md`).
+- Fix outline: drop the levels until `:messages` colors its listing, or use them for the listing's groups.
+
+## Search echoes fill the message history
+
+- Where: `carat/domain/editor_state.rb` line 135 (`show`), reached by the `/pattern` echo of `n`, `N`, `*`, and `#`, at the `feedback` change. Quality advisory of `feedback`.
+- Why it matters: Neovim does not keep the search echo in `:messages`, so 500 presses of `n` evict every real error, and the deviation is not in the compatibility notes.
+- Fix outline: show the search echo through `show_output`, or list the deviation under Messages and notifications in `docs/compatibility.md`, with a row pressing `n` after an error.
+
+## The read timeout cut to a notification's deadline has no test
+
+- Where: `carat/adapters/input_controller.rb` line 152, at the `feedback` change; only the harness pump is exercised. Quality advisory of `feedback`.
+- Why it matters: a regression that waits the full timeout leaves a notification on screen past its deadline unnoticed.
+- Fix outline: have the terminal double record the timeout of `read_key` and assert it is cut while a notice shows.
+
+## The notice painter's comments and narrow guard
+
+- Where: `carat/adapters/frame_presenter.rb` line 429 (a comment line not wrapped like its block) and line 439 (the `cols < NOTICE_NARROWEST` guard after the widths it makes moot), and `carat/domain/editor_state.rb` line 13 (an unwrapped comment line), at the `feedback` change. Quality advisory of `feedback`.
+- Why it matters: style drift and widths computed for nothing on a narrow screen.
+- Fix outline: rewrap both comments and move the guard to the top of `add_notice_boxes`.
+
+## Unrelated deletions rode in a feature change
+
+- Where: `carat/domain/motions.rb` line 129, where `feedback` deleted the dead `Motions.keyword?` and `char_class` with the `display_width` require. Quality advisory of `feedback`, a process note.
+- Why it matters: a refactor inside a feature change widens its review and mixes commit types in one squash.
+- Fix outline: nothing left in the code; leave such deletions to their own chore change next time.

@@ -16,6 +16,7 @@ require_relative "../domain/search_prompt"
 require_relative "../domain/history"
 require_relative "../domain/plugin_ui"
 require_relative "../domain/status_slots"
+require_relative "../domain/notices"
 require_relative "../domain/registers"
 require_relative "../domain/last_change"
 require_relative "../domain/keymap"
@@ -102,6 +103,7 @@ require_relative "../use_cases/ex/delete_command_handler"
 require_relative "../use_cases/ex/buffer_command_handler"
 require_relative "../use_cases/ex/lsp_start_command_handler"
 require_relative "../use_cases/ex/lsp_restart_command_handler"
+require_relative "../use_cases/ex/messages_command_handler"
 require_relative "../use_cases/ex/plugin_command_handler"
 require_relative "../use_cases/actions/action_table"
 require_relative "../use_cases/actions/motion_handler"
@@ -198,6 +200,7 @@ module Carat
       attr_reader :cache #: Domain::LineCache
       attr_reader :start_screen #: Domain::StartScreen
       attr_reader :status_slots #: Domain::StatusSlots
+      attr_reader :notices #: Domain::Notices
       attr_reader :arrange_view #: UseCases::ArrangeView
       attr_reader :highlight_view #: UseCases::HighlightView
       attr_reader :actions #: UseCases::ActionTable
@@ -319,7 +322,8 @@ module Carat
         @signature = Domain::SignatureRequest.new
         @key_hints = Domain::KeyHints.new
         @palette = Domain::Palette.new
-        @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots, completion: completions.request, clock: clock, hover: @hover, signature: @signature, symbols: @symbols)
+        @notices = Domain::Notices.new(history: @state.history)
+        @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots, completion: completions.request, clock: clock, hover: @hover, signature: @signature, symbols: @symbols, notices: @notices)
         @arrange_view = UseCases::ArrangeView.new(cache: @cache, buffers: @buffers)
         @actions = UseCases::ActionTable.new
         @commands = UseCases::ExTable.new
@@ -410,6 +414,7 @@ module Carat
         UseCases::DeleteCommandHandler.register(@commands, delete_lines: @delete_lines)
         UseCases::LspStartCommandHandler.register(@commands, @services)
         UseCases::LspRestartCommandHandler.register(@commands, @services)
+        UseCases::MessagesCommandHandler.register(@commands)
         UseCases::PluginCommandHandler.register(@commands, plugins: @plugins)
         @plugins.activate_all(value)
 
@@ -464,15 +469,16 @@ module Carat
         @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
         @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover, request_signature: @request_signature, follow_signature: @follow_signature, signature: @signature, key_hints: @key_hints, hide_key_hints: @hide_key_hints, palette: @palette, follow_palette: @follow_palette)
         @start_screen = Domain::StartScreen.new
-        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover, show_signature: @show_signature, signature: @signature, show_key_hints: @show_key_hints)
-        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, palette: @palette, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers), winbar: Winbar.new(symbols: @symbols))
+        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover, show_signature: @show_signature, signature: @signature, show_key_hints: @show_key_hints, notices: @notices)
+        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, palette: @palette, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers), winbar: Winbar.new(symbols: @symbols), notices: @notices)
         @screen_presenter = ScreenPresenter.new(terminal: terminal, theme: Domain::Themes.find(@state.options.theme, @state.options.background), colors: terminal.colors)
       end
 
       # Opens the file to edit and shows its message, or, for an empty
       # path or a directory with the startscreen option on, starts the
       # start screen over the empty buffer instead (at its last frame with
-      # reducedmotion, in plain glyphs when the terminal wants no color);
+      # reducedmotion, in plain glyphs when the terminal wants no color, as
+      # the notifications and the progress bar are drawn);
       # an empty path otherwise opens nothing. Then lets the plugins see
       # the buffer open, lays out the windows, and shows the first
       # configuration problem, if there is one, with the count of the
@@ -480,6 +486,7 @@ module Carat
       #: (String) -> void
       def open(path)
         options = @state.options
+        @frame_presenter.plain = @terminal.no_color?
         if options.startscreen && (path.empty? || @files.stat(path).directory)
           @start_screen.start(@clock.now, !options.reducedmotion, Domain::StartArt.from_plain(@terminal.no_color?))
         elsif !path.empty?
