@@ -18,5 +18,5 @@
 
 ## 5. Records
 
-- [ ] 5.1 `openspec/config.yaml`, `CLAUDE.md`, and `docs/codebase-map.md` name the new rules and gate. Checked by `make gates` and `make docs-lint`.
-- [ ] 5.2 `docs/backlog.md`: add the planner's entries from `build/plan/backlog.md`, change three copies to four in "The gateway cancels a request in three copies", and point the `Buffer#styles` entry at the lint exemption. Checked by `make docs-lint`.
+- [x] 5.1 `openspec/config.yaml`, `CLAUDE.md`, and `docs/codebase-map.md` name the new rules and gate. Checked by `make gates` and `make docs-lint`.
+- [x] 5.2 `docs/backlog.md`: add the planner's entries from `build/plan/backlog.md`, change three copies to four in "The gateway cancels a request in three copies", and point the `Buffer#styles` entry at the lint exemption. Checked by `make docs-lint`.
