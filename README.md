@@ -57,6 +57,7 @@ The leader is Space. Its keys come in groups named by their first letter, and ea
 - `<leader>f` files: `fs` saves as `:w` does; `ff` will open the finder and says "Not implemented" until it arrives.
 - `<leader>b` buffers: `bb` lists them as `:ls` does, `bn` and `bp` go to the next and previous one, `bd` deletes this one, or with a count the buffer of that number.
 - `<leader>d` docs: `dp` pins the documentation float `K` opened into a split.
+- `<leader>l` layout: `ls` hides the left sidebar and shows it again where it was, `lr` does the same for the right sidebar and `lp` for the bottom panel.
 - `<leader>e` opens the file tree, as before.
 - `<leader>p` (or F1) opens the command palette: every action and ex command with its key and description, filtered as you type; Ctrl-N and Ctrl-P move the selection, Enter runs it, Escape closes it.
 
@@ -85,7 +86,7 @@ plugin.explorer.width 30
 plugin.explorer.ignore .git build tmp
 ```
 
-- `option.<name>` sets an option by its Vim name (`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `undolevels`, `cursorline`, and the others), plus Carat's `icons`, `theme`, `background`, `startscreen`, and `reducedmotion`; `tabstop` takes 1 to 9999 and `shiftwidth` 0 to 9999, as in Vim.
+- `option.<name>` sets an option by its Vim name (`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `undolevels`, `cursorline`, and the others), plus Carat's `icons`, `theme`, `background`, `startscreen`, `reducedmotion`, and the slot sizes `layout.left_width`, `layout.right_width`, and `layout.panel_height` (0, the default, keeps the size a view asks for); `tabstop` takes 1 to 9999 and `shiftwidth` 0 to 9999, as in Vim.
 - `keymap.<mode> <keys> <action>` binds keys in Vim notation in `normal`, `insert`, `visual`, `visual_line`, `visual_block`, `operator_pending`, or `cmdline` mode, or in the `completion` layer that answers first while the completion popup shows, to an action from `docs/actions.md` or to keys to replay, such as `:w<CR>`; the action `none` removes a binding. `keymap.leader <Space>` sets what `<leader>` stands for.
 - `plugin.<name>.enabled` turns a plugin on or off, and `plugin.<name>.<option>` sets one of its options.
 - `language.<name>.lsp` and `language.<name>.formatter` name the commands the language services run: opening a file of a language whose `lsp` command is installed starts that server when Carat runs in a directory under a root of `language.trusted_roots` (for example `language.trusted_roots ~/src`, set in the user file, none by default), since a server such as ruby-lsp runs the project's own code; anywhere else the status bar reads `untrusted :LspStart` and `:LspStart` starts it. The bar shows the server's name and state (starting, indexing with a percent, stopped, or crashed, which `:LspRestart` restarts), and the server is told about the open files. Its diagnostics show as signs before the line numbers, the cursor line's message in the bottom row in normal mode, and the counts of errors, warnings, infos, and hints on the bar. They are read from the defaults and the user file only, never from a project's file, so opening a directory cannot choose a program to run. For the same reason a project's file may bind keys only to actions and `none`, not to keys to replay.
@@ -134,7 +135,9 @@ Carat writes 24-bit colors when the terminal sets `COLORTERM` to `truecolor` or 
 
 ## File tree
 
-`<leader>e` (Space, then `e`) or `:Explorer` opens a file tree in a 30-column window at the left, rooted at the directory you started Carat in, with the current file revealed and marked; the same key focuses the tree when it is open and closes it when it is focused. `:ExplorerFind` reveals the current file in the tree. Inside the tree:
+Each tab page has a left and a right sidebar and a bottom panel. A plugin's view opens in one of them, under a header row naming the views opened there; a sidebar keeps its width and the panel its height when windows are equalized, and `<leader>ls`, `<leader>lr`, and `<leader>lp` hide and show them.
+
+`<leader>e` (Space, then `e`) or `:Explorer` opens a file tree in the left sidebar, 30 columns wide, rooted at the directory you started Carat in, with the current file revealed and marked; the same key focuses the tree when it is open and closes it when it is focused. `:ExplorerFind` reveals the current file in the tree. Inside the tree:
 
 - `<CR>` or `l` opens a file in the window you came from; on a directory `<CR>` and `o` toggle it, `l` expands it, and `h` collapses it or goes to the parent.
 - `s`, `v`, and `t` open the file in a horizontal split, a vertical split, or a new tab page.

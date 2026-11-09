@@ -344,17 +344,18 @@ Flow: `WindowHandler` (`<C-w>` keys, equalizing itself) and `WindowCommandHandle
 
 Files:
 
-- `carat/domain/window.rb`: `Window` record (id, buffer, cursor, scroll, rectangle, fixed width, visual anchor, last selection); `show`, `copy_from`, `gutter_width`, `scroll_to_row`, `scroll_top_to`, `max_top`, `margin` (the clamp and scrolloff cap `ArrangeView` and `ScrollWindow` share), `scroll_to_col`.
+- `carat/domain/window.rb`: `Window` record (id, buffer, cursor, scroll, rectangle, fixed width and height, visual anchor, last selection); `show`, `copy_from`, `unfix_size`, `gutter_width`, `scroll_to_row`, `scroll_top_to`, `max_top`, `margin` (the clamp and scrolloff cap `ArrangeView` and `ScrollWindow` share), `scroll_to_col`.
 - `carat/domain/layout_node.rb`: `LayoutNode`; `leaf?`.
-- `carat/domain/layout.rb`: `Layout`, a flat node table; `split`, `split_edge`, `close`, `leaves`, `leaf_of`, `neighbour`, `equalize`, `arrange`, `number_of`, `first_leaf`, `fixed_width?`.
-- `carat/domain/tab_page.rb`: `TabPage` with its `FloatLayer`; `window` (the focused float first), `layout_window`, `window_count`, `focus` (leaves a float), `previous?`.
+- `carat/domain/layout.rb`: `Layout`, a flat node table; `split`, `split_edge`, `split_bottom` (the panel between the sidebars), `place_slot`, `close`, `leaves`, `leaf_of`, `leaf_holding`, `neighbour` (by node rectangles), `equalize`, `arrange`, `number_of`, `first_leaf`, `fixed_width?`, `fixed?`.
+- `carat/domain/tab_page.rb`: `TabPage` with its `FloatLayer` and three slots; `window` (the focused float first), `layout_window`, `window_count`, `focus` (leaves a float), `previous?`, `slot`, `slot_at`, `keeps?`.
+- `carat/domain/slot.rb`: `Slot` record (side, views, window, hidden, size), a sidebar or the panel; `occupied?`, `view_window`, `shown?`, `kept?`, `keeps?`, `sidebar?`, `attach`, `add_view`, `hide`, `clear`.
 - `carat/domain/float_spec.rb`: `FloatSpec` (anchor, offset, size, border, title, z); `edge`, `moved`, `refusal`.
 - `carat/domain/float_window.rb`: `FloatWindow` (a window, its spec, `selected`, a menu's selected row or -1, and `mark_from` and `mark_to`, marked display columns of the first row); `menu?`, `marked?`, `place` clamps the box to the screen, `box_top`, `box_bottom`, `box_left`, `box_right`.
 - `carat/domain/float_layer.rb`: `FloatLayer`, a tab page's floats by z with the focused index, at most 16; `add`, `close`, `close_top`, `close_focused`, `enter`, `leave`, `move`.
 - `carat/domain/tab_list.rb`: `TabList`; `tab`, `window`, `add_tab`, `remove_tab`, `next_tab`, `previous_tab`, `adopt`, `window_tab`, `float_tab`, `total_windows`, `shown?`, `windows_showing`, `focus_buffer`, `modified_in_windows`, `clamp_cursors`.
-- `carat/use_cases/arrange_view.rb`: `ArrangeView#call`; the top row goes to the buffer tabs when `BufferList#tab_row?`.
+- `carat/use_cases/arrange_view.rb`: `ArrangeView#call`; the top row goes to the buffer tabs when `BufferList#tab_row?`, and each shown slot window's first row to its header.
 - `carat/use_cases/windows/split_window.rb`: `SplitWindow#call`; every new window gets its id.
-- `carat/use_cases/windows/open_side_window.rb`: `OpenSideWindow#call`, a plugin's fixed-width side window.
+- `carat/use_cases/windows/open_side_window.rb`: `OpenSideWindow#call`, a plugin's view into its slot: the slot's window reused, a hidden one placed again, or a new one at the configured size.
 - `carat/use_cases/windows/open_float.rb`, `carat/use_cases/windows/close_float.rb`: `OpenFloat#call` (the id, the layer, enter), `CloseFloat#call` (the topmost for 0, else by id in any tab page).
 - `carat/use_cases/windows/close_window.rb`, `carat/use_cases/windows/close_other_windows.rb`: `call`.
 - `carat/use_cases/windows/focus_window.rb`: `FocusWindow#call`; `carat/use_cases/windows/focus_request.rb`: `FocusRequest` (target, count); `steps`.
@@ -372,8 +373,8 @@ Files:
 - `carat/use_cases/buffers/switch_buffer.rb`: `SwitchBuffer#call(state, request)`, `:bn`, `:bp`, `:bN`, `:b N` (`E37`, `E85`, `E86`).
 - `carat/use_cases/buffers/delete_buffer.rb`: `DeleteBuffer#call(state, number, bang, typed)`, `:bd` in the order of Neovim's `do_buffer` (`E89`, `E516`).
 - `carat/use_cases/ex/buffer_command_handler.rb`: `BufferCommandHandler.register` (`:ls`, `:buffers`, `:files`, `:b[uffer]`, `:bn[ext]`, `:bp[revious]`, `:bN[ext]`, `:bd[elete]`), the number and count arguments.
-- `carat/use_cases/windows/toggle_slot.rb`: `ToggleSlot#call`; TODO: one line on what it does.
-- `carat/use_cases/actions/layout_handler.rb`: `LayoutHandler.register` (`layout.toggle_sidebar`); TODO: one line on what it does.
+- `carat/use_cases/windows/toggle_slot.rb`: `ToggleSlot#call`, hides a shown slot keeping its window or shows a hidden one; "No view in", E444, E36.
+- `carat/use_cases/actions/layout_handler.rb`: `LayoutHandler.register` (`layout.toggle_sidebar`, `layout.toggle_right_sidebar`, `layout.toggle_panel`), each a side for `ToggleSlot`.
 
 Tests: `test/domain_layout.rb`, `test/domain_tab_list.rb`, `test/use_cases_arrange_view.rb`, `test/editor_windows.rb`, `test/editor_tabs.rb`, `test/editor_scroll.rb`, `test/editor_buffers.rb`, `test/domain_float_layer.rb`, `test/editor_floats.rb`, `test/domain_slot.rb`, `test/editor_slots.rb`.
 
@@ -442,7 +443,7 @@ Flow: `EditorAssembly#render` runs `ArrangeView` and `HighlightView`, then `Fram
 
 Files:
 
-- `carat/adapters/frame_presenter.rb`: `FramePresenter#call`, `display_col`, `display_width`; reads the state only; the floats of the tab page by z over everything but the message row (`paint_floats`, `paint_float_row`, `paint_mark` in Visual, `paint_border_row`, `mend_edges`), their boxes kept as the frame's float key (`build_float_key`, `forget_rows`, `compare_boxes`, `clear_repainted`, `under_float?`: no scroll under a float); a message of several lines over the bottom rows with the hit-enter line; in normal mode with no message the cursor line's diagnostic (`paint_diagnostic`, `diagnostic_group`); the current window's cursor line lifted onto the cursor-line layer, and `shape_of` the mode.
+- `carat/adapters/frame_presenter.rb`: `FramePresenter#call`, `display_col`, `display_width`; reads the state only; each shown slot's header row (`paint_headers`, `paint_header`); the floats of the tab page by z over everything but the message row (`paint_floats`, `paint_float_row`, `paint_mark` in Visual, `paint_border_row`, `mend_edges`), their boxes kept as the frame's float key (`build_float_key`, `forget_rows`, `compare_boxes`, `clear_repainted`, `under_float?`: no scroll under a float); a message of several lines over the bottom rows with the hit-enter line; in normal mode with no message the cursor line's diagnostic (`paint_diagnostic`, `diagnostic_group`); the current window's cursor line lifted onto the cursor-line layer, and `shape_of` the mode.
 - `carat/adapters/status_bar.rb`: `StatusBar#paint`, the global bar: the mode pill, file, branch, diagnostics, plugin segments, `lsp` slot, file type, encoding, position, and percent, dropped by `PRIORITIES` when narrow without allocating; `mode_name`, `mode_group`, `lsp_group`.
 - `carat/adapters/tab_bar.rb`: `TabBar#paint`, a tab per listed file buffer with its icon and modified dot, overflow counts, and the tab-page numbers at the right end, without allocating.
 - `carat/domain/status_slots.rb`: `StatusSlots` record (`branch`, the diagnostics counts, `lsp_name`, `lsp_state`), empty until git and language services fill it; `count_diagnostics`, `diagnostics?`, `lsp?`.
