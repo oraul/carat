@@ -4,6 +4,7 @@ require_relative "../outcome"
 require_relative "../completion/select_completion"
 require_relative "../completion/accept_completion"
 require_relative "../completion/close_completion"
+require_relative "../completion/complete_word"
 require_relative "action_handler"
 require_relative "action_table"
 
@@ -12,19 +13,24 @@ module Carat
     # The completion popup's actions, bound in keymap.completion and run
     # only while the popup shows: completion.next and completion.previous
     # through SelectCompletion, completion.insert and completion.replace
-    # through AcceptCompletion, completion.close through CloseCompletion.
+    # through AcceptCompletion, completion.close through CloseCompletion;
+    # and keyword completion, bound in keymap.insert, which opens it:
+    # completion.keyword_next and completion.keyword_previous through
+    # CompleteWord.
     class CompletionHandler < ActionHandler
       # @rbs @select_completion: SelectCompletion
       # @rbs @accept_completion: AcceptCompletion
       # @rbs @close_completion: CloseCompletion
+      # @rbs @complete_word: CompleteWord
       # @rbs @variant: Symbol
 
-      #: (select_completion: SelectCompletion, accept_completion: AcceptCompletion, close_completion: CloseCompletion, variant: Symbol) -> void
-      def initialize(select_completion:, accept_completion:, close_completion:, variant:)
+      #: (select_completion: SelectCompletion, accept_completion: AcceptCompletion, close_completion: CloseCompletion, complete_word: CompleteWord, variant: Symbol) -> void
+      def initialize(select_completion:, accept_completion:, close_completion:, complete_word:, variant:)
         super(kind: :action, repeat: false)
         @select_completion = select_completion
         @accept_completion = accept_completion
         @close_completion = close_completion
+        @complete_word = complete_word
         @variant = variant
       end
 
@@ -36,17 +42,21 @@ module Carat
         when :previous then @select_completion.call(state, -1)
         when :insert then @accept_completion.call(state, false)
         when :replace then @accept_completion.call(state, true)
+        when :keyword_next then @complete_word.call(state, true)
+        when :keyword_previous then @complete_word.call(state, false)
         else @close_completion.call(state)
         end
       end
 
-      #: (ActionTable, select_completion: SelectCompletion, accept_completion: AcceptCompletion, close_completion: CloseCompletion) -> void
-      def self.register(table, select_completion:, accept_completion:, close_completion:)
-        table.register("completion.next", CompletionHandler.new(select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, variant: :next), "Next completion")
-        table.register("completion.previous", CompletionHandler.new(select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, variant: :previous), "Previous completion")
-        table.register("completion.insert", CompletionHandler.new(select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, variant: :insert), "Insert the completion")
-        table.register("completion.replace", CompletionHandler.new(select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, variant: :replace), "Replace the word with completion")
-        table.register("completion.close", CompletionHandler.new(select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, variant: :close), "Close the completion popup")
+      #: (ActionTable, select_completion: SelectCompletion, accept_completion: AcceptCompletion, close_completion: CloseCompletion, complete_word: CompleteWord) -> void
+      def self.register(table, select_completion:, accept_completion:, close_completion:, complete_word:)
+        table.register("completion.next", CompletionHandler.new(select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, complete_word: complete_word, variant: :next), "Next completion")
+        table.register("completion.previous", CompletionHandler.new(select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, complete_word: complete_word, variant: :previous), "Previous completion")
+        table.register("completion.insert", CompletionHandler.new(select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, complete_word: complete_word, variant: :insert), "Insert the completion")
+        table.register("completion.replace", CompletionHandler.new(select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, complete_word: complete_word, variant: :replace), "Replace the word with completion")
+        table.register("completion.close", CompletionHandler.new(select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, complete_word: complete_word, variant: :close), "Close the completion popup")
+        table.register("completion.keyword_next", CompletionHandler.new(select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, complete_word: complete_word, variant: :keyword_next), "Complete a word, forward")
+        table.register("completion.keyword_previous", CompletionHandler.new(select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, complete_word: complete_word, variant: :keyword_previous), "Complete a word, backward")
       end
     end
   end

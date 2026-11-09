@@ -3104,3 +3104,51 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/use_cases/ex/messages_command_handler.rb` line 14 and `carat/use_cases/ex/syntax_command_handler.rb` line 14 at 3895e21. Periodic quality. Queue item `messages-tidy`.
 - Why it matters: dead code; each only forwards `spec` to `ExHandler#initialize`.
 - Fix outline: delete both constructors.
+
+## BufferWords repeats the menu's cap and exposes more than it needs
+
+- Where: `carat/domain/buffer_words.rb` at eb0b1ae: `LIMIT = 200` (line 24) repeats `CompletionList::LIMIT`; `done?` (line 52) is public though only `BufferWords` calls it; `collect` (line 38) on a `Struct` subclass shadows `Enumerable#collect`, which `Struct` includes, with an unrelated signature. Quality advisories in `word-completion`.
+- Why it matters: the two caps can drift so the scan keeps more or fewer words than the menu shows; the public `done?` widens the surface the backlog already trims; a reader expecting `Enumerable#collect` meets a different method, and a later caller of the block form gets the wrong one.
+- Fix outline: use `CompletionList::LIMIT` in `done?` and `scan_line` and drop the constant; move `done?` under `private` and drop it from its map entry; rename `collect` (for example `gather` or `scan_from`) in `CompleteWord` and the map. Queued in `completion-tidy`.
+
+## BufferWords slices every match before the duplicate check
+
+- Where: `take` in `carat/domain/buffer_words.rb` line 133 at eb0b1ae. Quality advisory in `word-completion`.
+- Why it matters: the byteslice of every match is allocated before it is compared with the kept words, so an empty prefix over a large buffer allocates one string per word occurrence up to the byte bound, though few of them are new.
+- Fix outline: compare the candidate's bytes against the kept words before slicing, or bound the duplicate case, with a benchmark row for Ctrl-N on an empty prefix over a large buffer. Queued in `completion-tidy`.
+
+## CompleteWord copies ShowCompletion's word-before-cursor step
+
+- Where: `carat/use_cases/completion/complete_word.rb` line 47 at eb0b1ae (head, word start, prefix, column) against `ShowCompletion#refresh` in `carat/use_cases/completion/show_completion.rb` lines 74 to 77. Quality advisory in `word-completion`.
+- Why it matters: the two copies decide what the word before the cursor is; a fix to one (a multibyte boundary, a keyword character option) misses the other, and the keyword and server popups then disagree on the prefix.
+- Fix outline: one domain step answering a small `Data` record of the prefix, its byte start, and its column, called by both use cases, with their existing rows unchanged. Queued in `completion-tidy`.
+
+## Every completion handler variant holds CompleteWord
+
+- Where: `CompletionHandler` in `carat/use_cases/actions/completion_handler.rb` line 28 at eb0b1ae, whose every popup variant now takes `complete_word` though only the two `keymap.insert` variants (`completion.keyword_next`, `completion.keyword_previous`) use it. Quality advisory in `word-completion`.
+- Why it matters: the popup handlers carry a collaborator they never call, widening the handler the backlog already records as repeating its constructor.
+- Fix outline: a separate `KeywordCompletionHandler` holding only `CompleteWord` and registering the two keyword actions, wired in `EditorAssembly` with its `docs/actions.md` rows unchanged. Queued in `completion-tidy`.
+
+## Completion docs lag the word-completion change
+
+- Where: the class comment of `carat/use_cases/completion/show_completion.rb` line 25 at eb0b1ae runs past the file's wrap width; the section 5.1 completion list of `docs/architecture.md` line 167 names `CompleteWord` but not the shared `OpenCompletionPopup`. Quality advisories in `word-completion`.
+- Why it matters: the long line breaks the file's style, and a reader of section 5.1 cannot find the use case that opens the popup float both completion paths share.
+- Fix outline: rewrap the paragraph, and add `OpenCompletionPopup` to the 5.1 list as the popup float `ShowCompletion` and `CompleteWord` share. Queued in `completion-tidy`.
+
+## Keyword completion skips the word right after the cursor on an empty prefix
+
+- Where: `carat/domain/buffer_words.rb` line 64 at 8f486e0, where the scan of the cursor's line starts at `start + 1` and the final `0...start` slice ends before `start`. Quality advisory in `word-completion`.
+- Why it matters: with no word before the cursor, the word starting at the cursor column is never offered from that spot, though the completion spec says every word matches with an empty prefix.
+- Fix outline: scan from `start` rather than `start + 1` when the prefix is empty (or narrow the spec wording to match Neovim), with a table row for a cursor placed before a word.
+
+## Typing after Ctrl-P selects the farthest match
+
+- Where: `carat/use_cases/completion/show_completion.rb` line 98 at 8f486e0, which refilters the reversed word list of a Ctrl-P menu and selects row 0. Quality advisory in `word-completion`.
+- Why it matters: the Ctrl-P popup selects the nearest match, but after one typed character the selection jumps to the farthest one.
+- Fix outline: keep the last row selected when the menu was filled backward, through a direction flag on the menu set by `CompleteWord`, with a row for Ctrl-P followed by a typed character.
+
+## No test pins that typing with no popup costs nothing more
+
+- Where: `test/editor_word_completion.rb` at 8f486e0 has no row for the spec scenario Typing costs nothing more (no buffer scan and no extra allocation per key with no popup). Quality advisory in `word-completion`.
+- Why it matters: a change that scans the buffer on every insert-mode key would pass the suite unseen.
+- Fix outline: assert that typing in insert mode with no popup leaves the menu unfilled, or add a bench scenario row that pins the allocations.

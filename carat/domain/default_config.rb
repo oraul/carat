@@ -223,6 +223,8 @@ module Carat
       keymap.insert <PageDown> scroll.page_down
       keymap.insert <PageUp> scroll.page_up
       keymap.insert <C-s> file.save
+      keymap.insert <C-n> completion.keyword_next
+      keymap.insert <C-p> completion.keyword_previous
 
       # While the completion popup shows in insert mode, these keys are looked
       # up first; any other key goes on to the insert bindings. Single keys only.

@@ -44,7 +44,8 @@ module AdaptersAssemblyTest
       ["handle_key", a.handle_key.completion], ["show_completion", a.show_completion.menu], ["close_completion", a.show_completion.close_completion.menu], ["show_docs", a.show_completion.show_docs.menu]
     ]), "the completion menu")
     t.assert_equal([true, true], [a.handle_key.show_completion.equal?(a.show_completion), a.show_completion.source.equal?(h.completions)], "the key handler holds the one ShowCompletion, over the source the harness gave")
-    t.assert_equal([true, true, true], [a.show_completion.show_docs.source.equal?(h.completions), a.show_completion.show_docs.open_float.equal?(a.show_completion.open_float), a.show_completion.show_docs.close_float.equal?(a.show_completion.close_float)], "the documentation float shares the popup's source and float use cases")
+    t.assert_equal([true, true, true], [a.show_completion.show_docs.source.equal?(h.completions), a.show_completion.show_docs.open_float.equal?(a.show_completion.open_popup.open_float), a.show_completion.show_docs.close_float.equal?(a.show_completion.open_popup.close_float)], "the documentation float shares the popup's source and float use cases")
+    t.assert_equal([true, true, true, true], [a.complete_word.open_popup.equal?(a.show_completion.open_popup), a.complete_word.menu.equal?(a.completion_menu), a.complete_word.close_completion.equal?(a.show_completion.close_completion), a.complete_word.buffers.equal?(a.buffers)], "keyword completion shares the popup, its menu, its closing, and the buffer list")
     t.assert_equal([true, true], [a.controller.show_completion.equal?(a.show_completion), a.services.completion.equal?(h.completions.request)], "the input controller holds the one ShowCompletion and the gateway the source's request")
     t.assert_equal([], strangers(a.hover, [
       ["services", a.services.hover], ["request_hover", a.request_hover.hover], ["show_hover", a.show_hover.hover],
