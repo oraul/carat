@@ -81,17 +81,24 @@ module AdaptersHoverTest
   # An editor over a.rb in the trusted /project with ruby-lsp installed,
   # its initialize answered with the capabilities given.
   def self.rig(capabilities)
+    rig_with(capabilities, [], false)
+  end
+
+  # rig with the plugins given and, when plain, NO_COLOR set.
+  #: (Hash[String, untyped], Array[untyped], bool) -> Rig
+  def self.rig_with(capabilities, plugins, plain)
     files = Carat::Doubles::MemoryFiles.new
     files.move_to("/project")
     files.put("a.rb", "def greet\n  puts 1\nend\n")
     clock = Carat::Doubles::ManualClock.new
     terminal = Carat::Doubles::FakeTerminal.new(clock: clock, rows: 12, cols: 40)
+    terminal.no_color = plain
     processes = Carat::Doubles::FakeProcesses.new
     processes.install("ruby-lsp")
     messages = Carat::Doubles::MemoryQueue.new
     completions = Carat::Adapters::ServerCompletions.new
     config = Carat::Doubles::FixedConfig.new(value: Carat::Doubles::FixedConfig.with_user("language.trusted_roots /project\noption.icons ascii\n"))
-    assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: config, processes: processes, messages: messages, completions: completions, plugin_list: [])
+    assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: config, processes: processes, messages: messages, completions: completions, plugin_list: plugins)
     r = Rig.new(clock: clock, terminal: terminal, processes: processes, messages: messages, assembly: assembly)
     assembly.screen_presenter.enter
     assembly.open("a.rb")
@@ -154,6 +161,24 @@ module AdaptersHoverTest
       n += 1
     end
     out
+  end
+
+  # The group the first cell of the word on the screen is drawn in, by
+  # name, with " in a float" when it is on the float layer; "" when the
+  # word is not shown.
+  def self.group_of(r, word)
+    rows = r.screen
+    i = 0
+    while i < rows.length
+      col = rows[i].index(word.to_s)
+      unless col.nil?
+        hl = r.frame.hl_at(i, col.to_i)
+        suffix = hl >= D::Highlight::FLOAT_LAYER ? " in a float" : ""
+        return D::Highlight.name_of(D::Highlight.base(hl)) + suffix
+      end
+      i += 1
+    end
+    ""
   end
 
   # The current buffer's lines.
@@ -276,6 +301,30 @@ module AdaptersHoverTest
     r.type("<Esc>")
     r.type("j")
     t.assert_equal([2, rows], [r.window_count, lines(r)], "the pinned split stays after Esc and a move")
+
+    # The markup drawn in its groups, over the float's background.
+    r = hovering
+    shown(r, markup("# Heading\n\nUse **strongword** _italicword_\n\n`codeword` [linkword](#d)"))
+    t.assert_equal(["@markup.heading in a float", "@markup.strong in a float", "@markup.italic in a float", "@markup.raw in a float", "@markup.link.label in a float", "NormalFloat"], [group_of(r, "Heading"), group_of(r, "strongword"), group_of(r, "italicword"), group_of(r, "codeword"), group_of(r, "linkword"), group_of(r, "Use")], "headings, strong and italic runs, code spans, and link texts are drawn in their groups in the float")
+    r.type("<Esc>")
+    shown(r, markup("```text\nplainwords\n```\n\n```ruby\n# note\n```"))
+    t.assert_equal(["@markup.raw.block in a float", "@markup.raw.block in a float"], [group_of(r, "plainwords"), group_of(r, "note")], "fenced code with no tokenizer for its language is drawn in @markup.raw.block")
+    r.type("<Space>dp")
+    t.assert_equal("@markup.raw.block", group_of(r, "plainwords"), "the pinned split draws the styles over the window's background")
+    r = rig_with({ "hoverProvider" => true }, [Carat::Plugins::Ruby::Plugin.new], false)
+    shown(r, markup("```ruby\n# note\nx = 4242\n```"))
+    t.assert_equal(["Comment in a float", "Number in a float"], [group_of(r, "note"), group_of(r, "4242")], "fenced Ruby is drawn through the Ruby tokenizer over the float's background")
+    r.type(":syntax off<CR>")
+    r.type("K")
+    r.wait
+    answer(r, markup("```ruby\n# note\n```"))
+    r.wait
+    t.assert_equal("@markup.raw.block in a float", group_of(r, "note"), "with syntax off fenced Ruby is plain code")
+    r = rig_with({ "hoverProvider" => true }, [], true)
+    shown(r, markup("# Heading\n\n```text\nplainwords\n```"))
+    t.assert_equal(["NormalFloat", "NormalFloat"], [group_of(r, "Heading"), group_of(r, "plainwords")], "NO_COLOR draws the documentation plain")
+    r.type("<Space>dp")
+    t.assert_equal(["Normal", 2], [group_of(r, "Heading"), r.window_count], "and the pinned split too")
 
     # Hostile and bounded text.
     r = hovering

@@ -11,9 +11,9 @@
 
 ## 3. Fenced code and the floats
 
-- [ ] 3.1 Add `UseCases::FormatDocs` (`carat/use_cases/docs/format_docs.rb`) tokenizing fenced rows through `PluginSyntax`, wired in `EditorAssembly` into `ShowHover` and `ShowCompletionDocs`; prove with `test/adapters_hover.rb`
-- [ ] 3.2 Add `Buffer#styles`, `style_at`, and `styled?`; set them in `ShowHover`, `ShowCompletionDocs`, and `PinHover`; prove with `test/adapters_hover.rb` (pinned split)
-- [ ] 3.3 Paint the styles in `FramePresenter` on the float layer for floats and on the base ids for a styled window, none when plain; prove with `test/adapters_hover.rb` (groups, fenced Ruby, unknown language, NO_COLOR) and `test/editor_completion.rb` (strong word)
+- [x] 3.1 Add `UseCases::FormatDocs` (`carat/use_cases/docs/format_docs.rb`) tokenizing fenced rows through `PluginSyntax`, wired in `EditorAssembly` into `ShowHover` and `ShowCompletionDocs`; prove with `test/adapters_hover.rb`
+- [x] 3.2 Add `Buffer#styles`, `style_at`, and `styled?`; set them in `ShowHover`, `ShowCompletionDocs`, and `PinHover`; prove with `test/adapters_hover.rb` (pinned split)
+- [x] 3.3 Paint the styles in `FramePresenter` on the float layer for floats and on the base ids for a styled window, none when plain; prove with `test/adapters_hover.rb` (groups, fenced Ruby, unknown language, NO_COLOR) and `test/editor_completion.rb` (strong word)
 
 ## 4. Docs and checks
 

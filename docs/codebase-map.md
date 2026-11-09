@@ -613,6 +613,7 @@ Files:
 - `carat/adapters/server_completions.rb`: `ServerCompletions`, the editor's completion source: ready for a completing server's file type, the answer held for the word or the word recorded as wanted; `documentation` (the held text, the candidate recorded as picked); `request`.
 - `carat/doubles/fixed_completions.rb`: `FixedCompletions`, a source a test fills with `add` and `document`, ready once it holds a candidate, counting `asked`, its `request` filled by nobody.
 - `carat/use_cases/docs/request_hover.rb`: `RequestHover#call`, `K`: enters the documentation float while it shows, else records the ask at the cursor, refused without a path or a hovering server.
+- `carat/use_cases/docs/format_docs.rb`: `FormatDocs#call`, documentation markdown as the rows and markup spans of a docs float, fenced code of a language an enabled plugin tokenizes highlighted through `PluginSyntax` when syntax is on, then wrapped; shared by `ShowHover` and `ShowCompletionDocs`.
 - `carat/use_cases/docs/show_hover.rb`: `ShowHover#call`, the arrived answer at the idle tick: dropped when the cursor moved, a message when empty, else a bordered float of `MarkdownText` rows below or above the cursor, at most 80 by 20.
 - `carat/use_cases/docs/follow_hover.rb`: `FollowHover#call`, after a key while the float is recorded: forgets a closed float, keeps an entered one, closes it when the cursor, window, buffer, or mode moved.
 - `carat/use_cases/docs/pin_hover.rb`: `PinHover#call`, `<leader>dp`: the float's rows in a scratch buffer in a new split, the float closed.

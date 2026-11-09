@@ -593,8 +593,9 @@ module Carat
         end
       end
 
-      # One row of a float's box: its text in NormalFloat, then its border
-      # and, on the top edge, its title.
+      # One row of a float's box: its text in NormalFloat, a documentation
+      # row's styles on the float layer unless plain (NO_COLOR), then its
+      # border and, on the top edge, its title.
       #: (Domain::Frame, Domain::FloatWindow, Integer, Integer, Integer) -> void
       def paint_float_row(frame, float, r, tabstop, cols)
         mend_edges(frame, r, float.box_left, float.box_right, cols)
@@ -604,12 +605,17 @@ module Carat
           width = window.width
           buffer = window.buffer
           row = window.top + r - window.row
+          group = float_group(float, row)
           if row < buffer.line_count
-            paint_text(frame, r, x, @cache.fetch(buffer.line(row), tabstop), width, window.left)
+            line = buffer.line(row)
+            decoded = @cache.fetch(line, tabstop)
+            paint_text(frame, r, x, decoded, width, window.left)
+            frame.fill(r, x, x + width, group)
+            paint_tokens(frame, r, x, decoded, width, window.left, buffer.style_at(row, line).tokens, Domain::Highlight::FLOAT_LAYER) if buffer.styled? && !@plain
           else
             frame.blank(r, x, x + width)
+            frame.fill(r, x, x + width, group)
           end
-          frame.fill(r, x, x + width, float_group(float, row))
           paint_mark(frame, float, r, x, width) if row == 0 && float.marked?
         end
         paint_border_row(frame, float, r) if float.spec.border
@@ -747,6 +753,7 @@ module Carat
         frame.add_scroll(wrow, wrow + height - 1, delta) if delta != 0
         signs = buffer.signs?
         highlights = buffer.syntax_cache
+        styled = !@plain && buffer.styled? && !highlights.active?
         search = @drawn
         @current = current
         lit = current && options.cursorline ? Domain::Highlight::CURSOR_LINE_LAYER : 0
@@ -768,6 +775,7 @@ module Carat
           if row < count
             line = buffer.line(row)
             syntax = highlights.lookup(row, line)
+            syntax = buffer.style_at(row, line) if styled
             number = number_shown(row, cursor.row, options, gutter, signs)
             sign = buffer.sign_at(row) if signs
             if row == cursor.row
@@ -937,7 +945,7 @@ module Carat
         end
         decoded = @cache.fetch(line, tabstop)
         paint_text(frame, frame_row, x + gutter, decoded, text_width, left)
-        paint_tokens(frame, frame_row, x + gutter, decoded, text_width, left, syntax.tokens) unless syntax.tokens.empty?
+        paint_tokens(frame, frame_row, x + gutter, decoded, text_width, left, syntax.tokens, 0) unless syntax.tokens.empty?
         paint_matches(frame, frame_row, x + gutter, decoded, text_width, left, line) if @drawn > 0
         paint_selection(frame, frame_row, x + gutter, text_width, left) if @sel_from <= @sel_to || @sel_end >= 0
       end
@@ -1000,11 +1008,11 @@ module Carat
         frame.blank(frame_row, at, col + width) if at < col + width
       end
 
-      # Gives the cells of each token the token's group: the display
-      # columns of its code points inside [left, left + width), a token
-      # past the end of the line cut there.
-      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer, Array[Integer]) -> void
-      def paint_tokens(frame, frame_row, col, decoded, width, left, tokens)
+      # Gives the cells of each token the token's group plus the layer: the
+      # display columns of its code points inside [left, left + width), a
+      # token past the end of the line cut there.
+      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer, Array[Integer], Integer) -> void
+      def paint_tokens(frame, frame_row, col, decoded, width, left, tokens, layer)
         size = decoded.size
         limit = left + width
         i = 0
@@ -1017,7 +1025,7 @@ module Carat
             last = decoded.col(to)
             first = left if first < left
             last = limit if last > limit
-            frame.fill(frame_row, col + first - left, col + last - left, tokens[i + 2]) if first < last
+            frame.fill(frame_row, col + first - left, col + last - left, tokens[i + 2] + layer) if first < last
           end
           i += 3
         end
