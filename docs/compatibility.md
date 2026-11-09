@@ -378,7 +378,7 @@ Every window shows one buffer from the buffer list with its own cursor and scrol
 | --- | --- | --- | --- |
 | `[count]<C-w>s` | `window.split` | Split horizontally: the new window above shows the same view with half the text rows, or count rows | `editor_windows`, `domain_layout` |
 | `[count]<C-w>v` | `window.vsplit` | Split vertically: the new window to the left shows the same view with half the columns, or count columns | `editor_windows`, `domain_layout` |
-| `[count]<C-w>h`, `j`, `k`, `l` | `window.left`, `window.down`, `window.up`, `window.right` | To the neighbour overlapping the cursor's screen row or column, count times, stopping at the edge | `editor_windows`, `domain_layout` |
+| `[count]<C-w>h`, `j`, `k`, `l` | `window.left`, `window.down`, `window.up`, `window.right` | To the neighbour whose layout rectangle abuts the window's and overlaps the cursor's screen row or column, so in a nested split the cursor's row picks between two stacked windows, count times, stopping at the edge | `editor_windows`, `domain_layout` |
 | `[count]<C-w>w` | `window.next` | Next window in layout order, wrapping; with a count, window number count or the last | `editor_windows` |
 | `[count]<C-w>W` | `window.previous` | Previous window in layout order, wrapping; with a count, as `<C-w>w` | `editor_windows` |
 | `<C-w>p` | `window.last_accessed` | The window that was current before the last change, if it still exists | `editor_windows` |
@@ -390,7 +390,7 @@ Every window shows one buffer from the buffer list with its own cursor and scrol
 
 Messages: `E36: Not enough room` when the current window has fewer than three text rows or cannot give both windows one text column plus the number column and a separator; `E444: Cannot close last window` from `<C-w>c` and `:close` on the last window of the last tab page; `Already only one window` from `<C-w>o` and `:only`.
 
-Differences from Neovim: `splitbelow` and `splitright` are off and not options; a window's minimum height is one text row and its minimum width one column plus the number column, with no `winminheight` or `winminwidth`; a fixed-width window (`winfixwidth`) is a sidebar and a fixed-height one (`winfixheight`) the panel (Layout slots below), neither set by `:set`; `<C-w>` followed by a count (`<C-w>3j`) is not read, only a count before `<C-w>`; `<C-w>t b x r R H J K L T`, `<C-w>+ - < >`, `:resize`, the held-Ctrl forms of those commands, and scroll binding arrive with later changes; the neighbour for `<C-w>h j k l` is chosen by the cursor's row and code point column, not its display column. `<C-w><C-c>` is not bound: as Vim's help says of it (`CTRL-W_CTRL-C`), the `<C-c>` cancels the window command, with the count typed before it, and does not close the window.
+Differences from Neovim: `splitbelow` and `splitright` are off and not options; a window's minimum height is one text row and its minimum width one column plus the number column, with no `winminheight` or `winminwidth`; a fixed-width window (`winfixwidth`) is a sidebar and a fixed-height one (`winfixheight`) the panel (Layout slots below), neither set by `:set`; `<C-w>` followed by a count (`<C-w>3j`) is not read, only a count before `<C-w>`; `<C-w>t b x r R H J K L T`, `<C-w>+ - < >`, `:resize`, the held-Ctrl forms of those commands, and scroll binding arrive with later changes; the neighbour for `<C-w>h j k l` is the window whose layout rectangle overlaps the cursor's row or code point column, not its display column. `<C-w><C-c>` is not bound: as Vim's help says of it (`CTRL-W_CTRL-C`), the `<C-c>` cancels the window command, with the count typed before it, and does not close the window.
 
 ## Scrolling
 
@@ -515,6 +515,20 @@ Carat's own, in place of the sidebar and panel plugins Neovim users add. Each ta
 
 Not implemented: choosing a view from the header, moving a view between slots, resizing a slot with keys, and a core view for the panel.
 
+## Breadcrumbs
+
+In place of Neovim's `winbar` option and the breadcrumb plugins (such as nvim-navic) Neovim users add. Each file window, a window showing a buffer that is not a plugin's scratch buffer, gives its first row to a winbar: one space, the buffer's path (the scratch title or `[No Name]`), and, when the language server of the current window's buffer offers `documentSymbolProvider` and its answer for that buffer is held, ` > ` and each symbol whose range holds the window's cursor row, outermost first; the current window's winbar in `TabLineSel`, the others' in `TabLine`, the rest of the row in `TabLineFill`. Slot and plugin windows show none and are not counted; a window of one text row keeps its row; a split count still gives the new window that many text rows under its winbar.
+
+| Keys or line | Action name | Behavior | Problem | Tests |
+| --- | --- | --- | --- | --- |
+| one file window | none | No winbar under `auto` | none | `editor_breadcrumbs` |
+| two or more file windows | none | A winbar on each file window under `auto`, gone again when one is left | none | `editor_breadcrumbs`, `editor_cmdline`, `editor_plugins` |
+| `option.breadcrumbs` | none | `auto` (default), `always` (every file window), or `never` | `file:line: unknown breadcrumbs mode WORD` | `editor_breadcrumbs`, `domain_options_config` |
+| symbol path | none | The symbols spanning the cursor row, from a hierarchical or flat answer, at most 500 symbols, 8 levels, names without control characters and cut to 40 bytes; a window on another buffer shows its path only | none | `editor_breadcrumbs` |
+| symbol requests | none | `textDocument/documentSymbol` at an idle tick, only while a winbar shows, once per text of the current window's buffer, one in flight; an edit meanwhile is asked after the answer; unanswered for two seconds it is cancelled and its late answer dropped; a key never waits for one | none | `editor_breadcrumbs` |
+
+Differences from Neovim: Neovim's `winbar` is an empty statusline format by default and shows nothing; Carat's has no format, is read from `option.breadcrumbs` only (`:set breadcrumbs` answers `Not implemented: :set breadcrumbs`), and shows no symbol kinds or icons. Not implemented: picking a symbol from the winbar, and symbols for a buffer other than the current window's until it becomes current.
+
 ## Key hints and command palette
 
 Carat's own, in place of the which-key and command palette plugins Neovim users add. Keys that only begin bindings (the leader, `g`, `z`, `<C-w>`), left with no key for `option.keyhints.delay` milliseconds, show a bordered float at the bottom right titled with the keys and their group name, one row per next key: its action's description, a group's name, `+` and the count of bindings under an unnamed prefix, or the keys a remap replays, in columns when taller than the screen. The next key closes it and is handled as usual. A prefix that is bound itself shows no hints, as `timeoutlen` resolves it; insert and command-line modes show none (`editor_key_hints`, `domain_keymap`).
@@ -529,4 +543,4 @@ Differences from Neovim: Neovim's `F1` opens `:help`, which Carat does not have.
 
 ## Options read so far
 
-`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `keyhints.delay` (Key hints), `layout.left_width`, `layout.right_width`, and `layout.panel_height` (Layout slots), `undolevels`, `icons`, `theme`, and `background` (Themes), `startscreen` and `reducedmotion` (Start screen), from the `option.*` lines of the configuration files; `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, and `cursorline` from those lines and `:set` (Neovim's defaults: off, off, on, on, off; the shipped configuration turns `smartcase` and `cursorline` on); `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.
+`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `keyhints.delay` (Key hints), `layout.left_width`, `layout.right_width`, and `layout.panel_height` (Layout slots), `breadcrumbs` (Breadcrumbs), `undolevels`, `icons`, `theme`, and `background` (Themes), `startscreen` and `reducedmotion` (Start screen), from the `option.*` lines of the configuration files; `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, and `cursorline` from those lines and `:set` (Neovim's defaults: off, off, on, on, off; the shipped configuration turns `smartcase` and `cursorline` on); `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.

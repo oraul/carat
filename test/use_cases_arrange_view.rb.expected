@@ -18,7 +18,7 @@ ok   a cursor past the right edge scrolls the window right
 ok   a cursor left of the window scrolls it back
 ok   tabs count with their display width
 ok   the windows start under the tab line
-ok   two splits typed with no frame between them give 5, 5, and 10 text rows
+ok   two splits typed with no frame between them give 4, 4, and 9 text rows under their winbars
 ok   the top window is current
 ok   no split reported E36
 ok   H after 30G goes to line 23, the top line the window shows after the jump

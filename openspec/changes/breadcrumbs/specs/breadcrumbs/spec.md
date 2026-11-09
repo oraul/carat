@@ -22,6 +22,10 @@ When the tab page shows two or more file windows (windows of the layout whose bu
 - **WHEN** the explorer is open beside one file window
 - **THEN** no winbar shows
 
+#### Scenario: A split count counts text rows
+- **WHEN** "a.txt" is shown in one window and "5<C-w>s" is typed
+- **THEN** the new window has its winbar and 5 text rows below it
+
 #### Scenario: A window of one text row keeps its row
 - **WHEN** two file windows are shown and one has a single text row
 - **THEN** that window shows its text row and no winbar
@@ -49,7 +53,7 @@ The winbar SHALL show one space and the window's file path (the scratch title or
 - **THEN** the problem `unknown breadcrumbs mode sometimes` is reported at that line and the winbar follows `auto`
 
 ### Requirement: The winbar shows the cursor's symbol path
-When the language server of the current window's buffer offers `documentSymbolProvider` and its answer for that buffer is held, every winbar of a window showing that buffer SHALL follow the path with ` > ` and the name of each symbol whose range holds that window's cursor row, outermost first. A window on another buffer SHALL show its path only. Symbol names SHALL be shown without control characters and cut to 40 characters, at most 500 symbols and 8 levels kept.
+When the language server of the current window's buffer offers `documentSymbolProvider` and its answer for that buffer is held, every winbar of a window showing that buffer SHALL follow the path with ` > ` and the name of each symbol whose range holds that window's cursor row, outermost first. A window on another buffer SHALL show its path only. Symbol names SHALL be shown without control characters and cut to 40 bytes, at most 500 symbols and 8 levels kept.
 
 #### Scenario: Inside a method of a class
 - **WHEN** two windows show "a.rb", the server answers that class `Foo` spans rows 1 to 5 and method `bar` rows 2 to 3, and the current window's cursor is on row 2
@@ -64,8 +68,8 @@ When the language server of the current window's buffer offers `documentSymbolPr
 - **THEN** each symbol whose range holds the cursor row is shown in the answer's order
 
 #### Scenario: A hostile answer is bounded
-- **WHEN** the server answers a name holding control characters and longer than 40 characters, or more than 500 symbols
-- **THEN** the name shows without the control characters and cut to 40 characters, and only the first 500 symbols are kept
+- **WHEN** the server answers a name holding control characters and longer than 40 bytes, or more than 500 symbols
+- **THEN** the name shows without the control characters and cut to 40 bytes, and only the first 500 symbols are kept
 
 ### Requirement: Symbol requests never delay a key
 The editor SHALL ask for the current window's buffer's symbols only at an idle tick, while a winbar shows, when the server offers `documentSymbolProvider`, once per text of the buffer, with at most one request in flight. A key SHALL be handled at once whether or not a request is in flight, the winbar showing the last answer held. A request unanswered for two seconds SHALL be cancelled, and an answer to any request but the one in flight dropped.
@@ -95,4 +99,4 @@ With no winbar shown, a key SHALL allocate no more objects than before winbars e
 
 #### Scenario: Allocations held
 - **WHEN** `make bench` runs the `lh` and `j` scenarios
-- **THEN** their allocations per key are the figures recorded on main
+- **THEN** their allocations per key are the figures recorded on main, and `lh-winbar`, two file windows with winbars, allocates as many per key as the same windows with `option.breadcrumbs never`

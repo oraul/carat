@@ -76,6 +76,7 @@ require_relative "../editor_screen"
 require_relative "../editor_scroll"
 require_relative "../editor_search"
 require_relative "../editor_slots"
+require_relative "../editor_breadcrumbs"
 require_relative "../editor_start_screen"
 require_relative "../editor_substitute"
 require_relative "../editor_syntax"
@@ -170,6 +171,7 @@ when "editor_screen" then EditorScreenTest.main
 when "editor_scroll" then EditorScrollTest.main
 when "editor_search" then EditorSearchTest.main
 when "editor_slots" then EditorSlotsTest.main
+when "editor_breadcrumbs" then EditorBreadcrumbsTest.main
 when "editor_start_screen" then EditorStartScreenTest.main
 when "editor_substitute" then EditorSubstituteTest.main
 when "editor_syntax" then EditorSyntaxTest.main

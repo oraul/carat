@@ -203,7 +203,7 @@ module EditorCmdlineTest
     h.type("<C-w>s")
     files.put("a.txt", "new text\n")
     h.type(":e<CR>")
-    t.assert_equal([["new text"], "  1 new text", "  1 new text"], [h.lines, h.row(0), h.row(5)], "e reloads the file for every window showing it")
+    t.assert_equal([["new text"], "  1 new text", "  1 new text"], [h.lines, h.row(1), h.row(6)], "e reloads the file for every window showing it, under their winbars")
     files = files_with("ab\n")
     files.put("b.txt", "zz\n")
     files.put("c.txt", "cc\n")

@@ -59,7 +59,7 @@ ok   e shows the listed buffer in the window and keeps the one it left hidden
 ok   both windows share one buffer
 ok   e a.txt shows the hidden buffer without reading the file again
 ok   e! reads it again
-ok   e reloads the file for every window showing it
+ok   e reloads the file for every window showing it, under their winbars
 ok   wa writes every buffer in every tab page
 ok   qa quits with several windows and tab pages
 ok   qa is refused by a modified buffer in another tab page and goes there

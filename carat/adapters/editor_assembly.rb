@@ -126,6 +126,7 @@ require_relative "../use_cases/actions/file_handler"
 require_relative "../use_cases/actions/buffer_handler"
 require_relative "../use_cases/actions/completion_handler"
 require_relative "../domain/hover_request"
+require_relative "../domain/symbol_request"
 require_relative "../use_cases/docs/request_hover"
 require_relative "../use_cases/docs/show_hover"
 require_relative "../use_cases/docs/follow_hover"
@@ -267,6 +268,7 @@ module Carat
       attr_reader :completion_menu #: Domain::CompletionMenu
       attr_reader :show_completion #: UseCases::ShowCompletion
       attr_reader :hover #: Domain::HoverRequest
+      attr_reader :symbols #: Domain::SymbolRequest
       attr_reader :request_hover #: UseCases::RequestHover
       attr_reader :show_hover #: UseCases::ShowHover
       attr_reader :follow_hover #: UseCases::FollowHover
@@ -313,10 +315,11 @@ module Carat
         @cache = Domain::LineCache.new
         @status_slots = Domain::StatusSlots.new
         @hover = Domain::HoverRequest.new
+        @symbols = Domain::SymbolRequest.new
         @signature = Domain::SignatureRequest.new
         @key_hints = Domain::KeyHints.new
         @palette = Domain::Palette.new
-        @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots, completion: completions.request, clock: clock, hover: @hover, signature: @signature)
+        @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots, completion: completions.request, clock: clock, hover: @hover, signature: @signature, symbols: @symbols)
         @arrange_view = UseCases::ArrangeView.new(cache: @cache, buffers: @buffers)
         @actions = UseCases::ActionTable.new
         @commands = UseCases::ExTable.new
@@ -462,7 +465,7 @@ module Carat
         @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover, request_signature: @request_signature, follow_signature: @follow_signature, signature: @signature, key_hints: @key_hints, hide_key_hints: @hide_key_hints, palette: @palette, follow_palette: @follow_palette)
         @start_screen = Domain::StartScreen.new
         @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover, show_signature: @show_signature, signature: @signature, show_key_hints: @show_key_hints)
-        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, palette: @palette, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers))
+        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, palette: @palette, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers), winbar: Winbar.new(symbols: @symbols))
         @screen_presenter = ScreenPresenter.new(terminal: terminal, theme: Domain::Themes.find(@state.options.theme, @state.options.background), colors: terminal.colors)
       end
 

@@ -115,7 +115,9 @@ module Carat
       # returning the new leaf's id or -1 when there is not enough room. The
       # new window shows the same view and goes above or to the left. size is
       # the new window's text rows or columns, 0 for half; min_width is one
-      # text column plus the gutter.
+      # text column plus the gutter. Rows are counted from the leaf's
+      # rectangle less its separator row, so a header or winbar row
+      # ArrangeView took from the window counts as the window's.
       #: (Integer, bool, Integer, Integer) -> Integer
       def split(id, vertical, size, min_width)
         leaf = node(id)
@@ -130,7 +132,7 @@ module Carat
           new_size = total - min_width - 1 if new_size > total - min_width - 1
           old_size = total - new_size - 1
         else
-          text = old.height
+          text = leaf.height - 1
           return -1 if text < 3
           new_text = size > 0 ? size : text / 2
           new_text = 1 if new_text < 1

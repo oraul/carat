@@ -33,9 +33,9 @@ ok   the left window grew and the fixed one kept its width
 ok   left and right neighbours
 ok   no neighbour above or below
 ok   neighbours above and below
-ok   with the cursor on the first row the upper right window is next
-ok   with the cursor low on the screen the lower right window is next
-ok   both right windows have the left window to their left
+ok   by layout rectangles: with the cursor on the first row the upper right window is next
+ok   by layout rectangles: with the cursor low on the screen the lower right window is next
+ok   by layout rectangles: both right windows have the left window to their left
 ok   the right windows are stacked
 ok   equalize halves the rows, the first window taking the remainder
 ok   a fixed-width window keeps its width

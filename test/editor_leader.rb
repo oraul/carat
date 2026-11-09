@@ -6,13 +6,15 @@ require_relative "../carat/testing"
 # the file is compiled on its own (make test-one).
 module EditorLeaderTest
   # A 24 by 80 editor with the shipped defaults on "a.txt" (three lines),
-  # with "b.txt" and "c.txt" on disk, after typing keys.
+  # with "b.txt" and "c.txt" on disk, after typing keys, with no winbar as in
+  # Neovim (test/editor_breadcrumbs.rb covers the winbars).
   def self.session(keys)
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "one\ntwo\nthree\n")
     files.put("b.txt", "zz\n")
     files.put("c.txt", "cc\n")
     h = Carat::Doubles::EditorHarness.default(files, 24, 80)
+    h.state.options.breadcrumbs = "never"
     h.open("a.txt")
     h.type(keys.to_s)
     h

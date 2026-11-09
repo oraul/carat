@@ -8,7 +8,7 @@ With two or more file windows on screen only the current window's file shows, in
 
 - Each file window gets a winbar on its first row when the tab page shows two or more file windows: one space, the file's path (the scratch title or `[No Name]` otherwise), then, when the language server's symbols for that buffer are held, ` > ` and each symbol whose range holds the window's cursor row, outermost first. The current window's winbar is in `TabLineSel`, the others' in `TabLine`, the rest of the row `TabLineFill`. Slot and plugin windows (scratch buffers) get none and are not counted; a window of one text row keeps its row.
 - A new option `option.breadcrumbs` takes `auto` (the default: the winbar shows with two or more file windows), `always`, or `never`; another word is reported as `file:line: unknown breadcrumbs mode WORD`.
-- The language-server client advertises `textDocument.documentSymbol` (hierarchical), records which servers offer `documentSymbolProvider`, and, at an idle tick and only while a winbar shows, asks the current window's buffer's symbols once per text: one request in flight, sent again after its answer when the text changed, cancelled when unanswered after two seconds. Answers are read only for the request in flight, at most 500 symbols, 8 levels deep, names stripped of control characters and cut to 40 characters.
+- The language-server client advertises `textDocument.documentSymbol` (hierarchical), records which servers offer `documentSymbolProvider`, and, at an idle tick and only while a winbar shows, asks the current window's buffer's symbols once per text: one request in flight, sent again after its answer when the text changed, cancelled when unanswered after two seconds. Answers are read only for the request in flight, at most 500 symbols, 8 levels deep, names stripped of control characters and cut to 40 bytes.
 - `<C-w>h`, `j`, `k`, and `l` gain a spec scenario, a `docs/compatibility.md` row text, and test names that record the layout-rectangle rule, with an editor test on a nested split.
 - Plan bookkeeping in `docs/backlog.md`: the fixed and the corrected entries the planner named, and the mouse moved out of the queue (recorded by the package step from the planner's backlog).
 
@@ -30,8 +30,8 @@ Assumptions: "file window" is a window of the layout showing a buffer that is no
 
 ## Impact
 
-- Domain: new `SymbolRequest`; `TabPage` gains `file_window_count` and `winbar?`; `Options` gains `breadcrumbs`.
-- Use cases: `ArrangeView` reserves the winbar rows.
+- Domain: new `SymbolRequest`; `TabPage` gains `file_window_count` and `winbar?`; `Options` gains `breadcrumbs`; `Layout#split` counts the rows of the leaf's rectangle.
+- Use cases: `ArrangeView` reserves the winbar rows; `SplitWindow` keeps a split count in text rows under a winbar.
 - Adapters: new `Winbar` painter and `SymbolOutline` reader; `FramePresenter` paints the winbars; `JsonRpcLanguageGateway` asks and reads document symbols; `EditorAssembly` wires the shared `SymbolRequest`.
 - Configuration: `config/default.caratrc` (`option.breadcrumbs auto`) and its generated mirror.
 - Tests: two file windows now show winbars, so window rectangles and frames of existing split tests move down one row.

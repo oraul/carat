@@ -16,6 +16,10 @@ Non-goals: symbol navigation, `:set breadcrumbs`, kinds or icons, symbols for bu
 
 `ArrangeView#call` calls `reserve_winbars` after `reserve_headers` when `TabPage#winbar?(options.breadcrumbs)`: each leaf window whose buffer is not scratch and has two rows or more starts a row lower, a row shorter. The layout tree, its node rectangles, and so the separators and `Layout#neighbour` are untouched; scrolling, `H`, `M`, `L`, and cursor clamping read `Window#height`, so they see the text rows. `FramePresenter#paint_winbars` paints the row above each such window when it is its node's top row (the same test `paint_headers` uses), adds it to the chrome rows, and marks it repainted under floats. The window rectangles are in the frame's layout key, so a winbar appearing or going repaints the window rows once. Alternative: a winbar inside `Layout#arrange` as part of the leaf's extent; rejected, since the layout tree's minimum sizes and `E36` checks would change for every split.
 
+### A split counts the rows of its leaf
+
+`Layout#split` read the window's height, which `ArrangeView` had already shortened by a header or winbar row, so a half split of a window with a winbar came out one row short and splits typed before a frame disagreed with those after one. It now counts the leaf's rectangle less its separator row, the same figure for a window with and without a reserved row, and `SplitWindow` adds the winbar's row to a count when the windows will show winbars once the split is made, so `5<C-w>s` still gives the new window five text rows, as `:resize` and a split count measure text rows in Neovim. Without winbars the rectangle less its separator is the window's height, so nothing changes there.
+
 ### Shown when, counted how
 
 `TabPage#file_window_count` walks the node table (`node_count`, `leaf?`) counting leaves whose window's buffer is not scratch, building no list, so it allocates nothing; `winbar?(mode)` is false for `never`, true for `always`, and `file_window_count > 1` for `auto`. Slot windows and plugin windows hold scratch buffers, so the explorer beside one file shows no winbar. `option.breadcrumbs` is a string option checked against `Options::BREADCRUMBS`; it is read from configuration lines only, as `option.layout.*` are.
@@ -39,7 +43,7 @@ Non-goals: symbol navigation, `:set breadcrumbs`, kinds or icons, symbols for bu
 ## Risks / Trade-offs
 
 - Every existing test with two file windows now has winbars: its rectangles and frames move down a row. The new rows are reviewed in the snapshot diff; `option.breadcrumbs never` restores the old layout for a user who wants it.
-- A server's hostile answer is bounded: 500 symbols, 8 levels, 40-character names without controls; the JSON itself is already bounded by `RpcFramer`'s 8 MiB body limit.
+- A server's hostile answer is bounded: 500 symbols, 8 levels, 40-byte names without controls; the JSON itself is already bounded by `RpcFramer`'s 8 MiB body limit.
 - With winbars shown and an answer kept for an older text, the path may name the symbol the cursor was in before an edit until the next answer, at most one round trip later.
 
 ## Tests
@@ -47,4 +51,4 @@ Non-goals: symbol navigation, `:set breadcrumbs`, kinds or icons, symbols for bu
 - `test/editor_breadcrumbs.rb`: `file_window_count` and `winbar?` per mode, winbar rows per case (one window, two, closed back to one, explorer beside one, `always`, `never`, a one-row window), the path and the symbol path through the gateway with a fake server, no request without the capability or with no winbar, a key handled before a slow answer, a cancelled answer dropped, an overdue request cancelled, names cleaned and capped.
 - `test/domain_options_config.rb`: the option's values and its problem line.
 - `test/editor_windows.rb` and `test/domain_layout.rb`: the rectangle-rule rows.
-- `make bench` on `lh` and `j`: allocations per key unchanged.
+- `make bench` on `lh` and `j`: allocations per key unchanged. A new `lh-winbar` scenario (two windows, winbars shown) allocates as many objects per key as the same two windows with `never` (31.0 each), so painting the winbars allocates nothing.

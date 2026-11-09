@@ -11,12 +11,16 @@ module EditorWindowsTest
   E444 = "E444: Cannot close last window"
 
   # An editor on "a.txt" (three lines) with "b.txt" and "c.txt" on disk.
+  # The windows show no winbar, as in Neovim, whose winbar is empty by
+  # default, so the rectangles are Neovim's; test/editor_breadcrumbs.rb
+  # covers the winbars.
   def self.editor(rows, cols)
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "one\ntwo\nthree\n")
     files.put("b.txt", "zz\n")
     files.put("c.txt", "cc\n")
     h = Carat::Doubles::EditorHarness.default(files, rows, cols)
+    h.state.options.breadcrumbs = "never"
     h.open("a.txt")
     h
   end
@@ -74,6 +78,8 @@ module EditorWindowsTest
   ONE = [[0, 0, 22, 80]]
   STACKED = [[0, 0, 11, 80], [12, 0, 10, 80]]
   BESIDE = [[0, 0, 22, 40], [0, 41, 22, 39]]
+  # Beside the left window, the right one split with one text row on top.
+  NESTED = [[0, 0, 22, 40], [0, 41, 1, 39], [2, 41, 20, 39]]
   # The same with a second file listed, under the buffer tabs row.
   TABBED_STACKED = [[1, 0, 11, 80], [13, 0, 9, 80]]
   TABBED_BESIDE = [[1, 0, 21, 40], [1, 41, 21, 39]]
@@ -102,6 +108,9 @@ module EditorWindowsTest
       ["Ctrl-W h moves back left", "<C-w>v<C-w>l<C-w>h", [2, 1, BESIDE]],
       ["Ctrl-W l with nothing to the right stays", "<C-w>v<C-w>l<C-w>l", [2, 2, BESIDE]],
       ["a count moves several windows and stops at the edge", "<C-w>s<C-w>s5<C-w>j", [3, 3, [[0, 0, 5, 80], [6, 0, 5, 80], [12, 0, 10, 80]]]],
+      ["Ctrl-W l picks the neighbour by layout rectangles: on the first row, the upper right window", "<C-w>v<C-w>l1<C-w>s<C-w>h<C-w>l", [3, 2, NESTED]],
+      ["Ctrl-W l picks the neighbour by layout rectangles: lower on the screen, the lower right window", "<C-w>v<C-w>l1<C-w>s<C-w>hjj<C-w>l", [3, 3, NESTED]],
+      ["Ctrl-W h from a right window whose rectangle abuts the left one goes there", "<C-w>v<C-w>l1<C-w>s<C-w>j<C-w>h", [3, 1, NESTED]],
       ["Ctrl-W w goes to the next window", "<C-w>s<C-w>w", [2, 2, STACKED]],
       ["Ctrl-W w wraps to the first", "<C-w>s<C-w>w<C-w>w", [2, 1, STACKED]],
       ["Ctrl-W W wraps to the last", "<C-w>s<C-w>W", [2, 2, STACKED]],
@@ -241,6 +250,7 @@ module EditorWindowsTest
     files.put("long.txt", lines)
     h = Carat::Doubles::EditorHarness.default(files, 24, 80)
     h.open("long.txt")
+    h.state.options.breadcrumbs = "never"
     h.type("<C-w>sG")
     t.assert_equal([39, 0], [h.windows[0][5], h.windows[1][5]], "G moves only the top window's cursor")
     t.assert_equal(" 40 line 40", h.row(10), "the top window scrolled to the end")

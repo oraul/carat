@@ -215,7 +215,8 @@ module SmokeEditorTest
     # <C-w> waits for its second key past timeoutlen (500 ms in the
     # shipped configuration): after a vertical split, <C-w>, a pause, and
     # l put the cursor in the right window, at column 46 behind its
-    # four-column number gutter, instead of one column right in the left.
+    # four-column number gutter on row 2 under its winbar, instead
+    # of one column right in the left.
     reader, writer, pid = PTY.spawn(BIN, path)
     writer.winsize = [24, 80]
     out = +"".b
@@ -228,7 +229,7 @@ module SmokeEditorTest
     mark = out.bytesize
     writer.write("l")
     settle(reader, out, 0.5)
-    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("\e[1;46H"), "<C-w>, a pause past timeoutlen, and l move to the right window")
+    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("\e[2;46H"), "<C-w>, a pause past timeoutlen, and l move to the right window, under its winbar")
     writer.write(":q\r")
     settle(reader, out, 0.5)
     writer.write(":q\r")

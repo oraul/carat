@@ -22,9 +22,11 @@ module Carat
     # screen when the editor starts without a file, and reducedmotion
     # shows its last frame without the animation. cursorline draws the
     # cursor's line in the current window over the CursorLine background.
+    # breadcrumbs says when file windows show a winbar: "auto" with two
+    # or more file windows, "always", or "never".
     # All but syntax_on come from option lines of the configuration. A Struct
     # record: mutable, with a reader and a writer per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, keyword_init: true)
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, keyword_init: true)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -50,6 +52,7 @@ module Carat
       # @rbs @layout_left_width: Integer
       # @rbs @layout_right_width: Integer
       # @rbs @layout_panel_height: Integer
+      # @rbs @breadcrumbs: String
 
       # Vim's defaults, the nerd icon set, the default theme on the
       # terminal's background, syntax highlighting on, and Neovim's search
@@ -58,7 +61,7 @@ module Carat
       # Neovim.
       #: () -> void
       def initialize
-        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: 300, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0)
+        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: 300, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto")
       end
 
       # The options a configuration line may set, by name, with the kind
@@ -70,13 +73,17 @@ module Carat
         "startscreen" => "bool", "reducedmotion" => "bool", "cursorline" => "bool",
         "tabstop" => "integer", "shiftwidth" => "integer", "scroll" => "integer", "scrolloff" => "integer", "timeoutlen" => "integer", "undolevels" => "integer", "keyhints.delay" => "integer",
         "layout.left_width" => "integer", "layout.right_width" => "integer", "layout.panel_height" => "integer",
-        "clipboard" => "string", "icons" => "string", "theme" => "string", "background" => "string"
+        "clipboard" => "string", "icons" => "string", "theme" => "string", "background" => "string", "breadcrumbs" => "string"
       }
 
       # The key hints' default wait in milliseconds and the longest one; 0
       # turns the hints off.
       KEYHINTS_DELAY = 300
       KEYHINTS_DELAY_MAX = 10_000
+
+      # The modes of breadcrumbs: the winbar shows with two or more file
+      # windows, on every file window, or never.
+      BREADCRUMBS = ["auto", "always", "never"]
 
       # The largest slot size, in columns or rows.
       SLOT_SIZE_MAX = 500
@@ -210,6 +217,12 @@ module Carat
             self.background = word
           else
             config.note(line, "unknown background #{word}")
+          end
+        when "breadcrumbs"
+          if BREADCRUMBS.include?(word)
+            self.breadcrumbs = word
+          else
+            config.note(line, "unknown breadcrumbs mode #{word}")
           end
         end
       end

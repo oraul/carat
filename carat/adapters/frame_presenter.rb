@@ -21,6 +21,7 @@ require_relative "../domain/start_screen"
 require_relative "painted_rows"
 require_relative "status_bar"
 require_relative "tab_bar"
+require_relative "winbar"
 
 module Carat
   module Adapters
@@ -34,7 +35,9 @@ module Carat
     # separator row under each window above another and a separator
     # column between windows side by side, both in WinSeparator, the one
     # status bar of the current window on the row above the last
-    # (StatusBar), and the message or command line row (a
+    # (StatusBar), each file window's winbar on its first row when the
+    # breadcrumbs mode shows them (Winbar), and the message or command
+    # line row (a
     # plugin's prompt in place of the colon) with the keys of a pending
     # command at its right edge. In a visual mode the current window draws
     # its selection with the Visual highlight, leaving the cell under the
@@ -104,6 +107,7 @@ module Carat
       attr_reader :start_screen #: Domain::StartScreen
       attr_reader :status_bar #: StatusBar
       attr_reader :tab_bar #: TabBar
+      attr_reader :winbar #: Winbar
 
       # @rbs @front: Domain::Frame
       # @rbs @back: Domain::Frame
@@ -127,8 +131,9 @@ module Carat
       # @rbs @floating: bool
       # @rbs @repainted: Array[Integer]
 
-      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, palette: Domain::Palette, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar) -> void
-      def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, palette:, start_screen:, status_bar:, tab_bar:)
+      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, palette: Domain::Palette, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar, winbar: Winbar) -> void
+      def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, palette:, start_screen:, status_bar:, tab_bar:, winbar:)
+        @winbar = winbar
         @palette = palette
         @input = input
         @plugin_ui = plugin_ui
@@ -225,6 +230,7 @@ module Carat
         end
         paint_separators(back, layout, layout.root)
         paint_headers(back, tab)
+        paint_winbars(back, tab, in_float) if tab.winbar?(options.breadcrumbs)
         if bar >= tabline
           @status_bar.paint(back, bar, cols, state)
           @chrome << bar
@@ -700,6 +706,27 @@ module Carat
             paint_header(frame, slot, window, row) if layout.node(layout.leaf_holding(window)).row == row
           end
           i += 1
+        end
+      end
+
+      # Paints the winbar of each file window that ArrangeView gave one:
+      # the row above its text, when that row is the top of its leaf.
+      #: (Domain::Frame, Domain::TabPage, bool) -> void
+      def paint_winbars(frame, tab, in_float)
+        layout = tab.layout
+        id = 0
+        while id < layout.node_count
+          node = layout.node(id)
+          if node.leaf?
+            window = layout.window_at(id)
+            row = window.row - 1
+            if !window.buffer.scratch? && node.row == row
+              @winbar.paint(frame, window, row, id == tab.current && !in_float)
+              @repainted[row] = 1 if @floating
+              @chrome << row
+            end
+          end
+          id += 1
         end
       end
 

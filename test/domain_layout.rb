@@ -188,17 +188,18 @@ module DomainLayoutTest
     top = l.split(0, false, 0, MIN)
     l.arrange(0, 0, 23, 80)
     t.assert_equal([0, top, -1, -1], [l.neighbour(top, :down), l.neighbour(0, :up), l.neighbour(top, :up), l.neighbour(0, :down)], "neighbours above and below")
-    # Nested: the right window is split; from the left window the neighbour depends on the cursor row.
+    # Nested: the right window is split; from the left window the neighbour is
+    # the leaf whose rectangle abuts it and overlaps the cursor's screen row.
     l = layout_in(23, 80)
     left = l.split(0, true, 0, MIN)
     l.arrange(0, 0, 23, 80)
     lower_right = 0
     upper_right = l.split(0, false, 0, MIN)
     l.arrange(0, 0, 23, 80)
-    t.assert_equal(upper_right, l.neighbour(left, :right), "with the cursor on the first row the upper right window is next")
+    t.assert_equal(upper_right, l.neighbour(left, :right), "by layout rectangles: with the cursor on the first row the upper right window is next")
     l.window_at(left).cursor.row = 20
-    t.assert_equal(lower_right, l.neighbour(left, :right), "with the cursor low on the screen the lower right window is next")
-    t.assert_equal([left, left], [l.neighbour(upper_right, :left), l.neighbour(lower_right, :left)], "both right windows have the left window to their left")
+    t.assert_equal(lower_right, l.neighbour(left, :right), "by layout rectangles: with the cursor low on the screen the lower right window is next")
+    t.assert_equal([left, left], [l.neighbour(upper_right, :left), l.neighbour(lower_right, :left)], "by layout rectangles: both right windows have the left window to their left")
     t.assert_equal([lower_right, upper_right], [l.neighbour(upper_right, :down), l.neighbour(lower_right, :up)], "the right windows are stacked")
 
     # Equalize.
