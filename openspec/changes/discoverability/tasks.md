@@ -23,3 +23,4 @@
 - [x] 4.1 Update `docs/compatibility.md`, `docs/codebase-map.md`, and `README.md`, checked by `make docs-lint` and `make gates`
 - [x] 4.2 Record the plan notes: `docs/queue.md` from `build/plan/queue.md`, `docs/backlog.md` with the planner's entries and the four widened entries, checked by `make docs-lint`
 - [x] 4.3 Run `make test`, `make lint`, `make diagnose`, `make bench` for `lh` and `j`, `make gates`, and `make spec-validate`, all passing
+- [x] 4.4 Record `keyhints_delay`, the `keymap.group` line, and the discovery use cases in `docs/architecture.md` sections 4, 5.3, and 7 within its budget, and cover an enabled plugin's palette row and hint and a disabled plugin's absence over `EditorHarness` with the hello plugin, proven by `test/editor_palette.rb`, `test/editor_key_hints.rb`, and `make docs-lint`
