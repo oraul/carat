@@ -2,11 +2,11 @@
 
 ## 1. Lint: the code map's method lists
 
-- [ ] 1.1 `test/lint.rb`: `map_entry_path`, `map_methods`, `defines?`, and `map_method_problems`, run over every file line of `docs/codebase-map.md`. Tested by "the code map method rule" and "no lint violations" in `test/lint.rb`.
+- [x] 1.1 `test/lint.rb`: `map_entry_path`, `map_methods`, `defines?`, and `map_method_problems`, run over every file line of `docs/codebase-map.md`. Tested by "the code map method rule" and "no lint violations" in `test/lint.rb`.
 
 ## 2. Lint: `Array[untyped]` of program objects
 
-- [ ] 2.1 `test/lint.rb`: `untyped_parameter?` with `UNTYPED_PARAMETERS`, and `list_assignment?` over the members pinned `Array[untyped]` with `UNTYPED_SHARED` (`styles`, owned by `hover-tidy`). Tested by "the untyped parameter rule", "the shared list rule", and "no lint violations" in `test/lint.rb`.
+- [x] 2.1 `test/lint.rb`: `untyped_parameter?` with `UNTYPED_PARAMETERS`, and `list_assignment?` over the members pinned `Array[untyped]` with `UNTYPED_SHARED` (`styles`, owned by `hover-tidy`). Tested by "the untyped parameter rule", "the shared list rule", and "no lint violations" in `test/lint.rb`.
 
 ## 3. Gates: doc prose a change leaves behind
 

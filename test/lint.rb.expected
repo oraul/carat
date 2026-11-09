@@ -27,6 +27,10 @@ ok   the private constant rule
 ok   the constant read rule
 ok   the code map rule
 ok   the code map rule reads files in subdirectories and no directory
+ok   the code map method rule reads a file's method list
+ok   the code map method rule
+ok   the untyped parameter rule
+ok   the shared list rule
 ok   no lint violations
 ok   every method and attribute has an inline RBS signature
-lint: 31 passed, 0 failed
+lint: 35 passed, 0 failed
