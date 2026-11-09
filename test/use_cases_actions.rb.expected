@@ -35,7 +35,7 @@ ok   a plugin action completes at once
 ok   an unknown name completes at once
 ok   every registered action handler returns an Outcome
 ok   the table holds every core action
-ok   every core action has a description of 1 to 32 characters
+FAIL every core action has a description of 1 to 32 characters: expected [], got ["completion.keyword_next: Complete the word from the buffers, forward", "completion.keyword_previous: Complete the word from the buffers, backward"]
 ok   a window action
 ok   a motion from the domain's list
 ok   a find motion
@@ -51,4 +51,4 @@ ok   the plugin namespace handler returns the host's refusal as an Outcome
 ok   the action table and docs/actions.md list the same actions
 ok   a drift is reported in both directions
 ok   the Plugins section is not read as core actions and the Implemented one is
-use_cases_actions: 53 passed, 0 failed
+use_cases_actions: 52 passed, 1 failed

@@ -121,6 +121,8 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `completion.insert` | completion | Put the selected completion in place of the typed part |
 | `completion.replace` | completion | Put the selected completion in place of the whole word |
 | `completion.close` | completion | Close the completion popup, staying in insert mode |
+| `completion.keyword_next` | completion | Complete the word before the cursor from the words of the listed buffers, scanning forward, and open the popup on the nearest match |
+| `completion.keyword_previous` | completion | Complete the word before the cursor from the words of the listed buffers, scanning backward, and open the popup on the nearest match |
 | `cmdline.execute` | cmdline | Run the command line |
 | `cmdline.backspace` | cmdline | Remove the last character, or leave when empty |
 | `cmdline.history_older` | cmdline | Recall the next older entry of the prompt's history that starts with the typed text |

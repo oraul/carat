@@ -5,6 +5,8 @@ require_relative "../ports/config_port"
 require_relative "../ports/completion_port"
 require_relative "../domain/completion_menu"
 require_relative "../use_cases/completion/show_completion"
+require_relative "../use_cases/completion/open_completion_popup"
+require_relative "../use_cases/completion/complete_word"
 require_relative "../domain/editor_state"
 require_relative "../domain/buffer_list"
 require_relative "../domain/tab_list"
@@ -257,6 +259,7 @@ module Carat
       attr_reader :completions #: Ports::CompletionPort
       attr_reader :completion_menu #: Domain::CompletionMenu
       attr_reader :show_completion #: UseCases::ShowCompletion
+      attr_reader :complete_word #: UseCases::CompleteWord
       attr_reader :hover #: Domain::HoverRequest
       attr_reader :request_hover #: UseCases::RequestHover
       attr_reader :show_hover #: UseCases::ShowHover
@@ -344,7 +347,9 @@ module Carat
         @completion_menu = Domain::CompletionMenu.new
         close_completion = UseCases::CloseCompletion.new(menu: @completion_menu, close_float: @close_float)
         show_docs = UseCases::ShowCompletionDocs.new(menu: @completion_menu, source: completions, open_float: @open_float, close_float: @close_float)
-        @show_completion = UseCases::ShowCompletion.new(menu: @completion_menu, source: completions, open_float: @open_float, close_float: @close_float, close_completion: close_completion, show_docs: show_docs)
+        open_popup = UseCases::OpenCompletionPopup.new(menu: @completion_menu, open_float: @open_float, close_float: @close_float, close_completion: close_completion)
+        @show_completion = UseCases::ShowCompletion.new(menu: @completion_menu, source: completions, open_popup: open_popup, close_completion: close_completion, show_docs: show_docs)
+        @complete_word = UseCases::CompleteWord.new(menu: @completion_menu, buffers: @buffers, open_popup: open_popup, close_completion: close_completion)
         @request_hover = UseCases::RequestHover.new(hover: @hover)
         @show_hover = UseCases::ShowHover.new(hover: @hover, open_float: @open_float, close_float: @close_float)
         @follow_hover = UseCases::FollowHover.new(hover: @hover, close_float: @close_float)
@@ -422,7 +427,7 @@ module Carat
         UseCases::SubstituteHandler.register(@actions, substitute_lines: @substitute_lines)
         UseCases::FileHandler.register(@actions, save_file: @save_file, save_all: @save_all, quit_all: @quit_all)
         UseCases::BufferHandler.register(@actions, list_buffers: @list_buffers, switch_buffer: @switch_buffer, delete_buffer: @delete_buffer)
-        UseCases::CompletionHandler.register(@actions, select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion)
+        UseCases::CompletionHandler.register(@actions, select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, complete_word: @complete_word)
         UseCases::DocsHandler.register(@actions, request_hover: @request_hover, pin_hover: @pin_hover)
         UseCases::PluginActionHandler.register(@actions, plugins: @plugins)
 

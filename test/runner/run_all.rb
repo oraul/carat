@@ -81,6 +81,7 @@ require_relative "../editor_transactions"
 require_relative "../editor_undo"
 require_relative "../editor_visual"
 require_relative "../editor_windows"
+require_relative "../editor_word_completion"
 require_relative "../json"
 require_relative "../lint"
 require_relative "../plugins_explorer"
@@ -171,6 +172,7 @@ when "editor_transactions" then EditorTransactionsTest.main
 when "editor_undo" then EditorUndoTest.main
 when "editor_visual" then EditorVisualTest.main
 when "editor_windows" then EditorWindowsTest.main
+when "editor_word_completion" then EditorWordCompletionTest.main
 when "json" then JsonTest.main
 when "lint" then LintTest.main
 when "plugins_explorer" then PluginsExplorerTest.main
