@@ -2338,7 +2338,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## A # search history entry is cut at its ?
 
-- Where: `VimPattern.escape` in `carat/domain/vim_pattern.rb` line 111, fed by `FindMatch#word` at `carat/use_cases/find_match.rb` line 119, at 38628bb (periodic quality). Queued in `search-tidy`.
+- Where: `VimPattern.escape` in `carat/domain/vim_pattern.rb` line 111, fed by `FindMatch#word` at `carat/use_cases/search/find_match.rb` line 119, at 38628bb (periodic quality). Queued in `search-tidy`.
 - Why it matters: the non-keyword text of `#` or `g#` enters the history with `?` unescaped and, recalled at a `?` prompt, is cut there.
 - Fix outline: escape the delimiter of the direction, with an `editor_search` row.
 
