@@ -2281,3 +2281,141 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/architecture.md` line 230 at d828abb, the section 7 example. Quality advisory in `discoverability`.
 - Why it matters: the example names `keymap.group <leader>w windows` while the same example binds `keymap.normal <leader>w :w<CR>`, so that prefix is bound and its hints never show, since a bound prefix resolves by `timeoutlen`.
 - Fix outline: name a group for an unbound prefix in the example, such as `keymap.group <leader>f files`.
+
+## A plugin prompt opened over the command palette is answered by the palette
+
+- Where: `carat/use_cases/execute_command_line.rb` line 57 and `UiRequests#prompt` in `carat/use_cases/plugins/ui_requests.rb` line 64, at 38628bb (periodic security Low (3)). Queued in `discoverability-tidy`.
+- Why it matters: with the palette active, Enter runs the palette's selected entry, an ex command or action matched by the prompt's text, instead of answering the prompt, and the prompt stays open in normal mode.
+- Fix outline: refuse a prompt while the palette is active or close the palette first, with a row in `test/editor_palette.rb`.
+
+## Palette resets its members in two places
+
+- Where: `carat/domain/palette.rb` lines 31 and 55 at 38628bb (periodic quality). Queued in `discoverability-tidy`.
+- Why it matters: `initialize` and `start` reset the same members, so a new member must be reset twice.
+- Fix outline: one private reset called by both.
+
+## The plugin prompt request names a local e
+
+- Where: `carat/use_cases/plugins/ui_requests.rb` line 92 at 38628bb (periodic quality). Queued in `discoverability-tidy`.
+- Why it matters: the naming rule forbids unclear abbreviations.
+- Fix outline: rename it entry.
+
+## Signature help reads the cursor column as a byte index
+
+- Where: `open_paren` in `carat/domain/signature_request.rb` line 147, and the row at `test/domain_signature_request.rb` line 41, at 38628bb (periodic quality blocking). Queued in `signature-tidy`.
+- Why it matters: the column is a character index, so with multibyte text before the `(` the scan starts left of the cursor and signature help never starts; the test row passes a byte column the editor never gives.
+- Fix outline: convert the column to its byte offset before scanning, keep one unit, and add rows with multibyte text before the `(` at the character column.
+
+## The gateway times out requests two ways
+
+- Where: `carat/adapters/json_rpc_language_gateway.rb` lines 523 and 604 (completion and resolve cancel at due plus a limit) against 662 and 768 (hover and signature keep a deadline), at 38628bb (periodic quality). Queued in `lsp-client-tidy`.
+- Why it matters: the 1,127-line class grows a send, cancel, and answer path per request kind, and the next kind (`breadcrumbs`, `definitions`) adds a third copy.
+- Fix outline: one deadline per request record set when sent, and one shared send, cancel, and timeout path.
+
+## The explorer's help restates its keymap
+
+- Where: `HELP` in `carat/plugins/explorer/plugin.rb` line 16 against its keymap at line 541, at 38628bb (periodic quality). In the backlog items of the queue.
+- Why it matters: a changed key leaves the `?` message wrong.
+- Fix outline: build the help from the keymap lines once, or let `?` show the key hints.
+
+## Command has methods but no member pins
+
+- Where: `carat/domain/command.rb` line 12, worked around in `Operate#big?` at `carat/use_cases/operate.rb` lines 187 to 189, at 38628bb (periodic quality). In the backlog items of the queue.
+- Why it matters: the unpinned action forces a `.to_s` and a comment at its caller.
+- Fix outline: pin each member and drop the workaround.
+
+## LastChange#resumed? changes state
+
+- Where: `carat/domain/last_change.rb` line 175 at 38628bb (periodic quality). In the backlog items of the queue.
+- Why it matters: the predicate resets `next_visual`, starts a recording, and sets `recording`, against the rule that a predicate answers a question.
+- Fix outline: a resume step called by `add_text` and `add_action`, and a plain recording check.
+
+## ci" on an empty string fails
+
+- Where: the inner quote object in `carat/domain/text_objects.rb` line 356 at 38628bb (periodic quality). In the backlog items of the queue.
+- Why it matters: on `""` Neovim enters insert between the quotes; carat fails, and `docs/compatibility.md` lists no difference.
+- Fix outline: return the empty range after the opening quote, with an `editor_text_objects` row.
+
+## A # search history entry is cut at its ?
+
+- Where: `VimPattern.escape` in `carat/domain/vim_pattern.rb` line 111, fed by `FindMatch#word` at `carat/use_cases/find_match.rb` line 119, at 38628bb (periodic quality). Queued in `search-tidy`.
+- Why it matters: the non-keyword text of `#` or `g#` enters the history with `?` unescaped and, recalled at a `?` prompt, is cut there.
+- Fix outline: escape the delimiter of the direction, with an `editor_search` row.
+
+## VimPattern and Search repeat a list and a test
+
+- Where: `carat/domain/vim_pattern.rb` line 22 (the escapes listed twice) and `Search.action?` in `carat/domain/search.rb` line 42 (a prefix test every listed name passes), at 38628bb (periodic quality). Queued in `search-tidy`.
+- Why it matters: each restates what the next line already says.
+- Fix outline: drop the repeated list and one of the two tests.
+
+## The Makefile's header, compile recipes, and docs-lint help drift
+
+- Where: `Makefile` line 3, the compile recipe at lines 221, 255, and 312, and the docs-lint help at line 359, at 38628bb (periodic quality). Queued in `run-budgets-tidy`.
+- Why it matters: the header says every target wraps spin or OpenSpec while seven call spinel; three targets copy one timing recipe; the help omits the queue budget and check.
+- Fix outline: correct the header, one recipe for the three, and name the queue budget in the help.
+
+## metrics compare passes a strict metric missing from the run
+
+- Where: `compare` in `tools/metrics.sh` line 86 at 38628bb (periodic quality). Queued in `run-budgets-tidy`.
+- Why it matters: only the current names are walked, so an `allocs.*` or `rounds.*` name of the base that the run lacks passes, against the header's rule.
+- Fix outline: fail each strict base name not seen, with a `tools/tools_test.sh` case.
+
+## The runner's wait is longer than it says, in two copies
+
+- Where: `runner_finish` in `tools/run_state.sh` line 698 and `check_wait` at line 646, at 38628bb (periodic quality). Queued in `check-runner-safety`.
+- Why it matters: the 30-second wait is 150 pauses, 150 seconds where a pause falls back to one second, and the loop is copied.
+- Fix outline: one wait helper bounded by elapsed seconds, used by both.
+
+## A run_state.sh paragraph splits its Usage list
+
+- Where: `tools/run_state.sh` lines 63 to 66 at 38628bb (periodic quality, raised twice). Queued in `run-budgets-tidy`.
+- Why it matters: the paragraph on refused keys sits between the set and phase entries.
+- Fix outline: move it above or below the list.
+
+## The map's palette lines drift from the code
+
+- Where: `docs/codebase-map.md` line 160 (ex commands said to get a key), area 6 (the search description lists), line 189 (`compile_substitute`), and lines 386 and 415 (the palette path in area 12's Flow), at 38628bb (periodic quality). Queued in `docs-index`.
+- Why it matters: a reader trusting the map misses the palette's ex command path and the description lists.
+- Fix outline: correct line 160, name the lists and the method, and add the palette path to the Flow line.
+
+## A plugin opening a view in an occupied slot releases another plugin's scratch buffer
+
+- Where: `OpenSideWindow#reuse` in `carat/use_cases/windows/open_side_window.rb` line 69 at edaf2c2. Security Low (5) in `layout-slots`.
+- Why it matters: the new view takes the slot window and `@buffers.release(old)` takes the other plugin's scratch buffer out of the list when no other window shows it, so plugin A can make plugin B's view, and B's later `set_scratch_lines` and `close_scratch`, fail; this crosses the plugin isolation boundary (availability only, no data or code exposure).
+- Fix outline: release the old buffer only when it has the new one's owner; keep another plugin's buffer listed as a view of the slot (or refuse the request with a failure response), with an `editor_slots` test of two plugins sharing a slot.
+
+## close_scratch misses a view its hidden slot keeps
+
+- Where: `close_scratch` in `carat/use_cases/plugins/window_requests.rb` line 115 at edaf2c2. Quality advisory in `layout-slots`.
+- Why it matters: it looks only at the layout, so a plugin closing a view that its hidden slot keeps gets `No window shows` and the next toggle brings the view back.
+- Fix outline: when a hidden slot keeps the buffer, clear the slot and release the buffer, with a row in `test/editor_plugins.rb`.
+
+## A refused panel still regroups the root row
+
+- Where: `panel_target` in `carat/domain/layout.rb` line 385 at edaf2c2. Quality advisory in `layout-slots`.
+- Why it matters: the root row's middle children are grouped into a new row before `attach` checks the room, so a panel refused with E36 still leaves the layout restructured with a nested row.
+- Fix outline: check the content's height against the size plus its minimum before grouping, or group only once `attach` would succeed.
+
+## ToggleSlot repeats the leaf close and the kept-slot placement
+
+- Where: the hide branch of `carat/use_cases/windows/toggle_slot.rb` lines 35 to 37, repeating `BufferList#close_window` (`carat/domain/buffer_list.rb` lines 282 to 284), and the kept-slot restore at lines 40 and 48 to 49, repeating `carat/use_cases/windows/open_side_window.rb` lines 35 to 38; the `current` lookup again after `place_slot` at lines 47 and 50, at edaf2c2. Quality advisories in `layout-slots`, raised three times.
+- Why it matters: two copies of closing a leaf (layout close, current to the taker's first leaf, previous forgotten) and of placing a kept slot (kept and listed, `place_slot` at its size, `hidden = false`) drift apart; the second `current` lookup is dead, since `attach` and `panel_target` never renumber existing leaves.
+- Fix outline: one `TabPage#close_leaf(id)` called by `ToggleSlot` and `BufferList#close_window`, one method that places a kept slot and answers the leaf or -1, called by both use cases, and drop the `current` local and its reassignment.
+
+## The side string is mapped by a nested ternary and dispatched in four places
+
+- Where: `carat/use_cases/plugins/window_requests.rb` lines 319 to 321, and the side dispatch in `TabPage#slot`, `TabPage#slot_at`, `Options#slot_size`, and `ToggleSlot#name_of`, at edaf2c2. Quality advisories in `layout-slots`, raised twice.
+- Why it matters: the nested ternary is harder to read than the `if`/`elsif` of `TabPage#slot`, and four copies of the side dispatch drift when a slot is added.
+- Fix outline: map the side once with a `case` or a small lookup and keep the per-side dispatch in `TabPage`.
+
+## Layout#fixed_width? has no production caller
+
+- Where: `carat/domain/layout.rb` line 297, called only by `test/domain_layout.rb` line 265 and named in `docs/codebase-map.md`, at edaf2c2. Quality advisory in `layout-slots`, raised twice.
+- Why it matters: close, equalize, and fit use `fixed?`, so the wrapper of `fixed?(id, true)` is dead code kept alive by its test.
+- Fix outline: drop it, test `fixed?(id, true)` instead, and update the layout line of the map.
+
+## Two open_scratch comments are not rewrapped
+
+- Where: the `open_scratch` comments in `carat/plugin_api.rb` line 480 (111 characters) and `carat/use_cases/plugins/window_requests.rb` line 69, at edaf2c2. Quality advisory in `layout-slots`.
+- Why it matters: they break their files' wrap width.
+- Fix outline: rewrap both at the file's width.
