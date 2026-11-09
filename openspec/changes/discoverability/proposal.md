@@ -32,7 +32,7 @@ None.
 
 ## Impact
 
-- Domain: `KeymapNode` gains a group name and a list of its child keys; `Keymap` reads `keymap.group` lines and answers the node of a prefix; `Options` gains `keyhints_delay`; new `KeyHints` and `Palette`; the palette reuses the completion popup's `FuzzyMatch`.
+- Domain: `KeymapNode` gains a list of its child keys; `Keymap` reads `keymap.group` lines into a table apart from the tries and answers the node and the group name of a prefix; `Options` gains `keyhints_delay`; new `KeyHints` and `Palette`; the palette reuses the completion popup's `FuzzyMatch`.
 - Use cases: new `ShowKeyHints`, `HideKeyHints`, `OpenPalette`, `FollowPalette`, `PaletteHandler`; `HandleKey` closes the hints and follows the palette; `ExecuteCommandLine` runs the palette's entry; `ExTable` describes each command.
 - Adapters: `InputController` times the hints; `FramePresenter` shows the `>` prompt; `EditorAssembly` wires the pieces.
 - Configuration: `config/default.caratrc` (the option, the group lines, three bindings) and its generated mirror.

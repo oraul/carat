@@ -64,11 +64,15 @@ Keys that are bound and also begin a longer binding SHALL show no hints; `timeou
 - **THEN** the problem `.caratrc:1: option.keyhints.delay takes a number from 0 to 10000` is reported and the delay stays 300
 
 ### Requirement: keymap.group names a prefix
-A configuration line `keymap.group <keys> <name>` SHALL name the normal-mode prefix the keys spell, in Vim notation with `<leader>`, for the hints; a later line for the same keys wins, and a project file's group line SHALL be read, as it binds nothing. A line without exactly keys and a name SHALL be reported as `file:line: keymap.group takes keys and a name`.
+A configuration line `keymap.group <keys> <name>` SHALL name the normal-mode prefix the keys spell, in Vim notation with `<leader>`, for the hints; a later line for the same keys wins, and a project file's group line SHALL be read, as it binds nothing: a group line SHALL NOT change what any key looks up. A line without exactly keys and a name SHALL be reported as `file:line: keymap.group takes keys and a name`.
 
 #### Scenario: A user names a group
 - **WHEN** the user file holds `keymap.group <leader>w panes` and Space is typed and the delay passes
 - **THEN** the leader hints show "w  panes"
+
+#### Scenario: A group under a bound key
+- **WHEN** `j` is bound to `cursor.down` and a configuration line is `keymap.group jk x`
+- **THEN** `j` still matches at once, with no wait for a second key
 
 #### Scenario: A malformed group line
 - **WHEN** a configuration line is `keymap.group <leader>w`

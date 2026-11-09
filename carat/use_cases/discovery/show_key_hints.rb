@@ -63,32 +63,37 @@ module Carat
         return if keys.empty?
         node = @keymap.node_at(mode, keys)
         return if node.leaf?
-        rows = entries(node)
+        rows = entries(mode, keys, node)
         name = title(keys)
-        name = "#{name} #{node.group}" unless node.group.empty?
+        group = @keymap.group_of(mode, keys)
+        name = "#{name} #{group}" unless group.empty?
         open(state, name, rows)
       end
 
       private
 
-      # One "key  meaning" text per child, in the order bound.
-      #: (Domain::KeymapNode) -> Array[String]
-      def entries(node)
+      # One "key  meaning" text per child of the node the keys lead to, in
+      # the order bound.
+      #: (Symbol, Array[Integer], Domain::KeymapNode) -> Array[String]
+      def entries(mode, keys, node)
         rows = []
         children = node.child_keys
         i = 0
         while i < children.length
+          code = children[i].to_i
           child = node.child_named(children[i])
-          rows << "#{Domain::KeyNotation.format(children[i].to_i)}  #{meaning(child)}"
+          rows << "#{Domain::KeyNotation.format(code)}  #{meaning(child, @keymap.group_of(mode, keys + [code]))}"
           i += 1
         end
         rows
       end
 
-      #: (Domain::KeymapNode) -> String
-      def meaning(child)
+      # What a child means: its group name or the count of its bindings
+      # when it is a prefix, else its action's description or its keys.
+      #: (Domain::KeymapNode, String) -> String
+      def meaning(child, group)
         unless child.leaf?
-          return child.group unless child.group.empty?
+          return group unless group.empty?
           return "+#{child.binding_count}"
         end
         value = child.value

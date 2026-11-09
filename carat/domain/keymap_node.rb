@@ -2,19 +2,16 @@ module Carat
   module Domain
     # One node of a keymap trie. Children are keyed by the decimal string of
     # the key code, a form the compiler can type. owner is the plugin whose
-    # default bindings put the value there, "" for the configuration;
-    # group is the name a keymap.group line gave the prefix, "" for none,
-    # which the key hints show. A Struct record: mutable, with a reader
-    # and a writer per member.
-    class KeymapNode < Struct.new(:value, :children, :owner, :group, keyword_init: true)
+    # default bindings put the value there, "" for the configuration. A
+    # Struct record: mutable, with a reader and a writer per member.
+    class KeymapNode < Struct.new(:value, :children, :owner, keyword_init: true)
       # @rbs @value: String?
       # @rbs @children: Hash[String, KeymapNode]
       # @rbs @owner: String
-      # @rbs @group: String
 
       #: () -> void
       def initialize
-        super(value: nil, children: {}, owner: "", group: "")
+        super(value: nil, children: {}, owner: "")
       end
 
       # The decimal strings of the ASCII key codes.

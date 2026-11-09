@@ -3,7 +3,7 @@
 ## 1. Domain
 
 - [x] 1.1 Reuse `FuzzyMatch.score` for the palette, proven by the filter rows of `test/editor_palette.rb`
-- [x] 1.2 Add `group` and `child_keys` to `KeymapNode`, `Keymap#node_at`, and the `keymap.group` line in `Keymap#apply` and `Config#binding?`, proven by new rows of `test/domain_keymap.rb`
+- [x] 1.2 Add `child_keys` to `KeymapNode`, `Keymap#node_at` and `Keymap#group_of`, and the `keymap.group` line in `Keymap#apply` and `Config#binding?`, proven by new rows of `test/domain_keymap.rb`
 - [x] 1.3 Add `option.keyhints.delay` to `Options` (member, kind, range 0 to 10000), proven by rows of `test/domain_options_config.rb`
 - [x] 1.4 Add the `KeyHints` and `Palette` records in `carat/domain/`, exercised by the editor tests of tasks 2 and 3
 

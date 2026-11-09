@@ -14,11 +14,14 @@ module Carat
     # second plugin cannot take another's keys. A Struct record: the roots
     # fill as bindings are added, errors collect as they are found, and
     # conflicts between plugins collect as "mode.keys is already bound by
-    # plugin name".
-    class Keymap < Struct.new(:roots, :errors, :conflicts, keyword_init: true)
+    # plugin name". The names keymap.group lines give normal-mode prefixes
+    # are kept apart from the tries, keyed by the prefix's codes, so a
+    # group line never changes what a key looks up.
+    class Keymap < Struct.new(:roots, :errors, :conflicts, :groups, keyword_init: true)
       # @rbs @roots: Hash[String, KeymapNode]
       # @rbs @errors: Array[String]
       # @rbs @conflicts: Array[String]
+      # @rbs @groups: Hash[String, String]
 
       # The empty literals are stored through the writers, not passed to
       # super: an empty array literal is typed Array[Integer] by default, and
@@ -29,6 +32,7 @@ module Carat
         self.roots = {}
         self.errors = []
         self.conflicts = []
+        self.groups = {}
       end
 
       # Whether a keymap value names an action: one or more namespace
@@ -244,6 +248,15 @@ module Carat
         node
       end
 
+      # The name a keymap.group line gave the prefix the keys spell, "" for
+      # none or a mode other than normal.
+      #: (Symbol, Array[Integer]) -> String
+      def group_of(mode, codes)
+        return "" unless mode == Mode::NORMAL
+        name = groups[group_key(codes)]
+        name.nil? ? "" : name
+      end
+
       #: (Symbol, Array[Integer]) -> KeymapMatch
       def lookup(mode, codes)
         node = root(mode)
@@ -266,8 +279,8 @@ module Carat
 
       private
 
-      # Names the normal-mode prefix of a keymap.group line, creating its
-      # nodes, and returns the problem, "" when there is none.
+      # Names the normal-mode prefix of a keymap.group line, leaving the
+      # tries as they are, and returns the problem, "" when there is none.
       #: (RcLine, String) -> String
       def name_group(line, leader)
         words = line.words
@@ -276,15 +289,22 @@ module Carat
         return parsed.error.to_s unless parsed.ok?
         return "empty key" if parsed.codes.empty?
         return "more than #{MAX_KEYS} keys" if parsed.codes.length > MAX_KEYS
-        node = root(Mode::NORMAL)
-        codes = parsed.codes
+        groups[group_key(parsed.codes)] = words[1].to_s
+        ""
+      end
+
+      # The key of a prefix in groups: its codes in decimal, joined by
+      # spaces.
+      #: (Array[Integer]) -> String
+      def group_key(codes)
+        text = +""
         i = 0
         while i < codes.length
-          node = node.child_for(codes[i])
+          text << " " if i > 0
+          text << codes[i].to_s
           i += 1
         end
-        node.group = words[1].to_s
-        ""
+        text
       end
 
       #: (KeymapNode, String) -> void

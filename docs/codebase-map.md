@@ -139,8 +139,8 @@ Files:
 - `carat/domain/key.rb`: `Key` codes; `printable?`, `alt?`, `base`, `char`, `TIMEOUT`.
 - `carat/domain/key_notation.rb`: `KeyNotation`; `parse`, `resolve`, `format`, `control_code`, `special_name`; Vim notation such as `<C-w>`.
 - `carat/domain/mode.rb`: `Mode`; `from_name`, `name_of`, `visual?`, `visual_kind`, `for_kind`.
-- `carat/domain/keymap.rb`: `Keymap`; `action_name?`, `leader_from`, `from_lines`, `add_lines`, `add_checked` (applies the configuration's keymap lines, `none` unbinding, refuses an unknown action and more than `MAX_KEYS` (64) keys, notes problems; `keymap.group` names a normal-mode prefix), `bind`, `bind_owned`, `remove_owner`, `node_at`, `lookup`.
-- `carat/domain/keymap_node.rb`: `KeymapNode` trie node (with its `group` name); `child?`, `child_for`, `child_named`, `leaf?`, `child_keys`, `binding_count`.
+- `carat/domain/keymap.rb`: `Keymap`; `action_name?`, `leader_from`, `from_lines`, `add_lines`, `add_checked` (applies the configuration's keymap lines, `none` unbinding, refuses an unknown action and more than `MAX_KEYS` (64) keys, notes problems; `keymap.group` names a normal-mode prefix in `groups`, apart from the tries), `bind`, `bind_owned`, `remove_owner`, `node_at`, `group_of`, `lookup`.
+- `carat/domain/keymap_node.rb`: `KeymapNode` trie node; `child?`, `child_for`, `child_named`, `leaf?`, `child_keys`, `binding_count`.
 - `carat/domain/keymap_match.rb`: `KeymapMatch` value (`kind`, `value`), a lookup result.
 - `carat/domain/command.rb`: `Command` value (`register`, `count`, `operator`, `action`, `char`, `linewise`, `keys`); `plain`, `count_or`, `operator?`.
 - `carat/domain/command_grammar.rb`: `CommandGrammar` state machine; `accept`, `accept_visual`, `take`, `reset`, `wants_char?`, `operator_pending?`, `pending?`, `display`.

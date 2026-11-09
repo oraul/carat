@@ -237,9 +237,16 @@ module DomainKeymapTest
     grouped_config = project("keymap.normal <leader>ws window.split\nkeymap.normal <leader>wv window.vsplit\nkeymap.group <leader>w windows\nkeymap.group <leader>w panes\nkeymap.group <leader>w\n")
     grouped.add_checked(grouped_config, bound_actions(grouped_config))
     node = grouped.node_at(:normal, codes(" w"))
-    t.assert_equal(["panes", ["115", "118"], 2], [node.group, node.child_keys, node.binding_count], "a later group line wins and the node lists its children in order")
+    t.assert_equal(["panes", ["115", "118"], 2], [grouped.group_of(:normal, codes(" w")), node.child_keys, node.binding_count], "a later group line wins and the node lists its children in order")
     t.assert_equal([".caratrc:5: keymap.group takes keys and a name"], grouped_config.report, "a group line without a name is reported")
-    t.assert_equal([true, ""], [grouped.node_at(:normal, codes("zq")).leaf?, grouped.node_at(:visual, codes(" w")).group], "keys that lead nowhere answer an empty node and a group names only the normal prefix")
+    t.assert_equal([true, "", ""], [grouped.node_at(:normal, codes("zq")).leaf?, grouped.group_of(:visual, codes(" w")), grouped.group_of(:normal, codes(" "))], "keys that lead nowhere answer an empty node and a group names only its normal prefix")
+
+    # A group line under a bound key leaves the trie alone: j still
+    # matches at once instead of waiting for a second key.
+    under = D::Keymap.new
+    under_config = project("keymap.normal j cursor.down\nkeymap.group jk x\nkeymap.group qq none\n")
+    under.add_checked(under_config, bound_actions(under_config))
+    t.assert_equal([:match, true, :none, "x"], [under.lookup(:normal, codes("j")).kind, under.node_at(:normal, codes("j")).leaf?, under.lookup(:normal, codes("q")).kind, under.group_of(:normal, codes("jk"))], "a group line creates no trie node, so j still matches and q stays unbound")
     untrusted = D::Config.new
     untrusted.read(".caratrc", "keymap.group <leader>w panes\n", false)
     t.assert_equal([], untrusted.report, "a project file's group line is read")
