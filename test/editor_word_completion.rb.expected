@@ -1,7 +1,7 @@
-ok   Ctrl-N lists the matches forward, the nearest selected
+ok   Ctrl-N selects the nearest match forward
 ok   a second Ctrl-N selects the next match
-ok   Ctrl-N wraps to the first match
-ok   Ctrl-P lists the matches backward, the nearest last and selected
+ok   repeated presses move and wrap: Ctrl-N wraps to the first match
+ok   Ctrl-P selects the nearest match backward, on the last row
 ok   a second Ctrl-P selects the farther match above
 ok   Ctrl-P wraps to the last match
 ok   the forward scan wraps to the top
@@ -14,7 +14,7 @@ ok   a non-ASCII word is one word
 ok   with no word before the cursor every word matches
 ok   no match reads Pattern not found and changes nothing
 ok   Ctrl-P with no match reads the same
-ok   Enter puts the selected word over the typed part
+ok   Enter puts the word over the typed part
 ok   Tab puts it over the whole word
 ok   Esc closes the popup and stays in insert mode
 ok   typing filters the words
@@ -25,6 +25,6 @@ ok   the words show in one popup float, a row each
 ok   Ctrl-P in the popup selects the row above, wrapping
 ok   a Ctrl-P popup opens on its last row
 ok   the dot command repeats the inserted word
-ok   with the server's popup open Ctrl-N moves its selection and reads no buffer
+ok   the server's popup keeps its keys: Ctrl-N moves its selection and reads no buffer
 ok   a match past the byte bound is not offered
 editor_word_completion: 29 passed, 0 failed

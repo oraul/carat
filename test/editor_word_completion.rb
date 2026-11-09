@@ -45,10 +45,10 @@ module EditorWordCompletionTest
 
     # Rows are [label, [text, keys], [labels, selected, line, mode, message]].
     t.table([
-      ["Ctrl-N lists the matches forward, the nearest selected", ["alpha\nfi\nfile\nfinal\nfilter\n", "jA<C-n>"], [["file", "final", "filter"], "file", "fi", :insert, ""]],
+      ["Ctrl-N selects the nearest match forward", ["alpha\nfi\nfile\nfinal\nfilter\n", "jA<C-n>"], [["file", "final", "filter"], "file", "fi", :insert, ""]],
       ["a second Ctrl-N selects the next match", ["alpha\nfi\nfile\nfinal\nfilter\n", "jA<C-n><C-n>"], [["file", "final", "filter"], "final", "fi", :insert, ""]],
-      ["Ctrl-N wraps to the first match", ["alpha\nfi\nfile\nfinal\nfilter\n", "jA<C-n><C-n><C-n><C-n>"], [["file", "final", "filter"], "file", "fi", :insert, ""]],
-      ["Ctrl-P lists the matches backward, the nearest last and selected", ["first\nfine\nfi\nfile\n", "jjA<C-p>"], [["file", "first", "fine"], "fine", "fi", :insert, ""]],
+      ["repeated presses move and wrap: Ctrl-N wraps to the first match", ["alpha\nfi\nfile\nfinal\nfilter\n", "jA<C-n><C-n><C-n><C-n>"], [["file", "final", "filter"], "file", "fi", :insert, ""]],
+      ["Ctrl-P selects the nearest match backward, on the last row", ["first\nfine\nfi\nfile\n", "jjA<C-p>"], [["file", "first", "fine"], "fine", "fi", :insert, ""]],
       ["a second Ctrl-P selects the farther match above", ["first\nfine\nfi\nfile\n", "jjA<C-p><C-p>"], [["file", "first", "fine"], "first", "fi", :insert, ""]],
       ["Ctrl-P wraps to the last match", ["first\nfine\nfi\nfile\n", "jjA<C-p><C-p><C-p><C-p>"], [["file", "first", "fine"], "fine", "fi", :insert, ""]],
       ["the forward scan wraps to the top", ["fine\nfi\nfile\n", "jA<C-n>"], [["file", "fine"], "file", "fi", :insert, ""]],
@@ -61,7 +61,7 @@ module EditorWordCompletionTest
       ["with no word before the cursor every word matches", ["ab cd\n\n", "jA<C-n>"], [["ab", "cd"], "ab", "", :insert, ""]],
       ["no match reads Pattern not found and changes nothing", ["zq\nalpha\n", "A<C-n>"], [[], "", "zq", :insert, "Pattern not found"]],
       ["Ctrl-P with no match reads the same", ["zq\nalpha\n", "A<C-p>"], [[], "", "zq", :insert, "Pattern not found"]],
-      ["Enter puts the selected word over the typed part", ["fi\nfile\n", "A<C-n><CR>"], [[], "", "file", :insert, ""]],
+      ["Enter puts the word over the typed part", ["fi\nfile\n", "A<C-n><CR>"], [[], "", "file", :insert, ""]],
       ["Tab puts it over the whole word", ["fi\nfinal\nfile\n", "A<C-n><C-n><Tab>"], [[], "", "file", :insert, ""]],
       ["Esc closes the popup and stays in insert mode", ["fi\nfile\n", "A<C-n><Esc>"], [[], "", "fi", :insert, ""]],
       ["typing filters the words", ["fi\nfile\nfinal\n", "A<C-n>n"], [["final"], "final", "fin", :insert, ""]]
@@ -105,7 +105,7 @@ module EditorWordCompletionTest
     h.type("ifi")
     first = h.assembly.completion_menu.chosen.label
     h.type("<C-n>")
-    t.assert_equal([["file_name", "filter"].sort, true, true], [labels(h).sort, h.assembly.completion_menu.chosen.label != first, h.assembly.completion_menu.showing?], "with the server's popup open Ctrl-N moves its selection and reads no buffer")
+    t.assert_equal([["file_name", "filter"].sort, true, true], [labels(h).sort, h.assembly.completion_menu.chosen.label != first, h.assembly.completion_menu.showing?], "the server's popup keeps its keys: Ctrl-N moves its selection and reads no buffer")
 
     # A large buffer is scanned within the bound: a match before it is
     # offered, one past a million bytes is not.
