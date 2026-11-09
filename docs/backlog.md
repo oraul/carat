@@ -272,9 +272,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a directory of the tree replaced by a link pointing outward between the check and the create, rename, or delete redirects the operation outside the tree root, so the containment holds only against a tree that does not change while the explorer acts on it.
 - Fix outline: when the file port gains directory-relative operations, open the resolved directory once and act through its descriptor (`openat`, `renameat`, `unlinkat` with no-follow), with a test row in `test/drivers_disk_files.rb`; until then record in `docs/spinel-notes.md` whether the pinned Spinel exposes them.
 
-## The README's commands table omits four make targets
+## The README's commands table omits six make targets
 
-- Where: `README.md` line 14, the commands table, which has no row for `make clean`, `make pack`, `make spinel-rev`, or `make help` (line 12 now names `make install`). Periodic quality advisory at df5a203.
+- Where: `README.md` line 14, the commands table, which has no row for `make clean`, `make pack`, `make spinel-rev`, or `make help` (line 12 now names `make install`), periodic quality advisory at df5a203, nor for `make metrics` or `make metrics-compare`, periodic quality at 3895e21.
 - Why it matters: the map's Build and CI rule gives every command a README line, and goal 12 keeps the README current.
 - Fix outline: add one row naming the missing targets, or one row per target, checked against `make help`.
 
@@ -370,7 +370,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The local cls is the abbreviation the naming rule forbids
 
-- Where: the local `cls` in `carat/domain/text_objects.rb` (line 75) and the parameter `cls` of `Runs#add` (`carat/domain/runs.rb:18`). Periodic quality at 0b17324.
+- Where: the local `cls` in `carat/domain/text_objects.rb` (line 86 at 3895e21) and the parameter `cls` of `Runs#add` (`carat/domain/runs.rb:18`). Periodic quality at 0b17324.
 - Why it matters: `CLAUDE.md` names `cls` as the counterexample of its naming rule (`char_class`, not `cls`).
 - Fix outline: rename both to `char_class`. Queued as a fold of `search-structure`.
 
@@ -1898,11 +1898,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: after the in-flight block the equal case has already returned, so the line is dead and suggests a path the poll does not have.
 - Fix outline: drop the line, with the hover rows of `test/adapters_hover.rb` unchanged.
 
-## A key resolved by timeoutlen leaves the hover float off its anchor
+## A key resolved by timeoutlen runs no follow tail
 
-- Where: `HandleKey#timeout` in `carat/use_cases/handle_key.rb` line 122 at 41297d6. Quality advisory in `quick-docs`. At c1b3a12 `timeout` copies the after-key tail of `call` (line 154: `FollowSignature`, the plugin observe, `ArrangeView`) without `FollowHover` (periodic quality); one shared tail would close both gaps. At d828abb `timeout` (line 154) also skips `FollowPalette` and `HideKeyHints` (quality advisory in `discoverability`).
-- Why it matters: `call` runs `FollowHover` after a key, but `timeout` dispatches the pending keys' shorter binding without it, so a cursor move resolved by `timeoutlen` leaves the documentation float open away from the cursor until the next key; likewise `palette.open` resolved by `timeoutlen` (a user binding under `<leader>p`) opens the `>` prompt with no list until the next key.
-- Fix outline: share the after-key tail of `call` with `timeout` (`FollowHover`, `FollowSignature`, `FollowPalette`, `HideKeyHints`, the plugin observe, `ArrangeView`), with a row in `test/adapters_hover.rb` that moves the cursor through a timed-out prefix and one in `test/editor_palette.rb` that opens the palette through a timed-out user binding.
+- Where: `HandleKey#timeout` in `carat/use_cases/handle_key.rb` (line 122 at 41297d6, line 154 at b76b722) and the comment of `carat/use_cases/discovery/hide_key_hints.rb` line 7. Quality advisories in `quick-docs` and `discoverability`, periodic quality at c1b3a12, b76b722, and 3895e21, which merged the two entries. Queue item `discoverability-tidy`.
+- Why it matters: `call` ends with an after-key tail (`ShowCompletion`, `FollowHover`, `FollowSignature`, `FollowPalette`, `HideKeyHints`, the plugin observe, `ArrangeView`) that `timeout` copies only in part, so an action resolved by `timeoutlen` leaves the documentation float open away from the cursor until the next key, `palette.open` bound beside a longer user binding (`<leader>p` with `<leader>pf`) opens the `>` prompt with no list until the next key, and the `HideKeyHints` comment says a timeout closes the hints, which it never does.
+- Fix outline: one private follow step that both `call` and `timeout` end with, a row in `test/adapters_hover.rb` that moves the cursor through a timed-out prefix, a row in `test/editor_palette.rb` that opens the palette through a timed-out user binding, and a corrected `HideKeyHints` comment.
 
 ## The hover placement counts rows with bare numbers
 
@@ -2359,12 +2359,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `open_scratch` comments in `carat/plugin_api.rb` line 480 (111 characters) and `carat/use_cases/plugins/window_requests.rb` line 69, at edaf2c2. Quality advisory in `layout-slots`.
 - Why it matters: they break their files' wrap width.
 - Fix outline: rewrap both at the file's width.
-
-## A key resolved by timeoutlen runs no follow tail
-
-- Where: `timeout` in `carat/use_cases/handle_key.rb` line 154 and the comment of `carat/use_cases/discovery/hide_key_hints.rb` line 7, at b76b722. Periodic quality. Queue item `discoverability-tidy`.
-- Why it matters: an action resolved by `timeoutlen` runs no `ShowCompletion`, `FollowHover`, or `FollowPalette`, so `palette.open` bound beside a longer user binding (`<leader>p` with `<leader>pf`) shows no list until the next key, and the comment says a timeout closes the hints, which it never does; it extends the entry on a timeout leaving the hover float off its anchor.
-- Fix outline: one private follow step that both `call` and `timeout` end with, a test row for `palette.open` resolved by timeout, and a corrected `HideKeyHints` comment.
 
 ## OpenPalette keeps a one-line private method with one caller
 
@@ -2931,12 +2925,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: formatting costs rows times spans, up to 100 rows times thousands of token quads, on every completion selection change.
 - Fix outline: walk the quads once with a cursor, since `wrap` appends them in row order, or keep a per-row start index.
 
-## A pathless buffer reaches nil.empty? in the language gateway
-
-- Where: `carat/adapters/json_rpc_language_gateway.rb` lines 556, 694, 847, and 1131 (`buffer.path.empty?` and `uri_of(buffer.path)`), where `Buffer#path` is `String?` (`carat/domain/buffer.rb` line 63), at df4654c. Periodic quality. Queue item `docs-nil-path` (T0).
-- Why it matters: a pinned docs split or a scratch given `:set filetype=ruby` while a ruby server runs calls `empty?` on nil at the next sync or request, a crash; `send_symbols` and `RequestHover` already use `path_text`.
-- Fix outline: read `path_text` at the four sites, with an `adapters_language_gateway` row setting the filetype in a pinned docs buffer.
-
 ## Lint does not catch a message literal in a second file or a def shadowing a reader
 
 - Where: `test/lint.rb`; instances at `carat/use_cases/plugins/plugin_router.rb` line 61 and `carat/use_cases/ex/execute_ex.rb` line 61 (the E492 literal, periodic df4654c), and the private `def hover` over `attr_reader :hover` in the gateway (blocker at 13de2674e59f). Queue item `implement-contracts-c`.
@@ -2996,3 +2984,117 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/architecture.md` line 343 at the `implement-contracts-b` change, which lists what `test/lint.rb` checks as the code map's coverage only. Quality advisory of `implement-contracts-b`.
 - Why it matters: the lint test now also checks the map's method lists, so a reader of section 10 misses why a renamed method fails lint.
 - Fix outline: say the code map's coverage and method lists.
+
+## The merge hook leaves the squash title and message unchecked
+
+- Where: `merge_tool` in `tools/agent_guard.sh` line 875 at 3895e21. Periodic security Low (6). Queue item `merge-gate-tidy`.
+- Why it matters: the hook checks the method and the expected head only, so a merger steered by branch-controlled CI log text can squash onto main a message holding a URL, a secret, or another trailer the body gate refused.
+- Fix outline: refuse a merge whose message differs from the run's body file plus the trailer or whose title is not the pull request title with its number, with a `tools/tools_test.sh` case.
+
+## The docs and scenarios gates split changed path names unquoted
+
+- Where: `gate_docs` in `tools/gates.sh` line 250 (`stays`, nested, reading the caller's `proposals`) and 251 (`for p in $proposals`), and `gate_scenarios` line 279 (`for spec in $deltas`), at 3895e21. Periodic security Low (4) and periodic quality. Queue item `content-gate-gaps`.
+- Why it matters: a branch path under `openspec/changes` with a space or a glob character makes the scenarios gate read another spec, skipping a delta's scenarios, or the stays check read another proposal.
+- Fix outline: a top-level `stays` function; read names with `git diff --name-only -z` into `while IFS= read -r` loops under `set -f`, each quoted; cases for a spaced and a globbed path.
+
+## The docs gate accepts a self-written unchanged line as proof
+
+- Where: the `unchanged, REASON` attestation of `gate_docs` in `tools/gates.sh`. Retrospective of `implement-contracts-b` (#86). Queue item `implement-contracts-c`.
+- Why it matters: #86's one quality blocker was README and help-list drift behind an untrue `README.md unchanged` line the gate accepted; quality first pass 0 there and 17 of 50 overall, doc prose 9 of 47 recorded blockers.
+- Fix outline: a case where a branch changes a target's help or a gate list and attests the README unchanged fails the gate; the acceptance is doc-prose blockers at 0 over the next five runs.
+
+## The scenarios gate counts a name found anywhere under test/
+
+- Where: `gate_scenarios` in `tools/gates.sh` line 300 at 3895e21. Periodic quality advisory. Queue item `implement-contracts-c`.
+- Why it matters: a scenario passes when its name appears, in any case, as a substring of any file under `test/`, snapshots included, so a short name counts as tested by coincidence.
+- Fix outline: match the name only in `.rb` test files and as a whole label or comment.
+
+## The docs gate keeps two overlapping CLAUDE.md checks
+
+- Where: `gate_docs` in `tools/gates.sh` line 236 and the `process_change` check at line 265, at 3895e21. Periodic quality advisory. Queue item `implement-contracts-c`.
+- Why it matters: the added-files check takes no proposal escape and the newer one takes the stays escape, so one file can pass one and fail the other, and the header does not say which wins.
+- Fix outline: fold the added-files check into `process_change`, or state in the header that additions take no escape.
+
+## The check-pass budget line projects 6 total tokens per output token
+
+- Where: the check-pass budget projection in `tools/run_state.sh`. Retrospective of `implement-contracts-b` (#86). Queue item `phase-shares`.
+- Why it matters: total per output token in the last 10 rows is 5.53 to 11.56 (median 7.74, 8 of 10 above 6); all three medium rows went over 1.2M, and #86's check pass said under at 146,753 output while the run ended at 1,998,500 total.
+- Fix outline: project from the recorded ratio of comparable rows; the acceptance is the check-pass verdict matching the final over the next three runs.
+
+## A typed count grows without a cap
+
+- Where: `digit` in `carat/domain/command_grammar.rb` line 103 and `take` line 191; `Operators.put` in `carat/domain/operators.rb` line 44; the two `MAX_COUNT` copies in `RegisterCount` and `SubstituteArgs`; at 3895e21. Periodic quality blocking. Queue item `editing-counts`.
+- Why it matters: the count is multiplied by the operator count with no limit, so a long count before `p` freezes the editor or exhausts memory, and past 19 digits the 64-bit count wraps.
+- Fix outline: cap counts at Vim's 999999999 through one shared constant replacing both `MAX_COUNT` copies; refuse a put past a limit as Neovim's E1240 does; `domain_grammar` and put rows.
+
+## aw and aW take the punctuation after a word
+
+- Where: `carat/domain/text_objects.rb` line 110 at 3895e21. Periodic quality. Queue item `editing-counts`.
+- Why it matters: `daw` on `foo` in `foo.bar` or `foo(x)` deletes `foo.` or `foo(`, unlike Neovim and the `docs/compatibility.md` row; no row covers a word before punctuation.
+- Fix outline: take the next run only when it is blank, else the blanks before, as the quote and count paths do; `daw` and `yaw` rows before punctuation in `test/editor_text_objects.rb`.
+
+## Put and operator advisories
+
+- Where: `PutOverSelection#repeated` in `carat/use_cases/visual/put_over_selection.rb` line 124 copies the loop of `Operators.put` (`carat/domain/operators.rb` lines 42 to 47); `carat/use_cases/actions/edit_handler.rb` line 50 makes `put_before` the catch-all `else`; `carat/domain/operators.rb` line 4 requires `registers` and `selection`, using neither, and gets `Block` only through them; at 3895e21. Periodic quality. Queue item `editing-counts`.
+- Why it matters: two copies of one loop, an unlisted variant silently putting before the cursor, and requires that hide what the file names.
+- Fix outline: one repeated-lines function used by both; name `when :put_before` with no catch-all; require `register_entry` and `block`.
+
+## Markup groups widen the plugin API without a version
+
+- Where: `token?` and `token_id` in `carat/domain/highlight.rb` line 163, reached by `Host#syntax_group` (`carat/use_cases/plugins/ui_requests.rb` line 85) and plugin tokens (`carat/use_cases/plugins/plugin_syntax.rb` line 79), at 3895e21; `docs/plugins.md` lines 87 and 116 and `carat/plugin_api.rb` line 713 still say syntax or file-icon groups only. Periodic quality. Queue item `hover-tidy`.
+- Why it matters: plugins can now name the six markup groups while `PluginApi::VERSION` stays 2.4 and the docs deny it, an undocumented widening.
+- Fix outline: bound both below the first markup group, or document it with a minor bump to 2.5 and a `use_cases_plugin_syntax` row.
+
+## The main loop spins at end of input
+
+- Where: `read_key` in `carat/drivers/ansi_terminal.rb` line 54 and `InputController#pump` in `carat/adapters/input_controller.rb` line 86, at 3895e21. Periodic quality. Queue item 39 (backlog items).
+- Why it matters: end of input reads as nil like a timeout, so with stdin closed and no SIGHUP the select returns at once on every pass and the editor spins at full CPU forever.
+- Fix outline: record end of input behind a `TerminalPort` predicate (architecture section 6) that `MainLoop#run` stops on, with a `test/drivers_main_loop.rb` row over `FakeTerminal`.
+
+## EditorAssembly names the gateway without requiring it
+
+- Where: `carat/adapters/editor_assembly.rb` line 327 at 3895e21, resolving only through the order of `carat.rb` lines 314 and 322. Periodic quality advisory. Queue item 39 (require orders).
+- Why it matters: every other collaborator is required in the file; a reorder of `carat.rb` breaks it.
+- Fix outline: add `require_relative "json_rpc_language_gateway"` with the other adapter requires.
+
+## The map lists EditorState#show twice
+
+- Where: `docs/codebase-map.md` line 117 (area 4) at 3895e21. Periodic quality advisory. Queue item `docs-index`.
+- Why it matters: the method list is checked by `test/lint.rb`, and a doubled name hides a missing one.
+- Fix outline: drop the second `show`.
+
+## Carat::Testing takes a positional constructor with no stated exemption
+
+- Where: `Testing#initialize(name)` in `carat/testing.rb` line 13; `test/lint.rb` line 1000 applies the keyword rule only to layer files, at 3895e21. Periodic quality. Queue item `docs-index`.
+- Why it matters: CLAUDE.md names `Carat::Testing` among the classes whose constructors take required keywords, so files outside a layer, plugins included, escape the rule unstated.
+- Fix outline: state the exemption beside the keyword rule in CLAUDE.md, or move to `initialize(name:)` across the tests.
+
+## paint_float_row fills the row in both branches
+
+- Where: `carat/adapters/frame_presenter.rb` lines 613 and 617 at 3895e21. Periodic quality advisory. Queue item `bars-tidy`.
+- Why it matters: the same fill is written twice under one condition.
+- Fix outline: one fill after the text or blank and before `paint_tokens`.
+
+## HandleKey restates KeyHints#showing?
+
+- Where: `carat/use_cases/handle_key.rb` line 131 at 3895e21, `float_id != 0` where `HideKeyHints#call` checks `showing?` again. Periodic quality advisory. Queue item `discoverability-tidy`.
+- Why it matters: two spellings of one test drift apart.
+- Fix outline: `@hide_key_hints.call(state) if @key_hints.showing?`.
+
+## metrics.sh ignores a failed field read
+
+- Where: `tools/metrics.sh` lines 55 and 57 at 3895e21 (`set --` from `analysis_budget.sh --fields`). Periodic quality advisory. Queue item `run-budgets-tidy`.
+- Why it matters: a failure stops on `set -u` with an unclear message and leaves the temporary output file.
+- Fix outline: read the fields into a variable with `|| die`, check both, and remove the temporary file on failure.
+
+## The outside-the-root refusal is built four times
+
+- Where: `carat/use_cases/files/resolve_inside.rb` line 41, `delete_path.rb` line 39, `make_path.rb` line 37, and `rename_path.rb` line 42, at 3895e21. Periodic quality. Queue item `file-access-tidy`.
+- Why it matters: the wording of one refusal lives in four places.
+- Fix outline: one domain function returning the message, called by the four.
+
+## Two ex handlers keep forwarding-only constructors
+
+- Where: `carat/use_cases/ex/messages_command_handler.rb` line 14 and `carat/use_cases/ex/syntax_command_handler.rb` line 14 at 3895e21. Periodic quality. Queue item `messages-tidy`.
+- Why it matters: dead code; each only forwards `spec` to `ExHandler#initialize`.
+- Fix outline: delete both constructors.
