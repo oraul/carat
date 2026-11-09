@@ -61,11 +61,13 @@ require_relative "../editor_floats"
 require_relative "../editor_global"
 require_relative "../editor_grammar"
 require_relative "../editor_insert"
+require_relative "../editor_key_hints"
 require_relative "../editor_leader"
 require_relative "../editor_lsp"
 require_relative "../editor_motions"
 require_relative "../editor_normal"
 require_relative "../editor_operators"
+require_relative "../editor_palette"
 require_relative "../editor_plugins"
 require_relative "../editor_registers"
 require_relative "../editor_repeat"
@@ -151,11 +153,13 @@ when "editor_floats" then EditorFloatsTest.main
 when "editor_global" then EditorGlobalTest.main
 when "editor_grammar" then EditorGrammarTest.main
 when "editor_insert" then EditorInsertTest.main
+when "editor_key_hints" then EditorKeyHintsTest.main
 when "editor_leader" then EditorLeaderTest.main
 when "editor_lsp" then EditorLspTest.main
 when "editor_motions" then EditorMotionsTest.main
 when "editor_normal" then EditorNormalTest.main
 when "editor_operators" then EditorOperatorsTest.main
+when "editor_palette" then EditorPaletteTest.main
 when "editor_plugins" then EditorPluginsTest.main
 when "editor_registers" then EditorRegistersTest.main
 when "editor_repeat" then EditorRepeatTest.main

@@ -1654,9 +1654,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Map method lists lag the code
 
-- Where: `docs/codebase-map.md:502`, 438, 435, 614 (periodic quality at 5722559).
-- Why it matters: `PluginApi::Paths` omits `absolute`, `StatusSlots` omits `set_lsp` and `label`, `FramePresenter` omits `float_group`, `EditorHarness` omits `completions`.
-- Fix outline: add the four names.
+- Where: `docs/codebase-map.md:502`, 438, 435, 614 (periodic quality at 5722559); also lines 151, 185 to 188, and 285 at c1b3a12 (periodic quality, docs-index): the `LastChange` bullet omits `split` and `unmeasure`, and the other two lag their files' method lists.
+- Why it matters: `PluginApi::Paths` omits `absolute`, `StatusSlots` omits `set_lsp` and `label`, `FramePresenter` omits `float_group`, `EditorHarness` omits `completions`; a reader trusting the map misses the methods.
+- Fix outline: add the missing names at each line. Queued in `docs-index`.
 
 ## Tab with expandtab pads by character column
 
@@ -1792,7 +1792,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The server completions test copies EditorHarness
 
-- Where: `test/adapters_server_completions.rb` line 17 at cd87445 (the `Rig` class copies `type`, `wait`, and `pump` because `carat/doubles/editor_harness.rb` line 38 hard-wires `FixedCompletions`), and its `CompletionRequest` record table (lines 154 to 173). Periodic quality at cd87445.
+- Where: `test/adapters_server_completions.rb` line 17 at cd87445 (the `Rig` class copies `type`, `wait`, and `pump` because `carat/doubles/editor_harness.rb` line 38 hard-wires `FixedCompletions`), and its `CompletionRequest` record table (lines 154 to 173). Periodic quality at cd87445. At c1b3a12 there are three rig copies: `test/adapters_signature.rb` line 17, `test/adapters_hover.rb`, and `test/adapters_server_completions.rb` (periodic quality).
 - Why it matters: two harnesses drift, and a domain record is tested in an adapter test.
 - Fix outline: let the harness take any completion port and drive the test through it; move the record table to a domain test. Queued in `completion-tidy-b`.
 
@@ -1816,7 +1816,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The completion resolve timeout restarts with every pick
 
-- Where: `carat/adapters/json_rpc_language_gateway.rb` line 562 at 925d759 (558 at d46ecff), which measures the resolve timeout from `docs.due`, which a new pick resets. Quality advisory in `completion-docs`, raised again at d46ecff.
+- Where: `carat/adapters/json_rpc_language_gateway.rb` line 562 at 925d759 (558 at d46ecff), which measures the resolve timeout from `docs.due`, which a new pick resets. Quality advisory in `completion-docs`, raised again at d46ecff. At c1b3a12 the cursor's screen row is recomputed at seven sites (periodic note at `carat/use_cases/completion/show_completion.rb` line 167), the hover and signature floats included.
 - Why it matters: every new pick during the flight moves `docs.due` forward, so a server that never answers is not cancelled while the selection keeps moving.
 - Fix outline: keep the send time (or a deadline) of the request in flight and time it out from that, with a case in `test/adapters_server_completions.rb` that keeps moving the selection. Queued in `completion-docs-tidy`.
 
@@ -1828,7 +1828,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## ShowCompletionDocs recomputes the cursor's screen row
 
-- Where: `carat/use_cases/completion/show_completion_docs.rb` line 88 at 925d759, which computes the row as `ShowCompletion#row_offset` does, and takes `below = popup.row > 0`, and line 102, which computes the column through `DisplayWidth.column` where `ArrangeView#place_floats` uses the line cache. Quality advisory in `completion-docs`, raised again at d46ecff.
+- Where: `carat/use_cases/completion/show_completion_docs.rb` line 88 at 925d759, which computes the row as `ShowCompletion#row_offset` does, and takes `below = popup.row > 0`, and line 102, which computes the column through `DisplayWidth.column` where `ArrangeView#place_floats` uses the line cache. Quality advisory in `completion-docs`, raised again at d46ecff. At c1b3a12 the cursor's screen row is recomputed at seven sites (periodic note at `carat/use_cases/completion/show_completion.rb` line 167), the hover and signature floats included.
 - Why it matters: the two copies and the sign convention couple the documentation float to the popup's layout, so a change to one silently misplaces the other.
 - Fix outline: derive the documentation float's vertical placement from the popup spec alone (row and height), or share one helper for the cursor's screen cell with `ArrangeView` and `ShowCompletion`. Queued in `completion-docs-tidy`.
 
@@ -1936,9 +1936,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## A key resolved by timeoutlen leaves the hover float off its anchor
 
-- Where: `HandleKey#timeout` in `carat/use_cases/handle_key.rb` line 122 at 41297d6. Quality advisory in `quick-docs`.
-- Why it matters: `call` runs `FollowHover` after a key, but `timeout` dispatches the pending keys' shorter binding without it, so a cursor move resolved by `timeoutlen` leaves the documentation float open away from the cursor until the next key.
-- Fix outline: end `timeout` with the same `@follow_hover.call(state) if @hover.float_id != 0` that `call` has, with a row in `test/adapters_hover.rb` that moves the cursor through a timed-out prefix.
+- Where: `HandleKey#timeout` in `carat/use_cases/handle_key.rb` line 122 at 41297d6. Quality advisory in `quick-docs`. At c1b3a12 `timeout` copies the after-key tail of `call` (line 154: `FollowSignature`, the plugin observe, `ArrangeView`) without `FollowHover` (periodic quality); one shared tail would close both gaps. At d828abb `timeout` (line 154) also skips `FollowPalette` and `HideKeyHints` (quality advisory in `discoverability`).
+- Why it matters: `call` runs `FollowHover` after a key, but `timeout` dispatches the pending keys' shorter binding without it, so a cursor move resolved by `timeoutlen` leaves the documentation float open away from the cursor until the next key; likewise `palette.open` resolved by `timeoutlen` (a user binding under `<leader>p`) opens the `>` prompt with no list until the next key.
+- Fix outline: share the after-key tail of `call` with `timeout` (`FollowHover`, `FollowSignature`, `FollowPalette`, `HideKeyHints`, the plugin observe, `ArrangeView`), with a row in `test/adapters_hover.rb` that moves the cursor through a timed-out prefix and one in `test/editor_palette.rb` that opens the palette through a timed-out user binding.
 
 ## The hover placement counts rows with bare numbers
 
@@ -2119,3 +2119,165 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: E477 in `delete_command_handler.rb` line 34, `substitute_command_handler.rb` line 37, `global_command_handler.rb` line 35; E488 in five files; E486, E492, E32, E33, E363, E444, E474, E939 in two or more, at b0dd342. Periodic quality. Queued in the backlog item batch.
 - Why it matters: `docs/architecture.md` section 5 puts a message several use cases need in `Domain::Messages`; copies drift from Neovim's text.
 - Fix outline: constants or builders in `Domain::Messages` called from every site.
+
+## A signature parameter label is marked inside the method name
+
+- Where: `carat/adapters/json_rpc_language_gateway.rb` line 835 at c1b3a12, the string-label branch of the signature marking (periodic quality blocking). Queued in `signature-tidy`.
+- Why it matters: ruby-lsp sends string labels, and a parameter whose name occurs in the method name is highlighted inside the name (each(e) marks the e of each), so parameter info points at the wrong text.
+- Fix outline: search for the label only after the signature's opening parenthesis and after the previous parameter's match, with no mark when absent, and a `test/adapters_signature.rb` row for each(e).
+
+## A signature request in a buffer without a path re-asks on every key
+
+- Where: `carat/use_cases/docs/request_signature.rb` line 24 at c1b3a12; the gateway's send drops a pathless buffer silently. Queued in `signature-tidy`.
+- Why it matters: FollowSignature keeps following a call that is never sent, asking again on every key, while RequestHover refuses such a buffer up front.
+- Fix outline: refuse a pathless buffer as RequestHover does, with a row typing ( in an unnamed ruby buffer expecting no active signature.
+
+## The signature gateway copies the hover forget and position steps
+
+- Where: `carat/adapters/json_rpc_language_gateway.rb` line 743 (forget_signature against forget_hover at 646) and line 780 (send_signature's position params against send_hover's at 676), at c1b3a12. Queued in `signature-tidy`, beside the entry The gateway cancels a request in three copies.
+- Why it matters: two copies of the same steps drift when one request's lifecycle changes.
+- Fix outline: one private position-params step for both sends and one forget step for both requests.
+
+## The signature trigger tests bare key codes
+
+- Where: `carat/use_cases/handle_key.rb` line 336 at c1b3a12. Queued in `signature-tidy`.
+- Why it matters: codes 40 and 44 hide the characters the text already holds.
+- Fix outline: compare the text with ( and , directly.
+
+## Scratch floats of plain lines are built seven ways
+
+- Where: `carat/use_cases/completion/show_completion.rb` line 151, `carat/use_cases/completion/show_completion_docs.rb` line 106, `carat/use_cases/docs/show_hover.rb` line 86, `carat/use_cases/docs/show_signature.rb` line 66, `carat/use_cases/plugins/window_requests.rb` line 235, at c1b3a12 (periodic quality), and `carat/use_cases/discovery/show_key_hints.rb` line 137 and `carat/use_cases/discovery/follow_palette.rb` line 124 at d828abb (quality advisories in `discoverability`). Queued in `hover-tidy`.
+- Why it matters: each builds the same buffer, owner, window, and float steps, so a change to an owned float must be made seven times.
+- Fix outline: one alternate constructor of a float from lines, owner, and spec, used by the seven.
+
+## A long insert copies its typed text on every key
+
+- Where: `carat/domain/last_change.rb` line 117 (add_text) and line 137 (add_action) at c1b3a12 (periodic quality). Queued in `insert-copy`.
+- Why it matters: each typed key rebuilds the session's typed string, so a long insert costs quadratic bytes on the typing hot path.
+- Fix outline: append to a fresh string started per session and hand the '.' register a copy, with a long-insert case and `insert` held at 35.0.
+
+## The generated config header names spin run, and the write step is copied
+
+- Where: `bin/carat-gen-config.rb` line 39 (the header written into `carat/domain/default_config.rb` line 2) and line 48, copied for the registry at line 57, at c1b3a12 (periodic quality). Queued in item 46, generators.
+- Why it matters: the header sends readers to a command CLAUDE.md forbids, and the write-only-when-changed block has two copies.
+- Fix outline: name make gen-config and regenerate; one write-if-changed helper for both targets.
+
+## The key decoder repeats the letter finals
+
+- Where: `carat/adapters/key_decoder.rb` line 143 (csi_key) against line 186 (ss3_key) at c1b3a12 (periodic quality). Queued in item 46.
+- Why it matters: ten finals are listed twice and can drift.
+- Fix outline: csi_key keeps 126 and hands every other final to ss3_key.
+
+## end_visual re-implements clamp_col
+
+- Where: `carat/domain/editor_state.rb` line 120 at c1b3a12 (periodic quality), beside the entry Operate and RepeatLast each copy EditorState#clamp_col. Queued in item 46.
+- Why it matters: a third copy of the clamp.
+- Fix outline: call clamp_col after the mode is set to normal.
+
+## Public helpers no other file calls
+
+- Where: `carat/domain/last_search.rb` line 111 (touch), `carat/use_cases/actions/action_table.rb` line 96 (handler_at), `carat/domain/buffer.rb` line 185 (detect_filetype, named on the map's buffer line), at c1b3a12 (periodic quality). Queued in item 46.
+- Why it matters: dead public surface invites callers that bypass the owner.
+- Fix outline: move the three under private and drop detect_filetype from the map line.
+
+## Json.pretty_generate has no production caller
+
+- Where: `carat/domain/json.rb` line 36 at c1b3a12, called only by `test/json.rb` (periodic quality). Queued in item 46, dead methods.
+- Why it matters: dead code the map lists as part of the JSON-RPC library.
+- Fix outline: remove it and its test row, or record why the library keeps it.
+
+## SaveAll branches twice for one assignment
+
+- Where: `carat/use_cases/files/save_all.rb` line 164 at c1b3a12 (periodic quality). Queued in `file-access-tidy`.
+- Why it matters: both branches assign the same result and differ only in the failed flag.
+- Fix outline: one assignment and one conditional flag.
+
+## Quit copies the close-other-windows loop
+
+- Where: `carat/use_cases/files/quit.rb` line 82 (close_page) against `carat/use_cases/windows/close_other_windows.rb` line 27, at c1b3a12 (periodic quality). Queued in `buffer-list-tidy`.
+- Why it matters: two copies of closing every window of a tab page but one.
+- Fix outline: one BufferList method both call.
+
+## The README's parameter-info sentence splits a paragraph
+
+- Where: `README.md` line 64 at c1b3a12 (periodic quality). Queued in `docs-index`.
+- Why it matters: the sentence follows the raw-mode Ctrl-S note, separating it from the language-service description.
+- Fix outline: move it before the raw-mode sentence.
+
+## The merge record trusts the merger's reply fields
+
+- Where: the merge and CI phase records of `.claude/workflows/deliver-change.js`; in `parameter-info` (#78) the reply swapped the pushed head and the squash commit, so 3 phases were recorded at a commit not on main (retrospective). Queued in `merge-gate-tidy`.
+- Why it matters: run state and history rows point at the wrong commits, 1 of the last 4 merges.
+- Fix outline: take each commit from the run state or git (the squash commit reachable from main, the CI head equal to the pushed head), with a tools_test case feeding a swapped reply.
+
+## The calibration rule counts CI reds caused outside the change
+
+- Where: the Calibration rule of `docs/goals.md`; the retrospective of `parameter-info` (#78). The plan of `discoverability` dropped `scout-effort-revert` by this reading; the goals text waits for the user.
+- Why it matters: low-effort scout rows #74 to #78 passed CI first 3 of 5, both reds a timed runner case (`check-runner-safety`), 5 of 5 counting own-diff reds, rework 7 against 7; the literal rule would revert a move that did no harm.
+- Fix outline: count only first-pass reds whose recorded cause is in the change's own diff, with the cause recorded in the run state.
+
+## The palette lists and replays unchecked plugin action names
+
+- Where: `carat/use_cases/discovery/open_palette.rb` line 79, which lists every `plugin.<name>.<action>` of an enabled plugin's manifest, and `carat/use_cases/handle_key.rb` line 269, which replays a chosen name that is not an action name as keys, at d828abb. Security Low findings (confidence 3 and 5) in `discoverability`.
+- Why it matters: a compiled-in plugin whose manifest fails `ManifestCheck` can declare an action such as `plugin.explorer.:w ~/.bashrc<CR>`, which is listed because the plugin is enabled, and Enter on it types the keys. No new capability, since a plugin can already bind replays in its manifest defaults, but the palette should only ever dispatch actions.
+- Fix outline: build the plugin entries from a registry method returning the enabled plugins' checked action names (only those for which `Domain::Keymap.action_name?` holds), and in `HandleKey` dispatch the palette's chosen name only when `Domain::Keymap.action_name?` holds, never through replay, with a row in `test/editor_palette.rb` for a refused name.
+
+## OpenPalette re-parses plugin action names
+
+- Where: `plugin_of` in `carat/use_cases/discovery/open_palette.rb` line 91 against `PluginRouter` line 36, and the one-line single-use `palette_add_plugin` at line 85, at d828abb. Quality advisories in `discoverability`.
+- Why it matters: two parsers of `plugin.<name>.<action>` can drift, and the wrapper adds a hop for one call.
+- Fix outline: have `PluginRegistry` return the enabled plugins' action names (the same method the palette entry above needs) and inline `@palette.add` into `add_plugin_actions`.
+
+## KEYHINTS_DELAY is never read
+
+- Where: `carat/domain/options.rb` line 72 at d828abb; `initialize` (line 56) repeats the literal 300. Quality advisory in `discoverability`, raised twice.
+- Why it matters: a constant beside a duplicated literal invites changing one and not the other.
+- Fix outline: use `KEYHINTS_DELAY` in `initialize`, or drop the constant.
+
+## The key hints and the palette cut text by characters, in two copies
+
+- Where: `cut` in `carat/use_cases/discovery/show_key_hints.rb` line 175 and its copy in `carat/use_cases/discovery/follow_palette.rb` line 168, with `pad` at line 161, at d828abb. Quality advisories in `discoverability`, raised twice.
+- Why it matters: a description holding wide characters overflows the float, and `pad` can be asked to repeat a space a negative number of times, while `ShowCompletion#fit` already cuts by cells.
+- Fix outline: one cell-aware domain helper cutting at `DisplayWidth.col_at(text, width, 1)` used by the key hints, the palette, and the completion menu, with a row holding a wide-character description.
+
+## ShowKeyHints copies HideKeyHints' close
+
+- Where: `carat/use_cases/discovery/show_key_hints.rb` line 56 at d828abb. Quality advisory in `discoverability`.
+- Why it matters: two copies of closing the hints float drift when the float's lifecycle changes.
+- Fix outline: have `ShowKeyHints` call `HideKeyHints` instead of holding `close_float`.
+
+## Three discovery comments are stale or break their wrap
+
+- Where: the class comment of `carat/use_cases/discovery/hide_key_hints.rb` (line 8), the class comment of `carat/use_cases/discovery/show_key_hints.rb` (line 23, longer than its neighbors), and the comment at `carat/use_cases/handle_key.rb` line 66 (breaks after "While the"), at d828abb. Quality advisories in `discoverability`.
+- Why it matters: the first says a binding resolved by `timeoutlen` closes the hints, but `timeout` never calls `HideKeyHints` and the hints never show over a `:pending` key; the others are style only.
+- Fix outline: drop the clause from the `HideKeyHints` comment and rewrap the other two to the width of the lines around them.
+
+## Ex command descriptions live apart from their registrations
+
+- Where: the description hash of `carat/use_cases/ex/ex_table.rb` line 20 at d828abb. Quality advisory in `discoverability`.
+- Why it matters: unlike `ActionTable.register`, which takes the description, each new ex command is edited in two places.
+- Fix outline: pass the description to `ExTable#register` from each handler's `register` and drop the hash.
+
+## The palette runs ex commands that need an argument bare
+
+- Where: `carat/use_cases/execute_command_line.rb` line 91 at d828abb. Quality advisory in `discoverability`.
+- Why it matters: picking `:edit`, `:buffer`, `:substitute`, or `:set` in the palette runs it without an argument and only reports an error.
+- Fix outline: for a command that takes an argument, leave `:name ` on the command line instead of running it, with a row in `test/editor_palette.rb`, or note the behavior in `docs/compatibility.md`.
+
+## A disabled plugin's group names stay in the keymap
+
+- Where: `name_group` in `carat/domain/keymap.rb` line 285 at d828abb. Quality advisory in `discoverability`.
+- Why it matters: the group name ignores the line's owner, so `remove_owner` keeps a disabled plugin's group names and a prefix it shared still shows that title over the key hints.
+- Fix outline: record the owner with each group name and drop it in `remove_owner`, or refuse `keymap.group` from a plugin, with a row in `test/editor_key_hints.rb`.
+
+## The discovery tests copy their session helper
+
+- Where: `plugin_session` in `test/editor_key_hints.rb` line 27 and in `test/editor_palette.rb` line 21, each repeating its file's `session` but for the plugin list, and the magic slice `row_of(...)[0, 55]` in `test/editor_palette.rb` line 96, at d828abb. Quality advisories in `discoverability`.
+- Why it matters: two copies of the same setup drift, and a slice at a counted width breaks silently when a description changes.
+- Fix outline: give each `session` a `plugins` argument (`plugins: []` at the existing rows) and drop `plugin_session`; assert `start_with?` on the expected prefix, or compare the whole rstripped row.
+
+## The architecture's group example names a bound prefix
+
+- Where: `docs/architecture.md` line 230 at d828abb, the section 7 example. Quality advisory in `discoverability`.
+- Why it matters: the example names `keymap.group <leader>w windows` while the same example binds `keymap.normal <leader>w :w<CR>`, so that prefix is bound and its hints never show, since a bound prefix resolves by `timeoutlen`.
+- Fix outline: name a group for an unbound prefix in the example, such as `keymap.group <leader>f files`.

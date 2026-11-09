@@ -250,6 +250,7 @@ Neovim shows signature help on request (`vim.lsp.buf.signature_help()`, `<C-s>` 
 | `<CR>` | `cmdline.execute` | Run the command, or search at a `/` or `?` prompt | `editor_cmdline`, `editor_search` |
 | `<Up>` | `cmdline.history_older` | The next older entry of the prompt's history (`:` or search) that starts with the text typed before the first recall | `editor_cmdline`, `editor_search` |
 | `<Down>` | `cmdline.history_newer` | The next newer entry, or the typed text after the newest | `editor_cmdline`, `editor_search` |
+| `<C-n>`, `<C-p>` | `palette.next`, `palette.previous` | At the command palette's `>` prompt, select the next or previous entry; nothing elsewhere (Neovim's history keys are `<Up>` and `<Down>` here) | `editor_palette` |
 
 ## Ex commands
 
@@ -497,6 +498,18 @@ Started with no argument or on a directory, Carat shows a start screen over the 
 
 The gem takes the theme's `Operator`, `Function`, and `Keyword` colors, the sparkle `Type`, the wordmark `Title`, and the hints `Special` and `Comment`. A window smaller than 20 columns or 15 rows shows only the wordmark. Differences from Neovim: there is no `:intro`, and the intro's `shortmess` flag `I` is `option.startscreen`; neither option is set by `:set` yet (`Not implemented: :set startscreen`).
 
+## Key hints and command palette
+
+Carat's own, in place of the which-key and command palette plugins Neovim users add. Keys that only begin bindings (the leader, `g`, `z`, `<C-w>`), left with no key for `option.keyhints.delay` milliseconds, show a bordered float at the bottom right titled with the keys and their group name, one row per next key: its action's description, a group's name, `+` and the count of bindings under an unnamed prefix, or the keys a remap replays, in columns when taller than the screen. The next key closes it and is handled as usual. A prefix that is bound itself shows no hints, as `timeoutlen` resolves it; insert and command-line modes show none (`editor_key_hints`, `domain_keymap`).
+
+| Keys or line | Action name | Behavior | Problem | Tests |
+| --- | --- | --- | --- | --- |
+| `option.keyhints.delay` | none | Milliseconds before the hints, 0 to 10000, 300 by default; 0 turns them off | `file:line: option.keyhints.delay takes a number from 0 to 10000` | `editor_key_hints`, `domain_options_config` |
+| `keymap.group <keys> <name>` | none | Names a normal-mode prefix in the hints, a later line winning; read from a project file too, as it binds nothing; the defaults name `<leader>w` windows, `q` quit, `f` files, `b` buffers, `d` docs, `g` goto, `z` view, `<C-w>` window | `file:line: keymap.group takes keys and a name` | `editor_key_hints`, `domain_keymap` |
+| `<leader>p`, `<F1>` | `palette.open` | The `>` prompt on the command line and a "Commands" float of every core action, enabled plugin action, and ex command (`:` and its full name), each with its first normal-mode key and description; typing filters by the completion popup's fuzzy match over the name and description (a leading `:` ignored), "No match" when none; `<C-n>` and `<C-p>` move the selection; Enter runs it, an action as its key would (an operator then waits for its motion), an ex command as typed after `:`; Esc closes | none | `editor_palette`, `use_cases_actions` |
+
+Differences from Neovim: Neovim's `F1` opens `:help`, which Carat does not have.
+
 ## Options read so far
 
-`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `undolevels`, `icons`, `theme`, and `background` (Themes), `startscreen` and `reducedmotion` (Start screen), from the `option.*` lines of the configuration files; `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, and `cursorline` from those lines and `:set` (Neovim's defaults: off, off, on, on, off; the shipped configuration turns `smartcase` and `cursorline` on); `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.
+`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `keyhints.delay` (Key hints), `undolevels`, `icons`, `theme`, and `background` (Themes), `startscreen` and `reducedmotion` (Start screen), from the `option.*` lines of the configuration files; `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, and `cursorline` from those lines and `:set` (Neovim's defaults: off, off, on, on, off; the shipped configuration turns `smartcase` and `cursorline` on); `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.

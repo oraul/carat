@@ -13,6 +13,7 @@ require_relative "../domain/plugin_ui"
 require_relative "../domain/command_grammar"
 require_relative "../domain/last_search"
 require_relative "../domain/search_prompt"
+require_relative "../domain/palette"
 require_relative "../domain/search"
 require_relative "../domain/search_budget"
 require_relative "../domain/search_pattern"
@@ -89,6 +90,7 @@ module Carat
       SHOWCMD_WIDTH = 10
       HIT_ENTER = "Press ENTER or type command to continue"
       SEPARATOR = "│"
+      PALETTE_PROMPT = ">"
       ROW_SEPARATOR = "─"
       FAR = 1 << 30
       FLOAT_STRIDE = 10
@@ -98,6 +100,7 @@ module Carat
       attr_reader :cache #: Domain::LineCache
       attr_reader :last_search #: Domain::LastSearch
       attr_reader :search_prompt #: Domain::SearchPrompt
+      attr_reader :palette #: Domain::Palette
       attr_reader :start_screen #: Domain::StartScreen
       attr_reader :status_bar #: StatusBar
       attr_reader :tab_bar #: TabBar
@@ -124,8 +127,9 @@ module Carat
       # @rbs @floating: bool
       # @rbs @repainted: Array[Integer]
 
-      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar) -> void
-      def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, start_screen:, status_bar:, tab_bar:)
+      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, palette: Domain::Palette, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar) -> void
+      def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, palette:, start_screen:, status_bar:, tab_bar:)
+        @palette = palette
         @input = input
         @plugin_ui = plugin_ui
         @cache = cache
@@ -926,11 +930,13 @@ module Carat
       end
 
       # ":" for an ex command line, "/" or "?" for a search prompt, a
-      # plugin's prompt text while one is open.
+      # plugin's prompt text while one is open, ">" while the command
+      # palette is.
       #: (Domain::EditorState) -> String
       def command_prefix(state)
         ui = @plugin_ui
         return ui.prompt if ui.prompting?
+        return PALETTE_PROMPT if @palette.active
         @search_prompt.active ? @search_prompt.prefix : ":"
       end
 

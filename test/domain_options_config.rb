@@ -105,6 +105,17 @@ module DomainOptionsConfigTest
     end
     t.assert_equal(true, options.cursorline, "the shipped configuration turns the cursor line on")
 
+    # option.keyhints.delay: the key hints' wait, 0 to 10000, 300 by default.
+    delays = []
+    reports = []
+    ["", "option.keyhints.delay 0\n", "option.keyhints.delay 10000\n", "option.keyhints.delay 10001\n", "option.keyhints.delay soon\n"].each do |text|
+      config = D::Config.new
+      config.read(".caratrc", text, false)
+      delays << D::Options.from_config(config).keyhints_delay
+      reports << config.report.length
+    end
+    t.assert_equal([[300, 0, 10000, 300, 300], [0, 0, 0, 1, 1]], [delays, reports], "keyhints.delay takes 0 to 10000 and keeps the earlier value otherwise")
+
     t.finish
   end
 end

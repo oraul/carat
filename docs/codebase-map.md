@@ -91,7 +91,7 @@ Files:
 - `carat/domain/rc_value.rb`: `RcValue` bool, integer, string, and list kinds; `valid?`, `expectation`, `text`, `number?`.
 - `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `refuse`, `line_at`, `last`, `note`, `report` (a stable merge of the ascending runs the readers note); scope and language checks, the project file refused language commands and key-sequence bindings.
 - `carat/domain/default_config.rb`: generated, `DEFAULT_CARATRC`; never edited by hand.
-- `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, `cursorline`, and the rest); `from_config`, `apply`, `width_problem` (tabstop 1 to 9999, shiftwidth 0 to 9999), `tab_width`.
+- `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, `cursorline`, `keyhints_delay` (0 to 10000), and the rest); `from_config`, `apply`, `width_problem` (tabstop 1 to 9999, shiftwidth 0 to 9999), `tab_width`.
 - `carat/domain/registry_source.rb`: `RegistrySource.render`, `entry?`, `names`; the registry text from the plugin list lines.
 - `carat/adapters/rc_config_gateway.rb`: `RcConfigGateway#load`, the `ConfigPort` driver over `FilePort` (`home`, `cwd`); refuses a linked project file, a file that is not regular, and one over `LIMIT`.
 - Outside the five roots: `config/default.caratrc` (every default option, binding, language command, and plugin setting) and `config/plugins.caratrc` (`plugin.<name> <path> <class>` per compiled plugin).
@@ -135,17 +135,17 @@ Flow: `InputController#pump` reads bytes, `KeyDecoder#feed` turns them into key 
 Files:
 
 - `carat/adapters/key_decoder.rb`: `KeyDecoder`; `feed`, `flush`, `pending?`, `encode`.
-- `carat/adapters/input_controller.rb`: `InputController`; `pump` (the `timeoutlen` wait from the options; the start screen's next frame, `tick`, and its dismissal on a key; a 0.02 second wait while the language services wait, and the popup refreshed when a completion answer arrived at the idle tick, `ShowHover` when a hover answer did, `ShowSignature` when a signature answer did), `decoder`.
+- `carat/adapters/input_controller.rb`: `InputController`; `pump` (the `timeoutlen` wait from the options; the start screen's next frame, `tick`, and its dismissal on a key; a 0.02 second wait while the language services wait, and the popup refreshed when a completion answer arrived at the idle tick, `ShowHover` when a hover answer did, `ShowSignature` when a signature answer did; `ShowKeyHints` once `keyhints.delay` passed over a `:waiting` key), `decoder`.
 - `carat/domain/key.rb`: `Key` codes; `printable?`, `alt?`, `base`, `char`, `TIMEOUT`.
 - `carat/domain/key_notation.rb`: `KeyNotation`; `parse`, `resolve`, `format`, `control_code`, `special_name`; Vim notation such as `<C-w>`.
 - `carat/domain/mode.rb`: `Mode`; `from_name`, `name_of`, `visual?`, `visual_kind`, `for_kind`.
-- `carat/domain/keymap.rb`: `Keymap`; `action_name?`, `leader_from`, `from_lines`, `add_lines`, `add_checked` (applies the configuration's keymap lines, `none` unbinding, refuses an unknown action and more than `MAX_KEYS` (64) keys, notes problems), `bind`, `bind_owned`, `remove_owner`, `lookup`.
-- `carat/domain/keymap_node.rb`: `KeymapNode` trie node; `child?`, `child_for`, `child_named`, `leaf?`.
+- `carat/domain/keymap.rb`: `Keymap`; `action_name?`, `leader_from`, `from_lines`, `add_lines`, `add_checked` (applies the configuration's keymap lines, `none` unbinding, refuses an unknown action and more than `MAX_KEYS` (64) keys, notes problems; `keymap.group` names a normal-mode prefix in `groups`, apart from the tries), `bind`, `bind_owned`, `remove_owner`, `node_at`, `group_of`, `lookup`.
+- `carat/domain/keymap_node.rb`: `KeymapNode` trie node; `child?`, `child_for`, `child_named`, `leaf?`, `child_keys`, `binding_count`.
 - `carat/domain/keymap_match.rb`: `KeymapMatch` value (`kind`, `value`), a lookup result.
 - `carat/domain/command.rb`: `Command` value (`register`, `count`, `operator`, `action`, `char`, `linewise`, `keys`); `plain`, `count_or`, `operator?`.
 - `carat/domain/command_grammar.rb`: `CommandGrammar` state machine; `accept`, `accept_visual`, `take`, `reset`, `wants_char?`, `operator_pending?`, `pending?`, `display`.
 - `carat/domain/input_state.rb`: `InputState`, the pending keys and the grammar, owned by `HandleKey`; `pending?`, `take_keys`.
-- `carat/use_cases/handle_key.rb`: `HandleKey#call`; ends in `FollowHover` only while a documentation float is recorded and in `FollowSignature` only while a call is followed; a typed `(` or `,` in insert mode calls `RequestSignature`.
+- `carat/use_cases/handle_key.rb`: `HandleKey#call`; ends in `FollowHover` only while a documentation float is recorded and in `FollowSignature` only while a call is followed; a typed `(` or `,` in insert mode calls `RequestSignature`; `HideKeyHints` first while the hints show, `FollowPalette` last while the palette follows, then the action its Enter chose.
 - `carat/use_cases/dispatcher.rb`: `Dispatcher#call`; an arrow key in insert mode closes the session's undo state and opens the next.
 - `carat/use_cases/actions/action_handler.rb`: `ActionHandler`, the input port of an action: `kind`, `repeat`, `call(state, command)`.
 - `carat/use_cases/actions/action_table.rb`: `ActionTable`; `register` (with the action's short description), `describe`, `register_namespace` (for `plugin.`), `find`, `kind_of`, `include?`, `names`.
@@ -153,8 +153,15 @@ Files:
 - `carat/use_cases/actions/message_handler.rb`: `MessageHandler`, the quit hint and the reserved actions.
 - `carat/use_cases/actions/file_handler.rb`: `FileHandler.register` (`file.save`, `file.find`, `quit.all`, `quit.write_all`); `:w`, `:qa`, and `:wqa` through `SaveFile`, `SaveAll`, and `QuitAll` for the leader groups and Ctrl-S; `file.find` answers "Not implemented" until the finder.
 - `carat/use_cases/actions/buffer_handler.rb`: `BufferHandler.register` (`buffer.list`, `buffer.next`, `buffer.previous`, `buffer.delete`); `:ls`, `:bn`, `:bp`, and `:bd` through the buffer use cases, a count stepping or naming the buffer.
+- `carat/domain/key_hints.rb`: `KeyHints`, the key hints float's id; `showing?`.
+- `carat/domain/palette.rb`: `Palette`, the command palette's entries (names, keys, descriptions), matches, selection, typed text, float, and the action Enter chose; `start`, `add`, `move`, `selected_entry`, `take_chosen`, `following?`.
+- `carat/use_cases/discovery/show_key_hints.rb`: `ShowKeyHints#call`, the float of the keys after a waiting prefix (descriptions, group names, `+N`), in columns at the bottom right, once `keyhints.delay` passed.
+- `carat/use_cases/discovery/hide_key_hints.rb`: `HideKeyHints#call`, closes the hints float on the next key.
+- `carat/use_cases/discovery/open_palette.rb`: `OpenPalette#call`, builds the palette's entries (core actions, enabled plugins' actions, ex commands, each with its first normal-mode key) and opens the `>` prompt.
+- `carat/use_cases/discovery/follow_palette.rb`: `FollowPalette#call`, after each key while the palette follows: filters by `FuzzyMatch`, reopens the menu float, closes it once the command line closed.
+- `carat/use_cases/actions/palette_handler.rb`: `PaletteHandler.register` (`palette.open`, `palette.next`, `palette.previous`); opens the palette or moves its selection.
 
-Tests: `test/domain_keys.rb`, `test/domain_keymap.rb`, `test/domain_grammar.rb`, `test/adapters_key_decoder.rb`, `test/use_cases_actions.rb` (the tables, the kinds, every handler returning an `Outcome`, the action table against `docs/actions.md`), `test/editor_grammar.rb`, `test/editor_leader.rb`.
+Tests: `test/domain_keys.rb`, `test/domain_keymap.rb`, `test/domain_grammar.rb`, `test/adapters_key_decoder.rb`, `test/use_cases_actions.rb` (the tables, the kinds, every handler returning an `Outcome`, the action table against `docs/actions.md`), `test/editor_grammar.rb`, `test/editor_leader.rb`, `test/editor_key_hints.rb` (the delay, groups, columns, closing), `test/editor_palette.rb` (opening, filtering, selection, running an action and an ex command).
 
 Designs: `command-grammar` (The grammar sits between the keymap and the dispatcher; Counts are optional; Dispatcher receives a Command; Bindings), `dependency-injection` (Input ports; The grammar reads kinds), `editor-foundation` (Use cases).
 
@@ -396,7 +403,7 @@ Files:
 - `carat/use_cases/ex/command_runner.rb`: `CommandRunner`, the interface the command line and the plugin host depend on.
 - `carat/use_cases/ex/execute_ex.rb`: `ExecuteEx#call`.
 - `carat/use_cases/ex/ex_handler.rb`: `ExHandler`; `matches?`, `call`.
-- `carat/use_cases/ex/ex_table.rb`: `ExTable`, handlers in order of precedence; `register`, `find`, `names`.
+- `carat/use_cases/ex/ex_table.rb`: `ExTable`, handlers in order of precedence; `register`, `find`, `names`, `full_names`, `describe` (each command's short description for the palette).
 - `carat/use_cases/ex/file_command_handler.rb`: `FileCommandHandler.register`.
 - `carat/use_cases/ex/substitute_command_handler.rb`: `SubstituteCommandHandler.register` (`:s[ubstitute]`, `:&`), `ranged?`.
 - `carat/use_cases/ex/global_command_handler.rb`: `GlobalCommandHandler.register` (`:g[lobal]`, `:g!`, `:v[global]`), `ranged?`; every line without a range.
