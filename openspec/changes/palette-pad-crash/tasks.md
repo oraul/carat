@@ -13,7 +13,7 @@
 ## 3. Records
 
 - [x] 3.1 Update the map (`display_width.rb` entry, the new test on the render area's Tests line) and the backlog bookkeeping of the plan notes in `docs/backlog.md`, proved by `make docs-lint` and `make lint`
-- [ ] 3.2 Run `make gates`, `make spec-validate`, and the targeted tests; `make bench` shows `lh` allocations per key unchanged
+- [x] 3.2 Run `make gates`, `make spec-validate`, and the targeted tests; `make bench` shows `lh` allocations per key unchanged
 
 ## Workflow follow-up
 
