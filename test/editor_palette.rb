@@ -1,5 +1,6 @@
 require_relative "../carat/test_support"
 require_relative "../carat/testing"
+require_relative "../carat/plugins/hello/plugin"
 
 # The test is this module's main. test/runner/run_all.rb runs it by name
 # with every other test in one program; the guard at the end runs it when
@@ -10,6 +11,18 @@ module EditorPaletteTest
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "one\ntwo\nthree\n")
     h = Carat::Doubles::EditorHarness.default(files, 24, 80)
+    h.open("a.txt")
+    h.type(keys.to_s)
+    h
+  end
+
+  # A session on a.txt with the hello plugin and the project lines, the
+  # keys typed.
+  def self.plugin_session(project, keys)
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.txt", "one\ntwo\nthree\n")
+    config = Carat::Doubles::FixedConfig.with(project.to_s)
+    h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 24, cols: 80, plugins: [Carat::Plugins::Hello::Plugin.new])
     h.open("a.txt")
     h.type(keys.to_s)
     h
@@ -76,6 +89,13 @@ module EditorPaletteTest
     t.assert_equal("window.split                <C-w>s      Split window", row_of(h, "window.split"), "a row holds the name, the key, and the description")
     h = session("<Space>ppalette.open")
     t.assert_equal("palette.open                <Space>p    Command palette", row_of(h, "palette.open"), "the palette shows its own key")
+
+    # An enabled plugin's action is listed with its key and its manifest's
+    # description; a disabled plugin's is not.
+    h = plugin_session("", "<Space>pgreet")
+    t.assert_equal("plugin.hello.greet          <Space>hh   Show a greeting", row_of(h, "plugin.hello.greet")[0, 55], "an enabled plugin's action shows its key and its manifest's description")
+    h = plugin_session("plugin.hello.enabled false\n", "<Space>pgreet")
+    t.assert_equal("", row_of(h, "plugin.hello.greet"), "a disabled plugin's action is left out")
 
     h = session("<Space>pvertically")
     t.assert_equal([true, true], [row_of(h, "window.vsplit") != "", row_of(h, ":vsplit") != ""], "a description matches")

@@ -1,5 +1,6 @@
 require_relative "../carat/test_support"
 require_relative "../carat/testing"
+require_relative "../carat/plugins/hello/plugin"
 
 # The test is this module's main. test/runner/run_all.rb runs it by name
 # with every other test in one program; the guard at the end runs it when
@@ -18,6 +19,19 @@ module EditorKeyHintsTest
       h.wait
       i += 1
     end
+    h
+  end
+
+  # A session on a.txt with the hello plugin and the project lines, the
+  # keys typed, then one wait passes with no key.
+  def self.plugin_session(project, keys)
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.txt", "one\ntwo\nthree\n")
+    config = Carat::Doubles::FixedConfig.with(project.to_s)
+    h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 24, cols: 80, plugins: [Carat::Plugins::Hello::Plugin.new])
+    h.open("a.txt")
+    h.type(keys.to_s)
+    h.wait
     h
   end
 
@@ -69,6 +83,11 @@ module EditorKeyHintsTest
       h = session(row[0], row[1], row[2], row[3])
       [h.state.tab.floats.count, title(h), lists?(h, row[4])]
     end
+
+    h = plugin_session("", "<Space>h")
+    t.assert_equal([1, "<Space>h", true], [h.state.tab.floats.count, title(h), lists?(h, "h  Show a greeting")], "a plugin's binding shows its manifest's description")
+    h = plugin_session("plugin.hello.enabled false\n", "<Space>h")
+    t.assert_equal(0, h.state.tab.floats.count, "a disabled plugin's prefix shows no hints")
 
     h = session("", 24, "<Space>", 1)
     h.type("ws")

@@ -11,6 +11,8 @@ ok   a user names a group
 ok   a prefix without a group counts its bindings
 ok   a delay of 0 shows no hints
 ok   insert mode shows no hints
+ok   a plugin's binding shows its manifest's description
+ok   a disabled plugin's prefix shows no hints
 ok   a key completes the binding and closes the hints
 ok   Esc closes the hints and cancels the keys
 ok   the next key closes the hints at once
@@ -20,4 +22,4 @@ ok   a prefix that is also bound shows no hints and timeoutlen resolves it
 ok   a delay out of range is reported
 ok   the delay stays the default
 ok   a group line without a name is reported
-editor_key_hints: 22 passed, 0 failed
+editor_key_hints: 24 passed, 0 failed
