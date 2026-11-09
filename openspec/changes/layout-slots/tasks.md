@@ -18,3 +18,4 @@
 - [x] 3.1 Update `docs/actions.md`, `docs/compatibility.md`, `docs/plugins.md`, `docs/architecture.md`, `docs/codebase-map.md`, and `README.md`, checked by `make docs-lint` and `make gates`
 - [x] 3.2 Record the plan notes in `docs/backlog.md` (renamed queue items, widened and raised-again entries), checked by `make docs-lint`
 - [x] 3.3 Run `make test`, `make lint`, `make diagnose`, `make gates`, and `make spec-validate`, all passing
+- [x] 3.4 Move E444 into `Domain::Messages` and use it in `ToggleSlot`, `CloseWindow`, and `WindowRequests` (quality review), proven by `test/editor_slots.rb`, `test/editor_windows.rb`, and `test/use_cases_ex.rb`

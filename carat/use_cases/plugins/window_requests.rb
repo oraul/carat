@@ -8,6 +8,7 @@ require_relative "../../domain/position"
 require_relative "../../domain/float_spec"
 require_relative "../../domain/float_window"
 require_relative "../../domain/window"
+require_relative "../../domain/messages"
 require_relative "../files/open_file"
 require_relative "../../ports/file_port"
 require_relative "../windows/split_window"
@@ -30,9 +31,6 @@ module Carat
     # OpenSideWindow, files through OpenFile, SplitWindow, and OpenTab. The plugin link has checked that
     # the plugin is enabled.
     class WindowRequests
-      E444 = "E444: Cannot close last window"
-      private_constant :E444
-
       attr_reader :state #: Domain::EditorState
       attr_reader :buffers #: Domain::BufferList
       attr_reader :tabs #: Domain::TabList
@@ -117,7 +115,7 @@ module Carat
         buffer = @buffers.scratch_for(name, title)
         leaf = buffer.nil? ? -1 : state.tab.layout.leaf_showing(buffer)
         return PluginApi::Response.failure("No window shows #{title}") if leaf < 0
-        return PluginApi::Response.failure(E444) if @tabs.total_windows <= 1
+        return PluginApi::Response.failure(Domain::Messages::E444) if @tabs.total_windows <= 1
         @buffers.close_window(@tabs.tab_index, leaf)
         PluginApi::Response.success("", 0)
       end

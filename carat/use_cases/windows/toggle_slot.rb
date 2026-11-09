@@ -16,9 +16,6 @@ module Carat
     # slot; hiding the tab page's only window answers E444, and a layout
     # with no room for the slot E36.
     class ToggleSlot
-      E444 = "E444: Cannot close last window"
-      private_constant :E444
-
       attr_reader :buffers #: Domain::BufferList
 
       #: (buffers: Domain::BufferList) -> void
@@ -32,7 +29,7 @@ module Carat
         slot = tab.slot(side)
         layout = tab.layout
         if slot.shown?(layout)
-          return Outcome.failure(E444) if layout.leaf_count <= 1
+          return Outcome.failure(Domain::Messages::E444) if layout.leaf_count <= 1
           leaf = layout.leaf_holding(slot.view_window)
           slot.hide(layout.node(leaf).size)
           taker = layout.close(leaf)
