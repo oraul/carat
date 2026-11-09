@@ -23,8 +23,15 @@ ok   Esc in the float closes it
 ok   with no float the pin key is refused
 ok   the pin key opens the rows in a scratch split and closes the float
 ok   the pinned split stays after Esc and a move
+ok   headings, strong and italic runs, code spans, and link texts are drawn in their groups in the float
+ok   fenced code with no tokenizer for its language is drawn in @markup.raw.block
+ok   the pinned split draws the styles over the window's background
+ok   fenced Ruby is drawn through the Ruby tokenizer over the float's background
+ok   with syntax off fenced Ruby is plain code
+ok   NO_COLOR draws the documentation plain
+ok   and the pinned split too
 ok   escape sequences are dropped, nesting capped, rows capped
 ok   no escape reaches the screen
 ok   a marked string with a language is fenced code and at most 16 parts are read
 ok   the joined text stops at 16,384 bytes
-adapters_hover: 29 passed, 0 failed
+adapters_hover: 36 passed, 0 failed

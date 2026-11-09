@@ -42,6 +42,7 @@ ok   the popup scrolls to the selected row
 ok   the selected item's documentation opens a second float
 ok   the float shows the markdown as plain rows at the popup's rows on its right
 ok   the documentation is drawn beside the list
+ok   a strong word and the heading are drawn in their groups over the float, the rest in NormalFloat
 ok   the documentation stands under the popup
 ok   the popup and its documentation equal a full repaint
 ok   an item without documentation shows no float
@@ -55,4 +56,4 @@ ok   with no room on the right the float stands on the popup's left
 ok   a long paragraph wraps at word boundaries within 60 columns
 ok   escape sequences are dropped and nesting is capped at four levels
 ok   no escape of the documentation reaches the screen
-editor_completion: 57 passed, 0 failed
+editor_completion: 58 passed, 0 failed
