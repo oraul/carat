@@ -40,6 +40,18 @@ ok   :q closes the side window
 ok   Ctrl-W q closes the side window
 ok   open a file in the file window, id 1
 ok   focusing a missing window fails
+ok   a panel at the bottom, its header on its first row
+ok   the panel keeps its height through a split and equalize
+ok   the panel goes between a sidebar and the edge
+ok   a sidebar beside the panel leaves it under the file
+ok   a second view takes the left slot's window
+ok   the first view comes back in the same window
+ok   an unknown side is refused
+ok   the panel toggles off and on
+ok   a closed slot window empties the slot
+ok   the header lists both views, the shown one selected
+ok   the view let go leaves the buffer list
+ok   the configured sizes win over the sizes the views ask for
 ok   the side window shows the plugin's lines
 ok   a plugin that declares no filetype of its name leaves its scratch buffer without syntax
 ok   the status bar shows its title
@@ -74,7 +86,7 @@ ok   opening the file a window already shows leaves it as it is, changes kept
 ok   a side window opens in the second tab page
 ok   and shows the one scratch buffer the first tab page shows
 ok   the first tab page still shows it
-ok   the side window's rows start at its first column
+ok   the side window's rows start at its first column, under its header
 ok   a raise in an event at startup disables the plugin
 ok   its binding went with it
 ok   the editor goes on editing
@@ -85,4 +97,4 @@ ok   a binding of a plugin action loads
 ok   every problem is reported in file and line order
 ok   the message row shows the first with the count of the others
 ok   the default configuration has no problem
-editor_plugins: 87 passed, 0 failed
+editor_plugins: 99 passed, 0 failed

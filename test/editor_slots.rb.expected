@@ -1,3 +1,14 @@
-ok   an empty line has no characters
-ok   a word counts its characters
-editor_slots: 2 passed, 0 failed
+ok   <leader>ls hides the explorer and the file window is current
+ok   <leader>ls again shows it with its cursor, the focus staying
+ok   the shown tree keeps its cursor
+ok   <leader>e shows a hidden explorer again, focused
+ok   an empty left sidebar says so
+ok   an empty right sidebar says so
+ok   an empty panel says so
+ok   the explorer on the right toggles with <leader>lr
+ok   the configured width wins over plugin.explorer.width
+ok   the explorer alone cannot be hidden
+ok   the left sidebar's header names the explorer, the tree under it
+ok   hidden, the file takes the row and the tree's buffer stays listed
+ok   closing the tab page lets go of the hidden explorer
+editor_slots: 13 passed, 0 failed

@@ -124,6 +124,7 @@ ok   the tree buffer takes the explorer's filetype
 ok   :syntax off draws the icons plain
 ok   :syntax on colors them again
 ok   the tree has no line numbers and a separator at its right
+ok   the left slot's header names the explorer over the tree
 ok   the tree lists both names
 ok   s opens a name with a space in a split
 ok   t opens a name with a bar in a tab page
@@ -133,4 +134,4 @@ ok   the screen shows each illegal byte as one replacement character
 ok   the explorer stays enabled after listing them
 ok   Enter opens a name that is not UTF-8
 ok   the status line names the opened file with one replacement character per illegal byte
-editor_explorer: 135 passed, 0 failed
+editor_explorer: 136 passed, 0 failed
