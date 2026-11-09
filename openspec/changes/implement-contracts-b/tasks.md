@@ -10,11 +10,11 @@
 
 ## 3. Gates: doc prose a change leaves behind
 
-- [ ] 3.1 `tools/gates.sh`: `gate_docs` refuses a spec change without `README.md` or `docs/architecture.md`, and a process file change without `CLAUDE.md`, unless a proposal in the diff says why. Tested by the "gates: docs ..." cases in `tools/tools_test.sh`.
+- [x] 3.1 `tools/gates.sh`: `gate_docs` refuses a spec change without `README.md` or `docs/architecture.md`, and a process file change without `CLAUDE.md`, unless a proposal in the diff says why. Tested by the "gates: docs ..." cases in `tools/tools_test.sh`.
 
 ## 4. Gates: scenarios no test names
 
-- [ ] 4.1 `tools/gates.sh`: `gate_scenarios`, in `static` and `pre-push`. Tested by the "gates: scenarios ..." cases in `tools/tools_test.sh`.
+- [x] 4.1 `tools/gates.sh`: `gate_scenarios`, in `static` and `pre-push`. Tested by the "gates: scenarios ..." cases in `tools/tools_test.sh`.
 
 ## 5. Records
 
