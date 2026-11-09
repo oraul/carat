@@ -161,7 +161,7 @@ module Carat
         end
         outcome = in_window(tab_index, leaf) { @open_file.call(state, path) }
         return PluginApi::WindowResponse.failure(outcome.message) unless outcome.ok
-        window.fixed_width = false if old.scratch? && !window.buffer.equal?(old)
+        window.unfix_size if old.scratch? && !window.buffer.equal?(old)
         @buffers.add(old) if old.modified? && !old.scratch? && @buffers.index_of(old) < 0
         focus_at(tab_index, target)
         PluginApi::WindowResponse.success(outcome.message, target)

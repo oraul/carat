@@ -43,6 +43,7 @@ require_relative "../domain_rpc_framer"
 require_relative "../domain_search"
 require_relative "../domain_selection"
 require_relative "../domain_signature_request"
+require_relative "../domain_slot"
 require_relative "../domain_substitute"
 require_relative "../domain_syntax_cache"
 require_relative "../domain_tab_list"
@@ -74,6 +75,7 @@ require_relative "../editor_repeat"
 require_relative "../editor_screen"
 require_relative "../editor_scroll"
 require_relative "../editor_search"
+require_relative "../editor_slots"
 require_relative "../editor_start_screen"
 require_relative "../editor_substitute"
 require_relative "../editor_syntax"
@@ -135,6 +137,7 @@ when "domain_rpc_framer" then DomainRpcFramerTest.main
 when "domain_search" then DomainSearchTest.main
 when "domain_selection" then DomainSelectionTest.main
 when "domain_signature_request" then DomainSignatureRequestTest.main
+when "domain_slot" then DomainSlotTest.main
 when "domain_substitute" then DomainSubstituteTest.main
 when "domain_syntax_cache" then DomainSyntaxCacheTest.main
 when "domain_tab_list" then DomainTabListTest.main
@@ -166,6 +169,7 @@ when "editor_repeat" then EditorRepeatTest.main
 when "editor_screen" then EditorScreenTest.main
 when "editor_scroll" then EditorScrollTest.main
 when "editor_search" then EditorSearchTest.main
+when "editor_slots" then EditorSlotsTest.main
 when "editor_start_screen" then EditorStartScreenTest.main
 when "editor_substitute" then EditorSubstituteTest.main
 when "editor_syntax" then EditorSyntaxTest.main
