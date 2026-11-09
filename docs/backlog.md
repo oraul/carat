@@ -972,7 +972,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: the mode list at the top of `tools/gates.sh` (line 41 at `package-clean`), which says pre-push is static, security, stages. Quality advisory of `package-clean`. At 38628bb the header still omits that `gate_attribution` is left out of the pre-push group (`tools/gates.sh` line 455, periodic quality). Queued in `merge-gate-tidy`.
 - Why it matters: static now adds the attribution gate, which pre-push deliberately leaves out (the gates stage runs it), so a reader trusting the header expects a check the push never makes.
-- Fix outline: list pre-push as trailer, content, snapshots, docs, security, stages, noting attribution runs through the gates stage.
+- Fix outline: list pre-push as origin, trailer, content, snapshots, docs, scenarios, cases, security, stages, noting attribution runs through the gates stage.
 
 ## The spec preview of a failed change is deleted by the next change's
 
@@ -1846,9 +1846,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The gateway cancels a request in four copies
 
-- Where: `cancel_hover` in `carat/adapters/json_rpc_language_gateway.rb` line 663 at 78078ad, beside `cancel` and `cancel_resolve`. Quality advisory in `quick-docs`. `parameter-info` added the shared private `cancel_request(language, id)`, which its `cancel_signature` calls; the three older copies do not yet. Raised again at 38628bb (periodic quality). Queued in `signature-tidy`. `cancel_symbols` (breadcrumbs) is the fourth copy at df4654c (entry The fourth gateway cancel copy).
+- Where: four copies in `carat/adapters/json_rpc_language_gateway.rb`: `cancel_hover` (line 663 at 78078ad), `cancel`, `cancel_resolve`, and `cancel_symbols` (line 795 at df4654c), beside the shared private `cancel_request(language, id)` (line 867 at df4654c) that `parameter-info` added for `cancel_signature`; none of the four calls it yet. Quality advisory in `quick-docs` and in `breadcrumbs`, raised again at 38628bb and df4654c (periodic quality). Queued in `signature-tidy`.
 - Why it matters: each looks up the server, sends `$/cancelRequest`, and zeroes the id, so a fix to one (a crashed server, a stale id) can miss the other three.
-- Fix outline: call the existing `cancel_request(language, id)` from the four, with the hover, completion, and resolve cancellation rows in `test/adapters_hover.rb` and `test/adapters_server_completions.rb` unchanged.
+- Fix outline: call the existing `cancel_request(language, id)` from the four (`cancel_request(ask.language, ask.sent_id)` then clearing `sent_id` in `cancel_symbols`), with the hover, completion, and resolve cancellation rows in `test/adapters_hover.rb` and `test/adapters_server_completions.rb` unchanged.
 
 ## The documentation floats copy the widest-row loop
 
@@ -2583,12 +2583,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: both compare the same string literals for the mode, so a new mode or rule must change two layers.
 - Fix outline: one `TabPage` predicate taking the extra file window count (`winbar?(mode, added)`), called from both, comparing against named constants beside `Options::BREADCRUMBS`.
 
-## The symbol cancel repeats the gateway's cancel_request
-
-- Where: `cancel_symbols` in `carat/adapters/json_rpc_language_gateway.rb` line 789 at the `breadcrumbs` change, beside `cancel_request` (line 861) that `cancel_signature` uses; quality advisory of `breadcrumbs`.
-- Why it matters: it inlines the server lookup and the `$/cancelRequest` notify, two places to change.
-- Fix outline: call `cancel_request(ask.language, ask.sent_id)`, then clear `sent_id`.
-
 ## A restarted server is never asked again for the same text's symbols
 
 - Where: `forget_symbols` in `carat/adapters/json_rpc_language_gateway.rb` line 757 at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
@@ -2955,12 +2949,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: `**kwargs` in a code span shows as kwargs; the indent must agree in three places for tokens to land; formatting is quadratic on every selection change.
 - Fix outline: keep marker bytes literal inside a code span and fix the row, one `CODE_INDENT`, one heading helper, drop `rows` into the test, a `SyntaxLines` list and one `Buffer.from_docs` (then drop the `styles` line of `UNTYPED_SHARED` in `test/lint.rb`, which exempts it from the shared list rule), rewrap the comments.
 
-## The fourth gateway cancel copy
-
-- Where: `cancel_symbols` in `carat/adapters/json_rpc_language_gateway.rb` line 795 beside `cancel_request` at line 867, at df4654c; widened in the entry The gateway cancels a request in four copies. Periodic quality. Queue item `signature-tidy`.
-- Why it matters: four copies of one notify drift apart.
-- Fix outline: route all four through `cancel_request`.
-
 ## The map and architecture lag plugin API 2.4, FormatDocs, and Config
 
 - Where, at df4654c: `docs/codebase-map.md` line 92 (Config lacks `count`), line 517 (VERSION 2.3, `carat/plugin_api.rb` line 12 is 2.4), line 523 and the area 15 and 16 bullets (PluginHost, Paths, PluginEntries, PluginEntry, Tree methods); `docs/architecture.md` line 181 (5.3 lacks `FormatDocs`, `MarkdownText`, `DocsText`). Periodic quality. Queue item `docs-index`.
@@ -2990,3 +2978,21 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/agent_guard.sh` line 610, at df4654c. Periodic security Low (6). Queue item `guard-lows`.
 - Why it matters: `BASE=HEAD` skips the origin ref check and empties the trailer and content scans while the gate still records gated.
 - Fix outline: admit `BASE` only for the read profile and have the merge group refuse a base other than `origin/main`, with a `tools/tools_test.sh` case.
+
+## The lint rules of implement-contracts-b rescan and reread
+
+- Where: `test/lint.rb` at the `implement-contracts-b` change: line 1120 reads `File.read(MAP)` again right after `map_problems` read it; line 1139 skips `carat/domain/default_config.rb` in the untyped parameter and shared list rules with no stated reason; line 1145 dedupes the shared list names with `pinned_names.index(name) == j` and rescans every owner per match over parallel arrays; line 1150 rescans `pinned_names` and `pinned_owners` for every assigning line and name. Quality advisories of `implement-contracts-b`.
+- Why it matters: the scans are quadratic in names per line and harder to read than the rule they enforce, the map is parsed twice per run, and an unexplained skip invites a wrong copy.
+- Fix outline: read the map once into a local passed to both checks; comment that `default_config.rb` is generated, or drop the skip if it holds neither shape; after the pin scan build one Hash from name to its owner paths (or a unique name list and `path + name` owner keys) and test membership in it in both the shared and the owned loops.
+
+## The tools test leaves the MODIFIED scenario and archived attestation paths untested
+
+- Where: `spec_file` in `tools/tools_test.sh` (line 1652 at the `implement-contracts-b` change) has no MODIFIED section, and no case attests a scenario in an archived proposal. Quality advisory of `implement-contracts-b`.
+- Why it matters: the MODIFIED branch of `gate_scenarios` and the archive path of the stays attestation in `gate_docs` can break without a failing case.
+- Fix outline: add a MODIFIED scenario to `spec_file` and a case whose attestation lives in an archived proposal under `openspec/changes/archive/`.
+
+## Architecture section 10 omits the map method-list lint rule
+
+- Where: `docs/architecture.md` line 343 at the `implement-contracts-b` change, which lists what `test/lint.rb` checks as the code map's coverage only. Quality advisory of `implement-contracts-b`.
+- Why it matters: the lint test now also checks the map's method lists, so a reader of section 10 misses why a renamed method fails lint.
+- Fix outline: say the code map's coverage and method lists.
