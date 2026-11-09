@@ -2810,3 +2810,21 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: none yet; a proposal waiting for the user's decision, moved out of `docs/queue.md` when the queue reached its budget.
 - Why it matters: five formats, block characters from its own decoder, kitty and iTerm2 where available, bounded parsing, a size cap, only base64 or cells sent.
 - Fix outline: queue it as a T5 item when the user approves, sized from the plugin rows of `docs/metrics.tsv`.
+
+## The palette-pad-crash scenarios drift from their tests
+
+- Where: `openspec/specs/command-palette/spec.md` lines 87 to 92 bind `window.split` while `test/editor_palette.rb` line 141 binds `insert.newline`; `openspec/specs/key-hints/spec.md` line 102 remaps `<leader>xa` while `test/editor_key_hints.rb` line 128 sets a group name for `<leader>xy`, since a project file reads no remap, at 6141633. Quality advisory of `palette-pad-crash`. Queue item `discoverability-tidy`.
+- Why it matters: a scenario is meant to describe the setup its test runs; a reader who reproduces the scenario takes a path the test never covers.
+- Fix outline: word the palette scenarios after `insert.newline` and the hint scenario after a group name of fifty wide characters whose widest row is 77 of 78 cells, through a proposal.
+
+## cells_of in the palette test returns an array no caller reads whole
+
+- Where: `cells_of` in `test/editor_palette.rb` line 66, at 6141633. Quality advisory of `palette-pad-crash`. Queue item `discoverability-tidy`.
+- Why it matters: it computes the row's total cells that no caller reads (only the second value is used) and returns several values in an array, against the test-helper rule of `CLAUDE.md`.
+- Fix outline: return only the description's start cell as an Integer and drop the total.
+
+## DisplayWidth.bytes_within is public for one caller
+
+- Where: `DisplayWidth.bytes_within` in `carat/domain/display_width.rb` line 148, called only by `cut` and a test, at 6141633. Quality advisory of `palette-pad-crash`. Queue item: backlog items, needless public methods.
+- Why it matters: needless public surface, the same kind as the entry Seven more methods are public with no outside caller.
+- Fix outline: move the stray-byte rows of its test to `cut` and make `bytes_within` private to `DisplayWidth`.
