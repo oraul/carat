@@ -38,7 +38,7 @@ Every Spinel pitfall this project has met, once, at the pinned compiler (`SPINEL
 - The return type of a method a subclass overrides (every port method and its driver and double overrides) is not applied: give it `# @rbs name: Type` parameter lines, or `# @rbs skip` when it takes none, and describe the return in prose. A `-> void` return is annotated normally.
 - `Array[T]` and `Hash[K, V]` pin only with builtin element types, and `Symbol` is not one: an `Array[Symbol]` signature is not applied, so such a parameter is `untyped` and checked with `is_a?`, and a `Hash[String, Symbol]` pin leaves the values `untyped`. A `Hash` pins only with `String` or `Symbol` keys, and a hash literal whose key is a constant reads as `Hash[untyped, untyped]`: write the key as a literal.
 - A nullable local keeps its nullable type after a `nil` check, and reading its members widens what they are stored into: pass it through a helper typed as never nil, as `Position.sure` is.
-- A concern whose results widen in `make types` becomes a module function, as `Boundary.copied_lines` did; a list of objects of a program class is a class of its own with a pinned `Array[untyped]` and a typed reader, as `PluginEntries` is.
+- A concern whose results widen in `make types` becomes a module function, as `Boundary.copied_lines` did; a list of objects of a program class is a class of its own with a pinned `Array[untyped]` and a typed reader, as `PluginEntries` is; `make lint` refuses an `Array[untyped]` parameter but the element reader `(Array[untyped], Integer) -> T`, and a pinned list assigned from another file.
 
 ## Analysis, tests, and the runner
 

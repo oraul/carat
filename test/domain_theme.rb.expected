@@ -1,5 +1,6 @@
 ok   every id has a name
-ok   49 UI groups, thirty syntax groups, thirteen file-icon groups
+ok   49 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
+ok   the markup groups after the file-icon groups
 ok   the status bar's groups follow Neovim's
 ok   names by id
 ok   Comment
@@ -8,12 +9,14 @@ ok   Define
 ok   Todo
 ok   a file-icon group
 ok   the last file-icon group
+ok   a markup group
+ok   the last markup group
 ok   a UI group is not a token group
 ok   nor is a new UI group
 ok   Normal is not either
 ok   an unknown name
 ok   names are case sensitive
-ok   token? covers the syntax and file-icon ids only
+ok   token? covers the syntax, file-icon, and markup ids only
 ok   name_of
 ok   find, the aliases, and one_dark for an unknown name
 ok   known?
@@ -73,6 +76,18 @@ ok   one_light: at 16 colors the painted cursor line keeps the background
 ok   dark_plus: at 16 colors the painted cursor line keeps the background
 ok   light_plus: at 16 colors the painted cursor line keeps the background
 ok   base strips the cursor-line layer
+ok   base strips the float layer
+ok   a group in a float is drawn over NormalFloat's background
+ok   a group with a background of its own keeps it in a float, one without a foreground takes NormalFloat's
+ok   one_dark's markup groups: blue bold headings, bold and italic text, green code, underlined cyan links, gray blocks
+ok   one_dark in a float at 24 bits
+ok   one_dark in a float at 256 colors
+ok   one_light in a float at 24 bits
+ok   one_light in a float at 256 colors
+ok   dark_plus in a float at 24 bits
+ok   dark_plus in a float at 256 colors
+ok   light_plus in a float at 24 bits
+ok   light_plus in a float at 256 colors
 ok   one_dark comments are readable
 ok   the contrast of WCAG's lightest AA gray on white and of a color on itself
 ok   the defaults: one_dark on the terminal's background, syntax on
@@ -93,4 +108,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 95 passed, 0 failed
+domain_theme: 110 passed, 0 failed

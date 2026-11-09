@@ -287,17 +287,24 @@ module Carat
       end
 
       # Removes the tab page at index and lets go of every buffer its
-      # windows showed. The caller has checked that another tab page
-      # exists.
+      # windows showed, its hidden slots' included. The caller has checked
+      # that another tab page exists.
       #: (Integer) -> void
       def close_tab(index)
-        layout = tabs.tab_at(index).layout
+        page = tabs.tab_at(index)
+        layout = page.layout
         ids = layout.leaves
         held = []
         i = 0
         while i < ids.length
           remember(layout.window_at(ids[i]))
           held << layout.window_at(ids[i]).buffer
+          i += 1
+        end
+        i = 0
+        while i < TabPage::SLOT_COUNT
+          slot = page.slot_at(i)
+          held << slot.view_window.buffer if slot.kept?
           i += 1
         end
         tabs.remove_tab(index)

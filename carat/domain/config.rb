@@ -203,13 +203,14 @@ module Carat
       end
 
       # Whether an untrusted file's keymap line may be kept: one whose
-      # value is an action name or none. A key sequence to replay is noted
+      # value is an action name or none, or a group name, which binds
+      # nothing. A key sequence to replay is noted
       # and refused, because a replay types anything, :w with any path
       # included, so a project file could write any file the user can.
       #: (RcLine) -> bool
       def binding?(line)
         words = line.words
-        return true if line.name == "leader" || words.length != 2
+        return true if line.name == "leader" || line.name == "group" || words.length != 2
         value = words[1].to_s
         return true if value == "none" || RcParser.key?(value, 0, value.bytesize)
         note(line, "key sequences are not read from a project file")

@@ -1,7 +1,6 @@
 require_relative "../../domain/editor_state"
 require_relative "../../domain/completion_menu"
 require_relative "../../domain/display_width"
-require_relative "../../domain/utf8"
 require_relative "../../domain/icons"
 require_relative "../../domain/buffer"
 require_relative "../../domain/window"
@@ -106,35 +105,15 @@ module Carat
           row = +" "
           row << Domain::Icons.glyph(item.icon_name, set)
           row << " "
-          row << fit(item.label, label_width)
+          row << Domain::DisplayWidth.fit(item.label, label_width)
           if detail_width > 0
             row << "  "
-            row << fit(item.detail, detail_width)
+            row << Domain::DisplayWidth.fit(item.detail, detail_width)
           end
           row << " "
           out << row
           i += 1
         end
-        out
-      end
-
-      # The text cut at a character boundary to width cells and padded
-      # with spaces to it.
-      #: (String, Integer) -> String
-      def fit(text, width)
-        out = +""
-        used = 0
-        len = text.bytesize
-        i = 0
-        while i < len
-          size = Domain::Utf8.size_at(text, i, len)
-          w = Domain::DisplayWidth.text_width(text.byteslice(i, size).to_s, 0)
-          break if used + w > width
-          out << text.byteslice(i, size).to_s
-          used += w
-          i += size
-        end
-        out << " " * (width - used)
         out
       end
     end

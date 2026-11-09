@@ -140,6 +140,50 @@ module Carat
         total
       end
 
+      # The byte length of the longest prefix of text that takes at most
+      # width cells as text_width measures it: it stops before the first
+      # character that would pass the width, so a combining mark stays
+      # with the character before it. A negative width answers 0.
+      #: (String, Integer) -> Integer
+      def self.bytes_within(text, width)
+        bytes = text.bytesize
+        i = 0
+        total = 0
+        while i < bytes
+          code = text.getbyte(i).to_i
+          size = 1
+          if code >= 0x80
+            size = Utf8.size_at(text, i, bytes)
+            code = Utf8.code_at(text, i, size)
+          end
+          total += control?(code) ? 1 : of(code)
+          break if total > width
+          i += size
+        end
+        i
+      end
+
+      # The text cut at a character boundary to at most width cells; the
+      # text itself when it fits.
+      #: (String, Integer) -> String
+      def self.cut(text, width)
+        size = bytes_within(text, width)
+        out = text
+        out = text.byteslice(0, size).to_s if size < text.bytesize
+        out
+      end
+
+      # A new string of the text cut to width cells and padded with
+      # spaces to exactly width, never a negative pad.
+      #: (String, Integer) -> String
+      def self.fit(text, width)
+        out = +""
+        out << cut(text, width)
+        used = text_width(out, 0)
+        out << " " * (width - used) if used < width
+        out
+      end
+
       # True for the code points no cell may hold raw: the C0 controls
       # below 32, delete (U+007F), and the C1 controls U+0080 to U+009F,
       # whose UTF-8 forms some terminals read as escape introducers.

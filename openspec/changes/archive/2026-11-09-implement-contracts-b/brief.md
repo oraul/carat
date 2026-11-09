@@ -1,0 +1,13 @@
+# Brief
+
+implement-contracts-b: docs/queue.md item 1 as the planner wrote it (T1 retrospective proposals, estimated medium), the one pipeline change after three features (feedback, palette-pad-crash's fix aside, quick-docs-styles, breadcrumbs). Quality first pass is 16 of 47; the item lists six mechanical checks, more than the size rule's about four, so the planner splits at start: pick the four with the most recorded blockers behind them (the quick-docs-styles retrospective adds evidence: 10 of 47 quality blockers were on doc files such as a stale README or architecture section) and queue the rest as implement-contracts-c. Each check fails make lint or tools-test with a case. Then word-completion, definitions, and the file finder follow. Security review is never skipped.
+
+Plan notes:
+
+- The plan split this change at start. Deliver the four checks with the most blockers: stale doc prose (README, docs/architecture.md, CLAUDE.md; 9 of 47 blockers; the README.md:68 blocker at #85 is the latest), behavior or a spec scenario with no test (9), a map line naming a method that does not exist (2), and `Array[untyped]` holding program objects (1). Each needs a failing case in make lint or tools-test. The other two checks (a message literal in a second file, a def shadowing a reader) are queued as item 5 `implement-contracts-c`.
+- The new `Array[untyped]` check will flag the existing `Buffer#styles` at carat/domain/buffer.rb:85 (periodic df4654c). That instance belongs to queue item 22 `hover-tidy` and the backlog entry 'The documentation formatter's periodic findings'. Either exempt it with a recorded reason or fix it here; the map check may likewise flag the drift at docs/codebase-map.md:92, 517 and 523 (item 30).
+- Add the entries in build/plan/backlog.md to docs/backlog.md. They hold the locations of the df4654c periodic findings that were folded into items 1, 5, 22, 23, 30, 37, 38, 39 and 31. In the existing entry 'The gateway cancels a request in three copies' (docs/backlog.md:1847), change three copies to four.
+- Quick-docs-styles advisories 2 to 7 are already in docs/backlog.md (headings at lines 2898, 2910 and 2934); they are placed in item 22 `hover-tidy`.
+- Dropped as duplicates: the periodic Low (5) at tools/run_state.sh:529, already in item 13; the Low (3) at json_rpc_language_gateway.rb:1059, already in item 29; and the untested scratch split at test/editor_breadcrumbs.rb:188, already in item 37.
+- build/plan/queue.md is 17,245 bytes against the 17,369 budget. Long lists in items 24, 29, 30 and 39 were shortened, and their details stay in docs/backlog.md.
+- The periodic security review at df4654c was partial (shell-tools not reviewed), so the next review stays due.

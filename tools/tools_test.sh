@@ -1072,7 +1072,7 @@ expect "guard: merger deletes the branch and fast-forwards main" 0 "^$" guard me
 # The merger's first green: the green and red lines as the workflow builds
 # them (mergeLines), and its two closing calls, each one call the guard
 # admits.
-expect "guard: merger runs the green line" 0 "^$" guard merger 'git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | grep -q -x -E '\''(https[:]//([^/@]+@)?github[.]com/|(ssh[:]//)?git@github[.]com[:/])o/r([.]git)?/?'\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null fetch -q --prune origin && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger runs the green line" 0 "^$" guard merger 'git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | grep -q -x -E '\''(https[:]//([^/@]+@)?github[.]com/|(ssh[:]//)?git@github[.]com[:/])o/r([.]git)?/?'\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: merger refuses another global configuration before git" 2 "a GIT_CONFIG_GLOBAL other than /dev/null" guard merger 'GIT_CONFIG_GLOBAL=tmp/g git fetch -q --prune origin'
 expect "guard: merger refuses a pinned configuration before another command" 2 "an assignment before ls" guard merger 'GIT_CONFIG_NOSYSTEM=1 ls'
 expect "guard: merger refuses another assignment before git" 2 "an assignment of BASE before git" guard merger 'BASE=main git fetch -q --prune origin'
@@ -1154,6 +1154,13 @@ expect "guard: merger refuses make" 2 "make is not a command" guard merger 'make
 expect "guard: merger refuses another body" 2 "not a pull request body file" guard merger 'CHANGE=c sh tmp/.merge-gates/tools/gates.sh merge README.md'
 expect "guard: contributor refuses git push" 2 "git push is not" guard contributor 'git push -u origin chore/x'
 expect "guard: contributor refuses a push of another form" 2 "tools/run_state.sh push other than" guard contributor 'sh tools/run_state.sh push c --force'
+# The contributor pushes only through tools/run_state.sh push and backup:
+# every git push it could run itself is refused, the direct push to the
+# backup refs that tools/run_state.sh backup runs included.
+for c in 'git push -q --atomic origin HEAD:refs/backup/chore/x main:refs/backup-base/chore/x' 'git push origin HEAD:refs/backup/chore/x' 'git -C . push origin HEAD:refs/backup/chore/x' 'git -c core.hooksPath=/dev/null push origin chore/x' 'GIT_CONFIG_NOSYSTEM=1 git --no-pager push origin chore/x' 'git push origin --delete chore/x'; do
+  expect "guard: contributor refuses $c" 2 "git push is not a command of this profile" guard contributor "$c"
+done
+expect "guard: contributor backs up and pushes through tools/run_state.sh" 0 "^$" guard contributor 'sh tools/run_state.sh backup c && sh tools/run_state.sh push c'
 expect "guard: contributor refuses a CI record" 2 "tools/run_state.sh set of ci" guard contributor 'sh tools/run_state.sh set c ci \"green abc1234\"'
 expect "guard: contributor refuses a reset" 2 "git reset is not" guard contributor 'git reset --hard HEAD~1'
 expect "guard: contributor refuses another git configuration" 2 "a git configuration override: -c core.hooksPath=tmp" guard contributor 'git -c core.hooksPath=tmp commit -m x'
@@ -1224,13 +1231,37 @@ expect "guard: read allows a pack in its real directory" 0 "^$" guard_edit read 
 expect "guard: contributor writes the body file in a real tree" 0 "^$" guard_edit contributor Write "$proj/build/pipeline/c.body.md"
 expect "guard: contributor allows the body gate in a real tree" 0 "^$" guard contributor 'sh tools/gates.sh pr-body build/pipeline/c.body.md'
 # A measurement through a link into .git, in a worktree and in the project.
-mkdir -p "$proj/.git" "$proj/tmp/.base"
+git_q init -q "$proj"
+git_q -C "$proj" commit -q --allow-empty -m "chore: base" -m "$TRAILER"
+git_q -C "$proj" worktree add -q --detach tmp/.base
 ln -s ../../.git "$proj/tmp/.base/build"
 expect "guard: read refuses a measurement through a link in a worktree" 2 "a path through a link: build/metrics" guard read 'cd tmp/.base && sh tools/metrics.sh measure build/metrics/current.tsv'
 expect "guard: read refuses a measurement into a linked worktree path" 2 "a path through a link" guard read "sh tools/metrics.sh measure $proj/tmp/.base/build/metrics/current.tsv"
 expect "guard: read measures into the project in a real tree" 0 "^$" guard read "sh tools/metrics.sh measure $proj/build/metrics/current.tsv"
 ln -s ../.git "$proj/build/metrics"
 expect "guard: read refuses a measurement through a link in the project" 2 "a path through a link" guard read "sh tools/metrics.sh measure $proj/build/metrics/current.tsv"
+# Git and make run only in a worktree of the project's own repository: a
+# repository planted at tmp/.NAME, a link to a worktree, and a worktree
+# of another repository are refused; a worktree not there yet is admitted
+# for the call that adds it, and add and remove go by the name.
+git_q init -q "$work/elsewhere"
+git_q -C "$work/elsewhere" commit -q --allow-empty -m "chore: base" -m "$TRAILER"
+git_q -C "$work/elsewhere" worktree add -q --detach "$proj/tmp/.forged"
+git_q init -q "$proj/tmp/.planted"
+ln -s .base "$proj/tmp/.linked"
+expect "guard: read allows git, cd, and make in a worktree of the project" 0 "^$" guard read 'git -C tmp/.base log -1 && cd tmp/.base && make -C tmp/.base dev-build'
+for w in planted linked forged; do
+  expect "guard: read refuses git in the $w tmp/.$w" 2 "git -C other than the project or a worktree" guard read "git -C tmp/.$w log -1"
+  expect "guard: read refuses cd into the $w tmp/.$w" 2 "cd other than to the project or a worktree" guard read "cd tmp/.$w"
+  expect "guard: read refuses make in the $w tmp/.$w" 2 "make -C outside a worktree" guard read "make -C tmp/.$w dev-build"
+done
+expect "guard: merger refuses a checkout in a planted repository" 2 "git -C other than" guard merger 'git -C tmp/.planted checkout -q --detach origin/main'
+expect "guard: read adds a worktree not there yet and uses it" 0 "^$" guard read 'git worktree add --detach tmp/.new origin/main || git -C tmp/.new checkout -q --detach origin/main'
+expect "guard: read removes a worktree by its name" 0 "^$" guard read 'git worktree remove --force tmp/.planted'
+printf 'gitdir: %s\n' "$(cat "$proj/tmp/.base/.git" | sed 's/^gitdir: //')" > "$proj/tmp/.planted/.gitfile"
+rm -rf "$proj/tmp/.planted/.git"
+mv "$proj/tmp/.planted/.gitfile" "$proj/tmp/.planted/.git"
+expect "guard: read refuses a .git file naming another worktree's record" 2 "git -C other than" guard read 'git -C tmp/.planted status'
 PROJECT=/w
 
 # The hook line of every agent file runs the guard of origin/main and
@@ -1253,6 +1284,8 @@ for f in "$here"/../.claude/agents/*.md; do
   expect "guard: the $a hook allows a git read" 0 "^$" hook "$f" 'git log --oneline -1'
   expect "guard: the $a hook refuses with main's guard, not the branch's" 2 "git push" hook "$f" 'git push origin x'
 done
+expect "guard: the contributor hook refuses a direct push to the backup refs" 2 "git push is not a command of this profile" \
+  hook "$here/../.claude/agents/contributor.md" 'git push -q --atomic origin HEAD:refs/backup/chore/x main:refs/backup-base/chore/x'
 f="$here/../.claude/agents/checker.md"
 echo 'exit 1' > tools/agent_guard.sh
 commit "chore: a failing guard"
@@ -1317,6 +1350,18 @@ commit "chore: main's guard"
 git_q push -q origin HEAD:main 2>/dev/null
 git_q fetch -q origin
 expect "guard: the merge hook refuses with main's guard" 2 "no run state records" merge_hook "$(git rev-parse HEAD)"
+# A guard on main that does not name the merge tool, or none, refuses the
+# merge rather than letting it run unguarded.
+echo 'exit 0' > tools/agent_guard.sh
+commit "chore: a guard without the merge tool"
+git_q push -q origin HEAD:main 2>/dev/null
+git_q fetch -q origin
+expect "guard: the merge hook refuses when main's guard lacks the merge tool" 2 "^$" merge_hook "$sha"
+: > tools/agent_guard.sh
+commit "chore: an empty guard"
+git_q push -q origin HEAD:main 2>/dev/null
+git_q fetch -q origin
+expect "guard: the merge hook refuses when main's guard is empty" 2 "^$" merge_hook "$sha"
 git_q config core.hooksPath "$work"
 expect "guard: a risky configuration key refuses every call" 2 "every call while the repository configuration sets core.hookspath" \
   env PROJECT="$PWD" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
@@ -1602,6 +1647,52 @@ echo agents >> CLAUDE.md
 echo agents >> README.md
 commit "docs: rules"
 expect "gates: docs passes with CLAUDE.md and README.md" 0 "ok   docs" gates docs
+
+# A spec change touches README.md and docs/architecture.md, a process
+# change CLAUDE.md, or the proposal says why each stays.
+spec_file() {
+  mkdir -p "$1"
+  printf '## ADDED Requirements\n\n### Requirement: Ghosts\n\n#### Scenario: Lint refuses a ghost\n\n#### Scenario: Tab completes a word\n\n## REMOVED Requirements\n\n### Requirement: Old\n\n#### Scenario: An old thing\n' > "$1/spec.md"
+}
+fresh docspec
+spec_file openspec/changes/c/specs/a
+echo "# Proposal" > openspec/changes/c/proposal.md
+commit "feat: spec"
+expect "gates: docs refuses a spec change without README.md" 1 "a spec changed, but README.md did not" gates docs
+expect "gates: docs refuses a spec change without docs/architecture.md" 1 "a spec changed, but docs/architecture.md did not" gates docs
+printf -- '- README.md: unchanged,\n' >> openspec/changes/c/proposal.md
+commit "docs: no reason"
+expect "gates: docs refuses an unchanged line without a reason" 1 "a spec changed, but README.md did not" gates docs
+printf -- '- README.md: unchanged, no key changes\n- `docs/architecture.md`: unchanged, no layer changes\n' >> openspec/changes/c/proposal.md
+commit "docs: say why"
+expect "gates: docs passes a spec change whose proposal says why each doc stays" 0 "ok   docs" gates docs
+fresh docspec2
+spec_file openspec/changes/archive/2026-01-01-c/specs/a
+echo x >> README.md
+echo x > docs/architecture.md
+commit "feat: archived spec with docs"
+expect "gates: docs passes an archived spec change with README.md and docs/architecture.md" 0 "ok   docs" gates docs
+fresh docproc
+echo "# a note" >> Makefile
+commit "build: note"
+expect "gates: docs refuses a process file change without CLAUDE.md" 1 "a process file changed, but CLAUDE.md did not" gates docs
+mkdir -p openspec/changes/c
+printf '# Proposal\n\n- CLAUDE.md: unchanged, a comment only\n' > openspec/changes/c/proposal.md
+commit "docs: say why"
+expect "gates: docs passes a process file change whose proposal says why CLAUDE.md stays" 0 "ok   docs" gates docs
+
+fresh scenarios
+spec_file openspec/changes/c/specs/a
+echo 't.assert_equal(1, 1, "lint refuses a ghost")' > test/a.rb
+commit "feat: spec"
+expect "gates: scenarios refuses a scenario no test names and names it" 1 'scenario "Tab completes a word" is named by no test' gates scenarios
+echo "# Scenario: Tab completes a word" >> tools/tools_test.sh
+commit "test: name it"
+expect "gates: scenarios passes when tests name each added scenario, a removed one left out" 0 "ok   scenarios: 2 scenarios named by tests" gates scenarios
+fresh scenarios2
+spec_file openspec/changes/archive/2026-01-01-c/specs/a
+commit "feat: archived spec"
+expect "gates: scenarios reads an archived delta spec" 1 'scenario "Lint refuses a ghost" is named by no test' gates scenarios
 
 fresh snapshots
 echo out > test/gone.rb.expected
@@ -1996,12 +2087,12 @@ expect "workflow: a resume past the push checks and reviews again unless this st
   js "$wf" "ranAll" "[ranAll({}), ranAll({ 'review.quality': 'pass a', 'review.security': 'pass a', 'phase.check': 'a' }), ranAll({ 'review.quality': 'pass a', 'review.security': 'blocked b', 'review.bench': 'pass a', 'phase.check': 'a' })]"
 expect "workflow: the resume check reads this start's records" 0 "if [(]!ranAll[(]ran[)][)]" grep -F "if (!ranAll(ran))" "$wf"
 expect "workflow: the resume check runs no fix round" 0 "verify[(]false[)]" grep -F "verify(false)" "$wf"
-expect "workflow: the green line fetches and adds the copy with no global configuration or hook" 0 "^2$" sh -c 'grep -c -F -e "const PINNED_GIT = '\''GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null'\''" -e "&& \${PINNED_GIT} fetch -q --prune origin && \${PINNED_GIT} worktree add -q --detach" "$1"' _ "$wf"
+expect "workflow: the green line fetches and adds the copy with no global configuration or hook" 0 "^2$" sh -c 'grep -c -F -e "const PINNED_GIT = '\''GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null'\''" -e "&& \${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && \${PINNED_GIT} worktree add -q --detach" "$1"' _ "$wf"
 # A local bare origin planted after the push, by branch code the checks
 # ran: the green line's origin check, the script's, fails before the
 # fetch, whose main would bring its own gates and guard, and main's guard
 # refuses the fetch; the hosted repository passes both.
-expect "workflow: the green line checks origin before its fetch" 0 "originCheck" grep -F '&& ${originCheck(state.repo)} && ${PINNED_GIT} fetch -q --prune origin' "$wf"
+expect "workflow: the green line checks origin before its fetch" 0 "originCheck" grep -F '&& ${originCheck(state.repo)} && ${PINNED_GIT} fetch -q --refmap= origin' "$wf"
 origin_check=$(js "$wf" "PINNED_GIT originCheck" "originCheck('o/r.x')" | sed 's/^"//; s/"$//; s/\\\\/\\/g')
 fresh planted
 gh="https:/""/github.com"
@@ -2009,6 +2100,19 @@ git_q remote add origin "$gh"/o/r.x.git
 expect "workflow: the origin check passes the hosted repository" 0 "^ok$" sh -c "$origin_check && echo ok"
 PROJECT=$PWD
 expect "guard: merger fetches from the hosted repository" 0 "^$" guard merger 'git fetch -q --prune origin'
+# The green line fetches main by its own refspec, reading no configured
+# one; any other refspec is refused, and every call while the repository
+# maps a ref other than a clone's onto origin/main.
+expect "guard: merger fetches main by its pinned refspec" 0 "^$" guard merger 'git fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main'
+expect "guard: merger refuses the pinned refspec reading the configured one" 2 "git fetch other than" guard merger 'git fetch -q origin +refs/heads/main:refs/remotes/origin/main'
+expect "guard: merger refuses another refspec onto origin/main" 2 "git fetch other than" guard merger 'git fetch -q --refmap= origin +refs/heads/x:refs/remotes/origin/main +refs/heads/main:refs/remotes/origin/main'
+git_q config remote.origin.fetch '+refs/heads/x:refs/remotes/origin/main'
+expect "guard: a fetch refspec other than a clone's refuses every call" 2 "every call while remote.origin.fetch is" guard read 'git status'
+git_q config --add remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
+expect "guard: a second fetch refspec refuses every call" 2 "every call while remote.origin.fetch is" guard merger 'git fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main'
+git_q config --unset-all remote.origin.fetch
+expect "guard: no fetch refspec refuses nothing" 0 "^$" guard read 'git status'
+git_q config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
 git_q init -q --bare "$work/planted.git"
 git_q push -q "$work/planted.git" HEAD:refs/heads/main 2>/dev/null
 git_q remote set-url origin "$work/planted.git"

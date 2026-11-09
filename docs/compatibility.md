@@ -252,6 +252,7 @@ Neovim shows signature help on request (`vim.lsp.buf.signature_help()`, `<C-s>` 
 | `<CR>` | `cmdline.execute` | Run the command, or search at a `/` or `?` prompt | `editor_cmdline`, `editor_search` |
 | `<Up>` | `cmdline.history_older` | The next older entry of the prompt's history (`:` or search) that starts with the text typed before the first recall | `editor_cmdline`, `editor_search` |
 | `<Down>` | `cmdline.history_newer` | The next newer entry, or the typed text after the newest | `editor_cmdline`, `editor_search` |
+| `<C-n>`, `<C-p>` | `palette.next`, `palette.previous` | At the command palette's `>` prompt, select the next or previous entry; nothing elsewhere (Neovim's history keys are `<Up>` and `<Down>` here) | `editor_palette` |
 
 ## Ex commands
 
@@ -305,6 +306,7 @@ Neovim shows signature help on request (`vim.lsp.buf.signature_help()`, `<C-s>` 
 | `:d[elete]` | `:[range]d [x] [count]`: delete the lines of the range (the cursor line without one), or count lines from its last line, into register x or the unnamed one, shifting the numbered registers; the cursor to the first non-blank of the line after them | `E488: Trailing characters: x`, `E939`, `E477` | `editor_global`, `domain_global`, `use_cases_ex` |
 | `:LspStart` | nvim-lspconfig's command: starts the current buffer's language server when none runs for its file type, in any directory, the start a directory outside `language.trusted_roots` waits for; the `lsp` slot reads `starting` | `No language server for this buffer`, `Cannot start ruby-lsp`, `E488: Trailing characters: x` | `editor_lsp`, `use_cases_ex` |
 | `:LspRestart` | nvim-lspconfig's command: stops every language server, clears their drawn diagnostics, and starts the current buffer's again; the `lsp` slot reads `starting` | `No language server for this buffer`, `Cannot start ruby-lsp`, `E488: Trailing characters: x` | `editor_lsp`, `use_cases_ex` |
+| `:mes[sages]`, `:mes[sages] clear` | Show the message history (Messages and notifications): one entry on the message row, several as a listing with the hit-enter prompt, none as nothing; `clear` empties it | `E474: Invalid argument` | `editor_messages`, `use_cases_ex` |
 | unknown | Report the command | `E492: Not an editor command: name` | `use_cases_ex`, `editor_cmdline` |
 
 Every command is recognized from its abbreviation to its full name, as the `name[suffix]` notation of the table means: `:vs`, `:vsp`, and `:vsplit` all split vertically, and `:tabf` and `:vsplitx` are unknown; the commands are tried in the order of this table, which is Vim's order where two could match, and the commands plugins declare come after them (`use_cases_ex` checks every spelling of every row, `editor_cmdline` runs `:vsp`, `:spl`, `:wr`, `:wal`, `:xi`, and `:tabfirs`).
@@ -371,6 +373,22 @@ Differences from Neovim: the `c` and `l` flags, `\=` expressions, and `\n` in th
 
 Differences from Neovim: `\/`, `\?`, and `\&` as the delimiter and a delimiter that is not ASCII answer `Not implemented`; `:m`, `:t`, `:normal`, and `:p` do not exist yet, so a global runs the other ex commands Carat has; after a global the message is the last one its command gave, not Vim's totals (`N substitutions on M lines` over every line, `N fewer lines`); a command that switches to another buffer stops the global, where Vim goes on there; a command that closes the undo step, as `:undo` does, splits the global into more than one; Ctrl-C does not interrupt it; `:d` reports no line count, as `dd` reports none.
 
+## Messages and notifications
+
+Every kind of message, where it shows, when it goes, and whether `:messages` keeps it.
+
+| Kind | Placement | Expiry | History | Test |
+| --- | --- | --- | --- | --- |
+| Information | The message row in `Normal` (a file written, `Not implemented: name`, a plugin's message) | The next key | Kept, the oldest past 500 dropped | `domain_messages`, `editor_messages` |
+| Error | The message row in `ErrorMsg` (`E492`, a plugin disabled) | The next key | Kept | `domain_messages`, `editor_messages` |
+| Listing | The rows above the message row with the hit-enter prompt (`:registers`, `:ls`, `:undolist`, `:messages`) | Enter or Space, or any other key run as a command | Not kept | `domain_messages`, `editor_messages` |
+| Info notification | A box at the top right, from the row under the buffer tabs, its right edge one column in, `Info` on its top border in `DiagnosticInfo`, the text in `NormalFloat`; at most three stacked oldest first, a fourth replacing the oldest, none reaching the status bar or on a screen under 8 columns | 3 seconds | Kept | `domain_messages`, `editor_messages` |
+| Warning notification | As info, `Warning` in `DiagnosticWarn` (a language server's `window/showMessage` of type 2) | 5 seconds | Kept | `domain_messages`, `editor_messages`, `adapters_language_gateway` |
+| Error notification | As info, `Error` in `DiagnosticError` (`window/showMessage` of type 1; other types are info) | 8 seconds | Kept | `domain_messages`, `editor_messages`, `adapters_language_gateway` |
+| Progress | The status bar's progress segment (Status bar and buffer tabs) | The work's end, or its server stopping | Not kept | `adapters_status_bar`, `adapters_language_gateway` |
+
+Notifications never animate, so `option.reducedmotion` changes only the progress bar; under `NO_COLOR` a box is `+`, `-`, and `|` in `Normal`. A server's message is one line without control characters or escape sequences, cut at 200 bytes. Differences from Neovim: `:{count}messages` is refused with `E481`, the history is not colored, `messagesopt` is not an option, notifications are not dismissed by a key and come only from language servers (no plugin request yet), and `window/showMessageRequest` and `window/logMessage` show nothing.
+
 ## Windows
 
 Every window shows one buffer from the buffer list with its own cursor and scroll position; a window above another ends in a separator row and windows side by side are separated by one column, both in `WinSeparator`, and one status bar serves them all (Status bar and buffer tabs below). A count before `<C-w>` is taken where Neovim takes one.
@@ -379,19 +397,19 @@ Every window shows one buffer from the buffer list with its own cursor and scrol
 | --- | --- | --- | --- |
 | `[count]<C-w>s` | `window.split` | Split horizontally: the new window above shows the same view with half the text rows, or count rows | `editor_windows`, `domain_layout` |
 | `[count]<C-w>v` | `window.vsplit` | Split vertically: the new window to the left shows the same view with half the columns, or count columns | `editor_windows`, `domain_layout` |
-| `[count]<C-w>h`, `j`, `k`, `l` | `window.left`, `window.down`, `window.up`, `window.right` | To the neighbour overlapping the cursor's screen row or column, count times, stopping at the edge | `editor_windows`, `domain_layout` |
+| `[count]<C-w>h`, `j`, `k`, `l` | `window.left`, `window.down`, `window.up`, `window.right` | To the neighbour whose layout rectangle abuts the window's and overlaps the cursor's screen row or column, so in a nested split the cursor's row picks between two stacked windows, count times, stopping at the edge | `editor_windows`, `domain_layout` |
 | `[count]<C-w>w` | `window.next` | Next window in layout order, wrapping; with a count, window number count or the last | `editor_windows` |
 | `[count]<C-w>W` | `window.previous` | Previous window in layout order, wrapping; with a count, as `<C-w>w` | `editor_windows` |
 | `<C-w>p` | `window.last_accessed` | The window that was current before the last change, if it still exists | `editor_windows` |
 | `[count]<C-w>c` | `window.close` | Close the window, or window count; its space goes to the window after it, or before it when last | `editor_windows`, `domain_layout` |
 | `<C-w>o` | `window.only` | Close every other window of the tab page | `editor_windows` |
-| `<C-w>=` | `window.equalize` | Make the windows of every split the same size, fixed-width windows kept | `editor_windows`, `domain_layout` |
+| `<C-w>=` | `window.equalize` | Make the windows of every split the same size, the sidebars' widths and the panel's height kept | `editor_windows`, `domain_layout`, `editor_plugins` |
 | `[count]<C-w>q` | `window.quit` | `:q` on the window, or on window count | `editor_windows` |
 | `[count]<C-w><C-s>`, `[count]<C-w><C-v>`, `[count]<C-w><C-h>`, `<C-j>`, `<C-k>`, `<C-l>`, `[count]<C-w><C-w>`, `<C-w><C-p>`, `<C-w><C-o>`, `[count]<C-w><C-q>` | as the plain second key | The same command with Ctrl held on the second key, in a file window and in the explorer tree | `editor_windows`, `editor_explorer`, `domain_keymap` |
 
 Messages: `E36: Not enough room` when the current window has fewer than three text rows or cannot give both windows one text column plus the number column and a separator; `E444: Cannot close last window` from `<C-w>c` and `:close` on the last window of the last tab page; `Already only one window` from `<C-w>o` and `:only`.
 
-Differences from Neovim: `splitbelow` and `splitright` are off and not options; a window's minimum height is one text row and its minimum width one column plus the number column, with no `winminheight` or `winminwidth`; a fixed-width window (`winfixwidth`) is set by the explorer plugin and not by `:set`; `<C-w>` followed by a count (`<C-w>3j`) is not read, only a count before `<C-w>`; `<C-w>t b x r R H J K L T`, `<C-w>+ - < >`, `:resize`, the held-Ctrl forms of those commands, `winfixheight`, and scroll binding arrive with later changes; the neighbour for `<C-w>h j k l` is chosen by the cursor's row and code point column, not its display column. `<C-w><C-c>` is not bound: as Vim's help says of it (`CTRL-W_CTRL-C`), the `<C-c>` cancels the window command, with the count typed before it, and does not close the window.
+Differences from Neovim: `splitbelow` and `splitright` are off and not options; a window's minimum height is one text row and its minimum width one column plus the number column, with no `winminheight` or `winminwidth`; a fixed-width window (`winfixwidth`) is a sidebar and a fixed-height one (`winfixheight`) the panel (Layout slots below), neither set by `:set`; `<C-w>` followed by a count (`<C-w>3j`) is not read, only a count before `<C-w>`; `<C-w>t b x r R H J K L T`, `<C-w>+ - < >`, `:resize`, the held-Ctrl forms of those commands, and scroll binding arrive with later changes; the neighbour for `<C-w>h j k l` is the window whose layout rectangle overlaps the cursor's row or code point column, not its display column. `<C-w><C-c>` is not bound: as Vim's help says of it (`CTRL-W_CTRL-C`), the `<C-c>` cancels the window command, with the count typed before it, and does not close the window.
 
 ## Scrolling
 
@@ -434,6 +452,7 @@ One status bar on the row above the message row serves every window, as `laststa
 | File | The path, the scratch title, or `[No Name]`, and the `modified` icon when modified; priority 90, cut last | `adapters_status_bar`, `editor_screen` |
 | Branch, diagnostics, `lsp` | Empty until git and language services fill them, then the branch after the `git` icon (40), each count above zero after its icon in its `Diagnostic` group (70, the current buffer's at the idle tick), and the server's name with its state (`starting`, `indexing 42%`, `stopped`, `crashed :LspRestart`, `untrusted :LspStart`, nothing when ready) in `StatusLineLspStarting` (starting, indexing), `Ready`, `Error` (crashed), or `StatusLine` (stopped, untrusted) (60) | `adapters_status_bar`, `editor_lsp` |
 | Plugin segments | In the order first set, before the `lsp` slot, each at its own priority, 10 for `set_status` | `adapters_status_bar`, `editor_plugins` |
+| Progress | While long work runs (a language server's `$/progress`), its title and message (40 bytes) and a ten-cell bar before the `lsp` slot: a `━` per ten percent in `StatusLineLspReady`, the rest `─`; without a percent three cells moving one per report, left out under `option.reducedmotion true`; `#` and `-` in `StatusLine` under `NO_COLOR` (35) | `adapters_status_bar`, `adapters_language_gateway` |
 | File type, encoding | The filetype when there is one (30) and `utf-8` (20) | `adapters_status_bar` |
 | Position, percent | `row:col` (80) and `All`, `Top`, `Bot`, or `N%` (50) | `adapters_status_bar`, `editor_screen` |
 | Narrow bar | Whole segments dropped, lowest priority first and the later of equals first, until the rest fit | `adapters_status_bar` |
@@ -447,7 +466,7 @@ The built-in `explorer` plugin is Carat's own, not part of Neovim; its keys foll
 
 | Keys | Where | Action name | Behavior |
 | --- | --- | --- | --- |
-| `<leader>e`, `:Explorer` | normal mode | `plugin.explorer.toggle` | Open the tree at the configured side and width, focus it when it is open, close it when it is current |
+| `<leader>e`, `:Explorer` | normal mode | `plugin.explorer.toggle` | Open the tree in the left sidebar slot (the right one with `plugin.explorer.side right`) at `plugin.explorer.width` unless the slot's width option is set, focus it when it is open or its slot is hidden, close it when it is current |
 | `:ExplorerFind` | command line | none | Open or focus the tree with the current file revealed and the cursor on it |
 | `l` | tree | `plugin.explorer.open` | Open the file in the previously used file window, or expand the directory and leave an expanded one expanded |
 | `h` | tree | `plugin.explorer.collapse` | Collapse the directory, or go to the parent's line |
@@ -460,7 +479,7 @@ The built-in `explorer` plugin is Carat's own, not part of Neovim; its keys foll
 | `-`, `C` | tree | `plugin.explorer.root_up`, `set_root` | Root up one directory; root at the directory under the cursor |
 | `q`, `?` | tree | `plugin.explorer.close`, `help` | Close the tree; show the keys in the message row |
 
-`j`, `k`, `gg`, `G`, counts, `<C-w>` commands, and `:` work in the tree as in any window. The tree keeps its width on `<C-w>=` and on resizes, and `:q` in it closes only the tree. Not implemented: copy, cut, and paste of files, bookmarks, git status, recursive delete, trash, and live updates when files change outside the editor.
+`j`, `k`, `gg`, `G`, counts, `<C-w>` commands, and `:` work in the tree as in any window. The tree's first row is its slot's header, and `<leader>ls` hides and shows it with its cursor (Layout slots). The tree keeps its width on `<C-w>=` and on resizes, and `:q` in it closes only the tree. Not implemented: copy, cut, and paste of files, bookmarks, git status, recursive delete, trash, and live updates when files change outside the editor.
 
 ## Syntax highlighting
 
@@ -499,6 +518,49 @@ Started with no argument or on a directory, Carat shows a start screen over the 
 
 The gem takes the theme's `Operator`, `Function`, and `Keyword` colors, the sparkle `Type`, the wordmark `Title`, and the hints `Special` and `Comment`. A window smaller than 20 columns or 15 rows shows only the wordmark. Differences from Neovim: there is no `:intro`, and the intro's `shortmess` flag `I` is `option.startscreen`; neither option is set by `:set` yet (`Not implemented: :set startscreen`).
 
+## Layout slots
+
+Carat's own, in place of the sidebar and panel plugins Neovim users add. Each tab page has a left and a right sidebar slot and a bottom panel slot; a plugin's view (the explorer's tree, a test plugin's lists) opens in the slot its side names, and a slot shows one view at a time in one window, a view opened in a slot with a window taking that window and the view shown before let go. The sidebars span the tab page's height at its edges and keep their width; the panel spans the width between them above the status bar and keeps its height. Each slot window's first row is a header listing the titles of the views opened in it, the shown one in `TabLineSel`, the others in `TabLine`, the rest in `TabLineFill`. A slot window closed by `:q`, `<C-w>c`, or its plugin, or one that took a file, empties the slot (`editor_slots`, `editor_plugins`, `domain_slot`, `domain_layout`).
+
+| Keys or line | Action name | Behavior | Problem | Tests |
+| --- | --- | --- | --- | --- |
+| left sidebar | none | A view at side `left`, such as the explorer, at the tab page's left edge, full height | `E36: Not enough room` | `editor_slots`, `editor_plugins`, `domain_layout` |
+| right sidebar | none | A view at side `right` at the right edge, full height | `E36: Not enough room` | `editor_plugins`, `domain_layout` |
+| bottom panel | none | A view at side `bottom` (plugin API 2.4) across the bottom between the sidebars | `E36: Not enough room` | `editor_plugins`, `domain_layout` |
+| `option.layout.left_width`, `option.layout.right_width` | none | The sidebar's width in columns, 0 to 500, 0 by default: 0 keeps the width the view asks for (`plugin.explorer.width`) | `file:line: option.layout.left_width takes a number from 0 to 500` | `editor_slots`, `editor_plugins`, `domain_options_config` |
+| `option.layout.panel_height` | none | The panel's height in rows, header and status row included, 0 to 500, 0 by default keeping the view's | `file:line: option.layout.panel_height takes a number from 0 to 500` | `editor_plugins`, `domain_options_config` |
+| `<leader>ls` | `layout.toggle_sidebar` | Hide the left sidebar, its view and cursor kept, another window current if it was; again, show it with its size, the focus staying; its plugin opening the view shows it too | `No view in the left sidebar`; `E444: Cannot close last window` | `editor_slots` |
+| `<leader>lr` | `layout.toggle_right_sidebar` | The same for the right sidebar | `No view in the right sidebar` | `editor_slots` |
+| `<leader>lp` | `layout.toggle_panel` | The same for the panel | `No view in the panel` | `editor_slots`, `editor_plugins` |
+
+Not implemented: choosing a view from the header, moving a view between slots, resizing a slot with keys, and a core view for the panel.
+
+## Breadcrumbs
+
+In place of Neovim's `winbar` option and the breadcrumb plugins (such as nvim-navic) Neovim users add. Each file window, a window showing a buffer that is not a plugin's scratch buffer, gives its first row to a winbar: one space, the buffer's path (the scratch title or `[No Name]`), and, when the language server of the current window's buffer offers `documentSymbolProvider` and its answer for that buffer is held, ` > ` and each symbol whose range holds the window's cursor row, outermost first; the current window's winbar in `TabLineSel`, the others' in `TabLine`, the rest of the row in `TabLineFill`. Slot and plugin windows show none and are not counted; a window of one text row keeps its row; a split count still gives the new window that many text rows under its winbar.
+
+| Keys or line | Action name | Behavior | Problem | Tests |
+| --- | --- | --- | --- | --- |
+| one file window | none | No winbar under `auto` | none | `editor_breadcrumbs` |
+| two or more file windows | none | A winbar on each file window under `auto`, gone again when one is left | none | `editor_breadcrumbs`, `editor_cmdline`, `editor_plugins` |
+| `option.breadcrumbs` | none | `auto` (default), `always` (every file window), or `never` | `file:line: unknown breadcrumbs mode WORD` | `editor_breadcrumbs`, `domain_options_config` |
+| symbol path | none | The symbols spanning the cursor row, from a hierarchical or flat answer, at most 500 symbols, 8 levels, names without control characters and cut to 40 bytes; a window on another buffer shows its path only | none | `editor_breadcrumbs` |
+| symbol requests | none | `textDocument/documentSymbol` at an idle tick, only while a winbar shows, once per text of the current window's buffer, one in flight; an edit meanwhile is asked after the answer; unanswered for two seconds it is cancelled and its late answer dropped; a key never waits for one | none | `editor_breadcrumbs` |
+
+Differences from Neovim: Neovim's `winbar` is an empty statusline format by default and shows nothing; Carat's has no format, is read from `option.breadcrumbs` only (`:set breadcrumbs` answers `Not implemented: :set breadcrumbs`), and shows no symbol kinds or icons. Not implemented: picking a symbol from the winbar, and symbols for a buffer other than the current window's until it becomes current.
+
+## Key hints and command palette
+
+Carat's own, in place of the which-key and command palette plugins Neovim users add. Keys that only begin bindings (the leader, `g`, `z`, `<C-w>`), left with no key for `option.keyhints.delay` milliseconds, show a bordered float at the bottom right titled with the keys and their group name, one row per next key: its action's description, a group's name, `+` and the count of bindings under an unnamed prefix, or the keys a remap replays, in columns when taller than the screen. The next key closes it and is handled as usual. A prefix that is bound itself shows no hints, as `timeoutlen` resolves it; insert and command-line modes show none (`editor_key_hints`, `domain_keymap`).
+
+| Keys or line | Action name | Behavior | Problem | Tests |
+| --- | --- | --- | --- | --- |
+| `option.keyhints.delay` | none | Milliseconds before the hints, 0 to 10000, 300 by default; 0 turns them off | `file:line: option.keyhints.delay takes a number from 0 to 10000` | `editor_key_hints`, `domain_options_config` |
+| `keymap.group <keys> <name>` | none | Names a normal-mode prefix in the hints, a later line winning; read from a project file too, as it binds nothing; the defaults name `<leader>w` windows, `q` quit, `f` files, `b` buffers, `d` docs, `l` layout, `g` goto, `z` view, `<C-w>` window | `file:line: keymap.group takes keys and a name` | `editor_key_hints`, `domain_keymap` |
+| `<leader>p`, `<F1>` | `palette.open` | The `>` prompt on the command line and a "Commands" float of every core action, enabled plugin action, and ex command (`:` and its full name), each with its first normal-mode key and description; typing filters by the completion popup's fuzzy match over the name and description (a leading `:` ignored), "No match" when none; `<C-n>` and `<C-p>` move the selection; Enter runs it, an action as its key would (an operator then waits for its motion), an ex command as typed after `:`; Esc closes | none | `editor_palette`, `use_cases_actions` |
+
+Differences from Neovim: Neovim's `F1` opens `:help`, which Carat does not have.
+
 ## Options read so far
 
-`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `undolevels`, `icons`, `theme`, and `background` (Themes), `startscreen` and `reducedmotion` (Start screen), from the `option.*` lines of the configuration files; `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, and `cursorline` from those lines and `:set` (Neovim's defaults: off, off, on, on, off; the shipped configuration turns `smartcase` and `cursorline` on); `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.
+`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `keyhints.delay` (Key hints), `layout.left_width`, `layout.right_width`, and `layout.panel_height` (Layout slots), `breadcrumbs` (Breadcrumbs), `undolevels`, `icons`, `theme`, and `background` (Themes), `startscreen` and `reducedmotion` (Start screen), from the `option.*` lines of the configuration files; `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, and `cursorline` from those lines and `:set` (Neovim's defaults: off, off, on, on, off; the shipped configuration turns `smartcase` and `cursorline` on); `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.

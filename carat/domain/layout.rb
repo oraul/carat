@@ -73,6 +73,19 @@ module Carat
         all[index]
       end
 
+      # The leaf holding the window, by identity, or -1; walks the table
+      # without building the list of leaves.
+      #: (Window) -> Integer
+      def leaf_holding(target)
+        i = 0
+        while i < nodes.length
+          current = node(i)
+          return i if current.leaf? && current.window.equal?(target)
+          i += 1
+        end
+        -1
+      end
+
       # The leaf whose window has the window id, or -1.
       #: (Integer) -> Integer
       def leaf_of(window_id)
@@ -102,7 +115,9 @@ module Carat
       # returning the new leaf's id or -1 when there is not enough room. The
       # new window shows the same view and goes above or to the left. size is
       # the new window's text rows or columns, 0 for half; min_width is one
-      # text column plus the gutter.
+      # text column plus the gutter. Rows are counted from the leaf's
+      # rectangle less its separator row, so a header or winbar row
+      # ArrangeView took from the window counts as the window's.
       #: (Integer, bool, Integer, Integer) -> Integer
       def split(id, vertical, size, min_width)
         leaf = node(id)
@@ -117,7 +132,7 @@ module Carat
           new_size = total - min_width - 1 if new_size > total - min_width - 1
           old_size = total - new_size - 1
         else
-          text = old.height
+          text = leaf.height - 1
           return -1 if text < 3
           new_text = size > 0 ? size : text / 2
           new_text = 1 if new_text < 1
@@ -158,38 +173,35 @@ module Carat
       end
 
       # Adds a window at the left (first) or right edge of the whole layout,
-      # size columns wide, as a plugin's side window: when the root is
-      # already a row the new leaf joins it at that end, otherwise a new
-      # row becomes the root holding the new leaf and the old root, which
-      # keeps the rest of the width minus the separator. Returns the new
-      # leaf's id, or -1 when the root's width cannot hold the size, the
-      # separator, and the minimum of what is there; the next arrange fits
-      # the old content to the width left.
+      # size columns wide, as a sidebar: when the root is already a row the
+      # new leaf joins it at that end, otherwise a new row becomes the root
+      # holding the new leaf and the old root, which keeps the rest of the
+      # width minus the separator. Returns the new leaf's id, or -1 when
+      # the root's width cannot hold the size, the separator, and the
+      # minimum of what is there; the next arrange fits the old content to
+      # the width left.
       #: (Window, Integer, bool) -> Integer
       def split_edge(window, size, first)
-        old_root = node(root)
-        total = old_root.width
-        return -1 if size < LEAF_MIN_WIDTH || total < size + 1 + min_size(root, true)
-        new_id = 0
-        if old_root.kind == :row
-          new_id = allocate(:leaf, root, window)
-          first ? old_root.children.unshift(new_id) : old_root.children.push(new_id)
-        else
-          inner_id = allocate(:row, -1, nil)
-          inner = node(inner_id)
-          inner.size = old_root.size
-          inner.row = old_root.row
-          inner.col = old_root.col
-          inner.height = old_root.height
-          inner.width = old_root.width
-          old_root.parent = inner_id
-          old_root.size = total - size - 1
-          new_id = allocate(:leaf, inner_id, window)
-          inner.children = first ? [new_id, root] : [root, new_id]
-          self.root = inner_id
-        end
-        node(new_id).size = size
-        new_id
+        attach(root, :row, window, size, first)
+      end
+
+      # Adds a window size rows high under the content between the
+      # sidebars, as the bottom panel: under the children of the root row
+      # between a fixed-width first and last child, grouped into a row of
+      # their own when there are several, otherwise under the root. Returns
+      # the new leaf's id, or -1 when that content cannot hold the size and
+      # its own minimum.
+      #: (Window, Integer) -> Integer
+      def split_bottom(window, size)
+        attach(panel_target, :column, window, size, false)
+      end
+
+      # Places a slot's window at its edge: :left and :right as sidebars,
+      # :bottom as the panel. Returns the new leaf's id or -1.
+      #: (Window, Integer, Symbol) -> Integer
+      def place_slot(window, size, side)
+        return split_bottom(window, size) if side == :bottom
+        split_edge(window, size, side == :left)
       end
 
       # Closes leaf id, giving its space to the sibling after it, or before
@@ -206,8 +218,9 @@ module Carat
         pos = position_of(siblings, id)
         target = pos + 1 < siblings.length ? pos + 1 : pos - 1
         other = pos + 1 < siblings.length ? pos - 1 : pos + 1
-        if parent.kind == :row && other >= 0 && other < siblings.length
-          target = other if fixed_width?(siblings[target]) && !fixed_width?(siblings[other])
+        along_row = parent.kind == :row
+        if other >= 0 && other < siblings.length
+          target = other if fixed?(siblings[target], along_row) && !fixed?(siblings[other], along_row)
         end
         gain = leaf.size + (parent.kind == :row ? 1 : 0)
         taker = siblings[target]
@@ -237,22 +250,23 @@ module Carat
         ccol = window.col + window.cursor.col - window.left
         ccol = window.col if ccol < window.col
         ccol = window.col + window.width - 1 if ccol > window.col + window.width - 1
+        own = node(id)
         all = leaves
         i = 0
         while i < all.length
           other = all[i]
           if other != id
-            candidate = window_at(other)
+            candidate = node(other)
             found = false
             case direction
             when :right
-              found = candidate.col == window.col + window.width + 1 && crow >= candidate.row && crow <= candidate.row + candidate.height
+              found = candidate.col == own.col + own.width + 1 && crow >= candidate.row && crow < candidate.row + candidate.height
             when :left
-              found = candidate.col + candidate.width + 1 == window.col && crow >= candidate.row && crow <= candidate.row + candidate.height
+              found = candidate.col + candidate.width + 1 == own.col && crow >= candidate.row && crow < candidate.row + candidate.height
             when :down
-              found = candidate.row == window.row + window.height + 1 && ccol >= candidate.col && ccol <= candidate.col + candidate.width
+              found = candidate.row == own.row + own.height && ccol >= candidate.col && ccol <= candidate.col + candidate.width
             when :up
-              found = candidate.row + candidate.height + 1 == window.row && ccol >= candidate.col && ccol <= candidate.col + candidate.width
+              found = candidate.row + candidate.height == own.row && ccol >= candidate.col && ccol <= candidate.col + candidate.width
             end
             return other if found
           end
@@ -262,8 +276,9 @@ module Carat
       end
 
       # Makes the windows of every split the same size, the first children
-      # taking the remainder; fixed-width windows keep their width and the
-      # others of their row share the rest.
+      # taking the remainder; fixed-width windows keep their width and
+      # fixed-height ones their height, and the others of their split share
+      # the rest.
       #: () -> void
       def equalize
         equalize_node(root)
@@ -282,19 +297,31 @@ module Carat
       # of whose children are, or a column one of whose children is.
       #: (Integer) -> bool
       def fixed_width?(id)
+        fixed?(id, true)
+      end
+
+      # Whether the node's extent along an axis is fixed (its width along a
+      # row, its height along a column): a leaf whose window is, a split
+      # along that axis all of whose children are, or a split across it
+      # one of whose children is.
+      #: (Integer, bool) -> bool
+      def fixed?(id, along_row)
         current = node(id)
-        return window_at(id).fixed_width if current.leaf?
+        if current.leaf?
+          window = window_at(id)
+          return along_row ? window.fixed_width : window.fixed_height
+        end
         children = current.children
         i = 0
-        if current.kind == :row
+        if (current.kind == :row) == along_row
           while i < children.length
-            return false unless fixed_width?(children[i])
+            return false unless fixed?(children[i], along_row)
             i += 1
           end
           true
         else
           while i < children.length
-            return true if fixed_width?(children[i])
+            return true if fixed?(children[i], along_row)
             i += 1
           end
           false
@@ -302,6 +329,94 @@ module Carat
       end
 
       private
+
+      # Adds a leaf for window beside node target_id along a split of kind
+      # (:row or :column), first or last: it joins target_id when that is
+      # a split of the kind, otherwise a new split of the kind takes
+      # target_id's place holding both. -1 when target_id cannot hold the
+      # size, a separator between columns, and its own minimum.
+      #: (Integer, Symbol, Window, Integer, bool) -> Integer
+      def attach(target_id, kind, window, size, first)
+        target = node(target_id)
+        along_row = kind == :row
+        total = along_row ? target.width : target.height
+        gap = along_row ? 1 : 0
+        least = along_row ? LEAF_MIN_WIDTH : LEAF_MIN_HEIGHT
+        return -1 if size < least || total < size + gap + min_size(target_id, along_row)
+        new_id = 0
+        if target.kind == kind
+          new_id = allocate(:leaf, target_id, window)
+          first ? target.children.unshift(new_id) : target.children.push(new_id)
+        else
+          parent_id = target.parent
+          inner_id = allocate(kind, parent_id, nil)
+          inner = node(inner_id)
+          inner.size = target.size
+          inner.row = target.row
+          inner.col = target.col
+          inner.height = target.height
+          inner.width = target.width
+          if parent_id < 0
+            self.root = inner_id
+          else
+            siblings = node(parent_id).children
+            siblings[position_of(siblings, target_id)] = inner_id
+          end
+          target.parent = inner_id
+          target.size = total - size - gap
+          new_id = allocate(:leaf, inner_id, window)
+          inner.children = first ? [new_id, target_id] : [target_id, new_id]
+        end
+        node(new_id).size = size
+        new_id
+      end
+
+      # The node the bottom panel goes under: the root, or when the root is
+      # a row with a fixed-width leaf first or last, the child between
+      # them, the children between them grouped into a new row first when
+      # there are several.
+      #: () -> Integer
+      def panel_target
+        top = node(root)
+        return root unless top.kind == :row
+        children = top.children
+        from = sidebar?(children[0]) ? 1 : 0
+        to = sidebar?(children[children.length - 1]) ? children.length - 1 : children.length
+        return root if to - from < 1 || (from == 0 && to == children.length)
+        return children[from] if to - from == 1
+        group_id = allocate(:row, root, nil)
+        group = node(group_id)
+        first = node(children[from])
+        group.row = first.row
+        group.col = first.col
+        group.height = top.height
+        members = []
+        kept = []
+        size = -1
+        i = 0
+        while i < children.length
+          if i < from || i >= to
+            kept << children[i]
+          else
+            kept << group_id if i == from
+            members << children[i]
+            node(children[i]).parent = group_id
+            size += node(children[i]).size + 1
+          end
+          i += 1
+        end
+        group.children = members
+        group.size = size
+        group.width = size
+        top.children = kept
+        group_id
+      end
+
+      # Whether node id is a fixed-width leaf, a sidebar at the root's end.
+      #: (Integer) -> bool
+      def sidebar?(id)
+        node(id).leaf? && window_at(id).fixed_width
+      end
 
       # Builds the list on the way back up rather than filling one passed
       # down: an empty array literal handed to another method is copied by
@@ -381,43 +496,37 @@ module Carat
         return if current.leaf?
         children = current.children
         count = children.length
+        along_row = current.kind == :row
+        avail = along_row ? current.width - (count - 1) : current.height
+        flex = 0
+        fixed_total = 0
         i = 0
-        if current.kind == :column
-          base = current.height / count
-          extra = current.height % count
-          while i < count
-            child = node(children[i])
-            child.size = base + (i < extra ? 1 : 0)
-            child.height = child.size
-            child.width = current.width
-            i += 1
+        while i < count
+          if fixed?(children[i], along_row)
+            fixed_total += node(children[i]).size
+          else
+            flex += 1
           end
-        else
-          avail = current.width - (count - 1)
-          flex = 0
-          fixed_total = 0
-          while i < count
-            if fixed_width?(children[i])
-              fixed_total += node(children[i]).size
-            else
-              flex += 1
-            end
-            i += 1
+          i += 1
+        end
+        base = flex > 0 ? (avail - fixed_total) / flex : 0
+        extra = flex > 0 ? (avail - fixed_total) % flex : 0
+        k = 0
+        i = 0
+        while i < count
+          child = node(children[i])
+          unless fixed?(children[i], along_row)
+            child.size = base + (k < extra ? 1 : 0)
+            k += 1
           end
-          base = flex > 0 ? (avail - fixed_total) / flex : 0
-          extra = flex > 0 ? (avail - fixed_total) % flex : 0
-          k = 0
-          i = 0
-          while i < count
-            child = node(children[i])
-            unless fixed_width?(children[i])
-              child.size = base + (k < extra ? 1 : 0)
-              k += 1
-            end
+          if along_row
             child.width = child.size
             child.height = current.height
-            i += 1
+          else
+            child.height = child.size
+            child.width = current.width
           end
+          i += 1
         end
         i = 0
         while i < count
@@ -467,8 +576,8 @@ module Carat
 
       # Makes the children's sizes sum to total: growth goes to the last
       # child that may change, shrinking takes from the last child down to
-      # its minimum and then from the one before it. Under a row a
-      # fixed-width child changes only when no other child can.
+      # its minimum and then from the one before it. A child fixed along
+      # the axis changes only when no other child can.
       #: (Array[Integer], Integer, bool) -> void
       def fit(children, total, along_row)
         sum = 0
@@ -476,7 +585,7 @@ module Carat
         i = 0
         while i < children.length
           sum += node(children[i]).size
-          flexible = true if !along_row || !fixed_width?(children[i])
+          flexible = true unless fixed?(children[i], along_row)
           i += 1
         end
         diff = total - sum
@@ -484,7 +593,7 @@ module Carat
         i = children.length - 1
         while i >= 0 && diff != 0
           id = children[i]
-          skip = along_row && flexible && fixed_width?(id)
+          skip = flexible && fixed?(id, along_row)
           unless skip
             current = node(id)
             if diff > 0

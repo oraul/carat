@@ -34,7 +34,7 @@ module AdaptersAssemblyTest
     t.assert_equal([], strangers(a.buffers, [
       ["open_file", a.open_file.buffers], ["save_all", a.save_all.buffers], ["quit", a.quit.buffers], ["quit_all", a.quit_all.buffers],
       ["close_window", a.close_window.buffers], ["close_other_windows", a.close_other_windows.buffers], ["split_window", a.split_window.buffers],
-      ["open_side_window", a.open_side_window.buffers], ["open_tab", a.open_tab.buffers], ["close_tab", a.close_tab.buffers],
+      ["open_side_window", a.open_side_window.buffers], ["toggle_slot", a.toggle_slot.buffers], ["open_tab", a.open_tab.buffers], ["close_tab", a.close_tab.buffers],
       ["close_other_tabs", a.close_other_tabs.buffers], ["rename_path", host.rename_path.buffers], ["delete_path", host.delete_path.buffers],
       ["registry", host.registry.buffers], ["events", host.events.buffers], ["buffer_requests", host.buffer_requests.buffers],
       ["window_requests", host.window_requests.buffers], ["list_buffers", a.list_buffers.buffers], ["switch_buffer", a.switch_buffer.buffers],
@@ -51,6 +51,9 @@ module AdaptersAssemblyTest
       ["services", a.services.hover], ["request_hover", a.request_hover.hover], ["show_hover", a.show_hover.hover],
       ["follow_hover", a.follow_hover.hover], ["pin_hover", a.pin_hover.hover]
     ]), "the hover request")
+    t.assert_equal([], strangers(a.symbols, [
+      ["services", a.services.symbols], ["winbar", a.frame_presenter.winbar.symbols]
+    ]), "the symbol request")
     t.assert_equal([], strangers(a.signature, [
       ["services", a.services.signature], ["request_signature", a.request_signature.signature], ["show_signature", a.show_signature.signature],
       ["follow_signature", a.follow_signature.signature], ["handle_key", a.handle_key.signature], ["controller", a.controller.signature]
@@ -137,14 +140,29 @@ module AdaptersAssemblyTest
     t.assert_equal([], strangers(a.open_float, [["show_signature", a.show_signature.open_float]]), "the open float use case, in the signature")
     t.assert_equal([], strangers(a.close_float, [["show_signature", a.show_signature.close_float], ["follow_signature", a.follow_signature.close_float]]), "the close float use case, in the signature")
     t.assert_equal([], strangers(a.close_float, [["show_hover", a.show_hover.close_float], ["follow_hover", a.follow_hover.close_float], ["pin_hover", a.pin_hover.close_float]]), "the close float use case, in the hover")
+    t.assert_equal([], strangers(a.key_hints, [["handle_key", a.handle_key.key_hints], ["show_key_hints", a.show_key_hints.hints], ["hide_key_hints", a.hide_key_hints.hints]]), "the key hints")
+    t.assert_equal([], strangers(a.palette, [["handle_key", a.handle_key.palette], ["execute_command_line", a.execute_command_line.palette], ["frame_presenter", a.frame_presenter.palette], ["open_palette", a.open_palette.palette], ["follow_palette", a.follow_palette.palette]]), "the command palette")
+    t.assert_equal([true, true, true], [a.handle_key.hide_key_hints.equal?(a.hide_key_hints), a.handle_key.follow_palette.equal?(a.follow_palette), a.controller.show_key_hints.equal?(a.show_key_hints)], "the key handler holds the one HideKeyHints and FollowPalette, the input controller the one ShowKeyHints")
+    t.assert_equal([], strangers(a.keymap, [["show_key_hints", a.show_key_hints.keymap], ["open_palette", a.open_palette.keymap]]), "the keymap, in the key hints and the palette")
+    t.assert_equal([], strangers(a.input, [["show_key_hints", a.show_key_hints.input]]), "the input state, in the key hints")
+    t.assert_equal([], strangers(a.plugins, [["show_key_hints", a.show_key_hints.plugins], ["open_palette", a.open_palette.plugins]]), "the plugin host, in the key hints and the palette")
+    t.assert_equal([], strangers(a.commands, [["open_palette", a.open_palette.commands]]), "the ex table, in the palette")
+    t.assert_equal([], strangers(a.plugin_ui, [["open_palette", a.open_palette.plugin_ui]]), "the plugin UI, in the palette")
+    t.assert_equal([], strangers(a.search_prompt, [["open_palette", a.open_palette.search_prompt]]), "the search prompt, in the palette")
+    t.assert_equal([], strangers(a.open_float, [["show_key_hints", a.show_key_hints.open_float], ["follow_palette", a.follow_palette.open_float]]), "the open float use case, in the key hints and the palette")
+    t.assert_equal([], strangers(a.close_float, [["show_key_hints", a.show_key_hints.close_float], ["hide_key_hints", a.hide_key_hints.close_float], ["follow_palette", a.follow_palette.close_float]]), "the close float use case, in the key hints and the palette")
+    t.assert_equal([], strangers(a.actions, [["show_key_hints", a.show_key_hints.actions], ["open_palette", a.open_palette.actions]]), "the action table, in the key hints and the palette")
     t.assert_equal([], strangers(a.actions, [["dispatcher", a.dispatcher.actions], ["handle_key", a.handle_key.actions], ["repeat_last", a.repeat_last.actions]]), "the action table")
     t.assert_equal([], strangers(a.dispatcher, [["handle_key", a.handle_key.dispatcher]]), "the dispatcher")
     t.assert_equal([], strangers(a.insert_text, [["handle_key", a.handle_key.insert_text], ["repeat_last", a.repeat_last.insert_text]]), "the insert text use case")
     t.assert_equal([], strangers(a.edit_command_line, [["handle_key", a.handle_key.command_line]]), "the command line editor")
     t.assert_equal([], strangers(a.cache, [["arrange_view", a.arrange_view.cache], ["frame_presenter", a.frame_presenter.cache]]), "the line cache")
     t.assert_equal([], strangers(a.start_screen, [["controller", a.controller.start_screen], ["frame_presenter", a.frame_presenter.start_screen]]), "the start screen")
+    t.assert_equal([], strangers(a.notices, [["controller", a.controller.notices], ["frame_presenter", a.frame_presenter.notices], ["services", a.services.notices]]), "the notifications")
+    t.assert_equal(true, a.notices.history.equal?(a.state.history), "the notifications keep the state's history")
     t.assert_equal([], strangers(a.arrange_view, [["handle_key", a.handle_key.arrange_view]]), "the arrange view use case")
-    t.assert_equal([], strangers(a.plugins.syntax, [["highlight_view", a.highlight_view.syntax]]), "the plugins as tokenizers")
+    t.assert_equal([], strangers(a.plugins.syntax, [["highlight_view", a.highlight_view.syntax], ["format_docs", a.format_docs.syntax]]), "the plugins as tokenizers")
+    t.assert_equal([], strangers(a.format_docs, [["show_hover", a.show_hover.format_docs], ["show_docs", a.show_completion.show_docs.format_docs]]), "the one documentation formatter")
     t.assert_equal([], strangers(a.plugins.registry, [["plugin_syntax", a.plugins.syntax.registry]]), "the plugin registry, in the tokenizer part")
 
     # Each port is one instance too.

@@ -10,9 +10,9 @@ module Carat
   module UseCases
     # <leader>dp: splits the layout window as :split does, at the
     # documentation's rows up to MAX_HEIGHT, shows a scratch buffer
-    # (TITLE) holding the documentation float's rows in the new window,
-    # which keeps the focus, and closes the float; the split stays when
-    # the float would have closed. With no documentation float it is
+    # (TITLE) holding the documentation float's rows and their styles in
+    # the new window, which keeps the focus, and closes the float; the
+    # split stays when the float would have closed. With no documentation float it is
     # refused, and a refused split keeps the float.
     class PinHover
       MAX_HEIGHT = 10
@@ -54,6 +54,7 @@ module Carat
         buffer = Domain::Buffer.new(lines: lines, path: nil, line_ending: "\n")
         buffer.owner = Domain::HoverRequest::OWNER
         buffer.title = TITLE
+        buffer.styles = source.styles
         @buffers.load(buffer)
         @close_float.call(state, id)
         hover.float_id = 0

@@ -1,0 +1,3 @@
+# Brief
+
+docs-nil-path: docs/queue.md item 1 as the planner wrote it (T0 crash, estimated small), first by the rule that a crash goes to the front: a pathless buffer (a pinned docs split, a scratch) given a filetype a running server serves calls empty? on its nil path at the next sync or request and stops the editor. Acceptance: a pathless buffer is never sent to the language server and never crashes a sync, request, or diagnostic, each path with a table-driven test; allocations per key unchanged. No planner decision is needed; word-completion, definitions, and the file finder follow. Security review is never skipped.

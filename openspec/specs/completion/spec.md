@@ -304,3 +304,10 @@ A press SHALL read at most 1,000,000 bytes of text and keep at most 200 matches.
 #### Scenario: Typing costs nothing more
 - **WHEN** characters are typed in insert mode with no popup showing
 - **THEN** no buffer is scanned and each key allocates as before
+
+### Requirement: The documentation beside the popup is styled
+The documentation float beside the completion popup SHALL draw its headings, emphasis, code spans, link text, and fenced code in the markup groups the hover documentation uses, fenced code of a tokenized language through the syntax highlighter, and none of them when `NO_COLOR` is set.
+
+#### Scenario: A strong word in the documentation
+- **WHEN** the selected item's documentation is "Use **map**." and the documentation float shows
+- **THEN** "map" is drawn in `@markup.strong` and "Use" in NormalFloat

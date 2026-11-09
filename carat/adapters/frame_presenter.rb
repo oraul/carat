@@ -13,13 +13,16 @@ require_relative "../domain/plugin_ui"
 require_relative "../domain/command_grammar"
 require_relative "../domain/last_search"
 require_relative "../domain/search_prompt"
+require_relative "../domain/palette"
 require_relative "../domain/search"
 require_relative "../domain/search_budget"
 require_relative "../domain/search_pattern"
 require_relative "../domain/start_screen"
+require_relative "../domain/notices"
 require_relative "painted_rows"
 require_relative "status_bar"
 require_relative "tab_bar"
+require_relative "winbar"
 
 module Carat
   module Adapters
@@ -33,7 +36,9 @@ module Carat
     # separator row under each window above another and a separator
     # column between windows side by side, both in WinSeparator, the one
     # status bar of the current window on the row above the last
-    # (StatusBar), and the message or command line row (a
+    # (StatusBar), each file window's winbar on its first row when the
+    # breadcrumbs mode shows them (Winbar), and the message or command
+    # line row (a
     # plugin's prompt in place of the colon) with the keys of a pending
     # command at its right edge. In a visual mode the current window draws
     # its selection with the Visual highlight, leaving the cell under the
@@ -89,18 +94,30 @@ module Carat
       SHOWCMD_WIDTH = 10
       HIT_ENTER = "Press ENTER or type command to continue"
       SEPARATOR = "│"
+      PALETTE_PROMPT = ">"
       ROW_SEPARATOR = "─"
       FAR = 1 << 30
       FLOAT_STRIDE = 10
+      # The title of a notification box by its level.
+      NOTICE_TITLES = ["Info", "Warning", "Error"]
+      # The rows of a notification box and its narrowest width.
+      NOTICE_HEIGHT = 3
+      NOTICE_MIN_WIDTH = 20
+      # The narrowest screen that draws notification boxes.
+      NOTICE_NARROWEST = 8
 
       attr_reader :input #: Domain::InputState
       attr_reader :plugin_ui #: Domain::PluginUi
       attr_reader :cache #: Domain::LineCache
       attr_reader :last_search #: Domain::LastSearch
       attr_reader :search_prompt #: Domain::SearchPrompt
+      attr_reader :palette #: Domain::Palette
       attr_reader :start_screen #: Domain::StartScreen
       attr_reader :status_bar #: StatusBar
       attr_reader :tab_bar #: TabBar
+      attr_reader :winbar #: Winbar
+      attr_reader :notices #: Domain::Notices
+      attr_reader :plain #: bool
 
       # @rbs @front: Domain::Frame
       # @rbs @back: Domain::Frame
@@ -123,9 +140,15 @@ module Carat
       # @rbs @float_key: Array[Integer]
       # @rbs @floating: bool
       # @rbs @repainted: Array[Integer]
+      # @rbs @notice_from: Integer
 
-      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar) -> void
-      def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, start_screen:, status_bar:, tab_bar:)
+      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, palette: Domain::Palette, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar, winbar: Winbar, notices: Domain::Notices) -> void
+      def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, palette:, start_screen:, status_bar:, tab_bar:, winbar:, notices:)
+        @winbar = winbar
+        @notices = notices
+        @plain = false
+        @notice_from = 0
+        @palette = palette
         @input = input
         @plugin_ui = plugin_ui
         @cache = cache
@@ -185,10 +208,11 @@ module Carat
         base_same = based && same_ints?(@key, base.layout)
         floats = tab.floats
         in_float = floats.focused?
-        @floating = floats.count > 0 || back.floats.length > 0 || base.floats.length > 0
+        @floating = floats.count > 0 || @notices.count > 0 || back.floats.length > 0 || base.floats.length > 0
         full_floats = false
         if @floating
           build_float_key(floats)
+          add_notice_boxes(rows, cols, tabline)
           full_floats = !same_ints?(@float_key, back.floats) || ids.length > 1 || in_float
           unless same_ints?(@float_key, back.floats)
             forget_rows(back.floats, rows)
@@ -220,6 +244,8 @@ module Carat
           i += 1
         end
         paint_separators(back, layout, layout.root)
+        paint_headers(back, tab)
+        paint_winbars(back, tab, in_float) if tab.winbar?(options.breadcrumbs)
         if bar >= tabline
           @status_bar.paint(back, bar, cols, state)
           @chrome << bar
@@ -232,6 +258,7 @@ module Carat
         end
         if @floating
           paint_floats(back, floats, tabstop, rows, cols, full_floats || start)
+          paint_notices(back, cols, full_floats || start)
           unless based && same_ints?(@float_key, base.floats)
             compare_boxes(back, base, @float_key)
             compare_boxes(back, base, base.floats)
@@ -276,6 +303,14 @@ module Carat
       #: (String, Integer) -> Integer
       def display_width(text, tabstop)
         display_col(text, text.length, tabstop)
+      end
+
+      # Draws the notification boxes and the status bar's progress with
+      # ASCII glyphs and no color when plain, as NO_COLOR asks.
+      #: (bool) -> void
+      def plain=(value)
+        @plain = value
+        @status_bar.plain = value
       end
 
       private
@@ -387,6 +422,101 @@ module Carat
         end
       end
 
+      # Appends to the float key a box per notification, oldest first from
+      # the row under the buffer tabs down, its right edge one column from
+      # the screen's, as wide as its text and its border, at least
+      # NOTICE_MIN_WIDTH so the title fits, within half the screen; a box
+      # reaching the status bar and those after it are left out, and every
+      # box on a screen narrower than NOTICE_NARROWEST. Its serial and
+      # level follow the box, so a new notification repaints.
+      #: (Integer, Integer, Integer) -> void
+      def add_notice_boxes(rows, cols, tabline)
+        key = @float_key
+        @notice_from = key.length
+        notices = @notices
+        widest = cols / 2
+        widest = NOTICE_MIN_WIDTH if widest < NOTICE_MIN_WIDTH
+        right = cols - 1
+        return if cols < NOTICE_NARROWEST
+        i = 0
+        while i < notices.count
+          top = tabline + i * NOTICE_HEIGHT
+          return if top + NOTICE_HEIGHT > rows - 2
+          width = Domain::DisplayWidth.text_width(notices.text_at(i), 0) + 4
+          width = NOTICE_MIN_WIDTH if width < NOTICE_MIN_WIDTH
+          width = widest if width > widest
+          left = right - width
+          left = 0 if left < 0
+          key << top
+          key << top + NOTICE_HEIGHT
+          key << left
+          key << right
+          key << notices.serial_at(i)
+          key << notices.level_at(i)
+          key << 0
+          key << 0
+          key << 0
+          key << -1
+          i += 1
+        end
+      end
+
+      # Each notification box of the float key: every row when full, else
+      # only the rows painted again under it in this frame.
+      #: (Domain::Frame, Integer, bool) -> void
+      def paint_notices(frame, cols, full)
+        key = @float_key
+        i = @notice_from
+        n = 0
+        while i < key.length
+          r = key[i]
+          while r < key[i + 1]
+            paint_notice_row(frame, n, r, key[i], key[i + 2], key[i + 3], cols) if full || @repainted[r] == 1
+            r += 1
+          end
+          i += FLOAT_STRIDE
+          n += 1
+        end
+      end
+
+      # One row of notification n's box from left to the column before
+      # right: the border with its level's title on top, or its text.
+      #: (Domain::Frame, Integer, Integer, Integer, Integer, Integer, Integer) -> void
+      def paint_notice_row(frame, n, r, top, left, right, cols)
+        mend_edges(frame, r, left, right, cols)
+        plain = @plain
+        last = right - 1
+        level = @notices.level_at(n)
+        border = plain ? Domain::Highlight::NORMAL : Domain::Highlight::FLOAT_BORDER
+        if r == top || r == top + NOTICE_HEIGHT - 1
+          corner_left = plain ? 0x2B : (r == top ? 0x256D : 0x2570)
+          corner_right = plain ? 0x2B : (r == top ? 0x256E : 0x256F)
+          frame.put_code(r, left, corner_left, 1, border)
+          frame.put_code(r, last, corner_right, 1, border)
+          c = left + 1
+          while c < last
+            frame.put_code(r, c, plain ? 0x2D : 0x2500, 1, border)
+            c += 1
+          end
+          frame.put_within(r, left + 1, NOTICE_TITLES[level], plain ? Domain::Highlight::NORMAL : notice_group(level), last) if r == top
+        else
+          text = plain ? Domain::Highlight::NORMAL : Domain::Highlight::NORMAL_FLOAT
+          frame.put_code(r, left, plain ? 0x7C : 0x2502, 1, border)
+          frame.blank(r, left + 1, last)
+          frame.fill(r, left + 1, last, text)
+          frame.put_within(r, left + 2, @notices.text_at(n), text, last - 1)
+          frame.put_code(r, last, plain ? 0x7C : 0x2502, 1, border)
+        end
+      end
+
+      # The diagnostic group of a notification level's title.
+      #: (Integer) -> Integer
+      def notice_group(level)
+        return Domain::Highlight::DIAGNOSTIC_ERROR if level == Domain::MessageHistory::ERROR
+        return Domain::Highlight::DIAGNOSTIC_WARN if level == Domain::MessageHistory::WARNING
+        Domain::Highlight::DIAGNOSTIC_INFO
+      end
+
       # Forgets the window rows the boxes of a key cover.
       #: (Array[Integer], Integer) -> void
       def forget_rows(key, rows)
@@ -463,8 +593,9 @@ module Carat
         end
       end
 
-      # One row of a float's box: its text in NormalFloat, then its border
-      # and, on the top edge, its title.
+      # One row of a float's box: its text in NormalFloat, a documentation
+      # row's styles on the float layer unless plain (NO_COLOR), then its
+      # border and, on the top edge, its title.
       #: (Domain::Frame, Domain::FloatWindow, Integer, Integer, Integer) -> void
       def paint_float_row(frame, float, r, tabstop, cols)
         mend_edges(frame, r, float.box_left, float.box_right, cols)
@@ -474,12 +605,17 @@ module Carat
           width = window.width
           buffer = window.buffer
           row = window.top + r - window.row
+          group = float_group(float, row)
           if row < buffer.line_count
-            paint_text(frame, r, x, @cache.fetch(buffer.line(row), tabstop), width, window.left)
+            line = buffer.line(row)
+            decoded = @cache.fetch(line, tabstop)
+            paint_text(frame, r, x, decoded, width, window.left)
+            frame.fill(r, x, x + width, group)
+            paint_tokens(frame, r, x, decoded, width, window.left, buffer.style_at(row, line).tokens, Domain::Highlight::FLOAT_LAYER) if buffer.styled? && !@plain
           else
             frame.blank(r, x, x + width)
+            frame.fill(r, x, x + width, group)
           end
-          frame.fill(r, x, x + width, float_group(float, row))
           paint_mark(frame, float, r, x, width) if row == 0 && float.marked?
         end
         paint_border_row(frame, float, r) if float.spec.border
@@ -617,6 +753,7 @@ module Carat
         frame.add_scroll(wrow, wrow + height - 1, delta) if delta != 0
         signs = buffer.signs?
         highlights = buffer.syntax_cache
+        styled = !@plain && buffer.styled? && !highlights.active?
         search = @drawn
         @current = current
         lit = current && options.cursorline ? Domain::Highlight::CURSOR_LINE_LAYER : 0
@@ -638,6 +775,7 @@ module Carat
           if row < count
             line = buffer.line(row)
             syntax = highlights.lookup(row, line)
+            syntax = buffer.style_at(row, line) if styled
             number = number_shown(row, cursor.row, options, gutter, signs)
             sign = buffer.sign_at(row) if signs
             if row == cursor.row
@@ -676,6 +814,68 @@ module Carat
           c += 1
         end
         @chrome << below
+      end
+
+      # The header row above each shown slot window that ArrangeView gave
+      # one: the titles of the slot's views, each between spaces, the
+      # shown one in TabLineSel and the others in TabLine, the rest of the
+      # row in TabLineFill. The titles are the strings the slot holds, so
+      # nothing is allocated.
+      #: (Domain::Frame, Domain::TabPage) -> void
+      def paint_headers(frame, tab)
+        layout = tab.layout
+        i = 0
+        while i < Domain::TabPage::SLOT_COUNT
+          slot = tab.slot_at(i)
+          if slot.shown?(layout)
+            window = slot.view_window
+            row = window.row - 1
+            paint_header(frame, slot, window, row) if layout.node(layout.leaf_holding(window)).row == row
+          end
+          i += 1
+        end
+      end
+
+      # Paints the winbar of each file window that ArrangeView gave one:
+      # the row above its text, when that row is the top of its leaf.
+      #: (Domain::Frame, Domain::TabPage, bool) -> void
+      def paint_winbars(frame, tab, in_float)
+        layout = tab.layout
+        id = 0
+        while id < layout.node_count
+          node = layout.node(id)
+          if node.leaf?
+            window = layout.window_at(id)
+            row = window.row - 1
+            if !window.buffer.scratch? && node.row == row
+              @winbar.paint(frame, window, row, id == tab.current && !in_float)
+              @repainted[row] = 1 if @floating
+              @chrome << row
+            end
+          end
+          id += 1
+        end
+      end
+
+      #: (Domain::Frame, Domain::Slot, Domain::Window, Integer) -> void
+      def paint_header(frame, slot, window, row)
+        x = window.col
+        limit = x + window.width
+        frame.blank(row, x, limit)
+        frame.fill(row, x, limit, Domain::Highlight::TAB_LINE_FILL)
+        shown = window.buffer.title
+        views = slot.views
+        c = x
+        k = 0
+        while k < views.length && c < limit
+          hl = views[k] == shown ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE
+          c = frame.put_within(row, c, " ", hl, limit)
+          c = frame.put_within(row, c, views[k], hl, limit)
+          c = frame.put_within(row, c, " ", hl, limit)
+          k += 1
+        end
+        @repainted[row] = 1 if @floating
+        @chrome << row
       end
 
       # The line number a row shows, -1 when the window has no number
@@ -745,7 +945,7 @@ module Carat
         end
         decoded = @cache.fetch(line, tabstop)
         paint_text(frame, frame_row, x + gutter, decoded, text_width, left)
-        paint_tokens(frame, frame_row, x + gutter, decoded, text_width, left, syntax.tokens) unless syntax.tokens.empty?
+        paint_tokens(frame, frame_row, x + gutter, decoded, text_width, left, syntax.tokens, 0) unless syntax.tokens.empty?
         paint_matches(frame, frame_row, x + gutter, decoded, text_width, left, line) if @drawn > 0
         paint_selection(frame, frame_row, x + gutter, text_width, left) if @sel_from <= @sel_to || @sel_end >= 0
       end
@@ -808,11 +1008,11 @@ module Carat
         frame.blank(frame_row, at, col + width) if at < col + width
       end
 
-      # Gives the cells of each token the token's group: the display
-      # columns of its code points inside [left, left + width), a token
-      # past the end of the line cut there.
-      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer, Array[Integer]) -> void
-      def paint_tokens(frame, frame_row, col, decoded, width, left, tokens)
+      # Gives the cells of each token the token's group plus the layer: the
+      # display columns of its code points inside [left, left + width), a
+      # token past the end of the line cut there.
+      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer, Array[Integer], Integer) -> void
+      def paint_tokens(frame, frame_row, col, decoded, width, left, tokens, layer)
         size = decoded.size
         limit = left + width
         i = 0
@@ -825,7 +1025,7 @@ module Carat
             last = decoded.col(to)
             first = left if first < left
             last = limit if last > limit
-            frame.fill(frame_row, col + first - left, col + last - left, tokens[i + 2]) if first < last
+            frame.fill(frame_row, col + first - left, col + last - left, tokens[i + 2] + layer) if first < last
           end
           i += 3
         end
@@ -926,11 +1126,13 @@ module Carat
       end
 
       # ":" for an ex command line, "/" or "?" for a search prompt, a
-      # plugin's prompt text while one is open.
+      # plugin's prompt text while one is open, ">" while the command
+      # palette is.
       #: (Domain::EditorState) -> String
       def command_prefix(state)
         ui = @plugin_ui
         return ui.prompt if ui.prompting?
+        return PALETTE_PROMPT if @palette.active
         @search_prompt.active ? @search_prompt.prefix : ":"
       end
 

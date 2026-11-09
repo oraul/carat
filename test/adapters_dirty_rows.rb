@@ -61,7 +61,7 @@ module AdaptersDirtyRowsTest
     h.type("jjjjj")
     h.type("j")
     t.assert_equal(0, h.frame.scroll_count, "a window narrower than the screen records no scroll")
-    t.assert_true(h.frame.dirty_rows.include?(0), "its moved rows are dirty instead")
+    t.assert_true(h.frame.dirty_rows.include?(1), "its moved rows under the winbar are dirty instead")
 
     # Relative numbers change every row's number when the cursor row moves.
     h = Carat::Doubles::EditorHarness.default(files, 10, 40)

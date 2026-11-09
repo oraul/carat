@@ -1,0 +1,37 @@
+ok   one file window shows a winbar only with always
+ok   two file windows show winbars but with never
+ok   a window on a scratch buffer, a slot's or a plugin's, is not a file window
+ok   one window has no winbar
+ok   two windows have winbars over their text
+ok   closing back to one window removes the winbar
+ok   always shows the winbar on one window
+ok   never hides the winbars of two windows
+ok   an unknown mode keeps auto
+ok   windows on different files name their own, under the buffer tabs
+ok   the current window's winbar is in TabLineSel, the other's in TabLine, the rest TabLineFill
+ok   the selected winbar follows the current window
+ok   the mode is read from configuration lines, not :set
+ok   a split count counts text rows below the winbar
+ok   a window of one text row keeps its row and shows no winbar
+ok   with one window and no winbar no symbol request is sent
+ok   initialize advertises hierarchical document symbols
+ok   the key that splits sends nothing
+ok   the next idle tick asks for the buffer's symbols
+ok   on the class line both windows on the buffer show the class
+ok   inside the method the current window shows the class and the method, the other its own cursor's
+ok   outside every symbol the path only, with no new request
+ok   a window on another buffer shows its path only, under the buffer tabs
+ok   a server without document symbols is not asked and the winbar shows the path
+ok   a key before the answer moves the cursor at once, the winbar showing the path
+ok   an edit while a request is in flight sends no second request
+ok   the slow answer shows when it arrives
+ok   the edited text is asked at the next idle tick after the answer
+ok   an empty answer leaves the path only
+ok   a request unanswered for two seconds is cancelled by its id
+ok   its late answer changes nothing and the same text is not asked again
+ok   a changed text is asked again
+ok   an error answer holds no symbols
+ok   a flat answer shows the symbols spanning the cursor row in its order
+ok   names lose their controls and are cut to 40 bytes, a bad item is skipped but its children kept, and 500 symbols are kept
+ok   symbols nested deeper than 8 levels are not read
+editor_breadcrumbs: 36 passed, 0 failed

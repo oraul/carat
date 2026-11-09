@@ -6,13 +6,14 @@ module Carat
     # columns including the gutter; all 0 before the first render, when the
     # screen motions H, M, and L treat the whole buffer as visible), and
     # whether its width is fixed, as Neovim's winfixwidth, so resizes and
-    # equalizing leave it alone. The window owns its visual selection: the
-    # anchor where it started (the cursor is the other end, the mode its
-    # kind), and the last selection it left, which "gv" restores. id is the
-    # stable number the editor gives the window when it enters a tab page
-    # (0 until then), never given to another window. A Struct record:
-    # mutable, with a reader and a writer per member.
-    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :anchor, :last_selection, :id, keyword_init: true)
+    # equalizing leave it alone, and whether its height is, as
+    # winfixheight, for the bottom panel. The window owns its visual
+    # selection: the anchor where it started (the cursor is the other
+    # end, the mode its kind), and the last selection it left, which "gv"
+    # restores. id is the stable number the editor gives the window when
+    # it enters a tab page (0 until then), never given to another window.
+    # A Struct record: mutable, with a reader and a writer per member.
+    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :fixed_height, :anchor, :last_selection, :id, keyword_init: true)
       SIGN_WIDTH = 2
 
       # @rbs @buffer: Buffer
@@ -24,13 +25,14 @@ module Carat
       # @rbs @height: Integer
       # @rbs @width: Integer
       # @rbs @fixed_width: bool
+      # @rbs @fixed_height: bool
       # @rbs @anchor: Position
       # @rbs @last_selection: Selection
       # @rbs @id: Integer
 
       #: (buffer: Buffer) -> void
       def initialize(buffer:)
-        super(buffer: buffer, cursor: Cursor.new(row: 0, col: 0), top: 0, left: 0, row: 0, col: 0, height: 0, width: 0, fixed_width: false, anchor: Position.new(row: 0, col: 0), last_selection: Selection.none, id: 0)
+        super(buffer: buffer, cursor: Cursor.new(row: 0, col: 0), top: 0, left: 0, row: 0, col: 0, height: 0, width: 0, fixed_width: false, fixed_height: false, anchor: Position.new(row: 0, col: 0), last_selection: Selection.none, id: 0)
       end
 
       # Shows another buffer from its start, forgetting the last selection,
@@ -42,6 +44,14 @@ module Carat
         self.top = 0
         self.left = 0
         self.last_selection = Selection.none
+      end
+
+      # Lets the window's width and height change again, as a plugin's
+      # side window that takes a file does.
+      #: () -> void
+      def unfix_size
+        self.fixed_width = false
+        self.fixed_height = false
       end
 
       # Takes the buffer, cursor, and scroll position of other, as a split

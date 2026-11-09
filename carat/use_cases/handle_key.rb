@@ -20,6 +20,10 @@ require_relative "search/open_search_prompt"
 require_relative "docs/follow_hover"
 require_relative "docs/request_signature"
 require_relative "docs/follow_signature"
+require_relative "discovery/hide_key_hints"
+require_relative "discovery/follow_palette"
+require_relative "../domain/key_hints"
+require_relative "../domain/palette"
 
 module Carat
   module UseCases
@@ -57,7 +61,12 @@ module Carat
     # `(` or `,` in insert mode ends in RequestSignature, and while a call
     # is followed every key ends in FollowSignature, which asks again as
     # the cursor moves through the call and closes the signature float
-    # outside it; with none, one comparison.
+    # outside it; with none, one comparison. A key arriving while the key
+    # hints show closes them first, through HideKeyHints; with none, one
+    # comparison. While the
+    # command palette follows, every key ends in FollowPalette, which
+    # filters and shows its list or closes it; an action its Enter chose
+    # is then dispatched with no keys, as if its key had been pressed.
     class HandleKey
       include Reporting
 
@@ -80,12 +89,20 @@ module Carat
       attr_reader :dispatcher #: Dispatcher
       attr_reader :insert_text #: InsertText
       attr_reader :command_line #: EditCommandLine
+      attr_reader :key_hints #: Domain::KeyHints
+      attr_reader :hide_key_hints #: HideKeyHints
+      attr_reader :palette #: Domain::Palette
+      attr_reader :follow_palette #: FollowPalette
 
       # @rbs @replays: Integer
       # @rbs @hover: Domain::HoverRequest
 
-      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, completion: Domain::CompletionMenu, show_completion: ShowCompletion, plugins: PluginHost, arrange_view: ArrangeView, search_prompt: Domain::SearchPrompt, open_search_prompt: OpenSearchPrompt, follow_hover: FollowHover, request_signature: RequestSignature, follow_signature: FollowSignature, signature: Domain::SignatureRequest) -> void
-      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, completion:, show_completion:, plugins:, arrange_view:, search_prompt:, open_search_prompt:, follow_hover:, request_signature:, follow_signature:, signature:)
+      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, completion: Domain::CompletionMenu, show_completion: ShowCompletion, plugins: PluginHost, arrange_view: ArrangeView, search_prompt: Domain::SearchPrompt, open_search_prompt: OpenSearchPrompt, follow_hover: FollowHover, request_signature: RequestSignature, follow_signature: FollowSignature, signature: Domain::SignatureRequest, key_hints: Domain::KeyHints, hide_key_hints: HideKeyHints, palette: Domain::Palette, follow_palette: FollowPalette) -> void
+      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, completion:, show_completion:, plugins:, arrange_view:, search_prompt:, open_search_prompt:, follow_hover:, request_signature:, follow_signature:, signature:, key_hints:, hide_key_hints:, palette:, follow_palette:)
+        @key_hints = key_hints
+        @hide_key_hints = hide_key_hints
+        @palette = palette
+        @follow_palette = follow_palette
         @request_signature = request_signature
         @follow_signature = follow_signature
         @signature = signature
@@ -111,6 +128,7 @@ module Carat
       #: (Domain::EditorState, Integer) -> Symbol
       def call(state, code)
         return timeout(state) if code == Domain::Key::TIMEOUT
+        @hide_key_hints.call(state) if @key_hints.float_id != 0
         @replays = 0
         queue = [code]
         result = :handled
@@ -121,6 +139,7 @@ module Carat
         @show_completion.call(state, false) if @completion.showing?
         @follow_hover.call(state) if @hover.float_id != 0
         @follow_signature.call(state) if @signature.active?
+        @follow_palette.call(state) if @palette.following?
         @plugins.observe
         @arrange_view.call(state)
         result
@@ -247,6 +266,7 @@ module Carat
         else
           @dispatcher.call(state, Domain::Command.plain(value))
           resume(state) if state.mode != Domain::Mode::CMDLINE && @input.grammar.wants_pattern?
+          queue = dispatch(state, @palette.take_chosen, [], queue) unless @palette.chosen.empty?
         end
         queue
       end

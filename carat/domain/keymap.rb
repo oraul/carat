@@ -14,11 +14,14 @@ module Carat
     # second plugin cannot take another's keys. A Struct record: the roots
     # fill as bindings are added, errors collect as they are found, and
     # conflicts between plugins collect as "mode.keys is already bound by
-    # plugin name".
-    class Keymap < Struct.new(:roots, :errors, :conflicts, keyword_init: true)
+    # plugin name". The names keymap.group lines give normal-mode prefixes
+    # are kept apart from the tries, keyed by the prefix's codes, so a
+    # group line never changes what a key looks up.
+    class Keymap < Struct.new(:roots, :errors, :conflicts, :groups, keyword_init: true)
       # @rbs @roots: Hash[String, KeymapNode]
       # @rbs @errors: Array[String]
       # @rbs @conflicts: Array[String]
+      # @rbs @groups: Hash[String, String]
 
       # The empty literals are stored through the writers, not passed to
       # super: an empty array literal is typed Array[Integer] by default, and
@@ -29,6 +32,7 @@ module Carat
         self.roots = {}
         self.errors = []
         self.conflicts = []
+        self.groups = {}
       end
 
       # Whether a keymap value names an action: one or more namespace
@@ -47,6 +51,9 @@ module Carat
 
       # The action that removes a binding.
       NONE = "none"
+
+      # The keymap line that names a normal-mode prefix for the key hints.
+      GROUP = "group"
 
       # The most keys one binding may hold: the trie is one node deep per
       # key, and removing a plugin's bindings walks it recursively, so a
@@ -145,6 +152,7 @@ module Carat
           return "a plugin cannot set keymap.leader" unless owner.empty?
           return Keymap.leader_problem(words)
         end
+        return name_group(line, leader) if name == GROUP
         mode = Mode.from_name(name)
         return "unknown mode #{name}" if mode.nil?
         return "#{line.key} takes keys and an action" unless words.length == 2
@@ -226,6 +234,29 @@ module Carat
         end
       end
 
+      # The node the keys lead to in the mode's trie, an empty node when
+      # they lead nowhere, so the answer is never nil.
+      #: (Symbol, Array[Integer]) -> KeymapNode
+      def node_at(mode, codes)
+        node = root(mode)
+        i = 0
+        while i < codes.length
+          return KeymapNode.new unless node.child?(codes[i])
+          node = node.child_for(codes[i])
+          i += 1
+        end
+        node
+      end
+
+      # The name a keymap.group line gave the prefix the keys spell, "" for
+      # none or a mode other than normal.
+      #: (Symbol, Array[Integer]) -> String
+      def group_of(mode, codes)
+        return "" unless mode == Mode::NORMAL
+        name = groups[group_key(codes)]
+        name.nil? ? "" : name
+      end
+
       #: (Symbol, Array[Integer]) -> KeymapMatch
       def lookup(mode, codes)
         node = root(mode)
@@ -247,6 +278,34 @@ module Carat
       end
 
       private
+
+      # Names the normal-mode prefix of a keymap.group line, leaving the
+      # tries as they are, and returns the problem, "" when there is none.
+      #: (RcLine, String) -> String
+      def name_group(line, leader)
+        words = line.words
+        return "#{line.key} takes keys and a name" unless words.length == 2
+        parsed = KeyNotation.parse(words[0].to_s, leader)
+        return parsed.error.to_s unless parsed.ok?
+        return "empty key" if parsed.codes.empty?
+        return "more than #{MAX_KEYS} keys" if parsed.codes.length > MAX_KEYS
+        groups[group_key(parsed.codes)] = words[1].to_s
+        ""
+      end
+
+      # The key of a prefix in groups: its codes in decimal, joined by
+      # spaces.
+      #: (Array[Integer]) -> String
+      def group_key(codes)
+        text = +""
+        i = 0
+        while i < codes.length
+          text << " " if i > 0
+          text << codes[i].to_s
+          i += 1
+        end
+        text
+      end
 
       #: (KeymapNode, String) -> void
       def clear_owner(node, owner)

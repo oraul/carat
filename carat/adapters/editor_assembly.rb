@@ -18,6 +18,7 @@ require_relative "../domain/search_prompt"
 require_relative "../domain/history"
 require_relative "../domain/plugin_ui"
 require_relative "../domain/status_slots"
+require_relative "../domain/notices"
 require_relative "../domain/registers"
 require_relative "../domain/last_change"
 require_relative "../domain/keymap"
@@ -104,6 +105,7 @@ require_relative "../use_cases/ex/delete_command_handler"
 require_relative "../use_cases/ex/buffer_command_handler"
 require_relative "../use_cases/ex/lsp_start_command_handler"
 require_relative "../use_cases/ex/lsp_restart_command_handler"
+require_relative "../use_cases/ex/messages_command_handler"
 require_relative "../use_cases/ex/plugin_command_handler"
 require_relative "../use_cases/actions/action_table"
 require_relative "../use_cases/actions/motion_handler"
@@ -128,15 +130,24 @@ require_relative "../use_cases/actions/file_handler"
 require_relative "../use_cases/actions/buffer_handler"
 require_relative "../use_cases/actions/completion_handler"
 require_relative "../domain/hover_request"
+require_relative "../domain/symbol_request"
 require_relative "../use_cases/docs/request_hover"
 require_relative "../use_cases/docs/show_hover"
 require_relative "../use_cases/docs/follow_hover"
 require_relative "../use_cases/docs/pin_hover"
 require_relative "../domain/signature_request"
+require_relative "../domain/key_hints"
+require_relative "../domain/palette"
 require_relative "../use_cases/docs/request_signature"
 require_relative "../use_cases/docs/show_signature"
 require_relative "../use_cases/docs/follow_signature"
+require_relative "../use_cases/discovery/show_key_hints"
+require_relative "../use_cases/discovery/hide_key_hints"
+require_relative "../use_cases/discovery/open_palette"
+require_relative "../use_cases/discovery/follow_palette"
 require_relative "../use_cases/actions/docs_handler"
+require_relative "../use_cases/actions/palette_handler"
+require_relative "../use_cases/actions/layout_handler"
 require_relative "../use_cases/actions/plugin_action_handler"
 require_relative "../use_cases/dispatcher"
 require_relative "../use_cases/handle_key"
@@ -191,8 +202,10 @@ module Carat
       attr_reader :cache #: Domain::LineCache
       attr_reader :start_screen #: Domain::StartScreen
       attr_reader :status_slots #: Domain::StatusSlots
+      attr_reader :notices #: Domain::Notices
       attr_reader :arrange_view #: UseCases::ArrangeView
       attr_reader :highlight_view #: UseCases::HighlightView
+      attr_reader :format_docs #: UseCases::FormatDocs
       attr_reader :actions #: UseCases::ActionTable
       attr_reader :commands #: UseCases::ExTable
       attr_reader :runner #: UseCases::CommandRunner
@@ -230,6 +243,7 @@ module Carat
       attr_reader :quit #: UseCases::Quit
       attr_reader :quit_all #: UseCases::QuitAll
       attr_reader :close_window #: UseCases::CloseWindow
+      attr_reader :toggle_slot #: UseCases::ToggleSlot
       attr_reader :close_other_windows #: UseCases::CloseOtherWindows
       attr_reader :split_window #: UseCases::SplitWindow
       attr_reader :open_side_window #: UseCases::OpenSideWindow
@@ -261,6 +275,7 @@ module Carat
       attr_reader :show_completion #: UseCases::ShowCompletion
       attr_reader :complete_word #: UseCases::CompleteWord
       attr_reader :hover #: Domain::HoverRequest
+      attr_reader :symbols #: Domain::SymbolRequest
       attr_reader :request_hover #: UseCases::RequestHover
       attr_reader :show_hover #: UseCases::ShowHover
       attr_reader :follow_hover #: UseCases::FollowHover
@@ -269,6 +284,12 @@ module Carat
       attr_reader :request_signature #: UseCases::RequestSignature
       attr_reader :show_signature #: UseCases::ShowSignature
       attr_reader :follow_signature #: UseCases::FollowSignature
+      attr_reader :key_hints #: Domain::KeyHints
+      attr_reader :show_key_hints #: UseCases::ShowKeyHints
+      attr_reader :hide_key_hints #: UseCases::HideKeyHints
+      attr_reader :palette #: Domain::Palette
+      attr_reader :open_palette #: UseCases::OpenPalette
+      attr_reader :follow_palette #: UseCases::FollowPalette
 
       #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, files: Ports::FilePort, config: Ports::ConfigPort, processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, completions: Ports::CompletionPort, plugin_list: Array[untyped]) -> void
       def initialize(terminal:, clock:, files:, config:, processes:, messages:, completions:, plugin_list:)
@@ -301,8 +322,12 @@ module Carat
         @cache = Domain::LineCache.new
         @status_slots = Domain::StatusSlots.new
         @hover = Domain::HoverRequest.new
+        @symbols = Domain::SymbolRequest.new
         @signature = Domain::SignatureRequest.new
-        @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots, completion: completions.request, clock: clock, hover: @hover, signature: @signature)
+        @key_hints = Domain::KeyHints.new
+        @palette = Domain::Palette.new
+        @notices = Domain::Notices.new(history: @state.history)
+        @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots, completion: completions.request, clock: clock, hover: @hover, signature: @signature, symbols: @symbols, notices: @notices)
         @arrange_view = UseCases::ArrangeView.new(cache: @cache, buffers: @buffers)
         @actions = UseCases::ActionTable.new
         @commands = UseCases::ExTable.new
@@ -339,6 +364,7 @@ module Carat
         @probe_path = UseCases::ProbePath.new(files: files)
         @open_file = UseCases::OpenFile.new(files: files, buffers: @buffers, probe_path: @probe_path)
         @close_window = UseCases::CloseWindow.new(buffers: @buffers, tabs: @tabs)
+        @toggle_slot = UseCases::ToggleSlot.new(buffers: @buffers)
         @close_other_windows = UseCases::CloseOtherWindows.new(buffers: @buffers)
         @split_window = UseCases::SplitWindow.new(open_file: @open_file, buffers: @buffers, tabs: @tabs)
         @open_side_window = UseCases::OpenSideWindow.new(buffers: @buffers, tabs: @tabs)
@@ -346,12 +372,7 @@ module Carat
         @close_float = UseCases::CloseFloat.new(tabs: @tabs)
         @completion_menu = Domain::CompletionMenu.new
         close_completion = UseCases::CloseCompletion.new(menu: @completion_menu, close_float: @close_float)
-        show_docs = UseCases::ShowCompletionDocs.new(menu: @completion_menu, source: completions, open_float: @open_float, close_float: @close_float)
-        open_popup = UseCases::OpenCompletionPopup.new(menu: @completion_menu, open_float: @open_float, close_float: @close_float, close_completion: close_completion)
-        @show_completion = UseCases::ShowCompletion.new(menu: @completion_menu, source: completions, open_popup: open_popup, close_completion: close_completion, show_docs: show_docs)
-        @complete_word = UseCases::CompleteWord.new(menu: @completion_menu, buffers: @buffers, open_popup: open_popup, close_completion: close_completion)
         @request_hover = UseCases::RequestHover.new(hover: @hover)
-        @show_hover = UseCases::ShowHover.new(hover: @hover, open_float: @open_float, close_float: @close_float)
         @follow_hover = UseCases::FollowHover.new(hover: @hover, close_float: @close_float)
         @pin_hover = UseCases::PinHover.new(hover: @hover, split_window: @split_window, buffers: @buffers, close_float: @close_float)
         @request_signature = UseCases::RequestSignature.new(signature: @signature)
@@ -379,6 +400,12 @@ module Carat
         @save_file = UseCases::SaveFile.new(files: files, plugins: @plugins, services: @services)
         @save_all = UseCases::SaveAll.new(save_file: @save_file, buffers: @buffers)
         @highlight_view = UseCases::HighlightView.new(syntax: @plugins.syntax)
+        @format_docs = UseCases::FormatDocs.new(syntax: @plugins.syntax)
+        show_docs = UseCases::ShowCompletionDocs.new(menu: @completion_menu, source: completions, open_float: @open_float, close_float: @close_float, format_docs: @format_docs)
+        open_popup = UseCases::OpenCompletionPopup.new(menu: @completion_menu, open_float: @open_float, close_float: @close_float, close_completion: close_completion)
+        @show_completion = UseCases::ShowCompletion.new(menu: @completion_menu, source: completions, open_popup: open_popup, close_completion: close_completion, show_docs: show_docs)
+        @complete_word = UseCases::CompleteWord.new(menu: @completion_menu, buffers: @buffers, open_popup: open_popup, close_completion: close_completion)
+        @show_hover = UseCases::ShowHover.new(hover: @hover, open_float: @open_float, close_float: @close_float, format_docs: @format_docs)
 
         UseCases::FileCommandHandler.register(@commands, save_file: @save_file, save_all: @save_all, quit: @quit, quit_all: @quit_all, open_file: @open_file)
         UseCases::WindowCommandHandler.register(@commands, split_window: @split_window, close_window: @close_window, close_other_windows: @close_other_windows)
@@ -394,13 +421,14 @@ module Carat
         UseCases::DeleteCommandHandler.register(@commands, delete_lines: @delete_lines)
         UseCases::LspStartCommandHandler.register(@commands, @services)
         UseCases::LspRestartCommandHandler.register(@commands, @services)
+        UseCases::MessagesCommandHandler.register(@commands)
         UseCases::PluginCommandHandler.register(@commands, plugins: @plugins)
         @plugins.activate_all(value)
 
         @enter_command_line = UseCases::EnterCommandLine.new(plugin_ui: @plugin_ui, search_prompt: @search_prompt, command_history: @command_history)
         @edit_command_line = UseCases::EditCommandLine.new(preview_search: @preview_search)
         @cancel_command_line = UseCases::CancelCommandLine.new(plugins: @plugins, plugin_ui: @plugin_ui, search_prompt: @search_prompt, last_search: @last_search)
-        @execute_command_line = UseCases::ExecuteCommandLine.new(runner: @runner, plugins: @plugins, plugin_ui: @plugin_ui, registers: @registers, search_prompt: @search_prompt, last_search: @last_search, command_history: @command_history, search_history: @search_history)
+        @execute_command_line = UseCases::ExecuteCommandLine.new(runner: @runner, plugins: @plugins, plugin_ui: @plugin_ui, registers: @registers, search_prompt: @search_prompt, last_search: @last_search, command_history: @command_history, search_history: @search_history, palette: @palette)
         erase_command_line = UseCases::EraseCommandLine.new(cancel_command_line: @cancel_command_line, preview_search: @preview_search)
         start_visual = UseCases::StartVisual.new
         reselect_visual = UseCases::ReselectVisual.new
@@ -429,6 +457,9 @@ module Carat
         UseCases::BufferHandler.register(@actions, list_buffers: @list_buffers, switch_buffer: @switch_buffer, delete_buffer: @delete_buffer)
         UseCases::CompletionHandler.register(@actions, select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, complete_word: @complete_word)
         UseCases::DocsHandler.register(@actions, request_hover: @request_hover, pin_hover: @pin_hover)
+        @open_palette = UseCases::OpenPalette.new(actions: @actions, commands: @commands, keymap: @keymap, plugins: @plugins, palette: @palette, plugin_ui: @plugin_ui, search_prompt: @search_prompt)
+        UseCases::PaletteHandler.register(@actions, open_palette: @open_palette, palette: @palette)
+        UseCases::LayoutHandler.register(@actions, toggle_slot: @toggle_slot)
         UseCases::PluginActionHandler.register(@actions, plugins: @plugins)
 
         @keymap.add_checked(value, known_actions)
@@ -439,18 +470,22 @@ module Carat
           i += 1
         end
 
+        @hide_key_hints = UseCases::HideKeyHints.new(hints: @key_hints, close_float: @close_float)
+        @show_key_hints = UseCases::ShowKeyHints.new(keymap: @keymap, input: @input, actions: @actions, plugins: @plugins, hints: @key_hints, open_float: @open_float, close_float: @close_float)
+        @follow_palette = UseCases::FollowPalette.new(palette: @palette, open_float: @open_float, close_float: @close_float)
         @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
-        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover, request_signature: @request_signature, follow_signature: @follow_signature, signature: @signature)
+        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover, request_signature: @request_signature, follow_signature: @follow_signature, signature: @signature, key_hints: @key_hints, hide_key_hints: @hide_key_hints, palette: @palette, follow_palette: @follow_palette)
         @start_screen = Domain::StartScreen.new
-        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover, show_signature: @show_signature, signature: @signature)
-        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers))
+        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover, show_signature: @show_signature, signature: @signature, show_key_hints: @show_key_hints, notices: @notices)
+        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, palette: @palette, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers), winbar: Winbar.new(symbols: @symbols), notices: @notices)
         @screen_presenter = ScreenPresenter.new(terminal: terminal, theme: Domain::Themes.find(@state.options.theme, @state.options.background), colors: terminal.colors)
       end
 
       # Opens the file to edit and shows its message, or, for an empty
       # path or a directory with the startscreen option on, starts the
       # start screen over the empty buffer instead (at its last frame with
-      # reducedmotion, in plain glyphs when the terminal wants no color);
+      # reducedmotion, in plain glyphs when the terminal wants no color, as
+      # the notifications and the progress bar are drawn);
       # an empty path otherwise opens nothing. Then lets the plugins see
       # the buffer open, lays out the windows, and shows the first
       # configuration problem, if there is one, with the count of the
@@ -458,6 +493,7 @@ module Carat
       #: (String) -> void
       def open(path)
         options = @state.options
+        @frame_presenter.plain = @terminal.no_color?
         if options.startscreen && (path.empty? || @files.stat(path).directory)
           @start_screen.start(@clock.now, !options.reducedmotion, Domain::StartArt.from_plain(@terminal.no_color?))
         elsif !path.empty?

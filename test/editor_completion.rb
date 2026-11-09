@@ -151,6 +151,8 @@ module EditorCompletionTest
     popup = floats.at(floats.index_of(menu.float_id))
     t.assert_equal([["final", "", "Ends the block."], 1, popup.spec.col + popup.spec.width, 15, 3], [docs.window.buffer.lines.dup, docs.spec.row, docs.spec.col, docs.spec.width, docs.spec.height], "the float shows the markdown as plain rows at the popup's rows on its right")
     t.assert_equal(["final", "Ends the block."], [h.row(1)[22, 5].to_s, h.row(3)[22, 15].to_s], "the documentation is drawn beside the list")
+    hd = Carat::Domain::Highlight
+    t.assert_equal([hd::MARKUP_STRONG + hd::FLOAT_LAYER, hd::NORMAL_FLOAT, hd::MARKUP_HEADING + hd::FLOAT_LAYER], [h.frame.hl_at(3, 31), h.frame.hl_at(3, 22), h.frame.hl_at(1, 22)], "a strong word and the heading are drawn in their groups over the float, the rest in NormalFloat")
     t.assert_equal(true, docs.spec.z < popup.spec.z, "the documentation stands under the popup")
     shown = h.screen
     h.resize(12, 40)

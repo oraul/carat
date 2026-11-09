@@ -4,10 +4,12 @@ require_relative "../domain/editor_state"
 require_relative "../domain/input_state"
 require_relative "../domain/key"
 require_relative "../domain/start_screen"
+require_relative "../domain/notices"
 require_relative "../use_cases/handle_key"
 require_relative "../use_cases/completion/show_completion"
 require_relative "../use_cases/docs/show_hover"
 require_relative "../use_cases/docs/show_signature"
+require_relative "../use_cases/discovery/show_key_hints"
 require_relative "../domain/signature_request"
 require_relative "key_decoder"
 
@@ -24,6 +26,13 @@ module Carat
     # completion or a request in flight) a read waits at most
     # SERVICE_TIMEOUT, so an answer arriving between two keys is read and
     # shown before the next one; so is a signature answer, in its float.
+    # While a notification shows, a read waits no longer than the next one
+    # leaves, and a read that times out drops those whose time has come.
+    # Keys HandleKey keeps :waiting arm the key hints: once
+    # keyhints.delay passes with the keys still pending, a read that times
+    # out shows them through ShowKeyHints. Keys kept :pending get none, as
+    # timeoutlen resolves them. The clock is read for the hints only after
+    # a :waiting key, as for timeoutlen after a :pending one.
     class InputController
       ESCAPE_TIMEOUT = 0.05
       IDLE_TIMEOUT = 0.25
@@ -35,17 +44,23 @@ module Carat
       attr_reader :input #: Domain::InputState
       attr_reader :start_screen #: Domain::StartScreen
       attr_reader :services #: Ports::LanguageServicePort
+      attr_reader :notices #: Domain::Notices
       attr_reader :show_completion #: UseCases::ShowCompletion
       attr_reader :show_hover #: UseCases::ShowHover
       attr_reader :show_signature #: UseCases::ShowSignature
       attr_reader :signature #: Domain::SignatureRequest
+      attr_reader :show_key_hints #: UseCases::ShowKeyHints
 
       # @rbs @decoder: KeyDecoder
       # @rbs @wait_until: Float
       # @rbs @deadline: bool
+      # @rbs @hint_at: Float
+      # @rbs @hinting: bool
 
-      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState, start_screen: Domain::StartScreen, services: Ports::LanguageServicePort, show_completion: UseCases::ShowCompletion, show_hover: UseCases::ShowHover, show_signature: UseCases::ShowSignature, signature: Domain::SignatureRequest) -> void
-      def initialize(terminal:, clock:, decoder:, handle_key:, input:, start_screen:, services:, show_completion:, show_hover:, show_signature:, signature:)
+      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState, start_screen: Domain::StartScreen, services: Ports::LanguageServicePort, show_completion: UseCases::ShowCompletion, show_hover: UseCases::ShowHover, show_signature: UseCases::ShowSignature, signature: Domain::SignatureRequest, show_key_hints: UseCases::ShowKeyHints, notices: Domain::Notices) -> void
+      def initialize(terminal:, clock:, decoder:, handle_key:, input:, start_screen:, services:, show_completion:, show_hover:, show_signature:, signature:, show_key_hints:, notices:)
+        @notices = notices
+        @show_key_hints = show_key_hints
         @show_signature = show_signature
         @signature = signature
         @services = services
@@ -59,6 +74,8 @@ module Carat
         @start_screen = start_screen
         @wait_until = 0.0
         @deadline = false
+        @hint_at = 0.0
+        @hinting = false
       end
 
       # One read and everything it unlocks. Returns true when the state may
@@ -72,6 +89,11 @@ module Carat
           end
           if @deadline && @input.pending? && @clock.now >= @wait_until
             @handle_key.call(state, Domain::Key::TIMEOUT)
+            return true
+          end
+          if @hinting && @input.pending? && @clock.now >= @hint_at
+            @hinting = false
+            @show_key_hints.call(state)
             return true
           end
           # Idle: the language services read and send here, never while a
@@ -92,6 +114,7 @@ module Carat
             @show_signature.call(state)
             served = true
           end
+          served = @notices.expire(@clock.now) || served if @notices.count > 0
           return tick || served
         end
         start = @start_screen
@@ -113,16 +136,21 @@ module Carat
       #: (Domain::EditorState) -> Float
       def next_timeout(state)
         return ESCAPE_TIMEOUT if @decoder.pending?
-        if @deadline && @input.pending?
-          remaining = @wait_until - @clock.now
+        if (@deadline || @hinting) && @input.pending?
+          remaining = (@deadline ? @wait_until : @hint_at) - @clock.now
           return remaining > 0.0 ? remaining : 0.0
         end
         if @start_screen.animating?
           frame = @start_screen.wait(@clock.now)
           return frame if frame < IDLE_TIMEOUT
         end
-        return SERVICE_TIMEOUT if @services.waiting?
-        IDLE_TIMEOUT
+        wait = IDLE_TIMEOUT
+        if @notices.count > 0
+          due = @notices.wait(@clock.now)
+          wait = due if due < wait
+        end
+        return SERVICE_TIMEOUT if @services.waiting? && SERVICE_TIMEOUT < wait
+        wait
       end
 
       # Moves the start screen to the frame of the clock when its next one
@@ -145,6 +173,8 @@ module Carat
           result = @handle_key.call(state, codes[i])
           @deadline = result == :pending
           @wait_until = @clock.now + state.options.timeoutlen / 1000.0 if @deadline
+          @hinting = result == :waiting && state.options.keyhints_delay > 0
+          @hint_at = @clock.now + state.options.keyhints_delay / 1000.0 if @hinting
           i += 1
         end
         true

@@ -6,7 +6,6 @@ require_relative "last_find"
 require_relative "walker"
 require_relative "sentence_starts"
 require_relative "motion"
-require_relative "display_width"
 
 module Carat
   module Domain
@@ -123,19 +122,9 @@ module Carat
         ch == " " || ch == "\t"
       end
 
-      # Keyword characters: ASCII letters, digits, underscore, and every
-      # code point from U+00C0 upward, until iskeyword exists. The code
-      # point is decoded by bytes, since a regular expression raises on a
-      # byte that is not UTF-8; such a byte is U+FFFD, a keyword character
-      # as every code point above U+00C0 is.
-      #: (String) -> bool
-      def self.keyword?(ch)
-        return false if ch.empty?
-        code_class(DisplayWidth.code_of(ch), false) == 2
-      end
-
-      # char_class for a code point: 0 for a space or a tab, then 1, or 2
-      # for ASCII letters, digits, underscore, and U+00C0 upward.
+      # The class of a code point: 0 for a space or a tab, then 1, or 2 for
+      # the keyword characters: ASCII letters, digits, underscore, and
+      # U+00C0 upward, until iskeyword exists.
       #: (Integer, bool) -> Integer
       def self.code_class(code, big)
         return 0 if code == 32 || code == 9
@@ -143,13 +132,6 @@ module Carat
         return 2 if code >= 0xC0 || code == 95
         return 2 if (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
         1
-      end
-
-      #: (String, bool) -> Integer
-      def self.char_class(ch, big)
-        return 0 if blank?(ch)
-        return 1 if big
-        keyword?(ch) ? 2 : 1
       end
 
       # ------------------------------------------------------- left-right

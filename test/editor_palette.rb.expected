@@ -1,0 +1,33 @@
+ok   leader p opens the palette
+ok   F1 opens the palette
+ok   a fuzzy text picks the window split
+ok   segment starts win
+ok   an ex command is found
+ok   a leading colon is ignored
+ok   nothing matches
+ok   backspace widens the list
+ok   Esc closes the palette
+ok   Enter runs an action
+ok   the prompt is >
+ok   the first row is the first action registered
+ok   a row holds the name, the key, and the description
+ok   the palette shows its own key
+ok   an enabled plugin's action shows its key and its manifest's description
+ok   a disabled plugin's action is left out
+ok   a description matches
+ok   Ctrl-N and Ctrl-P move the selection
+ok   the selection stops at the top
+ok   the list scrolls to keep the selection shown
+ok   Enter runs the selected action
+ok   Esc runs nothing
+ok   Enter runs an ex command as typed after a colon
+ok   an operator from the palette waits for its motion
+ok   Enter with nothing selected only closes
+ok   a key of seven wide characters
+ok   a key of twelve wide characters
+ok   a key of letters with combining marks
+ok   a key of wide characters with combining marks
+ok   a wide key keeps the characters that fit its column
+ok   a combining key keeps every mark with its letter
+ok   the colon prompt returns after the palette
+editor_palette: 32 passed, 0 failed

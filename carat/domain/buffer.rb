@@ -55,9 +55,10 @@ module Carat
     # the DIAGNOSTIC_OWNER layer, and diagnostic_marks holds one mark per
     # line (none while the list is empty), 0 or the 1-based index of the
     # line's most severe diagnostic, moved with the lines as the signs
-    # are. A Struct record:
-    # mutable, with a reader and a writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks, keyword_init: true)
+    # are. styles holds a documentation buffer's SyntaxLine per row (none
+    # for any other buffer), each kept for its row's string. A Struct
+    # record: mutable, with a reader and a writer per member.
+    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks, :styles, keyword_init: true)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
@@ -81,6 +82,7 @@ module Carat
       # @rbs @icon: String
       # @rbs @diagnostics: DiagnosticList
       # @rbs @diagnostic_marks: Array[Integer]
+      # @rbs @styles: Array[untyped]
 
       # Every member is stored through its writer after super(), so the
       # empty sign list takes the pinned type: Spinel's keyword super of a
@@ -114,6 +116,23 @@ module Carat
         self.icon = Buffer.icon_of(path)
         self.diagnostics = DiagnosticList.new
         self.diagnostic_marks = []
+        self.styles = Array.new(0, nil)
+      end
+
+      # Whether the buffer carries the styles of documentation rows.
+      #: () -> bool
+      def styled?
+        !styles.empty?
+      end
+
+      # The tokens a documentation row is drawn with: its style when the
+      # row still holds the very string the style was made for, so an
+      # edited or moved row is drawn plain, else SyntaxLine::NONE.
+      #: (Integer, String) -> SyntaxLine
+      def style_at(row, line)
+        return SyntaxLine::NONE if row >= styles.length
+        entry = style_entry(row)
+        entry.text.equal?(line) ? entry : SyntaxLine::NONE
       end
 
       # Whether an edit changed the text since the last load, reload, or
@@ -625,6 +644,12 @@ module Carat
       end
 
       private
+
+      # The style of a row inside the list.
+      #: (Integer) -> SyntaxLine
+      def style_entry(row)
+        styles[row]
+      end
 
       # The one place the line array changes. Clamps the rows into the
       # buffer, keeps at least one line, applies the splice in place,

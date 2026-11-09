@@ -63,6 +63,26 @@ module Carat
       def leaf?
         children.empty?
       end
+
+      # The decimal keys of the children in the order they were added,
+      # which is the configuration's order.
+      #: () -> Array[String]
+      def child_keys
+        children.keys
+      end
+
+      # How many bindings the node and the nodes under it hold.
+      #: () -> Integer
+      def binding_count
+        total = value.nil? ? 0 : 1
+        keys = children.keys
+        i = 0
+        while i < keys.length
+          total += child_named(keys[i]).binding_count
+          i += 1
+        end
+        total
+      end
     end
   end
 end

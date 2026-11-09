@@ -170,7 +170,13 @@ module Carat
         Highlight::ICON_C, BLUE, NONE, 0, 0,
         Highlight::ICON_YAML, PURPLE, NONE, 0, 0,
         Highlight::ICON_GIT, ORANGE, NONE, 0, 0,
-        Highlight::ICON_LOCK, DIM, NONE, 0, 0
+        Highlight::ICON_LOCK, DIM, NONE, 0, 0,
+        Highlight::MARKUP_HEADING, BLUE, NONE, BOLD, BOLD,
+        Highlight::MARKUP_STRONG, FG, NONE, BOLD, BOLD,
+        Highlight::MARKUP_ITALIC, FG, NONE, ITALIC, ITALIC,
+        Highlight::MARKUP_RAW, STRING, NONE, 0, 0,
+        Highlight::MARKUP_LINK, CYAN, NONE, UNDERLINE, UNDERLINE,
+        Highlight::MARKUP_RAW_BLOCK, DIM, NONE, 0, 0
       ]
 
       # Atom's One Dark, its grays, red, and comments a step lighter for
@@ -216,8 +222,8 @@ module Carat
         ESCAPE, 0x56b6c2, -1, 14
       ]
 
-      # Atom's One Light, its yellow, green, cyan, and blue a step darker
-      # for contrast.
+      # Atom's One Light, its yellow, orange, green, cyan, and blue a step
+      # darker for contrast, on its float background too.
       ONE_LIGHT = [
         BG, 0xfafafa, -1, 15,
         FG, 0x383a42, -1, 0,
@@ -249,18 +255,18 @@ module Carat
         CONTROL, 0xa626a4, -1, 5,
         FUNCTION, 0x2f63d6, -1, 4,
         TYPE, 0x8a6300, -1, 3,
-        STRING, 0x3c7a3b, 28, 2,
-        NUMBER, 0x986801, -1, 3,
-        CONSTANT, 0x986801, -1, 3,
+        STRING, 0x3c7a3b, 22, 2,
+        NUMBER, 0x926401, -1, 3,
+        CONSTANT, 0x926401, -1, 3,
         OPERATOR, 0x0e7490, 24, 6,
         PREPROC, 0xa626a4, -1, 5,
         SPECIAL, 0x2f63d6, -1, 4,
-        IDENTIFIER, 0xc0392b, -1, 1,
+        IDENTIFIER, 0xc0392b, 124, 1,
         ESCAPE, 0x0e7490, 24, 6
       ]
 
-      # Visual Studio Code's Dark+, its status bar a step darker for
-      # contrast.
+      # Visual Studio Code's Dark+, its status bar a step darker and its red
+      # a step lighter for contrast.
       DARK_PLUS = [
         BG, 0x1e1e1e, -1, 0,
         FG, 0xd4d4d4, -1, 7,
@@ -276,7 +282,7 @@ module Carat
         INC_SEARCH, 0x9e5a0a, -1, 1,
         ON_ACCENT, 0xffffff, -1, 15,
         ON_STRONG, 0x1e1e1e, -1, 0,
-        RED, 0xf44747, -1, 9,
+        RED, 0xf55252, -1, 9,
         ORANGE, 0xce9178, -1, 11,
         YELLOW, 0xcca700, -1, 11,
         GREEN, 0x89d185, -1, 10,
@@ -302,8 +308,8 @@ module Carat
         ESCAPE, 0xd7ba7d, -1, 11
       ]
 
-      # Visual Studio Code's Light+, its status bar and red a step darker
-      # for contrast.
+      # Visual Studio Code's Light+, its status bar, red, numbers, and types
+      # a step darker for contrast, on its float background too.
       LIGHT_PLUS = [
         BG, 0xffffff, -1, 15,
         FG, 0x000000, -1, 0,
@@ -323,20 +329,20 @@ module Carat
         ORANGE, 0xa31515, -1, 3,
         YELLOW, 0x8a6400, -1, 3,
         GREEN, 0x008000, -1, 2,
-        CYAN, 0x267f99, 24, 6,
+        CYAN, 0x247790, 24, 6,
         BLUE, 0x0000ff, -1, 4,
         PURPLE, 0xaf00db, -1, 5,
         DIFF_ADD, 0xdff3d0, -1, 10,
         DIFF_CHANGE, 0xdde7f7, -1, 14,
         DIFF_DELETE, 0xfce4e4, -1, 9,
         DIFF_TEXT, 0xb8cff0, -1, 12,
-        COMMENT, 0x008000, -1, 2,
+        COMMENT, 0x008000, 22, 2,
         KEYWORD, 0x0000ff, -1, 4,
         CONTROL, 0xaf00db, -1, 5,
         FUNCTION, 0x795e26, -1, 3,
-        TYPE, 0x267f99, 24, 6,
+        TYPE, 0x247790, 24, 6,
         STRING, 0xa31515, -1, 1,
-        NUMBER, 0x098658, -1, 2,
+        NUMBER, 0x097f54, 23, 2,
         CONSTANT, 0x0070c1, -1, 4,
         OPERATOR, 0x000000, -1, 0,
         PREPROC, 0xaf00db, -1, 5,
@@ -387,7 +393,10 @@ module Carat
       # group's missing foreground or background is the palette's. Each
       # group's cursor-line id takes its foreground and attributes and,
       # unless the group has a background of its own, the CursorLine
-      # background, or at 16 colors CursorLine's attributes.
+      # background, or at 16 colors CursorLine's attributes. Each group's
+      # float id takes its foreground, NormalFloat's when it has none, its
+      # attributes, and, unless it has a background of its own,
+      # NormalFloat's background at every depth.
       #: (String, Array[Integer], bool) -> Theme
       def self.from_palette(name, palette, painted)
         rgbs = Array.new(ROLES, -1)
@@ -454,6 +463,23 @@ module Carat
           bgs256[lit] = own ? bgs256[id] : indexes256[CURSOR_LINE]
           bgs16[lit] = own || lit16 < 0 ? bgs16[id] : lit16
           attrs16[lit] = own ? attrs16[id] : attrs16[id] | line16
+          i += 5
+        end
+        float = Highlight::NORMAL_FLOAT
+        i = 0
+        while i + 4 < GROUPS.length
+          id = GROUPS[i]
+          inside = id + Highlight::FLOAT_LAYER
+          has_fg = GROUPS[i + 1] >= 0 && GROUPS[i + 1] != FG
+          fgs[inside] = has_fg ? fgs[id] : fgs[float]
+          fgs256[inside] = has_fg ? fgs256[id] : fgs256[float]
+          fgs16[inside] = has_fg ? fgs16[id] : fgs16[float]
+          own = GROUPS[i + 2] >= 0 && GROUPS[i + 2] != BG
+          bgs[inside] = own ? bgs[id] : bgs[float]
+          bgs256[inside] = own ? bgs256[id] : bgs256[float]
+          bgs16[inside] = own ? bgs16[id] : bgs16[float]
+          attrs[inside] = attrs[id]
+          attrs16[inside] = attrs16[id]
           i += 5
         end
         Theme.new(name: name, fgs: fgs, bgs: bgs, fgs256: fgs256, bgs256: bgs256, fgs16: fgs16, bgs16: bgs16, attrs: attrs, attrs16: attrs16)

@@ -32,6 +32,17 @@ module Carat
       option.icons nerd
       option.undolevels 1000
       option.timeoutlen 500
+      # Milliseconds a key that begins longer bindings waits before the key
+      # hints list what may follow; 0 turns them off.
+      option.keyhints.delay 300
+      # The width of the left and right sidebars in columns and the height of
+      # the bottom panel in rows, 0 to 500; 0 keeps the size the view asks for.
+      option.layout.left_width 0
+      option.layout.right_width 0
+      option.layout.panel_height 0
+      # When file windows show a winbar with their path and the cursor's
+      # symbols: auto (with two or more file windows), always, or never.
+      option.breadcrumbs auto
       option.theme one_dark
       option.background terminal
       option.startscreen true
@@ -164,8 +175,18 @@ module Carat
       keymap.normal <Esc> float.close
       keymap.normal K docs.hover
       keymap.normal <C-s> file.save
-      # The leader groups: w windows, q quit, f files, b buffers, d docs; e
-      # is the explorer plugin's.
+      # The leader groups: w windows, q quit, f files, b buffers, d docs, l
+      # layout; e is the explorer plugin's.
+      # keymap.group <keys> <name> names a normal-mode prefix in the key hints.
+      keymap.group <leader>w windows
+      keymap.group <leader>q quit
+      keymap.group <leader>f files
+      keymap.group <leader>b buffers
+      keymap.group <leader>d docs
+      keymap.group <leader>l layout
+      keymap.group g goto
+      keymap.group z view
+      keymap.group <C-w> window
       keymap.normal <leader>ws window.split
       keymap.normal <leader>wv window.vsplit
       keymap.normal <leader>wh window.left
@@ -183,6 +204,11 @@ module Carat
       keymap.normal <leader>bp buffer.previous
       keymap.normal <leader>bd buffer.delete
       keymap.normal <leader>dp docs.pin
+      keymap.normal <leader>ls layout.toggle_sidebar
+      keymap.normal <leader>lr layout.toggle_right_sidebar
+      keymap.normal <leader>lp layout.toggle_panel
+      keymap.normal <leader>p palette.open
+      keymap.normal <F1> palette.open
 
       # Insert mode.
       keymap.insert <Esc> mode.normal
@@ -681,6 +707,8 @@ module Carat
       keymap.cmdline <BS> cmdline.backspace
       keymap.cmdline <Up> cmdline.history_older
       keymap.cmdline <Down> cmdline.history_newer
+      keymap.cmdline <C-n> palette.next
+      keymap.cmdline <C-p> palette.previous
 
       # Language commands: language.<name>.lsp and language.<name>.formatter.
       # A server starts on its own only in a directory under a root of

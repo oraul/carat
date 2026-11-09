@@ -55,6 +55,39 @@ module DomainLayoutTest
     [id, rects]
   end
 
+  # Slots placed in order on a 23 by 80 layout of "a.txt": each step is
+  # L (a 20-column left sidebar), R (a right one), P (a 6-row panel), V
+  # (a vertical split of the first file window), or E (equalize). The
+  # result is every leaf's rectangle with its buffer's path, after the
+  # last arrange, and the id the last placement answered.
+  def self.slots(steps)
+    layout = layout_in(23, 80)
+    last = 0
+    steps.each_char do |step|
+      if step == "V"
+        last = layout.split(layout.leaf_showing(layout.window_at(layout.leaves.find { |leaf| layout.window_at(leaf).buffer.path == "a.txt" }).buffer), true, 0, MIN)
+      elsif step == "E"
+        layout.equalize
+      else
+        window = D::Window.new(buffer: buffer_named(step == "P" ? "panel" : "side"))
+        side = step == "L" ? :left : (step == "R" ? :right : :bottom)
+        if side == :bottom
+          window.fixed_height = true
+        else
+          window.fixed_width = true
+        end
+        last = layout.place_slot(window, side == :bottom ? 6 : 20, side)
+      end
+      layout.arrange(0, 0, 23, 80)
+    end
+    rects = []
+    layout.leaves.each do |leaf|
+      w = layout.window_at(leaf)
+      rects << [w.row, w.col, w.height, w.width, w.buffer.path]
+    end
+    [last < 0 ? -1 : 0, rects]
+  end
+
   def self.main
     t = Carat::Testing.new("domain_layout")
 
@@ -155,17 +188,18 @@ module DomainLayoutTest
     top = l.split(0, false, 0, MIN)
     l.arrange(0, 0, 23, 80)
     t.assert_equal([0, top, -1, -1], [l.neighbour(top, :down), l.neighbour(0, :up), l.neighbour(top, :up), l.neighbour(0, :down)], "neighbours above and below")
-    # Nested: the right window is split; from the left window the neighbour depends on the cursor row.
+    # Nested: the right window is split; from the left window the neighbour is
+    # the leaf whose rectangle abuts it and overlaps the cursor's screen row.
     l = layout_in(23, 80)
     left = l.split(0, true, 0, MIN)
     l.arrange(0, 0, 23, 80)
     lower_right = 0
     upper_right = l.split(0, false, 0, MIN)
     l.arrange(0, 0, 23, 80)
-    t.assert_equal(upper_right, l.neighbour(left, :right), "with the cursor on the first row the upper right window is next")
+    t.assert_equal(upper_right, l.neighbour(left, :right), "by layout rectangles: with the cursor on the first row the upper right window is next")
     l.window_at(left).cursor.row = 20
-    t.assert_equal(lower_right, l.neighbour(left, :right), "with the cursor low on the screen the lower right window is next")
-    t.assert_equal([left, left], [l.neighbour(upper_right, :left), l.neighbour(lower_right, :left)], "both right windows have the left window to their left")
+    t.assert_equal(lower_right, l.neighbour(left, :right), "by layout rectangles: with the cursor low on the screen the lower right window is next")
+    t.assert_equal([left, left], [l.neighbour(upper_right, :left), l.neighbour(lower_right, :left)], "by layout rectangles: both right windows have the left window to their left")
     t.assert_equal([lower_right, upper_right], [l.neighbour(upper_right, :down), l.neighbour(lower_right, :up)], "the right windows are stacked")
 
     # Equalize.
@@ -241,6 +275,19 @@ module DomainLayoutTest
     ]) do |input|
       side(input[0], input[1], input[2])
     end
+
+    t.table([
+      ["a panel under one window", "P", [0, [[0, 0, 16, 80, "a.txt"], [17, 0, 5, 80, "panel"]]]],
+      ["a panel between the sidebars", "LRP", [0, [[0, 0, 22, 20, "side"], [0, 21, 16, 38, "a.txt"], [17, 21, 5, 38, "panel"], [0, 60, 22, 20, "side"]]]],
+      ["a sidebar beside the panel", "PL", [0, [[0, 0, 22, 20, "side"], [0, 21, 16, 59, "a.txt"], [17, 21, 5, 59, "panel"]]]],
+      ["a panel under two file windows", "LVP", [0, [[0, 0, 22, 20, "side"], [0, 21, 16, 29, "a.txt"], [0, 51, 16, 29, "a.txt"], [17, 21, 5, 59, "panel"]]]],
+      ["the panel keeps its height through equalize", "PVE", [0, [[0, 0, 16, 40, "a.txt"], [0, 41, 16, 39, "a.txt"], [17, 0, 5, 80, "panel"]]]],
+      ["no slot leaves the one window", "", [0, [[0, 0, 22, 80, "a.txt"]]]]
+    ]) do |input|
+      slots(input.to_s)
+    end
+    big = D::Window.new(buffer: buffer_named("panel"))
+    t.assert_equal(-1, layout_in(23, 80).split_bottom(big, 22), "a panel leaving the content less than its minimum is refused")
 
     # The side window keeps its width through equalize and a resize.
     page = D::TabPage.new(window: D::Window.new(buffer: buffer_named("a.txt")))

@@ -33,9 +33,9 @@ ok   the left window grew and the fixed one kept its width
 ok   left and right neighbours
 ok   no neighbour above or below
 ok   neighbours above and below
-ok   with the cursor on the first row the upper right window is next
-ok   with the cursor low on the screen the lower right window is next
-ok   both right windows have the left window to their left
+ok   by layout rectangles: with the cursor on the first row the upper right window is next
+ok   by layout rectangles: with the cursor low on the screen the lower right window is next
+ok   by layout rectangles: both right windows have the left window to their left
 ok   the right windows are stacked
 ok   equalize halves the rows, the first window taking the remainder
 ok   a fixed-width window keeps its width
@@ -56,6 +56,13 @@ ok   left of an existing row joins it
 ok   right of an existing row joins it
 ok   too wide for one window
 ok   zero width
+ok   a panel under one window
+ok   a panel between the sidebars
+ok   a sidebar beside the panel
+ok   a panel under two file windows
+ok   the panel keeps its height through equalize
+ok   no slot leaves the one window
+ok   a panel leaving the content less than its minimum is refused
 ok   equalize shares the rest between the other windows
 ok   a resize takes from the last flexible window
 ok   the side window stays fixed-width
@@ -64,4 +71,4 @@ ok   focusing the current window changes nothing
 ok   a closed previous window is forgotten
 ok   a leaf is found by its window's id
 ok   a leaf is found by the buffer it shows, by identity
-domain_layout: 66 passed, 0 failed
+domain_layout: 73 passed, 0 failed

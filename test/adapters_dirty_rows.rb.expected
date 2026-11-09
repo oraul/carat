@@ -12,7 +12,7 @@ ok   rows that only moved are not
 ok   k past the scrolloff records a scroll down by one
 ok   the top row came into view
 ok   a window narrower than the screen records no scroll
-ok   its moved rows are dirty instead
+ok   its moved rows under the winbar are dirty instead
 ok   with relative numbers a cursor row change dirties every text row
 ok   and the numbers are redrawn
 adapters_dirty_rows: 17 passed, 0 failed

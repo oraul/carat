@@ -8,6 +8,7 @@ require_relative "../../domain/position"
 require_relative "../../domain/float_spec"
 require_relative "../../domain/float_window"
 require_relative "../../domain/window"
+require_relative "../../domain/messages"
 require_relative "../files/open_file"
 require_relative "../../ports/file_port"
 require_relative "../windows/split_window"
@@ -30,9 +31,6 @@ module Carat
     # OpenSideWindow, files through OpenFile, SplitWindow, and OpenTab. The plugin link has checked that
     # the plugin is enabled.
     class WindowRequests
-      E444 = "E444: Cannot close last window"
-      private_constant :E444
-
       attr_reader :state #: Domain::EditorState
       attr_reader :buffers #: Domain::BufferList
       attr_reader :tabs #: Domain::TabList
@@ -63,14 +61,14 @@ module Carat
         @files = files
       end
 
-      # Opens the plugin's scratch buffer with that title in a fixed-width
-      # window at the edge of the tab page, or refreshes and focuses the
-      # one already shown there; one shown only in another tab page gets a
-      # side window here too. A new buffer takes the syntax named after
+      # Opens the plugin's scratch buffer with that title in the tab page's
+      # slot its side names (OpenSideWindow), or refreshes and focuses the
+      # one already shown there; one shown only in another tab page, or
+      # kept by a hidden slot, is shown in the slot here too. A new buffer takes the syntax named after
       # the plugin when the plugin tokenizes that filetype.
       #: (String, String, String, Integer, Array[String], untyped) -> PluginApi::WindowResponse
       def open_scratch(name, title, side, width, lines, bindings)
-        return PluginApi::WindowResponse.failure("No side #{side}: left or right") unless PluginApi::SIDES.include?(side)
+        return PluginApi::WindowResponse.failure("No side #{side}: left, right, or bottom") unless PluginApi::SIDES.include?(side)
         state = @state
         layout = state.tab.layout
         existing = @buffers.scratch_for(name, title)
@@ -117,7 +115,7 @@ module Carat
         buffer = @buffers.scratch_for(name, title)
         leaf = buffer.nil? ? -1 : state.tab.layout.leaf_showing(buffer)
         return PluginApi::Response.failure("No window shows #{title}") if leaf < 0
-        return PluginApi::Response.failure(E444) if @tabs.total_windows <= 1
+        return PluginApi::Response.failure(Domain::Messages::E444) if @tabs.total_windows <= 1
         @buffers.close_window(@tabs.tab_index, leaf)
         PluginApi::Response.success("", 0)
       end
@@ -161,7 +159,7 @@ module Carat
         end
         outcome = in_window(tab_index, leaf) { @open_file.call(state, path) }
         return PluginApi::WindowResponse.failure(outcome.message) unless outcome.ok
-        window.fixed_width = false if old.scratch? && !window.buffer.equal?(old)
+        window.unfix_size if old.scratch? && !window.buffer.equal?(old)
         @buffers.add(old) if old.modified? && !old.scratch? && @buffers.index_of(old) < 0
         focus_at(tab_index, target)
         PluginApi::WindowResponse.success(outcome.message, target)
@@ -314,10 +312,12 @@ module Carat
         PluginApi::Paths.absolute(here, a) == PluginApi::Paths.absolute(here, b)
       end
 
-      # Adds the side window through OpenSideWindow.
+      # Shows the buffer in the slot the side names through
+      # OpenSideWindow: left, right, or bottom.
       #: (Domain::Buffer, String, Integer) -> PluginApi::WindowResponse
       def place_side(buffer, side, width)
-        outcome = @open_side_window.call(@state, buffer, width, side == "left")
+        slot = side == "left" ? :left : (side == "right" ? :right : :bottom)
+        outcome = @open_side_window.call(@state, buffer, width, slot)
         return PluginApi::WindowResponse.failure(outcome.message) unless outcome.ok
         PluginApi::WindowResponse.success("", @state.window.id)
       end

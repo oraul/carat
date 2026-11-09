@@ -146,3 +146,60 @@ When a server answers `initialize` with an error, or without a result object, th
 #### Scenario: An initialize error
 - **WHEN** ruby-lsp answers `initialize` with an error and the editor is idle
 - **THEN** the slot shows the crash and names `:LspRestart`, and nothing after `initialize` was sent to the server
+
+### Requirement: Server messages as notifications
+
+A `window/showMessage` notification from a server SHALL show its message as a notification: type 1 as an error, 2 as a warning, and 3, 4, or any other value as info. The message SHALL be cut to one line of at most 200 bytes with control characters and escape sequences removed, and kept in the message history.
+
+#### Scenario: An error from the server
+
+- **WHEN** the server sends `window/showMessage` with type 1 and message `Bundle failed`
+- **THEN** an error notification `Bundle failed` shows at the top right and `:messages` lists `Bundle failed`
+
+#### Scenario: Control characters are removed
+
+- **WHEN** the server sends a message holding an escape character and a newline
+- **THEN** the notification shows it on one line without the escape character
+
+### Requirement: Server progress on the status bar
+
+A `$/progress` report of the current buffer's server SHALL fill the progress segment: `begin` with its `title`, `message`, and `percentage`, `report` with its `message` and `percentage`, keeping the title and the last percent. The segment SHALL go when every begun report has ended or the server stops or crashes.
+
+#### Scenario: Indexing with a title
+
+- **WHEN** the server begins progress titled `Indexing` and reports 42 percent with the message `3/7 files`
+- **THEN** the progress segment reads `Indexing 3/7 files` followed by a bar of four done cells, and the segment goes after the end
+
+### Requirement: A buffer without a path is never sent to the server
+
+A buffer that has no path (a `:new` buffer, a pinned docs split, a plugin's scratch buffer) SHALL never be opened, changed, saved, or closed on a language server and SHALL never be the document of a completion, hover, or signature help request, even when its file type is one a running server serves. A publish SHALL draw nothing on such a buffer. None of these SHALL stop the editor. Once the buffer is written to a name, it SHALL be opened on the server like any other file of its type.
+
+#### Scenario: A pathless buffer is never opened on the server
+
+- **WHEN** ruby-lsp runs, the user types `:new`, `:set filetype=ruby`, and `ifoo<Esc>`, and idle ticks pass
+- **THEN** no message is sent to the server and the editor keeps running
+
+#### Scenario: A word typed in a pathless buffer asks no completion
+
+- **WHEN** ruby-lsp completes, the user types `:new`, `:set filetype=ruby`, and `ifoo` in insert mode, and the debounce passes
+- **THEN** no completion request is sent and the editor keeps running
+
+#### Scenario: K in a pathless buffer asks no hover
+
+- **WHEN** ruby-lsp hovers, the user types `:new`, `:set filetype=ruby`, `ifoo<Esc>`, and `K`, and idle ticks pass
+- **THEN** no hover request is sent and the editor keeps running
+
+#### Scenario: An open paren in a pathless buffer asks no signature help
+
+- **WHEN** ruby-lsp gives signature help, the user types `:new`, `:set filetype=ruby`, and `ifoo(` in insert mode, and the debounce passes
+- **THEN** no signature help request is sent and the editor keeps running
+
+#### Scenario: A publish draws nothing on a pathless buffer
+
+- **WHEN** ruby-lsp runs, the user types `:new`, `:set filetype=ruby`, and `ifoo<Esc>`, and the server publishes diagnostics for the working directory's URI
+- **THEN** the pathless buffer shows no sign and the editor keeps running
+
+#### Scenario: A pathless buffer written to a name is opened
+
+- **WHEN** ruby-lsp runs, the user types `:new`, `:set filetype=ruby`, `ifoo<Esc>`, and `:w c.rb`, and an idle tick passes
+- **THEN** the server receives `didOpen` for `c.rb`

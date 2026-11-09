@@ -12,6 +12,7 @@ require_relative "../adapters_frame_presenter"
 require_relative "../adapters_hover"
 require_relative "../adapters_key_decoder"
 require_relative "../adapters_language_gateway"
+require_relative "../adapters_pathless_language"
 require_relative "../adapters_screen_presenter"
 require_relative "../adapters_server_completions"
 require_relative "../adapters_signature"
@@ -20,6 +21,7 @@ require_relative "../adapters_tab_bar"
 require_relative "../config_sync"
 require_relative "../domain_buffer"
 require_relative "../domain_buffer_list"
+require_relative "../domain_display_width"
 require_relative "../domain_edits"
 require_relative "../domain_ex_grammar"
 require_relative "../domain_ex_range"
@@ -35,6 +37,7 @@ require_relative "../domain_keys"
 require_relative "../domain_layout"
 require_relative "../domain_line_cache"
 require_relative "../domain_markdown_text"
+require_relative "../domain_messages"
 require_relative "../domain_options_config"
 require_relative "../domain_plugin_manifest"
 require_relative "../domain_rc_parser"
@@ -43,6 +46,7 @@ require_relative "../domain_rpc_framer"
 require_relative "../domain_search"
 require_relative "../domain_selection"
 require_relative "../domain_signature_request"
+require_relative "../domain_slot"
 require_relative "../domain_substitute"
 require_relative "../domain_syntax_cache"
 require_relative "../domain_tab_list"
@@ -61,17 +65,22 @@ require_relative "../editor_floats"
 require_relative "../editor_global"
 require_relative "../editor_grammar"
 require_relative "../editor_insert"
+require_relative "../editor_key_hints"
 require_relative "../editor_leader"
 require_relative "../editor_lsp"
+require_relative "../editor_messages"
 require_relative "../editor_motions"
 require_relative "../editor_normal"
 require_relative "../editor_operators"
+require_relative "../editor_palette"
 require_relative "../editor_plugins"
 require_relative "../editor_registers"
 require_relative "../editor_repeat"
 require_relative "../editor_screen"
 require_relative "../editor_scroll"
 require_relative "../editor_search"
+require_relative "../editor_slots"
+require_relative "../editor_breadcrumbs"
 require_relative "../editor_start_screen"
 require_relative "../editor_substitute"
 require_relative "../editor_syntax"
@@ -103,6 +112,7 @@ when "adapters_frame_presenter" then AdaptersFramePresenterTest.main
 when "adapters_hover" then AdaptersHoverTest.main
 when "adapters_key_decoder" then AdaptersKeyDecoderTest.main
 when "adapters_language_gateway" then AdaptersLanguageGatewayTest.main
+when "adapters_pathless_language" then AdaptersPathlessLanguageTest.main
 when "adapters_screen_presenter" then AdaptersScreenPresenterTest.main
 when "adapters_server_completions" then AdaptersServerCompletionsTest.main
 when "adapters_signature" then AdaptersSignatureTest.main
@@ -111,6 +121,7 @@ when "adapters_tab_bar" then AdaptersTabBarTest.main
 when "config_sync" then ConfigSyncTest.main
 when "domain_buffer" then DomainBufferTest.main
 when "domain_buffer_list" then DomainBufferListTest.main
+when "domain_display_width" then DomainDisplayWidthTest.main
 when "domain_edits" then DomainEditsTest.main
 when "domain_ex_grammar" then DomainExGrammarTest.main
 when "domain_ex_range" then DomainExRangeTest.main
@@ -126,6 +137,7 @@ when "domain_keys" then DomainKeysTest.main
 when "domain_layout" then DomainLayoutTest.main
 when "domain_line_cache" then DomainLineCacheTest.main
 when "domain_markdown_text" then DomainMarkdownTextTest.main
+when "domain_messages" then DomainMessagesTest.main
 when "domain_options_config" then DomainOptionsConfigTest.main
 when "domain_plugin_manifest" then DomainPluginManifestTest.main
 when "domain_rc_parser" then DomainRcParserTest.main
@@ -134,6 +146,7 @@ when "domain_rpc_framer" then DomainRpcFramerTest.main
 when "domain_search" then DomainSearchTest.main
 when "domain_selection" then DomainSelectionTest.main
 when "domain_signature_request" then DomainSignatureRequestTest.main
+when "domain_slot" then DomainSlotTest.main
 when "domain_substitute" then DomainSubstituteTest.main
 when "domain_syntax_cache" then DomainSyntaxCacheTest.main
 when "domain_tab_list" then DomainTabListTest.main
@@ -152,17 +165,22 @@ when "editor_floats" then EditorFloatsTest.main
 when "editor_global" then EditorGlobalTest.main
 when "editor_grammar" then EditorGrammarTest.main
 when "editor_insert" then EditorInsertTest.main
+when "editor_key_hints" then EditorKeyHintsTest.main
 when "editor_leader" then EditorLeaderTest.main
 when "editor_lsp" then EditorLspTest.main
+when "editor_messages" then EditorMessagesTest.main
 when "editor_motions" then EditorMotionsTest.main
 when "editor_normal" then EditorNormalTest.main
 when "editor_operators" then EditorOperatorsTest.main
+when "editor_palette" then EditorPaletteTest.main
 when "editor_plugins" then EditorPluginsTest.main
 when "editor_registers" then EditorRegistersTest.main
 when "editor_repeat" then EditorRepeatTest.main
 when "editor_screen" then EditorScreenTest.main
 when "editor_scroll" then EditorScrollTest.main
 when "editor_search" then EditorSearchTest.main
+when "editor_slots" then EditorSlotsTest.main
+when "editor_breadcrumbs" then EditorBreadcrumbsTest.main
 when "editor_start_screen" then EditorStartScreenTest.main
 when "editor_substitute" then EditorSubstituteTest.main
 when "editor_syntax" then EditorSyntaxTest.main

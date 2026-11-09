@@ -6,6 +6,7 @@ ok   the documentation float shares the popup's source and float use cases
 ok   keyword completion shares the popup, its menu, its closing, and the buffer list
 ok   the input controller holds the one ShowCompletion and the gateway the source's request
 ok   the hover request
+ok   the symbol request
 ok   the signature request
 ok   the input controller holds the one ShowSignature and the key handler the one RequestSignature and FollowSignature
 ok   the input controller holds the one ShowHover and the key handler the one FollowHover
@@ -47,14 +48,29 @@ ok   the open float use case, in the hover
 ok   the open float use case, in the signature
 ok   the close float use case, in the signature
 ok   the close float use case, in the hover
+ok   the key hints
+ok   the command palette
+ok   the key handler holds the one HideKeyHints and FollowPalette, the input controller the one ShowKeyHints
+ok   the keymap, in the key hints and the palette
+ok   the input state, in the key hints
+ok   the plugin host, in the key hints and the palette
+ok   the ex table, in the palette
+ok   the plugin UI, in the palette
+ok   the search prompt, in the palette
+ok   the open float use case, in the key hints and the palette
+ok   the close float use case, in the key hints and the palette
+ok   the action table, in the key hints and the palette
 ok   the action table
 ok   the dispatcher
 ok   the insert text use case
 ok   the command line editor
 ok   the line cache
 ok   the start screen
+ok   the notifications
+ok   the notifications keep the state's history
 ok   the arrange view use case
 ok   the plugins as tokenizers
+ok   the one documentation formatter
 ok   the plugin registry, in the tokenizer part
 ok   the terminal port
 ok   the clock port
@@ -72,4 +88,4 @@ ok   the gateway reads the shipped defaults through the file port it was given
 ok   the assembly and the gateway hold the one file port
 ok   a configuration without lines falls back to Vim's defaults
 ok   a configuration problem names its file and line
-adapters_assembly: 74 passed, 0 failed
+adapters_assembly: 90 passed, 0 failed

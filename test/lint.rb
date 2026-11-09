@@ -200,6 +200,8 @@ module LintTest
   # Methods that return bool but are commands, not questions: the result
   # says whether the command did something.
   BOOL_COMMANDS = {
+    "expire" => "drops the notifications whose time has come, answering whether any went",
+    "clear_progress" => "ends the long work on the bar, answering whether some was shown",
     "pump" => "reads and handles the keys that are ready",
     "show" => "shows a language server on the bar, answering whether the slot changed",
     "hold" => "shows a language server waiting for :LspStart on the bar, answering whether the slot changed",
@@ -603,6 +605,162 @@ module LintTest
     problems
   end
 
+  # The Ruby file a line of the map is about: its first code span when the
+  # line is a bullet starting with one, "" otherwise.
+  def self.map_entry_path(line)
+    return "" unless line.start_with?("- `")
+    close = line.index("`", 3)
+    return "" if close.nil?
+    path = line[3, close - 3].to_s
+    return "" unless map_file?(path) && path.end_with?(".rb")
+    path
+  end
+
+  # The method list of a file's line of the map: after its first "; `", up
+  # to the next ";" or sentence end outside parentheses, the items that are
+  # exactly one code span of a method's shape ("and " or "or " before it
+  # aside), a receiver cut ("Paths.join" is join). Prose items and spans in
+  # parentheses are not read.
+  def self.map_methods(line)
+    names = []
+    start = line.index("; `")
+    return names if start.nil?
+    list = ""
+    depth = 0
+    i = start + 2
+    while i < line.length
+      c = line[i].to_s
+      if c == "("
+        depth += 1
+      elsif c == ")"
+        depth -= 1
+      elsif depth == 0
+        break if c == ";"
+        break if c == "." && (i + 1 == line.length || line[i + 1].to_s == " ")
+        list += c
+      end
+      i += 1
+    end
+    list.split(",").each do |part|
+      item = part.to_s.strip
+      item = item[4, item.length - 4].to_s if item.start_with?("and ")
+      item = item[3, item.length - 3].to_s if item.start_with?("or ")
+      next unless item.length > 2 && item.start_with?("`") && item.end_with?("`")
+      span = item[1, item.length - 2].to_s
+      next unless span.match?(/\A([A-Z][A-Za-z0-9]*\.)?[a-z_][a-z0-9_]*[?!=]?\z/)
+      dot = span.index(".")
+      names << (dot.nil? ? span : span[dot + 1, span.length - dot - 1].to_s)
+    end
+    names
+  end
+
+  # Whether a stripped line defines the method span: "def span" or
+  # "def self.span", private or protected, followed by nothing, a space, or
+  # its parameters.
+  def self.def_named?(stripped, span)
+    s = stripped
+    s = s["private ".length, s.length].to_s if s.start_with?("private ")
+    s = s["protected ".length, s.length].to_s if s.start_with?("protected ")
+    return false unless s.start_with?("def ")
+    rest = s[4, s.length - 4].to_s
+    rest = rest[5, rest.length - 5].to_s if rest.start_with?("self.")
+    return false unless rest.start_with?(span)
+    after = rest[span.length, 1].to_s
+    after == "" || after == " " || after == "(" || after == ";"
+  end
+
+  # Whether a line names the symbol :name, whole.
+  def self.symbol_named?(stripped, name)
+    target = ":" + name
+    at = stripped.index(target)
+    while !at.nil?
+      after = stripped[at + target.length, 1].to_s
+      before = at == 0 ? "" : stripped[at - 1, 1].to_s
+      return true unless after.match?(/[A-Za-z0-9_?!]/) || before == ":"
+      at = stripped.index(target, at + 1)
+    end
+    false
+  end
+
+  # Whether a source defines the method span: a def, or, for a name without
+  # "?" or "!", an attribute or a Struct or Data member ("c=" is the writer
+  # of c).
+  def self.defines?(source, span)
+    predicate = span.end_with?("?") || span.end_with?("!")
+    bare = span.end_with?("=") ? span[0, span.length - 1].to_s : span
+    lines = source.lines
+    i = 0
+    while i < lines.length
+      stripped = lines[i].to_s.strip
+      return true if def_named?(stripped, span)
+      if !predicate && (stripped.start_with?("attr_") || stripped.include?("Struct.new(") || stripped.include?("Data.define("))
+        return true if symbol_named?(stripped, bare)
+      end
+      i += 1
+    end
+    false
+  end
+
+  # One line per name of a map line's method list its file does not define.
+  def self.map_method_problems(path, line, source)
+    problems = []
+    map_methods(line).each do |name|
+      problems << "#{MAP} names #{path} `#{name}`, which it does not define" unless defines?(source, name)
+    end
+    problems
+  end
+
+  # ---------------------------------------------- lists of program objects
+  #
+  # docs/spinel-notes.md: a list of objects of a program class is a class of
+  # its own, a pinned Array[untyped] read through a typed reader. A
+  # parameter of Array[untyped] passes such a list around bare, unless it is
+  # the element reader (Array[untyped], Integer) -> T or its file is below
+  # with the reason; a member pinned Array[untyped] is assigned only in a
+  # file pinning it, never shared by reference from another.
+  UNTYPED_PARAMETERS = {
+    "carat/domain/json.rb" => "JSON values are genuinely mixed",
+    "carat/testing.rb" => "a test table's rows are genuinely mixed",
+    "carat/adapters/editor_assembly.rb" => "the plugin list is the generated registry's",
+    "carat/doubles/editor_harness.rb" => "the plugin list is the generated registry's",
+    "carat/use_cases/plugins/buffer_requests.rb" => "the edit list is the plugin API's, as PluginApi::Host#edit_buffer declares it"
+  }
+  UNTYPED_SHARED = {
+    "styles" => "Buffer#styles, assigned by three docs use cases: queue item hover-tidy gives it a list class and removes this line"
+  }
+  ELEMENT_READER = "#: (Array[untyped], Integer) -> "
+
+  # Whether a signature line takes an Array[untyped] that is not the
+  # element reader's.
+  def self.untyped_parameter?(stripped)
+    return false unless stripped.start_with?("#: (")
+    arrow = stripped.index(" -> ")
+    params = arrow.nil? ? stripped : stripped[0, arrow].to_s
+    return false unless params.include?("Array[untyped]")
+    return true unless stripped.start_with?(ELEMENT_READER)
+    returned = stripped[ELEMENT_READER.length, stripped.length].to_s
+    returned == "void" || returned.include?("untyped")
+  end
+
+  # The member a line pins as Array[untyped], "" when it pins none.
+  def self.untyped_pin(stripped)
+    return "" unless stripped.start_with?("# @rbs @") && stripped.end_with?(": Array[untyped]")
+    stripped["# @rbs @".length, stripped.length - "# @rbs @".length - ": Array[untyped]".length].to_s
+  end
+
+  # Whether code assigns name on a receiver other than self.
+  def self.list_assignment?(code, name)
+    target = "." + name + " = "
+    at = code.index(target)
+    while !at.nil?
+      before = code[0, at].to_s
+      own = before.end_with?("self") && (before.length == 4 || !before[before.length - 5, 1].to_s.match?(/[A-Za-z0-9_]/))
+      return true unless own
+      at = code.index(target, at + 1)
+    end
+    false
+  end
+
   # ------------------------------------------------------------- ports
   #
   # The port table of docs/architecture.md section 6 names every method of
@@ -958,6 +1116,51 @@ module LintTest
 
     # The code map covers every file of the five roots and names no missing one.
     map_problems(map_files, map_spans(File.read(MAP).to_s)).each { |problem| violations << problem }
+    # The method list of a file's line of the map names what the file defines.
+    File.read(MAP).to_s.lines.each do |raw|
+      line = raw.chomp
+      path = map_entry_path(line)
+      next if path.empty? || !File.exist?(path)
+      map_method_problems(path, line, File.read(path).to_s).each { |problem| violations << problem }
+    end
+
+    # Lists of program objects: no bare Array[untyped] parameter, and a
+    # member pinned Array[untyped] assigned only where it is pinned.
+    carat_files = Dir.glob("carat/**/*.rb").sort.map { |path| path.to_s }
+    pinned_names = []
+    pinned_owners = []
+    carat_files.each do |path|
+      File.read(path).to_s.lines.each do |line|
+        name = untyped_pin(line.strip)
+        next if name.empty?
+        pinned_names << name
+        pinned_owners << path
+      end
+    end
+    carat_files.each do |path|
+      next if path == "carat/domain/default_config.rb"
+      File.read(path).to_s.lines.each_with_index do |line, i|
+        stripped = line.strip
+        if untyped_parameter?(stripped) && !UNTYPED_PARAMETERS.key?(path)
+          violations << "#{path}:#{i + 1}: an Array[untyped] parameter passes program objects bare; pass their list class with a typed reader (docs/spinel-notes.md)"
+        end
+        code = code_of(stripped)
+        j = 0
+        while code.include?(" = ") && j < pinned_names.length
+          name = pinned_names[j].to_s
+          if pinned_names.index(name) == j && !UNTYPED_SHARED.key?(name) && list_assignment?(code, name)
+            owned = false
+            k = 0
+            while k < pinned_names.length
+              owned = true if pinned_names[k].to_s == name && pinned_owners[k].to_s == path
+              k += 1
+            end
+            violations << "#{path}:#{i + 1}: assigns #{name}, pinned Array[untyped] in #{pinned_owners[j]}; keep the list in its class behind a typed reader (docs/spinel-notes.md)" unless owned
+          end
+          j += 1
+        end
+      end
+    end
 
     # Inline RBS: every method and attribute under carat/ carries a signature.
     # A def is covered when the comment block directly above it (same indent,
@@ -1024,6 +1227,12 @@ module LintTest
     t.assert_equal([true, true, false, false, false], [constant_read?("x = Operate::DELETE", "Operate", "DELETE"), constant_read?("x = UseCases::Operate::DELETE", "Operate", "DELETE"), constant_read?("x = MyOperate::DELETE", "Operate", "DELETE"), constant_read?("x = Operate::DELETED", "Operate", "DELETE"), constant_read?("x = Domain::OperatorKind::DELETE", "Operate", "DELETE")], "the constant read rule")
     t.assert_equal(["test/b.rb is in no area of docs/codebase-map.md", "test/b.rb.expected is in no area of docs/codebase-map.md", "docs/codebase-map.md names carat/gone.rb, which does not exist"], map_problems(["carat.rb", "carat/a.rb", "test/a.rb", "test/a.rb.expected", "test/b.rb", "test/b.rb.expected"], map_spans("- `carat.rb` and `carat/a.rb`: x, `test/a.rb`, `carat/gone.rb`, `carat/use_cases/`, `test/NAME.rb`, `make test`")), "the code map rule")
     t.assert_equal(true, map_files.include?("tools/noruby/ruby") && map_files.include?("test/runner/run_all.rb") && !map_files.include?("tools/noruby"), "the code map rule reads files in subdirectories and no directory")
+    entry = "- `carat/x.rb`: `X`, a thing (`not`, `read`); `a`, `b?`, `Paths.join`, `c=` (`skipped`), trimming at `prose`, and `d`; `later`."
+    t.assert_equal(["carat/x.rb", "", "", ["a", "b?", "join", "c=", "d"], []], [map_entry_path(entry), map_entry_path("- `docs/x.md`: y; `a`"), map_entry_path("Files:"), map_methods(entry), map_methods("- `carat/y.rb`: `Y`, no list.")], "the code map method rule reads a file's method list")
+    source = "class X < Struct.new(:c, keyword_init: true)\n  attr_reader :d #: Integer\n  def a\n  end\n  def self.join(x)\n  end\n  def bee?\n  end\n"
+    t.assert_equal([["docs/codebase-map.md names carat/x.rb `b?`, which it does not define"], false, false, true, false], [map_method_problems("carat/x.rb", entry, source), defines?("def open?\n", "open"), defines?("attr_reader :open #: bool\n", "open?"), defines?("  private def open(x)\n", "open"), defines?("Foo::open\n", "open")], "the code map method rule")
+    t.assert_equal([true, true, false, true, false, false, false], [untyped_parameter?("#: (Domain::Buffer, Array[untyped]) -> void"), untyped_parameter?("#: (files: MemoryFiles, plugins: Array[untyped]) -> void"), untyped_parameter?("#: (Array[untyped], Integer) -> PendingEvent"), untyped_parameter?("#: (Array[untyped], Integer) -> untyped"), untyped_parameter?("#: () -> Array[untyped]"), untyped_parameter?("# @rbs @items: Array[untyped]"), untyped_parameter?("#: (Array[String]) -> void")], "the untyped parameter rule")
+    t.assert_equal(["styles", "", true, false, false, false, true], [untyped_pin("# @rbs @styles: Array[untyped]"), untyped_pin("# @rbs @row: Integer"), list_assignment?("buffer.styles = docs.styles", "styles"), list_assignment?("self.styles = Array.new(0, nil)", "styles"), list_assignment?("x = buffer.styles", "styles"), list_assignment?("ok = buffer.styles == other", "styles"), list_assignment?("myself.styles = x", "styles")], "the shared list rule")
     t.assert_equal(0, violations.length, "no lint violations")
     t.assert_equal(0, missing.length, "every method and attribute has an inline RBS signature")
     t.finish

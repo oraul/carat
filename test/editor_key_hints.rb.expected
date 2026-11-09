@@ -1,0 +1,28 @@
+ok   the leader hints show after the delay
+ok   the leader hints name the quit group
+ok   the leader hints name the docs group
+ok   the leader hints describe the palette
+ok   a group lists its actions
+ok   a group lists the vertical split
+ok   g lists the tab keys
+ok   Ctrl-W names its keys in notation
+ok   no hint before the delay
+ok   a user names a group
+ok   a prefix without a group counts its bindings
+ok   a delay of 0 shows no hints
+ok   insert mode shows no hints
+ok   a plugin's binding shows its manifest's description
+ok   a disabled plugin's prefix shows no hints
+ok   a key completes the binding and closes the hints
+ok   Esc closes the hints and cancels the keys
+ok   the next key closes the hints at once
+ok   the next level shows after the delay
+ok   Ctrl-W hints fill several columns of the room
+ok   a group name of fifty wide characters
+ok   a group name of wide characters with combining marks
+ok   a group name of letters with combining marks fits whole
+ok   a prefix that is also bound shows no hints and timeoutlen resolves it
+ok   a delay out of range is reported
+ok   the delay stays the default
+ok   a group line without a name is reported
+editor_key_hints: 27 passed, 0 failed
