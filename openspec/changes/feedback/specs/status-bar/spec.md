@@ -4,7 +4,7 @@
 
 ### Requirement: Progress segment
 
-While long work runs, the status bar SHALL show a progress segment before the `lsp` slot, at priority 35: a space, the work's title followed by its message when it has one (cut to 40 characters), a space, a ten-cell bar, and a space. With a percent the bar SHALL show one done cell per ten percent, done cells `━` in `StatusLineLspReady` and the rest `─` in `StatusLine`. The segment SHALL go when the work ends.
+While long work runs, the status bar SHALL show a progress segment before the `lsp` slot, at priority 35: a space, the work's title followed by its message when it has one (cut to 40 bytes), a space, a ten-cell bar, and a space. With a percent the bar SHALL show one done cell per ten percent, done cells `━` in `StatusLineLspReady` and the rest `─` in `StatusLine`. The segment SHALL go when the work ends.
 
 #### Scenario: A bar at a percent
 

@@ -4,7 +4,7 @@
 
 ### Requirement: Server messages as notifications
 
-A `window/showMessage` notification from a running server SHALL show its message as a notification: type 1 as an error, 2 as a warning, and 3, 4, or any other value as info. The message SHALL be cut to one line of at most 200 characters with control characters removed, and kept in the message history.
+A `window/showMessage` notification from a server SHALL show its message as a notification: type 1 as an error, 2 as a warning, and 3, 4, or any other value as info. The message SHALL be cut to one line of at most 200 bytes with control characters and escape sequences removed, and kept in the message history.
 
 #### Scenario: An error from the server
 

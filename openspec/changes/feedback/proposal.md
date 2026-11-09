@@ -13,7 +13,7 @@ A message on the message row is gone at the next key and nothing keeps it, so an
 - `NO_COLOR` (set and not empty): notification boxes and the progress bar draw ASCII glyphs (`+`, `-`, `|`, `#`) in the `Normal` and `StatusLine` groups, with no severity color, as the start screen does.
 - `docs/compatibility.md` gains a Messages and notifications table: a row per message kind and notification for its placement, expiry, and history, and the `:messages` rows.
 
-Assumptions: the history keeps 500 entries (Neovim's default); a notification's text is cut to one line of at most 200 characters; notifications never animate, so `reducedmotion` changes only the progress bar; the progress segment follows the current buffer's server; `window/logMessage` and `window/showMessageRequest` are not shown (the request keeps its "not supported" reply); a plugin notification request is left for a later change (plugin API version bump).
+Assumptions: the history keeps 500 entries (Neovim's default); a notification's text is cut to one line of at most 200 bytes; notifications never animate, so `reducedmotion` changes only the progress bar; the progress segment follows the current buffer's server; `window/logMessage` and `window/showMessageRequest` are not shown (the request keeps its "not supported" reply); a plugin notification request is left for a later change (plugin API version bump).
 
 ## Capabilities
 
@@ -29,7 +29,7 @@ Assumptions: the history keeps 500 entries (Neovim's default); a notification's 
 ## Impact
 
 - Domain: new `MessageHistory` and `Notices` records; `EditorState` keeps the history and records in `show`; `StatusSlots` holds the progress.
-- Use cases: new `MessagesCommandHandler` (`:messages`), registered before the language server commands.
+- Use cases: new `MessagesCommandHandler` (`:messages`), registered after the language server commands.
 - Adapters: `FramePresenter` paints the notification boxes through the float key, `StatusBar` the progress segment, `InputController` expires notifications on idle reads, `JsonRpcLanguageGateway` reads `window/showMessage` and the progress titles, `EditorAssembly` wires the one `Notices`.
 - Docs: `docs/compatibility.md`, `docs/codebase-map.md`.
 - Out of scope: a plugin API notification or progress request, `:{count}messages`, colored `:messages` lines, `window/showMessageRequest` choices, notification history beyond the shared message history, and dismissing a notification by a key.
