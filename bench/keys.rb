@@ -113,6 +113,7 @@ SCENARIOS = [
   ["long-utf8", "hl", 2_000, 500, "NG$", "long-utf8", "none"],
   ["lh-explorer", "lh", 10_000, 10_000, "NG", "code", "explorer"],
   ["lh-float", "lh", 10_000, 10_000, "NG", "code", "float"],
+  ["lh-winbar", "lh", 10_000, 10_000, "<C-w>vNG", "code", "none"],
   ["j-explorer", "j", 9_000, 10_000, "gg", "code", "explorer"],
   ["undo", "u<C-r>", 4_000, 100_000, "NGx", "code", "none"],
   ["undo-line", "u<C-r>", 4_000, 100_000, "NGdd", "code", "none"],
