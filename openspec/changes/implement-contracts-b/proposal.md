@@ -22,7 +22,7 @@ This change is outside the roadmap of `docs/architecture.md` section 12: it repa
 
 ## Impact
 
-- README.md: unchanged, no command, binding, option, target, or user-visible behavior changes.
+- README.md: the `make gates` row and the list of what the gates refuse name the scenario gate and the doc prose refusals.
 - docs/architecture.md: unchanged, the test and gate machinery of section 10 keeps its shape and the file is at its budget.
 - CLAUDE.md: the Coding conventions name the scenario rule and the doc gate.
 

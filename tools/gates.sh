@@ -46,7 +46,8 @@
 #              make it the run state), has the template's shape, no comment,
 #              angle bracket, empty bullet, footer, URL, email, session id, or
 #              model name, and a Testing line naming the security review
-#   static     trailer, content, snapshots, docs, cases, attribution (make gates)
+#   static     trailer, content, snapshots, docs, scenarios, cases, attribution
+#              (make gates)
 #   origin     no risky configuration key; an origin/ base equal to origin's
 #   pre-push   origin, static, security, stages (tools/run_state.sh push)
 #   backup     trailer, content (tools/run_state.sh backup, with BASE the
