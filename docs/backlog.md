@@ -1792,9 +1792,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The server completions test copies EditorHarness
 
-- Where: `test/adapters_server_completions.rb` line 17 at cd87445 (the `Rig` class copies `type`, `wait`, and `pump` because `carat/doubles/editor_harness.rb` line 38 hard-wires `FixedCompletions`), and its `CompletionRequest` record table (lines 154 to 173). Periodic quality at cd87445.
+- Where: `test/adapters_server_completions.rb` line 17 at cd87445 (the `Rig` class copies `type`, `wait`, and `pump` because `carat/doubles/editor_harness.rb` line 38 hard-wires `FixedCompletions`), and its `CompletionRequest` record table (lines 154 to 173). Periodic quality at cd87445. Periodic quality at c1b3a12: the `Rig` is copied again in `test/adapters_signature.rb` line 17 and `test/adapters_hover.rb`.
 - Why it matters: two harnesses drift, and a domain record is tested in an adapter test.
-- Fix outline: let the harness take any completion port and drive the test through it; move the record table to a domain test. Queued in `completion-tidy-b`.
+- Fix outline: let the harness take any completion port, or add one gateway-backed harness in `carat/doubles/`, and drive the three tests through it; move the record table to a domain test. Queued in `completion-tidy-b`.
 
 ## LspStart and LspRestart handlers are copies
 
@@ -1816,7 +1816,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The completion resolve timeout restarts with every pick
 
-- Where: `carat/adapters/json_rpc_language_gateway.rb` line 562 at 925d759 (558 at d46ecff), which measures the resolve timeout from `docs.due`, which a new pick resets. Quality advisory in `completion-docs`, raised again at d46ecff.
+- Where: `carat/adapters/json_rpc_language_gateway.rb` line 562 at 925d759 (558 at d46ecff), which measures the resolve timeout from `docs.due`, which a new pick resets. Quality advisory in `completion-docs`, raised again at d46ecff. Periodic quality at c1b3a12 found the same computation in seven places: `carat/use_cases/completion/show_completion.rb` line 167 (moved by `word-completion` to `row_offset` in `carat/use_cases/completion/open_completion_popup.rb`), `carat/use_cases/arrange_view.rb` line 61, `carat/use_cases/completion/show_completion_docs.rb` line 88, `carat/use_cases/docs/show_hover.rb` line 71, `carat/use_cases/docs/show_signature.rb` line 65, `carat/domain/layout.rb` line 234, `carat/adapters/frame_presenter.rb` line 555.
 - Why it matters: every new pick during the flight moves `docs.due` forward, so a server that never answers is not cancelled while the selection keeps moving.
 - Fix outline: keep the send time (or a deadline) of the request in flight and time it out from that, with a case in `test/adapters_server_completions.rb` that keeps moving the selection. Queued in `completion-docs-tidy`.
 
@@ -1830,7 +1830,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `carat/use_cases/completion/show_completion_docs.rb` line 88 at 925d759, which computes the row as `ShowCompletion#row_offset` does, and takes `below = popup.row > 0`, and line 102, which computes the column through `DisplayWidth.column` where `ArrangeView#place_floats` uses the line cache. Quality advisory in `completion-docs`, raised again at d46ecff.
 - Why it matters: the two copies and the sign convention couple the documentation float to the popup's layout, so a change to one silently misplaces the other.
-- Fix outline: derive the documentation float's vertical placement from the popup spec alone (row and height), or share one helper for the cursor's screen cell with `ArrangeView` and `ShowCompletion`. Queued in `completion-docs-tidy`.
+- Fix outline: derive the documentation float's vertical placement from the popup spec alone (row and height), or one `Window` reader for a buffer row's screen row, called at each of the seven sites. Queued in `completion-docs-tidy` and `hover-tidy`.
 
 ## The gateway repeats the markdown size limit as a literal
 
@@ -1936,9 +1936,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## A key resolved by timeoutlen leaves the hover float off its anchor
 
-- Where: `HandleKey#timeout` in `carat/use_cases/handle_key.rb` line 122 at 41297d6. Quality advisory in `quick-docs`.
+- Where: `HandleKey#timeout` in `carat/use_cases/handle_key.rb` line 122 at 41297d6, line 154 at c1b3a12, which repeats the tail of `call` (`FollowSignature`, observe, `arrange_view`) but not `FollowHover` or `ShowCompletion`, so `parameter-info` extended one copy only. Quality advisory in `quick-docs`; periodic quality at c1b3a12.
 - Why it matters: `call` runs `FollowHover` after a key, but `timeout` dispatches the pending keys' shorter binding without it, so a cursor move resolved by `timeoutlen` leaves the documentation float open away from the cursor until the next key.
-- Fix outline: end `timeout` with the same `@follow_hover.call(state) if @hover.float_id != 0` that `call` has, with a row in `test/adapters_hover.rb` that moves the cursor through a timed-out prefix.
+- Fix outline: one private after-key step that `call` and `timeout` both end with (`ShowCompletion`, `FollowHover`, `FollowSignature`, observe, `arrange_view`), with a row in `test/adapters_hover.rb` that moves the cursor through a timed-out prefix. Queued in `hover-tidy`.
 
 ## The hover placement counts rows with bare numbers
 
@@ -2010,7 +2010,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `forget_signature` in `carat/adapters/json_rpc_language_gateway.rb` line 743 (dropping the language and the request in flight on a crash, `:LspStop`, or `:LspRestart`) and the in-range `activeSignature` choice at line 818, at c59a43d. Quality advisory in `parameter-info`.
 - Why it matters: a server crash with a signature request in flight, or a server that names a later signature as active, takes a path no test runs, so a stale request or the wrong signature could ship unnoticed.
-- Fix outline: add rows to `test/adapters_signature.rb` for a server crashing while a signature request is in flight and for an answer with `activeSignature` 1 of two signatures.
+- Fix outline: add rows to `test/adapters_signature.rb` for a server crashing while a signature request is in flight and for an answer with `activeSignature` 1 of two signatures. Periodic quality at c1b3a12: `forget_signature` and `send_signature` (lines 743 and 780) also copy `forget_hover` (646) and `send_hover` (676) line for line, beside the `cancel_request` copy already recorded; give both sends one private position-params step and both requests one forget step, in `hover-tidy`.
 
 ## Roadmap item 10 lost the changes that delivered it
 
@@ -2074,7 +2074,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The merge tool hook allows the merge when the guard is unnamed
 
-- Where: `.claude/agents/merger.md` line 15 at b0dd342, the case with no default branch. Periodic security Low (4). Queued in `pinned-main`.
+- Where: `.claude/agents/merger.md` line 15 at b0dd342, line 16 at c1b3a12, the case with no default branch. Periodic security Low (4), raised again as Low (3) at c1b3a12. Queued in `pinned-main`.
 - Why it matters: when the guard on `origin/main` does not contain the merge tool's name, the merge runs unguarded.
 - Fix outline: refuse in a default case, with a case in `tools/tools_test.sh`.
 
@@ -2119,3 +2119,87 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: E477 in `delete_command_handler.rb` line 34, `substitute_command_handler.rb` line 37, `global_command_handler.rb` line 35; E488 in five files; E486, E492, E32, E33, E363, E444, E474, E939 in two or more, at b0dd342. Periodic quality. Queued in the backlog item batch.
 - Why it matters: `docs/architecture.md` section 5 puts a message several use cases need in `Domain::Messages`; copies drift from Neovim's text.
 - Fix outline: constants or builders in `Domain::Messages` called from every site.
+
+## A signature marks a parameter label inside the method name
+
+- Where: `signed` in `carat/adapters/json_rpc_language_gateway.rb` line 835 at c1b3a12 (periodic quality, blocking).
+- Why it matters: a string parameter label is found at its first byte index in the whole signature label, so `each(e)` marks the `e` of `each` and `format(fmt, f)` the `f` of `format`; ruby-lsp sends string labels, so the wrong part is highlighted in common calls.
+- Fix outline: search from just after the label's first `(` and after the previous parameter's match, with a `test/adapters_signature.rb` row for `each(e)` expecting the mark on the parameter. Item `hover-tidy`.
+
+## The signature request starts in a buffer without a path
+
+- Where: `carat/use_cases/docs/request_signature.rb` line 24 at c1b3a12, while the gateway's `send_signature` drops a pathless buffer silently.
+- Why it matters: `FollowSignature` asks again on every key for nothing, unlike `RequestHover`, which refuses such a buffer up front.
+- Fix outline: return early for a buffer without a path, as `RequestHover` does, with a row typing `(` in an unnamed ruby buffer. Item `hover-tidy`.
+
+## The signature trigger compares bare key codes
+
+- Where: `carat/use_cases/handle_key.rb` line 336 at c1b3a12 (codes 40 and 44).
+- Why it matters: the character is already in `text`, so the numbers hide what is meant.
+- Fix outline: compare `text` with `(` and `,`. Item `hover-tidy`.
+
+## Owned scratch floats are built the same way in five places
+
+- Where: `carat/use_cases/completion/show_completion.rb` line 151 (moved by `word-completion` to `carat/use_cases/completion/open_completion_popup.rb`), `carat/use_cases/completion/show_completion_docs.rb` line 106, `carat/use_cases/docs/show_hover.rb` line 87, `carat/use_cases/docs/show_signature.rb` line 67, `carat/use_cases/plugins/window_requests.rb` line 235 at c1b3a12.
+- Why it matters: a float of plain lines (a pathless buffer, its owner, a window, a float window, then `OpenFloat`) is spelled five times, so a change to floats edits five files.
+- Fix outline: one alternate constructor for a float of lines with its owner and spec, used by the five. Item `hover-tidy`.
+
+## The config generator names a spin command and copies its write step
+
+- Where: `bin/carat-gen-config.rb` lines 39 and 48 (copied for the registry at 57) at c1b3a12; the header lands in `carat/domain/default_config.rb` line 2.
+- Why it matters: the header tells a reader to run the generator directly against the make-only rule, and the write-only-when-changed block exists twice.
+- Fix outline: say `make gen-config` in the header and regenerate; one helper writing a file only when its text changed for both targets. Item 42, generators.
+
+## The key decoder repeats the letter finals
+
+- Where: `csi_key` in `carat/adapters/key_decoder.rb` line 143 at c1b3a12 repeats the ten finals of `ss3_key` (line 186).
+- Why it matters: a new final key must be added twice.
+- Fix outline: `csi_key` keeps 126 and hands every other final to `ss3_key`. Item 42.
+
+## end_visual re-implements clamp_col
+
+- Where: `carat/domain/editor_state.rb` line 120 at c1b3a12.
+- Why it matters: a copy of `clamp_col` two lines above its definition, joining the `clamp` copies already listed.
+- Fix outline: call `clamp_col` after the mode is set to normal. Item 42, `clamp` copies.
+
+## Needless public and dead methods found at c1b3a12
+
+- Where: `touch` in `carat/domain/last_search.rb` line 111, `handler_at` in `carat/use_cases/actions/action_table.rb` line 96, `detect_filetype` in `carat/domain/buffer.rb` line 185 (only `rename` calls it, yet the map lists it), and `Json.pretty_generate` in `carat/domain/json.rb` line 36 (only its test calls it).
+- Why it matters: public surface the program never uses beyond its own file, three more for the dead methods list.
+- Fix outline: move the first three under private (dropping `detect_filetype` from the map line), and remove `pretty_generate` with its test row or record why the library keeps it. Item 42, dead or needless public methods.
+
+## An insert copies its whole typed text on every key
+
+- Where: `add_text` and `add_action` in `carat/domain/last_change.rb` lines 117 and 137 at c1b3a12.
+- Why it matters: `typed + text` rebuilds the session's text per typed key, quadratic bytes on the typing hot path for a long insert (T4).
+- Fix outline: start the typed text fresh in `begin_session`, append in place, and hand the `.` register a copy, with `insert` allocations held. Item 42.
+
+## Map entries lag the code at c1b3a12
+
+- Where: `docs/codebase-map.md` lines 151 and 185 to 188 (ActionTable `count`, SearchBudget `stop`, SearchHit `found?`, LastSearch `any?` and `end_preview`, SearchPrompt `prefix` and `close`) and line 285 (LastChange `split` and `unmeasure`, called by `carat/use_cases/dispatcher.rb` lines 101 and 115).
+- Why it matters: the map is where a change starts; missing methods send readers to the code.
+- Fix outline: name them in their entries. Item `docs-index`.
+
+## The README's parameter-info sentence splits the raw-mode paragraph
+
+- Where: `README.md` line 64 at c1b3a12.
+- Why it matters: the signature sentence follows the Ctrl-S raw-mode note, separating the language-service description from its neighbour.
+- Fix outline: move the signature sentence before the raw-mode sentence. Item `docs-index`.
+
+## SaveAll branches twice for one assignment
+
+- Where: `carat/use_cases/files/save_all.rb` line 164 at c1b3a12.
+- Why it matters: both branches assign the result and differ only in the failed flag.
+- Fix outline: assign once and set the flag from the write's result. Item `file-access-tidy`.
+
+## Quit repeats CloseOtherWindows' loop
+
+- Where: `close_page` in `carat/use_cases/files/quit.rb` line 82 at c1b3a12, against `CloseOtherWindows#call` in `carat/use_cases/windows/close_other_windows.rb` line 27.
+- Why it matters: closing every window of a tab page but one is written twice.
+- Fix outline: one `BufferList` method both call. Item `file-access-tidy`.
+
+## A link swapped in between the stat and the open of the project .caratrc
+
+- Where: `carat/adapters/rc_config_gateway.rb` lines 58 to 59 at c1b3a12 (`read_file`), which stats the path, refusing a link for the untrusted project file, and then reads it by path through the file port. Periodic security Low (2) at c1b3a12.
+- Why it matters: a link put in place between the check and the open is read as the project configuration, the same check-then-open gap `DiskFiles` closes by statting the opened file.
+- Fix outline: open the file first and check `File#stat` of the opened handle, as `DiskFiles` does, with a case in `test/drivers_disk_files.rb` or the gateway's test. Queued in `project-config-guards` (item 20).
