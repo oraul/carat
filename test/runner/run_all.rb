@@ -20,6 +20,7 @@ require_relative "../adapters_tab_bar"
 require_relative "../config_sync"
 require_relative "../domain_buffer"
 require_relative "../domain_buffer_list"
+require_relative "../domain_display_width"
 require_relative "../domain_edits"
 require_relative "../domain_ex_grammar"
 require_relative "../domain_ex_range"
@@ -117,6 +118,7 @@ when "adapters_tab_bar" then AdaptersTabBarTest.main
 when "config_sync" then ConfigSyncTest.main
 when "domain_buffer" then DomainBufferTest.main
 when "domain_buffer_list" then DomainBufferListTest.main
+when "domain_display_width" then DomainDisplayWidthTest.main
 when "domain_edits" then DomainEditsTest.main
 when "domain_ex_grammar" then DomainExGrammarTest.main
 when "domain_ex_range" then DomainExRangeTest.main

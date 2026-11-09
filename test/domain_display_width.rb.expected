@@ -1,0 +1,29 @@
+ok   ASCII that fits is kept whole
+ok   ASCII is cut to the width
+ok   a wide character that would pass the width is dropped
+ok   wide characters fill the width exactly
+ok   seven wide characters cut to 11 cells keep five
+ok   a combining mark stays with its letter
+ok   a combining mark after a dropped character is dropped
+ok   combining marks take no cell
+ok   a control character takes one cell
+ok   a zero width is empty
+ok   a negative width is empty
+ok   an empty text stays empty
+ok   a short text is padded
+ok   a text of the width is unchanged
+ok   a long text is cut without a pad
+ok   a wide character cut at the edge leaves one space
+ok   a key of seven wide characters fits 11 cells
+ok   a wide character wider than the width becomes spaces
+ok   a combining mark is padded by its letter's cells
+ok   a negative width is empty
+ok   wide characters at an odd width
+ok   wide characters at an even width
+ok   combining marks over the width
+ok   mixed wide and combining
+ok   a stray byte is one cell
+ok   a wide character is three bytes
+ok   a combining mark adds its bytes
+ok   a text that fits is answered itself, not copied
+domain_display_width: 28 passed, 0 failed

@@ -61,6 +61,15 @@ module EditorPaletteTest
     ""
   end
 
+  # The cells of the float's row that starts with the name and where its
+  # description starts, past the name and key columns, [0, -1] for none.
+  def self.cells_of(h, name, description)
+    row = row_of(h, name)
+    at = row.index(description.to_s)
+    return [0, -1] if at.nil?
+    [Carat::Domain::DisplayWidth.text_width(row, 0), Carat::Domain::DisplayWidth.text_width(row[0, at].to_s, 0)]
+  end
+
   def self.main
     t = Carat::Testing.new("editor_palette")
 
@@ -122,6 +131,25 @@ module EditorPaletteTest
 
     h = session("<Space>pzzzzqx<CR>")
     t.assert_equal([0, :normal, 1], [h.state.tab.floats.count, h.mode, h.window_count], "Enter with nothing selected only closes")
+
+    # A bound key wider than its column, of wide or combining characters,
+    # (insert.newline has no key of its own in normal mode) is cut by cells
+    # and padded so the description starts at cell 40.
+    # Rows are [label, project line, [the row's description column, the
+    # editor still running]].
+    t.table([
+      ["a key of seven wide characters", "keymap.normal あいうえおかき insert.newline\n", [40, true]],
+      ["a key of twelve wide characters", "keymap.normal あいうえおかきくけこさし insert.newline\n", [40, true]],
+      ["a key of letters with combining marks", "keymap.normal a\u0301b\u0301c\u0301d\u0301e\u0301f\u0301g\u0301 insert.newline\n", [40, true]],
+      ["a key of wide characters with combining marks", "keymap.normal あ\u0301い\u0301う\u0301え\u0301お\u0301か\u0301 insert.newline\n", [40, true]]
+    ]) do |project|
+      h = plugin_session(project, "<Space>pinsert.newline")
+      [cells_of(h, "insert.newline", "Break line")[1], h.mode == :cmdline]
+    end
+    h = plugin_session("keymap.normal あいうえおかき insert.newline\n", "<Space>pinsert.newline")
+    t.assert_equal(true, row_of(h, "insert.newline").include?("あいうえお "), "a wide key keeps the characters that fit its column")
+    h = plugin_session("keymap.normal a\u0301b\u0301c\u0301 insert.newline\n", "<Space>pinsert.newline")
+    t.assert_equal(true, row_of(h, "insert.newline").include?("a\u0301b\u0301c\u0301"), "a combining key keeps every mark with its letter")
 
     h = session("<Space>p<Esc>:")
     t.assert_equal(":", h.message_row[0, 1], "the colon prompt returns after the palette")

@@ -366,7 +366,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `FindMatch#keyword?` and `#blank?` in `carat/use_cases/search/find_match.rb` (line 129), `keyword?` through the bare class number in `Motions.code_class(code, false) == 2`. Periodic quality at 0b17324.
 - Why it matters: the word under the cursor for `*` and `#` is judged by a copy of the classes `Domain::Motions` owns, keyed on an unnamed number, so a change to the classes leaves the search motion behind.
-- Fix outline: a code-point predicate in `Domain::Motions` (or a named class constant) called from `FindMatch`, `Motions.keyword?`, and the runs scan. Queued in `search-structure`.
+- Fix outline: a code-point predicate in `Domain::Motions` (or a named class constant) called from `FindMatch` and the runs scan. Queued in `search-structure`.
 
 ## The local cls is the abbreviation the naming rule forbids
 
@@ -1024,9 +1024,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The map's Designs lines omit the last features
 
-- Where: the Designs lines of `docs/codebase-map.md` (line 523 at 3a99ddd and the others): area 16 lacks `explorer-folder-toggle` and `theme-tokens`, areas 3 and 13 lack `theme-tokens`, and areas 13 and 17 lack `start-screen`. Periodic quality at 3a99ddd; `completion-request` added `completion` and `diagnostics-display` to areas 13 and 17 (periodic quality at 5722559); at b76b722 area 5 (line 166) names no design of discoverability, quick-docs, or parameter-info, and area 3 (line 101) omits discoverability and layout-slots.
+- Where: the Designs lines of `docs/codebase-map.md` (line 523 at 3a99ddd and the others): area 16 lacks `explorer-folder-toggle` and `theme-tokens`, areas 3 and 13 lack `theme-tokens`, and areas 13 and 17 lack `start-screen`. Periodic quality at 3a99ddd; `completion-request` added `completion` and `diagnostics-display` to areas 13 and 17 (periodic quality at 5722559); at b76b722 area 5 (line 166) names no design of discoverability, quick-docs, or parameter-info, and area 3 (line 101) omits discoverability and layout-slots. At 31919d9 (periodic quality): `docs/codebase-map.md` line 117 names `show` twice, line 121 lists Messages without E444 and `unsaved_buffer`, Designs lines 279, 383, 389, and 437 miss completion, window, slot, breadcrumbs, `:LspStart`, `:LspRestart`, `:messages`, lsp-diagnostics, and feedback, and `docs/architecture.md` line 137 gives EditorState without the message, its error flag, and the history.
 - Why it matters: the Designs line is where a change finds the archived decisions of its area, so a reader of these areas misses why the code looks as it does.
-- Fix outline: add each change with the sections that touch the area, within the map's budget. Queued in `architecture-drift`.
+- Fix outline: add each change with the sections that touch the area, drop the second `show`, name the missing entries, and add the message history to the architecture's section 4, within the budgets. Queued in `architecture-drift`; the 31919d9 part in `docs-index`.
 
 ## Three explorer test rows spell out the DOCS tree inline
 
@@ -1261,12 +1261,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `README.md` (line 192 at `run-budgets`). Quality advisory of `run-budgets`, raised twice.
 - Why it matters: since `run-budgets` the merger runs the metric line only inside the green and red lines after CI, and not at all on a pending or stale return, so the README misdescribes when the figures are recorded.
 - Fix outline: reword the sentence to say the green and red lines record the figures.
-
-## The code map's tools_test.sh entry omits the call caps
-
-- Where: the `tools/tools_test.sh` entry of `docs/codebase-map.md` (line 49 at `run-budgets`). Quality advisory of `run-budgets`, raised twice.
-- Why it matters: the entry lists what the file covers but not the call-caps section `run-budgets` added (`CALL_CAPS`, `FIXED_CAPS`, `maxTurns`, the merger's call count), so a reader looking for that check is not sent there.
-- Fix outline: add the call caps to the entry.
 
 ## The CI wait's header and the merger's step 2 carry run history
 
@@ -1756,9 +1750,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## CompletionList#add returns a bool nobody reads
 
-- Where: `carat/domain/completion_list.rb` line 146 at cd87445; it escapes the predicate rule only because `BOOL_COMMANDS` lists `add` for `FloatLayer` (`test/lint.rb` line 220). Periodic quality at cd87445.
-- Why it matters: an unread result invites a caller to rely on it and hides behind another class's exemption.
-- Fix outline: make it return nothing. Queued in `completion-tidy`.
+- Where: `carat/domain/completion_list.rb` line 21 (`add`), the `add` exemption in `test/lint.rb` line 222, which `BOOL_COMMANDS` gives for `FloatLayer`, and the caller `carat/adapters/json_rpc_language_gateway.rb` line 595, which re-checks `LIMIT` at line 592, at 31919d9. Periodic quality at cd87445 and 847851d. Queue item `completion-tidy`.
+- Why it matters: an unread result invites a caller to rely on it and hides behind an exemption whose reason is about floats.
+- Fix outline: break on a false `add` and drop the gateway's check, or make `add` return nothing, and word the exemption for what remains.
 
 ## CompletionPort carries the server source's request record
 
@@ -2048,12 +2042,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the use case is built once in `EditorAssembly`, so state carries between calls and a nested or interrupted walk reads stale counts, the side channel already listed for `Operate`'s notice.
 - Fix outline: return the counts from the step or hold them in a record made per call, passed to the finish.
 
-## Motions.keyword? and Motions.char_class have no caller
-
-- Where: `carat/domain/motions.rb` lines 132 and 149 at b0dd342. Periodic quality. Queued in the backlog item batch.
-- Why it matters: dead code a reader must check, beside the live `code_class` path.
-- Fix outline: delete both, updating the entries that name `Motions.keyword?`.
-
 ## Walker depends on Motions through require order
 
 - Where: `carat/domain/walker.rb` line 63 calls `Motions.code_class` without requiring `motions.rb`, which requires `walker.rb`, at b0dd342. Periodic quality. Queued in the backlog item batch beside the ProcessRunner entry.
@@ -2197,12 +2185,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/domain/options.rb` line 72 at d828abb; `initialize` (line 56) repeats the literal 300. Quality advisory in `discoverability`, raised twice. Raised again at 38628bb (periodic quality). Queued in `discoverability-tidy`.
 - Why it matters: a constant beside a duplicated literal invites changing one and not the other.
 - Fix outline: use `KEYHINTS_DELAY` in `initialize`, or drop the constant.
-
-## The key hints and the palette cut text by characters, in two copies
-
-- Where: `cut` in `carat/use_cases/discovery/show_key_hints.rb` line 175 and its copy in `carat/use_cases/discovery/follow_palette.rb` line 168, with `pad` at line 161, at d828abb. Quality advisories in `discoverability`, raised twice. Raised again at 38628bb (periodic quality). Queued in `discoverability-tidy`.
-- Why it matters: a description holding wide characters overflows the float, and `pad` can be asked to repeat a space a negative number of times, while `ShowCompletion#fit` already cuts by cells.
-- Fix outline: one cell-aware domain helper cutting at `DisplayWidth.col_at(text, width, 1)` used by the key hints, the palette, and the completion menu, with a row holding a wide-character description.
 
 ## ShowKeyHints copies HideKeyHints' close
 
@@ -2589,12 +2571,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the unexplained 2 already in the backlog lives in two places.
 - Fix outline: one domain helper for the cursor's screen row and the rows free below it, the 2 named.
 
-## CompletionList#add answers a bool its caller ignores
-
-- Where: `carat/domain/completion_list.rb` line 60, the `add` exemption in `test/lint.rb` line 220, and the caller `carat/adapters/json_rpc_language_gateway.rb` line 572 at 847851d. Periodic quality. Queue item `completion-tidy`.
-- Why it matters: the exemption's reason is about floats, and the gateway re-checks `LIMIT` itself.
-- Fix outline: break on a false `add` and drop the gateway's check, or make `add` return void, and word the exemption for both.
-
 ## A project .caratrc can bind a key to a write or quit
 
 - Where: keymap lines in `carat/domain/config.rb` line 213 at 847851d. Periodic security Low (4). Queue item `project-config-guards`.
@@ -2642,12 +2618,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/codebase-map.md` line 591 and the render and language areas' Tests lines at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
 - Why it matters: the entry omits `count` and `name_at`, and the Tests lines do not name `test/editor_breadcrumbs.rb` though it covers `winbar.rb`, `symbol_outline.rb`, and `symbol_request.rb`.
 - Fix outline: add the two methods to the entry and the test to both areas' Tests lines.
-
-## The palette's pad raises on a wide bound key
-
-- Where: `pad` in `carat/use_cases/discovery/follow_palette.rb` line 164, at 7711421. Periodic quality. Queue item `palette-pad-crash`.
-- Why it matters: `cut` keeps width less one characters, not cells, so a bound key of seven or more wide characters measures over the column and `pad` multiplies a space by a negative count, which raises on the key path (T0, a crash).
-- Fix outline: cut to at most N cells and clamp the pad at 0, shared with the copy in `show_key_hints.rb`, with an `editor_palette` row for a wide key.
 
 ## The palette's name column cuts five shipped action names
 
@@ -2729,9 +2699,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The progress segment bounds its percent twice and follows any server
 
-- Where: `carat/adapters/json_rpc_language_gateway.rb` lines 1037 to 1045 (`set_progress`), against `show` at line 397, at the `feedback` change. Quality advisories of `feedback`.
-- Why it matters: the percent is bounded once as given and again for `server.percent`; and any running server's `$/progress` overwrites the title and label, while `show` follows only the current buffer's server, so a second server's report can relabel the current one's indexing.
-- Fix outline: `server.percent = given if given >= 0`; call `set_progress` only for the server `show` follows, or keep the progress per server, with an `editor_messages` row for two servers reporting at once.
+- Where: `carat/adapters/json_rpc_language_gateway.rb` lines 1037 to 1045 (`set_progress`), against `show` at line 398, and `carat/domain/status_slots.rb` line 63, at 31919d9. Quality advisories of `feedback`; periodic quality at 31919d9. Queue item `messages-tidy`.
+- Why it matters: the percent is bounded in three places; and any running server's `$/progress` overwrites the title and label, while `show` follows only the current buffer's server, so a second server's report can relabel the current one's indexing, or be wiped in the same poll and restart the bar's step.
+- Fix outline: `server.percent = given if given >= 0` and one clamp; call `set_progress` only for the server `show` follows, or keep the progress per server, with an `editor_messages` row for two servers reporting at once.
 
 ## MessageHistory stores levels nothing outside the tests reads
 
@@ -2757,8 +2727,104 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: style drift and widths computed for nothing on a narrow screen.
 - Fix outline: rewrap both comments and move the guard to the top of `add_notice_boxes`.
 
-## Unrelated deletions rode in a feature change
+## Bidi and zero-width format characters reach the terminal raw
 
-- Where: `carat/domain/motions.rb` line 129, where `feedback` deleted the dead `Motions.keyword?` and `char_class` with the `display_width` require. Quality advisory of `feedback`, a process note.
-- Why it matters: a refactor inside a feature change widens its review and mixes commit types in one squash.
-- Fix outline: nothing left in the code; leave such deletions to their own chore change next time.
+- Where: `carat/domain/display_width.rb` line 66 (`control?` and `code_cells`), at 31919d9; reached from buffer text, server text, and names through `carat/adapters/frame_presenter.rb`. Periodic security Medium (5). Queue item `bidi-controls`.
+- Why it matters: U+200B to U+200F, U+202A to U+202E, U+2060 to U+2069, U+FEFF, and U+061C count as one cell and are written raw, so a hostile file can reorder the shown code on a bidi-rendering terminal (Trojan Source) or desync columns.
+- Fix outline: treat them as controls, shown as a visible placeholder in buffer text and dropped from control-stripped text, with `test/domain_utf8.rb` and `test/editor_screen.rb` rows per source.
+
+## A server's progress title is stored raw and copied per report
+
+- Where: `carat/domain/status_slots.rb` line 60, fed from `carat/adapters/json_rpc_language_gateway.rb` line 1038, at 31919d9. Periodic security Low (3). Queue item `lsp-client-tidy`.
+- Why it matters: a `$/progress` begin title up to the 8 MiB body limit is kept whole and joined with every later report's message before it is cut, so a hostile server costs a multi-megabyte copy per report, up to 64 per tick.
+- Fix outline: store the title already cut to the progress limit, with a `test/adapters_language_gateway.rb` row for an oversized title.
+
+## :messages drops the two-line unsaved-buffer refusal
+
+- Where: `carat/domain/message_history.rb` line 29 (`add` drops any text holding a line feed), against `Messages.unsaved_buffer` in `carat/domain/messages.rb`, shown by `carat/use_cases/files/quit.rb`, at 31919d9. Periodic quality. Queue item `messages-tidy`.
+- Why it matters: E37 with E162 is never kept, against `docs/compatibility.md` Messages and notifications (Error: Kept) and Neovim, whose `:messages` keeps both lines.
+- Fix outline: keep each line of a shown message in the history (output-only text stays out), with a `test/editor_messages.rb` row for `:q` over a modified hidden buffer followed by `:messages`.
+
+## The message history is built inside EditorState, not the assembly
+
+- Where: `carat/domain/editor_state.rb` line 42, shared with the notices as `state.history`, at 31919d9. Periodic quality. Queue item `messages-tidy`.
+- Why it matters: CLAUDE.md requires everything shared to be built once in `EditorAssembly` and kept in a reader, so `test/adapters_assembly.rb` can check every holder got the one instance.
+- Fix outline: build it in `carat/adapters/editor_assembly.rb` with a reader, pass it to both holders, and add the identity row.
+
+## Feedback's naming, wrap, and plugin docs drift
+
+- Where: `carat/adapters/frame_presenter.rb` line 507 (a group id in a local named `text`), `carat/adapters/status_bar.rb` line 16 (a class comment past the wrap width), `docs/plugins.md` line 69 (the `set_segment` row omits the progress segment at 35 and its place before `lsp`), at 31919d9. Periodic quality. Queue item `messages-tidy`.
+- Why it matters: a misleading name, style drift, and a plugin author misreading where a segment lands.
+- Fix outline: rename the local, rewrap the paragraph, and add the progress to the row's priorities.
+
+## The explorer opens left on any side but right
+
+- Where: `carat/plugins/explorer/plugin.rb` line 516 (`side`), and `carat/use_cases/plugins/window_requests.rb` line 70 (`open_scratch`'s `width`, rows for the bottom panel since 2.4, and a failure text restating `PluginApi::SIDES`), at 31919d9. Periodic quality. Queue item `slots-tidy`.
+- Why it matters: `plugin.explorer.side bottom` or a typo silently opens the tree on the left with no problem reported; a parameter named for columns carries rows.
+- Fix outline: pass `bottom` through and report an unknown side, with a row; rename the parameter `size` and build the message from the sides list.
+
+## SymbolOutline's comment says characters for a byte cap
+
+- Where: `carat/adapters/symbol_outline.rb` line 12, at 31919d9. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Why it matters: the comment says names are cut to `NAME_LIMIT` characters, while the cut caps bytes, as the map says.
+- Fix outline: say bytes.
+
+## Options#apply repeats one block four times
+
+- Where: `carat/domain/options.rb` line 172 (tabstop, shiftwidth, `keyhints.delay`, the layout sizes), at 31919d9. Periodic quality. Queue item: backlog items, `:set` checks.
+- Why it matters: duplication: each branch computes a problem, assigns when empty, else notes it.
+- Fix outline: one private helper taking the problem and the line, answering whether to assign.
+
+## Seven more methods are public with no outside caller
+
+- Where: `Operators.ascii_recase` and `indent_width` (`carat/domain/operators.rb` lines 239 and 271), `Registers#unnamed?` (`carat/domain/registers.rb` line 65), `Buffer#layer_at` (`carat/domain/buffer.rb` line 232), `UndoTree#transaction_at`, `parent_of`, `head_of` (`carat/domain/undo_tree.rb` lines 99, 105, 111), at 31919d9. Periodic quality. Queue item: backlog items, needless public methods.
+- Why it matters: needless public surface, called only by tests.
+- Fix outline: make them private and test them through their public callers.
+
+## Two style slips of 31919d9
+
+- Where: `test/runner/run_all.rb` line 81 and its dispatch at line 178 (`editor_breadcrumbs` out of alphabetical order); `carat.rb` line 4 (a 90-character header line), at 31919d9. Periodic quality. Queue item: backlog items, the runner's test order and comments off their wrap; fold the second into Nine comments break their file's wrap width.
+- Why it matters: every other test keeps alphabetical order; the header breaks its wrap width.
+- Fix outline: move both lines to their place; rewrap lines 2 to 6.
+
+## Tooling header, refspec, and compare message drift
+
+- Where: `tools/tools_test.sh` line 2 (the header omits the tool-call caps section at line 1879 and the workflows' js cases); `tools/gates.sh` line 135 and `tools/agent_guard.sh` line 103 (the default fetch refspec defined twice); `tools/metrics.sh` line 105 (compare says the figures grew when a strict metric was only not measured), at 31919d9. Periodic quality. Queue items `run-budgets-tidy` (header, compare) and `merge-gate-tidy` (refspec, with merge-gate-integrity's open quality advisories).
+- Why it matters: a header that misleads a reader, one rule in two places, and a failure message naming the wrong cause.
+- Fix outline: list both sections in the header; define the refspec once in `tools/rules.sh` for the gates, the guard's copy under an equality case; say "grew or were not measured".
+
+## The live pull request body is not gated
+
+- Where: the `pr-body` gate of `tools/gates.sh` checks the body file in the run state, not the pull request as it stands; retrospective of `feedback` (#83). Queue item `merge-gate-tidy`.
+- Why it matters: a session-link footer appeared after the pull request opened at #83 and was removed only because the contributor re-read it; footers reached 10 of 53 earlier pull requests.
+- Fix outline: the merge gates compare the live body with the run state's body file and refuse a difference, with a case.
+
+## The planner's backlog text reaches the package unchecked
+
+- Where: the package step of `.claude/workflows/deliver-change.js` copies the planner's backlog text before `make docs-lint` sees it; retrospective of `feedback` (#83). Queue item `phase-shares`.
+- Why it matters: one entry named a missing path, failing `docs-lint` and costing the package a separate fix commit.
+- Fix outline: check the planner's output for missing paths before the package copies it, with a case in `make tools-test`.
+
+## An image-viewer plugin is under discussion
+
+- Where: none yet; a proposal waiting for the user's decision, moved out of `docs/queue.md` when the queue reached its budget.
+- Why it matters: five formats, block characters from its own decoder, kitty and iTerm2 where available, bounded parsing, a size cap, only base64 or cells sent.
+- Fix outline: queue it as a T5 item when the user approves, sized from the plugin rows of `docs/metrics.tsv`.
+
+## The palette-pad-crash scenarios drift from their tests
+
+- Where: `openspec/specs/command-palette/spec.md` lines 87 to 92 bind `window.split` while `test/editor_palette.rb` line 141 binds `insert.newline`; `openspec/specs/key-hints/spec.md` line 102 remaps `<leader>xa` while `test/editor_key_hints.rb` line 128 sets a group name for `<leader>xy`, since a project file reads no remap, at 6141633. Quality advisory of `palette-pad-crash`. Queue item `discoverability-tidy`.
+- Why it matters: a scenario is meant to describe the setup its test runs; a reader who reproduces the scenario takes a path the test never covers.
+- Fix outline: word the palette scenarios after `insert.newline` and the hint scenario after a group name of fifty wide characters whose widest row is 77 of 78 cells, through a proposal.
+
+## cells_of in the palette test returns an array no caller reads whole
+
+- Where: `cells_of` in `test/editor_palette.rb` line 66, at 6141633. Quality advisory of `palette-pad-crash`. Queue item `discoverability-tidy`.
+- Why it matters: it computes the row's total cells that no caller reads (only the second value is used) and returns several values in an array, against the test-helper rule of `CLAUDE.md`.
+- Fix outline: return only the description's start cell as an Integer and drop the total.
+
+## DisplayWidth.bytes_within is public for one caller
+
+- Where: `DisplayWidth.bytes_within` in `carat/domain/display_width.rb` line 148, called only by `cut` and a test, at 6141633. Quality advisory of `palette-pad-crash`. Queue item: backlog items, needless public methods.
+- Why it matters: needless public surface, the same kind as the entry Seven more methods are public with no outside caller.
+- Fix outline: move the stray-byte rows of its test to `cut` and make `bytes_within` private to `DisplayWidth`.

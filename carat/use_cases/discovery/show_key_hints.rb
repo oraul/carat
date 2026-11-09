@@ -160,7 +160,7 @@ module Carat
               used = Domain::DisplayWidth.text_width(line, 0)
               target = c * (width + GAP)
               line << " " * (target - used) if target > used
-              line << cut(rows[at], width)
+              line << Domain::DisplayWidth.cut(rows[at], width)
             end
             c += 1
           end
@@ -168,13 +168,6 @@ module Carat
           r += 1
         end
         lines
-      end
-
-      # The text cut to at most width cells.
-      #: (String, Integer) -> String
-      def cut(text, width)
-        return text if Domain::DisplayWidth.text_width(text, 0) <= width
-        text[0, width].to_s
       end
     end
   end

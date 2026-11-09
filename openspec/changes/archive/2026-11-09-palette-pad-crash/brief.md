@@ -1,0 +1,3 @@
+# Brief
+
+palette-pad-crash: docs/queue.md item 1 as the planner wrote it (T0 crash from the periodic quality review at 7711421, estimated small), first by the rule that a crash goes to the front: a bound key wider than 11 cells of wide characters makes the command palette's pad count negative, which raises and stops the editor. Acceptance: such a key renders truncated or padded without raising, the same check holds for the key-hints float and any other place that pads by display width, each with a table-driven test of wide and combining characters; allocations per key unchanged. No planner decision is needed; quick-docs-styles follows. Security review is never skipped.

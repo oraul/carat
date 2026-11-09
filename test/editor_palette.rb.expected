@@ -23,5 +23,11 @@ ok   Esc runs nothing
 ok   Enter runs an ex command as typed after a colon
 ok   an operator from the palette waits for its motion
 ok   Enter with nothing selected only closes
+ok   a key of seven wide characters
+ok   a key of twelve wide characters
+ok   a key of letters with combining marks
+ok   a key of wide characters with combining marks
+ok   a wide key keeps the characters that fit its column
+ok   a combining key keeps every mark with its letter
 ok   the colon prompt returns after the palette
-editor_palette: 26 passed, 0 failed
+editor_palette: 32 passed, 0 failed
