@@ -428,8 +428,9 @@ Files:
 - `carat/use_cases/recall_history.rb`: `RecallHistory#call`, `<Up>` and `<Down>` through the prompt's `History` (`:` or search).
 - `carat/use_cases/ex/lsp_start_command_handler.rb`: `LspStartCommandHandler.register` (`:LspStart`): starts the current buffer's language server, trusted directory or not, through `LanguageServicePort#start`.
 - `carat/use_cases/ex/lsp_restart_command_handler.rb`: `LspRestartCommandHandler.register` (`:LspRestart`): stops every language server and starts the current buffer's again through `LanguageServicePort#restart`.
+- `carat/use_cases/ex/messages_command_handler.rb`: `MessagesCommandHandler.register` (`:mes[sages]`); TODO: one line on what it does.
 
-Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`.
+Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`, `test/editor_messages.rb`, `test/domain_messages.rb`.
 
 Designs: `ex-write-quit-all` (all Decisions), `dependency-injection` (Ex names; ExecuteEx moves to use_cases/ex), `editor-foundation` (Use cases), `plugin-explorer` (The file requests are validated in the host), `use-case-boundaries` (The splits), `buffer-substitute` (all Decisions), `buffer-global` (all Decisions).
 

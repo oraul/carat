@@ -27,6 +27,8 @@ module AdaptersStatusBarTest
     SLOTS.infos = 0
     SLOTS.hints = 0
     SLOTS.set_lsp("", :none, 0)
+    SLOTS.clear_progress
+    BAR.plain = false
     UI.segments.clear
     UI.owners.clear
     UI.priorities.clear
@@ -47,6 +49,21 @@ module AdaptersStatusBarTest
   end
 
   # The lsp state of its name.
+  # The bar of a plain scenario 60 wide after progress titled title with
+  # each report's percent (-1 for none), reduced motion and plain as given.
+  def self.progress(title, percents, reduced, plain)
+    s = scenario("plain")
+    s.options.reducedmotion = reduced == true
+    BAR.plain = plain == true
+    list = percents.to_a
+    i = 0
+    while i < list.length
+      SLOTS.set_progress(i == 0 ? title.to_s : "", "", list[i].to_i)
+      i += 1
+    end
+    paint(s, 60).row_text(0)
+  end
+
   def self.lsp_state_of(name)
     case name.to_s
     when "starting" then :starting
@@ -248,6 +265,32 @@ module AdaptersStatusBarTest
     t.assert_equal([false, true, 0, 1], [again, other, empty.errors, empty.infos], "counting the same again changes nothing, another list replaces the counts")
     none = empty.count_diagnostics(D::DiagnosticList.new)
     t.assert_equal([true, false], [none, empty.diagnostics?], "no diagnostics empty the slot")
+
+    # The progress of long work before the lsp slot.
+    t.table([
+      ["a bar at a percent", ["Indexing", [40], false, false], pad(" NORMAL  a.txt ", " Indexing ━━━━──────  utf-8  1:1  All ", 60)],
+      ["a percent rounds down to whole cells", ["Indexing", [99], false, false], pad(" NORMAL  a.txt ", " Indexing ━━━━━━━━━─  utf-8  1:1  All ", 60)],
+      ["without a percent three cells move per report", ["Indexing", [-1, -1, -1], false, false], pad(" NORMAL  a.txt ", " Indexing ──━━━─────  utf-8  1:1  All ", 60)],
+      ["a report without a percent keeps the last", ["Indexing", [30, -1], false, false], pad(" NORMAL  a.txt ", " Indexing ━━━───────  utf-8  1:1  All ", 60)],
+      ["reduced motion leaves out a bar without a percent", ["Indexing", [-1], true, false], pad(" NORMAL  a.txt ", " Indexing  utf-8  1:1  All ", 60)],
+      ["reduced motion keeps a bar with a percent", ["Indexing", [40], true, false], pad(" NORMAL  a.txt ", " Indexing ━━━━──────  utf-8  1:1  All ", 60)],
+      ["a plain bar under NO_COLOR", ["Indexing", [40], false, true], pad(" NORMAL  a.txt ", " Indexing ####------  utf-8  1:1  All ", 60)],
+      ["no title, the bar alone", ["", [100], false, false], pad(" NORMAL  a.txt ", " ━━━━━━━━━━  utf-8  1:1  All ", 60)]
+    ]) do |input|
+      progress(input[0], input[1], input[2], input[3])
+    end
+    s = scenario("plain")
+    SLOTS.set_progress("Indexing", "", 40)
+    f = paint(s, 60)
+    x = f.row_text(0).index("━").to_i
+    t.assert_equal([H::STATUS_LSP_READY, H::STATUS, H::STATUS], [f.cell(0, x).hl, f.cell(0, x + 4).hl, f.cell(0, x - 1).hl], "done cells in StatusLineLspReady, the rest in StatusLine")
+    BAR.plain = true
+    f = paint(s, 60)
+    t.assert_equal(H::STATUS, f.cell(0, f.row_text(0).index("#").to_i).hl, "plain done cells in StatusLine")
+    BAR.plain = false
+    SLOTS.branch = "main"
+    t.assert_equal(pad(" NORMAL  a.txt  ± main ", " 1:1  All ", 36), paint(s, 36).row_text(0), "a narrow bar drops the progress (35) before the branch (40)")
+    t.assert_equal([true, false, false], [SLOTS.clear_progress, SLOTS.clear_progress, SLOTS.progress?], "clearing ends the progress once")
 
     t.finish
   end

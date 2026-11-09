@@ -3,6 +3,8 @@ require_relative "../ports/clock_port"
 require_relative "../domain/completion_request"
 require_relative "../domain/hover_request"
 require_relative "../domain/signature_request"
+require_relative "../domain/notices"
+require_relative "../domain/control_text"
 require_relative "../domain/symbol_request"
 require_relative "symbol_outline"
 require_relative "../domain/markdown_text"
@@ -74,6 +76,7 @@ module Carat
       DRAIN_LIMIT = 64
       NAME_LIMIT = 32
       MESSAGE_LIMIT = 500
+      NOTICE_LIMIT = 200
       DIAGNOSTIC_LIMIT = 1000
       METHOD_NOT_FOUND = -32_601
       FILE_SCHEME = "file:"
@@ -108,9 +111,11 @@ module Carat
       attr_reader :hover #: Domain::HoverRequest
       attr_reader :signature #: Domain::SignatureRequest
       attr_reader :symbols #: Domain::SymbolRequest
+      attr_reader :notices #: Domain::Notices
 
-      #: (processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, files: Ports::FilePort, buffers: Domain::BufferList, config: Domain::Config, slots: Domain::StatusSlots, completion: Domain::CompletionRequest, clock: Ports::ClockPort, hover: Domain::HoverRequest, signature: Domain::SignatureRequest, symbols: Domain::SymbolRequest) -> void
-      def initialize(processes:, messages:, files:, buffers:, config:, slots:, completion:, clock:, hover:, signature:, symbols:)
+      #: (processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, files: Ports::FilePort, buffers: Domain::BufferList, config: Domain::Config, slots: Domain::StatusSlots, completion: Domain::CompletionRequest, clock: Ports::ClockPort, hover: Domain::HoverRequest, signature: Domain::SignatureRequest, symbols: Domain::SymbolRequest, notices: Domain::Notices) -> void
+      def initialize(processes:, messages:, files:, buffers:, config:, slots:, completion:, clock:, hover:, signature:, symbols:, notices:)
+        @notices = notices
         @symbols = symbols
         @hover = hover
         @signature = signature
@@ -390,8 +395,9 @@ module Carat
       # whether the slot changed.
       #: (Domain::LanguageServer?) -> bool
       def show(server)
-        return @slots.set_lsp("", :none, 0) if server.nil?
-        @slots.set_lsp(server.name, server.state, server.percent)
+        cleared = server.nil? || server.state != :indexing ? @slots.clear_progress : false
+        return @slots.set_lsp("", :none, 0) || cleared if server.nil?
+        @slots.set_lsp(server.name, server.state, server.percent) || cleared
       end
 
       # Handles at most DRAIN_LIMIT queued messages; answers whether any.
@@ -1000,7 +1006,23 @@ module Carat
           progress(server, params["value"])
         elsif name == "textDocument/publishDiagnostics"
           published(server, params["uri"], params["diagnostics"])
+        elsif name == "window/showMessage"
+          shown(params["type"], params["message"])
         end
+      end
+
+      # A server's message as a notification: type 1 an error, 2 a
+      # warning, anything else information; its text on one line without
+      # escape sequences, cut to NOTICE_LIMIT bytes.
+      #: (untyped, untyped) -> void
+      def shown(type, message)
+        return unless message.is_a?(String)
+        text = Domain::ControlText.plain(message.to_s, NOTICE_LIMIT).strip
+        return if text.empty?
+        level = Domain::MessageHistory::INFO
+        level = Domain::MessageHistory::ERROR if type == 1
+        level = Domain::MessageHistory::WARNING if type == 2
+        @notices.add(text, level, @clock.now)
       end
 
       # A work-done progress report: begin and end count the reports that
@@ -1010,6 +1032,10 @@ module Carat
         return unless value.is_a?(Hash) && server.running?
         kind = value["kind"]
         percent = value["percentage"]
+        title = value["title"]
+        message = value["message"]
+        given = percent.is_a?(Integer) || percent.is_a?(Float) ? bounded(percent.to_i, 0, 100) : -1
+        @slots.set_progress(kind == "begin" && title.is_a?(String) ? title.to_s : "", message.is_a?(String) ? message.to_s : "", given) unless kind == "end"
         if kind == "begin"
           server.tasks = server.tasks + 1
           server.percent = 0

@@ -13,7 +13,7 @@ module Carat
     # Paints the one status bar across a frame row, as Neovim's
     # laststatus=3, for the current window: the mode pill, the file with
     # the modified icon, the git branch, and the diagnostics counts at the
-    # left; the plugins' segments, the lsp slot, the file type, the
+    # left; the plugins' segments, the progress of long work, the lsp slot, the file type, the
     # encoding, the position, and the percent at the right end. Each
     # segment is its text with a space on each side, so the bar has no
     # separator glyphs. An empty slot (branch, diagnostics, lsp, file
@@ -37,16 +37,22 @@ module Carat
       ENCODING = 7
       POSITION = 8
       PERCENT = 9
+      PROGRESS = 10
 
       # The priority of each kind by its number; a plugin's segment has
       # its own.
-      PRIORITIES = [100, 90, 40, 70, 0, 60, 30, 20, 80, 50]
+      PRIORITIES = [100, 90, 40, 70, 0, 60, 30, 20, 80, 50, 35]
 
       ENCODING_TEXT = "utf-8"
       NO_NAME = "[No Name]"
+      # The cells of the progress bar, and the done cells of one without a
+      # percent, which move one cell for each report.
+      BAR_CELLS = 10
+      BAR_RUN = 3
 
       attr_reader :plugin_ui #: Domain::PluginUi
       attr_reader :slots #: Domain::StatusSlots
+      attr_reader :plain #: bool
 
       # @rbs @kinds: Array[Integer]
       # @rbs @widths: Array[Integer]
@@ -58,6 +64,7 @@ module Carat
       def initialize(plugin_ui:, slots:)
         @plugin_ui = plugin_ui
         @slots = slots
+        @plain = false
         @kinds = []
         @widths = []
         @priorities = []
@@ -92,6 +99,13 @@ module Carat
           x = paint_entry(frame, row, x, cols, i, state) if @shown[i] == 1 && @kinds[i] > DIAGNOSTICS
           i += 1
         end
+      end
+
+      # Draws the progress bar with ASCII glyphs and no color when plain,
+      # as NO_COLOR asks.
+      #: (bool) -> void
+      def plain=(value)
+        @plain = value
       end
 
       # The pill text of a mode.
@@ -155,6 +169,7 @@ module Carat
           add(PLUGIN, text_width(ui.text_at(k)) + 2, k)
           k += 1
         end
+        add(PROGRESS, progress_width(state), -1) if slots.progress?
         add(LSP, text_width(slots.lsp_label) + 2, -1) if slots.lsp?
         add(FILETYPE, text_width(buffer.filetype) + 2, -1) unless buffer.filetype.empty?
         add(ENCODING, ENCODING_TEXT.length + 2, -1)
@@ -233,6 +248,10 @@ module Carat
         elsif kind == PLUGIN
           x = frame.put_within(row, x, " ", hl, limit)
           x = frame.put_within(row, x, @plugin_ui.text_at(@owners[i]), hl, limit)
+        elsif kind == PROGRESS
+          x = frame.put_within(row, x, " ", hl, limit)
+          x = frame.put_within(row, x, slots.progress_label, hl, limit)
+          x = paint_bar(frame, row, x, limit) if bar?(state)
         elsif kind == LSP
           hl = StatusBar.lsp_group(slots.lsp_state)
           x = frame.put_within(row, x, " ", hl, limit)
@@ -260,6 +279,47 @@ module Carat
           end
         end
         frame.put_within(row, x, " ", hl, limit)
+      end
+
+      # Whether the progress shows a bar: always with a percent, without one
+      # only when motion is not reduced.
+      #: (Domain::EditorState) -> bool
+      def bar?(state)
+        @slots.progress_percent >= 0 || !state.options.reducedmotion
+      end
+
+      # The cells of the progress segment: its label, the bar with the space
+      # before it when it shows, and a space on each side.
+      #: (Domain::EditorState) -> Integer
+      def progress_width(state)
+        label = @slots.progress_label
+        width = text_width(label) + 2
+        width += BAR_CELLS + (label.empty? ? 0 : 1) if bar?(state)
+        width
+      end
+
+      # The bar from x: a done cell per ten percent, or BAR_RUN done cells
+      # at the report count's place without a percent; returns the column
+      # after it.
+      #: (Domain::Frame, Integer, Integer, Integer) -> Integer
+      def paint_bar(frame, row, x, limit)
+        slots = @slots
+        x = frame.put_within(row, x, " ", Domain::Highlight::STATUS, limit) unless slots.progress_label.empty?
+        percent = slots.progress_percent
+        from = 0
+        to = percent * BAR_CELLS / 100
+        if percent < 0
+          from = (slots.progress_step - 1) % (BAR_CELLS - BAR_RUN + 1)
+          to = from + BAR_RUN
+        end
+        done = @plain ? Domain::Highlight::STATUS : Domain::Highlight::STATUS_LSP_READY
+        c = 0
+        while c < BAR_CELLS && x < limit
+          on = c >= from && c < to
+          x = frame.put_code(row, x, on ? (@plain ? 0x23 : 0x2501) : (@plain ? 0x2D : 0x2500), 1, on ? done : Domain::Highlight::STATUS)
+          c += 1
+        end
+        x
       end
 
       # One diagnostics count above zero as a space, its icon, a space, and
