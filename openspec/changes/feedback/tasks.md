@@ -20,4 +20,4 @@
 
 - [x] 4.1 Add the Messages and notifications table to `docs/compatibility.md` (each kind's placement, expiry, and history) and the progress row of the status bar; map the new files in `docs/codebase-map.md`
 - [x] 4.2 Do the plan's backlog bookkeeping in `docs/backlog.md` and delete the dead `Motions.char_class` and `keyword?` (`carat/use_cases/motions.rb`), checked by `make test`
-- [ ] 4.3 Run `make gates`, `make spec-validate`, `make docs-lint`, and the touched tests; confirm `lh` allocations per key with `make bench-budget`
+- [x] 4.3 Run `make gates`, `make spec-validate`, `make docs-lint`, and the touched tests; confirm `lh` allocations per key with `make bench-budget`
