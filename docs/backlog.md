@@ -2642,3 +2642,123 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/codebase-map.md` line 591 and the render and language areas' Tests lines at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
 - Why it matters: the entry omits `count` and `name_at`, and the Tests lines do not name `test/editor_breadcrumbs.rb` though it covers `winbar.rb`, `symbol_outline.rb`, and `symbol_request.rb`.
 - Fix outline: add the two methods to the entry and the test to both areas' Tests lines.
+
+## The palette's pad raises on a wide bound key
+
+- Where: `pad` in `carat/use_cases/discovery/follow_palette.rb` line 164, at 7711421. Periodic quality. Queue item `palette-pad-crash`.
+- Why it matters: `cut` keeps width less one characters, not cells, so a bound key of seven or more wide characters measures over the column and `pad` multiplies a space by a negative count, which raises on the key path (T0, a crash).
+- Fix outline: cut to at most N cells and clamp the pad at 0, shared with the copy in `show_key_hints.rb`, with an `editor_palette` row for a wide key.
+
+## The palette's name column cuts five shipped action names
+
+- Where: `NAME_WIDTH` in `carat/use_cases/discovery/follow_palette.rb` line 29, at 7711421. Periodic quality. Queue item `discoverability-tidy`.
+- Why it matters: 28 cuts `textobject.inner_single_quote`, `textobject.inner_double_quote`, `plugin.explorer.toggle_hidden`, `search.partial_word_backward`, and `motion.big_word_end_backward` to 27 characters.
+- Fix outline: size the column from the longest name capped by the float width, with a row showing a 29-character name whole.
+
+## :LspRestart lets a stale symbol answer replace the outline
+
+- Where: `stop` in `carat/adapters/json_rpc_language_gateway.rb` line 227, at 7711421; `crash` (line 439) forgets the symbol request, `stop` does not. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Why it matters: a documentSymbol request in flight keeps its id across a restart, so `waiting?` holds until the deadline, the cancel goes to the new server for an id it never issued, and the new server's answer to a reused id is read as the outline.
+- Fix outline: forget the symbol request in `stop` beside the other three, with an `editor_breadcrumbs` row for `:LspRestart` with a symbol request in flight.
+
+## The presenter and the arranger each decide which windows get a winbar
+
+- Where: `paint_winbars` in `carat/adapters/frame_presenter.rb` line 723 and `reserve_winbars` in `carat/use_cases/windows/arrange_view.rb` line 89, at 7711421. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Why it matters: two rules in two layers (geometry against scratch and height) must stay in step.
+- Fix outline: one predicate or a flag set by the arranger that the presenter reads.
+
+## Layout's split and attach copy the inner-split block
+
+- Where: `carat/domain/layout.rb` lines 153 to 168 (`split`) and 351 to 368 (`attach`), at 7711421. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Why it matters: allocating the split, copying size and rectangle, replacing the target, and reparenting are written twice.
+- Fix outline: one private helper returning the inner id, called by both.
+
+## Quit walks the leaves to count file windows
+
+- Where: `beside_side_windows?` in `carat/use_cases/files/quit.rb` line 66, at 7711421. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Why it matters: it repeats `TabPage#file_window_count`.
+- Fix outline: call `file_window_count`.
+
+## TabPage#previous? reads the node array directly
+
+- Where: `carat/domain/tab_page.rb` line 103, at 7711421. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Why it matters: every other walker uses `layout.node_count`.
+- Fix outline: use `node_count`.
+
+## A split from a scratch window has no winbar row
+
+- Where: `winbar_after?` in `carat/use_cases/windows/split_window.rb` line 59, at 7711421; `test/editor_breadcrumbs.rb` splits only file windows. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Why it matters: the branch adding no file window for a scratch split is untested.
+- Fix outline: rows splitting a slot or plugin window with a count under `auto` and `always`.
+
+## The docs deny or omit the winbar
+
+- Where: `docs/compatibility.md` line 441 (Bars says no winbar, against Breadcrumbs at line 518); `docs/architecture.md` line 257 (the FramePresenter bullet omits the winbar row and its painter), at 7711421. Periodic quality. Queue items `docs-index` and `architecture-drift`.
+- Why it matters: two documents contradict the delivered feature.
+- Fix outline: drop the denial or point to Breadcrumbs; name the winbar and `Winbar` in the bullet.
+
+## The map omits Layout and search methods other files call
+
+- Where: `docs/codebase-map.md` line 349 (Layout without `leaf_showing`, `leaf_number`, `leaf_count`, `node`, `node_count`, `window_at`), line 189 (VimPattern without `compile_substitute`), line 194 (LastSearch without `any?`, `end_preview`), line 195 (SearchPrompt without `close`, `prefix`), at 7711421. Periodic quality. Queue item `docs-index`.
+- Why it matters: callers look up a method the map does not name.
+- Fix outline: name them on those lines.
+
+## ExTable keeps unread positions and an uncalled count
+
+- Where: `carat/use_cases/ex/ex_table.rb` lines 16 and 56 (`@index` positions never read), 98 (`count`, no caller), 104 (`handler_at`, public only for `find`), at 7711421. Periodic quality. Queue item 41.
+- Why it matters: dead API, and the comment reads the index as a lookup though it only refuses duplicates.
+- Fix outline: delete `count`, make `handler_at` private, keep a set of taken names, and say so in the comment.
+
+## Motions repeats its row clamp and paragraph walk
+
+- Where: `carat/domain/motions.rb` line 246 (`line_down` repeats `vertical`'s checks at lines 215 to 222, `to_row` clamps again), lines 540 and 562 (`paragraph_forward` and `paragraph_backward` share one loop), at 7711421. Periodic quality. Queue item `search-tidy`.
+- Why it matters: three clamps and two walks to keep in step.
+- Fix outline: one private row clamp and one paragraph walker taking the step.
+
+## GlobalCommand#remember repeats SubstituteLines#remember
+
+- Where: `carat/use_cases/search/global_command.rb` line 81 and `carat/use_cases/search/substitute_lines.rb` line 113, at 7711421. Periodic quality. Queue item `substitute-tidy`.
+- Why it matters: the same four writes of a used pattern, so a fix to one misses the other.
+- Fix outline: one domain function both call.
+
+## Small code findings of the 7711421 periodic review
+
+- Where: `carat/use_cases/search/find_match.rb` line 163 and `substitute_lines.rb` line 143 (E486 as a literal, not a `Search` constant); `carat/use_cases/actions/motion_handler.rb` line 52 (a comment missing words) and `carat/domain/find.rb` line 3 (describes `LastFind`'s role); `carat/domain/vim_pattern.rb` line 23 (three escapes listed twice). Queue item `search-tidy`.
+- Why it matters: a message spelled twice and three wrong comments.
+- Fix outline: `Search::NOT_FOUND` used by both; reword the two comments; drop the second mention.
+
+## The progress segment bounds its percent twice and follows any server
+
+- Where: `carat/adapters/json_rpc_language_gateway.rb` lines 1037 to 1045 (`set_progress`), against `show` at line 397, at the `feedback` change. Quality advisories of `feedback`.
+- Why it matters: the percent is bounded once as given and again for `server.percent`; and any running server's `$/progress` overwrites the title and label, while `show` follows only the current buffer's server, so a second server's report can relabel the current one's indexing.
+- Fix outline: `server.percent = given if given >= 0`; call `set_progress` only for the server `show` follows, or keep the progress per server, with an `editor_messages` row for two servers reporting at once.
+
+## MessageHistory stores levels nothing outside the tests reads
+
+- Where: `carat/domain/message_history.rb` line 8, at the `feedback` change. Quality advisory of `feedback`.
+- Why it matters: speculative generality: levels are kept per entry, but only tests read `level_at`, since `:messages` is not colored (`docs/compatibility.md`).
+- Fix outline: drop the levels until `:messages` colors its listing, or use them for the listing's groups.
+
+## Search echoes fill the message history
+
+- Where: `carat/domain/editor_state.rb` line 135 (`show`), reached by the `/pattern` echo of `n`, `N`, `*`, and `#`, at the `feedback` change. Quality advisory of `feedback`.
+- Why it matters: Neovim does not keep the search echo in `:messages`, so 500 presses of `n` evict every real error, and the deviation is not in the compatibility notes.
+- Fix outline: show the search echo through `show_output`, or list the deviation under Messages and notifications in `docs/compatibility.md`, with a row pressing `n` after an error.
+
+## The read timeout cut to a notification's deadline has no test
+
+- Where: `carat/adapters/input_controller.rb` line 152, at the `feedback` change; only the harness pump is exercised. Quality advisory of `feedback`.
+- Why it matters: a regression that waits the full timeout leaves a notification on screen past its deadline unnoticed.
+- Fix outline: have the terminal double record the timeout of `read_key` and assert it is cut while a notice shows.
+
+## The notice painter's comments and narrow guard
+
+- Where: `carat/adapters/frame_presenter.rb` line 429 (a comment line not wrapped like its block) and line 439 (the `cols < NOTICE_NARROWEST` guard after the widths it makes moot), and `carat/domain/editor_state.rb` line 13 (an unwrapped comment line), at the `feedback` change. Quality advisory of `feedback`.
+- Why it matters: style drift and widths computed for nothing on a narrow screen.
+- Fix outline: rewrap both comments and move the guard to the top of `add_notice_boxes`.
+
+## Unrelated deletions rode in a feature change
+
+- Where: `carat/domain/motions.rb` line 129, where `feedback` deleted the dead `Motions.keyword?` and `char_class` with the `display_width` require. Quality advisory of `feedback`, a process note.
+- Why it matters: a refactor inside a feature change widens its review and mixes commit types in one squash.
+- Fix outline: nothing left in the code; leave such deletions to their own chore change next time.
