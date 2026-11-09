@@ -11,5 +11,5 @@
 
 ## 3. Docs and checks
 
-- [ ] 3.1 Update `docs/compatibility.md`, `docs/codebase-map.md`, `docs/architecture.md` (section 5.1), and `docs/backlog.md` (the plan notes); `make docs-lint` and `make gates` pass.
-- [ ] 3.2 Run `make test`, `make lint`, `make diagnose`, and `make spec-validate`, all passing.
+- [x] 3.1 Update `docs/compatibility.md`, `docs/codebase-map.md`, `docs/architecture.md` (section 5.1), and `docs/backlog.md` (the plan notes); `make docs-lint` and `make gates` pass.
+- [x] 3.2 Run `make test`, `make lint`, `make diagnose`, and `make spec-validate`, all passing.
