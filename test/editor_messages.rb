@@ -125,8 +125,15 @@ module EditorMessagesTest
     # Plain under NO_COLOR.
     h = editor(true)
     notify(h, "bundle failed", D::MessageHistory::ERROR)
-    t.assert_equal(["+Error----------+", "| bundle failed |", "+---------------+"], [h.row(0)[42, 17], h.row(1)[42, 17], h.row(2)[42, 17]], "a plain box in ASCII, as wide as its text")
-    t.assert_equal([H::NORMAL, H::NORMAL, H::NORMAL], [h.frame.hl_at(0, 42), h.frame.hl_at(0, 43), h.frame.hl_at(1, 44)], "a plain box is all in Normal")
+    t.assert_equal(["+Error-------------+", "| bundle failed    |", "+------------------+"], [h.row(0)[39, 20], h.row(1)[39, 20], h.row(2)[39, 20]], "a plain box in ASCII, at least 20 columns wide")
+    t.assert_equal([H::NORMAL, H::NORMAL, H::NORMAL], [h.frame.hl_at(0, 39), h.frame.hl_at(0, 40), h.frame.hl_at(1, 41)], "a plain box is all in Normal")
+
+    # A short text keeps the box 20 columns wide, so its title is whole.
+    h = editor(false)
+    notify(h, "slow", D::MessageHistory::WARNING)
+    notify(h, "ok", D::MessageHistory::ERROR)
+    t.assert_equal(["╭Warning───────────╮", "│ slow             │"], [h.row(0)[39, 20], h.row(1)[39, 20]], "a short warning draws its whole title")
+    t.assert_equal(["╭Error─────────────╮", "│ ok               │"], [h.row(3)[39, 20], h.row(4)[39, 20]], "a short error draws its whole title")
 
     t.finish
   end

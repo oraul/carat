@@ -424,10 +424,11 @@ module Carat
 
       # Appends to the float key a box per notification, oldest first from
       # the row under the buffer tabs down, its right edge one column from
-      # the screen's, as wide as its text and its border within half the
-      # screen; a box reaching the status bar and those after it are left
-      # out, and every box on a screen narrower than NOTICE_NARROWEST. Its serial and level follow the box, so a new notification
-      # repaints.
+      # the screen's, as wide as its text and its border, at least
+      # NOTICE_MIN_WIDTH so the title fits, within half the screen; a box
+      # reaching the status bar and those after it are left out, and every
+      # box on a screen narrower than NOTICE_NARROWEST. Its serial and
+      # level follow the box, so a new notification repaints.
       #: (Integer, Integer, Integer) -> void
       def add_notice_boxes(rows, cols, tabline)
         key = @float_key
@@ -442,6 +443,7 @@ module Carat
           top = tabline + i * NOTICE_HEIGHT
           return if top + NOTICE_HEIGHT > rows - 2
           width = Domain::DisplayWidth.text_width(notices.text_at(i), 0) + 4
+          width = NOTICE_MIN_WIDTH if width < NOTICE_MIN_WIDTH
           width = widest if width > widest
           left = right - width
           left = 0 if left < 0

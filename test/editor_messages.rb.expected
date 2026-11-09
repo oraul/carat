@@ -16,6 +16,8 @@ ok   a scroll under the box keeps it drawn
 ok   three boxes, two after 4 seconds, one after 6, none after 9
 ok   the rows under a box that left show the window again
 ok   a fourth replaces the oldest
-ok   a plain box in ASCII, as wide as its text
+ok   a plain box in ASCII, at least 20 columns wide
 ok   a plain box is all in Normal
-editor_messages: 20 passed, 0 failed
+ok   a short warning draws its whole title
+ok   a short error draws its whole title
+editor_messages: 22 passed, 0 failed
