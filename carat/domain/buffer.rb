@@ -58,9 +58,11 @@ module Carat
     # are. styles holds a documentation buffer's SyntaxLine per row (none
     # for any other buffer), each kept for its row's string. readonly
     # marks a file buffer that is never written, as a definition target
-    # outside the project opens (SaveFile refuses it with E45). A Struct
+    # outside the project opens (SaveFile refuses it with E45). listed is
+    # Neovim's 'buflisted': false for a buffer a jump left, which stays
+    # loaded with its number but has no tab until it is opened again. A Struct
     # record: mutable, with a reader and a writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks, :styles, :readonly, keyword_init: true)
+    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks, :styles, :readonly, :listed, keyword_init: true)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
@@ -86,6 +88,7 @@ module Carat
       # @rbs @diagnostic_marks: Array[Integer]
       # @rbs @styles: Array[untyped]
       # @rbs @readonly: bool
+      # @rbs @listed: bool
 
       # Every member is stored through its writer after super(), so the
       # empty sign list takes the pinned type: Spinel's keyword super of a
@@ -121,6 +124,7 @@ module Carat
         self.diagnostic_marks = []
         self.styles = Array.new(0, nil)
         self.readonly = false
+        self.listed = true
       end
 
       # Whether the buffer carries the styles of documentation rows.
@@ -174,6 +178,13 @@ module Carat
       #: () -> bool
       def scratch?
         !owner.empty?
+      end
+
+      # Whether the buffer has no tab in the tab row: a scratch buffer or
+      # one a jump left unlisted.
+      #: () -> bool
+      def tabless?
+        !listed || scratch?
       end
 
       # The name the status line shows: the path, the scratch title, or

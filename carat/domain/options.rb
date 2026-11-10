@@ -29,10 +29,12 @@ module Carat
     # or more file windows, "always", or "never". indentguides draws a
     # guide at each shiftwidth level of file windows' indentation, in
     # indentguides_char, one character one column wide. winborder is the
-    # border style of floats, Neovim's option (BorderStyle).
+    # border style of floats, Neovim's option (BorderStyle). jumptab is
+    # "replace" when a jump takes the tab of the buffer it leaves, or
+    # "keep", Vim's behavior.
     # All but syntax_on come from option lines of the configuration. A Struct
     # record: mutable, with a reader and a writer per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, :indentguides, :indentguides_char, :winborder, keyword_init: true)
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, :indentguides, :indentguides_char, :winborder, :jumptab, keyword_init: true)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -62,6 +64,7 @@ module Carat
       # @rbs @indentguides: bool
       # @rbs @indentguides_char: String
       # @rbs @winborder: String
+      # @rbs @jumptab: String
 
       # Vim's defaults, the nerd icon set, the default theme on the
       # terminal's background, syntax highlighting on, and Neovim's search
@@ -70,7 +73,7 @@ module Carat
       # indent guides off, as in Neovim, which draws none.
       #: () -> void
       def initialize
-        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: 300, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto", indentguides: false, indentguides_char: GUIDE_CHAR, winborder: BorderStyle::DEFAULT)
+        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: 300, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto", indentguides: false, indentguides_char: GUIDE_CHAR, winborder: BorderStyle::DEFAULT, jumptab: JUMPTAB_KEEP)
       end
 
       # The options a configuration line may set, by name, with the kind
@@ -82,7 +85,7 @@ module Carat
         "startscreen" => "bool", "reducedmotion" => "bool", "cursorline" => "bool", "indentguides" => "bool",
         "tabstop" => "integer", "shiftwidth" => "integer", "scroll" => "integer", "scrolloff" => "integer", "timeoutlen" => "integer", "undolevels" => "integer", "keyhints.delay" => "integer",
         "layout.left_width" => "integer", "layout.right_width" => "integer", "layout.panel_height" => "integer",
-        "clipboard" => "string", "icons" => "string", "theme" => "string", "background" => "string", "breadcrumbs" => "string", "indentguides.char" => "string", "winborder" => "string"
+        "clipboard" => "string", "icons" => "string", "theme" => "string", "background" => "string", "breadcrumbs" => "string", "indentguides.char" => "string", "winborder" => "string", "jumptab" => "string"
       }
 
       # The key hints' default wait in milliseconds and the longest one; 0
@@ -93,6 +96,12 @@ module Carat
       # The modes of breadcrumbs: the winbar shows with two or more file
       # windows, on every file window, or never.
       BREADCRUMBS = ["auto", "always", "never"]
+
+      # The modes of jumptab: a jump to a buffer with no tab takes the tab
+      # of the buffer it leaves, or keeps it beside the target, as Vim.
+      JUMPTAB_REPLACE = "replace"
+      JUMPTAB_KEEP = "keep"
+      JUMPTABS = [JUMPTAB_REPLACE, JUMPTAB_KEEP]
 
       # The indent guides' default character and the one drawn in its
       # place with the ascii icon set.
@@ -268,6 +277,12 @@ module Carat
             self.breadcrumbs = word
           else
             config.note(line, "unknown breadcrumbs mode #{word}")
+          end
+        when "jumptab"
+          if JUMPTABS.include?(word)
+            self.jumptab = word
+          else
+            config.note(line, "unknown jumptab mode #{word}")
           end
         when "winborder"
           if BorderStyle.style?(word)

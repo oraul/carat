@@ -2,6 +2,7 @@ require_relative "../../domain/editor_state"
 require_relative "../../domain/buffer_list"
 require_relative "../../domain/jump_list"
 require_relative "../../domain/messages"
+require_relative "../../domain/options"
 require_relative "../outcome"
 
 module Carat
@@ -11,7 +12,9 @@ module Carat
     # (E37 while the current file buffer is modified, the list then put
     # back as it was) with the cursor at the entry, clamped to the text.
     # An entry whose buffer is gone is dropped; past either end, or while
-    # a float such as the pick list has the focus, nothing happens.
+    # a float such as the pick list has the focus, nothing happens. Under
+    # option.jumptab replace an entry's buffer with no tab takes the tab
+    # of the buffer left (BufferList#hand_tab).
     class WalkJumps
       # @rbs @saved: Domain::JumpList
 
@@ -45,7 +48,9 @@ module Carat
             jumps.restore_from(@saved)
             return Outcome.failure(Domain::Messages::E37)
           end
+          tabbed = !target.tabless?
           @buffers.load(target)
+          @buffers.hand_tab(current, target) if !tabbed && state.options.jumptab == Domain::Options::JUMPTAB_REPLACE
         end
         window = state.window
         count = window.buffer.line_count

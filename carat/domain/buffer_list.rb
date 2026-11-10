@@ -137,7 +137,7 @@ module Carat
       end
 
       # The listed file buffer steps places after target, or before it
-      # when steps is negative, wrapping and skipping scratch buffers;
+      # when steps is negative, wrapping and skipping tabless buffers;
       # target itself for 0 when it is a file buffer, else the next one.
       # Nil when the list holds no file buffer, as Neovim's do_buffer
       # answers E85.
@@ -152,10 +152,10 @@ module Carat
         files = file_count
         count = (count - 1) % files + 1 if files > 0 && count > files
         start = -1
-        while count > 0 || buffer_at(i).scratch?
+        while count > 0 || buffer_at(i).tabless?
           start = i if start < 0
           i = forward ? (i + 1) % n : (i - 1 + n) % n
-          unless buffer_at(i).scratch?
+          unless buffer_at(i).tabless?
             count -= 1
             start = -1
           end
@@ -164,19 +164,19 @@ module Carat
         buffer_at(i)
       end
 
-      # How many file buffers the list holds, scratch buffers left out.
+      # How many file buffers have a tab, scratch and unlisted ones left out.
       #: () -> Integer
       def file_count
         total = 0
         i = 0
         while i < buffers.length
-          total += 1 unless buffer_at(i).scratch?
+          total += 1 unless buffer_at(i).tabless?
           i += 1
         end
         total
       end
 
-      # Whether the top row of buffer tabs shows: from two listed file
+      # Whether the top row of buffer tabs shows: from two tabbed file
       # buffers or two tab pages.
       #: (Integer) -> bool
       def tab_row?(tab_count)
@@ -191,12 +191,12 @@ module Carat
         index = index_of(target)
         i = index + 1
         while i < buffers.length
-          return buffer_at(i) unless buffer_at(i).scratch?
+          return buffer_at(i) unless buffer_at(i).tabless?
           i += 1
         end
         i = index - 1
         while i >= 0
-          return buffer_at(i) unless buffer_at(i).scratch?
+          return buffer_at(i) unless buffer_at(i).tabless?
           i -= 1
         end
         nil
@@ -214,11 +214,13 @@ module Carat
         nil
       end
 
-      # Lists a buffer that is not listed yet. A buffer entering the list
-      # for the first time receives the next id, which it keeps for as
-      # long as the editor runs, also after leaving the list.
+      # Lists a buffer that is not listed yet, or lists again one a jump
+      # left unlisted. A buffer entering the list for the first time
+      # receives the next id, which it keeps for as long as the editor
+      # runs, also after leaving the list.
       #: (Buffer) -> void
       def add(target)
+        target.listed = true
         return if index_of(target) >= 0
         if target.id == 0
           target.id = next_id
@@ -264,6 +266,24 @@ module Carat
         current.show(target)
         restore(current)
         release(old)
+      end
+
+      # A jump's tab rule (option.jumptab replace), once the jump showed
+      # target, which had no tab: target takes the tab of left, the buffer
+      # the jump left, at its place in the list, and left goes unlisted,
+      # still loaded. Nothing changes when left is target, has no tab, is
+      # modified, or is still shown by a window, or when either is not in
+      # the list (an empty buffer the target reused).
+      #: (Buffer, Buffer) -> void
+      def hand_tab(left, target)
+        return if left.equal?(target) || left.tabless? || left.modified? || tabs.shown?(left)
+        from = index_of(left)
+        at = index_of(target)
+        return if from < 0 || at < 0
+        buffers.delete_at(at)
+        from -= 1 if at < from
+        buffers.insert(from, target)
+        left.listed = false
       end
 
       # Removes window id from the tab page at index, closing the tab page

@@ -61,4 +61,9 @@ ok   solid is stored
 ok   none is stored
 ok   an unknown border style is refused and keeps the one before
 ok   the shipped border is rounded
-domain_options_config: 63 passed, 0 failed
+ok   keep, Vim's, without a configuration
+ok   replace is stored
+ok   keep is stored after replace
+ok   An unknown jumptab mode is refused and keeps the earlier value
+ok   the shipped configuration lets a jump take the tab it leaves
+domain_options_config: 68 passed, 0 failed

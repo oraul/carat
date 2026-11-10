@@ -12,7 +12,7 @@ module Carat
     # list order, a space, its file icon, a space, the last segment of its
     # path or [No Name], a space, the modified icon or a space, and a
     # space, the tab of the current window's buffer selected with its
-    # icon in its file-icon group; scratch buffers get none. From two tab
+    # icon in its file-icon group; scratch and unlisted buffers get none. From two tab
     # pages their numbers stand at the right end, " 1  2 ", the current
     # one selected, and the tabs use the columns before them. Tabs that do
     # not fit are counted, " <N " before the run shown and " N> " after
@@ -40,19 +40,19 @@ module Carat
         list = @buffers
         count = list.count
         last = count - 1
-        while last >= 0 && list.buffer_at(last).scratch?
+        while last >= 0 && list.buffer_at(last).tabless?
           last -= 1
         end
         return if last < 0
         first = 0
-        while list.buffer_at(first).scratch?
+        while list.buffer_at(first).tabless?
           first += 1
         end
         if span_width(first, last, set) > right
           files = list.file_count
           room = right - 2 * (Domain::Frame.digits(files) + 3)
           anchor = list.index_of(current)
-          anchor = first if anchor < 0 || current.scratch?
+          anchor = first if anchor < 0 || current.tabless?
           while first < anchor && span_width(first, anchor, set) > room
             first = next_file(first)
           end
@@ -73,7 +73,7 @@ module Carat
         i = first
         while i <= last
           buffer = list.buffer_at(i)
-          x = paint_tab(frame, x, right, buffer, buffer.equal?(current), set) unless buffer.scratch?
+          x = paint_tab(frame, x, right, buffer, buffer.equal?(current), set) unless buffer.tabless?
           i += 1
         end
         hidden = files_between(last + 1, count)
@@ -155,7 +155,7 @@ module Carat
         i = from
         while i <= to && i < list.count
           buffer = list.buffer_at(i)
-          total += tab_width(buffer, set) unless buffer.scratch?
+          total += tab_width(buffer, set) unless buffer.tabless?
           i += 1
         end
         total
@@ -167,7 +167,7 @@ module Carat
       def next_file(i)
         list = @buffers
         j = i + 1
-        while j < list.count && list.buffer_at(j).scratch?
+        while j < list.count && list.buffer_at(j).tabless?
           j += 1
         end
         j
@@ -181,7 +181,7 @@ module Carat
         total = 0
         i = from
         while i < to && i < list.count
-          total += 1 unless list.buffer_at(i).scratch?
+          total += 1 unless list.buffer_at(i).tabless?
           i += 1
         end
         total
