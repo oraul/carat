@@ -1,5 +1,5 @@
 ok   every id has a name
-ok   49 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
+ok   51 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
 ok   the markup groups after the file-icon groups
 ok   the status bar's groups follow Neovim's
 ok   names by id
@@ -13,6 +13,7 @@ ok   a markup group
 ok   the last markup group
 ok   a UI group is not a token group
 ok   nor is a new UI group
+ok   nor an indent guide group
 ok   Normal is not either
 ok   an unknown name
 ok   names are case sensitive
@@ -108,4 +109,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 110 passed, 0 failed
+domain_theme: 111 passed, 0 failed
