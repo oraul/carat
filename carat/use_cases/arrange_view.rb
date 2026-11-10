@@ -1,6 +1,7 @@
 require_relative "../domain/editor_state"
 require_relative "../domain/window"
 require_relative "../domain/options"
+require_relative "../domain/border_style"
 require_relative "../domain/line_cache"
 require_relative "../domain/buffer_list"
 
@@ -101,13 +102,14 @@ module Carat
         dcol = @cache.fetch(window.buffer.line(cursor.row), tabstop).col(cursor.col)
         cursor_row = window.row + cursor.row - window.top
         cursor_col = window.col + window.gutter_width(options) + dcol - window.left
+        edged = Domain::BorderStyle.edged?(options.winborder)
         i = 0
         while i < floats.count
           float = floats.at(i)
           if float.spec.cursor_anchored?
-            float.place(cursor_row, cursor_col, rows, cols)
+            float.place(cursor_row, cursor_col, rows, cols, edged)
           else
-            float.place(0, 0, rows, cols)
+            float.place(0, 0, rows, cols, edged)
           end
           scroll(float.window, options, tabstop)
           i += 1

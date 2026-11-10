@@ -103,8 +103,9 @@ module Carat
         end
         options = state.options
         cursor_col = window.col + window.gutter_width(options) + Domain::DisplayWidth.column(window.buffer.line(cursor.row), cursor.col, options.tab_width) - window.left
-        col = popup.col + popup.width
-        col = popup.col - width if cursor_col + col + width > state.screen_cols && cursor_col + popup.col - width >= 0
+        pad = 2 * Domain::FloatWindow::PAD
+        col = popup.col + popup.width + pad
+        col = popup.col - width - pad if cursor_col + col + width + pad > state.screen_cols && cursor_col + popup.col - width - pad >= 0
         spec = Domain::FloatSpec.new(anchor: "cursor", row: below ? 1 : -height, col: col, height: height, width: width, border: false, title: "", z: Z)
         buffer = Domain::Buffer.new(lines: rows, path: nil, line_ending: "\n")
         buffer.owner = OWNER

@@ -97,6 +97,8 @@ module EditorCompletionTest
     t.assert_equal([" v file_name  String ", " f filter     Array  ", " k final             "], [float.window.buffer.line(2), float.window.buffer.line(1), float.window.buffer.line(0)], "each row is the kind icon, the label, and the detail on the right")
     t.assert_equal(["  1 fi_tail", " k final", " f filter     Array", " v file_name  String"], [h.row(0), h.row(1)[1, 21].to_s.rstrip, h.row(2)[1, 21].to_s.rstrip, h.row(3)[1, 21].to_s.rstrip], "the popup stands under the line, its labels under the word")
     t.assert_equal([D::Highlight::POPUP_MENU, D::Highlight::POPUP_MENU_SELECTED], [h.frame.hl_at(1, 3), h.frame.hl_at(3, 3)], "the rows are drawn in Pmenu and the selected one in PmenuSel")
+    # Scenario: The selected row spans the padding.
+    t.assert_equal([0, D::Highlight::POPUP_MENU_SELECTED, D::Highlight::POPUP_MENU_SELECTED, D::Highlight::POPUP_MENU], [float.edge, h.frame.hl_at(3, float.box_left), h.frame.hl_at(3, float.box_right - 1), h.frame.hl_at(1, float.box_left)], "the popup has no border and its selected row is in PmenuSel across its padding")
     t.assert_equal(1, h.completions.asked, "the source is asked once for the word")
     h.type("l<BS>")
     t.assert_equal(1, h.completions.asked, "filtering asks the source no more")

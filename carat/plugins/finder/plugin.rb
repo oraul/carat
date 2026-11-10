@@ -265,8 +265,8 @@ module Carat
           height = @rows - 6
           height = 1 if height < 1
           preview = cols >= PREVIEW_COLUMNS
-          width = cols - 4
-          width = (width - 3) / 2 if preview
+          width = cols - 6
+          width = (width - 5) / 2 if preview
           width = 1 if width < 1
           title = "#{TITLE} #{@matches.length}/#{@paths.length}"
           shown = host.open_float(float_at(1, height, width, title), list_lines(height))
@@ -276,7 +276,7 @@ module Carat
           read = host.read_file(PluginApi::Paths.join(@root, path), height)
           lines = read.ok ? read.lines : [read.message]
           lines = [""] if lines.empty?
-          previewed = host.open_float(float_at(width + 4, height, cols - width - 7, path), lines)
+          previewed = host.open_float(float_at(width + 6, height, cols - width - 11, path), lines)
           @preview_float = previewed.ok ? previewed.window : 0
         end
 

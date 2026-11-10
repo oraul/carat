@@ -130,6 +130,7 @@ module Carat
         Highlight::STATUS_LSP_ERROR, RED, NONE, BOLD, BOLD,
         Highlight::INDENT_GUIDE, FAINT, NONE, 0, 0,
         Highlight::INDENT_GUIDE_SCOPE, DIM, NONE, 0, 0,
+        Highlight::FLOAT_TITLE, BLUE, FLOAT, BOLD, BOLD,
         Highlight::COMMENT, COMMENT, NONE, ITALIC, ITALIC,
         Highlight::CONSTANT, CONSTANT, NONE, 0, 0,
         Highlight::STRING, STRING, NONE, 0, 0,

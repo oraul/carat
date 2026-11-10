@@ -3,6 +3,7 @@ require_relative "../domain/frame"
 require_relative "../domain/text_lines"
 require_relative "../domain/highlight"
 require_relative "../domain/display_width"
+require_relative "../domain/border_style"
 require_relative "../domain/decoded_line"
 require_relative "../domain/line_cache"
 require_relative "../domain/syntax_line"
@@ -148,6 +149,7 @@ module Carat
       # @rbs @notice_from: Integer
       # @rbs @guides: IndentGuides
       # @rbs @guide_row: Integer
+      # @rbs @border: Array[Integer]
 
       #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, palette: Domain::Palette, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar, winbar: Winbar, notices: Domain::Notices) -> void
       def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, palette:, start_screen:, status_bar:, tab_bar:, winbar:, notices:)
@@ -155,6 +157,7 @@ module Carat
         @notices = notices
         @plain = false
         @notice_from = 0
+        @border = Domain::BorderStyle::ROUNDED
         @palette = palette
         @input = input
         @plugin_ui = plugin_ui
@@ -204,6 +207,7 @@ module Carat
         back.base_serial = based ? base.serial : -1
         options = state.options
         tabstop = options.tabstop > 0 ? options.tabstop : 8
+        @border = Domain::BorderStyle.glyphs(options.winborder, @plain || options.icons == "ascii")
         tabline = @tab_bar.buffers.tab_row?(state.tabs.tab_count) ? 1 : 0
         tab = state.tab
         layout = tab.layout
@@ -496,26 +500,39 @@ module Carat
         mend_edges(frame, r, left, right, cols)
         plain = @plain
         last = right - 1
-        level = @notices.level_at(n)
+        bottom = top + NOTICE_HEIGHT - 1
         border = plain ? Domain::Highlight::NORMAL : Domain::Highlight::FLOAT_BORDER
-        if r == top || r == top + NOTICE_HEIGHT - 1
-          corner_left = plain ? 0x2B : (r == top ? 0x256D : 0x2570)
-          corner_right = plain ? 0x2B : (r == top ? 0x256E : 0x256F)
-          frame.put_code(r, left, corner_left, 1, border)
-          frame.put_code(r, last, corner_right, 1, border)
-          c = left + 1
-          while c < last
-            frame.put_code(r, c, plain ? 0x2D : 0x2500, 1, border)
-            c += 1
-          end
-          frame.put_within(r, left + 1, NOTICE_TITLES[level], plain ? Domain::Highlight::NORMAL : notice_group(level), last) if r == top
-        else
+        paint_edge(frame, r, left, last, top, bottom, border)
+        if r == top
+          level = @notices.level_at(n)
+          frame.put_within(r, left + 1, NOTICE_TITLES[level], plain ? Domain::Highlight::NORMAL : notice_group(level), last)
+        elsif r != bottom
           text = plain ? Domain::Highlight::NORMAL : Domain::Highlight::NORMAL_FLOAT
-          frame.put_code(r, left, plain ? 0x7C : 0x2502, 1, border)
           frame.blank(r, left + 1, last)
           frame.fill(r, left + 1, last, text)
           frame.put_within(r, left + 2, @notices.text_at(n), text, last - 1)
-          frame.put_code(r, last, plain ? 0x7C : 0x2502, 1, border)
+        end
+      end
+
+      # One row of a box's border from left to last in hl, in the border
+      # glyphs of this frame: on its top or bottom row the corners and the
+      # edge between them, on any other row its two sides.
+      #: (Domain::Frame, Integer, Integer, Integer, Integer, Integer, Integer) -> void
+      def paint_edge(frame, r, left, last, top, bottom, hl)
+        glyphs = @border
+        if r == top || r == bottom
+          frame.put_code(r, left, glyphs[r == top ? Domain::BorderStyle::TOP_LEFT : Domain::BorderStyle::BOTTOM_LEFT], 1, hl)
+          frame.put_code(r, last, glyphs[r == top ? Domain::BorderStyle::TOP_RIGHT : Domain::BorderStyle::BOTTOM_RIGHT], 1, hl)
+          code = glyphs[Domain::BorderStyle::HORIZONTAL]
+          c = left + 1
+          while c < last
+            frame.put_code(r, c, code, 1, hl)
+            c += 1
+          end
+        else
+          code = glyphs[Domain::BorderStyle::VERTICAL]
+          frame.put_code(r, left, code, 1, hl)
+          frame.put_code(r, last, code, 1, hl)
         end
       end
 
@@ -603,9 +620,10 @@ module Carat
         end
       end
 
-      # One row of a float's box: its text in NormalFloat, a documentation
-      # row's styles on the float layer unless plain (NO_COLOR), then its
-      # border and, on the top edge, its title.
+      # One row of a float's box: its text, its padding, and the fill of
+      # its group across both, a documentation row's styles on the float
+      # layer unless plain (NO_COLOR), then its border and, on the top
+      # edge, its title.
       #: (Domain::Frame, Domain::FloatWindow, Integer, Integer, Integer) -> void
       def paint_float_row(frame, float, r, tabstop, cols)
         mend_edges(frame, r, float.box_left, float.box_right, cols)
@@ -613,22 +631,26 @@ module Carat
         if r >= window.row && r < window.row + window.height
           x = window.col
           width = window.width
+          inner_left = x - Domain::FloatWindow::PAD
+          inner_right = x + width + Domain::FloatWindow::PAD
           buffer = window.buffer
           row = window.top + r - window.row
-          group = float_group(float, row)
-          if row < buffer.line_count
-            line = buffer.line(row)
-            decoded = @cache.fetch(line, tabstop)
-            paint_text(frame, r, x, decoded, width, window.left)
-            frame.fill(r, x, x + width, group)
-            paint_tokens(frame, r, x, decoded, width, window.left, buffer.style_at(row, line).tokens, Domain::Highlight::FLOAT_LAYER) if buffer.styled? && !@plain
+          text = row < buffer.line_count
+          if text
+            paint_text(frame, r, x, @cache.fetch(buffer.line(row), tabstop), width, window.left)
           else
             frame.blank(r, x, x + width)
-            frame.fill(r, x, x + width, group)
+          end
+          frame.blank(r, inner_left, x)
+          frame.blank(r, x + width, inner_right)
+          frame.fill(r, inner_left, inner_right, float_group(float, row))
+          if text && buffer.styled? && !@plain
+            line = buffer.line(row)
+            paint_tokens(frame, r, x, @cache.fetch(line, tabstop), width, window.left, buffer.style_at(row, line).tokens, Domain::Highlight::FLOAT_LAYER)
           end
           paint_mark(frame, float, r, x, width) if row == 0 && float.marked?
         end
-        paint_border_row(frame, float, r) if float.spec.border
+        paint_border_row(frame, float, r) if float.edged?
       end
 
       # The marked columns of a float's first row in Visual, within its
@@ -659,27 +681,31 @@ module Carat
         frame.blank(row, right, right + 1) if right < cols && frame.width_at(row, right) == 0
       end
 
-      # The border cells of one row of a box, rounded corners.
+      # The border cells of one row of a float's box in FloatBorder and,
+      # on its top edge, its title centered between the corners.
       #: (Domain::Frame, Domain::FloatWindow, Integer) -> void
       def paint_border_row(frame, float, r)
         left = float.box_left
-        right = float.box_right - 1
-        hl = Domain::Highlight::FLOAT_BORDER
-        top = r == float.box_top
-        if top || r == float.box_bottom - 1
-          frame.put_code(r, left, top ? 0x256D : 0x2570, 1, hl)
-          frame.put_code(r, right, top ? 0x256E : 0x256F, 1, hl)
-          c = left + 1
-          while c < right
-            frame.put_code(r, c, 0x2500, 1, hl)
-            c += 1
-          end
-          title = float.spec.title
-          frame.put_within(r, left + 1, title, Domain::Highlight::TITLE, right) if top && !title.empty?
-        else
-          frame.put_code(r, left, 0x2502, 1, hl)
-          frame.put_code(r, right, 0x2502, 1, hl)
-        end
+        last = float.box_right - 1
+        top = float.box_top
+        paint_edge(frame, r, left, last, top, float.box_bottom - 1, Domain::Highlight::FLOAT_BORDER)
+        title = float.spec.title
+        paint_title(frame, r, left, last, title) if r == top && !title.empty?
+      end
+
+      # A title between the corners at left and last, with a blank on each
+      # side, centered and cut to the cells between them, in FloatTitle.
+      #: (Domain::Frame, Integer, Integer, Integer, String) -> void
+      def paint_title(frame, r, left, last, title)
+        room = last - left - 1
+        return if room < 3
+        width = Domain::DisplayWidth.text_width(title, 0) + 2
+        width = room if width > room
+        from = left + 1 + (room - width) / 2
+        hl = Domain::Highlight::FLOAT_TITLE
+        frame.put_code(r, from, 0x20, 1, hl)
+        stop = frame.put_within(r, from + 1, title, hl, from + width - 1)
+        frame.put_code(r, stop, 0x20, 1, hl)
       end
 
       #: (Integer, Integer) -> Integer

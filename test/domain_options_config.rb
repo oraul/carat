@@ -167,6 +167,24 @@ module DomainOptionsConfigTest
     end
     t.assert_equal("auto", options.breadcrumbs, "the shipped configuration shows breadcrumbs with two or more file windows")
 
+    # option.winborder: the float border. Rows are [label, project lines,
+    # [style, problems]]. Scenarios: The shipped border is rounded (the
+    # assertion after the table), An unknown border style.
+    t.table([
+      ["rounded by default", "", ["rounded", []]],
+      ["single is stored", "option.winborder single\n", ["single", []]],
+      ["double is stored", "option.winborder double\n", ["double", []]],
+      ["solid is stored", "option.winborder solid\n", ["solid", []]],
+      ["none is stored", "option.winborder none\n", ["none", []]],
+      ["an unknown border style is refused and keeps the one before", "option.winborder rounded\noption.winborder thick\n", ["rounded", [".caratrc:2: unknown border style thick"]]]
+    ]) do |text|
+      config = D::Config.new
+      config.read(".caratrc", text.to_s, false)
+      read = D::Options.from_config(config)
+      [read.winborder, config.report]
+    end
+    t.assert_equal("rounded", options.winborder, "the shipped border is rounded")
+
     t.finish
   end
 end

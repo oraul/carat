@@ -24,6 +24,36 @@ module EditorFloatsTest
     h
   end
 
+  # The editor of editor with configuration lines over the defaults, at
+  # rows by cols.
+  def self.configured(lines, rows, cols)
+    files = Carat::Doubles::MemoryFiles.new
+    text = +""
+    i = 1
+    while i <= 40
+      text << "line #{i}\n"
+      i += 1
+    end
+    files.put("a.txt", text)
+    config = Carat::Doubles::FixedConfig.with(lines.to_s)
+    h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: rows, cols: cols, plugins: [])
+    h.open("a.txt")
+    h
+  end
+
+  # The n cells of screen row r from column from, blanks past its end.
+  def self.cells(h, r, from, n)
+    s = h.row(r)
+    s += " " * (from + n - s.length) if s.length < from + n
+    s[from, n].to_s
+  end
+
+  def self.strings(values)
+    out = []
+    values.each { |v| out << v.to_s }
+    out
+  end
+
   # Opens a float through the request family as the plugin "test" and
   # draws a frame; answers the window id, 0 when refused.
   def self.open(h, options, lines)
@@ -59,19 +89,21 @@ module EditorFloatsTest
   def self.main
     t = Carat::Testing.new("editor_floats")
 
-    # Placement, border, and title.
+    # Placement, border, and title. Scenarios: Editor-anchored float with
+    # a border and a title, The shipped border is rounded, Padding in
+    # NormalFloat, A centered title.
     h = editor
     id = open(h, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])
     t.assert_equal(2, id, "the float's window gets the next window id")
     t.assert_equal([
       "  2 line 2",
-      "  3 ╭doc───────╮",
-      "  4 │one       │",
-      "  5 │two       │",
-      "  6 ╰──────────╯",
+      "  3 ╭─── doc ────╮",
+      "  4 │ one        │",
+      "  5 │ two        │",
+      "  6 ╰────────────╯",
       "  7 line 7"
     ], rows(h, 1, 6).map { |r| r.rstrip }, "a bordered float with its title over the window")
-    t.assert_equal([D::Highlight::FLOAT_BORDER, D::Highlight::TITLE, D::Highlight::NORMAL_FLOAT, D::Highlight::NORMAL], [h.frame.hl_at(2, 4), h.frame.hl_at(2, 5), h.frame.hl_at(3, 5), h.frame.hl_at(1, 5)], "the border, the title, and the text have the float groups")
+    t.assert_equal([D::Highlight::FLOAT_BORDER, D::Highlight::FLOAT_TITLE, D::Highlight::FLOAT_TITLE, D::Highlight::NORMAL_FLOAT, D::Highlight::NORMAL_FLOAT, D::Highlight::NORMAL], [h.frame.hl_at(2, 4), h.frame.hl_at(2, 8), h.frame.hl_at(2, 9), h.frame.hl_at(3, 5), h.frame.hl_at(3, 16), h.frame.hl_at(1, 5)], "the border, the title with its blanks in FloatTitle, and the padding and the text in NormalFloat")
     t.assert_equal([1, 1, "a.txt"], [h.window_count, h.state.window.id, h.state.buffer.path_text], "the float is not a layout window and the file window stays current")
 
     # Closing repaints only the rows it covered.
@@ -81,32 +113,33 @@ module EditorFloatsTest
     h.type("<Esc>")
     t.assert_equal(["", 1], [h.message, h.window_count], "Esc with no float does nothing")
 
-    # Cursor anchor and clamping.
+    # Cursor anchor and clamping. Scenarios: Cursor-anchored float, A float
+    # too large for the screen is cut and moved in.
     h = editor
     h.type("3G4l")
     open(h, options("cursor", 1, 0, 1, 6, false, "", 50, false), ["hint"])
-    t.assert_equal("  4 linehint", h.row(3)[0, 14], "a cursor float starts below the cursor cell")
+    t.assert_equal("  4 line hint", h.row(3)[0, 14], "a cursor float starts below the cursor cell")
     h = editor
     open(h, options("editor", 5, 50, 30, 100, true, "", 50, false), ["big"])
-    t.assert_equal(["╭" + "─" * 38 + "╮", "│big"], [h.row(0), h.row(1)[0, 4]], "a float larger than the screen fills it above the message row")
+    t.assert_equal(["╭" + "─" * 38 + "╮", "│ big"], [h.row(0), h.row(1)[0, 5]], "a float larger than the screen fills it above the message row")
     t.assert_equal("╰" + "─" * 38 + "╯", h.row(10), "its bottom border is on the row above the message row")
 
     # z order.
     h = editor
     open(h, options("editor", 1, 1, 1, 6, false, "", 50, false), ["high"])
     open(h, options("editor", 1, 3, 1, 6, false, "", 10, false), ["lowlow"])
-    t.assert_equal(" high  ow2", h.row(1)[0, 10], "a higher z is drawn over a lower one opened later")
+    t.assert_equal("  high   w", h.row(1)[0, 10], "a higher z is drawn over a lower one opened later")
     h.type("<Esc>")
-    t.assert_equal("  2lowlow2", h.row(1)[0, 10], "Esc closes the topmost, the higher z")
+    t.assert_equal("  2 lowlow", h.row(1)[0, 10], "Esc closes the topmost, the higher z")
 
     # Focus into and out of a float, and scrolling it.
     h = editor
     id = open(h, options("editor", 2, 4, 3, 10, true, "", 50, true), numbered(10))
-    t.assert_equal([id, 3, 5], [h.state.window.id, h.frame.cursor_row, h.frame.cursor_col], "entering makes the float current with the cursor in it")
+    t.assert_equal([id, 3, 6], [h.state.window.id, h.frame.cursor_row, h.frame.cursor_col], "entering makes the float current with the cursor in it")
     h.type("jjjj")
-    t.assert_equal([4, "│item 4    │", "│item 6    │", "  1 line 1"], [h.cursor[0], h.row(3)[4, 12], h.row(5)[4, 12], h.row(0).rstrip], "j scrolls the float with scrolloff and the window under it stays")
+    t.assert_equal([4, "│ item 4     │", "│ item 6     │", "  1 line 1"], [h.cursor[0], h.row(3)[4, 14], h.row(5)[4, 14], h.row(0).rstrip], "j scrolls the float with scrolloff and the window under it stays")
     h.type("<C-w>p")
-    t.assert_equal([1, "│item 4    │"], [h.state.window.id, h.row(3)[4, 12]], "Ctrl-W p goes back to the window under it, the float stays")
+    t.assert_equal([1, "│ item 4     │"], [h.state.window.id, h.row(3)[4, 14]], "Ctrl-W p goes back to the window under it, the float stays")
     t.assert_equal(true, h.plugins.window_requests.focus_window("test", id).ok, "a plugin focuses a float by id")
     t.assert_equal(id, h.state.window.id, "the float is current again")
     h.type(":q<CR>")
@@ -131,7 +164,7 @@ module EditorFloatsTest
     open(h, options("editor", 2, 4, 1, 10, false, "", 50, false), ["over"])
     h.type("11G")
     h.type("j")
-    t.assert_equal([0, "over"], [h.frame.scroll_count, h.row(2)[4, 4]], "a window under a float scrolls by rows, the float stays")
+    t.assert_equal([0, "over"], [h.frame.scroll_count, h.row(2)[5, 4]], "a window under a float scrolls by rows, the float stays")
     h.type("<Esc>j")
     t.assert_equal(1, h.frame.scroll_count, "with the float closed the next scroll is a region again")
 
@@ -139,7 +172,7 @@ module EditorFloatsTest
     h = editor
     open(h, options("editor", 1, 2, 2, 8, true, "t", 50, false), ["AAAA", "BBBB"])
     h.type("2Gx")
-    t.assert_equal(["ine 2", "│AAAA"], [h.lines[1], h.row(2)[2, 5]], "an edit under a float keeps the float drawn")
+    t.assert_equal(["ine 2", "│ AAAA"], [h.lines[1], h.row(2)[2, 6]], "an edit under a float keeps the float drawn")
     h.type("jxkxu")
     shown = h.screen
     h.resize(12, 40)
@@ -153,10 +186,10 @@ module EditorFloatsTest
     # Plugin requests.
     h = editor
     id = open(h, options("editor", 1, 2, 2, 8, false, "", 50, true), ["one", "two"])
-    t.assert_equal([id, "one"], [h.state.window.id, h.row(1)[2, 3]], "a plugin's float shows its lines and is current")
+    t.assert_equal([id, "one"], [h.state.window.id, h.row(1)[3, 3]], "a plugin's float shows its lines and is current")
     moved = h.plugins.window_requests.move_float("test", id, 4, 6).ok
     h.redraw
-    t.assert_equal([true, "one"], [moved, h.row(4)[6, 3]], "a plugin moves its float")
+    t.assert_equal([true, "one"], [moved, h.row(4)[7, 3]], "a plugin moves its float")
     t.assert_equal("  2 line 2", h.row(1).rstrip, "the rows it left show the window again")
     t.assert_equal([false, "No float #{id}"], [h.plugins.window_requests.close_float("other", id).ok, h.plugins.window_requests.close_float("other", id).message], "another plugin's float cannot be closed")
     t.assert_equal(false, h.plugins.window_requests.move_float("other", id, 0, 0).ok, "nor moved")
@@ -206,6 +239,43 @@ module EditorFloatsTest
     end
     t.assert_equal("Too many floating windows", h.plugins.window_requests.open_float("test", API::FloatOptions.at(0, 0, 1, 1), ["x"]).message, "a tab page holds sixteen floats")
     t.assert_equal("2.5", API::VERSION, "the plugin API is 2.5")
+
+    # The frame: each border style and the ASCII form at a small and a
+    # large screen. Scenarios: Each border style, The ASCII border, No
+    # border, A long title is cut, A notification follows the border style.
+    frames = [
+      ["rounded", "", ["╭", "╮", "╰", "╯", "─", "│"]],
+      ["single", "option.winborder single\n", ["┌", "┐", "└", "┘", "─", "│"]],
+      ["double", "option.winborder double\n", ["╔", "╗", "╚", "╝", "═", "║"]],
+      ["solid", "option.winborder solid\n", [" ", " ", " ", " ", " ", " "]],
+      ["ascii", "option.icons ascii\n", ["+", "+", "+", "+", "-", "|"]],
+      ["ascii double", "option.icons ascii\noption.winborder double\n", ["+", "+", "+", "+", "-", "|"]]
+    ]
+    frames.each do |row|
+      name = row[0].to_s
+      g = strings(row[2])
+      small = configured(row[1].to_s, 12, 40)
+      open(small, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])
+      expected = [g[0] + g[4] * 3 + " doc " + g[4] * 4 + g[1], g[5] + " one        " + g[5], g[5] + " two        " + g[5], g[2] + g[4] * 12 + g[3]]
+      got = [cells(small, 2, 4, 14), cells(small, 3, 4, 14), cells(small, 4, 4, 14), cells(small, 5, 4, 14)]
+      t.assert_equal(expected, got, "frame #{name} at 40 by 12: #{got.join(" / ")}")
+      large = configured(row[1].to_s, 36, 120)
+      open(large, options("editor", 10, 30, 3, 50, true, "a longer title", 50, false), ["one", "two", "three"])
+      expected = [g[0] + g[4] * 18 + " a longer title " + g[4] * 18 + g[1], g[5] + " one" + " " * 48 + g[5], g[5] + " three" + " " * 46 + g[5], g[2] + g[4] * 52 + g[3]]
+      got = [cells(large, 10, 30, 54), cells(large, 11, 30, 54), cells(large, 13, 30, 54), cells(large, 14, 30, 54)]
+      t.assert_equal(expected, got, "frame #{name} at 120 by 36: #{got.join(" / ")}")
+    end
+    h = configured("option.winborder none\n", 12, 40)
+    open(h, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])
+    t.assert_equal(["  2 line 2", "  3  one        ", "  4  two        ", "  5 line 5"], [h.row(1).rstrip, cells(h, 2, 0, 16), cells(h, 3, 0, 16), h.row(4).rstrip], "with winborder none a bordered float has no edge and no title, its padding kept")
+    t.assert_equal([D::Highlight::NORMAL_FLOAT, D::Highlight::NORMAL_FLOAT, D::Highlight::NORMAL], [h.frame.hl_at(2, 4), h.frame.hl_at(2, 15), h.frame.hl_at(2, 16)], "the padding of a float without an edge is in NormalFloat")
+    h = editor
+    open(h, options("editor", 2, 4, 1, 4, true, "a long title", 50, false), ["abcd"])
+    t.assert_equal(["╭ a lo ╮", "│ abcd │"], [h.row(2)[4, 8], h.row(3)[4, 8]], "a long title is cut between the corners with a blank on each side")
+    h = configured("option.winborder double\n", 12, 60)
+    h.assembly.notices.add("disk almost full", D::MessageHistory::WARNING, h.clock.now)
+    h.redraw
+    t.assert_equal(["╔Warning═══════════╗", "║ disk almost full ║", "╚══════════════════╝"], [h.row(0)[39, 20], h.row(1)[39, 20], h.row(2)[39, 20]], "a notification box is drawn in the border style")
 
     t.finish
   end
