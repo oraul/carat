@@ -8,10 +8,13 @@ module Carat
   module UseCases
     # Ctrl-O and Ctrl-I: moves through the jump list by steps, older for
     # a negative count, showing the entry's buffer in the current window
-    # (E37 while the current file buffer is modified) with the cursor at
-    # the entry, clamped to the text. An entry whose buffer is gone is
-    # dropped; past either end nothing happens.
+    # (E37 while the current file buffer is modified, the list then put
+    # back as it was) with the cursor at the entry, clamped to the text.
+    # An entry whose buffer is gone is dropped; past either end nothing
+    # happens.
     class WalkJumps
+      # @rbs @saved: Domain::JumpList
+
       attr_reader :jumps #: Domain::JumpList
       attr_reader :buffers #: Domain::BufferList
 
@@ -19,6 +22,7 @@ module Carat
       def initialize(jumps:, buffers:)
         @jumps = jumps
         @buffers = buffers
+        @saved = Domain::JumpList.new
       end
 
       #: (Domain::EditorState, Integer) -> Outcome
@@ -26,6 +30,8 @@ module Carat
         jumps = @jumps
         window = state.window
         current = window.buffer
+        guarded = current.modified? && !current.scratch?
+        @saved.restore_from(jumps) if guarded
         at = jumps.step(steps, current.id, window.cursor.row, window.cursor.col)
         return Outcome.none if at < 0
         target = @buffers.with_id(jumps.buffer_ids[at].to_i)
@@ -34,7 +40,10 @@ module Carat
           return Outcome.none
         end
         unless target.equal?(current)
-          return Outcome.failure(Domain::Messages::E37) if current.modified? && !current.scratch?
+          if guarded
+            jumps.restore_from(@saved)
+            return Outcome.failure(Domain::Messages::E37)
+          end
           @buffers.load(target)
         end
         window = state.window

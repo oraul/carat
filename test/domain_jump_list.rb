@@ -80,6 +80,12 @@ module DomainJumpListTest
     list.push(2, 2, 0)
     list.remove_at(0)
     t.assert_equal(["2:2:0", "at 1"], entries(list), "dropping an entry keeps the index on the same place")
+    list = filled([3, 5])
+    saved = D::JumpList.new
+    saved.restore_from(list)
+    list.step(-1, 1, 3, 0)
+    list.restore_from(saved)
+    t.assert_equal(["1:3:0", "1:5:0", "at 2"], entries(list), "restoring puts back the entries a step replaced and its index")
 
     t.finish
   end

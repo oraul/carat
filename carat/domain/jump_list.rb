@@ -4,8 +4,9 @@ module Carat
     # buffer ids, rows, and columns, at most LIMIT; index is the current
     # entry, equal to the length when none is (after a jump). A new entry
     # replaces one of the same buffer and row. Ctrl-O from the newest end
-    # first records where it starts, so Ctrl-I comes back there. A Struct
-    # record built with no arguments.
+    # first records where it starts, so Ctrl-I comes back there;
+    # restore_from puts back a step that was refused. A Struct record
+    # built with no arguments.
     class JumpList < Struct.new(:buffer_ids, :rows, :cols, :index, keyword_init: true)
       # @rbs @buffer_ids: Array[Integer]
       # @rbs @rows: Array[Integer]
@@ -60,6 +61,16 @@ module Carat
         return -1 if target < 0 || target >= buffer_ids.length
         self.index = target
         target
+      end
+
+      # Takes the entries and index of other as copies, so a step that
+      # was refused can be put back.
+      #: (JumpList) -> void
+      def restore_from(other)
+        self.buffer_ids = other.buffer_ids.dup
+        self.rows = other.rows.dup
+        self.cols = other.cols.dup
+        self.index = other.index
       end
 
       # Removes the entry at i, keeping index on the same entry.

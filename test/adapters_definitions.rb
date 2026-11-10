@@ -347,6 +347,11 @@ module AdaptersDefinitionsTest
     r.type("x")
     r.type("<C-o>")
     t.assert_equal(["E37: No write since last change (add ! to override)", "b.rb 1:4"], [r.message, r.where], "Ctrl-O refuses another buffer over a modified one")
+    r.type(":w<CR>")
+    r.type("<C-o>")
+    t.assert_equal(["a.rb 3:0", 2], [r.where, r.assembly.jumps.count], "A refused Ctrl-O leaves the jump list as it was")
+    r.type("<C-i>")
+    t.assert_equal("b.rb 1:4", r.where, "Ctrl-I after a refused Ctrl-O returns to the start")
     r = defining
     gone = r.assembly.state.buffer.id
     asked(r, "gd", location("/project/b.rb", 1, 4))

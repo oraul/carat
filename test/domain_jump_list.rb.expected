@@ -8,4 +8,5 @@ ok   A new entry on the same line replaces the old one
 ok   The list keeps the last hundred entries
 ok   Ctrl-O past the oldest entry does nothing
 ok   dropping an entry keeps the index on the same place
-domain_jump_list: 10 passed, 0 failed
+ok   restoring puts back the entries a step replaced and its index
+domain_jump_list: 11 passed, 0 failed

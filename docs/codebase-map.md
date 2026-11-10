@@ -622,14 +622,14 @@ Files:
 - `carat/use_cases/docs/pin_hover.rb`: `PinHover#call`, `<leader>dp`: the float's rows and their styles in a scratch buffer in a new split, the float closed.
 - `carat/use_cases/actions/docs_handler.rb`: `DocsHandler.register` (`docs.hover`, `docs.pin`).
 - `carat/domain/definition_request.rb`: `DefinitionRequest`, the definition ask gd and the peek key share with the gateway (the anchor, the kind, the serial, the request in flight and its deadline, the file targets, `arrived`, offering languages, the peek float and pick list ids); `ask`, `at?`, `offers?`, `waiting?`, `following?`, `add_target`.
-- `carat/domain/jump_list.rb`: `JumpList`, the positions `gd` left, at most 100, one per buffer line; `push`, `step` (from the newest end Ctrl-O records the start first), `remove_at`.
+- `carat/domain/jump_list.rb`: `JumpList`, the positions `gd` left, at most 100, one per buffer line; `push`, `step` (from the newest end Ctrl-O records the start first), `restore_from` (a refused step put back), `remove_at`.
 - `carat/use_cases/definitions/request_definition.rb`: `RequestDefinition#call`, `gd` and `<leader>dd`: records the ask at the cursor, refused without a path or an offering server with Neovim's not-supported message.
 - `carat/use_cases/definitions/show_definition.rb`: `ShowDefinition#call`, the arrived answer at the idle tick: dropped when stale, `No locations found` when empty, one target visited, several in the pick list (an entered float whose scratch buffer binds Enter).
 - `carat/use_cases/definitions/visit_target.rb`: `VisitTarget#call`, one target: a jump (E37 over a modified buffer, `OpenFile` inside the working directory with links resolved, a read-only scratch view outside, the jump list pushed, the UTF-16 column) or a peek float of 12 rows.
 - `carat/use_cases/definitions/open_definition_float.rb`: `OpenDefinitionFloat#call`, a bordered float over a buffer at the cursor, below or above, sized to its rows and title.
 - `carat/use_cases/definitions/choose_definition.rb`: `ChooseDefinition#call`, Enter in the pick list: closes it and visits the row's target.
 - `carat/use_cases/definitions/follow_definition.rb`: `FollowDefinition#call`, after a key while the peek float or pick list is recorded: forgets a closed one, closes the peek once the cursor moved, the list once left.
-- `carat/use_cases/definitions/walk_jumps.rb`: `WalkJumps#call`, Ctrl-O and Ctrl-I by the count across buffers, E37 over a modified buffer, a gone buffer's entry dropped.
+- `carat/use_cases/definitions/walk_jumps.rb`: `WalkJumps#call`, Ctrl-O and Ctrl-I by the count across buffers, E37 over a modified buffer with the list put back, a gone buffer's entry dropped.
 - `carat/use_cases/actions/definition_handler.rb`: `DefinitionHandler.register` (`definition.jump`, `definition.peek`, `definition.choose`, `jump.older`, `jump.newer`).
 - `carat/use_cases/docs/request_signature.rb`: `RequestSignature#call`, after a typed `(` or `,` in insert mode: records a signature ask for the innermost open `(` on the row when the buffer's server gives signature help.
 - `carat/use_cases/docs/show_signature.rb`: `ShowSignature#call`, the arrived answer at the idle tick: dropped off the followed call, an empty label stops it, else a bordered one-row float above the cursor (below without room) with the active parameter marked.
