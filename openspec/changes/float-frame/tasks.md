@@ -2,7 +2,7 @@
 
 ## 1. The option and the glyphs
 
-- [x] 1.1 Add `Domain::BorderStyle` (`carat/domain/border_style.rb`) with the five styles and their code points, and `option.winborder` in `carat/domain/options.rb` and `config/default.caratrc` (mirrored by `make gen-config`); prove with rows in `test/domain_options_config.rb` ("The shipped border is rounded", "An unknown border style") and `test/domain_border_style.rb`.
+- [x] 1.1 Add `Domain::BorderStyle` (`carat/domain/border_style.rb`) with the five styles and their code points, and `option.winborder` in `carat/domain/options.rb` and `config/default.caratrc` (mirrored by `make gen-config`); prove with rows in `test/domain_options_config.rb` ("The shipped border is rounded", "An unknown border style").
 
 ## 2. The box
 
