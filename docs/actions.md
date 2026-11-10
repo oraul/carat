@@ -167,6 +167,11 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `buffer.delete` | normal | Delete the current buffer as `:bd` does, or with a count the buffer of that number |
 | `docs.hover` | normal | Ask the language server for the documentation under the cursor and show it in a float; while the float shows, enter it |
 | `docs.pin` | normal | Pin the documentation float into a horizontal split over a scratch copy, closing the float |
+| `definition.jump` | normal | Ask the language server for the definition under the cursor and go there, adding the position left to the jump list; several targets open a pick list |
+| `definition.peek` | normal | Ask the language server for the definition under the cursor and show its source in a float, the cursor staying in the buffer |
+| `definition.choose` | normal | In the definition pick list (its own binding of Enter), go to or peek at the target of the row under the cursor |
+| `jump.older` | normal | Go to the older position in the jump list, by the count |
+| `jump.newer` | normal | Go to the newer position in the jump list, by the count |
 | `palette.open` | normal | Open the command palette: every action and ex command with its key and description, filtered as you type at the `>` prompt, Enter runs the selected one |
 | `palette.next` | cmdline | Select the next palette entry; nothing outside the palette |
 | `palette.previous` | cmdline | Select the previous palette entry; nothing outside the palette |

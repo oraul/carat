@@ -130,11 +130,22 @@ require_relative "../use_cases/actions/file_handler"
 require_relative "../use_cases/actions/buffer_handler"
 require_relative "../use_cases/actions/completion_handler"
 require_relative "../domain/hover_request"
+require_relative "../domain/definition_request"
+require_relative "../domain/jump_list"
 require_relative "../domain/symbol_request"
 require_relative "../use_cases/docs/request_hover"
 require_relative "../use_cases/docs/show_hover"
 require_relative "../use_cases/docs/follow_hover"
 require_relative "../use_cases/docs/pin_hover"
+require_relative "../use_cases/files/resolve_inside"
+require_relative "../use_cases/definitions/request_definition"
+require_relative "../use_cases/definitions/open_definition_float"
+require_relative "../use_cases/definitions/visit_target"
+require_relative "../use_cases/definitions/show_definition"
+require_relative "../use_cases/definitions/choose_definition"
+require_relative "../use_cases/definitions/follow_definition"
+require_relative "../use_cases/definitions/walk_jumps"
+require_relative "../use_cases/actions/definition_handler"
 require_relative "../domain/signature_request"
 require_relative "../domain/key_hints"
 require_relative "../domain/palette"
@@ -280,6 +291,16 @@ module Carat
       attr_reader :show_hover #: UseCases::ShowHover
       attr_reader :follow_hover #: UseCases::FollowHover
       attr_reader :pin_hover #: UseCases::PinHover
+      attr_reader :definition #: Domain::DefinitionRequest
+      attr_reader :jumps #: Domain::JumpList
+      attr_reader :resolve_inside #: UseCases::ResolveInside
+      attr_reader :request_definition #: UseCases::RequestDefinition
+      attr_reader :open_definition_float #: UseCases::OpenDefinitionFloat
+      attr_reader :visit_target #: UseCases::VisitTarget
+      attr_reader :show_definition #: UseCases::ShowDefinition
+      attr_reader :choose_definition #: UseCases::ChooseDefinition
+      attr_reader :follow_definition #: UseCases::FollowDefinition
+      attr_reader :walk_jumps #: UseCases::WalkJumps
       attr_reader :signature #: Domain::SignatureRequest
       attr_reader :request_signature #: UseCases::RequestSignature
       attr_reader :show_signature #: UseCases::ShowSignature
@@ -322,12 +343,14 @@ module Carat
         @cache = Domain::LineCache.new
         @status_slots = Domain::StatusSlots.new
         @hover = Domain::HoverRequest.new
+        @definition = Domain::DefinitionRequest.new
+        @jumps = Domain::JumpList.new
         @symbols = Domain::SymbolRequest.new
         @signature = Domain::SignatureRequest.new
         @key_hints = Domain::KeyHints.new
         @palette = Domain::Palette.new
         @notices = Domain::Notices.new(history: @state.history)
-        @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots, completion: completions.request, clock: clock, hover: @hover, signature: @signature, symbols: @symbols, notices: @notices)
+        @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots, completion: completions.request, clock: clock, hover: @hover, definition: @definition, signature: @signature, symbols: @symbols, notices: @notices)
         @arrange_view = UseCases::ArrangeView.new(cache: @cache, buffers: @buffers)
         @actions = UseCases::ActionTable.new
         @commands = UseCases::ExTable.new
@@ -406,6 +429,14 @@ module Carat
         @show_completion = UseCases::ShowCompletion.new(menu: @completion_menu, source: completions, open_popup: open_popup, close_completion: close_completion, show_docs: show_docs)
         @complete_word = UseCases::CompleteWord.new(menu: @completion_menu, buffers: @buffers, open_popup: open_popup, close_completion: close_completion)
         @show_hover = UseCases::ShowHover.new(hover: @hover, open_float: @open_float, close_float: @close_float, format_docs: @format_docs)
+        @resolve_inside = UseCases::ResolveInside.new(files: files)
+        @request_definition = UseCases::RequestDefinition.new(definition: @definition)
+        @open_definition_float = UseCases::OpenDefinitionFloat.new(open_float: @open_float)
+        @visit_target = UseCases::VisitTarget.new(definition: @definition, jumps: @jumps, buffers: @buffers, files: files, probe_path: @probe_path, open_file: @open_file, resolve_inside: @resolve_inside, open_definition_float: @open_definition_float)
+        @show_definition = UseCases::ShowDefinition.new(definition: @definition, files: files, close_float: @close_float, visit_target: @visit_target, open_definition_float: @open_definition_float)
+        @choose_definition = UseCases::ChooseDefinition.new(definition: @definition, close_float: @close_float, visit_target: @visit_target)
+        @follow_definition = UseCases::FollowDefinition.new(definition: @definition, close_float: @close_float)
+        @walk_jumps = UseCases::WalkJumps.new(jumps: @jumps, buffers: @buffers)
 
         UseCases::FileCommandHandler.register(@commands, save_file: @save_file, save_all: @save_all, quit: @quit, quit_all: @quit_all, open_file: @open_file)
         UseCases::WindowCommandHandler.register(@commands, split_window: @split_window, close_window: @close_window, close_other_windows: @close_other_windows)
@@ -457,6 +488,7 @@ module Carat
         UseCases::BufferHandler.register(@actions, list_buffers: @list_buffers, switch_buffer: @switch_buffer, delete_buffer: @delete_buffer)
         UseCases::CompletionHandler.register(@actions, select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, complete_word: @complete_word)
         UseCases::DocsHandler.register(@actions, request_hover: @request_hover, pin_hover: @pin_hover)
+        UseCases::DefinitionHandler.register(@actions, request_definition: @request_definition, choose_definition: @choose_definition, walk_jumps: @walk_jumps)
         @open_palette = UseCases::OpenPalette.new(actions: @actions, commands: @commands, keymap: @keymap, plugins: @plugins, palette: @palette, plugin_ui: @plugin_ui, search_prompt: @search_prompt)
         UseCases::PaletteHandler.register(@actions, open_palette: @open_palette, palette: @palette)
         UseCases::LayoutHandler.register(@actions, toggle_slot: @toggle_slot)
@@ -474,9 +506,9 @@ module Carat
         @show_key_hints = UseCases::ShowKeyHints.new(keymap: @keymap, input: @input, actions: @actions, plugins: @plugins, hints: @key_hints, open_float: @open_float, close_float: @close_float)
         @follow_palette = UseCases::FollowPalette.new(palette: @palette, open_float: @open_float, close_float: @close_float)
         @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
-        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover, request_signature: @request_signature, follow_signature: @follow_signature, signature: @signature, key_hints: @key_hints, hide_key_hints: @hide_key_hints, palette: @palette, follow_palette: @follow_palette)
+        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover, definition: @definition, follow_definition: @follow_definition, request_signature: @request_signature, follow_signature: @follow_signature, signature: @signature, key_hints: @key_hints, hide_key_hints: @hide_key_hints, palette: @palette, follow_palette: @follow_palette)
         @start_screen = Domain::StartScreen.new
-        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover, show_signature: @show_signature, signature: @signature, show_key_hints: @show_key_hints, notices: @notices)
+        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover, show_definition: @show_definition, show_signature: @show_signature, signature: @signature, show_key_hints: @show_key_hints, notices: @notices)
         @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, palette: @palette, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers), winbar: Winbar.new(symbols: @symbols), notices: @notices)
         @screen_presenter = ScreenPresenter.new(terminal: terminal, theme: Domain::Themes.find(@state.options.theme, @state.options.background), colors: terminal.colors)
       end
