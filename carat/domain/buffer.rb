@@ -56,9 +56,11 @@ module Carat
     # line (none while the list is empty), 0 or the 1-based index of the
     # line's most severe diagnostic, moved with the lines as the signs
     # are. styles holds a documentation buffer's SyntaxLine per row (none
-    # for any other buffer), each kept for its row's string. A Struct
+    # for any other buffer), each kept for its row's string. readonly
+    # marks a file buffer that is never written, as a definition target
+    # outside the project opens (SaveFile refuses it with E45). A Struct
     # record: mutable, with a reader and a writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks, :styles, keyword_init: true)
+    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks, :styles, :readonly, keyword_init: true)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
@@ -83,6 +85,7 @@ module Carat
       # @rbs @diagnostics: DiagnosticList
       # @rbs @diagnostic_marks: Array[Integer]
       # @rbs @styles: Array[untyped]
+      # @rbs @readonly: bool
 
       # Every member is stored through its writer after super(), so the
       # empty sign list takes the pinned type: Spinel's keyword super of a
@@ -117,6 +120,7 @@ module Carat
         self.diagnostics = DiagnosticList.new
         self.diagnostic_marks = []
         self.styles = Array.new(0, nil)
+        self.readonly = false
       end
 
       # Whether the buffer carries the styles of documentation rows.

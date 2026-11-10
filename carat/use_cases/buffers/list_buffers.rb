@@ -10,15 +10,15 @@ module Carat
     # buffers too with the bang. A line is the buffer number right-aligned
     # in three columns, five flags (u for a scratch buffer, which Neovim
     # would call unlisted; % for the current window's buffer; a when a
-    # window shows it, else h; a blank; + when modified), a space, the
-    # quoted name, spaces up to display column 40, and "line N", the
-    # cursor line for the current buffer and the line a window last left
-    # the others at. Each flag character of the argument keeps only the
+    # window shows it, else h; = when read-only, else a blank; + when
+    # modified), a space, the quoted name, spaces up to display column 40,
+    # and "line N", the cursor line for the current buffer and the line a
+    # window last left the others at. Each flag character of the argument keeps only the
     # buffers it names; those for states no buffer here has keep none.
     class ListBuffers
       NAME_END = 40
       NO_NAME = "[No Name]"
-      UNMATCHED = "#-=xRF?"
+      UNMATCHED = "#-xRF?"
       private_constant :NAME_END, :NO_NAME, :UNMATCHED
 
       attr_reader :buffers #: Domain::BufferList
@@ -57,6 +57,7 @@ module Carat
         return false if flags.include?("a") && !shown
         return false if flags.include?("h") && shown
         return false if flags.include?("%") && !buffer.equal?(state.buffer)
+        return false if flags.include?("=") && !buffer.readonly
         i = 0
         while i < UNMATCHED.length
           return false if flags.include?(UNMATCHED[i, 1])
@@ -70,7 +71,7 @@ module Carat
         current = buffer.equal?(state.buffer)
         number = buffer.id.to_s
         head = number.length < 3 ? " " * (3 - number.length) + number : number
-        flags = (buffer.scratch? ? "u" : " ") + (current ? "%" : " ") + (@buffers.tabs.shown?(buffer) ? "a" : "h") + " " + (buffer.modified? && !buffer.scratch? ? "+" : " ")
+        flags = (buffer.scratch? ? "u" : " ") + (current ? "%" : " ") + (@buffers.tabs.shown?(buffer) ? "a" : "h") + (buffer.readonly ? "=" : " ") + (buffer.modified? && !buffer.scratch? ? "+" : " ")
         out = head + flags + " \"" + name_of(buffer) + "\""
         pad = NAME_END - Domain::DisplayWidth.column(out, out.bytesize, 8)
         pad = 1 if pad < 1

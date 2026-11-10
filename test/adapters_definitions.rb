@@ -193,6 +193,38 @@ module AdaptersDefinitionsTest
     out
   end
 
+  # The text of row 0's cells drawn selected: the current buffer's tab,
+  # empty when no tab is selected or row 0 is no tab row.
+  #: (Rig) -> String
+  def self.selected_tab(r)
+    out = +""
+    frame = r.frame
+    col = 0
+    while col < frame.cols
+      out << frame.code_at(0, col) if frame.hl_at(0, col) == D::Highlight::TAB_LINE_SELECTED && frame.width_at(0, col) > 0
+      col += 1
+    end
+    out.strip
+  end
+
+  # gd to a target from a.rb, after the setup ("link" makes
+  # /project/out.rb a link to /gems/c.rb, "listed" opens /gems/c.rb with
+  # :e first and goes back to a.rb), read as "tab row | selected tab |
+  # where | buffers listed".
+  #: (String, String) -> String
+  def self.ghost_case(setup, path)
+    r = defining
+    if setup == "link"
+      r.files.put("/project/out.rb", "# c\ndef far\n  3\nend\n")
+      r.files.link_to("/project/out.rb", "/gems/c.rb")
+    elsif setup == "listed"
+      r.type(":e /gems/c.rb<CR>")
+      r.type(":bp<CR>")
+    end
+    asked(r, "gd", location(path, 1, 4))
+    "#{r.frame.row_text(0)} | #{selected_tab(r)} | #{r.where} | #{r.assembly.buffers.count}"
+  end
+
   def self.main
     t = Carat::Testing.new("adapters_definitions")
 
@@ -371,16 +403,26 @@ module AdaptersDefinitionsTest
     r = defining
     asked(r, "gd", location("/gems/c.rb", 1, 4))
     title = r.where
-    scratch = r.assembly.state.buffer.scratch?
+    flags = [r.assembly.state.buffer.readonly, r.assembly.state.buffer.scratch?]
     r.type(":w<CR>")
-    t.assert_equal(["/gems/c.rb 1:4", true, true], [title, scratch, r.message.start_with?("E382")], "A target outside the project opens read-only")
+    plain = r.message
+    r.type("x")
+    r.type(":wa<CR>")
+    all = r.message
+    t.assert_equal(["/gems/c.rb 1:4", [true, false], "E45: 'readonly' option is set", "E45: 'readonly' option is set", "# c\ndef far\n  3\nend\n"], [title, flags, plain, all, r.files.read("/gems/c.rb", 1000)], "A target outside the project opens read-only")
+    r.type(":w /project/copy.rb<CR>")
+    named = r.message
+    r.type(":w<CR>")
+    t.assert_equal(["E45: 'readonly' option is set", "E45: 'readonly' option is set", false, "# c\ndef far\n  3\nend\n"], [named, r.message, r.files.exist?("/project/copy.rb"), r.files.read("/gems/c.rb", 1000)], "Writing a read-only buffer is refused, modified, to its path or another")
+    r = defining
+    asked(r, "gd", location("/gems/c.rb", 1, 4))
     r.type("<C-o>")
-    t.assert_equal("a.rb 3:0", r.where, "Ctrl-O leaves the read-only view")
+    t.assert_equal("a.rb 3:0", r.where, "Ctrl-O leaves the read-only buffer")
     r = defining
     r.files.put("/project/out.rb", "# c\ndef far\n  3\nend\n")
     r.files.link_to("/project/out.rb", "/gems/c.rb")
     asked(r, "gd", location("/project/out.rb", 0, 0))
-    t.assert_equal(["/project/out.rb 0:0", true], [r.where, r.assembly.state.buffer.scratch?], "a target linked out of the project opens read-only")
+    t.assert_equal(["out.rb 0:0", true], [r.where, r.assembly.state.buffer.readonly], "a target linked out of the project opens read-only")
     r = defining
     asked(r, "gd", location("/project/lib", 0, 0))
     t.assert_equal(["\"lib\" is a directory", "a.rb 3:0", 0], [r.message, r.where, r.assembly.jumps.count], "A target that is not a regular file is refused")
@@ -390,6 +432,28 @@ module AdaptersDefinitionsTest
     r = defining
     asked(r, "gd", [{ "uri" => uri("/project/b%2Erb"), "range" => { "start" => { "line" => 2, "character" => 2 } } }, { "uri" => uri("relative/x.rb"), "range" => { "start" => { "line" => 0, "character" => 0 } } }, { "uri" => uri("/project/a%00.rb"), "range" => { "start" => { "line" => 0, "character" => 0 } } }, { "uri" => uri("/project/b.rb"), "range" => { "start" => { "line" => -1, "character" => 0 } } }])
     t.assert_equal("b.rb 2:2", r.where, "escapes are decoded and relative, NUL, and negative targets are dropped")
+
+    # The target's tab: it shows and is the selected one wherever the
+    # target lies, and an outside file already listed is shown, not
+    # copied.
+    t.table([
+      ["gd to another project file shows its tab, selected", ["", "/project/b.rb"], " r a.rb    r b.rb | b.rb | b.rb 1:4 | 2"],
+      ["gd outside the project shows the target's tab, selected", ["", "/gems/c.rb"], " r a.rb    r c.rb | c.rb | /gems/c.rb 1:4 | 2"],
+      ["gd to a project file linked out of the project shows its tab, selected", ["link", "/project/out.rb"], " r a.rb    r out.rb | out.rb | out.rb 1:4 | 2"],
+      ["gd to an outside file already listed shows that buffer and its tab", ["listed", "/gems/c.rb"], " r a.rb    r c.rb | c.rb | /gems/c.rb 1:4 | 2"]
+    ]) { |input| ghost_case(input[0].to_s, input[1].to_s) }
+    r = defining
+    asked(r, "gd", location("/gems/c.rb", 1, 4))
+    r.type(":bp<CR>")
+    back = "#{r.frame.row_text(0)} | #{selected_tab(r)} | #{r.where}"
+    r.type(":bn<CR>")
+    again = "#{r.frame.row_text(0)} | #{selected_tab(r)} | #{r.where}"
+    r.type(":ls<CR>")
+    t.assert_equal("  1  h   \"a.rb\"                         line 4\n  2 %a=  \"/gems/c.rb\"                   line 2", r.message, "A read-only buffer in the listing")
+    r.type(":ls =<CR>")
+    t.assert_equal("  2 %a=  \"/gems/c.rb\"                   line 2", r.message, "Filtered by the read-only flag")
+    r.type(":bd<CR>")
+    t.assert_equal([" r a.rb    r c.rb | a.rb | a.rb 3:0", " r a.rb    r c.rb | c.rb | /gems/c.rb 1:4", "a.rb 3:0 | 1"], [back, again, "#{r.where} | #{r.assembly.buffers.count}"], "The read-only target's tab selects and closes like the others")
 
     # The jump list's ends.
     r = defining
