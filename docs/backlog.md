@@ -3147,6 +3147,12 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: about twenty lines validate UTF-8 by hand (lead size, continuation bytes, overlongs, surrogates, range, `pack("U")`) in an adapter of over 1200 lines, and that multibyte branch has no test, so a regression in it would pass the suite.
 - Fix outline: move the decoding into a domain value (a `FileUri` with `path_of` beside the encoding of `uri_of`) tested in a domain test; decode each escape to its byte and refuse unless `out.valid_encoding?`, as `OpenFile` already relies on; add rows for a `%C3%A9` path that opens and an overlong `%C0%AE` and a surrogate `%ED%A0%80` that are skipped.
 
+## The definition ask copies the hover ask in the gateway
+
+- Where: `send_definition` (line 690) and `send_hover` (line 837) in `carat/adapters/json_rpc_language_gateway.rb` at d73f03f, which still differ only by their record, its offer predicate, and the method name; `Domain::DefinitionRequest` repeats `HoverRequest`'s anchor, serial, deadline, and languages fields. The cancel, forget, position-params, and running-server steps are shared since `periodic-blockers-a`. Quality advisories in `definitions` and `periodic-blockers-a`.
+- Why it matters: a fix to the replace-or-overdue check or the field writes of one send (such as the stale-answer defect queued in `hover-tidy`) has to be made in both. One private helper over both records is not possible as they stand: Spinel types a parameter once for the whole program (`docs/spinel-notes.md`, Types), so a record parameter taking both would be `untyped` and widen every call on it.
+- Fix outline: a shared anchored-ask record in the domain that `HoverRequest` and `DefinitionRequest` both hold, so one private send in the gateway takes that record and the method name, with the hover and definition request rows unchanged.
+
 ## The definition answer loop stops before LIMIT targets are kept
 
 - Where: `carat/adapters/json_rpc_language_gateway.rb` line 753 at fafe59c, `defined`, which reads only the first `DefinitionRequest::LIMIT` entries of an answer even when some were skipped as non-file, while `DefinitionRequest#add_target` caps the kept targets again. Quality advisory in `definitions`.

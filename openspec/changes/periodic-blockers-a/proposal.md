@@ -12,7 +12,7 @@ This change is outside the roadmap of `docs/architecture.md` section 12: it fixe
 - `JsonRpcLanguageGateway` cancels every request kind through its one `cancel_request(language, id)` (completion, resolve, hover, definition, symbols, signature).
 - The gateway forgets a stopped or crashed server's asks in one step, `forget_server`, for completion, hover, definition, signature, and symbols alike; `stop` used to skip the symbols ask, so a winbar request in flight to a stopped server was kept until its deadline.
 - The gateway builds the document and cursor position params of completion, hover, definition, and signature in one `position_params`, and finds a running server in one `running_server`.
-- `docs/backlog.md`: the four entries removed ("The gateway cancels a request in five copies", "The signature gateway copies the hover forget and position steps", "The definition ask copies the hover ask in the gateway", "gd misses its own file under a relative or dotted name").
+- `docs/backlog.md`: three entries removed ("The gateway cancels a request in five copies", "The signature gateway copies the hover forget and position steps", "gd misses its own file under a relative or dotted name"), and "The definition ask copies the hover ask in the gateway" narrowed to the two sends that keep a body each, with the Spinel reason and the shared domain anchor record as its outline.
 
 ## Out of scope
 
