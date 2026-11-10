@@ -40,7 +40,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Sentence motions rescan the whole buffer on every use
 
-- Where: `Carat::Domain::Motions.sentence_starts` in `carat/domain/motions.rb` (line 416 at 7711421), called by `(` and `)` and by the `is` and `as` text objects in `carat/domain/text_objects.rb` (line 150 at 7711421).
+- Where: `Carat::Domain::Motions.sentence_starts` in `carat/domain/motions.rb` (line 416 at 7711421), called by `(` and `)` and by the `is` and `as` text objects in `carat/domain/text_objects.rb` (line 150 at 7711421). Raised again at ce6abdb (`motions.rb:398`, `sentence_starts`, on every `(`, `)`, `is`, or `as`; periodic quality), queue item `editing-counts`: scan from the paragraph before the cursor to the one after, or cache the starts by the buffer's change count.
 - Why it matters: every use builds the list of sentence starts for the whole buffer, so one `)` takes about 96 ms on 100,000 lines, and a count or a repeated key multiplies it.
 - Fix outline: scan outward from the cursor, backward to the start of the current sentence and forward to the start of the next, stopping at a paragraph boundary, and reuse that walker for the text objects.
 
@@ -364,13 +364,13 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## FindMatch re-implements the domain's character classes
 
-- Where: `FindMatch#keyword?` and `#blank?` in `carat/use_cases/search/find_match.rb` (line 129), `keyword?` through the bare class number in `Motions.code_class(code, false) == 2`. Periodic quality at 0b17324.
+- Where: `FindMatch#keyword?` and `#blank?` in `carat/use_cases/search/find_match.rb` (line 129), `keyword?` through the bare class number in `Motions.code_class(code, false) == 2`. Periodic quality at 0b17324. Raised again at ce6abdb (`find_match.rb:134`, `blank?`; periodic quality), queue item `editing-counts`.
 - Why it matters: the word under the cursor for `*` and `#` is judged by a copy of the classes `Domain::Motions` owns, keyed on an unnamed number, so a change to the classes leaves the search motion behind.
 - Fix outline: a code-point predicate in `Domain::Motions` (or a named class constant) called from `FindMatch` and the runs scan. Queued in `search-structure`.
 
 ## The local cls is the abbreviation the naming rule forbids
 
-- Where: the local `cls` in `carat/domain/text_objects.rb` (line 86 at 3895e21) and the parameter `cls` of `Runs#add` (`carat/domain/runs.rb:18`). Periodic quality at 0b17324.
+- Where: the local `cls` in `carat/domain/text_objects.rb` (line 86 at 3895e21) and the parameter `cls` of `Runs#add` (`carat/domain/runs.rb:18`). Periodic quality at 0b17324. Raised again at ce6abdb (periodic quality), queue item `editing-counts`.
 - Why it matters: `CLAUDE.md` names `cls` as the counterexample of its naming rule (`char_class`, not `cls`).
 - Fix outline: rename both to `char_class`. Queued as a fold of `search-structure`.
 
@@ -556,7 +556,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The closing fallback can record a note twice
 
-- Where: `.claude/workflows/deliver-change.js` line 695, the fallback flush after a closing start that did not record, and `add_note` in `tools/run_state.sh`, which dedupes only `quality-advisory` notes. Quality advisory at e8c5b43 in `pipeline-speed-c`.
+- Where: `.claude/workflows/deliver-change.js` line 695, the fallback flush after a closing start that did not record, and `add_note` in `tools/run_state.sh`, which dedupes only `quality-advisory` notes. Quality advisory at e8c5b43 in `pipeline-speed-c`. Raised again at ce6abdb (`tools/run_state.sh:1103`; periodic quality): a restarted periodic start records its findings twice; the same bare-text comparison for the quality and security kinds, queue item `run-budgets-tidy`.
 - Why it matters: when the closing start ran part of the record line before a later command failed, the fallback reruns every line, so an extra-round note is recorded twice and the history counts it twice.
 - Fix outline: dedupe identical notes of every kind in `add_note`, or push back only the lines after the one that failed, with a `tools/tools_test.sh` case of a note recorded twice. Queued in `run-resume`.
 
@@ -822,7 +822,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: step 4 of the package step in `.claude/agents/contributor.md`, which opens the pull request with the GitHub tools, and its step 5 removal edit; `.claude/settings.json` sets the attribution `pr` empty and `sessionUrl` false. Retrospective proposal of `leader-layout`.
 - Why it matters: 10 of 53 run states record a pull request created with a footer holding a session link (pull requests 57 to 60, 64, 73, 76, 77, and 81) despite main's attribution settings, each needing a removal edit; the edit history keeps the link, against the hard rule that no session URL appears in GitHub activity. The footer is added by the pull request tool outside the repository, so no repository change has prevented it.
-- Fix outline: a merge-gate acceptance check that refuses a pull request body or squash message holding a session link, beside the package step's immediate removal edit (step 5), each removal reported. The main session concluded at `feedback` that the footer cannot be fixed from the repository (it reached 10 of 53 pull requests with main's attribution settings on), so only the package step's removal remains; the entry stays here, out of the queue, until a repository-side cause is found.
+- Fix outline: a merge-gate acceptance check that refuses a pull request body or squash message holding a session link, beside the package step's immediate removal edit (step 5), each removal reported. The main session concluded at `feedback` that the footer cannot be fixed from the repository (it reached 10 of 53 pull requests with main's attribution settings on), so only the package step's removal remains, which the user confirmed as standing at `queue-handoff`; the entry stays here, out of the queue, until a repository-side cause is found.
 
 ## The roadmap's progress is readable nowhere in one place
 
@@ -898,7 +898,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Operate and RepeatLast each copy EditorState#clamp_col
 
-- Where: the private `clamp(state, row, col)` in `carat/use_cases/operate.rb` (line 202 at `theme-tokens`) and `carat/use_cases/repeat_last.rb` (line 117), each `EditorState#clamp_col` in `carat/domain/editor_state.rb` (line 94) line for line. Periodic quality at 4c65f4e.
+- Where: the private `clamp(state, row, col)` in `carat/use_cases/operate.rb` (line 202 at `theme-tokens`) and `carat/use_cases/repeat_last.rb` (line 117), each `EditorState#clamp_col` in `carat/domain/editor_state.rb` (line 94) line for line. Periodic quality at 4c65f4e. Raised again at ce6abdb (`operate.rb:202`, `repeat_last.rb:116`; periodic quality), queue item `editing-counts`.
 - Why it matters: three copies of one clamp must change together, and a fix to the domain's misses the two use cases.
 - Fix outline: call `state.clamp_col(row, col)` at the six call sites and delete both private methods. Listed in the queue's backlog item.
 
@@ -1232,11 +1232,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the two call sites follow different rules, so a later change to the queue in `step` can silently drop or replay keys.
 - Fix outline: assign the result in `step` too, or narrow the comment to the timeout path.
 
-## Two documents count 41 UI highlight groups against the code's 49
+## The UI highlight group count is stale
 
-- Where: the `Highlight` bullet of `docs/architecture.md` (line 106 at 22a5de0) and the highlight paragraph of `docs/compatibility.md` (line 438), against `SYNTAX_FIRST = 49` in `carat/domain/highlight.rb` (line 63) since `bars` added five `STATUS_MODE` and three `STATUS_LSP` groups. Periodic quality at 22a5de0.
-- Why it matters: both documents describe the frame's group ids by a count that no longer matches the code, and the next group added drifts them again.
-- Fix outline: say 49 UI groups in both, or name the groups without a count so a new group cannot drift them.
+- Where: `docs/architecture.md:106` and `docs/codebase-map.md:487` (49 groups) and `docs/compatibility.md:507` (41) against `carat/domain/highlight.rb:68` (syntax from 51); the map's IndentGuides bullet (line 459) omits `on?`. Periodic quality at ce6abdb, replacing the entry of 22a5de0 (41 against 49); queue item `theme-tidy`.
+- Why it matters: the documents count fewer groups than the code, and the next group added drifts them again.
+- Fix outline: say 51 groups with the indent guides last in all three, or name the groups without a count; add `on?`.
 
 ## StatusLineNC is themed but painted by nothing
 
@@ -1900,7 +1900,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## A key resolved by timeoutlen runs no follow tail
 
-- Where: `HandleKey#timeout` in `carat/use_cases/handle_key.rb` (line 122 at 41297d6, line 154 at b76b722) and the comment of `carat/use_cases/discovery/hide_key_hints.rb` line 7. Quality advisories in `quick-docs` and `discoverability`, periodic quality at c1b3a12, b76b722, and 3895e21, which merged the two entries. Queue item `discoverability-tidy`.
+- Where: `HandleKey#timeout` in `carat/use_cases/handle_key.rb` (line 122 at 41297d6, line 154 at b76b722) and the comment of `carat/use_cases/discovery/hide_key_hints.rb` line 7. Quality advisories in `quick-docs` and `discoverability`, periodic quality at c1b3a12, b76b722, and 3895e21, which merged the two entries. Queue item `discoverability-tidy`. Raised again at ce6abdb (line 189 against the after-key tail at 153, and a list message cleared twice at 225 and 228; periodic quality): a palette following a key resolved by `timeoutlen` stays unfiltered until the next key; one private `after_keys(state)` both paths end in, with a row.
 - Why it matters: `call` ends with an after-key tail (`ShowCompletion`, `FollowHover`, `FollowDefinition`, `FollowSignature`, `FollowPalette`, `HideKeyHints`, the plugin observe, `ArrangeView`) that `timeout` copies only in part (it skips `FollowDefinition`, `handle_key.rb` line 181 at 8d8832f), so an action resolved by `timeoutlen` leaves the documentation float open away from the cursor until the next key, `palette.open` bound beside a longer user binding (`<leader>p` with `<leader>pf`) opens the `>` prompt with no list until the next key, and the `HideKeyHints` comment says a timeout closes the hints, which it never does.
 - Fix outline: one private follow step that both `call` and `timeout` end with, a row in `test/adapters_hover.rb` that moves the cursor through a timed-out prefix, a row in `test/editor_palette.rb` that opens the palette through a timed-out user binding, and a corrected `HideKeyHints` comment.
 
@@ -2002,7 +2002,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The completion close use case is shared through a local
 
-- Where: `close_completion` in `carat/adapters/editor_assembly.rb` line 336 at b0dd342, shared by `ShowCompletion` (338), `AcceptCompletion` (344), and `CompletionHandler` (413). Periodic quality, blocking. Queued in `completion-tidy`.
+- Where: `close_completion` in `carat/adapters/editor_assembly.rb` line 336 at b0dd342, shared by `ShowCompletion` (338), `AcceptCompletion` (344), and `CompletionHandler` (413). Periodic quality, blocking. Queued in `completion-tidy`. Raised again at ce6abdb (periodic quality), with `open_popup` (`editor_assembly.rb:429`, beside `close_completion` at 398) shared the same way: assembly readers for both, asserted per holder in `test/adapters_assembly.rb`.
 - Why it matters: CLAUDE.md asks everything shared to be kept in an assembly reader so the assembly test checks every holder; only `show_completion.close_completion` is checked.
 - Fix outline: keep it in a reader and assert that the other two holders hold that one object.
 
@@ -2032,7 +2032,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## WalkHistory keeps one walk's counts in instance variables
 
-- Where: `@gone`, `@back`, and `@empty_before` in `carat/use_cases/history/walk_history.rb` lines 32, 80, and 109 at b0dd342. Periodic quality. Queued in `search-tidy`.
+- Where: `@gone`, `@back`, and `@empty_before` in `carat/use_cases/history/walk_history.rb` lines 32, 80, and 109 at b0dd342. Periodic quality. Queued in `editing-counts`. Raised again at ce6abdb (line 32; periodic quality): a returned tally value.
 - Why it matters: the use case is built once in `EditorAssembly`, so state carries between calls and a nested or interrupted walk reads stale counts, the side channel already listed for `Operate`'s notice.
 - Fix outline: return the counts from the step or hold them in a record made per call, passed to the finish.
 
@@ -2050,7 +2050,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Keymap exposes helpers and the map misses methods
 
-- Where: `apply`, `bind_text`, and `holder_of` in `carat/domain/keymap.rb` lines 141, 162, and 205 are public with no outside caller; `leader_problem` and `no_actions` are missing from the map's `Keymap` entry; the `CommandGrammar` entry (`docs/codebase-map.md` line 146) omits `digit?`, `digit`, `char`, `wants_pattern?`, and `pattern`; the `Paths` list (line 503) omits `absolute` (`carat/plugin_api.rb` line 356), at b0dd342. Periodic quality. Queued in `docs-index`.
+- Where: `apply`, `bind_text`, and `holder_of` in `carat/domain/keymap.rb` lines 141, 162, and 205 are public with no outside caller; `leader_problem` and `no_actions` are missing from the map's `Keymap` entry; the `CommandGrammar` entry (`docs/codebase-map.md` line 146) omits `digit?`, `digit`, `char`, `wants_pattern?`, and `pattern`; the `Paths` list (line 503) omits `absolute` (`carat/plugin_api.rb` line 356), at b0dd342. Periodic quality. Queued in `docs-index`. Raised again at ce6abdb (periodic quality, `keymap.rb` 173 `apply` and 242 `holder_of` copying `node_at`), adding `bind` at 223 with no caller and `name_group` at 314 copying `bind_text`'s checks at 200: remove `bind` and its map mention, a private `keys_problem`; queue item: the backlog batches.
 - Why it matters: the map is the entry point for every change; missing methods send a reader to the code.
 - Fix outline: make the three instance methods private and name the missing methods in their entries.
 
@@ -2176,7 +2176,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## ShowKeyHints copies HideKeyHints' close
 
-- Where: `carat/use_cases/discovery/show_key_hints.rb` line 56 at d828abb. Quality advisory in `discoverability`. Raised again at 38628bb (periodic quality). Queued in `discoverability-tidy`.
+- Where: `carat/use_cases/discovery/show_key_hints.rb` line 56 at d828abb. Quality advisory in `discoverability`. Raised again at 38628bb (periodic quality). Queued in `discoverability-tidy`. Raised again at ce6abdb (periodic quality): inject `HideKeyHints`.
 - Why it matters: two copies of closing the hints float drift when the float's lifecycle changes.
 - Fix outline: have `ShowKeyHints` call `HideKeyHints` instead of holding `close_float`.
 
@@ -2332,7 +2332,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## ToggleSlot repeats the leaf close and the kept-slot placement
 
-- Where: the hide branch of `carat/use_cases/windows/toggle_slot.rb` lines 35 to 37, repeating `BufferList#close_window` (`carat/domain/buffer_list.rb` lines 282 to 284), and the kept-slot restore at lines 40 and 48 to 49, repeating `carat/use_cases/windows/open_side_window.rb` lines 35 to 38; the `current` lookup again after `place_slot` at lines 47 and 50, at edaf2c2. Quality advisories in `layout-slots`, raised three times.
+- Where: the hide branch of `carat/use_cases/windows/toggle_slot.rb` lines 35 to 37, repeating `BufferList#close_window` (`carat/domain/buffer_list.rb` lines 282 to 284), and the kept-slot restore at lines 40 and 48 to 49, repeating `carat/use_cases/windows/open_side_window.rb` lines 35 to 38; the `current` lookup again after `place_slot` at lines 47 and 50, at edaf2c2. Quality advisories in `layout-slots`, raised three times. Raised again at ce6abdb (`toggle_slot.rb:30` against `buffer_list.rb:282` and `open_side_window.rb:27`; periodic quality), queue item `slots-tidy`: a `TabPage#remove_leaf(id)` and one re-show step.
 - Why it matters: two copies of closing a leaf (layout close, current to the taker's first leaf, previous forgotten) and of placing a kept slot (kept and listed, `place_slot` at its size, `hidden = false`) drift apart; the second `current` lookup is dead, since `attach` and `panel_target` never renumber existing leaves.
 - Fix outline: one `TabPage#close_leaf(id)` called by `ToggleSlot` and `BufferList#close_window`, one method that places a kept slot and answers the leaf or -1, called by both use cases, and drop the `current` local and its reassignment.
 
@@ -2344,7 +2344,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Layout#fixed_width? has no production caller
 
-- Where: `carat/domain/layout.rb` line 297, called only by `test/domain_layout.rb` line 265 and named in `docs/codebase-map.md`, at edaf2c2. Quality advisory in `layout-slots`, raised twice.
+- Where: `carat/domain/layout.rb` line 297, called only by `test/domain_layout.rb` line 265 and named in `docs/codebase-map.md`, at edaf2c2. Quality advisory in `layout-slots`, raised twice. Raised again at ce6abdb (line 299; periodic quality), queue item `slots-tidy`.
 - Why it matters: close, equalize, and fit use `fixed?`, so the wrapper of `fixed?(id, true)` is dead code kept alive by its test.
 - Fix outline: drop it, test `fixed?(id, true)` instead, and update the layout line of the map.
 
@@ -2410,19 +2410,19 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The architecture and the queue sit at their byte budgets
 
-- Where: `BUDGETS` in `tools/docs_lint.sh` line 44: `docs/architecture.md` 88,058 of 88,064 bytes, at b76b722. Periodic quality. Queue items `breadcrumbs` and `architecture-drift`.
+- Where: `BUDGETS` in `tools/docs_lint.sh` line 44: `docs/architecture.md` 88,058 of 88,064 bytes, at b76b722. Periodic quality. Queue items `breadcrumbs` and `architecture-drift`. At ce6abdb (periodic quality) the architecture is 88,063 of 88,064 bytes, so every spec change rewords text it does not change to fit, as #93 did; queue item `docs-index`.
 - Why it matters: the next change adding a sentence to the architecture fails `docs-lint` in its check stage.
 - Fix outline: trim history and detail the archived designs already hold to restore working headroom.
 
 ## The map's bullets lag Messages, Options, the plugin API, and two tools
 
-- Where: `docs/codebase-map.md` line 119 (Messages without E444 and `unsaved_buffer`), line 94 (Options without `range_problem`, `slot_size`, and the three layout sizes), line 513 (VERSION 2.3, the code 2.4), line 44 (the check entry without `runner_finish`), and line 579 (AnsiTerminal named the only environment reader, while `DiskFiles#home` reads HOME), at b76b722. Periodic quality. Queue item `docs-index`.
+- Where: `docs/codebase-map.md` line 119 (Messages without E444 and `unsaved_buffer`), line 94 (Options without `range_problem`, `slot_size`, and the three layout sizes), line 513 (VERSION 2.3, the code 2.4), line 44 (the check entry without `runner_finish`), and line 579 (AnsiTerminal named the only environment reader, while `DiskFiles#home` reads HOME), at b76b722. Periodic quality. Queue item `docs-index`. Raised again at ce6abdb (periodic quality): line 94 also omits `guide_code`, `guide_char?`, and the indentguides members.
 - Why it matters: the map is the start of every change and states facts the code contradicts.
 - Fix outline: add the names, say 2.4 or name the constant without a number, and say the terminal driver's only environment reads.
 
 ## The .PHONY list leaves out metrics
 
-- Where: `Makefile` line 432, at b76b722. Periodic quality. Queue item `run-budgets-tidy`.
+- Where: `Makefile` line 432, at b76b722. Periodic quality. Queue item `run-budgets-tidy`. Raised again at ce6abdb, `metrics-compare` missing too (periodic quality).
 - Why it matters: a file or directory named `metrics` at the top would make `make metrics` answer up to date and skip the measurement the check stage records.
 - Fix outline: add `metrics` and `metrics-compare` to `.PHONY`.
 
@@ -2639,7 +2639,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The map omits Layout and search methods other files call
 
-- Where: `docs/codebase-map.md` line 349 (Layout without `leaf_showing`, `leaf_number`, `leaf_count`, `node`, `node_count`, `window_at`), line 189 (VimPattern without `compile_substitute`), line 194 (LastSearch without `any?`, `end_preview`), line 195 (SearchPrompt without `close`, `prefix`), at 7711421. Periodic quality. Queue item `docs-index`.
+- Where: `docs/codebase-map.md` line 349 (Layout without `leaf_showing`, `leaf_number`, `leaf_count`, `node`, `node_count`, `window_at`), line 189 (VimPattern without `compile_substitute`), line 194 (LastSearch without `any?`, `end_preview`), line 195 (SearchPrompt without `close`, `prefix`), at 7711421. Periodic quality. Queue item `docs-index`. Raised again at ce6abdb (periodic quality): `Layout#leaf_number`, `leaf_count`, and `window_at` are still missing.
 - Why it matters: callers look up a method the map does not name.
 - Fix outline: name them on those lines.
 
@@ -2651,7 +2651,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Motions repeats its row clamp and paragraph walk
 
-- Where: `carat/domain/motions.rb` line 246 (`line_down` repeats `vertical`'s checks at lines 215 to 222, `to_row` clamps again), lines 540 and 562 (`paragraph_forward` and `paragraph_backward` share one loop), at 7711421. Periodic quality. Queue item `search-tidy`.
+- Where: `carat/domain/motions.rb` line 246 (`line_down` repeats `vertical`'s checks at lines 215 to 222, `to_row` clamps again), lines 540 and 562 (`paragraph_forward` and `paragraph_backward` share one loop), at 7711421. Periodic quality. Queue item `editing-counts`. Raised again at ce6abdb (`motions.rb:228`, `line_down`, and 544, the paragraph loops; periodic quality): a `step_row` helper.
 - Why it matters: three clamps and two walks to keep in step.
 - Fix outline: one private row clamp and one paragraph walker taking the step.
 
@@ -2747,7 +2747,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Seven more methods are public with no outside caller
 
-- Where: `Operators.ascii_recase` and `indent_width` (`carat/domain/operators.rb` lines 239 and 271), `Registers#unnamed?` (`carat/domain/registers.rb` line 65), `Buffer#layer_at` (`carat/domain/buffer.rb` line 232), `UndoTree#transaction_at`, `parent_of`, `head_of` (`carat/domain/undo_tree.rb` lines 99, 105, 111), at 31919d9. Periodic quality. Queue item: backlog items, needless public methods.
+- Where: `Operators.ascii_recase` and `indent_width` (`carat/domain/operators.rb` lines 239 and 271), `Registers#unnamed?` (`carat/domain/registers.rb` line 65), `Buffer#layer_at` (`carat/domain/buffer.rb` line 232), `UndoTree#transaction_at`, `parent_of`, `head_of` (`carat/domain/undo_tree.rb` lines 99, 105, 111), at 31919d9. Periodic quality. Queue item: backlog items, needless public methods. Raised again at ce6abdb (periodic quality): `UndoTree#parent_of` and `transaction_at` have no production caller, queue item `editing-counts`.
 - Why it matters: needless public surface, called only by tests.
 - Fix outline: make them private and test them through their public callers.
 
@@ -2777,8 +2777,8 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## An image-viewer plugin is under discussion
 
-- Where: none yet; a proposal waiting for the user's decision, moved out of `docs/queue.md` when the queue reached its budget.
-- Why it matters: five formats, block characters from its own decoder, kitty and iTerm2 where available, bounded parsing, a size cap, only base64 or cells sent.
+- Where: none yet; a proposal under discussion with the user, moved out of `docs/queue.md` when the queue reached its budget, and parked, not scheduled, at `queue-handoff`.
+- Why it matters: five formats, block characters from its own decoder, kitty and iTerm2 where available, bounded parsing, a size cap, only base64 or cells sent. GNOME Terminal shows neither protocol, so it needs the plugin's own PNG decoder.
 - Fix outline: queue it as a T5 item when the user approves, sized from the plugin rows of `docs/metrics.tsv`.
 
 ## The palette-pad-crash scenarios drift from their tests
@@ -2825,7 +2825,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Key hints repeat the grammar-mode test
 
-- Where: `carat/use_cases/discovery/show_key_hints.rb` line 61 and `HandleKey#grammar_mode?` in `carat/use_cases/handle_key.rb` line 195, at 5e4c140. Periodic quality. Queue item `discoverability-tidy`.
+- Where: `carat/use_cases/discovery/show_key_hints.rb` line 61 and `HandleKey#grammar_mode?` in `carat/use_cases/handle_key.rb` line 195, at 5e4c140. Periodic quality. Queue item `discoverability-tidy`. Raised again at ce6abdb (periodic quality): a `Domain::Mode.grammar?` predicate.
 - Why it matters: a mode added to one test and not the other shows hints that disagree with the grammar.
 - Fix outline: one `Mode.grammar?(mode)` in `carat/domain/mode.rb` called by both.
 
@@ -2927,7 +2927,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The winbar rule restated in SplitWindow
 
-- Where: `winbar_after?` in `carat/use_cases/windows/split_window.rb` line 55 beside `TabPage#winbar?` (`carat/domain/tab_page.rb` line 61), at df4654c. Periodic quality. Queue item `breadcrumbs-tidy` (the untested scratch split, `test/editor_breadcrumbs.rb` line 188, is already there).
+- Where: `winbar_after?` in `carat/use_cases/windows/split_window.rb` line 55 beside `TabPage#winbar?` (`carat/domain/tab_page.rb` line 61), at df4654c. Periodic quality. Queue item `slots-tidy`, with the untested scratch split (`test/editor_breadcrumbs.rb` line 188). Raised again at ce6abdb (line 55; periodic quality).
 - Why it matters: a breadcrumbs mode change must be made twice.
 - Fix outline: one `TabPage` predicate taking the mode and the windows to add.
 
@@ -2939,7 +2939,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Plugin, grammar, and generator findings at df4654c
 
-- Where: `carat/use_cases/plugins/plugin_router.rb` line 44 (the register string passed uncopied), `carat/domain/manifest_check.rb` line 32 (shapes checked twice, a dead guard at line 145), `carat/use_cases/plugins/plugin_registry.rb` line 175 (`leave` repeats `cause`), `carat/use_cases/plugins/plugin_events.rb` line 142 (a resize event built with no subscriber), `carat/plugins/hello/plugin.rb` line 11 (stale comment, the action spelled beside `GREET`), `carat/plugins/registry.rb` line 2 and the `default_config.rb` header (generator names `spin run`), `test/lint.rb` line 845 (plugins exempt from keyword constructors, unstated in CLAUDE.md), comment wraps at `carat/plugin_api.rb` line 480 and 732, `window_requests.rb` lines 28 and 67, `ui_requests.rb` line 15, `carat/domain/plugin_ui.rb` line 7; `carat/domain/command_grammar.rb` line 138 (`accept` and `accept_visual` repeat a prefix), `carat/adapters/input_controller.rb` line 137 (`next_timeout` ignores `state`). Periodic quality advisories. Queue item 39 (backlog items by domain).
+- Where: `carat/use_cases/plugins/plugin_router.rb` line 44 (the register string passed uncopied), `carat/domain/manifest_check.rb` line 32 (shapes checked twice, a dead guard at line 145), `carat/use_cases/plugins/plugin_registry.rb` line 175 (`leave` repeats `cause`), `carat/use_cases/plugins/plugin_events.rb` line 142 (a resize event built with no subscriber), `carat/plugins/hello/plugin.rb` line 11 (stale comment, the action spelled beside `GREET`), `carat/plugins/registry.rb` line 2 and the `default_config.rb` header (generator names `spin run`), `test/lint.rb` line 845 (plugins exempt from keyword constructors, unstated in CLAUDE.md), comment wraps at `carat/plugin_api.rb` line 480 and 732, `window_requests.rb` lines 28 and 67, `ui_requests.rb` line 15, `carat/domain/plugin_ui.rb` line 7; `carat/domain/command_grammar.rb` line 138 (`accept` and `accept_visual` repeat a prefix), `carat/adapters/input_controller.rb` line 137 (`next_timeout` ignores `state`). Periodic quality advisories. Queue item 39 (backlog items by domain). Raised again at ce6abdb (periodic quality): `accept_visual` (`command_grammar.rb:163`), queue item `editing-counts`: one shared grammar opening.
 - Why it matters: the router breaks the strings-copied plugin rule; the rest are copies, dead code, and drift.
 - Fix outline: `command.register.dup`; one shapes result; pop then set from `cause`; return unless `wanted?("resize")`; reword and key by `GREET`; generator writes `make gen-config`; state the exemption or give `Tree` keywords; rewrap; one shared grammar step; drop the parameter.
 
@@ -3071,7 +3071,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The outside-the-root refusal is built four times
 
-- Where: `carat/use_cases/files/resolve_inside.rb` line 41, `delete_path.rb` line 39, `make_path.rb` line 37, and `rename_path.rb` line 42, at 3895e21. Periodic quality. Queue item `file-access-tidy`.
+- Where: `carat/use_cases/files/resolve_inside.rb` line 41, `delete_path.rb` line 39, `make_path.rb` line 37, and `rename_path.rb` line 42, at 3895e21. Periodic quality. Queue item `file-access-tidy`. Raised again at ce6abdb (periodic quality): lint's repeated-message rule sees only E-numbered messages, so the four drift unseen.
 - Why it matters: the wording of one refusal lives in four places.
 - Fix outline: one domain function returning the message, called by the four.
 
@@ -3095,7 +3095,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## CompleteWord copies ShowCompletion's word-before-cursor step
 
-- Where: `carat/use_cases/completion/complete_word.rb` line 47 at eb0b1ae (head, word start, prefix, column) against `ShowCompletion#refresh` in `carat/use_cases/completion/show_completion.rb` lines 74 to 77. Quality advisory in `word-completion`.
+- Where: `carat/use_cases/completion/complete_word.rb` line 47 at eb0b1ae (head, word start, prefix, column) against `ShowCompletion#refresh` in `carat/use_cases/completion/show_completion.rb` lines 74 to 77. Quality advisory in `word-completion`. Raised again at ce6abdb (`show_completion.rb:74`, `complete_word.rb:47`; periodic quality): one domain prefix helper for both.
 - Why it matters: the two copies decide what the word before the cursor is; a fix to one (a multibyte boundary, a keyword character option) misses the other, and the keyword and server popups then disagree on the prefix.
 - Fix outline: one domain step answering a small `Data` record of the prefix, its byte start, and its column, called by both use cases, with their existing rows unchanged. Queued in `completion-tidy`.
 
@@ -3269,13 +3269,13 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Search copies its prompt split and its E486 message
 
-- Where: `carat/use_cases/search/find_match.rb` line 68 against `preview_search.rb` line 106 (the `pattern_end` split on bytes 47 or 63), and line 163 against `substitute_lines.rb` line 143 (the E486 literal). Periodic quality at 8d8832f, queued in `search-tidy`.
+- Where: `carat/use_cases/search/find_match.rb` line 68 against `preview_search.rb` line 106 (the `pattern_end` split on bytes 47 or 63), and line 163 against `substitute_lines.rb` line 143 (the E486 literal). Periodic quality at 8d8832f, queued in `editing-counts`. Raised again at ce6abdb (`find_match.rb:68`, code points 47 and 63; periodic quality).
 - Why it matters: a fix to one split or message misses its copy.
 - Fix outline: one domain helper for each, used by both callers.
 
 ## Domain motion and text-object structure
 
-- Where: `carat/domain/walker.rb` line 63 calls `Motions.code_class` while `motions.rb` requires `walker.rb` (a cycle held by load order), and line 11's comment omits the bracket objects; `carat/domain/text_objects.rb` line 252 builds a Walker with no require, line 86 and `carat/domain/runs.rb` name a local `cls`; `carat/domain/motions.rb` line 197 and 228 repeat an edge refusal and row clamp, line 579 a dead store; `carat/use_cases/delete_lines.rb` line 28 copies `Operate#delete`'s linewise placement (`operate.rb` line 142, also `global_command.rb` line 150); `carat/domain/operators.rb` lines 172 and 251 copy the effective shift width rule. Periodic quality at 8d8832f, queued in item 37.
+- Where: `carat/domain/walker.rb` line 63 calls `Motions.code_class` while `motions.rb` requires `walker.rb` (a cycle held by load order), and line 11's comment omits the bracket objects; `carat/domain/text_objects.rb` line 252 builds a Walker with no require, line 86 and `carat/domain/runs.rb` name a local `cls`; `carat/domain/motions.rb` line 197 and 228 repeat an edge refusal and row clamp, line 579 a dead store; `carat/use_cases/delete_lines.rb` line 28 copies `Operate#delete`'s linewise placement (`operate.rb` line 142, also `global_command.rb` line 150); `carat/domain/operators.rb` lines 172 and 251 copy the effective shift width rule. Periodic quality at 8d8832f, queued in item 37. Raised again at ce6abdb (`walker.rb:63` and `text_objects.rb:252`, the require cycle; periodic quality), queue item `editing-counts`: move `code_class` into a module the four files require.
 - Why it matters: the cycle breaks under a changed require order, and each copied rule drifts.
 - Fix outline: move the character classes into one module both require; rename `cls` to `char_class`; one row-clamp helper; an `Options#shift_width` beside `tab_width`.
 
@@ -3287,7 +3287,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Signature help compares bare key codes
 
-- Where: `carat/use_cases/handle_key.rb` line 364, the literals 40 and 44 for `(` and `,`. Periodic quality at 8d8832f, queued in `signature-tidy`.
+- Where: `carat/use_cases/handle_key.rb` line 364, the literals 40 and 44 for `(` and `,`. Periodic quality at 8d8832f, queued in `signature-tidy`. Raised again at ce6abdb (line 379; periodic quality): a private constant beside `MAX_REPLAYS`, membership tested there.
 - Why it matters: bare codes hide which characters trigger signature help.
 - Fix outline: name them as key constants or compare the character.
 
@@ -3395,13 +3395,13 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Copies and placement found by the periodic review at 186ddfb
 
-- Where: `ListTree#probe` (`carat/use_cases/files/list_tree.rb` line 65) repeats `ProbePath#call` and asks the port itself, against `docs/architecture.md` section 5, queued in `file-access-tidy`; `CompleteWord` (`carat/use_cases/completion/complete_word.rb` line 47) copies the word-before-cursor slice of `show_completion.rb` lines 74 to 77, queued in `completion-tidy`; `Layout#fixed_width?` (`carat/domain/layout.rb` line 299) is used only by its test, queued in `slots-tidy`; `JumpList#step` (`carat/domain/jump_list.rb` line 55) pushes before the range check, so Ctrl-O on an empty list adds an entry, queued in `definitions-tidy`; `Icons::NAMES` (`carat/domain/icons.rb` line 13) is read nowhere and `DecodedLine` and `Cell` (`decoded_line.rb` line 15, `cell.rb` line 274) are never-changed values declared as `Struct`, queued in `theme-tidy`. Periodic quality at 186ddfb.
+- Where: `ListTree#probe` (`carat/use_cases/files/list_tree.rb` line 65) repeats `ProbePath#call` and asks the port itself, against `docs/architecture.md` section 5, queued in `periodic-blockers-b`; `CompleteWord` (`carat/use_cases/completion/complete_word.rb` line 47) copies the word-before-cursor slice of `show_completion.rb` lines 74 to 77, queued in `completion-tidy`; `Layout#fixed_width?` (`carat/domain/layout.rb` line 299) is used only by its test, queued in `slots-tidy`; `JumpList#step` (`carat/domain/jump_list.rb` line 55) pushes before the range check, so Ctrl-O on an empty list adds an entry, queued in `definitions-tidy`; `Icons::NAMES` (`carat/domain/icons.rb` line 13) is read nowhere and `DecodedLine` and `Cell` (`decoded_line.rb` line 15, `cell.rb` line 274) are never-changed values declared as `Struct`, queued in `theme-tidy`. Periodic quality at 186ddfb. Raised again at ce6abdb (periodic quality): `ListTree#probe` (`list_tree.rb:67`) as a blocker; the `CompleteWord` copy (`complete_word.rb:47`) and `Layout#fixed_width?` (`layout.rb:299`).
 - Why it matters: two probes and two slices drift; dead surface; a jump that answers nothing moved after adding an entry; records against the Data rule.
 - Fix outline: inject the one `probe_path:` into `ListTree` and use `Domain::PathPolicy.inside?`; one domain prefix helper; delete `fixed_width?`; return -1 before the push with a `test/domain_jump_list.rb` row; test `NAMES` against each set or drop it; `Data` subclasses or the Spinel reason in the comment.
 
 ## Small findings of the periodic review at 186ddfb
 
-- Where: dead code `TabRequest#counted?` (`carat/use_cases/windows/tab_request.rb` line 13), `UndoTree#undo_seq` and `#redo_seq` (`carat/domain/undo_tree.rb` lines 173 and 179, with the stale comment at 185), the dead store `row = top` (`carat/domain/motions.rb` line 579), `DisplayWidth.of_char` (`display_width.rb` line 133), `DecodedLine#cells` (line 91), `Cell#same?` (line 286); `Config#binding?`'s comment (`carat/domain/config.rb` line 205) omits the leader lines and lines of other word counts it keeps; the finder's `open_path` and `report` (`carat/plugins/finder/plugin.rb` line 314) copy the explorer's (lines 277 and 534); the finder matcher's helpers (`matcher.rb` line 55) are public and `lower(b)` takes a one-letter name; `PluginRouter#answer` (line 77) hands the plugin `prompt_id` uncopied; the explorer's `@followed` (`carat/plugins/explorer/plugin.rb` line 420) stays on the old path after its parent directory is renamed; `Frame::REPLACEMENT` (`frame.rb` line 36) repeats `Utf8::REPLACEMENT`. Periodic quality at 186ddfb, queued in the backlog batches.
+- Where: dead code `TabRequest#counted?` (`carat/use_cases/windows/tab_request.rb` line 13), `UndoTree#undo_seq` and `#redo_seq` (`carat/domain/undo_tree.rb` lines 173 and 179, with the stale comment at 185), the dead store `row = top` (`carat/domain/motions.rb` line 579), `DisplayWidth.of_char` (`display_width.rb` line 133), `DecodedLine#cells` (line 91), `Cell#same?` (line 286); `Config#binding?`'s comment (`carat/domain/config.rb` line 205) omits the leader lines and lines of other word counts it keeps; the finder's `open_path` and `report` (`carat/plugins/finder/plugin.rb` line 314) copy the explorer's (lines 277 and 534); the finder matcher's helpers (`matcher.rb` line 55) are public and `lower(b)` takes a one-letter name; `PluginRouter#answer` (line 77) hands the plugin `prompt_id` uncopied; the explorer's `@followed` (`carat/plugins/explorer/plugin.rb` line 420) stays on the old path after its parent directory is renamed; `Frame::REPLACEMENT` (`frame.rb` line 36) repeats `Utf8::REPLACEMENT`. Periodic quality at 186ddfb, queued in the backlog batches. Raised again at ce6abdb (periodic quality): the `UndoTree` readers and the stale comment at 185, queue item `editing-counts`.
 - Why it matters: dead surface and map mentions, a misleading comment, two open dispatches, a strings-copied breach, a mark on a path that no longer exists.
 - Fix outline: delete the dead code and its map mentions; fix the comment; one `PluginApi` opening helper or an entry per plugin; `private_class_method` where Spinel allows and `byte`; `id.dup`; `@followed = tree.marked` after `tree.moved` with a directory-rename case; `REPLACEMENT = Utf8::REPLACEMENT`.
 
@@ -3461,13 +3461,13 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The completion send slices the cursor-prefix line twice
 
-- Where: `complete` in `carat/adapters/json_rpc_language_gateway.rb` line 583 at 75fa4fd, which already holds the line up to the cursor, while `position_params` slices the line again. Quality advisory in `periodic-blockers-a`.
+- Where: `complete` in `carat/adapters/json_rpc_language_gateway.rb` line 583 at 75fa4fd, which already holds the line up to the cursor, while `position_params` slices the line again. Quality advisory in `periodic-blockers-a`. Raised again at ce6abdb (lines 576 and 1024; periodic quality), queue item `lsp-client-tidy`.
 - Why it matters: one more string is allocated per completion send, on the typing path.
 - Fix outline: let `position_params` take the prefix line (or the column computed from it) when the caller has it, or accept the one string and drop this entry.
 
 ## cancel_request's comment names the running server
 
-- Where: the comment of `cancel_request` in `carat/adapters/json_rpc_language_gateway.rb` line 1003 at 75fa4fd, which says the running server though the method looks up `server_for`, now beside `running_server`. Quality advisory in `periodic-blockers-a`.
+- Where: the comment of `cancel_request` in `carat/adapters/json_rpc_language_gateway.rb` line 1003 at 75fa4fd, which says the running server though the method looks up `server_for`, now beside `running_server`. Quality advisory in `periodic-blockers-a`. Raised again at ce6abdb (periodic quality), queue item `lsp-client-tidy`.
 - Why it matters: the comment points the reader at `running_server`, the other lookup, so a later change could pick the wrong one.
 - Fix outline: say the language's server in the comment.
 
@@ -3482,3 +3482,57 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where, at 6cb3c55: the Windows row of `docs/compatibility.md` line 537, which credits `adapters_indent_guides` with the start screen showing no guide though no case draws the start screen; `docs/architecture.md` lines 113 and 257, which reword sentences the change does not touch (the Nerd Font glyph clause, reading the state, the two preallocated frames). Quality advisories in `indent-guides`.
 - Why it matters: a compatibility row naming a test that does not prove it hides a gap, and rewording unrelated sentences widens a change's scope and its review.
 - Fix outline: add a start-screen case to the guides table or drop the start screen from the row's claim; restore the untouched wording and keep only the additions that name `indentguides`, `IndentGuides`, and the guides in the row record.
+
+## A security review stays current after later instruction-file commits
+
+- Where: `tools/gates.sh:112` (`settled_at`). Periodic security Low (3) at ce6abdb; queue item `content-gate-gaps`.
+- Why it matters: commits after the review that change `openspec/`, `docs/queue.md`, `docs/backlog.md`, or `docs/goals.md` keep the review current, though agents read those paths as instructions, so text added there reaches later agents unreviewed.
+- Fix outline: narrow the exemption to the archive move, the specs synced from the reviewed change, and `docs/metrics.tsv`, or have the reviewer re-read those paths; a `tools/tools_test.sh` case.
+
+## The finder's open with no file window replaces the explorer's tree
+
+- Where: `carat/plugins/finder/plugin.rb:319` against `carat/plugins/explorer/plugin.rb:284`. Periodic quality at ce6abdb; queue item `finder-grep`.
+- Why it matters: `open_path` passes `editing_window` 0, which resolves to the current window, so with only the tree shown the file replaces the tree's scratch buffer; the open-by-how dispatch is copied in both plugins and untested.
+- Fix outline: handle target 0 as the explorer does, with a `test/editor_finder.rb` row; consider one shared plugin API helper.
+
+## Two shipped options are accepted and dropped, and Config settings are untyped
+
+- Where: `carat/domain/options.rb:78` (`option.wrap`, `option.clipboard`, set at `config/default.caratrc` lines 23 and 26); `carat/domain/config.rb:27`. Periodic quality at ce6abdb; queue item `project-config-guards`, the type in the batches.
+- Why it matters: a user's value for either option is dropped with no note; `settings` is `Array[untyped]` though it holds only `RcLine` values.
+- Fix outline: note both as not implemented in `apply` or drop them from `KINDS` and the shipped file, with a `test/domain_options_config.rb` row; type `settings` as `Array[RcLine]` or state the compiler's reason.
+
+## The linewise change and its cursor are written in four places
+
+- Where: `carat/use_cases/visual/change_selection.rb:40`, `delete_lines.rb:24`, `selection_cut.rb:22`, and `carat/use_cases/operate.rb:143` and 157. Periodic quality at ce6abdb, the part of its editing-copies finding no other entry names; queue item `editing-counts`.
+- Why it matters: one rule spelled in four places drifts.
+- Fix outline: `Operators` helpers for the linewise change and its cursor, called by all four.
+
+## CloseOtherWindows reaches the tabs through the buffer list
+
+- Where: `carat/use_cases/windows/close_other_windows.rb:62` (`@buffers.tabs`). Periodic quality at ce6abdb, the part of its window-copies finding no other entry names; queue item `slots-tidy`.
+- Why it matters: a second path to the one tab list escapes `test/adapters_assembly.rb`.
+- Fix outline: inject `tabs:` and assert it in `test/adapters_assembly.rb`.
+
+## Map entries miss names of indent-guides and older changes
+
+- Where: `docs/codebase-map.md:325` (Selection: `numbered_delete?`, `as`, `line_start`), 144, 148, and 196 (Keymap, CommandGrammar, LastSearch), 299 (UndoTree), and area 11 (`FloatSpec#cursor_anchored?`, `FloatWindow#id`). Periodic quality at ce6abdb; the Options and Layout gaps are folded into their map entries; queue item `docs-index`.
+- Why it matters: the map is kept current and agents plan from it.
+- Fix outline: add each name to its line.
+
+## The benchmark's plugins column holds an option toggle
+
+- Where: `bench/keys.rb:255` (`noguides` in the plugins column). Periodic quality at ce6abdb; queue item: the backlog batches.
+- Why it matters: the plugins column mixes an option toggle with plugin sets, so a reader of the results misreads it.
+- Fix outline: a setup or options column.
+
+## The view reserves its top rows twice
+
+- Where: `carat/use_cases/arrange_view.rb:46` and 63 (`reserve_headers`, `reserve_winbars`). Periodic quality at ce6abdb; queue item `bars-tidy`.
+- Why it matters: one give-the-first-row step written twice.
+- Fix outline: one `Window` method both call.
+
+## Backlog entries are duplicated
+
+- Where: `docs/backlog.md:209` and 2742 (the `Options#apply` duplication), 899 and 2111 (copies of `EditorState#clamp_col`). Periodic quality at ce6abdb; queue item `backlog-compaction`.
+- Why it matters: one entry per finding; duplicates grow the file every planner and reviewer reads.
+- Fix outline: fold each pair into one entry listing every location.
