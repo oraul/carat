@@ -1,0 +1,37 @@
+name: scan
+
+# The pull request's title, body, commit messages, and added lines hold no
+# URL, email address, session id, model name, or secret but CLAUDE.md's
+# exceptions (tools/pr_scan.sh). The edited event reruns it when the title
+# or body changes, so a footer added after the pull request opened turns
+# it red, and the merger merges only over green checks.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+# Reads the repository only. The pull request event, never
+# pull_request_target, runs the branch's code without the base's secrets.
+permissions:
+  contents: read
+
+jobs:
+  text:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out carat
+        uses: actions/checkout@v4
+        with:
+          # Every commit of the pull request, whose messages and added
+          # lines the scan reads.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # The title and body reach the script only through the environment,
+      # never written into the script, so no text of theirs runs.
+      - name: Scan the title, body, commit messages, and added lines
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: sh tools/pr_scan.sh
