@@ -18,6 +18,7 @@ ok   :set syntax=OFF turns this buffer plain
 ok   and its syntax is empty
 ok   :set syn=ON goes back to the filetype
 ok   an option :set does not handle yet
+ok   winborder is an option Carat has, read from configuration lines
 ok   an unknown option
 ok   a text file is plain
 ok   :se ft=ruby highlights it and sets the syntax
@@ -34,4 +35,4 @@ ok   a heredoc body row is String between the indent guides at columns 0 and 2
 ok   typing in a heredoc tokenizes one row
 ok   the row is String
 ok   typing in a multi-line string tokenizes one row
-editor_syntax: 36 passed, 0 failed
+editor_syntax: 37 passed, 0 failed
