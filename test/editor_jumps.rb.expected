@@ -1,0 +1,20 @@
+ok   :e records the position left
+ok   :b N records the position left
+ok   :bn records the position left
+ok   :bp records the position left
+ok   :bN records the position left
+ok   :blast records the position left
+ok   :bfirst records the position left
+ok   <leader>bn records the position left
+ok   <leader>bp records the position left
+ok   The finder records the position left
+ok   The explorer records the position left
+ok   Ctrl-O walks back through several switches
+ok   A file opened over the startup buffer records nothing
+ok   Deleting a buffer records nothing
+ok   :e of the buffer shown records nothing
+ok   A split copies the jump list
+ok   A window walks only its own list
+ok   A new tab page copies the jump list
+ok   A walk back to a scratch buffer keeps the file's tab
+editor_jumps: 19 passed, 0 failed

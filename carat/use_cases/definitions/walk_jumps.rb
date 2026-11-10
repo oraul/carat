@@ -7,23 +7,23 @@ require_relative "../outcome"
 
 module Carat
   module UseCases
-    # Ctrl-O and Ctrl-I: moves through the jump list by steps, older for
-    # a negative count, showing the entry's buffer in the current window
-    # (E37 while the current file buffer is modified, the list then put
-    # back as it was) with the cursor at the entry, clamped to the text.
+    # Ctrl-O and Ctrl-I: moves through the current window's jump list by
+    # steps, older for a negative count, showing the entry's buffer in
+    # the window (E37 while the current file buffer is modified, the list
+    # then put back as it was) with the cursor at the entry, clamped to
+    # the text.
     # An entry whose buffer is gone is dropped; past either end, or while
     # a float such as the pick list has the focus, nothing happens. Under
-    # option.jumptab replace an entry's buffer with no tab takes the tab
-    # of the buffer left (BufferList#hand_tab).
+    # option.jumptab replace an entry's file buffer with no tab takes the
+    # tab of the buffer left (BufferList#hand_tab). The walk records no
+    # jump of its own.
     class WalkJumps
       # @rbs @saved: Domain::JumpList
 
-      attr_reader :jumps #: Domain::JumpList
       attr_reader :buffers #: Domain::BufferList
 
-      #: (jumps: Domain::JumpList, buffers: Domain::BufferList) -> void
-      def initialize(jumps:, buffers:)
-        @jumps = jumps
+      #: (buffers: Domain::BufferList) -> void
+      def initialize(buffers:)
         @buffers = buffers
         @saved = Domain::JumpList.new
       end
@@ -31,8 +31,8 @@ module Carat
       #: (Domain::EditorState, Integer) -> Outcome
       def call(state, steps)
         return Outcome.none if state.tab.floats.focused?
-        jumps = @jumps
         window = state.window
+        jumps = window.jumps
         current = window.buffer
         guarded = current.modified? && !current.scratch?
         @saved.restore_from(jumps) if guarded
@@ -50,7 +50,7 @@ module Carat
           end
           tabbed = !target.tabless?
           @buffers.load(target)
-          @buffers.hand_tab(current, target) if !tabbed && state.options.jumptab == Domain::Options::JUMPTAB_REPLACE
+          @buffers.hand_tab(current, target) if !tabbed && state.options.jump_takes_tab?
         end
         window = state.window
         count = window.buffer.line_count

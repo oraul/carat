@@ -6,9 +6,10 @@ require_relative "buffer_request"
 
 module Carat
   module UseCases
-    # :bn, :bp, :bN, and :b N: shows another listed file buffer in the
-    # current window, as the request says, with the cursor where a window
-    # last left it. The buffer the window showed stays listed, hidden. A
+    # :bn, :bp, :bN, :bfirst, :blast, and :b N: shows another listed file
+    # buffer in the current window, as the request says, with the cursor
+    # where a window last left it, the position left joining the window's
+    # jump list. The buffer the window showed stays listed, hidden. A
     # modified current file buffer refuses the switch with E37 unless the
     # request carries the bang, as :e does; a number of no listed file
     # buffer is E86 and a list without file buffers E85, as Neovim's
@@ -31,13 +32,16 @@ module Carat
         if request.target == :number
           found = @buffers.with_id(request.count)
           return Outcome.failure("E86: Buffer #{request.count} does not exist") if found.nil? || found.scratch?
+        elsif request.target == :first || request.target == :last
+          found = request.target == :first ? @buffers.first_file : @buffers.last_file
+          return Outcome.failure(E85) if found.nil?
         else
           found = @buffers.step_from(current, request.steps)
           return Outcome.failure(E85) if found.nil?
         end
         return Outcome.none if found.equal?(current)
         return Outcome.failure(Domain::Messages::E37) if current.modified? && !current.scratch? && !request.bang
-        @buffers.load(found)
+        @buffers.enter(found)
         Outcome.none
       end
     end

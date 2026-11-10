@@ -65,7 +65,6 @@ module AdaptersAssemblyTest
       ["show_definition", a.show_definition.definition], ["choose_definition", a.choose_definition.definition], ["follow_definition", a.follow_definition.definition],
       ["handle_key", a.handle_key.definition]
     ]), "the definition request")
-    t.assert_equal([], strangers(a.jumps, [["visit_target", a.visit_target.jumps], ["walk_jumps", a.walk_jumps.jumps]]), "the jump list")
     t.assert_equal([true, true, true], [a.controller.show_definition.equal?(a.show_definition), a.handle_key.follow_definition.equal?(a.follow_definition), a.show_definition.visit_target.equal?(a.visit_target)], "the input controller holds the one ShowDefinition and the key handler the one FollowDefinition")
     t.assert_true(a.show_definition.pick_keymap.equal?(a.pick_keymap), "ShowDefinition holds the one pick list keymap")
     t.assert_equal([], strangers(a.visit_target, [["show_definition", a.show_definition.visit_target], ["choose_definition", a.choose_definition.visit_target]]), "the one target visitor")

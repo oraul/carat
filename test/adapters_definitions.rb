@@ -287,7 +287,7 @@ module AdaptersDefinitionsTest
     t.assert_equal([3, 0, true], [request["params"]["position"]["line"], request["params"]["position"]["character"], request["params"]["textDocument"]["uri"].to_s.end_with?("/a.rb")], "gd sends the request at the next idle tick")
     answer(r, location("/project/a.rb", 0, 4))
     r.wait
-    t.assert_equal(["a.rb 0:4", 1, 3], [r.where, r.assembly.jumps.count, r.assembly.jumps.rows[0]], "One target in the same file moves the cursor")
+    t.assert_equal(["a.rb 0:4", 1, 3], [r.where, r.assembly.state.window.jumps.count, r.assembly.state.window.jumps.rows[0]], "One target in the same file moves the cursor")
     r.type("<C-o>")
     t.assert_equal("a.rb 3:0", r.where, "Ctrl-O returns to the position gd left")
     r.type("<C-i>")
@@ -325,7 +325,7 @@ module AdaptersDefinitionsTest
     r.wait
     r.messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => request_id(r), "error" => { "code" => -32_603, "message" => "boom" } }))
     r.wait
-    t.assert_equal([["No locations found", "No locations found", "No locations found", "No locations found"], "a.rb 3:0", 0], [[first, second, third, r.message], r.where, r.assembly.jumps.count], "An empty answer shows No locations found")
+    t.assert_equal([["No locations found", "No locations found", "No locations found", "No locations found"], "a.rb 3:0", 0], [[first, second, third, r.message], r.where, r.assembly.state.window.jumps.count], "An empty answer shows No locations found")
 
     # A modified buffer refuses another file, not its own.
     r = defining
@@ -399,7 +399,7 @@ module AdaptersDefinitionsTest
     r = defining
     asked(r, "<Space>dd", location("/project/b.rb", 1, 4))
     peek = r.assembly.definition.float_id
-    t.assert_equal([["def other", "  2", "end"], "a.rb 3:0", 0, false], [float_lines(r, peek), r.where, r.assembly.jumps.count, r.assembly.state.tab.floats.focused?], "Peek shows the target lines and keeps the cursor")
+    t.assert_equal([["def other", "  2", "end"], "a.rb 3:0", 0, false], [float_lines(r, peek), r.where, r.assembly.state.window.jumps.count, r.assembly.state.tab.floats.focused?], "Peek shows the target lines and keeps the cursor")
     t.assert_equal(true, r.frame.text_rows.join("\n").include?("b.rb:2"), "the peek float is titled with the path and line")
     r.type("<Esc>")
     t.assert_equal([0, 0], [r.float_count, r.assembly.definition.float_id], "Esc closes the peek float")
@@ -421,10 +421,10 @@ module AdaptersDefinitionsTest
     t.assert_equal("a.rb 3:0", r.where, "Ctrl-O after a pick returns to where gd was typed")
     asked(r, "gd", [location("/project/a.rb", 0, 4), location("/project/b.rb", 1, 4)])
     focused = r.assembly.state.tab.floats.focused?
-    count = r.assembly.jumps.count
+    count = r.assembly.state.window.jumps.count
     r.type("<C-o>")
     r.type("<C-i>")
-    in_pick = [r.float_count, r.assembly.state.tab.floats.focused?, float_lines(r, r.assembly.definition.pick_id), r.assembly.jumps.count == count]
+    in_pick = [r.float_count, r.assembly.state.tab.floats.focused?, float_lines(r, r.assembly.definition.pick_id), r.assembly.state.window.jumps.count == count]
     t.assert_equal([1, true, ["1 a.rb:1", "2 b.rb:2"], true], in_pick, "Ctrl-O in the pick list does nothing")
     r.type("<Esc>")
     t.assert_equal([true, 0, "a.rb 3:0"], [focused, r.float_count, r.where], "Esc closes the pick list")
@@ -467,7 +467,7 @@ module AdaptersDefinitionsTest
     t.assert_equal(["out.rb 0:0", true], [r.where, r.assembly.state.buffer.readonly], "a target linked out of the project opens read-only")
     r = defining
     asked(r, "gd", location("/project/lib", 0, 0))
-    t.assert_equal(["\"lib\" is a directory", "a.rb 3:0", 0], [r.message, r.where, r.assembly.jumps.count], "A target that is not a regular file is refused")
+    t.assert_equal(["\"lib\" is a directory", "a.rb 3:0", 0], [r.message, r.where, r.assembly.state.window.jumps.count], "A target that is not a regular file is refused")
     r = defining
     asked(r, "gd", location("/gems", 0, 0))
     t.assert_equal(["\"/gems\" is a directory", "a.rb 3:0"], [r.message, r.where], "a directory outside the project is refused")
@@ -512,6 +512,8 @@ module AdaptersDefinitionsTest
       ["Ctrl-O gives the buffer gd left its tab back", ["", "", "/project/b.rb", "<C-o>"], "a.rb* | a.rb 3:0 | false"],
       ["Ctrl-O gives the buffer gd left its tab back, and Ctrl-I the target", ["", "", "/project/b.rb", "<C-o><C-i>"], "b.rb* | b.rb 1:4 | false"],
       ["Back and forth keeps the tab's position", ["", ":e lib/x.rb<CR>:bp<CR>", "/project/b.rb", "<C-o>"], "a.rb* lib/x.rb | a.rb 3:0 | false"],
+      ["Ctrl-O across a buffer switch gives the tab back", ["", "", "/project/b.rb", ":e lib/x.rb<CR><C-o><C-o>"], "a.rb* lib/x.rb | a.rb 3:0 | false"],
+      ["Ctrl-O through a buffer switch shows the target first", ["", "", "/project/b.rb", ":e lib/x.rb<CR><C-o>"], "b.rb* lib/x.rb | b.rb 1:4 | false"],
       ["Ctrl-O under keep leaves both tabs", ["option.jumptab keep\n", "", "/project/b.rb", "<C-o>"], "a.rb* b.rb | a.rb 3:0 | false"],
       [":bn skips an unlisted buffer", ["", "", "/project/b.rb", ":bn<CR>"], "b.rb* | b.rb 1:4 | false"],
       [":b N lists an unlisted buffer again", ["", "", "/project/b.rb", ":b 1<CR>"], "b.rb a.rb* | a.rb 3:0 | false"]
@@ -544,7 +546,7 @@ module AdaptersDefinitionsTest
     t.assert_equal(["E37: No write since last change (add ! to override)", "b.rb 1:4"], [r.message, r.where], "Ctrl-O refuses another buffer over a modified one")
     r.type(":w<CR>")
     r.type("<C-o>")
-    t.assert_equal(["a.rb 3:0", 2], [r.where, r.assembly.jumps.count], "A refused Ctrl-O leaves the jump list as it was")
+    t.assert_equal(["a.rb 3:0", 2], [r.where, r.assembly.state.window.jumps.count], "A refused Ctrl-O leaves the jump list as it was")
     r.type("<C-i>")
     t.assert_equal("b.rb 1:4", r.where, "Ctrl-I after a refused Ctrl-O returns to the start")
     r = defining
@@ -552,7 +554,7 @@ module AdaptersDefinitionsTest
     asked(r, "gd", location("/project/b.rb", 1, 4))
     r.type(":bd #{gone}<CR>")
     r.type("<C-o>")
-    t.assert_equal(["b.rb 1:4", 1], [r.where, r.assembly.jumps.count], "Ctrl-O drops an entry whose buffer is gone and stays")
+    t.assert_equal(["b.rb 1:4", 1], [r.where, r.assembly.state.window.jumps.count], "Ctrl-O drops an entry whose buffer is gone and stays")
     r = defining
     r.type("4l")
     asked(r, "gd", location("/project/a.rb", 0, 4))

@@ -123,6 +123,13 @@ module Carat
         tabstop > 0 ? tabstop : 8
       end
 
+      # Whether a jump to a buffer with no tab takes the tab of the buffer
+      # it leaves (jumptab replace), the one place the rule reads it.
+      #: () -> bool
+      def jump_takes_tab?
+        jumptab == JUMPTAB_REPLACE
+      end
+
       # The code point indent guides are drawn with: the guide character,
       # or | in its place when the icon set is ascii and the character is
       # not.

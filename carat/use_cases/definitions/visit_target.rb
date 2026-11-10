@@ -4,7 +4,6 @@ require_relative "../../domain/buffer"
 require_relative "../../domain/buffer_list"
 require_relative "../../domain/definition_request"
 require_relative "../../domain/filetype"
-require_relative "../../domain/jump_list"
 require_relative "../../domain/messages"
 require_relative "../../domain/options"
 require_relative "../../domain/path_info"
@@ -26,8 +25,9 @@ module Carat
     # working directory with every link resolved, and otherwise shows the
     # listed buffer of the file or opens it as a listed read-only file
     # buffer named as :e would name it, which has its tab like any file
-    # buffer and is never written (SaveFile). The position left joins the
-    # jump list once the target shows. A peek
+    # buffer and is never written (SaveFile). Under option.jumptab replace
+    # a target with no tab takes the tab of the buffer left. The position
+    # left joins the window's jump list once the target shows. A peek
     # shows at most PEEK_ROWS lines from the target line in a float at the
     # cursor, read from a listed buffer of the file or from the file. Every
     # read refuses what OpenFile refuses (PathInfo#refusal): a directory, a
@@ -38,7 +38,6 @@ module Carat
       private_constant :PEEK_LIMIT, :PEEK_ROWS
 
       attr_reader :definition #: Domain::DefinitionRequest
-      attr_reader :jumps #: Domain::JumpList
       attr_reader :buffers #: Domain::BufferList
       attr_reader :files #: Ports::FilePort
       attr_reader :probe_path #: ProbePath
@@ -46,10 +45,9 @@ module Carat
       attr_reader :resolve_inside #: ResolveInside
       attr_reader :open_definition_float #: OpenDefinitionFloat
 
-      #: (definition: Domain::DefinitionRequest, jumps: Domain::JumpList, buffers: Domain::BufferList, files: Ports::FilePort, probe_path: ProbePath, open_file: OpenFile, resolve_inside: ResolveInside, open_definition_float: OpenDefinitionFloat) -> void
-      def initialize(definition:, jumps:, buffers:, files:, probe_path:, open_file:, resolve_inside:, open_definition_float:)
+      #: (definition: Domain::DefinitionRequest, buffers: Domain::BufferList, files: Ports::FilePort, probe_path: ProbePath, open_file: OpenFile, resolve_inside: ResolveInside, open_definition_float: OpenDefinitionFloat) -> void
+      def initialize(definition:, buffers:, files:, probe_path:, open_file:, resolve_inside:, open_definition_float:)
         @definition = definition
-        @jumps = jumps
         @buffers = buffers
         @files = files
         @probe_path = probe_path
@@ -84,9 +82,9 @@ module Carat
           tabbed = !held.nil? && !held.tabless?
           outcome = inside?(path) ? @open_file.call(state, open_path(path)) : view(state, path)
           return outcome unless outcome.ok
-          @buffers.hand_tab(current, state.window.buffer) if !tabbed && state.options.jumptab == Domain::Options::JUMPTAB_REPLACE
+          @buffers.hand_tab(current, state.window.buffer) if !tabbed && state.options.jump_takes_tab?
         end
-        @jumps.push(from_id, from_row, from_col)
+        window.jumps.push(from_id, from_row, from_col)
         place(state.window, line, character)
         outcome
       end
@@ -97,7 +95,7 @@ module Carat
       def view(state, path)
         listed = listed_for(path)
         unless listed.nil?
-          @buffers.load(listed)
+          @buffers.enter(listed)
           shown = "\"#{listed.path_text}\""
           shown += " [readonly]" if listed.readonly
           return Outcome.success(shown)
@@ -109,7 +107,7 @@ module Carat
         name = Domain::PathPolicy.shown(@files.cwd, path)
         buffer = Domain::Buffer.from_text(text, name)
         buffer.readonly = true
-        @buffers.load(buffer)
+        @buffers.enter(buffer)
         Outcome.success("\"#{name}\" [readonly] #{buffer.line_count}L, #{text.bytesize}B")
       end
 

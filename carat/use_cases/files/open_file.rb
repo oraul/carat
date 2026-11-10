@@ -19,7 +19,9 @@ module Carat
     # as PathInfo#refusal gives them, and the read itself is bounded and
     # never waits, so no path can hang the editor or fill its memory. Any other failure to read or load the file is E484, and a
     # file that is not valid UTF-8 opens with its bytes kept and Vim's
-    # "[ILLEGAL BYTE in line N]" in the message.
+    # "[ILLEGAL BYTE in line N]" in the message. Showing another buffer
+    # records the position left in the window's jump list
+    # (BufferList#enter).
     class OpenFile
       attr_reader :files #: Ports::FilePort
       attr_reader :buffers #: Domain::BufferList
@@ -36,7 +38,7 @@ module Carat
       def call(state, path)
         listed = @buffers.for_path(path)
         if !listed.nil? && !listed.equal?(state.buffer)
-          @buffers.load(listed)
+          @buffers.enter(listed)
           return Outcome.success("\"#{path}\" #{listed.line_count}L, #{listed.byte_count}B")
         end
         exists = @files.exist?(path)
@@ -52,7 +54,7 @@ module Carat
           return Outcome.failure("E484: Can't open file #{path}: #{e.message}")
         end
         if listed.nil?
-          @buffers.load(fresh)
+          @buffers.enter(fresh)
         else
           listed.reload(fresh.lines)
           listed.line_ending = fresh.line_ending

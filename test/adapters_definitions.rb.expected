@@ -57,6 +57,8 @@ ok   A target picked from the list takes over the tab
 ok   Ctrl-O gives the buffer gd left its tab back
 ok   Ctrl-O gives the buffer gd left its tab back, and Ctrl-I the target
 ok   Back and forth keeps the tab's position
+ok   Ctrl-O across a buffer switch gives the tab back
+ok   Ctrl-O through a buffer switch shows the target first
 ok   Ctrl-O under keep leaves both tabs
 ok   :bn skips an unlisted buffer
 ok   :b N lists an unlisted buffer again
@@ -68,4 +70,4 @@ ok   A refused Ctrl-O leaves the jump list as it was
 ok   Ctrl-I after a refused Ctrl-O returns to the start
 ok   Ctrl-O drops an entry whose buffer is gone and stays
 ok   Ctrl-O clamps the column to a line shortened since, in code points
-adapters_definitions: 70 passed, 0 failed
+adapters_definitions: 72 passed, 0 failed

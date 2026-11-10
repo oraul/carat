@@ -109,7 +109,18 @@ module EditorBuffersTest
       ["the cursor comes back after :only", ":sp b.txt<CR><C-w>jjj<C-w>k:only<CR>:b 1<CR>", ["a.txt", [2, 0], ""]],
       ["a modified buffer refuses", ":e b.txt<CR>:b 1<CR>x:bn<CR>", ["a.txt", [0, 0], E37]],
       ["the bang keeps it hidden", ":e b.txt<CR>:b 1<CR>x:bn!<CR>", ["b.txt", [0, 0], ""]],
-      ["a count before the command is refused", ":e b.txt<CR>:2bn<CR>", ["b.txt", [0, 0], "E481: No range allowed"]]
+      ["a count before the command is refused", ":e b.txt<CR>:2bn<CR>", ["b.txt", [0, 0], "E481: No range allowed"]],
+      # Scenarios "First and last", "Rewind is first", and "First
+      # refused on a modified buffer".
+      ["First and last: :bfirst shows the first buffer", ":e b.txt<CR>:e c.txt<CR>:b 2<CR>:bfirst<CR>", ["a.txt", [0, 0], ""]],
+      ["First and last: :blast then shows the last", ":e b.txt<CR>:e c.txt<CR>:b 2<CR>:bfirst<CR>:blast<CR>", ["c.txt", [0, 0], ""]],
+      [":bf and :bl", ":e b.txt<CR>:bf<CR>:bl<CR>", ["b.txt", [0, 0], ""]],
+      ["Rewind is first", ":e b.txt<CR>:br<CR>", ["a.txt", [0, 0], ""]],
+      [":brewind", ":e b.txt<CR>:brewind<CR>", ["a.txt", [0, 0], ""]],
+      [":bfirst of the first buffer stays", ":e b.txt<CR>:b 1<CR>:bfirst<CR>", ["a.txt", [0, 0], ""]],
+      ["First refused on a modified buffer", ":e b.txt<CR>x:bfirst<CR>", ["b.txt", [0, 0], E37]],
+      [":bfirst! keeps it hidden", ":e b.txt<CR>x:bfirst!<CR>", ["a.txt", [0, 0], ""]],
+      [":blast with a number", ":blast 2<CR>", ["a.txt", [0, 0], "E488: Trailing characters: 2"]]
     ]) do |keys|
       h = session(keys)
       [path(h), h.cursor, h.message]

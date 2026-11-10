@@ -1,3 +1,5 @@
+require_relative "jump_list"
+
 module Carat
   module Domain
     # A viewport over one buffer: the buffer it shows, its own cursor, the
@@ -12,8 +14,9 @@ module Carat
     # end, the mode its kind), and the last selection it left, which "gv"
     # restores. id is the stable number the editor gives the window when
     # it enters a tab page (0 until then), never given to another window.
+    # jumps is the window's own jump list, which a new window copies.
     # A Struct record: mutable, with a reader and a writer per member.
-    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :fixed_height, :anchor, :last_selection, :id, keyword_init: true)
+    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :fixed_height, :anchor, :last_selection, :id, :jumps, keyword_init: true)
       SIGN_WIDTH = 2
 
       # @rbs @buffer: Buffer
@@ -29,10 +32,11 @@ module Carat
       # @rbs @anchor: Position
       # @rbs @last_selection: Selection
       # @rbs @id: Integer
+      # @rbs @jumps: JumpList
 
       #: (buffer: Buffer) -> void
       def initialize(buffer:)
-        super(buffer: buffer, cursor: Cursor.new(row: 0, col: 0), top: 0, left: 0, row: 0, col: 0, height: 0, width: 0, fixed_width: false, fixed_height: false, anchor: Position.new(row: 0, col: 0), last_selection: Selection.none, id: 0)
+        super(buffer: buffer, cursor: Cursor.new(row: 0, col: 0), top: 0, left: 0, row: 0, col: 0, height: 0, width: 0, fixed_width: false, fixed_height: false, anchor: Position.new(row: 0, col: 0), last_selection: Selection.none, id: 0, jumps: JumpList.new)
       end
 
       # Shows another buffer from its start, forgetting the last selection,
@@ -54,8 +58,8 @@ module Carat
         self.fixed_height = false
       end
 
-      # Takes the buffer, cursor, and scroll position of other, as a split
-      # gives the new window the same view.
+      # Takes the buffer, cursor, scroll position, and a copy of the jump
+      # list of other, as a split gives the new window the same view.
       #: (Window) -> void
       def copy_from(other)
         self.buffer = other.buffer
@@ -64,6 +68,7 @@ module Carat
         self.top = other.top
         self.left = other.left
         self.last_selection = other.last_selection
+        jumps.restore_from(other.jumps)
       end
 
       # The gutter is the sign column, two cells while the buffer has

@@ -11,7 +11,8 @@ module Carat
   module UseCases
     # The ex commands of the buffer list: :ls, :buffers, and :files with
     # their flag argument and bang; :bn, :bp, and :bN with a count
-    # argument (E488 for another); :b N and :bd N with a buffer number,
+    # argument (E488 for another); :bfirst, :brewind, and :blast with
+    # none; :b N and :bd N with a buffer number,
     # the current buffer without one, and "Not implemented" for a name.
     class BufferCommandHandler < ExHandler
       LARGEST = 999_999_999
@@ -48,8 +49,8 @@ module Carat
       # command.
       #: (ExTable, list_buffers: ListBuffers, switch_buffer: SwitchBuffer, delete_buffer: DeleteBuffer) -> void
       def self.register(table, list_buffers:, switch_buffer:, delete_buffer:)
-        specs = ["ls", "buffers", "files", "b[uffer]", "bn[ext]", "bp[revious]", "bN[ext]", "bd[elete]"]
-        variants = [:list, :list, :list, :number, :next, :previous, :previous, :delete]
+        specs = ["ls", "buffers", "files", "b[uffer]", "bn[ext]", "bp[revious]", "bN[ext]", "bf[irst]", "br[ewind]", "bl[ast]", "bd[elete]"]
+        variants = [:list, :list, :list, :number, :next, :previous, :previous, :first, :first, :last, :delete]
         i = 0
         while i < specs.length
           table.register(BufferCommandHandler.new(spec: specs[i], list_buffers: list_buffers, switch_buffer: switch_buffer, delete_buffer: delete_buffer, variant: variants[i]))
@@ -68,11 +69,13 @@ module Carat
         @switch_buffer.call(state, BufferRequest.new(target: :number, count: number_in(args), bang: command.bang))
       end
 
-      # :bn, :bp, and :bN, one buffer without a count.
+      # :bn, :bp, and :bN, one buffer without a count; :bfirst and :blast,
+      # which take no argument.
       #: (Domain::EditorState, Domain::ExCommand) -> Outcome
       def step(state, command)
         args = command.args
-        return Outcome.failure("E488: Trailing characters: #{args}") unless args.empty? || digits?(args)
+        edge = @variant == :first || @variant == :last
+        return Outcome.failure("E488: Trailing characters: #{args}") unless args.empty? || (!edge && digits?(args))
         count = args.empty? ? 1 : number_in(args)
         @switch_buffer.call(state, BufferRequest.new(target: @variant, count: count, bang: command.bang))
       end

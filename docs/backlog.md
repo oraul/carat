@@ -214,7 +214,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Options repeats its bounded-number and known-name checks
 
-- Where: `Options#apply` in `carat/domain/options.rb`: the `tabstop` and `shiftwidth` blocks (lines 107 to 120) and the `icons` and `theme` blocks (lines 125 to 136) are each the same check-then-set-or-note shape. Advisory of the periodic quality review at 389c118. At 38628bb `keyhints.delay` (line 156) repeated the shape too (periodic quality), and at 7711421 the `breadcrumbs` block (line 221, periodic quality); `layout-slots` shares `Options.range_problem` between it and the three slot sizes, leaving `tabstop`, `shiftwidth`, `icons`, and `theme`.
+- Where: `Options#apply` in `carat/domain/options.rb`: the `tabstop` and `shiftwidth` blocks (lines 107 to 120) and the `icons` and `theme` blocks (lines 125 to 136) are each the same check-then-set-or-note shape. Advisory of the periodic quality review at 389c118. At 38628bb `keyhints.delay` (line 156) repeated the shape too (periodic quality), and at 7711421 the `breadcrumbs` block (line 221, periodic quality); `layout-slots` shares `Options.range_problem` between it and the three slot sizes, leaving `tabstop`, `shiftwidth`, `icons`, and `theme`. Raised again at be4b63a (now six copies).
 - Why it matters: a third bounded option copies the block again, and a fix to one copy can miss the other.
 - Fix outline: one private helper that takes the line, the value, and the low bound and returns whether to set (or a `width_value?` check both call), and one for a name checked against a known set; the rows of `test/domain_options_config.rb` stay as they are.
 
@@ -376,7 +376,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The local cls is the abbreviation the naming rule forbids
 
-- Where: the local `cls` in `carat/domain/text_objects.rb` (line 86 at 3895e21) and the parameter `cls` of `Runs#add` (`carat/domain/runs.rb:18`). Periodic quality at 0b17324. Raised again at ce6abdb (periodic quality), queue item `editing-counts`.
+- Where: the local `cls` in `carat/domain/text_objects.rb` (line 86 at 3895e21) and the parameter `cls` of `Runs#add` (`carat/domain/runs.rb:18`). Periodic quality at 0b17324. Raised again at ce6abdb (periodic quality), queue item `editing-counts`. Raised again at be4b63a (owner `editing-counts`).
 - Why it matters: `CLAUDE.md` names `cls` as the counterexample of its naming rule (`char_class`, not `cls`).
 - Fix outline: rename both to `char_class`. Queued as a fold of `search-structure`.
 
@@ -983,7 +983,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The spec preview of a failed change is deleted by the next change's
 
-- Where: the loop over `openspec/changes/` in `tools/spec_validate.sh` (line 25 at `package-clean`), which empties `build/spec-preview` for each active change while the header and the failure message promise a failed preview is kept. Quality advisory of `package-clean`.
+- Where: the loop over `openspec/changes/` in `tools/spec_validate.sh` (line 25 at `package-clean`), which empties `build/spec-preview` for each active change while the header and the failure message promise a failed preview is kept. Quality advisory of `package-clean`. Raised again at be4b63a, a duplicate of the failed spec preview entry (owner `backlog-compaction`).
 - Why it matters: with two active changes, the first one's failed preview is gone before anyone reads it, so the message points at a directory holding the wrong change.
 - Fix outline: preview each change under `build/spec-preview/<name>`, or stop after the first failure.
 
@@ -1907,7 +1907,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## A key resolved by timeoutlen runs no follow tail
 
-- Where: `HandleKey#timeout` in `carat/use_cases/handle_key.rb` (line 122 at 41297d6, line 154 at b76b722) and the comment of `carat/use_cases/discovery/hide_key_hints.rb` line 7. Quality advisories in `quick-docs` and `discoverability`, periodic quality at c1b3a12, b76b722, and 3895e21, which merged the two entries. Queue item `discoverability-tidy`. Raised again at ce6abdb (line 189 against the after-key tail at 153, and a list message cleared twice at 225 and 228; periodic quality): a palette following a key resolved by `timeoutlen` stays unfiltered until the next key; one private `after_keys(state)` both paths end in, with a row.
+- Where: `HandleKey#timeout` in `carat/use_cases/handle_key.rb` (line 122 at 41297d6, line 154 at b76b722) and the comment of `carat/use_cases/discovery/hide_key_hints.rb` line 7. Quality advisories in `quick-docs` and `discoverability`, periodic quality at c1b3a12, b76b722, and 3895e21, which merged the two entries. Queue item `discoverability-tidy`. Raised again at ce6abdb (line 189 against the after-key tail at 153, and a list message cleared twice at 225 and 228; periodic quality): a palette following a key resolved by `timeoutlen` stays unfiltered until the next key; one private `after_keys(state)` both paths end in, with a row. Raised again at be4b63a (owner `hover-tidy`).
 - Why it matters: `call` ends with an after-key tail (`ShowCompletion`, `FollowHover`, `FollowDefinition`, `FollowSignature`, `FollowPalette`, `HideKeyHints`, the plugin observe, `ArrangeView`) that `timeout` copies only in part (it skips `FollowDefinition`, `handle_key.rb` line 181 at 8d8832f), so an action resolved by `timeoutlen` leaves the documentation float open away from the cursor until the next key, `palette.open` bound beside a longer user binding (`<leader>p` with `<leader>pf`) opens the `>` prompt with no list until the next key, and the `HideKeyHints` comment says a timeout closes the hints, which it never does.
 - Fix outline: one private follow step that both `call` and `timeout` end with, a row in `test/adapters_hover.rb` that moves the cursor through a timed-out prefix, a row in `test/editor_palette.rb` that opens the palette through a timed-out user binding, and a corrected `HideKeyHints` comment.
 
@@ -2057,7 +2057,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Keymap exposes helpers and the map misses methods
 
-- Where: `apply`, `bind_text`, and `holder_of` in `carat/domain/keymap.rb` lines 141, 162, and 205 are public with no outside caller; `leader_problem` and `no_actions` are missing from the map's `Keymap` entry; the `CommandGrammar` entry (`docs/codebase-map.md` line 146) omits `digit?`, `digit`, `char`, `wants_pattern?`, and `pattern`; the `Paths` list (line 503) omits `absolute` (`carat/plugin_api.rb` line 356), at b0dd342. Periodic quality. Queued in `docs-index`. Raised again at ce6abdb (periodic quality, `keymap.rb` 173 `apply` and 242 `holder_of` copying `node_at`), adding `bind` at 223 with no caller and `name_group` at 314 copying `bind_text`'s checks at 200: remove `bind` and its map mention, a private `keys_problem`; queue item: the backlog batches.
+- Where: `apply`, `bind_text`, and `holder_of` in `carat/domain/keymap.rb` lines 141, 162, and 205 are public with no outside caller; `leader_problem` and `no_actions` are missing from the map's `Keymap` entry; the `CommandGrammar` entry (`docs/codebase-map.md` line 146) omits `digit?`, `digit`, `char`, `wants_pattern?`, and `pattern`; the `Paths` list (line 503) omits `absolute` (`carat/plugin_api.rb` line 356), at b0dd342. Periodic quality. Queued in `docs-index`. Raised again at ce6abdb (periodic quality, `keymap.rb` 173 `apply` and 242 `holder_of` copying `node_at`), adding `bind` at 223 with no caller and `name_group` at 314 copying `bind_text`'s checks at 200: remove `bind` and its map mention, a private `keys_problem`; queue item: the backlog batches. Raised again at be4b63a.
 - Why it matters: the map is the entry point for every change; missing methods send a reader to the code.
 - Fix outline: make the three instance methods private and name the missing methods in their entries.
 
@@ -2299,7 +2299,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## metrics compare passes a strict metric missing from the run
 
-- Where: `compare` in `tools/metrics.sh` line 86 at 38628bb (periodic quality). Queued in `run-budgets-tidy`.
+- Where: `compare` in `tools/metrics.sh` line 86 at 38628bb (periodic quality). Queued in `run-budgets-tidy`. Raised again at be4b63a, notes 23 and 43 (owner `run-budgets-tidy`).
 - Why it matters: only the current names are walked, so an `allocs.*` or `rounds.*` name of the base that the run lacks passes, against the header's rule.
 - Fix outline: fail each strict base name not seen, with a `tools/tools_test.sh` case.
 - Raised again at 6a0db20 (periodic quality, note 47): `tools/metrics.sh:86`. Owner: queue item `run-budgets-tidy`.
@@ -2414,13 +2414,13 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The architecture's Options and :set lines drift
 
-- Where: `docs/architecture.md` line 113 (the Options bullet) and line 174 (section 5.2), at b76b722. Periodic quality. Queue item `architecture-drift`.
+- Where: `docs/architecture.md` line 113 (the Options bullet) and line 174 (section 5.2), at b76b722. Periodic quality. Queue item `architecture-drift`. Raised again at be4b63a (owner `docs-index`).
 - Why it matters: the bullet lists `wrap` and `clipboard` as members, which are only checked keys of `Options::KINDS`, and omits `theme`, `background`, `syntax_on`, `startscreen`, and `reducedmotion`; section 5.2 lists `setlocal`, which has no handler, and says `:set` handles filetype and syntax only.
 - Fix outline: list the members as `carat/domain/options.rb` declares them, the options `:set` handles, and drop `setlocal` until a handler exists.
 
 ## The architecture and the queue sit at their byte budgets
 
-- Where: `BUDGETS` in `tools/docs_lint.sh` line 44: `docs/architecture.md` 88,058 of 88,064 bytes, at b76b722. Periodic quality. Queue items `breadcrumbs` and `architecture-drift`. At ce6abdb (periodic quality) the architecture is 88,063 of 88,064 bytes, so every spec change rewords text it does not change to fit, as #93 did; queue item `docs-index`.
+- Where: `BUDGETS` in `tools/docs_lint.sh` line 44: `docs/architecture.md` 88,058 of 88,064 bytes, at b76b722. Periodic quality. Queue items `breadcrumbs` and `architecture-drift`. At ce6abdb (periodic quality) the architecture is 88,063 of 88,064 bytes, so every spec change rewords text it does not change to fit, as #93 did; queue item `docs-index`. Raised again at be4b63a, 88,061 of 88,064 bytes (owner `docs-index`).
 - Why it matters: the next change adding a sentence to the architecture fails `docs-lint` in its check stage.
 - Fix outline: trim history and detail the archived designs already hold to restore working headroom.
 - Raised again at 6a0db20 (periodic quality, note 22): `docs/architecture.md` is 88,061 of 88,064 bytes (`tools/docs_lint.sh:44`). Owner: queue item `docs-index`.
@@ -2433,7 +2433,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The .PHONY list leaves out metrics
 
-- Where: `Makefile` line 432, at b76b722. Periodic quality. Queue item `run-budgets-tidy`. Raised again at ce6abdb, `metrics-compare` missing too (periodic quality).
+- Where: `Makefile` line 432, at b76b722. Periodic quality. Queue item `run-budgets-tidy`. Raised again at ce6abdb, `metrics-compare` missing too (periodic quality). Raised again at be4b63a (owner `check-skip`).
 - Why it matters: a file or directory named `metrics` at the top would make `make metrics` answer up to date and skip the measurement the check stage records.
 - Fix outline: add `metrics` and `metrics-compare` to `.PHONY`.
 
@@ -3134,11 +3134,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a change that scans the buffer on every insert-mode key would pass the suite unseen.
 - Fix outline: assert that typing in insert mode with no popup leaves the menu unfilled, or add a bench scenario row that pins the allocations. Queued in `completion-tidy`.
 
-## Only gd adds to the jump list, and the list is one for the editor
+## Only gd and buffer switches add to the jump list
 
-- Where: `carat/domain/jump_list.rb` and its one caller that pushes, `VisitTarget` in `carat/use_cases/definitions/visit_target.rb`, from the `definitions` change (out of scope there).
-- Why it matters: in Neovim `G`, `gg`, searches, `n`, `%`, marks, `:N`, and buffer switches also add to the jump list, kept per window and listed by `:jumps`, so Ctrl-O after a search or a `G` does nothing in carat.
-- Fix outline: push the position left from the jump motions (a jump flag on the motion handlers, pushed by the dispatcher when the cursor moved by more than a line), move the list into `Window` (copied on a split), and add `:jumps`, each with a row in `docs/compatibility.md` and `test/adapters_definitions.rb` or an editor test. Folded into the backlog items worth a change (queue item 37). When the jump motions arrive, move the `jump.older` and `jump.newer` handlers from `DefinitionHandler` (`carat/use_cases/actions/definition_handler.rb` line 52 at fafe59c) to a `JumpHandler`, since the list is not definition-specific (quality advisory in `definitions`).
+- Where: `carat/domain/jump_list.rb`, filled by `VisitTarget` (`gd`) and `BufferList#enter` (every buffer switch) since `jump-list`; the motion handlers push nothing, and no alternate file exists.
+- Why it matters: in Neovim `G`, `gg`, searches, `n`, `%`, `(`, `{`, `H`, `M`, `L`, marks, and `:N` also add to the window's jump list, so Ctrl-O after a search or a `G` does nothing in carat; `Ctrl-^`, `Ctrl-6`, and `:e #` reach no alternate file, and `:ls #` lists none.
+- Fix outline: push the position left from the jump motions (a jump flag on the motion handlers, pushed by the dispatcher), keep the window's alternate buffer beside its jump list (set by `BufferList#enter` and the walk), add `Ctrl-^`, `Ctrl-6`, `:e #`, and the `#` flag of `:ls`, each with a row in `docs/compatibility.md` and a table test, and move `jump.older` and `jump.newer` from `DefinitionHandler` to a `JumpHandler`, since the list is not definition-specific (quality advisory in `definitions`). Queue item `jump-motions`.
 
 ## Definition target paths keep decoded control bytes
 
@@ -3175,12 +3175,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/domain/keymap.rb` line 181 at fafe59c, `apply`, which checks a `keymap.pick` line on a throwaway keymap whatever its owner, while `pick_from` binds only the configuration's lines. Quality advisory in `definitions`.
 - Why it matters: a plugin manifest line `keymap.pick ...` is accepted without a problem and has no effect, so its author gets no report.
 - Fix outline: refuse it as "a plugin cannot set keymap.pick" when the owner is not empty, as `keymap.leader` is refused, with a row in `test/domain_keymap.rb`.
-
-## JumpList#step pushes before the bounds check
-
-- Where: `carat/domain/jump_list.rb` line 55 at fafe59c, `step`, whose comment says -1 past either end with nothing moved, but going older from the newest end pushes the position before the check, so Ctrl-O on an empty list adds an entry. Quality advisory in `definitions`.
-- Why it matters: the comment misleads the next reader, and a refused Ctrl-O on an empty list leaves an entry Ctrl-I can reach.
-- Fix outline: check the target before pushing (an empty list answers -1 at once), or reword the comment, with a row for Ctrl-O on an empty list.
 
 ## Definition float and row clamp copy other use cases
 
@@ -3268,7 +3262,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## A failed spec preview is deleted by the next change's preview
 
-- Where: `tools/spec_validate.sh` line 129. Periodic quality at 8d8832f, queued in `run-budgets-tidy`.
+- Where: `tools/spec_validate.sh` line 129. Periodic quality at 8d8832f, queued in `run-budgets-tidy`. Raised again at be4b63a, a duplicate of the spec preview entry (owner `backlog-compaction`).
 - Why it matters: the header promises a failed preview is kept for reading, but each active change resets it.
 - Fix outline: one preview directory per change, or stop resetting after a failure, with a case.
 
@@ -3454,7 +3448,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The action registration loop is copied five times
 
-- Where: the `NAMES` and `DESCRIPTIONS` registration loop in `carat/use_cases/actions/motion_handler.rb` line 32 (twice), `search_handler.rb` (twice), and `text_object_handler.rb` (once), at 2f54bb5; `"Not implemented: "` is spelled in `dispatcher.rb` line 61, `find_match.rb` line 53, `selection_handler.rb` line 48, and `vim_pattern.rb` lines 274 and 460. Periodic quality at 2f54bb5. Queued in the backlog batches and `messages-tidy`.
+- Where: the `NAMES` and `DESCRIPTIONS` registration loop in `carat/use_cases/actions/motion_handler.rb` line 32 (twice), `search_handler.rb` (twice), and `text_object_handler.rb` (once), at 2f54bb5; `"Not implemented: "` is spelled in `dispatcher.rb` line 61, `find_match.rb` line 53, `selection_handler.rb` line 48, and `vim_pattern.rb` lines 274 and 460. Periodic quality at 2f54bb5. Queued in the backlog batches and `messages-tidy`. Raised again at be4b63a (now thirteen loops).
 - Why it matters: a change to registration or to the refusal wording reaches one copy and misses the others, which the E-number lint cannot see.
 - Fix outline: one `ActionTable` method registering a names list with its descriptions; one `Domain::Messages` function for the refusal prefix called from the four files.
 
@@ -3550,7 +3544,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The overridden-method RBS form is used for Regexp and MatchData methods
 
-- Where: `carat/domain/search.rb:106` and `carat/domain/replacement.rb:87,152`, which use `# @rbs` parameter lines with the return in prose on methods that override nothing, because `MatchData` cannot be pinned; `CLAUDE.md` (inline RBS) and `docs/spinel-notes.md:39` reserve that form for overrides. Quality advisory at spinel-bump.
+- Where: `carat/domain/search.rb:106` and `carat/domain/replacement.rb:87,152`, which use `# @rbs` parameter lines with the return in prose on methods that override nothing, because `MatchData` cannot be pinned; `CLAUDE.md` (inline RBS) and `docs/spinel-notes.md:39` reserve that form for overrides. Quality advisory at spinel-bump. Raised again at be4b63a.
 - Why it matters: the documented rule and the code disagree, so the next reader either "fixes" the signature into one Spinel cannot analyze or copies the form where it is not needed.
 - Fix outline: extend `docs/spinel-notes.md` line 22 or 39 to say a method taking or returning `Regexp` or `MatchData` gets parameter lines and its return in prose.
 
@@ -3610,7 +3604,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Comments that read as changelogs or break the wrap width
 
-- Where: `carat/domain/range.rb` line 3; `carat/use_cases/handle_key.rb` lines 65 and 71 to 72; `carat/domain/editor_state.rb` lines 13 and 15; `carat/domain/highlight.rb` lines 5 to 13; `carat/use_cases/files/open_file.rb` line 20. Periodic quality at e49f63d.
+- Where: `carat/domain/range.rb` line 3; `carat/use_cases/handle_key.rb` lines 65 and 71 to 72; `carat/domain/editor_state.rb` lines 13 and 15; `carat/domain/highlight.rb` lines 5 to 13; `carat/use_cases/files/open_file.rb` line 20. Periodic quality at e49f63d. Raised again at be4b63a, also handle_key.rb:71, :315, :379.
 - Why it matters: ragged or historical comments mislead a reader.
 - Fix outline: describe what the class holds now and rewrap each block to its file's width. Queue item: Backlog batches.
 
@@ -3744,7 +3738,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `carat/plugins/finder/plugin.rb` line 268 (widths `cols - 6`, `(width - 5) / 2`, `width + 6`, `cols - width - 11`) and the `FloatOptions` comment at `carat/plugin_api.rb` line 197, which states a box is `width + 4` without the `option.winborder none` case. Quality advisories of `float-frame`.
 - Why it matters: under `option.winborder none` a box is `width + 2`, so the list and preview leave two-column gaps, and no test asserts the two boxes still tile the screen.
-- Fix outline: name the frame width of a bordered float (border 2 plus padding 2) in a constant, say `width + 2` under `winborder none` in the comment, let a plugin read the frame size through the API, and assert both boxes' columns in `test/editor_finder.rb`. Queue item `float-placement`.
+- Fix outline: name the frame width of a bordered float (border 2 plus padding 2) in a constant, say `width + 2` under `winborder none` in the comment, let a plugin read the frame size through the API, and assert both boxes' columns in `test/editor_finder.rb`. Queue item `float-edges`.
 
 ## The palette bench scenario is not in the default list
 
@@ -3762,13 +3756,13 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `carat/use_cases/docs/show_hover.rb:59`, `carat/use_cases/docs/show_signature.rb:53`, `carat/use_cases/definitions/open_definition_float.rb:40`, against `carat/use_cases/discovery/show_key_hints.rb:132`. Periodic quality, blocking.
 - Why it matters: `FloatWindow#place` fits text to cols minus border and padding, so under 84 columns (80 included) every long hover row, signature label, and peek row loses its last two columns; no test runs at a width where the cap binds.
-- Fix outline: one frame-width rule for every float, and a narrow-screen hover row asserting a wrapped row's last word shows. Queue item `float-placement`.
+- Fix outline: one frame-width rule for every float, and a narrow-screen hover row asserting a wrapped row's last word shows. Queue item `float-edges`.
 
 ## The palette width ignores the float padding
 
 - Where: `carat/use_cases/discovery/follow_palette.rb:114` and `:124`. Periodic quality.
 - Why it matters: below 94 columns the rows are cut two cells wider than `FloatWindow#place` leaves and the column goes negative until shifted.
-- Fix outline: the same frame-width rule as the hover entry. Queue item `float-placement`.
+- Fix outline: the same frame-width rule as the hover entry. Queue item `float-edges`.
 
 ## FloatWindow#place shadows its edge reader
 
@@ -3832,7 +3826,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Sentence motions rescan the starts linearly
 
-- Where: `carat/domain/motions.rb:468` and `:500`. Periodic quality.
+- Where: `carat/domain/motions.rb:468` and `:500`. Periodic quality. Raised again at be4b63a (owner `editing-counts`).
 - Why it matters: they duplicate `SentenceStarts#index_at` and rebuild a Position.
 - Fix outline: `next_after` and `last_before` on `SentenceStarts`. Queue item `editing-counts`.
 
@@ -3856,7 +3850,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## ci_scope asks for the same pull request twice
 
-- Where: `tools/ci_scope.sh:50` and `:51`. Periodic quality.
+- Where: `tools/ci_scope.sh:50` and `:51`. Periodic quality. Raised again at be4b63a (owner `check-skip`).
 - Why it matters: two calls for the head and the number can disagree.
 - Fix outline: one call printing both fields. Queue item `ci-hardening`.
 
@@ -3904,33 +3898,15 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Action registration loops are copied five times
 
-- Where: `carat/use_cases/actions/motion_handler.rb:34` and `:41`, `text_object_handler.rb:35`, `search_handler.rb:35` and `:42`. Periodic quality.
+- Where: `carat/use_cases/actions/motion_handler.rb:34` and `:41`, `text_object_handler.rb:35`, `search_handler.rb:35` and `:42`. Periodic quality. Raised again at be4b63a (now thirteen loops).
 - Why it matters: five copies of one loop.
 - Fix outline: one `ActionTable` method registering names and descriptions. Backlog batches (editing and keymap copies).
 
-## A replace jump back to a scratch buffer unlists the file left
-
-- Where: `BufferList#hand_tab` in `carat/domain/buffer_list.rb:278`, reached from `WalkJumps` (`carat/use_cases/definitions/walk_jumps.rb:53`), which computes `tabbed` false for a scratch entry; `gd` may start from a scratch buffer, which `visit_target.rb:82` exempts. Quality advisory of `jump-replace-tab`.
-- Why it matters: with `option.jumptab replace`, Ctrl-O back to a scratch buffer still shown in another window unlists the file buffer it leaves, so the tab row shrinks by a file the user never closed.
-- Fix outline: return early in `hand_tab` when the target is `scratch?`, with a row in `test/adapters_definitions.rb`. Queue item `jump-list`.
-
-## The replace-jump guard is written twice
-
-- Where: `carat/use_cases/definitions/visit_target.rb:87` and `carat/use_cases/definitions/walk_jumps.rb:53`, both `if !tabbed && state.options.jumptab == Domain::Options::JUMPTAB_REPLACE`. Quality advisory of `jump-replace-tab`.
-- Why it matters: the rule for when a jump takes over a tab lives in two use cases, which can drift apart as the jump list grows.
-- Fix outline: a predicate `Options#jump_takes_tab?`, or pass the mode to `hand_tab`, so the rule lives in one place. Queue item `jump-list`.
-
-## The architecture's Options list omits jumptab and winborder
-
-- Where: `docs/architecture.md:113`, which names Carat's own `Options` members (breadcrumbs, indentguides, icons). Quality advisory of `jump-replace-tab`.
-- Why it matters: the binding description of the record misses two members a reader of the code finds.
-- Fix outline: add `jumptab` and `winborder` to the list, making room under the file's budget by pointing to the notes. Queue item `jump-list`.
-
 ## The replace-jump tests leave three paths unchecked
 
-- Where: `test/adapters_definitions.rb:516` and `:519`, `test/adapters_tab_bar.rb:96`, against `docs/compatibility.md:288` and `carat/adapters/tab_bar.rb:76`. Quality advisory of `jump-replace-tab`.
+- Where: `test/adapters_definitions.rb:516` and `:519`, `test/adapters_tab_bar.rb:96`, against `docs/compatibility.md:288` and `carat/adapters/tab_bar.rb:76`. Quality advisory of `jump-replace-tab`. Raised again at be4b63a (owner moved from `jump-list` to `buffer-list-tidy`).
 - Why it matters: no row runs `:bd` after a replace jump to prove `BufferList#replacement_for` skips the unlisted buffer; no tab-bar row has an unlisted current buffer (the `anchor = first if anchor < 0 || current.tabless?` fallback) or unlisted buffers beside tab-page numbers; and the other `jump_case` rows read tabs through `tab_names`, which re-applies `Buffer#tabless?` instead of reading the painted row, while one block repeats the setup of the back-and-forth row to read it.
-- Fix outline: a `jump_case` row running `:bd` with a second tabbed buffer; rows with current 0 and with pages 2 in the unlisted table; `r.frame.row_text(0)` in `jump_case`'s output and the separate block dropped. Queue item `jump-list`.
+- Fix outline: a `jump_case` row running `:bd` with a second tabbed buffer; rows with current 0 and with pages 2 in the unlisted table; `r.frame.row_text(0)` in `jump_case`'s output and the separate block dropped. Queue item `buffer-list-tidy`.
 
 ## The tab-bar test's unlisted fixture reads ambiguously
 
@@ -3943,3 +3919,96 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/use_cases/buffers/list_buffers.rb:12`, `carat/adapters/tab_bar.rb:15`, `carat/domain/buffer.rb:62`. Quality advisory of `jump-replace-tab`.
 - Why it matters: the edited lines run past the files' 72-column wrap.
 - Fix outline: rewrap the paragraphs. Backlog batches (comment wraps).
+
+## A buffer a jump left unlisted turns modified yet stays hidden
+
+- Where: `carat/use_cases/files/delete_path.rb:64` (`mark_deleted`), `carat/use_cases/plugins/buffer_requests.rb:127`, against `carat/use_cases/buffers/list_buffers.rb:66`. Periodic quality.
+- Why it matters: the buffer is hidden from the tab row, `:ls`, and `:ls +`, while `:wa` silently writes the deleted file back and `:q` refuses on a buffer the user cannot see.
+- Fix outline: a buffer is listed again when it becomes modified, as Neovim's text edits set `buflisted`, with an editor row. Queue item `periodic-blockers-b`.
+
+## BufferList's comments and hand_tab's guards predate unlisted buffers
+
+- Where: `carat/domain/buffer_list.rb:8`, `:59`, `:65`, `:77`, `:279`; `docs/architecture.md:132`. Periodic quality.
+- Why it matters: the comments call every buffer held listed; `hand_tab`'s three guards and its reorder have no domain row, and its modified guard is unreachable behind E37.
+- Fix outline: reword the comments and the architecture entry; a table row per guard and for a target before and after the buffer left; state the modified guard as an invariant or drop it. Queue item `buffer-list-tidy`.
+
+## VisitTarget's comment omits jumptab and scans the list three times
+
+- Where: `carat/use_cases/definitions/visit_target.rb:27` and `:83`. Periodic quality advisory.
+- Why it matters: the class comment never mentions `option.jumptab replace`; `listed_for` runs up to three times a jump (see the existing `listed_for` entry).
+- Fix outline: one comment sentence; pass the held buffer into `view` and `open_path`. Queue item `definitions-tidy`.
+
+## :set jumptab answers E518 while :set breadcrumbs answers Not implemented
+
+- Where: `carat/use_cases/ex/set_command_handler.rb:27`. Periodic quality advisory.
+- Why it matters: `PENDING` copies `Options::KINDS` by hand and misses jumptab, indentguides, keyhints.delay, and layout.
+- Fix outline: derive the names from `Options::KINDS` plus the abbreviations, with a row for `:set jumptab`. Backlog batches (config checks).
+
+## KeyNotation branches on a Symbol constant the notes call miscompiled
+
+- Where: `carat/domain/key_notation.rb:150`; `test/domain_keys.rb`. Periodic quality.
+- Why it matters: `when Key::INSERT` has the shape `docs/spinel-notes.md` says folds to false, and no row formats `<Insert>` or `<Unknown>`.
+- Fix outline: format rows for both; if they fail, guard returns as `Mode.visual_kind`. Queue item `spinel-workarounds`.
+
+## The map misses the definition follow-ups, Paths names, and PluginEntry#attach
+
+- Where: `docs/codebase-map.md:141`, `:151`, `:526`, `:535`. Periodic quality advisory.
+- Why it matters: the pump and HandleKey lines omit ShowDefinition and FollowDefinition; Paths omits `absolute` and `segments`.
+- Fix outline: add the names. Queue item `docs-index`.
+
+## carat.rb misses two production files
+
+- Where: `carat.rb:2`; `carat/domain/border_style.rb`, `carat/use_cases/actions/search_handler.rb`. Periodic quality.
+- Why it matters: the header promises every file once; both are reached only transitively.
+- Fix outline: add both in layer order; `test/lint.rb` checks every production file is required. Queue item `docs-index`.
+
+## Search and pattern code keeps magic numbers and a literal message
+
+- Where: `carat/use_cases/search/find_match.rb:68`, `:163`; `preview_search.rb:37`; `carat/domain/vim_pattern.rb:641`; `carat/domain/walker.rb:63`. Periodic quality.
+- Why it matters: the delimiter is `47 : 63` twice, E486 is the only literal search message, `collection_end`'s comment names the wrong byte, and `Walker` calls `Motions.code_class` without requiring it.
+- Fix outline: a delimiter method, `Search::NOT_FOUND`, a reworded comment, one shared class-table module. Queue item `search-tidy`.
+
+## InputController hand-writes a reader and repeats a call
+
+- Where: `carat/adapters/input_controller.rb:128`, `:137`. Periodic quality advisory.
+- Fix outline: `attr_reader :decoder #: KeyDecoder`; dismiss first, then one `handle`. Backlog batches (copies).
+
+## Config pins its settings as untyped
+
+- Where: `carat/domain/config.rb:27`; `carat/domain/search_pattern.rb:9`. Periodic quality advisory.
+- Fix outline: `Array[RcLine]` or a comment naming the Spinel limit; a comment for the dropped Regexp signature. Backlog batches (RBS pins).
+
+## The Makefile repeats its timed compile and misdescribes gates
+
+- Where: `Makefile:241`, `:275`, `:332`, `:383`. Periodic quality advisory.
+- Fix outline: one `define timed_compile`; describe static as the gates that need no run state, here and in CLAUDE.md. Queue item `check-skip`.
+
+## gate_records reads its review commit unchecked
+
+- Where: `tools/gates.sh:436`. Periodic quality.
+- Why it matters: every other gate checks a run-state commit as hex and passes `--end-of-options`.
+- Fix outline: the same check as `gate_stages`. Queue item `content-gate-gaps`.
+
+## VisitTarget pushes a cross-file jump that enter already recorded
+
+- Where: `carat/use_cases/definitions/visit_target.rb:87`, against `BufferList#enter` reached through `OpenFile` or `view`. Quality advisory of `jump-list`.
+- Why it matters: for a jump to another file `enter` already pushed the same entry, so this push only re-appends it, and after a reused startup buffer it records an entry under the id the target took.
+- Fix outline: push explicitly only in the same-file case and leave cross-file jumps to `enter`, with a row asserting one entry per cross-file `gd`. Queue item `definitions-tidy`.
+
+## Every window allocates a jump list, floats and splits included
+
+- Where: `carat/domain/window.rb:39`; the float windows of the completion popup, hover, signature, key hints, and palette, built per show; the split's `Window.new` followed by `copy_from`. Quality advisory of `jump-list`.
+- Why it matters: each window now allocates a `JumpList` and three arrays, so every float shown and every split allocates them, and a split builds them in `Window.new` and then dups them again in `copy_from`.
+- Fix outline: check the figures with `make bench` and `make metrics-compare`; if they grow, give float windows no list of their own or copy the list in the split's constructor. Queue item `run-budgets-tidy`.
+
+## first_file and last_file are one scan written twice
+
+- Where: `carat/domain/buffer_list.rb:131`; `carat/use_cases/buffers/switch_buffer.rb:36`. Quality advisory of `jump-list`.
+- Why it matters: two copies of one scan, and `SwitchBuffer#call` re-tests the target in a ternary inside the `elsif` that already chose it.
+- Fix outline: one `BufferList` method taking the direction, or separate `:first` and `:last` branches in `SwitchBuffer`. Queue item `buffer-list-tidy`.
+
+## No row reaches the E85 branch of :bfirst and :blast
+
+- Where: `carat/use_cases/buffers/switch_buffer.rb:37`, against `docs/compatibility.md:292`. Quality advisory of `jump-list`.
+- Why it matters: the compatibility rows promise E85 for a list without file buffers, but no test runs that branch, so a regression there goes unseen.
+- Fix outline: a row in `test/editor_buffers.rb` running `:bfirst` and `:blast` with only a scratch buffer, and with no file buffer, listed. Queue item `buffer-list-tidy`.

@@ -74,7 +74,11 @@ module DomainJumpListTest
     t.assert_equal([100, 5, 104, 100], [list.count, list.rows[0], list.rows[99], list.index], "The list keeps the last hundred entries")
 
     list = D::JumpList.new
-    t.assert_equal([-1, 1], [list.step(-1, 1, 4, 0), list.count], "Ctrl-O past the oldest entry does nothing")
+    t.assert_equal([-1, 0, 0], [list.step(-1, 1, 4, 0), list.count, list.index], "Ctrl-O past the oldest entry does nothing")
+    t.assert_equal([-1, 0], [list.step(1, 1, 4, 0), list.count], "Ctrl-O on an empty list leaves it empty")
+    list = D::JumpList.new
+    list.push(1, 4, 0)
+    t.assert_equal([-1, 1, 1], [list.step(-1, 1, 4, 2), list.count, list.index], "Ctrl-O from the one entry's own line records nothing")
     list = D::JumpList.new
     list.push(1, 2, 0)
     list.push(2, 2, 0)
