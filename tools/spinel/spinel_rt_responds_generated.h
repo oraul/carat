@@ -349,6 +349,7 @@ static const char *const sp_gen_responds_integer[] = {
   "odd?",
   "ord",
   "pred",
+  "singleton_method_added",
   "size",
   "succ",
   "times",
@@ -363,5 +364,6 @@ static const char *const sp_gen_responds_float[] = {
   "nan?",
   "next_float",
   "prev_float",
+  "singleton_method_added",
   NULL
 };
