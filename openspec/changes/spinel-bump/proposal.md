@@ -15,6 +15,7 @@
 
 - carat compiles and passes `make check` at f34005bf through workarounds of three miscompilations new at that pin, each commented and recorded in `docs/spinel-notes.md` with a `docs/backlog.md` entry: `PluginEntry#link` is typed as the API's `Host` and stored through `PluginEntry#attach`; `Mode.visual_kind` compares with `==` instead of a `case` on constants; `Host#icon`, `Host#stat`, and `FilePort#stat` answer a failed or missing value from their base instead of raising.
 - The inline RBS warnings carat had at 001419ff are gone: the `MatchData` methods of `Search` and `Replacement` are typed by parameter lines, the `Regexp` member of `SearchPattern` is left to inference, `Testing` drops the block types Spinel does not seed, and `bench/keys.rb` drops the signatures on top-level methods, which Spinel never applied.
+- `Mode.name_of` answers `Symbol#name` rather than `to_s`, which allocates a new String at each call since Spinel 59044ad58, so the keymap lookup allocates no more per key than on main.
 
 No editor behavior changes.
 
