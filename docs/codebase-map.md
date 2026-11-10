@@ -170,6 +170,8 @@ Designs: `command-grammar` (The grammar sits between the keymap and the dispatch
 
 Rules: CLAUDE.md Coding conventions (bindings in `config/default.caratrc` only; every action has a handler and a line in `docs/actions.md`; the action kinds; a new motion binds in five modes); `docs/architecture.md` sections 4, 5.1, and 8.1.
 
+Bench: `palette` (typing into the command palette, each key refiltering its entries and reopening the menu float).
+
 ## 6. Motions and text objects
 
 What: every motion as a function of state and count, the text objects as ranges, and pattern search.
