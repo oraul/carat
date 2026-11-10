@@ -244,9 +244,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Three copies of the byte basename
 
-- Where: `Filetype.from_name` in `carat/domain/filetype.rb` (line 30) and `FramePresenter#file_name` in `carat/adapters/frame_presenter.rb` (line 660) each copy the byte basename that `PluginApi::Paths.basename` (`carat/plugin_api.rb:315`) gives and `Domain::PathPolicy.last_name` reuses, while `Filetype.base` (line 68) still uses `rindex`; `hold`, `launch`, and `initialize_params` in `carat/adapters/json_rpc_language_gateway.rb` (lines 247, 261, and 274 at eb63fb4) call `File.basename` on a server's command or the working directory. Advisory of the periodic quality review at 6ea61b1, the gateway's of `lsp-diagnostics`' retrospective.
+- Where: `Filetype.from_name` in `carat/domain/filetype.rb` (line 30) and `Buffer#name_start` in `carat/domain/buffer.rb` (line 226 at 8d8832f; `FramePresenter#file_name`, once at `frame_presenter.rb` line 660, is gone) each copy the byte basename that `PluginApi::Paths.basename` (`carat/plugin_api.rb:315`) gives and `Domain::PathPolicy.last_name` reuses, while `Filetype.base` (line 68) still uses `rindex`; `hold`, `launch`, and `initialize_params` in `carat/adapters/json_rpc_language_gateway.rb` (lines 247, 261, and 274 at eb63fb4) call `File.basename` on a server's command or the working directory. Advisory of the periodic quality review at 6ea61b1, the gateway's of `lsp-diagnostics`' retrospective.
 - Why it matters: three copies of one byte walk drift apart, and the `rindex` copy groups a lead byte with what follows on a name that is not UTF-8.
-- Fix outline: call `PluginApi::Paths.basename` in all three places.
+- Fix outline: call `PluginApi::Paths.basename` in all three places. Folded into `docs-index`.
 
 ## Filetype.program_type mixes byte and character indexes
 
@@ -376,7 +376,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## FramePresenter passes the painted row through instance variables
 
-- Where: `@row_of` and `@current` in `carat/adapters/frame_presenter.rb`, set at lines 356 and 380 and read at 585 by `paint_matches`. Periodic quality at 0b17324.
+- Where: `@row_of` and `@current` in `carat/adapters/frame_presenter.rb`, set at lines 758 and 788 and read at 1064 by `paint_matches` (at 8d8832f). Periodic quality at 0b17324.
 - Why it matters: the row and the window's currency reach `paint_matches` through a side channel, as the entry "Operate passes the search outcome through an instance variable" records for `Operate`, so a call order change paints with a stale row.
 - Fix outline: pass the row and the currency to `paint_row` and on to `paint_matches` as arguments and drop the two instance variables. Queued in `search-structure`, with the entry "Match highlighting walks matches left of the scroll and keeps rows painted after the budget stopped".
 
@@ -1684,8 +1684,8 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The typed part before the cursor is computed twice
 
-- Where: `carat/adapters/json_rpc_language_gateway.rb` (line 463 at 376d264) repeats `ShowCompletion`'s slice, `word_start`, `byteslice`, and `col - length` (`carat/use_cases/completion/show_completion.rb`, lines 74 to 77). Quality advisory in `completion-request`.
-- Why it matters: a change to how the word is found must be made in both places or the request and the menu disagree on the word.
+- Where: `carat/adapters/json_rpc_language_gateway.rb` (line 463 at 376d264) repeats `ShowCompletion`'s slice, `word_start`, `byteslice`, and `col - length` (`carat/use_cases/completion/show_completion.rb`, lines 74 to 77), and `carat/use_cases/completion/complete_word.rb` line 47 at 8d8832f is a third copy. Quality advisory in `completion-request` and `word-completion`.
+- Why it matters: a change to how the word is found must be made in all three places or the request and the menu disagree on the word.
 - Fix outline: one domain helper (for example in `FuzzyMatch`) answering the typed part and its start column before a column, used by both, with a table row.
 
 ## Completion-request style and docs advisories
@@ -1786,7 +1786,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The bench scenario list has drifted from the scenarios
 
-- Where: `bench/run.sh` line 69 at cd87445 copies the `SCENARIOS` of `bench/keys.rb` line 104 and omits `lh-float` and `n`. Periodic quality at cd87445.
+- Where: `bench/run.sh` line 69 at cd87445 copies the `SCENARIOS` of `bench/keys.rb` line 104 and omits `lh-float`, `lh-winbar`, and `n` (`file-finder` added `finder` to it). Periodic quality at cd87445, refreshed at 8d8832f; folded into `docs-index`.
 - Why it matters: `make bench` never runs area 13's float benchmark or `n`, so a regression there goes unmeasured.
 - Fix outline: take the names from the bench binary or one shared list, with a case that every scenario runs. Queued in the backlog items worth a change.
 
@@ -1850,11 +1850,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: after 20 tries the loop falls through, so a slow runner surfaces as an unrelated supersede failure.
 - Fix outline: fail with a message naming the stage when `stage.slow` never reads `running`. Queued in `check-runner-safety`.
 
-## The gateway cancels a request in four copies
+## The gateway cancels a request in five copies
 
-- Where: four copies in `carat/adapters/json_rpc_language_gateway.rb`: `cancel_hover` (line 663 at 78078ad), `cancel`, `cancel_resolve`, and `cancel_symbols` (line 795 at df4654c), beside the shared private `cancel_request(language, id)` (line 867 at df4654c) that `parameter-info` added for `cancel_signature`; none of the four calls it yet. Quality advisory in `quick-docs` and in `breadcrumbs`, raised again at 38628bb and df4654c (periodic quality). Queued in `signature-tidy`.
-- Why it matters: each looks up the server, sends `$/cancelRequest`, and zeroes the id, so a fix to one (a crashed server, a stale id) can miss the other three.
-- Fix outline: call the existing `cancel_request(language, id)` from the four (`cancel_request(ask.language, ask.sent_id)` then clearing `sent_id` in `cancel_symbols`), with the hover, completion, and resolve cancellation rows in `test/adapters_hover.rb` and `test/adapters_server_completions.rb` unchanged.
+- Where: five copies in `carat/adapters/json_rpc_language_gateway.rb`: `cancel_hover` (line 663 at 78078ad), `cancel`, `cancel_resolve`, `cancel_symbols` (line 795 at df4654c), and the definition request's cancel, plus the near copies `send_definition` and `forget_definition` (lines 692, 703, and 732 at 8d8832f), beside the shared private `cancel_request(language, id)` (line 867 at df4654c) that `parameter-info` added for `cancel_signature`; none of them calls it yet. Quality advisory in `quick-docs` and in `breadcrumbs`, raised again at 38628bb and df4654c (periodic quality) and blocking in the periodic quality review at 8d8832f. Queued in `signature-tidy`.
+- Why it matters: each looks up the server, sends `$/cancelRequest`, and zeroes the id, so a fix to one (a crashed server, a stale id) can miss the others.
+- Fix outline: call the existing `cancel_request(language, id)` from the five (`cancel_request(ask.language, ask.sent_id)` then clearing `sent_id` in `cancel_symbols`), with the hover, completion, and resolve cancellation rows in `test/adapters_hover.rb` and `test/adapters_server_completions.rb` unchanged.
 
 ## The documentation floats copy the widest-row loop
 
@@ -1907,7 +1907,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 ## A key resolved by timeoutlen runs no follow tail
 
 - Where: `HandleKey#timeout` in `carat/use_cases/handle_key.rb` (line 122 at 41297d6, line 154 at b76b722) and the comment of `carat/use_cases/discovery/hide_key_hints.rb` line 7. Quality advisories in `quick-docs` and `discoverability`, periodic quality at c1b3a12, b76b722, and 3895e21, which merged the two entries. Queue item `discoverability-tidy`.
-- Why it matters: `call` ends with an after-key tail (`ShowCompletion`, `FollowHover`, `FollowSignature`, `FollowPalette`, `HideKeyHints`, the plugin observe, `ArrangeView`) that `timeout` copies only in part, so an action resolved by `timeoutlen` leaves the documentation float open away from the cursor until the next key, `palette.open` bound beside a longer user binding (`<leader>p` with `<leader>pf`) opens the `>` prompt with no list until the next key, and the `HideKeyHints` comment says a timeout closes the hints, which it never does.
+- Why it matters: `call` ends with an after-key tail (`ShowCompletion`, `FollowHover`, `FollowDefinition`, `FollowSignature`, `FollowPalette`, `HideKeyHints`, the plugin observe, `ArrangeView`) that `timeout` copies only in part (it skips `FollowDefinition`, `handle_key.rb` line 181 at 8d8832f), so an action resolved by `timeoutlen` leaves the documentation float open away from the cursor until the next key, `palette.open` bound beside a longer user binding (`<leader>p` with `<leader>pf`) opens the `>` prompt with no list until the next key, and the `HideKeyHints` comment says a timeout closes the hints, which it never does.
 - Fix outline: one private follow step that both `call` and `timeout` end with, a row in `test/adapters_hover.rb` that moves the cursor through a timed-out prefix, a row in `test/editor_palette.rb` that opens the palette through a timed-out user binding, and a corrected `HideKeyHints` comment.
 
 ## The hover placement counts rows with bare numbers
@@ -2086,7 +2086,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The signature gateway copies the hover forget and position steps
 
-- Where: `carat/adapters/json_rpc_language_gateway.rb` line 743 (forget_signature against forget_hover at 646) and line 780 (send_signature's position params against send_hover's at 676), at c1b3a12. Queued in `signature-tidy`, beside the entry The gateway cancels a request in four copies. Raised again at 38628bb (periodic quality).
+- Where: `carat/adapters/json_rpc_language_gateway.rb` line 743 (forget_signature against forget_hover at 646) and line 780 (send_signature's position params against send_hover's at 676), at c1b3a12. Queued in `signature-tidy`, beside the entry The gateway cancels a request in five copies. Raised again at 38628bb (periodic quality).
 - Why it matters: two copies of the same steps drift when one request's lifecycle changes.
 - Fix outline: one private position-params step for both sends and one forget step for both requests.
 
@@ -3161,7 +3161,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Definition target paths keep decoded control bytes
 
-- Where: `carat/adapters/json_rpc_language_gateway.rb` line 789 at fafe59c, `path_of`, which refuses a raw or escaped NUL but keeps a decoded `%0A` or `%1B`. Security Low (5) and quality advisory in `definitions`.
+- Where: `carat/adapters/json_rpc_language_gateway.rb` line 789 at fafe59c, `path_of`, which refuses a raw or escaped NUL but keeps a decoded `%0A` or `%1B`. Security Low (5) and quality advisory in `definitions`. Owned by queue item 13, `bidi-controls`.
 - Why it matters: a hostile language server can put a newline or ESC into a target path, which reaches the read-only and E484 message text (split into extra message lines by `TextLines.split`), the read-only view's title, the float title, and a pick-list buffer line that then holds a newline, breaking the one-line invariant. `Frame#put_from` replaces every control with U+FFFD, so no escape sequence reaches the terminal.
 - Fix outline: in `path_of`, return "" when a decoded byte is below 0x20 or is 0x7F, as a NUL is refused (or pass the path through `Domain::ControlText.strip` before it is stored), with rows in the escapes test of `test/adapters_definitions.rb` for a URI holding `%0A` and `%1B`.
 
@@ -3236,3 +3236,93 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/codebase-map.md` line 523 at fafe59c, the `path_info.rb` entry, which does not name `refusal` and `BUFFER_LIMIT`, and line 612, the `json_rpc_language_gateway.rb` entry, which does not name `textDocument/definition`. Quality advisory in `definitions`.
 - Why it matters: the map is where a change starts; a missing name sends the next reader searching.
 - Fix outline: add both to their entries.
+
+## A key binding hard-coded in Ruby passes make lint
+
+- Where: `test/lint.rb`; the case was `PICK_BINDINGS` in `carat/use_cases/definitions/show_definition.rb` at ff0a0c7. Retrospective of `definitions`, queued in `implement-contracts-c`.
+- Why it matters: CLAUDE.md keeps bindings in `config/default.caratrc`, yet the literal passed three quality reviews (dfadb40, 73baf73, 25d43d8) and cost rework round 3 of 4.
+- Fix outline: fail `make lint` on a constant or literal under `carat/` pairing key notation with an action name outside `config/default.caratrc` and `carat/domain/default_config.rb`, with a test row.
+
+## A resume of finished tasks reruns plan and scouts and grants a fourth round
+
+- Where: `.claude/workflows/deliver-change.js`, the resume and round limit. Retrospective, `extra-round`, and `overrun` notes of `definitions`, queued in `run-resume`.
+- Why it matters: `definitions` resumed at 73baf73 with 6 of 6 tasks done, spent 117,076 of 474,458 output tokens (24.7%) on plan and scouts, and was granted round 4, which took output from 389,765 to 436,791, past the large budget of 416,666.
+- Fix outline: decide which phases a resume repeats (a done, unchanged branch starts at check) and count rounds across starts, stopping at 3, with cases.
+
+## A failed backup is retried by every start and never recorded
+
+- Where: `tools/run_state.sh backup` and the contributor's start. Retrospective of `definitions`, queued in `backup-records`.
+- Why it matters: four contributor starts made 11 attempts, all refused by the remote, with no run-state key, leaving 10 or more commits local only until the package push.
+- Fix outline: write a run-state key on a failed backup, make at most one attempt per later start when it is set, and name the unbacked commits in the report, with a case.
+
+## The docs and scenarios gates misjudge their inputs
+
+- Where: `tools/gates.sh` line 250 (`gate_docs` defines `stays` inside its body), line 238 against 262 (two overlapping CLAUDE.md checks, one excused cause printing two FAIL lines), line 288 (`gate_scenarios` accepts a name found anywhere under `test/` or in `tools/tools_test.sh` fixtures, or as a substring). Periodic quality at 8d8832f, queued in `content-gate-gaps`.
+- Why it matters: a scenario with no proving test passes when a fixture holds its words, and a proposal's excuse line is refused by the older check.
+- Fix outline: define helpers at top level; fold the two CLAUDE.md checks into one; match a scenario only as a whole label or comment outside the fixtures, with cases.
+
+## The CI checkout keeps the job token for every later step
+
+- Where: `.github/workflows/ci.yml` line 36, `actions/checkout`. Periodic security Low (4) at 8d8832f, queued in `ci-hardening`.
+- Why it matters: every later step runs the pull request's own Makefile and scripts with the read-only token in `.git/config`.
+- Fix outline: set `persist-credentials: false`, since `tools/ci_scope.sh` uses the token through `gh`.
+
+## The contributor's pull request tools have no guard hook
+
+- Where: `.claude/agents/contributor.md` line 4, the GitHub create and update pull request tools. Periodic security Low (5) at 8d8832f, queued in `guard-lows`.
+- Why it matters: a misled contributor can retarget a pull request's base, close or reopen one, or write a body the pr-body gate sees only at the merge.
+- Fix outline: a PreToolUse matcher for those tools running main's guard, admitting only base main, the run state's branch as head, and a body passing pr-body, with a `tools/tools_test.sh` case.
+
+## gd misses its own file under a relative or dotted name
+
+- Where: `carat/use_cases/definitions/visit_target.rb` line 166, `absolute`, a copy of `PluginApi::Paths.absolute` without normalizing. Periodic quality at 8d8832f, queued in `definitions-tidy`.
+- Why it matters: a buffer named `./a.rb` or `lib/../a.rb` never matches its own target, so a same-file `gd` over a modified buffer is refused with E37 and an unmodified one opens a second view.
+- Fix outline: normalize both paths through one shared helper, with rows for both spellings.
+
+## The pick keymap binds a line refused as an unknown action
+
+- Where: `carat/domain/keymap.rb` line 100, `pick_from`, and `test/domain_keymap.rb` line 194. Periodic quality at 8d8832f, queued in `definitions-tidy`.
+- Why it matters: `keymap.pick zq foo.bar` is reported as unknown yet bound, answering Not implemented, against the test's comment.
+- Fix outline: bind only the pick lines the action check accepted, and assert `zq` is unbound in the pick keymap.
+
+## The definition column walk copies the gateway's UTF-16 walk
+
+- Where: `carat/use_cases/definitions/visit_target.rb` line 196, `column_of`, against `JsonRpcLanguageGateway#utf16_offset` and `#utf16_length` (lines 1111 and 1157); the cursor-float widest-row loop in `show_completion_docs.rb` line 100 and `show_key_hints.rb` line 128 beside the entry "Definition float and row clamp copy other use cases". Periodic quality at 8d8832f, queued in `definitions-tidy`.
+- Why it matters: two UTF-16 walks drift apart on multibyte text; the float loop has four copies.
+- Fix outline: one domain UTF-16 helper used by both, with multibyte rows; one owner for the float sizing.
+
+## Docs drift found by the periodic review at 8d8832f
+
+- Where: `docs/codebase-map.md` line 140 (InputController omits ShowDefinition), 150 (HandleKey omits FollowDefinition), 117 (EditorState lists `show` twice), 520 (area 15 says plugin API 2.3, `carat/plugin_api.rb` line 12 is 2.4), 523 and 624 (PathInfo omits `refusal` and `BUFFER_LIMIT`, DefinitionRequest omits `clear_targets`, `target_count`, `LIMIT`, `OWNER`), the buffer.rb line (omits `display_name`, `path_text`, `byte_count`, `signs?`, `transaction_size`; `Buffer#blanks` at `carat/domain/buffer.rb` line 457 public but used only inside); `docs/architecture.md` line 167 (no OpenCompletionPopup), 178 (no OpenFloat, CloseFloat, ListBuffers, SwitchBuffer, DeleteBuffer); `README.md` line 9 and CLAUDE.md Stack name no `node`, which `make doctor` (Makefile line 173) needs for `tools/tools_test.sh` line 2030. Queued in `docs-index`.
+- Why it matters: the map and the architecture are where a change starts, and a clone following the README fails its first `make check` stage.
+- Fix outline: add the names, drop the duplicate, write 2.4, move `blanks` below `private`, and name `node` or say why it is outside the prerequisites.
+
+## A failed spec preview is deleted by the next change's preview
+
+- Where: `tools/spec_validate.sh` line 129. Periodic quality at 8d8832f, queued in `run-budgets-tidy`.
+- Why it matters: the header promises a failed preview is kept for reading, but each active change resets it.
+- Fix outline: one preview directory per change, or stop resetting after a failure, with a case.
+
+## Search copies its prompt split and its E486 message
+
+- Where: `carat/use_cases/search/find_match.rb` line 68 against `preview_search.rb` line 106 (the `pattern_end` split on bytes 47 or 63), and line 163 against `substitute_lines.rb` line 143 (the E486 literal). Periodic quality at 8d8832f, queued in `search-tidy`.
+- Why it matters: a fix to one split or message misses its copy.
+- Fix outline: one domain helper for each, used by both callers.
+
+## Domain motion and text-object structure
+
+- Where: `carat/domain/walker.rb` line 63 calls `Motions.code_class` while `motions.rb` requires `walker.rb` (a cycle held by load order), and line 11's comment omits the bracket objects; `carat/domain/text_objects.rb` line 252 builds a Walker with no require, line 86 and `carat/domain/runs.rb` name a local `cls`; `carat/domain/motions.rb` line 197 and 228 repeat an edge refusal and row clamp, line 579 a dead store; `carat/use_cases/delete_lines.rb` line 28 copies `Operate#delete`'s linewise placement (`operate.rb` line 142, also `global_command.rb` line 150); `carat/domain/operators.rb` lines 172 and 251 copy the effective shift width rule. Periodic quality at 8d8832f, queued in item 37.
+- Why it matters: the cycle breaks under a changed require order, and each copied rule drifts.
+- Fix outline: move the character classes into one module both require; rename `cls` to `char_class`; one row-clamp helper; an `Options#shift_width` beside `tab_width`.
+
+## Plugin host requests answer shared strings and stale comments
+
+- Where: `carat/use_cases/plugins/ui_requests.rb` line 78 (`icon` answers the shared glyph) and 107 (`run_ex` answers the message uncopied); `window_requests.rb` line 90 (`open_scratch` keeps the plugin's title string); unused requires in `carat/adapters/status_bar.rb` line 1 and `plugin_syntax.rb` line 1, `plugin_events.rb` line 6 requires `buffer_feed` for `BufferNotice`; stale comments at `carat/adapters/sgr_table.rb` line 8, `plugin_syntax.rb` line 69, `ui_requests.rb` line 81; `plugin_registry.rb` line 175 repeats `cause`; `plugin_events.rb` line 142 queues a resize no plugin wants. Periodic quality at 8d8832f, queued in item 37.
+- Why it matters: CLAUDE.md copies strings both ways at the plugin API, so a plugin appending to an answer changes the editor's icons or a buffer title.
+- Fix outline: copy each answered and stored string, with rows; fix the requires and comments; return early when no plugin wants the event.
+
+## Signature help compares bare key codes
+
+- Where: `carat/use_cases/handle_key.rb` line 364, the literals 40 and 44 for `(` and `,`. Periodic quality at 8d8832f, queued in `signature-tidy`.
+- Why it matters: bare codes hide which characters trigger signature help.
+- Fix outline: name them as key constants or compare the character.

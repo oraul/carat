@@ -66,7 +66,7 @@ if [ "${1:-}" = "--budget" ]; then
 fi
 
 if [ $# -eq 0 ]; then
-  set -- lh j insert w ddp lh-utf8 j-utf8 long-ascii long-utf8 lh-explorer j-explorer undo undo-line r dot-r dd dot-dd ciw dot-ciw memory memory-10k lh-ruby j-ruby insert-ruby heredoc-ruby string-ruby quote-ruby open-plain open-ruby G-ruby
+  set -- lh j insert w ddp lh-utf8 j-utf8 long-ascii long-utf8 lh-explorer j-explorer undo undo-line r dot-r dd dot-dd ciw dot-ciw memory memory-10k lh-ruby j-ruby insert-ruby heredoc-ruby string-ruby quote-ruby open-plain open-ruby G-ruby finder
 fi
 for scenario in "$@"; do
   case "$scenario" in

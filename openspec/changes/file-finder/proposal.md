@@ -32,7 +32,7 @@ Assumptions: the finder has its own `plugin.finder.ignore` option, defaulting to
 ## Impact
 
 - New: `carat/plugins/finder/plugin.rb`, `carat/plugins/finder/matcher.rb`, `carat/use_cases/files/list_tree.rb`, `test/editor_finder.rb`, `test/plugins_finder_matcher.rb`.
-- Changed: `carat/plugin_api.rb` (2.5), `PluginLink`, `FileRequests`, `UiRequests`, `PluginRouter`, `PluginHost`, `Domain::PluginUi`, `HandleKey` (the prompt keymap and the change after each key), `FileHandler` (no `file.find`), `config/plugins.caratrc` and the generated registry, `config/default.caratrc` and its mirror, `bench/keys.rb`, `test/editor_leader.rb`, `test/editor_floats.rb`, `test/use_cases_plugin_files.rb`, `test/runner/run_all.rb`.
+- Changed: `carat/plugin_api.rb` (2.5), `PluginLink`, `FileRequests`, `UiRequests`, `PluginRouter`, `PluginHost`, `Domain::PluginUi`, `HandleKey` (the prompt keymap and the change after each key), `FileHandler` (no `file.find`), `config/plugins.caratrc` and the generated registry, `config/default.caratrc` and its mirror, `bench/keys.rb` and `bench/run.sh`, `test/editor_leader.rb`, `test/editor_floats.rb`, `test/use_cases_plugin_files.rb`, `test/runner/run_all.rb`.
 - Docs: `docs/plugins.md`, `docs/actions.md`, `docs/compatibility.md`, `docs/codebase-map.md`, `docs/backlog.md` (the plan notes).
 - README.md: changed, Space f f and Ctrl-P open the finder.
 - docs/architecture.md: changed, roadmap item 12 is delivered and section 9 lists the 2.5 requests.
