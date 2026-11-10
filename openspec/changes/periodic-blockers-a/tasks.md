@@ -3,6 +3,7 @@
 ## 1. gd finds its own file under any spelling
 
 - [x] 1.1 `carat/use_cases/definitions/visit_target.rb`: `absolute` answers `PluginApi::Paths.absolute(@files.cwd, path)`, and the target is compared through it in `jump` and `listed_for`. Tested by "A target in the current file named with dot segments moves the cursor" in `test/adapters_definitions.rb`, both spellings, modified and unmodified.
+- [x] 1.2 `carat/use_cases/definitions/visit_target.rb`: `listed_for` finds a listed buffer named `./b.rb` for the target `/project/b.rb`, so gd shows it through `open_path` and a peek reads its text. Tested by "A target in a listed buffer named with dot segments shows that buffer" in `test/adapters_definitions.rb`, the buffer modified and hidden.
 
 ## 2. One owner per gateway lifecycle step
 
@@ -12,4 +13,4 @@
 
 ## 3. Records
 
-- [x] 3.1 `docs/codebase-map.md`: the gateway entry names the shared steps; `docs/backlog.md`: the four entries removed. Checked by `make gates` and `make docs-lint`.
+- [x] 3.1 `docs/codebase-map.md`: the gateway entry names the shared steps; `docs/backlog.md`: three entries removed and the definition ask entry narrowed to the two sends. Checked by `make gates` and `make docs-lint`.

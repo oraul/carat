@@ -272,6 +272,20 @@ module AdaptersDefinitionsTest
       end
     end
 
+    # A listed buffer named with dot segments is the target's file: gd
+    # shows it with its unsaved text and a peek reads it, not the disk.
+    r = defining
+    home = r.assembly.state.buffer.id
+    r.type(":e ./b.rb<CR>")
+    r.type("x")
+    r.type(":b! #{home}<CR>")
+    listed = r.assembly.buffers.count
+    asked(r, "<Space>dd", location("/project/b.rb", 0, 0))
+    peeked = float_lines(r, r.assembly.definition.float_id)
+    r.type("<Esc>")
+    asked(r, "gd", location("/project/b.rb", 1, 4))
+    t.assert_equal([[" b", "def other", "  2", "end"], "./b.rb 1:4", " b", listed, 2], [peeked, r.where, r.assembly.state.buffer.line(0), r.assembly.buffers.count, listed], "A target in a listed buffer named with dot segments shows that buffer")
+
     # Stale answers.
     r = defining
     r.type("gd")
