@@ -17,4 +17,4 @@
 
 - [x] 4.1 `docs/compatibility.md` rows (`<C-o>`, `<C-i>`, `option.jumptab`, `:bfirst`, `:blast`), `README.md`'s jump sentence, `docs/architecture.md`'s Options list with prose trimmed, `docs/codebase-map.md` lines and the new test
 - [x] 4.2 `docs/backlog.md`: the four fixed entries removed and the owners moved (the planner's new entries are the package step's)
-- [ ] 4.3 `make gates`, `make spec-validate`, `make docs-lint`, and the targeted tests pass
+- [x] 4.3 `make gates`, `make spec-validate`, `make docs-lint`, and the targeted tests pass
