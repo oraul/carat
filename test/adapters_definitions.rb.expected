@@ -33,15 +33,23 @@ ok   Esc closes the pick list
 ok   Enter in a peek's pick list peeks at the row's target
 ok   The pick list's keys come from the configuration
 ok   A target outside the project opens read-only
-ok   Ctrl-O leaves the read-only view
+ok   Writing a read-only buffer is refused, modified, to its path or another
+ok   Ctrl-O leaves the read-only buffer
 ok   a target linked out of the project opens read-only
 ok   A target that is not a regular file is refused
 ok   a directory outside the project is refused
 ok   escapes are decoded and relative, NUL, and negative targets are dropped
+ok   gd to another project file shows its tab, selected
+ok   gd outside the project shows the target's tab, selected
+ok   gd to a project file linked out of the project shows its tab, selected
+ok   gd to an outside file already listed shows that buffer and its tab
+ok   A read-only buffer in the listing
+ok   Filtered by the read-only flag
+ok   The read-only target's tab selects and closes like the others
 ok   Ctrl-O past the oldest entry does nothing in the editor
 ok   Ctrl-O refuses another buffer over a modified one
 ok   A refused Ctrl-O leaves the jump list as it was
 ok   Ctrl-I after a refused Ctrl-O returns to the start
 ok   Ctrl-O drops an entry whose buffer is gone and stays
 ok   Ctrl-O clamps the column to a line shortened since, in code points
-adapters_definitions: 46 passed, 0 failed
+adapters_definitions: 54 passed, 0 failed

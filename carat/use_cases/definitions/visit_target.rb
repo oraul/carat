@@ -22,9 +22,11 @@ module Carat
     # index. A jump moves the cursor in the current buffer when the target
     # is its file; another file is refused with E37 while the current file
     # buffer is modified, opens through OpenFile when it lies inside the
-    # working directory with every link resolved, and otherwise opens as a
-    # read-only scratch view titled with its path, never written. The
-    # position left joins the jump list once the target shows. A peek
+    # working directory with every link resolved, and otherwise shows the
+    # listed buffer of the file or opens it as a listed read-only file
+    # buffer named as :e would name it, which has its tab like any file
+    # buffer and is never written (SaveFile). The position left joins the
+    # jump list once the target shows. A peek
     # shows at most PEEK_ROWS lines from the target line in a float at the
     # cursor, read from a listed buffer of the file or from the file. Every
     # read refuses what OpenFile refuses (PathInfo#refusal): a directory, a
@@ -75,7 +77,7 @@ module Carat
         from_row = window.cursor.row
         from_col = window.cursor.col
         outcome = Outcome.none
-        unless absolute(current.path_text) == absolute(path) || (current.scratch? && current.owner == Domain::DefinitionRequest::OWNER && current.title == path)
+        unless absolute(current.path_text) == absolute(path)
           return Outcome.failure(Domain::Messages::E37) if current.modified? && !current.scratch?
           outcome = inside?(path) ? @open_file.call(state, open_path(path)) : view(state, path)
           return outcome unless outcome.ok
@@ -85,25 +87,26 @@ module Carat
         outcome
       end
 
-      # Shows the read-only view of a file outside the project, reused
-      # while it is listed.
+      # Shows a file outside the project: its listed buffer, or a new
+      # read-only file buffer of it.
       #: (Domain::EditorState, String) -> Outcome
       def view(state, path)
-        listed = @buffers.scratch_for(Domain::DefinitionRequest::OWNER, path)
+        listed = listed_for(path)
         unless listed.nil?
           @buffers.load(listed)
-          return Outcome.success("\"#{path}\" [readonly]")
+          shown = "\"#{listed.path_text}\""
+          shown += " [readonly]" if listed.readonly
+          return Outcome.success(shown)
         end
         problem = @probe_path.call(path).refusal(path, Domain::PathInfo::BUFFER_LIMIT)
         return Outcome.failure(problem) unless problem.empty?
         text = read(path, Domain::PathInfo::BUFFER_LIMIT)
         return Outcome.failure("E484: Can't open file #{path}") if text.nil?
-        buffer = Domain::Buffer.from_text(text, nil)
-        buffer.owner = Domain::DefinitionRequest::OWNER
-        buffer.title = path
-        buffer.assign_filetype(Domain::Filetype.detect(path, buffer.line(0)))
+        name = Domain::PathPolicy.shown(@files.cwd, path)
+        buffer = Domain::Buffer.from_text(text, name)
+        buffer.readonly = true
         @buffers.load(buffer)
-        Outcome.success("\"#{path}\" [readonly] #{buffer.line_count}L, #{text.bytesize}B")
+        Outcome.success("\"#{name}\" [readonly] #{buffer.line_count}L, #{text.bytesize}B")
       end
 
       #: (Domain::EditorState, String, Integer) -> Outcome
@@ -132,8 +135,7 @@ module Carat
         Outcome.none
       end
 
-      # A listed buffer showing the file, its read-only view included, or
-      # nil.
+      # The listed file buffer of the file, read-only or not, or nil.
       #: (String) -> Domain::Buffer?
       def listed_for(path)
         i = 0
@@ -142,7 +144,7 @@ module Carat
           return candidate if !candidate.scratch? && absolute(candidate.path_text) == absolute(path)
           i += 1
         end
-        @buffers.scratch_for(Domain::DefinitionRequest::OWNER, path)
+        nil
       end
 
       # The path OpenFile is given: a listed buffer's own, so it is shown
@@ -151,7 +153,7 @@ module Carat
       #: (String) -> String
       def open_path(path)
         listed = listed_for(path)
-        return listed.path_text if !listed.nil? && !listed.scratch?
+        return listed.path_text unless listed.nil?
         Domain::PathPolicy.shown(@files.cwd, path)
       end
 

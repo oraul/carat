@@ -8,7 +8,8 @@ module Carat
   module UseCases
     # Writes a buffer, which need not be the current one, to its path, or
     # to the given path, with Vim's messages: the written message, E32,
-    # E212, and E382 for a scratch buffer, which is never written. An
+    # E212, E382 for a scratch buffer, and E45 for a read-only buffer,
+    # neither ever written, whatever the path or a bang. An
     # unnamed buffer takes the path it is written to, and the buffer is
     # unmodified after a write to its own path. A write is reported to the
     # plugins as a buffer_save event and to the language services, which
@@ -16,7 +17,8 @@ module Carat
     # writes every modified one this way.
     class SaveFile
       E382 = "E382: Cannot write, 'buftype' option is set"
-      private_constant :E382
+      E45 = "E45: 'readonly' option is set"
+      private_constant :E382, :E45
 
       attr_reader :files #: Ports::FilePort
       attr_reader :plugins #: PluginHost
@@ -34,6 +36,7 @@ module Carat
       #: (Domain::Buffer, String) -> Outcome
       def call(buffer, path_arg)
         return Outcome.failure(E382) if buffer.scratch?
+        return Outcome.failure(E45) if buffer.readonly
         own = buffer.path
         path = path_arg.empty? ? own : path_arg
         return Outcome.failure("E32: No file name") if path.nil?

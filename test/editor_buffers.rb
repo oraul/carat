@@ -36,6 +36,9 @@ module EditorBuffersTest
     t = Carat::Testing.new("editor_buffers")
 
     # :ls and its spellings, flags, and filters: rows are [label, keys, message].
+    # Scenarios "Hidden and modified buffers" (modified buffers carry +)
+    # and "Filtered by a flag" (h keeps the hidden buffers); the = flag
+    # and filter are in adapters_definitions, over a gd target.
     t.table([
       ["one buffer", ":ls<CR>", A1],
       [":buffers lists the same", ":buffers<CR>", A1],
@@ -59,6 +62,7 @@ module EditorBuffersTest
     end
 
     # Scratch buffers show only with the bang or u.
+    # Scenario "Scratch buffers with the bang".
     h = session("")
     scratch = Carat::Domain::Buffer.new(lines: ["l"], path: nil, line_ending: "\n")
     scratch.owner = "hello"
