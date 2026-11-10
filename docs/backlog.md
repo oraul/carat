@@ -3982,3 +3982,27 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/use_cases/buffers/switch_buffer.rb:37`, against `docs/compatibility.md:292`. Quality advisory of `jump-list`.
 - Why it matters: the compatibility rows promise E85 for a list without file buffers, but no test runs that branch, so a regression there goes unseen.
 - Fix outline: a row in `test/editor_buffers.rb` running `:bfirst` and `:blast` with only a scratch buffer, and with no file buffer, listed. Queue item `buffer-list-tidy`.
+
+## Linked worktrees run their own untracked .githooks
+
+- Where: `tools/agent_guard.sh:877`, which allows the relative `core.hooksPath` `.githooks`, and `gate_origin` in `tools/gates.sh` around lines 147 to 149, which check only the project's `.githooks`. Security Medium (7) of `url-email-guard`.
+- Why it matters: with a relative hooks path every linked worktree `tmp/.NAME` uses its own `.githooks/` folder, so an untracked `post-checkout` or `reference-transaction` hook planted in an ignored worktree (`tmp/.review-security`, `tmp/.review-quality-N`, `tmp/.base`) by branch code or a misled contributor runs on the read agents' `git -C tmp/.NAME checkout -q --detach origin/main`, breaking the guard's rule that no git command an agent runs starts a command the branch chose. A planted `wt/.githooks/post-checkout` was seen to run.
+- Fix outline: one of: set and require an absolute `core.hooksPath` (the project's real path plus `/.githooks`) in `make hooks`, the guard, and `gate_origin`, so worktrees use the checked folder; or check `.githooks` in every linked worktree from `git worktree list` in the guard and the origin gate; or have the guard require `-c core.hooksPath=/dev/null` on checkout, fetch, and merge inside a worktree and update the benchmark and reviewer agent steps. Queue item `guard-lows`.
+
+## The content gates drop the scanner's exit status
+
+- Where: `report()` in `tools/gates.sh:198` (also 209 and 503) and `tools/docs_lint.sh:79`. Quality advisory of `url-email-guard`.
+- Why it matters: `report()` reads only the scanner's output, so a scanner error (exit 2 from `mktemp`, `awk`, or a missing file) leaves the content, pr-body, and docs content checks printing ok, while the hooks and `tools/pr_scan.sh` do check the status.
+- Fix outline: keep the scanner's status (run it into a variable, not through `sort` in a pipeline) and call `bad()` when it is 2, with a `tools/tools_test.sh` case. Queue item `content-gate-gaps`.
+
+## commit-msg scans the editor template's identity comments
+
+- Where: `.githooks/commit-msg:6`. Quality advisory of `url-email-guard`.
+- Why it matters: git runs `commit-msg` before it strips the editor template's comments, so a commit made in the editor whose template carries a `# Author:` or `# Committer:` line with an address (author not the committer, or an implicit identity) is refused for an email the commit will not hold.
+- Fix outline: also drop the template's `# Author:` and `# Committer:` lines (or follow git's cleanup mode) before scanning, with a hooks case. Queue item `content-gate-gaps`.
+
+## The content gate's header comment has a doubled close
+
+- Where: `tools/gates.sh:13`. Quality advisory of `url-email-guard`.
+- Why it matters: the header reads `a literal password or token); (tools/scan_text.sh); no commit adds`, a doubled close from the inserted line, which misreads.
+- Fix outline: write `a literal password or token), through tools/scan_text.sh; no commit adds`. Queue item: backlog batches (comment wraps).
