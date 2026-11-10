@@ -126,7 +126,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: the pinned Spinel (`SPINEL_REF` in the `Makefile`), new between 001419ff and f34005bf: the version entries of `src/call_plan.c` (#9898) and the constant readers of `case`/`when`; worked around in `carat/use_cases/plugins/plugin_entry.rb` (`attach`), `carat/domain/mode.rb` (`visual_kind`), `Host#icon` and `Host#stat` in `carat/plugin_api.rb`, and `FilePort#stat` in `carat/ports/file_port.rb`.
 - Why it matters: without the workarounds the release build does not compile (an entry's parameter typed from the argument's class, not the dispatched signature), charwise visual selections read as none (a `when` on a constant whose name another scope defines with another type folds to false), and `make diagnose` reports unresolved readers (an entry's return joins a raising base's `nil`); `docs/spinel-notes.md`, Known miscompilations, has the mechanism.
-- Fix outline: report each upstream with its reduced probe (the `when` probe: two modules defining `VISUAL` as a Symbol and an Integer, a `case` on the Symbol), then drop the workarounds in the bump that carries the fix. The `when` defect bisects to Spinel ade8cfe2; the versioned-entry defects have no reduced probe yet (a one-file probe of the plugin shape compiles at both pins), so the report names the carat build that shows them.
+- Fix outline: report each upstream with its reduced probe (the `when` probe: two modules defining `VISUAL` as a Symbol and an Integer, a `case` on the Symbol), then drop the workarounds in the bump that carries the fix. The `when` defect bisects to Spinel ade8cfe2; the versioned-entry defects have no reduced probe yet (a one-file probe of the plugin shape compiles at both pins), so the report names the carat build that shows them. `PluginEntry#attach(host)` (`carat/use_cases/plugins/plugin_entry.rb:51`) is a one-value setter not named `link=`, kept only because the Struct writer does not upcast (quality advisory at spinel-bump): the bump that clears this entry drops it for `self.link=`.
 
 ## Spinel loses the types of an array destructured inside a method
 
@@ -162,7 +162,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `tools/new.sh` and its tests in `tools/tools_test.sh`, which check the files each generator writes and the lines it inserts, not that they compile.
 - Why it matters: a convention that changes (a base class's constructor, an anchor's neighbor, a lint rule) could leave a generator writing code that no longer compiles or lints, and nothing would say so until an author ran it. The `authoring-kit` change compiled, linted, and tested the output of all five generators by hand in a scratch worktree (59 tests, `spinel-doctor` clean).
-- Fix outline: a `make generators-check` target that runs every generator in a temporary worktree, then `make gen-config`, `make lint`, `make test-build`, and `make test-run` there, run by the checker when `tools/new.sh`, `carat.rb`, `EditorAssembly`, the handler bases, or `test/lint.rb` change rather than on every check, since it costs a full analysis of the library.
+- Fix outline: a `make generators-check` target that runs every generator in a temporary worktree, then `make gen-config`, `make lint`, `make test-build`, and `make test-run` there, run by the checker when `tools/new.sh`, `carat.rb`, `EditorAssembly`, the handler bases, or `test/lint.rb` change rather than on every check, since it costs a full analysis of the library. The same holds for `tools/spinel/gen_respond_to_tables.rb`, the Ruby 4 port of Spinel's header generator (quality advisory at spinel-bump): no check compiles it, so a later pin that breaks it is found only at the next bump; compile it in `make tools-test` or in the same target.
 
 ## CI actions are pinned by tag
 
@@ -3542,3 +3542,27 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/backlog.md:209` and 2742 (the `Options#apply` duplication), 899 and 2111 (copies of `EditorState#clamp_col`). Periodic quality at ce6abdb; queue item `backlog-compaction`.
 - Why it matters: one entry per finding; duplicates grow the file every planner and reviewer reads.
 - Fix outline: fold each pair into one entry listing every location.
+
+## No test pins the port bases that answer failure values
+
+- Where: `Host#stat` (`carat/plugin_api.rb:622`), `Host#icon` (`carat/plugin_api.rb:630`), and `FilePort#stat` (`carat/ports/file_port.rb:45`), changed by `spinel-bump` from raising to answering a missing or failed value as the f34005bf workaround. Quality advisory at spinel-bump.
+- Why it matters: nothing asserts the new base answers, so the workaround is invisible to a reader of the tests and could be reverted, or kept past the fix, by accident.
+- Fix outline: add an assertion that a bare base answers missing or failed (or a lint exemption list naming the three methods), removed deliberately in the bump that clears the f34005bf entry.
+
+## The overridden-method RBS form is used for Regexp and MatchData methods
+
+- Where: `carat/domain/search.rb:106` and `carat/domain/replacement.rb:87,152`, which use `# @rbs` parameter lines with the return in prose on methods that override nothing, because `MatchData` cannot be pinned; `CLAUDE.md` (inline RBS) and `docs/spinel-notes.md:39` reserve that form for overrides. Quality advisory at spinel-bump.
+- Why it matters: the documented rule and the code disagree, so the next reader either "fixes" the signature into one Spinel cannot analyze or copies the form where it is not needed.
+- Fix outline: extend `docs/spinel-notes.md` line 22 or 39 to say a method taking or returning `Regexp` or `MatchData` gets parameter lines and its return in prose.
+
+## gen_respond_to_tables.rb repeats work and types its rows loosely
+
+- Where: `tools/spinel/gen_respond_to_tables.rb:95` (three `if`s map array names to arrays inside the family loop), line 101 (a second `uniq` after `family_names` already dedups), and lines 111, 138, and 156 (rows typed `Array[untyped]` where `Array[Row]` holds). Quality advisory at spinel-bump.
+- Why it matters: the port is read at every Spinel bump; the repeated lookups and loose types make it harder to compare with upstream and hide a wrong row from the analysis.
+- Fix outline: build one name-to-array hash before the loop, drop the second `uniq`, and type the rows `Array[Row]`.
+
+## A blank line splits the Known miscompilations list in the Spinel notes
+
+- Where: `docs/spinel-notes.md:482`, before the two items `spinel-bump` added for f34005bf. Quality advisory at spinel-bump.
+- Why it matters: Markdown renders the two new items as a separate list, so they read as apart from the Known miscompilations section.
+- Fix outline: remove the blank line.
