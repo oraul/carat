@@ -3,6 +3,7 @@ require_relative "../../domain/editor_state"
 require_relative "../../domain/plugin_ui"
 require_relative "../../domain/command"
 require_relative "../../domain/ex_command"
+require_relative "../../domain/messages"
 require_relative "../outcome"
 require_relative "../concerns/guarded"
 require_relative "plugin_registry"
@@ -58,7 +59,7 @@ module Carat
       #: (Domain::ExCommand) -> Outcome
       def command(ex_command)
         e = @registry.owner_of_command(ex_command.name)
-        return Outcome.failure("E492: Not an editor command: #{ex_command.name}") if e.nil?
+        return Outcome.failure(Domain::Messages.not_an_editor_command(ex_command.name)) if e.nil?
         call = PluginApi::Command.new(name: e.full_command(ex_command.name), bang: ex_command.bang, args: ex_command.args.dup)
         guarded(e) { e.plugin.on_command(call) }
         Outcome.success("")

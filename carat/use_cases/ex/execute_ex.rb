@@ -1,6 +1,7 @@
 require_relative "../../domain/editor_state"
 require_relative "../../domain/ex_grammar"
 require_relative "../../domain/ex_range"
+require_relative "../../domain/messages"
 require_relative "../../domain/motions"
 require_relative "../outcome"
 require_relative "ex_table"
@@ -58,7 +59,7 @@ module Carat
       def unknown(text)
         shown = text.strip
         shown = shown[1, shown.length - 1] while shown.start_with?(":")
-        Outcome.failure("E492: Not an editor command: #{shown}")
+        Outcome.failure(Domain::Messages.not_an_editor_command(shown))
       end
     end
   end

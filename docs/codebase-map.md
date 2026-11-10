@@ -118,7 +118,7 @@ Files:
 - `carat/domain/position.rb`: `Position` value; `sure`, `before?`, `to_a`.
 - `carat/domain/range.rb`: `Range` value; `charwise`, `normalized`.
 - `carat/domain/cursor.rb`: `Cursor` record (`row`, `col`, `want_col`); `position`, `move_to`.
-- `carat/domain/messages.rb`: `Messages`, messages several use cases show (`E36`, `E37`, the register refusals, `seconds_ago`).
+- `carat/domain/messages.rb`: `Messages`, messages several use cases show (`E36`, `E37`, the register refusals, `not_an_editor_command`, `seconds_ago`).
 - `carat/use_cases/outcome.rb`: `Outcome`; `success`, `failure`, `none` (shared).
 - `carat/use_cases/concerns/reporting.rb`: `Reporting#report(state, outcome)`, the one place an outcome reaches the message row.
 
@@ -663,7 +663,7 @@ Files:
 - `carat/doubles/manual_signals.rb`: `ManualSignals`; `resize`, `terminate`, `resize_after`, `terminate_after`.
 - `carat/doubles/editor_harness.rb`: `EditorHarness`; `default` (no plugins), `with_plugins`, `open`, `type`, `raw`, `wait`, `resize`, `lines`, `cursor`, `mode`, `message`, `screen`, `row`, `window_count`, `tab_count`, `status_row`.
 - `test/runner/run_all.rb`: the runner; a new test file gets a `require_relative` and a `when` line here; an unknown name exits 2.
-- `test/lint.rb`: `LintTest`, the rules the compiler does not enforce (layer requires and references, plugin references, `PluginLink` coverage, concerns, naming, including `get_`, `is_`, and `has_` members and keywords, constructors, records, use case rules, the `lines` rule, inline RBS, this map's coverage and its method lists (`map_methods`, `defines?`), lists of program objects (no bare `Array[untyped]` parameter, `UNTYPED_PARAMETERS`, no pinned list assigned from another file, `UNTYPED_SHARED`), the port table of `docs/architecture.md` section 6, and the holders the assembly test checks), each with a self-check.
+- `test/lint.rb`: `LintTest`, the rules the compiler does not enforce (layer requires and references, plugin references, `PluginLink` coverage, concerns, naming, including `get_`, `is_`, and `has_` members and keywords, constructors, records, use case rules, the `lines` rule, inline RBS, this map's coverage and its method lists (`map_methods`, `defines?`), lists of program objects (no bare `Array[untyped]` parameter, `UNTYPED_PARAMETERS`, no pinned list assigned from another file, `UNTYPED_SHARED`), the port table of `docs/architecture.md` section 6, the holders the assembly test checks, a Vim message spelled in a second file (`message_literals`, `repeat_problems`, `KNOWN_REPEATED_MESSAGES`), a def replacing a reader of its class (`shadow_problems`), and a `keymap.<mode>` literal outside `carat/plugins/` (`binding_modes`, `binding_literal?`)), each with a self-check.
 - `test/smoke_editor.rb`: the binary (`build/bin/carat` or `CARAT_BIN`) in a pseudo-terminal, also in a hostile project and home.
 - `tools/run_tests.sh`: runs tests from a compiled runner, compares each with its snapshot, prints a diff and a summary.
 - `bench/keys.rb`: the key benchmark over the doubles at 200 by 60; `SCENARIOS` (name, keys, count, lines, setup, text kind, plugins); time per key, slowest key, bytes, collector share, open time, lines tokenized, live heap.

@@ -21,6 +21,10 @@ ok   the keyword_init rule
 ok   record_names reads Struct and Data declarations
 ok   the record construction rule
 ok   code drops strings and comments
+ok   message_literals reads the fixed text of Vim messages
+ok   the repeated message rule
+ok   the reader shadow rule
+ok   the hard-coded binding rule
 ok   the one-call rule leaves out handlers, records, the plugin host, and Outcome
 ok   the one-call rule
 ok   the private constant rule
@@ -33,4 +37,4 @@ ok   the untyped parameter rule
 ok   the shared list rule
 ok   no lint violations
 ok   every method and attribute has an inline RBS signature
-lint: 35 passed, 0 failed
+lint: 39 passed, 0 failed
