@@ -216,11 +216,16 @@ module AdaptersDefinitionsTest
     r.type("<C-i>")
     t.assert_equal("b.rb 1:4", r.where, "Ctrl-I shows the target's buffer again")
 
-    # A LocationLink, and a character past a multibyte text.
+    # A LocationLink, a character past the line, and one after multibyte
+    # characters, the column counted in code points.
     r = defining
     link_target = { "targetUri" => uri("/project/b.rb"), "targetRange" => { "start" => { "line" => 0, "character" => 0 } }, "targetSelectionRange" => { "start" => { "line" => 3, "character" => 9 } } }
     asked(r, "gd", [link_target])
     t.assert_equal("b.rb 3:2", r.where, "a location link goes to its selection range, the column clamped to the line")
+    r = defining
+    r.files.put("m.rb", "s = \"\u{E9}\u{1F600}\"; t\n")
+    asked(r, "gd", location("/project/m.rb", 0, 11))
+    t.assert_equal("m.rb 0:10", r.where, "a character after multibyte characters lands on its code point column")
 
     # Answers that go nowhere.
     r = defining
@@ -337,6 +342,23 @@ module AdaptersDefinitionsTest
     r = defining
     r.type("<C-o>")
     t.assert_equal("a.rb 3:0", r.where, "Ctrl-O past the oldest entry does nothing in the editor")
+    r = defining
+    asked(r, "gd", location("/project/b.rb", 1, 4))
+    r.type("x")
+    r.type("<C-o>")
+    t.assert_equal(["E37: No write since last change (add ! to override)", "b.rb 1:4"], [r.message, r.where], "Ctrl-O refuses another buffer over a modified one")
+    r = defining
+    gone = r.assembly.state.buffer.id
+    asked(r, "gd", location("/project/b.rb", 1, 4))
+    r.type(":bd #{gone}<CR>")
+    r.type("<C-o>")
+    t.assert_equal(["b.rb 1:4", 1], [r.where, r.assembly.jumps.count], "Ctrl-O drops an entry whose buffer is gone and stays")
+    r = defining
+    r.type("4l")
+    asked(r, "gd", location("/project/a.rb", 0, 4))
+    r.assembly.state.buffer.set_lines(3, 4, ["\u{E9}\u{E9}"])
+    r.type("<C-o>")
+    t.assert_equal("a.rb 3:1", r.where, "Ctrl-O clamps the column to a line shortened since, in code points")
 
     t.finish
   end

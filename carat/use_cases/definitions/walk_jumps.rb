@@ -38,15 +38,13 @@ module Carat
           @buffers.load(target)
         end
         window = state.window
-        buffer = window.buffer
-        count = buffer.line_count
+        count = window.buffer.line_count
         row = jumps.rows[at].to_i
         row = count - 1 if row >= count
         row = 0 if row < 0
         col = jumps.cols[at].to_i
-        last = buffer.line(row).bytesize - 1
-        col = last if col > last
         col = 0 if col < 0
+        col = state.clamp_col(row, col)
         window.cursor.move_to(row, col)
         Outcome.none
       end

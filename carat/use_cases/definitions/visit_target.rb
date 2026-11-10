@@ -189,24 +189,24 @@ module Carat
         line >= count ? count - 1 : line
       end
 
-      # The byte of the character holding the UTF-16 code unit offset
-      # units, the last character's for one past the text, 0 on an empty
-      # line.
+      # The cursor column, a code point index, of the character holding the
+      # UTF-16 code unit offset units (two units for a four-byte sequence),
+      # the last character's for one past the text, 0 on an empty line.
       #: (String, Integer) -> Integer
       def column_of(text, units)
         count = 0
-        last = 0
+        column = -1
         i = 0
         while i < text.bytesize
           b = text.getbyte(i).to_i
           if (b & 0xC0) != 0x80
-            return i if count >= units
-            last = i
+            column += 1
+            return column if count >= units
             count += b >= 0xF0 ? 2 : 1
           end
           i += 1
         end
-        last
+        column < 0 ? 0 : column
       end
     end
   end

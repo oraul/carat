@@ -9,6 +9,7 @@ ok   One target in another project file opens it
 ok   Ctrl-O from another file shows the buffer gd left
 ok   Ctrl-I shows the target's buffer again
 ok   a location link goes to its selection range, the column clamped to the line
+ok   a character after multibyte characters lands on its code point column
 ok   An empty answer shows No locations found
 ok   A modified buffer refuses a jump to another file
 ok   A new gd cancels the request in flight
@@ -31,4 +32,7 @@ ok   A target that is not a regular file is refused
 ok   a directory outside the project is refused
 ok   escapes are decoded and relative, NUL, and negative targets are dropped
 ok   Ctrl-O past the oldest entry does nothing in the editor
-adapters_definitions: 33 passed, 0 failed
+ok   Ctrl-O refuses another buffer over a modified one
+ok   Ctrl-O drops an entry whose buffer is gone and stays
+ok   Ctrl-O clamps the column to a line shortened since, in code points
+adapters_definitions: 37 passed, 0 failed
