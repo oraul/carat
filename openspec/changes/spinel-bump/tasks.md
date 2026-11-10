@@ -28,6 +28,7 @@
 - [x] 5.4 Bisect the `when` probe between 001419ff and f34005bf (Spinel ade8cfe2) and record the three miscompilations in `docs/spinel-notes.md` with a `docs/backlog.md` entry.
 - [x] 5.5 Remove the 001419ff inline RBS warnings in `search.rb`, `replacement.rb`, `search_pattern.rb`, `testing.rb`, and `bench/keys.rb`; verify with `make lint`, the build, test-build, and bench logs.
 - [x] 5.6 Trace the extra allocation per key: build the bench of this branch with the 001419ff toolchain (main's figures, so the pin causes it), find the site with a per-call trace (`Symbol#to_s` in `Mode.name_of`, Spinel 59044ad58), answer `Symbol#name` there, and record it in `docs/spinel-notes.md`; verify with `make bench SCENARIOS="lh j insert"`, `make lint`, and `make test-one T=test/domain_keymap.rb`.
+- [x] 5.7 Name the three port bases that answer a failure value at f34005bf (`FilePort#stat`, `PluginApi::Host#stat`, `Host#icon`) in `docs/architecture.md` section 6, pointing at `docs/spinel-notes.md` Known miscompilations, within its budget; verify with `make docs-lint` and `make gates`.
 
 ## Blocker found in 2.3 (resolved by section 5)
 

@@ -34,7 +34,7 @@ None. This is a toolchain change; `skip_specs` is set.
 - `Makefile`: `SPINEL_REF`, the toolchain comment, the shared checkout recipe, the `spinel-header` target, `.PHONY`.
 - `tools/spinel/gen_respond_to_tables.rb`: new. `tools/spinel/spinel_rt_responds_generated.h`: regenerated.
 - `docs/spinel-notes.md`, `docs/backlog.md`: the re-test results. The new miscompilations and their workarounds: `carat/use_cases/plugins/plugin_entry.rb`, `plugin_host.rb`, `carat/domain/mode.rb`, `carat/plugin_api.rb`, `carat/ports/file_port.rb`. The warnings: `carat/domain/search.rb`, `replacement.rb`, `search_pattern.rb`, `carat/testing.rb`, `bench/keys.rb`.
-- `CLAUDE.md`: changed (Commands names `spinel-header`, the bump instruction). `README.md`: changed (the command list). `docs/architecture.md`: changed where it describes the vendored header. `docs/codebase-map.md`: area 2.
+- `CLAUDE.md`: changed (Commands names `spinel-header`, the bump instruction). `README.md`: changed (the command list). `docs/architecture.md`: changed where it describes the vendored header, and section 6 names the three port bases that answer a failure value at f34005bf. `docs/codebase-map.md`: area 2.
 
 Outside the roadmap of `docs/architecture.md` section 12: a toolchain bump the user asked for, done in its own pull request as the Makefile requires.
 
