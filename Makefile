@@ -162,6 +162,16 @@ toolchain:
 	@echo
 	@echo "Installed spinel, spin, and spinel-doctor ($(SPINEL_REF)) under $(PREFIX)/bin."
 	@echo "The make targets find them there automatically; no PATH change is needed."
+	@$(MAKE) --no-print-directory hooks
+
+## hooks: install the tracked commit hooks of .githooks by setting core.hooksPath (commit-msg scans the message, pre-commit the staged added lines, with tools/scan_text.sh); the gates and the agent guard allow no other hooks path; make toolchain runs it
+hooks:
+	@if git rev-parse --git-dir >/dev/null 2>&1; then \
+	  git config core.hooksPath .githooks && \
+	  echo "Installed the commit hooks of .githooks (core.hooksPath)."; \
+	else \
+	  echo "Not a git repository: no hooks installed."; \
+	fi
 
 ## spinel-header: regenerate the vendored tools/spinel/spinel_rt_responds_generated.h for SPINEL_REF without Ruby: fetch SPINEL_REF into SPINEL_SRC, compile tools/spinel/gen_respond_to_tables.rb with the installed spinel, and run it on the checkout; a bump runs it after changing SPINEL_REF and before make toolchain
 spinel-header:
@@ -449,4 +459,4 @@ help:
 	@echo
 	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)  T=$(T)  TEST_OPT=$(TEST_OPT)  SPINEL_CACHE_DIR=$(SPINEL_CACHE_DIR)  CARAT_BIN=$(CARAT_BIN)  TESTS=$(TESTS)"
 
-.PHONY: toolchain spinel-header toolchain-clean spinel-rev doctor no-cruby build dev-build run install pack clean test test-build test-run test-one lint snapshots diagnose diagnose-one bench bench-budget analysis-budget profile types gen-config config-current tools-test docs-lint gates stages check-stage check new-use-case new-action new-ex-command new-test new-plugin spec-list spec-validate spec-update help
+.PHONY: toolchain hooks spinel-header toolchain-clean spinel-rev doctor no-cruby build dev-build run install pack clean test test-build test-run test-one lint snapshots diagnose diagnose-one bench bench-budget analysis-budget profile types gen-config config-current tools-test docs-lint gates stages check-stage check new-use-case new-action new-ex-command new-test new-plugin spec-list spec-validate spec-update help
