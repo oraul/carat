@@ -105,6 +105,28 @@ module DomainOptionsConfigTest
     end
     t.assert_equal(true, options.cursorline, "the shipped configuration turns the cursor line on")
 
+    # The indent guides' options, A character too wide or too long among
+    # them: rows are [label, project lines,
+    # [indentguides, the guide character, the code drawn, problems]].
+    t.table([
+      ["the guides are off by default, as Neovim draws none", "", [false, "┊", 0x250a, []]],
+      ["the guides turned on", "option.indentguides true\n", [true, "┊", 0x250a, []]],
+      ["another character", "option.indentguides.char ▏\n", [false, "▏", 0x258f, []]],
+      ["an ASCII character", "option.indentguides.char :\n", [false, ":", 58, []]],
+      ["the ASCII fallback: | for a character outside ASCII with the ascii icon set", "option.icons ascii\n", [false, "┊", 124, []]],
+      ["an ASCII character is kept with the ascii icon set", "option.icons ascii\noption.indentguides.char :\n", [false, ":", 58, []]],
+      ["a value that is not a flag keeps the guides' earlier setting", "option.indentguides true\noption.indentguides yes\n", [true, "┊", 0x250a, [".caratrc:2: option.indentguides takes true or false"]]],
+      ["a character too long is refused, the one before kept", "option.indentguides.char ab\n", [false, "┊", 0x250a, [".caratrc:1: option.indentguides.char takes one character one column wide"]]],
+      ["a character too wide is refused, the one before kept", "option.indentguides.char :\noption.indentguides.char 日\n", [false, ":", 58, [".caratrc:2: option.indentguides.char takes one character one column wide"]]]
+    ]) do |text|
+      config = D::Config.new
+      config.read(".caratrc", text.to_s, false)
+      read = D::Options.from_config(config)
+      [read.indentguides, read.indentguides_char, read.guide_code, config.report]
+    end
+    # The shipped configuration turns them on.
+    t.assert_equal([true, "┊"], [options.indentguides, options.indentguides_char], "the shipped configuration turns the indent guides on, drawn in ┊")
+
     # option.keyhints.delay: the key hints' wait, 0 to 10000, 300 by default.
     delays = []
     reports = []

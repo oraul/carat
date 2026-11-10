@@ -3470,3 +3470,15 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the comment of `cancel_request` in `carat/adapters/json_rpc_language_gateway.rb` line 1003 at 75fa4fd, which says the running server though the method looks up `server_for`, now beside `running_server`. Quality advisory in `periodic-blockers-a`.
 - Why it matters: the comment points the reader at `running_server`, the other lookup, so a later change could pick the wrong one.
 - Fix outline: say the language's server in the comment.
+
+## IndentGuides keeps a magic stamp shift, a doubled guard, and a misleading helper name
+
+- Where, at 6cb3c55: `carat/adapters/indent_guides.rb` line 62 (the settings stamp shifts by the unnamed 16_384 and folds in `@tabstop`, which `build_key` already puts in the geometry key), line 106 (`paint` checks `@code == 0` and `i >= @rows` although its only caller, `carat/adapters/frame_presenter.rb` line 785, passes -1 unless the row is guided and inside the buffer), line 132 (private `indent_of(line)` returns a display width while `Buffer#indent_of(row)` returns the whitespace string); `test/adapters_indent_guides.rb` line 150 (the glyph case `default` sets `indentguides = true`, which `state_for` already does). Quality advisories in `indent-guides`.
+- Why it matters: the unnamed shift and the doubled tabstop make the stamp harder to check against `INDENT_CAP` and `SCOPE_SHIFT`; two guards for one condition can drift apart; one method name with two meanings misleads a reader of either file; the dead branch suggests the default case differs from the others.
+- Fix outline: name the shift as a constant beside `INDENT_CAP` and `SCOPE_SHIFT` and drop `@tabstop` from the stamp; keep one guard, either dropping it from `paint` or setting `@guide_row` to the row whenever it is guided; rename the helper `indent_width`; drop the assignment and leave `default` with no branch.
+
+## The indent-guides docs claim an untested start screen and reword untouched sentences
+
+- Where, at 6cb3c55: the Windows row of `docs/compatibility.md` line 537, which credits `adapters_indent_guides` with the start screen showing no guide though no case draws the start screen; `docs/architecture.md` lines 113 and 257, which reword sentences the change does not touch (the Nerd Font glyph clause, reading the state, the two preallocated frames). Quality advisories in `indent-guides`.
+- Why it matters: a compatibility row naming a test that does not prove it hides a gap, and rewording unrelated sentences widens a change's scope and its review.
+- Fix outline: add a start-screen case to the guides table or drop the start screen from the row's claim; restore the untouched wording and keep only the additions that name `indentguides`, `IndentGuides`, and the guides in the row record.

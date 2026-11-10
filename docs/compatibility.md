@@ -504,7 +504,7 @@ The filetype of a buffer comes from its name (`ruby` for `.rb`, `.rake`, `.gemsp
 
 ## Themes
 
-The editor knows 41 UI groups by Neovim's names (`Normal`, `LineNr`, `StatusLine`, ... `CursorLine`, `Pmenu`, `NormalFloat`, `DiffAdd`, `DiagnosticError`, ...), the thirty syntax groups, and thirteen file-icon groups named as nvim-web-devicons names them (`DevIconRb`, ...; the explorer's icons are drawn in them). Every shipped palette meets WCAG AA on its own background, 4.5:1 for text and 3:1 for decorations, at 24-bit and at 256 colors (`domain_theme`). At 256 colors a palette may give its own index where the nearest one would lose contrast or hue; at 16 colors a group may use an attribute in place of a color the basic set lacks, reverse video for the selection and underline for the cursor line (`adapters_screen_presenter`).
+The editor knows 41 UI groups by Neovim's names (`Normal`, `LineNr`, `StatusLine`, ... `CursorLine`, `Pmenu`, `NormalFloat`, `DiffAdd`, `DiagnosticError`, ...), the thirty syntax groups, and thirteen file-icon groups named as nvim-web-devicons names them (`DevIconRb`, ...; the explorer's icons are drawn in them); the status bar's eight and the indent guides' two, `IblIndent` and `IblScope` as indent-blankline names them, follow Neovim's 41. Every shipped palette meets WCAG AA on its own background, 4.5:1 for text and 3:1 for decorations, at 24-bit and at 256 colors (`domain_theme`). At 256 colors a palette may give its own index where the nearest one would lose contrast or hue; at 16 colors a group may use an attribute in place of a color the basic set lacks, reverse video for the selection and underline for the cursor line (`adapters_screen_presenter`).
 
 | Option | Values | Effect | Problem | Tests |
 | --- | --- | --- | --- | --- |
@@ -522,6 +522,26 @@ With `cursorline` on, the cursor's line in the current window is drawn over `Cur
 | `option.cursorline`, `:set cursorline` (`cul`) | `false` (Neovim's default), `true` (shipped) | Draws the cursor line of the current window | `file:line: option.cursorline takes true or false` | `adapters_frame_presenter`, `domain_options_config`, `editor_search` |
 
 Differences from Neovim: `cursorline` is global and drawn in the current window only, where Neovim's is window-local and drawn in every window that sets it; there is no `cursorlineopt` or `CursorLineSign`; the shapes are fixed, with no `guicursor`, and an operator waits with the block cursor, where Neovim's default shows an underline; replace mode itself (`R`) arrives with a later change.
+
+## Indent guides
+
+Neovim draws no indent guides; Carat draws them as the indent-blankline plugin does, by indentation alone. With `indentguides` on, a file window draws the guide character at each `shiftwidth` level of a line's leading whitespace, in `IblIndent`, and the guide of the cursor's block in `IblScope`; both groups are decorations held to 3:1 in every palette, on the cursor line too (`domain_theme`). Each case is a row of the table in `adapters_indent_guides`.
+
+| Case | Effect | Tests |
+| --- | --- | --- |
+| Levels | A guide at every multiple of `shiftwidth` before a line's first non-blank, `tabstop` when `shiftwidth` is 0, a tab counted to the next multiple of `tabstop` | `adapters_indent_guides` |
+| Scrolled sideways | The guides move with the window's horizontal scroll | `adapters_indent_guides` |
+| Blank lines | A blank or whitespace-only line shows the guides of the smaller of the nearest non-blank lines' indents above and below, none past 1000 lines or the buffer's ends | `adapters_indent_guides` |
+| The cursor's block | In the current window, the guide at the deepest level below the cursor line's indent, over the rows around it indented past that level, is in `IblScope`; on a line of no indent none is | `adapters_indent_guides` |
+| Cursor line | The guides on the cursor line take the cursor-line layer of their groups | `adapters_indent_guides` |
+| Windows | File windows only: a plugin's window, a float, and the start screen show none | `adapters_indent_guides` |
+
+| Option | Values | Effect | Problem | Tests |
+| --- | --- | --- | --- | --- |
+| `option.indentguides` | `false` (fresh options, as Neovim), `true` (shipped) | Draws the guides | `file:line: option.indentguides takes true or false` | `domain_options_config`, `adapters_indent_guides` |
+| `option.indentguides.char` | One character one column wide, not a control; `┊` by default | The guide character; with `option.icons ascii` one outside ASCII is drawn as `\|` | `file:line: option.indentguides.char takes one character one column wide` | `domain_options_config`, `adapters_indent_guides` |
+
+Differences from indent-blankline: the cursor's block is found by indentation, not by tree-sitter scope, and only in the current window; there is one color for every level; the options are read at startup, with no `:set` or `:IBLToggle`.
 
 ## Start screen
 
@@ -580,4 +600,4 @@ Differences from Neovim: Neovim's `F1` opens `:help`, which Carat does not have.
 
 ## Options read so far
 
-`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `keyhints.delay` (Key hints), `layout.left_width`, `layout.right_width`, and `layout.panel_height` (Layout slots), `breadcrumbs` (Breadcrumbs), `undolevels`, `icons`, `theme`, and `background` (Themes), `startscreen` and `reducedmotion` (Start screen), from the `option.*` lines of the configuration files; `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, and `cursorline` from those lines and `:set` (Neovim's defaults: off, off, on, on, off; the shipped configuration turns `smartcase` and `cursorline` on); `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.
+`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `keyhints.delay` (Key hints), `layout.left_width`, `layout.right_width`, and `layout.panel_height` (Layout slots), `breadcrumbs` (Breadcrumbs), `undolevels`, `icons`, `theme`, and `background` (Themes), `startscreen` and `reducedmotion` (Start screen), `indentguides` and `indentguides.char` (Indent guides), from the `option.*` lines of the configuration files; `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, and `cursorline` from those lines and `:set` (Neovim's defaults: off, off, on, on, off; the shipped configuration turns `smartcase` and `cursorline` on); `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.

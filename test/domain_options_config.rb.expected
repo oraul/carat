@@ -33,6 +33,16 @@ ok   turned on
 ok   a later line wins
 ok   takes true or false
 ok   the shipped configuration turns the cursor line on
+ok   the guides are off by default, as Neovim draws none
+ok   the guides turned on
+ok   another character
+ok   an ASCII character
+ok   the ASCII fallback: | for a character outside ASCII with the ascii icon set
+ok   an ASCII character is kept with the ascii icon set
+ok   a value that is not a flag keeps the guides' earlier setting
+ok   a character too long is refused, the one before kept
+ok   a character too wide is refused, the one before kept
+ok   the shipped configuration turns the indent guides on, drawn in ┊
 ok   keyhints.delay takes 0 to 10000 and keeps the earlier value otherwise
 ok   the slots keep the view's size by default
 ok   each slot takes its size
@@ -44,4 +54,4 @@ ok   never is stored
 ok   a later line wins
 ok   an unknown mode is refused and keeps auto
 ok   the shipped configuration shows breadcrumbs with two or more file windows
-domain_options_config: 46 passed, 0 failed
+domain_options_config: 56 passed, 0 failed

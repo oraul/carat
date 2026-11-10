@@ -1,0 +1,23 @@
+ok   Guides at each level: columns 0 and 2 of four spaces, shiftwidth 2
+ok   Shiftwidth 0 uses tabstop
+ok   A tab indent: one tab at tabstop 4 has guides at 0 and 2
+ok   Scrolled sideways: one column right, column 2's guide, the cursor's block, at the first text column plus 1
+ok   A blank line inside a block carries both guides
+ok   A blank line before a dedent carries the smaller indent
+ok   a whitespace-only line carries the indent around it, not its own
+ok   a blank line with no text below has no guide
+ok   The cursor in a nested block: column 2 in IblScope over its three lines
+ok   The cursor at the top level highlights no guide
+ok   a cursor on a blank line takes its carried indent
+ok   The cursor moves to another block: the rows are repainted
+ok   j inside one block dirties only the rows the cursor left and entered
+ok   Off draws none
+ok   turning the guides off repaints every row
+ok   A plugin's window draws no guide
+ok   A float shows no guide over a file window
+ok   the default guide is ┊
+ok   Another character: ▏
+ok   The ASCII fallback: | with the ascii icon set
+ok   An ASCII character is kept with the ascii icon set
+ok   On the cursor line the guides take the cursor-line layer of their groups
+adapters_indent_guides: 22 passed, 0 failed

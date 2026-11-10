@@ -20,6 +20,7 @@ require_relative "../domain/search_pattern"
 require_relative "../domain/start_screen"
 require_relative "../domain/notices"
 require_relative "painted_rows"
+require_relative "indent_guides"
 require_relative "status_bar"
 require_relative "tab_bar"
 require_relative "winbar"
@@ -52,7 +53,11 @@ module Carat
     # other work. With cursorline the cursor's row of the current window
     # is lifted onto the cursor-line layer of groups from the end of its
     # gutter to its right edge, its number in CursorLineNr, the layer
-    # being an input of the row like its cursor column. The cursor is
+    # being an input of the row like its cursor column. With
+    # indentguides a file window's rows (not a plugin's buffer, a float,
+    # or the start screen) show IndentGuides after their tokens, the key
+    # of a row's guides an input of the row and the guides' settings part
+    # of the frame's geometry key. The cursor is
     # placed in the current window, a bar in insert mode, an underline in
     # replace mode, and a block otherwise.
     #
@@ -141,6 +146,8 @@ module Carat
       # @rbs @floating: bool
       # @rbs @repainted: Array[Integer]
       # @rbs @notice_from: Integer
+      # @rbs @guides: IndentGuides
+      # @rbs @guide_row: Integer
 
       #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, palette: Domain::Palette, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar, winbar: Winbar, notices: Domain::Notices) -> void
       def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, palette:, start_screen:, status_bar:, tab_bar:, winbar:, notices:)
@@ -170,6 +177,8 @@ module Carat
         @back = Domain::Frame.new(rows: 1, cols: 1)
         @front_rows = PaintedRows.new(rows: 1, slots: 1)
         @back_rows = PaintedRows.new(rows: 1, slots: 1)
+        @guides = IndentGuides.new
+        @guide_row = -1
         @serial = 0
         @key = []
         @chrome = []
@@ -200,7 +209,7 @@ module Carat
         layout = tab.layout
         ids = layout.leaves
         ensure_slots(rows, ids.length)
-        build_key(rows, cols, tabline, tabstop, layout, ids)
+        build_key(rows, cols, tabline, tabstop, @guides.configure(options), layout, ids)
         unless same_ints?(@key, back.layout)
           @back_rows.invalidate
           copy_ints(@key, back.layout)
@@ -353,15 +362,16 @@ module Carat
       end
 
       # The geometry a frame is painted with: the size, the tab line, the
-      # tabstop, and every window's rectangle.
-      #: (Integer, Integer, Integer, Integer, Domain::Layout, Array[Integer]) -> void
-      def build_key(rows, cols, tabline, tabstop, layout, ids)
+      # tabstop, the indent guides' settings, and every window's rectangle.
+      #: (Integer, Integer, Integer, Integer, Integer, Domain::Layout, Array[Integer]) -> void
+      def build_key(rows, cols, tabline, tabstop, guides, layout, ids)
         key = @key
         key.clear
         key << rows
         key << cols
         key << tabline
         key << tabstop
+        key << guides
         i = 0
         while i < ids.length
           window = layout.window_at(ids[i])
@@ -758,6 +768,8 @@ module Carat
         @current = current
         lit = current && options.cursorline ? Domain::Highlight::CURSOR_LINE_LAYER : 0
         count = buffer.line_count
+        guided = @guides.on? && !buffer.scratch?
+        @guides.measure(buffer, top, height, cursor.row, current) if guided
         i = 0
         while i < height
           frame_row = wrow + i
@@ -769,6 +781,8 @@ module Carat
           sign = ""
           cur = -1
           layer = 0
+          guide = guided ? @guides.key(i) : 0
+          @guide_row = guided && row < count ? i : -1
           @sel_from = -1
           @sel_to = -2
           @sel_end = -1
@@ -784,13 +798,13 @@ module Carat
             end
             select_columns(selection, buffer, row, line, tabstop, block) if selecting
           end
-          unless @back_rows.same?(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search)
+          unless @back_rows.same?(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide)
             @row_of = row
             @number_hl = layer > 0 ? Domain::Highlight::CURSOR_LINE_NUMBER : Domain::Highlight::LINE_NUMBER
             paint_row(frame, frame_row, x, width, gutter, line, number, sign, signs, text_width, left, tabstop, syntax)
             @repainted[frame_row] = 1 if @floating
             frame.lift(frame_row, x + gutter, x + width, layer) if layer > 0
-            @back_rows.store(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search)
+            @back_rows.store(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide)
           end
           @back_rows.place(seg, window.id, top)
           if base_same
@@ -800,7 +814,7 @@ module Carat
               source = j >= 0 && j < height ? wrow + j : -1
               frame.sources[frame_row] = source
             end
-            frame.dirty[frame_row] = 1 if source < 0 || !@front_rows.same?(@front_rows.index(source, slot), line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search)
+            frame.dirty[frame_row] = 1 if source < 0 || !@front_rows.same?(@front_rows.index(source, slot), line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide)
           end
           i += 1
         end
@@ -946,6 +960,7 @@ module Carat
         decoded = @cache.fetch(line, tabstop)
         paint_text(frame, frame_row, x + gutter, decoded, text_width, left)
         paint_tokens(frame, frame_row, x + gutter, decoded, text_width, left, syntax.tokens, 0) unless syntax.tokens.empty?
+        @guides.paint(frame, frame_row, @guide_row, x + gutter, text_width, left) if @guide_row >= 0
         paint_matches(frame, frame_row, x + gutter, decoded, text_width, left, line) if @drawn > 0
         paint_selection(frame, frame_row, x + gutter, text_width, left) if @sel_from <= @sel_to || @sel_end >= 0
       end

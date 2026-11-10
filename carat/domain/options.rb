@@ -2,6 +2,8 @@ require_relative "themes"
 require_relative "icons"
 require_relative "config"
 require_relative "rc_value"
+require_relative "utf8"
+require_relative "display_width"
 
 module Carat
   module Domain
@@ -23,10 +25,12 @@ module Carat
     # shows its last frame without the animation. cursorline draws the
     # cursor's line in the current window over the CursorLine background.
     # breadcrumbs says when file windows show a winbar: "auto" with two
-    # or more file windows, "always", or "never".
+    # or more file windows, "always", or "never". indentguides draws a
+    # guide at each shiftwidth level of file windows' indentation, in
+    # indentguides_char, one character one column wide.
     # All but syntax_on come from option lines of the configuration. A Struct
     # record: mutable, with a reader and a writer per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, keyword_init: true)
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, :indentguides, :indentguides_char, keyword_init: true)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -53,15 +57,17 @@ module Carat
       # @rbs @layout_right_width: Integer
       # @rbs @layout_panel_height: Integer
       # @rbs @breadcrumbs: String
+      # @rbs @indentguides: bool
+      # @rbs @indentguides_char: String
 
       # Vim's defaults, the nerd icon set, the default theme on the
       # terminal's background, syntax highlighting on, and Neovim's search
       # defaults: hlsearch and incsearch on, ignorecase and smartcase off;
-      # the start screen on, with its animation; cursorline off, as in
-      # Neovim.
+      # the start screen on, with its animation; cursorline and the
+      # indent guides off, as in Neovim, which draws none.
       #: () -> void
       def initialize
-        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: 300, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto")
+        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: 300, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto", indentguides: false, indentguides_char: GUIDE_CHAR)
       end
 
       # The options a configuration line may set, by name, with the kind
@@ -70,10 +76,10 @@ module Carat
       KINDS = {
         "number" => "bool", "relativenumber" => "bool", "expandtab" => "bool", "autoindent" => "bool",
         "ignorecase" => "bool", "smartcase" => "bool", "hlsearch" => "bool", "incsearch" => "bool", "wrap" => "bool",
-        "startscreen" => "bool", "reducedmotion" => "bool", "cursorline" => "bool",
+        "startscreen" => "bool", "reducedmotion" => "bool", "cursorline" => "bool", "indentguides" => "bool",
         "tabstop" => "integer", "shiftwidth" => "integer", "scroll" => "integer", "scrolloff" => "integer", "timeoutlen" => "integer", "undolevels" => "integer", "keyhints.delay" => "integer",
         "layout.left_width" => "integer", "layout.right_width" => "integer", "layout.panel_height" => "integer",
-        "clipboard" => "string", "icons" => "string", "theme" => "string", "background" => "string", "breadcrumbs" => "string"
+        "clipboard" => "string", "icons" => "string", "theme" => "string", "background" => "string", "breadcrumbs" => "string", "indentguides.char" => "string"
       }
 
       # The key hints' default wait in milliseconds and the longest one; 0
@@ -84,6 +90,11 @@ module Carat
       # The modes of breadcrumbs: the winbar shows with two or more file
       # windows, on every file window, or never.
       BREADCRUMBS = ["auto", "always", "never"]
+
+      # The indent guides' default character and the one drawn in its
+      # place with the ascii icon set.
+      GUIDE_CHAR = "┊"
+      GUIDE_ASCII = 124
 
       # The largest slot size, in columns or rows.
       SLOT_SIZE_MAX = 500
@@ -98,6 +109,30 @@ module Carat
       #: () -> Integer
       def tab_width
         tabstop > 0 ? tabstop : 8
+      end
+
+      # The code point indent guides are drawn with: the guide character,
+      # or | in its place when the icon set is ascii and the character is
+      # not.
+      #: () -> Integer
+      def guide_code
+        text = indentguides_char
+        code = Utf8.code_at(text, 0, Utf8.size_at(text, 0, text.bytesize))
+        return GUIDE_ASCII if code > 127 && icons == "ascii"
+        code
+      end
+
+      # Whether a word can be the guide character: one character, one
+      # display column wide, not a control.
+      #: (String) -> bool
+      def self.guide_char?(word)
+        n = word.bytesize
+        return false if n == 0
+        size = Utf8.size_at(word, 0, n)
+        return false if size != n
+        code = Utf8.code_at(word, 0, size)
+        return false if code < 32 || DisplayWidth.control?(code)
+        DisplayWidth.of(code) == 1
       end
 
       # Builds options from the option lines of a configuration, applied
@@ -168,6 +203,13 @@ module Carat
         when "startscreen" then self.startscreen = word == "true"
         when "reducedmotion" then self.reducedmotion = word == "true"
         when "cursorline" then self.cursorline = word == "true"
+        when "indentguides" then self.indentguides = word == "true"
+        when "indentguides.char"
+          if Options.guide_char?(word)
+            self.indentguides_char = word
+          else
+            config.note(line, "#{line.key} takes one character one column wide")
+          end
         when "tabstop"
           problem = Options.width_problem(line.key, word.to_i, 1)
           if problem.empty?

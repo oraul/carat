@@ -11,6 +11,7 @@ require_relative "../adapters_dirty_rows"
 require_relative "../adapters_frame_presenter"
 require_relative "../adapters_hover"
 require_relative "../adapters_definitions"
+require_relative "../adapters_indent_guides"
 require_relative "../domain_jump_list"
 require_relative "../adapters_key_decoder"
 require_relative "../adapters_language_gateway"
@@ -115,6 +116,7 @@ when "adapters_dirty_rows" then AdaptersDirtyRowsTest.main
 when "adapters_frame_presenter" then AdaptersFramePresenterTest.main
 when "adapters_hover" then AdaptersHoverTest.main
 when "adapters_definitions" then AdaptersDefinitionsTest.main
+when "adapters_indent_guides" then AdaptersIndentGuidesTest.main
 when "domain_jump_list" then DomainJumpListTest.main
 when "adapters_key_decoder" then AdaptersKeyDecoderTest.main
 when "adapters_language_gateway" then AdaptersLanguageGatewayTest.main

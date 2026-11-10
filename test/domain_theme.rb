@@ -12,7 +12,7 @@ module DomainThemeTest
 
   # The groups drawn as decorations, held to 3:1 rather than 4.5:1, and
   # the groups that carry no text, exempt from the contrast rule.
-  DECORATIONS = [H::NON_TEXT, H::END_OF_BUFFER, H::WINDOW_SEPARATOR, H::FLOAT_BORDER, H::WHITESPACE, H::SIGN_COLUMN]
+  DECORATIONS = [H::NON_TEXT, H::END_OF_BUFFER, H::WINDOW_SEPARATOR, H::FLOAT_BORDER, H::WHITESPACE, H::SIGN_COLUMN, H::INDENT_GUIDE, H::INDENT_GUIDE_SCOPE]
   NO_TEXT = [H::TAB_LINE_FILL, H::POPUP_MENU_SCROLLBAR, H::POPUP_MENU_THUMB]
 
   # The linear light of one sRGB component, WCAG 2's formula.
@@ -154,10 +154,15 @@ module DomainThemeTest
   def self.main
     t = Carat::Testing.new("domain_theme")
 
+    # The color-themes scenarios these checks prove: The UI groups (the
+    # counts and names), A plugin asks for an editor group (token_id of a
+    # UI group is -1), The search groups have colors,
+    # Every UI group has a color in every palette,
+    # Every palette passes (the contrast tables), and Comments are readable.
     # The group table: UI groups first, then the thirty syntax groups,
     # then the file-icon groups.
     t.assert_equal(H::COUNT, H::NAMES.length, "every id has a name")
-    t.assert_equal([49, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "49 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
+    t.assert_equal([51, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "51 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
     t.assert_equal(["@markup.heading", "@markup.strong", "@markup.italic", "@markup.raw", "@markup.link.label", "@markup.raw.block"], [H::NAMES[H::MARKUP_HEADING], H::NAMES[H::MARKUP_STRONG], H::NAMES[H::MARKUP_ITALIC], H::NAMES[H::MARKUP_RAW], H::NAMES[H::MARKUP_LINK], H::NAMES[H::MARKUP_RAW_BLOCK]], "the markup groups after the file-icon groups")
     t.assert_equal(["StatusLineModeNormal", "StatusLineLspError"], [H.name_of(H::STATUS_MODE_NORMAL), H.name_of(H::STATUS_LSP_ERROR)], "the status bar's groups follow Neovim's")
 
@@ -173,12 +178,13 @@ module DomainThemeTest
       ["the last markup group", "@markup.raw.block", H::MARKUP_RAW_BLOCK],
       ["a UI group is not a token group", "StatusLine", -1],
       ["nor is a new UI group", "CursorLine", -1],
+      ["nor an indent guide group", "IblIndent", -1],
       ["Normal is not either", "Normal", -1],
       ["an unknown name", "Banana", -1],
       ["names are case sensitive", "comment", -1]
     ]) { |name| H.token_id(name.to_s) }
     t.assert_equal([false, true, true, true, false], [H.token?(H::VISUAL), H.token?(H::COMMENT), H.token?(H::ERROR), H.token?(H::MARKUP_RAW_BLOCK), H.token?(H::COUNT)], "token? covers the syntax, file-icon, and markup ids only")
-    t.assert_equal(["Visual", ""], [H.name_of(H::VISUAL), H.name_of(99)], "name_of")
+    t.assert_equal(["Visual", ""], [H.name_of(H::VISUAL), H.name_of(H::COUNT + 1)], "name_of")
 
     # The palettes, their aliases, and the backgrounds.
     t.assert_equal(["one_dark", "one_light", "dark_plus", "light_plus", "one_dark", "one_light", "one_dark"], [D::Themes.find("one_dark", "terminal").name, D::Themes.find("one_light", "terminal").name, D::Themes.find("dark_plus", "terminal").name, D::Themes.find("light_plus", "terminal").name, D::Themes.find("carat-dark", "terminal").name, D::Themes.find("carat-light", "terminal").name, D::Themes.find("nope", "terminal").name], "find, the aliases, and one_dark for an unknown name")

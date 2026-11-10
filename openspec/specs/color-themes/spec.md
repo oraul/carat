@@ -17,11 +17,11 @@ The editor SHALL know the syntax groups `Comment`, `Constant`, `String`, `Charac
 - **THEN** the request fails with `No highlight group named Banana`
 
 ### Requirement: The editor's own highlights are groups too
-The editor SHALL know 49 UI groups, the first 41 by Neovim's names and the status bar's eight after them, and SHALL draw its own parts in them, which every palette colors like the syntax groups and which a plugin cannot use for tokens.
+The editor SHALL know 51 UI groups, the first 41 by Neovim's names, the status bar's eight after them, and the indent guides' two, `IblIndent` and `IblScope` as Neovim's indent-blankline plugin names them, last, and SHALL draw its own parts in them, which every palette colors like the syntax groups and which a plugin cannot use for tokens.
 
 #### Scenario: The UI groups
 - **WHEN** the editor's group table is listed
-- **THEN** its UI groups are `Normal`, `LineNr`, `StatusLine`, `ErrorMsg`, `NonText`, `StatusLineNC`, `TabLine`, `TabLineSel`, `TabLineFill`, `Visual`, `SignColumn`, `Search`, `IncSearch`, `CurSearch`, `CursorLine`, `CursorLineNr`, `ColorColumn`, `EndOfBuffer`, `WinSeparator`, `Directory`, `Title`, `WarningMsg`, `ModeMsg`, `MoreMsg`, `Question`, `MatchParen`, `Pmenu`, `PmenuSel`, `PmenuSbar`, `PmenuThumb`, `NormalFloat`, `FloatBorder`, `DiffAdd`, `DiffChange`, `DiffDelete`, `DiffText`, `Whitespace`, `DiagnosticError`, `DiagnosticWarn`, `DiagnosticInfo`, `DiagnosticHint`, `StatusLineModeNormal`, `StatusLineModeInsert`, `StatusLineModeVisual`, `StatusLineModeReplace`, `StatusLineModeCommand`, `StatusLineLspStarting`, `StatusLineLspReady`, and `StatusLineLspError`
+- **THEN** its UI groups are `Normal`, `LineNr`, `StatusLine`, `ErrorMsg`, `NonText`, `StatusLineNC`, `TabLine`, `TabLineSel`, `TabLineFill`, `Visual`, `SignColumn`, `Search`, `IncSearch`, `CurSearch`, `CursorLine`, `CursorLineNr`, `ColorColumn`, `EndOfBuffer`, `WinSeparator`, `Directory`, `Title`, `WarningMsg`, `ModeMsg`, `MoreMsg`, `Question`, `MatchParen`, `Pmenu`, `PmenuSel`, `PmenuSbar`, `PmenuThumb`, `NormalFloat`, `FloatBorder`, `DiffAdd`, `DiffChange`, `DiffDelete`, `DiffText`, `Whitespace`, `DiagnosticError`, `DiagnosticWarn`, `DiagnosticInfo`, `DiagnosticHint`, `StatusLineModeNormal`, `StatusLineModeInsert`, `StatusLineModeVisual`, `StatusLineModeReplace`, `StatusLineModeCommand`, `StatusLineLspStarting`, `StatusLineLspReady`, `StatusLineLspError`, `IblIndent`, and `IblScope`
 
 #### Scenario: A plugin asks for an editor group
 - **WHEN** a plugin asks for the group `StatusLine`
@@ -114,7 +114,7 @@ The `option.background` line SHALL take `terminal` (the default) or `theme`. Wit
 - **THEN** ".caratrc:1: unknown background dark" is reported and the background stays `terminal`
 
 ### Requirement: Text groups meet WCAG AA contrast
-In every shipped palette, drawn with the theme's background, every group that carries text SHALL have a contrast ratio of at least 4.5:1 between its foreground and background, and every decoration group (`NonText`, `EndOfBuffer`, `WinSeparator`, `FloatBorder`, `Whitespace`, `SignColumn`, and the file-icon groups) at least 3:1, both at 24-bit colors and at the 256 colors written for them. `TabLineFill`, `PmenuSbar`, and `PmenuThumb`, which carry no text, are exempt.
+In every shipped palette, drawn with the theme's background, every group that carries text SHALL have a contrast ratio of at least 4.5:1 between its foreground and background, and every decoration group (`NonText`, `EndOfBuffer`, `WinSeparator`, `FloatBorder`, `Whitespace`, `SignColumn`, `IblIndent`, `IblScope`, and the file-icon groups) at least 3:1, both at 24-bit colors and at the 256 colors written for them. `TabLineFill`, `PmenuSbar`, and `PmenuThumb`, which carry no text, are exempt.
 
 #### Scenario: Every palette passes
 - **WHEN** the contrast of every group of `one_dark`, `one_light`, `dark_plus`, and `light_plus` is measured
