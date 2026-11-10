@@ -3157,4 +3157,82 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `carat/domain/jump_list.rb` and its one caller that pushes, `VisitTarget` in `carat/use_cases/definitions/visit_target.rb`, from the `definitions` change (out of scope there).
 - Why it matters: in Neovim `G`, `gg`, searches, `n`, `%`, marks, `:N`, and buffer switches also add to the jump list, kept per window and listed by `:jumps`, so Ctrl-O after a search or a `G` does nothing in carat.
-- Fix outline: push the position left from the jump motions (a jump flag on the motion handlers, pushed by the dispatcher when the cursor moved by more than a line), move the list into `Window` (copied on a split), and add `:jumps`, each with a row in `docs/compatibility.md` and `test/adapters_definitions.rb` or an editor test. Folded into the backlog items worth a change (queue item 37).
+- Fix outline: push the position left from the jump motions (a jump flag on the motion handlers, pushed by the dispatcher when the cursor moved by more than a line), move the list into `Window` (copied on a split), and add `:jumps`, each with a row in `docs/compatibility.md` and `test/adapters_definitions.rb` or an editor test. Folded into the backlog items worth a change (queue item 37). When the jump motions arrive, move the `jump.older` and `jump.newer` handlers from `DefinitionHandler` (`carat/use_cases/actions/definition_handler.rb` line 52 at fafe59c) to a `JumpHandler`, since the list is not definition-specific (quality advisory in `definitions`).
+
+## Definition target paths keep decoded control bytes
+
+- Where: `carat/adapters/json_rpc_language_gateway.rb` line 789 at fafe59c, `path_of`, which refuses a raw or escaped NUL but keeps a decoded `%0A` or `%1B`. Security Low (5) and quality advisory in `definitions`.
+- Why it matters: a hostile language server can put a newline or ESC into a target path, which reaches the read-only and E484 message text (split into extra message lines by `TextLines.split`), the read-only view's title, the float title, and a pick-list buffer line that then holds a newline, breaking the one-line invariant. `Frame#put_from` replaces every control with U+FFFD, so no escape sequence reaches the terminal.
+- Fix outline: in `path_of`, return "" when a decoded byte is below 0x20 or is 0x7F, as a NUL is refused (or pass the path through `Domain::ControlText.strip` before it is stored), with rows in the escapes test of `test/adapters_definitions.rb` for a URI holding `%0A` and `%1B`.
+
+## File URI decoding is hand-rolled inside the language gateway
+
+- Where: `carat/adapters/json_rpc_language_gateway.rb` lines 789 to 850 at fafe59c, `path_of`, `escaped`, and `hex_value`, far from `uri_of`; `test/adapters_definitions.rb` line 338 covers only `%2E` and `%00`. Quality advisories in `definitions`.
+- Why it matters: about twenty lines validate UTF-8 by hand (lead size, continuation bytes, overlongs, surrogates, range, `pack("U")`) in an adapter of over 1200 lines, and that multibyte branch has no test, so a regression in it would pass the suite.
+- Fix outline: move the decoding into a domain value (a `FileUri` with `path_of` beside the encoding of `uri_of`) tested in a domain test; decode each escape to its byte and refuse unless `out.valid_encoding?`, as `OpenFile` already relies on; add rows for a `%C3%A9` path that opens and an overlong `%C0%AE` and a surrogate `%ED%A0%80` that are skipped.
+
+## The definition ask copies the hover ask in the gateway
+
+- Where: `carat/adapters/json_rpc_language_gateway.rb` lines 692 (`forget_definition`), 703 (`send_definition`), and 732 (`cancel_definition`) at fafe59c, which repeat `forget_hover` (683), `send_hover` (853), and `cancel_hover` (881) but for the record and the method name; `Domain::DefinitionRequest` repeats `HoverRequest`'s anchor, serial, deadline, and languages fields. Quality advisories in `definitions`.
+- Why it matters: a fourth copy of the anchored-ask pattern; a fix to one send, cancel, or forget path (such as the stale-answer defect queued in `hover-tidy`) has to be made in each copy.
+- Fix outline: an anchored-ask record both requests hold, with one private send, cancel, and forget helper over the anchor fields and the method name in the gateway; if Spinel's typing of the two records prevents it, record the reason here.
+
+## The definition answer loop stops before LIMIT targets are kept
+
+- Where: `carat/adapters/json_rpc_language_gateway.rb` line 753 at fafe59c, `defined`, which reads only the first `DefinitionRequest::LIMIT` entries of an answer even when some were skipped as non-file, while `DefinitionRequest#add_target` caps the kept targets again. Quality advisory in `definitions`.
+- Why it matters: an answer whose first entries are not files drops file targets that follow, and the cap is held in two places.
+- Fix outline: scan a bounded number of entries larger than `LIMIT` (or until `LIMIT` are kept) and keep the one cap in `add_target`, with a row whose first entries are non-file.
+
+## gd inside a focused float works on the float
+
+- Where: `carat/use_cases/definitions/visit_target.rb` lines 70 and 83 at fafe59c, `jump` and `place`, which use `state.window`, the focused float when one is entered, while `RequestDefinition` asks at `state.tab.layout_window`. Quality advisory in `definitions`; the Ctrl-O and Ctrl-I part was fixed in the change, `WalkJumps` doing nothing while a float has the focus.
+- Why it matters: `gd` inside an entered hover float pushes the float's scratch buffer onto the jump list and loads the target into the float, since `BufferList#load` shows into `tabs.window`.
+- Fix outline: refuse `definition.*` while a float is focused, as `WalkJumps` does, or close the focused float first and work on the layout window, with a row pressing `gd` in an entered hover float.
+
+## A plugin's keymap.pick line is silently ignored
+
+- Where: `carat/domain/keymap.rb` line 181 at fafe59c, `apply`, which checks a `keymap.pick` line on a throwaway keymap whatever its owner, while `pick_from` binds only the configuration's lines. Quality advisory in `definitions`.
+- Why it matters: a plugin manifest line `keymap.pick ...` is accepted without a problem and has no effect, so its author gets no report.
+- Fix outline: refuse it as "a plugin cannot set keymap.pick" when the owner is not empty, as `keymap.leader` is refused, with a row in `test/domain_keymap.rb`.
+
+## JumpList#step pushes before the bounds check
+
+- Where: `carat/domain/jump_list.rb` line 55 at fafe59c, `step`, whose comment says -1 past either end with nothing moved, but going older from the newest end pushes the position before the check, so Ctrl-O on an empty list adds an entry. Quality advisory in `definitions`.
+- Why it matters: the comment misleads the next reader, and a refused Ctrl-O on an empty list leaves an entry Ctrl-I can reach.
+- Fix outline: check the target before pushing (an empty list answers -1 at once), or reword the comment, with a row for Ctrl-O on an empty list.
+
+## Definition float and row clamp copy other use cases
+
+- Where: `carat/use_cases/definitions/open_definition_float.rb` line 30 at fafe59c duplicates `ShowHover#open` (`carat/use_cases/docs/show_hover.rb` line 74): the below-or-above placement, height, width, and `FloatSpec`; `carat/use_cases/definitions/walk_jumps.rb` lines 51 to 53 repeat the row clamp of `VisitTarget#place` and `#clamp` (`visit_target.rb` lines 180 and 187). Quality advisories in `definitions`.
+- Why it matters: section 5 of `docs/architecture.md` moves logic several use cases share into the domain or one use case; two copies of the cursor-float placement drift apart.
+- Fix outline: have `ShowHover` open its float through the one use case (named for what it does, such as `OpenCursorFloat`) or move the placement into a domain helper both call; add `EditorState#clamp_row` beside `clamp_col` and call it from `WalkJumps` and `VisitTarget`.
+
+## HandleKey takes the definition record beside its follower
+
+- Where: `carat/use_cases/handle_key.rb` lines 105 to 129 at fafe59c, which take both `definition:` and `follow_definition:`, where the hover is read as `follow_hover.hover`. Quality advisories in `definitions`.
+- Why it matters: the extra keyword duplicates wiring the follower already holds and widens the constructor and `EditorAssembly`'s call.
+- Fix outline: set `@definition = follow_definition.definition` and drop the keyword from `HandleKey` and `EditorAssembly`, keeping `test/adapters_assembly.rb`'s shared-instance check.
+
+## Two comments left unwrapped by the definitions change
+
+- Where: `carat/use_cases/files/open_file.rb` line 20 (127 columns) and `carat/use_cases/handle_key.rb` line 63 at fafe59c. Quality advisories in `definitions`.
+- Why it matters: the rest of each comment wraps near 72 columns, so the lines read as broken.
+- Fix outline: rewrap both paragraphs at the file's width.
+
+## Definition commands lack a table-driven test
+
+- Where: `test/adapters_definitions.rb` line 184 at fafe59c, which the `gd`, Ctrl-O, and Ctrl-I rows of `docs/compatibility.md` point at, a sequence of asserts. Quality advisory in `definitions`.
+- Why it matters: CLAUDE.md asks a table-driven test of each Neovim command; the answer shapes (Location, list, LocationLink, escapes, relative, NUL, negative, non-file) fit a table and would be easier to extend.
+- Fix outline: a `t.table` of answers to the position or message reached.
+
+## A symlinked working directory opens the edited file read-only
+
+- Where: `carat/use_cases/definitions/visit_target.rb` line 166 at fafe59c, `absolute`, and `inside?` at line 160, which compare against the working directory as given. Quality advisory in `definitions`.
+- Why it matters: with a symlinked working directory and a server answering resolved paths, a target in the edited file compares unequal and fails `inside?`, so `gd` opens a read-only duplicate view instead of jumping.
+- Fix outline: also compare against the resolved working directory, with a row for a symlinked working directory.
+
+## Map entries miss the definitions change's names
+
+- Where: `docs/codebase-map.md` line 523 at fafe59c, the `path_info.rb` entry, which does not name `refusal` and `BUFFER_LIMIT`, and line 612, the `json_rpc_language_gateway.rb` entry, which does not name `textDocument/definition`. Quality advisory in `definitions`.
+- Why it matters: the map is where a change starts; a missing name sends the next reader searching.
+- Fix outline: add both to their entries.
