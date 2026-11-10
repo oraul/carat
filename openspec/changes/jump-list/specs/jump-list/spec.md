@@ -60,8 +60,8 @@ A window SHALL walk only its own jump list, and a new window, opened by a split,
 - **THEN** that window walks its own entries, never reaching the position the new window left
 
 #### Scenario: A new tab page copies the jump list
-- **WHEN** `:e b.txt` left `a.txt`, `:tabnew` opened a tab page, and Ctrl-O is typed there twice
-- **THEN** the new tab page's window walks back to `b.txt` and then `a.txt`
+- **WHEN** `:e b.txt` left `a.txt`, `:tabnew` opened a tab page, and Ctrl-O is typed there
+- **THEN** the new tab page's window shows `a.txt`, the entry it copied
 
 ### Requirement: Every buffer switch joins the jump list
 Showing another buffer in the window SHALL record the position the window left in its jump list: `:e`, `:b N`, `:bn`, `:bp`, `:bN`, `:bfirst`, `:blast`, the buffer keys, the finder, the explorer, and `gd`. Ctrl-O and Ctrl-I themselves and `:bd`'s replacement SHALL record nothing, and a file opened over the empty startup buffer SHALL record nothing, as that buffer leaves the list.

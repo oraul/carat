@@ -3134,11 +3134,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a change that scans the buffer on every insert-mode key would pass the suite unseen.
 - Fix outline: assert that typing in insert mode with no popup leaves the menu unfilled, or add a bench scenario row that pins the allocations. Queued in `completion-tidy`.
 
-## Only gd adds to the jump list, and the list is one for the editor
+## Only gd and buffer switches add to the jump list
 
-- Where: `carat/domain/jump_list.rb` and its one caller that pushes, `VisitTarget` in `carat/use_cases/definitions/visit_target.rb`, from the `definitions` change (out of scope there).
-- Why it matters: in Neovim `G`, `gg`, searches, `n`, `%`, marks, `:N`, and buffer switches also add to the jump list, kept per window and listed by `:jumps`, so Ctrl-O after a search or a `G` does nothing in carat.
-- Fix outline: push the position left from the jump motions (a jump flag on the motion handlers, pushed by the dispatcher when the cursor moved by more than a line), move the list into `Window` (copied on a split), and add `:jumps`, each with a row in `docs/compatibility.md` and `test/adapters_definitions.rb` or an editor test. Folded into the backlog items worth a change (queue item 37). When the jump motions arrive, move the `jump.older` and `jump.newer` handlers from `DefinitionHandler` (`carat/use_cases/actions/definition_handler.rb` line 52 at fafe59c) to a `JumpHandler`, since the list is not definition-specific (quality advisory in `definitions`).
+- Where: `carat/domain/jump_list.rb`, filled by `VisitTarget` (`gd`) and `BufferList#enter` (every buffer switch) since `jump-list`; the motion handlers push nothing, and no alternate file exists.
+- Why it matters: in Neovim `G`, `gg`, searches, `n`, `%`, `(`, `{`, `H`, `M`, `L`, marks, and `:N` also add to the window's jump list, so Ctrl-O after a search or a `G` does nothing in carat; `Ctrl-^`, `Ctrl-6`, and `:e #` reach no alternate file, and `:ls #` lists none.
+- Fix outline: push the position left from the jump motions (a jump flag on the motion handlers, pushed by the dispatcher), keep the window's alternate buffer beside its jump list (set by `BufferList#enter` and the walk), add `Ctrl-^`, `Ctrl-6`, `:e #`, and the `#` flag of `:ls`, each with a row in `docs/compatibility.md` and a table test, and move `jump.older` and `jump.newer` from `DefinitionHandler` to a `JumpHandler`, since the list is not definition-specific (quality advisory in `definitions`). Queue item `jump-motions`.
 
 ## Definition target paths keep decoded control bytes
 
@@ -3175,12 +3175,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/domain/keymap.rb` line 181 at fafe59c, `apply`, which checks a `keymap.pick` line on a throwaway keymap whatever its owner, while `pick_from` binds only the configuration's lines. Quality advisory in `definitions`.
 - Why it matters: a plugin manifest line `keymap.pick ...` is accepted without a problem and has no effect, so its author gets no report.
 - Fix outline: refuse it as "a plugin cannot set keymap.pick" when the owner is not empty, as `keymap.leader` is refused, with a row in `test/domain_keymap.rb`.
-
-## JumpList#step pushes before the bounds check
-
-- Where: `carat/domain/jump_list.rb` line 55 at fafe59c, `step`, whose comment says -1 past either end with nothing moved, but going older from the newest end pushes the position before the check, so Ctrl-O on an empty list adds an entry. Quality advisory in `definitions`.
-- Why it matters: the comment misleads the next reader, and a refused Ctrl-O on an empty list leaves an entry Ctrl-I can reach.
-- Fix outline: check the target before pushing (an empty list answers -1 at once), or reword the comment, with a row for Ctrl-O on an empty list.
 
 ## Definition float and row clamp copy other use cases
 
@@ -3744,7 +3738,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `carat/plugins/finder/plugin.rb` line 268 (widths `cols - 6`, `(width - 5) / 2`, `width + 6`, `cols - width - 11`) and the `FloatOptions` comment at `carat/plugin_api.rb` line 197, which states a box is `width + 4` without the `option.winborder none` case. Quality advisories of `float-frame`.
 - Why it matters: under `option.winborder none` a box is `width + 2`, so the list and preview leave two-column gaps, and no test asserts the two boxes still tile the screen.
-- Fix outline: name the frame width of a bordered float (border 2 plus padding 2) in a constant, say `width + 2` under `winborder none` in the comment, let a plugin read the frame size through the API, and assert both boxes' columns in `test/editor_finder.rb`. Queue item `float-placement`.
+- Fix outline: name the frame width of a bordered float (border 2 plus padding 2) in a constant, say `width + 2` under `winborder none` in the comment, let a plugin read the frame size through the API, and assert both boxes' columns in `test/editor_finder.rb`. Queue item `float-edges`.
 
 ## The palette bench scenario is not in the default list
 
@@ -3762,13 +3756,13 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `carat/use_cases/docs/show_hover.rb:59`, `carat/use_cases/docs/show_signature.rb:53`, `carat/use_cases/definitions/open_definition_float.rb:40`, against `carat/use_cases/discovery/show_key_hints.rb:132`. Periodic quality, blocking.
 - Why it matters: `FloatWindow#place` fits text to cols minus border and padding, so under 84 columns (80 included) every long hover row, signature label, and peek row loses its last two columns; no test runs at a width where the cap binds.
-- Fix outline: one frame-width rule for every float, and a narrow-screen hover row asserting a wrapped row's last word shows. Queue item `float-placement`.
+- Fix outline: one frame-width rule for every float, and a narrow-screen hover row asserting a wrapped row's last word shows. Queue item `float-edges`.
 
 ## The palette width ignores the float padding
 
 - Where: `carat/use_cases/discovery/follow_palette.rb:114` and `:124`. Periodic quality.
 - Why it matters: below 94 columns the rows are cut two cells wider than `FloatWindow#place` leaves and the column goes negative until shifted.
-- Fix outline: the same frame-width rule as the hover entry. Queue item `float-placement`.
+- Fix outline: the same frame-width rule as the hover entry. Queue item `float-edges`.
 
 ## FloatWindow#place shadows its edge reader
 
@@ -3908,29 +3902,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: five copies of one loop.
 - Fix outline: one `ActionTable` method registering names and descriptions. Backlog batches (editing and keymap copies).
 
-## A replace jump back to a scratch buffer unlists the file left
-
-- Where: `BufferList#hand_tab` in `carat/domain/buffer_list.rb:278`, reached from `WalkJumps` (`carat/use_cases/definitions/walk_jumps.rb:53`), which computes `tabbed` false for a scratch entry; `gd` may start from a scratch buffer, which `visit_target.rb:82` exempts. Quality advisory of `jump-replace-tab`.
-- Why it matters: with `option.jumptab replace`, Ctrl-O back to a scratch buffer still shown in another window unlists the file buffer it leaves, so the tab row shrinks by a file the user never closed.
-- Fix outline: return early in `hand_tab` when the target is `scratch?`, with a row in `test/adapters_definitions.rb`. Queue item `jump-list`.
-
-## The replace-jump guard is written twice
-
-- Where: `carat/use_cases/definitions/visit_target.rb:87` and `carat/use_cases/definitions/walk_jumps.rb:53`, both `if !tabbed && state.options.jumptab == Domain::Options::JUMPTAB_REPLACE`. Quality advisory of `jump-replace-tab`.
-- Why it matters: the rule for when a jump takes over a tab lives in two use cases, which can drift apart as the jump list grows.
-- Fix outline: a predicate `Options#jump_takes_tab?`, or pass the mode to `hand_tab`, so the rule lives in one place. Queue item `jump-list`.
-
-## The architecture's Options list omits jumptab and winborder
-
-- Where: `docs/architecture.md:113`, which names Carat's own `Options` members (breadcrumbs, indentguides, icons). Quality advisory of `jump-replace-tab`.
-- Why it matters: the binding description of the record misses two members a reader of the code finds.
-- Fix outline: add `jumptab` and `winborder` to the list, making room under the file's budget by pointing to the notes. Queue item `jump-list`.
-
 ## The replace-jump tests leave three paths unchecked
 
 - Where: `test/adapters_definitions.rb:516` and `:519`, `test/adapters_tab_bar.rb:96`, against `docs/compatibility.md:288` and `carat/adapters/tab_bar.rb:76`. Quality advisory of `jump-replace-tab`.
 - Why it matters: no row runs `:bd` after a replace jump to prove `BufferList#replacement_for` skips the unlisted buffer; no tab-bar row has an unlisted current buffer (the `anchor = first if anchor < 0 || current.tabless?` fallback) or unlisted buffers beside tab-page numbers; and the other `jump_case` rows read tabs through `tab_names`, which re-applies `Buffer#tabless?` instead of reading the painted row, while one block repeats the setup of the back-and-forth row to read it.
-- Fix outline: a `jump_case` row running `:bd` with a second tabbed buffer; rows with current 0 and with pages 2 in the unlisted table; `r.frame.row_text(0)` in `jump_case`'s output and the separate block dropped. Queue item `jump-list`.
+- Fix outline: a `jump_case` row running `:bd` with a second tabbed buffer; rows with current 0 and with pages 2 in the unlisted table; `r.frame.row_text(0)` in `jump_case`'s output and the separate block dropped. Queue item `buffer-list-tidy`.
 
 ## The tab-bar test's unlisted fixture reads ambiguously
 
