@@ -40,11 +40,11 @@ module Carat
 
       #: (ActionTable, request_definition: RequestDefinition, choose_definition: ChooseDefinition, walk_jumps: WalkJumps) -> void
       def self.register(table, request_definition:, choose_definition:, walk_jumps:)
-        table.register("definition.jump", DefinitionHandler.new(request_definition: request_definition, choose_definition: choose_definition, walk_jumps: walk_jumps, variant: :jump), "Go to the definition under the cursor")
-        table.register("definition.peek", DefinitionHandler.new(request_definition: request_definition, choose_definition: choose_definition, walk_jumps: walk_jumps, variant: :peek), "Peek at the definition under the cursor")
-        table.register("definition.choose", DefinitionHandler.new(request_definition: request_definition, choose_definition: choose_definition, walk_jumps: walk_jumps, variant: :choose), "Go to the definition picked in the list")
-        table.register("jump.older", DefinitionHandler.new(request_definition: request_definition, choose_definition: choose_definition, walk_jumps: walk_jumps, variant: :older), "Go to the older position in the jump list")
-        table.register("jump.newer", DefinitionHandler.new(request_definition: request_definition, choose_definition: choose_definition, walk_jumps: walk_jumps, variant: :newer), "Go to the newer position in the jump list")
+        table.register("definition.jump", DefinitionHandler.new(request_definition: request_definition, choose_definition: choose_definition, walk_jumps: walk_jumps, variant: :jump), "Go to the definition")
+        table.register("definition.peek", DefinitionHandler.new(request_definition: request_definition, choose_definition: choose_definition, walk_jumps: walk_jumps, variant: :peek), "Peek at the definition")
+        table.register("definition.choose", DefinitionHandler.new(request_definition: request_definition, choose_definition: choose_definition, walk_jumps: walk_jumps, variant: :choose), "Go to the picked definition")
+        table.register("jump.older", DefinitionHandler.new(request_definition: request_definition, choose_definition: choose_definition, walk_jumps: walk_jumps, variant: :older), "Older position in jump list")
+        table.register("jump.newer", DefinitionHandler.new(request_definition: request_definition, choose_definition: choose_definition, walk_jumps: walk_jumps, variant: :newer), "Newer position in jump list")
       end
     end
   end

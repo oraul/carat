@@ -10,6 +10,16 @@ ok   the symbol request
 ok   the signature request
 ok   the input controller holds the one ShowSignature and the key handler the one RequestSignature and FollowSignature
 ok   the input controller holds the one ShowHover and the key handler the one FollowHover
+ok   the definition request
+ok   the jump list
+ok   the input controller holds the one ShowDefinition and the key handler the one FollowDefinition
+ok   the one target visitor
+ok   the one definition float opener
+ok   the open float use case, in the definitions
+ok   the close float use case, in the definitions
+ok   the buffer list, in the definitions
+ok   the file port, in the definitions
+ok   the target visitor holds the one ProbePath, OpenFile, and ResolveInside
 ok   the tab list
 ok   the editor state
 ok   the registers
@@ -88,4 +98,4 @@ ok   the gateway reads the shipped defaults through the file port it was given
 ok   the assembly and the gateway hold the one file port
 ok   a configuration without lines falls back to Vim's defaults
 ok   a configuration problem names its file and line
-adapters_assembly: 90 passed, 0 failed
+adapters_assembly: 100 passed, 0 failed

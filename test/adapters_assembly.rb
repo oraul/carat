@@ -60,6 +60,20 @@ module AdaptersAssemblyTest
     ]), "the signature request")
     t.assert_equal([true, true, true], [a.controller.show_signature.equal?(a.show_signature), a.handle_key.request_signature.equal?(a.request_signature), a.handle_key.follow_signature.equal?(a.follow_signature)], "the input controller holds the one ShowSignature and the key handler the one RequestSignature and FollowSignature")
     t.assert_equal([true, true], [a.controller.show_hover.equal?(a.show_hover), a.handle_key.follow_hover.equal?(a.follow_hover)], "the input controller holds the one ShowHover and the key handler the one FollowHover")
+    t.assert_equal([], strangers(a.definition, [
+      ["services", a.services.definition], ["request_definition", a.request_definition.definition], ["visit_target", a.visit_target.definition],
+      ["show_definition", a.show_definition.definition], ["choose_definition", a.choose_definition.definition], ["follow_definition", a.follow_definition.definition],
+      ["handle_key", a.handle_key.definition]
+    ]), "the definition request")
+    t.assert_equal([], strangers(a.jumps, [["visit_target", a.visit_target.jumps], ["walk_jumps", a.walk_jumps.jumps]]), "the jump list")
+    t.assert_equal([true, true, true], [a.controller.show_definition.equal?(a.show_definition), a.handle_key.follow_definition.equal?(a.follow_definition), a.show_definition.visit_target.equal?(a.visit_target)], "the input controller holds the one ShowDefinition and the key handler the one FollowDefinition")
+    t.assert_equal([], strangers(a.visit_target, [["show_definition", a.show_definition.visit_target], ["choose_definition", a.choose_definition.visit_target]]), "the one target visitor")
+    t.assert_equal([], strangers(a.open_definition_float, [["visit_target", a.visit_target.open_definition_float], ["show_definition", a.show_definition.open_definition_float]]), "the one definition float opener")
+    t.assert_equal([], strangers(a.open_float, [["open_definition_float", a.open_definition_float.open_float]]), "the open float use case, in the definitions")
+    t.assert_equal([], strangers(a.close_float, [["show_definition", a.show_definition.close_float], ["choose_definition", a.choose_definition.close_float], ["follow_definition", a.follow_definition.close_float]]), "the close float use case, in the definitions")
+    t.assert_equal([], strangers(a.buffers, [["visit_target", a.visit_target.buffers], ["walk_jumps", a.walk_jumps.buffers]]), "the buffer list, in the definitions")
+    t.assert_equal([], strangers(h.files, [["visit_target", a.visit_target.files], ["show_definition", a.show_definition.files], ["resolve_inside", a.resolve_inside.files]]), "the file port, in the definitions")
+    t.assert_equal([true, true, true], [a.visit_target.probe_path.equal?(a.probe_path), a.visit_target.open_file.equal?(a.open_file), a.visit_target.resolve_inside.equal?(a.resolve_inside)], "the target visitor holds the one ProbePath, OpenFile, and ResolveInside")
     t.assert_equal([], strangers(a.tabs, [
       ["state", a.state.tabs], ["buffers", a.buffers.tabs], ["feed", a.buffers.feed.tabs], ["quit", a.quit.tabs],
       ["close_window", a.close_window.tabs], ["split_window", a.split_window.tabs], ["open_side_window", a.open_side_window.tabs],
