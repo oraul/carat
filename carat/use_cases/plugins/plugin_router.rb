@@ -78,6 +78,16 @@ module Carat
         guarded(e) { e.plugin.on_input(input) }
       end
 
+      # Reports a live prompt's changed text to the plugin that opened it.
+      #: (String) -> void
+      def follow_prompt(text)
+        ui = @plugin_ui
+        e = @registry.find(ui.prompt_owner)
+        return if e.nil? || !e.enabled
+        input = PluginApi::Input.new(id: ui.prompt_id.dup, text: text.dup, cancelled: false)
+        guarded(e) { e.plugin.on_prompt_change(input) }
+      end
+
       private
 
       # The concern's reader.

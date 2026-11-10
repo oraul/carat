@@ -7,9 +7,12 @@ require_relative "../carat/testing"
 module UseCasesPluginFilesTest
   P = Carat::PluginApi::Paths
 
-  # A test plugin that keeps its host and records every input it receives.
+  # A test plugin that keeps its host and records every input it
+  # receives, every change of a live prompt, and every action but list.
   class Fs < Carat::PluginApi::Plugin
     attr_reader :inputs #: Array[String]
+    attr_reader :changes #: Array[String]
+    attr_reader :actions #: Array[String]
 
     # @rbs @link: Carat::PluginApi::Host?
 
@@ -17,12 +20,14 @@ module UseCasesPluginFilesTest
     def initialize
       @link = nil
       @inputs = []
+      @changes = []
+      @actions = []
     end
 
     # Returns the manifest.
     # @rbs skip
     def manifest
-      Carat::PluginApi::Manifest.new(name: "fs", version: "1.0.0", api_version: "2.0", actions: { "plugin.fs.list" => "Open the list" }, commands: {}, bindings: ["keymap.normal <leader>fl plugin.fs.list"], events: [], options: [], option_types: {}, filetypes: [])
+      Carat::PluginApi::Manifest.new(name: "fs", version: "1.0.0", api_version: "2.0", actions: { "plugin.fs.list" => "Open the list", "plugin.fs.next" => "Next", "plugin.fs.close" => "Close the prompt" }, commands: {}, bindings: ["keymap.normal <leader>fl plugin.fs.list"], events: [], options: [], option_types: {}, filetypes: [])
     end
 
     #: (Carat::PluginApi::Host) -> void
@@ -32,7 +37,17 @@ module UseCasesPluginFilesTest
 
     #: (String, Carat::PluginApi::Context) -> void
     def on_action(name, context)
-      host.open_scratch("list", "left", 20, ["x", "y"], nil)
+      if name == "plugin.fs.list"
+        host.open_scratch("list", "left", 20, ["x", "y"], nil)
+        return
+      end
+      @actions << "#{name} #{context.count}"
+      host.close_prompt if name == "plugin.fs.close"
+    end
+
+    #: (Carat::PluginApi::Input) -> void
+    def on_prompt_change(input)
+      @changes << "#{input.id} #{input.text}"
     end
 
     #: (Carat::PluginApi::Input) -> void
@@ -273,6 +288,57 @@ module UseCasesPluginFilesTest
     t.assert_equal([false, "ask \"q\" false"], [h.quit?, fs.inputs[3]], "the text is not run as an ex command")
     h.type(":q<CR>")
     t.assert_equal([true, 4], [h.quit?, fs.inputs.length], "the next command line is an ex command again")
+
+    # list_files and read_file (API 2.5).
+    session = editor
+    h, fs = session.harness, session.plugin
+    files = h.files
+    files.put(".git/HEAD", "ref\n")
+    files.put("lib/deep/c.rb", "c\n")
+    files.put("/elsewhere/x.rb", "out\n")
+    files.put("out.rb", "")
+    files.link_to("/w/out.rb", "/elsewhere/x.rb")
+    files.put("in.rb", "")
+    files.link_to("/w/in.rb", "/w/a.txt")
+    files.put("alias/x.rb", "x\n")
+    files.link_to("/w/alias", "/w/lib")
+    files.put("three.txt", "one\r\ntwo\nthree\n")
+    t.table([
+      # list_files lists the files below the root, list_files skips ignored names, list_files skips a link that leaves the root, list_files does not enter a linked directory
+      ["list_files lists the files below the root", fs.host.list_files("/w", [".git"]), [true, "", ["a.txt", "b.txt", "in.rb", "lib/deep/c.rb", "lib/x.rb", "three.txt"]]],
+      ["list_files skips ignored names", fs.host.list_files("/w/lib", ["deep"]), [true, "", ["x.rb"]]],
+      ["without an ignore list the .git files are listed", fs.host.list_files("/w/.git", []), [true, "", ["HEAD"]]],
+      ["list_files fails for a missing root", fs.host.list_files("/nowhere", []), [false, "No such file or directory: /nowhere", []]],
+      ["read_file answers the first rows", fs.host.read_file("/w/three.txt", 2), [true, "", ["one", "two"]]],
+      ["read_file answers fewer rows of a short file", fs.host.read_file("/w/three.txt", 9), [true, "", ["one", "two", "three"]]],
+      ["read_file refuses a directory", fs.host.read_file("/w/lib", 2), [false, "Is a directory", []]],
+      ["read_file refuses no rows", fs.host.read_file("/w/a.txt", 0), [false, "rows must be 1 to 1000", []]],
+      ["read_file refuses a missing file", fs.host.read_file("/w/none.txt", 2).ok, false]
+    ]) do |r|
+      r.is_a?(Carat::PluginApi::Response) ? [r.ok, r.message, r.lines] : r
+    end
+
+    # The live prompt and close_prompt (API 2.5).
+    session = editor
+    h, fs = session.harness, session.plugin
+    r = fs.host.live_prompt("live", "> ", "", ["keymap.cmdline <C-n> plugin.fs.next", "keymap.cmdline <C-x> plugin.fs.close"])
+    h.type("ab")
+    t.assert_equal([true, :cmdline, ["live a", "live ab"], "> ab"], [r.ok, h.mode, fs.changes, h.message_row.rstrip], "a live prompt delivers each changed text")
+    h.type("<C-n>")
+    t.assert_equal([["plugin.fs.next 0"], :cmdline, 2], [fs.actions, h.mode, fs.changes.length], "a live prompt's binding runs the plugin's action")
+    t.assert_equal(false, fs.host.live_prompt("again", "x", "", []).ok, "a second live prompt is refused while one is open")
+    h.type("<BS>")
+    t.assert_equal("live a", fs.changes[2], "a backspace is a change")
+    h.type("x<CR>")
+    t.assert_equal([["live \"ax\" false"], :normal], [fs.inputs, h.mode], "Enter ends a live prompt with an answer")
+    h.type(":")
+    t.assert_equal(:cmdline, h.mode, "the next command line is an ex command again")
+    h.type("<C-n><Esc>")
+    t.assert_equal(1, fs.actions.length, "its bindings went with it")
+    fs.host.live_prompt("live", "> ", "", ["keymap.cmdline <C-x> plugin.fs.close"])
+    h.type("<C-x>")
+    t.assert_equal([:normal, 1, ""], [h.mode, fs.inputs.length, h.message_row.rstrip], "close_prompt closes the plugin's prompt")
+    t.assert_equal([false, "No prompt is open"], [fs.host.close_prompt.ok, fs.host.close_prompt.message], "close_prompt without a prompt fails")
 
     t.finish
   end
