@@ -43,6 +43,9 @@ module Carat
       # When file windows show a winbar with their path and the cursor's
       # symbols: auto (with two or more file windows), always, or never.
       option.breadcrumbs auto
+      # What a jump (gd, a pick-list choice, Ctrl-O, Ctrl-I) does with the tab
+      # of the buffer it leaves: replace (the target takes it) or keep (Vim's).
+      option.jumptab replace
       # The border of floats, as Neovim's winborder: none, single, double,
       # rounded, or solid; +, -, and | with option.icons ascii.
       option.winborder rounded

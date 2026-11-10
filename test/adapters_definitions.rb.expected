@@ -46,10 +46,25 @@ ok   gd to an outside file already listed shows that buffer and its tab
 ok   A read-only buffer in the listing
 ok   Filtered by the read-only flag
 ok   The read-only target's tab selects and closes like the others
+ok   gd to a project file takes over the tab it leaves
+ok   The target takes the tab's position and a tab opened with :e stays
+ok   A jump to a buffer with its own tab selects it and keeps both
+ok   A buffer shown in a second window keeps its tab
+ok   option.jumptab keep keeps both tabs
+ok   A target outside the project takes over the tab, read-only
+ok   A target outside the project keeps both tabs under keep, read-only
+ok   A target picked from the list takes over the tab
+ok   Ctrl-O gives the buffer gd left its tab back
+ok   Ctrl-O gives the buffer gd left its tab back, and Ctrl-I the target
+ok   Back and forth keeps the tab's position
+ok   Ctrl-O under keep leaves both tabs
+ok   :bn skips an unlisted buffer
+ok   :b N lists an unlisted buffer again
+ok   The listing hides an unlisted buffer and the bang shows it
 ok   Ctrl-O past the oldest entry does nothing in the editor
 ok   Ctrl-O refuses another buffer over a modified one
 ok   A refused Ctrl-O leaves the jump list as it was
 ok   Ctrl-I after a refused Ctrl-O returns to the start
 ok   Ctrl-O drops an entry whose buffer is gone and stays
 ok   Ctrl-O clamps the column to a line shortened since, in code points
-adapters_definitions: 54 passed, 0 failed
+adapters_definitions: 69 passed, 0 failed

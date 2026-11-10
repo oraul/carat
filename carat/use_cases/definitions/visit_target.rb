@@ -6,6 +6,7 @@ require_relative "../../domain/definition_request"
 require_relative "../../domain/filetype"
 require_relative "../../domain/jump_list"
 require_relative "../../domain/messages"
+require_relative "../../domain/options"
 require_relative "../../domain/path_info"
 require_relative "../../domain/path_policy"
 require_relative "../../domain/window"
@@ -79,8 +80,11 @@ module Carat
         outcome = Outcome.none
         unless absolute(current.path_text) == absolute(path)
           return Outcome.failure(Domain::Messages::E37) if current.modified? && !current.scratch?
+          held = listed_for(path)
+          tabbed = !held.nil? && !held.tabless?
           outcome = inside?(path) ? @open_file.call(state, open_path(path)) : view(state, path)
           return outcome unless outcome.ok
+          @buffers.hand_tab(current, state.window.buffer) if !tabbed && state.options.jumptab == Domain::Options::JUMPTAB_REPLACE
         end
         @jumps.push(from_id, from_row, from_col)
         place(state.window, line, character)

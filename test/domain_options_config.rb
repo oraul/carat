@@ -185,6 +185,22 @@ module DomainOptionsConfigTest
     end
     t.assert_equal("rounded", options.winborder, "the shipped border is rounded")
 
+    # option.jumptab: what a jump does with the tab it leaves. Rows are
+    # [label, project lines, [mode, problems]]. Scenario: An unknown
+    # jumptab mode is refused and keeps the earlier value.
+    t.table([
+      ["keep, Vim's, without a configuration", "", ["keep", []]],
+      ["replace is stored", "option.jumptab replace\n", ["replace", []]],
+      ["keep is stored after replace", "option.jumptab replace\noption.jumptab keep\n", ["keep", []]],
+      ["An unknown jumptab mode is refused and keeps the earlier value", "option.jumptab sometimes\n", ["keep", [".caratrc:1: unknown jumptab mode sometimes"]]]
+    ]) do |text|
+      config = D::Config.new
+      config.read(".caratrc", text.to_s, false)
+      read = D::Options.from_config(config)
+      [read.jumptab, config.report]
+    end
+    t.assert_equal("replace", options.jumptab, "the shipped configuration lets a jump take the tab it leaves")
+
     t.finish
   end
 end

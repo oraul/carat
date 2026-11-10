@@ -207,13 +207,55 @@ module AdaptersDefinitionsTest
     out.strip
   end
 
-  # gd to a target from a.rb, after the setup ("link" makes
+  # A defining rig with more lines in the user's configuration.
+  #: (String) -> Rig
+  def self.defining_with(user)
+    r = rig_with({ "definitionProvider" => true }, user)
+    r.type("3j")
+    r
+  end
+
+  # The paths of the buffers that have a tab, in the tab row's order, the
+  # current window's marked with a star.
+  #: (Rig) -> String
+  def self.tab_names(r)
+    list = r.assembly.buffers
+    current = r.assembly.state.buffer
+    out = [""]
+    out.clear
+    i = 0
+    while i < list.count
+      buffer = list.buffer_at(i)
+      out << buffer.path_text + (buffer.equal?(current) ? "*" : "") unless buffer.tabless?
+      i += 1
+    end
+    out.join(" ")
+  end
+
+  # A jump's tab rule: the user's lines, the keys before gd, the target
+  # ("pick" answers b.rb and lib/x.rb and Enter takes the first), and the
+  # keys after, read as "tabs | where | read-only".
+  #: (String, String, String, String) -> String
+  def self.jump_case(user, setup, target, after)
+    r = defining_with(user)
+    r.type(setup) unless setup.empty?
+    if target == "pick"
+      asked(r, "gd", [location("/project/b.rb", 1, 4), location("/project/lib/x.rb", 0, 0)])
+      r.type("<CR>")
+    else
+      asked(r, "gd", location(target, 1, 4))
+    end
+    r.type(after) unless after.empty?
+    "#{tab_names(r)} | #{r.where} | #{r.assembly.state.buffer.readonly}"
+  end
+
+  # gd to a target from a.rb under option.jumptab keep, after the setup ("link" makes
   # /project/out.rb a link to /gems/c.rb, "listed" opens /gems/c.rb with
   # :e first and goes back to a.rb), read as "tab row | selected tab |
   # where | buffers listed".
   #: (String, String) -> String
   def self.ghost_case(setup, path)
-    r = defining
+    r = defining_with("option.jumptab keep\n")
     if setup == "link"
       r.files.put("/project/out.rb", "# c\ndef far\n  3\nend\n")
       r.files.link_to("/project/out.rb", "/gems/c.rb")
@@ -442,7 +484,7 @@ module AdaptersDefinitionsTest
       ["gd to a project file linked out of the project shows its tab, selected", ["link", "/project/out.rb"], " r a.rb    r out.rb | out.rb | out.rb 1:4 | 2"],
       ["gd to an outside file already listed shows that buffer and its tab", ["listed", "/gems/c.rb"], " r a.rb    r c.rb | c.rb | /gems/c.rb 1:4 | 2"]
     ]) { |input| ghost_case(input[0].to_s, input[1].to_s) }
-    r = defining
+    r = defining_with("option.jumptab keep\n")
     asked(r, "gd", location("/gems/c.rb", 1, 4))
     r.type(":bp<CR>")
     back = "#{r.frame.row_text(0)} | #{selected_tab(r)} | #{r.where}"
@@ -454,6 +496,34 @@ module AdaptersDefinitionsTest
     t.assert_equal("  2 %a=  \"/gems/c.rb\"                   line 2", r.message, "Filtered by the read-only flag")
     r.type(":bd<CR>")
     t.assert_equal([" r a.rb    r c.rb | a.rb | a.rb 3:0", " r a.rb    r c.rb | c.rb | /gems/c.rb 1:4", "a.rb 3:0 | 1"], [back, again, "#{r.where} | #{r.assembly.buffers.count}"], "The read-only target's tab selects and closes like the others")
+
+    # A jump takes over the tab it leaves (option.jumptab replace, as
+    # shipped): rows are [label, [user lines, keys before, target, keys
+    # after], "tabs | where | read-only"].
+    t.table([
+      ["gd to a project file takes over the tab it leaves", ["", "", "/project/b.rb", ""], "b.rb* | b.rb 1:4 | false"],
+      ["The target takes the tab's position and a tab opened with :e stays", ["", ":e lib/x.rb<CR>:bp<CR>", "/project/b.rb", ""], "b.rb* lib/x.rb | b.rb 1:4 | false"],
+      ["A jump to a buffer with its own tab selects it and keeps both", ["", ":e b.rb<CR>:bp<CR>", "/project/b.rb", ""], "a.rb b.rb* | b.rb 1:4 | false"],
+      ["A buffer shown in a second window keeps its tab", ["", ":split<CR>", "/project/b.rb", ""], "a.rb b.rb* | b.rb 1:4 | false"],
+      ["option.jumptab keep keeps both tabs", ["option.jumptab keep\n", "", "/project/b.rb", ""], "a.rb b.rb* | b.rb 1:4 | false"],
+      ["A target outside the project takes over the tab, read-only", ["", "", "/gems/c.rb", ""], "/gems/c.rb* | /gems/c.rb 1:4 | true"],
+      ["A target outside the project keeps both tabs under keep, read-only", ["option.jumptab keep\n", "", "/gems/c.rb", ""], "a.rb /gems/c.rb* | /gems/c.rb 1:4 | true"],
+      ["A target picked from the list takes over the tab", ["", "", "pick", ""], "b.rb* | b.rb 1:4 | false"],
+      ["Ctrl-O gives the buffer gd left its tab back", ["", "", "/project/b.rb", "<C-o>"], "a.rb* | a.rb 3:0 | false"],
+      ["Ctrl-O gives the buffer gd left its tab back, and Ctrl-I the target", ["", "", "/project/b.rb", "<C-o><C-i>"], "b.rb* | b.rb 1:4 | false"],
+      ["Back and forth keeps the tab's position", ["", ":e lib/x.rb<CR>:bp<CR>", "/project/b.rb", "<C-o>"], "a.rb* lib/x.rb | a.rb 3:0 | false"],
+      ["Ctrl-O under keep leaves both tabs", ["option.jumptab keep\n", "", "/project/b.rb", "<C-o>"], "a.rb* b.rb | a.rb 3:0 | false"],
+      [":bn skips an unlisted buffer", ["", "", "/project/b.rb", ":bn<CR>"], "b.rb* | b.rb 1:4 | false"],
+      [":b N lists an unlisted buffer again", ["", "", "/project/b.rb", ":b 1<CR>"], "b.rb a.rb* | a.rb 3:0 | false"]
+    ]) { |input| jump_case(input[0].to_s, input[1].to_s, input[2].to_s, input[3].to_s) }
+    r = defining
+    asked(r, "gd", location("/project/b.rb", 1, 4))
+    r.type(":ls<CR>")
+    listed = r.message
+    r.type(":ls!<CR>")
+    all = r.message
+    r.type(":ls u<CR>")
+    t.assert_equal(["  2 %a   \"b.rb\"                         line 2", "  1u h   \"a.rb\"                         line 4\n  2 %a   \"b.rb\"                         line 2", "  1u h   \"a.rb\"                         line 4", 2], [listed, all, r.message, r.assembly.buffers.count], "The listing hides an unlisted buffer and the bang shows it")
 
     # The jump list's ends.
     r = defining

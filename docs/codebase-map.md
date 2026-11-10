@@ -258,7 +258,7 @@ Files:
 - `carat/domain/transaction.rb`: `Transaction` (records, cursor before and after, cause, merged row span, history flag); `add`, `seal`, `truncate`, `span`, `record_at`, `empty?`.
 - `carat/domain/buffer_feed.rb`: `BufferFeed`, the one sink of opens, closes, renames, and closed transactions, carrying the command's time and `undolevels`; `push`, `notice_at`, `count`, `clear`, `note`.
 - `carat/domain/buffer_notice.rb`: `BufferNotice`; `change?`.
-- `carat/domain/buffer_list.rb`: `BufferList` (listed buffers, their ids, the feed, keep or release policy: file buffers stay until `:bd`); `add`, `remove`, `release`, `load` (the empty buffer's number reused, the cursor remembered and restored), `for_path`, `with_id`, `scratch_for`, `hidden_modified`, `any_modified?`, `first_unsaved`, `bring`, `step_from`, `file_count`, `tab_row?`, `replacement_for`, `close_window`, `close_tab`, `close_windows_of`.
+- `carat/domain/buffer_list.rb`: `BufferList` (listed buffers, their ids, the feed, keep or release policy: file buffers stay until `:bd`); `add` (also lists again a buffer a jump left unlisted, `Buffer#listed`), `remove`, `release`, `load` (the empty buffer's number reused, the cursor remembered and restored), `hand_tab` (a jump's target takes the tab of the buffer left, which goes unlisted), `for_path`, `with_id`, `scratch_for`, `hidden_modified`, `any_modified?`, `first_unsaved`, `bring`, `step_from`, `file_count`, `tab_row?`, `replacement_for`, `close_window`, `close_tab`, `close_windows_of`.
 - `carat/use_cases/insert_text.rb`: `InsertText#call`.
 - `carat/use_cases/break_line.rb`: `BreakLine#call` (Enter).
 - `carat/use_cases/erase_character.rb`: `EraseCharacter#call(state, forward)` (Backspace, Delete).
@@ -378,7 +378,7 @@ Files:
 - `carat/use_cases/ex/window_command_handler.rb`: `WindowCommandHandler.register`.
 - `carat/use_cases/ex/tab_command_handler.rb`: `TabCommandHandler.register`.
 - `carat/use_cases/buffers/buffer_request.rb`: `BufferRequest` (target, count, bang); `steps`.
-- `carat/use_cases/buffers/list_buffers.rb`: `ListBuffers#call(state, flags, bang)`, the `:ls` listing with Neovim's columns and flag filters.
+- `carat/use_cases/buffers/list_buffers.rb`: `ListBuffers#call(state, flags, bang)`, the `:ls` listing in number order with Neovim's columns and flag filters, unlisted buffers under the bang.
 - `carat/use_cases/buffers/switch_buffer.rb`: `SwitchBuffer#call(state, request)`, `:bn`, `:bp`, `:bN`, `:b N` (`E37`, `E85`, `E86`).
 - `carat/use_cases/buffers/delete_buffer.rb`: `DeleteBuffer#call(state, number, bang, typed)`, `:bd` in the order of Neovim's `do_buffer` (`E89`, `E516`).
 - `carat/use_cases/ex/buffer_command_handler.rb`: `BufferCommandHandler.register` (`:ls`, `:buffers`, `:files`, `:b[uffer]`, `:bn[ext]`, `:bp[revious]`, `:bN[ext]`, `:bd[elete]`), the number and count arguments.
@@ -635,11 +635,11 @@ Files:
 - `carat/domain/jump_list.rb`: `JumpList`, the positions `gd` left, at most 100, one per buffer line; `push`, `step` (from the newest end Ctrl-O records the start first), `restore_from` (a refused step put back), `remove_at`.
 - `carat/use_cases/definitions/request_definition.rb`: `RequestDefinition#call`, `gd` and `<leader>dd`: records the ask at the cursor, refused without a path or an offering server with Neovim's not-supported message.
 - `carat/use_cases/definitions/show_definition.rb`: `ShowDefinition#call`, the arrived answer at the idle tick: dropped when stale, `No locations found` when empty, one target visited, several in the pick list (an entered float whose scratch buffer has the `keymap.pick` bindings).
-- `carat/use_cases/definitions/visit_target.rb`: `VisitTarget#call`, one target, the current or a listed file matched by its normalized absolute path (`PluginApi::Paths.absolute`): a jump (E37 over a modified buffer, `OpenFile` inside the working directory with links resolved, outside the file's listed buffer or a listed read-only file buffer with its tab (`Buffer#readonly`, refused by `SaveFile` with E45), the jump list pushed, the UTF-16 column) or a peek float of 12 rows.
+- `carat/use_cases/definitions/visit_target.rb`: `VisitTarget#call`, one target, the current or a listed file matched by its normalized absolute path (`PluginApi::Paths.absolute`): a jump (E37 over a modified buffer, `OpenFile` inside the working directory with links resolved, outside the file's listed buffer or a listed read-only file buffer with its tab (`Buffer#readonly`, refused by `SaveFile` with E45), the jump list pushed, the target given the tab left under `option.jumptab replace` through `BufferList#hand_tab`, the UTF-16 column) or a peek float of 12 rows.
 - `carat/use_cases/definitions/open_definition_float.rb`: `OpenDefinitionFloat#call`, a bordered float over a buffer at the cursor, below or above, sized to its rows and title.
 - `carat/use_cases/definitions/choose_definition.rb`: `ChooseDefinition#call`, Enter in the pick list: closes it and visits the row's target.
 - `carat/use_cases/definitions/follow_definition.rb`: `FollowDefinition#call`, after a key while the peek float or pick list is recorded: forgets a closed one, closes the peek once the cursor moved, the list once left.
-- `carat/use_cases/definitions/walk_jumps.rb`: `WalkJumps#call`, Ctrl-O and Ctrl-I by the count across buffers, E37 over a modified buffer with the list put back, a gone buffer's entry dropped.
+- `carat/use_cases/definitions/walk_jumps.rb`: `WalkJumps#call`, Ctrl-O and Ctrl-I by the count across buffers, E37 over a modified buffer with the list put back, a gone buffer's entry dropped, the tab rule of `option.jumptab` applied.
 - `carat/use_cases/actions/definition_handler.rb`: `DefinitionHandler.register` (`definition.jump`, `definition.peek`, `definition.choose`, `jump.older`, `jump.newer`).
 - `carat/use_cases/docs/request_signature.rb`: `RequestSignature#call`, after a typed `(` or `,` in insert mode: records a signature ask for the innermost open `(` on the row when the buffer's server gives signature help.
 - `carat/use_cases/docs/show_signature.rb`: `ShowSignature#call`, the arrived answer at the idle tick: dropped off the followed call, an empty label stops it, else a bordered one-row float above the cursor (below without room) with the active parameter marked.
