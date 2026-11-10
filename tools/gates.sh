@@ -49,9 +49,9 @@
 #              model name, and a Testing line naming the security review
 #   static     trailer, content, snapshots, docs, scenarios, cases, attribution
 #              (make gates)
-#   origin     no risky configuration key (core.hooksPath only as .githooks),
-#              no hook but a sample in .git/hooks, none but commit-msg and
-#              pre-commit in .githooks; an origin/ base equal to origin's
+#   origin     no risky configuration key (core.hooksPath included),
+#              nothing in .git/hooks but INSTALLED_HOOKS_RE's; an origin/
+#              base equal to origin's
 #   pre-push   origin, static, security, stages (tools/run_state.sh push)
 #   backup     trailer, content (tools/run_state.sh backup, with BASE the
 #              branch's base, so every commit the backup publishes)
@@ -127,11 +127,10 @@ require_base() {
 # (core.hooksPath neither: make hooks installs the hooks under the git
 # directory, which no checkout writes, and a hooks path in the work tree
 # would run any hook a checkout brings), the hooks directory holds nothing
-# but INSTALLED_HOOKS_RE's,
-# and an origin/NAME base is origin's NAME: the default fetch refspec (a
-# fetch restores the ref), an origin that is not a local repository (whose
-# fake branch ls-remote would report), and the ref equal to the branch
-# git ls-remote reports. A local base checks the configuration only.
+# but INSTALLED_HOOKS_RE's, and an origin/NAME base is origin's NAME: the
+# default fetch refspec (a fetch restores the ref), an origin that is not
+# a local repository (whose fake branch ls-remote would report), and the
+# ref equal to the branch git ls-remote reports. A local base checks the configuration only.
 gate_origin() {
   gate=origin
   remote=""
