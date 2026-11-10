@@ -137,7 +137,7 @@ module AdaptersIndentGuidesTest
       s.tab.floats.add(float, false)
       marks(draw(s), 5)
     else
-      []
+      ["unknown case #{name}"]
     end
   end
 
