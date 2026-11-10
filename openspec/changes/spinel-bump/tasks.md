@@ -10,6 +10,7 @@
 - [x] 2.1 Set `SPINEL_REF` to f34005bf and regenerate `tools/spinel/spinel_rt_responds_generated.h` with `make spinel-header`; verify the diff is the generator's output only.
 - [x] 2.2 Build the new toolchain with `make toolchain` with the stub first on the `PATH`, and confirm no `ruby` was reached.
 - [ ] 2.3 Run `make check` on the new toolchain and compare allocations per key, rounds, and analysis time with main's figures (lh 27.0, j 28.0, insert 35.0; rounds 2 and 2; 46.2 s and 119.1 s).
+  - Result with section 5: `make check` passes; rounds 2 and 2, analysis 38.9 s (carat) and 80.7 s (runner), against 46.2 s and 119.1 s; allocations per key lh 28.0, j 29.0, insert 36.0, one more than main's each, not yet traced to the pin or to section 5.
 
 ## 3. Defect re-test
 
