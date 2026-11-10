@@ -1,12 +1,14 @@
 module Carat
   module Domain
-    # The jump list: the positions gd left, oldest first, as parallel
+    # A window's jump list: the positions gd and the buffer switches
+    # left, oldest first, as parallel
     # buffer ids, rows, and columns, at most LIMIT; index is the current
     # entry, equal to the length when none is (after a jump). A new entry
     # replaces one of the same buffer and row. Ctrl-O from the newest end
     # first records where it starts, so Ctrl-I comes back there;
-    # restore_from puts back a step that was refused. A Struct record
-    # built with no arguments.
+    # restore_from copies another list, as a new window takes its
+    # parent's and a refused step is put back. A Struct record built with
+    # no arguments.
     class JumpList < Struct.new(:buffer_ids, :rows, :cols, :index, keyword_init: true)
       # @rbs @buffer_ids: Array[Integer]
       # @rbs @rows: Array[Integer]
@@ -50,10 +52,12 @@ module Carat
 
       # Moves by entries, older for a negative by, from the position given
       # (recorded first when going older from the newest end); answers the
-      # entry reached, or -1 past either end with nothing moved.
+      # entry reached, or -1 past either end with nothing moved or
+      # recorded.
       #: (Integer, Integer, Integer, Integer) -> Integer
       def step(by, buffer_id, row, col)
         if by < 0 && index >= buffer_ids.length
+          return -1 if length_after_push(buffer_id, row) - 1 + by < 0
           push(buffer_id, row, col)
           self.index = buffer_ids.length - 1
         end
@@ -81,6 +85,21 @@ module Carat
         rows.delete_at(i)
         cols.delete_at(i)
         self.index = index - 1 if index > i
+      end
+
+      private
+
+      # The length push would leave: one more entry, less one of the same
+      # buffer and row, at most LIMIT.
+      #: (Integer, Integer) -> Integer
+      def length_after_push(buffer_id, row)
+        kept = buffer_ids.length + 1
+        i = 0
+        while i < buffer_ids.length
+          kept -= 1 if buffer_ids[i] == buffer_id && rows[i] == row
+          i += 1
+        end
+        kept > LIMIT ? LIMIT : kept
       end
     end
   end
