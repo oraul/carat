@@ -156,9 +156,9 @@ module DomainThemeTest
 
     # The color-themes scenarios these checks prove: The UI groups (the
     # counts and names), A plugin asks for an editor group (token_id of a
-    # UI group is -1), The search groups have colors, Every UI group has a
-    # color in every palette, Every palette passes (the contrast tables),
-    # and Comments are readable.
+    # UI group is -1), The search groups have colors,
+    # Every UI group has a color in every palette,
+    # Every palette passes (the contrast tables), and Comments are readable.
     # The group table: UI groups first, then the thirty syntax groups,
     # then the file-icon groups.
     t.assert_equal(H::COUNT, H::NAMES.length, "every id has a name")
