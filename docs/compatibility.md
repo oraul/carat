@@ -598,6 +598,16 @@ Carat's own, in place of the which-key and command palette plugins Neovim users 
 
 Differences from Neovim: Neovim's `F1` opens `:help`, which Carat does not have.
 
+## Float borders
+
+Every float has one blank column of padding inside its left and right sides. Bordered floats (hover, the definition peek, the finder, the palette, the key hints, a plugin's float) and the notification boxes are drawn in the `option.winborder` style, a float's title centered on its top edge in `FloatTitle` and cut between the corners when longer; the completion popup stays borderless, as Neovim's popup menu (`editor_floats`, `editor_messages`).
+
+| Keys or line | Action name | Behavior | Problem | Tests |
+| --- | --- | --- | --- | --- |
+| `option.winborder` | none | `rounded` (default, `╭╮╰╯─│`), `single` (`┌┐└┘─│`), `double` (`╔╗╚╝═║`), `solid` (blank cells in `FloatBorder`), or `none` (no edge and no title, the padding kept); with `option.icons ascii` or `NO_COLOR` set the styles with lines draw `+`, `-`, and `\|` | `file:line: unknown border style WORD` | `domain_options_config`, `editor_floats` |
+
+Differences from Neovim: Neovim's `winborder` is empty by default, drawing no border, and also takes `bold`, `shadow`, and a list of characters; Carat's is `rounded` by default, takes none of those, and is read from `option.winborder` only (`:set winborder` answers `Not implemented: :set winborder`).
+
 ## Options read so far
 
-`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `keyhints.delay` (Key hints), `layout.left_width`, `layout.right_width`, and `layout.panel_height` (Layout slots), `breadcrumbs` (Breadcrumbs), `undolevels`, `icons`, `theme`, and `background` (Themes), `startscreen` and `reducedmotion` (Start screen), `indentguides` and `indentguides.char` (Indent guides), from the `option.*` lines of the configuration files; `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, and `cursorline` from those lines and `:set` (Neovim's defaults: off, off, on, on, off; the shipped configuration turns `smartcase` and `cursorline` on); `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.
+`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `keyhints.delay` (Key hints), `layout.left_width`, `layout.right_width`, and `layout.panel_height` (Layout slots), `breadcrumbs` (Breadcrumbs), `undolevels`, `icons`, `theme`, and `background` (Themes), `startscreen` and `reducedmotion` (Start screen), `indentguides` and `indentguides.char` (Indent guides), `winborder` (Float borders), from the `option.*` lines of the configuration files; `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, and `cursorline` from those lines and `:set` (Neovim's defaults: off, off, on, on, off; the shipped configuration turns `smartcase` and `cursorline` on); `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.
