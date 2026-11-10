@@ -76,7 +76,7 @@ check_content() {
   gate=content
   start=$failed
   # shellcheck disable=SC2046
-  scan "$(awk -v OFS="$TAB" '{ print FILENAME, $0 }' $(documents))"
+  report "$(sh "$here/scan_text.sh" $(documents))"
   [ $failed -ne $start ] || ok "$(documents | wc -l | tr -d ' ') document(s)"
 }
 
