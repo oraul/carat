@@ -245,10 +245,7 @@ module Carat
           server = server_at(i)
           i += 1
           next if server.handle == 0
-          forget_completion(server)
-          forget_hover(server)
-          forget_definition(server)
-          forget_signature(server)
+          forget_server(server)
           request(server, "shutdown", nil)
           notify(server, "exit", nil)
           @processes.stop(server.handle)
@@ -450,11 +447,7 @@ module Carat
       # limit: its process is stopped and the bar names the restart.
       #: (Domain::LanguageServer) -> void
       def crash(server)
-        forget_completion(server)
-        forget_hover(server)
-        forget_definition(server)
-        forget_signature(server)
-        forget_symbols(server)
+        forget_server(server)
         @processes.stop(server.handle)
         server.handle = 0
         server.state = :crashed
@@ -527,8 +520,24 @@ module Carat
         notify(server, "initialized", {})
       end
 
-      # A server that runs no more completes no more, and its request in
-      # flight is forgotten.
+      # A server that runs no more answers no request kind more: each ask
+      # drops its language, and a request in flight to it is forgotten.
+      #: (Domain::LanguageServer) -> void
+      def forget_server(server)
+        language = server.language
+        forget_completion(server)
+        @hover.languages.delete(language)
+        @hover.sent_id = 0 if @hover.language == language
+        @definition.languages.delete(language)
+        @definition.sent_id = 0 if @definition.language == language
+        @signature.languages.delete(language)
+        @signature.sent_id = 0 if @signature.language == language
+        @symbols.languages.delete(language)
+        @symbols.sent_id = 0 if @symbols.language == language
+      end
+
+      # The completion part of forget_server: the resolvers and the
+      # resolve in flight are completion's own.
       #: (Domain::LanguageServer) -> void
       def forget_completion(server)
         ask = @completion
@@ -568,11 +577,11 @@ module Carat
         start = Domain::FuzzyMatch.word_start(line)
         typed = line.byteslice(start, line.bytesize - start).to_s
         return if typed.empty? || cursor.col - typed.length != ask.col
-        server = server_for(buffer.filetype)
+        server = running_server(buffer.filetype)
         path = buffer.path_text
-        return if server.nil? || !server.running? || !ask.completes?(server.language) || path.empty?
-        position = { "line" => cursor.row, "character" => utf16_length(line) }
-        params = { "textDocument" => { "uri" => uri_of(path) }, "position" => position, "context" => { "triggerKind" => 1 } }
+        return if server.nil? || !ask.completes?(server.language) || path.empty?
+        params = position_params(path, buffer, cursor)
+        params["context"] = { "triggerKind" => 1 }
         ask.word = typed
         ask.language = server.language
         ask.sent_id = request(server, "textDocument/completion", params)
@@ -583,9 +592,7 @@ module Carat
       #: () -> void
       def cancel
         ask = @completion
-        return if ask.sent_id == 0
-        server = server_for(ask.language)
-        notify(server, "$/cancelRequest", { "id" => ask.sent_id }) unless server.nil?
+        cancel_request(ask.language, ask.sent_id)
         ask.sent_id = 0
       end
 
@@ -645,8 +652,8 @@ module Carat
         docs.sent = docs.want
         index = docs.index
         return unless docs.to_resolve?(index) && index < @items.length
-        server = server_for(@completion.language)
-        return if server.nil? || !server.running? || !@resolvers.include?(server.language)
+        server = running_server(@completion.language)
+        return if server.nil? || !@resolvers.include?(server.language)
         docs.known[index] = Domain::CompletionDocs::ASKED
         docs.sent_index = index
         docs.sent_id = request(server, "completionItem/resolve", @items[index])
@@ -656,9 +663,7 @@ module Carat
       #: () -> void
       def cancel_resolve
         docs = @completion.docs
-        return if docs.sent_id == 0
-        server = server_for(@completion.language)
-        notify(server, "$/cancelRequest", { "id" => docs.sent_id }) unless server.nil?
+        cancel_request(@completion.language, docs.sent_id)
         docs.sent_id = 0
       end
 
@@ -675,24 +680,6 @@ module Carat
         docs.texts[index] = text
         docs.known[index] = Domain::CompletionDocs::HELD
         docs.arrived = true unless text.empty?
-      end
-
-      # A server that runs no more hovers no more, and its request in
-      # flight is forgotten.
-      #: (Domain::LanguageServer) -> void
-      def forget_hover(server)
-        ask = @hover
-        ask.languages.delete(server.language)
-        ask.sent_id = 0 if ask.language == server.language
-      end
-
-      # A server that runs no more offers definitions no more, and its
-      # request in flight is forgotten.
-      #: (Domain::LanguageServer) -> void
-      def forget_definition(server)
-        ask = @definition
-        ask.languages.delete(server.language)
-        ask.sent_id = 0 if ask.language == server.language
       end
 
       # Sends the latest definition ask once, when the layout window, its
@@ -716,11 +703,10 @@ module Carat
         buffer = window.buffer
         cursor = window.cursor
         return unless state.mode == Domain::Mode::NORMAL && ask.at?(window.id, buffer.id, cursor.row, cursor.col)
-        server = server_for(buffer.filetype)
+        server = running_server(buffer.filetype)
         path = buffer.path_text
-        return if server.nil? || !server.running? || !ask.offers?(server.language) || path.empty?
-        line = buffer.line(cursor.row)[0, cursor.col].to_s
-        params = { "textDocument" => { "uri" => uri_of(path) }, "position" => { "line" => cursor.row, "character" => utf16_length(line) } }
+        return if server.nil? || !ask.offers?(server.language) || path.empty?
+        params = position_params(path, buffer, cursor)
         ask.language = server.language
         ask.deadline = @clock.now + ANSWER_LIMIT
         ask.sent_id = request(server, "textDocument/definition", params)
@@ -731,9 +717,7 @@ module Carat
       #: () -> void
       def cancel_definition
         ask = @definition
-        return if ask.sent_id == 0
-        server = server_for(ask.language)
-        notify(server, "$/cancelRequest", { "id" => ask.sent_id }) unless server.nil?
+        cancel_request(ask.language, ask.sent_id)
         ask.sent_id = 0
       end
 
@@ -866,11 +850,10 @@ module Carat
         buffer = window.buffer
         cursor = window.cursor
         return unless state.mode == Domain::Mode::NORMAL && ask.at?(window.id, buffer.id, cursor.row, cursor.col)
-        server = server_for(buffer.filetype)
+        server = running_server(buffer.filetype)
         path = buffer.path_text
-        return if server.nil? || !server.running? || !ask.hovers?(server.language) || path.empty?
-        line = buffer.line(cursor.row)[0, cursor.col].to_s
-        params = { "textDocument" => { "uri" => uri_of(path) }, "position" => { "line" => cursor.row, "character" => utf16_length(line) } }
+        return if server.nil? || !ask.hovers?(server.language) || path.empty?
+        params = position_params(path, buffer, cursor)
         ask.language = server.language
         ask.deadline = @clock.now + ANSWER_LIMIT
         ask.sent_id = request(server, "textDocument/hover", params)
@@ -880,9 +863,7 @@ module Carat
       #: () -> void
       def cancel_hover
         ask = @hover
-        return if ask.sent_id == 0
-        server = server_for(ask.language)
-        notify(server, "$/cancelRequest", { "id" => ask.sent_id }) unless server.nil?
+        cancel_request(ask.language, ask.sent_id)
         ask.sent_id = 0
       end
 
@@ -934,15 +915,6 @@ module Carat
         text.byteslice(0, limit).to_s
       end
 
-      # A server that runs no more gives symbols no more, and its request
-      # in flight is forgotten.
-      #: (Domain::LanguageServer) -> void
-      def forget_symbols(server)
-        ask = @symbols
-        ask.languages.delete(server.language)
-        ask.sent_id = 0 if ask.language == server.language
-      end
-
       # Asks for the symbols of the layout window's buffer while a winbar
       # shows, once per text, when its running server offers them: a
       # request in flight is only cancelled at its deadline, so a text
@@ -958,9 +930,9 @@ module Carat
         return unless tab.winbar?(state.options.breadcrumbs)
         buffer = tab.layout_window.buffer
         return if ask.asked?(buffer.id, buffer.changes, buffer.closed_count)
-        server = server_for(buffer.filetype)
+        server = running_server(buffer.filetype)
         path = buffer.path_text
-        return if server.nil? || !server.running? || !ask.offers?(server.language) || path.empty?
+        return if server.nil? || !ask.offers?(server.language) || path.empty?
         ask.ask(buffer.id, buffer.changes, buffer.closed_count)
         ask.language = server.language
         ask.deadline = @clock.now + ANSWER_LIMIT
@@ -971,8 +943,7 @@ module Carat
       #: () -> void
       def cancel_symbols
         ask = @symbols
-        server = server_for(ask.language)
-        notify(server, "$/cancelRequest", { "id" => ask.sent_id }) unless server.nil?
+        cancel_request(ask.language, ask.sent_id)
         ask.sent_id = 0
       end
 
@@ -981,15 +952,6 @@ module Carat
       def outlined(result)
         @symbols.sent_id = 0
         SymbolOutline.read(result, @symbols)
-      end
-
-      # A server that runs no more gives signature help no more, and its
-      # request in flight is forgotten.
-      #: (Domain::LanguageServer) -> void
-      def forget_signature(server)
-        ask = @signature
-        ask.languages.delete(server.language)
-        ask.sent_id = 0 if ask.language == server.language
       end
 
       # Sends the latest signature ask once no newer ask was recorded for
@@ -1020,11 +982,10 @@ module Carat
         buffer = window.buffer
         cursor = window.cursor
         return unless state.mode == Domain::Mode::INSERT && ask.at?(window.id, buffer.id, cursor.row, cursor.col)
-        server = server_for(buffer.filetype)
+        server = running_server(buffer.filetype)
         path = buffer.path_text
-        return if server.nil? || !server.running? || !ask.helps?(server.language) || path.empty?
-        line = buffer.line(cursor.row)[0, cursor.col].to_s
-        params = { "textDocument" => { "uri" => uri_of(path) }, "position" => { "line" => cursor.row, "character" => utf16_length(line) } }
+        return if server.nil? || !ask.helps?(server.language) || path.empty?
+        params = position_params(path, buffer, cursor)
         ask.language = server.language
         ask.deadline = now + ANSWER_LIMIT
         ask.sent_id = request(server, "textDocument/signatureHelp", params)
@@ -1046,6 +1007,22 @@ module Carat
         return if id == 0
         server = server_for(language)
         notify(server, "$/cancelRequest", { "id" => id }) unless server.nil?
+      end
+
+      # The running server of the language, nil when none runs.
+      #: (String) -> Domain::LanguageServer?
+      def running_server(language)
+        server = server_for(language)
+        return nil if server.nil? || !server.running?
+        server
+      end
+
+      # The document and cursor position params of a request at the
+      # cursor of the buffer at path, the column counted in UTF-16 units.
+      #: (String, Domain::Buffer, Domain::Cursor) -> Hash[String, untyped]
+      def position_params(path, buffer, cursor)
+        line = buffer.line(cursor.row)[0, cursor.col].to_s
+        { "textDocument" => { "uri" => uri_of(path) }, "position" => { "line" => cursor.row, "character" => utf16_length(line) } }
       end
 
       # Keeps the signature answer for the request in flight, unless a
