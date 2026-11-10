@@ -1,7 +1,8 @@
 module Carat
   module UseCases
     # Which buffer SwitchBuffer shows: target :next or :previous goes count
-    # listed file buffers forward or back, wrapping; :number shows buffer
+    # listed file buffers forward or back, wrapping; :first and :last show
+    # the first and the last listed file buffer; :number shows buffer
     # number count; :current stays. bang lets a modified current buffer
     # go hidden. A Data value.
     class BufferRequest < Data.define(:target, :count, :bang)

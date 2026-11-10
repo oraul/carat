@@ -69,6 +69,7 @@ require_relative "../editor_floats"
 require_relative "../editor_global"
 require_relative "../editor_grammar"
 require_relative "../editor_insert"
+require_relative "../editor_jumps"
 require_relative "../editor_key_hints"
 require_relative "../editor_leader"
 require_relative "../editor_lsp"
@@ -174,6 +175,7 @@ when "editor_floats" then EditorFloatsTest.main
 when "editor_global" then EditorGlobalTest.main
 when "editor_grammar" then EditorGrammarTest.main
 when "editor_insert" then EditorInsertTest.main
+when "editor_jumps" then EditorJumpsTest.main
 when "editor_key_hints" then EditorKeyHintsTest.main
 when "editor_leader" then EditorLeaderTest.main
 when "editor_lsp" then EditorLspTest.main

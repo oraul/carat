@@ -292,7 +292,6 @@ module Carat
       attr_reader :follow_hover #: UseCases::FollowHover
       attr_reader :pin_hover #: UseCases::PinHover
       attr_reader :definition #: Domain::DefinitionRequest
-      attr_reader :jumps #: Domain::JumpList
       attr_reader :resolve_inside #: UseCases::ResolveInside
       attr_reader :request_definition #: UseCases::RequestDefinition
       attr_reader :open_definition_float #: UseCases::OpenDefinitionFloat
@@ -345,7 +344,6 @@ module Carat
         @status_slots = Domain::StatusSlots.new
         @hover = Domain::HoverRequest.new
         @definition = Domain::DefinitionRequest.new
-        @jumps = Domain::JumpList.new
         @symbols = Domain::SymbolRequest.new
         @signature = Domain::SignatureRequest.new
         @key_hints = Domain::KeyHints.new
@@ -433,12 +431,12 @@ module Carat
         @resolve_inside = UseCases::ResolveInside.new(files: files)
         @request_definition = UseCases::RequestDefinition.new(definition: @definition)
         @open_definition_float = UseCases::OpenDefinitionFloat.new(open_float: @open_float)
-        @visit_target = UseCases::VisitTarget.new(definition: @definition, jumps: @jumps, buffers: @buffers, files: files, probe_path: @probe_path, open_file: @open_file, resolve_inside: @resolve_inside, open_definition_float: @open_definition_float)
+        @visit_target = UseCases::VisitTarget.new(definition: @definition, buffers: @buffers, files: files, probe_path: @probe_path, open_file: @open_file, resolve_inside: @resolve_inside, open_definition_float: @open_definition_float)
         @pick_keymap = Domain::Keymap.pick_from(value)
         @show_definition = UseCases::ShowDefinition.new(definition: @definition, files: files, close_float: @close_float, visit_target: @visit_target, open_definition_float: @open_definition_float, pick_keymap: @pick_keymap)
         @choose_definition = UseCases::ChooseDefinition.new(definition: @definition, close_float: @close_float, visit_target: @visit_target)
         @follow_definition = UseCases::FollowDefinition.new(definition: @definition, close_float: @close_float)
-        @walk_jumps = UseCases::WalkJumps.new(jumps: @jumps, buffers: @buffers)
+        @walk_jumps = UseCases::WalkJumps.new(buffers: @buffers)
 
         UseCases::FileCommandHandler.register(@commands, save_file: @save_file, save_all: @save_all, quit: @quit, quit_all: @quit_all, open_file: @open_file)
         UseCases::WindowCommandHandler.register(@commands, split_window: @split_window, close_window: @close_window, close_other_windows: @close_other_windows)

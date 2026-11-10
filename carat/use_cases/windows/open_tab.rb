@@ -9,7 +9,8 @@ module Carat
   module UseCases
     # Opens a tab page after the current one with one window showing a
     # fresh unnamed buffer, or the given file opened as :e does, and makes
-    # it current.
+    # it current. The window starts with a copy of the jump list of the
+    # window it was opened from, as Neovim's does.
     class OpenTab
       attr_reader :open_file #: OpenFile
       attr_reader :buffers #: Domain::BufferList
@@ -26,7 +27,9 @@ module Carat
       def call(state, path)
         buffer = Domain::Buffer.from_text("", nil)
         @buffers.add(buffer)
-        @tabs.add_tab(Domain::TabPage.new(window: Domain::Window.new(buffer: buffer)))
+        window = Domain::Window.new(buffer: buffer)
+        window.jumps.restore_from(state.window.jumps)
+        @tabs.add_tab(Domain::TabPage.new(window: window))
         return Outcome.success("") if path.empty?
         @open_file.call(state, path)
       end

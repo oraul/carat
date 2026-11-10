@@ -128,6 +128,28 @@ module Carat
         modified_buffer
       end
 
+      # The first listed file buffer, nil when the list holds none.
+      #: () -> Buffer?
+      def first_file
+        i = 0
+        while i < buffers.length
+          return buffer_at(i) unless buffer_at(i).tabless?
+          i += 1
+        end
+        nil
+      end
+
+      # The last listed file buffer, nil when the list holds none.
+      #: () -> Buffer?
+      def last_file
+        i = buffers.length - 1
+        while i >= 0
+          return buffer_at(i) unless buffer_at(i).tabless?
+          i -= 1
+        end
+        nil
+      end
+
       # Shows target to the user: focuses the first window that shows it,
       # in its tab page, or shows it in the current window.
       #: (Buffer) -> void
@@ -268,15 +290,30 @@ module Carat
         release(old)
       end
 
+      # Shows target in the current window as a buffer switch: the
+      # window's jump list records the position left, then load shows it.
+      # Nothing is recorded when the window shows target already, when the
+      # buffer left has no number, or when it is the empty startup buffer
+      # whose number a new target takes.
+      #: (Buffer) -> void
+      def enter(target)
+        current = tabs.window
+        old = current.buffer
+        return if old.equal?(target)
+        current.jumps.push(old.id, current.cursor.row, current.cursor.col) unless old.id == 0 || (target.id == 0 && reusable?(old))
+        load(target)
+      end
+
       # A jump's tab rule (option.jumptab replace), once the jump showed
       # target, which had no tab: target takes the tab of left, the buffer
       # the jump left, at its place in the list, and left goes unlisted,
       # still loaded. Nothing changes when left is target, has no tab, is
-      # modified, or is still shown by a window, or when either is not in
-      # the list (an empty buffer the target reused).
+      # modified, or is still shown by a window, when target is a scratch
+      # buffer, which never has a tab, or when either is not in the list
+      # (an empty buffer the target reused).
       #: (Buffer, Buffer) -> void
       def hand_tab(left, target)
-        return if left.equal?(target) || left.tabless? || left.modified? || tabs.shown?(left)
+        return if left.equal?(target) || target.scratch? || left.tabless? || left.modified? || tabs.shown?(left)
         from = index_of(left)
         at = index_of(target)
         return if from < 0 || at < 0
