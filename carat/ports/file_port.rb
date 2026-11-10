@@ -37,9 +37,13 @@ module Carat
       # seconds, directory and regular (following a link), and symlink (the
       # path itself); PathInfo.missing when nothing is there, while a link to
       # nothing exists as a link of size 0.
+      # The base answers PathInfo.missing rather than raising: at Spinel
+      # f34005bf a versioned entry joins a raising base's nil into the
+      # overrides' return, and the result's readers go unresolved
+      # (spinel-notes, Known miscompilations).
       # @rbs path: String
       def stat(path)
-        raise NotImplementedError, "FilePort#stat"
+        Domain::PathInfo.missing
       end
 
       # Returns the absolute path with every symbolic link resolved; raises
