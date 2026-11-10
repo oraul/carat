@@ -5,7 +5,7 @@ The positions `gd` leaves, walked back with Ctrl-O and forward with Ctrl-I acros
 ## ADDED Requirements
 
 ### Requirement: Ctrl-O and Ctrl-I walk the jump list
-The jump list SHALL hold the positions `gd` left, at most 100, an entry on the same buffer line as a new one replaced. Ctrl-O SHALL go to the older entry and Ctrl-I to the newer one, by the count, across buffers; at the newest end Ctrl-O SHALL first record the current position so Ctrl-I returns to it. Going past either end SHALL do nothing, and an entry whose buffer is gone SHALL be dropped.
+The jump list SHALL hold the positions `gd` left, at most 100, an entry on the same buffer line as a new one replaced. Ctrl-O SHALL go to the older entry and Ctrl-I to the newer one, by the count, across buffers; at the newest end Ctrl-O SHALL first record the current position so Ctrl-I returns to it. Going past either end SHALL do nothing, and an entry whose buffer is gone SHALL be dropped. While a float, such as the pick list, has the focus, Ctrl-O and Ctrl-I SHALL do nothing.
 
 #### Scenario: Ctrl-O returns and Ctrl-I goes forward again
 - **WHEN** `gd` jumped and Ctrl-O then Ctrl-I are typed
@@ -14,6 +14,10 @@ The jump list SHALL hold the positions `gd` left, at most 100, an entry on the s
 #### Scenario: Ctrl-O past the oldest entry does nothing
 - **WHEN** the jump list is empty and Ctrl-O is typed
 - **THEN** the buffer and cursor are unchanged
+
+#### Scenario: Ctrl-O in the pick list does nothing
+- **WHEN** the pick list has the focus and Ctrl-O is typed
+- **THEN** the pick list keeps the focus and its rows, and the jump list is unchanged
 
 #### Scenario: The list keeps the last hundred entries
 - **WHEN** 105 positions on different lines are pushed

@@ -10,8 +10,8 @@ module Carat
     # a negative count, showing the entry's buffer in the current window
     # (E37 while the current file buffer is modified, the list then put
     # back as it was) with the cursor at the entry, clamped to the text.
-    # An entry whose buffer is gone is dropped; past either end nothing
-    # happens.
+    # An entry whose buffer is gone is dropped; past either end, or while
+    # a float such as the pick list has the focus, nothing happens.
     class WalkJumps
       # @rbs @saved: Domain::JumpList
 
@@ -27,6 +27,7 @@ module Carat
 
       #: (Domain::EditorState, Integer) -> Outcome
       def call(state, steps)
+        return Outcome.none if state.tab.floats.focused?
         jumps = @jumps
         window = state.window
         current = window.buffer

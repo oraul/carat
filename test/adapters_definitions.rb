@@ -314,6 +314,11 @@ module AdaptersDefinitionsTest
     t.assert_equal("a.rb 3:0", r.where, "Ctrl-O after a pick returns to where gd was typed")
     asked(r, "gd", [location("/project/a.rb", 0, 4), location("/project/b.rb", 1, 4)])
     focused = r.assembly.state.tab.floats.focused?
+    count = r.assembly.jumps.count
+    r.type("<C-o>")
+    r.type("<C-i>")
+    in_pick = [r.float_count, r.assembly.state.tab.floats.focused?, float_lines(r, r.assembly.definition.pick_id), r.assembly.jumps.count == count]
+    t.assert_equal([1, true, ["1 a.rb:1", "2 b.rb:2"], true], in_pick, "Ctrl-O in the pick list does nothing")
     r.type("<Esc>")
     t.assert_equal([true, 0, "a.rb 3:0"], [focused, r.float_count, r.where], "Esc closes the pick list")
     asked(r, "<Space>dd", [location("/project/a.rb", 0, 4), location("/project/b.rb", 1, 4)])
