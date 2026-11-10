@@ -66,6 +66,9 @@ ok   removing an owner drops its bindings and the prefixes left empty, and keeps
 ok   the configuration replaces a plugin binding and keeps it when the plugin goes
 ok   checked loading reports unknown actions and malformed keys with the file and line
 ok   the refused binding is not added and the others are
+ok   keymap.pick binds Enter in the pick list's keymap and not in the editor's
+ok   checked loading reports a bad keymap.pick line with the file and line
+ok   keymap.pick rebinds and unbinds with the leader, and never binds in an editor mode
 ok   the leader is the last good leader line
 ok   the leader is a backslash when no line sets it
 ok   an action name has namespace segments, a key sequence does not
@@ -86,4 +89,4 @@ ok   a group line without a name is reported
 ok   keys that lead nowhere answer an empty node and a group names only its normal prefix
 ok   a group line creates no trie node, so j still matches and q stays unbound
 ok   a project file's group line is read
-domain_keymap: 88 passed, 0 failed
+domain_keymap: 91 passed, 0 failed

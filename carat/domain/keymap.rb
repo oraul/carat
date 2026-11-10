@@ -55,6 +55,11 @@ module Carat
       # The keymap line that names a normal-mode prefix for the key hints.
       GROUP = "group"
 
+      # The keymap lines, keymap.pick <keys> <action>, that bind in normal
+      # mode of a pick list's buffer, as the definition pick list's, and in
+      # no editor mode.
+      PICK = "pick"
+
       # The most keys one binding may hold: the trie is one node deep per
       # key, and removing a plugin's bindings walks it recursively, so a
       # hostile binding of a million keys would overflow the stack.
@@ -84,6 +89,26 @@ module Carat
         return parsed.error.to_s unless parsed.ok?
         return "keymap.leader takes one key" if parsed.codes.empty?
         ""
+      end
+
+      # The keymap of a pick list's buffer: the configuration's
+      # keymap.pick lines bound in normal mode, in order, so a later line
+      # wins and "none" removes a binding, with <leader> from the
+      # configuration. A line that does not bind is skipped here;
+      # add_checked notes it.
+      #: (Config) -> Keymap
+      def self.pick_from(config)
+        keymap = Keymap.new
+        leader = leader_from(config)
+        i = 0
+        n = config.count
+        while i < n
+          line = config.line_at(i)
+          words = line.words
+          keymap.bind_text(Mode::NORMAL, words[0].to_s, words[1].to_s, leader, "") if line.scope == "keymap" && line.name == PICK && words.length == 2
+          i += 1
+        end
+        keymap
       end
 
       # Builds a keymap from keymap lines, as a plugin gives them for its
@@ -153,11 +178,15 @@ module Carat
           return Keymap.leader_problem(words)
         end
         return name_group(line, leader) if name == GROUP
-        mode = Mode.from_name(name)
+        pick = name == PICK
+        mode = pick ? Mode::NORMAL : Mode.from_name(name)
         return "unknown mode #{name}" if mode.nil?
         return "#{line.key} takes keys and an action" unless words.length == 2
         value = words[1].to_s
         return "unknown action #{value}" if check && Keymap.action_name?(value) && !known.key?(value)
+        # A pick line is checked on a keymap of its own and bound only by
+        # pick_from, never in an editor mode.
+        return Keymap.new.bind_text(mode, words[0].to_s, value, leader, owner) if pick
         bind_text(mode, words[0].to_s, value, leader, owner)
       end
 

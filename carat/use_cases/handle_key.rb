@@ -18,6 +18,8 @@ require_relative "plugins/plugin_host"
 require_relative "arrange_view"
 require_relative "search/open_search_prompt"
 require_relative "docs/follow_hover"
+require_relative "definitions/follow_definition"
+require_relative "../domain/definition_request"
 require_relative "docs/request_signature"
 require_relative "docs/follow_signature"
 require_relative "discovery/hide_key_hints"
@@ -57,7 +59,8 @@ module Carat
     # layer; a typed character and, while the popup shows, every key end
     # in ShowCompletion, which opens, filters, or closes the popup. While
     # a documentation float shows, every key ends in FollowHover, which
-    # closes it when the cursor moved; with none, one comparison. A typed
+    # closes it when the cursor moved; with none, one comparison; the
+    # definition peek float and pick list end in FollowDefinition alike. A typed
     # `(` or `,` in insert mode ends in RequestSignature, and while a call
     # is followed every key ends in FollowSignature, which asks again as
     # the cursor moves through the call and closes the signature float
@@ -82,6 +85,8 @@ module Carat
       attr_reader :search_prompt #: Domain::SearchPrompt
       attr_reader :open_search_prompt #: OpenSearchPrompt
       attr_reader :follow_hover #: FollowHover
+      attr_reader :definition #: Domain::DefinitionRequest
+      attr_reader :follow_definition #: FollowDefinition
       attr_reader :request_signature #: RequestSignature
       attr_reader :follow_signature #: FollowSignature
       attr_reader :signature #: Domain::SignatureRequest
@@ -97,8 +102,8 @@ module Carat
       # @rbs @replays: Integer
       # @rbs @hover: Domain::HoverRequest
 
-      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, completion: Domain::CompletionMenu, show_completion: ShowCompletion, plugins: PluginHost, arrange_view: ArrangeView, search_prompt: Domain::SearchPrompt, open_search_prompt: OpenSearchPrompt, follow_hover: FollowHover, request_signature: RequestSignature, follow_signature: FollowSignature, signature: Domain::SignatureRequest, key_hints: Domain::KeyHints, hide_key_hints: HideKeyHints, palette: Domain::Palette, follow_palette: FollowPalette) -> void
-      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, completion:, show_completion:, plugins:, arrange_view:, search_prompt:, open_search_prompt:, follow_hover:, request_signature:, follow_signature:, signature:, key_hints:, hide_key_hints:, palette:, follow_palette:)
+      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, completion: Domain::CompletionMenu, show_completion: ShowCompletion, plugins: PluginHost, arrange_view: ArrangeView, search_prompt: Domain::SearchPrompt, open_search_prompt: OpenSearchPrompt, follow_hover: FollowHover, definition: Domain::DefinitionRequest, follow_definition: FollowDefinition, request_signature: RequestSignature, follow_signature: FollowSignature, signature: Domain::SignatureRequest, key_hints: Domain::KeyHints, hide_key_hints: HideKeyHints, palette: Domain::Palette, follow_palette: FollowPalette) -> void
+      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, completion:, show_completion:, plugins:, arrange_view:, search_prompt:, open_search_prompt:, follow_hover:, definition:, follow_definition:, request_signature:, follow_signature:, signature:, key_hints:, hide_key_hints:, palette:, follow_palette:)
         @key_hints = key_hints
         @hide_key_hints = hide_key_hints
         @palette = palette
@@ -120,6 +125,8 @@ module Carat
         @open_search_prompt = open_search_prompt
         @follow_hover = follow_hover
         @hover = follow_hover.hover
+        @definition = definition
+        @follow_definition = follow_definition
         @replays = 0
       end
 
@@ -138,6 +145,7 @@ module Carat
         end
         @show_completion.call(state, false) if @completion.showing?
         @follow_hover.call(state) if @hover.float_id != 0
+        @follow_definition.call(state) if @definition.following?
         @follow_signature.call(state) if @signature.active?
         @follow_palette.call(state) if @palette.following?
         @plugins.observe

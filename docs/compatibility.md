@@ -66,6 +66,10 @@ Differences from Neovim: a different operator after a pending one cancels silent
 | `<leader>fs`, `<C-s>` | `file.save` | Carat's file group and save key: `:w`, Ctrl-S also in insert mode, staying in it | `editor_leader`, `smoke_editor` |
 | `<leader>ff` | `file.find` | Reserved for the finder: "Not implemented: file.find" | `editor_leader` |
 | `K` | `docs.hover` | The language server's hover documentation under the cursor in a bordered float, its markdown as plain rows; `K` again enters it, `Esc` or a cursor move closes it; with no server Neovim runs `keywordprg` instead, Carat says `No hover provider for this buffer` | `adapters_hover` |
+| `gd` | `definition.jump` | The language server's definition under the cursor, asked without waiting: one target opens in the window with the cursor on it and the position left in the jump list, several open a pick list (Enter goes, Esc closes), a target outside the project opens read-only; with no server Neovim searches for a local declaration instead, Carat says `method textDocument/definition is not supported by any of the servers registered for the current buffer`, and an empty answer `No locations found` | `adapters_definitions` |
+| `<leader>dd` | `definition.peek` | The definition's source in a bordered float at the cursor, 12 rows from the target line, the cursor staying put; `Esc` or a cursor move closes it (Carat's own key) | `adapters_definitions` |
+| `<C-o>` | `jump.older` | The older position of the jump list, by the count, across buffers; one list for the editor and only `gd` adds to it, where Neovim keeps one per window and adds every jump command | `adapters_definitions` |
+| `<C-i>`, `<Tab>` | `jump.newer` | The newer position of the jump list, by the count | `adapters_definitions` |
 | `<leader>dp` | `docs.pin` | Carat's docs group: the documentation float pinned into a split | `adapters_hover` |
 | `<leader>bb`, `[count]<leader>bn`, `[count]<leader>bp`, `[count]<leader>bd` | `buffer.*` | Carat's buffer group: `:ls`, `:bn`, `:bp`, `:bd` or `:bd N` | `editor_leader` |
 

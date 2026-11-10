@@ -174,6 +174,9 @@ module Carat
       keymap.normal gT tab.previous
       keymap.normal <Esc> float.close
       keymap.normal K docs.hover
+      keymap.normal gd definition.jump
+      keymap.normal <C-o> jump.older
+      keymap.normal <C-i> jump.newer
       keymap.normal <C-s> file.save
       # The leader groups: w windows, q quit, f files, b buffers, d docs, l
       # layout; e is the explorer plugin's.
@@ -204,6 +207,10 @@ module Carat
       keymap.normal <leader>bp buffer.previous
       keymap.normal <leader>bd buffer.delete
       keymap.normal <leader>dp docs.pin
+      keymap.normal <leader>dd definition.peek
+      # keymap.pick <keys> <action> binds in normal mode of a pick list's
+      # buffer, as the definition pick list's, and in no editor mode.
+      keymap.pick <CR> definition.choose
       keymap.normal <leader>ls layout.toggle_sidebar
       keymap.normal <leader>lr layout.toggle_right_sidebar
       keymap.normal <leader>lp layout.toggle_panel

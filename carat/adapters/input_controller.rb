@@ -8,6 +8,7 @@ require_relative "../domain/notices"
 require_relative "../use_cases/handle_key"
 require_relative "../use_cases/completion/show_completion"
 require_relative "../use_cases/docs/show_hover"
+require_relative "../use_cases/definitions/show_definition"
 require_relative "../use_cases/docs/show_signature"
 require_relative "../use_cases/discovery/show_key_hints"
 require_relative "../domain/signature_request"
@@ -47,6 +48,7 @@ module Carat
       attr_reader :notices #: Domain::Notices
       attr_reader :show_completion #: UseCases::ShowCompletion
       attr_reader :show_hover #: UseCases::ShowHover
+      attr_reader :show_definition #: UseCases::ShowDefinition
       attr_reader :show_signature #: UseCases::ShowSignature
       attr_reader :signature #: Domain::SignatureRequest
       attr_reader :show_key_hints #: UseCases::ShowKeyHints
@@ -57,14 +59,15 @@ module Carat
       # @rbs @hint_at: Float
       # @rbs @hinting: bool
 
-      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState, start_screen: Domain::StartScreen, services: Ports::LanguageServicePort, show_completion: UseCases::ShowCompletion, show_hover: UseCases::ShowHover, show_signature: UseCases::ShowSignature, signature: Domain::SignatureRequest, show_key_hints: UseCases::ShowKeyHints, notices: Domain::Notices) -> void
-      def initialize(terminal:, clock:, decoder:, handle_key:, input:, start_screen:, services:, show_completion:, show_hover:, show_signature:, signature:, show_key_hints:, notices:)
+      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState, start_screen: Domain::StartScreen, services: Ports::LanguageServicePort, show_completion: UseCases::ShowCompletion, show_hover: UseCases::ShowHover, show_definition: UseCases::ShowDefinition, show_signature: UseCases::ShowSignature, signature: Domain::SignatureRequest, show_key_hints: UseCases::ShowKeyHints, notices: Domain::Notices) -> void
+      def initialize(terminal:, clock:, decoder:, handle_key:, input:, start_screen:, services:, show_completion:, show_hover:, show_definition:, show_signature:, signature:, show_key_hints:, notices:)
         @notices = notices
         @show_key_hints = show_key_hints
         @show_signature = show_signature
         @signature = signature
         @services = services
         @show_hover = show_hover
+        @show_definition = show_definition
         @show_completion = show_completion
         @terminal = terminal
         @clock = clock
@@ -98,8 +101,8 @@ module Carat
           end
           # Idle: the language services read and send here, never while a
           # key waits; a completion answer they kept fills the popup, and
-          # resolved documentation the float beside it, and a hover answer
-          # the documentation float.
+          # resolved documentation the float beside it, a hover answer the
+          # documentation float, and a definition answer its target.
           served = @services.poll(state)
           request = @show_completion.source.request
           if request.arrived || request.docs.arrived
@@ -108,6 +111,10 @@ module Carat
           end
           if @show_hover.hover.arrived
             @show_hover.call(state)
+            served = true
+          end
+          if @show_definition.definition.arrived
+            @show_definition.call(state)
             served = true
           end
           if @signature.arrived

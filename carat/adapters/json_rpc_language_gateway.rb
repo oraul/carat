@@ -2,6 +2,7 @@ require_relative "../ports/language_service_port"
 require_relative "../ports/clock_port"
 require_relative "../domain/completion_request"
 require_relative "../domain/hover_request"
+require_relative "../domain/definition_request"
 require_relative "../domain/signature_request"
 require_relative "../domain/notices"
 require_relative "../domain/control_text"
@@ -58,6 +59,11 @@ module Carat
     # sent; only the answer to it is read, its contents joined into one
     # markdown text of at most PART_LIMIT parts and
     # MarkdownText::RAW_LIMIT bytes, untrusted, and marked arrived. The
+    # definition ask gd and the peek key record
+    # (Domain::DefinitionRequest) is sent as textDocument/definition on
+    # the same terms when the server advertised definitionProvider; only
+    # an answer to the latest ask is read, its file targets percent
+    # decoded, bounded, untrusted, and marked arrived. The
     # signature ask insert mode records while it follows a call
     # (Domain::SignatureRequest) is sent as textDocument/signatureHelp
     # once no newer ask was recorded for DEBOUNCE seconds, when the cursor
@@ -88,6 +94,7 @@ module Carat
       SETTLE = 0.1
       DOCUMENT_LIMIT = 16_384
       PART_LIMIT = 16
+      PATH_LIMIT = 4096
       # The menu kind of each LSP CompletionItemKind, by number: interface,
       # enum, and struct read as class; value and enum member as constant.
       KIND_NAMES = ["text", "text", "method", "function", "constructor", "field", "variable", "class", "class", "module", "property", "text", "constant", "class", "keyword", "snippet", "text", "text", "text", "text", "constant", "constant", "class", "text", "text", "text"]
@@ -109,15 +116,17 @@ module Carat
       attr_reader :completion #: Domain::CompletionRequest
       attr_reader :clock #: Ports::ClockPort
       attr_reader :hover #: Domain::HoverRequest
+      attr_reader :definition #: Domain::DefinitionRequest
       attr_reader :signature #: Domain::SignatureRequest
       attr_reader :symbols #: Domain::SymbolRequest
       attr_reader :notices #: Domain::Notices
 
-      #: (processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, files: Ports::FilePort, buffers: Domain::BufferList, config: Domain::Config, slots: Domain::StatusSlots, completion: Domain::CompletionRequest, clock: Ports::ClockPort, hover: Domain::HoverRequest, signature: Domain::SignatureRequest, symbols: Domain::SymbolRequest, notices: Domain::Notices) -> void
-      def initialize(processes:, messages:, files:, buffers:, config:, slots:, completion:, clock:, hover:, signature:, symbols:, notices:)
+      #: (processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, files: Ports::FilePort, buffers: Domain::BufferList, config: Domain::Config, slots: Domain::StatusSlots, completion: Domain::CompletionRequest, clock: Ports::ClockPort, hover: Domain::HoverRequest, definition: Domain::DefinitionRequest, signature: Domain::SignatureRequest, symbols: Domain::SymbolRequest, notices: Domain::Notices) -> void
+      def initialize(processes:, messages:, files:, buffers:, config:, slots:, completion:, clock:, hover:, definition:, signature:, symbols:, notices:)
         @notices = notices
         @symbols = symbols
         @hover = hover
+        @definition = definition
         @signature = signature
         @processes = processes
         @messages = messages
@@ -162,6 +171,7 @@ module Carat
         complete(state)
         resolve
         send_hover(state)
+        send_definition(state)
         send_signature(state)
         send_symbols(state)
         return hold(language) || changed if held
@@ -200,7 +210,7 @@ module Carat
       # request is in flight, a symbol request included.
       # @rbs skip
       def waiting?
-        @completion.waiting? || @completion.docs.waiting? || @hover.waiting? || @signature.waiting? || @symbols.waiting?
+        @completion.waiting? || @completion.docs.waiting? || @hover.waiting? || @definition.waiting? || @signature.waiting? || @symbols.waiting?
       end
 
       #: (Domain::Buffer) -> void
@@ -237,6 +247,7 @@ module Carat
           next if server.handle == 0
           forget_completion(server)
           forget_hover(server)
+          forget_definition(server)
           forget_signature(server)
           request(server, "shutdown", nil)
           notify(server, "exit", nil)
@@ -386,7 +397,7 @@ module Carat
         completion = { "completionItem" => item, "contextSupport" => true }
         hover = { "contentFormat" => ["markdown", "plaintext"], "dynamicRegistration" => false }
         signature_help = { "signatureInformation" => { "parameterInformation" => { "labelOffsetSupport" => true }, "activeParameterSupport" => true }, "dynamicRegistration" => false }
-        document = { "synchronization" => sync, "publishDiagnostics" => { "relatedInformation" => false }, "completion" => completion, "hover" => hover, "signatureHelp" => signature_help, "documentSymbol" => { "hierarchicalDocumentSymbolSupport" => true, "dynamicRegistration" => false } }
+        document = { "synchronization" => sync, "publishDiagnostics" => { "relatedInformation" => false }, "completion" => completion, "hover" => hover, "definition" => { "linkSupport" => true, "dynamicRegistration" => false }, "signatureHelp" => signature_help, "documentSymbol" => { "hierarchicalDocumentSymbolSupport" => true, "dynamicRegistration" => false } }
         capabilities = { "textDocument" => document, "window" => { "workDoneProgress" => true } }
         { "processId" => nil, "clientInfo" => { "name" => "carat" }, "rootUri" => root, "capabilities" => capabilities, "workspaceFolders" => [{ "uri" => root, "name" => File.basename(@files.cwd) }] }
       end
@@ -441,6 +452,7 @@ module Carat
       def crash(server)
         forget_completion(server)
         forget_hover(server)
+        forget_definition(server)
         forget_signature(server)
         forget_symbols(server)
         @processes.stop(server.handle)
@@ -473,6 +485,8 @@ module Carat
           resolved(value.key?("error") ? nil : value["result"])
         elsif @hover.sent_id != 0 && value["id"] == @hover.sent_id && server.language == @hover.language
           hovered(value.key?("error") ? nil : value["result"])
+        elsif @definition.sent_id != 0 && value["id"] == @definition.sent_id && server.language == @definition.language
+          defined(value.key?("error") ? nil : value["result"])
         elsif @signature.sent_id != 0 && value["id"] == @signature.sent_id && server.language == @signature.language
           signed(value.key?("error") ? nil : value["result"])
         elsif @symbols.sent_id != 0 && value["id"] == @symbols.sent_id && server.language == @symbols.language
@@ -503,6 +517,8 @@ module Carat
         @resolvers << server.language if provider.is_a?(Hash) && provider["resolveProvider"] == true && !@resolvers.include?(server.language)
         hovers = caps.is_a?(Hash) ? caps["hoverProvider"] : nil
         @hover.languages << server.language if (hovers == true || hovers.is_a?(Hash)) && !@hover.hovers?(server.language)
+        defines = caps.is_a?(Hash) ? caps["definitionProvider"] : nil
+        @definition.languages << server.language if (defines == true || defines.is_a?(Hash)) && !@definition.offers?(server.language)
         helps = caps.is_a?(Hash) ? caps["signatureHelpProvider"] : nil
         @signature.languages << server.language if helps.is_a?(Hash) && !@signature.helps?(server.language)
         outlines = caps.is_a?(Hash) ? caps["documentSymbolProvider"] : nil
@@ -668,6 +684,165 @@ module Carat
         ask = @hover
         ask.languages.delete(server.language)
         ask.sent_id = 0 if ask.language == server.language
+      end
+
+      # A server that runs no more offers definitions no more, and its
+      # request in flight is forgotten.
+      #: (Domain::LanguageServer) -> void
+      def forget_definition(server)
+        ask = @definition
+        ask.languages.delete(server.language)
+        ask.sent_id = 0 if ask.language == server.language
+      end
+
+      # Sends the latest definition ask once, when the layout window, its
+      # buffer, the cursor, and normal mode are still where it was made and
+      # the buffer's server offers definitions; a newer ask cancels the
+      # request in flight, and so does an answer overdue.
+      #: (Domain::EditorState) -> void
+      def send_definition(state)
+        ask = @definition
+        return unless ask.waiting?
+        if ask.sent_id != 0
+          if ask.sent == ask.want
+            cancel_definition if @clock.now > ask.deadline
+            return
+          end
+          cancel_definition
+        end
+        return if ask.sent == ask.want
+        ask.sent = ask.want
+        window = state.tab.layout_window
+        buffer = window.buffer
+        cursor = window.cursor
+        return unless state.mode == Domain::Mode::NORMAL && ask.at?(window.id, buffer.id, cursor.row, cursor.col)
+        server = server_for(buffer.filetype)
+        path = buffer.path_text
+        return if server.nil? || !server.running? || !ask.offers?(server.language) || path.empty?
+        line = buffer.line(cursor.row)[0, cursor.col].to_s
+        params = { "textDocument" => { "uri" => uri_of(path) }, "position" => { "line" => cursor.row, "character" => utf16_length(line) } }
+        ask.language = server.language
+        ask.deadline = @clock.now + ANSWER_LIMIT
+        ask.sent_id = request(server, "textDocument/definition", params)
+      end
+
+      # Cancels the definition request in flight, whose answer is then
+      # dropped.
+      #: () -> void
+      def cancel_definition
+        ask = @definition
+        return if ask.sent_id == 0
+        server = server_for(ask.language)
+        notify(server, "$/cancelRequest", { "id" => ask.sent_id }) unless server.nil?
+        ask.sent_id = 0
+      end
+
+      # Keeps the file targets of a definition answer, a Location, a list
+      # of Locations, or a list of LocationLinks, at most
+      # DefinitionRequest::LIMIT, marked arrived; an error, a null, or an
+      # answer to an ask a newer one replaced keeps none, the stale one
+      # unmarked.
+      #: (untyped) -> void
+      def defined(result)
+        ask = @definition
+        ask.sent_id = 0
+        return unless ask.sent == ask.want
+        ask.clear_targets
+        if result.is_a?(Array)
+          i = 0
+          while i < result.length && i < Domain::DefinitionRequest::LIMIT
+            add_target(result[i])
+            i += 1
+          end
+        else
+          add_target(result)
+        end
+        ask.arrived = true
+      end
+
+      # Adds one Location or LocationLink whose URI is a file's and whose
+      # start is two non-negative integers; anything else is skipped.
+      #: (untyped) -> void
+      def add_target(item)
+        return unless item.is_a?(Hash)
+        uri = item["targetUri"]
+        range = item["targetSelectionRange"]
+        unless uri.is_a?(String)
+          uri = item["uri"]
+          range = item["range"]
+        end
+        return unless uri.is_a?(String) && range.is_a?(Hash)
+        start = range["start"]
+        return unless start.is_a?(Hash)
+        line = start["line"]
+        character = start["character"]
+        return unless line.is_a?(Integer) && character.is_a?(Integer) && line.to_i >= 0 && character.to_i >= 0
+        path = path_of(uri.to_s)
+        @definition.add_target(path, line.to_i, character.to_i) unless path.empty?
+      end
+
+      # The absolute path of a file URI, percent escapes decoded; "" for
+      # another scheme, a malformed escape or UTF-8 sequence, a byte not
+      # ASCII, a path not absolute, one holding a NUL, or one over
+      # PATH_LIMIT bytes.
+      #: (String) -> String
+      def path_of(uri)
+        prefix = "#{FILE_SCHEME}//"
+        n = uri.bytesize
+        return "" unless uri.start_with?(prefix) && n <= PATH_LIMIT * 3
+        out = +""
+        i = prefix.bytesize
+        while i < n
+          b = uri.getbyte(i).to_i
+          return "" if b == 0 || b >= 0x80
+          if b != 37
+            out << b.chr
+            i += 1
+            next
+          end
+          value = escaped(uri, i)
+          return "" if value <= 0
+          if value < 0x80
+            out << value.chr
+            i += 3
+            next
+          end
+          size = value >= 0xF8 ? 0 : value >= 0xF0 ? 4 : value >= 0xE0 ? 3 : value >= 0xC0 ? 2 : 0
+          return "" if size == 0
+          code = value & (size == 2 ? 0x1F : size == 3 ? 0x0F : 0x07)
+          k = 1
+          while k < size
+            next_value = escaped(uri, i + 3 * k)
+            return "" if next_value < 0x80 || next_value > 0xBF
+            code = (code << 6) | (next_value & 0x3F)
+            k += 1
+          end
+          return "" if code > 0x10FFFF || (code >= 0xD800 && code <= 0xDFFF) || code < (size == 2 ? 0x80 : size == 3 ? 0x800 : 0x10000)
+          out << [code].pack("U")
+          i += 3 * size
+        end
+        return "" unless out.start_with?("/") && out.bytesize <= PATH_LIMIT
+        out
+      end
+
+      # The byte a percent escape at i stands for, -1 when there is none.
+      #: (String, Integer) -> Integer
+      def escaped(uri, i)
+        return -1 if i + 2 >= uri.bytesize
+        return -1 unless uri.getbyte(i).to_i == 37
+        high = hex_value(uri.getbyte(i + 1).to_i)
+        low = hex_value(uri.getbyte(i + 2).to_i)
+        return -1 if high < 0 || low < 0
+        high * 16 + low
+      end
+
+      # The value of a hexadecimal digit's byte, -1 for another byte.
+      #: (Integer) -> Integer
+      def hex_value(b)
+        return b - 48 if b >= 48 && b <= 57
+        return b - 55 if b >= 65 && b <= 70
+        return b - 87 if b >= 97 && b <= 102
+        -1
       end
 
       # Sends the latest hover ask once, when the layout window, its

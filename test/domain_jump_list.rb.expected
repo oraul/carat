@@ -1,0 +1,12 @@
+ok   a push appends and leaves no entry current
+ok   Ctrl-O from the newest end records the start and goes back
+ok   Ctrl-I after Ctrl-O comes back to the start
+ok   Ctrl-O past the oldest entry moves nothing
+ok   Ctrl-I at the newest end moves nothing
+ok   a count of two goes back two
+ok   A new entry on the same line replaces the old one
+ok   The list keeps the last hundred entries
+ok   Ctrl-O past the oldest entry does nothing
+ok   dropping an entry keeps the index on the same place
+ok   restoring puts back the entries a step replaced and its index
+domain_jump_list: 11 passed, 0 failed

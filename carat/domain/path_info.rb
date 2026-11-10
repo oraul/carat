@@ -13,6 +13,9 @@ module Carat
       # @rbs @symlink: bool
       # @rbs @regular: bool
 
+      # The most bytes a file opened in a buffer may hold, 64 MiB.
+      BUFFER_LIMIT = 67_108_864
+
       #: () -> PathInfo
       def self.missing
         PathInfo.new(exists: false, size: 0, mtime: 0, directory: false, symlink: false, regular: false)
@@ -22,6 +25,19 @@ module Carat
       #: () -> bool
       def real_directory?
         directory && !symlink
+      end
+
+      # Vim's message for a path to read that is not there, not a regular
+      # file, or over limit bytes, "" for one that may be read; a path that
+      # could not be stated, as one removed meanwhile, is E484. The read
+      # checks again on the opened file, for a path swapped after the stat.
+      #: (String, Integer) -> String
+      def refusal(path, limit)
+        return "E484: Can't open file #{path}" unless exists
+        return "\"#{path}\" is a directory" if directory
+        return "\"#{path}\" is not a file" unless regular
+        return "E484: Can't open file #{path}: File too large" if size > limit
+        ""
       end
     end
   end

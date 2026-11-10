@@ -1,0 +1,42 @@
+ok   initialize advertises definitions with links
+ok   gd with no defining server is refused
+ok   gd records the ask and no key waits on the server
+ok   gd sends the request at the next idle tick
+ok   One target in the same file moves the cursor
+ok   Ctrl-O returns to the position gd left
+ok   Ctrl-O returns and Ctrl-I goes forward again
+ok   One target in another project file opens it
+ok   Ctrl-O from another file shows the buffer gd left
+ok   Ctrl-I shows the target's buffer again
+ok   a location link goes to its selection range, the column clamped to the line
+ok   a character after multibyte characters lands on its code point column
+ok   An empty answer shows No locations found
+ok   A modified buffer refuses a jump to another file
+ok   A new gd cancels the request in flight
+ok   an answer to a replaced ask is dropped though it arrives before the next request goes out
+ok   An answer after the cursor moved is dropped
+ok   An unanswered request is cancelled after two seconds
+ok   Peek shows the target lines and keeps the cursor
+ok   the peek float is titled with the path and line
+ok   Esc closes the peek float
+ok   a cursor move closes the peek float
+ok   peek shows a file outside the project
+ok   Several targets list them and Enter picks one
+ok   Ctrl-O after a pick returns to where gd was typed
+ok   Ctrl-O in the pick list does nothing
+ok   Esc closes the pick list
+ok   Enter in a peek's pick list peeks at the row's target
+ok   The pick list's keys come from the configuration
+ok   A target outside the project opens read-only
+ok   Ctrl-O leaves the read-only view
+ok   a target linked out of the project opens read-only
+ok   A target that is not a regular file is refused
+ok   a directory outside the project is refused
+ok   escapes are decoded and relative, NUL, and negative targets are dropped
+ok   Ctrl-O past the oldest entry does nothing in the editor
+ok   Ctrl-O refuses another buffer over a modified one
+ok   A refused Ctrl-O leaves the jump list as it was
+ok   Ctrl-I after a refused Ctrl-O returns to the start
+ok   Ctrl-O drops an entry whose buffer is gone and stays
+ok   Ctrl-O clamps the column to a line shortened since, in code points
+adapters_definitions: 41 passed, 0 failed
