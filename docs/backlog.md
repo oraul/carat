@@ -4006,3 +4006,63 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/gates.sh:13`. Quality advisory of `url-email-guard`.
 - Why it matters: the header reads `a literal password or token); (tools/scan_text.sh); no commit adds`, a doubled close from the inserted line, which misreads.
 - Fix outline: write `a literal password or token), through tools/scan_text.sh; no commit adds`. Queue item: backlog batches (comment wraps).
+
+## The record phase is a separate agent start
+
+- Where: the record start of `.claude/workflows/deliver-change.js`; retrospective note 7 of `jump-list`.
+- Why it matters: it runs one queued shell line for 641 to 1,170 output tokens and 1 or 2 calls in each of the last 10 rows, while the close start already runs a record line of the same kind.
+- Fix outline: none prescribed; accepted when 3 runs have no record phase and `show` lists the same keys. Queue item `phase-shares`.
+
+## The CI scope counts agent and workflow files as documentation
+
+- Where: `documentation()` in `tools/ci_scope.sh:39`, and the `scope_case` row at `tools/tools_test.sh:100`. Periodic security Low (4) at 9a92265.
+- Why it matters: a pull request touching only agent hooks, `.claude/settings.json`, or the workflows skips CI's tools-test, though `tools/tools_test.sh` reads them.
+- Fix outline: keep only the generated OpenSpec commands and skills in the documentation case, with the row expecting tools-test. Queue item `check-skip`.
+
+## Keymap repeats its key checks and trie walk
+
+- Where: `carat/domain/keymap.rb:314` (`name_group` repeats `bind_text`'s checks at 200 to 203; `holder_of` 242, `node_at` 269, `lookup` 290 each walk the trie). Periodic quality at 9a92265.
+- Why it matters: three copies of one walk drift apart when a key form is added.
+- Fix outline: one private key parser and one private walk used by all. Queue item: backlog batches (copies).
+
+## Docs drift found at 9a92265
+
+- Where: `docs/codebase-map.md:118` (EditorState names `show` twice); `docs/codebase-map.md:443` (area 12 claims every ex spelling, but no buffer-list command row is in `test/use_cases_ex.rb`); `docs/architecture.md:326` (plugin API 2.0 against 2.5 in `carat/plugin_api.rb:12` and `docs/plugins.md:23`); `carat.rb:2` (says `bin/*.rb` require only it, while `bin/carat-gen-config.rb:11` requires two files directly). Periodic quality.
+- Why it matters: agents plan from these documents.
+- Fix outline: correct each, or add the spelling rows. Queue item `docs-index`.
+
+## BufferList's comments call its unlisted buffers listed, and the unsaved rule has ten copies
+
+- Where: `carat/domain/buffer_list.rb:8` (class comment, `for_path`, `with_id`, and map area 8 say listed buffers, though `hand_tab` leaves unlisted ones in it; OpenFile names the result listed); `modified? && !scratch?` at `walk_jumps.rb:37`, `visit_target.rb:80`, `quit.rb:42` and `:51`, `save_all.rb:31`, `switch_buffer.rb:43`, `list_buffers.rb:88`, `window_requests.rb:163`, `buffer_list.rb:108` and `:233`. Periodic quality at 9a92265.
+- Why it matters: callers read a list as listed buffers only; the rule changes in one place and not the others.
+- Fix outline: reword to buffers listed or not, and one Buffer predicate with a domain row. Queue item `buffer-list-tidy`.
+
+## Ex and visual code copy domain helpers
+
+- Where: `carat/use_cases/ex/buffer_command_handler.rb:101` (`digits?` repeats the public `HistoryCommandHandler.digits?` at `history_command_handler.rb:65`); `carat/use_cases/ex/register_command_handler.rb:61` (repeats `RegisterEntry#lines` at `register_entry.rb:42`); `carat/use_cases/visual/put_over_selection.rb:124` (repeats the linewise count loop of `Operators.put` at `operators.rb:42`). Periodic quality at 9a92265.
+- Why it matters: copies drift; the put copy also carries the uncapped count.
+- Fix outline: one domain helper each. Queue items `editing-counts` (the put copy) and backlog batches (copies).
+
+## Visual operations compute what their selection kind never uses
+
+- Where: `carat/use_cases/visual/put_over_selection.rb:38` (block, top column, and range for every kind); `carat/use_cases/visual/recase_selection.rb:23` (`Selection#span` rebuilds the block per row). Periodic quality at 9a92265.
+- Why it matters: line scans per row of a large selection.
+- Fix outline: compute each only for its kind, the block once per call. Queue item: backlog batches (dead code).
+
+## Jump list tidy at 9a92265
+
+- Where: `test/domain_jump_list.rb:78` (a Ctrl-I row labeled Ctrl-O); `carat/domain/jump_list.rb:37` (`push` loops though one entry per line exists, and `length_after_push` at :95 repeats the scan); `carat/domain/jump_list.rb:4` (comment wrapped at 37 against 72 columns); `carat/use_cases/definitions/walk_jumps.rb:42` (a gone buffer's entry is dropped and the key does nothing, where Neovim steps on, unstated in `docs/compatibility.md:70`). Periodic quality.
+- Why it matters: a mislabeled row and a behavior gap with no compatibility note.
+- Fix outline: relabel, one line-index helper, rewrap, and step past dropped entries or record the difference. Queue item `definitions-tidy`.
+
+## The analysis budget warns on every build and passes a non-numeric rounds value
+
+- Where: `Makefile:78` (22 to 26 s and `ANALYSIS_MS` 45000, also `docs/architecture.md` line 346, against 39.0 s and 92.3 s at #95); `tools/analysis_budget.sh:67` (the rounds test errors and passes on a non-number). Periodic quality at 9a92265.
+- Why it matters: a warning on every build carries no signal, and a broken figure passes.
+- Fix outline: refresh the threshold per root, and refuse a non-numeric value with a case. Queue item `run-budgets-tidy`.
+
+## Periodic review slices cut the map areas by count
+
+- Where: `areaSlices` in `.claude/workflows/periodic-review.js:67`. Periodic quality at 9a92265.
+- Why it matters: slice 1 puts area 1 (about 8,850 lines and a 425 KB backlog) with five more areas under one 53-call cap, so the guard, the tools test, and most of the gates go unread.
+- Fix outline: weight slices by size or give area 1 its own. Queue item `review-scope`.

@@ -21,56 +21,58 @@ Items 1 and 2 are the user's bug reports after #96, 3 the float bug report after
 15. `definition-tab` (T5 user request, estimated medium, pushed back 2): no `<C-w>gd`. Accepted when it opens `gd`'s targets in a new tab page, the jump list keeps the position left, and no target changes nothing, with rows.
 16. `spinel-workarounds` (T2 user request, estimated medium, pushed back 2): 5 Spinel workarounds; a `Key::INSERT` branch of the Symbol shape the notes call miscompiled has no row. Accepted when each fixed one is dropped with a test, and allocations, rounds, and analysis time hold.
 17. `finder-pickers` (T5 user request, estimated medium, pushed back 2): no recent-file or buffer picker. Accepted when both filter and open with 5's spans, each with a row.
-18. `periodic-blockers-b` (T6 periodic quality blocking, estimated medium, pushed back 4): 8 blocking findings, two open at be4b63a (a buffer a jump left unlisted turns modified yet stays hidden from tabs and `:ls` while `:wa` writes a deleted file back). Accepted when each is fixed with a row or owned; split if over four.
+18. `periodic-blockers-b` (T6 periodic quality blocking, estimated medium, pushed back 4): 8 blocking findings, two open at 9a92265 (the Operate dispatch by `case` on constants; a buffer a jump left unlisted turns modified yet stays hidden from tabs and `:ls` while `:wa` writes a deleted file back). Accepted when each is fixed with a row or owned; split if over four.
 19. `csv-viewer` plugin (T5 user-scheduled, estimated large, pushed back 6): an aligned view-only table, sticky header, sort, raw toggle, RFC 4180, caps.
-20. `backlog-compaction` (T1 efficiency, estimated medium, pushed back 3): `docs/backlog.md` 419,092 bytes (+13,283); 34 entries name gone items, 4 duplicate pairs. Accepted when each entry has one live owner, a docs-lint budget and owner check fail in a case, and growth averages under 5 KB a merge over 5 runs.
+20. `backlog-compaction` (T1 efficiency, estimated medium, pushed back 3): `docs/backlog.md` 424,794 bytes (+5,702 at #99, +13,283 before); 34 entries name gone items, 9 duplicate sets. Accepted when each entry has one live owner, a docs-lint budget and owner check fail in a case, and growth averages under 5 KB a merge over 5 runs.
 21. `filetype-rules` (T5 user request, estimated medium, pushed back 2): `filetype.extension`, `.name`, `.shebang` lines, a project's capped at `file:line`, rows.
 22. `syntax-definitions` (T5 user request, estimated medium, pushed back 2): a Python definition in the `.caratrc` format generated into committed Ruby, a sync test, nothing read at run time.
 23. `syntax-forms` (T5 user request, estimated medium, pushed back 2): Python and Java forms with existing groups, a row each.
 24. `syntax-embedded` (T5 user request, estimated medium, pushed back 2): spans as another filetype, fences in any language, rows.
 25. `javascript-syntax` (T5 user request, estimated medium, pushed back 2): `js`, `mjs`, `cjs`, templates, regex against division, rows.
 26. `html-syntax` (T5 user request, estimated medium, pushed back 2): tags, attributes, entities, script through 24, rows.
-27. `merge-gate-tidy` (T1 pipeline defect, estimated medium, pushed back 9): a live body gained a session footer (12 of 55); the merger over its cap in 10 of 14 rows. Accepted when each has a case and a live body unlike the gated one refuses the merge.
-28. `phase-shares` (T1 retrospective, estimated medium, pushed back 11): plan plus scout 31.7% to 48.4%; #98 scouted 22.5% of its output again over #96's pack. Accepted when a one-area change is under 20% over three runs and a rescouted unchanged area under 10%.
+27. `merge-gate-tidy` (T1 pipeline defect, estimated medium, pushed back 9): the merger over its cap in 10 of 14 rows; its head and squash commit recorded swapped again at #99 (2 of the last 22 merges). Accepted when each has a case and a swapped merger result is refused.
+28. `phase-shares` (T1 retrospective, estimated medium, pushed back 11): plan plus scout 31.7% to 48.4%; #99 scouted 29.8% of its output (59,333 of 199,297) with no rework; a record start of 641 to 1,170 output tokens a run. Accepted when a one-area change is under 20% over three runs, a rescouted unchanged area under 10%, and 3 runs show no record start with the same run state keys.
 29. `run-resume` (T1 retrospective, estimated medium, pushed back 11): a resume reran plan and scouts (24.7% of #89). Accepted when it starts at check and rework never passes 3.
-30. `check-skip` (T1 retrospective, estimated medium, pushed back 11): 621 of 627 s of build on docs-only; CI 13.0 and 17.0 min. Accepted when docs-only checks take under 60 s and CI under 10 min in 3 runs.
+30. `check-skip` (T1 retrospective, estimated medium, pushed back 11): 621 of 627 s of build on docs-only; CI 13.0 and 17.0 min; CI skips tools-test for agent and workflow files (Low (4)). Accepted when docs-only checks take under 60 s and CI under 10 min in 3 runs, and a case runs tools-test for such a change.
 31. `check-runner-safety` (T1 with security Lows, estimated medium, pushed back 9): unlocked writes, a lost runner (Low (4)), shared toolchain (Low (5)). Accepted when each has a case.
-32. `content-gate-gaps` (T1 with security findings, estimated medium, pushed back 9): the gate skips a binary file (Medium (7)) and 5 Lows; a review commit read unchecked. Accepted when it refuses each in a case.
+32. `content-gate-gaps` (T1 with security findings, estimated medium, pushed back 9): the gate skips a binary file (Medium (7)); unquoted secrets pass; no merge-resolution case; commits after a review keep it current (Low (3)), its path list kept twice; a review commit read unchecked. Accepted when it refuses each in a case.
 33. `backup-records` (T1 retrospective, estimated small, pushed back 9): the backup failed in every attempt of #91 to #97. Accepted when 3 runs record none and a resume finds its commits.
-34. `review-scope` (T1 retrospective, estimated medium, pushed back 12): fix rounds re-raise advisories as blocking; quality first 23 of 61, 14 of 68 blockers a behavior change without a test that fails without it. Accepted when no round comes from an earlier advisory over 5 runs, 3 of the next 5 mediums pass quality first, and a gate fails on an option or bench scenario with no docs row.
+34. `review-scope` (T1 retrospective, estimated medium, pushed back 12): fix rounds re-raise advisories as blocking; quality first 23 of 61, 14 of 68 blockers a behavior change without a test that fails without it; periodic slice 1 puts area 1's 8,850 lines under one 53-call cap. Accepted when no round comes from an earlier advisory over 5 runs, 3 of the next 5 mediums pass quality first, a gate fails on an option or bench scenario with no docs row, and a periodic review reads area 1 whole.
 35. `bidi-controls` (T3 security Lows, estimated small, pushed back 5): bidi and C0 bytes reach the terminal (Low (5)). Accepted with a row per source.
 36. `ci-hardening` (T3 with T6 folded, estimated medium, pushed back 17): 4 Lows (6) to (4). Accepted when a case covers each and actions are pinned.
 37. `project-config-guards` (T3 with blocking, estimated medium, pushed back 17): a cloned `.caratrc` binds a write (Low (5)). Accepted with a row each.
 38. `insert-copy` (T4 periodic quality, estimated small, pushed back 6): a long insert copies per key. Accepted when bytes per key stay flat.
 39. `file-access-tidy` (T4 with T6 folded, estimated medium, pushed back 20): two 64 MiB strings per test run. Accepted when none allocates it and `open-ruby` stays 24.0.
-40. `editing-counts` (T6 with blocking, estimated medium, pushed back 5): a long count before `p` freezes; `ci(` on `()`; sentence scans. Accepted with rows for each.
+40. `editing-counts` (T6 with blocking, estimated medium, pushed back 5): a long count before `p` or visual `p` freezes (blocking, open at 9a92265); `ci(` on `()`; sentence scans. Accepted with rows for each.
 41. `hover-tidy` (T6 folded, estimated medium, pushed back 7): K shows an older answer (blocking); a timed-out key leaves floats stale. Accepted with a row per defect.
 42. `signature-tidy` (T6 with blocking, estimated medium, pushed back 6): a `(` scan by bytes. Accepted with a row per defect.
 43. `slots-tidy` (T6 with blocking and a Low, estimated medium, pushed back 6): a hidden cursor outlives its buffer. Accepted with a row per defect.
 44. `completion-tidy` (T6 folded, estimated medium, pushed back 8): 32 findings. Accepted when the gateway defects have rows.
 45. `completion-docs-tidy` (T6 with a Low, estimated medium, pushed back 8): wrong-server resolve (Low (3)); the docs float under the popup at the edge. Accepted with a case each.
-46. `buffer-list-tidy` (T6 with a Low, estimated medium, pushed back 10): a name forges `:ls` (Low (4)); unlisted-buffer paths untested. Accepted with a row each.
+46. `buffer-list-tidy` (T6 with a Low, estimated medium, pushed back 10): a name forges `:ls` (Low (4)); unlisted-buffer paths untested; the unsaved rule written in 10 places. Accepted with a row each.
 47. `lsp-client-tidy` (T6 with Lows, estimated medium, pushed back 10): unbounded queues (Low (5)); a 1373-line gateway. Accepted when memory stays capped.
-48. `definitions-tidy` (T6 with periodic quality, estimated medium, pushed back 5): `gd` in a float; the peek unhighlighted. Accepted with a row per defect.
-49. `docs-index` (T6 folded, estimated medium, pushed back 15): 21 pull requests missing from the map; the architecture 3 bytes under budget. Accepted when a check fails on a gap.
+48. `definitions-tidy` (T6 with periodic quality, estimated medium, pushed back 5): `gd` in a float; the peek unhighlighted; `<C-o>` stops at a gone buffer's entry where Neovim goes on. Accepted with a row per defect.
+49. `docs-index` (T6 folded, estimated medium, pushed back 15): 21 pull requests missing from the map; the architecture 3 bytes and `contributor.md` 29 bytes under budget; 5 drifts at #99. Accepted when a check fails on a gap.
 50. `guard-lows` (T6 with a Medium (4), estimated medium, pushed back 19): agent files rewritable. Accepted with a refusal case each.
 51. `substitute-tidy` (T6 with a Low, estimated medium, pushed back 17): many `&` (Low (6)). Accepted with a row each.
 52. `search-tidy` (T6 folded, estimated medium, pushed back 20): 1.5 s per incremental key. Accepted when a preview key stays in budget.
 53. `bars-tidy` (T6 folded, estimated medium, pushed back 9): about 17 status bar entries. Accepted when each is fixed or owned.
-54. `run-budgets-tidy` (T6 folded, estimated medium, pushed back 9): 42 advisories; a missing strict metric passes (raised 3 times). Accepted when it fails in a case.
+54. `run-budgets-tidy` (T6 folded, estimated medium, pushed back 9): 42 advisories; a missing strict metric passes (raised 3 times); a non-numeric rounds value passes; the analysis warning fires on every build (39.0 and 92.3 s against 45). Accepted when each fails in a case.
 55. `discoverability-tidy` (T6 with a Low, estimated small, pushed back 6): Enter under a plugin prompt (Low (3)). Accepted with a row each.
 56. `messages-tidy` (T6 with periodic quality, estimated medium, pushed back 5): `:messages` drops E37 and E162. Accepted with rows.
 57. Backlog batches (T6 folded by domain, estimated small each, pushed back 26): copies, config checks, RBS pins, comment wraps, dead code, generators, test hygiene, ideas.
 
 ## Decisions
 
-- `jump-list` (T2 user bug report, delivered now): estimated large, as its area's mediums all overran: #98 1,871,438 total, 84 min for 2 fixes; #96 1,959,229; #97 2,246,983, against 1.2M.
-- Split: the alternate file (`Ctrl-^`, `Ctrl-6`, `:e #`) moves into 1, leaving `jump-list` 3 fixes (every switch, per-window lists, the tab given back) plus #98's scratch gap; a third part would not fit medium by those rows.
-- Float bug report (T2, the user's, after #97): folded with `float-placement`'s frame-width rule into 3, the same code (finder box sizes, palette width, float rows); `float-placement` keeps the rest as 4, each part at four fixes or under.
-- #98 periodic quality (partial 17/18, 1 blocking, 34 advisory): the unlisted-modified buffer into 18; folds into 16, 32, 41, 46, 48, 49, 52, 54, 57 (`build/plan/backlog.md`).
-- #98 periodic security pass at be4b63a, 0 findings; #98 security pass: no High or Medium at 8 or above.
-- #98 retro: note 11 (quality first 0, 23/61) into 34, note 12 (scout 22.5%) into 28; #98 overran medium at 1,871,438.
-- Positions 4 to 57 unchanged (one item left, one entered): no push-backs.
-- Features first: 1 to 17 are user reports or features; no non-feature change is due.
-- Allocation figures from #98: `lh` 26.0, `j` 27.0, `insert` 34.0, `open-ruby` 24.0. Standing: indent guides core, breadcrumbs default kept.
+- `url-email-guard` (T2 user now-request, delivered now ahead of 1 at the user's order): the URL and footer breach recurred on #95 to #99, footers on 12 of 55 pull requests.
+- Size: estimated medium by tooling rows `queue-handoff` 748,665 total in 31.8 min and `periodic-blockers-a` 971,861, though the last 4 code mediums ran 1.87M to 2.53M; 4 brief parts, the folds being cases of the same scanner and job: no split.
+- Fold from 27 `merge-gate-tidy`: the live body ungated (#83) and the squash message unchecked, met by the job on `edited` over title and body, red blocking the merge.
+- Fold from 32 `content-gate-gaps`: the `++ ` line (Low (8)), the quoted path (Low (7)), the binary note, and the whole-line hit print (Low (5)); the binary refusal (Medium (7)) and the rest stay in 32.
+- Security: #99 periodic security pass at 9a92265, 1 Low (4) into 30; #99 security pass; Medium (7) under 8: no blocking finding.
+- #99 periodic quality (partial 17/18, 2 blocking, 27 advisory): both blocking still open in 18 and 40; advisories into 20, 32, 34, 40, 46, 48, 49, 54, 57 (`build/plan/backlog.md`).
+- #99 retro: note 6 (merge record swapped) into 27, notes 7 (record 641/2) and 8 (scout 29.8%) into 28.
+- #99 `jump-list` large: 1,968,203 total in 77.0 min, inside 2.5M; every gate passed first.
+- Positions 1 to 57 unchanged, the guard coming from outside the queue: no push-backs.
+- Features first: the guard is a now-request; 1 to 17 are user reports or features.
+- Allocation figures from #99: `lh` 26.0, `j` 27.0, `insert` 34.0, `open-ruby` 24.0. Standing: indent guides core, breadcrumbs default kept.
 - Parked: `image-viewer`, the mouse, a CSV chart; a carat font (optional, own repository, SIL licensed under a new name, `option.icons carat-font`); SVG icons (own rasterizer, kitty or sixel, falling back to 8).
