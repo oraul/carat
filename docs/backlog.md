@@ -3422,3 +3422,15 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: dead code `TabRequest#counted?` (`carat/use_cases/windows/tab_request.rb` line 13), `UndoTree#undo_seq` and `#redo_seq` (`carat/domain/undo_tree.rb` lines 173 and 179, with the stale comment at 185), the dead store `row = top` (`carat/domain/motions.rb` line 579), `DisplayWidth.of_char` (`display_width.rb` line 133), `DecodedLine#cells` (line 91), `Cell#same?` (line 286); `Config#binding?`'s comment (`carat/domain/config.rb` line 205) omits the leader lines and lines of other word counts it keeps; the finder's `open_path` and `report` (`carat/plugins/finder/plugin.rb` line 314) copy the explorer's (lines 277 and 534); the finder matcher's helpers (`matcher.rb` line 55) are public and `lower(b)` takes a one-letter name; `PluginRouter#answer` (line 77) hands the plugin `prompt_id` uncopied; the explorer's `@followed` (`carat/plugins/explorer/plugin.rb` line 420) stays on the old path after its parent directory is renamed; `Frame::REPLACEMENT` (`frame.rb` line 36) repeats `Utf8::REPLACEMENT`. Periodic quality at 186ddfb, queued in the backlog batches.
 - Why it matters: dead surface and map mentions, a misleading comment, two open dispatches, a strings-copied breach, a mark on a path that no longer exists.
 - Fix outline: delete the dead code and its map mentions; fix the comment; one `PluginApi` opening helper or an entry per plugin; `private_class_method` where Spinel allows and `byte`; `id.dup`; `@followed = tree.marked` after `tree.moved` with a directory-rename case; `REPLACEMENT = Utf8::REPLACEMENT`.
+
+## The reader shadow check skips classes whose name ends in end
+
+- Where: `shadow_problems` in `test/lint.rb` line 1019 at e0bca07, which skips any `class` or `module` line ending in `end`. Quality advisory in `implement-contracts-c`.
+- Why it matters: the skip is meant for one-line bodies, but a class named `Backend`, `Append`, or `Legend` also ends in `end` and is silently never checked; no such class exists today.
+- Fix outline: skip only a one-line body (the head holds `;`, as in `; end`), and add a `class Backend` case to the reader shadow self-check.
+
+## Two lint def readers parse the same prefixes separately
+
+- Where: `def_name` in `test/lint.rb` line 998 beside `def_named?` at line 661, and `symbol_names` at line 980 beside `symbol_named?` at line 674, at e0bca07. Quality advisory in `implement-contracts-c`.
+- Why it matters: `def_name` repeats the `private`, `protected`, `def`, and `self.` prefix parsing of `def_named?`, and `symbol_names` has its own boundary rules, so a fix to one reader can miss the other and the checks drift.
+- Fix outline: build `def_named?` on `def_name` (or one shared prefix helper), and `symbol_named?` on `symbol_names`, so each pair shares one parser.
