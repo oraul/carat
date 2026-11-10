@@ -12,4 +12,4 @@
 ## 3. Bench and docs
 
 - [x] 3.1 `bench/keys.rb` and `bench/run.sh`: `lh-noguides`, `j-noguides`, `insert-noguides`; `make bench-budget` passes.
-- [x] 3.2 `docs/compatibility.md` Indent guides section and Themes count, `README.md`, `docs/architecture.md`, `docs/codebase-map.md` areas 13 and 14; `make docs-lint` and `make gates` pass.
+- [x] 3.2 `docs/compatibility.md` Indent guides section and Themes count, `README.md`, `docs/architecture.md`, `docs/codebase-map.md` area 13; `make docs-lint` and `make gates` pass.

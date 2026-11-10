@@ -38,7 +38,7 @@ Deeply nested code is hard to follow in a terminal editor without a visual cue f
 - `carat/domain/options.rb`, `config/default.caratrc`, `carat/domain/default_config.rb`: the two options.
 - `bench/keys.rb`, `bench/run.sh`: the three scenarios with the guides off.
 - Tests: `test/adapters_indent_guides.rb` (new), `test/domain_options_config.rb`, `test/domain_theme.rb`.
-- `docs/compatibility.md` (an Indent guides section, the Themes count), `docs/codebase-map.md` (areas 13 and 14, the scenarios), `docs/queue.md` through the package step.
+- `docs/compatibility.md` (an Indent guides section, the Themes count), `docs/codebase-map.md` (area 13: the new file, the test, and the scenarios), `docs/queue.md` through the package step.
 - README.md: changed, the option list names `indentguides` and `indentguides.char`.
 - docs/architecture.md: changed, `Options`, the `.caratrc` option scope, and section 8.2's `FramePresenter` name the guides.
 
