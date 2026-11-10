@@ -3326,3 +3326,57 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/use_cases/handle_key.rb` line 364, the literals 40 and 44 for `(` and `,`. Periodic quality at 8d8832f, queued in `signature-tidy`.
 - Why it matters: bare codes hide which characters trigger signature help.
 - Fix outline: name them as key constants or compare the character.
+
+## Plugin file reads and listings are not contained in a root
+
+- Where: `carat/use_cases/plugins/file_requests.rb` line 71, the `read_file` and `list_files` requests. Security review of `file-finder`, Low (3).
+- Why it matters: unlike the make, rename, and delete requests, which check that the path is inside a root, an enabled plugin can read the first 1000 lines of any regular file under 256 KiB the user can read (for example `~/.ssh` keys) and list any directory tree. Every plugin is compiled in and trusted today, so this only hardens the plugin boundary.
+- Fix outline: have `read_file` and `list_files` take a root like the mutating requests, resolve the path with `ResolveInside` or `real_path` plus `Paths.inside?` before reading or walking, and have the finder pass its working-directory root, with a refusal row.
+
+## The finder's file cap has no test
+
+- Where: `carat/use_cases/plugins/file_requests.rb` line 64, the `MAX_FILES` cap of `list_files` (`ListTree`'s limit and the `Listed the first N files` message the finder shows). Quality review of `file-finder`.
+- Why it matters: the cap and its message can break unnoticed.
+- Fix outline: test `ListTree#call` with a small limit in `test/use_cases_plugin_files.rb` and the message at the cap.
+
+## A resize with the finder open is untested
+
+- Where: `carat/plugins/finder/plugin.rb` line 102, which re-lays the floats on a resize and turns the preview on or off at 100 columns. Quality review of `file-finder`.
+- Why it matters: the preview's width threshold on a resize has no row.
+- Fix outline: add a `test/editor_finder.rb` row that resizes the harness from 80 to 120 columns with the finder open and expects the preview float.
+
+## Plugin keymap errors are recorded by two copies of one loop
+
+- Where: `carat/use_cases/plugins/ui_requests.rb` line 84 and `WindowRequests#open_scratch` in `carat/use_cases/plugins/window_requests.rb` line 94, each recording a keymap error as `plugin NAME: binding ERROR`. Quality review of `file-finder`.
+- Why it matters: a change to the message or the parsing has to be made twice.
+- Fix outline: one shared helper, for example on `PluginRegistry`, that builds a plugin's keymap from its lines and records the errors, called from both.
+
+## HandleKey reaches the plugin UI through the plugins
+
+- Where: `carat/use_cases/handle_key.rb` line 117, which takes the shared `PluginUi` through `plugins.plugin_ui` instead of a `plugin_ui:` keyword from `EditorAssembly`, and keeps it with no reader. Quality review of `file-finder`.
+- Why it matters: unlike `palette:`, `signature:`, and the other shared records, `test/adapters_assembly.rb` cannot check that `HandleKey` holds the one instance.
+- Fix outline: pass `plugin_ui:` from `EditorAssembly`, add a reader, and check it in `test/adapters_assembly.rb`.
+
+## The finder re-reads its preview on every key
+
+- Where: `carat/plugins/finder/plugin.rb` line 276, `refresh`, which reads the highlighted file (up to 256 KiB) through `read_file` on every keystroke and highlight move. Quality review of `file-finder`.
+- Why it matters: typing a query re-reads the same file when the highlighted path does not change.
+- Fix outline: keep the last previewed path, height, and lines, and read again only when the path or the height changed.
+
+## The finder's sort key relies on the host's file cap
+
+- Where: `carat/plugins/finder/matcher.rb` line 25, `INDEX_BITS` 20 (1,048,575 indexes), and `MAX_FILES` of 100,000 in `carat/use_cases/plugins/file_requests.rb` line 20. Quality review of `file-finder`.
+- Why it matters: a cap above `INDEX_ROOM` would silently corrupt the packed keys.
+- Fix outline: say so beside `INDEX_ROOM`, or skip indexes above `INDEX_ROOM` in `Plugin#filter`.
+
+## Small tidy-ups in the finder and the plugin host
+
+- Where: `carat/plugins/finder/matcher.rb` line 1 requires `plugin_api.rb` but uses nothing from it; `carat/plugins/finder/plugin.rb` line 29, `OPEN`, names one action used once in `on_action` while the manifest and the other branches spell action names as literals; `carat/use_cases/plugins/plugin_host.rb` line 194, `follow_prompt`, dups the text into `prompt_seen` and `PluginRouter#follow_prompt` dups it again. Quality review of `file-finder`.
+- Why it matters: a dead require, an inconsistent naming of actions, and a second string copy per prompt key.
+- Fix outline: drop the require; drop `OPEN` and compare against the literal (or name every action the same way); dup once, in the router where the value crosses to the plugin.
+
+## The finder's normal-mode Ctrl-P differs from Neovim unsaid
+
+- Where: the File finder section of `docs/compatibility.md` (line 493). Quality review of `file-finder`.
+- Why it matters: normal-mode `<C-p>` moves the cursor up a line in Neovim; the finder takes it without saying so.
+- Fix outline: note the difference in the section, removable with `keymap.normal <C-p> none`.
