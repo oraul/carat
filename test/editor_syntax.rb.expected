@@ -30,7 +30,7 @@ ok   opening 100,000 lines tokenizes one screen
 ok   G tokenizes every row above the end once
 ok   and the last row is highlighted with the state carried from the top
 ok   G again tokenizes at most the rows of one screen
-ok   a heredoc body row is String
+ok   a heredoc body row is String between the indent guides at columns 0 and 2
 ok   typing in a heredoc tokenizes one row
 ok   the row is String
 ok   typing in a multi-line string tokenizes one row

@@ -100,8 +100,9 @@ COLS = 200
 # middle, S for the middle line of a multi-line string near it), text
 # kind, plugins ("none", "explorer" opened in a side window, "ruby",
 # the ruby plugin alone, "float", no plugin and a 60 by 15 bordered
-# float over the middle of the window, or "finder", the finder alone over
-# FINDER_FILES files, which every key typed into it filters)
+# float over the middle of the window, "finder", the finder alone over
+# FINDER_FILES files, which every key typed into it filters, or
+# "noguides", no plugin and the indent guides turned off)
 SCENARIOS = [
   ["lh", "lh", 10_000, 10_000, "NG", "code", "none"],
   ["j", "j", 9_000, 10_000, "gg", "code", "none"],
@@ -115,6 +116,9 @@ SCENARIOS = [
   ["lh-explorer", "lh", 10_000, 10_000, "NG", "code", "explorer"],
   ["lh-float", "lh", 10_000, 10_000, "NG", "code", "float"],
   ["lh-winbar", "lh", 10_000, 10_000, "<C-w>vNG", "code", "none"],
+  ["lh-noguides", "lh", 10_000, 10_000, "NG", "code", "noguides"],
+  ["j-noguides", "j", 9_000, 10_000, "gg", "code", "noguides"],
+  ["insert-noguides", "x<BS>", 10_000, 10_000, "NGA", "code", "noguides"],
   ["j-explorer", "j", 9_000, 10_000, "gg", "code", "explorer"],
   ["undo", "u<C-r>", 4_000, 100_000, "NGx", "code", "none"],
   ["undo-line", "u<C-r>", 4_000, 100_000, "NGdd", "code", "none"],
@@ -248,6 +252,7 @@ def run(scenario, count, size)
   end
   assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: Carat::Doubles::FixedConfig.new(value: Carat::Doubles::FixedConfig.defaults), processes: Carat::Doubles::FakeProcesses.new, messages: Carat::Doubles::MemoryQueue.new, completions: Carat::Adapters::ServerCompletions.new, plugin_list: list)
   assembly.screen_presenter.enter
+  assembly.state.options.indentguides = false if plugins == "noguides"
   opened = now
   assembly.open("a.rb")
   assembly.render(ROWS, COLS)

@@ -161,11 +161,11 @@ module EditorBreadcrumbsTest
 
     # The winbar rows: rows are [label, [user lines, keys], [row 0, row 1]].
     t.table([
-      ["one window has no winbar", ["", ""], ["class Foo", "  def bar"]],
+      ["one window has no winbar", ["", ""], ["class Foo", "| def bar"]],
       ["two windows have winbars over their text", ["", "<C-w>v"], [" a.rb               │ a.rb", "class Foo           │class Foo"]],
-      ["closing back to one window removes the winbar", ["", "<C-w>s<C-w>c"], ["class Foo", "  def bar"]],
+      ["closing back to one window removes the winbar", ["", "<C-w>s<C-w>c"], ["class Foo", "| def bar"]],
       ["always shows the winbar on one window", ["option.breadcrumbs always\n", ""], [" a.rb", "class Foo"]],
-      ["never hides the winbars of two windows", ["option.breadcrumbs never\n", "<C-w>v"], ["class Foo           │class Foo", "  def bar           │  def bar"]],
+      ["never hides the winbars of two windows", ["option.breadcrumbs never\n", "<C-w>v"], ["class Foo           │class Foo", "| def bar           │| def bar"]],
       ["an unknown mode keeps auto", ["option.breadcrumbs sometimes\n", "<C-w>v"], [" a.rb               │ a.rb", "class Foo           │class Foo"]]
     ]) do |input|
       r = rig(input[0].to_s, {})

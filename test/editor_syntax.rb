@@ -179,7 +179,7 @@ module EditorSyntaxTest
     h.type("G")
     t.assert_true(view.tokenized - before <= 60, "G again tokenizes at most the rows of one screen")
     h.type("gg15G")
-    t.assert_equal("String:    where id = 1", spans(h, 14), "a heredoc body row is String")
+    t.assert_equal("String:  String: where id = 1", spans(h, 14), "a heredoc body row is String between the indent guides at columns 0 and 2")
     h.type("i")
     before = view.tokenized
     h.type("x")
