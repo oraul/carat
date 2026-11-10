@@ -3144,7 +3144,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 ## Definition target paths keep decoded control bytes
 
 - Where: `carat/adapters/json_rpc_language_gateway.rb` line 789 at fafe59c, `path_of`, which refuses a raw or escaped NUL but keeps a decoded `%0A` or `%1B`. Security Low (5) and quality advisory in `definitions`. Owned by queue item 13, `bidi-controls`.
-- Why it matters: a hostile language server can put a newline or ESC into a target path, which reaches the read-only and E484 message text (split into extra message lines by `TextLines.split`), the read-only view's title, the float title, and a pick-list buffer line that then holds a newline, breaking the one-line invariant. `Frame#put_from` replaces every control with U+FFFD, so no escape sequence reaches the terminal.
+- Why it matters: a hostile language server can put a newline or ESC into a target path, which reaches the read-only and E484 message text (split into extra message lines by `TextLines.split`), the buffer path shown in the tab label and the status line (an outside target now opens as a read-only file buffer since `gd-ghost-tab`), the float title, and a pick-list buffer line that then holds a newline, breaking the one-line invariant. `Frame#put_from` replaces every control with U+FFFD, so no escape sequence reaches the terminal.
 - Fix outline: in `path_of`, return "" when a decoded byte is below 0x20 or is 0x7F, as a NUL is refused (or pass the path through `Domain::ControlText.strip` before it is stored), with rows in the escapes test of `test/adapters_definitions.rb` for a URI holding `%0A` and `%1B`.
 
 ## File URI decoding is hand-rolled inside the language gateway
@@ -3566,3 +3566,99 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/spinel-notes.md:482`, before the two items `spinel-bump` added for f34005bf. Quality advisory at spinel-bump.
 - Why it matters: Markdown renders the two new items as a separate list, so they read as apart from the Known miscompilations section.
 - Fix outline: remove the blank line.
+
+## Operate dispatches with case on constants the pinned Spinel may fold
+
+- Where: `carat/use_cases/operate.rb` line 65, `case`/`when` on `Domain::OperatorKind::DELETE` and `::INDENT`, String constants whose bare names are Integer constants elsewhere (`Key::DELETE`, `RcParser::DELETE`, `FormatDocs::INDENT`). Periodic quality blocking at e49f63d.
+- Why it matters: `docs/spinel-notes.md` (Known miscompilations, f34005bf) says the pinned Spinel folds this shape to false; it passes only by how the name resolves today, so a rename elsewhere silently breaks delete or indent.
+- Fix outline: dispatch with `==` guards as `Mode.visual_kind` does, citing the note, with a row per operator kind. Queue item: `periodic-blockers-b`.
+
+## The left and right window keys ignore the gutter and display columns
+
+- Where: `neighbour` in `carat/domain/layout.rb` line 250 takes the cursor column as `window.col + cursor.col - window.left`. Periodic quality at e49f63d.
+- Why it matters: it mixes a code point index with the display-column scroll and leaves out the gutter, so `<C-w>j` and `<C-w>k` beside vertical splits pick the wrong window with numbers, signs, tabs, or wide characters, unlike Neovim.
+- Fix outline: pass the gutter width and the cursor's display column into the neighbour search, with a row over a numbered window. Queue item: `slots-tidy`.
+
+## A raise while leaving the screen skips stopping the language servers
+
+- Where: the `ensure` in `bin/carat.rb` line 41 runs `screen_presenter.leave` then `services.stop`. Periodic quality at e49f63d.
+- Why it matters: a raise in `leave` leaves server processes running after the editor exits.
+- Fix outline: stop the services even when leaving raises, with a case. Queue item: `lsp-client-tidy`.
+
+## Stale places in the Makefile, CLAUDE.md, the rules script, and carat.rb
+
+- Where: `Makefile` line 19 (the `SPINEL_REF` comment sends the header regeneration to the toolchain target, not `spinel-header`); `CLAUDE.md` line 21 and `tools/rules.sh` line 34 (the allowed URL is in the shared Spinel checkout recipe, not the toolchain target); the CLAUDE.md buffer text bullet (`LeaveInsert` opens no transaction, it closes the insert session the dispatcher left open); `carat.rb` line 332 (`carat/adapters/indent_guides.rb` missing from the production require graph). Periodic quality at e49f63d.
+- Why it matters: each sends a reader to the wrong place, and the require graph header says every file is pulled in once.
+- Fix outline: correct each sentence and add the require. Queue item: `docs-index`.
+
+## The code map is behind the code
+
+- Where: `docs/codebase-map.md` line 584 (area 17 Flow says every port method raises, but `FilePort#stat` answers a value); line 488 and `docs/architecture.md` line 106 (49 UI groups, now 51 with the indent guides); lines 523, 532, 460 (`Paths` omits `absolute`, `PluginEntry` omits `attach` and `full_command`, `IndentGuides` omits `on?`). Periodic quality at e49f63d.
+- Why it matters: agents start from the map and the architecture.
+- Fix outline: update each sentence and list. Queue item: `docs-index`.
+
+## Records and values miss pins or say why not
+
+- Where: `carat/domain/search_pattern.rb` line 10 (the regexp pin dropped with no comment); `carat/domain/find.rb` line 4 and `command.rb`, `ex_command.rb`, `key_notation.rb`, `keymap_match.rb`, `position.rb`, `range.rb` (no member pins); `carat/domain/history.rb` line 23 (`super()` without keywords, uncommented); `carat/domain/transaction.rb` line 297 (`merged?` rewrites the last record, a command named as a predicate). Periodic quality at e49f63d.
+- Why it matters: against the inline RBS and naming rules of CLAUDE.md, and a reader cannot tell an omission from a Spinel workaround.
+- Fix outline: add the pins or a one-line comment citing `docs/spinel-notes.md`, and rename `merged?` or list it in `BOOL_COMMANDS`. Queue item: Backlog batches.
+
+## Requires out of step with the constants a file names
+
+- Where: `carat/domain/operators.rb` line 6 (requires `selection`, unused; `registers` where it uses `RegisterEntry`); `last_change.rb`, `reselect_visual.rb`, `toggle_slot.rb`, `completion_handler.rb`, `show_completion.rb` (unused requires); `carat/domain/layout.rb`, `window.rb`, `slot.rb`, `tab_page.rb`, `layout_node.rb` (build constants they never require). Periodic quality at e49f63d.
+- Why it matters: they compile only by the load order of `carat.rb`.
+- Fix outline: require what each file names and drop the rest, `make diagnose` confirming. Queue item: Backlog batches.
+
+## Comments that read as changelogs or break the wrap width
+
+- Where: `carat/domain/range.rb` line 3; `carat/use_cases/handle_key.rb` lines 65 and 71 to 72; `carat/domain/editor_state.rb` lines 13 and 15; `carat/domain/highlight.rb` lines 5 to 13; `carat/use_cases/files/open_file.rb` line 20. Periodic quality at e49f63d.
+- Why it matters: ragged or historical comments mislead a reader.
+- Fix outline: describe what the class holds now and rewrap each block to its file's width. Queue item: Backlog batches.
+
+## Copies in editing, substitute, and buffer-list code
+
+- Where: the tabstop-or-8 fallback in `dispatcher.rb` line 111, `repeat_last.rb` line 104, `leave_insert.rb` line 69, `insert_tab.rb` line 22, `arrange_view.rb` line 42 (`Options#tab_width` exists); private `clamp` in `operate.rb` line 202 and `repeat_last.rb` line 116 (`EditorState#clamp_col`); `change_selection.rb` line 41 repeating `Operate#change`; dead `tabstop_of` in `extend_visual.rb` line 53; `remember` in `global_command.rb` line 81 and `substitute_lines.rb` line 113; the group append in `replacement.rb` lines 99 and 127; `digits?` in `history_command_handler.rb` line 65 and `buffer_command_handler.rb` line 98; `beside_side_windows?` in `files/quit.rb` line 66; `list_buffers.rb` line 74 asking `shown?` twice; `any_modified?` and `redo_seq` used only by tests. Periodic quality at e49f63d.
+- Why it matters: each copy can drift from its original.
+- Fix outline: one owner per behavior, dead code removed. Queue items: `editing-counts` (fallbacks, clamps, change, dead code), `substitute-tidy` (remember, group append), `buffer-list-tidy` (digits, shown, unused methods), `slots-tidy` (quit).
+
+## The explorer tree takes positional arguments under a silent lint exemption
+
+- Where: `Tree#initialize` in `carat/plugins/explorer/tree.rb` line 23; the plugins exemption in `test/lint.rb` line 1185. Periodic quality at e49f63d.
+- Why it matters: CLAUDE.md requires keyword constructors and states no plugin exemption.
+- Fix outline: keyword arguments at the constructor and its callers, then drop or document the exemption. Queue item: Backlog batches.
+
+## A pin bump has no way to build and bench its base at its own pin
+
+- Where: the benchmark agent's base build and `make toolchain` with `PREFIX`. `spinel-bump` retrospective.
+- Why it matters: in #95 the benchmark's documented step failed on main and it built a base toolchain by hand (14 calls, 9,929 tokens), and the contributor rebuilt the old toolchain in a scratch path inside a capped implement start.
+- Fix outline: one documented way to build the base at its pin; acceptance: the next pin bump compares base and change with no hand-built toolchain. Queue item: `check-runner-safety`.
+
+## DefinitionRequest's OWNER comment names a view it no longer makes
+
+- Where: `carat/domain/definition_request.rb` line 34, the comment on `OWNER`. Quality advisory in `gd-ghost-tab`.
+- Why it matters: it still says the owner holds the read-only views of files outside the project, but since `gd-ghost-tab` an outside target opens as a read-only file buffer, so a reader looks for scratch views that no longer exist.
+- Fix outline: say the owner holds the scratch buffers of the peek float and the pick list.
+
+## Two class comments of the definitions change are wrapped unevenly
+
+- Where: `carat/use_cases/definitions/visit_target.rb` line 28 (line 29 stops at 45 columns) and `carat/use_cases/buffers/list_buffers.rb` line 16 (runs to 88 columns against the 72 to 75 of its block). Quality advisory in `gd-ghost-tab`.
+- Why it matters: the ragged block reads as an unfinished edit and breaks the file's wrap width, as in the comments entry above.
+- Fix outline: rewrap both class comments evenly at the width of their block.
+
+## An edited read-only gd target's unsaved-work errors have no test
+
+- Where: `test/adapters_definitions.rb` line 406, the read-only target rows. Quality advisory in `gd-ghost-tab`.
+- Why it matters: since `gd-ghost-tab` an edited read-only buffer counts as unsaved work (E37 on `gd`, Ctrl-O, `:e`, and `:b` away from it, E162 on quit), which the old scratch view never raised, so a regression in that behavior would pass the suite.
+- Fix outline: after `x` in the read-only buffer, assert that `:bp` reports E37, `:q` reports E162, and `:e!` clears the modified flag.
+
+## No test covers :wa over a modified read-only buffer and a writable one
+
+- Where: the definitions spec requirement on read-only targets (`openspec/specs/definitions/spec.md`) says `:wa` and `:wqa` still write the other modified buffers, and `test/adapters_definitions.rb` has no row for it. Quality advisory in `gd-ghost-tab`.
+- Why it matters: a `:wa` that stops at the first E45 would leave the user's writable edits unsaved without a failing test.
+- Fix outline: add a scenario and a row that modifies `a.rb` and the read-only target, runs `:wa`, and asserts `a.rb` is written while E45 is reported for the read-only one.
+
+## Nothing proves the read-only gd target is synced with the language server
+
+- Where: `test/adapters_definitions.rb` line 433. Quality advisory in `gd-ghost-tab`.
+- Why it matters: the `gd-ghost-tab` proposal opens the read-only buffer to the server (didOpen) so `gd` follows on from it, but no test asserts the didOpen or a `gd` from inside it, so losing the sync would pass the suite.
+- Fix outline: assert the fake server received didOpen for `/gems/c.rb` and that `gd` from that buffer visits a target.
