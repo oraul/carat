@@ -17,6 +17,7 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make doctor` | Check that `spinel`, `spin`, a C compiler, and `node` are on the path, and that the `ruby` every target reaches is the refusing stub |
 | `make no-cruby` | Prove that a test program without a snapshot fails instead of being compared against a CRuby |
 | `make toolchain` | Fetch, build without Ruby, and install the pinned Spinel commit under `tmp/` |
+| `make spinel-header` | Regenerate the vendored Spinel header for `SPINEL_REF` with the installed Spinel, no Ruby; run it when bumping the pin, before `make toolchain` |
 | `make toolchain-clean` | Remove `tmp/`, the Spinel checkout and the installed toolchain |
 | `make build` | Compile `bin/*.rb` into `build/bin` and print how to run it from anywhere |
 | `make dev-build` | Compile the editor with the development flags into `build/dev/carat`, the binary CI's smoke test runs on pull requests, and check its analysis budget |

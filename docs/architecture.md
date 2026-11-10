@@ -24,7 +24,7 @@ Non-goals:
 
 ## 2. Runtime and compiler
 
-- Compiler: Spinel. It parses Ruby with Prism, infers types across the whole program, emits C, and calls the system C compiler. Its language level is Ruby 4; its own benchmark baseline is CRuby 4.0.4. The project pins one exact Spinel commit in the Makefile, so every build, locally and in CI, uses the same compiler; bumping it is a deliberate change in its own pull request, which also regenerates the vendored header `tools/spinel/spinel_rt_responds_generated.h` with Spinel's generator at the new commit.
+- Compiler: Spinel. It parses Ruby with Prism, infers types across the whole program, emits C, and calls the system C compiler. Its language level is Ruby 4; its own benchmark baseline is CRuby 4.0.4. The project pins one exact Spinel commit in the Makefile, so every build, locally and in CI, uses the same compiler; bumping it is a deliberate change in its own pull request, which also regenerates the vendored header `tools/spinel/spinel_rt_responds_generated.h` at the new commit with `make spinel-header`.
 - Toolchain location: `make toolchain` fetches the pinned commit into `tmp/.spinel`, copies the vendored header into it so no Ruby interpreter is needed, builds it, and installs `spinel`, `spin`, and `spinel-doctor` under `tmp/.toolchain`. Both directories are ignored by git and removed by `make toolchain-clean`; `SPINEL_SRC` and `PREFIX` override them. They are hidden because `spin` treats every visible directory under the repository as project source (it reports foreign `.c` files and seeds the compiler from every `.rbs` it finds) and skips hidden ones. The Makefile exports `PATH` with `tmp/.toolchain/bin` first, so every target finds the toolchain and nobody edits a shell profile. A clone needs a C compiler, `make`, `git`, and `curl`, nothing else.
 - Project tool: `spin`, which ships with Spinel. It owns the manifest, dependency resolution, multi-file builds, test runs, packaging, and installation. The repository's `Makefile` is only a map: every target calls `spin` or OpenSpec and builds nothing itself. `make help` lists the targets.
 - Development loop: `spin build` compiles every `bin/*.rb` into `build/bin/`, `spin run carat -- FILE` builds and runs the editor, and `make test` compiles every `test/*.rb` into one test runner with `spinel` and runs each test from it. All need only Spinel and a C compiler.
@@ -359,7 +359,7 @@ tools/noruby/ruby               a ruby that refuses to run and exits 127, first 
 tools/analysis_budget.sh        the analysis budget: Spinel's re-narrowing rounds per compile root, checked
 tools/run_tests.sh              runs tests from a compiled runner and compares each with its snapshot
 tools/ci_scope.sh               decides whether a CI run needs the checks
-tools/spinel/                   the header Spinel generates with CRuby, vendored at the pinned commit
+tools/spinel/                   the header Spinel generates with CRuby, vendored, and its port
 tmp/                            .spinel, the Spinel checkout, and .toolchain, the installed toolchain; ignored by git, hidden from spin
 bin/carat.rb                    entry point and composition root; builds to build/bin/carat
 bin/carat-gen-config.rb         generates carat/domain/default_config.rb and the plugin registry from config/
