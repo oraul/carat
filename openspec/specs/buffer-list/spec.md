@@ -42,7 +42,7 @@ When a window stops showing a buffer, the buffer SHALL remember the window's cur
 - **THEN** the message is `  1 %a   "a.txt"                        line 1`
 
 ### Requirement: The flags of the buffer listing
-The five flag columns of a listing line SHALL be `u` for a buffer that is not listed, else a space; `%` for the buffer of the current window, else a space; `a` for a buffer some window shows, else `h`; a space; and `+` for a modified file buffer, else a space. With a bang the plugins' scratch buffers SHALL be listed too, flagged `u`.
+The five flag columns of a listing line SHALL be `u` for a buffer that is not listed, else a space; `%` for the buffer of the current window, else a space; `a` for a buffer some window shows, else `h`; `=` for a read-only buffer, else a space; and `+` for a modified file buffer, else a space. With a bang the plugins' scratch buffers SHALL be listed too, flagged `u`.
 
 #### Scenario: Hidden and modified buffers
 - **WHEN** "x" is pressed on "a.txt", ":sp b.txt" is run, "x" is pressed there, `<C-w>c` closes that window, and ":ls" is run
@@ -52,12 +52,20 @@ The five flag columns of a listing line SHALL be `u` for a buffer that is not li
 - **WHEN** a plugin's side window is open and ":ls!" is run
 - **THEN** its scratch buffer is listed with `u` in the first flag column and its title as the name, and ":ls" without the bang leaves it out
 
+#### Scenario: A read-only buffer in the listing
+- **WHEN** `gd` showed the read-only buffer of `/gems/c.rb` and ":ls" is run
+- **THEN** its line carries `%a=` and the `a.rb` line `h` with a space in the fourth column
+
 ### Requirement: Filtering the buffer listing
-An argument to `:ls` SHALL keep only the buffers that match every one of its flag characters: `u` the unlisted ones, `+` the modified ones, `a` the shown ones, `h` the hidden ones, `%` the current one, and `#`, `-`, `=`, `x`, `R`, `F`, and `?` none, since no buffer is alternate, unmodifiable, read-only, unreadable, or a terminal. Other characters SHALL be ignored.
+An argument to `:ls` SHALL keep only the buffers that match every one of its flag characters: `u` the unlisted ones, `+` the modified ones, `a` the shown ones, `h` the hidden ones, `%` the current one, `=` the read-only ones, and `#`, `-`, `x`, `R`, `F`, and `?` none, since no buffer is alternate, unmodifiable, unreadable, or a terminal. Other characters SHALL be ignored.
 
 #### Scenario: Filtered by a flag
 - **WHEN** "a.txt" and a hidden "b.txt" are listed and ":ls h" is run
 - **THEN** only the "b.txt" line is shown
+
+#### Scenario: Filtered by the read-only flag
+- **WHEN** `gd` showed the read-only buffer of `/gems/c.rb` over `a.rb` and ":ls =" is run
+- **THEN** only the `c.rb` line is shown
 
 ### Requirement: Moving through the buffer list
 `:bn`, `:bnext`, `:bp`, `:bprevious`, `:bN`, and `:bNext` SHALL show in the current window the next or the previous listed file buffer, wrapping at the ends, or the Nth one after or before with a number argument, 0 staying. `:b N` and `:buffer N` SHALL show buffer number N, and `:b` alone SHALL stay. Showing the buffer already shown SHALL change nothing.
