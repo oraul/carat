@@ -17,7 +17,7 @@ SPINEL_REPO ?= matz/spinel
 # its own pull request, after make check passes with the new commit, and
 # regenerate tools/spinel/spinel_rt_responds_generated.h in that same pull
 # request (see the toolchain target).
-SPINEL_REF  ?= 001419ff1af7f77aaf8862ff248afef66047dd41
+SPINEL_REF  ?= f34005bfded9f66dc094ac0aae85efd541cef789
 PREFIX      ?= $(CURDIR)/tmp/.toolchain
 FILE       ?= README.md
 # The most objects one key of the cursor scenario of the benchmark may
@@ -131,13 +131,18 @@ override export PATH := $(NORUBY):$(PREFIX)/bin:$(PATH)
 # no Ruby interpreter is needed to build the toolchain. The toolchain target
 # copies it into the checkout after the checkout step and before make deps,
 # so the copy is newer than its prerequisites and Spinel's rule leaves it
-# alone. It is a pure function of Spinel's sources: regenerate it with that
-# script, on a machine that has CRuby, in the same pull request that bumps
-# SPINEL_REF.
+# alone. It is a pure function of Spinel's sources. A bump regenerates it
+# in the same pull request with make spinel-header, before make toolchain:
+# tools/spinel/gen_respond_to_tables.rb is the part of Spinel's script that
+# reads the sources, compiled by the Spinel already installed, so no CRuby
+# is needed for that either.
 SPINEL_GENERATED_HEADER := tools/spinel/spinel_rt_responds_generated.h
+SPINEL_HEADER_GEN := tools/spinel/gen_respond_to_tables.rb
+SPINEL_HEADER_BIN := build/spinel/gen_respond_to_tables
 
-## toolchain: fetch the pinned Spinel commit SPINEL_REF into SPINEL_SRC (default tmp/.spinel), build it without Ruby, and install spinel, spin, and spinel-doctor under PREFIX (default tmp/.toolchain)
-toolchain:
+# Fetches SPINEL_REF into SPINEL_SRC and checks it out (toolchain and
+# spinel-header).
+define spinel_checkout
 	@if [ ! -d "$(SPINEL_SRC)/.git" ]; then \
 	  echo "Initializing Spinel checkout in $(SPINEL_SRC)"; \
 	  git init -q "$(SPINEL_SRC)"; \
@@ -145,6 +150,11 @@ toolchain:
 	fi
 	git -C "$(SPINEL_SRC)" fetch --depth 1 origin "$(SPINEL_REF)"
 	git -C "$(SPINEL_SRC)" checkout -q --detach FETCH_HEAD
+endef
+
+## toolchain: fetch the pinned Spinel commit SPINEL_REF into SPINEL_SRC (default tmp/.spinel), build it without Ruby, and install spinel, spin, and spinel-doctor under PREFIX (default tmp/.toolchain)
+toolchain:
+	$(spinel_checkout)
 	cp "$(SPINEL_GENERATED_HEADER)" "$(SPINEL_SRC)/lib/spinel_rt_responds_generated.h"
 	$(MAKE) -C "$(SPINEL_SRC)" deps
 	$(MAKE) -C "$(SPINEL_SRC)"
@@ -152,6 +162,16 @@ toolchain:
 	@echo
 	@echo "Installed spinel, spin, and spinel-doctor ($(SPINEL_REF)) under $(PREFIX)/bin."
 	@echo "The make targets find them there automatically; no PATH change is needed."
+
+## spinel-header: regenerate the vendored tools/spinel/spinel_rt_responds_generated.h for SPINEL_REF without Ruby: fetch SPINEL_REF into SPINEL_SRC, compile tools/spinel/gen_respond_to_tables.rb with the installed spinel, and run it on the checkout; a bump runs it after changing SPINEL_REF and before make toolchain
+spinel-header:
+	@command -v spinel >/dev/null 2>&1 || { echo "spinel-header: no spinel installed; run make toolchain at the current pin first" >&2; exit 1; }
+	$(spinel_checkout)
+	@mkdir -p "$(dir $(SPINEL_HEADER_BIN))"
+	spinel "$(SPINEL_HEADER_GEN)" -o "$(SPINEL_HEADER_BIN)"
+	"$(SPINEL_HEADER_BIN)" "$(SPINEL_SRC)" > "$(SPINEL_HEADER_BIN).h"
+	mv "$(SPINEL_HEADER_BIN).h" "$(SPINEL_GENERATED_HEADER)"
+	@git diff --stat -- "$(SPINEL_GENERATED_HEADER)"
 
 ## toolchain-clean: remove tmp/, the Spinel checkout and the installed toolchain
 toolchain-clean:
@@ -429,4 +449,4 @@ help:
 	@echo
 	@echo "Variables: SPINEL_SRC=$(SPINEL_SRC)  SPINEL_REPO=$(SPINEL_REPO)  SPINEL_REF=$(SPINEL_REF)  PREFIX=$(PREFIX)  FILE=$(FILE)  T=$(T)  TEST_OPT=$(TEST_OPT)  SPINEL_CACHE_DIR=$(SPINEL_CACHE_DIR)  CARAT_BIN=$(CARAT_BIN)  TESTS=$(TESTS)"
 
-.PHONY: toolchain toolchain-clean spinel-rev doctor no-cruby build dev-build run install pack clean test test-build test-run test-one lint snapshots diagnose diagnose-one bench bench-budget analysis-budget profile types gen-config config-current tools-test docs-lint gates stages check-stage check new-use-case new-action new-ex-command new-test new-plugin spec-list spec-validate spec-update help
+.PHONY: toolchain spinel-header toolchain-clean spinel-rev doctor no-cruby build dev-build run install pack clean test test-build test-run test-one lint snapshots diagnose diagnose-one bench bench-budget analysis-budget profile types gen-config config-current tools-test docs-lint gates stages check-stage check new-use-case new-action new-ex-command new-test new-plugin spec-list spec-validate spec-update help

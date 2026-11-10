@@ -95,7 +95,7 @@ module Carat
       #: (PluginApi::Plugin) -> void
       def register(plugin)
         e = @registry.register(plugin)
-        e.link = PluginLink.new(name: e.name, registry: @registry, buffer_requests: @buffer_requests, window_requests: @window_requests, file_requests: @file_requests, ui_requests: @ui_requests)
+        e.attach(PluginLink.new(name: e.name, registry: @registry, buffer_requests: @buffer_requests, window_requests: @window_requests, file_requests: @file_requests, ui_requests: @ui_requests))
         flush
       end
 

@@ -175,7 +175,6 @@ BLOCK = 20
 HEREDOC_ROW = 8
 STRING_ROW = 11
 
-#: () -> Float
 def now
   Process.clock_gettime(Process::CLOCK_MONOTONIC)
 end
@@ -183,7 +182,6 @@ end
 # The text of the file: lines of code, the same with accented letters
 # and Japanese comments, or short lines with one line of 10,000
 # characters in the middle, ASCII or starting with one accented letter.
-#: (Integer, String) -> String
 def text_of(lines, kind)
   out = []
   i = 0
@@ -206,7 +204,6 @@ def text_of(lines, kind)
   out.join("\n") + "\n"
 end
 
-#: (String) -> Array[String]
 def encode(notation)
   codes = Carat::Domain::KeyNotation.parse(notation, "").codes
   out = []
@@ -218,14 +215,12 @@ def encode(notation)
   out
 end
 
-#: (Carat::Adapters::EditorAssembly, NullTerminal, String) -> void
 def press(assembly, terminal, bytes)
   terminal.push(bytes)
   assembly.controller.pump(assembly.state)
   assembly.controller.pump(assembly.state) while assembly.controller.decoder.pending?
 end
 
-#: (Array[untyped], Integer, Integer) -> void
 def run(scenario, count, size)
   name = scenario[0].to_s
   keys = scenario[1].to_s

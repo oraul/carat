@@ -32,9 +32,12 @@ module Carat
         end
       end
 
+      # Symbol#name, not to_s: since Spinel 59044ad58 to_s allocates a new
+      # String at each call, as CRuby's does, and the keymap looks a mode's
+      # name up on every key; name answers the symbol's one interned copy.
       #: (Symbol) -> String
       def self.name_of(mode)
-        mode.to_s
+        mode.name
       end
 
       # Whether mode is one of the three visual modes.
@@ -44,15 +47,16 @@ module Carat
       end
 
       # The selection kind of a visual mode: :charwise, :linewise,
-      # :blockwise, or :none for any other mode.
+      # :blockwise, or :none for any other mode. Compared with == rather
+      # than a case: Spinel f34005bf folds `when VISUAL` to false, reading
+      # the name as Highlight::VISUAL, an Integer (spinel-notes, Known
+      # miscompilations).
       #: (Symbol) -> Symbol
       def self.visual_kind(mode)
-        case mode
-        when VISUAL then :charwise
-        when VISUAL_LINE then :linewise
-        when VISUAL_BLOCK then :blockwise
-        else :none
-        end
+        return :charwise if mode == VISUAL
+        return :linewise if mode == VISUAL_LINE
+        return :blockwise if mode == VISUAL_BLOCK
+        :none
       end
 
       # The visual mode of a selection kind; normal mode for :none.

@@ -96,7 +96,13 @@ module Carat
       # cannot pay for the scan. The length is charged on every call and
       # never refunded: finding from costs up to the line's length on text
       # that is not ASCII (docs/spinel-notes.md), whatever the scan reads.
-      #: (SearchPattern, String, Integer, Integer, SearchBudget) -> MatchData?
+      # Returns the MatchData, or nil. Typed by parameter lines: Spinel
+      # cannot pin MatchData, so a signature naming it is not applied.
+      # @rbs pattern: SearchPattern
+      # @rbs text: String
+      # @rbs length: Integer
+      # @rbs from: Integer
+      # @rbs budget: SearchBudget
       def self.match_at(pattern, text, length, from, budget)
         return nil if from > length
         size = pattern.size

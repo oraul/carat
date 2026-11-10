@@ -80,7 +80,10 @@ module Carat
       end
 
       # The text that replaces the match found in line.
-      #: (String, String, MatchData) -> String
+      # Typed by parameter lines, found left to inference: Spinel cannot
+      # pin MatchData. Returns a String.
+      # @rbs text: String
+      # @rbs line: String
       def self.expand(text, line, found)
         out = +""
         one = 0
@@ -143,7 +146,9 @@ module Carat
 
       # The text of group k of the match in line, "" when the pattern has
       # no such group or it did not take part.
-      #: (String, MatchData, Integer) -> String
+      # Typed by parameter lines, as expand is. Returns a String.
+      # @rbs line: String
+      # @rbs k: Integer
       def self.group_text(line, found, k)
         return "" if k >= found.size
         return "" if found[k].nil?

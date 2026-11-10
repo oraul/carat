@@ -614,16 +614,21 @@ module Carat
       end
 
       # Returns a FileInfo for the path.
+      # The base answers a missing FileInfo rather than raising: at Spinel
+      # f34005bf a versioned entry joins a raising base's nil into the
+      # overrides' return, and the result's readers go unresolved
+      # (spinel-notes, Known miscompilations).
       # @rbs path: String
       def stat(path)
-        raise NotImplementedError, "Host#stat"
+        FileInfo.missing
       end
 
       # Returns a TextResponse with the glyph of the named icon in the
       # configured icon set, failed for an unknown name.
+      # The base answers a failure rather than raising, as stat does.
       # @rbs name: String
       def icon(name)
-        raise NotImplementedError, "Host#icon"
+        TextResponse.failure("Host#icon is not implemented")
       end
 
       # Returns a TextResponse with the plugin's option value as text,

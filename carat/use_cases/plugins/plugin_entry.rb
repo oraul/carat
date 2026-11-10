@@ -16,7 +16,7 @@ module Carat
       # @rbs @name: String
       # @rbs @enabled: bool
       # @rbs @reason: String
-      # @rbs @link: PluginLink?
+      # @rbs @link: PluginApi::Host?
       # @rbs @options: Hash[String, String]
       # @rbs @events: Array[String]
       # @rbs @option_types: Hash[String, String]
@@ -40,6 +40,16 @@ module Carat
         self.option_types = {}
         self.priority = priority
         self.filetypes = []
+      end
+
+      # Gives the entry the host its plugin is activated with. The link is
+      # typed as the API's Host, the type each plugin's activate takes,
+      # and stored through this typed parameter: Spinel f34005bf writes a
+      # PluginLink into the Host member without the upcast (spinel-notes,
+      # Known miscompilations).
+      #: (PluginApi::Host) -> void
+      def attach(host)
+        self.link = host
       end
 
       # Whether the plugin tokenizes the filetype.

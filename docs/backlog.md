@@ -66,7 +66,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: Spinel's runtime, `lib/sp_slab.c` at the pinned `SPINEL_REF`: at the end of a full collection every entirely free slab chunk beyond a small reserve is handed back with `madvise(MADV_DONTNEED)`, and arenas are marked `MADV_HUGEPAGE`, so the next allocation that needs a chunk faults in a fresh huge page.
 - Why it matters: on a host whose huge page defragmentation is `madvise` that fault stalls for compaction, and single keys take 8 to 12 ms although the collection itself is under 2 ms; with `SPINEL_SLAB_HUGE=0` the slowest keys of the `make bench` scenarios drop to 1.2 to 2.0 ms (medians of the slowest key are 0.68, 1.67, and 1.46 ms for `l h`, `j`, and typing, against maxima of 2.29, 2.35, and 11.97 ms with huge pages on). The `render-core` target of no key over 2 ms is missed because of it.
-- Fix outline: report it upstream to Spinel with the benchmark and the `SPINEL_SLAB_HUGE=0` measurement, asking for released chunks to be kept for a while or for huge pages to be skipped for small heaps; until then, a workaround is to keep released chunks resident (a larger per-worker reserve) if Spinel exposes it, or to document `SPINEL_SLAB_HUGE=0` for interactive use, and bump `SPINEL_REF` in its own change once the runtime changes.
+- Fix outline: report it upstream to Spinel with the benchmark and the `SPINEL_SLAB_HUGE=0` measurement, asking for released chunks to be kept for a while or for huge pages to be skipped for small heaps; until then, a workaround is to keep released chunks resident (a larger per-worker reserve) if Spinel exposes it, or to document `SPINEL_SLAB_HUGE=0` for interactive use, and bump `SPINEL_REF` in its own change once the runtime changes. Rechecked at f34005bf: still open, `lib/sp_slab.c` still releases with `MADV_DONTNEED` on `MADV_HUGEPAGE` arenas.
 
 ## :earlier and :later take no time or write count
 
@@ -122,17 +122,23 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: in the `syntax-highlighting` measurements the plain open took a median of about 119 ms over eight runs and the highlighted one about 19 ms, while 10,000 lines open in about 2.5 ms either way; the plain time grows faster than the line count, which points at a collection or a growth step during the open that the plugin's startup allocations happen to move out of it, so the open time of large files depends on where the collector runs.
 - Fix outline: report the collections and their time during the open in the benchmark (`GC.stat("cycle")` and `GC.total_time` around `assembly.open`), find the allocation that triggers them while splitting the file into lines, and size or reuse that storage so the open stays linear.
 
+## Spinel f34005bf miscompiles versioned entries and case constants
+
+- Where: the pinned Spinel (`SPINEL_REF` in the `Makefile`), new between 001419ff and f34005bf: the version entries of `src/call_plan.c` (#9898) and the constant readers of `case`/`when`; worked around in `carat/use_cases/plugins/plugin_entry.rb` (`attach`), `carat/domain/mode.rb` (`visual_kind`), `Host#icon` and `Host#stat` in `carat/plugin_api.rb`, and `FilePort#stat` in `carat/ports/file_port.rb`.
+- Why it matters: without the workarounds the release build does not compile (an entry's parameter typed from the argument's class, not the dispatched signature), charwise visual selections read as none (a `when` on a constant whose name another scope defines with another type folds to false), and `make diagnose` reports unresolved readers (an entry's return joins a raising base's `nil`); `docs/spinel-notes.md`, Known miscompilations, has the mechanism.
+- Fix outline: report each upstream with its reduced probe (the `when` probe: two modules defining `VISUAL` as a Symbol and an Integer, a `case` on the Symbol), then drop the workarounds in the bump that carries the fix. The `when` defect bisects to Spinel ade8cfe2; the versioned-entry defects have no reduced probe yet (a one-file probe of the plugin shape compiles at both pins), so the report names the carat build that shows them. `PluginEntry#attach(host)` (`carat/use_cases/plugins/plugin_entry.rb:51`) is a one-value setter not named `link=`, kept only because the Struct writer does not upcast (quality advisory at spinel-bump): the bump that clears this entry drops it for `self.link=`.
+
 ## Spinel loses the types of an array destructured inside a method
 
 - Where: the pinned Spinel (`SPINEL_REF` in the `Makefile`); seen in the test helpers `setup` of `test/use_cases_plugins.rb`, `editor` of `test/use_cases_plugin_files.rb`, and `run` of `test/domain_grammar.rb`, which returned `[a, b, ...]` for the caller to destructure (`state, host, keymap, files, ex = setup(...)`).
 - Why it matters: at the top level of a program those locals kept their types, but once the `test-build` change moved each test's statements into a method, they became poly: in `test/use_cases_plugins.rb` the generated C did not compile (`expected statement before ')'` at each `state.cursor.row = 1`), and in the other two spinel-doctor reported unresolved calls on poly receivers. A minimal program with three values of three classes kept its types, so the trigger is not yet isolated. The helpers now return an object with typed readers, which is the convention in `CLAUDE.md`; production code has no such destructuring.
-- Fix outline: restore the array return of `setup` in `test/use_cases_plugins.rb` and reduce it to a minimal reproduction (five values from a helper, destructured twenty times inside one method, one of them an attribute chain assigned through), report it upstream to Spinel, and drop the convention once a `SPINEL_REF` bump compiles it typed.
+- Fix outline: restore the array return of `setup` in `test/use_cases_plugins.rb` and reduce it to a minimal reproduction (five values from a helper, destructured twenty times inside one method, one of them an attribute chain assigned through), report it upstream to Spinel, and drop the convention once a `SPINEL_REF` bump compiles it typed. Rechecked at f34005bf: the reduced probe keeps its types at both 001419ff and f34005bf, so only reverting a helper decides it.
 
 ## Spinel answers a method's argument for some string returns
 
 - Where: the pinned Spinel (`SPINEL_REF` in the `Makefile`); seen in `carat/domain/rc_value.rb` and `carat/domain/config.rb` during the `caratrc-config` change. `RcValue.expectation(kind)`, written as a `case` whose branches were string literals, answered the kind itself when called with a literal; `RcValue.text(words, kind)`, written as `words.empty? ? "" : words[0].to_s`, answered the kind; and `SCOPES.include?(line.scope)` answered false for a scope the array holds, while the same call through a local answered true.
 - Why it matters: each is silent wrong code, not a compile error; only the table tests caught them. The three places are rewritten (guard returns, a local for the first word, a local for the scope), but the same shapes elsewhere could be affected.
-- Fix outline: reduce each to a minimal program (a module function with a literal-branch `case` called with a literal; a ternary of `""` and an indexed `to_s` in a two-parameter method; a constant array's `include?` of a reader called on a `Data` value; a guard `return path if slash.nil?` before `path.byteslice(...).to_s`, which answered the path inside the whole program in `PluginApi::Paths.basename` during `utf8-input-safety` though not in a small probe), report them upstream, and recheck them when `SPINEL_REF` is bumped.
+- Fix outline: reduce each to a minimal program (a module function with a literal-branch `case` called with a literal; a ternary of `""` and an indexed `to_s` in a two-parameter method; a constant array's `include?` of a reader called on a `Data` value; a guard `return path if slash.nil?` before `path.byteslice(...).to_s`, which answered the path inside the whole program in `PluginApi::Paths.basename` during `utf8-input-safety` though not in a small probe), report them upstream, and recheck them when `SPINEL_REF` is bumped. Rechecked at f34005bf: the four reduced shapes answer correctly at both pins, so only reverting the rewritten places decides it.
 
 ## The plugin host keeps many-method classes in use_cases
 
@@ -144,19 +150,19 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: found in `Config#report` (`carat/domain/config.rb`), whose merge helper first appended to an array the caller created as `[]`; on the pinned Spinel the caller's array stayed empty, while one created as `[0]` kept the appends (`docs/spinel-notes.md`).
 - Why it matters: any helper that fills an out-parameter starting empty silently loses its work, and only a test of the result catches it.
-- Fix outline: reduce it with `spinel-reduce`, report it upstream with the probe, and when a fixed pin arrives let `merge_runs` append in place again; until then a filling helper returns the array and the caller assigns it.
+- Fix outline: reduce it with `spinel-reduce`, report it upstream with the probe, and when a fixed pin arrives let `merge_runs` append in place again; until then a filling helper returns the array and the caller assigns it. Rechecked at f34005bf: a reduced `merge_runs` keeps the appends at both pins, so only reverting `Config#report` decides it.
 
 ## Spinel compiles private_constant without enforcing it
 
 - Where: the pinned Spinel (`SPINEL_REF` in the `Makefile`); every `private_constant` line under `carat/use_cases/` since the `use-case-boundaries` change.
 - Why it matters: a probe on the pinned compiler compiled `private_constant :NAME` and still let another class read `Owner::NAME`, which CRuby refuses with `NameError`, so the declaration documents the intent but stops nothing. `private` on methods is enforced (a call raises `NoMethodError`). `test/lint.rb` carries the rule instead: every constant of a use case file is listed in a `private_constant`, and no file names `Owner::NAME` of a use case outside its own file.
-- Fix outline: reduce it to a minimal program (a class with a private constant read from another class), report it upstream, and when a `SPINEL_REF` bump enforces it, keep the lint rule only as a check that the list is complete.
+- Fix outline: reduce it to a minimal program (a class with a private constant read from another class), report it upstream, and when a `SPINEL_REF` bump enforces it, keep the lint rule only as a check that the list is complete. Rechecked at f34005bf: still open, the probe still reads `Owner::NAME` from another class.
 
 ## Nothing compiles the generators' output on every check
 
 - Where: `tools/new.sh` and its tests in `tools/tools_test.sh`, which check the files each generator writes and the lines it inserts, not that they compile.
 - Why it matters: a convention that changes (a base class's constructor, an anchor's neighbor, a lint rule) could leave a generator writing code that no longer compiles or lints, and nothing would say so until an author ran it. The `authoring-kit` change compiled, linted, and tested the output of all five generators by hand in a scratch worktree (59 tests, `spinel-doctor` clean).
-- Fix outline: a `make generators-check` target that runs every generator in a temporary worktree, then `make gen-config`, `make lint`, `make test-build`, and `make test-run` there, run by the checker when `tools/new.sh`, `carat.rb`, `EditorAssembly`, the handler bases, or `test/lint.rb` change rather than on every check, since it costs a full analysis of the library.
+- Fix outline: a `make generators-check` target that runs every generator in a temporary worktree, then `make gen-config`, `make lint`, `make test-build`, and `make test-run` there, run by the checker when `tools/new.sh`, `carat.rb`, `EditorAssembly`, the handler bases, or `test/lint.rb` change rather than on every check, since it costs a full analysis of the library. The same holds for `tools/spinel/gen_respond_to_tables.rb`, the Ruby 4 port of Spinel's header generator (quality advisory at spinel-bump): no check compiles it, so a later pin that breaks it is found only at the next bump; compile it in `make tools-test` or in the same target.
 
 ## CI actions are pinned by tag
 
@@ -3536,3 +3542,27 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/backlog.md:209` and 2742 (the `Options#apply` duplication), 899 and 2111 (copies of `EditorState#clamp_col`). Periodic quality at ce6abdb; queue item `backlog-compaction`.
 - Why it matters: one entry per finding; duplicates grow the file every planner and reviewer reads.
 - Fix outline: fold each pair into one entry listing every location.
+
+## No test pins the port bases that answer failure values
+
+- Where: `Host#stat` (`carat/plugin_api.rb:622`), `Host#icon` (`carat/plugin_api.rb:630`), and `FilePort#stat` (`carat/ports/file_port.rb:45`), changed by `spinel-bump` from raising to answering a missing or failed value as the f34005bf workaround. Quality advisory at spinel-bump.
+- Why it matters: nothing asserts the new base answers, so the workaround is invisible to a reader of the tests and could be reverted, or kept past the fix, by accident.
+- Fix outline: add an assertion that a bare base answers missing or failed (or a lint exemption list naming the three methods), removed deliberately in the bump that clears the f34005bf entry.
+
+## The overridden-method RBS form is used for Regexp and MatchData methods
+
+- Where: `carat/domain/search.rb:106` and `carat/domain/replacement.rb:87,152`, which use `# @rbs` parameter lines with the return in prose on methods that override nothing, because `MatchData` cannot be pinned; `CLAUDE.md` (inline RBS) and `docs/spinel-notes.md:39` reserve that form for overrides. Quality advisory at spinel-bump.
+- Why it matters: the documented rule and the code disagree, so the next reader either "fixes" the signature into one Spinel cannot analyze or copies the form where it is not needed.
+- Fix outline: extend `docs/spinel-notes.md` line 22 or 39 to say a method taking or returning `Regexp` or `MatchData` gets parameter lines and its return in prose.
+
+## gen_respond_to_tables.rb repeats work and types its rows loosely
+
+- Where: `tools/spinel/gen_respond_to_tables.rb:95` (three `if`s map array names to arrays inside the family loop), line 101 (a second `uniq` after `family_names` already dedups), and lines 111, 138, and 156 (rows typed `Array[untyped]` where `Array[Row]` holds). Quality advisory at spinel-bump.
+- Why it matters: the port is read at every Spinel bump; the repeated lookups and loose types make it harder to compare with upstream and hide a wrong row from the analysis.
+- Fix outline: build one name-to-array hash before the loop, drop the second `uniq`, and type the rows `Array[Row]`.
+
+## A blank line splits the Known miscompilations list in the Spinel notes
+
+- Where: `docs/spinel-notes.md:482`, before the two items `spinel-bump` added for f34005bf. Quality advisory at spinel-bump.
+- Why it matters: Markdown renders the two new items as a separate list, so they read as apart from the Known miscompilations section.
+- Fix outline: remove the blank line.
