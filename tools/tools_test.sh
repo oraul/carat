@@ -1706,7 +1706,7 @@ fresh hooked
 cp "$here/scan_text.sh" "$here/rules.sh" tools/
 cp -R "$here/../.githooks" .
 commit "chore: add the hooks"
-expect "hooks: make hooks sets core.hooksPath to .githooks" 0 "^[.]githooks$" \
+expect "hooks: make hooks sets core.hooksPath to the absolute .githooks of the main worktree" 0 "^/.*/hooked/[.]githooks$" \
   sh -c 'make -s -f "$1/../Makefile" hooks >/dev/null && git config core.hooksPath' _ "$here"
 echo x >> README.md
 git_q add -A
@@ -1952,13 +1952,35 @@ git_q config core.fsmonitor "touch planted"
 expect "gates: origin refuses a key that runs a command" 1 "FAIL origin: the repository configuration sets core.fsmonitor" gates origin
 expect "gates: pre-push runs the origin gate" 1 "FAIL origin: the repository configuration sets core.fsmonitor" gates pre-push
 git_q config --unset core.fsmonitor
-git_q config core.hooksPath .githooks
+abs_hooks=$(git rev-parse --path-format=absolute --git-common-dir)
+abs_hooks=${abs_hooks%/*}/.githooks
+git_q config core.hooksPath "$abs_hooks"
 mkdir -p .githooks
 : > .githooks/commit-msg
 : > .githooks/pre-commit
 expect "gates: origin allows core.hooksPath as the tracked .githooks" 0 "ok   origin: the configuration sets no risky key and no hook$" gates origin
 expect "guard: core.hooksPath as the tracked .githooks passes" 0 "" \
   env PROJECT="$PWD" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
+# A linked worktree uses the main worktree's checked .githooks, never a
+# hook planted in its own, and its gate and guard read the same directory.
+git_q commit -q --allow-empty -m "chore: a base for the worktree" -m "$TRAILER"
+git_q worktree add -q --detach "$work/origined-wt" HEAD
+mkdir -p "$work/origined-wt/.githooks"
+printf '#!/bin/sh\ntouch "%s"\n' "$work/origined-ran" > "$work/origined-wt/.githooks/post-checkout"
+chmod +x "$work/origined-wt/.githooks/post-checkout"
+expect "hooks: a linked worktree runs no hook planted in its own .githooks" 0 "^absent$" \
+  sh -c 'git -C "$1" checkout -q --detach HEAD && { [ -e "$2" ] && echo ran || echo absent; }' _ "$work/origined-wt" "$work/origined-ran"
+expect "gates: origin in a linked worktree reads the main worktree's .githooks" 0 "ok   origin: the configuration sets no risky key and no hook$" \
+  sh -c 'cd "$1" && BASE=main STAGES=lint sh "$2/gates.sh" origin' _ "$work/origined-wt" "$here"
+expect "guard: a linked worktree as the project reads the main worktree's .githooks" 0 "" \
+  env PROJECT="$work/origined-wt" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
+git_q worktree remove --force "$work/origined-wt"
+rm -f "$work/origined-ran"
+git_q config core.hooksPath .githooks
+expect "gates: origin refuses the relative core.hooksPath .githooks" 1 "FAIL origin: the repository configuration sets core.hookspath" gates origin
+expect "guard: the relative core.hooksPath .githooks refuses every call" 2 "every call while the repository configuration sets core.hookspath" \
+  env PROJECT="$PWD" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
+git_q config core.hooksPath "$abs_hooks"
 : > .githooks/post-checkout
 expect "gates: origin refuses a hook in .githooks but commit-msg and pre-commit" 1 "FAIL origin: [.]githooks holds post-checkout" gates origin
 expect "guard: a hook in .githooks but commit-msg and pre-commit refuses every call" 2 "every call while [.]githooks holds post-checkout" \

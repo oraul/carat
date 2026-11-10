@@ -164,11 +164,11 @@ toolchain:
 	@echo "The make targets find them there automatically; no PATH change is needed."
 	@$(MAKE) --no-print-directory hooks
 
-## hooks: install the tracked commit hooks of .githooks by setting core.hooksPath (commit-msg scans the message, pre-commit the staged added lines, with tools/scan_text.sh); the gates and the agent guard allow no other hooks path; make toolchain runs it
+## hooks: install the tracked commit hooks of .githooks by setting core.hooksPath to their absolute path in the main worktree, so a linked worktree runs them and never its own (commit-msg scans the message, pre-commit the staged added lines, with tools/scan_text.sh); the gates and the agent guard allow no other hooks path; make toolchain runs it
 hooks:
-	@if git rev-parse --git-dir >/dev/null 2>&1; then \
-	  git config core.hooksPath .githooks && \
-	  echo "Installed the commit hooks of .githooks (core.hooksPath)."; \
+	@if common=$$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then \
+	  git config core.hooksPath "$${common%/*}/.githooks" && \
+	  echo "Installed the commit hooks of $${common%/*}/.githooks (core.hooksPath)."; \
 	else \
 	  echo "Not a git repository: no hooks installed."; \
 	fi

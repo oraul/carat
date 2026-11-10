@@ -49,9 +49,12 @@ EOF
 # tools/agent_guard.sh holds a copy (a tools/tools_test.sh case keeps the
 # two equal), since branch code run by the checks can write .git/config.
 RISKY_CONFIG='^(core\.(fsmonitor|hookspath|sshcommand|gitproxy|pager|editor|askpass|alternaterefscommand|worktree)|diff\.external|diff\..+\.(textconv|command)|filter\..+|merge\..+\.driver|sequence\.editor|credential\..+|gpg\..+|uploadpack\..+|url\..+\.(insteadof|pushinsteadof)|remote\.origin\.(pushurl|uploadpack|receivepack|proxy|vcs)|http\..+|protocol\..+|include\..+|includeif\..+|extensions\.worktreeconfig)$'
-# The one core.hooksPath allowed, the tracked hooks make hooks installs,
-# and the only files it may hold: hooks that run at a commit, never one
-# that runs on a checkout, a merge, or a fetch. tools/agent_guard.sh holds
-# a copy of both (a tools/tools_test.sh case keeps them equal).
+# The tracked hooks directory make hooks installs, and the only files it
+# may hold: hooks that run at a commit, never one that runs on a checkout,
+# a merge, or a fetch. The one core.hooksPath allowed is its absolute path
+# in the main worktree (the parent of --git-common-dir), never the
+# relative name, which git reads from the top of each linked worktree.
+# tools/agent_guard.sh holds a copy of both (a tools/tools_test.sh case
+# keeps them equal).
 HOOKS_PATH='.githooks'
 HOOK_FILES_RE='^(commit-msg|pre-commit)$'

@@ -8,7 +8,7 @@
 ## 2. The commit hooks
 
 - [x] 2.1 `.githooks/commit-msg`, `.githooks/pre-commit`, and `make hooks`, run by `make toolchain`. Tested by the "hooks:" cases.
-- [x] 2.2 `tools/gates.sh` (origin) and `tools/agent_guard.sh`: `core.hooksPath` allowed only as `.githooks`, planted hooks read from the default directory, no other file in `.githooks`. Tested by "gates: origin allows core.hooksPath as the tracked .githooks", "gates: origin refuses a hook in .githooks but commit-msg and pre-commit", "gates: origin refuses core.hooksPath other than .githooks", the two "guard:" cases, and "guard: the guard's hooks path and hook names are the gates'".
+- [x] 2.2 `tools/gates.sh` (origin) and `tools/agent_guard.sh`: `core.hooksPath` allowed only as the absolute path of the main worktree's `.githooks`, planted hooks read from the default directory, no other file in that `.githooks`. Tested by "hooks: a linked worktree runs no hook planted in its own .githooks", "gates: origin in a linked worktree reads the main worktree's .githooks", "gates: origin refuses the relative core.hooksPath .githooks", the matching "guard:" cases, "gates: origin allows core.hooksPath as the tracked .githooks", "gates: origin refuses a hook in .githooks but commit-msg and pre-commit", "gates: origin refuses core.hooksPath other than .githooks", the two "guard:" cases, and "guard: the guard's hooks path and hook names are the gates'".
 
 ## 3. The pull request scan
 
