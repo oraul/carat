@@ -1,13 +1,21 @@
 #!/bin/sh
-# The commit-msg hook make hooks installs (core.hooksPath .githooks):
-# refuses a message holding a URL, an email address but the trailer's, a
-# session id, a model name, or a secret (tools/scan_text.sh). The diff git
-# commit --verbose appends below its scissors line is left out.
+# The commit-msg hook make hooks installs in the hooks directory of the
+# common git directory: refuses a message holding a URL, an email address
+# but the trailer's, a session id, a model name, or a secret, with the
+# scanner make hooks installed beside it (scan_text.sh), never the work
+# tree's. The diff git commit --verbose appends below its scissors line is
+# left out. A scanner status other than 0 or 1 refuses the commit too.
+here=$(cd "$(dirname "$0")" && pwd) || exit 1
 msg=$(sed '/^# -\{24\} >8 -\{24\}$/,$d' "$1")
-out=$(printf '%s\n' "$msg" | sh tools/scan_text.sh --where "commit message")
+out=$(printf '%s\n' "$msg" | sh "$here/scan_text.sh" --where "commit message")
 status=$?
 [ -z "$out" ] || printf '%s\n' "$out" >&2
-[ "$status" -eq 0 ] || {
-  echo "commit-msg: the message holds text CLAUDE.md forbids; remove each hit above" >&2
-  exit 1
-}
+case $status in
+  0) ;;
+  1)
+    echo "commit-msg: the message holds text CLAUDE.md forbids; remove each hit above" >&2
+    exit 1 ;;
+  *)
+    echo "commit-msg: the scanner $here/scan_text.sh failed (status $status); run make hooks" >&2
+    exit 1 ;;
+esac

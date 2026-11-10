@@ -1,13 +1,21 @@
 #!/bin/sh
-# The pre-commit hook make hooks installs (core.hooksPath .githooks):
-# refuses a commit whose staged added lines hold a URL (but the toolchain
-# target's clone address), an email address but the trailer's, a session
-# id, a model name, or a secret (tools/scan_text.sh).
+# The pre-commit hook make hooks installs in the hooks directory of the
+# common git directory: refuses a commit whose staged added lines hold a
+# URL (but the toolchain target's clone address), an email address but
+# the trailer's, a session id, a model name, or a secret, with the scanner
+# make hooks installed beside it (scan_text.sh), never the work tree's. A
+# scanner status other than 0 or 1 refuses the commit too.
+here=$(cd "$(dirname "$0")" && pwd) || exit 1
 out=$(git diff --cached -U0 --no-color --no-renames --no-ext-diff --no-textconv |
-  sh tools/scan_text.sh --diff)
+  sh "$here/scan_text.sh" --diff)
 status=$?
 [ -z "$out" ] || printf '%s\n' "$out" >&2
-[ "$status" -eq 0 ] || {
-  echo "pre-commit: the staged lines hold text CLAUDE.md forbids; remove each hit above" >&2
-  exit 1
-}
+case $status in
+  0) ;;
+  1)
+    echo "pre-commit: the staged lines hold text CLAUDE.md forbids; remove each hit above" >&2
+    exit 1 ;;
+  *)
+    echo "pre-commit: the scanner $here/scan_text.sh failed (status $status); run make hooks" >&2
+    exit 1 ;;
+esac

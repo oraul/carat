@@ -49,12 +49,16 @@ EOF
 # tools/agent_guard.sh holds a copy (a tools/tools_test.sh case keeps the
 # two equal), since branch code run by the checks can write .git/config.
 RISKY_CONFIG='^(core\.(fsmonitor|hookspath|sshcommand|gitproxy|pager|editor|askpass|alternaterefscommand|worktree)|diff\.external|diff\..+\.(textconv|command)|filter\..+|merge\..+\.driver|sequence\.editor|credential\..+|gpg\..+|uploadpack\..+|url\..+\.(insteadof|pushinsteadof)|remote\.origin\.(pushurl|uploadpack|receivepack|proxy|vcs)|http\..+|protocol\..+|include\..+|includeif\..+|extensions\.worktreeconfig)$'
-# The tracked hooks directory make hooks installs, and the only files it
-# may hold: hooks that run at a commit, never one that runs on a checkout,
-# a merge, or a fetch. The one core.hooksPath allowed is its absolute path
-# in the main worktree (the parent of --git-common-dir), never the
-# relative name, which git reads from the top of each linked worktree.
-# tools/agent_guard.sh holds a copy of both (a tools/tools_test.sh case
-# keeps them equal).
+# The tracked hooks directory, and the only files it may hold: hooks that
+# run at a commit, never one that runs on a checkout, a merge, or a fetch
+# (the content gate). Git never runs it: make hooks copies its hooks from
+# the current commit into the hooks directory of the common git directory,
+# which no checkout writes, and no core.hooksPath is allowed.
 HOOKS_PATH='.githooks'
 HOOK_FILES_RE='^(commit-msg|pre-commit)$'
+# The only files the hooks directory of the common git directory may hold:
+# git's samples, the two hooks, and the scanner make hooks installs beside
+# them, which git never runs, since it runs a hook only by an event's name.
+# tools/agent_guard.sh holds a copy (a tools/tools_test.sh case keeps the
+# two equal).
+INSTALLED_HOOKS_RE='^(commit-msg|pre-commit|scan_text[.]sh|rules[.]sh|.+[.]sample)$'

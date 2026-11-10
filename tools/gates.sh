@@ -124,11 +124,10 @@ require_base() {
 
 # The repository the gates read: branch code run by the checks can write
 # .git/config and the ref origin/main, so no key of RISKY_CONFIG is set
-# (core.hooksPath only as the absolute path of HOOKS_PATH in the main
-# worktree, the parent of --git-common-dir, as make hooks sets it, since
-# git reads a relative value from the top of each linked worktree), no
-# hook other than a sample is in .git/hooks, none but HOOK_FILES_RE's in
-# that HOOKS_PATH,
+# (core.hooksPath neither: make hooks installs the hooks under the git
+# directory, which no checkout writes, and a hooks path in the work tree
+# would run any hook a checkout brings), the hooks directory holds nothing
+# but INSTALLED_HOOKS_RE's,
 # and an origin/NAME base is origin's NAME: the default fetch refspec (a
 # fetch restores the ref), an origin that is not a local repository (whose
 # fake branch ls-remote would report), and the ref equal to the branch
@@ -138,17 +137,11 @@ gate_origin() {
   remote=""
   start=$failed
   git_common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)
-  tracked_hooks=${git_common:+${git_common%/*}/$HOOKS_PATH}
-  keys=$(git config --local --name-only --list 2>/dev/null | grep -i -E "$RISKY_CONFIG" | sort -u)
-  [ -z "$tracked_hooks" ] || [ "$(git config --local --get-all core.hooksPath 2>/dev/null)" != "$tracked_hooks" ] ||
-    keys=$(printf '%s\n' "$keys" | grep -v -i -x 'core[.]hookspath')
-  keys=$(printf '%s\n' "$keys" | grep . | tr '\n' ' ')
-  [ -z "$keys" ] || bad "the repository configuration sets ${keys% }, which runs a command or redirects origin; remove it from .git/config (make hooks sets the one core.hooksPath allowed)"
+  keys=$(git config --local --name-only --list 2>/dev/null | grep -i -E "$RISKY_CONFIG" | sort -u | tr '\n' ' ')
+  [ -z "$keys" ] || bad "the repository configuration sets ${keys% }, which runs a command or redirects origin; remove it from .git/config (make hooks removes a core.hooksPath)"
   hooks=${git_common:+$git_common/hooks}
-  planted=$([ -z "$hooks" ] || ! [ -d "$hooks" ] || ls -A "$hooks" | grep -v -E "[.]sample\$" | tr "\n" " "; true)
+  planted=$([ -z "$hooks" ] || ! [ -d "$hooks" ] || ls -A "$hooks" | grep -v -E "$INSTALLED_HOOKS_RE" | tr "\n" " "; true)
   [ -z "$planted" ] || bad "the hooks directory holds ${planted% }, which git runs on a checkout or a fetch; remove it"
-  extra=$([ -z "$tracked_hooks" ] || ! [ -d "$tracked_hooks" ] || ls -A "$tracked_hooks" | grep -v -E "$HOOK_FILES_RE" | tr "\n" " "; true)
-  [ -z "$extra" ] || bad "$HOOKS_PATH holds ${extra% }, which git would run on a checkout or a fetch once make hooks set core.hooksPath; only commit-msg and pre-commit belong there"
   case "$base" in
     origin/*)
       name=${base#origin/}

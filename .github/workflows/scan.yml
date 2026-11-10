@@ -2,9 +2,10 @@ name: scan
 
 # The pull request's title, body, commit messages, and added lines hold no
 # URL, email address, session id, model name, or secret but CLAUDE.md's
-# exceptions (tools/pr_scan.sh). The edited event reruns it when the title
-# or body changes, so a footer added after the pull request opened turns
-# it red, and the merger merges only over green checks.
+# exceptions (tools/pr_scan.sh, run from the base commit). The edited
+# event reruns it when the title or body changes, so a footer added after
+# the pull request opened turns it red, and the merger merges only over
+# green checks.
 on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
@@ -18,20 +19,32 @@ jobs:
   text:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out carat
+      - name: Check out the pull request
         uses: actions/checkout@v4
         with:
           # Every commit of the pull request, whose messages and added
           # lines the scan reads.
           fetch-depth: 0
+          path: head
+          persist-credentials: false
+
+      # The scanner is the base commit's, checked out apart, so a pull
+      # request that edits tools/pr_scan.sh, scan_text.sh, or rules.sh
+      # cannot pass its own check.
+      - name: Check out the base commit's scanner
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
           persist-credentials: false
 
       # The title and body reach the script only through the environment,
       # never written into the script, so no text of theirs runs.
       - name: Scan the title, body, commit messages, and added lines
+        working-directory: head
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: sh tools/pr_scan.sh
+        run: sh ../base/tools/pr_scan.sh

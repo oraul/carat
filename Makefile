@@ -164,11 +164,16 @@ toolchain:
 	@echo "The make targets find them there automatically; no PATH change is needed."
 	@$(MAKE) --no-print-directory hooks
 
-## hooks: install the tracked commit hooks of .githooks by setting core.hooksPath to their absolute path in the main worktree, so a linked worktree runs them and never its own (commit-msg scans the message, pre-commit the staged added lines, with tools/scan_text.sh); the gates and the agent guard allow no other hooks path; make toolchain runs it
+## hooks: install the commit hooks of .githooks at the current commit, with the scanner tools/scan_text.sh and tools/rules.sh beside them, into the hooks directory of the common git directory, which no checkout writes and every worktree runs, and remove any core.hooksPath (commit-msg scans the message, pre-commit the staged added lines); the gates and the agent guard allow no hooks path and no other hook; make toolchain runs it
 hooks:
 	@if common=$$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then \
-	  git config core.hooksPath "$${common%/*}/.githooks" && \
-	  echo "Installed the commit hooks of $${common%/*}/.githooks (core.hooksPath)."; \
+	  mkdir -p "$$common/hooks" && \
+	  for f in .githooks/commit-msg .githooks/pre-commit tools/scan_text.sh tools/rules.sh; do \
+	    to="$$common/hooks/$${f##*/}"; \
+	    git cat-file blob "HEAD:$$f" > "$$to.new" && chmod 755 "$$to.new" && mv -f "$$to.new" "$$to" || exit 1; \
+	  done; \
+	  if git config --local --get-all core.hooksPath >/dev/null 2>&1; then git config --local --unset-all core.hooksPath; fi; \
+	  echo "Installed the commit hooks and the scanner of HEAD in $$common/hooks."; \
 	else \
 	  echo "Not a git repository: no hooks installed."; \
 	fi
