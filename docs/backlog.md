@@ -3991,7 +3991,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## commit-msg scans the editor template's identity comments
 
-- Where: `.githooks/commit-msg:6`. Quality advisory of `url-email-guard`.
+- Where: `.githooks/commit-msg:9`. Quality advisory of `url-email-guard`.
 - Why it matters: git runs `commit-msg` before it strips the editor template's comments, so a commit made in the editor whose template carries a `# Author:` or `# Committer:` line with an address (author not the committer, or an implicit identity) is refused for an email the commit will not hold.
 - Fix outline: also drop the template's `# Author:` and `# Committer:` lines (or follow git's cleanup mode) before scanning, with a hooks case. Queue item `content-gate-gaps`.
 
@@ -4069,12 +4069,120 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Nothing tests that commit-msg drops the diff below the scissors line
 
-- Where: `.githooks/commit-msg:6`. Quality advisory of `url-email-guard`.
+- Where: `.githooks/commit-msg:9`. Quality advisory of `url-email-guard`.
 - Why it matters: the hook leaves out the diff `git commit --verbose` appends below its scissors line, but no case proves it, so a regression either refuses verbose commits whose diff holds a URL or scans too little.
 - Fix outline: a `tools/tools_test.sh` case running the hook on a message file with a URL below the scissors line (passes) and one with it above (refused). Queue item `content-gate-gaps`.
 
-## The archived url-email-guard proposal names the relative hooks path
+## The guard and the origin gate admit installed hooks by name only
 
-- Where: `openspec/changes/archive/2026-11-10-url-email-guard/proposal.md:11`. Quality advisory of `url-email-guard`.
-- Why it matters: it still says `make hooks` sets `core.hooksPath` to `.githooks`, the relative value the fix commit replaced, while its `design.md` and `tasks.md` were updated, so the archive disagrees with itself.
-- Fix outline: say the absolute path of the main worktree's `.githooks`. Queue item: backlog batches (comment wraps).
+- Where: `tools/agent_guard.sh:870` and :872 (`INSTALLED_HOOKS_RE` admits `commit-msg`, `pre-commit`, `scan_text.sh`, and `rules.sh` in the common git directory's hooks without comparing their contents) and `gate_origin` in `tools/gates.sh:141`. Security Medium (6), reported twice, by the security review of `hooks-path-fix`.
+- Why it matters: branch code the checks run, or `make hooks` run on a branch, can plant a malicious `.git/hooks/pre-commit` that `git status` does not show, that survives branch switches, and that neither the guard nor the origin gate refuses; the next `git commit` by an agent or the user runs it outside the guard. Before, any file but a sample was refused, and tampering with `.githooks` showed as a dirty tracked file.
+- Fix outline: in `agent_guard.sh` and `gate_origin`, compare each installed file but the samples (`git hash-object`) with its blob at `origin/main` (`.githooks/commit-msg`, `.githooks/pre-commit`, `tools/scan_text.sh`, `tools/rules.sh`) and refuse on a mismatch, naming `make hooks` at main; have `make hooks` install from `origin/main`, the reviewed commit, instead of HEAD; add a `tools/tools_test.sh` case where a tampered `.git/hooks/pre-commit` refuses every call. Queue item `content-gate-gaps`.
+
+## make hooks leaves a partial file and reports a failed mkdir as installed
+
+- Where: the `hooks` target in `Makefile:172`. Quality advisory of `hooks-path-fix`.
+- Why it matters: the redirect creates `NAME.new` before `git cat-file` fails on a missing blob, so a failed install leaves a file the guard and the origin gate then refuse every call for; a failed `mkdir` skips the loop yet prints Installed and exits 0.
+- Fix outline: `rm -f` the `.new` file before `exit 1`, and end the `mkdir` with `|| exit 1`, with a `tools/tools_test.sh` case. Queue item `content-gate-gaps`.
+
+## The origin gate's comment has a 92-column line
+
+- Where: the comment above `gate_origin` in `tools/gates.sh:133`. Quality advisory of `hooks-path-fix`.
+- Why it matters: the rewrapped block wraps under 80 columns except its last line.
+- Fix outline: move `A local base checks the configuration only.` to its own comment line. Queue item: backlog batches (comment wraps).
+
+## A path written two ways opens a second buffer of one file
+
+- Where: `carat/use_cases/files/open_file.rb:39` (`BufferList#for_path` by the literal path, `BufferList#add` dedupes by identity), against `VisitTarget#listed_for`, `WindowRequests#same_path?`, and `DeletePath`, which compare normalized absolute paths. Periodic quality blocking at bd86828.
+- Why it matters: `:e ./a.txt` or `:e` of the absolute path beside a listed `a.txt` makes a second writable buffer of one file, where Neovim reuses one; `:wa` then writes one over the other.
+- Fix outline: one lookup rule for every caller, with editor rows for `:e ./a.txt` and the absolute path. Queue item `periodic-blockers-b`.
+
+## Float borders keep their colors under NO_COLOR
+
+- Where: `carat/adapters/frame_presenter.rb:691` (`paint_border_row`, `paint_title` at 705) against the notification boxes at 504 and 508. Periodic quality at bd86828.
+- Why it matters: the floating-windows spec says the two boxes share a border, yet under NO_COLOR they differ.
+- Fix outline: one rule for both, or the reason recorded, with an `editor_floats` NO_COLOR row. Queue item `float-placement`.
+
+## The tab ex commands drop their argument
+
+- Where: `carat/use_cases/ex/tab_command_handler.rb:38` (`:tabn 3`, `:tabc 2`, `:tabo x`). Periodic quality at bd86828.
+- Why it matters: `:tabn 3` goes to the next tab page with no message; `docs/compatibility.md` lists `:tabn N` as later.
+- Fix outline: refuse an argument not implemented yet, with rows in `test/use_cases_ex.rb`. Queue item `tab-keys`.
+
+## OpenTab copies a focused float's jumps and leaves it focused
+
+- Where: `carat/use_cases/windows/open_tab.rb:31` (`state.window` is the focused float), unlike `SplitWindow`. Periodic quality at bd86828.
+- Why it matters: the new tab page starts with a float's jump list and the float stays focused.
+- Fix outline: leave the float first or copy from the layout window, with a row. Queue item `definition-tab`.
+
+## HandleKey drops the queue dispatch returns
+
+- Where: `carat/use_cases/handle_key.rb:247` (`step`) and :272 (`complete`), against dispatch's contract at :278-280. Periodic quality at bd86828.
+- Why it matters: the contract exists because the pinned Spinel can lose appends to the caller's array; `step` relies on in-place mutation anyway.
+- Fix outline: honor the contract or drop it, with a test that fails without the fix. Queue item `spinel-workarounds`.
+
+## The scanner and gates miss statuses and paths found at bd86828
+
+- Where: `tools/scan_text.sh:83` (`--diff` keeps only awk's status, so a missing FILE scans clean); `tools/gates.sh:282` (the docs gate's process files omit `tools/rules.sh`, `tools/scan_text.sh`, `tools/pr_scan.sh`, `.githooks/`, `.github/workflows/`); `tools/gates.sh:320` (the cases gate skips `.githooks/`). Periodic quality.
+- Why it matters: a scanner error reads as clean, and a process or hook change escapes its CLAUDE.md and case checks.
+- Fix outline: a nonzero status for a missing file, the paths added to both gates, each with a `tools_test` case. Queue item `content-gate-gaps`.
+
+## The ex digit readers are four, and one is uncapped
+
+- Where: `carat/use_cases/ex/history_command_handler.rb:43` and :75 (`:undo N`, `:earlier N`, `:later N` feed `args.to_i` unbounded), beside `ExRange.line_number`, `RegisterCount`, and `BufferCommandHandler#number_in`/`digits?` (buffer_command_handler.rb:101). Periodic quality at bd86828.
+- Why it matters: a 20-digit count reaches the history walk, the overflow `number_in` exists to prevent.
+- Fix outline: one bounded digit reader for all four, with rows for a 20-digit `:undo` and `:earlier`. Queue item `editing-counts`.
+
+## BufferList decides reuse twice, and :e and :x ignore the scratch rule
+
+- Where: `carat/domain/buffer_list.rb:303` (`enter` repeats `load`'s reuse test at 283); `carat/use_cases/ex/file_command_handler.rb:95` (`:e` refuses an edited scratch buffer with E37) and :77 (`:x` tries to write it). Periodic quality at bd86828.
+- Why it matters: two reuse rules can drift; the nine copies of `modified? && !scratch?` are how two sites missed it.
+- Fix outline: one reuse decision and one unsaved predicate at every site, with a `test/editor_cmdline.rb` row for `:e` from an edited scratch window. Queue item `buffer-list-tidy`.
+
+## Docs drift found at bd86828
+
+- Where: `Makefile:385` and :389 (the tools-test help omits the scanner, the pull request scan, and the hooks; docs-lint omits secrets); `README.md:15` (no `make spinel-rev` row); `docs/codebase-map.md:331`, 360, 421 (Selection, Layout, ExTable methods missing; `HistoryCommandHandler.digits?` listed public). Periodic quality.
+- Why it matters: agents plan from these documents.
+- Fix outline: correct each. Queue item `docs-index`.
+
+## The periodic slices put area 1 under one cap
+
+- Where: `.claude/workflows/periodic-review.js:67` (`areaSlices` splits by area count; area 1 holds about 6,700 lines). Periodic quality at bd86828.
+- Why it matters: the slice holding area 1 caps and the review ends partial by design.
+- Fix outline: none prescribed; superseded if the council reviews diffs. Queue item `periodic-council`.
+
+## drop_key repeats write_key's rewrite
+
+- Where: `tools/run_state.sh:309`. Periodic quality at bd86828.
+- Why it matters: two copies of the locked rewrite of the state file.
+- Fix outline: one rewrite helper, or gone with the Ruby port. Queue item `harness-ruby`.
+
+## CI scope and check keys leftovers
+
+- Where: `tools/ci_scope.sh:50-51` (two calls fetch the same answer); `tools/run_state.sh:206` (`NOT_COMPILED` omits `.githooks/`, so a hooks-only commit reruns the compile stages). Periodic quality at bd86828.
+- Why it matters: CI and check time.
+- Fix outline: one call; the path added with a `compiled_same` case. Queue item `ci-time`.
+
+## Small tidy-ups found at bd86828
+
+- Where: dead code at `tools/gates.sh:79` and `tools/docs_lint.sh:23` (`TAB`), `carat/domain/options.rb:93` (`KEYHINTS_DELAY`), `carat/use_cases/ex/ex_table.rb:56` (`@index` never read); stale comments at `tools/docs_lint.sh:12` and :27, `carat/use_cases/plugins/ui_requests.rb:112`; the variable `report` shadowing the function at `tools/docs_lint.sh:67`; per-call tallies in instance variables at `carat/use_cases/history/walk_history.rb:32`; `carat/use_cases/repeat_last.rb:49` resets `replaying` without `ensure`; `carat/use_cases/plugins/plugin_host.rb:78` builds a second `ResolveInside` outside `EditorAssembly`; `carat/use_cases/plugins/plugin_events.rb:142` queues an unwanted resize event; `carat/domain/syntax_cache.rb:159` repeats `start_of`; `tools/spec_validate.sh:129` erases the first failed preview. Periodic quality.
+- Why it matters: each is a second way to do one thing, a rule of CLAUDE.md, or a lost diagnostic.
+- Fix outline: fix each in the batch of its domain, with a row where behavior changes. Queue item: backlog batches.
+
+## A superseded red CI is handled as a real red
+
+- Where: the merger's CI handling in `.claude/workflows/deliver-change.js`; retrospective note 11 of `url-email-guard`.
+- Why it matters: #100's first text job failed on a footer removed 12 s later and its rerun passed, yet the run spent a contributor start with no commit and a full review round (reviews 37.7% of output).
+- Fix outline: none prescribed; accepted when a stale red resolves without a contributor start or a rework count, in a case. Queue item `merge-gate-tidy`.
+
+## The squash body keeps a superseded security line
+
+- Where: the package and merge steps; retrospective note 13 of `url-email-guard`.
+- Why it matters: #100's body reported the first security review after the fix round superseded it.
+- Fix outline: none prescribed; accepted when the merger refuses a body whose security line differs from the last recorded review. Queue item `merge-gate-tidy`.
+
+## A re-review rereads commits that touch no reviewed code
+
+- Where: the review rounds of `.claude/workflows/deliver-change.js`; retrospective note 12 of `url-email-guard`.
+- Why it matters: #100's second round reviewed only packaging commits and re-rated an unchanged Medium (7) to (8), a round of rework.
+- Fix outline: none prescribed; accepted when over 5 runs no round comes from a re-rating on unchanged lines. Queue item `review-scope`.
