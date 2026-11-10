@@ -1,0 +1,8 @@
+# Brief
+
+1. `spinel-bump` (T2 user request, estimated medium): `SPINEL_REF` is 001419ff (2026-10-28), upstream head 9aa36c3 when checked. Accepted, in its own pull request, when the pin is the head, `make toolchain` and `make check` pass, the vendored header regenerated only with no CRuby (else it stops and reports), allocations per key, rounds (carat 2, runner 2), and analysis time (46.2 s and 119.1 s at #93) do not regress, and each miscompilation in `docs/spinel-notes.md` is re-tested, the workarounds the new version fixes dropped.
+
+Plan notes:
+
+- Split: `spinel-bump` delivers the SPINEL_REF bump to the upstream head, the vendored header in tools/spinel/ regenerated without CRuby (stop and report if that is not possible), make toolchain and make check passing, and a re-test of each Spinel defect. Those are the 4 open entries under Known miscompilations in docs/spinel-notes.md and the destructure entry at docs/backlog.md:125. Record each result as fixed or still open in docs/spinel-notes.md and in its backlog entry (docs/backlog.md lines 65, 125, 131, 143, 149). Leave dropping the code workarounds to the queued `spinel-workarounds` item. Acceptance from the brief still applies: allocations per key (lh 27.0, j 28.0, insert 35.0), rounds (carat 2, runner 2) and analysis time (46.2 s and 119.1 s at #93) do not regress.
+- Bookkeeping: copy build/plan/queue.md to docs/queue.md in the package step. It is 17,311 of 17,369 bytes, so there is no room to lengthen it. The stale build/plan/backlog.md from the previous plan was removed and no backlog file was written, because every finding is placed in a queue item.
