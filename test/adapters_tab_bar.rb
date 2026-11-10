@@ -20,14 +20,15 @@ module AdaptersTabBarTest
   end
 
   # Lists a buffer per path ("" for an unnamed one, "*" before a path for
-  # a modified one, "!" for a scratch buffer), the one at current shown
-  # in the current window, with pages tab pages and the unicode icons.
+  # a modified one, "~" before a path for one a jump left unlisted, "!"
+  # for a scratch buffer), the one at current shown in the current
+  # window, with pages tab pages and the unicode icons.
   def self.setup(paths, current, pages)
     names = []
     paths.each { |p| names << p.to_s }
     buffers = []
     names.each do |name|
-      path = name.delete_prefix("*")
+      path = name.delete_prefix("*").delete_prefix("~")
       buffer = D::Buffer.new(lines: ["x"], path: path.empty? || path == "!" ? nil : path, line_ending: "\n")
       buffer.mark_unsaved if name.start_with?("*")
       if path == "!"
@@ -41,6 +42,7 @@ module AdaptersTabBarTest
     tabs.tab_index = 0
     list = D::BufferList.new(tabs: tabs)
     buffers.each { |b| list.add(b) }
+    names.each_with_index { |name, i| buffers[i].listed = false if name.start_with?("~") }
     options = D::Options.new
     options.icons = "unicode"
     Setup.new(state: D::EditorState.new(tabs: tabs, options: options), list: list)
@@ -60,6 +62,14 @@ module AdaptersTabBarTest
     out
   end
 
+  # The paths f0.txt to f9.txt, f0.txt, f3.txt, and f9.txt a jump left
+  # unlisted: seven tabs.
+  def self.unlisted
+    out = []
+    ten.each { |path| out << (path == "f0.txt" || path == "f3.txt" || path == "f9.txt" ? "~" + path : path) }
+    out
+  end
+
   def self.main
     t = Carat::Testing.new("adapters_tab_bar")
 
@@ -68,6 +78,8 @@ module AdaptersTabBarTest
       ["a tab per file with its icon and modified dot", [["*src/a.rb", "b.txt"], 1, 1], " ◈ a.rb ●  • b.txt"],
       ["an unnamed buffer", [["", "b.txt"], 0, 1], " • [No Name]    • b.txt"],
       ["a scratch buffer has no tab", [["a.txt", "!", "b.txt"], 0, 1], " • a.txt    • b.txt"],
+      ["an unlisted buffer has no tab", [["~a.txt", "b.txt", "c.txt"], 1, 1], " • b.txt    • c.txt"],
+      ["an unlisted buffer at the end has no tab", [["a.txt", "b.txt", "~c.txt"], 0, 1], " • a.txt    • b.txt"],
       ["the tab-page numbers at the right end", [["a.txt", "b.txt"], 0, 2], " • a.txt    • b.txt" + (" " * 16) + "1  2"],
       ["tab pages without a second file", [["a.txt"], 0, 3], " • a.txt" + (" " * 24) + "1  2  3"]
     ]) { |input| paint(setup(input[0], input[1], input[2]), 40).row_text(0) }
@@ -81,6 +93,10 @@ module AdaptersTabBarTest
     ]) { |current| paint(setup(ten, current, 1), 40).row_text(0) }
     t.assert_equal(" <1  • f1.txt    • f2.txt    • f3.txt    • f4.txt    • f5.txt    4>", paint(setup(ten, 5, 1), 70).row_text(0), "a wider row starts its run as early as the current tab allows")
     t.assert_equal(" • f0.txt", paint(setup(ten, 0, 1), 11).row_text(0), "a row narrower than the counts still shows the current tab, cut")
+    t.table([
+      ["unlisted buffers are neither shown nor counted", 5, " <2  • f4.txt    • f5.txt    3>"],
+      ["a leading unlisted buffer is neither shown nor counted", 1, " • f1.txt    • f2.txt    5>"]
+    ]) { |current| paint(setup(unlisted, current, 1), 40).row_text(0) }
 
     # Groups: the current tab selected with its icon's file-icon group,
     # the others plain, the counts plain, the rest the fill.

@@ -60,6 +60,7 @@ ok   Back and forth keeps the tab's position
 ok   Ctrl-O under keep leaves both tabs
 ok   :bn skips an unlisted buffer
 ok   :b N lists an unlisted buffer again
+ok   The painted tab row leaves the buffer a jump left out and Ctrl-O paints it back in place
 ok   The listing hides an unlisted buffer and the bang shows it
 ok   Ctrl-O past the oldest entry does nothing in the editor
 ok   Ctrl-O refuses another buffer over a modified one
@@ -67,4 +68,4 @@ ok   A refused Ctrl-O leaves the jump list as it was
 ok   Ctrl-I after a refused Ctrl-O returns to the start
 ok   Ctrl-O drops an entry whose buffer is gone and stays
 ok   Ctrl-O clamps the column to a line shortened since, in code points
-adapters_definitions: 69 passed, 0 failed
+adapters_definitions: 70 passed, 0 failed

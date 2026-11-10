@@ -516,6 +516,14 @@ module AdaptersDefinitionsTest
       [":bn skips an unlisted buffer", ["", "", "/project/b.rb", ":bn<CR>"], "b.rb* | b.rb 1:4 | false"],
       [":b N lists an unlisted buffer again", ["", "", "/project/b.rb", ":b 1<CR>"], "b.rb a.rb* | a.rb 3:0 | false"]
     ]) { |input| jump_case(input[0].to_s, input[1].to_s, input[2].to_s, input[3].to_s) }
+    # The painted tab row after a replace jump: the tab bar leaves the
+    # unlisted a.rb out, and Ctrl-O paints it back in its place.
+    r = defining
+    r.type(":e lib/x.rb<CR>:bp<CR>")
+    asked(r, "gd", location("/project/b.rb", 1, 4))
+    jumped = "#{r.frame.row_text(0)} | #{selected_tab(r)}"
+    r.type("<C-o>")
+    t.assert_equal([" r b.rb    r x.rb | b.rb", " r a.rb    r x.rb | a.rb"], [jumped, "#{r.frame.row_text(0)} | #{selected_tab(r)}"], "The painted tab row leaves the buffer a jump left out and Ctrl-O paints it back in place")
     r = defining
     asked(r, "gd", location("/project/b.rb", 1, 4))
     r.type(":ls<CR>")
