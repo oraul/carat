@@ -141,7 +141,7 @@ Files:
 - `carat/domain/key.rb`: `Key` codes; `printable?`, `alt?`, `base`, `char`, `TIMEOUT`.
 - `carat/domain/key_notation.rb`: `KeyNotation`; `parse`, `resolve`, `format`, `control_code`, `special_name`; Vim notation such as `<C-w>`.
 - `carat/domain/mode.rb`: `Mode`; `from_name`, `name_of`, `visual?`, `visual_kind`, `for_kind`.
-- `carat/domain/keymap.rb`: `Keymap`; `action_name?`, `leader_from`, `from_lines`, `add_lines`, `add_checked` (applies the configuration's keymap lines, `none` unbinding, refuses an unknown action and more than `MAX_KEYS` (64) keys, notes problems; `keymap.group` names a normal-mode prefix in `groups`, apart from the tries), `bind`, `bind_owned`, `remove_owner`, `node_at`, `group_of`, `lookup`.
+- `carat/domain/keymap.rb`: `Keymap`; `action_name?`, `leader_from`, `pick_from` (the `keymap.pick` lines as a pick list's keymap), `from_lines`, `add_lines`, `add_checked` (applies the configuration's keymap lines, `none` unbinding, refuses an unknown action and more than `MAX_KEYS` (64) keys, notes problems; `keymap.group` names a normal-mode prefix in `groups`, apart from the tries), `bind`, `bind_owned`, `remove_owner`, `node_at`, `group_of`, `lookup`.
 - `carat/domain/keymap_node.rb`: `KeymapNode` trie node; `child?`, `child_for`, `child_named`, `leaf?`, `child_keys`, `binding_count`.
 - `carat/domain/keymap_match.rb`: `KeymapMatch` value (`kind`, `value`), a lookup result.
 - `carat/domain/command.rb`: `Command` value (`register`, `count`, `operator`, `action`, `char`, `linewise`, `keys`); `plain`, `count_or`, `operator?`.
@@ -624,7 +624,7 @@ Files:
 - `carat/domain/definition_request.rb`: `DefinitionRequest`, the definition ask gd and the peek key share with the gateway (the anchor, the kind, the serial, the request in flight and its deadline, the file targets, `arrived`, offering languages, the peek float and pick list ids); `ask`, `at?`, `offers?`, `waiting?`, `following?`, `add_target`.
 - `carat/domain/jump_list.rb`: `JumpList`, the positions `gd` left, at most 100, one per buffer line; `push`, `step` (from the newest end Ctrl-O records the start first), `restore_from` (a refused step put back), `remove_at`.
 - `carat/use_cases/definitions/request_definition.rb`: `RequestDefinition#call`, `gd` and `<leader>dd`: records the ask at the cursor, refused without a path or an offering server with Neovim's not-supported message.
-- `carat/use_cases/definitions/show_definition.rb`: `ShowDefinition#call`, the arrived answer at the idle tick: dropped when stale, `No locations found` when empty, one target visited, several in the pick list (an entered float whose scratch buffer binds Enter).
+- `carat/use_cases/definitions/show_definition.rb`: `ShowDefinition#call`, the arrived answer at the idle tick: dropped when stale, `No locations found` when empty, one target visited, several in the pick list (an entered float whose scratch buffer has the `keymap.pick` bindings).
 - `carat/use_cases/definitions/visit_target.rb`: `VisitTarget#call`, one target: a jump (E37 over a modified buffer, `OpenFile` inside the working directory with links resolved, a read-only scratch view outside, the jump list pushed, the UTF-16 column) or a peek float of 12 rows.
 - `carat/use_cases/definitions/open_definition_float.rb`: `OpenDefinitionFloat#call`, a bordered float over a buffer at the cursor, below or above, sized to its rows and title.
 - `carat/use_cases/definitions/choose_definition.rb`: `ChooseDefinition#call`, Enter in the pick list: closes it and visits the row's target.

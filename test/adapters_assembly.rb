@@ -67,6 +67,7 @@ module AdaptersAssemblyTest
     ]), "the definition request")
     t.assert_equal([], strangers(a.jumps, [["visit_target", a.visit_target.jumps], ["walk_jumps", a.walk_jumps.jumps]]), "the jump list")
     t.assert_equal([true, true, true], [a.controller.show_definition.equal?(a.show_definition), a.handle_key.follow_definition.equal?(a.follow_definition), a.show_definition.visit_target.equal?(a.visit_target)], "the input controller holds the one ShowDefinition and the key handler the one FollowDefinition")
+    t.assert_true(a.show_definition.pick_keymap.equal?(a.pick_keymap), "ShowDefinition holds the one pick list keymap")
     t.assert_equal([], strangers(a.visit_target, [["show_definition", a.show_definition.visit_target], ["choose_definition", a.choose_definition.visit_target]]), "the one target visitor")
     t.assert_equal([], strangers(a.open_definition_float, [["visit_target", a.visit_target.open_definition_float], ["show_definition", a.show_definition.open_definition_float]]), "the one definition float opener")
     t.assert_equal([], strangers(a.open_float, [["open_definition_float", a.open_definition_float.open_float]]), "the open float use case, in the definitions")

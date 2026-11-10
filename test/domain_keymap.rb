@@ -184,6 +184,21 @@ module DomainKeymapTest
     ], checked_config.report, "checked loading reports unknown actions and malformed keys with the file and line")
     t.assert_equal([:match, :none, :match], [checked.lookup(:normal, codes("j")).kind, checked.lookup(:normal, codes("zq")).kind, checked.lookup(:normal, codes("zz")).kind], "the refused binding is not added and the others are")
 
+    # keymap.pick lines bind in normal mode of a pick list's buffer only:
+    # the defaults give Enter to definition.choose there and leave the
+    # editor's Enter alone; a later line wins, none unbinds, and a bad
+    # line is reported by checked loading and left out of both.
+    pick = D::Keymap.pick_from(config)
+    t.assert_equal([[:match, "definition.choose"], false], [[pick.lookup(:normal, codes("<CR>")).kind, pick.lookup(:normal, codes("<CR>")).value], keymap.lookup(:normal, codes("<CR>")).value == "definition.choose"], "keymap.pick binds Enter in the pick list's keymap and not in the editor's")
+    pick_config = project("keymap.pick <CR> none\nkeymap.pick o definition.choose\nkeymap.pick <leader>x definition.choose\nkeymap.pick zq foo.bar\nkeymap.pick <Nope> definition.choose\n")
+    pick_known = D::Keymap.no_actions
+    pick_known["definition.choose"] = true
+    pick_checked = D::Keymap.new
+    pick_checked.add_checked(pick_config, pick_known)
+    rebound = D::Keymap.pick_from(pick_config)
+    t.assert_equal([".caratrc:4: unknown action foo.bar", ".caratrc:5: unknown key <Nope>"], pick_config.report, "checked loading reports a bad keymap.pick line with the file and line")
+    t.assert_equal([:none, :match, :match, :none], [rebound.lookup(:normal, codes("<CR>")).kind, rebound.lookup(:normal, codes("o")).kind, rebound.lookup(:normal, codes(" x")).kind, pick_checked.lookup(:normal, codes("o")).kind], "keymap.pick rebinds and unbinds with the leader, and never binds in an editor mode")
+
     # The leader: the last good keymap.leader line, Vim's backslash
     # without one; a bad one is reported and skipped.
     leaders = D::Config.new

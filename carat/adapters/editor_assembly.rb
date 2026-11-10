@@ -297,6 +297,7 @@ module Carat
       attr_reader :request_definition #: UseCases::RequestDefinition
       attr_reader :open_definition_float #: UseCases::OpenDefinitionFloat
       attr_reader :visit_target #: UseCases::VisitTarget
+      attr_reader :pick_keymap #: Domain::Keymap
       attr_reader :show_definition #: UseCases::ShowDefinition
       attr_reader :choose_definition #: UseCases::ChooseDefinition
       attr_reader :follow_definition #: UseCases::FollowDefinition
@@ -433,7 +434,8 @@ module Carat
         @request_definition = UseCases::RequestDefinition.new(definition: @definition)
         @open_definition_float = UseCases::OpenDefinitionFloat.new(open_float: @open_float)
         @visit_target = UseCases::VisitTarget.new(definition: @definition, jumps: @jumps, buffers: @buffers, files: files, probe_path: @probe_path, open_file: @open_file, resolve_inside: @resolve_inside, open_definition_float: @open_definition_float)
-        @show_definition = UseCases::ShowDefinition.new(definition: @definition, files: files, close_float: @close_float, visit_target: @visit_target, open_definition_float: @open_definition_float)
+        @pick_keymap = Domain::Keymap.pick_from(value)
+        @show_definition = UseCases::ShowDefinition.new(definition: @definition, files: files, close_float: @close_float, visit_target: @visit_target, open_definition_float: @open_definition_float, pick_keymap: @pick_keymap)
         @choose_definition = UseCases::ChooseDefinition.new(definition: @definition, close_float: @close_float, visit_target: @visit_target)
         @follow_definition = UseCases::FollowDefinition.new(definition: @definition, close_float: @close_float)
         @walk_jumps = UseCases::WalkJumps.new(jumps: @jumps, buffers: @buffers)

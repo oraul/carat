@@ -61,7 +61,7 @@ At most one definition request SHALL be in flight; a newer ask SHALL cancel it w
 - **THEN** no float shows
 
 ### Requirement: Several targets show a pick list
-An answer with several targets SHALL open an entered float listing them as `N path:line`, at most 50; Enter on a row SHALL go to (or peek) that target and close the list; Esc SHALL close it.
+An answer with several targets SHALL open an entered float listing them as `N path:line`, at most 50; Enter on a row SHALL go to (or peek) that target and close the list; Esc SHALL close it. The list's keys SHALL be the configuration's `keymap.pick <keys> <action>` lines, bound in normal mode of the list's buffer and in no editor mode, the defaults binding `keymap.pick <CR> definition.choose`.
 
 #### Scenario: Several targets list them and Enter picks one
 - **WHEN** the answer has two locations and `j` then Enter are typed in the list
@@ -70,6 +70,10 @@ An answer with several targets SHALL open an entered float listing them as `N pa
 #### Scenario: Esc closes the pick list
 - **WHEN** the pick list shows and Esc is typed
 - **THEN** no float shows and the buffer and cursor are unchanged
+
+#### Scenario: The pick list's keys come from the configuration
+- **WHEN** the user's configuration has `keymap.pick <CR> none` and `keymap.pick o definition.choose`, and Enter, then `G` and `o` are typed in the list
+- **THEN** Enter leaves the list open, and `o` shows the second target with the list closed
 
 ### Requirement: Targets outside the project open read-only
 A target SHALL open through the file-open refusals (a directory, a non-regular file, a file over the limit). A target outside the working directory, or whose path leaves it through a link, SHALL open as a read-only view titled with its path, which `:w` refuses.

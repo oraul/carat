@@ -25,6 +25,7 @@ ok   Several targets list them and Enter picks one
 ok   Ctrl-O after a pick returns to where gd was typed
 ok   Esc closes the pick list
 ok   Enter in a peek's pick list peeks at the row's target
+ok   The pick list's keys come from the configuration
 ok   A target outside the project opens read-only
 ok   Ctrl-O leaves the read-only view
 ok   a target linked out of the project opens read-only
@@ -37,4 +38,4 @@ ok   A refused Ctrl-O leaves the jump list as it was
 ok   Ctrl-I after a refused Ctrl-O returns to the start
 ok   Ctrl-O drops an entry whose buffer is gone and stays
 ok   Ctrl-O clamps the column to a line shortened since, in code points
-adapters_definitions: 39 passed, 0 failed
+adapters_definitions: 40 passed, 0 failed

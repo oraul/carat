@@ -17,28 +17,27 @@ module Carat
     # it was asked: an older peek float or pick list closes; no target
     # shows Neovim's "No locations found"; one is visited; several open
     # the pick list, an entered float of numbered "path:line" rows whose
-    # scratch buffer binds Enter to definition.choose.
+    # scratch buffer has the configuration's keymap.pick bindings, Enter
+    # to definition.choose by default.
     class ShowDefinition
       NO_LOCATIONS = "No locations found"
-      PICK_BINDINGS = ["keymap.normal <CR> definition.choose"]
-      private_constant :NO_LOCATIONS, :PICK_BINDINGS
-
-      # @rbs @pick_keymap: Domain::Keymap
+      private_constant :NO_LOCATIONS
 
       attr_reader :definition #: Domain::DefinitionRequest
       attr_reader :files #: Ports::FilePort
       attr_reader :close_float #: CloseFloat
       attr_reader :visit_target #: VisitTarget
       attr_reader :open_definition_float #: OpenDefinitionFloat
+      attr_reader :pick_keymap #: Domain::Keymap
 
-      #: (definition: Domain::DefinitionRequest, files: Ports::FilePort, close_float: CloseFloat, visit_target: VisitTarget, open_definition_float: OpenDefinitionFloat) -> void
-      def initialize(definition:, files:, close_float:, visit_target:, open_definition_float:)
+      #: (definition: Domain::DefinitionRequest, files: Ports::FilePort, close_float: CloseFloat, visit_target: VisitTarget, open_definition_float: OpenDefinitionFloat, pick_keymap: Domain::Keymap) -> void
+      def initialize(definition:, files:, close_float:, visit_target:, open_definition_float:, pick_keymap:)
         @definition = definition
         @files = files
         @close_float = close_float
         @visit_target = visit_target
         @open_definition_float = open_definition_float
-        @pick_keymap = Domain::Keymap.from_lines(PICK_BINDINGS, "")
+        @pick_keymap = pick_keymap
       end
 
       #: (Domain::EditorState) -> void

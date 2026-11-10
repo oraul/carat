@@ -88,6 +88,12 @@ module AdaptersDefinitionsTest
   # capabilities given.
   #: (Hash[String, untyped]) -> Rig
   def self.rig(capabilities)
+    rig_with(capabilities, "")
+  end
+
+  # The rig with more lines in the user's configuration.
+  #: (Hash[String, untyped], String) -> Rig
+  def self.rig_with(capabilities, user)
     files = Carat::Doubles::MemoryFiles.new
     files.move_to("/project")
     files.put("a.rb", "def greet\n  puts 1\nend\ngreet\n")
@@ -100,7 +106,7 @@ module AdaptersDefinitionsTest
     processes.install("ruby-lsp")
     messages = Carat::Doubles::MemoryQueue.new
     completions = Carat::Adapters::ServerCompletions.new
-    config = Carat::Doubles::FixedConfig.new(value: Carat::Doubles::FixedConfig.with_user("language.trusted_roots /project\noption.icons ascii\n"))
+    config = Carat::Doubles::FixedConfig.new(value: Carat::Doubles::FixedConfig.with_user("language.trusted_roots /project\noption.icons ascii\n" + user))
     assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: config, processes: processes, messages: messages, completions: completions, plugin_list: [])
     r = Rig.new(files: files, terminal: terminal, processes: processes, messages: messages, assembly: assembly)
     assembly.screen_presenter.enter
@@ -313,6 +319,15 @@ module AdaptersDefinitionsTest
     asked(r, "<Space>dd", [location("/project/a.rb", 0, 4), location("/project/b.rb", 1, 4)])
     r.type("j<CR>")
     t.assert_equal([["def other", "  2", "end"], "a.rb 3:0"], [float_lines(r, r.assembly.definition.float_id), r.where], "Enter in a peek's pick list peeks at the row's target")
+    # The pick list's keys are keymap.pick lines of the configuration.
+    r = rig_with({ "definitionProvider" => true }, "keymap.pick <CR> none\nkeymap.pick o definition.choose\n")
+    r.type("3j")
+    asked(r, "gd", [location("/project/a.rb", 0, 4), location("/project/b.rb", 1, 4)])
+    r.type("<CR>")
+    open = r.float_count
+    r.type("G")
+    r.type("o")
+    t.assert_equal([1, "b.rb 1:4", 0], [open, r.where, r.float_count], "The pick list's keys come from the configuration")
 
     # Paths.
     r = defining

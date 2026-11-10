@@ -208,6 +208,9 @@ module Carat
       keymap.normal <leader>bd buffer.delete
       keymap.normal <leader>dp docs.pin
       keymap.normal <leader>dd definition.peek
+      # keymap.pick <keys> <action> binds in normal mode of a pick list's
+      # buffer, as the definition pick list's, and in no editor mode.
+      keymap.pick <CR> definition.choose
       keymap.normal <leader>ls layout.toggle_sidebar
       keymap.normal <leader>lr layout.toggle_right_sidebar
       keymap.normal <leader>lp layout.toggle_panel
