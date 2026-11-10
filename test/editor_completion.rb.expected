@@ -26,6 +26,7 @@ ok   with no ready source no popup opens, the source is not asked, and Ctrl-N in
 ok   each row is the kind icon, the label, and the detail on the right
 ok   the popup stands under the line, its labels under the word
 ok   the rows are drawn in Pmenu and the selected one in PmenuSel
+ok   the popup has no border and its selected row is in PmenuSel across its padding
 ok   the source is asked once for the word
 ok   filtering asks the source no more
 ok   the popup equals a full repaint
@@ -56,4 +57,4 @@ ok   with no room on the right the float stands on the popup's left
 ok   a long paragraph wraps at word boundaries within 60 columns
 ok   escape sequences are dropped and nesting is capped at four levels
 ok   no escape of the documentation reaches the screen
-editor_completion: 58 passed, 0 failed
+editor_completion: 59 passed, 0 failed

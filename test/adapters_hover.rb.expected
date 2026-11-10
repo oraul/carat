@@ -3,7 +3,7 @@ ok   K with no hovering server is refused and asks nothing
 ok   K records the ask and no key waits on the server
 ok   the next idle tick sends the document and the cursor
 ok   the answer opens the float at the next idle tick with no key, its markup laid out
-ok   the float is bordered below the cursor and nothing waits
+ok   the float is bordered below the cursor, in the ASCII form of the ascii icons, and nothing waits
 ok   moving the cursor closes the float
 ok   K again asks again
 ok   Esc closes the float

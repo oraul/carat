@@ -1,6 +1,6 @@
 ok   the float's window gets the next window id
 ok   a bordered float with its title over the window
-ok   the border, the title, and the text have the float groups
+ok   the border, the title with its blanks in FloatTitle, and the padding and the text in NormalFloat
 ok   the float is not a layout window and the file window stays current
 ok   Esc closes the topmost float
 ok   closing dirties the rows it covered and the message row only
@@ -43,4 +43,20 @@ ok   no rows
 ok   a z out of range
 ok   a tab page holds sixteen floats
 ok   the plugin API is 2.5
-editor_floats: 45 passed, 0 failed
+ok   frame rounded at 40 by 12: ╭─── doc ────╮ / │ one        │ / │ two        │ / ╰────────────╯
+ok   frame rounded at 120 by 36: ╭────────────────── a longer title ──────────────────╮ / │ one                                                │ / │ three                                              │ / ╰────────────────────────────────────────────────────╯
+ok   frame single at 40 by 12: ┌─── doc ────┐ / │ one        │ / │ two        │ / └────────────┘
+ok   frame single at 120 by 36: ┌────────────────── a longer title ──────────────────┐ / │ one                                                │ / │ three                                              │ / └────────────────────────────────────────────────────┘
+ok   frame double at 40 by 12: ╔═══ doc ════╗ / ║ one        ║ / ║ two        ║ / ╚════════════╝
+ok   frame double at 120 by 36: ╔══════════════════ a longer title ══════════════════╗ / ║ one                                                ║ / ║ three                                              ║ / ╚════════════════════════════════════════════════════╝
+ok   frame solid at 40 by 12:      doc       /   one          /   two          /               
+ok   frame solid at 120 by 36:                     a longer title                     /   one                                                  /   three                                                /                                                       
+ok   frame ascii at 40 by 12: +--- doc ----+ / | one        | / | two        | / +------------+
+ok   frame ascii at 120 by 36: +------------------ a longer title ------------------+ / | one                                                | / | three                                              | / +----------------------------------------------------+
+ok   frame ascii double at 40 by 12: +--- doc ----+ / | one        | / | two        | / +------------+
+ok   frame ascii double at 120 by 36: +------------------ a longer title ------------------+ / | one                                                | / | three                                              | / +----------------------------------------------------+
+ok   with winborder none a bordered float has no edge and no title, its padding kept
+ok   the padding of a float without an edge is in NormalFloat
+ok   a long title is cut between the corners with a blank on each side
+ok   a notification box is drawn in the border style
+editor_floats: 61 passed, 0 failed

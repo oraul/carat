@@ -181,7 +181,7 @@ module AdaptersIndentGuidesTest
       ["Off draws none", "off", ["x", "    b"]],
       ["turning the guides off repaints every row", "turned off", ["x", "    b"]],
       ["A plugin's window draws no guide", "plugin", ["x", "    b"]],
-      ["A float shows no guide over a file window", "float", ["x", "| | b", "|     f", "|     g", "| | e"]]
+      ["A float shows no guide over a file window", "float", ["x", "| | b", "|      f", "|      g", "| | e"]]
     ]) { |name| guides(name.to_s) }
 
     # The guide character: rows are [label, case, the code point drawn].

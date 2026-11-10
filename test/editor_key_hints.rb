@@ -121,13 +121,13 @@ module EditorKeyHintsTest
     t.assert_equal([1, 9, true], [floats.count, floats.at(0).window.height, floats.at(0).window.width > 40], "Ctrl-W hints fill several columns of the room")
 
     # A hint row of wide or combining characters is cut to the float's
-    # width in cells, a wide character that would pass it dropped (77 of
-    # 78 cells after "y  "); a group name is the text, since a project file
+    # width in cells, a wide character that would pass it dropped (75 of
+    # 76 cells after "y  "); a group name is the text, since a project file
     # reads no remap. Rows are [label, the group name of <leader>xy,
     # [the widest row's cells, the float's width, floats]].
     t.table([
-      ["a group name of fifty wide characters", "あ" * 50, [77, 78, 1]],
-      ["a group name of wide characters with combining marks", "あ\u0301" * 50, [77, 78, 1]],
+      ["a group name of fifty wide characters", "あ" * 50, [75, 76, 1]],
+      ["a group name of wide characters with combining marks", "あ\u0301" * 50, [75, 76, 1]],
       ["a group name of letters with combining marks fits whole", "e\u0301" * 30, [33, 33, 1]]
     ]) do |name|
       h = session("keymap.normal <leader>xya cursor.up\nkeymap.normal <leader>xb cursor.down\nkeymap.group <leader>xy " + name.to_s, 24, "<Space>x", 1)

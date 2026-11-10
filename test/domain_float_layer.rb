@@ -23,7 +23,7 @@ module DomainFloatLayerTest
   def self.placed(s, top, left, rows, cols)
     window = D::Window.new(buffer: D::Buffer.new(lines: ["x"], path: nil, line_ending: "\n"))
     float = D::FloatWindow.new(window: window, spec: s)
-    float.place(top, left, rows, cols)
+    float.place(top, left, rows, cols, true)
     [float.box_top, float.box_bottom, float.box_left, float.box_right, window.row, window.col, window.height, window.width]
   end
 
@@ -41,11 +41,11 @@ module DomainFloatLayerTest
     t = Carat::Testing.new("domain_float_layer")
 
     # Placement: the box at the offset, cut to fit, then moved in.
-    t.assert_equal([2, 6, 4, 16, 3, 5, 2, 10], placed(spec("editor", 2, 4, 2, 10, true, 50), 0, 0, 11, 40), "a bordered box sits at its offset, the text one cell inside")
-    t.assert_equal([4, 5, 5, 13, 4, 5, 1, 8], placed(spec("cursor", 1, 0, 1, 8, false, 50), 3, 5, 11, 40), "a cursor offset counts from the anchor cell")
-    t.assert_equal([0, 11, 0, 40, 1, 1, 9, 38], placed(spec("editor", 5, 50, 30, 100, true, 50), 0, 0, 11, 40), "a box larger than the area is cut to it and moved in")
-    t.assert_equal([8, 11, 34, 40, 9, 35, 1, 4], placed(spec("cursor", 1, 0, 1, 4, true, 50), 9, 38, 11, 40), "a box past the bottom right corner moves up and left")
-    t.assert_equal([0, 3, 0, 3, 1, 1, 1, 1], placed(spec("editor", 0, 0, 3, 3, true, 50), 0, 0, 1, 2), "an area too small for the border keeps a one-cell text area and overflows it")
+    t.assert_equal([2, 6, 4, 18, 3, 6, 2, 10], placed(spec("editor", 2, 4, 2, 10, true, 50), 0, 0, 11, 40), "a bordered box sits at its offset, the text inside its border and a column of padding")
+    t.assert_equal([4, 5, 5, 15, 4, 6, 1, 8], placed(spec("cursor", 1, 0, 1, 8, false, 50), 3, 5, 11, 40), "a cursor offset counts from the anchor cell")
+    t.assert_equal([0, 11, 0, 40, 1, 2, 9, 36], placed(spec("editor", 5, 50, 30, 100, true, 50), 0, 0, 11, 40), "a box larger than the area is cut to it and moved in")
+    t.assert_equal([8, 11, 32, 40, 9, 34, 1, 4], placed(spec("cursor", 1, 0, 1, 4, true, 50), 9, 38, 11, 40), "a box past the bottom right corner moves up and left")
+    t.assert_equal([0, 3, 0, 5, 1, 2, 1, 1], placed(spec("editor", 0, 0, 3, 3, true, 50), 0, 0, 1, 2), "an area too small for the border keeps a one-cell text area and overflows it")
 
     # Spec checks.
     t.table([

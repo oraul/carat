@@ -1,4 +1,4 @@
-ok   a bordered box sits at its offset, the text one cell inside
+ok   a bordered box sits at its offset, the text inside its border and a column of padding
 ok   a cursor offset counts from the anchor cell
 ok   a box larger than the area is cut to it and moved in
 ok   a box past the bottom right corner moves up and left

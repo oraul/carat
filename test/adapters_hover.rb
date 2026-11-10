@@ -220,7 +220,7 @@ module AdaptersHoverTest
     answer(r, markup("# greet\n\nSays **hello** with `puts`.\n\n- one\n- two\n\n```ruby\nputs 1\n```"))
     r.wait
     t.assert_equal(["greet", "", "Says hello with puts.", "", "• one", "• two", "", "  puts 1"], float_lines(r), "the answer opens the float at the next idle tick with no key, its markup laid out")
-    t.assert_equal([true, true, false], [r.screen[1].include?("╭"), r.screen[2].include?("greet"), r.assembly.services.waiting?], "the float is bordered below the cursor and nothing waits")
+    t.assert_equal([true, true, false], [r.screen[1].include?("+"), r.screen[2].include?("greet"), r.assembly.services.waiting?], "the float is bordered below the cursor, in the ASCII form of the ascii icons, and nothing waits")
     r.type("l")
     t.assert_equal([0, 0], [r.float_count, r.assembly.hover.float_id], "moving the cursor closes the float")
 
