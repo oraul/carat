@@ -20,5 +20,7 @@
 ## 5. Measure and docs
 
 - [x] 5.1 Add a `palette` bench scenario to `bench/keys.rb`; run `make bench SCENARIOS="lh-float finder palette"` and compare allocations per key and rounds with main's.
+  - Result (two runs each, branch against main with the same row): allocations per key lh-float 26.0 and 26.0, finder 414.0 and 416.0, palette 274.0 and 274.0; render times within run-to-run noise.
 - [x] 5.2 Update `README.md` (the option), `docs/codebase-map.md` (the new files), the `FloatOptions` comment in `carat/plugin_api.rb`, and `docs/backlog.md` (the folded entries and the owners of the plan notes).
-- [ ] 5.3 Capture the palette, the finder, the key hints, completion with docs, and hover at 120 by 36 as ANSI text from the pseudo-terminal harness into `build/captures/` for the run's report.
+- [x] 5.3 Capture the palette, the finder, the key hints, completion with docs, and hover at 120 by 36 as ANSI text from the pseudo-terminal harness into `build/captures/` for the run's report.
+  - Result: palette, finder, key hints, and word completion captured; hover and completion documentation need a language server, which this environment lacks (ruby-lsp needs CRuby), so those two show no float.

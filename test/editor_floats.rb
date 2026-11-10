@@ -89,9 +89,11 @@ module EditorFloatsTest
   def self.main
     t = Carat::Testing.new("editor_floats")
 
-    # Placement, border, and title. Scenarios: Editor-anchored float with
-    # a border and a title, The shipped border is rounded, Padding in
-    # NormalFloat, A centered title.
+    # Placement, border, and title. Scenarios:
+    # Editor-anchored float with a border and a title
+    # The shipped border is rounded
+    # Padding in NormalFloat
+    # A centered title
     h = editor
     id = open(h, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])
     t.assert_equal(2, id, "the float's window gets the next window id")
@@ -113,8 +115,8 @@ module EditorFloatsTest
     h.type("<Esc>")
     t.assert_equal(["", 1], [h.message, h.window_count], "Esc with no float does nothing")
 
-    # Cursor anchor and clamping. Scenarios: Cursor-anchored float, A float
-    # too large for the screen is cut and moved in.
+    # Cursor anchor and clamping. Scenarios: Cursor-anchored float, and
+    # A float too large for the screen is cut and moved in
     h = editor
     h.type("3G4l")
     open(h, options("cursor", 1, 0, 1, 6, false, "", 50, false), ["hint"])
