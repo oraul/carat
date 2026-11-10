@@ -858,7 +858,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `tokenize` and the `@line_groups` table in `carat/plugins/explorer/plugin.rb` (lines 139 and 467 at `theme-tokens`), rebuilt by `tree_lines` on every refresh. Periodic quality at 4c65f4e.
 - Why it matters: a line's tokens depend on plugin state instead of the line, though every icon the tree draws has its own glyph in each icon set, so the table is state the plugin need not keep.
-- Fix outline: build a glyph-to-group table once in `activate` from `host.icon` and `FileIcons::GROUPS`, look up the glyph at the icon column in `tokenize`, and drop `@line_groups` and `tree_lines`, together with the byte-walk entry above it. Queued in `theme-tidy`.
+- Fix outline: build a glyph-to-group table once in `activate` from `host.icon` and `FileIcons::GROUPS`, look up the glyph at the icon column in `tokenize`, and drop `@line_groups` and `tree_lines`, together with the byte-walk entry above it. Queued in `carat-palette`.
 
 ## Themes.palette repeats NAMES as an if chain
 
@@ -1050,13 +1050,13 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: the `CURSOR_LINE` role of the four palettes in `carat/domain/themes.rb`, measured by the cursor-line table of `test/domain_theme.rb`, which holds the cursor line to 3:1 as the selection is. At `cursor-shapes`: one_dark's keyword groups at 4.42:1 (24 bits), one_light's constants at 4.27:1 and its green groups at 4.05:1 (256 colors), dark_plus's comments and error groups at 3.99 to 4.43:1, light_plus's numbers at 3.90:1 (256 colors).
 - Why it matters: goal 1 asks for readable contrast; the line the user reads most is a little below WCAG AA for normal text in those groups.
-- Fix outline: tune each palette's cursor-line color, and its 256-color index (one_light and light_plus round to gray 255 at 256 colors), or the few foregrounds, until the table passes at 4.5:1 for text, then raise the threshold in the test. Queued in `theme-tidy`.
+- Fix outline: tune each palette's cursor-line color, and its 256-color index (one_light and light_plus round to gray 255 at 256 colors), or the few foregrounds, until the table passes at 4.5:1 for text, then raise the threshold in the test. Queued in `carat-palette`.
 
 ## The default cursor line keeps the terminal's foreground over a dark stripe
 
 - Where: `config/default.caratrc` (line 22 at `cursor-shapes`) turns `cursorline` on with `one_dark` and `option.background terminal`, so in `carat/domain/themes.rb` the lit cells of groups without a foreground keep the terminal's own foreground over the fixed `CURSOR_LINE` stripe (0x2c313c). Quality advisory of `cursor-shapes`.
 - Why it matters: on a light terminal, plain text on the cursor line becomes dark on dark and unreadable, and the cursor-line contrast table of `test/domain_theme.rb` checks only `background theme`.
-- Fix outline: give lit cells the palette's foreground when the stripe is painted over the terminal's background, with a contrast row for `background terminal`, or ship `cursorline` off until the theme follows the terminal's background. Queued in `theme-tidy`.
+- Fix outline: give lit cells the palette's foreground when the stripe is painted over the terminal's background, with a contrast row for `background terminal`, or ship `cursorline` off until the theme follows the terminal's background. Queued in `carat-palette`.
 
 ## The presenter passes the number's group to paint_row through an instance variable
 
@@ -1080,7 +1080,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `lit16` in `carat/domain/themes.rb` (line 428 at `cursor-shapes`) holds the `CURSOR_LINE` role's 16-color background index, while `lit` in the same loop is a layered group id. Quality advisory of `cursor-shapes`.
 - Why it matters: the names suggest one is the 16-color form of the other.
-- Fix outline: rename `lit16` to `line_bg16` beside `line16`. Queued in `theme-tidy`.
+- Fix outline: rename `lit16` to `line_bg16` beside `line16`. Queued in `carat-palette`.
 
 ## A test helper's comment sits above the wrong method
 
@@ -1240,7 +1240,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The UI highlight group count is stale
 
-- Where: `docs/architecture.md:106` and `docs/codebase-map.md:487` (49 groups) and `docs/compatibility.md:507` (41) against `carat/domain/highlight.rb:68` (syntax from 51); the map's IndentGuides bullet (line 459) omits `on?`. Periodic quality at ce6abdb, replacing the entry of 22a5de0 (41 against 49); queue item `theme-tidy`.
+- Where: `docs/architecture.md:106` and `docs/codebase-map.md:487` (49 groups) and `docs/compatibility.md:507` (41) against `carat/domain/highlight.rb:68` (syntax from 51); the map's IndentGuides bullet (line 459) omits `on?`. Periodic quality at ce6abdb, replacing the entry of 22a5de0 (41 against 49); queue item `carat-palette`.
 - Why it matters: the documents count fewer groups than the code, and the next group added drifts them again.
 - Fix outline: say 51 groups with the indent guides last in all three, or name the groups without a count; add `on?`.
 
@@ -1350,19 +1350,19 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `in_window` in `carat/use_cases/plugins/window_requests.rb` lines 293 and 304 at `floating-windows`. Quality advisory of `floating-windows`.
 - Why it matters: it assigns `state = @state` and never reads it (the block captures `open_file`'s own state), and it restores the float focus although its only caller, `open_file`, then calls `focus_at`, whose `TabPage#focus` leaves the float again, so the restore is never observable.
-- Fix outline: delete the dead line, and drop `saved_float` and its `enter`, or document that `in_window` keeps the focus for callers that do not refocus. Queued in `bars-tidy` with the other `floating-windows` notes.
+- Fix outline: delete the dead line, and drop `saved_float` and its `enter`, or document that `in_window` keeps the focus for callers that do not refocus. Queued in `float-placement` with the other `floating-windows` notes.
 
 ## FloatLayer is a plain class among the mutable records
 
 - Where: `carat/domain/float_layer.rb` line 10 at 803fe6e. Periodic quality advisory.
 - Why it matters: `CLAUDE.md` makes mutable records `Struct` subclasses with pinned members; `TabPage`, `TabList`, `LastFind`, and `StatusSlots` follow it, `FloatLayer` does not.
-- Fix outline: a `Struct` with `floats` and `focus` pinned, readers and `self.member =` writers, built with keywords in `TabPage`. Queued in `bars-tidy`.
+- Fix outline: a `Struct` with `floats` and `focus` pinned, readers and `self.member =` writers, built with keywords in `TabPage`. Queued in `float-placement`.
 
 ## move_float bypasses the float use cases
 
 - Where: `WindowRequests#move_float` in `carat/use_cases/plugins/window_requests.rb` (line 247 at 803fe6e). Periodic quality advisory.
 - Why it matters: `open_float` and `close_float` go through `OpenFloat` and `CloseFloat` as section 5.3 asks of request families, while `move_float` writes the tab page's `FloatLayer` directly and ignores the result of `move`.
-- Fix outline: a `MoveFloat` use case beside the other two, or a class comment saying a move is a domain write needing none, with `FloatLayer#move` made void. Queued in `bars-tidy`.
+- Fix outline: a `MoveFloat` use case beside the other two, or a class comment saying a move is a domain write needing none, with `FloatLayer#move` made void. Queued in `float-placement`.
 
 ## The architecture names no float
 
@@ -2170,25 +2170,25 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## OpenPalette re-parses plugin action names
 
-- Where: `plugin_of` in `carat/use_cases/discovery/open_palette.rb` line 91 against `PluginRouter` line 36, and the one-line single-use `palette_add_plugin` at line 85, at d828abb. Quality advisories in `discoverability`. Raised again at 38628bb and b76b722 (periodic quality); a second entry for `palette_add_plugin` was folded in here at 186ddfb. Queued in `discoverability-tidy`.
+- Where: `plugin_of` in `carat/use_cases/discovery/open_palette.rb` line 91 against `PluginRouter` line 36, and the one-line single-use `palette_add_plugin` at line 85, at d828abb. Quality advisories in `discoverability`. Raised again at 38628bb and b76b722 (periodic quality); a second entry for `palette_add_plugin` was folded in here at 186ddfb. Queued in `menu-hints`.
 - Why it matters: two parsers of `plugin.<name>.<action>` can drift, and the wrapper adds a hop for one call.
 - Fix outline: have `PluginRegistry` return the enabled plugins' action names (the same method the palette entry above needs) and inline `@palette.add` into `add_plugin_actions`.
 
 ## KEYHINTS_DELAY is never read
 
-- Where: `carat/domain/options.rb` line 72 at d828abb; `initialize` (line 56) repeats the literal 300. Quality advisory in `discoverability`, raised twice. Raised again at 38628bb (periodic quality). Queued in `discoverability-tidy`.
+- Where: `carat/domain/options.rb` line 72 at d828abb; `initialize` (line 56) repeats the literal 300. Quality advisory in `discoverability`, raised twice. Raised again at 38628bb (periodic quality). Queued in `menu-hints`.
 - Why it matters: a constant beside a duplicated literal invites changing one and not the other.
 - Fix outline: use `KEYHINTS_DELAY` in `initialize`, or drop the constant.
 
 ## ShowKeyHints copies HideKeyHints' close
 
-- Where: `carat/use_cases/discovery/show_key_hints.rb` line 56 at d828abb. Quality advisory in `discoverability`. Raised again at 38628bb (periodic quality). Queued in `discoverability-tidy`. Raised again at ce6abdb (periodic quality): inject `HideKeyHints`.
+- Where: `carat/use_cases/discovery/show_key_hints.rb` line 56 at d828abb. Quality advisory in `discoverability`. Raised again at 38628bb (periodic quality). Queued in `menu-hints`. Raised again at ce6abdb (periodic quality): inject `HideKeyHints`.
 - Why it matters: two copies of closing the hints float drift when the float's lifecycle changes.
 - Fix outline: have `ShowKeyHints` call `HideKeyHints` instead of holding `close_float`.
 
 ## Three discovery comments are stale or break their wrap
 
-- Where: the class comment of `carat/use_cases/discovery/hide_key_hints.rb` (line 8), the class comment of `carat/use_cases/discovery/show_key_hints.rb` (line 23, longer than its neighbors), and the comment at `carat/use_cases/handle_key.rb` line 66 (breaks after "While the"), at d828abb. Quality advisories in `discoverability`. Raised again at 38628bb (periodic quality). Queued in `discoverability-tidy`.
+- Where: the class comment of `carat/use_cases/discovery/hide_key_hints.rb` (line 8), the class comment of `carat/use_cases/discovery/show_key_hints.rb` (line 23, longer than its neighbors), and the comment at `carat/use_cases/handle_key.rb` line 66 (breaks after "While the"), at d828abb. Quality advisories in `discoverability`. Raised again at 38628bb (periodic quality). Queued in `menu-hints`.
 - Why it matters: the first says a binding resolved by `timeoutlen` closes the hints, but `timeout` never calls `HideKeyHints` and the hints never show over a `:pending` key; the others are style only.
 - Fix outline: drop the clause from the `HideKeyHints` comment and rewrap the other two to the width of the lines around them.
 
@@ -2230,7 +2230,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Palette resets its members in two places
 
-- Where: `carat/domain/palette.rb` lines 31 and 55 at 38628bb (periodic quality). Queued in `discoverability-tidy`.
+- Where: `carat/domain/palette.rb` lines 31 and 55 at 38628bb (periodic quality). Queued in `menu-hints`.
 - Why it matters: `initialize` and `start` reset the same members, so a new member must be reset twice.
 - Fix outline: one private reset called by both.
 
@@ -2597,43 +2597,43 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The palette's name column cuts five shipped action names
 
-- Where: `NAME_WIDTH` in `carat/use_cases/discovery/follow_palette.rb` line 29, at 7711421. Periodic quality. Queue item `discoverability-tidy`.
+- Where: `NAME_WIDTH` in `carat/use_cases/discovery/follow_palette.rb` line 29, at 7711421. Periodic quality. Queue item `menu-hints`.
 - Why it matters: 28 cuts `textobject.inner_single_quote`, `textobject.inner_double_quote`, `plugin.explorer.toggle_hidden`, `search.partial_word_backward`, and `motion.big_word_end_backward` to 27 characters.
 - Fix outline: size the column from the longest name capped by the float width, with a row showing a 29-character name whole.
 
 ## :LspRestart lets a stale symbol answer replace the outline
 
-- Where: `stop` in `carat/adapters/json_rpc_language_gateway.rb` line 227, at 7711421; `crash` (line 439) forgets the symbol request, `stop` does not. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Where: `stop` in `carat/adapters/json_rpc_language_gateway.rb` line 227, at 7711421; `crash` (line 439) forgets the symbol request, `stop` does not. Periodic quality. Queue item `top-rows`.
 - Why it matters: a documentSymbol request in flight keeps its id across a restart, so `waiting?` holds until the deadline, the cancel goes to the new server for an id it never issued, and the new server's answer to a reused id is read as the outline.
 - Fix outline: forget the symbol request in `stop` beside the other three, with an `editor_breadcrumbs` row for `:LspRestart` with a symbol request in flight.
 
 ## The presenter and the arranger each decide which windows get a winbar
 
-- Where: `paint_winbars` in `carat/adapters/frame_presenter.rb` line 723 and `reserve_winbars` in `carat/use_cases/arrange_view.rb` line 89, at 7711421. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Where: `paint_winbars` in `carat/adapters/frame_presenter.rb` line 723 and `reserve_winbars` in `carat/use_cases/arrange_view.rb` line 89, at 7711421. Periodic quality. Queue item `top-rows`.
 - Why it matters: two rules in two layers (geometry against scratch and height) must stay in step.
 - Fix outline: one predicate or a flag set by the arranger that the presenter reads.
 
 ## Layout's split and attach copy the inner-split block
 
-- Where: `carat/domain/layout.rb` lines 153 to 168 (`split`) and 351 to 368 (`attach`), at 7711421. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Where: `carat/domain/layout.rb` lines 153 to 168 (`split`) and 351 to 368 (`attach`), at 7711421. Periodic quality. Queue item `top-rows`.
 - Why it matters: allocating the split, copying size and rectangle, replacing the target, and reparenting are written twice.
 - Fix outline: one private helper returning the inner id, called by both.
 
 ## Quit walks the leaves to count file windows
 
-- Where: `beside_side_windows?` in `carat/use_cases/files/quit.rb` line 66, at 7711421. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Where: `beside_side_windows?` in `carat/use_cases/files/quit.rb` line 66, at 7711421. Periodic quality. Queue item `top-rows`.
 - Why it matters: it repeats `TabPage#file_window_count`.
 - Fix outline: call `file_window_count`.
 
 ## TabPage#previous? reads the node array directly
 
-- Where: `carat/domain/tab_page.rb` line 103, at 7711421. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Where: `carat/domain/tab_page.rb` line 103, at 7711421. Periodic quality. Queue item `top-rows`.
 - Why it matters: every other walker uses `layout.node_count`.
 - Fix outline: use `node_count`.
 
 ## A split from a scratch window has no winbar row
 
-- Where: `winbar_after?` in `carat/use_cases/windows/split_window.rb` line 59, at 7711421; `test/editor_breadcrumbs.rb` splits only file windows. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Where: `winbar_after?` in `carat/use_cases/windows/split_window.rb` line 59, at 7711421; `test/editor_breadcrumbs.rb` splits only file windows. Periodic quality. Queue item `top-rows`.
 - Why it matters: the branch adding no file window for a scratch split is untested.
 - Fix outline: rows splitting a slot or plugin window with a count under `auto` and `always`.
 
@@ -2741,7 +2741,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## SymbolOutline's comment says characters for a byte cap
 
-- Where: `carat/adapters/symbol_outline.rb` line 12, at 31919d9. Periodic quality. Queue item `breadcrumbs-tidy`.
+- Where: `carat/adapters/symbol_outline.rb` line 12, at 31919d9. Periodic quality. Queue item `top-rows`.
 - Why it matters: the comment says names are cut to `NAME_LIMIT` characters, while the cut caps bytes, as the map says.
 - Fix outline: say bytes.
 
@@ -2789,13 +2789,13 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The palette-pad-crash scenarios drift from their tests
 
-- Where: `openspec/specs/command-palette/spec.md` lines 87 to 92 bind `window.split` while `test/editor_palette.rb` line 141 binds `insert.newline`; `openspec/specs/key-hints/spec.md` line 102 remaps `<leader>xa` while `test/editor_key_hints.rb` line 128 sets a group name for `<leader>xy`, since a project file reads no remap, at 6141633. Quality advisory of `palette-pad-crash`. Queue item `discoverability-tidy`.
+- Where: `openspec/specs/command-palette/spec.md` lines 87 to 92 bind `window.split` while `test/editor_palette.rb` line 141 binds `insert.newline`; `openspec/specs/key-hints/spec.md` line 102 remaps `<leader>xa` while `test/editor_key_hints.rb` line 128 sets a group name for `<leader>xy`, since a project file reads no remap, at 6141633. Quality advisory of `palette-pad-crash`. Queue item `menu-hints`.
 - Why it matters: a scenario is meant to describe the setup its test runs; a reader who reproduces the scenario takes a path the test never covers.
 - Fix outline: word the palette scenarios after `insert.newline` and the hint scenario after a group name of fifty wide characters whose widest row is 77 of 78 cells, through a proposal.
 
 ## cells_of in the palette test returns an array no caller reads whole
 
-- Where: `cells_of` in `test/editor_palette.rb` line 66, at 6141633. Quality advisory of `palette-pad-crash`. Queue item `discoverability-tidy`.
+- Where: `cells_of` in `test/editor_palette.rb` line 66, at 6141633. Quality advisory of `palette-pad-crash`. Queue item `menu-hints`.
 - Why it matters: it computes the row's total cells that no caller reads (only the second value is used) and returns several values in an array, against the test-helper rule of `CLAUDE.md`.
 - Fix outline: return only the description's start cell as an Integer and drop the total.
 
@@ -2831,7 +2831,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Key hints repeat the grammar-mode test
 
-- Where: `carat/use_cases/discovery/show_key_hints.rb` line 61 and `HandleKey#grammar_mode?` in `carat/use_cases/handle_key.rb` line 195, at 5e4c140. Periodic quality. Queue item `discoverability-tidy`. Raised again at ce6abdb (periodic quality): a `Domain::Mode.grammar?` predicate.
+- Where: `carat/use_cases/discovery/show_key_hints.rb` line 61 and `HandleKey#grammar_mode?` in `carat/use_cases/handle_key.rb` line 195, at 5e4c140. Periodic quality. Queue item `menu-hints`. Raised again at ce6abdb (periodic quality): a `Domain::Mode.grammar?` predicate.
 - Why it matters: a mode added to one test and not the other shows hints that disagree with the grammar.
 - Fix outline: one `Mode.grammar?(mode)` in `carat/domain/mode.rb` called by both.
 
@@ -3057,15 +3057,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: CLAUDE.md names `Carat::Testing` among the classes whose constructors take required keywords, so files outside a layer, plugins included, escape the rule unstated.
 - Fix outline: state the exemption beside the keyword rule in CLAUDE.md, or move to `initialize(name:)` across the tests.
 
-## paint_float_row fills the row in both branches
-
-- Where: `carat/adapters/frame_presenter.rb` lines 613 and 617 at 3895e21. Periodic quality advisory. Queue item `bars-tidy`.
-- Why it matters: the same fill is written twice under one condition.
-- Fix outline: one fill after the text or blank and before `paint_tokens`.
-
 ## HandleKey restates KeyHints#showing?
 
-- Where: `carat/use_cases/handle_key.rb` line 131 at 3895e21, `float_id != 0` where `HideKeyHints#call` checks `showing?` again. Periodic quality advisory. Queue item `discoverability-tidy`.
+- Where: `carat/use_cases/handle_key.rb` line 131 at 3895e21, `float_id != 0` where `HideKeyHints#call` checks `showing?` again. Periodic quality advisory. Queue item `menu-hints`.
 - Why it matters: two spellings of one test drift apart.
 - Fix outline: `@hide_key_hints.call(state) if @key_hints.showing?`.
 
@@ -3389,9 +3383,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Bar and frame findings of the periodic review at 186ddfb
 
-- Where: `carat/adapters/status_bar.rb` line 1 requires `../plugin_api` and names none of it; `carat/adapters/frame_presenter.rb` line 299 `display_col` and `display_width` are public but used only inside; line 485 `paint_notice_row` draws the rounded border again beside `paint_border_row` (line 654); `NO_NAME` is defined in `status_bar.rb` line 47, `tab_bar.rb` line 23, and `winbar.rb` line 214. Periodic quality at 186ddfb, queued in `bars-tidy`.
-- Why it matters: a dead require, a wide public surface, two border painters and three constants to keep in step.
-- Fix outline: drop the require; move `display_width` below `private` and drop `display_col` (update the area 13 entry); one border painter with a plain flag; one `[No Name]` on `Domain::Buffer`.
+- Where: `carat/adapters/status_bar.rb` line 1 requires `../plugin_api` and names none of it; `carat/adapters/frame_presenter.rb` line 299 `display_col` and `display_width` are public but used only inside; `NO_NAME` is defined in `status_bar.rb` line 47, `tab_bar.rb` line 23, and `winbar.rb` line 214. Periodic quality at 186ddfb, queued in `bars-tidy`, the `NO_NAME` triplicate in `top-rows` (the notice border folded into `float-frame`, which drew both boxes through one painter).
+- Why it matters: a dead require, a wide public surface, and three constants to keep in step.
+- Fix outline: drop the require; move `display_width` below `private` and drop `display_col` (update the area 13 entry); one `[No Name]` on `Domain::Buffer`.
 
 ## Docs and spec drift found by the periodic review at 186ddfb
 
@@ -3401,7 +3395,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Copies and placement found by the periodic review at 186ddfb
 
-- Where: `ListTree#probe` (`carat/use_cases/files/list_tree.rb` line 65) repeats `ProbePath#call` and asks the port itself, against `docs/architecture.md` section 5, queued in `periodic-blockers-b`; `CompleteWord` (`carat/use_cases/completion/complete_word.rb` line 47) copies the word-before-cursor slice of `show_completion.rb` lines 74 to 77, queued in `completion-tidy`; `Layout#fixed_width?` (`carat/domain/layout.rb` line 299) is used only by its test, queued in `slots-tidy`; `JumpList#step` (`carat/domain/jump_list.rb` line 55) pushes before the range check, so Ctrl-O on an empty list adds an entry, queued in `definitions-tidy`; `Icons::NAMES` (`carat/domain/icons.rb` line 13) is read nowhere and `DecodedLine` and `Cell` (`decoded_line.rb` line 15, `cell.rb` line 274) are never-changed values declared as `Struct`, queued in `theme-tidy`. Periodic quality at 186ddfb. Raised again at ce6abdb (periodic quality): `ListTree#probe` (`list_tree.rb:67`) as a blocker; the `CompleteWord` copy (`complete_word.rb:47`) and `Layout#fixed_width?` (`layout.rb:299`).
+- Where: `ListTree#probe` (`carat/use_cases/files/list_tree.rb` line 65) repeats `ProbePath#call` and asks the port itself, against `docs/architecture.md` section 5, queued in `periodic-blockers-b`; `CompleteWord` (`carat/use_cases/completion/complete_word.rb` line 47) copies the word-before-cursor slice of `show_completion.rb` lines 74 to 77, queued in `completion-tidy`; `Layout#fixed_width?` (`carat/domain/layout.rb` line 299) is used only by its test, queued in `slots-tidy`; `JumpList#step` (`carat/domain/jump_list.rb` line 55) pushes before the range check, so Ctrl-O on an empty list adds an entry, queued in `definitions-tidy`; `Icons::NAMES` (`carat/domain/icons.rb` line 13) is read nowhere and `DecodedLine` and `Cell` (`decoded_line.rb` line 15, `cell.rb` line 274) are never-changed values declared as `Struct`, queued in `carat-palette`. Periodic quality at 186ddfb. Raised again at ce6abdb (periodic quality): `ListTree#probe` (`list_tree.rb:67`) as a blocker; the `CompleteWord` copy (`complete_word.rb:47`) and `Layout#fixed_width?` (`layout.rb:299`).
 - Why it matters: two probes and two slices drift; dead surface; a jump that answers nothing moved after adding an entry; records against the Data rule.
 - Fix outline: inject the one `probe_path:` into `ListTree` and use `Domain::PathPolicy.inside?`; one domain prefix helper; delete `fixed_width?`; return -1 before the push with a `test/domain_jump_list.rb` row; test `NAMES` against each set or drop it; `Data` subclasses or the Spinel reason in the comment.
 

@@ -102,7 +102,8 @@ COLS = 200
 # the ruby plugin alone, "float", no plugin and a 60 by 15 bordered
 # float over the middle of the window, "finder", the finder alone over
 # FINDER_FILES files, which every key typed into it filters, or
-# "noguides", no plugin and the indent guides turned off)
+# "noguides", no plugin and the indent guides turned off; the palette
+# scenario opens the command palette with <F1> in its setup keys)
 SCENARIOS = [
   ["lh", "lh", 10_000, 10_000, "NG", "code", "none"],
   ["j", "j", 9_000, 10_000, "gg", "code", "none"],
@@ -140,7 +141,8 @@ SCENARIOS = [
   ["open-ruby", "l", 10, 100_000, "gg", "ruby", "ruby"],
   ["G-ruby", "Ggg", 300, 100_000, "gg", "ruby", "ruby"],
   ["n", "n", 3_000, 100_000, "gg/0 end<CR>", "code", "none"],
-  ["finder", "f<BS>", 2_000, 1_000, " ffd", "code", "finder"]
+  ["finder", "f<BS>", 2_000, 1_000, " ffd", "code", "finder"],
+  ["palette", "e<BS>", 2_000, 1_000, "NG<F1>", "code", "none"]
 ]
 FINDER_FILES = 10_000
 
