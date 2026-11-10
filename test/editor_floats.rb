@@ -267,6 +267,13 @@ module EditorFloatsTest
       got = [cells(large, 10, 30, 54), cells(large, 11, 30, 54), cells(large, 13, 30, 54), cells(large, 14, 30, 54)]
       t.assert_equal(expected, got, "frame #{name} at 120 by 36: #{got.join(" / ")}")
     end
+    # Scenario: The ASCII border under NO_COLOR.
+    h = configured("", 12, 40)
+    h.terminal.no_color = true
+    h.open("a.txt")
+    open(h, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])
+    got = [cells(h, 2, 4, 14), cells(h, 3, 4, 14), cells(h, 5, 4, 14)]
+    t.assert_equal(["+--- doc ----+", "| one        |", "+------------+"], got, "frame rounded under NO_COLOR: #{got.join(" / ")}")
     h = configured("option.winborder none\n", 12, 40)
     open(h, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])
     t.assert_equal(["  2 line 2", "  3  one        ", "  4  two        ", "  5 line 5"], [h.row(1).rstrip, cells(h, 2, 0, 16), cells(h, 3, 0, 16), h.row(4).rstrip], "with winborder none a bordered float has no edge and no title, its padding kept")

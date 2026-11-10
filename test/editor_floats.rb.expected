@@ -55,8 +55,9 @@ ok   frame ascii at 40 by 12: +--- doc ----+ / | one        | / | two        | /
 ok   frame ascii at 120 by 36: +------------------ a longer title ------------------+ / | one                                                | / | three                                              | / +----------------------------------------------------+
 ok   frame ascii double at 40 by 12: +--- doc ----+ / | one        | / | two        | / +------------+
 ok   frame ascii double at 120 by 36: +------------------ a longer title ------------------+ / | one                                                | / | three                                              | / +----------------------------------------------------+
+ok   frame rounded under NO_COLOR: +--- doc ----+ / | one        | / +------------+
 ok   with winborder none a bordered float has no edge and no title, its padding kept
 ok   the padding of a float without an edge is in NormalFloat
 ok   a long title is cut between the corners with a blank on each side
 ok   a notification box is drawn in the border style
-editor_floats: 61 passed, 0 failed
+editor_floats: 62 passed, 0 failed

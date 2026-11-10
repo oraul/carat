@@ -65,6 +65,10 @@ Under `option.icons ascii`, or with `NO_COLOR` set, the border styles with lines
 - **WHEN** `option.icons ascii` is set and a bordered float titled "doc" 10 columns wide is opened
 - **THEN** its top edge reads `+--- doc ----+`, its sides `|`, and its bottom edge `+` and `-`
 
+#### Scenario: The ASCII border under NO_COLOR
+- **WHEN** `NO_COLOR` is set and a bordered float titled "doc" 10 columns wide is opened with the default `rounded` border
+- **THEN** its top edge reads `+--- doc ----+`, its sides `|`, and its bottom edge `+` and `-`
+
 #### Scenario: A notification follows the border style
 - **WHEN** `option.winborder double` is set and a notification shows
 - **THEN** its box is drawn with the double corners and edges
