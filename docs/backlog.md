@@ -2032,7 +2032,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## WalkHistory keeps one walk's counts in instance variables
 
-- Where: `@gone`, `@back`, and `@empty_before` in `carat/use_cases/history/walk_history.rb` lines 32, 80, and 109 at b0dd342. Periodic quality. Queued in `search-tidy`. Raised again at ce6abdb (line 32; periodic quality), queue item `editing-counts`: a returned tally value.
+- Where: `@gone`, `@back`, and `@empty_before` in `carat/use_cases/history/walk_history.rb` lines 32, 80, and 109 at b0dd342. Periodic quality. Queued in `editing-counts`. Raised again at ce6abdb (line 32; periodic quality): a returned tally value.
 - Why it matters: the use case is built once in `EditorAssembly`, so state carries between calls and a nested or interrupted walk reads stale counts, the side channel already listed for `Operate`'s notice.
 - Fix outline: return the counts from the step or hold them in a record made per call, passed to the finish.
 
@@ -2651,7 +2651,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Motions repeats its row clamp and paragraph walk
 
-- Where: `carat/domain/motions.rb` line 246 (`line_down` repeats `vertical`'s checks at lines 215 to 222, `to_row` clamps again), lines 540 and 562 (`paragraph_forward` and `paragraph_backward` share one loop), at 7711421. Periodic quality. Queue item `search-tidy`. Raised again at ce6abdb (`motions.rb:228`, `line_down`, and 544, the paragraph loops; periodic quality), queue item `editing-counts`: a `step_row` helper.
+- Where: `carat/domain/motions.rb` line 246 (`line_down` repeats `vertical`'s checks at lines 215 to 222, `to_row` clamps again), lines 540 and 562 (`paragraph_forward` and `paragraph_backward` share one loop), at 7711421. Periodic quality. Queue item `editing-counts`. Raised again at ce6abdb (`motions.rb:228`, `line_down`, and 544, the paragraph loops; periodic quality): a `step_row` helper.
 - Why it matters: three clamps and two walks to keep in step.
 - Fix outline: one private row clamp and one paragraph walker taking the step.
 
@@ -2927,7 +2927,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The winbar rule restated in SplitWindow
 
-- Where: `winbar_after?` in `carat/use_cases/windows/split_window.rb` line 55 beside `TabPage#winbar?` (`carat/domain/tab_page.rb` line 61), at df4654c. Periodic quality. Queue item `breadcrumbs-tidy` (the untested scratch split, `test/editor_breadcrumbs.rb` line 188, is already there). Raised again at ce6abdb (line 55; periodic quality), queue item `slots-tidy`.
+- Where: `winbar_after?` in `carat/use_cases/windows/split_window.rb` line 55 beside `TabPage#winbar?` (`carat/domain/tab_page.rb` line 61), at df4654c. Periodic quality. Queue item `slots-tidy`, with the untested scratch split (`test/editor_breadcrumbs.rb` line 188). Raised again at ce6abdb (line 55; periodic quality).
 - Why it matters: a breadcrumbs mode change must be made twice.
 - Fix outline: one `TabPage` predicate taking the mode and the windows to add.
 
@@ -3269,7 +3269,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Search copies its prompt split and its E486 message
 
-- Where: `carat/use_cases/search/find_match.rb` line 68 against `preview_search.rb` line 106 (the `pattern_end` split on bytes 47 or 63), and line 163 against `substitute_lines.rb` line 143 (the E486 literal). Periodic quality at 8d8832f, queued in `search-tidy`. Raised again at ce6abdb (`find_match.rb:68`, code points 47 and 63; periodic quality), queue item `editing-counts`.
+- Where: `carat/use_cases/search/find_match.rb` line 68 against `preview_search.rb` line 106 (the `pattern_end` split on bytes 47 or 63), and line 163 against `substitute_lines.rb` line 143 (the E486 literal). Periodic quality at 8d8832f, queued in `editing-counts`. Raised again at ce6abdb (`find_match.rb:68`, code points 47 and 63; periodic quality).
 - Why it matters: a fix to one split or message misses its copy.
 - Fix outline: one domain helper for each, used by both callers.
 
@@ -3395,7 +3395,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Copies and placement found by the periodic review at 186ddfb
 
-- Where: `ListTree#probe` (`carat/use_cases/files/list_tree.rb` line 65) repeats `ProbePath#call` and asks the port itself, against `docs/architecture.md` section 5, queued in `file-access-tidy`; `CompleteWord` (`carat/use_cases/completion/complete_word.rb` line 47) copies the word-before-cursor slice of `show_completion.rb` lines 74 to 77, queued in `completion-tidy`; `Layout#fixed_width?` (`carat/domain/layout.rb` line 299) is used only by its test, queued in `slots-tidy`; `JumpList#step` (`carat/domain/jump_list.rb` line 55) pushes before the range check, so Ctrl-O on an empty list adds an entry, queued in `definitions-tidy`; `Icons::NAMES` (`carat/domain/icons.rb` line 13) is read nowhere and `DecodedLine` and `Cell` (`decoded_line.rb` line 15, `cell.rb` line 274) are never-changed values declared as `Struct`, queued in `theme-tidy`. Periodic quality at 186ddfb. Raised again at ce6abdb (periodic quality): `ListTree#probe` (`list_tree.rb:67`) as a blocker, queue item `periodic-blockers-b`; the `CompleteWord` copy (`complete_word.rb:47`) and `Layout#fixed_width?` (`layout.rb:299`).
+- Where: `ListTree#probe` (`carat/use_cases/files/list_tree.rb` line 65) repeats `ProbePath#call` and asks the port itself, against `docs/architecture.md` section 5, queued in `periodic-blockers-b`; `CompleteWord` (`carat/use_cases/completion/complete_word.rb` line 47) copies the word-before-cursor slice of `show_completion.rb` lines 74 to 77, queued in `completion-tidy`; `Layout#fixed_width?` (`carat/domain/layout.rb` line 299) is used only by its test, queued in `slots-tidy`; `JumpList#step` (`carat/domain/jump_list.rb` line 55) pushes before the range check, so Ctrl-O on an empty list adds an entry, queued in `definitions-tidy`; `Icons::NAMES` (`carat/domain/icons.rb` line 13) is read nowhere and `DecodedLine` and `Cell` (`decoded_line.rb` line 15, `cell.rb` line 274) are never-changed values declared as `Struct`, queued in `theme-tidy`. Periodic quality at 186ddfb. Raised again at ce6abdb (periodic quality): `ListTree#probe` (`list_tree.rb:67`) as a blocker; the `CompleteWord` copy (`complete_word.rb:47`) and `Layout#fixed_width?` (`layout.rb:299`).
 - Why it matters: two probes and two slices drift; dead surface; a jump that answers nothing moved after adding an entry; records against the Data rule.
 - Fix outline: inject the one `probe_path:` into `ListTree` and use `Domain::PathPolicy.inside?`; one domain prefix helper; delete `fixed_width?`; return -1 before the push with a `test/domain_jump_list.rb` row; test `NAMES` against each set or drop it; `Data` subclasses or the Spinel reason in the comment.
 
