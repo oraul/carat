@@ -32,9 +32,12 @@ module Carat
         end
       end
 
+      # Symbol#name, not to_s: since Spinel 59044ad58 to_s allocates a new
+      # String at each call, as CRuby's does, and the keymap looks a mode's
+      # name up on every key; name answers the symbol's one interned copy.
       #: (Symbol) -> String
       def self.name_of(mode)
-        mode.to_s
+        mode.name
       end
 
       # Whether mode is one of the three visual modes.

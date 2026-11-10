@@ -9,6 +9,7 @@ Every Spinel pitfall this project has met, once, at the pinned compiler (`SPINEL
 - No `eval`, `method_missing`, `send` or `public_send` with a computed name, `define_method` under a runtime condition, `instance_variable_get` or `instance_variable_set` with a computed name, or `const_get` with a runtime name.
 - No custom `hash` or `eql?` on a class used as a hash key, and no array as a key: keys are strings, symbols, integers, or identity.
 - String literals are frozen with no opt-out; a mutable string is `+""`, `String.new`, or `dup`. Line arrays hold only strings, and a cell array holds one type.
+- `Symbol#to_s` allocates a new frozen String at each call since Spinel 59044ad58, as CRuby's does (at 001419ff it answered one shared copy); a hot path that needs a symbol's text uses `Symbol#name`, which answers the interned copy and allocates nothing, as `Mode.name_of` does for the keymap's lookup on every key.
 - Every instance variable is assigned in `initialize`: a call through an unassigned one crashes a release build.
 - A method does not both take a block and call itself.
 - An exception raised under about 64 nested `loop do` blocks ends the program with `SystemStackError`, so a recursive parser loops with `while true`, as `Carat::Json` does.
