@@ -44,15 +44,16 @@ module Carat
       end
 
       # The selection kind of a visual mode: :charwise, :linewise,
-      # :blockwise, or :none for any other mode.
+      # :blockwise, or :none for any other mode. Compared with == rather
+      # than a case: Spinel f34005bf folds `when VISUAL` to false, reading
+      # the name as Highlight::VISUAL, an Integer (spinel-notes, Known
+      # miscompilations).
       #: (Symbol) -> Symbol
       def self.visual_kind(mode)
-        case mode
-        when VISUAL then :charwise
-        when VISUAL_LINE then :linewise
-        when VISUAL_BLOCK then :blockwise
-        else :none
-        end
+        return :charwise if mode == VISUAL
+        return :linewise if mode == VISUAL_LINE
+        return :blockwise if mode == VISUAL_BLOCK
+        :none
       end
 
       # The visual mode of a selection kind; normal mode for :none.
