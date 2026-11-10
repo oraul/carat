@@ -19,7 +19,7 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make toolchain` | Fetch, build without Ruby, and install the pinned Spinel commit under `tmp/` |
 | `make spinel-header` | Regenerate the vendored Spinel header for `SPINEL_REF` with the installed Spinel, no Ruby; run it when bumping the pin, before `make toolchain` |
 | `make toolchain-clean` | Remove `tmp/`, the Spinel checkout and the installed toolchain |
-| `make hooks` | Install the tracked commit hooks of `.githooks`, which refuse a commit message or a staged line holding a URL, an email address, a session id, a model name, or a secret; `make toolchain` runs it |
+| `make hooks` | Copy the commit hooks of `.githooks` and their scanner at the current commit under the git directory, where no checkout writes, which refuse a commit message or a staged line holding a URL, an email address, a session id, a model name, or a secret; `make toolchain` runs it |
 | `make build` | Compile `bin/*.rb` into `build/bin` and print how to run it from anywhere |
 | `make dev-build` | Compile the editor with the development flags into `build/dev/carat`, the binary CI's smoke test runs on pull requests, and check its analysis budget |
 | `make run FILE=path` | Build and run the editor on a file |

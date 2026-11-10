@@ -221,7 +221,7 @@ Decided in `docs/architecture.md` sections 2 and 13, which give the reasons.
 
 Every command is a Makefile target and this list names them all; `make help` prints each one's description and variables, and `docs/architecture.md` section 10 explains the test, analysis, and diagnose machinery.
 
-- Toolchain: `make toolchain` (the pinned `SPINEL_REF`; bump it in its own pull request after `make check`, regenerating the vendored header there with `spinel-header`, which compiles `tools/spinel/gen_respond_to_tables.rb` with the installed Spinel), `spinel-header`, `toolchain-clean`, `spinel-rev`, `doctor`, `no-cruby`, `hooks` (the tracked `.githooks` as `core.hooksPath`, which `make toolchain` runs: the commit message and the staged added lines scanned).
+- Toolchain: `make toolchain` (the pinned `SPINEL_REF`; bump it in its own pull request after `make check`, regenerating the vendored header there with `spinel-header`, which compiles `tools/spinel/gen_respond_to_tables.rb` with the installed Spinel), `spinel-header`, `toolchain-clean`, `spinel-rev`, `doctor`, `no-cruby`, `hooks` (the commit hooks of `.githooks` and the scanner at `HEAD` copied under the git directory, which `make toolchain` runs: the commit message and the staged added lines scanned).
 - Build: `make build` (release), `dev-build`, `run FILE=path`, `install`, `pack`, `clean` (never `tmp/`).
 - Test: `make test` (`build`, `test-build`, `test-run`), `test-one T=test/NAME.rb`, `lint`, `snapshots` (rewrite every `.expected`, review the diff). A test without a snapshot fails.
 - Analysis: `make diagnose` and `diagnose-one T=path` (`spinel-doctor`, must be clean), `types`, `analysis-budget`.

@@ -4061,18 +4061,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: slice 1 puts area 1 (about 8,850 lines and a 425 KB backlog) with five more areas under one 53-call cap, so the guard, the tools test, and most of the gates go unread.
 - Fix outline: weight slices by size or give area 1 its own. Queue item `review-scope`.
 
-## The commit hooks run the scanner of the worktree they commit in
-
-- Where: `.githooks/pre-commit:7` and `.githooks/commit-msg:7`, which run `sh tools/scan_text.sh` by a relative path. Security Low (3) and quality advisory of `url-email-guard`.
-- Why it matters: the hooks now come from the main worktree's `.githooks`, but git runs a hook from the top of the worktree being committed in, so a commit in a linked worktree `tmp/.NAME` runs that worktree's own scanner, the pattern the absolute `core.hooksPath` closed; only the contributor commits under the guard and it already runs branch code, so there is no practical exploit today. A worktree at a commit without `tools/scan_text.sh` refuses every commit (status 127) with the misleading message that the text holds what `CLAUDE.md` forbids.
-- Fix outline: run the scanner beside the hook, `sh "$(dirname "$0")/../tools/scan_text.sh"` (or under the parent of `git rev-parse --path-format=absolute --git-common-dir`), in both hooks, and report a status other than 0 or 1 as a scanner error, with a hooks case in `tools/tools_test.sh`. Queue item `guard-lows`.
-
-## The main worktree is taken as the parent of the common git directory
-
-- Where: the `hooks` target in the `Makefile` around line 170, `gate_origin` in `tools/gates.sh`, and the same derivation in `tools/agent_guard.sh`. Quality advisory of `url-email-guard`.
-- Why it matters: the parent of `--git-common-dir` is not the main worktree when the git directory lives elsewhere (`--separate-git-dir`, a submodule), so `core.hooksPath` would point at an untracked directory that the gate and the guard then accept.
-- Fix outline: read the main worktree from the first `worktree` line of `git worktree list --porcelain` in all three, or refuse when that parent is not the main worktree's top level, with a tools case. Queue item `guard-lows`.
-
 ## The range scan of commit messages and added lines has two copies
 
 - Where: `tools/pr_scan.sh:43` and `gate_content` in `tools/gates.sh:198-209`. Quality advisory of `url-email-guard`.
