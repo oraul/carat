@@ -19,6 +19,10 @@ Non-Goals: removing workarounds (`spinel-workarounds`); a check that compares th
 - The checkout steps move into one `define` used by both targets, so the two cannot drift.
 - Defects are re-tested with reduced probes compiled at both pins: a probe that reproduces at 001419ff and answers correctly at f34005bf marks the defect fixed; one that reproduces at both stays open; one that does not reproduce at 001419ff cannot decide, and the defect stays open for `spinel-workarounds`, which reverts the workaround in the whole program. The slab release is read in the runtime source.
 
+- The user chose to stay on f34005bf and fix carat (option b). The entry's link is typed as `PluginApi::Host`, the type every plugin's `activate` takes, since nothing reads it as a `PluginLink`; the store goes through a typed parameter because the Struct writer does not upcast. `Mode.visual_kind` uses guard returns. The raising bases that a second override turns into a versioned entry answer the failure value their overrides already use (`TextResponse.failure`, `FileInfo.missing`, `PathInfo.missing`), only where `make diagnose` reports it, the smallest workaround; changing every raising base of the 36 Host and 12 port methods is a contract change for its own proposal.
+- The `cwd` error the stopped run saw in test roots does not appear once the link compiles: the runner builds, runs, and diagnoses clean, so `FilePort#cwd` keeps its raising base.
+- The 001419ff warnings: Spinel cannot pin `Regexp` or `MatchData`, so those annotations were never applied; parameter lines type what it can and inference the rest, which is what it did before.
+
 ## Risks / Trade-offs
 
 - [Spinel's generator changes in a later bump] → the port would silently diverge. The Makefile comment and the port's header say a bump whose generator files changed ports the change in the same pull request; `git diff OLD NEW -- tools/gen_respond_to_tables.rb tools/builtin_row_gen.rb` in the checkout shows it.

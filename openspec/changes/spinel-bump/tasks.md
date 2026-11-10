@@ -19,6 +19,14 @@
 
 - [x] 4.1 Update the Makefile comment, `CLAUDE.md` Commands, `README.md`, `docs/architecture.md` where it describes the header, `docs/spinel-notes.md` Toolchain, and `docs/codebase-map.md` area 2; verify with `make docs-lint` and `make gates`.
 
-## Blocker found in 2.3
+## 5. Carat at f34005bf (the user's option b)
+
+- [x] 5.1 Type `PluginEntry#link` as `PluginApi::Host?`, stored through `PluginEntry#attach`; verify with `make build` and `make test-build`.
+- [x] 5.2 Rewrite `Mode.visual_kind` with guard returns; verify `make test-run` passes all 103 tests.
+- [x] 5.3 Make `Host#icon`, `Host#stat`, and `FilePort#stat` answer typed values; verify `make diagnose-one T=test/runner/run_all.rb` is clean.
+- [x] 5.4 Bisect the `when` probe between 001419ff and f34005bf (Spinel ade8cfe2) and record the three miscompilations in `docs/spinel-notes.md` with a `docs/backlog.md` entry.
+- [x] 5.5 Remove the 001419ff inline RBS warnings in `search.rb`, `replacement.rb`, `search_pattern.rb`, `testing.rb`, and `bench/keys.rb`; verify with `make lint`, the build, test-build, and bench logs.
+
+## Blocker found in 2.3 (resolved by section 5)
 
 - `make check` with f34005bf stops at `make build`: the C of `PluginRegistry#activate_all` (`carat/use_cases/plugins/plugin_registry.rb:231`) passes an `sp_Host *` where each plugin's `activate` expects `sp_PluginLink *`, and test roots fail on `@files.cwd` read as void (`carat/use_cases/files/delete_path.rb:36`, `rename_path.rb:37`, `ui_requests.rb:131`). Main's code compiles at 001419ff, so these are new miscompilations at the head; the run stopped for the user's choice (pin the newest commit that passes, work around them here, or hold the bump).

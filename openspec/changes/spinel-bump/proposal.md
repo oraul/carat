@@ -13,6 +13,9 @@
 - Each Spinel defect is re-tested at the new pin, and `docs/spinel-notes.md` and its `docs/backlog.md` entry record the result: the four open Known miscompilations and the array destructuring note.
 - `CLAUDE.md` (Commands, the toolchain line), `README.md`, `docs/architecture.md` where it describes the header, `docs/codebase-map.md` area 2, and the Makefile comment describe the CRuby-free regeneration.
 
+- carat compiles and passes `make check` at f34005bf through workarounds of three miscompilations new at that pin, each commented and recorded in `docs/spinel-notes.md` with a `docs/backlog.md` entry: `PluginEntry#link` is typed as the API's `Host` and stored through `PluginEntry#attach`; `Mode.visual_kind` compares with `==` instead of a `case` on constants; `Host#icon`, `Host#stat`, and `FilePort#stat` answer a failed or missing value from their base instead of raising.
+- The inline RBS warnings carat had at 001419ff are gone: the `MatchData` methods of `Search` and `Replacement` are typed by parameter lines, the `Regexp` member of `SearchPattern` is left to inference, `Testing` drops the block types Spinel does not seed, and `bench/keys.rb` drops the signatures on top-level methods, which Spinel never applied.
+
 No editor behavior changes.
 
 ## Capabilities
@@ -29,7 +32,7 @@ None. This is a toolchain change; `skip_specs` is set.
 
 - `Makefile`: `SPINEL_REF`, the toolchain comment, the shared checkout recipe, the `spinel-header` target, `.PHONY`.
 - `tools/spinel/gen_respond_to_tables.rb`: new. `tools/spinel/spinel_rt_responds_generated.h`: regenerated.
-- `docs/spinel-notes.md`, `docs/backlog.md`: the re-test results.
+- `docs/spinel-notes.md`, `docs/backlog.md`: the re-test results. The new miscompilations and their workarounds: `carat/use_cases/plugins/plugin_entry.rb`, `plugin_host.rb`, `carat/domain/mode.rb`, `carat/plugin_api.rb`, `carat/ports/file_port.rb`. The warnings: `carat/domain/search.rb`, `replacement.rb`, `search_pattern.rb`, `carat/testing.rb`, `bench/keys.rb`.
 - `CLAUDE.md`: changed (Commands names `spinel-header`, the bump instruction). `README.md`: changed (the command list). `docs/architecture.md`: changed where it describes the vendored header. `docs/codebase-map.md`: area 2.
 
 Outside the roadmap of `docs/architecture.md` section 12: a toolchain bump the user asked for, done in its own pull request as the Makefile requires.
