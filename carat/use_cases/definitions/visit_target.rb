@@ -5,6 +5,7 @@ require_relative "../../domain/definition_request"
 require_relative "../../domain/filetype"
 require_relative "../../domain/jump_list"
 require_relative "../../domain/messages"
+require_relative "../../domain/path_info"
 require_relative "../../domain/path_policy"
 require_relative "../../domain/window"
 require_relative "../../ports/file_port"
@@ -25,13 +26,12 @@ module Carat
     # position left joins the jump list once the target shows. A peek
     # shows at most PEEK_ROWS lines from the target line in a float at the
     # cursor, read from a listed buffer of the file or from the file. Every
-    # read refuses what OpenFile refuses: a directory, a file that is not
-    # regular, and a file over its limit.
+    # read refuses what OpenFile refuses (PathInfo#refusal): a directory, a
+    # file that is not regular, and a file over its limit.
     class VisitTarget
-      VIEW_LIMIT = 67_108_864
       PEEK_LIMIT = 8_388_608
       PEEK_ROWS = 12
-      private_constant :VIEW_LIMIT, :PEEK_LIMIT, :PEEK_ROWS
+      private_constant :PEEK_LIMIT, :PEEK_ROWS
 
       attr_reader :definition #: Domain::DefinitionRequest
       attr_reader :jumps #: Domain::JumpList
@@ -93,9 +93,9 @@ module Carat
           @buffers.load(listed)
           return Outcome.success("\"#{path}\" [readonly]")
         end
-        problem = refusal(path, VIEW_LIMIT)
+        problem = @probe_path.call(path).refusal(path, Domain::PathInfo::BUFFER_LIMIT)
         return Outcome.failure(problem) unless problem.empty?
-        text = read(path, VIEW_LIMIT)
+        text = read(path, Domain::PathInfo::BUFFER_LIMIT)
         return Outcome.failure("E484: Can't open file #{path}") if text.nil?
         buffer = Domain::Buffer.from_text(text, nil)
         buffer.owner = Domain::DefinitionRequest::OWNER
@@ -109,7 +109,7 @@ module Carat
       def peek(state, path, line)
         source = listed_for(path)
         if source.nil?
-          problem = refusal(path, PEEK_LIMIT)
+          problem = @probe_path.call(path).refusal(path, PEEK_LIMIT)
           return Outcome.failure(problem) unless problem.empty?
           text = read(path, PEEK_LIMIT)
           return Outcome.failure("E484: Can't open file #{path}") if text.nil?
@@ -166,17 +166,6 @@ module Carat
       def absolute(path)
         return "" if path.empty?
         path.start_with?("/") ? path : "#{@files.cwd}/#{path}"
-      end
-
-      # OpenFile's refusals of a path to read, "" for none.
-      #: (String, Integer) -> String
-      def refusal(path, limit)
-        info = @probe_path.call(path)
-        return "E484: Can't open file #{path}" unless info.exists
-        return "\"#{path}\" is a directory" if info.directory
-        return "\"#{path}\" is not a file" unless info.regular
-        return "E484: Can't open file #{path}: File too large" if info.size > limit
-        ""
       end
 
       # The file's text, nil when the read fails.
