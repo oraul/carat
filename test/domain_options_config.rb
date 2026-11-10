@@ -105,7 +105,8 @@ module DomainOptionsConfigTest
     end
     t.assert_equal(true, options.cursorline, "the shipped configuration turns the cursor line on")
 
-    # The indent guides' options: rows are [label, project lines,
+    # The indent guides' options, A character too wide or too long among
+    # them: rows are [label, project lines,
     # [indentguides, the guide character, the code drawn, problems]].
     t.table([
       ["the guides are off by default, as Neovim draws none", "", [false, "┊", 0x250a, []]],
