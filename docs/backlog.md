@@ -3907,3 +3907,39 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/use_cases/actions/motion_handler.rb:34` and `:41`, `text_object_handler.rb:35`, `search_handler.rb:35` and `:42`. Periodic quality.
 - Why it matters: five copies of one loop.
 - Fix outline: one `ActionTable` method registering names and descriptions. Backlog batches (editing and keymap copies).
+
+## A replace jump back to a scratch buffer unlists the file left
+
+- Where: `BufferList#hand_tab` in `carat/domain/buffer_list.rb:278`, reached from `WalkJumps` (`carat/use_cases/definitions/walk_jumps.rb:53`), which computes `tabbed` false for a scratch entry; `gd` may start from a scratch buffer, which `visit_target.rb:82` exempts. Quality advisory of `jump-replace-tab`.
+- Why it matters: with `option.jumptab replace`, Ctrl-O back to a scratch buffer still shown in another window unlists the file buffer it leaves, so the tab row shrinks by a file the user never closed.
+- Fix outline: return early in `hand_tab` when the target is `scratch?`, with a row in `test/adapters_definitions.rb`. Queue item `jump-list`.
+
+## The replace-jump guard is written twice
+
+- Where: `carat/use_cases/definitions/visit_target.rb:87` and `carat/use_cases/definitions/walk_jumps.rb:53`, both `if !tabbed && state.options.jumptab == Domain::Options::JUMPTAB_REPLACE`. Quality advisory of `jump-replace-tab`.
+- Why it matters: the rule for when a jump takes over a tab lives in two use cases, which can drift apart as the jump list grows.
+- Fix outline: a predicate `Options#jump_takes_tab?`, or pass the mode to `hand_tab`, so the rule lives in one place. Queue item `jump-list`.
+
+## The architecture's Options list omits jumptab and winborder
+
+- Where: `docs/architecture.md:113`, which names Carat's own `Options` members (breadcrumbs, indentguides, icons). Quality advisory of `jump-replace-tab`.
+- Why it matters: the binding description of the record misses two members a reader of the code finds.
+- Fix outline: add `jumptab` and `winborder` to the list, making room under the file's budget by pointing to the notes. Queue item `jump-list`.
+
+## The replace-jump tests leave three paths unchecked
+
+- Where: `test/adapters_definitions.rb:516` and `:519`, `test/adapters_tab_bar.rb:96`, against `docs/compatibility.md:288` and `carat/adapters/tab_bar.rb:76`. Quality advisory of `jump-replace-tab`.
+- Why it matters: no row runs `:bd` after a replace jump to prove `BufferList#replacement_for` skips the unlisted buffer; no tab-bar row has an unlisted current buffer (the `anchor = first if anchor < 0 || current.tabless?` fallback) or unlisted buffers beside tab-page numbers; and the other `jump_case` rows read tabs through `tab_names`, which re-applies `Buffer#tabless?` instead of reading the painted row, while one block repeats the setup of the back-and-forth row to read it.
+- Fix outline: a `jump_case` row running `:bd` with a second tabbed buffer; rows with current 0 and with pages 2 in the unlisted table; `r.frame.row_text(0)` in `jump_case`'s output and the separate block dropped. Queue item `jump-list`.
+
+## The tab-bar test's unlisted fixture reads ambiguously
+
+- Where: `test/adapters_tab_bar.rb:31` and `:65`. Quality advisory of `jump-replace-tab`.
+- Why it matters: the setup strips `*` then `~` but tests both flags with `start_with?` on the raw name, so `~*a.txt` or `*~a.txt` would build a buffer other than the one written; the `unlisted` comment reads as if three paths were listed twice.
+- Fix outline: read each prefix once into a flag, or document the one allowed order; reword the comment to "The paths f0.txt to f9.txt with f0.txt, f3.txt, and f9.txt left unlisted by a jump: seven tabs." Backlog batches (test hygiene).
+
+## Three comments edited by jump-replace-tab break the wrap width
+
+- Where: `carat/use_cases/buffers/list_buffers.rb:12`, `carat/adapters/tab_bar.rb:15`, `carat/domain/buffer.rb:62`. Quality advisory of `jump-replace-tab`.
+- Why it matters: the edited lines run past the files' 72-column wrap.
+- Fix outline: rewrap the paragraphs. Backlog batches (comment wraps).
