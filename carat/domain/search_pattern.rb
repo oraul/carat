@@ -8,7 +8,6 @@ module Carat
     # A Data value.
     class SearchPattern < Data.define(:source, :regexp, :size, :error)
       # @rbs @source: String
-      # @rbs @regexp: Regexp
       # @rbs @size: Integer
       # @rbs @error: String
 

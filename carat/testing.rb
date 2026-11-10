@@ -31,7 +31,7 @@ module Carat
       value ? pass(label) : fail(label, "expected true, got #{value.inspect}")
     end
 
-    #: (Class, String) { () -> untyped } -> void
+    #: (Class, String) -> void
     def assert_raises(error_class, label)
       begin
         yield
@@ -48,7 +48,7 @@ module Carat
 
     # Runs a table: each row is [label, input, expected]; the block maps an
     # input to an actual value.
-    #: (Array[Array[untyped]]) { (untyped) -> untyped } -> void
+    #: (Array[Array[untyped]]) -> void
     def table(rows)
       rows.each do |row|
         actual = yield(row[1])
