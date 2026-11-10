@@ -190,9 +190,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Nine comments break their file's wrap width
 
-- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters), advisory of the periodic quality review at 66fd52b, the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118, the class comment of `carat/ports/terminal_port.rb` (line 4, 130 characters), advisory of the periodic quality review at 5b128b5, the class comments of `carat/use_cases/plugins/window_requests.rb` (line 23, 104 characters) and `carat/adapters/frame_presenter.rb` (line 48 at 3a99ddd, 105 characters, the line about one segment per row and window), advisories of the periodic quality review at 3a99ddd, and, quality advisories of `cursor-shapes`, the class comment of `carat/use_cases/ex/set_command_handler.rb` (line 17, 94 characters) the class comment of `carat/domain/frame.rb` (line 15, a short ragged line of 37 characters), and the class comment of `carat/domain/options.rb` (line 21, 77 characters), advisory of the periodic quality review at d5036f4, and the class comment of `carat/domain/buffer_list.rb` (line 15 at 68eb750, which breaks after "The feed" at about 51 characters), advisory of the periodic quality review at 68eb750. The class comment of `carat/use_cases/ex/set_command_handler.rb` (line 16) also still says "The four search options" although it now covers `cursorline`. Line 37 of `carat/use_cases/dispatcher.rb`, once listed here, is the one-line signature of the constructor, not a comment to rewrap (quality advisory of `explorer-folder-toggle`). At 38628bb also `carat/use_cases/handle_key.rb` line 65, `carat/domain/config.rb` line 206, `carat/domain/options.rb` line 17, and `tools/agent_guard.sh` line 31 (periodic quality); also `carat/adapters/json_rpc_language_gateway.rb` line 509 and `carat/domain/language_server.rb` line 166 at b76b722; also `tools/agent_guard.sh` lines 37 to 38 and `carat/use_cases/plugins/buffer_requests.rb` line 49 (periodic quality at 847851d).
+- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters), advisory of the periodic quality review at 66fd52b, the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118, the class comment of `carat/ports/terminal_port.rb` (line 4, 130 characters), advisory of the periodic quality review at 5b128b5, the class comments of `carat/use_cases/plugins/window_requests.rb` (line 23, 104 characters) and `carat/adapters/frame_presenter.rb` (line 48 at 3a99ddd, 105 characters, the line about one segment per row and window), advisories of the periodic quality review at 3a99ddd, and, quality advisories of `cursor-shapes`, the class comment of `carat/use_cases/ex/set_command_handler.rb` (line 17, 94 characters) the class comment of `carat/domain/frame.rb` (line 15, a short ragged line of 37 characters), and the class comment of `carat/domain/options.rb` (line 21, 77 characters), advisory of the periodic quality review at d5036f4, and the class comment of `carat/domain/buffer_list.rb` (line 15 at 68eb750, which breaks after "The feed" at about 51 characters), advisory of the periodic quality review at 68eb750. Line 37 of `carat/use_cases/dispatcher.rb`, once listed here, is the one-line signature of the constructor, not a comment to rewrap (quality advisory of `explorer-folder-toggle`). At 38628bb also `carat/use_cases/handle_key.rb` line 65, `carat/domain/config.rb` line 206, `carat/domain/options.rb` line 17, and `tools/agent_guard.sh` line 31 (periodic quality); also `carat/adapters/json_rpc_language_gateway.rb` line 509 and `carat/domain/language_server.rb` line 166 at b76b722; also `tools/agent_guard.sh` lines 37 to 38 and `carat/use_cases/plugins/buffer_requests.rb` line 49 (periodic quality at 847851d); also, periodic quality at 186ddfb, `carat/use_cases/files/open_file.rb` line 20 (about 140 characters), `carat/use_cases/completion/show_completion.rb` line 25, `carat.rb` lines 2 to 6 (about 91 characters), `carat/adapters/frame_presenter.rb` lines 41, 68, and 81, `carat/adapters/status_bar.rb` line 16 (about 100 characters), `carat/adapters/painted_rows.rb` lines 9 and 16, and `carat/domain/frame.rb` line 31.
 - Why it matters: style only; the rest of each file wraps comments at the surrounding width.
-- Fix outline: rewrap the nine comments to the width of the lines around them, and say "The boolean options" in the `SetCommandHandler` class comment.
+- Fix outline: rewrap the nine comments to the width of the lines around them.
 
 ## lh time per key rose 26% at window-navigation-and-scroll
 
@@ -1852,7 +1852,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The gateway cancels a request in five copies
 
-- Where: five copies in `carat/adapters/json_rpc_language_gateway.rb`: `cancel_hover` (line 663 at 78078ad), `cancel`, `cancel_resolve`, `cancel_symbols` (line 795 at df4654c), and the definition request's cancel, plus the near copies `send_definition` and `forget_definition` (lines 692, 703, and 732 at 8d8832f), beside the shared private `cancel_request(language, id)` (line 867 at df4654c) that `parameter-info` added for `cancel_signature`; none of them calls it yet. Quality advisory in `quick-docs` and in `breadcrumbs`, raised again at 38628bb and df4654c (periodic quality) and blocking in the periodic quality review at 8d8832f. Queued in `signature-tidy`.
+- Where: five copies in `carat/adapters/json_rpc_language_gateway.rb`: `cancel_hover` (line 663 at 78078ad), `cancel`, `cancel_resolve`, `cancel_symbols` (line 795 at df4654c), and the definition request's cancel, plus the near copies `send_definition` and `forget_definition` (lines 692, 703, and 732 at 8d8832f), beside the shared private `cancel_request(language, id)` (line 867 at df4654c) that `parameter-info` added for `cancel_signature`; none of them calls it yet. Quality advisory in `quick-docs` and in `breadcrumbs`, raised again at 38628bb and df4654c (periodic quality) and blocking in the periodic quality review at 8d8832f, raised again at 186ddfb with `send_definition` copying `send_hover` (line 703) and the four request kinds building the cursor-position params and the running-server check four times. Queued in `periodic-blockers-a`.
 - Why it matters: each looks up the server, sends `$/cancelRequest`, and zeroes the id, so a fix to one (a crashed server, a stale id) can miss the others.
 - Fix outline: call the existing `cancel_request(language, id)` from the five (`cancel_request(ask.language, ask.sent_id)` then clearing `sent_id` in `cancel_symbols`), with the hover, completion, and resolve cancellation rows in `test/adapters_hover.rb` and `test/adapters_server_completions.rb` unchanged.
 
@@ -2176,7 +2176,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## OpenPalette re-parses plugin action names
 
-- Where: `plugin_of` in `carat/use_cases/discovery/open_palette.rb` line 91 against `PluginRouter` line 36, and the one-line single-use `palette_add_plugin` at line 85, at d828abb. Quality advisories in `discoverability`. Raised again at 38628bb (periodic quality). Queued in `discoverability-tidy`.
+- Where: `plugin_of` in `carat/use_cases/discovery/open_palette.rb` line 91 against `PluginRouter` line 36, and the one-line single-use `palette_add_plugin` at line 85, at d828abb. Quality advisories in `discoverability`. Raised again at 38628bb and b76b722 (periodic quality); a second entry for `palette_add_plugin` was folded in here at 186ddfb. Queued in `discoverability-tidy`.
 - Why it matters: two parsers of `plugin.<name>.<action>` can drift, and the wrapper adds a hop for one call.
 - Fix outline: have `PluginRegistry` return the enabled plugins' action names (the same method the palette entry above needs) and inline `@palette.add` into `add_plugin_actions`.
 
@@ -2365,12 +2365,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `open_scratch` comments in `carat/plugin_api.rb` line 480 (111 characters) and `carat/use_cases/plugins/window_requests.rb` line 69, at edaf2c2. Quality advisory in `layout-slots`.
 - Why it matters: they break their files' wrap width.
 - Fix outline: rewrap both at the file's width.
-
-## OpenPalette keeps a one-line private method with one caller
-
-- Where: `palette_add_plugin` in `carat/use_cases/discovery/open_palette.rb` line 85, at b76b722. Periodic quality. Queue item `discoverability-tidy`.
-- Why it matters: needless indirection around one `@palette.add` call.
-- Fix outline: inline the call in `add_plugin_actions`.
 
 ## Closing a tab page's last window keeps its hidden slots' views
 
@@ -2931,12 +2925,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: formatting costs rows times spans, up to 100 rows times thousands of token quads, on every completion selection change.
 - Fix outline: walk the quads once with a cursor, since `wrap` appends them in row order, or keep a per-row start index.
 
-## Lint does not catch a message literal in a second file or a def shadowing a reader
-
-- Where: `test/lint.rb`; instances at `carat/use_cases/plugins/plugin_router.rb` line 61 and `carat/use_cases/ex/execute_ex.rb` line 61 (the E492 literal, periodic df4654c), and the private `def hover` over `attr_reader :hover` in the gateway (blocker at 13de2674e59f). Queue item `implement-contracts-c`.
-- Why it matters: each reached the quality review as a blocker or advisory, at quality first pass 17 of 49.
-- Fix outline: a lint rule per pattern with a case each; move E492 to `Domain::Messages`.
-
 ## The documentation formatter's periodic findings
 
 - Where, at df4654c: `carat/domain/markdown_text.rb` line 299 (`inline` drops emphasis markers inside a code span; `test/domain_markdown_text.rb` line 80 asserts the garbled span), line 66 with line 76 and `carat/use_cases/docs/format_docs.rb` line 19 (the two-column fence indent spelled three times), line 202 (`heading?` and `heading_text` repeat a scan), line 35 (`rows` used only by its test, module comment at line 9 and `docs/codebase-map.md` line 602 stale), line 387 (`wrapped` mutates and returns `out`); `carat/domain/docs_text.rb` line 111 and line 83 (rows times quads, the existing scan entry); `carat/domain/buffer.rb` line 85 (`styles` a bare `Array[untyped]` shared by reference from `show_completion_docs.rb` line 111, `show_hover.rb` line 94, `pin_hover.rb` line 57, which also repeat the float buffer build); comment wraps at `show_completion_docs.rb` line 25, `show_hover.rb` line 21, `pin_hover.rb` line 15. Periodic quality, one blocking. Queue item `hover-tidy`.
@@ -3237,12 +3225,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the map is where a change starts; a missing name sends the next reader searching.
 - Fix outline: add both to their entries.
 
-## A key binding hard-coded in Ruby passes make lint
-
-- Where: `test/lint.rb`; the case was `PICK_BINDINGS` in `carat/use_cases/definitions/show_definition.rb` at ff0a0c7. Retrospective of `definitions`, queued in `implement-contracts-c`.
-- Why it matters: CLAUDE.md keeps bindings in `config/default.caratrc`, yet the literal passed three quality reviews (dfadb40, 73baf73, 25d43d8) and cost rework round 3 of 4.
-- Fix outline: fail `make lint` on a constant or literal under `carat/` pairing key notation with an action name outside `config/default.caratrc` and `carat/domain/default_config.rb`, with a test row.
-
 ## A resume of finished tasks reruns plan and scouts and grants a fourth round
 
 - Where: `.claude/workflows/deliver-change.js`, the resume and round limit. Retrospective, `extra-round`, and `overrun` notes of `definitions`, queued in `run-resume`.
@@ -3275,7 +3257,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## gd misses its own file under a relative or dotted name
 
-- Where: `carat/use_cases/definitions/visit_target.rb` line 166, `absolute`, a copy of `PluginApi::Paths.absolute` without normalizing. Periodic quality at 8d8832f, queued in `definitions-tidy`.
+- Where: `carat/use_cases/definitions/visit_target.rb` line 166, `absolute`, a copy of `PluginApi::Paths.absolute` without normalizing. Periodic quality at 8d8832f, blocking, queued in `periodic-blockers-a`.
 - Why it matters: a buffer named `./a.rb` or `lib/../a.rb` never matches its own target, so a same-file `gd` over a modified buffer is refused with E37 and an unmodified one opens a second view.
 - Fix outline: normalize both paths through one shared helper, with rows for both spellings.
 
@@ -3380,3 +3362,63 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the File finder section of `docs/compatibility.md` (line 493). Quality review of `file-finder`.
 - Why it matters: normal-mode `<C-p>` moves the cursor up a line in Neovim; the finder takes it without saying so.
 - Fix outline: note the difference in the section, removable with `keymap.normal <C-p> none`.
+
+## Eight Vim messages are spelled in more than one file
+
+- Where: `KNOWN_REPEATED_MESSAGES` in `test/lint.rb`: E32 (`file_command_handler.rb`, `save_file.rb`), E33 (`vim_pattern.rb`, `substitute_lines.rb`), E474 (`history_command_handler.rb`, `messages_command_handler.rb`), E477 (the delete, global, and substitute command handlers), E484 (`path_info.rb`, `visit_target.rb`, `open_file.rb`), E486 (`find_match.rb`, `substitute_lines.rb`), E488 (`register_count.rb`, `substitute_args.rb`, and the buffer, LspRestart, and LspStart command handlers), E939 (`register_count.rb`, `substitute_lines.rb`). Recorded by `implement-contracts-c`, queued in `messages-tidy`.
+- Why it matters: a wording fix can reach one copy and miss the others; lint refuses a new repeat but keeps these listed.
+- Fix outline: one `Domain::Messages` constant or function per message, called from every file, and the line removed from `KNOWN_REPEATED_MESSAGES` (lint fails on a listed message that no longer repeats).
+
+## An unknown file action variant writes every buffer and quits
+
+- Where: `carat/use_cases/actions/file_handler.rb` line 37: removing `file.find` turned the case's `else` into the `:write_all` branch. Periodic quality at 186ddfb, blocking, queued in `periodic-blockers-b`.
+- Why it matters: a new or misspelled variant registered in `self.register` silently writes every buffer and quits; a latent correctness defect.
+- Fix outline: restore `when :write_all then write_quit_all(state)` and let no variant fall through to it, with a row.
+
+## The package step adds a backlog entry that already exists
+
+- Where: the contributor's package step; the `palette_add_plugin` entry was recorded twice (folded at 186ddfb). Periodic quality at 186ddfb, blocking, queued in `periodic-blockers-b` (the compaction itself is `backlog-compaction`).
+- Why it matters: a repeat hides what is left and double-counts a tidy item.
+- Fix outline: have the package step search the backlog for the same file and method before adding an entry.
+
+## EditorState's class comment is wrapped unevenly
+
+- Where: `carat/domain/editor_state.rb` line 13 (101 columns, lines 14 to 16 short and long in turn). Periodic quality at 186ddfb, blocking, queued in `periodic-blockers-b`.
+- Why it matters: the layer's comments wrap at 72 columns.
+- Fix outline: rewrap the class comment.
+
+## Security Lows of the periodic review at 186ddfb
+
+- Where: `tools/spec_validate.sh` line 17 runs the unpinned `npx -y @fission-ai/openspec@latest`, Low (5), queued in `ci-hardening`; `JsonRpcLanguageGateway#path_of` (`carat/adapters/json_rpc_language_gateway.rb` line 789) keeps `.` and `..` segments, so `VisitTarget`'s lexical inside check passes a path only `ResolveInside` refuses, Low (4), queued in `bidi-controls`; `list_dir` and `read_file` in `carat/use_cases/plugins/file_requests.rb` (lines 47 and 72) take any path with no root, Low (3), queued in `file-access-tidy`.
+- Why it matters: a compromised npm release runs with push credentials; one file gets different titles and keys; a plugin joining an unchecked name reads outside the project.
+- Fix outline: pin the version in one `OPENSPEC_VERSION` variable used by CLAUDE.md, the Makefile, and the script; return `PluginApi::Paths.normalize(out)` from `path_of` with a `..` row; take a root and require `Paths.inside?` and `ResolveInside`, with rows.
+
+## Search and prompt findings of the periodic review at 186ddfb
+
+- Where: `carat/use_cases/search/preview_search.rb` line 57 sets the cursor column unclamped (a `$` match stands past the last character); `carat/domain/search_prompt.rb` line 186 `restore` clamps to the line length, not length - 1; `carat/domain/vim_pattern.rb` line 23 lists the escapes t, e, and r twice; `carat/use_cases/search/find_match.rb` line 134 `blank?` repeats `Motions.code_class(code, false) == 0`. Periodic quality at 186ddfb, queued in `search-tidy`.
+- Why it matters: two normal-mode cursors off the line, a doubled comment, a repeated class check.
+- Fix outline: clamp through `state.clamp_col`, clamp `restore` to length - 1 (0 on an empty line), each with an `editor_search` row; drop the second list; define `blank?` through `code_class`.
+
+## Bar and frame findings of the periodic review at 186ddfb
+
+- Where: `carat/adapters/status_bar.rb` line 1 requires `../plugin_api` and names none of it; `carat/adapters/frame_presenter.rb` line 299 `display_col` and `display_width` are public but used only inside; line 485 `paint_notice_row` draws the rounded border again beside `paint_border_row` (line 654); `NO_NAME` is defined in `status_bar.rb` line 47, `tab_bar.rb` line 23, and `winbar.rb` line 214. Periodic quality at 186ddfb, queued in `bars-tidy`.
+- Why it matters: a dead require, a wide public surface, two border painters and three constants to keep in step.
+- Fix outline: drop the require; move `display_width` below `private` and drop `display_col` (update the area 13 entry); one border painter with a plain flag; one `[No Name]` on `Domain::Buffer`.
+
+## Docs and spec drift found by the periodic review at 186ddfb
+
+- Where: `openspec/specs/leader-keys/spec.md` line 43 and its scenario at line 49 still say `<leader>ff` shows "Not implemented: file.find"; `docs/codebase-map.md` line 527 (PluginHost omits `follow_prompt`), 617 and 582 (the gateway entry and the area 17 Flow omit the definition request), 465 (DisplayWidth lists the dead `of_char`, omits `code_cells`), 466 (DecodedLine omits `size`), 502 (Keywords omits `value?`), 565 (Tree omits `root`, `marked`, `expanded?`, `count`, `node`). Periodic quality at 186ddfb, queued in `docs-index`.
+- Why it matters: a source-of-truth spec contradicts the code, and the map is where a change starts.
+- Fix outline: a MODIFIED delta of `leader-keys` saying `<leader>ff` opens the finder, and the names added or dropped.
+
+## Copies and placement found by the periodic review at 186ddfb
+
+- Where: `ListTree#probe` (`carat/use_cases/files/list_tree.rb` line 65) repeats `ProbePath#call` and asks the port itself, against `docs/architecture.md` section 5, queued in `file-access-tidy`; `CompleteWord` (`carat/use_cases/completion/complete_word.rb` line 47) copies the word-before-cursor slice of `show_completion.rb` lines 74 to 77, queued in `completion-tidy`; `Layout#fixed_width?` (`carat/domain/layout.rb` line 299) is used only by its test, queued in `slots-tidy`; `JumpList#step` (`carat/domain/jump_list.rb` line 55) pushes before the range check, so Ctrl-O on an empty list adds an entry, queued in `definitions-tidy`; `Icons::NAMES` (`carat/domain/icons.rb` line 13) is read nowhere and `DecodedLine` and `Cell` (`decoded_line.rb` line 15, `cell.rb` line 274) are never-changed values declared as `Struct`, queued in `theme-tidy`. Periodic quality at 186ddfb.
+- Why it matters: two probes and two slices drift; dead surface; a jump that answers nothing moved after adding an entry; records against the Data rule.
+- Fix outline: inject the one `probe_path:` into `ListTree` and use `Domain::PathPolicy.inside?`; one domain prefix helper; delete `fixed_width?`; return -1 before the push with a `test/domain_jump_list.rb` row; test `NAMES` against each set or drop it; `Data` subclasses or the Spinel reason in the comment.
+
+## Small findings of the periodic review at 186ddfb
+
+- Where: dead code `TabRequest#counted?` (`carat/use_cases/windows/tab_request.rb` line 13), `UndoTree#undo_seq` and `#redo_seq` (`carat/domain/undo_tree.rb` lines 173 and 179, with the stale comment at 185), the dead store `row = top` (`carat/domain/motions.rb` line 579), `DisplayWidth.of_char` (`display_width.rb` line 133), `DecodedLine#cells` (line 91), `Cell#same?` (line 286); `Config#binding?`'s comment (`carat/domain/config.rb` line 205) omits the leader lines and lines of other word counts it keeps; the finder's `open_path` and `report` (`carat/plugins/finder/plugin.rb` line 314) copy the explorer's (lines 277 and 534); the finder matcher's helpers (`matcher.rb` line 55) are public and `lower(b)` takes a one-letter name; `PluginRouter#answer` (line 77) hands the plugin `prompt_id` uncopied; the explorer's `@followed` (`carat/plugins/explorer/plugin.rb` line 420) stays on the old path after its parent directory is renamed; `Frame::REPLACEMENT` (`frame.rb` line 36) repeats `Utf8::REPLACEMENT`. Periodic quality at 186ddfb, queued in the backlog batches.
+- Why it matters: dead surface and map mentions, a misleading comment, two open dispatches, a strings-copied breach, a mark on a path that no longer exists.
+- Fix outline: delete the dead code and its map mentions; fix the comment; one `PluginApi` opening helper or an entry per plugin; `private_class_method` where Spinel allows and `byte`; `id.dup`; `@followed = tree.marked` after `tree.moved` with a directory-rename case; `REPLACEMENT = Utf8::REPLACEMENT`.
