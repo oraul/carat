@@ -59,7 +59,8 @@ module Carat
         end
 
         # The score of the tightest leftmost match of the query in the
-        # path's bytes from from to size, -1 when there is none.
+        # path's bytes from from to size, -1 when there is none; a match
+        # whose gaps cost more than its points scores 0, still a match.
         #: (String, String, Integer, Integer) -> Integer
         def self.span_score(query, path, from, size)
           qlen = query.bytesize
@@ -72,7 +73,8 @@ module Carat
           return -1 if q < qlen
           stop = j - 1
           start = tighten(query, path, stop)
-          rate(query, path, start, stop) - GAP * (stop - start + 1 - qlen)
+          points = rate(query, path, start, stop) - GAP * (stop - start + 1 - qlen)
+          points < 0 ? 0 : points
         end
 
         # Walks back from stop, the last byte of a match, matching the

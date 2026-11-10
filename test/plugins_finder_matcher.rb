@@ -32,7 +32,9 @@ module PluginsFinderMatcherTest
       ["bytes across directories match", ["lbr", "lib/beta.rb"], true],
       ["bytes out of order do not match", ["teb", "lib/beta.rb"], false],
       ["a byte the path lacks does not match", ["z", "lib/beta.rb"], false],
-      ["a query longer than the path does not match", ["abcdef", "abc"], false]
+      ["a query longer than the path does not match", ["abcdef", "abc"], false],
+      ["a long gap still matches", ["ab", "xaccccccccccccccccccccccccccccccb"], true],
+      ["a long gap across directories still matches", ["ab", "xaccccccccccccccccccccccccccccccc/b.rb"], true]
     ]) do |row|
       score_of(row[0], row[1]) >= 0
     end
@@ -50,6 +52,7 @@ module PluginsFinderMatcherTest
       above?(row[0], row[1], row[2])
     end
 
+    t.assert_equal([256, 0], [score_of("ab", "xaccccccccccccccccccccccccccccccb"), score_of("ab", "xaccccccccccccccccccccccccccccccc/b.rb")], "a match whose gaps outweigh its points scores 0, plus the name bonus in the name")
     t.assert_equal([7, 0, 99_999], [M.index_of(M.key(5, 3, 7)), M.index_of(M.key(0, 2000, 0)), M.index_of(M.key(1, 1, 99_999))], "a key keeps its index")
     t.assert_equal([0, 4, 4], [M.name_start("a.rb"), M.name_start("lib/a.rb"), M.name_start("lib/")], "the file name starts after the last slash")
 
