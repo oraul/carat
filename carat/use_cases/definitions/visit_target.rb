@@ -1,3 +1,4 @@
+require_relative "../../plugin_api"
 require_relative "../../domain/editor_state"
 require_relative "../../domain/buffer"
 require_relative "../../domain/buffer_list"
@@ -74,7 +75,7 @@ module Carat
         from_row = window.cursor.row
         from_col = window.cursor.col
         outcome = Outcome.none
-        unless absolute(current.path_text) == path || (current.scratch? && current.owner == Domain::DefinitionRequest::OWNER && current.title == path)
+        unless absolute(current.path_text) == absolute(path) || (current.scratch? && current.owner == Domain::DefinitionRequest::OWNER && current.title == path)
           return Outcome.failure(Domain::Messages::E37) if current.modified? && !current.scratch?
           outcome = inside?(path) ? @open_file.call(state, open_path(path)) : view(state, path)
           return outcome unless outcome.ok
@@ -138,7 +139,7 @@ module Carat
         i = 0
         while i < @buffers.count
           candidate = @buffers.buffer_at(i)
-          return candidate if !candidate.scratch? && absolute(candidate.path_text) == path
+          return candidate if !candidate.scratch? && absolute(candidate.path_text) == absolute(path)
           i += 1
         end
         @buffers.scratch_for(Domain::DefinitionRequest::OWNER, path)
@@ -162,10 +163,13 @@ module Carat
         Domain::PathPolicy.inside?(cwd, path) && @resolve_inside.call(cwd, path, path).ok
       end
 
+      # The normalized absolute form of a path, "." and ".." resolved, so
+      # a buffer named ./a.rb is the file of a target /project/a.rb; ""
+      # for a buffer with no file.
       #: (String) -> String
       def absolute(path)
         return "" if path.empty?
-        path.start_with?("/") ? path : "#{@files.cwd}/#{path}"
+        PluginApi::Paths.absolute(@files.cwd, path)
       end
 
       # The file's text, nil when the read fails.

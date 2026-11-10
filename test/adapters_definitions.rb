@@ -94,6 +94,12 @@ module AdaptersDefinitionsTest
   # The rig with more lines in the user's configuration.
   #: (Hash[String, untyped], String) -> Rig
   def self.rig_with(capabilities, user)
+    rig_opening(capabilities, user, "a.rb")
+  end
+
+  # The rig over a.rb opened under the name given.
+  #: (Hash[String, untyped], String, String) -> Rig
+  def self.rig_opening(capabilities, user, name)
     files = Carat::Doubles::MemoryFiles.new
     files.move_to("/project")
     files.put("a.rb", "def greet\n  puts 1\nend\ngreet\n")
@@ -110,7 +116,7 @@ module AdaptersDefinitionsTest
     assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: config, processes: processes, messages: messages, completions: completions, plugin_list: [])
     r = Rig.new(files: files, terminal: terminal, processes: processes, messages: messages, assembly: assembly)
     assembly.screen_presenter.enter
-    assembly.open("a.rb")
+    assembly.open(name)
     r.wait
     init = { "capabilities" => capabilities, "serverInfo" => { "name" => "ruby-lsp" } }
     messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => 1, "result" => init }))
@@ -252,6 +258,19 @@ module AdaptersDefinitionsTest
     r.type("x")
     asked(r, "gd", location("/project/b.rb", 1, 0))
     t.assert_equal(["E37: No write since last change (add ! to override)", "a.rb 3:0"], [r.message, r.where], "A modified buffer refuses a jump to another file")
+
+    # The current file named with dot segments is the target's file,
+    # modified or not.
+    names = ["./a.rb", "lib/../a.rb"]
+    names.each do |name|
+      [false, true].each do |modified|
+        r = rig_opening({ "definitionProvider" => true }, "", name)
+        r.type("3j")
+        r.type("x") if modified
+        asked(r, "gd", location("/project/a.rb", 0, 4))
+        t.assert_equal(["#{name} 0:4", 1, false], [r.where, r.assembly.buffers.count, r.message.start_with?("E37")], "A target in the current file named with dot segments moves the cursor: #{name}, modified #{modified}")
+      end
+    end
 
     # Stale answers.
     r = defining

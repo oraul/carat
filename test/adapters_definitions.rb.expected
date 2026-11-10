@@ -12,6 +12,10 @@ ok   a location link goes to its selection range, the column clamped to the line
 ok   a character after multibyte characters lands on its code point column
 ok   An empty answer shows No locations found
 ok   A modified buffer refuses a jump to another file
+ok   A target in the current file named with dot segments moves the cursor: ./a.rb, modified false
+ok   A target in the current file named with dot segments moves the cursor: ./a.rb, modified true
+ok   A target in the current file named with dot segments moves the cursor: lib/../a.rb, modified false
+ok   A target in the current file named with dot segments moves the cursor: lib/../a.rb, modified true
 ok   A new gd cancels the request in flight
 ok   an answer to a replaced ask is dropped though it arrives before the next request goes out
 ok   An answer after the cursor moved is dropped
@@ -39,4 +43,4 @@ ok   A refused Ctrl-O leaves the jump list as it was
 ok   Ctrl-I after a refused Ctrl-O returns to the start
 ok   Ctrl-O drops an entry whose buffer is gone and stays
 ok   Ctrl-O clamps the column to a line shortened since, in code points
-adapters_definitions: 41 passed, 0 failed
+adapters_definitions: 45 passed, 0 failed
