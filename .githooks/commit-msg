@@ -1,0 +1,13 @@
+#!/bin/sh
+# The commit-msg hook make hooks installs (core.hooksPath .githooks):
+# refuses a message holding a URL, an email address but the trailer's, a
+# session id, a model name, or a secret (tools/scan_text.sh). The diff git
+# commit --verbose appends below its scissors line is left out.
+msg=$(sed '/^# -\{24\} >8 -\{24\}$/,$d' "$1")
+out=$(printf '%s\n' "$msg" | sh tools/scan_text.sh --where "commit message")
+status=$?
+[ -z "$out" ] || printf '%s\n' "$out" >&2
+[ "$status" -eq 0 ] || {
+  echo "commit-msg: the message holds text CLAUDE.md forbids; remove each hit above" >&2
+  exit 1
+}

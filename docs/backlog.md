@@ -196,7 +196,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Nine comments break their file's wrap width
 
-- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters), advisory of the periodic quality review at 66fd52b, the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118, the class comment of `carat/ports/terminal_port.rb` (line 4, 130 characters), advisory of the periodic quality review at 5b128b5, the class comments of `carat/use_cases/plugins/window_requests.rb` (line 23, 104 characters) and `carat/adapters/frame_presenter.rb` (line 48 at 3a99ddd, 105 characters, the line about one segment per row and window), advisories of the periodic quality review at 3a99ddd, and, quality advisories of `cursor-shapes`, the class comment of `carat/use_cases/ex/set_command_handler.rb` (line 17, 94 characters) the class comment of `carat/domain/frame.rb` (line 15, a short ragged line of 37 characters), and the class comment of `carat/domain/options.rb` (line 21, 77 characters), advisory of the periodic quality review at d5036f4, and the class comment of `carat/domain/buffer_list.rb` (line 15 at 68eb750, which breaks after "The feed" at about 51 characters), advisory of the periodic quality review at 68eb750. Line 37 of `carat/use_cases/dispatcher.rb`, once listed here, is the one-line signature of the constructor, not a comment to rewrap (quality advisory of `explorer-folder-toggle`). At 38628bb also `carat/use_cases/handle_key.rb` line 65, `carat/domain/config.rb` line 206, `carat/domain/options.rb` line 17, and `tools/agent_guard.sh` line 31 (periodic quality); also `carat/adapters/json_rpc_language_gateway.rb` line 509 and `carat/domain/language_server.rb` line 166 at b76b722; also `tools/agent_guard.sh` lines 37 to 38 and `carat/use_cases/plugins/buffer_requests.rb` line 49 (periodic quality at 847851d); also, periodic quality at 186ddfb, `carat/use_cases/files/open_file.rb` line 20 (about 140 characters), `carat/use_cases/completion/show_completion.rb` line 25, `carat.rb` lines 2 to 6 (about 91 characters), `carat/adapters/frame_presenter.rb` lines 41, 68, and 81, `carat/adapters/status_bar.rb` line 16 (about 100 characters), `carat/adapters/painted_rows.rb` lines 9 and 16, and `carat/domain/frame.rb` line 31.
+- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters), advisory of the periodic quality review at 66fd52b, the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118, the class comment of `carat/ports/terminal_port.rb` (line 4, 130 characters), advisory of the periodic quality review at 5b128b5, the class comments of `carat/use_cases/plugins/window_requests.rb` (line 23, 104 characters) and `carat/adapters/frame_presenter.rb` (line 48 at 3a99ddd, 105 characters, the line about one segment per row and window), advisories of the periodic quality review at 3a99ddd, and, quality advisories of `cursor-shapes`, the class comment of `carat/use_cases/ex/set_command_handler.rb` (line 17, 94 characters) the class comment of `carat/domain/frame.rb` (line 15, a short ragged line of 37 characters), and the class comment of `carat/domain/options.rb` (line 21, 77 characters), advisory of the periodic quality review at d5036f4, and the class comment of `carat/domain/buffer_list.rb` (line 15 at 68eb750, which breaks after "The feed" at about 51 characters), advisory of the periodic quality review at 68eb750. Line 37 of `carat/use_cases/dispatcher.rb`, once listed here, is the one-line signature of the constructor, not a comment to rewrap (quality advisory of `explorer-folder-toggle`). At 38628bb also `carat/use_cases/handle_key.rb` line 65, `carat/domain/config.rb` line 206, `carat/domain/options.rb` line 17, and `tools/agent_guard.sh` line 31 (periodic quality); also `carat/adapters/json_rpc_language_gateway.rb` line 509 and `carat/domain/language_server.rb` line 166 at b76b722; also `tools/agent_guard.sh` lines 37 to 38 and `carat/use_cases/plugins/buffer_requests.rb` line 49 (periodic quality at 847851d); also, periodic quality at 186ddfb, `carat/use_cases/files/open_file.rb` line 20 (about 140 characters), `carat/use_cases/completion/show_completion.rb` line 25, `carat.rb` lines 2 to 6 (about 91 characters), `carat/adapters/frame_presenter.rb` lines 41, 68, and 81, `carat/adapters/status_bar.rb` line 16 (about 100 characters), `carat/adapters/painted_rows.rb` lines 9 and 16, and `carat/domain/frame.rb` line 31. Raised again at 9a92265 (#99), adding `carat/use_cases/files/open_file.rb` line 20, `list_buffers.rb` lines 12 and 16, and `buffer_command_handler.rb` line 15.
 - Why it matters: style only; the rest of each file wraps comments at the surrounding width.
 - Fix outline: rewrap the nine comments to the width of the lines around them.
 
@@ -268,7 +268,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Visual r over an illegal byte has no test row
 
-- Where: the `:replace` branch of `ascii_recase` in `carat/domain/operators.rb` (line 244, `char * text.length` over text that is not UTF-8), while `~`, `U`, and `u` have rows in `test/editor_registers.rb` (lines 49 to 51). Advisory of the periodic quality review at 6ea61b1.
+- Where: the `:replace` branch of `ascii_recase` in `carat/domain/operators.rb` (line 243, `char * text.length` over text that is not UTF-8), while `~`, `U`, and `u` have rows in `test/editor_registers.rb` (lines 49 to 51). Advisory of the periodic quality review at 6ea61b1.
 - Why it matters: an untested branch on hostile text is where the next crash on an illegal byte would hide.
 - Fix outline: add a `v$r` row over a line with an illegal byte.
 
@@ -328,7 +328,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Operate passes the search outcome through an instance variable
 
-- Where: `Operate#search_motion` in `carat/use_cases/operate.rb` (line 131), which sets `@notice` deep in `motion_for` for `call` to read. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
+- Where: `Operate#search_motion` in `carat/use_cases/operate.rb` (line 131), which sets `@notice` deep in `motion_for` for `call` to read. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88. Raised again at 9a92265 (#99): the same side channel in `walk_history.rb` line 32.
 - Why it matters: the outcome travels by a side channel in a use case instead of a return value, which is harder to follow and easy to leave stale when another path through `motion_for` is added.
 - Fix outline: return the hit's outcome with the operand as a small result value, or have the operator handler run `FindMatch` first and pass the hit in. Queued in `search-structure`.
 
@@ -748,15 +748,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The content gate skips files git treats as binary
 
-- Where: `tools/gates.sh` line 126 (`gate_content` reads `git log -p`, which prints no lines for a file with a NUL byte or one `.gitattributes` marks `-diff` or `binary`, and the merge gates run from the branch's checkout, so the branch can set them). Security Low (6) of `backup-secret-scan`; raised to periodic security Medium (7) at b0dd342 (`tools/gates.sh` line 179).
+- Where: `tools/gates.sh` line 126 (`gate_content` reads `git log -p`, which prints no lines for a file with a NUL byte or one `.gitattributes` marks `-diff` or `binary`, and the merge gates run from the branch's checkout, so the branch can set them). Security Low (6) of `backup-secret-scan`; raised to periodic security Medium (7) at b0dd342 (`tools/gates.sh` line 179). Since `url-email-guard`, `tools/scan_text.sh` prints a `note:` line naming such a file in the content gate's output ("a binary file, not scanned"), but does not refuse it; the refusal stays here.
 - Why it matters: a committed secret in such a file passes the secret, URL, email, and model checks.
 - Fix outline: pass `--text` and `--no-textconv` to the `git log -p` scan, or refuse an added binary file and a `.gitattributes` change setting `diff`, `binary`, or `textconv` unless a reviewer allows it, with a `tools/tools_test.sh` case. Queued in `content-gate-gaps`.
-
-## The URL, email, and session checks print the whole matching line
-
-- Where: `tools/rules.sh` line 34 (`scan` prints each hit's full line for the URL, email, and session checks, while the secret checks print a label only). Security Low (5) of `backup-secret-scan`.
-- Why it matters: a credential inside a URL (a token before the host) appears in the gate output, the stage logs, and CI.
-- Fix outline: mask whatever matches `KEY_RE`, `TOKEN_RE`, or `ASSIGN_RE` with `[secret]` (a sed replacement) before printing any hit, with a `tools/tools_test.sh` case.
 
 ## The close note names the backup when there was none
 
@@ -781,18 +775,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/run_state.sh` line 716 (`$(echo $refs)` outside the line the SC2086 disable covers). Quality advisory of `backup-secret-scan`.
 - Why it matters: a glob character in a ref name would expand against the working directory, and the disable comment hides the intent.
 - Fix outline: print the names with `printf '%s ' $refs` under the disable, or `tr '\n' ' '`.
-
-## The content gate reads an added line starting with ++ as a path header
-
-- Where: `tools/gates.sh` line 127 (an added line whose text starts with `++ ` shows as `+++ ` in the diff and is taken for a path header, so the content gate never scans it). Periodic security Low (8) at d386c74.
-- Why it matters: a secret, URL, email address, or model name on such a line passes the gate into a public branch.
-- Fix outline: treat `+++ ` as a header only between a `diff --git` line and the first `@@` hunk line, with a `tools/tools_test.sh` case. Queued in `content-gate-gaps`.
-
-## The .env check misses a path git quotes
-
-- Where: `tools/gates.sh` line 129 (git quotes a path with a non-ASCII or special byte, as `"\303\251/.env"`, so the `.env` match fails on an added `.env` under such a directory). Periodic security Low (7) at d386c74.
-- Why it matters: an `.env` file with secrets reaches the branch unrefused.
-- Fix outline: list names with `git -c core.quotePath=false` and `-z` (or unquote them) before matching, with a `tools/tools_test.sh` case. Queued in `content-gate-gaps`.
 
 ## No case covers a secret only in a merge resolution
 
@@ -824,12 +806,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: in `backup-secret-scan` 2 of 2 backup pushes were refused and 0 backup refs reached origin, so the step spent tokens and changed no decision, and the run state holds no backup record to tell the report so; `docs-currency` made 7 more attempts, and 0 of 9 across the two runs reached origin (its retrospective); in `buffer-list` the implement and fix pushes all failed, 0 `refs/backup` refs reached origin, and 7 commits stayed local until the package push (retrospective note 11); in `leader-layout` 2 of 2 backup tries were refused (retrospective note 8), so no backup has reached origin in four runs; in `lsp-diagnostics` 8 attempts over 3 contributor starts were refused and no `refs/backup` ref reached origin (retrospective note 18), and in `diagnostics-display` all 6 implement commits and 3 more tries were refused, no restore being used; the first backup of `partial-results` was refused the same way; in `check-isolation` 3 of 3 backup pushes were refused, and 7 runs' retrospectives have recorded the same proposal. Kept here by the user's earlier decision, which the user may want to revisit; queued in `backup-records`.
 - Fix outline: record a refused backup push once in the run state, make no later backup attempt in that run, and have the report say no backup exists, with a `tools/tools_test.sh` case for a refused push.
 - Raised again at 6a0db20 (periodic quality, note 19).
-
-## Pull requests are created with a session-link footer the settings turn off
-
-- Where: step 4 of the package step in `.claude/agents/contributor.md`, which opens the pull request with the GitHub tools, and its step 5 removal edit; `.claude/settings.json` sets the attribution `pr` empty and `sessionUrl` false. Retrospective proposal of `leader-layout`. Raised again at bff9a02 (#96): the live pull request body gained a footer with a session link after creation; queue item `merge-gate-tidy`.
-- Why it matters: 10 of 53 run states record a pull request created with a footer holding a session link (pull requests 57 to 60, 64, 73, 76, 77, and 81) despite main's attribution settings, each needing a removal edit; the edit history keeps the link, against the hard rule that no session URL appears in GitHub activity. The footer is added by the pull request tool outside the repository, so no repository change has prevented it.
-- Fix outline: a merge-gate acceptance check that refuses a pull request body or squash message holding a session link, beside the package step's immediate removal edit (step 5), each removal reported. The main session concluded at `feedback` that the footer cannot be fixed from the repository (it reached 10 of 53 pull requests with main's attribution settings on), so only the package step's removal remains, which the user confirmed as standing at `queue-handoff`; the entry stays here, out of the queue, until a repository-side cause is found.
 
 ## The roadmap's progress is readable nowhere in one place
 
@@ -905,7 +881,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Operate and RepeatLast each copy EditorState#clamp_col
 
-- Where: the private `clamp(state, row, col)` in `carat/use_cases/operate.rb` (line 202 at `theme-tokens`) and `carat/use_cases/repeat_last.rb` (line 117), each `EditorState#clamp_col` in `carat/domain/editor_state.rb` (line 94) line for line. Periodic quality at 4c65f4e. Raised again at ce6abdb (`operate.rb:202`, `repeat_last.rb:116`; periodic quality), queue item `editing-counts`.
+- Where: the private `clamp(state, row, col)` in `carat/use_cases/operate.rb` (line 202 at `theme-tokens`) and `carat/use_cases/repeat_last.rb` (line 117), each `EditorState#clamp_col` in `carat/domain/editor_state.rb` (line 97) line for line. Periodic quality at 4c65f4e. Raised again at ce6abdb (`operate.rb:202`, `repeat_last.rb:116`; periodic quality), queue item `editing-counts`.
 - Why it matters: three copies of one clamp must change together, and a fix to the domain's misses the two use cases.
 - Fix outline: call `state.clamp_col(row, col)` at the six call sites and delete both private methods. Listed in the queue's backlog item.
 
@@ -2153,7 +2129,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The merge record trusts the merger's reply fields
 
-- Where: the merge and CI phase records of `.claude/workflows/deliver-change.js`; in `parameter-info` (#78) the reply swapped the pushed head and the squash commit, so 3 phases were recorded at a commit not on main (retrospective). Queued in `merge-gate-tidy`.
+- Where: the merge and CI phase records of `.claude/workflows/deliver-change.js`; in `parameter-info` (#78) the reply swapped the pushed head and the squash commit, so 3 phases were recorded at a commit not on main (retrospective). Queued in `merge-gate-tidy`. Raised again at 9a92265 (#99 retro note 6).
 - Why it matters: run state and history rows point at the wrong commits, 1 of the last 4 merges.
 - Fix outline: take each commit from the run state or git (the squash commit reachable from main, the CI head equal to the pushed head), with a tools_test case feeding a swapped reply.
 
@@ -2420,7 +2396,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The architecture and the queue sit at their byte budgets
 
-- Where: `BUDGETS` in `tools/docs_lint.sh` line 44: `docs/architecture.md` 88,058 of 88,064 bytes, at b76b722. Periodic quality. Queue items `breadcrumbs` and `architecture-drift`. At ce6abdb (periodic quality) the architecture is 88,063 of 88,064 bytes, so every spec change rewords text it does not change to fit, as #93 did; queue item `docs-index`. Raised again at be4b63a, 88,061 of 88,064 bytes (owner `docs-index`).
+- Where: `BUDGETS` in `tools/docs_lint.sh` line 44: `docs/architecture.md` 88,058 of 88,064 bytes, at b76b722. Periodic quality. Queue items `breadcrumbs` and `architecture-drift`. At ce6abdb (periodic quality) the architecture is 88,063 of 88,064 bytes, so every spec change rewords text it does not change to fit, as #93 did; queue item `docs-index`. Raised again at be4b63a, 88,061 of 88,064 bytes (owner `docs-index`). At 9a92265 `.claude/agents/contributor.md` had 29 bytes left of 8,192 (#99 note 32); `url-email-guard` filled it to 8,192 adding `make hooks`.
 - Why it matters: the next change adding a sentence to the architecture fails `docs-lint` in its check stage.
 - Fix outline: trim history and detail the archived designs already hold to restore working headroom.
 - Raised again at 6a0db20 (periodic quality, note 22): `docs/architecture.md` is 88,061 of 88,064 bytes (`tools/docs_lint.sh:44`). Owner: queue item `docs-index`.
@@ -2536,7 +2512,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## A block's top-left column is computed in six places
 
-- Where: `carat/domain/selection_cut.rb` line 30 and `carat/use_cases/visual/` `yank_selection.rb` line 39, `shift_selection.rb` line 22, `change_selection.rb` line 53, `put_over_selection.rb` line 39, `insert_at_selection.rb` line 46 at 847851d. Periodic quality. Queue item: backlog items, copies.
+- Where: `carat/domain/selection_cut.rb` line 25 and `carat/use_cases/visual/` `yank_selection.rb` line 32, `shift_selection.rb` line 17, `change_selection.rb` line 44, `put_over_selection.rb` line 39, `insert_at_selection.rb` line 40 at 9a92265. Periodic quality. Queue item: backlog items, copies.
 - Why it matters: architecture section 5 moves logic several use cases share into the domain.
 - Fix outline: one `Block` method beside `reaching_rows`, called from the six places.
 
@@ -2774,12 +2750,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a header that misleads a reader, one rule in two places, and a failure message naming the wrong cause.
 - Fix outline: list both sections in the header; define the refspec once in `tools/rules.sh` for the gates, the guard's copy under an equality case; say "grew or were not measured".
 
-## The live pull request body is not gated
-
-- Where: the `pr-body` gate of `tools/gates.sh` checks the body file in the run state, not the pull request as it stands; retrospective of `feedback` (#83). Queue item `merge-gate-tidy`.
-- Why it matters: a session-link footer appeared after the pull request opened at #83 and was removed only because the contributor re-read it; footers reached 10 of 53 earlier pull requests.
-- Fix outline: the merge gates compare the live body with the run state's body file and refuse a difference, with a case.
-
 ## The planner's backlog text reaches the package unchecked
 
 - Where: the package step of `.claude/workflows/deliver-change.js` copies the planner's backlog text before `make docs-lint` sees it; retrospective of `feedback` (#83). Queue item `phase-shares`.
@@ -2830,7 +2800,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The backlog has no byte budget
 
-- Where: `docs/backlog.md` (301 KB, 471 entries at 5e4c140, up from 151 KB over 20 changes) and `BUDGETS` in `tools/docs_lint.sh`. Periodic quality. Queue item `docs-index`.
+- Where: `docs/backlog.md` (301 KB, 471 entries at 5e4c140, up from 151 KB over 20 changes; 424,794 bytes at 9a92265) and `BUDGETS` in `tools/docs_lint.sh`. Periodic quality. Queue item `docs-index`. Duplicates for `backlog-compaction` (#99 notes 12 and 33), by their lines at 9a92265: 3976 repeats 3497, 2753 repeats 215, 3857 repeats 2313, 3851 repeats 2028, and the Makefile's timed compile is entered three times (2292, 3433, 3983).
 - Why it matters: no agent can read it whole to find fixed entries or avoid recording a finding twice.
 - Fix outline: give it a budget in `BUDGETS` and fold its entries per area, removing those no longer true.
 
@@ -3016,7 +2986,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## A typed count grows without a cap
 
-- Where: `digit` in `carat/domain/command_grammar.rb` line 103 and `take` line 191; `Operators.put` in `carat/domain/operators.rb` line 44; the two `MAX_COUNT` copies in `RegisterCount` and `SubstituteArgs`; at 3895e21. Periodic quality blocking. Queue item `editing-counts`.
+- Where: `digit` in `carat/domain/command_grammar.rb` line 103 and `take` line 191; `Operators.put` in `carat/domain/operators.rb` line 44; the two `MAX_COUNT` copies in `RegisterCount` and `SubstituteArgs`; at 3895e21. Periodic quality blocking. Queue item `editing-counts`. Raised again at 9a92265 (#99 note 35), which adds `carat/use_cases/visual/put_over_selection.rb` line 124.
 - Why it matters: the count is multiplied by the operator count with no limit, so a long count before `p` freezes the editor or exhausts memory, and past 19 digits the 64-bit count wraps.
 - Fix outline: cap counts at Vim's 999999999 through one shared constant replacing both `MAX_COUNT` copies; refuse a put past a limit as Neovim's E1240 does; `domain_grammar` and put rows.
 
@@ -3484,7 +3454,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## A security review stays current after later instruction-file commits
 
-- Where: `tools/gates.sh:112` (`settled_at`). Periodic security Low (3) at ce6abdb; queue item `content-gate-gaps`.
+- Where: `tools/gates.sh:112` (`settled_at`). Periodic security Low (3) at ce6abdb; queue item `content-gate-gaps`. Raised again at 9a92265 (#99): the path list of `tools/gates.sh` line 112 is copied as `TEST_ONLY` in `tools/run_state.sh` line 201, so a fix must change both.
 - Why it matters: commits after the review that change `openspec/`, `docs/queue.md`, `docs/backlog.md`, or `docs/goals.md` keep the review current, though agents read those paths as instructions, so text added there reaches later agents unreviewed.
 - Fix outline: narrow the exemption to the archive move, the specs synced from the reviewed change, and `docs/metrics.tsv`, or have the reviewer re-read those paths; a `tools/tools_test.sh` case.
 
@@ -3562,7 +3532,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Operate dispatches with case on constants the pinned Spinel may fold
 
-- Where: `carat/use_cases/operate.rb` line 65, `case`/`when` on `Domain::OperatorKind::DELETE` and `::INDENT`, String constants whose bare names are Integer constants elsewhere (`Key::DELETE`, `RcParser::DELETE`, `FormatDocs::INDENT`). Periodic quality blocking at e49f63d.
+- Where: `carat/use_cases/operate.rb` line 65, `case`/`when` on `Domain::OperatorKind::DELETE` and `::INDENT`, String constants whose bare names are Integer constants elsewhere (`Key::DELETE`, `RcParser::DELETE`, `FormatDocs::INDENT`). Periodic quality blocking at e49f63d. Raised again at 9a92265 (#99 note 34).
 - Why it matters: `docs/spinel-notes.md` (Known miscompilations, f34005bf) says the pinned Spinel folds this shape to false; it passes only by how the name resolves today, so a rename elsewhere silently breaks delete or indent.
 - Fix outline: dispatch with `==` guards as `Mode.visual_kind` does, citing the note, with a row per operator kind. Queue item: `periodic-blockers-b`.
 
@@ -3958,7 +3928,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## carat.rb misses two production files
 
-- Where: `carat.rb:2`; `carat/domain/border_style.rb`, `carat/use_cases/actions/search_handler.rb`. Periodic quality.
+- Where: `carat.rb:2`; `carat/domain/border_style.rb`, `carat/use_cases/actions/search_handler.rb`. Periodic quality. Raised again at 9a92265 (#99): `carat/adapters/indent_guides.rb` is missing too, making three.
 - Why it matters: the header promises every file once; both are reached only transitively.
 - Fix outline: add both in layer order; `test/lint.rb` checks every production file is required. Queue item `docs-index`.
 
@@ -4012,3 +3982,111 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/use_cases/buffers/switch_buffer.rb:37`, against `docs/compatibility.md:292`. Quality advisory of `jump-list`.
 - Why it matters: the compatibility rows promise E85 for a list without file buffers, but no test runs that branch, so a regression there goes unseen.
 - Fix outline: a row in `test/editor_buffers.rb` running `:bfirst` and `:blast` with only a scratch buffer, and with no file buffer, listed. Queue item `buffer-list-tidy`.
+
+## The content gates drop the scanner's exit status
+
+- Where: `report()` in `tools/gates.sh:198` (also 209 and 503) and `tools/docs_lint.sh:79`. Quality advisory of `url-email-guard`.
+- Why it matters: `report()` reads only the scanner's output, so a scanner error (exit 2 from `mktemp`, `awk`, or a missing file) leaves the content, pr-body, and docs content checks printing ok, while the hooks and `tools/pr_scan.sh` do check the status.
+- Fix outline: keep the scanner's status (run it into a variable, not through `sort` in a pipeline) and call `bad()` when it is 2, with a `tools/tools_test.sh` case. Queue item `content-gate-gaps`.
+
+## commit-msg scans the editor template's identity comments
+
+- Where: `.githooks/commit-msg:6`. Quality advisory of `url-email-guard`.
+- Why it matters: git runs `commit-msg` before it strips the editor template's comments, so a commit made in the editor whose template carries a `# Author:` or `# Committer:` line with an address (author not the committer, or an implicit identity) is refused for an email the commit will not hold.
+- Fix outline: also drop the template's `# Author:` and `# Committer:` lines (or follow git's cleanup mode) before scanning, with a hooks case. Queue item `content-gate-gaps`.
+
+## The content gate's header comment has a doubled close
+
+- Where: `tools/gates.sh:13`. Quality advisory of `url-email-guard`.
+- Why it matters: the header reads `a literal password or token); (tools/scan_text.sh); no commit adds`, a doubled close from the inserted line, which misreads.
+- Fix outline: write `a literal password or token), through tools/scan_text.sh; no commit adds`. Queue item: backlog batches (comment wraps).
+
+## The record phase is a separate agent start
+
+- Where: the record start of `.claude/workflows/deliver-change.js`; retrospective note 7 of `jump-list`.
+- Why it matters: it runs one queued shell line for 641 to 1,170 output tokens and 1 or 2 calls in each of the last 10 rows, while the close start already runs a record line of the same kind.
+- Fix outline: none prescribed; accepted when 3 runs have no record phase and `show` lists the same keys. Queue item `phase-shares`.
+
+## The CI scope counts agent and workflow files as documentation
+
+- Where: `documentation()` in `tools/ci_scope.sh:39`, and the `scope_case` row at `tools/tools_test.sh:100`. Periodic security Low (4) at 9a92265.
+- Why it matters: a pull request touching only agent hooks, `.claude/settings.json`, or the workflows skips CI's tools-test, though `tools/tools_test.sh` reads them.
+- Fix outline: keep only the generated OpenSpec commands and skills in the documentation case, with the row expecting tools-test. Queue item `check-skip`.
+
+## Keymap repeats its key checks and trie walk
+
+- Where: `carat/domain/keymap.rb:314` (`name_group` repeats `bind_text`'s checks at 200 to 203; `holder_of` 242, `node_at` 269, `lookup` 290 each walk the trie). Periodic quality at 9a92265.
+- Why it matters: three copies of one walk drift apart when a key form is added.
+- Fix outline: one private key parser and one private walk used by all. Queue item: backlog batches (copies).
+
+## Docs drift found at 9a92265
+
+- Where: `docs/codebase-map.md:118` (EditorState names `show` twice); `docs/codebase-map.md:443` (area 12 claims every ex spelling, but no buffer-list command row is in `test/use_cases_ex.rb`); `docs/architecture.md:326` (plugin API 2.0 against 2.5 in `carat/plugin_api.rb:12` and `docs/plugins.md:23`); `carat.rb:2` (says `bin/*.rb` require only it, while `bin/carat-gen-config.rb:11` requires two files directly). Periodic quality.
+- Why it matters: agents plan from these documents.
+- Fix outline: correct each, or add the spelling rows. Queue item `docs-index`.
+
+## BufferList's comments call its unlisted buffers listed, and the unsaved rule has ten copies
+
+- Where: `carat/domain/buffer_list.rb:8` (class comment, `for_path`, `with_id`, and map area 8 say listed buffers, though `hand_tab` leaves unlisted ones in it; OpenFile names the result listed); `modified? && !scratch?` at `walk_jumps.rb:37`, `visit_target.rb:80`, `quit.rb:42` and `:51`, `save_all.rb:31`, `switch_buffer.rb:43`, `list_buffers.rb:88`, `window_requests.rb:163`, `buffer_list.rb:108` and `:233`. Periodic quality at 9a92265.
+- Why it matters: callers read a list as listed buffers only; the rule changes in one place and not the others.
+- Fix outline: reword to buffers listed or not, and one Buffer predicate with a domain row. Queue item `buffer-list-tidy`.
+
+## Ex and visual code copy domain helpers
+
+- Where: `carat/use_cases/ex/buffer_command_handler.rb:101` (`digits?` repeats the public `HistoryCommandHandler.digits?` at `history_command_handler.rb:65`); `carat/use_cases/ex/register_command_handler.rb:61` (repeats `RegisterEntry#lines` at `register_entry.rb:42`); `carat/use_cases/visual/put_over_selection.rb:124` (repeats the linewise count loop of `Operators.put` at `operators.rb:42`). Periodic quality at 9a92265.
+- Why it matters: copies drift; the put copy also carries the uncapped count.
+- Fix outline: one domain helper each. Queue items `editing-counts` (the put copy) and backlog batches (copies).
+
+## Visual operations compute what their selection kind never uses
+
+- Where: `carat/use_cases/visual/put_over_selection.rb:38` (block, top column, and range for every kind); `carat/use_cases/visual/recase_selection.rb:23` (`Selection#span` rebuilds the block per row). Periodic quality at 9a92265.
+- Why it matters: line scans per row of a large selection.
+- Fix outline: compute each only for its kind, the block once per call. Queue item: backlog batches (dead code).
+
+## Jump list tidy at 9a92265
+
+- Where: `test/domain_jump_list.rb:78` (a Ctrl-I row labeled Ctrl-O); `carat/domain/jump_list.rb:37` (`push` loops though one entry per line exists, and `length_after_push` at :95 repeats the scan); `carat/domain/jump_list.rb:4` (comment wrapped at 37 against 72 columns); `carat/use_cases/definitions/walk_jumps.rb:42` (a gone buffer's entry is dropped and the key does nothing, where Neovim steps on, unstated in `docs/compatibility.md:70`). Periodic quality.
+- Why it matters: a mislabeled row and a behavior gap with no compatibility note.
+- Fix outline: relabel, one line-index helper, rewrap, and step past dropped entries or record the difference. Queue item `definitions-tidy`.
+
+## The analysis budget warns on every build and passes a non-numeric rounds value
+
+- Where: `Makefile:78` (22 to 26 s and `ANALYSIS_MS` 45000, also `docs/architecture.md` line 346, against 39.0 s and 92.3 s at #95); `tools/analysis_budget.sh:67` (the rounds test errors and passes on a non-number). Periodic quality at 9a92265.
+- Why it matters: a warning on every build carries no signal, and a broken figure passes.
+- Fix outline: refresh the threshold per root, and refuse a non-numeric value with a case. Queue item `run-budgets-tidy`.
+
+## Periodic review slices cut the map areas by count
+
+- Where: `areaSlices` in `.claude/workflows/periodic-review.js:67`. Periodic quality at 9a92265.
+- Why it matters: slice 1 puts area 1 (about 8,850 lines and a 425 KB backlog) with five more areas under one 53-call cap, so the guard, the tools test, and most of the gates go unread.
+- Fix outline: weight slices by size or give area 1 its own. Queue item `review-scope`.
+
+## The commit hooks run the scanner of the worktree they commit in
+
+- Where: `.githooks/pre-commit:7` and `.githooks/commit-msg:7`, which run `sh tools/scan_text.sh` by a relative path. Security Low (3) and quality advisory of `url-email-guard`.
+- Why it matters: the hooks now come from the main worktree's `.githooks`, but git runs a hook from the top of the worktree being committed in, so a commit in a linked worktree `tmp/.NAME` runs that worktree's own scanner, the pattern the absolute `core.hooksPath` closed; only the contributor commits under the guard and it already runs branch code, so there is no practical exploit today. A worktree at a commit without `tools/scan_text.sh` refuses every commit (status 127) with the misleading message that the text holds what `CLAUDE.md` forbids.
+- Fix outline: run the scanner beside the hook, `sh "$(dirname "$0")/../tools/scan_text.sh"` (or under the parent of `git rev-parse --path-format=absolute --git-common-dir`), in both hooks, and report a status other than 0 or 1 as a scanner error, with a hooks case in `tools/tools_test.sh`. Queue item `guard-lows`.
+
+## The main worktree is taken as the parent of the common git directory
+
+- Where: the `hooks` target in the `Makefile` around line 170, `gate_origin` in `tools/gates.sh`, and the same derivation in `tools/agent_guard.sh`. Quality advisory of `url-email-guard`.
+- Why it matters: the parent of `--git-common-dir` is not the main worktree when the git directory lives elsewhere (`--separate-git-dir`, a submodule), so `core.hooksPath` would point at an untracked directory that the gate and the guard then accept.
+- Fix outline: read the main worktree from the first `worktree` line of `git worktree list --porcelain` in all three, or refuse when that parent is not the main worktree's top level, with a tools case. Queue item `guard-lows`.
+
+## The range scan of commit messages and added lines has two copies
+
+- Where: `tools/pr_scan.sh:43` and `gate_content` in `tools/gates.sh:198-209`. Quality advisory of `url-email-guard`.
+- Why it matters: both scan a range's commit messages and added lines with `tools/scan_text.sh`, so a rule change in one leaves the other behind (one clear way to do each thing).
+- Fix outline: move the range scan into one function in `tools/rules.sh`, say `scan_range BASE HEAD`, that both call. Queue item `content-gate-gaps`.
+
+## Nothing tests that commit-msg drops the diff below the scissors line
+
+- Where: `.githooks/commit-msg:6`. Quality advisory of `url-email-guard`.
+- Why it matters: the hook leaves out the diff `git commit --verbose` appends below its scissors line, but no case proves it, so a regression either refuses verbose commits whose diff holds a URL or scans too little.
+- Fix outline: a `tools/tools_test.sh` case running the hook on a message file with a URL below the scissors line (passes) and one with it above (refused). Queue item `content-gate-gaps`.
+
+## The archived url-email-guard proposal names the relative hooks path
+
+- Where: `openspec/changes/archive/2026-11-10-url-email-guard/proposal.md:11`. Quality advisory of `url-email-guard`.
+- Why it matters: it still says `make hooks` sets `core.hooksPath` to `.githooks`, the relative value the fix commit replaced, while its `design.md` and `tasks.md` were updated, so the archive disagrees with itself.
+- Fix outline: say the absolute path of the main worktree's `.githooks`. Queue item: backlog batches (comment wraps).

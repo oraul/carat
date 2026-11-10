@@ -22,7 +22,7 @@ work=$(mktemp -d "${TMPDIR:-/tmp}/carat-tools-test.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 TRAILER='Co-Authored-By: Claude <noreply@anthropic.com>'
 SCHEME="https:"
-LINK="$SCHEME//example.org/page"
+LINK="$SCHEME//example"".org/page"
 MAIL="someone""@""example.org"
 TIER="son""net"
 passed=0
@@ -841,6 +841,10 @@ merge_touch "docs: notes" docs/x.md
 expect "run_state: review-due skips a docs-only change" 1 "^not due" state review-due areas
 merge_touch "ci: workflow" .github/workflows/ci.yml
 expect "run_state: review-due names the CI workflow" 0 "^due: the change touched guard and gates [(][.]github/workflows/ci[.]yml[)]" state review-due areas
+merge_touch "chore: scanner" tools/scan_text.sh
+expect "run_state: review-due names the scanner" 0 "^due: the change touched guard and gates [(]tools/scan_text[.]sh[)]" state review-due areas
+merge_touch "chore: hooks" .githooks/pre-commit
+expect "run_state: review-due names the commit hooks" 0 "^due: the change touched guard and gates [(][.]githooks/pre-commit[)]" state review-due areas
 mkdir -p config carat/domain
 printf '# Options.\noption.tabstop 2\nkeymap.normal j cursor.down\n' > config/default.caratrc
 echo 'mirror' > carat/domain/default_config.rb
@@ -1368,6 +1372,8 @@ expect "guard: a risky configuration key refuses every call" 2 "every call while
 git_q config --unset core.hooksPath
 expect "guard: the guard's risky keys are the gates'" 0 "^same$" \
   sh -c '[ "$(grep "^RISKY_CONFIG=" "$1/agent_guard.sh")" = "$(grep "^RISKY_CONFIG=" "$1/rules.sh")" ] && echo same' _ "$here"
+expect "guard: the guard's hooks path and hook names are the gates'" 0 "^same$" \
+  sh -c 'for v in HOOKS_PATH HOOK_FILES_RE; do [ "$(grep "^$v=" "$1/agent_guard.sh")" = "$(grep "^$v=" "$1/rules.sh")" ] || exit 1; done; echo same' _ "$here"
 cd "$work" || exit 1
 
 # ---------------------------------------------------------- docs_lint.sh
@@ -1406,13 +1412,13 @@ echo x >> docs/queue.md
 expect "docs_lint: refuses a queue over its budget" 1 "FAIL budgets: docs/queue.md is 17371 bytes, over its budget of 17369" doclint
 docs link
 echo "See $LINK." >> docs/notes.md
-expect "docs_lint: refuses a URL in a document" 1 "FAIL content: a URL" doclint
+expect "docs_lint: refuses a URL in a document" 1 "FAIL content: docs/notes[.]md:[0-9]+: url: " doclint
 docs mail
 echo "Write to $MAIL." >> README.md
-expect "docs_lint: refuses an email address" 1 "FAIL content: an email address" doclint
+expect "docs_lint: refuses an email address" 1 "FAIL content: README[.]md:[0-9]+: email: " doclint
 docs model
 echo "Run it on $TIER." >> .claude/agents/x.md
-expect "docs_lint: refuses a model name outside the frontmatter" 1 "FAIL content: a model name" doclint
+expect "docs_lint: refuses a model name outside the frontmatter" 1 "FAIL content: [.]claude/agents/x[.]md:[0-9]+: model name: " doclint
 docs wrap
 printf 'A paragraph\nwrapped by hand.\n' >> .github/pull_request_template.md
 expect "docs_lint: refuses a hard-wrapped template line" 1 "pull_request_template.md:[0-9]+: wrapped by hand" doclint
@@ -1605,7 +1611,7 @@ for kind in "key:$KEY_LINE" "aws:aws_id = $AWS_KEY" "github:GH=gh""p_abcdefghijk
   fresh secret
   echo "${kind#*:}" >> README.md
   commit "chore: add a line"
-  expect "gates: content refuses a secret: ${kind%%:*}" 1 "FAIL content: a secret .*" gates content
+  expect "gates: content refuses a secret: ${kind%%:*}" 1 "FAIL content: README[.]md:[0-9]+: secret: \[not shown\]" gates content
 done
 expect "gates: content does not print the secret" 0 "^0$" sh -c 'BASE=main STAGES=lint sh "$1/gates.sh" content | grep -c -F "$2"; true' _ "$here" "abcdefgh12345678"
 fresh secret2
@@ -1617,8 +1623,8 @@ echo "aws_id = $AWS_KEY" >> README.md
 commit "chore: add a key"
 git_q show HEAD~1:README.md > README.md
 commit "chore: remove the key"
-expect "gates: content refuses a secret a later commit removed" 1 "FAIL content: a secret .*" gates content
-expect "gates: backup refuses a secret" 1 "FAIL content: a secret .*" gates backup
+expect "gates: content refuses a secret a later commit removed" 1 "FAIL content: README[.]md:[0-9]+: secret: \[not shown\]" gates content
+expect "gates: backup refuses a secret" 1 "FAIL content: README[.]md:[0-9]+: secret: \[not shown\]" gates backup
 fresh dotenv
 echo "X=1" > .env
 commit "chore: add an env file"
@@ -1629,6 +1635,115 @@ echo "X=1" > config/.env.local
 commit "chore: add an env file"
 expect "gates: content refuses an added .env.local in a directory" 1 "config/\.env\.local" gates content
 expect "repository: .gitignore ignores .env files" 0 "config/\.env\.local" sh -c 'cd "$1/.." && git check-ignore .env config/.env.local' _ "$here"
+
+fresh dotenv3
+dir=$(printf 'caf\303\251')
+mkdir "$dir"
+echo "X=1" > "$dir/.env"
+commit "chore: add an env file"
+expect "gates: content refuses an added .env under a path git quotes" 1 "FAIL content: an added .env file" gates content
+fresh plusline
+echo "++ see $LINK" >> README.md
+commit "chore: add a line"
+expect "gates: content scans an added line starting with ++" 1 "FAIL content: README[.]md:[0-9]+: url: " gates content
+fresh binary
+printf 'see %s\000\n' "$LINK" > data.bin
+commit "chore: add a binary file"
+expect "gates: content notes a binary file and does not read it" 0 "note: data[.]bin: a binary file, not scanned" gates content
+fresh hookadd
+mkdir -p .githooks
+echo "exit 0" > .githooks/post-checkout
+commit "chore: add a hook"
+expect "gates: content refuses an added hook under .githooks but commit-msg and pre-commit" 1 "FAIL content: an added hook under [.]githooks other than" gates content
+
+# ------------------------------------------------------------ scan_text.sh
+# The one scanner: each URL form, an address, a session id, the two
+# exceptions, a split URL, a quoted string, a ++ line, a binary file, and
+# a secret masked. Each host is split before its dot, like the text above.
+
+scantext() {
+  printf '%s\n' "$1" | sh "$here/scan_text.sh"
+}
+
+# onediff PATH LINE: a diff adding LINE as line 2 of PATH, scanned.
+onediff() {
+  printf 'diff --git a/%s b/%s\n--- a/%s\n+++ b/%s\n@@ -1,0 +2 @@\n+%s\n' "$1" "$1" "$1" "$1" "$2" |
+    sh "$here/scan_text.sh" --diff
+}
+
+HOST="example"".org"
+for form in "scheme:see $LINK" "www host:go to w""ww.$HOST" "bare host and path:the $HOST/page" \
+    "code host:git""hub"".com/owner/repo" "session link:claude"".ai/code/x"; do
+  expect "scan_text: refuses a URL: ${form%%:*}" 1 "^stdin:1: url: " scantext "${form#*:}"
+done
+expect "scan_text: prints the URL, not the line" 1 "^stdin:1: url: https:[/][/]example[.]org/page$" scantext "the page ($LINK) is gone"
+expect "scan_text: refuses an email address" 1 "^stdin:1: email: someone@example[.]org$" scantext "write to $MAIL"
+expect "scan_text: refuses a session id" 1 "^stdin:1: session id: session_[A-Z]+$" scantext "id session""_ABCDEFGHIJKLMNOPQRS"
+expect "scan_text: allows the co-author trailer" 0 "^$" scantext "$TRAILER"
+expect "scan_text: refuses the trailer with another address" 1 "^stdin:1: email: someone@" scantext "Co-Authored-By: Claude <$MAIL>"
+expect "scan_text: allows the clone address on the Makefile's remote add line" 0 "^$" onediff Makefile "	git -C x remote add origin \"$LINK\""
+expect "scan_text: refuses the clone line outside the Makefile" 1 "^README[.]md:2: url: " onediff README.md "	git -C x remote add origin \"$LINK\""
+expect "scan_text: refuses a URL split where a line wraps" 1 "^stdin:1: url: example[.]org/page$" \
+  sh -c 'printf "see example.\norg/page\n" | sh "$1/scan_text.sh"' _ "$here"
+expect "scan_text: leaves a sentence ending a line alone" 0 "^$" sh -c 'printf "The end.\nNext line here.\n" | sh "$1/scan_text.sh"' _ "$here"
+expect "scan_text: refuses a URL in a quoted string" 1 "^stdin:1: url: https:[/][/]example[.]org/page$" scantext "url = \"$LINK\""
+expect "scan_text: scans an added line starting with ++" 1 "^README[.]md:2: url: " onediff README.md "++ see $LINK"
+printf 'see %s\000\n' "$LINK" > "$work/data.bin"
+expect "scan_text: notes a binary file and does not read it" 0 "^note: .*data[.]bin: a binary file, not scanned$" sh "$here/scan_text.sh" "$work/data.bin"
+expect "scan_text: notes a binary file in a diff" 0 "^note: data[.]bin: a binary file, not scanned$" \
+  sh -c 'printf "diff --git a/data.bin b/data.bin\nBinary files a/data.bin and b/data.bin differ\n" | sh "$1/scan_text.sh" --diff' _ "$here"
+TOKEN_URL="$SCHEME//user:gh""p_abcdefghijklmnopqrstuvwxyz0123456789@$HOST/x"
+expect "scan_text: masks a URL's user and password" 1 "^stdin:1: url: https:[/][/]\[hidden\]@example[.]org/x$" scantext "see $TOKEN_URL"
+expect "scan_text: never prints a token inside a URL" 0 "^0$" sh -c 'printf "see %s\n" "$2" | sh "$1/scan_text.sh" | grep -c abcdefghijklmnop; true' _ "$here" "$TOKEN_URL"
+expect "scan_text: names the model name and the secret by label" 1 "^stdin:2: secret: \[not shown\]$" scantext "run on $TIER
+aws_id = $AWS_KEY"
+expect "scan_text: refuses an unknown option" 2 "Usage: sh tools/scan_text.sh" sh "$here/scan_text.sh" --nope
+
+# ----------------------------------------------------- .githooks, pr_scan.sh
+# The commit hooks, installed as make hooks installs them, in a temporary
+# repository with the scanner beside them.
+fresh hooked
+cp "$here/scan_text.sh" "$here/rules.sh" tools/
+cp -R "$here/../.githooks" .
+commit "chore: add the hooks"
+expect "hooks: make hooks sets core.hooksPath to the absolute .githooks of the main worktree" 0 "^/.*/hooked/[.]githooks$" \
+  sh -c 'make -s -f "$1/../Makefile" hooks >/dev/null && git config core.hooksPath' _ "$here"
+echo x >> README.md
+git_q add -A
+expect "hooks: commit-msg refuses a message with a URL" 1 "commit-msg: the message holds" git_q commit -q -m "chore: see $LINK" -m "$TRAILER"
+echo "see $LINK" >> README.md
+git_q add -A
+expect "hooks: pre-commit refuses a staged line with a URL" 1 "README[.]md:[0-9]+: url: " git_q commit -q -m "chore: add a line" -m "$TRAILER"
+git_q reset -q --hard
+echo y >> README.md
+git_q add -A
+expect "hooks: a clean commit passes both hooks" 0 "" git_q commit -q -m "chore: add a clean line" -m "$TRAILER"
+
+# The pull request scan of .github/workflows/scan.yml, with a sample title,
+# body, and branch, and no network.
+prscan() {
+  BASE_SHA=$(git rev-parse main) HEAD_SHA=$(git rev-parse HEAD) PR_TITLE=$1 PR_BODY=$2 sh "$here/pr_scan.sh"
+}
+fresh prscan
+echo x >> README.md
+commit "chore: a clean line"
+expect "pr_scan: passes a clean title, body, commit, and diff" 0 "^ok   scan: the title, the body, 1 commit message" prscan "chore: clean" "## Summary"
+FOOTER="Generated by a tool, claude"".ai/code/session""_ABCDEFGHIJKLMNOPQRS"
+expect "pr_scan: refuses a footer with a session link in the body" 1 "^body:3: url: claude[.]ai/code/session_" prscan "chore: clean" "$(printf '## Summary\r\n\r\n%s\r\n' "$FOOTER")"
+expect "pr_scan: refuses a URL in the title" 1 "^title:1: url: " prscan "chore: see $LINK" "## Summary"
+expect "pr_scan: never runs the title's or body's text" 0 "^absent$" \
+  sh -c 'PR_TITLE="\$(touch injected)" PR_BODY="\`touch injected\`" BASE_SHA=$(git rev-parse main) HEAD_SHA=$(git rev-parse HEAD) sh "$1/pr_scan.sh" >/dev/null; [ -e injected ] || echo absent' _ "$here"
+expect "pr_scan: refuses a base that is not a commit" 2 "BASE_SHA and HEAD_SHA must name commits" env BASE_SHA=--all HEAD_SHA=x sh "$here/pr_scan.sh"
+fresh prscan2
+echo "write to $MAIL" >> README.md
+commit "chore: see $LINK"
+expect "pr_scan: refuses a URL in a commit message" 1 "^commit [0-9a-f]+:1: url: " prscan "chore: clean" "## Summary"
+expect "pr_scan: refuses an address in an added line" 1 "^README[.]md:[0-9]+: email: " prscan "chore: clean" "## Summary"
+expect "repository: the scan workflow runs on every pull request edit with read-only contents and no interpolated run line" 0 "^good$" \
+  sh -c 'f="$1/../.github/workflows/scan.yml"
+    grep -q -x "    types: \[opened, edited, reopened, synchronize\]" "$f" && grep -q -x "  contents: read" "$f" &&
+    ! grep -q -E "^ *pull_request_target:|: write" "$f" && ! grep -q -E "^ *run:.*[$][{][{]" "$f" &&
+    grep -q -x "        run: sh tools/pr_scan.sh" "$f" && echo good' _ "$here"
 
 fresh docs
 echo new > tools/new.sh
@@ -1837,6 +1952,43 @@ git_q config core.fsmonitor "touch planted"
 expect "gates: origin refuses a key that runs a command" 1 "FAIL origin: the repository configuration sets core.fsmonitor" gates origin
 expect "gates: pre-push runs the origin gate" 1 "FAIL origin: the repository configuration sets core.fsmonitor" gates pre-push
 git_q config --unset core.fsmonitor
+abs_hooks=$(git rev-parse --path-format=absolute --git-common-dir)
+abs_hooks=${abs_hooks%/*}/.githooks
+git_q config core.hooksPath "$abs_hooks"
+mkdir -p .githooks
+: > .githooks/commit-msg
+: > .githooks/pre-commit
+expect "gates: origin allows core.hooksPath as the tracked .githooks" 0 "ok   origin: the configuration sets no risky key and no hook$" gates origin
+expect "guard: core.hooksPath as the tracked .githooks passes" 0 "" \
+  env PROJECT="$PWD" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
+# A linked worktree uses the main worktree's checked .githooks, never a
+# hook planted in its own, and its gate and guard read the same directory.
+git_q commit -q --allow-empty -m "chore: a base for the worktree" -m "$TRAILER"
+git_q worktree add -q --detach "$work/origined-wt" HEAD
+mkdir -p "$work/origined-wt/.githooks"
+printf '#!/bin/sh\ntouch "%s"\n' "$work/origined-ran" > "$work/origined-wt/.githooks/post-checkout"
+chmod +x "$work/origined-wt/.githooks/post-checkout"
+expect "hooks: a linked worktree runs no hook planted in its own .githooks" 0 "^absent$" \
+  sh -c 'git -C "$1" checkout -q --detach HEAD && { [ -e "$2" ] && echo ran || echo absent; }' _ "$work/origined-wt" "$work/origined-ran"
+expect "gates: origin in a linked worktree reads the main worktree's .githooks" 0 "ok   origin: the configuration sets no risky key and no hook$" \
+  sh -c 'cd "$1" && BASE=main STAGES=lint sh "$2/gates.sh" origin' _ "$work/origined-wt" "$here"
+expect "guard: a linked worktree as the project reads the main worktree's .githooks" 0 "" \
+  env PROJECT="$work/origined-wt" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
+git_q worktree remove --force "$work/origined-wt"
+rm -f "$work/origined-ran"
+git_q config core.hooksPath .githooks
+expect "gates: origin refuses the relative core.hooksPath .githooks" 1 "FAIL origin: the repository configuration sets core.hookspath" gates origin
+expect "guard: the relative core.hooksPath .githooks refuses every call" 2 "every call while the repository configuration sets core.hookspath" \
+  env PROJECT="$PWD" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
+git_q config core.hooksPath "$abs_hooks"
+: > .githooks/post-checkout
+expect "gates: origin refuses a hook in .githooks but commit-msg and pre-commit" 1 "FAIL origin: [.]githooks holds post-checkout" gates origin
+expect "guard: a hook in .githooks but commit-msg and pre-commit refuses every call" 2 "every call while [.]githooks holds post-checkout" \
+  env PROJECT="$PWD" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
+rm -rf .githooks
+git_q config core.hooksPath hooks
+expect "gates: origin refuses core.hooksPath other than .githooks" 1 "FAIL origin: the repository configuration sets core.hookspath" gates origin
+git_q config --unset core.hooksPath
 git_q config "url.$work/fake.git.insteadOf" "$work/origined.git"
 expect "gates: origin refuses a rewritten origin address" 1 "FAIL origin: the repository configuration sets url[.].*[.]insteadof" gates origin
 git_q config --remove-section "url.$work/fake.git"

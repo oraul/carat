@@ -10,7 +10,8 @@
 #              and the commit messages hold no URL, no email address but the
 #              trailer's, no session id, no model name, and no secret (a
 #              private key, a platform token, a literal password or token);
-#              no commit adds a .env or .env.* file
+#              (tools/scan_text.sh); no commit adds a .env or .env.* file
+#              or a hook under .githooks but commit-msg and pre-commit
 #   snapshots  a changed test/*.rb.expected has its test and equals the
 #              runner's output (build/test/run_all, from make test-build)
 #   docs       files added, moved, or removed under the source roots need the
@@ -48,7 +49,9 @@
 #              model name, and a Testing line naming the security review
 #   static     trailer, content, snapshots, docs, scenarios, cases, attribution
 #              (make gates)
-#   origin     no risky configuration key; an origin/ base equal to origin's
+#   origin     no risky configuration key (core.hooksPath only as .githooks),
+#              no hook but a sample in .git/hooks, none but commit-msg and
+#              pre-commit in .githooks; an origin/ base equal to origin's
 #   pre-push   origin, static, security, stages (tools/run_state.sh push)
 #   backup     trailer, content (tools/run_state.sh backup, with BASE the
 #              branch's base, so every commit the backup publishes)
@@ -77,7 +80,7 @@ TAB=$(printf '\t')
 failed=0
 gate=""
 
-# The patterns of the content and pr-body gates, and scan.
+# The patterns of the content and pr-body gates, and report.
 . "$here/rules.sh"
 
 bad() {
@@ -120,8 +123,12 @@ require_base() {
 }
 
 # The repository the gates read: branch code run by the checks can write
-# .git/config and the ref origin/main, so no key of RISKY_CONFIG is set,
-# no hook other than a sample is in the hooks directory,
+# .git/config and the ref origin/main, so no key of RISKY_CONFIG is set
+# (core.hooksPath only as the absolute path of HOOKS_PATH in the main
+# worktree, the parent of --git-common-dir, as make hooks sets it, since
+# git reads a relative value from the top of each linked worktree), no
+# hook other than a sample is in .git/hooks, none but HOOK_FILES_RE's in
+# that HOOKS_PATH,
 # and an origin/NAME base is origin's NAME: the default fetch refspec (a
 # fetch restores the ref), an origin that is not a local repository (whose
 # fake branch ls-remote would report), and the ref equal to the branch
@@ -130,11 +137,18 @@ gate_origin() {
   gate=origin
   remote=""
   start=$failed
-  keys=$(git config --local --name-only --list 2>/dev/null | grep -i -E "$RISKY_CONFIG" | sort -u | tr '\n' ' ')
-  [ -z "$keys" ] || bad "the repository configuration sets ${keys% }, which runs a command or redirects origin; remove it from .git/config"
-  hooks=$(git rev-parse --path-format=absolute --git-path hooks 2>/dev/null)
+  git_common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)
+  tracked_hooks=${git_common:+${git_common%/*}/$HOOKS_PATH}
+  keys=$(git config --local --name-only --list 2>/dev/null | grep -i -E "$RISKY_CONFIG" | sort -u)
+  [ -z "$tracked_hooks" ] || [ "$(git config --local --get-all core.hooksPath 2>/dev/null)" != "$tracked_hooks" ] ||
+    keys=$(printf '%s\n' "$keys" | grep -v -i -x 'core[.]hookspath')
+  keys=$(printf '%s\n' "$keys" | grep . | tr '\n' ' ')
+  [ -z "$keys" ] || bad "the repository configuration sets ${keys% }, which runs a command or redirects origin; remove it from .git/config (make hooks sets the one core.hooksPath allowed)"
+  hooks=${git_common:+$git_common/hooks}
   planted=$([ -z "$hooks" ] || ! [ -d "$hooks" ] || ls -A "$hooks" | grep -v -E "[.]sample\$" | tr "\n" " "; true)
   [ -z "$planted" ] || bad "the hooks directory holds ${planted% }, which git runs on a checkout or a fetch; remove it"
+  extra=$([ -z "$tracked_hooks" ] || ! [ -d "$tracked_hooks" ] || ls -A "$tracked_hooks" | grep -v -E "$HOOK_FILES_RE" | tr "\n" " "; true)
+  [ -z "$extra" ] || bad "$HOOKS_PATH holds ${extra% }, which git would run on a checkout or a fetch once make hooks set core.hooksPath; only commit-msg and pre-commit belong there"
   case "$base" in
     origin/*)
       name=${base#origin/}
@@ -183,15 +197,19 @@ gate_trailer() {
 gate_content() {
   gate=content
   start=$failed
-  scan "$(git log -p -m -U0 --no-color --no-renames --format= "$base..HEAD" |
-    awk '/^\+\+\+ / { path = substr($0, 7); next } /^\+/ { print path "\t" substr($0, 2) }' | sort -u)"
-  envs=$(git log -m --no-renames --diff-filter=A --name-only --format= "$base..HEAD" |
-    grep -E '(^|/)\.env(\.[^/]*)?$' | sort -u)
+  report "$(git log -p -m -U0 --no-color --no-renames --no-ext-diff --no-textconv --format= "$base..HEAD" |
+    sh "$here/scan_text.sh" --diff | sort -u)"
+  # The names unquoted (-z), so a path git would quote matches too.
+  added=$(git log -z -m --no-renames --diff-filter=A --name-only --format= "$base..HEAD" | tr '\000' '\n')
+  envs=$(printf '%s\n' "$added" | grep -E '(^|/)\.env(\.[^/]*)?$' | sort -u)
   [ -z "$envs" ] || bad "an added .env file (secrets stay out of the repository):
 $envs"
-  scan "$(for c in $(git rev-list "$base..HEAD"); do
-    git log -1 --format=%B "$c" | sed "s/^/commit $(git rev-parse --short "$c")$TAB/"
-  done)"
+  hooks=$(printf '%s\n' "$added" | sed -n "s|^[.]${HOOKS_PATH#.}/||p" | grep -v -E "$HOOK_FILES_RE" | sort -u)
+  [ -z "$hooks" ] || bad "an added hook under $HOOKS_PATH other than commit-msg and pre-commit, which git would run on a checkout or a fetch:
+$hooks"
+  for c in $(git rev-list "$base..HEAD"); do
+    report "$(git log -1 --format=%B "$c" | sh "$here/scan_text.sh" --where "commit $(git rev-parse --short "$c")")"
+  done
   [ $failed -ne $start ] || ok "every commit's added lines and files, and commit messages"
 }
 
@@ -484,7 +502,7 @@ $hits"
   address=${TRAILER#*<}
   hits=$(grep -n -F "${address%>}" "$file")
   [ -z "$hits" ] || bad "an email address: $hits"
-  scan "$(sed "s/^/pr-body$TAB/" "$file")"
+  report "$(sh "$here/scan_text.sh" --where pr-body "$file")"
   [ $failed -ne $start ] || ok "$file"
 }
 

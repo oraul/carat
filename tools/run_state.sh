@@ -244,7 +244,7 @@ plugin boundaries=^carat/(plugin_api[.]rb|plugins/|use_cases/plugins/)
 terminal output=^carat/(drivers/ansi_terminal|ports/terminal_port|adapters/(screen_presenter|frame_presenter|painted_rows|sgr_table|key_decoder)|domain/(frame|display_width|utf8|decoded_line))[.]rb$
 process spawning=^carat/drivers/
 entry point=^bin/carat[.]rb$
-guard and gates=^(tools/(agent_guard|gates|rules|ci_scope)[.]sh$|tools/noruby/|[.]claude/settings[.]json$|[.]github/workflows/)'
+guard and gates=^(tools/(agent_guard|gates|rules|ci_scope|scan_text|pr_scan)[.]sh$|tools/noruby/|[.]githooks/|[.]claude/settings[.]json$|[.]github/workflows/)'
 
 die() {
   echo "run_state: $*" >&2
