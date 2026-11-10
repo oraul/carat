@@ -99,8 +99,9 @@ COLS = 200
 # (with N for the middle line number, H for a heredoc body line near the
 # middle, S for the middle line of a multi-line string near it), text
 # kind, plugins ("none", "explorer" opened in a side window, "ruby",
-# the ruby plugin alone, or "float", no plugin and a 60 by 15 bordered
-# float over the middle of the window)
+# the ruby plugin alone, "float", no plugin and a 60 by 15 bordered
+# float over the middle of the window, or "finder", the finder alone over
+# FINDER_FILES files, which every key typed into it filters)
 SCENARIOS = [
   ["lh", "lh", 10_000, 10_000, "NG", "code", "none"],
   ["j", "j", 9_000, 10_000, "gg", "code", "none"],
@@ -134,8 +135,10 @@ SCENARIOS = [
   ["open-plain", "l", 10, 100_000, "gg", "ruby", "none"],
   ["open-ruby", "l", 10, 100_000, "gg", "ruby", "ruby"],
   ["G-ruby", "Ggg", 300, 100_000, "gg", "ruby", "ruby"],
-  ["n", "n", 3_000, 100_000, "gg/0 end<CR>", "code", "none"]
+  ["n", "n", 3_000, 100_000, "gg/0 end<CR>", "code", "none"],
+  ["finder", "f<BS>", 2_000, 1_000, " ffd", "code", "finder"]
 ]
+FINDER_FILES = 10_000
 
 # One block of the generated Ruby source, BLOCK lines with the block
 # number for {n}: a comment with a Todo, a module, a class, a constant in
@@ -235,6 +238,14 @@ def run(scenario, count, size)
   list = []
   list = Carat::Plugins::Registry.all if plugins == "explorer"
   list << Carat::Plugins::Ruby::Plugin.new if plugins == "ruby"
+  list << Carat::Plugins::Finder::Plugin.new if plugins == "finder"
+  if plugins == "finder"
+    f = 0
+    while f < FINDER_FILES
+      files.put("d#{f / 100}/f#{f}.rb", "x = #{f}\n")
+      f += 1
+    end
+  end
   assembly = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: Carat::Doubles::FixedConfig.new(value: Carat::Doubles::FixedConfig.defaults), processes: Carat::Doubles::FakeProcesses.new, messages: Carat::Doubles::MemoryQueue.new, completions: Carat::Adapters::ServerCompletions.new, plugin_list: list)
   assembly.screen_presenter.enter
   opened = now

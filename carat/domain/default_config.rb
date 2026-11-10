@@ -201,7 +201,6 @@ module Carat
       keymap.normal <leader>qq quit.all
       keymap.normal <leader>qw quit.write_all
       keymap.normal <leader>fs file.save
-      keymap.normal <leader>ff file.find
       keymap.normal <leader>bb buffer.list
       keymap.normal <leader>bn buffer.next
       keymap.normal <leader>bp buffer.previous
@@ -731,6 +730,8 @@ module Carat
       plugin.explorer.show_hidden false
       plugin.explorer.ignore .git build tmp
       plugin.ruby.enabled true
+      plugin.finder.enabled true
+      plugin.finder.ignore .git build tmp
     CARATRC
   end
 end
