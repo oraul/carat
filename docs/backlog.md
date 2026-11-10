@@ -1850,12 +1850,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: after 20 tries the loop falls through, so a slow runner surfaces as an unrelated supersede failure.
 - Fix outline: fail with a message naming the stage when `stage.slow` never reads `running`. Queued in `check-runner-safety`.
 
-## The gateway cancels a request in five copies
-
-- Where: five copies in `carat/adapters/json_rpc_language_gateway.rb`: `cancel_hover` (line 663 at 78078ad), `cancel`, `cancel_resolve`, `cancel_symbols` (line 795 at df4654c), and the definition request's cancel, plus the near copies `send_definition` and `forget_definition` (lines 692, 703, and 732 at 8d8832f), beside the shared private `cancel_request(language, id)` (line 867 at df4654c) that `parameter-info` added for `cancel_signature`; none of them calls it yet. Quality advisory in `quick-docs` and in `breadcrumbs`, raised again at 38628bb and df4654c (periodic quality) and blocking in the periodic quality review at 8d8832f, raised again at 186ddfb with `send_definition` copying `send_hover` (line 703) and the four request kinds building the cursor-position params and the running-server check four times. Queued in `periodic-blockers-a`.
-- Why it matters: each looks up the server, sends `$/cancelRequest`, and zeroes the id, so a fix to one (a crashed server, a stale id) can miss the others.
-- Fix outline: call the existing `cancel_request(language, id)` from the five (`cancel_request(ask.language, ask.sent_id)` then clearing `sent_id` in `cancel_symbols`), with the hover, completion, and resolve cancellation rows in `test/adapters_hover.rb` and `test/adapters_server_completions.rb` unchanged.
-
 ## The documentation floats copy the widest-row loop
 
 - Where: `carat/use_cases/docs/show_hover.rb` line 84 at 78078ad, a copy of `carat/use_cases/completion/show_completion_docs.rb` line 98 and of `carat/domain/operators.rb` line 139. Quality advisory in `quick-docs`.
@@ -1870,8 +1864,8 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Hover paths in the spec or the code have no test
 
-- Where: `test/adapters_hover.rb` line 232 at 78078ad, the cancellation block; `forget_hover` and the `hoverProvider` check in `carat/adapters/json_rpc_language_gateway.rb`, and the float's close in `carat/use_cases/docs/show_hover.rb`. Quality advisory in `quick-docs`.
-- Why it matters: `forget_hover` on a crash or stop with a hover in flight, `hoverProvider` given as an object, and the float closing on `:q`, a window switch, or a buffer change can regress without a test failing.
+- Where: `test/adapters_hover.rb` line 232 at 78078ad, the cancellation block; `forget_server` (the hover ask) and the `hoverProvider` check in `carat/adapters/json_rpc_language_gateway.rb`, and the float's close in `carat/use_cases/docs/show_hover.rb`. Quality advisory in `quick-docs`.
+- Why it matters: `forget_server` (the hover ask) on a crash or stop with a hover in flight, `hoverProvider` given as an object, and the float closing on `:q`, a window switch, or a buffer change can regress without a test failing.
 - Fix outline: add those cases beside the cancellation block.
 
 ## Plaintext hover text is read as markdown
@@ -1978,7 +1972,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The signature gateway's forget and activeSignature paths are untested
 
-- Where: `forget_signature` in `carat/adapters/json_rpc_language_gateway.rb` line 743 (dropping the language and the request in flight on a crash, `:LspStop`, or `:LspRestart`) and the in-range `activeSignature` choice at line 818, at c59a43d. Quality advisory in `parameter-info`.
+- Where: `forget_server` (the signature ask, `forget_signature` before periodic-blockers-a) in `carat/adapters/json_rpc_language_gateway.rb` line 743 (dropping the language and the request in flight on a crash, `:LspStop`, or `:LspRestart`) and the in-range `activeSignature` choice at line 818, at c59a43d. Quality advisory in `parameter-info`.
 - Why it matters: a server crash with a signature request in flight, or a server that names a later signature as active, takes a path no test runs, so a stale request or the wrong signature could ship unnoticed.
 - Fix outline: add rows to `test/adapters_signature.rb` for a server crashing while a signature request is in flight and for an answer with `activeSignature` 1 of two signatures.
 
@@ -2083,12 +2077,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/use_cases/docs/request_signature.rb` line 24 at c1b3a12; the gateway's send drops a pathless buffer silently. Queued in `signature-tidy`.
 - Why it matters: FollowSignature keeps following a call that is never sent, asking again on every key, while RequestHover refuses such a buffer up front.
 - Fix outline: refuse a pathless buffer as RequestHover does, with a row typing ( in an unnamed ruby buffer expecting no active signature.
-
-## The signature gateway copies the hover forget and position steps
-
-- Where: `carat/adapters/json_rpc_language_gateway.rb` line 743 (forget_signature against forget_hover at 646) and line 780 (send_signature's position params against send_hover's at 676), at c1b3a12. Queued in `signature-tidy`, beside the entry The gateway cancels a request in five copies. Raised again at 38628bb (periodic quality).
-- Why it matters: two copies of the same steps drift when one request's lifecycle changes.
-- Fix outline: one private position-params step for both sends and one forget step for both requests.
 
 ## The signature trigger tests bare key codes
 
@@ -2579,9 +2567,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## A restarted server is never asked again for the same text's symbols
 
-- Where: `forget_symbols` in `carat/adapters/json_rpc_language_gateway.rb` line 757 at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
+- Where: `forget_server` (the symbol ask, `forget_symbols` before periodic-blockers-a) in `carat/adapters/json_rpc_language_gateway.rb` line 757 at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
 - Why it matters: it clears the request in flight but keeps `asked_buffer` and `asked_changes`, so after a crash and restart the winbar shows no symbols until an edit or a buffer switch.
-- Fix outline: reset the asked text (`asked_changes = -1`) in `forget_symbols`, with an `editor_breadcrumbs` row for a restart.
+- Fix outline: reset the asked text (`asked_changes = -1`) in `forget_server`, with an `editor_breadcrumbs` row for a restart.
 
 ## SymbolOutline's comment says characters where the cut is in bytes
 
@@ -3159,12 +3147,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: about twenty lines validate UTF-8 by hand (lead size, continuation bytes, overlongs, surrogates, range, `pack("U")`) in an adapter of over 1200 lines, and that multibyte branch has no test, so a regression in it would pass the suite.
 - Fix outline: move the decoding into a domain value (a `FileUri` with `path_of` beside the encoding of `uri_of`) tested in a domain test; decode each escape to its byte and refuse unless `out.valid_encoding?`, as `OpenFile` already relies on; add rows for a `%C3%A9` path that opens and an overlong `%C0%AE` and a surrogate `%ED%A0%80` that are skipped.
 
-## The definition ask copies the hover ask in the gateway
-
-- Where: `carat/adapters/json_rpc_language_gateway.rb` lines 692 (`forget_definition`), 703 (`send_definition`), and 732 (`cancel_definition`) at fafe59c, which repeat `forget_hover` (683), `send_hover` (853), and `cancel_hover` (881) but for the record and the method name; `Domain::DefinitionRequest` repeats `HoverRequest`'s anchor, serial, deadline, and languages fields. Quality advisories in `definitions`.
-- Why it matters: a fourth copy of the anchored-ask pattern; a fix to one send, cancel, or forget path (such as the stale-answer defect queued in `hover-tidy`) has to be made in each copy.
-- Fix outline: an anchored-ask record both requests hold, with one private send, cancel, and forget helper over the anchor fields and the method name in the gateway; if Spinel's typing of the two records prevents it, record the reason here.
-
 ## The definition answer loop stops before LIMIT targets are kept
 
 - Where: `carat/adapters/json_rpc_language_gateway.rb` line 753 at fafe59c, `defined`, which reads only the first `DefinitionRequest::LIMIT` entries of an answer even when some were skipped as non-file, while `DefinitionRequest#add_target` caps the kept targets again. Quality advisory in `definitions`.
@@ -3254,12 +3236,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `.claude/agents/contributor.md` line 4, the GitHub create and update pull request tools. Periodic security Low (5) at 8d8832f, queued in `guard-lows`.
 - Why it matters: a misled contributor can retarget a pull request's base, close or reopen one, or write a body the pr-body gate sees only at the merge.
 - Fix outline: a PreToolUse matcher for those tools running main's guard, admitting only base main, the run state's branch as head, and a body passing pr-body, with a `tools/tools_test.sh` case.
-
-## gd misses its own file under a relative or dotted name
-
-- Where: `carat/use_cases/definitions/visit_target.rb` line 166, `absolute`, a copy of `PluginApi::Paths.absolute` without normalizing. Periodic quality at 8d8832f, blocking, queued in `periodic-blockers-a`.
-- Why it matters: a buffer named `./a.rb` or `lib/../a.rb` never matches its own target, so a same-file `gd` over a modified buffer is refused with E37 and an unmodified one opens a second view.
-- Fix outline: normalize both paths through one shared helper, with rows for both spellings.
 
 ## The pick keymap binds a line refused as an unknown action
 
