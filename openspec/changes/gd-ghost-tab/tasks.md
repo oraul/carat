@@ -14,4 +14,4 @@
 ## 3. Docs
 
 - [x] 3.1 Update the `gd` and `:ls` rows and the differences paragraph of `docs/compatibility.md`, the `VisitTarget` line of `docs/codebase-map.md`, and the `gd` sentence of `README.md`.
-- [ ] 3.2 Run `make gates`, `make spec-validate`, `make docs-lint`, and `make lint`, and fix what fails.
+- [x] 3.2 Run `make gates`, `make spec-validate`, `make docs-lint`, and `make lint`, and fix what fails.
