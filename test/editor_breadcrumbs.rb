@@ -291,6 +291,16 @@ module EditorBreadcrumbsTest
     end
     t.assert_equal(["d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7"], names, "symbols nested deeper than 8 levels are not read")
 
+    # Stopping the servers forgets the symbol request in flight, as a
+    # crash does.
+    r = outlining("")
+    r.type("<C-w>v")
+    r.wait
+    asked = r.assembly.services.symbols
+    before = asked.sent_id != 0
+    r.assembly.services.stop
+    t.assert_equal([true, 0, 0], [before, asked.sent_id, asked.languages.length], "stop forgets the symbol request in flight")
+
     t.finish
   end
 end

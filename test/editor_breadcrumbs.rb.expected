@@ -34,4 +34,5 @@ ok   an error answer holds no symbols
 ok   a flat answer shows the symbols spanning the cursor row in its order
 ok   names lose their controls and are cut to 40 bytes, a bad item is skipped but its children kept, and 500 symbols are kept
 ok   symbols nested deeper than 8 levels are not read
-editor_breadcrumbs: 36 passed, 0 failed
+ok   stop forgets the symbol request in flight
+editor_breadcrumbs: 37 passed, 0 failed
