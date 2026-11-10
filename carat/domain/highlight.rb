@@ -3,7 +3,7 @@ module Carat
     # Highlight group ids carried by frame cells; a theme maps each to its
     # colors. The editor's own UI groups come first, with Neovim's names,
     # the status bar's mode pills and slots after them, then the indent
-    # guides' two; then the syntax
+    # guides' two, then FloatTitle; then the syntax
     # groups, from SYNTAX_FIRST on, with Neovim's standard
     # names in the order of its group-name help; then the file-icon groups,
     # from ICON_FIRST on, named as nvim-web-devicons names them; then the
@@ -64,62 +64,63 @@ module Carat
       STATUS_LSP_ERROR = 48
       INDENT_GUIDE = 49
       INDENT_GUIDE_SCOPE = 50
+      FLOAT_TITLE = 51
 
-      SYNTAX_FIRST = 51
-      COMMENT = 51
-      CONSTANT = 52
-      STRING = 53
-      CHARACTER = 54
-      NUMBER = 55
-      BOOLEAN = 56
-      FLOAT = 57
-      IDENTIFIER = 58
-      FUNCTION = 59
-      STATEMENT = 60
-      CONDITIONAL = 61
-      REPEAT = 62
-      LABEL = 63
-      OPERATOR = 64
-      KEYWORD = 65
-      EXCEPTION = 66
-      PRE_PROC = 67
-      INCLUDE = 68
-      DEFINE = 69
-      MACRO = 70
-      TYPE = 71
-      STORAGE_CLASS = 72
-      STRUCTURE = 73
-      TYPEDEF = 74
-      SPECIAL = 75
-      SPECIAL_CHAR = 76
-      DELIMITER = 77
-      SPECIAL_COMMENT = 78
-      TODO = 79
-      ERROR = 80
+      SYNTAX_FIRST = 52
+      COMMENT = 52
+      CONSTANT = 53
+      STRING = 54
+      CHARACTER = 55
+      NUMBER = 56
+      BOOLEAN = 57
+      FLOAT = 58
+      IDENTIFIER = 59
+      FUNCTION = 60
+      STATEMENT = 61
+      CONDITIONAL = 62
+      REPEAT = 63
+      LABEL = 64
+      OPERATOR = 65
+      KEYWORD = 66
+      EXCEPTION = 67
+      PRE_PROC = 68
+      INCLUDE = 69
+      DEFINE = 70
+      MACRO = 71
+      TYPE = 72
+      STORAGE_CLASS = 73
+      STRUCTURE = 74
+      TYPEDEF = 75
+      SPECIAL = 76
+      SPECIAL_CHAR = 77
+      DELIMITER = 78
+      SPECIAL_COMMENT = 79
+      TODO = 80
+      ERROR = 81
 
-      ICON_FIRST = 81
-      ICON_DEFAULT = 81
-      ICON_FOLDER = 82
-      ICON_SYMLINK = 83
-      ICON_RUBY = 84
-      ICON_JSON = 85
-      ICON_MARKDOWN = 86
-      ICON_TOML = 87
-      ICON_MAKEFILE = 88
-      ICON_SHELL = 89
-      ICON_C = 90
-      ICON_YAML = 91
-      ICON_GIT = 92
-      ICON_LOCK = 93
+      ICON_FIRST = 82
+      ICON_DEFAULT = 82
+      ICON_FOLDER = 83
+      ICON_SYMLINK = 84
+      ICON_RUBY = 85
+      ICON_JSON = 86
+      ICON_MARKDOWN = 87
+      ICON_TOML = 88
+      ICON_MAKEFILE = 89
+      ICON_SHELL = 90
+      ICON_C = 91
+      ICON_YAML = 92
+      ICON_GIT = 93
+      ICON_LOCK = 94
 
-      MARKUP_FIRST = 94
-      MARKUP_HEADING = 94
-      MARKUP_STRONG = 95
-      MARKUP_ITALIC = 96
-      MARKUP_RAW = 97
-      MARKUP_LINK = 98
-      MARKUP_RAW_BLOCK = 99
-      COUNT = 100
+      MARKUP_FIRST = 95
+      MARKUP_HEADING = 95
+      MARKUP_STRONG = 96
+      MARKUP_ITALIC = 97
+      MARKUP_RAW = 98
+      MARKUP_LINK = 99
+      MARKUP_RAW_BLOCK = 100
+      COUNT = 101
 
       # A cell on the cursor line carries its group's id plus this layer:
       # the group drawn over the CursorLine background, unless it has a
@@ -140,7 +141,7 @@ module Carat
         "DiagnosticError", "DiagnosticWarn", "DiagnosticInfo", "DiagnosticHint",
         "StatusLineModeNormal", "StatusLineModeInsert", "StatusLineModeVisual", "StatusLineModeReplace", "StatusLineModeCommand",
         "StatusLineLspStarting", "StatusLineLspReady", "StatusLineLspError",
-        "IblIndent", "IblScope",
+        "IblIndent", "IblScope", "FloatTitle",
         "Comment", "Constant", "String", "Character", "Number", "Boolean", "Float", "Identifier", "Function",
         "Statement", "Conditional", "Repeat", "Label", "Operator", "Keyword", "Exception",
         "PreProc", "Include", "Define", "Macro",

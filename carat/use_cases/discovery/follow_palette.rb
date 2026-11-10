@@ -121,7 +121,7 @@ module Carat
         top = palette.selected - height + 1
         top = 0 if top < 0
         lines = rows(top, height, width)
-        spec = Domain::FloatSpec.new(anchor: "editor", row: 1, col: (state.screen_cols - width - 2) / 2, height: height, width: width, border: true, title: TITLE, z: Z)
+        spec = Domain::FloatSpec.new(anchor: "editor", row: 1, col: (state.screen_cols - width - 2 - 2 * Domain::FloatWindow::PAD) / 2, height: height, width: width, border: true, title: TITLE, z: Z)
         buffer = Domain::Buffer.new(lines: lines, path: nil, line_ending: "\n")
         buffer.owner = Domain::Palette::OWNER
         float = Domain::FloatWindow.new(window: Domain::Window.new(buffer: buffer), spec: spec)

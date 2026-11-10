@@ -51,7 +51,7 @@ module Carat
         width = Domain::DisplayWidth.text_width(lines[0].to_s, 0)
         height = lines.length > MAX_ROWS ? MAX_ROWS : lines.length
         icon = Domain::DisplayWidth.text_width(Domain::Icons.glyph("kind_text", set), 0)
-        spec = Domain::FloatSpec.new(anchor: "cursor", row: row_offset(state, height), col: -typed_width - icon - 2, height: height, width: width, border: false, title: "", z: Z)
+        spec = Domain::FloatSpec.new(anchor: "cursor", row: row_offset(state, height), col: -typed_width - icon - 2 - Domain::FloatWindow::PAD, height: height, width: width, border: false, title: "", z: Z)
         buffer = Domain::Buffer.new(lines: lines, path: nil, line_ending: "\n")
         buffer.owner = OWNER
         float = Domain::FloatWindow.new(window: Domain::Window.new(buffer: buffer), spec: spec)

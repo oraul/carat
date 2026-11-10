@@ -133,6 +133,8 @@ module EditorSyntaxTest
     t.assert_equal(["Define:def Function:go String:\"hi\" Comment:# note", "ruby"], [spans(h, 0), h.buffer.syntax], ":set syn=ON goes back to the filetype")
     h.type(":set number<CR>")
     t.assert_equal("Not implemented: :set number", h.message, "an option :set does not handle yet")
+    h.type(":set winborder=single<CR>")
+    t.assert_equal("Not implemented: :set winborder=single", h.message, "winborder is an option Carat has, read from configuration lines")
     h.type(":set bogus<CR>")
     t.assert_equal("E518: Unknown option: bogus", h.message, "an unknown option")
     h.type(":e notes.txt<CR>")

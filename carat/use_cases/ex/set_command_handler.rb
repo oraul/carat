@@ -24,7 +24,7 @@ module Carat
       attr_reader :last_search #: Domain::LastSearch
 
       # The options Carat has that :set does not handle yet.
-      PENDING = ["number", "nu", "relativenumber", "rnu", "tabstop", "ts", "shiftwidth", "sw", "expandtab", "et", "autoindent", "ai", "scroll", "scr", "scrolloff", "so", "timeoutlen", "tm", "undolevels", "ul", "icons", "theme", "background", "bg", "startscreen", "reducedmotion", "breadcrumbs"]
+      PENDING = ["number", "nu", "relativenumber", "rnu", "tabstop", "ts", "shiftwidth", "sw", "expandtab", "et", "autoindent", "ai", "scroll", "scr", "scrolloff", "so", "timeoutlen", "tm", "undolevels", "ul", "icons", "theme", "background", "bg", "startscreen", "reducedmotion", "breadcrumbs", "winborder"]
       private_constant :PENDING
 
       #: (spec: String, last_search: Domain::LastSearch) -> void

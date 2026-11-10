@@ -1,5 +1,6 @@
 ok   every id has a name
-ok   51 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
+ok   FloatTitle is the last UI group, after the indent guides
+ok   52 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
 ok   the markup groups after the file-icon groups
 ok   the status bar's groups follow Neovim's
 ok   names by id
@@ -109,4 +110,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 111 passed, 0 failed
+domain_theme: 112 passed, 0 failed

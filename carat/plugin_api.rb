@@ -191,7 +191,10 @@ module Carat
     # Where and how a float opens (from 2.3): anchor "editor" counts row
     # and col from the screen's top-left cell, "cursor" from the cursor
     # cell; height and width are its text rows and columns, at least 1;
-    # border draws a one-cell border with the title on its top edge; z
+    # the host pads the text with one column on each side, inside the
+    # box; border draws a one-cell border around it (in the style of
+    # option.winborder, none drawing none) with the title centered on its
+    # top edge, so a bordered box is width + 4 columns wide; z
     # from 0 to 1000 stacks it, higher on top; enter makes it the current
     # window. A box larger than the screen is cut to it. A Data value.
     class FloatOptions < Data.define(:anchor, :row, :col, :height, :width, :border, :title, :z, :enter)

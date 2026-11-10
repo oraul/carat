@@ -43,6 +43,9 @@ module Carat
       # When file windows show a winbar with their path and the cursor's
       # symbols: auto (with two or more file windows), always, or never.
       option.breadcrumbs auto
+      # The border of floats, as Neovim's winborder: none, single, double,
+      # rounded, or solid; +, -, and | with option.icons ascii.
+      option.winborder rounded
       # Indent guides in file windows: a guide at each shiftwidth level of
       # the indentation, in one character one column wide, drawn as | with
       # option.icons ascii when the character is not ASCII.

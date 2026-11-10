@@ -54,4 +54,11 @@ ok   never is stored
 ok   a later line wins
 ok   an unknown mode is refused and keeps auto
 ok   the shipped configuration shows breadcrumbs with two or more file windows
-domain_options_config: 56 passed, 0 failed
+ok   rounded by default
+ok   single is stored
+ok   double is stored
+ok   solid is stored
+ok   none is stored
+ok   an unknown border style is refused and keeps the one before
+ok   the shipped border is rounded
+domain_options_config: 63 passed, 0 failed
