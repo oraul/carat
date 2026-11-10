@@ -1,0 +1,20 @@
+ok   an empty query matches with 0
+ok   the bytes in order match
+ok   case is ignored
+ok   bytes across directories match
+ok   bytes out of order do not match
+ok   a byte the path lacks does not match
+ok   a query longer than the path does not match
+ok   a long gap still matches
+ok   a long gap across directories still matches
+ok   the file name match ranks first
+ok   a run ranks above scattered bytes
+ok   a word start ranks above a middle byte
+ok   a camel case start counts as a word start
+ok   a tighter span ranks above a looser one
+ok   a shorter path breaks a tie
+ok   the listing order breaks a tie of equal paths
+ok   a match whose gaps outweigh its points scores 0, plus the name bonus in the name
+ok   a key keeps its index
+ok   the file name starts after the last slash
+plugins_finder_matcher: 19 passed, 0 failed

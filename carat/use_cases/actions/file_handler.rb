@@ -12,8 +12,7 @@ module Carat
     # The file and quit actions the leader groups and Ctrl-S bind: save
     # the current buffer as :w does, quit as :qa does, and write every
     # modified buffer and quit as :wqa does, through the use cases the ex
-    # commands run, so the messages and refusals are theirs. file.find is
-    # reserved for the finder and answers "Not implemented" until then.
+    # commands run, so the messages and refusals are theirs.
     class FileHandler < ActionHandler
       # @rbs @save_file: SaveFile
       # @rbs @save_all: SaveAll
@@ -35,16 +34,15 @@ module Carat
         case @variant
         when :save then @save_file.call(state.buffer, "")
         when :quit_all then @quit_all.call(state, false)
-        when :write_all then write_quit_all(state)
-        else Outcome.success("Not implemented: file.find")
+        else write_quit_all(state)
         end
       end
 
       #: (ActionTable, save_file: SaveFile, save_all: SaveAll, quit_all: QuitAll) -> void
       def self.register(table, save_file:, save_all:, quit_all:)
-        names = ["file.save", "file.find", "quit.all", "quit.write_all"]
-        variants = [:save, :find, :quit_all, :write_all]
-        descriptions = ["Save file", "Find file", "Quit all", "Save all and quit"]
+        names = ["file.save", "quit.all", "quit.write_all"]
+        variants = [:save, :quit_all, :write_all]
+        descriptions = ["Save file", "Quit all", "Save all and quit"]
         i = 0
         while i < names.length
           table.register(names[i], FileHandler.new(save_file: save_file, save_all: save_all, quit_all: quit_all, variant: variants[i]), descriptions[i])

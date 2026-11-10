@@ -42,5 +42,5 @@ ok   an unknown anchor
 ok   no rows
 ok   a z out of range
 ok   a tab page holds sixteen floats
-ok   the plugin API is 2.4
+ok   the plugin API is 2.5
 editor_floats: 45 passed, 0 failed

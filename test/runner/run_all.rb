@@ -63,6 +63,7 @@ require_relative "../editor_buffers"
 require_relative "../editor_cmdline"
 require_relative "../editor_completion"
 require_relative "../editor_explorer"
+require_relative "../editor_finder"
 require_relative "../editor_floats"
 require_relative "../editor_global"
 require_relative "../editor_grammar"
@@ -96,6 +97,7 @@ require_relative "../editor_word_completion"
 require_relative "../json"
 require_relative "../lint"
 require_relative "../plugins_explorer"
+require_relative "../plugins_finder_matcher"
 require_relative "../plugins_ruby"
 require_relative "../smoke_editor"
 require_relative "../use_cases_actions"
@@ -165,6 +167,7 @@ when "editor_buffers" then EditorBuffersTest.main
 when "editor_cmdline" then EditorCmdlineTest.main
 when "editor_completion" then EditorCompletionTest.main
 when "editor_explorer" then EditorExplorerTest.main
+when "editor_finder" then EditorFinderTest.main
 when "editor_floats" then EditorFloatsTest.main
 when "editor_global" then EditorGlobalTest.main
 when "editor_grammar" then EditorGrammarTest.main
@@ -198,6 +201,7 @@ when "editor_word_completion" then EditorWordCompletionTest.main
 when "json" then JsonTest.main
 when "lint" then LintTest.main
 when "plugins_explorer" then PluginsExplorerTest.main
+when "plugins_finder_matcher" then PluginsFinderMatcherTest.main
 when "plugins_ruby" then PluginsRubyTest.main
 when "smoke_editor" then SmokeEditorTest.main
 when "use_cases_actions" then UseCasesActionsTest.main

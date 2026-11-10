@@ -5,14 +5,17 @@ require_relative "../../domain/plugin_ui"
 require_relative "../../domain/icons"
 require_relative "../../domain/highlight"
 require_relative "../../domain/mode"
+require_relative "../../domain/keymap"
 require_relative "../../ports/file_port"
 require_relative "../ex/command_runner"
 require_relative "plugin_registry"
+require_relative "boundary"
 
 module Carat
   module UseCases
     # The requests of the plugin API about the editor around the text: a
-    # message, the plugin's status segment and its priority, a prompt, an icon, a highlight
+    # message, the plugin's status segment and its priority, a prompt, a
+    # live prompt with its keymap, closing the plugin's prompt, an icon, a highlight
     # group's id, the plugin's options, the working directory, and running an ex command
     # line, which is refused with E169 when plugin calls are already
     # nested MAX_DEPTH deep. The command runner is given at construction,
@@ -68,6 +71,34 @@ module Carat
         state.cmdline = initial.dup
         @input.pending_keys = []
         state.mode = Domain::Mode::CMDLINE
+        PluginApi::Response.success("", 0)
+      end
+
+      # Opens a prompt whose changes reach the plugin after each key and
+      # whose bindings answer before the command-line keymap.
+      #: (String, String, String, String, Array[String]) -> PluginApi::Response
+      def live_prompt(name, id, text, initial, bindings)
+        opened = prompt(name, id, text, initial)
+        return opened unless opened.ok
+        keymap = Domain::Keymap.from_lines(Boundary.copied_lines(bindings), @registry.leader)
+        errors = keymap.errors
+        i = 0
+        while i < errors.length
+          @registry.record("plugin #{name}: binding #{errors[i]}")
+          i += 1
+        end
+        @plugin_ui.go_live(initial.dup, keymap)
+        opened
+      end
+
+      # Closes the plugin's own prompt, with no answer, to normal mode.
+      #: (String) -> PluginApi::Response
+      def close_prompt(name)
+        ui = @plugin_ui
+        return PluginApi::Response.failure("No prompt is open") unless ui.prompting? && ui.prompt_owner == name
+        ui.close_prompt
+        @state.cmdline = ""
+        @state.mode = Domain::Mode::NORMAL
         PluginApi::Response.success("", 0)
       end
 

@@ -147,13 +147,13 @@ Files:
 - `carat/domain/command.rb`: `Command` value (`register`, `count`, `operator`, `action`, `char`, `linewise`, `keys`); `plain`, `count_or`, `operator?`.
 - `carat/domain/command_grammar.rb`: `CommandGrammar` state machine; `accept`, `accept_visual`, `take`, `reset`, `wants_char?`, `operator_pending?`, `pending?`, `display`.
 - `carat/domain/input_state.rb`: `InputState`, the pending keys and the grammar, owned by `HandleKey`; `pending?`, `take_keys`.
-- `carat/use_cases/handle_key.rb`: `HandleKey#call`; ends in `FollowHover` only while a documentation float is recorded and in `FollowSignature` only while a call is followed; a typed `(` or `,` in insert mode calls `RequestSignature`; `HideKeyHints` first while the hints show, `FollowPalette` last while the palette follows, then the action its Enter chose.
+- `carat/use_cases/handle_key.rb`: `HandleKey#call`; ends in `FollowHover` only while a documentation float is recorded and in `FollowSignature` only while a call is followed; a typed `(` or `,` in insert mode calls `RequestSignature`; `HideKeyHints` first while the hints show, `FollowPalette` last while the palette follows, then the action its Enter chose; a plugin's live prompt keymap answers first on the command line and `PluginHost#follow_prompt` ends the key while one is open.
 - `carat/use_cases/dispatcher.rb`: `Dispatcher#call`; an arrow key in insert mode closes the session's undo state and opens the next.
 - `carat/use_cases/actions/action_handler.rb`: `ActionHandler`, the input port of an action: `kind`, `repeat`, `call(state, command)`.
 - `carat/use_cases/actions/action_table.rb`: `ActionTable`; `register` (with the action's short description), `describe`, `register_namespace` (for `plugin.`), `find`, `kind_of`, `include?`, `names`.
 - `carat/use_cases/actions/normal_mode_handler.rb`: `NormalModeHandler`, leaving a visual mode itself.
 - `carat/use_cases/actions/message_handler.rb`: `MessageHandler`, the quit hint and the reserved actions.
-- `carat/use_cases/actions/file_handler.rb`: `FileHandler.register` (`file.save`, `file.find`, `quit.all`, `quit.write_all`); `:w`, `:qa`, and `:wqa` through `SaveFile`, `SaveAll`, and `QuitAll` for the leader groups and Ctrl-S; `file.find` answers "Not implemented" until the finder.
+- `carat/use_cases/actions/file_handler.rb`: `FileHandler.register` (`file.save`, `quit.all`, `quit.write_all`); `:w`, `:qa`, and `:wqa` through `SaveFile`, `SaveAll`, and `QuitAll` for the leader groups and Ctrl-S.
 - `carat/use_cases/actions/buffer_handler.rb`: `BufferHandler.register` (`buffer.list`, `buffer.next`, `buffer.previous`, `buffer.delete`); `:ls`, `:bn`, `:bp`, and `:bd` through the buffer use cases, a count stepping or naming the buffer.
 - `carat/domain/key_hints.rb`: `KeyHints`, the key hints float's id; `showing?`.
 - `carat/domain/palette.rb`: `Palette`, the command palette's entries (names, keys, descriptions), matches, selection, typed text, float, and the action Enter chose; `start`, `add`, `move`, `selected_entry`, `take_chosen`, `following?`.
@@ -434,6 +434,7 @@ Files:
 - `carat/use_cases/ex/lsp_start_command_handler.rb`: `LspStartCommandHandler.register` (`:LspStart`): starts the current buffer's language server, trusted directory or not, through `LanguageServicePort#start`.
 - `carat/use_cases/ex/lsp_restart_command_handler.rb`: `LspRestartCommandHandler.register` (`:LspRestart`): stops every language server and starts the current buffer's again through `LanguageServicePort#restart`.
 - `carat/use_cases/ex/messages_command_handler.rb`: `MessagesCommandHandler.register` (`:mes[sages]`): the message history on the message row or as a listing, `clear` empties it, `E474` for another argument.
+- `carat/use_cases/files/list_tree.rb`: `ListTree#call(root, ignore, limit)`, the regular files below a root for the plugins' `list_files`: ignored names skipped, links never entered, a link to a file kept only inside the resolved root.
 
 Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`, `test/editor_messages.rb` (`:messages`, the notification boxes, their expiry, and `NO_COLOR`), `test/domain_messages.rb` (the history and the notices).
 
@@ -517,32 +518,36 @@ Flow: `EditorAssembly` registers `Plugins::Registry.all` with `PluginHost#regist
 
 Files:
 
-- `carat/plugin_api.rb`: `Carat::PluginApi` (`VERSION` 2.3, `STATUS_PRIORITY`, `PRIORITY_MAX`, `EVENTS`, `OPTION_TYPES`, `SIDES`), the values `Manifest`, `Event`, `Context`, `Command`, `Edit`, `Response`, `WindowResponse`, `FloatOptions` (`at`), `TextResponse`, `BufferView`, `FileInfo`, `Input`, the path functions `Paths` (`normalize`, `join`, `dirname`, `basename`, `relative`, `inside?`), the file-icon table `FileIcons` (`file_type`, `group_of`, shared by the explorer and the buffer tabs), the `Host` base class (one method per request: `read_buffer`, `edit_buffer`, `open_scratch`, `open_in_split`, `run_ex`, `list_dir`, `make_file`, `prompt`, `syntax_group`, `set_segment`, and the rest), and the `Plugin` base class (`manifest`, `activate`, `deactivate`, `on_event`, `on_action`, `on_command`, `on_input`, `tokenize`).
+- `carat/plugin_api.rb`: `Carat::PluginApi` (`VERSION` 2.5, `STATUS_PRIORITY`, `PRIORITY_MAX`, `EVENTS`, `OPTION_TYPES`, `SIDES`), the values `Manifest`, `Event`, `Context`, `Command`, `Edit`, `Response`, `WindowResponse`, `FloatOptions` (`at`), `TextResponse`, `BufferView`, `FileInfo`, `Input`, the path functions `Paths` (`normalize`, `join`, `dirname`, `basename`, `relative`, `inside?`), the file-icon table `FileIcons` (`file_type`, `group_of`, shared by the explorer and the buffer tabs), the `Host` base class (one method per request: `read_buffer`, `edit_buffer`, `open_scratch`, `open_in_split`, `run_ex`, `list_dir`, `list_files`, `read_file`, `make_file`, `prompt`, `live_prompt`, `close_prompt`, `syntax_group`, `set_segment`, and the rest), and the `Plugin` base class (`manifest`, `activate`, `deactivate`, `on_event`, `on_action`, `on_command`, `on_input`, `on_prompt_change`, `tokenize`).
 - `carat/domain/manifest_check.rb`: `ManifestCheck.check` and its `check_*` rules (API version, shapes, actions, commands, events, bindings, options, filetypes).
 - `carat/domain/path_policy.rb`: `PathPolicy`; `create_problem`, `rename_problem`, `inside?`, `shown`.
 - `carat/domain/path_info.rb`: `PathInfo` value `FilePort#stat` returns (`exists`, `size`, `mtime`, `directory`, `symlink`, `regular`); `missing`, `real_directory?`.
-- `carat/domain/plugin_ui.rb`: `PluginUi`, status segments with their order (`owners`) and `priorities`, and the open prompt; `open_prompt`, `close_prompt`, `prompting?`, `segment`, `text_at`, `remove_segment`, `drop`.
+- `carat/domain/plugin_ui.rb`: `PluginUi`, status segments with their order (`owners`) and `priorities`, and the open prompt, live with its keymap and the text last reported; `open_prompt`, `go_live`, `close_prompt`, `prompting?`, `segment`, `text_at`, `remove_segment`, `drop`.
 - `carat/domain/sign_layer.rb`: `SignLayer`, one plugin's signs in one buffer, moved with the lines; `place`, `glyph_at`.
 - `carat/use_cases/plugins/plugin_host.rb`: `PluginHost`, the facade the core calls; `register`, `activate_all`, `action`, `command?`, `command`, `answer`, `observe`, `saved`, `resized`, `option`, `enabled?`, `errors`.
 - `carat/use_cases/plugins/plugin_registry.rb`: `PluginRegistry`; `register`, `activate_all`, `deactivate_all`, `disable` (cleanup), `refusal`, `enter`, `leave`, `depth`, `busy?`, `cause`, `owner_of_command`.
 - `carat/use_cases/plugins/plugin_entries.rb`: `PluginEntries`, the list with a typed reader; `add`, `entry`, `find`.
 - `carat/use_cases/plugins/plugin_entry.rb`: `PluginEntry` record; `subscribed?`, `command?`, `tokenizes?`.
-- `carat/use_cases/plugins/plugin_router.rb`: `PluginRouter`; `action`, `command?`, `command`, `answer`.
+- `carat/use_cases/plugins/plugin_router.rb`: `PluginRouter`; `action`, `command?`, `command`, `answer`, `follow_prompt`.
 - `carat/use_cases/plugins/plugin_events.rb`: `PluginEvents`; `observe`, `flush`, `saved`, `resized`.
 - `carat/use_cases/plugins/pending_event.rb`: `PendingEvent`; `for?`.
 - `carat/use_cases/plugins/plugin_link.rb`: `PluginLink`, the per-plugin `Host`; one override per `Host` method.
 - `carat/use_cases/plugins/buffer_requests.rb`: `BufferRequests`; `read_buffer`, `edit_buffer` (validated item by item, one transaction), `move_cursor`, `place_sign`, `clear_signs`.
 - `carat/use_cases/plugins/window_requests.rb`: `WindowRequests`; `open_scratch`, `set_scratch_lines`, `close_scratch`, `focus_window`, `open_file`, `open_in_split`, `open_in_tab`, `editing_window`, `scratch_window`, `open_float`, `move_float`, `close_float` (a plugin's own floats only, `own_float_tab`); `focus_window` enters a float.
-- `carat/use_cases/plugins/file_requests.rb`: `FileRequests`; `list_dir`, `stat`, `make_file`, `make_dir`, `rename_path`, `delete_path`.
-- `carat/use_cases/plugins/ui_requests.rb`: `UiRequests`; `message`, `set_status`, `set_segment`, `prompt`, `icon`, `syntax_group`, `option`, `working_directory`, `run_ex`.
+- `carat/use_cases/plugins/file_requests.rb`: `FileRequests`; `list_dir`, `list_files` (at most 100,000), `read_file` (at most 256 KiB), `stat`, `make_file`, `make_dir`, `rename_path`, `delete_path`.
+- `carat/use_cases/plugins/ui_requests.rb`: `UiRequests`; `message`, `set_status`, `set_segment`, `prompt`, `live_prompt`, `close_prompt`, `icon`, `syntax_group`, `option`, `working_directory`, `run_ex`.
 - `carat/use_cases/plugins/boundary.rb`: `Boundary.copied_lines`, the copies of strings crossing the boundary.
 - `carat/use_cases/concerns/guarded.rb`: `Guarded#guarded`, the one guarded path into a plugin.
 - `carat/use_cases/actions/plugin_action_handler.rb`: `PluginActionHandler.register`.
 - `carat/use_cases/ex/plugin_command_handler.rb`: `PluginCommandHandler`; `matches?`, `call`.
 - `carat/plugins/registry.rb`: generated from `config/plugins.caratrc`; `Registry.all`, one `require_relative` and one constructor per plugin; never edited by hand.
 - `carat/plugins/hello/plugin.rb`: `Hello::Plugin`, the smallest example and a test fixture outside the registry.
+- `carat/plugins/finder/plugin.rb`: `Finder::Plugin`, the fuzzy file finder on `<leader>ff` and `<C-p>`: `list_files` once per opening, a live prompt whose changes refilter, the list float and a preview float from 100 columns, Enter, split, vertical split, and tab picks; `manifest`, `on_event`, `on_action`, `on_prompt_change`, `on_input`.
+- `carat/plugins/finder/matcher.rb`: `Finder::Matcher`, path fuzzy scoring by bytes without allocating (file name first, word starts, runs, gaps); `score`, `key`, `index_of`.
 
-Tests: `test/domain_plugin_manifest.rb`, `test/use_cases_plugins.rb`, `test/use_cases_plugin_files.rb`, `test/use_cases_plugin_hardening.rb`, `test/editor_plugins.rb`.
+Tests: `test/domain_plugin_manifest.rb`, `test/use_cases_plugins.rb`, `test/use_cases_plugin_files.rb`, `test/use_cases_plugin_hardening.rb`, `test/editor_plugins.rb`, `test/editor_finder.rb`, `test/plugins_finder_matcher.rb`.
+
+Bench: `finder` (typing into the finder over 10,000 files, every key filtering all of them; about 2.3 ms a key at 8d8832f's machine, the target under 20 ms).
 
 Designs: `plugin-host` (all Decisions), `plugin-host-hardening` (all Decisions), `plugin-explorer` (The API grows by requests; The prompt reuses command-line mode; Window rules), `caratrc-config` (Plugin manifests use lines), `use-case-boundaries` (The plugin side).
 

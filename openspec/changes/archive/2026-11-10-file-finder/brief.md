@@ -1,0 +1,12 @@
+# Brief
+
+file-finder: docs/queue.md item 1 as the planner wrote it (T5 roadmap, the user's order, estimated large): a finder plugin opened by Space f f and Ctrl-P in normal mode, fuzzy-filtering the project's files as you type (best match first, the explorer's ignore list respected, links that leave the project skipped), a preview of the highlighted file when the terminal is wide enough, Enter opening the file and keys opening it in a split, a vertical split, or a tab, Esc closing it; 10,000 files filtered in under 20 ms with a bench scenario; each case a docs row and a table-driven test; allocations per key unchanged when the finder is closed. Continuous loop. Security review is never skipped.
+
+Plan notes:
+- Package step: run `sh tools/run_state.sh history` to add the definitions (#89) row to docs/metrics.tsv; its total 2,570,341 is over the large budget of 2.5M (overrun note: check output 436,791 against 416,666).
+- Add the entries in build/plan/backlog.md to docs/backlog.md; each names the queue item it is folded into.
+- Update existing docs/backlog.md entries instead of adding new ones: 'The gateway cancels a request in four copies' (line 1853) now five copies plus send_definition and forget_definition (json_rpc_language_gateway.rb:692, 703, 732; periodic blocking at 8d8832f); 'A key resolved by timeoutlen runs no follow tail' (line 1907) also skips FollowDefinition (handle_key.rb:181); the completion typed-part entry gains the third copy in complete_word.rb:47; 'Two comments left unwrapped by the definitions change' already covers open_file.rb:20.
+- Refresh stale docs/backlog.md entries (folded into docs-index): 'Three copies of the byte basename' (line 245) cites FramePresenter#file_name at frame_presenter.rb:660, gone, add Buffer#name_start (buffer.rb:226); the bench run.sh entry (line 1789) also omits lh-winbar; 'FramePresenter passes the painted row through instance variables' (line 379) lines 356, 380, 585 are now 758, 788, 1064.
+- The 'Definition target paths keep decoded control bytes' entry (security Low (5)) is now owned by queue item 13 bidi-controls; the metrics.sh compare finding (tools/metrics.sh:85) duplicates the strict-metric gap already in run-budgets-tidy; the Visual cursor cell finding duplicates the entry at docs/backlog.md line 2892, now owned by theme-tidy.
+- Queue size 17,336 of the 17,369 budget; items were shortened rather than findings dropped.
+- Stopped short of the cap: 18 tool calls of 20.

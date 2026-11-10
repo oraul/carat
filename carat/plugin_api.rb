@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 4
-    VERSION = "2.4"
+    MINOR = 5
+    VERSION = "2.5"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -590,6 +590,29 @@ module Carat
         raise NotImplementedError, "Host#list_dir"
       end
 
+      # Returns a Response whose lines are the paths, relative to root, of
+      # the regular files below it, recursively, each directory's entries
+      # sorted (API 2.5): an entry whose name is in ignore is neither
+      # listed nor entered, a link to a directory is never entered, and a
+      # link whose target is not inside root, every link resolved, is
+      # skipped. Failed when root cannot be read; at 100,000 files the
+      # listing stops with a message.
+      # @rbs root: String
+      # @rbs ignore: Array[String]
+      def list_files(root, ignore)
+        raise NotImplementedError, "Host#list_files"
+      end
+
+      # Returns a Response whose lines are the first rows lines of the
+      # regular file at path, without line endings, read only when it
+      # holds at most 256 KiB (API 2.5); failed with the file system's
+      # message, and for rows below 1 or above 1000.
+      # @rbs path: String
+      # @rbs rows: Integer
+      def read_file(path, rows)
+        raise NotImplementedError, "Host#read_file"
+      end
+
       # Returns a FileInfo for the path.
       # @rbs path: String
       def stat(path)
@@ -710,6 +733,28 @@ module Carat
         raise NotImplementedError, "Host#prompt"
       end
 
+      # Opens a prompt as prompt does whose every change of text arrives
+      # as an Input through on_prompt_change after the key, and whose
+      # bindings, keymap lines of command-line mode bound to the plugin's
+      # actions, answer before the command-line keymap while it is open
+      # (API 2.5). Returns a Response, failed while another prompt is
+      # open.
+      # @rbs id: String
+      # @rbs text: String
+      # @rbs initial: String
+      # @rbs bindings: Array[String]
+      def live_prompt(id, text, initial, bindings)
+        raise NotImplementedError, "Host#live_prompt"
+      end
+
+      # Closes the plugin's open prompt without an on_input and returns
+      # to normal mode (API 2.5). Returns a Response, failed when the
+      # plugin holds no open prompt.
+      # @rbs skip
+      def close_prompt
+        raise NotImplementedError, "Host#close_prompt"
+      end
+
       # Returns a Response whose number is the id of the syntax highlight
       # group ("Comment", "String", ... "Todo", "Error") or the file-icon
       # group ("DevIconDefault", "DevIconRb", ... "DevIconLock", API 2.1)
@@ -727,7 +772,8 @@ module Carat
     # plugin's Host when the plugin is enabled, deactivate when the editor
     # quits, on_event for every subscribed event, on_action for every
     # action of the plugin, on_command for every ex command of the
-    # plugin, on_input when a prompt the plugin opened ends, and tokenize
+    # plugin, on_input when a prompt the plugin opened ends,
+    # on_prompt_change when a live prompt's text changed, and tokenize
     # for each line the editor highlights in a filetype the manifest
     # declares. A plugin
     # that raises anything in any of them, an unimplemented method's
@@ -761,6 +807,11 @@ module Carat
 
       #: (Input) -> void
       def on_input(input)
+      end
+
+      # The text of a live prompt the plugin opened changed (API 2.5).
+      #: (Input) -> void
+      def on_prompt_change(input)
       end
 
       # Tokenizes one line of a buffer whose filetype the manifest

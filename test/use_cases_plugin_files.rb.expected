@@ -78,4 +78,22 @@ ok   Escape delivers a cancel
 ok   a backspace on an empty line cancels
 ok   the text is not run as an ex command
 ok   the next command line is an ex command again
-use_cases_plugin_files: 80 passed, 0 failed
+ok   list_files lists the files below the root
+ok   list_files skips ignored names
+ok   without an ignore list the .git files are listed
+ok   list_files fails for a missing root
+ok   read_file answers the first rows
+ok   read_file answers fewer rows of a short file
+ok   read_file refuses a directory
+ok   read_file refuses no rows
+ok   read_file refuses a missing file
+ok   a live prompt delivers each changed text
+ok   a live prompt's binding runs the plugin's action
+ok   a second live prompt is refused while one is open
+ok   a backspace is a change
+ok   Enter ends a live prompt with an answer
+ok   the next command line is an ex command again
+ok   its bindings went with it
+ok   close_prompt closes the plugin's prompt
+ok   close_prompt without a prompt fails
+use_cases_plugin_files: 98 passed, 0 failed

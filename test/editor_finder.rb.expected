@@ -1,0 +1,34 @@
+ok   Space f f opens the finder
+ok   Ctrl-P opens the finder
+ok   Typing filters the files
+ok   case is ignored
+ok   a backspace widens the match again
+ok   No file matches
+ok   Ctrl-N and Ctrl-P move the highlight
+ok   Down and Up move it too
+ok   the highlight stops at the first row
+ok   typing returns the highlight to the first row
+ok   Esc closes the finder
+ok   a backspace on the empty prompt closes it
+ok   A wide screen shows the preview
+ok   the preview follows the highlight
+ok   no match shows no preview
+ok   A narrow screen shows no preview
+ok   Enter opens the file
+ok   Ctrl-X opens it in a split
+ok   Ctrl-S opens it in a split too
+ok   Ctrl-V opens it in a vertical split
+ok   Ctrl-T opens it in a tab page
+ok   Enter with no match opens nothing
+ok   Esc opens nothing
+ok   the finder opens again after a pick
+ok   Ignored directories are not listed
+ok   the configuration's ignore list replaces the default
+ok   A link leaving the project is skipped
+ok   A linked directory is not entered
+ok   The file name match ranks first
+ok   Ten thousand files are listed
+ok   Ten thousand files are listed and filtered
+ok   the configuration removes the Ctrl-P binding
+ok   and Space f f still opens the finder
+editor_finder: 33 passed, 0 failed

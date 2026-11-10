@@ -1,6 +1,6 @@
 # Neovim compatibility
 
-Every Neovim command Carat implements has a row here and a table-driven test. The test column names the `test/*.rb` program whose table or assertions cover the row. Commands from later roadmap items are not listed until they land; pressing a key bound to one of them shows a "Not implemented" message. The commands plugins add are Carat's own, not Neovim's, and are listed in `docs/actions.md` and `docs/plugins.md`; the file explorer's are in the File explorer section below. A scratch window a plugin opens behaves as a `nofile` buffer in a `winfixwidth` window with `nonumber`: `:w` reports `E382`, `:wa` skips it, and `:q` closes it; `:q` in the last window that shows a file, when the only other windows of its tab page are plugin windows, closes that tab page, or ends the editor on the last one, as Neovim's tree plugins arrange.
+Every Neovim command Carat implements has a row here and a table-driven test. The test column names the `test/*.rb` program whose table or assertions cover the row. Commands from later roadmap items are not listed until they land; pressing a key bound to one of them shows a "Not implemented" message. The commands plugins add are Carat's own, not Neovim's, and are listed in `docs/actions.md` and `docs/plugins.md`; the file explorer's and the file finder's are in the File explorer and File finder sections below. A scratch window a plugin opens behaves as a `nofile` buffer in a `winfixwidth` window with `nonumber`: `:w` reports `E382`, `:wa` skips it, and `:q` closes it; `:q` in the last window that shows a file, when the only other windows of its tab page are plugin windows, closes that tab page, or ends the editor on the last one, as Neovim's tree plugins arrange.
 
 ## Command grammar
 
@@ -64,7 +64,6 @@ Differences from Neovim: a different operator after a pending one cancels silent
 | `[count]<leader>ws`, `[count]<leader>wv`, `[count]<leader>wh`, `wj`, `wk`, `wl`, `[count]<leader>wc`, `<leader>wo` | `window.*` | Carat's window group: as `<C-w>` with the same last key | `editor_leader`, `domain_keymap` |
 | `<leader>qq`, `<leader>qw` | `quit.all`, `quit.write_all` | Carat's quit group: `:qa`, and `:wqa` | `editor_leader`, `editor_cmdline`, `smoke_editor` |
 | `<leader>fs`, `<C-s>` | `file.save` | Carat's file group and save key: `:w`, Ctrl-S also in insert mode, staying in it | `editor_leader`, `smoke_editor` |
-| `<leader>ff` | `file.find` | Reserved for the finder: "Not implemented: file.find" | `editor_leader` |
 | `K` | `docs.hover` | The language server's hover documentation under the cursor in a bordered float, its markdown as plain rows; `K` again enters it, `Esc` or a cursor move closes it; with no server Neovim runs `keywordprg` instead, Carat says `No hover provider for this buffer` | `adapters_hover` |
 | `gd` | `definition.jump` | The language server's definition under the cursor, asked without waiting: one target opens in the window with the cursor on it and the position left in the jump list, several open a pick list (Enter goes, Esc closes), a target outside the project opens read-only; with no server Neovim searches for a local declaration instead, Carat says `method textDocument/definition is not supported by any of the servers registered for the current buffer`, and an empty answer `No locations found` | `adapters_definitions` |
 | `<leader>dd` | `definition.peek` | The definition's source in a bordered float at the cursor, 12 rows from the target line, the cursor staying put; `Esc` or a cursor move closes it (Carat's own key) | `adapters_definitions` |
@@ -484,6 +483,20 @@ The built-in `explorer` plugin is Carat's own, not part of Neovim; its keys foll
 | `q`, `?` | tree | `plugin.explorer.close`, `help` | Close the tree; show the keys in the message row |
 
 `j`, `k`, `gg`, `G`, counts, `<C-w>` commands, and `:` work in the tree as in any window. The tree's first row is its slot's header, and `<leader>ls` hides and shows it with its cursor (Layout slots). The tree keeps its width on `<C-w>=` and on resizes, and `:q` in it closes only the tree. Not implemented: copy, cut, and paste of files, bookmarks, git status, recursive delete, trash, and live updates when files change outside the editor.
+
+## File finder
+
+The built-in `finder` plugin is Carat's own, not part of Neovim; its keys follow the conventions of Neovim's fuzzy finders, such as telescope and fzf-lua. Every row is covered by `test/editor_finder.rb`, and the ranking by `test/plugins_finder_matcher.rb`.
+
+| Keys | Where | Action name | Behavior |
+| --- | --- | --- | --- |
+| `<leader>ff`, `<C-p>` | normal mode | `plugin.finder.open` | List the files below the working directory, without the names of `plugin.finder.ignore` (`.git build tmp`), links leading out of it, or the inside of linked directories, in a float titled `Files N/M` with the `> ` prompt on the command line |
+| typed text | finder | none | Filter by a fuzzy match of the path ignoring case, best first: the file name, word starts, and runs score higher, a shorter path breaks a tie; `No match` when nothing matches |
+| `<C-n>`, `<Down>`, `<C-p>`, `<Up>` | finder | `plugin.finder.next`, `previous` | Move the highlight, stopping at the ends |
+| `<CR>` | finder | none | Open the highlighted file in the editing window and close the finder; nothing with no match |
+| `<C-x>`, `<C-s>`, `<C-v>`, `<C-t>` | finder | `plugin.finder.open_split`, `open_vsplit`, `open_tab` | Open the highlighted file in a horizontal split, a vertical split, or a new tab page |
+| `<Esc>`, `<BS>` on the empty prompt | finder | none | Close the finder and open nothing |
+| none | finder, 100 columns or more | none | Preview the first rows of the highlighted file in a second float titled with its path |
 
 ## Syntax highlighting
 

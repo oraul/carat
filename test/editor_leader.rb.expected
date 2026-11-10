@@ -13,7 +13,6 @@ ok   Ctrl-S writes the file in normal mode
 ok   Ctrl-S in insert mode writes and stays in insert mode
 ok   typing after Ctrl-S in insert mode modifies the buffer again
 ok   leader w no longer writes
-ok   leader f f is reserved for the finder
 ok   Ctrl-S as the raw byte 0x13 writes the file
 ok   undo after Ctrl-S in insert mode takes the insert back and the buffer differs from the file
 ok   leader q q quits
@@ -31,4 +30,4 @@ ok   leader b d is refused by a change
 ok   leader b d refused shows what :bd shows
 ok   leader b d with a count of no buffer shows E516
 ok   leader b b lists the buffers as :ls does
-editor_leader: 33 passed, 0 failed
+editor_leader: 32 passed, 0 failed

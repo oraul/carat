@@ -4,3 +4,4 @@
 # after a change.
 plugin.explorer explorer/plugin Carat::Plugins::Explorer::Plugin
 plugin.ruby ruby/plugin Carat::Plugins::Ruby::Plugin
+plugin.finder finder/plugin Carat::Plugins::Finder::Plugin

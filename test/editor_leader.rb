@@ -64,8 +64,7 @@ module EditorLeaderTest
       ["Ctrl-S writes the file in normal mode", "x<C-s>", ["ne\ntwo\nthree\n", false, :normal, [0, 0], "\"a.txt\" 3L, 13B written"]],
       ["Ctrl-S in insert mode writes and stays in insert mode", "iab<C-s>", ["abone\ntwo\nthree\n", false, :insert, [0, 2], "\"a.txt\" 3L, 16B written"]],
       ["typing after Ctrl-S in insert mode modifies the buffer again", "iab<C-s>c", ["abone\ntwo\nthree\n", true, :insert, [0, 3], ""]],
-      ["leader w no longer writes", "x<Space>w<Esc>", ["one\ntwo\nthree\n", true, :normal, [0, 0], ""]],
-      ["leader f f is reserved for the finder", "<Space>ff", ["one\ntwo\nthree\n", false, :normal, [0, 0], "Not implemented: file.find"]]
+      ["leader w no longer writes", "x<Space>w<Esc>", ["one\ntwo\nthree\n", true, :normal, [0, 0], ""]]
     ]) do |keys|
       h = session(keys)
       [disk(h), h.buffer.modified?, h.mode, h.cursor, h.message]

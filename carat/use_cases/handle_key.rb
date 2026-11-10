@@ -26,6 +26,8 @@ require_relative "discovery/hide_key_hints"
 require_relative "discovery/follow_palette"
 require_relative "../domain/key_hints"
 require_relative "../domain/palette"
+require_relative "../domain/plugin_ui"
+require_relative "../domain/mode"
 
 module Carat
   module UseCases
@@ -70,6 +72,9 @@ module Carat
     # command palette follows, every key ends in FollowPalette, which
     # filters and shows its list or closes it; an action its Enter chose
     # is then dispatched with no keys, as if its key had been pressed.
+    # While a plugin's live prompt is open its keymap answers first on the
+    # command line and every key ends in PluginHost#follow_prompt, which
+    # reports a changed text; with none, one comparison.
     class HandleKey
       include Reporting
 
@@ -100,6 +105,7 @@ module Carat
       attr_reader :follow_palette #: FollowPalette
 
       # @rbs @replays: Integer
+      # @rbs @plugin_ui: Domain::PluginUi
       # @rbs @hover: Domain::HoverRequest
 
       #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, completion: Domain::CompletionMenu, show_completion: ShowCompletion, plugins: PluginHost, arrange_view: ArrangeView, search_prompt: Domain::SearchPrompt, open_search_prompt: OpenSearchPrompt, follow_hover: FollowHover, definition: Domain::DefinitionRequest, follow_definition: FollowDefinition, request_signature: RequestSignature, follow_signature: FollowSignature, signature: Domain::SignatureRequest, key_hints: Domain::KeyHints, hide_key_hints: HideKeyHints, palette: Domain::Palette, follow_palette: FollowPalette) -> void
@@ -108,6 +114,7 @@ module Carat
         @hide_key_hints = hide_key_hints
         @palette = palette
         @follow_palette = follow_palette
+        @plugin_ui = plugins.plugin_ui
         @request_signature = request_signature
         @follow_signature = follow_signature
         @signature = signature
@@ -148,6 +155,7 @@ module Carat
         @follow_definition.call(state) if @definition.following?
         @follow_signature.call(state) if @signature.active?
         @follow_palette.call(state) if @palette.following?
+        @plugins.follow_prompt(state) if @plugin_ui.prompt_live
         @plugins.observe
         @arrange_view.call(state)
         result
@@ -179,15 +187,22 @@ module Carat
           step(state, queue.shift, queue)
         end
         @follow_signature.call(state) if @signature.active?
+        @plugins.follow_prompt(state) if @plugin_ui.prompt_live
         @plugins.observe
         @arrange_view.call(state)
         :handled
       end
 
-      # The scratch buffer's own keymap answers first; a key it neither
-      # binds nor starts a binding with falls through to the mode's keymap.
+      # A live prompt's keymap answers first on the command line, then the
+      # scratch buffer's own keymap; a key neither binds nor starts a
+      # binding with falls through to the mode's keymap.
       #: (Domain::EditorState, Array[Integer]) -> Domain::KeymapMatch
       def lookup(state, keys)
+        prompt_keys = @plugin_ui.prompt_keymap
+        if !prompt_keys.nil? && state.mode == Domain::Mode::CMDLINE
+          found = prompt_keys.lookup(Domain::Mode::CMDLINE, keys)
+          return found unless found.kind == :none
+        end
         local = state.buffer.keymap
         unless local.nil?
           match = local.lookup(state.mode, keys)

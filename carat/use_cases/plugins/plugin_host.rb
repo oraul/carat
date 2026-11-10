@@ -6,6 +6,7 @@ require_relative "../../domain/input_state"
 require_relative "../../domain/plugin_ui"
 require_relative "../../domain/buffer"
 require_relative "../../domain/keymap"
+require_relative "../../domain/mode"
 require_relative "../../domain/command"
 require_relative "../../domain/ex_command"
 require_relative "../../ports/file_port"
@@ -16,6 +17,7 @@ require_relative "../files/resolve_inside"
 require_relative "../files/make_path"
 require_relative "../files/rename_path"
 require_relative "../files/delete_path"
+require_relative "../files/list_tree"
 require_relative "../windows/split_window"
 require_relative "../windows/open_side_window"
 require_relative "../windows/open_float"
@@ -82,7 +84,7 @@ module Carat
         @events = PluginEvents.new(state: state, buffers: buffers, tabs: tabs, registry: @registry)
         @buffer_requests = BufferRequests.new(state: state, buffers: buffers, registry: @registry)
         @window_requests = WindowRequests.new(state: state, buffers: buffers, tabs: tabs, registry: @registry, open_file: open_file, split_window: split_window, open_tab: open_tab, open_side_window: open_side_window, open_float: open_float, close_float: close_float, files: files)
-        @file_requests = FileRequests.new(files: files, probe_path: @probe_path, make_path: @make_path, rename_path: @rename_path, delete_path: @delete_path)
+        @file_requests = FileRequests.new(files: files, probe_path: @probe_path, make_path: @make_path, rename_path: @rename_path, delete_path: @delete_path, list_tree: ListTree.new(files: files))
         @ui_requests = UiRequests.new(state: state, registry: @registry, files: files, plugin_ui: plugin_ui, input: input, runner: runner)
         @syntax = PluginSyntax.new(registry: @registry)
       end
@@ -178,6 +180,19 @@ module Carat
       #: (String, bool) -> void
       def answer(text, cancelled)
         @router.answer(text, cancelled)
+        flush
+      end
+
+      # After a key while a live prompt is open: its text, when it changed
+      # since it was last reported, goes to the plugin that opened it.
+      #: (Domain::EditorState) -> void
+      def follow_prompt(state)
+        ui = @plugin_ui
+        return unless ui.prompt_live && state.mode == Domain::Mode::CMDLINE
+        text = state.cmdline
+        return if text == ui.prompt_seen
+        ui.prompt_seen = text.dup
+        @router.follow_prompt(text)
         flush
       end
 

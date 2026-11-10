@@ -186,6 +186,24 @@ module Carat
         @files.list_dir(@name, path)
       end
 
+      # Returns a Response.
+      # @rbs root: String
+      # @rbs ignore: Array[String]
+      def list_files(root, ignore)
+        why = refusal
+        return PluginApi::Response.failure(why) unless why.empty?
+        @files.list_files(@name, root, ignore)
+      end
+
+      # Returns a Response.
+      # @rbs path: String
+      # @rbs rows: Integer
+      def read_file(path, rows)
+        why = refusal
+        return PluginApi::Response.failure(why) unless why.empty?
+        @files.read_file(@name, path, rows)
+      end
+
       # Returns a FileInfo.
       # @rbs path: String
       def stat(path)
@@ -306,6 +324,25 @@ module Carat
         why = refusal
         return PluginApi::Response.failure(why) unless why.empty?
         @ui.prompt(@name, id, text, initial)
+      end
+
+      # Returns a Response.
+      # @rbs id: String
+      # @rbs text: String
+      # @rbs initial: String
+      # @rbs bindings: Array[String]
+      def live_prompt(id, text, initial, bindings)
+        why = refusal
+        return PluginApi::Response.failure(why) unless why.empty?
+        @ui.live_prompt(@name, id, text, initial, bindings)
+      end
+
+      # Returns a Response.
+      # @rbs skip
+      def close_prompt
+        why = refusal
+        return PluginApi::Response.failure(why) unless why.empty?
+        @ui.close_prompt(@name)
       end
 
       # Returns a Response whose number is the group's id.
