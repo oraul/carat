@@ -1,7 +1,8 @@
 # Checks the rules the Spinel compiler does not enforce by itself:
 # the layer dependency rule, the plugin rule (a plugin requires only
 # carat/plugin_api.rb and its own directory; the generated registry may
-# require any plugin), forbidden constructs, hard-coded bindings, and the
+# require any plugin), forbidden constructs, hard-coded bindings, Vim
+# messages spelled in a second file, defs replacing a reader, and the
 # coverage of docs/codebase-map.md.
 # Prints every violation; the snapshot is the empty report.
 require_relative "../carat/testing"
@@ -895,6 +896,177 @@ module LintTest
     problems
   end
 
+  # Vim messages spelled in more than one file, each with the queue item
+  # that gives it one home and removes its line. Lint refuses a message
+  # literal in a second file unless it is listed here, and a listed message
+  # that no longer repeats, so the list only shrinks.
+  KNOWN_REPEATED_MESSAGES = {
+    "E32: No file name" => "file_command_handler.rb and save_file.rb: queue item messages-tidy",
+    "E33: No previous substitute regular expression" => "vim_pattern.rb and substitute_lines.rb: queue item messages-tidy",
+    "E474: Invalid argument" => "history_command_handler.rb and messages_command_handler.rb: queue item messages-tidy",
+    "E477: No ! allowed" => "three ex command handlers: queue item messages-tidy",
+    "E484: Can't open file" => "path_info.rb, visit_target.rb, and open_file.rb: queue item messages-tidy",
+    "E486: Pattern not found:" => "find_match.rb and substitute_lines.rb: queue item messages-tidy",
+    "E488: Trailing characters:" => "five files: queue item messages-tidy",
+    "E939: Positive count required" => "register_count.rb and substitute_lines.rb: queue item messages-tidy"
+  }
+
+  DIGITS = "0123456789"
+  NAME_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789_"
+  WORD_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_:"
+
+  # The fixed text of each Vim message literal in a line of code: from a
+  # quote followed by E, digits, and a colon, up to the closing quote, an
+  # interpolation, or an escape, trimmed.
+  def self.message_literals(line)
+    found = []
+    i = 0
+    while i + 3 < line.length
+      quote = line[i, 1]
+      if (quote == "\"" || quote == "'") && line[i + 1, 1] == "E"
+        j = i + 2
+        j += 1 while j < line.length && DIGITS.include?(line[j, 1])
+        if j > i + 2 && line[j, 1] == ":"
+          k = j
+          while k < line.length
+            ch = line[k, 1]
+            break if ch == quote || ch == "\\" || (ch == "#" && line[k + 1, 1] == "{")
+            k += 1
+          end
+          found << line[i + 1, k - i - 1].strip
+          i = k
+        end
+      end
+      i += 1
+    end
+    found
+  end
+
+  # The files of the collected "message<TAB>path" pairs that spell message.
+  def self.message_files(found, message)
+    files = []
+    found.each do |pair|
+      parts = pair.split("\t")
+      files << parts[1] if parts[0] == message && !files.include?(parts[1])
+    end
+    files
+  end
+
+  # Why the collected "message<TAB>path" pairs break the repeated message
+  # rule: a message spelled in two or more files and not in known, and a
+  # message of known that is no longer in two.
+  def self.repeat_problems(found, known)
+    problems = []
+    messages = []
+    found.each do |pair|
+      message = pair.split("\t")[0]
+      messages << message unless messages.include?(message)
+    end
+    messages.each do |message|
+      files = message_files(found, message)
+      if files.length > 1 && !known.key?(message)
+        problems << "\"#{message}\" is spelled in #{files.join(", ")}; give it one home in Domain::Messages"
+      end
+    end
+    known.each_key do |message|
+      if message_files(found, message).length < 2
+        problems << "KNOWN_REPEATED_MESSAGES lists \"#{message}\", which is no longer in two files; remove its line"
+      end
+    end
+    problems
+  end
+
+  # The symbol names a line of code spells (":name", not "A::B" or "key:").
+  def self.symbol_names(code)
+    names = []
+    i = 0
+    while i < code.length
+      if code[i, 1] == ":" && (i == 0 || !WORD_CHARS.include?(code[i - 1, 1]))
+        j = i + 1
+        j += 1 while j < code.length && NAME_CHARS.include?(code[j, 1])
+        names << code[i + 1, j - i - 1] if j > i + 1
+        i = j
+      else
+        i += 1
+      end
+    end
+    names
+  end
+
+  # The name an instance method definition line defines, private or
+  # protected allowed, or "" for any other line and for a class method.
+  def self.def_name(stripped)
+    rest = stripped
+    rest = rest.sub("private ", "") if rest.start_with?("private ")
+    rest = rest.sub("protected ", "") if rest.start_with?("protected ")
+    return "" unless rest.start_with?("def ")
+    rest = rest.sub("def ", "")
+    return "" if rest.start_with?("self.")
+    words = rest.split("(")[0].to_s.split(" ")
+    words.empty? ? "" : words[0]
+  end
+
+  # The defs that replace a reader of their own class body, as "LINE: ...":
+  # an attr_reader or attr_accessor name two spaces inside the class, or a
+  # Struct or Data member of the class line, defined again by a def at
+  # that depth. Per class body, so another class's member is no reader.
+  def self.shadow_problems(text)
+    problems = []
+    lines = text.lines
+    lines.each_with_index do |opener, start|
+      head = opener.strip
+      next unless head.start_with?("class ") || head.start_with?("module ")
+      next if head.end_with?("end")
+      indent = opener[/\A */].length
+      readers = []
+      readers.concat(symbol_names(code_of(head))) if head.include?("Struct.new(") || head.include?("Data.define(")
+      defs = []
+      numbers = []
+      i = start + 1
+      while i < lines.length
+        line = lines[i]
+        depth = line[/\A */].length
+        stripped = line.strip
+        break if stripped == "end" && depth == indent
+        if depth == indent + 2
+          readers.concat(symbol_names(code_of(stripped))) if stripped.start_with?("attr_reader ") || stripped.start_with?("attr_accessor ")
+          name = def_name(stripped)
+          unless name.empty?
+            defs << name
+            numbers << i + 1
+          end
+        end
+        i += 1
+      end
+      defs.each_with_index do |name, k|
+        problems << "#{numbers[k]}: def #{name} replaces the reader #{name} of its class; rename one" if readers.include?(name)
+      end
+    end
+    problems
+  end
+
+  # The modes the configuration binds keys in: every keymap scope but
+  # leader and group, which bind no key to an action.
+  def self.binding_modes(config)
+    modes = []
+    config.each_line do |line|
+      next unless line.start_with?("keymap.")
+      mode = line.split(" ")[0].to_s.sub("keymap.", "")
+      next if mode == "leader" || mode == "group" || modes.include?(mode)
+      modes << mode
+    end
+    modes
+  end
+
+  # Whether a line of code holds a configuration line binding a key, a
+  # literal beginning "keymap.<mode> " for one of modes.
+  def self.binding_literal?(line, modes)
+    modes.each do |mode|
+      return true if line.include?("\"keymap.#{mode} ") || line.include?("'keymap.#{mode} ")
+    end
+    false
+  end
+
   def self.main
     t = Carat::Testing.new("lint")
 
@@ -928,6 +1100,8 @@ module LintTest
       violations << "carat/use_cases/plugins/plugin_link.rb: PluginLink does not override Host##{name}" unless link_methods.include?(name)
     end
 
+    modes = binding_modes(File.read("config/default.caratrc"))
+    found_messages = []
     source_files.each do |path|
       text = File.read(path)
       next if path == "carat/domain/default_config.rb" # generated, data only
@@ -956,6 +1130,13 @@ module LintTest
         end
         FORBIDDEN.each do |pattern, reason|
           violations << "#{path}:#{number}: #{reason}" if stripped.include?(pattern)
+        end
+        if !path.start_with?("carat/plugins/") && binding_literal?(stripped, modes)
+          violations << "#{path}:#{number}: a key binding is a line of config/default.caratrc or of a plugin's manifest, never a Ruby literal"
+        end
+        message_literals(stripped).each do |message|
+          pair = "#{message}\t#{path}"
+          found_messages << pair unless found_messages.include?(pair)
         end
         if stripped.include?(".send(") && !stripped.include?(".send(:")
           violations << "#{path}:#{number}: send with a computed name is not compiled by Spinel"
@@ -988,10 +1169,13 @@ module LintTest
       end
     end
 
+    repeat_problems(found_messages, KNOWN_REPEATED_MESSAGES).each { |problem| violations << problem }
+
     # Naming and constructors, over every file of the library.
     Dir.glob("carat/**/*.rb").sort.each do |path|
       next if path == "carat/domain/default_config.rb"
       text = File.read(path)
+      shadow_problems(text).each { |problem| violations << "#{path}:#{problem}" }
       lines = text.lines
       expected = expected_declaration(path)
       unless expected.empty?
@@ -1220,6 +1404,11 @@ module LintTest
     t.assert_equal(["Cursor", "Position"], record_names("class Cursor < Struct.new(:row, keyword_init: true)\n  class Position < Data.define(:row)\nclass Other\n"), "record_names reads Struct and Data declarations")
     t.assert_equal(["", "a record is built with keyword arguments", "", "a record is built with keyword arguments", "", "", "a record is built with keyword arguments", "", ""], [construction_problem("c = Cursor.new(row: 0, col: 0)", ["Cursor"], false, ""), construction_problem("c = D::Cursor.new(0, 0)", ["Cursor"], false, ""), construction_problem("n = LayoutNode.new(kind)", ["Node"], false, ""), construction_problem("new(text, codes)", ["DecodedLine"], true, ""), construction_problem("o = Options.new", ["Options"], false, ""), construction_problem("Manifest.new(", ["Manifest"], false, "name: \"\","), construction_problem("Manifest.new(", ["Manifest"], false, "\"\","), construction_problem("x = Array.new(3, 0)", ["Cursor"], true, ""), construction_problem("e = Event.new()", ["Event"], false, "")], "the record construction rule")
     t.assert_equal("x = \"\" ", code_of("x = \"Domain::Buffer\" # UseCases::"), "code drops strings and comments")
+    t.assert_equal([["E1: Bad thing", "E22: No"], ["E2: Two"], []], [message_literals("say(\"E1: Bad thing\\n\", 'E22: No')"), message_literals("x(\"E2: Two " + "#" + "{a}\")"), message_literals("x(\"Error: E3 is not\")")], "message_literals reads the fixed text of Vim messages")
+    t.assert_equal(["\"E1: A\" is spelled in a.rb, b.rb; give it one home in Domain::Messages", "KNOWN_REPEATED_MESSAGES lists \"E4: D\", which is no longer in two files; remove its line"], repeat_problems(["E1: A\ta.rb", "E1: A\tb.rb", "E2: B\ta.rb", "E3: C\ta.rb", "E3: C\tc.rb"], {"E3: C" => "x", "E4: D" => "y"}), "the repeated message rule")
+    t.assert_equal(["3: def row replaces the reader row of its class; rename one", "7: def hover replaces the reader hover of its class; rename one"], shadow_problems("class X < Struct.new(:row, keyword_init: true)\n  attr_reader :hover #: Integer\n  def row\n  end\n  def self.hover\n  end\n  private def hover\n  end\n  def hover=(x)\n  end\nend\nclass Y\n  def row\n  end\nend\n"), "the reader shadow rule")
+    modes_seen = binding_modes("keymap.leader <Space>\nkeymap.group <leader>f Files\nkeymap.normal j motion.down\nkeymap.visual_line j motion.down\nkeymap.normal k motion.up\n")
+    t.assert_equal([["normal", "visual_line"], true, true, false, false], [modes_seen, binding_literal?("PICK = \"keymap.normal <CR> pick.accept\"", modes_seen), binding_literal?("['keymap.visual_line > op.shift']", modes_seen), binding_literal?("return \"keymap.leader takes one key\"", modes_seen), binding_literal?("x = \"keymap.normalize\"", modes_seen)], "the hard-coded binding rule")
     violations.each { |v| STDOUT.puts v }
     t.assert_equal([true, true, true, true, false], [one_call_exempt?("carat/use_cases/actions/window_handler.rb", "    class WindowHandler < ActionHandler\n"), one_call_exempt?("carat/use_cases/windows/focus_request.rb", "    class FocusRequest < Data.define(:target, :count)\n"), one_call_exempt?("carat/use_cases/plugins/plugin_host.rb", "    class PluginHost\n"), one_call_exempt?("carat/use_cases/outcome.rb", "    class Outcome\n"), one_call_exempt?("carat/use_cases/operate.rb", "    class Operate\n")], "the one-call rule leaves out handlers, records, the plugin host, and Outcome")
     t.assert_equal([["a use case exposes only call; other is public", "a use case has no public writer (:mode)"], []], [one_call_problems(["class X\n", "attr_reader :tabs\n", "def initialize(tabs:)\n", "def call(state)\n", "def self.build(x)\n", "def other(state)\n", "attr_writer :mode\n", "private\n", "def helper\n"]), one_call_problems(["class X\n", "def call(state)\n", "private\n", "def helper(state)\n"])], "the one-call rule")
