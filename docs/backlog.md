@@ -3139,16 +3139,22 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Where: `carat/domain/buffer_words.rb` line 64 at 8f486e0, where the scan of the cursor's line starts at `start + 1` and the final `0...start` slice ends before `start`. Quality advisory in `word-completion`.
 - Why it matters: with no word before the cursor, the word starting at the cursor column is never offered from that spot, though the completion spec says every word matches with an empty prefix.
-- Fix outline: scan from `start` rather than `start + 1` when the prefix is empty (or narrow the spec wording to match Neovim), with a table row for a cursor placed before a word.
+- Fix outline: scan from `start` rather than `start + 1` when the prefix is empty (or narrow the spec wording to match Neovim), with a table row for a cursor placed before a word. Queued in `completion-tidy`.
 
 ## Typing after Ctrl-P selects the farthest match
 
 - Where: `carat/use_cases/completion/show_completion.rb` line 98 at 8f486e0, which refilters the reversed word list of a Ctrl-P menu and selects row 0. Quality advisory in `word-completion`.
 - Why it matters: the Ctrl-P popup selects the nearest match, but after one typed character the selection jumps to the farthest one.
-- Fix outline: keep the last row selected when the menu was filled backward, through a direction flag on the menu set by `CompleteWord`, with a row for Ctrl-P followed by a typed character.
+- Fix outline: keep the last row selected when the menu was filled backward, through a direction flag on the menu set by `CompleteWord`, with a row for Ctrl-P followed by a typed character. Queued in `completion-tidy`.
 
 ## No test pins that typing with no popup costs nothing more
 
 - Where: `test/editor_word_completion.rb` at 8f486e0 has no row for the spec scenario Typing costs nothing more (no buffer scan and no extra allocation per key with no popup). Quality advisory in `word-completion`.
 - Why it matters: a change that scans the buffer on every insert-mode key would pass the suite unseen.
-- Fix outline: assert that typing in insert mode with no popup leaves the menu unfilled, or add a bench scenario row that pins the allocations.
+- Fix outline: assert that typing in insert mode with no popup leaves the menu unfilled, or add a bench scenario row that pins the allocations. Queued in `completion-tidy`.
+
+## Only gd adds to the jump list, and the list is one for the editor
+
+- Where: `carat/domain/jump_list.rb` and its one caller that pushes, `VisitTarget` in `carat/use_cases/definitions/visit_target.rb`, from the `definitions` change (out of scope there).
+- Why it matters: in Neovim `G`, `gg`, searches, `n`, `%`, marks, `:N`, and buffer switches also add to the jump list, kept per window and listed by `:jumps`, so Ctrl-O after a search or a `G` does nothing in carat.
+- Fix outline: push the position left from the jump motions (a jump flag on the motion handlers, pushed by the dispatcher when the cursor moved by more than a line), move the list into `Window` (copied on a split), and add `:jumps`, each with a row in `docs/compatibility.md` and `test/adapters_definitions.rb` or an editor test.
