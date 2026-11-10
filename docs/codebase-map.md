@@ -118,7 +118,7 @@ Files:
 - `carat/domain/position.rb`: `Position` value; `sure`, `before?`, `to_a`.
 - `carat/domain/range.rb`: `Range` value; `charwise`, `normalized`.
 - `carat/domain/cursor.rb`: `Cursor` record (`row`, `col`, `want_col`); `position`, `move_to`.
-- `carat/domain/messages.rb`: `Messages`, messages several use cases show (`E36`, `E37`, the register refusals, `seconds_ago`).
+- `carat/domain/messages.rb`: `Messages`, messages several use cases show (`E36`, `E37`, the register refusals, `not_an_editor_command`, `seconds_ago`).
 - `carat/use_cases/outcome.rb`: `Outcome`; `success`, `failure`, `none` (shared).
 - `carat/use_cases/concerns/reporting.rb`: `Reporting#report(state, outcome)`, the one place an outcome reaches the message row.
 

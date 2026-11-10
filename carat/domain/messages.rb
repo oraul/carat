@@ -17,6 +17,12 @@ module Carat
         "E37: No write since last change\nE162: No write since last change for buffer \"#{name}\""
       end
 
+      # The refusal of an ex command no handler or plugin declares.
+      #: (String) -> String
+      def self.not_an_editor_command(name)
+        "E492: Not an editor command: #{name}"
+      end
+
       # The refusal of a write to a read-only register.
       #: (String) -> String
       def self.read_only_register(name)
