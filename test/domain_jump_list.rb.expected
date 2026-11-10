@@ -7,6 +7,8 @@ ok   a count of two goes back two
 ok   A new entry on the same line replaces the old one
 ok   The list keeps the last hundred entries
 ok   Ctrl-O past the oldest entry does nothing
+ok   Ctrl-O on an empty list leaves it empty
+ok   Ctrl-O from the one entry's own line records nothing
 ok   dropping an entry keeps the index on the same place
 ok   restoring puts back the entries a step replaced and its index
-domain_jump_list: 11 passed, 0 failed
+domain_jump_list: 13 passed, 0 failed

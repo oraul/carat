@@ -28,7 +28,7 @@ module Carat
         "tabonly" => "Close other tab pages", "tabnext" => "Next tab page", "tabprevious" => "Previous tab page",
         "tabNext" => "Previous tab page", "tabfirst" => "First tab page", "tablast" => "Last tab page",
         "ls" => "List buffers", "buffers" => "List buffers", "files" => "List buffers", "buffer" => "Go to a buffer",
-        "bnext" => "Next buffer", "bprevious" => "Previous buffer", "bNext" => "Previous buffer", "bdelete" => "Delete a buffer",
+        "bnext" => "Next buffer", "bprevious" => "Previous buffer", "bNext" => "Previous buffer", "bfirst" => "First buffer", "brewind" => "First buffer", "blast" => "Last buffer", "bdelete" => "Delete a buffer",
         "undo" => "Undo", "redo" => "Redo", "undolist" => "List undo branches", "earlier" => "Go back in undo time",
         "later" => "Go forward in undo time", "registers" => "List registers", "display" => "List registers",
         "syntax" => "Syntax highlighting on or off", "set" => "Set an option", "nohlsearch" => "Clear search highlight",
