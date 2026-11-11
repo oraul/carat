@@ -2435,6 +2435,21 @@ expect "sprint: the sweep runs in an even sprint" 0 '^true$' \
   sprint_js "parseDue('due: sprint-2 has 5 changes merged (a, b, c, d, e); combined diff abc1234..origin/main; sweep: yes').sweep"
 expect "sprint: a due line naming a shell word is not due" 0 '^null$' \
   sprint_js "parseDue('due: sprint-1 has 1 changes merged (\$(x)); combined diff abc1234..origin/main; sweep: no')"
+# A sprint security review left at its cap gets one more start over the
+# files it left, merged into one result, so a large diff still closes.
+sec_js() {
+  js "$swf" "isCommit securityDone mergeSecurity" "$1"
+}
+expect "sprint: the security continuation's findings merge and only its files stay left" 0 '^\[\["f1","f2"\],\["b"\],"abc1234"\]$' \
+  sec_js "(m => [m.findings.map((f) => f.title), m.not_reviewed, m.head])(mergeSecurity({ ran: true, head: 'abc1234', findings: [{ title: 'f1' }], not_reviewed: ['a', 'b'] }, { ran: true, head: 'abc1234', findings: [{ title: 'f2' }], not_reviewed: ['b', 'z'] }))"
+expect "sprint: a continuation covering every file left closes the security review" 0 '^\[\]$' \
+  sec_js "mergeSecurity({ ran: true, head: 'abc1234', findings: [], not_reviewed: ['a'] }, { ran: true, head: 'abc1234', findings: [], not_reviewed: [] }).not_reviewed"
+expect "sprint: a continuation without a result keeps the first start's files left" 0 '^\["a","b"\]$' \
+  sec_js "mergeSecurity({ ran: true, head: 'abc1234', findings: [], not_reviewed: ['a', 'b'] }, null).not_reviewed"
+expect "sprint: a retry stands for a first start without a result, and none for two" 0 '^\["def5678",null\]$' \
+  sec_js "[mergeSecurity(null, { ran: true, head: 'def5678', findings: [], not_reviewed: [] }).head, mergeSecurity({ ran: false, head: '', findings: [], not_reviewed: [] }, null)]"
+expect "sprint: the security reviewer gets one more start, its result merged before recording" 0 "^1 1 1$" \
+  sh -c 'echo "$(grep -c "label: .security-reviewer: sprint, continued." "$1") $(grep -c "^    return mergeSecurity(first, again)$" "$1") $(grep -c "^const ran = securityDone(security)$" "$1")"' _ "$swf"
 expect "sprint: not due ends before any reviewer start" 0 "^first$" \
   sh -c 'r=$(grep -n "if (!sprint || !due.initialized) return" "$1" | cut -d: -f1); a=$(grep -n "agentType:" "$1" | head -1 | cut -d: -f1); [ -n "$r" ] && [ "$r" -lt "$a" ] && echo first' _ "$swf"
 expect "sprint: the diff reviewers record nothing and the skeptic records the kept findings" 0 "^1 1$" \

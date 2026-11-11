@@ -4,7 +4,7 @@ export const meta = {
   whenToUse: '/sprint after a merge; it ends at once with "not due" until the sprint\'s five changes have merged',
   phases: [
     { title: 'Due', detail: 'one start runs review-due; not due ends the run' },
-    { title: 'Review', detail: 'the security and quality reviewers over the combined diff in their sprint mode, and in an even sprint the whole-tree sweep, in parallel' },
+    { title: 'Review', detail: 'the security and quality reviewers over the combined diff in their sprint mode, the security reviewer once more over the files it left, and in an even sprint the whole-tree sweep, in parallel' },
     { title: 'Skeptic', detail: 'the quality reviewer reads both results against the code: records the quality findings it keeps and every security finding, one it disputes as disputed' },
     { title: 'Plan', detail: 'the planner in its sprint mode: the backlog grooming and the next sprint\'s queue under build/plan/' },
     { title: 'Record', detail: 'the review results in the sprint\'s run state' },
@@ -83,6 +83,19 @@ function parseDue(line) {
   if (!names.every((n) => CHANGE.test(n))) return null
   return { sprint: m[1], number: Number(m[2]), names, base: m[4], tip: m[5], sweep: m[6] === 'yes' }
 }
+// The security review gets one more start over the files its first start
+// left, or over the whole diff when the first returned no result, as the
+// periodic review does; the two merge into one result whose not_reviewed
+// is what the second left, so a diff larger than one start still closes.
+// tools/tools_test.sh runs these helpers.
+function securityDone(r) {
+  return Boolean(r && r.ran && isCommit(r.head) && Array.isArray(r.findings) && Array.isArray(r.not_reviewed))
+}
+function mergeSecurity(first, again) {
+  if (!securityDone(again)) return securityDone(first) ? first : null
+  if (!securityDone(first)) return again
+  return { ran: true, head: first.head, findings: first.findings.concat(again.findings), not_reviewed: again.not_reviewed.filter((f) => first.not_reviewed.includes(f)), tool_calls: first.tool_calls }
+}
 
 phase('Due')
 const due = await agent(
@@ -93,10 +106,20 @@ if (!sprint || !due.initialized) return { due: false, report: `sprint-planning n
 
 phase('Review')
 const scope = `the combined diff \`git diff ${sprint.base} ${sprint.tip}\` of ${sprint.sprint}'s changes (${sprint.names.join(', ')})`
-const reviewTask = `Change \`${sprint.sprint}\`. Mode: sprint. Review ${scope} as your Sprint mode section says; record nothing, the skeptic records; return the findings, listing in not_reviewed the files you did not cover.${capLine(CAPS.review)}`
+const reviewTaskOf = (what, these) => `Change \`${sprint.sprint}\`. Mode: sprint. Review ${what} as your Sprint mode section says; record nothing, the skeptic records; return the findings, listing in not_reviewed the files${these} you did not cover.${capLine(CAPS.review)}`
+const reviewTask = reviewTaskOf(scope, '')
 const sweepName = `${sprint.sprint}-sweep`
+const securityStarts = []
 const [security, quality, sweep] = await parallel([
-  () => agent(reviewTask, { agentType: 'security-reviewer', schema: SECURITY, label: 'security-reviewer: sprint' }),
+  async () => {
+    const first = await agent(reviewTask, { agentType: 'security-reviewer', schema: SECURITY, label: 'security-reviewer: sprint' })
+    securityStarts.push(['security', first])
+    if (securityDone(first) && !first.not_reviewed.length) return first
+    const what = securityDone(first) ? `the files ${first.not_reviewed.join(', ')} of ${scope}, which the last start over it left at its cap` : `${scope}; the last start over it returned no result`
+    const again = await agent(reviewTaskOf(what, securityDone(first) ? ' of these' : ''), { agentType: 'security-reviewer', schema: SECURITY, label: 'security-reviewer: sprint, continued' })
+    securityStarts.push(['security continued', again])
+    return mergeSecurity(first, again)
+  },
   () => agent(reviewTask, { agentType: 'quality-reviewer', schema: QUALITY, label: 'quality-reviewer: sprint' }),
   async () => {
     try {
@@ -107,7 +130,7 @@ const [security, quality, sweep] = await parallel([
     }
   },
 ])
-const ran = Boolean(security && security.ran && isCommit(security.head))
+const ran = securityDone(security)
 const blocking = ran ? security.findings.filter((f) => f.severity !== 'Low' && f.confidence >= 8) : []
 
 phase('Skeptic')
@@ -140,7 +163,7 @@ if (ran) {
 } else record('periodic-security', 'not-run', 'no result', '')
 if (skeptical) record('periodic-quality', result(skeptic.kept_blocking, quality ? quality.not_reviewed.length : 1), `diff blocking=${skeptic.kept_blocking} advisory=${skeptic.kept_advisory} dropped=${skeptic.dropped} missed=${skeptic.missed}`, skeptic.head)
 else record('periodic-quality', 'not-run', 'no skeptic result', '')
-const starts = [['security', security], ['quality', quality], ['skeptic', skeptic], ['plan', plan]]
+const starts = [...securityStarts, ['quality', quality], ['skeptic', skeptic], ['plan', plan]]
 for (const [kind, r] of starts) {
   const cap = kind === 'skeptic' ? CAPS.skeptic : kind === 'plan' ? CAPS.plan : CAPS.review
   if (r && Number.isInteger(r.tool_calls) && r.tool_calls > cap) lines.push(`sh tools/run_state.sh note ${sprint.sprint} overrun "sprint ${kind} made ${r.tool_calls} tool calls in one start, over its cap of ${cap}"`)
