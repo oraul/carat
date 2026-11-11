@@ -187,6 +187,15 @@ module EditorJumpsTest
     h.type("jdG")
     t.assert_equal(1, h.state.window.jumps.count, "A jump under an operator records the position left")
 
+    # Scenario "A search under an operator records the position left".
+    # Rows are [label, [setup, keys], "added N"]: the operator leaves the
+    # cursor on the entry it recorded, which Ctrl-O then walks past, as
+    # Neovim's does, so only the count is compared.
+    t.table([
+      ["d/ records the position left", ["", "d/foo<CR>"], "added 1"],
+      ["dn records the position left", ["/foo<CR>j", "dn"], "added 1"]
+    ]) { |input| jumped(input[0].to_s, input[1].to_s).split(" | ")[0].to_s }
+
     # Scenario "Ctrl-^ goes back and forth".
     h = fresh("jj:e b.txt<CR><C-^>")
     first = where(h)
@@ -210,6 +219,10 @@ module EditorJumpsTest
     # Scenario "A split keeps the alternate buffer".
     t.assert_equal("a.txt 0:0", where(fresh(":e b.txt<CR>:sp<CR><C-^>")), "A split keeps the alternate buffer")
 
+    # Scenario "A new tab page keeps the alternate buffer".
+    h = fresh(":e b.txt<CR>:tabnew<CR><C-^>")
+    t.assert_equal([2, "a.txt 0:0"], [h.tab_index, where(h)], "A new tab page keeps the alternate buffer")
+
     # Scenario ":e # shows the alternate file".
     h = fresh(":e b.txt<CR>:e #<CR>")
     t.assert_equal(["a.txt 0:0", "\"a.txt\" 4L, 12B"], [where(h), h.message], ":e # shows the alternate file")
@@ -217,6 +230,11 @@ module EditorJumpsTest
     # Scenario ":e # without an alternate file".
     h = fresh(":e #<CR>")
     t.assert_equal(["a.txt 0:0", "E194: No alternate file name to substitute for '#'"], [where(h), h.message], ":e # without an alternate file")
+
+    # Scenario ":e # on an alternate buffer without a name": the window
+    # :new opened leaves its modified unnamed buffer for b.txt.
+    h = fresh(":new<CR>ix<Esc>:e! b.txt<CR>:e #<CR>")
+    t.assert_equal(["b.txt 0:0", "E499: Empty file name for '%' or '#', only works with \":p:h\""], [where(h), h.message], ":e # on an alternate buffer without a name")
 
     t.finish
   end

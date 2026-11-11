@@ -46,12 +46,16 @@ ok   w records nothing
 ok   $ records nothing
 ok   Ctrl-I comes back after a jump
 ok   A jump under an operator records the position left
+ok   d/ records the position left
+ok   dn records the position left
 ok   Ctrl-^ goes back and forth
 ok   Ctrl-6 is Ctrl-^
 ok   A count goes to that buffer
 ok   No alternate buffer
 ok   A modified buffer refuses Ctrl-^
 ok   A split keeps the alternate buffer
+ok   A new tab page keeps the alternate buffer
 ok   :e # shows the alternate file
 ok   :e # without an alternate file
-editor_jumps: 56 passed, 0 failed
+ok   :e # on an alternate buffer without a name
+editor_jumps: 60 passed, 0 failed

@@ -23,12 +23,20 @@
 - **WHEN** `dG` deletes from line 2 to the end
 - **THEN** the jump list holds one entry
 
+#### Scenario: A search under an operator records the position left
+- **WHEN** `d/foo` or `dn` deletes up to the next `foo`
+- **THEN** the jump list holds one entry more
+
 ### Requirement: Each window remembers its alternate buffer
 A window SHALL remember the buffer it showed before the current one, set by every buffer switch in it except a file opened over the empty startup buffer, and a new window SHALL take its parent's alternate buffer with the jump list.
 
 #### Scenario: A split keeps the alternate buffer
 - **WHEN** `:e b.txt` left `a.txt`, the window is split, and Ctrl-^ is typed in the new window
 - **THEN** the new window shows `a.txt`
+
+#### Scenario: A new tab page keeps the alternate buffer
+- **WHEN** `:e b.txt` left `a.txt`, `:tabnew` opens a tab page, and Ctrl-^ is typed in it
+- **THEN** the new tab page's window shows `a.txt`
 
 ### Requirement: Ctrl-^ shows the alternate buffer
 Ctrl-^, and Ctrl-6, which terminals send as the same key, SHALL show the window's alternate buffer as `:b N` does, recording the position left and making the buffer left the alternate one; with a count it SHALL show the buffer of that number. Without an alternate buffer it SHALL answer `E23: No alternate file`, and a modified current file buffer SHALL refuse it with `E37`.
@@ -63,3 +71,7 @@ Ctrl-^, and Ctrl-6, which terminals send as the same key, SHALL show the window'
 #### Scenario: :e # without an alternate file
 - **WHEN** only one file was opened and `:e #` is typed
 - **THEN** the message is `E194: No alternate file name to substitute for '#'`
+
+#### Scenario: :e # on an alternate buffer without a name
+- **WHEN** the window's alternate buffer is a modified buffer without a name and `:e #` is typed
+- **THEN** the message is `E499` and the buffer stays
