@@ -1,0 +1,20 @@
+name: branch-push
+
+# The trigger of open-pr. A push runs the pushed commit's copy of this
+# file, so a branch controls it: it holds no permissions, names no
+# environment, checks out nothing, and runs no repository code. open-pr,
+# a workflow_run workflow that GitHub runs only from main's copy, reads
+# the branch's pr.md as data and opens the pull request.
+on:
+  push:
+    branches: ['feature/**', 'bugfix/**', 'hotfix/**', 'release/**', 'chore/**']
+
+permissions: {}
+
+jobs:
+  pushed:
+    if: ${{ !github.event.deleted }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hand the push to open-pr
+        run: "true"

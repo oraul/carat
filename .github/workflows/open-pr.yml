@@ -1,0 +1,71 @@
+name: open-pr
+
+# The delivery's pull requests are opened here, on GitHub's runners: a
+# pull request created or edited over GitHub's API from a delivery
+# session gets a footer the session's network layer appends, and its git
+# proxy refuses tags, while a branch push arrives unchanged. The package
+# step commits the title, a blank line, and the gated body as pr.md in
+# the archived OpenSpec change (tools/open_pr.sh write) and pushes the
+# branch; the push runs branch-push, and its completion runs this
+# workflow, which reads pr.md, gates it, opens the pull request, and
+# reads it back. A branch with no new pr.md, gone, or with an open pull
+# request is left alone. No step pushes a tag or deletes a ref.
+#
+# GitHub runs a workflow_run workflow only from main's copy, so every
+# file this workflow runs is main's: the branch's commit is never checked
+# out or executed in the job that can read PR_TOKEN, and pr.md reaches it
+# only as data read with git show. The environment AI allows main alone
+# as a deployment ref, so a branch's own workflow cannot name it.
+on:
+  workflow_run:
+    workflows: [branch-push]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: open-pr-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  open:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
+    runs-on: ubuntu-latest
+    # The secret PR_TOKEN is the environment AI's, which only a job naming
+    # the environment can read: a token of the user's, so the pull
+    # request's events start CI and the scan. GITHUB_TOKEN never creates
+    # it, since its events start no workflow.
+    environment: AI
+    steps:
+      # Main's tools only; the branch's tip is fetched below as objects,
+      # never checked out.
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # Every value from the push reaches the shell through files and the
+      # environment, never written into a script. The script checks the
+      # branch name before it reaches git.
+      - name: Read pr.md from the branch
+        id: read
+        env:
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          sh tools/open_pr.sh read "$BRANCH" "$RUNNER_TEMP/pr"
+          if [ -f "$RUNNER_TEMP/pr/title" ]; then echo found=yes >> "$GITHUB_OUTPUT"; fi
+
+      - name: Gate the title and body
+        if: ${{ steps.read.outputs.found == 'yes' }}
+        run: sh tools/open_pr.sh gate "$RUNNER_TEMP/pr" tools
+
+      - name: Open the pull request and read it back
+        if: ${{ steps.read.outputs.found == 'yes' }}
+        env:
+          GH_TOKEN: ${{ secrets.PR_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          [ -n "$GH_TOKEN" ] || { echo "::error::the environment AI holds no secret PR_TOKEN"; exit 1; }
+          sh tools/open_pr.sh open "$BRANCH" "$RUNNER_TEMP/pr"

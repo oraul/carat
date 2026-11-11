@@ -289,6 +289,18 @@ expect "run_state: a check stage leaves origin's fetch refspec" 0 "^[+]refs/head
 expect "run_state: a run state a check stage writes is not the delivery clone's" 0 "^$" state get isolated review.security
 expect "run_state: check removes its clone" 0 "^$" ls -A "$work/checks"
 rm "$work/plant.out"
+# The clone has no release build (make stages leaves out build), so every
+# stage gets dev-build's binary as CARAT_BIN, which the smoke test runs.
+cat > "$work/bin/bin-make" <<'EOF'
+#!/bin/sh
+for arg in "$@"; do
+  case "$arg" in CARAT_BIN=build/dev/carat) exit 0 ;; esac
+done
+exit 4
+EOF
+chmod +x "$work/bin/bin-make"
+expect "run_state: check runs the smoke test on dev-build's binary, as CI does" 0 "every stage passed" \
+  env STAGES="test-run" MAKE="$work/bin/bin-make" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
 cd "$work/state" || exit 1
 # A check that did not finish says so: a stage ended by a signal, its own
 # or the runner's, is killed; one during which HEAD moved is superseded at
@@ -543,6 +555,96 @@ expect "run_state: a CI fix allows one more push" 0 "ok   pushes|ok   stages" \
 
 expect "run_state: abandon is no longer a command" 2 "" state abandon pushing
 
+
+# ------------------------------------------------------------ open_pr.sh
+
+# The pull request opened on the branch push, over a bare origin: the
+# contributor's write and wait, and the open-pr workflow's read, gate, and
+# open in a depth-1 checkout of main, gh a stand-in that records what it
+# was asked.
+fresh openpr
+git_q init -q --bare "$work/openpr.git"
+git_q remote add origin "$work/openpr.git"
+git_q checkout -q main
+mkdir -p openspec/changes/archive/2026-01-01-older
+printf 'chore: older\n\nolder body\n' > openspec/changes/archive/2026-01-01-older/pr.md
+commit "chore: an older change's record"
+git_q push -q origin main 2>/dev/null
+git_q checkout -q -B chore/openpr main
+state init openpr chore/openpr > /dev/null
+mkdir -p build/pipeline openspec/changes/archive/2026-11-11-openpr
+printf '## Summary\n\nOpens the pull request from pr.md.\n\n---\n\n## Changes\n\n- Add pr.md\n\n---\n\n## Testing\n\n- Run the security review, no finding\n\n---\n\n## Notes\n\nNone\n' > build/pipeline/openpr.body.md
+expect "open_pr: write refuses a change with no archive" 1 "no archived change absent" \
+  sh "$here/open_pr.sh" write absent "chore(tools): open on push"
+expect "open_pr: write puts the title, a blank line, and the body into the archived change's pr.md" 0 "^same$" \
+  sh -c 'sh "$1/open_pr.sh" write openpr "chore(tools): open on push" > /dev/null && { printf "chore(tools): open on push\n\n"; cat build/pipeline/openpr.body.md; } | cmp -s - openspec/changes/archive/2026-11-11-openpr/pr.md && echo same' _ "$here"
+cp build/pipeline/openpr.body.md "$work/openpr-good.md"
+echo "Generated with a tool" >> build/pipeline/openpr.body.md
+expect "open_pr: write refuses a body failing the pr-body gate" 1 "fails the pr-body gate" \
+  sh "$here/open_pr.sh" write openpr "chore(tools): open on push"
+cp "$work/openpr-good.md" build/pipeline/openpr.body.md
+commit "chore: the pull request text"
+git_q push -q origin chore/openpr 2>/dev/null
+git_q checkout -q -b chore/bare main
+echo plain >> README.md
+commit "chore: no pr.md"
+git_q push -q origin chore/bare 2>/dev/null
+git_q checkout -q chore/openpr
+state set openpr pushed "$(git rev-parse HEAD)" > /dev/null
+git_q clone -q --no-local --depth=1 --branch main "$work/openpr.git" "$work/openpr-ws" 2>/dev/null
+cd "$work/openpr-ws" || exit 1
+expect "open_pr: pr.md is parsed into the title and the body" 0 "^same$" \
+  sh -c 'sh "$1/open_pr.sh" read chore/openpr "$2" > /dev/null && cmp -s "$2/body" "$3" && [ "$(cat "$2/title")" = "chore(tools): open on push" ] && echo same' _ "$here" "$work/openpr-read" "$work/openpr-good.md"
+expect "open_pr: a branch without a new pr.md is left alone" 0 "holds no new pr.md: nothing to open" \
+  sh "$here/open_pr.sh" read chore/bare "$work/openpr-bare"
+expect "open_pr: a branch without a new pr.md leaves nothing to open" 0 "^$" ls -A "$work/openpr-bare"
+expect "open_pr: a branch gone from origin is left alone" 0 "no branch chore/absent on origin: nothing to open" \
+  sh "$here/open_pr.sh" read chore/absent "$work/openpr-absent"
+expect "open_pr: a branch of no allowed type is refused" 1 "not a Conventional Branch" sh "$here/open_pr.sh" read wip/openpr "$work/openpr-wip"
+expect "open_pr: main is refused as a branch" 1 "not a Conventional Branch" sh "$here/open_pr.sh" read main "$work/openpr-main"
+expect "open_pr: the read title and body pass the gates" 0 "pass" sh "$here/open_pr.sh" gate "$work/openpr-read" "$here"
+cp -R "$work/openpr-read" "$work/openpr-bad"
+echo "Generated with a tool" >> "$work/openpr-bad/body"
+expect "open_pr: a body failing the pr-body gate is refused" 1 "fails the pr-body gate" sh "$here/open_pr.sh" gate "$work/openpr-bad" "$here"
+# The stand-in gh: pr list prints GH_OPEN, pr create keeps the title and
+# body file in GH_DIR, pr view prints them back, the body with GH_FOOTER.
+mkdir -p "$work/openpr-bin" "$work/openpr-gh"
+cat > "$work/openpr-bin/gh" <<'GH'
+#!/bin/sh
+echo "$*" >> "$GH_DIR/calls"
+case "$1 $2" in
+  "pr list") echo "${GH_OPEN:-0}" ;;
+  "pr create")
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --title) printf '%s\n' "$2" > "$GH_DIR/title"; shift ;;
+        --body-file) cat "$2" > "$GH_DIR/body"; shift ;;
+      esac
+      shift
+    done ;;
+  "pr view")
+    case "$*" in
+      *"--json title"*) cat "$GH_DIR/title" ;;
+      *) cat "$GH_DIR/body"; printf '%s' "${GH_FOOTER:-}" ;;
+    esac ;;
+esac
+GH
+chmod +x "$work/openpr-bin/gh"
+expect "open_pr: a branch with an open pull request is left alone" 0 "already has an open pull request: nothing to open" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_OPEN=1 sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+expect "open_pr: an open pull request gets no create" 1 "^$" grep -n "pr create" "$work/openpr-gh/calls"
+expect "open_pr: open creates the pull request and reads it back equal" 0 "opened the pull request of chore/openpr" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+expect "open_pr: open created it on main from the branch" 0 "pr create --repo o/r --base main --head chore/openpr" cat "$work/openpr-gh/calls"
+expect "open_pr: a pull request read back with a footer is refused" 1 "body differs" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_FOOTER="A footer" sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+cd "$work/openpr" || exit 1
+expect "open_pr: wait fails when no pull request's head is the pushed head" 1 "no pull request's head" env WAIT_STEP=1 sh "$here/open_pr.sh" wait openpr 1
+git --git-dir="$work/openpr.git" update-ref refs/pull/2/head main
+git --git-dir="$work/openpr.git" update-ref refs/pull/3/head chore/openpr
+expect "open_pr: wait records the pull request whose head is the pushed head" 0 "pull request 3 at" env WAIT_STEP=1 sh "$here/open_pr.sh" wait openpr 1
+expect "open_pr: wait recorded the number in the run state" 0 "^3$" state get openpr pr
+expect "open_pr: wait refuses more than 540 seconds" 1 "wait 1 to 540" sh "$here/open_pr.sh" wait openpr 541
 fresh history
 state init history chore/history > /dev/null
 state metric history rework=1 first_pass=check:1,quality:0,security:1 ci_min=2.5 out_tokens=1200 tool_calls=40 phases=implement=1000/30,check=200/10 calib.scout=cheap/low calib.security=session/session > /dev/null
@@ -1050,6 +1152,13 @@ expect "guard: contributor commits" 0 "^$" guard contributor 'git add -A && git 
 expect "guard: contributor records the plan" 0 "^$" guard contributor 'cp build/plan/queue.md docs/queue.md && cp build/plan/goals.md docs/goals.md && sh tools/run_state.sh history'
 expect "guard: contributor archives" 0 "^$" guard contributor 'npx @fission-ai/openspec@latest archive c -y --skip-specs && npx @fission-ai/openspec@latest validate --all --strict --no-interactive'
 expect "guard: contributor pushes and opens the pull request" 0 "^$" guard contributor 'sh tools/run_state.sh push c && sh tools/gates.sh pr-body build/pipeline/c.body.md && sh tools/run_state.sh set c pr 47 && sh tools/run_state.sh show c'
+expect "guard: the contributor runs open_pr write and wait" 0 "^$" guard contributor 'sh tools/open_pr.sh write c \"chore(tools): open on push\" && sh tools/open_pr.sh wait c && sh tools/open_pr.sh wait c 300'
+expect "guard: the contributor's git push of a tag is refused" 2 "git push" guard contributor 'git push origin refs/tags/pr/chore/c'
+expect "guard: the contributor refuses the workflow's open_pr open" 2 "tools/open_pr.sh other than write or wait" guard contributor 'sh tools/open_pr.sh open chore/c tmp/x'
+expect "guard: the contributor refuses the workflow's open_pr read" 2 "tools/open_pr.sh other than write or wait" guard contributor 'sh tools/open_pr.sh read chore/c tmp/x'
+expect "guard: the contributor refuses open_pr write of another change" 2 "tools/open_pr.sh write other than" guard contributor 'sh tools/open_pr.sh write ../c t'
+expect "guard: the contributor refuses open_pr wait past a number" 2 "tools/open_pr.sh wait other than" guard contributor 'sh tools/open_pr.sh wait c soon'
+expect "guard: the merger refuses open_pr" 2 "tools/open_pr.sh" guard merger 'sh tools/open_pr.sh wait c'
 expect "guard: contributor pushes a CI fix" 0 "^$" guard contributor 'sh tools/run_state.sh push c --ci-fix'
 expect "guard: contributor merges main" 0 "^$" guard contributor 'git fetch -q origin && git merge --no-edit origin/main'
 expect "guard: contributor moves and removes files" 0 "^$" guard contributor 'mkdir -p tools/x && git mv a.sh tools/x/a.sh && rm -f tmp/x && chmod +x tools/x/a.sh && touch tmp/y'
@@ -2139,7 +2248,7 @@ js() {
   } | node -
 }
 work_js() {
-  js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead keepPushed" "$1"
+  js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead keepPushed packagedPr" "$1"
 }
 calib_js() {
   js "$wf" "SIZES CHANGE CALIBRATION calibrated calibrate restoreCalibration usage firstPass metricLine" "$1"
@@ -2180,8 +2289,17 @@ expect "agents: the quality reviewer blocks only on correctness and a missing te
   grep -E '^4[.] Blocking' "$here/../.claude/agents/quality-reviewer.md"
 expect "agents: the merger reads only the latest run of each check name" 0 'keep only the latest run of each check name' \
   grep -E '^2[.] Read the check runs' "$here/../.claude/agents/merger.md"
-expect "agents: the contributor creates the pull request with the body file unchanged" 0 "the file's text, unchanged, as the body" \
-  grep -E '^4[.] Write the body' "$here/../.claude/agents/contributor.md"
+# The pull request is opened by open-pr from the pushed pr.md, which reads
+# it back equal (tools/open_pr.sh open); no session tool creates it.
+expect "agents: the contributor opens the pull request by pr.md, never a create tool" 0 "open_pr.sh write .*Never call a pull request create tool or API" \
+  grep -E '^3[.] Write the body' "$here/../.claude/agents/contributor.md"
+expect "agents: the contributor holds no pull request create tool" 1 "^$" \
+  grep -n create_pull_request "$here/../.claude/agents/contributor.md"
+# The wait polls up to MAX_WAIT (540 s), past the Bash tool's 120 s default.
+expect "agents: the contributor waits for the pull request in the foreground" 0 'open_pr.sh wait <change>` in the foreground [(]Bash timeout 600000' \
+  grep -E '^5[.] Run `sh tools/open_pr[.]sh wait' "$here/../.claude/agents/contributor.md"
+expect "workflow: a package step without a pull request number stops the run" 0 '^\["47","","",""\]$' \
+  work_js "[packagedPr({ pr: 47 }), packagedPr({ pr: 0 }), packagedPr({ status: 'stopped' }), packagedPr(null)]"
 expect "workflow: a contributor that finished is done" 0 '^[{]"next":"done","left":\[\][}]$' \
   work_js "(r => continuation(r, workLeft(r), 0))({ status: 'done' })"
 expect "workflow: a capped contributor start is continued with what it left" 0 '^[{]"next":"continue","left":\["4.2 the docs"\][}]$' \

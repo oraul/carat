@@ -63,7 +63,10 @@
 #                openspec and npx @fission-ai/openspec@latest; mkdir rm cp
 #                mv touch chmod; sh tools/run_state.sh show status pending
 #                get budget history, push CHANGE [--ci-fix],
-#                set CHANGE pr N; sh tools/gates.sh GATE... or pr-body BODY
+#                set CHANGE pr N; sh tools/gates.sh GATE... or pr-body BODY;
+#                sh tools/open_pr.sh write CHANGE TITLE and wait CHANGE
+#                [SECONDS], which push nothing; never a pull request
+#                create tool or API
 #   close        the read profile, plus sh tools/run_state.sh phase CHANGE
 #                NAME COMMIT with NAME one of CLOSE_PHASES, the phases
 #                no merge gate reads: the retrospective's closing start
@@ -675,6 +678,18 @@ script_form() {
           done ;;
         compare) [ $# -eq 3 ] || refuse "tools/metrics.sh compare other than BASE CURRENT" ;;
         *) refuse "tools/metrics.sh other than measure or compare" ;;
+      esac ;;
+    tools/open_pr.sh)
+      # The pull request opened on the branch push: the contributor writes
+      # pr.md before its push and waits for the pull request after it;
+      # read, gate, and open are the open-pr workflow's alone.
+      only_profiles contributor "tools/open_pr.sh"
+      case "${1:-}" in
+        write) [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" || refuse "tools/open_pr.sh write other than CHANGE TITLE" ;;
+        wait)
+          { [ $# -eq 2 ] || { [ $# -eq 3 ] && matches "$3" '^[0-9]{1,3}$'; }; } && matches "$2" "$CHANGE_NAME" ||
+            refuse "tools/open_pr.sh wait other than CHANGE [SECONDS]" ;;
+        *) refuse "tools/open_pr.sh other than write or wait" ;;
       esac ;;
     tools/ci_wait.sh)
       only_profiles merger "tools/ci_wait.sh"
