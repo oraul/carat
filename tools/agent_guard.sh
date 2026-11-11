@@ -64,9 +64,9 @@
 #                mv touch chmod; sh tools/run_state.sh show status pending
 #                get budget history, push CHANGE [--ci-fix],
 #                set CHANGE pr N; sh tools/gates.sh GATE... or pr-body BODY;
-#                sh tools/pr_tag.sh push CHANGE TITLE and wait CHANGE
-#                [SECONDS], its only push but run_state.sh push: the tag
-#                pr/BRANCH; never a pull request create tool or API
+#                sh tools/open_pr.sh write CHANGE TITLE and wait CHANGE
+#                [SECONDS], which push nothing; never a pull request
+#                create tool or API
 #   close        the read profile, plus sh tools/run_state.sh phase CHANGE
 #                NAME COMMIT with NAME one of CLOSE_PHASES, the phases
 #                no merge gate reads: the retrospective's closing start
@@ -106,7 +106,7 @@ MAIN_REFSPEC='+refs/heads/main:refs/remotes/origin/main'
 DEFAULT_FETCH='+refs/heads/*:refs/remotes/origin/*'
 
 refuse() {
-  echo "agent_guard: refused for the ${shown:-$profile} profile: $*. Each profile runs only the commands its agent needs, listed in tools/agent_guard.sh: search with the Grep or Read tool, put text that names a refused form into a file with the Write tool, and push only through tools/run_state.sh push and the tag of tools/pr_tag.sh push." >&2
+  echo "agent_guard: refused for the ${shown:-$profile} profile: $*. Each profile runs only the commands its agent needs, listed in tools/agent_guard.sh: search with the Grep or Read tool, put text that names a refused form into a file with the Write tool, and push only through tools/run_state.sh push." >&2
   exit 2
 }
 
@@ -679,16 +679,17 @@ script_form() {
         compare) [ $# -eq 3 ] || refuse "tools/metrics.sh compare other than BASE CURRENT" ;;
         *) refuse "tools/metrics.sh other than measure or compare" ;;
       esac ;;
-    tools/pr_tag.sh)
-      # The pull request by tag: the contributor's one push besides
-      # tools/run_state.sh push is the tag pr/BRANCH that push makes.
-      only_profiles contributor "tools/pr_tag.sh"
+    tools/open_pr.sh)
+      # The pull request opened on the branch push: the contributor writes
+      # pr.md before its push and waits for the pull request after it;
+      # read, gate, and open are the open-pr workflow's alone.
+      only_profiles contributor "tools/open_pr.sh"
       case "${1:-}" in
-        push) [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" || refuse "tools/pr_tag.sh push other than CHANGE TITLE" ;;
+        write) [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" || refuse "tools/open_pr.sh write other than CHANGE TITLE" ;;
         wait)
           { [ $# -eq 2 ] || { [ $# -eq 3 ] && matches "$3" '^[0-9]{1,3}$'; }; } && matches "$2" "$CHANGE_NAME" ||
-            refuse "tools/pr_tag.sh wait other than CHANGE [SECONDS]" ;;
-        *) refuse "tools/pr_tag.sh other than push or wait" ;;
+            refuse "tools/open_pr.sh wait other than CHANGE [SECONDS]" ;;
+        *) refuse "tools/open_pr.sh other than write or wait" ;;
       esac ;;
     tools/ci_wait.sh)
       only_profiles merger "tools/ci_wait.sh"

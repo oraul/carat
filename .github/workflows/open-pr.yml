@@ -1,22 +1,24 @@
 name: open-pr
 
 # The delivery's pull requests are opened here, on GitHub's runners: a
-# pull request created over GitHub's API from a delivery session gets a
-# footer the session's network layer appends, while a git push arrives
-# unchanged. The contributor pushes an annotated tag pr/BRANCH whose
-# message is the title, a blank line, and the gated body
-# (tools/pr_tag.sh push); the tag push runs pr-tag, and its completion
-# runs this workflow, which gates the title and body, opens the pull
-# request, reads it back, and deletes the tag.
+# pull request created or edited over GitHub's API from a delivery
+# session gets a footer the session's network layer appends, and its git
+# proxy refuses tags, while a branch push arrives unchanged. The package
+# step commits the title, a blank line, and the gated body as pr.md in
+# the archived OpenSpec change (tools/open_pr.sh write) and pushes the
+# branch; the push runs branch-push, and its completion runs this
+# workflow, which reads pr.md, gates it, opens the pull request, and
+# reads it back. A branch with no new pr.md, gone, or with an open pull
+# request is left alone. No step pushes a tag or deletes a ref.
 #
 # GitHub runs a workflow_run workflow only from main's copy, so every
 # file this workflow runs is main's: the branch's commit is never checked
-# out or executed in a job that can read PR_TOKEN, and the tag reaches it
-# only as data read with git cat-file. The environment AI allows main
-# alone as a deployment ref, so a branch's workflow cannot name it.
+# out or executed in the job that can read PR_TOKEN, and pr.md reaches it
+# only as data read with git show. The environment AI allows main alone
+# as a deployment ref, so a branch's own workflow cannot name it.
 on:
   workflow_run:
-    workflows: [pr-tag]
+    workflows: [branch-push]
     types: [completed]
 
 permissions:
@@ -28,7 +30,7 @@ concurrency:
 
 jobs:
   open:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && startsWith(github.event.workflow_run.head_branch, 'pr/') }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
     runs-on: ubuntu-latest
     # The secret PR_TOKEN is the environment AI's, which only a job naming
     # the environment can read: a token of the user's, so the pull
@@ -36,57 +38,34 @@ jobs:
     # it, since its events start no workflow.
     environment: AI
     steps:
-      # Main's tools only; the tag and its commit are fetched below as
-      # objects, never checked out.
+      # Main's tools only; the branch's tip is fetched below as objects,
+      # never checked out.
       - name: Check out main
         uses: actions/checkout@v4
         with:
           ref: main
 
-      # Every value from the tag reaches the shell through files and the
-      # environment, never written into a script. The branch is checked
-      # before its name reaches git.
-      - name: Refuse a branch of no allowed type or missing on origin
+      # Every value from the push reaches the shell through files and the
+      # environment, never written into a script. The script checks the
+      # branch name before it reaches git.
+      - name: Read pr.md from the branch
+        id: read
         env:
-          TAG: ${{ github.event.workflow_run.head_branch }}
-        run: sh tools/pr_tag.sh branch "${TAG#pr/}"
-
-      - name: Read the title and body from the tag
-        env:
-          TAG: ${{ github.event.workflow_run.head_branch }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
-          git fetch -q --depth=1 --no-tags origin "+refs/tags/$TAG:refs/tags/$TAG"
-          sh tools/pr_tag.sh read "$TAG" "$RUNNER_TEMP/pr"
+          sh tools/open_pr.sh read "$BRANCH" "$RUNNER_TEMP/pr"
+          if [ -f "$RUNNER_TEMP/pr/title" ]; then echo found=yes >> "$GITHUB_OUTPUT"; fi
 
       - name: Gate the title and body
-        run: sh tools/pr_tag.sh gate "$RUNNER_TEMP/pr" tools
+        if: ${{ steps.read.outputs.found == 'yes' }}
+        run: sh tools/open_pr.sh gate "$RUNNER_TEMP/pr" tools
 
       - name: Open the pull request and read it back
+        if: ${{ steps.read.outputs.found == 'yes' }}
         env:
           GH_TOKEN: ${{ secrets.PR_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.event.workflow_run.head_branch }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
           [ -n "$GH_TOKEN" ] || { echo "::error::the environment AI holds no secret PR_TOKEN"; exit 1; }
-          pr=$RUNNER_TEMP/pr
-          branch=${TAG#pr/}
-          gh pr create --repo "$GH_REPO" --base main --head "$branch" --title "$(cat "$pr/title")" --body-file "$pr/body"
-          gh pr view "$branch" --repo "$GH_REPO" --json title --jq .title > "$pr/title.live"
-          gh pr view "$branch" --repo "$GH_REPO" --json body --jq .body > "$pr/body.live"
-          sh tools/pr_tag.sh same "$pr"
-
-  # Only after the pull request was opened and read back equal; a tag
-  # still on origin tells tools/pr_tag.sh wait the workflow failed. This
-  # job runs no repository code, so the one that does keeps contents: read.
-  delete:
-    needs: open
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Delete the tag
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.event.workflow_run.head_branch }}
-        run: gh api --method DELETE "repos/$GH_REPO/git/refs/tags/$TAG"
+          sh tools/open_pr.sh open "$BRANCH" "$RUNNER_TEMP/pr"
