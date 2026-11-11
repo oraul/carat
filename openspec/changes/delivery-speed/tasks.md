@@ -2,20 +2,20 @@
 
 ## 1. Run state, gates, and guard
 
-- [ ] 1.1 `tools/run_state.sh`, `tools/gates.sh`, `tools/agent_guard.sh`: remove the backup, restore, and abandon commands, the backup gate group, and the guard's backup form. Proved by `tools/tools_test.sh` "run_state: backup is no longer a command".
-- [ ] 1.2 `tools/run_state.sh`: `history` appends each merged run's late-finding notes to `docs/backlog.md`. Proved by "run_state: history appends a merged run's late findings to the backlog".
-- [ ] 1.3 `Makefile`, `tools/run_state.sh`, `tools/gates.sh`, `.github/workflows/ci.yml`: `FAST_STAGES` for the checker, main's full list while main has none, the release build on pull requests. Proved by "run_state: check runs main's full list while main has no fast list" and "gates: stages read the fast list".
-- [ ] 1.4 `tools/gates.sh`: the pr-body gate refuses a session line. Proved by "gates: pr-body refuses a session line".
+- [x] 1.1 `tools/run_state.sh`, `tools/gates.sh`, `tools/agent_guard.sh`: remove the backup, restore, and abandon commands, the backup gate group, and the guard's backup form. Proved by `tools/tools_test.sh` "run_state: backup is no longer a command".
+- [x] 1.2 `tools/run_state.sh`: `history` appends each merged run's late-finding notes to `docs/backlog.md`. Proved by "run_state: history appends a merged run's late findings to the backlog".
+- [x] 1.3 `Makefile`, `tools/run_state.sh`, `tools/gates.sh`, `.github/workflows/ci.yml`: `FAST_STAGES` for the checker, main's full list while main has none, the release build on pull requests. Proved by "run_state: check runs main's full list while main has no fast list" and "gates: stages read the fast list".
+- [x] 1.4 `tools/gates.sh`: the pr-body gate refuses a session line. Proved by "gates: pr-body refuses a session line".
 
 ## 2. Workflow
 
-- [ ] 2.1 `.claude/workflows/deliver-change.js`: late findings as notes (`noteText`), the push without findings. Proved by "workflow: a late finding becomes a shell-safe note".
-- [ ] 2.2 `.claude/workflows/deliver-change.js`: `staleRed` and the body-only fix without a round. Proved by "workflow: a red superseded by a green run of the same check is stale".
-- [ ] 2.3 `.claude/workflows/deliver-change.js`: fix-round review scope and `reRaised`. Proved by "workflow: a blocking finding at an earlier advisory's location is re-raised".
-- [ ] 2.4 `.claude/workflows/deliver-change.js`: flush only before a gate that reads a pending review record, no close fallback. Proved by "workflow: only check and review records need a record start".
-- [ ] 2.5 `.claude/workflows/deliver-change.js`: the resume trusts records settled at the pushed head. Proved by "workflow: a settled resume trusts the recorded check and reviews".
+- [x] 2.1 `.claude/workflows/deliver-change.js`: late findings as notes (`noteText`), the push without findings. Proved by "workflow: a late finding becomes a shell-safe note".
+- [x] 2.2 `.claude/workflows/deliver-change.js`: `staleRed` and the body-only fix without a round. Proved by "workflow: a red superseded by a green run of the same check is stale".
+- [x] 2.3 `.claude/workflows/deliver-change.js`: fix-round review scope and `reRaised`. Proved by "workflow: a blocking finding at an earlier advisory's location is re-raised".
+- [x] 2.4 `.claude/workflows/deliver-change.js`: flush only before a gate that reads a pending review record, no close fallback. Proved by "workflow: only check and review records need a record start".
+- [x] 2.5 `.claude/workflows/deliver-change.js`: the resume trusts records settled at the pushed head. Proved by "workflow: a settled resume trusts the recorded check and reviews".
 
 ## 3. Agents and docs
 
-- [ ] 3.1 `.claude/agents/quality-reviewer.md`, `checker.md`, `merger.md`, `contributor.md`: narrowed blocking, fast stages, latest run per check, the body mode and body equality, no backup. Proved by "agents: the quality reviewer blocks only on correctness and a missing test" and `make docs-lint`.
-- [ ] 3.2 CLAUDE.md, README.md, `docs/codebase-map.md`, `docs/architecture.md`: the commands, stages, and steps. Checked by `make gates` and `make docs-lint`.
+- [x] 3.1 `.claude/agents/quality-reviewer.md`, `checker.md`, `merger.md`, `contributor.md`: narrowed blocking, fast stages, latest run per check, the body mode and body equality, no backup. Proved by "agents: the quality reviewer blocks only on correctness and a missing test" and `make docs-lint`.
+- [x] 3.2 CLAUDE.md, README.md, `docs/codebase-map.md`, `docs/architecture.md`: the commands, stages, and steps. Checked by `make gates` and `make docs-lint`.
