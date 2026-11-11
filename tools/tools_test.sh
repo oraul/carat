@@ -785,7 +785,6 @@ awk '{ print } $0 == "  \"change\": \"unmerged\"," { print "  \"merged\": \"--ou
 mv unmerged.json build/pipeline/unmerged.json
 expect "run_state: budget passes git only a commit hash as the merged value" 0 "^no estimate: " state budget unmerged
 expect "run_state: pending skips an option-shaped merged value" 0 "^$" sh -c "sh '$here/run_state.sh' pending | grep -x unmerged; true"
-expect "run_state: review-due refuses an option-shaped merged value" 1 "unmerged is not merged" state review-due unmerged
 expect "run_state: budget refuses a change without a run state" 1 "no run state for nothing" state budget nothing
 state history > /dev/null
 expect "run_state: history never passes the merged value to git as an option" 1 "" test -e clobbered
@@ -835,98 +834,84 @@ echo more >> README.md
 commit "docs: more"
 expect "run_state: bench refuses a measurement of another commit" 1 "passed at another commit" bench
 
-# row CHANGE REVIEW: a history row with only a change and a review column.
-row() {
-  printf '%s\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t%s\n' "$1" "$2"
+# Sprints: review-due counts the history rows after the last sprint's last
+# change, then the merged changes without a row. mrow CHANGE MERGED
+# ESTIMATE TOKENS MINUTES FIRST: a history row with those columns.
+mrow() {
+  printf '%s\t-\t%s\t-\t-\t%s\t-\t-\t-\t-\t-\t-\t-\t-\t%s\t%s\t%s\t-\n' "$1" "$2" "$6" "$3" "$4" "$5"
 }
-fresh due
-state init due chore/due > /dev/null
-mkdir -p carat
-echo api > carat/plugin_api.rb
-commit "feat: api"
-state set due merged "$(git rev-parse --short=12 HEAD)" > /dev/null
-expect "run_state: review-due names a sensitive area" 0 "^due: the change touched plugin boundaries [(]carat/plugin_api[.]rb[)]" state review-due due
-mkdir -p carat/domain
-echo decoder > carat/domain/utf8.rb
-commit "fix: decoder"
-state set due merged "$(git rev-parse --short=12 HEAD)" > /dev/null
-expect "run_state: review-due names the decoder as terminal output" 0 "^due: the change touched terminal output [(]carat/domain/utf8[.]rb[)]" state review-due due
-echo more >> README.md
-commit "docs: readme"
-state set due merged "$(git rev-parse --short=12 HEAD)" > /dev/null
-expect "run_state: review-due is not due after one quiet change" 1 "^not due: 1 of 5" state review-due due
-{ printf 'header\n'; row a "security=pass quality=pass"; row b -; row c -; row d -; row e -; } > docs/metrics.tsv
-expect "run_state: review-due is due five changes after the last review" 0 "^due: 5 changes merged" state review-due due
-{ printf 'header\n'; row a "security=pass quality=pass"; row b -; row c -; row d -; row e "security=not-run quality=pass"; } > docs/metrics.tsv
-expect "run_state: review-due does not count a periodic review not run" 0 "^due: 5 changes merged" state review-due due
-{ printf 'header\n'; row a "security=pass quality=pass"; row b -; row c -; row d -; row e "security=partial quality=pass"; } > docs/metrics.tsv
-expect "run_state: review-due does not count a partial periodic review" 0 "^due: 5 changes merged" state review-due due
-row f "security=pass quality=pass" >> docs/metrics.tsv
-expect "run_state: a periodic review restarts the count" 1 "^not due: 1 of 5" state review-due due
-{ printf 'header\n'; row a "security=pass quality=pass"; row b -; row c -; row d -; row e -; } > docs/metrics.tsv
-state review due periodic-security not-run "no result after the retry" > /dev/null
-expect "run_state: review-due does not count a pending periodic review not run" 0 "^due: 5 changes merged" state review-due due
-state review due periodic-security blocked "high=1 medium=0 low=0 blocking=1" > /dev/null
-expect "run_state: review-due counts a pending blocked periodic review" 1 "^not due: 0 of 5" state review-due due
-# merge_touch MESSAGE PATH...: append a line to each PATH, commit, and
-# record the commit as the merged commit of the change areas.
-merge_touch() {
-  message=$1
-  shift
-  for f in "$@"; do
-    mkdir -p "$(dirname "$f")"
-    echo "# touched" >> "$f"
-  done
-  commit "$message"
-  state set areas merged "$(git rev-parse --short=12 HEAD)" > /dev/null
-}
-fresh areas
-state init areas chore/areas > /dev/null
-merge_touch "feat: entry" bin/carat.rb
-expect "run_state: review-due names the entry point" 0 "^due: the change touched entry point [(]bin/carat[.]rb[)]" state review-due areas
-merge_touch "chore: tool" tools/x.sh
-expect "run_state: review-due skips another tool" 1 "^not due" state review-due areas
-merge_touch "chore: guard" tools/agent_guard.sh
-expect "run_state: review-due names the guard" 0 "^due: the change touched guard and gates [(]tools/agent_guard[.]sh[)]" state review-due areas
-merge_touch "chore: gates" tools/gates.sh
-expect "run_state: review-due names the gates" 0 "^due: the change touched guard and gates [(]tools/gates[.]sh[)]" state review-due areas
-merge_touch "chore: settings" .claude/settings.json
-expect "run_state: review-due names the settings" 0 "^due: the change touched guard and gates [(][.]claude/settings[.]json[)]" state review-due areas
-merge_touch "chore: agent" .claude/agents/x.md
-expect "run_state: review-due skips an agent's prose" 1 "^not due" state review-due areas
-printf -- '---\nname: x\ntools: Bash, Read\n---\n\nProse.\n' > .claude/agents/x.md
-merge_touch "chore: agent tools" README.md
-expect "run_state: review-due names an agent's tools" 0 "^due: the change touched guard and gates [(][.]claude/agents/x[.]md, its tools or hooks[)]" state review-due areas
-printf '    - matcher: "Bash"\n' >> .claude/agents/x.md
-merge_touch "chore: agent hook" README.md
-expect "run_state: review-due names an agent's hook" 0 "its tools or hooks" state review-due areas
-merge_touch "docs: notes" docs/x.md
-expect "run_state: review-due skips a docs-only change" 1 "^not due" state review-due areas
-merge_touch "ci: workflow" .github/workflows/ci.yml
-expect "run_state: review-due names the CI workflow" 0 "^due: the change touched guard and gates [(][.]github/workflows/ci[.]yml[)]" state review-due areas
-merge_touch "chore: scanner" tools/scan_text.sh
-expect "run_state: review-due names the scanner" 0 "^due: the change touched guard and gates [(]tools/scan_text[.]sh[)]" state review-due areas
-merge_touch "chore: hooks" .githooks/pre-commit
-expect "run_state: review-due names the commit hooks" 0 "^due: the change touched guard and gates [(][.]githooks/pre-commit[)]" state review-due areas
-mkdir -p config carat/domain
-printf '# Options.\noption.tabstop 2\nkeymap.normal j cursor.down\n' > config/default.caratrc
-echo 'mirror' > carat/domain/default_config.rb
-merge_touch "feat: config" README.md
-{ sed 's/^keymap.normal j .*/keymap.normal j cursor.up/' config/default.caratrc; printf '\n# Window keys.\nkeymap.normal <C-w><C-j> window.down\n'; } > rc.tmp
-mv rc.tmp config/default.caratrc
-merge_touch "feat: keys" carat/domain/default_config.rb
-expect "run_state: review-due skips a keymap-only change" 1 "^not due" state review-due areas
-echo 'option.tabstop 4' >> config/default.caratrc
-merge_touch "feat: tabstop" README.md
-expect "run_state: review-due names a changed option" 0 "^due: the change touched config loading [(]config/default[.]caratrc[)]" state review-due areas
-merge_touch "fix: mirror" carat/domain/default_config.rb
-expect "run_state: review-due names the mirror changed alone" 0 "^due: the change touched config loading [(]carat/domain/default_config[.]rb[)]" state review-due areas
-echo 'keymap.normal k cursor.up' >> config/default.caratrc
-merge_touch "fix: loader" carat/adapters/rc_config_gateway.rb
-expect "run_state: review-due names a loader" 0 "^due: the change touched config loading [(]carat/adapters/rc_config_gateway[.]rb[)]" state review-due areas
-echo 'keymap.normal l cursor.right' >> config/default.caratrc
-merge_touch "fix: generator" bin/carat-gen-config.rb
-expect "run_state: review-due names the generator" 0 "^due: the change touched config loading [(]bin/carat-gen-config[.]rb[)]" state review-due areas
+fresh sprint
+printf 'sprint\tlast\n' > docs/sprints.tsv
+expect "run_state: review-due needs a sprint row" 1 "ends with no sprint row" state review-due
+printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
+{ printf 'header\n'; mrow old aaa111 small 1 1 -; mrow seed bbb222 small 1 1 -; mrow a1 c1 small 400000 30 check:1,quality:0; mrow a2 c2 medium 1300000 50 check:1,quality:1; } > docs/metrics.tsv
+expect "run_state: review-due is not due before the fifth merge of the sprint" 1 "^not due: sprint-1 has 2 of 5 changes merged [(]a1, a2[)]$" state review-due
+state init a3 chore/a3 > /dev/null
+state set a3 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: review-due counts a merged change without a row" 1 "^not due: sprint-1 has 3 of 5" state review-due
+{ mrow a3 c3 small 300000 20 check:0,quality:1; mrow a4 c4 small 200000 10 check:1; mrow a5 c5 large 2000000 70 check:1,quality:1; } >> docs/metrics.tsv
+expect "run_state: review-due is due at the fifth merge with the combined diff" 0 "^due: sprint-1 has 5 changes merged [(]a1, a2, a3, a4, a5[)]; combined diff bbb222[.][.]origin/main; sweep: no$" state review-due
+printf 'sprint-1\ta5\n' >> docs/sprints.tsv
+expect "run_state: a sprint row restarts the count" 1 "^not due: sprint-2 has 0 of 5" state review-due
+{ mrow b1 d1 small 1 1 -; mrow b2 d2 small 1 1 -; mrow b3 d3 small 1 1 -; mrow b4 d4 small 1 1 -; mrow b5 d5 small 1 1 -; } >> docs/metrics.tsv
+rm build/pipeline/a3.json
+expect "run_state: review-due asks for the sweep in an even sprint" 0 "^due: sprint-2 has 5 changes merged .*combined diff c5[.][.]origin/main; sweep: yes$" state review-due
+mkdir -p build/plan
+echo sprint-2 > build/plan/sprint
+expect "run_state: review-due is not due while the sprint plan waits" 1 "^not due: sprint-2 is planned" state review-due
+printf '# Queue\n\n## Sprint 3\n\n1. `b6` (T5, estimated small): six.\n' > build/plan/queue.md
+expect "run_state: plan-needed reads a waiting sprint plan" 1 "^not needed: b6 heads build/plan/queue[.]md, estimated small" state plan-needed b6
+# The backlog grooming: duplicates by location, removals by heading.
+cat > docs/backlog.md <<'EOB'
+# Backlog
+
+## x quality advisory at tools/a.sh:3
+
+- Why: a name.
+
+## y quality advisory at tools/a.sh:3
+
+- Why: the same name.
+
+### Kept entry at tools/b.sh:9
+
+- Why: kept.
+
+## x security Low at tools/c.sh:5
+
+- Why: quoting.
+
+## Findings of z after its package step
+
+- security Low (4) tools/d.sh:1 a thing; fix: y
+EOB
+expect "run_state: backlog-dups names entries at one location" 0 "^tools/a[.]sh:3: ## x quality advisory at tools/a[.]sh:3 [|] ## y quality advisory at tools/a[.]sh:3$" state backlog-dups
+expect "run_state: backlog-dups names no single location" 1 "" sh -c "sh '$here/run_state.sh' backlog-dups | grep tools/b"
+mkdir -p openspec/changes/archive/2026-11-11-b1
+commit "docs: backlog"
+fixer=$(git rev-parse --short=12 HEAD)
+cp docs/backlog.md backlog.before
+printf 'duplicate ## x security Low at tools/c.sh:5\n' > build/plan/groom.txt
+expect "run_state: groom keeps a disputed security entry" 1 "a security entry leaves only by" state groom
+printf 'duplicate ## Findings of z after its package step\n' > build/plan/groom.txt
+expect "run_state: groom keeps a security finding inside a group" 1 "a security entry leaves only by" state groom
+printf 'listed b1 ## no such heading\n' > build/plan/groom.txt
+expect "run_state: groom refuses an unknown heading and writes nothing" 1 "not one heading line" state groom
+expect "run_state: a refused groom leaves the backlog" 0 "" cmp docs/backlog.md backlog.before
+printf 'listed nope ## y quality advisory at tools/a.sh:3\n' > build/plan/groom.txt
+expect "run_state: groom refuses a listed change that is not archived" 1 "nope is not an archived change" state groom
+printf 'fixed 0123456789ab ## x security Low at tools/c.sh:5\n' > build/plan/groom.txt
+expect "run_state: groom refuses a fixing commit not in HEAD" 1 "is not a commit of HEAD" state groom
+printf 'listed b1 ## y quality advisory at tools/a.sh:3\nfixed %s ## x security Low at tools/c.sh:5\n' "$fixer" > build/plan/groom.txt
+printf '\n## Merged entry at tools/a.sh:3\n\n- Why: both names.\n' > build/plan/groomed.md
+expect "run_state: groom applies the sprint plan" 0 "^groom: applied sprint-2: 2 entries removed" state groom
+expect "run_state: groom removes a merged item's listed headings and no others" 0 "^## x quality advisory at tools/a[.]sh:3,### Kept entry at tools/b[.]sh:9,## Findings of z after its package step,## Merged entry at tools/a[.]sh:3,$" sh -c "grep '^##' docs/backlog.md | tr '\n' ','"
+expect "run_state: groom removes a security entry with its fixing commit" 1 "" grep -q quoting docs/backlog.md
+expect "run_state: groom copies the sprint's queue" 0 "^## Sprint 3$" grep '^## Sprint' docs/queue.md
+expect "run_state: groom appends the sprint row" 0 "^sprint-2 b5 5 b1,b2,b3,b4,b5 5[.]0 1[.]0 5 0 -$" sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
+expect "run_state: groom applies a plan once" 0 "^groom: no sprint plan waits" state groom
+expect "run_state: the sprint row counts budgets and first passes" 0 "^sprint-1 a5 5 a1,a2,a3,a4,a5 180[.]0 36[.]0 4200000 1 check:4/5,quality:3/4$" \
+  sh -c "printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv; echo sprint-1 > build/plan/sprint; rm -f build/plan/groom.txt build/plan/groomed.md; sh '$here/run_state.sh' groom > /dev/null; tail -1 docs/sprints.tsv | tr '\t' ' '"
 
 # The planner runs only when the queue needs a decision: the change is not
 # the queue's head, or a merged change without a history row holds a
@@ -1103,7 +1088,7 @@ expect "guard: read refuses a backup" 2 "tools/run_state.sh backup" guard read '
 expect "guard: checker records the figures first" 0 "^$" guard read 'sh tools/run_state.sh metric c phase.check=1200/5 first.check=0 rework=2 extra=1 stop=none estimate=small planned=0'
 expect "guard: retrospective budgets the last row's change" 0 "^$" guard close 'tail -1 docs/metrics.tsv | cut -f1; sh tools/run_state.sh budget prev && sh tools/run_state.sh note c overrun \"prev: over: estimated small\"'
 expect "guard: retrospective checks the squash commit" 0 "^$" guard close 'sh tools/run_state.sh show c && git show --stat abc1234 && BASE=abc1234~1 sh tools/gates.sh trailer && BASE=abc1234~1 sh tools/gates.sh content docs'
-expect "guard: retrospective records its notes" 0 "^$" guard close 'sh tools/run_state.sh note c retro \"x; evidence: 3\" && sh tools/run_state.sh budget c && sh tools/run_state.sh review-due c && sh tools/run_state.sh status'
+expect "guard: retrospective records its notes" 0 "^$" guard close 'sh tools/run_state.sh note c retro \"x; evidence: 3\" && sh tools/run_state.sh budget c && sh tools/run_state.sh review-due && sh tools/run_state.sh status'
 # The closing start runs the run's last records: the phases no merge gate
 # reads, notes, and the figures, never a review or a gated phase.
 expect "guard: close records a closing phase" 0 "^$" guard close 'sh tools/run_state.sh phase c package abc1234 && sh tools/run_state.sh phase c ci abc1234 && sh tools/run_state.sh phase c merge abc1234 && sh tools/run_state.sh phase c retro abc1234 && sh tools/run_state.sh phase c report abc1234 && sh tools/run_state.sh note c extra-round \"why\" && sh tools/run_state.sh metric c phase.check=1200/5 first.check=1 rework=0 stop=none'
