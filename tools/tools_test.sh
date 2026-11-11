@@ -736,6 +736,50 @@ expect "run_state: usage adds a start's totals" 0 "^no estimate: .*actual 5000 t
 expect "run_state: usage adds the starts' totals" 0 "actual 7500 total tokens in 4[.]5 minutes" state usage derived 2500 1
 expect "run_state: usage refuses minutes that are not a number" 1 "the wall minutes are a number, not x" state usage derived 100 'x'
 expect "run_state: usage refuses a token count that is not whole" 1 "a whole number" state usage derived 1.5 2
+# The CI stages: the steps of the newest ci run at a commit, from a fake
+# gh that prints what its --jq would ("SECONDS NAME" per step).
+mkdir -p "$work/stages-bin"
+cat > "$work/stages-bin/gh" <<'GH'
+#!/bin/sh
+case "$*" in
+  *"actions/runs?head_sha"*) echo "${FAKE_RUN:-}" ;;
+  *"/jobs"*) printf '%s\n' "5 Docs lint" "0 Scope" "${FAKE_TEST:-115} Compile the tests" "45 Build the editor for the smoke test" ;;
+esac
+GH
+chmod +x "$work/stages-bin/gh"
+full=$(git rev-parse HEAD)
+state set derived repo owner/carat > /dev/null
+expect "run_state: ci-stages records each step's seconds" 0 "recorded 3 steps of run 42" \
+  env PATH="$work/stages-bin:$PATH" FAKE_RUN=42 sh "$here/run_state.sh" ci-stages derived "$full"
+expect "run_state: ci-stages names a step by its words, cut at 32 characters" 0 "^45$" state get derived metric.ci.build_the_editor_for_the_smoke
+env PATH="$work/stages-bin:$PATH" FAKE_RUN=43 FAKE_TEST=0 sh "$here/run_state.sh" ci-stages derived "$full" > /dev/null
+expect "run_state: ci-stages replaces the previous run's stages" 0 "^$" state get derived metric.ci.compile_the_tests
+expect "run_state: ci-stages records nothing and passes without a run" 0 "no ci run found" \
+  env PATH="$work/stages-bin:$PATH" FAKE_RUN= sh "$here/run_state.sh" ci-stages derived "$full"
+expect "run_state: ci-stages refuses a commit that is not full" 1 "not a full commit" state ci-stages derived abc
+state metric derived ci_wait_calls=4 > /dev/null
+
+# The weighted tokens of a Workflow run's transcripts: a start of the
+# session tier whose first message is repeated on two lines, and a record
+# start of the cheap tier, whose model contains the tier alias of an agent
+# file's model: line.
+mkdir -p .claude/agents "$work/wf_one" "$work/wf_two"
+echo "model: small" > .claude/agents/x.md
+a1='{"type":"assistant","message":{"id":"msg_1","model":"vendor-large-1","content":[],"usage":{"input_tokens":2,"cache_creation_input_tokens":100,"cache_read_input_tokens":1000,"output_tokens":50}}}'
+printf '%s\n' '{"type":"user","message":{"content":"go"}}' "$a1" "$a1" \
+  '{"type":"assistant","message":{"id":"msg_2","model":"vendor-large-1","content":[],"usage":{"input_tokens":1,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":10}}}' > "$work/wf_one/agent-a.jsonl"
+echo '{"description":"contributor: implement","workflowPhase":"Implement"}' > "$work/wf_one/agent-a.meta.json"
+echo '{"type":"assistant","message":{"id":"msg_3","model":"vendor-small-1","content":[],"usage":{"input_tokens":4000,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":400}}}' > "$work/wf_one/agent-b.jsonl"
+echo '{"description":"record","workflowPhase":"Check"}' > "$work/wf_one/agent-b.meta.json"
+echo '{"type":"assistant","message":{"id":"msg_4","model":"vendor-large-1","content":[],"usage":{"input_tokens":4000,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":0}}}' > "$work/wf_two/agent-c.jsonl"
+echo '{"description":"contributor: fix","workflowPhase":"Implement"}' > "$work/wf_two/agent-c.meta.json"
+expect "run_state: tokens records each start" 0 "counted 2 starts of wf_one, 628 weighted tokens" state tokens derived "$work/wf_one"
+expect "run_state: tokens counts a repeated message once" 0 "^implement/session/1163/478$" state get derived metric.start.1
+expect "run_state: tokens weighs the cheap tier by its price" 0 "^record/cheap/4400/150$" state get derived metric.start.2
+expect "run_state: tokens counts a directory once" 0 "wf_one is already counted" state tokens derived "$work/wf_one"
+expect "run_state: tokens adds a later run's starts" 0 "counted 1 starts of wf_two, 4000 weighted tokens; the run's 4628 in all" state tokens derived "$work/wf_two"
+expect "run_state: tokens sums the phase" 0 "^5163/4478/2$" state get derived metric.weighted.implement
+expect "run_state: tokens refuses a missing directory" 1 "no directory" state tokens derived "$work/wf_none"
 state set derived merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 state set derived pushes 1 > /dev/null
 state history > /dev/null
@@ -745,6 +789,8 @@ expect "run_state: history groups the phase figures" 0 "^implement=1000/30,check
 expect "run_state: history sums the phase figures" 0 "^1200 40$" awk -F'\t' 'NR == 2 { print $11, $12 }' docs/metrics.tsv
 expect "run_state: history records no estimate without a queue item" 0 "^-$" awk -F'\t' 'NR == 2 { print $15 }' docs/metrics.tsv
 expect "run_state: history records the totals after the estimate" 0 "^7500 4[.]5$" awk -F'\t' 'NR == 2 { print $16, $17 }' docs/metrics.tsv
+expect "run_state: history records the CI stages, waiting calls, and weighted tokens" 0 "^docs_lint=5,build_the_editor_for_the_smoke=45 4 4628 implement=5163/4478/2,record=4400/150/1$" \
+  awk -F'\t' 'NR == 2 { print $19, $20, $21, $22 }' docs/metrics.tsv
 
 # The estimate: the size word of the change's item in the queue at the
 # parent of its squash commit, against the run's total tokens and wall
@@ -826,7 +872,7 @@ expect "run_state: history never passes the merged value to git as an option" 1 
 rm build/pipeline/unmerged.json
 expect "run_state: history records the estimate" 0 "^medium small - medium$" \
   sh -c "awk -F'\t' '\$1 == \"large\" { l = \$15 } \$1 == \"sized\" { s = \$15 } \$1 == \"unsized\" { u = \$15 } \$1 == \"planned\" { p = \$15 } END { print l, s, u, p }' docs/metrics.tsv"
-expect "run_state: every history row has the header's columns" 0 "^18$" sh -c "awk -F'\t' '{ print NF }' docs/metrics.tsv | sort -u"
+expect "run_state: every history row has the header's columns" 0 "^22$" sh -c "awk -F'\t' '{ print NF }' docs/metrics.tsv | sort -u"
 
 # The benchmark from the check: the metrics stage's measurement against the
 # last history row.

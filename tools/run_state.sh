@@ -31,7 +31,10 @@
 #                    skipped), and calib.KIND ("TIER/EFFORT" of a kind of
 #                    agent start), stored by the workflow, every figure in each
 #                    metric line it runs; total_tokens and wall_min, summed
-#                    over the starts by usage; older runs stored
+#                    over the starts by usage; ci.STEP (seconds of a CI
+#                    step, ci-stages), ci_wait_calls (the merger's calls
+#                    waiting on CI), start.N, weighted.KEY, weighted_tokens,
+#                    and counted (tokens); older runs stored
 #                    first_pass, out_tokens, tool_calls, phases
 #   note.N           "KIND TEXT": a retrospective proposal or a finding
 # Logs: build/stages/CHANGE/STAGE.log, ending in "EXIT n", "KILLED: ...",
@@ -132,6 +135,14 @@
 #                               tool reported them, to metric.total_tokens
 #                               and metric.wall_min, then print the budget
 #   review-due                  print "due: sprint-N ..." with the sprint's
+#   ci-stages CHANGE COMMIT     record the seconds of each step of the spin
+#                               job of the newest ci run at COMMIT as
+#                               metric.ci.STEP, read with gh; exits 0 when
+#                               none could be read
+#   tokens CHANGE DIR           record each agent start of the Workflow run
+#                               whose transcripts DIR holds, its total
+#                               tokens weighted by its tier (TIER_PRICES),
+#                               per start and per phase; a DIR counts once
 #                               changes, its combined diff BASE..origin/main,
 #                               and "sweep: yes" in an even sprint, and exit 0
 #                               when SPRINT_SIZE changes merged since the last
@@ -232,13 +243,18 @@ MINUTE_BUDGETS="small=25"
 # for spent: the median of the history's rows with both figures was 5.5
 # (4.1 to 9.1), rounded up so the note comes early rather than late.
 OUTPUT_SHARE=6
+# The price of each tier per million tokens, in tenths of a cent: input,
+# cache write (the five-minute rate), cache read, output, from the current
+# price list; tokens weighs a start by its tier, in session-tier input
+# tokens, so the weighted figure stays near the raw totals and budgets.
+TIER_PRICES="cheap=100/125/10/500 session=4000/5000/200/20000"
 # The note kinds of a pending change that the planner places: retrospective
 # proposals, overruns, and periodic review findings.
 PLAN_NOTES='retro|overrun|security|quality'
 TAB=$(printf '\t')
-# Columns 16 and 17 came after estimate, so rates ($5, $6)
-# read the same columns in every row.
-HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci_min${TAB}rounds${TAB}allocs${TAB}us_per_key${TAB}out_tokens${TAB}tool_calls${TAB}phases${TAB}review${TAB}estimate${TAB}total_tokens${TAB}wall_min${TAB}calibration"
+# Columns 16 and 17 came after estimate, and 19 to 22 after calibration,
+# so rates ($5, $6) read the same columns in every row.
+HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci_min${TAB}rounds${TAB}allocs${TAB}us_per_key${TAB}out_tokens${TAB}tool_calls${TAB}phases${TAB}review${TAB}estimate${TAB}total_tokens${TAB}wall_min${TAB}calibration${TAB}ci_stages${TAB}ci_wait_calls${TAB}weighted_tokens${TAB}weighted_phases"
 # A sprint is SPRINT_SIZE merged changes; sprint-planning reviews each
 # sprint's combined diff, and the whole tree in every second sprint. One
 # row per planned sprint in the sprints file, the first the seed sprint-0.
@@ -1161,6 +1177,105 @@ add_usage() {
   budget_line
 }
 
+# ci-stages COMMIT: the seconds of each step of the spin job of the newest
+# run of the ci workflow at COMMIT, read with gh, its seconds computed by
+# gh's jq, as metric.ci.STEP (the step's name in lowercase, every other
+# character an underscore, cut at a word within 32 characters), replacing
+# the previous run's; a step under a second is left out. The merger's green and red
+# lines run it first, so it exits 0 when nothing could be read.
+ci_stages() {
+  valid '[0-9a-f]{40}' "$1" || die "ci-stages: not a full commit: $1"
+  [ -f "$(state_file)" ] || die "no run state for $change"
+  repo=$(read_key repo)
+  valid '[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+' "$repo" || { echo "ci-stages: no repository recorded"; return 0; }
+  run=$(gh api "repos/$repo/actions/runs?head_sha=$1&per_page=20" --jq '[.workflow_runs[] | select(.name == "ci")][0].id // empty' 2>/dev/null || true)
+  valid '[0-9]+' "$run" || { echo "ci-stages: no ci run found at $1"; return 0; }
+  pairs=$(gh api "repos/$repo/actions/runs/$run/jobs?per_page=10" --jq '.jobs[] | select(.name == "spin") | .steps[] | select(.started_at != null and .completed_at != null) | "\((.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601)) \(.name)"' 2>/dev/null | awk '
+    $1 ~ /^[0-9]+$/ {
+      s = $1; $1 = ""; name = tolower($0)
+      gsub(/[^a-z0-9]+/, "_", name); sub(/^_+/, "", name); sub(/_+$/, "", name)
+      if (length(name) > 32) { name = substr(name, 1, 33); sub(/_[^_]*$/, "", name) }
+      if (name != "" && s >= 1) { if (!(name in t)) order[++n] = name; t[name] += s }
+    }
+    END { for (i = 1; i <= n; i++) print order[i] "=" t[order[i]] }')
+  [ -n "$pairs" ] || { echo "ci-stages: no step of run $run was read"; return 0; }
+  for key in $(keys_under metric.ci. | sed 's/=.*//'); do drop_key "metric.ci.$key"; done
+  for pair in $pairs; do write_key "metric.ci.${pair%%=*}" "${pair#*=}"; done
+  echo "ci-stages: recorded $(printf '%s\n' $pairs | wc -l | tr -d ' ') steps of run $run"
+}
+
+# tokens DIR: each agent start of one Workflow run, from the transcripts
+# the runtime wrote in DIR: agent-ID.jsonl, whose assistant lines carry the
+# message's id, model, and usage (a message repeated on several lines
+# counts once, its last line), and agent-ID.meta.json, its label and
+# workflow phase. A start's key is its phase in lowercase, record for the
+# record starts; its tier is cheap when its model contains a tier alias of
+# an agent file's model: line, else session. Records metric.start.N
+# "KEY/TIER/TOTAL/WEIGHTED", adds to metric.weighted.KEY
+# "TOTAL/WEIGHTED/STARTS" and metric.weighted_tokens, and appends DIR's
+# name to metric.counted, so a directory counts once.
+add_tokens() {
+  dir=$1
+  [ -d "$dir" ] || die "tokens: no directory $dir"
+  name=$(basename "$dir")
+  valid '[A-Za-z0-9_.-]+' "$name" || die "tokens: not a run directory name: $name"
+  [ -f "$(state_file)" ] || die "no run state for $change"
+  counted=$(read_key metric.counted)
+  case " $counted " in *" $name "*) echo "tokens: $name is already counted"; return 0 ;; esac
+  aliases=$(sed -n 's/^model: *\([a-z][a-z]*\).*/\1/p' .claude/agents/*.md 2>/dev/null | sort -u | paste -s -d' ' -)
+  n=$(keys_under metric.start. | sed 's/=.*//' | grep -x '[0-9][0-9]*' | sort -n | tail -1)
+  n=${n:-0}
+  starts=0
+  added=0
+  for file in "$dir"/agent-*.jsonl; do
+    [ -f "$file" ] || continue
+    meta=${file%.jsonl}.meta.json
+    label=$(sed -n 's/.*"description":"\([^"]*\)".*/\1/p' "$meta" 2>/dev/null | head -1)
+    key=record
+    [ "$label" = record ] || key=$(sed -n 's/.*"workflowPhase":"\([^"]*\)".*/\1/p' "$meta" 2>/dev/null | head -1 | tr 'A-Z' 'a-z' | tr -cd 'a-z0-9')
+    [ -n "$key" ] || key=other
+    line=$(A="$aliases" P="$TIER_PRICES" awk '
+      function num(s, field,   m) {
+        if (!match(s, "\"" field "\":[0-9]+")) return 0
+        m = substr(s, RSTART, RLENGTH); sub(/.*:/, "", m); return m + 0
+      }
+      index($0, "\"type\":\"assistant\"") {
+        i = index($0, "\"usage\":{")
+        if (!i || !match($0, /"model":"[^"<][^"]*"/)) next
+        model = substr($0, RSTART + 9, RLENGTH - 10)
+        id = "line" NR
+        if (match($0, /"id":"msg_[A-Za-z0-9_]+"/)) id = substr($0, RSTART + 6, RLENGTH - 7)
+        u = substr($0, i)
+        tin[id] = num(u, "input_tokens"); tcw[id] = num(u, "cache_creation_input_tokens")
+        tcr[id] = num(u, "cache_read_input_tokens"); tout[id] = num(u, "output_tokens")
+      }
+      END {
+        if (model == "") exit
+        tier = "session"
+        k = split(ENVIRON["A"], a, " ")
+        for (j = 1; j <= k; j++) if (index(model, a[j])) tier = "cheap"
+        k = split(ENVIRON["P"], p, " ")
+        for (j = 1; j <= k; j++) { split(p[j], kv, "="); split(kv[2], v, "/"); for (c = 1; c <= 4; c++) price[kv[1], c] = v[c] }
+        for (id in tin) { si += tin[id]; scw += tcw[id]; scr += tcr[id]; sout += tout[id] }
+        w = (si * price[tier, 1] + scw * price[tier, 2] + scr * price[tier, 3] + sout * price[tier, 4]) / price["session", 1]
+        printf "%s %.0f %.0f\n", tier, si + scw + scr + sout, w
+      }' "$file")
+    [ -n "$line" ] || continue
+    tier=${line%% *}
+    rest=${line#* }
+    total=${rest%% *}
+    weighted=${rest#* }
+    n=$((n + 1))
+    starts=$((starts + 1))
+    write_key "metric.start.$n" "$key/$tier/$total/$weighted"
+    write_key "metric.weighted.$key" "$(read_key "metric.weighted.$key" | awk -F/ -v t="$total" -v w="$weighted" '{ printf "%.0f/%.0f/%d", $1 + t, $2 + w, $3 + 1 } END { if (!NR) printf "%.0f/%.0f/1", t, w }')"
+    added=$(awk -v a="$added" -v b="$weighted" 'BEGIN { printf "%.0f", a + b }')
+  done
+  write_key metric.weighted_tokens "$(awk -v a="$(read_key metric.weighted_tokens)" -v b="$added" 'BEGIN { printf "%.0f", a + b }')"
+  write_key metric.counted "${counted:+$counted }$name"
+  echo "tokens: counted $starts starts of $name, $added weighted tokens; the run's $(read_key metric.weighted_tokens) in all"
+}
+
 # The tokens spent so far against the budget, which the checker prints
 # after a passing check: the output tokens of the phases the metric line
 # stored (every start's, this one's up to the check) against the size's
@@ -1217,7 +1332,8 @@ history_row() {
     "$(value metric.ci_min)" "$(group rounds)" "$(group allocs)" "$(group us)" \
     "$tokens" "$calls" "$phases" "$review" "$(estimate_of)" "$(value metric.total_tokens)"
   printf '%s\t' "$(value metric.wall_min)"
-  printf '%s\n' "$(group calib)"
+  printf '%s\t' "$(group calib)" "$(group ci)" "$(value metric.ci_wait_calls)" "$(value metric.weighted_tokens)"
+  printf '%s\n' "$(group weighted)"
 }
 
 # The findings a run's workflow recorded after its package step, as
@@ -1608,6 +1724,12 @@ case "$command" in
   usage)
     [ $# -eq 2 ] || usage
     add_usage "$1" "$2" ;;
+  ci-stages)
+    [ $# -eq 1 ] || usage
+    ci_stages "$1" ;;
+  tokens)
+    [ $# -eq 1 ] || usage
+    add_tokens "$1" ;;
   plan-needed)
     [ $# -eq 0 ] || usage
     plan_needed ;;
