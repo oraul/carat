@@ -9,7 +9,11 @@
 #     a Markdown file other than docs/actions.md and docs/compatibility.md,
 #     which the action and ex tests compare with the code, and
 #     docs/codebase-map.md, whose coverage the lint test checks, or a file
-#     under openspec/ or .claude/;
+#     under openspec/ or .claude/ other than the agents, the workflows, and
+#     .claude/settings.json, which make tools-test reads;
+#   - on a pull request, every file the merge commit changes against the
+#     newest earlier head of the pull request whose spin check passed is
+#     such documentation (GREEN_LOOKUPS heads back at most);
 #   - a push to main is the squash commit of a pull request whose head has
 #     the same tree and whose spin check passed: the tests ran on exactly
 #     these files already.
@@ -17,10 +21,11 @@
 # checks.
 #
 # Environment: EVENT (github.event_name), REPO (owner/name), SHA (the
-# commit checked out), GH_TOKEN for the gh calls on a push. The checkout
-# needs the commit's first parent (fetch-depth 2): on a pull request the
-# checked out commit is the merge of the head into the base, whose first
-# parent is the base.
+# commit checked out), GH_TOKEN for the gh calls, and on a pull request
+# PR (its number) and HEAD_SHA (its head). The checkout needs the commit's
+# first parent (fetch-depth 2): on a pull request the checked out commit
+# is the merge of the head into the base, whose first parent is the base;
+# a green head missing from the checkout is fetched by its sha.
 set -u
 
 answer() {
@@ -36,11 +41,13 @@ answer() {
 documentation() {
   case "$1" in
     docs/actions.md|docs/compatibility.md|docs/codebase-map.md) return 1 ;;
+    .claude/agents/*|.claude/workflows/*|.claude/settings.json) return 1 ;;
     openspec/*|.claude/*|*.md|docs/metrics.tsv) return 0 ;;
     *) return 1 ;;
   esac
 }
 
+GREEN_LOOKUPS=10
 event=${EVENT:-}
 if [ "$event" != "pull_request" ] && [ "$event" != "push" ]; then
   answer true "a $event run always runs the checks"
@@ -63,7 +70,33 @@ changed=$(git diff --name-only HEAD^1 HEAD 2>/dev/null) || answer true "the firs
 if [ -z "$changed" ]; then
   answer true "no changed file was found"
 fi
+code=""
 for path in $changed; do
-  documentation "$path" || answer true "$path is code, configuration, or a document a test reads"
+  documentation "$path" || { code=$path; break; }
 done
-answer false "only documentation that no test reads changed"
+[ -n "$code" ] || answer false "only documentation that no test reads changed"
+[ "$event" = "pull_request" ] || answer true "$code is code, configuration, or a document a test reads"
+[ -n "${PR:-}" ] && [ -n "${HEAD_SHA:-}" ] || answer true "$code is code, configuration, or a document a test reads, and no pull request was named"
+
+# The newest earlier head of the pull request whose spin check passed, at
+# most GREEN_LOOKUPS commits back from the head; the merge commit is
+# compared with it, so a base that moved with code since runs the checks.
+green=""
+commits=$(gh api "repos/$REPO/pulls/${PR:-}/commits?per_page=100" --jq '.[].sha' 2>/dev/null || true)
+lookups=0
+for sha in $(printf '%s\n' $commits | awk '{ l[NR] = $0 } END { for (i = NR; i > 0; i--) print l[i] }'); do
+  case "$sha" in *[!0-9a-f]*|"") continue ;; esac
+  [ "$sha" != "${HEAD_SHA:-}" ] || continue
+  lookups=$((lookups + 1))
+  [ "$lookups" -le "$GREEN_LOOKUPS" ] || break
+  passed=$(gh api "repos/$REPO/commits/$sha/check-runs?check_name=spin" --jq '[.check_runs[] | select(.conclusion == "success")] | length' 2>/dev/null || echo 0)
+  case "$passed" in ""|*[!0-9]*) passed=0 ;; esac
+  if [ "$passed" -gt 0 ]; then green=$sha; break; fi
+done
+[ -n "$green" ] || answer true "$code is code, configuration, or a document a test reads, and no earlier head of the pull request passed"
+git cat-file -e "$green^{commit}" 2>/dev/null || git fetch -q --depth=1 origin "$green" 2>/dev/null || answer true "$code is code, and the last green head $green could not be fetched"
+since=$(git diff --name-only "$green" HEAD 2>/dev/null) || answer true "$code is code, and the last green head $green could not be compared"
+for path in $since; do
+  documentation "$path" || answer true "$path is code, configuration, or a document a test reads, changed since the last green head $green"
+done
+answer false "only documentation that no test reads changed since the last green head $green"

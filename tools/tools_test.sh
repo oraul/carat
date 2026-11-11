@@ -97,7 +97,10 @@ scope_case() {
 
 scope_case false docs/notes.md
 scope_case false openspec/changes/x/proposal.md
-scope_case false .claude/agents/x.md
+scope_case true .claude/agents/x.md
+scope_case true .claude/workflows/x.js
+scope_case true .claude/settings.json
+scope_case false .claude/commands/x.md
 scope_case false docs/metrics.tsv
 scope_case true docs/codebase-map.md
 scope_case true docs/actions.md
@@ -120,10 +123,16 @@ mkdir -p "$work/bin"
 cat > "$work/bin/gh" <<'EOF'
 #!/bin/sh
 case "$*" in
+  *"/commits?per_page"*) printf '%s\n' $FAKE_COMMITS ;;
   *head.sha*) echo "$FAKE_HEAD" ;;
   *number*) echo 7 ;;
   *tree.sha*) echo "$FAKE_TREE" ;;
-  *check-runs*) echo "$FAKE_PASSED" ;;
+  *check-runs*)
+    if [ -n "${FAKE_GREEN:-}" ]; then
+      case "$*" in *"commits/$FAKE_GREEN/"*) echo 1 ;; *) echo 0 ;; esac
+    else
+      echo "$FAKE_PASSED"
+    fi ;;
 esac
 EOF
 chmod +x "$work/bin/gh"
@@ -136,6 +145,32 @@ expect "ci_scope: a push whose tree passed in its pull request skips" 0 "^run=fa
 expect "ci_scope: a push whose pull request did not pass runs" 0 "^run=true" \
   env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=0 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
 
+
+# A pull request's merge commit against its newest earlier head whose spin
+# check passed (FAKE_GREEN): the heads are A (code) and B, merged into the
+# base with no fast-forward, so the diff against the base holds code.
+# green_pr NAME FILE: B changes FILE; leaves A, B, and the merge checked out.
+green_pr() {
+  fresh "$1"
+  base=$(git rev-parse HEAD)
+  echo code >> tools/x.sh
+  commit "chore: code"
+  green_a=$(git rev-parse HEAD)
+  echo more >> "$2"
+  commit "chore: change $2"
+  green_b=$(git rev-parse HEAD)
+  git_q checkout -q --detach "$base"
+  git_q merge -q --no-ff -m merge "$green_b"
+}
+green_scope() {
+  env PATH="$work/bin:$PATH" FAKE_COMMITS="$green_a $green_b" FAKE_GREEN="$1" EVENT=pull_request REPO=owner/carat SHA=x PR=7 HEAD_SHA="$green_b" sh "$here/ci_scope.sh"
+}
+green_pr green-docs docs/notes.md
+expect "ci_scope: documentation since the last green head skips" 0 "^run=false: only documentation that no test reads changed since the last green head $green_a$" green_scope "$green_a"
+expect "ci_scope: no green head runs" 0 "^run=true: tools/x[.]sh is code.*no earlier head of the pull request passed" green_scope none
+expect "ci_scope: the head itself is never the green head" 0 "^run=true: .*no earlier head" green_scope "$green_b"
+green_pr green-code tools/y.sh
+expect "ci_scope: code since the last green head runs" 0 "^run=true: tools/y[.]sh is code.*changed since the last green head $green_a$" green_scope "$green_a"
 # ------------------------------------------------------------- metrics.sh
 
 mkdir -p "$work/metrics"
@@ -208,9 +243,9 @@ commit "chore: a fast list"
 expect "run_state: check runs make stages once main has a fast list" 0 "every stage passed" \
   env BASE=HEAD MAKE="$work/bin/fake-make" FAIL_B=2 sh "$here/run_state.sh" check state
 expect "make: every fast stage is a check stage" 0 "^none$" sh -c 'm="$1/../Makefile"; all=" $(sed -n "s/^CHECK_STAGES := //p" "$m") "; out=; for s in $(sed -n "s/^FAST_STAGES := //p" "$m"); do case "$all" in *" $s "*) ;; *) out="$out $s" ;; esac; done; [ -n "$(sed -n "s/^FAST_STAGES := //p" "$m")" ] && echo "${out:-none}"' _ "$here"
-# CI skips a change only under .claude/ (tools/ci_scope.sh), whose agent and
-# workflow files tools-test reads, so the checker runs tools-test.
-expect "make: the fast list keeps tools-test, which CI skips for agent and workflow files" 0 "tools-test" sh -c 'sed -n "s/^FAST_STAGES := //p" "$1/../Makefile" | tr " " "\\n" | grep -x tools-test' _ "$here"
+# tools-test tests the pipeline's tools, agents, and workflows, which a
+# pipeline change pushes, so the checker runs it before the push too.
+expect "make: the fast list keeps tools-test" 0 "tools-test" sh -c 'sed -n "s/^FAST_STAGES := //p" "$1/../Makefile" | tr " " "\\n" | grep -x tools-test' _ "$here"
 # A stage record counts only at the commit the workflow backs: one at HEAD
 # without it, which any agent could have written, runs again.
 expect "run_state: check runs a stage recorded at the head that no commit backs" 0 "^stage a: exit 0" \
@@ -701,6 +736,50 @@ expect "run_state: usage adds a start's totals" 0 "^no estimate: .*actual 5000 t
 expect "run_state: usage adds the starts' totals" 0 "actual 7500 total tokens in 4[.]5 minutes" state usage derived 2500 1
 expect "run_state: usage refuses minutes that are not a number" 1 "the wall minutes are a number, not x" state usage derived 100 'x'
 expect "run_state: usage refuses a token count that is not whole" 1 "a whole number" state usage derived 1.5 2
+# The CI stages: the steps of the newest ci run at a commit, from a fake
+# gh that prints what its --jq would ("SECONDS NAME" per step).
+mkdir -p "$work/stages-bin"
+cat > "$work/stages-bin/gh" <<'GH'
+#!/bin/sh
+case "$*" in
+  *"actions/runs?head_sha"*) echo "${FAKE_RUN:-}" ;;
+  *"/jobs"*) printf '%s\n' "5 Docs lint" "0 Scope" "${FAKE_TEST:-115} Compile the tests" "45 Build the editor for the smoke test" ;;
+esac
+GH
+chmod +x "$work/stages-bin/gh"
+full=$(git rev-parse HEAD)
+state set derived repo owner/carat > /dev/null
+expect "run_state: ci-stages records each step's seconds" 0 "recorded 3 steps of run 42" \
+  env PATH="$work/stages-bin:$PATH" FAKE_RUN=42 sh "$here/run_state.sh" ci-stages derived "$full"
+expect "run_state: ci-stages names a step by its words, cut at 32 characters" 0 "^45$" state get derived metric.ci.build_the_editor_for_the_smoke
+env PATH="$work/stages-bin:$PATH" FAKE_RUN=43 FAKE_TEST=0 sh "$here/run_state.sh" ci-stages derived "$full" > /dev/null
+expect "run_state: ci-stages replaces the previous run's stages" 0 "^$" state get derived metric.ci.compile_the_tests
+expect "run_state: ci-stages records nothing and passes without a run" 0 "no ci run found" \
+  env PATH="$work/stages-bin:$PATH" FAKE_RUN= sh "$here/run_state.sh" ci-stages derived "$full"
+expect "run_state: ci-stages refuses a commit that is not full" 1 "not a full commit" state ci-stages derived abc
+state metric derived ci_wait_calls=4 > /dev/null
+
+# The weighted tokens of a Workflow run's transcripts: a start of the
+# session tier whose first message is repeated on two lines, and a record
+# start of the cheap tier, whose model contains the tier alias of an agent
+# file's model: line.
+mkdir -p .claude/agents "$work/wf_one" "$work/wf_two"
+echo "model: small" > .claude/agents/x.md
+a1='{"type":"assistant","message":{"id":"msg_1","model":"vendor-large-1","content":[],"usage":{"input_tokens":2,"cache_creation_input_tokens":100,"cache_read_input_tokens":1000,"output_tokens":50}}}'
+printf '%s\n' '{"type":"user","message":{"content":"go"}}' "$a1" "$a1" \
+  '{"type":"assistant","message":{"id":"msg_2","model":"vendor-large-1","content":[],"usage":{"input_tokens":1,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":10}}}' > "$work/wf_one/agent-a.jsonl"
+echo '{"description":"contributor: implement","workflowPhase":"Implement"}' > "$work/wf_one/agent-a.meta.json"
+echo '{"type":"assistant","message":{"id":"msg_3","model":"vendor-small-1","content":[],"usage":{"input_tokens":4000,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":400}}}' > "$work/wf_one/agent-b.jsonl"
+echo '{"description":"record","workflowPhase":"Check"}' > "$work/wf_one/agent-b.meta.json"
+echo '{"type":"assistant","message":{"id":"msg_4","model":"vendor-large-1","content":[],"usage":{"input_tokens":4000,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":0}}}' > "$work/wf_two/agent-c.jsonl"
+echo '{"description":"contributor: fix","workflowPhase":"Implement"}' > "$work/wf_two/agent-c.meta.json"
+expect "run_state: tokens records each start" 0 "counted 2 starts of wf_one, 628 weighted tokens" state tokens derived "$work/wf_one"
+expect "run_state: tokens counts a repeated message once" 0 "^implement/session/1163/478$" state get derived metric.start.1
+expect "run_state: tokens weighs the cheap tier by its price" 0 "^record/cheap/4400/150$" state get derived metric.start.2
+expect "run_state: tokens counts a directory once" 0 "wf_one is already counted" state tokens derived "$work/wf_one"
+expect "run_state: tokens adds a later run's starts" 0 "counted 1 starts of wf_two, 4000 weighted tokens; the run's 4628 in all" state tokens derived "$work/wf_two"
+expect "run_state: tokens sums the phase" 0 "^5163/4478/2$" state get derived metric.weighted.implement
+expect "run_state: tokens refuses a missing directory" 1 "no directory" state tokens derived "$work/wf_none"
 state set derived merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 state set derived pushes 1 > /dev/null
 state history > /dev/null
@@ -710,6 +789,8 @@ expect "run_state: history groups the phase figures" 0 "^implement=1000/30,check
 expect "run_state: history sums the phase figures" 0 "^1200 40$" awk -F'\t' 'NR == 2 { print $11, $12 }' docs/metrics.tsv
 expect "run_state: history records no estimate without a queue item" 0 "^-$" awk -F'\t' 'NR == 2 { print $15 }' docs/metrics.tsv
 expect "run_state: history records the totals after the estimate" 0 "^7500 4[.]5$" awk -F'\t' 'NR == 2 { print $16, $17 }' docs/metrics.tsv
+expect "run_state: history records the CI stages, waiting calls, and weighted tokens" 0 "^docs_lint=5,build_the_editor_for_the_smoke=45 4 4628 implement=5163/4478/2,record=4400/150/1$" \
+  awk -F'\t' 'NR == 2 { print $19, $20, $21, $22 }' docs/metrics.tsv
 
 # The estimate: the size word of the change's item in the queue at the
 # parent of its squash commit, against the run's total tokens and wall
@@ -791,7 +872,7 @@ expect "run_state: history never passes the merged value to git as an option" 1 
 rm build/pipeline/unmerged.json
 expect "run_state: history records the estimate" 0 "^medium small - medium$" \
   sh -c "awk -F'\t' '\$1 == \"large\" { l = \$15 } \$1 == \"sized\" { s = \$15 } \$1 == \"unsized\" { u = \$15 } \$1 == \"planned\" { p = \$15 } END { print l, s, u, p }' docs/metrics.tsv"
-expect "run_state: every history row has the header's columns" 0 "^18$" sh -c "awk -F'\t' '{ print NF }' docs/metrics.tsv | sort -u"
+expect "run_state: every history row has the header's columns" 0 "^22$" sh -c "awk -F'\t' '{ print NF }' docs/metrics.tsv | sort -u"
 
 # The benchmark from the check: the metrics stage's measurement against the
 # last history row.
@@ -1116,6 +1197,10 @@ expect "guard: only the contributor applies the sprint plan" 2 "which the workfl
 # The closing start runs the run's last records: the phases no merge gate
 # reads, notes, and the figures, never a review or a gated phase.
 expect "guard: close records a closing phase" 0 "^$" guard close 'sh tools/run_state.sh phase c package abc1234 && sh tools/run_state.sh phase c ci abc1234 && sh tools/run_state.sh phase c merge abc1234 && sh tools/run_state.sh phase c retro abc1234 && sh tools/run_state.sh phase c report abc1234 && sh tools/run_state.sh note c extra-round \"why\" && sh tools/run_state.sh metric c phase.check=1200/5 first.check=1 rework=0 stop=none'
+expect "guard: close records the CI stages" 0 "^$" guard close 'sh tools/run_state.sh ci-stages c 0123456789abcdef0123456789abcdef01234567 && sh tools/run_state.sh metric c ci_wait_calls=4'
+expect "guard: close refuses CI stages at a short commit" 2 "only the close profile runs, as CHANGE COMMIT" guard close 'sh tools/run_state.sh ci-stages c abc1234'
+expect "guard: read refuses the CI stages" 2 "only the close profile runs" guard read 'sh tools/run_state.sh ci-stages c 0123456789abcdef0123456789abcdef01234567'
+expect "guard: merger refuses the CI stages" 2 "which the workflow or another agent runs" guard merger 'sh tools/run_state.sh ci-stages c 0123456789abcdef0123456789abcdef01234567'
 for gated in check quality security bench; do
   expect "guard: close refuses a $gated phase" 2 "the close profile records only" guard close "sh tools/run_state.sh phase c $gated abc1234"
 done
@@ -2276,7 +2361,7 @@ calib_js() {
 expect "workflow: calibrate passes a low effort and records the profile" 0 '^\[[{]"schema":1,"effort":"low"[}],[{]"schema":1[}],[{]"scout":"cheap/low","planner":"session/session"[}]\]$' \
   calib_js "[calibrate('scout', { schema: 1 }), calibrate('planner', { schema: 1 }), calibrated]"
 expect "workflow: the metric line carries the profiles" 0 ' calib[.]scout=cheap/low calib[.]security=session/session"$' \
-  calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; estimate = ''; planned = null; state = { change: 'c' }; calibrate('scout', {}); calibrate('security', {}); return metricLine() })()"
+  calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = ''; planned = null; state = { change: 'c' }; calibrate('scout', {}); calibrate('security', {}); return metricLine() })()"
 expect "workflow: a restart restores the recorded profiles of the kinds not used yet" 0 '^[{]"planner":"session/session","scout":"cheap/low"[}]$' \
   calib_js "(() => { calibrate('planner', {}); return restoreCalibration({ 'metric.calib.scout': 'cheap/low', 'metric.calib.planner': 'cheap/low', 'metric.calib.checker': 'cheap/high', 'metric.rework': '1' }, calibrated) })()"
 speed_js() {
@@ -2294,6 +2379,15 @@ expect "workflow: no security finding is kept non-blocking by its location" 0 '^
   sh -c 'grep -q -e "security re-rating kept non-blocking" -e "reRaised(\`\${f.file}" "$1" && echo found || echo none' _ "$wf"
 expect "workflow: a fix round narrows both reviews only from this start's pass" 0 '^\["abc1234","","","",""\]$' \
   speed_js '[narrowedFrom({ "review.quality": "pass abc1234" }, "quality", "def5678"), narrowedFrom({ "review.security": "pass def5678" }, "security", "def5678"), narrowedFrom({ "review.security": "blocked abc1234" }, "security", "def5678"), narrowedFrom({}, "quality", "def5678"), narrowedFrom({ "review.quality": "pass x" }, "quality", "def5678")]'
+expect "workflow: the closing start records the CI stages at a full commit only" 0 '^\[true,false,false\]$' \
+  speed_js '["sh tools/run_state.sh ci-stages c 0123456789abcdef0123456789abcdef01234567", "sh tools/run_state.sh ci-stages c abc1234", "sh tools/run_state.sh ci-stages c 0123456789abcdef0123456789abcdef01234567 && x"].map((l) => CLOSABLE.test(l))'
+expect "workflow: the merger's waits come from its minutes, its cap from the waits beyond the second" 0 '^\[0,1,2,3,4,12,12,14,16\]$' \
+  js "$wf" "FIXED_CAPS waitsOf mergerCap" '[0, 3, 7, 12, 17].map((w) => waitsOf({ waited: w })).concat([0, 7, 12, 17].map((w) => mergerCap({ waited: w })))'
+expect "workflow: the merger's waiting calls are recorded" 0 ' ci_wait_calls=4"$' \
+  calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = 4; estimate = ''; planned = null; state = { change: 'c' }; return metricLine() })()"
+expect "workflow: the merger's lines leave the CI stages to the record and closing starts" 0 "^1 0$" \
+  sh -c 'echo "$(grep -c "queue(\`sh tools/run_state.sh ci-stages \${state.change} \${pushed}\`, m.head)" "$1") $(grep -c "ci-stages" "$2")"' _ "$wf" "$here/../.claude/agents/merger.md"
+expect "deliver: the command records the weighted tokens" 0 "sh tools/run_state.sh tokens <change> <dir>" cat "$here/../.claude/commands/deliver.md"
 expect "workflow: both reviews' scopes read this start's records" 0 '^2$' grep -c "narrowedFrom(ran, '" "$wf"
 expect "workflow: a resume past the push builds no merge records from the run state" 0 '^\[\]$' \
   speed_js 'mergeRecords({})'

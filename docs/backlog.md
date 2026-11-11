@@ -4715,3 +4715,51 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Location: `.claude/agents/contributor.md` (8190 of the 8192-byte agent budget in `tools/docs_lint.sh` `BUDGETS`; the next largest agent file, `.claude/agents/planner.md`, is 5950).
 - Why it matters: at #108 a one-line timeout fix forced four unrelated rewordings to fit the budget, which the quality review flagged as a mixed commit; every later fix to the file pays the same cost.
 - Fix outline: keep at least 15% headroom (under 7000 bytes) by removing or merging instructions; acceptance: docs-lint and the agents cases of tools-test pass, and the next fix to an agent file changes only the lines its finding names.
+
+### Usage header splits review-due's description (`ci-time` quality advisory)
+
+- Location: `tools/run_state.sh:137`.
+- Why it matters: the ci-stages and tokens usage lines are inserted inside review-due's description, splitting it in the header that usage prints.
+- Fix outline: move the two entries after the end of review-due's block.
+
+### Stale comment on who runs ci-stages (`ci-time` quality advisory)
+
+- Location: `tools/run_state.sh:1184`.
+- Why it matters: the comment says the merger's green and red lines run ci-stages, but the workflow queues it for the record or closing start and the merger's lines never run it.
+- Fix outline: say the record or closing start runs it after CI finished.
+
+### ci-stages may drop every step on fractional seconds (`ci-time` quality advisory)
+
+- Location: `tools/run_state.sh:1194`.
+- Why it matters: the awk keeps only whole seconds, so if gh's fromdateiso8601 returns fractional seconds for GitHub's millisecond step timestamps every step is dropped and nothing is recorded; the fake gh never runs the jq.
+- Fix outline: floor the difference in the jq, or accept a decimal and round in awk.
+
+### ci-stages step name can exceed 32 characters (`ci-time` quality advisory)
+
+- Location: `tools/run_state.sh:1197`.
+- Why it matters: a step name longer than 32 characters with no underscore in its first 33 stays 33 characters, against the documented limit of 32.
+- Fix outline: fall back to substr(name, 1, 32) when the sub removes nothing.
+
+### ci_scope.sh lost its executable bit (`ci-time` quality advisory)
+
+- Location: `tools/ci_scope.sh:1`.
+- Why it matters: the file mode goes from 100755 to 100644, which the change does not mention.
+- Fix outline: restore the executable bit, or name the change in a proposal.
+
+### ci-stages queued on every green or red return (`ci-time` quality advisory)
+
+- Location: `.claude/workflows/deliver-change.js:1029`.
+- Why it matters: ci-stages is queued on every green or red return, the stale reds that loop again included, so the same line can run several times.
+- Fix outline: queue it beside verdict('ci', ...) after the stale-red and pending checks.
+
+### ci_scope.sh fallbacks have no tools test (`ci-time` quality advisory)
+
+- Location: `tools/tools_test.sh:173`.
+- Why it matters: the new fallbacks of `tools/ci_scope.sh` (no PR or HEAD_SHA, a green head that cannot be fetched, the GREEN_LOOKUPS limit) have no case.
+- Fix outline: add an expect case for each, run=true.
+
+### Redundant parameter defaults in ci_scope.sh (`ci-time` quality advisory)
+
+- Location: `tools/ci_scope.sh:85` and `tools/ci_scope.sh:92`.
+- Why it matters: the `${PR:-}` and `${HEAD_SHA:-}` defaults are redundant after the guard at line 82.
+- Fix outline: use `$PR` and `$HEAD_SHA`.

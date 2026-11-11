@@ -70,7 +70,8 @@
 #                create tool or API
 #   close        the read profile, plus sh tools/run_state.sh phase CHANGE
 #                NAME COMMIT with NAME one of CLOSE_PHASES, the phases
-#                no merge gate reads: the retrospective's closing start
+#                no merge gate reads, and ci-stages CHANGE COMMIT (a full
+#                sha): the retrospective's closing start
 #                runs the run's last records, never review and never the
 #                phase of check, quality, security, or bench
 # The merger alone may call the GitHub merge tool (merge_tool, below). Any
@@ -589,6 +590,9 @@ run_state_form() {
         contributor:pr) matches "$4" '^[0-9]+$' || refuse "a pull request record other than a number" ;;
         *) refuse "tools/run_state.sh set of $3" ;;
       esac ;;
+    read:ci-stages)
+      [ "$closing" = 1 ] && [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && matches "$3" '^[0-9a-f]{40}$' ||
+        refuse "tools/run_state.sh ci-stages, which only the close profile runs, as CHANGE COMMIT" ;;
     read:phase)
       [ "$closing" = 1 ] && [ $# -eq 4 ] && matches "$2" "$CHANGE_NAME" && options_in "$CLOSE_PHASES" "$3" && matches "$4" '^[0-9a-f]{7,40}$' ||
         refuse "tools/run_state.sh phase, which the workflow runs; the close profile records only CHANGE NAME COMMIT, NAME one of $CLOSE_PHASES" ;;
