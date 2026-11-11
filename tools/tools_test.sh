@@ -1493,7 +1493,9 @@ sed -i '/^3[.] /r pool.tmp' docs/queue.md
 expect "docs_lint: a sprint with two pipeline items fails" 1 "FAIL queue: the sprint holds 2 pipeline items" doclint
 printf '# Queue\n\n## Sprint 2\n\n' > docs/queue.md
 for n in 1 2 3 4 5 6; do printf '%s. `i%s` (T5, estimated small): item.\n' "$n" "$n" >> docs/queue.md; done
-expect "docs_lint: a sprint of six items fails" 1 "FAIL queue: the sprint holds 6 items, not 1 to 5" doclint
+expect "docs_lint: a sprint of six items fails" 1 "FAIL queue: the sprint holds 6 items, not 0 to 5" doclint
+printf '# Queue\n\n## Sprint 2\n\n## Pool\n\n1. `p` (T5, estimated small): pooled.\n' > docs/queue.md
+expect "docs_lint: a drained sprint of 0 items waits for /sprint" 0 "ok   queue: 1 item" doclint
 docs link
 echo "See $LINK." >> docs/notes.md
 expect "docs_lint: refuses a URL in a document" 1 "FAIL content: docs/notes[.]md:[0-9]+: url: " doclint

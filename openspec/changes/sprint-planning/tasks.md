@@ -9,7 +9,7 @@
 ## 2. Guard and lint
 
 - [x] 2.1 `tools/agent_guard.sh`: the read profile runs `backlog-dups`, the contributor `groom`. Proved by "guard: the read profile lists backlog duplicates" and "guard: the contributor applies the sprint plan".
-- [x] 2.2 `tools/docs_lint.sh` queue check: a sprint of 1 to 5 items with at most one pipeline item, T0 exempt. Proved by "docs_lint: a sprint of six items fails", "docs_lint: a sprint with two pipeline items fails", and "docs_lint: a T0 pipeline item does not count".
+- [x] 2.2 `tools/docs_lint.sh` queue check: a sprint of 0 to 5 items with at most one pipeline item, T0 exempt. Proved by "docs_lint: a sprint of six items fails", "docs_lint: a drained sprint of 0 items waits for /sprint", "docs_lint: a sprint with two pipeline items fails", and "docs_lint: a T0 pipeline item does not count".
 
 ## 3. Workflows
 

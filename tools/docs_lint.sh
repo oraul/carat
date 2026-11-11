@@ -143,11 +143,12 @@ check_queue() {
 $untiered"
   [ -z "$unsized" ] || bad "a queue item without \"estimated small\", \"estimated medium\", or \"estimated large\":
 $unsized"
+  # A drained sprint, every item delivered, waits with 0 items for /sprint.
   sprint=$(awk '/^## / { on = /^## Sprint/; next } on && /^[0-9]+[.] /' docs/queue.md)
   if grep -q '^## Sprint' docs/queue.md; then
     count=$(printf '%s\n' "$sprint" | grep -c .)
     pipeline=$(printf '%s\n' "$sprint" | sed -n 's/^[^(]*(\([^)]*\)).*/\1/p' | grep -w pipeline | grep -c -v -w T0)
-    [ "$count" -ge 1 ] && [ "$count" -le 5 ] || bad "the sprint holds $count items, not 1 to 5"
+    [ "$count" -le 5 ] || bad "the sprint holds $count items, not 0 to 5"
     [ "$pipeline" -le 1 ] || bad "the sprint holds $pipeline pipeline items, at most 1 (T0 exempt)"
   fi
   [ $failed -ne $start ] || ok "$(printf '%s\n' "$items" | grep -c .) item(s) with a tier and a size"
