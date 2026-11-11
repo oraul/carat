@@ -917,7 +917,7 @@ if (!resume || resume.status !== 'done') {
 // item never passes through a model's output.
 const planLine = resume && typeof resume.plan === 'string' ? resume.plan.split('\n')[0] : ''
 const request = typeof input.brief === 'string' && input.brief.trim() !== '' && input.brief.trim() !== state.change
-const brief = request ? input.brief : `the item of docs/queue.md that names \`${state.change}\`, read there as written (when no item names it, the existing OpenSpec change)`
+const brief = request ? input.brief : `the item of docs/queue.md that names \`${state.change}\` (of build/plan/queue.md while a sprint plan waits there: ${planLine || 'no plan line'}), read there as written (when no item names it, the existing OpenSpec change)`
 if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement'] && !request && /^not needed:/.test(planLine)) {
   phase('Plan')
   const size = /estimated (small|medium|large)\b/.exec(planLine)
@@ -975,7 +975,7 @@ if (!stopped && !state.merged) {
     if (await verify()) {
       phase('Package')
       const plan = planned === 0
-        ? 'The planner did not run: this change was taken from the head of docs/queue.md as written. Leave build/plan/, which holds an older run\'s files; remove this change\'s item from docs/queue.md and renumber the rest, and append the history of the merged changes as your package step says.'
+        ? 'The planner did not run: this change was taken from the head of docs/queue.md as written. Copy nothing from build/plan/, which holds an older run\'s files or a waiting sprint plan that groom applies; append the history and run groom as your package step says, then remove this change\'s item from docs/queue.md and renumber the rest.'
         : 'Apply the planner\'s files under build/plan/ and append the history of the merged changes as your package step says.'
       const done = await contributor('package', `Non-blocking findings to append to docs/backlog.md (a shell append; never read the file):\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
       if (done) state.pr = packagedPr(done)

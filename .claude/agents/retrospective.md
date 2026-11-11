@@ -21,7 +21,7 @@ Retrospective steps, only when the input asks for them:
 2. Propose at most three improvements to `.claude/workflows/deliver-change.js`, an agent under `.claude/agents/`, a script under `tools/`, or the process in `CLAUDE.md`. Each cites the numbers behind it, from this run and the history: a phase's share of output tokens or tool calls, a gate that often fails its first pass, a rework round with its cause, a step whose result never changed a decision. Prefer removing or merging a step, an agent, or an instruction over adding one. Each states the problem with its numbers and the acceptance check that shows it solved, not the implementation, which the contributor chooses (`workflow-trim` lost a quality round to an approach its brief prescribed). No proposal without a number; none at all is a valid result.
 3. Record each: `sh tools/run_state.sh note <change> retro "<proposal>; evidence: <numbers>"`.
 4. Run `sh tools/run_state.sh budget <last>`, where `<last>` is the change of the last row of `docs/metrics.tsv`, the newest run whose totals are final: its total tokens and wall minutes against the budgets of its size estimate (`docs/goals.md`), starting `under:` or `over:`. When it starts with `over:`, record `sh tools/run_state.sh note <change> overrun "<last>: <its line>"` for the planner, which re-estimates or splits similar items. When `<last>` has no run state, skip this step.
-5. Run `sh tools/run_state.sh review-due <change>` and keep its line (`due` true when it starts with `due:`).
+5. Run `sh tools/run_state.sh review-due` and keep its line (`due` true when it starts with `due:`: the sprint's five changes merged, so `sprint-planning` is due).
 
 Report steps, always:
 
@@ -33,7 +33,7 @@ Report steps, always:
 - Pull request: number, squash commit subject, and short SHA; or why there is none.
 - Phases: each phase with its result and the commit it finished at.
 - Checks: each stage with its result and seconds, a skipped or carried stage named so.
-- Security: the review's result, its findings by severity, and what was fixed or appended to the backlog (only the periodic review reads it whole; a contributor or scout only greps the entries its queue item names).
+- Security: the review's result, its findings by severity, and what was fixed or appended to the backlog (only `sprint-planning` opens it; a delivery only appends).
 - Quality and benchmarks: blocking and advisory findings, allocations and rounds base to change, time when measured.
 - Gates: each gate's result, the README's included.
 - CI: result, minutes, and the fixes it needed.

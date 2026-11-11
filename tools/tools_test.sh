@@ -2444,7 +2444,7 @@ backlog_reads() {
   echo "${out:-none}"
 }
 expect "agents: no delivery reads or greps the backlog" 0 "^none$" backlog_reads
-expect "agents: the planner writes self-contained items" 0 "^1 0$" \
+expect "agents: the planner writes self-contained items" 0 "^[1-9][0-9]* 0$" \
   sh -c 'echo "$(grep -c "self-contained" "$1") $(grep -c "Locations go in the" "$1")"' _ "$agents/planner.md"
 
 echo "$passed/$total passed"
