@@ -21,7 +21,7 @@ Input: the change name. The diff is `git diff origin/main...HEAD`; uncommitted w
 4. Blocking: a correctness bug, a broken rule of `CLAUDE.md` or `docs/architecture.md`, a behavior change without its test, or code a careful maintainer would not merge. Everything else is advisory. Each finding: file, line, the rule or reason, and a one-line fix.
 5. Record every finding, so a resumed run keeps them and the planner can read them: each blocking one as `sh tools/run_state.sh note <change> quality-blocking "<commit> <file>:<line> <rule or reason>; fix: <outline>"` and each advisory one the same way as `quality-advisory`, the commit being `git rev-parse --short=12 HEAD`, the `head` you return. The text you note is the text you return.
 6. The input states a cap of tool calls. On reaching it, record what you found and return with `not_reviewed` naming each file of the diff you did not review; the workflow continues with another start over those files. Otherwise `not_reviewed` is empty.
-7. Return the findings; the workflow records the review from them, `blocked` when any finding blocks, and hands the advisories to the package step, which appends them to `docs/backlog.md`, a file no delivery reads whole (a contributor or scout only greps the entries its queue item names).
+7. Return the findings; the workflow records the review from them, `blocked` when any finding blocks, and hands the advisories to the package step, which appends them to `docs/backlog.md`, a file only the periodic review reads whole (a contributor or scout only greps the entries its queue item names).
 
 ## Periodic mode
 

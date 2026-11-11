@@ -15,7 +15,7 @@ Out of scope: a byte budget for the backlog and any enforcement in `tools/agent_
 Assumptions:
 
 - The brief's count of nine duplicate sets was made earlier; every set found that records the same finding is merged, and the entries that themselves report duplicates (`Backlog entries are duplicated`, `Backlog duplicates found at #96`, `Three backlog findings are entered twice`) stay, since the brief forbids dropping fixed entries; the periodic backlog step removes them.
-- The periodic quality review keeps reading the backlog for entries already fixed, duplicated, or naming gone code: it is the periodic review, where the brief moves that work, and it never runs as a delivery phase's reviewer.
+- The periodic quality review keeps reading the backlog for entries already fixed, duplicated, or naming gone code: it is the periodic review, where the brief moves that work. `/deliver` starts it when due, after the merge (`.claude/workflows/deliver-change.js`, the Review phase), as its own workflow; the planner and the delivery reviewers (the quality and security reviews of the change's diff) never open the backlog, so only that periodic review reads it whole.
 - `docs/goals.md` names no backlog read, so it is unchanged; `tools/gates.sh` and `tools/run_state.sh` only list the file among the paths a package commit may touch, which stays true.
 
 ## Capabilities
