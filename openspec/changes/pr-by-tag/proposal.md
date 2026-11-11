@@ -13,7 +13,7 @@ Probes 106 and 107 showed, with curl and gh traces, that a pull request create o
 - The guard lets the contributor run `tools/pr_tag.sh push` and `wait`, its only push besides `tools/run_state.sh push`, which pushes nothing but the tag `pr/<branch>`; a direct `git push` stays refused.
 - The detached check passes `CARAT_BIN=build/dev/carat` to every stage (the fix of commit 9a828bb on `chore/publish-pr`), since the check clone has no release build and this change's own check runs the smoke test.
 
-Out of scope: `tools/publish_pr.sh` and `/publish-pr` (not brought over); the body mode's update path and the package step's re-read, which use the session's update tool, which decision 18 found arrives clean; the merger; `sprint-planning` and `ci-time`.
+Out of scope: `tools/publish_pr.sh` and `/publish-pr` (not brought over); the body mode's update path, which uses the session's update tool, which decision 18 found arrives clean; the merger; `sprint-planning` and `ci-time`. The package step's re-read of the pull request is dropped, since the open-pr workflow reads it back and fails unless it equals the tag.
 
 Assumptions:
 
