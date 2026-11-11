@@ -4162,3 +4162,15 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the review rounds of `.claude/workflows/deliver-change.js`; retrospective note 12 of `url-email-guard`.
 - Why it matters: #100's second round reviewed only packaging commits and re-rated an unchanged Medium (7) to (8), a round of rework.
 - Fix outline: none prescribed; accepted when over 5 runs no round comes from a re-rating on unchanged lines. Queue item `review-scope`.
+
+## A pull request can still run its own scan workflow
+
+- Where: `.github/workflows/scan.yml:21` and the README's description of the pull request scan. Security Low (4) of the `remove-commit-hooks` review.
+- Why it matters: a `pull_request` run uses the pull request's own workflow file, so a pull request that edits `scan.yml` back to `sh tools/pr_scan.sh` runs its own, possibly weakened, scanner and passes, contrary to the claim that a pull request cannot weaken its own check; the impact is limited because the merge gates rescan every commit with `origin/main`'s scanner.
+- Fix outline: reword the `scan.yml` comment and the README to say the base scanner covers edits to the scanner scripts but not to the workflow, or have the merge gate refuse a change to `.github/workflows/scan.yml` that does not run `../base/tools/pr_scan.sh`, with a `tools/tools_test.sh` case.
+
+## Leftovers of the commit hooks in the tools tests and the map
+
+- Where: `tools/tools_test.sh:846` (the review-due case still says it names the commit hooks and touches `.githooks/pre-commit`); `tools/tools_test.sh:1696` (about 20 lines build a stand-in Spinel repository and run the full `make toolchain` target to show `core.hooksPath` stays unset, which the grep case at 1718 already proves); `docs/codebase-map.md:48` (two parentheticals run together: `(a copy of rules.sh's) (core.hooksPath among them)`). Quality advisories of the `remove-commit-hooks` review.
+- Why it matters: the case name describes hooks that no longer exist, the stand-in repository is speculative generality that costs test time, and the map line reads unlike its neighbor.
+- Fix outline: rename the case to say it names a re-added `.githooks` file (or drop `[.]githooks/` from `REVIEW_AREAS` and the case); keep only the grep case at 1718 and remove the fakespinel and tooled setup and its case; merge the map's parentheticals into `(a copy of rules.sh's, core.hooksPath among them)`, as the `gates.sh` line above reads.
