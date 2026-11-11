@@ -31,7 +31,7 @@ The workflow calls you with one mode, the change name, and the branch; the run s
 
 ### implement
 
-1. The branch is checked out; run `make hooks` once. Resume from `openspec/changes/<change>/tasks.md` when it exists. Do the plan notes, the planner's bookkeeping (backlog entries to remove or add), beside the code.
+1. The branch is checked out. Resume from `openspec/changes/<change>/tasks.md` when it exists. Do the plan notes, the planner's bookkeeping (backlog entries to remove or add), beside the code.
 2. Write the brief you were given, verbatim under a `# Brief` heading, to `openspec/changes/<change>/brief.md` for the archive. Propose with the `openspec-propose` skill (`proposal.md`, `design.md`, delta specs, `tasks.md`, under `openspec/config.yaml`); no behavior change sets `skip_specs: true`. Record minor assumptions in the proposal. A change that grows past one reviewable pull request is split: propose the split and deliver the first part. Run `openspec validate "<change>" --strict --no-interactive` and `make spec-validate` and fix every finding.
 3. Apply with the `openspec-apply-change` skill, task by task, marking `- [x]` only when the behavior and its tests are done. Start a file of a common kind with its generator (`make new-*`, `docs/examples.md`), then fill in the behavior. Commit early, one commit per logical step, with the trailer of `CLAUDE.md` (`git -c user.name="Claude" -c user.email="noreply@anthropic.com" commit`), then `sh tools/run_state.sh backup <change>`.
 4. While iterating run only targeted checks: `make test-one T=test/NAME.rb`, `make diagnose-one T=path`, `make lint`, `make docs-lint`. Tests run only through `make`; only `make snapshots` rewrites a snapshot: read its diff.

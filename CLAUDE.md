@@ -31,7 +31,7 @@ These apply to every commit, pull request, comment, file, and chat reply.
 - Never commit secrets, tokens, API keys, or `.env` files.
 - Ruby 4 only, through Spinel. Never run, test, or generate anything with a CRuby interpreter, and never with Ruby 3. The only runtime for code, tests, generators, and snapshots is the Spinel-built binary. The only tool fetched from outside the repository is Spinel itself.
 - Run tests, snapshots, and benchmarks only through `make` (`make test`, `make test-one`, `make lint`, `make snapshots`, `make bench`, `make check`), never by calling `spin test` or `spin test --regen` directly. `spin test` compares a test program that has no `.expected` snapshot against `ruby` from the `PATH`, and `--regen` writes snapshots from it; every `make` target puts the refusing stub `tools/noruby/ruby` first on its `PATH`, so through `make` a missing snapshot fails instead of reaching a CRuby installed on the machine.
-- `tools/gates.sh` checks these rules before the push and the merge (`make gates` runs those that need only git), `tools/scan_text.sh` being the one scanner of forbidden text it, the commit hooks `make hooks` installs, and the `scan` check of each pull request's title, body, commits, and added lines run; rely on it, not on memory.
+- `tools/gates.sh` checks these rules before the push and the merge (`make gates` runs those that need only git), `tools/scan_text.sh` being the one scanner of forbidden text it and the `scan` check of each pull request's title, body, commits, and added lines (with the base commit's scanner) run; no local commit hook is installed and the gates refuse any `core.hooksPath`; rely on it, not on memory.
 
 ## Git workflow
 
@@ -221,7 +221,7 @@ Decided in `docs/architecture.md` sections 2 and 13, which give the reasons.
 
 Every command is a Makefile target and this list names them all; `make help` prints each one's description and variables, and `docs/architecture.md` section 10 explains the test, analysis, and diagnose machinery.
 
-- Toolchain: `make toolchain` (the pinned `SPINEL_REF`; bump it in its own pull request after `make check`, regenerating the vendored header there with `spinel-header`, which compiles `tools/spinel/gen_respond_to_tables.rb` with the installed Spinel), `spinel-header`, `toolchain-clean`, `spinel-rev`, `doctor`, `no-cruby`, `hooks` (the tracked `.githooks` as `core.hooksPath`, which `make toolchain` runs: the commit message and the staged added lines scanned).
+- Toolchain: `make toolchain` (the pinned `SPINEL_REF`; bump it in its own pull request after `make check`, regenerating the vendored header there with `spinel-header`, which compiles `tools/spinel/gen_respond_to_tables.rb` with the installed Spinel), `spinel-header`, `toolchain-clean`, `spinel-rev`, `doctor`, `no-cruby`.
 - Build: `make build` (release), `dev-build`, `run FILE=path`, `install`, `pack`, `clean` (never `tmp/`).
 - Test: `make test` (`build`, `test-build`, `test-run`), `test-one T=test/NAME.rb`, `lint`, `snapshots` (rewrite every `.expected`, review the diff). A test without a snapshot fails.
 - Analysis: `make diagnose` and `diagnose-one T=path` (`spinel-doctor`, must be clean), `types`, `analysis-budget`.
