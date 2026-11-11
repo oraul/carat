@@ -5,22 +5,30 @@ name: open-pr
 # footer the session's network layer appends, while a git push arrives
 # unchanged. The contributor pushes an annotated tag pr/BRANCH whose
 # message is the title, a blank line, and the gated body
-# (tools/pr_tag.sh push); this workflow gates them with main's tools,
-# opens the pull request, reads it back, and deletes the tag.
+# (tools/pr_tag.sh push); the tag push runs pr-tag, and its completion
+# runs this workflow, which gates the title and body, opens the pull
+# request, reads it back, and deletes the tag.
+#
+# GitHub runs a workflow_run workflow only from main's copy, so every
+# file this workflow runs is main's: the branch's commit is never checked
+# out or executed in a job that can read PR_TOKEN, and the tag reaches it
+# only as data read with git cat-file. The environment AI allows main
+# alone as a deployment ref, so a branch's workflow cannot name it.
 on:
-  push:
-    tags: ['pr/**']
+  workflow_run:
+    workflows: [pr-tag]
+    types: [completed]
 
 permissions:
   contents: read
 
 concurrency:
-  group: open-pr-${{ github.ref }}
+  group: open-pr-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: false
 
 jobs:
   open:
-    if: ${{ !github.event.deleted }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && startsWith(github.event.workflow_run.head_branch, 'pr/') }}
     runs-on: ubuntu-latest
     # The secret PR_TOKEN is the environment AI's, which only a job naming
     # the environment can read: a token of the user's, so the pull
@@ -28,49 +36,36 @@ jobs:
     # it, since its events start no workflow.
     environment: AI
     steps:
-      # The workflow and tools/pr_tag.sh are the tagged commit's, so a
-      # change that adds them opens its own pull request.
-      - name: Check out the tagged commit
-        uses: actions/checkout@v4
-        with:
-          path: head
-          fetch-depth: 0
-
-      # The gates are main's, checked out to their own path, so a branch
-      # cannot weaken the checks of its own title and body.
-      - name: Check out main's gates
+      # Main's tools only; the tag and its commit are fetched below as
+      # objects, never checked out.
+      - name: Check out main
         uses: actions/checkout@v4
         with:
           ref: main
-          path: main
-          persist-credentials: false
 
       # Every value from the tag reaches the shell through files and the
-      # environment, never written into a script.
-      - name: Read the title and body from the tag
-        working-directory: head
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          git fetch -q --force origin "+refs/tags/$TAG:refs/tags/$TAG"
-          sh tools/pr_tag.sh read "$TAG" "$RUNNER_TEMP/pr"
-
+      # environment, never written into a script. The branch is checked
+      # before its name reaches git.
       - name: Refuse a branch of no allowed type or missing on origin
-        working-directory: head
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ github.event.workflow_run.head_branch }}
         run: sh tools/pr_tag.sh branch "${TAG#pr/}"
 
-      - name: Gate the title and body with main's tools
-        working-directory: head
-        run: sh tools/pr_tag.sh gate "$RUNNER_TEMP/pr" ../main/tools
+      - name: Read the title and body from the tag
+        env:
+          TAG: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          git fetch -q --depth=1 --no-tags origin "+refs/tags/$TAG:refs/tags/$TAG"
+          sh tools/pr_tag.sh read "$TAG" "$RUNNER_TEMP/pr"
+
+      - name: Gate the title and body
+        run: sh tools/pr_tag.sh gate "$RUNNER_TEMP/pr" tools
 
       - name: Open the pull request and read it back
-        working-directory: head
         env:
           GH_TOKEN: ${{ secrets.PR_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ github.event.workflow_run.head_branch }}
         run: |
           [ -n "$GH_TOKEN" ] || { echo "::error::the environment AI holds no secret PR_TOKEN"; exit 1; }
           pr=$RUNNER_TEMP/pr
@@ -93,5 +88,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ github.event.workflow_run.head_branch }}
         run: gh api --method DELETE "repos/$GH_REPO/git/refs/tags/$TAG"

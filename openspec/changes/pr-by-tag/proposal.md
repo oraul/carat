@@ -7,7 +7,7 @@ Probes 106 and 107 showed, with curl and gh traces, that a pull request create o
 ## What Changes
 
 - The contributor's package step pushes the branch, then an annotated tag `pr/<branch>` on the pushed head whose message is the title line, a blank line, and the gated body file (`sh tools/pr_tag.sh push CHANGE TITLE`, which gates both first and pushes only that tag).
-- A new workflow `.github/workflows/open-pr.yml`, on a push of a tag `pr/**`, reads the title and body from the tag, runs main's `tools/gates.sh pr-body` and `tools/scan_text.sh` on them, refuses a branch that is not a Conventional Branch of an allowed type or does not exist, creates the pull request with `gh pr create` in a job that declares `environment: AI` and authenticates with that environment's secret `PR_TOKEN`, reads it back and fails unless title and body match, and deletes the tag.
+- Two new workflows: `.github/workflows/pr-tag.yml`, on a push of a tag `pr/**`, holds no secret, checks out nothing, and only refuses a tag naming no Conventional Branch; `.github/workflows/open-pr.yml`, a `workflow_run` on its completion that GitHub runs only from main's copy, reads the title and body from the tag, runs main's `tools/gates.sh pr-body` and `tools/scan_text.sh` on them, refuses a branch that is not a Conventional Branch of an allowed type or does not exist, creates the pull request with `gh pr create` in a job that declares `environment: AI` and authenticates with that environment's secret `PR_TOKEN`, reads it back and fails unless title and body match, and deletes the tag.
 - The delivery waits for its branch's pull request to appear (`sh tools/pr_tag.sh wait CHANGE`: the tag consumed and a pull request whose head is the pushed head), records its number, and continues to CI and the merger's squash-merge as today; a package step that returns no number stops the run with the reason.
 - The contributor never calls a pull request create tool or API: `mcp__github__create_pull_request` leaves its tools, and the agent files, the workflow, CLAUDE.md, the README, and the map say so.
 - The guard lets the contributor run `tools/pr_tag.sh push` and `wait`, its only push besides `tools/run_state.sh push`, which pushes nothing but the tag `pr/<branch>`; a direct `git push` stays refused.
@@ -17,8 +17,8 @@ Out of scope: `tools/publish_pr.sh` and `/publish-pr` (not brought over); the bo
 
 Assumptions:
 
-- The workflow file and `tools/pr_tag.sh` run from the tagged commit, which lets this change open its own pull request; the gates they apply are main's `tools/gates.sh` and `tools/scan_text.sh`, checked out from `main` to their own path, so a branch cannot weaken the gates themselves.
-- The tag is deleted by a second job that holds `contents: write` and runs no repository code, so the job that runs the tagged commit's script keeps `contents: read`; a tag is deleted only after the pull request was created and read back equal, so a tag still on origin means the workflow is pending or failed.
+- No file of the tagged commit runs in a job that can read `PR_TOKEN`: open-pr runs from main as a `workflow_run`, checks out main only, and reads the tag as data with `git cat-file`, so a branch can change neither the gates nor the steps that hold the token. The environment `AI` allows main alone as a deployment ref, a repository setting the user applies by hand, so a branch's own workflow cannot name it. Since GitHub runs a `workflow_run` workflow only once it is on main, this change's own pull request is opened once by hand by the user from the tag's title and body, a one-off bootstrap.
+- The tag is deleted by a second job that holds `contents: write` and runs no repository code, so the job that runs main's script keeps `contents: read`; a tag is deleted only after the pull request was created and read back equal, so a tag still on origin means the workflow is pending or failed.
 - The pull request number is read with git (`git ls-remote origin 'refs/pull/*/head'`, the highest number whose head is the pushed head), since the session's gh holds no valid token and a read needs no API call.
 - Title and body are compared after removing trailing newlines, since `gh` prints each with one newline of its own.
 
@@ -34,7 +34,7 @@ None.
 
 ## Impact
 
-- `tools/pr_tag.sh` (new), `.github/workflows/open-pr.yml` (new), `tools/agent_guard.sh`, `tools/run_state.sh`, `tools/tools_test.sh`, `Makefile`, `.claude/workflows/deliver-change.js`, `.claude/agents/contributor.md`, `docs/codebase-map.md`.
+- `tools/pr_tag.sh` (new), `.github/workflows/pr-tag.yml` (new), `.github/workflows/open-pr.yml` (new), `tools/agent_guard.sh`, `tools/run_state.sh`, `tools/tools_test.sh`, `Makefile`, `.claude/workflows/deliver-change.js`, `.claude/agents/contributor.md`, `docs/codebase-map.md`.
 - CLAUDE.md: changed, the contributor's pull request path and the `tools/pr_tag.sh` command.
 - README.md: changed, the package step and the guard's pushes.
 - docs/architecture.md: unchanged, section 10 names no pull request creation path.
