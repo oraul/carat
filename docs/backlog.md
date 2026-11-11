@@ -4534,3 +4534,82 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: tools/pr_tag.sh:131 (removed by pr-on-push). Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
 - Why it matters: an ls-remote failure in wait becomes empty refs, so a wait that never read origin ends with 'no pull request's head is', naming the wrong cause.
 - Fix outline: remember the failure and refuse with 'origin cannot be read' as push does.
+
+## pr-on-push security Low at tools/open_pr.sh:118
+
+- Where: `tools/open_pr.sh:118`. Delivery review of `pr-on-push` (security Low, confidence 4) at a2d4b6c.
+- Why it matters: wait records any pull request whose head equals the pushed sha (the largest number), so someone watching the repository could open a fork pull request at that sha before open-pr runs; the run would record it and the merger would squash it with their title as main's subject (the merged code is still the reviewed commit, because the merger passes the pushed sha as the expected head).
+- Fix outline: in wait, keep only pull requests whose head is in this repository and whose head branch is the delivery's branch (gh pr list --head BRANCH with headRefOid equal to the pushed sha and isCrossRepository false), or use the number open-pr reports.
+
+## pr-on-push security Low at .github/workflows/open-pr.yml:39
+
+- Where: `.github/workflows/open-pr.yml:39`. Delivery review of `pr-on-push` (security Low, confidence 3) at a2d4b6c.
+- Why it matters: the new PR_TOKEN (a token of the user's) is only as safe as the AI environment's deployment-branch rule, a repository setting outside the diff; without it any branch push could add a workflow naming environment: AI and read the token.
+- Fix outline: confirm the AI environment allows only main as its deployment branch, and make PR_TOKEN a fine-grained token scoped to this repository with only the pull-request permission it needs.
+
+## pr-on-push quality advisory at .claude/workflows/deliver-change.js:982
+
+- Where: `.claude/workflows/deliver-change.js:982`. Delivery review of `pr-on-push` (quality advisory) at e873e89.
+- Why it matters: a package step that pushed but got no number now stops with pushed set and pr empty, and a restart reruns package with no hint that the push already ran (that line goes only to a continued start), so the contributor redoes steps 1 to 3, commits after the push, and meets the refused second push before wait.
+- Fix outline: when state.pushed is set at the package start, tell the contributor to skip to step 5 (open_pr.sh wait) and return pushed.
+
+## pr-on-push quality advisory at tools/open_pr.sh:43
+
+- Where: `tools/open_pr.sh:43`. Delivery review of `pr-on-push` (quality advisory) at e873e89.
+- Why it matters: BRANCH_RE takes no dot or nested slash while branch-push.yml fires on every type/** push, so a push of release/1.2.0 (the example in CLAUDE.md) turns open-pr red.
+- Fix outline: have read print nothing to open and exit 0 for a branch it does not take, or narrow the branch-push filter to match.
+
+## pr-on-push quality advisory at tools/open_pr.sh:112
+
+- Where: `tools/open_pr.sh:112`. Delivery review of `pr-on-push` (quality advisory) at e873e89.
+- Why it matters: WAIT_STEP=0 passes the [0-9]{1,3} check and waited never grows, so wait polls origin forever.
+- Fix outline: match [1-9][0-9]{0,2}.
+
+## pr-on-push quality advisory at tools/open_pr.sh:180
+
+- Where: `tools/open_pr.sh:180`. Delivery review of `pr-on-push` (quality advisory) at e873e89.
+- Why it matters: the read-back looks the pull request up by branch name (gh pr view "$branch") instead of the URL gh pr create printed, so a branch with an earlier pull request can compare the wrong one.
+- Fix outline: keep the create output and pass that URL to both gh pr view calls.
+
+## pr-on-push quality advisory at tools/open_pr.sh:2
+
+- Where: `tools/open_pr.sh:2`. Delivery review of `pr-on-push` (quality advisory) at e873e89.
+- Why it matters: the header and open-pr.yml say a pull request created or edited over the API from a session gets a footer, while contributor.md:51 and README.md:196 say the update tool arrives clean.
+- Fix outline: state one rule (a create gets the footer, an update through the MCP tool arrives clean) in all four places.
+
+## pr-on-push quality advisory at tools/tools_test.sh:558
+
+- Where: `tools/tools_test.sh:558`. Delivery review of `pr-on-push` (quality advisory) at e873e89.
+- Why it matters: the open_pr cases prove no refusal of a branch with two new pr.md files, of a title with forbidden text at gate, or of a bad WAIT_STEP.
+- Fix outline: add one expect case for each.
+
+## pr-on-push quality advisory at tools/open_pr.sh:126
+
+- Where: `tools/open_pr.sh:126`. Delivery review of `pr-on-push` (quality advisory) at a2d4b6c.
+- Why it matters: wait counts only its sleeps toward SECONDS, not the up to 55 git ls-remote reads of origin, so a slow origin pushes the 540 s poll past the 600000 ms Bash timeout contributor.md:51 now sets and the tool kills it before its refuse message.
+- Fix outline: stop on a deadline from date +%s, or lower MAX_WAIT to leave the reads room.
+
+## pr-on-push quality advisory at .claude/agents/contributor.md:35
+
+- Where: `.claude/agents/contributor.md:35`. Delivery review of `pr-on-push` (quality advisory) at a2d4b6c.
+- Why it matters: the fix commit for the wait timeout also rewords unrelated lines (step 2 drops 'for the archive', step 3 'fill in' to 'add', step 6 drops 'The workflow records the phase from your result.', the Context paragraph), so one commit mixes the fix with edits no finding asked for.
+- Fix outline: keep a fix commit to its finding, or say in the body why the lines moved (docs-lint budget).
+
+## pr-on-push quality advisory at docs/queue.md:64
+
+- Where: `docs/queue.md:64` (and lines 67 and 71). Delivery review of `pr-on-push` (quality advisory) at a2d4b6c.
+- Why it matters: the Decisions still name pr-by-tag as delivered now, while this branch delivers pr-on-push, which replaces it with brief decision 19.
+- Fix outline: have the planner's queue name pr-on-push and decision 19 in those three lines.
+
+
+### Check clone's binary path not named in the map (late `pr-by-tag` quality advisory)
+
+- Location: `tools/run_state.sh` `CHECK_BIN` (beside `in_clone`), and the `run_state.sh` entry of `docs/codebase-map.md`.
+- Why it matters: `CHECK_BIN` repeats the Makefile's `DEV_BIN` path, so a change to one leaves the detached check running a stale or missing binary, and the map entry does not name it, so a reader cannot find it.
+- Fix outline: name `CHECK_BIN` beside `in_clone` in the map entry and let its comment name `DEV_BIN` as the one source; a tools-test case fails when the two paths differ.
+
+### Contributor keeps a pull request number permission (late `pr-by-tag` quality advisory)
+
+- Location: `tools/agent_guard.sh` contributor rule allowing `tools/run_state.sh set CHANGE pr N`, the `tools/run_state.sh` header line naming it, and the guard test "contributor pushes and opens the pull request".
+- Why it matters: once the delivery records the number of the pull request GitHub Actions opened, a contributor that may still write `pr` can record a number of a pull request it did not open, and the merger would act on it.
+- Fix outline: drop the contributor's `pr` permission and the header line once the wait step records the number, and turn the guard test into a refusal case; keep any bootstrap path the workflow itself needs.

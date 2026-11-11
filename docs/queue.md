@@ -61,16 +61,16 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- `pr-by-tag` (T1 user decision, brief decision 18, delivered now, off the list): every pull request create and edit from a cloud session gets a footer link (probes 106, 107); first.ci 0 at #102, #103; replaces `publish-pr` (PR 105 closed unmerged); before 1 and 2 at the user's word.
-- Environment `AI` (the user's addition): the creating job reads `PR_TOKEN` only by naming it; a missing secret or protection rule stops the run with the Action's log, no fallback.
-- Size: estimated large: pipeline rows 1,709,506 (67.0 min), 1,728,948 (73.8), 2,579,348 (105.0), #104 3,782,399 (175.0); not split at the user's word: its own pull request needs all 6 parts.
-- Cadence: `pr-by-tag`, 1, 2 are non-features after #103, #104 by the user's exception (brief decisions 0, 1, 18); 3 is the next feature.
-- #104 `delivery-speed`: 3,782,399 total, 452,167 output, 175.0 min against medium; rework 5, 2 rounds granted (notes 31, 45); quality pass blocking=0 at 2dcfd3ded4d1.
-- Retrospective notes 60 (Makefile:99 blocked 3 rounds) and 62 (7 overrun notes) into 29 (T1); 61 (reviews 56.7% of output) into 2's weighted figures, its drift share (4 of 11 blocking) into 46.
-- #104 periodic quality partial (blocking=2, advisory=53, 17/18 areas): advisory-line demotion and push arguments into 28, 24 backlog duplicates into 1, base-only names into 51; the rest reach the backlog by `history` (54).
-- Security: none High or Medium at confidence 8 or above; #104 periodic partial Medium (5) into 47, Lows into 30, 31, 33, 47; `pr-by-tag` edits the guard and workflows, so the next review stays due.
-- Sprint 1 (T1 user exception): #103, #104, `pr-by-tag`, 1, 2, 3; one pipeline change in 5 after.
+- `pr-on-push` (T1 user decision, brief decision 19, delivered now on PR 108, off the list): the cloud network layer adds a footer link to every API pull request create and edit (probes 106, 107) and the git proxy refuses tag pushes and ref deletes, so `pr-by-tag` stopped at package (1,059,329 total, 50.6 min); replaces `pr-by-tag` and `publish-pr` (PR 105 closed); before 1 and 2 at the user's word.
+- Environment `AI` (the user's, main only): the opening job reads `PR_TOKEN` only by naming it; a missing secret or rule stops the run with the Action's log, no fallback.
+- Size: estimated large: pipeline rows 1,709,506 (67.0 min), 1,728,948 (73.8), #104 3,782,399 (175.0); not split: one mechanism whose parts open the next pull request only together, and the user's "exactly this brief".
+- Notes: `pr-by-tag` 1, 3, 6, 8, 10, 11 and `publish-pr` 1 to 4, 6 name scripts the change removes: dropped; `pr-by-tag` 5 and 9 to the backlog (54); `pr-by-tag` 2, 4, 7 and `publish-pr` 5 handed to the contributor.
+- Cadence: `pr-on-push`, 1, 2 are non-features after #103, #104 by the user's exception (brief decisions 0, 1, 19); 3 is the next feature.
+- #104 `delivery-speed`: 3,782,399 total, 175.0 min against medium, rework 5; its retrospective notes 60, 62 into 29, 61 into 2, its drift share (4 of 11 blocking) into 46.
+- #104 periodic quality partial (blocking=2, advisory=53): advisory-line demotion and push arguments into 28, 24 backlog duplicates into 1, base-only names into 51; the rest by `history` (54).
+- Security: none High or Medium at confidence 8 or above; `pr-by-tag` security pass high=0 medium=0 at 742ba5fb057f; #104 periodic partial Medium (5) into 47, Lows into 30, 31, 33, 47; `pr-on-push` edits the guard and workflows, so the next review stays due.
+- Sprint 1 (T1 user exception): #103, #104, `pr-on-push`, 1, 2, 3; one pipeline change in 5 after.
 - Goals: unchanged; decisions 13 and 15 reach `docs/goals.md` in 1.
 - Parked, not planned (brief decisions 5 to 8): `scout-focus` until two runs of 2's weighted figures show scouts a real share; `code-index` until a grep locator misses a measured case; `reading-rules` until the weighted figures; `harness-ruby` if the dropped-key defect recurs.
-- Push-backs: none added; at 4 or more the user's sprint order is the reason (brief decisions 0, 1).
+- Push-backs: none added (`pr-on-push` takes `pr-by-tag`'s place); at 4 or more the user's sprint order is the reason (brief decisions 0, 1).
 - Figures from #104: `lh` 26.0, `j` 27.0, `insert` 34.0. Parked: `image-viewer`, the mouse, a CSV chart, a carat font, SVG icons.
