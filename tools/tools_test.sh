@@ -1887,6 +1887,14 @@ cp "$here/gates.sh" "$here/rules.sh" "$here/run_state.sh" "$work/copy/tools/"
 printf 'CHECK_STAGES := lint other\n' > "$work/copy/Makefile"
 expect "gates: stages reads the stage list beside the script" 1 "FAIL stages: other has not run" \
   env BASE=main CHANGE=staged sh "$work/copy/tools/gates.sh" stages
+# With a FAST_STAGES line the checker's list is the fast one: a fast stage
+# is required, a stage only CHECK_STAGES names is left to CI.
+printf 'CHECK_STAGES := lint other fast\nFAST_STAGES := lint fast\n' > "$work/copy/Makefile"
+expect "gates: stages require every stage of the fast list" 1 "FAIL stages: fast has not run" \
+  env BASE=main CHANGE=staged sh "$work/copy/tools/gates.sh" stages
+printf 'CHECK_STAGES := lint other\nFAST_STAGES := lint\n' > "$work/copy/Makefile"
+expect "gates: stages read the fast list" 0 "ok   stages: every stage passed at the recorded check" \
+  env BASE=main CHANGE=staged sh "$work/copy/tools/gates.sh" stages
 printf 'CHECK_STAGES := lint\n' > "$work/copy/Makefile"
 state set staged pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
 state review staged quality pass "blocking=0" > /dev/null
