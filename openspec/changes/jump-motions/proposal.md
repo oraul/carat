@@ -38,7 +38,7 @@ None.
 ## Impact
 
 - `carat/domain/motions.rb` (`%`, the jump names), `carat/domain/window.rb` (`alternate`, `record_jump`), `carat/domain/buffer_list.rb` (`load` sets the alternate, `alternate_of`), `carat/domain/key_notation.rb` (`<C-6>`, `<C-^>`), `carat/use_cases/move.rb`, `carat/use_cases/operate.rb`, `carat/use_cases/search/jump_to_match.rb`, `carat/use_cases/ex/execute_ex.rb`, `carat/use_cases/buffers/switch_buffer.rb`, `carat/use_cases/actions/buffer_handler.rb`, `carat/use_cases/ex/file_command_handler.rb`, `carat/use_cases/windows/open_tab.rb`, `carat/adapters/editor_assembly.rb`, `config/default.caratrc` and the generated `carat/domain/default_config.rb`.
-- Tests: `test/editor_jumps.rb` (the jump forms and the alternate file), `test/editor_motions.rb` (`%`), `test/domain_key_notation.rb`.
+- Tests: `test/editor_jumps.rb` (the jump forms and the alternate file), `test/editor_motions.rb` (`%`), `test/domain_keys.rb`.
 - `docs/compatibility.md` (rows for `%`, `Ctrl-^`, `:e #`, the `<C-o>` row, the Differences lines), `docs/actions.md` (`motion.match_pair`, `buffer.alternate`), `docs/codebase-map.md` (area 11's tests).
 - README.md: changed, the jump list sentence names the jump motions and `Ctrl-^`.
 - docs/architecture.md: changed, the `Window` entry names the alternate buffer.

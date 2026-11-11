@@ -43,6 +43,7 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `motion.screen_top` | normal, operator_pending, visual | Line count from the top of the window; linewise |
 | `motion.screen_middle` | normal, operator_pending, visual | Middle of the visible lines; linewise |
 | `motion.screen_bottom` | normal, operator_pending, visual | Line count from the bottom of the window; linewise |
+| `motion.match_pair` | normal, operator_pending, visual | `%`: the bracket matching the first one at or after the cursor on its line; inclusive; with a count the line at count percent, linewise |
 | `search.forward` | normal, operator_pending, visual | `/`: read a pattern on the command line, then the count-th match after the cursor; exclusive |
 | `search.backward` | normal, operator_pending, visual | `?`: read a pattern, then the count-th match before the cursor; exclusive |
 | `search.next` | normal, operator_pending, visual | `n`: the last search again in its direction; exclusive |
@@ -165,6 +166,7 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `buffer.next` | normal | Go to the next listed buffer as `:bn` does, count buffers on |
 | `buffer.previous` | normal | Go to the previous listed buffer as `:bp` does, count buffers back |
 | `buffer.delete` | normal | Delete the current buffer as `:bd` does, or with a count the buffer of that number |
+| `buffer.alternate` | normal | Show the window's alternate buffer as `Ctrl-^` does, or with a count the buffer of that number |
 | `docs.hover` | normal | Ask the language server for the documentation under the cursor and show it in a float; while the float shows, enter it |
 | `docs.pin` | normal | Pin the documentation float into a horizontal split over a scratch copy, closing the float |
 | `definition.jump` | normal | Ask the language server for the definition under the cursor and go there, adding the position left to the jump list; several targets open a pick list |
