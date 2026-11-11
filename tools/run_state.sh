@@ -21,9 +21,6 @@
 #                    merger passes as the expected head, the pull
 #                    request number, and
 #                    "green|red COMMIT"
-#   backup, base     the commit last pushed to refs/backup/BRANCH, until
-#                    the branch's push, the merge, or abandon deletes that
-#                    ref, and the branch's base pushed beside it
 #   merged           the squash commit on main
 #   metric.NAME      one measurement or figure of the run: tools/metrics.sh
 #                    names, rework, ci_min, estimate (the plan's size), phase.KEY
@@ -66,8 +63,7 @@
 #                               state), or HEAD's full sha
 #   set CHANGE KEY VALUE        write one value; refuses review.*, phase.*, gated,
 #                               and stage.*, which their own commands write,
-#                               and a merged or pushed value but a commit hash;
-#                               merged also deletes the backup refs
+#                               and a merged or pushed value but a commit hash
 # Every write refuses a key outside [a-z0-9_.-] and a key or value holding a
 # control character (newline, carriage return, tab, or another), so no write
 # adds a line of its own.
@@ -119,23 +115,7 @@
 #                               them, 1 otherwise
 #   push CHANGE [--ci-fix]      run the pre-push gates, refuse a push beyond one
 #                               plus one per CI fix (a CI fix needs ci red), push
-#                               the branch with upstream tracking, and count it;
-#                               then delete the branch's backup refs
-#   backup CHANGE               before the branch's push, run the trailer and
-#                               content gates from the branch's base (the
-#                               commit of main it forked from, recorded as
-#                               base) and push HEAD to refs/backup/BRANCH and
-#                               the base to refs/backup-base/BRANCH on origin,
-#                               no branch, so a reclaimed container loses no
-#                               commit
-#   restore BRANCH              create BRANCH from refs/backup/BRANCH on origin
-#                               when it exists neither here nor on origin;
-#                               refuse a backup whose recorded base is missing
-#                               or not on BASE, or holding a commit that does
-#                               not descend from it
-#   abandon CHANGE              delete the change's backup refs on origin, for
-#                               a run that will not resume (the user's; no
-#                               agent runs it); set CHANGE merged does too
+#                               the branch with upstream tracking, and count it
 #   metric CHANGE NAME=VALUE... record metric.NAME; names are [a-z0-9_.-], values
 #                               [A-Za-z0-9_.,:/=+-]
 #   metrics CHANGE FILE         record each "name<TAB>value" line of a
@@ -172,7 +152,9 @@
 #   pending                     the merged changes with no history row yet
 #   history                     append a history row for each pending change;
 #                               a gate without a stored first verdict is
-#                               left out of its first passes
+#                               left out of its first passes; append each
+#                               such run's late-finding notes to
+#                               docs/backlog.md (BACKLOG_FILE) as one entry
 #   status                      the queue, the running change, the last metrics
 #                               row, and the first-pass rates of the history
 #
@@ -187,6 +169,7 @@ state_dir=${RUN_STATE_DIR:-build/pipeline}
 stage_dir=${STAGE_DIR:-build/stages}
 make_cmd=${MAKE:-make}
 metrics_file=${METRICS_FILE:-docs/metrics.tsv}
+backlog_file=${BACKLOG_FILE:-docs/backlog.md}
 metrics_out=${METRICS_OUT:-build/metrics/current.tsv}
 PHASES="plan implement check quality security bench package ci merge retro report"
 # The stages that read what a test-only commit may change, which such a
@@ -209,9 +192,6 @@ COMPILE_STAGES="dev-build test-build diagnose"
 NOT_COMPILED='^([.]claude/|[.]github/|docs/|openspec/|tools/[^/]+[.]sh$|[^/]+[.]md$)'
 BUILD_TOOLS='^tools/analysis_budget[.]sh$'
 compiled_file=$state_dir/compiled
-# A Conventional Branch, as CLAUDE.md names them: the only branches backup
-# and restore take.
-BRANCH_PATTERN='(feature|bugfix|hotfix|release|chore)/[a-z0-9][a-z0-9-]*'
 # The gates of a history row's first passes, in order, before gates.
 GATES="check quality security bench ci"
 REVIEW_KINDS="security quality bench periodic-security periodic-quality"
@@ -417,8 +397,18 @@ tests_only_since() {
 # it reads no test program and only tests changed since BACKED.
 # The runner (check-run) runs them detached from the waiter (check_wait);
 # each stage that does not pass ends the run with its verdict line.
+# The merge gates run origin/main's copy (BASE), which requires the stages
+# of its Makefile: while that Makefile has CHECK_STAGES and no FAST_STAGES,
+# main's CHECK_STAGES; otherwise nothing, and make stages decides.
+main_stages() {
+  file=$(git show "${BASE:-origin/main}:Makefile" 2> /dev/null) || return 0
+  ! printf '%s\n' "$file" | grep -q '^FAST_STAGES := ' || return 0
+  printf '%s\n' "$file" | sed -n 's/^CHECK_STAGES := //p'
+}
+
 check_stages() {
-  stages=${STAGES:-$(in_clone "$make_cmd" -s --no-print-directory stages)}
+  stages=${STAGES:-$(main_stages)}
+  [ -n "$stages" ] || stages=$(in_clone "$make_cmd" -s --no-print-directory stages)
   backed=$1
   key=$(code_key)
   for s in $stages; do
@@ -829,107 +819,6 @@ push_branch() {
   # planted in this run state before the push is gone; the merge gates
   # clear every other run state's (gated_clear).
   write_key gated none
-  # The pushed branch holds every commit the backup held, whichever run
-  # state made it; a deletion that fails is reported, and recording merged
-  # tries it again.
-  drop_backup "$branch" push || true
-}
-
-# drop_backup BRANCH WHO: delete refs/backup/BRANCH and
-# refs/backup-base/BRANCH on origin when they exist, in one push, and drop
-# the backup record; says what it deleted, nothing when there was none;
-# returns 1 when the deletion failed.
-drop_backup() {
-  valid "$BRANCH_PATTERN" "$1" || return 0
-  refs=$(git ls-remote origin "refs/backup/$1" "refs/backup-base/$1" 2> /dev/null |
-    B="$1" awk '$2 == "refs/backup/" ENVIRON["B"] || $2 == "refs/backup-base/" ENVIRON["B"] { print $2 }')
-  if [ -n "$refs" ]; then
-    # shellcheck disable=SC2086 # the two ref names, which hold no space
-    if ! git push -q origin --delete $refs > /dev/null 2>&1; then
-      echo "$2: could not delete the backup of $1 on origin; abandon $change deletes it" >&2
-      return 1
-    fi
-    echo "$2: deleted the backup of $1 ($(echo $refs))"
-  fi
-  [ -z "$(read_key backup)" ] || drop_key backup
-}
-
-# The commit BRANCH forked from: the parent of the oldest first-parent
-# commit of HEAD not on BASE (origin/main), HEAD when every commit is, so a
-# later merge of origin/main, whose first parent is the branch, keeps it.
-branch_base() {
-  oldest=$(git rev-list --first-parent HEAD --not "${BASE:-origin/main}" -- 2> /dev/null | tail -1)
-  if [ -z "$oldest" ]; then
-    git rev-parse --verify -q HEAD
-  else
-    git rev-parse --verify -q "$oldest^1"
-  fi
-}
-
-# backup: push HEAD of the change's branch, not pushed yet, to
-# refs/backup/BRANCH on origin, and its base (branch_base, recorded as base)
-# to refs/backup-base/BRANCH, so a reclaimed container loses no commit and
-# restore can check what it takes. The trailer and content gates run from
-# that base, a commit of main, so they read every commit the push publishes.
-# The refs are no branch: no pull request or CI run starts from them. A
-# plain atomic push, since the branch's history only grows.
-backup_branch() {
-  branch=$(git rev-parse --abbrev-ref HEAD)
-  [ "$branch" != main ] && [ "$branch" = "$(read_key branch)" ] ||
-    die "backup: refused: HEAD is on $branch, not the change's branch $(read_key branch)"
-  valid "$BRANCH_PATTERN" "$branch" || die "backup: refused: not a Conventional Branch: $branch"
-  if [ "$(count pushes)" -gt 0 ]; then
-    echo "backup: $branch is on origin since its push; nothing to back up"
-    return 0
-  fi
-  main_ref=${BASE:-origin/main}
-  base=$(branch_base) || die "backup: refused: no base of $branch on $main_ref"
-  git merge-base --is-ancestor "$base" "$main_ref" 2> /dev/null ||
-    die "backup: refused: the base $(git rev-parse --short=12 "$base") is not on $main_ref"
-  write_key base "$(git rev-parse --short=12 "$base")"
-  BASE=$base CHANGE=$change sh "$here/gates.sh" backup || die "backup: refused: the backup gates failed"
-  git push -q --atomic origin "HEAD:refs/backup/$branch" "$base:refs/backup-base/$branch" ||
-    die "backup: git push failed (a backup of an older run of $branch? abandon $change deletes it)"
-  write_key backup "$(head_commit)"
-  echo "backup: $(head_commit) at refs/backup/$branch on origin"
-}
-
-# restore BRANCH: create BRANCH from its backup on origin when it exists
-# neither here nor on origin and the backup's history is rooted at its
-# recorded base: refs/backup-base/BRANCH, a commit of BASE (origin/main),
-# from which every commit of the backup descends; exit 1 with the reason
-# otherwise.
-restore_branch() {
-  valid "$BRANCH_PATTERN" "$1" || die "restore: not a Conventional Branch: $1"
-  if git rev-parse --verify -q "refs/heads/$1" > /dev/null; then
-    echo "restore: $1 exists here; nothing to restore"
-    return 1
-  fi
-  if git ls-remote --exit-code origin "refs/heads/$1" > /dev/null 2>&1; then
-    echo "restore: $1 is on origin; check it out from there"
-    return 1
-  fi
-  if ! git fetch -q origin "refs/backup/$1" 2> /dev/null; then
-    echo "restore: no backup of $1 on origin"
-    return 1
-  fi
-  tip=$(git rev-parse --verify -q FETCH_HEAD) || die "restore: no fetched head"
-  if ! git fetch -q origin "refs/backup-base/$1" 2> /dev/null; then
-    echo "restore: refused: the backup of $1 has no recorded base (refs/backup-base/$1)"
-    return 1
-  fi
-  base=$(git rev-parse --verify -q FETCH_HEAD) || die "restore: no fetched base"
-  if ! git merge-base --is-ancestor "$base" "${BASE:-origin/main}" 2> /dev/null; then
-    echo "restore: refused: the recorded base $(git rev-parse --short=12 "$base") of $1 is not on ${BASE:-origin/main}"
-    return 1
-  fi
-  if ! git merge-base --is-ancestor "$base" "$tip" ||
-      [ "$(git rev-list --count --ancestry-path "$base..$tip")" != "$(git rev-list --count "$base..$tip")" ]; then
-    echo "restore: refused: the backup of $1 holds commits that do not descend from its recorded base $(git rev-parse --short=12 "$base")"
-    return 1
-  fi
-  git branch "$1" "$tip" || die "restore: git branch failed"
-  echo "restore: $1 created from its backup at $(git rev-parse --short=12 "$1")"
 }
 
 show_status() {
@@ -1301,6 +1190,18 @@ history_row() {
   printf '%s\n' "$(group calib)"
 }
 
+# The findings a run's workflow recorded after its package step, as
+# late-finding notes, one per line in the order recorded.
+late_findings() {
+  for key in $(sed -n 's/^  "\(note\.[0-9][0-9]*\)": "late-finding .*/\1/p' "$(state_file)"); do
+    value=$(read_key "$key")
+    printf '%s\n' "${value#late-finding }"
+  done
+}
+
+# Each merged run's row, and its late findings appended to the backlog in
+# one entry, so the next change's package step commits both and a run
+# pushes no commit of records after its package step.
 append_history() {
   names=$(pending_list)
   [ -n "$names" ] || { echo "history: nothing pending"; return 0; }
@@ -1308,6 +1209,10 @@ append_history() {
   for change in $names; do
     history_row >> "$metrics_file"
     echo "history: appended $change"
+    found=$(late_findings)
+    [ -n "$found" ] || continue
+    { printf '\n## Findings of %s after its package step\n\n' "$change"; printf '%s\n' "$found" | sed 's/^/- /'; } >> "$backlog_file"
+    echo "history: appended the late findings of $change to $backlog_file"
   done
 }
 
@@ -1469,10 +1374,6 @@ case "$command" in
   status) show_status; exit 0 ;;
   pending) pending_list; exit 0 ;;
   history) append_history; exit 0 ;;
-  restore)
-    [ $# -eq 1 ] || usage
-    restore_branch "$1"
-    exit $? ;;
 esac
 [ $# -ge 1 ] || usage
 change=$1
@@ -1510,15 +1411,7 @@ case "$command" in
       review.*|phase.*|stage.*|gated) die "set: refused: $1 is written only by its own command (review, phase, stage, check, gated)" ;;
       merged|pushed) valid '[0-9a-f]{7,40}' "$2" || die "set: refused: $1 is a commit hash of 7 to 40 hexadecimal digits, not $2" ;;
     esac
-    write_key "$1" "$2"
-    # The run merged: its backup has no use left.
-    [ "$1" != merged ] || drop_backup "$(read_key branch)" set || true ;;
-  abandon)
-    [ $# -eq 0 ] || usage
-    [ -f "$(state_file)" ] || die "no run state for $change"
-    branch=$(read_key branch)
-    drop_backup "$branch" abandon || exit 1
-    echo "abandon: no backup of $branch is left on origin" ;;
+    write_key "$1" "$2" ;;
   phase)
     [ $# -eq 1 ] || [ $# -eq 2 ] || usage
     one_of "$1" "$PHASES" || die "phase: not a phase: $1 (one of $PHASES)"
@@ -1560,9 +1453,6 @@ case "$command" in
     esac ;;
   push)
     push_branch "${1:-}" ;;
-  backup)
-    [ $# -eq 0 ] || usage
-    backup_branch ;;
   metric)
     [ $# -ge 1 ] || usage
     for pair in "$@"; do record_metric "$pair"; done ;;

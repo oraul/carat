@@ -197,6 +197,17 @@ EOF
 chmod +x "$work/bin/fake-make"
 expect "run_state: check stops at the first failing stage" 1 "stage b failed" \
   env STAGES="a b" MAKE="$work/bin/fake-make" FAIL_B=2 sh "$here/run_state.sh" check state
+# The merge gates run main's copy: while its Makefile has no FAST_STAGES, the
+# check runs its CHECK_STAGES.
+printf 'CHECK_STAGES := a b\n' >> Makefile
+commit "chore: a full list"
+expect "run_state: check runs main's full list while main has no fast list" 1 "stage b failed" \
+  env BASE=HEAD MAKE="$work/bin/fake-make" FAIL_B=2 sh "$here/run_state.sh" check state
+printf 'FAST_STAGES := a\n' >> Makefile
+commit "chore: a fast list"
+expect "run_state: check runs make stages once main has a fast list" 0 "every stage passed" \
+  env BASE=HEAD MAKE="$work/bin/fake-make" FAIL_B=2 sh "$here/run_state.sh" check state
+expect "make: every fast stage is a check stage" 0 "^none$" sh -c 'm="$1/../Makefile"; all=" $(sed -n "s/^CHECK_STAGES := //p" "$m") "; out=; for s in $(sed -n "s/^FAST_STAGES := //p" "$m"); do case "$all" in *" $s "*) ;; *) out="$out $s" ;; esac; done; [ -n "$(sed -n "s/^FAST_STAGES := //p" "$m")" ] && echo "${out:-none}"' _ "$here"
 # A stage record counts only at the commit the workflow backs: one at HEAD
 # without it, which any agent could have written, runs again.
 expect "run_state: check runs a stage recorded at the head that no commit backs" 0 "^stage a: exit 0" \
@@ -502,50 +513,10 @@ git_q push -q origin main 2>/dev/null
 state init pushing chore/pushing > /dev/null
 echo more >> README.md
 commit "chore: more"
-# Before its push a run's commits survive a reclaimed container in a backup
-# ref, which no pull request or CI run reads, restored where the branch
-# exists neither in the clone nor on origin.
-backup() {
-  env BASE=main sh "$here/run_state.sh" backup pushing
-}
-expect "run_state: backup pushes the branch to its backup ref" 0 "^backup: $(git rev-parse --short=12 HEAD) at refs/backup/chore/pushing on origin$" backup
-expect "run_state: the backup ref holds the branch's head" 0 "^$(git rev-parse HEAD)[[:space:]]refs/backup/chore/pushing$" git ls-remote origin refs/backup/chore/pushing
-expect "run_state: no branch is pushed with the backup" 0 "^$" git ls-remote origin refs/heads/chore/pushing
-expect "run_state: backup records the branch's base" 0 "^$(git rev-parse --short=12 main)$" state get pushing base
-expect "run_state: backup pushes the base ref" 0 "^$(git rev-parse main)[[:space:]]refs/backup-base/chore/pushing$" git ls-remote origin refs/backup-base/chore/pushing
-echo "aws_id = AK""IAABCDEFGHIJKLMNOP" >> README.md
-commit "chore: a key"
-expect "run_state: backup refuses a secret" 1 "refused: the backup gates failed" backup
-expect "run_state: a refused backup pushes nothing" 0 "^$(git rev-parse HEAD~1)[[:space:]]" git ls-remote origin refs/backup/chore/pushing
-git_q reset -q --hard HEAD~1
-git_q commit -q --allow-empty -m "chore: no trailer"
-expect "run_state: backup runs the trailer gate" 1 "refused: the backup gates failed" backup
-git_q reset -q --hard HEAD~1
-git_q checkout -q main
-expect "run_state: backup refuses another branch than the change's" 1 "refused: HEAD is on main" backup
-git_q checkout -q chore/pushing
-git_q clone -q "$work/origin.git" "$work/reclaimed"
-expect "run_state: restore creates the branch from its backup" 0 "^restore: chore/pushing created from its backup at $(git rev-parse --short=12 HEAD)$" \
-  sh -c 'cd "$1" && sh "$2/run_state.sh" restore chore/pushing' _ "$work/reclaimed" "$here"
-expect "run_state: restore leaves a branch that exists" 1 "exists here" state restore chore/pushing
-expect "run_state: restore says when there is no backup" 1 "no backup of chore/other" \
-  sh -c 'cd "$1" && sh "$2/run_state.sh" restore chore/other' _ "$work/reclaimed" "$here"
-expect "run_state: restore refuses a name that is no branch" 1 "not a Conventional Branch" state restore ../x
-# A backup restores only a history rooted at its recorded base, a commit of
-# main: none without a base, a base off main, or a commit from elsewhere.
-foreign=$(printf '100644 blob %s\tforeign.txt\n' "$(echo foreign | git hash-object -w --stdin)" | git mktree)
-foreign=$(git_q commit-tree "$foreign" -m "chore: foreign" -m "$TRAILER")
-mixed=$(git_q commit-tree "main^{tree}" -p main -p "$foreign" -m "chore: merge" -m "$TRAILER")
-git_q push -q origin "$foreign:refs/backup/chore/nobase" "$foreign:refs/backup/chore/offmain" "$foreign:refs/backup-base/chore/offmain" \
-  "$mixed:refs/backup/chore/mixed" "main:refs/backup-base/chore/mixed" 2> /dev/null
-restore() {
-  sh -c 'cd "$1" && sh "$2/run_state.sh" restore "$3"' _ "$work/reclaimed" "$here" "$1"
-}
-expect "run_state: restore refuses a backup without a recorded base" 1 "refused: the backup of chore/nobase has no recorded base" restore chore/nobase
-expect "run_state: restore refuses a base not on main" 1 "refused: the recorded base [0-9a-f]+ of chore/offmain is not on origin/main" restore chore/offmain
-expect "run_state: restore refuses commits not descended from the base" 1 "refused: the backup of chore/mixed holds commits that do not descend" restore chore/mixed
-expect "run_state: a refused restore creates no branch" 1 "^$" sh -c 'cd "$1" && git rev-parse --verify -q refs/heads/chore/mixed' _ "$work/reclaimed"
-rm -rf "$work/reclaimed"
+# A run keeps its unpushed commits on its local branch; no backup ref is
+# pushed before the branch.
+expect "run_state: backup is no longer a command" 2 "" state backup pushing
+expect "run_state: restore is no longer a command" 2 "" state restore chore/pushing
 expect "run_state: push refuses before the checks and the review" 1 "pre-push gates failed" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a refused push counts a gate failure" 0 "^1$" state get pushing gates_failed
@@ -559,10 +530,6 @@ expect "run_state: a push is counted" 0 "^1$" state get pushing pushes
 expect "run_state: push clears a gated marker recorded before it" 0 "^none$" state get pushing gated
 expect "run_state: push records the full sha as pushed" 0 "^full$" \
   sh -c 'p=$(sh "$1/run_state.sh" get pushing pushed) && [ "$p" = "$(git rev-parse HEAD)" ] && [ ${#p} -eq 40 ] && echo full' _ "$here"
-expect "run_state: push deletes the backup ref" 0 "^$" git ls-remote origin refs/backup/chore/pushing
-expect "run_state: push deletes the base ref" 0 "^$" git ls-remote origin refs/backup-base/chore/pushing
-expect "run_state: push drops the backup record" 0 "^$" state get pushing backup
-expect "run_state: backup after the push has nothing to do" 0 "nothing to back up" backup
 expect "run_state: a second push is refused" 1 "refused: 1 push" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a CI fix push needs a red CI run" 1 "needs a red CI run" \
@@ -571,20 +538,7 @@ state set pushing ci "red abc" > /dev/null
 expect "run_state: a CI fix allows one more push" 0 "ok   pushes|ok   stages" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --ci-fix
 
-# A run that merges or is abandoned leaves no backup on origin.
-fresh leaving
-git_q remote add origin "$work/origin.git"
-state init leaving chore/leaving > /dev/null
-echo more >> README.md
-commit "chore: more"
-env BASE=main sh "$here/run_state.sh" backup leaving > /dev/null 2>&1
-expect "run_state: abandon deletes the backup refs" 0 "^abandon: deleted the backup of chore/leaving" state abandon leaving
-expect "run_state: abandon leaves no backup ref" 0 "^$" git ls-remote origin refs/backup/chore/leaving refs/backup-base/chore/leaving
-expect "run_state: abandon says when there is no backup" 0 "^abandon: no backup of chore/leaving is left on origin$" state abandon leaving
-env BASE=main sh "$here/run_state.sh" backup leaving > /dev/null 2>&1
-expect "run_state: recording merged deletes the backup refs" 0 "deleted the backup of chore/leaving" state set leaving merged "$(git rev-parse --short=12 HEAD)"
-expect "run_state: recording merged leaves no backup ref" 0 "^$" git ls-remote origin refs/backup/chore/leaving refs/backup-base/chore/leaving
-expect "run_state: recording merged drops the backup record" 0 "^$" state get leaving backup
+expect "run_state: abandon is no longer a command" 2 "" state abandon pushing
 
 fresh history
 state init history chore/history > /dev/null
@@ -610,11 +564,15 @@ expect "run_state: note numbers the notes" 0 "^security Medium [(]6[)]" state ge
 expect "run_state: note refuses a kind that is not a word" 1 "the kind is lowercase" state note history 'Retro x' text
 expect "run_state: pending skips a change that is not merged" 0 "^$" state pending
 state set history merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+state note history late-finding "security Low (5) tools/x.sh:3 a thing; fix: y" > /dev/null
+state note history overrun "not a finding" > /dev/null
 state set history pr 9 > /dev/null
 state set history pushes 1 > /dev/null
 state set history gates_failed 1 > /dev/null
 expect "run_state: pending names a merged change without a row" 0 "^history$" state pending
 expect "run_state: history appends the row" 0 "appended history" state history
+expect "run_state: history appends a merged run's late findings to the backlog" 0 "^- security Low [(]5[)] tools/x[.]sh:3 a thing; fix: y$" tail -1 docs/backlog.md
+expect "run_state: history heads the late findings with their run, no other note" 0 "^## Findings of history after its package step 1$" sh -c 'echo "$(grep "^## " docs/backlog.md) $(grep -c "^- " docs/backlog.md)"'
 expect "run_state: the history starts with its header" 0 "^change[[:space:]]date[[:space:]]merged" head -1 docs/metrics.tsv
 expect "run_state: the row groups the measurements and the first passes" 0 \
   "^carat=2 lh=27[.]0,j=28[.]0 lh=50[.]0 check:1,quality:0,security:1,gates:0 implement=1000/30,check=200/10 -$" \
@@ -1033,8 +991,7 @@ expect "guard: planner reads the run states" 0 "^$" guard read 'sh tools/run_sta
 expect "guard: planner prepares its directory" 0 "^$" guard read 'mkdir -p build/plan && rm -f build/plan/goals.md' build/plan
 expect "guard: checker runs the checks" 0 "^$" guard read 'sh tools/run_state.sh check c abc1234; sh tools/run_state.sh check c'
 expect "guard: checker never starts the runner" 2 "tools/run_state.sh check-run" guard read 'sh tools/run_state.sh check-run c'
-expect "guard: contributor backs up the branch" 0 "^$" guard contributor 'sh tools/run_state.sh backup c'
-expect "guard: contributor backup takes only the change" 2 "backup other than CHANGE" guard contributor 'sh tools/run_state.sh backup c origin'
+expect "guard: contributor refuses the removed backup command" 2 "tools/run_state.sh backup, which the workflow or another agent runs" guard contributor 'sh tools/run_state.sh backup c'
 expect "guard: contributor never abandons a run" 2 "run_state.sh abandon" guard contributor 'sh tools/run_state.sh abandon c'
 expect "guard: merger never abandons a run" 2 "run_state.sh abandon" guard merger 'sh tools/run_state.sh abandon c'
 expect "guard: read refuses a backup" 2 "tools/run_state.sh backup" guard read 'sh tools/run_state.sh backup c'
@@ -1158,13 +1115,12 @@ expect "guard: merger refuses make" 2 "make is not a command" guard merger 'make
 expect "guard: merger refuses another body" 2 "not a pull request body file" guard merger 'CHANGE=c sh tmp/.merge-gates/tools/gates.sh merge README.md'
 expect "guard: contributor refuses git push" 2 "git push is not" guard contributor 'git push -u origin chore/x'
 expect "guard: contributor refuses a push of another form" 2 "tools/run_state.sh push other than" guard contributor 'sh tools/run_state.sh push c --force'
-# The contributor pushes only through tools/run_state.sh push and backup:
-# every git push it could run itself is refused, the direct push to the
-# backup refs that tools/run_state.sh backup runs included.
+# The contributor pushes only through tools/run_state.sh push: every git
+# push it could run itself is refused, a push to a backup ref included.
 for c in 'git push -q --atomic origin HEAD:refs/backup/chore/x main:refs/backup-base/chore/x' 'git push origin HEAD:refs/backup/chore/x' 'git -C . push origin HEAD:refs/backup/chore/x' 'git -c core.hooksPath=/dev/null push origin chore/x' 'GIT_CONFIG_NOSYSTEM=1 git --no-pager push origin chore/x' 'git push origin --delete chore/x'; do
   expect "guard: contributor refuses $c" 2 "git push is not a command of this profile" guard contributor "$c"
 done
-expect "guard: contributor backs up and pushes through tools/run_state.sh" 0 "^$" guard contributor 'sh tools/run_state.sh backup c && sh tools/run_state.sh push c'
+expect "guard: contributor pushes through tools/run_state.sh" 0 "^$" guard contributor 'sh tools/run_state.sh push c'
 expect "guard: contributor refuses a CI record" 2 "tools/run_state.sh set of ci" guard contributor 'sh tools/run_state.sh set c ci \"green abc1234\"'
 expect "guard: contributor refuses a reset" 2 "git reset is not" guard contributor 'git reset --hard HEAD~1'
 expect "guard: contributor refuses another git configuration" 2 "a git configuration override: -c core.hooksPath=tmp" guard contributor 'git -c core.hooksPath=tmp commit -m x'
@@ -1570,11 +1526,7 @@ fresh content3
 echo x >> README.md
 commit "chore: written on $TIER"
 expect "gates: content refuses a model name in a commit message" 1 "commit [0-9a-f]+.*$TIER" gates content
-expect "gates: backup refuses forbidden content" 1 "FAIL content" gates backup
-fresh backup
-echo x >> README.md
-commit "chore: clean"
-expect "gates: backup passes a clean branch" 0 "ok   content" gates backup
+expect "gates: backup is no longer a gate" 2 "unknown gate backup" gates backup
 
 fresh cases
 echo "echo changed" >> tools/base.sh
@@ -1622,7 +1574,6 @@ commit "chore: add a key"
 git_q show HEAD~1:README.md > README.md
 commit "chore: remove the key"
 expect "gates: content refuses a secret a later commit removed" 1 "FAIL content: README[.]md:[0-9]+: secret: \[not shown\]" gates content
-expect "gates: backup refuses a secret" 1 "FAIL content: README[.]md:[0-9]+: secret: \[not shown\]" gates backup
 fresh dotenv
 echo "X=1" > .env
 commit "chore: add an env file"
@@ -2041,6 +1992,9 @@ expect "gates: pr-body refuses a linked body file" 1 "the body file linked.md is
 sed 's/^None$/None/' body.md > footer.md
 printf '\nGenerated with a tool\n%s\n' "$LINK" >> footer.md
 expect "gates: pr-body refuses a footer" 1 "a footer or attribution line" gates pr-body footer.md
+sed 's/^None$/None/' body.md > session.md
+printf '\nClaude-Session: 0123abcd\n' >> session.md
+expect "gates: pr-body refuses a session line" 1 "a session line" gates pr-body session.md
 sed 's/^None$/None <!-- left -->/' body.md > comment.md
 expect "gates: pr-body refuses a template comment" 1 "a comment or angle bracket" gates pr-body comment.md
 sed 's/security review/review/' body.md > nosec.md
