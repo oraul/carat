@@ -13,3 +13,4 @@
 
 - [x] 3.1 CLAUDE.md, README.md, `docs/codebase-map.md` area 1, the Makefile's `tools-test` description. Checked by `make gates` and `make docs-lint`.
 - [ ] 3.2 `docs/backlog.md` and `docs/queue.md`: the plan's backlog entries and queue, in the package step. Checked by `make docs-lint`.
+- [x] 3.3 `tools/run_state.sh` check: pass `CARAT_BIN=build/dev/carat` to every stage, since the clone has no release build. Tested by "run_state: check runs the smoke test on dev-build's binary, as CI does".
