@@ -213,7 +213,7 @@ const PLAN = {
   properties: {
     decisions: { type: 'array', items: { type: 'object', properties: { decision: { type: 'string' }, evidence: { type: 'string' } }, required: ['decision', 'evidence'] } },
     security_first: { ...LINES, description: 'unresolved blocking security findings the brief does not fix' },
-    notes: { ...LINES, description: 'for the contributor: findings the change only records in docs/backlog.md, and bookkeeping' },
+    notes: { ...LINES, description: 'for the contributor: findings the change only appends to docs/backlog.md, and bookkeeping' },
     files: LINES,
     estimate: { type: 'string', enum: SIZES, description: 'the size this change is estimated at' },
   },
@@ -870,13 +870,13 @@ if (!stopped && !state.merged) {
     let packs = input.packs || []
     if (!packs.length) {
       const plan = await measured('scout', () => agent(
-        `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${brief}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only records in docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. For each area, a pack under tmp/scout/ is current when its Commit: is origin/main or \`git diff --quiet <its commit> origin/main -- <its Files read>\` passes; list current packs by path and the areas still needing one, with the question a contributor needs answered about the existing code it edits or hooks into (callers, registration, tests), never about code the change will add, which does not exist yet; an area whose only edits are new files needs no pack.${capLine('areas')}`,
+        `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${brief}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only appends to docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. For each area, a pack under tmp/scout/ is current when its Commit: is origin/main or \`git diff --quiet <its commit> origin/main -- <its Files read>\` passes; list current packs by path and the areas still needing one, with the question a contributor needs answered about the existing code it edits or hooks into (callers, registration, tests), never about code the change will add, which does not exist yet; an area whose only edits are new files needs no pack.${capLine('areas')}`,
         calibrate('areas', { schema: withCalls(SCOUT_PLAN), label: 'scout plan' })), callCap('areas'))
       const room = plan ? Math.max(0, MAX_AREAS - plan.current.length) : 0
       const needed = plan ? plan.needed.slice(0, room) : []
       if (plan && plan.needed.length > room) note(`not scouted, beyond ${MAX_AREAS} areas: ${plan.needed.slice(room).map((n) => n.area).join(', ')}`)
       const fresh = plan ? await measured('scout', () => parallel(needed.map((n) => () =>
-        agent(`Area: ${n.area}. Question: ${n.question}. The change, for scope only: ${brief}. Write the pack and return its path.${capLine('scout')}`, calibrate('scout', { agentType: 'scout', schema: withCalls(PACK), label: `scout: ${n.area}` })))), callCap('scout')) : []
+        agent(`Area: ${n.area}. Question: ${n.question}. The change, for scope only: ${brief}. When its queue item names docs/backlog.md entries (by heading or keyword), Grep the file for those entries only, never reading it whole. Write the pack and return its path.${capLine('scout')}`, calibrate('scout', { agentType: 'scout', schema: withCalls(PACK), label: `scout: ${n.area}` })))), callCap('scout')) : []
       packs = (plan ? plan.current : []).concat(fresh.filter(Boolean).map((p) => p.pack))
       note(`scout packs: ${packs.join(', ') || 'none'}`)
     }
@@ -894,7 +894,7 @@ if (!stopped && !state.merged) {
       const plan = planned === 0
         ? 'The planner did not run: this change was taken from the head of docs/queue.md as written. Leave build/plan/, which holds an older run\'s files; remove this change\'s item from docs/queue.md and renumber the rest, and append the history of the merged changes as your package step says.'
         : 'Apply the planner\'s files under build/plan/ and append the history of the merged changes as your package step says.'
-      const done = await contributor('package', `Non-blocking findings for docs/backlog.md:\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
+      const done = await contributor('package', `Non-blocking findings to append to docs/backlog.md (a shell append; never read the file):\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
       if (done) { state.pr = String(done.pr || ''); phaseDone('package', head) }
     }
   }
@@ -953,7 +953,7 @@ if (!stopped && !state.merged) {
       if (!(await verify())) break
       phase('Merge')
       const fresh = handOver()
-      if (!(await contributor('push', `Push the CI fix.${fresh.length ? `\nNon-blocking findings for docs/backlog.md, which arrived after the package step:\n- ${fresh.join('\n- ')}` : ''}`))) break
+      if (!(await contributor('push', `Push the CI fix.${fresh.length ? `\nNon-blocking findings to append to docs/backlog.md (never read it), which arrived after the package step:\n- ${fresh.join('\n- ')}` : ''}`))) break
     }
   }
 }
