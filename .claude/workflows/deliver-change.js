@@ -11,7 +11,7 @@ export const meta = {
     { title: 'Quality', detail: 'quality reviewer: code-review and the repository rules, beside security on the same commit' },
     { title: 'Security', detail: 'security reviewer on the committed diff, beside quality; never skipped' },
     { title: 'Benchmark', detail: 'allocations and rounds against the figures recorded for main; the agent against main only when they differ' },
-    { title: 'Package', detail: 'contributor: archive, gates, one push, pull request' },
+    { title: 'Package', detail: 'contributor: archive, gates, one push, the pr tag' },
     { title: 'Merge', detail: 'merger: wait for CI, red back to the contributor; main\'s merge gates, squash with the trailer, verify main' },
     { title: 'Close', detail: 'retrospective: the last records, the proposals, the budget and review-due lines, and the report, in one start' },
     { title: 'Review', detail: 'periodic review of the whole codebase: security, never skipped, and quality' },
@@ -961,7 +961,10 @@ if (!stopped && !state.merged) {
 
   // A second push is refused, so a restart finds the package step done from
   // the push and the pull request it recorded (tools/run_state.sh push and
-  // set pr); its phase line waits for the last flush.
+  // tools/pr_tag.sh wait); its phase line waits for the last flush. The
+  // pull request is opened by .github/workflows/open-pr.yml from the tag
+  // pr/BRANCH the contributor pushes, never by a tool of a session, and a
+  // package step that returns no number stops the run before the merger.
   if (!stopped && !(state.pushed && state.pr)) {
     if (await verify()) {
       phase('Package')
@@ -969,7 +972,9 @@ if (!stopped && !state.merged) {
         ? 'The planner did not run: this change was taken from the head of docs/queue.md as written. Leave build/plan/, which holds an older run\'s files; remove this change\'s item from docs/queue.md and renumber the rest, and append the history of the merged changes as your package step says.'
         : 'Apply the planner\'s files under build/plan/ and append the history of the merged changes as your package step says.'
       const done = await contributor('package', `Non-blocking findings to append to docs/backlog.md (a shell append; never read the file):\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
-      if (done) { state.pr = String(done.pr || ''); phaseDone('package', head) }
+      if (done) state.pr = String(done.pr || '')
+      if (done && !/^[0-9]+$/.test(state.pr)) stopped = 'no pull request appeared for the tag pr/' + state.branch + ': read the open-pr workflow\'s log'
+      else if (done) phaseDone('package', head)
     }
   }
 
