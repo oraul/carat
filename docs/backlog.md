@@ -4709,3 +4709,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Location: `tools/run_state.sh:1255` `sprint_names` and the due line, `sprint_row` (line 1324).
 - Why it matters: when /sprint runs after a sixth merge, `sprint_names` and the due line list every change since the last sprint and the combined diff runs to `origin/main`, but `sprint_row` closes the sprint at its fifth row, so the sixth change is reviewed in this sprint and counted again in the next.
 - Fix outline: cut `sprint_names` at `SPRINT_SIZE` and end the combined diff at the fifth change's merged commit.
+
+### Contributor agent file has no headroom (`pr-on-push` retrospective)
+
+- Location: `.claude/agents/contributor.md` (8190 of the 8192-byte agent budget in `tools/docs_lint.sh` `BUDGETS`; the next largest agent file, `.claude/agents/planner.md`, is 5950).
+- Why it matters: at #108 a one-line timeout fix forced four unrelated rewordings to fit the budget, which the quality review flagged as a mixed commit; every later fix to the file pays the same cost.
+- Fix outline: keep at least 15% headroom (under 7000 bytes) by removing or merging instructions; acceptance: docs-lint and the agents cases of tools-test pass, and the next fix to an agent file changes only the lines its finding names.
