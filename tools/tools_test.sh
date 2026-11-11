@@ -2140,14 +2140,21 @@ expect "workflow: the metric line carries the profiles" 0 ' calib[.]scout=cheap/
 expect "workflow: a restart restores the recorded profiles of the kinds not used yet" 0 '^[{]"planner":"session/session","scout":"cheap/low"[}]$' \
   calib_js "(() => { calibrate('planner', {}); return restoreCalibration({ 'metric.calib.scout': 'cheap/low', 'metric.calib.planner': 'cheap/low', 'metric.calib.checker': 'cheap/high', 'metric.rework': '1' }, calibrated) })()"
 speed_js() {
-  js "$wf" "COMMIT CLOSABLE noteText staleRed findingAt reRaised settledRecords" "$1"
+  js "$wf" "COMMIT CLOSABLE noteText staleRed findingAt reRaised settledRecords securityBlocking narrowedFrom" "$1"
 }
 expect "workflow: a late finding becomes a shell-safe note" 0 '^"a [(]x[)] q y b"$' \
   speed_js 'noteText("a $(x) \"q\" `y` b")'
 expect "workflow: a red superseded by a green run of the same check is stale" 0 '^\[true,false,false\]$' \
   speed_js '[staleRed(["scan, completed, failure", "spin, completed, success", "scan, completed, success"]), staleRed(["scan, completed, success", "scan, completed, failure"]), staleRed([])]'
 expect "workflow: a blocking finding at an earlier advisory's location is re-raised" 0 '^\[true,false,true\]$' \
-  speed_js '[reRaised(findingAt("abc1234 tools/x.sh:12 a thing"), ["tools/x.sh:12 earlier"]), reRaised(findingAt("abc1234 tools/x.sh:13 b"), ["tools/x.sh:12 earlier"]), reRaised("tools/x.sh:4", ["security Medium (7) tools/x.sh:4 t; fix: f"])]'
+  speed_js '[reRaised(findingAt("abc1234 tools/x.sh:12 a thing"), ["tools/x.sh:12 earlier"]), reRaised(findingAt("abc1234 tools/x.sh:13 b"), ["tools/x.sh:12 earlier"]), reRaised("tools/x.sh:4", ["abc1234 tools/x.sh:4 an advisory"])]'
+expect "workflow: a re-rated security Medium at confidence 8 still blocks" 0 '^\[2,0\]$' \
+  speed_js '[securityBlocking([{ severity: "Medium", confidence: 8, in_change: true, file: "tools/x.sh", line: 4 }, { severity: "High", confidence: 9, in_change: true }, { severity: "Low", confidence: 9, in_change: true }, { severity: "Medium", confidence: 7, in_change: true }, { severity: "High", confidence: 9, in_change: false }]).length, securityBlocking([]).length]'
+expect "workflow: no security finding is kept non-blocking by its location" 0 '^none$' \
+  sh -c 'grep -q -e "security re-rating kept non-blocking" -e "reRaised(\`\${f.file}" "$1" && echo found || echo none' _ "$wf"
+expect "workflow: a fix round narrows both reviews only from this start's pass" 0 '^\["abc1234","","","",""\]$' \
+  speed_js '[narrowedFrom({ "review.quality": "pass abc1234" }, "quality", "def5678"), narrowedFrom({ "review.security": "pass def5678" }, "security", "def5678"), narrowedFrom({ "review.security": "blocked abc1234" }, "security", "def5678"), narrowedFrom({}, "quality", "def5678"), narrowedFrom({ "review.quality": "pass x" }, "quality", "def5678")]'
+expect "workflow: both reviews' scopes read this start's records" 0 '^2$' grep -c "narrowedFrom(ran, '" "$wf"
 expect "workflow: a settled resume trusts the recorded check and reviews" 0 '^\[[{]"phase.check":"abc1234","review.quality":"pass abc1234","review.security":"pass abc1234","review.bench":"pass abc1234"[}],null,null\]$' \
   speed_js '[settledRecords({ "phase.check": "abc1234", "review.quality": "pass abc1234 blocking=0", "review.security": "pass abc1234", "review.bench": "pass abc1234" }, true), settledRecords({ "phase.check": "abc1234", "review.quality": "blocked abc1234", "review.security": "pass abc1234", "review.bench": "pass abc1234" }, true), settledRecords({ "phase.check": "abc1234" }, false)]'
 expect "workflow: only check and review records need a record start" 0 '^\[true,false,false,true\]$' \

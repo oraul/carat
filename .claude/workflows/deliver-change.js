@@ -315,11 +315,25 @@ function findingAt(text) {
   const m = /(?:^|\s)([A-Za-z0-9_.][^\s:()]*:[0-9]+)/.exec(String(text || ''))
   return m ? m[1] : ''
 }
-// Whether a blocking finding at LOCATION repeats a finding the run already
-// kept as non-blocking (EARLIER, advisories and security backlog lines): a
-// re-raise or a re-rating, which a fix round never blocks on.
+// Whether a blocking quality finding at LOCATION repeats an advisory the
+// run already kept (EARLIER): a re-raise, which a fix round never blocks
+// on. Security findings never pass through it (securityBlocking).
 function reRaised(location, earlier) {
   return !!location && !/:0$/.test(location) && earlier.some((e) => findingAt(e) === location)
+}
+// The security findings that block (FINDINGS, the reviewer's): a High or
+// Medium in the change at confidence 8 or above, whatever an earlier round
+// rated at its location, as the hard rule of CLAUDE.md requires.
+function securityBlocking(findings) {
+  return (findings || []).filter((f) => f.severity !== 'Low' && f.confidence >= 8 && f.in_change)
+}
+// The commit a fix round's review of KIND narrows to: that of the pass
+// RECORDS (this start's, ran) hold, when it is not HEAD; '' otherwise, and
+// the whole branch diff is reviewed. A pass only the run state holds,
+// which branch code run by the checks could have written, never narrows.
+function narrowedFrom(records, kind, head) {
+  const [result, commit] = String(records['review.' + kind] || '').split(' ')
+  return result === 'pass' && COMMIT.test(commit || '') && commit !== head ? commit : ''
 }
 // On a resume past the push, the check and reviews the trusted run state
 // holds when tools/gates.sh passed exited 0 (settled): each passed at a
@@ -645,12 +659,13 @@ async function verify(fixes = true) {
 // findings of that round name, tests, and records. Without the findings or
 // their files, or at HEAD itself, the whole branch diff is reviewed.
 function priorQuality() {
-  const [result, commit] = at('review.quality')
+  const [result, commit] = String(ran['review.quality'] || '').split(' ')
   if (!COMMIT.test(commit || '')) return ''
   const last = `\nThe last quality review, at ${commit}, was ${result}.`
   const blocked = result === 'blocked'
-  // A fix round after a passed review reviews only the commits since it.
-  if (!blocked && commit !== head) return `${last} Review only \`git diff ${commit} HEAD\`, the commits since that pass, and block only on what that diff introduces.`
+  // A fix round after a pass of this start reviews only the commits since it.
+  const since = narrowedFrom(ran, 'quality', head)
+  if (since) return `${last} Review only \`git diff ${since} HEAD\`, the commits since that pass, and block only on what that diff introduces.`
   const listed = !blocked ? [] : qualityAt === commit && qualityBlocking.length ? qualityBlocking : null
   const files = blockedAt === commit ? blockedFiles : null
   if (commit === head || !listed || !files) return `${last} Review the whole branch diff.`
@@ -710,12 +725,13 @@ function qualityReview(scope, more) {
   return agent(`${intro()} Review the committed diff and return the findings.${more || scope}${capLine('quality')}`,
     calibrate('quality', { agentType: 'quality-reviewer', schema: withCalls(QUALITY), phase: 'Quality', label: more ? 'quality-reviewer: continued' : 'quality-reviewer' }))
 }
-// The security reviewer's scope in a fix round: the commits since the last
-// passed security review, in_change only for what they introduce.
+// The security reviewer's scope in a fix round: the commits since this
+// start's last passed security review, in_change only for what they
+// introduce.
 function priorSecurity() {
-  const [result, commit] = at('review.security')
-  return result === 'pass' && COMMIT.test(commit || '') && commit !== head
-    ? `\nThe last security review passed at ${commit}: review \`git diff ${commit} HEAD\`, the commits since, and set in_change only for a finding that diff introduces.`
+  const since = narrowedFrom(ran, 'security', head)
+  return since
+    ? `\nThe last security review passed at ${since}: review \`git diff ${since} HEAD\`, the commits since, and set in_change only for a finding that diff introduces.`
     : ''
 }
 function securityReview(more) {
@@ -768,13 +784,9 @@ async function reviews() {
   if (kinds.includes('security')) {
     const s = got.security
     if (!s || reviewLeft(s).length) { stopped = `the security review did not ${s && s.ran ? `cover ${reviewLeft(s).join(', ')}` : 'run'}; it cannot be skipped`; return null }
-    // A Medium at the location of a finding the run already kept as
-    // non-blocking is a re-rating, noted and never blocking; a High always
-    // blocks.
-    const earlier = backlog.slice()
-    const rated = (f) => f.severity === 'Medium' && reRaised(`${f.file}:${f.line || 0}`, earlier)
-    const blocking = s.findings.filter((f) => f.severity !== 'Low' && f.confidence >= 8 && f.in_change && !rated(f))
-    for (const f of s.findings.filter((f) => f.confidence >= 8 && f.in_change && rated(f))) note(`security re-rating kept non-blocking: ${f.file}:${f.line || 0} ${f.title}`)
+    // Every High or Medium in the change at confidence 8 or above blocks,
+    // a re-rating of an earlier non-blocking finding included.
+    const blocking = securityBlocking(s.findings)
     verdict('security', !blocking.length)
     for (const f of s.findings.filter((f) => !blocking.includes(f))) {
       const line = `security ${f.severity} (${f.confidence}) ${f.file}:${f.line || 0} ${f.title}; fix: ${f.fix}`
