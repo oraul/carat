@@ -289,6 +289,18 @@ expect "run_state: a check stage leaves origin's fetch refspec" 0 "^[+]refs/head
 expect "run_state: a run state a check stage writes is not the delivery clone's" 0 "^$" state get isolated review.security
 expect "run_state: check removes its clone" 0 "^$" ls -A "$work/checks"
 rm "$work/plant.out"
+# The clone has no release build (make stages leaves out build), so every
+# stage gets dev-build's binary as CARAT_BIN, which the smoke test runs.
+cat > "$work/bin/bin-make" <<'EOF'
+#!/bin/sh
+for arg in "$@"; do
+  case "$arg" in CARAT_BIN=build/dev/carat) exit 0 ;; esac
+done
+exit 4
+EOF
+chmod +x "$work/bin/bin-make"
+expect "run_state: check runs the smoke test on dev-build's binary, as CI does" 0 "every stage passed" \
+  env STAGES="test-run" MAKE="$work/bin/bin-make" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
 cd "$work/state" || exit 1
 # A check that did not finish says so: a stage ended by a signal, its own
 # or the runner's, is killed; one during which HEAD moved is superseded at

@@ -49,7 +49,8 @@ export SPINEL_CACHE_DIR ?= $(CURDIR)/build/spinel-cache
 # takes it for an up to date release binary.
 DEV_BIN     := build/dev/carat
 # The editor binary the smoke test runs (test/smoke_editor.rb reads it):
-# the release build by default, DEV_BIN when CI passes CARAT_BIN.
+# the release build by default, DEV_BIN when CI or the checker's clone
+# (tools/run_state.sh check, whose stages leave out build) passes CARAT_BIN.
 export CARAT_BIN ?= build/bin/carat
 # The tests make test-run runs: every test/*.rb when empty, e.g.
 # make test-run TESTS=test/smoke_editor.rb.

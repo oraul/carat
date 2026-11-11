@@ -437,7 +437,9 @@ check_stages() {
       continue
     fi
     one_of "$s" "$COMPILE_STAGES" && compiled_set "$s" ""
-    if ! run_stage "$s" sh -c "$CLONE_EXEC" in_clone "$check_root" "$make_cmd" --no-print-directory check-stage "S=$s"; then
+    # The clone has no release build (make stages leaves out build), so the
+    # smoke test runs dev-build's binary, as CI does on a pull request.
+    if ! run_stage "$s" sh -c "$CLONE_EXEC" in_clone "$check_root" "$make_cmd" --no-print-directory check-stage "S=$s" "CARAT_BIN=$CHECK_BIN"; then
       case "$stage_word" in killed|superseded) word=$stage_word ;; *) word=failed ;; esac
       echo "check: stage $s $word at $head; read $stage_dir/$change/$s.log"
       exit 1
@@ -708,6 +710,10 @@ code_key() {
     awk -F'\t' -v skip="$NOT_COMPILED" -v keep="$BUILD_TOOLS" '$2 !~ skip || $2 ~ keep' |
     git hash-object --stdin
 }
+
+# The editor binary every check stage gets as CARAT_BIN: DEV_BIN, which
+# dev-build writes before test-run's smoke test runs it.
+CHECK_BIN=build/dev/carat
 
 # The outputs of a compile stage, which later stages read (test-run and
 # metrics), as the Makefile names them (DEV_BIN, TEST_BIN).
