@@ -11,5 +11,5 @@
 
 ## 3. Docs and bookkeeping
 
-- [ ] 3.1 CLAUDE.md, README.md, `docs/codebase-map.md` area 1, `.claude/agents/contributor.md`, and the comments of `tools/scan_text.sh`: no commit hooks, the base checkout of the scan. Checked by `make gates` and `make docs-lint`.
-- [ ] 3.2 `docs/backlog.md` and `docs/queue.md`: the plan notes' removed and refreshed entries, the entries of `build/plan/backlog.md`, and `build/plan/queue.md`. Checked by `make docs-lint`.
+- [x] 3.1 CLAUDE.md, README.md, `docs/codebase-map.md` area 1, `.claude/agents/contributor.md`, and the comments of `tools/scan_text.sh`: no commit hooks, the base checkout of the scan. Checked by `make gates` and `make docs-lint`.
+- [x] 3.2 `docs/backlog.md` and `docs/queue.md`: the plan notes' removed and refreshed entries, the entries of `build/plan/backlog.md`, and `build/plan/queue.md`. Checked by `make docs-lint`.
