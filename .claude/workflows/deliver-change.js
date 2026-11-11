@@ -79,6 +79,9 @@ let lastStop = ''
 let stopKind = 'none'
 let planned = null
 let ciMinutes = null
+// The merger's calls waiting on CI over its starts, two per wait (the
+// wait and the read after it); null until a merger returned.
+let ciWaitCalls = null
 const SIZES = ['small', 'medium', 'large']
 let estimate = ''
 // Tool calls per agent start. CALL_CAPS holds a start's cap at a medium
@@ -102,8 +105,9 @@ const sizeWord = () => (SIZES.includes(estimate) ? estimate : 'medium')
 const callCap = (kind) => (kind in FIXED_CAPS ? FIXED_CAPS[kind] : Math.ceil(CALL_CAPS[kind] * CALL_SCALE[sizeWord()]))
 const capLine = (kind) => `\nTool calls: at most ${callCap(kind)} in this start (${kind in FIXED_CAPS ? 'a fixed cap' : `the ${kind} cap at ${SIZES.includes(estimate) ? `the ${estimate} estimate` : 'the medium figure, with no estimate yet'}`}). Count them; on reaching the cap, stop and return the schema with what is done, saying the cap stopped you.`
 // The merger's waits are 3, 4, then 5 minutes (.claude/agents/merger.md), so
-// the minutes it waited give the waits beyond the second.
-const mergerCap = (r) => FIXED_CAPS.merger + 2 * (Number(r.waited) > 7 ? Math.ceil((Number(r.waited) - 7) / 5) : 0)
+// the minutes it waited give its waits, and those beyond the second its cap.
+const waitsOf = (r) => { const w = Number(r && r.waited); return w > 0 ? (w <= 3 ? 1 : w <= 7 ? 2 : 2 + Math.ceil((w - 7) / 5)) : 0 }
+const mergerCap = (r) => FIXED_CAPS.merger + 2 * Math.max(0, waitsOf(r) - 2)
 // The model tier and reasoning effort of each kind of agent start, as
 // TIER/EFFORT, set from the history's figures (docs/goals.md, Calibration).
 // The tier is cheap, the model: line of the agent's file, the only place a
@@ -391,6 +395,7 @@ function metricLine() {
   const pairs = Object.keys(usage).map((k) => `phase.${k}=${Math.round(usage[k].tokens)}/${usage[k].calls}`)
     .concat(Object.keys(firstPass).map((g) => `first.${g}=${firstPass[g]}`), [`rework=${rework}`, `extra=${extra}`, `stop=${stopKind}`])
   if (ciMinutes !== null) pairs.push(`ci_min=${Number(ciMinutes).toFixed(1)}`)
+  if (Number.isInteger(ciWaitCalls)) pairs.push(`ci_wait_calls=${ciWaitCalls}`)
   if (SIZES.includes(estimate)) pairs.push(`estimate=${estimate}`)
   if (planned !== null) pairs.push(`planned=${planned}`)
   for (const k of Object.keys(calibrated)) pairs.push(`calib.${k}=${calibrated[k]}`)
@@ -415,6 +420,7 @@ function seed() {
   lastStop = /^[a-z]+$/.test(state['metric.stop'] || '') ? state['metric.stop'] : ''
   if (/^[01]$/.test(state['metric.planned'] || '')) planned = Number(state['metric.planned'])
   if (state['metric.ci_min']) ciMinutes = Number(state['metric.ci_min'])
+  if (/^[0-9]+$/.test(state['metric.ci_wait_calls'] || '')) ciWaitCalls = Number(state['metric.ci_wait_calls'])
   if (SIZES.includes(state['metric.estimate'])) estimate = state['metric.estimate']
   // The notes in the order they were recorded. The advisories of every
   // quality review of the run, which its reviewers recorded as
@@ -467,8 +473,8 @@ function phaseDone(name, commit) {
   queue(phaseLine(name, commit), commit)
 }
 // The queued lines the closing start may run under the guard's close
-// profile: the phases no merge gate reads, and notes.
-const CLOSABLE = /^sh tools\/run_state\.sh (phase [a-z0-9-]+ (plan|implement|package|ci|merge|retro|report) [0-9a-f]{7,40}|note [a-z0-9-]+ [a-z-]+ "[^"]*")$/
+// profile: the phases no merge gate reads, notes, and the CI stages.
+const CLOSABLE = /^sh tools\/run_state\.sh (phase [a-z0-9-]+ (plan|implement|package|ci|merge|retro|report) [0-9a-f]{7,40}|note [a-z0-9-]+ [a-z-]+ "[^"]*"|ci-stages [a-z0-9-]+ [0-9a-f]{40})$/
 function reviewed(kind, passed, commit, counts) {
   const result = passed ? 'pass' : 'blocked'
   state['review.' + kind] = `${result} ${commit}`
@@ -1016,6 +1022,10 @@ if (!stopped && !state.merged) {
         `${intro()}${mergeTarget()} The pushed head is ${pushed}. Wait for CI at it${waits ? ' (it was still running when you last returned; keep waiting)' : ''}, and merge the pull request if CI is green and every merge gate passes.\nThe green line: \`${lines.green}\`\nThe red line: \`${lines.red}\`\nTool calls: at most ${FIXED_CAPS.merger} in this start when CI passes within your first two waits, and 2 more for each later wait.`,
         calibrate('merger', { agentType: 'merger', schema: withCalls(MERGE) })), mergerCap)
       if (!m) { stopped = 'the merger returned no result'; break }
+      ciWaitCalls = (ciWaitCalls || 0) + 2 * waitsOf(m)
+      // The CI steps' seconds, read once the run finished, by the record
+      // start or the closing start, whose guard is main's after the merge.
+      if (m.ci === 'green' || m.ci === 'red') queue(`sh tools/run_state.sh ci-stages ${state.change} ${pushed}`, m.head)
       const checks = (m.checks || []).join('; ')
       note(`CI at ${m.head}: ${m.ci}${m.minutes ? ` in ${m.minutes} min` : ''}${m.ci === 'pending' && checks ? ` (${checks})` : ''}`)
       if (m.ci === 'pending' && !(m.waited >= 30)) note(`the merger returned pending after waiting ${Number.isFinite(m.waited) ? m.waited : 'unknown'} of 30 minutes`)

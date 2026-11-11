@@ -1197,6 +1197,10 @@ expect "guard: only the contributor applies the sprint plan" 2 "which the workfl
 # The closing start runs the run's last records: the phases no merge gate
 # reads, notes, and the figures, never a review or a gated phase.
 expect "guard: close records a closing phase" 0 "^$" guard close 'sh tools/run_state.sh phase c package abc1234 && sh tools/run_state.sh phase c ci abc1234 && sh tools/run_state.sh phase c merge abc1234 && sh tools/run_state.sh phase c retro abc1234 && sh tools/run_state.sh phase c report abc1234 && sh tools/run_state.sh note c extra-round \"why\" && sh tools/run_state.sh metric c phase.check=1200/5 first.check=1 rework=0 stop=none'
+expect "guard: close records the CI stages" 0 "^$" guard close 'sh tools/run_state.sh ci-stages c 0123456789abcdef0123456789abcdef01234567 && sh tools/run_state.sh metric c ci_wait_calls=4'
+expect "guard: close refuses CI stages at a short commit" 2 "only the close profile runs, as CHANGE COMMIT" guard close 'sh tools/run_state.sh ci-stages c abc1234'
+expect "guard: read refuses the CI stages" 2 "only the close profile runs" guard read 'sh tools/run_state.sh ci-stages c 0123456789abcdef0123456789abcdef01234567'
+expect "guard: merger refuses the CI stages" 2 "which the workflow or another agent runs" guard merger 'sh tools/run_state.sh ci-stages c 0123456789abcdef0123456789abcdef01234567'
 for gated in check quality security bench; do
   expect "guard: close refuses a $gated phase" 2 "the close profile records only" guard close "sh tools/run_state.sh phase c $gated abc1234"
 done
@@ -2357,7 +2361,7 @@ calib_js() {
 expect "workflow: calibrate passes a low effort and records the profile" 0 '^\[[{]"schema":1,"effort":"low"[}],[{]"schema":1[}],[{]"scout":"cheap/low","planner":"session/session"[}]\]$' \
   calib_js "[calibrate('scout', { schema: 1 }), calibrate('planner', { schema: 1 }), calibrated]"
 expect "workflow: the metric line carries the profiles" 0 ' calib[.]scout=cheap/low calib[.]security=session/session"$' \
-  calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; estimate = ''; planned = null; state = { change: 'c' }; calibrate('scout', {}); calibrate('security', {}); return metricLine() })()"
+  calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = ''; planned = null; state = { change: 'c' }; calibrate('scout', {}); calibrate('security', {}); return metricLine() })()"
 expect "workflow: a restart restores the recorded profiles of the kinds not used yet" 0 '^[{]"planner":"session/session","scout":"cheap/low"[}]$' \
   calib_js "(() => { calibrate('planner', {}); return restoreCalibration({ 'metric.calib.scout': 'cheap/low', 'metric.calib.planner': 'cheap/low', 'metric.calib.checker': 'cheap/high', 'metric.rework': '1' }, calibrated) })()"
 speed_js() {
@@ -2375,6 +2379,14 @@ expect "workflow: no security finding is kept non-blocking by its location" 0 '^
   sh -c 'grep -q -e "security re-rating kept non-blocking" -e "reRaised(\`\${f.file}" "$1" && echo found || echo none' _ "$wf"
 expect "workflow: a fix round narrows both reviews only from this start's pass" 0 '^\["abc1234","","","",""\]$' \
   speed_js '[narrowedFrom({ "review.quality": "pass abc1234" }, "quality", "def5678"), narrowedFrom({ "review.security": "pass def5678" }, "security", "def5678"), narrowedFrom({ "review.security": "blocked abc1234" }, "security", "def5678"), narrowedFrom({}, "quality", "def5678"), narrowedFrom({ "review.quality": "pass x" }, "quality", "def5678")]'
+expect "workflow: the closing start records the CI stages at a full commit only" 0 '^\[true,false,false\]$' \
+  speed_js '["sh tools/run_state.sh ci-stages c 0123456789abcdef0123456789abcdef01234567", "sh tools/run_state.sh ci-stages c abc1234", "sh tools/run_state.sh ci-stages c 0123456789abcdef0123456789abcdef01234567 && x"].map((l) => CLOSABLE.test(l))'
+expect "workflow: the merger's waits come from its minutes, its cap from the waits beyond the second" 0 '^\[0,1,2,3,4,12,12,14,16\]$' \
+  js "$wf" "FIXED_CAPS waitsOf mergerCap" '[0, 3, 7, 12, 17].map((w) => waitsOf({ waited: w })).concat([0, 7, 12, 17].map((w) => mergerCap({ waited: w })))'
+expect "workflow: the merger's waiting calls are recorded" 0 ' ci_wait_calls=4"$' \
+  calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = 4; estimate = ''; planned = null; state = { change: 'c' }; return metricLine() })()"
+expect "workflow: the merger's lines leave the CI stages to the record and closing starts" 0 "^1 0$" \
+  sh -c 'echo "$(grep -c "queue(\`sh tools/run_state.sh ci-stages \${state.change} \${pushed}\`, m.head)" "$1") $(grep -c "ci-stages" "$2")"' _ "$wf" "$here/../.claude/agents/merger.md"
 expect "workflow: both reviews' scopes read this start's records" 0 '^2$' grep -c "narrowedFrom(ran, '" "$wf"
 expect "workflow: a resume past the push builds no merge records from the run state" 0 '^\[\]$' \
   speed_js 'mergeRecords({})'
