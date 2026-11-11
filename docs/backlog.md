@@ -4462,3 +4462,142 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/gates.sh:489`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
 - Why it matters: the session-line pattern refuses any word session followed by a colon in a pull request body (for example 'the LSP session:'), a likely false positive for language server work.
 - Fix outline: anchor it to a line start or require the id, link, or url suffix.
+
+## publish-pr security Low (3) at tools/publish_pr.sh:90
+
+- Where: `tools/publish_pr.sh:90` and `:94`. Delivery review of `publish-pr` (security Low, confidence 3) at 9a828bb.
+- Why it matters: the live pull request title and body (GitHub-side text) are printed raw to stderr on a mismatch, so a collaborator who edits the pull request can put terminal escape sequences into the terminal of the person running /publish-pr.
+- Fix outline: strip control characters before printing: pipe `$tmp/title` and the diff output through `tr -d '\000-\010\013-\037\177'` (or `cat -v`).
+
+## publish-pr quality advisory at tools/publish_pr.sh:46
+
+- Where: `tools/publish_pr.sh:46`. Delivery review of `publish-pr` (quality advisory) at 9a828bb.
+- Why it matters: dead code: `tools/scan_text.sh` exits 1 on any hit, so a passing scan never prints and the second title check never fires.
+- Fix outline: drop the `[ -z "$out" ]` line.
+
+## publish-pr quality advisory at tools/publish_pr.sh:60
+
+- Where: `tools/publish_pr.sh:60`. Delivery review of `publish-pr` (quality advisory) at 9a828bb.
+- Why it matters: duplication: `call()` repeats the whole curl command in two branches differing only by the Content-Type header and `--data-binary`.
+- Fix outline: one curl, the data options added with `set --` when DATA is given.
+
+## publish-pr quality advisory at tools/publish_pr.sh:34
+
+- Where: `tools/publish_pr.sh:34`. Delivery review of `publish-pr` (quality advisory) at 9a828bb.
+- Why it matters: two case statements validate the change name where the guard has one pattern.
+- Fix outline: one `grep -Eq '^[a-z0-9][a-z0-9-]*$'` check, as the repo and branch checks do.
+
+## publish-pr quality advisory at .claude/agents/contributor.md:50
+
+- Where: `.claude/agents/contributor.md:50`. Delivery review of `publish-pr` (quality advisory) at 9a828bb.
+- Why it matters: one clear way: package step 4 runs `tools/gates.sh pr-body` and then `tools/publish_pr.sh`, which runs the same gate again.
+- Fix outline: drop the separate Check it sentence and let the script gate.
+
+## publish-pr quality advisory at tools/run_state.sh:442
+
+- Where: `tools/run_state.sh:442`. Delivery review of `publish-pr` (quality advisory) at 9a828bb.
+- Why it matters: one logical change per pull request: the check clone's CARAT_BIN fix (commit 9a828bb, a fix type) rides in this chore change beyond its brief.
+- Fix outline: name it in the pull request's Notes, or split such fixes into their own change next time.
+
+## publish-pr quality advisory at tools/tools_test.sh:2121
+
+- Where: `tools/tools_test.sh:2121` and `:2124`. Delivery review of `publish-pr` (quality advisory) at 9a828bb.
+- Why it matters: duplication: the two drift cases spell out the `publish()` helper's env line instead of reusing it.
+- Fix outline: let `publish()` pass FAKE_DRIFT through and call `FAKE_DRIFT=1 publish pub ...`.
+
+
+### Advisories deduped by exact text, so reworded findings repeat (merge-gate-integrity)
+
+- Where: `.claude/workflows/deliver-change.js:592` (addAdvisories), `tools/run_state.sh:1001` (add_note); periodic quality after #104, notes 64 and 109 of the `delivery-speed` run state.
+- Why it matters: each review round rewording one finding adds a new backlog entry; about 40 `delivery-speed` entries for about 20 findings (one CI comment five or six times, the `reRaised` line five).
+- Fix outline: key an advisory by its location and reason so a reworded one is not appended again, with a tools-test case; the repeated entries go to the grooming of `sprint-planning`.
+
+### Backlog duplicates and stale entries found after #104 (sprint-planning grooming)
+
+- Where: `docs/backlog.md`, periodic quality notes 65 to 68, 78 to 84, 110, and 113 to 123 of the `delivery-speed` run state: nine entries naming the removed backup step (756 to 804, 3182, and the why of 744); entries routed to queue names no longer held (merge-gate-tidy, check-skip, periodic-council, review-scope, backup-records, backlog-compaction, implement-contracts, and seven names in no item); duplicates at 1596 and 3556/3564 (tab width), 1083, 3562, 3968, and 4040 (digit readers), 3850 and 3962 (BufferList wording), 4028 and 4184 (OpenTab jumps, 4184 citing a wrong line), 3332, 3338, and 3350 (186ddfb bundles), 3568 and 1023 (explorer Tree), 2556 and 2906 (winbar policy), 197 and 3664 (scroll_window comment), 1795 and 2538 (row_offset), 987, 1602, 3350, and 3562 (dead counted?, undo_seq), 3622 and 4022 (ex arguments), 2996 and 3968 (put loop), 2641 and 2104 (ExTable, 2641 partly stale), 3992 and 4058 (periodic slices).
+- Why it matters: the scouts and contributors grep stale or doubled entries, and items route to names the queue no longer has.
+- Fix outline: the grooming step merges each set into one entry, removes the entries whose code is gone, and reroutes to current queue names; the run-state notes give the kept line of each set.
+
+### Periodic quality slices leave area 1 partial every time (sprint-planning)
+
+- Where: `.claude/workflows/periodic-review.js:79` (areaSlices); area 1 of `docs/codebase-map.md`.
+- Why it matters: area 1 alone (the workflow, guard, run state, gates, tools-test, agents, about 7000 lines) exceeds one start's cap of 53 calls, so the quality review ends partial (17 of 18 areas after #104).
+- Fix outline: weight slices by size or split area 1 so each slice fits a start; accepted when a periodic quality review covers every area.
+
+### Late findings appended as bare bullets (sprint-planning)
+
+- Where: `tools/run_state.sh:1217`.
+- Why it matters: late findings reach the backlog as one heading of bare bullets, not one entry each with where, why, and fix outline, so grooming cannot match them.
+- Fix outline: one entry per finding in the backlog's shape, with a case.
+
+### Push argument and CI-fix checks (pipeline tool tidy)
+
+- Where: `tools/run_state.sh:1458` (push passes any second argument), `tools/run_state.sh:803` (push --ci-fix accepts any recorded red CI).
+- Why it matters: a mistyped flag makes an ordinary push, and a stale red record lets every --ci-fix push count, so one push per CI fix does not hold.
+- Fix outline: refuse any argument but exactly --ci-fix; require the red record's commit to equal the pushed head; a case each.
+
+### Dead stage-list code after FAST_STAGES (pipeline tool tidy)
+
+- Where: `tools/run_state.sh:406` (main_stages, usage at 85 to 88, comment at 396 to 405), `tools/gates.sh:338` (CHECK_STAGES fallback, header at 35 to 37, message at 355), `tools/tools_test.sh:200`, `docs/codebase-map.md:36`.
+- Why it matters: code and cases kept alive for a list `origin/main` no longer needs; comments describe the wrong function.
+- Fix outline: remove the fallback and main_stages with their cases and mentions, move the check_stages comment.
+
+### Stale names kept by tools-test (test hygiene)
+
+- Where: `tools/run_state.sh:230` (review area lists the removed `.githooks/`, case at `tools/tools_test.sh:807`), `tools/tools_test.sh:521` and `:1532` (cases that a removed backup name is unknown), `tools/tools_test.sh:2003` and `:2006` (no-op sed used as copies).
+- Why it matters: dead weight that keeps removed names alive and reads as behavior.
+- Fix outline: drop the pattern and the removed-name cases, keep the guard refusals at 997 and 1000, use plain copies.
+
+### Failed spec previews deleted by the next change (pipeline tool tidy)
+
+- Where: `tools/spec_validate.sh:25`.
+- Why it matters: each active change removes `build/spec-preview` first, so a failed preview is lost though the header says it is kept.
+- Fix outline: preview each change in its own directory.
+
+### Guard admits several gate names that gates.sh ignores (pipeline tool tidy)
+
+- Where: `tools/agent_guard.sh:602`, `tools/gates.sh:501`.
+- Why it matters: gates.sh runs only the first name and reads the second as the body file, ignoring the rest silently.
+- Fix outline: admit one gate name, or refuse extra arguments for a gate without a body, with a case.
+
+### Session-line pattern outside the one scanner (content-gate-gaps)
+
+- Where: `tools/gates.sh:489`.
+- Why it matters: CLAUDE.md names `tools/scan_text.sh` the one scanner, but the pattern lives in the pr-body gate alone and refuses prose such as an LSP session line anywhere in a line.
+- Fix outline: one anchored pattern in the shared rules used by both, with a case.
+
+### Unused assignments and dead workflow branches (dead code)
+
+- Where: `tools/gates.sh:75` and `tools/docs_lint.sh:23` (TAB unused), `.claude/workflows/deliver-change.js:481` (an unreachable return), `.claude/workflows/deliver-change.js:97` (CALL_CAPS comment names the removed backup), `.claude/workflows/deliver-change.js:304` (staleRed splits a check on every comma).
+- Why it matters: dead lines and a stale comment mislead; a check name with a comma parses wrong.
+- Fix outline: delete the dead lines, reword the comment, take status and conclusion as the last two fields.
+
+### Stage docs drift after FAST_STAGES (docs-index)
+
+- Where: `.github/workflows/ci.yml:26`, `Makefile:99`, `Makefile:378`, `Makefile:382`, `Makefile:400`, `.claude/agents/checker.md:3`, `tools/run_state.sh:9` (the compiled stage suffix), `docs/codebase-map.md:46` (unclosed parenthesis), `docs/codebase-map.md:353` (area 11 names split_edge where place_slot is the caller).
+- Why it matters: comments, help, and the map say the checker runs every stage or omit what the tools test; 4 of #104's 11 blocking quality findings were this kind of drift.
+- Fix outline: reword each to the fast stages and CI split; the docs-currency checks of docs-index catch the next one.
+
+### Latent code advisories from the periodic review after #104 (copies, dead code, comment wraps)
+
+- Where: `carat/domain/buffer.rb:406` (Buffer#line reads from the end for a negative row against its comment), `carat/use_cases/plugins/plugin_events.rb:170` (@announced stores an unread path), `carat/domain/undo_tree.rb:328` (note_line public, listed as API at `docs/codebase-map.md:301`), `carat/use_cases/files/open_file.rb:20`, `carat/use_cases/completion/show_completion.rb:25`, `carat/domain/buffer.rb:63` (comment lines past their block's width).
+- Why it matters: a latent wrong read if a caller stops guarding the row; dead data and a needless public method widen the API; uneven wraps.
+- Fix outline: an empty string for a negative row with a test row; a set of ids; note_line private and dropped from the map; rewrap.
+
+### Contributor may write settings and agent files (guard-lows, settings rewritable)
+
+- Where: `tools/agent_guard.sh:328`; periodic security Medium (5) after #104.
+- Why it matters: hooks in `.claude/settings.json` and agent frontmatter load in the main session and later agents of the same clone before any review.
+- Fix outline: refuse contributor writes to the settings and agent frontmatter, or load them from `origin/main`, with a refusal case.
+
+### Unpinned registry tool runs outside the guard (guard-lows)
+
+- Where: `tools/agent_guard.sh:60`; periodic security Low (5) after #104.
+- Why it matters: the contributor profile allows the OpenSpec CLI at its latest tag, code fetched at run time outside every guard rule.
+- Fix outline: pin an exact version with its integrity, or vendor it.
+
+### CI checkout keeps the job token (ci-hardening)
+
+- Where: `.github/workflows/ci.yml:35`; periodic security Low (5) after #104.
+- Why it matters: the default persisted credentials sit in the checkout while the pull request's Makefile and tools run.
+- Fix outline: do not persist credentials; the scope step already reads its token from the environment.
