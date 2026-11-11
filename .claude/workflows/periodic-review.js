@@ -1,14 +1,14 @@
 export const meta = {
   name: 'periodic-review',
   description: 'Review the whole codebase at main: the security review, never skipped, and the quality review, findings recorded in the run state for the planner',
-  whenToUse: '/review on demand; the delivery workflow runs it every five merged changes and after a change to config loading, file access, plugin boundaries, terminal output, process spawning, the entry point, or the agent guard and the gates',
+  whenToUse: '/review on demand; sprint-planning runs it as the whole-tree sweep every second sprint',
   phases: [
     { title: 'Review', detail: 'the security reviewer and three quality reviewers over the map areas, in their periodic mode, in parallel' },
   ],
 }
 
 // args: { change } or a string naming the run state the reviews are recorded
-// in: the merged change that made the review due, or review-<date> for
+// in: sprint-N-sweep for sprint-planning's sweep, or review-<date> for
 // /review. The reviewers record every finding with tools/run_state.sh note;
 // this script records the two results, as the delivery workflow does, from
 // what the reviewers return (tools/agent_guard.sh keeps them off the

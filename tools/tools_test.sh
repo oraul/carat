@@ -844,8 +844,8 @@ fresh sprint
 printf 'sprint\tlast\n' > docs/sprints.tsv
 expect "run_state: review-due needs a sprint row" 1 "ends with no sprint row" state review-due
 printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
-{ printf 'header\n'; mrow old aaa111 small 1 1 -; mrow seed bbb222 small 1 1 -; mrow a1 c1 small 400000 30 check:1,quality:0; mrow a2 c2 medium 1300000 50 check:1,quality:1; } > docs/metrics.tsv
-expect "run_state: review-due is not due before the fifth merge of the sprint" 1 "^not due: sprint-1 has 2 of 5 changes merged [(]a1, a2[)]$" state review-due
+{ printf 'header\n'; mrow old aaa111 small 1 1 -; mrow seed bbb222 small 1 1 -; mrow a1 c1 small 400000 30 check:1,quality:0; mrow review-20261111 r1 - 9 9 -; mrow a2 c2 medium 1300000 50 check:1,quality:1; } > docs/metrics.tsv
+expect "run_state: review-due is not due before the fifth merge of the sprint, a review run not counted" 1 "^not due: sprint-1 has 2 of 5 changes merged [(]a1, a2[)]$" state review-due
 state init a3 chore/a3 > /dev/null
 state set a3 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "run_state: review-due counts a merged change without a row" 1 "^not due: sprint-1 has 3 of 5" state review-due

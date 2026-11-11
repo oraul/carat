@@ -239,6 +239,9 @@ HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci
 sprints_file=${SPRINTS_FILE:-docs/sprints.tsv}
 plan_dir=${PLAN_DIR:-build/plan}
 SPRINT_SIZE=5
+# The run states of reviews, not changes, which a sprint never counts:
+# /review's review-DATE and sprint-planning's sprint-N.
+REVIEW_RUNS='^(review|sprint)-[0-9]'
 SPRINT_HEADER="sprint${TAB}last${TAB}merges${TAB}changes${TAB}wall_min${TAB}min_per_change${TAB}total_tokens${TAB}over_budget${TAB}first_pass"
 
 die() {
@@ -1251,7 +1254,8 @@ sprint_state() {
   prev_last=$(printf '%s\n' "$last_row" | cut -f2)
   sprint_base=$(awk -F'\t' -v c="$prev_last" '$1 == c { print $3 }' "$metrics_file" 2>/dev/null | tail -1)
   [ -n "$sprint_base" ] || die "the last change of $prev, $prev_last, has no row in $metrics_file"
-  sprint_names=$({ awk -F'\t' -v c="$prev_last" 'seen && NF { print $1 } $1 == c { seen = 1 }' "$metrics_file"; pending_list; } | awk 'NF && !seen[$0]++')
+  sprint_names=$({ awk -F'\t' -v c="$prev_last" 'seen && NF { print $1 } $1 == c { seen = 1 }' "$metrics_file"; pending_list; } |
+    awk -v r="$REVIEW_RUNS" 'NF && $0 !~ r && !seen[$0]++')
   sprint_count=$(printf '%s\n' "$sprint_names" | grep -c .)
 }
 
@@ -1303,9 +1307,9 @@ backlog_entry() {
 # change, the total tokens, the runs over their size's budget
 # (TOKEN_BUDGETS), and each gate's first passes.
 sprint_row() {
-  awk -F'\t' -v c="$prev_last" -v budgets="$TOKEN_BUDGETS" -v s="sprint-$sprint_n" -v size="$SPRINT_SIZE" '
+  awk -F'\t' -v c="$prev_last" -v budgets="$TOKEN_BUDGETS" -v s="sprint-$sprint_n" -v size="$SPRINT_SIZE" -v r="$REVIEW_RUNS" '
     BEGIN { n = split(budgets, b, " "); for (i = 1; i <= n; i++) { split(b[i], kv, "="); budget[kv[1]] = kv[2] } }
-    seen && NF && rows < size {
+    seen && NF && rows < size && $1 !~ r {
       rows++; names = names (rows > 1 ? "," : "") $1; last = $1
       if ($17 ~ /^[0-9.]+$/) wall += $17
       if ($16 ~ /^[0-9]+$/) { tokens += $16; if (($15 in budget) && $16 + 0 > budget[$15] + 0) over++ }
@@ -1333,7 +1337,7 @@ groom() {
   if ! sprint_waiting; then echo "groom: no sprint plan waits in $plan_dir/"; return 0; fi
   sprint_state
   [ "$waiting" = "sprint-$sprint_n" ] || die "groom: the plan of $waiting is not the sprint in progress, sprint-$sprint_n"
-  rows=$(awk -F'\t' -v c="$prev_last" 'seen && NF { n++ } $1 == c { seen = 1 } END { print n + 0 }' "$metrics_file")
+  rows=$(awk -F'\t' -v c="$prev_last" -v r="$REVIEW_RUNS" 'seen && NF && $1 !~ r { n++ } $1 == c { seen = 1 } END { print n + 0 }' "$metrics_file")
   [ "$rows" -ge "$SPRINT_SIZE" ] || die "groom: sprint-$sprint_n has $rows of $SPRINT_SIZE history rows; run history first"
   removals=""
   repeats=""
