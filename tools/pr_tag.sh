@@ -4,13 +4,17 @@
 # network layer appends, while a git push arrives unchanged; so the
 # delivery never creates a pull request from its session. The contributor
 # pushes an annotated tag pr/BRANCH whose message is the title, a blank
-# line, and the gated body, and .github/workflows/open-pr.yml, on GitHub's
-# runners, creates the pull request from it with main's gates.
+# line, and the gated body; its push runs .github/workflows/pr-tag.yml,
+# whose completion runs .github/workflows/open-pr.yml from main, which
+# creates the pull request from it with main's copy of this script, never
+# the tagged commit's.
 #
 # Usage:
 #   sh tools/pr_tag.sh push CHANGE TITLE    the contributor, after
 #       tools/run_state.sh push: gates build/pipeline/CHANGE.body.md and
-#       TITLE, tags the pushed head pr/BRANCH, and pushes only that tag
+#       TITLE, tags the pushed head pr/BRANCH, and pushes only that tag;
+#       when a pull request's head is already the pushed head (a resumed
+#       package step), it pushes nothing and says to run wait
 #   sh tools/pr_tag.sh wait CHANGE [SECONDS]   the contributor: waits, at
 #       most SECONDS (1 to 540, default 540), until the tag is gone from
 #       origin and a pull request's head is the pushed head, and records
@@ -21,7 +25,7 @@
 #       of no allowed type or missing on origin
 #   sh tools/pr_tag.sh gate DIR TOOLS       the workflow: TOOLS/gates.sh
 #       pr-body on DIR/body and TOOLS/scan_text.sh on DIR/title, TOOLS
-#       main's tools directory
+#       the tools directory of main's checkout
 #   sh tools/pr_tag.sh same DIR             the workflow: DIR/title.live and
 #       DIR/body.live, read back from the pull request, equal DIR/title
 #       and DIR/body but for trailing newlines
@@ -87,8 +91,16 @@ case "$cmd" in
     case "$title" in *"
 "*) refuse "the title is more than one line" ;; esac
     tag=pr/$branch
-    [ -z "$(git ls-remote origin "refs/tags/$tag")" ] ||
+    refs=$(git ls-remote origin "refs/tags/$tag" 'refs/pull/*/head') || refuse "origin cannot be read"
+    if printf '%s\n' "$refs" | grep -q -F "refs/tags/$tag"; then
       refuse "the tag $tag is on origin: the open-pr workflow has not consumed it (pending or failed; read its log)"
+    fi
+    # A resumed package step: open-pr consumed the tag and the pull request
+    # is open at the pushed head, so a second tag would only fail to open it.
+    if printf '%s\n' "$refs" | awk -v sha="$pushed" '$1 == sha && $2 ~ /^refs\/pull\/[0-9]+\/head$/ { f = 1 } END { exit !f }'; then
+      echo "pr_tag: a pull request's head is already $pushed, so $tag is not pushed again; run sh tools/pr_tag.sh wait $change"
+      exit 0
+    fi
     work=$(mktemp -d) || exit 1
     trap 'rm -rf "$work"' EXIT
     printf '%s\n' "$title" > "$work/title"

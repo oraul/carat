@@ -606,6 +606,10 @@ git --git-dir="$work/prtag.git" update-ref refs/pull/2/head main
 git --git-dir="$work/prtag.git" update-ref refs/pull/3/head chore/prtag
 expect "pr_tag: wait records the pull request whose head is the pushed head" 0 "pull request 3 at" env WAIT_STEP=1 sh "$here/pr_tag.sh" wait prtag 1
 expect "pr_tag: wait recorded the number in the run state" 0 "^3$" state get prtag pr
+expect "pr_tag: a resumed push after the pull request opened pushes no tag and says to wait" 0 "not pushed again; run sh tools/pr_tag.sh wait prtag" \
+  sh "$here/pr_tag.sh" push prtag "chore(tools): open by tag"
+expect "pr_tag: the resumed push left no tag on origin" 0 "^no-tag$" \
+  sh -c '[ -z "$(git ls-remote origin refs/tags/pr/chore/prtag)" ] && echo no-tag'
 expect "pr_tag: wait refuses more than 540 seconds" 1 "wait 1 to 540" sh "$here/pr_tag.sh" wait prtag 541
 fresh history
 state init history chore/history > /dev/null

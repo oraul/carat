@@ -8,7 +8,8 @@
 
 - [x] 2.1 `tools/pr_tag.sh`: `read`, `branch`, `gate`, and `same`. Proved by "pr_tag: a tag message is read into the title and the body", "pr_tag: a body failing the pr-body gate is refused", "pr_tag: a branch of no allowed type is refused", and "pr_tag: a branch missing on origin is refused".
 - [x] 2.2 `tools/pr_tag.sh`: `push` and `wait`. Proved by "pr_tag: push tags the pushed head with the title and the body", "pr_tag: wait records the pull request whose head is the pushed head", and "pr_tag: wait fails while the tag is on origin".
-- [x] 2.3 `.github/workflows/open-pr.yml`: the tag push opens, reads back, and deletes, its steps the script's proved commands. Accepted by this change's own pull request, which the package step opens through it after the archive.
+- [x] 2.3 `.github/workflows/pr-tag.yml` and `open-pr.yml`: the tag push runs the secretless pr-tag, whose completion runs open-pr from main, which opens, reads back, and deletes with main's script, its steps the script's proved commands. Accepted once open-pr is on main; this change's own pull request is the one-off opened by hand (design, Risks).
+- [x] 2.4 `tools/pr_tag.sh push`: a resumed package step whose pull request is already open at the pushed head pushes no tag and says to run wait. Proved by "pr_tag: a resumed push after the pull request opened pushes no tag and says to wait" and "pr_tag: the resumed push left no tag on origin".
 
 ## 3. Guard, workflow, agents, and docs
 
