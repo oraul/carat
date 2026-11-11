@@ -4763,3 +4763,15 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Location: `tools/ci_scope.sh:85` and `tools/ci_scope.sh:92`.
 - Why it matters: the `${PR:-}` and `${HEAD_SHA:-}` defaults are redundant after the guard at line 82.
 - Fix outline: use `$PR` and `$HEAD_SHA`.
+
+### BufferList#enter duplicates the jump guard of Window#record_jump (`jump-motions` quality advisory)
+
+- Location: `carat/domain/buffer_list.rb:315` (`enter`).
+- Why it matters: enter pushes old.id, row, and col itself behind an 'unless old.id == 0' guard that the new Window#record_jump already holds, so the two jump-recording paths can drift apart.
+- Fix outline: replace the push with 'current.record_jump unless target.id == 0 && reusable?(old)', keeping the editor_jumps cases green.
+
+### Ctrl-^ shows a scratch alternate buffer that N Ctrl-^ and :b N refuse (`jump-motions` quality advisory)
+
+- Location: `carat/use_cases/buffers/switch_buffer.rb:37`.
+- Why it matters: load records a scratch buffer's id as the alternate, so Ctrl-^ shows a scratch buffer while 'N Ctrl-^' and ':b N' refuse the same buffer with E86, an inconsistency between paths to one buffer.
+- Fix outline: skip scratch buffers when load sets the alternate, or refuse a scratch alternate in SwitchBuffer as :number does, with an editor_jumps case.
