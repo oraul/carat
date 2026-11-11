@@ -33,7 +33,7 @@ Report steps, always:
 - Pull request: number, squash commit subject, and short SHA; or why there is none.
 - Phases: each phase with its result and the commit it finished at.
 - Checks: each stage with its result and seconds, a skipped or carried stage named so.
-- Security: the review's result, its findings by severity, and what was fixed or appended to the backlog (no delivery agent reads it).
+- Security: the review's result, its findings by severity, and what was fixed or appended to the backlog (no delivery agent reads it whole; a contributor or scout only greps the entries its queue item names).
 - Quality and benchmarks: blocking and advisory findings, allocations and rounds base to change, time when measured.
 - Gates: each gate's result, the README's included.
 - CI: result, minutes, and the fixes it needed.
