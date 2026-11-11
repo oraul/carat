@@ -26,7 +26,8 @@ module Carat
     # changes write the registers by Vim's delete rules and yanks by its
     # yank rules; naming a read-only register refuses the command with
     # E354. A search is an exclusive charwise motion found by FindMatch,
-    # whose message the outcome carries.
+    # whose message the outcome carries. A jump motion or a search records
+    # the position left in the window's jump list, as in Neovim.
     class Operate
       attr_reader :registers #: Domain::Registers
       attr_reader :last_find #: Domain::LastFind
@@ -88,6 +89,7 @@ module Carat
         return Domain::TextObjects.call(state, action, command.count) if Domain::TextObjects.object?(action)
         motion = motion_for(state, command)
         return nil if motion.nil?
+        state.window.record_jump if Domain::Motions.jump?(action) || Domain::Search.action?(action)
         from = cursor.position
         to = motion.target
         if to.before?(from)

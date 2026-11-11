@@ -14,9 +14,11 @@ module Carat
     # end, the mode its kind), and the last selection it left, which "gv"
     # restores. id is the stable number the editor gives the window when
     # it enters a tab page (0 until then), never given to another window.
-    # jumps is the window's own jump list, which a new window copies.
+    # jumps is the window's own jump list, which a new window copies, and
+    # alternate the number of the buffer it showed before the current one
+    # (0 for none), Neovim's alternate file, copied with the list.
     # A Struct record: mutable, with a reader and a writer per member.
-    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :fixed_height, :anchor, :last_selection, :id, :jumps, keyword_init: true)
+    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :fixed_height, :anchor, :last_selection, :id, :jumps, :alternate, keyword_init: true)
       SIGN_WIDTH = 2
 
       # @rbs @buffer: Buffer
@@ -33,10 +35,11 @@ module Carat
       # @rbs @last_selection: Selection
       # @rbs @id: Integer
       # @rbs @jumps: JumpList
+      # @rbs @alternate: Integer
 
       #: (buffer: Buffer) -> void
       def initialize(buffer:)
-        super(buffer: buffer, cursor: Cursor.new(row: 0, col: 0), top: 0, left: 0, row: 0, col: 0, height: 0, width: 0, fixed_width: false, fixed_height: false, anchor: Position.new(row: 0, col: 0), last_selection: Selection.none, id: 0, jumps: JumpList.new)
+        super(buffer: buffer, cursor: Cursor.new(row: 0, col: 0), top: 0, left: 0, row: 0, col: 0, height: 0, width: 0, fixed_width: false, fixed_height: false, anchor: Position.new(row: 0, col: 0), last_selection: Selection.none, id: 0, jumps: JumpList.new, alternate: 0)
       end
 
       # Shows another buffer from its start, forgetting the last selection,
@@ -58,8 +61,18 @@ module Carat
         self.fixed_height = false
       end
 
-      # Takes the buffer, cursor, scroll position, and a copy of the jump
-      # list of other, as a split gives the new window the same view.
+      # Records the cursor's position in the jump list before a jump
+      # motion moves it, as Neovim's setpcmark; nothing for the startup
+      # buffer, whose number 0 no walk finds.
+      #: () -> void
+      def record_jump
+        id = buffer.id
+        jumps.push(id, cursor.row, cursor.col) unless id == 0
+      end
+
+      # Takes the buffer, cursor, scroll position, a copy of the jump list,
+      # and the alternate buffer of other, as a split gives the new window
+      # the same view.
       #: (Window) -> void
       def copy_from(other)
         self.buffer = other.buffer
@@ -69,6 +82,7 @@ module Carat
         self.left = other.left
         self.last_selection = other.last_selection
         jumps.restore_from(other.jumps)
+        self.alternate = other.alternate
       end
 
       # The gutter is the sign column, two cells while the buffer has

@@ -1,6 +1,7 @@
 require_relative "../../domain/editor_state"
 require_relative "../files/open_file"
 require_relative "../../domain/messages"
+require_relative "../../domain/buffer_list"
 require_relative "../files/save_file"
 require_relative "../files/save_all"
 require_relative "../files/quit"
@@ -13,22 +14,25 @@ module Carat
     # The ex commands that write, quit, and edit files: :w, :wq, :x, :wa,
     # :wqa, :xa, :q, :qa, and :e, with their bang and argument. The "all"
     # commands act on every buffer in the list, across every tab page.
+    # ":e #" edits the file of the window's alternate buffer.
     class FileCommandHandler < ExHandler
       # @rbs @save_file: SaveFile
       # @rbs @save_all: SaveAll
       # @rbs @quit: Quit
       # @rbs @quit_all: QuitAll
       # @rbs @open_file: OpenFile
+      # @rbs @buffers: Domain::BufferList
       # @rbs @variant: Symbol
 
-      #: (spec: String, save_file: SaveFile, save_all: SaveAll, quit: Quit, quit_all: QuitAll, open_file: OpenFile, variant: Symbol) -> void
-      def initialize(spec:, save_file:, save_all:, quit:, quit_all:, open_file:, variant:)
+      #: (spec: String, save_file: SaveFile, save_all: SaveAll, quit: Quit, quit_all: QuitAll, open_file: OpenFile, buffers: Domain::BufferList, variant: Symbol) -> void
+      def initialize(spec:, save_file:, save_all:, quit:, quit_all:, open_file:, buffers:, variant:)
         super(spec: spec)
         @save_file = save_file
         @save_all = save_all
         @quit = quit
         @quit_all = quit_all
         @open_file = open_file
+        @buffers = buffers
         @variant = variant
       end
 
@@ -49,13 +53,13 @@ module Carat
 
       # Registers the file commands in the order of docs/compatibility.md,
       # which is their order of precedence.
-      #: (ExTable, save_file: SaveFile, save_all: SaveAll, quit: Quit, quit_all: QuitAll, open_file: OpenFile) -> void
-      def self.register(table, save_file:, save_all:, quit:, quit_all:, open_file:)
+      #: (ExTable, save_file: SaveFile, save_all: SaveAll, quit: Quit, quit_all: QuitAll, open_file: OpenFile, buffers: Domain::BufferList) -> void
+      def self.register(table, save_file:, save_all:, quit:, quit_all:, open_file:, buffers:)
         specs = ["w[rite]", "q[uit]", "wq", "x[it]", "exi[t]", "wa[ll]", "qa[ll]", "quita[ll]", "wqa[ll]", "xa[ll]", "e[dit]"]
         variants = [:write, :quit, :write_quit, :exit, :exit, :write_all, :quit_all, :quit_all, :write_quit_all, :write_quit_all, :edit]
         i = 0
         while i < specs.length
-          table.register(FileCommandHandler.new(spec: specs[i], save_file: save_file, save_all: save_all, quit: quit, quit_all: quit_all, open_file: open_file, variant: variants[i]))
+          table.register(FileCommandHandler.new(spec: specs[i], save_file: save_file, save_all: save_all, quit: quit, quit_all: quit_all, open_file: open_file, buffers: buffers, variant: variants[i]))
           i += 1
         end
       end
@@ -91,6 +95,12 @@ module Carat
       #: (Domain::EditorState, Domain::ExCommand) -> Outcome
       def edit(state, command)
         path = command.args.empty? ? state.buffer.path : command.args
+        if path == "#"
+          alternate = @buffers.alternate_of(state.window)
+          return Outcome.failure("E194: No alternate file name to substitute for '#'") if alternate.nil?
+          path = alternate.path
+          return Outcome.failure("E499: Empty file name for '%' or '#', only works with \":p:h\"") if path.nil?
+        end
         return Outcome.failure("E32: No file name") if path.nil?
         return Outcome.failure(Domain::Messages::E37) if state.buffer.modified? && !command.bang
         @open_file.call(state, path)

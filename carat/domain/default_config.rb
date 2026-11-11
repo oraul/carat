@@ -110,6 +110,7 @@ module Carat
       keymap.normal H motion.screen_top
       keymap.normal M motion.screen_middle
       keymap.normal L motion.screen_bottom
+      keymap.normal % motion.match_pair
       keymap.normal d operator.delete
       keymap.normal c operator.change
       keymap.normal y operator.yank
@@ -215,6 +216,7 @@ module Carat
       keymap.normal <leader>bb buffer.list
       keymap.normal <leader>bn buffer.next
       keymap.normal <leader>bp buffer.previous
+      keymap.normal <C-^> buffer.alternate
       keymap.normal <leader>bd buffer.delete
       keymap.normal <leader>dp docs.pin
       keymap.normal <leader>dd definition.peek
@@ -304,6 +306,7 @@ module Carat
       keymap.visual H motion.screen_top
       keymap.visual M motion.screen_middle
       keymap.visual L motion.screen_bottom
+      keymap.visual % motion.match_pair
       keymap.visual "\"" register.select
       keymap.visual o visual.swap_ends
       keymap.visual O visual.swap_corner
@@ -430,6 +433,7 @@ module Carat
       keymap.visual_line H motion.screen_top
       keymap.visual_line M motion.screen_middle
       keymap.visual_line L motion.screen_bottom
+      keymap.visual_line % motion.match_pair
       keymap.visual_line "\"" register.select
       keymap.visual_line o visual.swap_ends
       keymap.visual_line O visual.swap_corner
@@ -556,6 +560,7 @@ module Carat
       keymap.visual_block H motion.screen_top
       keymap.visual_block M motion.screen_middle
       keymap.visual_block L motion.screen_bottom
+      keymap.visual_block % motion.match_pair
       keymap.visual_block "\"" register.select
       keymap.visual_block o visual.swap_ends
       keymap.visual_block O visual.swap_corner
@@ -678,6 +683,7 @@ module Carat
       keymap.operator_pending H motion.screen_top
       keymap.operator_pending M motion.screen_middle
       keymap.operator_pending L motion.screen_bottom
+      keymap.operator_pending % motion.match_pair
       keymap.operator_pending d operator.delete
       keymap.operator_pending c operator.change
       keymap.operator_pending y operator.yank

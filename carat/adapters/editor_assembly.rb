@@ -438,7 +438,7 @@ module Carat
         @follow_definition = UseCases::FollowDefinition.new(definition: @definition, close_float: @close_float)
         @walk_jumps = UseCases::WalkJumps.new(buffers: @buffers)
 
-        UseCases::FileCommandHandler.register(@commands, save_file: @save_file, save_all: @save_all, quit: @quit, quit_all: @quit_all, open_file: @open_file)
+        UseCases::FileCommandHandler.register(@commands, save_file: @save_file, save_all: @save_all, quit: @quit, quit_all: @quit_all, open_file: @open_file, buffers: @buffers)
         UseCases::WindowCommandHandler.register(@commands, split_window: @split_window, close_window: @close_window, close_other_windows: @close_other_windows)
         UseCases::TabCommandHandler.register(@commands, open_tab: @open_tab, close_tab: @close_tab, close_other_tabs: @close_other_tabs, switch_tab: @switch_tab)
         UseCases::BufferCommandHandler.register(@commands, list_buffers: @list_buffers, switch_buffer: @switch_buffer, delete_buffer: @delete_buffer)

@@ -6,7 +6,8 @@ require_relative "buffer_request"
 
 module Carat
   module UseCases
-    # :bn, :bp, :bN, :bfirst, :blast, and :b N: shows another listed file
+    # :bn, :bp, :bN, :bfirst, :blast, :b N, and Ctrl-^, the window's
+    # alternate buffer (E23 without one): shows another listed file
     # buffer in the current window, as the request says, with the cursor
     # where a window last left it, the position left joining the window's
     # jump list. The buffer the window showed stays listed, hidden. A
@@ -16,7 +17,8 @@ module Carat
     # do_buffer answers.
     class SwitchBuffer
       E85 = "E85: There is no listed buffer"
-      private_constant :E85
+      E23 = "E23: No alternate file"
+      private_constant :E85, :E23
 
       attr_reader :buffers #: Domain::BufferList
 
@@ -32,6 +34,9 @@ module Carat
         if request.target == :number
           found = @buffers.with_id(request.count)
           return Outcome.failure("E86: Buffer #{request.count} does not exist") if found.nil? || found.scratch?
+        elsif request.target == :alternate
+          found = @buffers.alternate_of(state.window)
+          return Outcome.failure(E23) if found.nil?
         elsif request.target == :first || request.target == :last
           found = request.target == :first ? @buffers.first_file : @buffers.last_file
           return Outcome.failure(E85) if found.nil?

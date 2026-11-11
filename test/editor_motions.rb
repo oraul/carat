@@ -91,7 +91,16 @@ module EditorMotionsTest
       ["} without another empty line goes to the end", ["a\nb\n\nc\nd\n", [0, 0], "}}"], [4, 0]],
       ["{ goes back to the empty line", ["a\nb\n\nc\nd\n", [0, 0], "}}{"], [2, 0]],
       ["{ without an empty line goes to the start", ["a\nb\n", [1, 0], "{"], [0, 0]],
-      ["2} counts paragraphs", ["a\n\nb\n\nc\n", [0, 0], "2}"], [3, 0]]
+      ["2} counts paragraphs", ["a\n\nb\n\nc\n", [0, 0], "2}"], [3, 0]],
+      # The match-pair motion.
+      ["Percent goes to the matching bracket", ["x (a (b) c) y\n", [0, 0], "%"], [0, 10]],
+      ["Percent goes back from a closing bracket", ["f {\n  g\n}\n", [2, 0], "%"], [0, 2]],
+      ["Percent without a bracket does nothing", ["ab (c) d\n", [0, 6], "%"], [0, 6]],
+      ["Percent counts only its own kind", ["[ ( ] )\n", [0, 0], "%"], [0, 4]],
+      ["Percent without a match does nothing", ["a (b\nc\n", [0, 0], "%"], [0, 0]],
+      ["Percent after a multibyte character", ["\u00e9(x)\n", [0, 0], "%"], [0, 3]],
+      ["A count goes to that percent of the buffer", ["a\nb\nc\nd\ne\nf\ng\nh\ni\nj\n", [0, 0], "50%"], [4, 0]],
+      ["A count over 100 does nothing", ["a\nb\n", [0, 0], "101%"], [0, 0]]
     ]) do |input|
       h = editor(input[0], 0)
       h.state.cursor.move_to(input[1][0], input[1][1])
@@ -135,6 +144,11 @@ module EditorMotionsTest
     h.type("+")
     h.type("j")
     t.assert_equal([2, 0], h.cursor, "+ sets the wanted column")
+
+    # Scenario "Percent under an operator is inclusive".
+    h = editor("f(a, b) x\n", 0)
+    h.type("ld%")
+    t.assert_equal("f x", h.buffer.line(0), "Percent under an operator is inclusive")
 
     t.finish
   end

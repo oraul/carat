@@ -44,12 +44,14 @@ module Carat
 
       private
 
-      # A range alone: the cursor to its last line.
+      # A range alone: the cursor to its last line, recording the position
+      # left in the window's jump list.
       #: (Domain::EditorState, String) -> Outcome
       def go_to(state, range)
         cursor = state.cursor
         lines = Domain::ExRange.resolve(range, cursor.row, state.buffer.line_count, state.window.last_selection)
         return Outcome.failure(lines.error) unless lines.ok?
+        state.window.record_jump
         cursor.row = lines.last
         cursor.col = Domain::Motions.wanted_col(state, lines.last)
         Outcome.none
