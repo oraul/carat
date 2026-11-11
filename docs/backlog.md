@@ -4507,7 +4507,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## pr-by-tag quality advisory at openspec/changes/pr-by-tag/design.md:22
 
-- Where: `openspec/changes/pr-by-tag/design.md:22`, now under openspec/changes/archive/2026-11-11-pr-by-tag/. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Where: `openspec/changes/archive/2026-11-11-pr-by-tag/design.md:22`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
 - Why it matters: the bootstrap says the user opens the pull request by hand and resumes, but the unconsumed tag pr/chore/pr-by-tag stays on origin, so the resumed package step's pr_tag.sh push and wait both refuse and the run stops again.
 - Fix outline: say the user also deletes the tag on origin, or records the number with tools/run_state.sh set pr-by-tag pr N before resuming.
 
