@@ -208,6 +208,9 @@ commit "chore: a fast list"
 expect "run_state: check runs make stages once main has a fast list" 0 "every stage passed" \
   env BASE=HEAD MAKE="$work/bin/fake-make" FAIL_B=2 sh "$here/run_state.sh" check state
 expect "make: every fast stage is a check stage" 0 "^none$" sh -c 'm="$1/../Makefile"; all=" $(sed -n "s/^CHECK_STAGES := //p" "$m") "; out=; for s in $(sed -n "s/^FAST_STAGES := //p" "$m"); do case "$all" in *" $s "*) ;; *) out="$out $s" ;; esac; done; [ -n "$(sed -n "s/^FAST_STAGES := //p" "$m")" ] && echo "${out:-none}"' _ "$here"
+# CI skips a change only under .claude/ (tools/ci_scope.sh), whose agent and
+# workflow files tools-test reads, so the checker runs tools-test.
+expect "make: the fast list keeps tools-test, which CI skips for agent and workflow files" 0 "tools-test" sh -c 'sed -n "s/^FAST_STAGES := //p" "$1/../Makefile" | tr " " "\\n" | grep -x tools-test' _ "$here"
 # A stage record counts only at the commit the workflow backs: one at HEAD
 # without it, which any agent could have written, runs again.
 expect "run_state: check runs a stage recorded at the head that no commit backs" 0 "^stage a: exit 0" \

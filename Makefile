@@ -93,10 +93,12 @@ UNIT_SUMMARY := awk '/^spinel-timing: phase=analysis / { a = $$3 } /^spinel-timi
 CHECK_STAGES := doctor docs-lint build dev-build config-current test-build test-run diagnose no-cruby bench-budget metrics tools-test gates
 # The checker's stages (delivery-speed), which make stages prints and
 # tools/run_state.sh check runs each through make check-stage S=NAME: the
-# two CI leaves out, the tests, and the measurement the benchmark phase
-# compares with main's (metrics and the builds it reads). Every other stage
-# runs once, in CI, on every pull request.
-FAST_STAGES := docs-lint dev-build test-build test-run diagnose bench-budget metrics gates
+# two CI leaves out, the tests, the measurement the benchmark phase
+# compares with main's (metrics and the builds it reads), and tools-test,
+# since tools/ci_scope.sh skips CI for a change only under .claude/, whose
+# agent and workflow files tools-test reads. Every other stage runs once,
+# in CI, on every pull request.
+FAST_STAGES := docs-lint dev-build test-build test-run diagnose bench-budget metrics tools-test gates
 # The measurement make metrics writes from the builds of dev-build,
 # test-build, and bench-budget (tools/metrics.sh), and the base make
 # metrics-compare compares it with: tools/run_state.sh bench writes the last
