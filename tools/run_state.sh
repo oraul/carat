@@ -1290,12 +1290,11 @@ backlog_dups() {
     END { for (at in n) if (n[at] > 1) print at ": " h[at] }' "$backlog_file" | sort
 }
 
-# The backlog entry under the heading line $1, printed whole: from the
+# Every backlog entry under the heading line $1, printed whole: from the
 # heading to the next heading of any level, as each entry stands alone.
 backlog_entry() {
   H="$1" awk '
-    $0 == ENVIRON["H"] { on = 1; print; next }
-    on && /^#+ / { exit }
+    /^#+ / { on = ($0 == ENVIRON["H"]) }
     on { print }' "$backlog_file"
 }
 
@@ -1325,8 +1324,11 @@ sprint_row() {
 }
 
 # Applies a waiting sprint plan, every line of groom.txt checked before
-# anything is written; a security entry (any line naming security) leaves
-# only by a merged item's listed heading or its fixing commit.
+# anything is written. A listed or fixed heading loses every entry under
+# it; a duplicate heading that stands more than once keeps its first entry,
+# one that stands once needs another heading at its location
+# (backlog-dups). A security entry (any line naming security) leaves only
+# by a merged item's listed heading or its fixing commit.
 groom() {
   if ! sprint_waiting; then echo "groom: no sprint plan waits in $plan_dir/"; return 0; fi
   sprint_state
@@ -1334,6 +1336,7 @@ groom() {
   rows=$(awk -F'\t' -v c="$prev_last" 'seen && NF { n++ } $1 == c { seen = 1 } END { print n + 0 }' "$metrics_file")
   [ "$rows" -ge "$SPRINT_SIZE" ] || die "groom: sprint-$sprint_n has $rows of $SPRINT_SIZE history rows; run history first"
   removals=""
+  repeats=""
   if [ -f "$plan_dir/groom.txt" ]; then
     while IFS= read -r line || [ -n "$line" ]; do
       [ -n "$line" ] || continue
@@ -1344,8 +1347,8 @@ groom() {
         duplicate) word=""; heading=$rest ;;
         *) die "groom: not a groom line: $line" ;;
       esac
-      [ "$(grep -c -x -F -e "$heading" "$backlog_file")" -eq 1 ] && valid '#{2,3} .+' "$heading" ||
-        die "groom: not one heading line of $backlog_file: $heading"
+      stands=$(grep -c -x -F -e "$heading" "$backlog_file")
+      [ "$stands" -ge 1 ] && valid '#{2,3} .+' "$heading" || die "groom: not a heading line of $backlog_file: $heading"
       case "$kind" in
         listed)
           valid '[a-z0-9][a-z0-9-]*' "$word" && ls -d openspec/changes/archive/*-"$word" > /dev/null 2>&1 ||
@@ -1356,7 +1359,14 @@ groom() {
         duplicate)
           if backlog_entry "$heading" | grep -q -i security; then
             die "groom: a security entry leaves only by a merged item's heading or its fixing commit: $heading"
-          fi ;;
+          fi
+          if [ "$stands" -gt 1 ]; then
+            repeats="$repeats$heading
+"
+            continue
+          fi
+          at=$(printf '%s\n' "$heading" | grep -o -E '[A-Za-z0-9_./-]+[.][A-Za-z]+:[0-9]+' | head -1)
+          [ -n "$at" ] && backlog_dups | grep -q -F -e "$at: " || die "groom: no other heading names the location of: $heading" ;;
       esac
       removals="$removals$heading
 "
@@ -1364,13 +1374,16 @@ groom() {
   fi
   [ ! -f "$plan_dir/queue.md" ] || cp "$plan_dir/queue.md" docs/queue.md
   tmp=$(mktemp "$backlog_file.XXXXXX") || die "groom: no temporary file"
-  R="$removals" awk '
-    BEGIN { n = split(ENVIRON["R"], r, "\n"); for (i = 1; i <= n; i++) if (r[i] != "") gone[r[i]] = 1 }
-    /^#+ / { skip = ($0 in gone) }
+  R="$removals" D="$repeats" awk '
+    BEGIN {
+      n = split(ENVIRON["R"], r, "\n"); for (i = 1; i <= n; i++) if (r[i] != "") gone[r[i]] = 1
+      n = split(ENVIRON["D"], d, "\n"); for (i = 1; i <= n; i++) if (d[i] != "") repeat[d[i]] = 1
+    }
+    /^#+ / { seen[$0]++; skip = ($0 in gone) || (($0 in repeat) && seen[$0] > 1) }
     !skip { print }' "$backlog_file" > "$tmp" && mv "$tmp" "$backlog_file" || { rm -f "$tmp"; die "groom: $backlog_file not rewritten"; }
   [ ! -f "$plan_dir/groomed.md" ] || cat "$plan_dir/groomed.md" >> "$backlog_file"
   sprint_row >> "$sprints_file"
-  echo "groom: applied sprint-$sprint_n: $(printf '%s' "$removals" | grep -c .) entries removed, its row appended to $sprints_file"
+  echo "groom: applied sprint-$sprint_n: $(printf '%s' "$removals$repeats" | grep -c .) headings groomed, its row appended to $sprints_file"
 }
 
 # Whether the queue needs the planner before the change starts: needed
