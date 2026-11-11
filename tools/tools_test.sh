@@ -1372,8 +1372,6 @@ expect "guard: a risky configuration key refuses every call" 2 "every call while
 git_q config --unset core.hooksPath
 expect "guard: the guard's risky keys are the gates'" 0 "^same$" \
   sh -c '[ "$(grep "^RISKY_CONFIG=" "$1/agent_guard.sh")" = "$(grep "^RISKY_CONFIG=" "$1/rules.sh")" ] && echo same' _ "$here"
-expect "guard: the guard's hooks path and hook names are the gates'" 0 "^same$" \
-  sh -c 'for v in HOOKS_PATH HOOK_FILES_RE; do [ "$(grep "^$v=" "$1/agent_guard.sh")" = "$(grep "^$v=" "$1/rules.sh")" ] || exit 1; done; echo same' _ "$here"
 cd "$work" || exit 1
 
 # ---------------------------------------------------------- docs_lint.sh
@@ -1650,11 +1648,6 @@ fresh binary
 printf 'see %s\000\n' "$LINK" > data.bin
 commit "chore: add a binary file"
 expect "gates: content notes a binary file and does not read it" 0 "note: data[.]bin: a binary file, not scanned" gates content
-fresh hookadd
-mkdir -p .githooks
-echo "exit 0" > .githooks/post-checkout
-commit "chore: add a hook"
-expect "gates: content refuses an added hook under .githooks but commit-msg and pre-commit" 1 "FAIL content: an added hook under [.]githooks other than" gates content
 
 # ------------------------------------------------------------ scan_text.sh
 # The one scanner: each URL form, an address, a session id, the two
@@ -1699,25 +1692,31 @@ expect "scan_text: names the model name and the secret by label" 1 "^stdin:2: se
 aws_id = $AWS_KEY"
 expect "scan_text: refuses an unknown option" 2 "Usage: sh tools/scan_text.sh" sh "$here/scan_text.sh" --nope
 
-# ----------------------------------------------------- .githooks, pr_scan.sh
-# The commit hooks, installed as make hooks installs them, in a temporary
-# repository with the scanner beside them.
-fresh hooked
-cp "$here/scan_text.sh" "$here/rules.sh" tools/
-cp -R "$here/../.githooks" .
-commit "chore: add the hooks"
-expect "hooks: make hooks sets core.hooksPath to the absolute .githooks of the main worktree" 0 "^/.*/hooked/[.]githooks$" \
-  sh -c 'make -s -f "$1/../Makefile" hooks >/dev/null && git config core.hooksPath' _ "$here"
-echo x >> README.md
-git_q add -A
-expect "hooks: commit-msg refuses a message with a URL" 1 "commit-msg: the message holds" git_q commit -q -m "chore: see $LINK" -m "$TRAILER"
-echo "see $LINK" >> README.md
-git_q add -A
-expect "hooks: pre-commit refuses a staged line with a URL" 1 "README[.]md:[0-9]+: url: " git_q commit -q -m "chore: add a line" -m "$TRAILER"
-git_q reset -q --hard
-echo y >> README.md
-git_q add -A
-expect "hooks: a clean commit passes both hooks" 0 "" git_q commit -q -m "chore: add a clean line" -m "$TRAILER"
+# ------------------------------------------------- make toolchain, pr_scan.sh
+# make toolchain installs no commit hooks: in a clone, with a local stand-in
+# for the Spinel sources, it leaves core.hooksPath unset, and the Makefile
+# has no hooks target and sets core.hooksPath nowhere.
+cd "$work" || exit 1
+rm -rf fakespinel
+git_q init -q fakespinel
+mkdir -p fakespinel/lib
+: > fakespinel/lib/.keep
+printf 'all:\n\t@true\ndeps:\n\t@true\ninstall:\n\t@true\n' > fakespinel/Makefile
+git_q -C fakespinel add -A
+git_q -C fakespinel commit -q -m "chore: a stand-in" -m "$TRAILER"
+fresh tooled
+mkdir -p tools/spinel
+: > tools/spinel/spinel_rt_responds_generated.h
+commit "chore: the vendored header"
+git_q clone -q "$work/tooled" "$work/tooled-clone"
+git_q -C "$work/tooled-clone" checkout -q chore/tooled
+git_q init -q "$work/tooled-src"
+git_q -C "$work/tooled-src" remote add origin "$work/fakespinel"
+expect "toolchain: a clone after make toolchain has no core.hooksPath" 0 "^unset$" \
+  sh -c 'cd "$2" && make -s -f "$1/../Makefile" toolchain SPINEL_SRC="$3" SPINEL_REF=main PREFIX="$4" >/dev/null 2>&1 &&
+    { git config --get-all core.hooksPath || echo unset; }' _ "$here" "$work/tooled-clone" "$work/tooled-src" "$work/tooled-prefix"
+expect "toolchain: the Makefile has no hooks target and sets no core.hooksPath" 0 "^none$" \
+  sh -c '! grep -q -E "^hooks:|hooksPath" "$1/../Makefile" && ! [ -e "$1/../.githooks" ] && echo none' _ "$here"
 
 # The pull request scan of .github/workflows/scan.yml, with a sample title,
 # body, and branch, and no network.
@@ -1743,7 +1742,23 @@ expect "repository: the scan workflow runs on every pull request edit with read-
   sh -c 'f="$1/../.github/workflows/scan.yml"
     grep -q -x "    types: \[opened, edited, reopened, synchronize\]" "$f" && grep -q -x "  contents: read" "$f" &&
     ! grep -q -E "^ *pull_request_target:|: write" "$f" && ! grep -q -E "^ *run:.*[$][{][{]" "$f" &&
-    grep -q -x "        run: sh tools/pr_scan.sh" "$f" && echo good' _ "$here"
+    grep -q -x "        run: sh ../base/tools/pr_scan.sh" "$f" && echo good' _ "$here"
+# The scan runs the base commit's scanner, checked out to its own path
+# without credentials, over the head's repository, so a pull request that
+# makes its own scanner pass everything is still read by the base's.
+fresh prscan3
+printf '#!/bin/sh\ncat >/dev/null\nexit 0\n' > tools/scan_text.sh
+cp tools/scan_text.sh tools/pr_scan.sh
+echo "see $LINK" >> README.md
+commit "chore: a scanner that passes everything"
+expect "pr_scan: the base's scanner reads a head that replaces the scanner" 1 "^README[.]md:[0-9]+: url: " prscan "chore: clean" "## Summary"
+expect "repository: the scan workflow checks out the base's scanner to its own path, without credentials, and runs it in the head" 0 "^good$" \
+  sh -c 'f="$1/../.github/workflows/scan.yml"
+    awk "/^      - name:/ { step = \$0 } /ref: [$][{][{] github.event.pull_request.base.sha [}][}]\$/ { print step }" "$f" | grep -q "the base" &&
+    awk "/^      - name:/ { n++ } n == 1" "$f" | grep -q -x "          path: base" &&
+    awk "/^      - name:/ { n++ } n == 1" "$f" | grep -q -x "          persist-credentials: false" &&
+    awk "/^      - name:/ { n++ } n == 2" "$f" | grep -q -x "          path: head" &&
+    awk "/^      - name:/ { n++ } n == 3" "$f" | grep -q -x "        working-directory: head" && echo good' _ "$here"
 
 fresh docs
 echo new > tools/new.sh
@@ -1952,42 +1967,19 @@ git_q config core.fsmonitor "touch planted"
 expect "gates: origin refuses a key that runs a command" 1 "FAIL origin: the repository configuration sets core.fsmonitor" gates origin
 expect "gates: pre-push runs the origin gate" 1 "FAIL origin: the repository configuration sets core.fsmonitor" gates pre-push
 git_q config --unset core.fsmonitor
-abs_hooks=$(git rev-parse --path-format=absolute --git-common-dir)
-abs_hooks=${abs_hooks%/*}/.githooks
-git_q config core.hooksPath "$abs_hooks"
+# Any core.hooksPath is refused, the absolute path of a tracked .githooks
+# included, so git runs no hook that a checkout of a branch can write.
 mkdir -p .githooks
-: > .githooks/commit-msg
-: > .githooks/pre-commit
-expect "gates: origin allows core.hooksPath as the tracked .githooks" 0 "ok   origin: the configuration sets no risky key and no hook$" gates origin
-expect "guard: core.hooksPath as the tracked .githooks passes" 0 "" \
+printf '#!/bin/sh\ntouch planted\n' > .githooks/post-checkout
+git_q config core.hooksPath "$PWD/.githooks"
+expect "gates: origin refuses any core.hooksPath, a tracked .githooks included" 1 "FAIL origin: the repository configuration sets core.hookspath" gates origin
+expect "guard: any core.hooksPath, a tracked .githooks included, refuses every call" 2 "every call while the repository configuration sets core.hookspath" \
   env PROJECT="$PWD" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
-# A linked worktree uses the main worktree's checked .githooks, never a
-# hook planted in its own, and its gate and guard read the same directory.
-git_q commit -q --allow-empty -m "chore: a base for the worktree" -m "$TRAILER"
-git_q worktree add -q --detach "$work/origined-wt" HEAD
-mkdir -p "$work/origined-wt/.githooks"
-printf '#!/bin/sh\ntouch "%s"\n' "$work/origined-ran" > "$work/origined-wt/.githooks/post-checkout"
-chmod +x "$work/origined-wt/.githooks/post-checkout"
-expect "hooks: a linked worktree runs no hook planted in its own .githooks" 0 "^absent$" \
-  sh -c 'git -C "$1" checkout -q --detach HEAD && { [ -e "$2" ] && echo ran || echo absent; }' _ "$work/origined-wt" "$work/origined-ran"
-expect "gates: origin in a linked worktree reads the main worktree's .githooks" 0 "ok   origin: the configuration sets no risky key and no hook$" \
-  sh -c 'cd "$1" && BASE=main STAGES=lint sh "$2/gates.sh" origin' _ "$work/origined-wt" "$here"
-expect "guard: a linked worktree as the project reads the main worktree's .githooks" 0 "" \
-  env PROJECT="$work/origined-wt" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
-git_q worktree remove --force "$work/origined-wt"
-rm -f "$work/origined-ran"
 git_q config core.hooksPath .githooks
 expect "gates: origin refuses the relative core.hooksPath .githooks" 1 "FAIL origin: the repository configuration sets core.hookspath" gates origin
 expect "guard: the relative core.hooksPath .githooks refuses every call" 2 "every call while the repository configuration sets core.hookspath" \
   env PROJECT="$PWD" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
-git_q config core.hooksPath "$abs_hooks"
-: > .githooks/post-checkout
-expect "gates: origin refuses a hook in .githooks but commit-msg and pre-commit" 1 "FAIL origin: [.]githooks holds post-checkout" gates origin
-expect "guard: a hook in .githooks but commit-msg and pre-commit refuses every call" 2 "every call while [.]githooks holds post-checkout" \
-  env PROJECT="$PWD" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
 rm -rf .githooks
-git_q config core.hooksPath hooks
-expect "gates: origin refuses core.hooksPath other than .githooks" 1 "FAIL origin: the repository configuration sets core.hookspath" gates origin
 git_q config --unset core.hooksPath
 git_q config "url.$work/fake.git.insteadOf" "$work/origined.git"
 expect "gates: origin refuses a rewritten origin address" 1 "FAIL origin: the repository configuration sets url[.].*[.]insteadof" gates origin

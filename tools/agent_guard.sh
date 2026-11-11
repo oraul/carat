@@ -844,14 +844,6 @@ redirect() {
 # which branch code run by the checks can write, every call is refused, so
 # no git command an agent runs starts a command the branch chose.
 RISKY_CONFIG='^(core\.(fsmonitor|hookspath|sshcommand|gitproxy|pager|editor|askpass|alternaterefscommand|worktree)|diff\.external|diff\..+\.(textconv|command)|filter\..+|merge\..+\.driver|sequence\.editor|credential\..+|gpg\..+|uploadpack\..+|url\..+\.(insteadof|pushinsteadof)|remote\.origin\.(pushurl|uploadpack|receivepack|proxy|vcs)|http\..+|protocol\..+|include\..+|includeif\..+|extensions\.worktreeconfig)$'
-# The tracked hooks directory and the only files it may hold: a copy of
-# HOOKS_PATH and HOOK_FILES_RE in tools/rules.sh (the same case keeps them
-# equal). The one core.hooksPath allowed is its absolute path in the main
-# worktree, the parent of --git-common-dir, as make hooks sets it: git
-# reads a relative value from the top of whichever worktree it runs in,
-# so a linked worktree tmp/.NAME would run its own unchecked .githooks.
-HOOKS_PATH='.githooks'
-HOOK_FILES_RE='^(commit-msg|pre-commit)$'
 # The guard's git reads no global or system configuration, which branch
 # code can write too (a global insteadOf would answer for a fake origin).
 GIT_CONFIG_GLOBAL=/dev/null
@@ -859,11 +851,7 @@ GIT_CONFIG_NOSYSTEM=1
 export GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM
 project_dir=${CLAUDE_PROJECT_DIR:-.}
 git_common=$(git -C "$project_dir" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)
-tracked_hooks=${git_common:+${git_common%/*}/$HOOKS_PATH}
-risky=$(git -C "$project_dir" config --local --name-only --list 2>/dev/null | grep -i -E "$RISKY_CONFIG" | sort -u)
-[ -z "$tracked_hooks" ] || [ "$(git -C "$project_dir" config --local --get-all core.hooksPath 2>/dev/null)" != "$tracked_hooks" ] ||
-  risky=$(printf '%s\n' "$risky" | grep -v -i -x 'core[.]hookspath')
-risky=$(printf '%s\n' "$risky" | grep . | tr '\n' ' ')
+risky=$(git -C "$project_dir" config --local --name-only --list 2>/dev/null | grep -i -E "$RISKY_CONFIG" | sort -u | tr '\n' ' ')
 [ -z "$risky" ] || refuse "every call while the repository configuration sets ${risky% }, which runs a command or redirects origin"
 # A fetch refspec other than a clone's maps another ref onto origin/main,
 # whose guard the hooks and whose gates the merge read: every call is
@@ -872,14 +860,12 @@ fetch_spec=$(git -C "$project_dir" config --local --get-all remote.origin.fetch 
 [ -z "$fetch_spec" ] || [ "$fetch_spec" = "$DEFAULT_FETCH" ] ||
   refuse "every call while remote.origin.fetch is \"$(printf '%s' "$fetch_spec" | tr '\n' ' ')\", not $DEFAULT_FETCH; restore it with git config"
 # A hook in the hooks directory runs on a checkout, a fetch, or a commit
-# as surely as a configured one: while one other than a sample is there,
-# or one but commit-msg and pre-commit in the main worktree's HOOKS_PATH,
-# every call is refused.
+# as surely as a configured one: while one other than a sample is in the
+# common git directory's hooks folder, every call is refused (any
+# core.hooksPath is refused above).
 hooks=${git_common:+$git_common/hooks}
 planted=$([ -z "$hooks" ] || ! [ -d "$hooks" ] || ls -A "$hooks" | grep -v -E "[.]sample\$" | tr "\n" " "; true)
 [ -z "$planted" ] || refuse "every call while the hooks directory holds ${planted% }, which git runs; remove it"
-extra=$([ -z "$tracked_hooks" ] || ! [ -d "$tracked_hooks" ] || ls -A "$tracked_hooks" | grep -v -E "$HOOK_FILES_RE" | tr "\n" " "; true)
-[ -z "$extra" ] || refuse "every call while $HOOKS_PATH holds ${extra% }, which git would run; only commit-msg and pre-commit belong there"
 
 # The merge tool, for the merger only: a squash whose expected head (sha,
 # all 40 digits) exactly one run state under build/pipeline/ names, holding
