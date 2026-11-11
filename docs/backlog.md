@@ -4462,3 +4462,75 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/gates.sh:489`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
 - Why it matters: the session-line pattern refuses any word session followed by a colon in a pull request body (for example 'the LSP session:'), a likely false positive for language server work.
 - Fix outline: anchor it to a line start or require the id, link, or url suffix.
+
+## pr-by-tag security Low at tools/pr_tag.sh:121
+
+- Where: `tools/pr_tag.sh:121`. Delivery review of `pr-by-tag` (security Low, confidence 5) at 742ba5f.
+- Why it matters: wait records the highest-numbered pull request whose head ref equals the pushed sha without checking that it comes from this repository's branch; once the tag is gone, a fork pull request on the same commit gets a higher number, is recorded in state.pr, and the merger then acts on the attacker's pull request with its title, body, and conversation.
+- Fix outline: have open-pr publish the number it created, for example in a ref or a tag annotation the contributor reads with git, or check the pull request's head repository and branch with pull_request_read before recording it instead of matching only refs/pull/*/head by sha.
+
+## pr-by-tag security Low at .github/workflows/open-pr.yml:36
+
+- Where: `.github/workflows/open-pr.yml:36`. Delivery review of `pr-by-tag` (security Low, confidence 4) at 742ba5f.
+- Why it matters: the tagged-commit checkout keeps the default persist-credentials true, so the head code later steps run can read the GITHUB_TOKEN stored in head/.git/config; its permission is only contents read, but it hands the branch a credential it does not need.
+- Fix outline: set persist-credentials false on the head checkout, as the main checkout already does; fetch the tag with an explicit token only in the step that needs it, or keep the fetch-depth 0 clone, which already contains the tag.
+
+## pr-by-tag quality advisory at .github/workflows/open-pr.yml:40
+
+- Where: `.github/workflows/open-pr.yml:40`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Why it matters: the comment says a branch cannot weaken the checks of its own title and body, but the workflow file and the tools/pr_tag.sh that calls main's gates are the tagged commit's, so a branch can skip them.
+- Fix outline: reword it to say main's gates sit beside the scan workflow's base-commit scanner, as design.md Risks already admits.
+
+## pr-by-tag quality advisory at tools/pr_tag.sh:116
+
+- Where: `tools/pr_tag.sh:116`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Why it matters: wait does not check the run state's branch against BRANCH_RE as push does; an empty branch makes the tag pr/ and grep -F then matches any pr/ tag on origin.
+- Fix outline: add the same matches "$branch" "$BRANCH_RE" refusal as push.
+
+## pr-by-tag quality advisory at .claude/agents/contributor.md:22
+
+- Where: `.claude/agents/contributor.md:22`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Why it matters: 'tools/agent_guard.sh refuses both' now follows the two allowed pushes and reads as if the guard refused them.
+- Fix outline: say the guard refuses recording a phase or review and any other push.
+
+## pr-by-tag quality advisory at tools/run_state.sh:716
+
+- Where: `tools/run_state.sh:716`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Why it matters: CHECK_BIN repeats the Makefile's DEV_BIN path and the run_state.sh entry of docs/codebase-map.md does not name it.
+- Fix outline: name CHECK_BIN beside in_clone in the map entry, its comment naming DEV_BIN as the one source.
+
+## pr-by-tag quality advisory at tools/pr_tag.sh:125
+
+- Where: `tools/pr_tag.sh:125`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Why it matters: wait does not check the run state's branch against BRANCH_RE as push does; an empty branch makes the tag pr/ and grep -F then matches any pr/ tag on origin (the same finding as the entry at line 116).
+- Fix outline: add the same matches "$branch" "$BRANCH_RE" refusal as push.
+
+## pr-by-tag quality advisory at openspec/changes/pr-by-tag/design.md:22
+
+- Where: `openspec/changes/pr-by-tag/design.md:22`, now under openspec/changes/archive/2026-11-11-pr-by-tag/. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Why it matters: the bootstrap says the user opens the pull request by hand and resumes, but the unconsumed tag pr/chore/pr-by-tag stays on origin, so the resumed package step's pr_tag.sh push and wait both refuse and the run stops again.
+- Fix outline: say the user also deletes the tag on origin, or records the number with tools/run_state.sh set pr-by-tag pr N before resuming.
+
+## pr-by-tag quality advisory at tools/pr_tag.sh:96
+
+- Where: `tools/pr_tag.sh:96`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Why it matters: a continued package start that runs push while open-pr is still pending finds the tag on origin and is refused, and contributor.md step 4 gives no path but stop although wait would succeed.
+- Fix outline: in the contributor.md package step say that a push refused for a tag on origin is followed by wait, which stops only when it also fails.
+
+## pr-by-tag quality advisory at tools/agent_guard.sh:588
+
+- Where: `tools/agent_guard.sh:588`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Why it matters: the contributor keeps the permission tools/run_state.sh set CHANGE pr N (header line 66, test 'contributor pushes and opens the pull request'), though pr_tag.sh wait now records the number and the agent must never record a pull request another way.
+- Fix outline: drop contributor:pr and the header's set CHANGE pr N, and the set from that guard test.
+
+## pr-by-tag quality advisory at tools/pr_tag.sh:124
+
+- Where: `tools/pr_tag.sh:124`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Why it matters: WAIT_STEP=0 passes the check, so waited never grows and wait loops until a pull request appears, past its SECONDS bound.
+- Fix outline: require [1-9][0-9]{0,2}.
+
+## pr-by-tag quality advisory at tools/pr_tag.sh:131
+
+- Where: `tools/pr_tag.sh:131`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Why it matters: an ls-remote failure in wait becomes empty refs, so a wait that never read origin ends with 'no pull request's head is', naming the wrong cause.
+- Fix outline: remember the failure and refuse with 'origin cannot be read' as push does.
