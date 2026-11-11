@@ -2140,7 +2140,7 @@ expect "workflow: the metric line carries the profiles" 0 ' calib[.]scout=cheap/
 expect "workflow: a restart restores the recorded profiles of the kinds not used yet" 0 '^[{]"planner":"session/session","scout":"cheap/low"[}]$' \
   calib_js "(() => { calibrate('planner', {}); return restoreCalibration({ 'metric.calib.scout': 'cheap/low', 'metric.calib.planner': 'cheap/low', 'metric.calib.checker': 'cheap/high', 'metric.rework': '1' }, calibrated) })()"
 speed_js() {
-  js "$wf" "COMMIT CLOSABLE noteText staleRed findingAt reRaised settledRecords securityBlocking narrowedFrom" "$1"
+  js "$wf" "COMMIT CLOSABLE noteText staleRed findingAt reRaised securityBlocking narrowedFrom mergeRecords" "$1"
 }
 expect "workflow: a late finding becomes a shell-safe note" 0 '^"a [(]x[)] q y b"$' \
   speed_js 'noteText("a $(x) \"q\" `y` b")'
@@ -2155,8 +2155,10 @@ expect "workflow: no security finding is kept non-blocking by its location" 0 '^
 expect "workflow: a fix round narrows both reviews only from this start's pass" 0 '^\["abc1234","","","",""\]$' \
   speed_js '[narrowedFrom({ "review.quality": "pass abc1234" }, "quality", "def5678"), narrowedFrom({ "review.security": "pass def5678" }, "security", "def5678"), narrowedFrom({ "review.security": "blocked abc1234" }, "security", "def5678"), narrowedFrom({}, "quality", "def5678"), narrowedFrom({ "review.quality": "pass x" }, "quality", "def5678")]'
 expect "workflow: both reviews' scopes read this start's records" 0 '^2$' grep -c "narrowedFrom(ran, '" "$wf"
-expect "workflow: a settled resume trusts the recorded check and reviews" 0 '^\[[{]"phase.check":"abc1234","review.quality":"pass abc1234","review.security":"pass abc1234","review.bench":"pass abc1234"[}],null,null\]$' \
-  speed_js '[settledRecords({ "phase.check": "abc1234", "review.quality": "pass abc1234 blocking=0", "review.security": "pass abc1234", "review.bench": "pass abc1234" }, true), settledRecords({ "phase.check": "abc1234", "review.quality": "blocked abc1234", "review.security": "pass abc1234", "review.bench": "pass abc1234" }, true), settledRecords({ "phase.check": "abc1234" }, false)]'
+expect "workflow: a resume past the push builds no merge records from the run state" 0 '^\[\]$' \
+  speed_js 'mergeRecords({})'
+expect "workflow: only this start's verdicts enter its records" 0 '^only verdicts$' \
+  sh -c '[ "$(grep -c -E "ran\[" "$1")" = "$(grep -c -E "^  ran\[.(phase|review)[.]. [+] (name|kind)\] = |String[(]ran\[" "$1")" ] && ! grep -q -E "Object[.]assign[(]ran|settledRecords|gates[.]sh passed" "$1" && echo only verdicts' _ "$wf"
 expect "workflow: only check and review records need a record start" 0 '^\[true,false,false,true\]$' \
   speed_js '["sh tools/run_state.sh note c late-finding \"x (y) z\"", "sh tools/run_state.sh review c security pass \"high=0\" abc1234", "sh tools/run_state.sh phase c check abc1234", "sh tools/run_state.sh phase c implement abc1234"].map((l) => CLOSABLE.test(l))'
 expect "workflow: no record start runs at the close" 0 '^1$' grep -c 'await flush(' "$wf"

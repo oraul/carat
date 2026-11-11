@@ -14,7 +14,7 @@ A delivery takes 67 to 105 minutes and about 2M tokens (#99 to #102), and the us
 - A fix round's reviews cover the commits since the last passed review of the same start; a blocking quality finding at the location of an earlier advisory (a re-raise) is kept as an advisory. A security finding is never re-rated to non-blocking: the CLAUDE.md hard rule makes every High or Medium at confidence 8 or above in the change block, so item 6's re-rating applies to quality only.
 - The record agent start runs only when a check or review record is pending before a push or the merge gates, which read them and which only an unguarded start may write; every other record waits for the closing start, and the close's fallback record start is removed.
 - The pull request as created equals the gated body file: the contributor passes the file's text unchanged, compares the created body, and restores it; the pr-body gate refuses a session line. `.claude/settings.json` already sets no pull request text and no session link, so a footer the creation still adds comes from outside the repository; the Notes say what the user changes.
-- A resume trusts the check and reviews recorded at a commit when the pushed head's only later commits are records (`tools/gates.sh passed` exits 0), instead of running them again.
+- A resume past the push keeps running the check and every review again at the head: the brief's trust in the run state's records was dropped after the security review, and only the verdicts a start received build the merge gates' records or narrow a review.
 - A red CI only on the scan of the pull request body is fixed by a contributor `body` start (the body file corrected, gated, and set on the pull request, no commit, no push) and the merge continues without a fix round, once per run.
 
 Out of scope: the sprint model, the queue's self-contained items, the broad review at sprint end, and `docs/goals.md` (`sprint-planning`); CI caches (`ci-time`); the price-weighted measurement (decision 4). The queue's bookkeeping is the planner's `build/plan/queue.md`, copied in the package step.
@@ -23,7 +23,7 @@ Assumptions:
 
 - Item 2: the checker running fast stages is picked over the checker's pass standing for CI, since CI cannot see a local pass without trusting the run state and CI is never skipped for code; the evidence is the checker's 8 minutes against CI's 6 with both caches. The fast set keeps `metrics` and its builds because the benchmark phase reads the checker's measurement; it drops doctor, the release build, config-current, no-cruby, and tools-test, which CI runs on every pull request.
 - Item 7: the pre-push and merge gates read the check and review records, and the guard lets no guarded agent write them, so one record start stays where those records are pending before a push; removing it entirely would let a guarded agent write review records, which this change does not do. The start is removed everywhere else.
-- Item 9 trusts records of the run state, which branch code run by the checks can write; it is limited to records at a commit the merge gates' settled check accepts at the pushed head, and the merge gates still run main's copy.
+- Item 9 is not delivered: trusting the run state's records on a resume past the push would let records branch code wrote pass the merge gates and skip the security review, so the resume runs the check and the reviews again at the head, as on main.
 
 ## Capabilities
 

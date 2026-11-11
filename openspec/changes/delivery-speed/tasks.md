@@ -13,7 +13,7 @@
 - [x] 2.2 `.claude/workflows/deliver-change.js`: `staleRed` and the body-only fix without a round. Proved by "workflow: a red superseded by a green run of the same check is stale".
 - [x] 2.3 `.claude/workflows/deliver-change.js`: fix-round review scope from this start's pass (`narrowedFrom`), `reRaised` for quality only, and `securityBlocking` with no re-rating. Proved by "workflow: a blocking finding at an earlier advisory's location is re-raised", "workflow: a re-rated security Medium at confidence 8 still blocks", and "workflow: a fix round narrows both reviews only from this start's pass".
 - [x] 2.4 `.claude/workflows/deliver-change.js`: flush only before a gate that reads a pending review record, no close fallback. Proved by "workflow: only check and review records need a record start".
-- [x] 2.5 `.claude/workflows/deliver-change.js`: the resume trusts records settled at the pushed head. Proved by "workflow: a settled resume trusts the recorded check and reviews".
+- [x] 2.5 `.claude/workflows/deliver-change.js`: a resume past the push takes no record from the run state and runs the check and the reviews again at the head (item 9 dropped by the security review). Proved by "workflow: a resume past the push builds no merge records from the run state" and "workflow: only this start's verdicts enter its records".
 
 ## 3. Agents and docs
 

@@ -142,7 +142,6 @@ const RESUME = {
     status: STATUS, change: { type: 'string' }, branch: { type: 'string' }, head: HEAD,
     state_json: { type: 'string', description: 'the output of tools/run_state.sh trusted, verbatim' },
     plan: { type: 'string', description: 'the output of tools/run_state.sh plan-needed, verbatim: its one line' },
-    settled: { type: 'boolean', description: 'CHANGE=<change> sh tools/gates.sh passed exited 0' },
     reason: { type: 'string' },
   },
   required: ['status', 'change', 'branch', 'head', 'state_json'],
@@ -334,18 +333,6 @@ function securityBlocking(findings) {
 function narrowedFrom(records, kind, head) {
   const [result, commit] = String(records['review.' + kind] || '').split(' ')
   return result === 'pass' && COMMIT.test(commit || '') && commit !== head ? commit : ''
-}
-// On a resume past the push, the check and reviews the trusted run state
-// holds when tools/gates.sh passed exited 0 (settled): each passed at a
-// commit after which only records changed up to the pushed head; null
-// otherwise, and they run again.
-function settledRecords(st, settled) {
-  const keys = ['phase.check', 'review.quality', 'review.security', 'review.bench']
-  if (settled !== true || !/^[0-9a-f]{7,40}$/.test(st['phase.check'] || '')) return null
-  if (!keys.slice(1).every((k) => /^pass [0-9a-f]{7,40}( |$)/.test(st[k] || ''))) return null
-  const out = {}
-  for (const k of keys) out[k] = String(st[k]).split(' ').slice(0, 2).join(' ')
-  return out
 }
 
 // The output tokens the runtime has counted so far; the main session is idle
@@ -898,8 +885,7 @@ const resume = await agent(
 2. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Check it out when it exists locally or on origin; otherwise create it from origin/main, which needs a clean tree (stop with the reason when it is not).
 3. \`make doctor\`; run \`make toolchain\` when it fails and stop when that fails too.
 4. Run \`sh tools/run_state.sh init <change> <branch>\`, then \`sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git rev-parse --short=12 HEAD\` as head.
-5. Run \`sh tools/run_state.sh plan-needed <change>\` and return its one line verbatim as plan; its exit 1 means not needed, not a failure.
-6. When the run state holds pushed, run \`CHANGE=<change> sh tools/gates.sh passed\` and return settled true when it exited 0; its exit 1 is an answer, not a failure.${capLine('resume')}`,
+5. Run \`sh tools/run_state.sh plan-needed <change>\` and return its one line verbatim as plan; its exit 1 means not needed, not a failure.${capLine('resume')}`,
   calibrate('resume', { schema: RESUME, label: 'resume' }))
 if (!resume || resume.status !== 'done') {
   stopped = `resume stopped: ${resume ? resume.reason : 'no result'}`
@@ -995,20 +981,15 @@ if (!stopped && !state.merged) {
     phase('Merge')
     let waits = 0
     let bodyFixed = false
-    // A resume past the push holds no check or review of this start. When
-    // tools/gates.sh passed exited 0 at the pushed head, the check and the
-    // reviews passed at a commit followed only by records (the package
-    // step's), and the run state's records of them are taken as this
-    // start's; otherwise they run again at the head. A start that ran them
-    // all keeps its records, though the package step committed after them:
-    // the merge gates' settled_at allows that records-only diff. The resume
-    // runs no fix round, since a fix commit could not be pushed; a blocking
-    // finding stops the run.
-    const settled = ranAll(ran) ? null : settledRecords(state, resume && resume.settled)
-    if (settled && pushedHead(state.pushed, head)) {
-      Object.assign(ran, settled)
-      note(`resumed past the push: the check and the reviews recorded at ${settled['phase.check']} stand, only records changed since (tools/gates.sh passed)`)
-    }
+    // A resume past the push holds no check or review of this start, and
+    // the run state's could be branch-written (a pass, or the branch's own
+    // tools/gates.sh saying they settled): they run again at the head, the
+    // security review over the whole diff, and only this start's verdicts
+    // reach RECORDS or narrow a review. A start that ran them all keeps its
+    // records, though the package step committed after them: the merge
+    // gates' settled_at allows that records-only diff. The resume runs no
+    // fix round, since a fix commit could not be pushed; a blocking finding
+    // stops the run.
     if (!ranAll(ran)) {
       note('resumed past the push: the check and the reviews run again at the head')
       if (!(await verify(false)) && !stopped) stopped = `the check or a review did not pass at ${head} on resume`
