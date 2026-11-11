@@ -19,7 +19,7 @@ Input: the change name.
 2. Invoke the `security-review` skill with the Skill tool on the current branch. When it asks for sub-tasks or sub-agents you cannot start, do every one of them inline yourself; never drop one.
 3. Look in particular at what this repository exposes: the untrusted project `.caratrc` and the files the editor opens, paths a plugin or a file operation names (traversal outside the root), child processes (`Process.spawn` arguments), terminal escape sequences written from file text, shell scripts (quoting, word splitting, temporary files), the CI workflow (permissions, untrusted input in `run:` lines), and secrets or tokens in the diff.
 4. For each finding: severity (High, Medium, Low), confidence from 1 to 10, file and line, whether the line is in this change's diff, the attack in one sentence, and a fix outline.
-5. Blocking: a High or Medium finding at confidence 8 or above in code the change touches. Everything else goes to the backlog through the contributor.
+5. Blocking: a High or Medium finding at confidence 8 or above in code the change touches. Everything else the contributor appends to the backlog, which no delivery agent reads.
 6. The input states a cap of tool calls. On reaching it, return what you found with `not_reviewed` naming each file of the diff you did not review; the workflow continues with another start over those files, and the review never passes while a file is left. Otherwise `not_reviewed` is empty.
 7. Return the findings with `HEAD` as the reviewed commit. The workflow records the review from them, `pass` only when nothing blocks, and the merge gate refuses a change without that record at the reviewed commit.
 

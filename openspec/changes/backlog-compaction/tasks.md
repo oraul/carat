@@ -6,6 +6,6 @@
 
 ## 2. The append-only rule
 
-- [ ] 2.1 CLAUDE.md (Agents section, the backlog coding-conventions line) and README.md (the planner and package steps): during a delivery no agent reads `docs/backlog.md`; findings are appended; upkeep is the periodic review's. Checked by `make gates` and `make docs-lint`.
-- [ ] 2.2 `.claude/agents/contributor.md`, `planner.md`, `quality-reviewer.md`, `security-reviewer.md`, `retrospective.md`: the contributor appends by a shell append without reading and removes nothing; the planner never reads the backlog; the periodic quality review reports fixed, duplicated, and gone-code entries. Checked by `make docs-lint` (the agent file budget) and `make tools-test`.
-- [ ] 2.3 `.claude/workflows/deliver-change.js`, `.claude/commands/plan.md`, `.claude/commands/review.md`: the prompts hand findings to append and no longer say the planner reads the backlog. Checked by `make tools-test` and `make gates`.
+- [x] 2.1 CLAUDE.md (Agents section, the backlog coding-conventions line) and README.md (the planner and package steps): during a delivery no agent reads `docs/backlog.md`; findings are appended; upkeep is the periodic review's. Checked by `make gates` and `make docs-lint`.
+- [x] 2.2 `.claude/agents/contributor.md`, `planner.md`, `quality-reviewer.md`, `security-reviewer.md`, `retrospective.md`: the contributor appends by a shell append without reading and removes nothing; the planner never reads the backlog; the periodic quality review reports fixed, duplicated, and gone-code entries. Checked by `make docs-lint` (the agent file budget) and `make tools-test`.
+- [x] 2.3 `.claude/workflows/deliver-change.js`, `.claude/commands/plan.md`, `.claude/commands/review.md`: the prompts hand findings to append and no longer say the planner reads the backlog. Checked by `make tools-test` and `make gates`.
