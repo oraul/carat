@@ -98,7 +98,14 @@ const sweepName = `${sprint.sprint}-sweep`
 const [security, quality, sweep] = await parallel([
   () => agent(reviewTask, { agentType: 'security-reviewer', schema: SECURITY, label: 'security-reviewer: sprint' }),
   () => agent(reviewTask, { agentType: 'quality-reviewer', schema: QUALITY, label: 'quality-reviewer: sprint' }),
-  async () => (sprint.sweep ? workflow({ scriptPath: '.claude/workflows/periodic-review.js' }, { change: sweepName }) : null),
+  async () => {
+    try {
+      return sprint.sweep ? await workflow({ scriptPath: '.claude/workflows/periodic-review.js' }, { change: sweepName }) : null
+    } catch (e) {
+      log(`the sweep failed to start: ${e.message}`)
+      return null
+    }
+  },
 ])
 const ran = Boolean(security && security.ran && isCommit(security.head))
 const blocking = ran ? security.findings.filter((f) => f.severity !== 'Low' && f.confidence >= 8) : []
