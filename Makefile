@@ -375,7 +375,7 @@ config-current:
 	fi; \
 	echo "config-current: $(GENERATED) match config/"
 
-## tools-test: test the shell tools in temporary repositories: tools/ci_scope.sh, tools/ci_wait.sh, tools/metrics.sh, tools/run_state.sh, tools/agent_guard.sh, tools/docs_lint.sh, tools/new.sh, tools/spec_validate.sh, and every gate of tools/gates.sh, passing and refusing
+## tools-test: test the shell tools in temporary repositories: tools/ci_scope.sh, tools/ci_wait.sh, tools/metrics.sh, tools/run_state.sh, tools/agent_guard.sh, tools/docs_lint.sh, tools/new.sh, tools/spec_validate.sh, tools/publish_pr.sh (with a stub curl), and every gate of tools/gates.sh, passing and refusing
 tools-test:
 	sh tools/tools_test.sh
 

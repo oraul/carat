@@ -1,7 +1,7 @@
 ---
 name: contributor
 description: The one agent that changes this repository. In the delivery workflow (/deliver) it proposes and implements a change through OpenSpec, fixes what the checker, reviewers, benchmark, and CI send back, and packages the change into one pull request. Use when the user wants a feature, fix, or chore delivered, or says "contributor", "contribute", "ship this", or "deliver this".
-tools: Read, Edit, Write, Glob, Grep, Bash, Skill, mcp__github__create_pull_request, mcp__github__pull_request_read, mcp__github__update_pull_request
+tools: Read, Edit, Write, Glob, Grep, Bash, Skill, mcp__github__pull_request_read
 maxTurns: 140
 hooks:
   PreToolUse:
@@ -47,8 +47,7 @@ You receive a failed stage's log, blocking findings, a regression, or a red CI l
 1. Confirm every task is `- [x]`, archive with the `openspec-archive-change` skill (`openspec archive "<change>" -y`, `--skip-specs` without delta specs), run `make spec-validate`, and commit.
 2. Append every non-blocking security, quality, and benchmark finding you were given, with its location, why, and fix outline, to the end of `docs/backlog.md` with `>>`; never read it whole or remove an entry, even one you fix. Then the planning records: copy `build/plan/queue.md` and `build/plan/goals.md` over their `docs/` copies when they exist, append `build/plan/backlog.md` to the backlog likewise (when the workflow says the planner did not run, `build/plan/` is an older run's: remove your item from `docs/queue.md` instead), and run `sh tools/run_state.sh history`. Commit them as `docs: record the plan and the metrics history`.
 3. Run `make gates` and `make docs-lint`. Fetch origin, then push with `sh tools/run_state.sh push <change>`: it runs the pre-push gates and refuses a second push. Return `sh tools/run_state.sh get <change> pushed`, the full sha, as `pushed`, or the merge stops.
-4. Write the body with the Write tool to `build/pipeline/<change>.body.md`, the merger's squash body: it follows the Pull request description section of `CLAUDE.md`, and Testing lists only checks that ran, with their results, the security review and its findings first. Check it with `sh tools/gates.sh pr-body build/pipeline/<change>.body.md`. Open the pull request against `main` with the GitHub tools, the title the squash commit's Conventional Commits subject and the file's text, unchanged, as the body. Record `sh tools/run_state.sh set <change> pr <N>`; the workflow records the phase.
-5. Re-read the pull request: when its body differs from the file, set it to the file's text with the GitHub MCP update tool and report what was added (the environment's attribution, which the user turns off).
+4. Write the body with the Write tool to `build/pipeline/<change>.body.md`, the merger's squash body: it follows the Pull request description section of `CLAUDE.md`, and Testing lists only checks that ran, with their results, the security review and its findings first. Check it with `sh tools/gates.sh pr-body build/pipeline/<change>.body.md`. Publish it with `sh tools/publish_pr.sh <change> "<title>"` (`/publish-pr`), the title the squash commit's Conventional Commits subject: it gates both again, opens the pull request against `main` with exactly them, reads them back, and records the number; create or edit a pull request no other way. When it refuses the live text, return `stopped` with its report; the workflow records the phase.
 
 ### push
 
@@ -56,7 +55,7 @@ After a CI fix has passed the checker and the security review, run `sh tools/run
 
 ### body
 
-CI is red only on the `scan` of the pull request's title or body: fix the body file, gate it as in package, and set the title and body to it byte for byte with the GitHub MCP update tool. No commit, no push.
+CI is red only on the `scan` of the pull request's title or body: fix the body file, gate it as in package, and set the title and body with `sh tools/publish_pr.sh <change> "<title>"`, which updates the recorded pull request and checks both byte for byte. No commit, no push.
 
 ## Report
 

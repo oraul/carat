@@ -8,8 +8,9 @@
 # review areas), tools/agent_guard.sh (each profile's forms and refusals,
 # and the agents' hook lines), tools/docs_lint.sh (budgets, content, wraps,
 # paths, queue), tools/new.sh (every generator and its refusals),
-# tools/spec_validate.sh (the archive preview, with a stub openspec), and
-# every gate of tools/gates.sh, each passing and refusing.
+# tools/spec_validate.sh (the archive preview, with a stub openspec),
+# tools/publish_pr.sh (the gates first and the read-back, with a stub
+# curl), and every gate of tools/gates.sh, each passing and refusing.
 # Prints "ok   NAME" or "FAIL NAME" and the output, then "P/T passed";
 # exits 1 when any failed. Run by make tools-test.
 #
@@ -2266,7 +2267,7 @@ expect "agents: the quality reviewer blocks only on correctness and a missing te
   grep -E '^4[.] Blocking' "$here/../.claude/agents/quality-reviewer.md"
 expect "agents: the merger reads only the latest run of each check name" 0 'keep only the latest run of each check name' \
   grep -E '^2[.] Read the check runs' "$here/../.claude/agents/merger.md"
-expect "agents: the contributor creates the pull request with the body file unchanged" 0 "the file's text, unchanged, as the body" \
+expect "agents: the contributor publishes the pull request with tools/publish_pr.sh and no other way" 0 'Publish it with `sh tools/publish_pr[.]sh <change> "<title>"`.*create or edit a pull request no other way' \
   grep -E '^4[.] Write the body' "$here/../.claude/agents/contributor.md"
 expect "workflow: a contributor that finished is done" 0 '^[{]"next":"done","left":\[\][}]$' \
   work_js "(r => continuation(r, workLeft(r), 0))({ status: 'done' })"
