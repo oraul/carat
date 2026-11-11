@@ -18,9 +18,20 @@ jobs:
   text:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out carat
+      # The scanner is the base commit's, checked out to its own path, so
+      # a pull request that edits tools/pr_scan.sh, tools/scan_text.sh, or
+      # tools/rules.sh cannot pass its own check.
+      - name: Check out the base's scanner
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+
+      - name: Check out the pull request
+        uses: actions/checkout@v4
+        with:
+          path: head
           # Every commit of the pull request, whose messages and added
           # lines the scan reads.
           fetch-depth: 0
@@ -29,9 +40,10 @@ jobs:
       # The title and body reach the script only through the environment,
       # never written into the script, so no text of theirs runs.
       - name: Scan the title, body, commit messages, and added lines
+        working-directory: head
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: sh tools/pr_scan.sh
+        run: sh ../base/tools/pr_scan.sh

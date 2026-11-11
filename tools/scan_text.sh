@@ -6,8 +6,7 @@
 # co-author trailer's address, the Spinel clone address on the Makefile's
 # remote add line of the toolchain target, and an agent's frontmatter tier
 # alias. Run by the content and pr-body gates (tools/gates.sh), the docs
-# lint, the commit hooks of .githooks, and the pull request scan
-# (tools/pr_scan.sh).
+# lint, and the pull request scan (tools/pr_scan.sh).
 #
 # Usage: sh tools/scan_text.sh [--diff] [--where NAME] [FILE...]
 #   Reads each FILE, or standard input, and prints every hit as

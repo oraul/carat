@@ -1,9 +1,9 @@
 # The forbidden content of CLAUDE.md's hard rules as patterns, secrets
 # included, read by tools/scan_text.sh, the one scanner, which
-# tools/gates.sh (the content and pr-body gates), tools/docs_lint.sh, the
-# commit hooks of .githooks, and tools/pr_scan.sh run; report, which passes
-# the scanner's output to bad() (defined by the sourcing script); and the
-# repository configuration and hooks the origin gate refuses.
+# tools/gates.sh (the content and pr-body gates), tools/docs_lint.sh, and
+# tools/pr_scan.sh run; report, which passes the scanner's output to bad()
+# (defined by the sourcing script); and the repository configuration the
+# origin gate refuses.
 
 # The patterns are written so that this file does not match them. A URL is
 # a scheme followed by ://, a host starting with www and a dot, or a bare
@@ -49,12 +49,3 @@ EOF
 # tools/agent_guard.sh holds a copy (a tools/tools_test.sh case keeps the
 # two equal), since branch code run by the checks can write .git/config.
 RISKY_CONFIG='^(core\.(fsmonitor|hookspath|sshcommand|gitproxy|pager|editor|askpass|alternaterefscommand|worktree)|diff\.external|diff\..+\.(textconv|command)|filter\..+|merge\..+\.driver|sequence\.editor|credential\..+|gpg\..+|uploadpack\..+|url\..+\.(insteadof|pushinsteadof)|remote\.origin\.(pushurl|uploadpack|receivepack|proxy|vcs)|http\..+|protocol\..+|include\..+|includeif\..+|extensions\.worktreeconfig)$'
-# The tracked hooks directory make hooks installs, and the only files it
-# may hold: hooks that run at a commit, never one that runs on a checkout,
-# a merge, or a fetch. The one core.hooksPath allowed is its absolute path
-# in the main worktree (the parent of --git-common-dir), never the
-# relative name, which git reads from the top of each linked worktree.
-# tools/agent_guard.sh holds a copy of both (a tools/tools_test.sh case
-# keeps them equal).
-HOOKS_PATH='.githooks'
-HOOK_FILES_RE='^(commit-msg|pre-commit)$'

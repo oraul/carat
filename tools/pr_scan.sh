@@ -2,13 +2,16 @@
 # The pull request scan .github/workflows/scan.yml runs on every opened,
 # edited, reopened, and synchronized pull request, and runnable locally:
 # the title, the body, every commit message, and every commit's added
-# lines against each parent, through tools/scan_text.sh, each hit named.
+# lines against each parent, through the tools/scan_text.sh beside this
+# script, each hit named. The workflow runs the base commit's copy, checked
+# out to its own path, in the head's repository, so a pull request that
+# edits the scanner is still read by the base's.
 # Because an edit of the title or body reruns it, a footer added after the
 # pull request opened turns the check red until the body is clean. The
 # text arrives in the environment and is only ever piped to the scanner,
 # never placed in a command.
 #
-# Usage: sh tools/pr_scan.sh
+# Usage: sh PATH/tools/pr_scan.sh, in the repository holding both commits
 # Environment: PR_TITLE and PR_BODY, the pull request's text; BASE_SHA and
 #   HEAD_SHA, its base and head commits (7 to 40 hexadecimal digits), both
 #   in the local repository.
