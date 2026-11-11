@@ -1475,6 +1475,15 @@ head -c 17369 /dev/zero | tr '\0' x | head -c "$((17369 - $(wc -c < docs/queue.m
 expect "docs_lint: passes a queue at its budget" 0 "ok   budgets: 3 file" doclint
 echo x >> docs/queue.md
 expect "docs_lint: refuses a queue over its budget" 1 "FAIL budgets: docs/queue.md is 17371 bytes, over its budget of 17369" doclint
+docs sprint
+printf '# Queue\n\n## Sprint 2\n\n1. `a` (T2, estimated small): one.\n2. `b` (T1 pipeline, estimated small): two.\n3. `c` (T0 pipeline, estimated small): three.\n\n## Pool\n\n4. `d` (T1 pipeline, estimated small): four.\n' > docs/queue.md
+expect "docs_lint: a T0 pipeline item does not count" 0 "ok   queue: 4 item" doclint
+printf '5. `e` (T1 pipeline, estimated small): five.\n' > pool.tmp
+sed -i '/^3[.] /r pool.tmp' docs/queue.md
+expect "docs_lint: a sprint with two pipeline items fails" 1 "FAIL queue: the sprint holds 2 pipeline items" doclint
+printf '# Queue\n\n## Sprint 2\n\n' > docs/queue.md
+for n in 1 2 3 4 5 6; do printf '%s. `i%s` (T5, estimated small): item.\n' "$n" "$n" >> docs/queue.md; done
+expect "docs_lint: a sprint of six items fails" 1 "FAIL queue: the sprint holds 6 items, not 1 to 5" doclint
 docs link
 echo "See $LINK." >> docs/notes.md
 expect "docs_lint: refuses a URL in a document" 1 "FAIL content: docs/notes[.]md:[0-9]+: url: " doclint
@@ -2399,6 +2408,44 @@ expect "periodic: the areas left are kept to the start's slice" 0 '^\[\[3\],\[1,
   js "$pwf" "areasLeft" "[areasLeft({ head: 'abc1234', not_reviewed: [3, 9] }, [1, 2, 3]), areasLeft(null, [1, 2, 3]), areasLeft({ head: 'abc1234', not_reviewed: [] }, [1, 2, 3])]"
 expect "periodic: each quality start has its own worktree" 0 'tmp/[.]review-quality-[$][{]n[}]' grep '^const taskAreas = ' "$pwf"
 expect "periodic: the quality record states its coverage" 0 'covered=[$][{]MAP_AREAS - ' grep -F 'covered=${MAP_AREAS - ' "$pwf"
+# Sprint planning: review-due first, ending when not due; the diff
+# reviewers record nothing and the skeptic records what it keeps; the sweep
+# in an even sprint; each start's cap under its agent's maxTurns.
+swf="$here/../.claude/workflows/sprint-planning.js"
+sprint_js() {
+  js "$swf" "CHANGE parseDue" "$1"
+}
+expect "sprint: a not due line is not parsed as due" 0 '^\[null,null\]$' \
+  sprint_js "[parseDue('not due: sprint-1 has 3 of 5 changes merged (a, b, c)'), parseDue('not due: sprint-2 is planned; its plan waits in build/plan/ for the next package step')]"
+expect "sprint: a due line names the sprint, its changes, and its diff" 0 '^[{]"sprint":"sprint-1","number":1,"names":\["a","b-c"\],"base":"abc1234","tip":"origin/main","sweep":false[}]$' \
+  sprint_js "parseDue('due: sprint-1 has 2 changes merged (a, b-c); combined diff abc1234..origin/main; sweep: no')"
+expect "sprint: the sweep runs in an even sprint" 0 '^true$' \
+  sprint_js "parseDue('due: sprint-2 has 5 changes merged (a, b, c, d, e); combined diff abc1234..origin/main; sweep: yes').sweep"
+expect "sprint: a due line naming a shell word is not due" 0 '^null$' \
+  sprint_js "parseDue('due: sprint-1 has 1 changes merged (\$(x)); combined diff abc1234..origin/main; sweep: no')"
+expect "sprint: not due ends before any reviewer start" 0 "^first$" \
+  sh -c 'r=$(grep -n "if (!sprint || !due.initialized) return" "$1" | cut -d: -f1); a=$(grep -n "agentType:" "$1" | head -1 | cut -d: -f1); [ -n "$r" ] && [ "$r" -lt "$a" ] && echo first' _ "$swf"
+expect "sprint: the diff reviewers record nothing and the skeptic records the kept findings" 0 "^1 1$" \
+  sh -c 'echo "$(grep -c "record nothing, the skeptic records" "$1") $(grep -c "Mode: skeptic" "$1")"' _ "$swf"
+expect "sprint: the sweep is the periodic review in its own run state" 0 "sprint[.]sweep [?] workflow[(][{] scriptPath: '[.]claude/workflows/periodic-review[.]js' [}], [{] change: sweepName [}]" grep -F "sprint.sweep ? workflow(" "$swf"
+for pair in quality-reviewer:review security-reviewer:review quality-reviewer:skeptic planner:plan; do
+  agent=${pair%%:*}
+  cap=$(sed -n "s/^const CAPS = {.* ${pair#*:}: \([0-9]*\).*/\1/p" "$swf")
+  expect "caps: the sprint ${pair#*:} cap leaves the margin under the $agent file's maxTurns" 0 "^within$" \
+    sh -c '[ -n "$1" ] && [ $(($1 + $2)) -le "$(sed -n "s/^maxTurns: //p" "$3")" ] && echo within' _ "$cap" "$margin" "$agents/$agent.md"
+done
+expect "workflow: the delivery never starts the periodic review" 1 "" grep -q -E "periodic-review[.]js|phase[(]'Review'[)]" "$wf"
+# No delivery reads or greps the backlog: the contributor only appends.
+backlog_reads() {
+  out=$(for f in "$agents"/contributor.md "$agents"/scout.md "$agents"/checker.md "$agents"/quality-reviewer.md \
+    "$agents"/security-reviewer.md "$agents"/benchmark.md "$agents"/merger.md "$agents"/retrospective.md "$wf"; do
+    awk -v f="$(basename "$f")" '/backlog/ && (/[Gg]rep/ || (/(^|[^a-z])(reads?|cat|sed|head|tail)( |$)/ && !/never read/)) { print f ":" FNR }' "$f"
+  done)
+  echo "${out:-none}"
+}
+expect "agents: no delivery reads or greps the backlog" 0 "^none$" backlog_reads
+expect "agents: the planner writes self-contained items" 0 "^1 0$" \
+  sh -c 'echo "$(grep -c "self-contained" "$1") $(grep -c "Locations go in the" "$1")"' _ "$agents/planner.md"
 
 echo "$passed/$total passed"
 test "$passed" -eq "$total"
