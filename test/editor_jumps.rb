@@ -138,9 +138,10 @@ module EditorJumpsTest
     held = h.assembly.buffers.for_path("b.txt")
     t.assert_equal([true, true], [h.buffer.equal?(scratch), !held.nil? && held.listed], "A walk back to a scratch buffer keeps the file's tab")
 
-    # Scenarios "Each jump form records the position left", "A failed
-    # jump records nothing", and "Other motions record nothing": from
-    # line 2 of m.txt, after the setup keys. Rows are [label, [setup,
+    # Scenario "Each jump form records the position left".
+    # Scenario "A failed jump records nothing".
+    # Scenario "Other motions record nothing".
+    # From line 2 of m.txt, after the setup keys. Rows are [label, [setup,
     # keys], "added N | back B"].
     t.table([
       ["G records the position left", ["", "G"], "added 1 | back true"],
