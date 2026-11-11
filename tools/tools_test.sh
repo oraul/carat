@@ -97,7 +97,10 @@ scope_case() {
 
 scope_case false docs/notes.md
 scope_case false openspec/changes/x/proposal.md
-scope_case false .claude/agents/x.md
+scope_case true .claude/agents/x.md
+scope_case true .claude/workflows/x.js
+scope_case true .claude/settings.json
+scope_case false .claude/commands/x.md
 scope_case false docs/metrics.tsv
 scope_case true docs/codebase-map.md
 scope_case true docs/actions.md
@@ -120,10 +123,16 @@ mkdir -p "$work/bin"
 cat > "$work/bin/gh" <<'EOF'
 #!/bin/sh
 case "$*" in
+  *"/commits?per_page"*) printf '%s\n' $FAKE_COMMITS ;;
   *head.sha*) echo "$FAKE_HEAD" ;;
   *number*) echo 7 ;;
   *tree.sha*) echo "$FAKE_TREE" ;;
-  *check-runs*) echo "$FAKE_PASSED" ;;
+  *check-runs*)
+    if [ -n "${FAKE_GREEN:-}" ]; then
+      case "$*" in *"commits/$FAKE_GREEN/"*) echo 1 ;; *) echo 0 ;; esac
+    else
+      echo "$FAKE_PASSED"
+    fi ;;
 esac
 EOF
 chmod +x "$work/bin/gh"
@@ -136,6 +145,32 @@ expect "ci_scope: a push whose tree passed in its pull request skips" 0 "^run=fa
 expect "ci_scope: a push whose pull request did not pass runs" 0 "^run=true" \
   env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=0 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
 
+
+# A pull request's merge commit against its newest earlier head whose spin
+# check passed (FAKE_GREEN): the heads are A (code) and B, merged into the
+# base with no fast-forward, so the diff against the base holds code.
+# green_pr NAME FILE: B changes FILE; leaves A, B, and the merge checked out.
+green_pr() {
+  fresh "$1"
+  base=$(git rev-parse HEAD)
+  echo code >> tools/x.sh
+  commit "chore: code"
+  green_a=$(git rev-parse HEAD)
+  echo more >> "$2"
+  commit "chore: change $2"
+  green_b=$(git rev-parse HEAD)
+  git_q checkout -q --detach "$base"
+  git_q merge -q --no-ff -m merge "$green_b"
+}
+green_scope() {
+  env PATH="$work/bin:$PATH" FAKE_COMMITS="$green_a $green_b" FAKE_GREEN="$1" EVENT=pull_request REPO=owner/carat SHA=x PR=7 HEAD_SHA="$green_b" sh "$here/ci_scope.sh"
+}
+green_pr green-docs docs/notes.md
+expect "ci_scope: documentation since the last green head skips" 0 "^run=false: only documentation that no test reads changed since the last green head $green_a$" green_scope "$green_a"
+expect "ci_scope: no green head runs" 0 "^run=true: tools/x[.]sh is code.*no earlier head of the pull request passed" green_scope none
+expect "ci_scope: the head itself is never the green head" 0 "^run=true: .*no earlier head" green_scope "$green_b"
+green_pr green-code tools/y.sh
+expect "ci_scope: code since the last green head runs" 0 "^run=true: tools/y[.]sh is code.*changed since the last green head $green_a$" green_scope "$green_a"
 # ------------------------------------------------------------- metrics.sh
 
 mkdir -p "$work/metrics"
@@ -208,9 +243,9 @@ commit "chore: a fast list"
 expect "run_state: check runs make stages once main has a fast list" 0 "every stage passed" \
   env BASE=HEAD MAKE="$work/bin/fake-make" FAIL_B=2 sh "$here/run_state.sh" check state
 expect "make: every fast stage is a check stage" 0 "^none$" sh -c 'm="$1/../Makefile"; all=" $(sed -n "s/^CHECK_STAGES := //p" "$m") "; out=; for s in $(sed -n "s/^FAST_STAGES := //p" "$m"); do case "$all" in *" $s "*) ;; *) out="$out $s" ;; esac; done; [ -n "$(sed -n "s/^FAST_STAGES := //p" "$m")" ] && echo "${out:-none}"' _ "$here"
-# CI skips a change only under .claude/ (tools/ci_scope.sh), whose agent and
-# workflow files tools-test reads, so the checker runs tools-test.
-expect "make: the fast list keeps tools-test, which CI skips for agent and workflow files" 0 "tools-test" sh -c 'sed -n "s/^FAST_STAGES := //p" "$1/../Makefile" | tr " " "\\n" | grep -x tools-test' _ "$here"
+# tools-test tests the pipeline's tools, agents, and workflows, which a
+# pipeline change pushes, so the checker runs it before the push too.
+expect "make: the fast list keeps tools-test" 0 "tools-test" sh -c 'sed -n "s/^FAST_STAGES := //p" "$1/../Makefile" | tr " " "\\n" | grep -x tools-test' _ "$here"
 # A stage record counts only at the commit the workflow backs: one at HEAD
 # without it, which any agent could have written, runs again.
 expect "run_state: check runs a stage recorded at the head that no commit backs" 0 "^stage a: exit 0" \

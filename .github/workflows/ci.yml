@@ -40,7 +40,8 @@ jobs:
 
       # The job always runs and reports, so a required check on it passes;
       # tools/ci_scope.sh says whether the checks below are needed. They are
-      # skipped when only documentation no test reads changed, and on a
+      # skipped when only documentation no test reads changed, on a pull
+      # request also since its last head whose spin check passed, and on a
       # push to main whose tree is the head of a pull request that passed.
       # A push to main still compiles the development builds, which keeps
       # main's compile cache warm, and builds and smoke tests the release
@@ -51,6 +52,8 @@ jobs:
           EVENT: ${{ github.event_name }}
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           GH_TOKEN: ${{ github.token }}
         run: sh tools/ci_scope.sh
 
