@@ -2295,6 +2295,9 @@ expect "agents: the contributor opens the pull request by pr.md, never a create 
   grep -E '^3[.] Write the body' "$here/../.claude/agents/contributor.md"
 expect "agents: the contributor holds no pull request create tool" 1 "^$" \
   grep -n create_pull_request "$here/../.claude/agents/contributor.md"
+# The wait polls up to MAX_WAIT (540 s), past the Bash tool's 120 s default.
+expect "agents: the contributor waits for the pull request in the foreground" 0 'open_pr.sh wait <change>` in the foreground [(]Bash timeout 600000' \
+  grep -E '^5[.] Run `sh tools/open_pr[.]sh wait' "$here/../.claude/agents/contributor.md"
 expect "workflow: a package step without a pull request number stops the run" 0 '^\["47","","",""\]$' \
   work_js "[packagedPr({ pr: 47 }), packagedPr({ pr: 0 }), packagedPr({ status: 'stopped' }), packagedPr(null)]"
 expect "workflow: a contributor that finished is done" 0 '^[{]"next":"done","left":\[\][}]$' \
