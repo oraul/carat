@@ -858,6 +858,14 @@ rm build/pipeline/a3.json
 expect "run_state: review-due asks for the sweep in an even sprint" 0 "^due: sprint-2 has 5 changes merged .*combined diff c5[.][.]origin/main; sweep: yes$" state review-due
 mkdir -p build/plan
 echo sprint-2 > build/plan/sprint
+expect "run_state: review-due stays due while the waiting plan's sprint has no security review" 0 "^due: sprint-2 has 5 changes merged" state review-due
+expect "run_state: groom holds a plan whose sprint has no security review" 0 "^groom: the plan of sprint-2 waits for its security review [(]none[)]" state groom
+state init sprint-2 main > /dev/null 2>&1
+state review sprint-2 periodic-security not-run "no result" > /dev/null
+expect "run_state: review-due stays due while the sprint's security review did not run" 0 "^due: sprint-2 has 5 changes merged" state review-due
+state review sprint-2 periodic-security partial "diff not_reviewed=1" > /dev/null
+expect "run_state: groom holds a plan whose sprint security review is partial" 0 "^groom: the plan of sprint-2 waits for its security review [(]partial[)]" state groom
+state review sprint-2 periodic-security pass "diff blocking=0" > /dev/null
 expect "run_state: review-due is not due while the sprint plan waits" 1 "^not due: sprint-2 is planned" state review-due
 printf '# Queue\n\n## Sprint 3\n\n1. `b6` (T5, estimated small): six.\n' > build/plan/queue.md
 expect "run_state: plan-needed reads a waiting sprint plan" 1 "^not needed: b6 heads build/plan/queue[.]md, estimated small" state plan-needed b6
@@ -921,6 +929,8 @@ expect "run_state: groom keeps the first of a repeated heading" 0 "^once$" sh -c
 expect "run_state: groom copies the sprint's queue" 0 "^## Sprint 3$" grep '^## Sprint' docs/queue.md
 expect "run_state: groom appends the sprint row" 0 "^sprint-2 b5 5 b1,b2,b3,b4,b5 5[.]0 1[.]0 5 0 -$" sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
 expect "run_state: groom applies a plan once" 0 "^groom: no sprint plan waits" state groom
+state init sprint-1 main > /dev/null 2>&1
+state review sprint-1 periodic-security blocked "diff blocking=1" > /dev/null
 expect "run_state: the sprint row counts budgets and first passes" 0 "^sprint-1 a5 5 a1,a2,a3,a4,a5 180[.]0 36[.]0 4200000 1 check:4/5,quality:3/4$" \
   sh -c "printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv; echo sprint-1 > build/plan/sprint; rm -f build/plan/groom.txt build/plan/groomed.md; sh '$here/run_state.sh' groom > /dev/null; tail -1 docs/sprints.tsv | tr '\t' ' '"
 
@@ -2427,6 +2437,8 @@ expect "sprint: not due ends before any reviewer start" 0 "^first$" \
   sh -c 'r=$(grep -n "if (!sprint || !due.initialized) return" "$1" | cut -d: -f1); a=$(grep -n "agentType:" "$1" | head -1 | cut -d: -f1); [ -n "$r" ] && [ "$r" -lt "$a" ] && echo first' _ "$swf"
 expect "sprint: the diff reviewers record nothing and the skeptic records the kept findings" 0 "^1 1$" \
   sh -c 'echo "$(grep -c "record nothing, the skeptic records" "$1") $(grep -c "Mode: skeptic" "$1")"' _ "$swf"
+expect "sprint: the planner starts only after the security review and the skeptic" 0 "^1 1$" \
+  sh -c 'echo "$(grep -c "^const reviewed = ran && skeptical$" "$1") $(grep -c "^const plan = !reviewed [?] null : await agent[(]$" "$1")"' _ "$swf"
 expect "sprint: the sweep is the periodic review in its own run state" 0 "sprint[.]sweep [?] await workflow[(][{] scriptPath: '[.]claude/workflows/periodic-review[.]js' [}], [{] change: sweepName [}]" grep -F "sprint.sweep ? await workflow(" "$swf"
 for pair in quality-reviewer:review security-reviewer:review quality-reviewer:skeptic planner:plan; do
   agent=${pair%%:*}
@@ -2444,6 +2456,8 @@ backlog_reads() {
   echo "${out:-none}"
 }
 expect "agents: no delivery reads or greps the backlog" 0 "^none$" backlog_reads
+expect "agents: the sprint planner keeps unqueued findings in groomed.md" 0 "^1 0$" \
+  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "do not queue go into .build/plan/groomed[.]md.") $(printf "%s\n" "$s" | grep -v "never into .build/plan/backlog" | grep -c "build/plan/backlog")"' _ "$agents/planner.md"
 expect "agents: the planner writes self-contained items" 0 "^[1-9][0-9]* 0$" \
   sh -c 'echo "$(grep -c "self-contained" "$1") $(grep -c "Locations go in the" "$1")"' _ "$agents/planner.md"
 

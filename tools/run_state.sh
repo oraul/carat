@@ -138,19 +138,25 @@
 #                               sprint of docs/sprints.tsv (SPRINTS_FILE);
 #                               print "not due: ..." and exit 1 before that or
 #                               while the sprint's plan waits in build/plan/
+#                               after its security review, recorded pass or
+#                               blocked in the run state sprint-N
 #   backlog-dups                print each location (file:line) that two or
 #                               more backlog headings name, with the headings
 #   groom                       apply a waiting sprint plan (PLAN_DIR/sprint
 #                               names the sprint in progress, which the
-#                               sprints file lacks): check every line of
+#                               sprints file lacks, and sprint-N records its
+#                               security review pass or blocked; else the
+#                               plan waits): check every line of
 #                               groom.txt, "listed CHANGE HEADING" (CHANGE
 #                               archived), "fixed COMMIT HEADING" (COMMIT in
 #                               HEAD), or "duplicate HEADING" (never a
 #                               security entry), HEADING a whole heading line
 #                               of the backlog, and write nothing when one
 #                               fails; then copy queue.md over docs/queue.md,
-#                               remove each entry, append groomed.md, and
-#                               append the sprint's row from its history rows
+#                               remove each entry, append groomed.md (merged
+#                               entries and the sprint findings not queued),
+#                               and append the sprint's row from its history
+#                               rows
 #   plan-needed CHANGE          print "needed: REASON" and exit 0 when the
 #                               change is not the head of docs/queue.md (the
 #                               waiting sprint plan's queue.md) or a
@@ -1268,10 +1274,21 @@ sprint_waiting() {
   ! awk -F'\t' -v s="$waiting" '$1 == s { found = 1 } END { exit !found }' "$sprints_file"
 }
 
+# True when the run state sprint-N of the sprint in progress records its
+# security review pass or blocked (sprint_security, the result word): a
+# plan written without it waits, review-due staying due, so /sprint again
+# reviews the sprint anew instead of closing it unreviewed.
+sprint_reviewed() {
+  sprint_security=$(change="sprint-$sprint_n"; read_key review.periodic-security)
+  sprint_security=${sprint_security%% *}
+  case "$sprint_security" in pass|blocked) return 0 ;; esac
+  return 1
+}
+
 review_due() {
   sprint_state
   list=$(printf '%s\n' "$sprint_names" | awk 'NF { printf "%s%s", (n++ ? ", " : ""), $0 }')
-  if sprint_waiting && [ "$waiting" = "sprint-$sprint_n" ]; then
+  if sprint_waiting && [ "$waiting" = "sprint-$sprint_n" ] && sprint_reviewed; then
     echo "not due: sprint-$sprint_n is planned; its plan waits in $plan_dir/ for the next package step"
     return 1
   fi
@@ -1337,6 +1354,10 @@ groom() {
   if ! sprint_waiting; then echo "groom: no sprint plan waits in $plan_dir/"; return 0; fi
   sprint_state
   [ "$waiting" = "sprint-$sprint_n" ] || die "groom: the plan of $waiting is not the sprint in progress, sprint-$sprint_n"
+  if ! sprint_reviewed; then
+    echo "groom: the plan of sprint-$sprint_n waits for its security review (${sprint_security:-none}); run /sprint again"
+    return 0
+  fi
   rows=$(awk -F'\t' -v c="$prev_last" -v r="$REVIEW_RUNS" 'seen && NF && $1 !~ r { n++ } $1 == c { seen = 1 } END { print n + 0 }' "$metrics_file")
   [ "$rows" -ge "$SPRINT_SIZE" ] || die "groom: sprint-$sprint_n has $rows of $SPRINT_SIZE history rows; run history first"
   removals=""

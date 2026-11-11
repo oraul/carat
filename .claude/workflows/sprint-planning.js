@@ -117,9 +117,13 @@ const skeptic = await agent(
   `Change \`${sprint.sprint}\`. Mode: skeptic. The reviewers of ${scope} found what follows. Read each against the code at origin/main as your Skeptic mode section says, record what you keep in this run state, and return the counts.\nSecurity findings (record every one; one you dispute as disputed with its reason):\n${listed(securityLines)}\nQuality blocking:\n${listed(quality ? quality.blocking : [])}\nQuality advisory:\n${listed(quality ? quality.advisory : [])}${capLine(CAPS.skeptic)}`,
   { agentType: 'quality-reviewer', schema: SKEPTIC, label: 'quality-reviewer: skeptic' })
 const skeptical = Boolean(skeptic && isCommit(skeptic.head))
+// The planner starts only after the security review and the skeptic, who
+// records its findings: without both no plan and no marker are written, so
+// review-due stays due and /sprint again reviews the sprint anew.
+const reviewed = ran && skeptical
 
 phase('Plan')
-const plan = await agent(
+const plan = !reviewed ? null : await agent(
   `Mode: sprint. ${sprint.sprint} closed with ${sprint.names.join(', ')}. Plan sprint-${sprint.number + 1} as your Sprint mode section says, writing \`${sprint.sprint}\` into build/plan/sprint: the sprint review's findings are in the run state \`${sprint.sprint}\`${sprint.sweep ? ` and the sweep's in \`${sweepName}\`` : ''}, the duplicate candidates from \`sh tools/run_state.sh backlog-dups\`.${capLine(CAPS.plan)}`,
   { agentType: 'planner', schema: PLAN, label: 'planner: sprint' })
 
@@ -150,7 +154,7 @@ const report = [
   `Security: ${ran ? `${security.findings.length} finding(s), ${blocking.length} blocking${skeptical ? `, ${skeptic.disputed} disputed` : ''}` : 'did not run; run /sprint again'}`,
   `Quality: ${skeptical ? `${skeptic.kept_blocking} blocking and ${skeptic.kept_advisory} advisory kept, ${skeptic.dropped} dropped, ${skeptic.missed} missed by both` : 'the skeptic returned no result; nothing recorded'}`,
   `Sweep: ${sprint.sweep ? (sweep && sweep.ran ? `security ${sweep.security.length} finding(s), ${sweep.security_blocking} blocking; quality ${sweep.quality_blocking.length} blocking` : 'did not run; run /review') : 'not this sprint'}`,
-  `Plan: ${plan ? `${plan.paths.join(', ') || 'no file'}; ${plan.decisions.map((d) => `${d.decision} (${d.evidence})`).join('; ')}` : 'the planner returned no result; run /sprint again'}`,
+  `Plan: ${plan ? `${plan.paths.join(', ') || 'no file'}; ${plan.decisions.map((d) => `${d.decision} (${d.evidence})`).join('; ')}` : reviewed ? 'the planner returned no result; run /sprint again' : 'not started, the sprint review did not complete; run /sprint again'}`,
   plan && plan.security_first.length ? `Security first: deliver ${plan.security_first.join('; ')} before the sprint` : '',
   recorded && recorded.ok ? '' : `The results were not recorded: ${recorded ? recorded.output : 'no result'}`,
 ].filter(Boolean).join('\n- ')

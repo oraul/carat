@@ -20,3 +20,8 @@
 
 - [x] 4.1 `.claude/agents/planner.md` (self-contained items, sprint mode), `contributor.md` (groom, append only), `quality-reviewer.md` (sprint and skeptic modes), `security-reviewer.md` (sprint mode), `retrospective.md` (review-due without a change). Proved by "agents: no delivery reads or greps the backlog" and "agents: the planner writes self-contained items".
 - [x] 4.2 CLAUDE.md, README.md, `docs/goals.md`, `docs/codebase-map.md`, `.claude/workflows/periodic-review.js` header, `.claude/commands/review.md`. Checked by `make gates` and `make docs-lint`.
+
+## 5. Review fixes
+
+- [x] 5.1 A sprint never closes without its security review: `sprint-planning.js` starts the planner only after the security review and the skeptic returned, and `review-due` stays due and `groom` holds the plan while `sprint-N` records no pass or blocked security review. Proved by "sprint: the planner starts only after the security review and the skeptic", "run_state: review-due stays due while the waiting plan's sprint has no security review", "run_state: review-due stays due while the sprint's security review did not run", "run_state: groom holds a plan whose sprint has no security review", and "run_state: groom holds a plan whose sprint security review is partial".
+- [x] 5.2 The sprint findings the planner does not queue go into `build/plan/groomed.md`, which `groom` appends and a delivery's planner keeps, never `build/plan/backlog.md`. Proved by "agents: the sprint planner keeps unqueued findings in groomed.md" and "run_state: groom removes a merged item's listed headings and no others".
