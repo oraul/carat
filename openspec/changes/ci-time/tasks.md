@@ -18,4 +18,4 @@
 
 ## 4. Docs
 
-- [ ] 4.1 CLAUDE.md Commands, README's measurement paragraph, `docs/architecture.md` section 10, `docs/codebase-map.md`, the script header. Proved by `make gates` and `make docs-lint`.
+- [x] 4.1 CLAUDE.md Commands, README's measurement paragraph, `docs/architecture.md` section 10, `docs/codebase-map.md`, the script header. Proved by `make gates` and `make docs-lint`.
