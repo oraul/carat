@@ -2153,6 +2153,8 @@ expect "workflow: a settled resume trusts the recorded check and reviews" 0 '^\[
 expect "workflow: only check and review records need a record start" 0 '^\[true,false,false,true\]$' \
   speed_js '["sh tools/run_state.sh note c late-finding \"x (y) z\"", "sh tools/run_state.sh review c security pass \"high=0\" abc1234", "sh tools/run_state.sh phase c check abc1234", "sh tools/run_state.sh phase c implement abc1234"].map((l) => CLOSABLE.test(l))'
 expect "workflow: no record start runs at the close" 0 '^1$' grep -c 'await flush(' "$wf"
+expect "workflow: a red only on the body's scan is fixed once, before any fix round" 0 '^body before fix$' \
+  sh -c 'b=$(grep -n "m.body_only === true && !bodyFixed" "$1" | cut -d: -f1); f=$(grep -n "if (m.ci !== .red. || !mayFix())" "$1" | cut -d: -f1); [ -n "$b" ] && [ -n "$f" ] && [ "$b" -lt "$f" ] && grep -q "^### body$" "$2" && echo body before fix' _ "$wf" "$here/../.claude/agents/contributor.md"
 expect "guard: the close profile runs a late-finding note" 0 "^$" guard close 'sh tools/run_state.sh note c late-finding \"security Medium (7) tools/x.sh:3 a; fix: y\" && sh tools/run_state.sh phase c report abc1234'
 expect "agents: the quality reviewer blocks only on correctness and a missing test" 0 '^4[.] Blocking is only a correctness bug or a behavior change without its test[.]' \
   grep -E '^4[.] Blocking' "$here/../.claude/agents/quality-reviewer.md"
