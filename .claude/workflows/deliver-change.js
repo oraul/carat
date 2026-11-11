@@ -1,6 +1,6 @@
 export const meta = {
   name: 'deliver-change',
-  description: 'Deliver one change to main through fixed phases: plan, scouts, contributor, checker, quality and security review, benchmark, package, CI and merge, close (records, retrospective, and report in one start), periodic review',
+  description: 'Deliver one change to main through fixed phases: plan, scouts, contributor, checker, quality and security review, benchmark, package, CI and merge, close (records, retrospective, and report in one start); the sprint-end review is sprint-planning\'s',
   whenToUse: 'Every change to this repository, started by /deliver with a change name or a brief; it resumes from build/pipeline/CHANGE.json',
   phases: [
     { title: 'Resume', detail: 'branch, toolchain, and the run state' },
@@ -14,7 +14,6 @@ export const meta = {
     { title: 'Package', detail: 'contributor: archive, gates, pr.md, one push, the pull request open-pr opens' },
     { title: 'Merge', detail: 'merger: wait for CI, red back to the contributor; main\'s merge gates, squash with the trailer, verify main' },
     { title: 'Close', detail: 'retrospective: the last records, the proposals, the budget and review-due lines, and the report, in one start' },
-    { title: 'Review', detail: 'periodic review of the whole codebase: security, never skipped, and quality' },
   ],
 }
 
@@ -918,7 +917,7 @@ if (!resume || resume.status !== 'done') {
 // item never passes through a model's output.
 const planLine = resume && typeof resume.plan === 'string' ? resume.plan.split('\n')[0] : ''
 const request = typeof input.brief === 'string' && input.brief.trim() !== '' && input.brief.trim() !== state.change
-const brief = request ? input.brief : `the item of docs/queue.md that names \`${state.change}\`, read there as written (when no item names it, the existing OpenSpec change)`
+const brief = request ? input.brief : `the item of docs/queue.md that names \`${state.change}\` (of build/plan/queue.md while a sprint plan waits there: ${planLine || 'no plan line'}), read there as written (when no item names it, the existing OpenSpec change)`
 if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement'] && !request && /^not needed:/.test(planLine)) {
   phase('Plan')
   const size = /estimated (small|medium|large)\b/.exec(planLine)
@@ -957,7 +956,7 @@ if (!stopped && !state.merged) {
       const needed = plan ? plan.needed.slice(0, room) : []
       if (plan && plan.needed.length > room) note(`not scouted, beyond ${MAX_AREAS} areas: ${plan.needed.slice(room).map((n) => n.area).join(', ')}`)
       const fresh = plan ? await measured('scout', () => parallel(needed.map((n) => () =>
-        agent(`Area: ${n.area}. Question: ${n.question}. The change, for scope only: ${brief}. When its queue item names docs/backlog.md entries (by heading or keyword), Grep the file for those entries only, never reading it whole. Write the pack and return its path.${capLine('scout')}`, calibrate('scout', { agentType: 'scout', schema: withCalls(PACK), label: `scout: ${n.area}` })))), callCap('scout')) : []
+        agent(`Area: ${n.area}. Question: ${n.question}. The change, for scope only: ${brief}. Write the pack and return its path.${capLine('scout')}`, calibrate('scout', { agentType: 'scout', schema: withCalls(PACK), label: `scout: ${n.area}` })))), callCap('scout')) : []
       packs = (plan ? plan.current : []).concat(fresh.filter(Boolean).map((p) => p.pack))
       note(`scout packs: ${packs.join(', ') || 'none'}`)
     }
@@ -976,7 +975,7 @@ if (!stopped && !state.merged) {
     if (await verify()) {
       phase('Package')
       const plan = planned === 0
-        ? 'The planner did not run: this change was taken from the head of docs/queue.md as written. Leave build/plan/, which holds an older run\'s files; remove this change\'s item from docs/queue.md and renumber the rest, and append the history of the merged changes as your package step says.'
+        ? 'The planner did not run: this change was taken from the head of docs/queue.md as written. Copy nothing from build/plan/, which holds an older run\'s files or a waiting sprint plan that groom applies; append the history and run groom as your package step says, then remove this change\'s item from docs/queue.md and renumber the rest.'
         : 'Apply the planner\'s files under build/plan/ and append the history of the merged changes as your package step says.'
       const done = await contributor('package', `Non-blocking findings to append to docs/backlog.md (a shell append; never read the file):\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
       if (done) state.pr = packagedPr(done)
@@ -1068,14 +1067,15 @@ if (!stopped && !state.merged) {
 // The close, one retrospective start in every run: it runs the records left
 // since the last flush with this start's own phase lines and the metric
 // line, looks back when the change merged and no retrospective ran yet,
-// says whether a periodic review is due, and writes the report. The line
+// says whether sprint-planning is due, and writes the report. The line
 // and the summary are built from the same figures at once, so once the line
 // has run the run state's totals equal the summary's; this start's own cost
 // is the one figure recorded nowhere. No other start records: a line the
-// close did not run is reported as not recorded. The periodic review, when
-// due, runs after it; what the reviews find waits in the run state for the
-// next change's planner. A stopped run's unpushed commits stay on its
-// local branch for a resume.
+// close did not run is reported as not recorded. The delivery never runs
+// the periodic review: sprint-planning (/sprint), its own workflow, reviews
+// the sprint's combined diff once its five changes merged, and the report
+// says when it is due. A stopped run's unpushed commits stay on its local
+// branch for a resume.
 const looking = !stopped && Boolean(state.merged) && !state['phase.retro']
 phase('Close')
 // The findings that arrived after the package step become late-finding
@@ -1099,22 +1099,7 @@ if (close && looking) {
   note(`retrospective: ${close.proposals.map((x) => `${x.proposal} (${x.evidence})`).join('; ') || 'no proposal'}; ${close.review_due || 'review-due not read'}`)
 }
 if (records && (!close || !close.recorded)) note(`the closing start did not record the run${close && close.record_output ? `: ${close.record_output}` : ''}; its lines are not recorded`)
-let periodic = ''
-if (close && looking && close.due) {
-  phase('Review')
-  let p = null
-  try {
-    p = await measured('review', () => workflow({ scriptPath: '.claude/workflows/periodic-review.js' }, { change: state.change }))
-  } catch (e) {
-    note(`the periodic review failed to start: ${e.message}`)
-  }
-  // The periodic review records its own overrun notes; the workflow notes
-  // them beside its result.
-  for (const text of (p && p.over) || []) note(`over the call cap: ${text}`)
-  const missed = (areas) => (areas && areas.length ? `, partial: not reviewed ${areas.join(', ')}` : '')
-  if (!p || !p.ran) stopped = 'the periodic security review did not run; run /review'
-  else periodic = `periodic review: security ${p.security.length} finding(s), ${p.security_blocking} blocking (to the front of the queue)${missed(p.security_not_reviewed)}; quality ${p.quality_blocking.length} blocking, ${p.quality_advisory} advisory${missed(p.quality_not_reviewed)}${p.recorded === false ? '; the results were not recorded in the run state' : ''}`
-  if (periodic) note(periodic)
-}
-const after = `${periodic ? `\n- Periodic review: ${periodic.replace(/^periodic review: /, '')}` : ''}${stopped && looking ? `\n- Stopped after the close: ${stopped}` : ''}`
+const sprintDue = close && looking && close.due ? 'sprint-planning is due: start /sprint before the next /deliver' : ''
+if (sprintDue) note(sprintDue)
+const after = `${sprintDue ? `\n- Sprint: ${sprintDue}` : ''}${stopped && looking ? `\n- Stopped after the close: ${stopped}` : ''}`
 return close ? `${close.report}${after}` : `No report; notes:\n${notes.join('\n')}${stopped ? '\nStopped: ' + stopped : ''}`

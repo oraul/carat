@@ -4613,3 +4613,105 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Location: `tools/agent_guard.sh` contributor rule allowing `tools/run_state.sh set CHANGE pr N`, the `tools/run_state.sh` header line naming it, and the guard test "contributor pushes and opens the pull request".
 - Why it matters: once the delivery records the number of the pull request GitHub Actions opened, a contributor that may still write `pr` can record a number of a pull request it did not open, and the merger would act on it.
 - Fix outline: drop the contributor's `pr` permission and the header line once the wait step records the number, and turn the guard test into a refusal case; keep any bootstrap path the workflow itself needs.
+
+### Sprint planned and closed without its security review (`sprint-planning` security Medium (7))
+
+- Location: `.claude/workflows/sprint-planning.js:121` (and the sweep that fails to start, line 105), `tools/run_state.sh:1389` `groom`.
+- Why it matters: a sprint whose security review is not-run or partial, or whose sweep failed to start, is still planned: the planner writes `build/plan/sprint` and `groom` appends the sprint row, after which `review-due` counts from the next sprint, so the missed review of the sprint's combined diff never runs and a missed sweep waits ten more merges, breaking the rule that a partial or not-run security result keeps the next review due.
+- Fix outline: skip the Plan phase, so no `build/plan/sprint` is written, unless the security result is pass or blocked with every file reviewed (and, in an even sprint, the sweep ran); or make `groom` and `review-due` refuse to close sprint-N until `review.periodic-security` of run states sprint-N and sprint-N-sweep is pass or blocked.
+
+### Sprint security findings reach the run state only through the skeptic (`sprint-planning` security Medium (7))
+
+- Location: `.claude/workflows/sprint-planning.js:113`.
+- Why it matters: in sprint mode the security reviewer records nothing, so its findings reach the run state only through the skeptic, a quality-reviewer start; when the skeptic hits its cap, errors, or returns null, `periodic-security` is recorded blocked with no note per finding, so the planner, which reads only the notes, never sees a blocking High or Medium finding and never moves it to the front of the queue.
+- Fix outline: have the record start write each security finding as a security note straight from `security.findings`, keeping the skeptic only to add the disputed prefix, or have the security reviewer record its own findings as in periodic mode.
+
+### Groom removes security entries without proof of a fix (`sprint-planning` security Low (6))
+
+- Location: `tools/run_state.sh:1358` (`listed CHANGE HEADING`) and `tools/run_state.sh:1361` (`fixed COMMIT HEADING`).
+- Why it matters: `listed` only checks that some archived change's name ends in -CHANGE, not that it is one of this sprint's merged changes or that its queue item named the heading, and `fixed` accepts any ancestor of HEAD, even the root commit, so the planner, a model reading about 4,600 backlog lines, can remove any security entry unchecked, though the design says removal is proven.
+- Fix outline: for `listed`, require CHANGE in `sprint_names` and its archived proposal or brief to contain the exact heading; for `fixed`, require COMMIT in `sprint_base..HEAD` and touching the heading's file:line location; or refuse every removal of a security entry except `listed` by a merged sprint change.
+
+### Sprint security continuation drops differently spelled unreviewed files (`sprint-planning` security Low (5))
+
+- Location: `.claude/workflows/sprint-planning.js:97` `mergeSecurity`.
+- Why it matters: it keeps only the continuation's `not_reviewed` entries that exactly match the first start's free-form file names, so a differently spelled path (for example `./tools/run_state.sh`) is dropped and the sprint security review records pass with that file never reviewed.
+- Fix outline: fail closed: use `again.not_reviewed` unchanged, or normalize both lists against `git diff --name-only BASE TIP` before intersecting, or constrain the SECURITY schema's `not_reviewed` items to an enum of the combined diff's files as `periodic-review.js` does with its areas.
+
+### Groom's fixed check accepts any ancestor commit (`sprint-planning` quality advisory)
+
+- Location: `tools/run_state.sh:1361` `fixed COMMIT HEADING`.
+- Why it matters: it accepts any ancestor of HEAD, even the root commit, so a security entry's removal is not provable as the design claims.
+- Fix outline: also require the commit to touch the file the heading names (`git show --name-only`).
+
+### Groom's listed check matches any archive name suffix (`sprint-planning` quality advisory)
+
+- Location: `tools/run_state.sh:1358`, the archive check `openspec/changes/archive/*-WORD`.
+- Why it matters: it matches any archived change whose name ends in -WORD, so `listed review` passes on `periodic-review`.
+- Fix outline: match the date prefix exactly, `archive/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-WORD`.
+
+### Groom lets every copy of a duplicated finding go (`sprint-planning` quality advisory)
+
+- Location: `tools/run_state.sh:1373`.
+- Why it matters: duplicate lines naming every heading at one location each pass, since `backlog_dups` reads the unmodified file, so all copies of a finding can be removed with no `groomed.md` entry; and `grep -F '$at: '` matches a location as a substring of a longer one.
+- Fix outline: refuse a `groom.txt` that removes every heading at a location unless `groomed.md` names it, and compare the location field exactly with awk.
+
+### Stale review-due comment in the periodic review (`sprint-planning` quality advisory)
+
+- Location: `.claude/workflows/periodic-review.js:122`.
+- Why it matters: the comment says a partial review keeps the next one due, but `review-due` now counts sprints only, so a reader is misled about when the review runs again.
+- Fix outline: drop the review-due clause or state the new rule.
+
+### Delivery brief names the sprint queue even when none waits (`sprint-planning` quality advisory)
+
+- Location: `.claude/workflows/deliver-change.js:920`.
+- Why it matters: the brief always names `build/plan/queue.md` "while a sprint plan waits there", even when none waits and `build/plan/` holds an older run's files, leaving the agent to judge which queue is live.
+- Fix outline: name only the queue file `plan-needed`'s line reports (`docs/queue.md` or `build/plan/queue.md`).
+
+### Rerun of /sprint duplicates the skeptic's notes (`sprint-planning` quality advisory)
+
+- Location: `.claude/workflows/sprint-planning.js:116`.
+- Why it matters: a rerun after a partial failure re-inits sprint-N (resume) and the skeptic records every kept finding again, duplicating the notes the planner reads.
+- Fix outline: skip the review phases when `review.periodic-security` of sprint-N is already recorded at the same head, or clear its notes first.
+
+### Two result helpers with different argument types (`sprint-planning` quality advisory)
+
+- Location: `.claude/workflows/sprint-planning.js:129` `result(blocked, missed)`, beside the result helper of `.claude/workflows/periodic-review.js`.
+- Why it matters: it duplicates the periodic review's helper with a different argument type (a count against an array), so the two drift apart and a caller passing the other shape gets a wrong status.
+- Fix outline: share one shape, both taking the `not_reviewed` list.
+
+### plan-needed treats an unreviewed sprint plan as waiting (`sprint-planning` quality advisory)
+
+- Location: `tools/run_state.sh:1423` `plan_needed`, the planner's keep rule (`.claude/agents/planner.md:25`), and the package brief.
+- Why it matters: they treat any marker as a waiting plan through `sprint_waiting` without `sprint_reviewed`, so while `groom` holds an unreviewed plan deliveries take `build/plan/queue.md`'s head and the planner-not-run package path removes the item from `docs/queue.md`, where it is not, leaving the delivered change at the head of `build/plan/queue.md`.
+- Fix outline: one helper (`sprint_waiting` and `sprint_reviewed`) used by `review_due`, `groom`, and `plan_needed`.
+
+### Planner claims docs-lint checks the sprint queue (`sprint-planning` quality advisory)
+
+- Location: `.claude/agents/planner.md:35`, `tools/docs_lint.sh:135` `check_queue`.
+- Why it matters: `check_queue` reads only `docs/queue.md`, so `build/plan/queue.md`'s sprint rule is first checked after `groom` copies it in a later package step.
+- Fix outline: let `docs_lint` take the queue path (for example `QUEUE=build/plan/queue.md`) and have the planner run it, or reword the sentence.
+
+### docs_lint header gives the old sprint size (`sprint-planning` quality advisory)
+
+- Location: `tools/docs_lint.sh:19`, against the check at line 151 and the map.
+- Why it matters: the header still says the sprint items are 1 to 5 while the check and the map moved to 0 to 5, a drained sprint.
+- Fix outline: say 0 to 5, 0 once the sprint's deliveries drained it.
+
+### Sprint report hides a partial security review (`sprint-planning` quality advisory)
+
+- Location: `.claude/workflows/sprint-planning.js:177`.
+- Why it matters: the report's Security line gives only the finding counts, so a security review left partial after its continuation (recorded partial, `review-due` staying due, `groom` holding the plan) reads as complete and the user is not told to run /sprint again.
+- Fix outline: append ", partial: not reviewed FILES; run /sprint again" when `security.not_reviewed` is not empty.
+
+### Sprint after a sixth merge reviews a change twice (`sprint-planning` quality advisory)
+
+- Location: `tools/run_state.sh:1255` `sprint_names` and the due line, `sprint_row` (line 1324).
+- Why it matters: when /sprint runs after a sixth merge, `sprint_names` and the due line list every change since the last sprint and the combined diff runs to `origin/main`, but `sprint_row` closes the sprint at its fifth row, so the sixth change is reviewed in this sprint and counted again in the next.
+- Fix outline: cut `sprint_names` at `SPRINT_SIZE` and end the combined diff at the fifth change's merged commit.
+
+### Contributor agent file has no headroom (`pr-on-push` retrospective)
+
+- Location: `.claude/agents/contributor.md` (8190 of the 8192-byte agent budget in `tools/docs_lint.sh` `BUDGETS`; the next largest agent file, `.claude/agents/planner.md`, is 5950).
+- Why it matters: at #108 a one-line timeout fix forced four unrelated rewordings to fit the budget, which the quality review flagged as a mixed commit; every later fix to the file pays the same cost.
+- Fix outline: keep at least 15% headroom (under 7000 bytes) by removing or merging instructions; acceptance: docs-lint and the agents cases of tools-test pass, and the next fix to an agent file changes only the lines its finding names.

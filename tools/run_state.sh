@@ -131,12 +131,35 @@
 #                               output) and wall minutes, as the Workflow
 #                               tool reported them, to metric.total_tokens
 #                               and metric.wall_min, then print the budget
-#   review-due CHANGE           print "due: REASON" and exit 0 when the merged
-#                               change touched a sensitive area or five changes
-#                               merged since the last periodic review; print
-#                               "not due: ..." and exit 1 otherwise
+#   review-due                  print "due: sprint-N ..." with the sprint's
+#                               changes, its combined diff BASE..origin/main,
+#                               and "sweep: yes" in an even sprint, and exit 0
+#                               when SPRINT_SIZE changes merged since the last
+#                               sprint of docs/sprints.tsv (SPRINTS_FILE);
+#                               print "not due: ..." and exit 1 before that or
+#                               while the sprint's plan waits in build/plan/
+#                               after its security review, recorded pass or
+#                               blocked in the run state sprint-N
+#   backlog-dups                print each location (file:line) that two or
+#                               more backlog headings name, with the headings
+#   groom                       apply a waiting sprint plan (PLAN_DIR/sprint
+#                               names the sprint in progress, which the
+#                               sprints file lacks, and sprint-N records its
+#                               security review pass or blocked; else the
+#                               plan waits): check every line of
+#                               groom.txt, "listed CHANGE HEADING" (CHANGE
+#                               archived), "fixed COMMIT HEADING" (COMMIT in
+#                               HEAD), or "duplicate HEADING" (never a
+#                               security entry), HEADING a whole heading line
+#                               of the backlog, and write nothing when one
+#                               fails; then copy queue.md over docs/queue.md,
+#                               remove each entry, append groomed.md (merged
+#                               entries and the sprint findings not queued),
+#                               and append the sprint's row from its history
+#                               rows
 #   plan-needed CHANGE          print "needed: REASON" and exit 0 when the
-#                               change is not the head of docs/queue.md or a
+#                               change is not the head of docs/queue.md (the
+#                               waiting sprint plan's queue.md) or a
 #                               pending change holds a proposal or finding
 #                               (PLAN_NOTES) to place; print "not needed:
 #                               ..." with the head item's size and exit 1
@@ -164,7 +187,9 @@
 # Environment: BASE (origin/main), RUN_STATE_DIR (build/pipeline),
 # STAGE_DIR (build/stages), STAGES (the stage list; make -s stages when
 # unset), MAKE (make), METRICS_FILE (docs/metrics.tsv), METRICS_OUT
-# (build/metrics/current.tsv), CHECK_WAIT (540, seconds check waits).
+# (build/metrics/current.tsv), CHECK_WAIT (540, seconds check waits),
+# BACKLOG_FILE (docs/backlog.md), SPRINTS_FILE (docs/sprints.tsv), PLAN_DIR
+# (build/plan).
 set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -211,23 +236,19 @@ OUTPUT_SHARE=6
 # proposals, overruns, and periodic review findings.
 PLAN_NOTES='retro|overrun|security|quality'
 TAB=$(printf '\t')
-# Columns 16 and 17 came after estimate, so rates ($5, $6) and review_due
-# ($14) read the same columns in every row.
+# Columns 16 and 17 came after estimate, so rates ($5, $6)
+# read the same columns in every row.
 HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci_min${TAB}rounds${TAB}allocs${TAB}us_per_key${TAB}out_tokens${TAB}tool_calls${TAB}phases${TAB}review${TAB}estimate${TAB}total_tokens${TAB}wall_min${TAB}calibration"
-# The areas whose change makes a periodic review of the whole codebase due,
-# one "label=path pattern" per line, the first match named. An edit of
-# config/default.caratrc that adds or removes only key bindings, comments,
-# and blank lines leaves the file and its mirror out (keymap_only); an
-# agent file counts as the guard's wiring only when its tools or hook lines
-# change (agent_hooks). Other tooling, docs, and keymap-only changes count
-# only toward the five.
-REVIEW_AREAS='config loading=^(config/|bin/carat-gen-config[.]rb$|carat/(adapters/rc_config_gateway|ports/config_port|domain/(config|default_config|manifest_check|rc_[a-z_]+))[.]rb$)
-file access=^carat/(drivers/disk_files[.]rb|ports/file_port[.]rb|domain/path_(policy|info)[.]rb|use_cases/files/)
-plugin boundaries=^carat/(plugin_api[.]rb|plugins/|use_cases/plugins/)
-terminal output=^carat/(drivers/ansi_terminal|ports/terminal_port|adapters/(screen_presenter|frame_presenter|painted_rows|sgr_table|key_decoder)|domain/(frame|display_width|utf8|decoded_line))[.]rb$
-process spawning=^carat/drivers/
-entry point=^bin/carat[.]rb$
-guard and gates=^(tools/(agent_guard|gates|rules|ci_scope|scan_text|pr_scan)[.]sh$|tools/noruby/|[.]githooks/|[.]claude/settings[.]json$|[.]github/workflows/)'
+# A sprint is SPRINT_SIZE merged changes; sprint-planning reviews each
+# sprint's combined diff, and the whole tree in every second sprint. One
+# row per planned sprint in the sprints file, the first the seed sprint-0.
+sprints_file=${SPRINTS_FILE:-docs/sprints.tsv}
+plan_dir=${PLAN_DIR:-build/plan}
+SPRINT_SIZE=5
+# The run states of reviews, not changes, which a sprint never counts:
+# /review's review-DATE and sprint-planning's sprint-N.
+REVIEW_RUNS='^(review|sprint)-[0-9]'
+SPRINT_HEADER="sprint${TAB}last${TAB}merges${TAB}changes${TAB}wall_min${TAB}min_per_change${TAB}total_tokens${TAB}over_budget${TAB}first_pass"
 
 die() {
   echo "run_state: $*" >&2
@@ -1225,67 +1246,169 @@ append_history() {
   done
 }
 
-# True when the edit of config/default.caratrc in commit $1 adds or removes
-# only key bindings, comments, and blank lines; no edit is not keymap-only.
-keymap_only() {
-  lines=$(git diff --no-ext-diff --no-color -U0 --end-of-options "$1~1" "$1" -- config/default.caratrc 2>/dev/null |
-    awk '/^diff / { hunk = 0 } /^@@/ { hunk = 1; next } hunk && /^[-+]/')
-  [ -n "$lines" ] || return 1
-  [ -z "$(printf '%s\n' "$lines" | grep -v -E '^[-+](keymap[.]|#|[[:space:]]*$)')" ]
+# The sprint in progress: sprint_n, the number after the sprints file's
+# last row; sprint_base, the merged commit of that row's last change, where
+# the combined diff starts; and sprint_names and sprint_count, the changes
+# merged since (the history rows after that change's row, then the merged
+# changes without a row).
+sprint_state() {
+  [ -f "$sprints_file" ] || die "no $sprints_file"
+  last_row=$(awk -F'\t' 'NR > 1 && NF { row = $0 } END { print row }' "$sprints_file")
+  prev=$(printf '%s\n' "$last_row" | cut -f1)
+  valid 'sprint-[0-9]+' "$prev" || die "$sprints_file ends with no sprint row"
+  sprint_n=$((${prev#sprint-} + 1))
+  prev_last=$(printf '%s\n' "$last_row" | cut -f2)
+  sprint_base=$(awk -F'\t' -v c="$prev_last" '$1 == c { print $3 }' "$metrics_file" 2>/dev/null | tail -1)
+  [ -n "$sprint_base" ] || die "the last change of $prev, $prev_last, has no row in $metrics_file"
+  sprint_names=$({ awk -F'\t' -v c="$prev_last" 'seen && NF { print $1 } $1 == c { seen = 1 }' "$metrics_file"; pending_list; } |
+    awk -v r="$REVIEW_RUNS" 'NF && $0 !~ r && !seen[$0]++')
+  sprint_count=$(printf '%s\n' "$sprint_names" | grep -c .)
 }
 
-# The first agent file of commit $1 whose edit adds or removes a tools line
-# or a hook line of its frontmatter, the wiring of the guard; nothing when
-# none does.
-agent_hooks() {
-  git diff --no-ext-diff --no-color -U0 --end-of-options "$1~1" "$1" -- .claude/agents 2>/dev/null | awk '
-    /^diff / { file = $NF; sub(/^b\//, "", file); next }
-    /^(---|\+\+\+) / { next }
-    /^[-+](tools:|hooks:|[[:space:]]+(PreToolUse:|- matcher:|matcher:|hooks:|- type:|type:|command:))/ { print file; exit }'
+# True when a sprint plan waits in PLAN_DIR for a package step: its marker
+# names a sprint (waiting) that the sprints file has no row for.
+sprint_waiting() {
+  [ -f "$plan_dir/sprint" ] && [ -f "$sprints_file" ] || return 1
+  waiting=$(sed -n '1p' "$plan_dir/sprint")
+  valid 'sprint-[0-9]+' "$waiting" || return 1
+  ! awk -F'\t' -v s="$waiting" '$1 == s { found = 1 } END { exit !found }' "$sprints_file"
 }
 
-# periodic_done RESULT: a periodic security result that counts as a review
-# done; a partial or missing one keeps the next review due.
-periodic_done() {
-  [ "$1" = pass ] || [ "$1" = blocked ]
+# True when the run state sprint-N of the sprint in progress records its
+# security review pass or blocked (sprint_security, the result word): a
+# plan written without it waits, review-due staying due, so /sprint again
+# reviews the sprint anew instead of closing it unreviewed.
+sprint_reviewed() {
+  sprint_security=$(change="sprint-$sprint_n"; read_key review.periodic-security)
+  sprint_security=${sprint_security%% *}
+  case "$sprint_security" in pass|blocked) return 0 ;; esac
+  return 1
 }
 
 review_due() {
-  merged=$(merged_commit)
-  [ -n "$merged" ] || die "review-due: $change is not merged (no merged commit hash)"
-  paths=$(git diff --name-only --end-of-options "$merged~1" "$merged" -- 2>/dev/null)
-  if keymap_only "$merged"; then
-    paths=$(printf '%s\n' "$paths" | grep -v -x -E 'config/default[.]caratrc|carat/domain/default_config[.]rb')
+  sprint_state
+  list=$(printf '%s\n' "$sprint_names" | awk 'NF { printf "%s%s", (n++ ? ", " : ""), $0 }')
+  if sprint_waiting && [ "$waiting" = "sprint-$sprint_n" ] && sprint_reviewed; then
+    echo "not due: sprint-$sprint_n is planned; its plan waits in $plan_dir/ for the next package step"
+    return 1
   fi
-  area=$(printf '%s\n' "$REVIEW_AREAS" | while IFS='=' read -r label pattern; do
-    hit=$(printf '%s\n' "$paths" | grep -E -m 1 "$pattern")
-    if [ -n "$hit" ]; then echo "$label ($hit)"; break; fi
-  done)
-  if [ -z "$area" ]; then
-    hit=$(agent_hooks "$merged")
-    [ -z "$hit" ] || area="guard and gates ($hit, its tools or hooks)"
+  if [ "$sprint_count" -lt "$SPRINT_SIZE" ]; then
+    echo "not due: sprint-$sprint_n has $sprint_count of $SPRINT_SIZE changes merged${list:+ ($list)}"
+    return 1
   fi
-  if [ -n "$area" ]; then
-    echo "due: the change touched $area"
+  sweep=no
+  [ $((sprint_n % 2)) -ne 0 ] || sweep=yes
+  echo "due: sprint-$sprint_n has $sprint_count changes merged ($list); combined diff $sprint_base..${BASE:-origin/main}; sweep: $sweep"
+}
+
+# The locations (a file:line with an extension) that two or more backlog
+# headings name, each with those headings: the candidates of groom's
+# duplicate lines, which the model decides.
+backlog_dups() {
+  [ -f "$backlog_file" ] || die "no $backlog_file"
+  awk '/^#+ / && match($0, /[A-Za-z0-9_.\/-]+[.][A-Za-z]+:[0-9]+/) {
+      at = substr($0, RSTART, RLENGTH); n[at]++; h[at] = h[at] (n[at] > 1 ? " | " : "") $0 }
+    END { for (at in n) if (n[at] > 1) print at ": " h[at] }' "$backlog_file" | sort
+}
+
+# Every backlog entry under the heading line $1, printed whole: from the
+# heading to the next heading of any level, as each entry stands alone.
+backlog_entry() {
+  H="$1" awk '
+    /^#+ / { on = ($0 == ENVIRON["H"]) }
+    on { print }' "$backlog_file"
+}
+
+# The sprint's row from its first SPRINT_SIZE history rows: the last
+# change, the merges, the changes, the wall minutes and their mean per
+# change, the total tokens, the runs over their size's budget
+# (TOKEN_BUDGETS), and each gate's first passes.
+sprint_row() {
+  awk -F'\t' -v c="$prev_last" -v budgets="$TOKEN_BUDGETS" -v s="sprint-$sprint_n" -v size="$SPRINT_SIZE" -v r="$REVIEW_RUNS" '
+    BEGIN { n = split(budgets, b, " "); for (i = 1; i <= n; i++) { split(b[i], kv, "="); budget[kv[1]] = kv[2] } }
+    seen && NF && rows < size && $1 !~ r {
+      rows++; names = names (rows > 1 ? "," : "") $1; last = $1
+      if ($17 ~ /^[0-9.]+$/) wall += $17
+      if ($16 ~ /^[0-9]+$/) { tokens += $16; if (($15 in budget) && $16 + 0 > budget[$15] + 0) over++ }
+      m = split($6, g, ",")
+      for (i = 1; i <= m; i++) {
+        if (split(g[i], gv, ":") != 2) continue
+        if (!(gv[1] in total)) order[++k] = gv[1]
+        total[gv[1]]++; if (gv[2] == 1) pass[gv[1]]++
+      }
+    }
+    $1 == c { seen = 1 }
+    END {
+      for (i = 1; i <= k; i++) fp = fp (i > 1 ? "," : "") order[i] ":" (pass[order[i]] + 0) "/" total[order[i]]
+      printf "%s\t%s\t%d\t%s\t%.1f\t%.1f\t%d\t%d\t%s\n", s, last, rows, names, wall, rows ? wall / rows : 0, tokens, over, fp == "" ? "-" : fp
+    }' "$metrics_file"
+}
+
+# Applies a waiting sprint plan, every line of groom.txt checked before
+# anything is written. A listed or fixed heading loses every entry under
+# it; a duplicate heading that stands more than once keeps its first entry,
+# one that stands once needs another heading at its location
+# (backlog-dups). A security entry (any line naming security) leaves only
+# by a merged item's listed heading or its fixing commit.
+groom() {
+  if ! sprint_waiting; then echo "groom: no sprint plan waits in $plan_dir/"; return 0; fi
+  sprint_state
+  [ "$waiting" = "sprint-$sprint_n" ] || die "groom: the plan of $waiting is not the sprint in progress, sprint-$sprint_n"
+  if ! sprint_reviewed; then
+    echo "groom: the plan of sprint-$sprint_n waits for its security review (${sprint_security:-none}); run /sprint again"
     return 0
   fi
-  rows=0
-  [ ! -f "$metrics_file" ] || rows=$(awk -F'\t' 'NR > 1 { n = ($14 ~ /^security=(pass|blocked)( |$)/) ? 0 : n + 1 } END { print n + 0 }' "$metrics_file")
-  waiting=0
-  reviewed=0
-  for name in $(pending_list); do
-    security=$(change=$name; read_key review.periodic-security)
-    if periodic_done "${security%% *}"; then reviewed=1
-    else waiting=$((waiting + 1)); fi
-  done
-  [ "$reviewed" -eq 0 ] || rows=0
-  since=$((rows + waiting))
-  if [ "$since" -ge 5 ]; then
-    echo "due: $since changes merged since the last periodic review"
-    return 0
+  rows=$(awk -F'\t' -v c="$prev_last" -v r="$REVIEW_RUNS" 'seen && NF && $1 !~ r { n++ } $1 == c { seen = 1 } END { print n + 0 }' "$metrics_file")
+  [ "$rows" -ge "$SPRINT_SIZE" ] || die "groom: sprint-$sprint_n has $rows of $SPRINT_SIZE history rows; run history first"
+  removals=""
+  repeats=""
+  if [ -f "$plan_dir/groom.txt" ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+      [ -n "$line" ] || continue
+      kind=${line%% *}
+      rest=${line#* }
+      case "$kind" in
+        listed|fixed) word=${rest%% *}; heading=${rest#* } ;;
+        duplicate) word=""; heading=$rest ;;
+        *) die "groom: not a groom line: $line" ;;
+      esac
+      stands=$(grep -c -x -F -e "$heading" "$backlog_file")
+      [ "$stands" -ge 1 ] && valid '#{2,3} .+' "$heading" || die "groom: not a heading line of $backlog_file: $heading"
+      case "$kind" in
+        listed)
+          valid '[a-z0-9][a-z0-9-]*' "$word" && ls -d openspec/changes/archive/*-"$word" > /dev/null 2>&1 ||
+            die "groom: $word is not an archived change: $line" ;;
+        fixed)
+          valid '[0-9a-f]{7,40}' "$word" && git merge-base --is-ancestor "$word" HEAD 2>/dev/null ||
+            die "groom: $word is not a commit of HEAD: $line" ;;
+        duplicate)
+          if backlog_entry "$heading" | grep -q -i security; then
+            die "groom: a security entry leaves only by a merged item's heading or its fixing commit: $heading"
+          fi
+          if [ "$stands" -gt 1 ]; then
+            repeats="$repeats$heading
+"
+            continue
+          fi
+          at=$(printf '%s\n' "$heading" | grep -o -E '[A-Za-z0-9_./-]+[.][A-Za-z]+:[0-9]+' | head -1)
+          [ -n "$at" ] && backlog_dups | grep -q -F -e "$at: " || die "groom: no other heading names the location of: $heading" ;;
+      esac
+      removals="$removals$heading
+"
+    done < "$plan_dir/groom.txt"
   fi
-  echo "not due: $since of 5 changes merged since the last periodic review, and no sensitive area touched"
-  return 1
+  [ ! -f "$plan_dir/queue.md" ] || cp "$plan_dir/queue.md" docs/queue.md
+  tmp=$(mktemp "$backlog_file.XXXXXX") || die "groom: no temporary file"
+  R="$removals" D="$repeats" awk '
+    BEGIN {
+      n = split(ENVIRON["R"], r, "\n"); for (i = 1; i <= n; i++) if (r[i] != "") gone[r[i]] = 1
+      n = split(ENVIRON["D"], d, "\n"); for (i = 1; i <= n; i++) if (d[i] != "") repeat[d[i]] = 1
+    }
+    /^#+ / { seen[$0]++; skip = ($0 in gone) || (($0 in repeat) && seen[$0] > 1) }
+    !skip { print }' "$backlog_file" > "$tmp" && mv "$tmp" "$backlog_file" || { rm -f "$tmp"; die "groom: $backlog_file not rewritten"; }
+  [ ! -f "$plan_dir/groomed.md" ] || cat "$plan_dir/groomed.md" >> "$backlog_file"
+  sprint_row >> "$sprints_file"
+  echo "groom: applied sprint-$sprint_n: $(printf '%s' "$removals$repeats" | grep -c .) headings groomed, its row appended to $sprints_file"
 }
 
 # Whether the queue needs the planner before the change starts: needed
@@ -1296,10 +1419,12 @@ review_due() {
 # printed for the run's estimate. It prints one line: a run whose brief is
 # only the change name has its agents read the item in docs/queue.md.
 plan_needed() {
-  head_item=$(sed -n 's/^1[.] //p' docs/queue.md 2>/dev/null | head -1)
+  queue=docs/queue.md
+  ! sprint_waiting || queue=$plan_dir/queue.md
+  head_item=$(sed -n 's/^1[.] //p' "$queue" 2>/dev/null | head -1)
   name=$(printf '%s\n' "$head_item" | sed -n 's/^`\([a-z0-9][a-z0-9-]*\)`.*/\1/p')
   if [ "$name" != "$change" ]; then
-    echo "needed: $change is not the head of docs/queue.md (${name:-no named item})"
+    echo "needed: $change is not the head of $queue (${name:-no named item})"
     return 0
   fi
   for other in $(pending_list); do
@@ -1311,7 +1436,7 @@ plan_needed() {
     fi
   done
   size=$(printf '%s\n' "$head_item" | awk 'match($0, /estimated (small|medium|large)/) { print substr($0, RSTART + 10, RLENGTH - 10) }')
-  echo "not needed: $change heads docs/queue.md, estimated ${size:--}, and no pending change holds a proposal or finding"
+  echo "not needed: $change heads $queue, estimated ${size:--}, and no pending change holds a proposal or finding"
   return 1
 }
 
@@ -1383,6 +1508,9 @@ case "$command" in
   status) show_status; exit 0 ;;
   pending) pending_list; exit 0 ;;
   history) append_history; exit 0 ;;
+  review-due) [ $# -eq 0 ] || usage; review_due; exit $? ;;
+  backlog-dups) [ $# -eq 0 ] || usage; backlog_dups; exit $? ;;
+  groom) [ $# -eq 0 ] || usage; groom; exit $? ;;
 esac
 [ $# -ge 1 ] || usage
 change=$1
@@ -1483,9 +1611,6 @@ case "$command" in
   plan-needed)
     [ $# -eq 0 ] || usage
     plan_needed ;;
-  review-due)
-    [ $# -eq 0 ] || usage
-    review_due ;;
   *)
     usage ;;
 esac

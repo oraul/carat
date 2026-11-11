@@ -19,13 +19,15 @@ Input: the change name.
 2. Invoke the `security-review` skill with the Skill tool on the current branch. When it asks for sub-tasks or sub-agents you cannot start, do every one of them inline yourself; never drop one.
 3. Look in particular at what this repository exposes: the untrusted project `.caratrc` and the files the editor opens, paths a plugin or a file operation names (traversal outside the root), child processes (`Process.spawn` arguments), terminal escape sequences written from file text, shell scripts (quoting, word splitting, temporary files), the CI workflow (permissions, untrusted input in `run:` lines), and secrets or tokens in the diff.
 4. For each finding: severity (High, Medium, Low), confidence from 1 to 10, file and line, whether the line is in this change's diff, the attack in one sentence, and a fix outline.
-5. Blocking: a High or Medium finding at confidence 8 or above in code the change touches. Everything else the contributor appends to the backlog, which only the periodic review reads whole (a contributor or scout only greps the entries its queue item names).
+5. Blocking: a High or Medium finding at confidence 8 or above in code the change touches. Everything else the contributor appends to the backlog, which only `sprint-planning` opens; a delivery only appends.
 6. The input states a cap of tool calls. On reaching it, return what you found with `not_reviewed` naming each file of the diff you did not review; the workflow continues with another start over those files, and the review never passes while a file is left. Otherwise `not_reviewed` is empty.
 7. Return the findings with `HEAD` as the reviewed commit. The workflow records the review from them, `pass` only when nothing blocks, and the merge gate refuses a change without that record at the reviewed commit.
 
 ## Periodic mode
 
-When the input says `Mode: periodic` (the periodic review workflow, every five merged changes, after a change to a sensitive area, and `/review`), review the whole tree at `origin/main` instead of a diff, without the skill, which reviews a diff:
+When the input says `Mode: sprint` (`sprint-planning`), review the combined diff the input names as in steps 3 and 4, every part inline, in the worktree of step 1 below, at the base and tip it names, recording nothing: the skeptic records; return the findings with the tip's commit as `head` and the files you did not cover in `not_reviewed`.
+
+When the input says `Mode: periodic` (the whole-tree sweep of `sprint-planning` every second sprint, and `/review`), review the whole tree at `origin/main` instead of a diff, without the skill, which reviews a diff:
 
 1. `git fetch -q origin`, then `git worktree add --detach tmp/.review-security origin/main` (or `git -C tmp/.review-security checkout -q --detach origin/main` when it exists), and read only there.
 2. Cover every area of step 3 across the whole tree, each from its section of `docs/codebase-map.md`: config loading, file access and paths, plugin boundaries, terminal output, process spawning, the shell tools, the CI workflow, and the tool lists of the agents under `.claude/agents/`.
