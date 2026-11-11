@@ -2153,6 +2153,12 @@ expect "workflow: a settled resume trusts the recorded check and reviews" 0 '^\[
 expect "workflow: only check and review records need a record start" 0 '^\[true,false,false,true\]$' \
   speed_js '["sh tools/run_state.sh note c late-finding \"x (y) z\"", "sh tools/run_state.sh review c security pass \"high=0\" abc1234", "sh tools/run_state.sh phase c check abc1234", "sh tools/run_state.sh phase c implement abc1234"].map((l) => CLOSABLE.test(l))'
 expect "workflow: no record start runs at the close" 0 '^1$' grep -c 'await flush(' "$wf"
+expect "agents: the quality reviewer blocks only on correctness and a missing test" 0 '^4[.] Blocking is only a correctness bug or a behavior change without its test[.]' \
+  grep -E '^4[.] Blocking' "$here/../.claude/agents/quality-reviewer.md"
+expect "agents: the merger reads only the latest run of each check name" 0 'keep only the latest run of each check name' \
+  grep -E '^2[.] Read the check runs' "$here/../.claude/agents/merger.md"
+expect "agents: the contributor creates the pull request with the body file unchanged" 0 "the file's text, unchanged, as the body" \
+  grep -E '^4[.] Write the body' "$here/../.claude/agents/contributor.md"
 expect "workflow: a contributor that finished is done" 0 '^[{]"next":"done","left":\[\][}]$' \
   work_js "(r => continuation(r, workLeft(r), 0))({ status: 'done' })"
 expect "workflow: a capped contributor start is continued with what it left" 0 '^[{]"next":"continue","left":\["4.2 the docs"\][}]$' \
