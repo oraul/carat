@@ -63,7 +63,8 @@
 #                openspec and npx @fission-ai/openspec@latest; mkdir rm cp
 #                mv touch chmod; sh tools/run_state.sh show status pending
 #                get budget history, push CHANGE [--ci-fix],
-#                set CHANGE pr N; sh tools/gates.sh GATE... or pr-body BODY
+#                set CHANGE pr N; sh tools/gates.sh GATE... or pr-body BODY;
+#                sh tools/publish_pr.sh CHANGE TITLE...
 #   close        the read profile, plus sh tools/run_state.sh phase CHANGE
 #                NAME COMMIT with NAME one of CLOSE_PHASES, the phases
 #                no merge gate reads: the retrospective's closing start
@@ -679,6 +680,9 @@ script_form() {
     tools/ci_wait.sh)
       only_profiles merger "tools/ci_wait.sh"
       [ $# -eq 1 ] && matches "$1" '^[0-9]+$' || refuse "tools/ci_wait.sh other than SECONDS" ;;
+    tools/publish_pr.sh)
+      only_profiles contributor "tools/publish_pr.sh"
+      [ $# -ge 2 ] && matches "$1" "$CHANGE_NAME" || refuse "tools/publish_pr.sh other than CHANGE TITLE" ;;
     *) refuse "the script $script is not one this profile runs" ;;
   esac
 }
