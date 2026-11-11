@@ -2387,6 +2387,7 @@ expect "workflow: the merger's waiting calls are recorded" 0 ' ci_wait_calls=4"$
   calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = 4; estimate = ''; planned = null; state = { change: 'c' }; return metricLine() })()"
 expect "workflow: the merger's lines leave the CI stages to the record and closing starts" 0 "^1 0$" \
   sh -c 'echo "$(grep -c "queue(\`sh tools/run_state.sh ci-stages \${state.change} \${pushed}\`, m.head)" "$1") $(grep -c "ci-stages" "$2")"' _ "$wf" "$here/../.claude/agents/merger.md"
+expect "deliver: the command records the weighted tokens" 0 "sh tools/run_state.sh tokens <change> <dir>" cat "$here/../.claude/commands/deliver.md"
 expect "workflow: both reviews' scopes read this start's records" 0 '^2$' grep -c "narrowedFrom(ran, '" "$wf"
 expect "workflow: a resume past the push builds no merge records from the run state" 0 '^\[\]$' \
   speed_js 'mergeRecords({})'

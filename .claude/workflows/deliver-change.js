@@ -30,7 +30,8 @@ export const meta = {
 // stores every figure as metric.* in one metric line (metricLine), so a
 // restart seeds them and tools/run_state.sh history builds a whole row;
 // the total tokens and wall minutes of each start, which only the session
-// that ran the workflow sees, /deliver adds with tools/run_state.sh usage. The
+// that ran the workflow sees, /deliver adds with tools/run_state.sh usage, and
+// each start's tier-weighted tokens with tools/run_state.sh tokens. The
 // run state's phase.* and review.* lines and the figures are the script's
 // own: it builds each command from a schema-checked result. One agent that
 // reads nothing else runs the queued lines with the metric line (flush) at

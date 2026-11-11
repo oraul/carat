@@ -7,11 +7,11 @@ CI took 4.6 to 17.0 minutes over #95 to #109, but the run state keeps only the m
 ## What Changes
 
 - `tools/ci_scope.sh`: `.claude/agents/`, `.claude/workflows/`, and `.claude/settings.json` are code; on a pull request whose changes are not all documentation, the checks are still skipped when the merge commit differs from the newest earlier head of the pull request whose spin check passed only in documentation no test reads. `.github/workflows/ci.yml` passes the pull request's number and head.
-- New `sh tools/run_state.sh ci-stages CHANGE COMMIT`: reads the spin job of the newest ci run at the commit with `gh api` and records each step's seconds as `metric.ci.STEP`, replacing the previous run's; it never fails the line it is in. The merger's green and red lines run it first, and the guard's merger profile allows it.
+- New `sh tools/run_state.sh ci-stages CHANGE COMMIT`: reads the spin job of the newest ci run at the commit with `gh api` and records each step's seconds as `metric.ci.STEP`, replacing the previous run's; it never fails the line it is in. The workflow queues it at the pushed head once the merger reads CI green or red, for the record start or the closing start; the guard's close profile allows it with a full sha. The merger's own lines stay as they are, since its guard is `origin/main`'s copy, which would refuse a new command during this change's own merge.
 - The merger's CI waits are counted from the minutes it returns (3, 4, then 5 minute waits, two calls each: the wait and the read after it) as `metric.ci_wait_calls`.
 - New `sh tools/run_state.sh tokens CHANGE DIR`: reads one Workflow run's agent transcripts, sums each start's input, cache-write, cache-read, and output tokens, prices them by its tier (`TIER_PRICES`), and records `metric.start.N`, `metric.weighted.KEY` per phase, and `metric.weighted_tokens`; a directory is counted once. `/deliver` runs it after each Workflow start, beside `usage`.
 - `docs/metrics.tsv` gains columns 19 to 22, `ci_stages`, `ci_wait_calls`, `weighted_tokens`, and `weighted_phases`, the existing rows padded with `-`.
-- CLAUDE.md's Commands, the map, and the deliver command follow.
+- CLAUDE.md's Commands, README's measurement paragraph, `docs/architecture.md` section 10 (the CI scope), the map, and the deliver command follow.
 
 Out of scope: any change to the CI steps themselves or their caches (the latest pull request run, 43093596432, took 7.6 minutes with warm caches; the recorded stages will show where a slow run spends its time); judging the 3-run acceptance (CI under 10 minutes, docs-only under 60 seconds), which the next rows show; `docs/goals.md`, which no part of the brief asks to change; other `.claude/` paths, which only `make docs-lint` reads and which stay as they are.
 
@@ -34,6 +34,6 @@ None.
 
 ## Impact
 
-- `tools/ci_scope.sh`, `.github/workflows/ci.yml`, `tools/run_state.sh`, `tools/agent_guard.sh`, `tools/tools_test.sh`, `.claude/workflows/deliver-change.js`, `.claude/commands/deliver.md`, `docs/metrics.tsv`, `docs/codebase-map.md`.
+- `tools/ci_scope.sh`, `.github/workflows/ci.yml`, `tools/run_state.sh`, `tools/agent_guard.sh`, `tools/tools_test.sh`, `.claude/workflows/deliver-change.js`, `.claude/commands/deliver.md`, `docs/metrics.tsv`, `docs/codebase-map.md`, `docs/architecture.md`, `Makefile` (a comment).
 - CLAUDE.md: changed, the Commands line of `tools/run_state.sh` (`ci-stages`, `tokens`).
-- README.md: unchanged, no user-visible command, binding, option, or target changes; the run state commands are listed in CLAUDE.md and the script's header.
+- README.md: changed, the measurement paragraph (weighted tokens, CI stages, waiting calls).
