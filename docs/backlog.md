@@ -217,6 +217,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `Options#apply` in `carat/domain/options.rb`: the `tabstop` and `shiftwidth` blocks (lines 107 to 120) and the `icons` and `theme` blocks (lines 125 to 136) are each the same check-then-set-or-note shape. Advisory of the periodic quality review at 389c118. At 38628bb `keyhints.delay` (line 156) repeated the shape too (periodic quality), and at 7711421 the `breadcrumbs` block (line 221, periodic quality); `layout-slots` shares `Options.range_problem` between it and the three slot sizes, leaving `tabstop`, `shiftwidth`, `icons`, and `theme`. Raised again at be4b63a (now six copies).
 - Why it matters: a third bounded option copies the block again, and a fix to one copy can miss the other.
 - Fix outline: one private helper that takes the line, the value, and the low bound and returns whether to set (or a `width_value?` check both call), and one for a name checked against a known set; the rows of `test/domain_options_config.rb` stay as they are.
+- Raised again as "Options#apply repeats one block four times": Where: `carat/domain/options.rb` line 172 (tabstop, shiftwidth, `keyhints.delay`, the layout sizes), at 31919d9. Periodic quality. Queue item: backlog items, `:set` checks. Why it matters: duplication: each branch computes a problem, assigns when empty, else notes it. Fix outline: one private helper taking the problem and the line, answering whether to assign.
 
 ## OpenFile asks the port about a path twice
 
@@ -884,6 +885,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the private `clamp(state, row, col)` in `carat/use_cases/operate.rb` (line 202 at `theme-tokens`) and `carat/use_cases/repeat_last.rb` (line 117), each `EditorState#clamp_col` in `carat/domain/editor_state.rb` (line 97) line for line. Periodic quality at 4c65f4e. Raised again at ce6abdb (`operate.rb:202`, `repeat_last.rb:116`; periodic quality), queue item `editing-counts`.
 - Why it matters: three copies of one clamp must change together, and a fix to the domain's misses the two use cases.
 - Fix outline: call `state.clamp_col(row, col)` at the six call sites and delete both private methods. Listed in the queue's backlog item.
+- Raised again as "end_visual re-implements clamp_col": Where: `carat/domain/editor_state.rb` line 120 at c1b3a12 (periodic quality), beside the entry Operate and RepeatLast each copy EditorState#clamp_col. Queued in item 46. Why it matters: a third copy of the clamp. Fix outline: call clamp_col after the mode is set to normal.
 
 ## NO_COLOR leaves syntax, bars, and messages colored
 
@@ -962,6 +964,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the loop over `openspec/changes/` in `tools/spec_validate.sh` (line 25 at `package-clean`), which empties `build/spec-preview` for each active change while the header and the failure message promise a failed preview is kept. Quality advisory of `package-clean`. Raised again at be4b63a, a duplicate of the failed spec preview entry (owner `backlog-compaction`).
 - Why it matters: with two active changes, the first one's failed preview is gone before anyone reads it, so the message points at a directory holding the wrong change.
 - Fix outline: preview each change under `build/spec-preview/<name>`, or stop after the first failure.
+- Raised again as "A failed spec preview is deleted by the next change's preview": Where: `tools/spec_validate.sh` line 129. Periodic quality at 8d8832f, queued in `run-budgets-tidy`. Raised again at be4b63a, a duplicate of the spec preview entry (owner `backlog-compaction`). Why it matters: the header promises a failed preview is kept for reading, but each active change resets it. Fix outline: one preview directory per change, or stop resetting after a failure, with a case.
 
 ## The spec preview copies symbolic links under openspec/
 
@@ -1214,12 +1217,14 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `step` in `carat/use_cases/handle_key.rb` (line 172 at `leader-layout`) ignores the queue `dispatch` returns, though `dispatch`'s comment says the caller assigns it; it works only because `call`'s queue starts as the one key. Quality advisory of `leader-layout`.
 - Why it matters: the two call sites follow different rules, so a later change to the queue in `step` can silently drop or replay keys.
 - Fix outline: assign the result in `step` too, or narrow the comment to the timeout path.
+- Raised again as "HandleKey drops the queue dispatch returns": Where: `carat/use_cases/handle_key.rb:247` (`step`) and :272 (`complete`), against dispatch's contract at :278-280. Periodic quality at bd86828. Why it matters: the contract exists because the pinned Spinel can lose appends to the caller's array; `step` relies on in-place mutation anyway. Fix outline: honor the contract or drop it, with a test that fails without the fix. Queue item `spinel-workarounds`.
 
 ## The UI highlight group count is stale
 
 - Where: `docs/architecture.md:106` and `docs/codebase-map.md:487` (49 groups) and `docs/compatibility.md:507` (41) against `carat/domain/highlight.rb:68` (syntax from 51); the map's IndentGuides bullet (line 459) omits `on?`. Periodic quality at ce6abdb, replacing the entry of 22a5de0 (41 against 49); queue item `carat-palette`. Since `float-frame` the code makes 52 groups, `FloatTitle` last (the color-themes spec), while `docs/compatibility.md:507` still lists the indent guides as the last UI groups (quality advisory of `float-frame`).
 - Why it matters: the documents count fewer groups than the code, and the next group added drifts them again.
 - Fix outline: say 52 groups with `FloatTitle` last in `docs/architecture.md:106`, `docs/codebase-map.md:489`, and `docs/compatibility.md:507`, or name the groups without a count; add `on?`.
+- Also listed in "The code map is behind the code" (periodic quality at e49f63d): `docs/codebase-map.md` line 488 and `docs/architecture.md` line 106 (49 UI groups, then 51 with the indent guides) and line 460 (`IndentGuides` omits `on?`); why: agents start from the map and the architecture; fix: update each sentence and list.
 
 ## StatusLineNC is themed but painted by nothing
 
@@ -1502,6 +1507,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `documentation()` in `tools/ci_scope.sh` (line 39 at fb09c6b). Periodic security Low (5) at fb09c6b, found again by the periodic security review at 847851d, Low (5), `tools/ci_scope.sh:39`. Raised again at bff9a02 (#96): periodic security Low (5) at `tools/ci_scope.sh:15`.
 - Why it matters: a pull request changing only agent hook lines, `.claude/settings.json`, or the workflows is classed documentation, so CI skips `make tools-test`, the independent check of the guard hook lines and the attribution.
 - Fix outline: class `.claude/agents/`, `.claude/settings.json`, and `.claude/workflows/` as code, with a `tools/tools_test.sh` case. Queued in `ci-hardening`.
+- Raised again as "The CI scope counts agent and workflow files as documentation": Where: `documentation()` in `tools/ci_scope.sh:39`, and the `scope_case` row at `tools/tools_test.sh:100`. Periodic security Low (4) at 9a92265. Why it matters: a pull request touching only agent hooks, `.claude/settings.json`, or the workflows skips CI's tools-test, though `tools/tools_test.sh` reads them. Fix outline: keep only the generated OpenSpec commands and skills in the documentation case, with the row expecting tools-test. Queue item `check-skip`.
 
 ## The process runner's reader queues bodies without a bound
 
@@ -1772,6 +1778,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `bench/run.sh` line 69 at cd87445 copies the `SCENARIOS` of `bench/keys.rb` line 104 and omits `lh-float`, `lh-winbar`, and `n` (`file-finder` added `finder` to it). Periodic quality at cd87445, refreshed at 8d8832f; folded into `docs-index`.
 - Why it matters: `make bench` never runs area 13's float benchmark or `n`, so a regression there goes unmeasured.
 - Fix outline: take the names from the bench binary or one shared list, with a case that every scenario runs. Queued in the backlog items worth a change.
+- Raised again as "The palette bench scenario is not in the default list": Where: `bench/run.sh` line 69, the default scenario list, against `bench/keys.rb` line 145 (`palette`), named in the discovery area's Bench line since `float-frame`. Quality advisory of `float-frame`. Why it matters: `make bench` without `SCENARIOS` never measures the palette, so a regression in its refiltering goes unseen. Fix outline: add `palette` to the default list if it is meant to run by default, or say in the map why it is opt-in. Queue item `run-budgets-tidy`.
 
 ## The completion resolve timeout restarts with every pick
 
@@ -2006,6 +2013,8 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the push branch of `tools/ci_scope.sh` lines 47 and 48 at b0dd342. Periodic quality. Queued in `ci-hardening`. At 38628bb the header also omits `docs/metrics.tsv` (`tools/ci_scope.sh` lines 8 and 95, periodic quality), still at 7711421 (header lines 8 to 12, note 47).
 - Why it matters: two calls for one commit's head and number double the rate-limited requests and can disagree.
 - Fix outline: one call printing both fields, read once.
+- Raised again as "ci_scope asks for the same pull request twice": Where: `tools/ci_scope.sh:50` and `:51`. Periodic quality. Raised again at be4b63a (owner `check-skip`). Why it matters: two calls for the head and the number can disagree. Fix outline: one call printing both fields. Queue item `ci-hardening`.
+- Raised again as "The CI scope fetches one answer twice": Where: `tools/ci_scope.sh:50-51` (two calls fetch the same commit's pull request). Periodic quality at bd86828. Why it matters: CI time and API calls. Fix outline: one call read into both values. Queue item `ci-time`.
 
 ## A link planted in the check clone's build directory survives
 
@@ -2048,6 +2057,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: E477 in `delete_command_handler.rb` line 34, `substitute_command_handler.rb` line 37, `global_command_handler.rb` line 35; E488 in five files; E486, E492, E32, E33, E363, E474, E939 in two or more, at b0dd342. Periodic quality. Queued in the backlog item batch.
 - Why it matters: `docs/architecture.md` section 5 puts a message several use cases need in `Domain::Messages`; copies drift from Neovim's text.
 - Fix outline: constants or builders in `Domain::Messages` called from every site.
+- Raised again as "Eight Vim messages are spelled in more than one file": Where: `KNOWN_REPEATED_MESSAGES` in `test/lint.rb`: E32 (`file_command_handler.rb`, `save_file.rb`), E33 (`vim_pattern.rb`, `substitute_lines.rb`), E474 (`history_command_handler.rb`, `messages_command_handler.rb`), E477 (the delete, global, and substitute command handlers), E484 (`path_info.rb`, `visit_target.rb`, `open_file.rb`), E486 (`find_match.rb`, `substitute_lines.rb`), E488 (`register_count.rb`, `substitute_args.rb`, and the buffer, LspRestart, and LspStart command handlers), E939 (`register_count.rb`, `substitute_lines.rb`). Recorded by `implement-contracts-c`, queued in `messages-tidy`. Why it matters: a wording fix can reach one copy and miss the others; lint refuses a new repeat but keeps these listed. Fix outline: one `Domain::Messages` constant or function per message, called from every file, and the line removed from `KNOWN_REPEATED_MESSAGES` (lint fails on a listed message that no longer repeats).
 
 ## A signature parameter label is marked inside the method name
 
@@ -2090,12 +2100,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/adapters/key_decoder.rb` line 143 (csi_key) against line 186 (ss3_key) at c1b3a12 (periodic quality). Queued in item 46.
 - Why it matters: ten finals are listed twice and can drift.
 - Fix outline: csi_key keeps 126 and hands every other final to ss3_key.
-
-## end_visual re-implements clamp_col
-
-- Where: `carat/domain/editor_state.rb` line 120 at c1b3a12 (periodic quality), beside the entry Operate and RepeatLast each copy EditorState#clamp_col. Queued in item 46.
-- Why it matters: a third copy of the clamp.
-- Fix outline: call clamp_col after the mode is set to normal.
 
 ## Public helpers no other file calls
 
@@ -2272,6 +2276,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the header says every target wraps spin or OpenSpec while seven call spinel; three targets copy one timing recipe; the help omits the queue budget and check.
 - Fix outline: correct the header, one recipe for the three, and name the queue budget in the help.
 - Raised again at 6a0db20 (periodic quality, note 45): `Makefile:238`, `:272`, `:329`. Owner: queue item `run-budgets-tidy`.
+- Raised again as "The Makefile repeats its timed compile and misdescribes gates": Where: `Makefile:241`, `:275`, `:332`, `:383`. Periodic quality advisory. Fix outline: one `define timed_compile`; describe static as the gates that need no run state, here and in CLAUDE.md. Queue item `check-skip`.
 
 ## metrics compare passes a strict metric missing from the run
 
@@ -2291,6 +2296,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/run_state.sh` lines 63 to 66 at 38628bb (periodic quality, raised twice). Queued in `run-budgets-tidy`.
 - Why it matters: the paragraph on refused keys sits between the set and phase entries.
 - Fix outline: move it above or below the list.
+- Raised again as "The run_state header splits its usage list": Where: `tools/run_state.sh:71`. Periodic quality. Why it matters: the refusal paragraph sits inside the list the usage prints. Fix outline: move it after the list. Queue item `run-budgets-tidy`.
 
 ## The map's palette lines drift from the code
 
@@ -2479,6 +2485,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `resized` in `carat/use_cases/plugins/plugin_events.rb` line 142 at 847851d; `queue` (line 200) skips unwanted events. Periodic quality. Queue item: backlog items, plugin host classes.
 - Why it matters: an event is built for nobody on every resize.
 - Fix outline: update the last size, then return unless a plugin wants `resize`.
+- Also listed in "Plugin, grammar, and generator findings at df4654c" (periodic quality): `carat/use_cases/plugins/plugin_events.rb` line 142 (a resize event built with no subscriber); fix: return unless `wanted?("resize")`.
 
 ## Two plugin host classes look up an option the same way
 
@@ -2563,6 +2570,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the class comment of `carat/adapters/symbol_outline.rb` line 12 at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
 - Why it matters: `ControlText.strip` cuts at a byte limit, as the map, `docs/compatibility.md`, and the test say, so the comment misleads.
 - Fix outline: say bytes in the comment.
+- Raised again as "SymbolOutline's comment says characters for a byte cap": Where: `carat/adapters/symbol_outline.rb` line 12, at 31919d9. Periodic quality. Queue item `top-rows`. Why it matters: the comment says names are cut to `NAME_LIMIT` characters, while the cut caps bytes, as the map says. Fix outline: say bytes.
 
 ## FramePresenter's class comment breaks its wrap width
 
@@ -2720,18 +2728,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: `plugin.explorer.side bottom` or a typo silently opens the tree on the left with no problem reported; a parameter named for columns carries rows.
 - Fix outline: pass `bottom` through and report an unknown side, with a row; rename the parameter `size` and build the message from the sides list.
 
-## SymbolOutline's comment says characters for a byte cap
-
-- Where: `carat/adapters/symbol_outline.rb` line 12, at 31919d9. Periodic quality. Queue item `top-rows`.
-- Why it matters: the comment says names are cut to `NAME_LIMIT` characters, while the cut caps bytes, as the map says.
-- Fix outline: say bytes.
-
-## Options#apply repeats one block four times
-
-- Where: `carat/domain/options.rb` line 172 (tabstop, shiftwidth, `keyhints.delay`, the layout sizes), at 31919d9. Periodic quality. Queue item: backlog items, `:set` checks.
-- Why it matters: duplication: each branch computes a problem, assigns when empty, else notes it.
-- Fix outline: one private helper taking the problem and the line, answering whether to assign.
-
 ## Seven more methods are public with no outside caller
 
 - Where: `Operators.ascii_recase` and `indent_width` (`carat/domain/operators.rb` lines 239 and 271), `Registers#unnamed?` (`carat/domain/registers.rb` line 65), `Buffer#layer_at` (`carat/domain/buffer.rb` line 232), `UndoTree#transaction_at`, `parent_of`, `head_of` (`carat/domain/undo_tree.rb` lines 99, 105, 111), at 31919d9. Periodic quality. Queue item: backlog items, needless public methods. Raised again at ce6abdb (periodic quality): `UndoTree#parent_of` and `transaction_at` have no production caller, queue item `editing-counts`.
@@ -2815,6 +2811,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/codebase-map.md` line 117 (a second `show` before `list_message?`) and line 558 (area 16's Tree line without `expanded?`, `root`, `marked`, `count`, `node`), at 5e4c140. Periodic quality. Queue item `docs-index`.
 - Why it matters: the map is where every agent starts.
 - Fix outline: drop the second `show`; name the readers or say the list is the operations only.
+- Raised again as "The map lists EditorState#show twice": Where: `docs/codebase-map.md` line 117 (area 4) at 3895e21. Periodic quality advisory. Queue item `docs-index`. Why it matters: the method list is checked by `test/lint.rb`, and a doubled name hides a missing one. Fix outline: drop the second `show`.
 
 ## FramePresenter keeps two dead width wrappers
 
@@ -2920,9 +2917,9 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## Plugin, grammar, and generator findings at df4654c
 
-- Where: `carat/use_cases/plugins/plugin_router.rb` line 44 (the register string passed uncopied), `carat/domain/manifest_check.rb` line 32 (shapes checked twice, a dead guard at line 145), `carat/use_cases/plugins/plugin_registry.rb` line 175 (`leave` repeats `cause`), `carat/use_cases/plugins/plugin_events.rb` line 142 (a resize event built with no subscriber), `carat/plugins/hello/plugin.rb` line 11 (stale comment, the action spelled beside `GREET`), `carat/plugins/registry.rb` line 2 and the `default_config.rb` header (generator names `spin run`), `test/lint.rb` line 845 (plugins exempt from keyword constructors, unstated in CLAUDE.md), comment wraps at `carat/plugin_api.rb` line 480 and 732, `window_requests.rb` lines 28 and 67, `ui_requests.rb` line 15, `carat/domain/plugin_ui.rb` line 7; `carat/domain/command_grammar.rb` line 138 (`accept` and `accept_visual` repeat a prefix), `carat/adapters/input_controller.rb` line 137 (`next_timeout` ignores `state`). Periodic quality advisories. Queue item 39 (backlog items by domain). Raised again at ce6abdb (periodic quality): `accept_visual` (`command_grammar.rb:163`), queue item `editing-counts`: one shared grammar opening.
+- Where: `carat/use_cases/plugins/plugin_router.rb` line 44 (the register string passed uncopied), `carat/domain/manifest_check.rb` line 32 (shapes checked twice, a dead guard at line 145), `carat/use_cases/plugins/plugin_registry.rb` line 175 (`leave` repeats `cause`), `carat/plugins/hello/plugin.rb` line 11 (stale comment, the action spelled beside `GREET`), `carat/plugins/registry.rb` line 2 and the `default_config.rb` header (generator names `spin run`), `test/lint.rb` line 845 (plugins exempt from keyword constructors, unstated in CLAUDE.md), comment wraps at `carat/plugin_api.rb` line 480 and 732, `window_requests.rb` lines 28 and 67, `ui_requests.rb` line 15, `carat/domain/plugin_ui.rb` line 7; `carat/domain/command_grammar.rb` line 138 (`accept` and `accept_visual` repeat a prefix), `carat/adapters/input_controller.rb` line 137 (`next_timeout` ignores `state`). Periodic quality advisories. Queue item 39 (backlog items by domain). Raised again at ce6abdb (periodic quality): `accept_visual` (`command_grammar.rb:163`), queue item `editing-counts`: one shared grammar opening.
 - Why it matters: the router breaks the strings-copied plugin rule; the rest are copies, dead code, and drift.
-- Fix outline: `command.register.dup`; one shapes result; pop then set from `cause`; return unless `wanted?("resize")`; reword and key by `GREET`; generator writes `make gen-config`; state the exemption or give `Tree` keywords; rewrap; one shared grammar step; drop the parameter.
+- Fix outline: `command.register.dup`; one shapes result; pop then set from `cause`; reword and key by `GREET`; generator writes `make gen-config`; state the exemption or give `Tree` keywords; rewrap; one shared grammar step; drop the parameter.
 
 ## The merger profile may set BASE before the merge gates
 
@@ -3019,12 +3016,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/adapters/editor_assembly.rb` line 327 at 3895e21, resolving only through the order of `carat.rb` lines 314 and 322. Periodic quality advisory. Queue item 39 (require orders).
 - Why it matters: every other collaborator is required in the file; a reorder of `carat.rb` breaks it.
 - Fix outline: add `require_relative "json_rpc_language_gateway"` with the other adapter requires.
-
-## The map lists EditorState#show twice
-
-- Where: `docs/codebase-map.md` line 117 (area 4) at 3895e21. Periodic quality advisory. Queue item `docs-index`.
-- Why it matters: the method list is checked by `test/lint.rb`, and a doubled name hides a missing one.
-- Fix outline: drop the second `show`.
 
 ## Carat::Testing takes a positional constructor with no stated exemption
 
@@ -3230,12 +3221,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the map and the architecture are where a change starts, and a clone following the README fails its first `make check` stage.
 - Fix outline: add the names, drop the duplicate, write 2.4, move `blanks` below `private`, and name `node` or say why it is outside the prerequisites.
 
-## A failed spec preview is deleted by the next change's preview
-
-- Where: `tools/spec_validate.sh` line 129. Periodic quality at 8d8832f, queued in `run-budgets-tidy`. Raised again at be4b63a, a duplicate of the spec preview entry (owner `backlog-compaction`).
-- Why it matters: the header promises a failed preview is kept for reading, but each active change resets it.
-- Fix outline: one preview directory per change, or stop resetting after a failure, with a case.
-
 ## Search copies its prompt split and its E486 message
 
 - Where: `carat/use_cases/search/find_match.rb` line 68 against `preview_search.rb` line 106 (the `pattern_end` split on bytes 47 or 63), and line 163 against `substitute_lines.rb` line 143 (the E486 literal). Periodic quality at 8d8832f, queued in `editing-counts`. Raised again at ce6abdb (`find_match.rb:68`, code points 47 and 63; periodic quality).
@@ -3313,12 +3298,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the File finder section of `docs/compatibility.md` (line 493). Quality review of `file-finder`.
 - Why it matters: normal-mode `<C-p>` moves the cursor up a line in Neovim; the finder takes it without saying so.
 - Fix outline: note the difference in the section, removable with `keymap.normal <C-p> none`.
-
-## Eight Vim messages are spelled in more than one file
-
-- Where: `KNOWN_REPEATED_MESSAGES` in `test/lint.rb`: E32 (`file_command_handler.rb`, `save_file.rb`), E33 (`vim_pattern.rb`, `substitute_lines.rb`), E474 (`history_command_handler.rb`, `messages_command_handler.rb`), E477 (the delete, global, and substitute command handlers), E484 (`path_info.rb`, `visit_target.rb`, `open_file.rb`), E486 (`find_match.rb`, `substitute_lines.rb`), E488 (`register_count.rb`, `substitute_args.rb`, and the buffer, LspRestart, and LspStart command handlers), E939 (`register_count.rb`, `substitute_lines.rb`). Recorded by `implement-contracts-c`, queued in `messages-tidy`.
-- Why it matters: a wording fix can reach one copy and miss the others; lint refuses a new repeat but keeps these listed.
-- Fix outline: one `Domain::Messages` constant or function per message, called from every file, and the line removed from `KNOWN_REPEATED_MESSAGES` (lint fails on a listed message that no longer repeats).
 
 ## An unknown file action variant writes every buffer and quits
 
@@ -3421,6 +3400,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `NAMES` and `DESCRIPTIONS` registration loop in `carat/use_cases/actions/motion_handler.rb` line 32 (twice), `search_handler.rb` (twice), and `text_object_handler.rb` (once), at 2f54bb5; `"Not implemented: "` is spelled in `dispatcher.rb` line 61, `find_match.rb` line 53, `selection_handler.rb` line 48, and `vim_pattern.rb` lines 274 and 460. Periodic quality at 2f54bb5. Queued in the backlog batches and `messages-tidy`. Raised again at be4b63a (now thirteen loops).
 - Why it matters: a change to registration or to the refusal wording reaches one copy and misses the others, which the E-number lint cannot see.
 - Fix outline: one `ActionTable` method registering a names list with its descriptions; one `Domain::Messages` function for the refusal prefix called from the four files.
+- Raised again as "Action registration loops are copied five times": Where: `carat/use_cases/actions/motion_handler.rb:34` and `:41`, `text_object_handler.rb:35`, `search_handler.rb:35` and `:42`. Periodic quality. Raised again at be4b63a (now thirteen loops). Why it matters: five copies of one loop. Fix outline: one `ActionTable` method registering names and descriptions. Backlog batches (editing and keymap copies).
 
 ## listed_for recomputes the target's absolute path per buffer
 
@@ -3439,6 +3419,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the comment of `cancel_request` in `carat/adapters/json_rpc_language_gateway.rb` line 1003 at 75fa4fd, which says the running server though the method looks up `server_for`, now beside `running_server`. Quality advisory in `periodic-blockers-a`. Raised again at ce6abdb (periodic quality), queue item `lsp-client-tidy`.
 - Why it matters: the comment points the reader at `running_server`, the other lookup, so a later change could pick the wrong one.
 - Fix outline: say the language's server in the comment.
+- Raised again as "cancel_request's comment names the running server but asks any": Where: `carat/adapters/json_rpc_language_gateway.rb:1006`. Why it matters: the comment and the lookup (`server_for` beside `running_server`) disagree. Fix outline: call `running_server` or reword the comment. Queue item `lsp-client-tidy`.
 
 ## IndentGuides keeps a magic stamp shift, a doubled guard, and a misleading helper name
 
@@ -3556,7 +3537,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## The code map is behind the code
 
-- Where: `docs/codebase-map.md` line 584 (area 17 Flow says every port method raises, but `FilePort#stat` answers a value); line 488 and `docs/architecture.md` line 106 (49 UI groups, now 51 with the indent guides); lines 523, 532, 460 (`Paths` omits `absolute`, `PluginEntry` omits `attach` and `full_command`, `IndentGuides` omits `on?`). Periodic quality at e49f63d.
+- Where: `docs/codebase-map.md` line 584 (area 17 Flow says every port method raises, but `FilePort#stat` answers a value); lines 523 and 532 (`Paths` omits `absolute`, `PluginEntry` omits `attach` and `full_command`). Periodic quality at e49f63d.
 - Why it matters: agents start from the map and the architecture.
 - Fix outline: update each sentence and list. Queue item: `docs-index`.
 
@@ -3656,12 +3637,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: dead code and one rule kept in two places.
 - Fix outline: drop the parameter; one private helper reading a target within a limit. Queue item `definitions-tidy`.
 
-## cancel_request's comment names the running server but asks any
-
-- Where: `carat/adapters/json_rpc_language_gateway.rb:1006`.
-- Why it matters: the comment and the lookup (`server_for` beside `running_server`) disagree.
-- Fix outline: call `running_server` or reword the comment. Queue item `lsp-client-tidy`.
-
 ## The tab bar copies the status bar's digit fit
 
 - Where: `carat/adapters/tab_bar.rb:191` (`put_number`) against `carat/adapters/status_bar.rb:361` (`digits_within`).
@@ -3709,12 +3684,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/plugins/finder/plugin.rb` line 268 (widths `cols - 6`, `(width - 5) / 2`, `width + 6`, `cols - width - 11`) and the `FloatOptions` comment at `carat/plugin_api.rb` line 197, which states a box is `width + 4` without the `option.winborder none` case. Quality advisories of `float-frame`.
 - Why it matters: under `option.winborder none` a box is `width + 2`, so the list and preview leave two-column gaps, and no test asserts the two boxes still tile the screen.
 - Fix outline: name the frame width of a bordered float (border 2 plus padding 2) in a constant, say `width + 2` under `winborder none` in the comment, let a plugin read the frame size through the API, and assert both boxes' columns in `test/editor_finder.rb`. Queue item `float-edges`.
-
-## The palette bench scenario is not in the default list
-
-- Where: `bench/run.sh` line 69, the default scenario list, against `bench/keys.rb` line 145 (`palette`), named in the discovery area's Bench line since `float-frame`. Quality advisory of `float-frame`.
-- Why it matters: `make bench` without `SCENARIOS` never measures the palette, so a regression in its refiltering goes unseen.
-- Fix outline: add `palette` to the default list if it is meant to run by default, or say in the map why it is opt-in. Queue item `run-budgets-tidy`.
 
 ## The palette is one column off center without a border
 
@@ -3818,18 +3787,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: every other search message is a `Domain::Search` constant.
 - Fix outline: a not-found prefix constant. Queue item `search-tidy`.
 
-## ci_scope asks for the same pull request twice
-
-- Where: `tools/ci_scope.sh:50` and `:51`. Periodic quality. Raised again at be4b63a (owner `check-skip`).
-- Why it matters: two calls for the head and the number can disagree.
-- Fix outline: one call printing both fields. Queue item `ci-hardening`.
-
-## The run_state header splits its usage list
-
-- Where: `tools/run_state.sh:71`. Periodic quality.
-- Why it matters: the refusal paragraph sits inside the list the usage prints.
-- Fix outline: move it after the list. Queue item `run-budgets-tidy`.
-
 ## Backlog entries name queue items that are gone
 
 - Where: `docs/backlog.md:2273` and 33 others (architecture-drift 8, global-tidy 8, search-structure 8, substitute-structure 5, diagnostics-tidy 4, pipeline-hardening 1); 15 under the archived implement-contracts items (`test/lint.rb:1287`). Periodic quality.
@@ -3865,12 +3822,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `test/editor_floats.rb:30`; the `strings` helper in `test/domain_buffer.rb`, `test/domain_edits.rb`, `test/domain_global.rb`, `test/editor_floats.rb`. Periodic quality.
 - Why it matters: two bodies for one helper.
 - Fix outline: build the editor from `configured`, one `strings` helper in `Carat::Testing`. Backlog batches (test hygiene).
-
-## Action registration loops are copied five times
-
-- Where: `carat/use_cases/actions/motion_handler.rb:34` and `:41`, `text_object_handler.rb:35`, `search_handler.rb:35` and `:42`. Periodic quality. Raised again at be4b63a (now thirteen loops).
-- Why it matters: five copies of one loop.
-- Fix outline: one `ActionTable` method registering names and descriptions. Backlog batches (editing and keymap copies).
 
 ## The replace-jump tests leave three paths unchecked
 
@@ -3948,11 +3899,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/domain/config.rb:27`; `carat/domain/search_pattern.rb:9`. Periodic quality advisory.
 - Fix outline: `Array[RcLine]` or a comment naming the Spinel limit; a comment for the dropped Regexp signature. Backlog batches (RBS pins).
 
-## The Makefile repeats its timed compile and misdescribes gates
-
-- Where: `Makefile:241`, `:275`, `:332`, `:383`. Periodic quality advisory.
-- Fix outline: one `define timed_compile`; describe static as the gates that need no run state, here and in CLAUDE.md. Queue item `check-skip`.
-
 ## gate_records reads its review commit unchecked
 
 - Where: `tools/gates.sh:436`. Periodic quality.
@@ -4000,12 +3946,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the record start of `.claude/workflows/deliver-change.js`; retrospective note 7 of `jump-list`.
 - Why it matters: it runs one queued shell line for 641 to 1,170 output tokens and 1 or 2 calls in each of the last 10 rows, while the close start already runs a record line of the same kind.
 - Fix outline: none prescribed; accepted when 3 runs have no record phase and `show` lists the same keys. Queue item `phase-shares`.
-
-## The CI scope counts agent and workflow files as documentation
-
-- Where: `documentation()` in `tools/ci_scope.sh:39`, and the `scope_case` row at `tools/tools_test.sh:100`. Periodic security Low (4) at 9a92265.
-- Why it matters: a pull request touching only agent hooks, `.claude/settings.json`, or the workflows skips CI's tools-test, though `tools/tools_test.sh` reads them.
-- Fix outline: keep only the generated OpenSpec commands and skills in the documentation case, with the row expecting tools-test. Queue item `check-skip`.
 
 ## Keymap repeats its key checks and trie walk
 
@@ -4091,12 +4031,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the new tab page starts with a float's jump list and the float stays focused.
 - Fix outline: leave the float first or copy from the layout window, with a row. Queue item `definition-tab`.
 
-## HandleKey drops the queue dispatch returns
-
-- Where: `carat/use_cases/handle_key.rb:247` (`step`) and :272 (`complete`), against dispatch's contract at :278-280. Periodic quality at bd86828.
-- Why it matters: the contract exists because the pinned Spinel can lose appends to the caller's array; `step` relies on in-place mutation anyway.
-- Fix outline: honor the contract or drop it, with a test that fails without the fix. Queue item `spinel-workarounds`.
-
 ## The scanner and gates miss statuses and paths found at bd86828
 
 - Where: `tools/scan_text.sh:83` (`--diff` keeps only awk's status, so a missing FILE scans clean); `tools/gates.sh:282` (the docs gate's process files omit `tools/rules.sh`, `tools/scan_text.sh`, `tools/pr_scan.sh`, `.github/workflows/`). Periodic quality.
@@ -4132,12 +4066,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/run_state.sh:309`. Periodic quality at bd86828.
 - Why it matters: two copies of the locked rewrite of the state file.
 - Fix outline: one rewrite helper, or gone with the Ruby port. Queue item `harness-ruby`.
-
-## The CI scope fetches one answer twice
-
-- Where: `tools/ci_scope.sh:50-51` (two calls fetch the same commit's pull request). Periodic quality at bd86828.
-- Why it matters: CI time and API calls.
-- Fix outline: one call read into both values. Queue item `ci-time`.
 
 ## Small tidy-ups found at bd86828
 

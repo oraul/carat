@@ -2,7 +2,7 @@
 
 ## 1. Merge the backlog's duplicates
 
-- [ ] 1.1 `docs/backlog.md`: merge each set of entries recording the same finding into its earliest entry, with a `Raised again as` bullet per merged entry, and move the duplicated clauses of the two grouped entries to their standalone entries. Checked by `make docs-lint` and a count of headings before and after.
+- [x] 1.1 `docs/backlog.md`: merge each set of entries recording the same finding into its earliest entry, with a `Raised again as` bullet per merged entry, and move the duplicated clauses of the two grouped entries to their standalone entries. Checked by `make docs-lint` and a count of headings before and after.
 
 ## 2. The append-only rule
 
