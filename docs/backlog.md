@@ -4102,3 +4102,111 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/tools_test.sh:1754` (the case `pr_scan: the base's scanner reads a head that replaces the scanner` runs `$here/pr_scan.sh`, which already used the scanner beside it, so it passes without the change and proves nothing about `scan.yml`'s base checkout; the grep case after it does); `tools/tools_test.sh:846` (the review-due case still says it names the commit hooks and touches `.githooks/pre-commit`); `tools/tools_test.sh:1696` (about 20 lines build a stand-in Spinel repository and run the full `make toolchain` target to show `core.hooksPath` stays unset, which the grep case at 1718 already proves); `docs/codebase-map.md:48` (two parentheticals run together: `(a copy of rules.sh's) (core.hooksPath among them)`). Quality advisories of the `remove-commit-hooks` review.
 - Why it matters: the case name describes hooks that no longer exist, the stand-in repository is speculative generality that costs test time, and the map line reads unlike its neighbor.
 - Fix outline: rename the pr_scan case to state the contract it guards (`pr_scan.sh` reads the scanner beside itself, never the checkout's) or drop it; rename the review-due case to say it names a re-added `.githooks` file (or drop `[.]githooks/` from `REVIEW_AREAS` and the case); keep only the grep case at 1718 and remove the fakespinel and tooled setup and its case; merge the map's parentheticals into `(a copy of rules.sh's, core.hooksPath among them)`, as the `gates.sh` line above reads.
+
+## Small tidy-ups at bd86828 still holds two duplicate clauses
+
+- Where: `docs/backlog.md`, the `Small tidy-ups found at bd86828` entry, its `plugin_events.rb:142` resize clause and its `spec_validate.sh:129` preview clause. Quality advisory of the `backlog-compaction` review.
+- Why it matters: both clauses repeat standalone entries, the duplicates the `backlog-compaction` design says move to those entries, as was done for the df4654c entry.
+- Fix outline: in the periodic review's backlog step, move both clauses to their standalone entries as Also listed bullets and drop them from the tidy-ups entry.
+
+## Backlog entries reach the contributor twice
+
+- Where: `.claude/agents/planner.md:25` (`build/plan/backlog.md`) and `.claude/agents/planner.md:28` (plan notes), read at `.claude/agents/contributor.md:48`. Quality advisory of the `backlog-compaction` review.
+- Why it matters: a finding to append can arrive both as a plan note and as an entry of `build/plan/backlog.md`, and the contributor can no longer read the backlog to avoid appending it twice.
+- Fix outline: the planner writes backlog entries only to `build/plan/backlog.md`, and its plan notes keep the other bookkeeping.
+
+## The backlog append names no entry shape and no route
+
+- Where: `.claude/agents/contributor.md:48` (package step 2) and `.claude/agents/planner.md:25` (`build/plan/backlog.md`). Quality advisories of the `backlog-compaction` review.
+- Why it matters: the contributor must append entries to a file it may not read for their shape, and `tools/agent_guard.sh` refuses here-documents, so neither the entry form nor a working append route is stated.
+- Fix outline: state the shape (a blank line, a `## ` title, then `- Where:`, `- Why it matters:`, and `- Fix outline:` bullets) and the route (write the entries to a `tmp/` file with the Write tool, then `cat` it `>> docs/backlog.md`) in `contributor.md`, and the same shape in `planner.md` for `build/plan/backlog.md`.
+
+## The docs credit the periodic review with backlog edits it never makes
+
+- Where: `CLAUDE.md:208` and `README.md:192`. Quality advisory of the `backlog-compaction` review.
+- Why it matters: both say the periodic review merges duplicate entries and clears fixed ones, but the periodic reviewers never edit and `/review` fixes nothing, so until `periodic-council` lands nothing does.
+- Fix outline: say the periodic quality review reports duplicates and fixed entries and the backlog step of `periodic-council` applies them.
+
+## The implement step does not say to grep the named backlog entries
+
+- Where: `.claude/agents/contributor.md:34` (implement step 1); `openspec/changes/archive/2026-11-11-backlog-compaction/tasks.md` task 2.4 marks `contributor.md` done for it. Quality advisories of the `backlog-compaction` review.
+- Why it matters: the positive rule reaches the contributor only through `CLAUDE.md:208`; the agent file states only the package step's never read it whole.
+- Fix outline: add to implement step 1 "when your queue item names backlog entries, Grep `docs/backlog.md` for those entries only".
+
+## Queue item 60 names domains, not backlog entries
+
+- Where: `docs/queue.md:66`, item 60 (Backlog batches). Quality advisory of the `backlog-compaction` review.
+- Why it matters: it names domains (copies, config checks, RBS pins) rather than entry headings or keywords, so the grep the new rule relies on (`CLAUDE.md:208`, `planner.md` step 5) has nothing precise to match when the item is delivered.
+- Fix outline: the planner names the entries' headings or keywords when it next carries the item.
+
+## The review command credits the planner with the backlog append
+
+- Where: `.claude/commands/review.md:10`. Quality advisory of the `backlog-compaction` review.
+- Why it matters: "puts ... the others in the queue or appended to the backlog" mixes two constructions and credits the planner with an append the contributor does from `build/plan/backlog.md`.
+- Fix outline: write "puts ... the others in the queue or in `build/plan/backlog.md`, which the package step appends to the backlog".
+
+## A submodule's own git config runs a command past the guard
+
+- Where: `tools/agent_guard.sh:854` and the origin gate `tools/gates.sh:136` read only the superproject's `.git/config` and hooks. Periodic security Medium (6) at d0d783c.
+- Why it matters: a populated submodule's configuration under the common git directory's `modules` folder runs a command on `git status` (`core.fsmonitor`, verified with git 2.43).
+- Fix outline: refuse while the `modules` folder holds anything, or scan every `modules/*/config` with `RISKY_CONFIG` and every `modules/*/hooks`, in both scripts, with `tools/tools_test.sh` cases. Queue item `guard-lows`.
+
+## RISKY_CONFIG omits command-bearing keys
+
+- Where: `tools/rules.sh:51` and its copy in the guard. Periodic security Low (4) at d0d783c.
+- Why it matters: `submodule.NAME.update`, `submodule.recurse`, `pager.CMD`, and `trailer.TOKEN.cmd` or `command` can run a command and pass the check.
+- Fix outline: add submodule, pager, and trailer key patterns to both copies, with a `tools/tools_test.sh` case per key. Queue item `guard-lows`.
+
+## The toolchain checkout's git config is unchecked
+
+- Where: `Makefile:145` (`spinel_checkout` runs git in `tmp/.spinel`), linked writable into check clones at `tools/run_state.sh:529`. Periodic security Low (4) at d0d783c.
+- Why it matters: a stage can plant `core.fsmonitor` in `tmp/.spinel/.git/config` that the next `make toolchain` or `spinel-header` runs.
+- Fix outline: run its git with `GIT_CONFIG_GLOBAL=/dev/null` and refuse a `RISKY_CONFIG` key in that config, or stop linking `tmp/.spinel` into the check clone. Queue item `check-runner-safety`.
+
+## A key-sequence mapping value loads unchecked
+
+- Where: `carat/domain/keymap.rb:185` stores a non-action value unparsed; `carat/use_cases/handle_key.rb:353` replays it with `KeyNotation.parse(sequence, "")`. Periodic quality at d0d783c, the review's one blocking finding (the run state does not mark which; this one breaks CLAUDE.md Stack's `file:line` rule).
+- Why it matters: `keymap.normal <leader>s <leader>w` and any value with an unknown `<Name>` load with no `file:line` problem and fail only when pressed, as Bad mapping.
+- Fix outline: parse a non-action value with the leader when the line is applied, report its error on the line, and store the expanded sequence, with `test/editor_leader.rb` rows for `<leader>` in a replay and for an unknown name. Queue item `periodic-blockers-b`.
+
+## Ctrl-N and Ctrl-P scan unlisted buffers
+
+- Where: `carat/domain/buffer_words.rb:45` skips only scratch buffers, against its class comment (line 11). Periodic quality advisory at d0d783c.
+- Why it matters: Neovim's 'complete' `b` scans only listed buffers; words from buffers a jump left unlisted leak into completion.
+- Fix outline: skip buffers that are not listed, with a `test/editor_word_completion.rb` row after a replace jump. Queue item `buffer-list-tidy`.
+
+## :bd N deletes a buffer a jump left unlisted
+
+- Where: `carat/use_cases/buffers/delete_buffer.rb:29`, against the class comment (line 16). Periodic quality advisory at d0d783c.
+- Why it matters: the comment promises E516 for a number of no listed file buffer, as Neovim answers.
+- Fix outline: refuse an unlisted target with E516 when a number is given, with a `test/editor_buffers.rb` row after a replace jump. Queue item `buffer-list-tidy`.
+
+## :tabnew from a float copies the float's jump list
+
+- Where: `carat/use_cases/windows/open_tab.rb:220` copies `state.window.jumps`. Periodic quality advisory at d0d783c.
+- Why it matters: while a float has the focus that list is empty, so the new tab page loses the layout window's jumps.
+- Fix outline: copy the layout window's jumps, with a `test/editor_jumps.rb` row opening a tab from an entered float. Queue item `definitions-tidy`.
+
+## The jump-tab hand-over is written twice
+
+- Where: `carat/use_cases/definitions/walk_jumps.rb:51` and `carat/use_cases/definitions/visit_target.rb:82`. Periodic quality advisory at d0d783c.
+- Why it matters: both read `tabless?` before the open, open, then hand the tab when `option.jumptab` says so; two copies of one rule drift.
+- Fix outline: one shared place both use cases call, with the existing replace and keep rows unchanged. Queue item `definitions-tidy`.
+
+## Docs drift: option list, UI group count, a doubled map entry, run-together parentheticals
+
+- Where: `docs/architecture.md:241` omits `jumptab`, `indentguides.char`, `startscreen`, and `reducedmotion`, which `carat/domain/options.rb:82` accepts; `docs/codebase-map.md:493` and `docs/architecture.md:106` say 49 UI groups and `docs/compatibility.md:510` says 41, while `carat/domain/highlight.rb:66-69` has 52; `docs/codebase-map.md:120` lists `EditorState#show` twice; `docs/codebase-map.md:48` runs two parentheticals together. Periodic quality and #102 package advisories at d0d783c.
+- Why it matters: the docs an agent reads disagree with the code.
+- Fix outline: name the options (or point at `docs/compatibility.md`) within the byte budget, say 52 in the three docs, drop the second `show`, merge the parentheticals. Queue item `docs-index`.
+
+## Two comments rewrapped unevenly
+
+- Where: `carat/domain/highlight.rb:3` (lines 6-7 and 12-13 stop at 37 to 50 columns) and `carat/use_cases/ex/set_command_handler.rb:17` (about 95 columns). Periodic quality advisories at d0d783c.
+- Why it matters: comment blocks wrap at 72 columns elsewhere.
+- Fix outline: rewrap both paragraphs. Queue item: backlog batches, comment wraps.
+
+## A backlog entry still names a fixed JumpList#step defect
+
+- Where: the `docs/backlog.md` entry that says `JumpList#step` pushes before the range check (line 3367 at d0d783c); `carat/domain/jump_list.rb:59-60` now returns early and `test/domain_jump_list.rb:78` pins it. Periodic quality advisory at d0d783c.
+- Why it matters: a stale clause sends a later change after a fixed defect.
+- Fix outline: drop that clause from the entry's fix outline, in the periodic review's backlog step. Queue item `periodic-council`.
