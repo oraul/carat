@@ -1,2 +1,3 @@
 sprint	last	merges	changes	wall_min	min_per_change	total_tokens	over_budget	first_pass
 sprint-0	remove-commit-hooks	-	-	-	-	-	-	-
+sprint-1	ci-time	5	backlog-compaction,delivery-speed,pr-on-push,sprint-planning,ci-time	467.6	93.5	9519929	2	check:5/5,quality:1/5,security:4/5,bench:5/5,ci:4/5,gates:5/5
