@@ -2208,7 +2208,7 @@ js() {
   } | node -
 }
 work_js() {
-  js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead keepPushed" "$1"
+  js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead keepPushed packagedPr" "$1"
 }
 calib_js() {
   js "$wf" "SIZES CHANGE CALIBRATION calibrated calibrate restoreCalibration usage firstPass metricLine" "$1"
@@ -2249,8 +2249,14 @@ expect "agents: the quality reviewer blocks only on correctness and a missing te
   grep -E '^4[.] Blocking' "$here/../.claude/agents/quality-reviewer.md"
 expect "agents: the merger reads only the latest run of each check name" 0 'keep only the latest run of each check name' \
   grep -E '^2[.] Read the check runs' "$here/../.claude/agents/merger.md"
-expect "agents: the contributor creates the pull request with the body file unchanged" 0 "the file's text, unchanged, as the body" \
+# The pull request is opened by open-pr from the tag, which reads it back
+# equal to the tag's body (tools/pr_tag.sh same); no session tool creates it.
+expect "agents: the contributor opens the pull request by its tag, never a create tool" 0 "pr_tag.sh push .*Never call a pull request create tool or API" \
   grep -E '^4[.] Write the body' "$here/../.claude/agents/contributor.md"
+expect "agents: the contributor holds no pull request create tool" 1 "^$" \
+  grep -n create_pull_request "$here/../.claude/agents/contributor.md"
+expect "workflow: a package step without a pull request number stops the run" 0 '^\["47","","",""\]$' \
+  work_js "[packagedPr({ pr: 47 }), packagedPr({ pr: 0 }), packagedPr({ status: 'stopped' }), packagedPr(null)]"
 expect "workflow: a contributor that finished is done" 0 '^[{]"next":"done","left":\[\][}]$' \
   work_js "(r => continuation(r, workLeft(r), 0))({ status: 'done' })"
 expect "workflow: a capped contributor start is continued with what it left" 0 '^[{]"next":"continue","left":\["4.2 the docs"\][}]$' \

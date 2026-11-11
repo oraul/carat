@@ -274,6 +274,13 @@ function combineReviews(a, b) {
   }
   return out
 }
+// The pull request number a package step returned, '' when none: open-pr
+// opened no pull request from the tag pr/BRANCH (tools/pr_tag.sh wait
+// failed), and the run stops before the merger starts on none.
+function packagedPr(result) {
+  const pr = String((result && result.pr) || '')
+  return /^[0-9]+$/.test(pr) ? pr : ''
+}
 // The full sha the push recorded, kept only when it is 40 digits beginning
 // with the head the contributor reported; '' otherwise, which stops the
 // merge before the merger starts.
@@ -972,8 +979,8 @@ if (!stopped && !state.merged) {
         ? 'The planner did not run: this change was taken from the head of docs/queue.md as written. Leave build/plan/, which holds an older run\'s files; remove this change\'s item from docs/queue.md and renumber the rest, and append the history of the merged changes as your package step says.'
         : 'Apply the planner\'s files under build/plan/ and append the history of the merged changes as your package step says.'
       const done = await contributor('package', `Non-blocking findings to append to docs/backlog.md (a shell append; never read the file):\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
-      if (done) state.pr = String(done.pr || '')
-      if (done && !/^[0-9]+$/.test(state.pr)) stopped = 'no pull request appeared for the tag pr/' + state.branch + ': read the open-pr workflow\'s log'
+      if (done) state.pr = packagedPr(done)
+      if (done && !state.pr) stopped = 'no pull request appeared for the tag pr/' + state.branch + ': read the open-pr workflow\'s log'
       else if (done) phaseDone('package', head)
     }
   }
