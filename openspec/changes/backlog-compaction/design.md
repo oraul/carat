@@ -17,6 +17,7 @@ Non-goals: a budget, guard enforcement, the periodic backlog step itself, the ca
 - Two entries are a duplicate when they name the same code or document place and the same defect. Entries about neighboring defects in one place (a third copy of a clamp in a different method is still the same clamp duplication; a comment wrap beside a refused panel is not) are judged by the defect, and the entries the periodic notes named as duplicates are merged.
 - The contributor appends by a shell redirection (`>>`), which the guard already allows for a contributor; it writes nothing else into the file. The planner's `build/plan/backlog.md` is appended whole the same way.
 - The planner keeps writing `build/plan/backlog.md` with locations, from the run states' notes and the brief; it never opens `docs/backlog.md`. A finding already entered may be appended again; the periodic backlog step merges it.
+- A queue item may be only backlog entries (the backlog batches) and keeps locations out of the item, so the contributor and the scouts of such an item grep `docs/backlog.md` for the entries it names, by heading or keyword, and read only those; the file is never read whole. The alternative, copying the locations into the queue, would grow the queue past its budget.
 - The periodic quality reviewer is the one reader left: it reports entries fixed, duplicated, or naming gone code as findings, which the periodic backlog step of `periodic-council` will apply.
 
 ## Risks / Trade-offs

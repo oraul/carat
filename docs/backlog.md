@@ -1,6 +1,6 @@
 # Backlog
 
-Known items to fix in later changes. A finding that a change does not fix, because it is outside the change's scope or below the confidence the contributor agent acts on, is recorded here with where it is in the code, why it matters, and how to fix it, so that it is not lost and the next change can start from it. Each item is removed by the change that fixes it, through the OpenSpec loop like any other change.
+Known items to fix in later changes. A finding that a change does not fix, because it is outside the change's scope or below the confidence the contributor agent acts on, is recorded here with where it is in the code, why it matters, and how to fix it, so that it is not lost and the next change can start from it. During a delivery entries are only appended, at the end of the file, and a change works from the entries its queue item names, found by a grep rather than by reading the file; the periodic review merges duplicates, removes the entries that are fixed or name gone code, and turns entries into queue items.
 
 ## make types leaves build/carat.rbs that a later spin build warns about
 
