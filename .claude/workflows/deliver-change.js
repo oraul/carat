@@ -7,7 +7,7 @@ export const meta = {
     { title: 'Plan', detail: 'planner: the next queue from the metrics history; security findings first' },
     { title: 'Scout', detail: 'one scout per edited map area without a current pack, at most three' },
     { title: 'Implement', detail: 'contributor: propose and apply, committing early' },
-    { title: 'Check', detail: 'checker: the canonical stages through make' },
+    { title: 'Check', detail: 'checker: the fast stages through make; CI runs the rest' },
     { title: 'Quality', detail: 'quality reviewer: code-review and the repository rules, beside security on the same commit' },
     { title: 'Security', detail: 'security reviewer on the committed diff, beside quality; never skipped' },
     { title: 'Benchmark', detail: 'allocations and rounds against the figures recorded for main; the agent against main only when they differ' },
@@ -34,9 +34,10 @@ export const meta = {
 // that ran the workflow sees, /deliver adds with tools/run_state.sh usage. The
 // run state's phase.* and review.* lines and the figures are the script's
 // own: it builds each command from a schema-checked result. One agent that
-// reads nothing else runs the queued phase and review lines with the
-// metric line (flush) at the end of verify(), since the pre-push gates
-// read the reviews; the closing start runs those left at the end, where
+// reads nothing else runs the queued lines with the metric line (flush) at
+// the end of verify() only when a check or review record is among them,
+// since the pre-push and merge gates read those and no guarded agent may
+// write them; the closing start runs every other line at the end, where
 // the package, CI, and merge phases wait (a resume reads pushed, pr, and
 // merged instead), under the guard's close profile, which allows only the
 // phases no merge gate reads. The checker and the merger run the metric
@@ -95,7 +96,7 @@ let estimate = ''
 // margin), so a start
 // whose capped calls take one turn each can still commit, back up, and
 // return the schema; tools/tools_test.sh compares them with these lines.
-const CALL_CAPS = { planner: 20, scout: 30, implement: 90, fix: 40, package: 30, push: 15, checker: 20, quality: 35, security: 35, bench: 20, close: 25 }
+const CALL_CAPS = { planner: 20, scout: 30, implement: 90, fix: 40, package: 30, push: 15, body: 10, checker: 20, quality: 35, security: 35, bench: 20, close: 25 }
 const CALL_SCALE = { small: 0.5, medium: 1, large: 1.5 }
 const FIXED_CAPS = { resume: 12, areas: 10, record: 3, merger: 12 }
 const sizeWord = () => (SIZES.includes(estimate) ? estimate : 'medium')
@@ -202,7 +203,8 @@ const MERGE = {
   properties: {
     ci: { type: 'string', enum: ['green', 'red', 'pending', 'stale'] }, head: HEAD, minutes: { type: 'number' },
     waited: { type: 'number', description: 'minutes waited for CI in all' },
-    step: { type: 'string' }, log_excerpt: { type: 'string' }, checks: { ...LINES, description: 'each check: name, status, conclusion' },
+    step: { type: 'string' }, log_excerpt: { type: 'string' }, checks: { ...LINES, description: 'each check run of the head, oldest first: name, status, conclusion' },
+    body_only: { type: 'boolean', description: 'CI is red only on the scan check, and its log names the pull request title or body, no commit or added line' },
     merged: { type: 'boolean' }, sha: { type: 'string' }, subject: { type: 'string' }, branch_deleted: { type: 'boolean' }, problem: { type: 'string' },
   },
   required: ['ci', 'head', 'merged'],
@@ -285,6 +287,52 @@ function pushedHead(pushed, head) {
 // push, reports none.
 function keepPushed(mode, pushed, result) {
   return (mode === 'package' || mode === 'push') && result && result.pushed ? result.pushed : pushed
+}
+// A finding as the text of a run state note: only the characters a
+// double-quoted shell word keeps as written, at most 400, so the note line
+// stays one the closing start's profile runs (CLOSABLE).
+function noteText(text) {
+  return String(text || '').replace(/[^A-Za-z0-9 .,:;()/_+=#%'?*@-]/g, ' ').replace(/ +/g, ' ').trim().slice(0, 400)
+}
+// Whether a red CI is stale: the merger lists every check run of the head
+// oldest first, as "name, status, conclusion", and the last run of every
+// check name passed, so each failed run was superseded by a green run of
+// the same check (a scan re-run by a body edit).
+function staleRed(checks) {
+  const last = {}
+  for (const c of checks || []) {
+    const [name, status, conclusion] = String(c).split(',').map((s) => s.trim().toLowerCase())
+    if (name) last[name] = `${status} ${conclusion}`
+  }
+  const names = Object.keys(last)
+  return names.length > 0 && names.every((n) => /^completed (success|skipped|neutral)$/.test(last[n]))
+}
+// The file:line a finding names: a quality finding "<commit> <file>:<line>
+// ...", an advisory without the commit, or a security line "security SEV
+// (C) <file>:<line> ...".
+function findingAt(text) {
+  const m = /(?:^|\s)([A-Za-z0-9_.][^\s:()]*:[0-9]+)/.exec(String(text || ''))
+  return m ? m[1] : ''
+}
+// Whether a blocking quality finding at LOCATION repeats an advisory the
+// run already kept (EARLIER): a re-raise, which a fix round never blocks
+// on. Security findings never pass through it (securityBlocking).
+function reRaised(location, earlier) {
+  return !!location && !/:0$/.test(location) && earlier.some((e) => findingAt(e) === location)
+}
+// The security findings that block (FINDINGS, the reviewer's): a High or
+// Medium in the change at confidence 8 or above, whatever an earlier round
+// rated at its location, as the hard rule of CLAUDE.md requires.
+function securityBlocking(findings) {
+  return (findings || []).filter((f) => f.severity !== 'Low' && f.confidence >= 8 && f.in_change)
+}
+// The commit a fix round's review of KIND narrows to: that of the pass
+// RECORDS (this start's, ran) hold, when it is not HEAD; '' otherwise, and
+// the whole branch diff is reviewed. A pass only the run state holds,
+// which branch code run by the checks could have written, never narrows.
+function narrowedFrom(records, kind, head) {
+  const [result, commit] = String(records['review.' + kind] || '').split(' ')
+  return result === 'pass' && COMMIT.test(commit || '') && commit !== head ? commit : ''
 }
 
 // The output tokens the runtime has counted so far; the main session is idle
@@ -422,13 +470,13 @@ function reviewed(kind, passed, commit, counts) {
   const summary = Object.keys(counts).map((k) => `${k}=${Number.isInteger(counts[k]) ? counts[k] : 0}`).join(' ')
   queue(`sh tools/run_state.sh review ${state.change} ${kind} ${result} "${summary}" ${commit}`, commit)
 }
-// Runs the queued records with the metric line through one agent; with no
-// record queued no agent starts unless force (a stopped run's stop word),
-// and the figures wait for the next line an agent runs. The agent's own
-// cost reaches the next line, so the last flush's is the one figure
-// recorded nowhere.
-async function flush(force) {
-  if (!pending.length && !force) return true
+// Runs the queued records with the metric line through one agent, only
+// when a check or review record is queued, which the pre-push and merge
+// gates read and only an unguarded start may write; every other line and
+// the figures wait for the closing start. The agent's own cost reaches the
+// next line.
+async function flush() {
+  if (!pending.some((l) => !CLOSABLE.test(l))) return true
   const command = pending.splice(0).concat([metricLine()].filter(Boolean)).join(' && ')
   if (!command) return true
   const r = await measured('record', () => agent(
@@ -549,6 +597,12 @@ function handOver() {
   for (const f of fresh) handed.add(f)
   return fresh
 }
+// The findings that arrived after the package step, as late-finding notes
+// in the run state: the next change's package step appends them to
+// docs/backlog.md with this run's history row, so no push records them.
+function recordLate() {
+  for (const f of handOver()) queue(`sh tools/run_state.sh note ${state.change} late-finding "${noteText(f)}"`, head)
+}
 const intro = () => `Change \`${state.change}\` on branch \`${state.branch}\`.`
 
 async function contributor(mode, detail) {
@@ -592,10 +646,13 @@ async function verify(fixes = true) {
 // findings of that round name, tests, and records. Without the findings or
 // their files, or at HEAD itself, the whole branch diff is reviewed.
 function priorQuality() {
-  const [result, commit] = at('review.quality')
+  const [result, commit] = String(ran['review.quality'] || '').split(' ')
   if (!COMMIT.test(commit || '')) return ''
   const last = `\nThe last quality review, at ${commit}, was ${result}.`
   const blocked = result === 'blocked'
+  // A fix round after a pass of this start reviews only the commits since it.
+  const since = narrowedFrom(ran, 'quality', head)
+  if (since) return `${last} Review only \`git diff ${since} HEAD\`, the commits since that pass, and block only on what that diff introduces.`
   const listed = !blocked ? [] : qualityAt === commit && qualityBlocking.length ? qualityBlocking : null
   const files = blockedAt === commit ? blockedFiles : null
   if (commit === head || !listed || !files) return `${last} Review the whole branch diff.`
@@ -655,10 +712,19 @@ function qualityReview(scope, more) {
   return agent(`${intro()} Review the committed diff and return the findings.${more || scope}${capLine('quality')}`,
     calibrate('quality', { agentType: 'quality-reviewer', schema: withCalls(QUALITY), phase: 'Quality', label: more ? 'quality-reviewer: continued' : 'quality-reviewer' }))
 }
+// The security reviewer's scope in a fix round: the commits since this
+// start's last passed security review, in_change only for what they
+// introduce.
+function priorSecurity() {
+  const since = narrowedFrom(ran, 'security', head)
+  return since
+    ? `\nThe last security review passed at ${since}: review \`git diff ${since} HEAD\`, the commits since, and set in_change only for a finding that diff introduces.`
+    : ''
+}
 function securityReview(more) {
   return agent(more
     ? `${intro()} The last security review did not complete.${more} Run it, every sub-task inline, and return the result.${capLine('security')}`
-    : `${intro()} Run the security review on the committed diff and return the result.${capLine('security')}`,
+    : `${intro()} Run the security review on the committed diff and return the result.${priorSecurity()}${capLine('security')}`,
   calibrate('security', { agentType: 'security-reviewer', schema: withCalls(SECURITY), phase: 'Security', label: more ? 'security-reviewer: continued' : 'security-reviewer' }))
 }
 // What a continued review is told: the files the last start left, or the
@@ -705,7 +771,9 @@ async function reviews() {
   if (kinds.includes('security')) {
     const s = got.security
     if (!s || reviewLeft(s).length) { stopped = `the security review did not ${s && s.ran ? `cover ${reviewLeft(s).join(', ')}` : 'run'}; it cannot be skipped`; return null }
-    const blocking = s.findings.filter((f) => f.severity !== 'Low' && f.confidence >= 8 && f.in_change)
+    // Every High or Medium in the change at confidence 8 or above blocks,
+    // a re-rating of an earlier non-blocking finding included.
+    const blocking = securityBlocking(s.findings)
     verdict('security', !blocking.length)
     for (const f of s.findings.filter((f) => !blocking.includes(f))) {
       const line = `security ${f.severity} (${f.confidence}) ${f.file}:${f.line || 0} ${f.title}; fix: ${f.fix}`
@@ -722,6 +790,12 @@ async function reviews() {
     const q = got.quality
     if (!q) { stopped = 'the quality reviewer returned no result'; return null }
     if (reviewLeft(q).length) { stopped = `the quality review did not cover ${reviewLeft(q).join(', ')}`; return null }
+    // A blocking finding at the location of an earlier advisory is a
+    // re-raise, kept as an advisory.
+    const raised = q.blocking.filter((f) => reRaised(findingAt(f), qualityAdvisory))
+    if (raised.length) note(`quality re-raises kept as advisories: ${raised.join('; ')}`)
+    q.blocking = q.blocking.filter((f) => !raised.includes(f))
+    q.advisory = q.advisory.concat(raised)
     qualityBlocking = q.blocking
     qualityAt = q.head
     addAdvisories(q.advisory)
@@ -808,7 +882,7 @@ phase('Resume')
 const resume = await agent(
   `Prepare the delivery of one change. Input: ${JSON.stringify(input)}.
 1. \`git fetch -q origin\`. The change name is input.change, or an existing change under openspec/changes/ that the brief names, or a kebab-case name of 2 to 5 words derived from the brief.
-2. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Check it out when it exists locally or on origin; otherwise run \`sh tools/run_state.sh restore <branch>\` and check it out when that exited 0 (it created the branch from the backup of a reclaimed run's commits); otherwise create it from origin/main, which needs a clean tree (stop with the reason when it is not).
+2. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Check it out when it exists locally or on origin; otherwise create it from origin/main, which needs a clean tree (stop with the reason when it is not).
 3. \`make doctor\`; run \`make toolchain\` when it fails and stop when that fails too.
 4. Run \`sh tools/run_state.sh init <change> <branch>\`, then \`sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git rev-parse --short=12 HEAD\` as head.
 5. Run \`sh tools/run_state.sh plan-needed <change>\` and return its one line verbatim as plan; its exit 1 means not needed, not a failure.${capLine('resume')}`,
@@ -906,12 +980,16 @@ if (!stopped && !state.merged) {
   if (!stopped) {
     phase('Merge')
     let waits = 0
+    let bodyFixed = false
     // A resume past the push holds no check or review of this start, and
-    // the run state's could be branch-written: they run again at the head.
-    // A start that ran them all keeps its records, though the package step
-    // committed after them: the merge gates' settled_at allows that
-    // records-only diff. The resume runs no fix round, since a fix commit
-    // could not be pushed; a blocking finding stops the run.
+    // the run state's could be branch-written (a pass, or the branch's own
+    // tools/gates.sh saying they settled): they run again at the head, the
+    // security review over the whole diff, and only this start's verdicts
+    // reach RECORDS or narrow a review. A start that ran them all keeps its
+    // records, though the package step committed after them: the merge
+    // gates' settled_at allows that records-only diff. The resume runs no
+    // fix round, since a fix commit could not be pushed; a blocking finding
+    // stops the run.
     if (!ranAll(ran)) {
       note('resumed past the push: the check and the reviews run again at the head')
       if (!(await verify(false)) && !stopped) stopped = `the check or a review did not pass at ${head} on resume`
@@ -930,6 +1008,14 @@ if (!stopped && !state.merged) {
       const checks = (m.checks || []).join('; ')
       note(`CI at ${m.head}: ${m.ci}${m.minutes ? ` in ${m.minutes} min` : ''}${m.ci === 'pending' && checks ? ` (${checks})` : ''}`)
       if (m.ci === 'pending' && !(m.waited >= 30)) note(`the merger returned pending after waiting ${Number.isFinite(m.waited) ? m.waited : 'unknown'} of 30 minutes`)
+      // A red that a later green run of the same check on the head
+      // superseded is no failure: asked again, never a fix round.
+      if (m.ci === 'red' && staleRed(m.checks)) {
+        note(`CI red at ${m.head} superseded by a green run of the same check: asked again, no fix round`)
+        if (++waits < WAITS) continue
+        stopped = `CI at ${m.head} read red on superseded runs only, ${WAITS} times: ${checks}`
+        break
+      }
       if (m.ci === 'pending') {
         if (++waits < WAITS) continue
         stopped = `CI stalled at ${m.head} after ${WAITS} waits of up to 30 minutes: ${checks || 'no check state returned'}`
@@ -945,6 +1031,15 @@ if (!stopped && !state.merged) {
         note(`merged ${m.sha}: ${m.subject}${m.branch_deleted ? '' : ' (branch deletion refused)'}`)
         break
       }
+      // A red only on the scan of the pull request body: the contributor
+      // fixes the body file and the pull request, no commit and no push, and
+      // the merge goes on without a fix round, once per run.
+      if (m.ci === 'red' && m.body_only === true && !bodyFixed) {
+        bodyFixed = true
+        note('CI red only on the scan of the pull request body: the body is fixed without a fix round')
+        if (!(await contributor('body', `CI is red only on the scan of the pull request's title or body; its log:\n${m.log_excerpt || ''}`))) break
+        continue
+      }
       if (m.ci !== 'red' || !mayFix()) {
         stopped = m.ci === 'green' ? `not merged: ${m.problem || 'no reason given'}` : `CI ${m.ci}${m.step ? ' at ' + m.step : ''}${m.problem ? ': ' + m.problem : ''}${m.ci === 'red' ? ` after ${rework} fix rounds` : ''}`
         break
@@ -952,8 +1047,8 @@ if (!stopped && !state.merged) {
       if (!(await contributor('fix', `CI failed at ${m.step}; its log:\n${m.log_excerpt || ''}`))) break
       if (!(await verify())) break
       phase('Merge')
-      const fresh = handOver()
-      if (!(await contributor('push', `Push the CI fix.${fresh.length ? `\nNon-blocking findings to append to docs/backlog.md (never read it), which arrived after the package step:\n- ${fresh.join('\n- ')}` : ''}`))) break
+      recordLate()
+      if (!(await contributor('push', 'Push the CI fix; the findings that arrived after the package step are recorded in the run state, not appended.'))) break
     }
   }
 }
@@ -964,22 +1059,24 @@ if (!stopped && !state.merged) {
 // says whether a periodic review is due, and writes the report. The line
 // and the summary are built from the same figures at once, so once the line
 // has run the run state's totals equal the summary's; this start's own cost
-// is the one figure recorded nowhere. When the start did not record, its
-// lines go to one record start, as a run whose hooks still load the old
-// profile needs. The periodic review, when due, runs after it; what the
-// reviews find waits in the run state for the next change's planner.
-// A stopped run keeps its backup on origin for a resume; only the user
-// abandons a run, which deletes it.
-if (stopped && !state.merged && CHANGE.test(state.change || '')) note(`the backup of an unpushed branch stays on origin for a resume; \`sh tools/run_state.sh abandon ${state.change}\` deletes it when the run will not resume`)
+// is the one figure recorded nowhere. No other start records: a line the
+// close did not run is reported as not recorded. The periodic review, when
+// due, runs after it; what the reviews find waits in the run state for the
+// next change's planner. A stopped run's unpushed commits stay on its
+// local branch for a resume.
 const looking = !stopped && Boolean(state.merged) && !state['phase.retro']
 phase('Close')
-// A line the close profile refuses (none is left after verify()'s flush,
-// but a stop could leave one) goes through the record agent first.
-if (pending.some((l) => !CLOSABLE.test(l)) && !(await flush())) note(stopped)
+// The findings that arrived after the package step become late-finding
+// notes. A line the close profile refuses (a check or review record a
+// failed flush left) is reported, not recorded: a resume runs that check
+// or review again.
+if (state.pushed) recordLate()
+const refused = pending.filter((l) => !CLOSABLE.test(l))
+if (refused.length) note(`not recorded, refused by the close profile: ${refused.join('; ')}`)
 const closeAt = state.merged || head
 const own = CHANGE.test(state.change || '') && COMMIT.test(closeAt || '')
   ? (looking ? ['retro', 'report'] : ['report']).map((n) => phaseLine(n, closeAt)) : []
-const left = pending.splice(0)
+const left = pending.splice(0).filter((l) => CLOSABLE.test(l))
 const records = left.concat(own, [metricLine()].filter(Boolean)).join(' && ')
 const figures = summary()
 const close = await measured('close', () => agent(
@@ -989,11 +1086,7 @@ if (close && looking) {
   state['phase.retro'] = closeAt
   note(`retrospective: ${close.proposals.map((x) => `${x.proposal} (${x.evidence})`).join('; ') || 'no proposal'}; ${close.review_due || 'review-due not read'}`)
 }
-if (records && (!close || !close.recorded)) {
-  note(`the closing start did not record the run${close && close.record_output ? `: ${close.record_output}` : ''}; one record start runs its lines`)
-  pending.push(...left, ...(close ? own : []))
-  if (!(await flush(true))) note(stopped)
-}
+if (records && (!close || !close.recorded)) note(`the closing start did not record the run${close && close.record_output ? `: ${close.record_output}` : ''}; its lines are not recorded`)
 let periodic = ''
 if (close && looking && close.due) {
   phase('Review')

@@ -4210,3 +4210,255 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the `docs/backlog.md` entry that says `JumpList#step` pushes before the range check (line 3367 at d0d783c); `carat/domain/jump_list.rb:59-60` now returns early and `test/domain_jump_list.rb:78` pins it. Periodic quality advisory at d0d783c.
 - Why it matters: a stale clause sends a later change after a fixed defect.
 - Fix outline: drop that clause from the entry's fix outline, in the periodic review's backlog step. Queue item `periodic-council`.
+
+## delivery-speed security Low (4) at .claude/workflows/deliver-change.js:301
+
+- Where: `.claude/workflows/deliver-change.js:301`. Delivery review of `delivery-speed` (security Low (4)) at 2dcfd3d.
+- Why it matters: staleRed and merger step 2 match check runs by name only, so a later green run of a same-named job from a branch-added workflow hides a real failed run; the merger then asks again instead of starting a fix round.
+- Fix outline: Group check runs by workflow file (or check suite) plus job name; treat a red as superseded only when the later green run comes from the same workflow as the failed one, and that workflow exists on the base branch.
+
+## delivery-speed security Low (3) at tools/run_state.sh:1215
+
+- Where: `tools/run_state.sh:1215`. Delivery review of `delivery-speed` (security Low (3)) at 2dcfd3d.
+- Why it matters: append_history appends late-finding notes from the run state word for word to docs/backlog.md, which the next package step commits; branch code run by the checks can write such notes.
+- Fix outline: Only accept late-finding notes this workflow wrote (e.g. the closing start passes the expected count or a digest), or reapply the noteText character filter when the notes are read.
+
+## delivery-speed quality advisory at tools/run_state.sh:406
+
+- Where: `tools/run_state.sh:406`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: main_stages is a one-time migration shim: once this change merges every origin/main defines FAST_STAGES, so the function and its two tools_test cases are dead code.
+- Fix outline: remove them in the next tooling change.
+
+## delivery-speed quality advisory at docs/codebase-map.md:46
+
+- Where: `docs/codebase-map.md:46`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: the set entry now reads a commit hash;, phase with its parenthesis never closed after drop_backup was removed.
+- Fix outline: write commit hash), phase.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:796
+
+- Where: `.claude/workflows/deliver-change.js:796`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: reRaised matches file:line only, so a new correctness bug a fix round introduces at the line of an earlier advisory is silently demoted.
+- Fix outline: demote only when the blocking text without its commit equals the earlier advisory's text, or also compare the reason.
+
+## delivery-speed quality advisory at .claude/agents/merger.md:24
+
+- Where: `.claude/agents/merger.md:24`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: checks has two formats, name, status, conclusion for every run and name: status, conclusion for pending, while staleRed splits on commas only.
+- Fix outline: one format for every result.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:97
+
+- Where: `.claude/workflows/deliver-change.js:97`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: the CALL_CAPS comment still says a capped start can commit, back up, and return the schema.
+- Fix outline: drop back up.
+
+## delivery-speed quality advisory at tools/gates.sh:489
+
+- Where: `tools/gates.sh:489`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: the session-line pattern refuses any word session followed by a colon anywhere in a line, such as a Notes sentence about the next session:, a false refusal of a valid body.
+- Fix outline: anchor it to a line start, as in ^ *(claude-)?session([ _-]?(id.
+
+## delivery-speed quality advisory at .claude/agents/quality-reviewer.md:21
+
+- Where: `.claude/agents/quality-reviewer.md:21`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: advisories wait for the sprint-end review of sprint-planning, which exists nowhere in the repository or the queue, while CLAUDE.md sends advisories to the backlog and the periodic review.
+- Fix outline: name the periodic review, or add sprint-planning to the queue first.
+
+## delivery-speed quality advisory at .github/workflows/ci.yml:26
+
+- Where: `.github/workflows/ci.yml:26`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: the comment says every other stage runs only here, but docs-lint, dev-build, test-build, test-run, bench-budget, and metrics run in the checker too, and the line was left unwrapped.
+- Fix outline: say CI runs every stage but diagnose and gates, rewrapped.
+
+## delivery-speed quality advisory at tools/tools_test.sh:1992
+
+- Where: `tools/tools_test.sh:1992`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: sed s/^None$/None/ body.md is a no-op substitution used as a copy.
+- Fix outline: cp body.md session.md.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:344
+
+- Where: `.claude/workflows/deliver-change.js:344`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: settledRecords repeats the commit pattern /^[0-9a-f]{7,40}$/ that COMMIT already holds.
+- Fix outline: use COMMIT.test.
+
+## delivery-speed quality advisory at Makefile:398
+
+- Where: `Makefile:398`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: the check help still calls CHECK_STAGES everything a push needs, while a push now needs FAST_STAGES and CI runs the rest.
+- Fix outline: call it every stage, the checker's and CI's.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:795
+
+- Where: `.claude/workflows/deliver-change.js:795`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: reRaised demotes any blocking quality finding whose file:line equals an earlier advisory, by location alone, in any round and whatever the finding says, so a new correctness bug on a line that once carried a style advisory merges with only a note, and line numbers shift between commits.
+- Fix outline: demote only in a narrowed fix round and compare the finding text as well as file:line.
+
+## delivery-speed quality advisory at tools/run_state.sh:406
+
+- Where: `tools/run_state.sh:406`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: main_stages, and the CHECK_STAGES fallback of stage_list at tools/gates.sh:338, serve only this change own merge against a main without FAST_STAGES and are dead once it lands.
+- Fix outline: remove both in the next pipeline change.
+
+## delivery-speed quality advisory at docs/codebase-map.md:46
+
+- Where: `docs/codebase-map.md:46`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: removing the drop_backup clause left a commit hash;, and lost the closing parenthesis of the set entry.
+- Fix outline: write a commit hash),.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:97
+
+- Where: `.claude/workflows/deliver-change.js:97`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: the CALL_CAPS comment still says a capped start can commit, back up, and return the schema, though backup is removed.
+- Fix outline: drop back up.
+
+## delivery-speed quality advisory at .github/workflows/ci.yml:26
+
+- Where: `.github/workflows/ci.yml:26`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: the comment says every other stage runs only here, though docs-lint, dev-build, test-build, test-run, bench-budget, and metrics of FAST_STAGES run in CI too, and the line runs past the comment width.
+- Fix outline: say the stages outside FAST_STAGES run only here and rewrap.
+
+## delivery-speed quality advisory at tools/gates.sh:489
+
+- Where: `tools/gates.sh:489`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: the session-line pattern refuses any word session followed by a colon anywhere in a body, such as prose about Neovim mksession (Session: restored), not only a trailer-like line.
+- Fix outline: anchor it to a line start, ^(claude-)?session([ _-]?(id.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:1089
+
+- Where: `.claude/workflows/deliver-change.js:1089`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: a closing start that does not record now loses its phase lines and metric line with only a note, so a merged run history row can lack its package, ci, and merge figures.
+- Fix outline: keep one record start for the refused close, or say in the report which figures are missing.
+
+## delivery-speed quality advisory at .claude/agents/quality-reviewer.md:21
+
+- Where: `.claude/agents/quality-reviewer.md:21`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: defers style, naming, and architecture findings to the sprint-end review of sprint-planning, a change not in the repository yet, so until it lands only the periodic review takes them.
+- Fix outline: name the periodic review as their taker until sprint-planning lands.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:301
+
+- Where: `.claude/workflows/deliver-change.js:301`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: staleRed splits each check on every comma, so a matrix check name holding a comma (spin (ubuntu, 4)) parses wrong.
+- Fix outline: take status and conclusion as the last two fields.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:795
+
+- Where: `.claude/workflows/deliver-change.js:795`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: reRaised matches by file:line only, so a new correctness bug a fix round introduces at the line of an earlier advisory is silently downgraded, and on a resume the earlier advisories are seeded from run-state notes (line 419), which decision 6 treats as untrusted for narrowing.
+- Fix outline: also require the finding's rule text to match the advisory's and seed the comparison only from this start's advisories.
+
+## delivery-speed quality advisory at docs/codebase-map.md:46
+
+- Where: `docs/codebase-map.md:46`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: broken text in the run_state set entry: 'a commit hash;,' leaves its parenthesis unclosed.
+- Fix outline: replace ';,' with '),'.
+
+## delivery-speed quality advisory at .github/workflows/ci.yml:26
+
+- Where: `.github/workflows/ci.yml:26`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: the comment says every other stage runs only in CI, but dev-build, test-build, test-run, bench-budget, and metrics run in both the checker and CI, and the line is not wrapped like its neighbours.
+- Fix outline: say CI runs every stage but diagnose and gates, and rewrap.
+
+## delivery-speed quality advisory at tools/gates.sh:489
+
+- Where: `tools/gates.sh:489`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: the session-line pattern lives in the pr-body gate alone, while CLAUDE.md names tools/scan_text.sh the one scanner of forbidden text, so the scan check of the pull request never applies it; it also refuses prose such as 'the terminal session: ...' in an editor's body.
+- Fix outline: move a narrower pattern into tools/rules.sh and scan_text.sh.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:481
+
+- Where: `.claude/workflows/deliver-change.js:481`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: dead code: 'if (!command) return true' cannot run, since flush returns earlier unless a non-closable line is pending.
+- Fix outline: drop it.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:97
+
+- Where: `.claude/workflows/deliver-change.js:97`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: stale comment: 'commit, back up, and return the schema' names the removed backup step.
+- Fix outline: 'commit and return the schema'.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:1015
+
+- Where: `.claude/workflows/deliver-change.js:1015`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: a superseded red reuses the pending wait counter, so the merger's next prompt says CI was still running, and the body mode is measured under the package key (line 610).
+- Fix outline: a separate counter and prompt for a superseded red, and its own usage key for body.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:301
+
+- Where: `.claude/workflows/deliver-change.js:301`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: staleRed relies on the merger listing runs oldest first while GitHub lists check runs newest first; a misordered list starts a needless fix round or asks again up to WAITS times.
+- Fix outline: have the merger return only the latest run per name, or a completion time to sort on.
+
+## delivery-speed quality advisory at .claude/agents/contributor.md:59
+
+- Where: `.claude/agents/contributor.md:59`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: body mode says to set the title and body to the body file byte for byte, but the file holds only the body.
+- Fix outline: set the body to the file's text and correct the title only when the scan names it.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:1073
+
+- Where: `.claude/workflows/deliver-change.js:1073`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: on a resume past the push the reviews rerun over the whole diff with an empty handed set, so recordLate at the close turns every advisory the package step already appended into late-finding notes that history appends to docs/backlog.md again.
+- Fix outline: record late findings only from a start that ran the package step or a CI fix, or dedupe against the backlog text in append_history.
+
+## delivery-speed quality advisory at tools/run_state.sh:1217
+
+- Where: `tools/run_state.sh:1217`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: late findings are appended as one heading of bare bullets, not the Where, Why it matters, Fix outline entry shape the rest of docs/backlog.md and CLAUDE.md use.
+- Fix outline: write one entry per finding in that shape, or document the grouped form in the backlog header.
+
+## delivery-speed quality advisory at tools/gates.sh:35
+
+- Where: `tools/gates.sh:35`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: the header still says the stages gate requires every canonical stage from CHECK_STAGES, while stage_list now reads FAST_STAGES first.
+- Fix outline: say FAST_STAGES, else CHECK_STAGES.
+
+## delivery-speed quality advisory at .claude/agents/checker.md:3
+
+- Where: `.claude/agents/checker.md:3`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: the description still says the checker runs the canonical stage list.
+- Fix outline: say the fast stages (FAST_STAGES).
+
+## delivery-speed quality advisory at .github/workflows/ci.yml:26
+
+- Where: `.github/workflows/ci.yml:26`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: the comment says every other stage runs only here, but the builds, tests, bench-budget and metrics run in both the checker and CI.
+- Fix outline: say CI runs every stage but diagnose and gates, and the checker the fast subset.
+
+## delivery-speed quality advisory at .claude/agents/contributor.md:59
+
+- Where: `.claude/agents/contributor.md:59`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: body mode says set the title and body to the body file, which holds no title.
+- Fix outline: say set the body to the file and correct the title in place when the scan names it.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:795
+
+- Where: `.claude/workflows/deliver-change.js:795`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: reRaised downgrades a blocking quality finding at any earlier advisory's file:line, including one the previous round already blocked on (qualityBlocking), so an unfixed blocking finding sharing a line with an advisory passes the review, against design item 6 (a finding already blocking stays blocking) and with no test.
+- Fix outline: skip the downgrade when qualityBlocking holds a finding at the same findingAt location, and add a tools_test case.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:97
+
+- Where: `.claude/workflows/deliver-change.js:97`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: stale comment: the CALL_CAPS margin still says a start can commit, back up, and return, but the backup step is removed.
+- Fix outline: drop 'back up,'.
+
+## delivery-speed quality advisory at .github/workflows/ci.yml:26
+
+- Where: `.github/workflows/ci.yml:26`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: docs drift: the comment says every stage but diagnose and gates runs only in CI, yet FAST_STAGES also runs docs-lint, the dev and test builds, the tests, bench-budget, metrics, and tools-test in the checker.
+- Fix outline: say CI runs every stage but diagnose and gates and the checker runs FAST_STAGES.
+
+## delivery-speed quality advisory at .claude/workflows/deliver-change.js:795
+
+- Where: `.claude/workflows/deliver-change.js:795`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: reRaised demotes any blocking quality finding whose file:line equals an earlier advisory's, so a new bug a fix commit introduces on a line an earlier advisory named is kept as an advisory without notice to the contributor.
+- Fix outline: also compare the rule text, or demote only when the line is outside the fix diff.
+
+## delivery-speed quality advisory at tools/gates.sh:489
+
+- Where: `tools/gates.sh:489`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
+- Why it matters: the session-line pattern refuses any word session followed by a colon in a pull request body (for example 'the LSP session:'), a likely false positive for language server work.
+- Fix outline: anchor it to a line start or require the id, link, or url suffix.

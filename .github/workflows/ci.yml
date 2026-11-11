@@ -22,8 +22,8 @@ jobs:
   spin:
     runs-on: ubuntu-latest
     # The steps mirror CHECK_STAGES in the Makefile, whose comment records
-    # why CI leaves out three of them: the release build on pull requests,
-    # diagnose, and the gates. CI adds the comparison with main's
+    # why CI leaves out two of them, diagnose and the gates, which the
+    # checker runs (FAST_STAGES); every other stage runs only here. CI adds the comparison with main's
     # measurement, which needs main's run on the same kind of runner.
     env:
       # The optimization level of the development builds (the editor of the
@@ -195,13 +195,14 @@ jobs:
           key: carat-metrics-main-${{ github.sha }}
 
       # The release binary, spin build at -O 2, and the smoke test against
-      # it, on every push to main and on a run by hand, so the binary make
-      # build and make install produce is built and run on every commit of
-      # main. Pull requests run the smoke test on the development build.
+      # it, on every push to main, on a run by hand, and on a pull request
+      # that changes code, so the binary make build and make install produce
+      # is built and run before and after the merge; the checker no longer
+      # builds it (FAST_STAGES).
       - name: Release build
-        if: github.event_name != 'pull_request'
+        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
         run: make build
 
       - name: Smoke test the release build
-        if: github.event_name != 'pull_request'
+        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
         run: make test-run TESTS=test/smoke_editor.rb

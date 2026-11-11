@@ -85,17 +85,20 @@ ANALYSIS_MS     ?= 45000
 # compiled, and the C compile's wall time, so a log shows how much of the
 # compile cache a build reused.
 UNIT_SUMMARY := awk '/^spinel-timing: phase=analysis / { a = $$3 } /^spinel-timing: phase=cc_compile / { sub(/^spinel-timing: phase=cc_compile /, ""); print "analysis " a ", C compile " $$0; exit }'
-# The canonical stage list: make check runs it in order, the checker agent
-# runs each stage on its own through tools/run_state.sh check (make
-# check-stage S=NAME, with the same diagnose legs), and CI runs the same
-# targets but three: the release build only on main, since pull requests
-# smoke test dev-build (ci-speed-2); diagnose, a second analysis of every
-# root, about a minute, kept off pull requests to hold them near two
-# minutes, while the checker runs it before every push; and gates, which
-# need the branch's history and its run state, which a pull request's
-# checkout lacks, so the checker and the merger run them. docs-lint
+# The canonical stage list: make check runs it in order, and CI runs the
+# same targets but two: diagnose, a second analysis of every root, about a
+# minute, kept off pull requests, and gates, which need the branch's
+# history and its run state, which a pull request's checkout lacks. docs-lint
 # comes right after doctor: it needs no build and fails in a second.
 CHECK_STAGES := doctor docs-lint build dev-build config-current test-build test-run diagnose no-cruby bench-budget metrics tools-test gates
+# The checker's stages (delivery-speed), which make stages prints and
+# tools/run_state.sh check runs each through make check-stage S=NAME: the
+# two CI leaves out, the tests, the measurement the benchmark phase
+# compares with main's (metrics and the builds it reads), and tools-test,
+# since tools/ci_scope.sh skips CI for a change only under .claude/, whose
+# agent and workflow files tools-test reads. Every other stage runs once,
+# in CI, on every pull request.
+FAST_STAGES := docs-lint dev-build test-build test-run diagnose bench-budget metrics tools-test gates
 # The measurement make metrics writes from the builds of dev-build,
 # test-build, and bench-budget (tools/metrics.sh), and the base make
 # metrics-compare compares it with: tools/run_state.sh bench writes the last
@@ -384,9 +387,9 @@ docs-lint:
 gates:
 	sh tools/gates.sh static
 
-## stages: print the canonical stage list, CHECK_STAGES, which make check and the checker run in order
+## stages: print the checker's stage list, FAST_STAGES, which tools/run_state.sh check runs in order; make check runs CHECK_STAGES
 stages:
-	@echo $(CHECK_STAGES)
+	@echo $(FAST_STAGES)
 
 ## check-stage: run one stage of CHECK_STAGES as make check runs it, e.g. make check-stage S=diagnose
 check-stage: DIAGNOSE_SKIP = $(CHECK_SKIP)

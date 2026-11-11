@@ -51,8 +51,6 @@
 #   origin     no risky configuration key (core.hooksPath among them), no
 #              hook but a sample in .git/hooks; an origin/ base equal to origin's
 #   pre-push   origin, static, security, stages (tools/run_state.sh push)
-#   backup     trailer, content (tools/run_state.sh backup, with BASE the
-#              branch's base, so every commit the backup publishes)
 #   merge F    origin, trailer, content, security, stages, passed, records,
 #              pushes, pr-body F, then gated: the head they passed at
 #              (the merger, from a worktree of origin/main at
@@ -329,11 +327,14 @@ gate_security() {
   esac
 }
 
-# The canonical stage list: STAGES, else the CHECK_STAGES line of the
-# Makefile beside this script, read rather than run, so the merge's copy of
-# main lists main's stages whatever the branch's Makefile says.
+# The checker's stage list: STAGES, else the FAST_STAGES line of the
+# Makefile beside this script, else its CHECK_STAGES line, read rather than
+# run, so the merge's copy of main lists main's stages whatever the
+# branch's Makefile says; CI runs the rest of CHECK_STAGES.
 stage_list() {
   if [ -n "${STAGES:-}" ]; then echo "$STAGES"; return; fi
+  fast=$(sed -n 's/^FAST_STAGES := //p' "$here/../Makefile")
+  if [ -n "$fast" ]; then echo "$fast"; return; fi
   sed -n 's/^CHECK_STAGES := //p' "$here/../Makefile"
 }
 
@@ -351,7 +352,7 @@ gate_stages() {
   want=$(git rev-parse --verify -q --end-of-options "$checked^{commit}")
   settled_at "$checked" || bad "the check passed at $checked, but code changed since"
   stages=$(stage_list)
-  [ -n "$stages" ] || bad "no stage list (STAGES, or CHECK_STAGES in $here/../Makefile)"
+  [ -n "$stages" ] || bad "no stage list (STAGES, or FAST_STAGES or CHECK_STAGES in $here/../Makefile)"
   for s in $stages; do
     record=$(state "stage.$s")
     at=$(echo "$record" | cut -d' ' -f3)
@@ -483,6 +484,10 @@ $hits"
   [ -z "$hits" ] || bad "an empty bullet: $hits"
   hits=$(grep -n -i -E 'generated with|co-authored-by' "$file")
   [ -z "$hits" ] || bad "a footer or attribution line: $hits"
+  # The pull request is created with this file's text byte for byte, so a
+  # session line here would reach GitHub's activity.
+  hits=$(grep -n -i -E '(^|[^a-z])(claude-)?session([ _-]?(id|link|url))?:' "$file")
+  [ -z "$hits" ] || bad "a session line: $hits"
   sed -n '/^## Testing/,/^## Notes/p' "$file" | grep -q -i 'security review' ||
     bad "the Testing section does not report the security review"
   address=${TRAILER#*<}
@@ -512,7 +517,6 @@ case "$target" in
   pr-body) gate_pr_body "$body" ;;
   static) gate_trailer; gate_content; gate_snapshots; gate_docs; gate_scenarios; gate_cases; gate_attribution ;;
   pre-push) gate_origin; gate_trailer; gate_content; gate_snapshots; gate_docs; gate_scenarios; gate_cases; gate_security; gate_stages ;;
-  backup) gate_trailer; gate_content ;;
   passed) gate_passed ;;
   merge)
     sh "$here/run_state.sh" gated "$change" clear >/dev/null || bad "the merge record gated could not be cleared"
