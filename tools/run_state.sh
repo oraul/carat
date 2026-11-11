@@ -81,7 +81,10 @@
 #   stage CHANGE NAME CMD...    run CMD with its log and record its result
 #   check CHANGE [COMMIT]       refuse a dirty tracked tree or an untracked
 #                               file under carat/ bin/ test/ bench/, then
-#                               run the canonical stages (make -s stages) in
+#                               run the checker's stages (make -s stages,
+#                               FAST_STAGES; origin/main's CHECK_STAGES while
+#                               its Makefile has no FAST_STAGES, as its merge
+#                               gates require) in
 #                               order in the check clone (below) and stop
 #                               at the first failure (the
 #                               workflow records phase.check); a stage record

@@ -516,7 +516,7 @@ commit "chore: more"
 # A run keeps its unpushed commits on its local branch; no backup ref is
 # pushed before the branch.
 expect "run_state: backup is no longer a command" 2 "" state backup pushing
-expect "run_state: restore is no longer a command" 2 "" state restore chore/pushing
+expect "run_state: restore is no longer a command" 2 "" state restore pushing
 expect "run_state: push refuses before the checks and the review" 1 "pre-push gates failed" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a refused push counts a gate failure" 0 "^1$" state get pushing gates_failed
@@ -2056,7 +2056,7 @@ turns() {
   shift
   for kind in "$@"; do cap_of "$kind"; done | awk -v l="$large" -v r="$margin" '{ v = $1 * l; if (v > int(v)) v = int(v) + 1; if (v > m) m = v } END { print m + r }'
 }
-for pair in benchmark:bench checker:checker contributor:implement,fix,package,push planner:planner quality-reviewer:quality retrospective:close scout:scout security-reviewer:security; do
+for pair in benchmark:bench checker:checker contributor:implement,fix,package,push,body planner:planner quality-reviewer:quality retrospective:close scout:scout security-reviewer:security; do
   agent=${pair%%:*}
   want=$(turns "$agent" $(echo "${pair#*:}" | tr ',' ' '))
   expect "caps: the $agent file's maxTurns is its large cap and the margin" 0 "^maxTurns: $want$" grep -E '^maxTurns: ' "$agents/$agent.md"
@@ -2139,6 +2139,20 @@ expect "workflow: the metric line carries the profiles" 0 ' calib[.]scout=cheap/
   calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; estimate = ''; planned = null; state = { change: 'c' }; calibrate('scout', {}); calibrate('security', {}); return metricLine() })()"
 expect "workflow: a restart restores the recorded profiles of the kinds not used yet" 0 '^[{]"planner":"session/session","scout":"cheap/low"[}]$' \
   calib_js "(() => { calibrate('planner', {}); return restoreCalibration({ 'metric.calib.scout': 'cheap/low', 'metric.calib.planner': 'cheap/low', 'metric.calib.checker': 'cheap/high', 'metric.rework': '1' }, calibrated) })()"
+speed_js() {
+  js "$wf" "COMMIT CLOSABLE noteText staleRed findingAt reRaised settledRecords" "$1"
+}
+expect "workflow: a late finding becomes a shell-safe note" 0 '^"a [(]x[)] q y b"$' \
+  speed_js 'noteText("a $(x) \"q\" `y` b")'
+expect "workflow: a red superseded by a green run of the same check is stale" 0 '^\[true,false,false\]$' \
+  speed_js '[staleRed(["scan, completed, failure", "spin, completed, success", "scan, completed, success"]), staleRed(["scan, completed, success", "scan, completed, failure"]), staleRed([])]'
+expect "workflow: a blocking finding at an earlier advisory's location is re-raised" 0 '^\[true,false,true\]$' \
+  speed_js '[reRaised(findingAt("abc1234 tools/x.sh:12 a thing"), ["tools/x.sh:12 earlier"]), reRaised(findingAt("abc1234 tools/x.sh:13 b"), ["tools/x.sh:12 earlier"]), reRaised("tools/x.sh:4", ["security Medium (7) tools/x.sh:4 t; fix: f"])]'
+expect "workflow: a settled resume trusts the recorded check and reviews" 0 '^\[[{]"phase.check":"abc1234","review.quality":"pass abc1234","review.security":"pass abc1234","review.bench":"pass abc1234"[}],null,null\]$' \
+  speed_js '[settledRecords({ "phase.check": "abc1234", "review.quality": "pass abc1234 blocking=0", "review.security": "pass abc1234", "review.bench": "pass abc1234" }, true), settledRecords({ "phase.check": "abc1234", "review.quality": "blocked abc1234", "review.security": "pass abc1234", "review.bench": "pass abc1234" }, true), settledRecords({ "phase.check": "abc1234" }, false)]'
+expect "workflow: only check and review records need a record start" 0 '^\[true,false,false,true\]$' \
+  speed_js '["sh tools/run_state.sh note c late-finding \"x (y) z\"", "sh tools/run_state.sh review c security pass \"high=0\" abc1234", "sh tools/run_state.sh phase c check abc1234", "sh tools/run_state.sh phase c implement abc1234"].map((l) => CLOSABLE.test(l))'
+expect "workflow: no record start runs at the close" 0 '^1$' grep -c 'await flush(' "$wf"
 expect "workflow: a contributor that finished is done" 0 '^[{]"next":"done","left":\[\][}]$' \
   work_js "(r => continuation(r, workLeft(r), 0))({ status: 'done' })"
 expect "workflow: a capped contributor start is continued with what it left" 0 '^[{]"next":"continue","left":\["4.2 the docs"\][}]$' \
