@@ -4465,7 +4465,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## pr-by-tag security Low at tools/pr_tag.sh:121
 
-- Where: `tools/pr_tag.sh:121`. Delivery review of `pr-by-tag` (security Low, confidence 5) at 742ba5f.
+- Where: tools/pr_tag.sh:121 (removed by pr-on-push). Delivery review of `pr-by-tag` (security Low, confidence 5) at 742ba5f.
 - Why it matters: wait records the highest-numbered pull request whose head ref equals the pushed sha without checking that it comes from this repository's branch; once the tag is gone, a fork pull request on the same commit gets a higher number, is recorded in state.pr, and the merger then acts on the attacker's pull request with its title, body, and conversation.
 - Fix outline: have open-pr publish the number it created, for example in a ref or a tag annotation the contributor reads with git, or check the pull request's head repository and branch with pull_request_read before recording it instead of matching only refs/pull/*/head by sha.
 
@@ -4483,7 +4483,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## pr-by-tag quality advisory at tools/pr_tag.sh:116
 
-- Where: `tools/pr_tag.sh:116`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Where: tools/pr_tag.sh:116 (removed by pr-on-push). Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
 - Why it matters: wait does not check the run state's branch against BRANCH_RE as push does; an empty branch makes the tag pr/ and grep -F then matches any pr/ tag on origin.
 - Fix outline: add the same matches "$branch" "$BRANCH_RE" refusal as push.
 
@@ -4501,7 +4501,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## pr-by-tag quality advisory at tools/pr_tag.sh:125
 
-- Where: `tools/pr_tag.sh:125`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Where: tools/pr_tag.sh:125 (removed by pr-on-push). Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
 - Why it matters: wait does not check the run state's branch against BRANCH_RE as push does; an empty branch makes the tag pr/ and grep -F then matches any pr/ tag on origin (the same finding as the entry at line 116).
 - Fix outline: add the same matches "$branch" "$BRANCH_RE" refusal as push.
 
@@ -4513,7 +4513,7 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## pr-by-tag quality advisory at tools/pr_tag.sh:96
 
-- Where: `tools/pr_tag.sh:96`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Where: tools/pr_tag.sh:96 (removed by pr-on-push). Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
 - Why it matters: a continued package start that runs push while open-pr is still pending finds the tag on origin and is refused, and contributor.md step 4 gives no path but stop although wait would succeed.
 - Fix outline: in the contributor.md package step say that a push refused for a tag on origin is followed by wait, which stops only when it also fails.
 
@@ -4525,12 +4525,12 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 ## pr-by-tag quality advisory at tools/pr_tag.sh:124
 
-- Where: `tools/pr_tag.sh:124`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Where: tools/pr_tag.sh:124 (removed by pr-on-push). Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
 - Why it matters: WAIT_STEP=0 passes the check, so waited never grows and wait loops until a pull request appears, past its SECONDS bound.
 - Fix outline: require [1-9][0-9]{0,2}.
 
 ## pr-by-tag quality advisory at tools/pr_tag.sh:131
 
-- Where: `tools/pr_tag.sh:131`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
+- Where: tools/pr_tag.sh:131 (removed by pr-on-push). Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
 - Why it matters: an ls-remote failure in wait becomes empty refs, so a wait that never read origin ends with 'no pull request's head is', naming the wrong cause.
 - Fix outline: remember the failure and refuse with 'origin cannot be read' as push does.
