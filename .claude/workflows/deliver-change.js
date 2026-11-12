@@ -17,7 +17,8 @@ export const meta = {
   ],
 }
 
-// args: { change?, brief?, branch?, packs?: [path], areas?: [string] }, or a
+// args: { change?, brief?, branch?, packs?: [path], areas?: [string],
+// records?: 'skip' }, or a
 // string that is a change name or a brief. The run state, written only by
 // tools/run_state.sh and read through its trusted command (only the records
 // at a commit of the branch or of main), decides which phases are already
@@ -222,6 +223,7 @@ const PLAN = {
     notes: { ...LINES, description: 'for the contributor: findings the change only appends to docs/backlog.md, and bookkeeping' },
     files: LINES,
     estimate: { type: 'string', enum: SIZES, description: 'the size this change is estimated at' },
+    records: { type: 'string', enum: ['apply', 'skip'], description: 'skip when the brief excludes the planning records (history and groom) from this change\'s package step' },
   },
   required: ['decisions', 'security_first', 'notes', 'files', 'estimate'],
 }
@@ -946,10 +948,23 @@ if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement
     // Stored with the figures, so budget and the history row keep it after
     // the queue item leaves the queue.
     if (SIZES.includes(p.estimate)) estimate = p.estimate
+    if (p.records === 'skip') excludeRecords('the planner')
     if (p.security_first.length) stopped = `security first: deliver the fix of ${p.security_first.join('; ')} before this change`
     else phaseDone('plan', head)
   }
 }
+
+// A brief may exclude the planning records from the package step: the
+// run state's records=skip, which history and groom honor for the change:
+// no closable line, so the flush at the end of verify() writes it, before
+// the package step.
+function excludeRecords(why) {
+  if (state.records === 'skip') return
+  state.records = 'skip'
+  queue(`sh tools/run_state.sh set ${state.change} records skip`, head)
+  note(`planning records excluded by ${why}: the package step runs neither history nor groom`)
+}
+if (!stopped && !state.merged && input.records === 'skip') excludeRecords('the input')
 
 if (!stopped && !state.merged) {
   if (!state['phase.implement']) {
@@ -981,9 +996,10 @@ if (!stopped && !state.merged) {
   if (!stopped && !(state.pushed && state.pr)) {
     if (await verify()) {
       phase('Package')
+      const excluded = 'run neither history nor groom: this change\'s run state excludes the planning records (records=skip), and both say so for it'
       const plan = planned === 0
-        ? 'The planner did not run: this change was taken from the head of docs/queue.md as written. Copy nothing from build/plan/, which holds an older run\'s files or a waiting sprint plan that groom applies; append the history and run groom as your package step says, then remove this change\'s item from docs/queue.md and renumber the rest.'
-        : 'Apply the planner\'s files under build/plan/ and append the history of the merged changes as your package step says.'
+        ? `The planner did not run: this change was taken from the head of docs/queue.md as written. Copy nothing from build/plan/, which holds an older run's files or a waiting sprint plan that groom applies; ${state.records === 'skip' ? excluded : 'append the history and run groom as your package step says'}, then remove this change's item from docs/queue.md and renumber the rest.`
+        : `Apply the planner's files under build/plan/ and ${state.records === 'skip' ? excluded : 'append the history of the merged changes as your package step says'}.`
       const done = await contributor('package', `Non-blocking findings to append to docs/backlog.md (a shell append; never read the file):\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
       if (done) state.pr = packagedPr(done)
       if (done && !state.pr) stopped = 'no pull request appeared for the branch ' + state.branch + ': read the open-pr workflow\'s log'
