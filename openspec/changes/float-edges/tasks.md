@@ -13,7 +13,7 @@
 
 ## 3. The finder
 
-- [ ] 3.1 Name the finder's margin and box frame in `carat/plugins/finder/plugin.rb` and lay the boxes out from them; prove "The finder boxes share an edge" and "The finder boxes keep a gap without an edge" in `test/editor_finder.rb`
+- [x] 3.1 Name the finder's margin and box frame in `carat/plugins/finder/plugin.rb` and lay the boxes out from them; prove "The finder boxes share an edge" and "The finder boxes keep a gap without an edge" in `test/editor_finder.rb`
 
 ## 4. Docs and checks
 

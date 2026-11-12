@@ -65,6 +65,29 @@ module EditorFinderTest
     out
   end
 
+  # A 24 by cols editor with the finder over the files, the configuration
+  # lines over the defaults, the keys typed.
+  def self.configured(lines, keys, cols)
+    config = Carat::Doubles::FixedConfig.with(lines.to_s)
+    h = Carat::Doubles::EditorHarness.new(files: disk, config: config, rows: 24, cols: cols.to_i, plugins: [Carat::Plugins::Finder::Plugin.new])
+    h.open("lib/alpha.rb")
+    h.type(keys.to_s)
+    h
+  end
+
+  # The first and the after-last column of each float's box.
+  def self.boxes(h)
+    layer = h.state.tab.floats
+    out = []
+    i = 0
+    while i < layer.count
+      out << layer.at(i).box_left
+      out << layer.at(i).box_right
+      i += 1
+    end
+    out
+  end
+
   # The first matching row's title for a path list typed into.
   def self.first_title(h)
     shown = floats(h)
@@ -189,6 +212,13 @@ module EditorFinderTest
     h.type("<Space>ff")
     t.assert_equal(:cmdline, h.mode, "and Space f f still opens the finder")
 
+    # Scenario: The finder boxes share an edge.
+    h = configured("", "<Space>ffbet", 120)
+    top = h.row(1)
+    t.assert_equal([[1, 60, 60, 119], "╮╭"], [boxes(h), top[59, 2].to_s], "The finder boxes share an edge: the list from column 1, the preview from the column after it to one before the right edge")
+    # Scenario: The finder boxes keep a gap without an edge.
+    h = configured("option.winborder none\n", "<Space>ffbet", 120)
+    t.assert_equal([1, 58, 60, 117], boxes(h), "The finder boxes keep a gap without an edge: each box loses its edge columns")
     t.finish
   end
 end
