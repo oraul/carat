@@ -97,6 +97,7 @@ scope_case() {
 
 scope_case false docs/notes.md
 scope_case false openspec/changes/x/proposal.md
+scope_case false docs/sprints.tsv
 scope_case true .claude/agents/x.md
 scope_case true .claude/workflows/x.js
 scope_case true .claude/settings.json
@@ -719,6 +720,21 @@ expect "run_state: the row groups the measurements and the first passes" 0 \
   awk -F'\t' 'NR == 2 { print $8, $9, $10, $6, $13, $14 }' docs/metrics.tsv
 expect "run_state: history records the profiles" 0 "^scout=cheap/low,security=session/session$" awk -F'\t' 'NR == 2 { print $18 }' docs/metrics.tsv
 expect "run_state: history appends a change once" 0 "nothing pending" state history
+expect "run_state: history records the branch it appended a row on" 0 "^chore/history\$" state get history row
+cp docs/metrics.tsv m.keep
+head -1 m.keep > docs/metrics.tsv
+expect "run_state: history appends no row a run already has" 0 "^history: history already has its row, appended on chore/history; not appended again\$" state history
+expect "run_state: history leaves the history without the row a run already has" 0 "^1\$" sh -c "wc -l < docs/metrics.tsv | tr -d ' '"
+state set history records skip > /dev/null
+expect "run_state: history honors the records exclusion" 0 "^history: history excludes the planning records [(]records=skip[)]; nothing appended\$" state history history
+state set history records apply > /dev/null
+cp m.keep docs/metrics.tsv
+state init based chore/based > /dev/null
+state set based merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+printf 'based\t-\n' >> docs/metrics.tsv
+commit "docs: record based"
+cp m.keep docs/metrics.tsv
+expect "run_state: history appends no row main already has" 0 "^history: based already has its row in HEAD's docs/metrics[.]tsv; not appended again\$" env BASE=HEAD sh "$here/run_state.sh" history
 expect "run_state: status prints the first-pass rates" 0 "first-pass rates over 1 change.s.: check 1/1 quality 0/1 security 1/1 gates 0/1" state status
 
 # A run state whose first passes the workflow stored only in part: the
@@ -1010,6 +1026,16 @@ expect "run_state: groom keeps the first of a repeated heading" 0 "^once$" sh -c
 expect "run_state: groom copies the sprint's queue" 0 "^## Sprint 3$" grep '^## Sprint' docs/queue.md
 expect "run_state: groom appends the sprint row" 0 "^sprint-2 b5 5 b1,b2,b3,b4,b5 5[.]0 1[.]0 5 0 -$" sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
 expect "run_state: groom applies a plan once" 0 "^groom: no sprint plan waits" state groom
+expect "run_state: groom retires the applied plan's marker" 0 "^retired\$" sh -c "[ -f build/plan/sprint.applied ] && [ ! -f build/plan/sprint ] && echo retired"
+echo sprint-2 > build/plan/sprint
+expect "run_state: groom says a sprint's row already stands" 0 "^groom: sprint-2 already has its row in docs/sprints[.]tsv; not applied again, its marker retired\$" state groom
+expect "run_state: groom retires the marker of a sprint whose row stands" 0 "^retired\$" sh -c "[ ! -f build/plan/sprint ] && echo retired"
+state init pkg chore/pkg > /dev/null
+state set pkg records skip > /dev/null
+echo sprint-3 > build/plan/sprint
+expect "run_state: groom honors the records exclusion" 0 "^groom: pkg excludes the planning records [(]records=skip[)]; nothing applied\$" state groom pkg
+expect "run_state: groom keeps the marker under the records exclusion" 0 "^sprint-3\$" cat build/plan/sprint
+rm -f build/plan/sprint build/pipeline/pkg.json
 state init sprint-1 main > /dev/null 2>&1
 state review sprint-1 periodic-security blocked "diff blocking=1" > /dev/null
 expect "run_state: the sprint row counts budgets and first passes" 0 "^sprint-1 a5 5 a1,a2,a3,a4,a5 180[.]0 36[.]0 4200000 1 check:4/5,quality:3/4$" \
@@ -1534,6 +1560,8 @@ expect "guard: a risky configuration key refuses every call" 2 "every call while
 git_q config --unset core.hooksPath
 expect "guard: the guard's risky keys are the gates'" 0 "^same$" \
   sh -c '[ "$(grep "^RISKY_CONFIG=" "$1/agent_guard.sh")" = "$(grep "^RISKY_CONFIG=" "$1/rules.sh")" ] && echo same' _ "$here"
+expect "rules: the records-only list is named once" 0 "^tools/rules.sh,RECORDS_RE ci_scope gates run_state,\$" \
+  sh -c 'cd "$1" && printf "%s," "$(grep -l -F "docs/(backlog" *.sh | grep -v -x tools_test.sh | sed "s|^|tools/|")"; for f in ci_scope gates run_state; do grep -q "RECORDS_RE" "$f.sh" && printf " %s" "$f"; done | sed "s/^/RECORDS_RE/"; echo ,' _ "$here"
 cd "$work" || exit 1
 
 # ---------------------------------------------------------- docs_lint.sh
@@ -2045,6 +2073,18 @@ commit "fix: code beside the sprint row"
 expect "gates: security refuses a code change beside the sprint row" 1 "code changed since" gates security
 git_q rm -q tools/sprint.sh
 commit "chore: remove the code"
+expect "gates: security passes after appended sprint rows" 0 "ok   security: pass" gates security
+first_review=$(state get security review.security | cut -d" " -f2)
+state review security security pass "no finding" > /dev/null
+printf 'sprint-3\tc5\n' >> docs/sprints.tsv
+commit "docs: append a sprint row"
+expect "gates: security passes after a row appended to the reviewed sprint rows" 0 "ok   security: pass" gates security
+printf 'sprint\tlast\nsprint-1\ta4\nsprint-2\tb5\nsprint-3\tc5\n' > docs/sprints.tsv
+commit "docs: edit an earlier sprint row"
+expect "gates: security refuses an edit of an earlier sprint row" 1 "code changed since" gates security
+printf 'sprint\tlast\nsprint-1\ta5\nsprint-2\tb5\nsprint-3\tc5\n' > docs/sprints.tsv
+commit "docs: restore the sprint rows"
+state review security security pass "no finding" "$first_review" > /dev/null
 mkdir -p openspec/moved
 git_q mv tools/base.sh openspec/moved/base.sh
 commit "chore: move a tool"

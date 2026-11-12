@@ -37,12 +37,17 @@ answer() {
   exit 0
 }
 
-# True when a path is documentation no test reads.
+here=$(cd "$(dirname "$0")" && pwd)
+. "$here/rules.sh"
+
+# True when a path is documentation no test reads: a records-only path of
+# tools/rules.sh (RECORDS_RE), or one of the case below.
 documentation() {
+  ! printf '%s\n' "$1" | grep -q -E "^($RECORDS_RE)" || return 0
   case "$1" in
     docs/actions.md|docs/compatibility.md|docs/codebase-map.md) return 1 ;;
     .claude/agents/*|.claude/workflows/*|.claude/settings.json) return 1 ;;
-    openspec/*|.claude/*|*.md|docs/metrics.tsv) return 0 ;;
+    .claude/*|*.md) return 0 ;;
     *) return 1 ;;
   esac
 }
