@@ -61,6 +61,8 @@ module Carat
         when Domain::Key::DELETE then "\e[3~"
         when Domain::Key::PAGE_UP then "\e[5~"
         when Domain::Key::PAGE_DOWN then "\e[6~"
+        when Domain::Key::CTRL_PAGE_UP then "\e[5;5~"
+        when Domain::Key::CTRL_PAGE_DOWN then "\e[6;5~"
         when Domain::Key::F1 then "\eOP"
         when Domain::Key::F2 then "\eOQ"
         when Domain::Key::F3 then "\eOR"
@@ -132,15 +134,18 @@ module Carat
         return false if i >= size
         final = @pending.getbyte(i)
         params = @pending.byteslice(2, i - 2)
-        first = params.split(";")[0]
-        number = first.nil? ? 0 : first.to_i
-        codes << csi_key(final, number)
+        parts = params.split(";")
+        number = parts.empty? ? 0 : parts[0].to_i
+        modifier = parts.length > 1 ? parts[1].to_i : 1
+        codes << csi_key(final, number, modifier)
         consume(i + 1)
         true
       end
 
-      #: (Integer, Integer) -> Integer
-      def csi_key(final, number)
+      # The key of a CSI sequence; modifier is the second parameter, 1
+      # plus the Shift, Alt, and Ctrl bits, which only the page keys read.
+      #: (Integer, Integer, Integer) -> Integer
+      def csi_key(final, number, modifier)
         case final
         when 65 then Domain::Key::UP
         when 66 then Domain::Key::DOWN
@@ -152,20 +157,22 @@ module Carat
         when 81 then Domain::Key::F2
         when 82 then Domain::Key::F3
         when 83 then Domain::Key::F4
-        when 126 then tilde_key(number)
+        when 126 then tilde_key(number, modifier > 1 && ((modifier - 1) & 4) != 0)
         else Domain::Key::UNKNOWN
         end
       end
 
-      #: (Integer) -> Integer
-      def tilde_key(number)
+      # The key of a tilde sequence; control says the modifier holds Ctrl,
+      # which gives the page keys their Ctrl codes.
+      #: (Integer, bool) -> Integer
+      def tilde_key(number, control)
         case number
         when 1, 7 then Domain::Key::HOME
         when 2 then Domain::Key::INSERT
         when 3 then Domain::Key::DELETE
         when 4, 8 then Domain::Key::END_KEY
-        when 5 then Domain::Key::PAGE_UP
-        when 6 then Domain::Key::PAGE_DOWN
+        when 5 then control ? Domain::Key::CTRL_PAGE_UP : Domain::Key::PAGE_UP
+        when 6 then control ? Domain::Key::CTRL_PAGE_DOWN : Domain::Key::PAGE_DOWN
         when 11 then Domain::Key::F1
         when 12 then Domain::Key::F2
         when 13 then Domain::Key::F3

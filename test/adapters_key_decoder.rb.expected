@@ -13,6 +13,11 @@ ok   ss3 home
 ok   ss3 f1
 ok   csi f5
 ok   modified arrow
+ok   ctrl page down
+ok   ctrl page up
+ok   ctrl shift page down is ctrl page down
+ok   shift page down is page down
+ok   ctrl delete is delete
 ok   alt x
 ok   alt multi-byte
 ok   double escape leaves one pending
@@ -36,7 +41,8 @@ ok   up
 ok   delete
 ok   f1
 ok   f12
+ok   ctrl page down
 ok   alt x
 ok   unicode
 ok   every key round-trips through encode and feed
-adapters_key_decoder: 41 passed, 0 failed
+adapters_key_decoder: 47 passed, 0 failed

@@ -30,6 +30,7 @@ module DomainKeysTest
       ["arrows", "<Up><Down><Left><Right>", [K::UP, K::DOWN, K::LEFT, K::RIGHT]],
       ["home end del", "<Home><End><Del>", [K::HOME, K::END_KEY, K::DELETE]],
       ["page keys and insert", "<PageUp><PageDown><Insert>", [K::PAGE_UP, K::PAGE_DOWN, K::INSERT]],
+      ["control page keys", "<C-PageDown><c-pageup>", [K::CTRL_PAGE_DOWN, K::CTRL_PAGE_UP]],
       ["function keys", "<F1><F12>", [K::F1, K::F12]],
       ["lt and bar", "<lt><Bar>", [60, 124]],
       ["unicode character", "é", [233]],
@@ -50,6 +51,8 @@ module DomainKeysTest
     # Formatting: rows are [label, code, expected notation].
     t.table([
       ["up", K::UP, "<Up>"],
+      ["control page down", K::CTRL_PAGE_DOWN, "<C-PageDown>"],
+      ["control page up", K::CTRL_PAGE_UP, "<C-PageUp>"],
       ["enter", 13, "<CR>"],
       ["escape", 27, "<Esc>"],
       ["control c", 3, "<C-c>"],

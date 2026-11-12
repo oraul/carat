@@ -15,6 +15,7 @@ ok   tab and backspace
 ok   arrows
 ok   home end del
 ok   page keys and insert
+ok   control page keys
 ok   function keys
 ok   lt and bar
 ok   unicode character
@@ -26,6 +27,8 @@ ok   an unclosed bracket is the less-than character itself
 ok   leader with no leader configured is an error
 ok   leader written in notation
 ok   up
+ok   control page down
+ok   control page up
 ok   enter
 ok   escape
 ok   control c
@@ -48,4 +51,4 @@ ok   alt is not printable
 ok   base strips the alt flag
 ok   alt? sees the flag
 ok   char encodes a code point
-domain_keys: 50 passed, 0 failed
+domain_keys: 53 passed, 0 failed
