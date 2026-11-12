@@ -18,4 +18,4 @@
 ## 4. Docs and checks
 
 - [x] 4.1 Update the `winborder` sentence of `README.md`; `make docs-lint` passes
-- [ ] 4.2 Run `make lint`, `make gates`, and `make spec-validate`, all pass
+- [x] 4.2 Run `make lint`, `make gates`, and `make spec-validate`, all pass
