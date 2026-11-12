@@ -29,7 +29,17 @@ module AdaptersHoverTest
       @processes = processes
       @messages = messages
       @assembly = assembly
+      @rows = 12
+      @cols = 40
       @frame = assembly.render(12, 40)
+    end
+
+    # Draws the editor at rows by cols from now on.
+    #: (Integer, Integer) -> void
+    def resize(rows, cols)
+      @rows = rows
+      @cols = cols
+      @frame = @assembly.render(rows, cols)
     end
 
     # Types keys in Vim notation, one read per key.
@@ -54,7 +64,7 @@ module AdaptersHoverTest
     #: () -> void
     def pump
       @assembly.controller.pump(@assembly.state)
-      @frame = @assembly.render(12, 40)
+      @frame = @assembly.render(@rows, @cols)
     end
 
     #: () -> Array[String]
@@ -196,6 +206,17 @@ module AdaptersHoverTest
 
   def self.markup(value)
     { "kind" => "markdown", "value" => value.to_s }
+  end
+
+  # The float's text width, the width its rows were laid out at, its
+  # first row as the screen shows it from the text area's first column,
+  # and the screen's last column on that row: the right border when the
+  # row is not cut.
+  #: (Rig, Carat::Domain::FloatWindow) -> Array[untyped]
+  def self.drawn(r, float)
+    window = float.window
+    row = r.screen[window.row].to_s
+    [window.width, float.spec.width, row[window.col, window.width].to_s.rstrip, row[row.length - 1, 1].to_s]
   end
 
   def self.main
@@ -347,6 +368,21 @@ module AdaptersHoverTest
     rows = float_lines(r)
     t.assert_equal([100, false], [rows.length, rows.include?("after")], "the joined text stops at 16,384 bytes")
 
+    # Scenario: An 80-column hover row shows its last word.
+    r = hovering
+    r.resize(24, 80)
+    words = []
+    n = 1
+    while n <= 26
+      words << "wd#{n.to_s.rjust(3, "0")}"
+      n += 1
+    end
+    shown(r, markup(words.join(" ")))
+    rows = float_lines(r)
+    first = words[0, 12].to_a.join(" ")
+    floats = r.assembly.state.tab.floats
+    float = floats.at(floats.index_of(r.assembly.hover.float_id))
+    t.assert_equal([first, [71, 71, first, "|"]], [rows[0].to_s, drawn(r, float)], "An 80-column hover row shows its last word: wrapped at 76 columns, drawn whole inside the border")
     t.finish
   end
 end

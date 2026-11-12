@@ -129,7 +129,7 @@ module Carat
           width = w if w > width
           i += 1
         end
-        limit = state.screen_cols - 2 - 2 * Domain::FloatWindow::PAD
+        limit = Domain::FloatWindow.text_room(state.screen_cols, true, state.options.winborder)
         width = limit if width > limit
         height = rows.length < room ? rows.length : room
         columns = (rows.length + height - 1) / height

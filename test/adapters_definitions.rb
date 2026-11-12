@@ -29,7 +29,17 @@ module AdaptersDefinitionsTest
       @processes = processes
       @messages = messages
       @assembly = assembly
+      @rows = 12
+      @cols = 40
       @frame = assembly.render(12, 40)
+    end
+
+    # Draws the editor at rows by cols from now on.
+    #: (Integer, Integer) -> void
+    def resize(rows, cols)
+      @rows = rows
+      @cols = cols
+      @frame = @assembly.render(rows, cols)
     end
 
     # Types keys in Vim notation, one read per key.
@@ -54,7 +64,7 @@ module AdaptersDefinitionsTest
     #: () -> void
     def pump
       @assembly.controller.pump(@assembly.state)
-      @frame = @assembly.render(12, 40)
+      @frame = @assembly.render(@rows, @cols)
     end
 
     #: () -> Integer
@@ -265,6 +275,17 @@ module AdaptersDefinitionsTest
     end
     asked(r, "gd", location(path, 1, 4))
     "#{r.frame.row_text(0)} | #{selected_tab(r)} | #{r.where} | #{r.assembly.buffers.count}"
+  end
+
+  # The float's text width, the width its rows were laid out at, its
+  # first row as the screen shows it from the text area's first column,
+  # and the screen's last column on that row: the right border when the
+  # row is not cut.
+  #: (Rig, Carat::Domain::FloatWindow) -> Array[untyped]
+  def self.drawn(r, float)
+    window = float.window
+    row = r.frame.text_rows[window.row].to_s
+    [window.width, float.spec.width, row[window.col, window.width].to_s.rstrip, row[row.length - 1, 1].to_s]
   end
 
   def self.main
@@ -562,6 +583,14 @@ module AdaptersDefinitionsTest
     r.type("<C-o>")
     t.assert_equal("a.rb 3:1", r.where, "Ctrl-O clamps the column to a line shortened since, in code points")
 
+    # Scenario: The signature and the peek fit a narrow screen.
+    r = defining
+    long = "def long_name(alpha, bravo, charlie, delta, echo)"
+    r.files.put("/project/long.rb", "#{long}\n  1\nend\n")
+    asked(r, "<Space>dd", location("/project/long.rb", 0, 4))
+    floats = r.assembly.state.tab.floats
+    at = floats.index_of(r.assembly.definition.float_id)
+    t.assert_equal([36, 36, long[0, 36].to_s, "|"], at < 0 ? [] : drawn(r, floats.at(at)), "the peek fits a narrow screen: a long line is 36 columns at 40, its border in the last column")
     t.finish
   end
 end
