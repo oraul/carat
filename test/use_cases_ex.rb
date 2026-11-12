@@ -350,6 +350,16 @@ module UseCasesExTest
       ["tabfir with one tab page stays", "tabfir", [true, "", 1, 1]],
       ["tabfirst with one tab page stays", "tabfirst", [true, "", 1, 1]],
       ["tabl with one tab page stays", "tabl", [true, "", 1, 1]],
+      # Scenario: One tab page answers before reading the argument.
+      ["tabc 2 with one tab page fails before reading the argument", "tabc 2", [false, "E784: Cannot close last tab page", 1, 1]],
+      ["tabo x with one tab page says so before reading the argument", "tabo x", [true, "Already only one tab page", 1, 1]],
+      ["tabn 1 with one tab page stays", "tabn 1", [true, "", 1, 1]],
+      ["tabn 2 with one tab page is refused", "tabn 2", [false, "E475: Invalid argument: 2", 1, 1]],
+      ["tabn 0 is an invalid range", "tabn 0", [false, "E16: Invalid range", 1, 1]],
+      ["tabp 1 with one tab page stays", "tabp 1", [true, "", 1, 1]],
+      ["tabp 0 is refused", "tabp 0", [false, "E475: Invalid argument: 0", 1, 1]],
+      ["tabfir x is refused", "tabfir x", [false, "E488: Trailing characters: x", 1, 1]],
+      ["tablast x is refused", "tablast x", [false, "E488: Trailing characters: x", 1, 1]],
       ["tablast with one tab page stays", "tablast", [true, "", 1, 1]]
     ]) do |text|
       run_window(text)

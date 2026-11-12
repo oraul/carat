@@ -1,4 +1,5 @@
 require_relative "selection"
+require_relative "messages"
 
 module Carat
   module Domain
@@ -15,7 +16,7 @@ module Carat
       # @rbs @given: bool
       # @rbs @error: String
 
-      INVALID = "E16: Invalid range"
+      INVALID = Messages::E16
       BACKWARDS = "E493: Backwards range given"
       NO_MARK = "E20: Mark not set"
       # A line number is read up to this, which no buffer reaches.

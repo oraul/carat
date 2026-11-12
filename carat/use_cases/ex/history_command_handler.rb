@@ -1,4 +1,5 @@
 require_relative "../../domain/editor_state"
+require_relative "../../domain/messages"
 require_relative "../history/undo_step"
 require_relative "../history/redo_step"
 require_relative "../history/undo_to_state"
@@ -74,7 +75,7 @@ module Carat
         return @travel_history.call(state, direction) if args.empty?
         return @travel_history.call(state, direction * args.to_i) if HistoryCommandHandler.digits?(args)
         return Outcome.success("Not implemented: :#{name} #{args}") if args.match?(/\A[0-9]+[smhdf]\z/)
-        Outcome.failure("E475: Invalid argument: #{args}")
+        Outcome.failure(Domain::Messages.invalid_argument(args))
       end
     end
   end
