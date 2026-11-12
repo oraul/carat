@@ -19,5 +19,5 @@
 
 ## 5. Docs
 
-- [ ] 5.1 `docs/compatibility.md` (tab-page keys, buffer keys, tab ex rows, Differences), `docs/actions.md`, `README.md`'s feature sentence, `docs/architecture.md`'s `TabList` entry, `docs/codebase-map.md` area 11
+- [x] 5.1 `docs/compatibility.md` (tab-page keys, buffer keys, tab ex rows, Differences), `docs/actions.md`, `README.md`'s feature sentence, `docs/architecture.md`'s `TabList` entry, `docs/codebase-map.md` area 11
 - [ ] 5.2 `make gates`, `make spec-validate`, `make docs-lint`, and the targeted tests pass
