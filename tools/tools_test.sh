@@ -2036,6 +2036,15 @@ echo "1. next" > docs/queue.md
 echo change > docs/metrics.tsv
 commit "docs: record the queue and the metrics"
 expect "gates: security passes after the planning records only" 0 "ok   security: pass" gates security
+printf 'sprint\tlast\nsprint-1\ta5\n' > docs/sprints.tsv
+commit "docs: record the sprint row"
+expect "gates: security passes after the sprint row only" 0 "ok   security: pass" gates security
+printf 'sprint-2\tb5\n' >> docs/sprints.tsv
+echo code > tools/sprint.sh
+commit "fix: code beside the sprint row"
+expect "gates: security refuses a code change beside the sprint row" 1 "code changed since" gates security
+git_q rm -q tools/sprint.sh
+commit "chore: remove the code"
 mkdir -p openspec/moved
 git_q mv tools/base.sh openspec/moved/base.sh
 commit "chore: move a tool"
