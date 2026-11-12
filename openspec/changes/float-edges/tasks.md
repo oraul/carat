@@ -2,7 +2,7 @@
 
 ## 1. The frame rule
 
-- [ ] 1.1 Add `FloatWindow.frame_width` and `FloatWindow.text_room` in `carat/domain/float_window.rb` and cut `place` with `frame_width`; prove "The frame rule" in `test/domain_float_layer.rb`, `make test-one T=test/domain_float_layer.rb`
+- [x] 1.1 Add `FloatWindow.frame_width` and `FloatWindow.text_room` in `carat/domain/float_window.rb` and cut `place` with `frame_width`; prove "The frame rule" in `test/domain_float_layer.rb`, `make test-one T=test/domain_float_layer.rb`
 
 ## 2. The core floats
 

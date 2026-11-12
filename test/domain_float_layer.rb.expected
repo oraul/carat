@@ -3,6 +3,9 @@ ok   a cursor offset counts from the anchor cell
 ok   a box larger than the area is cut to it and moved in
 ok   a box past the bottom right corner moves up and left
 ok   an area too small for the border keeps a one-cell text area and overflows it
+ok   the widest text on a 40-column screen: bordered, bordered under none, without a border
+ok   a frame is the padding and the border on each side
+ok   a float of the widest text fills the screen and is not cut
 ok   editor is an anchor
 ok   cursor is an anchor
 ok   window is not
@@ -24,4 +27,4 @@ ok   moving changes the offset
 ok   a layer holds sixteen floats
 ok   the focused float is the current window and is found by its id
 ok   focusing a leaf leaves the float
-domain_float_layer: 26 passed, 0 failed
+domain_float_layer: 29 passed, 0 failed

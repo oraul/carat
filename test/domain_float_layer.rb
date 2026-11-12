@@ -47,6 +47,12 @@ module DomainFloatLayerTest
     t.assert_equal([8, 11, 32, 40, 9, 34, 1, 4], placed(spec("cursor", 1, 0, 1, 4, true, 50), 9, 38, 11, 40), "a box past the bottom right corner moves up and left")
     t.assert_equal([0, 3, 0, 5, 1, 2, 1, 1], placed(spec("editor", 0, 0, 3, 3, true, 50), 0, 0, 1, 2), "an area too small for the border keeps a one-cell text area and overflows it")
 
+    # Scenario: The frame rule.
+    room = [D::FloatWindow.text_room(40, true, "rounded"), D::FloatWindow.text_room(40, true, "none"), D::FloatWindow.text_room(40, false, "rounded")]
+    t.assert_equal([36, 38, 38], room, "the widest text on a 40-column screen: bordered, bordered under none, without a border")
+    t.assert_equal([4, 2], [D::FloatWindow.frame_width(1), D::FloatWindow.frame_width(0)], "a frame is the padding and the border on each side")
+    t.assert_equal([0, 3, 0, 40, 1, 2, 1, 36], placed(spec("editor", 0, 0, 1, D::FloatWindow.text_room(40, true, "rounded"), true, 50), 0, 0, 11, 40), "a float of the widest text fills the screen and is not cut")
+
     # Spec checks.
     t.table([
       ["editor is an anchor", ["editor", 1, 1, 0], ""],
