@@ -18,4 +18,4 @@
 ## 4. Docs and checks
 
 - [x] 4.1 `CLAUDE.md`, `README.md`, `docs/codebase-map.md`: name the behavior. Checked by `make gates` and `make docs-lint`.
-- [ ] 4.2 Run `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate`, all pass.
+- [x] 4.2 Run `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate`, all pass.

@@ -955,8 +955,9 @@ if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement
 }
 
 // A brief may exclude the planning records from the package step: the
-// run state's records=skip, which history and groom honor for the change,
-// written by the first flush, before the package step.
+// run state's records=skip, which history and groom honor for the change:
+// no closable line, so the flush at the end of verify() writes it, before
+// the package step.
 function excludeRecords(why) {
   if (state.records === 'skip') return
   state.records = 'skip'
@@ -999,8 +1000,7 @@ if (!stopped && !state.merged) {
       const plan = planned === 0
         ? `The planner did not run: this change was taken from the head of docs/queue.md as written. Copy nothing from build/plan/, which holds an older run's files or a waiting sprint plan that groom applies; ${state.records === 'skip' ? excluded : 'append the history and run groom as your package step says'}, then remove this change's item from docs/queue.md and renumber the rest.`
         : `Apply the planner's files under build/plan/ and ${state.records === 'skip' ? excluded : 'append the history of the merged changes as your package step says'}.`
-      // The records exclusion reaches the run state before the package step.
-      const done = (await flush()) && await contributor('package', `Non-blocking findings to append to docs/backlog.md (a shell append; never read the file):\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
+      const done = await contributor('package', `Non-blocking findings to append to docs/backlog.md (a shell append; never read the file):\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
       if (done) state.pr = packagedPr(done)
       if (done && !state.pr) stopped = 'no pull request appeared for the branch ' + state.branch + ': read the open-pr workflow\'s log'
       else if (done) phaseDone('package', head)
