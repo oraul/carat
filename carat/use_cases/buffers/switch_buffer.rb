@@ -6,8 +6,9 @@ require_relative "buffer_request"
 
 module Carat
   module UseCases
-    # :bn, :bp, :bN, :bfirst, :blast, :b N, and Ctrl-^, the window's
-    # alternate buffer (E23 without one): shows another listed file
+    # :bn, :bp, :bN, :bfirst, :blast, :b N, Ctrl-^, the window's
+    # alternate buffer (E23 without one), and {count}gt, the count-th
+    # buffer tab (nothing when the row has fewer): shows another listed file
     # buffer in the current window, as the request says, with the cursor
     # where a window last left it, the position left joining the window's
     # jump list. The buffer the window showed stays listed, hidden. A
@@ -37,6 +38,9 @@ module Carat
         elsif request.target == :alternate
           found = @buffers.alternate_of(state.window)
           return Outcome.failure(E23) if found.nil?
+        elsif request.target == :tab
+          found = @buffers.file_at(request.count)
+          return Outcome.none if found.nil?
         elsif request.target == :first || request.target == :last
           found = request.target == :first ? @buffers.first_file : @buffers.last_file
           return Outcome.failure(E85) if found.nil?

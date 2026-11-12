@@ -97,8 +97,15 @@ module DomainKeymapTest
       ["control w control o keeps only the window", [:normal, "<C-w><C-o>"], [:match, "window.only"]],
       ["control w control q quits the window", [:normal, "<C-w><C-q>"], [:match, "window.quit"]],
       ["control w control c is not bound", [:normal, "<C-w><C-c>"], [:none, nil]],
-      ["gt goes to the next tab page", [:normal, "gt"], [:match, "tab.next"]],
-      ["gT goes to the previous tab page", [:normal, "gT"], [:match, "tab.previous"]]
+      ["gt goes to the next tab of the row", [:normal, "gt"], [:match, "tabline.next"]],
+      ["gT goes to the previous tab of the row", [:normal, "gT"], [:match, "tabline.previous"]],
+      ["control page down goes to the next tab page", [:normal, "<C-PageDown>"], [:match, "tab.next"]],
+      ["control page up goes to the previous tab page", [:normal, "<C-PageUp>"], [:match, "tab.previous"]],
+      ["g tab goes to the last accessed tab page", [:normal, "g<Tab>"], [:match, "tab.last_accessed"]],
+      ["close bracket b goes to the next buffer", [:normal, "]b"], [:match, "buffer.next"]],
+      ["open bracket b goes to the previous buffer", [:normal, "[b"], [:match, "buffer.previous"]],
+      ["open bracket capital b goes to the first buffer", [:normal, "[B"], [:match, "buffer.first"]],
+      ["close bracket capital b goes to the last buffer", [:normal, "]B"], [:match, "buffer.last"]]
     ]) do |input|
       match = keymap.lookup(input[0], codes(input[1]))
       [match.kind, match.value]

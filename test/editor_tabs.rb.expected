@@ -14,10 +14,10 @@ ok   :tabo keeps the current tab page
 ok   :q closes the tab page
 ok   Ctrl-W c closes the tab page
 ok   Ctrl-W q closes the tab page
-ok   gt goes to the next tab page
-ok   gt wraps
-ok   gT goes back
-ok   gT wraps
+ok   Ctrl-PageDown goes to the next tab page
+ok   Ctrl-PageDown and Ctrl-PageUp wrap: Ctrl-PageDown from the last
+ok   Ctrl-PageDown and Ctrl-PageUp wrap: Ctrl-PageUp back from the first
+ok   Ctrl-PageUp wraps
 ok   :tabn goes to the next tab page
 ok   :tabnext wraps
 ok   :tabp goes back
@@ -28,17 +28,84 @@ ok   :tabl goes to the last
 ok   :tablast goes to the last
 ok   :tabfir goes to the first
 ok   :tabfirst goes to the first
-ok   3gt goes to tab page 3
-ok   2gt goes to tab page 2
-ok   5gt with three tab pages does nothing
-ok   2gT goes two back, wrapping
-ok   1gT goes one back
+ok   Counted Ctrl-PageDown: 3 goes to tab page 3
+ok   Counted Ctrl-PageDown: 2 goes to tab page 2
+ok   Counted Ctrl-PageDown: 5 with three tab pages does nothing
+ok   Counted Ctrl-PageUp: 2 goes two back, wrapping
+ok   Counted Ctrl-PageUp: 1 goes one back
+ok   Ctrl-PageDown with one tab page stays
+ok   g Tab goes to the last accessed tab page
+ok   g Tab goes to the last accessed tab page, twice back again
+ok   g Tab with two tab pages goes back after Ctrl-PageDown
+ok   g Tab goes back after :tabnew
+ok   g Tab keeps the last accessed tab page when an earlier one closes
+ok   g Tab with no tab page to go back to does nothing: one tab page
+ok   g Tab with no tab page to go back to does nothing: after :tabnew and :tabclose
+ok   g Tab with no tab page to go back to does nothing: the last accessed one closed
 ok   :tabclose on the last tab page reports E784
 ok   :tabc on the last tab page reports E784
 ok   :tabonly with one tab page says so
 ok   :tabo with one tab page says so
 ok   :tabe file shows the opened message
 ok   :tabnew shows nothing
+ok   g Tab with no tab page to go back to does nothing and shows no message
+ok   gt shows the next buffer tab, wrapping: once
+ok   gt shows the next buffer tab, wrapping: twice
+ok   gT shows the previous buffer tab, wrapping
+ok   gT shows the previous buffer tab, twice back again
+ok   Counted gt goes to that buffer tab: 3gt
+ok   Counted gt goes to that buffer tab: 5gt past the last does nothing
+ok   Counted gt goes to that buffer tab: 2gT goes two back
+ok   1gt goes to the first buffer tab
+ok   gt with one buffer tab stays
+ok   gt keeps the tab page
+ok   gT keeps the tab page
+ok   2gt keeps the tab page
+ok   gt refuses a modified buffer
+ok   Bracket b steps through the buffers: ]b
+ok   Bracket b steps through the buffers: 2]b wraps
+ok   Bracket b steps through the buffers: [b wraps back
+ok   ]b with two tab pages keeps the tab page
+ok   [b with two tab pages keeps the tab page
+ok   Bracket B goes to the first and the last buffer: ]B
+ok   Bracket B goes to the first and the last buffer: [B
+ok   [B with two tab pages keeps the tab page
+ok   ]B with one buffer stays
+ok   option.gt tabpages gives gt and gT the tab pages back: gt
+ok   option.gt tabpages gives gt and gT the tab pages back: 3gt
+ok   option.gt tabpages gives gt and gT the tab pages back: gT
+ok   option.gt tabpages gives gt and gT the tab pages back: 2gT wraps
+ok   option.gt tabpages: gt wraps
+ok   option.gt tabpages: 5gt with three tab pages does nothing
+ok   option.gt tabpages: gt with one tab page stays
+ok   option.gt tabpages: ]b still moves between buffers
+ok   tabn N goes to tab page N
+ok   :tabnext N with two tab pages
+ok   :tabn 1 with one tab page stays
+ok   tabp N goes N tab pages back
+ok   :tabN N with two tab pages wraps
+ok   :tabprevious N with one tab page stays
+ok   tabc N closes tab page N
+ok   :tabclose N with two tab pages closes the other one
+ok   :tabc N of the current tab page
+ok   tabo N keeps only tab page N
+ok   :tabonly N with two tab pages
+ok   A tab argument that names no tab page is refused: tabn 4
+ok   A tab argument that names no tab page is refused: tabo x
+ok   A tab argument that names no tab page is refused: tabc 0
+ok   A tab argument that names no tab page is refused: tabp 0
+ok   A tab argument that names no tab page is refused: tabl x
+ok   :tabn 0 is an invalid range
+ok   :tabn 3 with two tab pages is refused
+ok   :tabc 3 with two tab pages is refused
+ok   :tabo 0 with two tab pages is an invalid range
+ok   :tabn with a sign is refused
+ok   :tabp x is refused
+ok   :tabn with a long number is refused
+ok   :tabfir x is refused
+ok   :tabn 2 with one tab page is refused
+ok   One tab page answers before reading the argument: tabc 2
+ok   One tab page answers before reading the argument: tabo x
 ok   the new tab page shows the file at the top
 ok   the text starts under the tab line
 ok   the first tab page kept its cursor
@@ -67,4 +134,4 @@ ok   the listed empty buffer keeps the row, without tab-page numbers
 ok   one file in one tab page has no tabs row
 ok   a tab shows the file name without its directory
 ok   the path is untouched
-editor_tabs: 69 passed, 0 failed
+editor_tabs: 136 passed, 0 failed

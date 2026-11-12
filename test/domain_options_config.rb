@@ -201,6 +201,21 @@ module DomainOptionsConfigTest
     end
     t.assert_equal("replace", options.jumptab, "the shipped configuration lets a jump take the tab it leaves")
 
+    # option.gt: what gt and gT move between. Rows are [label, project
+    # lines, [mode, follows buffers, problems]].
+    t.table([
+      ["tabpages, Vim's, without a configuration", "", ["tabpages", false, []]],
+      ["buffers is stored", "option.gt buffers\n", ["buffers", true, []]],
+      ["tabpages is stored after buffers", "option.gt buffers\noption.gt tabpages\n", ["tabpages", false, []]],
+      ["An unknown gt mode is refused and keeps the earlier value", "option.gt pages\n", ["tabpages", false, [".caratrc:1: unknown gt mode pages"]]]
+    ]) do |text|
+      config = D::Config.new
+      config.read(".caratrc", text.to_s, false)
+      read = D::Options.from_config(config)
+      [read.gt, read.gt_follows_buffers?, config.report]
+    end
+    t.assert_equal([D::Options::GT_BUFFERS, true], [options.gt, options.gt_follows_buffers?], "the shipped configuration moves gt and gT between the buffer tabs")
+
     t.finish
   end
 end

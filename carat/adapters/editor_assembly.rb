@@ -480,7 +480,7 @@ module Carat
         UseCases::MessageHandler.register(@actions)
         UseCases::HistoryHandler.register(@actions, undo_step: @undo_step, redo_step: @redo_step, restore_line: UseCases::RestoreLine.new, travel_history: @travel_history, repeat_last: @repeat_last)
         UseCases::WindowHandler.register(@actions, split_window: @split_window, close_window: @close_window, close_other_windows: @close_other_windows, focus_window: focus_window, quit: @quit, tabs: @tabs)
-        UseCases::TabHandler.register(@actions, switch_tab: @switch_tab)
+        UseCases::TabHandler.register(@actions, switch_tab: @switch_tab, switch_buffer: @switch_buffer)
         UseCases::FloatHandler.register(@actions, close_float: @close_float)
         UseCases::ScrollHandler.register(@actions, scroll_window: scroll_window)
         UseCases::SubstituteHandler.register(@actions, substitute_lines: @substitute_lines)

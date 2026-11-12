@@ -158,7 +158,7 @@ module EditorFloatsTest
     open(h, options("editor", 2, 4, 1, 10, false, "", 50, false), ["mine"])
     h.type(":tabnew<CR>")
     t.assert_equal(false, h.screen.join("\n").include?("mine"), "another tab page shows no float")
-    h.type("gt")
+    h.type("<C-PageDown>")
     t.assert_equal(true, h.row(2).include?("mine"), "the first tab page shows its float again")
 
     # Scrolling under a float sends no scroll region.

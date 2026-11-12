@@ -344,7 +344,7 @@ module EditorPluginsTest
     end
     t.assert_equal([2, 2, 2], [h.tab_count, h.tab_index, h.window_count], "a side window opens in the second tab page")
     t.assert_equal(["", "list", ""], titles, "and shows the one scratch buffer the first tab page shows")
-    h.type("gt")
+    h.type("<C-PageDown>")
     t.assert_equal([2, "list"], [h.window_count, h.state.window.buffer.title], "the first tab page still shows it")
 
     # A side window has no line numbers.

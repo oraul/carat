@@ -66,4 +66,9 @@ ok   replace is stored
 ok   keep is stored after replace
 ok   An unknown jumptab mode is refused and keeps the earlier value
 ok   the shipped configuration lets a jump take the tab it leaves
-domain_options_config: 68 passed, 0 failed
+ok   tabpages, Vim's, without a configuration
+ok   buffers is stored
+ok   tabpages is stored after buffers
+ok   An unknown gt mode is refused and keeps the earlier value
+ok   the shipped configuration moves gt and gT between the buffer tabs
+domain_options_config: 73 passed, 0 failed
