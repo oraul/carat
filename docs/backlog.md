@@ -4726,3 +4726,27 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Location: `carat/use_cases/buffers/switch_buffer.rb:37`.
 - Why it matters: load records a scratch buffer's id as the alternate, so Ctrl-^ shows a scratch buffer while 'N Ctrl-^' and ':b N' refuse the same buffer with E86, an inconsistency between paths to one buffer.
 - Fix outline: skip scratch buffers when load sets the alternate, or refuse a scratch alternate in SwitchBuffer as :number does, with an editor_jumps case.
+
+## carat/domain/buffer_list.rb:315 BufferList#enter duplicates Window#record_jump (jump-motions, quality advisory)
+
+- Location: carat/domain/buffer_list.rb:315
+- Why: enter still pushes old.id with the window's row and col inline, behind the 'unless old.id == 0' guard that the new Window#record_jump already holds, so the two can drift apart.
+- Fix outline: replace the inline push with 'current.record_jump unless target.id == 0 && reusable?(old)'.
+
+## carat/use_cases/buffers/switch_buffer.rb:37 Ctrl-^ shows a scratch alternate that N Ctrl-^ and :b N refuse (jump-motions, quality advisory)
+
+- Location: carat/use_cases/buffers/switch_buffer.rb:37
+- Why: load records a scratch buffer's id as the alternate, so Ctrl-^ shows it, while 'N Ctrl-^' and ':b N' refuse a scratch buffer with E86, an inconsistent answer for the same buffer.
+- Fix outline: skip scratch buffers when load sets the alternate, or refuse a scratch alternate in SwitchBuffer as :number does.
+
+## carat/domain/buffer_list.rb:315 enter pushes the jump inline beside Window#record_jump (jump-motions, quality advisory, second round)
+
+- Location: carat/domain/buffer_list.rb:315
+- Why: the second review round found enter still pushing old.id with the window's cursor inline, the logic the new Window#record_jump holds; same finding as the first round's duplication entry.
+- Fix outline: 'current.record_jump unless target.id == 0 && reusable?(old)'.
+
+## carat/use_cases/ex/file_command_handler.rb:98 the ex handler resolves the alternate buffer itself (jump-motions, quality advisory)
+
+- Location: carat/use_cases/ex/file_command_handler.rb:98
+- Why: architecture section 5 has use cases orchestrate entities, but the ex handler now takes the BufferList and resolves the alternate buffer and its E194 and E499 refusals itself, beside SwitchBuffer's own alternate lookup.
+- Fix outline: let OpenFile, or a small domain helper on BufferList returning the alternate path or the error, resolve '#', keeping the handler a forwarder.
