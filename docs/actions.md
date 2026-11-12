@@ -2,7 +2,7 @@
 
 The action names a keymap value may use, in `namespace.action` form, or `plugin.<name>.<action>` for a plugin's action. A keymap value that is not an action name is a key sequence in Vim notation to replay. Actions that `config/default.caratrc` already binds but that a later roadmap item implements are listed under a Reserved section, none today; pressing their keys shows "Not implemented: name". Every name under Implemented and Reserved is registered in the editor's action table, and `test/use_cases_actions.rb` fails when the table and this file differ. A binding whose value is an action name that neither this file nor a registered plugin declares is reported when the configuration loads, with its file and line, as `.caratrc:3: unknown action foo.bar`, and is not added. A binding is a line `keymap.<mode> <keys> <action>` of a configuration file, and the action `none` removes the binding instead. Every core action is registered with a short description, at most 32 characters, which the key hints show beside its keys; a plugin's come from its manifest.
 
-In normal, operator-pending, and the visual modes the command grammar reads an action by the kind of the handler the action table registered for it: `cursor.*` and `motion.*` are motions, which move the cursor on their own and give an operator its range; `operator.delete`, `operator.change`, `operator.yank`, `operator.indent`, and `operator.dedent` are the pending operators, which wait for a motion, a text object, or themselves again for a linewise command; `textobject.*` actions are text objects, usable after an operator or in a visual mode; `register.select`, the four find motions, and `visual.replace` read one more key; `search.forward` and `search.backward` read a pattern on the command line and are then motions; every other action, the `window.*`, `scroll.*`, `tab.*`, `visual.*`, and `plugin.*` actions included, completes at once with the count and register typed before it. In a visual mode the five operators do not wait: they act on the selection at once, and a motion moves the cursor end of the selection.
+In normal, operator-pending, and the visual modes the command grammar reads an action by the kind of the handler the action table registered for it: `cursor.*` and `motion.*` are motions, which move the cursor on their own and give an operator its range; `operator.delete`, `operator.change`, `operator.yank`, `operator.indent`, and `operator.dedent` are the pending operators, which wait for a motion, a text object, or themselves again for a linewise command; `textobject.*` actions are text objects, usable after an operator or in a visual mode; `register.select`, the four find motions, and `visual.replace` read one more key; `search.forward` and `search.backward` read a pattern on the command line and are then motions; every other action, the `window.*`, `scroll.*`, `tab.*`, `tabline.*`, `visual.*`, and `plugin.*` actions included, completes at once with the count and register typed before it. In a visual mode the five operators do not wait: they act on the selection at once, and a motion moves the cursor end of the selection.
 
 In the Modes column, `visual` stands for the three visual maps, `visual`, `visual_line`, and `visual_block`, which bind the same keys, and `completion` for the keymap layer looked up first in insert mode while the completion popup shows. A `plugin.<name>.<action>` action is routed to the plugin that declared it in its manifest; a plugin's default bindings live in its manifest, not in `config/default.caratrc`, and a user binding of the same keys replaces them.
 
@@ -147,6 +147,9 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `window.quit` | normal | `:q` on the window, or on window count |
 | `tab.next` | normal | Next tab page, wrapping; a count is a tab page number |
 | `tab.previous` | normal | Count tab pages back, wrapping |
+| `tab.last_accessed` | normal | The tab page current before the current one, as `g<Tab>`; nothing when it closed |
+| `tabline.next` | normal | Next buffer tab, wrapping, a count the count-th tab; under `option.gt tabpages` as `tab.next` |
+| `tabline.previous` | normal | Count buffer tabs back, wrapping; under `option.gt tabpages` as `tab.previous` |
 | `float.close` | normal | Close the topmost floating window of the tab page; nothing when none is open |
 | `scroll.page_down` | normal, visual, insert | Scroll forward count pages of the window's text rows minus two, the cursor kept in view; with the last line shown, go to the last line |
 | `scroll.page_up` | normal, visual, insert | Scroll back count pages, the cursor kept in view |
@@ -165,6 +168,8 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `buffer.list` | normal | List the buffers as `:ls` does |
 | `buffer.next` | normal | Go to the next listed buffer as `:bn` does, count buffers on |
 | `buffer.previous` | normal | Go to the previous listed buffer as `:bp` does, count buffers back |
+| `buffer.first` | normal | Go to the first listed buffer as `:bfirst` does |
+| `buffer.last` | normal | Go to the last listed buffer as `:blast` does |
 | `buffer.delete` | normal | Delete the current buffer as `:bd` does, or with a count the buffer of that number |
 | `buffer.alternate` | normal | Show the window's alternate buffer as `Ctrl-^` does, or with a count the buffer of that number |
 | `docs.hover` | normal | Ask the language server for the documentation under the cursor and show it in a float; while the float shows, enter it |

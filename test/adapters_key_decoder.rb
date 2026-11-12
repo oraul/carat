@@ -13,8 +13,8 @@ module AdaptersKeyDecoderTest
 
     # One read each: rows are [label, bytes, expected codes]. They prove the
     # key-input scenarios "Arrow keys", "Tilde-terminated keys", "SS3 form",
-    # "Modified arrow", and "Ctrl-PageDown and Ctrl-PageUp decode to their
-    # own keys".
+    # "Modified arrow", and
+    # "Ctrl-PageDown and Ctrl-PageUp decode to their own keys".
     t.table([
       ["ascii letter", "a", [97]],
       ["several letters", "abc", [97, 98, 99]],
