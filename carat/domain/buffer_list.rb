@@ -186,6 +186,22 @@ module Carat
         buffer_at(i)
       end
 
+      # The listed file buffer of the number-th tab (1-based) of the tab
+      # row, in list order; nil when the row has fewer tabs.
+      #: (Integer) -> Buffer?
+      def file_at(number)
+        left = number
+        i = 0
+        while i < buffers.length
+          unless buffer_at(i).tabless?
+            left -= 1
+            return buffer_at(i) if left == 0
+          end
+          i += 1
+        end
+        nil
+      end
+
       # How many file buffers have a tab, scratch and unlisted ones left out.
       #: () -> Integer
       def file_count

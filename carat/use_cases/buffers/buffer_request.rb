@@ -3,9 +3,9 @@ module Carat
     # Which buffer SwitchBuffer shows: target :next or :previous goes count
     # listed file buffers forward or back, wrapping; :first and :last show
     # the first and the last listed file buffer; :number shows buffer
-    # number count; :alternate shows the window's alternate buffer;
-    # :current stays. bang lets a modified current buffer go hidden. A
-    # Data value.
+    # number count; :tab shows the buffer of the count-th buffer tab;
+    # :alternate shows the window's alternate buffer; :current stays.
+    # bang lets a modified current buffer go hidden. A Data value.
     class BufferRequest < Data.define(:target, :count, :bang)
       # @rbs @target: Symbol
       # @rbs @count: Integer

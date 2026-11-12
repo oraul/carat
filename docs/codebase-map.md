@@ -95,7 +95,7 @@ Files:
 - `carat/domain/rc_value.rb`: `RcValue` bool, integer, string, and list kinds; `valid?`, `expectation`, `text`, `number?`.
 - `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `refuse`, `line_at`, `last`, `note`, `report` (a stable merge of the ascending runs the readers note); scope and language checks, the project file refused language commands and key-sequence bindings.
 - `carat/domain/default_config.rb`: generated, `DEFAULT_CARATRC`; never edited by hand.
-- `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, `cursorline`, `keyhints_delay` (0 to 10000), `breadcrumbs` (`auto`, `always`, `never`), and the rest); `from_config`, `apply`, `width_problem` (tabstop 1 to 9999, shiftwidth 0 to 9999), `tab_width`, `jump_takes_tab?` (the jumptab rule, read by `VisitTarget` and `WalkJumps`).
+- `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, `cursorline`, `keyhints_delay` (0 to 10000), `breadcrumbs` (`auto`, `always`, `never`), and the rest); `from_config`, `apply`, `width_problem` (tabstop 1 to 9999, shiftwidth 0 to 9999), `tab_width`, `jump_takes_tab?` (the jumptab rule, read by `VisitTarget` and `WalkJumps`), `gt_follows_buffers?` (the gt rule, read by `TabHandler`).
 - `carat/domain/registry_source.rb`: `RegistrySource.render`, `entry?`, `names`; the registry text from the plugin list lines.
 - `carat/adapters/rc_config_gateway.rb`: `RcConfigGateway#load`, the `ConfigPort` driver over `FilePort` (`home`, `cwd`); refuses a linked project file, a file that is not regular, and one over `LIMIT`.
 - Outside the five roots: `config/default.caratrc` (every default option, binding, language command, and plugin setting) and `config/plugins.caratrc` (`plugin.<name> <path> <class>` per compiled plugin).
@@ -140,7 +140,7 @@ Flow: `InputController#pump` reads bytes, `KeyDecoder#feed` turns them into key 
 
 Files:
 
-- `carat/adapters/key_decoder.rb`: `KeyDecoder`; `feed`, `flush`, `pending?`, `encode`.
+- `carat/adapters/key_decoder.rb`: `KeyDecoder`; `feed`, `flush`, `pending?`, `encode`; a CSI modifier is read only for Ctrl on the page keys.
 - `carat/adapters/input_controller.rb`: `InputController`; `pump` (the notifications expired at an idle read and the read's wait cut to the next one's deadline; the `timeoutlen` wait from the options; the start screen's next frame, `tick`, and its dismissal on a key; a 0.02 second wait while the language services wait, and the popup refreshed when a completion answer arrived at the idle tick, `ShowHover` when a hover answer did, `ShowSignature` when a signature answer did; `ShowKeyHints` once `keyhints.delay` passed over a `:waiting` key), `decoder`.
 - `carat/domain/key.rb`: `Key` codes; `printable?`, `alt?`, `base`, `char`, `TIMEOUT`.
 - `carat/domain/key_notation.rb`: `KeyNotation`; `parse`, `resolve`, `format`, `control_code`, `special_name`; Vim notation such as `<C-w>`.
@@ -158,7 +158,7 @@ Files:
 - `carat/use_cases/actions/normal_mode_handler.rb`: `NormalModeHandler`, leaving a visual mode itself.
 - `carat/use_cases/actions/message_handler.rb`: `MessageHandler`, the quit hint and the reserved actions.
 - `carat/use_cases/actions/file_handler.rb`: `FileHandler.register` (`file.save`, `quit.all`, `quit.write_all`); `:w`, `:qa`, and `:wqa` through `SaveFile`, `SaveAll`, and `QuitAll` for the leader groups and Ctrl-S.
-- `carat/use_cases/actions/buffer_handler.rb`: `BufferHandler.register` (`buffer.list`, `buffer.next`, `buffer.previous`, `buffer.delete`); `:ls`, `:bn`, `:bp`, and `:bd` through the buffer use cases, a count stepping or naming the buffer.
+- `carat/use_cases/actions/buffer_handler.rb`: `BufferHandler.register` (`buffer.list`, `buffer.next`, `buffer.previous`, `buffer.first`, `buffer.last`, `buffer.delete`); `:ls`, `:bn`, `:bp`, `:bfirst`, `:blast`, and `:bd` through the buffer use cases, a count stepping or naming the buffer.
 - `carat/domain/key_hints.rb`: `KeyHints`, the key hints float's id; `showing?`.
 - `carat/domain/palette.rb`: `Palette`, the command palette's entries (names, keys, descriptions), matches, selection, typed text, float, and the action Enter chose; `start`, `add`, `move`, `selected_entry`, `take_chosen`, `following?`.
 - `carat/use_cases/discovery/show_key_hints.rb`: `ShowKeyHints#call`, the float of the keys after a waiting prefix (descriptions, group names, `+N`), in columns at the bottom right, once `keyhints.delay` passed; rows cut by cells (`DisplayWidth.cut`).
@@ -261,7 +261,7 @@ Files:
 - `carat/domain/transaction.rb`: `Transaction` (records, cursor before and after, cause, merged row span, history flag); `add`, `seal`, `truncate`, `span`, `record_at`, `empty?`.
 - `carat/domain/buffer_feed.rb`: `BufferFeed`, the one sink of opens, closes, renames, and closed transactions, carrying the command's time and `undolevels`; `push`, `notice_at`, `count`, `clear`, `note`.
 - `carat/domain/buffer_notice.rb`: `BufferNotice`; `change?`.
-- `carat/domain/buffer_list.rb`: `BufferList` (listed buffers, their ids, the feed, keep or release policy: file buffers stay until `:bd`); `add` (also lists again a buffer a jump left unlisted, `Buffer#listed`), `remove`, `release`, `load` (the empty buffer's number reused, the cursor remembered and restored, the buffer left made the alternate one), `alternate_of`, `enter` (a switch: the position left joins the window's jump list, then `load`), `first_file`, `last_file`, `hand_tab` (a jump's target takes the tab of the buffer left, which goes unlisted; never for a scratch target), `for_path`, `with_id`, `scratch_for`, `hidden_modified`, `any_modified?`, `first_unsaved`, `bring`, `step_from`, `file_count`, `tab_row?`, `replacement_for`, `close_window`, `close_tab`, `close_windows_of`.
+- `carat/domain/buffer_list.rb`: `BufferList` (listed buffers, their ids, the feed, keep or release policy: file buffers stay until `:bd`); `add` (also lists again a buffer a jump left unlisted, `Buffer#listed`), `remove`, `release`, `load` (the empty buffer's number reused, the cursor remembered and restored, the buffer left made the alternate one), `alternate_of`, `enter` (a switch: the position left joins the window's jump list, then `load`), `first_file`, `last_file`, `hand_tab` (a jump's target takes the tab of the buffer left, which goes unlisted; never for a scratch target), `for_path`, `with_id`, `scratch_for`, `hidden_modified`, `any_modified?`, `first_unsaved`, `bring`, `step_from`, `file_at` (the count-th buffer tab), `file_count`, `tab_row?`, `replacement_for`, `close_window`, `close_tab`, `close_windows_of`.
 - `carat/use_cases/insert_text.rb`: `InsertText#call`.
 - `carat/use_cases/break_line.rb`: `BreakLine#call` (Enter).
 - `carat/use_cases/erase_character.rb`: `EraseCharacter#call(state, forward)` (Backspace, Delete).
@@ -364,7 +364,7 @@ Files:
 - `carat/domain/float_window.rb`: `FloatWindow` (a window, its spec, `selected`, a menu's selected row or -1, and `mark_from` and `mark_to`, marked display columns of the first row, and `edge`, the border rows a place gave it; `PAD`, the padding columns on each side); `menu?`, `marked?`, `edged?`, `place` clamps the box with its padding and, when the style draws one, its border to the screen, `box_top`, `box_bottom`, `box_left`, `box_right`.
 - `carat/domain/border_style.rb`: `BorderStyle`, the styles of `option.winborder` and their code points, with the ASCII form; `style?`, `edged?`, `glyphs`.
 - `carat/domain/float_layer.rb`: `FloatLayer`, a tab page's floats by z with the focused index, at most 16; `add`, `close`, `close_top`, `close_focused`, `enter`, `leave`, `move`.
-- `carat/domain/tab_list.rb`: `TabList`; `tab`, `window`, `add_tab`, `remove_tab`, `next_tab`, `previous_tab`, `adopt`, `window_tab`, `float_tab`, `total_windows`, `shown?`, `windows_showing`, `focus_buffer`, `modified_in_windows`, `clamp_cursors`.
+- `carat/domain/tab_list.rb`: `TabList`; `tab`, `window`, `add_tab`, `remove_tab`, `next_tab`, `previous_tab`, `visit` and `last_accessed_tab` (the last accessed tab page, `last_index`), `adopt`, `window_tab`, `float_tab`, `total_windows`, `shown?`, `windows_showing`, `focus_buffer`, `modified_in_windows`, `clamp_cursors`.
 - `carat/use_cases/arrange_view.rb`: `ArrangeView#call`; the top row goes to the buffer tabs when `BufferList#tab_row?`, and each shown slot window's first row to its header, and with winbars (`TabPage#winbar?`) each file window's first row to its winbar (`reserve_winbars`).
 - `carat/use_cases/windows/split_window.rb`: `SplitWindow#call`; every new window gets its id; a row count gets one row more when the windows will show winbars.
 - `carat/use_cases/windows/open_side_window.rb`: `OpenSideWindow#call`, a plugin's view into its slot: the slot's window reused, a hidden one placed again, or a new one at the configured size.
@@ -375,14 +375,14 @@ Files:
 - `carat/use_cases/windows/open_tab.rb`, `carat/use_cases/windows/close_tab.rb`, `carat/use_cases/windows/close_other_tabs.rb`: `call` (a new tab page's window copies the jump list).
 - `carat/use_cases/windows/switch_tab.rb`: `SwitchTab#call`; `carat/use_cases/windows/tab_request.rb`: `TabRequest`; `counted?`.
 - `carat/use_cases/actions/window_handler.rb`: `WindowHandler.register`.
-- `carat/use_cases/actions/tab_handler.rb`: `TabHandler.register`.
+- `carat/use_cases/actions/tab_handler.rb`: `TabHandler.register` (`tab.next`, `tab.previous`, `tab.last_accessed`, and `tabline.next`, `tabline.previous`, which follow the buffer tabs through `SwitchBuffer` under `option.gt buffers`).
 - `carat/use_cases/actions/float_handler.rb`: `FloatHandler.register`, `float.close` (normal-mode `<Esc>`).
 - `carat/use_cases/actions/scroll_handler.rb`: `ScrollHandler.register`, the nine `scroll.*` actions, each a `ScrollRequest` target for `ScrollWindow`.
 - `carat/use_cases/ex/window_command_handler.rb`: `WindowCommandHandler.register`.
-- `carat/use_cases/ex/tab_command_handler.rb`: `TabCommandHandler.register`.
+- `carat/use_cases/ex/tab_command_handler.rb`: `TabCommandHandler.register`; the tab page number of `:tabn`, `:tabc`, `:tabo` and the count of `:tabp` (`E16`, `E475`, `E488`).
 - `carat/use_cases/buffers/buffer_request.rb`: `BufferRequest` (target `:next`, `:previous`, `:first`, `:last`, `:number`, `:current`, count, bang); `steps`.
 - `carat/use_cases/buffers/list_buffers.rb`: `ListBuffers#call(state, flags, bang)`, the `:ls` listing in number order with Neovim's columns and flag filters, unlisted buffers under the bang.
-- `carat/use_cases/buffers/switch_buffer.rb`: `SwitchBuffer#call(state, request)`, `:bn`, `:bp`, `:bN`, `:bfirst`, `:blast`, `:b N` (`E37`, `E85`, `E86`) through `BufferList#enter`.
+- `carat/use_cases/buffers/switch_buffer.rb`: `SwitchBuffer#call(state, request)`, `:bn`, `:bp`, `:bN`, `:bfirst`, `:blast`, `:b N`, `{count}gt` (`E37`, `E85`, `E86`) through `BufferList#enter`.
 - `carat/use_cases/buffers/delete_buffer.rb`: `DeleteBuffer#call(state, number, bang, typed)`, `:bd` in the order of Neovim's `do_buffer` (`E89`, `E516`).
 - `carat/use_cases/ex/buffer_command_handler.rb`: `BufferCommandHandler.register` (`:ls`, `:buffers`, `:files`, `:b[uffer]`, `:bn[ext]`, `:bp[revious]`, `:bN[ext]`, `:bf[irst]`, `:br[ewind]`, `:bl[ast]`, `:bd[elete]`), the number and count arguments.
 - `carat/use_cases/windows/toggle_slot.rb`: `ToggleSlot#call`, hides a shown slot keeping its window or shows a hidden one; "No view in", E444, E36.

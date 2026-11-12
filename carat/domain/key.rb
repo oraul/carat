@@ -36,6 +36,8 @@ module Carat
       F10 = SPECIAL + 20
       F11 = SPECIAL + 21
       F12 = SPECIAL + 22
+      CTRL_PAGE_UP = SPECIAL + 23
+      CTRL_PAGE_DOWN = SPECIAL + 24
       UNKNOWN = SPECIAL + 99
       # Not a key the terminal sends: the wait for more keys of a binding
       # ran out. The input controller hands it to HandleKey, which resolves

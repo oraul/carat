@@ -4,6 +4,7 @@ module Carat
     # in Vim's wording: a constant for fixed text, a function for text
     # with a value in it.
     module Messages
+      E16 = "E16: Invalid range"
       E36 = "E36: Not enough room"
       E37 = "E37: No write since last change (add ! to override)"
       E444 = "E444: Cannot close last window"
@@ -15,6 +16,13 @@ module Carat
       def self.unsaved_buffer(path)
         name = path.empty? ? "[No Name]" : path
         "E37: No write since last change\nE162: No write since last change for buffer \"#{name}\""
+      end
+
+      # The refusal of an argument a command cannot take, as Vim's
+      # e_invalid_argument_str.
+      #: (String) -> String
+      def self.invalid_argument(text)
+        "E475: Invalid argument: #{text}"
       end
 
       # The refusal of an ex command no handler or plugin declares.

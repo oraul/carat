@@ -216,9 +216,9 @@ module EditorCmdlineTest
     files = files_with("ab\n")
     files.put("b.txt", "zz\n")
     h = editor(files)
-    h.type(":tabe b.txt<CR>xgt:qa<CR>")
+    h.type(":tabe b.txt<CR>x<C-PageDown>:qa<CR>")
     t.assert_equal([false, unsaved("b.txt"), 2], [h.quit?, h.message, h.tab_index], "qa is refused by a modified buffer in another tab page and goes there")
-    h.type("gtx:wqa<CR>")
+    h.type("<C-PageDown>x:wqa<CR>")
     t.assert_equal(["b\n", "z\n", true], [h.files.get("a.txt"), h.files.get("b.txt"), h.quit?], "wqa writes the buffers of both tab pages and quits")
 
     # Leader mappings go through the same path.

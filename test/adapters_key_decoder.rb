@@ -11,7 +11,10 @@ module AdaptersKeyDecoderTest
   def self.main
     t = Carat::Testing.new("adapters_key_decoder")
 
-    # One read each: rows are [label, bytes, expected codes].
+    # One read each: rows are [label, bytes, expected codes]. They prove the
+    # key-input scenarios "Arrow keys", "Tilde-terminated keys", "SS3 form",
+    # "Modified arrow", and
+    # "Ctrl-PageDown and Ctrl-PageUp decode to their own keys".
     t.table([
       ["ascii letter", "a", [97]],
       ["several letters", "abc", [97, 98, 99]],
@@ -28,6 +31,11 @@ module AdaptersKeyDecoderTest
       ["ss3 f1", "\eOP", [K::F1]],
       ["csi f5", "\e[15~", [K::F5]],
       ["modified arrow", "\e[1;5C", [K::RIGHT]],
+      ["ctrl page down", "\e[6;5~", [K::CTRL_PAGE_DOWN]],
+      ["ctrl page up", "\e[5;5~", [K::CTRL_PAGE_UP]],
+      ["ctrl shift page down is ctrl page down", "\e[6;6~", [K::CTRL_PAGE_DOWN]],
+      ["shift page down is page down", "\e[6;2~", [K::PAGE_DOWN]],
+      ["ctrl delete is delete", "\e[3;5~", [K::DELETE]],
       ["alt x", "\ex", [120 | K::ALT]],
       ["alt multi-byte", "\eé", [233 | K::ALT]],
       ["double escape leaves one pending", "\e\e", [27]],
@@ -71,11 +79,12 @@ module AdaptersKeyDecoderTest
       ["delete", K::DELETE, "\e[3~"],
       ["f1", K::F1, "\eOP"],
       ["f12", K::F12, "\e[24~"],
+      ["ctrl page down", K::CTRL_PAGE_DOWN, "\e[6;5~"],
       ["alt x", 120 | K::ALT, "\ex"],
       ["unicode", 0x65E5, "日"]
     ]) { |code| Decoder.encode(code) }
 
-    round = [97, 13, 27, 3, K::UP, K::DOWN, K::LEFT, K::RIGHT, K::HOME, K::END_KEY, K::INSERT, K::DELETE, K::PAGE_UP, K::PAGE_DOWN, K::F1, K::F4, K::F5, K::F11, K::F12, 233, 120 | K::ALT]
+    round = [97, 13, 27, 3, K::UP, K::DOWN, K::LEFT, K::RIGHT, K::HOME, K::END_KEY, K::INSERT, K::DELETE, K::PAGE_UP, K::PAGE_DOWN, K::F1, K::F4, K::F5, K::F11, K::F12, K::CTRL_PAGE_UP, K::CTRL_PAGE_DOWN, 233, 120 | K::ALT]
     decoded = []
     round.each do |code|
       d = Decoder.new

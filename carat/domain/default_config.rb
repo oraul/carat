@@ -46,6 +46,9 @@ module Carat
       # What a jump (gd, a pick-list choice, Ctrl-O, Ctrl-I) does with the tab
       # of the buffer it leaves: replace (the target takes it) or keep (Vim's).
       option.jumptab replace
+      # What gt and gT move between: buffers (the buffer tabs of the top row)
+      # or tabpages (Vim's); <C-PageDown> and <C-PageUp> move tab pages.
+      option.gt buffers
       # The border of floats, as Neovim's winborder: none, single, double,
       # rounded, or solid; +, -, and | with option.icons ascii.
       option.winborder rounded
@@ -182,8 +185,11 @@ module Carat
       keymap.normal zt scroll.cursor_top
       keymap.normal zz scroll.cursor_middle
       keymap.normal zb scroll.cursor_bottom
-      keymap.normal gt tab.next
-      keymap.normal gT tab.previous
+      keymap.normal gt tabline.next
+      keymap.normal gT tabline.previous
+      keymap.normal <C-PageDown> tab.next
+      keymap.normal <C-PageUp> tab.previous
+      keymap.normal g<Tab> tab.last_accessed
       keymap.normal <Esc> float.close
       keymap.normal K docs.hover
       keymap.normal gd definition.jump
@@ -216,6 +222,10 @@ module Carat
       keymap.normal <leader>bb buffer.list
       keymap.normal <leader>bn buffer.next
       keymap.normal <leader>bp buffer.previous
+      keymap.normal ]b buffer.next
+      keymap.normal [b buffer.previous
+      keymap.normal [B buffer.first
+      keymap.normal ]B buffer.last
       keymap.normal <C-^> buffer.alternate
       keymap.normal <leader>bd buffer.delete
       keymap.normal <leader>dp docs.pin

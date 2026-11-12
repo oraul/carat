@@ -31,10 +31,11 @@ module Carat
     # indentguides_char, one character one column wide. winborder is the
     # border style of floats, Neovim's option (BorderStyle). jumptab is
     # "replace" when a jump takes the tab of the buffer it leaves, or
-    # "keep", Vim's behavior.
+    # "keep", Vim's behavior. gt is "buffers" when gt and gT move between
+    # the buffer tabs, or "tabpages", Vim's behavior.
     # All but syntax_on come from option lines of the configuration. A Struct
     # record: mutable, with a reader and a writer per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, :indentguides, :indentguides_char, :winborder, :jumptab, keyword_init: true)
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, :indentguides, :indentguides_char, :winborder, :jumptab, :gt, keyword_init: true)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -65,6 +66,7 @@ module Carat
       # @rbs @indentguides_char: String
       # @rbs @winborder: String
       # @rbs @jumptab: String
+      # @rbs @gt: String
 
       # Vim's defaults, the nerd icon set, the default theme on the
       # terminal's background, syntax highlighting on, and Neovim's search
@@ -73,7 +75,7 @@ module Carat
       # indent guides off, as in Neovim, which draws none.
       #: () -> void
       def initialize
-        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: 300, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto", indentguides: false, indentguides_char: GUIDE_CHAR, winborder: BorderStyle::DEFAULT, jumptab: JUMPTAB_KEEP)
+        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: 300, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto", indentguides: false, indentguides_char: GUIDE_CHAR, winborder: BorderStyle::DEFAULT, jumptab: JUMPTAB_KEEP, gt: GT_TAB_PAGES)
       end
 
       # The options a configuration line may set, by name, with the kind
@@ -85,7 +87,7 @@ module Carat
         "startscreen" => "bool", "reducedmotion" => "bool", "cursorline" => "bool", "indentguides" => "bool",
         "tabstop" => "integer", "shiftwidth" => "integer", "scroll" => "integer", "scrolloff" => "integer", "timeoutlen" => "integer", "undolevels" => "integer", "keyhints.delay" => "integer",
         "layout.left_width" => "integer", "layout.right_width" => "integer", "layout.panel_height" => "integer",
-        "clipboard" => "string", "icons" => "string", "theme" => "string", "background" => "string", "breadcrumbs" => "string", "indentguides.char" => "string", "winborder" => "string", "jumptab" => "string"
+        "clipboard" => "string", "icons" => "string", "theme" => "string", "background" => "string", "breadcrumbs" => "string", "indentguides.char" => "string", "winborder" => "string", "jumptab" => "string", "gt" => "string"
       }
 
       # The key hints' default wait in milliseconds and the longest one; 0
@@ -102,6 +104,12 @@ module Carat
       JUMPTAB_REPLACE = "replace"
       JUMPTAB_KEEP = "keep"
       JUMPTABS = [JUMPTAB_REPLACE, JUMPTAB_KEEP]
+
+      # The modes of gt: gt and gT move between the buffer tabs, or between
+      # the tab pages, as Vim.
+      GT_BUFFERS = "buffers"
+      GT_TAB_PAGES = "tabpages"
+      GTS = [GT_BUFFERS, GT_TAB_PAGES]
 
       # The indent guides' default character and the one drawn in its
       # place with the ascii icon set.
@@ -128,6 +136,13 @@ module Carat
       #: () -> bool
       def jump_takes_tab?
         jumptab == JUMPTAB_REPLACE
+      end
+
+      # Whether gt and gT move between the buffer tabs (gt buffers), the
+      # one place the rule reads it.
+      #: () -> bool
+      def gt_follows_buffers?
+        gt == GT_BUFFERS
       end
 
       # The code point indent guides are drawn with: the guide character,
@@ -290,6 +305,12 @@ module Carat
             self.jumptab = word
           else
             config.note(line, "unknown jumptab mode #{word}")
+          end
+        when "gt"
+          if GTS.include?(word)
+            self.gt = word
+          else
+            config.note(line, "unknown gt mode #{word}")
           end
         when "winborder"
           if BorderStyle.style?(word)

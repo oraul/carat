@@ -28,7 +28,7 @@ A control byte SHALL decode to a key whose code is the byte value, so Enter is 1
 - **THEN** the keys 13 and 3 are produced, in that order
 
 ### Requirement: Escape sequences decode to special keys
-The sequences terminals send for the arrow keys, Home, End, Insert, Delete, Page Up, Page Down, and F1 to F12, in both the CSI form and the SS3 form, SHALL decode to one key each with a code above the Unicode range. A modifier parameter in a CSI sequence SHALL be accepted and ignored.
+The sequences terminals send for the arrow keys, Home, End, Insert, Delete, Page Up, Page Down, and F1 to F12, in both the CSI form and the SS3 form, SHALL decode to one key each with a code above the Unicode range. A modifier parameter in a CSI sequence SHALL be accepted and ignored, except that Page Up and Page Down with a modifier that holds Ctrl SHALL decode to the keys Ctrl-PageUp and Ctrl-PageDown, which key notation names `<C-PageUp>` and `<C-PageDown>`.
 
 #### Scenario: Arrow keys
 - **WHEN** the bytes of ESC [ A, ESC [ B, ESC [ C, and ESC [ D arrive
@@ -45,6 +45,10 @@ The sequences terminals send for the arrow keys, Home, End, Insert, Delete, Page
 #### Scenario: Modified arrow
 - **WHEN** the bytes of ESC [ 1 ; 5 C arrive
 - **THEN** the key Right is produced
+
+#### Scenario: Ctrl-PageDown and Ctrl-PageUp decode to their own keys
+- **WHEN** the bytes of ESC [ 6 ; 5 ~ and ESC [ 5 ; 5 ~ arrive
+- **THEN** the keys Ctrl-PageDown and Ctrl-PageUp are produced, and "<C-PageDown><C-PageUp>" in notation gives the same codes and formats back to the same names
 
 ### Requirement: A lone Escape is the Escape key after a short wait
 An Escape byte that is not followed by more bytes within the escape timeout SHALL decode to the Escape key, code 27, so that pressing Escape alone is recognized without a terminator.

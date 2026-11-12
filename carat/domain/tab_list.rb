@@ -3,16 +3,18 @@ require_relative "tab_page"
 
 module Carat
   module Domain
-    # The tab pages of the editor in order, which one is current, and the
-    # id the next window to enter a tab page receives. Every window gets
+    # The tab pages of the editor in order, which one is current, the one
+    # current before it (the last accessed, -1 for none), and the id the
+    # next window to enter a tab page receives. Every window gets
     # its id once, here, and keeps it for as long as the editor runs. The
     # tab list also keeps the cursors of the windows inside their text:
     # the buffer feed reports every closed transaction with its first
     # changed row, and the cursors on or below it are clamped. A Struct
     # record: mutable, with a reader and a writer per member.
-    class TabList < Struct.new(:pages, :tab_index, :next_window_id, keyword_init: true)
+    class TabList < Struct.new(:pages, :tab_index, :last_index, :next_window_id, keyword_init: true)
       # @rbs @pages: Array[untyped]
       # @rbs @tab_index: Integer
+      # @rbs @last_index: Integer
       # @rbs @next_window_id: Integer
 
       # One tab page with the first window, which gets the first id. The
@@ -25,6 +27,7 @@ module Carat
         adopt(window)
         pages << TabPage.new(window: window)
         self.tab_index = 0
+        self.last_index = -1
       end
 
       # ------------------------------------------------------- current view
@@ -56,15 +59,23 @@ module Carat
       def add_tab(page)
         adopt(page.window)
         pages.insert(tab_index + 1, page)
+        self.last_index = tab_index
         self.tab_index = tab_index + 1
       end
 
       # Removes the tab page at index. When it was the current one, the one
       # after it becomes current, or the one before it when it was last, as
       # Neovim's alt_tabpage picks; otherwise the current one stays current.
+      # Closing the current or the last accessed tab page leaves none last
+      # accessed, as Vim's pointer to a freed tab page is no longer valid.
       #: (Integer) -> void
       def remove_tab(index)
         pages.delete_at(index)
+        if index == last_index || index == tab_index
+          self.last_index = -1
+        elsif index < last_index
+          self.last_index = last_index - 1
+        end
         self.tab_index = tab_index - 1 if index < tab_index
         self.tab_index = pages.length - 1 if tab_index > pages.length - 1
       end
@@ -74,11 +85,11 @@ module Carat
       #: (Integer) -> bool
       def next_tab(n)
         if n == 0
-          self.tab_index = (tab_index + 1) % pages.length
+          visit((tab_index + 1) % pages.length)
           return true
         end
         return false if n > pages.length
-        self.tab_index = n - 1
+        visit(n - 1)
         true
       end
 
@@ -86,7 +97,23 @@ module Carat
       #: (Integer) -> void
       def previous_tab(n)
         steps = n > 0 ? n : 1
-        self.tab_index = (tab_index - steps) % pages.length
+        visit((tab_index - steps) % pages.length)
+      end
+
+      # Makes the tab page at index current, the one it leaves the last
+      # accessed, as every tab page switch of the user does.
+      #: (Integer) -> void
+      def visit(index)
+        self.last_index = tab_index unless index == tab_index
+        self.tab_index = index
+      end
+
+      # Goes back to the last accessed tab page, as g<Tab> does; nothing
+      # when there is none.
+      #: () -> void
+      def last_accessed_tab
+        return if last_index < 0 || last_index >= pages.length || last_index == tab_index
+        visit(last_index)
       end
 
       # ------------------------------------------------------------ windows
@@ -183,7 +210,7 @@ module Carat
           i = 0
           while i < ids.length
             if page.layout.window_at(ids[i]).buffer.equal?(target)
-              self.tab_index = t
+              visit(t)
               page.focus(ids[i])
               return true
             end
