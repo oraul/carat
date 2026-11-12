@@ -4750,3 +4750,33 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Location: carat/use_cases/ex/file_command_handler.rb:98
 - Why: architecture section 5 has use cases orchestrate entities, but the ex handler now takes the BufferList and resolves the alternate buffer and its E194 and E499 refusals itself, beside SwitchBuffer's own alternate lookup.
 - Fix outline: let OpenFile, or a small domain helper on BufferList returning the alternate path or the error, resolve '#', keeping the handler a forwarder.
+
+## tab-keys quality advisory at carat/use_cases/ex/tab_command_handler.rb:101
+
+- Why: duplication, architecture section 5 (logic several use cases share moves into the domain): digits? is the third copy, beside BufferCommandHandler#digits? and HistoryCommandHandler.digits?.
+- Fix: move one digits? into a domain helper and call it from the three ex handlers.
+
+## tab-keys quality advisory at carat/use_cases/ex/tab_command_handler.rb:71
+
+- Why: the magic args.bytesize <= 9 is repeated at :82 and mirrors BufferCommandHandler#number_in's own 9-digit cut.
+- Fix: one shared number-argument helper (or a named constant) that both handlers use.
+
+## tab-keys quality advisory at carat/use_cases/ex/tab_command_handler.rb:45
+
+- Why: duplication: a sixth inline "E488: Trailing characters" literal while this change moved E475 into Messages.invalid_argument.
+- Fix: add Domain::Messages.trailing_characters(text) and use it here and in the other ex handlers.
+
+## tab-keys quality advisory at carat/use_cases/actions/tab_handler.rb:514
+
+- Why: cleverness: the tabline flag is derived from the array position (tabline: i > 2), which breaks silently when a name is added or reordered.
+- Fix: a parallel tablines array beside names and targets, or register the two tabline actions on their own lines.
+
+## tab-keys quality advisory at docs/codebase-map.md:125
+
+- Why: map currency: the messages.rb entry does not name the new E16 and invalid_argument, and the buffer_request.rb entry at :383 does not list the new :tab target.
+- Fix: add them to both entries.
+
+## tab-keys quality advisory at carat/domain/tab_list.rb:213
+
+- Why: test gap: focus_buffer now records a visit (the :q and :qa refusal moving to another tab page), but no test shows g<Tab> going back after it.
+- Fix: add an editor_tabs row such as :tabe b.txt<CR>x<C-PageDown>:qa<CR>g<Tab> checking the tab page returned to.
