@@ -68,13 +68,12 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- `jump-motions` (T2 user bug report, sprint 2's head, delivered now, off the list): estimated large: jump-list 1,968,203 (77 min), jump-replace-tab 1,871,438 (84), under large's 2.5M; not split: two fixes (jump forms, alternate file), already part 2b, the brief keeps the item.
-- Sprint 2 (T2, the sprint rule): 1 to 3 the features, 4 the one pipeline item; no T0 open; the pool keeps its order, no push-backs.
-- `pr-edit-path` (T1, sprint-1 security Medium (7) `.claude/agents/contributor.md:59`) estimated medium: two fixes against ci-time's 927,045 (62.2 min) for four; notes 5, 6 folded.
-- Feature sizes estimated large: float-frame 2,246,983 (112 min), gd-ghost-tab 1,959,229; each a split part.
-- Security: no High or Medium at confidence 8 or above; Mediums (7) at contributor.md:59, sprint-planning.js:121, :113 below 8; ci-time's 8 notes are quality advisories.
-- `sprint-security` (T1, 2 Mediums (7)) split from `sprint-tidy`, pool 1; `review-demotion` pushed back 2, quality first pass 26/69.
-- `ci-time-tidy` (T1, new): #110 recorded no ci-stage or weighted metric; ci-time notes 2 to 8 there, over the fold rule's five; note 1 (run_state.sh:137) into 24.
-- Folds: sprint notes 9 to 12, 17, ci-time retro 10 (plan 16.8% of #110) into 24; note 8, retro 9 (11 of 74) into 27; 4 into 32; 15 into 26; 16 into 53; 13 into 45.
-- Groom (T6): 2 fixed (8df063e, 6b7d489), 5 on pr_tag.sh replaced by 86a6fe3, 8 repeated headings, one re-entered.
-- Parked: `scout-focus`, `reading-rules`, `code-index`, `harness-ruby`, `image-viewer`, the mouse. Figures from #110: `lh` 26.0, `j` 27.0, `insert` 34.0.
+- `records-once` (T0 by the user's request "do a correcting next task" and the brief, outside the sprint count, delivered now, off the list): #111 merged with quality blocked (sprints-gate `quality-blocking` docs/sprints.tsv:3, blocking=1 at 6196588); 6226a44 applied sprint-1's plan, and a second groom of it would die at `tools/run_state.sh:1472` in the next package step.
+- `records-once` estimated medium, not split: three parts on the same lines (`run_state.sh:1469`, `:1351`, `:223`, `gates.sh:110`, `ci_scope.sh:41`); ci-time 927,045 (62.2 min) for four fixes, sprints-gate 925,374 (36.2 min) for one here, both under medium's 1.2M.
+- Placed in `records-once` part 3: sprints-gate's `quality-advisory` `tools/gates.sh:113` (three copies of one list) and its late security Low (3) at `tools/gates.sh:113` (an edited sprint row shrinks the sprint-end review); nothing to the backlog.
+- Security: no High or Medium at confidence 8 or above open; #111's review passed with one Low (3), placed above; sprint-1's Mediums (7) stay with `pr-edit-path` and `sprint-security`.
+- `jump-motions` (T2, sprint 2's head) resumes after `records-once` merges, off the list, keeping main's docs/queue.md, docs/backlog.md, docs/metrics.tsv, and docs/sprints.tsv over its dfe20aa.
+- Sprint 2 unchanged (T2, the sprint rule): `records-once` is T0 and exempt, `pr-edit-path` stays the one pipeline item; no push-backs.
+- Quality passed first in 4 of the last 10 rows and #111 merged one blocking finding unfixed: `review-demotion` and `merge-gate-integrity` keep their places, no new item.
+- The sprint-1 plan files left `build/plan/`: docs/sprints.tsv holds sprint-1 (5 merges, 467.6 min).
+- Parked: `scout-focus`, `reading-rules`, `code-index`, `harness-ruby`, `image-viewer`, the mouse. Figures from #111: `lh` 26.0, `j` 27.0, `insert` 34.0.

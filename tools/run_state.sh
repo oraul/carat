@@ -153,7 +153,12 @@
 #                               blocked in the run state sprint-N
 #   backlog-dups                print each location (file:line) that two or
 #                               more backlog headings name, with the headings
-#   groom                       apply a waiting sprint plan (PLAN_DIR/sprint
+#   groom [CHANGE]              nothing when CHANGE's run state sets
+#                               records=skip (the planning records excluded),
+#                               or, retiring the marker to sprint.applied,
+#                               when the sprint it names has its row in the
+#                               sprints file or BASE's; else
+#                               apply a waiting sprint plan (PLAN_DIR/sprint
 #                               names the sprint in progress, which the
 #                               sprints file lacks, and sprint-N records its
 #                               security review pass or blocked; else the
@@ -167,7 +172,7 @@
 #                               remove each entry, append groomed.md (merged
 #                               entries and the sprint findings not queued),
 #                               and append the sprint's row from its history
-#                               rows
+#                               rows, retiring the marker
 #   plan-needed CHANGE          print "needed: REASON" and exit 0 when the
 #                               change is not the head of docs/queue.md (the
 #                               waiting sprint plan's queue.md) or a
@@ -187,7 +192,11 @@
 #                               TOKEN_BUDGETS; a note after a passing check,
 #                               always exit 0
 #   pending                     the merged changes with no history row yet
-#   history                     append a history row for each pending change;
+#   history [CHANGE]            nothing when CHANGE's run state sets
+#                               records=skip; else append a history row for
+#                               each pending change but one whose row BASE's
+#                               history holds or whose run state records the
+#                               branch it was appended on (row, written here);
 #                               a gate without a stored first verdict is
 #                               left out of its first passes; append each
 #                               such run's late-finding notes to
@@ -204,6 +213,7 @@
 set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
+. "$here/rules.sh"
 state_dir=${RUN_STATE_DIR:-build/pipeline}
 stage_dir=${STAGE_DIR:-build/stages}
 make_cmd=${MAKE:-make}
@@ -217,10 +227,10 @@ PHASES="plan implement check quality security bench package ci merge retro repor
 # rounds from test-build's report, docs-lint reads docs/*.md and the test
 # paths the docs name, and gates reads the commit; check carries the others.
 # TEST_ONLY: the paths such a commit may change, tests and their snapshots,
-# the OpenSpec records, and the planning records and metrics history, which
-# no carried stage reads.
+# and the records-only paths of tools/rules.sh (RECORDS_RE), which no
+# carried stage reads.
 TEST_STAGES="test-build test-run diagnose metrics docs-lint gates"
-TEST_ONLY='^(test/|openspec/|docs/(backlog|queue|goals)\.md$|docs/metrics\.tsv$|$)'
+TEST_ONLY="^(test/|$RECORDS_RE|\$)"
 # The compile stages, skipped when the code they read is the code of their
 # last pass and their outputs are the ones it left: the code key hashes
 # every tracked path but NOT_COMPILED, which no compile stage reads, except
@@ -1347,13 +1357,29 @@ late_findings() {
 
 # Each merged run's row, and its late findings appended to the backlog in
 # one entry, so the next change's package step commits both and a run
-# pushes no commit of records after its package step.
+# pushes no commit of records after its package step. A run gets its row
+# once: none when BASE's history holds it, or when its run state records
+# the branch a package step appended it on (row), since the run states are
+# the clone's and the history file is each branch's.
 append_history() {
   names=$(pending_list)
   [ -n "$names" ] || { echo "history: nothing pending"; return 0; }
   [ -f "$metrics_file" ] || printf '%s\n' "$HEADER" > "$metrics_file"
+  base_history=$(git show "${BASE:-origin/main}:$metrics_file" 2>/dev/null) || base_history=""
+  branch_now=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || branch_now=HEAD
+  case "$branch_now" in ""|*[[:cntrl:]]*) branch_now=HEAD ;; esac
   for change in $names; do
+    on=$(read_key row)
+    if [ -n "$on" ]; then
+      echo "history: $change already has its row, appended on $on; not appended again"
+      continue
+    fi
+    if printf '%s\n' "$base_history" | awk -F'\t' -v c="$change" 'NR > 1 && $1 == c { found = 1 } END { exit !found }'; then
+      echo "history: $change already has its row in ${BASE:-origin/main}'s $metrics_file; not appended again"
+      continue
+    fi
     history_row >> "$metrics_file"
+    write_key row "$branch_now"
     echo "history: appended $change"
     found=$(late_findings)
     [ -n "$found" ] || continue
@@ -1466,7 +1492,15 @@ sprint_row() {
 # one that stands once needs another heading at its location
 # (backlog-dups). A security entry (any line naming security) leaves only
 # by a merged item's listed heading or its fixing commit.
+# A plan is applied once: the marker is the clone's and the sprints file
+# each branch's, so applying it, or finding its row in the sprints file or
+# BASE's, retires the marker to PLAN_DIR/sprint.applied.
 groom() {
+  if sprint_applied; then
+    mv "$plan_dir/sprint" "$plan_dir/sprint.applied" || die "groom: $plan_dir/sprint not retired"
+    echo "groom: $waiting already has its row in $applied_in; not applied again, its marker retired"
+    return 0
+  fi
   if ! sprint_waiting; then echo "groom: no sprint plan waits in $plan_dir/"; return 0; fi
   sprint_state
   [ "$waiting" = "sprint-$sprint_n" ] || die "groom: the plan of $waiting is not the sprint in progress, sprint-$sprint_n"
@@ -1524,7 +1558,35 @@ groom() {
     !skip { print }' "$backlog_file" > "$tmp" && mv "$tmp" "$backlog_file" || { rm -f "$tmp"; die "groom: $backlog_file not rewritten"; }
   [ ! -f "$plan_dir/groomed.md" ] || cat "$plan_dir/groomed.md" >> "$backlog_file"
   sprint_row >> "$sprints_file"
+  mv "$plan_dir/sprint" "$plan_dir/sprint.applied" || die "groom: $plan_dir/sprint not retired"
   echo "groom: applied sprint-$sprint_n: $(printf '%s' "$removals$repeats" | grep -c .) headings groomed, its row appended to $sprints_file"
+}
+
+# True when the marker names a sprint (waiting) whose row the sprints file
+# or BASE's holds (applied_in names which).
+sprint_applied() {
+  [ -f "$plan_dir/sprint" ] || return 1
+  waiting=$(sed -n '1p' "$plan_dir/sprint")
+  valid 'sprint-[0-9]+' "$waiting" || return 1
+  applied_in=$sprints_file
+  if [ -f "$sprints_file" ] && awk -F'\t' -v s="$waiting" '$1 == s { found = 1 } END { exit !found }' "$sprints_file"; then
+    return 0
+  fi
+  applied_in="${BASE:-origin/main}'s $sprints_file"
+  git show "${BASE:-origin/main}:$sprints_file" 2>/dev/null |
+    awk -F'\t' -v s="$waiting" '$1 == s { found = 1 } END { exit !found }'
+}
+
+# True when CHANGE ($2, the change whose package step runs COMMAND $1) has
+# its planning records excluded, records=skip in its run state, which the
+# workflow sets from the brief or the planner; says so.
+records_excluded() {
+  [ -n "$2" ] || return 1
+  case "$2" in */*|.*|*[[:cntrl:]]*) die "not a change name: $2" ;; esac
+  [ "$(change=$2; read_key records)" = skip ] || return 1
+  what="nothing appended"
+  [ "$1" != groom ] || what="nothing applied"
+  echo "$1: $2 excludes the planning records (records=skip); $what"
 }
 
 # Whether the queue needs the planner before the change starts: needed
@@ -1623,10 +1685,10 @@ shift
 case "$command" in
   status) show_status; exit 0 ;;
   pending) pending_list; exit 0 ;;
-  history) append_history; exit 0 ;;
+  history) [ $# -le 1 ] || usage; records_excluded history "${1:-}" || append_history; exit 0 ;;
   review-due) [ $# -eq 0 ] || usage; review_due; exit $? ;;
   backlog-dups) [ $# -eq 0 ] || usage; backlog_dups; exit $? ;;
-  groom) [ $# -eq 0 ] || usage; groom; exit $? ;;
+  groom) [ $# -le 1 ] || usage; ! records_excluded groom "${1:-}" || exit 0; groom; exit $? ;;
 esac
 [ $# -ge 1 ] || usage
 change=$1

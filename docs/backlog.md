@@ -4607,17 +4607,19 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the `${PR:-}` and `${HEAD_SHA:-}` defaults are redundant after the guard at line 82.
 - Fix outline: use `$PR` and `$HEAD_SHA`.
 
-### BufferList#enter duplicates the jump guard of Window#record_jump (`jump-motions` quality advisory)
+## The security gate exempts any edit to the sprint log, not only an appended row
 
-- Location: `carat/domain/buffer_list.rb:315` (`enter`).
-- Why it matters: enter pushes old.id, row, and col itself behind an 'unless old.id == 0' guard that the new Window#record_jump already holds, so the two jump-recording paths can drift apart.
-- Fix outline: replace the push with 'current.record_jump unless target.id == 0 && reusable?(old)', keeping the editor_jumps cases green.
+- Source: security review of sprints-gate, Low, confidence 3.
+- Location: tools/gates.sh:113 (`settled_at`).
+- Why: `settled_at` exempts any edit to docs/sprints.tsv after the reviewed commit, not only the row groom appends, so a forged or rewritten sprint row could shift review-due and the sprint base and let the sprint-end combined review skip changes; per-change reviews still run, and docs/metrics.tsv already gave equivalent control.
+- Fix: exempt docs/sprints.tsv only when its diff from COMMIT adds lines and deletes none (git diff --numstat deletions 0), optionally also requiring the added row to name the sprint in build/plan/sprint.
 
-### Ctrl-^ shows a scratch alternate buffer that N Ctrl-^ and :b N refuse (`jump-motions` quality advisory)
+## The records-only path list is kept by hand in three places
 
-- Location: `carat/use_cases/buffers/switch_buffer.rb:37`.
-- Why it matters: load records a scratch buffer's id as the alternate, so Ctrl-^ shows a scratch buffer while 'N Ctrl-^' and ':b N' refuse the same buffer with E86, an inconsistency between paths to one buffer.
-- Fix outline: skip scratch buffers when load sets the alternate, or refuse a scratch alternate in SwitchBuffer as :number does, with an editor_jumps case.
+- Source: quality review of sprints-gate, advisory.
+- Location: tools/gates.sh:113 (`settled_at`), tools/run_state.sh:223 (`TEST_ONLY`), tools/ci_scope.sh:45 (`documentation()`).
+- Why: one clear way: the records-only path list now differs between `settled_at` (with docs/sprints.tsv) and `TEST_ONLY` and `documentation()` (without it), three hand-kept copies of one list that drift, so a groom write is not treated alike by the gates, the stage carry, the fix scope, and CI.
+- Fix: name the planning-records pattern once and use it in all three, or add docs/sprints.tsv to `TEST_ONLY` and `ci_scope` in a follow-up.
 
 ### staleRed trusts the merger's order of check runs (`delivery-speed` quality advisory)
 
@@ -4660,3 +4662,67 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Location: the plan phase of `.claude/workflows/deliver-change.js` and `plan-needed` in `tools/run_state.sh`.
 - Why it matters: #110's item was already decided and estimated, yet 7 of the plan's 8 decisions were about other items: plan 29,632 of 176,620 output tokens (16.8%), plan plus scouts 28.4% at rework 0; plan 4.5% to 23.3% of output over the last 10 rows.
 - Fix outline: a delivery whose item heads the queue with an estimate starts no planner, or plan stays under 5% of output over three runs. Queue item `sprint-tidy`.
+
+## records-once quality advisory at tools/run_state.sh:233
+
+- Location: tools/run_state.sh:233, with the stage carry at line 475 and the quality fix scope at line 818.
+- Why: TEST_ONLY now admits docs/sprints.tsv, which changes the stage carry and the quality fix scope, but no tools-test case covers a sprints.tsv-only commit in either.
+- Fix outline: add an expect that a docs/sprints.tsv-only commit carries a compile stage and is left out of the fix scope.
+
+## records-once quality advisory at tools/run_state.sh:1586
+
+- Location: tools/run_state.sh:1586 and the dispatch at line 1697.
+- Why: records_excluded repeats the change-name case of the dispatch, two copies that can drift.
+- Fix outline: one change_name helper that both call.
+
+## records-once quality advisory at .claude/agents/planner.md:28
+
+- Location: .claude/agents/planner.md:28, read by .claude/workflows/deliver-change.js:226 and :951.
+- Why: step 7 lists the result fields but not the new optional records field the workflow reads, so the planner has only the schema description to know when to return it.
+- Fix outline: add records: skip when the brief excludes history and groom to step 7.
+
+## records-once quality advisory at .claude/workflows/deliver-change.js:999
+
+- Location: .claude/workflows/deliver-change.js:999, against tools/rules.sh:52 (RECORDS_RE) and the README.
+- Why: the planning records means two sets: RECORDS_RE and the README count the queue and goals among them, while records=skip excludes only history and groom and the package step still applies the planner queue.
+- Fix outline: say history and groom (or the metrics and sprint rows) wherever records=skip is described, in the workflow text, the run_state.sh header, CLAUDE.md, and the README.
+
+## records-once quality advisory at .claude/workflows/deliver-change.js:961
+
+- Location: .claude/workflows/deliver-change.js:961 and tools/tools_test.sh.
+- Why: excludeRecords and the package text it selects have no js case in tools/tools_test.sh; only the run_state.sh side is tested.
+- Fix outline: move the package-text choice into a pure helper and add a js case for records skip and apply.
+
+## records-once quality advisory at tools/tools_test.sh:1564
+
+- Location: tools/tools_test.sh:1564, the rules: the records-only list is named once case.
+- Why: the case packs two greps, a sed, and comma-joined printf output into one sh -c line that is hard to read and to diagnose on failure.
+- Fix outline: two plain expects, one that grep -l of the literal path list over tools/*.sh names only rules.sh and one per reader that it names RECORDS_RE.
+
+## records-once quality advisory at tools/ci_scope.sh:8
+
+- Location: tools/ci_scope.sh:8 and line 46.
+- Why: the header still describes skippable documentation as Markdown and openspec/.claude files, not the shared RECORDS_RE list (docs/metrics.tsv, docs/sprints.tsv), and line 46 writes the records test as a double negation (! grep || return 0).
+- Fix outline: name RECORDS_RE in the header and write printf | grep -q -E ... && return 0.
+
+## records-once quality advisory at docs/codebase-map.md:117
+
+- Location: docs/codebase-map.md:117, against tools/gates.sh:342 and :425.
+- Why: the gates.sh entry names settled_at and appended_rows under the stages gate only, though the security and passed gates read them too.
+- Fix outline: name them once as the helper the three gates share.
+
+## Findings of sprints-gate after its package step
+
+- security Low (3) tools/gates.sh:113 settled_at exempts any edit to docs/sprints.tsv, not only an appended row, so after the review a commit could rewrite the last sprint row's 'last' column. That moves sprint_base in tools/run_state.sh sprint_state and shrinks the combined diff the sprint-end security review covers. Each change keeps its own security review, and the PR scan still reads the edit.; 
+
+### BufferList#enter duplicates the jump guard of Window#record_jump (`jump-motions` quality advisory)
+
+- Location: `carat/domain/buffer_list.rb:315` (`enter`).
+- Why it matters: enter pushes old.id, row, and col itself behind an 'unless old.id == 0' guard that the new Window#record_jump already holds, so the two jump-recording paths can drift apart.
+- Fix outline: replace the push with 'current.record_jump unless target.id == 0 && reusable?(old)', keeping the editor_jumps cases green.
+
+### Ctrl-^ shows a scratch alternate buffer that N Ctrl-^ and :b N refuse (`jump-motions` quality advisory)
+
+- Location: `carat/use_cases/buffers/switch_buffer.rb:37`.
+- Why it matters: load records a scratch buffer's id as the alternate, so Ctrl-^ shows a scratch buffer while 'N Ctrl-^' and ':b N' refuse the same buffer with E86, an inconsistency between paths to one buffer.
+- Fix outline: skip scratch buffers when load sets the alternate, or refuse a scratch alternate in SwitchBuffer as :number does, with an editor_jumps case.

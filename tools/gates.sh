@@ -31,7 +31,8 @@
 #              session link
 #   security   the security review is recorded as pass at a commit whose
 #              difference to HEAD touches only openspec/, docs/backlog.md,
-#              docs/queue.md, docs/goals.md, and docs/metrics.tsv
+#              docs/queue.md, docs/goals.md, docs/metrics.tsv, and
+#              docs/sprints.tsv
 #   stages     phase.check is at such a commit and every canonical stage
 #              (STAGES, else the CHECK_STAGES line of the Makefile beside
 #              this script) passed at exactly that commit
@@ -100,15 +101,32 @@ state() {
 }
 
 # True when the difference from COMMIT to HEAD touches only files no check
-# reads but docs-lint: the OpenSpec change (archived after the checks), the
+# reads but docs-lint: the records-only paths of tools/rules.sh
+# (RECORDS_RE): the OpenSpec change (archived after the checks), the
 # backlog, and the planning records the package step writes (queue, goals,
-# and metrics history), whose docs-lint the package step and CI run again.
+# metrics history, and the sprint row groom appends to docs/sprints.tsv),
+# whose docs-lint the package step and CI run again. docs/sprints.tsv counts
+# only by appended rows: an edit of an earlier row moves the sprint base,
+# which the sprint-end security review starts from.
 # Without rename detection, a file moved into openspec/ counts by its old
 # path too.
 settled_at() {
   hex "$1" || return 1
   rest=$(git diff --no-renames --name-only --end-of-options "$1" HEAD -- 2>/dev/null) || return 1
-  [ -z "$(printf '%s\n' "$rest" | grep -v -E '^(openspec/|docs/(backlog|queue|goals)\.md$|docs/metrics\.tsv$|$)')" ]
+  [ -z "$(printf '%s\n' "$rest" | grep -v -E "^($RECORDS_RE|\$)")" ] || return 1
+  ! printf '%s\n' "$rest" | grep -q -x -F docs/sprints.tsv || appended_rows "$1" docs/sprints.tsv
+}
+
+# True when FILE at HEAD is FILE at COMMIT with lines appended: absent at
+# COMMIT, or empty or ending in a line break there, and its bytes at COMMIT
+# the first bytes at HEAD.
+appended_rows() {
+  before=$(git rev-parse -q --verify --end-of-options "$1:$2" 2>/dev/null) || return 0
+  size=$(git cat-file -s "$before") || return 1
+  [ "$size" -eq 0 ] && return 0
+  [ -z "$(git cat-file blob "$before" | tail -c 1)" ] || return 1
+  prefix=$(git cat-file blob "HEAD:$2" 2>/dev/null | head -c "$size" | git hash-object --stdin) || return 1
+  [ "$prefix" = "$before" ]
 }
 
 require_base() {
