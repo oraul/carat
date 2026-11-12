@@ -35,7 +35,7 @@ module Carat
         "motion.word_forward", "motion.big_word_forward", "motion.word_backward", "motion.big_word_backward",
         "motion.word_end", "motion.big_word_end", "motion.word_end_backward", "motion.big_word_end_backward",
         "motion.sentence_forward", "motion.sentence_backward", "motion.paragraph_forward", "motion.paragraph_backward",
-        "motion.screen_top", "motion.screen_middle", "motion.screen_bottom"
+        "motion.screen_top", "motion.screen_middle", "motion.screen_bottom", "motion.match_pair"
       ]
 
       # The short descriptions of NAMES, in the same order, for the key
@@ -48,8 +48,27 @@ module Carat
         "Next word", "Next WORD", "Previous word", "Previous WORD",
         "End of word", "End of WORD", "End of previous word", "End of previous WORD",
         "Next sentence", "Previous sentence", "Next paragraph", "Previous paragraph",
-        "Top of window", "Middle of window", "Bottom of window"
+        "Top of window", "Middle of window", "Bottom of window", "Matching pair"
       ]
+
+      # The motions Neovim counts as jumps: moving by one records the
+      # position left in the window's jump list (the searches are
+      # Search.action?).
+      JUMP_NAMES = [
+        "cursor.buffer_start", "cursor.buffer_end",
+        "motion.sentence_forward", "motion.sentence_backward", "motion.paragraph_forward", "motion.paragraph_backward",
+        "motion.screen_top", "motion.screen_middle", "motion.screen_bottom", "motion.match_pair"
+      ]
+
+      # The bytes of the brackets % matches, openers first, each closer
+      # three places after its opener: ( [ { ) ] }.
+      PAIR_BYTES = [40, 91, 123, 41, 93, 125]
+
+      # Whether a motion is a jump.
+      #: (String) -> bool
+      def self.jump?(name)
+        JUMP_NAMES.include?(name)
+      end
 
       # The motion a command asks for. This is the one entry point with a
       # side effect: f, F, t, and T record themselves in last_find so that
@@ -111,6 +130,7 @@ module Carat
         when "motion.screen_top" then screen(state, :top, n, pending)
         when "motion.screen_middle" then screen(state, :middle, n, pending)
         when "motion.screen_bottom" then screen(state, :bottom, n, pending)
+        when "motion.match_pair" then count > 0 ? percent_line(state, count) : match_pair(state)
         else nil
         end
       end
@@ -590,6 +610,75 @@ module Carat
         row = bottom if row > bottom
         row = top if row < top
         to_row(state, row)
+      end
+
+      # ------------------------------------------------------------ pairs
+
+      # {count}%: the line at count percent of the buffer, rounded up,
+      # keeping the wanted column as G does; nil past 100.
+      #: (EditorState, Integer) -> Motion?
+      def self.percent_line(state, count)
+        return nil if count > 100
+        to_row(state, (count * state.buffer.line_count + 99) / 100 - 1)
+      end
+
+      # %: the bracket matching the first one at or after the cursor on
+      # its line, nested pairs of its kind counted across lines; an
+      # inclusive motion, nil without a bracket or a match. Brackets are
+      # ASCII, never inside a UTF-8 sequence, so the walk reads bytes.
+      #: (EditorState) -> Motion?
+      def self.match_pair(state)
+        buffer = state.buffer
+        cursor = state.cursor
+        row = cursor.row
+        line = buffer.line(row)
+        at = line[0, cursor.col].to_s.bytesize
+        size = line.bytesize
+        kind = -1
+        while at < size
+          kind = pair_kind(line.getbyte(at).to_i)
+          break if kind >= 0
+          at += 1
+        end
+        return nil if kind < 0
+        forward = kind < 3
+        mine = PAIR_BYTES[kind].to_i
+        other = PAIR_BYTES[forward ? kind + 3 : kind - 3].to_i
+        step = forward ? 1 : -1
+        last = buffer.line_count - 1
+        depth = 1
+        at += step
+        while true
+          while at >= 0 && at < size
+            byte = line.getbyte(at).to_i
+            if byte == mine
+              depth += 1
+            elsif byte == other
+              depth -= 1
+              if depth == 0
+                return Motion.new(target: Position.new(row: row, col: line.byteslice(0, at).to_s.length), linewise: false, inclusive: true, want: :set)
+              end
+            end
+            at += step
+          end
+          row += step
+          return nil if row < 0 || row > last
+          line = buffer.line(row)
+          size = line.bytesize
+          at = forward ? 0 : size - 1
+        end
+        nil
+      end
+
+      # The place of a byte in PAIR_BYTES, or -1 for any other byte.
+      #: (Integer) -> Integer
+      def self.pair_kind(byte)
+        i = 0
+        while i < PAIR_BYTES.length
+          return i if PAIR_BYTES[i] == byte
+          i += 1
+        end
+        -1
       end
     end
   end

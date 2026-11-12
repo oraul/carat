@@ -8,7 +8,8 @@ module Carat
   module UseCases
     # Moves the cursor by a motion command: every motion comes from
     # Domain::Motions, and the result decides what happens to the wanted
-    # column. A motion that cannot move changes nothing. f, F, t, and T
+    # column. A motion that cannot move changes nothing; a jump motion
+    # records the position left in the window's jump list. f, F, t, and T
     # are remembered in the last find, which ";" and "," repeat.
     class Move
       attr_reader :last_find #: Domain::LastFind
@@ -22,6 +23,7 @@ module Carat
       def call(state, command)
         motion = Domain::Motions.for_command(state, @last_find, command, false)
         return Outcome.none if motion.nil?
+        state.window.record_jump if Domain::Motions.jump?(command.action)
         cursor = state.cursor
         target = motion.target
         case motion.want

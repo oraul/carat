@@ -17,4 +17,45 @@ ok   A split copies the jump list
 ok   A window walks only its own list
 ok   A new tab page copies the jump list
 ok   A walk back to a scratch buffer keeps the file's tab
-editor_jumps: 19 passed, 0 failed
+ok   G records the position left
+ok   gg records the position left
+ok   % records the position left
+ok   50% records the position left
+ok   ) records the position left
+ok   ( records the position left
+ok   } records the position left
+ok   { records the position left
+ok   H records the position left
+ok   M records the position left
+ok   L records the position left
+ok   / records the position left
+ok   ? records the position left
+ok   n records the position left
+ok   N records the position left
+ok   * records the position left
+ok   # records the position left
+ok   g* records the position left
+ok   g# records the position left
+ok   :N records the position left
+ok   :$ records the position left
+ok   G in visual mode records the position left
+ok   A search with no match records nothing
+ok   ( at the start of the buffer records nothing
+ok   j records nothing
+ok   w records nothing
+ok   $ records nothing
+ok   Ctrl-I comes back after a jump
+ok   A jump under an operator records the position left
+ok   d/ records the position left
+ok   dn records the position left
+ok   Ctrl-^ goes back and forth
+ok   Ctrl-6 is Ctrl-^
+ok   A count goes to that buffer
+ok   No alternate buffer
+ok   A modified buffer refuses Ctrl-^
+ok   A split keeps the alternate buffer
+ok   A new tab page keeps the alternate buffer
+ok   :e # shows the alternate file
+ok   :e # without an alternate file
+ok   :e # on an alternate buffer without a name
+editor_jumps: 60 passed, 0 failed

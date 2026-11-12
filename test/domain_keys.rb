@@ -20,6 +20,7 @@ module DomainKeysTest
       ["control key", "<C-r>", [18]],
       ["control uppercase letter", "<C-R>", [18]],
       ["control bracket", "<C-[>", [27]],
+      ["control caret and control 6", "<C-^><C-6>", [30, 30]],
       ["two control keys in one word", "<C-w><C-h>", [23, 8]],
       ["alt key", "<A-x>", [120 | K::ALT]],
       ["meta spelling", "<M-x>", [120 | K::ALT]],
@@ -57,6 +58,8 @@ module DomainKeysTest
       ["less than", 60, "<lt>"],
       ["alt x", 120 | K::ALT, "<A-x>"],
       ["nul", 0, "<C-@>"],
+      ["control caret", 30, "<C-^>"],
+      ["control backslash", 28, "<C-\\>"],
       ["delete", K::DELETE, "<Del>"],
       ["f5", K::F5, "<F5>"]
     ]) { |code| N.format(code) }

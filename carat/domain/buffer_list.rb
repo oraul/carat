@@ -273,7 +273,9 @@ module Carat
       # showed remembers the cursor and stays listed, unless it is a
       # scratch buffer no window shows. A buffer never listed takes the
       # number of an unnamed, empty, unmodified buffer only this window
-      # shows, which leaves the list first, as Neovim reuses it.
+      # shows, which leaves the list first, as Neovim reuses it. The buffer
+      # left becomes the window's alternate buffer, unless it had no
+      # number or gave its number to target.
       #: (Buffer) -> void
       def load(target)
         current = tabs.window
@@ -283,11 +285,21 @@ module Carat
         if target.id == 0 && reusable?(old)
           remove(old)
           target.id = old.id
+        elsif old.id != 0
+          current.alternate = old.id
         end
         add(target)
         current.show(target)
         restore(current)
         release(old)
+      end
+
+      # The window's alternate buffer while the list holds it, else nil.
+      #: (Window) -> Buffer?
+      def alternate_of(window)
+        id = window.alternate
+        return nil if id == 0
+        with_id(id)
       end
 
       # Shows target in the current window as a buffer switch: the

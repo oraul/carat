@@ -103,8 +103,9 @@ module Carat
         nil
       end
 
-      # The control code of a key: letters by their alphabet position and
-      # the ASCII punctuation Vim accepts after C-.
+      # The control code of a key: letters by their alphabet position, the
+      # ASCII punctuation Vim accepts after C-, and 6, which terminals send
+      # as Ctrl-^.
       #: (String) -> Integer?
       def self.control_code(ch)
         code = ch.downcase.ord
@@ -113,7 +114,7 @@ module Carat
         return 27 if ch == "["
         return 28 if ch == "\\"
         return 29 if ch == "]"
-        return 30 if ch == "^"
+        return 30 if ch == "^" || ch == "6"
         return 31 if ch == "_"
         return 127 if ch == "?"
         nil
@@ -125,6 +126,7 @@ module Carat
         return "<A-#{format(Key.base(code))}>" if Key.alt?(code)
         special = special_name(code)
         return special unless special.nil?
+        return "<C-#{Key.char(code + 64)}>" if code >= 28 && code < 32
         return "<C-#{Key.char(code + 96)}>" if code > 0 && code < 32
         return "<C-@>" if code == 0
         Key.char(code)
