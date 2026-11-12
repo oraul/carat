@@ -1502,13 +1502,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: twelve copies of one test drift independently, and each reader of a count or number must find its own.
 - Fix outline: one domain module function used by the domain and adapter copies, the plugin keeping its own as the plugin rule requires, with `make bench` held on the hot paths. Queued in the backlog item of `docs/queue.md` (`clamp` copies and ASCII digit tests).
 
-## A pull request touching only .claude/ skips tools-test
-
-- Where: `documentation()` in `tools/ci_scope.sh` (line 39 at fb09c6b). Periodic security Low (5) at fb09c6b, found again by the periodic security review at 847851d, Low (5), `tools/ci_scope.sh:39`. Raised again at bff9a02 (#96): periodic security Low (5) at `tools/ci_scope.sh:15`.
-- Why it matters: a pull request changing only agent hook lines, `.claude/settings.json`, or the workflows is classed documentation, so CI skips `make tools-test`, the independent check of the guard hook lines and the attribution.
-- Fix outline: class `.claude/agents/`, `.claude/settings.json`, and `.claude/workflows/` as code, with a `tools/tools_test.sh` case. Queued in `ci-hardening`.
-- Raised again as "The CI scope counts agent and workflow files as documentation": Where: `documentation()` in `tools/ci_scope.sh:39`, and the `scope_case` row at `tools/tools_test.sh:100`. Periodic security Low (4) at 9a92265. Why it matters: a pull request touching only agent hooks, `.claude/settings.json`, or the workflows skips CI's tools-test, though `tools/tools_test.sh` reads them. Fix outline: keep only the generated OpenSpec commands and skills in the documentation case, with the row expecting tools-test. Queue item `check-skip`.
-
 ## The process runner's reader queues bodies without a bound
 
 - Where: the reader thread in `carat/drivers/process_runner.rb` (line 106 at fb09c6b). Periodic security Low (4) at fb09c6b.
@@ -4259,12 +4252,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the session-line pattern refuses any word session followed by a colon anywhere in a line, such as a Notes sentence about the next session:, a false refusal of a valid body.
 - Fix outline: anchor it to a line start, as in ^ *(claude-)?session([ _-]?(id.
 
-## delivery-speed quality advisory at .claude/agents/quality-reviewer.md:21
-
-- Where: `.claude/agents/quality-reviewer.md:21`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: advisories wait for the sprint-end review of sprint-planning, which exists nowhere in the repository or the queue, while CLAUDE.md sends advisories to the backlog and the periodic review.
-- Fix outline: name the periodic review, or add sprint-planning to the queue first.
-
 ## delivery-speed quality advisory at .github/workflows/ci.yml:26
 
 - Where: `.github/workflows/ci.yml:26`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
@@ -4295,47 +4282,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: reRaised demotes any blocking quality finding whose file:line equals an earlier advisory, by location alone, in any round and whatever the finding says, so a new correctness bug on a line that once carried a style advisory merges with only a note, and line numbers shift between commits.
 - Fix outline: demote only in a narrowed fix round and compare the finding text as well as file:line.
 
-## delivery-speed quality advisory at tools/run_state.sh:406
-
-- Where: `tools/run_state.sh:406`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: main_stages, and the CHECK_STAGES fallback of stage_list at tools/gates.sh:338, serve only this change own merge against a main without FAST_STAGES and are dead once it lands.
-- Fix outline: remove both in the next pipeline change.
-
-## delivery-speed quality advisory at docs/codebase-map.md:46
-
-- Where: `docs/codebase-map.md:46`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: removing the drop_backup clause left a commit hash;, and lost the closing parenthesis of the set entry.
-- Fix outline: write a commit hash),.
-
-## delivery-speed quality advisory at .claude/workflows/deliver-change.js:97
-
-- Where: `.claude/workflows/deliver-change.js:97`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: the CALL_CAPS comment still says a capped start can commit, back up, and return the schema, though backup is removed.
-- Fix outline: drop back up.
-
-## delivery-speed quality advisory at .github/workflows/ci.yml:26
-
-- Where: `.github/workflows/ci.yml:26`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: the comment says every other stage runs only here, though docs-lint, dev-build, test-build, test-run, bench-budget, and metrics of FAST_STAGES run in CI too, and the line runs past the comment width.
-- Fix outline: say the stages outside FAST_STAGES run only here and rewrap.
-
-## delivery-speed quality advisory at tools/gates.sh:489
-
-- Where: `tools/gates.sh:489`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: the session-line pattern refuses any word session followed by a colon anywhere in a body, such as prose about Neovim mksession (Session: restored), not only a trailer-like line.
-- Fix outline: anchor it to a line start, ^(claude-)?session([ _-]?(id.
-
 ## delivery-speed quality advisory at .claude/workflows/deliver-change.js:1089
 
 - Where: `.claude/workflows/deliver-change.js:1089`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
 - Why it matters: a closing start that does not record now loses its phase lines and metric line with only a note, so a merged run history row can lack its package, ci, and merge figures.
 - Fix outline: keep one record start for the refused close, or say in the report which figures are missing.
-
-## delivery-speed quality advisory at .claude/agents/quality-reviewer.md:21
-
-- Where: `.claude/agents/quality-reviewer.md:21`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: defers style, naming, and architecture findings to the sprint-end review of sprint-planning, a change not in the repository yet, so until it lands only the periodic review takes them.
-- Fix outline: name the periodic review as their taker until sprint-planning lands.
 
 ## delivery-speed quality advisory at .claude/workflows/deliver-change.js:301
 
@@ -4343,53 +4294,17 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: staleRed splits each check on every comma, so a matrix check name holding a comma (spin (ubuntu, 4)) parses wrong.
 - Fix outline: take status and conclusion as the last two fields.
 
-## delivery-speed quality advisory at .claude/workflows/deliver-change.js:795
-
-- Where: `.claude/workflows/deliver-change.js:795`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: reRaised matches by file:line only, so a new correctness bug a fix round introduces at the line of an earlier advisory is silently downgraded, and on a resume the earlier advisories are seeded from run-state notes (line 419), which decision 6 treats as untrusted for narrowing.
-- Fix outline: also require the finding's rule text to match the advisory's and seed the comparison only from this start's advisories.
-
-## delivery-speed quality advisory at docs/codebase-map.md:46
-
-- Where: `docs/codebase-map.md:46`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: broken text in the run_state set entry: 'a commit hash;,' leaves its parenthesis unclosed.
-- Fix outline: replace ';,' with '),'.
-
-## delivery-speed quality advisory at .github/workflows/ci.yml:26
-
-- Where: `.github/workflows/ci.yml:26`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: the comment says every other stage runs only in CI, but dev-build, test-build, test-run, bench-budget, and metrics run in both the checker and CI, and the line is not wrapped like its neighbours.
-- Fix outline: say CI runs every stage but diagnose and gates, and rewrap.
-
-## delivery-speed quality advisory at tools/gates.sh:489
-
-- Where: `tools/gates.sh:489`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: the session-line pattern lives in the pr-body gate alone, while CLAUDE.md names tools/scan_text.sh the one scanner of forbidden text, so the scan check of the pull request never applies it; it also refuses prose such as 'the terminal session: ...' in an editor's body.
-- Fix outline: move a narrower pattern into tools/rules.sh and scan_text.sh.
-
 ## delivery-speed quality advisory at .claude/workflows/deliver-change.js:481
 
 - Where: `.claude/workflows/deliver-change.js:481`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
 - Why it matters: dead code: 'if (!command) return true' cannot run, since flush returns earlier unless a non-closable line is pending.
 - Fix outline: drop it.
 
-## delivery-speed quality advisory at .claude/workflows/deliver-change.js:97
-
-- Where: `.claude/workflows/deliver-change.js:97`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: stale comment: 'commit, back up, and return the schema' names the removed backup step.
-- Fix outline: 'commit and return the schema'.
-
 ## delivery-speed quality advisory at .claude/workflows/deliver-change.js:1015
 
 - Where: `.claude/workflows/deliver-change.js:1015`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
 - Why it matters: a superseded red reuses the pending wait counter, so the merger's next prompt says CI was still running, and the body mode is measured under the package key (line 610).
 - Fix outline: a separate counter and prompt for a superseded red, and its own usage key for body.
-
-## delivery-speed quality advisory at .claude/workflows/deliver-change.js:301
-
-- Where: `.claude/workflows/deliver-change.js:301`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: staleRed relies on the merger listing runs oldest first while GitHub lists check runs newest first; a misordered list starts a needless fix round or asks again up to WAITS times.
-- Fix outline: have the merger return only the latest run per name, or a completion time to sort on.
 
 ## delivery-speed quality advisory at .claude/agents/contributor.md:59
 
@@ -4421,48 +4336,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the description still says the checker runs the canonical stage list.
 - Fix outline: say the fast stages (FAST_STAGES).
 
-## delivery-speed quality advisory at .github/workflows/ci.yml:26
-
-- Where: `.github/workflows/ci.yml:26`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: the comment says every other stage runs only here, but the builds, tests, bench-budget and metrics run in both the checker and CI.
-- Fix outline: say CI runs every stage but diagnose and gates, and the checker the fast subset.
-
-## delivery-speed quality advisory at .claude/agents/contributor.md:59
-
-- Where: `.claude/agents/contributor.md:59`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: body mode says set the title and body to the body file, which holds no title.
-- Fix outline: say set the body to the file and correct the title in place when the scan names it.
-
-## delivery-speed quality advisory at .claude/workflows/deliver-change.js:795
-
-- Where: `.claude/workflows/deliver-change.js:795`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: reRaised downgrades a blocking quality finding at any earlier advisory's file:line, including one the previous round already blocked on (qualityBlocking), so an unfixed blocking finding sharing a line with an advisory passes the review, against design item 6 (a finding already blocking stays blocking) and with no test.
-- Fix outline: skip the downgrade when qualityBlocking holds a finding at the same findingAt location, and add a tools_test case.
-
-## delivery-speed quality advisory at .claude/workflows/deliver-change.js:97
-
-- Where: `.claude/workflows/deliver-change.js:97`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: stale comment: the CALL_CAPS margin still says a start can commit, back up, and return, but the backup step is removed.
-- Fix outline: drop 'back up,'.
-
-## delivery-speed quality advisory at .github/workflows/ci.yml:26
-
-- Where: `.github/workflows/ci.yml:26`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: docs drift: the comment says every stage but diagnose and gates runs only in CI, yet FAST_STAGES also runs docs-lint, the dev and test builds, the tests, bench-budget, metrics, and tools-test in the checker.
-- Fix outline: say CI runs every stage but diagnose and gates and the checker runs FAST_STAGES.
-
-## delivery-speed quality advisory at .claude/workflows/deliver-change.js:795
-
-- Where: `.claude/workflows/deliver-change.js:795`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: reRaised demotes any blocking quality finding whose file:line equals an earlier advisory's, so a new bug a fix commit introduces on a line an earlier advisory named is kept as an advisory without notice to the contributor.
-- Fix outline: also compare the rule text, or demote only when the line is outside the fix diff.
-
-## delivery-speed quality advisory at tools/gates.sh:489
-
-- Where: `tools/gates.sh:489`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: the session-line pattern refuses any word session followed by a colon in a pull request body (for example 'the LSP session:'), a likely false positive for language server work.
-- Fix outline: anchor it to a line start or require the id, link, or url suffix.
-
 ## pr-by-tag security Low at tools/pr_tag.sh:121
 
 - Where: tools/pr_tag.sh:121 (removed by pr-on-push). Delivery review of `pr-by-tag` (security Low, confidence 5) at 742ba5f.
@@ -4481,12 +4354,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the comment says a branch cannot weaken the checks of its own title and body, but the workflow file and the tools/pr_tag.sh that calls main's gates are the tagged commit's, so a branch can skip them.
 - Fix outline: reword it to say main's gates sit beside the scan workflow's base-commit scanner, as design.md Risks already admits.
 
-## pr-by-tag quality advisory at tools/pr_tag.sh:116
-
-- Where: tools/pr_tag.sh:116 (removed by pr-on-push). Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
-- Why it matters: wait does not check the run state's branch against BRANCH_RE as push does; an empty branch makes the tag pr/ and grep -F then matches any pr/ tag on origin.
-- Fix outline: add the same matches "$branch" "$BRANCH_RE" refusal as push.
-
 ## pr-by-tag quality advisory at .claude/agents/contributor.md:22
 
 - Where: `.claude/agents/contributor.md:22`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
@@ -4499,35 +4366,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: CHECK_BIN repeats the Makefile's DEV_BIN path and the run_state.sh entry of docs/codebase-map.md does not name it.
 - Fix outline: name CHECK_BIN beside in_clone in the map entry, its comment naming DEV_BIN as the one source.
 
-## pr-by-tag quality advisory at tools/pr_tag.sh:125
-
-- Where: tools/pr_tag.sh:125 (removed by pr-on-push). Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
-- Why it matters: wait does not check the run state's branch against BRANCH_RE as push does; an empty branch makes the tag pr/ and grep -F then matches any pr/ tag on origin (the same finding as the entry at line 116).
-- Fix outline: add the same matches "$branch" "$BRANCH_RE" refusal as push.
-
-## pr-by-tag quality advisory at openspec/changes/pr-by-tag/design.md:22
-
-- Where: `openspec/changes/archive/2026-11-11-pr-by-tag/design.md:22`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
-- Why it matters: the bootstrap says the user opens the pull request by hand and resumes, but the unconsumed tag pr/chore/pr-by-tag stays on origin, so the resumed package step's pr_tag.sh push and wait both refuse and the run stops again.
-- Fix outline: say the user also deletes the tag on origin, or records the number with tools/run_state.sh set pr-by-tag pr N before resuming.
-
-## pr-by-tag quality advisory at tools/pr_tag.sh:96
-
-- Where: tools/pr_tag.sh:96 (removed by pr-on-push). Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
-- Why it matters: a continued package start that runs push while open-pr is still pending finds the tag on origin and is refused, and contributor.md step 4 gives no path but stop although wait would succeed.
-- Fix outline: in the contributor.md package step say that a push refused for a tag on origin is followed by wait, which stops only when it also fails.
-
 ## pr-by-tag quality advisory at tools/agent_guard.sh:588
 
 - Where: `tools/agent_guard.sh:588`. Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
 - Why it matters: the contributor keeps the permission tools/run_state.sh set CHANGE pr N (header line 66, test 'contributor pushes and opens the pull request'), though pr_tag.sh wait now records the number and the agent must never record a pull request another way.
 - Fix outline: drop contributor:pr and the header's set CHANGE pr N, and the set from that guard test.
-
-## pr-by-tag quality advisory at tools/pr_tag.sh:124
-
-- Where: tools/pr_tag.sh:124 (removed by pr-on-push). Delivery review of `pr-by-tag` (quality advisory) at 742ba5f.
-- Why it matters: WAIT_STEP=0 passes the check, so waited never grows and wait loops until a pull request appears, past its SECONDS bound.
-- Fix outline: require [1-9][0-9]{0,2}.
 
 ## pr-by-tag quality advisory at tools/pr_tag.sh:131
 
@@ -4763,3 +4606,59 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Location: `tools/ci_scope.sh:85` and `tools/ci_scope.sh:92`.
 - Why it matters: the `${PR:-}` and `${HEAD_SHA:-}` defaults are redundant after the guard at line 82.
 - Fix outline: use `$PR` and `$HEAD_SHA`.
+
+## The security gate exempts any edit to the sprint log, not only an appended row
+
+- Source: security review of sprints-gate, Low, confidence 3.
+- Location: tools/gates.sh:113 (`settled_at`).
+- Why: `settled_at` exempts any edit to docs/sprints.tsv after the reviewed commit, not only the row groom appends, so a forged or rewritten sprint row could shift review-due and the sprint base and let the sprint-end combined review skip changes; per-change reviews still run, and docs/metrics.tsv already gave equivalent control.
+- Fix: exempt docs/sprints.tsv only when its diff from COMMIT adds lines and deletes none (git diff --numstat deletions 0), optionally also requiring the added row to name the sprint in build/plan/sprint.
+
+## The records-only path list is kept by hand in three places
+
+- Source: quality review of sprints-gate, advisory.
+- Location: tools/gates.sh:113 (`settled_at`), tools/run_state.sh:223 (`TEST_ONLY`), tools/ci_scope.sh:45 (`documentation()`).
+- Why: one clear way: the records-only path list now differs between `settled_at` (with docs/sprints.tsv) and `TEST_ONLY` and `documentation()` (without it), three hand-kept copies of one list that drift, so a groom write is not treated alike by the gates, the stage carry, the fix scope, and CI.
+- Fix: name the planning-records pattern once and use it in all three, or add docs/sprints.tsv to `TEST_ONLY` and `ci_scope` in a follow-up.
+
+### staleRed trusts the merger's order of check runs (`delivery-speed` quality advisory)
+
+- Location: `.claude/workflows/deliver-change.js:301` (`staleRed`) and `.claude/agents/merger.md:24`. Re-entered by the sprint-1 grooming from the second copy of the repeated heading at that line, whose first copy (a comma inside a check name) stays.
+- Why it matters: staleRed relies on the merger listing check runs oldest first while GitHub lists them newest first; a misordered list starts a needless fix round or asks again up to WAITS times.
+- Fix outline: have the merger return only the latest run per name, or a completion time to sort on, with a tools-test case for each order.
+
+### The sprint planner starts after a partial security review (`sprint-1` review quality)
+
+- Location: `.claude/workflows/sprint-planning.js:146`.
+- Why it matters: the planner starts once the security review ran, even when `not_reviewed` is not empty, while `groom` and `review-due` accept only pass or blocked, so that plan always waits and /sprint redoes the review and the plan: a wasted planner start.
+- Fix outline: start the planner only on a complete, skeptic-checked security result, with a case. Queue item `sprint-tidy`.
+
+### The sprint quality review gets no continuation at its cap (`sprint-1` review quality)
+
+- Location: `.claude/workflows/sprint-planning.js:123`.
+- Why it matters: the security review gets a continued start over the files it left at its cap, the quality review none, so a capped quality review is recorded partial and never covered in that run.
+- Fix outline: give quality the same one continuation, or say in the header why it gets none. Queue item `sprint-tidy`.
+
+### The sprint workflow copies the periodic review's caps (`sprint-1` review quality)
+
+- Location: `.claude/workflows/sprint-planning.js:22` (CALLS, FINDING, capLine, the cap 53) against `.claude/workflows/periodic-review.js:17` to `:28` and `:54` (PERIODIC_CAP); the comment at line 71 says they must stay equal.
+- Why it matters: workflow scripts cannot import one another, so the copies drift silently.
+- Fix outline: a tools-test check that the copies match. Queue item `sprint-tidy`.
+
+### The branch types are written in three places (`sprint-1` review quality)
+
+- Location: `tools/open_pr.sh:43` (BRANCH_RE), `tools/agent_guard.sh:101` (BRANCH), `.github/workflows/branch-push.yml:10` (branches).
+- Why it matters: adding a type to one list silently breaks the open-pr path.
+- Fix outline: a tools-test check that the three lists match, or one derived from another. Queue item `open-pr-tidy`.
+
+### The merge phase names the branch head, not the squash commit (`ci-time` retrospective)
+
+- Location: the closing input of `.claude/workflows/deliver-change.js` and the `phase.merge` line it records.
+- Why it matters: #110 passed the branch head 2e6c64184f00 as merged while the squash on main is 8df063e271c8, so `phase.merge` and the closing gates' BASE name the head; `phase.merge` differs from `merged` in 11 of 74 run states.
+- Fix outline: the closing input, `phase.merge`, and `merged` all name the commit on origin/main's first-parent line, with a tools-test case where the merger returns the head. Queue item `merge-gate-integrity`.
+
+### A delivery whose item heads the queue still plans the whole pool (`ci-time` retrospective)
+
+- Location: the plan phase of `.claude/workflows/deliver-change.js` and `plan-needed` in `tools/run_state.sh`.
+- Why it matters: #110's item was already decided and estimated, yet 7 of the plan's 8 decisions were about other items: plan 29,632 of 176,620 output tokens (16.8%), plan plus scouts 28.4% at rework 0; plan 4.5% to 23.3% of output over the last 10 rows.
+- Fix outline: a delivery whose item heads the queue with an estimate starts no planner, or plan stays under 5% of output over three runs. Queue item `sprint-tidy`.
