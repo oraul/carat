@@ -207,3 +207,7 @@ When an exclusive motion under an operator ends in column 0 of a later line, the
 #### Scenario: Percent under an operator is inclusive
 - **WHEN** the cursor is on `(` of `f(a, b) x` and `d%` is typed
 - **THEN** the line is `f x`
+
+#### Scenario: Percent under an operator fills register 1
+- **WHEN** the cursor is on `(` of `f(a) x` and `d%` is typed
+- **THEN** register 1 holds `(a)` and the small delete register stays empty

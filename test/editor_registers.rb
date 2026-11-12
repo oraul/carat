@@ -122,6 +122,11 @@ module EditorRegistersTest
     h.state.cursor.move_to(0, 1)
     h.type("d}")
     t.assert_equal(["b", true], [h.assembly.registers.read("1").text, h.assembly.registers.read("-").nil?], "a paragraph motion uses register 1 and not register -")
+    # Scenario "Percent under an operator fills register 1".
+    h = editor("f(a) x\n")
+    h.state.cursor.move_to(0, 1)
+    h.type("d%")
+    t.assert_equal(["(a)", true], [h.assembly.registers.read("1").text, h.assembly.registers.read("-").nil?], "Percent under an operator fills register 1")
 
     # Read-only registers refuse writes.
     h = editor("a\nb\n")

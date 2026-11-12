@@ -47,7 +47,7 @@ module Carat
       # line, as Vim's use_reg_one; marks arrive later.
       REGISTER_ONE_MOTIONS = [
         "motion.sentence_forward", "motion.sentence_backward", "motion.paragraph_forward", "motion.paragraph_backward",
-        "search.forward", "search.backward", "search.next", "search.previous",
+        "motion.match_pair", "search.forward", "search.backward", "search.next", "search.previous",
         "search.word_forward", "search.word_backward", "search.partial_word_forward", "search.partial_word_backward"
       ]
       private_constant :REGISTER_ONE_MOTIONS

@@ -46,6 +46,7 @@ ok   a visual yank fills register 0
 ok   three line deletes fill registers 1 to 3
 ok   a named line delete fills register 1 too
 ok   a paragraph motion uses register 1 and not register -
+ok   Percent under an operator fills register 1
 ok   a delete into . is refused
 ok   a yank into % is refused
 ok   a visual delete into : leaves visual mode and is refused
@@ -60,4 +61,4 @@ ok   :display with a name keeps that register
 ok   another key dismisses the listing and is handled
 ok   the small delete, inserted text, and command line registers are listed
 ok   a block is listed with its rows
-editor_registers: 62 passed, 0 failed
+editor_registers: 63 passed, 0 failed
