@@ -291,8 +291,9 @@ module DomainThemeTest
     # Scenario: Every palette passes. WCAG AA: 4.5:1 for text, 3:1 for
     # decorations, on the theme's background, at 24 bits and at the 256
     # colors written. The pills and the lsp groups are text groups, so the
-    # same rows prove Every palette's pills pass and Every palette's lsp
-    # groups pass.
+    # same rows prove two more scenarios:
+    # Every palette's pills pass
+    # Every palette's lsp groups pass
     t.table([
       ["carat-dark at 24 bits", ["carat-dark", "24"], []],
       ["carat-dark at 256 colors", ["carat-dark", "256"], []],
@@ -404,6 +405,8 @@ module DomainThemeTest
     # Options read the theme from the option.theme line and the
     # background from the option.background line.
     t.assert_equal(["carat-dark", "terminal", true], [D::Options.new.theme, D::Options.new.background, D::Options.new.syntax_on], "the defaults: carat-dark on the terminal's background, syntax on")
+    # Scenario: Light theme. The line selects light_plus, whose Comment
+    # color adapters_screen_presenter writes.
     t.assert_equal("light_plus", theme_of("option.theme light_plus\n").theme, "the theme line selects a palette")
     t.assert_equal("carat-light", theme_of("option.theme carat-light\n").theme, "Carat's light palette is accepted")
     unknown = D::Config.new
