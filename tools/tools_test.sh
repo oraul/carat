@@ -146,6 +146,46 @@ expect "ci_scope: a push whose tree passed in its pull request skips" 0 "^run=fa
 expect "ci_scope: a push whose pull request did not pass runs" 0 "^run=true" \
   env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=0 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
 
+# A gh that answers a GitHub 5xx error body and fails for the queries
+# matching FAKE_FAIL, as in main's CI run 246, and hands the rest to the
+# stub above.
+mkdir -p "$work/errbin"
+cat > "$work/errbin/gh" <<EOF
+#!/bin/sh
+case "\$*" in
+  *\$FAKE_FAIL*) printf '{\n  "message": "Server Error"\n}\n'; exit 1 ;;
+esac
+exec "$work/bin/gh" "\$@"
+EOF
+chmod +x "$work/errbin/gh"
+# err_scope PATTERN: a push whose tree passed in its pull request, with
+# the queries matching PATTERN failing, writing to $work/scope-out.
+err_scope() {
+  rm -f "$work/scope-out"
+  env PATH="$work/errbin:$PATH" FAKE_FAIL="$1" GITHUB_OUTPUT="$work/scope-out" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=1 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
+}
+# well_formed: GITHUB_OUTPUT holds exactly run=true and one reason= line.
+well_formed() {
+  [ "$(wc -l < "$work/scope-out")" -eq 2 ] && [ "$(sed -n 1p "$work/scope-out")" = "run=true" ] &&
+    sed -n 2p "$work/scope-out" | grep -q -E '^reason=[^{}]+$' && echo well-formed
+}
+expect "ci_scope: a push whose number query answers an error body runs" 0 "^run=true: tools/x[.]sh is code" err_scope number
+expect "ci_scope: an error body leaves GITHUB_OUTPUT one run and one reason line" 0 "^well-formed$" well_formed
+expect "ci_scope: a push whose every query answers an error body runs" 0 "^run=true: tools/x[.]sh is code" err_scope ""
+expect "ci_scope: every query failing leaves GITHUB_OUTPUT one run and one reason line" 0 "^well-formed$" well_formed
+# A code path holding a line break, which git --name-only quotes as
+# "tools/x\nrun=false.sh": the reason that names it stays one line.
+fresh linebreak
+nl_path=$(printf 'tools/x\nrun=false.sh')
+echo code > "$nl_path"
+commit "chore: add a path with a line break"
+nl_scope() {
+  rm -f "$work/scope-out"
+  GITHUB_OUTPUT="$work/scope-out" EVENT=pull_request REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
+}
+expect "ci_scope: a path with a line break runs" 0 '^run=true: "tools/x\\nrun=false[.]sh" is code' nl_scope
+expect "ci_scope: a path with a line break leaves GITHUB_OUTPUT one run and one reason line" 0 "^well-formed$" well_formed
+
 
 # A pull request's merge commit against its newest earlier head whose spin
 # check passed (FAKE_GREEN): the heads are A (code) and B, merged into the

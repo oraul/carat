@@ -28,13 +28,29 @@
 # a green head missing from the checkout is fetched by its sha.
 set -u
 
+# answer RUN REASON: the reason goes on one line whatever it holds, so
+# GITHUB_OUTPUT keeps one run= and one reason= line. printf, never echo:
+# dash's echo expands backslash escapes, and git quotes a path holding a
+# line break as "x\ny", which echo would turn back into a line break.
 answer() {
+  reason=$(printf '%s' "$2" | tr '\r\n' '  ')
   if [ -n "${GITHUB_OUTPUT:-}" ]; then
-    echo "run=$1" >> "$GITHUB_OUTPUT"
-    echo "reason=$2" >> "$GITHUB_OUTPUT"
+    printf 'run=%s\n' "$1" >> "$GITHUB_OUTPUT"
+    printf 'reason=%s\n' "$reason" >> "$GITHUB_OUTPUT"
   fi
-  echo "run=$1: $2"
+  printf 'run=%s: %s\n' "$1" "$reason"
   exit 0
+}
+
+# A gh answer is used only when it is the kind of value asked for: digits
+# prints a non-empty run of digits (a number or a count), hex one of
+# lowercase hex digits (a commit or tree sha), and nothing for any other
+# answer, an error body included, which leaves it unknown.
+digits() {
+  case "$1" in ""|*[!0-9]*) ;; *) printf '%s' "$1" ;; esac
+}
+hex() {
+  case "$1" in ""|*[!0-9a-f]*) ;; *) printf '%s' "$1" ;; esac
 }
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -59,11 +75,11 @@ if [ "$event" != "pull_request" ] && [ "$event" != "push" ]; then
 fi
 
 if [ "$event" = "push" ]; then
-  head=$(gh api "repos/$REPO/commits/$SHA/pulls" --jq '.[0].head.sha // empty' 2>/dev/null || true)
-  number=$(gh api "repos/$REPO/commits/$SHA/pulls" --jq '.[0].number // empty' 2>/dev/null || true)
-  if [ -n "$head" ]; then
-    head_tree=$(gh api "repos/$REPO/commits/$head" --jq '.commit.tree.sha' 2>/dev/null || true)
-    passed=$(gh api "repos/$REPO/commits/$head/check-runs?check_name=spin" --jq '[.check_runs[] | select(.conclusion == "success")] | length' 2>/dev/null || echo 0)
+  head=$(hex "$(gh api "repos/$REPO/commits/$SHA/pulls" --jq '.[0].head.sha // empty' 2>/dev/null)")
+  number=$(digits "$(gh api "repos/$REPO/commits/$SHA/pulls" --jq '.[0].number // empty' 2>/dev/null)")
+  if [ -n "$head" ] && [ -n "$number" ]; then
+    head_tree=$(hex "$(gh api "repos/$REPO/commits/$head" --jq '.commit.tree.sha' 2>/dev/null)")
+    passed=$(digits "$(gh api "repos/$REPO/commits/$head/check-runs?check_name=spin" --jq '[.check_runs[] | select(.conclusion == "success")] | length' 2>/dev/null)")
     tree=$(git rev-parse HEAD^{tree})
     if [ -n "$head_tree" ] && [ "$head_tree" = "$tree" ] && [ "${passed:-0}" -gt 0 ]; then
       answer false "the tree equals the head of pull request $number, whose spin check passed"
@@ -90,13 +106,12 @@ green=""
 commits=$(gh api "repos/$REPO/pulls/${PR:-}/commits?per_page=100" --jq '.[].sha' 2>/dev/null || true)
 lookups=0
 for sha in $(printf '%s\n' $commits | awk '{ l[NR] = $0 } END { for (i = NR; i > 0; i--) print l[i] }'); do
-  case "$sha" in *[!0-9a-f]*|"") continue ;; esac
+  [ -n "$(hex "$sha")" ] || continue
   [ "$sha" != "${HEAD_SHA:-}" ] || continue
   lookups=$((lookups + 1))
   [ "$lookups" -le "$GREEN_LOOKUPS" ] || break
-  passed=$(gh api "repos/$REPO/commits/$sha/check-runs?check_name=spin" --jq '[.check_runs[] | select(.conclusion == "success")] | length' 2>/dev/null || echo 0)
-  case "$passed" in ""|*[!0-9]*) passed=0 ;; esac
-  if [ "$passed" -gt 0 ]; then green=$sha; break; fi
+  passed=$(digits "$(gh api "repos/$REPO/commits/$sha/check-runs?check_name=spin" --jq '[.check_runs[] | select(.conclusion == "success")] | length' 2>/dev/null)")
+  if [ "${passed:-0}" -gt 0 ]; then green=$sha; break; fi
 done
 [ -n "$green" ] || answer true "$code is code, configuration, or a document a test reads, and no earlier head of the pull request passed"
 git cat-file -e "$green^{commit}" 2>/dev/null || git fetch -q --depth=1 origin "$green" 2>/dev/null || answer true "$code is code, and the last green head $green could not be fetched"
