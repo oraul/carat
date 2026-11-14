@@ -205,6 +205,7 @@ module EditorBreadcrumbsTest
     r.wait
     request = last_of(r, "textDocument/documentSymbol")
     t.assert_equal([1, A_URI], [r.symbols_sent, request["params"]["textDocument"]["uri"].to_s], "the next idle tick asks for the buffer's symbols")
+    # The rig reads option.icons ascii: the ASCII separator joins these.
     answer(r, symbol_id(r), OUTLINE)
     t.assert_equal([" a.rb > Foo", " a.rb > Foo"], [cut(r, 0, 0, 20), cut(r, 0, 21, 19)], "on the class line both windows on the buffer show the class")
     r.type("j")
@@ -256,7 +257,17 @@ module EditorBreadcrumbsTest
     r.wait
     t.assert_equal([" a.rb", false], [cut(r, 0, 0, 20), r.assembly.services.waiting?], "an error answer holds no symbols")
 
-    # Answers in the flat form and hostile ones.
+    # Inside a method of a class, with the unicode icons: the symbols are
+    # joined by " › ".
+    r = outlining("option.icons unicode\n")
+    r.type("<C-w>v")
+    r.wait
+    answer(r, symbol_id(r), OUTLINE)
+    r.type("j")
+    t.assert_equal(" a.rb › Foo › bar", cut(r, 0, 0, 20), "inside a method of a class the symbols are joined by the single angle quote")
+
+    # Answers in the flat form and hostile ones (a flat symbol answer, a
+    # hostile answer is bounded).
     r = outlining("")
     r.type("<C-w>vj")
     r.wait
