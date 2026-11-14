@@ -17,11 +17,15 @@ When two or more file buffers are listed or two or more tab pages exist, row 0 S
 - **THEN** row 0 is the first text row
 
 ### Requirement: A tab per listed file buffer
-Each tab SHALL read a space, the file's icon of the icon set, a space, the last segment of the path or `[No Name]`, a space, the `modified` icon when the buffer is modified or a space otherwise, and a space, in list order. The tab of the current window's buffer SHALL be drawn in `TabLineSel` with its icon in the file-icon group of the file, and the other tabs in `TabLine`.
+Each tab SHALL read a space, the file's icon of the icon set, a space, the last segment of the path or `[No Name]`, a space, the `modified` icon when the buffer is modified or a space otherwise, and a space, in list order. The tab of the current window's buffer SHALL be drawn in `TabLineSel`, its icon included, and the other tabs in `TabLine`.
 
 #### Scenario: Two tabs, one modified
 - **WHEN** "src/a.rb" is modified and "b.txt" is current, with the unicode icons
 - **THEN** row 0 reads " ◈ a.rb ●  • b.txt   " from column 0, the second tab in the selected group
+
+#### Scenario: The selected tab's icon is in the selected group
+- **WHEN** "a.rb" is current among two listed files
+- **THEN** every cell of its tab, the icon's included, is in `TabLineSel`
 
 ### Requirement: Tabs that do not fit are counted at the ends
 When the tabs do not fit the row, the row SHALL show a run of whole tabs that includes the current buffer's, preceded by " <N " when N tabs are hidden before it and followed by " N> " when N are hidden after it, both in `TabLine`. The run SHALL start as early as the current tab allows.
@@ -77,3 +81,10 @@ With `option.gt buffers`, the shipped default, "gt" SHALL show the buffer of the
 #### Scenario: An unknown gt mode is refused and keeps the earlier value
 - **WHEN** the configuration holds `option.gt pages`
 - **THEN** the report reads `.caratrc:1: unknown gt mode pages` and the option keeps its value
+
+### Requirement: The modified mark takes one cell
+A tab's modified mark SHALL take exactly one cell, so a tab is as wide modified as unmodified; a `modified` icon wider than one cell SHALL be replaced by the ASCII set's.
+
+#### Scenario: The modified mark keeps the tab's width
+- **WHEN** "a.rb" and "b.txt" are listed and "a.rb" is modified, with the nerd, the unicode, or the ascii icons
+- **THEN** the tab of "b.txt" starts at the column it starts at when "a.rb" is unmodified
