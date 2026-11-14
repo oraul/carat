@@ -10,6 +10,7 @@ Every agent's PreToolUse hook runs `git show origin/main:tools/agent_guard.sh` a
 - The merger's merge-tool hook keeps its check that main's guard names the merge tool, on the guard read the same way.
 - `tools/tools_test.sh`: the hook cases run against a hosted-looking origin answered by a local bare repository (a command-line `insteadOf` in the hook's environment, which branch code cannot set); a case moves `origin/main` locally to a commit with a permissive guard and every agent's hook still refuses, the normal path passes, and cases refuse a local origin and ignore a repository `insteadOf`, fetch a main the repository lacks, and keep every hook line's resolution identical.
 - `tools/agent_guard.sh` header, `docs/codebase-map.md` (its bullet), and `README.md` (the guard sentence) say where the guard is read from.
+- The longer hook line (about 500 bytes more) puts `contributor.md` and `planner.md` over their `docs_lint.sh` budgets, so their prose makes room by pointing to `CLAUDE.md` and dropping restatements (an example, a reason after a rule, a list the result schema already gives), never by raising a budget; no instruction of either agent changes.
 
 Out of scope: the guard's allowlists and `merge_tool`; the merge gates' green line and `originCheck`; reads of `origin/main` by `tools/gates.sh` and `tools/run_state.sh`; the planner's queue decisions in the brief (applied by the package step from `build/plan/`); `docs/backlog.md`, which the package step only appends to.
 
@@ -31,7 +32,7 @@ None.
 
 ## Impact
 
-- `.claude/agents/*.md` (the hook lines), `tools/agent_guard.sh` (header comment), `tools/tools_test.sh`, `docs/codebase-map.md`, `README.md`.
+- `.claude/agents/*.md` (the hook lines; the contributor and planner prose trimmed to their budgets), `tools/agent_guard.sh` (header comment), `tools/tools_test.sh`, `docs/codebase-map.md`, `README.md`.
 - CLAUDE.md: unchanged, it says only that each agent's hook runs `tools/agent_guard.sh`, which stays true; no command, target, agent, workflow, or gate is added or removed.
 - README.md: changed, its guard sentence names origin's main as `ls-remote` reports it.
 - docs/architecture.md: unchanged, no section describes the agents' hooks.

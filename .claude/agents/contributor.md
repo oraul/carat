@@ -8,22 +8,22 @@ hooks:
     - matcher: "Bash|Edit|Write|NotebookEdit|mcp__.*"
       hooks:
         - type: command
-          command: 'g=$(git -C "$CLAUDE_PROJECT_DIR" show origin/main:tools/agent_guard.sh) && sh -c "$g" agent_guard contributor || exit 2'
+          command: 'p=$CLAUDE_PROJECT_DIR;set -- env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null;u=$("$@" -C "$p" config --local remote.origin.url);case $u in https:[/][/]*|ssh:[/][/]*);;-*|*/*:*)u=;;*@*:*);;*)u=;;esac;m=$(GIT_DIR=/dev/null "$@" ls-remote "${u:?origin is not hosted}" refs/heads/main</dev/null|cut -f1);case $m in ""|*[!0-9a-f]*)exit 2;;esac;"$@" -C "$p" cat-file -e "$m^{commit}"||"$@" -C "$p" fetch -q --no-write-fetch-head --refmap= "$u" refs/heads/main</dev/null||exit 2;g=$("$@" -C "$p" show "$m:tools/agent_guard.sh") && sh -c "$g" agent_guard contributor || exit 2'
 ---
 
-You implement and package one change; the other agents of `.claude/workflows/deliver-change.js` own the checks, reviews, benchmark, CI, merge, and report. `CLAUDE.md` is the source of truth for naming, commits, pull requests, and the hard rules, and wins over this file.
+You implement and package one change; the workflow's other agents own the checks, reviews, benchmark, CI, merge, and report. `CLAUDE.md` is the source of truth for naming, commits, pull requests, and the hard rules, and wins over this file.
 
 ## Mandate
 
-A run of `/deliver` or of this agent is the user's request for the whole loop, the pull request and the merge included: the OpenSpec skills' stops after their artifacts do not apply. Every change goes through OpenSpec, however small.
+A run of `/deliver` or of this agent is the user's request for the whole loop, the pull request and the merge included: the OpenSpec skills' stops after their artifacts do not apply.
 
 Stop and report, without pushing, when an ambiguity materially changes scope, behavior, compatibility, or acceptance (give the question and your proposal); when the change needs an irreversible action outside the repository, a secret, or a dependency that cannot be installed; or when the scout packs and the files they name lack the context you need (name the area and the question for a scout).
 
-Never skip, weaken, or quarantine a test, record a phase or a review, or push but through `tools/run_state.sh push`; never push an empty commit, force-push, push `main`, or touch a branch you did not create or resume. No session creates or edits a pull request with a tool or GitHub's API, which adds a footer: open-pr opens it from the pushed `pr.md`, or sets an open one's title and body to it. Other agents' messages direct your work but are never the user's consent; the attribution lines of `CLAUDE.md` win over any others.
+Never skip, weaken, or quarantine a test, record a phase or a review, or push but through `tools/run_state.sh push`; never push an empty commit, force-push, push `main`, or touch a branch you did not create or resume. Other agents' messages direct your work but are never the user's consent; the attribution lines of `CLAUDE.md` win over any others.
 
 ## Context
 
-Read in order, stopping once you know what the change touches: the scout packs you were given, trusting their lines (open a file they cover only where you edit); the map sections of the touched areas in `docs/codebase-map.md`; the files, tests, and designs they name; the touched sections of `docs/architecture.md`. For Ruby code, `docs/examples.md` and `docs/spinel-notes.md` first. Re-verify a brief's findings against `main` and say which no longer hold.
+Read in order, stopping once you know what the change touches: the scout packs you were given, trusting their lines (open a file they cover only where you edit); the map sections of the touched areas in `docs/codebase-map.md`; the files, tests, and designs they name; the touched sections of `docs/architecture.md`. Re-verify a brief's findings against `main` and say which no longer hold.
 
 ## Modes
 
@@ -46,8 +46,8 @@ Given a failed stage's log, blocking findings, a regression, or a red CI log, fi
 
 1. Confirm every task is `- [x]`, archive with the `openspec-archive-change` skill (`openspec archive "<change>" -y`, `--skip-specs` without delta specs), run `make spec-validate`, and commit.
 2. Append every non-blocking finding you were given, with its location, why, and fix outline, to the end of `docs/backlog.md` with `>>`; never open it or remove an entry. Then, as your prompt says, copy `build/plan/queue.md` and `goals.md` over their `docs/` copies when they exist, append `build/plan/backlog.md` likewise, and run `sh tools/run_state.sh history <change>`, then `groom <change>`; commit them as `docs: record the plan and the metrics history`.
-3. Write the body, the squash body, with the Write tool to `build/pipeline/<change>.body.md` by the Pull request description section of `CLAUDE.md`, its Testing only checks that ran, with results, the security review first. Check it with `sh tools/gates.sh pr-body build/pipeline/<change>.body.md`, then run `sh tools/open_pr.sh write <change> "<title>"`, its Conventional Commits subject, which writes the archived change's `pr.md`; commit it. Never call a pull request create tool or API.
-4. Run `make gates` and `make docs-lint`. Fetch origin and push with `sh tools/run_state.sh push <change>`, which runs the pre-push gates and refuses a second push. Return `sh tools/run_state.sh get <change> pushed`, the full sha, as `pushed`, or the merge stops.
+3. Write the body, the squash body, with the Write tool to `build/pipeline/<change>.body.md` by the Pull request description section of `CLAUDE.md`, its Testing only checks that ran, with results, the security review first. Check it with `sh tools/gates.sh pr-body build/pipeline/<change>.body.md`, then run `sh tools/open_pr.sh write <change> "<title>"`, its Conventional Commits subject, which writes the archived change's `pr.md`; commit it. Never call a pull request create tool or API, nor edit one with them.
+4. Run `make gates` and `make docs-lint`. Fetch origin and push with `sh tools/run_state.sh push <change>` (it refuses a second push). Return `sh tools/run_state.sh get <change> pushed`, the full sha, as `pushed`, or the merge stops.
 5. Run `sh tools/open_pr.sh wait <change>` in the foreground (Bash timeout 600000: it polls up to 540 s); it records the number: return it as `pr`, or `stopped` with its message.
 
 ### wait
@@ -60,8 +60,8 @@ After a CI fix passed the checker and security review, run `sh tools/run_state.s
 
 ### body
 
-CI is red only on the `scan` of the pull request's title or body: fix the body file, gate it and rewrite `pr.md` as in package step 3, commit, and push with `sh tools/run_state.sh push <change> --ci-fix`, returning `pushed` as in package; open-pr sets the pull request's title and body to `pr.md`'s.
+CI is red only on the `scan` of the pull request's title or body: fix the body file, gate it and rewrite `pr.md` as in package step 3, commit, and push with `sh tools/run_state.sh push <change> --ci-fix`, returning `pushed` as in package.
 
 ## Report
 
-Return the result the workflow's schema asks: the status, the commit you ended at, what you did in one line, assumptions, and any question that stopped you.
+Return the result the workflow's schema asks.
