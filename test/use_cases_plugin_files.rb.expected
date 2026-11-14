@@ -87,6 +87,7 @@ ok   read_file answers fewer rows of a short file
 ok   read_file refuses a directory
 ok   read_file refuses no rows
 ok   read_file refuses a missing file
+ok   read_file reads a line that starts with a continuation byte
 ok   a live prompt delivers each changed text
 ok   a live prompt's binding runs the plugin's action
 ok   a second live prompt is refused while one is open
@@ -96,4 +97,4 @@ ok   the next command line is an ex command again
 ok   its bindings went with it
 ok   close_prompt closes the plugin's prompt
 ok   close_prompt without a prompt fails
-use_cases_plugin_files: 98 passed, 0 failed
+use_cases_plugin_files: 99 passed, 0 failed

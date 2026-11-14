@@ -18,6 +18,12 @@ module DomainVimPatternTest
     found.nil? ? "none" : "#{found.begin(0)}-#{found.end(0)}"
   end
 
+  # The byte of the first unescaped delimiter of text outside a
+  # collection. Typed, as probe is.
+  def self.pattern_end(text, delimiter)
+    P.pattern_end(text.to_s, delimiter.to_i)
+  end
+
   def self.main
     t = Carat::Testing.new("domain_vim_pattern")
 
@@ -118,6 +124,14 @@ module DomainVimPatternTest
       ["an uppercase letter in a collection counts", ["[F]oo", "foo", true, true], "none"]
     ]) do |input|
       probe(input[0], input[1], input[2], input[3])
+    end
+
+    # Rows are [label, [text, delimiter byte], end byte].
+    t.table([
+      ["a slash in a collection does not end the pattern", ["[/]/", 47], 3],
+      ["a collection of a multibyte character ends after it", ["[\u00E9]/x", 47], 4]
+    ]) do |input|
+      pattern_end(input[0], input[1])
     end
 
     t.assert_equal("a\\.b\\*c\\/\\\\", P.escape("a.b*c/\\"), "escape for a literal search")

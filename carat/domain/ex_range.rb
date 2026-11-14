@@ -1,5 +1,6 @@
 require_relative "selection"
 require_relative "messages"
+require_relative "utf8"
 
 module Carat
   module Domain
@@ -42,7 +43,7 @@ module Carat
         start = 0
         size = text.bytesize
         while start <= size
-          comma = text.byteindex(",", start)
+          comma = text.byteindex(",", Utf8.boundary(text, start))
           stop = comma.nil? ? size : comma
           number = address(text.byteslice(start, stop - start).to_s.strip, row, line_count, selection)
           return refused(NO_MARK) if number == -2

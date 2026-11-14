@@ -317,6 +317,9 @@ module UseCasesPluginFilesTest
     ]) do |r|
       r.is_a?(Carat::PluginApi::Response) ? [r.ok, r.message, r.lines] : r
     end
+    files.put("binary.bin", "a\n\x80b\n")
+    r = fs.host.read_file("/w/binary.bin", 2)
+    t.assert_equal([true, ["a", "\x80b"]], [r.ok, r.lines], "read_file reads a line that starts with a continuation byte")
 
     # The live prompt and close_prompt (API 2.5).
     session = editor

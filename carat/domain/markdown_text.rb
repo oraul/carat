@@ -50,7 +50,7 @@ module Carat
         len = body.bytesize
         start = 0
         while start <= len && doc.count < ROW_LIMIT
-          found = body.byteindex("\n", start)
+          found = body.byteindex("\n", Utf8.boundary(body, start))
           stop = found.nil? ? len : found.to_i
           line = ControlText.line(body.byteslice(start, stop - start).to_s, RAW_LIMIT)
           start = stop + 1
@@ -274,7 +274,7 @@ module Carat
             open = true
             i += 1
           elsif b == 0x5D && open && text.getbyte(i + 1).to_i == 0x28 && closes
-            found = text.byteindex(")", i + 2)
+            found = text.byteindex(")", Utf8.boundary(text, i + 2))
             open = false
             if found.nil?
               closes = false

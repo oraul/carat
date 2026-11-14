@@ -43,6 +43,7 @@ module DomainRpcFramerTest
       ["the name in any case and a Content-Type header", ["content-type: x\r\nCONTENT-LENGTH:3\r\n\r\nabc"], ["abc"]],
       ["the length counts bytes", ["Content-Length: 4\r\n\r\n\"é\""], ["\"é\""]],
       ["an empty body", ["Content-Length: 0\r\n\r\n"], [""]],
+      ["a header line that starts with a continuation byte", ["Content-Type: x\r\n\x80y: z\r\nContent-Length: 1\r\n\r\n1"], ["1"]],
       ["a missing length refuses", ["X: 1\r\n\r\nabc"], ["refused"]],
       ["a length that is not digits refuses", ["Content-Length: 1x\r\n\r\nab"], ["refused"]],
       ["ten digits refuse", ["Content-Length: 1234567890\r\n\r\n"], ["refused"]],

@@ -469,7 +469,7 @@ Files:
 - `carat/domain/cell.rb`: `Cell`, a value view of one cell for tests.
 - `carat/domain/start_art.rb`: `StartArt`, the start screen's six frames and wordmark computed once from the gem's legend, Unicode in the theme's groups or ASCII in Normal; `from_plain`, `none`, `paint` (centred in a window, the wordmark alone when it does not fit).
 - `carat/domain/start_screen.rb`: `StartScreen` record (`showing`, `step`, `started`, `art`); `start`, `animating?`, `due?`, `advance`, `wait`, `dismiss`, `paint`; the input controller advances it on the clock and dismisses it on a key, the frame presenter paints it over the current window.
-- `carat/domain/utf8.rb`: `Utf8`; `size_at` (RFC 3629, every other byte one U+FFFD character, as `String#length` counts), `code_at`, `codes`, `scalar?`; decodes by walking bytes.
+- `carat/domain/utf8.rb`: `Utf8`; `size_at` (RFC 3629, every other byte one U+FFFD character, as `String#length` counts), `code_at`, `codes`, `scalar?`, `boundary` (the offset `byteindex` takes, past continuation bytes); decodes by walking bytes.
 - `carat/domain/display_width.rb`: `DisplayWidth`; `of`, `of_char`, `text_width`, `cell`, `code_of`, `column`, `col_at`, `private_use?`, `control?`; `bytes_within`, `cut`, and `fit` cut a menu's text by cells and pad it, never by a negative count; the private use areas are one cell wide.
 - `carat/domain/decoded_line.rb`: `DecodedLine`, a line's code points and display columns; `decode`, `plain?`, `code`, `col`, `width`, `index_at`.
 - `carat/domain/identity_table.rb`: `IdentityTable`, keyed by object identity; `find`, `store`, `clear`.

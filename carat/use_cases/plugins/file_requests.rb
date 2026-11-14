@@ -1,6 +1,7 @@
 require_relative "../../plugin_api"
 require_relative "../../ports/file_port"
 require_relative "../files/probe_path"
+require_relative "../../domain/utf8"
 require_relative "../files/make_path"
 require_relative "../files/rename_path"
 require_relative "../files/delete_path"
@@ -116,7 +117,7 @@ module Carat
         at = 0
         size = text.bytesize
         while at < size && lines.length < rows
-          stop = text.byteindex("\n", at)
+          stop = text.byteindex("\n", Domain::Utf8.boundary(text, at))
           stop = size if stop.nil?
           finish = stop
           finish -= 1 if finish > at && text.getbyte(finish - 1).to_i == 13

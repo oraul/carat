@@ -49,6 +49,11 @@ ok   U+E000
 ok   U+10FFFF
 ok   0x110000
 ok   negative
+ok   an ASCII byte is a boundary
+ok   the continuation bytes of a character are skipped
+ok   lone continuation bytes are skipped
+ok   the end of the text is a boundary
+ok   an offset past the end stays
 ok   empty text has no pieces
 ok   one line
 ok   a trailing newline gives an empty last piece
@@ -63,4 +68,5 @@ ok   split agrees with String#split on valid text
 ok   an absolute path
 ok   a relative path keeps a leading ..
 ok   a name that is not UTF-8
-domain_utf8: 65 passed, 0 failed
+ok   a name that starts with a continuation byte
+domain_utf8: 71 passed, 0 failed

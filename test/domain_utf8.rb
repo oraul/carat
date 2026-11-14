@@ -64,6 +64,11 @@ module DomainUtf8Test
     Carat::PluginApi::Paths.segments(value.to_s)
   end
 
+  #: (untyped, untyped) -> Integer
+  def self.boundary(text, i)
+    D::Utf8.boundary(text.to_s, i.to_i)
+  end
+
   #: (untyped) -> bool
   def self.scalar?(value)
     D::Utf8.scalar?(value.to_i)
@@ -161,6 +166,17 @@ module DomainUtf8Test
       scalar?(code)
     end
 
+    # The offset byteindex takes: rows are [label, [text, i], offset].
+    t.table([
+      ["an ASCII byte is a boundary", ["ab", 1], 1],
+      ["the continuation bytes of a character are skipped", ["\u00E9!", 1], 2],
+      ["lone continuation bytes are skipped", ["a\x80\xBFb", 1], 3],
+      ["the end of the text is a boundary", ["a\x80", 1], 2],
+      ["an offset past the end stays", ["a", 3], 3]
+    ]) do |input|
+      boundary(input[0], input[1])
+    end
+
     # TextLines.split answers what split("\n", -1) answers on valid text
     # and splits text that is not UTF-8, which split refuses.
     t.table([
@@ -190,7 +206,8 @@ module DomainUtf8Test
     t.table([
       ["an absolute path", "/a/./b/../c", ["a", "c"]],
       ["a relative path keeps a leading ..", "../x//y/", ["..", "x", "y"]],
-      ["a name that is not UTF-8", "/proj/caf\xE9/\xF4\x90\x80\x80.md", ["proj", "caf\xE9", "\xF4\x90\x80\x80.md"]]
+      ["a name that is not UTF-8", "/proj/caf\xE9/\xF4\x90\x80\x80.md", ["proj", "caf\xE9", "\xF4\x90\x80\x80.md"]],
+      ["a name that starts with a continuation byte", "/a/\x80b", ["a", "\x80b"]]
     ]) do |path|
       segments(path)
     end
