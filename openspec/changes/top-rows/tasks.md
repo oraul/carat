@@ -15,4 +15,4 @@
 
 ## 4. Docs and checks
 
-- [ ] 4.1 Update `README.md` (the winbar example) and `docs/codebase-map.md` (frame, tab bar, winbar, status bar lines); run `make bench SCENARIOS=lh-winbar`, `make gates`, and `make spec-validate`
+- [x] 4.1 Update `README.md` (the winbar example) and `docs/codebase-map.md` (frame, tab bar, winbar, status bar lines); run `make bench SCENARIOS=lh-winbar`, `make gates`, and `make spec-validate`
