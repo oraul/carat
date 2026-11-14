@@ -11,8 +11,8 @@
 
 ## 3. Palette rows
 
-- [ ] 3.1 Store each match's field in `carat/domain/palette.rb` from `FollowPalette#filter`, and lay rows out as name (30 cells), description, and key on the right in `carat/use_cases/discovery/follow_palette.rb`; prove with `test/editor_palette.rb` (A 29-character name is whole, The key in caret notation on the right, A key of wide characters, A key with combining marks)
-- [ ] 3.2 Give the palette buffer one style per shown row with the description and match tokens in the Pmenu groups; prove with `test/editor_palette.rb` (A matched name's letters in PmenuMatch, The selected row's match in PmenuMatchSel, A description match is marked in its column)
+- [x] 3.1 Store each match's field in `carat/domain/palette.rb` from `FollowPalette#filter`, and lay rows out as name (30 cells), description, and key on the right in `carat/use_cases/discovery/follow_palette.rb`; prove with `test/editor_palette.rb` (A 29-character name is whole, The key in caret notation on the right, A key of wide characters, A key with combining marks)
+- [x] 3.2 Give the palette buffer one style per shown row with the description and match tokens in the Pmenu groups; prove with `test/editor_palette.rb` (A matched name's letters in PmenuMatch, The selected row's match in PmenuMatchSel, A description match is marked in its column)
 
 ## 4. Completion popup
 

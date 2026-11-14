@@ -6,6 +6,7 @@ require_relative "../carat/plugins/hello/plugin"
 # with every other test in one program; the guard at the end runs it when
 # the file is compiled on its own (make test-one).
 module EditorPaletteTest
+  H = Carat::Domain::Highlight
   # A session on a.txt with the default configuration, the keys typed.
   def self.session(keys)
     files = Carat::Doubles::MemoryFiles.new
@@ -59,6 +60,51 @@ module EditorPaletteTest
       i += 1
     end
     ""
+  end
+
+  # The text width of the topmost float.
+  def self.width_of(h)
+    floats = h.state.tab.floats
+    floats.at(floats.count - 1).window.width
+  end
+
+  # The cell where the text starts in the float's row that starts with
+  # the name, -1 for none.
+  def self.cell_of(h, name, text)
+    row = row_of(h, name)
+    at = row.index(text.to_s)
+    return -1 if at.nil?
+    Carat::Domain::DisplayWidth.text_width(row[0, at].to_s, 0)
+  end
+
+  # The index of the float's row that starts with the name, -1 for none.
+  def self.index_of(h, name)
+    rows = lines(h)
+    i = 0
+    while i < rows.length
+      return i if rows[i].to_s.start_with?(name.to_s + " ")
+      i += 1
+    end
+    -1
+  end
+
+  # The group, without its layer, of the cell at col of the float's row.
+  def self.group_at(h, row, col)
+    floats = h.state.tab.floats
+    window = floats.at(floats.count - 1).window
+    H.base(h.frame.hl_at(window.row + row - window.top, window.col + col))
+  end
+
+  # Whether a cell of the float's row from col to before stop is drawn in
+  # PmenuMatch or PmenuMatchSel.
+  def self.marked?(h, row, col, stop)
+    c = col
+    while c < stop
+      g = group_at(h, row, c)
+      return true if g == H::POPUP_MENU_MATCH || g == H::POPUP_MENU_MATCH_SELECTED
+      c += 1
+    end
+    false
   end
 
   # The cells of the float's row that starts with the name and where its
@@ -150,15 +196,21 @@ module EditorPaletteTest
     h = session("<Space>p")
     t.assert_equal(">", h.message_row[0, 1], "the prompt is >")
     t.assert_equal(h.assembly.actions.names[0], name_at(h, 0), "the first row is the first action registered")
+    # Scenario: The key in caret notation on the right. The name's
+    # column is 30 cells, the description follows, and the key stands in
+    # the last 12 cells.
     h = session("<Space>pwindow.split")
-    t.assert_equal("window.split                <C-w>s      Split window", row_of(h, "window.split"), "a row holds the name, the key, and the description")
+    t.assert_equal([0, 30, width_of(h) - 12, true], [row_of(h, "window.split").index("window.split"), cells_of(h, "window.split", "Split window")[1], cell_of(h, "window.split", "^Ws"), row_of(h, "window.split").end_with?("^Ws")], "a row holds the name, the description, and the key in caret notation on the right")
     h = session("<Space>ppalette.open")
-    t.assert_equal("palette.open                <Space>p    Command palette", row_of(h, "palette.open"), "the palette shows its own key")
+    t.assert_equal([30, width_of(h) - 12], [cells_of(h, "palette.open", "Command palette")[1], cell_of(h, "palette.open", "<Space>p")], "the palette shows its own key")
+    # Scenario: A 29-character name is whole.
+    h = session("<Space>pinner_single")
+    t.assert_equal(["textobject.inner_single_quote ", false], [row_of(h, "textobject.inner_single_quote")[0, 30].to_s, row_of(h, "textobject.inner_single_quote")[30, 1].to_s == " "], "A 29-character name is whole, its description at cell 30")
 
     # An enabled plugin's action is listed with its key and its manifest's
     # description; a disabled plugin's is not.
     h = plugin_session("", "<Space>pgreet")
-    t.assert_equal("plugin.hello.greet          <Space>hh   Show a greeting", row_of(h, "plugin.hello.greet")[0, 55], "an enabled plugin's action shows its key and its manifest's description")
+    t.assert_equal([30, width_of(h) - 12], [cells_of(h, "plugin.hello.greet", "Show a greeting")[1], cell_of(h, "plugin.hello.greet", "<Space>hh")], "an enabled plugin's action shows its key and its manifest's description")
     h = plugin_session("plugin.hello.enabled false\n", "<Space>pgreet")
     t.assert_equal("", row_of(h, "plugin.hello.greet"), "a disabled plugin's action is left out")
 
@@ -188,24 +240,42 @@ module EditorPaletteTest
     h = session("<Space>pzzzzqx<CR>")
     t.assert_equal([0, :normal, 1], [h.state.tab.floats.count, h.mode, h.window_count], "Enter with nothing selected only closes")
 
-    # A bound key wider than its column, of wide or combining characters,
-    # (insert.newline has no key of its own in normal mode) is cut by cells
-    # and padded so the description starts at cell 40.
+    # Scenarios: A key of wide characters, A key with combining marks. A
+    # bound key wider than its column (insert.newline has no key of its
+    # own in normal mode) is cut by cells; the description starts at cell
+    # 30 and the key 12 cells before the row's end.
     # Rows are [label, project line, [the row's description column, the
-    # editor still running]].
+    # key's column from the row's end, the editor still running]].
     t.table([
-      ["a key of seven wide characters", "keymap.normal あいうえおかき insert.newline\n", [40, true]],
-      ["a key of twelve wide characters", "keymap.normal あいうえおかきくけこさし insert.newline\n", [40, true]],
-      ["a key of letters with combining marks", "keymap.normal a\u0301b\u0301c\u0301d\u0301e\u0301f\u0301g\u0301 insert.newline\n", [40, true]],
-      ["a key of wide characters with combining marks", "keymap.normal あ\u0301い\u0301う\u0301え\u0301お\u0301か\u0301 insert.newline\n", [40, true]]
+      ["a key of seven wide characters", "keymap.normal あいうえおかき insert.newline\n", [30, 12, true]],
+      ["a key of twelve wide characters", "keymap.normal あいうえおかきくけこさし insert.newline\n", [30, 12, true]],
+      ["a key of letters with combining marks", "keymap.normal a\u0301b\u0301c\u0301d\u0301e\u0301f\u0301g\u0301 insert.newline\n", [30, 12, true]],
+      ["a key of wide characters with combining marks", "keymap.normal あ\u0301い\u0301う\u0301え\u0301お\u0301か\u0301 insert.newline\n", [30, 12, true]]
     ]) do |project|
       h = plugin_session(project, "<Space>pinsert.newline")
-      [cells_of(h, "insert.newline", "Break line")[1], h.mode == :cmdline]
+      key = project.to_s.split(" ")[1].to_s
+      [cells_of(h, "insert.newline", "Break line")[1], width_of(h) - cell_of(h, "insert.newline", key[0, 2].to_s), h.mode == :cmdline]
     end
     h = plugin_session("keymap.normal あいうえおかき insert.newline\n", "<Space>pinsert.newline")
-    t.assert_equal(true, row_of(h, "insert.newline").include?("あいうえお "), "a wide key keeps the characters that fit its column")
+    t.assert_equal([true, false], [row_of(h, "insert.newline").end_with?("あいうえお"), row_of(h, "insert.newline").include?("か")], "a wide key keeps the characters that fit its column")
     h = plugin_session("keymap.normal a\u0301b\u0301c\u0301 insert.newline\n", "<Space>pinsert.newline")
     t.assert_equal(true, row_of(h, "insert.newline").include?("a\u0301b\u0301c\u0301"), "a combining key keeps every mark with its letter")
+
+    # Scenario: The selected row's match in PmenuMatchSel. On the
+    # selected window.split row "wsp" marks the w, s, and p of the name.
+    h = session("<Space>pwsp")
+    at = index_of(h, "window.split")
+    h.type("<C-n>" * at)
+    t.assert_equal([H::POPUP_MENU_MATCH_SELECTED, H::POPUP_MENU_MATCH_SELECTED, H::POPUP_MENU_MATCH_SELECTED, H::POPUP_MENU_SELECTED, H::POPUP_MENU_EXTRA_SELECTED], [group_at(h, at, 0), group_at(h, at, 7), group_at(h, at, 8), group_at(h, at, 1), group_at(h, at, 30)], "The selected row's match in PmenuMatchSel, its description in PmenuExtraSel, the rest in PmenuSel")
+    # Scenario: A matched name's letters in PmenuMatch.
+    h.type(at == 0 ? "<C-n>" : "<C-p>")
+    t.assert_equal([H::POPUP_MENU_MATCH, H::POPUP_MENU_MATCH, H::POPUP_MENU_MATCH, H::POPUP_MENU, H::POPUP_MENU_EXTRA], [group_at(h, at, 0), group_at(h, at, 7), group_at(h, at, 8), group_at(h, at, 1), group_at(h, at, 30)], "A matched name's letters in PmenuMatch, the description in PmenuExtra, the rest in Pmenu")
+    # Scenario: A description match is marked in its column.
+    h = session("<Space>pvertically")
+    at = index_of(h, "window.vsplit")
+    t.assert_equal([false, true], [marked?(h, at, 0, 30), marked?(h, at, 30, width_of(h) - 12)], "A description match is marked in its column, not in the name's")
+    h = session("<Space>p")
+    t.assert_equal(false, marked?(h, 0, 0, width_of(h)), "with an empty text nothing is marked")
 
     h = session("<Space>p<Esc>:")
     t.assert_equal(":", h.message_row[0, 1], "the colon prompt returns after the palette")

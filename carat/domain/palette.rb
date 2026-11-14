@@ -4,17 +4,19 @@ module Carat
     # arrays of names (an action name, or ":" and an ex command's full
     # name), keys (the first normal-mode key, "" for none), and
     # descriptions; matches, the indexes of the entries the typed text
-    # matches, best first; selected, the index into matches of the chosen
+    # matches, best first, with fields, for each match, 0 when its name's
+    # score ranked it and 1 when its description's did; selected, the index into matches of the chosen
     # row; query, the typed text the matches were filtered for; active
     # while its prompt holds the command line; float_id, its float, 0 for
     # none, with shown_query and shown_selected, what the float shows; and
     # chosen, the action Enter picked for HandleKey to run, "" for none.
     # A Struct record built with no arguments.
-    class Palette < Struct.new(:names, :keys, :descriptions, :matches, :selected, :query, :active, :float_id, :shown_query, :shown_selected, :chosen, keyword_init: true)
+    class Palette < Struct.new(:names, :keys, :descriptions, :matches, :fields, :selected, :query, :active, :float_id, :shown_query, :shown_selected, :chosen, keyword_init: true)
       # @rbs @names: Array[String]
       # @rbs @keys: Array[String]
       # @rbs @descriptions: Array[String]
       # @rbs @matches: Array[Integer]
+      # @rbs @fields: Array[Integer]
       # @rbs @selected: Integer
       # @rbs @query: String
       # @rbs @active: bool
@@ -34,6 +36,7 @@ module Carat
         self.keys = []
         self.descriptions = []
         self.matches = []
+        self.fields = []
         self.selected = 0
         self.query = ""
         self.active = false
@@ -57,6 +60,7 @@ module Carat
         self.keys = []
         self.descriptions = []
         self.matches = []
+        self.fields = []
         self.selected = 0
         self.query = ""
         self.shown_query = ""
