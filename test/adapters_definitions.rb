@@ -203,7 +203,7 @@ module AdaptersDefinitionsTest
     out
   end
 
-  # The text of row 0's cells drawn selected: the current buffer's tab,
+  # The text of row 0's cells drawn selected: the current buffer's tab, its icon included,
   # empty when no tab is selected or row 0 is no tab row.
   #: (Rig) -> String
   def self.selected_tab(r)
@@ -500,10 +500,10 @@ module AdaptersDefinitionsTest
     # target lies, and an outside file already listed is shown, not
     # copied.
     t.table([
-      ["gd to another project file shows its tab, selected", ["", "/project/b.rb"], " r a.rb    r b.rb | b.rb | b.rb 1:4 | 2"],
-      ["gd outside the project shows the target's tab, selected", ["", "/gems/c.rb"], " r a.rb    r c.rb | c.rb | /gems/c.rb 1:4 | 2"],
-      ["gd to a project file linked out of the project shows its tab, selected", ["link", "/project/out.rb"], " r a.rb    r out.rb | out.rb | out.rb 1:4 | 2"],
-      ["gd to an outside file already listed shows that buffer and its tab", ["listed", "/gems/c.rb"], " r a.rb    r c.rb | c.rb | /gems/c.rb 1:4 | 2"]
+      ["gd to another project file shows its tab, selected", ["", "/project/b.rb"], " r a.rb    r b.rb | r b.rb | b.rb 1:4 | 2"],
+      ["gd outside the project shows the target's tab, selected", ["", "/gems/c.rb"], " r a.rb    r c.rb | r c.rb | /gems/c.rb 1:4 | 2"],
+      ["gd to a project file linked out of the project shows its tab, selected", ["link", "/project/out.rb"], " r a.rb    r out.rb | r out.rb | out.rb 1:4 | 2"],
+      ["gd to an outside file already listed shows that buffer and its tab", ["listed", "/gems/c.rb"], " r a.rb    r c.rb | r c.rb | /gems/c.rb 1:4 | 2"]
     ]) { |input| ghost_case(input[0].to_s, input[1].to_s) }
     r = defining_with("option.jumptab keep\n")
     asked(r, "gd", location("/gems/c.rb", 1, 4))
@@ -516,7 +516,7 @@ module AdaptersDefinitionsTest
     r.type(":ls =<CR>")
     t.assert_equal("  2 %a=  \"/gems/c.rb\"                   line 2", r.message, "Filtered by the read-only flag")
     r.type(":bd<CR>")
-    t.assert_equal([" r a.rb    r c.rb | a.rb | a.rb 3:0", " r a.rb    r c.rb | c.rb | /gems/c.rb 1:4", "a.rb 3:0 | 1"], [back, again, "#{r.where} | #{r.assembly.buffers.count}"], "The read-only target's tab selects and closes like the others")
+    t.assert_equal([" r a.rb    r c.rb | r a.rb | a.rb 3:0", " r a.rb    r c.rb | r c.rb | /gems/c.rb 1:4", "a.rb 3:0 | 1"], [back, again, "#{r.where} | #{r.assembly.buffers.count}"], "The read-only target's tab selects and closes like the others")
 
     # A jump takes over the tab it leaves (option.jumptab replace, as
     # shipped): rows are [label, [user lines, keys before, target, keys
@@ -546,7 +546,7 @@ module AdaptersDefinitionsTest
     asked(r, "gd", location("/project/b.rb", 1, 4))
     jumped = "#{r.frame.row_text(0)} | #{selected_tab(r)}"
     r.type("<C-o>")
-    t.assert_equal([" r b.rb    r x.rb | b.rb", " r a.rb    r x.rb | a.rb"], [jumped, "#{r.frame.row_text(0)} | #{selected_tab(r)}"], "The painted tab row leaves the buffer a jump left out and Ctrl-O paints it back in place")
+    t.assert_equal([" r b.rb    r x.rb | r b.rb", " r a.rb    r x.rb | r a.rb"], [jumped, "#{r.frame.row_text(0)} | #{selected_tab(r)}"], "The painted tab row leaves the buffer a jump left out and Ctrl-O paints it back in place")
     r = defining
     asked(r, "gd", location("/project/b.rb", 1, 4))
     r.type(":ls<CR>")

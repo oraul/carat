@@ -7,7 +7,8 @@ module Carat
   module Adapters
     # Paints a file window's winbar, the row above its text: one space,
     # the buffer's path (the scratch title or [No Name]), and, when the
-    # shared SymbolRequest holds that buffer's symbols, SEPARATOR and the
+    # shared SymbolRequest holds that buffer's symbols, SEPARATOR (or
+    # ASCII_SEPARATOR under option.icons ascii) and the
     # name of each symbol spanning the window's cursor row in the order
     # held, outermost first, then a space; the current window's in
     # TabLineSel, the others' in TabLine, the rest of the row in
@@ -15,7 +16,8 @@ module Carat
     # already stored, so a winbar costs no object per frame.
     class Winbar
       NO_NAME = "[No Name]"
-      SEPARATOR = " > "
+      SEPARATOR = " › "
+      ASCII_SEPARATOR = " > "
 
       attr_reader :symbols #: Domain::SymbolRequest
 
@@ -24,9 +26,10 @@ module Carat
         @symbols = symbols
       end
 
-      # Paints the winbar of the window on the frame row.
-      #: (Domain::Frame, Domain::Window, Integer, bool) -> void
-      def paint(frame, window, row, current)
+      # Paints the winbar of the window on the frame row, the symbols
+      # joined by ASCII_SEPARATOR when ascii.
+      #: (Domain::Frame, Domain::Window, Integer, bool, bool) -> void
+      def paint(frame, window, row, current, ascii)
         x = window.col
         limit = x + window.width
         frame.blank(row, x, limit)
@@ -39,10 +42,11 @@ module Carat
         ask = @symbols
         if ask.held?(buffer.id)
           cursor_row = window.cursor.row
+          separator = ascii ? ASCII_SEPARATOR : SEPARATOR
           i = 0
           while i < ask.count && c < limit
             if ask.spans?(i, cursor_row)
-              c = frame.put_within(row, c, SEPARATOR, hl, limit)
+              c = frame.put_within(row, c, separator, hl, limit)
               c = frame.put_within(row, c, ask.name_at(i), hl, limit)
             end
             i += 1

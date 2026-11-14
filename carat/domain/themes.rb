@@ -64,7 +64,7 @@ module Carat
       SPECIAL = 34
       IDENTIFIER = 35
       ESCAPE = 36
-      # Text on a strong accent, the mode pills': the palette's background
+      # Text on a strong accent, the mode pills' and the selected tab's: the palette's background
       # color, kept when the terminal paints its own background.
       ON_STRONG = 37
       ROLES = 38
@@ -86,7 +86,7 @@ module Carat
         Highlight::NON_TEXT, FAINT, NONE, 0, 0,
         Highlight::STATUS_NC, DIM, PANEL_NC, 0, 0,
         Highlight::TAB_LINE, DIM, PANEL_NC, 0, 0,
-        Highlight::TAB_LINE_SELECTED, FG, NONE, BOLD, BOLD,
+        Highlight::TAB_LINE_SELECTED, ON_STRONG, BLUE, BOLD, BOLD,
         Highlight::TAB_LINE_FILL, NONE, PANEL_NC, 0, 0,
         Highlight::VISUAL, NONE, SELECTION, 0, REVERSE,
         Highlight::SIGN_COLUMN, YELLOW, NONE, 0, 0,

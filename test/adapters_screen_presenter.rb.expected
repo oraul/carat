@@ -32,7 +32,7 @@ ok   inactive status lines have the theme's StatusLineNC
 ok   tab line labels have TabLine
 ok   the selected label has TabLineSel
 ok   the tab line fill has TabLineFill
-ok   the tab line sequences at 256 colors
+ok   the tab line sequences at 256 colors, the selected one bold on the accent
 ok   the selection has the Visual background
 ok   only the changed part of a row is written, from its column
 ok   the unchanged part of the row is not written

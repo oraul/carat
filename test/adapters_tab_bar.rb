@@ -75,7 +75,7 @@ module AdaptersTabBarTest
 
     # One row per case, 40 columns wide.
     t.table([
-      ["a tab per file with its icon and modified dot", [["*src/a.rb", "b.txt"], 1, 1], " ◈ a.rb ●  • b.txt"],
+      ["two tabs, one modified: a tab per file with its icon and modified dot", [["*src/a.rb", "b.txt"], 1, 1], " ◈ a.rb ●  • b.txt"],
       ["an unnamed buffer", [["", "b.txt"], 0, 1], " • [No Name]    • b.txt"],
       ["a scratch buffer has no tab", [["a.txt", "!", "b.txt"], 0, 1], " • a.txt    • b.txt"],
       ["an unlisted buffer has no tab", [["~a.txt", "b.txt", "c.txt"], 1, 1], " • b.txt    • c.txt"],
@@ -98,10 +98,25 @@ module AdaptersTabBarTest
       ["a leading unlisted buffer is neither shown nor counted", 1, " • f1.txt    • f2.txt    5>"]
     ]) { |current| paint(setup(unlisted, current, 1), 40).row_text(0) }
 
-    # Groups: the current tab selected with its icon's file-icon group,
-    # the others plain, the counts plain, the rest the fill.
+    # Groups: the current tab selected, its icon included, the others plain, the counts plain, the rest the fill.
     f = paint(setup(["*src/a.rb", "b.txt"], 0, 2), 40)
-    t.assert_equal([H::TAB_LINE_SELECTED, H::ICON_RUBY, H::TAB_LINE_SELECTED, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE_FILL, H::TAB_LINE_SELECTED, H::TAB_LINE], [f.cell(0, 0).hl, f.cell(0, 1).hl, f.cell(0, 8).hl, f.cell(0, 10).hl, f.cell(0, 11).hl, f.cell(0, 30).hl, f.cell(0, 35).hl, f.cell(0, 38).hl], "selected tab, ruby icon, plain tab and its icon, fill, and the tab-page numbers")
+    t.assert_equal([H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE_FILL, H::TAB_LINE_SELECTED, H::TAB_LINE], [f.cell(0, 0).hl, f.cell(0, 1).hl, f.cell(0, 8).hl, f.cell(0, 10).hl, f.cell(0, 11).hl, f.cell(0, 30).hl, f.cell(0, 35).hl, f.cell(0, 38).hl], "selected tab and its icon, plain tab and its icon, fill, and the tab-page numbers")
+
+    # The modified mark keeps the tab's width: the second tab starts at
+    # the same column whether the first is modified, in every icon set.
+    t.table([
+      ["nerd", "nerd", [true, true]],
+      ["unicode", "unicode", [true, true]],
+      ["ascii", "ascii", [true, true]]
+    ]) do |set|
+      plain = setup(["a.rb", "b.txt"], 1, 1)
+      marked = setup(["*a.rb", "b.txt"], 1, 1)
+      plain.state.options.icons = set.to_s
+      marked.state.options.icons = set.to_s
+      before = paint(plain, 40).row_text(0)
+      after = paint(marked, 40).row_text(0)
+      [before.index("b.txt") == after.index("b.txt"), before != after]
+    end
     f = paint(setup(ten, 5, 1), 40)
     t.assert_equal([H::TAB_LINE, H::TAB_LINE], [f.cell(0, 1).hl, f.cell(0, 29).hl], "the counts are plain")
 

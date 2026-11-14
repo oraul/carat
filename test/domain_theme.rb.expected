@@ -61,6 +61,14 @@ ok   dark_plus at 24 bits
 ok   dark_plus at 256 colors
 ok   light_plus at 24 bits
 ok   light_plus at 256 colors
+ok   one_dark on the theme background: the selected tab reads at a glance
+ok   one_dark on the terminal background: the selected tab reads at a glance
+ok   one_light on the theme background: the selected tab reads at a glance
+ok   one_light on the terminal background: the selected tab reads at a glance
+ok   dark_plus on the theme background: the selected tab reads at a glance
+ok   dark_plus on the terminal background: the selected tab reads at a glance
+ok   light_plus on the theme background: the selected tab reads at a glance
+ok   light_plus on the terminal background: the selected tab reads at a glance
 ok   one_dark on the cursor line at 24 bits
 ok   one_dark on the cursor line at 256 colors
 ok   one_light on the cursor line at 24 bits
@@ -123,4 +131,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 125 passed, 0 failed
+domain_theme: 133 passed, 0 failed

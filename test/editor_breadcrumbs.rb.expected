@@ -31,8 +31,9 @@ ok   a request unanswered for two seconds is cancelled by its id
 ok   its late answer changes nothing and the same text is not asked again
 ok   a changed text is asked again
 ok   an error answer holds no symbols
+ok   inside a method of a class the symbols are joined by the single angle quote
 ok   a flat answer shows the symbols spanning the cursor row in its order
 ok   names lose their controls and are cut to 40 bytes, a bad item is skipped but its children kept, and 500 symbols are kept
 ok   symbols nested deeper than 8 levels are not read
 ok   stop forgets the symbol request in flight
-editor_breadcrumbs: 37 passed, 0 failed
+editor_breadcrumbs: 38 passed, 0 failed

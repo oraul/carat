@@ -139,7 +139,7 @@ Carat writes 24-bit colors when the terminal sets `COLORTERM` to `truecolor` or 
 
 Each tab page has a left and a right sidebar and a bottom panel. A plugin's view opens in one of them, under a header row naming the views opened there; a sidebar keeps its width and the panel its height when windows are equalized, and `<leader>ls`, `<leader>lr`, and `<leader>lp` hide and show them.
 
-With two or more file windows each shows a winbar on its first row: its file's path and, when the language server offers document symbols, the class and method the cursor is in, as `a.rb > Foo > bar`. `option.breadcrumbs always` shows it on a single window too and `never` turns it off.
+With two or more file windows each shows a winbar on its first row: its file's path and, when the language server offers document symbols, the class and method the cursor is in, as `a.rb › Foo › bar` (`a.rb > Foo > bar` under `option.icons ascii`), the current window's on the accent the selected buffer tab shares. `option.breadcrumbs always` shows it on a single window too and `never` turns it off.
 
 `<leader>e` (Space, then `e`) or `:Explorer` opens a file tree in the left sidebar, 30 columns wide, rooted at the directory you started Carat in, with the current file revealed and marked; the same key focuses the tree when it is open and closes it when it is focused. `:ExplorerFind` reveals the current file in the tree. Inside the tree:
 

@@ -1,4 +1,4 @@
-ok   a tab per file with its icon and modified dot
+ok   two tabs, one modified: a tab per file with its icon and modified dot
 ok   an unnamed buffer
 ok   a scratch buffer has no tab
 ok   an unlisted buffer has no tab
@@ -12,6 +12,9 @@ ok   a wider row starts its run as early as the current tab allows
 ok   a row narrower than the counts still shows the current tab, cut
 ok   unlisted buffers are neither shown nor counted
 ok   a leading unlisted buffer is neither shown nor counted
-ok   selected tab, ruby icon, plain tab and its icon, fill, and the tab-page numbers
+ok   selected tab and its icon, plain tab and its icon, fill, and the tab-page numbers
+ok   nerd
+ok   unicode
+ok   ascii
 ok   the counts are plain
-adapters_tab_bar: 16 passed, 0 failed
+adapters_tab_bar: 19 passed, 0 failed

@@ -182,6 +182,27 @@ module DomainThemeTest
     [H::SEARCH, H::INC_SEARCH, H::CURRENT_SEARCH].all? { |id| theme.bg(id) >= 0 && theme.bg16(id) >= 0 }
   end
 
+  # What keeps a theme's selected tab from reading at a glance: its
+  # background below 3:1 from TabLine's or TabLineFill's at 24 bits or at
+  # 256 colors, the same basic background as theirs, or bold missing on
+  # TabLineSel or present on TabLine at either depth.
+  #: (Carat::Domain::Theme) -> Array[String]
+  def self.tab_glance(theme)
+    out = []
+    sel = H::TAB_LINE_SELECTED
+    [H::TAB_LINE, H::TAB_LINE_FILL].each do |id|
+      ratio = contrast(theme.bg(sel), theme.bg(id))
+      out << "#{H::NAMES[id]} #{ratio}" if ratio < 300
+      ratio = contrast(shown_256(theme.bg(sel), theme.bg256(sel)), shown_256(theme.bg(id), theme.bg256(id)))
+      out << "#{H::NAMES[id]} at 256 #{ratio}" if ratio < 300
+      out << "#{H::NAMES[id]} at 16" if theme.bg16(sel) == theme.bg16(id)
+    end
+    bold = D::Theme::BOLD
+    out << "TabLineSel not bold" if (theme.attr(sel) & bold) == 0 || (theme.attr16(sel) & bold) == 0
+    out << "TabLine bold" if (theme.attr(H::TAB_LINE) & bold) != 0 || (theme.attr16(H::TAB_LINE) & bold) != 0
+    out
+  end
+
   # The options of text read as the project file.
   def self.theme_of(text)
     config = D::Config.new
@@ -273,6 +294,15 @@ module DomainThemeTest
       ["light_plus at 24 bits", ["light_plus", "24"], []],
       ["light_plus at 256 colors", ["light_plus", "256"], []]
     ]) { |input| low_contrast(D::Themes.find(input[0].to_s, "theme"), input[1].to_s == "256", 0) }
+
+    # Every palette's selected tab stands out: TabLineSel on its accent
+    # at 3:1 from the tab row, another basic color, and bold, on either
+    # background.
+    PALETTES.each do |name|
+      ["theme", "terminal"].each do |background|
+        t.assert_equal([], tab_glance(D::Themes.find(name, background)), "#{name} on the #{background} background: the selected tab reads at a glance")
+      end
+    end
 
     # On the cursor line, over CursorLine's background where a group has
     # none of its own, every group keeps 3:1.

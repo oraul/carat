@@ -228,6 +228,15 @@ module Carat
         col + count
       end
 
+      # put_digits only when every digit fits before column limit; returns
+      # the column after them, or col unchanged when they do not fit. The
+      # one digit fit of the bars.
+      #: (Integer, Integer, Integer, Integer, Integer) -> Integer
+      def put_digits_within(row, col, number, hl, limit)
+        return col if col + Frame.digits(number) > limit
+        put_digits(row, col, number, hl)
+      end
+
       # Writes number right-aligned in field cells followed by one space,
       # as a line number gutter shows it, keeping only the first visible
       # cells of those field + 1 and stopping at the right edge.
