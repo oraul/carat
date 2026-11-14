@@ -4941,3 +4941,33 @@ One clear way to do each thing: the boundary rule is applied by hand at seven `b
 - Where: `carat/domain/utf8.rb:54`; `carat/plugin_api.rb:347` repeats the loop inline. Sprint-3 quality review of `spinel-rebump`.
 - Why it matters: a new `byteindex(needle, offset)` call that skips `Utf8.boundary` raises under the pinned Spinel on a continuation byte, and only memory keeps the rule.
 - Fix outline: a `test/lint.rb` rule refusing a `byteindex` with an offset argument outside `Utf8.boundary`, the `plugin_api.rb` copy allowed. Queue item `spinel-workarounds`.
+
+### Restrict the open-pr edit path to same-repository pull requests (security Low, confidence 4)
+
+- Where: `tools/open_pr.sh:190`
+- Why it matters: the new edit path picks the open pull request by bare branch name, and `gh pr list --head` matches the ref name for any owner, so a fork's pull request with the same head ref name opened before open-pr runs gets pr.md's title and body written onto it with PR_TOKEN instead of the delivery's own being opened. It needs a trusted push and only changes pull request text; the reviewed code and the merge gates are unaffected.
+- Fix outline: have `gh pr list` return `number` and `isCrossRepository`, keep only same-repository pull requests (refuse when there are none or more than one), then call `gh pr view` and `gh pr edit` with that number instead of the branch name.
+
+### One title and body equality helper in open_pr.sh (quality advisory)
+
+- Where: `tools/open_pr.sh:186`
+- Why it matters: the title and body equality test is written twice, in the early exit and in the read-back loop, so the two can drift.
+- Fix outline: one `same_text DIR` helper used by both.
+
+### Drop the duplicated contributor size test (quality advisory)
+
+- Where: `tools/tools_test.sh:2499`
+- Why it matters: the contributor size test repeats the new docs_lint budget and greps its literal line, so a budget change must be made twice.
+- Fix outline: rely on the docs-lint budget and drop the test, or keep only the size check.
+
+### Read the scan red right after a body push as pending (quality advisory)
+
+- Where: `.claude/workflows/deliver-change.js:1094` and `.claude/workflows/deliver-change.js:1102`
+- Why it matters: after the body push the merger can read the synchronize scan red before open-pr edits the text and reruns scan (spin skips a records-only diff, so checks finish fast); with bodyFixed set that red becomes a fix round.
+- Fix outline: have body mode poll until the pull request text equals pr.md, or read a body-only red right after a body fix as pending once.
+
+### One settlePackage helper for the wait and package branches (quality advisory)
+
+- Where: `.claude/workflows/deliver-change.js:1018`
+- Why it matters: the wait and package branches repeat the same pr, stop, and phaseDone tail, and the step is named merge when the run already stopped.
+- Fix outline: one `settlePackage(done)` helper for both branches and a skip step word for a stopped run.
