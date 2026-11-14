@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: A float is placed by its spec over the layout
-A float SHALL show its buffer in a box of the given text rows and columns, padded by one column on each side and bordered when asked. Its top-left corner SHALL be the given offset from the editor's top-left cell (anchor "editor") or from the cursor cell of the window under it (anchor "cursor"). The box SHALL stay inside the screen above the message row, less its margin when it is editor-anchored: its size cut to fit first, then its position moved in. The windows under it SHALL keep their size and their text.
+A float SHALL show its buffer in a box of the given text rows and columns, padded by one column on each side and bordered when asked, its top-left corner at the given offset from the editor's top-left cell ("editor") or the cursor cell ("cursor"). The box SHALL stay on the screen above the message row, less its margin when editor-anchored: its size cut first, then moved in. The windows under it SHALL keep their size and text.
 
 #### Scenario: Editor-anchored float with a border and a title
 - **WHEN** a float of 2 rows by 10 columns with a border and the title "doc" is opened at row 2, column 4 of the editor in a 40 by 12 editor
