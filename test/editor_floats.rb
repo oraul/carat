@@ -227,6 +227,7 @@ module EditorFloatsTest
     shown = h.screen
     h.resize(12, 40)
     t.assert_equal(shown, h.screen, "the float's text equals a full repaint after the delete")
+    # Scenario: Refused requests.
     t.table([
       ["an unknown anchor", ["window", 1, 1, 50], "No anchor window: editor or cursor"],
       ["no rows", ["editor", 0, 1, 50], "A float needs at least one row and one column"],
