@@ -2,8 +2,9 @@
 
 ## 1. The pin
 
-- [ ] 1.1 Set `SPINEL_REF` in the `Makefile` to 6af548c9be5683902cb1abc8c2cb6f307b7e7a74 and regenerate `tools/spinel/spinel_rt_responds_generated.h` with `make spinel-header` using the 6b43fe94 toolchain. Verify that the diff is only the generator's output and that `make -s spinel-rev` prints the new commit.
-- [ ] 1.2 Build the new toolchain with `make toolchain`. Verify that `make doctor` reports the stub refusing `ruby`.
+- [x] 1.1 Set `SPINEL_REF` in the `Makefile` to 6af548c9be5683902cb1abc8c2cb6f307b7e7a74 and regenerate `tools/spinel/spinel_rt_responds_generated.h` with `make spinel-header` using the 6b43fe94 toolchain. Verify that the diff is only the generator's output and that `make -s spinel-rev` prints the new commit.
+  - Result: `make spinel-header` with the 6b43fe94 toolchain writes a header identical to the committed one, so `tools/spinel/spinel_rt_responds_generated.h` is unchanged; `make -s spinel-rev` prints 6af548c9be5683902cb1abc8c2cb6f307b7e7a74. The comments of `Utf8.boundary` and `PluginApi::Paths.segments` now name 84aa303b1, the commit that brings the rule, after the pin.
+- [x] 1.2 Build the new toolchain with `make toolchain`. Verify that `make doctor` reports the stub refusing `ruby`.
 
 ## 2. Carat at the new pin
 
