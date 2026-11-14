@@ -40,30 +40,59 @@ module DomainFloatLayerTest
   def self.main
     t = Carat::Testing.new("domain_float_layer")
 
-    # Placement: the box at the offset, cut to fit, then moved in.
+    # Placement: the box at the offset, cut to fit, then moved inside the
+    # margin.
     t.assert_equal([2, 6, 4, 18, 3, 6, 2, 10], placed(spec("editor", 2, 4, 2, 10, true, 50), 0, 0, 11, 40), "a bordered box sits at its offset, the text inside its border and a column of padding")
     t.assert_equal([4, 5, 5, 15, 4, 6, 1, 8], placed(spec("cursor", 1, 0, 1, 8, false, 50), 3, 5, 11, 40), "a cursor offset counts from the anchor cell")
-    t.assert_equal([0, 11, 0, 40, 1, 2, 9, 36], placed(spec("editor", 5, 50, 30, 100, true, 50), 0, 0, 11, 40), "a box larger than the area is cut to it and moved in")
-    t.assert_equal([8, 11, 32, 40, 9, 34, 1, 4], placed(spec("cursor", 1, 0, 1, 4, true, 50), 9, 38, 11, 40), "a box past the bottom right corner moves up and left")
+    # Scenario: A float too large for the screen is cut and moved in.
+    t.assert_equal([1, 10, 1, 39, 2, 3, 7, 34], placed(spec("editor", 5, 50, 30, 100, true, 50), 0, 0, 11, 40), "a box larger than the area is cut to it less the margin and moved in")
+    # Scenario: A float keeps its margin at the corner.
+    t.assert_equal([7, 10, 31, 39, 8, 33, 1, 4], placed(spec("editor", 10, 38, 1, 4, true, 50), 0, 0, 11, 40), "a box past the bottom right corner moves up and left inside the margin")
+    # Scenario: A cursor float follows its anchor to the edge.
+    t.assert_equal([8, 11, 32, 40, 9, 34, 1, 4], placed(spec("cursor", 1, 0, 1, 4, true, 50), 9, 38, 11, 40), "a cursor box follows its anchor to the area's edge")
+    t.assert_equal([1, 4, 1, 15], placed(spec("editor", 0, 0, 1, 10, true, 50), 0, 0, 11, 40)[0, 4], "a box at the corner keeps a cell from the top and the left")
+    # Scenario: A screen too small for the margin.
     t.assert_equal([0, 3, 0, 5, 1, 2, 1, 1], placed(spec("editor", 0, 0, 3, 3, true, 50), 0, 0, 1, 2), "an area too small for the border keeps a one-cell text area and overflows it")
+    t.assert_equal([[0, 3, 0, 5], [1, 4, 1, 13]], [placed(spec("editor", 0, 0, 1, 10, true, 50), 0, 0, 3, 6)[0, 4], placed(spec("editor", 0, 0, 1, 10, true, 50), 0, 0, 5, 14)[0, 4]], "an area too small for a one-cell box and its margin uses the margin cells, a larger one cuts the box to keep it")
 
     # Scenario: The frame rule.
-    room = [D::FloatWindow.text_room(40, true, "rounded"), D::FloatWindow.text_room(40, true, "none"), D::FloatWindow.text_room(40, false, "rounded")]
-    t.assert_equal([36, 38, 38], room, "the widest text on a 40-column screen: bordered, bordered under none, without a border")
+    room = [D::FloatWindow.text_room(40, "rounded"), D::FloatWindow.text_room(40, "none")]
+    t.assert_equal([34, 36], room, "the widest text on a 40-column screen: bordered, bordered under none")
     t.assert_equal([4, 2], [D::FloatWindow.frame_width(1), D::FloatWindow.frame_width(0)], "a frame is the padding and the border on each side")
-    t.assert_equal([0, 3, 0, 40, 1, 2, 1, 36], placed(spec("editor", 0, 0, 1, D::FloatWindow.text_room(40, true, "rounded"), true, 50), 0, 0, 11, 40), "a float of the widest text fills the screen and is not cut")
+    t.assert_equal([1, 4, 1, 39, 2, 3, 1, 34], placed(spec("editor", 0, 0, 1, D::FloatWindow.text_room(40, "rounded"), true, 50), 0, 0, 11, 40), "a float of the widest text fills the screen less its margin and is not cut")
+
+    # Scenario: A centered box under both borders.
+    centered = D::FloatWindow.new(window: D::Window.new(buffer: D::Buffer.new(lines: ["x"], path: nil, line_ending: "\n")), spec: spec("editor", 1, 30, 2, 10, true, 50))
+    centered.centered = true
+    centered.place(0, 0, 11, 40, true)
+    edged = [centered.box_left, centered.box_right]
+    centered.place(0, 0, 11, 40, false)
+    t.assert_equal([[13, 27], [14, 26]], [edged, [centered.box_left, centered.box_right]], "a centered box has as many columns on each side, with and without an edge")
+    centered.place(0, 0, 11, 60, true)
+    t.assert_equal([23, 37], [centered.box_left, centered.box_right], "placed again on a wider area it is centered there")
+    # Scenario: The edge follows the last placement.
+    float = D::FloatWindow.new(window: D::Window.new(buffer: D::Buffer.new(lines: ["x"], path: nil, line_ending: "\n")), spec: spec("editor", 2, 4, 2, 10, true, 50))
+    float.place(0, 0, 11, 40, true)
+    first = [float.edge, float.box_right - float.box_left]
+    float.place(0, 0, 11, 40, false)
+    t.assert_equal([[1, 14], [0, 12]], [first, [float.edge, float.box_right - float.box_left]], "the edge reads 1 and then 0, the box two columns narrower")
 
     # Spec checks.
     t.table([
-      ["editor is an anchor", ["editor", 1, 1, 0], ""],
-      ["cursor is an anchor", ["cursor", 1, 1, 1000], ""],
-      ["window is not", ["window", 1, 1, 0], "No anchor window: editor or cursor"],
-      ["no rows", ["editor", 0, 1, 0], "A float needs at least one row and one column"],
-      ["no columns", ["editor", 1, 0, 0], "A float needs at least one row and one column"],
-      ["a negative z", ["editor", 1, 1, -1], "No z order -1: 0 to 1000"],
-      ["a z past the top", ["editor", 1, 1, 1001], "No z order 1001: 0 to 1000"]
+      ["editor is an anchor", ["editor", 0, 0, 1, 1, 0], ""],
+      ["cursor is an anchor", ["cursor", -3, 2, 1, 1, 1000], ""],
+      ["window is not", ["window", 0, 0, 1, 1, 0], "No anchor window: editor or cursor"],
+      ["no rows", ["editor", 0, 0, 0, 1, 0], "A float needs at least one row and one column"],
+      ["no columns", ["editor", 0, 0, 1, 0, 0], "A float needs at least one row and one column"],
+      ["a negative z", ["editor", 0, 0, 1, 1, -1], "No z order -1: 0 to 1000"],
+      ["a z past the top", ["editor", 0, 0, 1, 1, 1001], "No z order 1001: 0 to 1000"],
+      ["offsets at the bounds", ["editor", -10_000, 10_000, 1, 1, 0], ""],
+      ["a row past the top", ["editor", 10_001, 0, 1, 1, 0], "No offset 10001: -10000 to 10000"],
+      ["a column past the bottom", ["cursor", 0, -10_001, 1, 1, 0], "No offset -10001: -10000 to 10000"],
+      ["the row first", ["editor", -20_000, 20_000, 1, 1, 0], "No offset -20000: -10000 to 10000"],
+      ["an offset near the integer maximum", ["editor", 0, 4_611_686_018_427_387_903, 1, 1, 0], "No offset 4611686018427387903: -10000 to 10000"]
     ]) do |row|
-      D::FloatSpec.refusal(row[0].to_s, row[1].to_i, row[2].to_i, row[3].to_i)
+      D::FloatSpec.refusal(row[0].to_s, row[1].to_i, row[2].to_i, row[3].to_i, row[4].to_i, row[5].to_i)
     end
     t.assert_equal([7, 9, 3], [spec("editor", 1, 2, 3, 4, true, 5).moved(7, 9).row, spec("editor", 1, 2, 3, 4, true, 5).moved(7, 9).col, spec("editor", 1, 2, 3, 4, true, 5).moved(7, 9).height], "moving keeps the size")
 

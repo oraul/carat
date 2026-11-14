@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: A float is placed by its spec over the layout
-A float SHALL show its buffer in a box of the given text rows and columns, padded by one column on each side and bordered when asked. Its top-left corner SHALL be the given offset from the editor's top-left cell (anchor "editor") or from the cursor cell of the window under it (anchor "cursor"). The box SHALL stay inside the screen above the message row less its margin: its size cut to fit first, then its position moved in. The windows under it SHALL keep their size and their text.
+A float SHALL show its buffer in a box of the given text rows and columns, padded by one column on each side and bordered when asked. Its top-left corner SHALL be the given offset from the editor's top-left cell (anchor "editor") or from the cursor cell of the window under it (anchor "cursor"). The box SHALL stay inside the screen above the message row, less its margin when it is editor-anchored: its size cut to fit first, then its position moved in. The windows under it SHALL keep their size and their text.
 
 #### Scenario: Editor-anchored float with a border and a title
 - **WHEN** a float of 2 rows by 10 columns with a border and the title "doc" is opened at row 2, column 4 of the editor in a 40 by 12 editor
@@ -32,11 +32,11 @@ A float's frame SHALL be its padding, one column on each side, and its border, o
 
 #### Scenario: The signature and the peek fit a narrow screen
 - **WHEN** the screen is 40 columns wide and a signature label or a peeked definition line is longer than the screen
-- **THEN** the float's text is 34 columns wide and shown whole, its right border in the column before the screen's last
+- **THEN** the float's text is 34 columns wide and shown whole inside its border
 
 #### Scenario: The key hints use the border columns without an edge
-- **WHEN** the screen is 36 by 6 and "<Space>x" shows nine hints of 10 cells, or a hint longer than the screen, once under `rounded` and once under `none`
-- **THEN** the hints' text is at most 30 columns wide under `rounded` and at most 32 under `none`, the long hint cut to that width
+- **WHEN** the screen is 38 by 8 and "<Space>x" shows nine hints of 10 cells, or a hint longer than the screen, once under `rounded` and once under `none`
+- **THEN** the hints' text is at most 32 columns wide under `rounded`, fitting 2 columns of hints, and at most 34 under `none`, fitting 3, the long hint cut to that width, and every hint row laid out is shown
 
 #### Scenario: The frame rule
 - **WHEN** a float's widest text is asked for a 40-column screen under `rounded` and under `none`
@@ -45,11 +45,15 @@ A float's frame SHALL be its padding, one column on each side, and its border, o
 ## ADDED Requirements
 
 ### Requirement: A float keeps a margin from the screen's edges
-Every float's box SHALL keep one cell from each side of the screen above the message row, so it never covers the first or the last column, the top row, or the row above the message row. When the screen cannot hold the box and its margin on an axis, the box SHALL use the margin cells of that axis.
+An editor-anchored float's box SHALL keep one cell from each side of the screen above the message row, so it never covers the first or the last column, the top row, or the row above the message row. A cursor-anchored float SHALL follow its anchor cell to the screen's edge, so a popup's labels stay under the word. The box SHALL be cut to keep its margin, and only when the screen cannot hold a one-cell text area with its frame and margin on an axis SHALL the box use the margin cells of that axis.
 
 #### Scenario: A float keeps its margin at the corner
-- **WHEN** a bordered float of 1 row by 4 columns is placed one row below a cursor cell at row 9, column 38 of a 40-column area of 11 rows
+- **WHEN** a bordered float of 1 row by 4 columns is placed at row 10, column 38 of the editor in a 40-column area of 11 rows
 - **THEN** its box moves up and left to rows 7 to 9 and columns 31 to 38, one cell inside the area's last row and column
+
+#### Scenario: A cursor float follows its anchor to the edge
+- **WHEN** the same float is placed one row below a cursor cell at row 9, column 38
+- **THEN** its box spans rows 8 to 10 and columns 32 to 39, the area's last row and column
 
 #### Scenario: A screen too small for the margin
 - **WHEN** a bordered float of 3 rows by 3 columns is placed in an area of 1 row by 2 columns

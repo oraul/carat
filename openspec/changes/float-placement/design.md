@@ -14,7 +14,7 @@ Non-goals: the key hints panel, the palette's columns, and the completion popup'
 
 ### The margin lives in place
 
-`FloatWindow::MARGIN = 1`. `place` cuts the height to `rows - 2 * MARGIN - 2 * edge` and the width to `cols - 2 * MARGIN - frame_width(edge)` (at least one cell, as before), then `shift` keeps the corner between `MARGIN` and `room - MARGIN - size`. When a box with its margin is larger than the area on an axis (a screen too small), `shift` keeps it between 0 and `room`, as before, so a tiny screen loses the margin, not the float. The area stays the screen above the message row, so the margin rows are the top row (the buffer tabs when shown) and the row above the message row (the status bar). Alternative: a margin per caller (the palette's row 1, the finder's `MARGIN`); rejected, since the user asked it of every float and `place` is the one place every float passes.
+`FloatWindow::MARGIN = 1`. For an editor-anchored float `place` cuts the height to `rows - 2 * MARGIN - 2 * edge` and the width to `cols - 2 * MARGIN - frame_width(edge)` (at least one cell, as before), then `shift` keeps the corner between `MARGIN` and `room - MARGIN - size`. A cursor-anchored float (the completion popup, hover, signature) keeps a margin of 0: it is attached to text, and a margin would move the popup's labels off the word under them at the first column and cut its tenth row near the bottom, as `test/editor_completion.rb` showed; it is only kept on the screen, as before. When a box with its margin is larger than the area on an axis (a screen too small), `shift` keeps it between 0 and `room`, as before, so a tiny screen loses the margin, not the float. The area stays the screen above the message row, so the margin rows are the top row (the buffer tabs when shown) and the row above the message row (the status bar). Alternative: a margin per caller (the palette's row 1, the finder's `MARGIN`); rejected, since the user asked it of every float and `place` is the one place every float passes.
 
 `text_room(cols, style)` is `cols - 2 * MARGIN - frame_width(edge)` with the edge from the style; the border argument is dropped, every caller sizing a bordered float. A float sized to the screen therefore fills the screen less its margin and is never cut by `place`.
 
@@ -41,7 +41,7 @@ Non-goals: the key hints panel, the palette's columns, and the completion popup'
 ## Risks / Trade-offs
 
 - Every float sized to the screen is 2 columns narrower, and a box at an edge moves one cell in: the hover wraps at 74 columns on an 80-column screen instead of 76. This is the margin the user asked for.
-- A cursor-anchored float on the first or last column moves one cell off its anchor.
+- A cursor-anchored float still reaches the screen's edges, as Neovim's popup menu does; its text is sized by the same `text_room`, so it is 2 columns narrower on a narrow screen.
 - A plugin built against 2.5 that computes boxes from `width + 4` still works; it only misses the frame under `none`.
 
 ## Migration Plan

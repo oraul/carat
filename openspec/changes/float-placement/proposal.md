@@ -6,7 +6,7 @@ The user reported (part b of the float report) that floats touch the screen edge
 
 ## What Changes
 
-- Every float keeps a margin of one cell from the screen's edges: `FloatWindow#place` cuts the box to the area less the margin and moves it inside it, so a box never covers the first or last column, the top row (the buffer tabs), or the row above the message row (the status bar), as long as the screen holds the box and its margin; on a screen too small for that the box uses the margin cells.
+- Every editor-anchored float keeps a margin of one cell from the screen's edges: `FloatWindow#place` cuts the box to the area less the margin and moves it inside it, so a box never covers the first or last column, the top row (the buffer tabs), or the row above the message row (the status bar), as long as the screen holds the box and its margin; on a screen too small for that the box uses the margin cells.
 - The widest text a float shows is the screen less its margin and its frame (`FloatWindow.text_room(cols, style)`, the border argument every caller passed as true removed), so the palette, the documentation, signature, and definition floats, and the key hints never lay out a row the placement cuts.
 - A float can be centered: `FloatWindow#centered`, set by the opener, makes `place` compute its column from the box's own width at every arrange, so it is centered at show and again after a resize, under any border style. The palette uses it instead of its fixed column.
 - Notification titles are drawn as float titles are: centered between the corners with a blank on each side, in the severity's group.
@@ -16,7 +16,7 @@ The user reported (part b of the float report) that floats touch the screen edge
 
 Assumptions:
 
-- "Every float keeps a margin" is read as one cell on each side of the area floats are placed in (the screen above the message row); notifications, which are not floats, keep their placement (top right, one column from the right edge, from the row under the buffer tabs).
+- "Every float keeps a margin" is read as one cell on each side of the area floats are placed in (the screen above the message row) for every editor-anchored float (the palette, the key hints, the finder, plugin floats); a cursor-anchored float (the completion popup, hover, signature) follows its anchor cell to the edge as before, so the popup's labels stay under the word; notifications, which are not floats, keep their placement (top right, one column from the right edge, from the row under the buffer tabs).
 - The `FloatOptions` choice: `FloatOptions` has required members, so a new member would be a major version (`docs/architecture.md` section 9.4); centering stays a core placement flag on `FloatWindow` and the frame is a separate host request, keeping 2.x. Plugins get no centering request, which no plugin needs yet.
 - Centering is horizontal only: the palette keeps row 1, the key hints keep their place (their panel is `menu-hints`).
 - The offset bound, 10000 cells each way, is far past any terminal and far from the integer limits.

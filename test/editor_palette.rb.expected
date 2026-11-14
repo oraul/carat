@@ -36,5 +36,7 @@ ok   The palette keeps its right border while the filter shrinks at 60 by 24
 ok   the palette shows every row whole under winborder none at 60 by 24
 ok   The palette keeps its right border while the filter shrinks at 80 by 24
 ok   the palette shows every row whole under winborder none at 80 by 24
-ok   Without an edge the palette uses the border columns
-editor_palette: 39 passed, 0 failed
+ok   Without an edge the palette uses the border columns, the screen less its margin and its padding
+ok   The palette is centered without a border: as many columns left of its box as right
+ok   The palette is centered again after a resize: centered at 120 columns and at 100
+editor_palette: 41 passed, 0 failed

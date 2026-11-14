@@ -590,7 +590,7 @@ module AdaptersDefinitionsTest
     asked(r, "<Space>dd", location("/project/long.rb", 0, 4))
     floats = r.assembly.state.tab.floats
     at = floats.index_of(r.assembly.definition.float_id)
-    t.assert_equal([36, 36, long[0, 36].to_s, "|"], at < 0 ? [] : drawn(r, floats.at(at)), "the peek fits a narrow screen: a long line is 36 columns at 40, its border in the last column")
+    t.assert_equal([34, 34, long[0, 34].to_s, "|"], at < 0 ? [] : drawn(r, floats.at(at)), "the peek fits a narrow screen: a long line is 34 columns at 40, shown whole inside its border")
     t.finish
   end
 end

@@ -83,9 +83,13 @@ module Carat
     #
     # The floating windows of the tab page are painted last, by z, over
     # the windows, the status bar, and the start screen: their text in
-    # NormalFloat (a menu's in Pmenu, its selected row in PmenuSel), a
-    # rounded border in FloatBorder with the title in
-    # Title. A frame keeps the boxes it was painted with; when they
+    # NormalFloat (a menu's in Pmenu, its selected row in PmenuSel) with
+    # a column of padding in the same colors on each side, the border of
+    # option.winborder in FloatBorder (none under none, ASCII when plain
+    # or under option.icons ascii), and the title centered on the top
+    # edge with a blank on each side in FloatTitle. The notifications follow at the top right in the same
+    # border, their severity centered as a title is. A frame keeps the
+    # boxes it was painted with; when they
     # differ from the ones to paint, the frame forgets the window rows the
     # old boxes covered, so those are repainted, and every row a box
     # covers in this frame or in the frame shown is compared cell by cell.
@@ -505,7 +509,7 @@ module Carat
         paint_edge(frame, r, left, last, top, bottom, border)
         if r == top
           level = @notices.level_at(n)
-          frame.put_within(r, left + 1, NOTICE_TITLES[level], plain ? Domain::Highlight::NORMAL : notice_group(level), last)
+          paint_title(frame, r, left, last, NOTICE_TITLES[level], plain ? Domain::Highlight::NORMAL : notice_group(level))
         elsif r != bottom
           text = plain ? Domain::Highlight::NORMAL : Domain::Highlight::NORMAL_FLOAT
           frame.blank(r, left + 1, last)
@@ -690,19 +694,19 @@ module Carat
         top = float.box_top
         paint_edge(frame, r, left, last, top, float.box_bottom - 1, Domain::Highlight::FLOAT_BORDER)
         title = float.spec.title
-        paint_title(frame, r, left, last, title) if r == top && !title.empty?
+        paint_title(frame, r, left, last, title, Domain::Highlight::FLOAT_TITLE) if r == top && !title.empty?
       end
 
       # A title between the corners at left and last, with a blank on each
-      # side, centered and cut to the cells between them, in FloatTitle.
-      #: (Domain::Frame, Integer, Integer, Integer, String) -> void
-      def paint_title(frame, r, left, last, title)
+      # side, centered and cut to the cells between them, in hl: FloatTitle
+      # for a float, the severity's group for a notification.
+      #: (Domain::Frame, Integer, Integer, Integer, String, Integer) -> void
+      def paint_title(frame, r, left, last, title, hl)
         room = last - left - 1
         return if room < 3
         width = Domain::DisplayWidth.text_width(title, 0) + 2
         width = room if width > room
         from = left + 1 + (room - width) / 2
-        hl = Domain::Highlight::FLOAT_TITLE
         frame.put_code(r, from, 0x20, 1, hl)
         stop = frame.put_within(r, from + 1, title, hl, from + width - 1)
         frame.put_code(r, stop, 0x20, 1, hl)

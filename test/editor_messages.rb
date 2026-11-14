@@ -82,12 +82,12 @@ module EditorMessagesTest
     h.type(":messages all<CR>")
     t.assert_equal(H::MESSAGE_ERROR, h.frame.hl_at(11, 0), "the refusal is an error")
 
-    # A warning at the top right of a 60-column screen.
+    # Scenario: A warning shows at the top right of a 60-column screen.
     h = editor(false)
     notify(h, "disk almost full", D::MessageHistory::WARNING)
-    t.assert_equal(["╭Warning───────────╮", "│ disk almost full │", "╰──────────────────╯"], [h.row(0)[39, 20], h.row(1)[39, 20], h.row(2)[39, 20]], "a warning box ends one column before the right edge")
+    t.assert_equal(["╭──── Warning ─────╮", "│ disk almost full │", "╰──────────────────╯"], [h.row(0)[39, 20], h.row(1)[39, 20], h.row(2)[39, 20]], "a warning box ends one column before the right edge")
     t.assert_equal([59, "line 2 of the fi"], [h.row(1).rstrip.length, h.row(1)[4, 16]], "the last column and the window beside the box are kept")
-    t.assert_equal([H::FLOAT_BORDER, H::DIAGNOSTIC_WARN, H::NORMAL_FLOAT], [h.frame.hl_at(0, 39), h.frame.hl_at(0, 40), h.frame.hl_at(1, 41)], "the border, the title in its severity's group, the text in NormalFloat")
+    t.assert_equal([H::FLOAT_BORDER, H::DIAGNOSTIC_WARN, H::DIAGNOSTIC_WARN, H::NORMAL_FLOAT], [h.frame.hl_at(0, 39), h.frame.hl_at(0, 44), h.frame.hl_at(0, 45), h.frame.hl_at(1, 41)], "the border, the title in its severity's group, the text in NormalFloat")
     t.assert_equal(0, h.state.history.to_s.index("disk almost full"), "a notification is kept in the history")
 
     # Keys go on under a notification, and the screen equals a full repaint.
@@ -125,15 +125,15 @@ module EditorMessagesTest
     # Plain under NO_COLOR.
     h = editor(true)
     notify(h, "bundle failed", D::MessageHistory::ERROR)
-    t.assert_equal(["+Error-------------+", "| bundle failed    |", "+------------------+"], [h.row(0)[39, 20], h.row(1)[39, 20], h.row(2)[39, 20]], "a plain box in ASCII, at least 20 columns wide")
+    t.assert_equal(["+----- Error ------+", "| bundle failed    |", "+------------------+"], [h.row(0)[39, 20], h.row(1)[39, 20], h.row(2)[39, 20]], "a plain box in ASCII, at least 20 columns wide")
     t.assert_equal([H::NORMAL, H::NORMAL, H::NORMAL], [h.frame.hl_at(0, 39), h.frame.hl_at(0, 40), h.frame.hl_at(1, 41)], "a plain box is all in Normal")
 
     # A short text keeps the box 20 columns wide, so its title is whole.
     h = editor(false)
     notify(h, "slow", D::MessageHistory::WARNING)
     notify(h, "ok", D::MessageHistory::ERROR)
-    t.assert_equal(["╭Warning───────────╮", "│ slow             │"], [h.row(0)[39, 20], h.row(1)[39, 20]], "a short warning draws its whole title")
-    t.assert_equal(["╭Error─────────────╮", "│ ok               │"], [h.row(3)[39, 20], h.row(4)[39, 20]], "a short error draws its whole title")
+    t.assert_equal(["╭──── Warning ─────╮", "│ slow             │"], [h.row(0)[39, 20], h.row(1)[39, 20]], "a short warning draws its whole title")
+    t.assert_equal(["╭───── Error ──────╮", "│ ok               │"], [h.row(3)[39, 20], h.row(4)[39, 20]], "a short error draws its whole title")
 
     t.finish
   end

@@ -37,7 +37,7 @@ module Carat
         height = up ? above : below
         height = wanted if height > wanted
         return 0 if height < 1
-        limit = Domain::FloatWindow.text_room(state.screen_cols, true, state.options.winborder)
+        limit = Domain::FloatWindow.text_room(state.screen_cols, state.options.winborder)
         limit = WIDTH if limit > WIDTH
         return 0 if limit < 1
         width = Domain::DisplayWidth.text_width(title, 0)

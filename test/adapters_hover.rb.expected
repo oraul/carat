@@ -34,5 +34,5 @@ ok   escape sequences are dropped, nesting capped, rows capped
 ok   no escape reaches the screen
 ok   a marked string with a language is fenced code and at most 16 parts are read
 ok   the joined text stops at 16,384 bytes
-ok   An 80-column hover row shows its last word: wrapped at 76 columns, drawn whole inside the border
+ok   An 80-column hover row shows its last word: wrapped at 74 columns, drawn whole inside the border
 adapters_hover: 37 passed, 0 failed

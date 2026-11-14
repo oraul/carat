@@ -111,7 +111,7 @@ module Carat
         palette = @palette
         room = state.screen_rows - 5
         return if room < 1 || state.screen_cols < 8
-        width = Domain::FloatWindow.text_room(state.screen_cols, true, state.options.winborder)
+        width = Domain::FloatWindow.text_room(state.screen_cols, state.options.winborder)
         width = MAX_WIDTH if width > MAX_WIDTH
         matches = palette.matches
         height = matches.length
@@ -121,10 +121,11 @@ module Carat
         top = palette.selected - height + 1
         top = 0 if top < 0
         lines = rows(top, height, width)
-        spec = Domain::FloatSpec.new(anchor: "editor", row: 1, col: (state.screen_cols - width - Domain::FloatWindow.frame_width(1)) / 2, height: height, width: width, border: true, title: TITLE, z: Z)
+        spec = Domain::FloatSpec.new(anchor: "editor", row: 1, col: 0, height: height, width: width, border: true, title: TITLE, z: Z)
         buffer = Domain::Buffer.new(lines: lines, path: nil, line_ending: "\n")
         buffer.owner = Domain::Palette::OWNER
         float = Domain::FloatWindow.new(window: Domain::Window.new(buffer: buffer), spec: spec)
+        float.centered = true
         float.selected = matches.empty? ? -1 : palette.selected - top
         return unless @open_float.call(state, float, false).ok
         palette.float_id = float.id
