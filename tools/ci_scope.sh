@@ -29,14 +29,16 @@
 set -u
 
 # answer RUN REASON: the reason goes on one line whatever it holds, so
-# GITHUB_OUTPUT keeps one run= and one reason= line.
+# GITHUB_OUTPUT keeps one run= and one reason= line. printf, never echo:
+# dash's echo expands backslash escapes, and git quotes a path holding a
+# line break as "x\ny", which echo would turn back into a line break.
 answer() {
   reason=$(printf '%s' "$2" | tr '\r\n' '  ')
   if [ -n "${GITHUB_OUTPUT:-}" ]; then
-    echo "run=$1" >> "$GITHUB_OUTPUT"
-    echo "reason=$reason" >> "$GITHUB_OUTPUT"
+    printf 'run=%s\n' "$1" >> "$GITHUB_OUTPUT"
+    printf 'reason=%s\n' "$reason" >> "$GITHUB_OUTPUT"
   fi
-  echo "run=$1: $reason"
+  printf 'run=%s: %s\n' "$1" "$reason"
   exit 0
 }
 

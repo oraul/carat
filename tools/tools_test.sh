@@ -173,6 +173,18 @@ expect "ci_scope: a push whose number query answers an error body runs" 0 "^run=
 expect "ci_scope: an error body leaves GITHUB_OUTPUT one run and one reason line" 0 "^well-formed$" well_formed
 expect "ci_scope: a push whose every query answers an error body runs" 0 "^run=true: tools/x[.]sh is code" err_scope ""
 expect "ci_scope: every query failing leaves GITHUB_OUTPUT one run and one reason line" 0 "^well-formed$" well_formed
+# A code path holding a line break, which git --name-only quotes as
+# "tools/x\nrun=false.sh": the reason that names it stays one line.
+fresh linebreak
+nl_path=$(printf 'tools/x\nrun=false.sh')
+echo code > "$nl_path"
+commit "chore: add a path with a line break"
+nl_scope() {
+  rm -f "$work/scope-out"
+  GITHUB_OUTPUT="$work/scope-out" EVENT=pull_request REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
+}
+expect "ci_scope: a path with a line break runs" 0 '^run=true: "tools/x\\nrun=false[.]sh" is code' nl_scope
+expect "ci_scope: a path with a line break leaves GITHUB_OUTPUT one run and one reason line" 0 "^well-formed$" well_formed
 
 
 # A pull request's merge commit against its newest earlier head whose spin
