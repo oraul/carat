@@ -10,6 +10,9 @@ module Carat
     class FloatSpec < Data.define(:anchor, :row, :col, :height, :width, :border, :title, :z)
       ANCHORS = ["editor", "cursor"].freeze
       Z_MAX = 1000
+      # The largest offset a row or a column may have either way, far past
+      # any screen and far from the integer limits the anchor is added to.
+      OFFSET_MAX = 10_000
 
       # @rbs @anchor: String
       # @rbs @row: Integer
@@ -38,12 +41,24 @@ module Carat
       end
 
       # Why the values cannot make a float, "" when they can.
-      #: (String, Integer, Integer, Integer) -> String
-      def self.refusal(anchor, height, width, z)
+      #: (String, Integer, Integer, Integer, Integer, Integer) -> String
+      def self.refusal(anchor, row, col, height, width, z)
         return "No anchor #{anchor}: editor or cursor" unless ANCHORS.include?(anchor)
+        offset = offset_refusal(row, col)
+        return offset unless offset.empty?
         return "A float needs at least one row and one column" if height < 1 || width < 1
         return "No z order #{z}: 0 to #{Z_MAX}" if z < 0 || z > Z_MAX
         ""
+      end
+
+      # Why a row and column offset cannot place a float, "" when they
+      # can: each lies within OFFSET_MAX either way, the row checked first.
+      #: (Integer, Integer) -> String
+      def self.offset_refusal(row, col)
+        bad = row
+        bad = col if row.abs <= OFFSET_MAX
+        return "" if bad.abs <= OFFSET_MAX
+        "No offset #{bad}: -#{OFFSET_MAX} to #{OFFSET_MAX}"
       end
     end
   end

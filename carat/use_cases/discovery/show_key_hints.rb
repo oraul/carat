@@ -116,11 +116,12 @@ module Carat
       end
 
       # Lays the entries out in as many columns as the room above the
-      # message row needs, leaving out those that do not fit, and opens
-      # the float at the bottom right of the editor.
+      # message row, less the float margin and the border, needs, leaving
+      # out those that do not fit, and opens the float at the bottom right
+      # of the editor; a screen with no text column left opens none.
       #: (Domain::EditorState, String, Array[String]) -> void
       def open(state, title, rows)
-        room = state.screen_rows - 3
+        room = state.screen_rows - 3 - 2 * Domain::FloatWindow::MARGIN
         return if room < 1 || state.screen_cols < 6
         width = 1
         i = 0
@@ -129,7 +130,8 @@ module Carat
           width = w if w > width
           i += 1
         end
-        limit = Domain::FloatWindow.text_room(state.screen_cols, true, state.options.winborder)
+        limit = Domain::FloatWindow.text_room(state.screen_cols, state.options.winborder)
+        return if limit < 1
         width = limit if width > limit
         height = rows.length < room ? rows.length : room
         columns = (rows.length + height - 1) / height

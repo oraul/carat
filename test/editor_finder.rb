@@ -216,9 +216,9 @@ module EditorFinderTest
     h = configured("", "<Space>ffbet", 120)
     top = h.row(1)
     t.assert_equal([[1, 60, 60, 119], "╮╭"], [boxes(h), top[59, 2].to_s], "The finder boxes share an edge: the list from column 1, the preview from the column after it to one before the right edge")
-    # Scenario: The finder boxes keep a gap without an edge.
+    # Scenario: The finder boxes share an edge without a border.
     h = configured("option.winborder none\n", "<Space>ffbet", 120)
-    t.assert_equal([1, 58, 60, 117], boxes(h), "The finder boxes keep a gap without an edge: each box loses its edge columns")
+    t.assert_equal([1, 60, 60, 119], boxes(h), "The finder boxes share an edge without a border: the host's frame closes the gap")
     t.finish
   end
 end

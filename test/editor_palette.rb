@@ -221,7 +221,18 @@ module EditorPaletteTest
     h = sized("option.winborder none\n", 24, 60)
     h.type("<Space>p")
     floats = h.state.tab.floats
-    t.assert_equal([58, 58], [floats.at(0).spec.width, floats.at(0).window.width], "Without an edge the palette uses the border columns")
+    t.assert_equal([56, 56], [floats.at(0).spec.width, floats.at(0).window.width], "Without an edge the palette uses the border columns, the screen less its margin and its padding")
+    # Scenario: The palette is centered without a border.
+    float = floats.at(0)
+    t.assert_equal([1, 1, false], [float.box_left, 60 - float.box_right, float.edged?], "The palette is centered without a border: as many columns left of its box as right")
+    # Scenario: The palette is centered again after a resize.
+    h = sized("", 36, 120)
+    h.type("<Space>p")
+    float = h.state.tab.floats.at(0)
+    wide = [float.box_left, 120 - float.box_right]
+    h.resize(30, 100)
+    float = h.state.tab.floats.at(0)
+    t.assert_equal([[13, 13], [3, 3], 1], [wide, [float.box_left, 100 - float.box_right], h.state.tab.floats.count], "The palette is centered again after a resize: centered at 120 columns and at 100")
     t.finish
   end
 end

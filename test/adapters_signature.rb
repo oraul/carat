@@ -319,7 +319,7 @@ module AdaptersSignatureTest
     label = "foo(alpha, bravo, charlie, delta, echo, foxtrot)"
     answer(r, help(label, ["alpha", "bravo"], 0))
     f = float(r)
-    t.assert_equal([36, 36, label[0, 36].to_s, "|"], f.nil? ? [] : drawn(r, f), "The signature and the peek fit a narrow screen: a long label is 36 columns at 40, its border in the last column")
+    t.assert_equal([34, 34, label[0, 34].to_s.rstrip, "|"], f.nil? ? [] : drawn(r, f), "The signature and the peek fit a narrow screen: a long label is 34 columns at 40, shown whole inside its border")
     t.finish
   end
 end

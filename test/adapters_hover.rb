@@ -382,7 +382,7 @@ module AdaptersHoverTest
     first = words[0, 12].to_a.join(" ")
     floats = r.assembly.state.tab.floats
     float = floats.at(floats.index_of(r.assembly.hover.float_id))
-    t.assert_equal([first, [71, 71, first, "|"]], [rows[0].to_s, drawn(r, float)], "An 80-column hover row shows its last word: wrapped at 76 columns, drawn whole inside the border")
+    t.assert_equal([first, [71, 71, first, "|"]], [rows[0].to_s, drawn(r, float)], "An 80-column hover row shows its last word: wrapped at 74 columns, drawn whole inside the border")
     t.finish
   end
 end

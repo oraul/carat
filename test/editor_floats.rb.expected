@@ -6,8 +6,8 @@ ok   Esc closes the topmost float
 ok   closing dirties the rows it covered and the message row only
 ok   Esc with no float does nothing
 ok   a cursor float starts below the cursor cell
-ok   a float larger than the screen fills it above the message row
-ok   its bottom border is on the row above the message row
+ok   a float larger than the screen fills it less its margin
+ok   its bottom border is above the margin row, the top row, the status bar, and the first column left to the window
 ok   a higher z is drawn over a lower one opened later
 ok   Esc closes the topmost, the higher z
 ok   entering makes the float current with the cursor in it
@@ -42,7 +42,10 @@ ok   an unknown anchor
 ok   no rows
 ok   a z out of range
 ok   a tab page holds sixteen floats
-ok   the plugin API is 2.5
+ok   the plugin API is 2.6
+ok   An offset out of range is refused when a float opens
+ok   and when it moves, the float staying where it was
+ok   The frame under each border: the edge, padding, margin, and a 10-column text's box
 ok   frame rounded at 40 by 12: ╭─── doc ────╮ / │ one        │ / │ two        │ / ╰────────────╯
 ok   frame rounded at 120 by 36: ╭────────────────── a longer title ──────────────────╮ / │ one                                                │ / │ three                                              │ / ╰────────────────────────────────────────────────────╯
 ok   frame single at 40 by 12: ┌─── doc ────┐ / │ one        │ / │ two        │ / └────────────┘
@@ -60,4 +63,5 @@ ok   with winborder none a bordered float has no edge and no title, its padding 
 ok   the padding of a float without an edge is in NormalFloat
 ok   a long title is cut between the corners with a blank on each side
 ok   a notification box is drawn in the border style
-editor_floats: 62 passed, 0 failed
+ok   A notification title is centered like a float title: the severity and its blanks in its group
+editor_floats: 66 passed, 0 failed

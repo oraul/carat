@@ -7,6 +7,7 @@ require_relative "../../domain/keymap"
 require_relative "../../domain/position"
 require_relative "../../domain/float_spec"
 require_relative "../../domain/float_window"
+require_relative "../../domain/border_style"
 require_relative "../../domain/window"
 require_relative "../../domain/messages"
 require_relative "../files/open_file"
@@ -25,7 +26,8 @@ module Carat
     # windows, focusing a window, opening a file in a window, in a split,
     # or in a tab page, the windows a plugin opens files in, and floats
     # over the layout (OpenFloat, CloseFloat), which a plugin moves and
-    # closes only when it opened them. Windows
+    # closes only when it opened them, and the frame those floats take.
+    # Windows
     # are addressed by id, 0 for the current one, in any tab page. The
     # rules are the core use cases': side windows go through
     # OpenSideWindow, files through OpenFile, SplitWindow, and OpenTab. The plugin link has checked that
@@ -228,7 +230,7 @@ module Carat
       # lines in a scratch buffer the plugin owns, outside the buffer list.
       #: (String, PluginApi::FloatOptions, Array[String]) -> PluginApi::WindowResponse
       def open_float(name, options, lines)
-        why = Domain::FloatSpec.refusal(options.anchor.to_s, options.height.to_i, options.width.to_i, options.z.to_i)
+        why = Domain::FloatSpec.refusal(options.anchor.to_s, options.row.to_i, options.col.to_i, options.height.to_i, options.width.to_i, options.z.to_i)
         return PluginApi::WindowResponse.failure(why) unless why.empty?
         buffer = Domain::Buffer.new(lines: Boundary.copied_lines(lines), path: nil, line_ending: "\n")
         buffer.owner = name
@@ -241,12 +243,23 @@ module Carat
         PluginApi::WindowResponse.success("", float.id)
       end
 
+      # Moves the plugin's float to another offset, refused out of range.
       #: (String, Integer, Integer, Integer) -> PluginApi::Response
       def move_float(name, id, row, col)
+        why = Domain::FloatSpec.offset_refusal(row, col)
+        return PluginApi::Response.failure(why) unless why.empty?
         index = own_float_tab(name, id)
         return PluginApi::Response.failure("No float #{id}") if index < 0
         @tabs.tab_at(index).floats.move(window_or_current(id), row, col)
         PluginApi::Response.success("", 0)
+      end
+
+      # The frame a float of the plugin would have, bordered or not, under
+      # the current border style: its edge, padding, and margin cells.
+      #: (String, bool) -> PluginApi::FloatFrame
+      def float_frame(name, border)
+        edge = border && Domain::BorderStyle.edged?(@state.options.winborder) ? 1 : 0
+        PluginApi::FloatFrame.success(edge, Domain::FloatWindow::PAD, Domain::FloatWindow::MARGIN)
       end
 
       #: (String, Integer) -> PluginApi::Response

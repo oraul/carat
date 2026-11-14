@@ -13,11 +13,18 @@ module Carat
     # selected, drawn in PmenuSel and its other rows in Pmenu; any other
     # float has -1 there. A float may mark the display columns mark_from
     # up to mark_to of its buffer's first row (the active parameter of a
-    # signature), drawn in Visual; -1 for none. A Struct record: mutable,
-    # with a reader and a writer per member.
-    class FloatWindow < Struct.new(:window, :spec, :selected, :mark_from, :mark_to, :edge, keyword_init: true)
+    # signature), drawn in Visual; -1 for none. A centered float (the
+    # palette) has its column computed by place from its box at every
+    # arrange, so it is centered at show and after a resize, the spec's
+    # column unused. A Struct record: mutable, with a reader and a writer
+    # per member.
+    class FloatWindow < Struct.new(:window, :spec, :selected, :mark_from, :mark_to, :edge, :centered, keyword_init: true)
       # The columns of padding on each side of the text area.
       PAD = 1
+      # The cells an editor-anchored box keeps from each side of the area
+      # it is placed in, when the area holds the box and its margin; a
+      # cursor-anchored box follows its anchor cell to the area's edge.
+      MARGIN = 1
 
       # @rbs @window: Window
       # @rbs @spec: FloatSpec
@@ -25,10 +32,11 @@ module Carat
       # @rbs @mark_from: Integer
       # @rbs @mark_to: Integer
       # @rbs @edge: Integer
+      # @rbs @centered: bool
 
       #: (window: Window, spec: FloatSpec) -> void
       def initialize(window:, spec:)
-        super(window: window, spec: spec, selected: -1, mark_from: -1, mark_to: -1, edge: spec.edge)
+        super(window: window, spec: spec, selected: -1, mark_from: -1, mark_to: -1, edge: spec.edge, centered: false)
       end
 
       # The columns a box's frame takes beside its text: the padding on
@@ -38,14 +46,13 @@ module Carat
         2 * (edge + PAD)
       end
 
-      # The widest text a float can show on a screen of cols columns: the
-      # screen less its frame, the border counted when the float is
-      # bordered and the style draws an edge. Every float sized to the
+      # The widest text a bordered float can show on a screen of cols
+      # columns: the screen less its margin and its frame, the border
+      # counted when the style draws an edge. Every float sized to the
       # screen asks this, so place never cuts a row it laid out.
-      #: (Integer, bool, String) -> Integer
-      def self.text_room(cols, border, style)
-        edge = border && BorderStyle.edged?(style) ? 1 : 0
-        cols - frame_width(edge)
+      #: (Integer, String) -> Integer
+      def self.text_room(cols, style)
+        cols - 2 * MARGIN - frame_width(BorderStyle.edged?(style) ? 1 : 0)
       end
 
       # Whether the float marks columns of its first row.
@@ -66,22 +73,24 @@ module Carat
       end
 
       # Places the box with its corner at the spec's offset from the
-      # anchor cell (top, left) inside rows by cols cells, with an edge
-      # when the spec asks for a border and edged (the border style draws
-      # one): its size is cut to fit first, then its corner moved in, so
-      # the whole box shows whenever the area holds a one-cell text area,
-      # its padding, and its border.
+      # anchor cell (top, left), or centered when the float is, inside
+      # rows by cols cells, less MARGIN on each side for an editor-anchored
+      # box, with an edge when the spec asks for a border and edged (the
+      # border style draws one): its size is cut to fit first, then its
+      # corner moved in, so the whole box shows whenever the area holds a
+      # one-cell text area, its padding, and its border.
       #: (Integer, Integer, Integer, Integer, bool) -> void
       def place(top, left, rows, cols, edged)
-        edge = edged ? spec.edge : 0
-        self.edge = edge
-        side = edge + PAD
-        height = fit(spec.height, rows - 2 * edge)
-        width = fit(spec.width, cols - FloatWindow.frame_width(edge))
-        box_row = shift(top + spec.row, height + 2 * edge, rows)
-        box_col = shift(left + spec.col, width + FloatWindow.frame_width(edge), cols)
+        self.edge = edged ? spec.edge : 0
+        margin = spec.cursor_anchored? ? 0 : MARGIN
+        frame = FloatWindow.frame_width(edge)
+        height = fit(spec.height, rows - 2 * margin - 2 * edge)
+        width = fit(spec.width, cols - 2 * margin - frame)
+        box_col = centered ? (cols - width - frame) / 2 : left + spec.col
+        box_row = shift(top + spec.row, height + 2 * edge, rows, margin)
+        box_col = shift(box_col, width + frame, cols, margin)
         window.row = box_row + edge
-        window.col = box_col + side
+        window.col = box_col + edge + PAD
         window.height = height
         window.width = width
       end
@@ -124,10 +133,15 @@ module Carat
         size > room ? room : size
       end
 
-      #: (Integer, Integer, Integer) -> Integer
-      def shift(at, size, room)
-        at = room - size if at + size > room
-        at < 0 ? 0 : at
+      # The corner at moved in so a box of size cells lies inside room
+      # less margin on each side, or inside room when it cannot hold the
+      # box and its margin.
+      #: (Integer, Integer, Integer, Integer) -> Integer
+      def shift(at, size, room, margin)
+        low = size + 2 * margin > room ? 0 : margin
+        high = room - low
+        at = high - size if at + size > high
+        at < low ? low : at
       end
     end
   end

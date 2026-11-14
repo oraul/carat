@@ -162,16 +162,16 @@ module EditorKeyHintsTest
 
     h = session("", 12, "<C-w>", 1)
     floats = h.state.tab.floats
-    t.assert_equal([1, 9, true], [floats.count, floats.at(0).window.height, floats.at(0).window.width > 40], "Ctrl-W hints fill several columns of the room")
+    t.assert_equal([1, 7, true], [floats.count, floats.at(0).window.height, floats.at(0).window.width > 40], "Ctrl-W hints fill several columns of the room")
 
     # A hint row of wide or combining characters is cut to the float's
-    # width in cells, a wide character that would pass it dropped (75 of
-    # 76 cells after "y  "); a group name is the text, since a project file
+    # width in cells, a wide character that would pass it dropped (73 of
+    # 74 cells after "y  "); a group name is the text, since a project file
     # reads no remap. Rows are [label, the group name of <leader>xy,
     # [the widest row's cells, the float's width, floats]].
     t.table([
-      ["a group name of fifty wide characters", "あ" * 50, [75, 76, 1]],
-      ["a group name of wide characters with combining marks", "あ\u0301" * 50, [75, 76, 1]],
+      ["a group name of fifty wide characters", "あ" * 50, [73, 74, 1]],
+      ["a group name of wide characters with combining marks", "あ\u0301" * 50, [73, 74, 1]],
       ["a group name of letters with combining marks fits whole", "e\u0301" * 30, [33, 33, 1]]
     ]) do |name|
       h = session("keymap.normal <leader>xya cursor.up\nkeymap.normal <leader>xb cursor.down\nkeymap.group <leader>xy " + name.to_s, 24, "<Space>x", 1)
@@ -179,20 +179,26 @@ module EditorKeyHintsTest
     end
 
     # Scenario "The key hints use the border columns without an edge": on
-    # a 36 by 6 screen the hints have 3 rows of room and 32 columns of text
-    # under rounded, 34 under none, so nine ten-cell entries fit 2 columns
+    # a 38 by 8 screen the hints have 3 rows of room (the screen less the
+    # message row, the margin, and the border) and 32 columns of text
+    # under rounded, 34 under none (the screen less the margin and the
+    # frame), so nine ten-cell entries fit 2 columns
     # (22 cells, 6 entries shown) or 3 (34 cells, all 9), and a long group
     # name is cut to the text width (31 or 33 cells of wide characters).
-    # Rows are [label, [border, project lines], [the float's width, the
-    # widest row's cells, entries shown]].
+    # On a 6-column screen rounded leaves no text column (6 less the
+    # margin and the frame), so no float opens, and none leaves 2.
+    # Rows are [label, [border, project lines, screen columns], [the
+    # float's width, the widest row's cells, entries shown]].
     long = "keymap.normal <leader>xya cursor.up\nkeymap.normal <leader>xbz cursor.up\nkeymap.group <leader>xy " + "あ" * 50 + "\nkeymap.group <leader>xb group-b\n"
     t.table([
-      ["rounded fits two columns of ten-cell hints", ["rounded", nine_groups], [22, 22, 6]],
-      ["none fits three columns of ten-cell hints", ["none", nine_groups], [34, 34, 9]],
-      ["rounded cuts a long hint to 32 columns", ["rounded", long], [32, 31, 1]],
-      ["none cuts a long hint to 34 columns", ["none", long], [34, 33, 1]]
+      ["rounded fits two columns of ten-cell hints", ["rounded", nine_groups, "38"], [22, 22, 6]],
+      ["none fits three columns of ten-cell hints", ["none", nine_groups, "38"], [34, 34, 9]],
+      ["rounded cuts a long hint to 32 columns", ["rounded", long, "38"], [32, 31, 1]],
+      ["none cuts a long hint to 34 columns", ["none", long, "38"], [34, 33, 1]],
+      ["rounded opens no hints without a text column", ["rounded", nine_groups, "6"], [0, 0, 0]],
+      ["none cuts the hints to 2 columns of a six-column screen", ["none", nine_groups, "6"], [2, 2, 0]]
     ]) do |row|
-      h = sized_session("option.winborder " + row[0].to_s + "\n" + row[1].to_s, 6, 36, "<Space>x")
+      h = sized_session("option.winborder " + row[0].to_s + "\n" + row[1].to_s, 8, row[2].to_s.to_i, "<Space>x")
       floats = h.state.tab.floats
       [floats.count == 0 ? 0 : floats.at(0).window.width, widest(h), shown(h, "group-")]
     end
