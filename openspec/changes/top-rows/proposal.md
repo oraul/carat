@@ -20,7 +20,7 @@ None.
 
 ### Modified Capabilities
 
-- `buffer-tabs`: the selected tab's icon in `TabLineSel`, and the modified mark's one cell.
+- `buffer-tabs`: the selected tab's icon in `TabLineSel`, and a new requirement for the modified mark's one cell.
 - `breadcrumbs`: the ` › ` separator and its ASCII form.
 - `color-themes`: the selected tab group's accent, its contrast against the tab row, and its bold.
 
