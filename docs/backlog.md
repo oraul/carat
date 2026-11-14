@@ -4878,3 +4878,27 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/use_cases/actions/tab_handler.rb:47` ties the tabline flag to a name's position (`i > 2`); `carat/domain/tab_list.rb:86` next_tab returns a bool no caller reads (a BOOL_COMMANDS entry kept for it); `carat/plugins/finder/plugin.rb:153` no_paths misnamed and the OPEN literal repeated at 79 and 87; `carat/use_cases/discovery/follow_palette.rb:103` trims the colon twice; `carat/domain/command_grammar.rb:139` accept and accept_visual share a start; `carat/domain/runs.rb:18` names a parameter cls; `carat/domain/buffer.rb:387` repeats initialize's empty line; `carat/domain/transaction.rb:297` merged? changes state; comments past the wrap in `carat/use_cases/handle_key.rb:65`, `carat/use_cases/discovery/show_key_hints.rb:23`, `carat/use_cases/completion/show_completion.rb:25`, `carat/use_cases/completion/show_completion_docs.rb:146`.
 - Why it matters: copies, unclear names, and dead returns the naming and wrap rules forbid.
 - Fix outline: a tablines array, a void next_tab, the renames, one private helper per copy, and the rewraps, each in its domain's batch.
+
+## menu-hints quality advisory at carat/use_cases/discovery/show_key_hints.rb:112
+
+Location: `carat/use_cases/discovery/show_key_hints.rb:112`. Why: `segment` passes the empty literal `heads = []` to `collect_heads`, which appends Strings to it, the open pitfall of `docs/spinel-notes.md` where an empty literal is typed `Array[Integer]` and a callee's appends may be dropped. Fix outline: have `collect_heads` return the array it fills and the caller assign the result, as `Config#merge_runs` does.
+
+## menu-hints quality advisory at carat/domain/keymap_node.rb:76
+
+Location: `carat/domain/keymap_node.rb:76`. Why: dead code; `ShowKeyHints` no longer shows `+N`, so `KeymapNode#binding_count` has no production caller left (only `test/domain_keymap.rb:262` and the map entry at `docs/codebase-map.md:149`). Fix outline: remove the method, its assertion, and its map mention.
+
+## menu-hints quality advisory at carat/use_cases/discovery/hide_key_hints.rb:7
+
+Location: `carat/use_cases/discovery/hide_key_hints.rb:7`. Why: docs currency; the class comment says `HandleKey` calls it only while the hints show, but `ShowKeyHints#call` now calls it unconditionally before every show. Fix outline: name both callers and say it does nothing while no hints show.
+
+## menu-hints quality advisory at carat/domain/float_window.rb:16
+
+Location: `carat/domain/float_window.rb:16`. Why: docs currency; the `centered` member's comment names the palette as the centered float, and the key hints panel now sets `centered` too. Fix outline: name the palette and the key hints.
+
+## menu-hints quality advisory at carat/use_cases/discovery/show_key_hints.rb:131
+
+Location: `carat/use_cases/discovery/show_key_hints.rb:131`. Why: a prefix of plugin actions (`plugin.NAME.ACTION`) always reads `plugin`, even for one plugin's actions, which names the mechanism and not what the keys do. Fix outline: for a plugin action take the segment after `plugin.`, or state the choice in the key-hints spec.
+
+## menu-hints quality advisory at carat/use_cases/handle_key.rb:145
+
+Location: `carat/use_cases/handle_key.rb:145`. Why: one way to do each thing; `HandleKey` still guards with `@key_hints.showing?` before `HideKeyHints#call`, which checks `showing?` itself, while `ShowKeyHints` now calls it with no guard. Fix outline: call `@hide_key_hints.call(state)` without the guard, so the check lives only in `HideKeyHints`.
