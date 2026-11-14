@@ -12,4 +12,4 @@
 
 ## 3. Docs
 
-- [ ] 3.1 CLAUDE.md, README.md, `docs/codebase-map.md`: the one rule and open-pr's edit. Checked by `make gates` and `make docs-lint`.
+- [x] 3.1 CLAUDE.md, README.md, `docs/codebase-map.md`: the one rule and open-pr's edit. Checked by `make gates` and `make docs-lint`.
