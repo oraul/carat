@@ -4944,3 +4944,30 @@ Duplication: wide_session repeats plugin_session line for line except the plugin
 ### carat/domain/fuzzy_match.rb:69 positions matches multibyte queries by byte
 
 Correctness, pre-existing and outside this change's fix: positions compares bytes, so a multibyte query's continuation bytes can match inside another character and FollowPalette#mark then paints that character ("日" on "本語日" matches E6 in 本 and 97 A5 in 日, marking both). Fix: step the word by whole characters (Domain::Utf8.size_at) and compare each query character's bytes as a unit, with a FuzzyMatch test of such a word.
+
+## Findings of top-rows
+
+### Quality: the winbar row of the compatibility table names the old separator, docs/compatibility.md:587
+
+- Why: docs currency; the winbar row still says the symbols are joined by ` > `, while the winbar now joins them with ` › `.
+- Fix: say ` › `, and ` > ` under `option.icons ascii`.
+
+### Quality: the tab bar's modified-mark fallback cannot trigger, carat/adapters/tab_bar.rb:137
+
+- Why: speculative generality; the `mark(set)` fallback to the ASCII mark cannot trigger, since every shipped set's modified glyph is one cell and the sets are constants, yet it measures the glyph for each modified tab on every frame.
+- Fix: drop the fallback and add a test that each set's modified glyph measures one cell, or test the fallback through a wide glyph.
+
+### Quality: the modified-mark width table does not prove the change, test/adapters_tab_bar.rb:105
+
+- Why: the table passes unchanged on main's code because every shipped mark is already one cell, it compares `String#index` character offsets rather than cell columns, and its labels nerd, unicode, and ascii do not name the scenario in the snapshot.
+- Fix: label the rows `<set>: the modified mark keeps the tab's width` and compare the cell column of b.txt's first cell.
+
+### Quality: the slot header's shown view shares the accent without a word in the docs, carat/adapters/frame_presenter.rb:916
+
+- Why: undocumented side effect; the slot header row's shown view also uses `TabLineSel` and so becomes the bold blue block, but the proposal, design, and README list only the tabs, the tab-page numbers, and the winbar as sharing the accent.
+- Fix: name the slot header in the design and README, or confirm it is intended.
+
+### Quality: reflowed comments run past the comment width, carat/domain/themes.rb:67
+
+- Why: style; the reflowed comments here and at carat/adapters/tab_bar.rb:15 run past the files' comment width.
+- Fix: rewrap them to match the surrounding lines.
