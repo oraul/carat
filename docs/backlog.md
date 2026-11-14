@@ -4993,3 +4993,23 @@ The phrase 'the pin stays at its parent 6af548c9' copies the Makefile's pin valu
 ### carat/domain/utf8.rb:49: the byteindex guard comment describes behavior the pinned compiler does not have
 
 The comment (and carat/plugin_api.rb:345) says byteindex refuses a continuation-byte offset, but the pinned 6af548c9 does not raise, so a reader who cannot reproduce it may take the guard for dead code and remove it. Fix: say Spinel refuses it from 84aa303b1, after the pin, and the guard is kept for that bump.
+
+## Findings of untyped-elephant, non-blocking
+
+### Rename the private element reader list in carat/testing.rb:83
+
+- Location: carat/testing.rb:83 (quality advisory, naming).
+- Why: the private element reader `list` reads as a collection constructor and shares its name with `FilePort#list`, which `DiskFiles` and `MemoryFiles` implement, the shared-name shape `docs/spinel-notes.md` warns can leave calls unresolved.
+- Fix: rename it after what it returns, for example `array_cell`, beside `cell`.
+
+### Use one term for the rebuilt structure in docs/spinel-notes.md:47
+
+- Location: docs/spinel-notes.md:47 and the comment at carat/testing.rb:52 (quality advisory, docs currency).
+- Why: the bullet calls the rebuilt structure both the position map and the load record, and the testing comment says position map.
+- Fix: use one term, load record, as `SP_TIMING` and the design name it, in both places.
+
+### Split the golden table-test sentence in docs/examples.md:55
+
+- Location: docs/examples.md:55 (quality advisory, docs clarity).
+- Why: the inserted clause about `t.cases` when every input is an array literal, so the block indexes a typed array, turns the golden table-test sentence into a run-on list.
+- Fix: move `cases` into its own sentence after the one describing `t.table`.
