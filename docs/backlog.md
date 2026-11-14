@@ -4971,3 +4971,25 @@ One clear way to do each thing: the boundary rule is applied by hand at seven `b
 - Where: `.claude/workflows/deliver-change.js:1018`
 - Why it matters: the wait and package branches repeat the same pr, stop, and phaseDone tail, and the step is named merge when the run already stopped.
 - Fix outline: one `settlePackage(done)` helper for both branches and a skip step word for a stopped run.
+
+## Findings of spinel-compile-time
+
+### docs/spinel-notes.md:47: the compile-time check of a Spinel bump has no place in the bump procedure
+
+The new rule that a bump past 2440954d1 is checked for compile time is not in the bump procedure: the SPINEL_REF comment (Makefile:16) and the CLAUDE.md Commands toolchain bullet still say only after make check passes, nothing measures compile seconds (analysis-budget only warns on analysis ms), and Makefile:79 still cites 22 to 26 s of analysis against the 47.2 s and 106.7 s spinel-compile-time measured. Why: the next bump can reintroduce the regression unnoticed. Fix: name the compile-time comparison (test-build and diagnose seconds) in the SPINEL_REF comment and the CLAUDE.md toolchain bullet, or record test-build seconds as a metric, and refresh Makefile:79.
+
+### docs/spinel-notes.md:55: the open notes were not rechecked at the new pin 6af548c9
+
+The header (line 3) says open notes are rechecked when the pin is bumped, but this pin move leaves lines 15-16 and 48-61 at Rechecked at f34005bf or new at f34005bf, and the f34005bf workarounds cited in docs/architecture.md:197, carat/domain/mode.rb:58, carat/ports/file_port.rb:41, and carat/plugin_api.rb:657 are not said to hold at 6af548c9. Why: a note that no longer holds keeps a workaround alive or hides a pitfall. Fix: recheck the open notes at 6af548c9 in a follow-up and update their Rechecked lines.
+
+### docs/spinel-notes.md:21: the byteindex IndexError rule describes a commit after the pin without a recheck marker
+
+The file's opening says each note holds at the pinned compiler, but the byteindex IndexError rule now describes 84aa303b1, after the pin 6af548c9, with no recheck marker like the other notes about other commits. Why: a reader takes it as true at the pin, which it is not. Fix: mark it as not at the pin and rechecked when a bump passes 84aa303b1, the reason Utf8.boundary is kept.
+
+### docs/spinel-notes.md:47: the note copies the pin value, which the next bump makes false
+
+The phrase 'the pin stays at its parent 6af548c9' copies the Makefile's pin value into a binding note that the next bump past 2440954d1 (after untyped-elephant) makes false. Why: a binding note that goes stale with every bump misleads. Fix: say '6af548c9, its parent, is the newest commit without it' and leave the pin value to SPINEL_REF.
+
+### carat/domain/utf8.rb:49: the byteindex guard comment describes behavior the pinned compiler does not have
+
+The comment (and carat/plugin_api.rb:345) says byteindex refuses a continuation-byte offset, but the pinned 6af548c9 does not raise, so a reader who cannot reproduce it may take the guard for dead code and remove it. Fix: say Spinel refuses it from 84aa303b1, after the pin, and the guard is kept for that bump.
