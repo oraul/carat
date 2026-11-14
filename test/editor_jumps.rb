@@ -143,7 +143,7 @@ module EditorJumpsTest
     # Scenario "Other motions record nothing".
     # From line 2 of m.txt, after the setup keys. Rows are [label, [setup,
     # keys], "added N | back B"].
-    t.table([
+    t.cases([
       ["G records the position left", ["", "G"], "added 1 | back true"],
       ["gg records the position left", ["", "gg"], "added 1 | back true"],
       ["% records the position left", ["", "%"], "added 1 | back true"],
@@ -191,7 +191,7 @@ module EditorJumpsTest
     # Rows are [label, [setup, keys], "added N"]: the operator leaves the
     # cursor on the entry it recorded, which Ctrl-O then walks past, as
     # Neovim's does, so only the count is compared.
-    t.table([
+    t.cases([
       ["d/ records the position left", ["", "d/foo<CR>"], "added 1"],
       ["dn records the position left", ["/foo<CR>j", "dn"], "added 1"]
     ]) { |input| jumped(input[0].to_s, input[1].to_s).split(" | ")[0].to_s }

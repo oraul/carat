@@ -45,7 +45,7 @@ module EditorCompletionTest
 
     # Rows are [label, [text, keys], [lines, cursor col, showing, selected, matches, mode]];
     # the source holds file_name, filter, and final.
-    t.table([
+    t.cases([
       ["typing opens the popup, the best first", ["_tail\n", "ifi"], [["fi_tail"], 2, true, "final", 3, :insert]],
       ["Ctrl-N selects the next row", ["_tail\n", "ifi<C-n>"], [["fi_tail"], 2, true, "filter", 3, :insert]],
       ["Down selects the next row", ["_tail\n", "ifi<Down>"], [["fi_tail"], 2, true, "filter", 3, :insert]],

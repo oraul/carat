@@ -26,7 +26,7 @@ module EditorVisualTest
 
     # Every key of visual mode in each kind it applies to: rows are
     # [label, [text, start, keys], [lines, cursor, mode]].
-    t.table([
+    t.cases([
       # Entering, switching, and leaving.
       ["v starts charwise visual mode", ["abc\n", [0, 1], "v"], [["abc"], [0, 1], :visual]],
       ["V starts linewise visual mode", ["a\nb\n", [1, 0], "V"], [["a", "b"], [1, 0], :visual_line]],
@@ -168,7 +168,7 @@ module EditorVisualTest
     end
 
     # What the registers hold: rows are [label, [text, start, keys, register], [text, kind]].
-    t.table([
+    t.cases([
       ["a charwise yank", ["abcd\n", [0, 1], "vly", ""], ["bc", :charwise]],
       ["a yank across lines", ["abc\ndef\n", [0, 1], "vjy", ""], ["bc\nde", :charwise]],
       ["a yank with the cursor before the anchor", ["abcd\n", [0, 2], "vhhy", ""], ["abc", :charwise]],
@@ -210,7 +210,7 @@ module EditorVisualTest
     end
 
     # Putting a blockwise register in normal mode: rows are [label, [text, start, keys], [lines, cursor]].
-    t.table([
+    t.cases([
       ["p puts a block after the cursor", ["abc\ndef\n", [0, 0], "<C-v>jly$p"], [["abcab", "defde"], [0, 3]]],
       ["P pads a short row", ["xabc\nyd\n", [0, 0], "<C-v>jdllP"], [["abxc", "d y"], [0, 2]]],
       ["rows past the end are added", ["x\ny\na\n", [0, 0], "<C-v>j\"aydddd\"ap"], [["ax", " y"], [0, 1]]],

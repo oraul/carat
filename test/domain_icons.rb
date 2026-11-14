@@ -36,7 +36,7 @@ module DomainIconsTest
     end
 
     # Rows are [label, [name, set], glyph].
-    t.table([
+    t.cases([
       ["ascii closed folder", ["folder_closed", "ascii"], "+"],
       ["ascii open folder", ["folder_open", "ascii"], "-"],
       ["ascii error", ["error", "ascii"], "X"],

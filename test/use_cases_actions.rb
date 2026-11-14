@@ -93,7 +93,7 @@ module UseCasesActionsTest
 
     # ---------------------------------------------------------------- ex names
 
-    t.table([
+    t.cases([
       ["a spec with a suffix", ["w[rite]", "w"], ["w", "write", true]],
       ["the full name", ["w[rite]", "write"], ["w", "write", true]],
       ["a spelling between", ["vs[plit]", "vsp"], ["vs", "vsplit", true]],

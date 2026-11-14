@@ -260,7 +260,7 @@ module DomainThemeTest
     painted = D::Themes.find("one_dark", "theme")
     # The status bar's groups per mode and state: the pills' text on the
     # mode's accent, bold, the lsp slot's accent on the editor's background.
-    t.table([
+    t.cases([
       ["normal pill", [H::STATUS_MODE_NORMAL], [0x282c34, 0x61afef, D::Theme::BOLD, 0, 12]],
       ["insert pill", [H::STATUS_MODE_INSERT], [0x282c34, 0x98c379, D::Theme::BOLD, 0, 10]],
       ["visual pill", [H::STATUS_MODE_VISUAL], [0x282c34, 0xc97fe0, D::Theme::BOLD, 0, 13]],
@@ -294,7 +294,7 @@ module DomainThemeTest
     # same rows prove two more scenarios:
     # Every palette's pills pass
     # Every palette's lsp groups pass
-    t.table([
+    t.cases([
       ["carat-dark at 24 bits", ["carat-dark", "24"], []],
       ["carat-dark at 256 colors", ["carat-dark", "256"], []],
       ["carat-light at 24 bits", ["carat-light", "24"], []],
@@ -321,7 +321,7 @@ module DomainThemeTest
     # Scenario: Every palette passes on the cursor line. Over
     # CursorLine's background where a group has none of its own, text
     # keeps 4.5:1 and decorations 3:1.
-    t.table([
+    t.cases([
       ["carat-dark on the cursor line at 24 bits", ["carat-dark", "24"], []],
       ["carat-dark on the cursor line at 256 colors", ["carat-dark", "256"], []],
       ["carat-light on the cursor line at 24 bits", ["carat-light", "24"], []],
@@ -357,7 +357,7 @@ module DomainThemeTest
     # Scenario: Every palette passes in a float. WCAG AA inside a float:
     # every syntax and markup group at 4.5:1 over
     # NormalFloat's background, at 24 bits and at the 256 colors written.
-    t.table([
+    t.cases([
       ["carat-dark in a float at 24 bits", ["carat-dark", "24"], []],
       ["carat-dark in a float at 256 colors", ["carat-dark", "256"], []],
       ["carat-light in a float at 24 bits", ["carat-light", "24"], []],
@@ -375,7 +375,7 @@ module DomainThemeTest
     # PmenuMatchSel, and PmenuExtraSel inside a float reach 4.5:1 at 24
     # bits and 256 colors with the theme's background, and at 16 colors,
     # under either background, carry reverse video and PmenuSel's colors.
-    t.table([
+    t.cases([
       ["carat-dark's selected menu row at 24 bits", ["carat-dark", "24"], []],
       ["carat-dark's selected menu row at 256 colors", ["carat-dark", "256"], []],
       ["carat-light's selected menu row at 24 bits", ["carat-light", "24"], []],
@@ -389,7 +389,7 @@ module DomainThemeTest
       ["light_plus's selected menu row at 24 bits", ["light_plus", "24"], []],
       ["light_plus's selected menu row at 256 colors", ["light_plus", "256"], []]
     ]) { |input| selected_low_contrast(D::Themes.find(input[0].to_s, "theme"), input[1].to_s == "256") }
-    t.table([
+    t.cases([
       ["carat-dark's selected menu row at 16 colors on the terminal's background", ["carat-dark", "terminal"], []],
       ["carat-light's selected menu row at 16 colors on the theme's background", ["carat-light", "theme"], []],
       ["one_dark's selected menu row at 16 colors on the terminal's background", ["one_dark", "terminal"], []],
@@ -422,7 +422,7 @@ module DomainThemeTest
     t.assert_equal(["carat-dark", "terminal"], [D::Options.from_config(shipped).theme, D::Options.from_config(shipped).background], "Default theme: the shipped configuration names carat-dark on the terminal's background")
 
     # The color depth from COLORTERM and TERM.
-    t.table([
+    t.cases([
       ["truecolor", ["truecolor", "xterm-256color"], D::ColorDepth::TRUECOLOR],
       ["24bit", ["24bit", "linux"], D::ColorDepth::TRUECOLOR],
       ["256 colors", ["", "xterm-256color"], D::ColorDepth::COLORS_256],

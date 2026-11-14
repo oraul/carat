@@ -17,7 +17,7 @@ module EditorRepeatTest
     t = Carat::Testing.new("editor_repeat")
 
     # The dot command: rows are [label, [text, start, keys], [lines, cursor]].
-    t.table([
+    t.cases([
       ["an operator with a motion", ["one two three\n", [0, 0], "dw."], [["three"], [0, 0]]],
       ["an operator with a text object", ["a (b) (c)\n", [0, 3], "di)f(l."], [["a () ()"], [0, 6]]],
       ["a doubled operator", ["a\nb\nc\nd\n", [0, 0], "dd."], [["c", "d"], [0, 0]]],

@@ -29,7 +29,7 @@ module EditorSubstituteTest
     t = Carat::Testing.new("editor_substitute")
 
     # Rows are [label, [text, start, keys], [cursor, message, lines]].
-    t.table([
+    t.cases([
       # Ranges.
       ["no range is the cursor line", ["a\na\na\n", [1, 0], ":s/a/b/<CR>"], [[1, 0], "", "a|b|a"]],
       ["percent is every line", ["a\na\na\n", [0, 0], ":%s/a/b/<CR>"], [[2, 0], "3 substitutions on 3 lines", "b|b|b"]],

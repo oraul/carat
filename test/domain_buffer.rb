@@ -104,7 +104,7 @@ module DomainBufferTest
     t.assert_equal(2, fresh.byte_count, "byte count includes the newline")
 
     # Insert: rows are [label, [lines, row, col, text], expected lines].
-    t.table([
+    t.cases([
       ["insert within a line", [["xy"], 0, 1, "ab"], ["xaby"]],
       ["insert a newline", [["xy"], 0, 1, "\n"], ["x", "y"]],
       ["insert multi-line text", [["xy"], 0, 1, "1\n2\n3"], ["x1", "2", "3y"]],
@@ -123,7 +123,7 @@ module DomainBufferTest
     t.assert_true(b.modified?, "insert marks the buffer modified")
 
     # Delete: rows are [label, [lines, r1, c1, r2, c2], expected lines].
-    t.table([
+    t.cases([
       ["delete within a line", [["abcd"], 0, 1, 0, 3], ["ad"]],
       ["delete across lines", [["ab", "cd", "ef"], 0, 1, 2, 1], ["af"]],
       ["delete a line break", [["ab", "cd"], 0, 2, 1, 0], ["abcd"]],
@@ -150,7 +150,7 @@ module DomainBufferTest
     t.assert_equal(["a-", "-d"], b.lines, "replace across lines")
 
     # Set lines: rows are [label, [lines, from, to, new lines], expected lines].
-    t.table([
+    t.cases([
       ["replace two lines with one", [["a", "b", "c"], 0, 2, ["z"]], ["z", "c"]],
       ["insert lines without removing", [["a", "b"], 1, 1, ["x", "y"]], ["a", "x", "y", "b"]],
       ["remove every line leaves one", [["a", "b"], 0, 2, []], [""]],
@@ -208,7 +208,7 @@ module DomainBufferTest
     o = D::Options.new
     t.assert_equal([false, 8, 0], [o.number, o.tabstop, o.scrolloff], "options start with Vim's defaults")
 
-    t.table([
+    t.cases([
       ["text of a range on one line", [["abcdef"], rng(0, 1, 0, 4, false)], "bcd"],
       ["text of an inclusive range", [["abcdef"], rng(0, 1, 0, 4, true)], "bcde"],
       ["text of a backward range", [["abcdef"], rng(0, 4, 0, 1, false)], "bcd"],

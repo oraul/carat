@@ -69,7 +69,7 @@ module DomainMarkdownTextTest
     end
 
     # The spans of the markup. Rows are [label, [document, width], spans].
-    t.table([
+    t.cases([
       ["a heading", ["## Title", 40], "0:0+5 @markup.heading"],
       ["strong and emphasized runs", ["Use **map** or _each_.", 40], "0:4+3 @markup.strong 0:11+4 @markup.italic"],
       ["a code span", ["Call `x.y` now", 40], "0:5+3 @markup.raw"],

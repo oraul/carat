@@ -21,7 +21,7 @@ module DomainFiletypeTest
 
     # The table: extensions, whole names, then a shebang when the name says
     # nothing; "" for none.
-    t.table([
+    t.cases([
       ["an .rb file", ["lib/a.rb", ""], "ruby"],
       ["a .rake file", ["tasks/build.rake", ""], "ruby"],
       ["a .gemspec file", ["carat.gemspec", ""], "ruby"],

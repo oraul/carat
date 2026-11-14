@@ -89,7 +89,7 @@ module DomainMessagesTest
     t.assert_equal(["E492: Not an editor command: foo\ninfo", "info"], [state.history.to_s, state.message], "show keeps a message, show_output does not")
 
     # Rows are [label, [levels added at 0, times expired at], texts left].
-    t.table([
+    t.cases([
       ["info leaves at 3, warning at 5, error at 8", [[0, 1, 2], ["2.9", "3.0", "5.0", "7.9", "8.0"]], ["n0,n1,n2", "n1,n2", "n2", "n2", ""]],
       ["a fourth replaces the oldest", [[2, 2, 2, 2], ["0.0"]], ["n1,n2,n3"]],
       ["a level out of range is info", [[7], ["2.9", "3.0"]], ["n0", ""]]

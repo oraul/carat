@@ -156,7 +156,7 @@ module DomainRcParserTest
     t.assert_equal([20_000, true], [many.report.length, many.report == expected], "20,000 interleaved problems are all reported in line order")
 
     # Values: rows are [label, [words, kind], [valid, text]].
-    t.table([
+    t.cases([
       ["true", [["true"], "bool"], [true, "true"]],
       ["false", [["false"], "bool"], [true, "false"]],
       ["yes is not a flag", [["yes"], "bool"], [false, "yes"]],

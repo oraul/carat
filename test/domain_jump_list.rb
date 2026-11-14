@@ -46,7 +46,7 @@ module DomainJumpListTest
     t = Carat::Testing.new("domain_jump_list")
 
     # Rows are [label, rows pushed, steps as [by, row of the current position], the entries and index after].
-    t.table([
+    t.cases([
       ["a push appends and leaves no entry current", [[3], []], ["1:3:0", "at 1"]],
       ["Ctrl-O from the newest end records the start and goes back", [[3], [-1, 9]], ["1:3:0", "1:9:0", "at 0"]],
       ["Ctrl-I after Ctrl-O comes back to the start", [[3], [-1, 9, 1, 3]], ["1:3:0", "1:9:0", "at 1"]],

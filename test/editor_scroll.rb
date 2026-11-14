@@ -43,7 +43,7 @@ module EditorScrollTest
 
     # Rows are [label, [scrolloff, top, cursor row, keys], [top, cursor row]],
     # rows counted from 0, over 100 lines in a window of 10 text rows.
-    t.table([
+    t.cases([
       ["Ctrl-F scrolls forward a page of the rows minus two", [0, 0, 0, "<C-f>"], [8, 8]],
       ["PageDown scrolls as Ctrl-F", [0, 0, 0, "<PageDown>"], [8, 8]],
       ["Ctrl-B scrolls back a page, the cursor kept where it is in view", [0, 8, 8, "<C-b>"], [0, 8]],

@@ -35,7 +35,7 @@ module EditorSearchTest
     t = Carat::Testing.new("editor_search")
 
     # Rows are [label, [text, start, keys], [cursor, message, lines]].
-    t.table([
+    t.cases([
       # / and ?.
       ["/ moves to the next match", ["foo bar\nbar\n", [0, 0], "/bar<CR>"], [[0, 4], "/bar", "foo bar|bar"]],
       ["? moves to the previous match", ["foo\nx foo\n", [1, 2], "?foo<CR>"], [[0, 0], "?foo", "foo|x foo"]],

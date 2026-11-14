@@ -23,7 +23,7 @@ module DomainSearchTest
     t = Carat::Testing.new("domain_search")
 
     # Rows are [label, [text, pattern, row, col, forward, count], hit].
-    t.table([
+    t.cases([
       ["forward on the line", ["foo bar\n", "bar", 0, 0, true, 1], "0,4-7"],
       ["forward skips the match under the cursor", ["a a a\n", "a", 0, 0, true, 1], "0,2-3"],
       ["forward to a later line", ["ab\ncd\nab\n", "ab", 0, 0, true, 1], "2,0-2"],

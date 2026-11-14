@@ -25,7 +25,7 @@ module DomainExRangeTest
 
     # Rows are [label, [range, cursor row, lines, selection top, bottom],
     # [first, last, given, error]] on a buffer of five lines.
-    t.table([
+    t.cases([
       ["no range is the cursor line", ["", 2, 5, -1, -1], [2, 2, false, ""]],
       ["percent is every line", ["%", 2, 5, -1, -1], [0, 4, true, ""]],
       ["dot is the cursor line", [".", 2, 5, -1, -1], [2, 2, true, ""]],

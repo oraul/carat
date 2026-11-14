@@ -78,7 +78,7 @@ module DomainFloatLayerTest
     t.assert_equal([[1, 14], [0, 12]], [first, [float.edge, float.box_right - float.box_left]], "the edge reads 1 and then 0, the box two columns narrower")
 
     # Spec checks.
-    t.table([
+    t.cases([
       ["editor is an anchor", ["editor", 0, 0, 1, 1, 0], ""],
       ["cursor is an anchor", ["cursor", -3, 2, 1, 1, 1000], ""],
       ["window is not", ["window", 0, 0, 1, 1, 0], "No anchor window: editor or cursor"],

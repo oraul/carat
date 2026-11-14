@@ -184,7 +184,7 @@ module EditorWindowsTest
     end
 
     # Messages: rows are [label, [rows, cols, keys], message].
-    t.table([
+    t.cases([
       ["two text rows cannot be split", [4, 80, "<C-w>s"], E36],
       ["three text rows can", [5, 80, "<C-w>s"], ""],
       ["nine columns cannot be split with the gutter", [10, 9, "<C-w>v"], E36],

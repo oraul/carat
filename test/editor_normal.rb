@@ -24,7 +24,7 @@ module EditorNormalTest
     t.assert_equal("\"a.txt\" 3L, 14B", h.message_row, "shows the opened message")
 
     # Motions: rows are [label, [text, start, keys], expected cursor].
-    t.table([
+    t.cases([
       ["right at line end does nothing", ["abc\n", [0, 2], "l"], [0, 2]],
       ["left at line start does nothing", ["abc\n", [0, 0], "h"], [0, 0]],
       ["right moves one column", ["abc\n", [0, 0], "ll"], [0, 2]],
@@ -51,7 +51,7 @@ module EditorNormalTest
     end
 
     # Entering insert mode: rows are [label, [text, start, keys], [lines, cursor, mode]].
-    t.table([
+    t.cases([
       ["i before the cursor", ["ab\n", [0, 1], "i"], [["ab"], [0, 1], :insert]],
       ["a after the cursor", ["ab\n", [0, 0], "a"], [["ab"], [0, 1], :insert]],
       ["a on an empty line", ["\n", [0, 0], "a"], [[""], [0, 0], :insert]],

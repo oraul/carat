@@ -34,7 +34,7 @@ module DomainSelectionTest
     t = Carat::Testing.new("domain_selection")
 
     # Display columns of a line.
-    t.table([
+    t.cases([
       ["column after a tab", ["a\tb", 2, :column], 4],
       ["column of the tab", ["a\tb", 1, :column], 1],
       ["column after a wide character", ["a中b", 2, :column], 3],
@@ -52,7 +52,7 @@ module DomainSelectionTest
     t.assert_equal([3, 2, 2, 1], [D::DisplayWidth.cell("\t", 1, 4), D::DisplayWidth.cell("中", 0, 4), D::DisplayWidth.cell("\u0001", 0, 4), D::DisplayWidth.cell("a", 0, 4)], "cell widths of a tab, a wide character, a control, and a letter")
 
     # The span of one row: rows are [label, [lines, anchor, head, kind, to_end, row], [from, to, eol]].
-    t.table([
+    t.cases([
       ["charwise on one row", [["abcd"], [0, 1], [0, 2], :charwise, false, 0], [1, 3, false]],
       ["charwise first row of several", [["abc", "def", "ghi"], [0, 1], [2, 1], :charwise, false, 0], [1, 3, true]],
       ["charwise middle row", [["abc", "def", "ghi"], [0, 1], [2, 1], :charwise, false, 1], [0, 3, true]],
@@ -77,7 +77,7 @@ module DomainSelectionTest
     end
 
     # The block's display columns: rows are [label, [lines, anchor, head, to_end], [top, bottom, left, right]].
-    t.table([
+    t.cases([
       ["a block on plain text", [["abcd", "efgh"], [0, 1], [1, 2], false], [0, 1, 1, 2]],
       ["a tab at the anchor widens the block", [["a\tb", "abcdef"], [0, 1], [1, 1], false], [0, 1, 1, 3]],
       ["a wide character at the cursor widens the block", [["abcd", "a中b"], [0, 3], [1, 1], false], [0, 1, 1, 3]],
