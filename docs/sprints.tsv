@@ -2,3 +2,4 @@ sprint	last	merges	changes	wall_min	min_per_change	total_tokens	over_budget	firs
 sprint-0	remove-commit-hooks	-	-	-	-	-	-	-
 sprint-1	ci-time	5	backlog-compaction,delivery-speed,pr-on-push,sprint-planning,ci-time	467.6	93.5	9519929	2	check:5/5,quality:1/5,security:4/5,bench:5/5,ci:4/5,gates:5/5
 sprint-2	float-edges	5	sprints-gate,records-once,jump-motions,tab-keys,float-edges	345.3	69.1	6017075	0	check:5/5,quality:3/5,security:5/5,bench:5/5,ci:5/5,gates:4/5
+sprint-3	spinel-rebump	5	float-placement,menu-hints,palette-rows,top-rows,spinel-rebump	572.0	114.4	5126060	1	check:4/5,quality:3/5,security:5/5,bench:5/5,ci:5/5,gates:5/5
