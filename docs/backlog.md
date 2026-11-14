@@ -4971,3 +4971,23 @@ Correctness, pre-existing and outside this change's fix: positions compares byte
 
 - Why: style; the reflowed comments here and at carat/adapters/tab_bar.rb:15 run past the files' comment width.
 - Fix: rewrap them to match the surrounding lines.
+
+## spinel-rebump quality advisory at carat/domain/utf8.rb:49
+
+Comment accuracy: the comment here, in `carat/plugin_api.rb:345`, and in `docs/spinel-notes.md:21` date the `byteindex` `IndexError` on a continuation offset to Spinel 6b43fe94 (the new pin), while the proposal and design name 84aa303b1 as the commit that introduced it, so a reader bisecting the behavior starts from the wrong commit. Fix outline: cite 84aa303b1 in all three places.
+
+## spinel-rebump quality advisory at carat/domain/ex_range.rb:46
+
+Tests beside every behavior change: the new `Utf8.boundary` calls in `ExRange` and `MarkdownText` (`carat/domain/markdown_text.rb:53` and `:277`) have no test row, so dropping one brings the `IndexError` back unseen on text that is not UTF-8. Fix outline: add a row each, an ex range with a 0x80 after a comma and a markdown body with a 0x80 after a newline and after a `](`.
+
+## spinel-rebump quality advisory at carat/domain/rpc_framer.rb:68
+
+Tests beside every behavior change: only the header-line loop (line 106) is tested; the `read_header` search from `@start` on a continuation byte, the one in the language-server reader thread, has no row, so a regression there would raise in the reader thread unseen. Fix outline: add a framer row whose second frame's header starts with 0x80 right after the first body.
+
+## spinel-rebump quality advisory at carat/use_cases/plugins/file_requests.rb:4
+
+Match the existing style: the domain require is wedged between the `../files` use-case requires instead of grouped with the inner-layer requires, which hides the layer order the requires otherwise show. Fix outline: move it up beside `plugin_api` and `ports/file_port`.
+
+## spinel-rebump quality advisory at carat/domain/utf8.rb:54
+
+One clear way to do each thing: the boundary rule is applied by hand at seven `byteindex` call sites and only `docs/spinel-notes.md` states it, so the next `byteindex` with an offset can bring the `IndexError` back. Fix outline: a `test/lint.rb` rule refusing a `byteindex` or `byterindex` call with an offset argument not wrapped in `Utf8.boundary` (exempting the inlined copy in `PluginApi::Paths.segments`).
