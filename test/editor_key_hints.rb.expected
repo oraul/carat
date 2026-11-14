@@ -25,8 +25,10 @@ ok   rounded fits two columns of ten-cell hints
 ok   none fits three columns of ten-cell hints
 ok   rounded cuts a long hint to 32 columns
 ok   none cuts a long hint to 34 columns
+ok   rounded opens no hints without a text column
+ok   none cuts the hints to 2 columns of a six-column screen
 ok   a prefix that is also bound shows no hints and timeoutlen resolves it
 ok   a delay out of range is reported
 ok   the delay stays the default
 ok   a group line without a name is reported
-editor_key_hints: 31 passed, 0 failed
+editor_key_hints: 33 passed, 0 failed
