@@ -16,7 +16,7 @@
 
 ## 4. Completion popup
 
-- [ ] 4.1 Drop the rows' own padding spaces and move the column in `carat/use_cases/completion/open_completion_popup.rb`; prove with `test/editor_completion.rb` (A row's cells, The popup pads one column)
+- [x] 4.1 Drop the rows' own padding spaces and move the column in `carat/use_cases/completion/open_completion_popup.rb`; prove with `test/editor_completion.rb` (A row's cells, The popup pads one column)
 
 ## 5. Docs and checks
 
