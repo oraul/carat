@@ -2,7 +2,7 @@
 
 ### Requirement: A row fits its columns by display cells
 
-Each palette row SHALL lay out three columns measured in terminal cells: the name in a column of 30 cells, so a name of up to 29 cells is shown whole, then the description, then the first normal-mode key in a column of 12 cells at the row's right end, the key spelled in caret notation for a control key (`^W` for `<C-w>`) and in Vim notation otherwise. A name, description, or key wider than its column SHALL be cut at a character boundary, keeping a combining mark with the character before it, and padded with spaces so the next column starts at the same cell on every row; when fewer than two cells remain for the description it SHALL be left out, and the whole row SHALL be cut to the float's width in cells. A bound key of any width SHALL never stop the editor.
+Each palette row SHALL show the name in a 30-cell column, the description, and the first normal-mode key in a 12-cell column at the row's right end, a control key in caret notation (`^W` for `<C-w>`). A text wider than its column SHALL be cut at a character boundary, a combining mark kept with its character, and padded so each column starts at the same cell on every row; a description given under two cells is left out, the row is cut to the float's width, and no key width stops the editor.
 
 #### Scenario: A key of wide characters
 

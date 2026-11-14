@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: The editor's own highlights are groups too
-The editor SHALL know 56 UI groups, the first 41 by Neovim's names, the status bar's eight after them, the indent guides' two, `IblIndent` and `IblScope` as Neovim's indent-blankline plugin names them, `FloatTitle`, the title on a float's top edge as Neovim names it, and last the popup menu's match and extra groups `PmenuMatch`, `PmenuMatchSel`, `PmenuExtra`, and `PmenuExtraSel` as Neovim names them, and SHALL draw its own parts in them, which every palette colors like the syntax groups and which a plugin cannot use for tokens.
+The editor SHALL know 56 UI groups, by the names the scenario lists: Neovim's 41, the status bar's eight, indent-blankline's `IblIndent` and `IblScope`, Neovim's `FloatTitle`, and last Neovim's popup menu groups `PmenuMatch`, `PmenuMatchSel`, `PmenuExtra`, and `PmenuExtraSel`; it SHALL draw its own parts in them, which every palette colors like the syntax groups and which a plugin cannot use for tokens.
 
 #### Scenario: The UI groups
 - **WHEN** the editor's group table is listed
