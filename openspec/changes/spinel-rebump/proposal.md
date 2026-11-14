@@ -8,9 +8,9 @@
 
 - `SPINEL_REF` moves from f34005bfded9f66dc094ac0aae85efd541cef789 to 6b43fe94de957419fd6a670fae365987b40d4f1a, upstream head at the start of this change.
 - `tools/spinel/spinel_rt_responds_generated.h` is regenerated at the new pin with `make spinel-header`, run with the f34005bf toolchain before `make toolchain`.
-- Whatever carat needs to stay green at the new pin (build, tests, `spinel-doctor`, allocation budget, metrics), and nothing else.
+- Whatever carat needs to stay green at the new pin, and nothing else. One thing was needed: since Spinel 84aa303b1 (in this range), `String#byteindex` and `#byterindex` raise `IndexError`, as CRuby's do, for an offset on a continuation byte. `TextLines.split` searched from such an offset in text that is not UTF-8, so `test/domain_buffer.rb` and `test/domain_utf8.rb` failed. The same could happen in valid text: `VimPattern.pattern_end` searched from inside the multibyte character of a collection such as `[é]`. And in invalid text the ex range, the markdown reader, the JSON-RPC framer, the plugin host's `read_file`, and `PluginApi::Paths.segments` could hit it too. A new `Domain::Utf8.boundary` moves each such offset past the continuation bytes first. Every needle is ASCII, so no match is lost (`Paths.segments` inlines the two lines, since `plugin_api.rb` requires nothing). Tests pin the helper and the call sites whose results are easy to state, and `docs/spinel-notes.md` records the rule.
 
-No editor behavior changes.
+No editor behavior changes: the editor answers as it does on main at f34005bf.
 
 ## Capabilities
 
@@ -26,6 +26,7 @@ None. This is a toolchain change; `skip_specs` is set.
 
 - `Makefile`: `SPINEL_REF`.
 - `tools/spinel/spinel_rt_responds_generated.h`: regenerated.
+- `carat/domain/utf8.rb` (`boundary`), `text_lines.rb`, `ex_range.rb`, `markdown_text.rb`, `rpc_framer.rb`, `vim_pattern.rb`, `carat/use_cases/plugins/file_requests.rb`, `carat/plugin_api.rb`: offsets of `byteindex` start at a boundary. Tests: `test/domain_utf8.rb`, `domain_vim_pattern.rb`, `domain_rpc_framer.rb`, `use_cases_plugin_files.rb`. Docs: `docs/spinel-notes.md` (Language and library), `docs/codebase-map.md` (`utf8.rb`).
 - `tools/spinel/gen_respond_to_tables.rb`: unchanged; Spinel's `tools/gen_respond_to_tables.rb` and `tools/builtin_row_gen.rb` are identical at both pins, only their inputs (`src/builtin_ops.c`, `lib/spinel_rt.h`) moved.
 - CI: unchanged; its toolchain and compile caches are keyed on `make spinel-rev`, so the new pin builds a fresh toolchain on the first run.
 - CLAUDE.md: unchanged, the commands and the bump procedure are the same; only the pinned value moves.

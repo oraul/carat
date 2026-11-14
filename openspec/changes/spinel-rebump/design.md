@@ -19,6 +19,7 @@
 - Regenerate the header with the f34005bf toolchain, then build the new one: the header must exist before the new toolchain can build, and the generator's inputs are text, so the old compiler reads the new sources the same way. Spinel's generator scripts are unchanged between the pins (`git diff --stat` of `tools/gen_respond_to_tables.rb` and `tools/builtin_row_gen.rb` is empty), so the port needs no change.
 - Pin the full 40-digit commit, not a branch name, so `make spinel-rev` answers it without the remote and CI's cache keys change with it.
 - A carat change is made only where a stage fails at the new pin, each one commented with the Spinel commit that needs it and recorded in `docs/spinel-notes.md`; a workaround that becomes removable is named in the pull request's Notes and left.
+- The `byteindex` boundary rule (Spinel 84aa303b1) is met at the call sites, not by catching `IndexError`: one helper, `Utf8.boundary`, skips the continuation bytes at the offset, so the search answers what the old Spinel answered for every ASCII needle, allocates nothing, and keeps `memchr`-speed search. Alternatives: a `getbyte` loop for the newline (slower on long lines), or slicing the rest of the text (an allocation per line).
 
 ## Risks / Trade-offs
 
