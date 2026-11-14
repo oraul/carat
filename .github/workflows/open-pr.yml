@@ -1,15 +1,17 @@
 name: open-pr
 
-# The delivery's pull requests are opened here, on GitHub's runners: a
-# pull request created or edited over GitHub's API from a delivery
-# session gets a footer the session's network layer appends, and its git
-# proxy refuses tags, while a branch push arrives unchanged. The package
-# step commits the title, a blank line, and the gated body as pr.md in
-# the archived OpenSpec change (tools/open_pr.sh write) and pushes the
-# branch; the push runs branch-push, and its completion runs this
-# workflow, which reads pr.md, gates it, opens the pull request, and
-# reads it back. A branch with no new pr.md, gone, or with an open pull
-# request is left alone. No step pushes a tag or deletes a ref.
+# The delivery's pull requests are opened and edited here, on GitHub's
+# runners: a pull request created or edited over GitHub's API from a
+# delivery session gets a footer the session's network layer appends, and
+# its git proxy refuses tags, while a branch push arrives unchanged; so no
+# session creates or edits one with a tool or the API. The package step,
+# and a body fix, commits the title, a blank line, and the gated body as
+# pr.md in the archived OpenSpec change (tools/open_pr.sh write) and
+# pushes the branch; the push runs branch-push, and its completion runs
+# this workflow, which reads pr.md, gates it, opens the pull request or
+# sets an open one's title and body to it, and reads it back. A branch
+# with no new pr.md or gone is left alone. No step pushes a tag or
+# deletes a ref.
 #
 # GitHub runs a workflow_run workflow only from main's copy, so every
 # file this workflow runs is main's: the branch's commit is never checked
@@ -60,7 +62,7 @@ jobs:
         if: ${{ steps.read.outputs.found == 'yes' }}
         run: sh tools/open_pr.sh gate "$RUNNER_TEMP/pr" tools
 
-      - name: Open the pull request and read it back
+      - name: Open or edit the pull request and read it back
         if: ${{ steps.read.outputs.found == 'yes' }}
         env:
           GH_TOKEN: ${{ secrets.PR_TOKEN }}

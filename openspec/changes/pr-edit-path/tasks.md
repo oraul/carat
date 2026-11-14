@@ -2,8 +2,8 @@
 
 ## 1. open-pr sets an open pull request's text
 
-- [ ] 1.1 `tools/open_pr.sh` `open`: one open pull request gets its title and body set to `pr.md`'s when they differ, read back equal; more than one is refused; the header states the one rule. Proved by `tools/tools_test.sh` "open_pr: an open pull request equal to pr.md is left as it is", "open_pr: open sets an open pull request's title and body to pr.md's", "open_pr: an open pull request gets no create", "open_pr: an edit read back with a footer is refused", and "open_pr: more than one open pull request is refused".
-- [ ] 1.2 `.github/workflows/open-pr.yml`: its comment and step name state the same rule. Checked by `make gates`.
+- [x] 1.1 `tools/open_pr.sh` `open`: one open pull request gets its title and body set to `pr.md`'s when they differ, read back equal; more than one is refused; the header states the one rule. Proved by `tools/tools_test.sh` "open_pr: an open pull request equal to pr.md is left as it is", "open_pr: open sets an open pull request's title and body to pr.md's", "open_pr: an open pull request gets no create", "open_pr: an edit read back with a footer is refused", and "open_pr: more than one open pull request is refused".
+- [x] 1.2 `.github/workflows/open-pr.yml`: its comment and step name state the same rule. Checked by `make gates`.
 
 ## 2. The contributor and the workflow
 

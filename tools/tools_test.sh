@@ -642,15 +642,16 @@ expect "open_pr: the read title and body pass the gates" 0 "pass" sh "$here/open
 cp -R "$work/openpr-read" "$work/openpr-bad"
 echo "Generated with a tool" >> "$work/openpr-bad/body"
 expect "open_pr: a body failing the pr-body gate is refused" 1 "fails the pr-body gate" sh "$here/open_pr.sh" gate "$work/openpr-bad" "$here"
-# The stand-in gh: pr list prints GH_OPEN, pr create keeps the title and
-# body file in GH_DIR, pr view prints them back, the body with GH_FOOTER.
+# The stand-in gh: pr list prints GH_OPEN, pr create and pr edit keep the
+# title and body file in GH_DIR, pr view prints them back, the body with
+# GH_FOOTER.
 mkdir -p "$work/openpr-bin" "$work/openpr-gh"
 cat > "$work/openpr-bin/gh" <<'GH'
 #!/bin/sh
 echo "$*" >> "$GH_DIR/calls"
 case "$1 $2" in
   "pr list") echo "${GH_OPEN:-0}" ;;
-  "pr create")
+  "pr create"|"pr edit")
     while [ $# -gt 0 ]; do
       case "$1" in
         --title) printf '%s\n' "$2" > "$GH_DIR/title"; shift ;;
@@ -666,14 +667,29 @@ case "$1 $2" in
 esac
 GH
 chmod +x "$work/openpr-bin/gh"
-expect "open_pr: a branch with an open pull request is left alone" 0 "already has an open pull request: nothing to open" \
-  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_OPEN=1 sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
-expect "open_pr: an open pull request gets no create" 1 "^$" grep -n "pr create" "$work/openpr-gh/calls"
 expect "open_pr: open creates the pull request and reads it back equal" 0 "opened the pull request of chore/openpr" \
   env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
 expect "open_pr: open created it on main from the branch" 0 "pr create --repo o/r --base main --head chore/openpr" cat "$work/openpr-gh/calls"
 expect "open_pr: a pull request read back with a footer is refused" 1 "body differs" \
   env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_FOOTER="A footer" sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+# An open pull request, opened by hand or holding an older text, gets
+# pr.md's title and body from the push, never from a session's tool.
+: > "$work/openpr-gh/calls"
+expect "open_pr: an open pull request equal to pr.md is left as it is" 0 "already holds pr.md's title and body" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_OPEN=1 sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+expect "open_pr: an open pull request equal to pr.md gets no edit or create" 1 "^$" grep -n -E "pr (create|edit)" "$work/openpr-gh/calls"
+printf 'chore: an older title\n' > "$work/openpr-gh/title"
+printf 'an older body\n' > "$work/openpr-gh/body"
+expect "open_pr: open sets an open pull request's title and body to pr.md's" 0 "set the title and body of the open pull request of chore/openpr, its title and body equal" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_OPEN=1 sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+expect "open_pr: the edit names the branch's pull request and pr.md's text" 0 "^same$" \
+  sh -c 'grep -q -x -F "pr edit chore/openpr --repo o/r --title chore(tools): open on push --body-file $1/body" "$2/calls" && cmp -s "$1/body" "$2/body" && echo same' _ "$work/openpr-read" "$work/openpr-gh"
+expect "open_pr: an open pull request gets no create" 1 "^$" grep -n "pr create" "$work/openpr-gh/calls"
+printf 'an older body\n' > "$work/openpr-gh/body"
+expect "open_pr: an edit read back with a footer is refused" 1 "body differs" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_OPEN=1 GH_FOOTER="A footer" sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+expect "open_pr: more than one open pull request is refused" 1 "has 2 open pull requests" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_OPEN=2 sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
 cd "$work/openpr" || exit 1
 expect "open_pr: wait fails when no pull request's head is the pushed head" 1 "no pull request's head" env WAIT_STEP=1 sh "$here/open_pr.sh" wait openpr 1
 git --git-dir="$work/openpr.git" update-ref refs/pull/2/head main
