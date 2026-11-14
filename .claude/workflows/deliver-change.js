@@ -100,7 +100,7 @@ let estimate = ''
 // margin), so a start
 // whose capped calls take one turn each can still commit, back up, and
 // return the schema; tools/tools_test.sh compares them with these lines.
-const CALL_CAPS = { planner: 20, scout: 30, implement: 90, fix: 40, package: 30, push: 15, body: 10, checker: 20, quality: 35, security: 35, bench: 20, close: 25 }
+const CALL_CAPS = { planner: 20, scout: 30, implement: 90, fix: 40, package: 30, push: 15, body: 12, wait: 6, checker: 20, quality: 35, security: 35, bench: 20, close: 25 }
 const CALL_SCALE = { small: 0.5, medium: 1, large: 1.5 }
 const FIXED_CAPS = { resume: 12, areas: 10, record: 3, merger: 12 }
 const sizeWord = () => (SIZES.includes(estimate) ? estimate : 'medium')
@@ -294,12 +294,29 @@ function pushedHead(pushed, head) {
   const full = String(pushed || '')
   return /^[0-9a-f]{40}$/.test(full) && /^[0-9a-f]{7,40}$/.test(head || '') && full.startsWith(head) ? full : ''
 }
-// The pushed sha after one start of a package or push call: the start's own
-// when it reported one, else the one kept from an earlier start, so a start
-// capped after its push keeps it when the continuation, refused a second
-// push, reports none.
+// The contributor modes that push (a body fix pushes pr.md as a CI fix),
+// one list for keepPushed and the continuation's pushed hint.
+const PUSHING = ['package', 'push', 'body']
+// The pushed sha after one start of a pushing mode: the start's own when it
+// reported one, else the one kept from an earlier start, so a start capped
+// after its push keeps it when the continuation, refused a second push,
+// reports none.
 function keepPushed(mode, pushed, result) {
-  return (mode === 'package' || mode === 'push') && result && result.pushed ? result.pushed : pushed
+  return PUSHING.includes(mode) && result && result.pushed ? result.pushed : pushed
+}
+// The line a continued start of a pushing mode gets, so it returns the
+// recorded sha instead of retrying a push the second time refuses.
+function pushedHint(mode, change) {
+  return PUSHING.includes(mode) ? `\nWhen this mode's push already ran, which a second push refuses, return \`sh tools/run_state.sh get ${change} pushed\` as \`pushed\`.` : ''
+}
+// The step before the merge from the run state: merge once the push and
+// the pull request number are both recorded; wait when only the push is,
+// since a second push is refused: the contributor's wait mode runs
+// tools/open_pr.sh wait alone, committing and pushing nothing; package
+// when nothing was pushed.
+function packageStep(state) {
+  if (!(state && state.pushed)) return 'package'
+  return /^[0-9]+$/.test(String(state.pr || '')) ? 'merge' : 'wait'
 }
 // A finding as the text of a run state note: only the characters a
 // double-quoted shell word keeps as written, at most 400, so the note line
@@ -640,7 +657,7 @@ async function contributor(mode, detail) {
     const why = result ? 'reached its cap' : 'returned no result'
     note(`contributor (${mode}) ${why}${result ? `, left: ${step.left.join('; ')}` : ''}; continued`)
     queue(`sh tools/run_state.sh note ${state.change} overrun "contributor ${mode} start ${count + 1} ${why} and was continued"`, head)
-    more = `\nThis continues a start that ${result ? `reached its cap. It left:\n- ${step.left.join('\n- ')}` : 'returned no result, having reached its turn ceiling'}\nResume from the branch's commits, tasks.md, and the run state; redo nothing already committed or recorded.${mode === 'package' || mode === 'push' ? `\nWhen this mode's push already ran, which a second push refuses, return \`sh tools/run_state.sh get ${state.change} pushed\` as \`pushed\`.` : ''}`
+    more = `\nThis continues a start that ${result ? `reached its cap. It left:\n- ${step.left.join('\n- ')}` : 'returned no result, having reached its turn ceiling'}\nResume from the branch's commits, tasks.md, and the run state; redo nothing already committed or recorded.${pushedHint(mode, state.change)}`
   }
   head = result.head
   note(`contributor (${mode}): ${result.summary}`)
@@ -992,8 +1009,17 @@ if (!stopped && !state.merged) {
   // tools/open_pr.sh wait); its phase line waits for the last flush. The
   // pull request is opened by .github/workflows/open-pr.yml from the pr.md
   // the contributor commits before its push, never by a session's tool, and a
-  // package step that returns no number stops the run before the merger.
-  if (!stopped && !(state.pushed && state.pr)) {
+  // package step that returns no number stops the run before the merger. A
+  // restart after a push that recorded no number only waits for it.
+  const step = stopped ? 'merge' : packageStep(state)
+  if (step === 'wait') {
+    phase('Package')
+    const done = await contributor('wait', `The push recorded ${state.pushed}, but no pull request number: wait for it; commit nothing and push nothing.`)
+    if (done) state.pr = packagedPr(done)
+    if (done && !state.pr) stopped = 'no pull request appeared for the branch ' + state.branch + ': read the open-pr workflow\'s log'
+    else if (done) phaseDone('package', head)
+  }
+  if (step === 'package') {
     if (await verify()) {
       phase('Package')
       const excluded = 'run neither history nor groom: this change\'s run state excludes the planning records (records=skip), and both say so for it'
@@ -1070,8 +1096,9 @@ if (!stopped && !state.merged) {
         break
       }
       // A red only on the scan of the pull request body: the contributor
-      // fixes the body file and the pull request, no commit and no push, and
-      // the merge goes on without a fix round, once per run.
+      // fixes the body file, commits it as pr.md, and pushes it as a CI fix,
+      // from which open-pr sets the pull request's title and body; the merge
+      // goes on at the new head without a fix round, once per run.
       if (m.ci === 'red' && m.body_only === true && !bodyFixed) {
         bodyFixed = true
         note('CI red only on the scan of the pull request body: the body is fixed without a fix round')

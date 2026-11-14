@@ -2,13 +2,14 @@
 # The pull request opened on the branch push. A pull request created or
 # edited over GitHub's API from a cloud session reaches GitHub with a
 # footer the session's network layer appends, and its git proxy refuses a
-# tag push and a ref delete, while a branch push arrives unchanged; so the
-# delivery never creates a pull request from its session. The package
-# step commits the title and the gated body as pr.md in the archived
-# OpenSpec change and pushes the branch; the push runs
-# .github/workflows/branch-push.yml, whose completion runs
+# tag push and a ref delete, while a branch push arrives unchanged; so no
+# session creates or edits a pull request with a tool or GitHub's API.
+# The package step, and a body fix, commits the title and the gated body
+# as pr.md in the archived OpenSpec change and pushes the branch; the
+# push runs .github/workflows/branch-push.yml, whose completion runs
 # .github/workflows/open-pr.yml from main, which opens the pull request
-# from that file with main's copy of this script, never the branch's.
+# from that file, or sets an open one's title and body to it, with main's
+# copy of this script, never the branch's.
 #
 # Usage:
 #   sh tools/open_pr.sh write CHANGE TITLE   the contributor, before its
@@ -28,10 +29,11 @@
 #       pr-body on DIR/body and TOOLS/scan_text.sh on DIR/title, TOOLS
 #       the tools directory of main's checkout
 #   sh tools/open_pr.sh open BRANCH DIR      the workflow, with GH_TOKEN
-#       and GH_REPO: leaves a branch with an open pull request alone;
-#       otherwise opens it from DIR/title and DIR/body with gh, reads it
-#       back, and fails unless both equal the files but for trailing
-#       newlines
+#       and GH_REPO: opens the pull request from DIR/title and DIR/body
+#       with gh, or, when the branch has one open, sets its title and body
+#       to them where either differs (more than one open is refused);
+#       reads the text back and fails unless both equal the files but for
+#       trailing newlines
 #
 # Environment: WAIT_STEP, the seconds between two reads of origin (10).
 # Exit status: 0 done or nothing to do, 1 refused or not equal, 2 a usage
@@ -72,6 +74,13 @@ $out"
   out=$(tr -d '\r' < "$1" | sh "$3/scan_text.sh" --where title)
   [ -z "$out" ] || refuse "the title holds forbidden text:
 $out"
+}
+
+# live_text BRANCH DIR: the open pull request's title and body, as gh
+# reads them back, into DIR/title.live and DIR/body.live.
+live_text() {
+  gh pr view "$1" --repo "$GH_REPO" --json title --jq .title > "$2/title.live" || refuse "cannot read the title back"
+  gh pr view "$1" --repo "$GH_REPO" --json body --jq .body > "$2/body.live" || refuse "cannot read the body back"
 }
 
 # chomped FILE: the file's text without its trailing newlines.
@@ -171,18 +180,26 @@ $found"
     count=$(gh pr list --repo "$GH_REPO" --head "$branch" --state open --json number --jq length) ||
       refuse "cannot list the pull requests of $branch"
     matches "$count" '[0-9]+' || refuse "gh pr list printed no count: $count"
-    if [ "$count" -gt 0 ]; then
-      echo "open_pr: $branch already has an open pull request: nothing to open"
-      exit 0
+    [ "$count" -le 1 ] || refuse "$branch has $count open pull requests: close all but one"
+    if [ "$count" -eq 1 ]; then
+      live_text "$branch" "$dir"
+      if [ "$(chomped "$dir/title")" = "$(chomped "$dir/title.live")" ] && [ "$(chomped "$dir/body")" = "$(chomped "$dir/body.live")" ]; then
+        echo "open_pr: the open pull request of $branch already holds pr.md's title and body"
+        exit 0
+      fi
+      gh pr edit "$branch" --repo "$GH_REPO" --title "$(cat "$dir/title")" --body-file "$dir/body" ||
+        refuse "gh pr edit failed"
+      done_text="set the title and body of the open pull request of $branch"
+    else
+      gh pr create --repo "$GH_REPO" --base main --head "$branch" --title "$(cat "$dir/title")" --body-file "$dir/body" ||
+        refuse "gh pr create failed"
+      done_text="opened the pull request of $branch"
     fi
-    gh pr create --repo "$GH_REPO" --base main --head "$branch" --title "$(cat "$dir/title")" --body-file "$dir/body" ||
-      refuse "gh pr create failed"
-    gh pr view "$branch" --repo "$GH_REPO" --json title --jq .title > "$dir/title.live" || refuse "cannot read the title back"
-    gh pr view "$branch" --repo "$GH_REPO" --json body --jq .body > "$dir/body.live" || refuse "cannot read the body back"
+    live_text "$branch" "$dir"
     for part in title body; do
       [ "$(chomped "$dir/$part")" = "$(chomped "$dir/$part.live")" ] ||
         refuse "the pull request's $part differs from pr.md's"
     done
-    echo "open_pr: opened the pull request of $branch, its title and body equal to pr.md's" ;;
+    echo "open_pr: $done_text, its title and body equal to pr.md's" ;;
   *) usage ;;
 esac

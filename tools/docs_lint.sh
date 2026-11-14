@@ -41,9 +41,11 @@ ok() {
 
 # "PATTERN BYTES" lines: every file the pattern matches is at most BYTES.
 # Raising a budget is a reviewed line of this file. The queue's holds what
-# the planner rewrites and every agent may read at a start.
+# the planner rewrites and every agent may read at a start; the
+# contributor's leaves room under the agents' for a new mode.
 BUDGETS="CLAUDE.md 30720
 .claude/agents/*.md 8192
+.claude/agents/contributor.md 6999
 docs/architecture.md 88064
 docs/queue.md 17369"
 
