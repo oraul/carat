@@ -134,6 +134,15 @@ module Carat
         Key.char(code)
       end
 
+      # The notation of one code with a control character in caret
+      # notation, "^" and the character 64 above it ("^W", "^@"), as the
+      # command palette shows keys; any other code as format spells it.
+      #: (Integer) -> String
+      def self.caret(code)
+        return format(code) if Key.alt?(code) || !special_name(code).nil? || code < 0 || code >= 32
+        "^#{Key.char(code + 64)}"
+      end
+
       #: (Integer) -> String?
       def self.special_name(code)
         case code

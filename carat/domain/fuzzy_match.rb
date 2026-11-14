@@ -42,6 +42,53 @@ module Carat
         score
       end
 
+      # The bytes of the word the pattern matched in the walk score makes,
+      # ascending and each once; empty when it does not match.
+      #: (String, String) -> Array[Integer]
+      def self.positions(pattern, word)
+        out = Array.new(0, 0)
+        plen = pattern.bytesize
+        wlen = word.bytesize
+        return out if plen == 0
+        anchor = -1
+        i = 0
+        while i < plen
+          stop = i
+          stop += 1 while stop < plen && pattern.getbyte(stop).to_i != 0x5F
+          if stop > i
+            anchor = anchor_of(pattern, i, word, anchor + 1, wlen)
+            if anchor < 0
+              out.clear
+              return out
+            end
+            keep(out, anchor)
+            j = anchor + 1
+            k = i + 1
+            while k < stop
+              want = lower(pattern.getbyte(k).to_i)
+              j += 1 while j < wlen && lower(word.getbyte(j).to_i) != want
+              if j >= wlen
+                out.clear
+                return out
+              end
+              keep(out, j)
+              j += 1
+              k += 1
+            end
+          end
+          i = stop + 1
+        end
+        out
+      end
+
+      # Inserts the byte into the ascending list unless it is there.
+      #: (Array[Integer], Integer) -> void
+      def self.keep(list, byte)
+        at = list.length
+        at -= 1 while at > 0 && list[at - 1] > byte
+        list.insert(at, byte) unless at > 0 && list[at - 1] == byte
+      end
+
       # Whether the word starts with the pattern, ignoring ASCII case.
       #: (String, String) -> bool
       def self.prefix?(pattern, word)

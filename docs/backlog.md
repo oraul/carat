@@ -4902,3 +4902,45 @@ Location: `carat/use_cases/discovery/show_key_hints.rb:131`. Why: a prefix of pl
 ## menu-hints quality advisory at carat/use_cases/handle_key.rb:145
 
 Location: `carat/use_cases/handle_key.rb:145`. Why: one way to do each thing; `HandleKey` still guards with `@key_hints.showing?` before `HideKeyHints#call`, which checks `showing?` itself, while `ShowKeyHints` now calls it with no guard. Fix outline: call `@hide_key_hints.call(state)` without the guard, so the check lives only in `HideKeyHints`.
+
+## Findings of palette-rows (quality advisories)
+
+### carat/domain/fuzzy_match.rb:48 positions duplicates the score walk
+
+Duplication: positions repeats score's part loop and follow's inner walk byte for byte, so the two can drift apart. Fix: one private walk that fills an optional positions list and returns the runs, score and positions both calling it.
+
+### carat/use_cases/discovery/follow_palette.rb:177 styles re-derives the palette row layout
+
+Duplication: styles re-derives the layout rows already built (room at 159 and 180, the name cut again, the description column's start from the padding arithmetic). Fix: build each row's tokens in the rows loop from the cells it just padded, or share one column helper.
+
+### carat/use_cases/discovery/follow_palette.rb:235 private code point count in a use case
+
+Duplication: char_count re-implements the code point count Domain::MarkdownText.char_count and Domain::Utf8.size_at already give, in a use case. Fix: add a prefix count to Domain::Utf8 (or call MarkdownText.char_count on the byteslice) and drop the private copy.
+
+### carat/domain/buffer.rb:58 styles comment names only the documentation buffer
+
+Docs currency: the styles comment (and FramePresenter#paint_float_row's at carat/adapters/frame_presenter.rb:628) still say styles belong to a documentation buffer, while the palette's menu buffer now carries them. Fix: say a styled float's rows (documentation or palette menu).
+
+### openspec/specs/command-palette/spec.md:9 wide-key scenarios name another action than the test
+
+Spec and test drift (cited at the change's delta spec, now synced into the main spec): the scenarios A key of wide characters and A key with combining marks bind window.split, but test/editor_palette.rb:250 binds insert.newline. Fix: make the scenarios name insert.newline (or the test bind window.split).
+
+### carat/use_cases/discovery/follow_palette.rb:193 ex command colon skip in mark untested
+
+Test gap: the skip path of mark for an ex command's leading colon (a match on :write, offset by one character) has no test. Fix: add an editor_palette case typing an ex name and checking the marked cells start after the colon.
+
+### carat/use_cases/discovery/follow_palette.rb:94 score and field repeat one comparison
+
+Simplicity: score and field each repeat the a >= b comparison. Fix: one if a >= b branch setting both.
+
+### docs/codebase-map.md:170 editor_palette test description is stale
+
+Docs currency: the Tests line still describes test/editor_palette.rb as opening, filtering, selection, and running, without the row layout and match marking it now covers. Fix: add the columns, caret keys, and match groups to that description.
+
+### test/editor_palette.rb:131 wide_session duplicates plugin_session
+
+Duplication: wide_session repeats plugin_session line for line except the plugin it passes. Fix: give plugin_session the plugin as a parameter and call it with Wide.new and Carat::Plugins::Hello::Plugin.new.
+
+### carat/domain/fuzzy_match.rb:69 positions matches multibyte queries by byte
+
+Correctness, pre-existing and outside this change's fix: positions compares bytes, so a multibyte query's continuation bytes can match inside another character and FollowPalette#mark then paints that character ("日" on "本語日" matches E6 in 本 and 97 A5 in 日, marking both). Fix: step the word by whole characters (Domain::Utf8.size_at) and compare each query character's bytes as a unit, with a FuzzyMatch test of such a word.

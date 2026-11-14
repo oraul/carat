@@ -51,4 +51,11 @@ ok   alt is not printable
 ok   base strips the alt flag
 ok   alt? sees the flag
 ok   char encodes a code point
-domain_keys: 53 passed, 0 failed
+ok   Ctrl-W is ^W
+ok   Ctrl-@ is ^@
+ok   Ctrl-_ is ^_
+ok   a named control keeps its name
+ok   Esc keeps its name
+ok   a letter is itself
+ok   F1 keeps its name
+domain_keys: 60 passed, 0 failed

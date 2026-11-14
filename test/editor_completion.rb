@@ -94,9 +94,12 @@ module EditorCompletionTest
     h = editor("_tail\n", three)
     h.type("ifi<C-p>")
     float = h.state.tab.floats.at(0)
-    t.assert_equal([" v file_name  String ", " f filter     Array  ", " k final             "], [float.window.buffer.line(2), float.window.buffer.line(1), float.window.buffer.line(0)], "each row is the kind icon, the label, and the detail on the right")
+    t.assert_equal(["v file_name  String", "f filter     Array ", "k final            "], [float.window.buffer.line(2), float.window.buffer.line(1), float.window.buffer.line(0)], "each row is the kind icon, the label, and the detail on the right")
     t.assert_equal(["  1 fi_tail", " k final", " f filter     Array", " v file_name  String"], [h.row(0), h.row(1)[1, 21].to_s.rstrip, h.row(2)[1, 21].to_s.rstrip, h.row(3)[1, 21].to_s.rstrip], "the popup stands under the line, its labels under the word")
     t.assert_equal([D::Highlight::POPUP_MENU, D::Highlight::POPUP_MENU_SELECTED], [h.frame.hl_at(1, 3), h.frame.hl_at(3, 3)], "the rows are drawn in Pmenu and the selected one in PmenuSel")
+    # Scenario: The popup pads one column: the float's padding on each
+    # side of the text, the icon right after the box's left edge.
+    t.assert_equal([1, 1, "v"], [float.window.col - float.box_left, float.box_right - float.window.col - float.window.width, h.row(3)[float.box_left + 1, 1].to_s], "The popup pads one column on each side, its icon after the box's left edge")
     # Scenario: The selected row spans the padding.
     t.assert_equal([0, D::Highlight::POPUP_MENU_SELECTED, D::Highlight::POPUP_MENU_SELECTED, D::Highlight::POPUP_MENU], [float.edge, h.frame.hl_at(3, float.box_left), h.frame.hl_at(3, float.box_right - 1), h.frame.hl_at(1, float.box_left)], "the popup has no border and its selected row is in PmenuSel across its padding")
     t.assert_equal(1, h.completions.asked, "the source is asked once for the word")
@@ -130,7 +133,7 @@ module EditorCompletionTest
     h.type("ir")
     menu = h.assembly.completion_menu
     first = h.state.tab.floats.at(0).window.buffer.line(0)
-    t.assert_equal([" T red_x ", true, 80], [first[0, 9], first.rstrip.end_with?("  Int"), menu.candidates.at(1).label.bytesize], "escape sequences are dropped, an unknown kind reads as text, and a long label is cut to 80 bytes")
+    t.assert_equal(["T red_x  ", true, 80], [first[0, 9], first.rstrip.end_with?("  Int"), menu.candidates.at(1).label.bytesize], "escape sequences are dropped, an unknown kind reads as text, and a long label is cut to 80 bytes")
     t.assert_equal(false, h.screen.join("\n").include?("\e"), "no escape reaches the screen")
     many = []
     300.times { |i| many << ["w#{i}", "text", ""] }
@@ -152,7 +155,7 @@ module EditorCompletionTest
     docs = floats.at(floats.index_of(menu.docs_float_id))
     popup = floats.at(floats.index_of(menu.float_id))
     t.assert_equal([["final", "", "Ends the block."], 1, popup.spec.col + popup.spec.width + 2, 15, 3], [docs.window.buffer.lines.dup, docs.spec.row, docs.spec.col, docs.spec.width, docs.spec.height], "the float shows the markdown as plain rows at the popup's rows on its right")
-    t.assert_equal(["final", "Ends the block."], [h.row(1)[24, 5].to_s, h.row(3)[24, 15].to_s], "the documentation is drawn beside the list")
+    t.assert_equal(["final", "Ends the block."], [h.row(1)[23, 5].to_s, h.row(3)[23, 15].to_s], "the documentation is drawn beside the list")
     hd = Carat::Domain::Highlight
     t.assert_equal([hd::MARKUP_STRONG + hd::FLOAT_LAYER, hd::NORMAL_FLOAT, hd::MARKUP_HEADING + hd::FLOAT_LAYER], [h.frame.hl_at(3, 33), h.frame.hl_at(3, 24), h.frame.hl_at(1, 24)], "a strong word and the heading are drawn in their groups over the float, the rest in NormalFloat")
     t.assert_equal(true, docs.spec.z < popup.spec.z, "the documentation stands under the popup")

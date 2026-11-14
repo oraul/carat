@@ -10,8 +10,9 @@ ok   Esc closes the palette
 ok   Enter runs an action
 ok   the prompt is >
 ok   the first row is the first action registered
-ok   a row holds the name, the key, and the description
+ok   a row holds the name, the description, and the key in caret notation on the right
 ok   the palette shows its own key
+ok   A 29-character name is whole, its description at cell 30
 ok   an enabled plugin's action shows its key and its manifest's description
 ok   a disabled plugin's action is left out
 ok   a description matches
@@ -29,6 +30,12 @@ ok   a key of letters with combining marks
 ok   a key of wide characters with combining marks
 ok   a wide key keeps the characters that fit its column
 ok   a combining key keeps every mark with its letter
+ok   The selected row's match in PmenuMatchSel, its description in PmenuExtraSel, the rest in PmenuSel
+ok   A matched name's letters in PmenuMatch, the description in PmenuExtra, the rest in Pmenu
+ok   A description match is marked in its column, not in the name's
+ok   with an empty text nothing is marked
+ok   a multibyte query marks only the character it matched
+ok   A narrow palette leaves the description out: the key follows the name and no cell is in PmenuExtra
 ok   the colon prompt returns after the palette
 ok   The palette keeps its right border while the filter shrinks at 120 by 36
 ok   the palette shows every row whole under winborder none at 120 by 36
@@ -39,4 +46,4 @@ ok   the palette shows every row whole under winborder none at 80 by 24
 ok   Without an edge the palette uses the border columns, the screen less its margin and its padding
 ok   The palette is centered without a border: as many columns left of its box as right
 ok   The palette is centered again after a resize: centered at 120 columns and at 100
-editor_palette: 41 passed, 0 failed
+editor_palette: 48 passed, 0 failed

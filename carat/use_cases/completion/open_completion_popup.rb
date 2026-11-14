@@ -51,7 +51,7 @@ module Carat
         width = Domain::DisplayWidth.text_width(lines[0].to_s, 0)
         height = lines.length > MAX_ROWS ? MAX_ROWS : lines.length
         icon = Domain::DisplayWidth.text_width(Domain::Icons.glyph("kind_text", set), 0)
-        spec = Domain::FloatSpec.new(anchor: "cursor", row: row_offset(state, height), col: -typed_width - icon - 2 - Domain::FloatWindow::PAD, height: height, width: width, border: false, title: "", z: Z)
+        spec = Domain::FloatSpec.new(anchor: "cursor", row: row_offset(state, height), col: -typed_width - icon - 1 - Domain::FloatWindow::PAD, height: height, width: width, border: false, title: "", z: Z)
         buffer = Domain::Buffer.new(lines: lines, path: nil, line_ending: "\n")
         buffer.owner = OWNER
         float = Domain::FloatWindow.new(window: Domain::Window.new(buffer: buffer), spec: spec)
@@ -78,9 +78,10 @@ module Carat
         below < height && above > below ? -height : 1
       end
 
-      # One row per match: " ", the kind's icon, " ", the label padded to
-      # the label column, then two spaces and the detail padded to its
-      # column when any match has a detail, and " ".
+      # One row per match: the kind's icon, " ", the label padded to the
+      # label column, then two spaces and the detail padded to its column
+      # when any match has a detail; the float's padding is the row's only
+      # margin.
       #: (Domain::CompletionMenu, String) -> Array[String]
       def rows(menu, set)
         matches = menu.matches
@@ -102,7 +103,7 @@ module Carat
         i = 0
         while i < matches.length
           item = menu.candidates.at(matches[i])
-          row = +" "
+          row = +""
           row << Domain::Icons.glyph(item.icon_name, set)
           row << " "
           row << Domain::DisplayWidth.fit(item.label, label_width)
@@ -110,7 +111,6 @@ module Carat
             row << "  "
             row << Domain::DisplayWidth.fit(item.detail, detail_width)
           end
-          row << " "
           out << row
           i += 1
         end
