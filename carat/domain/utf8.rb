@@ -47,7 +47,7 @@ module Carat
       # The first byte at or after i of text that String#byteindex takes as
       # an offset: past the continuation bytes (0x80 to 0xBF) at i, which
       # it refuses with an IndexError as inside a character since Spinel
-      # 6b43fe94, as CRuby does, even in text that is not UTF-8. A search
+      # 84aa303b1, as CRuby does, even in text that is not UTF-8. A search
       # for an ASCII needle from there finds what it would from i, since
       # no continuation byte is ASCII.
       #: (String, Integer) -> Integer
