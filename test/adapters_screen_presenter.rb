@@ -182,7 +182,7 @@ module AdaptersScreenPresenterTest
     t.assert_true(out.include?("#{sgr256(H::TAB_LINE)}tab"), "tab line labels have TabLine")
     t.assert_true(out.include?("#{sgr256(H::TAB_LINE_SELECTED)}sel"), "the selected label has TabLineSel")
     t.assert_true(out.include?("#{sgr256(H::TAB_LINE_FILL)}fill"), "the tab line fill has TabLineFill")
-    t.assert_equal(["\e[0;38;5;247;48;5;235m", "\e[0;1m", "\e[0;48;5;235m"], [sgr256(H::TAB_LINE), sgr256(H::TAB_LINE_SELECTED), sgr256(H::TAB_LINE_FILL)], "the tab line sequences at 256 colors")
+    t.assert_equal(["\e[0;38;5;247;48;5;235m", "\e[0;1;38;5;236;48;5;75m", "\e[0;48;5;235m"], [sgr256(H::TAB_LINE), sgr256(H::TAB_LINE_SELECTED), sgr256(H::TAB_LINE_FILL)], "the tab line sequences at 256 colors, the selected one bold on the accent")
 
     # The visual selection has the theme's Visual background.
     selected = D::Frame.new(rows: 1, cols: 8)

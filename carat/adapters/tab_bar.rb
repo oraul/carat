@@ -1,4 +1,3 @@
-require_relative "../plugin_api"
 require_relative "../domain/editor_state"
 require_relative "../domain/buffer_list"
 require_relative "../domain/frame"
@@ -10,10 +9,10 @@ module Carat
   module Adapters
     # Paints the top row of buffer tabs: one tab per listed file buffer in
     # list order, a space, its file icon, a space, the last segment of its
-    # path or [No Name], a space, the modified icon or a space, and a
-    # space, the tab of the current window's buffer selected with its
-    # icon in its file-icon group; scratch and unlisted buffers get none. From two tab
-    # pages their numbers stand at the right end, " 1  2 ", the current
+    # path or [No Name], a space, the modified icon or a space (one
+    # cell either way), and a space, the tab of the current window's
+    # buffer selected, its icon included; scratch and unlisted buffers get
+    # none. From two tab pages their numbers stand at the right end, " 1  2 ", the current
     # one selected, and the tabs use the columns before them. Tabs that do
     # not fit are counted, " <N " before the run shown and " N> " after
     # it; the run starts as early as keeping the current tab in it
@@ -21,6 +20,7 @@ module Carat
     # and every width is counted, so a row costs no object per frame.
     class TabBar
       NO_NAME = "[No Name]"
+      MARK_CELLS = 1
 
       attr_reader :buffers #: Domain::BufferList
 
@@ -50,6 +50,8 @@ module Carat
         end
         if span_width(first, last, set) > right
           files = list.file_count
+          # Room for both counts, " <N " and " N> ", at the widest N
+          # put_digits_within may write.
           room = right - 2 * (Domain::Frame.digits(files) + 3)
           anchor = list.index_of(current)
           anchor = first if anchor < 0 || current.tabless?
@@ -67,7 +69,7 @@ module Carat
         hidden = files_between(0, first)
         if hidden > 0
           x = frame.put_within(0, x, " <", Domain::Highlight::TAB_LINE, right)
-          x = put_number(frame, x, right, hidden)
+          x = frame.put_digits_within(0, x, hidden, Domain::Highlight::TAB_LINE, right)
           x = frame.put_within(0, x, " ", Domain::Highlight::TAB_LINE, right)
         end
         i = first
@@ -79,7 +81,7 @@ module Carat
         hidden = files_between(last + 1, count)
         return if hidden <= 0
         x = frame.put_within(0, x, " ", Domain::Highlight::TAB_LINE, right)
-        x = put_number(frame, x, right, hidden)
+        x = frame.put_digits_within(0, x, hidden, Domain::Highlight::TAB_LINE, right)
         frame.put_within(0, x, "> ", Domain::Highlight::TAB_LINE, right)
       end
 
@@ -105,7 +107,7 @@ module Carat
         while t < pages
           hl = t == tabs.tab_index ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE
           x = frame.put_within(0, x, " ", hl, cols)
-          x = frame.put_digits(0, x, t + 1, hl) if x + Domain::Frame.digits(t + 1) <= cols
+          x = frame.put_digits_within(0, x, t + 1, hl, cols)
           x = frame.put_within(0, x, " ", hl, cols)
           t += 1
         end
@@ -115,9 +117,8 @@ module Carat
       #: (Domain::Frame, Integer, Integer, Domain::Buffer, bool, String) -> Integer
       def paint_tab(frame, x, limit, buffer, selected, set)
         hl = selected ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE
-        icon_hl = selected ? icon_group(buffer) : hl
         x = frame.put_within(0, x, " ", hl, limit)
-        x = frame.put_within(0, x, Domain::Icons.glyph(buffer.icon, set), icon_hl, limit)
+        x = frame.put_within(0, x, Domain::Icons.glyph(buffer.icon, set), hl, limit)
         x = frame.put_within(0, x, " ", hl, limit)
         path = buffer.path
         if path.nil?
@@ -126,25 +127,24 @@ module Carat
           x = frame.put_from(0, x, path, buffer.name_start, hl, limit)
         end
         x = frame.put_within(0, x, " ", hl, limit)
-        x = frame.put_within(0, x, buffer.modified? ? Domain::Icons.glyph("modified", set) : " ", hl, limit)
+        x = frame.put_within(0, x, buffer.modified? ? mark(set) : " ", hl, limit)
         frame.put_within(0, x, " ", hl, limit)
       end
 
-      # The file-icon group of the buffer's icon, the tab line's selected
-      # group when the name has none.
-      #: (Domain::Buffer) -> Integer
-      def icon_group(buffer)
-        id = Domain::Highlight.token_id(PluginApi::FileIcons.group_of(buffer.icon))
-        id < 0 ? Domain::Highlight::TAB_LINE_SELECTED : id
+      # The modified mark of the set, the ascii set's when the set's glyph
+      # is wider than the one cell a mark takes.
+      #: (String) -> String
+      def mark(set)
+        glyph = Domain::Icons.glyph("modified", set)
+        Domain::DisplayWidth.text_width(glyph, 0) == 1 ? glyph : Domain::Icons.glyph("modified", "ascii")
       end
 
-      # The cells of one tab.
+      # The cells of one tab, its mark one cell whether modified or not.
       #: (Domain::Buffer, String) -> Integer
       def tab_width(buffer, set)
         path = buffer.path
         name = path.nil? ? NO_NAME.length : Domain::DisplayWidth.text_width(path, buffer.name_start)
-        mark = buffer.modified? ? Domain::DisplayWidth.text_width(Domain::Icons.glyph("modified", set), 0) : 1
-        Domain::DisplayWidth.text_width(Domain::Icons.glyph(buffer.icon, set), 0) + name + mark + 4
+        Domain::DisplayWidth.text_width(Domain::Icons.glyph(buffer.icon, set), 0) + name + MARK_CELLS + 4
       end
 
       # The cells of the file tabs from list position from to position to.
@@ -185,12 +185,6 @@ module Carat
           i += 1
         end
         total
-      end
-
-      #: (Domain::Frame, Integer, Integer, Integer) -> Integer
-      def put_number(frame, x, limit, number)
-        return x if x + Domain::Frame.digits(number) > limit
-        frame.put_digits(0, x, number, Domain::Highlight::TAB_LINE)
       end
     end
   end
