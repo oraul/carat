@@ -4780,3 +4780,83 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 
 - Why: test gap: focus_buffer now records a visit (the :q and :qa refusal moving to another tab page), but no test shows g<Tab> going back after it.
 - Fix: add an editor_tabs row such as :tabe b.txt<CR>x<C-PageDown>:qa<CR>g<Tab> checking the tab page returned to.
+
+## Findings of float-edges at its package step
+
+### Quality advisory: text_room border parameter is always true (carat/domain/float_window.rb:46)
+
+- Location: carat/domain/float_window.rb:46
+- Why: speculative generality; text_room's border parameter is true at every production caller (palette, hover, signature, definition, key hints), only the test passes false.
+- Fix: drop the parameter, text_room(cols, style), or pass the spec's border from the caller.
+
+### Quality advisory: drawn helper and resizable Rig copied across float tests (test/adapters_hover.rb:216)
+
+- Location: test/adapters_hover.rb:216, copies in test/adapters_signature.rb:197 and test/adapters_definitions.rb:285
+- Why: duplication and test conventions; the drawn helper and the resizable Rig (@rows, @cols, resize) are copied verbatim, and drawn returns a mixed Array[untyped] instead of an object with typed readers.
+- Fix: move one drawn helper returning a small record with typed readers into the shared test support and reuse it.
+
+### Quality advisory: unguarded hover float lookup (test/adapters_hover.rb:383)
+
+- Location: test/adapters_hover.rb:383
+- Why: floats.at(floats.index_of(...)) has no guard for a missing float, unlike test/adapters_definitions.rb:592, so a missing hover float indexes -1 instead of failing clearly.
+- Fix: guard with at < 0 ? [] : drawn(...) as the definitions test does.
+
+### Quality advisory: finder FRAME literal ignores winborder (carat/plugins/finder/plugin.rb:32)
+
+- Location: carat/plugins/finder/plugin.rb:32
+- Why: FRAME = 4 restates FloatWindow.frame_width(1) as a literal, so under winborder none the finder keeps a 3-column right margin and a 2-column gap.
+- Fix: expose the frame width through PluginApi in float-placement and derive the finder's sizes from it.
+
+### Quality advisory: palette column always subtracts frame_width(1) (carat/use_cases/discovery/follow_palette.rb:124)
+
+- Location: carat/use_cases/discovery/follow_palette.rb:124
+- Why: the palette column always subtracts frame_width(1) while its width now follows winborder; under none it is -1 (clamped by shift) on narrow screens and one column left of center on wide ones.
+- Fix: compute the edge once as text_room does and use frame_width(edge) for the column (float-placement).
+
+### Quality advisory: place computes frame_width twice (carat/domain/float_window.rb:80)
+
+- Location: carat/domain/float_window.rb:80
+- Why: place computes FloatWindow.frame_width(edge) twice beside side = edge + PAD.
+- Fix: compute frame = FloatWindow.frame_width(edge) once and use it for the width cut and the shift.
+
+### Quality advisory: every text_room caller passes border true (carat/domain/float_window.rb:46)
+
+- Location: carat/domain/float_window.rb:46
+- Why: speculative generality; every caller of text_room passes border true.
+- Fix: drop the border parameter (text_room(cols, style)) until a borderless caller needs it.
+
+### Quality advisory: palette width and column use different edges (carat/use_cases/discovery/follow_palette.rb:124)
+
+- Location: carat/use_cases/discovery/follow_palette.rb:124, width at carat/use_cases/discovery/follow_palette.rb:114
+- Why: the column uses frame_width(1) while the width uses the style's edge, so under winborder none the palette sits one column left of centre (col -1, clamped, on narrow screens).
+- Fix: derive the edge once and pass frame_width(edge) to both, or carry it into float-placement as the design says.
+
+### Quality advisory: unused resize helper in definitions and signature rigs (test/adapters_definitions.rb:39)
+
+- Location: test/adapters_definitions.rb:39 and test/adapters_signature.rb:39
+- Why: dead code; the resize helper and the @rows/@cols state are unused there, only adapters_hover calls resize.
+- Fix: drop them from those two rigs.
+
+### Quality advisory: drawn helper duplicated in three tests (test/adapters_hover.rb:215)
+
+- Location: test/adapters_hover.rb:215, copies in test/adapters_definitions.rb:284 and test/adapters_signature.rb:196
+- Why: duplication; the same drawn helper is copied into three test files.
+- Fix: keep one shared helper in the test support or the rig the three share.
+
+### Quality advisory: missing hover float reads at(-1) (test/adapters_hover.rb:383)
+
+- Location: test/adapters_hover.rb:383
+- Why: floats.at(floats.index_of(...)) is unguarded, so a missing hover float reads at(-1) and errors instead of failing the assertion.
+- Fix: guard with at < 0 ? [] as adapters_definitions.rb:592 does.
+
+### Quality advisory: README says finder boxes share an edge under every border (README.md:58)
+
+- Location: README.md:58
+- Why: docs currency; it says the finder's list and preview boxes share an edge, but under option.winborder none they stand two columns apart.
+- Fix: say they share an edge under a drawn border and keep a gap under none.
+
+### Quality advisory: sized_session repeats session (test/editor_key_hints.rb:65)
+
+- Location: test/editor_key_hints.rb:65
+- Why: duplication; sized_session repeats session (line 11) but for the cols and the wait count.
+- Fix: give session a cols parameter (the existing callers passing 80) and drop sized_session.
