@@ -31,7 +31,7 @@ None.
 ## Impact
 
 - Code: `carat/domain/themes.rb`, `config/default.caratrc` and its generated mirror `carat/domain/default_config.rb`.
-- Tests: `test/domain_theme.rb` (the palette list, the contrast tables, the default), `test/domain_options_config.rb` (the shipped defaults), and the snapshots of tests drawn with the default theme.
+- Tests: `test/domain_theme.rb` (the palette list, the contrast tables, the default), `test/domain_options_config.rb` (the shipped defaults), and `test/adapters_screen_presenter.rb` (the ruler, the painted Normal, and carat-light's comment, drawn with the new default or the new palette).
 - Docs: `docs/compatibility.md` (Themes), `docs/codebase-map.md` (the themes line).
 - README.md: changed, the theme paragraph and the configuration example name `carat-dark` as the default.
 - docs/architecture.md: changed, the `Themes` entry and the configuration example name the six palettes and the default.

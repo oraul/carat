@@ -20,5 +20,5 @@ Non-goals: the cursor line under `background terminal` (`carat-palette-b`), user
 
 ## Risks / Trade-offs
 
-- Every snapshot drawn with the default theme changes its colors; the diff of `make snapshots` is read to confirm only color sequences change.
+- Checks drawn with the default theme change their colors: in `test/adapters_screen_presenter.rb` the ruler's sequence and the painted Normal now follow `carat-dark`, and the painted Normal is looked for on line 1, since line 0 is on the cursor line, which `carat-dark` draws on its own background at 256 colors where one_dark's cursor line and background both fell on index 236. `make snapshots` changed only those labels and the theme test's new rows.
 - A user whose configuration names `carat-dark` or `carat-light` now gets Carat's palettes instead of the One palettes; both are dark or light as before.

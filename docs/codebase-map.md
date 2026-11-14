@@ -493,7 +493,7 @@ Files:
 
 - `carat/domain/highlight.rb`: `Highlight` group ids (56 UI groups, the popup menu's match and extra groups last, thirty syntax groups from `SYNTAX_FIRST`, thirteen file-icon groups from `ICON_FIRST`, six documentation markup groups from `MARKUP_FIRST`, with Neovim's `NAMES`, and each again from `CURSOR_LINE_LAYER` on the cursor line and from `FLOAT_LAYER` below `LIMIT` inside a float); `token_id`, `token?`, `name_of`, `base`.
 - `carat/domain/theme.rb`: `Theme`, per group 24-bit, 256-color, and 16-color colors and attributes; `fg`, `bg`, `fg256`, `bg256`, `fg16`, `bg16`, `attr`, `attr16`, `paints_background?`.
-- `carat/domain/themes.rb`: `Themes`, the palettes as colors per role and `GROUPS`, the roles of every group; `known?`, `background?`, `canonical`, `find`, `palette`, `from_palette` (the cursor-line and float layers included; `one_dark`, `one_light`, `dark_plus`, `light_plus`, aliases `carat-dark`, `carat-light`).
+- `carat/domain/themes.rb`: `Themes`, the palettes as colors per role and `GROUPS`, the roles of every group; `known?`, `background?`, `canonical`, `find`, `palette`, `from_palette` (the cursor-line and float layers included; Carat's own `carat-dark`, the default, and `carat-light`, then `one_dark`, `one_light`, `dark_plus`, `light_plus`).
 - `carat/domain/color_depth.rb`: `ColorDepth.detect` from `COLORTERM` and `TERM`.
 - `carat/domain/filetype.rb`: `Filetype`; `detect`, `from_name`, `from_shebang`.
 - `carat/domain/syntax_line.rb`: `SyntaxLine`, one line's tokens for a start state with its end state.
