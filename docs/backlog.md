@@ -1026,12 +1026,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a bare `true` or `false` at the call site reads as nothing, and the rule and its check disagree, so a reader cannot tell whether plugins must follow it.
 - Fix outline: give `Tree` keyword arguments (root, the hidden-files flag, the ignore list), and state the plugin exemption, or its absence, in `CLAUDE.md` beside the lint rule.
 
-## Text on the cursor line falls below 4.5:1 in every palette
-
-- Where: the `CURSOR_LINE` role of the four palettes in `carat/domain/themes.rb`, measured by the cursor-line table of `test/domain_theme.rb`, which holds the cursor line to 3:1 as the selection is. At `cursor-shapes`: one_dark's keyword groups at 4.42:1 (24 bits), one_light's constants at 4.27:1 and its green groups at 4.05:1 (256 colors), dark_plus's comments and error groups at 3.99 to 4.43:1, light_plus's numbers at 3.90:1 (256 colors).
-- Why it matters: goal 1 asks for readable contrast; the line the user reads most is a little below WCAG AA for normal text in those groups.
-- Fix outline: tune each palette's cursor-line color, and its 256-color index (one_light and light_plus round to gray 255 at 256 colors), or the few foregrounds, until the table passes at 4.5:1 for text, then raise the threshold in the test. Queued in `carat-palette`.
-
 ## The default cursor line keeps the terminal's foreground over a dark stripe
 
 - Where: `config/default.caratrc` (line 22 at `cursor-shapes`) turns `cursorline` on with `one_dark` and `option.background terminal`, so in `carat/domain/themes.rb` the lit cells of groups without a foreground keep the terminal's own foreground over the fixed `CURSOR_LINE` stripe (0x2c313c). Quality advisory of `cursor-shapes`.
@@ -1055,12 +1049,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `LIMIT = COUNT * 2` in `carat/domain/highlight.rb` (line 107 at `cursor-shapes`), which doubles every theme array and `SgrTable` entry with it. Quality advisory of `cursor-shapes`.
 - Why it matters: a one-off layer: a second overlay such as ColorColumn or CursorColumn would have to multiply the space again.
 - Fix outline: when the next overlay arrives, generalize to `id = base + layer * COUNT` with a layer count, or record the limit in the design.
-
-## A 16-color background index is named like a group id in the theme build
-
-- Where: `lit16` in `carat/domain/themes.rb` (line 428 at `cursor-shapes`) holds the `CURSOR_LINE` role's 16-color background index, while `lit` in the same loop is a layered group id. Quality advisory of `cursor-shapes`.
-- Why it matters: the names suggest one is the 16-color form of the other.
-- Fix outline: rename `lit16` to `line_bg16` beside `line16`. Queued in `carat-palette`.
 
 ## A test helper's comment sits above the wrong method
 
@@ -1218,13 +1206,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the two call sites follow different rules, so a later change to the queue in `step` can silently drop or replay keys.
 - Fix outline: assign the result in `step` too, or narrow the comment to the timeout path.
 - Raised again as "HandleKey drops the queue dispatch returns": Where: `carat/use_cases/handle_key.rb:247` (`step`) and :272 (`complete`), against dispatch's contract at :278-280. Periodic quality at bd86828. Why it matters: the contract exists because the pinned Spinel can lose appends to the caller's array; `step` relies on in-place mutation anyway. Fix outline: honor the contract or drop it, with a test that fails without the fix. Queue item `spinel-workarounds`.
-
-## The UI highlight group count is stale
-
-- Where: `docs/architecture.md:106` and `docs/codebase-map.md:487` (49 groups) and `docs/compatibility.md:507` (41) against `carat/domain/highlight.rb:68` (syntax from 51); the map's IndentGuides bullet (line 459) omits `on?`. Periodic quality at ce6abdb, replacing the entry of 22a5de0 (41 against 49); queue item `carat-palette`. Since `float-frame` the code makes 52 groups, `FloatTitle` last (the color-themes spec), while `docs/compatibility.md:507` still lists the indent guides as the last UI groups (quality advisory of `float-frame`).
-- Why it matters: the documents count fewer groups than the code, and the next group added drifts them again.
-- Fix outline: say 52 groups with `FloatTitle` last in `docs/architecture.md:106`, `docs/codebase-map.md:489`, and `docs/compatibility.md:507`, or name the groups without a count; add `on?`.
-- Also listed in "The code map is behind the code" (periodic quality at e49f63d): `docs/codebase-map.md` line 488 and `docs/architecture.md` line 106 (49 UI groups, then 51 with the indent guides) and line 460 (`IndentGuides` omits `on?`); why: agents start from the map and the architecture; fix: update each sentence and list.
 
 ## StatusLineNC is themed but painted by nothing
 
@@ -3148,12 +3129,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: every later step runs the pull request's own Makefile and scripts with the read-only token in `.git/config`.
 - Fix outline: set `persist-credentials: false`, since `tools/ci_scope.sh` uses the token through `gh`.
 
-## The contributor's pull request tools have no guard hook
-
-- Where: `.claude/agents/contributor.md` line 4, the GitHub create and update pull request tools. Periodic security Low (5) at 8d8832f, queued in `guard-lows`.
-- Why it matters: a misled contributor can retarget a pull request's base, close or reopen one, or write a body the pr-body gate sees only at the merge.
-- Fix outline: a PreToolUse matcher for those tools running main's guard, admitting only base main, the run state's branch as head, and a body passing pr-body, with a `tools/tools_test.sh` case.
-
 ## The pick keymap binds a line refused as an unknown action
 
 - Where: `carat/domain/keymap.rb` line 100, `pick_from`, and `test/domain_keymap.rb` line 194. Periodic quality at 8d8832f, queued in `definitions-tidy`.
@@ -3623,12 +3598,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/adapters/frame_presenter.rb` line 639, `paint_float_row`, which calls `buffer.line(row)` and `@cache.fetch` once for `paint_text` and again for `paint_tokens` on a styled row. Quality advisory of `float-frame`.
 - Why it matters: duplicated work per row in the presenter's hot path, which the `float-frame` proposal set out to tidy.
 - Fix outline: fetch the line and its decoded form once into locals before the branch and reuse them for the tokens; confirm with `make bench`. Queue item `float-placement`.
-
-## The theme test's group comment is out of date
-
-- Where: `test/domain_theme.rb:160`. Periodic quality.
-- Why it matters: it opens with fragments and omits the markup groups the asserts check.
-- Fix outline: one comment naming the UI, syntax, file-icon, and markup groups in order. Queue item `carat-palette`.
 
 ## Window separators and the progress bar ignore option.icons ascii
 
@@ -4198,12 +4167,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a superseded red reuses the pending wait counter, so the merger's next prompt says CI was still running, and the body mode is measured under the package key (line 610).
 - Fix outline: a separate counter and prompt for a superseded red, and its own usage key for body.
 
-## delivery-speed quality advisory at .claude/agents/contributor.md:59
-
-- Where: `.claude/agents/contributor.md:59`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: body mode says to set the title and body to the body file byte for byte, but the file holds only the body.
-- Fix outline: set the body to the file's text and correct the title only when the scan names it.
-
 ## delivery-speed quality advisory at .claude/workflows/deliver-change.js:1073
 
 - Where: `.claude/workflows/deliver-change.js:1073`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
@@ -4282,12 +4245,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the new PR_TOKEN (a token of the user's) is only as safe as the AI environment's deployment-branch rule, a repository setting outside the diff; without it any branch push could add a workflow naming environment: AI and read the token.
 - Fix outline: confirm the AI environment allows only main as its deployment branch, and make PR_TOKEN a fine-grained token scoped to this repository with only the pull-request permission it needs.
 
-## pr-on-push quality advisory at .claude/workflows/deliver-change.js:982
-
-- Where: `.claude/workflows/deliver-change.js:982`. Delivery review of `pr-on-push` (quality advisory) at e873e89.
-- Why it matters: a package step that pushed but got no number now stops with pushed set and pr empty, and a restart reruns package with no hint that the push already ran (that line goes only to a continued start), so the contributor redoes steps 1 to 3, commits after the push, and meets the refused second push before wait.
-- Fix outline: when state.pushed is set at the package start, tell the contributor to skip to step 5 (open_pr.sh wait) and return pushed.
-
 ## pr-on-push quality advisory at tools/open_pr.sh:43
 
 - Where: `tools/open_pr.sh:43`. Delivery review of `pr-on-push` (quality advisory) at e873e89.
@@ -4305,12 +4262,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/open_pr.sh:180`. Delivery review of `pr-on-push` (quality advisory) at e873e89.
 - Why it matters: the read-back looks the pull request up by branch name (gh pr view "$branch") instead of the URL gh pr create printed, so a branch with an earlier pull request can compare the wrong one.
 - Fix outline: keep the create output and pass that URL to both gh pr view calls.
-
-## pr-on-push quality advisory at tools/open_pr.sh:2
-
-- Where: `tools/open_pr.sh:2`. Delivery review of `pr-on-push` (quality advisory) at e873e89.
-- Why it matters: the header and open-pr.yml say a pull request created or edited over the API from a session gets a footer, while contributor.md:51 and README.md:196 say the update tool arrives clean.
-- Fix outline: state one rule (a create gets the footer, an update through the MCP tool arrives clean) in all four places.
 
 ## pr-on-push quality advisory at tools/tools_test.sh:558
 
@@ -4444,12 +4395,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Location: `tools/run_state.sh:1255` `sprint_names` and the due line, `sprint_row` (line 1324).
 - Why it matters: when /sprint runs after a sixth merge, `sprint_names` and the due line list every change since the last sprint and the combined diff runs to `origin/main`, but `sprint_row` closes the sprint at its fifth row, so the sixth change is reviewed in this sprint and counted again in the next.
 - Fix outline: cut `sprint_names` at `SPRINT_SIZE` and end the combined diff at the fifth change's merged commit.
-
-### Contributor agent file has no headroom (`pr-on-push` retrospective)
-
-- Location: `.claude/agents/contributor.md` (8190 of the 8192-byte agent budget in `tools/docs_lint.sh` `BUDGETS`; the next largest agent file, `.claude/agents/planner.md`, is 5950).
-- Why it matters: at #108 a one-line timeout fix forced four unrelated rewordings to fit the budget, which the quality review flagged as a mixed commit; every later fix to the file pays the same cost.
-- Fix outline: keep at least 15% headroom (under 7000 bytes) by removing or merging instructions; acceptance: docs-lint and the agents cases of tools-test pass, and the next fix to an agent file changes only the lines its finding names.
 
 ### Usage header splits review-due's description (`ci-time` quality advisory)
 
@@ -4894,10 +4839,6 @@ Correctness, pre-existing and outside this change's fix: positions compares byte
 - Why: style; the reflowed comments here and at carat/adapters/tab_bar.rb:15 run past the files' comment width.
 - Fix: rewrap them to match the surrounding lines.
 
-## spinel-rebump quality advisory at carat/domain/utf8.rb:49
-
-Comment accuracy: the comment here, in `carat/plugin_api.rb:345`, and in `docs/spinel-notes.md:21` date the `byteindex` `IndexError` on a continuation offset to Spinel 6b43fe94 (the new pin), while the proposal and design name 84aa303b1 as the commit that introduced it, so a reader bisecting the behavior starts from the wrong commit. Fix outline: cite 84aa303b1 in all three places.
-
 ## spinel-rebump quality advisory at carat/domain/ex_range.rb:46
 
 Tests beside every behavior change: the new `Utf8.boundary` calls in `ExRange` and `MarkdownText` (`carat/domain/markdown_text.rb:53` and `:277`) have no test row, so dropping one brings the `IndexError` back unseen on text that is not UTF-8. Fix outline: add a row each, an ex range with a 0x80 after a comma and a markdown body with a 0x80 after a newline and after a `](`.
@@ -4989,10 +4930,6 @@ The file's opening says each note holds at the pinned compiler, but the byteinde
 ### docs/spinel-notes.md:47: the note copies the pin value, which the next bump makes false
 
 The phrase 'the pin stays at its parent 6af548c9' copies the Makefile's pin value into a binding note that the next bump past 2440954d1 (after untyped-elephant) makes false. Why: a binding note that goes stale with every bump misleads. Fix: say '6af548c9, its parent, is the newest commit without it' and leave the pin value to SPINEL_REF.
-
-### carat/domain/utf8.rb:49: the byteindex guard comment describes behavior the pinned compiler does not have
-
-The comment (and carat/plugin_api.rb:345) says byteindex refuses a continuation-byte offset, but the pinned 6af548c9 does not raise, so a reader who cannot reproduce it may take the guard for dead code and remove it. Fix: say Spinel refuses it from 84aa303b1, after the pin, and the guard is kept for that bump.
 
 ## Findings of untyped-elephant, non-blocking
 
@@ -5109,3 +5046,275 @@ The comment (and carat/plugin_api.rb:345) says byteindex refuses a continuation-
 - Location: .claude/agents/checker.md:12 and every agent hook line (quality advisory, cleanup on interruption).
 - Why: the temporary repository is removed only on the normal path, with no trap, so a hook killed during its fetch of about a second leaves a directory under TMPDIR on every such call.
 - Fix: add trap 'rm -rf "$d"' EXIT after mktemp if the byte budgets allow, or accept it and say so in the design's Risks.
+
+## Findings of the sprint-4 review and sweep
+
+### carat/domain/utf8.rb:49: the byteindex guard comment cites the wrong Spinel commit
+
+- Location: carat/domain/utf8.rb:49, carat/plugin_api.rb:345, docs/spinel-notes.md:21 (spinel-rebump and spinel-compile-time quality advisories, merged by the sprint-4 grooming).
+- Why: the comments date the `byteindex` refusal of a continuation offset to 6b43fe94 and describe it as current, while 84aa303b1 introduced it and the pinned 6af548c9 does not raise, so a reader bisecting starts wrong or takes the guard for dead code.
+- Fix: say Spinel refuses it from 84aa303b1, after the pin, and the guard is kept for that bump, in all three places.
+
+### Fork pull requests sharing the branch name block open_pr.sh (security Low (5))
+
+- Location: tools/open_pr.sh:180 (sprint-4 review and sweep, security Low (5)).
+- Why: `gh pr list --head` counts fork pull requests with the predictable head name while view and edit by branch resolve only the same-repository head, so any user can make the count wrong (open refused) or have the title and body edit target the wrong one with PR_TOKEN.
+- Fix: count only same-repository heads, resolve one number, pass it to view and edit; a tools_test case with a cross-repository stand-in.
+
+### The check clone shares a writable toolchain (security Low (5))
+
+- Location: tools/run_state.sh:571 (sprint-4 sweep, security Low (5)).
+- Why: the check clone symlinks tmp/.toolchain and tmp/.spinel of the delivery clone, so a stage running branch code can overwrite the spinel binaries, persisting into later checks and agent make runs.
+- Fix: make the toolchain read-only after install, or verify a checksum of tmp/.toolchain/bin before each stage.
+
+### CI runs the branch's own scope script (security Low (6))
+
+- Location: .github/workflows/ci.yml:58 (sprint-4 sweep, security Low (6)).
+- Why: the scope step runs the pull request's tools/ci_scope.sh, so a branch can answer run=false and turn the spin check green without tests.
+- Fix: run main's ci_scope.sh from a base checkout, as scan.yml does with its scanner.
+
+### Sentence motions loop once per count past the last sentence
+
+- Location: carat/domain/motions.rb:488 and :520 (sprint-4 sweep, quality blocking).
+- Why: sentence_forward and sentence_backward rescan every start once per remaining count, O(count x starts), so `999999999)` freezes the editor where word motions stop at the buffer edge.
+- Fix: stop when no start is found and resume from the last one; a large-count row in test/editor_motions.rb.
+
+### The body-fix path can read a stale scan run
+
+- Location: .claude/workflows/deliver-change.js:1102 (sprint-4 review, quality).
+- Why: the body mode pushes pr.md as a CI fix whose scan run reads the old body and goes red before open-pr edits the body, so a merger reading checks in that window returns red with bodyFixed true and the run falls into a fix round.
+- Fix: wait until the open pull request's title and body equal pr.md's before returning, or have the merger ignore a scan run older than the last edit.
+
+### The wait and package blocks repeat three lines
+
+- Location: .claude/workflows/deliver-change.js:1015 (lines 1018-1020 and 1030-1032; sprint-4 review, quality).
+- Why: packagedPr, the no pull request stop, and phaseDone package are written twice.
+- Fix: one helper taking the contributor result.
+
+### Testing#cases accepts a row whose input is no array literal
+
+- Location: carat/testing.rb:66 (sprint-4 review, quality).
+- Why: such a row compiles with the wrong typing and no warning.
+- Fix: test/lint.rb flags a `t.cases` row whose second element is not an array literal.
+
+### The theme contrast tables list every palette by hand
+
+- Location: test/domain_theme.rb:297, 324, 360, 378, 392 (sprint-4 review, quality).
+- Why: five tables repeat two rows per palette while PALETTES (line 11) names them; the carat palettes needed about 20 hand rows.
+- Fix: build each table's rows from PALETTES.
+
+### The Alias scenario names a palette that is no alias
+
+- Location: openspec/specs/color-themes/spec.md:49, test/domain_theme.rb:253 and :257 (sprint-4 review, quality).
+- Why: the scenario now says carat-light is not an alias, and the test cites the misleading name.
+- Fix: rename the scenario in a spec change and update the test's label and comment.
+
+### The contributor budget is enforced twice
+
+- Location: tools/docs_lint.sh:48 and tools/tools_test.sh:2540 (sprint-4 review, quality).
+- Why: tools_test checks the size under 7000 and greps docs_lint for the budget line, so the limit lives in two places.
+- Fix: keep it only in BUDGETS and drop the tools_test copy.
+
+### The contributor's test and recording rule lost a word
+
+- Location: .claude/agents/contributor.md:22 (sprint-4 review, quality).
+- Why: the condensed sentence drops "disable" and the note that agent_guard.sh refuses both, and reads as if a phase or review may be recorded through `run_state.sh push`.
+- Fix: restore "disable" and split the test rule and the recording rule into two sentences.
+
+### The timeout path's magic numbers and dead clear
+
+- Location: carat/use_cases/handle_key.rb:378 and :224 (sprint-4 sweep, quality advisory).
+- Why: `code == 40 || code == 44` spells ( and , as numbers; clear_message inside the list_message? branch repeats the unconditional call at :227.
+- Fix: named constants; drop the inner call.
+
+### The tabstop fallback is re-spelled beside Options#tab_width
+
+- Location: dispatcher.rb:112, leave_insert.rb:69, repeat_last.rb:104, visual/extend_visual.rb:54, arrange_view.rb:43, insert_tab.rb:22 under carat/use_cases/, and carat/domain/operators.rb:172, 251, 272 (sprint-4 sweep, quality advisory).
+- Why: `tabstop > 0 ? tabstop : 8` repeats Options#tab_width (options.rb:130), and Options already refuses a tabstop below 1, so the fallback is dead.
+- Fix: call options.tab_width, and one shift width helper for the operators.
+
+### ActionTable#register drops a duplicate silently
+
+- Location: carat/use_cases/actions/action_table.rb:34 (sprint-4 sweep, quality advisory).
+- Why: register returns false for a known name and all 68 callers ignore it, so a second registration vanishes.
+- Fix: raise or note a startup problem; a test in test/use_cases_actions.rb.
+
+### accept_visual repeats accept's preamble
+
+- Location: carat/domain/command_grammar.rb:163 and :138 (sprint-4 sweep, quality advisory).
+- Why: the want check, remember, and search branch are copied.
+- Fix: a shared private preamble returning the early result.
+
+### The key decoder repeats final-byte cases and loses a key after invalid UTF-8
+
+- Location: carat/adapters/key_decoder.rb:148 and :212 (sprint-4 sweep, quality advisory).
+- Why: csi_key copies ss3_key's ten cases; a lead byte followed by a non-continuation (C3 41) consumes the whole length, losing the ASCII key.
+- Fix: csi_key handles 126 and passes the rest to ss3_key; on an invalid sequence emit U+FFFD for the lead byte alone.
+
+### InputController calls handle twice
+
+- Location: carat/adapters/input_controller.rb:128 (sprint-4 sweep, quality advisory).
+- Why: the start-screen branch and the fall-through each call handle(state, @decoder.feed(bytes)).
+- Fix: dismiss the start screen if showing, then one handle call.
+
+### Operate and RepeatLast copy EditorState#clamp_col
+
+- Location: carat/use_cases/operate.rb:204, carat/use_cases/repeat_last.rb:116, carat/domain/editor_state.rb:97 (sprint-4 sweep, quality).
+- Why: two private clamps duplicate clamp_col.
+- Fix: call state.clamp_col and delete both.
+
+### Buffer#revert_to leaves global marks unshifted
+
+- Location: carat/domain/buffer.rb:652 (sprint-4 sweep, quality).
+- Why: revert_to shifts sign layers and the syntax cache but not global_marks, unlike splice (:687), so a plugin edit reverted during `:g` leaves marked rows off.
+- Fix: shift global_marks in the loop; a test in test/editor_global.rb.
+
+### gen-config repeats its write-if-changed block
+
+- Location: bin/carat-gen-config.rb:87 and :96 (sprint-4 sweep, quality advisory).
+- Why: the block is written twice.
+- Fix: one write_if_changed(path, text, summary).
+
+### The development compile is copied in three targets
+
+- Location: Makefile:245, :279, :336 (sprint-4 sweep, quality advisory).
+- Why: dev-build, test-build, and bench-budget repeat SP_TIMING, the timing filter, the failure message, and UNIT_SUMMARY.
+- Fix: one define dev_compile called by the three.
+
+### toolchain-clean removes all of tmp
+
+- Location: Makefile:182 (sprint-4 sweep, quality advisory).
+- Why: `rm -rf tmp` also deletes linked worktrees and tmp/scout, leaving stale worktree records, against its help text.
+- Fix: remove SPINEL_SRC and PREFIX only, or run git worktree prune after.
+
+### make help and tool headers drift from the code
+
+- Location: Makefile:454 and :379, tools/tools_test.sh:2-12, tools/docs_lint.sh:19, tools/gates.sh:36 and :62, tools/run_state.sh:137 (sprint-4 sweep, quality advisory).
+- Why: help omits ten variables and three tested scripts; docs_lint says 1 to 5 sprint items where it accepts 0 to 5; gates omits FAST_STAGES; run_state's usage splits the review-due entry around ci-stages and tokens.
+- Fix: correct each text.
+
+### open_pr.sh's wait step, double read, and branch pattern
+
+- Location: tools/open_pr.sh:121, :82, :45 (sprint-4 sweep, quality).
+- Why: WAIT_STEP=0 passes its check and wait polls forever; two gh pr view calls read title and body; BRANCH_RE copies agent_guard.sh:101 with no equality case.
+- Fix: require a step from 1; one view call; a tools_test equality case.
+
+### The gates split file lists on spaces
+
+- Location: tools/gates.sh:224 and :299 (sprint-4 sweep, quality advisory).
+- Why: the snapshots and scenarios loops split paths on spaces, so the scenarios gate skips a delta spec whose path holds one and fails open.
+- Fix: read paths line by line as gate_content does.
+
+### metrics compare ignores a missing figure
+
+- Location: tools/metrics.sh:86 and :55 (sprint-4 sweep, quality).
+- Why: compare walks only CURRENT, so a base scenario with no current line passes; line 55 splits fields unquoted, so a ? field globs.
+- Fix: fail each strict base name not seen; read the fields with read.
+
+### make bench skips four scenarios
+
+- Location: bench/run.sh:69, bench/keys.rb:118, 119, 143, 145 (sprint-4 sweep, quality).
+- Why: the default list is a hand copy that left out lh-float, lh-winbar, n, and palette, though the header says every scenario runs.
+- Fix: loop over the names build/bench/keys prints, or add the four.
+
+### spec_validate removes a failed preview
+
+- Location: tools/spec_validate.sh:25 (sprint-4 sweep, quality).
+- Why: the header promises a failed preview is kept, but the next active change's run removes build/spec-preview.
+- Fix: preview each change under its own directory, or stop removing after a failure.
+
+### Periodic quality slices split areas by count
+
+- Location: .claude/workflows/periodic-review.js:65 (sprint-4 sweep, quality).
+- Why: slice 1 holds area 1, about 10,000 lines, which one start cannot read; the sweep left areas 1, 13, 14, 15 unreviewed (covered 14/18).
+- Fix: weight slices by line count, or split area 1 in the map.
+
+### The sprint report misreads the sweep
+
+- Location: .claude/workflows/sprint-planning.js:179 (sprint-4 sweep, quality).
+- Why: the Sweep line says did not run whenever the security start did not run, though quality slices may have recorded, and never reports quality advisories or unreviewed areas.
+- Fix: report the sweep's security and quality separately.
+
+### ListTree copies ProbePath and spells inside? another way
+
+- Location: carat/use_cases/files/list_tree.rb:67 and :98 (sprint-4 sweep, quality).
+- Why: probe repeats ProbePath#call, the map's one place asking the port about a path; ListTree calls PluginApi::Paths.inside? where the others use Domain::PathPolicy.inside?.
+- Fix: inject probe_path; use one spelling.
+
+### The outside-root message is built in four places
+
+- Location: carat/use_cases/files/resolve_inside.rb:41, make_path.rb:37, rename_path.rb:42, delete_path.rb:39 (sprint-4 sweep, quality).
+- Why: four copies of 'Outside the tree root: ' can drift.
+- Fix: one PathPolicy method taking cwd and path.
+
+### Test tables pass unconverted values
+
+- Location: test/domain_selection.rb:47 and 49, test/editor_operators.rb:145-147, test/editor_insert.rb:40-42, test/editor_completion.rb:71 (sprint-4 sweep, quality).
+- Why: table inputs reach the library unconverted, against the typed-helper rule.
+- Fix: convert with .to_s, .to_i, or ints first.
+
+### EditorHarness#windows returns tuples
+
+- Location: carat/doubles/editor_harness.rb:190, 13 call sites such as test/editor_leader.rb:57 and test/editor_tabs.rb:247 (sprint-4 sweep, quality).
+- Why: a seven-element array indexed by position, against the typed-readers rule.
+- Fix: a small Data value with named readers.
+
+### The map's areas 8, 13, and 15 drift from the code
+
+- Location: docs/codebase-map.md:251, :231, :420, :529, :464, :47, :121 (sprint-4 sweep, quality).
+- Why: area 8 omits completion; Registers.unnamed?, ExHandler#ranged?, Paths.absolute, StatusSlots#set_lsp unnamed; the run_state bullet has an unclosed parenthesis; the editor_state bullet names show twice.
+- Fix: correct each line.
+
+### Dead display helpers
+
+- Location: carat/domain/display_width.rb:37, carat/adapters/frame_presenter.rb:316 and :321, carat/domain/frame.rb:62 (sprint-4 sweep, quality).
+- Why: DisplayWidth.of_char has no caller; display_col and display_width serve one test; Frame#index serves one test while every method inlines it; the map lists them.
+- Fix: delete them, move the tests to DisplayWidth.column, update the map (code_cells in of_char's place).
+
+### Frame, status bar, and screen presenter repeats
+
+- Location: carat/domain/frame.rb:36, carat/adapters/status_bar.rb:1 and :47, carat/adapters/screen_presenter.rb:193 (sprint-4 sweep, quality).
+- Why: Frame::REPLACEMENT repeats Utf8::REPLACEMENT; an unused plugin_api require; NO_NAME defined in four files (also tab_bar.rb:22, winbar.rb:18, list_buffers.rb:20); two loops inline same_cell?.
+- Fix: one constant each, drop the require, call same_cell? unless a bench shows a cost.
+
+### FramePresenter#call is 116 lines
+
+- Location: carat/adapters/frame_presenter.rb:200 (sprint-4 sweep, quality).
+- Why: one method sizes, keys floats, draws chrome, the start screen, dirty marks, and places the cursor.
+- Fix: move the float-key block (226-239) and the chrome dirtiness loop (289-298) into private methods.
+
+### Plugin docs, SyntaxCache, and comment layout
+
+- Location: docs/plugins.md:70, carat/domain/syntax_cache.rb:42, carat/use_cases/plugins/buffer_requests.rb:49 (sprint-4 sweep, quality).
+- Why: the segment priority list omits progress 35; SyntaxCache calls super() then assigns, unlike LineCache; comments mis-indented or past the wrap width (also window_requests.rb:69, status_bar.rb:16, tab_bar.rb:15, frame.rb:15 and :31).
+- Fix: add the priority, pass members to super by keyword, rewrap.
+
+### The theme palette lookup repeats NAMES and keeps a dead branch
+
+- Location: carat/domain/themes.rb:474 and :545 (sprint-4 sweep, quality).
+- Why: an if-chain repeats NAMES and falls back silently to CARAT_DARK; line_bg16 handles a 16-color cursor line no palette has.
+- Fix: a PALETTES array indexed by NAMES.index; drop line_bg16.
+
+### Filetype cuts names by hand and slices by character
+
+- Location: carat/domain/filetype.rb:29 and :81 (sprint-4 sweep, quality).
+- Why: from_name repeats Paths.basename and FileIcons.file_type; program_type slices by character with a byte count.
+- Fix: Paths.basename and one extension helper; byteslice.
+
+### The language gateway's copies and relative URIs
+
+- Location: carat/adapters/json_rpc_language_gateway.rb:267, :837, :232, :1328 (sprint-4 sweep, quality).
+- Why: listed is public for two private callers; send_hover and the cancels copy send_definition; restart copies start's tail; uri_of keeps ./ segments, so one file syncs under two URIs.
+- Fix: make listed private; one sender and canceller if Spinel types them; one launch helper; build the URI from PluginApi::Paths.absolute with a test.
+
+### Plugin host strings, focus, and parameters
+
+- Location: carat/use_cases/plugins/plugin_router.rb:77, window_requests.rb:303, plugin_host.rb:189 (sprint-4 sweep, quality).
+- Why: answer passes prompt_id uncopied; in_window restores focus only after the block returns, so a raise leaves it moved; follow_prompt takes the state the host keeps.
+- Fix: id.dup; restore in ensure; drop the parameter.
+
+### The finder copies the explorer and the explorer loses a followed file
+
+- Location: carat/plugins/finder/plugin.rb:321, 336, 177 and carat/plugins/explorer/plugin.rb:420 (sprint-4 sweep, quality).
+- Why: open_path, report, and ignored repeat the explorer's; finish_rename moves @followed only on an exact match, so a file inside a renamed directory keeps its old path.
+- Fix: add the shared helpers to PluginApi; rewrite @followed on a path-plus-slash prefix with a test.
