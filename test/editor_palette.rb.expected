@@ -34,6 +34,8 @@ ok   The selected row's match in PmenuMatchSel, its description in PmenuExtraSel
 ok   A matched name's letters in PmenuMatch, the description in PmenuExtra, the rest in Pmenu
 ok   A description match is marked in its column, not in the name's
 ok   with an empty text nothing is marked
+ok   a multibyte query marks only the character it matched
+ok   A narrow palette leaves the description out: the key follows the name and no cell is in PmenuExtra
 ok   the colon prompt returns after the palette
 ok   The palette keeps its right border while the filter shrinks at 120 by 36
 ok   the palette shows every row whole under winborder none at 120 by 36
@@ -44,4 +46,4 @@ ok   the palette shows every row whole under winborder none at 80 by 24
 ok   Without an edge the palette uses the border columns, the screen less its margin and its padding
 ok   The palette is centered without a border: as many columns left of its box as right
 ok   The palette is centered again after a resize: centered at 120 columns and at 100
-editor_palette: 46 passed, 0 failed
+editor_palette: 48 passed, 0 failed

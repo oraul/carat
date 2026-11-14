@@ -7,6 +7,17 @@ require_relative "../carat/plugins/hello/plugin"
 # the file is compiled on its own (make test-one).
 module EditorPaletteTest
   H = Carat::Domain::Highlight
+
+  # A plugin whose one action has a description that starts with wide
+  # characters, three bytes each.
+  class Wide < Carat::PluginApi::Plugin
+    # Returns the manifest.
+    # @rbs skip
+    def manifest
+      Carat::PluginApi::Manifest.new(name: "wide", version: "1.0.0", api_version: Carat::PluginApi::VERSION, actions: { "plugin.wide.go" => "\u65E5\u672C\u8A9E text" }, commands: {}, bindings: [], events: [], options: [], option_types: {}, filetypes: [])
+    end
+  end
+
   # A session on a.txt with the default configuration, the keys typed.
   def self.session(keys)
     files = Carat::Doubles::MemoryFiles.new
@@ -114,6 +125,28 @@ module EditorPaletteTest
     at = row.index(description.to_s)
     return [0, -1] if at.nil?
     [Carat::Domain::DisplayWidth.text_width(row, 0), Carat::Domain::DisplayWidth.text_width(row[0, at].to_s, 0)]
+  end
+
+  # A session on a.txt with the Wide plugin, the keys typed.
+  def self.wide_session(keys)
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.txt", "one\ntwo\nthree\n")
+    h = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with(""), rows: 24, cols: 80, plugins: [Wide.new])
+    h.open("a.txt")
+    h.type(keys.to_s)
+    h
+  end
+
+  # Whether a cell of the float's row from col to before stop is drawn in
+  # PmenuExtra or PmenuExtraSel.
+  def self.extra?(h, row, col, stop)
+    c = col
+    while c < stop
+      g = group_at(h, row, c)
+      return true if g == H::POPUP_MENU_EXTRA || g == H::POPUP_MENU_EXTRA_SELECTED
+      c += 1
+    end
+    false
   end
 
   # A rows by cols session on a.txt with the configuration lines over
@@ -276,6 +309,16 @@ module EditorPaletteTest
     t.assert_equal([false, true], [marked?(h, at, 0, 30), marked?(h, at, 30, width_of(h) - 12)], "A description match is marked in its column, not in the name's")
     h = session("<Space>p")
     t.assert_equal(false, marked?(h, 0, 0, width_of(h)), "with an empty text nothing is marked")
+    # A multibyte query marks whole characters: the one wide character it
+    # matched, two cells, and not the two that follow it.
+    h = wide_session("<Space>p\u65E5")
+    at = index_of(h, "plugin.wide.go")
+    t.assert_equal([true, true, false, false], [marked?(h, at, 30, 31), marked?(h, at, 31, 32), marked?(h, at, 32, 34), marked?(h, at, 34, 36)], "a multibyte query marks only the character it matched")
+    # Scenario: A narrow palette leaves the description out.
+    h = sized("option.winborder none\n", 24, 46)
+    h.type("<Space>pwindow.split")
+    at = index_of(h, "window.split")
+    t.assert_equal([42, 30, false, false], [width_of(h), cell_of(h, "window.split", "^Ws"), row_of(h, "window.split").include?("Split"), extra?(h, at, 0, width_of(h))], "A narrow palette leaves the description out: the key follows the name and no cell is in PmenuExtra")
 
     h = session("<Space>p<Esc>:")
     t.assert_equal(":", h.message_row[0, 1], "the colon prompt returns after the palette")

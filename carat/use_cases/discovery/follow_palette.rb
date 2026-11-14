@@ -209,8 +209,9 @@ module Carat
       end
 
       # Adds a token per run of the characters of text the query matched,
-      # from skip bytes on, below limit characters, at column from of the
-      # row, in PmenuMatch or on the selected row PmenuMatchSel.
+      # counted in whole characters, from skip bytes on, below limit
+      # characters, at column from of the row, in PmenuMatch or on the
+      # selected row PmenuMatchSel.
       #: (Array[Integer], String, String, Integer, Integer, Integer, bool) -> void
       def mark(tokens, query, text, skip, from, limit, selected)
         return if query.empty?
@@ -219,14 +220,18 @@ module Carat
         group = selected ? Domain::Highlight::POPUP_MENU_MATCH_SELECTED : Domain::Highlight::POPUP_MENU_MATCH
         i = 0
         while i < found.length
-          at = char_count(text, found[i] + skip)
+          # A run is consecutive matched bytes; it is drawn from the
+          # character holding its first byte to the one holding its last.
+          at = char_count(text, found[i] + skip + 1) - 1
           break if at >= limit
-          length = 1
-          length += 1 while i + length < found.length && found[i + length] == found[i] + length && at + length < limit
+          run = 1
+          run += 1 while i + run < found.length && found[i + run] == found[i] + run
+          stop = char_count(text, found[i + run - 1] + skip + 1)
+          stop = limit if stop > limit
           tokens << from + at
-          tokens << length
+          tokens << stop - at
           tokens << group
-          i += length
+          i += run
         end
       end
 
