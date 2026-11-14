@@ -131,12 +131,11 @@ module Carat
         height = 1 if height < 1
         top = palette.selected - height + 1
         top = 0 if top < 0
-        styles = Array.new(0, nil)
-        lines = rows(top, height, width, styles)
+        lines = rows(top, height, width)
         spec = Domain::FloatSpec.new(anchor: "editor", row: 1, col: 0, height: height, width: width, border: true, title: TITLE, z: Z)
         buffer = Domain::Buffer.new(lines: lines, path: nil, line_ending: "\n")
         buffer.owner = Domain::Palette::OWNER
-        buffer.styles = styles
+        buffer.styles = styles(top, lines, width) unless matches.empty?
         float = Domain::FloatWindow.new(window: Domain::Window.new(buffer: buffer), spec: spec)
         float.centered = true
         float.selected = matches.empty? ? -1 : palette.selected - top
@@ -147,11 +146,9 @@ module Carat
       end
 
       # The rows of the matches from top, the name, the description, and
-      # the key on the right in columns cut to the width, each row's style
-      # added to styles: the description column, then the runs of matched
-      # characters, in the Pmenu groups of the row.
-      #: (Integer, Integer, Integer, Array[untyped]) -> Array[String]
-      def rows(top, height, width, styles)
+      # the key on the right in columns cut to the width.
+      #: (Integer, Integer, Integer) -> Array[String]
+      def rows(top, height, width)
         palette = @palette
         matches = palette.matches
         lines = []
@@ -159,36 +156,54 @@ module Carat
           lines << EMPTY
           return lines
         end
-        query = bare(palette.query)
         room = width - NAME_WIDTH - KEY_WIDTH
         r = top
         while r < top + height && r < matches.length
           entry = matches[r]
+          line = pad(palette.names[entry], NAME_WIDTH)
+          line << pad(palette.descriptions[entry], room) if room >= 2
+          line << pad(palette.keys[entry], KEY_WIDTH)
+          lines << Domain::DisplayWidth.cut(line, width)
+          r += 1
+        end
+        lines
+      end
+
+      # A style per row of the lines, the matches from top: the
+      # description column in PmenuExtra, then the runs of the matched
+      # characters of the field that ranked the entry in PmenuMatch, their
+      # Sel forms on the selected row.
+      #: (Integer, Array[String], Integer) -> Array[untyped]
+      def styles(top, lines, width)
+        palette = @palette
+        query = bare(palette.query)
+        room = width - NAME_WIDTH - KEY_WIDTH
+        out = Array.new(0, nil)
+        i = 0
+        while i < lines.length
+          r = top + i
+          entry = palette.matches[r]
           selected = r == palette.selected
           name = palette.names[entry]
           description = palette.descriptions[entry]
+          field = palette.fields[r]
           tokens = Array.new(0, 0)
-          line = pad(name, NAME_WIDTH)
-          from = chars(line, line.bytesize)
-          if palette.fields[r] == 0
+          if field == 0
             skip = name.start_with?(":") ? 1 : 0
             mark(tokens, query, name, skip, 0, kept(name, NAME_WIDTH), selected)
           end
           if room >= 2
-            cell = pad(description, room)
-            line << cell
+            cell = pad(name, NAME_WIDTH)
+            from = chars(cell, cell.bytesize)
             tokens << from
-            tokens << chars(cell, cell.bytesize)
+            tokens << kept(description, room) + 1
             tokens << (selected ? Domain::Highlight::POPUP_MENU_EXTRA_SELECTED : Domain::Highlight::POPUP_MENU_EXTRA)
-            mark(tokens, query, description, 0, from, kept(description, room), selected) if palette.fields[r] == 1
+            mark(tokens, query, description, 0, from, kept(description, room), selected) if field == 1
           end
-          line << pad(palette.keys[entry], KEY_WIDTH)
-          line = Domain::DisplayWidth.cut(line, width)
-          lines << line
-          styles << Domain::SyntaxLine.new(text: line, start: 0, tokens: tokens, end_state: 0)
-          r += 1
+          out << Domain::SyntaxLine.new(text: lines[i], start: 0, tokens: tokens, end_state: 0)
+          i += 1
         end
-        lines
+        out
       end
 
       # Adds a token per run of the characters of text the query matched,

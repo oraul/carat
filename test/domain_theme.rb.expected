@@ -1,6 +1,6 @@
 ok   every id has a name
-ok   FloatTitle is the last UI group, after the indent guides
-ok   52 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
+ok   FloatTitle follows the indent guides and the popup menu's match and extra groups are the last UI groups
+ok   56 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
 ok   the markup groups after the file-icon groups
 ok   the status bar's groups follow Neovim's
 ok   names by id
@@ -90,6 +90,19 @@ ok   dark_plus in a float at 24 bits
 ok   dark_plus in a float at 256 colors
 ok   light_plus in a float at 24 bits
 ok   light_plus in a float at 256 colors
+ok   one_dark's selected menu row at 24 bits
+ok   one_dark's selected menu row at 256 colors
+ok   one_light's selected menu row at 24 bits
+ok   one_light's selected menu row at 256 colors
+ok   dark_plus's selected menu row at 24 bits
+ok   dark_plus's selected menu row at 256 colors
+ok   light_plus's selected menu row at 24 bits
+ok   light_plus's selected menu row at 256 colors
+ok   one_dark's selected menu row at 16 colors on the terminal's background
+ok   one_dark's selected menu row at 16 colors on the theme's background
+ok   one_light's selected menu row at 16 colors on the theme's background
+ok   dark_plus's selected menu row at 16 colors on the theme's background
+ok   light_plus's selected menu row at 16 colors on the terminal's background
 ok   one_dark comments are readable
 ok   the contrast of WCAG's lightest AA gray on white and of a color on itself
 ok   the defaults: one_dark on the terminal's background, syntax on
@@ -110,4 +123,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 112 passed, 0 failed
+domain_theme: 125 passed, 0 failed

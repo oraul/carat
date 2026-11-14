@@ -31,6 +31,11 @@ ok   other controls are dropped, breaks are spaces
 ok   an illegal byte is U+FFFD
 ok   cut at the limit
 ok   cut at a character boundary
+ok   the letters of a name in order
+ok   each part from its anchor, a byte matched twice kept once
+ok   case is ignored
+ok   no match is empty
+ok   an empty pattern is empty
 ok   a label of 500 letters is cut to 80 bytes
 ok   an insert text is cut to 200 bytes
 ok   a detail is cut to 80 bytes
@@ -38,4 +43,4 @@ ok   plain reads at most 4096 raw bytes
 ok   an escape-laden label is cleaned and an unknown kind reads as text
 ok   an empty insert text is the label
 ok   a list keeps 200 candidates
-domain_fuzzy_match: 40 passed, 0 failed
+domain_fuzzy_match: 45 passed, 0 failed
