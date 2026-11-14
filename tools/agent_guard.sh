@@ -1,9 +1,14 @@
 #!/bin/sh
 # The guard of the delivery agents: an allowlist of the commands each
 # agent needs. A PreToolUse hook in the frontmatter of each agent under
-# .claude/agents/ runs the copy on origin/main with the agent's profile and
-# the tool call's JSON on stdin, and refuses the call on any status but 0;
-# the guard exits 2 with the reason on stderr to refuse and 0 to allow.
+# .claude/agents/ runs the copy at origin's main, fetched from origin's
+# address, the one the hook line pins (any other is refused), into a new
+# temporary bare repository with no global or system configuration, every
+# object hashed on arrival, then removed (never read from the project's
+# objects, configuration, or local ref origin/main, all of which branch
+# code can write), with the agent's profile and the tool call's JSON on
+# stdin, and refuses the call on any status but 0; the guard exits 2 with
+# the reason on stderr to refuse and 0 to allow.
 #
 # Usage: sh tools/agent_guard.sh PROFILE [DIR] < HOOK-JSON
 #
