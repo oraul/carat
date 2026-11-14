@@ -321,7 +321,7 @@ module AdaptersScreenPresenterTest
     h.type("l")
     out = h.terminal.last_write
     t.assert_equal(false, out.include?("method"), "l writes no buffer text")
-    t.assert_true(out.match?(/\e\[59;\d+H\e\[0;1;38;5;253;48;5;238m2\e\[0m/), "l writes only the changed cell of the ruler")
+    t.assert_true(out.match?(/\e\[59;\d+H\e\[0;1;38;5;254;48;5;237m2\e\[0m/), "l writes only the changed cell of the ruler")
 
     # The theme's background: the Normal sequence is in effect when the
     # screen is cleared and when a region scrolls, so the terminal fills
@@ -335,12 +335,14 @@ module AdaptersScreenPresenterTest
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", lines_text)
     painted = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with("option.background theme\n"), rows: 10, cols: 40, plugins: [])
-    normal = Carat::Adapters::SgrTable.sequence(D::Themes.find("one_dark", "theme"), H::NORMAL, C256)
+    normal = Carat::Adapters::SgrTable.sequence(D::Themes.find(D::Themes::DEFAULT, "theme"), H::NORMAL, C256)
     painted.open("a.txt")
-    t.assert_equal("\e[0;38;5;249;48;5;236m", normal, "the painted Normal is one_dark's text color on its background")
+    t.assert_equal("\e[0;38;5;252;48;5;234m", normal, "the painted Normal is carat-dark's text color on its background")
     t.assert_true(painted.terminal.last_write.include?("#{normal}\e[2J"), "the screen is cleared after the painted Normal sequence")
     first = painted.terminal.last_write
-    t.assert_true(first.include?("#{normal}line 0") || first.include?("#{normal} line 0"), "a Normal cell is written in the palette's colors")
+    # Line 0 is on the cursor line, carat-dark's own background at 256
+    # colors, so line 1 shows a Normal cell.
+    t.assert_true(first.include?("#{normal}line 1"), "a Normal cell is written in the palette's colors")
     painted.type("jjjjjjjj")
     t.assert_true(painted.terminal.last_write.include?("#{normal}\e[1;8r\e[1S"), "a region scrolls after the painted Normal sequence")
     h = Carat::Doubles::EditorHarness.default(files, 10, 40)
@@ -361,7 +363,7 @@ module AdaptersScreenPresenterTest
       ["a 16-color selection is reverse video", [C16, "one_dark", H::VISUAL], "\e[0;7m"],
       ["a 16-color cursor line is underlined", [C16, "one_dark", H::CURSOR_LINE], "\e[0;4m"],
       ["a 256-color search", [C256, "one_dark", H::SEARCH], "\e[0;38;5;236;48;5;180m"],
-      ["carat-light is one_light's comment", [T, "carat-light", H::COMMENT], "\e[0;3;38;2;105;108;119m"],
+      ["carat-light's own comment", [T, "carat-light", H::COMMENT], "\e[0;3;38;2;92;97;115m"],
       ["one_light's string at its own 256-color index", [C256, "one_light", H::STRING], "\e[0;38;5;22m"],
       ["dark_plus's comment at its own 256-color index", [C256, "dark_plus", H::COMMENT], "\e[0;3;38;5;71m"],
       ["dark_plus's keyword", [T, "dark_plus", H::KEYWORD], "\e[0;38;2;86;156;214m"],

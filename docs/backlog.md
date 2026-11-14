@@ -1286,12 +1286,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: it accepts the security and the quality values for both results, although the design says the schema keeps the line safe, and it is recomputed four times per run.
 - Fix outline: compute `securityMissed` and `qualityMissed` once and drop the filter, or filter by each kind's own values.
 
-## Float offsets are not range-checked at the plugin boundary
-
-- Where: `FloatWindow#shift` and `#place` in `carat/domain/float_window.rb` line 74, `FloatSpec.refusal`, `WindowRequests#move_float` in `carat/use_cases/plugins/window_requests.rb`, and `FramePresenter#paint_floats` in `carat/adapters/frame_presenter.rb` line 450 at `floating-windows`. Security Low (3) of `floating-windows`.
-- Why it matters: a row or column offset from `open_float` or `move_float` near the integer maximum could wrap in Spinel's 64-bit arithmetic, so `shift` skips its clamp, the box's right edge wraps negative, the on-screen check passes, and frame cells are read and written far outside the frame. Only compiled-in, trusted plugins supply these offsets today and no `.caratrc` or file text reaches them, so this is defense in depth.
-- Fix outline: refuse a row or column whose absolute value is above a bound such as `1 << 20` in `FloatSpec.refusal` and in `move_float`, or clamp the offset in `FloatWindow#place` before adding it to the anchor; also check that the box's right edge is past its left and its bottom past its top in `paint_floats`.
-
 ## Four float layer methods are exempt from the predicate rule by name
 
 - Where: `BOOL_COMMANDS` in `test/lint.rb` line 212, and `FloatLayer#add`, `#enter`, `#move`, and `#close_top` in `carat/domain/float_layer.rb` at `floating-windows`. Quality advisory of `floating-windows`.
@@ -2148,18 +2142,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: two parsers of `plugin.<name>.<action>` can drift, and the wrapper adds a hop for one call.
 - Fix outline: have `PluginRegistry` return the enabled plugins' action names (the same method the palette entry above needs) and inline `@palette.add` into `add_plugin_actions`.
 
-## KEYHINTS_DELAY is never read
-
-- Where: `carat/domain/options.rb` line 72 at d828abb; `initialize` (line 56) repeats the literal 300. Quality advisory in `discoverability`, raised twice. Raised again at 38628bb (periodic quality). Queued in `menu-hints`.
-- Why it matters: a constant beside a duplicated literal invites changing one and not the other.
-- Fix outline: use `KEYHINTS_DELAY` in `initialize`, or drop the constant.
-
-## ShowKeyHints copies HideKeyHints' close
-
-- Where: `carat/use_cases/discovery/show_key_hints.rb` line 56 at d828abb. Quality advisory in `discoverability`. Raised again at 38628bb (periodic quality). Queued in `menu-hints`. Raised again at ce6abdb (periodic quality): inject `HideKeyHints`.
-- Why it matters: two copies of closing the hints float drift when the float's lifecycle changes.
-- Fix outline: have `ShowKeyHints` call `HideKeyHints` instead of holding `close_float`.
-
 ## Three discovery comments are stale or break their wrap
 
 - Where: the class comment of `carat/use_cases/discovery/hide_key_hints.rb` (line 8), the class comment of `carat/use_cases/discovery/show_key_hints.rb` (line 23, longer than its neighbors), and the comment at `carat/use_cases/handle_key.rb` line 66 (breaks after "While the"), at d828abb. Quality advisories in `discoverability`. Raised again at 38628bb (periodic quality). Queued in `menu-hints`.
@@ -2577,12 +2559,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the entry omits `count` and `name_at`, and the Tests lines do not name `test/editor_breadcrumbs.rb` though it covers `winbar.rb`, `symbol_outline.rb`, and `symbol_request.rb`.
 - Fix outline: add the two methods to the entry and the test to both areas' Tests lines.
 
-## The palette's name column cuts five shipped action names
-
-- Where: `NAME_WIDTH` in `carat/use_cases/discovery/follow_palette.rb` line 29, at 7711421. Periodic quality. Queue item `menu-hints`.
-- Why it matters: 28 cuts `textobject.inner_single_quote`, `textobject.inner_double_quote`, `plugin.explorer.toggle_hidden`, `search.partial_word_backward`, and `motion.big_word_end_backward` to 27 characters.
-- Fix outline: size the column from the longest name capped by the float width, with a row showing a 29-character name whole.
-
 ## :LspRestart lets a stale symbol answer replace the outline
 
 - Where: `stop` in `carat/adapters/json_rpc_language_gateway.rb` line 227, at 7711421; `crash` (line 439) forgets the symbol request, `stop` does not. Periodic quality. Queue item `top-rows`.
@@ -2792,12 +2768,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/backlog.md` (301 KB, 471 entries at 5e4c140, up from 151 KB over 20 changes; 424,794 bytes at 9a92265) and `BUDGETS` in `tools/docs_lint.sh`. Periodic quality. Queue item `docs-index`. Duplicates for `backlog-compaction` (#99 notes 12 and 33), by their lines at 9a92265: 3976 repeats 3497, 2753 repeats 215, 3857 repeats 2313, 3851 repeats 2028, and the Makefile's timed compile is entered three times (2292, 3433, 3983).
 - Why it matters: no agent can read it whole to find fixed entries or avoid recording a finding twice.
 - Fix outline: give it a budget in `BUDGETS` and fold its entries per area, removing those no longer true.
-
-## Key hints repeat the grammar-mode test
-
-- Where: `carat/use_cases/discovery/show_key_hints.rb` line 61 and `HandleKey#grammar_mode?` in `carat/use_cases/handle_key.rb` line 195, at 5e4c140. Periodic quality. Queue item `menu-hints`. Raised again at ce6abdb (periodic quality): a `Domain::Mode.grammar?` predicate.
-- Why it matters: a mode added to one test and not the other shows hints that disagree with the grammar.
-- Fix outline: one `Mode.grammar?(mode)` in `carat/domain/mode.rb` called by both.
 
 ## The map names EditorState's show twice and lacks Tree readers
 
@@ -3015,12 +2985,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `Testing#initialize(name)` in `carat/testing.rb` line 13; `test/lint.rb` line 1000 applies the keyword rule only to layer files, at 3895e21. Periodic quality. Queue item `docs-index`.
 - Why it matters: CLAUDE.md names `Carat::Testing` among the classes whose constructors take required keywords, so files outside a layer, plugins included, escape the rule unstated.
 - Fix outline: state the exemption beside the keyword rule in CLAUDE.md, or move to `initialize(name:)` across the tests.
-
-## HandleKey restates KeyHints#showing?
-
-- Where: `carat/use_cases/handle_key.rb` line 131 at 3895e21, `float_id != 0` where `HideKeyHints#call` checks `showing?` again. Periodic quality advisory. Queue item `menu-hints`.
-- Why it matters: two spellings of one test drift apart.
-- Fix outline: `@hide_key_hints.call(state) if @key_hints.showing?`.
 
 ## metrics.sh ignores a failed field read
 
@@ -3624,12 +3588,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: dead code and one rule kept in two places.
 - Fix outline: drop the parameter; one private helper reading a target within a limit. Queue item `definitions-tidy`.
 
-## The tab bar copies the status bar's digit fit
-
-- Where: `carat/adapters/tab_bar.rb:191` (`put_number`) against `carat/adapters/status_bar.rb:361` (`digits_within`).
-- Why it matters: two copies of one rule in the bars `top-rows` reworks.
-- Fix outline: one frame helper both bars call. Queue item `top-rows`.
-
 ## The explorer spells its keys twice
 
 - Where: `carat/plugins/explorer/plugin.rb:16` (`HELP`) against `:541` (its keymap).
@@ -3665,42 +3623,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/adapters/frame_presenter.rb` line 639, `paint_float_row`, which calls `buffer.line(row)` and `@cache.fetch` once for `paint_text` and again for `paint_tokens` on a styled row. Quality advisory of `float-frame`.
 - Why it matters: duplicated work per row in the presenter's hot path, which the `float-frame` proposal set out to tidy.
 - Fix outline: fetch the line and its decoded form once into locals before the branch and reuse them for the tokens; confirm with `make bench`. Queue item `float-placement`.
-
-## The palette is one column off center without a border
-
-- Where: `carat/use_cases/discovery/follow_palette.rb` line 124 (and `carat/use_cases/discovery/show_key_hints.rb` line 132 for its limit), which subtract a 2-column border unconditionally. Quality advisory of `float-frame`.
-- Why it matters: under `option.winborder none` the palette sits one column off center.
-- Fix outline: subtract the border only when `BorderStyle.edged?(options.winborder)`, with a row in `test/editor_palette.rb`. Queue item `float-placement`.
-
-## FloatWindow#place shadows its edge reader
-
-- Where: `carat/domain/float_window.rb:58`. Periodic quality.
-- Why it matters: the method reads `edge` two ways, a local and the member.
-- Fix outline: rename the local and write the member from it. Queue item `float-placement`.
-
-## The frame presenter's comment and map bullet predate float-frame
-
-- Where: `carat/adapters/frame_presenter.rb:84`; `docs/codebase-map.md:457`. Periodic quality.
-- Why it matters: neither names the padding, `option.winborder`, the centered `FloatTitle`, `paint_edge`, or `paint_title`.
-- Fix outline: reword both. Queue item `float-placement`.
-
-## Notification titles are drawn flush, float titles centered
-
-- Where: `carat/adapters/frame_presenter.rb:508`. Periodic quality.
-- Why it matters: two title styles on one screen, against the calm uniform frame.
-- Fix outline: draw the level title through the float title path with the level's group. Queue item `float-placement`.
-
-## The open_float row omits the padding and the box width
-
-- Where: `docs/plugins.md:83` against `carat/plugin_api.rb:194`. Periodic quality, raised twice (notes 37 and 49).
-- Why it matters: a plugin tiling floats from the docs overlaps them, as the in-tree finder had to be changed.
-- Fix outline: state the padding, the winborder styles, and the box width with and without a border in the row. Queue item `float-placement`.
-
-## The completion popup pads its rows twice
-
-- Where: `carat/use_cases/completion/open_completion_popup.rb:105`, `:113`, and `:54`. Periodic quality.
-- Why it matters: two blank columns each side against one on every other float.
-- Fix outline: drop the row's own blanks, adjust the column offset and `test/editor_completion.rb`. Queue item `menu-hints`.
 
 ## The theme test's group comment is out of date
 
@@ -4991,3 +4913,31 @@ Match the existing style: the domain require is wedged between the `../files` us
 ## spinel-rebump quality advisory at carat/domain/utf8.rb:54
 
 One clear way to do each thing: the boundary rule is applied by hand at seven `byteindex` call sites and only `docs/spinel-notes.md` states it, so the next `byteindex` with an offset can bring the `IndexError` back. Fix outline: a `test/lint.rb` rule refusing a `byteindex` or `byterindex` call with an offset argument not wrapped in `Utf8.boundary` (exempting the inlined copy in `PluginApi::Paths.segments`).
+
+- quality advisory (carat-palette) test/adapters_screen_presenter.rb:337 spec drift: the unmodified scenario 'The theme paints' (openspec/specs/color-themes/spec.md:105) names one_dark and \e[0;38;5;249;48;5;236m, but its test now draws the default carat-dark and asserts 252;234, so after archive the scenario is proved by no test. Fix: add 'option.theme one_dark' to the harness config and keep the one_dark sequence, or modify the scenario to carat-dark in a delta.
+- quality advisory (carat-palette) test/adapters_screen_presenter.rb:358 spec drift: the 'Status line' scenario (openspec/specs/color-themes/spec.md:68) names carat-dark, which was one_dark's alias and is now its own palette, while its test row still draws one_dark. Fix: draw the row with carat-dark and its StatusLine colors, or modify the scenario to one_dark in a delta.
+- quality advisory (carat-palette) docs/compatibility.md:517 docs accuracy: the corrected sentence lists the thirty syntax, thirteen file-icon, and six markup groups after '56 UI groups:', as if they were among the 56, which are Neovim's 41, the status bar's eight, the two indent guides, FloatTitle, and four popup menu groups. Fix: say '56 UI groups (Neovim's 41, then ...), plus thirty syntax, thirteen file-icon, and six markup groups'.
+- quality advisory (carat-palette) carat/domain/themes.rb:460 duplication: with the alias table gone, canonical repeats known?'s NAMES.include? test. Fix: write it as 'known?(name) ? name : DEFAULT' or fold it into find.
+## Palette tokens shift on a description that is not UTF-8
+
+- Where: `char_count` in `carat/use_cases/discovery/follow_palette.rb:240`. Sprint-3 quality review.
+- Why it matters: `char_count` counts every byte that is not a continuation byte, while the frame decodes token columns with `Utf8`, which counts a lone continuation byte or a broken sequence as one replacement character each, so a plugin description holding such bytes shifts its `PmenuMatch` and `PmenuExtra` tokens by one or more columns.
+- Fix outline: count characters the way the decoder does (one shared count beside `Utf8.size_at`), with a palette test whose description is not UTF-8. Queue item `palette-tidy`.
+
+## Cursor-anchored floats lose two columns to the centered-float margin
+
+- Where: `text_room` in `carat/domain/float_window.rb:54`, called by `ShowHover`, `ShowSignature`, and `OpenDefinitionFloat`. Sprint-3 quality review.
+- Why it matters: `text_room` always subtracts twice the margin, but cursor-anchored floats get no margin from `place`, so they come out two columns narrower than the screen allows, against the comment "Every float sized to the screen asks this".
+- Fix outline: size by the float's anchor, or document that cursor floats give up the two columns, with a hover row at the screen's width. Queue item `hover-tidy`.
+
+## The Spinel boundary guards in ExRange and MarkdownText have no test
+
+- Where: `carat/domain/ex_range.rb:46`, `carat/domain/markdown_text.rb:53` and `:277`. Sprint-3 quality review of `spinel-rebump`.
+- Why it matters: under the pinned Spinel a `byteindex` from a continuation byte raises `IndexError` without the `Utf8.boundary` guard; `RpcFramer`, `TextLines`, `VimPattern`, `Paths`, and `read_file` each got a regression row, these three did not, so removing a guard passes the suite.
+- Fix outline: rows in `test/domain_ex_range.rb` (a range such as `1,` then a continuation byte) and `test/domain_markdown_text.rb` (a continuation byte after a newline and inside a link target). Queue item `spinel-workarounds`.
+
+## Nothing enforces Utf8.boundary on an offset byteindex
+
+- Where: `carat/domain/utf8.rb:54`; `carat/plugin_api.rb:347` repeats the loop inline. Sprint-3 quality review of `spinel-rebump`.
+- Why it matters: a new `byteindex(needle, offset)` call that skips `Utf8.boundary` raises under the pinned Spinel on a continuation byte, and only memory keeps the rule.
+- Fix outline: a `test/lint.rb` rule refusing a `byteindex` with an offset argument outside `Utf8.boundary`, the `plugin_api.rb` copy allowed. Queue item `spinel-workarounds`.

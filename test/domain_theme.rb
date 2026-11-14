@@ -8,7 +8,7 @@ module DomainThemeTest
   D = Carat::Domain
   H = D::Highlight
 
-  PALETTES = ["one_dark", "one_light", "dark_plus", "light_plus"]
+  PALETTES = ["carat-dark", "carat-light", "one_dark", "one_light", "dark_plus", "light_plus"]
 
   # The groups drawn as decorations, held to 3:1 rather than 4.5:1, and
   # the groups that carry no text, exempt from the contrast rule.
@@ -130,7 +130,7 @@ module DomainThemeTest
   # falls below WCAG AA on their background, 4.5:1 for text and 3:1 for
   # decorations, at 24 bits or at 256 colors, each with its ratio; with
   # layer H::CURSOR_LINE_LAYER, each group as drawn on the cursor line,
-  # held to 3:1 as the selection's background is.
+  # held to the same thresholds.
   #: (Carat::Domain::Theme, bool, Integer) -> Array[String]
   def self.low_contrast(theme, at256, layer)
     out = []
@@ -144,7 +144,7 @@ module DomainThemeTest
           bg = shown_256(bg, theme.bg256(id + layer))
         end
         ratio = contrast(fg, bg)
-        out << "#{H::NAMES[id]} #{ratio}" if ratio < (decoration?(id) || layer > 0 ? 300 : 450)
+        out << "#{H::NAMES[id]} #{ratio}" if ratio < (decoration?(id) ? 300 : 450)
       end
       id += 1
     end
@@ -218,8 +218,9 @@ module DomainThemeTest
     # UI group is -1), The search groups have colors,
     # Every UI group has a color in every palette,
     # Every palette passes (the contrast tables), and Comments are readable.
-    # The group table: UI groups first, then the thirty syntax groups,
-    # then the file-icon groups.
+    # The group table: the 56 UI groups first, then the thirty syntax
+    # groups, then the thirteen file-icon groups, then the six markup
+    # groups.
     t.assert_equal(H::COUNT, H::NAMES.length, "every id has a name")
     t.assert_equal(["IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Comment"], [H::NAMES[H::INDENT_GUIDE_SCOPE], H::NAMES[H::FLOAT_TITLE], H::NAMES[H::POPUP_MENU_MATCH], H::NAMES[H::POPUP_MENU_MATCH_SELECTED], H::NAMES[H::POPUP_MENU_EXTRA], H::NAMES[H::POPUP_MENU_EXTRA_SELECTED], H::NAMES[H::SYNTAX_FIRST]], "FloatTitle follows the indent guides and the popup menu's match and extra groups are the last UI groups")
     t.assert_equal([56, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "56 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
@@ -246,9 +247,14 @@ module DomainThemeTest
     t.assert_equal([false, true, true, true, false], [H.token?(H::VISUAL), H.token?(H::COMMENT), H.token?(H::ERROR), H.token?(H::MARKUP_RAW_BLOCK), H.token?(H::COUNT)], "token? covers the syntax, file-icon, and markup ids only")
     t.assert_equal(["Visual", ""], [H.name_of(H::VISUAL), H.name_of(H::COUNT + 1)], "name_of")
 
-    # The palettes, their aliases, and the backgrounds.
-    t.assert_equal(["one_dark", "one_light", "dark_plus", "light_plus", "one_dark", "one_light", "one_dark"], [D::Themes.find("one_dark", "terminal").name, D::Themes.find("one_light", "terminal").name, D::Themes.find("dark_plus", "terminal").name, D::Themes.find("light_plus", "terminal").name, D::Themes.find("carat-dark", "terminal").name, D::Themes.find("carat-light", "terminal").name, D::Themes.find("nope", "terminal").name], "find, the aliases, and one_dark for an unknown name")
-    t.assert_equal([true, true, true, true, true, true, false, false], [D::Themes.known?("one_dark"), D::Themes.known?("one_light"), D::Themes.known?("dark_plus"), D::Themes.known?("light_plus"), D::Themes.known?("carat-dark"), D::Themes.known?("carat-light"), D::Themes.known?("nope"), D::Themes.known?("One_Dark")], "known?")
+    # The palettes and the backgrounds.
+    t.assert_equal(["carat-dark", "carat-light", "one_dark", "one_light", "dark_plus", "light_plus", "carat-dark"], [D::Themes.find("carat-dark", "terminal").name, D::Themes.find("carat-light", "terminal").name, D::Themes.find("one_dark", "terminal").name, D::Themes.find("one_light", "terminal").name, D::Themes.find("dark_plus", "terminal").name, D::Themes.find("light_plus", "terminal").name, D::Themes.find("nope", "terminal").name], "find, and carat-dark for an unknown name")
+    t.assert_equal([true, true, true, true, true, true, false, false], [D::Themes.known?("carat-dark"), D::Themes.known?("carat-light"), D::Themes.known?("one_dark"), D::Themes.known?("one_light"), D::Themes.known?("dark_plus"), D::Themes.known?("light_plus"), D::Themes.known?("nope"), D::Themes.known?("Carat-Dark")], "known?")
+    # Scenario: Alias. carat-light, once an alias of one_light, is Carat's
+    # own light palette.
+    carat_light = D::Themes.find("carat-light", "theme")
+    one_light = D::Themes.find("one_light", "theme")
+    t.assert_true(carat_light.bg(H::NORMAL) != one_light.bg(H::NORMAL) && carat_light.fg(H::KEYWORD) != one_light.fg(H::KEYWORD), "Alias: carat-light is its own palette, not one_light's")
     t.assert_equal([true, true, false], [D::Themes.background?("terminal"), D::Themes.background?("theme"), D::Themes.background?("dark")], "background?")
     dark = D::Themes.find("one_dark", "terminal")
     painted = D::Themes.find("one_dark", "theme")
@@ -257,7 +263,7 @@ module DomainThemeTest
     t.table([
       ["normal pill", [H::STATUS_MODE_NORMAL], [0x282c34, 0x61afef, D::Theme::BOLD, 0, 12]],
       ["insert pill", [H::STATUS_MODE_INSERT], [0x282c34, 0x98c379, D::Theme::BOLD, 0, 10]],
-      ["visual pill", [H::STATUS_MODE_VISUAL], [0x282c34, 0xc678dd, D::Theme::BOLD, 0, 13]],
+      ["visual pill", [H::STATUS_MODE_VISUAL], [0x282c34, 0xc97fe0, D::Theme::BOLD, 0, 13]],
       ["replace pill", [H::STATUS_MODE_REPLACE], [0x282c34, 0xe8757e, D::Theme::BOLD, 0, 9]],
       ["command pill", [H::STATUS_MODE_COMMAND], [0x282c34, 0xe5c07b, D::Theme::BOLD, 0, 11]],
       ["lsp starting", [H::STATUS_LSP_STARTING], [0xe5c07b, -1, 0, 11, -1]],
@@ -282,9 +288,17 @@ module DomainThemeTest
     t.assert_equal([0, D::Theme::REVERSE, 0, D::Theme::UNDERLINE], [dark.attr(H::VISUAL), dark.attr16(H::VISUAL), dark.attr(H::CURSOR_LINE), dark.attr16(H::CURSOR_LINE)], "16-color attributes stand in for the selection and cursor line colors")
     t.assert_equal(D::Theme::BOLD, dark.attr(H::STATUS) & D::Theme::BOLD, "the status line is bold")
 
-    # WCAG AA: 4.5:1 for text, 3:1 for decorations, on the theme's
-    # background, at 24 bits and at the 256 colors written.
+    # Scenario: Every palette passes. WCAG AA: 4.5:1 for text, 3:1 for
+    # decorations, on the theme's background, at 24 bits and at the 256
+    # colors written. The pills and the lsp groups are text groups, so the
+    # same rows prove two more scenarios:
+    # Every palette's pills pass
+    # Every palette's lsp groups pass
     t.table([
+      ["carat-dark at 24 bits", ["carat-dark", "24"], []],
+      ["carat-dark at 256 colors", ["carat-dark", "256"], []],
+      ["carat-light at 24 bits", ["carat-light", "24"], []],
+      ["carat-light at 256 colors", ["carat-light", "256"], []],
       ["one_dark at 24 bits", ["one_dark", "24"], []],
       ["one_dark at 256 colors", ["one_dark", "256"], []],
       ["one_light at 24 bits", ["one_light", "24"], []],
@@ -304,9 +318,14 @@ module DomainThemeTest
       end
     end
 
-    # On the cursor line, over CursorLine's background where a group has
-    # none of its own, every group keeps 3:1.
+    # Scenario: Every palette passes on the cursor line. Over
+    # CursorLine's background where a group has none of its own, text
+    # keeps 4.5:1 and decorations 3:1.
     t.table([
+      ["carat-dark on the cursor line at 24 bits", ["carat-dark", "24"], []],
+      ["carat-dark on the cursor line at 256 colors", ["carat-dark", "256"], []],
+      ["carat-light on the cursor line at 24 bits", ["carat-light", "24"], []],
+      ["carat-light on the cursor line at 256 colors", ["carat-light", "256"], []],
       ["one_dark on the cursor line at 24 bits", ["one_dark", "24"], []],
       ["one_dark on the cursor line at 256 colors", ["one_dark", "256"], []],
       ["one_light on the cursor line at 24 bits", ["one_light", "24"], []],
@@ -335,9 +354,14 @@ module DomainThemeTest
     t.assert_equal([dark.bg(H::TODO), dark.fg(H::NORMAL_FLOAT)], [dark.bg(H::TODO + inside), dark.fg(H::MARKUP_STRONG + inside)], "a group with a background of its own keeps it in a float, one without a foreground takes NormalFloat's")
     t.assert_equal([0x61afef, D::Theme::BOLD, 0xabb2bf, D::Theme::BOLD, D::Theme::ITALIC, 0x98c379, 0x56b6c2, D::Theme::UNDERLINE, 0x959ca8], [painted.fg(H::MARKUP_HEADING), painted.attr(H::MARKUP_HEADING), painted.fg(H::MARKUP_STRONG), painted.attr(H::MARKUP_STRONG), painted.attr(H::MARKUP_ITALIC), painted.fg(H::MARKUP_RAW), painted.fg(H::MARKUP_LINK), painted.attr(H::MARKUP_LINK), painted.fg(H::MARKUP_RAW_BLOCK)], "one_dark's markup groups: blue bold headings, bold and italic text, green code, underlined cyan links, gray blocks")
 
-    # WCAG AA inside a float: every syntax and markup group at 4.5:1 over
+    # Scenario: Every palette passes in a float. WCAG AA inside a float:
+    # every syntax and markup group at 4.5:1 over
     # NormalFloat's background, at 24 bits and at the 256 colors written.
     t.table([
+      ["carat-dark in a float at 24 bits", ["carat-dark", "24"], []],
+      ["carat-dark in a float at 256 colors", ["carat-dark", "256"], []],
+      ["carat-light in a float at 24 bits", ["carat-light", "24"], []],
+      ["carat-light in a float at 256 colors", ["carat-light", "256"], []],
       ["one_dark in a float at 24 bits", ["one_dark", "24"], []],
       ["one_dark in a float at 256 colors", ["one_dark", "256"], []],
       ["one_light in a float at 24 bits", ["one_light", "24"], []],
@@ -352,6 +376,10 @@ module DomainThemeTest
     # bits and 256 colors with the theme's background, and at 16 colors,
     # under either background, carry reverse video and PmenuSel's colors.
     t.table([
+      ["carat-dark's selected menu row at 24 bits", ["carat-dark", "24"], []],
+      ["carat-dark's selected menu row at 256 colors", ["carat-dark", "256"], []],
+      ["carat-light's selected menu row at 24 bits", ["carat-light", "24"], []],
+      ["carat-light's selected menu row at 256 colors", ["carat-light", "256"], []],
       ["one_dark's selected menu row at 24 bits", ["one_dark", "24"], []],
       ["one_dark's selected menu row at 256 colors", ["one_dark", "256"], []],
       ["one_light's selected menu row at 24 bits", ["one_light", "24"], []],
@@ -362,31 +390,36 @@ module DomainThemeTest
       ["light_plus's selected menu row at 256 colors", ["light_plus", "256"], []]
     ]) { |input| selected_low_contrast(D::Themes.find(input[0].to_s, "theme"), input[1].to_s == "256") }
     t.table([
+      ["carat-dark's selected menu row at 16 colors on the terminal's background", ["carat-dark", "terminal"], []],
+      ["carat-light's selected menu row at 16 colors on the theme's background", ["carat-light", "theme"], []],
       ["one_dark's selected menu row at 16 colors on the terminal's background", ["one_dark", "terminal"], []],
       ["one_dark's selected menu row at 16 colors on the theme's background", ["one_dark", "theme"], []],
       ["one_light's selected menu row at 16 colors on the theme's background", ["one_light", "theme"], []],
       ["dark_plus's selected menu row at 16 colors on the theme's background", ["dark_plus", "theme"], []],
       ["light_plus's selected menu row at 16 colors on the terminal's background", ["light_plus", "terminal"], []]
     ]) { |input| selected_16(D::Themes.find(input[0].to_s, input[1].to_s)) }
-    t.assert_true(contrast(painted.fg(H::COMMENT), painted.bg(H::COMMENT)) >= 450, "one_dark comments are readable")
+    carat_dark = D::Themes.find("carat-dark", "theme")
+    t.assert_true(contrast(carat_dark.fg(H::COMMENT), carat_dark.bg(H::COMMENT)) >= 450, "Comments are readable: carat-dark's comments reach 4.5:1")
     t.assert_equal([454, 100], [contrast(0x767676, 0xffffff), contrast(0x777777, 0x777777)], "the contrast of WCAG's lightest AA gray on white and of a color on itself")
 
     # Options read the theme from the option.theme line and the
     # background from the option.background line.
-    t.assert_equal(["one_dark", "terminal", true], [D::Options.new.theme, D::Options.new.background, D::Options.new.syntax_on], "the defaults: one_dark on the terminal's background, syntax on")
+    t.assert_equal(["carat-dark", "terminal", true], [D::Options.new.theme, D::Options.new.background, D::Options.new.syntax_on], "the defaults: carat-dark on the terminal's background, syntax on")
+    # Scenario: Light theme. The line selects light_plus, whose Comment
+    # color adapters_screen_presenter writes.
     t.assert_equal("light_plus", theme_of("option.theme light_plus\n").theme, "the theme line selects a palette")
-    t.assert_equal("carat-light", theme_of("option.theme carat-light\n").theme, "an alias is accepted")
+    t.assert_equal("carat-light", theme_of("option.theme carat-light\n").theme, "Carat's light palette is accepted")
     unknown = D::Config.new
     unknown.read(".caratrc", "option.theme solarized\n", false)
-    t.assert_equal(["one_dark", [".caratrc:1: unknown theme solarized"]], [D::Options.from_config(unknown).theme, unknown.report], "an unknown theme keeps the default and is reported")
-    t.assert_equal("one_dark", theme_of("option.theme \"carat light\" x\n").theme, "a theme of the wrong kind keeps the default")
+    t.assert_equal(["carat-dark", [".caratrc:1: unknown theme solarized"]], [D::Options.from_config(unknown).theme, unknown.report], "Unknown theme: it keeps the default and is reported")
+    t.assert_equal("carat-dark", theme_of("option.theme \"carat light\" x\n").theme, "a theme of the wrong kind keeps the default")
     t.assert_equal("theme", theme_of("option.background theme\n").background, "the background line paints the background")
     background = D::Config.new
     background.read(".caratrc", "option.background dark\n", false)
     t.assert_equal(["terminal", [".caratrc:1: unknown background dark"]], [D::Options.from_config(background).background, background.report], "an unknown background keeps the default and is reported")
     shipped = D::Config.new
     shipped.read_defaults("config/default.caratrc", D::DEFAULT_CARATRC)
-    t.assert_equal(["one_dark", "terminal"], [D::Options.from_config(shipped).theme, D::Options.from_config(shipped).background], "the shipped configuration names one_dark on the terminal's background")
+    t.assert_equal(["carat-dark", "terminal"], [D::Options.from_config(shipped).theme, D::Options.from_config(shipped).background], "Default theme: the shipped configuration names carat-dark on the terminal's background")
 
     # The color depth from COLORTERM and TERM.
     t.table([

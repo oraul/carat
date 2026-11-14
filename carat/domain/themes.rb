@@ -3,27 +3,27 @@ require_relative "theme"
 
 module Carat
   module Domain
-    # The palettes Carat ships, chosen by the option.theme line: one_dark,
-    # the default, and dark_plus for a dark terminal, one_light and
-    # light_plus for a light one, with carat-dark and carat-light kept as
-    # aliases of the One palettes. A palette is a color per role: rows of
-    # the role, its 24-bit color, its 256-color index (-1 for the nearest
-    # one, given only where the nearest would lose contrast or hue), and
-    # its index among the 16 basic colors (-1 for none), given by hand as
-    # Vim themes give ctermfg. GROUPS says which role colors each group, the
-    # same for every palette, with the group's attributes and its
-    # attributes at 16 colors, so each palette's own colors, its syntax
-    # colors included, reach every group. The background option decides
-    # who paints the background: "terminal" leaves Normal and the
-    # palette's text color to the terminal, "theme" paints them under
-    # every cell. Every text group meets WCAG AA contrast on the
-    # palette's background, which test/domain_theme.rb checks. They are
-    # Ruby rather than configuration lines because the configuration only
-    # names one; user themes are in the backlog.
+    # The palettes Carat ships, chosen by the option.theme line: Carat's
+    # own carat-dark, the default, and carat-light, with a sapphire gem as
+    # their accent, then one_dark and dark_plus for a dark terminal and
+    # one_light and light_plus for a light one. A palette is a color per
+    # role: rows of the role, its 24-bit color, its 256-color index (-1
+    # for the nearest one, given only where the nearest would lose
+    # contrast or hue), and its index among the 16 basic colors (-1 for
+    # none), given by hand as Vim themes give ctermfg. GROUPS says which
+    # role colors each group, the same for every palette, with the
+    # group's attributes and its attributes at 16 colors, so each
+    # palette's own colors, its syntax colors included, reach every group.
+    # The background option decides who paints the background:
+    # "terminal" leaves Normal and the palette's text color to the
+    # terminal, "theme" paints them under every cell. Every text group
+    # meets WCAG AA contrast on the palette's background and on its
+    # cursor line, which test/domain_theme.rb checks. They are Ruby rather
+    # than configuration lines because the configuration only names one;
+    # user themes are in the backlog.
     module Themes
-      DEFAULT = "one_dark"
-      NAMES = ["one_dark", "one_light", "dark_plus", "light_plus"]
-      ALIASES = { "carat-dark" => "one_dark", "carat-light" => "one_light" }
+      DEFAULT = "carat-dark"
+      NAMES = ["carat-dark", "carat-light", "one_dark", "one_light", "dark_plus", "light_plus"]
       BACKGROUNDS = ["terminal", "theme"]
 
       # The color roles of a palette.
@@ -186,8 +186,94 @@ module Carat
         Highlight::MARKUP_RAW_BLOCK, DIM, NONE, 0, 0
       ]
 
-      # Atom's One Dark, its grays, red, and comments a step lighter for
-      # contrast.
+      # Carat's own dark palette: a blue-black background, a sapphire
+      # accent, and ruby, amethyst, and gold for the syntax.
+      CARAT_DARK = [
+        BG, 0x1b1d26, -1, 0,
+        FG, 0xc8ccd8, -1, 7,
+        DIM, 0x9298ab, -1, 8,
+        FAINT, 0x6c7286, -1, 8,
+        PANEL, 0x2e3346, -1, 7,
+        PANEL_FG, 0xe2e5ee, -1, 0,
+        PANEL_NC, 0x15171e, -1, 7,
+        FLOAT, 0x15171e, -1, 0,
+        SELECTION, 0x323a55, -1, -1,
+        CURSOR_LINE, 0x21242f, -1, -1,
+        SEARCH, 0xe8c46a, -1, 11,
+        INC_SEARCH, 0xf0a35e, -1, 9,
+        ON_ACCENT, 0x1b1d26, -1, 0,
+        ON_STRONG, 0x1b1d26, -1, 0,
+        RED, 0xf27a8a, -1, 9,
+        ORANGE, 0xf0a35e, -1, 11,
+        YELLOW, 0xe8c46a, -1, 11,
+        GREEN, 0x8fd18b, -1, 10,
+        CYAN, 0x5fcfd0, -1, 14,
+        BLUE, 0x7fa6ff, -1, 12,
+        PURPLE, 0xc99bff, -1, 13,
+        DIFF_ADD, 0x22332a, -1, 2,
+        DIFF_CHANGE, 0x222c44, -1, 4,
+        DIFF_DELETE, 0x3a2229, -1, 1,
+        DIFF_TEXT, 0x2e3d63, -1, 6,
+        COMMENT, 0x9298ab, -1, 8,
+        KEYWORD, 0xc99bff, -1, 13,
+        CONTROL, 0xc99bff, -1, 13,
+        FUNCTION, 0x7fa6ff, -1, 12,
+        TYPE, 0xe8c46a, -1, 11,
+        STRING, 0x8fd18b, -1, 10,
+        NUMBER, 0xf0a35e, -1, 11,
+        CONSTANT, 0xf0a35e, -1, 11,
+        OPERATOR, 0x5fcfd0, -1, 14,
+        PREPROC, 0xc99bff, -1, 13,
+        SPECIAL, 0x7fa6ff, -1, 12,
+        IDENTIFIER, 0xf27a8a, -1, 9,
+        ESCAPE, 0x5fcfd0, -1, 14
+      ]
+
+      # Carat's own light palette: the same roles on a cool white, its
+      # accents dark enough for text.
+      CARAT_LIGHT = [
+        BG, 0xfbfbfd, -1, 15,
+        FG, 0x2f3340, -1, 0,
+        DIM, 0x5c6173, -1, 8,
+        FAINT, 0x7a8094, -1, 8,
+        PANEL, 0xe3e6ef, -1, 7,
+        PANEL_FG, 0x2f3340, -1, 0,
+        PANEL_NC, 0xf0f1f5, -1, 7,
+        FLOAT, 0xf0f1f5, -1, 7,
+        SELECTION, 0xdce1f2, -1, -1,
+        CURSOR_LINE, 0xf2f3f7, -1, -1,
+        SEARCH, 0xf5dc8f, -1, 11,
+        INC_SEARCH, 0xf2b06e, -1, 9,
+        ON_ACCENT, 0x2f3340, -1, 0,
+        ON_STRONG, 0xfbfbfd, -1, 15,
+        RED, 0xbf1f3c, -1, 1,
+        ORANGE, 0x985600, -1, 3,
+        YELLOW, 0x7a5f00, -1, 3,
+        GREEN, 0x2b7330, -1, 2,
+        CYAN, 0x0a6c84, -1, 6,
+        BLUE, 0x2c58d0, -1, 4,
+        PURPLE, 0x962cad, -1, 5,
+        DIFF_ADD, 0xe0f2e0, -1, 10,
+        DIFF_CHANGE, 0xe2eafb, -1, 14,
+        DIFF_DELETE, 0xfdecee, -1, 9,
+        DIFF_TEXT, 0xc6d6f7, -1, 12,
+        COMMENT, 0x5c6173, -1, 8,
+        KEYWORD, 0x962cad, -1, 5,
+        CONTROL, 0x962cad, -1, 5,
+        FUNCTION, 0x2c58d0, -1, 4,
+        TYPE, 0x7a5f00, -1, 3,
+        STRING, 0x2b7330, -1, 2,
+        NUMBER, 0x985600, -1, 3,
+        CONSTANT, 0x985600, -1, 3,
+        OPERATOR, 0x0a6c84, -1, 6,
+        PREPROC, 0x962cad, -1, 5,
+        SPECIAL, 0x2c58d0, -1, 4,
+        IDENTIFIER, 0xbf1f3c, -1, 1,
+        ESCAPE, 0x0a6c84, -1, 6
+      ]
+
+      # Atom's One Dark, its grays, red, comments, and purple a step
+      # lighter for contrast.
       ONE_DARK = [
         BG, 0x282c34, -1, 0,
         FG, 0xabb2bf, -1, 7,
@@ -209,28 +295,28 @@ module Carat
         GREEN, 0x98c379, -1, 10,
         CYAN, 0x56b6c2, -1, 14,
         BLUE, 0x61afef, -1, 12,
-        PURPLE, 0xc678dd, -1, 13,
+        PURPLE, 0xc97fe0, -1, 13,
         DIFF_ADD, 0x2f3b2e, -1, 2,
         DIFF_CHANGE, 0x2c3445, -1, 4,
         DIFF_DELETE, 0x3a2a2e, -1, 1,
         DIFF_TEXT, 0x34405a, 17, 6,
         COMMENT, 0x959ca8, -1, 8,
-        KEYWORD, 0xc678dd, -1, 13,
-        CONTROL, 0xc678dd, -1, 13,
+        KEYWORD, 0xc97fe0, -1, 13,
+        CONTROL, 0xc97fe0, -1, 13,
         FUNCTION, 0x61afef, -1, 12,
         TYPE, 0xe5c07b, -1, 11,
         STRING, 0x98c379, -1, 10,
         NUMBER, 0xd19a66, -1, 11,
         CONSTANT, 0xd19a66, -1, 11,
         OPERATOR, 0x56b6c2, -1, 14,
-        PREPROC, 0xc678dd, -1, 13,
+        PREPROC, 0xc97fe0, -1, 13,
         SPECIAL, 0x61afef, -1, 12,
         IDENTIFIER, 0xe8757e, -1, 9,
         ESCAPE, 0x56b6c2, -1, 14
       ]
 
       # Atom's One Light, its yellow, orange, green, cyan, and blue a step
-      # darker for contrast, on its float background too.
+      # darker for contrast, on its float background and cursor line too.
       ONE_LIGHT = [
         BG, 0xfafafa, -1, 15,
         FG, 0x383a42, -1, 0,
@@ -249,7 +335,7 @@ module Carat
         RED, 0xca1243, 125, 1,
         ORANGE, 0x986801, -1, 3,
         YELLOW, 0x8a6300, -1, 3,
-        GREEN, 0x3c7a3b, 28, 2,
+        GREEN, 0x3c7a3b, 22, 2,
         CYAN, 0x0e7490, 24, 6,
         BLUE, 0x2f63d6, -1, 4,
         PURPLE, 0xa626a4, -1, 5,
@@ -272,8 +358,8 @@ module Carat
         ESCAPE, 0x0e7490, 24, 6
       ]
 
-      # Visual Studio Code's Dark+, its status bar a step darker and its red
-      # a step lighter for contrast.
+      # Visual Studio Code's Dark+, its status bar and cursor line a step
+      # darker and its red a step lighter for contrast.
       DARK_PLUS = [
         BG, 0x1e1e1e, -1, 0,
         FG, 0xd4d4d4, -1, 7,
@@ -284,12 +370,12 @@ module Carat
         PANEL_NC, 0x252526, -1, 7,
         FLOAT, 0x252526, -1, 0,
         SELECTION, 0x264f78, -1, -1,
-        CURSOR_LINE, 0x2a2a2a, -1, -1,
+        CURSOR_LINE, 0x262626, -1, -1,
         SEARCH, 0x613214, -1, 3,
         INC_SEARCH, 0x9e5a0a, -1, 1,
         ON_ACCENT, 0xffffff, -1, 15,
         ON_STRONG, 0x1e1e1e, -1, 0,
-        RED, 0xf55252, -1, 9,
+        RED, 0xf65c5c, -1, 9,
         ORANGE, 0xce9178, -1, 11,
         YELLOW, 0xcca700, -1, 11,
         GREEN, 0x89d185, -1, 10,
@@ -316,7 +402,8 @@ module Carat
       ]
 
       # Visual Studio Code's Light+, its status bar, red, numbers, and types
-      # a step darker for contrast, on its float background too.
+      # a step darker for contrast, on its float background and cursor line
+      # too.
       LIGHT_PLUS = [
         BG, 0xffffff, -1, 15,
         FG, 0x000000, -1, 0,
@@ -335,7 +422,7 @@ module Carat
         RED, 0xb52a2a, -1, 1,
         ORANGE, 0xa31515, -1, 3,
         YELLOW, 0x8a6400, -1, 3,
-        GREEN, 0x008000, -1, 2,
+        GREEN, 0x008000, 22, 2,
         CYAN, 0x247790, 24, 6,
         BLUE, 0x0000ff, -1, 4,
         PURPLE, 0xaf00db, -1, 5,
@@ -357,10 +444,10 @@ module Carat
         IDENTIFIER, 0x001080, -1, 4,
         ESCAPE, 0xc10000, -1, 1
       ]
-      # Whether a name selects a palette, an alias included.
+      # Whether a name selects a palette.
       #: (String) -> bool
       def self.known?(name)
-        NAMES.include?(name) || ALIASES.key?(name)
+        NAMES.include?(name)
       end
 
       #: (String) -> bool
@@ -368,19 +455,16 @@ module Carat
         BACKGROUNDS.include?(word)
       end
 
-      # The palette's name for a name or an alias, the default for an
-      # unknown one.
+      # The palette's name for a name, the default for an unknown one.
       #: (String) -> String
       def self.canonical(name)
-        aliased = ALIASES[name]
-        return aliased unless aliased.nil?
         return name if NAMES.include?(name)
         DEFAULT
       end
 
-      # The theme of a palette, by name or alias, for a background:
-      # "theme" paints the palette's background and text color, any
-      # other leaves them to the terminal. An unknown name is one_dark.
+      # The theme of a palette, by name, for a background: "theme" paints
+      # the palette's background and text color, any other leaves them to
+      # the terminal. An unknown name is carat-dark.
       #: (String, String) -> Theme
       def self.find(name, background)
         key = canonical(name)
@@ -389,10 +473,12 @@ module Carat
 
       #: (String) -> Array[Integer]
       def self.palette(key)
+        return CARAT_LIGHT if key == "carat-light"
+        return ONE_DARK if key == "one_dark"
         return ONE_LIGHT if key == "one_light"
         return DARK_PLUS if key == "dark_plus"
         return LIGHT_PLUS if key == "light_plus"
-        ONE_DARK
+        CARAT_DARK
       end
 
       # Resolves every group's roles against a palette. Without a painted
@@ -456,7 +542,7 @@ module Carat
         # No palette has a 16-color CursorLine background, which the
         # underline stands in for: a group without its own background
         # keeps the one it has off the line, the painted Normal's included.
-        lit16 = indexes16[CURSOR_LINE]
+        line_bg16 = indexes16[CURSOR_LINE]
         i = 0
         while i + 4 < GROUPS.length
           id = GROUPS[i]
@@ -468,7 +554,7 @@ module Carat
           own = GROUPS[i + 2] >= 0 && GROUPS[i + 2] != BG
           bgs[lit] = own ? bgs[id] : rgbs[CURSOR_LINE]
           bgs256[lit] = own ? bgs256[id] : indexes256[CURSOR_LINE]
-          bgs16[lit] = own || lit16 < 0 ? bgs16[id] : lit16
+          bgs16[lit] = own || line_bg16 < 0 ? bgs16[id] : line_bg16
           attrs16[lit] = own ? attrs16[id] : attrs16[id] | line16
           i += 5
         end

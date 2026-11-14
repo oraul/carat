@@ -57,7 +57,7 @@ module Carat
       # option.icons ascii when the character is not ASCII.
       option.indentguides true
       option.indentguides.char ┊
-      option.theme one_dark
+      option.theme carat-dark
       option.background terminal
       option.startscreen true
       option.reducedmotion false

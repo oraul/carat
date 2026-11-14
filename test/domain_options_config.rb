@@ -49,7 +49,7 @@ module DomainOptionsConfigTest
     shipped = D::Config.new
     shipped.read_defaults("config/default.caratrc", D::DEFAULT_CARATRC)
     options = D::Options.from_config(shipped)
-    t.assert_equal([[true, false, 2, 2, true, true, 5, 500, 1000], "nerd", "one_dark", []], [[options.number, options.relativenumber, options.tabstop, options.shiftwidth, options.expandtab, options.autoindent, options.scrolloff, options.timeoutlen, options.undolevels], options.icons, options.theme, shipped.report], "the shipped defaults set Carat's options cleanly")
+    t.assert_equal([[true, false, 2, 2, true, true, 5, 500, 1000], "nerd", "carat-dark", []], [[options.number, options.relativenumber, options.tabstop, options.shiftwidth, options.expandtab, options.autoindent, options.scrolloff, options.timeoutlen, options.undolevels], options.icons, options.theme, shipped.report], "the shipped defaults set Carat's options cleanly")
 
     # The scroll option: rows are [label, project lines, [scroll, problems]].
     t.table([
