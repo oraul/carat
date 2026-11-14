@@ -5013,3 +5013,45 @@ The comment (and carat/plugin_api.rb:345) says byteindex refuses a continuation-
 - Location: docs/examples.md:55 (quality advisory, docs clarity).
 - Why: the inserted clause about `t.cases` when every input is an array literal, so the block indexes a typed array, turns the golden table-test sentence into a run-on list.
 - Fix: move `cases` into its own sentence after the one describing `t.table`.
+
+### Stop glob expansion of changed paths in tools/ci_scope.sh:95
+
+- Location: tools/ci_scope.sh:95 and tools/ci_scope.sh:119, the loops over `$changed` and `$since` (security Low, confidence 4, existing code).
+- Why: the unquoted path lists get word splitting and wildcard expansion, so a fork pull request can add a code file named like a wildcard (for example `docs/[a-z]*`) that expands to existing documentation; the scope step then answers run=false and the required spin check passes without running the tests.
+- Fix: run `set -f` before the loops (or read `git diff --name-only -z` and handle each NUL-separated path), and add a tools-test case with a wildcard path asserting run=true.
+
+### Read changed paths without splitting in tools/ci_scope.sh:96
+
+- Location: tools/ci_scope.sh:96, `for path in $changed` (quality advisory, pre-existing in the touched script).
+- Why: a path with glob characters (`notes[.]md` beside `notes.md`) expands against the checkout and a path with spaces splits, which can count a code file as documentation and skip the tests.
+- Fix: `set -f` before the loops, or read the paths with `while IFS= read -r path`.
+
+### Exercise the head tree and check-run filters in tools/tools_test.sh:172
+
+- Location: tools/tools_test.sh:172, the ci_scope error cases (quality advisory, tests).
+- Why: the new cases fail only the number query or every query (where head fails first), so the hex filter on head_tree and the digits filter on passed in the push branch are never exercised.
+- Fix: add `err_scope tree.sha` and `err_scope check-runs` expectations asserting run=true.
+
+### Query the commit's pull request once in tools/ci_scope.sh:76
+
+- Location: tools/ci_scope.sh:76 (quality advisory, duplication).
+- Why: the same endpoint `repos/$REPO/commits/$SHA/pulls` is called twice for head.sha and number, doubling the request and letting the two answers disagree.
+- Fix: one call with `--jq '.[0] | "\(.head.sha) \(.number)"'`, split and validated once.
+
+### Keep the case pattern for the sha test in tools/ci_scope.sh:107
+
+- Location: tools/ci_scope.sh:107 (quality advisory, simplicity).
+- Why: `[ -n "$(hex "$sha")" ]` replaces an in-process case test with a command substitution per listed sha only to test a pattern.
+- Fix: keep the case pattern there, or give the filters a predicate form for checks that need no value.
+
+### Make each ci_scope expectation stand alone in tools/tools_test.sh:170
+
+- Location: tools/tools_test.sh:170 (quality advisory, test independence).
+- Why: `well_formed` reads `$work/scope-out` left by the preceding `err_scope` expectation, so each pair depends on its order.
+- Fix: have one helper run `err_scope` and then check the file, so each expectation stands alone.
+
+### Drop the extra blank line in tools/tools_test.sh:188
+
+- Location: tools/tools_test.sh:188 (quality advisory, style).
+- Why: the added ci_scope block ends with a blank line before the existing one, leaving two blank lines before the green_pr comment where the file uses one.
+- Fix: drop the extra blank line at 188.
