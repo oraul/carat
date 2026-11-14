@@ -1494,6 +1494,18 @@ for f in "$here"/../.claude/agents/*.md; do
 done
 expect "guard: the contributor hook refuses a direct push to the backup refs" 2 "git push is not a command of this profile" \
   hook "$here/../.claude/agents/contributor.md" 'git push -q --atomic origin HEAD:refs/backup/chore/x main:refs/backup-base/chore/x'
+# The contributor's hook matches every MCP tool, and main's guard refuses a
+# pull request write it does not judge.
+mcp_hook() {
+  line=$(sed -n "s/^ *command: '\\(.*\\)'\$/\\1/p" "$1" | sed -n 1p)
+  printf '{"tool_name":"%s","tool_input":{"owner":"o","repo":"r","pullNumber":7,"body":"b"}}' "$2" | CLAUDE_PROJECT_DIR=$hooks sh -c "$line"
+}
+expect "guard: the contributor hook matches every MCP tool" 0 'matcher: "Bash[|]Edit[|]Write[|]NotebookEdit[|]mcp__[.][*]"' \
+  grep -F 'matcher: "Bash|Edit|Write|NotebookEdit|mcp__.*"' "$here/../.claude/agents/contributor.md"
+expect "guard: the contributor hook refuses a pull request update tool" 2 "the tool mcp__github__update_pull_request, which this guard does not judge" \
+  mcp_hook "$here/../.claude/agents/contributor.md" mcp__github__update_pull_request
+expect "guard: the contributor hook refuses a pull request create tool" 2 "the tool mcp__github__create_pull_request, which this guard does not judge" \
+  mcp_hook "$here/../.claude/agents/contributor.md" mcp__github__create_pull_request
 f="$here/../.claude/agents/checker.md"
 echo 'exit 1' > tools/agent_guard.sh
 commit "chore: a failing guard"
@@ -2346,7 +2358,7 @@ turns() {
   shift
   for kind in "$@"; do cap_of "$kind"; done | awk -v l="$large" -v r="$margin" '{ v = $1 * l; if (v > int(v)) v = int(v) + 1; if (v > m) m = v } END { print m + r }'
 }
-for pair in benchmark:bench checker:checker contributor:implement,fix,package,push,body planner:planner quality-reviewer:quality retrospective:close scout:scout security-reviewer:security; do
+for pair in benchmark:bench checker:checker contributor:implement,fix,package,push,body,wait planner:planner quality-reviewer:quality retrospective:close scout:scout security-reviewer:security; do
   agent=${pair%%:*}
   want=$(turns "$agent" $(echo "${pair#*:}" | tr ',' ' '))
   expect "caps: the $agent file's maxTurns is its large cap and the margin" 0 "^maxTurns: $want$" grep -E '^maxTurns: ' "$agents/$agent.md"
@@ -2418,7 +2430,7 @@ js() {
   } | node -
 }
 work_js() {
-  js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead keepPushed packagedPr" "$1"
+  js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead keepPushed packagedPr packageStep" "$1"
 }
 calib_js() {
   js "$wf" "SIZES CHANGE CALIBRATION calibrated calibrate restoreCalibration usage firstPass metricLine" "$1"
@@ -2474,11 +2486,29 @@ expect "agents: the contributor opens the pull request by pr.md, never a create 
   grep -E '^3[.] Write the body' "$here/../.claude/agents/contributor.md"
 expect "agents: the contributor holds no pull request create tool" 1 "^$" \
   grep -n create_pull_request "$here/../.claude/agents/contributor.md"
+# No session writes a pull request: the contributor holds no GitHub tool,
+# and its hook sends every MCP tool to the guard, which refuses one it does
+# not judge; a title or body fix reaches the pull request as pr.md.
+expect "agents: the contributor holds no GitHub tool" 1 "^$" \
+  sh -c 'sed -n "s/^tools: //p" "$1" | grep -n "mcp__"' _ "$here/../.claude/agents/contributor.md"
+expect "agents: the body mode pushes pr.md, never a tool" 0 "^pushes$" \
+  sh -c 'b=$(sed -n "/^### body$/,/^## /p" "$1"); printf "%s\n" "$b" | grep -q "rewrite .pr.md. as in package step 3, commit, and push with .sh tools/run_state.sh push <change> --ci-fix." && ! printf "%s\n" "$b" | grep -q -i -E "update tool|mcp|no push" && echo pushes' _ "$here/../.claude/agents/contributor.md"
+expect "agents: the wait mode commits and pushes nothing" 0 "^No commit, no push[.]$" \
+  sh -c 'sed -n "/^### wait$/,/^### /p" "$1" | grep -o "No commit, no push[.]"' _ "$here/../.claude/agents/contributor.md"
+expect "agents: no agent file names the pull request update tool" 1 "^$" grep -l update_pull_request "$agents"/*.md
+expect "agents: the contributor file is under 7000 bytes" 0 "^under$" \
+  sh -c '[ "$(wc -c < "$1")" -lt 7000 ] && grep -q -x -F ".claude/agents/contributor.md 6999" "$2" && echo under' _ "$here/../.claude/agents/contributor.md" "$here/docs_lint.sh"
 # The wait polls up to MAX_WAIT (540 s), past the Bash tool's 120 s default.
 expect "agents: the contributor waits for the pull request in the foreground" 0 'open_pr.sh wait <change>` in the foreground [(]Bash timeout 600000' \
   grep -E '^5[.] Run `sh tools/open_pr[.]sh wait' "$here/../.claude/agents/contributor.md"
 expect "workflow: a package step without a pull request number stops the run" 0 '^\["47","","",""\]$' \
   work_js "[packagedPr({ pr: 47 }), packagedPr({ pr: 0 }), packagedPr({ status: 'stopped' }), packagedPr(null)]"
+expect "workflow: a resume past the push with no number only waits" 0 '^\["wait","wait","merge","package","package"\]$' \
+  work_js "[packageStep({ pushed: '0123456789abcdef0123456789abcdef01234567', pr: '' }), packageStep({ pushed: '0123456789abcdef0123456789abcdef01234567' }), packageStep({ pushed: '0123456789abcdef0123456789abcdef01234567', pr: '47' }), packageStep({ pr: '47' }), packageStep(null)]"
+expect "workflow: the wait step starts the wait mode, never the package step" 0 "^wait before package$" \
+  sh -c 'w=$(grep -n "^  if (step === .wait.) {$" "$1" | cut -d: -f1); p=$(grep -n "^  if (step === .package.) {$" "$1" | cut -d: -f1); c=$(grep -n "await contributor(.wait., .The push recorded" "$1" | cut -d: -f1); [ -n "$w" ] && [ -n "$c" ] && [ "$w" -lt "$c" ] && [ "$c" -lt "$p" ] && echo wait before package' _ "$wf"
+expect "workflow: a body start's pushed sha is kept" 0 '^"1bcdef0123456789abcdef0123456789abcdef01"$' \
+  work_js "keepPushed('body', '', { status: 'done', pushed: '1bcdef0123456789abcdef0123456789abcdef01' })"
 expect "workflow: a contributor that finished is done" 0 '^[{]"next":"done","left":\[\][}]$' \
   work_js "(r => continuation(r, workLeft(r), 0))({ status: 'done' })"
 expect "workflow: a capped contributor start is continued with what it left" 0 '^[{]"next":"continue","left":\["4.2 the docs"\][}]$' \

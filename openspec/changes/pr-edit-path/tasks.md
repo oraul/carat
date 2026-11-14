@@ -7,8 +7,8 @@
 
 ## 2. The contributor and the workflow
 
-- [ ] 2.1 `.claude/agents/contributor.md`: no GitHub tool granted, the hook matches `mcp__` tools, the body mode pushes `pr.md` as a CI fix, a `wait` mode, under 7,000 bytes. Proved by "agents: the contributor holds no GitHub tool", "guard: the contributor hook refuses a pull request update tool", "agents: the body mode pushes pr.md, never a tool", and "agents: the contributor file is under 7000 bytes" (`tools/docs_lint.sh` budget).
-- [ ] 2.2 `.claude/workflows/deliver-change.js`: `packageStep` resumes past a push with no number in the `wait` mode; `keepPushed` keeps a body start's sha; caps for `wait` and `body`. Proved by "workflow: a resume past the push with no number only waits" and "workflow: a body start's pushed sha is kept".
+- [x] 2.1 `.claude/agents/contributor.md`: no GitHub tool granted, the hook matches `mcp__` tools, the body mode pushes `pr.md` as a CI fix, a `wait` mode, under 7,000 bytes. Proved by "agents: the contributor holds no GitHub tool", "guard: the contributor hook refuses a pull request update tool", "agents: the body mode pushes pr.md, never a tool", and "agents: the contributor file is under 7000 bytes" (`tools/docs_lint.sh` budget).
+- [x] 2.2 `.claude/workflows/deliver-change.js`: `packageStep` resumes past a push with no number in the `wait` mode; `keepPushed` keeps a body start's sha; caps for `wait` and `body`. Proved by "workflow: a resume past the push with no number only waits" and "workflow: a body start's pushed sha is kept".
 
 ## 3. Docs
 
