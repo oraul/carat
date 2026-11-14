@@ -127,6 +127,7 @@ module EditorKeyHintsTest
       ["the leader hints name the quit group", ["", 24, "<Space>", 1, "q  quit"], [1, "<Space>", true]],
       ["the leader hints name the docs group", ["", 24, "<Space>", 1, "d  docs"], [1, "<Space>", true]],
       ["the leader hints describe the palette", ["", 24, "<Space>", 1, "p  Command palette"], [1, "<Space>", true]],
+      # Scenario "Group hints list actions".
       ["a group lists its actions", ["", 24, "<Space>w", 1, "s  Split window"], [1, "<Space>w windows", true]],
       ["a group lists the vertical split", ["", 24, "<Space>w", 1, "v  Split window vertically"], [1, "<Space>w windows", true]],
       ["g lists the tab keys", ["", 24, "g", 1, "t  Next buffer tab or tab page"], [1, "g goto", true]],
@@ -187,6 +188,7 @@ module EditorKeyHintsTest
     h.wait
     t.assert_equal([1, "<Space>w windows"], [h.state.tab.floats.count, title(h)], "the next level shows after the delay")
 
+    # Scenario "Ctrl-W in columns".
     h = session("", 12, "<C-w>", 1)
     floats = h.state.tab.floats
     t.assert_equal([1, 7, true], [floats.count, floats.at(0).window.height, floats.at(0).window.width > 40], "Ctrl-W hints fill several columns of the room")
