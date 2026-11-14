@@ -133,13 +133,40 @@ module EditorKeyHintsTest
       ["Ctrl-W names its keys in notation", ["", 24, "<C-w>", 1, "<C-s>  Split window"], [1, "<C-w> window", true]],
       ["no hint before the delay", ["", 24, "<Space>", 0, "w  windows"], [0, "", false]],
       ["a user names a group", ["keymap.group <leader>w panes", 24, "<Space>", 1, "w  panes"], [1, "<Space>", true]],
-      ["a prefix without a group counts its bindings", ["keymap.normal <leader>xa cursor.up\nkeymap.normal <leader>xb cursor.down", 24, "<Space>", 1, "x  +2"], [1, "<Space>", true]],
+      # Scenarios "A group without a name" and "A group of mixed actions".
+      ["a prefix without a group is named by its actions", ["keymap.normal <leader>xa cursor.up\nkeymap.normal <leader>xb cursor.down", 24, "<Space>", 1, "x  cursor"], [1, "<Space>", true]],
+      ["a prefix of mixed actions is a group", ["keymap.normal <leader>xa cursor.up\nkeymap.normal <leader>xb window.split", 24, "<Space>", 1, "x  group"], [1, "<Space>", true]],
       ["a delay of 0 shows no hints", ["option.keyhints.delay 0", 24, "<Space>", 3, "w  windows"], [0, "", false]],
       ["insert mode shows no hints", ["keymap.insert ab <Esc>", 24, "ia", 1, "b"], [0, "", false]]
     ]) do |row|
       h = session(row[0], row[1], row[2], row[3])
       [h.state.tab.floats.count, title(h), lists?(h, row[4])]
     end
+
+    # A remap is read from the user file only, so the key sequence row of
+    # "A group of mixed actions" is a user session.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.txt", "one\n")
+    config = Carat::Doubles::FixedConfig.with_user("keymap.normal <leader>xa :w<CR>\nkeymap.normal <leader>xb cursor.down\n")
+    h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 24, cols: 80, plugins: [])
+    h.open("a.txt")
+    h.type("<Space>")
+    h.wait
+    t.assert_equal([1, true], [h.state.tab.floats.count, lists?(h, "x  group")], "a prefix of a key sequence is a group")
+
+    m = Carat::Domain::Mode
+    t.assert_equal([true, true, true, true, true, false, false, false], [m.grammar?(m::NORMAL), m.grammar?(m::OPERATOR_PENDING), m.grammar?(m::VISUAL), m.grammar?(m::VISUAL_LINE), m.grammar?(m::VISUAL_BLOCK), m.grammar?(m::INSERT), m.grammar?(m::REPLACE), m.grammar?(m::CMDLINE)], "the grammar reads keys, and the hints show, in normal, operator-pending, and the visual modes only")
+
+    # Scenario "The hints are a centered bottom panel": on 80 by 24 the
+    # area above the message row is rows 0 to 22, so the box ends on row
+    # 21, above the margin row 22; after a resize to 60 columns it is
+    # centered again.
+    h = session("", 24, "<Space>", 1)
+    float = h.state.tab.floats.at(0)
+    wide = [(float.box_left - (80 - float.box_right)).abs <= 1, float.box_bottom]
+    h.resize(24, 60)
+    float = h.state.tab.floats.at(0)
+    t.assert_equal([[true, 22], [true, 22]], [wide, [(float.box_left - (60 - float.box_right)).abs <= 1, float.box_bottom]], "The hints are a centered bottom panel at 80 columns and again at 60")
 
     h = plugin_session("", "<Space>h")
     t.assert_equal([1, "<Space>h", true], [h.state.tab.floats.count, title(h), lists?(h, "h  Show a greeting")], "a plugin's binding shows its manifest's description")

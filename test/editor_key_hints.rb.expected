@@ -8,9 +8,13 @@ ok   g lists the tab keys
 ok   Ctrl-W names its keys in notation
 ok   no hint before the delay
 ok   a user names a group
-ok   a prefix without a group counts its bindings
+ok   a prefix without a group is named by its actions
+ok   a prefix of mixed actions is a group
 ok   a delay of 0 shows no hints
 ok   insert mode shows no hints
+ok   a prefix of a key sequence is a group
+ok   the grammar reads keys, and the hints show, in normal, operator-pending, and the visual modes only
+ok   The hints are a centered bottom panel at 80 columns and again at 60
 ok   a plugin's binding shows its manifest's description
 ok   a disabled plugin's prefix shows no hints
 ok   a key completes the binding and closes the hints
@@ -31,4 +35,4 @@ ok   a prefix that is also bound shows no hints and timeoutlen resolves it
 ok   a delay out of range is reported
 ok   the delay stays the default
 ok   a group line without a name is reported
-editor_key_hints: 33 passed, 0 failed
+editor_key_hints: 37 passed, 0 failed
