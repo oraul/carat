@@ -11,4 +11,4 @@
 
 ## 3. Checks
 
-- [ ] 3.1 Run `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate`.
+- [x] 3.1 Run `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate`.
