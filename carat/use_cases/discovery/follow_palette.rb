@@ -188,17 +188,19 @@ module Carat
           description = palette.descriptions[entry]
           field = palette.fields[r]
           tokens = Array.new(0, 0)
-          if field == 0
-            skip = name.start_with?(":") ? 1 : 0
-            mark(tokens, query, name, skip, 0, kept(name, NAME_WIDTH), selected)
-          end
+          shown = Domain::DisplayWidth.cut(name, NAME_WIDTH - 1)
+          limit = chars(shown, shown.bytesize)
+          mark(tokens, query, name, name.start_with?(":") ? 1 : 0, 0, limit, selected) if field == 0
           if room >= 2
-            cell = pad(name, NAME_WIDTH)
-            from = chars(cell, cell.bytesize)
+            # The name's cell: its kept characters and the spaces padding
+            # them to NAME_WIDTH cells.
+            from = limit + NAME_WIDTH - Domain::DisplayWidth.text_width(shown, 0)
+            shown = Domain::DisplayWidth.cut(description, room - 1)
+            limit = chars(shown, shown.bytesize)
             tokens << from
-            tokens << kept(description, room) + 1
+            tokens << limit + 1
             tokens << (selected ? Domain::Highlight::POPUP_MENU_EXTRA_SELECTED : Domain::Highlight::POPUP_MENU_EXTRA)
-            mark(tokens, query, description, 0, from, kept(description, room), selected) if field == 1
+            mark(tokens, query, description, 0, from, limit, selected) if field == 1
           end
           out << Domain::SyntaxLine.new(text: lines[i], start: 0, tokens: tokens, end_state: 0)
           i += 1
@@ -226,13 +228,6 @@ module Carat
           tokens << group
           i += length
         end
-      end
-
-      # The characters of text a column of width cells keeps.
-      #: (String, Integer) -> Integer
-      def kept(text, width)
-        cut = Domain::DisplayWidth.cut(text, width - 1)
-        chars(cut, cut.bytesize)
       end
 
       # The characters in the first bytes of text: the bytes that start one.

@@ -61,7 +61,7 @@ module Carat
               out.clear
               return out
             end
-            out << anchor
+            keep(out, anchor)
             j = anchor + 1
             k = i + 1
             while k < stop
@@ -71,14 +71,22 @@ module Carat
                 out.clear
                 return out
               end
-              out << j
+              keep(out, j)
               j += 1
               k += 1
             end
           end
           i = stop + 1
         end
-        out.sort.uniq
+        out
+      end
+
+      # Inserts the byte into the ascending list unless it is there.
+      #: (Array[Integer], Integer) -> void
+      def self.keep(list, byte)
+        at = list.length
+        at -= 1 while at > 0 && list[at - 1] > byte
+        list.insert(at, byte) unless at > 0 && list[at - 1] == byte
       end
 
       # Whether the word starts with the pattern, ignoring ASCII case.
