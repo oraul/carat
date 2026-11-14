@@ -19,6 +19,10 @@ A float's frame SHALL be its padding, one column on each side, and, when it is b
 - **WHEN** the screen is 40 columns wide and a signature label or a peeked definition line is longer than the screen
 - **THEN** the float's text is 36 columns wide and shown whole, its right border in the screen's last column
 
+#### Scenario: The key hints use the border columns without an edge
+- **WHEN** the screen is 36 by 6 and "<Space>x" shows nine hints of 10 cells, or a hint longer than the screen, once under `rounded` and once under `none`
+- **THEN** the hints' text is at most 32 columns wide under `rounded`, fitting 2 columns of hints, and at most 34 under `none`, fitting 3, the long hint cut to that width
+
 #### Scenario: The frame rule
 - **WHEN** a float's widest text is asked for a 40-column screen, bordered under `rounded`, bordered under `none`, and without a border
 - **THEN** it is 36, 38, and 38 columns, and a placed box is never wider than the screen it is placed in

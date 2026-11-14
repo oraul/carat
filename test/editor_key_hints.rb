@@ -60,6 +60,50 @@ module EditorKeyHintsTest
     false
   end
 
+  # A session of rows by cols on a.txt with the project lines, the keys
+  # typed, then one wait passes with no key.
+  def self.sized_session(project, rows, cols, keys)
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.txt", "one\ntwo\nthree\n")
+    h = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with(project.to_s), rows: rows.to_i, cols: cols.to_i, plugins: [])
+    h.open("a.txt")
+    h.type(keys.to_s)
+    h.wait
+    h
+  end
+
+  # How many times the text shows in the hint lines.
+  def self.shown(h, text)
+    lines = hint_lines(h)
+    want = text.to_s
+    count = 0
+    i = 0
+    while i < lines.length
+      at = lines[i].index(want)
+      while at
+        count += 1
+        at = lines[i].index(want, at + want.length)
+      end
+      i += 1
+    end
+    count
+  end
+
+  # The project lines of nine groups under <leader>x, each hint
+  # "k  group-k" ten cells wide.
+  def self.nine_groups
+    text = +""
+    keys = "abcdefghi"
+    i = 0
+    while i < keys.length
+      k = keys[i].to_s
+      text << "keymap.normal <leader>x" + k + "z cursor.up\n"
+      text << "keymap.group <leader>x" + k + " group-" + k + "\n"
+      i += 1
+    end
+    text
+  end
+
   # The cells of the float's widest row.
   def self.widest(h)
     lines = hint_lines(h)
@@ -132,6 +176,25 @@ module EditorKeyHintsTest
     ]) do |name|
       h = session("keymap.normal <leader>xya cursor.up\nkeymap.normal <leader>xb cursor.down\nkeymap.group <leader>xy " + name.to_s, 24, "<Space>x", 1)
       [widest(h), h.state.tab.floats.count == 0 ? 0 : h.state.tab.floats.at(0).window.width, h.state.tab.floats.count]
+    end
+
+    # Scenario "The key hints use the border columns without an edge": on
+    # a 36 by 6 screen the hints have 3 rows of room and 32 columns of text
+    # under rounded, 34 under none, so nine ten-cell entries fit 2 columns
+    # (22 cells, 6 entries shown) or 3 (34 cells, all 9), and a long group
+    # name is cut to the text width (31 or 33 cells of wide characters).
+    # Rows are [label, [border, project lines], [the float's width, the
+    # widest row's cells, entries shown]].
+    long = "keymap.normal <leader>xya cursor.up\nkeymap.normal <leader>xbz cursor.up\nkeymap.group <leader>xy " + "あ" * 50 + "\nkeymap.group <leader>xb group-b\n"
+    t.table([
+      ["rounded fits two columns of ten-cell hints", ["rounded", nine_groups], [22, 22, 6]],
+      ["none fits three columns of ten-cell hints", ["none", nine_groups], [34, 34, 9]],
+      ["rounded cuts a long hint to 32 columns", ["rounded", long], [32, 31, 1]],
+      ["none cuts a long hint to 34 columns", ["none", long], [34, 33, 1]]
+    ]) do |row|
+      h = sized_session("option.winborder " + row[0].to_s + "\n" + row[1].to_s, 6, 36, "<Space>x")
+      floats = h.state.tab.floats
+      [floats.count == 0 ? 0 : floats.at(0).window.width, widest(h), shown(h, "group-")]
     end
 
     h = session("keymap.normal <leader>x cursor.down\nkeymap.normal <leader>xa cursor.up", 24, "<Space>x", 1)
