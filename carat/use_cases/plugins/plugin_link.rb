@@ -271,6 +271,14 @@ module Carat
         @windows.move_float(@name, window, row, col)
       end
 
+      # Returns a FloatFrame.
+      # @rbs border: bool
+      def float_frame(border)
+        why = refusal
+        return PluginApi::FloatFrame.failure(why) unless why.empty?
+        @windows.float_frame(@name, border == true)
+      end
+
       # Returns a Response.
       # @rbs window: Integer
       def close_float(window)

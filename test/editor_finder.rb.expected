@@ -32,5 +32,5 @@ ok   Ten thousand files are listed and filtered
 ok   the configuration removes the Ctrl-P binding
 ok   and Space f f still opens the finder
 ok   The finder boxes share an edge: the list from column 1, the preview from the column after it to one before the right edge
-ok   The finder boxes keep a gap without an edge: each box loses its edge columns
+ok   The finder boxes share an edge without a border: the host's frame closes the gap
 editor_finder: 35 passed, 0 failed

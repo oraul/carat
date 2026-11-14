@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 5
-    VERSION = "2.5"
+    MINOR = 6
+    VERSION = "2.6"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -189,14 +189,17 @@ module Carat
     end
 
     # Where and how a float opens (from 2.3): anchor "editor" counts row
-    # and col from the screen's top-left cell, "cursor" from the cursor
-    # cell; height and width are its text rows and columns, at least 1;
-    # the host pads the text with one column on each side, inside the
-    # box; border draws a one-cell border around it (in the style of
-    # option.winborder, none drawing none) with the title centered on its
-    # top edge, so a bordered box is width + 4 columns wide; z
-    # from 0 to 1000 stacks it, higher on top; enter makes it the current
-    # window. A box larger than the screen is cut to it. A Data value.
+    # and col (each -10000 to 10000) from the screen's top-left cell,
+    # "cursor" from the cursor cell; height and width are its text rows
+    # and columns, at least 1; the host pads the text with one column on
+    # each side, inside the box; border draws a one-cell border around
+    # it (in the style of option.winborder, none drawing none) with the
+    # title centered on its top edge, so a bordered box is width + 4
+    # columns wide under a drawn border and width + 2 under none, as
+    # Host#float_frame answers; z from 0 to 1000 stacks it, higher on
+    # top; enter makes it the current window. An "editor" box keeps a
+    # margin of one cell from the screen's edges and is cut to fit inside
+    # it; a "cursor" box is cut to the screen. A Data value.
     class FloatOptions < Data.define(:anchor, :row, :col, :height, :width, :border, :title, :z, :enter)
       # @rbs @anchor: String
       # @rbs @row: Integer
@@ -213,6 +216,35 @@ module Carat
       #: (Integer, Integer, Integer, Integer) -> FloatOptions
       def self.at(row, col, height, width)
         FloatOptions.new(anchor: "editor", row: row, col: col, height: height, width: width, border: true, title: "", z: 50, enter: false)
+      end
+    end
+
+    # The frame of a float (from 2.6): whether the request succeeded, a
+    # message (the reason when it failed), the border cells on each side
+    # under the current option.winborder (0 or 1), the padding columns on
+    # each side, and the cells the host keeps between an "editor" box and
+    # the screen's edges. A Data value.
+    class FloatFrame < Data.define(:ok, :message, :edge, :padding, :margin)
+      # @rbs @ok: bool
+      # @rbs @message: String
+      # @rbs @edge: Integer
+      # @rbs @padding: Integer
+      # @rbs @margin: Integer
+
+      #: (Integer, Integer, Integer) -> FloatFrame
+      def self.success(edge, padding, margin)
+        FloatFrame.new(ok: true, message: "", edge: edge, padding: padding, margin: margin)
+      end
+
+      #: (String) -> FloatFrame
+      def self.failure(message)
+        FloatFrame.new(ok: false, message: message, edge: 0, padding: 0, margin: 0)
+      end
+
+      # The columns of a box whose text is width columns wide.
+      #: (Integer) -> Integer
+      def box_width(width)
+        width + 2 * (edge + padding)
       end
     end
 
@@ -668,8 +700,8 @@ module Carat
       # Opens a float (from 2.3) showing the lines in a scratch buffer the
       # plugin owns, never listed nor written, placed as the FloatOptions
       # say over the current tab page, and returns a WindowResponse with
-      # its window id; refused for an unknown anchor, a size below 1, a z
-      # out of range, or a tab page holding 16 floats.
+      # its window id; refused for an unknown anchor, an offset or a z out
+      # of range, a size below 1, or a tab page holding 16 floats.
       # @rbs options: FloatOptions
       # @rbs lines: Array[String]
       def open_float(options, lines)
@@ -677,12 +709,21 @@ module Carat
       end
 
       # Moves the plugin's float with the window id to another offset from
-      # its anchor and returns a Response (from 2.3).
+      # its anchor and returns a Response (from 2.3); refused for an
+      # offset out of range.
       # @rbs window: Integer
       # @rbs row: Integer
       # @rbs col: Integer
       def move_float(window, row, col)
         raise NotImplementedError, "Host#move_float"
+      end
+
+      # Returns a FloatFrame (from 2.6): the frame a float the plugin opens
+      # with that border takes under the current border style, and the
+      # margin the host keeps around every box.
+      # @rbs border: bool
+      def float_frame(border)
+        raise NotImplementedError, "Host#float_frame"
       end
 
       # Closes the plugin's float with the window id, 0 for the current

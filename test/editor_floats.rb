@@ -123,8 +123,8 @@ module EditorFloatsTest
     t.assert_equal("  4 line hint", h.row(3)[0, 14], "a cursor float starts below the cursor cell")
     h = editor
     open(h, options("editor", 5, 50, 30, 100, true, "", 50, false), ["big"])
-    t.assert_equal(["╭" + "─" * 38 + "╮", "│ big"], [h.row(0), h.row(1)[0, 5]], "a float larger than the screen fills it above the message row")
-    t.assert_equal("╰" + "─" * 38 + "╯", h.row(10), "its bottom border is on the row above the message row")
+    t.assert_equal(["╭" + "─" * 36 + "╮", "│ big"], [h.row(1)[1, 38], h.row(2)[1, 5]], "a float larger than the screen fills it less its margin")
+    t.assert_equal(["╰" + "─" * 36 + "╯", "  1 line 1", false, " "], [h.row(9)[1, 38], h.row(0).rstrip, h.row(10).include?("─"), h.row(5)[0, 1]], "its bottom border is above the margin row, the top row, the status bar, and the first column left to the window")
 
     # z order.
     h = editor
@@ -240,7 +240,23 @@ module EditorFloatsTest
       i += 1
     end
     t.assert_equal("Too many floating windows", h.plugins.window_requests.open_float("test", API::FloatOptions.at(0, 0, 1, 1), ["x"]).message, "a tab page holds sixteen floats")
-    t.assert_equal("2.5", API::VERSION, "the plugin API is 2.5")
+    t.assert_equal("2.6", API::VERSION, "the plugin API is 2.6")
+
+    # Scenario: An offset out of range is refused.
+    h = editor
+    refused = h.plugins.window_requests.open_float("test", options("editor", 0, 10_001, 1, 4, true, "", 50, false), ["x"])
+    t.assert_equal([false, "No offset 10001: -10000 to 10000", 0], [refused.ok, refused.message, h.state.tab.floats.count], "An offset out of range is refused when a float opens")
+    id = open(h, options("editor", 1, 2, 1, 4, false, "", 50, false), ["x"])
+    moved = h.plugins.window_requests.move_float("test", id, -10_001, 0)
+    spec = h.state.tab.floats.at(0).spec
+    t.assert_equal([false, "No offset -10001: -10000 to 10000", 1, 2], [moved.ok, moved.message, spec.row, spec.col], "and when it moves, the float staying where it was")
+
+    # Scenario: The frame under each border.
+    frames = [h.plugins.window_requests.float_frame("test", true)]
+    h.state.options.winborder = "none"
+    frames << h.plugins.window_requests.float_frame("test", true)
+    frames << h.plugins.window_requests.float_frame("test", false)
+    t.assert_equal([[true, 1, 1, 1, 14], [true, 0, 1, 1, 12], [true, 0, 1, 1, 12]], frames.map { |f| [f.ok, f.edge, f.padding, f.margin, f.box_width(10)] }, "The frame under each border: the edge, padding, margin, and a 10-column text's box")
 
     # The frame: each border style and the ASCII form at a small and a
     # large screen. Scenarios: Each border style, The ASCII border, No
@@ -284,7 +300,9 @@ module EditorFloatsTest
     h = configured("option.winborder double\n", 12, 60)
     h.assembly.notices.add("disk almost full", D::MessageHistory::WARNING, h.clock.now)
     h.redraw
-    t.assert_equal(["╔Warning═══════════╗", "║ disk almost full ║", "╚══════════════════╝"], [h.row(0)[39, 20], h.row(1)[39, 20], h.row(2)[39, 20]], "a notification box is drawn in the border style")
+    t.assert_equal(["╔════ Warning ═════╗", "║ disk almost full ║", "╚══════════════════╝"], [h.row(0)[39, 20], h.row(1)[39, 20], h.row(2)[39, 20]], "a notification box is drawn in the border style")
+    # Scenario: A notification title is centered like a float title.
+    t.assert_equal([D::Highlight::FLOAT_BORDER, D::Highlight::DIAGNOSTIC_WARN, D::Highlight::DIAGNOSTIC_WARN, D::Highlight::DIAGNOSTIC_WARN, D::Highlight::FLOAT_BORDER], [h.frame.hl_at(0, 43), h.frame.hl_at(0, 44), h.frame.hl_at(0, 48), h.frame.hl_at(0, 52), h.frame.hl_at(0, 53)], "A notification title is centered like a float title: the severity and its blanks in its group")
 
     t.finish
   end

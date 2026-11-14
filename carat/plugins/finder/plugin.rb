@@ -25,11 +25,6 @@ module Carat
         MARK = "> "
         SPACE = "  "
         PREVIEW_COLUMNS = 100
-        # The columns between a box and the screen's edge.
-        MARGIN = 1
-        # The columns a bordered box takes beside its text, its padding
-        # and its border on each side, as FloatOptions documents.
-        FRAME = 4
         Z = 900
         OPEN = "plugin.finder.open"
         KEYS = [
@@ -262,11 +257,10 @@ module Carat
         end
 
         # Opens the list float, and the preview beside it on a wide
-        # screen, for the matches and the highlight: MARGIN from each
-        # screen edge, the preview's box in the column after the list's,
-        # so with a drawn border the boxes share an edge and under
-        # winborder none, each box losing its edge columns, they keep a
-        # gap.
+        # screen, for the matches and the highlight, sized from the frame
+        # the host answers for a bordered float: the host's margin from
+        # each screen edge, the preview's box in the column after the
+        # list's, so the boxes share an edge under every border style.
         #: (Carat::PluginApi::Host) -> void
         def refresh(host)
           close_floats(host)
@@ -274,19 +268,22 @@ module Carat
           height = @rows - 6
           height = 1 if height < 1
           preview = cols >= PREVIEW_COLUMNS
-          room = cols - 2 * MARGIN
-          width = room - FRAME
-          width = (room - 2 * FRAME) / 2 if preview
+          box = host.float_frame(true)
+          margin = box.margin
+          frame = box.box_width(0)
+          room = cols - 2 * margin
+          width = room - frame
+          width = (room - 2 * frame) / 2 if preview
           width = 1 if width < 1
           title = "#{TITLE} #{@matches.length}/#{@paths.length}"
-          shown = host.open_float(float_at(MARGIN, height, width, title), list_lines(height))
+          shown = host.open_float(float_at(margin, height, width, title), list_lines(height))
           @list_float = shown.ok ? shown.window : 0
           return unless preview && !@matches.empty?
           path = selected_path
           read = host.read_file(PluginApi::Paths.join(@root, path), height)
           lines = read.ok ? read.lines : [read.message]
           lines = [""] if lines.empty?
-          previewed = host.open_float(float_at(MARGIN + width + FRAME, height, room - width - 2 * FRAME, path), lines)
+          previewed = host.open_float(float_at(margin + width + frame, height, room - width - 2 * frame, path), lines)
           @preview_float = previewed.ok ? previewed.window : 0
         end
 
