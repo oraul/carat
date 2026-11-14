@@ -9,4 +9,4 @@
 ## 2. Carat at the new pin
 
 - [ ] 2.1 Run every stage of `make check` (`CHECK_STAGES`) on the new toolchain, fixing only what fails at the new pin, each fix named. Verify that `make check` passes, that test-build and diagnose take about 125 to 175 s, and compare allocations per key and rounds with main's figures in `docs/metrics.tsv`.
-- [ ] 2.2 Record 2440954d1 as the compile-time regression in `docs/spinel-notes.md` (Analysis, tests, and the runner), and move the `byteindex` note in Language and library to 84aa303b1. Verify with `make docs-lint` and `make gates`.
+- [x] 2.2 Record 2440954d1 as the compile-time regression in `docs/spinel-notes.md` (Analysis, tests, and the runner), and move the `byteindex` note in Language and library to 84aa303b1. Verify with `make docs-lint` and `make gates`.

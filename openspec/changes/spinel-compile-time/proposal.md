@@ -29,9 +29,9 @@ None. This is a toolchain change, so `skip_specs` is set.
 - `tools/spinel/spinel_rt_responds_generated.h`: regenerated (left unchanged if the generator's output is the same).
 - `docs/spinel-notes.md`: the compile-time entry and the `byteindex` note.
 - CI: unchanged. Its toolchain and compile caches are keyed on `make spinel-rev`, so the first run builds a fresh toolchain.
-- CLAUDE.md: unchanged. The commands and the bump procedure stay the same; only the pinned value moves.
-- README.md: unchanged, since no command, option, or user-visible behavior changes.
-- docs/architecture.md: unchanged, since it names `SPINEL_REF` without its value.
+- CLAUDE.md: unchanged, the commands and the bump procedure stay the same and only the pinned value moves.
+- README.md: unchanged, no command, option, or user-visible behavior changes.
+- docs/architecture.md: unchanged, it names `SPINEL_REF` without its value.
 
 Outside the roadmap of `docs/architecture.md` section 12: a toolchain pin the user chose to fix the compile time, made in its own pull request as the Makefile requires.
 
