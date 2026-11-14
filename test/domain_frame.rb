@@ -35,6 +35,12 @@ module DomainFrameTest
     p = D::Frame.new(rows: 1, cols: 8)
     t.assert_equal([3, "b中"], [p.put_from(0, 0, "a/b中", 2, H::NORMAL, 8), p.row_text(0)], "put_from starts at the byte after the slash")
     t.assert_equal(2, p.put_from(0, 0, "abcdef", 1, H::NORMAL, 2), "put_from stops at its limit")
+
+    # put_digits_within: the bars' one digit fit, all the digits or none.
+    n = D::Frame.new(rows: 1, cols: 8)
+    t.assert_equal([4, "x123"], [n.put_digits_within(0, 1, 123, H::STATUS, 4), "x#{n.row_text(0)[1, 3]}"], "put_digits_within writes digits that end at the limit")
+    t.assert_equal([5, "x123"], [n.put_digits_within(0, 5, 1234, H::STATUS, 8), "x#{n.row_text(0)[1, 3]}"], "put_digits_within writes nothing when a digit would pass the limit")
+    t.assert_equal([H::STATUS, D::Frame::SPACE], [n.hl_at(0, 1), n.code_at(0, 5)], "put_digits_within writes in its group and leaves the cells it skips")
     t.table([
       ["ascii from 0", ["abc", 0], 3],
       ["a wide character", ["a中", 0], 3],

@@ -265,14 +265,14 @@ module Carat
         elsif kind == POSITION
           cursor = window.cursor
           x = frame.put_within(row, x, " ", hl, limit)
-          x = digits_within(frame, row, x, limit, cursor.row + 1, hl)
+          x = frame.put_digits_within(row, x, cursor.row + 1, hl, limit)
           x = frame.put_within(row, x, ":", hl, limit)
-          x = digits_within(frame, row, x, limit, cursor.col + 1, hl)
+          x = frame.put_digits_within(row, x, cursor.col + 1, hl, limit)
         else
           x = frame.put_within(row, x, " ", hl, limit)
           percent = percent_of(window)
           if percent >= 0
-            x = digits_within(frame, row, x, limit, percent, hl)
+            x = frame.put_digits_within(row, x, percent, hl, limit)
             x = frame.put_within(row, x, "%", hl, limit)
           else
             x = frame.put_within(row, x, percent_word(window), hl, limit)
@@ -330,7 +330,7 @@ module Carat
         x = frame.put_within(row, x, " ", hl, limit)
         x = frame.put_within(row, x, Domain::Icons.glyph(icon, set), hl, limit)
         x = frame.put_within(row, x, " ", hl, limit)
-        digits_within(frame, row, x, limit, count, hl)
+        frame.put_digits_within(row, x, count, hl, limit)
       end
 
       # The group of the last count above zero, which the diagnostics
@@ -354,14 +354,6 @@ module Carat
       def count_width(count, icon, set)
         return 0 if count <= 0
         text_width(Domain::Icons.glyph(icon, set)) + Domain::Frame.digits(count) + 2
-      end
-
-      # The digits of number from x when they all fit before limit.
-      #: (Domain::Frame, Integer, Integer, Integer, Integer, Integer) -> Integer
-      def digits_within(frame, row, x, limit, number, hl)
-        width = Domain::Frame.digits(number)
-        return x if x + width > limit
-        frame.put_digits(row, x, number, hl)
       end
 
       # The path, the scratch title, or [No Name].
