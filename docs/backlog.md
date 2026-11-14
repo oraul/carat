@@ -3088,12 +3088,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a change that scans the buffer on every insert-mode key would pass the suite unseen.
 - Fix outline: assert that typing in insert mode with no popup leaves the menu unfilled, or add a bench scenario row that pins the allocations. Queued in `completion-tidy`.
 
-## Only gd and buffer switches add to the jump list
-
-- Where: `carat/domain/jump_list.rb`, filled by `VisitTarget` (`gd`) and `BufferList#enter` (every buffer switch) since `jump-list`; the motion handlers push nothing, and no alternate file exists.
-- Why it matters: in Neovim `G`, `gg`, searches, `n`, `%`, `(`, `{`, `H`, `M`, `L`, marks, and `:N` also add to the window's jump list, so Ctrl-O after a search or a `G` does nothing in carat; `Ctrl-^`, `Ctrl-6`, and `:e #` reach no alternate file, and `:ls #` lists none.
-- Fix outline: push the position left from the jump motions (a jump flag on the motion handlers, pushed by the dispatcher), keep the window's alternate buffer beside its jump list (set by `BufferList#enter` and the walk), add `Ctrl-^`, `Ctrl-6`, `:e #`, and the `#` flag of `:ls`, each with a row in `docs/compatibility.md` and a table test, and move `jump.older` and `jump.newer` from `DefinitionHandler` to a `JumpHandler`, since the list is not definition-specific (quality advisory in `definitions`). Queue item `jump-motions`.
-
 ## Definition target paths keep decoded control bytes
 
 - Where: `carat/adapters/json_rpc_language_gateway.rb` line 789 at fafe59c, `path_of`, which refuses a raw or escaped NUL but keeps a decoded `%0A` or `%1B`. Security Low (5) and quality advisory in `definitions`. Owned by queue item 13, `bidi-controls`. Raised again at bff9a02 (#96): decoded C0 and C1 bytes, periodic security Low (4) at `carat/adapters/json_rpc_language_gateway.rb:789`; queue item `bidi-controls`.
@@ -3672,29 +3666,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: duplicated work per row in the presenter's hot path, which the `float-frame` proposal set out to tidy.
 - Fix outline: fetch the line and its decoded form once into locals before the branch and reuse them for the tokens; confirm with `make bench`. Queue item `float-placement`.
 
-## The finder's box sizes are magic numbers that assume a bordered float
-
-- Where: `carat/plugins/finder/plugin.rb` line 268 (widths `cols - 6`, `(width - 5) / 2`, `width + 6`, `cols - width - 11`) and the `FloatOptions` comment at `carat/plugin_api.rb` line 197, which states a box is `width + 4` without the `option.winborder none` case. Quality advisories of `float-frame`.
-- Why it matters: under `option.winborder none` a box is `width + 2`, so the list and preview leave two-column gaps, and no test asserts the two boxes still tile the screen.
-- Fix outline: name the frame width of a bordered float (border 2 plus padding 2) in a constant, say `width + 2` under `winborder none` in the comment, let a plugin read the frame size through the API, and assert both boxes' columns in `test/editor_finder.rb`. Queue item `float-edges`.
-
 ## The palette is one column off center without a border
 
 - Where: `carat/use_cases/discovery/follow_palette.rb` line 124 (and `carat/use_cases/discovery/show_key_hints.rb` line 132 for its limit), which subtract a 2-column border unconditionally. Quality advisory of `float-frame`.
 - Why it matters: under `option.winborder none` the palette sits one column off center.
 - Fix outline: subtract the border only when `BorderStyle.edged?(options.winborder)`, with a row in `test/editor_palette.rb`. Queue item `float-placement`.
-
-## Floats cap their width at the border only and lose two columns
-
-- Where: `carat/use_cases/docs/show_hover.rb:59`, `carat/use_cases/docs/show_signature.rb:53`, `carat/use_cases/definitions/open_definition_float.rb:40`, against `carat/use_cases/discovery/show_key_hints.rb:132`. Periodic quality, blocking.
-- Why it matters: `FloatWindow#place` fits text to cols minus border and padding, so under 84 columns (80 included) every long hover row, signature label, and peek row loses its last two columns; no test runs at a width where the cap binds.
-- Fix outline: one frame-width rule for every float, and a narrow-screen hover row asserting a wrapped row's last word shows. Queue item `float-edges`.
-
-## The palette width ignores the float padding
-
-- Where: `carat/use_cases/discovery/follow_palette.rb:114` and `:124`. Periodic quality.
-- Why it matters: below 94 columns the rows are cut two cells wider than `FloatWindow#place` leaves and the column goes negative until shifted.
-- Fix outline: the same frame-width rule as the hover entry. Queue item `float-edges`.
 
 ## FloatWindow#place shadows its edge reader
 
@@ -4011,12 +3987,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/adapters/frame_presenter.rb:691` (`paint_border_row`, `paint_title` at 705) against the notification boxes at 504 and 508. Periodic quality at bd86828.
 - Why it matters: the floating-windows spec says the two boxes share a border, yet under NO_COLOR they differ.
 - Fix outline: one rule for both, or the reason recorded, with an `editor_floats` NO_COLOR row. Queue item `float-placement`.
-
-## The tab ex commands drop their argument
-
-- Where: `carat/use_cases/ex/tab_command_handler.rb:38` (`:tabn 3`, `:tabc 2`, `:tabo x`). Periodic quality at bd86828.
-- Why it matters: `:tabn 3` goes to the next tab page with no message; `docs/compatibility.md` lists `:tabn N` as later.
-- Fix outline: refuse an argument not implemented yet, with rows in `test/use_cases_ex.rb`. Queue item `tab-keys`.
 
 ## OpenTab copies a focused float's jumps and leaves it focused
 
@@ -4727,23 +4697,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: load records a scratch buffer's id as the alternate, so Ctrl-^ shows a scratch buffer while 'N Ctrl-^' and ':b N' refuse the same buffer with E86, an inconsistency between paths to one buffer.
 - Fix outline: skip scratch buffers when load sets the alternate, or refuse a scratch alternate in SwitchBuffer as :number does, with an editor_jumps case.
 
-## carat/domain/buffer_list.rb:315 BufferList#enter duplicates Window#record_jump (jump-motions, quality advisory)
-
-- Location: carat/domain/buffer_list.rb:315
-- Why: enter still pushes old.id with the window's row and col inline, behind the 'unless old.id == 0' guard that the new Window#record_jump already holds, so the two can drift apart.
-- Fix outline: replace the inline push with 'current.record_jump unless target.id == 0 && reusable?(old)'.
-
 ## carat/use_cases/buffers/switch_buffer.rb:37 Ctrl-^ shows a scratch alternate that N Ctrl-^ and :b N refuse (jump-motions, quality advisory)
 
 - Location: carat/use_cases/buffers/switch_buffer.rb:37
 - Why: load records a scratch buffer's id as the alternate, so Ctrl-^ shows it, while 'N Ctrl-^' and ':b N' refuse a scratch buffer with E86, an inconsistent answer for the same buffer.
 - Fix outline: skip scratch buffers when load sets the alternate, or refuse a scratch alternate in SwitchBuffer as :number does.
-
-## carat/domain/buffer_list.rb:315 enter pushes the jump inline beside Window#record_jump (jump-motions, quality advisory, second round)
-
-- Location: carat/domain/buffer_list.rb:315
-- Why: the second review round found enter still pushing old.id with the window's cursor inline, the logic the new Window#record_jump holds; same finding as the first round's duplication entry.
-- Fix outline: 'current.record_jump unless target.id == 0 && reusable?(old)'.
 
 ## carat/use_cases/ex/file_command_handler.rb:98 the ex handler resolves the alternate buffer itself (jump-motions, quality advisory)
 
@@ -4807,29 +4765,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why: FRAME = 4 restates FloatWindow.frame_width(1) as a literal, so under winborder none the finder keeps a 3-column right margin and a 2-column gap.
 - Fix: expose the frame width through PluginApi in float-placement and derive the finder's sizes from it.
 
-### Quality advisory: palette column always subtracts frame_width(1) (carat/use_cases/discovery/follow_palette.rb:124)
-
-- Location: carat/use_cases/discovery/follow_palette.rb:124
-- Why: the palette column always subtracts frame_width(1) while its width now follows winborder; under none it is -1 (clamped by shift) on narrow screens and one column left of center on wide ones.
-- Fix: compute the edge once as text_room does and use frame_width(edge) for the column (float-placement).
-
 ### Quality advisory: place computes frame_width twice (carat/domain/float_window.rb:80)
 
 - Location: carat/domain/float_window.rb:80
 - Why: place computes FloatWindow.frame_width(edge) twice beside side = edge + PAD.
 - Fix: compute frame = FloatWindow.frame_width(edge) once and use it for the width cut and the shift.
-
-### Quality advisory: every text_room caller passes border true (carat/domain/float_window.rb:46)
-
-- Location: carat/domain/float_window.rb:46
-- Why: speculative generality; every caller of text_room passes border true.
-- Fix: drop the border parameter (text_room(cols, style)) until a borderless caller needs it.
-
-### Quality advisory: palette width and column use different edges (carat/use_cases/discovery/follow_palette.rb:124)
-
-- Location: carat/use_cases/discovery/follow_palette.rb:124, width at carat/use_cases/discovery/follow_palette.rb:114
-- Why: the column uses frame_width(1) while the width uses the style's edge, so under winborder none the palette sits one column left of centre (col -1, clamped, on narrow screens).
-- Fix: derive the edge once and pass frame_width(edge) to both, or carry it into float-placement as the design says.
 
 ### Quality advisory: unused resize helper in definitions and signature rigs (test/adapters_definitions.rb:39)
 
@@ -4843,12 +4783,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why: duplication; the same drawn helper is copied into three test files.
 - Fix: keep one shared helper in the test support or the rig the three share.
 
-### Quality advisory: missing hover float reads at(-1) (test/adapters_hover.rb:383)
-
-- Location: test/adapters_hover.rb:383
-- Why: floats.at(floats.index_of(...)) is unguarded, so a missing hover float reads at(-1) and errors instead of failing the assertion.
-- Fix: guard with at < 0 ? [] as adapters_definitions.rb:592 does.
-
 ### Quality advisory: README says finder boxes share an edge under every border (README.md:58)
 
 - Location: README.md:58
@@ -4860,3 +4794,87 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Location: test/editor_key_hints.rb:65
 - Why: duplication; sized_session repeats session (line 11) but for the cols and the wait count.
 - Fix: give session a cols parameter (the existing callers passing 80) and drop sized_session.
+
+## Float offset check overflows at the integer minimum (float-placement, security Low (4))
+
+- Where: `carat/domain/float_spec.rb:58`, `offset_refusal`.
+- Why it matters: it relies on Integer#abs, which for the integer minimum raises RangeError (default overflow mode) or wraps to a negative value (wrap mode) and passes the range check; a plugin passing that offset to open_float or move_float either has its own call fail through the guarded path or gets an offset past the new limit, which place still clamps to the screen, so there is no out-of-bounds write.
+- Fix outline: compare without abs: refuse when row < -OFFSET_MAX or row > OFFSET_MAX, then the same for col, and add a test row with the integer minimum.
+
+## offset_refusal reassigns bad and compares abs (float-placement, quality advisory)
+
+- Where: `carat/domain/float_spec.rb:57`, `offset_refusal`.
+- Why it matters: simplicity: it picks the bad value by reassigning bad and compares row.abs, which is clever and overflows at the minimum integer.
+- Fix outline: check each bound directly (row < -OFFSET_MAX or row > OFFSET_MAX, then col) and return the message for the first out of range.
+
+## PluginLink#float_frame's refusal branch is untested (float-placement, quality advisory)
+
+- Where: `carat/use_cases/plugins/plugin_link.rb:276`.
+- Why it matters: tests beside behavior: the refusal branch (a disabled plugin answering FloatFrame.failure) is untested; `test/editor_floats.rb` calls WindowRequests#float_frame directly.
+- Fix outline: add an assertion through the link for an enabled and a disabled plugin.
+
+## WindowRequests#float_frame takes a name it never reads (float-placement, quality advisory)
+
+- Where: `carat/use_cases/plugins/window_requests.rb:260`.
+- Why it matters: dead parameter: float_frame takes name and never reads it.
+- Fix outline: drop it from WindowRequests#float_frame and its PluginLink call, or say in the comment that it keeps the request family's shape.
+
+## The frame presenter's class comment wraps unevenly (float-placement, quality advisory)
+
+- Where: `carat/adapters/frame_presenter.rb:90`.
+- Why it matters: style: the class comment line ending "in FloatTitle. The notifications follow at the top right in the same" runs past the file's wrap width while the next lines break short.
+- Fix outline: rewrap the paragraph.
+
+## The key hints keep two column guards that disagree (float-placement, quality advisory)
+
+- Where: `carat/use_cases/discovery/show_key_hints.rb:125`.
+- Why it matters: duplication: the state.screen_cols < 6 guard and the new limit < 1 check express one rule, and the old one now disagrees with text_room (it refuses a 5-column none screen whose limit is 1, and only limit < 1 protects rounded at 6).
+- Fix outline: drop state.screen_cols < 6 from line 125 and keep return if limit < 1 as the single column guard.
+
+## OpenSpec runs unpinned beside the push credentials (sprint-2 sweep security Medium (4))
+
+- Where: `tools/spec_validate.sh:17` runs `npx -y` of the latest OpenSpec release in the spec-validate stage, as the contributor profile and CLAUDE.md do. Periodic security at 8b9bf6a. Pool item `guard-lows`.
+- Why it matters: a hijacked or malicious release runs with the delivery session's git push credentials.
+- Fix outline: pin one exact version in one place (a Makefile variable) used by the stage, the docs, and the guard's allowlist, with a tools case refusing an unpinned call.
+
+## A forged sprint row settles the sprint review gate (sprint-2 review security Low (5))
+
+- Where: `settled_at` in `tools/gates.sh:117`; `sprint_state` in `tools/run_state.sh` takes the next sprint base from the row. Sprint-2 review at 8b9bf6a.
+- Why it matters: a package step or a misled contributor can append a sprint row naming the latest merged change; the merge gate still passes and the sprint-end combined-diff review starts from the forged base and skips changes.
+- Fix outline: accept only the row groom writes for the sprint `build/plan/sprint` names, after the history rows it counts, with a tools case refusing a forged row. Pool item `sprint-security`.
+
+## history and groom skip on records of a branch that never merges (sprint-2 sweep)
+
+- Where: `history` in `tools/run_state.sh:1372` skips a change whose run state records a row on any branch; `groom` retires the sprint marker clone-wide. Periodic quality at 8b9bf6a, raised twice.
+- Why it matters: a package-step branch that never merges (a run stopped after three red CI rounds) loses its metrics row, its late findings, or the whole sprint plan for good.
+- Fix outline: skip only when the recorded row is on the current base, and retire the marker only once the sprint row reaches the base, with a tools case for a stopped run. Pool item `sprint-tidy`.
+
+## A plugin's tab page switch skips TabList#visit (sprint-2 review)
+
+- Where: `carat/use_cases/plugins/window_requests.rb:132` (the float branch of focus_window) and `focus_at` at line 281 (focus_window, open_file, open_in_split) assign the tab index directly. Sprint-2 review at 8b9bf6a.
+- Why it matters: the last tab page is not updated, so `g<Tab>` goes to the wrong tab page after the finder or explorer focuses a window in another tab page, unlike Vim.
+- Fix outline: switch through `TabList#visit`, with a row where a plugin focuses a window in another tab page and `g<Tab>` returns. Pool item `definitions-tidy`.
+
+## The % motion repeats the text objects' bracket walk (sprint-2 sweep)
+
+- Where: `match_pair` and `pair_kind` in `carat/domain/motions.rb:630` against `find_opener` and `find_closer` in `carat/domain/text_objects.rb:251` and `:268`. Periodic quality at 8b9bf6a, raised twice.
+- Why it matters: two nested bracket walks in two forms (bytes against Walker) can drift apart.
+- Fix outline: one bracket matcher in Motions, which TextObjects already requires, used by `%` and the pair objects, with the existing rows held.
+
+## Docs drift found at 8b9bf6a
+
+- Where: `docs/codebase-map.md` line 161 (BufferHandler omits `buffer.alternate`), 125 (Messages omits E16, E444, invalid_argument, unsaved_buffer), 121 (show twice), 47 (a stray `;,`), 364 (FloatWindow omits frame_width and text_room), 464 (StatusSlots omits set_lsp and label), 331 and 303 (Selection and LastChange methods); `README.md:5` lacks `%` and `<C-^>`; `docs/architecture.md:126` lacks `%` and `{count}%`. Sprint-2 review and sweep.
+- Why it matters: the map and README lag jump-motions, tab-keys, and float-edges.
+- Fix outline: update those lines. Pool item `docs-index`.
+
+## Tooling headers and double negatives found at 8b9bf6a
+
+- Where: `tools/rules.sh:1` header omits RECORDS_RE; `tools/ci_scope.sh:45` and the groom dispatch in `tools/run_state.sh:1691` write `! cmd || return`. Sprint-2 review and sweep.
+- Why it matters: the header no longer names what three scripts source it for, and the double negatives read backwards.
+- Fix outline: name RECORDS_RE in the header and write both as plain `if` tests.
+
+## Small code findings of the sprint-2 review and sweep at 8b9bf6a
+
+- Where: `carat/use_cases/actions/tab_handler.rb:47` ties the tabline flag to a name's position (`i > 2`); `carat/domain/tab_list.rb:86` next_tab returns a bool no caller reads (a BOOL_COMMANDS entry kept for it); `carat/plugins/finder/plugin.rb:153` no_paths misnamed and the OPEN literal repeated at 79 and 87; `carat/use_cases/discovery/follow_palette.rb:103` trims the colon twice; `carat/domain/command_grammar.rb:139` accept and accept_visual share a start; `carat/domain/runs.rb:18` names a parameter cls; `carat/domain/buffer.rb:387` repeats initialize's empty line; `carat/domain/transaction.rb:297` merged? changes state; comments past the wrap in `carat/use_cases/handle_key.rb:65`, `carat/use_cases/discovery/show_key_hints.rb:23`, `carat/use_cases/completion/show_completion.rb:25`, `carat/use_cases/completion/show_completion_docs.rb:146`.
+- Why it matters: copies, unclear names, and dead returns the naming and wrap rules forbid.
+- Fix outline: a tablines array, a void next_tab, the renames, one private helper per copy, and the rewraps, each in its domain's batch.
