@@ -24,6 +24,11 @@ Each palette row SHALL show the name in a 30-cell column, the description, and t
 - **WHEN** the user presses `<Space>p` and types `window.split`
 - **THEN** the `window.split` row reads the name, `Split window` from cell 30, and `^Ws` starting 12 cells before the row's end
 
+#### Scenario: A narrow palette leaves the description out
+
+- **WHEN** the screen is 46 columns wide under `option.winborder none`, so the palette's text is 42 columns, and the user presses `<Space>p` and types `window.split`
+- **THEN** the `window.split` row reads the name, then `^Ws` from cell 30, without its description, and no cell of the row is drawn in `PmenuExtra` or `PmenuExtraSel`
+
 ## ADDED Requirements
 
 ### Requirement: Matched characters are marked
