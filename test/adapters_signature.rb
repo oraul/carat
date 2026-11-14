@@ -29,7 +29,17 @@ module AdaptersSignatureTest
       @processes = processes
       @messages = messages
       @assembly = assembly
+      @rows = 12
+      @cols = 40
       @frame = assembly.render(12, 40)
+    end
+
+    # Draws the editor at rows by cols from now on.
+    #: (Integer, Integer) -> void
+    def resize(rows, cols)
+      @rows = rows
+      @cols = cols
+      @frame = @assembly.render(rows, cols)
     end
 
     # Types keys in Vim notation, one read per key.
@@ -54,7 +64,7 @@ module AdaptersSignatureTest
     #: () -> void
     def pump
       @assembly.controller.pump(@assembly.state)
-      @frame = @assembly.render(12, 40)
+      @frame = @assembly.render(@rows, @cols)
     end
 
     #: () -> Integer
@@ -179,6 +189,17 @@ module AdaptersSignatureTest
     r
   end
 
+  # The float's text width, the width its rows were laid out at, its
+  # first row as the screen shows it from the text area's first column,
+  # and the screen's last column on that row: the right border when the
+  # row is not cut.
+  #: (Rig, Carat::Domain::FloatWindow) -> Array[untyped]
+  def self.drawn(r, float)
+    window = float.window
+    row = r.frame.text_rows[window.row].to_s
+    [window.width, float.spec.width, row[window.col, window.width].to_s.rstrip, row[row.length - 1, 1].to_s]
+  end
+
   def self.main
     t = Carat::Testing.new("adapters_signature")
 
@@ -291,6 +312,14 @@ module AdaptersSignatureTest
     t.assert_equal([false, true, true, [-1, -1]], [line.include?("\e"), line.bytesize <= 1024, line.start_with?("f(www"), mark(r)], "escape sequences are dropped, the label capped, and offsets past it mark nothing")
     t.assert_equal(false, r.terminal.writes.join.include?("owned"), "no escape reaches the screen")
 
+    # Scenario: The signature and the peek fit a narrow screen.
+    r = signing
+    r.type("Gofoo(")
+    settle(r)
+    label = "foo(alpha, bravo, charlie, delta, echo, foxtrot)"
+    answer(r, help(label, ["alpha", "bravo"], 0))
+    f = float(r)
+    t.assert_equal([36, 36, label[0, 36].to_s, "|"], f.nil? ? [] : drawn(r, f), "The signature and the peek fit a narrow screen: a long label is 36 columns at 40, its border in the last column")
     t.finish
   end
 end

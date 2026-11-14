@@ -30,4 +30,11 @@ ok   a key of wide characters with combining marks
 ok   a wide key keeps the characters that fit its column
 ok   a combining key keeps every mark with its letter
 ok   the colon prompt returns after the palette
-editor_palette: 32 passed, 0 failed
+ok   The palette keeps its right border while the filter shrinks at 120 by 36
+ok   the palette shows every row whole under winborder none at 120 by 36
+ok   The palette keeps its right border while the filter shrinks at 60 by 24
+ok   the palette shows every row whole under winborder none at 60 by 24
+ok   The palette keeps its right border while the filter shrinks at 80 by 24
+ok   the palette shows every row whole under winborder none at 80 by 24
+ok   Without an edge the palette uses the border columns
+editor_palette: 39 passed, 0 failed

@@ -31,4 +31,6 @@ ok   Ten thousand files are listed
 ok   Ten thousand files are listed and filtered
 ok   the configuration removes the Ctrl-P binding
 ok   and Space f f still opens the finder
-editor_finder: 33 passed, 0 failed
+ok   The finder boxes share an edge: the list from column 1, the preview from the column after it to one before the right edge
+ok   The finder boxes keep a gap without an edge: each box loses its edge columns
+editor_finder: 35 passed, 0 failed

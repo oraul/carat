@@ -70,4 +70,5 @@ ok   A refused Ctrl-O leaves the jump list as it was
 ok   Ctrl-I after a refused Ctrl-O returns to the start
 ok   Ctrl-O drops an entry whose buffer is gone and stays
 ok   Ctrl-O clamps the column to a line shortened since, in code points
-adapters_definitions: 72 passed, 0 failed
+ok   the peek fits a narrow screen: a long line is 36 columns at 40, its border in the last column
+adapters_definitions: 73 passed, 0 failed

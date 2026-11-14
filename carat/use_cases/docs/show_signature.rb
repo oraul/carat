@@ -50,7 +50,8 @@ module Carat
           return
         end
         width = Domain::DisplayWidth.text_width(label, 0)
-        width = state.screen_cols - 2 if width > state.screen_cols - 2
+        room = Domain::FloatWindow.text_room(state.screen_cols, true, state.options.winborder)
+        width = room if width > room
         return if width < 1
         open(state, window, label, width)
       end

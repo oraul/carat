@@ -1,5 +1,6 @@
 require_relative "window"
 require_relative "float_spec"
+require_relative "border_style"
 
 module Carat
   module Domain
@@ -28,6 +29,23 @@ module Carat
       #: (window: Window, spec: FloatSpec) -> void
       def initialize(window:, spec:)
         super(window: window, spec: spec, selected: -1, mark_from: -1, mark_to: -1, edge: spec.edge)
+      end
+
+      # The columns a box's frame takes beside its text: the padding on
+      # each side and, with an edge of one cell, the border on each side.
+      #: (Integer) -> Integer
+      def self.frame_width(edge)
+        2 * (edge + PAD)
+      end
+
+      # The widest text a float can show on a screen of cols columns: the
+      # screen less its frame, the border counted when the float is
+      # bordered and the style draws an edge. Every float sized to the
+      # screen asks this, so place never cuts a row it laid out.
+      #: (Integer, bool, String) -> Integer
+      def self.text_room(cols, border, style)
+        edge = border && BorderStyle.edged?(style) ? 1 : 0
+        cols - frame_width(edge)
       end
 
       # Whether the float marks columns of its first row.
@@ -59,9 +77,9 @@ module Carat
         self.edge = edge
         side = edge + PAD
         height = fit(spec.height, rows - 2 * edge)
-        width = fit(spec.width, cols - 2 * side)
+        width = fit(spec.width, cols - FloatWindow.frame_width(edge))
         box_row = shift(top + spec.row, height + 2 * edge, rows)
-        box_col = shift(left + spec.col, width + 2 * side, cols)
+        box_col = shift(left + spec.col, width + FloatWindow.frame_width(edge), cols)
         window.row = box_row + edge
         window.col = box_col + side
         window.height = height

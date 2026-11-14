@@ -70,6 +70,62 @@ module EditorPaletteTest
     [Carat::Domain::DisplayWidth.text_width(row, 0), Carat::Domain::DisplayWidth.text_width(row[0, at].to_s, 0)]
   end
 
+  # A rows by cols session on a.txt with the configuration lines over
+  # the defaults.
+  def self.sized(lines, rows, cols)
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.txt", "one\ntwo\nthree\n")
+    config = Carat::Doubles::FixedConfig.with(lines.to_s)
+    h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: rows.to_i, cols: cols.to_i, plugins: [])
+    h.open("a.txt")
+    h
+  end
+
+  # What is wrong with the topmost float's frame, "" when nothing: a box
+  # row whose last column is not the right border (when edged), a row
+  # of its text not shown whole up to the padding, or a text area
+  # narrower than the width the rows were laid out at.
+  def self.frame_fault(h)
+    floats = h.state.tab.floats
+    return "no float" if floats.count == 0
+    float = floats.at(floats.count - 1)
+    window = float.window
+    return "text area #{window.width} for rows of #{float.spec.width}" if window.width != float.spec.width
+    r = float.box_top
+    while r < float.box_bottom
+      row = h.row(r)
+      row += " " * (h.state.screen_cols - row.length) if row.length < h.state.screen_cols
+      if float.edged?
+        glyph = row[float.box_right - 1, 1].to_s
+        return "row #{r} ends in #{glyph.inspect}" unless glyph == "│" || glyph == "╮" || glyph == "╯"
+      end
+      at = r - window.row
+      if at >= 0 && at < window.height
+        line = window.buffer.lines[at].to_s
+        return "row #{r} shows #{row[window.col, line.length].to_s.inspect}" if row[window.col, line.length].to_s != line
+        return "row #{r} has no padding" if row[window.col + window.width, 1].to_s != " "
+      end
+      r += 1
+    end
+    ""
+  end
+
+  # The frame faults after "<Space>p" and each key of the filter typed
+  # one at a time, as "key: fault", empty when every frame is right.
+  def self.shrinking(lines, rows, cols, filter)
+    h = sized(lines, rows, cols)
+    out = []
+    h.type("<Space>p")
+    fault = frame_fault(h)
+    out << "<Space>p: #{fault}" unless fault.empty?
+    filter.to_s.each_char do |key|
+      h.type(key)
+      fault = frame_fault(h)
+      out << "#{key}: #{fault}" unless fault.empty?
+    end
+    out
+  end
+
   def self.main
     t = Carat::Testing.new("editor_palette")
 
@@ -154,6 +210,18 @@ module EditorPaletteTest
     h = session("<Space>p<Esc>:")
     t.assert_equal(":", h.message_row[0, 1], "the colon prompt returns after the palette")
 
+    # Scenario: The palette keeps its right border while the filter shrinks.
+    [[36, 120], [24, 60], [24, 80]].each do |size|
+      rows = size[0].to_i
+      cols = size[1].to_i
+      t.assert_equal([], shrinking("", rows, cols, "vsplitq"), "The palette keeps its right border while the filter shrinks at #{cols} by #{rows}")
+      t.assert_equal([], shrinking("option.winborder none\n", rows, cols, "vsplitq"), "the palette shows every row whole under winborder none at #{cols} by #{rows}")
+    end
+    # Scenario: Without an edge the palette uses the border columns.
+    h = sized("option.winborder none\n", 24, 60)
+    h.type("<Space>p")
+    floats = h.state.tab.floats
+    t.assert_equal([58, 58], [floats.at(0).spec.width, floats.at(0).window.width], "Without an edge the palette uses the border columns")
     t.finish
   end
 end

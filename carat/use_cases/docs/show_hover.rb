@@ -56,7 +56,7 @@ module Carat
           @close_float.call(state, hover.float_id)
           hover.float_id = 0
         end
-        width = state.screen_cols - 2
+        width = Domain::FloatWindow.text_room(state.screen_cols, true, state.options.winborder)
         width = WIDTH if width > WIDTH
         return if width < 1
         docs = @format_docs.call(state, text, width)
