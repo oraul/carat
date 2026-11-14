@@ -29,7 +29,7 @@ module DomainVimPatternTest
 
     # Rows are [label, [pattern, text], first match or error], case
     # matched.
-    t.table([
+    t.cases([
       # Literal text and the characters the engine would read specially.
       ["a word", ["bar", "foo bar"], "4-7"],
       ["parentheses are literal", ["f(x)", "a f(x)"], "2-6"],
@@ -113,7 +113,7 @@ module DomainVimPatternTest
     end
 
     # Case: rows are [label, [pattern, text, ignorecase, smartcase], match].
-    t.table([
+    t.cases([
       ["case matched by default", ["foo", "FOO", false, false], "none"],
       ["ignorecase", ["foo", "FOO", true, false], "0-3"],
       ["smartcase with an uppercase letter", ["Foo", "FOO", true, true], "none"],
@@ -127,7 +127,7 @@ module DomainVimPatternTest
     end
 
     # Rows are [label, [text, delimiter byte], end byte].
-    t.table([
+    t.cases([
       ["a slash in a collection does not end the pattern", ["[/]/", 47], 3],
       ["a collection of a multibyte character ends after it", ["[\u00E9]/x", 47], 4]
     ]) do |input|

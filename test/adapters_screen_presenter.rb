@@ -351,7 +351,7 @@ module AdaptersScreenPresenterTest
     h.type("jjjjjjjj")
     t.assert_true(h.terminal.last_write.include?("\e[0m\e[1;8r\e[1S"), "and scrolls after the bare reset as before")
 
-    t.table([
+    t.cases([
       ["a truecolor comment", [T, "one_dark", H::COMMENT], "\e[0;3;38;2;149;156;168m"],
       ["a 256-color comment, the nearest index", [C256, "one_dark", H::COMMENT], "\e[0;3;38;5;247m"],
       ["a 16-color comment", [C16, "one_dark", H::COMMENT], "\e[0;3;90m"],

@@ -60,7 +60,7 @@ module EditorUndoTest
 
     # Keys through the editor: rows are [label, [text, start, keys], [lines,
     # cursor, message]].
-    t.table([
+    t.cases([
       ["u undoes a delete", ["abc\n", [0, 0], "xu"], [["abc"], [0, 0], "1 change; before #1  0 seconds ago"]],
       ["Ctrl-R redoes it", ["abc\n", [0, 0], "xu<C-r>"], [["bc"], [0, 0], "1 change; after #1  0 seconds ago"]],
       ["a count undoes several states", ["abcd\n", [0, 0], "xxx2u"], [["bcd"], [0, 0], "2 changes; before #2  0 seconds ago"]],

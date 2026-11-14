@@ -98,7 +98,7 @@ module EditorFinderTest
     t = Carat::Testing.new("editor_finder")
 
     # Rows are [label, [keys, columns], [mode, command line, floats]].
-    t.table([
+    t.cases([
       # Space f f opens the finder
       ["Space f f opens the finder", ["<Space>ff", 80], [:cmdline, ">", ["Files 3/3|> docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
       # Ctrl-P opens the finder

@@ -119,7 +119,7 @@ module DriversDiskFilesTest
     resolve = Carat::UseCases::ResolveInside.new(files: files)
     make = Carat::UseCases::MakePath.new(files: files, probe_path: probe, resolve_inside: resolve)
     shown = "#{DIR}/tree/out"
-    t.table([
+    t.cases([
       ["a file below a link leading out of the root", ["tree", "tree/out/x.rb", "outside/x.rb", "file"], [false, "Outside the tree root: #{shown}/x.rb", false]],
       ["a directory below a link leading out of the root", ["tree", "tree/out/pkg", "outside/pkg", "dir"], [false, "Outside the tree root: #{shown}/pkg", false]],
       ["a dangling link leading out is an existing entry", ["tree", "tree/dangle", "outside/new.rb", "file"], [false, "Already exists: #{DIR}/tree/dangle", false]],
@@ -137,7 +137,7 @@ module DriversDiskFilesTest
     buffers = Carat::Domain::BufferList.new(tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: scratch)))
     rename = Carat::UseCases::RenamePath.new(files: files, buffers: buffers, probe_path: probe, resolve_inside: resolve)
     delete = Carat::UseCases::DeletePath.new(files: files, buffers: buffers, probe_path: probe, resolve_inside: resolve)
-    t.table([
+    t.cases([
       ["a rename below a link leading out of the root", ["tree", "tree/out/keep.rb", "moved.rb", "outside/keep.rb"], [false, "Outside the tree root: #{shown}/keep.rb", true]],
       ["a delete below a link leading out of the root", ["tree", "tree/out/keep.rb", "", "outside/keep.rb"], [false, "Outside the tree root: #{shown}/keep.rb", true]],
       ["a rename below a link that stays inside", ["tree", "tree/alias/in.rb", "in2.rb", "tree/lib/in2.rb"], [true, "", true]],

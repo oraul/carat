@@ -160,7 +160,7 @@ module EditorBreadcrumbsTest
     t.assert_equal([1, false], [tab.file_window_count, tab.winbar?("auto")], "a window on a scratch buffer, a slot's or a plugin's, is not a file window")
 
     # The winbar rows: rows are [label, [user lines, keys], [row 0, row 1]].
-    t.table([
+    t.cases([
       ["one window has no winbar", ["", ""], ["class Foo", "| def bar"]],
       ["two windows have winbars over their text", ["", "<C-w>v"], [" a.rb               │ a.rb", "class Foo           │class Foo"]],
       ["closing back to one window removes the winbar", ["", "<C-w>s<C-w>c"], ["class Foo", "| def bar"]],

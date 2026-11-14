@@ -129,7 +129,7 @@ module PluginsExplorerTest
     t.assert_equal(true, tree.node(1).directory, "a link to a directory still sorts and expands as one")
 
     # Icon names: rows are [label, name, directory, expanded, symlink, icon].
-    t.table([
+    t.cases([
       ["ruby", ["a.rb", false, false, false], "ruby"],
       ["json", ["a.json", false, false, false], "json"],
       ["markdown", ["README.md", false, false, false], "markdown"],

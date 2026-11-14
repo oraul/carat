@@ -81,7 +81,7 @@ module EditorTransactionsTest
   def self.main
     t = Carat::Testing.new("editor_transactions")
 
-    t.table([
+    t.cases([
       ["dd is one transaction with one record", ["a\nb\nc\n", "jdd"], [1, [[1, ["b"], []]], 1, 1]],
       ["3dd is one transaction", ["a\nb\nc\nd\n", "3dd"], [1, [[0, ["a", "b", "c"], []]], 0, 0]],
       ["o, typing, and Escape are one insert session, its records merged", ["a\n", "oxy<Esc>"], [1, [[1, [], ["xy"]]], 0, 1]],

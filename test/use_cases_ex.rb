@@ -197,7 +197,7 @@ module UseCasesExTest
     t.assert_equal(["x\n", true], [files.get("other.txt"), s.quit], "wq with a path writes there and quits")
 
     # Exit. Rows are [label, [command line, buffer kind], [ok, message, quit, disk, modified]].
-    t.table([
+    t.cases([
       ["x on a clean buffer quits without writing", ["x", :clean], [true, "", true, "old\n", false]],
       ["x on a modified buffer writes and quits", ["x", :modified], [true, "", true, "new\n", false]],
       ["x with no file name stays", ["x", :unnamed], [false, "E32: No file name", false, "old\n", true]],
@@ -224,7 +224,7 @@ module UseCasesExTest
     t.assert_equal([true, "x\n", nil, true], [r.ok, files.get("b.txt"), files.get("a.txt"), s.quit], "x with a path writes there even when clean and quits")
 
     # Quit-all.
-    t.table([
+    t.cases([
       ["qa on a clean buffer quits", ["qa", :clean], [true, "", true, "old\n", false]],
       ["qa refused while modified", ["qa", :modified], [false, E162_A, false, "old\n", true]],
       ["qa refused on a modified unnamed buffer", ["qa", :unnamed], [false, E162_NO_NAME, false, "old\n", true]],
@@ -245,7 +245,7 @@ module UseCasesExTest
     end
 
     # Write-all.
-    t.table([
+    t.cases([
       ["wa on a clean buffer writes nothing", ["wa", :clean], [true, "", false, "old\n", false]],
       ["wa writes a modified buffer", ["wa", :modified], [true, WRITTEN, false, "new\n", false]],
       ["wa with no file name reports E141", ["wa", :unnamed], [false, E141, false, "old\n", true]],
@@ -262,7 +262,7 @@ module UseCasesExTest
     end
 
     # Write-quit-all.
-    t.table([
+    t.cases([
       ["wqa on a clean buffer quits without writing", ["wqa", :clean], [true, "", true, "old\n", false]],
       ["wqa writes a modified buffer and quits", ["wqa", :modified], [true, "", true, "new\n", false]],
       ["wqa with no file name stays", ["wqa", :unnamed], [false, E141, false, "old\n", true]],

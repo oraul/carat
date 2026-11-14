@@ -18,7 +18,7 @@ module EditorGrammarTest
 
     # The grammar through the editor: rows are [label, [text, start, keys],
     # [lines, cursor, mode]].
-    t.table([
+    t.cases([
       ["a count applies to a motion", ["abcdef\n", [0, 0], "3l"], [["abcdef"], [0, 3], :normal]],
       ["an operator then a motion", ["one two\n", [0, 0], "dw"], [["two"], [0, 0], :normal]],
       ["an operator then a text object", ["one two\n", [0, 5], "diw"], [["one "], [0, 3], :normal]],

@@ -63,7 +63,7 @@ module DomainRpcFramerTest
     end
     t.assert_equal(300, count, "many frames through one framer")
 
-    t.table([
+    t.cases([
       ["plain text stays", ["ruby-lsp", 32], "ruby-lsp"],
       ["an escape sequence loses its escape", ["a\e[31mb", 32], "a[31mb"],
       ["C0, DEL, and C1 controls are dropped", ["a\r\n\tb\x7Fc\u009Bd", 32], "abcd"],
@@ -73,7 +73,7 @@ module DomainRpcFramerTest
       ["the limit in bytes", ["abcdef", 4], "abcd"]
     ]) { |args| strip(args[0], args[1]) }
 
-    t.table([
+    t.cases([
       ["breaks and tabs become spaces", ["expected end\nfound EOF\r\tx", 64], "expected end found EOF  x"],
       ["an escape sequence still loses its escape", ["a\n\e[31mb", 32], "a [31mb"],
       ["the cut counts the spaces", ["ab\ncd", 3], "ab "]

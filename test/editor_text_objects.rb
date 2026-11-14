@@ -17,7 +17,7 @@ module EditorTextObjectsTest
     t = Carat::Testing.new("editor_text_objects")
 
     # Text objects under d: rows are [label, [text, start, keys], [lines, cursor]].
-    t.table([
+    t.cases([
       # Words.
       ["diw deletes the word", ["one two three\n", [0, 5], "diw"], [["one  three"], [0, 4]]],
       ["daw deletes the word and the blanks after it", ["one two three\n", [0, 5], "daw"], [["one three"], [0, 4]]],

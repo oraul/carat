@@ -61,7 +61,7 @@ module DomainGlobalTest
     t = Carat::Testing.new("domain_global")
 
     # Rows are [label, [lines, marked rows, edits after each take], rows taken].
-    t.table([
+    t.cases([
       ["the marked rows in order", [["a", "b", "a", "a"], [0, 2, 3], []], [0, 2, 3, -1]],
       ["no marks", [["a"], [], []], [-1]],
       ["deleting each taken row", [["a", "a", "b", "a"], [0, 1, 3], [[0, 1, []], [0, 1, []], [1, 2, []]]], [0, 0, 1, -1]],

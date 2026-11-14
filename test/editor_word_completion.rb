@@ -44,7 +44,7 @@ module EditorWordCompletionTest
     t = Carat::Testing.new("editor_word_completion")
 
     # Rows are [label, [text, keys], [labels, selected, line, mode, message]].
-    t.table([
+    t.cases([
       ["Ctrl-N selects the nearest match forward", ["alpha\nfi\nfile\nfinal\nfilter\n", "jA<C-n>"], [["file", "final", "filter"], "file", "fi", :insert, ""]],
       ["a second Ctrl-N selects the next match", ["alpha\nfi\nfile\nfinal\nfilter\n", "jA<C-n><C-n>"], [["file", "final", "filter"], "final", "fi", :insert, ""]],
       ["repeated presses move and wrap: Ctrl-N wraps to the first match", ["alpha\nfi\nfile\nfinal\nfilter\n", "jA<C-n><C-n><C-n><C-n>"], [["file", "final", "filter"], "file", "fi", :insert, ""]],

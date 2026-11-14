@@ -167,7 +167,7 @@ module DomainUtf8Test
     end
 
     # The offset byteindex takes: rows are [label, [text, i], offset].
-    t.table([
+    t.cases([
       ["an ASCII byte is a boundary", ["ab", 1], 1],
       ["the continuation bytes of a character are skipped", ["\u00E9!", 1], 2],
       ["lone continuation bytes are skipped", ["a\x80\xBFb", 1], 3],

@@ -36,7 +36,7 @@ module DomainSubstituteTest
     t = Carat::Testing.new("domain_substitute")
 
     # Rows are [label, [argument, pattern allowed], parsed].
-    t.table([
+    t.cases([
       ["pattern, string, and flags", ["/a/b/g", true], [true, "a", "b", "g", -1, ""]],
       ["no closing delimiter", ["/a/b", true], [true, "a", "b", "", -1, ""]],
       ["pattern only", ["/a", true], [true, "a", "", "", -1, ""]],
@@ -77,7 +77,7 @@ module DomainSubstituteTest
     end
 
     # Rows are [label, [pattern, line, string, all, count only], result].
-    t.table([
+    t.cases([
       ["the first match", ["o", "foo", "0", false, false], ["f0o", 1]],
       ["every match", ["o", "foo", "0", true, false], ["f00", 2]],
       ["no match", ["z", "foo", "0", true, false], ["foo", 0]],
@@ -117,7 +117,7 @@ module DomainSubstituteTest
     t.assert_equal(["x\xFFb".dup.force_encoding(Encoding::UTF_8), 1], line("a", bad, "x", false, false), "an illegal byte is kept")
 
     # Rows are [label, [raw, previous, has previous], expanded].
-    t.table([
+    t.cases([
       ["no tilde", ["abc", "P", true], "abc"],
       ["a tilde is the previous string", ["a~b", "P", true], "aPb"],
       ["no previous string", ["a~b", "", false], "ab"],

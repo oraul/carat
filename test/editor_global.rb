@@ -29,7 +29,7 @@ module EditorGlobalTest
     t = Carat::Testing.new("editor_global")
 
     # Rows are [label, [text, start, keys], [cursor, message, lines]].
-    t.table([
+    t.cases([
       # Marking and running.
       ["a substitute on the matching lines", ["ax\nbx\nax\n", [0, 0], ":g/a/s/x/y/<CR>"], [[2, 0], "", "ay|bx|ay"]],
       ["the long name", ["ax\nbx\n", [1, 0], ":global/a/s/x/y/<CR>"], [[0, 0], "", "ay|bx"]],

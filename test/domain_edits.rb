@@ -37,7 +37,7 @@ module DomainEditsTest
     t = Carat::Testing.new("domain_edits")
 
     # LineSplice.apply: rows are [label, [lines, from, to, new lines], expected].
-    t.table([
+    t.cases([
       ["same count overwrites", [["a", "b", "c"], 1, 2, ["x"]], ["a", "x", "c"]],
       ["grow by one", [["a", "b"], 1, 1, ["x"]], ["a", "x", "b"]],
       ["shrink by one", [["a", "b", "c"], 0, 1, []], ["b", "c"]],

@@ -56,7 +56,7 @@ module EditorSlotsTest
 
     # The slot toggles over the explorer: rows are [label, [configuration,
     # keys], [windows, current window, its cursor, message]].
-    t.table([
+    t.cases([
       ["<leader>ls hides the explorer and the file window is current", ["", " e ls"], [FILE, "a.md", [0, 0], ""]],
       ["<leader>ls again shows it with its cursor, the focus staying", ["", " ek<C-w>l ls ls"], [OPEN, "a.md", [0, 0], ""]],
       ["the shown tree keeps its cursor", ["", " ek<C-w>l ls ls<C-w>h"], [OPEN, "explorer", [1, 0], ""]],

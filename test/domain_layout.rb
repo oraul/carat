@@ -265,7 +265,7 @@ module DomainLayoutTest
     l.window_at(upper).fixed_width = true
     t.assert_equal([false, true, false], [l.fixed_width?(left), l.fixed_width?(l.node(upper).parent), l.fixed_width?(l.root)], "a column is fixed when one child is, a row when all are")
 
-    t.table([
+    t.cases([
       ["left of one window", [true, 30, false], [2, [[0, 0, 22, 30, "list"], [0, 31, 22, 49, "a.txt"]]]],
       ["right of one window", [false, 30, false], [2, [[0, 0, 22, 49, "a.txt"], [0, 50, 22, 30, "list"]]]],
       ["left of an existing row joins it", [true, 20, true], [3, [[0, 0, 22, 20, "list"], [0, 21, 22, 40, "a.txt"], [0, 62, 22, 18, "a.txt"]]]],

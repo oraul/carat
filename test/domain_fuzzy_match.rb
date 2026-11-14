@@ -41,7 +41,7 @@ module DomainFuzzyMatchTest
     t = Carat::Testing.new("domain_fuzzy_match")
 
     # Rows are [label, [pattern, word], matches].
-    t.table([
+    t.cases([
       ["fn_na finds file_name", ["fn_na", "file_name"], true],
       ["fn_na finds fn_name", ["fn_na", "fn_name"], true],
       ["fn_na does not find final", ["fn_na", "final"], false],
@@ -64,7 +64,7 @@ module DomainFuzzyMatchTest
     end
 
     # Rows are [label, [pattern, words], ranked].
-    t.table([
+    t.cases([
       ["a prefix comes first", ["fil", ["a_file_list", "file"]], ["file", "a_file_list"]],
       ["runs beat gaps", ["fn", ["f_x_n", "fn_x"]], ["fn_x", "f_x_n"]],
       ["shorter first among equals", ["ab", ["abcdef", "abc"]], ["abc", "abcdef"]],
@@ -74,7 +74,7 @@ module DomainFuzzyMatchTest
     end
 
     # Rows are [label, [text, limit], cleaned].
-    t.table([
+    t.cases([
       ["CSI sequences are dropped whole", ["\e[31mred\e[0m", 80], "red"],
       ["an OSC title ended by BEL", ["a\e]0;title\ab", 80], "ab"],
       ["an OSC ended by ESC backslash", ["a\e]8;;x\e\\b", 80], "ab"],
@@ -94,7 +94,7 @@ module DomainFuzzyMatchTest
     # FuzzyMatch.positions: the bytes the score's walk matched, ascending
     # and each once, empty for no match; the palette draws its matches
     # from them.
-    t.table([
+    t.cases([
       ["the letters of a name in order", ["wsp", "window.split"], [0, 7, 8]],
       ["each part from its anchor, a byte matched twice kept once", ["fn_na", "file_name"], [0, 5, 6]],
       ["case is ignored", ["WS", "window.split"], [0, 7]],

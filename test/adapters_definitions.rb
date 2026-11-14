@@ -499,7 +499,7 @@ module AdaptersDefinitionsTest
     # The target's tab: it shows and is the selected one wherever the
     # target lies, and an outside file already listed is shown, not
     # copied.
-    t.table([
+    t.cases([
       ["gd to another project file shows its tab, selected", ["", "/project/b.rb"], " r a.rb    r b.rb | r b.rb | b.rb 1:4 | 2"],
       ["gd outside the project shows the target's tab, selected", ["", "/gems/c.rb"], " r a.rb    r c.rb | r c.rb | /gems/c.rb 1:4 | 2"],
       ["gd to a project file linked out of the project shows its tab, selected", ["link", "/project/out.rb"], " r a.rb    r out.rb | r out.rb | out.rb 1:4 | 2"],
@@ -521,7 +521,7 @@ module AdaptersDefinitionsTest
     # A jump takes over the tab it leaves (option.jumptab replace, as
     # shipped): rows are [label, [user lines, keys before, target, keys
     # after], "tabs | where | read-only"].
-    t.table([
+    t.cases([
       ["gd to a project file takes over the tab it leaves", ["", "", "/project/b.rb", ""], "b.rb* | b.rb 1:4 | false"],
       ["The target takes the tab's position and a tab opened with :e stays", ["", ":e lib/x.rb<CR>:bp<CR>", "/project/b.rb", ""], "b.rb* lib/x.rb | b.rb 1:4 | false"],
       ["A jump to a buffer with its own tab selects it and keeps both", ["", ":e b.rb<CR>:bp<CR>", "/project/b.rb", ""], "a.rb b.rb* | b.rb 1:4 | false"],

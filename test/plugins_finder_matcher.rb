@@ -25,7 +25,7 @@ module PluginsFinderMatcherTest
     t = Carat::Testing.new("plugins_finder_matcher")
 
     # Rows are [label, [query, path], whether it matches].
-    t.table([
+    t.cases([
       ["an empty query matches with 0", ["", "a.rb"], true],
       ["the bytes in order match", ["bet", "lib/beta.rb"], true],
       ["case is ignored", ["BETA", "lib/beta.rb"], true],
@@ -40,7 +40,7 @@ module PluginsFinderMatcherTest
     end
 
     # Rows are [label, [query, better, worse], true].
-    t.table([
+    t.cases([
       ["the file name match ranks first", ["plugin", "lib/plugin.rb", "plugins/finder/x.rb"], true],
       ["a run ranks above scattered bytes", ["map", "lib/map.rb", "lib/mxaxp.rb"], true],
       ["a word start ranks above a middle byte", ["fs", "lib/file_set.rb", "lib/fuss.rb"], true],

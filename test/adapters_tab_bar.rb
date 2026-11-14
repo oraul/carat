@@ -74,7 +74,7 @@ module AdaptersTabBarTest
     t = Carat::Testing.new("adapters_tab_bar")
 
     # One row per case, 40 columns wide.
-    t.table([
+    t.cases([
       ["two tabs, one modified: a tab per file with its icon and modified dot", [["*src/a.rb", "b.txt"], 1, 1], " ◈ a.rb ●  • b.txt"],
       ["an unnamed buffer", [["", "b.txt"], 0, 1], " • [No Name]    • b.txt"],
       ["a scratch buffer has no tab", [["a.txt", "!", "b.txt"], 0, 1], " • a.txt    • b.txt"],

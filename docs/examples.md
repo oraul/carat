@@ -52,6 +52,6 @@ Wiring: the plugin with a manifest of one action (generator); its `config/plugin
 
 ## Table-driven test
 
-`test/domain_ex_grammar.rb` is a module named after the file with the suffix `Test`, its rows `[label, input, expected]` through `t.table`, its statements in `def self.main`, and the guard `DomainExGrammarTest.main if __FILE__ == $0`. `test/editor_insert.rb` drives the whole editor through `EditorHarness` over the doubles with keys in Vim notation. A table value is converted by a typed helper before it reaches the library; a helper returning several values returns an object with typed readers.
+`test/domain_ex_grammar.rb` is a module named after the file with the suffix `Test`, its rows `[label, input, expected]` through `t.table`, or `t.cases` when every input is an array literal, so the block indexes a typed array, its statements in `def self.main`, and the guard `DomainExGrammarTest.main if __FILE__ == $0`. `test/editor_insert.rb` drives the whole editor through `EditorHarness` over the doubles with keys in Vim notation. A table value is converted by a typed helper before it reaches the library; a helper returning several values returns an object with typed readers.
 
 Wiring: the program and a snapshot equal to its output (generator); its `require_relative` and `when` lines in `test/runner/run_all.rb` (generator); its entry on the area's Tests line of the map (generator); the real rows, then `make test-one T=test/NAME.rb` and `make snapshots` with the diff reviewed (by hand). A Neovim command's rows also go into `docs/compatibility.md`.

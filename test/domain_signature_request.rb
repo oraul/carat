@@ -27,7 +27,7 @@ module DomainSignatureRequestTest
     t = Carat::Testing.new("domain_signature_request")
 
     # Rows are [label, [line, cursor column], the "(" column or -1].
-    t.table([
+    t.cases([
       ["no parenthesis", ["foo bar", 7], -1],
       ["just after the open parenthesis", ["foo(", 4], 3],
       ["after an argument", ["foo(a, b", 8], 3],
@@ -44,7 +44,7 @@ module DomainSignatureRequestTest
     end
 
     # Rows are [label, [prefix, parameter, suffix], [label, from, to, arrived]].
-    t.table([
+    t.cases([
       ["a parameter in the middle", ["foo(", "a", ", b)"], ["foo(a, b)", 4, 5, true]],
       ["no parameter marks nothing", ["foo(a, b)", "", ""], ["foo(a, b)", -1, -1, true]],
       ["an empty answer", ["", "", ""], ["", -1, -1, true]],

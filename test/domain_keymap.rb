@@ -50,7 +50,7 @@ module DomainKeymapTest
 
     # Lookups against the default configuration: rows are
     # [label, [mode, notation], [kind, value]].
-    t.table([
+    t.cases([
       ["j in normal", [:normal, "j"], [:match, "cursor.down"]],
       ["arrow in normal", [:normal, "<Down>"], [:match, "cursor.down"]],
       ["escape in insert", [:insert, "<Esc>"], [:match, "mode.normal"]],

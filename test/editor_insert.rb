@@ -18,7 +18,7 @@ module EditorInsertTest
     t = Carat::Testing.new("editor_insert")
 
     # Rows are [label, [text, start, keys], [lines, cursor, mode]], autoindent off.
-    t.table([
+    t.cases([
       ["typing a word", ["ab\n", [0, 0], "ixy"], [["xyab"], [0, 2], :insert]],
       ["typing a non-ascii character", ["ab\n", [0, 0], "aé"], [["aéb"], [0, 2], :insert]],
       ["right reaches the end of the line", ["ab\n", [0, 1], "i<Right><Right>"], [["ab"], [0, 2], :insert]],

@@ -267,7 +267,7 @@ module AdaptersStatusBarTest
     t.assert_equal([true, false], [none, empty.diagnostics?], "no diagnostics empty the slot")
 
     # The progress of long work before the lsp slot.
-    t.table([
+    t.cases([
       ["a bar at a percent", ["Indexing", [40], false, false], pad(" NORMAL  a.txt ", " Indexing ━━━━──────  utf-8  1:1  All ", 60)],
       ["a percent rounds down to whole cells", ["Indexing", [99], false, false], pad(" NORMAL  a.txt ", " Indexing ━━━━━━━━━─  utf-8  1:1  All ", 60)],
       ["without a percent three cells move per report", ["Indexing", [-1, -1, -1], false, false], pad(" NORMAL  a.txt ", " Indexing ──━━━─────  utf-8  1:1  All ", 60)],

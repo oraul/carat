@@ -662,7 +662,7 @@ Flow: `make test-build` compiles `test/runner/run_all.rb`, which requires every 
 
 Files:
 
-- `carat/testing.rb`: `Carat::Testing`; `assert_equal`, `assert_true`, `assert_raises`, `table`, `finish`.
+- `carat/testing.rb`: `Carat::Testing`; `assert_equal`, `assert_true`, `assert_raises`, `table`, `cases` (a table whose inputs are arrays, yielded typed), `finish`.
 - `carat/test_support.rb`: the require graph of tests and the benchmark, `carat.rb` and the doubles.
 - `carat/doubles/fake_terminal.rb`: `FakeTerminal` (256 colors, `no_color=`); `push`, `writes`, `last_write`, `read_key`, `write`.
 - `carat/doubles/manual_clock.rb`: `ManualClock`; `now`, `advance`, `sleep`.

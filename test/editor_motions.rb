@@ -19,7 +19,7 @@ module EditorMotionsTest
 
     # Cursor motions: rows are [label, [text, start, keys], expected cursor].
     # Each key sequence is typed in one session, so a row can chain motions.
-    t.table([
+    t.cases([
       # Counts on the foundation motions.
       ["3l moves three columns", ["abcdef\n", [0, 0], "3l"], [0, 3]],
       ["12l takes a two-digit count", ["abcdefghijklmnop\n", [0, 0], "12l"], [0, 12]],
@@ -111,7 +111,7 @@ module EditorMotionsTest
     # Screen motions in a window of 8 text rows over forty lines: rows are
     # [label, [scrolloff, keys to scroll, keys], expected row].
     forty = (1..40).map { |n| "line #{n}" }.join("\n") + "\n"
-    t.table([
+    t.cases([
       ["H goes to the top of the window", [0, "18G", "H"], 10],
       ["M goes to the middle of the window", [0, "18G", "M"], 13],
       ["L goes to the bottom of the window", [0, "18G", "L"], 17],

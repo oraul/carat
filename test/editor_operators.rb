@@ -29,7 +29,7 @@ module EditorOperatorsTest
 
     # Operators over motions, doubled, and the standalone commands: rows are
     # [label, [text, start, keys], [lines, cursor, mode]].
-    t.table([
+    t.cases([
       # Delete over motions.
       ["dw deletes to the next word", ["one two\n", [0, 0], "dw"], [["two"], [0, 0], :normal]],
       ["de deletes to the end of the word", ["one two\n", [0, 0], "de"], [[" two"], [0, 0], :normal]],
@@ -149,7 +149,7 @@ module EditorOperatorsTest
     end
 
     # Options that change an operator: rows are [label, [text, start, options, keys], [lines, cursor]].
-    t.table([
+    t.cases([
       ["cc without autoindent", ["  ab\nc\nd\n", [0, 0], "option.autoindent false\n", "2cc"], [["", "d"], [0, 0]]],
       [">> with tabs", ["ab\n", [0, 0], "option.expandtab false\noption.shiftwidth 4\noption.tabstop 8\n", ">>"], [["    ab"], [0, 4]]],
       [">> twice with tabs makes a tab", ["ab\n", [0, 0], "option.expandtab false\noption.shiftwidth 4\noption.tabstop 8\n", ">>>>"], [["\tab"], [0, 1]]],

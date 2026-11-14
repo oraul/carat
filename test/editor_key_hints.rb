@@ -122,7 +122,7 @@ module EditorKeyHintsTest
 
     # Rows are [label, [project lines, rows, keys, waits, text], [floats,
     # title, whether a hint row holds the text]].
-    t.table([
+    t.cases([
       ["the leader hints show after the delay", ["", 24, "<Space>", 1, "w  windows"], [1, "<Space>", true]],
       ["the leader hints name the quit group", ["", 24, "<Space>", 1, "q  quit"], [1, "<Space>", true]],
       ["the leader hints name the docs group", ["", 24, "<Space>", 1, "d  docs"], [1, "<Space>", true]],
@@ -219,7 +219,7 @@ module EditorKeyHintsTest
     # Rows are [label, [border, project lines, screen columns], [the
     # float's width, the widest row's cells, entries shown]].
     long = "keymap.normal <leader>xya cursor.up\nkeymap.normal <leader>xbz cursor.up\nkeymap.group <leader>xy " + "あ" * 50 + "\nkeymap.group <leader>xb group-b\n"
-    t.table([
+    t.cases([
       ["rounded fits two columns of ten-cell hints", ["rounded", nine_groups, "38"], [22, 22, 6]],
       ["none fits three columns of ten-cell hints", ["none", nine_groups, "38"], [34, 34, 9]],
       ["rounded cuts a long hint to 32 columns", ["rounded", long, "38"], [32, 31, 1]],

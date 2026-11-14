@@ -41,7 +41,7 @@ module DomainFrameTest
     t.assert_equal([4, "x123"], [n.put_digits_within(0, 1, 123, H::STATUS, 4), "x#{n.row_text(0)[1, 3]}"], "put_digits_within writes digits that end at the limit")
     t.assert_equal([5, "x123"], [n.put_digits_within(0, 5, 1234, H::STATUS, 8), "x#{n.row_text(0)[1, 3]}"], "put_digits_within writes nothing when a digit would pass the limit")
     t.assert_equal([H::STATUS, D::Frame::SPACE], [n.hl_at(0, 1), n.code_at(0, 5)], "put_digits_within writes in its group and leaves the cells it skips")
-    t.table([
+    t.cases([
       ["ascii from 0", ["abc", 0], 3],
       ["a wide character", ["a中", 0], 3],
       ["from a byte offset", ["src/a.rb", 4], 4],

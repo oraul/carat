@@ -17,7 +17,7 @@ module EditorRegistersTest
     t = Carat::Testing.new("editor_registers")
 
     # Registers through the editor: rows are [label, [text, start, keys], lines].
-    t.table([
+    t.cases([
       ["dd then p", ["a\nb\n", [0, 0], "ddp"], ["b", "a"]],
       ["x then P", ["ab\n", [0, 0], "xP"], ["ab"]],
       ["the latest write wins", ["one two\n", [0, 0], "ywx$p"], ["ne twoo"]],
@@ -41,7 +41,7 @@ module EditorRegistersTest
     # Lines that are not valid UTF-8 go through the registers and the case
     # changes with every byte kept: rows are [label, [text, start, keys],
     # lines].
-    t.table([
+    t.cases([
       ["yy then p copies a line with an illegal byte", ["a\xFFb\n", [0, 0], "yyp"], ["a\xFFb", "a\xFFb"]],
       ["dd then p moves it", ["a\xFFb\nc\n", [0, 0], "ddp"], ["c", "a\xFFb"]],
       ["a charwise yank of illegal bytes", ["\xC0\xAFx\n", [0, 0], "y$$p"], ["\xC0\xAFx\xC0\xAFx"]],
@@ -88,7 +88,7 @@ module EditorRegistersTest
 
     # The numbered, small delete, black hole, and read-only registers: rows
     # are [label, [text, start, keys], lines].
-    t.table([
+    t.cases([
       ["register 0 survives a delete", ["a\nb\n", [0, 0], "yyjdd\"0p"], ["a", "a"]],
       ["a named yank leaves register 0", ["a\nb\n", [0, 0], "yyj\"byy\"0p"], ["a", "b", "a"]],
       ["register 1 takes a line delete", ["a\nb\n", [0, 0], "yydd\"1p"], ["b", "a"]],
