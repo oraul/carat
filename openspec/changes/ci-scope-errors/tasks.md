@@ -7,4 +7,4 @@
 
 ## 2. Checks
 
-- [ ] 2.1 Run `make tools-test`, `make gates`, and `make spec-validate`.
+- [x] 2.1 Run `make tools-test`, `make gates`, and `make spec-validate`.
