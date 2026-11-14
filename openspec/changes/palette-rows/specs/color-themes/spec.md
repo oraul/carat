@@ -26,4 +26,4 @@ The groups of a menu's selected row, `PmenuSel`, `PmenuMatchSel`, and `PmenuExtr
 
 #### Scenario: The selected menu row's groups at each depth
 - **WHEN** any shipped palette is chosen, with the theme's background or the terminal's
-- **THEN** `PmenuSel`, `PmenuMatchSel`, and `PmenuExtraSel` reach 4.5:1 inside a float at 24 bits and at 256 colors, and at 16 colors carry reverse video and `PmenuSel`'s 16-color foreground and background
+- **THEN** with the theme's background `PmenuSel`, `PmenuMatchSel`, and `PmenuExtraSel` reach 4.5:1 inside a float at 24 bits and at 256 colors, and under either background at 16 colors they carry reverse video and `PmenuSel`'s 16-color foreground and background

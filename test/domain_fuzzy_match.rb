@@ -91,6 +91,19 @@ module DomainFuzzyMatchTest
       plain(pair[0], pair[1])
     end
 
+    # FuzzyMatch.positions: the bytes the score's walk matched, ascending
+    # and each once, empty for no match; the palette draws its matches
+    # from them.
+    t.table([
+      ["the letters of a name in order", ["wsp", "window.split"], [0, 7, 8]],
+      ["each part from its anchor, a byte matched twice kept once", ["fn_na", "file_name"], [0, 5, 6]],
+      ["case is ignored", ["WS", "window.split"], [0, 7]],
+      ["no match is empty", ["ame", "file_name"], []],
+      ["an empty pattern is empty", ["", "file_name"], []]
+    ]) do |pair|
+      D::FuzzyMatch.positions(pair[0].to_s, pair[1].to_s)
+    end
+
     long = "a" * 500
     t.assert_equal(80, item(long, "text", "", "").label.bytesize, "a label of 500 letters is cut to 80 bytes")
     t.assert_equal(200, item(long, "text", "", long).text.bytesize, "an insert text is cut to 200 bytes")

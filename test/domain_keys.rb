@@ -81,6 +81,17 @@ module DomainKeysTest
     t.assert_equal(true, K.alt?(120 | K::ALT), "alt? sees the flag")
     t.assert_equal("日", K.char(0x65E5), "char encodes a code point")
 
+    # KeyNotation.caret, the palette's keys: a control character as "^"
+    # and its letter, every other code as format spells it.
+    t.table([
+      ["Ctrl-W is ^W", 23, "^W"],
+      ["Ctrl-@ is ^@", 0, "^@"],
+      ["Ctrl-_ is ^_", 31, "^_"],
+      ["a named control keeps its name", K::CR, "<CR>"],
+      ["Esc keeps its name", K::ESC, "<Esc>"],
+      ["a letter is itself", 97, "a"],
+      ["F1 keeps its name", K::F1, "<F1>"]
+    ]) { |code| N.caret(code.to_i) }
     t.finish
   end
 end

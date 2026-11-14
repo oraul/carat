@@ -3,7 +3,8 @@ module Carat
     # Highlight group ids carried by frame cells; a theme maps each to its
     # colors. The editor's own UI groups come first, with Neovim's names,
     # the status bar's mode pills and slots after them, then the indent
-    # guides' two, then FloatTitle; then the syntax
+    # guides' two, then FloatTitle, then the popup menu's
+    # match and extra groups; then the syntax
     # groups, from SYNTAX_FIRST on, with Neovim's standard
     # names in the order of its group-name help; then the file-icon groups,
     # from ICON_FIRST on, named as nvim-web-devicons names them; then the
@@ -65,62 +66,66 @@ module Carat
       INDENT_GUIDE = 49
       INDENT_GUIDE_SCOPE = 50
       FLOAT_TITLE = 51
+      POPUP_MENU_MATCH = 52
+      POPUP_MENU_MATCH_SELECTED = 53
+      POPUP_MENU_EXTRA = 54
+      POPUP_MENU_EXTRA_SELECTED = 55
 
-      SYNTAX_FIRST = 52
-      COMMENT = 52
-      CONSTANT = 53
-      STRING = 54
-      CHARACTER = 55
-      NUMBER = 56
-      BOOLEAN = 57
-      FLOAT = 58
-      IDENTIFIER = 59
-      FUNCTION = 60
-      STATEMENT = 61
-      CONDITIONAL = 62
-      REPEAT = 63
-      LABEL = 64
-      OPERATOR = 65
-      KEYWORD = 66
-      EXCEPTION = 67
-      PRE_PROC = 68
-      INCLUDE = 69
-      DEFINE = 70
-      MACRO = 71
-      TYPE = 72
-      STORAGE_CLASS = 73
-      STRUCTURE = 74
-      TYPEDEF = 75
-      SPECIAL = 76
-      SPECIAL_CHAR = 77
-      DELIMITER = 78
-      SPECIAL_COMMENT = 79
-      TODO = 80
-      ERROR = 81
+      SYNTAX_FIRST = 56
+      COMMENT = 56
+      CONSTANT = 57
+      STRING = 58
+      CHARACTER = 59
+      NUMBER = 60
+      BOOLEAN = 61
+      FLOAT = 62
+      IDENTIFIER = 63
+      FUNCTION = 64
+      STATEMENT = 65
+      CONDITIONAL = 66
+      REPEAT = 67
+      LABEL = 68
+      OPERATOR = 69
+      KEYWORD = 70
+      EXCEPTION = 71
+      PRE_PROC = 72
+      INCLUDE = 73
+      DEFINE = 74
+      MACRO = 75
+      TYPE = 76
+      STORAGE_CLASS = 77
+      STRUCTURE = 78
+      TYPEDEF = 79
+      SPECIAL = 80
+      SPECIAL_CHAR = 81
+      DELIMITER = 82
+      SPECIAL_COMMENT = 83
+      TODO = 84
+      ERROR = 85
 
-      ICON_FIRST = 82
-      ICON_DEFAULT = 82
-      ICON_FOLDER = 83
-      ICON_SYMLINK = 84
-      ICON_RUBY = 85
-      ICON_JSON = 86
-      ICON_MARKDOWN = 87
-      ICON_TOML = 88
-      ICON_MAKEFILE = 89
-      ICON_SHELL = 90
-      ICON_C = 91
-      ICON_YAML = 92
-      ICON_GIT = 93
-      ICON_LOCK = 94
+      ICON_FIRST = 86
+      ICON_DEFAULT = 86
+      ICON_FOLDER = 87
+      ICON_SYMLINK = 88
+      ICON_RUBY = 89
+      ICON_JSON = 90
+      ICON_MARKDOWN = 91
+      ICON_TOML = 92
+      ICON_MAKEFILE = 93
+      ICON_SHELL = 94
+      ICON_C = 95
+      ICON_YAML = 96
+      ICON_GIT = 97
+      ICON_LOCK = 98
 
-      MARKUP_FIRST = 95
-      MARKUP_HEADING = 95
-      MARKUP_STRONG = 96
-      MARKUP_ITALIC = 97
-      MARKUP_RAW = 98
-      MARKUP_LINK = 99
-      MARKUP_RAW_BLOCK = 100
-      COUNT = 101
+      MARKUP_FIRST = 99
+      MARKUP_HEADING = 99
+      MARKUP_STRONG = 100
+      MARKUP_ITALIC = 101
+      MARKUP_RAW = 102
+      MARKUP_LINK = 103
+      MARKUP_RAW_BLOCK = 104
+      COUNT = 105
 
       # A cell on the cursor line carries its group's id plus this layer:
       # the group drawn over the CursorLine background, unless it has a
@@ -141,7 +146,7 @@ module Carat
         "DiagnosticError", "DiagnosticWarn", "DiagnosticInfo", "DiagnosticHint",
         "StatusLineModeNormal", "StatusLineModeInsert", "StatusLineModeVisual", "StatusLineModeReplace", "StatusLineModeCommand",
         "StatusLineLspStarting", "StatusLineLspReady", "StatusLineLspError",
-        "IblIndent", "IblScope", "FloatTitle",
+        "IblIndent", "IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel",
         "Comment", "Constant", "String", "Character", "Number", "Boolean", "Float", "Identifier", "Function",
         "Statement", "Conditional", "Repeat", "Label", "Operator", "Keyword", "Exception",
         "PreProc", "Include", "Define", "Macro",

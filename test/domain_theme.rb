@@ -63,6 +63,44 @@ module DomainThemeTest
     DECORATIONS.include?(id) || (id >= H::ICON_FIRST && id < H::MARKUP_FIRST)
   end
 
+  # The groups of a menu's selected row.
+  SELECTED = [H::POPUP_MENU_SELECTED, H::POPUP_MENU_MATCH_SELECTED, H::POPUP_MENU_EXTRA_SELECTED]
+
+  # The selected menu row's groups inside a float whose foreground falls
+  # below 4.5:1 on their background, at 24 bits or at 256 colors, each
+  # with its ratio.
+  #: (Carat::Domain::Theme, bool) -> Array[String]
+  def self.selected_low_contrast(theme, at256)
+    out = []
+    SELECTED.each do |id|
+      inside = id + H::FLOAT_LAYER
+      fg = theme.fg(inside)
+      bg = theme.bg(inside)
+      if at256
+        fg = shown_256(fg, theme.fg256(inside))
+        bg = shown_256(bg, theme.bg256(inside))
+      end
+      ratio = contrast(fg, bg)
+      out << "#{H::NAMES[id]} #{ratio}" if ratio < 450
+    end
+    out
+  end
+
+  # The selected menu row's groups inside a float that at 16 colors lack
+  # reverse video or differ from PmenuSel's colors.
+  #: (Carat::Domain::Theme) -> Array[String]
+  def self.selected_16(theme)
+    out = []
+    sel = H::POPUP_MENU_SELECTED + H::FLOAT_LAYER
+    SELECTED.each do |id|
+      inside = id + H::FLOAT_LAYER
+      reverse = (theme.attr16(inside) & D::Theme::REVERSE) != 0
+      same = theme.fg16(inside) == theme.fg16(sel) && theme.bg16(inside) == theme.bg16(sel)
+      out << H::NAMES[id] unless reverse && same
+    end
+    out
+  end
+
   # The syntax and markup groups of a theme drawn inside a float, over
   # NormalFloat's background unless they have their own, whose foreground
   # falls below 4.5:1 there, at 24 bits or at 256 colors, each with its
@@ -162,8 +200,8 @@ module DomainThemeTest
     # The group table: UI groups first, then the thirty syntax groups,
     # then the file-icon groups.
     t.assert_equal(H::COUNT, H::NAMES.length, "every id has a name")
-    t.assert_equal(["IblScope", "FloatTitle", "Comment"], [H::NAMES[H::INDENT_GUIDE_SCOPE], H::NAMES[H::FLOAT_TITLE], H::NAMES[H::SYNTAX_FIRST]], "FloatTitle is the last UI group, after the indent guides")
-    t.assert_equal([52, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "52 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
+    t.assert_equal(["IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Comment"], [H::NAMES[H::INDENT_GUIDE_SCOPE], H::NAMES[H::FLOAT_TITLE], H::NAMES[H::POPUP_MENU_MATCH], H::NAMES[H::POPUP_MENU_MATCH_SELECTED], H::NAMES[H::POPUP_MENU_EXTRA], H::NAMES[H::POPUP_MENU_EXTRA_SELECTED], H::NAMES[H::SYNTAX_FIRST]], "FloatTitle follows the indent guides and the popup menu's match and extra groups are the last UI groups")
+    t.assert_equal([56, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "56 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
     t.assert_equal(["@markup.heading", "@markup.strong", "@markup.italic", "@markup.raw", "@markup.link.label", "@markup.raw.block"], [H::NAMES[H::MARKUP_HEADING], H::NAMES[H::MARKUP_STRONG], H::NAMES[H::MARKUP_ITALIC], H::NAMES[H::MARKUP_RAW], H::NAMES[H::MARKUP_LINK], H::NAMES[H::MARKUP_RAW_BLOCK]], "the markup groups after the file-icon groups")
     t.assert_equal(["StatusLineModeNormal", "StatusLineLspError"], [H.name_of(H::STATUS_MODE_NORMAL), H.name_of(H::STATUS_LSP_ERROR)], "the status bar's groups follow Neovim's")
 
@@ -279,6 +317,27 @@ module DomainThemeTest
       ["light_plus in a float at 24 bits", ["light_plus", "24"], []],
       ["light_plus in a float at 256 colors", ["light_plus", "256"], []]
     ]) { |input| float_low_contrast(D::Themes.find(input[0].to_s, "theme"), input[1].to_s == "256") }
+    # Scenario: The selected menu row's groups at each depth. PmenuSel,
+    # PmenuMatchSel, and PmenuExtraSel inside a float reach 4.5:1 at 24
+    # bits and 256 colors with the theme's background, and at 16 colors,
+    # under either background, carry reverse video and PmenuSel's colors.
+    t.table([
+      ["one_dark's selected menu row at 24 bits", ["one_dark", "24"], []],
+      ["one_dark's selected menu row at 256 colors", ["one_dark", "256"], []],
+      ["one_light's selected menu row at 24 bits", ["one_light", "24"], []],
+      ["one_light's selected menu row at 256 colors", ["one_light", "256"], []],
+      ["dark_plus's selected menu row at 24 bits", ["dark_plus", "24"], []],
+      ["dark_plus's selected menu row at 256 colors", ["dark_plus", "256"], []],
+      ["light_plus's selected menu row at 24 bits", ["light_plus", "24"], []],
+      ["light_plus's selected menu row at 256 colors", ["light_plus", "256"], []]
+    ]) { |input| selected_low_contrast(D::Themes.find(input[0].to_s, "theme"), input[1].to_s == "256") }
+    t.table([
+      ["one_dark's selected menu row at 16 colors on the terminal's background", ["one_dark", "terminal"], []],
+      ["one_dark's selected menu row at 16 colors on the theme's background", ["one_dark", "theme"], []],
+      ["one_light's selected menu row at 16 colors on the theme's background", ["one_light", "theme"], []],
+      ["dark_plus's selected menu row at 16 colors on the theme's background", ["dark_plus", "theme"], []],
+      ["light_plus's selected menu row at 16 colors on the terminal's background", ["light_plus", "terminal"], []]
+    ]) { |input| selected_16(D::Themes.find(input[0].to_s, input[1].to_s)) }
     t.assert_true(contrast(painted.fg(H::COMMENT), painted.bg(H::COMMENT)) >= 450, "one_dark comments are readable")
     t.assert_equal([454, 100], [contrast(0x767676, 0xffffff), contrast(0x777777, 0x777777)], "the contrast of WCAG's lightest AA gray on white and of a color on itself")
 

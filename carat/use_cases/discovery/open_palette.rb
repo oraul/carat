@@ -16,7 +16,8 @@ module Carat
     # <leader>p and <F1>: opens the command palette. Its entries are built
     # once per opening: every core action in registration order, every
     # action of an enabled plugin, then every ex command as ":" and its
-    # full name, each with its first normal-mode key in Vim notation (the
+    # full name, each with its first normal-mode key in Vim notation, a
+    # control key in caret notation (the
     # trie walked in the configuration's order) and its description. The
     # command line opens empty under the palette's prompt; a plugin's or
     # a search prompt that was open is closed. FollowPalette shows the
@@ -119,7 +120,7 @@ module Carat
         i = 0
         while i < children.length
           child = children[i]
-          keys = walk(node.child_named(child), path + Domain::KeyNotation.format(child.to_i), keys)
+          keys = walk(node.child_named(child), path + Domain::KeyNotation.caret(child.to_i), keys)
           i += 1
         end
         keys

@@ -2,12 +2,12 @@
 
 ## 1. Groups and themes
 
-- [ ] 1.1 Add `PmenuMatch`, `PmenuMatchSel`, `PmenuExtra`, `PmenuExtraSel` after `FloatTitle` in `carat/domain/highlight.rb` (later ids up by four) and color them in `carat/domain/themes.rb`; prove with `test/domain_theme.rb` (The UI groups, The selected menu row's groups at each depth)
+- [x] 1.1 Add `PmenuMatch`, `PmenuMatchSel`, `PmenuExtra`, `PmenuExtraSel` after `FloatTitle` in `carat/domain/highlight.rb` (later ids up by four) and color them in `carat/domain/themes.rb`; prove with `test/domain_theme.rb` (The UI groups, The selected menu row's groups at each depth)
 
 ## 2. Matching and keys
 
-- [ ] 2.1 Add `FuzzyMatch.positions` in `carat/domain/fuzzy_match.rb`, the bytes the score walk matched; prove with the FuzzyMatch test
-- [ ] 2.2 Add `KeyNotation.caret` in `carat/domain/key_notation.rb` and use it in `carat/use_cases/discovery/open_palette.rb`; prove with `test/domain_keys.rb` and `test/editor_palette.rb`
+- [x] 2.1 Add `FuzzyMatch.positions` in `carat/domain/fuzzy_match.rb`, the bytes the score walk matched; prove with the FuzzyMatch test
+- [x] 2.2 Add `KeyNotation.caret` in `carat/domain/key_notation.rb` and use it in `carat/use_cases/discovery/open_palette.rb`; prove with `test/domain_keys.rb` and `test/editor_palette.rb`
 
 ## 3. Palette rows
 
