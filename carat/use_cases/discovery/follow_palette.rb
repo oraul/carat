@@ -189,14 +189,14 @@ module Carat
           field = palette.fields[r]
           tokens = Array.new(0, 0)
           shown = Domain::DisplayWidth.cut(name, NAME_WIDTH - 1)
-          limit = chars(shown, shown.bytesize)
+          limit = char_count(shown, shown.bytesize)
           mark(tokens, query, name, name.start_with?(":") ? 1 : 0, 0, limit, selected) if field == 0
           if room >= 2
             # The name's cell: its kept characters and the spaces padding
             # them to NAME_WIDTH cells.
             from = limit + NAME_WIDTH - Domain::DisplayWidth.text_width(shown, 0)
             shown = Domain::DisplayWidth.cut(description, room - 1)
-            limit = chars(shown, shown.bytesize)
+            limit = char_count(shown, shown.bytesize)
             tokens << from
             tokens << limit + 1
             tokens << (selected ? Domain::Highlight::POPUP_MENU_EXTRA_SELECTED : Domain::Highlight::POPUP_MENU_EXTRA)
@@ -219,7 +219,7 @@ module Carat
         group = selected ? Domain::Highlight::POPUP_MENU_MATCH_SELECTED : Domain::Highlight::POPUP_MENU_MATCH
         i = 0
         while i < found.length
-          at = chars(text, found[i] + skip)
+          at = char_count(text, found[i] + skip)
           break if at >= limit
           length = 1
           length += 1 while i + length < found.length && found[i + length] == found[i] + length && at + length < limit
@@ -232,7 +232,7 @@ module Carat
 
       # The characters in the first bytes of text: the bytes that start one.
       #: (String, Integer) -> Integer
-      def chars(text, bytes)
+      def char_count(text, bytes)
         count = 0
         i = 0
         while i < bytes
