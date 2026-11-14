@@ -1,7 +1,10 @@
 #!/bin/sh
 # The guard of the delivery agents: an allowlist of the commands each
 # agent needs. A PreToolUse hook in the frontmatter of each agent under
-# .claude/agents/ runs the copy on origin/main with the agent's profile and
+# .claude/agents/ runs the copy at origin's main, the commit git ls-remote
+# of origin's hosted address names, asked outside the repository with no
+# global or system configuration (never the local ref origin/main, which
+# branch code can move), with the agent's profile and
 # the tool call's JSON on stdin, and refuses the call on any status but 0;
 # the guard exits 2 with the reason on stderr to refuse and 0 to allow.
 #

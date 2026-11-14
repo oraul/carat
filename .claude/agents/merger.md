@@ -9,11 +9,11 @@ hooks:
     - matcher: "Bash"
       hooks:
         - type: command
-          command: 'g=$(git -C "$CLAUDE_PROJECT_DIR" show origin/main:tools/agent_guard.sh) && sh -c "$g" agent_guard merger || exit 2'
+          command: 'p=$CLAUDE_PROJECT_DIR;set -- env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null;u=$("$@" -C "$p" config --local remote.origin.url);case $u in https:[/][/]*|ssh:[/][/]*);;-*|*/*:*)u=;;*@*:*);;*)u=;;esac;m=$(GIT_DIR=/dev/null "$@" ls-remote "${u:?origin is not hosted}" refs/heads/main</dev/null|cut -f1);case $m in ""|*[!0-9a-f]*)exit 2;;esac;"$@" -C "$p" cat-file -e "$m^{commit}"||"$@" -C "$p" fetch -q --no-write-fetch-head --refmap= "$u" refs/heads/main</dev/null||exit 2;g=$("$@" -C "$p" show "$m:tools/agent_guard.sh") && sh -c "$g" agent_guard merger || exit 2'
     - matcher: "mcp__github__merge_pull_request"
       hooks:
         - type: command
-          command: 'g=$(git -C "$CLAUDE_PROJECT_DIR" show origin/main:tools/agent_guard.sh) || exit 2; case "$g" in *mcp__github__merge_pull_request*) ;; *) exit 2 ;; esac; sh -c "$g" agent_guard merger || exit 2'
+          command: 'p=$CLAUDE_PROJECT_DIR;set -- env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null;u=$("$@" -C "$p" config --local remote.origin.url);case $u in https:[/][/]*|ssh:[/][/]*);;-*|*/*:*)u=;;*@*:*);;*)u=;;esac;m=$(GIT_DIR=/dev/null "$@" ls-remote "${u:?origin is not hosted}" refs/heads/main</dev/null|cut -f1);case $m in ""|*[!0-9a-f]*)exit 2;;esac;"$@" -C "$p" cat-file -e "$m^{commit}"||"$@" -C "$p" fetch -q --no-write-fetch-head --refmap= "$u" refs/heads/main</dev/null||exit 2;g=$("$@" -C "$p" show "$m:tools/agent_guard.sh") || exit 2; case "$g" in *mcp__github__merge_pull_request*) ;; *) exit 2 ;; esac; sh -c "$g" agent_guard merger || exit 2'
 ---
 
 You wait for CI on one pull request and merge it. You never edit, commit, push a commit, or rerun a job.

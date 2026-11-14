@@ -1512,48 +1512,104 @@ mv "$proj/tmp/.planted/.gitfile" "$proj/tmp/.planted/.git"
 expect "guard: read refuses a .git file naming another worktree's record" 2 "git -C other than" guard read 'git -C tmp/.planted status'
 PROJECT=/w
 
-# The hook line of every agent file runs the guard of origin/main and
-# refuses on any status but 0: a missing or failing guard refuses, and an
-# edit on the branch has no effect until it is merged.
+# The hook line of every agent file runs the guard of origin's main, the
+# commit git ls-remote of origin's address names, read outside the
+# repository and with no global or system configuration, never the local
+# ref origin/main, which branch code can move; it refuses on any status
+# but 0: a missing or failing guard refuses, and an edit on the branch has
+# no effect until it is merged. Here origin is a hosted-looking address
+# that a local bare repository answers through a command-line insteadOf
+# in the hook's environment (answered), which branch code cannot set.
 # hook FILE COMMAND: FILE's hook line on a Bash call of COMMAND in $hooks.
+answered() {
+  env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$answer.insteadOf" GIT_CONFIG_VALUE_0="$hosted" "$@"
+}
 hook() {
   line=$(sed -n "s/^ *command: '\\(.*\\)'\$/\\1/p" "$1" | sed -n 1p)
   [ -n "$line" ] || { echo "no hook line in $1"; return 9; }
-  printf '{"tool_name":"Bash","tool_input":{"command":"%s"}}' "$2" | CLAUDE_PROJECT_DIR=$hooks sh -c "$line"
+  printf '{"tool_name":"Bash","tool_input":{"command":"%s"}}' "$2" | answered env CLAUDE_PROJECT_DIR="$hooks" sh -c "$line"
 }
+agents="$here/../.claude/agents"
+expect "guard: no hook line reads the local origin/main" 1 "^$" sh -c 'grep -h "command: .*origin/main" "$1"/*.md' _ "$agents"
+expect "guard: every hook line resolves main the same way" 0 "^10 1$" \
+  sh -c 'l=$(sed -n "s/^ *command: '\''\\(.*show \"\\\$m:tools\\/agent_guard[.]sh\")\\).*/\\1/p" "$1"/*.md); echo "$(printf "%s\n" "$l" | grep -c .) $(printf "%s\n" "$l" | sort -u | grep -c .)"' _ "$agents"
 fresh hooks
 hooks=$PWD
+hosted="https:/""/host.invalid/o/hooks.git"
+answer="$work/hooks.git"
+git_q init -q --bare "$answer"
+git_q remote add origin "$hosted"
 cp "$here/agent_guard.sh" tools/agent_guard.sh
 commit "chore: the guard"
+git_q push -q "$answer" HEAD:refs/heads/main 2>/dev/null
 git_q update-ref refs/remotes/origin/main HEAD
 echo 'exit 0' > tools/agent_guard.sh
-for f in "$here"/../.claude/agents/*.md; do
+for f in "$agents"/*.md; do
   a=$(basename "$f" .md)
   expect "guard: the $a hook allows a git read" 0 "^$" hook "$f" 'git log --oneline -1'
   expect "guard: the $a hook refuses with main's guard, not the branch's" 2 "git push" hook "$f" 'git push origin x'
 done
 expect "guard: the contributor hook refuses a direct push to the backup refs" 2 "git push is not a command of this profile" \
-  hook "$here/../.claude/agents/contributor.md" 'git push -q --atomic origin HEAD:refs/backup/chore/x main:refs/backup-base/chore/x'
+  hook "$agents/contributor.md" 'git push -q --atomic origin HEAD:refs/backup/chore/x main:refs/backup-base/chore/x'
+# Branch code moves origin/main locally to a commit whose guard allows
+# everything: every hook still runs origin's main's guard and refuses.
+commit "chore: a permissive guard"
+git_q update-ref refs/remotes/origin/main HEAD
+for f in "$agents"/*.md; do
+  a=$(basename "$f" .md)
+  expect "guard: the $a hook refuses with origin's main's guard when origin/main was moved locally" 2 "git push" hook "$f" 'git push origin x'
+done
+expect "guard: the merge hook refuses when origin/main was moved locally" 2 "no run state records" \
+  sh -c 'line=$(sed -n "s/^ *command: '\''\\(.*\\)'\''\$/\\1/p" "$1" | sed -n 2p); printf "{\"tool_name\":\"mcp__github__merge_pull_request\",\"tool_input\":{\"merge_method\":\"squash\",\"sha\":\"%s\"}}" "$2" | env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$3.insteadOf" GIT_CONFIG_VALUE_0="$4" CLAUDE_PROJECT_DIR="$5" sh -c "$line"' \
+  _ "$agents/merger.md" "$(git rev-parse HEAD)" "$answer" "$hosted" "$hooks"
+# A local origin, a file: address, or a remote helper is refused before
+# any guard runs, since a repository branch code built would answer for
+# main; a repository insteadOf does not redirect the lookup, so main's
+# guard runs and refuses every call while it is set.
+f="$agents/checker.md"
+git_q remote set-url origin "$answer"
+expect "guard: a hook refuses a local origin" 2 "origin is not hosted" hook "$f" 'ls'
+git_q remote set-url origin "file:/""/$answer"
+expect "guard: a hook refuses a file: origin" 2 "origin is not hosted" hook "$f" 'ls'
+git_q remote set-url origin "ext::sh -c true"
+expect "guard: a hook refuses a remote helper origin" 2 "origin is not hosted" hook "$f" 'ls'
+git_q remote set-url origin "$hosted"
+git_q init -q --bare "$work/hooks-planted.git"
+git_q push -q "$work/hooks-planted.git" HEAD:refs/heads/main 2>/dev/null
+git_q config "url.$work/hooks-planted.git.insteadOf" "$hosted"
+expect "guard: a hook ignores a repository insteadOf" 2 "every call while the repository configuration sets url[.].*[.]insteadof" hook "$f" 'ls'
+git_q config --remove-section "url.$work/hooks-planted.git"
+answer="$work/hooks-none.git"
+expect "guard: a hook refuses when origin cannot be reached" 2 "fatal" hook "$f" 'ls'
+answer="$work/hooks.git"
+# Main moved on origin past the repository, as after the merger's merge:
+# the hook fetches it without writing a ref and runs its guard.
+git_q clone -q -b main "$answer" "$work/hooks-ahead" 2>/dev/null
+(cd "$work/hooks-ahead" && echo ahead >> README.md && commit "chore: ahead" && git_q push -q origin HEAD:main 2>/dev/null)
+ahead=$(git -C "$answer" rev-parse main)
+moved=$(git rev-parse origin/main)
+expect "guard: a hook fetches a main the repository lacks" 2 "git push" hook "$f" 'git push origin x'
+expect "guard: the hook's fetch brings main's commit and writes no ref" 0 "^commit $moved$" \
+  sh -c 'echo "$(git cat-file -t "$1") $(git rev-parse origin/main)"' _ "$ahead"
 # The contributor's hook matches every MCP tool, and main's guard refuses a
 # pull request write it does not judge.
 mcp_hook() {
   line=$(sed -n "s/^ *command: '\\(.*\\)'\$/\\1/p" "$1" | sed -n 1p)
-  printf '{"tool_name":"%s","tool_input":{"owner":"o","repo":"r","pullNumber":7,"body":"b"}}' "$2" | CLAUDE_PROJECT_DIR=$hooks sh -c "$line"
+  printf '{"tool_name":"%s","tool_input":{"owner":"o","repo":"r","pullNumber":7,"body":"b"}}' "$2" | answered env CLAUDE_PROJECT_DIR="$hooks" sh -c "$line"
 }
 expect "guard: the contributor hook matches every MCP tool" 0 'matcher: "Bash[|]Edit[|]Write[|]NotebookEdit[|]mcp__[.][*]"' \
-  grep -F 'matcher: "Bash|Edit|Write|NotebookEdit|mcp__.*"' "$here/../.claude/agents/contributor.md"
+  grep -F 'matcher: "Bash|Edit|Write|NotebookEdit|mcp__.*"' "$agents/contributor.md"
 expect "guard: the contributor hook refuses a pull request update tool" 2 "the tool mcp__github__update_pull_request, which this guard does not judge" \
-  mcp_hook "$here/../.claude/agents/contributor.md" mcp__github__update_pull_request
+  mcp_hook "$agents/contributor.md" mcp__github__update_pull_request
 expect "guard: the contributor hook refuses a pull request create tool" 2 "the tool mcp__github__create_pull_request, which this guard does not judge" \
-  mcp_hook "$here/../.claude/agents/contributor.md" mcp__github__create_pull_request
-f="$here/../.claude/agents/checker.md"
+  mcp_hook "$agents/contributor.md" mcp__github__create_pull_request
 echo 'exit 1' > tools/agent_guard.sh
 commit "chore: a failing guard"
-git_q update-ref refs/remotes/origin/main HEAD
+git_q push -q "$answer" +HEAD:refs/heads/main 2>/dev/null
 expect "guard: a hook refuses when the guard fails" 2 "" hook "$f" 'ls'
 git_q rm -q tools/agent_guard.sh
 commit "chore: no guard"
-git_q update-ref refs/remotes/origin/main HEAD
+git_q push -q "$answer" +HEAD:refs/heads/main 2>/dev/null
 expect "guard: a hook refuses when main has no guard" 2 "" hook "$f" 'ls'
 cd "$work" || exit 1
 
@@ -1568,7 +1624,7 @@ merge_call() {
 merge_hook() {
   line=$(sed -n "s/^ *command: '\\(.*\\)'\$/\\1/p" "$here/../.claude/agents/merger.md" | sed -n 2p)
   printf '{"tool_name":"mcp__github__merge_pull_request","tool_input":{"merge_method":"squash","sha":"%s"}}' "$1" |
-    CLAUDE_PROJECT_DIR=$PWD sh -c "$line"
+    answered env CLAUDE_PROJECT_DIR="$PWD" sh -c "$line"
 }
 fresh mtool
 git_q init -q --bare "$work/mtool.git"
@@ -1605,22 +1661,24 @@ expect "run_state: set refuses gated" 1 "gated is written only by its own comman
 expect "guard: no profile records gated" 2 "gated" guard merger 'sh tools/run_state.sh gated c pass'
 expect "guard: the contributor does not record gated" 2 "gated" guard contributor 'sh tools/run_state.sh gated c pass'
 expect "guard: the merger hook matches the merge tool" 0 'matcher: "mcp__github__merge_pull_request"' grep -F 'matcher: "mcp__github__merge_pull_request"' "$here/../.claude/agents/merger.md"
+# The merge hook reads main from origin, the hosted address mtool.git
+# answers.
+hosted="https:/""/host.invalid/o/mtool.git"
+answer="$work/mtool.git"
+git_q remote set-url origin "$hosted"
 cp "$here/agent_guard.sh" tools/agent_guard.sh
 commit "chore: main's guard"
-git_q push -q origin HEAD:main 2>/dev/null
-git_q fetch -q origin
+git_q push -q "$answer" HEAD:main 2>/dev/null
 expect "guard: the merge hook refuses with main's guard" 2 "no run state records" merge_hook "$(git rev-parse HEAD)"
 # A guard on main that does not name the merge tool, or none, refuses the
 # merge rather than letting it run unguarded.
 echo 'exit 0' > tools/agent_guard.sh
 commit "chore: a guard without the merge tool"
-git_q push -q origin HEAD:main 2>/dev/null
-git_q fetch -q origin
+git_q push -q "$answer" HEAD:main 2>/dev/null
 expect "guard: the merge hook refuses when main's guard lacks the merge tool" 2 "^$" merge_hook "$sha"
 : > tools/agent_guard.sh
 commit "chore: an empty guard"
-git_q push -q origin HEAD:main 2>/dev/null
-git_q fetch -q origin
+git_q push -q "$answer" HEAD:main 2>/dev/null
 expect "guard: the merge hook refuses when main's guard is empty" 2 "^$" merge_hook "$sha"
 git_q config core.hooksPath "$work"
 expect "guard: a risky configuration key refuses every call" 2 "every call while the repository configuration sets core.hookspath" \

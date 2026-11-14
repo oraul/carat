@@ -9,7 +9,7 @@ hooks:
     - matcher: "Bash|Write"
       hooks:
         - type: command
-          command: 'g=$(git -C "$CLAUDE_PROJECT_DIR" show origin/main:tools/agent_guard.sh) && sh -c "$g" agent_guard read tmp/scout || exit 2'
+          command: 'p=$CLAUDE_PROJECT_DIR;set -- env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null;u=$("$@" -C "$p" config --local remote.origin.url);case $u in https:[/][/]*|ssh:[/][/]*);;-*|*/*:*)u=;;*@*:*);;*)u=;;esac;m=$(GIT_DIR=/dev/null "$@" ls-remote "${u:?origin is not hosted}" refs/heads/main</dev/null|cut -f1);case $m in ""|*[!0-9a-f]*)exit 2;;esac;"$@" -C "$p" cat-file -e "$m^{commit}"||"$@" -C "$p" fetch -q --no-write-fetch-head --refmap= "$u" refs/heads/main</dev/null||exit 2;g=$("$@" -C "$p" show "$m:tools/agent_guard.sh") && sh -c "$g" agent_guard read tmp/scout || exit 2'
 ---
 
 You are a scout for this repository. You read; you never change the repository. Your one product is a context pack: a Markdown file of facts about one area of the code, which a contributor reads instead of searching the codebase itself. `CLAUDE.md` is the source of truth for the rules, which the contributor already holds; you neither restate nor reinterpret it.
