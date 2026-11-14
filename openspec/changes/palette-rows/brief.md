@@ -1,0 +1,7 @@
+# Brief
+
+palette-rows — The head item of sprint 3 in docs/queue.md (part b of menu-hints), delivered as the planner wrote it there (self-contained: locations, acceptance, and the backlog headings it covers). The pull request is opened by the branch-push Action from pr.md; never call a pull request create tool. During the delivery never read or grep docs/backlog.md, not even through a repository-wide search (exclude it). Keep to exactly the queue item; name anything extra and ask.
+
+The queue item, sprint 3 item 1 of docs/queue.md at 84467c6:
+
+`palette-rows` (T2 user now-request, estimated medium, pushed back 3, part b of `menu-hints`): `NAME_WIDTH = 28` (`carat/use_cases/discovery/follow_palette.rb:30`, padded at `:151`) cuts 5 shipped action names to 27 characters; palette matches are scored (`:81`) but not kept as spans, and no Pmenu group marks a matched character (`carat/adapters/frame_presenter.rb:672`); the completion popup pads 2 columns each side against 1 on every other float (`carat/use_cases/completion/open_completion_popup.rb:105`, its offset at `:54`). Fix outline: palette rows drawn from stored matches, the popup's padding to the floats' one. Accepted when palette rows align name, a dimmed column, and caret-notation keys with a 29-character name whole, matches are spans in the Pmenu groups, selected rows reach 4.5:1 at each color depth, the popup pads 1 column, and the `palette` scenario holds. Backlog: "## The palette's name column cuts five shipped action names", "## The completion popup pads its rows twice".
