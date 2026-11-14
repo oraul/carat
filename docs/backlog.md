@@ -5055,3 +5055,57 @@ The comment (and carat/plugin_api.rb:345) says byteindex refuses a continuation-
 - Location: tools/tools_test.sh:188 (quality advisory, style).
 - Why: the added ci_scope block ends with a blank line before the existing one, leaving two blank lines before the green_pr comment where the file uses one.
 - Fix: drop the extra blank line at 188.
+
+### Define merge_hook once in the guard hook tests
+
+- Location: tools/tools_test.sh:1575 (quality advisory, duplication; also reported at 1562 against an earlier revision).
+- Why: the merge-hook case inlines a copy of merge_hook (defined at 1647) with its own GIT_CONFIG_COUNT env instead of answered, so the two copies can drift.
+- Fix: define merge_hook once above the hook cases, wrapped in answered, and call it from the merge-hook case.
+
+### Stop hardcoding the hook count in the main-resolution check
+
+- Location: tools/tools_test.sh:1538 (quality advisory, brittle check; also reported at 1534).
+- Why: the check that every hook line resolves main the same way hardcodes ^10 1$, so adding an agent or a hook fails it with no drift.
+- Fix: assert only that the unique count is 1 and that the line count equals the number of command: lines under .claude/agents.
+
+### End the workflow-trim sentence in planner.md with a period
+
+- Location: .claude/agents/planner.md:26 (quality advisory, docs).
+- Why: trimming the workflow-trim example left 'which the contributor chooses: A sprint item', a dangling colon before a new sentence.
+- Fix: end the sentence with a period.
+
+### Make room in the planner and contributor agent files
+
+- Location: .claude/agents/planner.md:1 and .claude/agents/contributor.md:1 (quality advisory, docs budget).
+- Why: planner.md is 8189 of 8192 bytes and contributor.md 6996 of 6999 after the longer hook line, so the next edit to either must trim again.
+- Fix: plan a pass moving restated rules to CLAUDE.md pointers before the next agent-file change.
+
+### Restore the dropped contributor instructions or correct the guard-ref-pin proposal
+
+- Location: .claude/agents/contributor.md:18 (quality advisory, docs; also reported at 26).
+- Why: the trim drops instructions ('Every change goes through OpenSpec, however small'; 'For Ruby code, docs/examples.md and docs/spinel-notes.md first'; why no session edits a pull request with a tool) while the proposal says no instruction of either agent changes; CLAUDE.md still covers them.
+- Fix: keep a short pointer to docs/examples.md and docs/spinel-notes.md, or correct the proposal's claim.
+
+### Name the hook lines' pinned origin address in the URL exception
+
+- Location: .claude/agents/checker.md:12, every agent hook line, and tools/tools_test.sh:1542 (quality advisory, hard-rule drift).
+- Why: the hook lines spell origin's hosted address split with [/][/] and string concatenation so tools/scan_text.sh does not see it, while CLAUDE.md's hard rules name the Makefile toolchain address as the single URL exception.
+- Fix: name the hook lines' pinned origin address in that exception in CLAUDE.md instead of hiding it from the scanner.
+
+### Reword the superseded task 1.1 of guard-ref-pin
+
+- Location: openspec/changes/archive/2026-11-14-guard-ref-pin/tasks.md:5 (quality advisory, docs currency).
+- Why: task 1.1 still describes the superseded design (config-free git ls-remote, a local fetch without writing a ref, the guard read at that commit), which task 1.3 replaced, so the archived change contradicts the hook lines.
+- Fix: reword 1.1 to the temporary-repository fetch, or mark it superseded by 1.3.
+
+### Check the hook runs before the empty TMPDIR assertion
+
+- Location: tools/tools_test.sh:1597 (quality advisory, vacuous test).
+- Why: the two hook runs before it discard their status and output, so if the hook failed before mktemp, or mktemp ignored TMPDIR, the empty directory still passes.
+- Fix: wrap the two runs in expect with their 0 and 2 statuses, or assert the directory was used.
+
+### Remove the hooks' temporary repository on interruption
+
+- Location: .claude/agents/checker.md:12 and every agent hook line (quality advisory, cleanup on interruption).
+- Why: the temporary repository is removed only on the normal path, with no trap, so a hook killed during its fetch of about a second leaves a directory under TMPDIR on every such call.
+- Fix: add trap 'rm -rf "$d"' EXIT after mktemp if the byte budgets allow, or accept it and say so in the design's Risks.
