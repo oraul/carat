@@ -20,8 +20,9 @@ ok   an unknown name
 ok   names are case sensitive
 ok   token? covers the syntax, file-icon, and markup ids only
 ok   name_of
-ok   find, the aliases, and one_dark for an unknown name
+ok   find, and carat-dark for an unknown name
 ok   known?
+ok   Alias: carat-light is its own palette, not one_light's
 ok   background?
 ok   normal pill
 ok   insert pill
@@ -36,6 +37,12 @@ ok   with the terminal's background Normal keeps the terminal's colors
 ok   with the theme's background Normal is the palette's
 ok   a group without a background of its own is drawn on the painted one
 ok   a group without a foreground of its own takes the palette's text color when painted
+ok   carat-dark: every group has a 24-bit foreground and background on the theme's background
+ok   carat-dark: every group but Normal and Delimiter shows at 16 colors
+ok   carat-dark: Search, IncSearch, and CurSearch have a background at every depth
+ok   carat-light: every group has a 24-bit foreground and background on the theme's background
+ok   carat-light: every group but Normal and Delimiter shows at 16 colors
+ok   carat-light: Search, IncSearch, and CurSearch have a background at every depth
 ok   one_dark: every group has a 24-bit foreground and background on the theme's background
 ok   one_dark: every group but Normal and Delimiter shows at 16 colors
 ok   one_dark: Search, IncSearch, and CurSearch have a background at every depth
@@ -53,6 +60,10 @@ ok   palettes have their own syntax colors
 ok   a palette gives a 256-color index only where it needs one
 ok   16-color attributes stand in for the selection and cursor line colors
 ok   the status line is bold
+ok   carat-dark at 24 bits
+ok   carat-dark at 256 colors
+ok   carat-light at 24 bits
+ok   carat-light at 256 colors
 ok   one_dark at 24 bits
 ok   one_dark at 256 colors
 ok   one_light at 24 bits
@@ -61,6 +72,10 @@ ok   dark_plus at 24 bits
 ok   dark_plus at 256 colors
 ok   light_plus at 24 bits
 ok   light_plus at 256 colors
+ok   carat-dark on the theme background: the selected tab reads at a glance
+ok   carat-dark on the terminal background: the selected tab reads at a glance
+ok   carat-light on the theme background: the selected tab reads at a glance
+ok   carat-light on the terminal background: the selected tab reads at a glance
 ok   one_dark on the theme background: the selected tab reads at a glance
 ok   one_dark on the terminal background: the selected tab reads at a glance
 ok   one_light on the theme background: the selected tab reads at a glance
@@ -69,6 +84,10 @@ ok   dark_plus on the theme background: the selected tab reads at a glance
 ok   dark_plus on the terminal background: the selected tab reads at a glance
 ok   light_plus on the theme background: the selected tab reads at a glance
 ok   light_plus on the terminal background: the selected tab reads at a glance
+ok   carat-dark on the cursor line at 24 bits
+ok   carat-dark on the cursor line at 256 colors
+ok   carat-light on the cursor line at 24 bits
+ok   carat-light on the cursor line at 256 colors
 ok   one_dark on the cursor line at 24 bits
 ok   one_dark on the cursor line at 256 colors
 ok   one_light on the cursor line at 24 bits
@@ -81,6 +100,8 @@ ok   a group on the cursor line keeps its color and attributes over CursorLine's
 ok   a group with a background of its own keeps it on the cursor line
 ok   at 16 colors the cursor line underlines a group without a background
 ok   at 16 colors a painted theme keeps Normal's background on the cursor line
+ok   carat-dark: at 16 colors the painted cursor line keeps the background
+ok   carat-light: at 16 colors the painted cursor line keeps the background
 ok   one_dark: at 16 colors the painted cursor line keeps the background
 ok   one_light: at 16 colors the painted cursor line keeps the background
 ok   dark_plus: at 16 colors the painted cursor line keeps the background
@@ -90,6 +111,10 @@ ok   base strips the float layer
 ok   a group in a float is drawn over NormalFloat's background
 ok   a group with a background of its own keeps it in a float, one without a foreground takes NormalFloat's
 ok   one_dark's markup groups: blue bold headings, bold and italic text, green code, underlined cyan links, gray blocks
+ok   carat-dark in a float at 24 bits
+ok   carat-dark in a float at 256 colors
+ok   carat-light in a float at 24 bits
+ok   carat-light in a float at 256 colors
 ok   one_dark in a float at 24 bits
 ok   one_dark in a float at 256 colors
 ok   one_light in a float at 24 bits
@@ -98,6 +123,10 @@ ok   dark_plus in a float at 24 bits
 ok   dark_plus in a float at 256 colors
 ok   light_plus in a float at 24 bits
 ok   light_plus in a float at 256 colors
+ok   carat-dark's selected menu row at 24 bits
+ok   carat-dark's selected menu row at 256 colors
+ok   carat-light's selected menu row at 24 bits
+ok   carat-light's selected menu row at 256 colors
 ok   one_dark's selected menu row at 24 bits
 ok   one_dark's selected menu row at 256 colors
 ok   one_light's selected menu row at 24 bits
@@ -106,21 +135,23 @@ ok   dark_plus's selected menu row at 24 bits
 ok   dark_plus's selected menu row at 256 colors
 ok   light_plus's selected menu row at 24 bits
 ok   light_plus's selected menu row at 256 colors
+ok   carat-dark's selected menu row at 16 colors on the terminal's background
+ok   carat-light's selected menu row at 16 colors on the theme's background
 ok   one_dark's selected menu row at 16 colors on the terminal's background
 ok   one_dark's selected menu row at 16 colors on the theme's background
 ok   one_light's selected menu row at 16 colors on the theme's background
 ok   dark_plus's selected menu row at 16 colors on the theme's background
 ok   light_plus's selected menu row at 16 colors on the terminal's background
-ok   one_dark comments are readable
+ok   Comments are readable: carat-dark's comments reach 4.5:1
 ok   the contrast of WCAG's lightest AA gray on white and of a color on itself
-ok   the defaults: one_dark on the terminal's background, syntax on
+ok   the defaults: carat-dark on the terminal's background, syntax on
 ok   the theme line selects a palette
-ok   an alias is accepted
-ok   an unknown theme keeps the default and is reported
+ok   Carat's light palette is accepted
+ok   Unknown theme: it keeps the default and is reported
 ok   a theme of the wrong kind keeps the default
 ok   the background line paints the background
 ok   an unknown background keeps the default and is reported
-ok   the shipped configuration names one_dark on the terminal's background
+ok   Default theme: the shipped configuration names carat-dark on the terminal's background
 ok   truecolor
 ok   24bit
 ok   256 colors
@@ -131,4 +162,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 133 passed, 0 failed
+domain_theme: 164 passed, 0 failed

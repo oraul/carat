@@ -62,7 +62,7 @@ ok   and writes fewer than 500 bytes
 ok   with the cursor line j also rewrites the two lines it moves between, fewer than 1500 bytes
 ok   l writes no buffer text
 ok   l writes only the changed cell of the ruler
-ok   the painted Normal is one_dark's text color on its background
+ok   the painted Normal is carat-dark's text color on its background
 ok   the screen is cleared after the painted Normal sequence
 ok   a Normal cell is written in the palette's colors
 ok   a region scrolls after the painted Normal sequence
@@ -79,7 +79,7 @@ ok   a 16-color Todo
 ok   a 16-color selection is reverse video
 ok   a 16-color cursor line is underlined
 ok   a 256-color search
-ok   carat-light is one_light's comment
+ok   carat-light's own comment
 ok   one_light's string at its own 256-color index
 ok   dark_plus's comment at its own 256-color index
 ok   dark_plus's keyword
