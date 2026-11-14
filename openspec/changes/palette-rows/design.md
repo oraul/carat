@@ -35,4 +35,4 @@ Non-goals: match spans in the completion popup or the finder, the key hints pane
 ## Risks / Trade-offs
 
 - Renumbering the syntax, icon, and markup ids changes every id past 51; nothing stores an id across runs, plugins resolve groups by name, and the theme table is keyed by the constants. Mitigation: `test/domain_theme.rb` checks the counts and every group's colors.
-- The `palette` scenario rebuilds the styles on each key: at most 15 `SyntaxLine` values and their token arrays per key. Mitigation: `make bench SCENARIOS=palette` is compared with main's recorded figures.
+- The `palette` scenario rebuilds the styles on each key: at most 15 `SyntaxLine` values and their token arrays per key. Measured with `make bench SCENARIOS=palette` against main at 84467c6: 353.5 allocations per key against 281.0 and a total of 211 us against 201 us per key; the added allocations are the shown rows' token arrays, styles, and match lists, and the name's padded cell is not built twice.

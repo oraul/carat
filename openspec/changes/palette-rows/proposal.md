@@ -29,7 +29,7 @@ None.
 - Code: `carat/use_cases/discovery/follow_palette.rb`, `carat/use_cases/discovery/open_palette.rb`, `carat/domain/palette.rb`, `carat/domain/fuzzy_match.rb`, `carat/domain/key_notation.rb`, `carat/domain/highlight.rb` (the syntax, icon, and markup ids move up by four), `carat/domain/themes.rb`, `carat/use_cases/completion/open_completion_popup.rb`.
 - Tests: `test/editor_palette.rb`, `test/editor_completion.rb`, `test/domain_theme.rb`, `test/domain_fuzzy_match.rb` or the test that holds FuzzyMatch, `test/domain_keys.rb` for the caret form.
 - Docs: `docs/compatibility.md` (the UI groups), `docs/codebase-map.md` (the palette and highlight lines), `docs/architecture.md` (the UI group count in the `Highlight` line).
-- README.md: unchanged, no command, binding, option, or target changes; the palette and popup look different but are reached the same way.
+- README.md: changed, the palette's line describes the dimmed description, the key in caret notation on the right, and the marked letters.
 - docs/architecture.md: changed, the `Highlight` line's UI group count and names.
 - Bench: `palette` refilters on each key as before; the stored field is one integer per match and the spans are computed for the shown rows only.
 

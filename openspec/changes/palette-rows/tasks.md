@@ -20,4 +20,4 @@
 
 ## 5. Docs and checks
 
-- [ ] 5.1 Update `docs/compatibility.md`, `docs/codebase-map.md`, and `docs/architecture.md` for the groups and the palette row; run `make bench SCENARIOS=palette`, `make gates`, and `make spec-validate`
+- [x] 5.1 Update `docs/compatibility.md`, `docs/codebase-map.md`, and `docs/architecture.md` for the groups and the palette row; run `make bench SCENARIOS=palette`, `make gates`, and `make spec-validate`
