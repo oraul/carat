@@ -11,4 +11,4 @@
 
 ## 3. Docs and checks
 
-- [ ] 3.1 Correct the group comment of `test/domain_theme.rb` and the UI group count in `docs/compatibility.md`, and update `README.md`, `docs/architecture.md`, and `docs/codebase-map.md` for the six palettes; run `make gates` and `make spec-validate`
+- [x] 3.1 Correct the group comment of `test/domain_theme.rb` and the UI group count in `docs/compatibility.md`, and update `README.md`, `docs/architecture.md`, and `docs/codebase-map.md` for the six palettes; run `make gates` and `make spec-validate`
