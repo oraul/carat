@@ -2430,7 +2430,7 @@ js() {
   } | node -
 }
 work_js() {
-  js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead keepPushed packagedPr packageStep" "$1"
+  js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead PUSHING keepPushed pushedHint packagedPr packageStep" "$1"
 }
 calib_js() {
   js "$wf" "SIZES CHANGE CALIBRATION calibrated calibrate restoreCalibration usage firstPass metricLine" "$1"
@@ -2540,8 +2540,11 @@ expect "workflow: a continued package start keeps the sha its capped start pushe
   work_js "[keepPushed('package', '', { status: 'partial', pushed: '$full' }), keepPushed('package', '$full', { status: 'done' }), keepPushed('fix', '', { status: 'done', pushed: '$full' })]"
 expect "workflow: a later push start's sha replaces the kept one" 0 '^"1bcdef0123456789abcdef0123456789abcdef01"$' \
   work_js "keepPushed('push', '$full', { status: 'done', pushed: '1bcdef0123456789abcdef0123456789abcdef01' })"
+expect "workflow: a continued start of every pushing mode, body included, is told to return the recorded sha" 0 '^\[true,true,true,false,false\]$' \
+  work_js "['package', 'push', 'body', 'fix', 'implement'].map(m => pushedHint(m, 'c').includes('sh tools/run_state.sh get c pushed'))"
+expect "workflow: the continuation's pushed hint comes from the shared list" 0 "pushedHint[(]mode, state[.]change[)]" grep -F 'pushedHint(mode, state.change)' "$wf"
 expect "workflow: every contributor start's pushed sha is kept" 0 "state[.]pushed = keepPushed[(]mode, state[.]pushed, result[)]" grep -F 'state.pushed = keepPushed(mode, state.pushed, result)' "$wf"
-expect "workflow: a continued package or push start returns the recorded pushed sha" 0 'get [$][{]state[.]change[}] pushed' grep -F 'get ${state.change} pushed\` as \`pushed\`' "$wf"
+expect "workflow: a continued package, push, or body start returns the recorded pushed sha" 0 'get [$][{]change[}] pushed' grep -F 'get ${change} pushed\` as \`pushed\`' "$wf"
 expect "workflow: the package step returns the recorded pushed sha" 0 'get <change> pushed`, the full sha, as `pushed`' grep -F 'Return `sh tools/run_state.sh get <change> pushed`, the full sha, as `pushed`' "$agents/contributor.md"
 expect "workflow: the push mode returns the pushed sha" 0 'returning `pushed` as in package' grep -F -- '--ci-fix`, one push per CI fix, returning `pushed` as in package' "$agents/contributor.md"
 expect "workflow: a forged record in the run state skips nothing" 0 '^\[false,false,true,true,false\]$' \

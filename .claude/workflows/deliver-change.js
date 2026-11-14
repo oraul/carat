@@ -294,12 +294,20 @@ function pushedHead(pushed, head) {
   const full = String(pushed || '')
   return /^[0-9a-f]{40}$/.test(full) && /^[0-9a-f]{7,40}$/.test(head || '') && full.startsWith(head) ? full : ''
 }
-// The pushed sha after one start of a package, push, or body call (a body
-// fix pushes pr.md as a CI fix): the start's own when it reported one, else
-// the one kept from an earlier start, so a start capped after its push
-// keeps it when the continuation, refused a second push, reports none.
+// The contributor modes that push (a body fix pushes pr.md as a CI fix),
+// one list for keepPushed and the continuation's pushed hint.
+const PUSHING = ['package', 'push', 'body']
+// The pushed sha after one start of a pushing mode: the start's own when it
+// reported one, else the one kept from an earlier start, so a start capped
+// after its push keeps it when the continuation, refused a second push,
+// reports none.
 function keepPushed(mode, pushed, result) {
-  return (mode === 'package' || mode === 'push' || mode === 'body') && result && result.pushed ? result.pushed : pushed
+  return PUSHING.includes(mode) && result && result.pushed ? result.pushed : pushed
+}
+// The line a continued start of a pushing mode gets, so it returns the
+// recorded sha instead of retrying a push the second time refuses.
+function pushedHint(mode, change) {
+  return PUSHING.includes(mode) ? `\nWhen this mode's push already ran, which a second push refuses, return \`sh tools/run_state.sh get ${change} pushed\` as \`pushed\`.` : ''
 }
 // The step before the merge from the run state: merge once the push and
 // the pull request number are both recorded; wait when only the push is,
@@ -649,7 +657,7 @@ async function contributor(mode, detail) {
     const why = result ? 'reached its cap' : 'returned no result'
     note(`contributor (${mode}) ${why}${result ? `, left: ${step.left.join('; ')}` : ''}; continued`)
     queue(`sh tools/run_state.sh note ${state.change} overrun "contributor ${mode} start ${count + 1} ${why} and was continued"`, head)
-    more = `\nThis continues a start that ${result ? `reached its cap. It left:\n- ${step.left.join('\n- ')}` : 'returned no result, having reached its turn ceiling'}\nResume from the branch's commits, tasks.md, and the run state; redo nothing already committed or recorded.${mode === 'package' || mode === 'push' ? `\nWhen this mode's push already ran, which a second push refuses, return \`sh tools/run_state.sh get ${state.change} pushed\` as \`pushed\`.` : ''}`
+    more = `\nThis continues a start that ${result ? `reached its cap. It left:\n- ${step.left.join('\n- ')}` : 'returned no result, having reached its turn ceiling'}\nResume from the branch's commits, tasks.md, and the run state; redo nothing already committed or recorded.${pushedHint(mode, state.change)}`
   }
   head = result.head
   note(`contributor (${mode}): ${result.summary}`)
