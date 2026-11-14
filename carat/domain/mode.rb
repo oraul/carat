@@ -46,6 +46,13 @@ module Carat
         mode == VISUAL || mode == VISUAL_LINE || mode == VISUAL_BLOCK
       end
 
+      # Whether the grammar reads keys in mode: normal, operator-pending,
+      # and the three visual modes.
+      #: (Symbol) -> bool
+      def self.grammar?(mode)
+        mode == NORMAL || mode == OPERATOR_PENDING || visual?(mode)
+      end
+
       # The selection kind of a visual mode: :charwise, :linewise,
       # :blockwise, or :none for any other mode. Compared with == rather
       # than a case: Spinel f34005bf folds `when VISUAL` to false, reading

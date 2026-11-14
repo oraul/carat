@@ -60,7 +60,7 @@ ok   the close float use case, in the signature
 ok   the close float use case, in the hover
 ok   the key hints
 ok   the command palette
-ok   the key handler holds the one HideKeyHints and FollowPalette, the input controller the one ShowKeyHints
+ok   the key handler and the key hints hold the one HideKeyHints, the key handler the one FollowPalette, the input controller the one ShowKeyHints
 ok   the keymap, in the key hints and the palette
 ok   the input state, in the key hints
 ok   the plugin host, in the key hints and the palette

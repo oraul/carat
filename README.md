@@ -62,7 +62,7 @@ The leader is Space. Its keys come in groups named by their first letter, and ea
 - `<leader>e` opens the file tree, as before.
 - `<leader>p` (or F1) opens the command palette: every action and ex command with its key and description, filtered as you type; Ctrl-N and Ctrl-P move the selection, Enter runs it, Escape closes it.
 
-Pause after a group key, or after `g`, `z`, or `<C-w>`, and a float at the bottom right lists the keys that may follow and what each does. `option.keyhints.delay` sets the pause in milliseconds (300; 0 turns the hints off), and `keymap.group <keys> <name>` names a group of your own, as `keymap.group <leader>w panes`.
+Pause after a group key, or after `g`, `z`, or `<C-w>`, and a panel centered at the bottom lists the keys that may follow and what each does, a group of your own named by the actions under it. `option.keyhints.delay` sets the pause in milliseconds (300; 0 turns the hints off), and `keymap.group <keys> <name>` names a group of your own, as `keymap.group <leader>w panes`.
 
 Ctrl-S saves in normal and in insert mode, where you stay in insert mode.
 

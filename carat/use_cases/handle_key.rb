@@ -142,7 +142,7 @@ module Carat
       #: (Domain::EditorState, Integer) -> Symbol
       def call(state, code)
         return timeout(state) if code == Domain::Key::TIMEOUT
-        @hide_key_hints.call(state) if @key_hints.float_id != 0
+        @hide_key_hints.call(state) if @key_hints.showing?
         @replays = 0
         queue = [code]
         result = :handled
@@ -214,8 +214,7 @@ module Carat
       # Whether the grammar reads keys in the current mode.
       #: (Domain::EditorState) -> bool
       def grammar_mode?(state)
-        mode = state.mode
-        mode == Domain::Mode::NORMAL || mode == Domain::Mode::OPERATOR_PENDING || Domain::Mode.visual?(mode)
+        Domain::Mode.grammar?(state.mode)
       end
 
       # Handles one key; a remap it triggers is pushed to the front of queue.
