@@ -10,6 +10,13 @@
 # stdin, and refuses the call on any status but 0; the guard exits 2 with
 # the reason on stderr to refuse and 0 to allow.
 #
+# The hook line pins origin by digest, naming no address: it accepts
+# remote.origin.url, .git stripped, only when its git blob id is one of
+# the three it lists, those of the repository's address in its https,
+# ssh (git@host/path), and scp (git@host:path) forms, each computed as
+# printf %s FORM | git hash-object --stdin, and recomputed when the
+# repository moves.
+#
 # Usage: sh tools/agent_guard.sh PROFILE [DIR] < HOOK-JSON
 #
 # A Bash command is read as the shell reads it: words with their quotes
