@@ -427,7 +427,7 @@ module AdaptersFramePresenterTest
     s.options.icons = "unicode"
     f = draw(s, 7, 30)
     t.assert_equal(" • a.txt    • b.txt", f.row_text(0), "two listed files show their tabs, the current one selected")
-    t.assert_equal([D::Highlight::TAB_LINE_SELECTED, D::Highlight::ICON_DEFAULT, D::Highlight::TAB_LINE], [f.cell(0, 0).hl, f.cell(0, 1).hl, f.cell(0, 11).hl], "the selected tab's icon takes its file-icon group")
+    t.assert_equal([D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE], [f.cell(0, 0).hl, f.cell(0, 1).hl, f.cell(0, 11).hl], "the selected tab's icon is in the selected group, TabLineSel")
     LISTED.remove(other)
     LISTED.remove(s.buffer)
 

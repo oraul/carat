@@ -266,8 +266,8 @@ module EditorBreadcrumbsTest
     r.type("j")
     t.assert_equal(" a.rb › Foo › bar", cut(r, 0, 0, 20), "inside a method of a class the symbols are joined by the single angle quote")
 
-    # Answers in the flat form and hostile ones (a flat symbol answer, a
-    # hostile answer is bounded).
+    # Answers in the flat form and hostile ones: a flat symbol answer;
+    # a hostile answer is bounded.
     r = outlining("")
     r.type("<C-w>vj")
     r.wait

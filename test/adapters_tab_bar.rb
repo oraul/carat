@@ -98,8 +98,7 @@ module AdaptersTabBarTest
       ["a leading unlisted buffer is neither shown nor counted", 1, " • f1.txt    • f2.txt    5>"]
     ]) { |current| paint(setup(unlisted, current, 1), 40).row_text(0) }
 
-    # Groups: the current tab selected, its icon included (the selected
-    # tab's icon is in the selected group), the others plain, the counts plain, the rest the fill.
+    # Groups: the current tab selected, its icon included, the others plain, the counts plain, the rest the fill.
     f = paint(setup(["*src/a.rb", "b.txt"], 0, 2), 40)
     t.assert_equal([H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE_FILL, H::TAB_LINE_SELECTED, H::TAB_LINE], [f.cell(0, 0).hl, f.cell(0, 1).hl, f.cell(0, 8).hl, f.cell(0, 10).hl, f.cell(0, 11).hl, f.cell(0, 30).hl, f.cell(0, 35).hl, f.cell(0, 38).hl], "selected tab and its icon, plain tab and its icon, fill, and the tab-page numbers")
 

@@ -99,7 +99,7 @@ ok   the second number is selected now
 ok   the second tab page's window is drawn
 ok   with one tab page and no files listed there is no tabs row
 ok   two listed files show their tabs, the current one selected
-ok   the selected tab's icon takes its file-icon group
+ok   the selected tab's icon is in the selected group, TabLineSel
 ok   no sign column without signs
 ok   the sign sits in its column and the numbers move right
 ok   the sign column carries the SignColumn highlight
