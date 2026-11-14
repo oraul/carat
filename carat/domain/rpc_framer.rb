@@ -1,3 +1,5 @@
+require_relative "utf8"
+
 module Carat
   module Domain
     # Splits a language server's output into JSON-RPC bodies, framed as in
@@ -63,7 +65,7 @@ module Carat
       # complete or when it was refused.
       #: () -> bool
       def read_header
-        stop = @buffer.byteindex(SEPARATOR, @start)
+        stop = @buffer.byteindex(SEPARATOR, Utf8.boundary(@buffer, @start))
         if stop.nil?
           refuse if @buffer.bytesize - @start > HEADER_LIMIT
           return false
@@ -101,7 +103,7 @@ module Carat
         from = 0
         size = header.bytesize
         while from <= size
-          stop = header.byteindex("\r\n", from) || size
+          stop = header.byteindex("\r\n", Utf8.boundary(header, from)) || size
           length = line_length(header.byteslice(from, stop - from).to_s, length)
           from = stop + 2
         end

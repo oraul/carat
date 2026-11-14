@@ -4,6 +4,7 @@ ok   a frame split in the header and the body
 ok   the name in any case and a Content-Type header
 ok   the length counts bytes
 ok   an empty body
+ok   a header line that starts with a continuation byte
 ok   a missing length refuses
 ok   a length that is not digits refuses
 ok   ten digits refuse
@@ -23,4 +24,4 @@ ok   the limit in bytes
 ok   breaks and tabs become spaces
 ok   an escape sequence still loses its escape
 ok   the cut counts the spaces
-domain_rpc_framer: 25 passed, 0 failed
+domain_rpc_framer: 26 passed, 0 failed

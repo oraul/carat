@@ -129,7 +129,7 @@ module Carat
           if byte == 92
             i += 2
           elsif byte == 91
-            close = i + 2 < n ? text.byteindex("]", i + 2) : nil
+            close = i + 2 < n ? text.byteindex("]", Utf8.boundary(text, i + 2)) : nil
             i = close.nil? ? i + 1 : close + 1
           else
             i += 1
@@ -664,7 +664,7 @@ module Carat
       #: (Integer) -> Integer
       def posix_class_end(i)
         return 0 unless i + 1 < @bytes && @source.getbyte(i + 1) == 58
-        close = @source.byteindex(":]", i + 2)
+        close = @source.byteindex(":]", Utf8.boundary(@source, i + 2))
         return 0 if close.nil?
         name = @source.byteslice(i + 2, close - i - 2).to_s
         return 0 unless POSIX.include?(name)

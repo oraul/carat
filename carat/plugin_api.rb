@@ -342,7 +342,11 @@ module Carat
         size = path.bytesize
         start = 0
         while start <= size
-          slash = path.byteindex("/", start)
+          # byteindex refuses an offset on a continuation byte (Spinel
+          # 6b43fe94, as CRuby); no "/" is one, so skipping them loses none.
+          from = start
+          from += 1 while from < size && (path.getbyte(from).to_i & 0xC0) == 0x80
+          slash = path.byteindex("/", from)
           stop = slash.nil? ? size : slash
           piece = path.byteslice(start, stop - start).to_s
           if piece == ".."

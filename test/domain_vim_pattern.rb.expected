@@ -76,6 +76,8 @@ ok   an escaped letter is not uppercase
 ok   backslash c ignores case
 ok   backslash C matches case
 ok   an uppercase letter in a collection counts
+ok   a slash in a collection does not end the pattern
+ok   a collection of a multibyte character ends after it
 ok   escape for a literal search
 ok   an escaped text matches itself
-domain_vim_pattern: 80 passed, 0 failed
+domain_vim_pattern: 82 passed, 0 failed

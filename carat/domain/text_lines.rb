@@ -1,3 +1,5 @@
+require_relative "utf8"
+
 module Carat
   module Domain
     # Splits text at its newlines by walking bytes, so text that is not
@@ -17,7 +19,7 @@ module Carat
         return out if size == 0
         start = 0
         while true
-          found = text.byteindex("\n", start)
+          found = text.byteindex("\n", Utf8.boundary(text, start))
           if found.nil?
             out << text.byteslice(start, size - start).to_s
             return out
