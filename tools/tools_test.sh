@@ -1519,10 +1519,14 @@ PROJECT=/w
 # but 0: a missing or failing guard refuses, and an edit on the branch has
 # no effect until it is merged. Here origin is a hosted-looking address
 # that a local bare repository answers through a command-line insteadOf
-# in the hook's environment (answered), which branch code cannot set.
+# in the hook's environment (answered), which branch code cannot set; the
+# hook line pins origin's address, so a second hosted-looking address
+# (fork), which the environment answers from $work/hooks-planted.git, is
+# refused.
 # hook FILE COMMAND: FILE's hook line on a Bash call of COMMAND in $hooks.
 answered() {
-  env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$answer.insteadOf" GIT_CONFIG_VALUE_0="$hosted" "$@"
+  env GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0="url.$answer.insteadOf" GIT_CONFIG_VALUE_0="$hosted" \
+    GIT_CONFIG_KEY_1="url.$work/hooks-planted.git.insteadOf" GIT_CONFIG_VALUE_1="$fork" "$@"
 }
 hook() {
   line=$(sed -n "s/^ *command: '\\(.*\\)'\$/\\1/p" "$1" | sed -n 1p)
@@ -1535,7 +1539,8 @@ expect "guard: every hook line resolves main the same way" 0 "^10 1$" \
   sh -c 'l=$(sed -n "s/^ *command: '\''\\(.*show \"\\\$m:tools\\/agent_guard[.]sh\")\\).*/\\1/p" "$1"/*.md); echo "$(printf "%s\n" "$l" | grep -c .) $(printf "%s\n" "$l" | sort -u | grep -c .)"' _ "$agents"
 fresh hooks
 hooks=$PWD
-hosted="https:/""/host.invalid/o/hooks.git"
+hosted="https:/""/github"".com/oraul/carat.git"
+fork="https:/""/host.invalid/a/fork.git"
 answer="$work/hooks.git"
 git_q init -q --bare "$answer"
 git_q remote add origin "$hosted"
@@ -1559,6 +1564,14 @@ for f in "$agents"/*.md; do
   a=$(basename "$f" .md)
   expect "guard: the $a hook refuses with origin's main's guard when origin/main was moved locally" 2 "git push" hook "$f" 'git push origin x'
 done
+# A replace ref branch code plants for main's commit, naming the permissive
+# one: every hook reads past it and still runs origin's main's guard.
+git_q update-ref "refs/replace/$(git -C "$answer" rev-parse main)" HEAD
+for f in "$agents"/*.md; do
+  a=$(basename "$f" .md)
+  expect "guard: the $a hook refuses with main's guard past a replace ref" 2 "git push" hook "$f" 'git push origin x'
+done
+git_q update-ref -d "refs/replace/$(git -C "$answer" rev-parse main)"
 expect "guard: the merge hook refuses when origin/main was moved locally" 2 "no run state records" \
   sh -c 'line=$(sed -n "s/^ *command: '\''\\(.*\\)'\''\$/\\1/p" "$1" | sed -n 2p); printf "{\"tool_name\":\"mcp__github__merge_pull_request\",\"tool_input\":{\"merge_method\":\"squash\",\"sha\":\"%s\"}}" "$2" | env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$3.insteadOf" GIT_CONFIG_VALUE_0="$4" CLAUDE_PROJECT_DIR="$5" sh -c "$line"' \
   _ "$agents/merger.md" "$(git rev-parse HEAD)" "$answer" "$hosted" "$hooks"
@@ -1573,9 +1586,19 @@ git_q remote set-url origin "file:/""/$answer"
 expect "guard: a hook refuses a file: origin" 2 "origin is not hosted" hook "$f" 'ls'
 git_q remote set-url origin "ext::sh -c true"
 expect "guard: a hook refuses a remote helper origin" 2 "origin is not hosted" hook "$f" 'ls'
+git_q remote set-url origin "foo::x@host:path"
+expect "guard: a hook refuses a remote helper origin with an at sign and a colon" 2 "origin is not hosted" hook "$f" 'ls'
 git_q remote set-url origin "$hosted"
 git_q init -q --bare "$work/hooks-planted.git"
 git_q push -q "$work/hooks-planted.git" HEAD:refs/heads/main 2>/dev/null
+# Branch code points origin at a second hosted-looking address whose main
+# carries the permissive guard: every hook refuses it.
+git_q remote set-url origin "$fork"
+for g in "$agents"/*.md; do
+  a=$(basename "$g" .md)
+  expect "guard: the $a hook refuses an origin other than the pinned one" 2 "origin is not hosted" hook "$g" 'git push origin x'
+done
+git_q remote set-url origin "$hosted"
 git_q config "url.$work/hooks-planted.git.insteadOf" "$hosted"
 expect "guard: a hook ignores a repository insteadOf" 2 "every call while the repository configuration sets url[.].*[.]insteadof" hook "$f" 'ls'
 git_q config --remove-section "url.$work/hooks-planted.git"
@@ -1661,9 +1684,8 @@ expect "run_state: set refuses gated" 1 "gated is written only by its own comman
 expect "guard: no profile records gated" 2 "gated" guard merger 'sh tools/run_state.sh gated c pass'
 expect "guard: the contributor does not record gated" 2 "gated" guard contributor 'sh tools/run_state.sh gated c pass'
 expect "guard: the merger hook matches the merge tool" 0 'matcher: "mcp__github__merge_pull_request"' grep -F 'matcher: "mcp__github__merge_pull_request"' "$here/../.claude/agents/merger.md"
-# The merge hook reads main from origin, the hosted address mtool.git
-# answers.
-hosted="https:/""/host.invalid/o/mtool.git"
+# The merge hook reads main from origin, the pinned address, which
+# mtool.git answers.
 answer="$work/mtool.git"
 git_q remote set-url origin "$hosted"
 cp "$here/agent_guard.sh" tools/agent_guard.sh

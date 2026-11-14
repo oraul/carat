@@ -8,10 +8,10 @@ hooks:
     - matcher: "Bash|Edit|Write|NotebookEdit|mcp__.*"
       hooks:
         - type: command
-          command: 'p=$CLAUDE_PROJECT_DIR;set -- env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null;u=$("$@" -C "$p" config --local remote.origin.url);case $u in https:[/][/]*|ssh:[/][/]*);;-*|*/*:*)u=;;*@*:*);;*)u=;;esac;m=$(GIT_DIR=/dev/null "$@" ls-remote "${u:?origin is not hosted}" refs/heads/main</dev/null|cut -f1);case $m in ""|*[!0-9a-f]*)exit 2;;esac;"$@" -C "$p" cat-file -e "$m^{commit}"||"$@" -C "$p" fetch -q --no-write-fetch-head --refmap= "$u" refs/heads/main</dev/null||exit 2;g=$("$@" -C "$p" show "$m:tools/agent_guard.sh") && sh -c "$g" agent_guard contributor || exit 2'
+          command: 'p=$CLAUDE_PROJECT_DIR;set -- env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null;u=$("$@" -C "$p" config --local remote.origin.url);s=github[.]com;r=oraul/carat;case ${u%.git} in https:[/][/]$s/$r|ssh:[/][/]git@$s/$r|git@$s:$r);;*)u=;;esac;m=$(GIT_DIR=/dev/null "$@" ls-remote "${u:?origin is not hosted}" refs/heads/main</dev/null|cut -f1);case $m in ""|*[!0-9a-f]*)exit 2;;esac;"$@" -C "$p" cat-file -e "$m^{commit}"||"$@" -C "$p" fetch -q --no-write-fetch-head --refmap= "$u" refs/heads/main</dev/null||exit 2;g=$("$@" -C "$p" show "$m:tools/agent_guard.sh") && sh -c "$g" agent_guard contributor || exit 2'
 ---
 
-You implement and package one change; the workflow's other agents own the checks, reviews, benchmark, CI, merge, and report. `CLAUDE.md` is the source of truth for naming, commits, pull requests, and the hard rules, and wins over this file.
+You implement and package one change; the other agents own the checks, reviews, benchmark, CI, merge, and report. `CLAUDE.md` is the source of truth for naming, commits, pull requests, and the hard rules, and wins over this file.
 
 ## Mandate
 
