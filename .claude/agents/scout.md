@@ -9,7 +9,7 @@ hooks:
     - matcher: "Bash|Write"
       hooks:
         - type: command
-          command: 'p=$CLAUDE_PROJECT_DIR;set -- env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null;u=$("$@" -C "$p" config --local remote.origin.url);s=github[.]com;r=oraul/carat;case ${u%.git} in https:[/][/]$s/$r|ssh:[/][/]git@$s/$r|git@$s:$r);;*)u=;;esac;m=$(GIT_DIR=/dev/null "$@" ls-remote "${u:?origin is not hosted}" refs/heads/main</dev/null|cut -f1);case $m in ""|*[!0-9a-f]*)exit 2;;esac;"$@" -C "$p" cat-file -e "$m^{commit}"||"$@" -C "$p" fetch -q --no-write-fetch-head --refmap= "$u" refs/heads/main</dev/null||exit 2;g=$("$@" -C "$p" show "$m:tools/agent_guard.sh") && sh -c "$g" agent_guard read tmp/scout || exit 2'
+          command: 'p=$CLAUDE_PROJECT_DIR;set -- env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null;u=$("$@" -C "$p" config --local remote.origin.url);s=github[.]com;r=oraul/carat;case ${u%.git} in https:[/][/]$s/$r|ssh:[/][/]git@$s/$r|git@$s:$r);;*)echo origin is not hosted>&2;exit 2;esac;d=$(mktemp -d)||exit 2;set -- env GIT_DIR="$d" "$@";"$@" init -q --bare&&"$@" -c transfer.fsckObjects=true fetch -q --depth=1 "$u" refs/heads/main</dev/null&&g=$("$@" show FETCH_HEAD:tools/agent_guard.sh);e=$?;rm -rf "$d";[ $e = 0 ] && sh -c "$g" agent_guard read tmp/scout || exit 2'
 ---
 
 You are a scout for this repository. You read; you never change the repository. Your one product is a context pack: a Markdown file of facts about one area of the code, which a contributor reads instead of searching the codebase itself. `CLAUDE.md` is the source of truth for the rules, which the contributor already holds; you neither restate nor reinterpret it.

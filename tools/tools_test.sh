@@ -1512,10 +1512,11 @@ mv "$proj/tmp/.planted/.gitfile" "$proj/tmp/.planted/.git"
 expect "guard: read refuses a .git file naming another worktree's record" 2 "git -C other than" guard read 'git -C tmp/.planted status'
 PROJECT=/w
 
-# The hook line of every agent file runs the guard of origin's main, the
-# commit git ls-remote of origin's address names, read outside the
-# repository and with no global or system configuration, never the local
-# ref origin/main, which branch code can move; it refuses on any status
+# The hook line of every agent file runs the guard of origin's main,
+# fetched from origin's address into a new temporary bare repository with
+# no global or system configuration, every object hashed on arrival, never
+# read from the project's object store, configuration, or local ref
+# origin/main, all of which branch code can write; it refuses on any status
 # but 0: a missing or failing guard refuses, and an edit on the branch has
 # no effect until it is merged. Here origin is a hosted-looking address
 # that a local bare repository answers through a command-line insteadOf
@@ -1536,7 +1537,7 @@ hook() {
 agents="$here/../.claude/agents"
 expect "guard: no hook line reads the local origin/main" 1 "^$" sh -c 'grep -h "command: .*origin/main" "$1"/*.md' _ "$agents"
 expect "guard: every hook line resolves main the same way" 0 "^10 1$" \
-  sh -c 'l=$(sed -n "s/^ *command: '\''\\(.*show \"\\\$m:tools\\/agent_guard[.]sh\")\\).*/\\1/p" "$1"/*.md); echo "$(printf "%s\n" "$l" | grep -c .) $(printf "%s\n" "$l" | sort -u | grep -c .)"' _ "$agents"
+  sh -c 'l=$(sed -n "s/^ *command: '\''\\(.*show FETCH_HEAD:tools\\/agent_guard[.]sh)\\).*/\\1/p" "$1"/*.md); echo "$(printf "%s\n" "$l" | grep -c .) $(printf "%s\n" "$l" | sort -u | grep -c .)"' _ "$agents"
 fresh hooks
 hooks=$PWD
 hosted="https:/""/github"".com/oraul/carat.git"
@@ -1572,6 +1573,28 @@ for f in "$agents"/*.md; do
   expect "guard: the $a hook refuses with main's guard past a replace ref" 2 "git push" hook "$f" 'git push origin x'
 done
 git_q update-ref -d "refs/replace/$(git -C "$answer" rev-parse main)"
+# Branch code plants a loose object holding a permissive guard under the id
+# of main's guard blob, which git reads without checking its hash: every
+# hook reads the guard from its own fetch, never the project's objects.
+b=$(git -C "$answer" rev-parse main:tools/agent_guard.sh)
+loose=".git/objects/$(echo "$b" | cut -c1-2)/$(echo "$b" | cut -c3-)"
+git_q init -q --bare "$work/forge.git"
+forged=$(printf 'exit 0\n' | git --git-dir="$work/forge.git" hash-object -w --stdin)
+cp "$loose" "$work/guard-object"
+rm -f "$loose"
+cp "$work/forge.git/objects/$(echo "$forged" | cut -c1-2)/$(echo "$forged" | cut -c3-)" "$loose"
+expect "guard: the planted object answers for main's guard blob" 0 "^exit 0$" git cat-file blob "$b"
+for f in "$agents"/*.md; do
+  a=$(basename "$f" .md)
+  expect "guard: the $a hook refuses with main's guard past a planted object with a mismatched hash" 2 "git push" hook "$f" 'git push origin x'
+done
+rm -f "$loose"
+cp "$work/guard-object" "$loose"
+# The hook removes its temporary repository, whether it allows or refuses.
+mkdir "$work/hook-tmp"
+TMPDIR="$work/hook-tmp" hook "$agents/checker.md" 'git log --oneline -1' > /dev/null 2>&1
+TMPDIR="$work/hook-tmp" hook "$agents/checker.md" 'git push origin x' > /dev/null 2>&1
+expect "guard: the hook leaves no temporary repository" 0 "^$" ls -A "$work/hook-tmp"
 expect "guard: the merge hook refuses when origin/main was moved locally" 2 "no run state records" \
   sh -c 'line=$(sed -n "s/^ *command: '\''\\(.*\\)'\''\$/\\1/p" "$1" | sed -n 2p); printf "{\"tool_name\":\"mcp__github__merge_pull_request\",\"tool_input\":{\"merge_method\":\"squash\",\"sha\":\"%s\"}}" "$2" | env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$3.insteadOf" GIT_CONFIG_VALUE_0="$4" CLAUDE_PROJECT_DIR="$5" sh -c "$line"' \
   _ "$agents/merger.md" "$(git rev-parse HEAD)" "$answer" "$hosted" "$hooks"
@@ -1606,14 +1629,15 @@ answer="$work/hooks-none.git"
 expect "guard: a hook refuses when origin cannot be reached" 2 "fatal" hook "$f" 'ls'
 answer="$work/hooks.git"
 # Main moved on origin past the repository, as after the merger's merge:
-# the hook fetches it without writing a ref and runs its guard.
+# the hook fetches it outside the repository and runs its guard, leaving
+# the repository's objects and refs as they were.
 git_q clone -q -b main "$answer" "$work/hooks-ahead" 2>/dev/null
 (cd "$work/hooks-ahead" && echo ahead >> README.md && commit "chore: ahead" && git_q push -q origin HEAD:main 2>/dev/null)
 ahead=$(git -C "$answer" rev-parse main)
 moved=$(git rev-parse origin/main)
 expect "guard: a hook fetches a main the repository lacks" 2 "git push" hook "$f" 'git push origin x'
-expect "guard: the hook's fetch brings main's commit and writes no ref" 0 "^commit $moved$" \
-  sh -c 'echo "$(git cat-file -t "$1") $(git rev-parse origin/main)"' _ "$ahead"
+expect "guard: the hook's fetch writes neither an object nor a ref in the repository" 0 "^missing $moved$" \
+  sh -c 'echo "$(git cat-file -e "$1" 2>/dev/null && echo present || echo missing) $(git rev-parse origin/main)"' _ "$ahead"
 # The contributor's hook matches every MCP tool, and main's guard refuses a
 # pull request write it does not judge.
 mcp_hook() {
