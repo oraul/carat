@@ -8,7 +8,7 @@ hooks:
     - matcher: "Bash|Edit|Write|NotebookEdit|mcp__.*"
       hooks:
         - type: command
-          command: 'p=$CLAUDE_PROJECT_DIR;set -- env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null;u=$("$@" -C "$p" config --local remote.origin.url);s=github[.]com;r=oraul/carat;case ${u%.git} in https:[/][/]$s/$r|ssh:[/][/]git@$s/$r|git@$s:$r);;*)echo origin is not hosted>&2;exit 2;esac;d=$(mktemp -d)||exit 2;set -- env GIT_DIR="$d" "$@";"$@" init -q --bare&&"$@" -c transfer.fsckObjects=true fetch -q --depth=1 "$u" refs/heads/main</dev/null&&g=$("$@" show FETCH_HEAD:tools/agent_guard.sh);e=$?;rm -rf "$d";[ $e = 0 ] && sh -c "$g" agent_guard contributor || exit 2'
+          command: 'set -- env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null;u=$("$@" -C "$CLAUDE_PROJECT_DIR" config --local remote.origin.url);case $(printf %s "${u%.git}"|"$@" hash-object --stdin) in 244706f6059ecef3ab5cd192a3b80eea788e0e2a|5cd0861f1cf8aa9c1a53cdb6a739247d9577cb90|b2da5b5322207a9cca89affa28b5740add3ad2f4);;*)echo origin is not hosted>&2;exit 2;esac;d=$(mktemp -d)||exit 2;set -- env GIT_DIR="$d" "$@";"$@" init -q --bare&&"$@" -c transfer.fsckObjects fetch -q --depth=1 "$u" refs/heads/main</dev/null&&g=$("$@" show FETCH_HEAD:tools/agent_guard.sh);e=$?;rm -rf "$d";[ $e = 0 ] && sh -c "$g" agent_guard contributor || exit 2'
 ---
 
 You implement and package one change; the other agents own the checks, reviews, benchmark, CI, merge, and report. `CLAUDE.md` is the source of truth for naming, commits, pull requests, and the hard rules, and wins over this file.
@@ -34,9 +34,9 @@ The workflow gives one mode, the change, and the branch (run state: `sh tools/ru
 1. Resume from `openspec/changes/<change>/tasks.md` when it exists. Do the plan notes beside the code.
 2. Write the brief verbatim under `# Brief` to `openspec/changes/<change>/brief.md`. Propose with the `openspec-propose` skill (no behavior change sets `skip_specs: true`), minor assumptions in the proposal. A change past one reviewable pull request is split: propose the split, deliver the first part. Fix every finding of `openspec validate "<change>" --strict --no-interactive` and `make spec-validate`.
 3. Apply with the `openspec-apply-change` skill task by task, marking `- [x]` only when the behavior and its tests are done. Start a file of a common kind with its generator (`make new-*`). Commit one logical step at a time with the trailer of `CLAUDE.md` (`git -c user.name="Claude" -c user.email="noreply@anthropic.com" commit`).
-4. While iterating run only targeted checks, always through `make`: `make test-one T=test/NAME.rb`, `make diagnose-one T=path`, `make lint`, `make docs-lint`; only `make snapshots` rewrites a snapshot: read its diff.
+4. While iterating run only targeted checks, always through `make`: `make test-one T=test/NAME.rb`, `diagnose-one T=path`, `lint`, `docs-lint`; only `make snapshots` rewrites a snapshot: read its diff.
 5. Keep the docs current: a file added, moved, or removed updates its map area, a new target, agent, command, or workflow file `CLAUDE.md`, a user-visible change `README.md`. Make room within a budget by pointing to the notes, never by raising it.
-6. Confirm every delta spec scenario has code and a test. Run `make gates` and `make spec-validate` and fix what fails.
+6. Confirm every delta spec scenario has code and a test. Run `make gates` and `spec-validate` and fix what fails.
 
 ### fix
 

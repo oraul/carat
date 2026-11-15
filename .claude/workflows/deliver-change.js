@@ -534,26 +534,29 @@ async function flush() {
 // Before the fetch, originCheck holds origin to the hosted repository.
 const MERGE_GATES = 'tmp/.merge-gates'
 const PINNED_GIT = 'GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null'
-// The green line's origin check, before its fetch: origin's url, as git
-// resolves it (insteadOf included) and with its lines joined, is REPO
-// (owner/name, the run state's, no part only dots) on GitHub over https
-// or ssh.
+// The git blob ids (printf %s FORM | git hash-object --stdin) of the
+// repository's address in its https, ssh (git@host/path), and scp
+// (git@host:path) forms, the three the hook lines under .claude/agents/
+// pin, then the same three with .git; recomputed when the repository
+// moves.
+const ORIGIN_IDS = ['244706f6059ecef3ab5cd192a3b80eea788e0e2a', '5cd0861f1cf8aa9c1a53cdb6a739247d9577cb90', 'b2da5b5322207a9cca89affa28b5740add3ad2f4', '63b6cf12839e160500c53c6dafc920b56bb92d6b', '15d198e2a7d9d7bfdc3fbe324d57c83feda2d51e', '2a4afd8e4b6f3f7d61b102c6ce270e6ead7bc233']
+// The green line's origin check, before its fetch: the blob id of
+// origin's url, as git resolves it (insteadOf included) and with its
+// lines joined, is one of ORIGIN_IDS, so the line names no address; a
+// user before the host or a trailing slash is refused.
 // Branch code run by the checks can point remote.origin.url at a local
 // repository or a server of its own, whose main the forced fetch would
 // make origin/main, bringing its own gates and the guard the merge hook
-// reads; the check is the script's, which no fetch replaces. A REPO of
-// another form matches nothing (a^b).
-function originCheck(repo) {
-  const valid = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo || '') && !/(^|\/)\.+(\/|$)/.test(repo)
-  const name = valid ? repo.replace(/\./g, '[.]') : 'a^b'
-  return `${PINNED_GIT} remote get-url origin | tr -d '\\n' | grep -q -x -E '(https[:]//([^/@]+@)?github[.]com/|(ssh[:]//)?git@github[.]com[:/])${name}([.]git)?/?'`
+// reads; the check is the script's, which no fetch replaces.
+function originCheck() {
+  return `${PINNED_GIT} remote get-url origin | tr -d '\\n' | ${PINNED_GIT} hash-object --stdin | grep -q -x -E '${ORIGIN_IDS.join('|')}'`
 }
 function mergeLines() {
   const records = mergeRecords(ran)
   const first = (line) => [metricLine(), line].filter(Boolean).join(' && ')
   const ci = (result) => `sh tools/run_state.sh set ${state.change} ci "${result} ${head}"`
   return {
-    green: `git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck(state.repo)} && ${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
+    green: `git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck()} && ${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
     red: first(ci('red')),
   }
 }
