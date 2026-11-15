@@ -234,12 +234,13 @@ TEST_ONLY="^(test/|$RECORDS_RE|\$)"
 # The compile stages, skipped when the code they read is the code of their
 # last pass and their outputs are the ones it left: the code key hashes
 # every tracked path but NOT_COMPILED, which no compile stage reads, except
-# BUILD_TOOLS, which dev-build and test-build run. COMPILED keeps each
-# stage's last pass, "STAGE KEY SUM", across changes, in the run state's
-# directory, which only this script writes.
+# BUILD_TOOLS, the scripts dev-build, test-build, and diagnose run: the
+# analysis budget and the Spinel warning check, whose pattern decides a
+# pass. COMPILED keeps each stage's last pass, "STAGE KEY SUM", across
+# changes, in the run state's directory, which only this script writes.
 COMPILE_STAGES="dev-build test-build diagnose"
 NOT_COMPILED='^([.]claude/|[.]github/|docs/|openspec/|tools/[^/]+[.]sh$|[^/]+[.]md$)'
-BUILD_TOOLS='^tools/analysis_budget[.]sh$'
+BUILD_TOOLS='^tools/(analysis_budget|spinel_warnings)[.]sh$'
 compiled_file=$state_dir/compiled
 # The gates of a history row's first passes, in order, before gates.
 GATES="check quality security bench ci"
