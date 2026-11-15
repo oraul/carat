@@ -8,7 +8,7 @@
 
 ## 3. revert_to and the global marks
 
-- [ ] 3.1 Shift the global marks in `Buffer#revert_to` (`carat/domain/buffer.rb`); prove it with the `test/domain_global.rb` check "A reverted plugin edit inside a global".
+- [x] 3.1 Shift the global marks in `Buffer#revert_to` (`carat/domain/buffer.rb`); prove it with the `test/domain_global.rb` check "A reverted plugin edit inside a global".
 
 ## 4. timeout follow-ups
 
