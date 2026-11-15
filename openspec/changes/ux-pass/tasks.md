@@ -15,4 +15,4 @@
 
 ## 4. Verify
 
-- [ ] 4.1 Confirm no file under `carat/`, `bin/`, `config/`, `test/`, or `tools/` changed (`git diff --stat main`), then run `make lint`, `make docs-lint`, `make gates`, and `make spec-validate`.
+- [x] 4.1 Confirm no file under `carat/`, `bin/`, `config/`, `test/`, or `tools/` changed (`git diff --stat main`), then run `make lint`, `make docs-lint`, `make gates`, and `make spec-validate`.
