@@ -2,9 +2,9 @@
 
 ## 1. Formatter setting
 
-- [ ] 1.1 Answer a formatter line as not supported yet in `carat/domain/config.rb` (`PLANNED_SETTINGS`), proven by "a language setting not supported yet" in `test/domain_rc_parser.rb`
-- [ ] 1.2 Remove the shipped formatter line from `config/default.caratrc` and regenerate `carat/domain/default_config.rb` with `make gen-config`, proven by `test/config_sync.rb` ("The defaults ship no formatter")
-- [ ] 1.3 Update README.md and `docs/architecture.md` section 7
+- [x] 1.1 Answer a formatter line as not supported yet in `carat/domain/config.rb` (`PLANNED_SETTINGS`), proven by "a language setting not supported yet" in `test/domain_rc_parser.rb`
+- [x] 1.2 Remove the shipped formatter line from `config/default.caratrc` and regenerate `carat/domain/default_config.rb` with `make gen-config`, proven by `test/config_sync.rb` ("The defaults ship no formatter")
+- [x] 1.3 Update README.md and `docs/architecture.md` section 7
 
 ## 2. Ex descriptions with their registration
 

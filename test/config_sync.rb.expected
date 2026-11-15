@@ -1,5 +1,6 @@
 ok   generated mirror matches config/default.caratrc
 ok   every line of the defaults reads, in a known scope
+ok   the defaults ship no formatter
 ok   every option line names an option with a value of its kind
 ok   the icons option names a set
 ok   the defaults set the leader
@@ -17,4 +18,4 @@ ok   generated registry matches config/plugins.caratrc
 ok   the compiled registry names the same plugins
 ok   the compiled registry constructs one plugin per entry
 ok   every plugin line of config/default.caratrc names a listed plugin
-config_sync: 19 passed, 0 failed
+config_sync: 20 passed, 0 failed

@@ -746,12 +746,11 @@ module Carat
       keymap.cmdline <C-n> palette.next
       keymap.cmdline <C-p> palette.previous
 
-      # Language commands: language.<name>.lsp and language.<name>.formatter.
+      # Language commands: language.<name>.lsp, the language server to run.
       # A server starts on its own only in a directory under a root of
       # language.trusted_roots, set in the user file, as
       # language.trusted_roots ~/src /work; elsewhere :LspStart starts it.
       language.ruby.lsp ruby-lsp
-      language.ruby.formatter rubocop -A --stdin {file} --stderr
 
       # Plugins: plugin.<name>.enabled and plugin.<name>.<option>.
       plugin.explorer.enabled true
