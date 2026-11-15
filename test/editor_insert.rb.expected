@@ -20,6 +20,8 @@ ok   autoindent copies the indent
 ok   o copies the indent with autoindent
 ok   o does not indent without autoindent
 ok   expandtab inserts spaces to the next tabstop
+ok   Expandtab after a tab: the spaces reach the tab stop by screen cell
+ok   Expandtab after a wide character: the spaces reach the tab stop by screen cell
 ok   noexpandtab inserts a tab character
 ok   insert indicator shown
 ok   bar cursor in insert mode
@@ -27,4 +29,4 @@ ok   indicator cleared in normal mode
 ok   block cursor in normal mode
 ok   typed text appears on the screen
 ok   the status bar shows the mode and the buffer as modified
-editor_insert: 29 passed, 0 failed
+editor_insert: 31 passed, 0 failed

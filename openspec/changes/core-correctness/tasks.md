@@ -1,6 +1,6 @@
 ## 1. Tab under expandtab
 
-- [ ] 1.1 Pad from the display column in `InsertTab#call` (`carat/use_cases/insert_tab.rb`) with `Domain::DisplayWidth.column`; prove it with the `test/editor_insert.rb` rows "Expandtab after a tab" and "Expandtab after a wide character".
+- [x] 1.1 Pad from the display column in `InsertTab#call` (`carat/use_cases/insert_tab.rb`) with `Domain::DisplayWidth.column`; prove it with the `test/editor_insert.rb` rows "Expandtab after a tab" and "Expandtab after a wide character".
 
 ## 2. none unbinding
 
