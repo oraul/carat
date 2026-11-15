@@ -56,6 +56,38 @@ module AdaptersFramePresenterTest
     true
   end
 
+  # Every cell's code point is ASCII.
+  def self.ascii_frame?(frame)
+    r = 0
+    while r < frame.rows
+      c = 0
+      while c < frame.cols
+        return false if frame.cell(r, c).code > 127
+        c += 1
+      end
+      r += 1
+    end
+    true
+  end
+
+  # The distinct characters of the cells in WinSeparator, sorted.
+  def self.separator_chars(frame)
+    chars = []
+    r = 0
+    while r < frame.rows
+      c = 0
+      while c < frame.cols
+        cell = frame.cell(r, c)
+        if cell.hl == Carat::Domain::Highlight::WINDOW_SEPARATOR
+          chars << cell.char unless chars.include?(cell.char)
+        end
+        c += 1
+      end
+      r += 1
+    end
+    chars.sort
+  end
+
   # The visual selection: the Visual highlight on the selected cells of the
   # current window, the cell under the cursor left in its own highlight.
   VIS = D::Highlight::VISUAL
@@ -393,6 +425,32 @@ module AdaptersFramePresenterTest
     s.buffer.mark_unsaved
     f = draw(s, 6, 21)
     t.assert_equal(" NORMAL  a.txt ●", f.row_text(4), "the modified icon stays when the rest is dropped")
+
+    # ASCII separators: under option.icons ascii the separator column is |
+    # and the separator row -, both in WinSeparator.
+    s = state_for(["one", "two", "three"], "a.txt")
+    s.options.icons = "ascii"
+    draw(s, 12, 30)
+    s.tab.layout.split(0, true, 0, 5)
+    s.tab.layout.split(0, false, 0, 5)
+    f = draw(s, 12, 30)
+    t.assert_equal(["-", "|"], separator_chars(f), "the cells in WinSeparator are the ascii separators | and -")
+
+    # No byte above 127 in an ascii frame: two listed tabs, both splits, a
+    # modified buffer, and progress at 40 percent; the same frame in the
+    # unicode set holds box drawing and shapes.
+    LISTED.add(s.buffer)
+    other = D::Buffer.new(lines: ["zz"], path: "b.txt", line_ending: "\n")
+    LISTED.add(other)
+    s.buffer.mark_unsaved
+    SLOTS.set_progress("Indexing", "", 40)
+    f = draw(s, 12, 80)
+    t.assert_equal([true, true, true], [f.row_text(0).include?("a.txt"), f.text_rows.join("\n").include?("Indexing ####------"), ascii_frame?(f)], "an ascii frame with tabs, splits, a modified buffer, and progress holds no code point above 127")
+    s.options.icons = "unicode"
+    t.assert_equal(false, ascii_frame?(draw(s, 12, 80)), "the same frame in the unicode set holds code points above 127")
+    SLOTS.clear_progress
+    LISTED.remove(other)
+    LISTED.remove(s.buffer)
 
     # A long line is clipped at the window's edge.
     s = state_for(["abcdefghijklmnopqrstuvwxyz"], "a.txt")

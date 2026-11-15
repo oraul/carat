@@ -251,7 +251,7 @@ module Carat
         elsif kind == PROGRESS
           x = frame.put_within(row, x, " ", hl, limit)
           x = frame.put_within(row, x, slots.progress_label, hl, limit)
-          x = paint_bar(frame, row, x, limit) if bar?(state)
+          x = paint_bar(frame, row, x, limit, set == "ascii") if bar?(state)
         elsif kind == LSP
           hl = StatusBar.lsp_group(slots.lsp_state)
           x = frame.put_within(row, x, " ", hl, limit)
@@ -300,9 +300,10 @@ module Carat
 
       # The bar from x: a done cell per ten percent, or BAR_RUN done cells
       # at the report count's place without a percent; returns the column
-      # after it.
-      #: (Domain::Frame, Integer, Integer, Integer) -> Integer
-      def paint_bar(frame, row, x, limit)
+      # after it. The cells are # and - when plain or ascii; only plain
+      # drops the done cells' color.
+      #: (Domain::Frame, Integer, Integer, Integer, bool) -> Integer
+      def paint_bar(frame, row, x, limit, ascii)
         slots = @slots
         x = frame.put_within(row, x, " ", Domain::Highlight::STATUS, limit) unless slots.progress_label.empty?
         percent = slots.progress_percent
@@ -313,10 +314,11 @@ module Carat
           to = from + BAR_RUN
         end
         done = @plain ? Domain::Highlight::STATUS : Domain::Highlight::STATUS_LSP_READY
+        flat = @plain || ascii
         c = 0
         while c < BAR_CELLS && x < limit
           on = c >= from && c < to
-          x = frame.put_code(row, x, on ? (@plain ? 0x23 : 0x2501) : (@plain ? 0x2D : 0x2500), 1, on ? done : Domain::Highlight::STATUS)
+          x = frame.put_code(row, x, on ? (flat ? 0x23 : 0x2501) : (flat ? 0x2D : 0x2500), 1, on ? done : Domain::Highlight::STATUS)
           c += 1
         end
         x

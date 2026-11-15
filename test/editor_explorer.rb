@@ -337,7 +337,7 @@ module EditorExplorerTest
 
     h = editor_on("a.md", config_with("ascii", ""))
     h.type(" e")
-    t.assert_equal(["│", "~"], [h.row(0)[30, 1], h.row(6)[0, 1]], "the tree has no line numbers and a separator at its right")
+    t.assert_equal(["|", "~"], [h.row(0)[30, 1], h.row(6)[0, 1]], "the tree has no line numbers and a separator at its right")
     t.assert_equal([" explorer", H::TAB_LINE_SELECTED, H::TAB_LINE_FILL, " - proj"], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 12), h.row(1)[0, 30].rstrip], "the left slot's header names the explorer over the tree")
 
     # Names with a space or a bar open as named, never parsed as an ex

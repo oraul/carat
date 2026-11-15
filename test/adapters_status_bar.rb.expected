@@ -59,6 +59,7 @@ ok   a plain bar under NO_COLOR
 ok   no title, the bar alone
 ok   done cells in StatusLineLspReady, the rest in StatusLine
 ok   plain done cells in StatusLine
+ok   an ascii bar reads #### and ------ with the done cells in StatusLineLspReady
 ok   a narrow bar drops the progress (35) before the branch (40)
 ok   clearing ends the progress once
-adapters_status_bar: 63 passed, 0 failed
+adapters_status_bar: 64 passed, 0 failed
