@@ -392,7 +392,7 @@ module AdaptersFramePresenterTest
     t.assert_equal([0, 15], [f.cursor_row, f.cursor_col], "the cursor is in the right window, which stayed current")
     s.buffer.mark_unsaved
     f = draw(s, 6, 21)
-    t.assert_equal(" NORMAL  a.txt \u{F111}", f.row_text(4), "the modified icon stays when the rest is dropped")
+    t.assert_equal(" NORMAL  a.txt ●", f.row_text(4), "the modified icon stays when the rest is dropped")
 
     # A long line is clipped at the window's edge.
     s = state_for(["abcdefghijklmnopqrstuvwxyz"], "a.txt")

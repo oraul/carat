@@ -4,7 +4,8 @@ module Carat
     # set uses Nerd Fonts code points in the private use areas, which take
     # one cell and need a Nerd Font in the terminal; the unicode set uses
     # triangles, bullets, and geometric shapes common terminal fonts have;
-    # the ascii set uses plain characters. Plugins ask for icons by name
+    # the ascii set uses plain characters. The unicode set is the default,
+    # each of its glyphs one cell wide in any font. Plugins ask for icons by name
     # through the host, never by code point, so the icons option switches
     # the whole editor.
     module Icons
@@ -121,7 +122,7 @@ module Carat
       }
 
       # The glyph for a name in a set, "" for an unknown name; an unknown
-      # set reads as nerd.
+      # set reads as the default set, unicode.
       #: (String, String) -> String
       def self.glyph(name, set)
         glyph = table(set)[name]
@@ -131,9 +132,9 @@ module Carat
       #: (String) -> Hash[String, String]
       def self.table(set)
         case set
-        when "unicode" then UNICODE
+        when "nerd" then NERD
         when "ascii" then ASCII
-        else NERD
+        else UNICODE
         end
       end
 

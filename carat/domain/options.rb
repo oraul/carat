@@ -9,8 +9,9 @@ require_relative "border_style"
 module Carat
   module Domain
     # Typed options with Vim names, plus icons, Carat's own: the icon set
-    # plugins draw with, "nerd", "unicode", or "ascii". timeoutlen is the
-    # milliseconds the keymap waits for the rest of an ambiguous binding.
+    # plugins draw with, "unicode" (the default), "nerd", or "ascii".
+    # timeoutlen is the milliseconds the keymap waits for the rest of an
+    # ambiguous binding.
     # scroll is the lines <C-d> and <C-u> scroll, half the window when 0.
     # Only the ones the editor reads are members; :set and local options
     # arrive with the options change. undolevels is how many undo states a
@@ -75,7 +76,7 @@ module Carat
       # indent guides off, as in Neovim, which draws none.
       #: () -> void
       def initialize
-        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "nerd", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: KEYHINTS_DELAY, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto", indentguides: false, indentguides_char: GUIDE_CHAR, winborder: BorderStyle::DEFAULT, jumptab: JUMPTAB_KEEP, gt: GT_TAB_PAGES)
+        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "unicode", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: KEYHINTS_DELAY, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto", indentguides: false, indentguides_char: GUIDE_CHAR, winborder: BorderStyle::DEFAULT, jumptab: JUMPTAB_KEEP, gt: GT_TAB_PAGES)
       end
 
       # The options a configuration line may set, by name, with the kind

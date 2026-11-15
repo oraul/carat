@@ -367,7 +367,7 @@ module UseCasesPluginsTest
     t.assert_equal([true, "\"a.txt\" 2L, 11B written", "edited\ntwo\n"], [r.ok, r.message, files.get("a.txt")], "run_ex runs the command and returns its outcome")
     r = h.run_ex("nope")
     t.assert_equal([false, "E492: Not an editor command: nope"], [r.ok, r.message], "a failed ex command is a failed response")
-    t.assert_equal("\u{F05A}", h.icon("info").text, "icon reads the nerd set by default")
+    t.assert_equal("◆", h.icon("info").text, "icon reads the unicode set by default")
     state.options.icons = "ascii"
     t.assert_equal(["i", false, "No icon named nope"], [h.icon("info").text, h.icon("nope").ok, h.icon("nope").message], "and the ascii set when configured, refusing an unknown name")
 
@@ -403,14 +403,14 @@ module UseCasesPluginsTest
     rig = setup([p, q], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     r = p.host.place_sign(0, 1, "error")
-    t.assert_equal([true, "\u{F057}", "probe"], [r.ok, state.buffer.sign_at(1), state.buffer.layer_at(0).owner], "a sign is the icon's glyph with its owner")
+    t.assert_equal([true, "✖", "probe"], [r.ok, state.buffer.sign_at(1), state.buffer.layer_at(0).owner], "a sign is the icon's glyph with its owner")
     q.host.place_sign(0, 0, "warning")
     p.host.place_sign(0, 1, "info")
-    t.assert_equal(["\u{F071}", "\u{F05A}"], [state.buffer.sign_at(0), state.buffer.sign_at(1)], "a plugin's later sign on a row replaces its own")
+    t.assert_equal(["▲", "◆"], [state.buffer.sign_at(0), state.buffer.sign_at(1)], "a plugin's later sign on a row replaces its own")
     q.host.place_sign(0, 1, "warning")
-    t.assert_equal("\u{F05A}", state.buffer.sign_at(1), "the plugin registered first shows when two mark a row")
+    t.assert_equal("◆", state.buffer.sign_at(1), "the plugin registered first shows when two mark a row")
     r = p.host.clear_signs(0)
-    t.assert_equal([true, 1, "\u{F071}", "\u{F071}"], [r.ok, r.number, state.buffer.sign_at(0), state.buffer.sign_at(1)], "a plugin clears only its own signs")
+    t.assert_equal([true, 1, "▲", "▲"], [r.ok, r.number, state.buffer.sign_at(0), state.buffer.sign_at(1)], "a plugin clears only its own signs")
     t.assert_equal("Row 7 is outside the buffer", p.host.place_sign(0, 7, "error").message, "a row outside the buffer is refused")
     t.assert_equal("No icon named nope", p.host.place_sign(0, 0, "nope").message, "an unknown icon is refused")
     t.assert_equal(false, p.host.clear_signs(99).ok, "clearing a missing buffer fails")

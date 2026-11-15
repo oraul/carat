@@ -29,7 +29,10 @@ module Carat
       option.scroll 0
       option.scrolloff 5
       option.clipboard ""
-      option.icons nerd
+      # The icon set: unicode (shapes common terminal fonts have), nerd (needs
+      # a Nerd Font), or ascii, which also draws the window separators and the
+      # progress bar in ASCII.
+      option.icons unicode
       option.undolevels 1000
       option.timeoutlen 500
       # Milliseconds a key that begins longer bindings waits before the key
