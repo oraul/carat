@@ -6,8 +6,8 @@
 
 ## 2. Corrections
 
-- [ ] 2.1 `docs/architecture.md`: correct each disagreement the report lists under Corrected here (planned markers, layer diagram, ex commands, API version, `Carat::Json` size, Makefile role, port callers, environment reads, completion menu, layout tree, roadmap condition). Verify with `make docs-lint` and `make test-one T=test/lint.rb` (the port table and the map paths).
-- [ ] 2.2 `docs/codebase-map.md`: correct area 17's environment reads, area 4's repeated method, and area 1's stray mark. Verify with `make test-one T=test/lint.rb` (map methods and paths) and `make docs-lint`.
+- [x] 2.1 `docs/architecture.md`: correct each disagreement the report lists under Corrected here (planned markers, layer diagram, ex commands, API version, `Carat::Json` size, Makefile role, port callers, environment reads, completion menu, layout tree, roadmap condition). Verify with `make docs-lint` and `make test-one T=test/lint.rb` (the port table and the map paths).
+- [x] 2.2 `docs/codebase-map.md`: correct area 17's environment reads, area 4's repeated method, and area 1's stray mark. Verify with `make test-one T=test/lint.rb` (map methods and paths) and `make docs-lint`.
 
 ## 3. Backlog
 
