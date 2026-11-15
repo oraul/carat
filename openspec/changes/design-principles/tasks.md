@@ -6,9 +6,9 @@
 
 ## 2. Sprint mix
 
-- [ ] 2.1 `docs/goals.md`: add the mix of three features and two fixes, T0 outside it, to the sprint rule. Verify with `make docs-lint`.
-- [ ] 2.2 `.claude/agents/planner.md`: the rubric citation of step 2 and sprint mode step 2 state the mix and the decision's evidence `3 features, 2 fixes`, within 8,192 bytes. Verify with `make docs-lint`.
-- [ ] 2.3 `CLAUDE.md` Agents Sprints line and the README's planner step state the mix. Verify with `make docs-lint` and `make gates` (docs gate).
+- [x] 2.1 `docs/goals.md`: add the mix of three features and two fixes, T0 outside it, to the sprint rule. Verify with `make docs-lint`.
+- [x] 2.2 `.claude/agents/planner.md`: the rubric citation of step 2 and sprint mode step 2 state the mix and the decision's evidence `3 features, 2 fixes`, within 8,192 bytes. Verify with `make docs-lint`.
+- [x] 2.3 `CLAUDE.md` Agents Sprints line and the README's planner step state the mix. Verify with `make docs-lint` and `make gates` (docs gate).
 
 ## 3. Gates
 
