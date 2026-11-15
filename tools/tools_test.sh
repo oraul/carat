@@ -173,6 +173,55 @@ expect "ci_scope: a push whose tree passed in its pull request skips tools-test"
   env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=1 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
 expect "ci_scope: a push whose pull request did not pass runs" 0 "^run=true" \
   env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=0 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
+# The compile output (the main workflow's compiling steps): an equal-tree
+# push whose units main's compile cache holds (CACHED, the probe's hit)
+# compiles nothing, one without them warms the cache, a push whose tree
+# differs from the passed head runs the full checks and compiles, and a
+# pull request compiles only when its checks run.
+expect "ci_scope: an equal-tree push whose units are cached compiles nothing" 0 "^compile=false$" \
+  env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=1 CACHED=true EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
+expect "ci_scope: an equal-tree push without cached units compiles" 0 "^compile=true$" \
+  env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=1 CACHED=false EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
+expect "ci_scope: a differing-tree push runs the full checks" 0 "^run=true: tools/x[.]sh is code" \
+  env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE=0123abcd FAKE_PASSED=1 CACHED=true EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
+expect "ci_scope: a differing-tree push compiles though its units are cached" 0 "^compile=true$" \
+  env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE=0123abcd FAKE_PASSED=1 CACHED=true EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
+fresh pr-compile
+echo change >> docs/notes.md
+commit "chore: change the notes"
+expect "ci_scope: a documentation-only pull request compiles nothing" 0 "^compile=false$" scope pull_request
+cd "$work/push" || exit 1
+
+# The two workflows: pull requests run ci.yml alone, whose job spin is the
+# required check, with no step only main needs; main.yml never runs on a
+# pull request, and each of its compiling steps runs only on compile.
+pr_flow="$here/../.github/workflows/ci.yml"
+main_flow="$here/../.github/workflows/main.yml"
+# triggers FILE: the events of the workflow's on: block, one per line.
+triggers() {
+  awk '/^on:/ { on = 1; next } on && /^[^ ]/ { exit } on && /^  [a-z_]+:/ { sub(/^  /, ""); sub(/:.*/, ""); print }' "$1"
+}
+# ungated FILE: the run: line of every step that compiles or runs a compiled
+# program (make dev-build, test-build, bench-budget, metrics, build, the
+# release smoke test, or the toolchain) but whose if: does not name compile.
+ungated() {
+  awk '
+    function check() { if (cmd ~ /make (dev-build|test-build|bench-budget|metrics|build|toolchain)( |$)|smoke_editor/ && cond !~ /outputs[.]compile == .true./) print cmd }
+    /^      - name:/ { check(); cond = ""; cmd = "" }
+    /^        if:/ { cond = $0 }
+    /^        run:/ { cmd = $0 }
+    END { check() }' "$1"
+}
+only_pull_requests() {
+  [ "$(triggers "$1")" = pull_request ] && echo "pull requests only"
+}
+expect "ci workflows: the pull request workflow runs on pull requests only" 0 "^pull requests only$" only_pull_requests "$pr_flow"
+expect "ci workflows: the pull request workflow keeps the required check spin" 0 "^  spin:$" grep -x '  spin:' "$pr_flow"
+expect "ci workflows: a pull request runs no main-only step" 1 "^$" grep -E 'make build|smoke_editor|cache/save|refs/heads/main' "$pr_flow"
+expect "ci workflows: the main workflow never runs on a pull request" 1 "^$" grep -x '  pull_request:' "$main_flow"
+expect "ci workflows: the main workflow runs on a push to main" 0 "branches: \[main\]" grep -A1 -x '  push:' "$main_flow"
+expect "ci workflows: no job of the main workflow is named spin" 1 "^$" grep -x '  spin:' "$main_flow"
+expect "ci workflows: the main workflow compiles only on compile" 0 "^$" ungated "$main_flow"
 
 # A gh that answers a GitHub 5xx error body and fails for the queries
 # matching FAKE_FAIL, as in main's CI run 246, and hands the rest to the
@@ -192,17 +241,18 @@ err_scope() {
   rm -f "$work/scope-out"
   env PATH="$work/errbin:$PATH" FAKE_FAIL="$1" GITHUB_OUTPUT="$work/scope-out" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=1 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
 }
-# well_formed: GITHUB_OUTPUT holds exactly run=true, one reason= line, and
-# one tools= line.
+# well_formed: GITHUB_OUTPUT holds exactly run=true, one reason= line, one
+# tools= line, and one compile= line.
 well_formed() {
-  [ "$(wc -l < "$work/scope-out")" -eq 3 ] && [ "$(sed -n 1p "$work/scope-out")" = "run=true" ] &&
+  [ "$(wc -l < "$work/scope-out")" -eq 4 ] && [ "$(sed -n 1p "$work/scope-out")" = "run=true" ] &&
     sed -n 2p "$work/scope-out" | grep -q -E '^reason=[^{}]+$' &&
-    sed -n 3p "$work/scope-out" | grep -q -E '^tools=(true|false)$' && echo well-formed
+    sed -n 3p "$work/scope-out" | grep -q -E '^tools=(true|false)$' &&
+    [ "$(sed -n 4p "$work/scope-out")" = "compile=true" ] && echo well-formed
 }
 expect "ci_scope: a push whose number query answers an error body runs" 0 "^run=true: tools/x[.]sh is code" err_scope number
-expect "ci_scope: an error body leaves GITHUB_OUTPUT one run, one reason, and one tools line" 0 "^well-formed$" well_formed
+expect "ci_scope: an error body leaves GITHUB_OUTPUT one run, one reason, one tools, and one compile line" 0 "^well-formed$" well_formed
 expect "ci_scope: a push whose every query answers an error body runs" 0 "^run=true: tools/x[.]sh is code" err_scope ""
-expect "ci_scope: every query failing leaves GITHUB_OUTPUT one run, one reason, and one tools line" 0 "^well-formed$" well_formed
+expect "ci_scope: every query failing leaves GITHUB_OUTPUT one run, one reason, one tools, and one compile line" 0 "^well-formed$" well_formed
 # A code path holding a line break, which git --name-only quotes as
 # "tools/x\nrun=false.sh": the reason that names it stays one line.
 fresh linebreak
@@ -849,15 +899,17 @@ cat > "$work/stages-bin/gh" <<'GH'
 #!/bin/sh
 case "$*" in
   *"actions/runs?head_sha"*) echo "${FAKE_RUN:-}" ;;
-  *"/jobs"*) printf '%s\n' "5 Docs lint" "0 Scope" "${FAKE_TEST:-115} Compile the tests" "45 Build the editor for the smoke test" ;;
+  *"/jobs"*) printf '%s\n' "5 Docs lint" "0 Scope" "${FAKE_TEST:-115} Compile the tests" "45 Build the editor for the smoke test" "0.43999981880187988 Resolve the Spinel commit" "0.04 Restore the toolchain from cache" ;;
 esac
 GH
 chmod +x "$work/stages-bin/gh"
 full=$(git rev-parse HEAD)
 state set derived repo owner/carat > /dev/null
-expect "run_state: ci-stages records each step's seconds" 0 "recorded 3 steps of run 42" \
+expect "run_state: ci-stages records each step's seconds" 0 "recorded 4 steps of run 42" \
   env PATH="$work/stages-bin:$PATH" FAKE_RUN=42 sh "$here/run_state.sh" ci-stages derived "$full"
 expect "run_state: ci-stages names a step by its words, cut at 32 characters" 0 "^45$" state get derived metric.ci.build_the_editor_for_the_smoke
+expect "run_state: ci-stages records a fractional step, rounded to a tenth" 0 "^0[.]4$" state get derived metric.ci.resolve_the_spinel_commit
+expect "run_state: ci-stages leaves out a step that rounds to nothing" 0 "^$" state get derived metric.ci.restore_the_toolchain_from_cache
 env PATH="$work/stages-bin:$PATH" FAKE_RUN=43 FAKE_TEST=0 sh "$here/run_state.sh" ci-stages derived "$full" > /dev/null
 expect "run_state: ci-stages replaces the previous run's stages" 0 "^$" state get derived metric.ci.compile_the_tests
 expect "run_state: ci-stages records nothing and passes without a run" 0 "no ci run found" \
@@ -895,7 +947,7 @@ expect "run_state: history groups the phase figures" 0 "^implement=1000/30,check
 expect "run_state: history sums the phase figures" 0 "^1200 40$" awk -F'\t' 'NR == 2 { print $11, $12 }' docs/metrics.tsv
 expect "run_state: history records no estimate without a queue item" 0 "^-$" awk -F'\t' 'NR == 2 { print $15 }' docs/metrics.tsv
 expect "run_state: history records the totals after the estimate" 0 "^7500 4[.]5$" awk -F'\t' 'NR == 2 { print $16, $17 }' docs/metrics.tsv
-expect "run_state: history records the CI stages, waiting calls, and weighted tokens" 0 "^docs_lint=5,build_the_editor_for_the_smoke=45 4 4628 implement=5163/4478/2,record=4400/150/1$" \
+expect "run_state: history records the CI stages, waiting calls, and weighted tokens" 0 "^docs_lint=5,build_the_editor_for_the_smoke=45,resolve_the_spinel_commit=0[.]4 4 4628 implement=5163/4478/2,record=4400/150/1$" \
   awk -F'\t' 'NR == 2 { print $19, $20, $21, $22 }' docs/metrics.tsv
 
 # The estimate: the size word of the change's item in the queue at the

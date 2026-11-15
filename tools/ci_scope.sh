@@ -16,31 +16,42 @@
 #     these files already.
 # It also writes tools=true or tools=false: whether make tools-test reads
 # a changed file (TOOLS_RE in tools/rules.sh), true on a run by hand or
-# when the changed files are unknown, false on the equal-tree push.
+# when the changed files are unknown, false on the equal-tree push. And it
+# writes compile=true or compile=false: whether the steps that compile run,
+# true when the checks run, and on a push also when CACHED, the hit of a
+# lookup-only probe of the compile cache's exact entry, is not true, so an
+# equal-tree push of sources main already compiled compiles nothing while
+# one main has not compiled warms the cache, measures main, and builds the
+# release binary.
 # Anything it cannot establish, an API call that fails included, runs the
 # checks.
 #
 # Environment: EVENT (github.event_name), REPO (owner/name), SHA (the
-# commit checked out), GH_TOKEN for the gh calls, and on a pull request
+# commit checked out), GH_TOKEN for the gh calls, CACHED on a push, and on
+# a pull request
 # PR (its number) and HEAD_SHA (its head). The checkout needs the commit's
 # first parent (fetch-depth 2): on a pull request the checked out commit
 # is the merge of the head into the base, whose first parent is the base;
 # a green head missing from the checkout is fetched by its sha.
 set -u
 
-# answer RUN REASON: writes RUN, REASON, and tools; the reason goes on one line whatever it holds, so
+# answer RUN REASON: writes RUN, REASON, tools, and compile; the reason goes on one line whatever it holds, so
 # GITHUB_OUTPUT keeps one run= and one reason= line. printf, never echo:
 # dash's echo expands backslash escapes, and git quotes a path holding a
 # line break as "x\ny", which echo would turn back into a line break.
 answer() {
   reason=$(printf '%s' "$2" | tr '\r\n' '  ')
+  compile=false
+  if [ "$1" = true ] || { [ "$event" = push ] && [ "${CACHED:-}" != true ]; }; then compile=true; fi
   if [ -n "${GITHUB_OUTPUT:-}" ]; then
     printf 'run=%s\n' "$1" >> "$GITHUB_OUTPUT"
     printf 'reason=%s\n' "$reason" >> "$GITHUB_OUTPUT"
     printf 'tools=%s\n' "$tools" >> "$GITHUB_OUTPUT"
+    printf 'compile=%s\n' "$compile" >> "$GITHUB_OUTPUT"
   fi
   printf 'run=%s: %s\n' "$1" "$reason"
   printf 'tools=%s\n' "$tools"
+  printf 'compile=%s\n' "$compile"
   exit 0
 }
 
