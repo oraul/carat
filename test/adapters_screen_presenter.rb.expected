@@ -86,11 +86,11 @@ ok   dark_plus's keyword
 ok   light_plus's comment
 ok   a file-icon group
 ok   Normal is a bare reset
-ok   Normal on the cursor line takes its background
+ok   Normal on the cursor line takes its background and the palette's text color
 ok   a comment on the cursor line keeps its color
 ok   a 256-color comment on the cursor line
 ok   a 16-color comment on the cursor line is underlined
-ok   a selection on the cursor line keeps its background
+ok   a selection on the cursor line keeps its background and takes the palette's text color
 ok   a 16-color selection on the cursor line is not underlined
 ok   the nearest palette colors: cube corners and grays
 ok   an id out of range is drawn as Normal

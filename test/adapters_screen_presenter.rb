@@ -370,11 +370,11 @@ module AdaptersScreenPresenterTest
       ["light_plus's comment", [T, "light_plus", H::COMMENT], "\e[0;3;38;2;0;128;0m"],
       ["a file-icon group", [T, "one_dark", H::ICON_RUBY], "\e[0;38;2;232;117;126m"],
       ["Normal is a bare reset", [T, "one_dark", H::NORMAL], "\e[0m"],
-      ["Normal on the cursor line takes its background", [T, "one_dark", H::NORMAL + H::CURSOR_LINE_LAYER], "\e[0;48;2;44;49;60m"],
+      ["Normal on the cursor line takes its background and the palette's text color", [T, "one_dark", H::NORMAL + H::CURSOR_LINE_LAYER], "\e[0;38;2;171;178;191;48;2;44;49;60m"],
       ["a comment on the cursor line keeps its color", [T, "one_dark", H::COMMENT + H::CURSOR_LINE_LAYER], "\e[0;3;38;2;149;156;168;48;2;44;49;60m"],
       ["a 256-color comment on the cursor line", [C256, "one_dark", H::COMMENT + H::CURSOR_LINE_LAYER], "\e[0;3;38;5;247;48;5;236m"],
       ["a 16-color comment on the cursor line is underlined", [C16, "one_dark", H::COMMENT + H::CURSOR_LINE_LAYER], "\e[0;3;4;90m"],
-      ["a selection on the cursor line keeps its background", [T, "one_dark", H::VISUAL + H::CURSOR_LINE_LAYER], "\e[0;48;2;62;68;82m"],
+      ["a selection on the cursor line keeps its background and takes the palette's text color", [T, "one_dark", H::VISUAL + H::CURSOR_LINE_LAYER], "\e[0;38;2;171;178;191;48;2;62;68;82m"],
       ["a 16-color selection on the cursor line is not underlined", [C16, "one_dark", H::VISUAL + H::CURSOR_LINE_LAYER], "\e[0;7m"]
     ]) { |input| written(input[0].to_i, input[1].to_s, input[2].to_i) }
     t.assert_equal([16, 231, 232, 255, 103], [Carat::Adapters::SgrTable.index_256(0x000000), Carat::Adapters::SgrTable.index_256(0xffffff), Carat::Adapters::SgrTable.index_256(0x080808), Carat::Adapters::SgrTable.index_256(0xeeeeee), Carat::Adapters::SgrTable.index_256(0x7f849c)], "the nearest palette colors: cube corners and grays")

@@ -47,8 +47,8 @@ The `option.theme` line of the configuration SHALL select the palette: Carat's o
 - **THEN** the Comment group is written with `light_plus`'s comment color
 
 #### Scenario: Alias
-- **WHEN** a configuration line is "option.theme carat-light", a name that was once an alias of `one_light`
-- **THEN** the colors are those of Carat's own `carat-light`, which differ from `one_light`'s
+- **WHEN** a configuration line is "option.theme carat-light"
+- **THEN** the colors are those of Carat's own `carat-light`, which is no alias: its colors differ from `one_light`'s
 
 #### Scenario: Unknown theme
 - **WHEN** the project file's first line is "option.theme solarized"
@@ -125,11 +125,15 @@ In every shipped palette, drawn with the theme's background, every group that ca
 - **THEN** it is at least 4.5:1
 
 ### Requirement: Text on the cursor line stays readable
-In every shipped palette, drawn with the theme's background, every group that carries text SHALL keep a contrast ratio of at least 4.5:1 between its foreground and its background when drawn on the cursor line, and every decoration group at least 3:1, on the `CursorLine` background unless the group has a background of its own, at 24-bit colors and at the 256 colors written for them. `TabLineFill`, `PmenuSbar`, and `PmenuThumb`, which carry no text, are exempt.
+In every shipped palette, with either background, every text group drawn on the cursor line SHALL keep a contrast ratio of at least 4.5:1 and every decoration group at least 3:1, over `CursorLine`'s background unless the group has its own, at 24-bit colors and at the 256 colors written. There a group with the terminal's foreground SHALL take the palette's text color. `TabLineFill`, `PmenuSbar`, and `PmenuThumb`, which carry no text, are exempt.
 
 #### Scenario: Every palette passes on the cursor line
-- **WHEN** the contrast of every group of the six shipped palettes is measured on the cursor line
-- **THEN** no text group is below 4.5:1 and no decoration group below 3:1
+- **WHEN** the contrast of every group of the six shipped palettes is measured on the cursor line, with either background, at 24-bit colors and at 256 colors
+- **THEN** no text group is below 4.5:1, no decoration group below 3:1, and no group keeps the terminal's foreground
+
+#### Scenario: The cursor line on the terminal's background
+- **WHEN** the background is `terminal` and a Normal cell is drawn on the cursor line
+- **THEN** it has the palette's text color over `CursorLine`'s background, the colors it has on the line with the theme's background
 
 ### Requirement: The cursor line at 16 colors
 At 16 colors a group without a background of its own SHALL be underlined on the cursor line and SHALL keep the background it has off the line, the theme's painted background included.
