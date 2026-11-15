@@ -5824,3 +5824,21 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: `carat/use_cases/actions/buffer_handler.rb:50` (the handler), the finding 11 entry of `docs/backlog.md`, and `openspec/changes/archive/2026-11-15-ux-pass/design.md:71`.
 - Why: the entry's location names only the `docs/actions.md` row, not the handler that implements the action, so the fix starts with a search; quality advisory from ux-pass.
 - Fix: add `carat/use_cases/actions/buffer_handler.rb:50` to the finding 11 entry's location.
+
+### revert_to leaves restored rows unmarked for :g
+
+- Location: `carat/domain/buffer.rb:656` (`revert_to`), `GlobalMarks#shift`, and the global spec's revert requirement.
+- Why: `revert_to` moves the global marks back, but rows the reverted edit had deleted come back unmarked because `GlobalMarks#shift` inserts unmarked rows, so the comment's "return to how they were" and the global spec's requirement overclaim and `:g` skips those lines; quality advisory from core-correctness.
+- Fix: keep the removed rows' flags with the change record and restore them on revert, or narrow the comment and the requirement to inserted rows, with a test row that reverts a deletion of a marked line.
+
+### Keymap unbind descends the trie twice
+
+- Location: `carat/domain/keymap.rb:359` (`unbind`).
+- Why: `unbind` re-walks the trie from the root for every depth it prunes, a second descent duplicating the first; quality advisory from core-correctness.
+- Fix: collect the visited nodes in an array while descending and prune from it deepest first.
+
+### Timeout follow-ups beyond hover have no test
+
+- Location: `carat/use_cases/handle_key.rb:198` (the timeout path) and `test/editor_leader.rb`.
+- Why: the timeout now also runs the completion, definition, and palette follow-ups, but only the hover follow-up has a test, so a regression in the others would pass; quality advisory from core-correctness.
+- Fix: add a timeout row in which a resolved binding closes or refreshes the completion menu or the palette.
