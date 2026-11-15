@@ -7,6 +7,15 @@ require_relative "../carat/testing"
 module DomainGrammarTest
   D = Carat::Domain
 
+  # The element at index of a script step or of its codes, both untyped:
+  # read through Carat::Json.element, whose [] is on a typed receiver, since
+  # a [] on an untyped one costs code generation a rebuild of Spinel's
+  # position map from 2440954d1 on (docs/spinel-notes.md).
+  #: (untyped, Integer) -> untyped
+  def self.at(list, index)
+    Carat::Json.element(list, index)
+  end
+
   # A script step's values are untyped; the grammar takes typed key codes,
   # and an untyped argument would widen its parameters for the whole
   # program, so the codes are copied into an integer array.
@@ -15,7 +24,7 @@ module DomainGrammarTest
     out = []
     i = 0
     while i < value.length
-      out << value[i].to_i
+      out << at(value, i).to_i
       i += 1
     end
     out
@@ -58,11 +67,11 @@ module DomainGrammarTest
     grammar = Carat::Domain::CommandGrammar.new
     results = []
     script.each do |step|
-      case step[0]
-      when :digit then grammar.digit(step[1]); results << :digit
-      when :char then results << grammar.char(step[1])
-      when :visual then results << grammar.accept_visual(step[1], kind(step[1]), ints(step[2]))
-      else results << grammar.accept(step[1], kind(step[1]), ints(step[2]))
+      case at(step, 0)
+      when :digit then grammar.digit(at(step, 1)); results << :digit
+      when :char then results << grammar.char(at(step, 1))
+      when :visual then results << grammar.accept_visual(at(step, 1), kind(at(step, 1)), ints(at(step, 2)))
+      else results << grammar.accept(at(step, 1), kind(at(step, 1)), ints(at(step, 2)))
       end
     end
     command = results.last == :complete ? grammar.take : nil

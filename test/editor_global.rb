@@ -20,7 +20,7 @@ module EditorGlobalTest
   # Keys typed on text from a position: the cursor, the message, and the
   # lines after them. Typed: a table value is untyped (docs/spinel-notes.md).
   def self.run(text, at, keys)
-    h = editor(text, at[0], at[1])
+    h = editor(text, Carat::Json.element(at, 0), Carat::Json.element(at, 1))
     h.type(keys.to_s)
     [h.cursor, h.message, h.lines.join("|")]
   end

@@ -61,7 +61,7 @@ module EditorRepeatTest
       ["a visual replace", ["abcd\n", [0, 0], "vlrxll."], [["xxxx"], [0, 2]]]
     ]) do |input|
       h = editor(input[0])
-      h.state.cursor.move_to(input[1][0], input[1][1])
+      h.state.cursor.move_to(Carat::Json.element(input[1], 0), Carat::Json.element(input[1], 1))
       h.type(input[2])
       [h.lines, h.cursor]
     end

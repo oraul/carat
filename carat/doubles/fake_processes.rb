@@ -66,7 +66,7 @@ module Carat
         names = []
         @bodies.each do |body|
           value = Json.parse(body)
-          names << (value.is_a?(Hash) && value["method"].is_a?(String) ? value["method"].to_s : "result")
+          names << (value.is_a?(Hash) && Json.field(value, "method").is_a?(String) ? Json.field(value, "method").to_s : "result")
         end
         names
       end

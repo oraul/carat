@@ -128,7 +128,7 @@ module UseCasesArrangeViewTest
     windows = h.windows
     i = 0
     while i < windows.length
-      heights << windows[i][2]
+      heights << Carat::Json.element(windows[i], 2)
       i += 1
     end
     t.assert_equal([4, 4, 9], heights, "two splits typed with no frame between them give 4, 4, and 9 text rows under their winbars")

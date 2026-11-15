@@ -138,11 +138,12 @@ module LintTest
   # The code of a line: string literals emptied and a trailing comment
   # dropped, so a namespace inside a string or a comment is not a reference.
   def self.code_of(line)
+    text = line.to_s
     out = +""
     quote = ""
     i = 0
-    while i < line.length
-      ch = line[i, 1]
+    while i < text.length
+      ch = text[i, 1]
       if quote.empty?
         break if ch == "#"
         quote = ch if ch == "\"" || ch == "'"
@@ -279,7 +280,7 @@ module LintTest
     depth = namespaces.length
     i = 0
     while i < depth
-      want = (" " * (2 * i)) + "module " + namespaces[i]
+      want = (" " * (2 * i)) + "module " + Carat::Json.element(namespaces, i).to_s
       problems << "opens no module #{namespaces[0, i + 1].join("::")}" unless lines.any? { |l| l.rstrip == want }
       i += 1
     end
@@ -819,21 +820,21 @@ module LintTest
   def self.port_problems(ports, rows)
     problems = []
     ports.each do |port|
-      name = port[0].to_s
+      name = Carat::Json.element(port, 0).to_s
       listed = []
-      rows.each { |row| listed = row if row[0].to_s == name }
+      rows.each { |row| listed = row if Carat::Json.element(row, 0).to_s == name }
       if listed.empty?
         problems << "#{ARCHITECTURE} section 6 has no row for #{name}"
         next
       end
       i = 1
       while i < port.length
-        problems << "#{name}##{port[i]} is missing from the port table of #{ARCHITECTURE} section 6" unless listed.include?(port[i].to_s)
+        problems << "#{name}##{Carat::Json.element(port, i)} is missing from the port table of #{ARCHITECTURE} section 6" unless listed.include?(Carat::Json.element(port, i).to_s)
         i += 1
       end
       i = 1
       while i < listed.length
-        problems << "the port table of #{ARCHITECTURE} section 6 names #{name}##{listed[i]}, which #{name} does not define" unless port.include?(listed[i].to_s)
+        problems << "the port table of #{ARCHITECTURE} section 6 names #{name}##{Carat::Json.element(listed, i)}, which #{name} does not define" unless port.include?(Carat::Json.element(listed, i).to_s)
         i += 1
       end
     end
@@ -870,7 +871,7 @@ module LintTest
     problems = []
     readers = typed_readers(text)
     reader_names = []
-    readers.each { |pair| reader_names << pair[0].to_s }
+    readers.each { |pair| reader_names << Carat::Json.element(pair, 0).to_s }
     keywords = []
     text.each_line do |line|
       stripped = line.strip
@@ -888,8 +889,8 @@ module LintTest
       end
     end
     readers.each do |pair|
-      reader = pair[0].to_s
-      type = pair[1].to_s
+      reader = Carat::Json.element(pair, 0).to_s
+      type = Carat::Json.element(pair, 1).to_s
       next unless shared.include?(type)
       problems << "#{ASSEMBLY_TEST} never checks #{holder}.#{reader}, a shared #{type}" unless named.include?(".#{holder}.#{reader}")
     end
@@ -919,21 +920,22 @@ module LintTest
   # quote followed by E, digits, and a colon, up to the closing quote, an
   # interpolation, or an escape, trimmed.
   def self.message_literals(line)
+    text = line.to_s
     found = []
     i = 0
-    while i + 3 < line.length
-      quote = line[i, 1]
-      if (quote == "\"" || quote == "'") && line[i + 1, 1] == "E"
+    while i + 3 < text.length
+      quote = text[i, 1]
+      if (quote == "\"" || quote == "'") && text[i + 1, 1] == "E"
         j = i + 2
-        j += 1 while j < line.length && DIGITS.include?(line[j, 1])
-        if j > i + 2 && line[j, 1] == ":"
+        j += 1 while j < text.length && DIGITS.include?(text[j, 1])
+        if j > i + 2 && text[j, 1] == ":"
           k = j
-          while k < line.length
-            ch = line[k, 1]
-            break if ch == quote || ch == "\\" || (ch == "#" && line[k + 1, 1] == "{")
+          while k < text.length
+            ch = text[k, 1]
+            break if ch == quote || ch == "\\" || (ch == "#" && text[k + 1, 1] == "{")
             k += 1
           end
-          found << line[i + 1, k - i - 1].strip
+          found << text[i + 1, k - i - 1].strip
           i = k
         end
       end
@@ -1285,7 +1287,7 @@ module LintTest
     # assembly test checks each one; the test calls the plugin host host.
     assembly = typed_readers(File.read(ASSEMBLY).to_s)
     shared = []
-    assembly.each { |pair| shared << pair[1].to_s }
+    assembly.each { |pair| shared << Carat::Json.element(pair, 1).to_s }
     homes = {}
     Dir.glob("carat/**/*.rb").sort.each do |path|
       expected = expected_declaration(path)
@@ -1293,9 +1295,9 @@ module LintTest
     end
     named = File.read(ASSEMBLY_TEST).to_s.gsub("host.", "a.plugins.")
     assembly.each do |pair|
-      home = homes[pair[1].to_s]
+      home = homes[Carat::Json.element(pair, 1).to_s]
       next if home.nil?
-      holder_problems(pair[0].to_s, File.read(home.to_s).to_s, shared, named).each { |problem| violations << "#{home}: #{problem}" }
+      holder_problems(Carat::Json.element(pair, 0).to_s, File.read(home.to_s).to_s, shared, named).each { |problem| violations << "#{home}: #{problem}" }
     end
 
     # The code map covers every file of the five roots and names no missing one.

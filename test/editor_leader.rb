@@ -54,7 +54,7 @@ module EditorLeaderTest
     ]) do |keys|
       h = session(keys)
       h.wait
-      [h.window_count, h.window_index, h.windows[0][2]]
+      [h.window_count, h.window_index, Carat::Json.element(h.windows[0], 2)]
     end
 
     # Saving: rows are [label, keys, [a.txt on disk, modified, mode,

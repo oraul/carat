@@ -9,12 +9,12 @@ module DomainDisplayWidthTest
 
   # DisplayWidth.cut of a [text, width] row.
   def self.cut(value)
-    D::DisplayWidth.cut(value[0].to_s, value[1].to_i)
+    D::DisplayWidth.cut(Carat::Json.element(value, 0).to_s, Carat::Json.element(value, 1).to_i)
   end
 
   # DisplayWidth.fit of a [text, width] row.
   def self.fit(value)
-    D::DisplayWidth.fit(value[0].to_s, value[1].to_i)
+    D::DisplayWidth.fit(Carat::Json.element(value, 0).to_s, Carat::Json.element(value, 1).to_i)
   end
 
   # The cells DisplayWidth.fit of a [text, width] row takes.
@@ -24,7 +24,7 @@ module DomainDisplayWidthTest
 
   # DisplayWidth.bytes_within of a [text, width] row.
   def self.bytes_within(value)
-    D::DisplayWidth.bytes_within(value[0].to_s, value[1].to_i)
+    D::DisplayWidth.bytes_within(Carat::Json.element(value, 0).to_s, Carat::Json.element(value, 1).to_i)
   end
 
   def self.main

@@ -33,7 +33,7 @@ module EditorRegistersTest
       ["the unnamed register holds only the appended text", ["a\nb\n", [0, 0], "\"ayyj\"Ayyp"], ["a", "b", "b"]]
     ]) do |input|
       h = editor(input[0])
-      h.state.cursor.move_to(input[1][0], input[1][1])
+      h.state.cursor.move_to(Carat::Json.element(input[1], 0), Carat::Json.element(input[1], 1))
       h.type(input[2])
       h.lines
     end
@@ -52,7 +52,7 @@ module EditorRegistersTest
       ["w moves over an illegal byte as a keyword character", ["ab\xFF cd\n", [0, 0], "wx"], ["ab\xFF d"]]
     ]) do |input|
       h = editor(input[0].to_s)
-      h.state.cursor.move_to(input[1][0].to_i, input[1][1].to_i)
+      h.state.cursor.move_to(Carat::Json.element(input[1], 0).to_i, Carat::Json.element(input[1], 1).to_i)
       h.type(input[2].to_s)
       h.lines
     end
@@ -105,7 +105,7 @@ module EditorRegistersTest
       ["a visual yank fills register 0", ["ab\n", [0, 0], "vly$\"0p"], ["abab"]]
     ]) do |input|
       h = editor(input[0])
-      h.state.cursor.move_to(input[1][0], input[1][1])
+      h.state.cursor.move_to(Carat::Json.element(input[1], 0), Carat::Json.element(input[1], 1))
       h.type(input[2])
       h.lines
     end

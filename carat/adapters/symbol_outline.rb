@@ -1,3 +1,4 @@
+require_relative "../domain/json"
 require_relative "../domain/symbol_request"
 require_relative "../domain/control_text"
 
@@ -28,11 +29,11 @@ module Carat
       def self.walk(list, symbols, depth)
         i = 0
         while i < list.length && symbols.count < LIMIT
-          item = list[i]
+          item = Json.element(list, i)
           i += 1
           next unless item.is_a?(Hash)
           keep(item, symbols)
-          children = item["children"]
+          children = Json.field(item, "children")
           walk(children, symbols, depth + 1) if children.is_a?(Array) && depth < DEPTH_LIMIT
         end
       end
@@ -40,14 +41,14 @@ module Carat
       # Keeps one item when it has a string name and a valid range.
       #: (untyped, Domain::SymbolRequest) -> void
       def self.keep(item, symbols)
-        name = item["name"]
+        name = Json.field(item, "name")
         return unless name.is_a?(String)
-        range = item["range"]
-        location = item["location"]
-        range = location["range"] if !range.is_a?(Hash) && location.is_a?(Hash)
+        range = Json.field(item, "range")
+        location = Json.field(item, "location")
+        range = Json.field(location, "range") if !range.is_a?(Hash) && location.is_a?(Hash)
         return unless range.is_a?(Hash)
-        first = line_of(range["start"])
-        last = line_of(range["end"])
+        first = line_of(Json.field(range, "start"))
+        last = line_of(Json.field(range, "end"))
         return if first < 0 || last < first
         text = Domain::ControlText.strip(name.to_s, NAME_LIMIT)
         symbols.add(text, first, last) unless text.empty?
@@ -57,7 +58,7 @@ module Carat
       #: (untyped) -> Integer
       def self.line_of(position)
         return -1 unless position.is_a?(Hash)
-        line = position["line"]
+        line = Json.field(position, "line")
         line.is_a?(Integer) ? line.to_i : -1
       end
     end

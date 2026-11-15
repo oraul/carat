@@ -58,7 +58,7 @@ module AdaptersStatusBarTest
     list = percents.to_a
     i = 0
     while i < list.length
-      SLOTS.set_progress(i == 0 ? title.to_s : "", "", list[i].to_i)
+      SLOTS.set_progress(i == 0 ? title.to_s : "", "", Carat::Json.element(list, i).to_i)
       i += 1
     end
     paint(s, 60).row_text(0)

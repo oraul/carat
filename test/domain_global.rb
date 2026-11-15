@@ -33,9 +33,9 @@ module DomainGlobalTest
       row = buffer.global_marks.take
       taken << row
       break if row < 0
-      edit = edits[k]
+      edit = Carat::Json.element(edits, k)
       unless edit.nil?
-        buffer.set_lines(edit[0].to_i, edit[1].to_i, strings(edit[2]))
+        buffer.set_lines(Carat::Json.element(edit, 0).to_i, Carat::Json.element(edit, 1).to_i, strings(Carat::Json.element(edit, 2)))
       end
       k += 1
     end

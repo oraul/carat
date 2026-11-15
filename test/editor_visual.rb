@@ -162,7 +162,7 @@ module EditorVisualTest
       ["a bracket object with no pair leaves the selection", ["abc\n", [0, 1], "vi(d"], [["ac"], [0, 1], :normal]]
     ]) do |input|
       h = editor(input[0])
-      h.state.cursor.move_to(input[1][0], input[1][1])
+      h.state.cursor.move_to(Carat::Json.element(input[1], 0), Carat::Json.element(input[1], 1))
       h.type(input[2])
       [h.lines, h.cursor, h.mode]
     end
@@ -204,7 +204,7 @@ module EditorVisualTest
       ["an uppercase register appends to a block", ["ab\ncd\n", [0, 0], "<C-v>j\"ayl\"Ayl", "a"], ["a\nc\nb", :blockwise]]
     ]) do |input|
       h = editor(input[0])
-      h.state.cursor.move_to(input[1][0], input[1][1])
+      h.state.cursor.move_to(Carat::Json.element(input[1], 0), Carat::Json.element(input[1], 1))
       h.type(input[2])
       register_of(h, input[3])
     end
@@ -218,7 +218,7 @@ module EditorVisualTest
       ["a narrow row is padded to the block's width", ["ab\nc\nxyz\nxyz\n", [0, 0], "<C-v>jly2jlP"], [["ab", "c", "xabyz", "xc yz"], [2, 1]]]
     ]) do |input|
       h = editor(input[0])
-      h.state.cursor.move_to(input[1][0], input[1][1])
+      h.state.cursor.move_to(Carat::Json.element(input[1], 0), Carat::Json.element(input[1], 1))
       h.type(input[2])
       [h.lines, h.cursor]
     end
