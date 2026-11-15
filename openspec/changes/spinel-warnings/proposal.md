@@ -29,7 +29,7 @@ None. No editor behavior changes, so `skip_specs` is set.
 - `carat/use_cases/windows/tab_request.rb`, `carat/domain/utf8.rb`: comments and one no-op statement; allocations and rounds are expected equal to main's.
 - `Makefile`, `tools/spinel_warnings.sh`, `tools/tools_test.sh`: the build targets and their test.
 - `docs/codebase-map.md`: area 1 names `tools/spinel_warnings.sh`.
-- `docs/architecture.md`: section 10 says the build targets and `make diagnose` fail on a Spinel warning.
+- docs/architecture.md: unchanged, it is within 9 bytes of its budget; the rule is in `docs/spinel-notes.md`, binding with its section 2.1, and the Makefile comment.
 - `docs/spinel-notes.md`: the pruned-method warning and its workaround.
 - CLAUDE.md: unchanged, no target, command, agent, workflow, or rule is added; the targets keep their names and only fail on one more condition.
 - README.md: unchanged, no command, option, or editor behavior changes.
