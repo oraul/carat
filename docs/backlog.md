@@ -5492,3 +5492,35 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Source: quality advisory, winbar-outline
 - Why: the requirement says a scratch split gets exactly the counted rows under every breadcrumbs mode and the design names the auto case beside two file windows as fixed, but only always is tested.
 - Fix outline: add a row with option.breadcrumbs auto and two file windows splitting 5<C-w>s from the scratch window, expecting 5 text rows and no winbar.
+
+## Non-blocking findings of spinel-untyped-bump
+
+### carat/adapters/json_rpc_language_gateway.rb:469 receive reads the same fields in many branches
+
+- Quality advisory, duplication: receive reads Json.field(value, "id") in seven branches of its elsif chain and Json.field(value, "result") in six.
+- Fix: read id = Json.field(value, "id") once after name and compare each branch against it.
+
+### carat/adapters/json_rpc_language_gateway.rb:1065 signed reads each bound twice
+
+- Quality advisory, duplication: signed reads Json.element(part, 0) and Json.element(part, 1) twice each.
+- Fix: read the two bounds into locals once and test is_a?(Integer) on them.
+
+### carat/doubles/fake_processes.rb:69 methods_sent reads the method field twice
+
+- Quality advisory, duplication: methods_sent reads Json.field(value, "method") twice in one expression.
+- Fix: name = Json.field(value, "method"), then name.is_a?(String) ? name.to_s : "result".
+
+### test/editor_grammar.rb:47 untyped table values reach Cursor#move_to
+
+- Quality advisory, typed table values and duplication (corrects the earlier note, which named editor_operators): the same move_to(Carat::Json.element(input[1], 0), Carat::Json.element(input[1], 1)) line, rewritten in 15 test files, still hands untyped table values to Cursor#move_to.
+- Fix: convert with .to_i as the typed-table rule says (test/editor_registers.rb already does), ideally through one shared helper.
+
+### test/domain_grammar.rb:15 two forms of reading a table element
+
+- Quality advisory, one clear way: DomainGrammarTest wraps Carat::Json.element as at while about thirty other test files call Carat::Json.element inline, and the tests use a JSON reader as a general untyped-array reader.
+- Fix: pick one form, either a named element reader in Carat::Testing used by every test or the inline call everywhere with at dropped.
+
+### docs/spinel-notes.md:47 the element reader advice drifted from the design
+
+- Quality advisory, docs drift: the bullet still advises reading an untyped array through an element reader (Array[untyped], Integer) -> T, while design.md found a bare reader given an untyped argument does not help since nothing narrows it, and the change relies on Json.element's is_a?(Array) check.
+- Fix: say the reader must narrow an untyped argument with is_a?(Array), as Carat::Json.element does.
