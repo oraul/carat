@@ -105,6 +105,13 @@ module Carat
         end
         out
       end
+
+      # Names boundary and scalar? in every program that requires this
+      # file, which already have them public. Spinel drops a method that
+      # nothing in the program names, unless it is the last statement of
+      # its module, and then warns that its signature is not applied:
+      # carat-gen-config calls only size_at (docs/spinel-notes.md).
+      public_class_method :boundary, :scalar?
     end
   end
 end

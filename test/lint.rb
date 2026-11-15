@@ -6,6 +6,7 @@
 # coverage of docs/codebase-map.md.
 # Prints every violation; the snapshot is the empty report.
 require_relative "../carat/testing"
+require_relative "../carat/domain/json"
 
 # The test is this module's main. test/runner/run_all.rb runs it by name
 # with every other test in one program; the guard at the end runs it when

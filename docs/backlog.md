@@ -2129,12 +2129,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the first says a binding resolved by `timeoutlen` closes the hints, but `timeout` never calls `HideKeyHints` and the hints never show over a `:pending` key; the others are style only.
 - Fix outline: drop the clause from the `HideKeyHints` comment and rewrap the other two to the width of the lines around them.
 
-## Ex command descriptions live apart from their registrations
-
-- Where: the description hash of `carat/use_cases/ex/ex_table.rb` line 20 at d828abb. Quality advisory in `discoverability`. Raised again at 38628bb (periodic quality), which also notes that no test checks every ex command has a description (`ex_table.rb` line 19). Queued in `discoverability-tidy`.
-- Why it matters: unlike `ActionTable.register`, which takes the description, each new ex command is edited in two places.
-- Fix outline: pass the description to `ExTable#register` from each handler's `register` and drop the hash.
-
 ## The palette runs ex commands that need an argument bare
 
 - Where: `carat/use_cases/execute_command_line.rb` line 91 at d828abb. Quality advisory in `discoverability`.
@@ -2509,24 +2503,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a file or link appearing between the probe and the write is truncated or followed.
 - Fix outline: a create that fails on an existing path or link, used here, with a case.
 
-## The winbar's never, always, and auto policy lives in two layers
-
-- Where: `winbar_after?` in `carat/use_cases/windows/split_window.rb` line 55 and `TabPage#winbar?` in `carat/domain/tab_page.rb` line 61 at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
-- Why it matters: both compare the same string literals for the mode, so a new mode or rule must change two layers.
-- Fix outline: one `TabPage` predicate taking the extra file window count (`winbar?(mode, added)`), called from both, comparing against named constants beside `Options::BREADCRUMBS`.
-
 ## A restarted server is never asked again for the same text's symbols
 
 - Where: `forget_server` (the symbol ask, `forget_symbols` before periodic-blockers-a; line 526 at d73f03f) in `carat/adapters/json_rpc_language_gateway.rb`; quality advisory of `breadcrumbs`.
 - Why it matters: it clears the request in flight but keeps `asked_buffer` and `asked_changes`, so after a crash and restart the winbar shows no symbols until an edit or a buffer switch.
 - Fix outline: reset the asked text (`asked_changes = -1`) in `forget_server`, with an `editor_breadcrumbs` row for a restart.
-
-## SymbolOutline's comment says characters where the cut is in bytes
-
-- Where: the class comment of `carat/adapters/symbol_outline.rb` line 12 at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
-- Why it matters: `ControlText.strip` cuts at a byte limit, as the map, `docs/compatibility.md`, and the test say, so the comment misleads.
-- Fix outline: say bytes in the comment.
-- Raised again as "SymbolOutline's comment says characters for a byte cap": Where: `carat/adapters/symbol_outline.rb` line 12, at 31919d9. Periodic quality. Queue item `top-rows`. Why it matters: the comment says names are cut to `NAME_LIMIT` characters, while the cut caps bytes, as the map says. Fix outline: say bytes.
 
 ## FramePresenter's class comment breaks its wrap width
 
@@ -2539,18 +2520,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `docs/codebase-map.md` line 591 and the render and language areas' Tests lines at the `breadcrumbs` change; quality advisory of `breadcrumbs`.
 - Why it matters: the entry omits `count` and `name_at`, and the Tests lines do not name `test/editor_breadcrumbs.rb` though it covers `winbar.rb`, `symbol_outline.rb`, and `symbol_request.rb`.
 - Fix outline: add the two methods to the entry and the test to both areas' Tests lines.
-
-## :LspRestart lets a stale symbol answer replace the outline
-
-- Where: `stop` in `carat/adapters/json_rpc_language_gateway.rb` line 227, at 7711421; `crash` (line 439) forgets the symbol request, `stop` does not. Periodic quality. Queue item `top-rows`.
-- Why it matters: a documentSymbol request in flight keeps its id across a restart, so `waiting?` holds until the deadline, the cancel goes to the new server for an id it never issued, and the new server's answer to a reused id is read as the outline.
-- Fix outline: forget the symbol request in `stop` beside the other three, with an `editor_breadcrumbs` row for `:LspRestart` with a symbol request in flight.
-
-## The presenter and the arranger each decide which windows get a winbar
-
-- Where: `paint_winbars` in `carat/adapters/frame_presenter.rb` line 723 and `reserve_winbars` in `carat/use_cases/arrange_view.rb` line 89, at 7711421. Periodic quality. Queue item `top-rows`.
-- Why it matters: two rules in two layers (geometry against scratch and height) must stay in step.
-- Fix outline: one predicate or a flag set by the arranger that the presenter reads.
 
 ## Layout's split and attach copy the inner-split block
 
@@ -2569,12 +2538,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/domain/tab_page.rb` line 103, at 7711421. Periodic quality. Queue item `top-rows`.
 - Why it matters: every other walker uses `layout.node_count`.
 - Fix outline: use `node_count`.
-
-## A split from a scratch window has no winbar row
-
-- Where: `winbar_after?` in `carat/use_cases/windows/split_window.rb` line 59, at 7711421; `test/editor_breadcrumbs.rb` splits only file windows. Periodic quality. Queue item `top-rows`.
-- Why it matters: the branch adding no file window for a scratch split is untested.
-- Fix outline: rows splitting a slot or plugin window with a count under `auto` and `always`.
 
 ## The docs deny or omit the winbar
 
@@ -2846,12 +2809,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where, at df4654c: `docs/codebase-map.md` line 92 (Config lacks `count`), line 517 (VERSION 2.3, `carat/plugin_api.rb` line 12 is 2.4), line 523 and the area 15 and 16 bullets (PluginHost, Paths, PluginEntries, PluginEntry, Tree methods); `docs/architecture.md` line 181 (5.3 lacks `FormatDocs`, `MarkdownText`, `DocsText`). Periodic quality. Queue item `docs-index`.
 - Why it matters: CLAUDE.md keeps both in sync; drift here caused 9 of 47 quality blockers.
 - Fix outline: update the bullets and the 5.3 docs line.
-
-## The winbar rule restated in SplitWindow
-
-- Where: `winbar_after?` in `carat/use_cases/windows/split_window.rb` line 55 beside `TabPage#winbar?` (`carat/domain/tab_page.rb` line 61), at df4654c. Periodic quality. Queue item `slots-tidy`, with the untested scratch split (`test/editor_breadcrumbs.rb` line 188). Raised again at ce6abdb (line 55; periodic quality).
-- Why it matters: a breadcrumbs mode change must be made twice.
-- Fix outline: one `TabPage` predicate taking the mode and the windows to add.
 
 ## The message history name and a doubled clear
 
@@ -5350,21 +5307,9 @@ Location: `carat/domain/hover_request.rb`, `definition_request.rb`, `signature_r
 
 Location: `carat/adapters/input_controller.rb:62` (constructor takes `show_completion`, `show_hover`, `show_definition`, `show_signature`, `signature`); `carat/use_cases/handle_key.rb:92-105` (`follow_hover`, `follow_definition`, `follow_signature`, `follow_palette`). Why: each new feature of this kind (references, rename) widens two constructors, the assembly, and the idle and after-key paths by hand, and the order answers are shown or floats followed is implicit. Fix outline: an ordered list of idle steps (`call(state)` answering whether it showed something) and one of after-key followers, filled by each feature's `register` like the action table, so `InputController` and `HandleKey` walk a list.
 
-### The language formatter setting does nothing (architecture-review H3)
-
-Location: `carat/domain/config.rb:21` (`LANGUAGE_SETTINGS`), `config/default.caratrc:749` (`language.ruby.formatter`); no `FormatBuffer` use case or one-shot runner exists. Why: the setting is shipped, validated, and refused from the project file, yet nothing reads it, so a user who sets it sees no effect and no message. Fix outline: deliver formatting (roadmap item 14) or, until then, drop the shipped line and report the setting as not yet supported.
-
-### Ex command descriptions live apart from their registration (architecture-review R1)
-
-Location: `carat/use_cases/ex/ex_table.rb:20` (`DESCRIPTIONS` by full name) against each `carat/use_cases/ex/*_command_handler.rb` name spec; action descriptions arrive with each action's registration (`ActionTable#describe`). Why: two lists to keep in sync and two mechanisms for one job; an ex command registered without a description shows an empty one in the command palette and nothing fails. Fix outline: pass the description with each ex handler's registration as actions do, remove `DESCRIPTIONS`, and fail a test on a named command without one.
-
 ### Two file-name classifiers (architecture-review R2)
 
 Location: `carat/domain/filetype.rb:8-11` (`EXTENSIONS`, `NAMES`) and `carat/plugin_api.rb:424-481` (`FileIcons::NAMES`, `file_type`). Why: both map a name or extension to a kind (`rb` to `ruby` in each), so a new language is added twice and the two can disagree. Fix outline: one table in `carat/plugin_api.rb` (rank 0) that `Filetype` reads, the icon-only names apart, or `FileIcons` taking the filetype the host already detected.
-
-### Dead methods with no caller (architecture-review R3)
-
-Location: `DisplayWidth.of_char` (`carat/domain/display_width.rb:37`), `ExtendVisual#tabstop_of` (`carat/use_cases/visual/extend_visual.rb:53`), `CommandGrammar#operator_pending?` (`carat/domain/command_grammar.rb:84`), `TabRequest#counted?` (`carat/use_cases/windows/tab_request.rb:14`), `FakeTerminal#input?` (`carat/doubles/fake_terminal.rb:55`); plugin-facing `args?` (`carat/plugin_api.rb:125`) and `insertion?` (line 142) have no caller either. Why: code nobody calls is still read, compiled, analysed, and listed; `of_char` contradicts the rule that `DisplayWidth` takes no one-character strings. Fix outline: remove the five and their map entries; keep or document the two API members in `docs/plugins.md`; a lint rule for a private method its file never calls.
 
 ### The language gateway is one class of 1,373 lines (architecture-review M1)
 
@@ -5548,3 +5493,205 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: docs/spinel-notes.md:47.
 - Why: quality advisory, acceptance: the entry records 125 runner rebuilds at 93d7883b while the brief accepted the bump at rebuilds near the old pin's 39 (FileUtils' 26 aside), and neither the notes nor the proposal say why 125 was accepted.
 - Fix outline: state in the entry that compile time (test-build 169 s, diagnose 219 s) met the target while the rebuild count stays at part a's 125, with what is left to bring it down listed; the pull request notes of spinel-untyped-bump-b say so.
+
+## Findings of spinel-warnings
+
+### Makefile:317 the Spinel warning recipe is repeated in every compile target
+
+- Where: Makefile:317, and the build, test-one, bench, types, and gen-config targets, with near copies in dev-build, test-build, and bench-budget.
+- Why: the same capture-stderr, keep-status, copy-back, fail-on-status, check recipe is copied target by target, so a fix to one copy drifts from the others (quality advisory, duplication).
+- Fix: one script mode, for example sh tools/spinel_warnings.sh run LABEL LOG -- CMD..., keeping the status and the check in one place.
+
+### Makefile:248 make build no longer streams the standard error of spin build
+
+- Where: Makefile:248, the build target.
+- Why: make build now holds all of spin build's standard error until it exits, so Spinel and cc errors of the minute-long release build no longer stream and an interrupted build shows none (quality advisory, behavior).
+- Fix: tee standard error into BUILD_LOG while keeping spin's status.
+
+### tools/spinel_warnings.sh:42 the wrapper's temporary file has no trap
+
+- Where: tools/spinel_warnings.sh:42.
+- Why: the wrapper's mktemp file has no trap, so an interrupted or killed diagnose compile leaves carat-spinel.XXXXXX files in TMPDIR (quality advisory, shell hygiene).
+- Fix: trap 'rm -f "$err"' EXIT INT TERM after mktemp.
+
+### tools/tools_test.sh:2926 the wrapper status case never sees a failing status
+
+- Where: tools/tools_test.sh:2926, the case named 'the wrapper keeps spinel's status'.
+- Why: it only runs a stub that exits 0, so a wrapper that lost a failing status (spinel-doctor then reading a missing .c) would still pass (quality advisory, tests).
+- Fix: add a stub run exiting non-zero and expect that status, plus diagnose-one and dev-build pass cases.
+
+### openspec/changes/archive/2026-11-15-spinel-warnings/proposal.md:1 the change mixed fixes with a build change
+
+- Where: openspec/changes/archive/2026-11-15-spinel-warnings/proposal.md:1 (proposal.md of spinel-warnings before its archive).
+- Why: the branch mixes fixes (the test/lint.rb require, the tab_request and utf8 warnings) with a build change (every target fails on a warning), needing both fix and build types in one squash commit (quality advisory, one logical change per pull request).
+- Fix: name the fixes as the enabling part of the build change in the pull request text, or split the lint and warning fixes out next time.
+
+### Makefile:87 BUILD_BINS lists the binaries by hand
+
+- Where: Makefile:87.
+- Why: BUILD_BINS spells out build/bin/carat-gen-config beside GEN_CONFIG_BIN and lists the binaries by hand while spin build compiles every bin/*.rb, so a new bin/*.rb that warns keeps its binary and a second make build passes silently (quality advisory, duplication and drift).
+- Fix: BUILD_BINS ?= $(patsubst bin/%.rb,build/bin/%,$(wildcard bin/*.rb)) and GEN_CONFIG_BIN built from it or the reverse.
+
+### docs/codebase-map.md:51 the tools_test.sh entry omits the Spinel warning cases
+
+- Where: docs/codebase-map.md:51, the tools/tools_test.sh entry.
+- Why: the entry lists what it tests but not the new Spinel warning cases on the build targets with a stub toolchain (stub_make), which its header and make help now name (quality advisory, docs currency).
+- Fix: add 'the Spinel warning check on the build targets with a stub toolchain (stub_make)' to the entry.
+
+## Findings of the sprint-6 review and sweep
+
+### Security: the check clone links the toolchain back into the delivery clone (sprint-6 sweep, Medium (6))
+
+- Location: tools/run_state.sh:571 (sprint-6 sweep at 4958dc6bd923, security Medium (6); raised before as Low (5)). Queue item `check-runner-safety`.
+- Why: the check clone links tmp/.toolchain and tmp/.spinel back into the delivery clone, so a stage running branch code writes through the link (build/pipeline, .git, the toolchain binaries) and the clone isolates nothing.
+- Fix outline: give the clone its own read-only toolchain copy, or put the toolchain bin on PATH outside the clone, and run the read profile's make targets in the check clone too.
+
+### A crash then :LspStart never asks the new server for the outline
+
+- Location: carat/adapters/json_rpc_language_gateway.rb:537 (`forget_server`, called from the crash at :451 and from stop; start at :188). Sprint-6 review, quality. Queue item `gateway-split-a`.
+- Why: `forget_server` clears the symbol request's sent id but keeps the text last asked (`SymbolRequest#asked?`), so after a crash with a symbol request in flight the new server is never asked for the unchanged text and the outline stays stale; winbar-outline fixed only the restart path.
+- Fix outline: forget the symbol request in `forget_server` when its language matches, drop the separate forget from restart, and add a `test/editor_breadcrumbs.rb` case for a crash then `:LspStart`.
+
+### send_symbols decides the winbar apart from ArrangeView
+
+- Location: carat/adapters/json_rpc_language_gateway.rb:931 (`send_symbols` reads `TabPage#winbar?`). Sprint-6 review, quality. Queue item `gateway-split-a`.
+- Why: `ArrangeView#reserve_winbars` is the one place that decides (`Window#winbar`), so symbols are asked for a one-row layout window or a scratch buffer that shows no winbar.
+- Fix outline: return unless the layout window's winbar flag is set.
+
+### markdown_of reads the value field twice
+
+- Location: carat/adapters/json_rpc_language_gateway.rb:910 and :911. Sprint-6 review, quality advisory. Queue item `gateway-split-a`.
+- Why: duplication: `Json.field(part, "value")` is read twice.
+- Fix outline: read it once into a local, then check its class and convert it.
+
+### test/lint.rb helpers return arrays to destructure
+
+- Location: test/lint.rb:255 (`expected_declaration` returns namespaces and base) and :862 (`typed_readers` returns name and type pairs), read back through `Carat::Json.element` at 283, 874, 892, 893, 1290, 1298 to 1300. Sprint-6 review, quality advisory. Queue item `spinel-workarounds`.
+- Why: the tests rule asks a helper returning several values to return an object with typed readers.
+- Fix outline: small typed records (a declaration with namespaces and base, a reader with name and type) and drop those element reads.
+
+### The unsupported language setting scenario names a file its test does not parse
+
+- Location: openspec/specs/config-files/spec.md:233 (scenario "A language setting not supported yet") against test/domain_rc_parser.rb:100. Sprint-6 review, quality advisory. Queue item `tools-docs-tidy`.
+- Why: the scenario expects the user file's label while the test parses a trusted `.caratrc` and checks `.caratrc:1`, so the scenario is not proven as written.
+- Fix outline: give the test the user file's label, or word the scenario by the trusted file.
+
+### Keymap#bind has no caller
+
+- Location: carat/domain/keymap.rb:223; docs/codebase-map.md area 5. Sprint-6 sweep, quality. Queue item `input-core-tidy`.
+- Why: dead code the map still lists; only `bind_owned` and `bind_text` are used.
+- Fix outline: remove the method and its map mention.
+
+### Range's comment is stale and its RBS block is missing
+
+- Location: carat/domain/range.rb:4. Sprint-6 sweep, quality. Queue item `input-core-tidy`.
+- Why: the comment says only the exclusive charwise kind is used while text objects and Selection build linewise, blockwise, and inclusive ranges, and the record lacks the `# @rbs` instance variable block every other Data record carries.
+- Fix outline: rewrite the comment and add the block.
+
+### A broken key sequence drops a bound shorter prefix
+
+- Location: carat/use_cases/handle_key.rb:253, the timeout comment at :166. Sprint-6 sweep, quality. Queue item `input-core-tidy`.
+- Why: when pending keys stop matching, or time out at a prefix, every pending key is dropped even when a shorter prefix is bound (with `a` bound beside `abc`, typing `abx` loses the `a` action), where Vim fires the longest bound prefix and replays the rest.
+- Fix outline: dispatch the longest bound prefix and push the remaining keys back on the queue, with a table test in test/editor_leader.rb.
+
+### Generated config headers tell the reader to run spin directly
+
+- Location: bin/carat-gen-config.rb:32; the headers of carat/domain/default_config.rb:2 and carat/plugins/registry.rb:2 (through carat/domain/registry_source.rb:57); docs/architecture.md:222. Sprint-6 sweep, quality. Queue item `tools-docs-tidy`.
+- Why: `make gen-config` is the one documented way, with tools/noruby first on the PATH.
+- Fix outline: say make gen-config in both renderers and the architecture, then regenerate.
+
+### docs_lint's usage header says a sprint holds 1 to 5 items
+
+- Location: tools/docs_lint.sh:18 against check_queue at :148 to :153 and the map area 1. Sprint-6 sweep, quality (raised twice). Queue item `tools-docs-tidy`.
+- Why: a drained sprint holds 0 items and passes; the header misstates the check.
+- Fix outline: say 0 to 5.
+
+### RcLine splits the key at a literal byte
+
+- Location: carat/domain/rc_line.rb:224. Sprint-6 sweep, quality advisory. Queue item `input-core-tidy`.
+- Why: magic number 46 where `RcParser::DOT` names it.
+- Fix outline: require rc_parser and use the constant.
+
+### RegistrySource walks the plugin entry lines twice
+
+- Location: carat/domain/registry_source.rb:27 and :40. Sprint-6 sweep, quality advisory. Queue item `plugin-host-tidy`.
+- Why: duplication: `column` and `names` repeat the same walk.
+- Fix outline: one private entries reader both map.
+
+### accept_visual repeats the prelude of accept
+
+- Location: carat/domain/command_grammar.rb:158 against :134 to :143. Sprint-6 sweep, quality advisory. Queue item `input-core-tidy`.
+- Why: duplication: the want check, remember, and search prelude are copied line for line.
+- Fix outline: one private prelude returning the early result or nil, called by both.
+
+### History counts are unbounded and digits? is written four times
+
+- Location: carat/use_cases/ex/history_command_handler.rb:44 and :77; `digits?` at buffer_command_handler.rb:102, tab_command_handler.rb:102, history_command_handler.rb:67, carat/domain/json.rb:72. Sprint-6 sweep, quality. Queue item `ex-handlers-tidy`.
+- Why: `:undo N`, `:earlier N`, and `:later N` convert an unbounded run of digits while the buffer and tab handlers hold theirs to 9 bytes for Spinel's Integer.
+- Fix outline: one domain predicate with the 9-digit bound the three handlers share, with a test for a long count.
+
+### Requires never named in their files
+
+- Location: carat/use_cases/visual/extend_visual.rb:6 (display_width), carat/domain/last_change.rb (position, display_width), carat/domain/operators.rb (registers, selection). Sprint-6 sweep, quality advisory. Queue item `input-core-tidy`.
+- Why: dead requires hide the real dependency graph.
+- Fix outline: drop them and confirm with make test-build.
+
+### The BufferRequest map entry omits two targets
+
+- Location: docs/codebase-map.md:383 and :161. Sprint-6 sweep, quality advisory. Queue item `tools-docs-tidy`.
+- Why: SwitchBuffer also takes the tab and alternate targets (buffer_request.rb, tab_handler.rb:36, buffer_handler.rb:43) and line 161 omits buffer.alternate.
+- Fix outline: list both targets and the action.
+
+### Reloading the current buffer resets the cursor
+
+- Location: carat/use_cases/files/open_file.rb:62, the class comment at :20. Sprint-6 sweep, quality. Queue item `file-access-tidy`.
+- Why: `:e` and `:e!` on the current buffer call `window.show`, putting the cursor at the top and forgetting the last selection, though the comment says the cursors are kept and Vim keeps the cursor line.
+- Fix outline: skip show for the current buffer and clamp the cursor, or state the reset in the spec; rewrap the comment.
+
+### :new file and :vnew file drop their argument
+
+- Location: carat/use_cases/ex/window_command_handler.rb:33. Sprint-6 sweep, quality. Queue item `ex-handlers-tidy`.
+- Why: Vim edits the named file in the new window; carat opens an empty one silently.
+- Fix outline: pass the argument, fresh only when it is empty, or answer E488, with a test.
+
+### Not implemented is a success in one handler and a failure in another
+
+- Location: carat/use_cases/ex/history_command_handler.rb:78 against buffer_command_handler.rb:69 and :88. Sprint-6 sweep, quality advisory. Queue item `ex-handlers-tidy`.
+- Why: the same answer is shown with two outcomes.
+- Fix outline: one form for every unimplemented argument.
+
+### PluginRouter spells the registry's refusal texts again
+
+- Location: carat/use_cases/plugins/plugin_router.rb:40 against PluginRegistry#refusal (plugin_registry.rb:100). Sprint-6 sweep, quality advisory. Queue item `plugin-host-tidy`.
+- Why: duplication of the no-plugin and disabled texts.
+- Fix outline: use the registry's refusal and fail when it is not empty.
+
+### Palette#start repeats initialize's resets
+
+- Location: carat/domain/palette.rb:58; CommandGrammar#initialize and #reset at command_grammar.rb:37 to :53 alike. Sprint-6 sweep, quality advisory. Queue item `input-core-tidy`.
+- Why: a new member has to be reset in two places.
+- Fix outline: initialize calls start, then sets the two members start keeps.
+
+### The examples' action kinds omit :search
+
+- Location: docs/examples.md:25. Sprint-6 sweep, quality advisory. Queue item `tools-docs-tidy`.
+- Why: SearchHandler registers the search kind and CommandGrammar reads it.
+- Fix outline: add it to the list with what it reads.
+
+### The CommandGrammar and ActionTable map bullets omit public methods
+
+- Location: docs/codebase-map.md:152 and :157. Sprint-6 sweep, quality advisory. Queue item `tools-docs-tidy`.
+- Why: HandleKey calls pattern, wants_pattern?, char, digit?, and digit, and the table's count and handler_at are public, none listed.
+- Fix outline: list them.
+
+### ci_scope asks the same pull request query twice
+
+- Location: tools/ci_scope.sh:78. Sprint-6 sweep, quality advisory. Queue item `ci-scope-quoting`.
+- Why: two identical gh api calls read the head sha and the number.
+- Fix outline: one call printing both, split with read.
+
+### make snapshots ignores a crashing test
+
+- Location: Makefile:303. Sprint-6 sweep, quality. Queue item `tools-docs-tidy`.
+- Why: the runner's exit status per test is ignored, so a crash's output becomes its snapshot with only a manual diff review before a commit.
+- Fix outline: note each nonzero exit and exit 1 after the loop.
