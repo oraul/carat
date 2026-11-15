@@ -2,7 +2,7 @@
 
 ## 1. Principles
 
-- [ ] 1.1 `docs/architecture.md`: add the Design principles list to section 1 (deep modules with H2 and M5 cited, no broken windows) and shorten the statements other sections repeat to stay within the budget. Verify with `make docs-lint` (budget) and `make test-one T=test/lint.rb` (map paths).
+- [x] 1.1 `docs/architecture.md`: add the Design principles list to section 1 (deep modules with H2 and M5 cited, no broken windows) and shorten the statements other sections repeat to stay within the budget. Verify with `make docs-lint` (budget) and `make test-one T=test/lint.rb` (map paths).
 
 ## 2. Sprint mix
 
