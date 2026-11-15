@@ -5353,3 +5353,79 @@ The phrase 'the pin stays at its parent 6af548c9' copies the Makefile's pin valu
 - Location: carat/adapters/status_bar.rb:254, carat/adapters/frame_presenter.rb:217, :266, and :859, beside carat/adapters/options.rb:156 (found reviewing carat-glyphs).
 - Why: the set name is compared as a string literal at each site, so a rename or a new set has to find them all.
 - Fix: add an Options#ascii_icons? predicate (or an Icons::ASCII_SET constant) and use it at each site so the set name lives in one place.
+
+### Language-service asks have no port (architecture-review H1)
+
+Location: `carat/domain/hover_request.rb`, `definition_request.rb`, `signature_request.rb`, `symbol_request.rb`, `completion_request.rb`; `carat/adapters/editor_assembly.rb` (the `hover`, `definition`, `symbols`, `signature` readers); `docs/architecture.md` section 5.3. Why: completion goes through `CompletionPort` while hover, definition, signature help, and document symbols go through mutable domain records the use cases and `JsonRpcLanguageGateway` both write, two mechanisms for one job; the records hold protocol bookkeeping (request in flight, deadline, serial), so the domain carries adapter state and a second backend or double must mimic the mutations. Fix outline: one `LanguageAskPort` (ask by kind and anchor, answer by kind, `waiting?`) or the `CompletionPort` shape per ask; domain records keep the anchor and answer, the gateway the ids and deadlines; one double for every ask.
+
+### Asynchronous language features have no extension point (architecture-review H2)
+
+Location: `carat/adapters/input_controller.rb:62` (constructor takes `show_completion`, `show_hover`, `show_definition`, `show_signature`, `signature`); `carat/use_cases/handle_key.rb:92-105` (`follow_hover`, `follow_definition`, `follow_signature`, `follow_palette`). Why: each new feature of this kind (references, rename) widens two constructors, the assembly, and the idle and after-key paths by hand, and the order answers are shown or floats followed is implicit. Fix outline: an ordered list of idle steps (`call(state)` answering whether it showed something) and one of after-key followers, filled by each feature's `register` like the action table, so `InputController` and `HandleKey` walk a list.
+
+### The language formatter setting does nothing (architecture-review H3)
+
+Location: `carat/domain/config.rb:21` (`LANGUAGE_SETTINGS`), `config/default.caratrc:749` (`language.ruby.formatter`); no `FormatBuffer` use case or one-shot runner exists. Why: the setting is shipped, validated, and refused from the project file, yet nothing reads it, so a user who sets it sees no effect and no message. Fix outline: deliver formatting (roadmap item 14) or, until then, drop the shipped line and report the setting as not yet supported.
+
+### Ex command descriptions live apart from their registration (architecture-review R1)
+
+Location: `carat/use_cases/ex/ex_table.rb:20` (`DESCRIPTIONS` by full name) against each `carat/use_cases/ex/*_command_handler.rb` name spec; action descriptions arrive with each action's registration (`ActionTable#describe`). Why: two lists to keep in sync and two mechanisms for one job; an ex command registered without a description shows an empty one in the command palette and nothing fails. Fix outline: pass the description with each ex handler's registration as actions do, remove `DESCRIPTIONS`, and fail a test on a named command without one.
+
+### Two file-name classifiers (architecture-review R2)
+
+Location: `carat/domain/filetype.rb:8-11` (`EXTENSIONS`, `NAMES`) and `carat/plugin_api.rb:424-481` (`FileIcons::NAMES`, `file_type`). Why: both map a name or extension to a kind (`rb` to `ruby` in each), so a new language is added twice and the two can disagree. Fix outline: one table in `carat/plugin_api.rb` (rank 0) that `Filetype` reads, the icon-only names apart, or `FileIcons` taking the filetype the host already detected.
+
+### Dead methods with no caller (architecture-review R3)
+
+Location: `DisplayWidth.of_char` (`carat/domain/display_width.rb:37`), `ExtendVisual#tabstop_of` (`carat/use_cases/visual/extend_visual.rb:53`), `CommandGrammar#operator_pending?` (`carat/domain/command_grammar.rb:84`), `TabRequest#counted?` (`carat/use_cases/windows/tab_request.rb:14`), `FakeTerminal#input?` (`carat/doubles/fake_terminal.rb:55`); plugin-facing `args?` (`carat/plugin_api.rb:125`) and `insertion?` (line 142) have no caller either. Why: code nobody calls is still read, compiled, analysed, and listed; `of_char` contradicts the rule that `DisplayWidth` takes no one-character strings. Fix outline: remove the five and their map entries; keep or document the two API members in `docs/plugins.md`; a lint rule for a private method its file never calls.
+
+### The language gateway is one class of 1,373 lines (architecture-review M1)
+
+Location: `carat/adapters/json_rpc_language_gateway.rb`. Why: lifecycle, document sync, diagnostics, progress, and five request kinds share one class, so every language feature edits it, and `docs/architecture.md` section 9.3 expects the plugin gateway to reuse framing and process handling that are woven into the language protocol. Fix outline: extract a JSON-RPC session (ids, pending requests, cancellation, framing over `ProcessPort`) and one small class per request kind, before `plugin-protocol` (roadmap item 13).
+
+### The frame presenter still paints floats, menus, and messages itself (architecture-review M2)
+
+Location: `carat/adapters/frame_presenter.rb` (1,274 lines); `TabBar`, `StatusBar`, `Winbar`, `IndentGuides`, and `PaintedRows` were split out already. Why: floats, the completion menu, the message area, notifications, and the diagnostic line are painted inline, so each new overlay grows the file. Fix outline: move float and menu painting and the message rows into painters on the pattern of `StatusBar`, the presenter keeping the frame swap and the window rows.
+
+### The plugin API file mixes four concerns (architecture-review M3)
+
+Location: `carat/plugin_api.rb` (888 lines): request and response values, the `Host` and `Plugin` bases, `Paths`, and `FileIcons`. Why: it is the one file a plugin author reads, and the API reference is buried among path functions and an icon table. Fix outline: keep `carat/plugin_api.rb` as the one file a plugin requires, requiring one file per concern from a `plugin_api` directory beside it (values, host, plugin, paths, file icons), and widen the lint's plugin rule to that directory.
+
+### Floats have no place in the architecture (architecture-review M4)
+
+Location: `docs/architecture.md` sections 4, 5.3, and 8.2; the code has `Domain::FloatWindow`, `Domain::CompletionMenu`, `UseCases::OpenFloat` and `CloseFloat`, `Highlight::FLOAT_LAYER`, and plugin API 2.3 and 2.6. Why: floats carry documentation, definitions, signature help, the finder, the key hints, and the palette, yet the architecture mentions them only in passing, so where a new overlay belongs is not written down. Fix outline: a short paragraph on floats in section 4 (record, group layer, plugin ownership) and section 8.2 (painting order), within the budget by pointing to the map for lists.
+
+### The assembly grows with every feature (architecture-review M5)
+
+Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` builds every record and use case. Why: it is the one wiring place by design, but one long constructor makes a feature's wiring hard to find and review. Fix outline: group construction into a private method per feature (language services, discovery, plugins), keeping the readers and the one-instance rule `test/adapters_assembly.rb` checks.
+
+## Findings of architecture-review at review
+
+### docs/architecture.md:29 the Makefile statement is still contradicted by the Makefile
+
+- Where: docs/architecture.md:29, and the section 11 tree line that repeats it.
+- Why: the toolchain target runs git and builds Spinel with make, and doctor and no-cruby run inline shell, so not every target calls spin, spinel, OpenSpec, or a tools/ script as the corrected sentence says.
+- Fix: name the toolchain build among what the targets run, or say most targets call those and the toolchain recipe fetches and builds Spinel.
+
+### docs/architecture.md:174 the ex command list still omits registered commands
+
+- Where: docs/architecture.md:174.
+- Why: the list the design calls corrected leaves out wqa and xa among the file commands, and vnew, bf, and bl among the buffer and window commands, which ExTable DESCRIPTIONS names.
+- Fix: add them, or say the list is a sample and point to docs/compatibility.md for the full set.
+
+### docs/architecture.md:180 the (planned) markers do not cite their roadmap item
+
+- Where: docs/architecture.md:180, 374, 379, and 392.
+- Why: the change's design (design.md:20) says planned pieces are marked (planned) with the roadmap item where there is one, but no marker cites its item: FormatBuffer and git_signs are item 14, the plugin gateway and plugin-protocol.md item 13.
+- Fix: append the item number to each marker, or drop that clause from the design.
+
+### docs/codebase-map.md:599 the corrected environment sentence reads ambiguously
+
+- Where: docs/codebase-map.md:599.
+- Why: the sentence reads 'the environment reads but the HOME of DiskFiles#home', which is hard to parse.
+- Fix: write 'the only environment reads besides the HOME that DiskFiles#home reads'.
+
+### docs/architecture.md:271 the one-shot runner is marked as future twice
+
+- Where: docs/architecture.md:271, and the layout line at docs/architecture.md:379.
+- Why: 'will run ... (planned)' marks the one-shot runner as future twice, and the edited layout line now sits one column right of the tree's description column.
+- Fix: drop 'will' to match the other (planned) markers and realign the column.
