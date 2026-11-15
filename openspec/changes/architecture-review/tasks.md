@@ -11,7 +11,7 @@
 
 ## 3. Backlog
 
-- [ ] 3.1 Append every open finding of the report to the end of `docs/backlog.md` with `>>`, without reading the file. Verify with `git diff --stat docs/backlog.md` (additions only) and `make docs-lint`.
+- [x] 3.1 Append every open finding of the report to the end of `docs/backlog.md` with `>>`, without reading the file. Verify with `git diff --stat docs/backlog.md` (additions only) and `make docs-lint`.
 
 ## 4. Gates
 
