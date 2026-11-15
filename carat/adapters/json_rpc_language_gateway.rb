@@ -459,32 +459,32 @@ module Carat
       def receive(server, text)
         value = parse(text)
         return unless value.is_a?(Hash)
-        name = value["method"]
+        name = Json.field(value, "method")
         if name.is_a?(String)
           if value.key?("id")
-            answer(server, name.to_s, value["id"])
+            answer(server, name.to_s, Json.field(value, "id"))
           else
-            notified(server, name.to_s, value["params"])
+            notified(server, name.to_s, Json.field(value, "params"))
           end
-        elsif value["id"] == server.init_id && server.state == :starting
-          result = value["result"]
+        elsif Json.field(value, "id") == server.init_id && server.state == :starting
+          result = Json.field(value, "result")
           if value.key?("error") || !result.is_a?(Hash)
             crash(server)
           else
             initialized(server, result)
           end
-        elsif @completion.sent_id != 0 && value["id"] == @completion.sent_id && server.language == @completion.language
-          completed(value.key?("error") ? nil : value["result"])
-        elsif @completion.docs.sent_id != 0 && value["id"] == @completion.docs.sent_id && server.language == @completion.language
-          resolved(value.key?("error") ? nil : value["result"])
-        elsif @hover.sent_id != 0 && value["id"] == @hover.sent_id && server.language == @hover.language
-          hovered(value.key?("error") ? nil : value["result"])
-        elsif @definition.sent_id != 0 && value["id"] == @definition.sent_id && server.language == @definition.language
-          defined(value.key?("error") ? nil : value["result"])
-        elsif @signature.sent_id != 0 && value["id"] == @signature.sent_id && server.language == @signature.language
-          signed(value.key?("error") ? nil : value["result"])
-        elsif @symbols.sent_id != 0 && value["id"] == @symbols.sent_id && server.language == @symbols.language
-          outlined(value.key?("error") ? nil : value["result"])
+        elsif @completion.sent_id != 0 && Json.field(value, "id") == @completion.sent_id && server.language == @completion.language
+          completed(value.key?("error") ? nil : Json.field(value, "result"))
+        elsif @completion.docs.sent_id != 0 && Json.field(value, "id") == @completion.docs.sent_id && server.language == @completion.language
+          resolved(value.key?("error") ? nil : Json.field(value, "result"))
+        elsif @hover.sent_id != 0 && Json.field(value, "id") == @hover.sent_id && server.language == @hover.language
+          hovered(value.key?("error") ? nil : Json.field(value, "result"))
+        elsif @definition.sent_id != 0 && Json.field(value, "id") == @definition.sent_id && server.language == @definition.language
+          defined(value.key?("error") ? nil : Json.field(value, "result"))
+        elsif @signature.sent_id != 0 && Json.field(value, "id") == @signature.sent_id && server.language == @signature.language
+          signed(value.key?("error") ? nil : Json.field(value, "result"))
+        elsif @symbols.sent_id != 0 && Json.field(value, "id") == @symbols.sent_id && server.language == @symbols.language
+          outlined(value.key?("error") ? nil : Json.field(value, "result"))
         end
       end
 
@@ -499,23 +499,23 @@ module Carat
       # The initialize result: the server's name, ready, and initialized.
       #: (Domain::LanguageServer, untyped) -> void
       def initialized(server, result)
-        info = result.is_a?(Hash) ? result["serverInfo"] : nil
-        name = info.is_a?(Hash) ? info["name"] : nil
+        info = Json.field(result, "serverInfo")
+        name = Json.field(info, "name")
         if name.is_a?(String)
           stripped = Domain::ControlText.strip(name.to_s, NAME_LIMIT)
           server.name = stripped unless stripped.empty?
         end
-        caps = result.is_a?(Hash) ? result["capabilities"] : nil
-        provider = caps.is_a?(Hash) ? caps["completionProvider"] : nil
+        caps = Json.field(result, "capabilities")
+        provider = Json.field(caps, "completionProvider")
         @completion.languages << server.language if provider.is_a?(Hash) && !@completion.completes?(server.language)
-        @resolvers << server.language if provider.is_a?(Hash) && provider["resolveProvider"] == true && !@resolvers.include?(server.language)
-        hovers = caps.is_a?(Hash) ? caps["hoverProvider"] : nil
+        @resolvers << server.language if provider.is_a?(Hash) && Json.field(provider, "resolveProvider") == true && !@resolvers.include?(server.language)
+        hovers = Json.field(caps, "hoverProvider")
         @hover.languages << server.language if (hovers == true || hovers.is_a?(Hash)) && !@hover.hovers?(server.language)
-        defines = caps.is_a?(Hash) ? caps["definitionProvider"] : nil
+        defines = Json.field(caps, "definitionProvider")
         @definition.languages << server.language if (defines == true || defines.is_a?(Hash)) && !@definition.offers?(server.language)
-        helps = caps.is_a?(Hash) ? caps["signatureHelpProvider"] : nil
+        helps = Json.field(caps, "signatureHelpProvider")
         @signature.languages << server.language if helps.is_a?(Hash) && !@signature.helps?(server.language)
-        outlines = caps.is_a?(Hash) ? caps["documentSymbolProvider"] : nil
+        outlines = Json.field(caps, "documentSymbolProvider")
         @symbols.languages << server.language if (outlines == true || outlines.is_a?(Hash)) && !@symbols.offers?(server.language)
         server.state = :ready
         notify(server, "initialized", {})
@@ -610,7 +610,7 @@ module Carat
         docs.clear
         @items.clear
         resolves = @resolvers.include?(ask.language)
-        items = result.is_a?(Hash) ? result["items"] : result
+        items = result.is_a?(Hash) ? Json.field(result, "items") : result
         list = Domain::CompletionList.new
         if items.is_a?(Array)
           items.each do |item|
@@ -736,7 +736,7 @@ module Carat
         if result.is_a?(Array)
           i = 0
           while i < result.length && i < Domain::DefinitionRequest::LIMIT
-            add_target(result[i])
+            add_target(Json.element(result, i))
             i += 1
           end
         else
@@ -750,17 +750,17 @@ module Carat
       #: (untyped) -> void
       def add_target(item)
         return unless item.is_a?(Hash)
-        uri = item["targetUri"]
-        range = item["targetSelectionRange"]
+        uri = Json.field(item, "targetUri")
+        range = Json.field(item, "targetSelectionRange")
         unless uri.is_a?(String)
-          uri = item["uri"]
-          range = item["range"]
+          uri = Json.field(item, "uri")
+          range = Json.field(item, "range")
         end
         return unless uri.is_a?(String) && range.is_a?(Hash)
-        start = range["start"]
+        start = Json.field(range, "start")
         return unless start.is_a?(Hash)
-        line = start["line"]
-        character = start["character"]
+        line = Json.field(start, "line")
+        character = Json.field(start, "character")
         return unless line.is_a?(Integer) && character.is_a?(Integer) && line.to_i >= 0 && character.to_i >= 0
         path = path_of(uri.to_s)
         @definition.add_target(path, line.to_i, character.to_i) unless path.empty?
@@ -874,7 +874,7 @@ module Carat
       def hovered(result)
         ask = @hover
         ask.sent_id = 0
-        ask.text = hover_text(result.is_a?(Hash) ? result["contents"] : nil)
+        ask.text = hover_text(Json.field(result, "contents"))
         ask.arrived = true
       end
 
@@ -890,7 +890,7 @@ module Carat
         count = PART_LIMIT if count > PART_LIMIT
         i = 0
         while i < count && out.bytesize < limit
-          piece = markdown_of(contents[i], limit - out.bytesize)
+          piece = markdown_of(Json.element(contents, i), limit - out.bytesize)
           i += 1
           next if piece.strip.empty?
           out << "\n\n" unless out.empty?
@@ -907,9 +907,9 @@ module Carat
         text = ""
         if part.is_a?(String)
           text = part.to_s
-        elsif part.is_a?(Hash) && part["value"].is_a?(String)
-          text = part["value"].to_s
-          language = part["language"]
+        elsif part.is_a?(Hash) && Json.field(part, "value").is_a?(String)
+          text = Json.field(part, "value").to_s
+          language = Json.field(part, "language")
           text = "```" + Domain::ControlText.strip(language.to_s, NAME_LIMIT) + "\n" + text + "\n```" if language.is_a?(String)
         end
         return text if text.bytesize <= limit
@@ -1035,25 +1035,25 @@ module Carat
         ask = @signature
         ask.sent_id = 0
         return if ask.sent != ask.want
-        signatures = result.is_a?(Hash) ? result["signatures"] : nil
+        signatures = Json.field(result, "signatures")
         unless signatures.is_a?(Array) && !signatures.empty?
           ask.keep("", "", "")
           return
         end
-        active = index_in(result["activeSignature"], signatures.length)
-        chosen = signatures[active < 0 ? 0 : active]
-        label = chosen.is_a?(Hash) ? chosen["label"] : nil
+        active = index_in(Json.field(result, "activeSignature"), signatures.length)
+        chosen = Json.element(signatures, active < 0 ? 0 : active)
+        label = Json.field(chosen, "label")
         unless label.is_a?(String)
           ask.keep("", "", "")
           return
         end
         text = label.to_s
-        parameters = chosen["parameters"]
+        parameters = Json.field(chosen, "parameters")
         count = parameters.is_a?(Array) ? parameters.length : 0
-        wanted = chosen.key?("activeParameter") ? chosen["activeParameter"] : result["activeParameter"]
+        wanted = chosen.key?("activeParameter") ? Json.field(chosen, "activeParameter") : Json.field(result, "activeParameter")
         index = index_in(wanted.nil? ? 0 : wanted, count)
-        part = index < 0 ? nil : parameters[index]
-        part = part["label"] if part.is_a?(Hash)
+        part = index < 0 ? nil : Json.element(parameters, index)
+        part = Json.field(part, "label") if part.is_a?(Hash)
         from = -1
         to = -1
         if part.is_a?(String) && !part.to_s.empty?
@@ -1062,9 +1062,9 @@ module Carat
             from = found.to_i
             to = from + part.to_s.bytesize
           end
-        elsif part.is_a?(Array) && part.length == 2 && part[0].is_a?(Integer) && part[1].is_a?(Integer)
-          from = utf16_offset(text, part[0].to_i)
-          to = utf16_offset(text, part[1].to_i)
+        elsif part.is_a?(Array) && part.length == 2 && Json.element(part, 0).is_a?(Integer) && Json.element(part, 1).is_a?(Integer)
+          from = utf16_offset(text, Json.element(part, 0).to_i)
+          to = utf16_offset(text, Json.element(part, 1).to_i)
           from = -1 if to < from
         end
         if from < 0 || to < 0
@@ -1107,8 +1107,8 @@ module Carat
       #: (untyped) -> String
       def document_of(item)
         return "" unless item.is_a?(Hash)
-        value = item["documentation"]
-        value = value["value"] if value.is_a?(Hash)
+        value = Json.field(item, "documentation")
+        value = Json.field(value, "value") if value.is_a?(Hash)
         return "" unless value.is_a?(String)
         text = value.to_s
         text.bytesize > DOCUMENT_LIMIT ? text.byteslice(0, DOCUMENT_LIMIT).to_s : text
@@ -1118,14 +1118,14 @@ module Carat
       #: (untyped) -> Domain::CompletionItem?
       def candidate_of(item)
         return nil unless item.is_a?(Hash)
-        label = item["label"]
+        label = Json.field(item, "label")
         return nil unless label.is_a?(String)
-        number = item["kind"]
+        number = Json.field(item, "kind")
         kind = number.is_a?(Integer) && number.to_i > 0 && number.to_i < KIND_NAMES.length ? KIND_NAMES[number.to_i].to_s : "text"
-        detail = item["detail"]
-        edit = item["textEdit"]
-        text = edit.is_a?(Hash) ? edit["newText"] : nil
-        text = item["insertText"] unless text.is_a?(String)
+        detail = Json.field(item, "detail")
+        edit = Json.field(item, "textEdit")
+        text = Json.field(edit, "newText")
+        text = Json.field(item, "insertText") unless text.is_a?(String)
         Domain::CompletionItem.from_source(label.to_s, kind, detail.is_a?(String) ? detail.to_s : "", text.is_a?(String) ? text.to_s : "")
       end
 
@@ -1159,11 +1159,11 @@ module Carat
       def notified(server, name, params)
         return unless params.is_a?(Hash)
         if name == "$/progress"
-          progress(server, params["value"])
+          progress(server, Json.field(params, "value"))
         elsif name == "textDocument/publishDiagnostics"
-          published(server, params["uri"], params["diagnostics"])
+          published(server, Json.field(params, "uri"), Json.field(params, "diagnostics"))
         elsif name == "window/showMessage"
-          shown(params["type"], params["message"])
+          shown(Json.field(params, "type"), Json.field(params, "message"))
         end
       end
 
@@ -1186,10 +1186,10 @@ module Carat
       #: (Domain::LanguageServer, untyped) -> void
       def progress(server, value)
         return unless value.is_a?(Hash) && server.running?
-        kind = value["kind"]
-        percent = value["percentage"]
-        title = value["title"]
-        message = value["message"]
+        kind = Json.field(value, "kind")
+        percent = Json.field(value, "percentage")
+        title = Json.field(value, "title")
+        message = Json.field(value, "message")
         given = percent.is_a?(Integer) || percent.is_a?(Float) ? bounded(percent.to_i, 0, 100) : -1
         @slots.set_progress(kind == "begin" && title.is_a?(String) ? title.to_s : "", message.is_a?(String) ? message.to_s : "", given) unless kind == "end"
         if kind == "begin"
@@ -1256,12 +1256,12 @@ module Carat
       #: (untyped) -> Domain::Diagnostic?
       def diagnostic_of(item)
         return nil unless item.is_a?(Hash)
-        range = item["range"]
-        start = range.is_a?(Hash) ? range["start"] : nil
+        range = Json.field(item, "range")
+        start = Json.field(range, "start")
         return nil unless start.is_a?(Hash)
-        severity = item["severity"]
-        message = item["message"]
-        Domain::Diagnostic.new(row: count_of(start["line"]), col: count_of(start["character"]), severity: severity.is_a?(Integer) ? bounded(severity.to_i, 1, 4) : 1, message: message.is_a?(String) ? Domain::ControlText.line(message.to_s, MESSAGE_LIMIT) : "")
+        severity = Json.field(item, "severity")
+        message = Json.field(item, "message")
+        Domain::Diagnostic.new(row: count_of(Json.field(start, "line")), col: count_of(Json.field(start, "character")), severity: severity.is_a?(Integer) ? bounded(severity.to_i, 1, 4) : 1, message: message.is_a?(String) ? Domain::ControlText.line(message.to_s, MESSAGE_LIMIT) : "")
       end
 
       #: (Integer, Integer, Integer) -> Integer
