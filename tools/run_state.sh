@@ -241,6 +241,13 @@ TEST_ONLY="^(test/|$RECORDS_RE|\$)"
 COMPILE_STAGES="dev-build test-build diagnose"
 NOT_COMPILED='^([.]claude/|[.]github/|docs/|openspec/|tools/[^/]+[.]sh$|[^/]+[.]md$)'
 BUILD_TOOLS='^tools/(analysis_budget|spinel_warnings)[.]sh$'
+# The path scope: the stages a change's paths need, from the paths changed
+# since its merge base with main (BASE). ALWAYS_STAGES run on any change;
+# tools-test runs when a changed path is one it reads (TOOLS_RE in
+# tools/rules.sh); every other stage when a changed path is not
+# documentation (tools/rules.sh), so a documentation-only change runs only
+# ALWAYS_STAGES. A stage left out is recorded passed, with the note scoped.
+ALWAYS_STAGES="docs-lint gates"
 compiled_file=$state_dir/compiled
 # The gates of a history row's first passes, in order, before gates.
 GATES="check quality security bench ci"
@@ -451,6 +458,26 @@ tests_only_since() {
 # The merge gates run origin/main's copy (BASE), which requires the stages
 # of its Makefile: while that Makefile has CHECK_STAGES and no FAST_STAGES,
 # main's CHECK_STAGES; otherwise nothing, and make stages decides.
+# The paths changed from the merge base with BASE to HEAD, a rename
+# counting both; nothing when the merge base is unknown.
+scope_paths() {
+  scope_base=$(git merge-base "${BASE:-origin/main}" HEAD 2>/dev/null) || return 0
+  git diff --no-renames --name-only "$scope_base" HEAD 2>/dev/null
+}
+
+# out_of_scope STAGE PATHS: true when no path of PATHS is one STAGE checks;
+# false for no paths, so an unknown scope runs every stage.
+out_of_scope() {
+  [ -n "$2" ] && ! one_of "$1" "$ALWAYS_STAGES" || return 1
+  if [ "$1" = tools-test ]; then
+    ! printf '%s\n' "$2" | grep -q -E "$TOOLS_RE"
+    return
+  fi
+  for scope_path in $2; do
+    documentation "$scope_path" || return 1
+  done
+}
+
 main_stages() {
   file=$(git show "${BASE:-origin/main}:Makefile" 2> /dev/null) || return 0
   ! printf '%s\n' "$file" | grep -q '^FAST_STAGES := ' || return 0
@@ -462,6 +489,7 @@ check_stages() {
   [ -n "$stages" ] || stages=$(in_clone "$make_cmd" -s --no-print-directory stages)
   backed=$1
   key=$(code_key)
+  paths=$(scope_paths)
   for s in $stages; do
     record=$(read_key "stage.$s")
     at=$(echo "$record" | cut -d' ' -f3)
@@ -479,6 +507,11 @@ check_stages() {
           continue
         fi ;;
     esac
+    if out_of_scope "$s" "$paths"; then
+      write_key "stage.$s" "0 0s $head $(utc_now) scoped"
+      echo "stage $s: no path changed since the merge base is one it checks, skipped"
+      continue
+    fi
     if one_of "$s" "$COMPILE_STAGES" && compiled_same "$s" "$key"; then
       write_key "stage.$s" "0 0s $head $(utc_now) compiled-$(echo "$key" | cut -c1-12)"
       echo "stage $s: passed on the same code (key $(echo "$key" | cut -c1-12)) with its outputs unchanged, skipped"
@@ -997,6 +1030,9 @@ newest_pending() {
 # step, after this one, so main's figures are those of the newest merged
 # change without a row (its run state's metric.rounds.*, allocs.*, us.*),
 # and the last history row only when no merged change is pending.
+# When the check scoped the metrics stage out, no measured path changed, so
+# main's figures are carried as the change's own, which the next history
+# row reads, and reported the same.
 bench_compare() {
   record=$(read_key stage.metrics)
   case "$record" in
@@ -1004,7 +1040,8 @@ bench_compare() {
       die "bench: the metrics stage passed at another commit; run the checks first" ;;
     *) die "bench: the metrics stage has not passed at HEAD; run the checks first" ;;
   esac
-  import_metrics "$metrics_out"
+  scoped=no
+  case "$record" in *" scoped") scoped=yes ;; *) import_metrics "$metrics_out" ;; esac
   last=$(dirname "$metrics_out")/last.tsv
   base=$(newest_pending)
   if [ -n "$base" ]; then
@@ -1028,6 +1065,12 @@ bench_compare() {
       }
       { out("rounds", $8); out("allocs", $9); out("us", $10) }' > "$last"
     source="the history row of $(tail -1 "$metrics_file" | cut -f1)"
+  fi
+  if [ "$scoped" = yes ]; then
+    mkdir -p "$(dirname "$metrics_out")" && cp "$last" "$metrics_out"
+    import_metrics "$metrics_out"
+    echo "bench: the check measured nothing, since no path it measures changed; carried the figures of $source"
+    return 0
   fi
   echo "bench: comparing with $source"
   "$make_cmd" --no-print-directory metrics-compare "BASE_METRICS=$last"

@@ -5,18 +5,18 @@
 # GITHUB_OUTPUT (to standard output when that is not set).
 #
 # The checks are skipped when
-#   - every file the change touches is documentation that no test reads:
-#     a Markdown file other than docs/actions.md and docs/compatibility.md,
-#     which the action and ex tests compare with the code, and
-#     docs/codebase-map.md, whose coverage the lint test checks, or a file
-#     under openspec/ or .claude/ other than the agents, the workflows, and
-#     .claude/settings.json, which make tools-test reads;
+#   - every file the change touches is documentation that no test reads
+#     (documentation in tools/rules.sh: the records, a LICENSE file, and
+#     Markdown or .claude/ files but those a test or tools case reads);
 #   - on a pull request, every file the merge commit changes against the
 #     newest earlier head of the pull request whose spin check passed is
 #     such documentation (GREEN_LOOKUPS heads back at most);
 #   - a push to main is the squash commit of a pull request whose head has
 #     the same tree and whose spin check passed: the tests ran on exactly
 #     these files already.
+# It also writes tools=true or tools=false: whether make tools-test reads
+# a changed file (TOOLS_RE in tools/rules.sh), true on a run by hand or
+# when the changed files are unknown, false on the equal-tree push.
 # Anything it cannot establish, an API call that fails included, runs the
 # checks.
 #
@@ -28,7 +28,7 @@
 # a green head missing from the checkout is fetched by its sha.
 set -u
 
-# answer RUN REASON: the reason goes on one line whatever it holds, so
+# answer RUN REASON: writes RUN, REASON, and tools; the reason goes on one line whatever it holds, so
 # GITHUB_OUTPUT keeps one run= and one reason= line. printf, never echo:
 # dash's echo expands backslash escapes, and git quotes a path holding a
 # line break as "x\ny", which echo would turn back into a line break.
@@ -37,8 +37,10 @@ answer() {
   if [ -n "${GITHUB_OUTPUT:-}" ]; then
     printf 'run=%s\n' "$1" >> "$GITHUB_OUTPUT"
     printf 'reason=%s\n' "$reason" >> "$GITHUB_OUTPUT"
+    printf 'tools=%s\n' "$tools" >> "$GITHUB_OUTPUT"
   fi
   printf 'run=%s: %s\n' "$1" "$reason"
+  printf 'tools=%s\n' "$tools"
   exit 0
 }
 
@@ -56,19 +58,8 @@ hex() {
 here=$(cd "$(dirname "$0")" && pwd)
 . "$here/rules.sh"
 
-# True when a path is documentation no test reads: a records-only path of
-# tools/rules.sh (RECORDS_RE), or one of the case below.
-documentation() {
-  ! printf '%s\n' "$1" | grep -q -E "^($RECORDS_RE)" || return 0
-  case "$1" in
-    docs/actions.md|docs/compatibility.md|docs/codebase-map.md) return 1 ;;
-    .claude/agents/*|.claude/workflows/*|.claude/settings.json) return 1 ;;
-    .claude/*|*.md) return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
 GREEN_LOOKUPS=10
+tools=true
 event=${EVENT:-}
 if [ "$event" != "pull_request" ] && [ "$event" != "push" ]; then
   answer true "a $event run always runs the checks"
@@ -82,6 +73,7 @@ if [ "$event" = "push" ]; then
     passed=$(digits "$(gh api "repos/$REPO/commits/$head/check-runs?check_name=spin" --jq '[.check_runs[] | select(.conclusion == "success")] | length' 2>/dev/null)")
     tree=$(git rev-parse HEAD^{tree})
     if [ -n "$head_tree" ] && [ "$head_tree" = "$tree" ] && [ "${passed:-0}" -gt 0 ]; then
+      tools=false
       answer false "the tree equals the head of pull request $number, whose spin check passed"
     fi
   fi
@@ -91,6 +83,7 @@ changed=$(git diff --name-only HEAD^1 HEAD 2>/dev/null) || answer true "the firs
 if [ -z "$changed" ]; then
   answer true "no changed file was found"
 fi
+printf '%s\n' "$changed" | grep -q -E "$TOOLS_RE" || tools=false
 code=""
 for path in $changed; do
   documentation "$path" || { code=$path; break; }

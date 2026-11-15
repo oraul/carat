@@ -110,17 +110,19 @@ jobs:
         run: make no-cruby
 
       # The documents' byte budgets, forbidden content, hard-wrapped pull
-      # request text, and dead paths. A Markdown-only pull request skips
-      # the checks (tools/ci_scope.sh), so the checker's run before the
-      # push covers those.
+      # request text, and dead paths. It needs no toolchain and takes a
+      # second, so every pull request runs it, a documentation-only one
+      # whose compile, test, and bench steps tools/ci_scope.sh skips too.
       - name: Docs lint
-        if: steps.scope.outputs.run == 'true'
+        if: steps.scope.outputs.run == 'true' || github.event_name == 'pull_request'
         run: make docs-lint
 
       # The shell tools behind CI and the delivery pipeline, tested in
       # temporary repositories: tools/ci_scope.sh, the run state, the gates.
+      # Only when a changed file is one it reads (tools=, TOOLS_RE in
+      # tools/rules.sh).
       - name: Tools
-        if: steps.scope.outputs.run == 'true'
+        if: steps.scope.outputs.tools == 'true'
         run: make tools-test
 
       # The editor the smoke test runs, compiled with the development flags
