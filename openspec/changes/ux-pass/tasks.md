@@ -2,8 +2,8 @@
 
 ## 1. Evidence
 
-- [ ] 1.1 Build the release binary with `make build` and drive it in a pseudo-terminal as `test/smoke_editor.rb` does, with a scratch driver compiled by Spinel and never committed. Proven by the header of each screen file, which names its keys and times.
-- [ ] 1.2 Save each topic's screens with their colors under `openspec/changes/ux-pass/screens/`, one text file per screen (first use, empty and loading states, feedback, messages, floats, time), and the key-to-answer times for a motion, an insert, and each float in `screens/timings.txt`. Proven by the files and `make gates` (the forbidden-text scan of the added lines).
+- [x] 1.1 Build the release binary with `make build` and drive it in a pseudo-terminal as `test/smoke_editor.rb` does, with a scratch driver compiled by Spinel and never committed. Proven by the header of each screen file, which names its keys and times.
+- [x] 1.2 Save each topic's screens with their colors under `openspec/changes/ux-pass/screens/`, one text file per screen (first use, empty and loading states, feedback, messages, floats, time), and the key-to-answer times for a motion, an insert, and each float in `screens/timings.txt`. Proven by the files and `make gates` (the forbidden-text scan of the added lines).
 
 ## 2. Review
 
