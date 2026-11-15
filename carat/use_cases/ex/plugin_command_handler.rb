@@ -31,7 +31,7 @@ module Carat
 
       #: (ExTable, plugins: PluginHost) -> void
       def self.register(table, plugins:)
-        table.register(PluginCommandHandler.new(plugins: plugins))
+        table.register(PluginCommandHandler.new(plugins: plugins), "")
       end
     end
   end

@@ -8,35 +8,14 @@ module Carat
     # to its position. A handler whose full name or abbreviation is
     # already registered is refused. A handler with an empty name, the
     # plugin commands, is matched by asking it, after the named ones.
-    # Each named command has a short description, which the command
-    # palette shows beside it, kept here by full name so the handlers'
-    # registrations stay as they are.
+    # Each named command is registered with a short description, which
+    # the command palette shows beside it, as an action is.
     class ExTable
       # @rbs @handlers: Array[untyped]
       # @rbs @index: Hash[String, Integer]
       # @rbs @names: Array[String]
       # @rbs @full_names: Array[String]
-
-      DESCRIPTIONS = {
-        "write" => "Write the buffer", "quit" => "Close the window", "wq" => "Write and close the window",
-        "xit" => "Write if changed and close", "exit" => "Write if changed and close", "wall" => "Write all buffers",
-        "qall" => "Quit the editor", "quitall" => "Quit the editor", "wqall" => "Write all and quit",
-        "xall" => "Write all and quit", "edit" => "Edit a file",
-        "split" => "Split window", "vsplit" => "Split window vertically", "new" => "Split with an empty buffer",
-        "vnew" => "Vertical split, empty buffer", "close" => "Close the window", "only" => "Close other windows",
-        "tabnew" => "New tab page", "tabedit" => "Edit a file in a new tab", "tabclose" => "Close the tab page",
-        "tabonly" => "Close other tab pages", "tabnext" => "Next tab page", "tabprevious" => "Previous tab page",
-        "tabNext" => "Previous tab page", "tabfirst" => "First tab page", "tablast" => "Last tab page",
-        "ls" => "List buffers", "buffers" => "List buffers", "files" => "List buffers", "buffer" => "Go to a buffer",
-        "bnext" => "Next buffer", "bprevious" => "Previous buffer", "bNext" => "Previous buffer", "bfirst" => "First buffer", "brewind" => "First buffer", "blast" => "Last buffer", "bdelete" => "Delete a buffer",
-        "undo" => "Undo", "redo" => "Redo", "undolist" => "List undo branches", "earlier" => "Go back in undo time",
-        "later" => "Go forward in undo time", "registers" => "List registers", "display" => "List registers",
-        "syntax" => "Syntax highlighting on or off", "set" => "Set an option", "nohlsearch" => "Clear search highlight",
-        "substitute" => "Substitute in lines", "&" => "Repeat last substitute", "global" => "Run on matching lines",
-        "vglobal" => "Run on other lines", "delete" => "Delete lines", "LspStart" => "Start language server",
-        "LspRestart" => "Restart language servers", "messages" => "Show the message history"
-      }
-      private_constant :DESCRIPTIONS
+      # @rbs @descriptions: Hash[String, String]
 
       #: () -> void
       def initialize
@@ -44,12 +23,14 @@ module Carat
         @index = {}
         @names = []
         @full_names = []
+        @descriptions = {}
       end
 
-      # Registers the handler under the name it carries; false, and
-      # nothing added, when its full name or abbreviation is taken.
-      #: (ExHandler) -> bool
-      def register(handler)
+      # Registers the handler under the name it carries, with the
+      # description the palette shows for a named one; false, and nothing
+      # added, when its full name or abbreviation is taken.
+      #: (ExHandler, String) -> bool
+      def register(handler, description)
         name = handler.name
         return false if !name.full.empty? && (@index.key?(name.full) || @index.key?(name.short))
         unless name.full.empty?
@@ -57,6 +38,7 @@ module Carat
           @index[name.short] = @handlers.length
           @names << name.to_s
           @full_names << name.full
+          @descriptions[name.full] = description
         end
         @handlers << handler
         true
@@ -91,7 +73,7 @@ module Carat
       # The description of a command by its full name, "" for none.
       #: (String) -> String
       def describe(full)
-        text = DESCRIPTIONS[full]
+        text = @descriptions[full]
         text.nil? ? "" : text
       end
 

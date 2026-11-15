@@ -1886,7 +1886,7 @@ expect "new: refuses a plugin action" 2 "declared in its manifest" new action ta
 
 kit ex
 expect "new: ex-command writes the handler" 0 "wrote carat/use_cases/ex/sort_command_handler.rb" new ex-command sort 'sor[t]'
-expect "new: ex-command registers its Vim name" 0 "has " has carat/use_cases/ex/sort_command_handler.rb '        table.register(SortCommandHandler.new(spec: "sor[t]"))'
+expect "new: ex-command registers its Vim name" 0 "has " has carat/use_cases/ex/sort_command_handler.rb '        table.register(SortCommandHandler.new(spec: "sor[t]"), "TODO: short description")'
 expect "new: ex-command adds its row before unknown" 0 "^unknown" sh -c "grep -A1 -F '| \`:sor[t]\` |' docs/compatibility.md | tail -1 | cut -c3-9"
 expect "new: refuses a documented ex command" 2 "already lists :new" new ex-command fresh new
 

@@ -33,7 +33,7 @@ module Carat
       # command shares its spelling.
       #: (ExTable, Ports::LanguageServicePort) -> void
       def self.register(table, services)
-        table.register(LspRestartCommandHandler.new(spec: "LspRestart", services: services))
+        table.register(LspRestartCommandHandler.new(spec: "LspRestart", services: services), "Restart language servers")
       end
     end
   end

@@ -18,7 +18,12 @@ module Carat
 
       # The settings of a language: the commands the language services
       # run, each a list of words.
-      LANGUAGE_SETTINGS = ["lsp", "formatter"]
+      LANGUAGE_SETTINGS = ["lsp"]
+
+      # The settings of a language the roadmap plans but no service reads
+      # yet (formatting, roadmap item 14): a line setting one is answered
+      # and not kept.
+      PLANNED_SETTINGS = ["formatter"]
 
       # The key of the directories whose language servers start on their
       # own: a language line, so only the defaults and the user file set it.
@@ -180,7 +185,8 @@ module Carat
 
       # Whether a language line may be kept: from a trusted file, as
       # language.<name>.<setting> with a known setting or as
-      # language.trusted_roots. Notes why not.
+      # language.trusted_roots. Notes why not, a planned setting as not
+      # supported yet.
       #: (RcLine, bool) -> bool
       def language?(line, trusted)
         unless trusted
@@ -195,6 +201,10 @@ module Carat
           return false
         end
         setting = name[dot + 1, name.length - dot - 1].to_s
+        if PLANNED_SETTINGS.include?(setting)
+          note(line, "language setting #{setting} is not supported yet")
+          return false
+        end
         unless LANGUAGE_SETTINGS.include?(setting)
           note(line, "unknown language setting #{setting}")
           return false

@@ -272,11 +272,12 @@ module Carat
       end
 
       # Registers :@FULL@ in the order of docs/compatibility.md, which is
-      # its precedence; a handler that runs a use case takes it as a
+      # its precedence, with the description the command palette shows; a
+      # handler that runs a use case takes it as a
       # required keyword here and in initialize.
       #: (ExTable) -> void
       def self.register(table)
-        table.register(@CLASS@.new(spec: "@SPEC@"))
+        table.register(@CLASS@.new(spec: "@SPEC@"), "TODO: short description")
       end
     end
   end

@@ -97,6 +97,7 @@ module DomainRcParserTest
       ["a language command", "language.ruby.lsp ruby-lsp --debug\n", [["1 language|ruby.lsp [\"ruby-lsp\", \"--debug\"]"], []]],
       ["the trusted roots", "language.trusted_roots ~/src /work\n", [["1 language|trusted_roots [\"~/src\", \"/work\"]"], []]],
       ["an unknown language setting", "language.ruby.linter rubocop\nlanguage.ruby x\n", [[], [".caratrc:1: unknown language setting linter", ".caratrc:2: unknown setting language.ruby"]]],
+      ["a language setting not supported yet", "language.ruby.formatter rubocop\n", [[], [".caratrc:1: language setting formatter is not supported yet"]]],
       ["an illegal byte in each scope", "option.theme caf\xE9\nkeymap.normal x a\xFF.b\nplugin.hello.greeting \xC0\xAF\nlanguage.ruby.lsp ruby-lsp\xFE\noption.tabstop 4\n", [["5 option|tabstop [\"4\"]"], [".caratrc:1: illegal byte", ".caratrc:2: illegal byte", ".caratrc:3: illegal byte", ".caratrc:4: illegal byte"]]]
     ]) do |text|
       config_of(text.to_s, true)

@@ -33,11 +33,6 @@ module Carat
         code >= 0xF0000 && code <= 0xFFFFD
       end
 
-      #: (String) -> Integer
-      def self.of_char(ch)
-        of(code_of(ch))
-      end
-
       # The cells one character takes when it starts at display column
       # dcol: a tab reaches the next tabstop, a C0 control takes two as ^X,
       # delete and the C1 controls take four as <xx>, and every other code

@@ -51,11 +51,6 @@ module Carat
         @queue << bytes
       end
 
-      #: () -> bool
-      def input?
-        !@queue.empty?
-      end
-
       # The bytes of every write, in order.
       #: () -> Array[String]
       def writes

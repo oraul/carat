@@ -45,8 +45,8 @@ module Carat
       # docs/compatibility.md; no other command shares their spellings.
       #: (ExTable, substitute_lines: SubstituteLines) -> void
       def self.register(table, substitute_lines:)
-        table.register(SubstituteCommandHandler.new(spec: "s[ubstitute]", substitute_lines: substitute_lines, allow_pattern: true))
-        table.register(SubstituteCommandHandler.new(spec: "&", substitute_lines: substitute_lines, allow_pattern: false))
+        table.register(SubstituteCommandHandler.new(spec: "s[ubstitute]", substitute_lines: substitute_lines, allow_pattern: true), "Substitute in lines")
+        table.register(SubstituteCommandHandler.new(spec: "&", substitute_lines: substitute_lines, allow_pattern: false), "Repeat last substitute")
       end
     end
   end

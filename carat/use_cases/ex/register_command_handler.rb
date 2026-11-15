@@ -48,8 +48,8 @@ module Carat
 
       #: (ExTable, registers: Domain::Registers) -> void
       def self.register(table, registers:)
-        table.register(RegisterCommandHandler.new(spec: "reg[isters]", registers: registers))
-        table.register(RegisterCommandHandler.new(spec: "di[splay]", registers: registers))
+        table.register(RegisterCommandHandler.new(spec: "reg[isters]", registers: registers), "List registers")
+        table.register(RegisterCommandHandler.new(spec: "di[splay]", registers: registers), "List registers")
       end
 
       # One line of the listing, its text cut to room columns.

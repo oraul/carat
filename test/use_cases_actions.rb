@@ -112,7 +112,7 @@ module UseCasesActionsTest
     # ---------------------------------------------------------------- ex table
 
     commands = U::ExTable.new
-    t.assert_equal([true, true, false, false], [commands.register(EchoCommandHandler.new(spec: "fi[nd]")), commands.register(EchoCommandHandler.new(spec: "fix")), commands.register(EchoCommandHandler.new(spec: "fi[nd]")), commands.register(EchoCommandHandler.new(spec: "fix[up]"))], "a name or abbreviation registers once")
+    t.assert_equal([true, true, false, false], [commands.register(EchoCommandHandler.new(spec: "fi[nd]"), "Find a thing"), commands.register(EchoCommandHandler.new(spec: "fix"), "Fix a thing"), commands.register(EchoCommandHandler.new(spec: "fi[nd]"), "Find again"), commands.register(EchoCommandHandler.new(spec: "fix[up]"), "Fix up")], "a name or abbreviation registers once")
     t.table([
       ["the abbreviation", "fi", "find"],
       ["a spelling between", "fin", "find"],
@@ -127,12 +127,13 @@ module UseCasesActionsTest
       handler.nil? ? "" : handler.call(state, D::ExCommand.new(range: "", name: name, bang: false, args: "")).message
     end
     ordered = U::ExTable.new
-    ordered.register(EchoCommandHandler.new(spec: "ma[rk]"))
-    ordered.register(EchoCommandHandler.new(spec: "m[ove]"))
+    ordered.register(EchoCommandHandler.new(spec: "ma[rk]"), "Mark")
+    ordered.register(EchoCommandHandler.new(spec: "m[ove]"), "Move")
     first = ordered.find("m")
     second = ordered.find("ma")
     t.assert_equal(["move", "mark"], [first.nil? ? "" : first.name.full, second.nil? ? "" : second.name.full], "when two names accept a typed name the first registered wins")
     t.assert_equal(["fi[nd]", "fix"], commands.names, "names lists the registered names in Vim's notation")
+    t.assert_equal(["Find a thing", "Fix a thing", ""], [commands.describe("find"), commands.describe("fix"), commands.describe("fixup")], "a description arrives with its registration, and a refused registration adds none")
 
     # ---------------------------------------------------- the editor's tables
 
@@ -186,7 +187,8 @@ module UseCasesActionsTest
     t.assert_equal([], undescribed, "every core action has a description of 1 to 32 characters")
 
     # Every named ex command is described in 1 to 32 characters for the
-    # command palette.
+    # command palette, by the registration that names it: a command
+    # registered with an empty description fails here.
     full = h.assembly.commands.full_names
     plain = []
     i = 0

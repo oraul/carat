@@ -54,9 +54,10 @@ module Carat
       def self.register(table, open_tab:, close_tab:, close_other_tabs:, switch_tab:)
         specs = ["tabnew", "tabe[dit]", "tabc[lose]", "tabo[nly]", "tabn[ext]", "tabp[revious]", "tabN[ext]", "tabfir[st]", "tabl[ast]"]
         variants = [:open, :open, :close, :only, :next, :previous, :previous, :first, :last]
+        descriptions = ["New tab page", "Edit a file in a new tab", "Close the tab page", "Close other tab pages", "Next tab page", "Previous tab page", "Previous tab page", "First tab page", "Last tab page"]
         i = 0
         while i < specs.length
-          table.register(TabCommandHandler.new(spec: specs[i], open_tab: open_tab, close_tab: close_tab, close_other_tabs: close_other_tabs, switch_tab: switch_tab, variant: variants[i]))
+          table.register(TabCommandHandler.new(spec: specs[i], open_tab: open_tab, close_tab: close_tab, close_other_tabs: close_other_tabs, switch_tab: switch_tab, variant: variants[i]), descriptions[i])
           i += 1
         end
       end

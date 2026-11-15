@@ -32,7 +32,7 @@ module Carat
       # Registers :messages after the language server commands.
       #: (ExTable) -> void
       def self.register(table)
-        table.register(MessagesCommandHandler.new(spec: "mes[sages]"))
+        table.register(MessagesCommandHandler.new(spec: "mes[sages]"), "Show the message history")
       end
     end
   end

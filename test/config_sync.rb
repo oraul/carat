@@ -19,6 +19,7 @@ module ConfigSyncTest
     config = Carat::Domain::Config.new
     config.read_defaults("config/default.caratrc", Carat::Domain::DEFAULT_CARATRC)
     t.assert_equal([], config.report, "every line of the defaults reads, in a known scope")
+    t.assert_true(config.last("language.ruby.formatter").nil?, "the defaults ship no formatter")
     options = Carat::Domain::Options.from_config(config)
     t.assert_equal([], config.report, "every option line names an option with a value of its kind")
     t.assert_true(Carat::Domain::Icons.set?(options.icons), "the icons option names a set")

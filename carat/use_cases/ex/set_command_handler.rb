@@ -77,7 +77,7 @@ module Carat
       # Registers :set after :syntax.
       #: (ExTable, last_search: Domain::LastSearch) -> void
       def self.register(table, last_search:)
-        table.register(SetCommandHandler.new(spec: "se[t]", last_search: last_search))
+        table.register(SetCommandHandler.new(spec: "se[t]", last_search: last_search), "Set an option")
       end
 
       private

@@ -45,8 +45,8 @@ module Carat
       # (:vs[plit] and :vne[w] need two letters).
       #: (ExTable, global_command: GlobalCommand) -> void
       def self.register(table, global_command:)
-        table.register(GlobalCommandHandler.new(spec: "g[lobal]", global_command: global_command, invert: false))
-        table.register(GlobalCommandHandler.new(spec: "v[global]", global_command: global_command, invert: true))
+        table.register(GlobalCommandHandler.new(spec: "g[lobal]", global_command: global_command, invert: false), "Run on matching lines")
+        table.register(GlobalCommandHandler.new(spec: "v[global]", global_command: global_command, invert: true), "Run on other lines")
       end
     end
   end

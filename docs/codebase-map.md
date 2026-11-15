@@ -149,7 +149,7 @@ Files:
 - `carat/domain/keymap_node.rb`: `KeymapNode` trie node; `child?`, `child_for`, `child_named`, `leaf?`, `child_keys`, `binding_count`.
 - `carat/domain/keymap_match.rb`: `KeymapMatch` value (`kind`, `value`), a lookup result.
 - `carat/domain/command.rb`: `Command` value (`register`, `count`, `operator`, `action`, `char`, `linewise`, `keys`); `plain`, `count_or`, `operator?`.
-- `carat/domain/command_grammar.rb`: `CommandGrammar` state machine; `accept`, `accept_visual`, `take`, `reset`, `wants_char?`, `operator_pending?`, `pending?`, `display`.
+- `carat/domain/command_grammar.rb`: `CommandGrammar` state machine; `accept`, `accept_visual`, `take`, `reset`, `wants_char?`, `pending?`, `display`.
 - `carat/domain/input_state.rb`: `InputState`, the pending keys and the grammar, owned by `HandleKey`; `pending?`, `take_keys`.
 - `carat/use_cases/handle_key.rb`: `HandleKey#call`; ends in `FollowHover` only while a documentation float is recorded and in `FollowSignature` only while a call is followed; a typed `(` or `,` in insert mode calls `RequestSignature`; `HideKeyHints` first while the hints show, `FollowPalette` last while the palette follows, then the action its Enter chose; a plugin's live prompt keymap answers first on the command line and `PluginHost#follow_prompt` ends the key while one is open.
 - `carat/use_cases/dispatcher.rb`: `Dispatcher#call`; an arrow key in insert mode closes the session's undo state and opens the next.
@@ -373,7 +373,7 @@ Files:
 - `carat/use_cases/windows/focus_window.rb`: `FocusWindow#call`; `carat/use_cases/windows/focus_request.rb`: `FocusRequest` (target, count); `steps`.
 - `carat/use_cases/windows/scroll_window.rb`: `ScrollWindow#call`, the page, half-page, line, and `zt zz zb` scrolls of the current window, the cursor kept in view with scrolloff and its wanted column; `carat/use_cases/windows/scroll_request.rb`: `ScrollRequest` (target, count); `steps`.
 - `carat/use_cases/windows/open_tab.rb`, `carat/use_cases/windows/close_tab.rb`, `carat/use_cases/windows/close_other_tabs.rb`: `call` (a new tab page's window copies the jump list).
-- `carat/use_cases/windows/switch_tab.rb`: `SwitchTab#call`; `carat/use_cases/windows/tab_request.rb`: `TabRequest`; `counted?`.
+- `carat/use_cases/windows/switch_tab.rb`: `SwitchTab#call`; `carat/use_cases/windows/tab_request.rb`: `TabRequest`.
 - `carat/use_cases/actions/window_handler.rb`: `WindowHandler.register`.
 - `carat/use_cases/actions/tab_handler.rb`: `TabHandler.register` (`tab.next`, `tab.previous`, `tab.last_accessed`, and `tabline.next`, `tabline.previous`, which follow the buffer tabs through `SwitchBuffer` under `option.gt buffers`).
 - `carat/use_cases/actions/float_handler.rb`: `FloatHandler.register`, `float.close` (normal-mode `<Esc>`).
@@ -418,7 +418,7 @@ Files:
 - `carat/use_cases/ex/command_runner.rb`: `CommandRunner`, the interface the command line and the plugin host depend on.
 - `carat/use_cases/ex/execute_ex.rb`: `ExecuteEx#call`.
 - `carat/use_cases/ex/ex_handler.rb`: `ExHandler`; `matches?`, `call`.
-- `carat/use_cases/ex/ex_table.rb`: `ExTable`, handlers in order of precedence; `register`, `find`, `names`, `full_names`, `describe` (each command's short description for the palette).
+- `carat/use_cases/ex/ex_table.rb`: `ExTable`, handlers in order of precedence; `register`, `find`, `names`, `full_names`, `describe` (the short description each command is registered with, for the palette).
 - `carat/use_cases/ex/file_command_handler.rb`: `FileCommandHandler.register`.
 - `carat/use_cases/ex/substitute_command_handler.rb`: `SubstituteCommandHandler.register` (`:s[ubstitute]`, `:&`), `ranged?`.
 - `carat/use_cases/ex/global_command_handler.rb`: `GlobalCommandHandler.register` (`:g[lobal]`, `:g!`, `:v[global]`), `ranged?`; every line without a range.
@@ -470,7 +470,7 @@ Files:
 - `carat/domain/start_art.rb`: `StartArt`, the start screen's six frames and wordmark computed once from the gem's legend, Unicode in the theme's groups or ASCII in Normal; `from_plain`, `none`, `paint` (centred in a window, the wordmark alone when it does not fit).
 - `carat/domain/start_screen.rb`: `StartScreen` record (`showing`, `step`, `started`, `art`); `start`, `animating?`, `due?`, `advance`, `wait`, `dismiss`, `paint`; the input controller advances it on the clock and dismisses it on a key, the frame presenter paints it over the current window.
 - `carat/domain/utf8.rb`: `Utf8`; `size_at` (RFC 3629, every other byte one U+FFFD character, as `String#length` counts), `code_at`, `codes`, `scalar?`, `boundary` (the offset `byteindex` takes, past continuation bytes); decodes by walking bytes.
-- `carat/domain/display_width.rb`: `DisplayWidth`; `of`, `of_char`, `text_width`, `cell`, `code_of`, `column`, `col_at`, `private_use?`, `control?`; `bytes_within`, `cut`, and `fit` cut a menu's text by cells and pad it, never by a negative count; the private use areas are one cell wide.
+- `carat/domain/display_width.rb`: `DisplayWidth`; `of`, `text_width`, `cell`, `code_of`, `column`, `col_at`, `private_use?`, `control?`; `bytes_within`, `cut`, and `fit` cut a menu's text by cells and pad it, never by a negative count; the private use areas are one cell wide.
 - `carat/domain/decoded_line.rb`: `DecodedLine`, a line's code points and display columns; `decode`, `plain?`, `code`, `col`, `width`, `index_at`.
 - `carat/domain/identity_table.rb`: `IdentityTable`, keyed by object identity; `find`, `store`, `clear`.
 - `carat/domain/line_cache.rb`: `LineCache`, decoded lines of the visible rows in two generations, shared by `ArrangeView` and the presenter; `fetch`, `turn`, `holds?`.

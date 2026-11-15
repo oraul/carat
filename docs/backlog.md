@@ -5445,3 +5445,29 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: `carat/domain/json.rb:53` (`Json.field`, `element`, `reach`), `carat/adapters/json_rpc_language_gateway.rb`, `carat/adapters/symbol_outline.rb`, `docs/spinel-notes.md:47` (sprint-5 quality review).
 - Why it matters: the typed readers serve the language-server tests (about 68 calls, 1,181 to 779 rebuilds), but the gateway's 210 untyped reads and SymbolOutline's 18 stay, as the Spinel notes list them.
 - Fix outline: move the gateway's and SymbolOutline's reads onto the readers, accepted with a lower `SP_TIMING` rebuild count at the pin. Queue item `spinel-workarounds`.
+
+## Findings of architecture-tidy's review
+
+### docs/examples.md:31 golden ex-command paragraph omits the palette description (quality, docs currency)
+
+- Where: docs/examples.md:31 and its wiring list at docs/examples.md:33.
+- Why: task 2.3 of architecture-tidy is done, but the golden ex-command paragraph and its wiring still describe register(table) without the palette description the registration now carries, nor the generator's TODO placeholder that must be replaced by hand.
+- Fix: say SyntaxCommandHandler registers itself with its description in self.register(table), and add the description to the wiring list as a by-hand step.
+
+### openspec/specs/config-files/spec.md:27 quoting scenario uses a refused formatter key (quality, spec drift)
+
+- Where: openspec/specs/config-files/spec.md:27, scenario A quoted word, and its row at test/domain_rc_parser.rb:42.
+- Why: the scenario still uses a language.ruby.formatter line, which Config now refuses as not supported yet, so the main spec illustrates quoting with a setting it rejects.
+- Fix: add a MODIFIED scenario to a delta spec using a still-read key such as language.ruby.lsp ruby-lsp "--config my file.yml", and change the matching row at test/domain_rc_parser.rb:42.
+
+### tools/new.sh:280 generated TODO description placeholder passes the description check (quality)
+
+- Where: tools/new.sh:280 for an ex command, tools/new.sh:221 for an action, and the check at test/use_cases_actions.rb:190.
+- Why: the generated placeholder TODO: short description is 23 characters, so the 1-to-32 length check passes an ex command or action that still ships the placeholder in the palette, weakening the rule that the test fails on an ex command without a description.
+- Fix: make both description checks also reject text starting with TODO.
+
+### tools/new.sh:275 hand-reflowed template comment (quality, style)
+
+- Where: tools/new.sh:275.
+- Why: the template comment was reflowed by hand, leaving the short line a handler that runs a use case takes it as a before a wrapped remainder.
+- Fix: rewrap the three lines to the file's width.

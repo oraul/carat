@@ -8,12 +8,6 @@ module Carat
     class TabRequest < Data.define(:target, :count)
       # @rbs @target: Symbol
       # @rbs @count: Integer
-
-      # Whether a count was given.
-      #: () -> bool
-      def counted?
-        count > 0
-      end
     end
   end
 end

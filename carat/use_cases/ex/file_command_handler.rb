@@ -57,9 +57,10 @@ module Carat
       def self.register(table, save_file:, save_all:, quit:, quit_all:, open_file:, buffers:)
         specs = ["w[rite]", "q[uit]", "wq", "x[it]", "exi[t]", "wa[ll]", "qa[ll]", "quita[ll]", "wqa[ll]", "xa[ll]", "e[dit]"]
         variants = [:write, :quit, :write_quit, :exit, :exit, :write_all, :quit_all, :quit_all, :write_quit_all, :write_quit_all, :edit]
+        descriptions = ["Write the buffer", "Close the window", "Write and close the window", "Write if changed and close", "Write if changed and close", "Write all buffers", "Quit the editor", "Quit the editor", "Write all and quit", "Write all and quit", "Edit a file"]
         i = 0
         while i < specs.length
-          table.register(FileCommandHandler.new(spec: specs[i], save_file: save_file, save_all: save_all, quit: quit, quit_all: quit_all, open_file: open_file, buffers: buffers, variant: variants[i]))
+          table.register(FileCommandHandler.new(spec: specs[i], save_file: save_file, save_all: save_all, quit: quit, quit_all: quit_all, open_file: open_file, buffers: buffers, variant: variants[i]), descriptions[i])
           i += 1
         end
       end
