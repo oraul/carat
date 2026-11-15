@@ -19,4 +19,4 @@
 
 ## 4. Close
 
-- [ ] 4.1 Run `make gates` and `make spec-validate`
+- [x] 4.1 Run `make gates` and `make spec-validate`
