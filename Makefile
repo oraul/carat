@@ -70,6 +70,14 @@ T          ?=
 # second analysis of each root (spinel --emit-rbs); make diagnose and
 # make types print them.
 DIAGNOSE_SKIP ?= behavior
+# A Spinel warning fails the build (tools/spinel_warnings.sh): dev-build
+# and test-build check the report they write, build keeps spin build's
+# standard error in BUILD_LOG, and diagnose and diagnose-one run
+# spinel-doctor with the script as its compiler, which collects the
+# warnings of every root in DIAGNOSE_LOG.
+SPINEL_WARNINGS := sh tools/spinel_warnings.sh check
+BUILD_LOG    ?= build/release.log
+DIAGNOSE_LOG ?= build/diagnose/warnings.log
 # The analysis budget (tools/analysis_budget.sh): the most re-narrowing
 # rounds Spinel's analysis of a compile root may take, which fails, and
 # the analysis milliseconds above which it only warns, since time depends
@@ -229,7 +237,12 @@ no-cruby:
 
 ## build: compile every bin/*.rb into build/bin and print how to run the editor from anywhere
 build:
-	spin build
+	@mkdir -p $(dir $(BUILD_LOG))
+	@echo "spin build"
+	@spin build 2> $(BUILD_LOG); \
+	  status=$$?; cat $(BUILD_LOG) >&2; \
+	  if [ $$status -ne 0 ]; then echo "build: spin build failed" >&2; exit 1; fi; \
+	  $(SPINEL_WARNINGS) build $(BUILD_LOG)
 	@echo
 	@echo "Built $(CURDIR)/build/bin/carat"
 	@echo "To run it from anywhere, add an alias to your shell profile (~/.bashrc, ~/.zshrc, or ~/.config/fish/config.fish):"
@@ -244,7 +257,8 @@ dev-build:
 	@echo "spinel bin/carat.rb $(DEV_FLAGS) -o $(DEV_BIN)"
 	@SP_TIMING=1 spinel $$(spin flags) bin/carat.rb $(DEV_FLAGS) -o $(DEV_BIN) 2> $(DEV_BIN).timing; \
 	  status=$$?; grep -v '^spinel-timing' $(DEV_BIN).timing >&2; \
-	  if [ $$status -ne 0 ]; then echo "dev-build: bin/carat.rb did not compile" >&2; exit 1; fi
+	  if [ $$status -ne 0 ]; then echo "dev-build: bin/carat.rb did not compile" >&2; exit 1; fi; \
+	  $(SPINEL_WARNINGS) dev-build $(DEV_BIN).timing
 	@$(UNIT_SUMMARY) $(DEV_BIN).timing
 	sh tools/analysis_budget.sh --check $(ANALYSIS_ROUNDS) $(ANALYSIS_MS) bin/carat.rb $(DEV_BIN).timing
 
@@ -278,7 +292,8 @@ test-build:
 	@echo "spinel $(TEST_RUNNER) $(DEV_FLAGS) -o $(TEST_BIN)"
 	@SP_TIMING=1 spinel $$(spin flags) $(TEST_RUNNER) $(DEV_FLAGS) -o $(TEST_BIN) 2> $(TEST_BIN).timing; \
 	  status=$$?; grep -v '^spinel-timing' $(TEST_BIN).timing >&2; \
-	  if [ $$status -ne 0 ]; then echo "test-build: $(TEST_RUNNER) did not compile; no test ran" >&2; exit 1; fi
+	  if [ $$status -ne 0 ]; then echo "test-build: $(TEST_RUNNER) did not compile; no test ran" >&2; exit 1; fi; \
+	  $(SPINEL_WARNINGS) test-build $(TEST_BIN).timing
 	@$(UNIT_SUMMARY) $(TEST_BIN).timing
 	sh tools/analysis_budget.sh --check $(ANALYSIS_ROUNDS) $(ANALYSIS_MS) $(TEST_RUNNER) $(TEST_BIN).timing
 
@@ -310,17 +325,26 @@ snapshots: build test-build
 
 ## diagnose: run spinel-doctor on every compile root, bin/*.rb and the test runner, which holds every test program: unsupported constructs, unresolved calls, widened slots, boxing advice, and a build at -O TEST_OPT. The behavior leg is skipped: it compares against a CRuby on the path, which this project never uses and which differs from Ruby 4 output
 diagnose:
-	@status=0; \
+	@mkdir -p $(dir $(DIAGNOSE_LOG))
+	@: > $(DIAGNOSE_LOG); status=0; \
 	for root in bin/*.rb $(TEST_RUNNER); do \
 	  echo "== $$root"; \
-	  spinel-doctor --quiet --skip $(DIAGNOSE_SKIP) "$$root" -- $$(spin flags) -O $(TEST_OPT) || status=1; \
+	  SPINEL=$(CURDIR)/tools/spinel_warnings.sh SPINEL_WARNINGS_LOG=$(abspath $(DIAGNOSE_LOG)) \
+	    spinel-doctor --quiet --skip $(DIAGNOSE_SKIP) "$$root" -- $$(spin flags) -O $(TEST_OPT) || status=1; \
 	done; \
+	$(SPINEL_WARNINGS) diagnose $(DIAGNOSE_LOG) || status=1; \
 	exit $$status
 
 ## diagnose-one: run spinel-doctor on one file as make diagnose does, e.g. make diagnose-one T=test/domain_buffer.rb
 diagnose-one:
 	@case "$(T)" in *.rb) ;; *) echo "usage: make diagnose-one T=path/NAME.rb" >&2; exit 2 ;; esac
-	spinel-doctor --quiet --skip $(DIAGNOSE_SKIP) "$(T)" -- $$(spin flags) -O $(TEST_OPT)
+	@mkdir -p $(dir $(DIAGNOSE_LOG))
+	@: > $(DIAGNOSE_LOG); \
+	echo "spinel-doctor --quiet --skip $(DIAGNOSE_SKIP) $(T) -- -O $(TEST_OPT)"; \
+	SPINEL=$(CURDIR)/tools/spinel_warnings.sh SPINEL_WARNINGS_LOG=$(abspath $(DIAGNOSE_LOG)) \
+	  spinel-doctor --quiet --skip $(DIAGNOSE_SKIP) "$(T)" -- $$(spin flags) -O $(TEST_OPT); \
+	status=$$?; $(SPINEL_WARNINGS) diagnose-one $(DIAGNOSE_LOG) || status=1; \
+	exit $$status
 
 ## bench: build the key benchmark bench/keys.rb into build/bench and run its scenarios (all, or SCENARIOS="lh j"): time per key for handling and rendering, the slowest key, bytes written, the collector's share, and allocations per key, pinned to one core when taskset exists
 bench:
@@ -376,7 +400,7 @@ config-current:
 	fi; \
 	echo "config-current: $(GENERATED) match config/"
 
-## tools-test: test the shell tools in temporary repositories: tools/ci_scope.sh, tools/ci_wait.sh, tools/metrics.sh, tools/run_state.sh, tools/agent_guard.sh, tools/docs_lint.sh, tools/new.sh, tools/spec_validate.sh, and every gate of tools/gates.sh, passing and refusing
+## tools-test: test the shell tools in temporary repositories: tools/ci_scope.sh, tools/spinel_warnings.sh (on the build targets with a stub toolchain), tools/ci_wait.sh, tools/metrics.sh, tools/run_state.sh, tools/agent_guard.sh, tools/docs_lint.sh, tools/new.sh, tools/spec_validate.sh, and every gate of tools/gates.sh, passing and refusing
 tools-test:
 	sh tools/tools_test.sh
 

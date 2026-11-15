@@ -8,7 +8,8 @@
 # review areas), tools/agent_guard.sh (each profile's forms and refusals,
 # and the agents' hook lines), tools/docs_lint.sh (budgets, content, wraps,
 # paths, queue), tools/new.sh (every generator and its refusals),
-# tools/spec_validate.sh (the archive preview, with a stub openspec), and
+# tools/spec_validate.sh (the archive preview, with a stub openspec),
+# tools/spinel_warnings.sh (the build targets on a stub toolchain), and
 # every gate of tools/gates.sh, each passing and refusing.
 # Prints "ok   NAME" or "FAIL NAME" and the output, then "P/T passed";
 # exits 1 when any failed. Run by make tools-test.
@@ -2865,6 +2866,56 @@ expect "agents: the sprint planner keeps unqueued findings in groomed.md" 0 "^1 
   sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "do not queue go into .build/plan/groomed[.]md.") $(printf "%s\n" "$s" | grep -v "never into .build/plan/backlog" | grep -c "build/plan/backlog")"' _ "$agents/planner.md"
 expect "agents: the planner writes self-contained items" 0 "^[1-9][0-9]* 0$" \
   sh -c 'echo "$(grep -c "self-contained" "$1") $(grep -c "Locations go in the" "$1")"' _ "$agents/planner.md"
+
+# Spinel warnings (tools/spinel_warnings.sh): the real build targets run
+# against a stub toolchain under PREFIX, which the Makefile's PATH puts
+# first, with every output in the temporary directory. The stub compiler
+# writes its -o file and prints one warning unless STUB_CLEAN is set; the
+# stub spinel-doctor runs SPINEL, as spinel-doctor does.
+tc="$work/stub-toolchain"
+mkdir -p "$tc/bin" "$tc/out"
+WARNING='spinel: x.rb:1:1: warning: inline RBS: a stub warning'
+cat > "$tc/bin/spinel" <<EOF
+#!/bin/sh
+out=
+while [ \$# -gt 0 ]; do [ "\$1" = -o ] && out=\$2; shift; done
+[ -n "\$out" ] && : > "\$out"
+[ -n "\${STUB_CLEAN:-}" ] || echo "$WARNING" >&2
+exit 0
+EOF
+cat > "$tc/bin/spin" <<'EOF'
+#!/bin/sh
+[ "$1" = build ] && exec spinel bin/carat.rb -o "$STUB_OUT/carat"
+exit 0
+EOF
+cat > "$tc/bin/spinel-doctor" <<'EOF'
+#!/bin/sh
+"$SPINEL" x.rb -c -o "$STUB_OUT/doctor.c" > /dev/null 2>&1
+echo "spinel-doctor: clean"
+EOF
+chmod +x "$tc/bin/spinel" "$tc/bin/spin" "$tc/bin/spinel-doctor"
+# stub_make TARGET [VAR=VALUE...]: the repository's make TARGET on the stubs.
+stub_make() {
+  target=$1
+  shift
+  env -u MAKEFLAGS -u MFLAGS -u MAKELEVEL STUB_OUT="$tc/out" "$@" make -s --no-print-directory -C "$here/.." \
+    PREFIX="$tc" DEV_BIN="$tc/out/dev" TEST_BIN="$tc/out/run_all" BUILD_LOG="$tc/out/release.log" \
+    DIAGNOSE_LOG="$tc/out/warnings.log" "$target"
+}
+expect "spinel warnings: a warning fails make dev-build" 2 "dev-build: Spinel printed 1 warning" stub_make dev-build
+expect "spinel warnings: a warning fails make test-build" 2 "test-build: Spinel printed 1 warning" stub_make test-build
+expect "spinel warnings: a warning fails make build" 2 "build: Spinel printed 1 warning" stub_make build
+expect "spinel warnings: a warning fails make diagnose, each line once" 2 "^diagnose: Spinel printed 1 warning" stub_make diagnose
+expect "spinel warnings: make diagnose passes without a warning" 0 "^spinel-doctor: clean$" stub_make diagnose STUB_CLEAN=1
+expect "spinel warnings: make build passes without a warning" 0 "^Built " stub_make build STUB_CLEAN=1
+printf 'spinel-timing: phase=analysis ms=1.0\nanalysis budget: warning: slow\n' > "$tc/out/clean.log"
+expect "spinel warnings: check passes timing lines and other warnings" 0 "^$" \
+  sh "$here/spinel_warnings.sh" check label "$tc/out/clean.log" "$tc/out/missing.log"
+printf '%s\n' "$WARNING" > "$tc/out/one.log"
+expect "spinel warnings: check prints the warning and fails" 1 "^spinel: x[.]rb:1:1: warning: " \
+  sh "$here/spinel_warnings.sh" check label "$tc/out/clean.log" "$tc/out/one.log"
+expect "spinel warnings: the wrapper keeps spinel's status and logs its warnings" 0 "^1$" \
+  sh -c 'PATH="$1/bin:$PATH" SPINEL_WARNINGS_LOG="$1/out/wrapped.log" "$2" a.rb -o "$1/out/a" 2> /dev/null && grep -c "warning:" "$1/out/wrapped.log"' _ "$tc" "$here/spinel_warnings.sh"
 
 echo "$passed/$total passed"
 test "$passed" -eq "$total"
