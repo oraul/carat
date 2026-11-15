@@ -5794,3 +5794,33 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: the `buffer.list` action, `docs/actions.md:168` (`List the buffers as :ls does`).
 - Why: `<Space>bb` prints `1 %a   "greet.rb"   line 3` on the message row, Vim's format with nothing to pick, while the buffer list is first in the user's UI order of `docs/goals.md` (ux-pass review finding 11). Reproduction: start on a file, `<Space>bb`, `openspec/changes/archive/*-ux-pass/screens/float-buffers.txt`.
 - Fix: bind `<leader>bb` to a buffer picker float in the finder's style, `:ls` keeping Vim's output; a behavior change for planning to decide.
+
+### The ux-pass start timings have no saved evidence
+
+- Location: `openspec/changes/archive/2026-11-15-ux-pass/design.md:52`.
+- Why: the two start rows of the timing table (6.5 to 10 ms, 632 ms; 7 to 10 ms, 8 ms, 260 to 520 ms with the server) cite no recorded run: first-start, first-file, and empty-new-file record first byte none and settled none, and `timings.txt` has only `start greet.rb settled 10.8 ms`; quality advisory from ux-pass.
+- Fix: add the start runs to `timings.txt` or drop the figures that were not recorded.
+
+### The ux-pass screen headers name only the last keys written
+
+- Location: `openspec/changes/archive/2026-11-15-ux-pass/design.md:19`, `openspec/changes/archive/2026-11-15-ux-pass/tasks.md:5`.
+- Why: a screen header names only the last keys sent (`empty-explorer-help` says `keys: ?`, not `<Space>e` then `?`) and the start screens leave the keys empty with times none, so the claim that each header names its keys does not hold alone; quality advisory from ux-pass.
+- Fix: write the full key sequence from the named start in each header, or say in the design that the screen list carries it.
+
+### The ux-pass finding 6 reproduction names the wrong file
+
+- Location: `openspec/changes/archive/2026-11-15-ux-pass/design.md:66`.
+- Why: finding 6's reproduction starts on `notes.txt`, but its evidence `time-insert-char` is `greet.rb` with the canned server (row 23 shows `greet.rb` and `fake-lsp`), so following it does not reproduce the screen; quality advisory from ux-pass.
+- Fix: name `greet.rb` and the keys the screen records in the reproduction and in the backlog entry of finding 6.
+
+### The ux-pass finding 5 entry names no line of its cause
+
+- Location: `carat/plugins/finder/plugin.rb:140` (the cause, lines 139 to 141), the finding 5 entry of `docs/backlog.md`, and `openspec/changes/archive/2026-11-15-ux-pass/design.md:65`.
+- Why: the entry's location names no line, while the cause is `on_input` closing the finder before it checks for an empty path, so the fix starts with a search; quality advisory from ux-pass.
+- Fix: cite `carat/plugins/finder/plugin.rb:140` in the finding 5 entry's location.
+
+### The ux-pass finding 11 entry names only the doc row
+
+- Location: `carat/use_cases/actions/buffer_handler.rb:50` (the handler), the finding 11 entry of `docs/backlog.md`, and `openspec/changes/archive/2026-11-15-ux-pass/design.md:71`.
+- Why: the entry's location names only the `docs/actions.md` row, not the handler that implements the action, so the fix starts with a search; quality advisory from ux-pass.
+- Fix: add `carat/use_cases/actions/buffer_handler.rb:50` to the finding 11 entry's location.
