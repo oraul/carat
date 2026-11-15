@@ -2923,6 +2923,9 @@ expect "spinel warnings: check passes timing lines and other warnings" 0 "^$" \
 printf '%s\n' "$WARNING" > "$tc/out/one.log"
 expect "spinel warnings: check prints the warning and fails" 1 "^spinel: x[.]rb:1:1: warning: " \
   sh "$here/spinel_warnings.sh" check label "$tc/out/clean.log" "$tc/out/one.log"
+printf 'spinel: warning: type inference did not converge\n' > "$tc/out/bare.log"
+expect "spinel warnings: check fails on a warning without a location" 1 "^label: Spinel printed 1 warning" \
+  sh "$here/spinel_warnings.sh" check label "$tc/out/clean.log" "$tc/out/bare.log"
 expect "spinel warnings: the wrapper keeps spinel's status and logs its warnings" 0 "^1$" \
   sh -c 'PATH="$1/bin:$PATH" SPINEL_WARNINGS_LOG="$1/out/wrapped.log" "$2" a.rb -o "$1/out/a" 2> /dev/null && grep -c "warning:" "$1/out/wrapped.log"' _ "$tc" "$here/spinel_warnings.sh"
 

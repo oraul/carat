@@ -1,7 +1,9 @@
 #!/bin/sh
 # Fails a build on a Spinel warning, a standard error line of the form
-# "spinel: FILE:LINE:COL: warning: MESSAGE", which Spinel prints and
-# still exits 0 on.
+# "spinel: FILE:LINE:COL: warning: MESSAGE", or "spinel: warning: MESSAGE"
+# for the warnings without a location (an --rbs ivar pin dropped, type
+# inference that did not converge), which Spinel prints and still exits 0
+# on.
 #
 # check LABEL FILE...: print every warning line of the files once (a
 # missing file has none), then "LABEL: Spinel printed N warning(s)", and exit 1
@@ -17,7 +19,7 @@
 # --quiet output leaves out.
 set -u
 
-PATTERN='^spinel: .*: warning: '
+PATTERN='^spinel: (.*: )?warning: '
 
 if [ "${1:-}" = check ]; then
   if [ $# -lt 3 ]; then
