@@ -69,7 +69,7 @@ module Carat
       # @rbs @jumptab: String
       # @rbs @gt: String
 
-      # Vim's defaults, the nerd icon set, the default theme on the
+      # Vim's defaults, the unicode icon set, the default theme on the
       # terminal's background, syntax highlighting on, and Neovim's search
       # defaults: hlsearch and incsearch on, ignorecase and smartcase off;
       # the start screen on, with its animation; cursorline and the

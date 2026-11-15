@@ -296,6 +296,7 @@ module AdaptersStatusBarTest
     t.assert_equal([" Indexing ####------ ", H::STATUS_LSP_READY, H::STATUS], [f.row_text(0)[x - 10, 21], f.cell(0, x).hl, f.cell(0, x + 4).hl], "an ascii bar reads #### and ------ with the done cells in StatusLineLspReady")
     s.options.icons = "unicode"
     SLOTS.branch = "main"
+    # A narrow bar drops the segment before the file type.
     t.assert_equal(pad(" NORMAL  a.txt  ± main ", " 1:1  All ", 36), paint(s, 36).row_text(0), "a narrow bar drops the progress (35) before the branch (40)")
     t.assert_equal([true, false, false], [SLOTS.clear_progress, SLOTS.clear_progress, SLOTS.progress?], "clearing ends the progress once")
 

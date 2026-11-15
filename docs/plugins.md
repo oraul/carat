@@ -125,4 +125,4 @@ The highlight groups are Neovim's standard names: `Comment`, `Constant`, `String
 
 ## Icons
 
-Ask for icons by name, never by code point: `host.icon("folder_closed").text`. The `icons` option chooses the set for the whole editor, `nerd`, `unicode`, or `ascii`; see the README for the fonts.
+Ask for icons by name, never by code point: `host.icon("folder_closed").text`. The `icons` option chooses the set for the whole editor, `unicode` (the default), `nerd`, or `ascii`; see the README for the fonts.
