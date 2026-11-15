@@ -5,3 +5,4 @@ sprint-2	float-edges	5	sprints-gate,records-once,jump-motions,tab-keys,float-edg
 sprint-3	spinel-rebump	5	float-placement,menu-hints,palette-rows,top-rows,spinel-rebump	572.0	114.4	5126060	1	check:4/5,quality:3/5,security:5/5,bench:5/5,ci:5/5,gates:5/5
 sprint-4	ci-scope-errors	5	carat-palette,pr-edit-path,spinel-compile-time,untyped-elephant,ci-scope-errors	408.0	81.6	4856690	1	check:5/5,quality:3/5,security:5/5,bench:5/5,ci:5/5,gates:5/5
 sprint-5	architecture-review	5	guard-ref-pin,guard-pin-no-url,untyped-gateway,carat-glyphs,architecture-review	296.0	59.2	5049384	2	check:5/5,quality:4/5,security:4/5,bench:5/5,ci:5/5,gates:5/5
+sprint-6	spinel-untyped-bump-b	5	design-principles,architecture-tidy,winbar-outline,spinel-untyped-bump,spinel-untyped-bump-b	290.0	58.0	3896160	0	check:5/5,quality:5/5,security:5/5,bench:5/5,ci:5/5,gates:5/5
