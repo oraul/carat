@@ -22,6 +22,7 @@ ok   token? covers the syntax, file-icon, and markup ids only
 ok   name_of
 ok   find, and carat-dark for an unknown name
 ok   known?
+ok   every name has its own palette in the lookup
 ok   Alias: carat-light is its own palette, not one_light's
 ok   background?
 ok   normal pill
@@ -84,18 +85,42 @@ ok   dark_plus on the theme background: the selected tab reads at a glance
 ok   dark_plus on the terminal background: the selected tab reads at a glance
 ok   light_plus on the theme background: the selected tab reads at a glance
 ok   light_plus on the terminal background: the selected tab reads at a glance
-ok   carat-dark on the cursor line at 24 bits
-ok   carat-dark on the cursor line at 256 colors
-ok   carat-light on the cursor line at 24 bits
-ok   carat-light on the cursor line at 256 colors
-ok   one_dark on the cursor line at 24 bits
-ok   one_dark on the cursor line at 256 colors
-ok   one_light on the cursor line at 24 bits
-ok   one_light on the cursor line at 256 colors
-ok   dark_plus on the cursor line at 24 bits
-ok   dark_plus on the cursor line at 256 colors
-ok   light_plus on the cursor line at 24 bits
-ok   light_plus on the cursor line at 256 colors
+ok   carat-dark on the cursor line on the terminal's background at 24 bits
+ok   carat-dark on the cursor line on the terminal's background at 256 colors
+ok   carat-light on the cursor line on the terminal's background at 24 bits
+ok   carat-light on the cursor line on the terminal's background at 256 colors
+ok   one_dark on the cursor line on the terminal's background at 24 bits
+ok   one_dark on the cursor line on the terminal's background at 256 colors
+ok   one_light on the cursor line on the terminal's background at 24 bits
+ok   one_light on the cursor line on the terminal's background at 256 colors
+ok   dark_plus on the cursor line on the terminal's background at 24 bits
+ok   dark_plus on the cursor line on the terminal's background at 256 colors
+ok   light_plus on the cursor line on the terminal's background at 24 bits
+ok   light_plus on the cursor line on the terminal's background at 256 colors
+ok   carat-dark on the cursor line on the theme's background at 24 bits
+ok   carat-dark on the cursor line on the theme's background at 256 colors
+ok   carat-light on the cursor line on the theme's background at 24 bits
+ok   carat-light on the cursor line on the theme's background at 256 colors
+ok   one_dark on the cursor line on the theme's background at 24 bits
+ok   one_dark on the cursor line on the theme's background at 256 colors
+ok   one_light on the cursor line on the theme's background at 24 bits
+ok   one_light on the cursor line on the theme's background at 256 colors
+ok   dark_plus on the cursor line on the theme's background at 24 bits
+ok   dark_plus on the cursor line on the theme's background at 256 colors
+ok   light_plus on the cursor line on the theme's background at 24 bits
+ok   light_plus on the cursor line on the theme's background at 256 colors
+ok   carat-dark: the terminal's background leaves the text color and background to it at 256 colors too
+ok   The cursor line on the terminal's background: carat-dark's Normal takes the palette's text color over CursorLine's background
+ok   carat-light: the terminal's background leaves the text color and background to it at 256 colors too
+ok   The cursor line on the terminal's background: carat-light's Normal takes the palette's text color over CursorLine's background
+ok   one_dark: the terminal's background leaves the text color and background to it at 256 colors too
+ok   The cursor line on the terminal's background: one_dark's Normal takes the palette's text color over CursorLine's background
+ok   one_light: the terminal's background leaves the text color and background to it at 256 colors too
+ok   The cursor line on the terminal's background: one_light's Normal takes the palette's text color over CursorLine's background
+ok   dark_plus: the terminal's background leaves the text color and background to it at 256 colors too
+ok   The cursor line on the terminal's background: dark_plus's Normal takes the palette's text color over CursorLine's background
+ok   light_plus: the terminal's background leaves the text color and background to it at 256 colors too
+ok   The cursor line on the terminal's background: light_plus's Normal takes the palette's text color over CursorLine's background
 ok   a group on the cursor line keeps its color and attributes over CursorLine's background
 ok   a group with a background of its own keeps it on the cursor line
 ok   at 16 colors the cursor line underlines a group without a background
@@ -136,12 +161,17 @@ ok   dark_plus's selected menu row at 256 colors
 ok   light_plus's selected menu row at 24 bits
 ok   light_plus's selected menu row at 256 colors
 ok   carat-dark's selected menu row at 16 colors on the terminal's background
+ok   carat-dark's selected menu row at 16 colors on the theme's background
+ok   carat-light's selected menu row at 16 colors on the terminal's background
 ok   carat-light's selected menu row at 16 colors on the theme's background
 ok   one_dark's selected menu row at 16 colors on the terminal's background
 ok   one_dark's selected menu row at 16 colors on the theme's background
+ok   one_light's selected menu row at 16 colors on the terminal's background
 ok   one_light's selected menu row at 16 colors on the theme's background
+ok   dark_plus's selected menu row at 16 colors on the terminal's background
 ok   dark_plus's selected menu row at 16 colors on the theme's background
 ok   light_plus's selected menu row at 16 colors on the terminal's background
+ok   light_plus's selected menu row at 16 colors on the theme's background
 ok   Comments are readable: carat-dark's comments reach 4.5:1
 ok   the contrast of WCAG's lightest AA gray on white and of a color on itself
 ok   the defaults: carat-dark on the terminal's background, syntax on
@@ -162,4 +192,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 164 passed, 0 failed
+domain_theme: 194 passed, 0 failed

@@ -8,8 +8,6 @@ module DomainThemeTest
   D = Carat::Domain
   H = D::Highlight
 
-  PALETTES = ["carat-dark", "carat-light", "one_dark", "one_light", "dark_plus", "light_plus"]
-
   # The groups drawn as decorations, held to 3:1 rather than 4.5:1, and
   # the groups that carry no text, exempt from the contrast rule.
   DECORATIONS = [H::NON_TEXT, H::END_OF_BUFFER, H::WINDOW_SEPARATOR, H::FLOAT_BORDER, H::WHITESPACE, H::SIGN_COLUMN, H::INDENT_GUIDE, H::INDENT_GUIDE_SCOPE]
@@ -126,11 +124,12 @@ module DomainThemeTest
     out
   end
 
-  # The groups of a theme drawn with its background whose foreground
-  # falls below WCAG AA on their background, 4.5:1 for text and 3:1 for
-  # decorations, at 24 bits or at 256 colors, each with its ratio; with
-  # layer H::CURSOR_LINE_LAYER, each group as drawn on the cursor line,
-  # held to the same thresholds.
+  # The groups of a theme whose foreground falls below WCAG AA on their
+  # background, 4.5:1 for text and 3:1 for decorations, at 24 bits or at
+  # 256 colors, each with its ratio, and those pairing the terminal's
+  # color with the palette's, "unpaired"; with layer
+  # H::CURSOR_LINE_LAYER, each group as drawn on the cursor line, held to
+  # the same thresholds.
   #: (Carat::Domain::Theme, bool, Integer) -> Array[String]
   def self.low_contrast(theme, at256, layer)
     out = []
@@ -139,12 +138,16 @@ module DomainThemeTest
       unless NO_TEXT.include?(id)
         fg = theme.fg(id + layer)
         bg = theme.bg(id + layer)
-        if at256
-          fg = shown_256(fg, theme.fg256(id + layer))
-          bg = shown_256(bg, theme.bg256(id + layer))
+        if fg < 0 || bg < 0
+          out << "#{H::NAMES[id]} unpaired" if fg >= 0 || bg >= 0
+        else
+          if at256
+            fg = shown_256(fg, theme.fg256(id + layer))
+            bg = shown_256(bg, theme.bg256(id + layer))
+          end
+          ratio = contrast(fg, bg)
+          out << "#{H::NAMES[id]} #{ratio}" if ratio < (decoration?(id) ? 300 : 450)
         end
-        ratio = contrast(fg, bg)
-        out << "#{H::NAMES[id]} #{ratio}" if ratio < (decoration?(id) ? 300 : 450)
       end
       id += 1
     end
@@ -250,8 +253,22 @@ module DomainThemeTest
     # The palettes and the backgrounds.
     t.assert_equal(["carat-dark", "carat-light", "one_dark", "one_light", "dark_plus", "light_plus", "carat-dark"], [D::Themes.find("carat-dark", "terminal").name, D::Themes.find("carat-light", "terminal").name, D::Themes.find("one_dark", "terminal").name, D::Themes.find("one_light", "terminal").name, D::Themes.find("dark_plus", "terminal").name, D::Themes.find("light_plus", "terminal").name, D::Themes.find("nope", "terminal").name], "find, and carat-dark for an unknown name")
     t.assert_equal([true, true, true, true, true, true, false, false], [D::Themes.known?("carat-dark"), D::Themes.known?("carat-light"), D::Themes.known?("one_dark"), D::Themes.known?("one_light"), D::Themes.known?("dark_plus"), D::Themes.known?("light_plus"), D::Themes.known?("nope"), D::Themes.known?("Carat-Dark")], "known?")
-    # Scenario: Alias. carat-light, once an alias of one_light, is Carat's
-    # own light palette.
+    # A name without its own palette in the lookup fails here.
+    names = D::Themes::NAMES
+    palettes = D::Themes::PALETTES
+    shared = []
+    i = 0
+    while i < palettes.length
+      j = i + 1
+      while j < palettes.length
+        shared << "#{names[i]} #{names[j]}" if palettes[i] == palettes[j]
+        j += 1
+      end
+      i += 1
+    end
+    t.assert_equal([names.length, []], [palettes.length, shared], "every name has its own palette in the lookup")
+    # Scenario: Alias. carat-light is Carat's own light palette, no alias:
+    # its colors differ from one_light's.
     carat_light = D::Themes.find("carat-light", "theme")
     one_light = D::Themes.find("one_light", "theme")
     t.assert_true(carat_light.bg(H::NORMAL) != one_light.bg(H::NORMAL) && carat_light.fg(H::KEYWORD) != one_light.fg(H::KEYWORD), "Alias: carat-light is its own palette, not one_light's")
@@ -277,7 +294,7 @@ module DomainThemeTest
     t.assert_equal([0xabb2bf, 0x282c34, 7, 0, true], [painted.fg(H::NORMAL), painted.bg(H::NORMAL), painted.fg16(H::NORMAL), painted.bg16(H::NORMAL), painted.paints_background?], "with the theme's background Normal is the palette's")
     t.assert_equal([-1, 0x282c34], [dark.bg(H::COMMENT), painted.bg(H::COMMENT)], "a group without a background of its own is drawn on the painted one")
     t.assert_equal([-1, 0xabb2bf], [dark.fg(H::VISUAL), painted.fg(H::VISUAL)], "a group without a foreground of its own takes the palette's text color when painted")
-    PALETTES.each do |name|
+    D::Themes::NAMES.each do |name|
       t.assert_equal([], uncolored(D::Themes.find(name, "theme")), "#{name}: every group has a 24-bit foreground and background on the theme's background")
       t.assert_equal(["Normal", "Delimiter"], plain_16(D::Themes.find(name, "terminal")), "#{name}: every group but Normal and Delimiter shows at 16 colors")
       t.assert_true(search_backgrounds?(D::Themes.find(name, "terminal")), "#{name}: Search, IncSearch, and CurSearch have a background at every depth")
@@ -294,25 +311,15 @@ module DomainThemeTest
     # same rows prove two more scenarios:
     # Every palette's pills pass
     # Every palette's lsp groups pass
-    t.cases([
-      ["carat-dark at 24 bits", ["carat-dark", "24"], []],
-      ["carat-dark at 256 colors", ["carat-dark", "256"], []],
-      ["carat-light at 24 bits", ["carat-light", "24"], []],
-      ["carat-light at 256 colors", ["carat-light", "256"], []],
-      ["one_dark at 24 bits", ["one_dark", "24"], []],
-      ["one_dark at 256 colors", ["one_dark", "256"], []],
-      ["one_light at 24 bits", ["one_light", "24"], []],
-      ["one_light at 256 colors", ["one_light", "256"], []],
-      ["dark_plus at 24 bits", ["dark_plus", "24"], []],
-      ["dark_plus at 256 colors", ["dark_plus", "256"], []],
-      ["light_plus at 24 bits", ["light_plus", "24"], []],
-      ["light_plus at 256 colors", ["light_plus", "256"], []]
-    ]) { |input| low_contrast(D::Themes.find(input[0].to_s, "theme"), input[1].to_s == "256", 0) }
+    D::Themes::NAMES.each do |name|
+      t.assert_equal([], low_contrast(D::Themes.find(name, "theme"), false, 0), "#{name} at 24 bits")
+      t.assert_equal([], low_contrast(D::Themes.find(name, "theme"), true, 0), "#{name} at 256 colors")
+    end
 
     # Every palette's selected tab stands out: TabLineSel on its accent
     # at 3:1 from the tab row, another basic color, and bold, on either
     # background.
-    PALETTES.each do |name|
+    D::Themes::NAMES.each do |name|
       ["theme", "terminal"].each do |background|
         t.assert_equal([], tab_glance(D::Themes.find(name, background)), "#{name} on the #{background} background: the selected tab reads at a glance")
       end
@@ -320,27 +327,27 @@ module DomainThemeTest
 
     # Scenario: Every palette passes on the cursor line. Over
     # CursorLine's background where a group has none of its own, text
-    # keeps 4.5:1 and decorations 3:1.
-    t.cases([
-      ["carat-dark on the cursor line at 24 bits", ["carat-dark", "24"], []],
-      ["carat-dark on the cursor line at 256 colors", ["carat-dark", "256"], []],
-      ["carat-light on the cursor line at 24 bits", ["carat-light", "24"], []],
-      ["carat-light on the cursor line at 256 colors", ["carat-light", "256"], []],
-      ["one_dark on the cursor line at 24 bits", ["one_dark", "24"], []],
-      ["one_dark on the cursor line at 256 colors", ["one_dark", "256"], []],
-      ["one_light on the cursor line at 24 bits", ["one_light", "24"], []],
-      ["one_light on the cursor line at 256 colors", ["one_light", "256"], []],
-      ["dark_plus on the cursor line at 24 bits", ["dark_plus", "24"], []],
-      ["dark_plus on the cursor line at 256 colors", ["dark_plus", "256"], []],
-      ["light_plus on the cursor line at 24 bits", ["light_plus", "24"], []],
-      ["light_plus on the cursor line at 256 colors", ["light_plus", "256"], []]
-    ]) { |input| low_contrast(D::Themes.find(input[0].to_s, "theme"), input[1].to_s == "256", H::CURSOR_LINE_LAYER) }
+    # keeps 4.5:1 and decorations 3:1, with either background, and no
+    # cell keeps the terminal's foreground over a palette color.
+    D::Themes::BACKGROUNDS.each do |background|
+      D::Themes::NAMES.each do |name|
+        t.assert_equal([], low_contrast(D::Themes.find(name, background), false, H::CURSOR_LINE_LAYER), "#{name} on the cursor line on the #{background}'s background at 24 bits")
+        t.assert_equal([], low_contrast(D::Themes.find(name, background), true, H::CURSOR_LINE_LAYER), "#{name} on the cursor line on the #{background}'s background at 256 colors")
+      end
+    end
     lit = H::CURSOR_LINE_LAYER
+    D::Themes::NAMES.each do |name|
+      terminal = D::Themes.find(name, "terminal")
+      painted_line = D::Themes.find(name, "theme")
+      t.assert_equal([-1, -1, -1, -1], [terminal.fg256(H::NORMAL), terminal.bg256(H::NORMAL), terminal.fg256(H::CURSOR_LINE_NUMBER), terminal.bg256(H::COMMENT)], "#{name}: the terminal's background leaves the text color and background to it at 256 colors too")
+      # Scenario: The cursor line on the terminal's background.
+      t.assert_equal([painted_line.fg(H::NORMAL + lit), painted_line.bg(H::NORMAL + lit), painted_line.fg256(H::NORMAL + lit), painted_line.bg256(H::NORMAL + lit)], [terminal.fg(H::NORMAL + lit), terminal.bg(H::NORMAL + lit), terminal.fg256(H::NORMAL + lit), terminal.bg256(H::NORMAL + lit)], "The cursor line on the terminal's background: #{name}'s Normal takes the palette's text color over CursorLine's background")
+    end
     t.assert_equal([painted.fg(H::COMMENT), painted.bg(H::CURSOR_LINE), dark.bg(H::CURSOR_LINE), painted.attr(H::COMMENT)], [painted.fg(H::COMMENT + lit), painted.bg(H::COMMENT + lit), dark.bg(H::NORMAL + lit), painted.attr(H::COMMENT + lit)], "a group on the cursor line keeps its color and attributes over CursorLine's background")
     t.assert_equal([dark.bg(H::VISUAL), dark.bg16(H::SEARCH), dark.attr16(H::VISUAL)], [dark.bg(H::VISUAL + lit), dark.bg16(H::SEARCH + lit), dark.attr16(H::VISUAL + lit)], "a group with a background of its own keeps it on the cursor line")
     t.assert_equal([D::Theme::ITALIC | D::Theme::UNDERLINE, D::Theme::UNDERLINE], [dark.attr16(H::COMMENT + lit), dark.attr16(H::NORMAL + lit)], "at 16 colors the cursor line underlines a group without a background")
     t.assert_equal([painted.bg16(H::NORMAL), painted.bg16(H::NORMAL), painted.fg16(H::NORMAL), D::Theme::UNDERLINE], [painted.bg16(H::NORMAL + lit), painted.bg16(H::COMMENT + lit), painted.fg16(H::NORMAL + lit), painted.attr16(H::NORMAL + lit)], "at 16 colors a painted theme keeps Normal's background on the cursor line")
-    PALETTES.each do |name|
+    D::Themes::NAMES.each do |name|
       theme = D::Themes.find(name, "theme")
       t.assert_true(theme.bg16(H::NORMAL + lit) >= 0 && theme.bg16(H::COMMENT + lit) == theme.bg16(H::NORMAL), "#{name}: at 16 colors the painted cursor line keeps the background")
     end
@@ -357,47 +364,23 @@ module DomainThemeTest
     # Scenario: Every palette passes in a float. WCAG AA inside a float:
     # every syntax and markup group at 4.5:1 over
     # NormalFloat's background, at 24 bits and at the 256 colors written.
-    t.cases([
-      ["carat-dark in a float at 24 bits", ["carat-dark", "24"], []],
-      ["carat-dark in a float at 256 colors", ["carat-dark", "256"], []],
-      ["carat-light in a float at 24 bits", ["carat-light", "24"], []],
-      ["carat-light in a float at 256 colors", ["carat-light", "256"], []],
-      ["one_dark in a float at 24 bits", ["one_dark", "24"], []],
-      ["one_dark in a float at 256 colors", ["one_dark", "256"], []],
-      ["one_light in a float at 24 bits", ["one_light", "24"], []],
-      ["one_light in a float at 256 colors", ["one_light", "256"], []],
-      ["dark_plus in a float at 24 bits", ["dark_plus", "24"], []],
-      ["dark_plus in a float at 256 colors", ["dark_plus", "256"], []],
-      ["light_plus in a float at 24 bits", ["light_plus", "24"], []],
-      ["light_plus in a float at 256 colors", ["light_plus", "256"], []]
-    ]) { |input| float_low_contrast(D::Themes.find(input[0].to_s, "theme"), input[1].to_s == "256") }
+    D::Themes::NAMES.each do |name|
+      t.assert_equal([], float_low_contrast(D::Themes.find(name, "theme"), false), "#{name} in a float at 24 bits")
+      t.assert_equal([], float_low_contrast(D::Themes.find(name, "theme"), true), "#{name} in a float at 256 colors")
+    end
     # Scenario: The selected menu row's groups at each depth. PmenuSel,
     # PmenuMatchSel, and PmenuExtraSel inside a float reach 4.5:1 at 24
     # bits and 256 colors with the theme's background, and at 16 colors,
     # under either background, carry reverse video and PmenuSel's colors.
-    t.cases([
-      ["carat-dark's selected menu row at 24 bits", ["carat-dark", "24"], []],
-      ["carat-dark's selected menu row at 256 colors", ["carat-dark", "256"], []],
-      ["carat-light's selected menu row at 24 bits", ["carat-light", "24"], []],
-      ["carat-light's selected menu row at 256 colors", ["carat-light", "256"], []],
-      ["one_dark's selected menu row at 24 bits", ["one_dark", "24"], []],
-      ["one_dark's selected menu row at 256 colors", ["one_dark", "256"], []],
-      ["one_light's selected menu row at 24 bits", ["one_light", "24"], []],
-      ["one_light's selected menu row at 256 colors", ["one_light", "256"], []],
-      ["dark_plus's selected menu row at 24 bits", ["dark_plus", "24"], []],
-      ["dark_plus's selected menu row at 256 colors", ["dark_plus", "256"], []],
-      ["light_plus's selected menu row at 24 bits", ["light_plus", "24"], []],
-      ["light_plus's selected menu row at 256 colors", ["light_plus", "256"], []]
-    ]) { |input| selected_low_contrast(D::Themes.find(input[0].to_s, "theme"), input[1].to_s == "256") }
-    t.cases([
-      ["carat-dark's selected menu row at 16 colors on the terminal's background", ["carat-dark", "terminal"], []],
-      ["carat-light's selected menu row at 16 colors on the theme's background", ["carat-light", "theme"], []],
-      ["one_dark's selected menu row at 16 colors on the terminal's background", ["one_dark", "terminal"], []],
-      ["one_dark's selected menu row at 16 colors on the theme's background", ["one_dark", "theme"], []],
-      ["one_light's selected menu row at 16 colors on the theme's background", ["one_light", "theme"], []],
-      ["dark_plus's selected menu row at 16 colors on the theme's background", ["dark_plus", "theme"], []],
-      ["light_plus's selected menu row at 16 colors on the terminal's background", ["light_plus", "terminal"], []]
-    ]) { |input| selected_16(D::Themes.find(input[0].to_s, input[1].to_s)) }
+    D::Themes::NAMES.each do |name|
+      t.assert_equal([], selected_low_contrast(D::Themes.find(name, "theme"), false), "#{name}'s selected menu row at 24 bits")
+      t.assert_equal([], selected_low_contrast(D::Themes.find(name, "theme"), true), "#{name}'s selected menu row at 256 colors")
+    end
+    D::Themes::NAMES.each do |name|
+      D::Themes::BACKGROUNDS.each do |background|
+        t.assert_equal([], selected_16(D::Themes.find(name, background)), "#{name}'s selected menu row at 16 colors on the #{background}'s background")
+      end
+    end
     carat_dark = D::Themes.find("carat-dark", "theme")
     t.assert_true(contrast(carat_dark.fg(H::COMMENT), carat_dark.bg(H::COMMENT)) >= 450, "Comments are readable: carat-dark's comments reach 4.5:1")
     t.assert_equal([454, 100], [contrast(0x767676, 0xffffff), contrast(0x777777, 0x777777)], "the contrast of WCAG's lightest AA gray on white and of a color on itself")

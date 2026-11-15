@@ -64,8 +64,9 @@ module Carat
       SPECIAL = 34
       IDENTIFIER = 35
       ESCAPE = 36
-      # Text on a strong accent, the mode pills' and the selected tab's: the palette's background
-      # color, kept when the terminal paints its own background.
+      # Text on a strong accent, the mode pills' and the selected tab's:
+      # the palette's background color, kept when the terminal paints its
+      # own background.
       ON_STRONG = 37
       ROLES = 38
       NONE = -1
@@ -444,49 +445,47 @@ module Carat
         IDENTIFIER, 0x001080, -1, 4,
         ESCAPE, 0xc10000, -1, 1
       ]
+
+      # The palettes in the order of NAMES, the one table find looks a
+      # name up in.
+      PALETTES = [CARAT_DARK, CARAT_LIGHT, ONE_DARK, ONE_LIGHT, DARK_PLUS, LIGHT_PLUS]
+
       # Whether a name selects a palette.
       #: (String) -> bool
       def self.known?(name)
         NAMES.include?(name)
       end
 
+      # Whether a word is a value of the option.background line.
       #: (String) -> bool
       def self.background?(word)
         BACKGROUNDS.include?(word)
       end
 
-      # The palette's name for a name, the default for an unknown one.
-      #: (String) -> String
-      def self.canonical(name)
-        return name if NAMES.include?(name)
-        DEFAULT
-      end
-
       # The theme of a palette, by name, for a background: "theme" paints
       # the palette's background and text color, any other leaves them to
-      # the terminal. An unknown name is carat-dark.
+      # the terminal. An unknown name is carat-dark, the default.
       #: (String, String) -> Theme
       def self.find(name, background)
-        key = canonical(name)
-        from_palette(key, palette(key), background == "theme")
-      end
-
-      #: (String) -> Array[Integer]
-      def self.palette(key)
-        return CARAT_LIGHT if key == "carat-light"
-        return ONE_DARK if key == "one_dark"
-        return ONE_LIGHT if key == "one_light"
-        return DARK_PLUS if key == "dark_plus"
-        return LIGHT_PLUS if key == "light_plus"
-        CARAT_DARK
+        index = -1
+        fallback = 0
+        i = 0
+        while i < NAMES.length
+          index = i if NAMES[i] == name
+          fallback = i if NAMES[i] == DEFAULT
+          i += 1
+        end
+        index = fallback if index < 0
+        from_palette(NAMES[index], PALETTES[index], background == "theme")
       end
 
       # Resolves every group's roles against a palette. Without a painted
       # background the roles BG and FG are the terminal's own; with it a
       # group's missing foreground or background is the palette's. Each
-      # group's cursor-line id takes its foreground and attributes and,
-      # unless the group has a background of its own, the CursorLine
-      # background, or at 16 colors CursorLine's attributes. Each group's
+      # group's cursor-line id takes its foreground, the palette's text
+      # color where it has the terminal's, and attributes and, unless the
+      # group has a background of its own, the CursorLine background, or
+      # at 16 colors CursorLine's attributes. Each group's
       # float id takes its foreground, NormalFloat's when it has none, its
       # attributes, and, unless it has a background of its own,
       # NormalFloat's background at every depth.
@@ -503,9 +502,13 @@ module Carat
           indexes16[role] = palette[i + 3]
           i += 4
         end
+        text = rgbs[FG]
+        text256 = indexes256[FG]
         unless painted
           rgbs[BG] = -1
           rgbs[FG] = -1
+          indexes256[BG] = -1
+          indexes256[FG] = -1
           indexes16[BG] = -1
           indexes16[FG] = -1
         end
@@ -539,22 +542,24 @@ module Carat
           i += 5
         end
         line16 = attrs16[Highlight::CURSOR_LINE]
-        # No palette has a 16-color CursorLine background, which the
-        # underline stands in for: a group without its own background
-        # keeps the one it has off the line, the painted Normal's included.
-        line_bg16 = indexes16[CURSOR_LINE]
+        # At 16 colors the underline stands in for the CursorLine
+        # background: a group keeps the colors it has off the line, the
+        # painted Normal's included. At the other depths a cell with the
+        # terminal's foreground over a palette color takes the palette's
+        # text color, so the terminal's background keeps the contrast too.
         i = 0
         while i + 4 < GROUPS.length
           id = GROUPS[i]
           lit = id + Highlight::CURSOR_LINE_LAYER
-          fgs[lit] = fgs[id]
-          fgs256[lit] = fgs256[id]
-          fgs16[lit] = fgs16[id]
-          attrs[lit] = attrs[id]
           own = GROUPS[i + 2] >= 0 && GROUPS[i + 2] != BG
           bgs[lit] = own ? bgs[id] : rgbs[CURSOR_LINE]
           bgs256[lit] = own ? bgs256[id] : indexes256[CURSOR_LINE]
-          bgs16[lit] = own || line_bg16 < 0 ? bgs16[id] : line_bg16
+          bgs16[lit] = bgs16[id]
+          terminal_fg = fgs[id] < 0 && bgs[lit] >= 0
+          fgs[lit] = terminal_fg ? text : fgs[id]
+          fgs256[lit] = terminal_fg ? text256 : fgs256[id]
+          fgs16[lit] = fgs16[id]
+          attrs[lit] = attrs[id]
           attrs16[lit] = own ? attrs16[id] : attrs16[id] | line16
           i += 5
         end
