@@ -1,0 +1,53 @@
+# fail-ex-unknown-later
+# message 4 s later, no key
+# cursor row 1 col 5, block, shown
+# text (24x80):
+01|  1 alpha beta gamma
+02|  2 delta epsilon
+03|~
+04|~
+05|~
+06|~
+07|~
+08|~
+09|~
+10|~
+11|~
+12|~
+13|~
+14|~
+15|~
+16|~
+17|~
+18|~
+19|~
+20|~
+21|~
+22|~
+23| NORMAL  notes.txt                                              utf-8  1:1  All
+24|E492: Not an editor command: frobnicate
+# colors, per row: start-end style (columns 1-based)
+01: 1-4 bold; 5-80 fg=#c8ccd8 bg=#21242f;
+02: 1-4 fg=#9298ab; 5-80 default;
+03: 1-1 fg=#6c7286; 2-80 default;
+04: 1-1 fg=#6c7286; 2-80 default;
+05: 1-1 fg=#6c7286; 2-80 default;
+06: 1-1 fg=#6c7286; 2-80 default;
+07: 1-1 fg=#6c7286; 2-80 default;
+08: 1-1 fg=#6c7286; 2-80 default;
+09: 1-1 fg=#6c7286; 2-80 default;
+10: 1-1 fg=#6c7286; 2-80 default;
+11: 1-1 fg=#6c7286; 2-80 default;
+12: 1-1 fg=#6c7286; 2-80 default;
+13: 1-1 fg=#6c7286; 2-80 default;
+14: 1-1 fg=#6c7286; 2-80 default;
+15: 1-1 fg=#6c7286; 2-80 default;
+16: 1-1 fg=#6c7286; 2-80 default;
+17: 1-1 fg=#6c7286; 2-80 default;
+18: 1-1 fg=#6c7286; 2-80 default;
+19: 1-1 fg=#6c7286; 2-80 default;
+20: 1-1 fg=#6c7286; 2-80 default;
+21: 1-1 fg=#6c7286; 2-80 default;
+22: 1-1 fg=#6c7286; 2-80 default;
+23: 1-8 fg=#1b1d26 bg=#7fa6ff bold; 9-80 fg=#e2e5ee bg=#2e3346 bold;
+24: 1-39 fg=#f27a8a bold; 40-80 default;
