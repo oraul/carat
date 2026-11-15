@@ -5713,3 +5713,24 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: README.md:212, the credit line, and tools/spinel/spinel_rt_responds_generated.h.
 - Why: the MIT condition asks that Spinel's copyright and permission notice go with copies of substantial portions; the credit line names the license without carrying that notice for the vendored header. Found by the quality review of mit-license (advisory).
 - Fix outline: in a later item, put Spinel's copyright line and MIT notice in a comment at the top of the tools/spinel/ files, or record in the design why the generated method-name tables need none.
+
+## carat/domain/themes.rb:470 find hand-rolls a linear search
+
+- Source: quality advisory, carat-palette-b.
+- Location: carat/domain/themes.rb:470.
+- Why: find hand-rolls a linear search and recomputes DEFAULT's index on every call, where Array#index already serves this under carat/ (plugin_ui.rb:84); simplicity.
+- Fix: index = NAMES.index(name), falling back to NAMES.index(DEFAULT) when nil, and drop the while loop.
+
+## test/domain_theme.rb:453 the BG and FG 256-color clearing row proves nothing new
+
+- Source: quality advisory, carat-palette-b.
+- Location: test/domain_theme.rb:453 (carat/domain/themes.rb:510-511).
+- Why: every shipped palette already gives -1 as the BG and FG 256-color index, so this row passed before the change and no test fails if the indexes256[BG]/[FG] clearing at carat/domain/themes.rb:510-511 is removed.
+- Fix: add a row that calls D::Themes.from_palette with a small palette giving FG and BG a 256 index and asserts fg256/bg256(H::NORMAL) are -1 when not painted.
+
+## test/domain_theme.rb:376 the palette lookup row misses a reordered PALETTES
+
+- Source: quality advisory, carat-palette-b.
+- Location: test/domain_theme.rb:376.
+- Why: the lookup row checks only that the lengths match and no two palettes are equal, so a reordered PALETTES (ONE_DARK and ONE_LIGHT swapped, say) still passes and draws another palette for a name, which the proposal says this row prevents.
+- Fix: assert each name's find(name, "theme").bg(H::NORMAL) against a table of each palette's BG color.
