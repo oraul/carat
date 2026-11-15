@@ -94,9 +94,9 @@ TYPES_RBS    := build/carat.rbs
 # the analysis milliseconds above which it only warns, since time depends
 # on the machine. make test-build checks the test runner's own report, so
 # the budget costs no second analysis; make analysis-budget compiles
-# ANALYSIS_ROOTS to C one after another and checks them. Every root needed
-# 2 rounds and 22 to 26 seconds of analysis on a four-core machine; a value
-# that widens to untyped across the library took 5 rounds and 40 seconds.
+# ANALYSIS_ROOTS to C one after another and checks them. The figures move
+# with each Spinel pin, so none is kept here: make dev-build and make
+# test-build print each root's analysis time, and the check its rounds.
 ANALYSIS_ROOTS  ?= bin/carat.rb $(TEST_RUNNER)
 ANALYSIS_ROUNDS ?= 2
 ANALYSIS_MS     ?= 45000

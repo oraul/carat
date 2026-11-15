@@ -107,7 +107,32 @@ scope_case false docs/metrics.tsv
 scope_case true docs/codebase-map.md
 scope_case true docs/actions.md
 scope_case true tools/x.sh
+scope_case false LICENSE
+scope_case false tools/spinel/LICENSE
 expect "ci_scope: a run by hand always runs" 0 "^run=true" scope workflow_dispatch
+expect "ci_scope: a run by hand runs tools-test" 0 "^tools=true$" scope workflow_dispatch
+
+# tools_case WANT PATH: a pull request changing PATH writes tools=WANT, by
+# TOOLS_RE, whatever run it writes.
+tools_case() {
+  fresh scope
+  mkdir -p "$(dirname "$2")"
+  echo change >> "$2"
+  commit "chore: change $2"
+  expect "ci_scope: tools=$1 for $2 on a pull request" 0 "^tools=$1$" scope pull_request
+}
+
+tools_case true tools/x.sh
+tools_case true .claude/commands/x.md
+tools_case true .claude/agents/x.md
+tools_case true .github/workflows/x.yml
+tools_case true Makefile
+tools_case true docs/codebase-map.md
+tools_case true test/lint.rb
+tools_case false carat/domain/x.rb
+tools_case false test/x.rb
+tools_case false docs/notes.md
+tools_case false LICENSE
 
 # ------------------------------------------------------------ ci_wait.sh
 expect "ci_wait: waits the given seconds" 0 "^ci_wait: waited 1 seconds$" sh "$here/ci_wait.sh" 1
@@ -144,6 +169,8 @@ commit "chore: code"
 tree=$(git rev-parse 'HEAD^{tree}')
 expect "ci_scope: a push whose tree passed in its pull request skips" 0 "^run=false: the tree equals the head of pull request 7" \
   env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=1 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
+expect "ci_scope: a push whose tree passed in its pull request skips tools-test" 0 "^tools=false$" \
+  env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=1 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
 expect "ci_scope: a push whose pull request did not pass runs" 0 "^run=true" \
   env PATH="$work/bin:$PATH" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=0 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
 
@@ -165,15 +192,17 @@ err_scope() {
   rm -f "$work/scope-out"
   env PATH="$work/errbin:$PATH" FAKE_FAIL="$1" GITHUB_OUTPUT="$work/scope-out" FAKE_HEAD=abc FAKE_TREE="$tree" FAKE_PASSED=1 EVENT=push REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
 }
-# well_formed: GITHUB_OUTPUT holds exactly run=true and one reason= line.
+# well_formed: GITHUB_OUTPUT holds exactly run=true, one reason= line, and
+# one tools= line.
 well_formed() {
-  [ "$(wc -l < "$work/scope-out")" -eq 2 ] && [ "$(sed -n 1p "$work/scope-out")" = "run=true" ] &&
-    sed -n 2p "$work/scope-out" | grep -q -E '^reason=[^{}]+$' && echo well-formed
+  [ "$(wc -l < "$work/scope-out")" -eq 3 ] && [ "$(sed -n 1p "$work/scope-out")" = "run=true" ] &&
+    sed -n 2p "$work/scope-out" | grep -q -E '^reason=[^{}]+$' &&
+    sed -n 3p "$work/scope-out" | grep -q -E '^tools=(true|false)$' && echo well-formed
 }
 expect "ci_scope: a push whose number query answers an error body runs" 0 "^run=true: tools/x[.]sh is code" err_scope number
-expect "ci_scope: an error body leaves GITHUB_OUTPUT one run and one reason line" 0 "^well-formed$" well_formed
+expect "ci_scope: an error body leaves GITHUB_OUTPUT one run, one reason, and one tools line" 0 "^well-formed$" well_formed
 expect "ci_scope: a push whose every query answers an error body runs" 0 "^run=true: tools/x[.]sh is code" err_scope ""
-expect "ci_scope: every query failing leaves GITHUB_OUTPUT one run and one reason line" 0 "^well-formed$" well_formed
+expect "ci_scope: every query failing leaves GITHUB_OUTPUT one run, one reason, and one tools line" 0 "^well-formed$" well_formed
 # A code path holding a line break, which git --name-only quotes as
 # "tools/x\nrun=false.sh": the reason that names it stays one line.
 fresh linebreak
@@ -185,7 +214,7 @@ nl_scope() {
   GITHUB_OUTPUT="$work/scope-out" EVENT=pull_request REPO=owner/carat SHA=x sh "$here/ci_scope.sh"
 }
 expect "ci_scope: a path with a line break runs" 0 '^run=true: "tools/x\\nrun=false[.]sh" is code' nl_scope
-expect "ci_scope: a path with a line break leaves GITHUB_OUTPUT one run and one reason line" 0 "^well-formed$" well_formed
+expect "ci_scope: a path with a line break leaves GITHUB_OUTPUT one run, one reason, and one tools line" 0 "^well-formed$" well_formed
 
 
 # A pull request's merge commit against its newest earlier head whose spin
@@ -950,6 +979,66 @@ rm build/pipeline/unmerged.json
 expect "run_state: history records the estimate" 0 "^medium small - medium$" \
   sh -c "awk -F'\t' '\$1 == \"large\" { l = \$15 } \$1 == \"sized\" { s = \$15 } \$1 == \"unsized\" { u = \$15 } \$1 == \"planned\" { p = \$15 } END { print l, s, u, p }' docs/metrics.tsv"
 expect "run_state: every history row has the header's columns" 0 "^22$" sh -c "awk -F'\t' '{ print NF }' docs/metrics.tsv | sort -u"
+
+# The path scope: the stages a change's paths need since the merge base
+# with main. A documentation-only change runs only docs-lint and gates, the
+# others recorded passed with the note scoped; tools-test runs only when a
+# path it reads (TOOLS_RE) changed; an unknown merge base runs every stage.
+fresh scoped
+state init scoped chore/scoped > /dev/null
+echo notes > docs/notes.md
+echo license > LICENSE
+commit "docs: notes"
+# scoped_check [CHANGE [BASE]]: the check of CHANGE (scoped) against BASE (main).
+scoped_check() {
+  env BASE="${2:-main}" STAGES="docs-lint dev-build test-run metrics tools-test gates" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check "${1:-scoped}"
+}
+# notes_of [CHANGE]: each stage's note, the fifth field of its record, or "ran".
+notes_of() {
+  for s in docs-lint dev-build test-run metrics tools-test gates; do
+    printf '%s=%s ' "$s" "$(state get "${1:-scoped}" "stage.$s" | cut -d' ' -f5 | sed 's/^$/ran/')"
+  done
+  echo
+}
+expect "run_state: check on a documentation-only change skips a stage out of scope" 0 "^stage dev-build: no path changed since the merge base is one it checks, skipped$" scoped_check
+expect "run_state: check on a documentation-only change runs only docs-lint and gates" 0 "^docs-lint=ran dev-build=scoped test-run=scoped metrics=scoped tools-test=scoped gates=ran $" notes_of
+expect "run_state: a scoped stage is recorded passed at the head" 0 "^0 0s $(git rev-parse --short=12 HEAD) [^ ]+ scoped$" state get scoped stage.dev-build
+printf 'rounds.carat\t3\nallocs.lh\t99.0\n' > "$work/stale.tsv"
+mkdir -p build/metrics && cp "$work/stale.tsv" build/metrics/current.tsv
+{ printf 'header\n'; printf 'prev\t-\t-\t-\t-\t-\t-\tcarat=2\tlh=27\tlh=50.0\t-\t-\t-\t-\n'; } > "$work/scoped-history.tsv"
+scoped_bench() {
+  env METRICS_FILE="$work/scoped-history.tsv" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" bench scoped
+}
+expect "run_state: bench carries main's figures when the metrics stage was scoped" 0 "carried the figures of the history row of prev" scoped_bench
+expect "run_state: bench replaces the older measurement with main's figures" 0 "^allocs[.]lh[[:space:]]27$" grep allocs build/metrics/current.tsv
+expect "run_state: bench records main's figures as the change's" 0 "^27$" state get scoped metric.allocs.lh
+mkdir -p carat/domain && echo code > carat/domain/x.rb
+commit "feat: code"
+scoped_check > /dev/null
+expect "run_state: check on code touching no file tools-test reads skips only tools-test" 0 "^docs-lint=ran dev-build=ran test-run=ran metrics=ran tools-test=scoped gates=ran $" notes_of
+echo tool > tools/y.sh
+commit "chore: a tool"
+scoped_check > /dev/null
+expect "run_state: check on a change to a tool runs tools-test" 0 "tools-test=ran " notes_of
+fresh unscoped
+state init unscoped chore/unscoped > /dev/null
+echo notes > docs/more.md
+commit "docs: more"
+scoped_check unscoped no-such-base > /dev/null
+expect "run_state: check with no merge base runs every stage" 0 "^docs-lint=ran dev-build=ran test-run=ran metrics=ran tools-test=ran gates=ran $" notes_of unscoped
+# Every repository path tools/tools_test.sh reads, through the tools
+# directory's parent or in the generator kit, is one TOOLS_RE matches, so
+# tools-test runs on it; prints each one missed, or checked.
+tools_reads() {
+  { grep -o '[$]here/[.][.]/[A-Za-z.][A-Za-z0-9_./-]*' "$here/tools_test.sh" | sed 's|^[$]here/[.][.]/||'
+    sed -n '/^kit() {/,/^}/p' "$here/tools_test.sh" | sed -n '/tar -cf/,/tar -xf/p' | tr ' )' '\n\n' | grep -E '^[a-z][A-Za-z0-9_./-]*[.][a-z]+$'
+  } | sort -u | while read -r p; do
+    [ -d "$here/../$p" ] && p="$p/"
+    printf '%s\n' "$p" | grep -q -E "$1" || echo "missed $p"
+  done | awk '{ print; n++ } END { if (n == 0) print "checked" }'
+}
+tools_re=$(. "$here/rules.sh"; printf '%s' "$TOOLS_RE")
+expect "rules: TOOLS_RE matches every repository path tools-test reads" 0 "^checked$" tools_reads "$tools_re"
 
 # The benchmark from the check: the metrics stage's measurement against the
 # last history row.
@@ -1769,8 +1858,9 @@ expect "guard: a risky configuration key refuses every call" 2 "every call while
 git_q config --unset core.hooksPath
 expect "guard: the guard's risky keys are the gates'" 0 "^same$" \
   sh -c '[ "$(grep "^RISKY_CONFIG=" "$1/agent_guard.sh")" = "$(grep "^RISKY_CONFIG=" "$1/rules.sh")" ] && echo same' _ "$here"
+# ci_scope reads it through documentation, in tools/rules.sh.
 expect "rules: the records-only list is named once" 0 "^tools/rules.sh,RECORDS_RE ci_scope gates run_state,\$" \
-  sh -c 'cd "$1" && printf "%s," "$(grep -l -F "docs/(backlog" *.sh | grep -v -x tools_test.sh | sed "s|^|tools/|")"; for f in ci_scope gates run_state; do grep -q "RECORDS_RE" "$f.sh" && printf " %s" "$f"; done | sed "s/^/RECORDS_RE/"; echo ,' _ "$here"
+  sh -c 'cd "$1" && printf "%s," "$(grep -l -F "docs/(backlog" *.sh | grep -v -x tools_test.sh | sed "s|^|tools/|")"; for f in ci_scope gates run_state; do grep -q -E "RECORDS_RE|documentation \"[$]" "$f.sh" && printf " %s" "$f"; done | sed "s/^/RECORDS_RE/"; echo ,' _ "$here"
 cd "$work" || exit 1
 
 # ---------------------------------------------------------- docs_lint.sh

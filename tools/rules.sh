@@ -55,5 +55,32 @@ RISKY_CONFIG='^(core\.(fsmonitor|hookspath|sshcommand|gitproxy|pager|editor|askp
 # the metrics history, and the sprints file, which a package step commits
 # after the checks and no check but docs-lint reads. Read by settled_at in
 # tools/gates.sh (docs/sprints.tsv only by appended rows), TEST_ONLY in
-# tools/run_state.sh, and documentation() in tools/ci_scope.sh.
+# tools/run_state.sh, and documentation() below.
 RECORDS_RE='openspec/|docs/(backlog|queue|goals)\.md$|docs/(metrics|sprints)\.tsv$'
+
+# documentation PATH: true when PATH is documentation no test, build, or
+# tool case reads, so CI (tools/ci_scope.sh) and the checker's scope
+# (tools/run_state.sh check) skip the compile, test, and bench stages for
+# it: a records-only path (RECORDS_RE), a LICENSE file, a Markdown file
+# other than docs/actions.md and docs/compatibility.md, which the action
+# and ex tests compare with the code, and docs/codebase-map.md, whose
+# coverage the lint test checks, or a file under .claude/ other than the
+# agents, the workflows, and .claude/settings.json, which make tools-test
+# reads.
+documentation() {
+  ! printf '%s\n' "$1" | grep -q -E "^($RECORDS_RE)" || return 0
+  case "$1" in
+    docs/actions.md|docs/compatibility.md|docs/codebase-map.md) return 1 ;;
+    .claude/agents/*|.claude/workflows/*|.claude/settings.json) return 1 ;;
+    .claude/*|*.md|LICENSE|*/LICENSE) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# The paths make tools-test (tools/tools_test.sh) reads from this
+# repository: the tools, the agents, workflows, commands, and settings,
+# .github/, the Makefile, and the files the generator cases copy (kit).
+# tools-test runs, in CI and in the checker, only when a changed path
+# matches (a path git quotes keeps its leading quote); a tools_test.sh
+# case fails on a path it reads that this misses.
+TOOLS_RE='^"?(tools/|[.]claude/(agents|workflows|commands)/|[.]claude/settings[.]json$|[.]github/|Makefile$|carat[.]rb$|carat/adapters/editor_assembly[.]rb$|docs/(codebase-map|actions|compatibility)[.]md$|test/runner/run_all[.]rb$|test/lint[.]rb$|config/(plugins|default)[.]caratrc$)'
