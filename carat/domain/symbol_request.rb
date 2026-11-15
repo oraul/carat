@@ -79,6 +79,17 @@ module Carat
         ends.clear
       end
 
+      # Forgets the request in flight, the text last asked, and the held
+      # symbols, as after a restart of the servers: the next server is
+      # asked again and nothing answered before reaches the winbar. The
+      # offering languages are the gateway's, kept per server.
+      #: () -> void
+      def forget
+        self.sent_id = 0
+        ask(0, -1, -1)
+        restart
+      end
+
       # Keeps one symbol spanning the rows from first to last.
       #: (String, Integer, Integer) -> void
       def add(name, first, last)
