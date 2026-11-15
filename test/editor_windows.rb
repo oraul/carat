@@ -51,7 +51,7 @@ module EditorWindowsTest
     all = h.windows
     i = 0
     while i < all.length
-      out << all[i][4]
+      out << Carat::Json.element(all[i], 4)
       i += 1
     end
     out
@@ -241,7 +241,7 @@ module EditorWindowsTest
 
     # Each window has its own cursor and scroll position.
     h = session("<C-w>sj<C-w>jjj")
-    t.assert_equal([[1, 0], [2, 0]], [[h.windows[0][5], h.windows[0][6]], [h.windows[1][5], h.windows[1][6]]], "cursors are independent")
+    t.assert_equal([[1, 0], [2, 0]], [[Carat::Json.element(h.windows[0], 5), Carat::Json.element(h.windows[0], 6)], [Carat::Json.element(h.windows[1], 5), Carat::Json.element(h.windows[1], 6)]], "cursors are independent")
     h.type("<C-w>k")
     t.assert_equal([1, 0], h.cursor, "switching back restores the other cursor")
     lines = +""
@@ -252,7 +252,7 @@ module EditorWindowsTest
     h.open("long.txt")
     h.state.options.breadcrumbs = "never"
     h.type("<C-w>sG")
-    t.assert_equal([39, 0], [h.windows[0][5], h.windows[1][5]], "G moves only the top window's cursor")
+    t.assert_equal([39, 0], [Carat::Json.element(h.windows[0], 5), Carat::Json.element(h.windows[1], 5)], "G moves only the top window's cursor")
     t.assert_equal(" 40 line 40", h.row(10), "the top window scrolled to the end")
     t.assert_equal("  1 line 1", h.row(12), "the bottom window did not scroll")
 

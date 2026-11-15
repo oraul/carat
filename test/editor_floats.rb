@@ -271,14 +271,14 @@ module EditorFloatsTest
       ["ascii double", "option.icons ascii\noption.winborder double\n", ["+", "+", "+", "+", "-", "|"]]
     ]
     frames.each do |row|
-      name = row[0].to_s
-      g = strings(row[2])
-      small = configured(row[1].to_s, 12, 40)
+      name = Carat::Json.element(row, 0).to_s
+      g = strings(Carat::Json.element(row, 2))
+      small = configured(Carat::Json.element(row, 1).to_s, 12, 40)
       open(small, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])
       expected = [g[0] + g[4] * 3 + " doc " + g[4] * 4 + g[1], g[5] + " one        " + g[5], g[5] + " two        " + g[5], g[2] + g[4] * 12 + g[3]]
       got = [cells(small, 2, 4, 14), cells(small, 3, 4, 14), cells(small, 4, 4, 14), cells(small, 5, 4, 14)]
       t.assert_equal(expected, got, "frame #{name} at 40 by 12: #{got.join(" / ")}")
-      large = configured(row[1].to_s, 36, 120)
+      large = configured(Carat::Json.element(row, 1).to_s, 36, 120)
       open(large, options("editor", 10, 30, 3, 50, true, "a longer title", 50, false), ["one", "two", "three"])
       expected = [g[0] + g[4] * 18 + " a longer title " + g[4] * 18 + g[1], g[5] + " one" + " " * 48 + g[5], g[5] + " three" + " " * 46 + g[5], g[2] + g[4] * 52 + g[3]]
       got = [cells(large, 10, 30, 54), cells(large, 11, 30, 54), cells(large, 13, 30, 54), cells(large, 14, 30, 54)]

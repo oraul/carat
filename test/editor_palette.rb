@@ -325,8 +325,8 @@ module EditorPaletteTest
 
     # Scenario: The palette keeps its right border while the filter shrinks.
     [[36, 120], [24, 60], [24, 80]].each do |size|
-      rows = size[0].to_i
-      cols = size[1].to_i
+      rows = Carat::Json.element(size, 0).to_i
+      cols = Carat::Json.element(size, 1).to_i
       t.assert_equal([], shrinking("", rows, cols, "vsplitq"), "The palette keeps its right border while the filter shrinks at #{cols} by #{rows}")
       t.assert_equal([], shrinking("option.winborder none\n", rows, cols, "vsplitq"), "the palette shows every row whole under winborder none at #{cols} by #{rows}")
     end

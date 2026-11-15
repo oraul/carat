@@ -132,7 +132,7 @@ module EditorPluginsTest
     h.windows.each do |w|
       buffer = h.state.tab.layout.window_at(h.state.tab.layout.leaves[out.length]).buffer
       name = buffer.display_name
-      out << [w[0], w[1], w[2], w[3], name.nil? ? "" : name]
+      out << [Carat::Json.element(w, 0), Carat::Json.element(w, 1), Carat::Json.element(w, 2), Carat::Json.element(w, 3), name.nil? ? "" : name]
     end
     out
   end

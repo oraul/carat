@@ -59,7 +59,7 @@ module EditorFinderTest
     windows = h.windows
     i = 0
     while i < windows.length
-      out << windows[i][1].to_i
+      out << Carat::Json.element(windows[i], 1).to_i
       i += 1
     end
     out

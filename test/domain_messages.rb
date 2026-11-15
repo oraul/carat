@@ -15,7 +15,7 @@ module DomainMessagesTest
     list = texts.to_a
     i = 0
     while i < list.length
-      text = list[i].to_s
+      text = Carat::Json.element(list, i).to_s
       history.add(text, text.start_with?("E") ? H::ERROR : H::INFO)
       i += 1
     end
@@ -35,14 +35,14 @@ module DomainMessagesTest
     list = levels.to_a
     i = 0
     while i < list.length
-      notices.add("n#{i}", list[i].to_i, 0.0)
+      notices.add("n#{i}", Carat::Json.element(list, i).to_i, 0.0)
       i += 1
     end
     out = []
     steps = times.to_a
     i = 0
     while i < steps.length
-      notices.expire(steps[i].to_s.to_f)
+      notices.expire(Carat::Json.element(steps, i).to_s.to_f)
       out << texts_of(notices)
       i += 1
     end

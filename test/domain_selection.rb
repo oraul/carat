@@ -15,7 +15,7 @@ module DomainSelectionTest
     copy = []
     i = 0
     while i < lines.length
-      copy << lines[i].to_s
+      copy << Carat::Json.element(lines, i).to_s
       i += 1
     end
     Carat::Domain::Buffer.new(lines: copy, path: nil, line_ending: "\n")
@@ -23,7 +23,7 @@ module DomainSelectionTest
 
   #: (untyped) -> Carat::Domain::Position
   def self.pos(pair)
-    Carat::Domain::Position.new(row: pair[0].to_i, col: pair[1].to_i)
+    Carat::Domain::Position.new(row: Carat::Json.element(pair, 0).to_i, col: Carat::Json.element(pair, 1).to_i)
   end
 
   def self.selection_of(anchor, head, kind, to_end)

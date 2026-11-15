@@ -44,7 +44,7 @@ module EditorGrammarTest
       ["a count on a remap", ["ab\n", [0, 0], "2<C-c>"], [["ab"], [0, 0], :normal]]
     ]) do |input|
       h = editor(input[0])
-      h.state.cursor.move_to(input[1][0], input[1][1])
+      h.state.cursor.move_to(Carat::Json.element(input[1], 0), Carat::Json.element(input[1], 1))
       h.type(input[2])
       [h.lines, h.cursor, h.mode]
     end

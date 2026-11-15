@@ -18,7 +18,7 @@ module DomainBufferTest
     out = []
     i = 0
     while i < value.length
-      out << value[i].to_s
+      out << Carat::Json.element(value, i).to_s
       i += 1
     end
     out

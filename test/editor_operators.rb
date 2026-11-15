@@ -143,7 +143,7 @@ module EditorOperatorsTest
       ["~ on an empty line", ["\n", [0, 0], "~"], [[""], [0, 0], :normal]]
     ]) do |input|
       h = editor(input[0])
-      h.state.cursor.move_to(input[1][0], input[1][1])
+      h.state.cursor.move_to(Carat::Json.element(input[1], 0), Carat::Json.element(input[1], 1))
       h.type(input[2])
       [h.lines, h.cursor, h.mode]
     end
@@ -157,7 +157,7 @@ module EditorOperatorsTest
       [">> with shiftwidth 0 uses tabstop", ["ab\n", [0, 0], "option.shiftwidth 0\noption.tabstop 4\n", ">>"], [["    ab"], [0, 4]]]
     ]) do |input|
       h = editor_with(input[0], input[2])
-      h.state.cursor.move_to(input[1][0], input[1][1])
+      h.state.cursor.move_to(Carat::Json.element(input[1], 0), Carat::Json.element(input[1], 1))
       h.type(input[3])
       [h.lines, h.cursor]
     end
