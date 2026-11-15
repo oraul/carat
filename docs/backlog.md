@@ -5397,3 +5397,35 @@ Location: `docs/architecture.md` sections 4, 5.3, and 8.2; the code has `Domain:
 ### The assembly grows with every feature (architecture-review M5)
 
 Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` builds every record and use case. Why: it is the one wiring place by design, but one long constructor makes a feature's wiring hard to find and review. Fix outline: group construction into a private method per feature (language services, discovery, plugins), keeping the readers and the one-instance rule `test/adapters_assembly.rb` checks.
+
+## Findings of architecture-review at review
+
+### docs/architecture.md:29 the Makefile statement is still contradicted by the Makefile
+
+- Where: docs/architecture.md:29, and the section 11 tree line that repeats it.
+- Why: the toolchain target runs git and builds Spinel with make, and doctor and no-cruby run inline shell, so not every target calls spin, spinel, OpenSpec, or a tools/ script as the corrected sentence says.
+- Fix: name the toolchain build among what the targets run, or say most targets call those and the toolchain recipe fetches and builds Spinel.
+
+### docs/architecture.md:174 the ex command list still omits registered commands
+
+- Where: docs/architecture.md:174.
+- Why: the list the design calls corrected leaves out wqa and xa among the file commands, and vnew, bf, and bl among the buffer and window commands, which ExTable DESCRIPTIONS names.
+- Fix: add them, or say the list is a sample and point to docs/compatibility.md for the full set.
+
+### docs/architecture.md:180 the (planned) markers do not cite their roadmap item
+
+- Where: docs/architecture.md:180, 374, 379, and 392.
+- Why: the change's design (design.md:20) says planned pieces are marked (planned) with the roadmap item where there is one, but no marker cites its item: FormatBuffer and git_signs are item 14, the plugin gateway and plugin-protocol.md item 13.
+- Fix: append the item number to each marker, or drop that clause from the design.
+
+### docs/codebase-map.md:599 the corrected environment sentence reads ambiguously
+
+- Where: docs/codebase-map.md:599.
+- Why: the sentence reads 'the environment reads but the HOME of DiskFiles#home', which is hard to parse.
+- Fix: write 'the only environment reads besides the HOME that DiskFiles#home reads'.
+
+### docs/architecture.md:271 the one-shot runner is marked as future twice
+
+- Where: docs/architecture.md:271, and the layout line at docs/architecture.md:379.
+- Why: 'will run ... (planned)' marks the one-shot runner as future twice, and the edited layout line now sits one column right of the tree's description column.
+- Fix: drop 'will' to match the other (planned) markers and realign the column.
