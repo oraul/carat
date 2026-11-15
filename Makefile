@@ -17,7 +17,7 @@ SPINEL_REPO ?= matz/spinel
 # its own pull request, after make check passes with the new commit, and
 # regenerate tools/spinel/spinel_rt_responds_generated.h in that same pull
 # request (see the toolchain target).
-SPINEL_REF  ?= 6af548c9be5683902cb1abc8c2cb6f307b7e7a74
+SPINEL_REF  ?= 93d7883bd8d85ebbce768445c41c03d9a4bc9e92
 PREFIX      ?= $(CURDIR)/tmp/.toolchain
 FILE       ?= README.md
 # The most objects one key of the cursor scenario of the benchmark may

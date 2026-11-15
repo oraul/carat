@@ -2,8 +2,8 @@
 
 ## 1. Generator and header
 
-- [ ] 1.1 `tools/spinel/gen_respond_to_tables.rb`: add the nine Symbol false positives Spinel's generator lists at 93d7883b to `SYMBOL_FALSE_POSITIVE`. Proven by `make spinel-header` at the new commit passing the Symbol check.
-- [ ] 1.2 `Makefile`: `SPINEL_REF` to 93d7883bd8d85ebbce768445c41c03d9a4bc9e92; `tools/spinel/spinel_rt_responds_generated.h` regenerated with `make spinel-header` by the installed 6af548c9 toolchain. Proven by `make spinel-rev` printing the new commit and the header's `git diff --stat`.
+- [x] 1.1 `tools/spinel/gen_respond_to_tables.rb`: add the nine Symbol false positives Spinel's generator lists at 93d7883b to `SYMBOL_FALSE_POSITIVE`. Proven by `make spinel-header` at the new commit passing the Symbol check.
+- [x] 1.2 `Makefile`: `SPINEL_REF` to 93d7883bd8d85ebbce768445c41c03d9a4bc9e92; `tools/spinel/spinel_rt_responds_generated.h` regenerated with `make spinel-header` by the installed 6af548c9 toolchain. Proven by `make spinel-rev` printing the new commit and the header's `git diff --stat`.
 
 ## 2. Toolchain and checks
 
