@@ -5471,3 +5471,24 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Where: tools/new.sh:275.
 - Why: the template comment was reflowed by hand, leaving the short line a handler that runs a use case takes it as a before a wrapped remainder.
 - Fix: rewrap the three lines to the file's width.
+
+## winbar_with? on TabPage reads no tab state
+
+- Location: carat/domain/tab_page.rb:68
+- Source: quality advisory, winbar-outline
+- Why: winbar_with? reads no TabPage state, the breadcrumbs rule being a function of the mode and a count only, so SplitWindow fetches a tab just to ask it.
+- Fix outline: move the rule beside the mode it compares (Options, for example Options#winbars_with?(count)) and keep TabPage#winbar? as the caller passing file_window_count.
+
+## Window#winbar reads as the Winbar adapter rather than a flag
+
+- Location: carat/domain/window.rb:23
+- Source: quality advisory, winbar-outline
+- Why: the bool member winbar reads as the Winbar adapter rather than a flag (Window#winbar beside FramePresenter#winbar, which is the adapter).
+- Fix outline: name it after what it records, for example winbar_shown, in the record, ArrangeView, FramePresenter, the test, and the map.
+
+## Scratch split under breadcrumbs auto is untested
+
+- Location: test/editor_breadcrumbs.rb:209
+- Source: quality advisory, winbar-outline
+- Why: the requirement says a scratch split gets exactly the counted rows under every breadcrumbs mode and the design names the auto case beside two file windows as fixed, but only always is tested.
+- Fix outline: add a row with option.breadcrumbs auto and two file windows splitting 5<C-w>s from the scratch window, expecting 5 text rows and no winbar.

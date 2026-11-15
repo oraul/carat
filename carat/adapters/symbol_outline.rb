@@ -9,7 +9,7 @@ module Carat
     # children) or a SymbolInformation list (location.range) is walked in
     # order, parents before children, keeping at most LIMIT symbols and
     # DEPTH_LIMIT levels, each name stripped of control characters and
-    # cut to NAME_LIMIT characters. An item without a string name or with
+    # cut to NAME_LIMIT bytes. An item without a string name or with
     # a range whose start line is negative or whose end is before its
     # start is skipped, its children still read; an error or a result
     # that is not a list holds no symbols.

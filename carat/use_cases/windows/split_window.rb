@@ -49,15 +49,14 @@ module Carat
 
       # Whether the windows show winbars once the split is made, so that a
       # count of text rows gets one row more for the new window's winbar:
-      # the new window is a file window unless it shows the current
-      # window's scratch buffer.
+      # never when the new window keeps the current window's scratch
+      # buffer, which shows none, otherwise TabPage's rule with one file
+      # window more.
       #: (Domain::EditorState, String, bool) -> bool
       def winbar_after?(state, path, fresh)
-        mode = state.options.breadcrumbs
-        return false if mode == "never"
-        return true if mode == "always"
-        added = state.window.buffer.scratch? && path.empty? && !fresh ? 0 : 1
-        state.tab.file_window_count + added > 1
+        return false if state.window.buffer.scratch? && path.empty? && !fresh
+        tab = state.tab
+        tab.winbar_with?(state.options.breadcrumbs, tab.file_window_count + 1)
       end
     end
   end

@@ -47,7 +47,7 @@ module Carat
         layout = state.tab.layout
         layout.arrange(tabline, 0, area, cols)
         reserve_headers(state.tab)
-        reserve_winbars(layout) if state.tab.winbar?(options.breadcrumbs)
+        reserve_winbars(layout, state.tab.winbar?(options.breadcrumbs))
         id = 0
         while id < layout.node_count
           scroll(layout.window_at(id), options, tabstop) if layout.node(id).leaf?
@@ -78,18 +78,23 @@ module Carat
         end
       end
 
-      # Gives each file window's first row to its winbar the same way;
-      # slot and plugin windows hold scratch buffers and keep theirs.
-      #: (Domain::Layout) -> void
-      def reserve_winbars(layout)
+      # Decides which windows show a winbar, the one place that does: when
+      # shown is true, each file window of two rows or more gives its
+      # first row to its winbar the same way and is marked (Window#winbar)
+      # for the presenter; slot and plugin windows hold scratch buffers and
+      # keep theirs. Every other leaf is unmarked.
+      #: (Domain::Layout, bool) -> void
+      def reserve_winbars(layout, shown)
         id = 0
         while id < layout.node_count
           if layout.node(id).leaf?
             window = layout.window_at(id)
-            if !window.buffer.scratch? && window.height > 1
+            marked = shown && !window.buffer.scratch? && window.height > 1
+            if marked
               window.row = window.row + 1
               window.height = window.height - 1
             end
+            window.winbar = marked
           end
           id += 1
         end

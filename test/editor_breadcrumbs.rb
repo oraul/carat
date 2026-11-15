@@ -106,6 +106,18 @@ module EditorBreadcrumbsTest
     r
   end
 
+  # An editor whose current window shows a scratch buffer, a slot's as
+  # the explorer's, with the user lines given and a server without
+  # capabilities.
+  def self.scratch_rig(lines)
+    r = rig(lines, {})
+    scratch = D::Buffer.from_text("tree\n", nil)
+    scratch.owner = "explorer"
+    r.assembly.state.window.show(scratch)
+    r.wait
+    r
+  end
+
   # A server offering document symbols, with the user lines given.
   def self.outlining(lines)
     rig(lines, { "documentSymbolProvider" => true })
@@ -158,6 +170,7 @@ module EditorBreadcrumbsTest
     tab.layout.window_at(other).buffer = D::Buffer.from_text("tree\n", nil)
     tab.layout.window_at(other).buffer.owner = "explorer"
     t.assert_equal([1, false], [tab.file_window_count, tab.winbar?("auto")], "a window on a scratch buffer, a slot's or a plugin's, is not a file window")
+    t.assert_equal([false, true, true, true, false], [tab.winbar_with?("auto", 1), tab.winbar_with?("auto", 2), tab.winbar_with?("always", 0), tab.winbar_with?("always", 1), tab.winbar_with?("never", 3)], "the one rule of the modes: auto with two or more file windows, always, never")
 
     # The winbar rows: rows are [label, [user lines, keys], [row 0, row 1]].
     t.cases([
@@ -192,6 +205,16 @@ module EditorBreadcrumbsTest
     r.type("8<C-w>s")
     lower = r.assembly.state.tab.layout.window_at(0)
     t.assert_equal([1, 9, "class Foo"], [lower.height, lower.row, r.row(9).rstrip], "a window of one text row keeps its row and shows no winbar")
+
+    # A split count from a scratch window counts the new window's rows.
+    r = scratch_rig("option.breadcrumbs always\n")
+    r.type("5<C-w>s")
+    window = r.assembly.state.window
+    t.assert_equal([0, 5, "tree", false], [window.row, window.height, r.row(0).rstrip, window.winbar], "A split count from a scratch window: the new window shows the scratch buffer with no winbar and 5 text rows")
+    r = scratch_rig("option.breadcrumbs always\n")
+    r.type(":split b.txt<CR>")
+    window = r.assembly.state.window
+    t.assert_equal([2, " b.txt", "bee", true], [window.row, r.row(1).rstrip, r.row(2).rstrip, window.winbar], "A split from a scratch window to a file has its row: the winbar under the buffer tabs, the text below it")
 
     # The symbol path.
     r = outlining("")
@@ -311,6 +334,29 @@ module EditorBreadcrumbsTest
     before = asked.sent_id != 0
     r.assembly.services.stop
     t.assert_equal([true, 0, 0], [before, asked.sent_id, asked.languages.length], "stop forgets the symbol request in flight")
+
+    # A restart keeps the new outline: the held symbols and the text last
+    # asked are dropped, the restarted server (handle 2) is asked, and the
+    # old server's answer (handle 1) changes nothing.
+    r = outlining("")
+    r.type("<C-w>v")
+    r.wait
+    answer(r, symbol_id(r), OUTLINE)
+    r.type("x")
+    r.wait
+    old = symbol_id(r)
+    r.type(":LspRestart<CR>")
+    t.assert_equal([2, " a.rb"], [r.symbols_sent, cut(r, 0, 0, 20)], "a restart drops the held symbols and the winbar shows the path")
+    init = { "capabilities" => { "documentSymbolProvider" => true }, "serverInfo" => { "name" => "ruby-lsp" } }
+    r.messages.body(2, J.generate({ "jsonrpc" => "2.0", "id" => 1, "result" => init }))
+    r.wait
+    t.assert_equal(3, r.symbols_sent, "the restarted server is asked for the same text once it is ready")
+    fresh = symbol_id(r)
+    r.messages.body(2, J.generate({ "jsonrpc" => "2.0", "id" => fresh, "result" => [flat("Baz", 0, 5)] }))
+    r.wait
+    r.messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => old, "result" => OUTLINE }))
+    r.wait
+    t.assert_equal([" a.rb > Baz", 3], [cut(r, 0, 0, 20), r.symbols_sent], "A restart keeps the new outline: the old server's late answer changes nothing")
 
     t.finish
   end

@@ -221,6 +221,7 @@ module Carat
       # @rbs state: Domain::EditorState
       def restart(state)
         stop
+        @symbols.forget
         i = 0
         while i < @servers.length
           clear_shown(server_at(i).language)

@@ -17,8 +17,10 @@ module Carat
     # jumps is the window's own jump list, which a new window copies, and
     # alternate the number of the buffer it showed before the current one
     # (0 for none), Neovim's alternate file, copied with the list.
+    # winbar is whether ArrangeView gave the window's first row to its
+    # winbar at the last arrange (false until then and for floats).
     # A Struct record: mutable, with a reader and a writer per member.
-    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :fixed_height, :anchor, :last_selection, :id, :jumps, :alternate, keyword_init: true)
+    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :fixed_height, :anchor, :last_selection, :id, :jumps, :alternate, :winbar, keyword_init: true)
       SIGN_WIDTH = 2
 
       # @rbs @buffer: Buffer
@@ -36,10 +38,11 @@ module Carat
       # @rbs @id: Integer
       # @rbs @jumps: JumpList
       # @rbs @alternate: Integer
+      # @rbs @winbar: bool
 
       #: (buffer: Buffer) -> void
       def initialize(buffer:)
-        super(buffer: buffer, cursor: Cursor.new(row: 0, col: 0), top: 0, left: 0, row: 0, col: 0, height: 0, width: 0, fixed_width: false, fixed_height: false, anchor: Position.new(row: 0, col: 0), last_selection: Selection.none, id: 0, jumps: JumpList.new, alternate: 0)
+        super(buffer: buffer, cursor: Cursor.new(row: 0, col: 0), top: 0, left: 0, row: 0, col: 0, height: 0, width: 0, fixed_width: false, fixed_height: false, anchor: Position.new(row: 0, col: 0), last_selection: Selection.none, id: 0, jumps: JumpList.new, alternate: 0, winbar: false)
       end
 
       # Shows another buffer from its start, forgetting the last selection,
