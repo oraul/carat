@@ -601,7 +601,7 @@ Files:
 - `carat/drivers/monotonic_clock.rb`: `MonotonicClock`.
 - `carat/drivers/signals.rb`: `Signals`; INT and TERM terminate, WINCH resizes, flags only.
 - `carat/drivers/main_loop.rb`: `MainLoop#run`.
-- `carat/domain/json.rb`: `Carat::Json` (`parse`, `generate`, `pretty_generate`), for JSON-RPC; the configuration is not JSON. Nesting is capped at `MAX_DEPTH`, illegal UTF-8 bytes read and write as U+FFFD.
+- `carat/domain/json.rb`: `Carat::Json` (`parse`, `generate`, `pretty_generate`, and the typed readers `field`, `element`, and `reach` of a parsed value, whose `[]` is on a typed receiver), for JSON-RPC; the configuration is not JSON. Nesting is capped at `MAX_DEPTH`, illegal UTF-8 bytes read and write as U+FFFD.
 - `carat/ports/process_port.rb`: `ProcessPort`; `spawn` (a handle, 0 when the command cannot start), `write`, `stop`.
 - `carat/ports/message_queue_port.rb`: `MessageQueuePort`; `push`, `pop` (nil at once when empty).
 - `carat/ports/language_service_port.rb`: `LanguageServicePort`; `poll`, `start`, `restart`, `saved`, `waiting?`, `stop`.

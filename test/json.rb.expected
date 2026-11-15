@@ -39,5 +39,8 @@ ok   write a truncated sequence as U+FFFD
 ok   write UTF-8 and a control byte
 ok   write every short escape
 ok   pretty print
+ok   a dotted path reads members and elements, nil where a step finds none
+ok   a member or an element of another kind of value is nil
+ok   a path segment of digits is an index
 ok   round trip
-json: 42 passed, 0 failed
+json: 45 passed, 0 failed
