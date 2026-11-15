@@ -5815,3 +5815,27 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: test/domain_global.rb, its standalone compile failing at carat/use_cases/history/list_undo.rb:27 and carat/use_cases/history/walk_history.rb:168 (a finding the core-correctness contributor handed over that never reached the backlog; its retrospective).
 - Why: make test-one T=test/domain_global.rb does not compile though the whole runner passes, so the global command's tests cannot be checked alone; 1 of 4 handed findings of core-correctness was lost.
 - Fix outline: reproduce with make test-one, name the typing the standalone program loses at those two lines, and type it or record the pitfall in docs/spinel-notes.md, accepted when the standalone compile passes. Queue item `tools-docs-tidy`.
+
+### Path-scope helpers split the stage-list comments in run_state.sh
+
+- Location: tools/run_state.sh:461
+- Why: scope_paths and out_of_scope were inserted between the comment blocks of check_stages and main_stages (lines 451-460) and main_stages, so those comments now sit above scope_paths and main_stages has none.
+- Fix: move the two helpers and their comments above line 451, leaving the main_stages comment directly above main_stages.
+
+### Tests-only carry runs before the path scope in run_state.sh
+
+- Location: tools/run_state.sh:503
+- Why: the tests-only carry runs before the path scope, so a stage recorded scoped (never run) on a documentation-only commit is carried as carried-from after a later tests-only fix: dev-build is carried without building the binary test-run's smoke test uses, a false failure in that rare path.
+- Fix: skip the carry for a record ending in scoped (let out_of_scope decide), with a tools_test.sh case.
+
+### ci_scope.sh answer comment overruns its wrap and omits the tools line
+
+- Location: tools/ci_scope.sh:31
+- Why: the answer comment line runs far past the file's 72-column wrap and the next line still says GITHUB_OUTPUT keeps one run= and one reason= line, not the new tools= line.
+- Fix: rewrap it and name the three lines.
+
+### Records-only case labels ci_scope under RECORDS_RE
+
+- Location: tools/tools_test.sh:1862
+- Why: the records-only case now counts ci_scope by its documentation call yet still prints it under the label RECORDS_RE, which ci_scope.sh no longer names.
+- Fix: drop ci_scope from that list (documentation is in rules.sh, already counted) or label the readers by what they call.
