@@ -5695,3 +5695,9 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: Makefile:303. Sprint-6 sweep, quality. Queue item `tools-docs-tidy`.
 - Why: the runner's exit status per test is ignored, so a crash's output becomes its snapshot with only a manual diff review before a commit.
 - Fix outline: note each nonzero exit and exit 1 after the loop.
+
+### make types leaves build/carat.rbs that breaks every later compile
+
+- Location: Makefile types target, build/carat.rbs read by spin --rbs
+- Why: after make types, every later Spinel compile reads the stale build/carat.rbs and fails until the file is deleted
+- Fix: write the types output outside the path spin reads, or delete it at the end of the target, with a tools_test case
