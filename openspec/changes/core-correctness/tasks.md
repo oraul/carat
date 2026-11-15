@@ -16,4 +16,4 @@
 
 ## 5. Checks
 
-- [ ] 5.1 Run the targeted tests, `make lint`, `make diagnose-one` on the touched files, `make gates`, and `make spec-validate`.
+- [x] 5.1 Run the targeted tests, `make lint`, `make diagnose-one` on the touched files, `make gates`, and `make spec-validate`.
