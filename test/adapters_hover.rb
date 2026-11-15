@@ -130,7 +130,7 @@ module AdaptersHoverTest
     i = bodies.length - 1
     while i >= 0
       value = J.parse(bodies[i].to_s)
-      return value if value["method"] == name.to_s
+      return value if J.field(value, "method") == name.to_s
       i -= 1
     end
     nil
@@ -138,7 +138,7 @@ module AdaptersHoverTest
 
   # The id of the last hover request sent.
   def self.hover_id(r)
-    last_of(r, "textDocument/hover")["id"].to_i
+    J.field(last_of(r, "textDocument/hover"), "id").to_i
   end
 
   # Answers the last hover request with the contents.
@@ -224,8 +224,8 @@ module AdaptersHoverTest
 
     # No server hovers.
     r = rig({})
-    hover = last_of(r, "initialize")["params"]["capabilities"]["textDocument"]["hover"]
-    t.assert_equal(["markdown", "plaintext"], hover["contentFormat"], "initialize advertises hover with markdown content")
+    hover = J.reach(last_of(r, "initialize"), "params.capabilities.textDocument.hover")
+    t.assert_equal(["markdown", "plaintext"], J.field(hover, "contentFormat"), "initialize advertises hover with markdown content")
     r.type("K")
     r.wait
     t.assert_equal(["No hover provider for this buffer", 0], [r.assembly.state.message, r.hovers_sent], "K with no hovering server is refused and asks nothing")
@@ -237,7 +237,7 @@ module AdaptersHoverTest
     t.assert_equal([0, true], [r.hovers_sent, r.assembly.services.waiting?], "K records the ask and no key waits on the server")
     r.wait
     asked = last_of(r, "textDocument/hover")
-    t.assert_equal([2, 0, 4, true], [asked["id"], asked["params"]["position"]["line"], asked["params"]["position"]["character"], asked["params"]["textDocument"]["uri"].to_s.end_with?("/a.rb")], "the next idle tick sends the document and the cursor")
+    t.assert_equal([2, 0, 4, true], [J.field(asked, "id"), J.reach(asked, "params.position.line"), J.reach(asked, "params.position.character"), J.reach(asked, "params.textDocument.uri").to_s.end_with?("/a.rb")], "the next idle tick sends the document and the cursor")
     answer(r, markup("# greet\n\nSays **hello** with `puts`.\n\n- one\n- two\n\n```ruby\nputs 1\n```"))
     r.wait
     t.assert_equal(["greet", "", "Says hello with puts.", "", "• one", "• two", "", "  puts 1"], float_lines(r), "the answer opens the float at the next idle tick with no key, its markup laid out")
@@ -282,7 +282,7 @@ module AdaptersHoverTest
     first = hover_id(r)
     r.type("K")
     r.wait
-    t.assert_equal([first, 2, first + 1], [last_of(r, "$/cancelRequest")["params"]["id"], r.hovers_sent, hover_id(r)], "a new K cancels the request in flight by its id and sends another")
+    t.assert_equal([first, 2, first + 1], [J.reach(last_of(r, "$/cancelRequest"), "params.id"), r.hovers_sent, hover_id(r)], "a new K cancels the request in flight by its id and sends another")
     r.messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => first, "result" => { "contents" => "old" } }))
     r.wait
     t.assert_equal(0, r.float_count, "the cancelled request's answer is dropped")
@@ -291,7 +291,7 @@ module AdaptersHoverTest
       r.wait
       n += 1
     end
-    t.assert_equal([first + 1, false], [last_of(r, "$/cancelRequest")["params"]["id"], r.assembly.services.waiting?], "an unanswered request is cancelled after two seconds and waits no more")
+    t.assert_equal([first + 1, false], [J.reach(last_of(r, "$/cancelRequest"), "params.id"), r.assembly.services.waiting?], "an unanswered request is cancelled after two seconds and waits no more")
     t.assert_equal(true, n >= 99 && n <= 102, "the timeout counts from the sending")
 
     # Scrolling: K enters the float.

@@ -160,7 +160,7 @@ module AdaptersDefinitionsTest
     i = bodies.length - 1
     while i >= 0
       value = J.parse(bodies[i].to_s)
-      return value if value["method"] == name.to_s
+      return value if J.field(value, "method") == name.to_s
       i -= 1
     end
     nil
@@ -168,7 +168,7 @@ module AdaptersDefinitionsTest
 
   #: (Rig) -> Integer
   def self.request_id(r)
-    last_of(r, "textDocument/definition")["id"].to_i
+    J.field(last_of(r, "textDocument/definition"), "id").to_i
   end
 
   # Answers the last definition request with the result.
@@ -293,7 +293,7 @@ module AdaptersDefinitionsTest
 
     # No server offers definitions.
     r = rig({})
-    link = last_of(r, "initialize")["params"]["capabilities"]["textDocument"]["definition"]["linkSupport"]
+    link = J.reach(last_of(r, "initialize"), "params.capabilities.textDocument.definition.linkSupport")
     t.assert_equal(true, link, "initialize advertises definitions with links")
     r.type("gd")
     r.wait
@@ -305,7 +305,7 @@ module AdaptersDefinitionsTest
     t.assert_equal([0, true], [r.sent, r.assembly.services.waiting?], "gd records the ask and no key waits on the server")
     r.wait
     request = last_of(r, "textDocument/definition")
-    t.assert_equal([3, 0, true], [request["params"]["position"]["line"], request["params"]["position"]["character"], request["params"]["textDocument"]["uri"].to_s.end_with?("/a.rb")], "gd sends the request at the next idle tick")
+    t.assert_equal([3, 0, true], [J.reach(request, "params.position.line"), J.reach(request, "params.position.character"), J.reach(request, "params.textDocument.uri").to_s.end_with?("/a.rb")], "gd sends the request at the next idle tick")
     answer(r, location("/project/a.rb", 0, 4))
     r.wait
     t.assert_equal(["a.rb 0:4", 1, 3], [r.where, r.assembly.state.window.jumps.count, r.assembly.state.window.jumps.rows[0]], "One target in the same file moves the cursor")
@@ -390,7 +390,7 @@ module AdaptersDefinitionsTest
     r.wait
     r.messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => first_id, "result" => location("/project/b.rb", 1, 0) }))
     r.wait
-    t.assert_equal(["a.rb 3:0", first_id, 2], [r.where, last_of(r, "$/cancelRequest")["params"]["id"], r.sent], "A new gd cancels the request in flight")
+    t.assert_equal(["a.rb 3:0", first_id, 2], [r.where, J.reach(last_of(r, "$/cancelRequest"), "params.id"), r.sent], "A new gd cancels the request in flight")
     r = defining
     r.type("gd")
     r.wait
@@ -414,7 +414,7 @@ module AdaptersDefinitionsTest
       r.wait
       n += 1
     end
-    t.assert_equal([request_id(r), false, true], [last_of(r, "$/cancelRequest")["params"]["id"], r.assembly.services.waiting?, n >= 99 && n <= 102], "An unanswered request is cancelled after two seconds")
+    t.assert_equal([request_id(r), false, true], [J.reach(last_of(r, "$/cancelRequest"), "params.id"), r.assembly.services.waiting?, n >= 99 && n <= 102], "An unanswered request is cancelled after two seconds")
 
     # The peek float.
     r = defining

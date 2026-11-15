@@ -25,6 +25,61 @@ module Carat
       Parser.new(text: text).parse
     end
 
+    # Typed readers of a parsed value. Spinel types what parse returns
+    # untyped, and from Spinel 2440954d1 on each [] generated on an untyped
+    # receiver costs code generation two walks of the whole program
+    # (docs/spinel-notes.md), so a parsed value is read through these, whose
+    # [] is on a receiver typed Hash or Array.
+
+    # The member key of an object; nil when value is not an object or holds
+    # no such member.
+    #: (untyped, String) -> untyped
+    def self.field(value, key)
+      return nil unless value.is_a?(Hash)
+      object_field(value, key)
+    end
+
+    # The element at index of an array; nil when value is not an array or
+    # the index is outside it.
+    #: (untyped, Integer) -> untyped
+    def self.element(value, index)
+      return nil unless value.is_a?(Array)
+      array_element(value, index)
+    end
+
+    # The value at a dotted path of members, a segment of digits an array
+    # index ("params.contentChanges.0.text"); nil when a step finds none.
+    #: (untyped, String) -> untyped
+    def self.reach(value, path)
+      at = value
+      path.split(".").each do |segment|
+        at = digits?(segment) ? element(at, segment.to_i) : field(at, segment)
+      end
+      at
+    end
+
+    #: (Hash[String, untyped], String) -> untyped
+    def self.object_field(object, key)
+      object[key]
+    end
+
+    #: (Array[untyped], Integer) -> untyped
+    def self.array_element(list, index)
+      list[index]
+    end
+
+    #: (String) -> bool
+    def self.digits?(text)
+      return false if text.empty?
+      i = 0
+      while i < text.bytesize
+        b = text.getbyte(i).to_i
+        return false if b < 48 || b > 57
+        i += 1
+      end
+      true
+    end
+
     #: (untyped) -> String
     def self.generate(value)
       out = +""

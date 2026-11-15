@@ -64,6 +64,13 @@ module JsonTest
 
     t.assert_equal("{\n  \"a\": [\n    1\n  ]\n}", J.pretty_generate({ "a" => [1] }), "pretty print")
 
+    # The typed readers: a member, an element, and a dotted path, nil for a
+    # value of another kind or a step that finds nothing.
+    read = J.parse("{\"a\": {\"b\": [10, {\"c\": \"x\"}]}, \"n\": null}")
+    t.assert_equal([10, "x", nil, nil, nil, nil], [J.reach(read, "a.b.0"), J.reach(read, "a.b.1.c"), J.reach(read, "a.b.2"), J.reach(read, "a.x.c"), J.reach(read, "n.c"), J.reach(read, "a.b.c")], "a dotted path reads members and elements, nil where a step finds none")
+    t.assert_equal([true, nil, nil, 10, nil, nil], [J.field(read, "a").is_a?(Hash), J.field(read, "n"), J.field(J.field(read, "a"), "b").is_a?(Hash) ? 1 : nil, J.element(J.reach(read, "a.b"), 0), J.element(J.reach(read, "a.b"), 5), J.element(read, 0)], "a member or an element of another kind of value is nil")
+    t.assert_equal([true, false, false, false], [J.digits?("12"), J.digits?(""), J.digits?("1a"), J.digits?("-1")], "a path segment of digits is an index")
+
     round = { "k" => [1, 2.5, "s", nil, true, { "n" => {} }] }
     t.assert_equal(round, J.parse(J.generate(round)), "round trip")
 
