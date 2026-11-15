@@ -7,7 +7,7 @@
 
 ## 2. Review
 
-- [ ] 2.1 Record the three-view review of the six topics in `design.md`: the screen list, the timing table, each kept finding with its reproduction and location, and the skeptic's dropped findings with the reason. Proven by `make docs-lint` and `make spec-validate`.
+- [x] 2.1 Record the three-view review of the six topics in `design.md`: the screen list, the timing table, each kept finding with its reproduction and location, and the skeptic's dropped findings with the reason. Proven by `make docs-lint` and `make spec-validate`.
 
 ## 3. Backlog
 
