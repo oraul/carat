@@ -12,7 +12,7 @@
 
 ## 3. Gates
 
-- [ ] 3.1 Run `make gates` and `make spec-validate` and fix what fails.
+- [x] 3.1 Run `make gates` and `make spec-validate` and fix what fails.
 
 ## Workflow follow-up
 
