@@ -16,7 +16,7 @@
 
 ## 4. Verification
 
-- [ ] 4.1 Run `make gates`, `make spec-validate`, and `make test`; all pass.
+- [x] 4.1 Run `make gates`, `make spec-validate`, and `make test`; all pass.
 
 ## Workflow follow-up
 
