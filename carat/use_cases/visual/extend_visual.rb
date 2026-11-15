@@ -49,11 +49,6 @@ module Carat
 
       private
 
-      #: (Domain::EditorState) -> Integer
-      def tabstop_of(state)
-        state.options.tabstop > 0 ? state.options.tabstop : 8
-      end
-
       # The object the action finds with the cursor at pos; the cursor is
       # put back, because the text objects read it.
       #: (Domain::EditorState, String, Integer, Domain::Position) -> Domain::Range?

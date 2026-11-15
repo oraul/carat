@@ -80,11 +80,6 @@ module Carat
         take
       end
 
-      #: () -> bool
-      def operator_pending?
-        !operator.empty?
-      end
-
       # Whether anything of a command has been typed.
       #: () -> bool
       def pending?

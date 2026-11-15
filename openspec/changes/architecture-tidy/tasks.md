@@ -14,8 +14,8 @@
 
 ## 3. Dead code
 
-- [ ] 3.1 Remove `of_char`, `tabstop_of`, `operator_pending?`, `counted?`, and `input?` and their code-map entries, proven by `test/lint.rb`
-- [ ] 3.2 Document `PluginApi::Command#args?` and `PluginApi::Edit#insertion?` in `docs/plugins.md`
+- [x] 3.1 Remove `of_char`, `tabstop_of`, `operator_pending?`, `counted?`, and `input?` and their code-map entries, proven by `test/lint.rb`
+- [x] 3.2 Document `PluginApi::Command#args?` and `PluginApi::Edit#insertion?` in `docs/plugins.md`
 
 ## 4. Close
 
