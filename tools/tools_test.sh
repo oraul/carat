@@ -1311,10 +1311,21 @@ expect "guard: merger refuses another script under the worktree" 2 "the script t
 expect "guard: contributor refuses main's merge gates" 2 "is not a command of this profile" guard contributor 'sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: merger verifies and records the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%B origin/main && sh tools/run_state.sh set c merged abc1234 && git ls-remote --heads origin chore/x'
 expect "guard: merger deletes the branch and fast-forwards main" 0 "^$" guard merger 'git push origin --delete chore/x; git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
+# The green line's fixture origin, on a reserved host, and the blob ids
+# of its forms in the order of ORIGIN_IDS, which replace the pinned ones in
+# the line under test.
+inv="https:/""/host.invalid/o/r.x"
+inv_ssh="ssh:/""/git""@host.invalid/o/r.x"
+inv_scp="git""@host.invalid:o/r.x"
+inv_ids=$(for f in "$inv" "$inv_ssh" "$inv_scp" "$inv.git" "$inv_ssh.git" "$inv_scp.git"; do printf %s "$f" | git hash-object --stdin; done | paste -s -d '|' -)
+expect "guard: merger hashes stdin" 0 "^$" guard merger 'git hash-object --stdin'
+expect "guard: merger refuses a hash that writes the object" 2 "git hash-object other than --stdin" guard merger 'git hash-object -w --stdin'
+expect "guard: merger refuses a hash through a path's filters" 2 "git hash-object other than --stdin" guard merger 'git hash-object --stdin --path=x'
+expect "guard: read refuses git hash-object" 2 "git hash-object is not a command of this profile" guard read 'git hash-object --stdin'
 # The merger's first green: the green and red lines as the workflow builds
 # them (mergeLines), and its two closing calls, each one call the guard
 # admits.
-expect "guard: merger runs the green line" 0 "^$" guard merger 'git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | grep -q -x -E '\''(https[:]//([^/@]+@)?github[.]com/|(ssh[:]//)?git@github[.]com[:/])o/r([.]git)?/?'\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger runs the green line" 0 "^$" guard merger 'git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null hash-object --stdin | grep -q -x -E '\'''"$inv_ids"''\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: merger refuses another global configuration before git" 2 "a GIT_CONFIG_GLOBAL other than /dev/null" guard merger 'GIT_CONFIG_GLOBAL=tmp/g git fetch -q --prune origin'
 expect "guard: merger refuses a pinned configuration before another command" 2 "an assignment before ls" guard merger 'GIT_CONFIG_NOSYSTEM=1 ls'
 expect "guard: merger refuses another assignment before git" 2 "an assignment of BASE before git" guard merger 'BASE=main git fetch -q --prune origin'
@@ -2728,12 +2739,29 @@ expect "workflow: the green line fetches and adds the copy with no global config
 # ran: the green line's origin check, the script's, fails before the
 # fetch, whose main would bring its own gates and guard, and main's guard
 # refuses the fetch; the hosted repository passes both.
-expect "workflow: the green line checks origin before its fetch" 0 "originCheck" grep -F '&& ${originCheck(state.repo)} && ${PINNED_GIT} fetch -q --refmap= origin' "$wf"
-origin_check=$(js "$wf" "PINNED_GIT originCheck" "originCheck('o/r.x')" | sed 's/^"//; s/"$//; s/\\\\/\\/g')
+expect "workflow: the green line checks origin before its fetch" 0 "originCheck" grep -F '&& ${originCheck()} && ${PINNED_GIT} fetch -q --refmap= origin' "$wf"
+# The check as the workflow builds it, its six pinned ids replaced by the
+# fixture's (inv_ids).
+origin_check=$(js "$wf" "PINNED_GIT ORIGIN_IDS originCheck" "originCheck()" | sed 's/^"//; s/"$//; s/\\\\/\\/g' |
+  sed -E "s/'[0-9a-f]{40}([|][0-9a-f]{40}){5}'\$/'$inv_ids'/")
+expect "workflow: the origin check under test holds the fixture's ids" 0 "^ok$" sh -c 'case $1 in *" hash-object --stdin | grep -q -x -E '\''$2'\''") echo ok ;; esac' _ "$origin_check" "$inv_ids"
 fresh planted
-gh="https:/""/github.com"
-git_q remote add origin "$gh"/o/r.x.git
+git_q remote add origin "$inv.git"
 expect "workflow: the origin check passes the hosted repository" 0 "^ok$" sh -c "$origin_check && echo ok"
+passes_form() {
+  git_q remote set-url origin "$2"
+  expect "workflow: the origin check passes the $1 form" 0 "^ok$" sh -c "$origin_check && echo ok"
+}
+passes_form https "$inv"
+passes_form ssh "$inv_ssh"
+passes_form "ssh .git" "$inv_ssh.git"
+passes_form scp "$inv_scp"
+passes_form "scp .git" "$inv_scp.git"
+git_q remote set-url origin "$inv/"
+expect "workflow: the origin check fails a trailing slash" 1 "^$" sh -c "$origin_check"
+git_q remote set-url origin "https:/""/u""@host.invalid/o/r.x.git"
+expect "workflow: the origin check fails a user before the host" 1 "^$" sh -c "$origin_check"
+git_q remote set-url origin "$inv.git"
 PROJECT=$PWD
 expect "guard: merger fetches from the hosted repository" 0 "^$" guard merger 'git fetch -q --prune origin'
 # The green line fetches main by its own refspec, reading no configured
@@ -2759,15 +2787,18 @@ git_q remote set-url origin "file:/""/$work/planted.git"
 expect "workflow: the origin check fails a file: origin" 1 "^$" sh -c "$origin_check"
 git_q remote set-url origin "ext::sh -c true"
 expect "guard: merger refuses a fetch through a remote helper" 2 "a local repository or a remote helper" guard merger 'git fetch -q --prune origin'
-git_q remote set-url origin "$gh"/o/r.x.git
-git_q config url."$work/planted.git".insteadOf "$gh"/o/r.x.git
+git_q remote set-url origin "$inv.git"
+git_q config url."$work/planted.git".insteadOf "$inv.git"
 expect "workflow: the origin check fails an insteadOf to a local origin" 1 "^$" sh -c "$origin_check"
 git_q config --unset url."$work/planted.git".insteadOf
-git_q remote set-url origin "$gh"/o/rex.git
+git_q remote set-url origin "https:/""/host.invalid/o/rex.git"
 expect "workflow: the origin check fails another repository" 1 "^$" sh -c "$origin_check"
 unset PROJECT
-expect "workflow: a run state's repository of another form matches nothing" 0 '^\[true,true,true,false\]$' \
-  js "$wf" "PINNED_GIT originCheck" "['../x', 'o/..', 'o/r x', 'o/r.x'].map((r) => originCheck(r).includes(')a^b('))"
+# ORIGIN_IDS begins with the three ids every hook line pins, the forms
+# without .git, and holds six distinct ids, the same forms with .git last.
+hook_ids=$(sed -n -E "s/^ *command: .* in ([0-9a-f]{40}[|][0-9a-f]{40}[|][0-9a-f]{40})[)].*/\1/p" "$agents"/*.md | sort -u)
+expect "workflow: originCheck's ids are the hook lines' ids, with and without .git" 0 '^true$' \
+  js "$wf" "ORIGIN_IDS" "'$hook_ids'.split('|').length === 3 && ORIGIN_IDS.slice(0, 3).join('|') === '$hook_ids' && ORIGIN_IDS.length === 6 && new Set(ORIGIN_IDS).size === 6 && ORIGIN_IDS.every((i) => /^[0-9a-f]{40}$/.test(i))"
 cd "$work" || exit 1
 areas=$(grep -c -E '^## [0-9]+[.] ' "$here/../docs/codebase-map.md")
 expect "periodic: MAP_AREAS is the map's count of areas" 0 "^const MAP_AREAS = $areas$" grep '^const MAP_AREAS = ' "$pwf"

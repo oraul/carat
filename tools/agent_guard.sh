@@ -15,7 +15,8 @@
 # the three it lists, those of the repository's address in its https,
 # ssh (git@host/path), and scp (git@host:path) forms, each computed as
 # printf %s FORM | git hash-object --stdin, and recomputed when the
-# repository moves.
+# repository moves, with ORIGIN_IDS in .claude/workflows/deliver-change.js,
+# the merge gates' green line's pin: the same three, then each with .git.
 #
 # Usage: sh tools/agent_guard.sh PROFILE [DIR] < HOOK-JSON
 #
@@ -69,7 +70,8 @@
 #                merge BODY, never the branch's tools/gates.sh merge; sh
 #                tools/ci_wait.sh N; git push origin --delete BRANCH, git
 #                checkout -q main, git merge -q --ff-only origin/main, git
-#                branch -D BRANCH, BRANCH a Conventional Branch
+#                branch -D BRANCH, BRANCH a Conventional Branch; git
+#                hash-object --stdin, with no other option
 #   contributor  adds git -c user.name=X -c user.email=Y, git add commit mv
 #                rm restore, git merge origin/main; make -s -k TARGET with
 #                the variables of MAKE_VARS, no shell character in a value;
@@ -544,6 +546,10 @@ git_form() {
           *) refuse "git merge other than of origin/main: $1" ;;
         esac
       done ;;
+    hash-object)
+      # The green line's origin check hashes origin's url, writing nothing.
+      only_profiles merger "git hash-object"
+      [ "$*" = --stdin ] || refuse "git hash-object other than --stdin" ;;
     add|commit|mv|rm|restore)
       only_profiles contributor "git $verb" ;;
     *) refuse "git $verb is not a command of this profile" ;;
