@@ -175,7 +175,7 @@ module SmokeEditorTest
     mark = out.bytesize
     writer.write("x")
     settle(reader, out, 0.5)
-    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("\u{F111}".b), "x deletes a character and the status bar marks the buffer modified")
+    t.assert_true(out.byteslice(mark, out.bytesize - mark).include?("●".b), "x deletes a character and the status bar marks the buffer modified")
     writer.write("A!")
     settle(reader, out, 0.5)
     writer.write("\e")
@@ -248,7 +248,7 @@ module SmokeEditorTest
     settle(reader, out, 0.5)
     drawn = out.byteslice(mark, out.bytesize - mark)
     t.assert_true(drawn.include?("explorer"), "<leader>e opens the tree, titled explorer")
-    t.assert_true(drawn.include?("\u{F07C}".b), "the tree's root line has the open folder icon")
+    t.assert_true(drawn.include?("▾".b), "the tree's root line has the open folder icon")
     writer.write("\x17l")
     settle(reader, out, 0.5)
     writer.write(":q\r")

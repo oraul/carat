@@ -363,7 +363,7 @@ module UseCasesPluginHardeningTest
     h = editor([s])
     s.host.place_sign(0, 2, "error")
     h.type("ggO<Esc>")
-    t.assert_equal(["", "\u{F057}"], [h.buffer.sign_at(2), h.buffer.sign_at(3)], "a line opened above moves the sign down")
+    t.assert_equal(["", "✖"], [h.buffer.sign_at(2), h.buffer.sign_at(3)], "a line opened above moves the sign down")
     h.type("4Gdd")
     t.assert_equal([["", "one", "two"], "", ""], [h.lines, h.buffer.sign_at(2), h.buffer.sign_at(3)], "deleting its line removes it")
 

@@ -106,6 +106,9 @@ module Carat
       SEPARATOR = "│"
       PALETTE_PROMPT = ">"
       ROW_SEPARATOR = "─"
+      # The window separators under option.icons ascii.
+      ASCII_SEPARATOR = "|"
+      ASCII_ROW_SEPARATOR = "-"
       FAR = 1 << 30
       FLOAT_STRIDE = 10
       # The title of a notification box by its level.
@@ -260,9 +263,10 @@ module Carat
           paint_window(back, layout.window_at(id), i, current, options, tabstop, bar, current ? selection : @none, cols, base_same)
           i += 1
         end
-        paint_separators(back, layout, layout.root)
+        ascii = options.icons == "ascii"
+        paint_separators(back, layout, layout.root, ascii ? ASCII_SEPARATOR : SEPARATOR)
         paint_headers(back, tab)
-        paint_winbars(back, tab, in_float, options.icons == "ascii") if tab.winbar?(options.breadcrumbs)
+        paint_winbars(back, tab, in_float, ascii) if tab.winbar?(options.breadcrumbs)
         if bar >= tabline
           @status_bar.paint(back, bar, cols, state)
           @chrome << bar
@@ -852,9 +856,10 @@ module Carat
         return if below == bar
         frame.blank(below, x, x + width)
         @repainted[below] = 1 if @floating
+        glyph = options.icons == "ascii" ? ASCII_ROW_SEPARATOR : ROW_SEPARATOR
         c = x
         while c < x + width
-          frame.put(below, c, ROW_SEPARATOR, Domain::Highlight::WINDOW_SEPARATOR)
+          frame.put(below, c, glyph, Domain::Highlight::WINDOW_SEPARATOR)
           c += 1
         end
         @chrome << below
@@ -1148,10 +1153,11 @@ module Carat
         frame.put(frame_row, col + eol - left, " ", Domain::Highlight::VISUAL)
       end
 
-      # A separator column after every child of a row but the last, over
-      # the row's whole height, then the same inside nested splits.
-      #: (Domain::Frame, Domain::Layout, Integer) -> void
-      def paint_separators(frame, layout, id)
+      # A separator column of glyph after every child of a row but the
+      # last, over the row's whole height, then the same inside nested
+      # splits.
+      #: (Domain::Frame, Domain::Layout, Integer, String) -> void
+      def paint_separators(frame, layout, id, glyph)
         current = layout.node(id)
         return if current.leaf?
         children = current.children
@@ -1162,11 +1168,11 @@ module Carat
             sep = child.col + child.width
             r = current.row
             while r < current.row + current.height
-              frame.put(r, sep, SEPARATOR, Domain::Highlight::WINDOW_SEPARATOR)
+              frame.put(r, sep, glyph, Domain::Highlight::WINDOW_SEPARATOR)
               r += 1
             end
           end
-          paint_separators(frame, layout, children[i])
+          paint_separators(frame, layout, children[i], glyph)
           i += 1
         end
       end

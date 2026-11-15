@@ -105,21 +105,57 @@ ok   unicode closed folder
 ok   nerd closed folder
 ok   unknown name
 ok   unknown name in ascii
-ok   unknown set reads as nerd
+ok   unknown set reads as the default, unicode
 ok   ascii function kind
 ok   ascii variable kind
 ok   unicode class kind
+ok   the default folder_closed is one cell outside the private use areas
+ok   the default folder_open is one cell outside the private use areas
+ok   the default file is one cell outside the private use areas
+ok   the default symlink is one cell outside the private use areas
+ok   the default modified is one cell outside the private use areas
+ok   the default current is one cell outside the private use areas
+ok   the default error is one cell outside the private use areas
+ok   the default warning is one cell outside the private use areas
+ok   the default info is one cell outside the private use areas
+ok   the default hint is one cell outside the private use areas
+ok   the default ruby is one cell outside the private use areas
+ok   the default json is one cell outside the private use areas
+ok   the default markdown is one cell outside the private use areas
+ok   the default toml is one cell outside the private use areas
+ok   the default makefile is one cell outside the private use areas
+ok   the default shell is one cell outside the private use areas
+ok   the default c is one cell outside the private use areas
+ok   the default yaml is one cell outside the private use areas
+ok   the default git is one cell outside the private use areas
+ok   the default lock is one cell outside the private use areas
+ok   the default default is one cell outside the private use areas
+ok   the default kind_text is one cell outside the private use areas
+ok   the default kind_method is one cell outside the private use areas
+ok   the default kind_function is one cell outside the private use areas
+ok   the default kind_constructor is one cell outside the private use areas
+ok   the default kind_field is one cell outside the private use areas
+ok   the default kind_variable is one cell outside the private use areas
+ok   the default kind_class is one cell outside the private use areas
+ok   the default kind_module is one cell outside the private use areas
+ok   the default kind_property is one cell outside the private use areas
+ok   the default kind_keyword is one cell outside the private use areas
+ok   the default kind_snippet is one cell outside the private use areas
+ok   the default kind_constant is one cell outside the private use areas
 ok   thirty-three icon names, twelve of them completion kinds
 ok   the ascii current marker is >
 ok   unicode is a set
 ok   emoji is not a set
-ok   default is nerd
+ok   default is unicode
+ok   nerd stays selectable
+ok   invalid keeps the default
 ok   unicode
 ok   ascii
 ok   invalid keeps the set before it
 ok   two words keep the default
-ok   fresh options use nerd
-ok   the shipped configuration selects nerd
+ok   fresh options use unicode
+ok   the shipped configuration selects unicode
+ok   nerd stays selectable: its closed folder is the Nerd Font glyph
 ok   nerd folder
 ok   start of the basic plane area
 ok   end of the basic plane area
@@ -130,4 +166,4 @@ ok   a wide character is still wide
 ok   a unicode icon
 ok   private_use? for a nerd glyph
 ok   private_use? for a letter
-domain_icons: 132 passed, 0 failed
+domain_icons: 168 passed, 0 failed

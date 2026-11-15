@@ -5341,3 +5341,15 @@ The phrase 'the pin stays at its parent 6af548c9' copies the Makefile's pin valu
 - untyped-gateway, quality advisory, carat/domain/json.rb:62: object_field and array_element are public although the design's risk mitigation says object_field is called only from field, which verified the Hash. Why: any other caller passes Spinel an unverified Hash. Fix: say in their comment they are reached only through field and element (the codebase has no private_class_method), or fold each [] into a typed local inside field and element.
 - untyped-gateway, quality advisory, test/json.rb:71: the check J.field(J.field(read, "a"), "b").is_a?(Hash) ? 1 : nil asks whether an Array is a Hash. Why: it proves nothing about the readers, under a label promising a member of another kind of value is nil. Fix: replace it with J.field(J.reach(read, "a.b"), "c") expecting nil.
 - untyped-gateway, quality advisory, docs/spinel-notes.md:47: the same baseline of 1,181 rebuilds is given as 131 s of code generation (untyped-elephant) and then as 152 s (this change), measured on different machines without saying so. Why: a reader compares seconds that are not comparable. Fix: name the machine dependence beside the new seconds or give only the rebuild counts.
+
+## Quality: the ascii icon set is tested three times in carat/adapters/frame_presenter.rb:266
+
+- Location: carat/adapters/frame_presenter.rb:266, beside :217 and :859 (found reviewing carat-glyphs).
+- Why: options.icons == "ascii" is evaluated at :217 for the border, again at :266 for the separators and winbars, and once per window at :859 in paint_window, so the one decision is duplicated and repeated per window.
+- Fix: compute ascii once at the top of call, reuse it for the border, and pick both separator glyphs there (or keep the row glyph in the one place call already chooses the column glyph).
+
+## Quality: the icon set name "ascii" is a string literal in four places, carat/adapters/status_bar.rb:254
+
+- Location: carat/adapters/status_bar.rb:254, carat/adapters/frame_presenter.rb:217, :266, and :859, beside carat/adapters/options.rb:156 (found reviewing carat-glyphs).
+- Why: the set name is compared as a string literal at each site, so a rename or a new set has to find them all.
+- Fix: add an Options#ascii_icons? predicate (or an Icons::ASCII_SET constant) and use it at each site so the set name lives in one place.

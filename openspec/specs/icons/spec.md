@@ -6,15 +6,19 @@ Icons are the glyphs the editor and its plugins show for folders, files, file ty
 ## Requirements
 
 ### Requirement: The icons option selects the icon set
-The option "icons" SHALL take the values "nerd", "unicode", and "ascii", "nerd" being the default, and SHALL be read from the `option.icons` line of the configuration; any other value SHALL be reported as `file:line: unknown icon set NAME` and keep the set before it.
+The option "icons" SHALL take the values "unicode", "nerd", and "ascii", "unicode" being the default, and SHALL be read from the `option.icons` line of the configuration; "nerd" SHALL stay selectable by that line; any other value SHALL be reported as `file:line: unknown icon set NAME` and keep the set before it.
 
 #### Scenario: Default set
 - **WHEN** the shipped configuration is loaded
-- **THEN** the icons option is "nerd"
+- **THEN** the icons option is "unicode"
+
+#### Scenario: Nerd stays selectable
+- **WHEN** the project file's first line is "option.icons nerd"
+- **THEN** the icons option is "nerd", no problem is reported, and "folder_closed" yields the nerd glyph U+F07B
 
 #### Scenario: Invalid value
 - **WHEN** the project file's first line is "option.icons emoji"
-- **THEN** the icons option stays "nerd" and ".caratrc:1: unknown icon set emoji" is reported
+- **THEN** the icons option stays "unicode" and ".caratrc:1: unknown icon set emoji" is reported
 
 ### Requirement: The icon table maps names to one glyph per set
 The table SHALL hold, for each set, a glyph for the names folder_closed, folder_open, file, symlink, modified, current, error, warning, info, hint, ruby, json, markdown, toml, makefile, shell, c, yaml, git, lock, and default. The nerd set SHALL use Nerd Font code points in the private use areas, the unicode set SHALL use triangles, bullets, and geometric shapes outside the private use areas, and the ascii set SHALL use ASCII characters only. An unknown name SHALL yield the empty string.
@@ -59,3 +63,10 @@ The table SHALL also hold, in each set and under the same rules for each set, a 
 #### Scenario: A completion kind
 - **WHEN** "kind_function" is looked up in the ascii set
 - **THEN** the glyph is "f"
+
+### Requirement: The default set's glyphs take one cell in any font
+Every glyph of the default set, "unicode", SHALL be a single character of display width 1 outside the private use areas, so a terminal font without Nerd Font glyphs draws every icon in one cell.
+
+#### Scenario: Every default glyph is one cell outside the private use areas
+- **WHEN** each icon name is looked up in the default set
+- **THEN** each glyph is one character whose display width is 1 and whose code point is in neither private use area

@@ -61,7 +61,7 @@ ok   a negative priority is refused
 ok   empty text removes it with its place and priority
 ok   run_ex runs the command and returns its outcome
 ok   a failed ex command is a failed response
-ok   icon reads the nerd set by default
+ok   icon reads the unicode set by default
 ok   and the ascii set when configured, refusing an unknown name
 ok   two edits apply as one batch
 ok   one bad edit refuses the whole list

@@ -162,11 +162,11 @@ module EditorBreadcrumbsTest
     # The winbar rows: rows are [label, [user lines, keys], [row 0, row 1]].
     t.cases([
       ["one window has no winbar", ["", ""], ["class Foo", "| def bar"]],
-      ["two windows have winbars over their text", ["", "<C-w>v"], [" a.rb               │ a.rb", "class Foo           │class Foo"]],
+      ["two windows have winbars over their text", ["", "<C-w>v"], [" a.rb               | a.rb", "class Foo           |class Foo"]],
       ["closing back to one window removes the winbar", ["", "<C-w>s<C-w>c"], ["class Foo", "| def bar"]],
       ["always shows the winbar on one window", ["option.breadcrumbs always\n", ""], [" a.rb", "class Foo"]],
-      ["never hides the winbars of two windows", ["option.breadcrumbs never\n", "<C-w>v"], ["class Foo           │class Foo", "| def bar           │| def bar"]],
-      ["an unknown mode keeps auto", ["option.breadcrumbs sometimes\n", "<C-w>v"], [" a.rb               │ a.rb", "class Foo           │class Foo"]]
+      ["never hides the winbars of two windows", ["option.breadcrumbs never\n", "<C-w>v"], ["class Foo           |class Foo", "| def bar           || def bar"]],
+      ["an unknown mode keeps auto", ["option.breadcrumbs sometimes\n", "<C-w>v"], [" a.rb               | a.rb", "class Foo           |class Foo"]]
     ]) do |input|
       r = rig(input[0].to_s, {})
       r.type(input[1].to_s)
@@ -175,7 +175,7 @@ module EditorBreadcrumbsTest
 
     r = rig("", {})
     r.type(":vsplit b.txt<CR>")
-    t.assert_equal([" b.txt              │ a.rb", "bee                 │class Foo"], [r.row(1).rstrip, r.row(2).rstrip], "windows on different files name their own, under the buffer tabs")
+    t.assert_equal([" b.txt              | a.rb", "bee                 |class Foo"], [r.row(1).rstrip, r.row(2).rstrip], "windows on different files name their own, under the buffer tabs")
     r = rig("", {})
     r.type("<C-w>v")
     t.assert_equal([H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE_FILL, H::TAB_LINE, H::TAB_LINE_FILL], [r.frame.hl_at(0, 0), r.frame.hl_at(0, 1), r.frame.hl_at(0, 10), r.frame.hl_at(0, 22), r.frame.hl_at(0, 30)], "the current window's winbar is in TabLineSel, the other's in TabLine, the rest TabLineFill")

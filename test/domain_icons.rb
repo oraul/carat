@@ -45,12 +45,23 @@ module DomainIconsTest
       ["nerd closed folder", ["folder_closed", "nerd"], "\u{F07B}"],
       ["unknown name", ["nope", "nerd"], ""],
       ["unknown name in ascii", ["nope", "ascii"], ""],
-      ["unknown set reads as nerd", ["folder_closed", "emoji"], "\u{F07B}"],
+      ["unknown set reads as the default, unicode", ["folder_closed", "emoji"], "▸"],
       ["ascii function kind", ["kind_function", "ascii"], "f"],
       ["ascii variable kind", ["kind_variable", "ascii"], "v"],
       ["unicode class kind", ["kind_class", "unicode"], "◈"]
     ]) do |pair|
       I.glyph(pair[0], pair[1])
+    end
+
+    # Every default glyph is one cell outside the private use areas: each
+    # name in the default set is one character, one cell wide, and in
+    # neither private use area, so any terminal font draws it. Rows are
+    # [name, [characters, cells, private use]].
+    default_set = D::Options.new.icons
+    t.table(I::NAMES.map { |name| ["the default #{name} is one cell outside the private use areas", name, [1, 1, false]] }) do |name|
+      glyph = I.glyph(name.to_s, default_set)
+      code = glyph.codepoints.empty? ? 0 : glyph.codepoints[0]
+      [glyph.codepoints.length, D::DisplayWidth.of(code), D::DisplayWidth.private_use?(code)]
     end
 
     t.assert_equal(33, I::NAMES.length, "thirty-three icon names, twelve of them completion kinds")
@@ -59,21 +70,27 @@ module DomainIconsTest
     t.assert_equal(false, I.set?("emoji"), "emoji is not a set")
 
     # The option: rows are [label, project lines, [icons value, problems]].
+    # Default set; Nerd stays selectable; Invalid value.
     t.table([
-      ["default is nerd", "", ["nerd", []]],
+      ["default is unicode", "", ["unicode", []]],
+      ["nerd stays selectable", "option.icons nerd\n", ["nerd", []]],
+      ["invalid keeps the default", "option.icons emoji\n", ["unicode", [".caratrc:1: unknown icon set emoji"]]],
       ["unicode", "option.icons unicode\n", ["unicode", []]],
       ["ascii", "option.icons ascii\n", ["ascii", []]],
       ["invalid keeps the set before it", "option.icons ascii\noption.icons emoji\n", ["ascii", [".caratrc:2: unknown icon set emoji"]]],
-      ["two words keep the default", "option.icons nerd font\n", ["nerd", [".caratrc:1: option.icons takes one word"]]]
+      ["two words keep the default", "option.icons nerd font\n", ["unicode", [".caratrc:1: option.icons takes one word"]]]
     ]) do |text|
       config = D::Config.new
       config.read(".caratrc", text.to_s, false)
       [D::Options.from_config(config).icons, config.report]
     end
-    t.assert_equal("nerd", D::Options.new.icons, "fresh options use nerd")
+    t.assert_equal("unicode", D::Options.new.icons, "fresh options use unicode")
     config = D::Config.new
     config.read_defaults("config/default.caratrc", D::DEFAULT_CARATRC)
-    t.assert_equal("nerd", D::Options.from_config(config).icons, "the shipped configuration selects nerd")
+    t.assert_equal("unicode", D::Options.from_config(config).icons, "the shipped configuration selects unicode")
+    config = D::Config.new
+    config.read(".caratrc", "option.icons nerd\n", false)
+    t.assert_equal("\u{F07B}", I.glyph("folder_closed", D::Options.from_config(config).icons), "nerd stays selectable: its closed folder is the Nerd Font glyph")
 
     # Display width of the private use areas, where Nerd Font glyphs live.
     t.table([

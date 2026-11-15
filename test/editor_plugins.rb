@@ -10,7 +10,7 @@ module EditorPluginsTest
   A = Carat::PluginApi
   E36 = "E36: Not enough room"
   E382 = "E382: Cannot write, 'buftype' option is set"
-  INFO = "\u{F05A}"
+  INFO = "◆"
 
   # A test plugin that drives the window requests from key bindings and
   # reports every response in the message row.

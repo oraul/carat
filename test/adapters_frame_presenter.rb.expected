@@ -88,6 +88,9 @@ ok   the separator stops above the bar
 ok   row 5 is the message row
 ok   the cursor is in the right window, which stayed current
 ok   the modified icon stays when the rest is dropped
+ok   the cells in WinSeparator are the ascii separators | and -
+ok   an ascii frame with tabs, splits, a modified buffer, and progress holds no code point above 127
+ok   the same frame in the unicode set holds code points above 127
 ok   each window shows what fits before its edge
 ok   the tab-page numbers stand at the right end
 ok   fill, selected, and plain highlights
@@ -165,4 +168,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   a block on the command line
-adapters_frame_presenter: 167 passed, 0 failed
+adapters_frame_presenter: 170 passed, 0 failed

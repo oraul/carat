@@ -162,24 +162,22 @@ plugin.explorer.ignore .git build tmp
 
 ## Icons and Nerd Fonts
 
-The file explorer, the diagnostics, and the plugins draw small icons: folders, file types, error and warning markers. By default they come from a Nerd Font, a font family that adds thousands of such glyphs to a programming font. The font is optional: the editor is fully usable without one, see the `icons` option below.
+The file explorer, the diagnostics, and the plugins draw small icons: folders, file types, error and warning markers. By default they are triangles, bullets, and geometric shapes that common terminal fonts already have, each one cell wide, so no extra font is needed. The `icons` option chooses the set:
 
-To use the icons, install a Nerd Font and select it in your terminal. JetBrainsMono Nerd Font is a good choice.
+```
+option.icons unicode
+```
+
+`unicode` is the default; `nerd` draws Nerd Font glyphs and needs a Nerd Font, below; `ascii` uses plain characters such as `+`, `-`, `*`, and `!`, and also draws the window separators as `|` and `-` and the progress bar as `#` and `-`, so the whole screen is ASCII. Plugins ask for icons by name, so the option switches every icon in the editor.
+
+To use the Nerd Font icons, install a Nerd Font, select it in your terminal, and set `option.icons nerd`. JetBrainsMono Nerd Font is a good choice.
 
 - macOS: `brew install --cask font-jetbrains-mono-nerd-font`, then pick "JetBrainsMono Nerd Font" in the terminal's profile settings.
 - Arch Linux: `pacman -S ttf-jetbrains-mono-nerd`.
 - Other Linux distributions: download the `JetBrainsMono` archive from the Nerd Fonts project's releases, unpack it into `~/.local/share/fonts/`, and run `fc-cache -f`.
 - Windows: install the font on the Windows side (unpack the same archive and select the font files, then "Install") and choose it in Windows Terminal's profile, so a terminal running Carat under WSL draws with it.
 
-Then select the font in the terminal: in iTerm2, Terminal.app, Windows Terminal, GNOME Terminal, Konsole, Alacritty, WezTerm, kitty, and the others, the font is a setting of the profile or the configuration file; the terminal, not Carat, draws the glyphs.
-
-Without a Nerd Font the icon cells show boxes or blanks. Set the `icons` option in your configuration to another set instead:
-
-```
-option.icons unicode
-```
-
-`unicode` uses triangles, bullets, and geometric shapes that common terminal fonts already have, and `ascii` uses plain characters such as `+`, `-`, `*`, and `!`. The default is `nerd`. Plugins ask for icons by name, so the option switches every icon in the editor.
+Then select the font in the terminal: in iTerm2, Terminal.app, Windows Terminal, GNOME Terminal, Konsole, Alacritty, WezTerm, kitty, and the others, the font is a setting of the profile or the configuration file; the terminal, not Carat, draws the glyphs. Without a Nerd Font the `nerd` icon cells show boxes or blanks.
 
 ## How carat is built with AI
 

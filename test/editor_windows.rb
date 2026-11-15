@@ -223,7 +223,7 @@ module EditorWindowsTest
     h = session("<C-w>sx")
     t.assert_equal(["ne", "two", "three"], h.lines, "x deletes in the shared buffer")
     t.assert_equal(["  1 ne", "  1 ne"], [h.row(0), h.row(12)], "both windows show the edit")
-    t.assert_equal(["\u2500" * 80, " NORMAL  a.txt \u{F111}"], [h.row(11), h.row(22)[0, 16]], "a separator row between the windows and the status bar carries the modified icon")
+    t.assert_equal(["\u2500" * 80, " NORMAL  a.txt ●"], [h.row(11), h.row(22)[0, 16]], "a separator row between the windows and the status bar carries the modified icon")
 
     # The status bar and the separators.
     h = session("<C-w>s<C-w>jj")
