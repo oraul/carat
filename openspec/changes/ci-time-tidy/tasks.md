@@ -16,4 +16,4 @@
 ## 4. Makefile and docs
 
 - [x] 4.1 Drop the stale analysis figures from the Makefile's budget comment
-- [ ] 4.2 Update area 1 of `docs/codebase-map.md`, the README pipeline section, and `docs/architecture.md` section 10; run `make docs-lint`, `make tools-test`, `make gates`, and `make spec-validate`
+- [x] 4.2 Update area 1 of `docs/codebase-map.md`, the README pipeline section, and `docs/architecture.md` section 10; run `make docs-lint`, `make tools-test`, `make gates`, and `make spec-validate`
