@@ -5728,3 +5728,69 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: test/domain_theme.rb:376
 - Why: the lookup row checks only that the lengths match and no two palettes are equal, so a reordered PALETTES (ONE_DARK and ONE_LIGHT swapped, say) still passes and draws another palette for a name, which the proposal says this row prevents; quality advisory from carat-palette-b.
 - Fix: assert each name's find(name, "theme").bg(H::NORMAL) against a table of each palette's BG color.
+
+### First-use hints wait for the start screen's logo animation
+
+- Location: `carat/domain/start_art.rb:67` (the hints), `carat/adapters/input_controller.rb:150` (the animation).
+- Why: for about 0.6 s the first screen shows a single dot and no hint, the one thing a first-time user needs (ux-pass review finding 1). Reproduction: start `carat` with no file and read the screen within 100 ms, `openspec/changes/archive/*-ux-pass/screens/start-early.txt` against `start-late.txt` and `first-start.txt`.
+- Fix: draw the name and the three hint lines in the first frame and animate only the logo.
+
+### The Ctrl-C hint says abandon all changes when nothing is modified
+
+- Location: `carat/use_cases/actions/message_handler.rb:10`.
+- Why: on a pristine `[No Name]` buffer the hint tells the user to `:q!` and abandon all changes, spells the name `Carat` where carat writes `carat` everywhere else, copies Neovim's sentence, and clears the start screen (ux-pass review finding 2). Reproduction: start with no file, `<C-c>`, `openspec/changes/archive/*-ux-pass/screens/first-quit-hint.txt`.
+- Fix: name `:q` when no buffer is modified and `:q!` only when one is, in carat's own words with a lowercase name, and keep the start screen under the message.
+
+### The language server's status segment has no status bar background
+
+- Location: `carat/domain/themes.rb:129` to `:131` (`STATUS_LSP_STARTING`, `STATUS_LSP_READY`, `STATUS_LSP_ERROR` with background `NONE`); `carat/adapters/status_bar.rb:316` reuses `STATUS_LSP_READY` for finished progress.
+- Why: the segment is drawn on the terminal's default background, a hole in the bar's `#2e3346` band, while starting and once ready (ux-pass review finding 3). Reproduction: a user `caratrc` naming a language server and trusting the project, start on a Ruby file, `openspec/changes/archive/*-ux-pass/screens/lsp-starting.txt` and `lsp-ready.txt`, row 23's color runs.
+- Fix: give the three highlights the status bar's background in every theme, with a test that every status segment highlight has one.
+
+### The explorer's help is one message line cut at the terminal's width
+
+- Location: `carat/plugins/explorer/plugin.rb:16` and `:249`.
+- Why: `?` prints every key on the message row and loses the end at 80 columns (`... d delet`), so `R`, `H`, `-`, `C`, and `q` are never shown (ux-pass review finding 4). Reproduction: start in an empty folder, `<Space>e`, `?`, `openspec/changes/archive/*-ux-pass/screens/empty-explorer-help.txt`.
+- Fix: show the help as a bordered float like the key-hint menu, one key per row, closed by `<Esc>`, `q`, or `?`.
+
+### Enter on a finder with no match closes it and drops the query
+
+- Location: `carat/plugins/finder/plugin.rb`, the open action with no entry.
+- Why: after `No match`, `<CR>` closes the finder with no message, so a typo costs the whole query; VS Code's quick open and Neovim's fuzzy finders stay open (ux-pass review finding 5). Reproduction: start with no file in a project, `<C-p>`, `zzqx`, `<CR>`, `openspec/changes/archive/*-ux-pass/screens/empty-finder-nomatch.txt` then `empty-finder-nomatch-enter.txt`.
+- Fix: keep the finder open on Enter with no entry, with a test in the finder plugin's tests.
+
+### Insert mode is shown twice, in the pill and on the message row
+
+- Location: `carat/adapters/frame_presenter.rb:1255`.
+- Why: the status bar's `INSERT` pill and `-- INSERT --` on the message row say the same thing and take the message row while typing (ux-pass review finding 6). Reproduction: start on a file, `i`, `openspec/changes/archive/*-ux-pass/screens/time-insert-char.txt`, rows 23 and 24.
+- Fix: drop the message-row mode text while the status bar shows the mode pill, or add a `showmode` option defaulting to off.
+
+### The key-hint menu names its entries three ways
+
+- Location: `config/default.caratrc:200` to `:205` (the group names), the action descriptions shown for single keys (the explorer's toggle in `carat/plugins/explorer/plugin.rb`), `carat/domain/key_hints.rb`.
+- Why: under `<Space>` entries read as a long sentence (`Open the file tree, focus it, or close it when it is focused`), lowercase group names (`files`, `windows`), and title case (`Command palette`), in an order neither alphabetical nor the configuration's (ux-pass review finding 7). Reproduction: start on a file, `<Space>`, wait one second, `openspec/changes/archive/*-ux-pass/screens/msg-leader-menu.txt`.
+- Fix: a short sentence-case label for every entry, groups included (a hint label beside the long description), sorted by key.
+
+### The completion popup is the only float without a border
+
+- Location: `carat/adapters/frame_presenter.rb:661` (borders only for an edged float), the completion float.
+- Why: hover, the finder, the palette, and the key-hint menu share a rounded `#6c7286` border with a bold title; the completion popup has neither, and no rule says when a float is borderless (ux-pass review finding 8). Reproduction: start on a Ruby file with a language server, `8G`, `o`, `gre`, `openspec/changes/archive/*-ux-pass/screens/float-completion-lsp.txt` against `float-hover.txt`.
+- Fix: decide the rule (every float bordered, or inline lists near the cursor borderless), record it in `docs/architecture.md` with the float style, and make the completion popup follow it.
+
+### The palette and the finder frame their prompt and title differently
+
+- Location: `carat/adapters/frame_presenter.rb:107` (`PALETTE_PROMPT = ">"`), `carat/use_cases/discovery/follow_palette.rb:36` (`TITLE`), `carat/plugins/finder/plugin.rb:22` (`PROMPT = "> "`).
+- Why: the finder's prompt is `> ` and its title counts (`Files 0/5`), the palette's prompt is `>` with no space and its title `Commands` has no count, two floats of one kind a few keys apart (ux-pass review finding 9). Reproduction: start on a file, `<Space>p`, `wri`, `openspec/changes/archive/*-ux-pass/screens/float-palette-filter.txt` against `empty-finder-nomatch.txt`.
+- Fix: one prompt and one title form, `> ` and `Name shown/total`, for both.
+
+### The palette leads with action names and cuts descriptions mid-word
+
+- Location: `carat/use_cases/discovery/follow_palette.rb:34` (`NAME_WIDTH`) and `:163`.
+- Why: each row starts with a 30-column dotted name and the description is cut with no ellipsis (`Replace the word with completio`) beside an empty key column, and the unfiltered list opens on `motion.repeat_find` and the arrow motions (ux-pass review finding 10). Reproduction: start on a file, `<Space>p`, then `wri`, `openspec/changes/archive/*-ux-pass/screens/float-palette.txt` and `float-palette-filter.txt`, rows 15 to 17.
+- Fix: the description first, the dotted name dimmed after it, an ellipsis on a cut, the key column only as wide as its longest key, and the most used commands first when the query is empty.
+
+### The leader buffer list prints Vim's :ls line
+
+- Location: the `buffer.list` action, `docs/actions.md:168` (`List the buffers as :ls does`).
+- Why: `<Space>bb` prints `1 %a   "greet.rb"   line 3` on the message row, Vim's format with nothing to pick, while the buffer list is first in the user's UI order of `docs/goals.md` (ux-pass review finding 11). Reproduction: start on a file, `<Space>bb`, `openspec/changes/archive/*-ux-pass/screens/float-buffers.txt`.
+- Fix: bind `<leader>bb` to a buffer picker float in the finder's style, `:ls` keeping Vim's output; a behavior change for planning to decide.

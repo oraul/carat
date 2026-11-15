@@ -11,7 +11,7 @@
 
 ## 3. Backlog
 
-- [ ] 3.1 Append each kept finding to the end of `docs/backlog.md` with `>>`, as `### title` plus `- Location:`, `- Why:`, `- Fix:` lines, the reproduction in the Why line, without reading the file. Proven by `make docs-lint`.
+- [x] 3.1 Append each kept finding to the end of `docs/backlog.md` with `>>`, as `### title` plus `- Location:`, `- Why:`, `- Fix:` lines, the reproduction in the Why line, without reading the file. Proven by `make docs-lint`.
 
 ## 4. Verify
 
