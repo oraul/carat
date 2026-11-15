@@ -4,79 +4,114 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 6
 
-1. `winbar-outline` (T2 user now-request, part b of `top-rows`, estimated medium, pushed back 4): `stop` (`carat/adapters/json_rpc_language_gateway.rb:242`, called by `restart` at `:222`) keeps a symbol request in flight, so after `:LspRestart` a stale answer replaces the outline; `FramePresenter` (`carat/adapters/frame_presenter.rb:265`), `ArrangeView` (`carat/use_cases/arrange_view.rb:50`), `winbar_after?` (`carat/use_cases/windows/split_window.rb:55`), and `TabPage#winbar?` (`carat/domain/tab_page.rb:61`) each decide which windows get a winbar, comparing the same mode literals; a split from a scratch window has no winbar row (untested, `test/editor_breadcrumbs.rb:188`); `carat/adapters/symbol_outline.rb:12` says characters where the cut is in bytes. Fix outline: no answer from before a restart reaches the outline; one owner of the winbar decision. Accepted when a `test/editor_breadcrumbs.rb` row keeps the new outline after `:LspRestart` with a request in flight, a scratch split has its row, one place compares the modes, and the comment matches the cut. Backlog: "## :LspRestart lets a stale symbol answer replace the outline", "## The presenter and the arranger each decide which windows get a winbar", "## A split from a scratch window has no winbar row", "## SymbolOutline's comment says characters where the cut is in bytes", "## The winbar's never, always, and auto policy lives in two layers", "## The winbar rule restated in SplitWindow".
-2. `carat-palette-b` (T2 user now-request, estimated medium, pushed back 1): with `cursorline` on and `option.background terminal`, lit cells of groups without a foreground keep the terminal's foreground over the fixed stripe (`carat/domain/themes.rb:39`), dark on dark on a light terminal, and the contrast table checks only `background theme`; the lookup repeats `NAMES` as an if chain with a silent fallback and a dead `line_bg16` (`themes.rb:474`, `:545`); `from_palette` keeps `indexes256` BG and FG; five contrast tables list the palettes by hand (`test/domain_theme.rb:297`, `:11`); the Alias scenario names carat-light (`openspec/specs/color-themes/spec.md:49`, `test/domain_theme.rb:253`); comments past the width (`themes.rb:67`). Fix outline: lit cells take the palette's foreground over the terminal's background; one palette table drives the lookup and the tests. Accepted when a `test/domain_theme.rb` row holds 4.5:1 cursor-line text in every palette, background, and depth, the tables iterate the names, and a palette missing from the lookup fails. Backlog: "## The default cursor line keeps the terminal's foreground over a dark stripe", "## Themes.palette repeats NAMES as an if chain", "## from_palette leaves the 256-color background and foreground when the terminal paints", "## The theme test lists the palettes a second time", "## Themes misses a blank line and a comment near known?", "### The theme contrast tables list every palette by hand", "### The Alias scenario names a palette that is no alias", "### The theme palette lookup repeats NAMES and keeps a dead branch", "### Quality: reflowed comments run past the comment width, carat/domain/themes.rb:67".
-3. `ux-pass` (T2 user now-request, estimated medium, pushed back 3): no review of how carat feels in use is recorded; the gates measure code (quality 40/90 first pass), not use. Locations: the presenters `carat/adapters/frame_presenter.rb`, `status_bar.rb`, `tab_bar.rb`, `winbar.rb`, and `config/default.caratrc`. Accepted when a three-view review (Facet identity, other tools, a skeptic) of first use, empty and loading states, feedback on a failed key, messages, float consistency, and key-to-answer time is recorded in its archived change, each finding with a reproduction appended to `docs/backlog.md` for sprint 7's planning, no code changed. Backlog: none.
+1. `carat-palette-b` (T2 user now-request, estimated medium, pushed back 1): with `cursorline` on and `option.background terminal`, lit cells of groups without a foreground keep the terminal's foreground over the fixed stripe (`carat/domain/themes.rb:39`), dark on dark on a light terminal, and the contrast table checks only `background theme`; the lookup repeats `NAMES` as an if chain with a silent fallback and a dead `line_bg16` (`themes.rb:474`, `:545`); `from_palette` keeps `indexes256` BG and FG; five contrast tables list the palettes by hand (`test/domain_theme.rb:297`, `:11`); the Alias scenario names carat-light (`openspec/specs/color-themes/spec.md:49`, `test/domain_theme.rb:253`); comments past the width (`themes.rb:67`). Fix outline: lit cells take the palette's foreground over the terminal's background; one palette table drives the lookup and the tests. Accepted when a `test/domain_theme.rb` row holds 4.5:1 cursor-line text in every palette, background, and depth, the tables iterate the names, and a palette missing from the lookup fails. Backlog: "## The default cursor line keeps the terminal's foreground over a dark stripe", "## Themes.palette repeats NAMES as an if chain", "## from_palette leaves the 256-color background and foreground when the terminal paints", "## The theme test lists the palettes a second time", "## Themes misses a blank line and a comment near known?", "### The theme contrast tables list every palette by hand", "### The Alias scenario names a palette that is no alias", "### The theme palette lookup repeats NAMES and keeps a dead branch", "### Quality: reflowed comments run past the comment width, carat/domain/themes.rb:67".
+2. `ux-pass` (T2 user now-request, estimated medium, pushed back 3): no review of how carat feels in use is recorded; the gates measure code (quality 41/91 first pass), not use. Locations: the presenters `carat/adapters/frame_presenter.rb`, `status_bar.rb`, `tab_bar.rb`, `winbar.rb`, and `config/default.caratrc`. Accepted when a three-view review (Facet identity, other tools, a skeptic) of first use, empty and loading states, feedback on a failed key, messages, float consistency, and key-to-answer time is recorded in its archived change, each finding with a reproduction appended to `docs/backlog.md` for sprint 7's planning, no code changed. Backlog: none.
 
 ## Pool
 
-1. `markdown-reading-a` (T2 user now-request, part a of `markdown-reading`, estimated medium, pushed back 4, sprint 7 by the user's decision): one key toggles a read-only Markdown view (measure, headings, lists, quotes); `carat/domain/markdown_text.rb:27` draws box-drawing cells under `option.icons ascii`, against `README.md:171`. Accepted when snapshots show the view and the toggle, no escape byte or ascii-set box cell is drawn, and a document over the caps stays bounded.
-2. `brief-only-relay` (T1 pipeline, user-approved, estimated medium, pushed back 2, sprint 7's pipeline slot by the user's decision): the workflow relays the user's latest chat message beside the main session's brief (`.claude/workflows/deliver-change.js:945`), so text the brief left out reaches every start. Accepted when every agent start receives only the brief or resume brief, a case showing no other user text in a start's prompt. Backlog: none.
-3. `markdown-reading-b` (T2 user now-request, part b, estimated medium): aligned tables, links, heading jumps and an outline, fences, on part a's view.
-4. `markdown-preview` plugin (T2 user now-request, estimated medium, pushed back 3): a live split preview on the reading renderer.
-5. `mermaid-flowchart` (T2 user now-request, estimated large, pushed back 3, split at its start): layered box text, bounded.
-6. `mermaid-sequence` (T2 user now-request, estimated medium, pushed back 3): on 5's caps.
-7. `spinel-workarounds` (T2 user request, estimated medium, pushed back 5, goal 6 behind goal 1's UI items): 5 workarounds; untested `Utf8.boundary` guards; advisories of #120, #123, #124, #128 (`carat/domain/json.rb:72`); the gateway's 210 and `SymbolOutline`'s 18 untyped reads.
-8. `finder-grep` (T5 user request, estimated medium, pushed back 5): a live grep picker.
-9. `definition-tab` (T5 user request, estimated medium, pushed back 5): `<C-w>gd` in a new tab page.
-10. `finder-pickers` (T5 user request, estimated medium, pushed back 5): recent-file and buffer pickers.
-11. `csv-viewer` plugin (T5 user-scheduled, estimated large, pushed back 9, after the UI track): an aligned view-only table.
-12. `filetype-rules` (T5 user request, estimated medium, pushed back 5): `filetype.*` lines; `filetype.rb:29`; two classifiers (architecture-review R2).
-13. `syntax-definitions` (T5 user request, estimated medium, pushed back 5): a generated Python definition.
-14. `syntax-forms` (T5 user request, estimated medium, pushed back 5): Python and Java forms.
-15. `syntax-embedded` (T5 user request, estimated medium, pushed back 5): fences in any language.
-16. `javascript-syntax` (T5 user request, estimated medium, pushed back 5): templates, regex against division.
-17. `html-syntax` (T5 user request, estimated medium, pushed back 5): tags, attributes, entities.
-18. `gate-object-pin` (T1 pipeline security, estimated medium, pushed back 2, sprint 8's pipeline slot): a planted object under `.git/objects` substitutes content in the merge gates' worktree of `origin/main`; the pins accept origin's ssh and scp forms, so a `~/.ssh/config` branch code writes redirects the guard's fetch (Medium (5), `.claude/agents/merger.md:12`). Accepted when a case plants such an object and the gates read main's content, and an scp-form origin is refused.
-19. `hook-one-place` (T1 retrospective, estimated medium, pushed back 1): the guard hook is copied into 10 lines over 9 agent files (`planner.md` 8,190 of 8,192 bytes, `contributor.md` 6,995 of 6,999); the origin pin is checked two ways (`.claude/workflows/deliver-change.js:542`); no budget headroom: #131 ended `docs/architecture.md` 88,057 of 88,064, `CLAUDE.md` 30,692 of 30,720, trimming two facts out of its scope. Accepted when changing how hooks resolve the guard edits one place and moves no agent file's byte count, and the next added rule removes no sentence outside its scope.
-20. `scout-focus` (T1 retrospective, estimated medium, pushed back 4, one pipeline slot a sprint): scouts 44.9% of output (64,257 of 143,232) and 53 of 169 calls at #129, 34.0% at #128, 0 of 14 packs reusable; 472 at #130, whose brief cited its lines. Accepted when three editor changes spend under 15% and fewer calls than the contributor on scouts.
-21. `merged-name-guard` (T1 pipeline defect, estimated medium, pushed back 3, one pipeline slot a sprint): `/deliver` with a merged name replayed #95's run (about 120K tokens). Accepted when refused unless an explicit resume, in a case.
-22. `ci-scope-quoting` (T1 pipeline defect with a security Low (6), estimated small, pushed back 2): `tools/ci_scope.sh:95` judges a path with a space or glob in pieces; `.github/workflows/ci.yml:58` runs the branch's scope script. Accepted when such a path runs CI and main's script decides.
-23. `sprint-security` (T1 pipeline security, estimated medium, pushed back 2): a partial sprint review still grooms (Medium (7), `.claude/workflows/sprint-planning.js:121`); groom drops a security entry on any ancestor (Low (6)); a forged sprint row (Low (5)). Accepted when each refuses or records partial.
-24. `review-demotion` (T1 pipeline defect, estimated medium, pushed back 4, one pipeline slot a sprint): `reRaised` demotes a blocking finding (#109); duplicate records (#126 notes 7 to 11); reviews 34.4% of output. Accepted in cases, reviews under 31,000 output in one round.
-25. `spec-tests-first` (T1 retrospective, estimated medium, pushed back 2): quality 40/90 first pass; #113, #115, #118 blocked on untested delta specs; #130's 5 of 5 advisories cite lines its own diff wrote. Accepted when 4 of 5 deliveries pass quality first and no entry cites its own diff's line.
-26. `sprint-tidy` (T1 pipeline defects, estimated medium, split at its start): plan_needed takes an unreviewed plan, and plans a brief that already fixes the order (#131 plan 22.2% of output, 19,833 of 89,434; 4 of 10 decisions restated it); history skips a never-merged row (`tools/run_state.sh:1372`); 3 of 4 searching starts reached `docs/backlog.md` at #129. Accepted when each fails in a case and such a brief spends under 10% on plan.
-27. `ci-time-tidy` (T1 pipeline defects, estimated medium): ci-stages drops fractional steps; `Makefile:79` stale; docs-only #130 spent 390 of 486 stage seconds (80.2%) on compile, test, and bench, #127 382 of 476. Accepted when such a change runs only its paths' stages.
-28. `open-pr-refusals` (T1 with security Lows, estimated medium, pushed back 2): scanner exit 2 passes; fork heads (Low (5), `tools/open_pr.sh:180`); `WAIT_STEP=0` polls forever. Accepted when each refuses in a case.
-29. `merge-gate-integrity` (T1 pipeline defect, estimated medium, pushed back 14): merger over its cap in 11 of 16 rows; `phase.merge` unlike `merged` in 17 of 92 run states, the close step handed the branch head (#130). Accepted in cases, wait calls 4 or fewer.
-30. `run-resume` (T1 retrospective, estimated medium, pushed back 16): resumes rerun plan and scouts (#115 46.6%, #127 9.4%). Accepted when a resume starts at its first unfinished phase.
-31. `check-runner-safety` (T1 with security Lows, estimated medium, pushed back 14): unlocked writes, a lost runner, a writable toolchain (Low (5), `tools/run_state.sh:571`).
-32. `content-gate-gaps` (T1 with security findings, estimated medium, pushed back 14): binary files skipped (Medium (7)); scanner errors read clean; `tools/gates.sh:224` fails open on a space; the docs gate refuses an agent-file edit without a README change, against CLAUDE.md's README-unchanged escape (#131, 1 deviation). Accepted when a gate case for an agent-file edit agrees with CLAUDE.md.
-33. `bidi-controls` (T3 security Lows, estimated small, pushed back 10): bidi and C0 bytes reach the terminal (Low (5)).
-34. `ci-hardening` (T3 with T6 folded, estimated medium, pushed back 22): actions pinned by tag (Low (5)); 6 Lows.
-35. `project-config-guards` (T3 with blocking, estimated medium, pushed back 22): a cloned `.caratrc` binds a write (Low (5)).
-36. `insert-copy` (T4 periodic quality, estimated small, pushed back 11): a long insert copies per key.
-37. `bench-scenarios` (T4 tests, estimated small): `palette` and `lh-winbar` skipped (`tools/metrics.sh:30`, `bench/run.sh:69`); a missing figure passes.
-38. `file-access-tidy` (T4 with T6 folded, estimated medium, pushed back 25): two 64 MiB strings per run; a link race (Low (3)).
-39. `language-ask-port` (T5 architecture-review H1, estimated medium): hover, definition, signature, symbols ride mutable records the gateway writes (`carat/domain/hover_request.rb`), completion a port.
-40. `language-followers` (T5 architecture-review H2 and M5, estimated medium): each async feature widens `carat/adapters/input_controller.rb:62` and `carat/use_cases/handle_key.rb:92`; `carat/adapters/editor_assembly.rb` 582 lines.
-41. `gateway-split` (T5 architecture-review M1, estimated large, split at its start, before roadmap item 13): the gateway's 1,373 lines; folds `lsp-client-tidy` (unbounded queues Low (5), `uri_of`).
-42. `frame-painters` (T5 architecture-review M2, estimated medium): the presenter's 1,274 lines paint floats, menus, messages inline.
-43. `plugin-api-split` (T5 architecture-review M3, estimated medium): `carat/plugin_api.rb` 888 lines, four concerns.
-44. `architecture-docs` (T6, 7 docs findings, estimated small): floats absent from `docs/architecture.md` (M4); #130's 5 advisories; #131 dropped the CRuby benchmark baseline and Ractor's thread list, stated nowhere else.
-45. `periodic-blockers-b` (T6 periodic quality blocking, estimated medium, pushed back 7): 4 periodic blocking findings.
-46. `editing-counts` (T6 with blocking, estimated medium, pushed back 10): uncapped counts; `motions.rb:488`; revert skips global marks.
-47. `hover-tidy` (T6 folded, estimated medium, pushed back 12): stale K answers and floats.
-48. `signature-tidy` (T6 with blocking, estimated medium, pushed back 11): a `(` scan by bytes.
-49. `slots-tidy` (T6 with blocking and a Low, estimated medium, pushed back 11): a hidden cursor outlives its buffer.
-50. `completion-tidy` (T6 folded, estimated medium, pushed back 13): 32 findings.
-51. `completion-docs-tidy` (T6 with a Low, estimated medium, pushed back 13): wrong-server resolve (Low (3)).
-52. `buffer-list-tidy` (T6 with a Low, estimated medium, pushed back 15): a name forges `:ls` (Low (4)).
-53. `definitions-tidy` (T6 with periodic quality, estimated medium, pushed back 10): `gd` in a float; jumps copied.
-54. `plugin-host-tidy` (T6 sweep, estimated medium): 5 findings, focus left on raise.
-55. `input-core-tidy` (T6 sweep, estimated medium): 9 key, grammar, tab width findings.
-56. `ui-code-tidy` (T6 sweep, estimated medium): 11 frame and bar findings; #129's 2 (`frame_presenter.rb:266`, `status_bar.rb:254`).
-57. `tools-docs-tidy` (T6 sweep, estimated medium): 18 tool and agent wording findings; #126's and #127's trim advisories; #131's 4 (`docs/goals.md:27` T0 scope against `CLAUDE.md:206`, `.claude/agents/planner.md:22`, `:35`, a sprint with under three ready features).
-58. `docs-index` (T6 folded, estimated medium, pushed back 20, split at its start): map and README drift.
+1. `markdown-reading-a` (T2 user now-request, part a, estimated medium, pushed back 4, S7): one key toggles a read-only Markdown view (measure, headings, lists, quotes); `carat/domain/markdown_text.rb:27` draws box cells under `option.icons ascii`, against `README.md:171`. Accepted when snapshots show the view and toggle, no escape byte or ascii-set box cell drawn, an over-cap document bounded.
+2. `brief-only-relay` (T1 pipeline, estimated medium, pushed back 2, S7): the workflow relays the user's latest chat message beside the brief (`.claude/workflows/deliver-change.js:945`). Accepted when a case shows a start's prompt holds only the brief or resume brief.
+3. `ci-time-tidy` (T1 pipeline defects, estimated medium, S7): ci-stages drops fractional steps; `Makefile:79` stale; docs-only #130 spent 390 of 486 stage seconds on compile, test, bench. Accepted when such a change runs only its paths' stages.
+4. `scout-focus` (T1 pipeline retrospective, estimated medium, pushed back 4, S7): scouts 31.1% of output at #132 (42,370 of 136,334, 54 of 155 calls, implement 36), 44.9% at #129, 0 of 14 packs reusable. Accepted when three code changes spend under 15% and fewer calls than the contributor on scouts, first passes unchanged.
+5. `sprint-tidy` (T1 pipeline defects, estimated medium, split at its start, S7): plan_needed plans a brief that fixes the order (#131 plan 22.2% of output); history skips a never-merged row (`tools/run_state.sh:1372`). Accepted when each fails in a case.
+6. `ruby-structure-check` (T2 user request, estimated medium, S8): carat's Ruby tokenizer flags an unclosed `def`, `class`, `module`, `do`, `if` and the like at once, no language server. Accepted when a table test flags each opener and keys hold.
+7. `git-signs-status` (T2 user request, estimated medium, S8): added, changed, deleted line signs; branch with ahead and behind in the status line.
+8. `git-panel` plugin (T2 user request, estimated large, split at its start, S8): an explorer-like panel over the git command: Unstaged, Staged, Recent; `s` stage, `u` unstage, `c` commit in a message buffer with the staged summary (`:wq` commits, empty aborts), `?` help, a confirmation before anything destructive.
+9. `backlog-read-guard` (T1 pipeline, estimated small, S8): `tools/agent_guard.sh` lets a delivery read `docs/backlog.md` (3 of 4 searching starts at #129). Accepted when a case refuses each read form and an append passes.
+10. `gateway-split-a` (T5 architecture-review M1, estimated medium, S8): the gateway's 1,373 lines; the pure `LspUri` and `Utf16Position` helpers and `JsonRpcSession` first; folds `lsp-client-tidy` (unbounded queues Low (5)).
+11. `lint-panel` (T2 user request, estimated large, split at its start, S9): every diagnostic, built-in and RuboCop, in a list, Enter jumps; rubocop on or off in the status line; quickfix `:grep :make :cnext :copen` joins it.
+12. `git-push-pull` (T2 user request, estimated medium, S9): `P` asks "push <branch> -> origin?", progress and result in a float, never force; `F` pulls.
+13. `git-diff-blame` (T2 user request, estimated medium, S9): `=` diffs the file; a blame line for the current line.
+14. `gate-object-pin` (T1 pipeline security, estimated medium, pushed back 2, S9): a planted `.git/objects` object substitutes main's content in the merge gates; ssh and scp origins accepted (Medium (5), `.claude/agents/merger.md:12`). Accepted when such a case reads main's content and scp is refused.
+15. `frame-painters` (T5 architecture-review M2, estimated medium, S9): the presenter's 1,274 lines paint floats, menus, messages inline.
+16. `language-any` (T2 user request, estimated medium, S10): `language.<name>.lsp` lines start other language servers.
+17. `vim-macros-marks` (T2 user request, estimated medium, S10): `q{a-z} @{a-z} @@`; `m{a-z} 'a` and backtick `a`, `''`.
+18. `vim-case-increment` (T2 user request, estimated medium, S10): `g~ gu gU gq =` in normal mode; `<C-a> <C-x>`.
+19. `own-line-advisories` (T1 pipeline, estimated medium, S10): advisories on lines a change wrote go to the backlog, #132 2 of 4, #130 5 of 5. Accepted when over three deliveries no appended entry cites its own diff's line, rework unchanged.
+20. `gateway-split-b` (T5 architecture-review M1, estimated medium, S10): one class per request kind.
+21. `vim-line-commands` (T2 user request, estimated medium, S11): `:m :t :normal :sort`.
+22. `vim-folds` (T2 user request, estimated medium, S11): `zf za zo zc`.
+23. `markdown-reading-b` (T2 user now-request, part b, estimated medium, S11): tables, links, heading jumps, outline, fences.
+24. `hook-one-place` with budget-headroom (T1 pipeline, estimated medium, pushed back 1, S11): the guard hook in 10 lines of 9 agent files; `planner.md` 8,190 of 8,192 bytes, `CLAUDE.md` 30,692 of 30,720. Accepted when the hook resolves in one place and the next rule trims nothing outside its scope.
+25. `plugin-api-split` (T5 architecture-review M3, estimated medium, S11): `carat/plugin_api.rb` 888 lines.
+26. `plugin-protocol-a` (T5 user-scheduled, estimated medium, S12): external plugins' protocol, part a.
+27. `formatting` (T5 roadmap 14, estimated medium, S12): RuboCop through the language service.
+28. `ux-pass-2` (T2 user now-request, estimated medium, S12): a second recorded use review.
+29. `merge-gate-integrity` (T1 pipeline defect, estimated medium, pushed back 14, S12): merger over its cap 11 of 16 rows; #132 merge 16,313 output (12.0%) on a clean run. Accepted when 3 green merges spend under 6,000.
+30. `language-followers` (T5 architecture-review H2, estimated medium, S12): `input_controller.rb:62`, `handle_key.rb:92`; the assembly grouping.
+31. `plugin-protocol-b` (T5 user-scheduled, estimated medium, S13).
+32. `release-build` (T5 roadmap 15, estimated medium, S13).
+33. `sample-plugin` (T5 user-scheduled, estimated medium, S13): a first external plugin.
+34. `merged-name-guard` (T1 pipeline defect, estimated medium, pushed back 3, S13): a merged name replayed #95 (120K).
+35. `spinel-workarounds` (T2 user request, estimated medium, pushed back 5, S13): move `SPINEL_REF`; 5 workarounds; `json.rb:72`.
+36. `dogfooding` (T2 user request, estimated medium, S14): carat edits carat; fix what use finds.
+37. `review-demotion` (T1 pipeline defect, estimated medium, pushed back 4, S14): `reRaised` demotes a blocker.
+38. `language-ask-port` (T5 architecture-review H1, estimated medium, S14): `hover_request.rb`.
+39. `markdown-preview` plugin (T2 user now-request, estimated medium, pushed back 4).
+40. `mermaid-flowchart` (T2 user now-request, estimated large, pushed back 4, split at its start).
+41. `mermaid-sequence` (T2 user now-request, estimated medium, pushed back 4).
+42. `finder-grep` (T5 user request, estimated medium, pushed back 6).
+43. `definition-tab` (T5 user request, estimated medium, pushed back 6): `<C-w>gd`.
+44. `finder-pickers` (T5 user request, estimated medium, pushed back 6).
+45. `csv-viewer` plugin (T5 user-scheduled, estimated large, pushed back 10).
+46. `filetype-rules` (T5 user request, estimated medium, pushed back 6): `filetype.rb:29`.
+47. `syntax-definitions` (T5 user request, estimated medium, pushed back 6).
+48. `syntax-forms` (T5 user request, estimated medium, pushed back 6).
+49. `syntax-embedded` (T5 user request, estimated medium, pushed back 6).
+50. `javascript-syntax` (T5 user request, estimated medium, pushed back 6).
+51. `html-syntax` (T5 user request, estimated medium, pushed back 6).
+52. `sprint-security` (T1 pipeline security, estimated medium, pushed back 3): partial review grooms, Medium (7) `sprint-planning.js:121`.
+53. `content-gate-gaps` (T1 security, estimated medium, pushed back 15): binary files skipped, Medium (7); `gates.sh:224`.
+54. `ci-scope-quoting` (T1 pipeline, Low (6), estimated small, pushed back 3): `tools/ci_scope.sh:95`.
+55. `spec-tests-first` (T1 retrospective, estimated medium, pushed back 3): quality 41/91 first pass.
+56. `open-pr-refusals` (T1 security Lows, estimated medium, pushed back 3): `tools/open_pr.sh:180`.
+57. `run-resume` (T1 retrospective, estimated medium, pushed back 17): resumes rerun plan and scouts.
+58. `check-runner-safety` (T1 security Lows, estimated medium, pushed back 15): `run_state.sh:571`.
+59. `bidi-controls` (T3 security Lows, estimated small, pushed back 11).
+60. `ci-hardening` (T3 with T6, estimated medium, pushed back 23): tag-pinned actions.
+61. `project-config-guards` (T3, estimated medium, pushed back 23): a cloned `.caratrc` binds a write.
+62. `insert-copy` (T4, estimated small, pushed back 12).
+63. `bench-scenarios` (T4 tests, estimated small, pushed back 1): `tools/metrics.sh:30`.
+64. `file-access-tidy` (T4 with T6, estimated medium, pushed back 26).
+65. `architecture-docs` (T6, estimated small, pushed back 1): floats (M4); #131's lost facts.
+66. `periodic-blockers-b` (T6 periodic quality, estimated medium, pushed back 8).
+67. `editing-counts` (T6, estimated medium, pushed back 11): `motions.rb:488`.
+68. `hover-tidy` (T6, estimated medium, pushed back 13).
+69. `signature-tidy` (T6, estimated medium, pushed back 12).
+70. `slots-tidy` (T6, estimated medium, pushed back 12).
+71. `completion-tidy` (T6, estimated medium, pushed back 14): 32 findings.
+72. `completion-docs-tidy` (T6, estimated medium, pushed back 14).
+73. `buffer-list-tidy` (T6, estimated medium, pushed back 16).
+74. `definitions-tidy` (T6, estimated medium, pushed back 11).
+75. `plugin-host-tidy` (T6 sweep, estimated medium, pushed back 1).
+76. `input-core-tidy` (T6 sweep, estimated medium, pushed back 1).
+77. `ui-code-tidy` (T6 sweep, estimated medium, pushed back 1): `frame_presenter.rb:266`.
+78. `tools-docs-tidy` (T6 sweep, estimated medium, pushed back 1): #131's 4; #132's `docs/examples.md:31`, `tools/new.sh:280`, `:275`, `config-files/spec.md:27`.
+79. `docs-index` (T6, estimated medium, pushed back 21, split at its start).
+
+## Guide
+
+The user's 9-sprint guide (2026-11-15), the direction each sprint's planning follows, security first and review findings adjusting it; pool items carry their sprint:
+
+- S6 features `winbar-outline`, `carat-palette-b`, `ux-pass`; fixes `design-principles`, `architecture-tidy` (done).
+- S7, a one-time exception to the one-pipeline limit and the 3/2 mix: `markdown-reading-a`; `brief-only-relay`, `ci-time-tidy`, `scout-focus`, `sprint-tidy`.
+- S8 `ruby-structure-check`, `git-signs-status`, `git-panel`; `backlog-read-guard`, `gateway-split-a`.
+- S9 `lint-panel`, `git-push-pull`, `git-diff-blame`; `gate-object-pin` (first if rated T0), `frame-painters`.
+- S10 `language-any`, `vim-macros-marks`, `vim-case-increment`; `own-line-advisories`, `gateway-split-b`.
+- S11 `vim-line-commands`, `vim-folds`, `markdown-reading-b`; `hook-one-place`, `plugin-api-split`.
+- S12 `plugin-protocol-a`, `formatting`, `ux-pass-2`; `merge-gate-integrity`, `language-followers`.
+- S13 `plugin-protocol-b`, `release-build`, `sample-plugin`; `merged-name-guard`, `spinel-workarounds`.
+- S14 `dogfooding` and two that S6 to S13 reveal; `review-demotion`, `language-ask-port`.
+- Dropped: carat drawing its own glyphs; `nerd` stays an option, not deprecated.
 
 ## Decisions
 
-- `architecture-tidy` (T5, sprint 6's second fix) is delivered and leaves the queue; no reordering, as the brief asks.
-- Size medium, not the queue's small: about 50 ex descriptions over 18 handler files plus config and 5 methods; the lowest of the last ten totals is 722,832 (#131, docs only, 34.0 min), tidy `untyped-gateway` 819,190, 64.0 min; three parts, no split.
-- Security: no High or Medium at 8 or above open; #131 security 0/0/0 at 76dc730c7e0e; the highest pooled is Medium (7) (`content-gate-gaps`, `sprint-security`).
-- #131 notes 1 to 4 (T6 advisories, `docs/goals.md:27`, `.claude/agents/planner.md:22`, `:35`) fold into `tools-docs-tidy`; note 5 (T6, two facts lost) into `architecture-docs`.
-- #131 retro 6 (T1, plan 22.2% of output) folds into `sprint-tidy`; retro 7 (T1, `docs/architecture.md` 88,057 of 88,064) into `hook-one-place`; retro 8 (T1, 1 deviation) into `content-gate-gaps`.
-- Sprint 7 (the user's decision): `markdown-reading-a` (T2, pushed back 4) and `brief-only-relay` (T1, pushed back 2) at pool 1 and 2, plus two pool features and one fix drawn by its planning; `gate-object-pin` waits, Medium (5) under 8.
-- Groom: sprint-5's plan is applied (its `docs/sprints.tsv` row), its groom files removed.
-- Pace: quality 40/90 first pass, security 85/90, ci 87/93; #131 rework 0, 34.0 min, 722,832 total.
-- Parked: `reading-rules`, `code-index`, `harness-ruby`, `image-viewer`, the mouse.
+- `winbar-outline` (T2, pushed back 4) is delivered and leaves the queue; size medium: four fixes in one domain, comparable totals 722,832 to 1,391,276 (`carat-glyphs` 914,349, 63 min).
+- Security: none open at 8 or above; #132 security 0/0/0 at 7876eba939b4; highest pooled Medium (7) (`sprint-security`, `content-gate-gaps`).
+- The user's guide (A) is recorded as Guide and orders the pool by sprint; its new items (B) are placed, T2 features, the three pipeline ones T1; (C) queues nothing.
+- Every item below pool 38 moved down by the guide is pushed back 1, the user's guide its written reason.
+- S7's four pipeline fixes fail `tools/docs_lint.sh:153` (at most 1) when sprint 7's planning writes them: user-approved, but the check needs the user's word on a change before then, not a workaround.
+- `git-panel` and `lint-panel` are estimated large outside the roadmap: split at their start, part b to S14's two open slots.
+- #132 retro 5 (T1, scouts 31.1%) folds into `scout-focus`; 6 (T1, merge 12.0%) into `merge-gate-integrity`; 7 (T1, 2 of 4) into `own-line-advisories`.
+- #132 notes 1 to 4 (T6 advisories) fold into `tools-docs-tidy`.
+- Pace: quality 41/91 first pass, security 86/91, ci 88/94; #132 rework 0.
