@@ -5524,3 +5524,27 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 
 - Quality advisory, docs drift: the bullet still advises reading an untyped array through an element reader (Array[untyped], Integer) -> T, while design.md found a bare reader given an untyped argument does not help since nothing narrows it, and the change relies on Json.element's is_a?(Array) check.
 - Fix: say the reader must narrow an untyped argument with is_a?(Array), as Carat::Json.element does.
+
+## Header claimed regenerated in the archived spinel-untyped-bump-b (openspec/changes/archive/2026-11-15-spinel-untyped-bump-b/proposal.md:11)
+
+- Location: openspec/changes/archive/2026-11-15-spinel-untyped-bump-b/proposal.md:11, also its :29 Impact, design.md:7, and tasks.md:6.
+- Why: quality advisory, docs currency: they say the vendored header tools/spinel/spinel_rt_responds_generated.h is regenerated and changed, but commit 7d6e154 leaves it byte for byte the 6af548c9 one and the diff has no header change.
+- Fix outline: say the header was regenerated at 93d7883b and came out unchanged, and drop it from Impact (in the next note that cites the pin, since the archive records the change as it was).
+
+## Two Spinel warnings at 93d7883b on carat/domain/utf8.rb (docs/spinel-notes.md:47)
+
+- Location: docs/spinel-notes.md:47; the warnings name carat/domain/utf8.rb:53 and carat/domain/utf8.rb:63.
+- Why: quality advisory, docs currency: Spinel 93d7883b prints two new warnings (declaration became a NilNode before types were read) while building carat-gen-config; they are noted only in the archived tasks.md, while spinel-notes records every Spinel pitfall met at the pin.
+- Fix outline: add an open note to docs/spinel-notes.md, or a spinel-warnings entry, naming the two signatures and whether their types are lost.
+
+## Regression bullet reads as a changelog of pins (docs/spinel-notes.md:47)
+
+- Location: docs/spinel-notes.md:47.
+- Why: quality advisory, simplicity: the untyped-receiver regression bullet grows a sixth dated measurement and now reads as a changelog of pins and figures rather than a rule.
+- Fix outline: keep the rule (avoid a [] on an untyped receiver; read through Testing#cell, Testing#cases, Carat::Json.field/element/reach) and the current pin's figures, and leave the history to the archived changes.
+
+## Accepted rebuild count unexplained at 93d7883b (docs/spinel-notes.md:47)
+
+- Location: docs/spinel-notes.md:47.
+- Why: quality advisory, acceptance: the entry records 125 runner rebuilds at 93d7883b while the brief accepted the bump at rebuilds near the old pin's 39 (FileUtils' 26 aside), and neither the notes nor the proposal say why 125 was accepted.
+- Fix outline: state in the entry that compile time (test-build 169 s, diagnose 219 s) met the target while the rebuild count stays at part a's 125, with what is left to bring it down listed; the pull request notes of spinel-untyped-bump-b say so.

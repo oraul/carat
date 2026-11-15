@@ -53,7 +53,10 @@ module GenRespondToTables
 
   RANGE_FAMILIES = ["Range", "Range(Float)", "Range(String)"].freeze
   RANGE_FALSE_POSITIVE = ["reverse", "join", "index"].freeze
-  SYMBOL_FALSE_POSITIVE = ["dump", "undump", "pack"].freeze
+  # Rows the TY_POLY kind attributes to Symbol that are String's boxed
+  # transforms (or Array#pack's), not Symbol methods.
+  SYMBOL_FALSE_POSITIVE = ["dump", "undump", "pack", "b", "scrub", "encode", "strip", "lstrip", "rstrip",
+                           "chomp", "chop", "to_str"].freeze
 
   ROW = /\{\s*(\w+),\s*"((?:[^"\\]|\\.)*)",\s*(-?\w+),\s*(-?\w+),\s*(BF_\w+)/
   ZERO_IO = /\ABZ_IO\("([^"]+)",\s*\w+,\s*\w+,\s*(\d+)/
