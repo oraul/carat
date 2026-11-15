@@ -3599,12 +3599,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: duplicated work per row in the presenter's hot path, which the `float-frame` proposal set out to tidy.
 - Fix outline: fetch the line and its decoded form once into locals before the branch and reuse them for the tokens; confirm with `make bench`. Queue item `float-placement`.
 
-## Window separators and the progress bar ignore option.icons ascii
-
-- Where: `carat/adapters/frame_presenter.rb:102` and `:104`; `carat/adapters/status_bar.rb:319`. Periodic quality.
-- Why it matters: under `option.icons ascii` one screen mixes ASCII borders with box-drawing separators.
-- Fix outline: take the separators and progress glyphs from the same glyph-set decision, once per frame. Queue item `carat-glyphs`.
-
 ## The docs float lands under a shifted completion popup
 
 - Where: `carat/use_cases/completion/show_completion_docs.rb:107`. Periodic quality.
@@ -5023,12 +5017,6 @@ The phrase 'the pin stays at its parent 6af548c9' copies the Makefile's pin valu
 - Why: the trim drops instructions ('Every change goes through OpenSpec, however small'; 'For Ruby code, docs/examples.md and docs/spinel-notes.md first'; why no session edits a pull request with a tool) while the proposal says no instruction of either agent changes; CLAUDE.md still covers them.
 - Fix: keep a short pointer to docs/examples.md and docs/spinel-notes.md, or correct the proposal's claim.
 
-### Name the hook lines' pinned origin address in the URL exception
-
-- Location: .claude/agents/checker.md:12, every agent hook line, and tools/tools_test.sh:1542 (quality advisory, hard-rule drift).
-- Why: the hook lines spell origin's hosted address split with [/][/] and string concatenation so tools/scan_text.sh does not see it, while CLAUDE.md's hard rules name the Makefile toolchain address as the single URL exception.
-- Fix: name the hook lines' pinned origin address in that exception in CLAUDE.md instead of hiding it from the scanner.
-
 ### Reword the superseded task 1.1 of guard-ref-pin
 
 - Location: openspec/changes/archive/2026-11-14-guard-ref-pin/tasks.md:5 (quality advisory, docs currency).
@@ -5429,3 +5417,31 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Where: docs/architecture.md:271, and the layout line at docs/architecture.md:379.
 - Why: 'will run ... (planned)' marks the one-shot runner as future twice, and the edited layout line now sits one column right of the tree's description column.
 - Fix: drop 'will' to match the other (planned) markers and realign the column.
+
+## Findings of design-principles at review
+
+- Quality, docs currency, docs/goals.md:27: the T0 scope is inconsistent; goals keeps only T0 security fixes outside the sprint mix while CLAUDE.md:206 (T0 exempt from both) and .claude/agents/planner.md:35 (T0 exempt) exempt every T0 item, a red main or a crash too, so a T0 crash fix counts in the mix by one text and not by the other. Fix: say "T0 items stay outside the mix and always go first" in docs/goals.md:27, or narrow the other two to security.
+- Quality, docs accuracy, .claude/agents/planner.md:35: "three features and two fixes, ... a decision citing 3 features, 2 fixes, ...; make docs-lint checks it" reads as if docs-lint checks the mix, but tools/docs_lint.sh:152 counts only pipeline items and nothing enforces the mix (the change's design.md Risks). Fix: write "make docs-lint checks the pipeline count, not the mix".
+- Quality, wording, .claude/agents/planner.md:22: "at most one fix a pipeline change" is ungrammatical and ambiguous, as if a pipeline change had to be a fix. Fix: "three features and two fixes, a pipeline change, at most one, counting as a fix, T0 exempt".
+- Quality, rule gap, docs/goals.md:27: the fixed mix of three features and two fixes, and the planner's sprint mode at .claude/agents/planner.md:35, has no rule for a pool with fewer than three ready features, beside the older "when no feature is ready, the next non-feature item runs". Fix: add one clause, "with fewer features ready, fixes fill the slots and a decision says so".
+- Quality, accuracy, openspec/changes/archive/2026-11-15-design-principles/proposal.md:29: Impact says four sentences repeating sections 2, 9, and 13 are shortened or removed, but the diff trims six places in docs/architecture.md, and the dropped CRuby 4.0.4 benchmark baseline aside (formerly docs/architecture.md:32) and the Ractor note on Spinel's thread list (formerly line 23) are stated nowhere else. Fix: record in docs/architecture.md, or in a follow-up change's notes, that the baseline aside was dropped content, and restore the Ractor fact if it is still needed.
+
+## Findings of the sprint-5 review
+
+### Security: the guard pins accept origin's ssh and scp forms (security Medium (5))
+
+- Location: `.claude/agents/merger.md:12` and the same hook line in every agent file under `.claude/agents/`; `ORIGIN_IDS` and `originCheck` in `.claude/workflows/deliver-change.js:542` to `:552` (sprint-5 security review).
+- Why it matters: security. Branch code run by the checks can write the home directory; it can set `remote.origin.url` to the pinned scp form and write a `~/.ssh/config` Host entry with its own HostName, ProxyCommand, and known_hosts, so the hooks' fetch of main and the green line's fetch for the merge gates come from its server and a forged guard and gates allow every call and the merge. The real origin is https, so the ssh forms are unused surface. Confidence 5: ssh is not installed here and an environment insteadOf rewrites ssh to https, so it was not reproduced.
+- Fix outline: pin only the https form's digest (with and without `.git`) in every hook line and in `ORIGIN_IDS`, or keep ssh only with `core.sshCommand` reading no user config and a pinned host key; add a `tools/tools_test.sh` case where an scp-form origin is refused. Queue item `gate-object-pin`.
+
+### The origin pin is checked two ways in the hooks and the green line
+
+- Location: `.claude/workflows/deliver-change.js:542` (`originCheck`) against the hook lines under `.claude/agents/` (sprint-5 quality review).
+- Why it matters: the hooks hash `config --local remote.origin.url` with `.git` stripped against 3 ids, while `originCheck` hashes `remote get-url` against 6 ids (the 3 plus their `.git` forms), so the recipe and the id list live in two shapes in 11 places.
+- Fix outline: strip a trailing `.git` in `originCheck` too, keep only the three ids, and say in the `tools/agent_guard.sh` header that both read the address the same way. Queue item `hook-one-place`.
+
+### The language gateway's and SymbolOutline's untyped reads have no item
+
+- Location: `carat/domain/json.rb:53` (`Json.field`, `element`, `reach`), `carat/adapters/json_rpc_language_gateway.rb`, `carat/adapters/symbol_outline.rb`, `docs/spinel-notes.md:47` (sprint-5 quality review).
+- Why it matters: the typed readers serve the language-server tests (about 68 calls, 1,181 to 779 rebuilds), but the gateway's 210 untyped reads and SymbolOutline's 18 stay, as the Spinel notes list them.
+- Fix outline: move the gateway's and SymbolOutline's reads onto the readers, accepted with a lower `SP_TIMING` rebuild count at the pin. Queue item `spinel-workarounds`.
