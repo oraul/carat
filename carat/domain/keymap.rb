@@ -226,6 +226,10 @@ module Carat
 
       #: (Symbol, Array[Integer], String?, String) -> void
       def bind_owned(mode, codes, value, owner)
+        if value.nil?
+          unbind(mode, codes)
+          return
+        end
         node = root(mode)
         i = 0
         while i < codes.length
@@ -233,7 +237,7 @@ module Carat
           i += 1
         end
         node.value = value
-        node.owner = value.nil? ? "" : owner
+        node.owner = owner
       end
 
       # The plugin that owns the binding of the keys, "" when the keys are
@@ -334,6 +338,37 @@ module Carat
           i += 1
         end
         text
+      end
+
+      # Removes the binding of the keys (a none line) and the nodes left
+      # with neither a value nor children, deepest first, as clear_owner
+      # does, so a shorter binding is no prefix of nothing. Keys that were
+      # never bound create no node; longer bindings under the keys stay.
+      #: (Symbol, Array[Integer]) -> void
+      def unbind(mode, codes)
+        node = root(mode)
+        i = 0
+        while i < codes.length
+          return unless node.child?(codes[i])
+          node = node.child_for(codes[i])
+          i += 1
+        end
+        node.value = nil
+        node.owner = ""
+        depth = codes.length
+        while depth > 0
+          parent = root(mode)
+          i = 0
+          while i < depth - 1
+            parent = parent.child_for(codes[i])
+            i += 1
+          end
+          key = KeymapNode.key_of(codes[depth - 1])
+          child = parent.child_named(key)
+          return unless child.value.nil? && child.leaf?
+          parent.children.delete(key)
+          depth -= 1
+        end
       end
 
       #: (KeymapNode, String) -> void

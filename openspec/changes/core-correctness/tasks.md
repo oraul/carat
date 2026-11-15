@@ -4,7 +4,7 @@
 
 ## 2. none unbinding
 
-- [ ] 2.1 Route a nil value in `Keymap#bind_owned` to a private `unbind` that walks with `child?` and prunes the emptied nodes (`carat/domain/keymap.rb`); prove it with the `test/domain_keymap.rb` checks "A two-key none unbinding leaves no prefix" and "A none unbinding keeps the longer bindings".
+- [x] 2.1 Route a nil value in `Keymap#bind_owned` to a private `unbind` that walks with `child?` and prunes the emptied nodes (`carat/domain/keymap.rb`); prove it with the `test/domain_keymap.rb` checks "A two-key none unbinding leaves no prefix" and "A none unbinding keeps the longer bindings".
 
 ## 3. revert_to and the global marks
 

@@ -62,6 +62,8 @@ ok   k without an action is unbound
 ok   l with an empty action is unbound
 ok   malformed bindings are reported with the file and line
 ok   none unbinds a key and a later line wins
+ok   A two-key none unbinding leaves no prefix: x matches at once and q, never bound, stays unbound
+ok   A none unbinding keeps the longer bindings
 ok   plugin binding stays when the configuration is silent
 ok   configuration replaces the plugin binding
 ok   configuration removes the plugin binding
@@ -96,4 +98,4 @@ ok   a group line without a name is reported
 ok   keys that lead nowhere answer an empty node and a group names only its normal prefix
 ok   a group line creates no trie node, so j still matches and q stays unbound
 ok   a project file's group line is read
-domain_keymap: 98 passed, 0 failed
+domain_keymap: 100 passed, 0 failed
