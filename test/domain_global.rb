@@ -83,6 +83,19 @@ module DomainGlobalTest
     buffer.global_marks.clear
     t.assert_equal([false, -1], [buffer.global_marks.active?, buffer.global_marks.take], "clear drops the marks")
 
+    # A plugin edit that fails part way inside :g: GlobalCommand#visit has
+    # marked the rows and opened the transaction, BufferRequests#edit_buffer
+    # applied some edits and reverts them with revert_to.
+    reverted = D::Buffer.new(lines: ["a", "b", "a", "a"], path: nil, line_ending: "\n")
+    reverted.global_marks.mark([0, 2, 3], reverted.line_count)
+    reverted.begin_transaction(D::Position.new(row: 0, col: 0))
+    first = reverted.global_marks.take
+    mark = reverted.transaction_size
+    reverted.set_lines(1, 1, ["x", "y"])
+    reverted.revert_to(mark)
+    taken = [first, reverted.global_marks.take, reverted.global_marks.take, reverted.global_marks.take]
+    t.assert_equal([[0, 2, 3, -1], ["a", "b", "a", "a"]], [taken, reverted.lines], "A reverted plugin edit inside a global: the marks stay on their lines")
+
     # Rows are [label, argument, [pattern, command, error]].
     t.table([
       ["pattern and command", "/a/d", ["a", "d", ""]],

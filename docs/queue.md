@@ -4,8 +4,6 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 7
 
-1. `core-correctness` (T6 periodic quality blocking, fix, estimated medium): four editing bugs the sprint-6 sweep raised again (blocking=2 at 4958dc6bd923): Tab under `expandtab` pads from the code-point column, so after a tab or a wide character it stops off the stop (`carat/use_cases/insert_tab.rb:23`; ts=4 after a tab and x lands on display column 7, not 8; the one test, `test/editor_insert.rb:64`, types after ASCII); a `none` unbinding walks with `child_for` and leaves empty trie nodes, so `keymap.normal xy none` makes `x` wait timeoutlen or with no deadline (`carat/domain/keymap.rb:228`); `Buffer#revert_to` skips the `global_marks.shift` of `splice` (`carat/domain/buffer.rb:652`, `:687`), displacing marks when a plugin edit is reverted inside `:g`; `HandleKey#timeout` drops the completion, hover, definition, and palette follow-ups of `call` (`carat/use_cases/handle_key.rb:170`, `:153`), leaving a float open after a timeoutlen binding moves the cursor. Fix outline: each path matches its sibling and Vim. Accepted when rows fail before and pass after in `test/editor_insert.rb` (a tab and a wide character before the cursor), `test/domain_keymap.rb` (a two-key `none`), `test/domain_global.rb` (a revert inside `:g`), and `test/editor_leader.rb` (a timeoutlen binding closes the hover). Backlog: "## Tab with expandtab pads by character column", "## A none unbinding turns an unbound key into an empty prefix", "## A rollback during :g leaves the global marks on the wrong rows", "### Buffer#revert_to leaves global marks unshifted", "## A key resolved by timeoutlen runs no follow tail".
-
 ## Pool
 
 1. `brief-only-relay` (T1 pipeline, estimated medium, pushed back 3, S8 first, the user-approved exception): the workflow relays the user's latest chat message beside the brief (`.claude/workflows/deliver-change.js:945`), and the package start gets only the backlog handover and plan notes, not the brief (`.claude/workflows/deliver-change.js:1032`), so #137 pushed and merged before the user's reading; in the commit applying the sprint-8 queue it adds the "user-approved exception" marker `tools/docs_lint.sh:153` honors. Accepted when a case shows a start's prompt holds only the brief or resume brief, a case shows the brief, a hold-for-the-user instruction included, reaches every contributor start, the package start included, and docs-lint passes a marked sprint of 4 pipeline items and refuses an unmarked one.
@@ -27,7 +25,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 17. `language-any` (T2 user request, estimated medium, S11): `language.<name>.lsp` lines.
 18. `vim-macros-marks` (T2 user request, estimated medium, S11).
 19. `vim-case-increment` (T2 user request, estimated medium, S11).
-20. `own-line-advisories` (T1 pipeline, estimated medium, S11): advisories on a change's own lines go to the backlog (#134 6 of 6, #133 3 of 3); the package start composes the handed entries (#138 package 7,995 output, 20 of 30 calls, its first append in the wrong form, redone; #137 advisory 1 the same). Accepted when every appended entry is a ### title with Location, Why, Fix lines and the package prompt carries no finding text to rewrite.
+20. `own-line-advisories` (T1 pipeline, estimated medium, S11): advisories on a change's own lines go to the backlog (#134 6 of 6, #133 3 of 3, #139 5 of 5); the package start composes the handed entries (#138 package 7,995 output, 20 of 30 calls, its first append in the wrong form, redone; #137 advisory 1 the same). Accepted when every appended entry is a ### title with Location, Why, Fix lines and the package prompt carries no finding text to rewrite.
 21. `gateway-split-b` (T5 architecture-review M1, estimated medium, S11).
 22. `vim-line-commands` (T2 user request, estimated medium, S12).
 23. `vim-folds` (T2 user request, estimated medium, S12).
@@ -45,7 +43,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 35. `merged-name-guard` (T1 pipeline defect, estimated medium, pushed back 3, S14): a merged name replayed #95 (120K): a delivery started under a change name already merged reuses that run's state. Accepted when a case refuses or fresh-starts a merged name.
 36. `spinel-workarounds` (T2 user request, estimated medium, pushed back 5, S14): `json.rb:72`; #134's typed test reads; #135's advisories 1, 3, 4 (`docs/spinel-notes.md:47`); `test/lint.rb:255` arrays.
 37. `dogfooding` (T2 user request, estimated medium, S15).
-38. `review-demotion` (T1 pipeline defect, estimated medium, pushed back 4, S15).
+38. `review-demotion` (T1 pipeline defect, estimated medium, pushed back 4, S15): folds #139 retro 6: on docs-only skip_specs changes the quality review never changed a decision (#139 reviews 15,363 of 98,866 output, 15.5%; #130, #131, #137, #139 4 of 4 first pass, 60,089 of 343,322, 17.5%). Accepted when 3 such changes spend under half that reviews output, the security review still runs on the committed diff, and no later CI failure or sprint finding traces to the skipped check.
 39. `language-ask-port` (T5 architecture-review H1, estimated medium, S15).
 40. `markdown-preview` plugin (T2 user now-request, estimated medium, pushed back 4).
 41. `mermaid-flowchart` (T2 user now-request, estimated large, pushed back 4, split at its start).
@@ -63,7 +61,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 53. `sprint-security` (T1 pipeline security, estimated medium, pushed back 3): Medium (7) `sprint-planning.js:121`.
 54. `content-gate-gaps` (T1 security, estimated medium, pushed back 15): Medium (7) `gates.sh:224`.
 55. `ci-scope-quoting` (T1 pipeline, Low (6), estimated small, pushed back 3): `tools/ci_scope.sh:95`, `:78`.
-56. `spec-tests-first` (T1 retrospective, estimated medium, pushed back 3): quality 46/97 first pass; #136 3 blocking failure-path misses in new tooling; #138 2 of 3 advisories rows that pass before the change (`test/domain_theme.rb:453`, `:376`). Accepted above 60% over 10 changes and no such advisory over the next 5 code changes, no new start.
+56. `spec-tests-first` (T1 retrospective, estimated medium, pushed back 3): quality 47/98 first pass; #136 3 blocking failure-path misses in new tooling; #138 2 of 3 advisories rows that pass before the change (`test/domain_theme.rb:453`, `:376`). Accepted above 60% over 10 changes and no such advisory over the next 5 code changes, no new start.
 57. `open-pr-refusals` (T1 security Lows, estimated medium, pushed back 3).
 58. `run-resume` (T1 retrospective, estimated medium, pushed back 17).
 59. `check-runner-safety` (T1 security, estimated medium, pushed back 15): sprint-6 sweep Medium (6) `run_state.sh:571`; `toolchain-clean`.
@@ -87,7 +85,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 77. `plugin-host-tidy` (T6 sweep, estimated medium, pushed back 1): `plugin_router.rb:40`.
 78. `input-core-tidy` (T6 sweep, estimated medium, pushed back 1): longest bound prefix (`handle_key.rb:253`).
 79. `ui-code-tidy` (T6 sweep, estimated medium, pushed back 1): #138 advisories `carat/domain/themes.rb:470` (a hand-rolled find), `test/domain_theme.rb:453`, `:376` (rows passing without the fix).
-80. `tools-docs-tidy` (T6 sweep, estimated medium, pushed back 1): `docs/examples.md:25`, `:31`; `tools/docs_lint.sh:18`; `Makefile:303`; #136's 7 advisories (`Makefile:317`, `:87`, `tools/spinel_warnings.sh:42`); "### make types leaves build/carat.rbs that breaks every later compile", whose `- Fix:` and line-less Location drift from the entry format (#137 advisory 1).
+80. `tools-docs-tidy` (T6 sweep, estimated medium, pushed back 1): `docs/examples.md:25`, `:31`; `tools/docs_lint.sh:18`; `Makefile:303`; #136's 7 advisories (`Makefile:317`, `:87`, `tools/spinel_warnings.sh:42`); "### make types leaves build/carat.rbs that breaks every later compile", whose `- Fix:` and line-less Location drift from the entry format (#137 advisory 1); #139's 5 advisories: the archived ux-pass `design.md:52`, `:19`, `:66` (unrecorded timings, header keys, finding 6's file), its backlog findings 5 and 11 lacking `carat/plugins/finder/plugin.rb:140` and `carat/use_cases/actions/buffer_handler.rb:50`.
 81. `docs-index` (T6, estimated medium, pushed back 21, split at its start).
 
 ## Guide
@@ -101,13 +99,10 @@ The user's guide (2026-11-15), security first and review findings adjusting it:
 
 ## Decisions
 
-- `ux-pass` (T2 user now-request, pushed back 5) runs now, estimated medium: docs-only mit-license 636,713 total in 30 min plus a release build (62 s in CI) and pseudo-terminal screens; code rows 658,578 to 935,582, under medium's 1.2M; one review, no code, not split.
-- S7 left: `core-correctness` (T6 periodic quality blocking=2 at 4958dc6bd923), the user's composition; mix deviation kept: 2 features, 3 fixes.
-- `merged-name-guard` (T1, pool 35) restored to its 4958dc6 defect (#95 replayed a merged name, 120K) by the user's instruction; the merged-commit check (#136 d180d78de192) stays only in `merge-gate-integrity`; nothing reordered.
-- #138 retro 4 (package 7,995 output, 20 of 30 calls, entry form redone; 2 of the last 2 runs) folded into `own-line-advisories` (T1, pool 20).
-- #138 retro 5 (tools-test 91 of 663 local stage s, 13.7%, no tested file touched) folded into `ci-time-tidy` (T1, S8).
-- #138 retro 6 (2 of 3 advisories rows passing before the change; quality 46/97) folded into `spec-tests-first` (T1, pool 56).
-- #138 advisories 1 to 3 (`carat/domain/themes.rb:470`, `test/domain_theme.rb:453`, `:376`), appended by its package step, folded into `ui-code-tidy` (T6 sweep).
-- #138 within budget: 750,242 total in 56 min, rework 0; #136's overrun (1,443,603) already reported.
-- Security: none open at 8 or above; #138 0/0/0 at 37e1270c2aa7; pooled Mediums (7) `sprint-security`, `content-gate-gaps`.
-- Pace: quality 46/97 first pass, ci 93/99, 86 rework rounds over 97 changes.
+- `core-correctness` (T6 periodic quality blocking=2 at 4958dc6bd923) runs now as written, the user's S7 composition, its last item; Sprint 7 drained to 0 items, waiting for `/sprint`; nothing reordered.
+- Estimated medium, not split: four fixes (at the about-four limit), each in one file with one test row; code rows 658,578 (#133) to 935,582 (#134), #138 one fix 750,242 in 56 min, under medium's 1.2M.
+- #139 retro 6 (docs-only quality reviews 15.5% of output, 4 of 4 first pass, 17.5% together) folded into `review-demotion` (T1, pool 38).
+- #139 advisories 1 to 5 (archived ux-pass `design.md:52`, `:19`, `:66`; backlog findings 5 and 11), appended by its package step, folded into `tools-docs-tidy` (T6 sweep, pool 80); their own-line count (5 of 5) into `own-line-advisories` (T1, pool 20).
+- #139 within budget: 676,270 total in 31 min, rework 0, ci first pass.
+- Security: none open at 8 or above; #139 0/0/0 at 0943b1dd86d1; pooled Mediums (7) `sprint-security`, `content-gate-gaps`.
+- Pace: quality 47/98 first pass, ci 94/100, 86 rework rounds over 98 changes.

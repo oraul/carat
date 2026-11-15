@@ -10,6 +10,7 @@ ok   a buffer starts with no marks
 ok   an edit with no global running marks nothing
 ok   marking makes the marks active
 ok   clear drops the marks
+ok   A reverted plugin edit inside a global: the marks stay on their lines
 ok   pattern and command
 ok   a command with its own delimiters
 ok   no closing delimiter lists
@@ -45,4 +46,4 @@ ok   a zero count
 ok   something after the count
 ok   two registers
 ok   blanks after the count
-domain_global: 47 passed, 0 failed
+domain_global: 48 passed, 0 failed

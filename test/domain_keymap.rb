@@ -141,6 +141,12 @@ module DomainKeymapTest
     unbound = D::Keymap.new
     unbound.add_checked(project("keymap.normal j cursor.down\nkeymap.normal k cursor.up\nkeymap.normal j none\nkeymap.normal k cursor.down\n"), known)
     t.assert_equal([:none, "cursor.down"], [unbound.lookup(:normal, codes("j")).kind, unbound.lookup(:normal, codes("k")).value], "none unbinds a key and a later line wins")
+    pruned = D::Keymap.new
+    pruned.add_checked(project("keymap.normal x cursor.down\nkeymap.normal xy cursor.up\nkeymap.normal xy none\nkeymap.normal qz none\n"), known)
+    t.assert_equal([:match, :none, :none], [pruned.lookup(:normal, codes("x")).kind, pruned.lookup(:normal, codes("xy")).kind, pruned.lookup(:normal, codes("q")).kind], "A two-key none unbinding leaves no prefix: x matches at once and q, never bound, stays unbound")
+    longer = D::Keymap.new
+    longer.add_checked(project("keymap.normal xyz cursor.down\nkeymap.normal xy none\n"), known)
+    t.assert_equal([:prefix, :match], [longer.lookup(:normal, codes("xy")).kind, longer.lookup(:normal, codes("xyz")).kind], "A none unbinding keeps the longer bindings")
 
     t.table([
       ["plugin binding stays when the configuration is silent", "", [[:match, "plugin.hello.greet"], [:match, "plugin.hello.extra"]]],

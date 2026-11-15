@@ -639,7 +639,8 @@ module Carat
 
       # Undoes the records of the open transaction after the first count,
       # last first, without recording anything: the lines, the change
-      # counter, and the signs return to how they were. The plugin host
+      # counter, the signs, and the marks of a running global return to
+      # how they were, as splice moves them forward. The plugin host
       # uses it when applying a validated edit request still fails.
       #: (Integer) -> void
       def revert_to(count)
@@ -652,6 +653,7 @@ module Carat
           LineSplice.apply(lines, change.row, change.row + gone, change.removed)
           shift_signs(change.row, gone, change.removed.length)
           syntax_cache.shift(change.row, gone, change.removed.length)
+          global_marks.shift(change.row, gone, change.removed.length)
           self.changes = changes - 1
           i -= 1
         end
