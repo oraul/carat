@@ -2,7 +2,7 @@
 
 ## 1. Review
 
-- [ ] 1.1 Check `docs/architecture.md` and `docs/codebase-map.md` against the code at main and write `openspec/changes/architecture-review/report.md`: holes, redundancy, reading and maintenance costs, each with location, why, and fix outline, and the corrections made here. Verify every named location exists with `grep`/`find` over the named paths, never `docs/backlog.md`.
+- [x] 1.1 Check `docs/architecture.md` and `docs/codebase-map.md` against the code at main and write the Findings section of `openspec/changes/architecture-review/design.md`: holes, redundancy, reading and maintenance costs, each with location, why, and fix outline, and the corrections made here. Verify every named location exists with `grep`/`find` over the named paths, never `docs/backlog.md`.
 
 ## 2. Corrections
 
@@ -19,4 +19,4 @@
 
 ## Workflow follow-up
 
-- Archive with `openspec archive architecture-review -y --skip-specs`, which keeps `report.md` in the archived change.
+- Archive with `openspec archive architecture-review -y --skip-specs`, which keeps the design and its Findings in the archived change.
