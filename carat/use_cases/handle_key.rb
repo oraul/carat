@@ -150,6 +150,18 @@ module Carat
           result = step(state, queue.shift, queue)
           @arrange_view.call(state) unless queue.empty?
         end
+        follow(state)
+        result
+      end
+
+      private
+
+      # After the keys of a typed key or a timeout ran: the completion menu,
+      # the documentation and definition floats, the signature help, the
+      # palette, and a plugin prompt follow the result, each behind one
+      # comparison, then the plugins observe and the view is arranged.
+      #: (Domain::EditorState) -> void
+      def follow(state)
         @show_completion.call(state, false) if @completion.showing?
         @follow_hover.call(state) if @hover.float_id != 0
         @follow_definition.call(state) if @definition.following?
@@ -158,10 +170,7 @@ module Carat
         @plugins.follow_prompt(state) if @plugin_ui.prompt_live
         @plugins.observe
         @arrange_view.call(state)
-        result
       end
-
-      private
 
       # Resolves pending keys after timeoutlen: the shorter binding fires if
       # there is one, otherwise the keys are dropped (or inserted as text);
@@ -186,10 +195,7 @@ module Carat
           @arrange_view.call(state)
           step(state, queue.shift, queue)
         end
-        @follow_signature.call(state) if @signature.active?
-        @plugins.follow_prompt(state) if @plugin_ui.prompt_live
-        @plugins.observe
-        @arrange_view.call(state)
+        follow(state)
         :handled
       end
 

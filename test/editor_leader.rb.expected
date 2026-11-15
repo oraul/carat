@@ -30,4 +30,5 @@ ok   leader b d is refused by a change
 ok   leader b d refused shows what :bd shows
 ok   leader b d with a count of no buffer shows E516
 ok   leader b b lists the buffers as :ls does
-editor_leader: 32 passed, 0 failed
+ok   A timeoutlen binding closes the hover: the float stays while leader w waits and closes when the binding moves the cursor
+editor_leader: 33 passed, 0 failed

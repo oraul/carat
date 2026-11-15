@@ -105,6 +105,24 @@ module EditorLeaderTest
     t.assert_equal("E516: No buffers were deleted: bdelete 9", session(THREE + "9<Space>bd").message, "leader b d with a count of no buffer shows E516")
     t.assert_equal(session(THREE + ":ls<CR>").message, session(THREE + "<Space>bb").message, "leader b b lists the buffers as :ls does")
 
+    # A binding resolved by timeoutlen: leader w moving the cursor is also
+    # the prefix of the window group, so it fires only when timeoutlen
+    # passes, and the documentation float follows the move as after a key.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.txt", "one\ntwo\nthree\n")
+    h = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with_user("keymap.normal <leader>w cursor.right\n"), rows: 24, cols: 80, plugins: [])
+    h.open("a.txt")
+    window = h.state.tab.layout_window
+    hover = h.assembly.hover
+    hover.ask(window.id, window.buffer.id, 0, 0)
+    hover.text = "greet"
+    h.assembly.show_hover.call(h.state)
+    shown = hover.float_id
+    h.type("<Space>w")
+    waiting = [h.cursor, hover.float_id == shown, shown != 0]
+    h.wait
+    t.assert_equal([[[0, 0], true, true], [0, 1], 0, -1], [waiting, h.cursor, hover.float_id, h.state.tab.floats.index_of(shown)], "A timeoutlen binding closes the hover: the float stays while leader w waits and closes when the binding moves the cursor")
+
     t.finish
   end
 end

@@ -12,7 +12,7 @@
 
 ## 4. timeout follow-ups
 
-- [ ] 4.1 Move the follow-ups of `HandleKey#call` into a private `follow` that `HandleKey#timeout` also ends with (`carat/use_cases/handle_key.rb`); prove it with the `test/editor_leader.rb` check "A timeoutlen binding closes the hover".
+- [x] 4.1 Move the follow-ups of `HandleKey#call` into a private `follow` that `HandleKey#timeout` also ends with (`carat/use_cases/handle_key.rb`); prove it with the `test/editor_leader.rb` check "A timeoutlen binding closes the hover".
 
 ## 5. Checks
 
