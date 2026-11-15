@@ -28,7 +28,7 @@ module Carat
       # Registers :nohlsearch after :set.
       #: (ExTable, last_search: Domain::LastSearch) -> void
       def self.register(table, last_search:)
-        table.register(NohlsearchCommandHandler.new(spec: "noh[lsearch]", last_search: last_search))
+        table.register(NohlsearchCommandHandler.new(spec: "noh[lsearch]", last_search: last_search), "Clear search highlight")
       end
     end
   end

@@ -50,7 +50,7 @@ module Carat
       # docs/compatibility.md; no core command shares its abbreviation.
       #: (ExTable, delete_lines: DeleteLines) -> void
       def self.register(table, delete_lines:)
-        table.register(DeleteCommandHandler.new(spec: "d[elete]", delete_lines: delete_lines))
+        table.register(DeleteCommandHandler.new(spec: "d[elete]", delete_lines: delete_lines), "Delete lines")
       end
     end
   end

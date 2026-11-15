@@ -8,9 +8,9 @@
 
 ## 2. Ex descriptions with their registration
 
-- [ ] 2.1 Make `ExTable#register` take the description and drop `DESCRIPTIONS` (`carat/use_cases/ex/ex_table.rb`), proven by a table test in `test/use_cases_actions.rb`
-- [ ] 2.2 Pass each description from the sixteen `carat/use_cases/ex/*_command_handler.rb` families, proven by "every ex command has a description of 1 to 32 characters"
-- [ ] 2.3 Make the `new-ex-command` generator (`tools/new.sh`) write a description, proven by `tools/tools_test.sh`; update `docs/examples.md` and the map where they name the ex wiring
+- [x] 2.1 Make `ExTable#register` take the description and drop `DESCRIPTIONS` (`carat/use_cases/ex/ex_table.rb`), proven by a table test in `test/use_cases_actions.rb`
+- [x] 2.2 Pass each description from the sixteen `carat/use_cases/ex/*_command_handler.rb` families, proven by "every ex command has a description of 1 to 32 characters"
+- [x] 2.3 Make the `new-ex-command` generator (`tools/new.sh`) write a description, proven by `tools/tools_test.sh`; update `docs/examples.md` and the map where they name the ex wiring
 
 ## 3. Dead code
 

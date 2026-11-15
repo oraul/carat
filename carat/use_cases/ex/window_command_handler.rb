@@ -42,9 +42,10 @@ module Carat
       def self.register(table, split_window:, close_window:, close_other_windows:)
         specs = ["sp[lit]", "vs[plit]", "new", "vne[w]", "clo[se]", "on[ly]"]
         variants = [:split, :vsplit, :new, :vnew, :close, :only]
+        descriptions = ["Split window", "Split window vertically", "Split with an empty buffer", "Vertical split, empty buffer", "Close the window", "Close other windows"]
         i = 0
         while i < specs.length
-          table.register(WindowCommandHandler.new(spec: specs[i], split_window: split_window, close_window: close_window, close_other_windows: close_other_windows, variant: variants[i]))
+          table.register(WindowCommandHandler.new(spec: specs[i], split_window: split_window, close_window: close_window, close_other_windows: close_other_windows, variant: variants[i]), descriptions[i])
           i += 1
         end
       end

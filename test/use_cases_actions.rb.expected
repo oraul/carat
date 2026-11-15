@@ -24,6 +24,7 @@ ok   an unknown name
 ok   an empty name
 ok   when two names accept a typed name the first registered wins
 ok   names lists the registered names in Vim's notation
+ok   a description arrives with its registration, and a refused registration adds none
 ok   h is a motion
 ok   f reads a character
 ok   d is a pending operator
@@ -53,4 +54,4 @@ ok   the plugin namespace handler returns the host's refusal as an Outcome
 ok   the action table and docs/actions.md list the same actions
 ok   a drift is reported in both directions
 ok   the Plugins section is not read as core actions and the Implemented one is
-use_cases_actions: 55 passed, 0 failed
+use_cases_actions: 56 passed, 0 failed

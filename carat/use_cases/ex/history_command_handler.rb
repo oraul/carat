@@ -54,9 +54,10 @@ module Carat
       def self.register(table, undo_step:, redo_step:, undo_to_state:, travel_history:, list_undo:)
         specs = ["u[ndo]", "red[o]", "undol[ist]", "ea[rlier]", "lat[er]"]
         variants = [:undo, :redo, :list, :earlier, :later]
+        descriptions = ["Undo", "Redo", "List undo branches", "Go back in undo time", "Go forward in undo time"]
         i = 0
         while i < specs.length
-          table.register(HistoryCommandHandler.new(spec: specs[i], undo_step: undo_step, redo_step: redo_step, undo_to_state: undo_to_state, travel_history: travel_history, list_undo: list_undo, variant: variants[i]))
+          table.register(HistoryCommandHandler.new(spec: specs[i], undo_step: undo_step, redo_step: redo_step, undo_to_state: undo_to_state, travel_history: travel_history, list_undo: list_undo, variant: variants[i]), descriptions[i])
           i += 1
         end
       end

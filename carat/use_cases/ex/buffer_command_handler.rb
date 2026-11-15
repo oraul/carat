@@ -51,9 +51,10 @@ module Carat
       def self.register(table, list_buffers:, switch_buffer:, delete_buffer:)
         specs = ["ls", "buffers", "files", "b[uffer]", "bn[ext]", "bp[revious]", "bN[ext]", "bf[irst]", "br[ewind]", "bl[ast]", "bd[elete]"]
         variants = [:list, :list, :list, :number, :next, :previous, :previous, :first, :first, :last, :delete]
+        descriptions = ["List buffers", "List buffers", "List buffers", "Go to a buffer", "Next buffer", "Previous buffer", "Previous buffer", "First buffer", "First buffer", "Last buffer", "Delete a buffer"]
         i = 0
         while i < specs.length
-          table.register(BufferCommandHandler.new(spec: specs[i], list_buffers: list_buffers, switch_buffer: switch_buffer, delete_buffer: delete_buffer, variant: variants[i]))
+          table.register(BufferCommandHandler.new(spec: specs[i], list_buffers: list_buffers, switch_buffer: switch_buffer, delete_buffer: delete_buffer, variant: variants[i]), descriptions[i])
           i += 1
         end
       end

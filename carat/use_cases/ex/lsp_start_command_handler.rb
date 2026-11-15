@@ -34,7 +34,7 @@ module Carat
       # core command shares its spelling.
       #: (ExTable, Ports::LanguageServicePort) -> void
       def self.register(table, services)
-        table.register(LspStartCommandHandler.new(spec: "LspStart", services: services))
+        table.register(LspStartCommandHandler.new(spec: "LspStart", services: services), "Start language server")
       end
     end
   end

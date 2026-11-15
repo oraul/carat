@@ -36,7 +36,7 @@ module Carat
       # Registers :syntax after the register commands.
       #: (ExTable) -> void
       def self.register(table)
-        table.register(SyntaxCommandHandler.new(spec: "sy[ntax]"))
+        table.register(SyntaxCommandHandler.new(spec: "sy[ntax]"), "Syntax highlighting on or off")
       end
     end
   end
