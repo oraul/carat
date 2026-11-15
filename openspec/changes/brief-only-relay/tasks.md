@@ -13,4 +13,4 @@
 ## 3. Docs and close
 
 - [x] 3.1 Update CLAUDE.md's Agents section (the brief in every contributor start, the sprint marker) and area 1 of `docs/codebase-map.md`
-- [ ] 3.2 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`
+- [x] 3.2 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`

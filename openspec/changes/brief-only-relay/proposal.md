@@ -29,7 +29,7 @@ None: the change alters the delivery pipeline and a documentation check, which n
 - `tools/tools_test.sh`: the workflow and docs-lint cases.
 - `docs/codebase-map.md`: area 1's `tools/docs_lint.sh` line names the marker.
 - CLAUDE.md: changed, the Agents section says every contributor start carries the brief and the sprint rule names the marker.
-- README.md: unchanged, no command, binding, option, or user-visible editor behavior changes.
+- README.md: changed, the pipeline section says every contributor start receives the brief and names the sprint exception line (a workflow change, which the docs gate ties to the README).
 - docs/architecture.md: unchanged, no layer, port, or roadmap item changes.
 
 Outside the roadmap of `docs/architecture.md` section 12: a pipeline fix (T1) the user approved as sprint 8's first item.
