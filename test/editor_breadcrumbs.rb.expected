@@ -1,6 +1,7 @@
 ok   one file window shows a winbar only with always
 ok   two file windows show winbars but with never
 ok   a window on a scratch buffer, a slot's or a plugin's, is not a file window
+ok   the one rule of the modes: auto with two or more file windows, always, never
 ok   one window has no winbar
 ok   two windows have winbars over their text
 ok   closing back to one window removes the winbar
@@ -13,6 +14,8 @@ ok   the selected winbar follows the current window
 ok   the mode is read from configuration lines, not :set
 ok   a split count counts text rows below the winbar
 ok   a window of one text row keeps its row and shows no winbar
+ok   A split count from a scratch window: the new window shows the scratch buffer with no winbar and 5 text rows
+ok   A split from a scratch window to a file has its row: the winbar under the buffer tabs, the text below it
 ok   with one window and no winbar no symbol request is sent
 ok   initialize advertises hierarchical document symbols
 ok   the key that splits sends nothing
@@ -36,4 +39,7 @@ ok   a flat answer shows the symbols spanning the cursor row in its order
 ok   names lose their controls and are cut to 40 bytes, a bad item is skipped but its children kept, and 500 symbols are kept
 ok   symbols nested deeper than 8 levels are not read
 ok   stop forgets the symbol request in flight
-editor_breadcrumbs: 38 passed, 0 failed
+ok   a restart drops the held symbols and the winbar shows the path
+ok   the restarted server is asked for the same text once it is ready
+ok   A restart keeps the new outline: the old server's late answer changes nothing
+editor_breadcrumbs: 44 passed, 0 failed

@@ -266,7 +266,7 @@ module Carat
         ascii = options.icons == "ascii"
         paint_separators(back, layout, layout.root, ascii ? ASCII_SEPARATOR : SEPARATOR)
         paint_headers(back, tab)
-        paint_winbars(back, tab, in_float, ascii) if tab.winbar?(options.breadcrumbs)
+        paint_winbars(back, tab, in_float, ascii)
         if bar >= tabline
           @status_bar.paint(back, bar, cols, state)
           @chrome << bar
@@ -885,19 +885,18 @@ module Carat
         end
       end
 
-      # Paints the winbar of each file window that ArrangeView gave one:
-      # the row above its text, when that row is the top of its leaf, its
-      # symbols joined in ASCII when ascii.
+      # Paints the winbar of each window ArrangeView gave one
+      # (Window#winbar): the row above its text, its symbols joined in
+      # ASCII when ascii.
       #: (Domain::Frame, Domain::TabPage, bool, bool) -> void
       def paint_winbars(frame, tab, in_float, ascii)
         layout = tab.layout
         id = 0
         while id < layout.node_count
-          node = layout.node(id)
-          if node.leaf?
+          if layout.node(id).leaf?
             window = layout.window_at(id)
             row = window.row - 1
-            if !window.buffer.scratch? && node.row == row
+            if window.winbar
               @winbar.paint(frame, window, row, id == tab.current && !in_float, ascii)
               @repainted[row] = 1 if @floating
               @chrome << row

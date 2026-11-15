@@ -55,13 +55,20 @@ module Carat
       end
 
       # Whether the file windows show a winbar under the breadcrumbs mode
-      # (Options::BREADCRUMBS): never, always, or with two or more file
-      # windows.
+      # (Options::BREADCRUMBS) with the windows the tab page shows now.
       #: (String) -> bool
       def winbar?(mode)
+        winbar_with?(mode, file_window_count)
+      end
+
+      # Whether the file windows show a winbar under the breadcrumbs mode
+      # with that many file windows: never, always, or with two or more
+      # (auto). The one place the modes are compared.
+      #: (String, Integer) -> bool
+      def winbar_with?(mode, count)
         return false if mode == "never"
         return true if mode == "always"
-        file_window_count > 1
+        count > 1
       end
 
       # The slot at a side: :left, :right, or :bottom.
