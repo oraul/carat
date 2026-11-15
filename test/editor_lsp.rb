@@ -40,7 +40,7 @@ module EditorLspTest
     h = open_in("a.rb", true, "language.trusted_roots /project\noption.icons ascii\n")
     h.messages.body(1, INIT)
     h.wait
-    uri = Carat::Json.parse(h.processes.bodies[2])["params"]["textDocument"]["uri"]
+    uri = Carat::Json.reach(Carat::Json.parse(h.processes.bodies[2]), "params.textDocument.uri")
     start = { "start" => { "line" => 0, "character" => 0 } }
     list = [{ "range" => start, "severity" => 4, "message" => "a hint" }, { "range" => start, "severity" => 1, "message" => "expected end\nfound EOF\e[31m" }]
     h.messages.body(1, Carat::Json.generate({ "jsonrpc" => "2.0", "method" => "textDocument/publishDiagnostics", "params" => { "uri" => uri, "diagnostics" => list } }))

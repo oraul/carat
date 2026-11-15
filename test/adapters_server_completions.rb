@@ -124,7 +124,7 @@ module AdaptersServerCompletionsTest
     i = bodies.length - 1
     while i >= 0
       value = J.parse(bodies[i].to_s)
-      return value if value["method"] == name.to_s
+      return value if J.field(value, "method") == name.to_s
       i -= 1
     end
     nil
@@ -208,7 +208,7 @@ module AdaptersServerCompletionsTest
     t.assert_equal(0, count_of(r, "textDocument/completion"), "the first idle tick only starts the debounce")
     until_sent(r, "textDocument/completion", 20)
     asked = last_of(r, "textDocument/completion")
-    t.assert_equal([2, 0, 2, 1, true], [asked["id"], asked["params"]["position"]["line"], asked["params"]["position"]["character"], asked["params"]["context"]["triggerKind"], asked["params"]["textDocument"]["uri"].to_s.end_with?("/a.rb")], "the request names the document and the cursor after 0.1 seconds")
+    t.assert_equal([2, 0, 2, 1, true], [J.field(asked, "id"), J.reach(asked, "params.position.line"), J.reach(asked, "params.position.character"), J.reach(asked, "params.context.triggerKind"), J.reach(asked, "params.textDocument.uri").to_s.end_with?("/a.rb")], "the request names the document and the cursor after 0.1 seconds")
     t.assert_equal(true, r.sent.index("textDocument/didChange").to_i < r.sent.index("textDocument/completion").to_i, "the typed text is sent before the request")
     before = r.clock.now
     r.wait
@@ -244,7 +244,7 @@ module AdaptersServerCompletionsTest
     until_sent(r, "textDocument/completion", 20)
     10.times { r.wait }
     asked = last_of(r, "textDocument/completion")
-    t.assert_equal([1, 5], [count_of(r, "textDocument/completion"), asked["params"]["position"]["character"]], "words typed within the debounce send one request, for the last")
+    t.assert_equal([1, 5], [count_of(r, "textDocument/completion"), J.reach(asked, "params.position.character")], "words typed within the debounce send one request, for the last")
 
     # A stale request is cancelled and its answer dropped.
     r = completing
@@ -253,7 +253,7 @@ module AdaptersServerCompletionsTest
     r.type(" ba")
     r.wait
     cancel = last_of(r, "$/cancelRequest")
-    t.assert_equal(2, cancel.nil? ? 0 : cancel["params"]["id"], "another word cancels the request in flight")
+    t.assert_equal(2, cancel.nil? ? 0 : J.reach(cancel, "params.id"), "another word cancels the request in flight")
     answer(r, 2, three)
     r.wait
     t.assert_equal([], r.popup, "the cancelled request's answer opens no popup")
@@ -279,7 +279,7 @@ module AdaptersServerCompletionsTest
     until_sent(r, "textDocument/completion", 20)
     10.times { r.wait } if count_of(r, "textDocument/completion") < 2
     asked = last_of(r, "textDocument/completion")
-    t.assert_equal([2, 2], [count_of(r, "textDocument/completion"), asked["params"]["position"]["character"]], "a second word typed at the same column sends a request of its own")
+    t.assert_equal([2, 2], [count_of(r, "textDocument/completion"), J.reach(asked, "params.position.character")], "a second word typed at the same column sends a request of its own")
     answer(r, 3, [item("bar", 6), item("baz", 6)])
     r.wait
     t.assert_equal(["bar", "baz"], r.popup, "the second word's answer fills the popup, not the first word's")
@@ -303,7 +303,7 @@ module AdaptersServerCompletionsTest
     r.type("fi")
     until_sent(r, "textDocument/completion", 20)
     asked = last_of(r, "textDocument/completion")
-    t.assert_equal([1, 2], [count_of(r, "textDocument/completion"), asked["params"]["position"]["character"]], "the word typed next at the same column asks the server")
+    t.assert_equal([1, 2], [count_of(r, "textDocument/completion"), J.reach(asked, "params.position.character")], "the word typed next at the same column asks the server")
     answer(r, 2, three)
     r.wait
     t.assert_equal(["final", "filter", "file_name"], r.popup, "its answer fills the popup")
@@ -352,22 +352,22 @@ module AdaptersServerCompletionsTest
 
     # Documentation: in the answer, or resolved once the selection settles.
     r = rig({ "completionProvider" => { "resolveProvider" => true } })
-    item = last_of(r, "initialize")["params"]["capabilities"]["textDocument"]["completion"]["completionItem"]
-    t.assert_equal([["markdown", "plaintext"], ["documentation"]], [item["documentationFormat"], item["resolveSupport"]["properties"]], "initialize advertises markdown documentation resolved lazily")
+    item = J.reach(last_of(r, "initialize"), "params.capabilities.textDocument.completion.completionItem")
+    t.assert_equal([["markdown", "plaintext"], ["documentation"]], [J.field(item, "documentationFormat"), J.reach(item, "resolveSupport.properties")], "initialize advertises markdown documentation resolved lazily")
     r.type("ifi")
     until_sent(r, "textDocument/completion", 20)
-    answer(r, last_of(r, "textDocument/completion")["id"], [described("file_name", 6, 0), described("filter", 3, 1), described("final", 14, 2)])
+    answer(r, J.field(last_of(r, "textDocument/completion"), "id"), [described("file_name", 6, 0), described("filter", 3, 1), described("final", 14, 2)])
     r.wait
     t.assert_equal(["final", 1], [r.assembly.completion_menu.chosen.label, r.assembly.state.tab.floats.count], "an item without documentation in the answer shows no float at first")
     r.type("<C-n><C-n>")
     until_sent(r, "completionItem/resolve", 20)
     asked = last_of(r, "completionItem/resolve")
-    t.assert_equal([1, "file_name", 0], [count_of(r, "completionItem/resolve"), asked["params"]["label"], asked["params"]["data"]["n"]], "one request is sent, for the settled item as the server gave it")
+    t.assert_equal([1, "file_name", 0], [count_of(r, "completionItem/resolve"), J.reach(asked, "params.label"), J.reach(asked, "params.data.n")], "one request is sent, for the settled item as the server gave it")
     t.assert_equal(true, r.assembly.services.waiting?, "while a resolve is in flight the services wait")
     r.messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => 999, "result" => { "label" => "x", "documentation" => "stray" } }))
     r.wait
     t.assert_equal([], docs_lines(r), "an answer to no resolve in flight changes nothing")
-    r.messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => asked["id"].to_i, "result" => { "label" => "file_name", "documentation" => { "kind" => "markdown", "value" => "# file_name\n\nThe \e[31mname\e[0m." } } }))
+    r.messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => J.field(asked, "id").to_i, "result" => { "label" => "file_name", "documentation" => { "kind" => "markdown", "value" => "# file_name\n\nThe \e[31mname\e[0m." } } }))
     r.wait
     t.assert_equal(["file_name", "", "The name."], docs_lines(r), "the resolved documentation shows at the next idle tick with no key, its escapes dropped")
     t.assert_equal([false, false], [r.assembly.services.waiting?, r.terminal.output.include?("\e[31mname")], "a resolved item waits no more and no escape of it reaches the terminal")
@@ -384,15 +384,15 @@ module AdaptersServerCompletionsTest
     r = rig({ "completionProvider" => { "resolveProvider" => true } })
     r.type("ifi")
     until_sent(r, "textDocument/completion", 20)
-    answer(r, last_of(r, "textDocument/completion")["id"], [described("file_name", 6, 0), described("filter", 3, 1), described("final", 14, 2)])
+    answer(r, J.field(last_of(r, "textDocument/completion"), "id"), [described("file_name", 6, 0), described("filter", 3, 1), described("final", 14, 2)])
     r.wait
     r.type("<C-n><C-n>")
     until_sent(r, "completionItem/resolve", 20)
     asked = last_of(r, "completionItem/resolve")
     110.times { r.wait }
     cancel = last_of(r, "$/cancelRequest")
-    t.assert_equal([1, asked["id"].to_i, false], [count_of(r, "$/cancelRequest"), cancel.nil? ? 0 : cancel["params"]["id"], r.assembly.services.waiting?], "an unanswered resolve is cancelled by its id after two seconds and waits no more")
-    r.messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => asked["id"].to_i, "result" => { "label" => "file_name", "documentation" => "late" } }))
+    t.assert_equal([1, J.field(asked, "id").to_i, false], [count_of(r, "$/cancelRequest"), cancel.nil? ? 0 : J.reach(cancel, "params.id"), r.assembly.services.waiting?], "an unanswered resolve is cancelled by its id after two seconds and waits no more")
+    r.messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => J.field(asked, "id").to_i, "result" => { "label" => "file_name", "documentation" => "late" } }))
     r.wait
     t.assert_equal([1, []], [count_of(r, "completionItem/resolve"), docs_lines(r)], "the cancelled resolve's answer shows nothing and the item is not asked again")
 
@@ -400,7 +400,7 @@ module AdaptersServerCompletionsTest
     r = rig({ "completionProvider" => { "resolveProvider" => true } })
     r.type("ifi")
     until_sent(r, "textDocument/completion", 20)
-    answer(r, last_of(r, "textDocument/completion")["id"], [described("file_name", 6, 0), described("filter", 3, 1), described("final", 14, 2)])
+    answer(r, J.field(last_of(r, "textDocument/completion"), "id"), [described("file_name", 6, 0), described("filter", 3, 1), described("final", 14, 2)])
     r.wait
     r.type("<C-n><C-n>")
     until_sent(r, "completionItem/resolve", 20)
@@ -409,11 +409,11 @@ module AdaptersServerCompletionsTest
     until_sent(r, "textDocument/completion", 20)
     10.times { r.wait } if count_of(r, "textDocument/completion") < 2
     t.assert_equal([2, 0], [count_of(r, "textDocument/completion"), count_of(r, "$/cancelRequest")], "a new word is asked while the resolve stays in flight")
-    answer(r, last_of(r, "textDocument/completion")["id"], [item("bar", 6), item("baz", 6)])
+    answer(r, J.field(last_of(r, "textDocument/completion"), "id"), [item("bar", 6), item("baz", 6)])
     r.wait
     cancel = last_of(r, "$/cancelRequest")
-    t.assert_equal([1, asked["id"].to_i, ["bar", "baz"]], [count_of(r, "$/cancelRequest"), cancel.nil? ? 0 : cancel["params"]["id"], r.popup], "the new word's answer cancels the resolve in flight by its id")
-    r.messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => asked["id"].to_i, "result" => { "label" => "file_name", "documentation" => "late" } }))
+    t.assert_equal([1, J.field(asked, "id").to_i, ["bar", "baz"]], [count_of(r, "$/cancelRequest"), cancel.nil? ? 0 : J.reach(cancel, "params.id"), r.popup], "the new word's answer cancels the resolve in flight by its id")
+    r.messages.body(1, J.generate({ "jsonrpc" => "2.0", "id" => J.field(asked, "id").to_i, "result" => { "label" => "file_name", "documentation" => "late" } }))
     10.times { r.wait }
     t.assert_equal([], docs_lines(r), "the cancelled resolve's late answer changes no float")
 
@@ -421,14 +421,14 @@ module AdaptersServerCompletionsTest
     r = rig({ "completionProvider" => { "resolveProvider" => true } })
     r.type("ifi")
     until_sent(r, "textDocument/completion", 20)
-    answer(r, last_of(r, "textDocument/completion")["id"], [{ "label" => "final", "kind" => 14, "documentation" => "Ends the block." }])
+    answer(r, J.field(last_of(r, "textDocument/completion"), "id"), [{ "label" => "final", "kind" => 14, "documentation" => "Ends the block." }])
     r.wait
     10.times { r.wait }
     t.assert_equal([["Ends the block."], 0], [docs_lines(r), count_of(r, "completionItem/resolve")], "documentation in the answer shows with no request")
     r = completing
     r.type("ifi")
     until_sent(r, "textDocument/completion", 20)
-    answer(r, last_of(r, "textDocument/completion")["id"], three)
+    answer(r, J.field(last_of(r, "textDocument/completion"), "id"), three)
     r.wait
     r.type("<C-n>")
     10.times { r.wait }

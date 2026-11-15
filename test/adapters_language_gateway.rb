@@ -93,15 +93,15 @@ module AdaptersLanguageGatewayTest
     h.wait
     t.assert_equal([["ruby-lsp"], ["initialize"], "ruby-lsp starting"], [h.processes.spawned, h.processes.methods_sent, label(h)], "a Ruby buffer starts ruby-lsp and sends initialize")
     init = last_body(h)
-    t.assert_equal([1, true, true], [init["id"], init["params"]["rootUri"].to_s.start_with?("file:" + "/" * 3), init["params"]["capabilities"]["window"]["workDoneProgress"]], "initialize names the root and the progress capability")
+    t.assert_equal([1, true, true], [J.field(init, "id"), J.reach(init, "params.rootUri").to_s.start_with?("file:" + "/" * 3), J.reach(init, "params.capabilities.window.workDoneProgress")], "initialize names the root and the progress capability")
     h.wait
     t.assert_equal([1, 1], [h.processes.spawned.length, h.processes.bodies.length], "the next idle tick starts nothing more and sends nothing before the answer")
     h.messages.body(1, INIT)
     h.wait
     t.assert_equal([["initialize", "initialized", "textDocument/didOpen"], "ruby-lsp"], [h.processes.methods_sent, label(h)], "the answer makes it ready and opens the buffer")
-    opened = last_body(h)["params"]["textDocument"]
-    t.assert_equal(["ruby", 1, "x = 1\n", true], [opened["languageId"], opened["version"], opened["text"], opened["uri"].to_s.end_with?("/a.rb")], "didOpen carries the language, version 1, the text, and the file URI")
-    t.assert_equal([false, true], [init["params"]["capabilities"]["textDocument"]["completion"]["completionItem"]["snippetSupport"], init["params"]["capabilities"]["textDocument"]["completion"]["contextSupport"]], "initialize advertises completion without snippets")
+    opened = J.reach(last_body(h), "params.textDocument")
+    t.assert_equal(["ruby", 1, "x = 1\n", true], [J.field(opened, "languageId"), J.field(opened, "version"), J.field(opened, "text"), J.field(opened, "uri").to_s.end_with?("/a.rb")], "didOpen carries the language, version 1, the text, and the file URI")
+    t.assert_equal([false, true], [J.reach(init, "params.capabilities.textDocument.completion.completionItem.snippetSupport"), J.reach(init, "params.capabilities.textDocument.completion.contextSupport")], "initialize advertises completion without snippets")
 
     # A failed initialize is a crash: nothing more is sent. Rows are
     # [label, the answer, "slot|methods sent|handles stopped"].
@@ -145,11 +145,11 @@ module AdaptersLanguageGatewayTest
     t.assert_equal([], sent_since(h, n), "an unchanged buffer sends nothing")
     h.type("x")
     h.wait
-    change = last_body(h)["params"]
-    t.assert_equal([["textDocument/didChange"], 2, " = 1\n"], [sent_since(h, n), change["textDocument"]["version"], change["contentChanges"][0]["text"]], "an edit sends the whole text at the next idle tick with version 2")
+    change = J.field(last_body(h), "params")
+    t.assert_equal([["textDocument/didChange"], 2, " = 1\n"], [sent_since(h, n), J.reach(change, "textDocument.version"), J.reach(change, "contentChanges.0.text")], "an edit sends the whole text at the next idle tick with version 2")
     h.type("u")
     h.wait
-    t.assert_equal([3, "x = 1\n"], [last_body(h)["params"]["textDocument"]["version"], last_body(h)["params"]["contentChanges"][0]["text"]], "an undo is a change with a higher version")
+    t.assert_equal([3, "x = 1\n"], [J.reach(last_body(h), "params.textDocument.version"), J.reach(last_body(h), "params.contentChanges.0.text")], "an undo is a change with a higher version")
     n = h.processes.bodies.length
     h.type(":w<CR>")
     h.wait
@@ -168,10 +168,10 @@ module AdaptersLanguageGatewayTest
     h.messages.body(1, "{\"jsonrpc\":\"2.0\",\"id\":\"tok\",\"method\":\"window/workDoneProgress/create\",\"params\":{\"token\":\"t\"}}")
     h.wait
     reply = last_body(h)
-    t.assert_equal(["tok", true, nil], [reply["id"], reply.key?("result"), reply["result"]], "a progress token request gets a null result")
+    t.assert_equal(["tok", true, nil], [J.field(reply, "id"), reply.key?("result"), J.field(reply, "result")], "a progress token request gets a null result")
     h.messages.body(1, "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"workspace/applyEdit\",\"params\":{}}")
     h.wait
-    t.assert_equal([7, -32_601], [last_body(h)["id"], last_body(h)["error"]["code"]], "another request is refused as not found")
+    t.assert_equal([7, -32_601], [J.field(last_body(h), "id"), J.reach(last_body(h), "error.code")], "another request is refused as not found")
     notify(h, "$/progress", { "token" => "t", "value" => { "kind" => "begin", "title" => "Indexing" } })
     t.assert_equal("ruby-lsp indexing 0%", label(h), "progress begins")
     notify(h, "$/progress", { "token" => "t", "value" => { "kind" => "report", "percentage" => 42 } })
@@ -203,7 +203,7 @@ module AdaptersLanguageGatewayTest
     # Diagnostics as values.
     path = h.buffer.path
     two = [{ "range" => { "start" => { "line" => 2, "character" => 4 } }, "severity" => 1, "message" => "bad\e[31m" }, { "range" => { "start" => { "line" => 0, "character" => 0 } }, "severity" => 9, "message" => "x" }]
-    uri = J.parse(h.processes.bodies[2])["params"]["textDocument"]["uri"]
+    uri = J.reach(J.parse(h.processes.bodies[2]), "params.textDocument.uri")
     notify(h, "textDocument/publishDiagnostics", { "uri" => uri, "diagnostics" => two })
     got = h.assembly.services.diagnostics(path)
     t.assert_equal([2, 2, 4, 1, "bad[31m", 4], [got.count, got.at(0).row, got.at(0).col, got.at(0).severity, got.at(0).message, got.at(1).severity], "diagnostics are kept stripped, the severity bounded")

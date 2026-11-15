@@ -113,7 +113,7 @@ module AdaptersSignatureTest
     i = bodies.length - 1
     while i >= 0
       value = J.parse(bodies[i].to_s)
-      return value if value["method"] == name.to_s
+      return value if J.field(value, "method") == name.to_s
       i -= 1
     end
     nil
@@ -121,7 +121,7 @@ module AdaptersSignatureTest
 
   # The id of the last signature request sent.
   def self.request_id(r)
-    last_of(r, "textDocument/signatureHelp")["id"].to_i
+    J.field(last_of(r, "textDocument/signatureHelp"), "id").to_i
   end
 
   # Idle ticks until the debounce passed and the wanted request is sent.
@@ -205,8 +205,8 @@ module AdaptersSignatureTest
 
     # No server gives signature help.
     r = rig({})
-    help_caps = last_of(r, "initialize")["params"]["capabilities"]["textDocument"]["signatureHelp"]
-    t.assert_equal([true, true], [help_caps["signatureInformation"]["parameterInformation"]["labelOffsetSupport"], help_caps["signatureInformation"]["activeParameterSupport"]], "initialize advertises signature help with label offsets")
+    help_caps = J.reach(last_of(r, "initialize"), "params.capabilities.textDocument.signatureHelp")
+    t.assert_equal([true, true], [J.reach(help_caps, "signatureInformation.parameterInformation.labelOffsetSupport"), J.reach(help_caps, "signatureInformation.activeParameterSupport")], "initialize advertises signature help with label offsets")
     r.type("Gofoo(")
     settle(r)
     t.assert_equal([0, 0, false], [r.sent, r.float_count, r.assembly.signature.active?], "with no server giving signature help ( asks nothing")
@@ -220,7 +220,7 @@ module AdaptersSignatureTest
     t.assert_equal([0, true, true], [r.sent, r.assembly.signature.active?, r.assembly.services.waiting?], "( records the ask and the first idle tick only starts the debounce")
     settle(r)
     asked = last_of(r, "textDocument/signatureHelp")
-    t.assert_equal([1, 3, 4], [r.sent, asked["params"]["position"]["line"], asked["params"]["position"]["character"]], "the request is sent once the debounce passed, at the cursor")
+    t.assert_equal([1, 3, 4], [r.sent, J.reach(asked, "params.position.line"), J.reach(asked, "params.position.character")], "the request is sent once the debounce passed, at the cursor")
     answer(r, help("foo(a, b)", ["a", "b"], 0))
     t.assert_equal(["foo(a, b)", [4, 5], 1], [shown(r), mark(r), r.float_count], "the answer opens the float with no key, the first parameter marked")
     f = float(r)
@@ -233,7 +233,7 @@ module AdaptersSignatureTest
     r.type("x, ")
     settle(r)
     asked = last_of(r, "textDocument/signatureHelp")
-    t.assert_equal([7, "foo(a, b)"], [asked["params"]["position"]["character"], shown(r)], "typing an argument asks again and the float stays until the answer")
+    t.assert_equal([7, "foo(a, b)"], [J.reach(asked, "params.position.character"), shown(r)], "typing an argument asks again and the float stays until the answer")
     answer(r, { "signatures" => [{ "label" => "foo(a, b)", "parameters" => [{ "label" => [4, 5] }, { "label" => [7, 8] }], "activeParameter" => 1 }] })
     t.assert_equal([7, 8], mark(r), "the answer moves the mark to the second parameter, given as offsets")
     r.type("bar(")
@@ -273,7 +273,7 @@ module AdaptersSignatureTest
     first = request_id(r)
     r.type("q")
     settle(r)
-    t.assert_equal([first, first + 1], [last_of(r, "$/cancelRequest")["params"]["id"], request_id(r)], "a newer ask cancels the request in flight and sends its own")
+    t.assert_equal([first, first + 1], [J.reach(last_of(r, "$/cancelRequest"), "params.id"), request_id(r)], "a newer ask cancels the request in flight and sends its own")
     answer_id(r, first, help("stale(a)", ["a"], 0))
     r.wait
     t.assert_equal(["foo(a, b)", true], [shown(r), r.assembly.services.waiting?], "an older answer arriving after the newer request was sent is dropped")
@@ -289,7 +289,7 @@ module AdaptersSignatureTest
     r.wait
     t.assert_equal(["foo(a, b)", 2, 0], [shown(r), r.sent, r.assembly.signature.sent_id], "an older answer arriving before the newer request was sent is dropped")
     settle(r)
-    t.assert_equal([3, 6], [r.sent, last_of(r, "textDocument/signatureHelp")["params"]["position"]["character"]], "the newer request is sent once the debounce passed")
+    t.assert_equal([3, 6], [r.sent, J.reach(last_of(r, "textDocument/signatureHelp"), "params.position.character")], "the newer request is sent once the debounce passed")
 
     r = signing
     r.type("Gofoo(")
@@ -300,7 +300,7 @@ module AdaptersSignatureTest
       r.wait
       n += 1
     end
-    t.assert_equal([first, false], [last_of(r, "$/cancelRequest")["params"]["id"], r.assembly.services.waiting?], "an unanswered request is cancelled after two seconds and waits no more")
+    t.assert_equal([first, false], [J.reach(last_of(r, "$/cancelRequest"), "params.id"), r.assembly.services.waiting?], "an unanswered request is cancelled after two seconds and waits no more")
 
     # Hostile text.
     r = signing

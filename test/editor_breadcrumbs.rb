@@ -117,7 +117,7 @@ module EditorBreadcrumbsTest
     i = bodies.length - 1
     while i >= 0
       value = J.parse(bodies[i].to_s)
-      return value if value["method"] == name.to_s
+      return value if J.field(value, "method") == name.to_s
       i -= 1
     end
     nil
@@ -125,7 +125,7 @@ module EditorBreadcrumbsTest
 
   # The id of the last symbol request sent.
   def self.symbol_id(r)
-    last_of(r, "textDocument/documentSymbol")["id"].to_i
+    J.field(last_of(r, "textDocument/documentSymbol"), "id").to_i
   end
 
   # Answers the request with the id with the result, then an idle tick.
@@ -199,12 +199,12 @@ module EditorBreadcrumbsTest
     r.wait
     t.assert_equal(0, r.symbols_sent, "with one window and no winbar no symbol request is sent")
     init = J.parse(r.processes.bodies[0].to_s)
-    t.assert_equal(true, init["params"]["capabilities"]["textDocument"]["documentSymbol"]["hierarchicalDocumentSymbolSupport"], "initialize advertises hierarchical document symbols")
+    t.assert_equal(true, J.reach(init, "params.capabilities.textDocument.documentSymbol.hierarchicalDocumentSymbolSupport"), "initialize advertises hierarchical document symbols")
     r.type("<C-w>v")
     t.assert_equal([0, " a.rb"], [r.symbols_sent, cut(r, 0, 0, 20)], "the key that splits sends nothing")
     r.wait
     request = last_of(r, "textDocument/documentSymbol")
-    t.assert_equal([1, A_URI], [r.symbols_sent, request["params"]["textDocument"]["uri"].to_s], "the next idle tick asks for the buffer's symbols")
+    t.assert_equal([1, A_URI], [r.symbols_sent, J.reach(request, "params.textDocument.uri").to_s], "the next idle tick asks for the buffer's symbols")
     # The rig reads option.icons ascii: the ASCII separator joins these.
     answer(r, symbol_id(r), OUTLINE)
     t.assert_equal([" a.rb > Foo", " a.rb > Foo"], [cut(r, 0, 0, 20), cut(r, 0, 21, 19)], "on the class line both windows on the buffer show the class")
@@ -246,7 +246,7 @@ module EditorBreadcrumbsTest
     r.clock.advance(2.5)
     r.wait
     cancel = last_of(r, "$/cancelRequest")
-    t.assert_equal([id, false], [cancel["params"]["id"].to_i, r.assembly.services.waiting?], "a request unanswered for two seconds is cancelled by its id")
+    t.assert_equal([id, false], [J.reach(cancel, "params.id").to_i, r.assembly.services.waiting?], "a request unanswered for two seconds is cancelled by its id")
     answer(r, id, OUTLINE)
     r.wait
     t.assert_equal([" a.rb", 1], [cut(r, 0, 0, 20), r.symbols_sent], "its late answer changes nothing and the same text is not asked again")
