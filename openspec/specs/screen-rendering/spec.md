@@ -163,7 +163,7 @@ No cell of a frame SHALL hold a code point below 32, U+007F, or U+0080 to U+009F
 - **THEN** the bytes written contain the markers "<9b>" and "<9d>" and, outside the presenter's own escape sequences, no byte sequence encoding a code point from U+0080 to U+009F
 
 ### Requirement: Frame layout for several windows
-The frame SHALL show every window of the current tab page in its own rectangle: a horizontal split stacks the windows, each window above another ending in a separator row of "─" across its width; a vertical split places them side by side with one separator column of "│" between them, down to the status bar. Every separator SHALL be in `WinSeparator`. Each window SHALL have its own gutter and text area, rows past the end of its buffer SHALL show "~", and the message row SHALL stay the last row.
+The frame SHALL show every window of the current tab page in its own rectangle: stacked windows are divided by a separator row of "─" ("-" with `option.icons ascii`) across the upper window's width, side-by-side windows by one separator column of "│" ("|" with `option.icons ascii`) down to the status bar, every separator in `WinSeparator`. Each window SHALL have its own gutter and text area, rows past its buffer's end SHALL show "~", and the message row SHALL stay the last row.
 
 #### Scenario: Two stacked windows
 - **WHEN** the lines ["one", "two", "three"] are shown in a window split horizontally in a 9-row, 14-column frame
@@ -172,6 +172,10 @@ The frame SHALL show every window of the current tab page in its own rectangle: 
 #### Scenario: Two windows side by side
 - **WHEN** the lines ["one", "two"] are shown in a window split vertically in a 6-row, 21-column frame
 - **THEN** row 0 reads "  1 one   │  1 one", with the separator at column 10 in `WinSeparator`, row 4 is the status bar across all 21 columns, and row 5 is the message row
+
+#### Scenario: ASCII separators
+- **WHEN** `option.icons` is "ascii" and a window is split vertically and then horizontally
+- **THEN** the separator column reads "|" and the separator row reads "-" across its width, both in `WinSeparator`
 
 ### Requirement: The cursor is placed in the current window
 The frame cursor SHALL be placed inside the current window's rectangle, after its gutter, by display width, and each window SHALL scroll on its own to keep its cursor visible with scrolloff.
@@ -295,3 +299,10 @@ The cursorline option SHALL be read from `option.cursorline` lines of the config
 #### Scenario: A configuration value of the wrong kind
 - **WHEN** the project file's first line is "option.cursorline yes"
 - **THEN** ".caratrc:1: option.cursorline takes true or false" is reported and the option keeps its value
+
+### Requirement: An ASCII frame under the ascii icon set
+With `option.icons ascii` and buffer text that is ASCII, every cell of the frame SHALL hold an ASCII character: the tabs, the window separators, the status bar with its icons and progress bar, and the message row.
+
+#### Scenario: No byte above 127 in an ascii frame
+- **WHEN** `option.icons` is "ascii", two files are listed as tabs, the window is split vertically and horizontally, the buffer is modified, and work reports 40 percent
+- **THEN** no cell of the frame holds a code point above 127
