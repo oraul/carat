@@ -5695,3 +5695,21 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: Makefile:303. Sprint-6 sweep, quality. Queue item `tools-docs-tidy`.
 - Why: the runner's exit status per test is ignored, so a crash's output becomes its snapshot with only a manual diff review before a commit.
 - Fix outline: note each nonzero exit and exit 1 after the loop.
+
+### make types leaves build/carat.rbs that breaks every later compile
+
+- Location: Makefile types target, build/carat.rbs read by spin --rbs
+- Why: after make types, every later Spinel compile reads the stale build/carat.rbs and fails until the file is deleted
+- Fix: write the types output outside the path spin reads, or delete it at the end of the target, with a tools_test case
+
+### Backlog entry for the stale build/carat.rbs drifts from the entry format (docs/backlog.md:5701)
+
+- Location: docs/backlog.md:5701, the entry the mit-license change added.
+- Why: it uses '- Fix:' where entries use '- Fix outline:', and its Location gives no line and unquoted paths, against the entry format CLAUDE.md asks for (location, why, fix outline). Found by the quality review of mit-license (advisory).
+- Fix outline: at sprint grooming, change it to '- Location: Makefile:405 (types), build/carat.rbs read by spin --rbs.' and '- Fix outline: ...'.
+
+### Spinel's MIT notice does not travel with the vendored generated header (README.md:212)
+
+- Location: README.md:212, the credit line, and tools/spinel/spinel_rt_responds_generated.h.
+- Why: the MIT condition asks that Spinel's copyright and permission notice go with copies of substantial portions; the credit line names the license without carrying that notice for the vendored header. Found by the quality review of mit-license (advisory).
+- Fix outline: in a later item, put Spinel's copyright line and MIT notice in a comment at the top of the tools/spinel/ files, or record in the design why the generated method-name tables need none.
