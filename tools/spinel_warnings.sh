@@ -5,9 +5,10 @@
 #
 # check LABEL FILE...: print every warning line of the files once (a
 # missing file has none), then "LABEL: Spinel printed N warning(s)", and exit 1
-# when there was one; exit 0 otherwise. The Makefile's dev-build,
-# test-build, build, diagnose, and diagnose-one run it on the standard
-# error they kept.
+# when there was one; exit 0 otherwise. The Makefile targets that
+# compile with Spinel (dev-build, test-build, build, test-one, bench,
+# bench-budget, types, gen-config, diagnose, diagnose-one) run it on the
+# standard error they kept.
 #
 # Any other arguments: the compiler spinel-doctor runs when SPINEL names
 # this file. Runs spinel with the arguments, copies its standard error

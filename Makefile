@@ -70,14 +70,20 @@ T          ?=
 # second analysis of each root (spinel --emit-rbs); make diagnose and
 # make types print them.
 DIAGNOSE_SKIP ?= behavior
-# A Spinel warning fails the build (tools/spinel_warnings.sh): dev-build
-# and test-build check the report they write, build keeps spin build's
-# standard error in BUILD_LOG, and diagnose and diagnose-one run
-# spinel-doctor with the script as its compiler, which collects the
-# warnings of every root in DIAGNOSE_LOG.
+# A Spinel warning fails every target that compiles with Spinel
+# (tools/spinel_warnings.sh): dev-build, test-build, and bench-budget
+# check the report they write; test-one, bench, and types keep Spinel's
+# standard error beside their output (ONE_DIR, BENCH_KEYS, TYPES_RBS);
+# build and gen-config keep spin's in BUILD_LOG and GEN_CONFIG_LOG; and
+# diagnose and diagnose-one run spinel-doctor with the script as its
+# compiler, which collects the warnings of every root in DIAGNOSE_LOG.
 SPINEL_WARNINGS := sh tools/spinel_warnings.sh check
 BUILD_LOG    ?= build/release.log
 DIAGNOSE_LOG ?= build/diagnose/warnings.log
+GEN_CONFIG_LOG ?= build/gen-config.log
+ONE_DIR      := build/test-one
+BENCH_KEYS   := build/bench/keys
+TYPES_RBS    := build/carat.rbs
 # The analysis budget (tools/analysis_budget.sh): the most re-narrowing
 # rounds Spinel's analysis of a compile root may take, which fails, and
 # the analysis milliseconds above which it only warns, since time depends
@@ -305,10 +311,14 @@ test-run:
 test-one:
 	@case "$(T)" in test/*.rb) ;; *) echo "usage: make test-one T=test/NAME.rb" >&2; exit 2 ;; esac
 	@case "$(T)" in test/smoke_*) $(MAKE) --no-print-directory build ;; esac
-	@mkdir -p build/test-one
-	@rm -f build/test-one/$(basename $(notdir $(T)))
-	spinel $$(spin flags) $(T) $(DEV_FLAGS) -o build/test-one/$(basename $(notdir $(T)))
-	sh tools/run_tests.sh build/test-one/$(basename $(notdir $(T))) $(T)
+	@mkdir -p $(ONE_DIR)
+	@rm -f $(ONE_DIR)/$(basename $(notdir $(T)))
+	@echo "spinel $(T) $(DEV_FLAGS) -o $(ONE_DIR)/$(basename $(notdir $(T)))"
+	@spinel $$(spin flags) $(T) $(DEV_FLAGS) -o $(ONE_DIR)/$(basename $(notdir $(T))) 2> $(ONE_DIR)/$(basename $(notdir $(T))).log; \
+	  status=$$?; cat $(ONE_DIR)/$(basename $(notdir $(T))).log >&2; \
+	  if [ $$status -ne 0 ]; then echo "test-one: $(T) did not compile" >&2; exit 1; fi; \
+	  $(SPINEL_WARNINGS) test-one $(ONE_DIR)/$(basename $(notdir $(T))).log
+	sh tools/run_tests.sh $(ONE_DIR)/$(basename $(notdir $(T))) $(T)
 
 ## lint: compile and run only the lint test program (make test-one T=test/lint.rb)
 lint:
@@ -348,9 +358,13 @@ diagnose-one:
 
 ## bench: build the key benchmark bench/keys.rb into build/bench and run its scenarios (all, or SCENARIOS="lh j"): time per key for handling and rendering, the slowest key, bytes written, the collector's share, and allocations per key, pinned to one core when taskset exists
 bench:
-	@mkdir -p build/bench
-	spinel $$(spin flags) bench/keys.rb -o build/bench/keys
-	sh bench/run.sh $(SCENARIOS)
+	@mkdir -p $(dir $(BENCH_KEYS))
+	@echo "spinel bench/keys.rb -o $(BENCH_KEYS)"
+	@spinel $$(spin flags) bench/keys.rb -o $(BENCH_KEYS) 2> $(BENCH_KEYS).log; \
+	  status=$$?; cat $(BENCH_KEYS).log >&2; \
+	  if [ $$status -ne 0 ]; then echo "bench: bench/keys.rb did not compile" >&2; exit 1; fi; \
+	  $(SPINEL_WARNINGS) bench $(BENCH_KEYS).log
+	BENCH_BIN=$(BENCH_KEYS) sh bench/run.sh $(SCENARIOS)
 
 ## bench-budget: build the key benchmark with the development flags into build/bench/keys-budget (allocations are the same at -O 0 as at -O 2) and fail when one key of the cursor scenario (lh) allocates ALLOC_BUDGET objects or more (default 100); CI runs it
 bench-budget:
@@ -359,7 +373,8 @@ bench-budget:
 	@echo "spinel bench/keys.rb $(DEV_FLAGS) -o $(BUDGET_BIN)"
 	@SP_TIMING=1 spinel $$(spin flags) bench/keys.rb $(DEV_FLAGS) -o $(BUDGET_BIN) 2> $(BUDGET_BIN).timing; \
 	  status=$$?; grep -v '^spinel-timing' $(BUDGET_BIN).timing >&2; \
-	  if [ $$status -ne 0 ]; then echo "bench-budget: bench/keys.rb did not compile" >&2; exit 1; fi
+	  if [ $$status -ne 0 ]; then echo "bench-budget: bench/keys.rb did not compile" >&2; exit 1; fi; \
+	  $(SPINEL_WARNINGS) bench-budget $(BUDGET_BIN).timing
 	@$(UNIT_SUMMARY) $(BUDGET_BIN).timing
 	BENCH_BIN=$(BUDGET_BIN) sh bench/run.sh --budget lh $(ALLOC_BUDGET)
 
@@ -383,13 +398,21 @@ analysis-budget:
 
 ## types: print the signatures Spinel inferred for the editor, marking where inference widened to untyped
 types:
-	@mkdir -p build
-	spinel $$(spin flags) bin/carat.rb --emit-rbs -o build/carat.rbs >/dev/null
-	@cat build/carat.rbs
+	@mkdir -p $(dir $(TYPES_RBS))
+	@spinel $$(spin flags) bin/carat.rb --emit-rbs -o $(TYPES_RBS) > /dev/null 2> $(TYPES_RBS).log; \
+	  status=$$?; cat $(TYPES_RBS).log >&2; \
+	  if [ $$status -ne 0 ]; then echo "types: bin/carat.rb did not compile" >&2; exit 1; fi; \
+	  $(SPINEL_WARNINGS) types $(TYPES_RBS).log
+	@cat $(TYPES_RBS)
 
 ## gen-config: regenerate carat/domain/default_config.rb and carat/plugins/registry.rb from config/
 gen-config:
-	spin run carat-gen-config
+	@mkdir -p $(dir $(GEN_CONFIG_LOG))
+	@echo "spin run carat-gen-config"
+	@spin run carat-gen-config 2> $(GEN_CONFIG_LOG); \
+	  status=$$?; cat $(GEN_CONFIG_LOG) >&2; \
+	  if [ $$status -ne 0 ]; then echo "gen-config: spin run carat-gen-config failed" >&2; exit 1; fi; \
+	  $(SPINEL_WARNINGS) gen-config $(GEN_CONFIG_LOG)
 
 ## config-current: run gen-config and fail when it changed the config mirror or the plugin registry, which were then stale
 config-current:
