@@ -1818,6 +1818,18 @@ for n in 1 2 3 4 5 6; do printf '%s. `i%s` (T5, estimated small): item.\n' "$n" 
 expect "docs_lint: a sprint of six items fails" 1 "FAIL queue: the sprint holds 6 items, not 0 to 5" doclint
 printf '# Queue\n\n## Sprint 2\n\n## Pool\n\n1. `p` (T5, estimated small): pooled.\n' > docs/queue.md
 expect "docs_lint: a drained sprint of 0 items waits for /sprint" 0 "ok   queue: 1 item" doclint
+# The user-approved exception: a line beginning with it under the sprint
+# heading lifts the one-pipeline limit; an item naming it does not.
+printf '# Queue\n\n## Sprint 8\n\n' > docs/queue.md
+for n in 1 2 3 4; do printf '%s. `p%s` (T1 pipeline, estimated small, the user-approved exception): item.\n' "$n" "$n" >> docs/queue.md; done
+printf '5. `f` (T2, estimated small): five.\n\n## Pool\n\n6. `q` (T1 pipeline, estimated small): pooled.\n' >> docs/queue.md
+expect "docs_lint: an unmarked sprint of 4 pipeline items fails" 1 "FAIL queue: the sprint holds 4 pipeline items, at most 1 [(]T0 exempt[)] without a line beginning .The user-approved exception." doclint
+sed -i 's/^## Sprint 8$/## Sprint 8\n\nThe user-approved exception (Guide): 5 items, 4 pipeline./' docs/queue.md
+expect "docs_lint: a marked sprint of 4 pipeline items passes" 0 "ok   queue: 6 item" doclint
+sed -i 's/^The user-approved exception/An exception/' docs/queue.md
+expect "docs_lint: a marker not at a line start does not count" 1 "FAIL queue: the sprint holds 4 pipeline items" doclint
+printf '# Queue\n\n## Sprint 8\n\n1. `a` (T1 pipeline, estimated small): one.\n2. `b` (T1 pipeline, estimated small): two.\n\n## Pool\n\nThe user-approved exception (Guide): a pool line.\n' > docs/queue.md
+expect "docs_lint: a marker outside the sprint section does not count" 1 "FAIL queue: the sprint holds 2 pipeline items" doclint
 docs link
 echo "See $LINK." >> docs/notes.md
 expect "docs_lint: refuses a URL in a document" 1 "FAIL content: docs/notes[.]md:[0-9]+: url: " doclint
@@ -2698,6 +2710,21 @@ expect "workflow: a capped contributor naming nothing left resumes from tasks.md
   work_js "(r => continuation(r, workLeft(r), 1))({ status: 'partial', remaining: [] })"
 expect "workflow: a contributor start with no result is continued" 0 '^[{]"next":"continue","left":\[\][}]$' \
   work_js "continuation(null, null, 0)"
+# The brief or the resume brief only: a field passed beside the arguments,
+# such as the user's latest chat message, is dropped before any start's
+# prompt is built, and the workflow reads its arguments nowhere else.
+expect "workflow: a start's prompt holds only the brief or the resume brief" 0 '^\[[{]"brief":"b"[}],[{]"change":"c","brief":"b"[}],[{]"brief":"x"[}],[{][}]\]$' \
+  js "$wf" "ARG_KEYS startInput" '[startInput({ brief: "b", message: "the latest chat message" }), startInput({ change: "c", brief: "b", chat: "m", note: "n" }), startInput("x"), startInput(null)]'
+expect "workflow: the arguments are read only through startInput" 0 '^1 1$' \
+  sh -c 'echo "$(grep -v "^ *//" "$1" | grep -c -w args) $(grep -c -x "const input = startInput(args)" "$1")"' _ "$wf"
+expect "workflow: the resume brief names only the queue plan-needed read" 0 '^\[true,true,true\]$' \
+  js "$wf" "resumeBrief" '(([a, b, c]) => [/^the item of build\/plan\/queue[.]md, the waiting sprint plan, that names `c`/.test(a) && !/docs\/queue/.test(a), /^the item of docs\/queue[.]md that names `c`/.test(b) && !/build\/plan/.test(b), /^the item of docs\/queue[.]md [(]build\/plan\/queue[.]md while a sprint plan waits there[)]/.test(c)])([resumeBrief("c", "needed: c is not the head of build/plan/queue.md (x)"), resumeBrief("c", "not needed: c heads docs/queue.md, estimated small, and no pending change holds a proposal or finding"), resumeBrief("c", "")])'
+# Every contributor start is built by contributor() from contributorTask
+# with the brief, so a hold for the user reaches the package start too.
+expect "workflow: the brief, a hold for the user included, reaches every contributor start" 0 '^true$' \
+  js "$wf" "contributorTask" '["implement", "fix", "package", "wait", "push", "body"].every((m) => contributorTask(m, "the item; hold for the user before the push", "d").startsWith(`Mode: ${m}. Brief: the item; hold for the user before the push. d`))'
+expect "workflow: every contributor start goes through contributorTask with the brief" 0 '^1 1$' \
+  sh -c 'echo "$(grep -c "agentType: .contributor." "$1") $(grep -c "contributorTask(mode, brief, detail)" "$1")"' _ "$wf"
 expect "workflow: a contributor with a question stops" 0 '^[{]"next":"stop"' \
   work_js "(r => continuation(r, workLeft(r), 0))({ status: 'stopped', question: 'which scope?' })"
 expect "workflow: a start still unfinished after the continuations stops" 0 '^\["stop","stop",2\]$' \
