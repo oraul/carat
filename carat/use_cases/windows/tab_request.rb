@@ -6,8 +6,6 @@ module Carat
     # and :last go to the ends; :last_accessed goes back to the tab page
     # current before the current one. A Data value.
     class TabRequest < Data.define(:target, :count)
-      # @rbs @target: Symbol
-      # @rbs @count: Integer
     end
   end
 end
