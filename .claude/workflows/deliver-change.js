@@ -47,7 +47,17 @@ export const meta = {
 // commands, and the merger's records gate compares the file with what the
 // script received. Each start's model tier and effort come from
 // CALIBRATION, and the run state records them beside its figures.
-const input = typeof args === 'string' ? { brief: args } : (args || {})
+// Only the arguments above are kept: a field passed beside them, such as a
+// chat message, never reaches a start's prompt, which carries the brief or
+// the resume brief only.
+const ARG_KEYS = ['change', 'brief', 'branch', 'packs', 'areas', 'records']
+function startInput(raw) {
+  const given = typeof raw === 'string' ? { brief: raw } : (raw || {})
+  const kept = {}
+  for (const key of ARG_KEYS) if (given[key] !== undefined) kept[key] = given[key]
+  return kept
+}
+const input = startInput(args)
 const ROUNDS = 3
 // Map areas scouted per change, and merger calls that may find CI still
 // running (each waits up to 30 minutes) before the run stops as stalled.
@@ -639,6 +649,12 @@ function recordLate() {
   for (const f of handOver()) queue(`sh tools/run_state.sh note ${state.change} late-finding "${noteText(f)}"`, head)
 }
 const intro = () => `Change \`${state.change}\` on branch \`${state.branch}\`.`
+// Every contributor start, the package start that pushes included, carries
+// the brief, so what it asks, a hold for the user's reading included,
+// reaches each of them.
+function contributorTask(mode, briefText, detail) {
+  return `Mode: ${mode}. Brief: ${briefText}. ${detail}`
+}
 
 async function contributor(mode, detail) {
   if (mode === 'fix') rework++
@@ -647,7 +663,7 @@ async function contributor(mode, detail) {
   let more = ''
   for (let count = 0; ; count++) {
     result = await measured(key, () => agent(
-      `${intro()} Mode: ${mode}. ${detail}${more}\nFollow your Modes section for \`${mode}\` and return the schema.${capLine(mode)}`,
+      `${intro()} ${contributorTask(mode, brief, detail)}${more}\nFollow your Modes section for \`${mode}\` and return the schema.${capLine(mode)}`,
       calibrate('contributor', { agentType: 'contributor', schema: withCalls(WORK), label: `contributor: ${mode}${count ? ', continued' : ''}` })), callCap(mode))
     state.pushed = keepPushed(mode, state.pushed, result)
     const step = continuation(result, result ? workLeft(result) : null, count)
@@ -945,8 +961,15 @@ if (!resume || resume.status !== 'done') {
 // read the queue item naming the change in docs/queue.md themselves: the
 // item never passes through a model's output.
 const planLine = resume && typeof resume.plan === 'string' ? resume.plan.split('\n')[0] : ''
+// The resume brief names the queue plan-needed read: build/plan/queue.md
+// only while a sprint plan waits there, docs/queue.md otherwise.
+function resumeBrief(change, line) {
+  const queueFile = /build\/plan\/queue\.md/.test(line) ? 'build/plan/queue.md, the waiting sprint plan,'
+    : /docs\/queue\.md/.test(line) ? 'docs/queue.md' : 'docs/queue.md (build/plan/queue.md while a sprint plan waits there)'
+  return `the item of ${queueFile} that names \`${change}\`, read there as written (when no item names it, the existing OpenSpec change)`
+}
 const request = typeof input.brief === 'string' && input.brief.trim() !== '' && input.brief.trim() !== state.change
-const brief = request ? input.brief : `the item of docs/queue.md that names \`${state.change}\` (of build/plan/queue.md while a sprint plan waits there: ${planLine || 'no plan line'}), read there as written (when no item names it, the existing OpenSpec change)`
+const brief = request ? input.brief : resumeBrief(state.change, planLine)
 if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement'] && !request && /^not needed:/.test(planLine)) {
   phase('Plan')
   const size = /estimated (small|medium|large)\b/.exec(planLine)
@@ -1003,7 +1026,7 @@ if (!stopped && !state.merged) {
       note(`scout packs: ${packs.join(', ') || 'none'}`)
     }
     phase('Implement')
-    const done = await contributor('implement', `Brief: ${brief}. Scout packs: ${packs.join(', ') || 'none'}.${planNotes.length ? `\nPlan notes:\n- ${planNotes.join('\n- ')}` : ''}`)
+    const done = await contributor('implement', `Scout packs: ${packs.join(', ') || 'none'}.${planNotes.length ? `\nPlan notes:\n- ${planNotes.join('\n- ')}` : ''}`)
     if (done) phaseDone('implement', head)
   }
 

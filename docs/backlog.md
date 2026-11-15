@@ -735,12 +735,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a read-profile agent can append a forged pass line so `check` exits 0; the stages gates still need the records, which limits it.
 - Fix outline: keep `check.log` and `check.pid` outside `build/stages/`, or derive the verdict from the run state's stage records. Queued in `check-runner-safety`.
 
-## A rollback during :g leaves the global marks on the wrong rows
-
-- Where: `carat/domain/buffer.rb` line 611 at 847851d (`revert_to` undoes records with `LineSplice.apply` and shifts the signs and the syntax cache but not `global_marks`, unlike `splice`'s shift at line 647). Periodic quality advisory at eb0f1be.
-- Why it matters: a plugin edit rolled back while a `:g` runs leaves the marks on rows the command never matched, so the global runs its command on the wrong lines.
-- Fix outline: shift `global_marks` beside the other two shifts in `revert_to` and add a `test/domain_global.rb` row. Queued in `global-tidy`.
-
 ## The secret patterns miss unquoted assignments and unlisted token shapes
 
 - Where: `tools/rules.sh` (`ASSIGN_RE` takes only a quoted literal; `TOKEN_RE` lists the shapes of AWS, GitHub, GitLab, Slack, Google API, `sk-` keys, Stripe live, and npm). Limit accepted by `backup-secret-scan`.
@@ -838,18 +832,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a line's tokens depend on plugin state instead of the line, though every icon the tree draws has its own glyph in each icon set, so the table is state the plugin need not keep.
 - Fix outline: build a glyph-to-group table once in `activate` from `host.icon` and `FileIcons::GROUPS`, look up the glyph at the icon column in `tokenize`, and drop `@line_groups` and `tree_lines`, together with the byte-walk entry above it. Queued in `carat-palette`.
 
-## Themes.palette repeats NAMES as an if chain
-
-- Where: `palette(key)` in `carat/domain/themes.rb` (line 363 at `theme-tokens`).
-- Why it matters: a new palette must be added both to `NAMES` and to the chain, and forgetting the chain silently falls back to the default.
-- Fix outline: one `PALETTES` hash of name to rows, with `NAMES = PALETTES.keys` and `palette` a lookup with `ONE_DARK` as its fallback.
-
-## from_palette leaves the 256-color background and foreground when the terminal paints
-
-- Where: `from_palette` in `carat/domain/themes.rb` (line 386 at `theme-tokens`).
-- Why it matters: without a painted background it clears the 24-bit and 16-color values of `BG` and `FG` but not `indexes256`; it is harmless only because every palette gives -1 there and `SgrTable.color` returns early on a negative color, so a palette giving its own index would paint the background at 256 colors.
-- Fix outline: also set `indexes256[BG]` and `indexes256[FG]` to -1.
-
 ## The background option's values are bare literals
 
 - Where: `Options#initialize` in `carat/domain/options.rb` (line 45 at `theme-tokens`), `Themes.find` (`"theme"`), and `BACKGROUNDS` in `carat/domain/themes.rb`, while the theme's default is `Themes::DEFAULT`.
@@ -861,18 +843,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `test/adapters_screen_presenter.rb` (line 318 at `theme-tokens`), whose assertion joins two expected sequences with `||`.
 - Why it matters: the test does not pin what the presenter writes for the first painted row, so a regression to the other sequence passes.
 - Fix outline: assert the one exact sequence the snapshot shows.
-
-## The theme test lists the palettes a second time
-
-- Where: `PALETTES` in `test/domain_theme.rb` (line 11 at `theme-tokens`), which repeats `D::Themes::NAMES`.
-- Why it matters: a fifth palette would escape the contrast and coverage checks.
-- Fix outline: iterate `D::Themes::NAMES`.
-
-## Themes misses a blank line and a comment near known?
-
-- Where: `carat/domain/themes.rb` (line 332 at `theme-tokens`): no blank line between the `LIGHT_PLUS` table and the `known?` comment, and `background?` has no comment unlike its neighbours.
-- Why it matters: the file's layout is otherwise consistent, and the missing comment leaves `background?`'s meaning to its body.
-- Fix outline: add the blank line and a one-line comment above `background?`.
 
 ## The architecture gives the plugin API as 2.0
 
@@ -1025,12 +995,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `Tree.new` in `carat/plugins/explorer/plugin.rb` (line 484 at `explorer-folder-toggle`), passing the hidden-files flag positionally, while `test/lint.rb` (line 674) exempts `carat/plugins/` and `carat/plugin_api.rb` from the keyword-constructor check that `CLAUDE.md` states without exception. Periodic quality advisory at 3a99ddd.
 - Why it matters: a bare `true` or `false` at the call site reads as nothing, and the rule and its check disagree, so a reader cannot tell whether plugins must follow it.
 - Fix outline: give `Tree` keyword arguments (root, the hidden-files flag, the ignore list), and state the plugin exemption, or its absence, in `CLAUDE.md` beside the lint rule.
-
-## The default cursor line keeps the terminal's foreground over a dark stripe
-
-- Where: `config/default.caratrc` (line 22 at `cursor-shapes`) turns `cursorline` on with `one_dark` and `option.background terminal`, so in `carat/domain/themes.rb` the lit cells of groups without a foreground keep the terminal's own foreground over the fixed `CURSOR_LINE` stripe (0x2c313c). Quality advisory of `cursor-shapes`.
-- Why it matters: on a light terminal, plain text on the cursor line becomes dark on dark and unreadable, and the cursor-line contrast table of `test/domain_theme.rb` checks only `background theme`.
-- Fix outline: give lit cells the palette's foreground when the stripe is painted over the terminal's background, with a contrast row for `background terminal`, or ship `cursorline` off until the theme follows the terminal's background. Queued in `carat-palette`.
 
 ## The presenter passes the number's group to paint_row through an instance variable
 
@@ -1597,12 +1561,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: `PluginApi::Paths` omits `absolute`, `StatusSlots` omits `set_lsp` and `label`, `FramePresenter` omits `float_group`, `EditorHarness` omits `completions`; a reader trusting the map misses the methods.
 - Fix outline: add the missing names at each line. Queued in `docs-index`.
 
-## Tab with expandtab pads by character column
-
-- Where: `carat/use_cases/insert_tab.rb:23` (periodic quality at 5722559).
-- Why it matters: after a tab or a wide character before the cursor the spaces stop short of or past the next tab stop, unlike Vim's virtual-column rule; `test/editor_insert.rb:64` checks only an ASCII line.
-- Fix outline: take the display column with `Domain::DisplayWidth.column` and pad to the next multiple of the tab width, with rows after a tab and after a wide character.
-
 ## Architecture section 4 names no completion domain object
 
 - Where: `docs/architecture.md:92` (periodic quality at 5722559).
@@ -1855,12 +1813,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `return if ask.sent == ask.want` in `carat/adapters/json_rpc_language_gateway.rb` line 646 at 41297d6. Quality advisory in `quick-docs`.
 - Why it matters: after the in-flight block the equal case has already returned, so the line is dead and suggests a path the poll does not have.
 - Fix outline: drop the line, with the hover rows of `test/adapters_hover.rb` unchanged.
-
-## A key resolved by timeoutlen runs no follow tail
-
-- Where: `HandleKey#timeout` in `carat/use_cases/handle_key.rb` (line 122 at 41297d6, line 154 at b76b722) and the comment of `carat/use_cases/discovery/hide_key_hints.rb` line 7. Quality advisories in `quick-docs` and `discoverability`, periodic quality at c1b3a12, b76b722, and 3895e21, which merged the two entries. Queue item `discoverability-tidy`. Raised again at ce6abdb (line 189 against the after-key tail at 153, and a list message cleared twice at 225 and 228; periodic quality): a palette following a key resolved by `timeoutlen` stays unfiltered until the next key; one private `after_keys(state)` both paths end in, with a row. Raised again at be4b63a (owner `hover-tidy`).
-- Why it matters: `call` ends with an after-key tail (`ShowCompletion`, `FollowHover`, `FollowDefinition`, `FollowSignature`, `FollowPalette`, `HideKeyHints`, the plugin observe, `ArrangeView`) that `timeout` copies only in part (it skips `FollowDefinition`, `handle_key.rb` line 181 at 8d8832f), so an action resolved by `timeoutlen` leaves the documentation float open away from the cursor until the next key, `palette.open` bound beside a longer user binding (`<leader>p` with `<leader>pf`) opens the `>` prompt with no list until the next key, and the `HideKeyHints` comment says a timeout closes the hints, which it never does.
-- Fix outline: one private follow step that both `call` and `timeout` end with, a row in `test/adapters_hover.rb` that moves the cursor through a timed-out prefix, a row in `test/editor_palette.rb` that opens the palette through a timed-out user binding, and a corrected `HideKeyHints` comment.
 
 ## The hover placement counts rows with bare numbers
 
@@ -2700,12 +2652,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `carat/adapters/rc_config_gateway.rb` line 59 (the stat refusing a link) and line 68 (the read by path), at 5e4c140. Periodic security Low (2). Queue item `project-config-guards`.
 - Why it matters: a link swapped in between the stat and the read is followed.
 - Fix outline: open once without following links and check the opened file, as `DiskFiles#read` checks regular files, with a case in `test/drivers_disk_files.rb`.
-
-## A none unbinding turns an unbound key into an empty prefix
-
-- Where: `carat/domain/keymap.rb` line 181 (`bind_owned` through `child_for`), at 5e4c140. Periodic quality blocking. Queue item `project-config-guards`.
-- Why it matters: `keymap.normal QQ none` makes an unbound `Q` a prefix, so `HandleKey` answers waiting with no deadline and `ShowKeyHints` lists `Q` with no meaning; unbinding a group's last child leaves the group waiting.
-- Fix outline: for `none` walk the path with `child?` and stop where it ends, then drop nodes left with no value and no children as `clear_owner` does, with a `test/domain_keymap.rb` row for `QQ none`.
 
 ## The backlog has no byte budget
 
@@ -4785,11 +4731,6 @@ Correctness, pre-existing and outside this change's fix: positions compares byte
 - Why: undocumented side effect; the slot header row's shown view also uses `TabLineSel` and so becomes the bold blue block, but the proposal, design, and README list only the tabs, the tab-page numbers, and the winbar as sharing the accent.
 - Fix: name the slot header in the design and README, or confirm it is intended.
 
-### Quality: reflowed comments run past the comment width, carat/domain/themes.rb:67
-
-- Why: style; the reflowed comments here and at carat/adapters/tab_bar.rb:15 run past the files' comment width.
-- Fix: rewrap them to match the surrounding lines.
-
 ## spinel-rebump quality advisory at carat/domain/ex_range.rb:46
 
 Tests beside every behavior change: the new `Utf8.boundary` calls in `ExRange` and `MarkdownText` (`carat/domain/markdown_text.rb:53` and `:277`) have no test row, so dropping one brings the `IndexError` back unseen on text that is not UTF-8. Fix outline: add a row each, an ex range with a 0x80 after a comma and a markdown body with a 0x80 after a newline and after a `](`.
@@ -5042,18 +4983,6 @@ The phrase 'the pin stays at its parent 6af548c9' copies the Makefile's pin valu
 - Why: such a row compiles with the wrong typing and no warning.
 - Fix: test/lint.rb flags a `t.cases` row whose second element is not an array literal.
 
-### The theme contrast tables list every palette by hand
-
-- Location: test/domain_theme.rb:297, 324, 360, 378, 392 (sprint-4 review, quality).
-- Why: five tables repeat two rows per palette while PALETTES (line 11) names them; the carat palettes needed about 20 hand rows.
-- Fix: build each table's rows from PALETTES.
-
-### The Alias scenario names a palette that is no alias
-
-- Location: openspec/specs/color-themes/spec.md:49, test/domain_theme.rb:253 and :257 (sprint-4 review, quality).
-- Why: the scenario now says carat-light is not an alias, and the test cites the misleading name.
-- Fix: rename the scenario in a spec change and update the test's label and comment.
-
 ### The contributor budget is enforced twice
 
 - Location: tools/docs_lint.sh:48 and tools/tools_test.sh:2540 (sprint-4 review, quality).
@@ -5107,12 +5036,6 @@ The phrase 'the pin stays at its parent 6af548c9' copies the Makefile's pin valu
 - Location: carat/use_cases/operate.rb:204, carat/use_cases/repeat_last.rb:116, carat/domain/editor_state.rb:97 (sprint-4 sweep, quality).
 - Why: two private clamps duplicate clamp_col.
 - Fix: call state.clamp_col and delete both.
-
-### Buffer#revert_to leaves global marks unshifted
-
-- Location: carat/domain/buffer.rb:652 (sprint-4 sweep, quality).
-- Why: revert_to shifts sign layers and the syntax cache but not global_marks, unlike splice (:687), so a plugin edit reverted during `:g` leaves marked rows off.
-- Fix: shift global_marks in the loop; a test in test/editor_global.rb.
 
 ### gen-config repeats its write-if-changed block
 
@@ -5233,12 +5156,6 @@ The phrase 'the pin stays at its parent 6af548c9' copies the Makefile's pin valu
 - Location: docs/plugins.md:70, carat/domain/syntax_cache.rb:42, carat/use_cases/plugins/buffer_requests.rb:49 (sprint-4 sweep, quality).
 - Why: the segment priority list omits progress 35; SyntaxCache calls super() then assigns, unlike LineCache; comments mis-indented or past the wrap width (also window_requests.rb:69, status_bar.rb:16, tab_bar.rb:15, frame.rb:15 and :31).
 - Fix: add the priority, pass members to super by keyword, rewrap.
-
-### The theme palette lookup repeats NAMES and keeps a dead branch
-
-- Location: carat/domain/themes.rb:474 and :545 (sprint-4 sweep, quality).
-- Why: an if-chain repeats NAMES and falls back silently to CARAT_DARK; line_bg16 handles a 16-color cursor line no palette has.
-- Fix: a PALETTES array indexed by NAMES.index; drop line_bg16.
 
 ### Filetype cuts names by hand and slices by character
 
@@ -5475,12 +5392,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: openspec/changes/archive/2026-11-15-spinel-untyped-bump-b/proposal.md:11, also its :29 Impact, design.md:7, and tasks.md:6.
 - Why: quality advisory, docs currency: they say the vendored header tools/spinel/spinel_rt_responds_generated.h is regenerated and changed, but commit 7d6e154 leaves it byte for byte the 6af548c9 one and the diff has no header change.
 - Fix outline: say the header was regenerated at 93d7883b and came out unchanged, and drop it from Impact (in the next note that cites the pin, since the archive records the change as it was).
-
-## Two Spinel warnings at 93d7883b on carat/domain/utf8.rb (docs/spinel-notes.md:47)
-
-- Location: docs/spinel-notes.md:47; the warnings name carat/domain/utf8.rb:53 and carat/domain/utf8.rb:63.
-- Why: quality advisory, docs currency: Spinel 93d7883b prints two new warnings (declaration became a NilNode before types were read) while building carat-gen-config; they are noted only in the archived tasks.md, while spinel-notes records every Spinel pitfall met at the pin.
-- Fix outline: add an open note to docs/spinel-notes.md, or a spinel-warnings entry, naming the two signatures and whether their types are lost.
 
 ## Regression bullet reads as a changelog of pins (docs/spinel-notes.md:47)
 
@@ -5842,3 +5753,65 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: `carat/use_cases/handle_key.rb:198` (the timeout path) and `test/editor_leader.rb`.
 - Why: the timeout now also runs the completion, definition, and palette follow-ups, but only the hover follow-up has a test, so a regression in the others would pass; quality advisory from core-correctness.
 - Fix: add a timeout row in which a resolved binding closes or refreshes the completion menu or the palette.
+
+## The resume brief misses the planner's queue when the planner runs
+
+- Location: .claude/workflows/deliver-change.js:967
+- Why: resumeBrief is computed from plan-needed's line before the planner runs; on 'needed: c is not the head of docs/queue.md' the planner writes build/plan/queue.md, yet a change-name-only brief now names docs/queue.md alone (the old one named both), so an item the planner adds or rewrites there is missed.
+- Fix: name build/plan/queue.md as well when the planner runs, or build the brief after the plan phase.
+- Source: quality advisory, brief-only-relay.
+
+## The docs-lint line-start marker case does not prove the line-start rule
+
+- Location: tools/tools_test.sh:1829
+- Why: the case 'a marker not at a line start does not count' rewrites the marker to 'An exception', which a substring match would not find either, so the line-start rule stays unproven.
+- Fix: put the marker mid-line (for example 'Note: The user-approved exception ...') and expect the failure.
+- Source: quality advisory, brief-only-relay.
+
+## CLAUDE.md lost a rule and misstates the start inputs to fit its budget
+
+- Location: CLAUDE.md:204
+- Why: the edit drops the rule 'Tasks of one domain may share a change' and rewords open-pr's role, unrelated to the brief, to fit the 30720-byte budget (now 30718), and 'every start given only the brief' misstates that starts also get packs, findings, and logs.
+- Fix: restore the rule, say 'every start given the brief', and make room elsewhere.
+- Source: quality advisory, brief-only-relay.
+
+## The planner agent does not name the sprint exception marker line
+
+- Location: .claude/agents/planner.md:35
+- Why: it still states at most one pipeline item (T0 exempt) with no word on the 'The user-approved exception' line docs-lint now honors and the planner is the one to write.
+- Fix: name the marker line and when to write it there.
+- Source: quality advisory, brief-only-relay.
+
+## docs-lint scans the sprint section twice
+
+- Location: tools/docs_lint.sh:157
+- Why: the marker awk repeats the sprint-section scan of line 150's awk.
+- Fix: one awk pass, or a shared helper printing the sprint section's lines that both filters read.
+- Source: quality advisory, brief-only-relay.
+
+## Static grep counts in tools_test prove text, not behavior
+
+- Location: tools/tools_test.sh:2718
+- Why: the static cases counting the word args and the agentType: contributor call site prove text, not behavior, and break on any new mention or call site.
+- Fix: keep the startInput and contributorTask behavior cases and drop or narrow the grep counts.
+- Source: quality advisory, brief-only-relay.
+
+## Findings of the sprint-7 review
+
+### Spinel warnings print twice in each guarded compile target
+
+- Location: Makefile:254, and the build, dev-build, test-build, test-one, bench, bench-budget, types, and gen-config targets (sprint-7 review, quality, shell output).
+- Why: each guarded target echoes its whole log to standard error, then tools/spinel_warnings.sh check prints the same warning lines again, so every Spinel warning shows twice and a reader counts it twice.
+- Fix outline: leave the warning lines out of the echoed log, or have check print only its summary line. Queue item `tools-docs-tidy`.
+
+### The architecture's section 10 omits the Spinel warning gate
+
+- Location: docs/architecture.md:351, the diagnose bullet of section 10 (sprint-7 review, quality, docs currency).
+- Why: section 10 describes make diagnose and the build machinery but not that a Spinel warning now fails every compile target, nor that diagnose runs Spinel through tools/spinel_warnings.sh because spinel-doctor --quiet hides warnings; only docs/spinel-notes.md says it, and the architecture is binding.
+- Fix outline: one sentence in the diagnose bullet of section 10. Queue item `tools-docs-tidy`.
+
+### test-one cannot compile test/domain_global.rb alone
+
+- Location: test/domain_global.rb, its standalone compile failing at carat/use_cases/history/list_undo.rb:27 and carat/use_cases/history/walk_history.rb:168 (a finding the core-correctness contributor handed over that never reached the backlog; its retrospective).
+- Why: make test-one T=test/domain_global.rb does not compile though the whole runner passes, so the global command's tests cannot be checked alone; 1 of 4 handed findings of core-correctness was lost.
+- Fix outline: reproduce with make test-one, name the typing the standalone program loses at those two lines, and type it or record the pitfall in docs/spinel-notes.md, accepted when the standalone compile passes. Queue item `tools-docs-tidy`.
