@@ -74,13 +74,18 @@ DIAGNOSE_SKIP ?= behavior
 # (tools/spinel_warnings.sh): dev-build, test-build, and bench-budget
 # check the report they write; test-one, bench, and types keep Spinel's
 # standard error beside their output (ONE_DIR, BENCH_KEYS, TYPES_RBS);
-# build and gen-config keep spin's in BUILD_LOG and GEN_CONFIG_LOG; and
+# build and gen-config keep spin's in BUILD_LOG and GEN_CONFIG_LOG and,
+# on a warning, remove the binaries spin wrote (BUILD_BINS, GEN_CONFIG_BIN),
+# since spin compiles nothing while a binary is newer than its sources and
+# a second run would pass silently; and
 # diagnose and diagnose-one run spinel-doctor with the script as its
 # compiler, which collects the warnings of every root in DIAGNOSE_LOG.
 SPINEL_WARNINGS := sh tools/spinel_warnings.sh check
 BUILD_LOG    ?= build/release.log
 DIAGNOSE_LOG ?= build/diagnose/warnings.log
 GEN_CONFIG_LOG ?= build/gen-config.log
+BUILD_BINS   ?= build/bin/carat build/bin/carat-gen-config
+GEN_CONFIG_BIN ?= build/bin/carat-gen-config
 ONE_DIR      := build/test-one
 BENCH_KEYS   := build/bench/keys
 TYPES_RBS    := build/carat.rbs
@@ -248,7 +253,7 @@ build:
 	@spin build 2> $(BUILD_LOG); \
 	  status=$$?; cat $(BUILD_LOG) >&2; \
 	  if [ $$status -ne 0 ]; then echo "build: spin build failed" >&2; exit 1; fi; \
-	  $(SPINEL_WARNINGS) build $(BUILD_LOG)
+	  $(SPINEL_WARNINGS) build $(BUILD_LOG) || { rm -f $(BUILD_BINS); exit 1; }
 	@echo
 	@echo "Built $(CURDIR)/build/bin/carat"
 	@echo "To run it from anywhere, add an alias to your shell profile (~/.bashrc, ~/.zshrc, or ~/.config/fish/config.fish):"
@@ -412,7 +417,7 @@ gen-config:
 	@spin run carat-gen-config 2> $(GEN_CONFIG_LOG); \
 	  status=$$?; cat $(GEN_CONFIG_LOG) >&2; \
 	  if [ $$status -ne 0 ]; then echo "gen-config: spin run carat-gen-config failed" >&2; exit 1; fi; \
-	  $(SPINEL_WARNINGS) gen-config $(GEN_CONFIG_LOG)
+	  $(SPINEL_WARNINGS) gen-config $(GEN_CONFIG_LOG) || { rm -f $(GEN_CONFIG_BIN); exit 1; }
 
 ## config-current: run gen-config and fail when it changed the config mirror or the plugin registry, which were then stale
 config-current:

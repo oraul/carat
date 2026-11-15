@@ -580,6 +580,10 @@ echo budget again > tools/analysis_budget.sh
 commit "chore: the analysis budget"
 compile_check > "$work/compiled.out" 2>&1
 expect "run_state: check runs a compile stage after a change to the script it runs" 0 "^stage dev-build: exit 0" cat "$work/compiled.out"
+echo pattern > tools/spinel_warnings.sh
+commit "chore: the warning check"
+compile_check > "$work/compiled.out" 2>&1
+expect "run_state: check runs a compile stage after a change to the warning check" 0 "^stage diagnose: exit 0" cat "$work/compiled.out"
 # The metrics stage writes its figures in the clone, where METRICS_OUT is
 # unset; the check copies them to the delivery clone's METRICS_OUT, which
 # bench and the benchmark read.
@@ -2902,11 +2906,13 @@ stub_make() {
   env -u MAKEFLAGS -u MFLAGS -u MAKELEVEL STUB_OUT="$tc/out" "$@" make -s --no-print-directory -C "$here/.." \
     PREFIX="$tc" DEV_BIN="$tc/out/dev" TEST_BIN="$tc/out/run_all" BUILD_LOG="$tc/out/release.log" \
     DIAGNOSE_LOG="$tc/out/warnings.log" GEN_CONFIG_LOG="$tc/out/gen-config.log" ONE_DIR="$tc/out/one" \
+    BUILD_BINS="$tc/out/carat" GEN_CONFIG_BIN="$tc/out/gen-config" \
     BENCH_KEYS="$tc/out/keys" BUDGET_BIN="$tc/out/keys-budget" TYPES_RBS="$tc/out/carat.rbs" "$target"
 }
 expect "spinel warnings: a warning fails make dev-build" 2 "dev-build: Spinel printed 1 warning" stub_make dev-build
 expect "spinel warnings: a warning fails make test-build" 2 "test-build: Spinel printed 1 warning" stub_make test-build
 expect "spinel warnings: a warning fails make build" 2 "build: Spinel printed 1 warning" stub_make build
+expect "spinel warnings: a failed make build removes the binary, so the next one compiles again" 1 "^$" test -e "$tc/out/carat"
 expect "spinel warnings: a warning fails make diagnose, each line once" 2 "^diagnose: Spinel printed 1 warning" stub_make diagnose
 expect "spinel warnings: make diagnose passes without a warning" 0 "^spinel-doctor: clean$" stub_make diagnose STUB_CLEAN=1
 expect "spinel warnings: make build passes without a warning" 0 "^Built " stub_make build STUB_CLEAN=1
@@ -2916,6 +2922,7 @@ expect "spinel warnings: a warning fails make bench-budget" 2 "^bench-budget: Sp
 expect "spinel warnings: a warning fails make types" 2 "^types: Spinel printed 1 warning" stub_make types
 expect "spinel warnings: make types passes without a warning" 0 "^$" stub_make types STUB_CLEAN=1
 expect "spinel warnings: a warning fails make gen-config" 2 "^gen-config: Spinel printed 1 warning" stub_make gen-config
+expect "spinel warnings: a failed make gen-config removes the binary, so the next one compiles again" 1 "^$" test -e "$tc/out/gen-config"
 expect "spinel warnings: make gen-config passes without a warning" 0 "^spin run carat-gen-config$" stub_make gen-config STUB_CLEAN=1
 printf 'spinel-timing: phase=analysis ms=1.0\nanalysis budget: warning: slow\n' > "$tc/out/clean.log"
 expect "spinel warnings: check passes timing lines and other warnings" 0 "^$" \
