@@ -1331,6 +1331,28 @@ state metric prev planned=0 > /dev/null
 expect "run_state: plan-needed keeps a failing periodic security review a merge with a skipped planner followed" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed next
 state metric prev planned=1 > /dev/null
 expect "run_state: plan-needed leaves a failing periodic security review a later merge followed" 1 "^not needed" state plan-needed next
+# Every history row merged after the review counts, so later deliveries
+# whose planner was skipped keep it cleared; a failing review no planned
+# merge followed is superseded by a passing one of a later commit, not of
+# the same one (review-coverage-b).
+for skipped in skip-one skip-two; do
+  echo "$skipped" >> README.md
+  commit "feat: $skipped"
+  state init "$skipped" "chore/$skipped" > /dev/null
+  state set "$skipped" merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+  state phase "$skipped" plan > /dev/null
+  state metric "$skipped" planned=0 > /dev/null
+  state history > /dev/null
+done
+expect "run_state: plan-needed leaves a failing periodic security review a planned merge then two skipped planners followed" 1 "^not needed" state plan-needed next
+state review review-20261116 periodic-security blocked "high=0 medium=1 low=0 blocking=1" > /dev/null
+state init review-20261117 main > /dev/null 2>&1
+state review review-20261117 periodic-security pass "high=0 medium=0 low=0 blocking=0" > /dev/null
+expect "run_state: plan-needed keeps a failing periodic security review a pass of the same commit followed" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed next
+echo later >> README.md
+commit "feat: later"
+state review review-20261117 periodic-security pass "high=0 medium=0 low=0 blocking=0" > /dev/null
+expect "run_state: plan-needed leaves a failing periodic security review a later passing one superseded" 1 "^not needed" state plan-needed next
 printf '# Queue\n\n1. UI track: themes (T5, estimated medium).\n' > docs/queue.md
 expect "run_state: plan-needed names a head without a change name" 0 "^needed: next is not the head of docs/queue[.]md [(]no named item[)]" state plan-needed next
 

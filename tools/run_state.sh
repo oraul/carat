@@ -182,8 +182,9 @@
 #                               (PLAN_NOTES) to place, or a review run records
 #                               a failing periodic security review with no
 #                               change planned and merged since
-#                               (merged_since); print "not needed:
-#                               ..." with the head item's size and exit 1
+#                               (merged_since) nor a later periodic
+#                               security review passed (passed_since);
+#                               print "not needed: ..." with the head item's size and exit 1
 #   budget CHANGE               print "over:", "under:", "unmeasured:", or
 #                               "no estimate:" with the change's estimate, its
 #                               budget (TOKEN_BUDGETS, MINUTE_BUDGETS), its
@@ -1720,19 +1721,27 @@ records_excluded() {
 }
 
 # True when a change planned and merged after COMMIT, the commit a
-# periodic review read: the newest history row's change, or a pending
-# one, whose merged commit and recorded phase.plan both descend from
-# COMMIT and are not it, its planner not skipped (metric.planned is not
-# 0). That planner saw the review: plan-needed names a failing review
-# before any other reason and the workflow passes the review run to the
-# planner, so its finding was delivered first or judged not blocking. A
-# merge planned at or before COMMIT, or without its run state, clears
-# nothing (review-coverage-b). A COMMIT git does not know is never merged since.
+# periodic review read: any history row's change merged after COMMIT (the
+# rows read newest first, up to the first merged at or before it, since
+# main is linear), or a pending one, whose merged commit and recorded
+# phase.plan both descend from COMMIT and are not it, its planner not
+# skipped (metric.planned is not 0). That planner saw the review:
+# plan-needed names a failing review before any other reason and the
+# workflow passes the review run to the planner, so its finding was
+# delivered first or judged not blocking. Later merges whose planner was
+# skipped leave it cleared. A merge planned at or before COMMIT, or
+# without its run state, clears nothing (review-coverage-b). A COMMIT git
+# does not know is never merged since.
 merged_since() {
   valid '[0-9a-f]{7,40}' "$1" || return 1
   since=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
-  newest=$(awk -F'\t' 'NR > 1 && $3 ~ /^[0-9a-f]+$/ { m = $1 } END { print m }' "$metrics_file" 2>/dev/null)
-  for ran in $newest $(pending_list); do
+  rows=$(awk -F'\t' 'NR > 1 && $3 ~ /^[0-9a-f]+$/ { r[++n] = $1 ":" $3 } END { for (i = n; i > 0; i--) print r[i] }' "$metrics_file" 2>/dev/null)
+  after=
+  for row in $rows; do
+    descends "$since" "${row#*:}" || break
+    after="$after ${row%%:*}"
+  done
+  for ran in $after $(pending_list); do
     valid '[a-z0-9][a-z0-9-]*' "$ran" || continue
     commits=$(change=$ran; planned_commits)
     [ -n "$commits" ] || continue
@@ -1740,6 +1749,28 @@ merged_since() {
       descends "$since" "$m" || continue 2
     done
     return 0
+  done
+  return 1
+}
+
+# True when a review run records a passing periodic security review (pass,
+# no blocking finding) at a commit that descends from COMMIT and is not
+# it: a later whole-tree security review superseded the failing one at
+# COMMIT (review-coverage-b).
+passed_since() {
+  valid '[0-9a-f]{7,40}' "$1" || return 1
+  since=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
+  for later in $(ls "$state_dir" 2>/dev/null | sed -n 's/[.]json$//p' | grep -E "$REVIEW_RUNS"); do
+    passed=$(change=$later; read_key review.periodic-security)
+    case "$passed" in
+      "pass "*) ;;
+      *) continue ;;
+    esac
+    case "$passed " in *" blocking="[1-9]*) continue ;; esac
+    at=${passed#pass }
+    at=${at%% *}
+    valid '[0-9a-f]{7,40}' "$at" || continue
+    descends "$since" "$at" && return 0
   done
   return 1
 }
@@ -1772,7 +1803,8 @@ descends() {
 # Whether the queue needs the planner before the change starts: needed,
 # first, when a review run (REVIEW_RUNS) records a failing periodic
 # security review (blocked, or blocking findings counted) and no change
-# merged since (merged_since), the line naming that run, which the
+# merged since (merged_since) nor a later one passed (passed_since),
+# the line naming that run, which the
 # workflow hands the planner so its security-first stop applies whatever
 # else needs it; then when the change is not the first item of
 # docs/queue.md, or when another merged change without a history row
@@ -1792,6 +1824,7 @@ plan_needed() {
     reviewed=${record#* }
     reviewed=${reviewed%% *}
     merged_since "$reviewed" && continue
+    passed_since "$reviewed" && continue
     echo "needed: $run records a failing periodic security review at $reviewed, and no change merged since"
     return 0
   done
