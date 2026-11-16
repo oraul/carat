@@ -13,6 +13,7 @@ require_relative "../domain/completion_list"
 require_relative "../domain/completion_item"
 require_relative "../domain/mode"
 require_relative "../domain/fuzzy_match"
+require_relative "../domain/trusted_roots"
 
 module Carat
   module Adapters
@@ -327,41 +328,8 @@ module Carat
       # is kept, since neither the directory nor the configuration changes.
       #: () -> bool
       def trusted?
-        @trust = trust_of(@files.cwd) if @trust == :unknown
+        @trust = (Domain::TrustedRoots.cover?(@config, @files.cwd, @files.home) ? :trusted : :untrusted) if @trust == :unknown
         @trust == :trusted
-      end
-
-      #: (String) -> Symbol
-      def trust_of(cwd)
-        line = @config.last(Domain::Config::TRUSTED_ROOTS)
-        return :untrusted if line.nil? || !cwd.start_with?("/")
-        words = line.words
-        i = 0
-        while i < words.length
-          root = root_of(words[i].to_s)
-          i += 1
-          next if root.empty?
-          return :trusted if root == "/" || cwd == root || cwd.start_with?("#{root}/")
-        end
-        :untrusted
-      end
-
-      # A root word as an absolute path without a trailing slash, "" when
-      # it is not absolute, names no home, or holds a . or .. segment.
-      #: (String) -> String
-      def root_of(word)
-        path = word
-        if word == "~" || word.start_with?("~/")
-          home = @files.home
-          return "" if home.empty?
-          path = "#{home}#{word[1, word.length - 1]}"
-        end
-        return "" unless path.start_with?("/")
-        return "" if "#{path}/".include?("/./") || "#{path}/".include?("/../")
-        while path.length > 1 && path.end_with?("/")
-          path = path[0, path.length - 1].to_s
-        end
-        path
       end
 
       # Shows a language's server as waiting for an explicit start in an

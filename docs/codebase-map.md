@@ -96,12 +96,13 @@ Files:
 - `carat/domain/rc_value.rb`: `RcValue` bool, integer, string, and list kinds; `valid?`, `expectation`, `text`, `number?`.
 - `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `refuse`, `line_at`, `last`, `note`, `report` (a stable merge of the ascending runs the readers note); scope and language checks, the project file refused language commands and key-sequence bindings.
 - `carat/domain/default_config.rb`: generated, `DEFAULT_CARATRC`; never edited by hand.
+- `carat/domain/trusted_roots.rb`: `TrustedRoots.cover?`, whether the last `language.trusted_roots` line covers the working directory; the language gateway (area 17) and the plugin host's `run_program` (area 15) ask it.
 - `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, `cursorline`, `keyhints_delay` (0 to 10000), `breadcrumbs` (`auto`, `always`, `never`), and the rest); `from_config`, `apply`, `width_problem` (tabstop 1 to 9999, shiftwidth 0 to 9999), `tab_width`, `jump_takes_tab?` (the jumptab rule, read by `VisitTarget` and `WalkJumps`), `gt_follows_buffers?` (the gt rule, read by `TabHandler`).
 - `carat/domain/registry_source.rb`: `RegistrySource.render`, `entry?`, `names`; the registry text from the plugin list lines.
 - `carat/adapters/rc_config_gateway.rb`: `RcConfigGateway#load`, the `ConfigPort` driver over `FilePort` (`home`, `cwd`); refuses a linked project file, a file that is not regular, and one over `LIMIT`.
 - Outside the five roots: `config/default.caratrc` (every default option, binding, language command, and plugin setting) and `config/plugins.caratrc` (`plugin.<name> <path> <class>` per compiled plugin).
 
-Tests: `test/domain_rc_parser.rb`, `test/domain_options_config.rb`, `test/adapters_config_gateway.rb`, `test/config_sync.rb` (the mirror and the registry match their sources, the defaults read cleanly and bind every mode).
+Tests: `test/domain_rc_parser.rb`, `test/domain_options_config.rb`, `test/adapters_config_gateway.rb`, `test/config_sync.rb` (the mirror and the registry match their sources, the defaults read cleanly and bind every mode), `test/domain_trusted_roots.rb`.
 
 Designs: `caratrc-config` (all Decisions), `dependency-injection` (Configuration problems at load time), `state-and-ports` (Configuration).
 
@@ -534,7 +535,7 @@ Files:
 - `carat/domain/path_info.rb`: `PathInfo` value `FilePort#stat` returns (`exists`, `size`, `mtime`, `directory`, `symlink`, `regular`); `missing`, `real_directory?`.
 - `carat/domain/plugin_ui.rb`: `PluginUi`, status segments with their order (`owners`) and `priorities`, and the open prompt, live with its keymap and the text last reported; `open_prompt`, `go_live`, `close_prompt`, `prompting?`, `segment`, `text_at`, `remove_segment`, `drop`.
 - `carat/domain/sign_layer.rb`: `SignLayer`, one plugin's signs in one buffer, moved with the lines; `place`, `glyph_at`.
-- `carat/use_cases/plugins/plugin_host.rb`: `PluginHost`, the facade the core calls; `register`, `activate_all`, `action`, `command?`, `command`, `answer`, `observe`, `saved`, `resized`, `option`, `enabled?`, `errors`.
+- `carat/use_cases/plugins/plugin_host.rb`: `PluginHost`, the facade the core calls; `register`, `activate_all` (deciding first through `Domain::TrustedRoots` whether programs may run), `action`, `command?`, `command`, `answer`, `observe`, `saved`, `resized`, `option`, `enabled?`, `errors`.
 - `carat/use_cases/plugins/plugin_registry.rb`: `PluginRegistry`; `register`, `activate_all`, `deactivate_all`, `disable` (cleanup), `refusal`, `enter`, `leave`, `depth`, `busy?`, `cause`, `owner_of_command`.
 - `carat/use_cases/plugins/plugin_entries.rb`: `PluginEntries`, the list with a typed reader; `add`, `entry`, `find`.
 - `carat/use_cases/plugins/plugin_entry.rb`: `PluginEntry` record; `subscribed?`, `command?`, `tokenizes?`.
@@ -544,7 +545,7 @@ Files:
 - `carat/use_cases/plugins/plugin_link.rb`: `PluginLink`, the per-plugin `Host`; one override per `Host` method.
 - `carat/use_cases/plugins/buffer_requests.rb`: `BufferRequests`; `read_buffer`, `edit_buffer` (validated item by item, one transaction), `move_cursor`, `place_sign`, `clear_signs`.
 - `carat/use_cases/plugins/window_requests.rb`: `WindowRequests`; `open_scratch`, `set_scratch_lines`, `close_scratch`, `focus_window`, `open_file`, `open_in_split`, `open_in_tab`, `editing_window`, `scratch_window`, `open_float`, `move_float` (offsets range-checked), `close_float` (a plugin's own floats only, `own_float_tab`), `float_frame`; `focus_window` enters a float.
-- `carat/use_cases/plugins/file_requests.rb`: `FileRequests`; `list_dir`, `list_files` (at most 100,000), `read_file` (at most 256 KiB), `stat`, `make_file`, `make_dir`, `rename_path`, `delete_path`.
+- `carat/use_cases/plugins/file_requests.rb`: `FileRequests`; `list_dir`, `list_files` (at most 100,000), `read_file` (at most 256 KiB), `stat`, `make_file`, `make_dir`, `rename_path`, `delete_path`, `run_program` (refused until `trusted=` says the working directory is under a trusted root, with `GIT_NO_LAZY_FETCH=1`).
 - `carat/use_cases/plugins/ui_requests.rb`: `UiRequests`; `message`, `set_status`, `set_segment`, `prompt`, `live_prompt`, `close_prompt`, `icon`, `syntax_group`, `option`, `working_directory`, `run_ex`.
 - `carat/use_cases/plugins/boundary.rb`: `Boundary.copied_lines`, the copies of strings crossing the boundary.
 - `carat/use_cases/concerns/guarded.rb`: `Guarded#guarded`, the one guarded path into a plugin.
@@ -554,7 +555,7 @@ Files:
 - `carat/plugins/hello/plugin.rb`: `Hello::Plugin`, the smallest example and a test fixture outside the registry.
 - `carat/plugins/finder/plugin.rb`: `Finder::Plugin`, the fuzzy file finder on `<leader>ff` and `<C-p>`: `list_files` once per opening, a live prompt whose changes refilter, the list float and a preview float from 100 columns, sized from the host's `float_frame` so the boxes share an edge, Enter, split, vertical split, and tab picks; `manifest`, `on_event`, `on_action`, `on_prompt_change`, `on_input`.
 - `carat/plugins/finder/matcher.rb`: `Finder::Matcher`, path fuzzy scoring by bytes without allocating (file name first, word starts, runs, gaps); `score`, `key`, `index_of`.
-- `carat/plugins/git_signs/plugin.rb`: `GitSigns::Plugin`; `manifest`, `activate`, `deactivate`, `on_event` (the branch with its ahead and behind counts as the segment at priority 40, from `git symbolic-ref` and `git rev-list` through `run_program`, on activation, open, save, and focus; git's output untrusted).
+- `carat/plugins/git_signs/plugin.rb`: `GitSigns::Plugin`; `manifest`, `activate`, `deactivate`, `on_event` (the branch with its ahead and behind counts as the segment at priority 40, from `git symbolic-ref` and `git rev-list` through `run_program`, on activation, open, save, and focus, only under a trusted root, each command refusing `ext::` and fsmonitor; git's output untrusted).
 
 Tests: `test/domain_plugin_manifest.rb`, `test/use_cases_plugins.rb`, `test/use_cases_plugin_files.rb`, `test/use_cases_plugin_hardening.rb`, `test/editor_plugins.rb`, `test/editor_finder.rb`, `test/plugins_finder_matcher.rb`, `test/editor_git_signs.rb`.
 
@@ -605,7 +606,7 @@ Files:
 - `carat/drivers/signals.rb`: `Signals`; INT and TERM terminate, WINCH resizes, flags only.
 - `carat/drivers/main_loop.rb`: `MainLoop#run`.
 - `carat/domain/json.rb`: `Carat::Json` (`parse`, `generate`, `pretty_generate`, and the typed readers `field`, `element`, and `reach` of a parsed value, whose `[]` is on a typed receiver), for JSON-RPC; the configuration is not JSON. Nesting is capped at `MAX_DEPTH`, illegal UTF-8 bytes read and write as U+FFFD.
-- `carat/ports/process_port.rb`: `ProcessPort`; `spawn` (a handle, 0 when the command cannot start), `write`, `stop`.
+- `carat/ports/process_port.rb`: `ProcessPort`; `spawn` (a handle, 0 when the command cannot start), `write`, `stop`, `capture(argv, environment)` (a one-shot output, the variables added to the child's environment).
 - `carat/ports/message_queue_port.rb`: `MessageQueuePort`; `push`, `pop` (nil at once when empty).
 - `carat/ports/language_service_port.rb`: `LanguageServicePort`; `poll`, `start`, `restart`, `saved`, `waiting?`, `stop`.
 - `carat/ports/completion_port.rb`: `CompletionPort`, the completion source that never waits; `ready?`, `candidates`, `documentation`, `request`.
@@ -626,7 +627,7 @@ Files:
 - `carat/domain/language_server.rb`: `LanguageServer`, one server's state, documents, and diagnostics.
 - `carat/adapters/symbol_outline.rb`: `SymbolOutline.read`, a document-symbol answer (hierarchical or flat) into the shared `SymbolRequest`, at most 500 symbols, 8 levels, names cleaned and cut to 40 bytes.
 - `carat/adapters/json_rpc_language_gateway.rb`: `JsonRpcLanguageGateway`; `window/showMessage` as a notification (`shown`, cleaned and cut at 200 bytes), `$/progress` titles, messages, and percents into the slots' progress, cleared in `show` when the current server is not indexing; `poll` (a publish handed to its buffers and the current buffer's counts to the slot at the idle tick, then the debounced completion request, the settled pick's `completionItem/resolve`, and the hover ask's `textDocument/hover`, its contents read as bounded markdown), and the debounced `textDocument/signatureHelp` of the followed call, an older answer dropped (`send_signature`, `signed`, `cancel_request`), and, while a winbar shows, `textDocument/documentSymbol` once per text of the layout window's buffer, one in flight (`send_symbols`, `cancel_symbols`, `outlined`), `start`, `restart` (the symbol request forgotten, `SymbolRequest#forget`), `saved`, `waiting?`, `stop`, `diagnostics`, `server_for`; a failed initialize is a crash. Every request kind shares `cancel_request`, `forget_server` (on `stop` and a crash), `position_params`, and `running_server`.
-- `carat/doubles/fake_processes.rb`: `FakeProcesses`; `install`, `break_input`, `spawned`, `bodies`, `methods_sent`, `stopped`.
+- `carat/doubles/fake_processes.rb`: `FakeProcesses`; `install`, `break_input`, `spawned`, `bodies`, `methods_sent`, `stopped`, `captured`, `environments`.
 - `carat/doubles/memory_queue.rb`: `MemoryQueue`; `body`, `count`.
 - `carat/doubles/fake_language_services.rb`: `FakeLanguageServices`, no server, never `waiting?`, the writes recorded in `saves`, for use cases built by hand.
 - `carat/adapters/server_completions.rb`: `ServerCompletions`, the editor's completion source: ready for a completing server's file type, the answer held for the word or the word recorded as wanted; `documentation` (the held text, the candidate recorded as picked); `request`.

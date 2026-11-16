@@ -6,10 +6,12 @@ require_relative "../carat/testing"
 # the file is compiled on its own (make test-one).
 #
 # The git_signs plugin over FakeProcesses: git is installed and its
-# answers scripted per command, or left out so it cannot start.
+# answers scripted per command, or left out so it cannot start. The
+# working directory, /project, is a trusted root unless a test says not.
 module EditorGitSignsTest
-  BRANCH = "git symbolic-ref --short -q HEAD"
-  COUNTS = "git rev-list --left-right --count HEAD...@{upstream}"
+  SAFE = "git -c protocol.ext.allow=never -c core.fsmonitor=false"
+  BRANCH = "#{SAFE} symbolic-ref --short -q HEAD"
+  COUNTS = "#{SAFE} rev-list --left-right --count HEAD...@{upstream}"
 
   # The plugin's segment, "" for none.
   #: (Carat::Doubles::EditorHarness) -> String
@@ -18,19 +20,32 @@ module EditorGitSignsTest
     segments.key?("git_signs") ? segments["git_signs"].to_s : ""
   end
 
-  # An editor over a.txt with the plugin registered.
+  # The defaults with the working directory trusted.
+  #: () -> Carat::Domain::Config
+  def self.trusted
+    Carat::Doubles::FixedConfig.with_user("language.trusted_roots /project\n")
+  end
+
+  # An editor over a.txt with the plugin registered, under a trusted root.
   #: () -> Carat::Doubles::EditorHarness
   def self.editor
+    editor_with(trusted)
+  end
+
+  # An editor over a.txt with the plugin registered and the configuration.
+  #: (Carat::Domain::Config) -> Carat::Doubles::EditorHarness
+  def self.editor_with(config)
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "one\n")
     files.put("b.txt", "two\n")
-    Carat::Doubles::EditorHarness.with_plugins(files, 24, 80, [Carat::Plugins::GitSigns::Plugin.new])
+    Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 24, cols: 80, plugins: [Carat::Plugins::GitSigns::Plugin.new])
   end
 
   def self.main
     t = Carat::Testing.new("editor_git_signs")
 
     # Scenario "The branch and both counts show".
+    # Scenario "Under a trusted root the branch and counts show".
     h = editor
     h.processes.install("git")
     h.processes.script(BRANCH, "main\n")
@@ -67,7 +82,7 @@ module EditorGitSignsTest
     h = editor
     h.processes.install("git")
     h.processes.script(BRANCH, "main\n")
-    h.plugins.activate_all(Carat::Doubles::FixedConfig.defaults)
+    h.plugins.activate_all(trusted)
     t.assert_equal(["± main", [BRANCH, COUNTS]], [segment(h), h.processes.captured], "the segment shows on activation, before any buffer opens")
 
     # Scenario "A branch without an upstream shows alone".
@@ -99,7 +114,7 @@ module EditorGitSignsTest
     h = editor
     h.processes.install("git")
     h.open("a.txt")
-    t.assert_equal(["", ["git symbolic-ref --short -q HEAD"]], [segment(h), h.processes.captured], "outside a repository nothing shows and the counts are not asked")
+    t.assert_equal(["", [BRANCH]], [segment(h), h.processes.captured], "outside a repository nothing shows and the counts are not asked")
     t.assert_equal(false, h.message.include?("git"), "and no message names git")
 
     # Scenario "Without git nothing shows".
@@ -107,6 +122,37 @@ module EditorGitSignsTest
     h.open("a.txt")
     t.assert_equal(["", [], true], [segment(h), h.processes.captured, h.assembly.plugins.enabled?("git_signs")], "without git nothing shows and the plugin stays enabled")
     t.assert_equal(false, h.message.include?("git"), "and no error reaches the message row")
+
+    # Scenario "Outside a trusted root no git runs".
+    h = editor_with(Carat::Doubles::FixedConfig.defaults)
+    h.processes.install("git")
+    h.processes.script(BRANCH, "main\n")
+    h.processes.script(COUNTS, "1\t2\n")
+    h.open("a.txt")
+    h.type(":w<CR>")
+    t.assert_equal(["", []], [segment(h), h.processes.captured], "outside a trusted root no git runs and no segment shows, with no trusted_roots line")
+    t.assert_equal(false, h.message.include?("git") || h.message.include?("trusted"), "and no message names git or the trust")
+    h = editor_with(Carat::Doubles::FixedConfig.with_user("language.trusted_roots /elsewhere ~/src\n"))
+    h.processes.install("git")
+    h.processes.script(BRANCH, "main\n")
+    h.open("a.txt")
+    t.assert_equal(["", []], [segment(h), h.processes.captured], "outside a trusted root no git runs, with roots that do not cover the directory")
+
+    # Scenario "A promisor remote with a command runs nothing".
+    # The canned partial clone: its promisor remote is an ext:: command
+    # and the upstream commit is missing, so git answers no counts unless
+    # it fetched, and it fetches, running the command, only when lazy
+    # fetching is on and ext:: allowed. The double answers the branch and,
+    # for the counts as the plugin sends them, nothing; were the command
+    # sent without the refusals the canned "fetched" counts would show.
+    h = editor
+    h.processes.install("git")
+    h.processes.script(BRANCH, "main\n")
+    h.processes.script("git rev-list --left-right --count HEAD...@{upstream}", "7\t7\n")
+    h.open("a.txt")
+    t.assert_equal("± main", segment(h), "a promisor remote with a command runs nothing: the segment shows the branch alone")
+    t.assert_equal([BRANCH, COUNTS], h.processes.captured, "each command refuses the ext:: transport and the fsmonitor hook on its command line")
+    t.assert_equal(["GIT_NO_LAZY_FETCH=1", "GIT_NO_LAZY_FETCH=1"], h.processes.environments, "and runs with lazy fetching off")
 
     t.finish
   end

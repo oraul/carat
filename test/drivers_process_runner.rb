@@ -9,6 +9,7 @@ require_relative "../carat/testing"
 # oversized header, and a missing command does not start.
 module DriversProcessRunnerTest
   D = Carat::Domain
+  ENVIRONMENT = { "GIT_NO_LAZY_FETCH" => "1" }
 
   # The next message, waiting up to two seconds for a thread to push it.
   def self.next_message(queue)
@@ -54,12 +55,14 @@ module DriversProcessRunnerTest
     t.assert_equal(false, runner.write(9, "x"), "an unknown handle takes no input")
 
     # The driver runs a program without a shell
-    t.assert_equal("a;b", runner.capture(["printf", "%s", "a;b"]).to_s, "capture answers the output of the words as given, no shell splitting them")
-    t.assert_equal(true, runner.capture(["carat-no-such-command"]).nil?, "capture of a missing program answers nothing")
-    t.assert_equal(true, runner.capture([]).nil?, "capture of no words answers nothing")
-    t.assert_equal(true, runner.capture(["sh", "-c", "sleep 5"]).nil?, "capture of a program past the deadline answers nothing")
+    t.assert_equal("a;b", runner.capture(["printf", "%s", "a;b"], ENVIRONMENT).to_s, "capture answers the output of the words as given, no shell splitting them")
+    t.assert_equal(true, runner.capture(["carat-no-such-command"], ENVIRONMENT).nil?, "capture of a missing program answers nothing")
+    # The driver adds the variables to the child environment
+    t.assert_equal("1", runner.capture(["sh", "-c", "printf %s \"$GIT_NO_LAZY_FETCH\""], ENVIRONMENT).to_s, "capture adds the variables to the child's environment: it sees GIT_NO_LAZY_FETCH=1")
+    t.assert_equal(true, runner.capture([], ENVIRONMENT).nil?, "capture of no words answers nothing")
+    t.assert_equal(true, runner.capture(["sh", "-c", "sleep 5"], ENVIRONMENT).nil?, "capture of a program past the deadline answers nothing")
     # "é\n" is three bytes, so byte 65,536 of the stream is the second byte of an é
-    long = runner.capture(["sh", "-c", "yes é | head -c 70000"]).to_s
+    long = runner.capture(["sh", "-c", "yes é | head -c 70000"], ENVIRONMENT).to_s
     t.assert_equal(65_535, long.bytesize, "capture of output over the limit keeps at most 64 KiB, cut before the character the limit splits")
     t.assert_equal(true, long.valid_encoding?, "capture of long valid UTF-8 output answers valid UTF-8")
 

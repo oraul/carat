@@ -29,11 +29,13 @@ module Carat
       end
 
       # Runs the command without a shell, with no input and its error
-      # output discarded, and answers its standard output, at most 64 KiB,
+      # output discarded, the variables of environment added to the
+      # editor's own, and answers its standard output, at most 64 KiB,
       # or nil when it cannot start or runs past its deadline, when it is
       # stopped.
       # @rbs argv: Array[String]
-      def capture(argv)
+      # @rbs environment: Hash[String, String]
+      def capture(argv, environment)
         raise NotImplementedError, "ProcessPort#capture"
       end
     end

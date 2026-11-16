@@ -54,6 +54,7 @@ require_relative "../domain_substitute"
 require_relative "../domain_syntax_cache"
 require_relative "../domain_tab_list"
 require_relative "../domain_theme"
+require_relative "../domain_trusted_roots"
 require_relative "../domain_undo_tree"
 require_relative "../domain_utf8"
 require_relative "../domain_vim_pattern"
@@ -163,6 +164,7 @@ when "domain_substitute" then DomainSubstituteTest.main
 when "domain_syntax_cache" then DomainSyntaxCacheTest.main
 when "domain_tab_list" then DomainTabListTest.main
 when "domain_theme" then DomainThemeTest.main
+when "domain_trusted_roots" then DomainTrustedRootsTest.main
 when "domain_undo_tree" then DomainUndoTreeTest.main
 when "domain_utf8" then DomainUtf8Test.main
 when "domain_vim_pattern" then DomainVimPatternTest.main

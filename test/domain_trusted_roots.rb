@@ -1,0 +1,52 @@
+require_relative "../carat/test_support"
+require_relative "../carat/testing"
+
+# The test is this module's main. test/runner/run_all.rb runs it by name
+# with every other test in one program; the guard at the end runs it when
+# the file is compiled on its own (make test-one).
+#
+# TrustedRoots over a user file's language.trusted_roots line, the home
+# being /home/user.
+module DomainTrustedRootsTest
+  HOME = "/home/user"
+
+  # Whether the roots cover the directory; the input is "ROOTS|CWD", an
+  # empty ROOTS meaning no line. A table value is untyped, so it is
+  # converted before it reaches the library (docs/spinel-notes.md).
+  #: (untyped) -> bool
+  def self.covered(value)
+    text = value.to_s
+    bar = text.index("|").to_i
+    roots = text[0, bar].to_s
+    cwd = text[bar + 1, text.length - bar - 1].to_s
+    config = roots.empty? ? Carat::Doubles::FixedConfig.defaults : Carat::Doubles::FixedConfig.with_user("language.trusted_roots #{roots}\n")
+    Carat::Domain::TrustedRoots.cover?(config, cwd, HOME)
+  end
+
+  def self.main
+    t = Carat::Testing.new("domain_trusted_roots")
+
+    # Rows are [label, "ROOTS|CWD", trusted].
+    t.table([
+      ["no line trusts nothing", "|/project", false],
+      ["a root trusts itself", "/project|/project", true],
+      ["a root trusts a directory below it", "/work|/work/app", true],
+      ["a root does not trust a sibling sharing its prefix", "/work|/workshop", false],
+      ["a trailing slash is ignored", "/work/|/work/app", true],
+      ["a root under the home", "~/src|/home/user/src/app", true],
+      ["the home itself", "~|/home/user", true],
+      ["a relative root trusts nothing", "src|/src", false],
+      ["a root with a .. segment trusts nothing", "/work/../etc|/etc", false],
+      ["the root directory trusts every absolute directory", "/|/anything", true],
+      ["a relative working directory is never trusted", "/|project", false],
+      ["any of several roots", "/elsewhere ~/src /project|/project/lib", true],
+      ["none of several roots", "/elsewhere ~/src|/project", false]
+    ]) do |input|
+      covered(input)
+    end
+
+    t.finish
+  end
+end
+
+DomainTrustedRootsTest.main if __FILE__ == $0

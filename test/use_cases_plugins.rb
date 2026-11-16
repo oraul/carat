@@ -150,6 +150,7 @@ module UseCasesPluginsTest
     Carat::UseCases::PluginCommandHandler.register(commands, plugins: host)
     plugins.each { |p| host.register(p) }
     config = Carat::Domain::Config.new
+    config.read("~/.config/carat/caratrc", "language.trusted_roots /project\n", true)
     config.read(".caratrc", lines, false)
     host.activate_all(config)
     keymap.add_lines(["keymap.normal <leader>pp cursor.down"], " ", "")
@@ -381,6 +382,17 @@ module UseCasesPluginsTest
     ran = h.run_program(["git", "symbolic-ref", "--short", "-q", "HEAD"])
     # run_program answers the program's output
     t.assert_equal([true, "main\n", ["git symbolic-ref --short -q HEAD"]], [ran.ok, ran.text, processes.captured], "run_program answers the program's output and the port gets the words as given")
+    # run_program turns lazy fetching off
+    t.assert_equal(["GIT_NO_LAZY_FETCH=1"], processes.environments, "run_program turns lazy fetching off: the port gets GIT_NO_LAZY_FETCH=1")
+    # run_program outside a trusted root starts nothing
+    requests = rig.host.file_requests
+    requests.trusted = Carat::Domain::TrustedRoots.cover?(Carat::Doubles::FixedConfig.with_user("language.trusted_roots /elsewhere\n"), "/project", "/home/user")
+    ran = h.run_program(["git", "symbolic-ref", "--short", "-q", "HEAD"])
+    t.assert_equal([false, "a program runs only under a root of language.trusted_roots", 1], [ran.ok, ran.message, processes.captured.length], "run_program outside a trusted root starts nothing")
+    requests.trusted = true
+    # run_program before activation starts nothing
+    fresh = Carat::UseCases::FileRequests.new(files: requests.files, processes: processes, probe_path: rig.host.probe_path, make_path: rig.host.make_path, rename_path: rig.host.rename_path, delete_path: rig.host.delete_path, list_tree: Carat::UseCases::ListTree.new(files: requests.files))
+    t.assert_equal([false, 1], [fresh.run_program("probe", ["git", "status"]).ok, processes.captured.length], "run_program before activation starts nothing")
     ran = h.run_program(["svn", "info"])
     # run_program fails when the program cannot start
     t.assert_equal([false, "cannot run svn"], [ran.ok, ran.message], "run_program fails when the program cannot start")
