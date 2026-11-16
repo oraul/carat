@@ -59,7 +59,7 @@ module Carat
         width = Domain::FloatWindow.text_room(state.screen_cols, state.options.winborder)
         width = WIDTH if width > WIDTH
         return if width < 1
-        docs = @format_docs.call(state, text, width)
+        docs = @format_docs.call(state, text, width, false)
         if docs.count == 0
           state.show(NO_INFORMATION, false)
           return

@@ -38,7 +38,7 @@ module AdaptersAssemblyTest
       ["close_other_tabs", a.close_other_tabs.buffers], ["rename_path", host.rename_path.buffers], ["delete_path", host.delete_path.buffers],
       ["registry", host.registry.buffers], ["events", host.events.buffers], ["buffer_requests", host.buffer_requests.buffers],
       ["window_requests", host.window_requests.buffers], ["list_buffers", a.list_buffers.buffers], ["switch_buffer", a.switch_buffer.buffers],
-      ["delete_buffer", a.delete_buffer.buffers], ["arrange_view", a.arrange_view.buffers], ["tab_bar", a.frame_presenter.tab_bar.buffers], ["pin_hover", a.pin_hover.buffers]
+      ["delete_buffer", a.delete_buffer.buffers], ["arrange_view", a.arrange_view.buffers], ["tab_bar", a.frame_presenter.tab_bar.buffers], ["pin_hover", a.pin_hover.buffers], ["toggle_reading", a.toggle_reading.buffers]
     ]), "the buffer list")
     t.assert_equal([], strangers(a.completion_menu, [
       ["handle_key", a.handle_key.completion], ["show_completion", a.show_completion.menu], ["close_completion", a.show_completion.close_completion.menu], ["show_docs", a.show_completion.show_docs.menu]
@@ -176,7 +176,7 @@ module AdaptersAssemblyTest
     t.assert_equal(true, a.notices.history.equal?(a.state.history), "the notifications keep the state's history")
     t.assert_equal([], strangers(a.arrange_view, [["handle_key", a.handle_key.arrange_view]]), "the arrange view use case")
     t.assert_equal([], strangers(a.plugins.syntax, [["highlight_view", a.highlight_view.syntax], ["format_docs", a.format_docs.syntax]]), "the plugins as tokenizers")
-    t.assert_equal([], strangers(a.format_docs, [["show_hover", a.show_hover.format_docs], ["show_docs", a.show_completion.show_docs.format_docs]]), "the one documentation formatter")
+    t.assert_equal([], strangers(a.format_docs, [["show_hover", a.show_hover.format_docs], ["show_docs", a.show_completion.show_docs.format_docs], ["toggle_reading", a.toggle_reading.format_docs]]), "the one documentation formatter")
     t.assert_equal([], strangers(a.plugins.registry, [["plugin_syntax", a.plugins.syntax.registry]]), "the plugin registry, in the tokenizer part")
 
     # Each port is one instance too.

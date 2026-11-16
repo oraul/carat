@@ -291,6 +291,7 @@ module Carat
       attr_reader :show_hover #: UseCases::ShowHover
       attr_reader :follow_hover #: UseCases::FollowHover
       attr_reader :pin_hover #: UseCases::PinHover
+      attr_reader :toggle_reading #: UseCases::ToggleReading
       attr_reader :definition #: Domain::DefinitionRequest
       attr_reader :resolve_inside #: UseCases::ResolveInside
       attr_reader :request_definition #: UseCases::RequestDefinition
@@ -423,6 +424,7 @@ module Carat
         @save_all = UseCases::SaveAll.new(save_file: @save_file, buffers: @buffers)
         @highlight_view = UseCases::HighlightView.new(syntax: @plugins.syntax)
         @format_docs = UseCases::FormatDocs.new(syntax: @plugins.syntax)
+        @toggle_reading = UseCases::ToggleReading.new(buffers: @buffers, format_docs: @format_docs)
         show_docs = UseCases::ShowCompletionDocs.new(menu: @completion_menu, source: completions, open_float: @open_float, close_float: @close_float, format_docs: @format_docs)
         open_popup = UseCases::OpenCompletionPopup.new(menu: @completion_menu, open_float: @open_float, close_float: @close_float, close_completion: close_completion)
         @show_completion = UseCases::ShowCompletion.new(menu: @completion_menu, source: completions, open_popup: open_popup, close_completion: close_completion, show_docs: show_docs)
@@ -487,7 +489,7 @@ module Carat
         UseCases::FileHandler.register(@actions, save_file: @save_file, save_all: @save_all, quit_all: @quit_all)
         UseCases::BufferHandler.register(@actions, list_buffers: @list_buffers, switch_buffer: @switch_buffer, delete_buffer: @delete_buffer)
         UseCases::CompletionHandler.register(@actions, select_completion: select_completion, accept_completion: accept_completion, close_completion: close_completion, complete_word: @complete_word)
-        UseCases::DocsHandler.register(@actions, request_hover: @request_hover, pin_hover: @pin_hover)
+        UseCases::DocsHandler.register(@actions, request_hover: @request_hover, pin_hover: @pin_hover, toggle_reading: @toggle_reading)
         UseCases::DefinitionHandler.register(@actions, request_definition: @request_definition, choose_definition: @choose_definition, walk_jumps: @walk_jumps)
         @open_palette = UseCases::OpenPalette.new(actions: @actions, commands: @commands, keymap: @keymap, plugins: @plugins, palette: @palette, plugin_ui: @plugin_ui, search_prompt: @search_prompt)
         UseCases::PaletteHandler.register(@actions, open_palette: @open_palette, palette: @palette)

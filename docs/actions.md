@@ -174,6 +174,7 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `buffer.alternate` | normal | Show the window's alternate buffer as `Ctrl-^` does, or with a count the buffer of that number |
 | `docs.hover` | normal | Ask the language server for the documentation under the cursor and show it in a float; while the float shows, enter it |
 | `docs.pin` | normal | Pin the documentation float into a horizontal split over a scratch copy, closing the float |
+| `docs.toggle_reading` | normal | Show a Markdown file (`.md`, `.markdown`) as reading text in a `[reading]` scratch buffer at most 80 columns wide, its markers within the icon set; again, show the file with its cursor where it was |
 | `definition.jump` | normal | Ask the language server for the definition under the cursor and go there, adding the position left to the jump list; several targets open a pick list |
 | `definition.peek` | normal | Ask the language server for the definition under the cursor and show its source in a float, the cursor staying in the buffer |
 | `definition.choose` | normal | In the definition pick list (a `keymap.pick` binding, Enter by default), go to or peek at the target of the row under the cursor |

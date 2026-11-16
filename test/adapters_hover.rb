@@ -240,7 +240,8 @@ module AdaptersHoverTest
     t.assert_equal([2, 0, 4, true], [J.field(asked, "id"), J.reach(asked, "params.position.line"), J.reach(asked, "params.position.character"), J.reach(asked, "params.textDocument.uri").to_s.end_with?("/a.rb")], "the next idle tick sends the document and the cursor")
     answer(r, markup("# greet\n\nSays **hello** with `puts`.\n\n- one\n- two\n\n```ruby\nputs 1\n```"))
     r.wait
-    t.assert_equal(["greet", "", "Says hello with puts.", "", "• one", "• two", "", "  puts 1"], float_lines(r), "the answer opens the float at the next idle tick with no key, its markup laid out")
+    # hover-docs, scenario "Documentation markers under ascii": the rig runs the ascii icons.
+    t.assert_equal(["greet", "", "Says hello with puts.", "", "* one", "* two", "", "  puts 1"], float_lines(r), "the answer opens the float at the next idle tick with no key, its markup laid out, the bullets those of the ascii icons")
     t.assert_equal([true, true, false], [r.screen[1].include?("+"), r.screen[2].include?("greet"), r.assembly.services.waiting?], "the float is bordered below the cursor, in the ASCII form of the ascii icons, and nothing waits")
     r.type("l")
     t.assert_equal([0, 0], [r.float_count, r.assembly.hover.float_id], "moving the cursor closes the float")
@@ -351,7 +352,7 @@ module AdaptersHoverTest
     r = hovering
     shown(r, markup("\e[31mred\e[0m\e]0;title\a\n\n" + ">" * 10 + " deep\n\n" + "y\n\n" * 400_000))
     rows = float_lines(r)
-    t.assert_equal(["red", "│ │ │ │ deep", true], [rows[0].to_s, rows[2].to_s, rows.length <= 100], "escape sequences are dropped, nesting capped, rows capped")
+    t.assert_equal(["red", "| | | | deep", true], [rows[0].to_s, rows[2].to_s, rows.length <= 100], "escape sequences are dropped, nesting capped, rows capped")
     t.assert_equal(false, r.screen.join("\n").include?("\e"), "no escape reaches the screen")
     parts = [{ "language" => "ruby\e[1m\n", "value" => "x = 1" }]
     i = 0

@@ -6,20 +6,26 @@ require_relative "utf8"
 
 module Carat
   module Domain
-    # Documentation markdown from a program (a language server's completion
-    # item) as plain rows for a float, the text untrusted: at most
-    # RAW_LIMIT bytes are read, escape sequences and controls dropped
-    # (ControlText), and at most ROW_LIMIT rows kept. A fence line toggles
-    # code, whose lines keep their text indented by two spaces; any other
-    # line loses its block markers (quote levels read as BAR each, at most
-    # NEST_LIMIT of them, as is the indentation; heading markers; a list
-    # marker reads as BULLET; a thematic break as RULE) and its inline
-    # markup (backticks, emphasis at word boundaries, a link or an image as
-    # its text, a backslash escape as its character). Runs of blank rows
-    # read as one, none leads or trails, and a row wider than the width
-    # wraps at its last space after text, or on a character boundary when
-    # it has none, never inside its prefix. One pass over the bytes,
-    # nothing recursive, so nesting costs nothing beyond its cap.
+    # Markdown from a program (a language server's documentation) or a
+    # file (the reading view) as rows with their markup spans, the text
+    # untrusted: at most raw_limit bytes are read (RAW_LIMIT for
+    # documentation, READING_RAW_LIMIT for a file), escape sequences and
+    # controls dropped (ControlText), and at most row_limit rows kept
+    # (ROW_LIMIT or READING_ROW_LIMIT). A fence line toggles code, whose
+    # lines keep their text indented by two spaces and carry the fence's
+    # language and block number; any other line loses its block markers
+    # (quote levels read as a bar each, at most NEST_LIMIT of them, as is
+    # the indentation; heading markers; a list marker reads as a bullet; a
+    # thematic break as a rule, the three drawn from the icon set, plain
+    # ASCII for "ascii") and its inline markup (backticks, emphasis at word
+    # boundaries, a link or an image as its text, a backslash escape as its
+    # character). parse keeps a span (Highlight group) for each heading,
+    # strong and emphasized run, code span, link text, and fenced row;
+    # wrap cuts them with the rows. Runs of blank rows read as one, none
+    # leads or trails, and a row wider than the width wraps at its last
+    # space after text, or on a character boundary when it has none, never
+    # inside its prefix. One pass over the bytes, nothing recursive, so
+    # nesting costs nothing beyond its cap.
     module MarkdownText
       RAW_LIMIT = 16_384
       ROW_LIMIT = 100
@@ -27,20 +33,20 @@ module Carat
       BULLET = "• "
       BAR = "│ "
       RULE = "────────────────────"
+      ASCII_BULLET = "* "
+      ASCII_BAR = "| "
+      ASCII_RULE = "--------------------"
+      READING_RAW_LIMIT = 262_144
+      READING_ROW_LIMIT = 10_000
       PUNCTUATION = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
       SYNTAX_LIMIT = 32
 
-      # The rows of the text, each at most width cells wide.
-      #: (String, Integer) -> Array[String]
-      def self.rows(text, width)
-        wrap(parse(text), width).texts
-      end
-
       # The text read into rows not yet wrapped, with their spans, at most
-      # ROW_LIMIT of them.
-      #: (String) -> DocsText
-      def self.parse(text)
-        raw = text.bytesize > RAW_LIMIT ? text.byteslice(0, RAW_LIMIT).to_s : text
+      # row_limit of them, read from at most raw_limit bytes, its markers
+      # those of the icon set.
+      #: (String, String, Integer, Integer) -> DocsText
+      def self.parse(text, set, raw_limit, row_limit)
+        raw = text.bytesize > raw_limit ? text.byteslice(0, raw_limit).to_s : text
         body = ControlText.without_sequences(raw)
         doc = DocsText.new
         code = false
@@ -49,10 +55,10 @@ module Carat
         gap = false
         len = body.bytesize
         start = 0
-        while start <= len && doc.count < ROW_LIMIT
+        while start <= len && doc.count < row_limit
           found = body.byteindex("\n", Utf8.boundary(body, start))
           stop = found.nil? ? len : found.to_i
-          line = ControlText.line(body.byteslice(start, stop - start).to_s, RAW_LIMIT)
+          line = ControlText.line(body.byteslice(start, stop - start).to_s, raw_limit)
           start = stop + 1
           if fence?(line)
             code = !code
@@ -63,7 +69,7 @@ module Carat
             next
           end
           at = gap ? doc.count + 1 : doc.count
-          row = code ? "  " + line.rstrip : block(line, doc, at).rstrip
+          row = code ? "  " + line.rstrip : block(line, doc, at, set, raw_limit).rstrip
           if row.strip.empty?
             doc.drop_spans(at)
             gap = doc.count > 0
@@ -82,13 +88,14 @@ module Carat
       end
 
       # The rows of a parsed text wrapped at width cells, their spans cut
-      # with them, at most ROW_LIMIT rows and no empty one at the end.
-      #: (DocsText, Integer) -> DocsText
-      def self.wrap(doc, width)
+      # with them, at most row_limit rows and no empty one at the end, the
+      # prefixes those of the icon set.
+      #: (DocsText, Integer, String, Integer) -> DocsText
+      def self.wrap(doc, width, set, row_limit)
         out = DocsText.new
         row = 0
-        while row < doc.count && out.count < ROW_LIMIT
-          out = wrapped(doc, row, width, out)
+        while row < doc.count && out.count < row_limit
+          out = wrapped(doc, row, width, out, set, row_limit)
           row += 1
         end
         out.trim
@@ -139,9 +146,11 @@ module Carat
       end
 
       # A line outside code with its block markers read and its inline
-      # markup taken out, its spans added to the document's row at.
-      #: (String, DocsText, Integer) -> String
-      def self.block(line, doc, at)
+      # markup taken out, its spans added to the document's row at, its
+      # markers those of the icon set; a heading's span reaches the end of
+      # a line of at most raw_limit bytes.
+      #: (String, DocsText, Integer, String, Integer) -> String
+      def self.block(line, doc, at, set, raw_limit)
         len = line.bytesize
         i = 0
         i += 1 while i < len && line.getbyte(i).to_i == 0x20
@@ -155,20 +164,20 @@ module Carat
         depth = NEST_LIMIT if depth > NEST_LIMIT
         indent = NEST_LIMIT if indent > NEST_LIMIT
         out = +""
-        depth.times { out << BAR }
+        depth.times { out << bar(set) }
         indent.times { out << "  " }
         rest = line.byteslice(i, len - i).to_s
         if rule?(rest)
-          out << RULE
+          out << rule(set)
           return out
         end
         offset = (depth + indent) * 2
         heading = heading?(rest)
         rest = heading_text(rest)
-        doc.add_span(at, offset, offset + RAW_LIMIT, Highlight::MARKUP_HEADING) if heading
+        doc.add_span(at, offset, offset + raw_limit, Highlight::MARKUP_HEADING) if heading
         mark = rest.getbyte(0).to_i
         if (mark == 0x2D || mark == 0x2A || mark == 0x2B) && rest.getbyte(1).to_i == 0x20
-          out << BULLET
+          out << bullet(set)
           offset += 2
           rest = rest.byteslice(2, rest.bytesize - 2).to_s
         end
@@ -357,19 +366,40 @@ module Carat
         (b >= 0x30 && b <= 0x39) || (b >= 0x41 && b <= 0x5A) || (b >= 0x61 && b <= 0x7A) || b >= 0x80
       end
 
+      # The list bullet of the icon set: plain for "ascii", else BULLET.
+      #: (String) -> String
+      def self.bullet(set)
+        set == "ascii" ? ASCII_BULLET : BULLET
+      end
+
+      # The quote bar of the icon set: plain for "ascii", else BAR.
+      #: (String) -> String
+      def self.bar(set)
+        set == "ascii" ? ASCII_BAR : BAR
+      end
+
+      # The thematic-break rule of the icon set: plain for "ascii", else
+      # RULE.
+      #: (String) -> String
+      def self.rule(set)
+        set == "ascii" ? ASCII_RULE : RULE
+      end
+
       # The bytes of the row's prefix: its leading spaces, bars, and
-      # bullet.
-      #: (String) -> Integer
-      def self.prefix_size(row)
+      # bullet, those of the icon set.
+      #: (String, String) -> Integer
+      def self.prefix_size(row, set)
         len = row.bytesize
+        bar = bar(set)
+        bullet = bullet(set)
         i = 0
         while i < len
           if row.getbyte(i).to_i == 0x20
             i += 1
-          elsif row.byteslice(i, BAR.bytesize).to_s == BAR
-            i += BAR.bytesize
-          elsif row.byteslice(i, BULLET.bytesize).to_s == BULLET
-            i += BULLET.bytesize
+          elsif row.byteslice(i, bar.bytesize).to_s == bar
+            i += bar.bytesize
+          elsif row.byteslice(i, bullet.bytesize).to_s == bullet
+            i += bullet.bytesize
           else
             return i
           end
@@ -383,8 +413,8 @@ module Carat
       # with the row's spans cut to it. The row's prefix (its leading
       # spaces, bars, and bullet) is not text, so a code indent, a bullet,
       # or a bar is never left alone on a row.
-      #: (DocsText, Integer, Integer, DocsText) -> DocsText
-      def self.wrapped(doc, row, width, out)
+      #: (DocsText, Integer, Integer, DocsText, String, Integer) -> DocsText
+      def self.wrapped(doc, row, width, out, set, row_limit)
         text = doc.line(row)
         syntax = doc.syntax(row)
         fenced = doc.block(row)
@@ -393,7 +423,7 @@ module Carat
           out.add_row(text, syntax, fenced)
           return out
         end
-        prefix = prefix_size(text)
+        prefix = prefix_size(text, set)
         start = 0
         start_col = 0
         used = 0
@@ -411,7 +441,7 @@ module Carat
             cut_col = at_space ? space_col : col
             at = out.add_row(text.byteslice(start, cut - start).to_s.rstrip, syntax, fenced)
             out.copy_spans(doc, row, start_col, cut_col, at)
-            return out if out.count >= ROW_LIMIT
+            return out if out.count >= row_limit
             start = at_space ? space + 1 : i
             start_col = at_space ? space_col + 1 : col
             i = start
