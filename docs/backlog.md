@@ -1291,12 +1291,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: stop closes the child's input after `shutdown` and `exit` and detaches it without a signal, so a server that neither exits on `exit` nor on the end of its input keeps running after the editor ends; ruby-lsp exits on both.
 - Fix outline: after closing the input, send `TERM` from the writer thread when the child has not ended within a second, and `KILL` a second later, with a test over a child that ignores its input. Queued in `lsp-client-tidy`.
 
-## didChange sends the whole text of a changed buffer
-
-- Where: `JsonRpcLanguageGateway#sync_buffer` in `carat/adapters/json_rpc_language_gateway.rb` at `lsp-diagnostics`.
-- Why it matters: every idle tick after an edit copies and encodes the buffer's whole text, which for a file of megabytes is a visible pause after typing stops.
-- Fix outline: send incremental changes built from the buffer's change records since the last version when the server asks for incremental sync, with a gateway test of an edit in the middle of a long file. Fits `completion`, which needs fresh text often.
-
 ## Diagnostic columns are UTF-16 units
 
 - Where: `JsonRpcLanguageGateway#diagnostic_of` at `lsp-diagnostics`: `Diagnostic#col` keeps the server's `character`, counted in UTF-16 units, the protocol's default.
@@ -3854,12 +3848,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the positive rule reaches the contributor only through `CLAUDE.md:208`; the agent file states only the package step's never read it whole.
 - Fix outline: add to implement step 1 "when your queue item names backlog entries, Grep `docs/backlog.md` for those entries only".
 
-## Queue item 60 names domains, not backlog entries
-
-- Where: `docs/queue.md:66`, item 60 (Backlog batches). Quality advisory of the `backlog-compaction` review.
-- Why it matters: it names domains (copies, config checks, RBS pins) rather than entry headings or keywords, so the grep the new rule relies on (`CLAUDE.md:208`, `planner.md` step 5) has nothing precise to match when the item is delivered.
-- Fix outline: the planner names the entries' headings or keywords when it next carries the item.
-
 ## The review command credits the planner with the backlog append
 
 - Where: `.claude/commands/review.md:10`. Quality advisory of the `backlog-compaction` review.
@@ -4147,13 +4135,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `.claude/agents/contributor.md:35`. Delivery review of `pr-on-push` (quality advisory) at a2d4b6c.
 - Why it matters: the fix commit for the wait timeout also rewords unrelated lines (step 2 drops 'for the archive', step 3 'fill in' to 'add', step 6 drops 'The workflow records the phase from your result.', the Context paragraph), so one commit mixes the fix with edits no finding asked for.
 - Fix outline: keep a fix commit to its finding, or say in the body why the lines moved (docs-lint budget).
-
-## pr-on-push quality advisory at docs/queue.md:64
-
-- Where: `docs/queue.md:64` (and lines 67 and 71). Delivery review of `pr-on-push` (quality advisory) at a2d4b6c.
-- Why it matters: the Decisions still name pr-by-tag as delivered now, while this branch delivers pr-on-push, which replaces it with brief decision 19.
-- Fix outline: have the planner's queue name pr-on-push and decision 19 in those three lines.
-
 
 ### Check clone's binary path not named in the map (late `pr-by-tag` quality advisory)
 
@@ -5897,16 +5878,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: the handler's variant is named @action/action: where the sibling handlers (BufferHandler) name it @variant/variant:, and 'action' already means the dotted action name (quality advisory, markdown-reading-a)
 - Fix: rename it to variant
 
-### The FormatDocs map entry omits ToggleReading
-- Location: docs/codebase-map.md:633
-- Why: docs currency: the FormatDocs entry still says 'shared by ShowHover and ShowCompletionDocs' though ToggleReading now calls it too (quality advisory, markdown-reading-a)
-- Fix: add ToggleReading to the list
-
-### ToggleReading copies one over-cap line whole
-- Location: carat/use_cases/docs/toggle_reading.rb:86
-- Why: text_of checks the cap before appending, so one line longer than READING_RAW_LIMIT is copied whole, against its comment that a huge file costs no more than the reader reads (quality advisory, markdown-reading-a)
-- Fix: append at most the remaining room (byteslice to READING_RAW_LIMIT - out.bytesize) and stop
-
 ### The markdown-reading spec has no scenario for a closed source
 - Location: test/use_cases_toggle_reading.rb:83
 - Why: tests beside behavior: the new test cites scenario 'Toggling back to the source', but the delta spec has no scenario for the closed-source refusal (quality advisory, markdown-reading-a)
@@ -6362,3 +6333,374 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: carat/domain/status_slots.rb:18, carat/adapters/status_bar.rb:164 and :241, docs/compatibility.md:466 and :468 (sprint-9 review, quality); queued in `ui-code-tidy` beside "## The status bar's branch slot has no writer".
 - Why it matters: only tests fill the core branch slot while git_signs draws the branch as its own segment at the same priority 40, yet the compatibility row says the core slot shows it.
 - Fix outline: remove the slot from StatusSlots and StatusBar and fold the row into the git_signs row, or have the plugin fill the core slot.
+
+### backlog-pick dies on an unmatched findings glob
+- Location: .claude/agents/planner.md:35 and .claude/workflows/sprint-planning.js:150, with tools/run_state.sh:1760
+- Why: the planner and sprint-planning call backlog-pick docs/backlog.md docs/findings/*.md, but groom removes every findings file (tools/run_state.sh:1973), so a sprint whose changes left no findings passes the literal glob and the pick fails with no docs/findings/*.md.
+- Fix: have backlog_pick skip an unmatched literal glob argument, or have the callers name only existing files.
+
+### backlog-pick tries each backticked path twice
+- Location: tools/run_state.sh:1831
+- Why: candidates re-adds every backticked pathlike token in the bare-word pass after stripping the backticks, so each one is looked up twice, wasted work on every entry.
+- Fix: run the bare-word pass over the Location with the backticked spans removed instead of only the backticks.
+
+### Top-level docs findings never reach a batch
+- Location: tools/run_state.sh:1757
+- Why: entries at README.md, CLAUDE.md, and docs/ paths are always unmapped since docs/codebase-map.md names no numbered area for them, so docs findings never reach a backlog-lane batch and only a planner decision mentions them.
+- Fix: map the top-level docs in an area of docs/codebase-map.md, or batch unmapped entries as their own docs item.
+
+### No case pins a bare directory word known only by its files
+- Location: tools/run_state.sh:1821
+- Why: a bare backticked directory word the map does not name itself but that holds mapped paths (`tools` with only tools/a.sh mapped) prints unmapped, while the same directory with a slash is placed by dir_area; the header documents the asymmetry but no tools_test case pins it.
+- Fix: in named_file accept a word for which dir_area of the word with a slash is non-empty and the tree holds it, with a tools_test case, or add a case pinning the unmapped result.
+
+### The contributor's list of the other agents' phases drops the benchmark
+- Location: .claude/agents/contributor.md:14
+- Why: the benchmark still runs as its own phase, so the list misleads a reader of the agent; the fix did not fit the file's budget without a trim after the reviews
+- Fix: restore benchmark to the list, trimming six bytes elsewhere in the file
+
+
+### open-pr pins its actions by tag beside PR_TOKEN (security Low, confidence 6)
+- Location: .github/workflows/open-pr.yml:46
+- Why: actions/checkout and actions/cache are pinned by tag in the job that holds PR_TOKEN, so a moved tag would run foreign code beside the token
+- Fix: pin every action to a full commit sha with the tag in a comment
+
+### git_signs relies on GIT_NO_LAZY_FETCH, which a git older than 2.44 ignores (security Low, confidence 5)
+
+- Location: carat/plugins/git_signs/plugin.rb:27
+- Why: under a trusted root, a git older than 2.44 ignores GIT_NO_LAZY_FETCH, so a crafted partial clone can trigger a lazy fetch over ssh or another allowed transport and run the repository's core.sshCommand, against the comment's claim that the repository's configuration stays untrusted inside a trusted root; defense in depth only, since the user trusted the directory and language servers run there too.
+- Fix: refuse every transport on the command line, not only ext: pass -c protocol.allow=never plus -c protocol.NAME.allow=never for file, git, ssh, http, and https, since a per-protocol setting in the repository outranks protocol.allow; or check the git version, or pass --no-lazy-fetch where git supports it.
+
+### Incremental sync misses a reload that only changes the line ending
+- Location: carat/adapters/json_rpc_language_gateway.rb:1356
+- Why: an :e! reload that only changes the line ending (OpenFile sets line_ending, open_file.rb:60) leaves the stored lines equal, so under sync kind 2 nothing is sent and the server keeps the old terminators, mixed after later ranged edits (positions stay right).
+- Fix: store the line ending sent beside the remembered texts and replace the whole document when it changed.
+
+### No replayed incremental sync row over a CRLF buffer
+- Location: test/adapters_language_gateway.rb:112
+- Why: no replayed row covers a CRLF buffer under sync kind 2, though the design relies on ranges joined with the buffer's own ending staying right.
+- Fix: add a replayed row over a CRLF file to the sync kind 2 table.
+
+### MarkdownText.parse overruns its row cap with a table
+
+- Location: carat/domain/markdown_text.rb:182 and its top border at line 295
+- Why: with the gap set at row_limit - 1 rows, the blank row plus the unconditional top border push the parsed DocsText one or two rows past row_limit; wrap re-caps the output so nothing shows, but parse breaks its own at-most-row_limit contract.
+- Fix: add the gap row and the top border only while doc.count is below row_limit, as draw_table already does for the body and the bottom border, with a test at the cap.
+
+### Documentation floats draw tables with no test or spec saying so
+
+- Location: carat/use_cases/docs/format_docs.rb:38, test/adapters_hover.rb, README.md, openspec/specs/markdown-reading/spec.md
+- Why: parse now draws tables at the width for the K and completion documentation floats too, but the spec and README name only the reading view and no hover test shows a table, so the float behavior is unproven.
+- Fix: say in the README sentence on the floats and in the spec that documentation floats draw tables the same way, and add one float row with a table to test/adapters_hover.rb.
+
+### MarkdownText.split_cells copies each cell a character at a time
+
+- Location: carat/domain/markdown_text.rb:219
+- Why: each cell is built by one byteslice per character, an allocation per byte on every table row parsed for the reading view and the floats.
+- Fix: track the cell's start byte and byteslice the whole run at each unescaped pipe.
+
+
+### Lane worktree trusts a branch-controlled build/pipeline
+- Location: tools/run_state.sh:2347 (lane_open), the green line of .claude/workflows/deliver-change.js
+- Why: security Medium (5): a branch that force-adds build/pipeline, as a directory or a symlink, stops lane-open from linking the lane to the main checkout's run state, so the merge gates running inside the lane read branch-controlled stage records, push counts, and body file instead of the workflow's own records.
+- Fix: in lane_open refuse when git -C "$dir" ls-files lists anything under a LANE_LINKS path, or when "$dir/$l" exists but is not a symlink to "$top/$l"; pass gates.sh merge an absolute RUN_STATE_DIR and STAGE_DIR of the main checkout and read the body file from its absolute path.
+
+### Merger's lane-close and contributor's merge-main accept any change name
+- Location: tools/agent_guard.sh:600-601
+- Why: security Low (4): the merger profile admits run_state.sh lane-close with any arguments, unlike push and set beside it, so a misled or prompt-injected merger could force-remove another running delivery's worktree and lose its uncommitted work; merge-main is admitted the same way.
+- Fix: require [ $# -eq 2 ] and matches "$2" "$CHANGE_NAME" for both, as contributor:push does, with one refusing guard case each in tools/tools_test.sh.
+
+### merge_main runs git merge with global configuration and hooks
+- Location: tools/run_state.sh:2391 (merge_main)
+- Why: security Low (3): a plain git merge reads global and system configuration and runs hooks, both writable by branch code the checks run, which is why the fetches and the merge-gates worktree use pinned git.
+- Fix: run the merge through pinned_git (GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1, -c core.hooksPath=/dev/null), keeping the core.attributesFile and identity -c options.
+
+### merge_main hides a merge failure that is not a conflict
+- Location: tools/run_state.sh:2397 (merge_main)
+- Why: correctness: git merge's output goes to /dev/null, so a failure that is not a conflict (an untracked file it would overwrite, a missing ref) reports conflicts with no file named, and the silent git merge --abort then fails.
+- Fix: keep git's stderr and print it when no file is unmerged, aborting only when a merge is in progress.
+
+### Concurrent lanes race on the shared origin/main ref lock
+- Location: tools/run_state.sh:2388 (merge_main) and the green line's fetch
+- Why: correctness: two lanes share one .git and both fetch +refs/heads/main:refs/remotes/origin/main, so concurrent deliveries can fail on the ref lock.
+- Fix: retry the fetch once on failure, or fetch into a per-lane ref such as refs/lanes/<change>/main.
+
+### lane_open and lane_close remove a worktree by different steps
+- Location: tools/run_state.sh:2332 (lane_open), :2366 (lane_close)
+- Why: correctness: lane_open removes a replaced run's worktree directly while lane_close removes the toolchain links first so no removal can reach their targets; the two paths can diverge in safety.
+- Fix: share one lane_remove helper (links first, then git worktree remove --force) from both.
+
+### MERGE_MAIN tells a continuation start to merge over a dirty tree
+- Location: .claude/workflows/deliver-change.js:702, tools/run_state.sh:2385
+- Why: correctness: every implement and fix start is told to run merge-main first, but merge_main dies on a dirty tracked tree, so a continuation over uncommitted work exits 1 before it starts.
+- Fix: say to run it when the tracked tree is clean, else after the next commit.
+
+### Lane and merge-main refusals have no tools-test case
+- Location: tools/tools_test.sh:1593; tools/run_state.sh:2330, :2365, :2383-2385
+- Why: missing test: no case covers lane-open or lane-close over a non-worktree tmp/.lane-CHANGE, nor merge-main on a detached HEAD, on main, or with a dirty tracked tree.
+- Fix: add one refusing expect case each.
+
+### The sprint's records change merges past a blocking sprint security finding
+- Location: .claude/workflows/sprint-planning.js:196
+- Why: security Low (4): the records change sprint-N-records is delivered even when the sprint plan returns security_first or the sprint's combined-diff review found blocking findings; it skips the planner (plan_needed returns not needed for a records change and checks only periodic security reviews), so the security-first stop never runs for it, weakening the rule that blocking security fixes go first. A process-gate gap, not directly exploitable: the change writes only docs records and gets its own security review.
+- Fix: deliver the records change only when `!(plan.security_first || []).length && !blocking.length` holds at line 196, otherwise report that it waits for the security fix; or have plan_needed treat a blocking sprint-N security review record as needing the planner.
+
+### The not-due parseDue case uses review-due's old text
+- Location: tools/tools_test.sh:3442
+- Why: missing test: the case feeds parseDue 'for the next package step', which review_due no longer prints (now 'for its records change, sprint-N-records'), so the case no longer tracks the real output and a regression in parsing the new line goes unseen.
+- Fix: use review_due's current not-due line in the fixture, or capture it from review_due itself.
+
+### lane_of prints the shell's error for a missing queue file
+- Location: tools/run_state.sh:1264
+- Why: correctness: `item_named < "docs/queue-$l.md" 2>/dev/null` opens the input before stderr is redirected, so a missing queue file still prints the shell's error into the command's output.
+- Fix: put 2>/dev/null before the input redirection, or test -f the queue first.
+
+### The one review fix round a run counts only pushed rounds
+- Location: .claude/workflows/deliver-change.js:966 and 978 (resumeFix), tools/run_state.sh push (writes review_fixes)
+- Why: review_fixes is written only by the push, so a round that began and stopped unpushed lets a later start begin another, against the proposal's rule that a second round, in the same start or a later one, is refused.
+- Fix: Record the round in the run state when it begins (a review_fix_round key) and count it in resumeFix.
+
+### The review fix push result is ignored
+- Location: .claude/workflows/deliver-change.js:1156 and 1172
+- Why: The result of the review fix contributor('push') is not checked, so a refused or failed push surfaces only as the pushedHead mismatch stop and its reason is lost.
+- Fix: If the push start returns false, keep the stop the contributor set or set stopped with the push's reason, as the CI fix path at line 1217 breaks.
+
+### A review fix round turns off review narrowing for the rest of the start
+- Location: .claude/workflows/deliver-change.js:798 (priorSecurity)
+- Why: Performance: once reviewFixRounds is above zero, every later CI fix round after the review fix push re-reviews the whole branch diff, costing tokens and time.
+- Fix: Drop narrowing only for the review fix round's own reviews, for example remember the head the round began at and narrow from passes after it.
+
+### A resume pushes an unpushed CI fix as the review fix
+- Location: .claude/workflows/deliver-change.js:909 (resumePush)
+- Why: resumePush pushes any head past the recorded push as the review fix, so an unpushed CI fix commit, from a start stopped between the CI fix commit and its --ci-fix push, is pushed with --review-fix: ci_fixes is not counted and the run's one review fix is spent, so a later blocking review on resume is refused.
+- Fix: Push with --ci-fix when CI is recorded red and keep --review-fix for a blocked review only, or name the case in the comment and the README.
+
+### push --review-fix does not check that a review blocked
+- Location: tools/run_state.sh:931 (push, the --review-fix case)
+- Why: The review fix push checks only that the recorded push differs from HEAD, not that a review blocked, so any caller gets one extra push beyond the push-once rule.
+- Fix: Require a blocked review.quality or review.security record at the pushed head before allowing the --review-fix push, with a tools_test case refusing it otherwise.
+
+### SELF_CHECK repeats the contributor's implement step 5
+- Location: .claude/workflows/deliver-change.js:684 (SELF_CHECK), .claude/agents/contributor.md implement step 5
+- Why: Every implement and fix prompt carries the same rule twice, and the two texts can drift apart.
+- Fix: Keep the rule in the agent file and have the prompt point to step 5, or drop step 5's copy.
+
+### CLAUDE.md sits 9 bytes under its docs budget
+- Location: CLAUDE.md:1 (tools/docs_lint.sh budget of 30720 bytes)
+- Why: CLAUDE.md is 30711 of its 30720 bytes after rework-guards trimmed unrelated lines (the hotfix and release branch examples, the Stack PATH note) to fit, so the next addition fails docs-lint.
+- Fix: Move detail to the notes docs CLAUDE.md already points to rather than trimming more examples.
+
+### The init usage line still says it refuses any merged run
+- Location: tools/run_state.sh:59 (header usage of init)
+- Why: Docs currency: the usage line says init refuses a CHANGE with merged recorded, but init now resumes a merged run without phase.retro.
+- Fix: Say it refuses a merged run the close recorded (phase.retro) or one with a lane history row.
+
+### The archived proposal omits init's merged-run exception
+- Location: openspec/changes/archive/2026-11-16-rework-guards/proposal.md:12
+- Why: Docs currency: the proposal says init refuses any run state with merged set, while the design and the code resume a merged run the close has not closed.
+- Fix: Add that exception to the proposal's sentence.
+
+### Task 1.3 names a test no case carries
+- Location: openspec/changes/archive/2026-11-16-rework-guards/tasks.md:7
+- Why: Task 1.3 names the test "workflow: the review fix round pushes once more", which no tools_test.sh case carries; the push is proved by "workflow: a passed resume pushes a head past the recorded push as the review fix".
+- Fix: Name the existing test in the task.
+
+### Lane-open follows a committed tmp or build symlink out of the repository (sprint-10 security Low (5))
+- Location: tools/run_state.sh:2350 (lane_open, parallel-lanes-b)
+- Why: .gitignore ignores tmp/ and build/ only as directories, so a branch may commit a symlink named tmp or build, and lane-open's mkdir -p and ln -s then create the toolchain, cache, pipeline, stages, and plan links in any directory it names, outside the repository root. Queued in lane-guards.
+- Fix: refuse a lane whose tmp or build path, or any parent of a link target, is a symlink, or a branch that tracks anything under tmp/ or build/.
+
+### Two lanes share one writable toolchain and compile cache (sprint-10 security Low (3), disputed)
+- Location: tools/run_state.sh:2312 (LANE_LINKS, parallel-lanes-b)
+- Why: branch code run by one lane's checks can tamper with the binary or cache entries the other lane builds and benchmarks with. Disputed by the skeptic: the checks already run as the same user with write access to those paths by absolute path, and serial deliveries shared them; running at once adds timing, not capability.
+- Fix: link the toolchain read-only for the lanes or check its hash before each check; give each lane its own compile cache or key entries by a content hash checked on read.
+
+### history writes late findings to a findings file the records change folded
+- Location: tools/run_state.sh:1708 (history), groom at tools/run_state.sh:2072
+- Why: a merged change's late findings go to docs/findings/<that change>.md, which a sprint records change may have folded and deleted on main; a lane branch cut before it then hits a modify/delete conflict at its squash merge, or brings back folded entries, and merge-main's union driver settles neither. Queued in lane-records.
+- Fix: append late findings to the packaging change's own findings file under its "Findings of X after its package step" heading.
+
+### MarkdownText cell_lines repeats the wrap's cut-finding loop
+- Location: carat/domain/markdown_text.rb:414 and :794
+- Why: cell_lines repeats the cut at the last space or on a character boundary that wrap writes out with spans and columns, two copies to keep in step.
+- Fix: pull out the shared cut-finding loop, or say in a comment why the two stay apart.
+
+### A pipe line right after a table is drawn as a table row
+- Location: carat/domain/markdown_text.rb:177
+- Why: table rows go on through any line holding a pipe, so a heading, list item, quote, or fence line with a pipe directly after a table is drawn as a row, while GFM ends the table where another block starts. Folded into markdown-reading-c.
+- Fix: also stop at a line that opens a block (#, >, a list marker, a fence), with a test.
+
+### The gateway test's synced helper repeats in_dir and ready_with
+- Location: test/adapters_language_gateway.rb:67 and :23
+- Why: synced repeats in_dir with another file text, then ready_with's open and initialize steps.
+- Fix: give in_dir a text parameter and build synced from it plus ready_with's steps.
+
+### Deleting an empty charwise range marks the buffer modified
+- Location: carat/domain/buffer.rb:504 (Buffer#delete)
+- Why: d0 at column 0, d^ on the first non-blank, or c0 at column 0 splices an identical line, so the buffer shows modified, :q refuses with E37, a no-op undo state is pushed, and plugins and the language server get a change notice; Neovim changes nothing. Folded into core-correctness-b.
+- Fix: return early for an empty one-row range (or skip it in Operate), with a d0-at-column-0 row asserting modified? stays false.
+
+### A counted aw starting on blanks takes the wrong span
+- Location: carat/domain/text_objects.rb:116 (count loop 121-129)
+- Why: 2aw on "  foo bar baz" takes blanks, foo, and the next blank instead of Vim's blanks, foo, blank, bar. Folded into core-correctness-b.
+- Fix: step (blank, word) pairs when the cursor started on a blank, with a d2aw-from-blanks row in test/editor_text_objects.rb.
+
+### The typed count has no cap and MAX_COUNT is written twice
+- Location: carat/domain/command_grammar.rb:98; carat/domain/register_count.rb:15; carat/domain/substitute_args.rb:27
+- Why: CommandGrammar#digit accumulates with no cap, so a long count overflows Integer, while RegisterCount and SubstituteArgs stop at a duplicated 1_000_000_000. Folded into input-core-tidy.
+- Fix: one domain count limit applied in digit too, with a grammar test.
+
+### HandleKey's step and complete drop the queue dispatch returns
+- Location: carat/use_cases/handle_key.rb:252, :277 (dispatch 281-286)
+- Why: dispatch says the caller assigns its returned queue because of the open Spinel pitfall on appends to a passed empty array; a remap reached in timeout's step loop, whose queue began as a [] literal, may lose its keys. Folded into input-core-tidy.
+- Fix: keep the replay queue in one instance field cleared per call and timeout.
+
+### Key::CTRL_H is unused
+- Location: carat/domain/key.rb:14
+- Why: dead code, referenced nowhere in carat/, bin/, or test/. Folded into input-core-tidy.
+- Fix: remove it.
+
+### csi_key repeats ss3_key's final-byte cases
+- Location: carat/adapters/key_decoder.rb:148 and 193-206
+- Why: ten final-byte cases copied word for word. Folded into input-core-tidy.
+- Fix: handle 126 in csi_key and answer ss3_key(final) for the rest.
+
+### The docs gate holds two rules for one agent-file case
+- Location: tools/gates.sh:260-263 and 286-290
+- Why: an added or removed agent, command, or workflow file needs a CLAUDE.md change without the proposal escape at 260, while 286-290 accepts "- CLAUDE.md: unchanged, REASON" for every change of the same files. Folded into tools-docs-tidy.
+- Fix: drop the process part of 260-263 and let process_change decide, keeping target_change for the README check.
+
+### groom documents CHANGE as optional though it dies without one
+- Location: tools/run_state.sh:2014, the header, and the dispatch at :2504
+- Why: drift: groom with no CHANGE always dies while a sprint plan waits. Folded into lane-records.
+- Fix: make CHANGE required in the header, the usage, and the dispatch.
+
+### UndoTree#undo_seq and #redo_seq have no production caller
+- Location: carat/domain/undo_tree.rb:173, :179
+- Why: only tests call them and the map lists them as API (area 8). Folded into architecture-docs.
+- Fix: drop them and assert through undo_path and redo_path, updating the map.
+
+### SaveAll#call never reads its state parameter
+- Location: carat/use_cases/files/save_all.rb:24
+- Why: an unused parameter every caller must supply. Folded into ex-handlers-tidy.
+- Fix: drop it and update FileCommandHandler and the map.
+
+### RegisterCommandHandler compares entry kinds by hand
+- Location: carat/use_cases/ex/register_command_handler.rb:112
+- Why: compares kind with :linewise and :blockwise though RegisterEntry has linewise? and blockwise?. Folded into ex-handlers-tidy.
+- Fix: use the predicates.
+
+### UTF-16 counts by lead byte desynchronize incremental sync on invalid UTF-8
+- Location: carat/adapters/json_rpc_language_gateway.rb:1146 (utf16_length), :1100 (utf16_offset), :1385 (ranged_change); carat/use_cases/definitions/visit_target.rb:204
+- Why: a stray 0x80-0xBF byte counts 0 units and a lone 0xF0-0xFF byte 2, while Carat::Json sends each illegal byte as one U+FFFD (1 unit), so in a file that is not valid UTF-8 each ranged didChange after such a byte corrupts the server's copy of the line. Queued in lsp-sync-fixes.
+- Fix: one domain helper walking Utf8.size_at and code_at, 2 units only above 0xFFFF, used by the gateway and VisitTarget, with a replayed sync row over a line holding 0xB0 and 0xFC.
+
+### The map and architecture lag the plugin API, ProcessPort, StatusSlots, and DisplayWidth
+- Location: docs/codebase-map.md:531, :547, :608, :617, :465, :476; docs/architecture.md:330, :275
+- Why: VERSION 2.6 where carat/plugin_api.rb:12 is 2.7; FileRequests omits run_program; Paths omits absolute and segments; ProcessPort and ProcessRunner omit capture and section 6/7 still plans Open3.capture3; StatusSlots omits set_lsp and label; DisplayWidth omits code_cells. Folded into architecture-docs.
+- Fix: name each in its entry and describe capture in the architecture.
+
+### PluginApi::FileIcons.group_of has no caller
+- Location: carat/plugin_api.rb:478; carat/plugins/explorer/file_icons.rb:12, plugin.rb:451-455
+- Why: the explorer reads GROUPS through its own alias while the map calls group_of shared. Folded into architecture-docs.
+- Fix: have Explorer#icon_groups call group_of and drop the alias, or remove group_of.
+
+### Command#args? and Edit#insertion? have no caller
+- Location: carat/plugin_api.rb:125, :142
+- Why: no plugin, host code, or test calls them. Folded into architecture-docs.
+- Fix: cover them in test/use_cases_plugins.rb as API, or remove them with a minor version note.
+
+### send_change repeats remember and the didChange envelope per sync kind
+- Location: carat/adapters/json_rpc_language_gateway.rb:1335
+- Why: kinds 1 and 2 repeat remember and the notify, and the kinds are bare literals. Queued in lsp-sync-fixes.
+- Fix: compute the content change by a named kind, then remember and notify once.
+
+### MarkdownText.parse finds a line end inline beside line_end
+- Location: carat/domain/markdown_text.rb:75 and :192
+- Why: two copies of one byteindex lookup.
+- Fix: call line_end in parse.
+
+### metrics.sh compare passes a base key the current run lacks
+- Location: tools/metrics.sh:86
+- Why: compare reads only CURRENT's names, so an allocs.* or rounds.* key in BASE that CURRENT lacks passes, though the header says a value not measured fails. Folded into tools-docs-tidy.
+- Fix: print FAIL in END for each strict base key never seen in CURRENT.
+
+### lane_open checks the branch with a line-wise grep and a third copy of the pattern
+- Location: tools/run_state.sh:2323; tools/open_pr.sh:45; tools/agent_guard.sh:117
+- Why: grep -c over printf passes a multi-line value whose first line matches, and the branch pattern is copied instead of the valid helper. Queued in lane-guards.
+- Fix: valid "$BRANCH_RE" "$branch" with BRANCH_RE defined once in tools/rules.sh, in its own small change first since rules.sh holds merge-gate rules.
+
+### plan_apply's comment says no common record though it writes docs/goals.md
+- Location: tools/run_state.sh:1317
+- Why: two lanes applying goals.md conflict at merge-main. Folded into lane-records.
+- Fix: correct the comment and apply goals.md only in the sprint records change, or name it as the one shared write.
+
+### The search delimiter bytes are written twice
+- Location: carat/use_cases/search/find_match.rb:68; carat/use_cases/search/preview_search.rb:37
+- Why: 47 and 63 for / and ? repeated. Folded into editing-dedup-a.
+- Fix: one domain helper used by both.
+
+### Character classes are bare numbers
+- Location: carat/use_cases/search/find_match.rb:130; Motions.code_class, Walker.char_class, TextObjects.runs
+- Why: 0, 1, 2 compared by hand and blank? re-derives class 0. Folded into editing-dedup-a.
+- Fix: named constants BLANK, OTHER, KEYWORD in Motions, keyword? and blank? built on them.
+
+### Twenty handler files copy the NAMES and DESCRIPTIONS loop
+- Location: carat/use_cases/actions/motion_handler.rb:76, text_object_handler.rb, search_handler.rb, and about 20 more
+- Why: one registration loop copied per kind. Folded into editing-dedup-a.
+- Fix: ActionTable#register_all(names, handler, descriptions).
+
+### Paragraph motions never answer nil
+- Location: carat/domain/motions.rb:542
+- Why: paragraph_forward and paragraph_backward return a position even when the cursor already stands there, against the module contract sentence_forward keeps. Folded into core-correctness-b.
+- Fix: return nil when the target equals the cursor.
+
+### MotionHandler's class comment is garbled
+- Location: carat/use_cases/actions/motion_handler.rb:10
+- Why: "in a visual mode a motion moves the cursor end of the selection" misreads.
+- Fix: "in a visual mode a motion moves the cursor, the moving end of the selection".
+
+### A range alone past the last line gives E16
+- Location: carat/domain/ex_range.rb:51
+- Why: :99 on five lines is refused, but Neovim and docs/compatibility.md move to the last line, E16 only before a command. Folded into core-correctness-b.
+- Fix: clamp the last address in ExecuteEx#go_to, with a row in test/editor_cmdline.rb.
+
+### clamp_cursors skips a hidden slot's kept window
+- Location: carat/domain/tab_list.rb:252
+- Why: a plugin view buffer shortened while its slot is hidden keeps a cursor past its last line until shown again. Folded into core-correctness-b.
+- Fix: also walk each page's kept slot windows, with a case in test/editor_slots.rb.
+
+### GlobalCommand#remember repeats SubstituteLines
+- Location: carat/use_cases/search/global_command.rb:81; carat/use_cases/search/substitute_lines.rb:113
+- Why: the pattern into LastSubstitute and LastSearch, the / register, and the history written twice. Folded into editing-dedup-a.
+- Fix: one shared helper both call.
+
+### revert_to repeats splice's row shifting
+- Location: carat/domain/buffer.rb:653 and 687-689
+- Why: a new per-line layer must be added in two places. Folded into editing-dedup-a.
+- Fix: a private shift_rows(row, removed, inserted) used by both.
+
+### StatusBar requires plugin_api without using it
+- Location: carat/adapters/status_bar.rb:1
+- Why: the only adapter requiring it, naming no PluginApi constant. Folded into ui-code-tidy.
+- Fix: remove the require.
+
+### Four display methods are dead code
+- Location: carat/domain/decoded_line.rb:91 (cells); carat/adapters/painted_rows.rb:107 (syntax_at); carat/domain/frame.rb:129 (clear); carat/plugins/explorer/tree.rb:38 (marked)
+- Why: nothing calls them. Folded into ui-code-tidy.
+- Fix: remove them.
+
+### FramePresenter compares the float key twice in a row
+- Location: carat/adapters/frame_presenter.rb:236
+- Why: same_ints?(@float_key, back.floats) runs twice. Folded into ui-code-tidy.
+- Fix: compute it once into a local.
+
+### A notice box covers the whole row on narrow screens
+- Location: carat/adapters/frame_presenter.rb:460
+- Why: the comment says half the screen, but NOTICE_MIN_WIDTH overrides it below 40 columns and from 8 to 21 columns the box clamps to left 0 across the row. Folded into ui-code-tidy.
+- Fix: cap the width at cols - 2, or correct the comment and the map.
+
+### Cell is a Struct though never changed
+- Location: carat/domain/cell.rb:8
+- Why: an immutable value view, which CLAUDE.md makes a Data subclass. Folded into ui-code-tidy.
+- Fix: make it a Data subclass of code, width, hl.

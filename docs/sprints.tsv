@@ -9,3 +9,4 @@ sprint-6	spinel-untyped-bump-b	5	design-principles,architecture-tidy,winbar-outl
 sprint-7	core-correctness	5	spinel-warnings,mit-license,carat-palette-b,ux-pass,core-correctness	280.0	56.0	4360766	1	check:5/5,quality:4/5,security:5/5,bench:5/5,gates:5/5,ci:4/4
 sprint-8	sprint-tidy	5	brief-only-relay,ci-time-tidy,ci-time-tidy-b,scout-focus,sprint-tidy	212.0	42.4	4101144	0	check:5/5,quality:3/5,security:5/5,bench:5/5,ci:5/5,gates:5/5
 sprint-9	spinel-update	5	markdown-reading-a,ruby-structure-check,git-signs-status-a,review-coverage-b,spinel-update	402.0	80.4	4632402	0	check:5/5,quality:2/5,security:5/5,bench:5/5,ci:4/4,gates:5/5
+sprint-10	markdown-reading-b	6	backlog-lane-split,rework-guards,backlog-lane-c,parallel-lanes,parallel-lanes-b,markdown-reading-b	414.0	69.0	6676133	1	check:6/6,quality:1/6,security:6/6,bench:6/6,ci:5/6,gates:4/6
