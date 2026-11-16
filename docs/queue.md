@@ -4,12 +4,11 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 8
 
-The user-approved exception (Guide): 4 items left, 2 pipeline; the marker `brief-only-relay` made docs-lint honor, applied in the same commit as this queue.
+The user-approved exception (Guide): 3 items left, 1 pipeline; the marker `brief-only-relay` made docs-lint honor.
 
-1. `scout-focus` (T1 pipeline retrospective, estimated medium, pushed back 5): scouts 51,496 of 127,096 output (40.5%) and 62 of 166 calls at #140 against implement 30,295, the packs counting 27 calls of their own; 18.7% at #135, 32.1% at #134, 20.9% at #137 (a root LICENSE in no map area), against 472 and 1,397 at #130, #133 (`.claude/workflows/deliver-change.js:994`, `.claude/agents/scout.md` step 8). Fix outline: a scout reads only what the change's locations need; no scout for a change in no map area. Accepted when three code changes spend under 15% of output, under the implement phase, and fewer calls than the contributor on scouts, recorded calls matching the packs' within 5, a change in no map area starts no scout or spends under 2%, first passes unchanged. Backlog: "## The scout's step 8 says every Rules line names sections".
-2. `sprint-tidy` (T1 pipeline defects, estimated medium, pushed back 1, split at its start): a brief fixing the order still plans (#135 plan 14.9% of output), a resume whose brief holds the main session's decisions starts a full planner (#136 41,075 of 242,766, 16.9%, 20 calls); history skips a never-merged row (`tools/run_state.sh:1372`); review-due counts a user-approved exception toward a sprint's five. Fix outline: plan-needed sees a fixed order, history keeps unmerged rows out, review-due skips marked items. Accepted when each fails in a case before and passes after. Backlog: none.
-3. `spinel-notice` (T2 user request, docs, estimated small, the user-approved exception): `tools/spinel/` carries a header generated from Spinel, but the credit at `README.md:212` names the MIT license without its copyright and permission notice (#137 advisory 2). Fix outline: a LICENSE file in `tools/spinel/` with Spinel's MIT copyright and permission notice, the copyright line without the email, and the README credit pointing at it; no URL, no email. Accepted when that file holds the notice, the README credit names it, and docs-lint and gates pass. Backlog: "### Spinel's MIT notice does not travel with the vendored generated header (README.md:212)".
-4. `markdown-reading-a` (T2 user now-request, part a, estimated medium, pushed back 5): no key shows a Markdown buffer as readable text (measure, headings, lists, quotes); `carat/domain/markdown_text.rb:27` draws box cells under `option.icons ascii`, against `README.md:171`; its module comment at line 10 omits the spans `parse` keeps. Fix outline: a bound toggle drawing the buffer as reading text within the icon set. Accepted when snapshots show the view and the toggle, no escape byte or ascii-set box cell is drawn, an over-cap document stays bounded, and `docs/actions.md` has the row. Backlog: "## The MarkdownText comment still says plain rows".
+1. `sprint-tidy` (T1 pipeline defects, estimated medium, pushed back 1, split at its start): a brief fixing the order still plans (#135 plan 14.9% of output), a resume whose brief holds the main session's decisions starts a full planner (#136 41,075 of 242,766, 16.9%, 20 calls); history skips a never-merged row (`tools/run_state.sh:1372`); review-due counts a user-approved exception toward a sprint's five. Fix outline: plan-needed sees a fixed order, history keeps unmerged rows out, review-due skips marked items. Accepted when each fails in a case before and passes after. Backlog: none.
+2. `spinel-notice` (T2 user request, docs, estimated small, the user-approved exception): `tools/spinel/` carries a header generated from Spinel, but the credit at `README.md:212` names the MIT license without its copyright and permission notice (#137 advisory 2). Fix outline: a LICENSE file in `tools/spinel/` with Spinel's MIT copyright and permission notice, the copyright line without the email, and the README credit pointing at it; no URL, no email. Accepted when that file holds the notice, the README credit names it, and docs-lint and gates pass. Backlog: "### Spinel's MIT notice does not travel with the vendored generated header (README.md:212)".
+3. `markdown-reading-a` (T2 user now-request, part a, estimated medium, pushed back 5): no key shows a Markdown buffer as readable text (measure, headings, lists, quotes); `carat/domain/markdown_text.rb:27` draws box cells under `option.icons ascii`, against `README.md:171`; its module comment at line 10 omits the spans `parse` keeps. Fix outline: a bound toggle drawing the buffer as reading text within the icon set. Accepted when snapshots show the view and the toggle, no escape byte or ascii-set box cell is drawn, an over-cap document stays bounded, and `docs/actions.md` has the row. Backlog: "## The MarkdownText comment still says plain rows".
 
 ## Pool
 
@@ -26,7 +25,7 @@ The user-approved exception (Guide): 4 items left, 2 pipeline; the marker `brief
 11. `language-any` (T2 user request, estimated medium, S11): `language.<name>.lsp` lines.
 12. `vim-macros-marks` (T2 user request, estimated medium, S11).
 13. `vim-case-increment` (T2 user request, estimated medium, S11).
-14. `own-line-advisories` (T1 pipeline, estimated medium, S11): advisories on a change's own lines reach the backlog (#134 6 of 6, #133 3 of 3, #139 5 of 5); #138 package 20 of 30 calls redoing an append; #140 lost 1 of 4 handed findings. Accepted when every handed finding appears in the merged backlog diff as a ### entry with Location, Why, Fix, checked by a case.
+14. `own-line-advisories` (T1 pipeline, estimated medium, S11): advisories on a change's own lines reach the backlog (#134 6 of 6, #133 3 of 3, #139 5 of 5, #143 8 of 8, 4 one-line nits on its own lines; reviews 24.4% of #143 output); #138 package 20 of 30 calls redoing an append; #140 lost 1 of 4 handed findings. Accepted when every handed finding appears in the merged backlog diff as a ### entry with Location, Why, Fix, checked by a case.
 15. `gateway-split-b` (T5 architecture-review M1, estimated medium, S11).
 16. `vim-line-commands` (T2 user request, estimated medium, S12).
 17. `vim-folds` (T2 user request, estimated medium, S12).
@@ -36,7 +35,7 @@ The user-approved exception (Guide): 4 items left, 2 pipeline; the marker `brief
 21. `plugin-protocol-a` (T5 user-scheduled, estimated medium, S13).
 22. `formatting` (T5 roadmap 14, estimated medium, S13).
 23. `ux-pass-2` (T2 user now-request, estimated medium, S13).
-24. `merge-gate-integrity` (T1 pipeline defect, estimated medium, pushed back 14, S13 by the guide): #140 merge 10,307 output, 14 calls over its cap of 12, 4 waiting on a 6.3 min CI; #142 13 calls, 6 waiting on an 8.2 min CI; 4 of the last 10 merges over 12 calls; #136 stored d180d78de192 for d180d78de199; #142 notes and record line name the head 97e55861412b, main ca36ad587cf9 (#142 retro). Accepted when 5 green merges stay within the cap, wait in at most 2 calls, spend under 6,000, and over 3 runs the notes, record line, and run state hold main's squash commit, verified in git before it is stored.
+24. `merge-gate-integrity` (T1 pipeline defect, estimated medium, pushed back 14, S13 by the guide): #140 merge 10,307 output, 14 calls over its cap of 12, 4 waiting on a 6.3 min CI; #142 13 calls, 6 waiting on an 8.2 min CI; #143 12 calls, 4 waiting on a 7.0 min CI; 4 of the last 10 merges over 12 calls; #136 stored d180d78de192 for d180d78de199; #142 stored the head 97e55861412b for main's ca36ad587cf9, #143 f39c2857fba2 for 7b03a5e0080c (retros). Accepted when 5 green merges stay within the cap, wait in at most 2 calls, spend under 6,000, and over 3 runs the notes, record line, and run state hold main's squash commit, verified in git before it is stored.
 25. `language-followers` (T5 architecture-review H2, estimated medium, S13).
 26. `plugin-protocol-b` (T5 user-scheduled, estimated medium, S14).
 27. `release-build` (T5 roadmap 15, estimated medium, S14).
@@ -64,34 +63,35 @@ The user-approved exception (Guide): 4 items left, 2 pipeline; the marker `brief
 49. `html-syntax` (T5 user request, estimated medium, pushed back 6).
 50. `sprint-security` (T1 pipeline security, estimated medium, pushed back 3): Medium (7) `sprint-planning.js:121`.
 51. `content-gate-gaps` (T1 security, estimated medium, pushed back 15): Medium (7) `gates.sh:224`.
-52. `ci-scope-quoting` (T1 pipeline, Low (6), estimated small, pushed back 3): `tools/ci_scope.sh:95`, `:78`; #142 advisories: the tests-only carry runs before the path scope, so a scoped dev-build is carried and test-run's smoke fails falsely (`tools/run_state.sh:503`); `tools/ci_scope.sh:31` overlong, names two output lines of three. Accepted when a case fails before and passes after each.
-53. `spec-tests-first` (T1 retrospective, estimated medium, pushed back 3): quality 49/100 first pass. Accepted above 60% over 10 changes.
-54. `open-pr-refusals` (T1 security Lows, estimated medium, pushed back 3).
-55. `run-resume` (T1 retrospective, estimated medium, pushed back 17): #141 `.claude/workflows/deliver-change.js:967` builds the resume brief before the planner runs, so it misses `build/plan/queue.md`.
-56. `check-runner-safety` (T1 security, estimated medium, pushed back 15): Medium (6) `run_state.sh:571`; `toolchain-clean`.
-57. `bidi-controls` (T3 security Lows, estimated small, pushed back 11).
-58. `ci-hardening` (T3 with T6, estimated medium, pushed back 23): tag-pinned actions, `open-pr.yml:46`.
-59. `project-config-guards` (T3, estimated medium, pushed back 23): a cloned `.caratrc` binds a write (`config.rb:221`).
-60. `insert-copy` (T4, estimated small, pushed back 12).
-61. `bench-scenarios` (T4 tests, estimated small, pushed back 1): `bench/run.sh:69`.
-62. `file-access-tidy` (T4 with T6, estimated medium, pushed back 26): `open_file.rb:62`.
-63. `architecture-docs` (T6, estimated small, pushed back 1): floats (M4); `wrap`, `clipboard`.
-64. `periodic-blockers-b` (T6 periodic quality, estimated medium, pushed back 8).
-65. `ex-handlers-tidy` (T6 sweep, estimated medium): `history_command_handler.rb:44`.
-66. `editing-counts` (T6, estimated medium, pushed back 11).
-67. `hover-tidy` (T6, estimated medium, pushed back 13).
-68. `signature-tidy` (T6, estimated medium, pushed back 12).
-69. `slots-tidy` (T6, estimated medium, pushed back 12).
-70. `completion-tidy` (T6, estimated medium, pushed back 14).
-71. `completion-docs-tidy` (T6, estimated medium, pushed back 14).
-72. `buffer-list-tidy` (T6, estimated medium, pushed back 16).
-73. `definitions-tidy` (T6, estimated medium, pushed back 11).
-74. `plugin-host-tidy` (T6 sweep, estimated medium, pushed back 1): `plugin_router.rb:40`.
-75. `input-core-tidy` (T6 sweep, estimated medium, pushed back 1): `handle_key.rb:253`.
-76. `core-correctness-b` (T6 sweep, estimated small): #140's own lines: a reverted edit brings deleted marked rows back unmarked for `:g` (`carat/domain/buffer.rb:656`), `carat/domain/keymap.rb:348` walks the trie twice, timeout follow-ups beyond hover untested (`carat/use_cases/handle_key.rb:198`).
-77. `ui-code-tidy` (T6 sweep, estimated medium, pushed back 1): `carat/domain/themes.rb:470`, `test/domain_theme.rb:453`, `:376`, `:257`.
-78. `tools-docs-tidy` (T6 sweep, estimated medium, pushed back 1): `docs/examples.md:25`, `:31`; `Makefile:303`; #136's advisories (`Makefile:317`, `:87`, `tools/spinel_warnings.sh:42`); warnings printed twice (`Makefile:254`); section 10 (`docs/architecture.md:351`); the two `make types` entries; #139's 5 advisories; a standalone `test/domain_global.rb` compile; #141's advisories (`tools/tools_test.sh:1829`, `:2718`, `tools/docs_lint.sh:157`, `CLAUDE.md:204`); #142's (`tools/run_state.sh:461`, `tools/tools_test.sh:1862`).
-79. `docs-index` (T6, estimated medium, pushed back 21, split at its start).
+52. `ci-scope-quoting` (T1 pipeline, Low (6), estimated small, pushed back 3): `tools/ci_scope.sh:95`, `:78`; #142 advisories: the tests-only carry runs before the path scope, so a scoped dev-build is carried and test-run's smoke fails falsely (`tools/run_state.sh:503`); `tools/ci_scope.sh:31` overlong, names two output lines of three, and leaves an orphan line (#143 advisory 6). Accepted when a case fails before and passes after each.
+53. `ci-workflow-tidy` (T1 pipeline advisories, estimated small): #143 advisories 1, 2, 3, 7, 8: the secs filter of `tools/run_state.sh:1250` no test runs; the compile cache key written three times (`.github/workflows/main.yml:52`, `.github/workflows/ci.yml`) and the check steps copied (`main.yml:95`), so a drift goes unseen; the probe keys on Ruby sources only, so a `Makefile` or `tools/metrics.sh` change keeps a stale measurement (`main.yml:47`); a redundant ref test (`main.yml:151`). Accepted when a case fails before and passes after each, the key and the steps checked equal in both workflows.
+54. `spec-tests-first` (T1 retrospective, estimated medium, pushed back 3): quality 49/100 first pass. Accepted above 60% over 10 changes.
+55. `open-pr-refusals` (T1 security Lows, estimated medium, pushed back 3).
+56. `run-resume` (T1 retrospective, estimated medium, pushed back 17): #141 `.claude/workflows/deliver-change.js:967` builds the resume brief before the planner runs, so it misses `build/plan/queue.md`.
+57. `check-runner-safety` (T1 security, estimated medium, pushed back 15): Medium (6) `run_state.sh:571`; `toolchain-clean`.
+58. `bidi-controls` (T3 security Lows, estimated small, pushed back 11).
+59. `ci-hardening` (T3 with T6, estimated medium, pushed back 23): tag-pinned actions, `open-pr.yml:46`.
+60. `project-config-guards` (T3, estimated medium, pushed back 23): a cloned `.caratrc` binds a write (`config.rb:221`).
+61. `insert-copy` (T4, estimated small, pushed back 12).
+62. `bench-scenarios` (T4 tests, estimated small, pushed back 1): `bench/run.sh:69`.
+63. `file-access-tidy` (T4 with T6, estimated medium, pushed back 26): `open_file.rb:62`.
+64. `architecture-docs` (T6, estimated small, pushed back 1): floats (M4); `wrap`, `clipboard`.
+65. `periodic-blockers-b` (T6 periodic quality, estimated medium, pushed back 8).
+66. `ex-handlers-tidy` (T6 sweep, estimated medium): `history_command_handler.rb:44`.
+67. `editing-counts` (T6, estimated medium, pushed back 11).
+68. `hover-tidy` (T6, estimated medium, pushed back 13).
+69. `signature-tidy` (T6, estimated medium, pushed back 12).
+70. `slots-tidy` (T6, estimated medium, pushed back 12).
+71. `completion-tidy` (T6, estimated medium, pushed back 14).
+72. `completion-docs-tidy` (T6, estimated medium, pushed back 14).
+73. `buffer-list-tidy` (T6, estimated medium, pushed back 16).
+74. `definitions-tidy` (T6, estimated medium, pushed back 11).
+75. `plugin-host-tidy` (T6 sweep, estimated medium, pushed back 1): `plugin_router.rb:40`.
+76. `input-core-tidy` (T6 sweep, estimated medium, pushed back 1): `handle_key.rb:253`.
+77. `core-correctness-b` (T6 sweep, estimated small): #140's own lines: a reverted edit brings deleted marked rows back unmarked for `:g` (`carat/domain/buffer.rb:656`), `carat/domain/keymap.rb:348` walks the trie twice, timeout follow-ups beyond hover untested (`carat/use_cases/handle_key.rb:198`).
+78. `ui-code-tidy` (T6 sweep, estimated medium, pushed back 1): `carat/domain/themes.rb:470`, `test/domain_theme.rb:453`, `:376`, `:257`.
+79. `tools-docs-tidy` (T6 sweep, estimated medium, pushed back 1): `docs/examples.md:25`, `:31`; `Makefile:303`; #136's advisories (`Makefile:317`, `:87`, `tools/spinel_warnings.sh:42`); warnings printed twice (`Makefile:254`); section 10 (`docs/architecture.md:351`); the two `make types` entries; #139's 5 advisories; a standalone `test/domain_global.rb` compile; #141's advisories (`tools/tools_test.sh:1829`, `:2718`, `tools/docs_lint.sh:157`, `CLAUDE.md:204`); #142's (`tools/run_state.sh:461`, `tools/tools_test.sh:1862`); #143's (`README.md:189` and `CLAUDE.md` on the release build only on main, `Makefile:122`).
+80. `docs-index` (T6, estimated medium, pushed back 21, split at its start).
 
 ## Guide
 
@@ -103,10 +103,12 @@ The user's guide (2026-11-15), security first and review findings adjusting it:
 
 ## Decisions
 
-- `ci-time-tidy-b` (T1 pipeline defects, part b), this change, estimated medium: 3 fixes (the two workflows, the equal-tree main push, the ci-stages fractional step), under the about-four limit; rows ci-time-tidy 791,970 total in 49 min, brief-only-relay 677,866 in 33 min, under the 1.2M medium budget; #140 release build 63 s, smoke 23 s, compile 84 s. It covers "## CI time doubled after the Spinel pin bump".
-- Removed from Sprint 8, nothing reordered (brief); Sprint 8 holds 4 items, 2 pipeline (T1), 2 T2, under the marker line.
-- review-due: this change is Sprint 8's third merge after #141, #142; 5 reached at `sprint-tidy`, leaving `spinel-notice` and `markdown-reading-a` to the sprint-9 plan.
-- #142 quality advisories (T1 and T6): 2 (a false smoke failure, `tools/run_state.sh:503`) and 3 (`tools/ci_scope.sh:31`) into `ci-scope-quoting`, pool 52; 1 and 4 into `tools-docs-tidy`, pool 78; all 4 already appended by #142's package step.
-- #142 retro (T1): the record line names the head 97e55861412b, not main's ca36ad587cf9; merge 13 calls over its cap of 12, 6 waiting on an 8.2 min CI: into `merge-gate-integrity`, pool 24, not moved (brief).
-- Security: none open at 8 or above; #142 0/0/0 at 5a8c1d877f1b; pooled Mediums (7) `sprint-security`, `content-gate-gaps`, (6) `check-runner-safety`, (5) `gate-object-pin`.
-- Pace: quality 50/101 first pass, ci 97/103, 86 rework rounds over 101 changes; #142 791,970 total, within medium.
+- `scout-focus` (T1 pipeline retrospective), this change, estimated medium: 2 fixes plus the recorded-calls match, under the about-four limit; pipeline rows ci-time-tidy 791,970 total in 49 min, ci-time-tidy-b 784,166 in 40 min, brief-only-relay 677,866 in 33 min, under the 1.2M medium budget. It covers "## The scout's step 8 says every Rules line names sections".
+- Removed from Sprint 8, nothing reordered (brief); Sprint 8 holds 3 items, 1 pipeline (T1), 2 T2, under the marker line.
+- review-due: this change is Sprint 8's fourth merge after #141, #142, #143; 5 reached at `sprint-tidy`, leaving `spinel-notice` and `markdown-reading-a` to the sprint-9 plan.
+- #143 retro scout-focus (T1): scout 21,704 of 116,974 output (18.6%), 19 of 117 calls, 6 pack gaps unused: evidence for this change; its 5% target dropped, the brief fixing the acceptance at 15%.
+- #143 retro own-line-advisories (T1): 8 of 8 advisories appended, 4 on its own lines; reviews 24.4% of output: into pool 14, not moved.
+- #143 retro merge-gate-integrity (T1): f39c2857fba2 stored for main's 7b03a5e0080c; merge 12 calls at its cap of 12, 4 waiting on a 7.0 min CI: into pool 24, not moved (brief).
+- #143 quality advisories (T1 and T6, all 8 appended by its package step): 1, 2, 3, 7, 8 into the new `ci-workflow-tidy`, pool 53, one CI domain; 6 into `ci-scope-quoting`, pool 52; 4 and 5 into `tools-docs-tidy`, pool 79.
+- Security: none open at 8 or above; #143 0/0/0 at 56c291695205; pooled Mediums (7) `sprint-security`, `content-gate-gaps`, (6) `check-runner-safety`, (5) `gate-object-pin`.
+- Pace: quality 51/102 first pass, ci 98/104, 86 rework rounds over 102 changes; #143 784,166 total in 40 min, within medium.
