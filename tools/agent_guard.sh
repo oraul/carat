@@ -598,8 +598,8 @@ run_state_form() {
     merger:show|merger:status|merger:get|merger:trusted|merger:metric) ;;
     contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history|contributor:groom) ;;
     contributor:push)
-      [ $# -ge 2 ] && [ $# -le 3 ] && matches "$2" "$CHANGE_NAME" && { [ $# -eq 2 ] || [ "$3" = --ci-fix ]; } ||
-        refuse "tools/run_state.sh push other than CHANGE [--ci-fix]" ;;
+      [ $# -ge 2 ] && [ $# -le 3 ] && matches "$2" "$CHANGE_NAME" && { [ $# -eq 2 ] || [ "$3" = --ci-fix ] || [ "$3" = --review-fix ]; } ||
+        refuse "tools/run_state.sh push other than CHANGE [--ci-fix | --review-fix]" ;;
     merger:set|contributor:set)
       [ $# -eq 4 ] && matches "$2" "$CHANGE_NAME" || refuse "tools/run_state.sh set other than CHANGE KEY VALUE"
       case "$profile:$3" in

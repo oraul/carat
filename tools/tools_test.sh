@@ -871,9 +871,13 @@ state set history pr 9 > /dev/null
 state set history pushes 1 > /dev/null
 state set history gates_failed 1 > /dev/null
 expect "run_state: pending names a merged change without a row" 0 "^history$" state pending
+expect "run_state: init resumes a merged run the close has not closed" 0 "resuming history" state init history chore/history
 expect "run_state: history appends the row" 0 "appended history" state history
 # A delivery never reuses a merged name; an unmerged run resumes, and the
-# sprint and review run states at main keep resuming (rework-guards).
+# sprint and review run states at main keep resuming, and so does (above) a merged
+# run the close has not closed, whose restart reaches the retrospective
+# (rework-guards).
+state phase history retro > /dev/null
 expect "run_state: init refuses a change name a run state recorded merged" 1 "refused: history merged as [0-9a-f]+; take a unique name" state init history chore/history
 expect "run_state: init at main resumes a merged sprint run state" 0 "resuming history" state init history main
 mv build/pipeline/history.json "$work/history.json"
@@ -1667,6 +1671,8 @@ expect "guard: the contributor refuses open_pr write of another change" 2 "tools
 expect "guard: the contributor refuses open_pr wait past a number" 2 "tools/open_pr.sh wait other than" guard contributor 'sh tools/open_pr.sh wait c soon'
 expect "guard: the merger refuses open_pr" 2 "tools/open_pr.sh" guard merger 'sh tools/open_pr.sh wait c'
 expect "guard: contributor pushes a CI fix" 0 "^$" guard contributor 'sh tools/run_state.sh push c --ci-fix'
+expect "guard: contributor pushes a resume's review fix" 0 "^$" guard contributor 'sh tools/run_state.sh push c --review-fix'
+expect "guard: contributor refuses a push of another kind" 2 "push other than CHANGE \[--ci-fix [|] --review-fix\]" guard contributor 'sh tools/run_state.sh push c --force'
 expect "guard: contributor merges main" 0 "^$" guard contributor 'git fetch -q origin && git merge --no-edit origin/main'
 expect "guard: contributor moves and removes files" 0 "^$" guard contributor 'mkdir -p tools/x && git mv a.sh tools/x/a.sh && rm -f tmp/x && chmod +x tools/x/a.sh && touch tmp/y'
 expect "guard: contributor reads lines and the tree" 0 "^$" guard contributor 'cd /w && sed -n 1,70p tools/x.sh; sed -n \"300,\\$p\" docs/backlog.md; find tools -name x.sh; git status --short | head'

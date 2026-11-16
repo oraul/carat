@@ -5,10 +5,11 @@
 - [x] 1.1 `tools/run_state.sh` push `--review-fix` (a recorded push other than HEAD, once per run, `review_fixes`); proved by "run_state: a review fix push needs a recorded push other than the head", "run_state: a review fix allows one more push", and "run_state: a second review fix push is refused" in `tools/tools_test.sh`
 - [x] 1.2 `tools/gates.sh` `pushes` counts the review fix; proved by "gates: pushes allow one review fix" and "gates: pushes refuse a second review fix"
 - [x] 1.3 `.claude/workflows/deliver-change.js`: `resumeFix`, the blocked step in `rounds`, the whole-diff security review in the round, and the `--review-fix` push before the merger; proved by "workflow: a resume past the push with a new blocking quality finding runs one fix round", "workflow: a second review fix round is refused", "workflow: a resume's failed check or benchmark gets no fix round", "workflow: the review fix round pushes once more", "workflow: the review fix round pushes with --review-fix", and "workflow: the review fix round reviews security over the whole diff"
+- [x] 1.4 `tools/agent_guard.sh` lets the contributor run `push CHANGE --review-fix`; proved by "guard: contributor pushes a resume's review fix" and "guard: contributor refuses a push of another kind"
 
 ## 2. Merged names
 
-- [x] 2.1 `tools/run_state.sh` init refuses a merged change name on a branch other than main; proved by "run_state: init refuses a change name a run state recorded merged", "run_state: init refuses a change name a lane history row holds", "run_state: init resumes an unmerged run of the name", and "run_state: init at main resumes a merged sprint run state"; the resume prompt's stop proved by "workflow: the resume start stops on a refused init"
+- [x] 2.1 `tools/run_state.sh` init refuses a merged change name on a branch other than main; proved by "run_state: init refuses a change name a run state recorded merged", "run_state: init refuses a change name a lane history row holds", "run_state: init resumes an unmerged run of the name", and "run_state: init at main resumes a merged sprint run state", while a merged run the close has not closed (no `phase.retro`) resumes so a restart after the merge reaches the retrospective, proved by "run_state: init resumes a merged run the close has not closed"; the resume prompt's stop proved by "workflow: the resume start stops on a refused init"
 
 ## 3. Agent rules and docs
 

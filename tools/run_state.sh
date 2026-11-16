@@ -2067,10 +2067,12 @@ case "$command" in
     [ $# -eq 1 ] || usage
     mkdir -p "$state_dir"
     # A delivery never reuses a merged name: a recurring change takes a
-    # unique one (spinel-bump-<7-char commit>). The sprint and review run
-    # states, at main, set merged after their init and resume by it.
+    # unique one (spinel-bump-<7-char commit>). A merged run the close has
+    # not closed (no phase.retro) resumes, so a restart after the merge
+    # reaches its retrospective. The sprint and review run states, at main,
+    # set merged after their init and resume by it.
     if [ "$1" != main ]; then
-      done_at=$([ ! -f "$(state_file)" ] || merged_commit)
+      done_at=$([ ! -f "$(state_file)" ] || [ -z "$(read_key phase.retro)" ] || merged_commit)
       [ -z "$done_at" ] || die "init: refused: $change merged as $done_at; take a unique name, such as $change-<7-char commit>"
       ! has_row "$change" || die "init: refused: $change has a lane history row, so it merged; take a unique name, such as $change-<7-char commit>"
     fi
