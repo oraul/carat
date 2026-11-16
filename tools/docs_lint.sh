@@ -13,12 +13,15 @@
 #             line that continues the line above it, as GitHub would show it
 #   paths     a backticked path under a tracked root names a file or directory
 #             that exists, unless it holds a placeholder
-#   queue     every numbered item of docs/queue.md names a tier T0 to T6 and
+#   queue     every numbered item of the lane queues, docs/queue-feature.md
+#             and docs/queue-backlog.md, names a tier T0 to T6 and
 #             "estimated small", "estimated medium", or "estimated large";
 #             the items under a "## Sprint" heading, up to the next "## "
-#             heading, are 0 to 5, at most one of them saying "pipeline"
-#             in its parenthesis without T0, unless a line of that section
-#             begins "The user-approved exception"
+#             heading, are 0 to 3 in the feature lane and 0 to 2 in the
+#             backlog lane, at most one of them saying "pipeline" in its
+#             parenthesis without T0, and that one a defect, unless a line
+#             of that section begins "The user-approved exception"; both
+#             files together within QUEUE_BUDGET
 set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
