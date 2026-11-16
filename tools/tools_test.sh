@@ -1354,7 +1354,7 @@ mkdir -p build/plan
 echo sprint-1 > build/plan/sprint
 state init sprint-1 main > /dev/null 2>&1
 state review sprint-1 periodic-security pass "diff blocking=0" > /dev/null
-state groom > /dev/null
+state groom sprint-1-records > /dev/null
 expect "run_state: the groomed sprint row ends at the fifth counted change in merge order, its exception inside" 0 "^sprint-1 e5 6 e1,e2,e3,e4,x1,e5 " sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
 echo x2 >> README.md
 commit "feat: x2"
@@ -1395,12 +1395,12 @@ expect "run_state: review-due asks for the sweep in an even sprint" 0 "^due: spr
 mkdir -p build/plan
 echo sprint-2 > build/plan/sprint
 expect "run_state: review-due stays due while the waiting plan's sprint has no security review" 0 "^due: sprint-2 has 5 changes merged" state review-due
-expect "run_state: groom holds a plan whose sprint has no security review" 0 "^groom: the plan of sprint-2 waits for its security review [(]none[)]" state groom
+expect "run_state: groom holds a plan whose sprint has no security review" 0 "^groom: the plan of sprint-2 waits for its security review [(]none[)]" state groom sprint-2-records
 state init sprint-2 main > /dev/null 2>&1
 state review sprint-2 periodic-security not-run "no result" > /dev/null
 expect "run_state: review-due stays due while the sprint's security review did not run" 0 "^due: sprint-2 has 5 changes merged" state review-due
 state review sprint-2 periodic-security partial "diff not_reviewed=1" > /dev/null
-expect "run_state: groom holds a plan whose sprint security review is partial" 0 "^groom: the plan of sprint-2 waits for its security review [(]partial[)]" state groom
+expect "run_state: groom holds a plan whose sprint security review is partial" 0 "^groom: the plan of sprint-2 waits for its security review [(]partial[)]" state groom sprint-2-records
 state review sprint-2 periodic-security pass "diff blocking=0" > /dev/null
 expect "run_state: review-due is not due while the sprint plan waits" 1 "^not due: sprint-2 is planned" state review-due
 printf '# Queue\n\n## Sprint 3\n\n1. `b6` (T5, estimated small): six.\n' > build/plan/queue-backlog.md
@@ -1450,21 +1450,28 @@ printf '### Fc finding at tools/b.sh:9\n' > docs/findings/fc.md
 expect "run_state: backlog-dups names a location a backlog and a findings-file heading share" 0 "^tools/b[.]sh:9: ### Kept entry at tools/b[.]sh:9 [|] ### Fc finding at tools/b[.]sh:9$" sh -c "sh '$here/run_state.sh' backlog-dups | grep tools/b"
 rm docs/findings/fc.md
 printf 'duplicate ## x security Low at tools/c.sh:5\n' > build/plan/groom.txt
-expect "run_state: groom keeps a disputed security entry" 1 "a security entry leaves only by" state groom
+expect "run_state: groom keeps a disputed security entry" 1 "a security entry leaves only by" state groom sprint-2-records
 printf 'duplicate ## Findings of z after its package step\n' > build/plan/groom.txt
-expect "run_state: groom keeps a security finding inside a group" 1 "a security entry leaves only by" state groom
+expect "run_state: groom keeps a security finding inside a group" 1 "a security entry leaves only by" state groom sprint-2-records
 printf 'listed b1 ## no such heading\n' > build/plan/groom.txt
-expect "run_state: groom refuses an unknown heading and writes nothing" 1 "not a heading line" state groom
+expect "run_state: groom refuses an unknown heading and writes nothing" 1 "not a heading line" state groom sprint-2-records
 expect "run_state: a refused groom leaves the backlog" 0 "" cmp docs/backlog.md backlog.before
 printf 'duplicate ### Kept entry at tools/b.sh:9\n' > build/plan/groom.txt
-expect "run_state: groom refuses a duplicate alone at its location" 1 "no other heading names the location" state groom
+expect "run_state: groom refuses a duplicate alone at its location" 1 "no other heading names the location" state groom sprint-2-records
 printf 'listed nope ## y quality advisory at tools/a.sh:3\n' > build/plan/groom.txt
-expect "run_state: groom refuses a listed change that is not archived" 1 "nope is not an archived change" state groom
+expect "run_state: groom refuses a listed change that is not archived" 1 "nope is not an archived change" state groom sprint-2-records
 printf 'fixed 0123456789ab ## x security Low at tools/c.sh:5\n' > build/plan/groom.txt
-expect "run_state: groom refuses a fixing commit not in HEAD" 1 "is not a commit of HEAD" state groom
+expect "run_state: groom refuses a fixing commit not in HEAD" 1 "is not a commit of HEAD" state groom sprint-2-records
+# The fold and the sprint row are written once, by the sprint's records
+# change that sprint-planning delivers, never by a delivery's package step
+# (parallel-lanes).
+cp docs/sprints.tsv "$work/sprints.before"
+expect "run_state: groom refuses a delivery's change, leaving the plan to its records change" 1 "applied once, by its records change sprint-2-records, which sprint-planning delivers; not by b6" state groom b6
+expect "run_state: groom refuses a run with no change" 1 "not by a run with no change" state groom
+expect "run_state: a groom a delivery ran writes neither the fold nor the sprint row" 0 "" sh -c "cmp docs/backlog.md backlog.before && cmp docs/sprints.tsv '$work/sprints.before' && [ -f build/plan/sprint ]"
 printf 'listed b1 ## y quality advisory at tools/a.sh:3\nfixed %s ## x security Low at tools/c.sh:5\nduplicate ## w quality advisory at tools/e.sh:2\n' "$fixer" > build/plan/groom.txt
 printf '\n## Merged entry at tools/a.sh:3\n\n- Why: both names.\n' > build/plan/groomed.md
-expect "run_state: groom applies the sprint plan" 0 "^groom: applied sprint-2: 3 headings groomed, 2 findings file[(]s[)] folded" state groom
+expect "run_state: groom applies the sprint plan" 0 "^groom: applied sprint-2: 3 headings groomed, 2 findings file[(]s[)] folded" state groom sprint-2-records
 expect "run_state: groom removes a merged item's listed headings and no others" 0 "^## x quality advisory at tools/a[.]sh:3,### Kept entry at tools/b[.]sh:9,## Findings of z after its package step,## w quality advisory at tools/e[.]sh:2,### Fa finding at tools/f[.]sh:1,### Fb finding at tools/g[.]sh:2,## Merged entry at tools/a[.]sh:3,$" sh -c "grep '^##' docs/backlog.md | tr '\n' ','"
 expect "run_state: groom folds two changes' findings into the backlog and removes their files" 0 "^2 0$" sh -c "echo \$(grep -c -e '- Why: [ab][.]' docs/backlog.md) \$(ls docs/findings | grep -c .)"
 expect "run_state: groom removes a security entry with its fixing commit" 1 "" grep -q quoting docs/backlog.md
@@ -1485,7 +1492,53 @@ rm -f build/plan/sprint build/pipeline/pkg.json
 state init sprint-1 main > /dev/null 2>&1
 state review sprint-1 periodic-security blocked "diff blocking=1" > /dev/null
 expect "run_state: the sprint row counts budgets and first passes" 0 "^sprint-1 a5 5 a1,a2,a3,a4,a5 180[.]0 36[.]0 4200000 1 check:4/5,quality:3/4$" \
-  sh -c "printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv; echo sprint-1 > build/plan/sprint; rm -f build/plan/groom.txt build/plan/groomed.md; sh '$here/run_state.sh' groom > /dev/null; tail -1 docs/sprints.tsv | tr '\t' ' '"
+  sh -c "printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv; echo sprint-1 > build/plan/sprint; rm -f build/plan/groom.txt build/plan/groomed.md; sh '$here/run_state.sh' groom sprint-1-records > /dev/null; tail -1 docs/sprints.tsv | tr '\t' ' '"
+
+# Two lanes' package steps (parallel-lanes): each delivery's planner writes
+# its own plan directory, plan-apply copies only its lane's queue, and
+# history appends only its lane's rows, so a feature branch and a backlog
+# branch from one base share no record file and merge cleanly.
+fresh lanes
+printf '# Queue\n\n1. `f2` (T3, estimated small): two.\n' > docs/queue-feature.md
+printf '# Queue\n\n1. `b2` (T4, estimated small): two.\n2. `zz` (T4, estimated small): later.\n' > docs/queue-backlog.md
+commit "docs: the lane queues"
+state init f1 feature/f1 > /dev/null
+state init b1 chore/b1 > /dev/null
+echo f1 > f1.txt && commit "feat: f1" && state set f1 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+echo b1 > b1.txt && commit "chore: b1" && state set b1 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+state init f2 feature/f2 > /dev/null
+state init b2 chore/b2 > /dev/null
+state init b3 chore/b3 > /dev/null
+expect "run_state: lane takes an unmerged change's lane from the queue naming it" 0 "^feature backlog$" sh -c "echo \$(sh '$here/run_state.sh' lane f2) \$(sh '$here/run_state.sh' lane b2)"
+expect "run_state: lane takes an unqueued change's lane from its branch" 0 "^backlog$" state lane b3
+mkdir -p build/plan/f2 build/plan/b2
+printf '# Queue\n\n1. `f3` (T3, estimated small): the f2 plan.\n' > build/plan/f2/queue-feature.md
+printf '# Queue\n\n1. `bx` (T4, estimated small): a stray plan.\n' > build/plan/f2/queue-backlog.md
+printf '# Queue\n\n1. `b3` (T4, estimated small): the b2 plan.\n' > build/plan/b2/queue-backlog.md
+printf '\n### Unplaced at tools/u.sh:1\n\n- Location: tools/u.sh:1\n- Why: a fixture.\n- Fix: none.\n' > build/plan/b2/backlog.md
+printf '# Goals of b2\n' > build/plan/b2/goals.md
+lanes_base=$(git rev-parse HEAD)
+git_q checkout -q -b chore/b2
+expect "run_state: plan-apply copies only its lane's queue" 0 "^plan-apply: copied build/plan/b2/queue-backlog[.]md over docs/queue-backlog[.]md$" state plan-apply b2
+expect "run_state: a backlog plan-apply leaves the feature lane's queue" 0 "^1[.] .f2. .*b3. " sh -c "echo \$(sed -n 3p docs/queue-feature.md) \$(sed -n 3p docs/queue-backlog.md)"
+expect "run_state: plan-apply copies the plan's goals" 0 "^# Goals of b2$" cat docs/goals.md
+state init zz feature/zz > /dev/null
+expect "run_state: lane takes a change its planner unqueued from BASE's queue, before its branch" 0 "^backlog feature$" sh -c "echo \$(BASE=$lanes_base sh '$here/run_state.sh' lane zz) \$(BASE=none sh '$here/run_state.sh' lane zz)"
+expect "run_state: plan-apply appends the plan's backlog to the change's findings file" 0 "^### Unplaced at tools/u[.]sh:1$" grep '^###' docs/findings/b2.md
+expect "run_state: history appends only its lane's rows" 0 "f1 is of the feature lane; left to that lane's next package step" state history b2
+expect "run_state: a backlog package step writes no feature history" 0 "^b1 none$" sh -c "echo \$(cut -f1 docs/metrics-backlog.tsv | sed -n 2p) \$([ -f docs/metrics-feature.tsv ] && echo some || echo none)"
+commit "docs: the b2 records"
+git_q checkout -q -b feature/f2 "$lanes_base"
+expect "run_state: two lanes' plans stand in their own directories" 0 "copied build/plan/f2/queue-feature[.]md .*left build/plan/f2/queue-backlog[.]md, of the backlog lane" sh -c "sh '$here/run_state.sh' plan-apply f2 | tr '\n' ' '"
+expect "run_state: a feature package step leaves the backlog lane's queue and history" 0 "^b2 f1 none$" sh -c "sh '$here/run_state.sh' history f2 > /dev/null; echo \$(sed -n 's/^1[.] .\\([a-z0-9]*\\).*/\\1/p' docs/queue-backlog.md) \$(cut -f1 docs/metrics-feature.tsv | sed -n 2p) \$([ -f docs/metrics-backlog.tsv ] && echo some || echo none)"
+commit "docs: the f2 records"
+expect "run_state: two lanes' records share no file" 0 "^none$" sh -c "git diff --name-only $lanes_base chore/b2 | sort > '$work/b2.files'; git diff --name-only $lanes_base feature/f2 | sort > '$work/f2.files'; echo \$(comm -12 '$work/b2.files' '$work/f2.files' | grep -c . | sed 's/^0$/none/')"
+expect "run_state: two lanes' records merge cleanly" 0 "" git_q merge -q --no-edit chore/b2
+state init f9 feature/f9 > /dev/null
+state init b9 chore/b9 > /dev/null
+echo f9 > f9.txt && commit "feat: f9" && state set f9 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+echo b9 > b9.txt && commit "chore: b9" && state set b9 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: a sprint's records change appends every lane's rows" 0 "^f9 b9$" sh -c "sh '$here/run_state.sh' history sprint-1-records > /dev/null; echo \$(tail -1 docs/metrics-feature.tsv | cut -f1) \$(tail -1 docs/metrics-backlog.tsv | cut -f1)"
 
 # The planner runs only when the queue needs a decision: the change is not
 # the queue's head, or a merged change without a history row holds a
@@ -1496,6 +1549,7 @@ commit "docs: the queue"
 state init next chore/next > /dev/null
 expect "run_state: plan-needed takes the queue head as written" 1 "^not needed: next heads docs/queue-backlog[.]md, estimated small," state plan-needed next
 expect "run_state: plan-needed names a change that is not the head" 0 "^needed: later is not the head of docs/queue-feature[.]md docs/queue-backlog[.]md [(]no named item, next[)]" state plan-needed later
+expect "run_state: plan-needed takes a sprint's records change as planned" 1 "^not needed: sprint-2-records applies the waiting sprint plan, estimated small" state plan-needed sprint-2-records
 # plan_lines CHANGE: plan-needed's exit, then the count of its lines.
 plan_lines() {
   out=$(state plan-needed "$1")
@@ -1706,6 +1760,7 @@ expect "guard: retrospective checks the squash commit" 0 "^$" guard close 'sh to
 expect "guard: retrospective records its notes" 0 "^$" guard close 'sh tools/run_state.sh note c retro \"x; evidence: 3\" && sh tools/run_state.sh budget c && sh tools/run_state.sh review-due && sh tools/run_state.sh status'
 expect "guard: the read profile lists backlog duplicates" 0 "^$" guard read 'sh tools/run_state.sh backlog-dups && sh tools/run_state.sh review-due' build/plan
 expect "guard: the contributor applies the sprint plan" 0 "^$" guard contributor 'sh tools/run_state.sh history && sh tools/run_state.sh groom'
+expect "guard: the contributor applies its plan" 0 "^$" guard contributor 'sh tools/run_state.sh plan-apply c && sh tools/run_state.sh history c'
 expect "guard: only the contributor applies the sprint plan" 2 "which the workflow or another agent runs" guard read 'sh tools/run_state.sh groom' build/plan
 # The closing start runs the run's last records: the phases no merge gate
 # reads, notes, and the figures, never a review or a gated phase.
@@ -3088,6 +3143,22 @@ expect "workflow: the metric line carries the profiles" 0 ' calib[.]scout=cheap/
   calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = ''; planned = null; state = { change: 'c' }; calibrate('scout', {}); calibrate('security', {}); return metricLine() })()"
 expect "workflow: a restart restores the recorded profiles of the kinds not used yet" 0 '^[{]"planner":"session/session","scout":"cheap/low"[}]$' \
   calib_js "(() => { calibrate('planner', {}); return restoreCalibration({ 'metric.calib.scout': 'cheap/low', 'metric.calib.planner': 'cheap/low', 'metric.calib.checker': 'cheap/high', 'metric.rework': '1' }, calibrated) })()"
+# A delivery's planner writes its own plan directory, and its package step
+# applies only its lane's plan and rows, never groom (parallel-lanes).
+plan_js() {
+  js "$wf" "planDir packagePlan" "$1"
+}
+expect "workflow: two deliveries' planners write separate plan directories" 0 '^\["build/plan/a/","build/plan/b/"\]$' \
+  plan_js "[planDir('a'), planDir('b')]"
+expect "workflow: the package step applies its lane's plan and history, never groom" 0 '^\[true,true,true,false\]$' \
+  plan_js "(p => [p.includes('plan-apply c'), p.includes('history c'), p.includes('never run groom'), /run_state[.]sh groom/.test(p)])(packagePlan({ change: 'c' }, 1))"
+expect "workflow: an unplanned package step copies no plan and runs no groom" 0 '^\[false,true,true\]$' \
+  plan_js "(p => [p.includes('plan-apply c'), p.includes('history c'), p.includes('never run groom')])(packagePlan({ change: 'c' }, 0))"
+expect "workflow: a records-skip package step runs no history" 0 '^\[false,true\]$' \
+  plan_js "(p => [p.includes('history c'), p.includes('run no history')])(packagePlan({ change: 'c', records: 'skip' }, 1))"
+expect "workflow: the records change's package step runs neither again" 0 '^true$' \
+  plan_js "packagePlan({ change: 'sprint-3-records' }, 0).includes('ran history and groom; run neither again')"
+expect "workflow: the planner prompt names its plan directory" 0 "^1$" grep -c -F 'Write your files under ${planDir(state.change)}' "$wf"
 # The scouts read only the change's locations, and none starts for an area
 # given no location, such as a root file in no map area (scout-focus).
 scout_js() {
@@ -3373,6 +3444,18 @@ expect "sprint: a due line names the sprint, its changes, and its diff" 0 '^[{]"
   sprint_js "parseDue('due: sprint-1 has 2 changes merged (a, b-c); combined diff abc1234..origin/main; sweep: no')"
 expect "sprint: the sweep runs in an even sprint" 0 '^true$' \
   sprint_js "parseDue('due: sprint-2 has 5 changes merged (a, b, c, d, e); combined diff abc1234..origin/main; sweep: yes').sweep"
+# The fold and the sprint row are written once, by the sprint's records
+# change, which sprint-planning delivers (parallel-lanes).
+expect "sprint: the records change runs history and groom under its own name" 0 '^\["sprint-3-records","chore/sprint-3-records",true,true\]$' \
+  js "$swf" "recordsRun" "(r => [r.change, r.branch, r.brief.includes('history sprint-3-records'), r.brief.includes('groom sprint-3-records')])(recordsRun({ sprint: 'sprint-3' }))"
+expect "sprint: sprint-planning delivers the sprint's records change" 0 "^1$" grep -c -F "workflow({ scriptPath: '.claude/workflows/deliver-change.js' }, recordsRun(sprint))" "$swf"
+# deliver-change.js returns a report whether or not it merged: only the
+# merged commit of the records change's run state counts as finished.
+expect "sprint: a records change that stopped with a report gets the resume hint" 0 '^\["sprint-3-records did not finish; resume it with /deliver sprint-3-records","sprint-3-records did not finish; resume it with /deliver sprint-3-records"\]$' \
+  js "$swf" "isCommit recordsLine" "[recordsLine('sprint-3-records', '', '- Change: sprint-3-records\nStopped: CI red'), recordsLine('sprint-3-records', 'no such key', null)]"
+expect "sprint: a merged records change names its commit" 0 '^"sprint-3-records: merged as abc1234; - Change: sprint-3-records"$' \
+  js "$swf" "isCommit recordsLine" "recordsLine('sprint-3-records', 'abc1234', '- Change: sprint-3-records\nmore')"
+expect "sprint: the records line reads the run state's merged commit" 0 '^1$' grep -c -F 'sh tools/run_state.sh get ${recordsName} merged' "$swf"
 expect "sprint: a due line naming a shell word is not due" 0 '^null$' \
   sprint_js "parseDue('due: sprint-1 has 1 changes merged (\$(x)); combined diff abc1234..origin/main; sweep: no')"
 # A sprint security review left at its cap gets one more start over the
@@ -3417,6 +3500,9 @@ backlog_reads() {
 expect "agents: no delivery reads or greps the backlog" 0 "^none$" backlog_reads
 expect "agents: the sprint planner keeps unqueued findings in groomed.md" 0 "^1 0$" \
   sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "do not queue go into .build/plan/groomed[.]md.") $(printf "%s\n" "$s" | grep -v "never into .build/plan/backlog" | grep -c "build/plan/backlog")"' _ "$agents/planner.md"
+expect "agents: the package step applies its own plan and rows, never groom" 0 "^1 0$" \
+  sh -c 's=$(grep "^2[.] Append each non-blocking finding" "$1"); echo "$(printf "%s\n" "$s" | grep -c "plan-apply <change>.*history <change>.*never .groom.")" "$(printf "%s\n" "$s" | grep -c "build/plan/queue-")"' _ "$agents/contributor.md"
+expect "agents: a delivery's planner writes its own plan directory" 0 "^1$" grep -c -F 'build/plan/<change>/` for a delivery' "$agents/planner.md"
 expect "agents: the planner writes self-contained items" 0 "^[1-9][0-9]* 0$" \
   sh -c 'echo "$(grep -c "self-contained" "$1") $(grep -c "Locations go in the" "$1")"' _ "$agents/planner.md"
 expect "agents: the sprint planner runs the pick over the backlog and findings files, the triage, and the calibration" 0 "^1 1 1$" \

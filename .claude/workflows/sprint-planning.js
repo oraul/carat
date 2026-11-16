@@ -1,6 +1,6 @@
 export const meta = {
   name: 'sprint-planning',
-  description: 'Close a sprint of five merged changes: the review of its combined diff (security, never skipped, quality and architecture, and the skeptic), the whole-tree sweep every second sprint, the backlog grooming, and the next sprint\'s queue of five, which the next package step applies with its metrics row',
+  description: 'Close a sprint of five merged changes: the review of its combined diff (security, never skipped, quality and architecture, and the skeptic), the whole-tree sweep every second sprint, the backlog grooming, and the next sprint\'s queue of five, which its records change, sprint-N-records, applies once with the sprint\'s row',
   whenToUse: '/sprint after a merge; it ends at once with "not due" until the sprint\'s five changes have merged',
   phases: [
     { title: 'Due', detail: 'one start runs review-due; not due ends the run' },
@@ -8,13 +8,15 @@ export const meta = {
     { title: 'Skeptic', detail: 'the quality reviewer reads both results against the code: records the quality findings it keeps and every security finding, one it disputes as disputed' },
     { title: 'Plan', detail: 'the planner in its sprint mode: the backlog grooming with its one-time triage, and the next sprint\'s queue under build/plan/, its two backlog items from backlog-pick' },
     { title: 'Record', detail: 'the review results in the sprint\'s run state' },
+    { title: 'Records', detail: 'the sprint\'s records change, sprint-N-records, delivered through deliver-change.js: history and groom write the backlog fold, the lane queues, and the sprints row once' },
   ],
 }
 
 // args: none. The sprint is the one tools/run_state.sh review-due counts
 // (docs/sprints.tsv): due once its five changes merged, not due while its
-// plan waits in build/plan/ for the next package step, which applies it
-// with tools/run_state.sh groom. The diff reviewers record nothing; the
+// plan waits in build/plan/ for its records change, sprint-N-records, which
+// this workflow delivers last and which alone applies it with
+// tools/run_state.sh groom, never a lane's package step. The diff reviewers record nothing; the
 // skeptic records the findings it keeps, so a quality finding it drops is
 // never recorded and a security finding it disputes is recorded as
 // disputed. The sweep, the whole-tree periodic review, records in its own
@@ -97,6 +99,29 @@ function mergeSecurity(first, again) {
   return { ran: true, head: first.head, findings: first.findings.concat(again.findings), not_reviewed: again.not_reviewed.filter((f) => first.not_reviewed.includes(f)), tool_calls: first.tool_calls }
 }
 
+// The sprint's records change: a delivery of its own, started through
+// deliver-change.js as the sweep starts periodic-review.js, whose
+// contributor runs history (every lane's rows) and groom in its implement
+// step, so the backlog fold, the sprint's lane queues, and its sprints row
+// are written once and pass the checker, the reviews, and the merge gates.
+// tools/tools_test.sh runs this helper.
+function recordsRun(sprint) {
+  const change = `${sprint.sprint}-records`
+  return {
+    change, branch: `chore/${change}`,
+    brief: `${change}: apply the plan of ${sprint.sprint} waiting in build/plan/, sprint-planning's records change (T0 records, estimated small). In your implement step run \`sh tools/run_state.sh history ${change}\`, which appends every lane's pending rows, then \`sh tools/run_state.sh groom ${change}\`, which folds the findings files into docs/backlog.md, copies the sprint's two lane queues, and appends the sprint's row to docs/sprints.tsv; commit them with this change's OpenSpec change (skip_specs: true), no code and no other file. When groom applies nothing (the plan waits or stands applied), stop and say so.`,
+  }
+}
+
+// The report's line for the records change: deliver-change.js returns a
+// report whether or not it merged, so only the merged commit its run state
+// records counts as finished; anything else gets the resume hint
+// .claude/commands/sprint.md acts on. tools/tools_test.sh runs this helper.
+function recordsLine(name, merged, delivered) {
+  if (!isCommit(merged)) return `${name} did not finish; resume it with /deliver ${name}`
+  return `${name}: merged as ${merged}${delivered ? `; ${String(delivered).split('\n')[0]}` : ''}`
+}
+
 phase('Due')
 const due = await agent(
   `Run \`sh tools/run_state.sh review-due\` with the Bash tool from the repository root and return its one line verbatim as line (exit 1 means not due, not a failure). Only when the line begins with \`due: sprint-N\`, run \`sh tools/run_state.sh init sprint-N main\`, and when it ends with \`sweep: yes\` also \`sh tools/run_state.sh init sprint-N-sweep main\`, N being its number; return initialized true when they exited 0.${capLine(CAPS.due)}`,
@@ -172,6 +197,26 @@ const recorded = await agent(
   `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${lines.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(CAPS.record)}`,
   { schema: { type: 'object', properties: { ok: { type: 'boolean' }, output: { type: 'string' } }, required: ['ok', 'output'] }, effort: 'low', label: 'record' })
 
+phase('Records')
+// Only a plan written after a complete review, with the results recorded,
+// gets its records change; otherwise the plan does not exist or waits for
+// /sprint again.
+let delivered = null
+let merged = ''
+const recordsName = recordsRun(sprint).change
+if (plan && recorded && recorded.ok) {
+  try {
+    delivered = await workflow({ scriptPath: '.claude/workflows/deliver-change.js' }, recordsRun(sprint))
+  } catch (e) {
+    log(`the records change failed to start: ${e.message}`)
+  }
+  // Whether it merged is read from its run state, never from its report.
+  const read = await agent(
+    `Run \`sh tools/run_state.sh get ${recordsName} merged\` with the Bash tool from the repository root, exactly as written, and nothing else. Return its output, trimmed, as merged (empty when it printed nothing or failed).${capLine(CAPS.record)}`,
+    { schema: { type: 'object', properties: { merged: { type: 'string' } }, required: ['merged'] }, effort: 'low', label: 'records-merged' })
+  merged = read ? read.merged.trim() : ''
+}
+
 const report = [
   `${sprint.sprint}: ${sprint.names.join(', ')}`,
   `Security: ${ran ? `${security.findings.length} finding(s), ${blocking.length} blocking${skeptical ? `, ${skeptic.disputed} disputed` : ''}` : 'did not run; run /sprint again'}`,
@@ -180,6 +225,7 @@ const report = [
   `Plan: ${plan ? `${plan.paths.join(', ') || 'no file'}; ${plan.decisions.map((d) => `${d.decision} (${d.evidence})`).join('; ')}` : reviewed ? 'the planner returned no result; run /sprint again' : 'not started, the sprint review did not complete; run /sprint again'}`,
   plan && plan.security_first.length ? `Security first: deliver ${plan.security_first.join('; ')} before the sprint` : '',
   recorded && recorded.ok ? '' : `The results were not recorded: ${recorded ? recorded.output : 'no result'}`,
+  plan && recorded && recorded.ok ? `Records: ${recordsLine(recordsName, merged, delivered)}` : '',
 ].filter(Boolean).join('\n- ')
 log(report)
 return { due: true, sprint: sprint.sprint, ran, recorded: Boolean(recorded && recorded.ok), report: `- ${report}` }

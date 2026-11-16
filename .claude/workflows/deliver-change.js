@@ -256,7 +256,7 @@ const PLAN = {
     notes: { ...LINES, description: 'for the contributor: findings the change only writes to docs/findings/CHANGE.md, and bookkeeping' },
     files: LINES,
     estimate: { type: 'string', enum: SIZES, description: 'the size this change is estimated at' },
-    records: { type: 'string', enum: ['apply', 'skip'], description: 'skip when the brief excludes the planning records (history and groom) from this change\'s package step' },
+    records: { type: 'string', enum: ['apply', 'skip'], description: 'skip when the brief excludes the planning records (history) from this change\'s package step' },
   },
   required: ['decisions', 'security_first', 'notes', 'files', 'estimate'],
 }
@@ -1031,6 +1031,24 @@ function resumeBrief(change, line) {
     : /docs\/queue-/.test(line) ? `docs/${LANES}` : `docs/${LANES} (build/plan/ while a sprint plan waits there)`
   return `the item of ${queueFile} that names \`${change}\`, read there as written (when no item names it, the existing OpenSpec change)`
 }
+// A delivery's planner writes only under its own plan directory, so two
+// lanes' planners never overwrite each other; the sprint planner keeps
+// build/plan/ itself. tools/tools_test.sh runs these helpers.
+function planDir(change) {
+  return `build/plan/${change}/`
+}
+// The package step's plan line: plan-apply and history for the change's
+// own lane, never groom, which only a sprint's records change runs, in its
+// implement step, so the fold and the sprint row are written once.
+function packagePlan(state, planned) {
+  if (/^sprint-[0-9]+-records$/.test(state.change)) return 'This is the sprint\'s records change: your implement step ran history and groom; run neither again, nor plan-apply, and copy nothing from build/plan/.'
+  const history = state.records === 'skip'
+    ? 'run no history: this change\'s run state excludes the planning records (records=skip), and history says so for it'
+    : `run \`sh tools/run_state.sh history ${state.change}\`, which appends only its lane's rows`
+  return planned === 0
+    ? `The planner did not run: this change was taken from the head of its lane queue as written. Copy nothing from build/plan/ and run no plan-apply; ${history}; never run groom, which the sprint's records change runs; then remove this change's item from its lane queue and renumber the rest.`
+    : `Run \`sh tools/run_state.sh plan-apply ${state.change}\`, which applies ${planDir(state.change)} for this change's lane only, and ${history}; never run groom, which the sprint's records change runs.`
+}
 // Whether the Plan phase is skipped: no merge, plan, or implement record
 // yet, and plan-needed's line says not needed, whatever the brief says.
 // tools/tools_test.sh runs this helper.
@@ -1062,7 +1080,7 @@ if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement
   phase('Plan')
   planned = 1
   const p = await measured('plan', () => agent(
-    `${intro()} Plan the queue for this delivery. Brief: ${input.brief || 'the existing OpenSpec change'}.${planReview(planLine)}${capLine('planner')}`,
+    `${intro()} Plan the queue for this delivery. Brief: ${input.brief || 'the existing OpenSpec change'}. Write your files under ${planDir(state.change)}, this delivery's own plan directory.${planReview(planLine)}${capLine('planner')}`,
     calibrate('planner', { agentType: 'planner', schema: withCalls(PLAN) })), callCap('planner'))
   if (!p) stopped = 'the planner returned no result'
   else {
@@ -1078,14 +1096,14 @@ if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement
 }
 
 // A brief may exclude the planning records from the package step: the
-// run state's records=skip, which history and groom honor for the change:
+// run state's records=skip, which history honors for the change:
 // no closable line, so the flush at the end of verify() writes it, before
 // the package step.
 function excludeRecords(why) {
   if (state.records === 'skip') return
   state.records = 'skip'
   queue(`sh tools/run_state.sh set ${state.change} records skip`, head)
-  note(`planning records excluded by ${why}: the package step runs neither history nor groom`)
+  note(`planning records excluded by ${why}: the package step runs no history`)
 }
 if (!stopped && !state.merged && input.records === 'skip') excludeRecords('the input')
 
@@ -1130,10 +1148,7 @@ if (!stopped && !state.merged) {
   if (step === 'package') {
     if (await verify()) {
       phase('Package')
-      const excluded = 'run neither history nor groom: this change\'s run state excludes the planning records (records=skip), and both say so for it'
-      const plan = planned === 0
-        ? `The planner did not run: this change was taken from the head of its lane queue as written. Copy nothing from build/plan/, which holds an older run's files or a waiting sprint plan that groom applies; ${state.records === 'skip' ? excluded : 'append the history and run groom as your package step says'}, then remove this change's item from its lane queue and renumber the rest.`
-        : `Apply the planner's files under build/plan/ and ${state.records === 'skip' ? excluded : 'append the history of the merged changes as your package step says'}.`
+      const plan = packagePlan(state, planned)
       const done = await contributor('package', `Non-blocking findings to append to docs/findings/${state.change}.md (mkdir -p docs/findings first, as a fresh checkout lacks it, then a shell append; never read docs/backlog.md):\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
       if (done) state.pr = packagedPr(done)
       if (done && !state.pr) stopped = 'no pull request appeared for the branch ' + state.branch + ': read the open-pr workflow\'s log'
