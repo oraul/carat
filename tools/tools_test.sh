@@ -1148,24 +1148,26 @@ mrow() {
   printf '%s\t-\t%s\t-\t-\t%s\t-\t-\t-\t-\t-\t-\t-\t-\t%s\t%s\t%s\t-\n' "$1" "$2" "$6" "$3" "$4" "$5"
 }
 # A change whose queue item, at its squash commit's parent, carries the
-# user-approved exception in its parenthesis is not counted toward the five,
-# and the groomed row takes it beside the five (sprint-tidy).
+# words "beyond the sprint" in its parenthesis is not counted toward the five,
+# and the groomed row takes it beside the five; an item marked only "the
+# user-approved exception", which lifts the one-pipeline limit, still counts
+# (sprint-tidy).
 fresh exception
 printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
 printf '# Backlog\n' > docs/backlog.md
 { printf 'header\n'; mrow seed bbb222 small 1 1 -; mrow e1 c1 small 1 1 -; mrow e2 c2 small 1 1 -; mrow e3 c3 small 1 1 -; mrow e4 c4 small 1 1 -; } > docs/metrics.tsv
-printf '# Queue\n\n1. `x1` (T2 user request, estimated small, the user-approved exception): one.\n2. `e5` (T1, estimated small): review-due counts a user-approved exception toward the five.\n' > docs/queue.md
+printf '# Queue\n\n1. `x1` (T2 user request, estimated small, user-approved beyond the sprint): one.\n2. `e5` (T1 pipeline, estimated small, the user-approved exception): review-due counts a change beyond the sprint toward the five.\n' > docs/queue.md
 commit "docs: the queue"
 echo x1 >> README.md
 commit "feat: x1"
 state init x1 chore/x1 > /dev/null
 state set x1 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
-expect "run_state: review-due leaves a user-approved exception out of the count" 1 "^not due: sprint-1 has 4 of 5 changes merged [(]e1, e2, e3, e4, x1[)]; not counted, a user-approved exception: x1\$" state review-due
+expect "run_state: review-due leaves a change beyond the sprint out of the count" 1 "^not due: sprint-1 has 4 of 5 changes merged [(]e1, e2, e3, e4, x1[)]; not counted, beyond the sprint: x1\$" state review-due
 echo e5 >> README.md
 commit "feat: e5"
 state init e5 chore/e5 > /dev/null
 state set e5 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
-expect "run_state: review-due is due at the fifth counted merge beside an exception" 0 "^due: sprint-1 has 5 changes merged [(]e1, e2, e3, e4, e5, x1[)]; combined diff bbb222[.][.]origin/main; sweep: no\$" state review-due
+expect "run_state: review-due is due at the fifth counted merge beside an exception, an item marked only for the pipeline limit counted" 0 "^due: sprint-1 has 5 changes merged [(]e1, e2, e3, e4, e5, x1[)]; combined diff bbb222[.][.]origin/main; sweep: no\$" state review-due
 state history > /dev/null
 mkdir -p build/plan
 echo sprint-1 > build/plan/sprint

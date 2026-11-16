@@ -283,8 +283,10 @@ SPRINT_SIZE=5
 # /review's review-DATE and sprint-planning's sprint-N.
 REVIEW_RUNS='^(review|sprint)-[0-9]'
 # The words that mark a queue item, inside its first parenthesis, as a
-# change the user approved beyond a sprint's five, which it never counts.
-EXCEPTION_MARK='user-approved exception'
+# change the user approved beyond a sprint's five, which it never counts;
+# distinct from "the user-approved exception", which lifts only the
+# one-pipeline limit (docs_lint.sh) and leaves the item counted.
+EXCEPTION_MARK='beyond the sprint'
 SPRINT_HEADER="sprint${TAB}last${TAB}merges${TAB}changes${TAB}wall_min${TAB}min_per_change${TAB}total_tokens${TAB}over_budget${TAB}first_pass"
 
 die() {
@@ -1472,7 +1474,7 @@ append_history() {
 # last row; sprint_base, the merged commit of that row's last change, where
 # the combined diff starts; sprint_names, the changes merged since (the
 # history rows after that change's row, then the merged changes without a
-# row); sprint_exceptions, those a user-approved exception (exception_item);
+# row); sprint_exceptions, those marked beyond the sprint (exception_item);
 # and sprint_count, the rest.
 sprint_state() {
   [ -f "$sprints_file" ] || die "no $sprints_file"
@@ -1501,7 +1503,7 @@ merged_of() {
 
 # True when the item naming NAME in docs/queue.md at the parent of COMMIT,
 # the queue it was delivered from, carries EXCEPTION_MARK in its first
-# parenthesis: a user-approved exception, which a sprint never counts.
+# parenthesis: a change beyond the sprint, which a sprint never counts.
 exception_item() {
   valid '[0-9a-f]{7,40}' "$2" || return 1
   git show --end-of-options "$2^:docs/queue.md" 2>/dev/null | C="$1" M="$EXCEPTION_MARK" awk '
@@ -1542,7 +1544,7 @@ review_due() {
     return 1
   fi
   if [ "$sprint_count" -lt "$SPRINT_SIZE" ]; then
-    echo "not due: sprint-$sprint_n has $sprint_count of $SPRINT_SIZE changes merged${list:+ ($list)}${sprint_exceptions:+; not counted, a user-approved exception: $sprint_exceptions}"
+    echo "not due: sprint-$sprint_n has $sprint_count of $SPRINT_SIZE changes merged${list:+ ($list)}${sprint_exceptions:+; not counted, beyond the sprint: $sprint_exceptions}"
     return 1
   fi
   sweep=no
@@ -1569,7 +1571,7 @@ backlog_entry() {
 }
 
 # The sprint's row from its history rows up to the SPRINT_SIZE-th counted
-# one (a user-approved exception, sprint_exceptions, not counted): the last
+# one (a change beyond the sprint, sprint_exceptions, not counted): the last
 # change, the merges, the changes, the wall minutes and their mean per
 # change, the total tokens, the runs over their size's budget
 # (TOKEN_BUDGETS), and each gate's first passes.

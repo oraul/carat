@@ -10,7 +10,7 @@
 
 ## 3. Sprint count
 
-- [x] 3.1 Add `EXCEPTION_MARK`, `merged_of`, and `exception_item` to `tools/run_state.sh`; leave marked changes out of `sprint_count`, name them on review-due's not-due line, and count the same way in `sprint_row` and `groom`; proved by "run_state: review-due leaves a user-approved exception out of the count" and "run_state: review-due is due at the fifth counted merge beside an exception" in `tools/tools_test.sh`
+- [x] 3.1 Add `EXCEPTION_MARK`, `merged_of`, and `exception_item` to `tools/run_state.sh`; leave marked changes out of `sprint_count`, name them on review-due's not-due line, and count the same way in `sprint_row` and `groom`; proved by "run_state: review-due leaves a change beyond the sprint out of the count" and "run_state: review-due is due at the fifth counted merge beside an exception, an item marked only for the pipeline limit counted" in `tools/tools_test.sh`
 
 ## 4. Docs
 
