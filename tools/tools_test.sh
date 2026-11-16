@@ -2091,7 +2091,10 @@ expect "docs_lint: refuses an agent file over its budget" 1 "FAIL budgets: .clau
 docs queuesize
 printf '# Queue\n\n1. `a` (T2, estimated small): one.\n' > docs/queue-backlog.md
 printf '# Queue\n\n1. `b` (T2, estimated small): two.\n' > docs/queue-feature.md
-head -c 17969 /dev/zero | tr '\0' x | head -c "$((17969 - $(wc -c < docs/queue-backlog.md) - $(wc -c < docs/queue-feature.md)))" >> docs/queue-backlog.md
+# The padding, in lines of at most 80 bytes: a single line that long
+# takes the gates of docs_lint.sh seconds to scan.
+awk -v n="$((17969 - $(wc -c < docs/queue-backlog.md) - $(wc -c < docs/queue-feature.md)))" \
+  'BEGIN { while (n > 0) { k = n > 80 ? 80 : n; s = sprintf("%*s", k - 1, ""); gsub(/ /, "x", s); print s; n -= k } }' >> docs/queue-backlog.md
 expect "docs_lint: passes the lane queues at their shared budget" 0 "ok   queue: 2 item" doclint
 echo x >> docs/queue-feature.md
 expect "docs_lint: refuses the lane queues over their shared budget" 1 "FAIL queue: the lane queues are 17971 bytes together, over their budget of 17969" doclint
