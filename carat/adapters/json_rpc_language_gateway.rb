@@ -25,9 +25,11 @@ module Carat
     # since a server such as ruby-lsp runs the project's own code; in any
     # other directory the lsp slot reads untrusted until :LspStart. Once a
     # server answered initialize it is told about each buffer of its file
-    # type with a path: didOpen, didChange with the whole text when
-    # the buffer's change counters moved, didSave after SaveFile wrote it,
-    # and didClose when the buffer is gone. Its output is untrusted: a body
+    # type with a path: didOpen, didChange when the buffer's change
+    # counters moved (by the textDocumentSync kind its initialize result
+    # announced: under 2 one ranged change from the lines last sent,
+    # under 1 the whole text, under any other kind none), didSave after
+    # SaveFile wrote it, and didClose when the buffer is gone. Its output is untrusted: a body
     # that is not a JSON object is dropped, at most DRAIN_LIMIT messages are
     # read per tick, and the name and every diagnostic message are stripped
     # of control characters and capped (Domain::ControlText). A publish is
@@ -506,6 +508,7 @@ module Carat
           server.name = stripped unless stripped.empty?
         end
         caps = Json.field(result, "capabilities")
+        server.sync_kind = sync_kind_of(Json.field(caps, "textDocumentSync"))
         provider = Json.field(caps, "completionProvider")
         @completion.languages << server.language if provider.is_a?(Hash) && !@completion.completes?(server.language)
         @resolvers << server.language if provider.is_a?(Hash) && Json.field(provider, "resolveProvider") == true && !@resolvers.include?(server.language)
@@ -519,6 +522,14 @@ module Carat
         @symbols.languages << server.language if (outlines == true || outlines.is_a?(Hash)) && !@symbols.offers?(server.language)
         server.state = :ready
         notify(server, "initialized", {})
+      end
+
+      # The textDocumentSync kind a server announced: a number, or the
+      # options object's change; 0 (none) for anything else.
+      #: (untyped) -> Integer
+      def sync_kind_of(value)
+        change = value.is_a?(Hash) ? Json.field(value, "change") : value
+        change.is_a?(Integer) ? change.to_i : 0
       end
 
       # A server that runs no more answers no request kind more: each ask
@@ -1306,18 +1317,103 @@ module Carat
           notify(server, "textDocument/didOpen", { "textDocument" => { "uri" => uri, "languageId" => server.language, "version" => 1, "text" => buffer.to_text } })
           return
         end
-        if server.changes[uri] != buffer.changes || server.closed[uri] != buffer.closed_count
-          remember(server, uri, buffer, version.to_i + 1)
-          notify(server, "textDocument/didChange", { "textDocument" => { "uri" => uri, "version" => version.to_i + 1 }, "contentChanges" => [{ "text" => buffer.to_text }] })
-        end
+        send_change(server, uri, buffer, version.to_i) if server.changes[uri] != buffer.changes || server.closed[uri] != buffer.closed_count
         notify(server, "textDocument/didSave", { "textDocument" => { "uri" => uri } }) if @saves.include?(buffer.id)
       end
 
+      # Sends a changed buffer by the server's sync kind: the whole text
+      # under 1; under 2 one ranged change from the lines last sent, or
+      # nothing when the text is the same again (the version kept); no
+      # didChange under any other kind. The counters are stored each time.
+      #: (Domain::LanguageServer, String, Domain::Buffer, Integer) -> void
+      def send_change(server, uri, buffer, version)
+        kind = server.sync_kind
+        sent = server.texts[uri]
+        if kind == 1
+          remember(server, uri, buffer, version + 1)
+          notify(server, "textDocument/didChange", { "textDocument" => { "uri" => uri, "version" => version + 1 }, "contentChanges" => [{ "text" => buffer.to_text }] })
+        elsif kind == 2 && !sent.nil? && sent != buffer.lines
+          remember(server, uri, buffer, version + 1)
+          notify(server, "textDocument/didChange", { "textDocument" => { "uri" => uri, "version" => version + 1 }, "contentChanges" => [ranged_change(sent, buffer.lines, buffer.line_ending)] })
+        else
+          remember(server, uri, buffer, version)
+        end
+      end
+
+      # Stores what a document's server was sent: the version, the
+      # buffer's change counters, and under incremental sync a copy of its
+      # line array (the strings shared, since a line is never changed in
+      # place).
       #: (Domain::LanguageServer, String, Domain::Buffer, Integer) -> void
       def remember(server, uri, buffer, version)
         server.versions[uri] = version
         server.changes[uri] = buffer.changes
         server.closed[uri] = buffer.closed_count
+        server.texts[uri] = buffer.lines.dup if server.sync_kind == 2
+      end
+
+      # The one content change that turns the lines sent into the lines
+      # now: the span between the common leading and trailing lines,
+      # narrowed within its first and last lines to the bytes that differ
+      # (on character boundaries, never overlapping), in zero-based lines
+      # and UTF-16 characters. A span of whole lines starts and ends at
+      # character 0; the end may be the line after the last, which the
+      # text's final line ending makes valid.
+      #: (Array[String], Array[String], String) -> Hash[String, untyped]
+      def ranged_change(sent, lines, ending)
+        limit = [sent.length, lines.length].min
+        top = 0
+        top += 1 while top < limit && sent[top] == lines[top]
+        bottom = 0
+        bottom += 1 while bottom < limit - top && sent[sent.length - 1 - bottom] == lines[lines.length - 1 - bottom]
+        sent_end = sent.length - bottom
+        lines_end = lines.length - bottom
+        text = lines[top...lines_end].to_a.join(ending)
+        if sent_end == top || lines_end == top
+          text += ending if lines_end > top
+          return content_change(top, 0, sent_end, 0, text)
+        end
+        first = sent[top].to_s
+        last = sent[sent_end - 1].to_s
+        head = shared_head(first, lines[top].to_s)
+        tail = shared_tail(last, lines[lines_end - 1].to_s)
+        tail = [tail, first.bytesize - head].min if sent_end - top == 1
+        tail = [tail, lines[top].to_s.bytesize - head].min if lines_end - top == 1
+        tail -= 1 while tail > 0 && continuation?(last, last.bytesize - tail)
+        content_change(top, utf16_length(first.byteslice(0, head).to_s), sent_end - 1, utf16_length(last.byteslice(0, last.bytesize - tail).to_s), text.byteslice(head, text.bytesize - head - tail).to_s)
+      end
+
+      # The bytes two lines share at their start, backed off to a
+      # character boundary.
+      #: (String, String) -> Integer
+      def shared_head(left, right)
+        limit = [left.bytesize, right.bytesize].min
+        count = 0
+        count += 1 while count < limit && left.getbyte(count) == right.getbyte(count)
+        count -= 1 while count > 0 && (continuation?(left, count) || continuation?(right, count))
+        count
+      end
+
+      # The bytes two lines share at their end.
+      #: (String, String) -> Integer
+      def shared_tail(left, right)
+        limit = [left.bytesize, right.bytesize].min
+        count = 0
+        count += 1 while count < limit && left.getbyte(left.bytesize - 1 - count) == right.getbyte(right.bytesize - 1 - count)
+        count
+      end
+
+      # Whether the byte at index is inside a character, a UTF-8
+      # continuation byte.
+      #: (String, Integer) -> bool
+      def continuation?(text, index)
+        index < text.bytesize && (text.getbyte(index).to_i & 0xC0) == 0x80
+      end
+
+      # A content change replacing the range between two positions.
+      #: (Integer, Integer, Integer, Integer, String) -> Hash[String, untyped]
+      def content_change(start_line, start_character, end_line, end_character, text)
+        { "range" => { "start" => { "line" => start_line, "character" => start_character }, "end" => { "line" => end_line, "character" => end_character } }, "text" => text }
       end
 
       # The file URI of a path, made absolute against the working

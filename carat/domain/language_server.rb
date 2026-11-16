@@ -7,10 +7,12 @@ module Carat
     # the state (:starting, :ready, :indexing, :stopped, or :crashed), the
     # progress percent and how many progress reports run, the next request
     # id and the initialize request's, and per document URI the version
-    # sent, the buffer's change counters at that send, and
-    # the tick that last saw it; the diagnostics published per URI. A
-    # Struct record: the hashes start empty through the writers.
-    class LanguageServer < Struct.new(:language, :words, :name, :handle, :state, :percent, :tasks, :next_id, :init_id, :versions, :changes, :closed, :seen, :tick, :diagnostics, keyword_init: true)
+    # sent, the buffer's change counters at that send, the lines sent
+    # (kept only under incremental sync), and the tick that last saw it;
+    # the diagnostics published per URI; and the textDocumentSync kind
+    # the server announced (0 none, 1 full, 2 incremental). A Struct
+    # record: the hashes start empty through the writers.
+    class LanguageServer < Struct.new(:language, :words, :name, :handle, :state, :percent, :tasks, :next_id, :init_id, :versions, :changes, :closed, :seen, :tick, :diagnostics, :texts, :sync_kind, keyword_init: true)
       # @rbs @language: String
       # @rbs @words: Array[String]
       # @rbs @name: String
@@ -26,6 +28,8 @@ module Carat
       # @rbs @seen: Hash[String, Integer]
       # @rbs @tick: Integer
       # @rbs @diagnostics: Hash[String, DiagnosticList]
+      # @rbs @texts: Hash[String, Array[String]]
+      # @rbs @sync_kind: Integer
 
       #: (language: String, words: Array[String], name: String, handle: Integer) -> void
       def initialize(language:, words:, name:, handle:)
@@ -45,6 +49,8 @@ module Carat
         self.seen = {}
         self.tick = 0
         self.diagnostics = {}
+        self.texts = {}
+        self.sync_kind = 0
       end
 
       # Whether the server answered initialize and runs, so documents are
@@ -61,7 +67,7 @@ module Carat
         next_id
       end
 
-      # Forgets a document: its counters and its diagnostics.
+      # Forgets a document: its counters, its text, and its diagnostics.
       #: (String) -> void
       def forget(uri)
         versions.delete(uri)
@@ -69,6 +75,7 @@ module Carat
         closed.delete(uri)
         seen.delete(uri)
         diagnostics.delete(uri)
+        texts.delete(uri)
       end
     end
   end
