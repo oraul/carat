@@ -1096,7 +1096,7 @@ if (!stopped && !state.merged) {
       const plan = planned === 0
         ? `The planner did not run: this change was taken from the head of its lane queue as written. Copy nothing from build/plan/, which holds an older run's files or a waiting sprint plan that groom applies; ${state.records === 'skip' ? excluded : 'append the history and run groom as your package step says'}, then remove this change's item from its lane queue and renumber the rest.`
         : `Apply the planner's files under build/plan/ and ${state.records === 'skip' ? excluded : 'append the history of the merged changes as your package step says'}.`
-      const done = await contributor('package', `Non-blocking findings to append to docs/findings/${state.change}.md (a shell append; never read docs/backlog.md):\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
+      const done = await contributor('package', `Non-blocking findings to append to docs/findings/${state.change}.md (mkdir -p docs/findings first, as a fresh checkout lacks it, then a shell append; never read docs/backlog.md):\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
       if (done) state.pr = packagedPr(done)
       if (done && !state.pr) stopped = 'no pull request appeared for the branch ' + state.branch + ': read the open-pr workflow\'s log'
       else if (done) phaseDone('package', head)

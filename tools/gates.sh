@@ -108,11 +108,11 @@ state() {
 # (RECORDS_RE): the OpenSpec change (archived after the checks), the
 # backlog and the findings files, and the planning records the package
 # step writes (the lane queues, goals, the lane metrics histories, and
-# the sprint row groom appends to docs/sprints.tsv), whose docs-lint the package step and CI run again. docs/sprints.tsv counts
-# only by appended rows: an edit of an earlier row moves the sprint base,
-# which the sprint-end security review starts from.
-# Without rename detection, a file moved into openspec/ counts by its old
-# path too.
+# the sprint row groom appends to docs/sprints.tsv), whose docs-lint the
+# package step and CI run again. docs/sprints.tsv counts only by appended
+# rows: an edit of an earlier row moves the sprint base, which the
+# sprint-end security review starts from. Without rename detection, a
+# file moved into openspec/ counts by its old path too.
 settled_at() {
   hex "$1" || return 1
   rest=$(git diff --no-renames --name-only --end-of-options "$1" HEAD -- 2>/dev/null) || return 1
