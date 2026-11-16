@@ -1534,6 +1534,62 @@ expect "run_state: a feature package step leaves the backlog lane's queue and hi
 commit "docs: the f2 records"
 expect "run_state: two lanes' records share no file" 0 "^none$" sh -c "git diff --name-only $lanes_base chore/b2 | sort > '$work/b2.files'; git diff --name-only $lanes_base feature/f2 | sort > '$work/f2.files'; echo \$(comm -12 '$work/b2.files' '$work/f2.files' | grep -c . | sed 's/^0$/none/')"
 expect "run_state: two lanes' records merge cleanly" 0 "" git_q merge -q --no-edit chore/b2
+
+# Each delivery's own worktree (parallel-lanes-b): lane-open makes it under
+# the hidden tmp/ from origin/main, linking the main checkout's toolchain,
+# compile cache, and run states; merge-main takes a moved main in, the
+# appended records by union; lane-close removes it after the merge.
+fresh worktrees
+git_q checkout -q main
+echo tmp/ >> .gitignore
+mkdir -p docs/findings
+printf 'change\tlane\n' > docs/metrics-feature.tsv
+printf 'change\tlane\n' > docs/metrics-backlog.tsv
+printf 'sprint\tlast\n' > docs/sprints.tsv
+printf '## Findings of wa\n' > docs/findings/wa.md
+echo shared > shared.txt
+commit "chore: the records"
+git_q init -q --bare "$work/worktrees.git"
+git_q remote add origin "$work/worktrees.git"
+git_q push -q origin main 2>/dev/null
+git_q fetch -q origin
+mkdir -p tmp/.toolchain/bin tmp/.spinel build/spinel-cache
+echo tool > tmp/.toolchain/bin/spin
+wt_top=$(pwd -P)
+expect "run_state: lane-open makes the change's worktree under the hidden tmp/" 0 "^lane: tmp/[.]lane-wa on feature/wa$" state lane-open wa feature/wa
+expect "run_state: a lane worktree starts on its branch at origin/main" 0 "^feature/wa yes$" sh -c "echo \$(git -C tmp/.lane-wa symbolic-ref --short HEAD) \$([ \$(git -C tmp/.lane-wa rev-parse HEAD) = \$(git rev-parse origin/main) ] && echo yes)"
+expect "run_state: a lane worktree shares the main checkout's toolchain and compile cache" 0 "^tool $wt_top/tmp/[.]spinel $wt_top/build/spinel-cache$" sh -c "echo \$(cat tmp/.lane-wa/tmp/.toolchain/bin/spin) \$(readlink tmp/.lane-wa/tmp/.spinel) \$(readlink tmp/.lane-wa/build/spinel-cache)"
+expect "run_state: a lane's run state lands in the main checkout's build/pipeline" 0 "^feature/wa$" sh -c "cd tmp/.lane-wa && sh '$here/run_state.sh' init wa feature/wa > /dev/null && cd ../.. && sh '$here/run_state.sh' get wa branch"
+expect "run_state: lane-open run from the lane keeps it on a resume" 0 "^lane: tmp/[.]lane-wa on feature/wa kept$" sh -c "touch tmp/.lane-wa/kept && cd tmp/.lane-wa && echo \$(sh '$here/run_state.sh' lane-open wa feature/wa) \$([ -f kept ] && echo kept)"
+expect "run_state: lane-open refuses a branch outside Conventional Branch" 1 "not a Conventional Branch" state lane-open wz main
+state lane-open wb chore/wb > /dev/null
+state lane-open wc chore/wc > /dev/null
+expect "run_state: lane-open replaces a replaced run's worktree on another branch" 0 "removed the replaced run's tmp/[.]lane-wc lane: tmp/[.]lane-wc on chore/wc-two" sh -c "sh '$here/run_state.sh' lane-open wc chore/wc-two | tr '\n' ' '"
+expect "run_state: two lanes stand at once, each in its own worktree" 0 "^3$" sh -c "git worktree list | grep -c '/tmp/[.]lane-w[abc] '"
+(cd tmp/.lane-wa && printf 'f1\tfeature\n' >> docs/metrics-feature.tsv && printf '\n### wa finding\n' >> docs/findings/wa.md && commit "docs: the wa records")
+(cd tmp/.lane-wb && echo branch side > shared.txt && commit "chore: the wb edit")
+printf 'f0\tfeature\n' >> docs/metrics-feature.tsv
+printf 'b0\tbacklog\n' >> docs/metrics-backlog.tsv
+printf '\n### main finding\n' >> docs/findings/wa.md
+printf 'sprint-1\tb0\n' >> docs/sprints.tsv
+echo main side > shared.txt
+commit "docs: main moved"
+git_q push -q origin main 2>/dev/null
+expect "run_state: merge-main merges a moved main into the lane's branch" 0 "^merge-main: merged origin/main into feature/wa at " sh -c "cd tmp/.lane-wa && sh '$here/run_state.sh' merge-main wa"
+expect "run_state: two lanes' records merge by appended rows only" 0 "^change lane f1 feature f0 feature b0 backlog none$" sh -c "cd tmp/.lane-wa && echo \$(cat docs/metrics-feature.tsv docs/metrics-backlog.tsv | sed -n '1,3p;5p') \$(grep -c '^[<>=]\\{7\\}' docs/metrics-feature.tsv docs/findings/wa.md docs/sprints.tsv | grep -v ':0$' || echo none)"
+expect "run_state: merge-main keeps both sides' findings and sprint rows" 0 "^2 2$" sh -c "cd tmp/.lane-wa && echo \$(grep -c '^### ' docs/findings/wa.md) \$(wc -l < docs/sprints.tsv)"
+expect "run_state: merge-main's merge commit carries the trailer, no rebase" 0 "^3 Co-Authored-By: Claude" sh -c "cd tmp/.lane-wa && echo \$(git rev-list --parents -n 1 HEAD | wc -w | tr -d ' ') \$(git log -1 --format=%B | grep '^Co-Authored-By')"
+expect "run_state: merge-main does nothing once the branch holds main" 0 "^merge-main: feature/wa holds origin/main$" sh -c "cd tmp/.lane-wa && sh '$here/run_state.sh' merge-main wa"
+expect "run_state: merge-main aborts and names a conflict outside the appended records" 1 "conflicts in shared[.]txt" sh -c "cd tmp/.lane-wb && sh '$here/run_state.sh' merge-main wb"
+expect "run_state: an aborted merge-main leaves the branch as it was" 0 "^branch side none$" sh -c "cd tmp/.lane-wb && echo \$(cat shared.txt) \$([ -f \"\$(git rev-parse --git-dir)/MERGE_HEAD\" ] && echo merging || echo none)"
+git_q merge -q --no-edit feature/wa > /dev/null 2>&1
+state set wa merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: lane-close removes the worktree after the merge" 0 "^lane-close: removed tmp/[.]lane-wa none$" sh -c "echo \$(sh '$here/run_state.sh' lane-close wa) \$(git worktree list | grep -c '/tmp/[.]lane-wa ' | sed 's/^0$/none/')"
+expect "run_state: lane-close leaves the shared toolchain, cache, and run state" 0 "^tool yes feature/wa$" sh -c "echo \$(cat tmp/.toolchain/bin/spin) \$([ -d build/spinel-cache ] && echo yes) \$(sh '$here/run_state.sh' get wa branch)"
+expect "run_state: lane-close with no worktree does nothing" 0 "^lane-close: no tmp/[.]lane-wa$" state lane-close wa
+state lane-close wb > /dev/null
+state lane-close wc > /dev/null
+cd "$work/lanes" || exit 1
 state init f9 feature/f9 > /dev/null
 state init b9 chore/b9 > /dev/null
 echo f9 > f9.txt && commit "feat: f9" && state set f9 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
@@ -1811,14 +1867,16 @@ expect "guard: read refuses git hash-object" 2 "git hash-object is not a command
 # The merger's first green: the green and red lines as the workflow builds
 # them (mergeLines), and its two closing calls, each one call the guard
 # admits.
-expect "guard: merger runs the green line" 0 "^$" guard merger 'git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null hash-object --stdin | grep -q -x -E '\'''"$inv_ids"''\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger runs the green line" 0 "^$" guard merger 'cd tmp/.lane-c && git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null hash-object --stdin | grep -q -x -E '\'''"$inv_ids"''\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: merger refuses another global configuration before git" 2 "a GIT_CONFIG_GLOBAL other than /dev/null" guard merger 'GIT_CONFIG_GLOBAL=tmp/g git fetch -q --prune origin'
 expect "guard: merger refuses a pinned configuration before another command" 2 "an assignment before ls" guard merger 'GIT_CONFIG_NOSYSTEM=1 ls'
 expect "guard: merger refuses another assignment before git" 2 "an assignment of BASE before git" guard merger 'BASE=main git fetch -q --prune origin'
 expect "guard: merger records red CI" 0 "^$" guard merger 'sh tools/run_state.sh metric c rework=1 && sh tools/run_state.sh set c ci \"red abc1234\"'
 expect "guard: merger waits as its file says" 0 "^$" guard merger 'sh tools/ci_wait.sh 180 && sh tools/ci_wait.sh 240 && sh tools/ci_wait.sh 300'
 expect "guard: merger verifies the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%H%n%B origin/main'
-expect "guard: merger records the merge and cleans up" 0 "^$" guard merger 'sh tools/run_state.sh set c merged abc1234 && git ls-remote --heads origin chore/x && git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
+expect "guard: merger records the merge and cleans up" 0 "^$" guard merger 'sh tools/run_state.sh set c merged abc1234 && sh tools/run_state.sh lane-close c && git ls-remote --heads origin chore/x && git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
+expect "guard: contributor merges a moved main into its worktree's branch" 0 "^$" guard contributor 'cd tmp/.lane-c && sh tools/run_state.sh merge-main c'
+expect "guard: merger refuses merge-main, the contributor's" 2 "tools/run_state.sh merge-main" guard merger 'sh tools/run_state.sh merge-main c'
 expect "guard: contributor proposes and validates" 0 "^$" guard contributor 'npx -y @fission-ai/openspec@latest new change c && npx @fission-ai/openspec@latest validate \"c\" --strict --no-interactive && openspec status --change c --json'
 expect "guard: contributor generates and checks" 0 "^$" guard contributor 'make new-ex-command NAME=sort SPEC=\"sor[t]\" AREA=12 && make test-one T=test/domain_buffer.rb && make diagnose-one T=carat/domain/buffer.rb && make -s lint docs-lint gates && make snapshots && make spec-validate'
 expect "guard: contributor commits" 0 "^$" guard contributor 'git add -A && git -c user.name=\"Claude\" -c user.email=\"noreply@anthropic.com\" commit -q -m \"feat: x\" -m \"Co-Authored-By: Claude <noreply@anthropic.com>\" && git commit -q -F tmp/message.txt'
@@ -3154,6 +3212,19 @@ expect "workflow: the package step applies its lane's plan and history, never gr
   plan_js "(p => [p.includes('plan-apply c'), p.includes('history c'), p.includes('never run groom'), /run_state[.]sh groom/.test(p)])(packagePlan({ change: 'c' }, 1))"
 expect "workflow: an unplanned package step copies no plan and runs no groom" 0 '^\[false,true,true\]$' \
   plan_js "(p => [p.includes('plan-apply c'), p.includes('history c'), p.includes('never run groom')])(packagePlan({ change: 'c' }, 0))"
+# Each delivery runs in its own worktree, its merge gates a worktree under
+# the lane's own tmp/, so two never share one (parallel-lanes-b).
+lane_js() {
+  js "$wf" "MERGE_GATES PINNED_GIT ORIGIN_IDS laneDir mergeGatesDir originCheck mergeRecords mergeLines intro" "(() => { globalThis.metricLine = () => ''; globalThis.ran = {}; globalThis.head = 'abc1234'; globalThis.state = { change: 'a', branch: 'chore/a' }; return $1 })()"
+}
+expect "workflow: two concurrent deliveries' merge-gates paths are distinct" 0 '^\["tmp/[.]lane-a/tmp/[.]merge-gates","tmp/[.]lane-b/tmp/[.]merge-gates"\]$' \
+  lane_js "[mergeGatesDir('a'), mergeGatesDir('b')]"
+expect "workflow: the green line runs the merge gates in the delivery's worktree" 0 '^\[true,true\]$' \
+  lane_js "(g => [g.startsWith('cd tmp/.lane-a && '), g.includes('worktree add -q --detach tmp/.merge-gates origin/main')])(mergeLines().green)"
+expect "workflow: every agent start runs its commands in the change's worktree" 0 '^true$' \
+  lane_js "intro().includes('cd tmp/.lane-a && ')"
+expect "workflow: an implement or fix start first merges a moved main, a package start does not" 0 '^\[true,true,false\]$' \
+  js "$wf" "MERGE_MAIN SELF_CHECK contributorTask" "['implement', 'fix', 'package'].map((m) => contributorTask(m, 'b', 'd').includes('run_state.sh merge-main'))"
 expect "workflow: a records-skip package step runs no history" 0 '^\[false,true\]$' \
   plan_js "(p => [p.includes('history c'), p.includes('run no history')])(packagePlan({ change: 'c', records: 'skip' }, 1))"
 expect "workflow: the records change's package step runs neither again" 0 '^true$' \
@@ -3284,7 +3355,7 @@ expect "workflow: the resume brief names only the queue plan-needed read" 0 '^\[
 # Every contributor start is built by contributor() from contributorTask
 # with the brief, so a hold for the user reaches the package start too.
 expect "workflow: the brief, a hold for the user included, reaches every contributor start" 0 '^true$' \
-  js "$wf" "SELF_CHECK contributorTask" '["implement", "fix", "package", "wait", "push", "body"].every((m) => contributorTask(m, "the item; hold for the user before the push", "d").startsWith(`Mode: ${m}. Brief: the item; hold for the user before the push. d`))'
+  js "$wf" "MERGE_MAIN SELF_CHECK contributorTask" '["implement", "fix", "package", "wait", "push", "body"].every((m) => contributorTask(m, "the item; hold for the user before the push", "d").startsWith(`Mode: ${m}. Brief: the item; hold for the user before the push. d`))'
 expect "workflow: every contributor start goes through contributorTask with the brief" 0 '^1 1$' \
   sh -c 'echo "$(grep -c "agentType: .contributor." "$1") $(grep -c "contributorTask(mode, brief, detail)" "$1")"' _ "$wf"
 expect "workflow: a contributor with a question stops" 0 '^[{]"next":"stop"' \
@@ -3350,7 +3421,7 @@ expect "workflow: the review fix round pushes with --review-fix" 0 "^1$" \
 expect "workflow: the review fix round reviews security over the whole diff" 0 "^1$" grep -c -F "const since = reviewFixRounds ? '' : narrowedFrom(ran, 'security', head)" "$wf"
 expect "workflow: the resume start stops on a refused init" 0 "^1$" grep -c -F "when it refuses (a merged change name), stop with its message as reason" "$wf"
 expect "workflow: the implement and fix prompts carry the self-check" 0 '^\[true,true,false\]$' \
-  js "$wf" "SELF_CHECK contributorTask" "['implement', 'fix', 'package'].map((m) => /every behavior the change adds or alters has a test.*docs[/]actions[.]md[)] is updated.*compared against the brief/.test(contributorTask(m, 'b', 'd')))"
+  js "$wf" "MERGE_MAIN SELF_CHECK contributorTask" "['implement', 'fix', 'package'].map((m) => /every behavior the change adds or alters has a test.*docs[/]actions[.]md[)] is updated.*compared against the brief/.test(contributorTask(m, 'b', 'd')))"
 expect "contributor: the self-check is in the implement steps" 0 "^1 1 1$" \
   sh -c 'echo "$(grep -c -E "^5[.] Self-check before returning: every behavior added or altered and every delta spec scenario has a test proving it; every document describing it [(]README[.]md, CLAUDE[.]md, and the architecture, codebase map, compatibility, and actions docs[)] is current.*the diff matches the brief, anything extra named" "$1") $(grep -c "self-check and commit as in implement" "$1") $(grep -c -F -- "--review-fix\`, once a run" "$1")"' _ "$agents/contributor.md"
 expect "planner: a change editing the merge gate's rules lands that edit first" 0 "^1$" \

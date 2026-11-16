@@ -259,6 +259,25 @@
 #                               and append backlog.md to FINDINGS_DIR/CHANGE.md
 #   status                      the queue, the running change, the last metrics
 #                               row, and the first-pass rates of the history
+#   lane-open CHANGE BRANCH     make the change's worktree tmp/.lane-CHANGE
+#                               of the main checkout on BRANCH (the local
+#                               branch, else origin's, else a new one from
+#                               BASE), keep it on a resume, replace one on
+#                               another branch (a replaced run), and link
+#                               the main checkout's toolchain (tmp/.spinel,
+#                               tmp/.toolchain), compile cache
+#                               (build/spinel-cache), run states, stage
+#                               logs, and plans (build/pipeline, build/stages,
+#                               build/plan) into it; print its path
+#   lane-close CHANGE           remove the change's worktree, after its merge
+#                               or when its run is replaced, never a link's
+#                               target; nothing when none stands
+#   merge-main CHANGE           in the worktree, fetch origin's main (BASE
+#                               when set, unfetched) and merge it into the
+#                               branch when it moved, never a rebase: the
+#                               appended records (APPENDED_RECORDS) merge by
+#                               union, both sides' rows kept; any other conflict
+#                               aborts the merge and names its files, exit 1
 #
 # Environment: BASE (origin/main), RUN_STATE_DIR (build/pipeline),
 # STAGE_DIR (build/stages), STAGES (the stage list; make -s stages when
@@ -2279,6 +2298,110 @@ usage() {
   exit 2
 }
 
+# The delivery worktrees (parallel-lanes-b): each delivery runs in its own
+# git worktree of the main checkout, tmp/.lane-CHANGE, hidden since spin
+# reads every visible directory as source, so a feature-lane and a
+# backlog-lane delivery run at once. What the deliveries share stays the
+# main checkout's, linked in: the one toolchain and compile cache, and the
+# run states, stage logs, and plans this script and the workflow read
+# there. A lane's merge gates and benchmark base are worktrees under its own
+# tmp/, so two deliveries never share one.
+LANE_LINKS="tmp/.spinel tmp/.toolchain build/spinel-cache build/pipeline build/stages build/plan"
+
+# main_top: the main checkout's root, from a linked worktree too.
+main_top() {
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || die "lane: not a git repository"
+  [ "$(basename "$common")" = .git ] || die "lane: the main checkout has no .git directory: $common"
+  dirname "$common"
+}
+
+lane_open() {
+  branch=$1
+  matches_branch=$(printf '%s\n' "$branch" | grep -c -E '^(feature|bugfix|hotfix|release|chore)/[a-z0-9][a-z0-9-]*$')
+  [ "$matches_branch" = 1 ] || die "lane-open: not a Conventional Branch: $branch"
+  top=$(main_top) || exit 1
+  cd "$top" || die "lane-open: cannot enter $top"
+  dir=tmp/.lane-$change
+  git worktree prune
+  if [ -e "$dir" ] || [ -L "$dir" ]; then
+    [ -d "$dir" ] && [ ! -L "$dir" ] && [ -f "$dir/.git" ] || die "lane-open: $dir stands and is not a worktree"
+    if [ "$(git -C "$dir" symbolic-ref -q --short HEAD)" != "$branch" ]; then
+      git worktree remove --force "$dir" || die "lane-open: the replaced run's $dir could not be removed"
+      echo "lane-open: removed the replaced run's $dir"
+    fi
+  fi
+  if [ ! -e "$dir" ]; then
+    mkdir -p tmp
+    if git show-ref -q --verify "refs/heads/$branch"; then
+      git worktree add -q "$dir" "$branch"
+    elif git show-ref -q --verify "refs/remotes/origin/$branch"; then
+      git worktree add -q --track -b "$branch" "$dir" "origin/$branch"
+    else
+      git worktree add -q --no-track -b "$branch" "$dir" "${BASE:-origin/main}"
+    fi || die "lane-open: git worktree add of $branch at $dir failed (a branch checked out in the main checkout is checked out there first: check out main in it)"
+  fi
+  for l in $LANE_LINKS; do
+    case "$l" in build/*) mkdir -p "$l" ;; esac
+    [ -e "$l" ] || continue
+    mkdir -p "$dir/$(dirname "$l")"
+    [ -e "$dir/$l" ] || [ -L "$dir/$l" ] || ln -s "$top/$l" "$dir/$l"
+  done
+  echo "lane: $dir on $branch"
+}
+
+lane_close() {
+  top=$(main_top) || exit 1
+  cd "$top" || die "lane-close: cannot enter $top"
+  dir=tmp/.lane-$change
+  if [ ! -e "$dir" ] && [ ! -L "$dir" ]; then
+    git worktree prune
+    echo "lane-close: no $dir"
+    return 0
+  fi
+  [ -d "$dir" ] && [ ! -L "$dir" ] && [ -f "$dir/.git" ] || die "lane-close: $dir is not a worktree"
+  # The links go first, so no removal can reach what they point at.
+  for l in $LANE_LINKS; do
+    [ ! -L "$dir/$l" ] || rm -f "$dir/$l"
+  done
+  git worktree remove --force "$dir" || die "lane-close: git worktree remove of $dir failed"
+  git worktree prune
+  echo "lane-close: removed $dir"
+}
+
+# merge_main: main moved while the delivery ran; merge it in, never a
+# rebase or a force-push. The appended records (each lane's metrics rows,
+# the findings files, the sprint rows) merge by git's union driver, given
+# by an attributes file of this merge alone, both sides' rows kept; a
+# conflict in anything else is the contributor's, by the conflict rules of
+# its push mode.
+APPENDED_RECORDS="docs/metrics-*.tsv docs/findings/*.md docs/sprints.tsv"
+merge_main() {
+  branch=$(git symbolic-ref -q --short HEAD) || die "merge-main: HEAD is not on a branch"
+  [ "$branch" != main ] || die "merge-main: HEAD is main"
+  [ -z "$(git status --porcelain --untracked-files=no)" ] || die "merge-main: the tracked tree is dirty"
+  base=${BASE:-origin/main}
+  if [ -z "${BASE:-}" ]; then
+    pinned_git fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main || die "merge-main: the fetch of origin's main failed"
+  fi
+  if git merge-base --is-ancestor "$base" HEAD; then
+    echo "merge-main: $branch holds $base"
+    return 0
+  fi
+  attrs=$(mktemp "${TMPDIR:-/tmp}/carat-union.XXXXXX") || die "merge-main: mktemp failed"
+  (set -f; for p in $APPENDED_RECORDS; do echo "$p merge=union"; done) > "$attrs"
+  if git -c core.attributesFile="$attrs" -c user.name=Claude -c user.email=noreply@anthropic.com merge -q --no-ff --no-edit \
+      -m "chore: merge main into the branch" -m "Co-Authored-By: Claude <noreply@anthropic.com>" "$base" > /dev/null 2>&1; then
+    rm -f "$attrs"
+    echo "merge-main: merged $base into $branch at $(git rev-parse --short=12 HEAD)"
+    return 0
+  fi
+  rm -f "$attrs"
+  files=$(git diff --name-only --diff-filter=U | tr '\n' ' ')
+  git merge --abort 2>/dev/null
+  echo "merge-main: conflicts in ${files:-no file named}; merge $base by hand by the conflict rules, or stop and name each file where both sides changed the same logic"
+  exit 1
+}
+
 [ $# -ge 1 ] || usage
 command=$1
 shift
@@ -2400,6 +2523,15 @@ case "$command" in
   plan-apply)
     [ $# -eq 0 ] || usage
     plan_apply ;;
+  lane-open)
+    [ $# -eq 1 ] || usage
+    lane_open "$1" ;;
+  lane-close)
+    [ $# -eq 0 ] || usage
+    lane_close ;;
+  merge-main)
+    [ $# -eq 0 ] || usage
+    merge_main ;;
   usage)
     [ $# -eq 2 ] || usage
     add_usage "$1" "$2" ;;
