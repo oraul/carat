@@ -146,7 +146,9 @@
 #                               changes, its combined diff BASE..origin/main,
 #                               and "sweep: yes" in an even sprint, and exit 0
 #                               when SPRINT_SIZE changes merged since the last
-#                               sprint of docs/sprints.tsv (SPRINTS_FILE);
+#                               sprint of docs/sprints.tsv (SPRINTS_FILE), up
+#                               to SPRINT_EXCEPTIONS marked beyond the sprint
+#                               not counted;
 #                               print "not due: ..." and exit 1 before that or
 #                               while the sprint's plan waits in build/plan/
 #                               after its security review, recorded pass or
@@ -177,8 +179,12 @@
 #                               change is not the head of docs/queue.md (the
 #                               waiting sprint plan's queue.md) or a
 #                               pending change holds a proposal or finding
-#                               (PLAN_NOTES) to place; print "not needed:
-#                               ..." with the head item's size and exit 1
+#                               (PLAN_NOTES) to place, or a review run records
+#                               a failing periodic security review with no
+#                               change planned and merged since
+#                               (merged_since) nor a later periodic
+#                               security review passed (passed_since);
+#                               print "not needed: ..." with the head item's size and exit 1
 #   budget CHANGE               print "over:", "under:", "unmeasured:", or
 #                               "no estimate:" with the change's estimate, its
 #                               budget (TOKEN_BUDGETS, MINUTE_BUDGETS), its
@@ -283,10 +289,14 @@ SPRINT_SIZE=5
 # /review's review-DATE and sprint-planning's sprint-N.
 REVIEW_RUNS='^(review|sprint)-[0-9]'
 # The words that mark a queue item, inside its first parenthesis, as a
-# change the user approved beyond a sprint's five, which it never counts;
+# change the user approved beyond a sprint's five, which it does not count;
 # distinct from "the user-approved exception", which lifts only the
 # one-pipeline limit (docs_lint.sh) and leaves the item counted.
 EXCEPTION_MARK='beyond the sprint'
+# At most this many marked changes per sprint go uncounted, the first in
+# the sprint's order; a later one counts, so a sprint closes after at most
+# SPRINT_SIZE + SPRINT_EXCEPTIONS merges whatever the queue text says.
+SPRINT_EXCEPTIONS=1
 SPRINT_HEADER="sprint${TAB}last${TAB}merges${TAB}changes${TAB}wall_min${TAB}min_per_change${TAB}total_tokens${TAB}over_budget${TAB}first_pass"
 
 die() {
@@ -1474,8 +1484,9 @@ append_history() {
 # last row; sprint_base, the merged commit of that row's last change, where
 # the combined diff starts; sprint_names, the changes merged since (the
 # history rows after that change's row, then the merged changes without a
-# row); sprint_exceptions, those marked beyond the sprint (exception_item);
-# and sprint_count, the rest.
+# row); sprint_exceptions, the first SPRINT_EXCEPTIONS of them marked beyond
+# the sprint (exception_item), the queue read no further once they are
+# found; and sprint_count, the rest.
 sprint_state() {
   [ -f "$sprints_file" ] || die "no $sprints_file"
   last_row=$(awk -F'\t' 'NR > 1 && NF { row = $0 } END { print row }' "$sprints_file")
@@ -1488,8 +1499,13 @@ sprint_state() {
   sprint_names=$({ awk -F'\t' -v c="$prev_last" 'seen && NF { print $1 } $1 == c { seen = 1 }' "$metrics_file"; pending_list; } |
     awk -v r="$REVIEW_RUNS" 'NF && $0 !~ r && !seen[$0]++')
   sprint_exceptions=""
+  exempt=0
   for name in $sprint_names; do
-    ! exception_item "$name" "$(merged_of "$name")" || sprint_exceptions="${sprint_exceptions:+$sprint_exceptions }$name"
+    [ "$exempt" -lt "$SPRINT_EXCEPTIONS" ] || break
+    if exception_item "$name" "$(merged_of "$name")"; then
+      sprint_exceptions="${sprint_exceptions:+$sprint_exceptions }$name"
+      exempt=$((exempt + 1))
+    fi
   done
   sprint_count=$(printf '%s\n' "$sprint_names" | X=" $sprint_exceptions " awk 'NF && !index(ENVIRON["X"], " " $0 " ")' | grep -c .)
 }
@@ -1503,7 +1519,8 @@ merged_of() {
 
 # True when the item naming NAME in docs/queue.md at the parent of COMMIT,
 # the queue it was delivered from, carries EXCEPTION_MARK in its first
-# parenthesis: a change beyond the sprint, which a sprint never counts.
+# parenthesis: a change beyond the sprint, which a sprint does not count
+# (up to SPRINT_EXCEPTIONS).
 exception_item() {
   valid '[0-9a-f]{7,40}' "$2" || return 1
   git show --end-of-options "$2^:docs/queue.md" 2>/dev/null | C="$1" M="$EXCEPTION_MARK" awk '
@@ -1571,16 +1588,17 @@ backlog_entry() {
 }
 
 # The sprint's row from its history rows up to the SPRINT_SIZE-th counted
-# one (a change beyond the sprint, sprint_exceptions, not counted): the last
-# change, the merges, the changes, the wall minutes and their mean per
-# change, the total tokens, the runs over their size's budget
-# (TOKEN_BUDGETS), and each gate's first passes.
+# one, where it ends, a later exception's row left to the next sprint, whose
+# combined diff starts there (a change beyond the sprint, sprint_exceptions,
+# not counted): the last change, the merges, the changes, the wall minutes
+# and their mean per change, the total tokens, the runs over their size's
+# budget (TOKEN_BUDGETS), and each gate's first passes.
 sprint_row() {
   awk -F'\t' -v c="$prev_last" -v budgets="$TOKEN_BUDGETS" -v s="sprint-$sprint_n" -v size="$SPRINT_SIZE" -v r="$REVIEW_RUNS" -v x=" $sprint_exceptions " '
     BEGIN { n = split(budgets, b, " "); for (i = 1; i <= n; i++) { split(b[i], kv, "="); budget[kv[1]] = kv[2] } }
     seen && NF && !done && $1 !~ r {
       ex = index(x, " " $1 " ") > 0
-      if (!ex && counted == size) { done = 1; next }
+      if (counted == size) { done = 1; next }
       if (!ex) counted++
       rows++; names = names (rows > 1 ? "," : "") $1; last = $1
       if ($17 ~ /^[0-9.]+$/) wall += $17
@@ -1702,16 +1720,114 @@ records_excluded() {
   echo "$1: $2 excludes the planning records (records=skip); $what"
 }
 
-# Whether the queue needs the planner before the change starts: needed
-# when the change is not the first item of docs/queue.md, or when another
-# merged change without a history row holds a note of a PLAN_NOTES kind
-# (a retrospective proposal, an overrun, a periodic finding) that only the
-# planner places; otherwise the head item is taken as written, its size
+# True when a change planned and merged after COMMIT, the commit a
+# periodic review read: any history row's change merged after COMMIT (the
+# rows read newest first, up to the first merged at or before it, since
+# main is linear), or a pending one, whose merged commit and recorded
+# phase.plan both descend from COMMIT and are not it, its planner not
+# skipped (metric.planned is not 0). That planner saw the review:
+# plan-needed names a failing review before any other reason and the
+# workflow passes the review run to the planner, so its finding was
+# delivered first or judged not blocking. Later merges whose planner was
+# skipped leave it cleared. A merge planned at or before COMMIT, or
+# without its run state, clears nothing (review-coverage-b). A COMMIT git
+# does not know is never merged since.
+merged_since() {
+  valid '[0-9a-f]{7,40}' "$1" || return 1
+  since=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
+  rows=$(awk -F'\t' 'NR > 1 && $3 ~ /^[0-9a-f]+$/ { r[++n] = $1 ":" $3 } END { for (i = n; i > 0; i--) print r[i] }' "$metrics_file" 2>/dev/null)
+  after=
+  for row in $rows; do
+    descends "$since" "${row#*:}" || break
+    after="$after ${row%%:*}"
+  done
+  for ran in $after $(pending_list); do
+    valid '[a-z0-9][a-z0-9-]*' "$ran" || continue
+    commits=$(change=$ran; planned_commits)
+    [ -n "$commits" ] || continue
+    for m in $commits; do
+      descends "$since" "$m" || continue 2
+    done
+    return 0
+  done
+  return 1
+}
+
+# True when a review run records a passing periodic security review (pass,
+# no blocking finding) at a commit that descends from COMMIT and is not
+# it: a later whole-tree security review superseded the failing one at
+# COMMIT (review-coverage-b).
+passed_since() {
+  valid '[0-9a-f]{7,40}' "$1" || return 1
+  since=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
+  for later in $(ls "$state_dir" 2>/dev/null | sed -n 's/[.]json$//p' | grep -E "$REVIEW_RUNS"); do
+    passed=$(change=$later; read_key review.periodic-security)
+    case "$passed" in
+      "pass "*) ;;
+      *) continue ;;
+    esac
+    case "$passed " in *" blocking="[1-9]*) continue ;; esac
+    at=${passed#pass }
+    at=${at%% *}
+    valid '[0-9a-f]{7,40}' "$at" || continue
+    descends "$since" "$at" && return 0
+  done
+  return 1
+}
+
+# The change's merged and phase.plan commits, on one line, when both are 7
+# to 40 hexadecimal digits and its planner was not skipped (metric.planned
+# is not 0); nothing otherwise. One read of the run state.
+planned_commits() {
+  file=$(state_file)
+  [ -f "$file" ] || return 0
+  awk '
+    /^  "(merged|phase[.]plan|metric[.]planned)": "/ {
+      key = $0; sub(/^  "/, "", key); sub(/".*/, "", key)
+      value = $0; sub(/^  "[^"]*": "/, "", value); sub(/",?$/, "", value)
+      if (!(key in got)) got[key] = value
+    }
+    function commit(v) { return v ~ /^[0-9a-f]+$/ && length(v) >= 7 && length(v) <= 40 }
+    END {
+      if (got["metric.planned"] != "0" && commit(got["merged"]) && commit(got["phase.plan"])) print got["merged"], got["phase.plan"]
+    }' "$file"
+}
+
+# True when COMMIT, a hexadecimal hash (planned_commits checked it), names
+# a commit that descends from the full commit SINCE and is not it.
+descends() {
+  full=$(git rev-parse --verify -q --end-of-options "$2^{commit}" 2>/dev/null) || return 1
+  [ "$full" != "$1" ] && git merge-base --is-ancestor "$1" "$full" 2>/dev/null
+}
+
+# Whether the queue needs the planner before the change starts: needed,
+# first, when a review run (REVIEW_RUNS) records a failing periodic
+# security review (blocked, or blocking findings counted) and no change
+# merged since (merged_since) nor a later one passed (passed_since),
+# the line naming that run, which the
+# workflow hands the planner so its security-first stop applies whatever
+# else needs it; then when the change is not the first item of
+# docs/queue.md, or when another merged change without a history row
+# holds a note of a PLAN_NOTES kind (a retrospective proposal, an
+# overrun, a periodic finding) that only the planner places; otherwise the head item is taken as written, its size
 # printed for the run's estimate. It prints one line: a run whose brief is
 # only the change name has its agents read the item in docs/queue.md.
 plan_needed() {
   queue=docs/queue.md
   ! sprint_waiting || queue=$plan_dir/queue.md
+  for run in $(ls "$state_dir" 2>/dev/null | sed -n 's/[.]json$//p' | grep -E "$REVIEW_RUNS"); do
+    record=$(change=$run; read_key review.periodic-security)
+    case "${record%% *}: $record" in
+      blocked:*|*" blocking="[1-9]*) ;;
+      *) continue ;;
+    esac
+    reviewed=${record#* }
+    reviewed=${reviewed%% *}
+    merged_since "$reviewed" && continue
+    passed_since "$reviewed" && continue
+    echo "needed: $run records a failing periodic security review at $reviewed, and no change merged since"
+    return 0
+  done
   head_item=$(sed -n 's/^1[.] //p' "$queue" 2>/dev/null | head -1)
   name=$(printf '%s\n' "$head_item" | sed -n 's/^`\([a-z0-9][a-z0-9-]*\)`.*/\1/p')
   if [ "$name" != "$change" ]; then

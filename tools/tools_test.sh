@@ -1149,14 +1149,15 @@ mrow() {
 }
 # A change whose queue item, at its squash commit's parent, carries the
 # words "beyond the sprint" in its parenthesis is not counted toward the five,
-# and the groomed row takes it beside the five; an item marked only "the
-# user-approved exception", which lifts the one-pipeline limit, still counts
-# (sprint-tidy).
+# one such change per sprint (SPRINT_EXCEPTIONS), and the groomed row ends at
+# the fifth counted change, so a later exception's row goes to the next
+# sprint; an item marked only "the user-approved exception", which lifts the
+# one-pipeline limit, still counts (sprint-tidy, review-coverage).
 fresh exception
 printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
 printf '# Backlog\n' > docs/backlog.md
 { printf 'header\n'; mrow seed bbb222 small 1 1 -; mrow e1 c1 small 1 1 -; mrow e2 c2 small 1 1 -; mrow e3 c3 small 1 1 -; mrow e4 c4 small 1 1 -; } > docs/metrics.tsv
-printf '# Queue\n\n1. `x1` (T2 user request, estimated small, user-approved beyond the sprint): one.\n2. `e5` (T1 pipeline, estimated small, the user-approved exception): review-due counts a change beyond the sprint toward the five.\n' > docs/queue.md
+printf '# Queue\n\n1. `x1` (T2 user request, estimated small, user-approved beyond the sprint): one.\n2. `e5` (T1 pipeline, estimated small, the user-approved exception): review-due counts a change beyond the sprint toward the five.\n3. `x2` (T2 user request, estimated small, beyond the sprint): two.\n' > docs/queue.md
 commit "docs: the queue"
 echo x1 >> README.md
 commit "feat: x1"
@@ -1174,7 +1175,12 @@ echo sprint-1 > build/plan/sprint
 state init sprint-1 main > /dev/null 2>&1
 state review sprint-1 periodic-security pass "diff blocking=0" > /dev/null
 state groom > /dev/null
-expect "run_state: the groomed sprint row takes the exception beside the five" 0 "^sprint-1 x1 6 e1,e2,e3,e4,e5,x1 " sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
+expect "run_state: the groomed sprint row ends at the fifth counted change, a later exception left to the next sprint" 0 "^sprint-1 e5 5 e1,e2,e3,e4,e5 " sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
+echo x2 >> README.md
+commit "feat: x2"
+state init x2 chore/x2 > /dev/null
+state set x2 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: review-due counts a change beyond the sprint past the sprint's one exception" 1 "^not due: sprint-2 has 1 of 5 changes merged [(]x1, x2[)]; not counted, beyond the sprint: x1\$" state review-due
 fresh sprint
 printf 'sprint\tlast\n' > docs/sprints.tsv
 expect "run_state: review-due needs a sprint row" 1 "ends with no sprint row" state review-due
@@ -1306,6 +1312,47 @@ expect "run_state: plan-needed names a pending proposal" 0 "^needed: prev holds 
 expect "run_state: plan-needed prints one line beside a pending proposal" 0 "^exit 0 lines 1\$" plan_lines next
 state history > /dev/null
 expect "run_state: plan-needed leaves a change with a history row" 1 "^not needed" state plan-needed next
+# A periodic security review records on its own run state, which has no
+# merged commit: a failing one stands until a change merges after the
+# commit it reviewed, here prev's row once the review is of the commit
+# before prev's (review-coverage).
+state init review-20261116 main > /dev/null 2>&1
+state review review-20261116 periodic-security partial "high=0 medium=1 low=0 blocking=1 not_reviewed=2" > /dev/null
+expect "run_state: plan-needed names a failing periodic security review no merge followed" 0 "^needed: review-20261116 records a failing periodic security review at [0-9a-f]*, and no change merged since\$" state plan-needed next
+expect "run_state: plan-needed names a failing periodic security review before any other reason" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed later
+state review review-20261116 periodic-security blocked "high=0 medium=1 low=0 blocking=1" "$(git rev-parse --short=12 HEAD^)" > /dev/null
+# Only a merge whose planner ran after the review clears it: prev planned
+# at the reviewed commit, or with its planner skipped, leaves it standing
+# (review-coverage-b).
+state phase prev plan "$(git rev-parse --short=12 HEAD^)" > /dev/null
+expect "run_state: plan-needed keeps a failing periodic security review a merge planned before it followed" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed next
+state phase prev plan > /dev/null
+state metric prev planned=0 > /dev/null
+expect "run_state: plan-needed keeps a failing periodic security review a merge with a skipped planner followed" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed next
+state metric prev planned=1 > /dev/null
+expect "run_state: plan-needed leaves a failing periodic security review a later merge followed" 1 "^not needed" state plan-needed next
+# Every history row merged after the review counts, so later deliveries
+# whose planner was skipped keep it cleared; a failing review no planned
+# merge followed is superseded by a passing one of a later commit, not of
+# the same one (review-coverage-b).
+for skipped in skip-one skip-two; do
+  echo "$skipped" >> README.md
+  commit "feat: $skipped"
+  state init "$skipped" "chore/$skipped" > /dev/null
+  state set "$skipped" merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+  state phase "$skipped" plan > /dev/null
+  state metric "$skipped" planned=0 > /dev/null
+  state history > /dev/null
+done
+expect "run_state: plan-needed leaves a failing periodic security review a planned merge then two skipped planners followed" 1 "^not needed" state plan-needed next
+state review review-20261116 periodic-security blocked "high=0 medium=1 low=0 blocking=1" > /dev/null
+state init review-20261117 main > /dev/null 2>&1
+state review review-20261117 periodic-security pass "high=0 medium=0 low=0 blocking=0" > /dev/null
+expect "run_state: plan-needed keeps a failing periodic security review a pass of the same commit followed" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed next
+echo later >> README.md
+commit "feat: later"
+state review review-20261117 periodic-security pass "high=0 medium=0 low=0 blocking=0" > /dev/null
+expect "run_state: plan-needed leaves a failing periodic security review a later passing one superseded" 1 "^not needed" state plan-needed next
 printf '# Queue\n\n1. UI track: themes (T5, estimated medium).\n' > docs/queue.md
 expect "run_state: plan-needed names a head without a change name" 0 "^needed: next is not the head of docs/queue[.]md [(]no named item[)]" state plan-needed next
 
@@ -2843,6 +2890,12 @@ expect "scout: the pack records its tool calls" 0 '^2$' grep -c -E '^Tool calls:
 expect "workflow: a brief fixing the order skips the planner" 0 '^\[true,false,false,false,false\]$' \
   js "$wf" "planSkipped" "[planSkipped({}, 'not needed: c heads docs/queue.md, estimated medium'), planSkipped({}, 'needed: c is not the head of docs/queue.md (b)'), planSkipped({ 'phase.plan': 'abc1234' }, 'not needed: c'), planSkipped({ merged: 'abc1234' }, 'not needed: c'), planSkipped({}, '')]"
 expect "workflow: the plan skip reads plan-needed alone, not the brief" 0 '^1$' grep -c -x 'if (!stopped && planSkipped(state, planLine)) {' "$wf"
+# The planner reads the review run plan-needed names for a failing
+# periodic security review, which its pending list never holds
+# (review-coverage).
+expect "workflow: the planner is told the failing review run plan-needed names" 0 '^\[true,""\]$' \
+  js "$wf" "planReview" '[/show review-20261116` and apply your security-first step/.test(planReview("needed: review-20261116 records a failing periodic security review at abc1234def56, and no change merged since")), planReview("needed: c is not the head of docs/queue.md (b)")]'
+expect "workflow: the planner prompt carries the failing review" 0 '^1$' grep -c -F '${planReview(planLine)}${capLine('"'"'planner'"'"')}' "$wf"
 speed_js() {
   js "$wf" "COMMIT CLOSABLE noteText staleRed findingAt reRaised securityBlocking narrowedFrom mergeRecords" "$1"
 }

@@ -6253,3 +6253,95 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: openspec/specs/plugin-host/spec.md (from the archived change git-signs-status-a, delta spec line 4)
 - Why: the requirement cuts before a character the limit would split, but no scenario names that and the test at test/drivers_process_runner.rb:62 names none.
 - Fix: add a scenario such as 'Long output is cut before a character' and label the driver test with it.
+
+### merged_since clears a periodic security finding on a merge planned before it
+
+- Location: tools/run_state.sh:1726
+- Why: security Low (4). merged_since clears a failing periodic security review on any later merge, including one whose delivery started before the review was recorded; a delivery planned (or plan-skipped) before a /review records a blocking finding merges afterwards, so plan-needed treats the finding as seen by a planner and later queue-head deliveries skip the security-first stop. A gap in the new trigger, not a regression.
+- Fix: count only a merge whose planner start came after the review was recorded, for example by storing the review run's name or time in the merged run's state when its planner or plan-needed saw it and having merged_since require that marker instead of commit ancestry alone, or keep the trigger until a planner start records that it read the review run.
+
+### merged_since reads only the last metrics row's merged commit
+
+- Location: tools/run_state.sh:1729
+- Why: quality advisory. Metrics rows follow run-state order, not merge order, so a later merge in an earlier row is missed and the planner keeps running; the pending loop also adds a subprocess per state file.
+- Fix: since every commit on main is a squash merge, test that origin/main descends from COMMIT and differs from it.
+
+### No case for a passing periodic security review in plan-needed
+
+- Location: tools/tools_test.sh:1321
+- Why: quality advisory. No case shows that a passing periodic security review, or a partial one with blocking=0, leaves plan-needed not needed, the filter of tools/run_state.sh:1767-1770.
+- Fix: add a pass "... blocking=0" case expecting ^not needed.
+
+### sprint_state picks an exception past the fifth counted row
+
+- Location: tools/run_state.sh:1502
+- Why: quality advisory. sprint_state picks the exception from every name merged since the last sprint while sprint_row (tools/run_state.sh:1599) now ends at the fifth counted row, so review-due names an exception (x1 in tools/tools_test.sh:1178) that the groomed row leaves out and that then spends the next sprint's one exemption, x2 counted.
+- Fix: pick sprint_exceptions only among the names before the SPRINT_SIZE-th counted one, so review-due, groom, and the row read the same window.
+
+### A resumed delivery clears a periodic security review unseen
+
+- Location: tools/run_state.sh:1723
+- Why: quality advisory. merged_since clears a failing periodic security review at any later merge on the premise that the merging change's planner saw it, but a delivery resumed past its plan phase (phase.plan or phase.implement recorded before the review) skips the planner and still clears it unseen; the review-coverage design names this risk.
+- Fix: clear only on a merged change whose run state records phase.plan after the review was recorded, or keep the record until a later periodic security review passes.
+
+### plan_needed lists run states differently from pending_list
+
+- Location: tools/run_state.sh:1753
+- Why: quality advisory. plan_needed lists run states with ls piped to sed and grep while pending_list (tools/run_state.sh:1142) globs the state directory's json files; one clear way to do each thing.
+- Fix: loop over the state directory's json files with basename and a case on REVIEW_RUNS as pending_list does.
+
+### Unwrapped comment lines in run_state.sh
+
+- Location: tools/run_state.sh:1726
+- Why: quality advisory. Comment lines are left unwrapped beside wrapped ones (also tools/run_state.sh:1747), against the file's comment style.
+- Fix: rewrap both comments at the width of the surrounding lines.
+
+### merged_since decides planned after the review from commit ancestry, not from when the review was recorded
+- Location: tools/run_state.sh:1731 (security Low, confidence 4, review-coverage-b)
+- Why: when /review runs at the same time as a delivery, a planner that never saw a failing periodic security review can clear it: the review reads origin/main at X, another change merges to X', and a delivery started at X' runs its planner before the review is recorded; its phase.plan strictly descends from X, so its merge clears the review and the blocking finding never reaches the planner's security-first stop.
+- Fix: record in the delivery's run state which failing review run plan-needed handed to the planner (for example metric.plan_review=RUN at REVIEWED_COMMIT, written when planReview(planLine) is non-empty) and let merged_since clear a review only when a merged, planned change recorded that same run and commit; alternatively compare the review record's write time with the time phase.plan was written, not their commits.
+
+### passed_since lets a diff-only sprint security review supersede a failing whole-tree periodic security review
+- Location: tools/run_state.sh:1760 (security Medium, confidence 6, review-coverage-b)
+- Why: a /review whole-tree sweep fails at commit C with a blocking finding in untouched code; deliveries planned before C merge and close the sprint; the sprint-N combined-diff review passes at a later tip without reading the flagged file; passed_since then treats the failing review as superseded and plan-needed stops putting it in front of the planner's security-first stop although the finding was never fixed. REVIEW_RUNS ('^(review|sprint)-[0-9]') matches sprint-N, while the function's comment says whole-tree. Narrow path; the sprint-mode planner may still see the run in pending.
+- Fix: in passed_since accept only whole-tree records: skip any record whose summary begins with 'diff' (sprint-N runs, as sprint-planning.js line 162 writes them), or restrict the run names to review-* and sprint-N-sweep; add a tools_test case where a later 'pass COMMIT diff ... blocking=0' record leaves the failing review in force.
+
+### planned_commits re-implements the run-state key parsing of read_key
+- Location: tools/run_state.sh:1752 (quality advisory, review-coverage-b)
+- Why: duplication: the run-state JSON format gets a second parser that can drift from read_key.
+- Fix: reuse read_key or one shared multi-key reader so the run-state format has one parser.
+
+### plan_needed and merged_since comments run past the comment wrap
+- Location: tools/run_state.sh:1780 and tools/run_state.sh:1729 (quality advisory, review-coverage-b)
+- Why: a line of the plan_needed comment ('overrun, a periodic finding) that only the planner places; otherwise the head item ...') runs past the block's wrap, and the merged_since comment appends 'A COMMIT git does not know is never merged since.' past it.
+- Fix: rewrap both comments.
+
+### plan_needed lists review runs by parsing ls output
+- Location: tools/run_state.sh:1786 (quality advisory, review-coverage-b)
+- Why: parsing ls output is fragile shell.
+- Fix: iterate "$state_dir"/*.json with a glob, strip the suffix, and match REVIEW_RUNS with case or grep on the name.
+
+### plan-needed wording says no change merged since though a merge planned before the review no longer counts
+- Location: tools/run_state.sh:1798, .claude/workflows/deliver-change.js:977, README.md pipeline step 1 (quality advisory, review-coverage-b)
+- Why: the plan-needed line 'and no change merged since', the planReview comment ('no merge since'), and the README step ('failed with no change merged since whose planner ran after it') misstate or garble the rule now that a merge planned before the review does not count.
+- Fix: say 'no change planned after it has merged since' in all three.
+
+### passed_since lets a sprint-N diff pass supersede a whole-tree review contrary to its comment
+- Location: tools/run_state.sh:1763 (quality advisory, review-coverage-b)
+- Why: passed_since lists every REVIEW_RUNS run, so a sprint-N run's periodic-security pass, which reviewed only the sprint's combined diff, supersedes a failing whole-tree review, though its comment says a later whole-tree review supersedes it.
+- Fix: list only review-DATE runs there, or say in the comment and proposal that a sprint-diff pass counts.
+
+### Review-run listing and reviewed-commit resolution are repeated
+- Location: tools/run_state.sh:1763 and tools/run_state.sh:1818 (quality advisory, review-coverage-b)
+- Why: the review-run listing (ls state_dir, sed, grep REVIEW_RUNS) is repeated, and merged_since and passed_since each validate and rev-parse the same reviewed commit.
+- Fix: extract a review_runs helper and resolve the reviewed commit once in plan_needed, passing the full commit to both.
+
+### plan-needed needed line omits the later passing review condition
+- Location: tools/run_state.sh:1828 (quality advisory, review-coverage-b)
+- Why: the needed line still says 'and no change merged since' though passed_since now also has to fail.
+- Fix: say 'no change planned and merged since nor a later periodic security review passed' and adjust the tools_test expectations.
+
+### run_state.sh header plan-needed line and plan_needed comment have over-long lines
+- Location: tools/run_state.sh:187, tools/run_state.sh:1807, tools/run_state.sh:1812 (quality advisory, review-coverage-b)
+- Why: comment wrapping: over-long lines and a broken wrap.
+- Fix: rewrap both to the file's comment width.
