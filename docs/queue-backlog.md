@@ -1,11 +1,10 @@
 # Queue: backlog
 
-Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix is accepted with `lh` 26.0, `j` 27.0, `insert` 32.0 held.
+Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix is accepted with `lh` 26.0, `j` 27.0, `insert` 26.0 held.
 
 ## Sprint 11
 
-1. `review-pipeline-a` (T1 pipeline defect, security Lows, estimated medium, backlog-pick batch 1): the `guard and gates` pattern (`tools/run_state.sh:161`) leaves out `run_state.sh` and `deliver-change.js`, whose records `gates.sh` trusts (Low (7)); staleRed matches check runs by name, so a branch-added workflow's green job hides a red run (`.claude/workflows/deliver-change.js:301`, Low (4)); `security-reviewer.md:33` reverses the not-run order; `missedOf` (`periodic-review.js:85`) takes either kind's values; the continued prompt joins its sentence to the last file (`deliver-change.js:586`). Accepted when tools-test cases show both files reviewed, another workflow's green run not clearing a red one, missedOf refusing the other kind, the last path alone. Backlog: "## The guard and gates review area leaves out the review's own record keepers", "## delivery-speed security Low (4) at .claude/workflows/deliver-change.js:301", "## The security reviewer's not-run order reads reversed", "## The periodic review's missed check accepts either kind's values", "## The continued security prompt joins its sentence to the last file left".
-2. `windows-tabs-tidy` (T6 with a security Low (4), estimated medium, backlog-pick batch 2): `offset_refusal` (`carat/domain/float_spec.rb:58`) uses Integer#abs, failing at the integer minimum; `scroll_handler.rb:20` writes a trait after super, `:33` names half-page targets twice; `tab_request.rb:13` counted? and `command_grammar.rb:84` operator_pending? unused; digits? twice (`buffer_command_handler.rb:98`, `history_command_handler.rb:65`); `:b 0000000001` gives E86 (`buffer_command_handler.rb:92`); `buffer_request.rb:5` `:current` does nothing; `close_other_windows.rb:34` clears previous twice; 9 comments over their wrap (`scroll_window.rb:18`). Accepted when tests show the minimum offset refused, `:b 0000000001` on buffer 1, one digits?, allocations held. Backlog: "## Float offset check overflows at the integer minimum (float-placement, security Low (4))", "## ScrollHandler sets a base class trait after super", "## Half-page scroll targets have two names", "## Nine comments break their file's wrap width", "## TabRequest#counted? and CommandGrammar#operator_pending? have no caller", "## BufferCommandHandler#digits? duplicates HistoryCommandHandler.digits?", "## A buffer number with leading zeros past nine bytes reads as the largest", "## BufferRequest's :current target exists only to return no outcome", "## CloseOtherWindows clears tab.previous a second time".
+1. `windows-tabs-tidy` (T6 with a security Low (4), estimated medium, backlog-pick batch 2): `offset_refusal` (`carat/domain/float_spec.rb:58`) uses Integer#abs, failing at the integer minimum; `scroll_handler.rb:20` writes a trait after super, `:33` names half-page targets twice; `tab_request.rb:13` counted? and `command_grammar.rb:84` operator_pending? unused; digits? twice (`buffer_command_handler.rb:98`, `history_command_handler.rb:65`); `:b 0000000001` gives E86 (`buffer_command_handler.rb:92`); `buffer_request.rb:5` `:current` does nothing; `close_other_windows.rb:34` clears previous twice; 9 comments over their wrap (`scroll_window.rb:18`). Accepted when tests show the minimum offset refused, `:b 0000000001` on buffer 1, one digits?, allocations held. Backlog: "## Float offset check overflows at the integer minimum (float-placement, security Low (4))", "## ScrollHandler sets a base class trait after super", "## Half-page scroll targets have two names", "## Nine comments break their file's wrap width", "## TabRequest#counted? and CommandGrammar#operator_pending? have no caller", "## BufferCommandHandler#digits? duplicates HistoryCommandHandler.digits?", "## A buffer number with leading zeros past nine bytes reads as the largest", "## BufferRequest's :current target exists only to return no outcome", "## CloseOtherWindows clears tab.previous a second time".
 
 ## Pool
 
@@ -32,7 +31,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 21. `review-demotion` (T1 pipeline defect, estimated medium, pushed back 4, S15): reviews 21.9% to 36.6% of output.
 22. `record-tier` (T1 pipeline, estimated small).
 23. `prose-grep-cases` (T1 pipeline, estimated medium).
-24. `plan-apply-guard` (T1 pipeline, estimated small).
+24. `plan-apply-guard` (T1 pipeline, estimated small): sprint-10-records note 3, groom took the sprint plan's feature queue naming the merged `git-signs-trust` and folded a nonexistent path, fixed by hand; accepted when tools-test cases show groom preferring `build/plan/<change>/queue-*.md` and refusing an absent path.
 25. `sprint-marker-tidy` (T1 pipeline advisories, estimated small).
 26. `plan-skip` (T1 pipeline, estimated small): plan in 10 of 10 rows.
 27. `scout-value` (T1 pipeline, estimated small): scout 15.6% of output.
@@ -63,13 +62,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 
 ## Decisions
 
-- Sprint 11: 3 features, 2 backlog: backlog-pick batches 1 (area 1, 10 of 451) and 2 (area 11, 10 of 57); `review-pipeline-a` the one pipeline item, a defect (Lows (7), (4)).
-- Batch 1 split, 10 to 5 by the size check: rules.sh to `secret-patterns` (merge-gate rules alone), 2 to `review-pipeline-b`, Lows at 186ddfb and `gates.sh:112` kept by `ci-hardening`, `content-gate-gaps`.
-- Batch 2: 9 of 10, `:g`'s `:m :t :normal` to the feature pool. Unmapped: 24 headings (README, CLAUDE.md, docs/queue.md) to `architecture-docs`, `docs-index`.
-- `ruby-structure-remove` (T2) and `planner-split-rule` pushed back 1 by the batch rule.
-- Backlog triage: 3 stale (`fixed` 9aeb13f, f26b539): 4 entries name only deleted files, 2 still hold.
-- Groom: 2 `listed` by markdown-reading-b; backlog-dups 2 groups, 0 duplicates.
-- Sprint-10: 70 sweep and 10 review notes: 40 entries to `groomed.md`, 1 queued T0, 32 duplicates of entries or pool items.
-- Retro notes: lsp-incremental-sync 9, markdown-reading-b 8 to `review-demotion`; note 10 (check 24,171 output) to `check-skip`; markdown-reading-b 7 to `scout-value`; 6 (merge 30,050/12) and overrun (14 calls, cap 12) to `merge-gate-integrity`.
-- Calibrate: backlog 5 rows since the split, 1,171,692 mean total, 70.8 min, quality 0/5, 0 entries closed; feature 930,246, 80.6 min, quality 3/5; no budget change until 3 batch runs close entries.
-- Security first resolved: sweep High (9) `git_signs/plugin.rb:23` at f26b539 is fixed by f29f956 (#160, `git-signs-trust`, its review security pass high=0 at 283ab0cf503c): trusted-root refusal, `GIT_NO_LAZY_FETCH=1`, `protocol.ext.allow=never`, tested in `test/editor_git_signs.rb`; `sprint-10-records` (T0 records, estimated small) proceeds.
+- Security first resolved (T0): sweep High (9) `carat/plugins/git_signs/plugin.rb:23` at f26b5391419c is fixed by merged f29f956 (#160): trusted-root refusal, `GIT_NO_LAZY_FETCH=1` (`file_requests.rb:30`), `protocol.ext.allow=never` (`plugin.rb:27`); sweep Lows (4) `process_runner.rb:98` and (6) `open-pr.yml:46` stay in `process-capture-hardening`, `ci-hardening`.
+- `review-pipeline-a` (T1 pipeline defect, Lows (7), (4)) delivered as Sprint 11 backlog item 1, removed here; `windows-tabs-tidy` (T6, batch 2) is the sprint's one backlog item left.
+- Size medium: 5 fixes, 2 of them one-line wording, kept whole as the sprint plan's size check left it; 10 backlog-lane medium rows 741,570 to 1,739,169 total, 46 to 100 min.
+- Acceptance figure `insert` 32.0 to 26.0: sprint-10-records note 2, insert=26.0 in every row since #151.
+- sprint-10-records note 3 (groom refolds a merged item) to `plan-apply-guard` (T1, small); note 1 (proposal says five, sprints.tsv 6) dropped: the change merged as #161.
