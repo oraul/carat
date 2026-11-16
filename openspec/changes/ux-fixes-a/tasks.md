@@ -1,6 +1,6 @@
 ## 1. The lsp slot on the bar
 
-- [ ] 1.1 Add the roles `PANEL_YELLOW`, `PANEL_GREEN`, `PANEL_RED` to `Carat::Domain::Themes`, give them in the six palettes, and name them with `PANEL` for the three `StatusLineLsp*` groups, proved by `test/domain_theme.rb` "The lsp groups share the bar's background" and "Every palette's lsp groups pass on the bar"
+- [x] 1.1 Add the roles `PANEL_YELLOW`, `PANEL_GREEN`, `PANEL_RED` to `Carat::Domain::Themes`, give them in the six palettes, and name them with `PANEL` for the three `StatusLineLsp*` groups, proved by `test/domain_theme.rb` "The lsp groups share the bar's background" and "Every palette's lsp groups pass on the bar"
 
 ## 2. The finder keeps a query with no match
 

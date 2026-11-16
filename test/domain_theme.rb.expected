@@ -73,6 +73,18 @@ ok   dark_plus at 24 bits
 ok   dark_plus at 256 colors
 ok   light_plus at 24 bits
 ok   light_plus at 256 colors
+ok   The lsp groups share the bar's background: carat-dark on the terminal's background
+ok   The lsp groups share the bar's background: carat-dark on the theme's background
+ok   The lsp groups share the bar's background: carat-light on the terminal's background
+ok   The lsp groups share the bar's background: carat-light on the theme's background
+ok   The lsp groups share the bar's background: one_dark on the terminal's background
+ok   The lsp groups share the bar's background: one_dark on the theme's background
+ok   The lsp groups share the bar's background: one_light on the terminal's background
+ok   The lsp groups share the bar's background: one_light on the theme's background
+ok   The lsp groups share the bar's background: dark_plus on the terminal's background
+ok   The lsp groups share the bar's background: dark_plus on the theme's background
+ok   The lsp groups share the bar's background: light_plus on the terminal's background
+ok   The lsp groups share the bar's background: light_plus on the theme's background
 ok   carat-dark on the theme background: the selected tab reads at a glance
 ok   carat-dark on the terminal background: the selected tab reads at a glance
 ok   carat-light on the theme background: the selected tab reads at a glance
@@ -192,4 +204,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 194 passed, 0 failed
+domain_theme: 206 passed, 0 failed
