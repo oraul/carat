@@ -165,11 +165,13 @@
 #   backlog-dups                print each location (file:line) that two or
 #                               more backlog headings name, with the headings
 #   backlog-pick [FILE...]      print the next PICK_BATCHES batches of the
-#                               backlog entries ("### title", "- Location:",
-#                               "- Why:") of the FILEs, else of the backlog
-#                               and the findings files, each of one
-#                               docs/codebase-map.md area: the areas of the
-#                               entries naming security first, then by their
+#                               backlog entries ("## title" or deeper,
+#                               "- Location:" or "- Where:", "- Why:" or
+#                               "- Why it matters:") of the FILEs, else
+#                               of the backlog and the findings files,
+#                               each of one docs/codebase-map.md area:
+#                               the areas of the entries naming
+#                               security first, then by their
 #                               oldest entry; PICK_MIN or more give at most
 #                               PICK_MAX, security first, then oldest; fewer
 #                               give their security entries alone, or none;
@@ -1732,15 +1734,19 @@ backlog_entry() {
     on { print }'
 }
 
-# The pick of the backlog lane: the entries ("### " headings, each to the
-# next heading) of the FILEs in order, else of folded_backlog, ranked into
-# batches of one docs/codebase-map.md area each (backlog-pick in the
-# header). A Location's first token, its backticks and :line dropped,
-# matches a path the map names under a numbered area, or lies under one
-# ending in "/"; an entry whose heading text a queue file holds, not as
-# the start of a longer word, is queued, and one whose whole heading line
-# ends a line of PLAN_DIR/groom.txt is groomed: the closed sprint's
-# removals, which stay in the backlog until the next package step.
+# The pick of the backlog lane: the entries (a "## " or deeper heading, to
+# the next heading, with a "- Location:" or "- Where:" line or a path:line
+# in the heading; any other heading a section) of the FILEs in order, else
+# of folded_backlog, ranked into batches of one docs/codebase-map.md area
+# each (backlog-pick in the header). A Location's first token, its
+# backticks and :line dropped, else the heading's first path:line, matches
+# a path the map names under a numbered area (a bullet's leading path
+# first, then any backticked path of the area's lines), or lies under the
+# longest one ending in "/"; an entry whose heading text a queue file
+# holds, not as the start of a longer word, is queued, and one whose
+# whole heading line ends a line of PLAN_DIR/groom.txt is groomed: the
+# closed sprint's removals, which stay in the backlog until the next
+# package step.
 backlog_pick() {
   if [ $# -eq 0 ]; then
     [ -f "$backlog_file" ] || die "no $backlog_file"
@@ -1753,34 +1759,54 @@ backlog_pick() {
       while ((getline line < ENVIRON["M"]) > 0) {
         if (line ~ /^## [0-9]+[.] /) { area = substr(line, 4); continue }
         if (line ~ /^## /) { area = ""; continue }
-        if (area != "" && match(line, /^- `[^`]+`/)) map[substr(line, 4, RLENGTH - 4)] = area
+        if (area == "") continue
+        if (match(line, /^- `[^`]+`/)) own[substr(line, 4, RLENGTH - 4)] = area
+        for (s = line; match(s, /`[^` ]+`/); s = substr(s, RSTART + RLENGTH)) {
+          t = substr(s, RSTART + 1, RLENGTH - 2)
+          if (t ~ /^[A-Za-z0-9_.\/-]+$/ && !(t in seen)) seen[t] = area
+        }
       }
       nq = split(ENVIRON["Q"], qf, " ")
       for (i = 1; i <= nq; i++) while ((getline line < qf[i]) > 0) queued = queued "\n" line
       while ((getline line < ENVIRON["G"]) > 0)
         for (j = 1; j < length(line); j++) if (substr(line, j, 2) == " #") groomed[substr(line, j + 1)] = 1
     }
-    /^### / { n++; head[n] = $0; on = 1; next }
+    /^##+ / { n++; head[n] = $0; on = 1; next }
     /^#+ / { on = 0; next }
-    on && /^- Location:/ { loc[n] = $0 }
-    on && /^- Why:/ { why[n] = $0 }
+    on && !(n in loc) && /^- (Location|Where):/ { loc[n] = $0 }
+    on && /^- Why( it matters)?:/ { why[n] = $0 }
     function queued_at(t,   s, j) {
       for (s = queued; (j = index(s, t)) > 0; s = substr(s, j + 1))
         if (substr(s, j + length(t), 1) !~ /[A-Za-z0-9_]/) return 1
       return 0
     }
-    function area_of(p,   k) {
-      if (p in map) return map[p]
-      for (k in map) if (k ~ /\/$/ && index(p, k) == 1) return map[k]
-      return ""
+    function under(m, p,   k, best) {
+      if (p in m) return m[p]
+      best = ""
+      for (k in m) if (k ~ /\/$/ && index(p, k) == 1 && length(k) > length(best)) best = k
+      return best == "" ? "" : m[best]
+    }
+    function area_of(p,   a) {
+      if (p == "") return ""
+      a = under(own, p)
+      return a != "" ? a : under(seen, p)
+    }
+    function head_path(h) {
+      if (!match(h, /[A-Za-z0-9_.\/-]+[.][A-Za-z]+:[0-9]+/)) return ""
+      h = substr(h, RSTART, RLENGTH); sub(/:[0-9]+$/, "", h); return h
     }
     END {
       for (i = 1; i <= n; i++) {
-        if (queued_at(substr(head[i], 5)) || (head[i] in groomed)) continue
-        p = loc[i]; sub(/^- Location:[ \t]*/, "", p); gsub(/`/, "", p)
+        hp = head_path(head[i])
+        if (!(i in loc) && hp == "") continue
+        t = head[i]; sub(/^#+ /, "", t)
+        if (queued_at(t) || (head[i] in groomed)) continue
+        p = loc[i]; sub(/^- (Location|Where):[ \t]*/, "", p); gsub(/`/, "", p)
         sub(/[ \t,;(].*$/, "", p); sub(/:.*$/, "", p)
         a = area_of(p)
-        if (a == "") { print "unmapped: " head[i] " (" (p == "" ? "no Location" : p) ")"; continue }
+        if (a == "" && area_of(hp) != "") { p = hp; a = area_of(hp) }
+        if (p == "") p = hp
+        if (a == "") { print "unmapped: " head[i] " (" p ")"; continue }
         at[i] = a; count[a]++
         if (tolower(head[i] " " why[i]) ~ /security/) { secure[i] = 1; nsec[a]++ }
       }

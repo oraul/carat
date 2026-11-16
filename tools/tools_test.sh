@@ -744,11 +744,14 @@ cat > docs/codebase-map.md <<'EOB'
 
 ## 1. Build and CI
 
-- `tools/a.sh`: a.
+- `tools/a.sh`: a, which calls `tools/t.sh`.
+- Outside the roots: `Makefile` (make), `.github/workflows/ci.yml` (CI).
 
 ## 2. Toolchain
 
 - `tools/t.sh`: t.
+
+Tests: `tools/t_test.sh` (the t test).
 
 ## 3. Configuration
 
@@ -792,6 +795,23 @@ expect "run_state: backlog-pick reads the backlog and findings files by default"
 expect "run_state: backlog-pick prints no batch when none qualifies" 1 "^no batch: no area holds 5 entries and none names security$" \
   sh -c 'tail -4 "$1" > bk3.md && sh "$2" backlog-pick bk3.md' _ bk2.md "$here/run_state.sh"
 expect "run_state: backlog-pick refuses a missing file" 1 "no nofile[.]md" state backlog-pick nofile.md
+# The other entry forms: "## " and deeper headings, "- Where:" and
+# "- Why it matters:" lines, a heading's path:line without a Location, a
+# path on a Tests: line, the second path of a bullet, a section heading.
+{ printf '# Backlog\n\n## Section\n\n## w1 quoting\n\n- Where: `tools/t.sh:7`\n- Why it matters: security Medium (8).\n'
+  printf '\n## w2 at tools/t_test.sh:3\n\n- Why it matters: w.\n\n#### w3 deeper\n\n- Location: tools/t.sh:9\n'
+  printf '\n## w4 test\n\n- Where: tools/t_test.sh:4\n\n## w5 plain\n\n- Location: tools/t.sh:11\n'
+  printf '\n## w6 target\n\n- Where: Makefile:12\n\n## w7 at .github/workflows/ci.yml:5\n\n- Why: security Low.\n'
+} > bk4.md
+pick=$(state backlog-pick bk4.md)
+expect "run_state: backlog-pick reads ## entries with Where and Why it matters lines" 0 "^batch 1: area 2[.] Toolchain, 5 of 5 entries ## w1 quoting ## w2 at tools/t_test[.]sh:3 #### w3 deeper ## w4 test ## w5 plain batch 2" \
+  sh -c 'printf "%s\n" "$1" | tr "\n" " "' _ "$pick"
+expect "run_state: backlog-pick places an entry by its heading's path without a Location" 0 "^1$" \
+  sh -c 'printf "%s\n" "$1" | grep -c "^## w2 at tools/t_test[.]sh:3$"' _ "$pick"
+expect "run_state: backlog-pick maps a path on a Tests: line of an area" 0 "^1$" \
+  sh -c 'printf "%s\n" "$1" | grep -c "^## w4 test$"' _ "$pick"
+expect "run_state: backlog-pick maps every path of a bullet and skips a section heading" 0 "^batch 2: area 1[.] Build and CI, its 1 security entries alone of 2 ## w7 at [.]github/workflows/ci[.]yml:5 0$" \
+  sh -c 'echo "$(printf "%s\n" "$1" | sed -n "/^batch 2/,\$p" | tr "\n" " ")$(printf "%s\n" "$1" | grep -c "unmapped\|Section")"' _ "$pick"
 
 
 # ------------------------------------------------------------ open_pr.sh

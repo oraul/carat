@@ -12,3 +12,7 @@
 ## 3. Docs
 
 - [x] 3.1 `docs/codebase-map.md` area 1 names `backlog-pick`; README.md's sprint planning step names the pick, the triage, and the calibration; `make docs-lint` and `make gates` pass
+
+## 4. Review fixes
+
+- [x] 4.1 The pick reads `##` and deeper headings, `- Where:` and `- Why it matters:` lines, and a heading's path:line without a Location, and maps every backticked path of an area's lines; proved by "run_state: backlog-pick reads ## entries with Where and Why it matters lines", "run_state: backlog-pick places an entry by its heading's path without a Location", "run_state: backlog-pick maps a path on a Tests: line of an area", and "run_state: backlog-pick maps every path of a bullet and skips a section heading"
