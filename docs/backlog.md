@@ -5923,3 +5923,33 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: tools/tools_test.sh:2795
 - Why: the pack-currency cases (2795, 2797, 2798) match the prose of PACK_CURRENT, the workflow source, and scout.md by regex, so a rewording breaks them and they prove no behavior, the pattern of the advisory at tools/tools_test.sh:2790.
 - Fix: keep one case that PACK_CURRENT reaches the area-plan prompt through a stubbed agent, or accept them as wording guards and say so in a comment.
+
+### Sprint count exemption trusts model-written queue text
+- Location: tools/run_state.sh:1505
+- Why: security Low (confidence 3): review-due trusts the words 'user-approved exception' in a model-written queue item, so the sprint-end review can be put off.
+- Fix: require proof the user approved the exception, such as a run-state record the workflow writes from the user's input, rather than words the planner writes into docs/queue.md; or cap exceptions per sprint (for example one) and make review-due fall due anyway after a set number of merges since sprint_base.
+
+### merged_on_main repeats supported
+- Location: tools/run_state.sh:1121
+- Why: quality advisory: merged_on_main repeats supported (tools/run_state.sh:1735) line for line, differing only in the base it reads.
+- Fix: one helper taking the base, supported calling it after its shape check.
+
+### unmerged_list duplicates pending_list's loop
+- Location: tools/run_state.sh:1143 and tools/run_state.sh:1146
+- Why: quality advisory: unmerged_list repeats pending_list's loop (state files, merged_commit, has_row) with only the merged_on_main test inverted, and append_history walks the run states twice.
+- Fix: one loop that classifies each run once, pending_list and unmerged_list filtering its output, or pending_list taking a mode argument or printing never-merged runs to stderr.
+
+### Planner does not know the beyond-the-sprint marker
+- Location: tools/run_state.sh:287, .claude/agents/planner.md:25, docs/goals.md
+- Why: quality advisory: the proposal says the planner writes the beyond-the-sprint marker, yet neither planner.md step 5 nor docs/goals.md names it, so only a hand edit of docs/queue.md ever marks an item and review-due's exception rule depends on memory.
+- Fix: name EXCEPTION_MARK's words in planner.md's item parenthesis rule beside the pipeline-limit line, and in the sprint rule of docs/goals.md, for a change the user approves beyond the five.
+
+### Double negative in the sprint exception count
+- Location: tools/run_state.sh:1492
+- Why: quality advisory: '! exception_item ... || sprint_exceptions=...' is a double negative that reads as the opposite of what it does.
+- Fix: write 'if exception_item "$name" "$(merged_of "$name")"; then sprint_exceptions=...; fi'.
+
+### sprint_row takes exception rows past the fifth counted row
+- Location: tools/run_state.sh:1583
+- Why: quality advisory: sprint_row keeps taking exception rows after the fifth counted row until a sixth counted one, so an exception whose history row lands after the sprint review (a merge between /sprint and the groom) joins the closed sprint's row and becomes its last change, the next sprint_base, leaving its diff in neither sprint's combined diff.
+- Fix: end the row at the fifth counted row, taking only the exceptions before it, or bound it by the reviewed head.

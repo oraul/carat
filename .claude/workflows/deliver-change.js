@@ -973,10 +973,12 @@ if (!resume || resume.status !== 'done') {
 
 // The planner orders the queue from the metrics history before a new change
 // starts; an unresolved blocking security finding goes first. It runs only
-// when the queue needs a decision: plan-needed found one (the change is not
-// the queue's head, or a proposal or finding waits), or the brief is a
-// request beyond the change's name. Otherwise the head item is taken as
-// written, with its size as the estimate. A brief that is only the change
+// when the queue needs a decision, which plan-needed alone finds (the change
+// is not the queue's head, or a proposal or finding waits): a brief for the
+// head item keeps the order, so it plans no more than the change's name
+// would (planSkipped). Otherwise the head item is taken as written, with its
+// size as the estimate, and the brief still reaches the scouts and the
+// contributor. A brief that is only the change
 // name gives the scouts and the contributor nothing to work from, so they
 // read the queue item naming the change in docs/queue.md themselves: the
 // item never passes through a model's output.
@@ -988,9 +990,15 @@ function resumeBrief(change, line) {
     : /docs\/queue\.md/.test(line) ? 'docs/queue.md' : 'docs/queue.md (build/plan/queue.md while a sprint plan waits there)'
   return `the item of ${queueFile} that names \`${change}\`, read there as written (when no item names it, the existing OpenSpec change)`
 }
+// Whether the Plan phase is skipped: no merge, plan, or implement record
+// yet, and plan-needed's line says not needed, whatever the brief says.
+// tools/tools_test.sh runs this helper.
+function planSkipped(state, line) {
+  return !state.merged && !state['phase.plan'] && !state['phase.implement'] && /^not needed:/.test(line || '')
+}
 const request = typeof input.brief === 'string' && input.brief.trim() !== '' && input.brief.trim() !== state.change
 const brief = request ? input.brief : resumeBrief(state.change, planLine)
-if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement'] && !request && /^not needed:/.test(planLine)) {
+if (!stopped && planSkipped(state, planLine)) {
   phase('Plan')
   const size = /estimated (small|medium|large)\b/.exec(planLine)
   if (size) estimate = size[1]

@@ -875,6 +875,14 @@ printf 'based\t-\n' >> docs/metrics.tsv
 commit "docs: record based"
 cp m.keep docs/metrics.tsv
 expect "run_state: history appends no row main already has" 0 "^history: based already has its row in HEAD's docs/metrics[.]tsv; not appended again\$" env BASE=HEAD sh "$here/run_state.sh" history
+# A merged value naming no commit on main is a run that never merged: no
+# row, no pending name (sprint-tidy).
+state init stray chore/stray > /dev/null
+state set stray merged e375e4cfa5cf > /dev/null
+expect "run_state: pending skips a run whose merged commit is not on main" 0 "^$" sh -c "sh '$here/run_state.sh' pending | grep -x stray; true"
+expect "run_state: history keeps a never-merged run out" 0 "^history: stray records merged e375e4cfa5cf, no commit on main; not appended\$" env BASE=HEAD sh "$here/run_state.sh" history
+expect "run_state: history appends no row of a never-merged run" 0 "^0\$" sh -c "grep -c '^stray' docs/metrics.tsv; true"
+rm build/pipeline/stray.json
 expect "run_state: status prints the first-pass rates" 0 "first-pass rates over 1 change.s.: check 1/1 quality 0/1 security 1/1 gates 0/1" state status
 
 # A run state whose first passes the workflow stored only in part: the
@@ -1139,6 +1147,34 @@ expect "run_state: bench refuses a measurement of another commit" 1 "passed at a
 mrow() {
   printf '%s\t-\t%s\t-\t-\t%s\t-\t-\t-\t-\t-\t-\t-\t-\t%s\t%s\t%s\t-\n' "$1" "$2" "$6" "$3" "$4" "$5"
 }
+# A change whose queue item, at its squash commit's parent, carries the
+# words "beyond the sprint" in its parenthesis is not counted toward the five,
+# and the groomed row takes it beside the five; an item marked only "the
+# user-approved exception", which lifts the one-pipeline limit, still counts
+# (sprint-tidy).
+fresh exception
+printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
+printf '# Backlog\n' > docs/backlog.md
+{ printf 'header\n'; mrow seed bbb222 small 1 1 -; mrow e1 c1 small 1 1 -; mrow e2 c2 small 1 1 -; mrow e3 c3 small 1 1 -; mrow e4 c4 small 1 1 -; } > docs/metrics.tsv
+printf '# Queue\n\n1. `x1` (T2 user request, estimated small, user-approved beyond the sprint): one.\n2. `e5` (T1 pipeline, estimated small, the user-approved exception): review-due counts a change beyond the sprint toward the five.\n' > docs/queue.md
+commit "docs: the queue"
+echo x1 >> README.md
+commit "feat: x1"
+state init x1 chore/x1 > /dev/null
+state set x1 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: review-due leaves a change beyond the sprint out of the count" 1 "^not due: sprint-1 has 4 of 5 changes merged [(]e1, e2, e3, e4, x1[)]; not counted, beyond the sprint: x1\$" state review-due
+echo e5 >> README.md
+commit "feat: e5"
+state init e5 chore/e5 > /dev/null
+state set e5 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: review-due is due at the fifth counted merge beside an exception, an item marked only for the pipeline limit counted" 0 "^due: sprint-1 has 5 changes merged [(]e1, e2, e3, e4, e5, x1[)]; combined diff bbb222[.][.]origin/main; sweep: no\$" state review-due
+state history > /dev/null
+mkdir -p build/plan
+echo sprint-1 > build/plan/sprint
+state init sprint-1 main > /dev/null 2>&1
+state review sprint-1 periodic-security pass "diff blocking=0" > /dev/null
+state groom > /dev/null
+expect "run_state: the groomed sprint row takes the exception beside the five" 0 "^sprint-1 x1 6 e1,e2,e3,e4,e5,x1 " sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
 fresh sprint
 printf 'sprint\tlast\n' > docs/sprints.tsv
 expect "run_state: review-due needs a sprint row" 1 "ends with no sprint row" state review-due
@@ -2802,6 +2838,11 @@ expect "scout: the steps read only the locations" 0 '^4[.] Read only what the lo
 expect "scout: step 8 copies the Rules line whatever it names" 0 '^1 0$' \
   sh -c 'echo "$(grep -c "^8[.] .*as written, whether it names sections" "$1") $(grep -c "the Rules line names the sections" "$1")"' _ "$agents/scout.md"
 expect "scout: the pack records its tool calls" 0 '^2$' grep -c -E '^Tool calls: |`tool_calls` the number the pack.s `Tool calls:` line records' "$agents/scout.md"
+# The Plan phase is skipped on plan-needed's not-needed line whatever the
+# brief says: a brief for the queue's head keeps the order (sprint-tidy).
+expect "workflow: a brief fixing the order skips the planner" 0 '^\[true,false,false,false,false\]$' \
+  js "$wf" "planSkipped" "[planSkipped({}, 'not needed: c heads docs/queue.md, estimated medium'), planSkipped({}, 'needed: c is not the head of docs/queue.md (b)'), planSkipped({ 'phase.plan': 'abc1234' }, 'not needed: c'), planSkipped({ merged: 'abc1234' }, 'not needed: c'), planSkipped({}, '')]"
+expect "workflow: the plan skip reads plan-needed alone, not the brief" 0 '^1$' grep -c -x 'if (!stopped && planSkipped(state, planLine)) {' "$wf"
 speed_js() {
   js "$wf" "COMMIT CLOSABLE noteText staleRed findingAt reRaised securityBlocking narrowedFrom mergeRecords" "$1"
 }

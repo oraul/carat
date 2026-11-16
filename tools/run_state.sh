@@ -282,6 +282,11 @@ SPRINT_SIZE=5
 # The run states of reviews, not changes, which a sprint never counts:
 # /review's review-DATE and sprint-planning's sprint-N.
 REVIEW_RUNS='^(review|sprint)-[0-9]'
+# The words that mark a queue item, inside its first parenthesis, as a
+# change the user approved beyond a sprint's five, which it never counts;
+# distinct from "the user-approved exception", which lifts only the
+# one-pipeline limit (docs_lint.sh) and leaves the item counted.
+EXCEPTION_MARK='beyond the sprint'
 SPRINT_HEADER="sprint${TAB}last${TAB}merges${TAB}changes${TAB}wall_min${TAB}min_per_change${TAB}total_tokens${TAB}over_budget${TAB}first_pass"
 
 die() {
@@ -1113,14 +1118,39 @@ has_row() {
   [ -f "$metrics_file" ] && awk -F'\t' -v c="$1" 'NR > 1 && $1 == c { found = 1 } END { exit !found }' "$metrics_file"
 }
 
+# True when COMMIT names a commit git knows on HEAD or on BASE
+# (origin/main): a merge, unlike a merged value naming no such commit.
+merged_on_main() {
+  full=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
+  git merge-base --is-ancestor "$full" HEAD 2>/dev/null && return 0
+  git merge-base --is-ancestor "$full" "${BASE:-origin/main}" 2>/dev/null
+}
+
 # The merged changes whose run state has no history row, one per line; a
-# merged value that is not a commit hash is not a merge.
+# merged value that is not a commit hash, or names no commit on main
+# (merged_on_main), is not a merge, so no history row, sprint, or bench
+# base takes it.
 pending_list() {
   for file in "$state_dir"/*.json; do
     [ -f "$file" ] || continue
     name=$(basename "$file" .json)
-    [ -n "$(change=$name; merged_commit)" ] || continue
-    has_row "$name" || echo "$name"
+    merged=$(change=$name; merged_commit)
+    [ -n "$merged" ] || continue
+    has_row "$name" && continue
+    merged_on_main "$merged" && echo "$name"
+  done
+}
+
+# The run states whose merged value is a commit hash naming no commit on
+# main and that have no history row, as "NAME VALUE" lines: never merged.
+unmerged_list() {
+  for file in "$state_dir"/*.json; do
+    [ -f "$file" ] || continue
+    name=$(basename "$file" .json)
+    merged=$(change=$name; merged_commit)
+    [ -n "$merged" ] || continue
+    has_row "$name" && continue
+    merged_on_main "$merged" || echo "$name $merged"
   done
 }
 
@@ -1404,12 +1434,16 @@ late_findings() {
 }
 
 # Each merged run's row, and its late findings appended to the backlog in
-# one entry, so the next change's package step commits both and a run
+# one entry (a run whose merged value names no commit on main is named and
+# left out), so the next change's package step commits both and a run
 # pushes no commit of records after its package step. A run gets its row
 # once: none when BASE's history holds it, or when its run state records
 # the branch a package step appended it on (row), since the run states are
 # the clone's and the history file is each branch's.
 append_history() {
+  unmerged_list | while read -r name merged; do
+    echo "history: $name records merged $merged, no commit on main; not appended"
+  done
   names=$(pending_list)
   [ -n "$names" ] || { echo "history: nothing pending"; return 0; }
   [ -f "$metrics_file" ] || printf '%s\n' "$HEADER" > "$metrics_file"
@@ -1438,9 +1472,10 @@ append_history() {
 
 # The sprint in progress: sprint_n, the number after the sprints file's
 # last row; sprint_base, the merged commit of that row's last change, where
-# the combined diff starts; and sprint_names and sprint_count, the changes
-# merged since (the history rows after that change's row, then the merged
-# changes without a row).
+# the combined diff starts; sprint_names, the changes merged since (the
+# history rows after that change's row, then the merged changes without a
+# row); sprint_exceptions, those marked beyond the sprint (exception_item);
+# and sprint_count, the rest.
 sprint_state() {
   [ -f "$sprints_file" ] || die "no $sprints_file"
   last_row=$(awk -F'\t' 'NR > 1 && NF { row = $0 } END { print row }' "$sprints_file")
@@ -1452,7 +1487,33 @@ sprint_state() {
   [ -n "$sprint_base" ] || die "the last change of $prev, $prev_last, has no row in $metrics_file"
   sprint_names=$({ awk -F'\t' -v c="$prev_last" 'seen && NF { print $1 } $1 == c { seen = 1 }' "$metrics_file"; pending_list; } |
     awk -v r="$REVIEW_RUNS" 'NF && $0 !~ r && !seen[$0]++')
-  sprint_count=$(printf '%s\n' "$sprint_names" | grep -c .)
+  sprint_exceptions=""
+  for name in $sprint_names; do
+    ! exception_item "$name" "$(merged_of "$name")" || sprint_exceptions="${sprint_exceptions:+$sprint_exceptions }$name"
+  done
+  sprint_count=$(printf '%s\n' "$sprint_names" | X=" $sprint_exceptions " awk 'NF && !index(ENVIRON["X"], " " $0 " ")' | grep -c .)
+}
+
+# The merged commit of NAME: its history row's, else its run state's.
+merged_of() {
+  m=$(awk -F'\t' -v c="$1" 'NR > 1 && $1 == c { m = $3 } END { print m }' "$metrics_file" 2>/dev/null)
+  valid '[0-9a-f]{7,40}' "$m" || m=$(change=$1; merged_commit)
+  printf '%s\n' "$m"
+}
+
+# True when the item naming NAME in docs/queue.md at the parent of COMMIT,
+# the queue it was delivered from, carries EXCEPTION_MARK in its first
+# parenthesis: a change beyond the sprint, which a sprint never counts.
+exception_item() {
+  valid '[0-9a-f]{7,40}' "$2" || return 1
+  git show --end-of-options "$2^:docs/queue.md" 2>/dev/null | C="$1" M="$EXCEPTION_MARK" awk '
+    {
+      item = $0
+      if (!sub(/^[0-9]+[.] /, "", item) || index(item, "`" ENVIRON["C"] "` (") != 1) next
+      found = index(substr(item, 1, index(item, ")")), ENVIRON["M"]) > 0
+      exit
+    }
+    END { exit !found }'
 }
 
 # True when a sprint plan waits in PLAN_DIR for a package step: its marker
@@ -1483,7 +1544,7 @@ review_due() {
     return 1
   fi
   if [ "$sprint_count" -lt "$SPRINT_SIZE" ]; then
-    echo "not due: sprint-$sprint_n has $sprint_count of $SPRINT_SIZE changes merged${list:+ ($list)}"
+    echo "not due: sprint-$sprint_n has $sprint_count of $SPRINT_SIZE changes merged${list:+ ($list)}${sprint_exceptions:+; not counted, beyond the sprint: $sprint_exceptions}"
     return 1
   fi
   sweep=no
@@ -1509,14 +1570,18 @@ backlog_entry() {
     on { print }' "$backlog_file"
 }
 
-# The sprint's row from its first SPRINT_SIZE history rows: the last
+# The sprint's row from its history rows up to the SPRINT_SIZE-th counted
+# one (a change beyond the sprint, sprint_exceptions, not counted): the last
 # change, the merges, the changes, the wall minutes and their mean per
 # change, the total tokens, the runs over their size's budget
 # (TOKEN_BUDGETS), and each gate's first passes.
 sprint_row() {
-  awk -F'\t' -v c="$prev_last" -v budgets="$TOKEN_BUDGETS" -v s="sprint-$sprint_n" -v size="$SPRINT_SIZE" -v r="$REVIEW_RUNS" '
+  awk -F'\t' -v c="$prev_last" -v budgets="$TOKEN_BUDGETS" -v s="sprint-$sprint_n" -v size="$SPRINT_SIZE" -v r="$REVIEW_RUNS" -v x=" $sprint_exceptions " '
     BEGIN { n = split(budgets, b, " "); for (i = 1; i <= n; i++) { split(b[i], kv, "="); budget[kv[1]] = kv[2] } }
-    seen && NF && rows < size && $1 !~ r {
+    seen && NF && !done && $1 !~ r {
+      ex = index(x, " " $1 " ") > 0
+      if (!ex && counted == size) { done = 1; next }
+      if (!ex) counted++
       rows++; names = names (rows > 1 ? "," : "") $1; last = $1
       if ($17 ~ /^[0-9.]+$/) wall += $17
       if ($16 ~ /^[0-9]+$/) { tokens += $16; if (($15 in budget) && $16 + 0 > budget[$15] + 0) over++ }
@@ -1556,7 +1621,7 @@ groom() {
     echo "groom: the plan of sprint-$sprint_n waits for its security review (${sprint_security:-none}); run /sprint again"
     return 0
   fi
-  rows=$(awk -F'\t' -v c="$prev_last" -v r="$REVIEW_RUNS" 'seen && NF && $1 !~ r { n++ } $1 == c { seen = 1 } END { print n + 0 }' "$metrics_file")
+  rows=$(awk -F'\t' -v c="$prev_last" -v r="$REVIEW_RUNS" -v x=" $sprint_exceptions " 'seen && NF && $1 !~ r && !index(x, " " $1 " ") { n++ } $1 == c { seen = 1 } END { print n + 0 }' "$metrics_file")
   [ "$rows" -ge "$SPRINT_SIZE" ] || die "groom: sprint-$sprint_n has $rows of $SPRINT_SIZE history rows; run history first"
   removals=""
   repeats=""
