@@ -10,9 +10,14 @@ module Carat
     # when the framer refuses it; and a writer that takes queued bytes
     # off an outbox, so a child that stops reading never blocks the editor
     # thread. Process.detach reaps a stopped child (Spinel compiles no
-    # Process.wait(pid) or WNOHANG).
+    # Process.wait(pid) or WNOHANG). capture runs a short command on the
+    # editor thread instead: the same spawn without a shell, its output read
+    # with IO.select until it ends, CAPTURE_LIMIT bytes are kept, or
+    # CAPTURE_SECONDS pass, when the child is killed.
     class ProcessRunner < Ports::ProcessPort
       READ_SIZE = 65_536
+      CAPTURE_LIMIT = 65_536
+      CAPTURE_SECONDS = 2.0
 
       # @rbs @messages: Ports::MessageQueuePort
       # @rbs @pids: Array[Integer]
@@ -67,7 +72,57 @@ module Carat
         Process.detach(@pids[handle - 1])
       end
 
+      # @rbs argv: Array[String]
+      def capture(argv)
+        return nil if argv.empty?
+        output = IO.pipe
+        pid = start_quiet(argv, output[1])
+        output[1].close
+        if pid == 0
+          output[0].close
+          return nil
+        end
+        text = collect(output[0], Process.clock_gettime(Process::CLOCK_MONOTONIC) + CAPTURE_SECONDS)
+        output[0].close
+        kill(pid) if text.nil?
+        Process.detach(pid)
+        text
+      end
+
       private
+
+      # The child's pid with no input and no error output, or 0 when the
+      # command cannot start.
+      #: (Array[String], IO) -> Integer
+      def start_quiet(argv, output)
+        Process.spawn([argv[0], argv[0]], *argv.drop(1), in: File::NULL, out: output, err: File::NULL)
+      rescue SystemCallError
+        0
+      end
+
+      # The output until it ends, at most CAPTURE_LIMIT bytes of it, or nil
+      # when the deadline passes first.
+      #: (IO, Float) -> String?
+      def collect(output, deadline)
+        text = +""
+        while text.bytesize < CAPTURE_LIMIT
+          left = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          return nil if left <= 0
+          ready = IO.select([output], nil, nil, left)
+          return nil if ready.nil?
+          chunk = read_chunk(output)
+          break if chunk.nil?
+          text << chunk
+        end
+        text.bytesize > CAPTURE_LIMIT ? text.byteslice(0, CAPTURE_LIMIT).to_s : text
+      end
+
+      #: (Integer) -> void
+      def kill(pid)
+        Process.kill("KILL", pid)
+      rescue SystemCallError
+        nil
+      end
 
       #: (Integer) -> bool
       def open?(handle)

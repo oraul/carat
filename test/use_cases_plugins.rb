@@ -102,10 +102,12 @@ module UseCasesPluginsTest
     attr_reader :files #: Carat::Doubles::MemoryFiles
     attr_reader :ex #: Carat::UseCases::ExecuteEx
     attr_reader :config #: Carat::Domain::Config
+    attr_reader :processes #: Carat::Doubles::FakeProcesses
 
-    #: (Carat::Domain::EditorState, Carat::UseCases::PluginHost, Carat::Domain::Keymap, Carat::Doubles::MemoryFiles, Carat::UseCases::ExecuteEx, Carat::Domain::Config) -> void
-    def initialize(state, host, keymap, files, ex, config)
+    #: (Carat::Domain::EditorState, Carat::UseCases::PluginHost, Carat::Domain::Keymap, Carat::Doubles::MemoryFiles, Carat::UseCases::ExecuteEx, Carat::Domain::Config, Carat::Doubles::FakeProcesses) -> void
+    def initialize(state, host, keymap, files, ex, config, processes)
       @config = config
+      @processes = processes
       @state = state
       @host = host
       @keymap = keymap
@@ -120,6 +122,7 @@ module UseCasesPluginsTest
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "one\ntwo\n")
     files.put("b.txt", "zz\n")
+    processes = Carat::Doubles::FakeProcesses.new
     files.put("dir/b.txt", "1\n")
     files.put("dir/a.txt", "2\n")
     first = Carat::Domain::Buffer.from_text("", nil)
@@ -136,7 +139,7 @@ module UseCasesPluginsTest
     split_window = Carat::UseCases::SplitWindow.new(open_file: open_file, buffers: buffers, tabs: tabs)
     open_side_window = Carat::UseCases::OpenSideWindow.new(buffers: buffers, tabs: tabs)
     open_tab = Carat::UseCases::OpenTab.new(open_file: open_file, buffers: buffers, tabs: tabs)
-    host = Carat::UseCases::PluginHost.new(state: state, buffers: buffers, tabs: tabs, input: Carat::Domain::InputState.new, plugin_ui: Carat::Domain::PluginUi.new, files: files, open_file: open_file, probe_path: probe_path, split_window: split_window, open_side_window: open_side_window, open_float: Carat::UseCases::OpenFloat.new(tabs: tabs), close_float: Carat::UseCases::CloseFloat.new(tabs: tabs), open_tab: open_tab, keymap: keymap, leader: " ", runner: ex)
+    host = Carat::UseCases::PluginHost.new(state: state, buffers: buffers, tabs: tabs, input: Carat::Domain::InputState.new, plugin_ui: Carat::Domain::PluginUi.new, files: files, processes: processes, open_file: open_file, probe_path: probe_path, split_window: split_window, open_side_window: open_side_window, open_float: Carat::UseCases::OpenFloat.new(tabs: tabs), close_float: Carat::UseCases::CloseFloat.new(tabs: tabs), open_tab: open_tab, keymap: keymap, leader: " ", runner: ex)
     save_file = Carat::UseCases::SaveFile.new(files: files, plugins: host, services: Carat::Doubles::FakeLanguageServices.new)
     save_all = Carat::UseCases::SaveAll.new(save_file: save_file, buffers: buffers)
     quit = Carat::UseCases::Quit.new(buffers: buffers, tabs: tabs)
@@ -153,7 +156,7 @@ module UseCasesPluginsTest
     open_file.call(state, "a.txt")
     state.tab.layout.arrange(0, 0, 23, 80)
     host.observe
-    Rig.new(state, host, keymap, files, ex, config)
+    Rig.new(state, host, keymap, files, ex, config, processes)
   end
 
   def self.codes(text)
@@ -175,18 +178,18 @@ module UseCasesPluginsTest
     bad = Probe.new("probe", "3.0", [], ACTIONS, {}, [])
     rig = setup([bad], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 3.0, the host has 2.6"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
-    t.assert_equal(["plugin probe: needs API 3.0, the host has 2.6"], host.errors, "the refusal is recorded")
+    t.assert_equal([false, "needs API 3.0, the host has 2.7"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
+    t.assert_equal(["plugin probe: needs API 3.0, the host has 2.7"], host.errors, "the refusal is recorded")
     t.assert_equal([], bad.log, "a refused plugin is not activated")
 
-    minor = Probe.new("probe", "2.7", [], ACTIONS, {}, [])
+    minor = Probe.new("probe", "2.8", [], ACTIONS, {}, [])
     rig = setup([minor], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 2.7, the host has 2.6"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused")
+    t.assert_equal([false, "needs API 2.8, the host has 2.7"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused")
     older = Probe.new("probe", "1.3", [], ACTIONS, {}, [])
     rig = setup([older], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 1.3, the host has 2.6"], [host.enabled?("probe"), host.reason("probe")], "an older major version is refused")
+    t.assert_equal([false, "needs API 1.3, the host has 2.7"], [host.enabled?("probe"), host.reason("probe")], "an older major version is refused")
     same = Probe.new("probe", "2.0", [], ACTIONS, {}, [])
     rig = setup([same], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
@@ -370,6 +373,22 @@ module UseCasesPluginsTest
     t.assert_equal("◆", h.icon("info").text, "icon reads the unicode set by default")
     state.options.icons = "ascii"
     t.assert_equal(["i", false, "No icon named nope"], [h.icon("info").text, h.icon("nope").ok, h.icon("nope").message], "and the ascii set when configured, refusing an unknown name")
+
+    # Requests: running a program.
+    processes = rig.processes
+    processes.install("git")
+    processes.script("git symbolic-ref --short -q HEAD", "main\n")
+    r = h.run_program(["git", "symbolic-ref", "--short", "-q", "HEAD"])
+    # run_program answers the program's output
+    t.assert_equal([true, "main\n", ["git symbolic-ref --short -q HEAD"]], [r.ok, r.text, processes.captured], "run_program answers the program's output and the port gets the words as given")
+    r = h.run_program(["svn", "info"])
+    # run_program fails when the program cannot start
+    t.assert_equal([false, "cannot run svn"], [r.ok, r.message], "run_program fails when the program cannot start")
+    # run_program refuses a path or an empty command
+    t.assert_equal([false, false, false, false], [h.run_program([]).ok, h.run_program(["./git", "status"]).ok, h.run_program(["git", ""]).ok, h.run_program(["git", "a\0b"]).ok], "run_program refuses a path or an empty command, an empty word, and a NUL")
+    t.assert_equal(["./git: the program must be a name on the PATH", 1], [h.run_program(["/usr/bin/git"]).message.sub("/usr/bin/git", "./git"), processes.captured.length], "and starts nothing for them")
+    processes.script("git log", "\xff")
+    t.assert_equal([false, "git answered bytes that are not UTF-8"], [h.run_program(["git", "log"]).ok, h.run_program(["git", "log"]).message], "output that is not UTF-8 fails")
 
     # Requests: the edit transaction.
     p = probe([])

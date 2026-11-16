@@ -53,6 +53,12 @@ module DriversProcessRunnerTest
     t.assert_equal(0, runner.spawn([]), "no words start nothing")
     t.assert_equal(false, runner.write(9, "x"), "an unknown handle takes no input")
 
+    # The driver runs a program without a shell
+    t.assert_equal("a;b", runner.capture(["printf", "%s", "a;b"]).to_s, "capture answers the output of the words as given, no shell splitting them")
+    t.assert_equal(true, runner.capture(["carat-no-such-command"]).nil?, "capture of a missing program answers nothing")
+    t.assert_equal(true, runner.capture([]).nil?, "capture of no words answers nothing")
+    t.assert_equal(true, runner.capture(["sh", "-c", "sleep 5"]).nil?, "capture of a program past the deadline answers nothing")
+
     loud = runner.spawn(["sh", "-c", "printf 'Content-Length: 999999999\\r\\n\\r\\n'; sleep 1"])
     t.assert_equal(true, loud > 0, "sh starts")
     t.assert_equal("overflow ", describe(queue), "an oversized frame stops the reading")

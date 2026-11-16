@@ -414,7 +414,7 @@ module Carat
         @quit_all = UseCases::QuitAll.new(buffers: @buffers)
         focus_window = UseCases::FocusWindow.new
         scroll_window = UseCases::ScrollWindow.new
-        @plugins = UseCases::PluginHost.new(state: @state, buffers: @buffers, tabs: @tabs, input: @input, plugin_ui: @plugin_ui, files: files, open_file: @open_file, probe_path: @probe_path, split_window: @split_window, open_side_window: @open_side_window, open_float: @open_float, close_float: @close_float, open_tab: @open_tab, keymap: @keymap, leader: leader, runner: @runner)
+        @plugins = UseCases::PluginHost.new(state: @state, buffers: @buffers, tabs: @tabs, input: @input, plugin_ui: @plugin_ui, files: files, processes: processes, open_file: @open_file, probe_path: @probe_path, split_window: @split_window, open_side_window: @open_side_window, open_float: @open_float, close_float: @close_float, open_tab: @open_tab, keymap: @keymap, leader: leader, runner: @runner)
         i = 0
         while i < plugin_list.length
           @plugins.register(plugin_list[i])
