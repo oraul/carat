@@ -55,7 +55,7 @@ The push ran, no pull request number recorded: run package step 5 alone, returni
 
 ### push
 
-After a CI fix passed the checker and security review, run `sh tools/run_state.sh push <change> --ci-fix`, one push per CI fix, returning `pushed` as in package; a resume's review fix, `--review-fix`, once a run. On a conflict with `main`, merge `origin/main` into it (the merge commit carries the trailer) and say so: keep both sides of appended files, regenerate generated ones with `make`, stop and name a conflict where both sides changed the same logic; the fix stays here, checks and reviews rerun.
+After a CI fix passed the checker and security review, run `sh tools/run_state.sh push <change> --ci-fix`, one push per CI fix, returning `pushed` as in package; a resume's review fix, `--review-fix`, once a run. On a conflict with `main`, run `merge-main` and say so; on its conflicts merge `origin/main` by hand (the trailer): keep both sides of appended files, regenerate generated ones with `make`, stop and name a conflict where both sides changed the same logic; the fix stays here, checks and reviews rerun.
 
 ### body
 
