@@ -749,7 +749,7 @@ cat > docs/codebase-map.md <<'EOB'
 
 ## 2. Toolchain
 
-- `tools/t.sh`: t.
+- `tools/t.sh`: t, its `refuse` and `ensure`.
 
 Tests: `tools/t_test.sh` (the t test).
 
@@ -791,7 +791,8 @@ expect "run_state: backlog-pick gives an area under 5 its security entries alone
 cp bk2.md docs/backlog.md
 mkdir -p docs/findings
 printf '### f1 security at tools/t.sh:3\n\n- Location: tools/t.sh:3\n- Why: f.\n' > docs/findings/f.md
-expect "run_state: backlog-pick reads the backlog and findings files by default" 0 "^batch 2: area 2[.] Toolchain, its 1 security entries alone of 1$" state backlog-pick
+expect "run_state: backlog-pick with no file prints its usage and reads no backlog" 0 "^2 1 0$" \
+  sh -c 'o=$(sh "$1" backlog-pick 2>&1); s=$?; echo "$s $(printf "%s\n" "$o" | grep -c "^  backlog-pick FILE[.][.][.] ") $(printf "%s\n" "$o" | grep -c "^batch\|^unmapped\|^no batch")"' _ "$here/run_state.sh"
 expect "run_state: backlog-pick prints no batch when none qualifies" 1 "^no batch: no area holds 5 entries and none names security$" \
   sh -c 'tail -4 "$1" > bk3.md && sh "$2" backlog-pick bk3.md' _ bk2.md "$here/run_state.sh"
 expect "run_state: backlog-pick refuses a missing file" 1 "no nofile[.]md" state backlog-pick nofile.md
@@ -824,6 +825,16 @@ expect "run_state: backlog-pick maps every path of a bullet and skips a section 
 } > bk5.md
 expect "run_state: backlog-pick places a Location by its first mapped path or directory, a symbol or prose first" 0 "^batch 1: area 1[.] Build and CI, its 1 security entries alone of 2 ## v3 directory batch 2: area 2[.] Toolchain, 5 of 5 entries ## v1 symbol ## v2 prose ## v5 two paths ## v6 plain ## v7 plain $" \
   sh -c 'sh "$1" backlog-pick bk5.md | tr "\n" " "' _ "$here/run_state.sh"
+# A bare backticked identifier the map mentions (`refuse`, `ensure`, area
+# 2) before a mapped path places nothing; a bare word the map names and
+# the tree holds (`Makefile`, area 1) does.
+touch Makefile
+{ printf '## i1 identifier first\n\n- Location: `refuse` in `tools/a.sh:5`\n- Why: security Low.\n'
+  printf '\n## i2 bare file\n\n- Where: `ensure` then `Makefile` (the target)\n- Why: security Low.\n'
+  printf '\n## i3 identifier only\n\n- Location: `ensure` of the loop\n'
+} > bk6.md
+expect "run_state: backlog-pick places a Location by its mapped path, never by an identifier before it" 0 "^unmapped: ## i3 identifier only [(][)] batch 1: area 1[.] Build and CI, its 2 security entries alone of 2 ## i1 identifier first ## i2 bare file $" \
+  sh -c 'sh "$1" backlog-pick bk6.md | tr "\n" " "' _ "$here/run_state.sh"
 
 
 # ------------------------------------------------------------ open_pr.sh
@@ -3379,8 +3390,8 @@ expect "sprint: the diff reviewers record nothing and the skeptic records the ke
   sh -c 'echo "$(grep -c "record nothing, the skeptic records" "$1") $(grep -c "Mode: skeptic" "$1")"' _ "$swf"
 expect "sprint: the planner starts only after the security review and the skeptic" 0 "^1 1$" \
   sh -c 'echo "$(grep -c "^const reviewed = ran && skeptical$" "$1") $(grep -c "^const plan = !reviewed [?] null : await agent[(]$" "$1")"' _ "$swf"
-expect "sprint: the plan step names the pick and the triage" 0 "^1 1$" \
-  sh -c 'echo "$(grep -c "title: .Plan., detail: .*one-time triage.*backlog-pick" "$1") $(grep -c "Mode: sprint[.].*backlog-pick.*one-time backlog triage" "$1")"' _ "$swf"
+expect "sprint: the plan step names the pick over the backlog and findings files, and the triage" 0 "^1 1$" \
+  sh -c 'echo "$(grep -c "title: .Plan., detail: .*one-time triage.*backlog-pick" "$1") $(grep -c "Mode: sprint[.].*backlog-pick docs/backlog[.]md docs/findings/[*][.]md.*one-time backlog triage" "$1")"' _ "$swf"
 expect "sprint: the sweep is the periodic review in its own run state" 0 "sprint[.]sweep [?] await workflow[(][{] scriptPath: '[.]claude/workflows/periodic-review[.]js' [}], [{] change: sweepName [}]" grep -F "sprint.sweep ? await workflow(" "$swf"
 for pair in quality-reviewer:review security-reviewer:review quality-reviewer:skeptic planner:plan; do
   agent=${pair%%:*}
@@ -3402,8 +3413,8 @@ expect "agents: the sprint planner keeps unqueued findings in groomed.md" 0 "^1 
   sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "do not queue go into .build/plan/groomed[.]md.") $(printf "%s\n" "$s" | grep -v "never into .build/plan/backlog" | grep -c "build/plan/backlog")"' _ "$agents/planner.md"
 expect "agents: the planner writes self-contained items" 0 "^[1-9][0-9]* 0$" \
   sh -c 'echo "$(grep -c "self-contained" "$1") $(grep -c "Locations go in the" "$1")"' _ "$agents/planner.md"
-expect "agents: the sprint planner runs the pick, the triage, and the calibration" 0 "^1 1 1$" \
-  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "2 backlog items, the first two batches of .sh tools/run_state[.]sh backlog-pick., each listing its batch.s headings in its Backlog part") $(printf "%s\n" "$s" | grep -c "Triage once, when .git log -S .Backlog triage:. -- docs/queue-backlog[.]md. prints nothing or the user asks") $(printf "%s\n" "$s" | grep -c "compares it with .docs/metrics-feature[.]tsv. (total tokens, wall minutes, first-pass rates, entries closed per run)")"' _ "$agents/planner.md"
+expect "agents: the sprint planner runs the pick over the backlog and findings files, the triage, and the calibration" 0 "^1 1 1$" \
+  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "2 backlog items, the first two batches of .sh tools/run_state[.]sh backlog-pick docs/backlog[.]md docs/findings/[*][.]md., each listing its batch.s headings in its Backlog part") $(printf "%s\n" "$s" | grep -c "Triage once, when .git log -S .Backlog triage:. -- docs/queue-backlog[.]md. prints nothing or the user asks") $(printf "%s\n" "$s" | grep -c "compares it with .docs/metrics-feature[.]tsv. (total tokens, wall minutes, first-pass rates, entries closed per run)")"' _ "$agents/planner.md"
 
 # Spinel warnings (tools/spinel_warnings.sh): the real build targets run
 # against a stub toolchain under PREFIX, which the Makefile's PATH puts

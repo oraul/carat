@@ -164,26 +164,28 @@
 #                               blocked in the run state sprint-N
 #   backlog-dups                print each location (file:line) that two or
 #                               more backlog headings name, with the headings
-#   backlog-pick [FILE...]      print the next PICK_BATCHES batches of the
+#   backlog-pick FILE...        print the next PICK_BATCHES batches of the
 #                               backlog entries ("## title" or deeper,
 #                               "- Location:" or "- Where:", "- Why:" or
-#                               "- Why it matters:") of the FILEs, else
-#                               of the backlog and the findings files,
-#                               each of one docs/codebase-map.md area:
-#                               the areas of the entries naming
-#                               security first, then by their
-#                               oldest entry; PICK_MIN or more give at most
-#                               PICK_MAX, security first, then oldest; fewer
-#                               give their security entries alone, or none;
-#                               an entry a queue file names, or whose whole
-#                               heading line ends a line of
-#                               PLAN_DIR/groom.txt, is skipped, one
-#                               placed by the first path of its Location
-#                               line the map holds, or a directory holding
-#                               one, else by its heading's path:line; one
-#                               no mapped path holds printed "unmapped:";
-#                               exit 1 when no batch
-#   groom [CHANGE]             nothing when CHANGE's run state sets
+#                               "- Why it matters:") of the FILEs, which it
+#                               requires (only the sprint planner names
+#                               docs/backlog.md and docs/findings/*.md),
+#                               each of one docs/codebase-map.md area: the
+#                               areas of the entries naming security first,
+#                               then by their oldest entry; PICK_MIN or more
+#                               give at most PICK_MAX, security first, then
+#                               oldest; fewer give their security entries
+#                               alone, or none; an entry a queue file names,
+#                               or whose whole heading line ends a line of
+#                               PLAN_DIR/groom.txt, is skipped; one placed by
+#                               the first path of its Location line the map
+#                               holds (a bare backticked word only when the
+#                               map names it and the tree holds it as a file
+#                               or directory), or a directory holding one,
+#                               else by its heading's path:line; one no
+#                               mapped path holds printed "unmapped:"; exit
+#                               1 when no batch
+#   groom [CHANGE]              nothing when CHANGE's run state sets
 #                               records=skip (the planning records excluded),
 #                               or, retiring the marker to sprint.applied,
 #                               when the sprint it names has its row in the
@@ -1739,26 +1741,24 @@ backlog_entry() {
 
 # The pick of the backlog lane: the entries (a "## " or deeper heading, to
 # the next heading, with a "- Location:" or "- Where:" line or a path:line
-# in the heading; any other heading a section) of the FILEs in order, else
-# of folded_backlog, ranked into batches of one docs/codebase-map.md area
-# each (backlog-pick in the header). The first token of a Location that
-# the map places (its backticked tokens first, then each word holding a "."
-# or "/" or a :line, its :line and punctuation dropped), else the heading's
-# first path:line, matches a path the map names under a numbered area (a
-# bullet's leading path first, then any backticked path of the area's
-# lines), or lies under the longest one ending in "/", or is a directory
-# holding one (the first in name order); an entry whose heading text a queue file
-# holds, not as the start of a longer word, is queued, and one whose
-# whole heading line ends a line of PLAN_DIR/groom.txt is groomed: the
-# closed sprint's removals, which stay in the backlog until the next
-# package step.
+# in the heading; any other heading a section) of the FILEs in order, which
+# it requires, never reading the backlog on its own, ranked into batches of
+# one docs/codebase-map.md area each (backlog-pick in the header). The first
+# token of a Location that the map places (its backticked tokens first, a
+# bare word among them only when the map names it and the tree holds it as
+# a file or directory, so an identifier such as `ensure` never places it;
+# then each word holding a "." or "/" or a :line, its :line and punctuation
+# dropped), else the heading's first path:line, matches a path the map
+# names under a numbered area (a bullet's leading path first, then any
+# backticked path of the area's lines), or lies under the longest one
+# ending in "/", or is a directory holding one (the first in name order);
+# an entry whose heading text a queue file holds, not as the start of a
+# longer word, is queued, and one whose whole heading line ends a line of
+# PLAN_DIR/groom.txt is groomed: the closed sprint's removals, which stay
+# in the backlog until the next package step.
 backlog_pick() {
-  if [ $# -eq 0 ]; then
-    [ -f "$backlog_file" ] || die "no $backlog_file"
-  else
-    for f in "$@"; do [ -f "$f" ] || die "no $f"; done
-  fi
-  { if [ $# -eq 0 ]; then folded_backlog; else cat "$@"; fi; } |
+  for f in "$@"; do [ -f "$f" ] || die "no $f"; done
+  cat "$@" |
     M=docs/codebase-map.md Q="$queue_files" G="$plan_dir/groom.txt" B=$PICK_BATCHES L=$PICK_MIN H=$PICK_MAX awk '
     BEGIN {
       while ((getline line < ENVIRON["M"]) > 0) {
@@ -1818,11 +1818,15 @@ backlog_pick() {
     function pathlike(raw, t) {
       return t != "" && (t ~ /[.\/]/ || raw ~ /^[A-Za-z0-9_.\/-]+:[0-9]/)
     }
+    function named_file(t) {
+      if (!((t in own) || (t in seen) || ((t "/") in own) || ((t "/") in seen))) return 0
+      return system("test -e \"" t "\"") == 0
+    }
     function candidates(s,   k, r, raw, t, nw, w, x) {
       k = 0
       for (r = s; match(r, /`[^`]+`/); r = substr(r, RSTART + RLENGTH)) {
         raw = substr(r, RSTART + 1, RLENGTH - 2); t = clean(raw)
-        if (pathlike(raw, t) || (t != "" && t == raw)) cand[++k] = t
+        if (pathlike(raw, t) || (t != "" && t == raw && named_file(t))) cand[++k] = t
       }
       gsub(/`/, "", s); nw = split(s, w, /[ \t]+/)
       for (x = 1; x <= nw; x++) if (pathlike(w[x], t = clean(w[x]))) cand[++k] = t
@@ -2203,7 +2207,7 @@ case "$command" in
   history) [ $# -le 1 ] || usage; records_excluded history "${1:-}" || append_history; exit 0 ;;
   review-due) [ $# -eq 0 ] || usage; review_due; exit $? ;;
   backlog-dups) [ $# -eq 0 ] || usage; backlog_dups; exit $? ;;
-  backlog-pick) backlog_pick "$@"; exit $? ;;
+  backlog-pick) [ $# -ge 1 ] || usage; backlog_pick "$@"; exit $? ;;
   groom) [ $# -le 1 ] || usage; ! records_excluded groom "${1:-}" || exit 0; groom; exit $? ;;
 esac
 [ $# -ge 1 ] || usage
