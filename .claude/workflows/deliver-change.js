@@ -987,8 +987,8 @@ const planLine = resume && typeof resume.plan === 'string' ? resume.plan.split('
 // The resume brief names the lane queues plan-needed read: the waiting
 // sprint plan's under build/plan/ only while one waits there, the docs/
 // lane queues otherwise.
-const LANES = 'queue-feature.md or queue-backlog.md'
 function resumeBrief(change, line) {
+  const LANES = 'queue-feature.md or queue-backlog.md'
   const queueFile = /build\/plan\/queue-/.test(line) ? `build/plan/${LANES}, the waiting sprint plan,`
     : /docs\/queue-/.test(line) ? `docs/${LANES}` : `docs/${LANES} (build/plan/ while a sprint plan waits there)`
   return `the item of ${queueFile} that names \`${change}\`, read there as written (when no item names it, the existing OpenSpec change)`
@@ -1094,7 +1094,7 @@ if (!stopped && !state.merged) {
       phase('Package')
       const excluded = 'run neither history nor groom: this change\'s run state excludes the planning records (records=skip), and both say so for it'
       const plan = planned === 0
-        ? `The planner did not run: this change was taken from the head of its lane queue (docs/queue-feature.md or docs/queue-backlog.md) as written. Copy nothing from build/plan/, which holds an older run's files or a waiting sprint plan that groom applies; ${state.records === 'skip' ? excluded : 'append the history and run groom as your package step says'}, then remove this change's item from its lane queue and renumber the rest.`
+        ? `The planner did not run: this change was taken from the head of its lane queue as written. Copy nothing from build/plan/, which holds an older run's files or a waiting sprint plan that groom applies; ${state.records === 'skip' ? excluded : 'append the history and run groom as your package step says'}, then remove this change's item from its lane queue and renumber the rest.`
         : `Apply the planner's files under build/plan/ and ${state.records === 'skip' ? excluded : 'append the history of the merged changes as your package step says'}.`
       const done = await contributor('package', `Non-blocking findings to append to docs/findings/${state.change}.md (a shell append; never read docs/backlog.md):\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
       if (done) state.pr = packagedPr(done)
