@@ -210,7 +210,7 @@ Ports to the outside are the interfaces use cases depend on. Each is a Ruby clas
 | `SignalPort` | `install`, `terminated?`, `resized?`, `acknowledge_resize` | `Signals` | `ManualSignals`, which a test trips |
 | `LanguageServicePort` | `poll(state)` when idle, `start(state)`, `restart(state)`, `saved(buffer)`, `waiting?`, `stop` | `JsonRpcLanguageGateway` | `FakeLanguageServices` |
 | `CompletionPort` | `ready?`, `candidates`, `documentation`, `request`, never waits | `ServerCompletions` | `FixedCompletions` |
-| `ProcessPort` | `spawn(argv)` returning a handle (0 if it cannot start), `write(handle, bytes)`, `stop(handle)`; output on the queue; one-shot `capture(argv, environment)` | `ProcessRunner` | `FakeProcesses` |
+| `ProcessPort` | `spawn(argv)` returning a handle (0 when it cannot start), `write(handle, bytes)`, `stop(handle)`; output comes on the queue; one-shot `capture(argv)` | `ProcessRunner` | `FakeProcesses` |
 | `MessageQueuePort` | `push(message)`, `pop` (nil at once when empty) | `RuntimeQueue` | `MemoryQueue` |
 
 ## 7. Configuration and key maps in .caratrc files
