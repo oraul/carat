@@ -20,7 +20,7 @@ None.
 
 ### Modified Capabilities
 
-- `language-server`: the requirement "The server is told about the documents" sends `didChange` by the sync kind the server announced instead of always with the whole text.
+- `language-server`: the requirement "The server is told about the documents" no longer fixes the whole text, and the added requirement "The changes follow the announced sync kind" sends `didChange` by the sync kind the server announced.
 
 ## Impact
 
