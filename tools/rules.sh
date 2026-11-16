@@ -51,12 +51,13 @@ EOF
 RISKY_CONFIG='^(core\.(fsmonitor|hookspath|sshcommand|gitproxy|pager|editor|askpass|alternaterefscommand|worktree)|diff\.external|diff\..+\.(textconv|command)|filter\..+|merge\..+\.driver|sequence\.editor|credential\..+|gpg\..+|uploadpack\..+|url\..+\.(insteadof|pushinsteadof)|remote\.origin\.(pushurl|uploadpack|receivepack|proxy|vcs)|http\..+|protocol\..+|include\..+|includeif\..+|extensions\.worktreeconfig)$'
 
 # The records-only paths, an extended regular expression without anchors:
-# the OpenSpec records, the backlog, the planning records (queue, goals),
-# the metrics history, and the sprints file, which a package step commits
+# the OpenSpec records, the backlog and the findings files, the planning
+# records (the lane queues, goals), the lane metrics histories, and the
+# sprints file, which a package step commits
 # after the checks and no check but docs-lint reads. Read by settled_at in
 # tools/gates.sh (docs/sprints.tsv only by appended rows), TEST_ONLY in
 # tools/run_state.sh, and documentation() below.
-RECORDS_RE='openspec/|docs/(backlog|queue|goals)\.md$|docs/(metrics|sprints)\.tsv$'
+RECORDS_RE='openspec/|docs/(backlog|queue-feature|queue-backlog|goals)\.md$|docs/findings/[a-z0-9-]+\.md$|docs/(metrics-feature|metrics-backlog|sprints)\.tsv$'
 
 # documentation PATH: true when PATH is documentation no test, build, or
 # tool case reads, so CI (tools/ci_scope.sh) and the checker's scope

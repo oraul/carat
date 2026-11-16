@@ -4,7 +4,7 @@
 # goes on; a background sleep ends a subagent's turn, and the merger then
 # returned pending minutes into a CI run. At most 540 seconds, under the
 # shell tool's ten-minute limit for one call. The harness has allowed it in
-# every run since guard-hardening, whose merge phases in docs/metrics.tsv
+# every run since guard-hardening, whose merge phases in the metrics history
 # spent 3,476 to 6,841 output tokens, the cost of one merger start. The
 # merger waits 180, 240, then 300 seconds.
 #
