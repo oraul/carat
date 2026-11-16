@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: A plugin runs a program through the host
-The request `run_program(argv)` (API 2.7) SHALL run the program the first word names, looked up on the `PATH`, with the other words as its arguments, without a shell, and answer a copy of its standard output, at most 64 KiB. The program SHALL get no input, its error output discarded, and the editor's working directory.
+The request `run_program(argv)` (API 2.7) SHALL run the program the first word names, looked up on the `PATH`, with the other words as its arguments, without a shell, and answer a copy of its standard output, at most 64 KiB, cut before a character the limit would split. The program SHALL get no input, its error output discarded, and the editor's working directory.
 
 #### Scenario: run_program answers the program's output
 - **WHEN** a plugin runs `git symbolic-ref --short -q HEAD` and the program prints "main"

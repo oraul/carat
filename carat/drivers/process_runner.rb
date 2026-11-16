@@ -100,12 +100,14 @@ module Carat
         0
       end
 
-      # The output until it ends, at most CAPTURE_LIMIT bytes of it, or nil
-      # when the deadline passes first.
+      # The output until it ends, at most CAPTURE_LIMIT bytes of it cut
+      # before a character, or nil when the deadline passes first. It
+      # reads past the limit so the byte at the limit shows whether the
+      # cut splits a character.
       #: (IO, Float) -> String?
       def collect(output, deadline)
         text = +""
-        while text.bytesize < CAPTURE_LIMIT
+        while text.bytesize <= CAPTURE_LIMIT
           left = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
           return nil if left <= 0
           ready = IO.select([output], nil, nil, left)
@@ -114,7 +116,23 @@ module Carat
           break if chunk.nil?
           text << chunk
         end
-        text.bytesize > CAPTURE_LIMIT ? text.byteslice(0, CAPTURE_LIMIT).to_s : text
+        text.bytesize > CAPTURE_LIMIT ? text.byteslice(0, cut_point(text)).to_s : text
+      end
+
+      # The byte offset at or below CAPTURE_LIMIT where text can be cut
+      # without splitting a UTF-8 character: back past the continuation
+      # bytes (0x80 to 0xBF) at the limit, at most three, the most a
+      # character holds after its lead byte, so a cut of valid text stays
+      # valid and a cut of other bytes stays near the limit.
+      #: (String) -> Integer
+      def cut_point(text)
+        at = CAPTURE_LIMIT
+        steps = 0
+        while steps < 3 && at > 0 && (text.getbyte(at).to_i & 0xC0) == 0x80
+          at -= 1
+          steps += 1
+        end
+        at
       end
 
       #: (Integer) -> void

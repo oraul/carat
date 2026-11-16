@@ -58,6 +58,10 @@ module DriversProcessRunnerTest
     t.assert_equal(true, runner.capture(["carat-no-such-command"]).nil?, "capture of a missing program answers nothing")
     t.assert_equal(true, runner.capture([]).nil?, "capture of no words answers nothing")
     t.assert_equal(true, runner.capture(["sh", "-c", "sleep 5"]).nil?, "capture of a program past the deadline answers nothing")
+    # "é\n" is three bytes, so byte 65,536 of the stream is the second byte of an é
+    long = runner.capture(["sh", "-c", "yes é | head -c 70000"]).to_s
+    t.assert_equal(65_535, long.bytesize, "capture of output over the limit keeps at most 64 KiB, cut before the character the limit splits")
+    t.assert_equal(true, long.valid_encoding?, "capture of long valid UTF-8 output answers valid UTF-8")
 
     loud = runner.spawn(["sh", "-c", "printf 'Content-Length: 999999999\\r\\n\\r\\n'; sleep 1"])
     t.assert_equal(true, loud > 0, "sh starts")
