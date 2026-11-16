@@ -3225,6 +3225,10 @@ expect "workflow: every agent start runs its commands in the change's worktree" 
   lane_js "intro().includes('cd tmp/.lane-a && ')"
 expect "workflow: an implement or fix start first merges a moved main, a package start does not" 0 '^\[true,true,false\]$' \
   js "$wf" "MERGE_MAIN SELF_CHECK contributorTask" "['implement', 'fix', 'package'].map((m) => contributorTask(m, 'b', 'd').includes('run_state.sh merge-main'))"
+expect "workflow: the resume start opens the change's worktree from the main checkout" 0 '^1 2$' \
+  sh -c 'echo "$(grep -c "Run \`sh tools/run_state.sh lane-open <change> <branch>\` in the main checkout" "$1") $(grep -o "cd tmp/[.]lane-<change> && sh tools/run_state.sh [a-z-]*" "$1" | wc -l | tr -d " ")"' _ "$wf"
+expect "agents: the merger removes the worktree after the merge, the contributor merges a moved main" 0 '^1 1$' \
+  sh -c 'echo "$(grep -c "set <change> merged <short sha> && sh tools/run_state.sh lane-close <change> && " "$1/merger.md") $(grep -c "run .merge-main. and say so" "$1/contributor.md")"' _ "$here/../.claude/agents"
 expect "workflow: a records-skip package step runs no history" 0 '^\[false,true\]$' \
   plan_js "(p => [p.includes('history c'), p.includes('run no history')])(packagePlan({ change: 'c', records: 'skip' }, 1))"
 expect "workflow: the records change's package step runs neither again" 0 '^true$' \
