@@ -6,8 +6,8 @@
 
 ## 2. The planner
 
-- [ ] 2.1 `.claude/agents/planner.md` sprint mode: the backlog items from the pick, the one-time triage, the calibration rule, within its budget; proved by "agents: the sprint planner runs the pick, the triage, and the calibration"
-- [ ] 2.2 `.claude/workflows/sprint-planning.js` Plan step and sprint prompt name the pick and the triage; proved by "sprint: the plan step names the pick and the triage"
+- [x] 2.1 `.claude/agents/planner.md` sprint mode: the backlog items from the pick, the one-time triage, the calibration rule, within its budget; proved by "agents: the sprint planner runs the pick, the triage, and the calibration"
+- [x] 2.2 `.claude/workflows/sprint-planning.js` Plan step and sprint prompt name the pick and the triage; proved by "sprint: the plan step names the pick and the triage"
 
 ## 3. Docs
 
