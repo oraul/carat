@@ -4,7 +4,7 @@
 
 - [x] 1.1 `tools/run_state.sh` push `--review-fix` (a recorded push other than HEAD, once per run, `review_fixes`); proved by "run_state: a review fix push needs a recorded push other than the head", "run_state: a review fix allows one more push", and "run_state: a second review fix push is refused" in `tools/tools_test.sh`
 - [x] 1.2 `tools/gates.sh` `pushes` counts the review fix; proved by "gates: pushes allow one review fix" and "gates: pushes refuse a second review fix"
-- [x] 1.3 `.claude/workflows/deliver-change.js`: `resumeFix`, the blocked step in `rounds`, the whole-diff security review in the round, and the `--review-fix` push before the merger; proved by "workflow: a resume past the push with a new blocking quality finding runs one fix round", "workflow: a second review fix round is refused", "workflow: a resume's failed check gets no fix round", and "workflow: the review fix round pushes once more with --review-fix"
+- [x] 1.3 `.claude/workflows/deliver-change.js`: `resumeFix`, the blocked step in `rounds`, the whole-diff security review in the round, and the `--review-fix` push before the merger; proved by "workflow: a resume past the push with a new blocking quality finding runs one fix round", "workflow: a second review fix round is refused", "workflow: a resume's failed check or benchmark gets no fix round", "workflow: the review fix round pushes once more", "workflow: the review fix round pushes with --review-fix", and "workflow: the review fix round reviews security over the whole diff"
 
 ## 2. Merged names
 
