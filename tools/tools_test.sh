@@ -1553,6 +1553,8 @@ git_q init -q --bare "$work/worktrees.git"
 git_q remote add origin "$work/worktrees.git"
 git_q push -q origin main 2>/dev/null
 git_q fetch -q origin
+expect "run_state: lane-open before the toolchain exists links the one make toolchain installs later" 0 "^tool$" sh -c "[ ! -e tmp/.toolchain ] && sh '$here/run_state.sh' lane-open wt chore/wt > /dev/null && mkdir -p tmp/.toolchain/bin && echo tool > tmp/.toolchain/bin/spin && cat tmp/.lane-wt/tmp/.toolchain/bin/spin"
+state lane-close wt > /dev/null
 mkdir -p tmp/.toolchain/bin tmp/.spinel build/spinel-cache
 echo tool > tmp/.toolchain/bin/spin
 wt_top=$(pwd -P)
@@ -3226,9 +3228,15 @@ expect "workflow: every agent start runs its commands in the change's worktree" 
 expect "workflow: an implement or fix start first merges a moved main, a package start does not" 0 '^\[true,true,false\]$' \
   js "$wf" "MERGE_MAIN SELF_CHECK contributorTask" "['implement', 'fix', 'package'].map((m) => contributorTask(m, 'b', 'd').includes('run_state.sh merge-main'))"
 expect "workflow: the resume start opens the change's worktree from the main checkout" 0 '^1 2$' \
-  sh -c 'echo "$(grep -c "Run \`sh tools/run_state.sh lane-open <change> <branch>\` in the main checkout" "$1") $(grep -o "cd tmp/[.]lane-<change> && sh tools/run_state.sh [a-z-]*" "$1" | wc -l | tr -d " ")"' _ "$wf"
-expect "agents: the merger removes the worktree after the merge, the contributor merges a moved main" 0 '^1 1$' \
-  sh -c 'echo "$(grep -c "set <change> merged <short sha> && sh tools/run_state.sh lane-close <change> && " "$1/merger.md") $(grep -c "run .merge-main. and say so" "$1/contributor.md")"' _ "$here/../.claude/agents"
+  sh -c 'echo "$(grep -cF "Run \\\`sh tools/run_state.sh lane-open <change> <branch>\\\` in the main checkout" "$1") $(grep -o "cd tmp/[.]lane-<change> && sh tools/run_state.sh [a-z-]*" "$1" | wc -l | tr -d " ")"' _ "$wf"
+expect "workflow: the script parses as a module body" 0 '^ok$' \
+  node -e "const A = Object.getPrototypeOf(async function () {}).constructor; new A(require('fs').readFileSync(process.argv[1], 'utf8').replace(/^export /gm, '')); console.log('ok')" "$wf"
+expect "workflow: the resume start installs the toolchain in the main checkout before it opens the worktree" 0 '^yes$' \
+  sh -c 'd=$(grep -n "^2[.] In the main checkout, before any worktree links the toolchain, .*make doctor" "$1" | cut -d: -f1); l=$(grep -n "^3[.] .*run_state[.]sh lane-open <change> <branch>" "$1" | cut -d: -f1); [ -n "$d" ] && [ -n "$l" ] && [ "$d" -lt "$l" ] && echo yes' _ "$wf"
+expect "workflow: the merger's task runs step 7 in the main checkout, never cd into the worktree" 0 '^\[true,true,true\]$' \
+  js "$wf" "MERGER_CLOSE" "[MERGER_CLOSE.includes('step 7'), MERGER_CLOSE.includes('in the main checkout, with no \`cd\` into the worktree'), require('fs').readFileSync('$wf', 'utf8').includes('\${intro()}\${MERGER_CLOSE}')]"
+expect "agents: the merger removes the worktree after the merge from the main checkout, the contributor merges a moved main" 0 '^1 1$' \
+  sh -c 'echo "$(grep -c "^7[.] In the main checkout, with no .cd. into the worktree.*set <change> merged <short sha> && sh tools/run_state.sh lane-close <change> && " "$1/merger.md") $(grep -c "run .merge-main. and say so" "$1/contributor.md")"' _ "$here/../.claude/agents"
 expect "workflow: a records-skip package step runs no history" 0 '^\[false,true\]$' \
   plan_js "(p => [p.includes('history c'), p.includes('run no history')])(packagePlan({ change: 'c', records: 'skip' }, 1))"
 expect "workflow: the records change's package step runs neither again" 0 '^true$' \

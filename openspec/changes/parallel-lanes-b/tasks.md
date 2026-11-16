@@ -14,3 +14,9 @@
 
 - [x] 3.1 README.md and `docs/codebase-map.md` area 1; CLAUDE.md's wording proposed in design.md; `make docs-lint`.
 - [x] 3.2 `make tools-test` (seconds against main's), `make gates`, `make spec-validate`.
+
+## 4. Review fixes
+
+- [x] 4.1 The merger's step 7 in the main checkout, never cd into the lane (`merger.md`, the workflow's `MERGER_CLOSE` in the merger's task); proved by "workflow: the merger's task runs step 7 in the main checkout, never cd into the worktree" and "agents: the merger removes the worktree after the merge from the main checkout, the contributor merges a moved main".
+- [x] 4.2 `lane-open` makes each link target when missing, and the resume installs the toolchain before it; proved by "run_state: lane-open before the toolchain exists links the one make toolchain installs later" and "workflow: the resume start installs the toolchain in the main checkout before it opens the worktree".
+- [x] 4.3 The resume prompt's unescaped backticks around `lane-open` ended its template literal, so the workflow did not parse; proved by "workflow: the script parses as a module body".
