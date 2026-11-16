@@ -13,7 +13,8 @@ module Carat
     # before it in the block ended in, its tokens moved past the indent
     # and drawn over the block's own group. A tokenizer that raises is
     # disabled by the plugin guard and the rest of its block stays plain
-    # code. The lines are tokenized whole, then wrapped with their spans.
+    # code. The lines are tokenized whole, then wrapped with their spans;
+    # a table is drawn at the width as it is parsed.
     # The bullets, bars, and rules are those of option.icons, and reading
     # chooses the caps: a file's reading view (ToggleReading) reads up to
     # MarkdownText::READING_RAW_LIMIT bytes into READING_ROW_LIMIT rows, the
@@ -34,7 +35,7 @@ module Carat
         set = state.options.icons
         raw_limit = reading ? Domain::MarkdownText::READING_RAW_LIMIT : Domain::MarkdownText::RAW_LIMIT
         row_limit = reading ? Domain::MarkdownText::READING_ROW_LIMIT : Domain::MarkdownText::ROW_LIMIT
-        doc = Domain::MarkdownText.parse(text, set, raw_limit, row_limit)
+        doc = Domain::MarkdownText.parse(text, set, raw_limit, row_limit, width)
         highlight(doc) if state.options.syntax_on
         Domain::MarkdownText.wrap(doc, width, set, row_limit)
       end

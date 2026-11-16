@@ -19,9 +19,13 @@ module Carat
     # thematic break as a rule, the three drawn from the icon set, plain
     # ASCII for "ascii") and its inline markup (backticks, emphasis at word
     # boundaries, a link or an image as its text, a backslash escape as its
-    # character). parse keeps a span (Highlight group) for each heading,
-    # strong and emphasized run, code span, link text, and fenced row;
-    # wrap cuts them with the rows. Runs of blank rows read as one, none
+    # character). A table (a header row, a separator row, and the rows
+    # holding a pipe after it) is drawn by parse at the width as aligned
+    # columns in borders from the icon set, its cells wrapped when it is
+    # wider, so wrap leaves its rows whole. parse keeps a span (Highlight
+    # group) for each heading, strong and emphasized run, code span, link
+    # text, and fenced row; wrap cuts them with the rows. gather joins a
+    # file's lines up to the raw cap. Runs of blank rows read as one, none
     # leads or trails, and a row wider than the width wraps at its last
     # space after text, or on a character boundary when it has none, never
     # inside its prefix. One pass over the bytes, nothing recursive, so
@@ -40,12 +44,24 @@ module Carat
       READING_ROW_LIMIT = 10_000
       PUNCTUATION = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
       SYNTAX_LIMIT = 32
+      BOX = ["┌", "┬", "┐", "├", "┼", "┤", "└", "┴", "┘", "─", "│"]
+      ASCII_BOX = ["+", "+", "+", "+", "+", "+", "+", "+", "+", "-", "|"]
+      BOX_TOP = 0
+      BOX_MIDDLE = 3
+      BOX_BOTTOM = 6
+      BOX_LINE = 9
+      BOX_SIDE = 10
+      ALIGN_LEFT = 0
+      ALIGN_CENTER = 1
+      ALIGN_RIGHT = 2
+      CELL_MIN = 2
 
-      # The text read into rows not yet wrapped, with their spans, at most
-      # row_limit of them, read from at most raw_limit bytes, its markers
-      # those of the icon set.
-      #: (String, String, Integer, Integer) -> DocsText
-      def self.parse(text, set, raw_limit, row_limit)
+      # The text read into rows, with their spans, at most row_limit of
+      # them, read from at most raw_limit bytes, its markers those of the
+      # icon set; the rows of a table are drawn at width cells, the others
+      # not yet wrapped.
+      #: (String, String, Integer, Integer, Integer) -> DocsText
+      def self.parse(text, set, raw_limit, row_limit, width)
         raw = text.bytesize > raw_limit ? text.byteslice(0, raw_limit).to_s : text
         body = ControlText.without_sequences(raw)
         doc = DocsText.new
@@ -67,6 +83,14 @@ module Carat
               syntax = fence_syntax(line)
             end
             next
+          end
+          if !code && line.include?("|")
+            after = table(body, start, line, doc, set, raw_limit, row_limit, width, gap)
+            if after >= 0
+              start = after
+              gap = false
+              next
+            end
           end
           at = gap ? doc.count + 1 : doc.count
           row = code ? "  " + line.rstrip : block(line, doc, at, set, raw_limit).rstrip
@@ -100,6 +124,359 @@ module Carat
         end
         out.trim
         out
+      end
+
+      # The lines joined by newlines, at most limit bytes of them: a line
+      # longer than the room left is read only up to it, cut back to a
+      # character boundary, and nothing after it is read, so a huge line
+      # costs no more than the reader reads.
+      #: (Array[String], Integer) -> String
+      def self.gather(lines, limit)
+        out = +""
+        row = 0
+        while row < lines.length && out.bytesize < limit
+          out << "\n" if row > 0
+          line = lines[row]
+          room = limit - out.bytesize
+          if line.bytesize > room
+            cut = room
+            cut -= 1 while cut > 0 && (line.getbyte(cut).to_i & 0xC0) == 0x80
+            out << line.byteslice(0, cut).to_s
+            return out
+          end
+          out << line
+          row += 1
+        end
+        out
+      end
+
+      # The byte after the table whose header is line and whose separator
+      # row starts at byte start of body, its rows drawn into the document
+      # at width cells, after a blank row when gap is set; -1, nothing
+      # added, when the next line is no separator row of as many cells as
+      # the header or the width cannot give each column CELL_MIN cells.
+      # Its rows are the lines holding a pipe after the separator, at most
+      # row_limit of them counted with the header.
+      #: (String, Integer, String, DocsText, String, Integer, Integer, Integer, bool) -> Integer
+      def self.table(body, start, line, doc, set, raw_limit, row_limit, width, gap)
+        len = body.bytesize
+        return -1 if start > len
+        stop = line_end(body, start)
+        aligns = alignments(ControlText.line(body.byteslice(start, stop - start).to_s, raw_limit))
+        cols = aligns.length
+        return -1 if cols == 0 || (CELL_MIN + 3) * cols + 1 > width
+        head = split_cells(line)
+        return -1 unless head.length == cols
+        scratch = DocsText.new
+        cells = add_cells(head, cols, Array.new(0, ""), scratch)
+        rows = 1
+        start = stop + 1
+        while start <= len && rows < row_limit
+          stop = line_end(body, start)
+          text = ControlText.line(body.byteslice(start, stop - start).to_s, raw_limit)
+          break unless text.include?("|")
+          cells = add_cells(split_cells(text), cols, cells, scratch)
+          rows += 1
+          start = stop + 1
+        end
+        doc.add_row("", "", 0) if gap
+        draw_table(cells, aligns, rows, doc, set, row_limit, width)
+        start
+      end
+
+      # The byte of the line feed ending the line that starts at byte
+      # start of body, or the body's end.
+      #: (String, Integer) -> Integer
+      def self.line_end(body, start)
+        found = body.byteindex("\n", Utf8.boundary(body, start))
+        found.nil? ? body.bytesize : found.to_i
+      end
+
+      # The cells of a table line, each stripped: cut at every pipe not
+      # escaped as "\|", one leading and one trailing pipe dropped.
+      #: (String) -> Array[String]
+      def self.split_cells(line)
+        out = Array.new(0, "")
+        text = line.strip
+        len = text.bytesize
+        i = len > 0 && text.getbyte(0).to_i == 0x7C ? 1 : 0
+        cell = +""
+        tail = true
+        while i < len
+          b = text.getbyte(i).to_i
+          if b == 0x7C
+            out << cell.strip
+            cell = +""
+            tail = false
+            i += 1
+          else
+            size = 1
+            if b == 0x5C && text.getbyte(i + 1).to_i == 0x7C
+              size = 2
+            elsif b >= 0x80
+              size = Utf8.size_at(text, i, len)
+            end
+            cell << text.byteslice(i, size).to_s
+            tail = true
+            i += size
+          end
+        end
+        out << cell.strip if tail
+        out
+      end
+
+      # The alignment of each cell of a separator row: ALIGN_LEFT for ---
+      # or :--, ALIGN_CENTER for :-:, ALIGN_RIGHT for --:; none when the
+      # line is no separator row, which holds a pipe and a hyphen and
+      # nothing but spaces, pipes, colons, and hyphens, each cell hyphens
+      # with an optional colon at either end.
+      #: (String) -> Array[Integer]
+      def self.alignments(line)
+        out = Array.new(0, 0)
+        return out unless line.include?("|") && line.include?("-")
+        i = 0
+        while i < line.bytesize
+          b = line.getbyte(i).to_i
+          return out unless b == 0x20 || b == 0x7C || b == 0x3A || b == 0x2D
+          i += 1
+        end
+        cells = split_cells(line)
+        c = 0
+        while c < cells.length
+          cell = cells[c]
+          n = cell.bytesize
+          left = n > 0 && cell.getbyte(0).to_i == 0x3A
+          right = n > 1 && cell.getbyte(n - 1).to_i == 0x3A
+          from = left ? 1 : 0
+          to = right ? n - 1 : n
+          return Array.new(0, 0) unless dashes?(cell, from, to)
+          out << (left && right ? ALIGN_CENTER : (right ? ALIGN_RIGHT : ALIGN_LEFT))
+          c += 1
+        end
+        out
+      end
+
+      # Whether the bytes [from, to) of the text are one or more hyphens
+      # and nothing else.
+      #: (String, Integer, Integer) -> bool
+      def self.dashes?(text, from, to)
+        return false unless to > from
+        i = from
+        while i < to
+          return false unless text.getbyte(i).to_i == 0x2D
+          i += 1
+        end
+        true
+      end
+
+      # The cells with cols cells of a table row added, their inline
+      # markup read out (its spans going to scratch and dropped), a short
+      # row padded with empty cells and a long one cut.
+      #: (Array[String], Integer, Array[String], DocsText) -> Array[String]
+      def self.add_cells(row, cols, cells, scratch)
+        c = 0
+        while c < cols
+          cells << (c < row.length ? inline(row[c], 0, scratch, 0) : "")
+          scratch.drop_spans(0)
+          c += 1
+        end
+        cells
+      end
+
+      # Adds a table's rows, cols cells each in cells, to the document at
+      # width cells: the top border, the header, a rule under it when body
+      # rows follow, the body, and the bottom border, from the icon set,
+      # while the document is under row_limit rows.
+      #: (Array[String], Array[Integer], Integer, DocsText, String, Integer, Integer) -> void
+      def self.draw_table(cells, aligns, rows, doc, set, row_limit, width)
+        cols = aligns.length
+        widths = column_widths(cells, cols, width)
+        box = box(set)
+        doc.add_row(border(widths, box, BOX_TOP), "", 0)
+        r = 0
+        while r < rows && doc.count < row_limit
+          draw_row(cells, r * cols, aligns, widths, doc, box, row_limit)
+          doc.add_row(border(widths, box, BOX_MIDDLE), "", 0) if r == 0 && rows > 1 && doc.count < row_limit
+          r += 1
+        end
+        doc.add_row(border(widths, box, BOX_BOTTOM), "", 0) if doc.count < row_limit
+      end
+
+      # The text width of each of the cols columns: its widest cell, at
+      # least CELL_MIN; when the table would be wider than width cells,
+      # the columns are capped at the widest cap that fits, the room left
+      # going a cell each to the capped columns in order, so the widest
+      # columns give way first.
+      #: (Array[String], Integer, Integer) -> Array[Integer]
+      def self.column_widths(cells, cols, width)
+        natural = Array.new(cols, CELL_MIN)
+        i = 0
+        while i < cells.length
+          cell_width = DisplayWidth.text_width(cells[i], 0)
+          natural[i % cols] = cell_width if cell_width > natural[i % cols]
+          i += 1
+        end
+        room = width - 3 * cols - 1
+        widest = CELL_MIN
+        c = 0
+        while c < cols
+          widest = natural[c] if natural[c] > widest
+          c += 1
+        end
+        return natural if capped_sum(natural, widest) <= room
+        low = CELL_MIN
+        high = widest
+        while low < high
+          mid = (low + high + 1) / 2
+          if capped_sum(natural, mid) <= room
+            low = mid
+          else
+            high = mid - 1
+          end
+        end
+        out = Array.new(cols, 0)
+        left = room
+        c = 0
+        while c < cols
+          out[c] = natural[c] < low ? natural[c] : low
+          left -= out[c]
+          c += 1
+        end
+        c = 0
+        while c < cols && left > 0
+          if natural[c] > out[c]
+            out[c] += 1
+            left -= 1
+          end
+          c += 1
+        end
+        out
+      end
+
+      # The sum of the widths, each capped at cap.
+      #: (Array[Integer], Integer) -> Integer
+      def self.capped_sum(widths, cap)
+        total = 0
+        i = 0
+        while i < widths.length
+          total += widths[i] < cap ? widths[i] : cap
+          i += 1
+        end
+        total
+      end
+
+      # Adds the lines of one table row, its cells from index first of
+      # cells: as many as its tallest cell wraps to, each cell aligned in
+      # its column and blank below its last piece, while the document is
+      # under row_limit rows.
+      #: (Array[String], Integer, Array[Integer], Array[Integer], DocsText, Array[String], Integer) -> void
+      def self.draw_row(cells, first, aligns, widths, doc, box, row_limit)
+        cols = aligns.length
+        pieces = Array.new(0, "")
+        starts = Array.new(0, 0)
+        height = 1
+        c = 0
+        while c < cols
+          starts << pieces.length
+          lines = cell_lines(cells[first + c], widths[c], row_limit)
+          height = lines.length if lines.length > height
+          k = 0
+          while k < lines.length
+            pieces << lines[k]
+            k += 1
+          end
+          c += 1
+        end
+        starts << pieces.length
+        side = box[BOX_SIDE]
+        line = 0
+        while line < height && doc.count < row_limit
+          out = +""
+          out << side
+          c = 0
+          while c < cols
+            at = starts[c] + line
+            out << " "
+            out << padded(at < starts[c + 1] ? pieces[at] : "", widths[c], aligns[c])
+            out << " "
+            out << side
+            c += 1
+          end
+          doc.add_row(out, "", 0)
+          line += 1
+        end
+      end
+
+      # The text cut into pieces of at most width cells, each at its last
+      # space within the width, or on a character when a word is longer,
+      # at most limit of them; one empty piece for an empty text.
+      #: (String, Integer, Integer) -> Array[String]
+      def self.cell_lines(text, width, limit)
+        out = Array.new(0, "")
+        len = text.bytesize
+        start = 0
+        used = 0
+        space = -1
+        i = 0
+        while i < len && out.length < limit
+          size = Utf8.size_at(text, i, len)
+          cells = DisplayWidth.of(Utf8.code_at(text, i, size))
+          if used + cells > width && i > start
+            cut = space > start ? space : i
+            out << text.byteslice(start, cut - start).to_s.rstrip
+            start = space > start ? space + 1 : i
+            start += 1 while start < len && text.getbyte(start).to_i == 0x20
+            i = start
+            used = 0
+            space = -1
+            next
+          end
+          space = i if text.getbyte(i).to_i == 0x20
+          used += cells
+          i += size
+        end
+        out << text.byteslice(start, len - start).to_s if out.empty? || (start < len && out.length < limit)
+        out
+      end
+
+      # The piece padded with spaces to width cells by its alignment, a
+      # centered piece's odd cell on its right.
+      #: (String, Integer, Integer) -> String
+      def self.padded(piece, width, align)
+        gap = width - DisplayWidth.text_width(piece, 0)
+        gap = 0 if gap < 0
+        left = 0
+        left = gap if align == ALIGN_RIGHT
+        left = gap / 2 if align == ALIGN_CENTER
+        out = +""
+        out << " " * left
+        out << piece
+        out << " " * (gap - left)
+        out
+      end
+
+      # A border line of a table whose columns are widths wide: the left
+      # corner or tee at index at of the box, the joint after it between
+      # columns, the right one after that, the horizontal line between.
+      #: (Array[Integer], Array[String], Integer) -> String
+      def self.border(widths, box, at)
+        out = +""
+        out << box[at]
+        c = 0
+        while c < widths.length
+          out << box[at + 1] if c > 0
+          (widths[c] + 2).times { out << box[BOX_LINE] }
+          c += 1
+        end
+        out << box[at + 2]
+        out
+      end
+
+      # The table border pieces of the icon set: plain for "ascii", else
+      # BOX.
+      #: (String) -> Array[String]
+      def self.box(set)
+        set == "ascii" ? ASCII_BOX : BOX
       end
 
       # The language a fence's info string names: its first word, at most
