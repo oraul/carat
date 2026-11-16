@@ -268,7 +268,10 @@
 #                               tmp/.toolchain), compile cache
 #                               (build/spinel-cache), run states, stage
 #                               logs, and plans (build/pipeline, build/stages,
-#                               build/plan) into it; print its path
+#                               build/plan) into it, each target made first
+#                               when missing, so a lane opened before make
+#                               toolchain shares the one it installs; print
+#                               its path
 #   lane-close CHANGE           remove the change's worktree, after its merge
 #                               or when its run is replaced, never a link's
 #                               target; nothing when none stands
@@ -2340,9 +2343,10 @@ lane_open() {
       git worktree add -q --no-track -b "$branch" "$dir" "${BASE:-origin/main}"
     fi || die "lane-open: git worktree add of $branch at $dir failed (a branch checked out in the main checkout is checked out there first: check out main in it)"
   fi
+  # Every target is made first, so a lane opened before make toolchain
+  # still links the one toolchain the main checkout installs into later.
   for l in $LANE_LINKS; do
-    case "$l" in build/*) mkdir -p "$l" ;; esac
-    [ -e "$l" ] || continue
+    mkdir -p "$l" || die "lane-open: cannot make $top/$l"
     mkdir -p "$dir/$(dirname "$l")"
     [ -e "$dir/$l" ] || [ -L "$dir/$l" ] || ln -s "$top/$l" "$dir/$l"
   done

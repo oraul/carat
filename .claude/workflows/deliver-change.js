@@ -1013,8 +1013,8 @@ phase('Resume')
 const resume = await agent(
   `Prepare the delivery of one change. Input: ${JSON.stringify(input)}.
 1. \`git fetch -q origin\`. The change name is input.change, or an existing change under openspec/changes/ that the brief names, or a kebab-case name of 2 to 5 words derived from the brief.
-2. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Run `sh tools/run_state.sh lane-open <change> <branch>` in the main checkout, which stays on main: it makes the change's worktree tmp/.lane-<change> on the branch (local, else origin's, else new from origin/main), keeps it on a resume, and links the shared toolchain, compile cache, and run states; stop with its message when it fails.
-3. \`make doctor\`; run \`make toolchain\` when it fails and stop when that fails too.
+2. In the main checkout, before any worktree links the toolchain, \`make doctor\`; run \`make toolchain\` when it fails and stop when that fails too.
+3. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Run \`sh tools/run_state.sh lane-open <change> <branch>\` in the main checkout, which stays on main: it makes the change's worktree tmp/.lane-<change> on the branch (local, else origin's, else new from origin/main), keeps it on a resume, and links the shared toolchain, compile cache, and run states; stop with its message when it fails.
 4. Run \`sh tools/run_state.sh init <change> <branch>\`; when it refuses (a merged change name), stop with its message as reason. Then \`cd tmp/.lane-<change> && sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git -C tmp/.lane-<change> rev-parse --short=12 HEAD\` as head.
 5. Run \`cd tmp/.lane-<change> && sh tools/run_state.sh plan-needed <change>\` and return its one line verbatim as plan; its exit 1 means not needed, not a failure.${capLine('resume')}`,
   calibrate('resume', { schema: RESUME, label: 'resume' }))
