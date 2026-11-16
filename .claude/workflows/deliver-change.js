@@ -250,7 +250,7 @@ const PLAN = {
   properties: {
     decisions: { type: 'array', items: { type: 'object', properties: { decision: { type: 'string' }, evidence: { type: 'string' } }, required: ['decision', 'evidence'] } },
     security_first: { ...LINES, description: 'unresolved blocking security findings the brief does not fix' },
-    notes: { ...LINES, description: 'for the contributor: findings the change only appends to docs/backlog.md, and bookkeeping' },
+    notes: { ...LINES, description: 'for the contributor: findings the change only writes to docs/findings/CHANGE.md, and bookkeeping' },
     files: LINES,
     estimate: { type: 'string', enum: SIZES, description: 'the size this change is estimated at' },
     records: { type: 'string', enum: ['apply', 'skip'], description: 'skip when the brief excludes the planning records (history and groom) from this change\'s package step' },
@@ -647,7 +647,7 @@ function setBlocked(commit, files) {
   blockedFiles = files.every(Boolean) ? [...new Set(files)] : null
 }
 // The advisories of every quality review of the run, in order and without
-// duplicates, for docs/backlog.md; the findings handed to the contributor
+// duplicates, for docs/findings/CHANGE.md; the findings handed to the contributor
 // so far, so a CI fix's push gets only those that arrived after them.
 let qualityAdvisory = []
 const handed = new Set()
@@ -663,8 +663,8 @@ function handOver() {
   return fresh
 }
 // The findings that arrived after the package step, as late-finding notes
-// in the run state: the next change's package step appends them to
-// docs/backlog.md with this run's history row, so no push records them.
+// in the run state: the next change's package step writes them to
+// docs/findings/CHANGE.md with this run's history row, so no push records them.
 function recordLate() {
   for (const f of handOver()) queue(`sh tools/run_state.sh note ${state.change} late-finding "${noteText(f)}"`, head)
 }
@@ -981,14 +981,16 @@ if (!resume || resume.status !== 'done') {
 // size as the estimate, and the brief still reaches the scouts and the
 // contributor. A brief that is only the change
 // name gives the scouts and the contributor nothing to work from, so they
-// read the queue item naming the change in docs/queue.md themselves: the
+// read the queue item naming the change in its lane queue themselves: the
 // item never passes through a model's output.
 const planLine = resume && typeof resume.plan === 'string' ? resume.plan.split('\n')[0] : ''
-// The resume brief names the queue plan-needed read: build/plan/queue.md
-// only while a sprint plan waits there, docs/queue.md otherwise.
+// The resume brief names the lane queues plan-needed read: the waiting
+// sprint plan's under build/plan/ only while one waits there, the docs/
+// lane queues otherwise.
 function resumeBrief(change, line) {
-  const queueFile = /build\/plan\/queue\.md/.test(line) ? 'build/plan/queue.md, the waiting sprint plan,'
-    : /docs\/queue\.md/.test(line) ? 'docs/queue.md' : 'docs/queue.md (build/plan/queue.md while a sprint plan waits there)'
+  const LANES = 'queue-feature.md or queue-backlog.md'
+  const queueFile = /build\/plan\/queue-/.test(line) ? `build/plan/${LANES}, the waiting sprint plan,`
+    : /docs\/queue-/.test(line) ? `docs/${LANES}` : `docs/${LANES} (build/plan/ while a sprint plan waits there)`
   return `the item of ${queueFile} that names \`${change}\`, read there as written (when no item names it, the existing OpenSpec change)`
 }
 // Whether the Plan phase is skipped: no merge, plan, or implement record
@@ -1092,9 +1094,9 @@ if (!stopped && !state.merged) {
       phase('Package')
       const excluded = 'run neither history nor groom: this change\'s run state excludes the planning records (records=skip), and both say so for it'
       const plan = planned === 0
-        ? `The planner did not run: this change was taken from the head of docs/queue.md as written. Copy nothing from build/plan/, which holds an older run's files or a waiting sprint plan that groom applies; ${state.records === 'skip' ? excluded : 'append the history and run groom as your package step says'}, then remove this change's item from docs/queue.md and renumber the rest.`
+        ? `The planner did not run: this change was taken from the head of its lane queue as written. Copy nothing from build/plan/, which holds an older run's files or a waiting sprint plan that groom applies; ${state.records === 'skip' ? excluded : 'append the history and run groom as your package step says'}, then remove this change's item from its lane queue and renumber the rest.`
         : `Apply the planner's files under build/plan/ and ${state.records === 'skip' ? excluded : 'append the history of the merged changes as your package step says'}.`
-      const done = await contributor('package', `Non-blocking findings to append to docs/backlog.md (a shell append; never read the file):\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
+      const done = await contributor('package', `Non-blocking findings to append to docs/findings/${state.change}.md (mkdir -p docs/findings first, as a fresh checkout lacks it, then a shell append; never read docs/backlog.md):\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
       if (done) state.pr = packagedPr(done)
       if (done && !state.pr) stopped = 'no pull request appeared for the branch ' + state.branch + ': read the open-pr workflow\'s log'
       else if (done) phaseDone('package', head)

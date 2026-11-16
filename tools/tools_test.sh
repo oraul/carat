@@ -103,7 +103,9 @@ scope_case true .claude/agents/x.md
 scope_case true .claude/workflows/x.js
 scope_case true .claude/settings.json
 scope_case false .claude/commands/x.md
-scope_case false docs/metrics.tsv
+scope_case false docs/metrics-backlog.tsv
+scope_case false docs/findings/x.md
+scope_case false docs/queue-feature.md
 scope_case true docs/codebase-map.md
 scope_case true docs/actions.md
 scope_case true tools/x.sh
@@ -852,38 +854,54 @@ state set history pushes 1 > /dev/null
 state set history gates_failed 1 > /dev/null
 expect "run_state: pending names a merged change without a row" 0 "^history$" state pending
 expect "run_state: history appends the row" 0 "appended history" state history
-expect "run_state: history appends a merged run's late findings to the backlog" 0 "^- security Low [(]5[)] tools/x[.]sh:3 a thing; fix: y$" tail -1 docs/backlog.md
-expect "run_state: history heads the late findings with their run, no other note" 0 "^## Findings of history after its package step 1$" sh -c 'echo "$(grep "^## " docs/backlog.md) $(grep -c "^- " docs/backlog.md)"'
-expect "run_state: the history starts with its header" 0 "^change[[:space:]]date[[:space:]]merged" head -1 docs/metrics.tsv
+expect "run_state: history appends a merged run's late findings to its findings file" 0 "^- security Low [(]5[)] tools/x[.]sh:3 a thing; fix: y$" tail -1 docs/findings/history.md
+expect "run_state: history heads the late findings with their run, no other note" 0 "^## Findings of history after its package step 1$" sh -c 'echo "$(grep "^## " docs/findings/history.md) $(grep -c "^- " docs/findings/history.md)"'
+expect "run_state: the history starts with its header" 0 "^change[[:space:]]date[[:space:]]merged" head -1 docs/metrics-backlog.tsv
 expect "run_state: the row groups the measurements and the first passes" 0 \
   "^carat=2 lh=27[.]0,j=28[.]0 lh=50[.]0 check:1,quality:0,security:1,gates:0 implement=1000/30,check=200/10 -$" \
-  awk -F'\t' 'NR == 2 { print $8, $9, $10, $6, $13, $14 }' docs/metrics.tsv
-expect "run_state: history records the profiles" 0 "^scout=cheap/low,security=session/session$" awk -F'\t' 'NR == 2 { print $18 }' docs/metrics.tsv
+  awk -F'\t' 'NR == 2 { print $8, $9, $10, $6, $13, $14 }' docs/metrics-backlog.tsv
+expect "run_state: history records the profiles" 0 "^scout=cheap/low,security=session/session$" awk -F'\t' 'NR == 2 { print $18 }' docs/metrics-backlog.tsv
 expect "run_state: history appends a change once" 0 "nothing pending" state history
 expect "run_state: history records the branch it appended a row on" 0 "^chore/history\$" state get history row
-cp docs/metrics.tsv m.keep
-head -1 m.keep > docs/metrics.tsv
+cp docs/metrics-backlog.tsv m.keep
+head -1 m.keep > docs/metrics-backlog.tsv
 expect "run_state: history appends no row a run already has" 0 "^history: history already has its row, appended on chore/history; not appended again\$" state history
-expect "run_state: history leaves the history without the row a run already has" 0 "^1\$" sh -c "wc -l < docs/metrics.tsv | tr -d ' '"
+expect "run_state: history leaves the history without the row a run already has" 0 "^1\$" sh -c "wc -l < docs/metrics-backlog.tsv | tr -d ' '"
 state set history records skip > /dev/null
 expect "run_state: history honors the records exclusion" 0 "^history: history excludes the planning records [(]records=skip[)]; nothing appended\$" state history history
 state set history records apply > /dev/null
-cp m.keep docs/metrics.tsv
+cp m.keep docs/metrics-backlog.tsv
 state init based chore/based > /dev/null
 state set based merged "$(git rev-parse --short=12 HEAD)" > /dev/null
-printf 'based\t-\n' >> docs/metrics.tsv
+printf 'based\t-\n' >> docs/metrics-backlog.tsv
 commit "docs: record based"
-cp m.keep docs/metrics.tsv
-expect "run_state: history appends no row main already has" 0 "^history: based already has its row in HEAD's docs/metrics[.]tsv; not appended again\$" env BASE=HEAD sh "$here/run_state.sh" history
+cp m.keep docs/metrics-backlog.tsv
+expect "run_state: history appends no row main already has" 0 "^history: based already has its row in HEAD's history; not appended again\$" env BASE=HEAD sh "$here/run_state.sh" history
 # A merged value naming no commit on main is a run that never merged: no
 # row, no pending name (sprint-tidy).
 state init stray chore/stray > /dev/null
 state set stray merged e375e4cfa5cf > /dev/null
 expect "run_state: pending skips a run whose merged commit is not on main" 0 "^$" sh -c "sh '$here/run_state.sh' pending | grep -x stray; true"
 expect "run_state: history keeps a never-merged run out" 0 "^history: stray records merged e375e4cfa5cf, no commit on main; not appended\$" env BASE=HEAD sh "$here/run_state.sh" history
-expect "run_state: history appends no row of a never-merged run" 0 "^0\$" sh -c "grep -c '^stray' docs/metrics.tsv; true"
+expect "run_state: history appends no row of a never-merged run" 0 "^0\$" sh -c "grep -c '^stray' docs/metrics-backlog.tsv; true"
 rm build/pipeline/stray.json
 expect "run_state: status prints the first-pass rates" 0 "first-pass rates over 1 change.s.: check 1/1 quality 0/1 security 1/1 gates 0/1" state status
+# A change merged on main after the branch point, the in-flight case of the
+# lanes: history appends its row, though HEAD lacks its commit, and the
+# history orders it by BASE's ancestry too, so it is the newest row.
+# The commit lands on main by plumbing, leaving the branch's work tree as it is.
+landed_full=$(git_q commit-tree -p main -m "chore: land another change" -m "$TRAILER" "main^{tree}")
+git_q update-ref refs/heads/main "$landed_full"
+landed_at=$(git rev-parse --short=12 "$landed_full")
+state init landed chore/landed > /dev/null
+state set landed merged "$landed_at" > /dev/null
+expect "run_state: history appends a change merged on BASE after the branch point" 0 "appended landed" env BASE=main sh "$here/run_state.sh" history
+expect "run_state: a change merged on BASE after the branch point is the newest history row" 0 "^landed$" \
+  sh -c "env BASE=main sh '$here/run_state.sh' status | awk -F'\t' 'f { print \$1; exit } /^change\tdate/ { f = 1 }'"
+# history and based share their merged commit, so their file order ranks
+# based last; landed, whose commit HEAD lacks, sorts first.
+expect "run_state: a BASE that names no commit leaves the order to HEAD's ancestry, a row it holds the newest" 0 "^based$" \
+  sh -c "env BASE=nothing sh '$here/run_state.sh' status | awk -F'\t' 'f { print \$1; exit } /^change\tdate/ { f = 1 }'"
 
 # A run state whose first passes the workflow stored only in part: the
 # stage, review, and ci lines hold each gate's last result, not its first,
@@ -950,19 +968,19 @@ state set derived merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 state set derived pushes 1 > /dev/null
 state history > /dev/null
 expect "run_state: history takes only the stored first verdicts" 0 "^bench:0,ci:0,gates:1$" \
-  awk -F'\t' 'NR == 2 { print $6 }' docs/metrics.tsv
-expect "run_state: history groups the phase figures" 0 "^implement=1000/30,check=200/10$" awk -F'\t' 'NR == 2 { print $13 }' docs/metrics.tsv
-expect "run_state: history sums the phase figures" 0 "^1200 40$" awk -F'\t' 'NR == 2 { print $11, $12 }' docs/metrics.tsv
-expect "run_state: history records no estimate without a queue item" 0 "^-$" awk -F'\t' 'NR == 2 { print $15 }' docs/metrics.tsv
-expect "run_state: history records the totals after the estimate" 0 "^7500 4[.]5$" awk -F'\t' 'NR == 2 { print $16, $17 }' docs/metrics.tsv
+  awk -F'\t' 'NR == 2 { print $6 }' docs/metrics-backlog.tsv
+expect "run_state: history groups the phase figures" 0 "^implement=1000/30,check=200/10$" awk -F'\t' 'NR == 2 { print $13 }' docs/metrics-backlog.tsv
+expect "run_state: history sums the phase figures" 0 "^1200 40$" awk -F'\t' 'NR == 2 { print $11, $12 }' docs/metrics-backlog.tsv
+expect "run_state: history records no estimate without a queue item" 0 "^-$" awk -F'\t' 'NR == 2 { print $15 }' docs/metrics-backlog.tsv
+expect "run_state: history records the totals after the estimate" 0 "^7500 4[.]5$" awk -F'\t' 'NR == 2 { print $16, $17 }' docs/metrics-backlog.tsv
 expect "run_state: history records the CI stages, waiting calls, and weighted tokens" 0 "^docs_lint=5,build_the_editor_for_the_smoke=45,resolve_the_spinel_commit=0[.]4 4 4628 implement=5163/4478/2,record=4400/150/1$" \
-  awk -F'\t' 'NR == 2 { print $19, $20, $21, $22 }' docs/metrics.tsv
+  awk -F'\t' 'NR == 2 { print $19, $20, $21, $22 }' docs/metrics-backlog.tsv
 
 # The estimate: the size word of the change's item in the queue at the
 # parent of its squash commit, against the run's total tokens and wall
 # minutes (usage), with its output tokens beside them.
 fresh estimate
-printf '# Queue\n\n1. `sized` (T2, estimated small): one.\n2. `unsized` (T5): two, after `sized`.\n3. `large` (T4, estimated large): three.\n4. `quiet` (T6, estimated medium): four.\n5. `unmerged` (T6, estimated small): five.\n' > docs/queue.md
+printf '# Queue\n\n1. `sized` (T2, estimated small): one.\n2. `unsized` (T5): two, after `sized`.\n3. `large` (T4, estimated large): three.\n4. `quiet` (T6, estimated medium): four.\n5. `unmerged` (T6, estimated small): five.\n' > docs/queue-backlog.md
 commit "docs: the queue"
 echo squash >> README.md
 commit "feat: the squash commit"
@@ -1037,8 +1055,33 @@ state history > /dev/null
 expect "run_state: history never passes the merged value to git as an option" 1 "" test -e clobbered
 rm build/pipeline/unmerged.json
 expect "run_state: history records the estimate" 0 "^medium small - medium$" \
-  sh -c "awk -F'\t' '\$1 == \"large\" { l = \$15 } \$1 == \"sized\" { s = \$15 } \$1 == \"unsized\" { u = \$15 } \$1 == \"planned\" { p = \$15 } END { print l, s, u, p }' docs/metrics.tsv"
-expect "run_state: every history row has the header's columns" 0 "^22$" sh -c "awk -F'\t' '{ print NF }' docs/metrics.tsv | sort -u"
+  sh -c "awk -F'\t' '\$1 == \"large\" { l = \$15 } \$1 == \"sized\" { s = \$15 } \$1 == \"unsized\" { u = \$15 } \$1 == \"planned\" { p = \$15 } END { print l, s, u, p }' docs/metrics-backlog.tsv docs/metrics-feature.tsv"
+expect "run_state: every history row has the header's columns" 0 "^22$" sh -c "awk -F'\t' '{ print NF }' docs/metrics-backlog.tsv docs/metrics-feature.tsv | sort -u"
+expect "run_state: history appends a change with no lane queue item and a feat squash to the feature lane" 0 "^change planned feature backlog$" \
+  sh -c "echo \$(cut -f1 docs/metrics-feature.tsv) \$(sh '$here/run_state.sh' lane planned) \$(sh '$here/run_state.sh' lane sized)"
+# A change merged before the lanes: its squash parent holds only the one
+# queue, which queue_at reads at that commit for the estimate; a squash
+# subject of no known type goes to the feature lane, as no lane item says.
+fresh oldqueue
+printf '# Queue\n\n1. `old` (T2, estimated large): one.\n' > docs/queue.md
+commit "docs: the queue before the lanes"
+echo squash >> README.md
+commit "fix: the squash commit"
+state init old chore/old > /dev/null
+state set old merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+echo odd >> README.md
+commit "misc: a squash of no known type"
+state init odd chore/odd > /dev/null
+state set odd merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+state history > /dev/null
+expect "run_state: history reads the estimate from the one queue at a squash parent before the lanes" 0 "^large$" awk -F'\t' '$1 == "old" { print $15 }' docs/metrics-backlog.tsv
+expect "run_state: a squash subject of no known type goes to the feature lane" 0 "^feature odd$" sh -c "echo \$(sh '$here/run_state.sh' lane odd) \$(cut -f1 docs/metrics-feature.tsv | sed -n 2p)"
+# BASE's two lane files, each with its header: neither header is a row, so
+# a run named like the header's first column still gets its row.
+commit "docs: record the lanes"
+state init change chore/change > /dev/null
+state set change merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: history reads no lane file's header at BASE as a row" 0 "appended change" env BASE=HEAD sh "$here/run_state.sh" history
 
 # The path scope: the stages a change's paths need since the merge base
 # with main. A documentation-only change runs only docs-lint and gates, the
@@ -1065,9 +1108,9 @@ expect "run_state: check on a documentation-only change runs only docs-lint and 
 expect "run_state: a scoped stage is recorded passed at the head" 0 "^0 0s $(git rev-parse --short=12 HEAD) [^ ]+ scoped$" state get scoped stage.dev-build
 printf 'rounds.carat\t3\nallocs.lh\t99.0\n' > "$work/stale.tsv"
 mkdir -p build/metrics && cp "$work/stale.tsv" build/metrics/current.tsv
-{ printf 'header\n'; printf 'prev\t-\t-\t-\t-\t-\t-\tcarat=2\tlh=27\tlh=50.0\t-\t-\t-\t-\n'; } > "$work/scoped-history.tsv"
+{ printf 'header\n'; printf 'prev\t-\t-\t-\t-\t-\t-\tcarat=2\tlh=27\tlh=50.0\t-\t-\t-\t-\n'; } > "$work/scoped-history-backlog.tsv"
 scoped_bench() {
-  env METRICS_FILE="$work/scoped-history.tsv" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" bench scoped
+  env METRICS_PREFIX="$work/scoped-history" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" bench scoped
 }
 expect "run_state: bench carries main's figures when the metrics stage was scoped" 0 "carried the figures of the history row of prev" scoped_bench
 expect "run_state: bench replaces the older measurement with main's figures" 0 "^allocs[.]lh[[:space:]]27$" grep allocs build/metrics/current.tsv
@@ -1116,7 +1159,7 @@ expect "run_state: bench needs the metrics stage at HEAD" 1 "the metrics stage h
 state stage bench metrics true > /dev/null
 mkdir -p build/metrics
 printf 'rounds.carat\t2\nallocs.lh\t27.0\nus.lh\t60.0\n' > build/metrics/current.tsv
-{ printf 'header\n'; printf 'prev\t-\t-\t-\t-\t-\t-\tcarat=2\tlh=27\tlh=50.0\t-\t-\t-\t-\n'; } > docs/metrics.tsv
+{ printf 'header\n'; printf 'prev\t-\t-\t-\t-\t-\t-\tcarat=2\tlh=27\tlh=50.0\t-\t-\t-\t-\n'; } > docs/metrics-backlog.tsv
 expect "run_state: bench passes the same figures" 0 "same allocations and rounds" bench
 expect "run_state: bench compares through make metrics-compare" 0 "^make --no-print-directory metrics-compare BASE_METRICS=build/metrics/last[.]tsv$" bench
 expect "run_state: bench writes the last row as a base" 0 "^allocs[.]lh[[:space:]]27$" cat build/metrics/last.tsv
@@ -1156,8 +1199,8 @@ mrow() {
 fresh exception
 printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
 printf '# Backlog\n' > docs/backlog.md
-{ printf 'header\n'; mrow seed bbb222 small 1 1 -; mrow e1 c1 small 1 1 -; mrow e2 c2 small 1 1 -; mrow e3 c3 small 1 1 -; mrow e4 c4 small 1 1 -; } > docs/metrics.tsv
-printf '# Queue\n\n1. `x1` (T2 user request, estimated small, user-approved beyond the sprint): one.\n2. `e5` (T1 pipeline, estimated small, the user-approved exception): review-due counts a change beyond the sprint toward the five.\n3. `x2` (T2 user request, estimated small, beyond the sprint): two.\n' > docs/queue.md
+{ printf 'header\n'; mrow seed bbb222 small 1 1 -; mrow e1 c1 small 1 1 -; mrow e2 c2 small 1 1 -; mrow e3 c3 small 1 1 -; mrow e4 c4 small 1 1 -; } > docs/metrics-backlog.tsv
+printf '# Queue\n\n1. `x1` (T2 user request, estimated small, user-approved beyond the sprint): one.\n2. `e5` (T1 pipeline, estimated small, the user-approved exception): review-due counts a change beyond the sprint toward the five.\n3. `x2` (T2 user request, estimated small, beyond the sprint): two.\n' > docs/queue-backlog.md
 commit "docs: the queue"
 echo x1 >> README.md
 commit "feat: x1"
@@ -1175,26 +1218,41 @@ echo sprint-1 > build/plan/sprint
 state init sprint-1 main > /dev/null 2>&1
 state review sprint-1 periodic-security pass "diff blocking=0" > /dev/null
 state groom > /dev/null
-expect "run_state: the groomed sprint row ends at the fifth counted change, a later exception left to the next sprint" 0 "^sprint-1 e5 5 e1,e2,e3,e4,e5 " sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
+expect "run_state: the groomed sprint row ends at the fifth counted change in merge order, its exception inside" 0 "^sprint-1 e5 6 e1,e2,e3,e4,x1,e5 " sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
 echo x2 >> README.md
 commit "feat: x2"
 state init x2 chore/x2 > /dev/null
 state set x2 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
-expect "run_state: review-due counts a change beyond the sprint past the sprint's one exception" 1 "^not due: sprint-2 has 1 of 5 changes merged [(]x1, x2[)]; not counted, beyond the sprint: x1\$" state review-due
+expect "run_state: review-due leaves the next sprint's exception out of its count" 1 "^not due: sprint-2 has 0 of 5 changes merged [(]x2[)]; not counted, beyond the sprint: x2\$" state review-due
+printf '4. `x3` (T2 user request, estimated small, beyond the sprint): three.\n' >> docs/queue-backlog.md
+commit "docs: x3 queued"
+echo x3 >> README.md
+commit "feat: x3"
+state init x3 chore/x3 > /dev/null
+state set x3 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: review-due counts a change beyond the sprint past the sprint's one exception" 1 "^not due: sprint-2 has 1 of 5 changes merged [(]x2, x3[)]; not counted, beyond the sprint: x2\$" state review-due
+state history > /dev/null
+printf 'sprint-2\tx3\n' >> docs/sprints.tsv
+printf '# Queue\n\n## Sprint 4\n\nThe user-approved exception: `y1` (T1 pipeline, estimated small, beyond the sprint): first.\n' > docs/queue-feature.md
+echo y1 >> README.md
+commit "chore: y1 with the plan naming it"
+state init y1 chore/y1 > /dev/null
+state set y1 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: review-due leaves out a change the exception line of its merged commit's queue names" 1 "^not due: sprint-3 has 0 of 5 changes merged [(]y1[)]; not counted, beyond the sprint: y1\$" state review-due
 fresh sprint
 printf 'sprint\tlast\n' > docs/sprints.tsv
 expect "run_state: review-due needs a sprint row" 1 "ends with no sprint row" state review-due
 printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
-{ printf 'header\n'; mrow old aaa111 small 1 1 -; mrow seed bbb222 small 1 1 -; mrow a1 c1 small 400000 30 check:1,quality:0; mrow review-20261111 r1 - 9 9 -; mrow a2 c2 medium 1300000 50 check:1,quality:1; } > docs/metrics.tsv
+{ printf 'header\n'; mrow old aaa111 small 1 1 -; mrow seed bbb222 small 1 1 -; mrow a1 c1 small 400000 30 check:1,quality:0; mrow review-20261111 r1 - 9 9 -; mrow a2 c2 medium 1300000 50 check:1,quality:1; } > docs/metrics-backlog.tsv
 expect "run_state: review-due is not due before the fifth merge of the sprint, a review run not counted" 1 "^not due: sprint-1 has 2 of 5 changes merged [(]a1, a2[)]$" state review-due
 state init a3 chore/a3 > /dev/null
 state set a3 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "run_state: review-due counts a merged change without a row" 1 "^not due: sprint-1 has 3 of 5" state review-due
-{ mrow a3 c3 small 300000 20 check:0,quality:1; mrow a4 c4 small 200000 10 check:1; mrow a5 c5 large 2000000 70 check:1,quality:1; } >> docs/metrics.tsv
+{ mrow a3 c3 small 300000 20 check:0,quality:1; mrow a4 c4 small 200000 10 check:1; mrow a5 c5 large 2000000 70 check:1,quality:1; } >> docs/metrics-backlog.tsv
 expect "run_state: review-due is due at the fifth merge with the combined diff" 0 "^due: sprint-1 has 5 changes merged [(]a1, a2, a3, a4, a5[)]; combined diff bbb222[.][.]origin/main; sweep: no$" state review-due
 printf 'sprint-1\ta5\n' >> docs/sprints.tsv
 expect "run_state: a sprint row restarts the count" 1 "^not due: sprint-2 has 0 of 5" state review-due
-{ mrow b1 d1 small 1 1 -; mrow b2 d2 small 1 1 -; mrow b3 d3 small 1 1 -; mrow b4 d4 small 1 1 -; mrow b5 d5 small 1 1 -; } >> docs/metrics.tsv
+{ mrow b1 d1 small 1 1 -; mrow b2 d2 small 1 1 -; mrow b3 d3 small 1 1 -; mrow b4 d4 small 1 1 -; mrow b5 d5 small 1 1 -; } >> docs/metrics-backlog.tsv
 rm build/pipeline/a3.json
 expect "run_state: review-due asks for the sweep in an even sprint" 0 "^due: sprint-2 has 5 changes merged .*combined diff c5[.][.]origin/main; sweep: yes$" state review-due
 mkdir -p build/plan
@@ -1208,8 +1266,8 @@ state review sprint-2 periodic-security partial "diff not_reviewed=1" > /dev/nul
 expect "run_state: groom holds a plan whose sprint security review is partial" 0 "^groom: the plan of sprint-2 waits for its security review [(]partial[)]" state groom
 state review sprint-2 periodic-security pass "diff blocking=0" > /dev/null
 expect "run_state: review-due is not due while the sprint plan waits" 1 "^not due: sprint-2 is planned" state review-due
-printf '# Queue\n\n## Sprint 3\n\n1. `b6` (T5, estimated small): six.\n' > build/plan/queue.md
-expect "run_state: plan-needed reads a waiting sprint plan" 1 "^not needed: b6 heads build/plan/queue[.]md, estimated small" state plan-needed b6
+printf '# Queue\n\n## Sprint 3\n\n1. `b6` (T5, estimated small): six.\n' > build/plan/queue-backlog.md
+expect "run_state: plan-needed reads a waiting sprint plan" 1 "^not needed: b6 heads build/plan/queue-backlog[.]md, estimated small" state plan-needed b6
 # The backlog grooming: duplicates by location, removals by heading.
 cat > docs/backlog.md <<'EOB'
 # Backlog
@@ -1248,6 +1306,12 @@ mkdir -p openspec/changes/archive/2026-11-11-b1
 commit "docs: backlog"
 fixer=$(git rev-parse --short=12 HEAD)
 cp docs/backlog.md backlog.before
+mkdir -p docs/findings
+printf '\n### Fa finding at tools/f.sh:1\n\n- Why: a.\n' > docs/findings/fa.md
+printf '### Fb finding at tools/g.sh:2\n\n- Why: b.\n' > docs/findings/fb.md
+printf '### Fc finding at tools/b.sh:9\n' > docs/findings/fc.md
+expect "run_state: backlog-dups names a location a backlog and a findings-file heading share" 0 "^tools/b[.]sh:9: ### Kept entry at tools/b[.]sh:9 [|] ### Fc finding at tools/b[.]sh:9$" sh -c "sh '$here/run_state.sh' backlog-dups | grep tools/b"
+rm docs/findings/fc.md
 printf 'duplicate ## x security Low at tools/c.sh:5\n' > build/plan/groom.txt
 expect "run_state: groom keeps a disputed security entry" 1 "a security entry leaves only by" state groom
 printf 'duplicate ## Findings of z after its package step\n' > build/plan/groom.txt
@@ -1263,11 +1327,12 @@ printf 'fixed 0123456789ab ## x security Low at tools/c.sh:5\n' > build/plan/gro
 expect "run_state: groom refuses a fixing commit not in HEAD" 1 "is not a commit of HEAD" state groom
 printf 'listed b1 ## y quality advisory at tools/a.sh:3\nfixed %s ## x security Low at tools/c.sh:5\nduplicate ## w quality advisory at tools/e.sh:2\n' "$fixer" > build/plan/groom.txt
 printf '\n## Merged entry at tools/a.sh:3\n\n- Why: both names.\n' > build/plan/groomed.md
-expect "run_state: groom applies the sprint plan" 0 "^groom: applied sprint-2: 3 headings groomed" state groom
-expect "run_state: groom removes a merged item's listed headings and no others" 0 "^## x quality advisory at tools/a[.]sh:3,### Kept entry at tools/b[.]sh:9,## Findings of z after its package step,## w quality advisory at tools/e[.]sh:2,## Merged entry at tools/a[.]sh:3,$" sh -c "grep '^##' docs/backlog.md | tr '\n' ','"
+expect "run_state: groom applies the sprint plan" 0 "^groom: applied sprint-2: 3 headings groomed, 2 findings file[(]s[)] folded" state groom
+expect "run_state: groom removes a merged item's listed headings and no others" 0 "^## x quality advisory at tools/a[.]sh:3,### Kept entry at tools/b[.]sh:9,## Findings of z after its package step,## w quality advisory at tools/e[.]sh:2,### Fa finding at tools/f[.]sh:1,### Fb finding at tools/g[.]sh:2,## Merged entry at tools/a[.]sh:3,$" sh -c "grep '^##' docs/backlog.md | tr '\n' ','"
+expect "run_state: groom folds two changes' findings into the backlog and removes their files" 0 "^2 0$" sh -c "echo \$(grep -c -e '- Why: [ab][.]' docs/backlog.md) \$(ls docs/findings | grep -c .)"
 expect "run_state: groom removes a security entry with its fixing commit" 1 "" grep -q quoting docs/backlog.md
 expect "run_state: groom keeps the first of a repeated heading" 0 "^once$" sh -c "grep -o -E 'once|twice' docs/backlog.md"
-expect "run_state: groom copies the sprint's queue" 0 "^## Sprint 3$" grep '^## Sprint' docs/queue.md
+expect "run_state: groom copies the sprint's queue" 0 "^## Sprint 3$" grep '^## Sprint' docs/queue-backlog.md
 expect "run_state: groom appends the sprint row" 0 "^sprint-2 b5 5 b1,b2,b3,b4,b5 5[.]0 1[.]0 5 0 -$" sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
 expect "run_state: groom applies a plan once" 0 "^groom: no sprint plan waits" state groom
 expect "run_state: groom retires the applied plan's marker" 0 "^retired\$" sh -c "[ -f build/plan/sprint.applied ] && [ ! -f build/plan/sprint ] && echo retired"
@@ -1289,11 +1354,11 @@ expect "run_state: the sprint row counts budgets and first passes" 0 "^sprint-1 
 # the queue's head, or a merged change without a history row holds a
 # proposal or finding to place.
 fresh plan
-printf '# Queue\n\n1. `next` (T1, estimated small): one, estimated large later.\n2. `later` (T5, estimated medium): two.\n' > docs/queue.md
+printf '# Queue\n\n1. `next` (T1, estimated small): one, estimated large later.\n2. `later` (T5, estimated medium): two.\n' > docs/queue-backlog.md
 commit "docs: the queue"
 state init next chore/next > /dev/null
-expect "run_state: plan-needed takes the queue head as written" 1 "^not needed: next heads docs/queue[.]md, estimated small," state plan-needed next
-expect "run_state: plan-needed names a change that is not the head" 0 "^needed: later is not the head of docs/queue[.]md [(]next[)]" state plan-needed later
+expect "run_state: plan-needed takes the queue head as written" 1 "^not needed: next heads docs/queue-backlog[.]md, estimated small," state plan-needed next
+expect "run_state: plan-needed names a change that is not the head" 0 "^needed: later is not the head of docs/queue-feature[.]md docs/queue-backlog[.]md [(]no named item, next[)]" state plan-needed later
 # plan_lines CHANGE: plan-needed's exit, then the count of its lines.
 plan_lines() {
   out=$(state plan-needed "$1")
@@ -1353,8 +1418,8 @@ echo later >> README.md
 commit "feat: later"
 state review review-20261117 periodic-security pass "high=0 medium=0 low=0 blocking=0" > /dev/null
 expect "run_state: plan-needed leaves a failing periodic security review a later passing one superseded" 1 "^not needed" state plan-needed next
-printf '# Queue\n\n1. UI track: themes (T5, estimated medium).\n' > docs/queue.md
-expect "run_state: plan-needed names a head without a change name" 0 "^needed: next is not the head of docs/queue[.]md [(]no named item[)]" state plan-needed next
+printf '# Queue\n\n1. UI track: themes (T5, estimated medium).\n' > docs/queue-backlog.md
+expect "run_state: plan-needed names a head without a change name" 0 "^needed: next is not the head of docs/queue-feature[.]md docs/queue-backlog[.]md [(]no named item, no named item[)]" state plan-needed next
 
 # forge CHANGE LINE: append LINE to the run state as a hand edit would.
 forge() {
@@ -1499,7 +1564,7 @@ expect "guard: contributor never abandons a run" 2 "run_state.sh abandon" guard 
 expect "guard: merger never abandons a run" 2 "run_state.sh abandon" guard merger 'sh tools/run_state.sh abandon c'
 expect "guard: read refuses a backup" 2 "tools/run_state.sh backup" guard read 'sh tools/run_state.sh backup c'
 expect "guard: checker records the figures first" 0 "^$" guard read 'sh tools/run_state.sh metric c phase.check=1200/5 first.check=0 rework=2 extra=1 stop=none estimate=small planned=0'
-expect "guard: retrospective budgets the last row's change" 0 "^$" guard close 'tail -1 docs/metrics.tsv | cut -f1; sh tools/run_state.sh budget prev && sh tools/run_state.sh note c overrun \"prev: over: estimated small\"'
+expect "guard: retrospective budgets the last row's change" 0 "^$" guard close 'tail -1 docs/metrics-backlog.tsv | cut -f1; sh tools/run_state.sh budget prev && sh tools/run_state.sh note c overrun \"prev: over: estimated small\"'
 expect "guard: retrospective checks the squash commit" 0 "^$" guard close 'sh tools/run_state.sh show c && git show --stat abc1234 && BASE=abc1234~1 sh tools/gates.sh trailer && BASE=abc1234~1 sh tools/gates.sh content docs'
 expect "guard: retrospective records its notes" 0 "^$" guard close 'sh tools/run_state.sh note c retro \"x; evidence: 3\" && sh tools/run_state.sh budget c && sh tools/run_state.sh review-due && sh tools/run_state.sh status'
 expect "guard: the read profile lists backlog duplicates" 0 "^$" guard read 'sh tools/run_state.sh backlog-dups && sh tools/run_state.sh review-due' build/plan
@@ -1565,7 +1630,7 @@ expect "guard: merger records the merge and cleans up" 0 "^$" guard merger 'sh t
 expect "guard: contributor proposes and validates" 0 "^$" guard contributor 'npx -y @fission-ai/openspec@latest new change c && npx @fission-ai/openspec@latest validate \"c\" --strict --no-interactive && openspec status --change c --json'
 expect "guard: contributor generates and checks" 0 "^$" guard contributor 'make new-ex-command NAME=sort SPEC=\"sor[t]\" AREA=12 && make test-one T=test/domain_buffer.rb && make diagnose-one T=carat/domain/buffer.rb && make -s lint docs-lint gates && make snapshots && make spec-validate'
 expect "guard: contributor commits" 0 "^$" guard contributor 'git add -A && git -c user.name=\"Claude\" -c user.email=\"noreply@anthropic.com\" commit -q -m \"feat: x\" -m \"Co-Authored-By: Claude <noreply@anthropic.com>\" && git commit -q -F tmp/message.txt'
-expect "guard: contributor records the plan" 0 "^$" guard contributor 'cp build/plan/queue.md docs/queue.md && cp build/plan/goals.md docs/goals.md && sh tools/run_state.sh history'
+expect "guard: contributor records the plan" 0 "^$" guard contributor 'cp build/plan/queue-backlog.md docs/queue-backlog.md && cp build/plan/goals.md docs/goals.md && sh tools/run_state.sh history'
 expect "guard: contributor archives" 0 "^$" guard contributor 'npx @fission-ai/openspec@latest archive c -y --skip-specs && npx @fission-ai/openspec@latest validate --all --strict --no-interactive'
 expect "guard: contributor pushes and opens the pull request" 0 "^$" guard contributor 'sh tools/run_state.sh push c && sh tools/gates.sh pr-body build/pipeline/c.body.md && sh tools/run_state.sh set c pr 47 && sh tools/run_state.sh show c'
 expect "guard: the contributor runs open_pr write and wait" 0 "^$" guard contributor 'sh tools/open_pr.sh write c \"chore(tools): open on push\" && sh tools/open_pr.sh wait c && sh tools/open_pr.sh wait c 300'
@@ -1682,7 +1747,7 @@ expect "guard: contributor writes the body file" 0 "^$" guard_edit contributor W
 expect "guard: contributor refuses a path through the body file" 2 "a parent step" guard_edit contributor Write /w/build/pipeline/c.body.md/../c.json
 expect "guard: read refuses a file edit without a directory" 2 "a write by an agent that writes no file" guard_edit read Write /w/tools/x.sh
 expect "guard: read allows a pack in its directory, whatever its text" 0 "^$" guard_edit read Write /w/tmp/scout/area.md tmp/scout
-expect "guard: read allows a relative path in its directory" 0 "^$" guard_edit read Write build/plan/queue.md build/plan
+expect "guard: read allows a relative path in its directory" 0 "^$" guard_edit read Write build/plan/queue-backlog.md build/plan
 expect "guard: read refuses a file outside its directory" 2 "a write outside tmp/scout" guard_edit read Write /w/tools/x.sh tmp/scout
 expect "guard: read refuses a parent step out of its directory" 2 "a parent step" guard_edit read Write /w/tmp/scout/../../tools/x.sh tmp/scout
 expect "guard: merger refuses every file edit" 2 "a write by an agent that writes no file" guard_edit merger Write /w/tmp/x.md
@@ -2027,34 +2092,58 @@ docs agent
 head -c 8193 /dev/zero | tr '\0' x >> .claude/agents/x.md
 expect "docs_lint: refuses an agent file over its budget" 1 "FAIL budgets: .claude/agents/x.md" doclint
 docs queuesize
-printf '# Queue\n\n1. `a` (T2, estimated small): one.\n' > docs/queue.md
-head -c 17369 /dev/zero | tr '\0' x | head -c "$((17369 - $(wc -c < docs/queue.md)))" >> docs/queue.md
-expect "docs_lint: passes a queue at its budget" 0 "ok   budgets: 3 file" doclint
-echo x >> docs/queue.md
-expect "docs_lint: refuses a queue over its budget" 1 "FAIL budgets: docs/queue.md is 17371 bytes, over its budget of 17369" doclint
+printf '# Queue\n\n1. `a` (T2, estimated small): one.\n' > docs/queue-backlog.md
+printf '# Queue\n\n1. `b` (T2, estimated small): two.\n' > docs/queue-feature.md
+# The padding, in lines of at most 80 bytes: a single line that long
+# takes the gates of docs_lint.sh seconds to scan.
+awk -v n="$((17969 - $(wc -c < docs/queue-backlog.md) - $(wc -c < docs/queue-feature.md)))" \
+  'BEGIN { while (n > 0) { k = n > 80 ? 80 : n; s = sprintf("%*s", k - 1, ""); gsub(/ /, "x", s); print s; n -= k } }' >> docs/queue-backlog.md
+expect "docs_lint: passes the lane queues at their shared budget" 0 "ok   queue: 2 item" doclint
+echo x >> docs/queue-feature.md
+expect "docs_lint: refuses the lane queues over their shared budget" 1 "FAIL queue: the lane queues are 17971 bytes together, over their budget of 17969" doclint
 docs sprint
-printf '# Queue\n\n## Sprint 2\n\n1. `a` (T2, estimated small): one.\n2. `b` (T1 pipeline, estimated small): two.\n3. `c` (T0 pipeline, estimated small): three.\n\n## Pool\n\n4. `d` (T1 pipeline, estimated small): four.\n' > docs/queue.md
-expect "docs_lint: a T0 pipeline item does not count" 0 "ok   queue: 4 item" doclint
-printf '5. `e` (T1 pipeline, estimated small): five.\n' > pool.tmp
-sed -i '/^3[.] /r pool.tmp' docs/queue.md
-expect "docs_lint: a sprint with two pipeline items fails" 1 "FAIL queue: the sprint holds 2 pipeline items" doclint
-printf '# Queue\n\n## Sprint 2\n\n' > docs/queue.md
-for n in 1 2 3 4 5 6; do printf '%s. `i%s` (T5, estimated small): item.\n' "$n" "$n" >> docs/queue.md; done
-expect "docs_lint: a sprint of six items fails" 1 "FAIL queue: the sprint holds 6 items, not 0 to 5" doclint
-printf '# Queue\n\n## Sprint 2\n\n## Pool\n\n1. `p` (T5, estimated small): pooled.\n' > docs/queue.md
+printf '# Queue\n\n## Sprint 2\n\n1. `b` (T1 pipeline defect, estimated small): two.\n2. `c` (T0 pipeline, estimated small): three.\n\n## Pool\n\n3. `d` (T1 pipeline, estimated small): four.\n' > docs/queue-backlog.md
+expect "docs_lint: a T0 pipeline item does not count" 0 "ok   queue: 3 item" doclint
+sed -i 's/(T0 pipeline/(T1 pipeline defect/' docs/queue-backlog.md
+expect "docs_lint: a sprint with two pipeline items fails" 1 "FAIL queue: the sprint holds 2 pipeline items across both lanes, 0 of them no defect" doclint
+printf '# Queue\n\n## Sprint 2\n\n1. `b` (T1 pipeline, estimated small): two.\n' > docs/queue-backlog.md
+expect "docs_lint: a sprint pipeline item that is no defect fails" 1 "FAIL queue: the sprint holds 1 pipeline items across both lanes, 1 of them no defect" doclint
+# The pipeline limit is the sprint's, both lanes' sprint sections counted
+# together: one pipeline defect in each lane is two.
+printf '# Queue\n\n## Sprint 2\n\n1. `b` (T1 pipeline defect, estimated small): two.\n' > docs/queue-backlog.md
+printf '# Queue\n\n## Sprint 2\n\n1. `f` (T1 pipeline defect, estimated small): one.\n' > docs/queue-feature.md
+expect "docs_lint: a pipeline defect in each lane's sprint is two for the sprint and fails" 1 "FAIL queue: the sprint holds 2 pipeline items across both lanes, 0 of them no defect" doclint
+printf '# Queue\n\n## Sprint 2\n\nThe user-approved exception (Guide): two pipeline defects.\n\n1. `f` (T1 pipeline defect, estimated small): one.\n' > docs/queue-feature.md
+expect "docs_lint: an exception line in either lane lifts the sprint's pipeline limit" 0 "ok   queue: 2 item" doclint
+printf '# Queue\n\n## Sprint 2\n\n' > docs/queue-feature.md
+for n in 1 2 3 4; do printf '%s. `i%s` (T5, estimated small): item.\n' "$n" "$n" >> docs/queue-feature.md; done
+expect "docs_lint: a feature lane sprint of four items fails" 1 "FAIL queue: docs/queue-feature[.]md: the sprint holds 4 items, not 0 to 3" doclint
+rm docs/queue-feature.md
+printf '# Queue\n\n## Sprint 2\n\n## Pool\n\n1. `p` (T5, estimated small): pooled.\n' > docs/queue-backlog.md
 expect "docs_lint: a drained sprint of 0 items waits for /sprint" 0 "ok   queue: 1 item" doclint
 # The user-approved exception: a line beginning with it under the sprint
-# heading lifts the one-pipeline limit; an item naming it does not.
-printf '# Queue\n\n## Sprint 8\n\n' > docs/queue.md
-for n in 1 2 3 4; do printf '%s. `p%s` (T1 pipeline, estimated small, the user-approved exception): item.\n' "$n" "$n" >> docs/queue.md; done
-printf '5. `f` (T2, estimated small): five.\n\n## Pool\n\n6. `q` (T1 pipeline, estimated small): pooled.\n' >> docs/queue.md
-expect "docs_lint: an unmarked sprint of 4 pipeline items fails" 1 "FAIL queue: the sprint holds 4 pipeline items, at most 1 [(]T0 exempt[)] without a line beginning .The user-approved exception." doclint
-sed -i 's/^## Sprint 8$/## Sprint 8\n\nThe user-approved exception (Guide): 5 items, 4 pipeline./' docs/queue.md
-expect "docs_lint: a marked sprint of 4 pipeline items passes" 0 "ok   queue: 6 item" doclint
-sed -i 's/^The user-approved exception/An exception/' docs/queue.md
-expect "docs_lint: a marker not at a line start does not count" 1 "FAIL queue: the sprint holds 4 pipeline items" doclint
-printf '# Queue\n\n## Sprint 8\n\n1. `a` (T1 pipeline, estimated small): one.\n2. `b` (T1 pipeline, estimated small): two.\n\n## Pool\n\nThe user-approved exception (Guide): a pool line.\n' > docs/queue.md
-expect "docs_lint: a marker outside the sprint section does not count" 1 "FAIL queue: the sprint holds 2 pipeline items" doclint
+# heading lifts the pipeline limits; an item naming it does not.
+printf '# Queue\n\n## Sprint 8\n\n' > docs/queue-backlog.md
+for n in 1 2; do printf '%s. `p%s` (T1 pipeline, estimated small, the user-approved exception): item.\n' "$n" "$n" >> docs/queue-backlog.md; done
+printf '\n## Pool\n\n3. `q` (T1 pipeline, estimated small): pooled.\n' >> docs/queue-backlog.md
+expect "docs_lint: an unmarked sprint of 2 pipeline items fails" 1 "FAIL queue: the sprint holds 2 pipeline items across both lanes, 2 of them no defect; at most 1, a defect [(]T0 exempt[)], without a line beginning .The user-approved exception." doclint
+sed -i 's/^## Sprint 8$/## Sprint 8\n\nThe user-approved exception (Guide): 2 pipeline items./' docs/queue-backlog.md
+expect "docs_lint: a marked sprint of 2 pipeline items passes" 0 "ok   queue: 3 item" doclint
+sed -i 's/^The user-approved exception/An exception/' docs/queue-backlog.md
+expect "docs_lint: a marker not at a line start does not count" 1 "FAIL queue: the sprint holds 2 pipeline items across both lanes" doclint
+printf '# Queue\n\n## Sprint 8\n\n1. `a` (T1 pipeline, estimated small): one.\n2. `b` (T1 pipeline, estimated small): two.\n\n## Pool\n\nThe user-approved exception (Guide): a pool line.\n' > docs/queue-backlog.md
+expect "docs_lint: a marker outside the sprint section does not count" 1 "FAIL queue: the sprint holds 2 pipeline items across both lanes" doclint
+# The retired paths: the backlog may name the one queue and history the
+# lanes replaced, any other document may not, and a path that never
+# existed fails in the backlog too.
+docs retired
+printf '# Backlog\n\n### Old\n\n- Location: `docs/queue.md` and `docs/metrics.tsv:3`.\n' > docs/backlog.md
+expect "docs_lint: the backlog may name the retired queue and history" 0 "ok   paths: 1 path" doclint
+printf -- '- Location: `docs/queue-gone.md`.\n' >> docs/backlog.md
+expect "docs_lint: the backlog naming a path that never existed fails" 1 "^docs/backlog[.]md:[0-9]+:docs/queue-gone[.]md$" doclint
+docs retiredelsewhere
+echo 'See `docs/queue.md`.' > docs/notes.md
+expect "docs_lint: another document naming a retired path fails" 1 "^docs/notes[.]md:1:docs/queue[.]md$" doclint
 docs link
 echo "See $LINK." >> docs/notes.md
 expect "docs_lint: refuses a URL in a document" 1 "FAIL content: docs/notes[.]md:[0-9]+: url: " doclint
@@ -2077,13 +2166,13 @@ docs line
 echo 'See `tools/x.sh:3-9`.' >> docs/notes.md
 expect "docs_lint: reads a path with a line suffix" 0 "ok   paths: 2 path" doclint
 docs queue
-printf '# Queue\n\n1. `a` (T2 user request, estimated small): one.\n2. `b` (T3 with T6 folded, estimated large): two.\n\n- An idea, not an item.\n' > docs/queue.md
+printf '# Queue\n\n1. `a` (T2 user request, estimated small): one.\n2. `b` (T3 with T6 folded, estimated large): two.\n\n- An idea, not an item.\n' > docs/queue-backlog.md
 expect "docs_lint: passes a queue whose items carry a tier and a size" 0 "ok   queue: 2 item" doclint
 docs untiered
-printf '1. `a` (T2, estimated small): one.\n2. `b` (tier T, estimated medium): two.\n' > docs/queue.md
+printf '1. `a` (T2, estimated small): one.\n2. `b` (tier T, estimated medium): two.\n' > docs/queue-backlog.md
 expect "docs_lint: refuses a queue item without a tier and names it" 1 "^2:2[.] .b. [(]tier T, estimated medium[)]" doclint
 docs unsized
-printf '1. `a` (T2, estimated small): one.\n2. `b` (T5, large): two.\n' > docs/queue.md
+printf '1. `a` (T2, estimated small): one.\n2. `b` (T5, large): two.\n' > docs/queue-backlog.md
 expect "docs_lint: refuses a queue item without a size" 1 "FAIL queue: a queue item without .estimated small" doclint
 
 # ----------------------------------------------------------------- new.sh
@@ -2506,8 +2595,8 @@ mkdir -p openspec/changes/archive/x
 echo archived > openspec/changes/archive/x/tasks.md
 commit "chore: archive"
 expect "gates: security passes after an archive only" 0 "ok   security: pass" gates security
-echo "1. next" > docs/queue.md
-echo change > docs/metrics.tsv
+echo "1. next" > docs/queue-backlog.md
+echo change > docs/metrics-backlog.tsv
 commit "docs: record the queue and the metrics"
 expect "gates: security passes after the planning records only" 0 "ok   security: pass" gates security
 printf 'sprint\tlast\nsprint-1\ta5\n' > docs/sprints.tsv
@@ -2564,7 +2653,7 @@ state review passed bench pass "blocking=0" > /dev/null
 expect "gates: passed passes the four records at the pushed head" 0 "ok   passed: check, quality, security, and bench passed at the pushed head" gates passed
 mkdir -p openspec/changes/archive/x
 echo archived > openspec/changes/archive/x/tasks.md
-echo "1. next" > docs/queue.md
+echo "1. next" > docs/queue-backlog.md
 commit "docs: archive and record the queue"
 expect "gates: passed refuses when HEAD is not the pushed head" 1 "is not the pushed head" gates passed
 state set passed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
@@ -2888,13 +2977,13 @@ expect "scout: the pack records its tool calls" 0 '^2$' grep -c -E '^Tool calls:
 # The Plan phase is skipped on plan-needed's not-needed line whatever the
 # brief says: a brief for the queue's head keeps the order (sprint-tidy).
 expect "workflow: a brief fixing the order skips the planner" 0 '^\[true,false,false,false,false\]$' \
-  js "$wf" "planSkipped" "[planSkipped({}, 'not needed: c heads docs/queue.md, estimated medium'), planSkipped({}, 'needed: c is not the head of docs/queue.md (b)'), planSkipped({ 'phase.plan': 'abc1234' }, 'not needed: c'), planSkipped({ merged: 'abc1234' }, 'not needed: c'), planSkipped({}, '')]"
+  js "$wf" "planSkipped" "[planSkipped({}, 'not needed: c heads docs/queue-backlog.md, estimated medium'), planSkipped({}, 'needed: c is not the head of docs/queue-backlog.md (b)'), planSkipped({ 'phase.plan': 'abc1234' }, 'not needed: c'), planSkipped({ merged: 'abc1234' }, 'not needed: c'), planSkipped({}, '')]"
 expect "workflow: the plan skip reads plan-needed alone, not the brief" 0 '^1$' grep -c -x 'if (!stopped && planSkipped(state, planLine)) {' "$wf"
 # The planner reads the review run plan-needed names for a failing
 # periodic security review, which its pending list never holds
 # (review-coverage).
 expect "workflow: the planner is told the failing review run plan-needed names" 0 '^\[true,""\]$' \
-  js "$wf" "planReview" '[/show review-20261116` and apply your security-first step/.test(planReview("needed: review-20261116 records a failing periodic security review at abc1234def56, and no change merged since")), planReview("needed: c is not the head of docs/queue.md (b)")]'
+  js "$wf" "planReview" '[/show review-20261116` and apply your security-first step/.test(planReview("needed: review-20261116 records a failing periodic security review at abc1234def56, and no change merged since")), planReview("needed: c is not the head of docs/queue-backlog.md (b)")]'
 expect "workflow: the planner prompt carries the failing review" 0 '^1$' grep -c -F '${planReview(planLine)}${capLine('"'"'planner'"'"')}' "$wf"
 speed_js() {
   js "$wf" "COMMIT CLOSABLE noteText staleRed findingAt reRaised securityBlocking narrowedFrom mergeRecords" "$1"
@@ -2980,7 +3069,7 @@ expect "workflow: a start's prompt holds only the brief or the resume brief" 0 '
 expect "workflow: the arguments are read only through startInput" 0 '^1 1$' \
   sh -c 'echo "$(grep -v "^ *//" "$1" | grep -c -w args) $(grep -c -x "const input = startInput(args)" "$1")"' _ "$wf"
 expect "workflow: the resume brief names only the queue plan-needed read" 0 '^\[true,true,true\]$' \
-  js "$wf" "resumeBrief" '(([a, b, c]) => [/^the item of build\/plan\/queue[.]md, the waiting sprint plan, that names `c`/.test(a) && !/docs\/queue/.test(a), /^the item of docs\/queue[.]md that names `c`/.test(b) && !/build\/plan/.test(b), /^the item of docs\/queue[.]md [(]build\/plan\/queue[.]md while a sprint plan waits there[)]/.test(c)])([resumeBrief("c", "needed: c is not the head of build/plan/queue.md (x)"), resumeBrief("c", "not needed: c heads docs/queue.md, estimated small, and no pending change holds a proposal or finding"), resumeBrief("c", "")])'
+  js "$wf" "resumeBrief" '(([a, b, c]) => [/^the item of build\/plan\/queue-feature[.]md or queue-backlog[.]md, the waiting sprint plan, that names `c`/.test(a) && !/docs\/queue/.test(a), /^the item of docs\/queue-feature[.]md or queue-backlog[.]md that names `c`/.test(b) && !/build\/plan/.test(b), /^the item of docs\/queue-feature[.]md or queue-backlog[.]md [(]build\/plan\/ while a sprint plan waits there[)]/.test(c)])([resumeBrief("c", "needed: c is not the head of build/plan/queue-backlog.md (x)"), resumeBrief("c", "not needed: c heads docs/queue-backlog.md, estimated small, and no pending change holds a proposal or finding"), resumeBrief("c", "")])'
 # Every contributor start is built by contributor() from contributorTask
 # with the brief, so a hold for the user reaches the package start too.
 expect "workflow: the brief, a hold for the user included, reaches every contributor start" 0 '^true$' \

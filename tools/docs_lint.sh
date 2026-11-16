@@ -13,12 +13,15 @@
 #             line that continues the line above it, as GitHub would show it
 #   paths     a backticked path under a tracked root names a file or directory
 #             that exists, unless it holds a placeholder
-#   queue     every numbered item of docs/queue.md names a tier T0 to T6 and
+#   queue     every numbered item of the lane queues, docs/queue-feature.md
+#             and docs/queue-backlog.md, names a tier T0 to T6 and
 #             "estimated small", "estimated medium", or "estimated large";
 #             the items under a "## Sprint" heading, up to the next "## "
-#             heading, are 0 to 5, at most one of them saying "pipeline"
-#             in its parenthesis without T0, unless a line of that section
-#             begins "The user-approved exception"
+#             heading, are 0 to 3 in the feature lane and 0 to 2 in the
+#             backlog lane, at most one of them saying "pipeline" in its
+#             parenthesis without T0, and that one a defect, unless a line
+#             of that section begins "The user-approved exception"; both
+#             files together within QUEUE_BUDGET
 set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -41,14 +44,21 @@ ok() {
 }
 
 # "PATTERN BYTES" lines: every file the pattern matches is at most BYTES.
-# Raising a budget is a reviewed line of this file. The queue's holds what
-# the planner rewrites and every agent may read at a start; the
-# contributor's leaves room under the agents' for a new mode.
+# Raising a budget is a reviewed line of this file. The contributor's
+# leaves room under the agents' for a new mode.
 BUDGETS="CLAUDE.md 30720
 .claude/agents/*.md 8192
 .claude/agents/contributor.md 6999
-docs/architecture.md 88064
-docs/queue.md 17369"
+docs/architecture.md 88064"
+# The two lane queues share one budget, what the planner rewrites and every
+# agent may read at a start: the one queue's 17,369 bytes before the lanes
+# and 600 for the second file's title and opening line.
+QUEUE_BUDGET=17969
+
+# The paths a change retired that the backlog, the one document keeping
+# older entries as they were written, may still name: the one queue and
+# history the lanes replaced. Every other document names the lane files.
+RETIRED='docs/queue\.md|docs/metrics\.tsv'
 
 # The documents an agent reads; the generated OpenSpec commands are not ours.
 documents() {
@@ -121,7 +131,7 @@ check_paths() {
   # shellcheck disable=SC2046
   spans=$(grep -n -o '`[^` ]*`' $(documents) | tr -d '`' |
     grep -E ':(carat|bin|test|bench|tools|docs|config|openspec|\.claude|\.github)/' |
-    grep -v -E ':.*([<>*${}]|NAME|CHANGE|KIND|\.\.\.)')
+    grep -v -E ':.*([<>*${}]|NAME|CHANGE|KIND|\.\.\.)' | grep -v -E "^docs/backlog\.md:[0-9]+:($RETIRED)(:[0-9][0-9,-]*)?\$")
   dead=$(printf '%s\n' "$spans" | while IFS= read -r line; do
     [ -n "$line" ] || continue
     path=${line#*:*:}
@@ -133,13 +143,40 @@ $dead"
   [ $failed -ne $start ] || ok "$(printf '%s\n' "$spans" | grep -c .) path(s) exist"
 }
 
-# The queue items, lines that start with a number and a period: each names
-# its tier and its size, as the rubric of docs/goals.md asks.
+# The items of each lane queue, lines that start with a number and a
+# period: each names its tier and its size, as the rubric of docs/goals.md
+# asks. A lane's sprint holds at most its share of the sprint of 5, the
+# feature lane 3 and the backlog lane 2; the sprint, both lanes' sprint
+# sections together, holds a pipeline item only for a defect, at most one
+# (T0 exempt), unless a line beginning "The user-approved exception" in
+# either lifts it; both files within QUEUE_BUDGET.
 check_queue() {
   gate=queue
   start=$failed
-  [ -f docs/queue.md ] || { ok "no docs/queue.md"; return; }
-  items=$(grep -n -E '^[0-9]+[.] ' docs/queue.md)
+  total=0
+  bytes=0
+  sprints=""
+  marked=""
+  for lane in feature:3 backlog:2; do
+    file=docs/queue-${lane%%:*}.md
+    [ -f "$file" ] && check_lane "$file" "${lane#*:}"
+  done
+  pipeline=$(printf '%s\n' "$sprints" | sed -n 's/^[^(]*(\([^)]*\)).*/\1/p' | grep -w pipeline | grep -v -w T0)
+  others=$(printf '%s\n' "$pipeline" | grep . | grep -c -v -w defect)
+  pipeline=$(printf '%s\n' "$pipeline" | grep -c .)
+  # A line beginning "The user-approved exception" lifts the pipeline
+  # limits for its sprint; an item line begins with its number instead.
+  [ -n "$marked" ] || { [ "$pipeline" -le 1 ] && [ "$others" -eq 0 ]; } ||
+    bad "the sprint holds $pipeline pipeline items across both lanes, $others of them no defect; at most 1, a defect (T0 exempt), without a line beginning \"The user-approved exception\""
+  [ "$bytes" -le "$QUEUE_BUDGET" ] || bad "the lane queues are $bytes bytes together, over their budget of $QUEUE_BUDGET"
+  [ $failed -ne $start ] || ok "$total item(s) with a tier and a size"
+}
+
+# One lane file: its tiers, sizes, and sprint share; its sprint items and
+# exception lines are added to the sprint's for check_queue.
+check_lane() {
+  bytes=$((bytes + $(wc -c < "$1")))
+  items=$(grep -n -E '^[0-9]+[.] ' "$1")
   untiered=$(printf '%s\n' "$items" | grep . | grep -v -E '(^|[^A-Za-z0-9])T[0-6]([^0-9]|$)' | cut -c1-80)
   unsized=$(printf '%s\n' "$items" | grep . | grep -v -E 'estimated (small|medium|large)' | cut -c1-80)
   [ -z "$untiered" ] || bad "a queue item without a tier T0 to T6:
@@ -147,17 +184,15 @@ $untiered"
   [ -z "$unsized" ] || bad "a queue item without \"estimated small\", \"estimated medium\", or \"estimated large\":
 $unsized"
   # A drained sprint, every item delivered, waits with 0 items for /sprint.
-  sprint=$(awk '/^## / { on = /^## Sprint/; next } on && /^[0-9]+[.] /' docs/queue.md)
-  if grep -q '^## Sprint' docs/queue.md; then
+  sprint=$(awk '/^## / { on = /^## Sprint/; next } on && /^[0-9]+[.] /' "$1")
+  if grep -q '^## Sprint' "$1"; then
     count=$(printf '%s\n' "$sprint" | grep -c .)
-    pipeline=$(printf '%s\n' "$sprint" | sed -n 's/^[^(]*(\([^)]*\)).*/\1/p' | grep -w pipeline | grep -c -v -w T0)
-    [ "$count" -le 5 ] || bad "the sprint holds $count items, not 0 to 5"
-    # A line beginning "The user-approved exception" lifts the one-pipeline
-    # limit for its sprint; an item line begins with its number instead.
-    marked=$(awk '/^## / { on = /^## Sprint/; next } on && /^The user-approved exception/' docs/queue.md)
-    [ -n "$marked" ] || [ "$pipeline" -le 1 ] || bad "the sprint holds $pipeline pipeline items, at most 1 (T0 exempt) without a line beginning \"The user-approved exception\""
+    [ "$count" -le "$2" ] || bad "$1: the sprint holds $count items, not 0 to $2"
+    sprints="$sprints
+$sprint"
+    marked="$marked$(awk '/^## / { on = /^## Sprint/; next } on && /^The user-approved exception/' "$1")"
   fi
-  [ $failed -ne $start ] || ok "$(printf '%s\n' "$items" | grep -c .) item(s) with a tier and a size"
+  total=$((total + $(printf '%s\n' "$items" | grep -c .)))
 }
 
 check_budgets

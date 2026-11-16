@@ -47,7 +47,8 @@
 # it. build/stages/CHANGE/carry keeps its build/ between checks (without
 # pipeline, stages, and plan) and METRICS_OUT gets its metrics.
 #
-# History: docs/metrics.tsv, one row per merged change, appended by history
+# History: docs/metrics-feature.tsv and docs/metrics-backlog.tsv, one row
+# per merged change in its lane's file (lane), appended by history
 # from the run states that have none yet, so the next change carries the
 # rows of the runs before it (columns in HEADER below). A row's estimate is
 # metric.estimate, else the size word of the change's queue item, its
@@ -170,14 +171,18 @@
 #                               HEAD), or "duplicate HEADING" (never a
 #                               security entry), HEADING a whole heading line
 #                               of the backlog, and write nothing when one
-#                               fails; then copy queue.md over docs/queue.md,
+#                               fails; then copy queue-feature.md and
+#                               queue-backlog.md over their docs/ lane files,
+#                               fold each findings file (FINDINGS_DIR) into
+#                               the backlog and remove it,
 #                               remove each entry, append groomed.md (merged
 #                               entries and the sprint findings not queued),
 #                               and append the sprint's row from its history
 #                               rows, retiring the marker
 #   plan-needed CHANGE          print "needed: REASON" and exit 0 when the
-#                               change is not the head of docs/queue.md (the
-#                               waiting sprint plan's queue.md) or a
+#                               change is not item 1 of a lane queue,
+#                               docs/queue-feature.md or docs/queue-backlog.md
+#                               (the waiting sprint plan's) or a
 #                               pending change holds a proposal or finding
 #                               (PLAN_NOTES) to place, or a review run records
 #                               a failing periodic security review with no
@@ -206,16 +211,20 @@
 #                               a gate without a stored first verdict is
 #                               left out of its first passes; append each
 #                               such run's late-finding notes to
-#                               docs/backlog.md (BACKLOG_FILE) as one entry
+#                               the change's findings file
+#                               (FINDINGS_DIR/CHANGE.md) as one entry
+#   lane CHANGE                 print the change's lane, feature or backlog
+#                               (lane_of), whose history file gets its row
 #   status                      the queue, the running change, the last metrics
 #                               row, and the first-pass rates of the history
 #
 # Environment: BASE (origin/main), RUN_STATE_DIR (build/pipeline),
 # STAGE_DIR (build/stages), STAGES (the stage list; make -s stages when
-# unset), MAKE (make), METRICS_FILE (docs/metrics.tsv), METRICS_OUT
+# unset), MAKE (make), METRICS_PREFIX (docs/metrics, the lane files
+# PREFIX-feature.tsv and PREFIX-backlog.tsv), METRICS_OUT
 # (build/metrics/current.tsv), CHECK_WAIT (540, seconds check waits),
-# BACKLOG_FILE (docs/backlog.md), SPRINTS_FILE (docs/sprints.tsv), PLAN_DIR
-# (build/plan).
+# BACKLOG_FILE (docs/backlog.md), FINDINGS_DIR (docs/findings),
+# SPRINTS_FILE (docs/sprints.tsv), PLAN_DIR (build/plan).
 set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -223,8 +232,11 @@ here=$(cd "$(dirname "$0")" && pwd)
 state_dir=${RUN_STATE_DIR:-build/pipeline}
 stage_dir=${STAGE_DIR:-build/stages}
 make_cmd=${MAKE:-make}
-metrics_file=${METRICS_FILE:-docs/metrics.tsv}
+metrics_prefix=${METRICS_PREFIX:-docs/metrics}
+metrics_files="$metrics_prefix-feature.tsv $metrics_prefix-backlog.tsv"
 backlog_file=${BACKLOG_FILE:-docs/backlog.md}
+findings_dir=${FINDINGS_DIR:-docs/findings}
+queue_files="docs/queue-feature.md docs/queue-backlog.md"
 metrics_out=${METRICS_OUT:-build/metrics/current.tsv}
 PHASES="plan implement check quality security bench package ci merge retro report"
 # The stages that read what a test-only commit may change, which such a
@@ -927,12 +939,14 @@ push_branch() {
 }
 
 show_status() {
-  if [ -f docs/queue.md ]; then
-    echo "== queue (docs/queue.md)"
-    cat docs/queue.md
-  else
-    echo "queue: none (docs/queue.md does not exist)"
-  fi
+  for q in $queue_files; do
+    if [ -f "$q" ]; then
+      echo "== queue ($q)"
+      cat "$q"
+    else
+      echo "queue: none ($q does not exist)"
+    fi
+  done
   running=""
   for file in $(ls -t "$state_dir"/*.json 2>/dev/null); do
     change=$(basename "$file" .json)
@@ -953,13 +967,13 @@ show_status() {
   else
     echo "running: none"
   fi
-  if [ -f "$metrics_file" ] && [ "$(wc -l < "$metrics_file")" -gt 1 ]; then
-    echo "== last metrics row ($metrics_file)"
-    head -1 "$metrics_file"
-    tail -1 "$metrics_file"
-    rates
+  history=$(history_rows)
+  if [ "$(printf '%s\n' "$history" | wc -l)" -gt 1 ]; then
+    echo "== last metrics row ($metrics_files)"
+    printf '%s\n' "$history" | sed -n '1p;$p'
+    printf '%s\n' "$history" | rates
   else
-    echo "metrics: none ($metrics_file has no row)"
+    echo "metrics: none ($metrics_files hold no row)"
   fi
 }
 
@@ -982,7 +996,7 @@ rates() {
       for (i = 1; i <= gates; i++) line = line " " order[i] " " passed[order[i]] + 0 "/" tried[order[i]]
       print line
       print "rework rounds: " rework + 0 " over " changes + 0 " change(s)"
-    }' "$metrics_file"
+    }'
 }
 
 # True when VALUE matches PATTERN whole; a value holding a control
@@ -1068,18 +1082,19 @@ bench_compare() {
     fi
     source="the run state of $base, merged without a history row yet"
   else
-    if [ ! -f "$metrics_file" ] || [ "$(wc -l < "$metrics_file")" -le 1 ]; then
-      echo "bench: no history row in $metrics_file to compare with"
+    newest=$(history_rows | sed -n '2,$p' | tail -1)
+    if [ -z "$newest" ]; then
+      echo "bench: no history row in $metrics_files to compare with"
       return 1
     fi
-    tail -1 "$metrics_file" | awk -F'\t' '
+    printf '%s\n' "$newest" | awk -F'\t' '
       function out(kind, list,   n, i, p, kv) {
         if (list == "-" || list == "") return
         n = split(list, p, ",")
         for (i = 1; i <= n; i++) { split(p[i], kv, "="); printf "%s.%s\t%s\n", kind, kv[1], kv[2] }
       }
       { out("rounds", $8); out("allocs", $9); out("us", $10) }' > "$last"
-    source="the history row of $(tail -1 "$metrics_file" | cut -f1)"
+    source="the history row of $(printf '%s\n' "$newest" | cut -f1)"
   fi
   if [ "$scoped" = yes ]; then
     mkdir -p "$(dirname "$metrics_out")" && cp "$last" "$metrics_out"
@@ -1125,7 +1140,78 @@ add_note() {
 }
 
 has_row() {
-  [ -f "$metrics_file" ] && awk -F'\t' -v c="$1" 'NR > 1 && $1 == c { found = 1 } END { exit !found }' "$metrics_file"
+  lane_rows | awk -F'\t' -v c="$1" '$1 == c { found = 1 } END { exit !found }'
+}
+
+# Both lanes' history rows, unsorted and without the header, for a lookup
+# by name.
+lane_rows() {
+  for f in $metrics_files; do
+    [ ! -f "$f" ] || awk 'NR > 1 && NF' "$f"
+  done
+}
+
+# The header, then both lanes' history rows oldest merge first: ordered by
+# the place of each row's merged commit in the ancestry of HEAD and of BASE
+# (origin/main) together, oldest first (rev-list --topo-order, which main's
+# chain of squash commits orders whole, whatever their timestamps), so a
+# change merged on main after HEAD's branch point, whose row history
+# appends (merged_on_main), sorts after every row HEAD holds; a row whose
+# commit neither holds sorts first, in its file's order. BASE is passed to
+# git only as the commit it resolves to, and left out when it resolves to
+# none.
+history_rows() {
+  printf '%s\n' "$HEADER"
+  rows=$(lane_rows)
+  [ -n "$rows" ] || return 0
+  base_tip=$(git rev-parse --verify -q --end-of-options "${BASE:-origin/main}^{commit}" 2>/dev/null) || base_tip=""
+  # shellcheck disable=SC2086 # base_tip is one hash or empty
+  { git rev-list --reverse --topo-order HEAD $base_tip -- 2>/dev/null; echo --; printf '%s\n' "$rows"; } | awk -F'\t' '
+    !body { if ($0 == "--") body = 1; else { n++; at[substr($0, 1, 12)] = n; full[n] = $0 }; next }
+    {
+      k = 0
+      if ($3 ~ /^[0-9a-f]+$/ && length($3) >= 7) {
+        if (length($3) >= 12) k = at[substr($3, 1, 12)] + 0
+        else for (i = 1; i <= n; i++) if (index(full[i], $3) == 1) { k = i; break }
+        if (k && index(full[k], $3) != 1) k = 0
+      }
+      printf "%d\t%d\t%s\n", k, NR, $0
+    }' | sort -n -k1,1 -k2,2 | cut -f3-
+}
+
+# The lane of the change, feature or backlog: the lane queue naming its
+# item ("N. `CHANGE` (") at the parent of its squash commit, else its
+# squash subject's type (a Conventional Commits type other than feat the
+# backlog lane), else feature, feat and a subject of no known type alike.
+# Its history row goes to that lane's file, the record of the lane.
+lane_of() {
+  merged=$(merged_commit)
+  lane=""
+  if valid '[0-9a-f]{7,40}' "$merged"; then
+    for l in feature backlog; do
+      if git show --end-of-options "$merged^:docs/queue-$l.md" 2>/dev/null | C="$change" awk '
+        { item = $0; if (sub(/^[0-9]+[.] /, "", item) && index(item, "`" ENVIRON["C"] "` (") == 1) f = 1 }
+        END { exit !f }'; then
+        lane=$l
+        break
+      fi
+    done
+    if [ -z "$lane" ]; then
+      case "$(git log -1 --format=%s --end-of-options "$merged" -- 2>/dev/null | sed -n 's/^\([a-z]*\)[(!:].*/\1/p')" in
+        fix|chore|docs|refactor|test|perf|style|build|ci|revert) lane=backlog ;;
+      esac
+    fi
+  fi
+  echo "${lane:-feature}"
+}
+
+# The queue at COMMIT: both lane queues, else, at a commit before the
+# lanes, the one queue file it had, so the history before the split stays
+# readable; the working tree's old queue is never read.
+queue_at() {
+  q=$(for l in feature backlog; do git show --end-of-options "$1:docs/queue-$l.md" 2>/dev/null; done)
+  [ -n "$q" ] || q=$(git show --end-of-options "$1:docs/queue.md" 2>/dev/null)
+  printf '%s\n' "$q"
 }
 
 # True when COMMIT names a commit git knows on HEAD or on BASE
@@ -1210,7 +1296,7 @@ out_tokens() {
 # The size the change was estimated at, small, medium, or large:
 # metric.estimate, which the workflow stores from the plan, so it outlives
 # the queue item; else, for a run that stored none, the "estimated SIZE" of
-# its item ("N. `CHANGE` ...") in docs/queue.md at the parent of its squash
+# its item ("N. `CHANGE` ...") in the lane queues (queue_at) at the parent of its squash
 # commit, the queue it was delivered from; "-" when neither states a size.
 estimate_of() {
   size=$(read_key metric.estimate)
@@ -1220,7 +1306,7 @@ estimate_of() {
   fi
   merged=$(merged_commit)
   [ -n "$merged" ] || { echo -; return; }
-  size=$(git show --end-of-options "$merged^:docs/queue.md" 2>/dev/null | C="$change" awk '
+  size=$(queue_at "$merged^" | C="$change" awk '
     {
       item = $0
       if (!sub(/^[0-9]+[.] /, "", item) || index(item, "`" ENVIRON["C"] "`") != 1) next
@@ -1456,8 +1542,9 @@ append_history() {
   done
   names=$(pending_list)
   [ -n "$names" ] || { echo "history: nothing pending"; return 0; }
-  [ -f "$metrics_file" ] || printf '%s\n' "$HEADER" > "$metrics_file"
-  base_history=$(git show "${BASE:-origin/main}:$metrics_file" 2>/dev/null) || base_history=""
+  # Each lane file's rows at BASE, its header stripped, so the second
+  # file's header is never read as a row.
+  base_history=$(for f in $metrics_files; do git show "${BASE:-origin/main}:$f" 2>/dev/null | awk 'NR > 1 && NF'; done)
   branch_now=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || branch_now=HEAD
   case "$branch_now" in ""|*[[:cntrl:]]*) branch_now=HEAD ;; esac
   for change in $names; do
@@ -1466,17 +1553,20 @@ append_history() {
       echo "history: $change already has its row, appended on $on; not appended again"
       continue
     fi
-    if printf '%s\n' "$base_history" | awk -F'\t' -v c="$change" 'NR > 1 && $1 == c { found = 1 } END { exit !found }'; then
-      echo "history: $change already has its row in ${BASE:-origin/main}'s $metrics_file; not appended again"
+    if printf '%s\n' "$base_history" | awk -F'\t' -v c="$change" '$1 == c { found = 1 } END { exit !found }'; then
+      echo "history: $change already has its row in ${BASE:-origin/main}'s history; not appended again"
       continue
     fi
-    history_row >> "$metrics_file"
+    file=$metrics_prefix-$(lane_of).tsv
+    [ -f "$file" ] || printf '%s\n' "$HEADER" > "$file"
+    history_row >> "$file"
     write_key row "$branch_now"
-    echo "history: appended $change"
+    echo "history: appended $change to $file"
     found=$(late_findings)
     [ -n "$found" ] || continue
-    { printf '\n## Findings of %s after its package step\n\n' "$change"; printf '%s\n' "$found" | sed 's/^/- /'; } >> "$backlog_file"
-    echo "history: appended the late findings of $change to $backlog_file"
+    mkdir -p "$findings_dir" || die "history: no $findings_dir"
+    { printf '\n## Findings of %s after its package step\n\n' "$change"; printf '%s\n' "$found" | sed 's/^/- /'; } >> "$findings_dir/$change.md"
+    echo "history: appended the late findings of $change to $findings_dir/$change.md"
   done
 }
 
@@ -1494,9 +1584,10 @@ sprint_state() {
   valid 'sprint-[0-9]+' "$prev" || die "$sprints_file ends with no sprint row"
   sprint_n=$((${prev#sprint-} + 1))
   prev_last=$(printf '%s\n' "$last_row" | cut -f2)
-  sprint_base=$(awk -F'\t' -v c="$prev_last" '$1 == c { print $3 }' "$metrics_file" 2>/dev/null | tail -1)
-  [ -n "$sprint_base" ] || die "the last change of $prev, $prev_last, has no row in $metrics_file"
-  sprint_names=$({ awk -F'\t' -v c="$prev_last" 'seen && NF { print $1 } $1 == c { seen = 1 }' "$metrics_file"; pending_list; } |
+  history=$(history_rows)
+  sprint_base=$(printf '%s\n' "$history" | awk -F'\t' -v c="$prev_last" '$1 == c { print $3 }' | tail -1)
+  [ -n "$sprint_base" ] || die "the last change of $prev, $prev_last, has no row in $metrics_files"
+  sprint_names=$({ printf '%s\n' "$history" | awk -F'\t' -v c="$prev_last" 'seen && NF { print $1 } $1 == c { seen = 1 }'; pending_list; } |
     awk -v r="$REVIEW_RUNS" 'NF && $0 !~ r && !seen[$0]++')
   sprint_exceptions=""
   exempt=0
@@ -1512,25 +1603,31 @@ sprint_state() {
 
 # The merged commit of NAME: its history row's, else its run state's.
 merged_of() {
-  m=$(awk -F'\t' -v c="$1" 'NR > 1 && $1 == c { m = $3 } END { print m }' "$metrics_file" 2>/dev/null)
+  m=$(lane_rows | awk -F'\t' -v c="$1" '$1 == c { m = $3 } END { print m }')
   valid '[0-9a-f]{7,40}' "$m" || m=$(change=$1; merged_commit)
   printf '%s\n' "$m"
 }
 
-# True when the item naming NAME in docs/queue.md at the parent of COMMIT,
-# the queue it was delivered from, carries EXCEPTION_MARK in its first
-# parenthesis: a change beyond the sprint, which a sprint does not count
-# (up to SPRINT_EXCEPTIONS).
+# True when the item naming NAME (numbered, or the line "The
+# user-approved exception: `NAME` (...)") in the queue at the parent of
+# COMMIT, the queue it was delivered from, or else at COMMIT, whose package
+# step may have applied the plan naming it, carries EXCEPTION_MARK in its
+# first parenthesis: a change beyond the sprint, which a sprint does not
+# count (up to SPRINT_EXCEPTIONS).
 exception_item() {
   valid '[0-9a-f]{7,40}' "$2" || return 1
-  git show --end-of-options "$2^:docs/queue.md" 2>/dev/null | C="$1" M="$EXCEPTION_MARK" awk '
-    {
-      item = $0
-      if (!sub(/^[0-9]+[.] /, "", item) || index(item, "`" ENVIRON["C"] "` (") != 1) next
-      found = index(substr(item, 1, index(item, ")")), ENVIRON["M"]) > 0
-      exit
-    }
-    END { exit !found }'
+  for at in "$2^" "$2"; do
+    queue_at "$at" | C="$1" M="$EXCEPTION_MARK" awk '
+      {
+        item = $0
+        if (!sub(/^[0-9]+[.] /, "", item) && !sub(/^The user-approved exception: /, "", item)) next
+        if (index(item, "`" ENVIRON["C"] "` (") != 1) next
+        found = index(substr(item, 1, index(item, ")")), ENVIRON["M"]) > 0
+        exit
+      }
+      END { exit !found }' && return 0
+  done
+  return 1
 }
 
 # True when a sprint plan waits in PLAN_DIR for a package step: its marker
@@ -1574,17 +1671,29 @@ review_due() {
 # duplicate lines, which the model decides.
 backlog_dups() {
   [ -f "$backlog_file" ] || die "no $backlog_file"
-  awk '/^#+ / && match($0, /[A-Za-z0-9_.\/-]+[.][A-Za-z]+:[0-9]+/) {
+  folded_backlog | awk '/^#+ / && match($0, /[A-Za-z0-9_.\/-]+[.][A-Za-z]+:[0-9]+/) {
       at = substr($0, RSTART, RLENGTH); n[at]++; h[at] = h[at] (n[at] > 1 ? " | " : "") $0 }
-    END { for (at in n) if (n[at] > 1) print at ": " h[at] }' "$backlog_file" | sort
+    END { for (at in n) if (n[at] > 1) print at ": " h[at] }' | sort
+}
+
+# The backlog, then each findings file of FINDINGS_DIR in name order after
+# a blank line: the backlog as groom writes it, which the sprint planner
+# grooms.
+folded_backlog() {
+  cat "$backlog_file"
+  for f in "$findings_dir"/*.md; do
+    [ -f "$f" ] || continue
+    echo
+    awk 'NF { on = 1 } on' "$f"
+  done
 }
 
 # Every backlog entry under the heading line $1, printed whole: from the
 # heading to the next heading of any level, as each entry stands alone.
 backlog_entry() {
-  H="$1" awk '
+  folded_backlog | H="$1" awk '
     /^#+ / { on = ($0 == ENVIRON["H"]) }
-    on { print }' "$backlog_file"
+    on { print }'
 }
 
 # The sprint's row from its history rows up to the SPRINT_SIZE-th counted
@@ -1594,7 +1703,7 @@ backlog_entry() {
 # and their mean per change, the total tokens, the runs over their size's
 # budget (TOKEN_BUDGETS), and each gate's first passes.
 sprint_row() {
-  awk -F'\t' -v c="$prev_last" -v budgets="$TOKEN_BUDGETS" -v s="sprint-$sprint_n" -v size="$SPRINT_SIZE" -v r="$REVIEW_RUNS" -v x=" $sprint_exceptions " '
+  history_rows | awk -F'\t' -v c="$prev_last" -v budgets="$TOKEN_BUDGETS" -v s="sprint-$sprint_n" -v size="$SPRINT_SIZE" -v r="$REVIEW_RUNS" -v x=" $sprint_exceptions " '
     BEGIN { n = split(budgets, b, " "); for (i = 1; i <= n; i++) { split(b[i], kv, "="); budget[kv[1]] = kv[2] } }
     seen && NF && !done && $1 !~ r {
       ex = index(x, " " $1 " ") > 0
@@ -1614,7 +1723,7 @@ sprint_row() {
     END {
       for (i = 1; i <= k; i++) fp = fp (i > 1 ? "," : "") order[i] ":" (pass[order[i]] + 0) "/" total[order[i]]
       printf "%s\t%s\t%d\t%s\t%.1f\t%.1f\t%d\t%d\t%s\n", s, last, rows, names, wall, rows ? wall / rows : 0, tokens, over, fp == "" ? "-" : fp
-    }' "$metrics_file"
+    }'
 }
 
 # Applies a waiting sprint plan, every line of groom.txt checked before
@@ -1639,7 +1748,7 @@ groom() {
     echo "groom: the plan of sprint-$sprint_n waits for its security review (${sprint_security:-none}); run /sprint again"
     return 0
   fi
-  rows=$(awk -F'\t' -v c="$prev_last" -v r="$REVIEW_RUNS" -v x=" $sprint_exceptions " 'seen && NF && $1 !~ r && !index(x, " " $1 " ") { n++ } $1 == c { seen = 1 } END { print n + 0 }' "$metrics_file")
+  rows=$(printf '%s\n' "$history" | awk -F'\t' -v c="$prev_last" -v r="$REVIEW_RUNS" -v x=" $sprint_exceptions " 'seen && NF && $1 !~ r && !index(x, " " $1 " ") { n++ } $1 == c { seen = 1 } END { print n + 0 }')
   [ "$rows" -ge "$SPRINT_SIZE" ] || die "groom: sprint-$sprint_n has $rows of $SPRINT_SIZE history rows; run history first"
   removals=""
   repeats=""
@@ -1653,8 +1762,8 @@ groom() {
         duplicate) word=""; heading=$rest ;;
         *) die "groom: not a groom line: $line" ;;
       esac
-      stands=$(grep -c -x -F -e "$heading" "$backlog_file")
-      [ "$stands" -ge 1 ] && valid '#{2,3} .+' "$heading" || die "groom: not a heading line of $backlog_file: $heading"
+      stands=$(folded_backlog | grep -c -x -F -e "$heading")
+      [ "$stands" -ge 1 ] && valid '#{2,3} .+' "$heading" || die "groom: not a heading line of $backlog_file or a findings file: $heading"
       case "$kind" in
         listed)
           valid '[a-z0-9][a-z0-9-]*' "$word" && ls -d openspec/changes/archive/*-"$word" > /dev/null 2>&1 ||
@@ -1678,19 +1787,23 @@ groom() {
 "
     done < "$plan_dir/groom.txt"
   fi
-  [ ! -f "$plan_dir/queue.md" ] || cp "$plan_dir/queue.md" docs/queue.md
+  for l in feature backlog; do
+    [ ! -f "$plan_dir/queue-$l.md" ] || cp "$plan_dir/queue-$l.md" "docs/queue-$l.md"
+  done
+  folded=$(ls "$findings_dir"/*.md 2>/dev/null | grep -c .)
   tmp=$(mktemp "$backlog_file.XXXXXX") || die "groom: no temporary file"
-  R="$removals" D="$repeats" awk '
+  folded_backlog | R="$removals" D="$repeats" awk '
     BEGIN {
       n = split(ENVIRON["R"], r, "\n"); for (i = 1; i <= n; i++) if (r[i] != "") gone[r[i]] = 1
       n = split(ENVIRON["D"], d, "\n"); for (i = 1; i <= n; i++) if (d[i] != "") repeat[d[i]] = 1
     }
     /^#+ / { seen[$0]++; skip = ($0 in gone) || (($0 in repeat) && seen[$0] > 1) }
-    !skip { print }' "$backlog_file" > "$tmp" && mv "$tmp" "$backlog_file" || { rm -f "$tmp"; die "groom: $backlog_file not rewritten"; }
+    !skip { print }' > "$tmp" && mv "$tmp" "$backlog_file" || { rm -f "$tmp"; die "groom: $backlog_file not rewritten"; }
+  [ "$folded" -eq 0 ] || rm -f "$findings_dir"/*.md
   [ ! -f "$plan_dir/groomed.md" ] || cat "$plan_dir/groomed.md" >> "$backlog_file"
   sprint_row >> "$sprints_file"
   mv "$plan_dir/sprint" "$plan_dir/sprint.applied" || die "groom: $plan_dir/sprint not retired"
-  echo "groom: applied sprint-$sprint_n: $(printf '%s' "$removals$repeats" | grep -c .) headings groomed, its row appended to $sprints_file"
+  echo "groom: applied sprint-$sprint_n: $(printf '%s' "$removals$repeats" | grep -c .) headings groomed, $folded findings file(s) folded, its row appended to $sprints_file"
 }
 
 # True when the marker names a sprint (waiting) whose row the sprints file
@@ -1735,7 +1848,7 @@ records_excluded() {
 merged_since() {
   valid '[0-9a-f]{7,40}' "$1" || return 1
   since=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
-  rows=$(awk -F'\t' 'NR > 1 && $3 ~ /^[0-9a-f]+$/ { r[++n] = $1 ":" $3 } END { for (i = n; i > 0; i--) print r[i] }' "$metrics_file" 2>/dev/null)
+  rows=$(history_rows | awk -F'\t' 'NR > 1 && $3 ~ /^[0-9a-f]+$/ { r[++n] = $1 ":" $3 } END { for (i = n; i > 0; i--) print r[i] }')
   after=
   for row in $rows; do
     descends "$since" "${row#*:}" || break
@@ -1807,14 +1920,14 @@ descends() {
 # the line naming that run, which the
 # workflow hands the planner so its security-first stop applies whatever
 # else needs it; then when the change is not the first item of
-# docs/queue.md, or when another merged change without a history row
+# a lane queue (docs/queue-feature.md or docs/queue-backlog.md), or when another merged change without a history row
 # holds a note of a PLAN_NOTES kind (a retrospective proposal, an
 # overrun, a periodic finding) that only the planner places; otherwise the head item is taken as written, its size
 # printed for the run's estimate. It prints one line: a run whose brief is
-# only the change name has its agents read the item in docs/queue.md.
+# only the change name has its agents read the item in its lane queue.
 plan_needed() {
-  queue=docs/queue.md
-  ! sprint_waiting || queue=$plan_dir/queue.md
+  queues=$queue_files
+  ! sprint_waiting || queues="$plan_dir/queue-feature.md $plan_dir/queue-backlog.md"
   for run in $(ls "$state_dir" 2>/dev/null | sed -n 's/[.]json$//p' | grep -E "$REVIEW_RUNS"); do
     record=$(change=$run; read_key review.periodic-security)
     case "${record%% *}: $record" in
@@ -1828,10 +1941,16 @@ plan_needed() {
     echo "needed: $run records a failing periodic security review at $reviewed, and no change merged since"
     return 0
   done
-  head_item=$(sed -n 's/^1[.] //p' "$queue" 2>/dev/null | head -1)
-  name=$(printf '%s\n' "$head_item" | sed -n 's/^`\([a-z0-9][a-z0-9-]*\)`.*/\1/p')
-  if [ "$name" != "$change" ]; then
-    echo "needed: $change is not the head of $queue (${name:-no named item})"
+  queue=""
+  heads=""
+  for q in $queues; do
+    item=$(sed -n 's/^1[.] //p' "$q" 2>/dev/null | head -1)
+    name=$(printf '%s\n' "$item" | sed -n 's/^`\([a-z0-9][a-z0-9-]*\)`.*/\1/p')
+    heads="$heads${heads:+, }${name:-no named item}"
+    [ -n "$queue" ] || [ "$name" != "$change" ] || { queue=$q; head_item=$item; }
+  done
+  if [ -z "$queue" ]; then
+    echo "needed: $change is not the head of $queues ($heads)"
     return 0
   fi
   for other in $(pending_list); do
@@ -2012,6 +2131,9 @@ case "$command" in
   spent)
     [ $# -eq 0 ] || usage
     spent_line ;;
+  lane)
+    [ $# -eq 0 ] || usage
+    lane_of ;;
   usage)
     [ $# -eq 2 ] || usage
     add_usage "$1" "$2" ;;

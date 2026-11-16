@@ -3,4 +3,4 @@ description: Show the delivery queue, the running change's phase from its run st
 allowed-tools: Bash(sh tools/run_state.sh status)
 ---
 
-Run `sh tools/run_state.sh status` and show its output as it is: the queue (`docs/queue.md`) when it exists, the change whose run state under `build/pipeline/` is not merged with its phases done, its next phase, its stages, reviews, pull request, and CI, and the last row of `docs/metrics.tsv` with the first-pass rate of each gate and the rework rounds when the history has a row. Add nothing else.
+Run `sh tools/run_state.sh status` and show its output as it is: the lane queues (`docs/queue-*.md`) that exist, the change whose run state under `build/pipeline/` is not merged with its phases done, its next phase, its stages, reviews, pull request, and CI, and the newest row of the lane histories (`docs/metrics-*.tsv`) with the first-pass rate of each gate and the rework rounds when the history has a row. Add nothing else.
