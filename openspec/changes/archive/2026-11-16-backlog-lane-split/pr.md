@@ -15,7 +15,7 @@ Splits the delivery records into two lanes, a feature lane and a backlog lane, e
 - Change tools/rules.sh RECORDS_RE to name the lane files and docs/findings, and narrow the docs-lint RETIRED path exemption to the records that keep history.
 - Add tools-test cases for the RETIRED exemption, queue_at's fallback for an estimate and a beyond-the-sprint item, the records scope of the findings and lane files, the one-row BASE case, a subject of no known type, the cross-lane pipeline limit, and a fold of two changes' findings into the backlog.
 - Document the contributor's conflict rules for a push: keep both sides of appended files, regenerate generated files with their make targets, stop and name a conflict where both sides changed the same logic.
-- Document the lanes in CLAUDE.md, README.md, docs/goals.md, docs/codebase-map.md, and the agents, restoring the ci-stages and tokens command descriptions and naming the benchmark among the other agents' phases.
+- Document the lanes in CLAUDE.md, README.md, docs/goals.md, docs/codebase-map.md, and the agents, restoring the ci-stages and tokens command descriptions.
 - Record sprint-9's last metrics row, the planner's Sprint 10 queue, and the sprint-9 grooming.
 
 ---
