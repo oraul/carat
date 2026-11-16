@@ -1500,7 +1500,7 @@ expect "run_state: the sprint row counts budgets and first passes" 0 "^sprint-1 
 # branch from one base share no record file and merge cleanly.
 fresh lanes
 printf '# Queue\n\n1. `f2` (T3, estimated small): two.\n' > docs/queue-feature.md
-printf '# Queue\n\n1. `b2` (T4, estimated small): two.\n' > docs/queue-backlog.md
+printf '# Queue\n\n1. `b2` (T4, estimated small): two.\n2. `zz` (T4, estimated small): later.\n' > docs/queue-backlog.md
 commit "docs: the lane queues"
 state init f1 feature/f1 > /dev/null
 state init b1 chore/b1 > /dev/null
@@ -1516,10 +1516,14 @@ printf '# Queue\n\n1. `f3` (T3, estimated small): the f2 plan.\n' > build/plan/f
 printf '# Queue\n\n1. `bx` (T4, estimated small): a stray plan.\n' > build/plan/f2/queue-backlog.md
 printf '# Queue\n\n1. `b3` (T4, estimated small): the b2 plan.\n' > build/plan/b2/queue-backlog.md
 printf '\n### Unplaced at tools/u.sh:1\n\n- Location: tools/u.sh:1\n- Why: a fixture.\n- Fix: none.\n' > build/plan/b2/backlog.md
+printf '# Goals of b2\n' > build/plan/b2/goals.md
 lanes_base=$(git rev-parse HEAD)
 git_q checkout -q -b chore/b2
 expect "run_state: plan-apply copies only its lane's queue" 0 "^plan-apply: copied build/plan/b2/queue-backlog[.]md over docs/queue-backlog[.]md$" state plan-apply b2
 expect "run_state: a backlog plan-apply leaves the feature lane's queue" 0 "^1[.] .f2. .*b3. " sh -c "echo \$(sed -n 3p docs/queue-feature.md) \$(sed -n 3p docs/queue-backlog.md)"
+expect "run_state: plan-apply copies the plan's goals" 0 "^# Goals of b2$" cat docs/goals.md
+state init zz feature/zz > /dev/null
+expect "run_state: lane takes a change its planner unqueued from BASE's queue, before its branch" 0 "^backlog feature$" sh -c "echo \$(BASE=$lanes_base sh '$here/run_state.sh' lane zz) \$(BASE=none sh '$here/run_state.sh' lane zz)"
 expect "run_state: plan-apply appends the plan's backlog to the change's findings file" 0 "^### Unplaced at tools/u[.]sh:1$" grep '^###' docs/findings/b2.md
 expect "run_state: history appends only its lane's rows" 0 "f1 is of the feature lane; left to that lane's next package step" state history b2
 expect "run_state: a backlog package step writes no feature history" 0 "^b1 none$" sh -c "echo \$(cut -f1 docs/metrics-backlog.tsv | sed -n 2p) \$([ -f docs/metrics-feature.tsv ] && echo some || echo none)"
