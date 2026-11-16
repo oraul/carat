@@ -173,7 +173,9 @@
 #                               oldest entry; PICK_MIN or more give at most
 #                               PICK_MAX, security first, then oldest; fewer
 #                               give their security entries alone, or none;
-#                               an entry a queue file names is skipped, one
+#                               an entry a queue file names, or whose whole
+#                               heading line ends a line of
+#                               PLAN_DIR/groom.txt, is skipped, one
 #                               no mapped path holds printed "unmapped:";
 #                               exit 1 when no batch
 #   groom [CHANGE]             nothing when CHANGE's run state sets
@@ -1736,7 +1738,9 @@ backlog_entry() {
 # header). A Location's first token, its backticks and :line dropped,
 # matches a path the map names under a numbered area, or lies under one
 # ending in "/"; an entry whose heading text a queue file holds, not as
-# the start of a longer word, is queued.
+# the start of a longer word, is queued, and one whose whole heading line
+# ends a line of PLAN_DIR/groom.txt is groomed: the closed sprint's
+# removals, which stay in the backlog until the next package step.
 backlog_pick() {
   if [ $# -eq 0 ]; then
     [ -f "$backlog_file" ] || die "no $backlog_file"
@@ -1744,7 +1748,7 @@ backlog_pick() {
     for f in "$@"; do [ -f "$f" ] || die "no $f"; done
   fi
   { if [ $# -eq 0 ]; then folded_backlog; else cat "$@"; fi; } |
-    M=docs/codebase-map.md Q="$queue_files" B=$PICK_BATCHES L=$PICK_MIN H=$PICK_MAX awk '
+    M=docs/codebase-map.md Q="$queue_files" G="$plan_dir/groom.txt" B=$PICK_BATCHES L=$PICK_MIN H=$PICK_MAX awk '
     BEGIN {
       while ((getline line < ENVIRON["M"]) > 0) {
         if (line ~ /^## [0-9]+[.] /) { area = substr(line, 4); continue }
@@ -1753,6 +1757,8 @@ backlog_pick() {
       }
       nq = split(ENVIRON["Q"], qf, " ")
       for (i = 1; i <= nq; i++) while ((getline line < qf[i]) > 0) queued = queued "\n" line
+      while ((getline line < ENVIRON["G"]) > 0)
+        for (j = 1; j < length(line); j++) if (substr(line, j, 2) == " #") groomed[substr(line, j + 1)] = 1
     }
     /^### / { n++; head[n] = $0; on = 1; next }
     /^#+ / { on = 0; next }
@@ -1770,7 +1776,7 @@ backlog_pick() {
     }
     END {
       for (i = 1; i <= n; i++) {
-        if (queued_at(substr(head[i], 5))) continue
+        if (queued_at(substr(head[i], 5)) || (head[i] in groomed)) continue
         p = loc[i]; sub(/^- Location:[ \t]*/, "", p); gsub(/`/, "", p)
         sub(/[ \t,;(].*$/, "", p); sub(/:.*$/, "", p)
         a = area_of(p)

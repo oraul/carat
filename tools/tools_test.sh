@@ -777,6 +777,11 @@ expect "run_state: backlog-pick skips an entry a queued item names" 0 "^0 1$" \
   sh -c 'echo "$(printf "%s\n" "$1" | grep -c "^### a2 ") $(printf "%s\n" "$1" | grep -c "^### t1 ")"' _ "$pick"
 expect "run_state: backlog-pick reports an unmapped entry" 0 "^unmapped: ### u1 at tools/z[.]sh:1 [(]tools/z[.]sh[)] 0$" \
   sh -c 'echo "$(printf "%s\n" "$1" | grep "^unmapped") $(printf "%s\n" "$1" | grep -c "^### u1")"' _ "$pick"
+mkdir -p build/plan
+printf 'listed b0 ### a1 at tools/a.sh:1\nfixed abc1234 ### s1 quoting at tools/a.sh:40\nduplicate ### a3 at tools/a.sh:3 x\n' > build/plan/groom.txt
+expect "run_state: backlog-pick skips an entry the plan's groom.txt removes" 0 "^1 0 1$" \
+  sh -c 'p=$(sh "$1" backlog-pick bk.md); echo "$(printf "%s\n" "$p" | grep -c "^batch 1: area 1[.] Build and CI, 9 of 9 entries$") $(printf "%s\n" "$p" | grep -c "^### a1 \|^### s1 ") $(printf "%s\n" "$p" | grep -c "^### a3 ")"' _ "$here/run_state.sh"
+rm build/plan/groom.txt
 printf '### s2 at config/y.caratrc:1\n\n- Location: config/y.caratrc:1\n- Why: security Low.\n- Fix: y.\n\n### a1 at tools/a.sh:1\n\n- Location: tools/a.sh:1\n- Why: a.\n' > bk2.md
 expect "run_state: backlog-pick gives an area under 5 its security entries alone" 0 "^batch 1: area 3[.] Configuration, its 1 security entries alone of 1 ### s2 at config/y[.]caratrc:1 $" \
   sh -c 'sh "$1" backlog-pick bk2.md | tr "\n" " "' _ "$here/run_state.sh"
