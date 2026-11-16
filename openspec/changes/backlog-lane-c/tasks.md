@@ -21,6 +21,6 @@
 ## 5. backlog-lane-c
 
 - [x] 5.1 Carry backlog-lane-b's commits and rename the change to `backlog-lane-c`, in `docs/queue-backlog.md`'s exception and parallel-lanes lines too
-- [x] 5.2 A bare backticked word of a Location places it only when the map names it and the tree holds it as a file or directory (`named_file`); proved by "run_state: backlog-pick places a Location by its mapped path, never by an identifier before it"
+- [x] 5.2 A bare backticked word of a Location places it only when the map names it and the tree holds it as a file or directory (`named_file`); proved by "run_state: backlog-pick places a Location by its mapped path, never by an identifier before it" and, for a word mapped only as a directory placed by its slash form, "run_state: backlog-pick places a bare backticked directory the map names in its area"
 - [x] 5.3 The pick requires its files, printing its usage and exiting 2 with none; the planner's sprint mode and sprint-planning pass `docs/backlog.md` and `docs/findings/*.md`, and the header, README.md, and the code map say so; proved by "run_state: backlog-pick with no file prints its usage and reads no backlog" and the two renamed planner and sprint cases
 - [x] 5.4 The groom header column and the pick's header wrap aligned; the repeated "for the contributor" dropped from `.claude/agents/planner.md`

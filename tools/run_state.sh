@@ -1826,7 +1826,8 @@ backlog_pick() {
       k = 0
       for (r = s; match(r, /`[^`]+`/); r = substr(r, RSTART + RLENGTH)) {
         raw = substr(r, RSTART + 1, RLENGTH - 2); t = clean(raw)
-        if (pathlike(raw, t) || (t != "" && t == raw && named_file(t))) cand[++k] = t
+        if (pathlike(raw, t)) cand[++k] = t
+        else if (t != "" && t == raw && named_file(t)) cand[++k] = ((t in own) || (t in seen)) ? t : t "/"
       }
       gsub(/`/, "", s); nw = split(s, w, /[ \t]+/)
       for (x = 1; x <= nw; x++) if (pathlike(w[x], t = clean(w[x]))) cand[++k] = t

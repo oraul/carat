@@ -835,6 +835,12 @@ touch Makefile
 } > bk6.md
 expect "run_state: backlog-pick places a Location by its mapped path, never by an identifier before it" 0 "^unmapped: ## i3 identifier only [(][)] batch 1: area 1[.] Build and CI, its 2 security entries alone of 2 ## i1 identifier first ## i2 bare file $" \
   sh -c 'sh "$1" backlog-pick bk6.md | tr "\n" " "' _ "$here/run_state.sh"
+# A bare backticked word the map names only as a directory (`config`, its
+# `config/` in area 3) and the tree holds is placed in that area.
+mkdir -p config
+printf '## d1 bare directory\n\n- Location: `config` (the defaults)\n- Why: security Low.\n' > bk7.md
+expect "run_state: backlog-pick places a bare backticked directory the map names in its area" 0 "^batch 1: area 3[.] Configuration, its 1 security entries alone of 1 ## d1 bare directory $" \
+  sh -c 'sh "$1" backlog-pick bk7.md | tr "\n" " "' _ "$here/run_state.sh"
 
 
 # ------------------------------------------------------------ open_pr.sh
