@@ -2042,33 +2042,36 @@ head -c 8193 /dev/zero | tr '\0' x >> .claude/agents/x.md
 expect "docs_lint: refuses an agent file over its budget" 1 "FAIL budgets: .claude/agents/x.md" doclint
 docs queuesize
 printf '# Queue\n\n1. `a` (T2, estimated small): one.\n' > docs/queue-backlog.md
-head -c 17369 /dev/zero | tr '\0' x | head -c "$((17369 - $(wc -c < docs/queue-backlog.md)))" >> docs/queue-backlog.md
-expect "docs_lint: passes a queue at its budget" 0 "ok   budgets: 3 file" doclint
-echo x >> docs/queue-backlog.md
-expect "docs_lint: refuses a queue over its budget" 1 "FAIL budgets: docs/queue-backlog.md is 17371 bytes, over its budget of 17369" doclint
+printf '# Queue\n\n1. `b` (T2, estimated small): two.\n' > docs/queue-feature.md
+head -c 17969 /dev/zero | tr '\0' x | head -c "$((17969 - $(wc -c < docs/queue-backlog.md) - $(wc -c < docs/queue-feature.md)))" >> docs/queue-backlog.md
+expect "docs_lint: passes the lane queues at their shared budget" 0 "ok   queue: 2 item" doclint
+echo x >> docs/queue-feature.md
+expect "docs_lint: refuses the lane queues over their shared budget" 1 "FAIL queue: the lane queues are 17971 bytes together, over their budget of 17969" doclint
 docs sprint
-printf '# Queue\n\n## Sprint 2\n\n1. `a` (T2, estimated small): one.\n2. `b` (T1 pipeline, estimated small): two.\n3. `c` (T0 pipeline, estimated small): three.\n\n## Pool\n\n4. `d` (T1 pipeline, estimated small): four.\n' > docs/queue-backlog.md
-expect "docs_lint: a T0 pipeline item does not count" 0 "ok   queue: 4 item" doclint
-printf '5. `e` (T1 pipeline, estimated small): five.\n' > pool.tmp
-sed -i '/^3[.] /r pool.tmp' docs/queue-backlog.md
-expect "docs_lint: a sprint with two pipeline items fails" 1 "FAIL queue: the sprint holds 2 pipeline items" doclint
-printf '# Queue\n\n## Sprint 2\n\n' > docs/queue-backlog.md
-for n in 1 2 3 4 5 6; do printf '%s. `i%s` (T5, estimated small): item.\n' "$n" "$n" >> docs/queue-backlog.md; done
-expect "docs_lint: a sprint of six items fails" 1 "FAIL queue: the sprint holds 6 items, not 0 to 5" doclint
+printf '# Queue\n\n## Sprint 2\n\n1. `b` (T1 pipeline defect, estimated small): two.\n2. `c` (T0 pipeline, estimated small): three.\n\n## Pool\n\n3. `d` (T1 pipeline, estimated small): four.\n' > docs/queue-backlog.md
+expect "docs_lint: a T0 pipeline item does not count" 0 "ok   queue: 3 item" doclint
+sed -i 's/(T0 pipeline/(T1 pipeline defect/' docs/queue-backlog.md
+expect "docs_lint: a sprint with two pipeline items fails" 1 "FAIL queue: docs/queue-backlog[.]md: the sprint holds 2 pipeline items, 0 of them no defect" doclint
+printf '# Queue\n\n## Sprint 2\n\n1. `b` (T1 pipeline, estimated small): two.\n' > docs/queue-backlog.md
+expect "docs_lint: a sprint pipeline item that is no defect fails" 1 "FAIL queue: docs/queue-backlog[.]md: the sprint holds 1 pipeline items, 1 of them no defect" doclint
+printf '# Queue\n\n## Sprint 2\n\n' > docs/queue-feature.md
+for n in 1 2 3 4; do printf '%s. `i%s` (T5, estimated small): item.\n' "$n" "$n" >> docs/queue-feature.md; done
+expect "docs_lint: a feature lane sprint of four items fails" 1 "FAIL queue: docs/queue-feature[.]md: the sprint holds 4 items, not 0 to 3" doclint
+rm docs/queue-feature.md
 printf '# Queue\n\n## Sprint 2\n\n## Pool\n\n1. `p` (T5, estimated small): pooled.\n' > docs/queue-backlog.md
 expect "docs_lint: a drained sprint of 0 items waits for /sprint" 0 "ok   queue: 1 item" doclint
 # The user-approved exception: a line beginning with it under the sprint
-# heading lifts the one-pipeline limit; an item naming it does not.
+# heading lifts the pipeline limits; an item naming it does not.
 printf '# Queue\n\n## Sprint 8\n\n' > docs/queue-backlog.md
-for n in 1 2 3 4; do printf '%s. `p%s` (T1 pipeline, estimated small, the user-approved exception): item.\n' "$n" "$n" >> docs/queue-backlog.md; done
-printf '5. `f` (T2, estimated small): five.\n\n## Pool\n\n6. `q` (T1 pipeline, estimated small): pooled.\n' >> docs/queue-backlog.md
-expect "docs_lint: an unmarked sprint of 4 pipeline items fails" 1 "FAIL queue: the sprint holds 4 pipeline items, at most 1 [(]T0 exempt[)] without a line beginning .The user-approved exception." doclint
-sed -i 's/^## Sprint 8$/## Sprint 8\n\nThe user-approved exception (Guide): 5 items, 4 pipeline./' docs/queue-backlog.md
-expect "docs_lint: a marked sprint of 4 pipeline items passes" 0 "ok   queue: 6 item" doclint
+for n in 1 2; do printf '%s. `p%s` (T1 pipeline, estimated small, the user-approved exception): item.\n' "$n" "$n" >> docs/queue-backlog.md; done
+printf '\n## Pool\n\n3. `q` (T1 pipeline, estimated small): pooled.\n' >> docs/queue-backlog.md
+expect "docs_lint: an unmarked sprint of 2 pipeline items fails" 1 "FAIL queue: docs/queue-backlog[.]md: the sprint holds 2 pipeline items, 2 of them no defect; at most 1, a defect [(]T0 exempt[)], without a line beginning .The user-approved exception." doclint
+sed -i 's/^## Sprint 8$/## Sprint 8\n\nThe user-approved exception (Guide): 2 pipeline items./' docs/queue-backlog.md
+expect "docs_lint: a marked sprint of 2 pipeline items passes" 0 "ok   queue: 3 item" doclint
 sed -i 's/^The user-approved exception/An exception/' docs/queue-backlog.md
-expect "docs_lint: a marker not at a line start does not count" 1 "FAIL queue: the sprint holds 4 pipeline items" doclint
+expect "docs_lint: a marker not at a line start does not count" 1 "FAIL queue: docs/queue-backlog[.]md: the sprint holds 2 pipeline items" doclint
 printf '# Queue\n\n## Sprint 8\n\n1. `a` (T1 pipeline, estimated small): one.\n2. `b` (T1 pipeline, estimated small): two.\n\n## Pool\n\nThe user-approved exception (Guide): a pool line.\n' > docs/queue-backlog.md
-expect "docs_lint: a marker outside the sprint section does not count" 1 "FAIL queue: the sprint holds 2 pipeline items" doclint
+expect "docs_lint: a marker outside the sprint section does not count" 1 "FAIL queue: docs/queue-backlog[.]md: the sprint holds 2 pipeline items" doclint
 docs link
 echo "See $LINK." >> docs/notes.md
 expect "docs_lint: refuses a URL in a document" 1 "FAIL content: docs/notes[.]md:[0-9]+: url: " doclint
