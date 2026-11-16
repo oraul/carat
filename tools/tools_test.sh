@@ -2112,7 +2112,8 @@ doclint() {
 docs clean
 expect "docs_lint: passes a clean tree, the trailer, a tier alias in frontmatter, and placeholders" 0 "ok   paths: 1 path" doclint
 docs budget
-head -c 30721 /dev/zero | tr '\0' x >> CLAUDE.md
+# Short lines: one line of 30 KB takes the content checks seconds.
+head -c 30721 /dev/zero | tr '\0' x | fold -w 64 >> CLAUDE.md
 expect "docs_lint: refuses CLAUDE.md over its budget" 1 "FAIL budgets: CLAUDE.md is [0-9]+ bytes, over its budget of 30720" doclint
 docs agent
 head -c 8193 /dev/zero | tr '\0' x >> .claude/agents/x.md
