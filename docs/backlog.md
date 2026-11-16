@@ -5953,3 +5953,28 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: tools/run_state.sh:1583
 - Why: quality advisory: sprint_row keeps taking exception rows after the fifth counted row until a sixth counted one, so an exception whose history row lands after the sprint review (a merge between /sprint and the groom) joins the closed sprint's row and becomes its last change, the next sprint_base, leaving its diff in neither sprint's combined diff.
 - Fix: end the row at the fifth counted row, taking only the exceptions before it, or bound it by the reviewed head.
+
+### ToggleReading's call takes a Command it never reads
+- Location: carat/use_cases/docs/toggle_reading.rb:39
+- Why: a use case's call takes the state and its operation's inputs, but call(state, command) never reads the Command (quality advisory, markdown-reading-a)
+- Fix: make it call(state), as PinHover, and have DocsHandler pass only the state
+
+### DocsHandler names its variant action
+- Location: carat/use_cases/actions/docs_handler.rb:20
+- Why: the handler's variant is named @action/action: where the sibling handlers (BufferHandler) name it @variant/variant:, and 'action' already means the dotted action name (quality advisory, markdown-reading-a)
+- Fix: rename it to variant
+
+### The FormatDocs map entry omits ToggleReading
+- Location: docs/codebase-map.md:633
+- Why: docs currency: the FormatDocs entry still says 'shared by ShowHover and ShowCompletionDocs' though ToggleReading now calls it too (quality advisory, markdown-reading-a)
+- Fix: add ToggleReading to the list
+
+### ToggleReading copies one over-cap line whole
+- Location: carat/use_cases/docs/toggle_reading.rb:86
+- Why: text_of checks the cap before appending, so one line longer than READING_RAW_LIMIT is copied whole, against its comment that a huge file costs no more than the reader reads (quality advisory, markdown-reading-a)
+- Fix: append at most the remaining room (byteslice to READING_RAW_LIMIT - out.bytesize) and stop
+
+### The markdown-reading spec has no scenario for a closed source
+- Location: test/use_cases_toggle_reading.rb:83
+- Why: tests beside behavior: the new test cites scenario 'Toggling back to the source', but the delta spec has no scenario for the closed-source refusal (quality advisory, markdown-reading-a)
+- Fix: add a scenario 'The source file was closed' (THEN the message 'The Markdown file is closed' shows and the view stays) to openspec/specs/markdown-reading/spec.md through a proposal and cite it in the test comment
