@@ -11,7 +11,12 @@ module Carat
       # is saved, and when a window gains the focus; both commands read
       # refs and objects only, never the work tree, so no filter or hook a
       # repository configures runs. Outside a repository, on a detached
-      # head, or without git the segment is empty and nothing is said.
+      # head, or without git the segment is empty and nothing is said, and
+      # so it is outside a root of language.trusted_roots, where the host
+      # runs no program. A repository's configuration is untrusted even
+      # there: each command refuses the ext:: transport and the fsmonitor
+      # hook on its command line, which outranks the repository's, and the
+      # host turns git's lazy fetch off, so a promisor remote runs nothing.
       # git's output is untrusted text: the first line only, control
       # characters dropped, at most NAME_LIMIT characters, and a count
       # that is not one to nine digits reads as zero.
@@ -19,8 +24,8 @@ module Carat
         NAME = "git_signs"
         PRIORITY = 40
         NAME_LIMIT = 60
-        BRANCH = ["git", "symbolic-ref", "--short", "-q", "HEAD"]
-        COUNTS = ["git", "rev-list", "--left-right", "--count", "HEAD...@{upstream}"]
+        BRANCH = ["git", "-c", "protocol.ext.allow=never", "-c", "core.fsmonitor=false", "symbolic-ref", "--short", "-q", "HEAD"]
+        COUNTS = ["git", "-c", "protocol.ext.allow=never", "-c", "core.fsmonitor=false", "rev-list", "--left-right", "--count", "HEAD...@{upstream}"]
 
         # @rbs @host: Carat::PluginApi::Host?
         # @rbs @shown: String

@@ -14,10 +14,10 @@ The request `run_program` SHALL fail without starting anything while the editor'
 ### Requirement: The host runs a program with git's lazy fetch off
 Every program the request starts SHALL have `GIT_NO_LAZY_FETCH=1` in its environment, besides the editor's own variables, so git never fetches a missing object from a promisor remote for a plugin.
 
-#### Scenario: run_program turns git's lazy fetch off
+#### Scenario: run_program turns lazy fetching off
 - **WHEN** a plugin under a trusted root runs a program
 - **THEN** the process port receives the variable `GIT_NO_LAZY_FETCH` set to `1`
 
-#### Scenario: The driver adds the variables to the child's environment
+#### Scenario: The driver adds the variables to the child environment
 - **WHEN** the process runner captures a program with `GIT_NO_LAZY_FETCH` set to `1`
 - **THEN** the program sees the variable set to `1`

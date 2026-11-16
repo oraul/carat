@@ -64,6 +64,9 @@ ok   a failed ex command is a failed response
 ok   icon reads the unicode set by default
 ok   and the ascii set when configured, refusing an unknown name
 ok   run_program answers the program's output and the port gets the words as given
+ok   run_program turns lazy fetching off: the port gets GIT_NO_LAZY_FETCH=1
+ok   run_program outside a trusted root starts nothing
+ok   run_program before activation starts nothing
 ok   run_program fails when the program cannot start
 ok   run_program refuses a path or an empty command, an empty word, and a NUL
 ok   and starts nothing for them
@@ -96,4 +99,4 @@ ok   a raise in an event disables the plugin and keeps the edit
 ok   a disabled plugin's requests are refused
 ok   reads, stats, and icons too
 ok   a disabled plugin's segment is dropped when it is disabled
-use_cases_plugins: 98 passed, 0 failed
+use_cases_plugins: 101 passed, 0 failed

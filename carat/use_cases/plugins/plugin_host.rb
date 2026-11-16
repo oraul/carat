@@ -35,6 +35,7 @@ require_relative "file_requests"
 require_relative "ui_requests"
 require_relative "plugin_link"
 require_relative "plugin_syntax"
+require_relative "../../domain/trusted_roots"
 
 module Carat
   module UseCases
@@ -100,9 +101,13 @@ module Carat
         flush
       end
 
-      # Activates every registered plugin the configuration leaves enabled.
+      # Activates every registered plugin the configuration leaves enabled,
+      # first deciding whether their programs may run: the working
+      # directory is under a root of language.trusted_roots.
       #: (Domain::Config) -> void
       def activate_all(config)
+        files = @file_requests.files
+        @file_requests.trusted = Domain::TrustedRoots.cover?(config, files.cwd, files.home)
         @registry.activate_all(config)
         flush
       end
