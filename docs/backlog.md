@@ -6178,3 +6178,78 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: .claude/workflows/deliver-change.js, the close (retrospective) start of markdown-reading-a (#146), run state notes 8 and 9
 - Why: twice in one run the retrospective start returned a placeholder after no tool calls, so the main session ran its record line by hand and corrected the merger's squash commit (67562e699059 stored for 67562e69905c); the run's last records depend on that start
 - Fix: refuse a close result made with no tool calls and restart it once, or record the run's last lines without the model; accepted when a stubbed placeholder close is refused by a case and the record line still lands
+
+### git_signs rev-list can lazy-fetch from a promisor remote in an untrusted .git (security Medium, confidence 6)
+- Location: carat/plugins/git_signs/plugin.rb:23
+- Why: a crafted .git handed over in a project directory or archive (repositoryformatversion 1, extensions.partialClone, a promisor remote whose core.sshCommand or remote.NAME.uploadpack is a command, a branch with an upstream, the HEAD commit object missing) makes `git rev-list --left-right --count HEAD...@{upstream}`, run on activation, open, save, and focus by the default-on plugin, lazy-fetch the missing object, so git runs the attacker's command as the user as soon as carat starts there; the design and the plugin comment claim no command the repository configures can run, which does not hold for rev-list.
+- Fix: add `--missing=allow-any` (or `--exclude-promisor-objects`) to COUNTS, which sets fetch_if_missing to 0, with a test that pins the flag; alternatively read the branch and counts without git objects, or pass `-c core.sshCommand= -c protocol.allow=never` (a repository-level protocol.NAME.allow can still override the last); correct the claim in the archived design.md and the plugin comment.
+
+### Code map entries lack the git-signs-status-a methods
+- Location: docs/codebase-map.md:547, 608, 617, 629
+- Why: the map is not current: file_requests.rb lacks run_program, process_port.rb and process_runner.rb lack capture, fake_processes.rb lacks script, capture, and captured.
+- Fix: add them to the four entries.
+
+### plugins.md names the wrong run_program message for non-UTF-8 output
+- Location: docs/plugins.md:79
+- Why: the run_program row says it fails with "cannot run git" for non-UTF-8 output, but the message is "git answered bytes that are not UTF-8".
+- Fix: name both messages.
+
+### ProcessRunner#capture override lacks its return in prose
+- Location: carat/drivers/process_runner.rb:76
+- Why: capture overrides the port with only a `# @rbs argv:` line and no return in prose, against the inline RBS rule for overrides.
+- Fix: add a comment stating it answers the output or nil.
+
+### run_program lives in the FileRequests family
+- Location: carat/use_cases/plugins/file_requests.rb:23
+- Why: running a program lives in FileRequests, a family named for files, so its name and doc no longer say what it holds.
+- Fix: move run_program into its own ProgramRequests family, or rename the family at the sprint-end review.
+
+### run_program path test rewrites the message before comparing
+- Location: test/use_cases_plugins.rb:389
+- Why: the assertion rewrites the message with .sub("/usr/bin/git", "./git") before comparing, which hides what is asserted.
+- Fix: assert the literal "/usr/bin/git: the program must be a name on the PATH".
+
+### Process runner deadline test waits the full two seconds
+- Location: test/drivers_process_runner.rb:60
+- Why: the deadline test waits the full 2-second CAPTURE_SECONDS on every make test run.
+- Fix: accept it knowingly, or let the driver take the deadline as a constructor keyword so the test passes a short one.
+
+### git_signs tests counts.length == 2 twice
+- Location: carat/plugins/git_signs/plugin.rb:76
+- Why: the same condition is tested twice.
+- Fix: return early with the branch text when counts.length != 2, then read both counts.
+
+### git_signs runs git synchronously on the editor thread
+- Location: carat/plugins/git_signs/plugin.rb:43
+- Why: activation and every buffer_open, buffer_save, and window_focus run up to two git processes synchronously on the editor thread, each up to 2 s (design.md accepts the risk).
+- Fix: measure with make bench on a large repository, and move to the threaded spawn path if a refresh shows.
+
+### capture now times out on exactly 64 KiB with stdout held open
+- Location: carat/drivers/process_runner.rb:110
+- Why: the loop waits for a byte past CAPTURE_LIMIT or the end, so a program printing exactly 65,536 bytes and holding stdout open (a background child) now times out to nil where it answered before.
+- Fix: keep the < loop and trim an incomplete trailing sequence of the kept 64 KiB with the Domain::Utf8 character-size logic instead of reading past the limit.
+
+### ProcessRunner class comment describes the old capture loop
+- Location: carat/drivers/process_runner.rb:15
+- Why: the class comment still says capture reads until CAPTURE_LIMIT bytes are kept, while collect now reads past the limit and cuts before a character.
+- Fix: reword the class comment to match collect's.
+
+### cut_point carries a guard that cannot fail and belongs in Domain::Utf8
+- Location: carat/drivers/process_runner.rb:131
+- Why: the at > 0 guard can never fail (at starts at CAPTURE_LIMIT and drops at most 3), and a backward UTF-8 boundary belongs beside Domain::Utf8.boundary.
+- Fix: drop the guard and move cut_point to Domain::Utf8 as the backward counterpart of boundary.
+
+### git_signs activation test does not assert the startup activation
+- Location: test/editor_git_signs.rb:70
+- Why: the scenario calls plugins.activate_all a second time on an editor the harness already activated before git was installed, a state bin/carat never reaches, so the startup activation itself is not asserted.
+- Fix: let EditorHarness take a processes double prepared before construction (or a with_plugins variant) and assert the first activation.
+
+### git_signs split assertion cannot tell whether the split refreshed
+- Location: test/editor_git_signs.rb:61
+- Why: the assertion 'a split keeps the branch' runs while git still answers main, so it cannot tell whether the split refreshed.
+- Fix: drop it, or script another branch before the window split if the split's refresh matters.
+
+### plugin-host spec lacks a scenario for cutting before a character
+- Location: openspec/specs/plugin-host/spec.md (from the archived change git-signs-status-a, delta spec line 4)
+- Why: the requirement cuts before a character the limit would split, but no scenario names that and the test at test/drivers_process_runner.rb:62 names none.
+- Fix: add a scenario such as 'Long output is cut before a character' and label the driver test with it.
