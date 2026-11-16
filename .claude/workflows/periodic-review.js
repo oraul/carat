@@ -121,15 +121,17 @@ const quality = gotQuality ? {
 // partial result outranks blocked, so a partial review keeps the next one
 // due (tools/run_state.sh review-due).
 const result = (blocked, missed) => (missed.length ? 'partial' : blocked ? 'blocked' : 'pass')
-const missedOf = (r) => (r && Array.isArray(r.not_reviewed) ? r.not_reviewed.filter((a) => SECURITY_AREAS.includes(a) || Number.isInteger(a)) : [])
+// The areas a result left, only of its own kind: the security area names
+// for security, the map area numbers for quality.
+const missedOf = (r, kind) => (r && Array.isArray(r.not_reviewed) ? r.not_reviewed.filter((a) => (kind === 'security' ? SECURITY_AREAS.includes(a) : Number.isInteger(a) && a >= 1 && a <= MAP_AREAS)) : [])
 const tail = (missed) => (missed.length ? ` not_reviewed=${missed.join(',')}` : '')
 const lines = []
 const record = (kind, word, summary, head) => lines.push(`sh tools/run_state.sh review ${change} ${kind} ${word} "${summary}"${head ? ` ${head}` : ''}`)
 if (ran) {
   const count = (severity) => security.findings.filter((f) => f.severity === severity).length
-  record('periodic-security', result(blocking.length, missedOf(security)), `high=${count('High')} medium=${count('Medium')} low=${count('Low')} blocking=${blocking.length}${tail(missedOf(security))}`, security.head)
+  record('periodic-security', result(blocking.length, missedOf(security, 'security')), `high=${count('High')} medium=${count('Medium')} low=${count('Low')} blocking=${blocking.length}${tail(missedOf(security, 'security'))}`, security.head)
 } else record('periodic-security', 'not-run', 'no result after the retry', '')
-if (gotQuality) record('periodic-quality', result(quality.blocking.length, missedOf(quality)), `blocking=${quality.blocking.length} advisory=${quality.advisory.length} covered=${MAP_AREAS - missedOf(quality).length}/${MAP_AREAS}${tail(missedOf(quality))}`, quality.head)
+if (gotQuality) record('periodic-quality', result(quality.blocking.length, missedOf(quality, 'quality')), `blocking=${quality.blocking.length} advisory=${quality.advisory.length} covered=${MAP_AREAS - missedOf(quality, 'quality').length}/${MAP_AREAS}${tail(missedOf(quality, 'quality'))}`, quality.head)
 else record('periodic-quality', 'not-run', 'no result', '')
 // A start over its cap leaves an overrun note for the planner, of fixed
 // words and numbers, as the delivery workflow's overCap does.
@@ -139,16 +141,16 @@ const recorded = await agent(
   `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${lines.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(RECORD_CAP)}`,
   { schema: { type: 'object', properties: { ok: { type: 'boolean' }, output: { type: 'string' } }, required: ['ok', 'output'] }, effort: 'low', label: 'record' })
 if (!recorded || !recorded.ok) log(`the periodic review's results were not recorded: ${recorded ? recorded.output : 'no result'}`)
-log(`periodic review of ${change}: security ${ran ? `${security.findings.length} finding(s), ${blocking.length} blocking${tail(missedOf(security))}` : 'did not run'}; quality ${gotQuality ? `${quality.blocking.length} blocking, ${quality.advisory.length} advisory${tail(missedOf(quality))}` : 'did not run'}`)
+log(`periodic review of ${change}: security ${ran ? `${security.findings.length} finding(s), ${blocking.length} blocking${tail(missedOf(security, 'security'))}` : 'did not run'}; quality ${gotQuality ? `${quality.blocking.length} blocking, ${quality.advisory.length} advisory${tail(missedOf(quality, 'quality'))}` : 'did not run'}`)
 return {
   ran,
   recorded: Boolean(recorded && recorded.ok),
   security: ran ? security.findings.map((f) => `${f.severity} (${f.confidence}) ${f.file}:${f.line || 0} ${f.title}; fix: ${f.fix}`) : [],
   security_blocking: blocking.length,
-  security_not_reviewed: ran ? missedOf(security) : [],
+  security_not_reviewed: ran ? missedOf(security, 'security') : [],
   quality_blocking: gotQuality ? quality.blocking : [],
   quality_advisory: gotQuality ? quality.advisory.length : 0,
-  quality_not_reviewed: gotQuality ? missedOf(quality) : [],
+  quality_not_reviewed: gotQuality ? missedOf(quality, 'quality') : [],
   over,
   tool_calls: starts.reduce((n, r) => n + r.tool_calls, 0),
 }
