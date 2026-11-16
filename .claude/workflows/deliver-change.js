@@ -89,6 +89,9 @@ let extra = 0
 let extraNow = false
 let lastStop = ''
 let stopKind = 'none'
+// The review fix rounds this start began on a resume past the push (at
+// most one a run, with the run state's review_fixes; resumeFix).
+let reviewFixRounds = 0
 let planned = null
 let ciMinutes = null
 // The merger's calls waiting on CI over its starts, two per wait (the
@@ -673,8 +676,12 @@ const intro = () => `Change \`${state.change}\` on branch \`${state.branch}\`.`
 // the brief, so what it asks, a hold for the user's reading included,
 // reaches each of them.
 function contributorTask(mode, briefText, detail) {
-  return `Mode: ${mode}. Brief: ${briefText}. ${detail}`
+  return `Mode: ${mode}. Brief: ${briefText}. ${detail}${mode === 'implement' || mode === 'fix' ? SELF_CHECK : ''}`
 }
+// The contributor's self-check before an implement or fix start returns
+// (its agent file's implement step 5): the mechanical findings a review
+// would otherwise block on.
+const SELF_CHECK = '\nBefore returning, check yourself: every behavior the change adds or alters has a test that proves it; every document describing that behavior (README.md, docs/architecture.md, CLAUDE.md, docs/codebase-map.md, docs/compatibility.md, docs/actions.md) is updated; and the diff is compared against the brief, anything extra named in your summary.'
 
 async function contributor(mode, detail) {
   if (mode === 'fix') rework++
@@ -787,7 +794,8 @@ function qualityReview(scope, more) {
 // start's last passed security review, in_change only for what they
 // introduce.
 function priorSecurity() {
-  const since = narrowedFrom(ran, 'security', head)
+  // A review fix round of a resume past the push reviews the whole diff.
+  const since = reviewFixRounds ? '' : narrowedFrom(ran, 'security', head)
   return since
     ? `\nThe last security review passed at ${since}: review \`git diff ${since} HEAD\`, the commits since, and set in_change only for a finding that diff introduces.`
     : ''
@@ -881,9 +889,21 @@ async function reviews() {
   return messages.join('\n\n')
 }
 
+// A resume past the push blocked at the head (fixes false): one fix round
+// a run when the quality or security review blocked (by, the step that
+// blocked: check, review, or bench) and no review fix was used (used, the
+// run state's review_fixes plus this start's rounds), its push a review
+// fix (tools/run_state.sh push --review-fix); else the stop's reason.
+function resumeFix(by, used) {
+  if (by !== 'review') return 'blocked on resume, where only a blocking review gets a fix round'
+  if (Number(used) >= 1) return 'a second review fix round is refused: one is allowed a run'
+  return ''
+}
+
 async function rounds(fixes = true) {
   for (;;) {
     let blocked = ''
+    let by = 'check'
     if (!doneAtHead('check')) {
       phase('Check')
       // The check the workflow last recorded: stage records count only at
@@ -920,6 +940,7 @@ async function rounds(fixes = true) {
       const r = await reviews()
       if (r === null) return false
       blocked = r
+      by = 'review'
     }
     if (!blocked && !reviewedAtHead('bench')) {
       phase('Benchmark')
@@ -938,12 +959,17 @@ async function rounds(fixes = true) {
         verdict('bench', !b.blocking.length)
         note(`benchmark at ${b.head}: ${b.report.join('; ')}`)
         reviewed('bench', !b.blocking.length, b.head, { blocking: b.blocking.length })
-        if (b.blocking.length) blocked = `Blocking regressions:\n- ${b.blocking.join('\n- ')}`
+        if (b.blocking.length) { blocked = `Blocking regressions:\n- ${b.blocking.join('\n- ')}`; by = 'bench' }
       }
     }
     if (!blocked) return true
-    if (!fixes) { stopped = `blocked at ${head} on resume, where no fix can be pushed: ${blocked.split('\n')[0]}`; return false }
+    const refused = fixes ? '' : resumeFix(by, Number(state.review_fixes || 0) + reviewFixRounds)
+    if (refused) { stopped = `${refused}, at ${head}: ${blocked.split('\n')[0]}`; return false }
     if (!mayFix()) { stopped = `still blocked after ${rework} fix rounds: ${blocked.split('\n')[0]}`; return false }
+    if (!fixes) {
+      reviewFixRounds++
+      note(`resumed past the push: a review blocked at ${head}; one review fix round, pushed with --review-fix`)
+    }
     phase('Implement')
     if (!(await contributor('fix', blocked))) return false
   }
@@ -955,7 +981,7 @@ const resume = await agent(
 1. \`git fetch -q origin\`. The change name is input.change, or an existing change under openspec/changes/ that the brief names, or a kebab-case name of 2 to 5 words derived from the brief.
 2. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Check it out when it exists locally or on origin; otherwise create it from origin/main, which needs a clean tree (stop with the reason when it is not).
 3. \`make doctor\`; run \`make toolchain\` when it fails and stop when that fails too.
-4. Run \`sh tools/run_state.sh init <change> <branch>\`, then \`sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git rev-parse --short=12 HEAD\` as head.
+4. Run \`sh tools/run_state.sh init <change> <branch>\`; when it refuses (a merged change name), stop with its message as reason. Then \`sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git rev-parse --short=12 HEAD\` as head.
 5. Run \`sh tools/run_state.sh plan-needed <change>\` and return its one line verbatim as plan; its exit 1 means not needed, not a failure.${capLine('resume')}`,
   calibrate('resume', { schema: RESUME, label: 'resume' }))
 if (!resume || resume.status !== 'done') {
@@ -1117,13 +1143,18 @@ if (!stopped && !state.merged) {
     // security review over the whole diff, and only this start's verdicts
     // reach RECORDS or narrow a review. A start that ran them all keeps its
     // records, though the package step committed after them: the merge
-    // gates' settled_at allows that records-only diff. The resume runs no
-    // fix round, since a fix commit could not be pushed; a blocking finding
-    // stops the run.
+    // gates' settled_at allows that records-only diff. A blocking quality or
+    // security review gets one fix round a run (resumeFix), the security
+    // review over the whole diff again, pushed as a review fix; a failed
+    // check or benchmark, or a second review fix, stops the run.
     if (!ranAll(ran)) {
       note('resumed past the push: the check and the reviews run again at the head')
       if (!(await verify(false)) && !stopped) stopped = `the check or a review did not pass at ${head} on resume`
       phase('Merge')
+      if (!stopped && reviewFixRounds) {
+        recordLate()
+        await contributor('push', `Push the review fix of this resume past the push with \`sh tools/run_state.sh push ${state.change} --review-fix\`, not --ci-fix; the findings that arrived after the package step are recorded in the run state, not appended.`)
+      }
     }
     for (; !stopped;) {
       // GitHub matches the expected head against the full sha, and only the

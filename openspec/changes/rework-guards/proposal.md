@@ -25,6 +25,7 @@ None: the change alters the delivery pipeline, which no spec under `openspec/spe
 ## Impact
 
 - `.claude/workflows/deliver-change.js`, `tools/run_state.sh`, `tools/gates.sh`, `tools/tools_test.sh`, `.claude/agents/contributor.md`, `.claude/agents/planner.md`.
+- `tools/rules.sh`: TOOLS_RE names CLAUDE.md, since a tools-test case now reads its Agents section; this is the ci_scope pattern, not one the merge gate reads.
 - CLAUDE.md: changed, the Agents section names the four rules; other lines shortened to stay within its budget.
 - README.md: unchanged, it describes the pipeline's phases and commands, none of which this change adds or renames; the push's new option is named in the script header and CLAUDE.md.
 - docs/architecture.md: unchanged, it describes the editor's architecture and the test machinery, not the delivery workflow's fix rounds or run state guards.

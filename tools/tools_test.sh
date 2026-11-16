@@ -714,6 +714,24 @@ expect "run_state: a CI fix push needs a red CI run" 1 "needs a red CI run" \
 state set pushing ci "red abc" > /dev/null
 expect "run_state: a CI fix allows one more push" 0 "ok   pushes|ok   stages" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --ci-fix
+# A resume past the push fixing a blocking review pushes once more, once a
+# run (rework-guards).
+expect "run_state: a review fix push needs a recorded push other than the head" 1 "needs a recorded push other than HEAD" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --review-fix
+echo fix >> README.md
+commit "chore: a review fix"
+state stage pushing lint true > /dev/null
+state phase pushing check > /dev/null
+state review pushing security pass "no finding" > /dev/null
+expect "run_state: a review fix allows one more push" 0 "ok   pushes|ok   stages" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --review-fix
+expect "gates: pushes allow one review fix" 0 "3 push[(]es[)], 1 CI fix[(]es[)], 1 review fix" gates pushes
+echo again >> README.md
+commit "chore: a second review fix"
+expect "run_state: a second review fix push is refused" 1 "refused: 1 review fix push" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --review-fix
+state set pushing review_fixes 2 > /dev/null
+expect "gates: pushes refuse a second review fix" 1 "2 review fix pushes; one is allowed a run" gates pushes
 
 expect "run_state: abandon is no longer a command" 2 "" state abandon pushing
 
@@ -854,6 +872,14 @@ state set history pushes 1 > /dev/null
 state set history gates_failed 1 > /dev/null
 expect "run_state: pending names a merged change without a row" 0 "^history$" state pending
 expect "run_state: history appends the row" 0 "appended history" state history
+# A delivery never reuses a merged name; an unmerged run resumes, and the
+# sprint and review run states at main keep resuming (rework-guards).
+expect "run_state: init refuses a change name a run state recorded merged" 1 "refused: history merged as [0-9a-f]+; take a unique name" state init history chore/history
+expect "run_state: init at main resumes a merged sprint run state" 0 "resuming history" state init history main
+mv build/pipeline/history.json "$work/history.json"
+expect "run_state: init refuses a change name a lane history row holds" 1 "refused: history has a lane history row" state init history chore/history
+mv "$work/history.json" build/pipeline/history.json
+expect "run_state: init resumes an unmerged run of the name" 0 "resuming unmeasured" state init unmeasured chore/unmeasured
 expect "run_state: history appends a merged run's late findings to its findings file" 0 "^- security Low [(]5[)] tools/x[.]sh:3 a thing; fix: y$" tail -1 docs/findings/history.md
 expect "run_state: history heads the late findings with their run, no other note" 0 "^## Findings of history after its package step 1$" sh -c 'echo "$(grep "^## " docs/findings/history.md) $(grep -c "^- " docs/findings/history.md)"'
 expect "run_state: the history starts with its header" 0 "^change[[:space:]]date[[:space:]]merged" head -1 docs/metrics-backlog.tsv
@@ -3073,7 +3099,7 @@ expect "workflow: the resume brief names only the queue plan-needed read" 0 '^\[
 # Every contributor start is built by contributor() from contributorTask
 # with the brief, so a hold for the user reaches the package start too.
 expect "workflow: the brief, a hold for the user included, reaches every contributor start" 0 '^true$' \
-  js "$wf" "contributorTask" '["implement", "fix", "package", "wait", "push", "body"].every((m) => contributorTask(m, "the item; hold for the user before the push", "d").startsWith(`Mode: ${m}. Brief: the item; hold for the user before the push. d`))'
+  js "$wf" "SELF_CHECK contributorTask" '["implement", "fix", "package", "wait", "push", "body"].every((m) => contributorTask(m, "the item; hold for the user before the push", "d").startsWith(`Mode: ${m}. Brief: the item; hold for the user before the push. d`))'
 expect "workflow: every contributor start goes through contributorTask with the brief" 0 '^1 1$' \
   sh -c 'echo "$(grep -c "agentType: .contributor." "$1") $(grep -c "contributorTask(mode, brief, detail)" "$1")"' _ "$wf"
 expect "workflow: a contributor with a question stops" 0 '^[{]"next":"stop"' \
@@ -3116,7 +3142,30 @@ expect "workflow: the merge lines use this start's records" 0 "const records = m
 expect "workflow: a resume past the push checks and reviews again unless this start ran them" 0 '^\[false,false,true\]$' \
   js "$wf" "ranAll" "[ranAll({}), ranAll({ 'review.quality': 'pass a', 'review.security': 'pass a', 'phase.check': 'a' }), ranAll({ 'review.quality': 'pass a', 'review.security': 'blocked b', 'review.bench': 'pass a', 'phase.check': 'a' })]"
 expect "workflow: the resume check reads this start's records" 0 "if [(]!ranAll[(]ran[)][)]" grep -F "if (!ranAll(ran))" "$wf"
-expect "workflow: the resume check runs no fix round" 0 "verify[(]false[)]" grep -F "verify(false)" "$wf"
+expect "workflow: the resume check runs verify without fixes" 0 "verify[(]false[)]" grep -F "verify(false)" "$wf"
+# A resume past the push gets one review fix round a run, pushed once more
+# as a review fix; the security review runs over the whole diff in it
+# (rework-guards).
+expect "workflow: a resume past the push with a new blocking quality finding runs one fix round" 0 '^""$' \
+  js "$wf" "resumeFix" "resumeFix('review', 0)"
+expect "workflow: a second review fix round is refused" 0 '^\["a second review fix round is refused: one is allowed a run","a second review fix round is refused: one is allowed a run"\]$' \
+  js "$wf" "resumeFix" "[resumeFix('review', 1), resumeFix('review', '1')]"
+expect "workflow: a resume's failed check or benchmark gets no fix round" 0 '^\[true,true\]$' \
+  js "$wf" "resumeFix" "[/only a blocking review/.test(resumeFix('check', 0)), /only a blocking review/.test(resumeFix('bench', 0))]"
+expect "workflow: the round reads the run state's review fixes and this start's" 0 "^1$" grep -c -F "resumeFix(by, Number(state.review_fixes || 0) + reviewFixRounds)" "$wf"
+expect "workflow: the review fix round pushes once more" 0 "^1$" grep -c -F 'if (!stopped && reviewFixRounds) {' "$wf"
+expect "workflow: the review fix round pushes with --review-fix" 0 "^1$" \
+  grep -c "await contributor('push', .Push the review fix of this resume past the push with .*sh tools/run_state.sh push [\$]{state.change} --review-fix" "$wf"
+expect "workflow: the review fix round reviews security over the whole diff" 0 "^1$" grep -c -F "const since = reviewFixRounds ? '' : narrowedFrom(ran, 'security', head)" "$wf"
+expect "workflow: the resume start stops on a refused init" 0 "^1$" grep -c -F "when it refuses (a merged change name), stop with its message as reason" "$wf"
+expect "workflow: the implement and fix prompts carry the self-check" 0 '^\[true,true,false\]$' \
+  js "$wf" "SELF_CHECK contributorTask" "['implement', 'fix', 'package'].map((m) => /every behavior the change adds or alters has a test.*docs[/]actions[.]md[)] is updated.*compared against the brief/.test(contributorTask(m, 'b', 'd')))"
+expect "contributor: the self-check is in the implement steps" 0 "^1 1 1$" \
+  sh -c 'echo "$(grep -c -E "^5[.] Self-check before returning: every behavior added or altered and every delta spec scenario has a test proving it; every document describing it [(]README[.]md, CLAUDE[.]md, and the architecture, codebase map, compatibility, and actions docs[)] is current.*the diff matches the brief, anything extra named" "$1") $(grep -c "self-check and commit as in implement" "$1") $(grep -c -F -- "--review-fix\`, once a run" "$1")"' _ "$agents/contributor.md"
+expect "planner: a change editing the merge gate's rules lands that edit first" 0 "^1$" \
+  grep -c -F "A change editing the merge gate's own rules (\`tools/rules.sh\` RECORDS_RE and the other patterns main's \`tools/gates.sh merge\` reads) lands that edit first as its own small change" "$agents/planner.md"
+expect "claude: the Agents section names the self-check, the review fix, the gate-rules rule, and the merged-name refusal" 0 "^4$" \
+  sh -c 'sed -n "/^## Agents/,/^## Stack/p" "$1" | grep -o -e "It self-checks tests, docs, and the brief" -e "may fix a new blocking review once (.push --review-fix.)" -e "an edit of the merge gate.s rules (.tools/rules.sh.) goes first" -e ".init. refuses a merged name" | wc -l | tr -d " "' _ "$here/../CLAUDE.md"
 expect "workflow: the green line fetches and adds the copy with no global configuration or hook" 0 "^2$" sh -c 'grep -c -F -e "const PINNED_GIT = '\''GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null'\''" -e "&& \${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && \${PINNED_GIT} worktree add -q --detach" "$1"' _ "$wf"
 # A local bare origin planted after the push, by branch code the checks
 # ran: the green line's origin check, the script's, fails before the
