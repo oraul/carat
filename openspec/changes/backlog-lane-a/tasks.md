@@ -15,4 +15,4 @@
 
 - [x] 3.1 Update the planner, contributor (findings file, conflict rules), checker, quality reviewer, retrospective, the commands, and `.claude/workflows/deliver-change.js`
 - [x] 3.2 Update CLAUDE.md, README.md, docs/goals.md, docs/codebase-map.md, `tools/gates.sh` and `tools/ci_wait.sh` comments
-- [ ] 3.3 Run `make tools-test` (seconds compared with main), `make docs-lint`, `make gates`, `make spec-validate`
+- [x] 3.3 Run `make tools-test` (seconds compared with main), `make docs-lint`, `make gates`, `make spec-validate`

@@ -7,7 +7,7 @@
 ## Decisions
 
 - Lane files, not lane columns: a column would keep one file and its conflicts. Each lane file keeps the old shape, so the existing awk programs run unchanged over a merged stream.
-- `history_rows` prints the header, then both lanes' rows ordered by the committer time of each row's merged commit, read in one `git log --no-walk --ignore-missing` call; a row whose commit git does not know gets time 0 and a stable sort keeps its file order. Readers that need order use it; lookups by name (`has_row`, `merged_of`) read the lanes unsorted.
+- `history_rows` prints the header, then both lanes' rows ordered by the place of each row's merged commit in `git rev-list --reverse --topo-order HEAD`, one git call: main's squash commits form one chain, so the order is the merge order whatever the timestamps (a first try by committer time tied within a second and made the tests flaky); a row whose commit HEAD does not hold gets 0 and a stable sort keeps its file order. Readers that need order use it; lookups by name (`has_row`, `merged_of`) read the lanes unsorted.
 - `lane_of CHANGE`: the lane file naming the item at `merged^`, else the squash subject's type, else feature. A recorded file is the record of the lane; nothing else is stored.
 - `queue_at COMMIT`: both lane files at COMMIT, else `docs/queue.md` at COMMIT when neither exists there (history before the split).
 - `exception_item` reads `merged^`, then `merged`, and accepts a numbered item or the `The user-approved exception: \`NAME\` (` line, the mark in its first parenthesis.
@@ -18,5 +18,5 @@
 
 ## Risks
 
-- Commit-time order differs from append order when a row was appended late; the merge order is the truer one for a sprint.
+- Merge order differs from append order when a row was appended late; the merge order is the truer one for a sprint (on today's history one row, `authoring-kit`, moves up two places).
 - A planner still writing `build/plan/queue.md` would be ignored by `groom`; the planner's file names the lane files, and this change's package step splits the waiting plan by hand.
