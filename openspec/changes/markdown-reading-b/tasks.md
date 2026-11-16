@@ -12,4 +12,4 @@
 ## 3. Docs and checks
 
 - [x] 3.1 Update `docs/codebase-map.md` (`FormatDocs` naming `ToggleReading`, the `MarkdownText` entry and its test's tables) and the README (tables in the reading view); prove with `make docs-lint` and `make lint`
-- [ ] 3.2 Run `make gates`, `make spec-validate`, and `make metrics-compare`
+- [x] 3.2 Run `make gates`, `make spec-validate`, and `make bench SCENARIOS="lh j insert"` (allocations held)

@@ -34,4 +34,4 @@ The room for text is `width - (3 * columns + 1)` (a border and two spaces per co
 
 ### 6. Allocations
 
-Nothing here runs on a key other than `<leader>dr`, `K`, or a completion's documentation, so the recorded `lh` 26.0, `j` 27.0, and `insert` 32.0 allocations are untouched; `make metrics-compare` confirms.
+Nothing here runs on a key other than `<leader>dr`, `K`, or a completion's documentation, so the `lh` 26.0, `j` 27.0, and `insert` 26.0 allocations per key `make bench` measures are untouched.

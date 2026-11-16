@@ -16,7 +16,7 @@ Out of scope: flowing paragraphs and block quotes to the measure, and the bare b
 
 Roadmap: outside the roadmap order of `docs/architecture.md` section 12; it extends the delivered reading view at the user's request.
 
-Assumptions: the documentation floats (hover and completion) share the reader, so a table in a language server's documentation is drawn the same way; the rows of a table end at a blank line or a line holding no `|`; a row with fewer cells than the header is padded with empty cells and one with more is cut to the header's count, as GitHub's tables do; a separator row whose cell count differs from the header's makes no table; the allocation target holds `lh` 26.0, `j` 27.0, and `insert` 32.0, the figures recorded in `docs/metrics-feature.tsv` (the brief's `insert 26.0` reads as a typo of those).
+Assumptions: the documentation floats (hover and completion) share the reader, so a table in a language server's documentation is drawn the same way; the rows of a table end at a blank line or a line holding no `|`; a row with fewer cells than the header is padded with empty cells and one with more is cut to the header's count, as GitHub's tables do; a separator row whose cell count differs from the header's makes no table; the allocations held are those `make bench` measures, `lh` 26.0, `j` 27.0, and `insert` 26.0, as the brief gives them (`docs/metrics-feature.tsv` records `insert` 32.0 from the metrics build, which this change does not move either).
 
 ## Capabilities
 
