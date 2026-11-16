@@ -1314,14 +1314,12 @@ state history > /dev/null
 expect "run_state: plan-needed leaves a change with a history row" 1 "^not needed" state plan-needed next
 # A periodic security review records on its own run state, which has no
 # merged commit: a failing one stands until a change merges after the
-# commit it reviewed (review-coverage).
+# commit it reviewed, here prev's row once the review is of the commit
+# before prev's (review-coverage).
 state init review-20261116 main > /dev/null 2>&1
 state review review-20261116 periodic-security partial "high=0 medium=1 low=0 blocking=1 not_reviewed=2" > /dev/null
 expect "run_state: plan-needed names a failing periodic security review no merge followed" 0 "^needed: review-20261116 records a failing periodic security review at [0-9a-f]*, and no change merged since\$" state plan-needed next
-echo fix >> README.md
-commit "fix: the finding"
-state init fix chore/fix > /dev/null
-state set fix merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+state review review-20261116 periodic-security blocked "high=0 medium=1 low=0 blocking=1" "$(git rev-parse --short=12 HEAD^)" > /dev/null
 expect "run_state: plan-needed leaves a failing periodic security review a later merge followed" 1 "^not needed" state plan-needed next
 printf '# Queue\n\n1. UI track: themes (T5, estimated medium).\n' > docs/queue.md
 expect "run_state: plan-needed names a head without a change name" 0 "^needed: next is not the head of docs/queue[.]md [(]no named item[)]" state plan-needed next

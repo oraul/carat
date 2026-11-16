@@ -1762,16 +1762,14 @@ plan_needed() {
       return 0
     fi
   done
-  for file in "$state_dir"/*.json; do
-    [ -f "$file" ] || continue
-    run=$(basename "$file" .json)
-    printf '%s\n' "$run" | grep -q -E "$REVIEW_RUNS" || continue
+  for run in $(ls "$state_dir" 2>/dev/null | sed -n 's/[.]json$//p' | grep -E "$REVIEW_RUNS"); do
     record=$(change=$run; read_key review.periodic-security)
-    case "${record%% *}" in
-      blocked) ;;
-      *) printf '%s\n' "$record" | grep -q -E 'blocking=0*[1-9]' || continue ;;
+    case "${record%% *}: $record" in
+      blocked:*|*" blocking="[1-9]*) ;;
+      *) continue ;;
     esac
-    reviewed=$(printf '%s\n' "$record" | cut -d' ' -f2)
+    reviewed=${record#* }
+    reviewed=${reviewed%% *}
     merged_since "$reviewed" && continue
     echo "needed: $run records a failing periodic security review at $reviewed, and no change merged since"
     return 0
