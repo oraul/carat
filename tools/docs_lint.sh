@@ -52,6 +52,10 @@ docs/architecture.md 88064"
 # and 600 for the second file's title and opening line.
 QUEUE_BUDGET=17969
 
+# The paths a change retired that older records, the backlog's entries
+# among them, still name: the one queue and history the lanes replaced.
+RETIRED='docs/queue\.md|docs/metrics\.tsv'
+
 # The documents an agent reads; the generated OpenSpec commands are not ours.
 documents() {
   for f in CLAUDE.md README.md docs/*.md .claude/agents/*.md .claude/commands/*.md \
@@ -123,7 +127,7 @@ check_paths() {
   # shellcheck disable=SC2046
   spans=$(grep -n -o '`[^` ]*`' $(documents) | tr -d '`' |
     grep -E ':(carat|bin|test|bench|tools|docs|config|openspec|\.claude|\.github)/' |
-    grep -v -E ':.*([<>*${}]|NAME|CHANGE|KIND|\.\.\.)')
+    grep -v -E ':.*([<>*${}]|NAME|CHANGE|KIND|\.\.\.)' | grep -v -E ":($RETIRED)(:[0-9][0-9,-]*)?\$")
   dead=$(printf '%s\n' "$spans" | while IFS= read -r line; do
     [ -n "$line" ] || continue
     path=${line#*:*:}
