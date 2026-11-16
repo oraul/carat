@@ -104,6 +104,8 @@ scope_case true .claude/workflows/x.js
 scope_case true .claude/settings.json
 scope_case false .claude/commands/x.md
 scope_case false docs/metrics-backlog.tsv
+scope_case false docs/findings/x.md
+scope_case false docs/queue-feature.md
 scope_case true docs/codebase-map.md
 scope_case true docs/actions.md
 scope_case true tools/x.sh
@@ -896,7 +898,9 @@ state set landed merged "$landed_at" > /dev/null
 expect "run_state: history appends a change merged on BASE after the branch point" 0 "appended landed" env BASE=main sh "$here/run_state.sh" history
 expect "run_state: a change merged on BASE after the branch point is the newest history row" 0 "^landed$" \
   sh -c "env BASE=main sh '$here/run_state.sh' status | awk -F'\t' 'f { print \$1; exit } /^change\tdate/ { f = 1 }'"
-expect "run_state: a BASE that names no commit leaves the order to HEAD's ancestry, a row it holds the newest" 0 "^(based|history)$" \
+# history and based share their merged commit, so their file order ranks
+# based last; landed, whose commit HEAD lacks, sorts first.
+expect "run_state: a BASE that names no commit leaves the order to HEAD's ancestry, a row it holds the newest" 0 "^based$" \
   sh -c "env BASE=nothing sh '$here/run_state.sh' status | awk -F'\t' 'f { print \$1; exit } /^change\tdate/ { f = 1 }'"
 
 # A run state whose first passes the workflow stored only in part: the
@@ -1055,6 +1059,29 @@ expect "run_state: history records the estimate" 0 "^medium small - medium$" \
 expect "run_state: every history row has the header's columns" 0 "^22$" sh -c "awk -F'\t' '{ print NF }' docs/metrics-backlog.tsv docs/metrics-feature.tsv | sort -u"
 expect "run_state: history appends a change with no lane queue item and a feat squash to the feature lane" 0 "^change planned feature backlog$" \
   sh -c "echo \$(cut -f1 docs/metrics-feature.tsv) \$(sh '$here/run_state.sh' lane planned) \$(sh '$here/run_state.sh' lane sized)"
+# A change merged before the lanes: its squash parent holds only the one
+# queue, which queue_at reads at that commit for the estimate; a squash
+# subject of no known type goes to the feature lane, as no lane item says.
+fresh oldqueue
+printf '# Queue\n\n1. `old` (T2, estimated large): one.\n' > docs/queue.md
+commit "docs: the queue before the lanes"
+echo squash >> README.md
+commit "fix: the squash commit"
+state init old chore/old > /dev/null
+state set old merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+echo odd >> README.md
+commit "misc: a squash of no known type"
+state init odd chore/odd > /dev/null
+state set odd merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+state history > /dev/null
+expect "run_state: history reads the estimate from the one queue at a squash parent before the lanes" 0 "^large$" awk -F'\t' '$1 == "old" { print $15 }' docs/metrics-backlog.tsv
+expect "run_state: a squash subject of no known type goes to the feature lane" 0 "^feature odd$" sh -c "echo \$(sh '$here/run_state.sh' lane odd) \$(cut -f1 docs/metrics-feature.tsv | sed -n 2p)"
+# BASE's two lane files, each with its header: neither header is a row, so
+# a run named like the header's first column still gets its row.
+commit "docs: record the lanes"
+state init change chore/change > /dev/null
+state set change merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: history reads no lane file's header at BASE as a row" 0 "appended change" env BASE=HEAD sh "$here/run_state.sh" history
 
 # The path scope: the stages a change's paths need since the merge base
 # with main. A documentation-only change runs only docs-lint and gates, the
@@ -2072,9 +2099,16 @@ docs sprint
 printf '# Queue\n\n## Sprint 2\n\n1. `b` (T1 pipeline defect, estimated small): two.\n2. `c` (T0 pipeline, estimated small): three.\n\n## Pool\n\n3. `d` (T1 pipeline, estimated small): four.\n' > docs/queue-backlog.md
 expect "docs_lint: a T0 pipeline item does not count" 0 "ok   queue: 3 item" doclint
 sed -i 's/(T0 pipeline/(T1 pipeline defect/' docs/queue-backlog.md
-expect "docs_lint: a sprint with two pipeline items fails" 1 "FAIL queue: docs/queue-backlog[.]md: the sprint holds 2 pipeline items, 0 of them no defect" doclint
+expect "docs_lint: a sprint with two pipeline items fails" 1 "FAIL queue: the sprint holds 2 pipeline items across both lanes, 0 of them no defect" doclint
 printf '# Queue\n\n## Sprint 2\n\n1. `b` (T1 pipeline, estimated small): two.\n' > docs/queue-backlog.md
-expect "docs_lint: a sprint pipeline item that is no defect fails" 1 "FAIL queue: docs/queue-backlog[.]md: the sprint holds 1 pipeline items, 1 of them no defect" doclint
+expect "docs_lint: a sprint pipeline item that is no defect fails" 1 "FAIL queue: the sprint holds 1 pipeline items across both lanes, 1 of them no defect" doclint
+# The pipeline limit is the sprint's, both lanes' sprint sections counted
+# together: one pipeline defect in each lane is two.
+printf '# Queue\n\n## Sprint 2\n\n1. `b` (T1 pipeline defect, estimated small): two.\n' > docs/queue-backlog.md
+printf '# Queue\n\n## Sprint 2\n\n1. `f` (T1 pipeline defect, estimated small): one.\n' > docs/queue-feature.md
+expect "docs_lint: a pipeline defect in each lane's sprint is two for the sprint and fails" 1 "FAIL queue: the sprint holds 2 pipeline items across both lanes, 0 of them no defect" doclint
+printf '# Queue\n\n## Sprint 2\n\nThe user-approved exception (Guide): two pipeline defects.\n\n1. `f` (T1 pipeline defect, estimated small): one.\n' > docs/queue-feature.md
+expect "docs_lint: an exception line in either lane lifts the sprint's pipeline limit" 0 "ok   queue: 2 item" doclint
 printf '# Queue\n\n## Sprint 2\n\n' > docs/queue-feature.md
 for n in 1 2 3 4; do printf '%s. `i%s` (T5, estimated small): item.\n' "$n" "$n" >> docs/queue-feature.md; done
 expect "docs_lint: a feature lane sprint of four items fails" 1 "FAIL queue: docs/queue-feature[.]md: the sprint holds 4 items, not 0 to 3" doclint
@@ -2086,13 +2120,24 @@ expect "docs_lint: a drained sprint of 0 items waits for /sprint" 0 "ok   queue:
 printf '# Queue\n\n## Sprint 8\n\n' > docs/queue-backlog.md
 for n in 1 2; do printf '%s. `p%s` (T1 pipeline, estimated small, the user-approved exception): item.\n' "$n" "$n" >> docs/queue-backlog.md; done
 printf '\n## Pool\n\n3. `q` (T1 pipeline, estimated small): pooled.\n' >> docs/queue-backlog.md
-expect "docs_lint: an unmarked sprint of 2 pipeline items fails" 1 "FAIL queue: docs/queue-backlog[.]md: the sprint holds 2 pipeline items, 2 of them no defect; at most 1, a defect [(]T0 exempt[)], without a line beginning .The user-approved exception." doclint
+expect "docs_lint: an unmarked sprint of 2 pipeline items fails" 1 "FAIL queue: the sprint holds 2 pipeline items across both lanes, 2 of them no defect; at most 1, a defect [(]T0 exempt[)], without a line beginning .The user-approved exception." doclint
 sed -i 's/^## Sprint 8$/## Sprint 8\n\nThe user-approved exception (Guide): 2 pipeline items./' docs/queue-backlog.md
 expect "docs_lint: a marked sprint of 2 pipeline items passes" 0 "ok   queue: 3 item" doclint
 sed -i 's/^The user-approved exception/An exception/' docs/queue-backlog.md
-expect "docs_lint: a marker not at a line start does not count" 1 "FAIL queue: docs/queue-backlog[.]md: the sprint holds 2 pipeline items" doclint
+expect "docs_lint: a marker not at a line start does not count" 1 "FAIL queue: the sprint holds 2 pipeline items across both lanes" doclint
 printf '# Queue\n\n## Sprint 8\n\n1. `a` (T1 pipeline, estimated small): one.\n2. `b` (T1 pipeline, estimated small): two.\n\n## Pool\n\nThe user-approved exception (Guide): a pool line.\n' > docs/queue-backlog.md
-expect "docs_lint: a marker outside the sprint section does not count" 1 "FAIL queue: docs/queue-backlog[.]md: the sprint holds 2 pipeline items" doclint
+expect "docs_lint: a marker outside the sprint section does not count" 1 "FAIL queue: the sprint holds 2 pipeline items across both lanes" doclint
+# The retired paths: the backlog may name the one queue and history the
+# lanes replaced, any other document may not, and a path that never
+# existed fails in the backlog too.
+docs retired
+printf '# Backlog\n\n### Old\n\n- Location: `docs/queue.md` and `docs/metrics.tsv:3`.\n' > docs/backlog.md
+expect "docs_lint: the backlog may name the retired queue and history" 0 "ok   paths: 1 path" doclint
+printf -- '- Location: `docs/queue-gone.md`.\n' >> docs/backlog.md
+expect "docs_lint: the backlog naming a path that never existed fails" 1 "^docs/backlog[.]md:[0-9]+:docs/queue-gone[.]md$" doclint
+docs retiredelsewhere
+echo 'See `docs/queue.md`.' > docs/notes.md
+expect "docs_lint: another document naming a retired path fails" 1 "^docs/notes[.]md:1:docs/queue[.]md$" doclint
 docs link
 echo "See $LINK." >> docs/notes.md
 expect "docs_lint: refuses a URL in a document" 1 "FAIL content: docs/notes[.]md:[0-9]+: url: " doclint

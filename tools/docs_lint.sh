@@ -55,8 +55,9 @@ docs/architecture.md 88064"
 # and 600 for the second file's title and opening line.
 QUEUE_BUDGET=17969
 
-# The paths a change retired that older records, the backlog's entries
-# among them, still name: the one queue and history the lanes replaced.
+# The paths a change retired that the backlog, the one document keeping
+# older entries as they were written, may still name: the one queue and
+# history the lanes replaced. Every other document names the lane files.
 RETIRED='docs/queue\.md|docs/metrics\.tsv'
 
 # The documents an agent reads; the generated OpenSpec commands are not ours.
@@ -130,7 +131,7 @@ check_paths() {
   # shellcheck disable=SC2046
   spans=$(grep -n -o '`[^` ]*`' $(documents) | tr -d '`' |
     grep -E ':(carat|bin|test|bench|tools|docs|config|openspec|\.claude|\.github)/' |
-    grep -v -E ':.*([<>*${}]|NAME|CHANGE|KIND|\.\.\.)' | grep -v -E ":($RETIRED)(:[0-9][0-9,-]*)?\$")
+    grep -v -E ':.*([<>*${}]|NAME|CHANGE|KIND|\.\.\.)' | grep -v -E "^docs/backlog\.md:[0-9]+:($RETIRED)(:[0-9][0-9,-]*)?\$")
   dead=$(printf '%s\n' "$spans" | while IFS= read -r line; do
     [ -n "$line" ] || continue
     path=${line#*:*:}
@@ -145,22 +146,34 @@ $dead"
 # The items of each lane queue, lines that start with a number and a
 # period: each names its tier and its size, as the rubric of docs/goals.md
 # asks. A lane's sprint holds at most its share of the sprint of 5, the
-# feature lane 3 and the backlog lane 2, and a pipeline item only for a
-# defect, at most one (T0 exempt), unless a line beginning "The
-# user-approved exception" lifts it; both files within QUEUE_BUDGET.
+# feature lane 3 and the backlog lane 2; the sprint, both lanes' sprint
+# sections together, holds a pipeline item only for a defect, at most one
+# (T0 exempt), unless a line beginning "The user-approved exception" in
+# either lifts it; both files within QUEUE_BUDGET.
 check_queue() {
   gate=queue
   start=$failed
   total=0
   bytes=0
+  sprints=""
+  marked=""
   for lane in feature:3 backlog:2; do
     file=docs/queue-${lane%%:*}.md
     [ -f "$file" ] && check_lane "$file" "${lane#*:}"
   done
+  pipeline=$(printf '%s\n' "$sprints" | sed -n 's/^[^(]*(\([^)]*\)).*/\1/p' | grep -w pipeline | grep -v -w T0)
+  others=$(printf '%s\n' "$pipeline" | grep . | grep -c -v -w defect)
+  pipeline=$(printf '%s\n' "$pipeline" | grep -c .)
+  # A line beginning "The user-approved exception" lifts the pipeline
+  # limits for its sprint; an item line begins with its number instead.
+  [ -n "$marked" ] || { [ "$pipeline" -le 1 ] && [ "$others" -eq 0 ]; } ||
+    bad "the sprint holds $pipeline pipeline items across both lanes, $others of them no defect; at most 1, a defect (T0 exempt), without a line beginning \"The user-approved exception\""
   [ "$bytes" -le "$QUEUE_BUDGET" ] || bad "the lane queues are $bytes bytes together, over their budget of $QUEUE_BUDGET"
   [ $failed -ne $start ] || ok "$total item(s) with a tier and a size"
 }
 
+# One lane file: its tiers, sizes, and sprint share; its sprint items and
+# exception lines are added to the sprint's for check_queue.
 check_lane() {
   bytes=$((bytes + $(wc -c < "$1")))
   items=$(grep -n -E '^[0-9]+[.] ' "$1")
@@ -174,15 +187,10 @@ $unsized"
   sprint=$(awk '/^## / { on = /^## Sprint/; next } on && /^[0-9]+[.] /' "$1")
   if grep -q '^## Sprint' "$1"; then
     count=$(printf '%s\n' "$sprint" | grep -c .)
-    pipeline=$(printf '%s\n' "$sprint" | sed -n 's/^[^(]*(\([^)]*\)).*/\1/p' | grep -w pipeline | grep -v -w T0)
-    others=$(printf '%s\n' "$pipeline" | grep . | grep -c -v -w defect)
-    pipeline=$(printf '%s\n' "$pipeline" | grep -c .)
     [ "$count" -le "$2" ] || bad "$1: the sprint holds $count items, not 0 to $2"
-    # A line beginning "The user-approved exception" lifts the pipeline
-    # limits for its sprint; an item line begins with its number instead.
-    marked=$(awk '/^## / { on = /^## Sprint/; next } on && /^The user-approved exception/' "$1")
-    [ -n "$marked" ] || { [ "$pipeline" -le 1 ] && [ "$others" -eq 0 ]; } ||
-      bad "$1: the sprint holds $pipeline pipeline items, $others of them no defect; at most 1, a defect (T0 exempt), without a line beginning \"The user-approved exception\""
+    sprints="$sprints
+$sprint"
+    marked="$marked$(awk '/^## / { on = /^## Sprint/; next } on && /^The user-approved exception/' "$1")"
   fi
   total=$((total + $(printf '%s\n' "$items" | grep -c .)))
 }

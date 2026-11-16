@@ -1181,9 +1181,9 @@ history_rows() {
 
 # The lane of the change, feature or backlog: the lane queue naming its
 # item ("N. `CHANGE` (") at the parent of its squash commit, else its
-# squash subject's type (feat the feature lane, another Conventional
-# Commits type the backlog lane), else backlog. Its history row goes to
-# that lane's file, the record of the lane.
+# squash subject's type (a Conventional Commits type other than feat the
+# backlog lane), else feature, feat and a subject of no known type alike.
+# Its history row goes to that lane's file, the record of the lane.
 lane_of() {
   merged=$(merged_commit)
   lane=""
@@ -1198,12 +1198,11 @@ lane_of() {
     done
     if [ -z "$lane" ]; then
       case "$(git log -1 --format=%s --end-of-options "$merged" -- 2>/dev/null | sed -n 's/^\([a-z]*\)[(!:].*/\1/p')" in
-        feat) lane=feature ;;
         fix|chore|docs|refactor|test|perf|style|build|ci|revert) lane=backlog ;;
       esac
     fi
   fi
-  echo "${lane:-backlog}"
+  echo "${lane:-feature}"
 }
 
 # The queue at COMMIT: both lane queues, else, at a commit before the
@@ -1543,7 +1542,9 @@ append_history() {
   done
   names=$(pending_list)
   [ -n "$names" ] || { echo "history: nothing pending"; return 0; }
-  base_history=$(for f in $metrics_files; do git show "${BASE:-origin/main}:$f" 2>/dev/null; done)
+  # Each lane file's rows at BASE, its header stripped, so the second
+  # file's header is never read as a row.
+  base_history=$(for f in $metrics_files; do git show "${BASE:-origin/main}:$f" 2>/dev/null | awk 'NR > 1 && NF'; done)
   branch_now=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || branch_now=HEAD
   case "$branch_now" in ""|*[[:cntrl:]]*) branch_now=HEAD ;; esac
   for change in $names; do
@@ -1552,7 +1553,7 @@ append_history() {
       echo "history: $change already has its row, appended on $on; not appended again"
       continue
     fi
-    if printf '%s\n' "$base_history" | awk -F'\t' -v c="$change" 'NR > 1 && $1 == c { found = 1 } END { exit !found }'; then
+    if printf '%s\n' "$base_history" | awk -F'\t' -v c="$change" '$1 == c { found = 1 } END { exit !found }'; then
       echo "history: $change already has its row in ${BASE:-origin/main}'s history; not appended again"
       continue
     fi
