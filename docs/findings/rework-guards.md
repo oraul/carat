@@ -13,11 +13,6 @@
 - Why: The result of the review fix contributor('push') is not checked, so a refused or failed push surfaces only as the pushedHead mismatch stop and its reason is lost.
 - Fix: If the push start returns false, keep the stop the contributor set or set stopped with the push's reason, as the CI fix path at line 1217 breaks.
 
-### The merged resume path is unreachable after init refuses merged names
-- Location: tools/run_state.sh:2073 (init), .claude/workflows/deliver-change.js:1135 to 1147 (the comment on a restart after the merge), the !state.merged guards near 1061, 1090, and 1092, and the looking retrospective near 1234 to 1250
-- Why: init now refuses a run state with merged set on a delivery branch, so the workflow's merged-resume handling can no longer be reached by /deliver, and a merged run whose close died never gets its retrospective.
-- Fix: Let init resume a merged run state whose phase.retro is unset, or remove the dead guards and the stale comment.
-
 ### A review fix round turns off review narrowing for the rest of the start
 - Location: .claude/workflows/deliver-change.js:798 (priorSecurity)
 - Why: Performance: once reviewFixRounds is above zero, every later CI fix round after the review fix push re-reviews the whole branch diff, costing tokens and time.
