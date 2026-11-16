@@ -1309,6 +1309,9 @@ cp docs/backlog.md backlog.before
 mkdir -p docs/findings
 printf '\n### Fa finding at tools/f.sh:1\n\n- Why: a.\n' > docs/findings/fa.md
 printf '### Fb finding at tools/g.sh:2\n\n- Why: b.\n' > docs/findings/fb.md
+printf '### Fc finding at tools/b.sh:9\n' > docs/findings/fc.md
+expect "run_state: backlog-dups names a location a backlog and a findings-file heading share" 0 "^tools/b[.]sh:9: ### Kept entry at tools/b[.]sh:9 [|] ### Fc finding at tools/b[.]sh:9$" sh -c "sh '$here/run_state.sh' backlog-dups | grep tools/b"
+rm docs/findings/fc.md
 printf 'duplicate ## x security Low at tools/c.sh:5\n' > build/plan/groom.txt
 expect "run_state: groom keeps a disputed security entry" 1 "a security entry leaves only by" state groom
 printf 'duplicate ## Findings of z after its package step\n' > build/plan/groom.txt
