@@ -80,8 +80,9 @@ documentation() {
 
 # The paths make tools-test (tools/tools_test.sh) reads from this
 # repository: the tools, the agents, workflows, commands, and settings,
-# .github/, the Makefile, and the files the generator cases copy (kit).
+# .github/, the Makefile, CLAUDE.md (its Agents rules), and the files
+# the generator cases copy (kit).
 # tools-test runs, in CI and in the checker, only when a changed path
 # matches (a path git quotes keeps its leading quote); a tools_test.sh
 # case fails on a path it reads that this misses.
-TOOLS_RE='^"?(tools/|[.]claude/(agents|workflows|commands)/|[.]claude/settings[.]json$|[.]github/|Makefile$|carat[.]rb$|carat/adapters/editor_assembly[.]rb$|docs/(codebase-map|actions|compatibility)[.]md$|test/runner/run_all[.]rb$|test/lint[.]rb$|config/(plugins|default)[.]caratrc$)'
+TOOLS_RE='^"?(tools/|[.]claude/(agents|workflows|commands)/|[.]claude/settings[.]json$|[.]github/|Makefile$|carat[.]rb$|carat/adapters/editor_assembly[.]rb$|CLAUDE[.]md$|docs/(codebase-map|actions|compatibility)[.]md$|test/runner/run_all[.]rb$|test/lint[.]rb$|config/(plugins|default)[.]caratrc$)'

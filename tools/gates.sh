@@ -39,7 +39,7 @@
 #   stages     phase.check is at such a commit and every canonical stage
 #              (STAGES, else the CHECK_STAGES line of the Makefile beside
 #              this script) passed at exactly that commit
-#   pushes     at most one push plus one per CI fix
+#   pushes     at most one push plus one per CI fix and one review fix
 #   passed     a clean tracked tree, phase.check and a pass of
 #              review.quality, review.security, and review.bench, each at a
 #              commit settled at the pushed head, HEAD
@@ -393,10 +393,13 @@ gate_pushes() {
   gate=pushes
   pushes=$(state pushes)
   fixes=$(state ci_fixes)
-  if [ "${pushes:-0}" -gt $((1 + ${fixes:-0})) ]; then
-    bad "$pushes pushes for ${fixes:-0} CI fix(es); one is allowed, plus one per CI fix"
+  reviews=$(state review_fixes)
+  if [ "${reviews:-0}" -gt 1 ]; then
+    bad "$reviews review fix pushes; one is allowed a run"
+  elif [ "${pushes:-0}" -gt $((1 + ${fixes:-0} + ${reviews:-0})) ]; then
+    bad "$pushes pushes for ${fixes:-0} CI fix(es) and ${reviews:-0} review fix(es); one is allowed, plus one per CI fix and one review fix"
   else
-    ok "${pushes:-0} push(es), ${fixes:-0} CI fix(es)"
+    ok "${pushes:-0} push(es), ${fixes:-0} CI fix(es), ${reviews:-0} review fix(es)"
   fi
 }
 

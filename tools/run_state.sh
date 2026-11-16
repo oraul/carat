@@ -14,6 +14,7 @@
 #   review.KIND      "RESULT COMMIT SUMMARY" (security, quality, bench, and
 #                    periodic-security and periodic-quality after a merge)
 #   pushes, ci_fixes the pushes made and the CI fixes they may answer
+#   review_fixes     the review fix pushes made (at most one a run)
 #   gates_failed     the push attempts the pre-push gates refused
 #   gated            the full sha every merge gate passed at, which the
 #                    merge tool's hook requires; "none" after a push
@@ -55,7 +56,10 @@
 # actual the total_tokens and wall_min, with out_tokens beside them.
 #
 # Usage: sh tools/run_state.sh COMMAND ...
-#   init CHANGE BRANCH          create the state unless it exists, then show it
+#   init CHANGE BRANCH          create the state unless it exists, then show it;
+#                               on a BRANCH other than main, refuse a CHANGE
+#                               already merged (merged recorded or a lane
+#                               history row), which takes a unique name
 #   show CHANGE                 print the state
 #   trusted CHANGE              print the state a resume may trust: without a
 #                               phase.*, review.*, or merged record whose
@@ -120,9 +124,13 @@
 #                               without a history row, else the last row;
 #                               exit 0 when allocations and rounds equal
 #                               them, 1 otherwise
-#   push CHANGE [--ci-fix]      run the pre-push gates, refuse a push beyond one
-#                               plus one per CI fix (a CI fix needs ci red), push
-#                               the branch with upstream tracking, and count it
+#   push CHANGE [--ci-fix|--review-fix]
+#                               run the pre-push gates, refuse a push beyond one
+#                               plus one per CI fix (a CI fix needs ci red) plus
+#                               one review fix a run (a resume past the push
+#                               fixing a blocking review: a recorded push other
+#                               than HEAD), push the branch with upstream
+#                               tracking, and count it
 #   metric CHANGE NAME=VALUE... record metric.NAME; names are [a-z0-9_.-], values
 #                               [A-Za-z0-9_.,:/=+-]
 #   metrics CHANGE FILE         record each "name<TAB>value" line of a
@@ -913,14 +921,22 @@ gated_clear() {
 push_branch() {
   pushes=$(count pushes)
   fixes=$(count ci_fixes)
-  if [ "${1:-}" = "--ci-fix" ]; then
-    case "$(read_key ci)" in
-      red*) fixes=$((fixes + 1)) ;;
-      *) die "push: refused: a CI fix push needs a red CI run recorded (ci)" ;;
-    esac
-  fi
-  if [ "$pushes" -ge $((1 + fixes)) ]; then
-    die "push: refused: $pushes push(es) made; one is allowed, plus one per CI fix ($fixes)"
+  reviews=$(count review_fixes)
+  case "${1:-}" in
+    --ci-fix)
+      case "$(read_key ci)" in
+        red*) fixes=$((fixes + 1)) ;;
+        *) die "push: refused: a CI fix push needs a red CI run recorded (ci)" ;;
+      esac ;;
+    --review-fix)
+      [ "$reviews" -eq 0 ] || die "push: refused: $reviews review fix push(es) made; one is allowed a run"
+      pushed=$(read_key pushed)
+      [ -n "$pushed" ] && [ "$pushed" != "$(git rev-parse HEAD)" ] ||
+        die "push: refused: a review fix push needs a recorded push other than HEAD (pushed)"
+      reviews=1 ;;
+  esac
+  if [ "$pushes" -ge $((1 + fixes + reviews)) ]; then
+    die "push: refused: $pushes push(es) made; one is allowed, plus one per CI fix ($fixes) and one review fix ($reviews)"
   fi
   branch=$(git rev-parse --abbrev-ref HEAD)
   [ "$branch" != "main" ] || die "push: refused: never push main"
@@ -931,6 +947,7 @@ push_branch() {
   git push -u origin "$branch" || die "push: git push failed"
   write_key pushes $((pushes + 1))
   write_key ci_fixes "$fixes"
+  [ "$reviews" -eq 0 ] || write_key review_fixes "$reviews"
   write_key pushed "$(git rev-parse HEAD)"
   # A new head needs the merge gates again, and a marker branch code
   # planted in this run state before the push is gone; the merge gates
@@ -2049,6 +2066,16 @@ case "$command" in
   init)
     [ $# -eq 1 ] || usage
     mkdir -p "$state_dir"
+    # A delivery never reuses a merged name: a recurring change takes a
+    # unique one (spinel-bump-<7-char commit>). A merged run the close has
+    # not closed (no phase.retro) resumes, so a restart after the merge
+    # reaches its retrospective. The sprint and review run states, at main,
+    # set merged after their init and resume by it.
+    if [ "$1" != main ]; then
+      done_at=$([ ! -f "$(state_file)" ] || [ -z "$(read_key phase.retro)" ] || merged_commit)
+      [ -z "$done_at" ] || die "init: refused: $change merged as $done_at; take a unique name, such as $change-<7-char commit>"
+      ! has_row "$change" || die "init: refused: $change has a lane history row, so it merged; take a unique name, such as $change-<7-char commit>"
+    fi
     if [ -f "$(state_file)" ]; then
       echo "run_state: resuming $change" >&2
     else
