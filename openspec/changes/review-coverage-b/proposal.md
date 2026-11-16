@@ -6,9 +6,10 @@ Pull request 149 (`review-coverage`) made `plan-needed` name a failing periodic 
 
 ## What Changes
 
-- `merged_since` counts a merged change (the newest history row's, or a pending one's) as clearing a failing periodic security review only when its run state records a planner that ran after the review: its `phase.plan` commit descends from the reviewed commit and differs from it, and its `metric.planned` is not `0` (a skipped planner). Otherwise the review stands, and `plan-needed` keeps printing `needed:`, until a delivery planned after it merges or a later periodic security review passes.
+- `merged_since` counts a merged change (any history row's merged after the reviewed commit, read newest first up to the first merged at or before it, or a pending one's) as clearing a failing periodic security review only when its run state records a planner that ran after the review: its `phase.plan` commit descends from the reviewed commit and differs from it, and its `metric.planned` is not `0` (a skipped planner). Otherwise the review stands, and `plan-needed` keeps printing `needed:`, until a delivery planned after it merges or a later periodic security review passes. Later merges whose planner was skipped leave a cleared review cleared.
+- `passed_since`: a failing periodic security review is superseded when a review run records a passing one (`pass`, no blocking finding) at a commit that descends from the failing review's commit and differs from it; `plan-needed` checks it after `merged_since`.
 - A history row's change name is checked as a change name before its run state is read.
-- Cases in `tools/tools_test.sh`: a merge planned at or before the reviewed commit leaves `plan-needed` needed, a merge whose planner was skipped leaves it needed, and a merge planned after the review clears it (the existing later-merge case, now with its plan record).
+- Cases in `tools/tools_test.sh`: a merge planned at or before the reviewed commit leaves `plan-needed` needed, a merge whose planner was skipped leaves it needed, and a merge planned after the review clears it (the existing later-merge case, now with its plan record); that merge followed by two merges with skipped planners still clears it; a passing periodic security review of the same commit leaves the failing one standing and one of a later commit supersedes it.
 - Docs: the `plan-needed` line of the `tools/run_state.sh` header, the comment above `planReview` in `.claude/workflows/deliver-change.js`, the README pipeline step 1, and the map's `tools/run_state.sh` entry.
 
 ## Capabilities

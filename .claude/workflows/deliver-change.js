@@ -1000,7 +1000,8 @@ function planSkipped(state, line) {
 // The planner prompt's line for a failing periodic security review that
 // plan-needed names first: the review run, whose show the planner reads,
 // since its pending list holds merged run states only and merged_since
-// clears the review at the merge of the next change planned after it
+// clears the review at the merge of the next change planned after it,
+// or passed_since at a later passing periodic security review
 // (review-coverage, review-coverage-b); otherwise
 // nothing. tools/tools_test.sh runs this helper.
 function planReview(line) {
