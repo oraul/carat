@@ -1152,15 +1152,21 @@ lane_rows() {
 }
 
 # The header, then both lanes' history rows oldest merge first: ordered by
-# the place of each row's merged commit in HEAD's ancestry, oldest first
-# (rev-list --topo-order, which main's chain of squash commits orders
-# whole, whatever their timestamps); a row whose commit HEAD does not hold
-# sorts first, in its file's order.
+# the place of each row's merged commit in the ancestry of HEAD and of BASE
+# (origin/main) together, oldest first (rev-list --topo-order, which main's
+# chain of squash commits orders whole, whatever their timestamps), so a
+# change merged on main after HEAD's branch point, whose row history
+# appends (merged_on_main), sorts after every row HEAD holds; a row whose
+# commit neither holds sorts first, in its file's order. BASE is passed to
+# git only as the commit it resolves to, and left out when it resolves to
+# none.
 history_rows() {
   printf '%s\n' "$HEADER"
   rows=$(lane_rows)
   [ -n "$rows" ] || return 0
-  { git rev-list --reverse --topo-order HEAD -- 2>/dev/null; echo --; printf '%s\n' "$rows"; } | awk -F'\t' '
+  base_tip=$(git rev-parse --verify -q --end-of-options "${BASE:-origin/main}^{commit}" 2>/dev/null) || base_tip=""
+  # shellcheck disable=SC2086 # base_tip is one hash or empty
+  { git rev-list --reverse --topo-order HEAD $base_tip -- 2>/dev/null; echo --; printf '%s\n' "$rows"; } | awk -F'\t' '
     !body { if ($0 == "--") body = 1; else { n++; at[substr($0, 1, 12)] = n; full[n] = $0 }; next }
     {
       k = 0

@@ -884,6 +884,20 @@ expect "run_state: history keeps a never-merged run out" 0 "^history: stray reco
 expect "run_state: history appends no row of a never-merged run" 0 "^0\$" sh -c "grep -c '^stray' docs/metrics-backlog.tsv; true"
 rm build/pipeline/stray.json
 expect "run_state: status prints the first-pass rates" 0 "first-pass rates over 1 change.s.: check 1/1 quality 0/1 security 1/1 gates 0/1" state status
+# A change merged on main after the branch point, the in-flight case of the
+# lanes: history appends its row, though HEAD lacks its commit, and the
+# history orders it by BASE's ancestry too, so it is the newest row.
+# The commit lands on main by plumbing, leaving the branch's work tree as it is.
+landed_full=$(git_q commit-tree -p main -m "chore: land another change" -m "$TRAILER" "main^{tree}")
+git_q update-ref refs/heads/main "$landed_full"
+landed_at=$(git rev-parse --short=12 "$landed_full")
+state init landed chore/landed > /dev/null
+state set landed merged "$landed_at" > /dev/null
+expect "run_state: history appends a change merged on BASE after the branch point" 0 "appended landed" env BASE=main sh "$here/run_state.sh" history
+expect "run_state: a change merged on BASE after the branch point is the newest history row" 0 "^landed$" \
+  sh -c "env BASE=main sh '$here/run_state.sh' status | awk -F'\t' 'f { print \$1; exit } /^change\tdate/ { f = 1 }'"
+expect "run_state: a BASE that names no commit leaves the order to HEAD's ancestry, a row it holds the newest" 0 "^(based|history)$" \
+  sh -c "env BASE=nothing sh '$here/run_state.sh' status | awk -F'\t' 'f { print \$1; exit } /^change\tdate/ { f = 1 }'"
 
 # A run state whose first passes the workflow stored only in part: the
 # stage, review, and ci lines hold each gate's last result, not its first,
