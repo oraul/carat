@@ -13,7 +13,7 @@ The host's run_program now refuses every plugin program while the editor runs ou
 - Change the git_signs commands to pass -c protocol.ext.allow=never and -c core.fsmonitor=false, so a trusted repository's configuration can name no command either.
 - Move the trusted roots rule from the language server gateway into one shared Domain::TrustedRoots, used by both, so the two answers cannot drift.
 - Add tests for the trusted roots rule, the refusal outside a trusted root, the hardened command line and environment under an ext:: promisor remote, the branch segment and counts in a trusted root, and the environment reaching the child process.
-- Document that the branch segment needs a trusted root in README.md, docs/plugins.md, and docs/architecture.md, name the capture environment in the process port row, and place the new files in the code map.
+- Document that the branch segment needs a trusted root in README.md, docs/plugins.md, and docs/architecture.md, and place the new files in the code map.
 - Archive the git-signs-trust OpenSpec change, adding its requirements to the plugin-host and git-status specs.
 
 ---
@@ -21,7 +21,7 @@ The host's run_program now refuses every plugin program while the editor runs ou
 ## Testing
 
 - Run the security review of the committed diff, passed with no High or Medium finding and one Low, recorded in docs/findings/git-signs-trust.md.
-- Run the quality review, passed with no blocking finding; the docs advisory on the process port row is fixed and the five style advisories are dropped.
+- Run the quality review, passed with no blocking finding; its six docs and style advisories are dropped.
 - Run the checker's stages docs-lint, dev-build, test-build, test-run, diagnose, bench-budget, metrics, tools-test, and gates, all pass.
 - Run the benchmark review, passed with the allocations held at lh 26.0, j 27.0, and insert 26.0.
 - Run make spec-validate after the archive, all 53 items pass.
