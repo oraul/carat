@@ -205,7 +205,7 @@ module EditorCompletionTest
     h.type("ifi")
     menu = h.assembly.completion_menu
     docs = h.state.tab.floats.at(h.state.tab.floats.index_of(menu.docs_float_id))
-    t.assert_equal(["red", "│ │ │ │ x"], [docs.window.buffer.line(0), docs.window.buffer.line(1)], "escape sequences are dropped and nesting is capped at four levels")
+    t.assert_equal(["red", "| | | | x"], [docs.window.buffer.line(0), docs.window.buffer.line(1)], "escape sequences are dropped and nesting is capped at four levels")
     t.assert_equal(false, h.screen.join("\n").include?("\e"), "no escape of the documentation reaches the screen")
     t.finish
   end

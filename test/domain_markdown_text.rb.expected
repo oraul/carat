@@ -29,6 +29,12 @@ ok   a quote bar stays with the long word after it
 ok   a bullet's text still wraps at a space
 ok   wide characters wrap by cells
 ok   a document reads as plain rows
+ok   ascii list markers are stars
+ok   an ascii quote is a pipe per level
+ok   an ascii thematic break is a rule of hyphens
+ok   an ascii bullet stays with the long word after it
+ok   an ascii quote wraps after its bar
+ok   an ascii document under the ascii set holds no code point above 127
 ok   a heading
 ok   strong and emphasized runs
 ok   a code span
@@ -46,4 +52,7 @@ ok   a megabyte of short lines keeps at most 100 rows, no blank last
 ok   at most 16,384 bytes are read
 ok   a long line wraps to at most 100 rows
 ok   an empty document has no rows
-domain_markdown_text: 48 passed, 0 failed
+ok   a megabyte of short lines keeps at most 10,000 reading rows
+ok   at most 262,144 bytes of a file are read
+ok   a file under the caps keeps every row, beyond the docs caps
+domain_markdown_text: 57 passed, 0 failed
