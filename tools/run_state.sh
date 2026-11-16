@@ -164,6 +164,27 @@
 #                               blocked in the run state sprint-N
 #   backlog-dups                print each location (file:line) that two or
 #                               more backlog headings name, with the headings
+#   backlog-pick FILE...        print the next PICK_BATCHES batches of the
+#                               backlog entries ("## title" or deeper,
+#                               "- Location:" or "- Where:", "- Why:" or
+#                               "- Why it matters:") of the FILEs, which it
+#                               requires (only the sprint planner names
+#                               docs/backlog.md and docs/findings/*.md),
+#                               each of one docs/codebase-map.md area: the
+#                               areas of the entries naming security first,
+#                               then by their oldest entry; PICK_MIN or more
+#                               give at most PICK_MAX, security first, then
+#                               oldest; fewer give their security entries
+#                               alone, or none; an entry a queue file names,
+#                               or whose whole heading line ends a line of
+#                               PLAN_DIR/groom.txt, is skipped; one placed by
+#                               the first path of its Location line the map
+#                               holds (a bare backticked word only when the
+#                               map names it and the tree holds it as a file
+#                               or directory), or a directory holding one,
+#                               else by its heading's path:line; one no
+#                               mapped path holds printed "unmapped:"; exit
+#                               1 when no batch
 #   groom [CHANGE]              nothing when CHANGE's run state sets
 #                               records=skip (the planning records excluded),
 #                               or, retiring the marker to sprint.applied,
@@ -245,6 +266,11 @@ metrics_files="$metrics_prefix-feature.tsv $metrics_prefix-backlog.tsv"
 backlog_file=${BACKLOG_FILE:-docs/backlog.md}
 findings_dir=${FINDINGS_DIR:-docs/findings}
 queue_files="docs/queue-feature.md docs/queue-backlog.md"
+# The pick's batches (backlog-pick): the sprint's two backlog items, each
+# of one area holding PICK_MIN entries, at most PICK_MAX of them.
+PICK_BATCHES=2
+PICK_MIN=5
+PICK_MAX=10
 metrics_out=${METRICS_OUT:-build/metrics/current.tsv}
 PHASES="plan implement check quality security bench package ci merge retro report"
 # The stages that read what a test-only commit may change, which such a
@@ -1713,6 +1739,135 @@ backlog_entry() {
     on { print }'
 }
 
+# The pick of the backlog lane: the entries (a "## " or deeper heading, to
+# the next heading, with a "- Location:" or "- Where:" line or a path:line
+# in the heading; any other heading a section) of the FILEs in order, which
+# it requires, never reading the backlog on its own, ranked into batches of
+# one docs/codebase-map.md area each (backlog-pick in the header). The first
+# token of a Location that the map places (its backticked tokens first, a
+# bare word among them only when the map names it and the tree holds it as
+# a file or directory, so an identifier such as `ensure` never places it;
+# then each word holding a "." or "/" or a :line, its :line and punctuation
+# dropped), else the heading's first path:line, matches a path the map
+# names under a numbered area (a bullet's leading path first, then any
+# backticked path of the area's lines), or lies under the longest one
+# ending in "/", or is a directory holding one (the first in name order);
+# an entry whose heading text a queue file holds, not as the start of a
+# longer word, is queued, and one whose whole heading line ends a line of
+# PLAN_DIR/groom.txt is groomed: the closed sprint's removals, which stay
+# in the backlog until the next package step.
+backlog_pick() {
+  for f in "$@"; do [ -f "$f" ] || die "no $f"; done
+  cat "$@" |
+    M=docs/codebase-map.md Q="$queue_files" G="$plan_dir/groom.txt" B=$PICK_BATCHES L=$PICK_MIN H=$PICK_MAX awk '
+    BEGIN {
+      while ((getline line < ENVIRON["M"]) > 0) {
+        if (line ~ /^## [0-9]+[.] /) { area = substr(line, 4); continue }
+        if (line ~ /^## /) { area = ""; continue }
+        if (area == "") continue
+        if (match(line, /^- `[^`]+`/)) own[substr(line, 4, RLENGTH - 4)] = area
+        for (s = line; match(s, /`[^` ]+`/); s = substr(s, RSTART + RLENGTH)) {
+          t = substr(s, RSTART + 1, RLENGTH - 2)
+          if (t ~ /^[A-Za-z0-9_.\/-]+$/ && !(t in seen)) seen[t] = area
+        }
+      }
+      nq = split(ENVIRON["Q"], qf, " ")
+      for (i = 1; i <= nq; i++) while ((getline line < qf[i]) > 0) queued = queued "\n" line
+      while ((getline line < ENVIRON["G"]) > 0)
+        for (j = 1; j < length(line); j++) if (substr(line, j, 2) == " #") groomed[substr(line, j + 1)] = 1
+    }
+    /^##+ / { n++; head[n] = $0; on = 1; next }
+    /^#+ / { on = 0; next }
+    on && !(n in loc) && /^- (Location|Where):/ { loc[n] = $0 }
+    on && /^- Why( it matters)?:/ { why[n] = $0 }
+    function queued_at(t,   s, j) {
+      for (s = queued; (j = index(s, t)) > 0; s = substr(s, j + 1))
+        if (substr(s, j + length(t), 1) !~ /[A-Za-z0-9_]/) return 1
+      return 0
+    }
+    function under(m, p,   k, best) {
+      if (p in m) return m[p]
+      best = ""
+      for (k in m) if (k ~ /\/$/ && index(p, k) == 1 && length(k) > length(best)) best = k
+      return best == "" ? "" : m[best]
+    }
+    function area_of(p,   a) {
+      if (p == "") return ""
+      a = under(own, p)
+      return a != "" ? a : under(seen, p)
+    }
+    function dir_area(p,   d, k, best) {
+      if (p !~ /\//) return ""
+      d = p; if (d !~ /\/$/) d = d "/"
+      best = ""
+      for (k in own) if (index(k, d) == 1 && (best == "" || k < best)) best = k
+      if (best != "") return own[best]
+      for (k in seen) if (index(k, d) == 1 && (best == "" || k < best)) best = k
+      return best == "" ? "" : seen[best]
+    }
+    function place(p,   a) {
+      a = area_of(p)
+      return a != "" ? a : dir_area(p)
+    }
+    function clean(t) {
+      sub(/^[ \t]+/, "", t); sub(/[ \t].*$/, "", t); sub(/^[(\"]+/, "", t)
+      if (t ~ /::/) return ""
+      sub(/:.*$/, "", t); sub(/[).,;\"]+$/, "", t)
+      return t ~ /^[A-Za-z0-9_.\/-]+$/ ? t : ""
+    }
+    function pathlike(raw, t) {
+      return t != "" && (t ~ /[.\/]/ || raw ~ /^[A-Za-z0-9_.\/-]+:[0-9]/)
+    }
+    function named_file(t) {
+      if (!((t in own) || (t in seen) || ((t "/") in own) || ((t "/") in seen))) return 0
+      return system("test -e \"" t "\"") == 0
+    }
+    function candidates(s,   k, r, raw, t, nw, w, x) {
+      k = 0
+      for (r = s; match(r, /`[^`]+`/); r = substr(r, RSTART + RLENGTH)) {
+        raw = substr(r, RSTART + 1, RLENGTH - 2); t = clean(raw)
+        if (pathlike(raw, t)) cand[++k] = t
+        else if (t != "" && t == raw && named_file(t)) cand[++k] = ((t in own) || (t in seen)) ? t : t "/"
+      }
+      gsub(/`/, "", s); nw = split(s, w, /[ \t]+/)
+      for (x = 1; x <= nw; x++) if (pathlike(w[x], t = clean(w[x]))) cand[++k] = t
+      return k
+    }
+    function head_path(h) {
+      if (!match(h, /[A-Za-z0-9_.\/-]+[.][A-Za-z]+:[0-9]+/)) return ""
+      h = substr(h, RSTART, RLENGTH); sub(/:[0-9]+$/, "", h); return h
+    }
+    END {
+      for (i = 1; i <= n; i++) {
+        hp = head_path(head[i])
+        if (!(i in loc) && hp == "") continue
+        t = head[i]; sub(/^#+ /, "", t)
+        if (queued_at(t) || (head[i] in groomed)) continue
+        s = loc[i]; sub(/^- (Location|Where):[ \t]*/, "", s)
+        nc = candidates(s); a = ""; p = ""
+        for (c = 1; c <= nc && a == ""; c++) if ((a = place(cand[c])) != "") p = cand[c]
+        if (a == "" && (a = area_of(hp)) != "") p = hp
+        if (p == "") p = nc ? cand[1] : hp
+        if (a == "") { print "unmapped: " head[i] " (" p ")"; continue }
+        at[i] = a; count[a]++
+        if (tolower(head[i] " " why[i]) ~ /security/) { secure[i] = 1; nsec[a]++ }
+      }
+      for (pass = 1; pass <= 2; pass++)
+        for (i = 1; i <= n; i++)
+          if ((i in at) && !(at[i] in ranked) && (pass == 2 || (i in secure))) { ranked[at[i]] = 1; order[++m] = at[i] }
+      for (r = 1; r <= m && b < ENVIRON["B"] + 0; r++) {
+        a = order[r]; alone = count[a] < ENVIRON["L"] + 0
+        if (alone && !nsec[a]) continue
+        b++; k = 0; out = ""
+        for (pass = 1; pass <= (alone ? 1 : 2); pass++)
+          for (i = 1; i <= n && k < ENVIRON["H"] + 0; i++)
+            if (at[i] == a && ((pass == 1) == (i in secure))) { k++; out = out "\n" head[i] }
+        print "batch " b ": area " a ", " (alone ? "its " k " security entries alone of " count[a] : k " of " count[a] " entries") out
+      }
+      if (!b) { print "no batch: no area holds " ENVIRON["L"] " entries and none names security"; exit 1 }
+    }'
+}
+
 # The sprint's row from its history rows up to the SPRINT_SIZE-th counted
 # one, where it ends, a later exception's row left to the next sprint, whose
 # combined diff starts there (a change beyond the sprint, sprint_exceptions,
@@ -2053,6 +2208,7 @@ case "$command" in
   history) [ $# -le 1 ] || usage; records_excluded history "${1:-}" || append_history; exit 0 ;;
   review-due) [ $# -eq 0 ] || usage; review_due; exit $? ;;
   backlog-dups) [ $# -eq 0 ] || usage; backlog_dups; exit $? ;;
+  backlog-pick) [ $# -ge 1 ] || usage; backlog_pick "$@"; exit $? ;;
   groom) [ $# -le 1 ] || usage; ! records_excluded groom "${1:-}" || exit 0; groom; exit $? ;;
 esac
 [ $# -ge 1 ] || usage

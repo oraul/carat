@@ -6,7 +6,7 @@ export const meta = {
     { title: 'Due', detail: 'one start runs review-due; not due ends the run' },
     { title: 'Review', detail: 'the security and quality reviewers over the combined diff in their sprint mode, the security reviewer once more over the files it left, and in an even sprint the whole-tree sweep, in parallel' },
     { title: 'Skeptic', detail: 'the quality reviewer reads both results against the code: records the quality findings it keeps and every security finding, one it disputes as disputed' },
-    { title: 'Plan', detail: 'the planner in its sprint mode: the backlog grooming and the next sprint\'s queue under build/plan/' },
+    { title: 'Plan', detail: 'the planner in its sprint mode: the backlog grooming with its one-time triage, and the next sprint\'s queue under build/plan/, its two backlog items from backlog-pick' },
     { title: 'Record', detail: 'the review results in the sprint\'s run state' },
   ],
 }
@@ -147,7 +147,7 @@ const reviewed = ran && skeptical
 
 phase('Plan')
 const plan = !reviewed ? null : await agent(
-  `Mode: sprint. ${sprint.sprint} closed with ${sprint.names.join(', ')}. Plan sprint-${sprint.number + 1} as your Sprint mode section says, writing \`${sprint.sprint}\` into build/plan/sprint: the sprint review's findings are in the run state \`${sprint.sprint}\`${sprint.sweep ? ` and the sweep's in \`${sweepName}\`` : ''}, the duplicate candidates from \`sh tools/run_state.sh backlog-dups\`.${capLine(CAPS.plan)}`,
+  `Mode: sprint. ${sprint.sprint} closed with ${sprint.names.join(', ')}. Plan sprint-${sprint.number + 1} as your Sprint mode section says, writing \`${sprint.sprint}\` into build/plan/sprint: the sprint review's findings are in the run state \`${sprint.sprint}\`${sprint.sweep ? ` and the sweep's in \`${sweepName}\`` : ''}, the duplicate candidates from \`sh tools/run_state.sh backlog-dups\`, the two backlog items from \`sh tools/run_state.sh backlog-pick docs/backlog.md docs/findings/*.md\` (its one caller with the real files), and the one-time backlog triage unless done.${capLine(CAPS.plan)}`,
   { agentType: 'planner', schema: PLAN, label: 'planner: sprint' })
 
 phase('Record')

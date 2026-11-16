@@ -735,6 +735,113 @@ expect "gates: pushes refuse a second review fix" 1 "2 review fix pushes; one is
 
 expect "run_state: abandon is no longer a command" 2 "" state abandon pushing
 
+# The backlog pick over a fixture map, queue, and backlogs: area 3 holds 3
+# entries, area 1 eleven unqueued with the newest naming security, area 2
+# six, and one entry names a path only the delivered changes list.
+fresh pick
+cat > docs/codebase-map.md <<'EOB'
+# Codebase map
+
+## 1. Build and CI
+
+- `tools/a.sh`: a, which calls `tools/t.sh`.
+- Outside the roots: `Makefile` (make), `.github/workflows/ci.yml` (CI).
+
+## 2. Toolchain
+
+- `tools/t.sh`: t, its `refuse` and `ensure`.
+
+Tests: `tools/t_test.sh` (the t test).
+
+## 3. Configuration
+
+- `config/`: the configuration.
+
+## Delivered changes
+
+- `tools/z.sh`
+EOB
+printf '# Queue\n\n## Sprint 1\n\n1. `b1` (T5, estimated small): closes ### a2 at tools/a.sh:2, not t1 at tools/t.sh:10.\n' > docs/queue-backlog.md
+{ printf '# Backlog\n\n## Older section\n'
+  for i in 1 2 3; do printf '\n### c%s at config/x.caratrc:%s\n\n- Location: `config/x.caratrc:%s`\n- Why: c.\n- Fix: c.\n' $i $i $i; done
+  for i in 1 2 3 4 5 6 7 8 9 10 11; do printf '\n### a%s at tools/a.sh:%s\n\n- Location: tools/a.sh:%s (a)\n- Why: a.\n- Fix: a.\n' $i $i $i; done
+  for i in 1 2 3 4 5 6; do printf '\n### t%s at tools/t.sh:%s\n\n- Location: tools/t.sh:%s\n- Why: t.\n- Fix: t.\n' $i $i $i; done
+  printf '\n### u1 at tools/z.sh:1\n\n- Location: tools/z.sh:1\n- Why: u.\n- Fix: u.\n'
+  printf '\n### s1 quoting at tools/a.sh:40\n\n- Location: tools/a.sh:40\n- Why: security Medium (8), an unquoted path.\n- Fix: quote it.\n'
+} > bk.md
+pick=$(state backlog-pick bk.md)
+expect "run_state: backlog-pick puts a security entry first whatever its age" 0 "^### s1 quoting at tools/a[.]sh:40$" \
+  sh -c 'printf "%s\n" "$1" | sed -n "/^batch 1/{n;p;}"' _ "$pick"
+expect "run_state: backlog-pick batches one area, oldest first, at most 10" 0 "^batch 1: area 1[.] Build and CI, 10 of 11 entries s1 a1 a3 a4 a5 a6 a7 a8 a9 a10 $" \
+  sh -c 'printf "%s\n" "$1" | sed -n "/^batch 1/,/^batch 2/p" | sed "\$d" | sed "s/^### \([a-z0-9]*\) .*/\1/" | tr "\n" " "' _ "$pick"
+expect "run_state: backlog-pick passes over an area of fewer than 5" 0 "^1 0$" \
+  sh -c 'echo "$(printf "%s\n" "$1" | grep -c "^batch 2: area 2[.] Toolchain, 6 of 6 entries$") $(printf "%s\n" "$1" | grep -c "^### c\|area 3")"' _ "$pick"
+expect "run_state: backlog-pick skips an entry a queued item names" 0 "^0 1$" \
+  sh -c 'echo "$(printf "%s\n" "$1" | grep -c "^### a2 ") $(printf "%s\n" "$1" | grep -c "^### t1 ")"' _ "$pick"
+expect "run_state: backlog-pick reports an unmapped entry" 0 "^unmapped: ### u1 at tools/z[.]sh:1 [(]tools/z[.]sh[)] 0$" \
+  sh -c 'echo "$(printf "%s\n" "$1" | grep "^unmapped") $(printf "%s\n" "$1" | grep -c "^### u1")"' _ "$pick"
+mkdir -p build/plan
+printf 'listed b0 ### a1 at tools/a.sh:1\nfixed abc1234 ### s1 quoting at tools/a.sh:40\nduplicate ### a3 at tools/a.sh:3 x\n' > build/plan/groom.txt
+expect "run_state: backlog-pick skips an entry the plan's groom.txt removes" 0 "^1 0 1$" \
+  sh -c 'p=$(sh "$1" backlog-pick bk.md); echo "$(printf "%s\n" "$p" | grep -c "^batch 1: area 1[.] Build and CI, 9 of 9 entries$") $(printf "%s\n" "$p" | grep -c "^### a1 \|^### s1 ") $(printf "%s\n" "$p" | grep -c "^### a3 ")"' _ "$here/run_state.sh"
+rm build/plan/groom.txt
+printf '### s2 at config/y.caratrc:1\n\n- Location: config/y.caratrc:1\n- Why: security Low.\n- Fix: y.\n\n### a1 at tools/a.sh:1\n\n- Location: tools/a.sh:1\n- Why: a.\n' > bk2.md
+expect "run_state: backlog-pick gives an area under 5 its security entries alone" 0 "^batch 1: area 3[.] Configuration, its 1 security entries alone of 1 ### s2 at config/y[.]caratrc:1 $" \
+  sh -c 'sh "$1" backlog-pick bk2.md | tr "\n" " "' _ "$here/run_state.sh"
+cp bk2.md docs/backlog.md
+mkdir -p docs/findings
+printf '### f1 security at tools/t.sh:3\n\n- Location: tools/t.sh:3\n- Why: f.\n' > docs/findings/f.md
+expect "run_state: backlog-pick with no file prints its usage and reads no backlog" 0 "^2 1 0$" \
+  sh -c 'o=$(sh "$1" backlog-pick 2>&1); s=$?; echo "$s $(printf "%s\n" "$o" | grep -c "^  backlog-pick FILE[.][.][.] ") $(printf "%s\n" "$o" | grep -c "^batch\|^unmapped\|^no batch")"' _ "$here/run_state.sh"
+expect "run_state: backlog-pick prints no batch when none qualifies" 1 "^no batch: no area holds 5 entries and none names security$" \
+  sh -c 'tail -4 "$1" > bk3.md && sh "$2" backlog-pick bk3.md' _ bk2.md "$here/run_state.sh"
+expect "run_state: backlog-pick refuses a missing file" 1 "no nofile[.]md" state backlog-pick nofile.md
+# The other entry forms: "## " and deeper headings, "- Where:" and
+# "- Why it matters:" lines, a heading's path:line without a Location, a
+# path on a Tests: line, the second path of a bullet, a section heading.
+{ printf '# Backlog\n\n## Section\n\n## w1 quoting\n\n- Where: `tools/t.sh:7`\n- Why it matters: security Medium (8).\n'
+  printf '\n## w2 at tools/t_test.sh:3\n\n- Why it matters: w.\n\n#### w3 deeper\n\n- Location: tools/t.sh:9\n'
+  printf '\n## w4 test\n\n- Where: tools/t_test.sh:4\n\n## w5 plain\n\n- Location: tools/t.sh:11\n'
+  printf '\n## w6 target\n\n- Where: Makefile:12\n\n## w7 at .github/workflows/ci.yml:5\n\n- Why: security Low.\n'
+} > bk4.md
+pick=$(state backlog-pick bk4.md)
+expect "run_state: backlog-pick reads ## entries with Where and Why it matters lines" 0 "^batch 1: area 2[.] Toolchain, 5 of 5 entries ## w1 quoting ## w2 at tools/t_test[.]sh:3 #### w3 deeper ## w4 test ## w5 plain batch 2" \
+  sh -c 'printf "%s\n" "$1" | tr "\n" " "' _ "$pick"
+expect "run_state: backlog-pick places an entry by its heading's path without a Location" 0 "^1$" \
+  sh -c 'printf "%s\n" "$1" | grep -c "^## w2 at tools/t_test[.]sh:3$"' _ "$pick"
+expect "run_state: backlog-pick maps a path on a Tests: line of an area" 0 "^1$" \
+  sh -c 'printf "%s\n" "$1" | grep -c "^## w4 test$"' _ "$pick"
+expect "run_state: backlog-pick maps every path of a bullet and skips a section heading" 0 "^batch 2: area 1[.] Build and CI, its 1 security entries alone of 2 ## w7 at [.]github/workflows/ci[.]yml:5 0$" \
+  sh -c 'echo "$(printf "%s\n" "$1" | sed -n "/^batch 2/,\$p" | tr "\n" " ")$(printf "%s\n" "$1" | grep -c "unmapped\|Section")"' _ "$pick"
+# A Location or Where line opening with a symbol, a constant, or prose,
+# an unmapped backticked token before a mapped word, a directory holding
+# mapped paths.
+{ printf '## v1 symbol\n\n- Where: -> `Foo::Bar#baz` in `tools/t.sh:20`, the reader\n'
+  printf '\n## v2 prose\n\n- Location: the loop of tools/t_test.sh:8 (t)\n'
+  printf '\n## v3 directory\n\n- Location: .github/workflows (every job)\n- Why: security Low.\n'
+  printf '\n## v4 target first\n\n- Where: in `make lint`, tools/a.sh:3\n'
+  printf '\n## v5 two paths\n\n- Location: see `nowhere/x.rb:1` and tools/t.sh:2, tools/a.sh:4\n'
+  printf '\n## v6 plain\n\n- Location: tools/t.sh:30\n\n## v7 plain\n\n- Location: tools/t.sh:31\n'
+} > bk5.md
+expect "run_state: backlog-pick places a Location by its first mapped path or directory, a symbol or prose first" 0 "^batch 1: area 1[.] Build and CI, its 1 security entries alone of 2 ## v3 directory batch 2: area 2[.] Toolchain, 5 of 5 entries ## v1 symbol ## v2 prose ## v5 two paths ## v6 plain ## v7 plain $" \
+  sh -c 'sh "$1" backlog-pick bk5.md | tr "\n" " "' _ "$here/run_state.sh"
+# A bare backticked identifier the map mentions (`refuse`, `ensure`, area
+# 2) before a mapped path places nothing; a bare word the map names and
+# the tree holds (`Makefile`, area 1) does.
+touch Makefile
+{ printf '## i1 identifier first\n\n- Location: `refuse` in `tools/a.sh:5`\n- Why: security Low.\n'
+  printf '\n## i2 bare file\n\n- Where: `ensure` then `Makefile` (the target)\n- Why: security Low.\n'
+  printf '\n## i3 identifier only\n\n- Location: `ensure` of the loop\n'
+} > bk6.md
+expect "run_state: backlog-pick places a Location by its mapped path, never by an identifier before it" 0 "^unmapped: ## i3 identifier only [(][)] batch 1: area 1[.] Build and CI, its 2 security entries alone of 2 ## i1 identifier first ## i2 bare file $" \
+  sh -c 'sh "$1" backlog-pick bk6.md | tr "\n" " "' _ "$here/run_state.sh"
+# A bare backticked word the map names only as a directory (`config`, its
+# `config/` in area 3) and the tree holds is placed in that area.
+mkdir -p config
+printf '## d1 bare directory\n\n- Location: `config` (the defaults)\n- Why: security Low.\n' > bk7.md
+expect "run_state: backlog-pick places a bare backticked directory the map names in its area" 0 "^batch 1: area 3[.] Configuration, its 1 security entries alone of 1 ## d1 bare directory $" \
+  sh -c 'sh "$1" backlog-pick bk7.md | tr "\n" " "' _ "$here/run_state.sh"
+
 
 # ------------------------------------------------------------ open_pr.sh
 
@@ -3289,6 +3396,8 @@ expect "sprint: the diff reviewers record nothing and the skeptic records the ke
   sh -c 'echo "$(grep -c "record nothing, the skeptic records" "$1") $(grep -c "Mode: skeptic" "$1")"' _ "$swf"
 expect "sprint: the planner starts only after the security review and the skeptic" 0 "^1 1$" \
   sh -c 'echo "$(grep -c "^const reviewed = ran && skeptical$" "$1") $(grep -c "^const plan = !reviewed [?] null : await agent[(]$" "$1")"' _ "$swf"
+expect "sprint: the plan step names the pick over the backlog and findings files, and the triage" 0 "^1 1$" \
+  sh -c 'echo "$(grep -c "title: .Plan., detail: .*one-time triage.*backlog-pick" "$1") $(grep -c "Mode: sprint[.].*backlog-pick docs/backlog[.]md docs/findings/[*][.]md.*one-time backlog triage" "$1")"' _ "$swf"
 expect "sprint: the sweep is the periodic review in its own run state" 0 "sprint[.]sweep [?] await workflow[(][{] scriptPath: '[.]claude/workflows/periodic-review[.]js' [}], [{] change: sweepName [}]" grep -F "sprint.sweep ? await workflow(" "$swf"
 for pair in quality-reviewer:review security-reviewer:review quality-reviewer:skeptic planner:plan; do
   agent=${pair%%:*}
@@ -3310,6 +3419,8 @@ expect "agents: the sprint planner keeps unqueued findings in groomed.md" 0 "^1 
   sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "do not queue go into .build/plan/groomed[.]md.") $(printf "%s\n" "$s" | grep -v "never into .build/plan/backlog" | grep -c "build/plan/backlog")"' _ "$agents/planner.md"
 expect "agents: the planner writes self-contained items" 0 "^[1-9][0-9]* 0$" \
   sh -c 'echo "$(grep -c "self-contained" "$1") $(grep -c "Locations go in the" "$1")"' _ "$agents/planner.md"
+expect "agents: the sprint planner runs the pick over the backlog and findings files, the triage, and the calibration" 0 "^1 1 1$" \
+  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "2 backlog items, the first two batches of .sh tools/run_state[.]sh backlog-pick docs/backlog[.]md docs/findings/[*][.]md., each listing its batch.s headings in its Backlog part") $(printf "%s\n" "$s" | grep -c "Triage once, when .git log -S .Backlog triage:. -- docs/queue-backlog[.]md. prints nothing or the user asks") $(printf "%s\n" "$s" | grep -c "compares it with .docs/metrics-feature[.]tsv. (total tokens, wall minutes, first-pass rates, entries closed per run)")"' _ "$agents/planner.md"
 
 # Spinel warnings (tools/spinel_warnings.sh): the real build targets run
 # against a stub toolchain under PREFIX, which the Makefile's PATH puts
