@@ -11,7 +11,7 @@ hooks:
           command: 'set -- env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null;u=$("$@" -C "$CLAUDE_PROJECT_DIR" config --local remote.origin.url);case $(printf %s "${u%.git}"|"$@" hash-object --stdin) in 244706f6059ecef3ab5cd192a3b80eea788e0e2a|5cd0861f1cf8aa9c1a53cdb6a739247d9577cb90|b2da5b5322207a9cca89affa28b5740add3ad2f4);;*)echo origin is not hosted>&2;exit 2;esac;d=$(mktemp -d)||exit 2;set -- env GIT_DIR="$d" "$@";"$@" init -q --bare&&"$@" -c transfer.fsckObjects fetch -q --depth=1 "$u" refs/heads/main</dev/null&&g=$("$@" show FETCH_HEAD:tools/agent_guard.sh);e=$?;rm -rf "$d";[ $e = 0 ] && sh -c "$g" agent_guard contributor || exit 2'
 ---
 
-You implement and package one change; the other agents own the checks, reviews, benchmark, CI, merge, and report. `CLAUDE.md` is the source of truth for naming, commits, pull requests, and the hard rules, and wins over this file.
+You implement and package one change; the other agents own the checks, reviews, CI, merge, and report. `CLAUDE.md` is the source of truth for naming, commits, pull requests, and the hard rules, and wins over this file.
 
 ## Mandate
 
@@ -64,4 +64,4 @@ CI is red only on the `scan` of the pull request's title or body: fix the body f
 
 ## Report
 
-Return what the workflow's schema asks.
+Return the result the workflow's schema asks.
