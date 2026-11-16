@@ -554,8 +554,9 @@ Files:
 - `carat/plugins/hello/plugin.rb`: `Hello::Plugin`, the smallest example and a test fixture outside the registry.
 - `carat/plugins/finder/plugin.rb`: `Finder::Plugin`, the fuzzy file finder on `<leader>ff` and `<C-p>`: `list_files` once per opening, a live prompt whose changes refilter, the list float and a preview float from 100 columns, sized from the host's `float_frame` so the boxes share an edge, Enter, split, vertical split, and tab picks; `manifest`, `on_event`, `on_action`, `on_prompt_change`, `on_input`.
 - `carat/plugins/finder/matcher.rb`: `Finder::Matcher`, path fuzzy scoring by bytes without allocating (file name first, word starts, runs, gaps); `score`, `key`, `index_of`.
+- `carat/plugins/git_signs/plugin.rb`: `GitSigns::Plugin`; `manifest`, `activate`, `deactivate`, `on_event` (the branch with its ahead and behind counts as the segment at priority 40, from `git symbolic-ref` and `git rev-list` through `run_program`, on activation, open, save, and focus; git's output untrusted).
 
-Tests: `test/domain_plugin_manifest.rb`, `test/use_cases_plugins.rb`, `test/use_cases_plugin_files.rb`, `test/use_cases_plugin_hardening.rb`, `test/editor_plugins.rb`, `test/editor_finder.rb`, `test/plugins_finder_matcher.rb`.
+Tests: `test/domain_plugin_manifest.rb`, `test/use_cases_plugins.rb`, `test/use_cases_plugin_files.rb`, `test/use_cases_plugin_hardening.rb`, `test/editor_plugins.rb`, `test/editor_finder.rb`, `test/plugins_finder_matcher.rb`, `test/editor_git_signs.rb`.
 
 Bench: `finder` (typing into the finder over 10,000 files, every key filtering all of them; about 2.3 ms a key at 8d8832f's machine, the target under 20 ms).
 

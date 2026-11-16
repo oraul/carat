@@ -1,0 +1,15 @@
+ok   the branch and both counts show as the plugin's segment
+ok   and the status bar shows it
+ok   git is asked for the branch, then the counts
+ok   the segment under ascii icons is all ASCII
+ok   every character of it
+ok   the segment follows a branch change on save, no zero count shown
+ok   a branch without an upstream shows alone
+ok   control characters in the branch are dropped, the first line only
+ok   the name is cut to 60 characters
+ok   a count that is not digits reads as zero
+ok   outside a repository nothing shows and the counts are not asked
+ok   and no message names git
+ok   without git nothing shows and the plugin stays enabled
+ok   and no error reaches the message row
+editor_git_signs: 14 passed, 0 failed
