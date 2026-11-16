@@ -189,7 +189,11 @@
 #                               records=skip (the planning records excluded),
 #                               or, retiring the marker to sprint.applied,
 #                               when the sprint it names has its row in the
-#                               sprints file or BASE's; else
+#                               sprints file or BASE's; refuse a CHANGE other
+#                               than sprint-N-records, the records change
+#                               sprint-planning delivers for the sprint-N the
+#                               marker names, so no delivery's package step
+#                               writes the fold or the row; else
 #                               apply a waiting sprint plan (PLAN_DIR/sprint
 #                               names the sprint in progress, which the
 #                               sprints file lacks, and sprint-N records its
@@ -211,7 +215,8 @@
 #   plan-needed CHANGE          print "needed: REASON" and exit 0 when the
 #                               change is not item 1 of a lane queue,
 #                               docs/queue-feature.md or docs/queue-backlog.md
-#                               (the waiting sprint plan's) or a
+#                               (the waiting sprint plan's), and is not a
+#                               sprint's records change, or a
 #                               pending change holds a proposal or finding
 #                               (PLAN_NOTES) to place, or a review run records
 #                               a failing periodic security review with no
@@ -234,7 +239,10 @@
 #   pending                     the merged changes with no history row yet
 #   history [CHANGE]            nothing when CHANGE's run state sets
 #                               records=skip; else append a history row for
-#                               each pending change but one whose row BASE's
+#                               each pending change of CHANGE's lane
+#                               (lane_of; every lane with no CHANGE or a
+#                               sprint's records change), the other lane's
+#                               left to its next package step, but one whose row BASE's
 #                               history holds or whose run state records the
 #                               branch it was appended on (row, written here);
 #                               a gate without a stored first verdict is
@@ -244,6 +252,11 @@
 #                               (FINDINGS_DIR/CHANGE.md) as one entry
 #   lane CHANGE                 print the change's lane, feature or backlog
 #                               (lane_of), whose history file gets its row
+#   plan-apply CHANGE           apply the delivery planner's PLAN_DIR/CHANGE/
+#                               for the change's lane only: copy its
+#                               queue-LANE.md over docs/queue-LANE.md, leaving
+#                               the other lane's, goals.md over docs/goals.md,
+#                               and append backlog.md to FINDINGS_DIR/CHANGE.md
 #   status                      the queue, the running change, the last metrics
 #                               row, and the first-pass rates of the history
 #
@@ -1227,14 +1240,16 @@ history_rows() {
 # squash subject's type (a Conventional Commits type other than feat the
 # backlog lane), else feature, feat and a subject of no known type alike.
 # Its history row goes to that lane's file, the record of the lane.
+# A change not merged yet (the one a package step packages) takes the lane
+# queue naming its item in the working tree, else at BASE, where it stood
+# before its planner removed it, else its recorded branch's type: feature/
+# the feature lane, any other type the backlog lane.
 lane_of() {
   merged=$(merged_commit)
   lane=""
   if valid '[0-9a-f]{7,40}' "$merged"; then
     for l in feature backlog; do
-      if git show --end-of-options "$merged^:docs/queue-$l.md" 2>/dev/null | C="$change" awk '
-        { item = $0; if (sub(/^[0-9]+[.] /, "", item) && index(item, "`" ENVIRON["C"] "` (") == 1) f = 1 }
-        END { exit !f }'; then
+      if git show --end-of-options "$merged^:docs/queue-$l.md" 2>/dev/null | item_named; then
         lane=$l
         break
       fi
@@ -1244,8 +1259,59 @@ lane_of() {
         fix|chore|docs|refactor|test|perf|style|build|ci|revert) lane=backlog ;;
       esac
     fi
+  else
+    for l in feature backlog; do
+      if item_named < "docs/queue-$l.md" 2>/dev/null; then lane=$l; break; fi
+    done
+    for l in feature backlog; do
+      [ -z "$lane" ] || break
+      if git show --end-of-options "${BASE:-origin/main}:docs/queue-$l.md" 2>/dev/null | item_named; then lane=$l; fi
+    done
+    if [ -z "$lane" ]; then
+      case "$(read_key branch)" in feature/*|"") ;; */*) lane=backlog ;; esac
+    fi
   fi
   echo "${lane:-feature}"
+}
+
+# True when the queue on stdin holds an item naming the change
+# ("N. `CHANGE` (").
+item_named() {
+  C="$change" awk '
+    { item = $0; if (sub(/^[0-9]+[.] /, "", item) && index(item, "`" ENVIRON["C"] "` (") == 1) f = 1 }
+    END { exit !f }'
+}
+
+# True when NAME is a sprint's records change, sprint-N-records, which
+# sprint-planning delivers to apply the closed sprint's plan (groom).
+records_change() {
+  valid 'sprint-[0-9]+-records' "$1"
+}
+
+# Applies the delivery planner's directory, PLAN_DIR/CHANGE, for the
+# change's lane (lane_of) only: its queue over that lane's docs/ queue,
+# the other lane's queue file left and named, goals.md over docs/goals.md,
+# and backlog.md appended to the change's findings file. Two lanes' package
+# steps so write no common record.
+plan_apply() {
+  dir=$plan_dir/$change
+  lane=$(lane_of)
+  if [ ! -d "$dir" ]; then echo "plan-apply: no plan in $dir/; nothing applied"; return 0; fi
+  if [ -f "$dir/queue-$lane.md" ]; then
+    cp "$dir/queue-$lane.md" "docs/queue-$lane.md" || die "plan-apply: docs/queue-$lane.md not written"
+    echo "plan-apply: copied $dir/queue-$lane.md over docs/queue-$lane.md"
+  fi
+  for l in feature backlog; do
+    [ "$l" = "$lane" ] || [ ! -f "$dir/queue-$l.md" ] || echo "plan-apply: left $dir/queue-$l.md, of the $l lane, which $change's package step never applies"
+  done
+  if [ -f "$dir/goals.md" ]; then
+    cp "$dir/goals.md" docs/goals.md || die "plan-apply: docs/goals.md not written"
+    echo "plan-apply: copied $dir/goals.md over docs/goals.md"
+  fi
+  if [ -f "$dir/backlog.md" ]; then
+    mkdir -p "$findings_dir" && cat "$dir/backlog.md" >> "$findings_dir/$change.md" || die "plan-apply: $findings_dir/$change.md not appended"
+    echo "plan-apply: appended $dir/backlog.md to $findings_dir/$change.md"
+  fi
 }
 
 # The queue at COMMIT: both lane queues, else, at a commit before the
@@ -1585,6 +1651,10 @@ append_history() {
   done
   names=$(pending_list)
   [ -n "$names" ] || { echo "history: nothing pending"; return 0; }
+  # The lane whose rows a delivery's package step appends, the change's
+  # own; a sprint's records change, or no change, appends every lane's.
+  only=""
+  if [ -n "${1:-}" ] && ! records_change "$1"; then only=$(change=$1; lane_of); fi
   # Each lane file's rows at BASE, its header stripped, so the second
   # file's header is never read as a row.
   base_history=$(for f in $metrics_files; do git show "${BASE:-origin/main}:$f" 2>/dev/null | awk 'NR > 1 && NF'; done)
@@ -1600,7 +1670,12 @@ append_history() {
       echo "history: $change already has its row in ${BASE:-origin/main}'s history; not appended again"
       continue
     fi
-    file=$metrics_prefix-$(lane_of).tsv
+    lane_now=$(lane_of)
+    if [ -n "$only" ] && [ "$lane_now" != "$only" ]; then
+      echo "history: $change is of the $lane_now lane; left to that lane's next package step"
+      continue
+    fi
+    file=$metrics_prefix-$lane_now.tsv
     [ -f "$file" ] || printf '%s\n' "$HEADER" > "$file"
     history_row >> "$file"
     write_key row "$branch_now"
@@ -1697,7 +1772,7 @@ review_due() {
   sprint_state
   list=$(printf '%s\n' "$sprint_names" | awk 'NF { printf "%s%s", (n++ ? ", " : ""), $0 }')
   if sprint_waiting && [ "$waiting" = "sprint-$sprint_n" ] && sprint_reviewed; then
-    echo "not due: sprint-$sprint_n is planned; its plan waits in $plan_dir/ for the next package step"
+    echo "not due: sprint-$sprint_n is planned; its plan waits in $plan_dir/ for its records change, sprint-$sprint_n-records"
     return 1
   fi
   if [ "$sprint_count" -lt "$SPRINT_SIZE" ]; then
@@ -1755,7 +1830,7 @@ backlog_entry() {
 # an entry whose heading text a queue file holds, not as the start of a
 # longer word, is queued, and one whose whole heading line ends a line of
 # PLAN_DIR/groom.txt is groomed: the closed sprint's removals, which stay
-# in the backlog until the next package step.
+# in the backlog until the sprint's records change.
 backlog_pick() {
   for f in "$@"; do [ -f "$f" ] || die "no $f"; done
   cat "$@" |
@@ -1914,6 +1989,7 @@ groom() {
     return 0
   fi
   if ! sprint_waiting; then echo "groom: no sprint plan waits in $plan_dir/"; return 0; fi
+  [ "${1:-}" = "$waiting-records" ] || die "groom: the plan of $waiting is applied once, by its records change $waiting-records, which sprint-planning delivers; not by ${1:-a run with no change}"
   sprint_state
   [ "$waiting" = "sprint-$sprint_n" ] || die "groom: the plan of $waiting is not the sprint in progress, sprint-$sprint_n"
   if ! sprint_reviewed; then
@@ -2113,6 +2189,10 @@ plan_needed() {
     echo "needed: $run records a failing periodic security review at $reviewed, and no change merged since"
     return 0
   done
+  if records_change "$change"; then
+    echo "not needed: $change applies the waiting sprint plan, estimated small, and no planner places it"
+    return 1
+  fi
   queue=""
   heads=""
   for q in $queues; do
@@ -2205,11 +2285,11 @@ shift
 case "$command" in
   status) show_status; exit 0 ;;
   pending) pending_list; exit 0 ;;
-  history) [ $# -le 1 ] || usage; records_excluded history "${1:-}" || append_history; exit 0 ;;
+  history) [ $# -le 1 ] || usage; records_excluded history "${1:-}" || append_history "${1:-}"; exit 0 ;;
   review-due) [ $# -eq 0 ] || usage; review_due; exit $? ;;
   backlog-dups) [ $# -eq 0 ] || usage; backlog_dups; exit $? ;;
   backlog-pick) [ $# -ge 1 ] || usage; backlog_pick "$@"; exit $? ;;
-  groom) [ $# -le 1 ] || usage; ! records_excluded groom "${1:-}" || exit 0; groom; exit $? ;;
+  groom) [ $# -le 1 ] || usage; ! records_excluded groom "${1:-}" || exit 0; groom "${1:-}"; exit $? ;;
 esac
 [ $# -ge 1 ] || usage
 change=$1
@@ -2317,6 +2397,9 @@ case "$command" in
   lane)
     [ $# -eq 0 ] || usage
     lane_of ;;
+  plan-apply)
+    [ $# -eq 0 ] || usage
+    plan_apply ;;
   usage)
     [ $# -eq 2 ] || usage
     add_usage "$1" "$2" ;;
