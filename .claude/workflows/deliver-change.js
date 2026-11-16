@@ -170,6 +170,11 @@ const SCOUT_PLAN = {
   },
   required: ['current', 'needed'],
 }
+// When a pack an earlier change left serves this one: packs are bounded to
+// their locations, so a pack of the same area and commit that names other
+// locations holds no facts about this change's (.claude/agents/scout.md
+// step 3 applies the same rule).
+const PACK_CURRENT = 'a pack under tmp/scout/ is current for an area only when its Locations: line lists every location the change edits in that area, each the same path or path:line, and its Commit: is origin/main or `git diff --quiet <its commit> origin/main -- <its Files read>` passes; a pack of the area missing any of those locations is not current, however recent its commit'
 // The scouts a plan starts: an area given no location the change edits
 // there (a file the map places in no area, such as a root LICENSE) starts
 // none, and the rest are cut at the room the current packs leave.
@@ -1032,7 +1037,7 @@ if (!stopped && !state.merged) {
       // The plan's calls are its own key, so phase.scout holds only the
       // scouts' starts, the figure their packs' Tool calls lines match.
       const plan = await measured('areas', () => agent(
-        `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${brief}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only appends to docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. A file belongs to an area only when the area's section names its path, itself or by its directory (look the path up in docs/codebase-map.md): a file the map places in no area, such as a root LICENSE, belongs to none, and a change editing only such files lists no area. For each area, a pack under tmp/scout/ is current when its Commit: is origin/main or \`git diff --quiet <its commit> origin/main -- <its Files read>\` passes; list current packs by path and the areas still needing one, each with its locations, the paths or path:line of the existing code the change edits there, and the question a contributor needs answered about that code (callers, registration, tests), never about code the change will add, which does not exist yet; an area whose only edits are new files needs no pack.${capLine('areas')}`,
+        `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${brief}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only appends to docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. A file belongs to an area only when the area's section names its path, itself or by its directory (look the path up in docs/codebase-map.md): a file the map places in no area, such as a root LICENSE, belongs to none, and a change editing only such files lists no area. For each area, first name its locations, the paths or path:line of the existing code the change edits there, and the question a contributor needs answered about that code (callers, registration, tests), never about code the change will add, which does not exist yet; an area whose only edits are new files needs no pack. Then ${PACK_CURRENT}. List current packs by path and the areas still needing one, each with its locations and question.${capLine('areas')}`,
         calibrate('areas', { schema: withCalls(SCOUT_PLAN), label: 'scout plan' })), callCap('areas'))
       const targets = scoutTargets(plan, MAX_AREAS)
       if (targets.unplaced.length) note(`not scouted, no location in the area: ${targets.unplaced.map((n) => n.area).join(', ')}`)

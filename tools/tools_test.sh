@@ -2792,6 +2792,10 @@ expect "workflow: the areas beyond the room are cut" 0 '^\[\["p"\],\["a","b"\],\
   scout_js "(t => [t.current, t.needed.map((n) => n.area), t.beyond.map((n) => n.area)])(scoutTargets({ current: ['p'], needed: ['a', 'b', 'c'].map((a) => ({ area: a, question: 'q', locations: ['x'] })) }, 3))"
 expect "workflow: the scout prompt carries the locations" 0 '^"Area: 1[.] Build and CI[.] Locations: a[.]js:9, b[.]md; read only what these locations need[.] Question: q[.]' \
   scout_js "scoutPrompt({ area: '1. Build and CI', question: 'q', locations: ['a.js:9', 'b.md'] }, 'the brief')"
+expect "workflow: a pack is current only when its Locations: cover the area's" 0 '^\[true,true\]$' \
+  js "$wf" "PACK_CURRENT" "[/Locations: line lists every location the change edits in that area/.test(PACK_CURRENT), /missing any of those locations is not current/.test(PACK_CURRENT)]"
+expect "workflow: the area plan applies the pack currency rule" 0 '^1$' grep -c -F 'Then ${PACK_CURRENT}. List current packs' "$wf"
+expect "scout: a pack is reused only when it lists every given location" 0 '^1$' grep -c -E '^3[.] Reuse: .*`Locations:` line lists every location you were given.*A pack missing any of your locations is not current' "$agents/scout.md"
 expect "workflow: the area plan is measured apart from the scouts" 0 '^1 1$' \
   sh -c 'echo "$(grep -c "measured(.areas., () => agent(" "$1") $(grep -c "measured(.scout.," "$1")"' _ "$wf"
 expect "scout: the steps read only the locations" 0 '^4[.] Read only what the locations need; never a whole file' grep -E '^4[.] ' "$agents/scout.md"
