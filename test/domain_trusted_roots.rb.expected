@@ -1,0 +1,14 @@
+ok   no line trusts nothing
+ok   a root trusts itself
+ok   a root trusts a directory below it
+ok   a root does not trust a sibling sharing its prefix
+ok   a trailing slash is ignored
+ok   a root under the home
+ok   the home itself
+ok   a relative root trusts nothing
+ok   a root with a .. segment trusts nothing
+ok   the root directory trusts every absolute directory
+ok   a relative working directory is never trusted
+ok   any of several roots
+ok   none of several roots
+domain_trusted_roots: 13 passed, 0 failed

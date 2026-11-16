@@ -16,11 +16,13 @@ module Carat
       # @rbs @scripted: Array[String]
       # @rbs @outputs: Array[String]
       # @rbs @captured: Array[String]
+      # @rbs @environments: Array[String]
 
       attr_reader :spawned #: Array[String]
       attr_reader :bodies #: Array[String]
       attr_reader :stopped #: Array[Integer]
       attr_reader :captured #: Array[String]
+      attr_reader :environments #: Array[String]
 
       #: () -> void
       def initialize
@@ -32,6 +34,7 @@ module Carat
         @scripted = []
         @outputs = []
         @captured = []
+        @environments = []
       end
 
       # Gives the command, its words joined by spaces, the output a capture
@@ -82,12 +85,18 @@ module Carat
         @stopped << handle
       end
 
-      # Records the command and answers its scripted output.
+      # Records the command and the variables added to its environment, as
+      # NAME=value words in the order given, and answers its scripted
+      # output.
       # @rbs argv: Array[String]
-      def capture(argv)
+      # @rbs environment: Hash[String, String]
+      def capture(argv, environment)
         return nil if argv.empty? || !@installed.include?(argv[0])
         command = argv.join(" ")
         @captured << command
+        words = []
+        environment.each { |name, value| words << "#{name}=#{value}" }
+        @environments << words.join(" ")
         at = @scripted.index(command)
         at.nil? ? "" : @outputs[at]
       end

@@ -15,4 +15,10 @@ ok   outside a repository nothing shows and the counts are not asked
 ok   and no message names git
 ok   without git nothing shows and the plugin stays enabled
 ok   and no error reaches the message row
-editor_git_signs: 17 passed, 0 failed
+ok   outside a trusted root no git runs and no segment shows, with no trusted_roots line
+ok   and no message names git or the trust
+ok   outside a trusted root no git runs, with roots that do not cover the directory
+ok   a promisor remote with a command runs nothing: the segment shows the branch alone
+ok   each command refuses the ext:: transport and the fsmonitor hook on its command line
+ok   and runs with lazy fetching off
+editor_git_signs: 23 passed, 0 failed

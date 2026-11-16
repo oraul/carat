@@ -18,13 +18,17 @@ module Carat
     # entries inside a root, which MakePath, RenamePath, and DeletePath
     # check and perform, and running a program on the PATH through the
     # process port's capture, never a path, so not one a cloned project
-    # carries. The plugin link has checked that the plugin is
-    # enabled. The use cases have no reader named as a request.
+    # carries, and only while the working directory is trusted
+    # (Domain::TrustedRoots, which the plugin host decides on activation),
+    # with git's lazy fetch off (PROGRAM_ENVIRONMENT), so a cloned
+    # repository's promisor remote cannot run a command. The plugin link
+    # has checked that the plugin is enabled. The use cases have no reader named as a request.
     class FileRequests
       MAX_FILES = 100_000
       READ_LIMIT = 262_144
       MAX_ROWS = 1000
-      private_constant :MAX_FILES, :READ_LIMIT, :MAX_ROWS
+      PROGRAM_ENVIRONMENT = { "GIT_NO_LAZY_FETCH" => "1" }
+      private_constant :MAX_FILES, :READ_LIMIT, :MAX_ROWS, :PROGRAM_ENVIRONMENT
 
       attr_reader :files #: Ports::FilePort
       attr_reader :probe_path #: ProbePath
@@ -34,6 +38,7 @@ module Carat
       # @rbs @rename_path: RenamePath
       # @rbs @delete_path: DeletePath
       # @rbs @list_tree: ListTree
+      # @rbs @trusted: bool
 
       #: (files: Ports::FilePort, processes: Ports::ProcessPort, probe_path: ProbePath, make_path: MakePath, rename_path: RenamePath, delete_path: DeletePath, list_tree: ListTree) -> void
       def initialize(files:, processes:, probe_path:, make_path:, rename_path:, delete_path:, list_tree:)
@@ -44,6 +49,14 @@ module Carat
         @rename_path = rename_path
         @delete_path = delete_path
         @list_tree = list_tree
+        @trusted = false
+      end
+
+      # Whether programs may run: the working directory is under a trusted
+      # root. False until the plugin host decides it on activation.
+      #: (bool) -> void
+      def trusted=(value)
+        @trusted = value
       end
 
       #: (String, String) -> PluginApi::Response
@@ -113,14 +126,17 @@ module Carat
         respond(@delete_path.call(root, path))
       end
 
-      # Runs the program after the checks; the words are copied, so the
+      # Runs the program after the checks, refused outside a trusted root,
+      # with PROGRAM_ENVIRONMENT added to its environment; the words are
+      # copied, so the
       # plugin cannot change them while they run.
       #: (String, Array[String]) -> PluginApi::TextResponse
       def run_program(name, argv)
+        return PluginApi::TextResponse.failure("a program runs only under a root of language.trusted_roots") unless @trusted
         why = program_refusal(argv)
         return PluginApi::TextResponse.failure(why) unless why.empty?
         words = argv.map { |word| word.dup }
-        output = @processes.capture(words)
+        output = @processes.capture(words, PROGRAM_ENVIRONMENT)
         return PluginApi::TextResponse.failure("cannot run #{words[0]}") if output.nil?
         return PluginApi::TextResponse.failure("#{words[0]} answered bytes that are not UTF-8") unless output.valid_encoding?
         PluginApi::TextResponse.success(output.dup)

@@ -73,10 +73,11 @@ module Carat
       end
 
       # @rbs argv: Array[String]
-      def capture(argv)
+      # @rbs environment: Hash[String, String]
+      def capture(argv, environment)
         return nil if argv.empty?
         output = IO.pipe
-        pid = start_quiet(argv, output[1])
+        pid = start_quiet(argv, environment, output[1])
         output[1].close
         if pid == 0
           output[0].close
@@ -91,11 +92,11 @@ module Carat
 
       private
 
-      # The child's pid with no input and no error output, or 0 when the
-      # command cannot start.
-      #: (Array[String], IO) -> Integer
-      def start_quiet(argv, output)
-        Process.spawn([argv[0], argv[0]], *argv.drop(1), in: File::NULL, out: output, err: File::NULL)
+      # The child's pid with no input and no error output, the variables
+      # added to its environment, or 0 when the command cannot start.
+      #: (Array[String], Hash[String, String], IO) -> Integer
+      def start_quiet(argv, environment, output)
+        Process.spawn(environment, [argv[0], argv[0]], *argv.drop(1), in: File::NULL, out: output, err: File::NULL)
       rescue SystemCallError
         0
       end
