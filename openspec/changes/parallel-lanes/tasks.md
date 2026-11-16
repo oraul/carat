@@ -8,7 +8,7 @@
 ## 2. Workflows and agents
 
 - [x] 2.1 `.claude/workflows/deliver-change.js`: the planner writes `build/plan/<change>/`; the package step runs `plan-apply` and `history`, never `groom`, and nothing for a records change; proved by the cases reading its prompts.
-- [x] 2.2 `.claude/workflows/sprint-planning.js`: the Records phase delivering `sprint-N-records`; proved by "sprint-planning delivers the sprint's records change".
+- [x] 2.2 `.claude/workflows/sprint-planning.js`: the Records phase delivering `sprint-N-records`; proved by "sprint-planning delivers the sprint's records change"; its report line decides finished from the run state's merged commit, proved by "a records change that stopped with a report gets the resume hint", "a merged records change names its commit", and "the records line reads the run state's merged commit".
 - [x] 2.3 `.claude/agents/planner.md` and `contributor.md`: the plan directory and the package and records steps; proved by the agents cases.
 
 ## 3. Docs and checks

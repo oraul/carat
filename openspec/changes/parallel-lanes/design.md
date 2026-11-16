@@ -19,4 +19,4 @@ Goals: two lanes' planners never share a file; one lane's package step writes on
 
 - Each sprint costs one more small delivery (records-only, docs stages only). Accepted: it is what writes the records once.
 - Until a lane's next package step, the other lane's pending rows are absent from its history file; `status` and `bench` read the files as they are, as they did between a merge and the next package step.
-- A stopped records change leaves the plan waiting (`review-due` not due); `/deliver sprint-N-records` resumes it, which the sprint-planning report says.
+- A stopped records change leaves the plan waiting (`review-due` not due); `/deliver sprint-N-records` resumes it, which the sprint-planning report says. Since `deliver-change.js` returns a report whether or not it merged, the report decides finished only from the merged commit `sh tools/run_state.sh get sprint-N-records merged` prints, read by one capped start after the delivery.

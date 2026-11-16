@@ -3449,6 +3449,13 @@ expect "sprint: the sweep runs in an even sprint" 0 '^true$' \
 expect "sprint: the records change runs history and groom under its own name" 0 '^\["sprint-3-records","chore/sprint-3-records",true,true\]$' \
   js "$swf" "recordsRun" "(r => [r.change, r.branch, r.brief.includes('history sprint-3-records'), r.brief.includes('groom sprint-3-records')])(recordsRun({ sprint: 'sprint-3' }))"
 expect "sprint: sprint-planning delivers the sprint's records change" 0 "^1$" grep -c -F "workflow({ scriptPath: '.claude/workflows/deliver-change.js' }, recordsRun(sprint))" "$swf"
+# deliver-change.js returns a report whether or not it merged: only the
+# merged commit of the records change's run state counts as finished.
+expect "sprint: a records change that stopped with a report gets the resume hint" 0 '^\["sprint-3-records did not finish; resume it with /deliver sprint-3-records","sprint-3-records did not finish; resume it with /deliver sprint-3-records"\]$' \
+  js "$swf" "isCommit recordsLine" "[recordsLine('sprint-3-records', '', '- Change: sprint-3-records\nStopped: CI red'), recordsLine('sprint-3-records', 'no such key', null)]"
+expect "sprint: a merged records change names its commit" 0 '^"sprint-3-records: merged as abc1234; - Change: sprint-3-records"$' \
+  js "$swf" "isCommit recordsLine" "recordsLine('sprint-3-records', 'abc1234', '- Change: sprint-3-records\nmore')"
+expect "sprint: the records line reads the run state's merged commit" 0 '^1$' grep -c -F 'sh tools/run_state.sh get ${recordsName} merged' "$swf"
 expect "sprint: a due line naming a shell word is not due" 0 '^null$' \
   sprint_js "parseDue('due: sprint-1 has 1 changes merged (\$(x)); combined diff abc1234..origin/main; sweep: no')"
 # A sprint security review left at its cap gets one more start over the

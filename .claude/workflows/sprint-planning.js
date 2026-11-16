@@ -113,6 +113,15 @@ function recordsRun(sprint) {
   }
 }
 
+// The report's line for the records change: deliver-change.js returns a
+// report whether or not it merged, so only the merged commit its run state
+// records counts as finished; anything else gets the resume hint
+// .claude/commands/sprint.md acts on. tools/tools_test.sh runs this helper.
+function recordsLine(name, merged, delivered) {
+  if (!isCommit(merged)) return `${name} did not finish; resume it with /deliver ${name}`
+  return `${name}: merged as ${merged}${delivered ? `; ${String(delivered).split('\n')[0]}` : ''}`
+}
+
 phase('Due')
 const due = await agent(
   `Run \`sh tools/run_state.sh review-due\` with the Bash tool from the repository root and return its one line verbatim as line (exit 1 means not due, not a failure). Only when the line begins with \`due: sprint-N\`, run \`sh tools/run_state.sh init sprint-N main\`, and when it ends with \`sweep: yes\` also \`sh tools/run_state.sh init sprint-N-sweep main\`, N being its number; return initialized true when they exited 0.${capLine(CAPS.due)}`,
@@ -193,14 +202,20 @@ phase('Records')
 // gets its records change; otherwise the plan does not exist or waits for
 // /sprint again.
 let delivered = null
+let merged = ''
+const recordsName = recordsRun(sprint).change
 if (plan && recorded && recorded.ok) {
   try {
     delivered = await workflow({ scriptPath: '.claude/workflows/deliver-change.js' }, recordsRun(sprint))
   } catch (e) {
     log(`the records change failed to start: ${e.message}`)
   }
+  // Whether it merged is read from its run state, never from its report.
+  const read = await agent(
+    `Run \`sh tools/run_state.sh get ${recordsName} merged\` with the Bash tool from the repository root, exactly as written, and nothing else. Return its output, trimmed, as merged (empty when it printed nothing or failed).${capLine(CAPS.record)}`,
+    { schema: { type: 'object', properties: { merged: { type: 'string' } }, required: ['merged'] }, effort: 'low', label: 'records-merged' })
+  merged = read ? read.merged.trim() : ''
 }
-const recordsName = recordsRun(sprint).change
 
 const report = [
   `${sprint.sprint}: ${sprint.names.join(', ')}`,
@@ -210,7 +225,7 @@ const report = [
   `Plan: ${plan ? `${plan.paths.join(', ') || 'no file'}; ${plan.decisions.map((d) => `${d.decision} (${d.evidence})`).join('; ')}` : reviewed ? 'the planner returned no result; run /sprint again' : 'not started, the sprint review did not complete; run /sprint again'}`,
   plan && plan.security_first.length ? `Security first: deliver ${plan.security_first.join('; ')} before the sprint` : '',
   recorded && recorded.ok ? '' : `The results were not recorded: ${recorded ? recorded.output : 'no result'}`,
-  plan && recorded && recorded.ok ? `Records: ${delivered ? `${recordsName}: ${String(delivered).split('\n')[0]}` : `${recordsName} did not finish; resume it with /deliver ${recordsName}`}` : '',
+  plan && recorded && recorded.ok ? `Records: ${recordsLine(recordsName, merged, delivered)}` : '',
 ].filter(Boolean).join('\n- ')
 log(report)
 return { due: true, sprint: sprint.sprint, ran, recorded: Boolean(recorded && recorded.ok), report: `- ${report}` }
