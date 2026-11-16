@@ -164,7 +164,19 @@
 #                               blocked in the run state sprint-N
 #   backlog-dups                print each location (file:line) that two or
 #                               more backlog headings name, with the headings
-#   groom [CHANGE]              nothing when CHANGE's run state sets
+#   backlog-pick [FILE...]      print the next PICK_BATCHES batches of the
+#                               backlog entries ("### title", "- Location:",
+#                               "- Why:") of the FILEs, else of the backlog
+#                               and the findings files, each of one
+#                               docs/codebase-map.md area: the areas of the
+#                               entries naming security first, then by their
+#                               oldest entry; PICK_MIN or more give at most
+#                               PICK_MAX, security first, then oldest; fewer
+#                               give their security entries alone, or none;
+#                               an entry a queue file names is skipped, one
+#                               no mapped path holds printed "unmapped:";
+#                               exit 1 when no batch
+#   groom [CHANGE]             nothing when CHANGE's run state sets
 #                               records=skip (the planning records excluded),
 #                               or, retiring the marker to sprint.applied,
 #                               when the sprint it names has its row in the
@@ -245,6 +257,11 @@ metrics_files="$metrics_prefix-feature.tsv $metrics_prefix-backlog.tsv"
 backlog_file=${BACKLOG_FILE:-docs/backlog.md}
 findings_dir=${FINDINGS_DIR:-docs/findings}
 queue_files="docs/queue-feature.md docs/queue-backlog.md"
+# The pick's batches (backlog-pick): the sprint's two backlog items, each
+# of one area holding PICK_MIN entries, at most PICK_MAX of them.
+PICK_BATCHES=2
+PICK_MIN=5
+PICK_MAX=10
 metrics_out=${METRICS_OUT:-build/metrics/current.tsv}
 PHASES="plan implement check quality security bench package ci merge retro report"
 # The stages that read what a test-only commit may change, which such a
@@ -1713,6 +1730,70 @@ backlog_entry() {
     on { print }'
 }
 
+# The pick of the backlog lane: the entries ("### " headings, each to the
+# next heading) of the FILEs in order, else of folded_backlog, ranked into
+# batches of one docs/codebase-map.md area each (backlog-pick in the
+# header). A Location's first token, its backticks and :line dropped,
+# matches a path the map names under a numbered area, or lies under one
+# ending in "/"; an entry whose heading text a queue file holds, not as
+# the start of a longer word, is queued.
+backlog_pick() {
+  if [ $# -eq 0 ]; then
+    [ -f "$backlog_file" ] || die "no $backlog_file"
+  else
+    for f in "$@"; do [ -f "$f" ] || die "no $f"; done
+  fi
+  { if [ $# -eq 0 ]; then folded_backlog; else cat "$@"; fi; } |
+    M=docs/codebase-map.md Q="$queue_files" B=$PICK_BATCHES L=$PICK_MIN H=$PICK_MAX awk '
+    BEGIN {
+      while ((getline line < ENVIRON["M"]) > 0) {
+        if (line ~ /^## [0-9]+[.] /) { area = substr(line, 4); continue }
+        if (line ~ /^## /) { area = ""; continue }
+        if (area != "" && match(line, /^- `[^`]+`/)) map[substr(line, 4, RLENGTH - 4)] = area
+      }
+      nq = split(ENVIRON["Q"], qf, " ")
+      for (i = 1; i <= nq; i++) while ((getline line < qf[i]) > 0) queued = queued "\n" line
+    }
+    /^### / { n++; head[n] = $0; on = 1; next }
+    /^#+ / { on = 0; next }
+    on && /^- Location:/ { loc[n] = $0 }
+    on && /^- Why:/ { why[n] = $0 }
+    function queued_at(t,   s, j) {
+      for (s = queued; (j = index(s, t)) > 0; s = substr(s, j + 1))
+        if (substr(s, j + length(t), 1) !~ /[A-Za-z0-9_]/) return 1
+      return 0
+    }
+    function area_of(p,   k) {
+      if (p in map) return map[p]
+      for (k in map) if (k ~ /\/$/ && index(p, k) == 1) return map[k]
+      return ""
+    }
+    END {
+      for (i = 1; i <= n; i++) {
+        if (queued_at(substr(head[i], 5))) continue
+        p = loc[i]; sub(/^- Location:[ \t]*/, "", p); gsub(/`/, "", p)
+        sub(/[ \t,;(].*$/, "", p); sub(/:.*$/, "", p)
+        a = area_of(p)
+        if (a == "") { print "unmapped: " head[i] " (" (p == "" ? "no Location" : p) ")"; continue }
+        at[i] = a; count[a]++
+        if (tolower(head[i] " " why[i]) ~ /security/) { secure[i] = 1; nsec[a]++ }
+      }
+      for (pass = 1; pass <= 2; pass++)
+        for (i = 1; i <= n; i++)
+          if ((i in at) && !(at[i] in ranked) && (pass == 2 || (i in secure))) { ranked[at[i]] = 1; order[++m] = at[i] }
+      for (r = 1; r <= m && b < ENVIRON["B"] + 0; r++) {
+        a = order[r]; alone = count[a] < ENVIRON["L"] + 0
+        if (alone && !nsec[a]) continue
+        b++; k = 0; out = ""
+        for (pass = 1; pass <= (alone ? 1 : 2); pass++)
+          for (i = 1; i <= n && k < ENVIRON["H"] + 0; i++)
+            if (at[i] == a && ((pass == 1) == (i in secure))) { k++; out = out "\n" head[i] }
+        print "batch " b ": area " a ", " (alone ? "its " k " security entries alone of " count[a] : k " of " count[a] " entries") out
+      }
+      if (!b) { print "no batch: no area holds " ENVIRON["L"] " entries and none names security"; exit 1 }
+    }'
+}
+
 # The sprint's row from its history rows up to the SPRINT_SIZE-th counted
 # one, where it ends, a later exception's row left to the next sprint, whose
 # combined diff starts there (a change beyond the sprint, sprint_exceptions,
@@ -2053,6 +2134,7 @@ case "$command" in
   history) [ $# -le 1 ] || usage; records_excluded history "${1:-}" || append_history; exit 0 ;;
   review-due) [ $# -eq 0 ] || usage; review_due; exit $? ;;
   backlog-dups) [ $# -eq 0 ] || usage; backlog_dups; exit $? ;;
+  backlog-pick) backlog_pick "$@"; exit $? ;;
   groom) [ $# -le 1 ] || usage; ! records_excluded groom "${1:-}" || exit 0; groom; exit $? ;;
 esac
 [ $# -ge 1 ] || usage

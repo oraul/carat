@@ -735,6 +735,59 @@ expect "gates: pushes refuse a second review fix" 1 "2 review fix pushes; one is
 
 expect "run_state: abandon is no longer a command" 2 "" state abandon pushing
 
+# The backlog pick over a fixture map, queue, and backlogs: area 3 holds 3
+# entries, area 1 eleven unqueued with the newest naming security, area 2
+# six, and one entry names a path only the delivered changes list.
+fresh pick
+cat > docs/codebase-map.md <<'EOB'
+# Codebase map
+
+## 1. Build and CI
+
+- `tools/a.sh`: a.
+
+## 2. Toolchain
+
+- `tools/t.sh`: t.
+
+## 3. Configuration
+
+- `config/`: the configuration.
+
+## Delivered changes
+
+- `tools/z.sh`
+EOB
+printf '# Queue\n\n## Sprint 1\n\n1. `b1` (T5, estimated small): closes ### a2 at tools/a.sh:2, not t1 at tools/t.sh:10.\n' > docs/queue-backlog.md
+{ printf '# Backlog\n\n## Older section\n'
+  for i in 1 2 3; do printf '\n### c%s at config/x.caratrc:%s\n\n- Location: `config/x.caratrc:%s`\n- Why: c.\n- Fix: c.\n' $i $i $i; done
+  for i in 1 2 3 4 5 6 7 8 9 10 11; do printf '\n### a%s at tools/a.sh:%s\n\n- Location: tools/a.sh:%s (a)\n- Why: a.\n- Fix: a.\n' $i $i $i; done
+  for i in 1 2 3 4 5 6; do printf '\n### t%s at tools/t.sh:%s\n\n- Location: tools/t.sh:%s\n- Why: t.\n- Fix: t.\n' $i $i $i; done
+  printf '\n### u1 at tools/z.sh:1\n\n- Location: tools/z.sh:1\n- Why: u.\n- Fix: u.\n'
+  printf '\n### s1 quoting at tools/a.sh:40\n\n- Location: tools/a.sh:40\n- Why: security Medium (8), an unquoted path.\n- Fix: quote it.\n'
+} > bk.md
+pick=$(state backlog-pick bk.md)
+expect "run_state: backlog-pick puts a security entry first whatever its age" 0 "^### s1 quoting at tools/a[.]sh:40$" \
+  sh -c 'printf "%s\n" "$1" | sed -n "/^batch 1/{n;p;}"' _ "$pick"
+expect "run_state: backlog-pick batches one area, oldest first, at most 10" 0 "^batch 1: area 1[.] Build and CI, 10 of 11 entries s1 a1 a3 a4 a5 a6 a7 a8 a9 a10 $" \
+  sh -c 'printf "%s\n" "$1" | sed -n "/^batch 1/,/^batch 2/p" | sed "\$d" | sed "s/^### \([a-z0-9]*\) .*/\1/" | tr "\n" " "' _ "$pick"
+expect "run_state: backlog-pick passes over an area of fewer than 5" 0 "^1 0$" \
+  sh -c 'echo "$(printf "%s\n" "$1" | grep -c "^batch 2: area 2[.] Toolchain, 6 of 6 entries$") $(printf "%s\n" "$1" | grep -c "^### c\|area 3")"' _ "$pick"
+expect "run_state: backlog-pick skips an entry a queued item names" 0 "^0 1$" \
+  sh -c 'echo "$(printf "%s\n" "$1" | grep -c "^### a2 ") $(printf "%s\n" "$1" | grep -c "^### t1 ")"' _ "$pick"
+expect "run_state: backlog-pick reports an unmapped entry" 0 "^unmapped: ### u1 at tools/z[.]sh:1 [(]tools/z[.]sh[)] 0$" \
+  sh -c 'echo "$(printf "%s\n" "$1" | grep "^unmapped") $(printf "%s\n" "$1" | grep -c "^### u1")"' _ "$pick"
+printf '### s2 at config/y.caratrc:1\n\n- Location: config/y.caratrc:1\n- Why: security Low.\n- Fix: y.\n\n### a1 at tools/a.sh:1\n\n- Location: tools/a.sh:1\n- Why: a.\n' > bk2.md
+expect "run_state: backlog-pick gives an area under 5 its security entries alone" 0 "^batch 1: area 3[.] Configuration, its 1 security entries alone of 1 ### s2 at config/y[.]caratrc:1 $" \
+  sh -c 'sh "$1" backlog-pick bk2.md | tr "\n" " "' _ "$here/run_state.sh"
+cp bk2.md docs/backlog.md
+mkdir -p docs/findings
+printf '### f1 security at tools/t.sh:3\n\n- Location: tools/t.sh:3\n- Why: f.\n' > docs/findings/f.md
+expect "run_state: backlog-pick reads the backlog and findings files by default" 0 "^batch 2: area 2[.] Toolchain, its 1 security entries alone of 1$" state backlog-pick
+expect "run_state: backlog-pick prints no batch when none qualifies" 1 "^no batch: no area holds 5 entries and none names security$" \
+  sh -c 'tail -4 "$1" > bk3.md && sh "$2" backlog-pick bk3.md' _ bk2.md "$here/run_state.sh"
+expect "run_state: backlog-pick refuses a missing file" 1 "no nofile[.]md" state backlog-pick nofile.md
+
 
 # ------------------------------------------------------------ open_pr.sh
 
