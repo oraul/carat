@@ -1,6 +1,6 @@
 ---
 name: contributor
-description: The one agent that changes this repository. In /deliver it proposes and implements a change through OpenSpec, fixes what comes back, and packages it into one pull request. Use when a change is to be delivered.
+description: The one agent that changes this repository. In /deliver it proposes, implements, fixes, and packages one change through OpenSpec into one pull request. Use when a change is to be delivered.
 tools: Read, Edit, Write, Glob, Grep, Bash, Skill
 maxTurns: 140
 hooks:
@@ -45,9 +45,9 @@ Given a failed stage's log, blocking findings, a regression, or a red CI log, fi
 ### package
 
 1. Confirm every task is `- [x]`, archive with the `openspec-archive-change` skill (`openspec archive "<change>" -y`, `--skip-specs` without delta specs), run `make spec-validate`, and commit.
-2. Append every non-blocking finding you were given, with its location, why, and fix outline, to `docs/findings/<change>.md` with `>>`, never opening `docs/backlog.md`. Then, as your prompt says, copy `build/plan/queue-*.md` and `goals.md` over their `docs/` copies when they exist, append `build/plan/backlog.md` likewise, and run `sh tools/run_state.sh history <change>`, then `groom <change>`; commit them as `docs: record the plan and the metrics history`.
-3. Write the squash body with the Write tool to `build/pipeline/<change>.body.md` by the Pull request description section of `CLAUDE.md`, its Testing only checks that ran, with results, the security review first. Check it with `sh tools/gates.sh pr-body` on that file, then run `sh tools/open_pr.sh write <change> "<title>"`, its Conventional Commits subject, which writes the archived change's `pr.md`; commit it. Never call a pull request create tool or API, nor edit one with them.
-4. Run `make gates` and `make docs-lint`. Fetch origin and push with `sh tools/run_state.sh push <change>`. Return `sh tools/run_state.sh get <change> pushed`, the full sha, as `pushed`, or the merge stops.
+2. Append every non-blocking finding you were given, with its location, why, and fix outline, to `docs/findings/<change>.md` with `>>`, never opening the backlog. Then, as your prompt says, copy `build/plan/queue-*.md` and `goals.md` over their `docs/` copies when they exist, append `build/plan/backlog.md` likewise, and run `sh tools/run_state.sh history <change>`, then `groom <change>`; commit them as `docs: record the plan and the metrics history`.
+3. Write the body with the Write tool to `build/pipeline/<change>.body.md` by the Pull request description section of `CLAUDE.md`, its Testing only checks that ran, with results, the security review first. Check it with `sh tools/gates.sh pr-body` on that file, then run `sh tools/open_pr.sh write <change> "<title>"`, its Conventional Commits subject, which writes the archived change's `pr.md`; commit it. Never call a pull request create tool or API, nor edit one with them.
+4. Run `make gates` and `make docs-lint`. Fetch origin and push with `sh tools/run_state.sh push <change>`. Return `sh tools/run_state.sh get <change> pushed` as `pushed`, or the merge stops.
 5. Run `sh tools/open_pr.sh wait <change>` in the foreground (Bash timeout 600000: it polls up to 540 s); it records the number: return it as `pr`, or `stopped` with its message.
 
 ### wait
@@ -56,11 +56,11 @@ The push ran but no pull request number was recorded: run package step 5 alone, 
 
 ### push
 
-After a CI fix passed the checker and security review, run `sh tools/run_state.sh push <change> --ci-fix`, one push per CI fix, returning `pushed` as in package. On a conflict with `main`, merge `origin/main` into it (the merge commit carries the trailer) and say so: keep both sides of an appended file, regenerate a generated one with its `make` target, stop and name a conflict where both sides changed the same logic; the fix stays here, checks and reviews rerun.
+After a CI fix passed the checker and security review, run `sh tools/run_state.sh push <change> --ci-fix`, one push per CI fix, returning `pushed` as in package. On a conflict with `main`, merge `origin/main` into it (the merge commit carries the trailer) and say so: keep both sides of appended files, regenerate generated ones with `make`, stop and name a conflict where both sides changed the same logic; the fix stays here, checks and reviews rerun.
 
 ### body
 
-CI is red only on the `scan` of the pull request's title or body: fix the body file, gate it and rewrite `pr.md` as in package step 3, commit, and push as in push mode.
+CI is red only on the `scan` of the pull request's title or body: fix the body file, gate it and rewrite `pr.md` as in package step 3, commit, and push with `sh tools/run_state.sh push <change> --ci-fix`, returning `pushed`.
 
 ## Report
 

@@ -874,7 +874,7 @@ state set based merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 printf 'based\t-\n' >> docs/metrics-backlog.tsv
 commit "docs: record based"
 cp m.keep docs/metrics-backlog.tsv
-expect "run_state: history appends no row main already has" 0 "^history: based already has its row in HEAD's docs/metrics[.]tsv; not appended again\$" env BASE=HEAD sh "$here/run_state.sh" history
+expect "run_state: history appends no row main already has" 0 "^history: based already has its row in HEAD's history; not appended again\$" env BASE=HEAD sh "$here/run_state.sh" history
 # A merged value naming no commit on main is a run that never merged: no
 # row, no pending name (sprint-tidy).
 state init stray chore/stray > /dev/null
@@ -1177,14 +1177,21 @@ echo sprint-1 > build/plan/sprint
 state init sprint-1 main > /dev/null 2>&1
 state review sprint-1 periodic-security pass "diff blocking=0" > /dev/null
 state groom > /dev/null
-expect "run_state: the groomed sprint row ends at the fifth counted change, a later exception left to the next sprint" 0 "^sprint-1 e5 5 e1,e2,e3,e4,e5 " sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
+expect "run_state: the groomed sprint row ends at the fifth counted change in merge order, its exception inside" 0 "^sprint-1 e5 6 e1,e2,e3,e4,x1,e5 " sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
 echo x2 >> README.md
 commit "feat: x2"
 state init x2 chore/x2 > /dev/null
 state set x2 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
-expect "run_state: review-due counts a change beyond the sprint past the sprint's one exception" 1 "^not due: sprint-2 has 1 of 5 changes merged [(]x1, x2[)]; not counted, beyond the sprint: x1\$" state review-due
+expect "run_state: review-due leaves the next sprint's exception out of its count" 1 "^not due: sprint-2 has 0 of 5 changes merged [(]x2[)]; not counted, beyond the sprint: x2\$" state review-due
+printf '4. `x3` (T2 user request, estimated small, beyond the sprint): three.\n' >> docs/queue-backlog.md
+commit "docs: x3 queued"
+echo x3 >> README.md
+commit "feat: x3"
+state init x3 chore/x3 > /dev/null
+state set x3 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: review-due counts a change beyond the sprint past the sprint's one exception" 1 "^not due: sprint-2 has 1 of 5 changes merged [(]x2, x3[)]; not counted, beyond the sprint: x2\$" state review-due
 state history > /dev/null
-printf 'sprint-2\tx2\n' >> docs/sprints.tsv
+printf 'sprint-2\tx3\n' >> docs/sprints.tsv
 printf '# Queue\n\n## Sprint 4\n\nThe user-approved exception: `y1` (T1 pipeline, estimated small, beyond the sprint): first.\n' > docs/queue-feature.md
 echo y1 >> README.md
 commit "chore: y1 with the plan naming it"
