@@ -974,7 +974,8 @@ if (!resume || resume.status !== 'done') {
 // The planner orders the queue from the metrics history before a new change
 // starts; an unresolved blocking security finding goes first. It runs only
 // when the queue needs a decision, which plan-needed alone finds (the change
-// is not the queue's head, or a proposal or finding waits): a brief for the
+// is not the queue's head, a proposal or finding waits, or a periodic
+// security review failed with no merge since): a brief for the
 // head item keeps the order, so it plans no more than the change's name
 // would (planSkipped). Otherwise the head item is taken as written, with its
 // size as the estimate, and the brief still reaches the scouts and the

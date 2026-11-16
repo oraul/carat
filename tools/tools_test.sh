@@ -1149,14 +1149,15 @@ mrow() {
 }
 # A change whose queue item, at its squash commit's parent, carries the
 # words "beyond the sprint" in its parenthesis is not counted toward the five,
-# and the groomed row takes it beside the five; an item marked only "the
-# user-approved exception", which lifts the one-pipeline limit, still counts
-# (sprint-tidy).
+# one such change per sprint (SPRINT_EXCEPTIONS), and the groomed row ends at
+# the fifth counted change, so a later exception's row goes to the next
+# sprint; an item marked only "the user-approved exception", which lifts the
+# one-pipeline limit, still counts (sprint-tidy, review-coverage).
 fresh exception
 printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
 printf '# Backlog\n' > docs/backlog.md
 { printf 'header\n'; mrow seed bbb222 small 1 1 -; mrow e1 c1 small 1 1 -; mrow e2 c2 small 1 1 -; mrow e3 c3 small 1 1 -; mrow e4 c4 small 1 1 -; } > docs/metrics.tsv
-printf '# Queue\n\n1. `x1` (T2 user request, estimated small, user-approved beyond the sprint): one.\n2. `e5` (T1 pipeline, estimated small, the user-approved exception): review-due counts a change beyond the sprint toward the five.\n' > docs/queue.md
+printf '# Queue\n\n1. `x1` (T2 user request, estimated small, user-approved beyond the sprint): one.\n2. `e5` (T1 pipeline, estimated small, the user-approved exception): review-due counts a change beyond the sprint toward the five.\n3. `x2` (T2 user request, estimated small, beyond the sprint): two.\n' > docs/queue.md
 commit "docs: the queue"
 echo x1 >> README.md
 commit "feat: x1"
@@ -1174,7 +1175,12 @@ echo sprint-1 > build/plan/sprint
 state init sprint-1 main > /dev/null 2>&1
 state review sprint-1 periodic-security pass "diff blocking=0" > /dev/null
 state groom > /dev/null
-expect "run_state: the groomed sprint row takes the exception beside the five" 0 "^sprint-1 x1 6 e1,e2,e3,e4,e5,x1 " sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
+expect "run_state: the groomed sprint row ends at the fifth counted change, a later exception left to the next sprint" 0 "^sprint-1 e5 5 e1,e2,e3,e4,e5 " sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
+echo x2 >> README.md
+commit "feat: x2"
+state init x2 chore/x2 > /dev/null
+state set x2 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: review-due counts a change beyond the sprint past the sprint's one exception" 1 "^not due: sprint-2 has 1 of 5 changes merged [(]x1, x2[)]; not counted, beyond the sprint: x1\$" state review-due
 fresh sprint
 printf 'sprint\tlast\n' > docs/sprints.tsv
 expect "run_state: review-due needs a sprint row" 1 "ends with no sprint row" state review-due
@@ -1306,6 +1312,17 @@ expect "run_state: plan-needed names a pending proposal" 0 "^needed: prev holds 
 expect "run_state: plan-needed prints one line beside a pending proposal" 0 "^exit 0 lines 1\$" plan_lines next
 state history > /dev/null
 expect "run_state: plan-needed leaves a change with a history row" 1 "^not needed" state plan-needed next
+# A periodic security review records on its own run state, which has no
+# merged commit: a failing one stands until a change merges after the
+# commit it reviewed (review-coverage).
+state init review-20261116 main > /dev/null 2>&1
+state review review-20261116 periodic-security partial "high=0 medium=1 low=0 blocking=1 not_reviewed=2" > /dev/null
+expect "run_state: plan-needed names a failing periodic security review no merge followed" 0 "^needed: review-20261116 records a failing periodic security review at [0-9a-f]*, and no change merged since\$" state plan-needed next
+echo fix >> README.md
+commit "fix: the finding"
+state init fix chore/fix > /dev/null
+state set fix merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: plan-needed leaves a failing periodic security review a later merge followed" 1 "^not needed" state plan-needed next
 printf '# Queue\n\n1. UI track: themes (T5, estimated medium).\n' > docs/queue.md
 expect "run_state: plan-needed names a head without a change name" 0 "^needed: next is not the head of docs/queue[.]md [(]no named item[)]" state plan-needed next
 

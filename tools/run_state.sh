@@ -146,7 +146,9 @@
 #                               changes, its combined diff BASE..origin/main,
 #                               and "sweep: yes" in an even sprint, and exit 0
 #                               when SPRINT_SIZE changes merged since the last
-#                               sprint of docs/sprints.tsv (SPRINTS_FILE);
+#                               sprint of docs/sprints.tsv (SPRINTS_FILE), up
+#                               to SPRINT_EXCEPTIONS marked beyond the sprint
+#                               not counted;
 #                               print "not due: ..." and exit 1 before that or
 #                               while the sprint's plan waits in build/plan/
 #                               after its security review, recorded pass or
@@ -177,7 +179,9 @@
 #                               change is not the head of docs/queue.md (the
 #                               waiting sprint plan's queue.md) or a
 #                               pending change holds a proposal or finding
-#                               (PLAN_NOTES) to place; print "not needed:
+#                               (PLAN_NOTES) to place, or a review run records
+#                               a failing periodic security review with no
+#                               change merged since; print "not needed:
 #                               ..." with the head item's size and exit 1
 #   budget CHANGE               print "over:", "under:", "unmeasured:", or
 #                               "no estimate:" with the change's estimate, its
@@ -283,10 +287,14 @@ SPRINT_SIZE=5
 # /review's review-DATE and sprint-planning's sprint-N.
 REVIEW_RUNS='^(review|sprint)-[0-9]'
 # The words that mark a queue item, inside its first parenthesis, as a
-# change the user approved beyond a sprint's five, which it never counts;
+# change the user approved beyond a sprint's five, which it does not count;
 # distinct from "the user-approved exception", which lifts only the
 # one-pipeline limit (docs_lint.sh) and leaves the item counted.
 EXCEPTION_MARK='beyond the sprint'
+# At most this many marked changes per sprint go uncounted, the first in
+# the sprint's order; a later one counts, so a sprint closes after at most
+# SPRINT_SIZE + SPRINT_EXCEPTIONS merges whatever the queue text says.
+SPRINT_EXCEPTIONS=1
 SPRINT_HEADER="sprint${TAB}last${TAB}merges${TAB}changes${TAB}wall_min${TAB}min_per_change${TAB}total_tokens${TAB}over_budget${TAB}first_pass"
 
 die() {
@@ -1474,8 +1482,9 @@ append_history() {
 # last row; sprint_base, the merged commit of that row's last change, where
 # the combined diff starts; sprint_names, the changes merged since (the
 # history rows after that change's row, then the merged changes without a
-# row); sprint_exceptions, those marked beyond the sprint (exception_item);
-# and sprint_count, the rest.
+# row); sprint_exceptions, the first SPRINT_EXCEPTIONS of them marked beyond
+# the sprint (exception_item), the queue read no further once they are
+# found; and sprint_count, the rest.
 sprint_state() {
   [ -f "$sprints_file" ] || die "no $sprints_file"
   last_row=$(awk -F'\t' 'NR > 1 && NF { row = $0 } END { print row }' "$sprints_file")
@@ -1488,8 +1497,13 @@ sprint_state() {
   sprint_names=$({ awk -F'\t' -v c="$prev_last" 'seen && NF { print $1 } $1 == c { seen = 1 }' "$metrics_file"; pending_list; } |
     awk -v r="$REVIEW_RUNS" 'NF && $0 !~ r && !seen[$0]++')
   sprint_exceptions=""
+  exempt=0
   for name in $sprint_names; do
-    ! exception_item "$name" "$(merged_of "$name")" || sprint_exceptions="${sprint_exceptions:+$sprint_exceptions }$name"
+    [ "$exempt" -lt "$SPRINT_EXCEPTIONS" ] || break
+    if exception_item "$name" "$(merged_of "$name")"; then
+      sprint_exceptions="${sprint_exceptions:+$sprint_exceptions }$name"
+      exempt=$((exempt + 1))
+    fi
   done
   sprint_count=$(printf '%s\n' "$sprint_names" | X=" $sprint_exceptions " awk 'NF && !index(ENVIRON["X"], " " $0 " ")' | grep -c .)
 }
@@ -1503,7 +1517,8 @@ merged_of() {
 
 # True when the item naming NAME in docs/queue.md at the parent of COMMIT,
 # the queue it was delivered from, carries EXCEPTION_MARK in its first
-# parenthesis: a change beyond the sprint, which a sprint never counts.
+# parenthesis: a change beyond the sprint, which a sprint does not count
+# (up to SPRINT_EXCEPTIONS).
 exception_item() {
   valid '[0-9a-f]{7,40}' "$2" || return 1
   git show --end-of-options "$2^:docs/queue.md" 2>/dev/null | C="$1" M="$EXCEPTION_MARK" awk '
@@ -1571,16 +1586,17 @@ backlog_entry() {
 }
 
 # The sprint's row from its history rows up to the SPRINT_SIZE-th counted
-# one (a change beyond the sprint, sprint_exceptions, not counted): the last
-# change, the merges, the changes, the wall minutes and their mean per
-# change, the total tokens, the runs over their size's budget
-# (TOKEN_BUDGETS), and each gate's first passes.
+# one, where it ends, a later exception's row left to the next sprint, whose
+# combined diff starts there (a change beyond the sprint, sprint_exceptions,
+# not counted): the last change, the merges, the changes, the wall minutes
+# and their mean per change, the total tokens, the runs over their size's
+# budget (TOKEN_BUDGETS), and each gate's first passes.
 sprint_row() {
   awk -F'\t' -v c="$prev_last" -v budgets="$TOKEN_BUDGETS" -v s="sprint-$sprint_n" -v size="$SPRINT_SIZE" -v r="$REVIEW_RUNS" -v x=" $sprint_exceptions " '
     BEGIN { n = split(budgets, b, " "); for (i = 1; i <= n; i++) { split(b[i], kv, "="); budget[kv[1]] = kv[2] } }
     seen && NF && !done && $1 !~ r {
       ex = index(x, " " $1 " ") > 0
-      if (!ex && counted == size) { done = 1; next }
+      if (counted == size) { done = 1; next }
       if (!ex) counted++
       rows++; names = names (rows > 1 ? "," : "") $1; last = $1
       if ($17 ~ /^[0-9.]+$/) wall += $17
@@ -1702,11 +1718,31 @@ records_excluded() {
   echo "$1: $2 excludes the planning records (records=skip); $what"
 }
 
+# True when a change merged after COMMIT, the commit a periodic review
+# read: the newest history row's merged commit, or a pending change's,
+# descends from it and is not it. That change's planner saw the review, as
+# plan-needed named it, so its finding was delivered first or judged not
+# blocking. A COMMIT git does not know is never merged since.
+merged_since() {
+  valid '[0-9a-f]{7,40}' "$1" || return 1
+  since=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
+  newest=$(awk -F'\t' 'NR > 1 && $3 ~ /^[0-9a-f]+$/ { m = $3 } END { print m }' "$metrics_file" 2>/dev/null)
+  for m in $newest $(for p in $(pending_list); do change=$p; merged_commit; done); do
+    valid '[0-9a-f]{7,40}' "$m" || continue
+    full=$(git rev-parse --verify -q --end-of-options "$m^{commit}" 2>/dev/null) || continue
+    [ "$full" != "$since" ] && git merge-base --is-ancestor "$since" "$full" 2>/dev/null && return 0
+  done
+  return 1
+}
+
 # Whether the queue needs the planner before the change starts: needed
-# when the change is not the first item of docs/queue.md, or when another
+# when the change is not the first item of docs/queue.md, when another
 # merged change without a history row holds a note of a PLAN_NOTES kind
 # (a retrospective proposal, an overrun, a periodic finding) that only the
-# planner places; otherwise the head item is taken as written, its size
+# planner places, or when a review run (REVIEW_RUNS) records a failing
+# periodic security review (blocked, or blocking findings counted) and no
+# change merged since (merged_since), so its security-first stop applies;
+# otherwise the head item is taken as written, its size
 # printed for the run's estimate. It prints one line: a run whose brief is
 # only the change name has its agents read the item in docs/queue.md.
 plan_needed() {
@@ -1725,6 +1761,20 @@ plan_needed() {
       echo "needed: $other holds $n proposal(s) or finding(s) to place"
       return 0
     fi
+  done
+  for file in "$state_dir"/*.json; do
+    [ -f "$file" ] || continue
+    run=$(basename "$file" .json)
+    printf '%s\n' "$run" | grep -q -E "$REVIEW_RUNS" || continue
+    record=$(change=$run; read_key review.periodic-security)
+    case "${record%% *}" in
+      blocked) ;;
+      *) printf '%s\n' "$record" | grep -q -E 'blocking=0*[1-9]' || continue ;;
+    esac
+    reviewed=$(printf '%s\n' "$record" | cut -d' ' -f2)
+    merged_since "$reviewed" && continue
+    echo "needed: $run records a failing periodic security review at $reviewed, and no change merged since"
+    return 0
   done
   size=$(printf '%s\n' "$head_item" | awk 'match($0, /estimated (small|medium|large)/) { print substr($0, RSTART + 10, RLENGTH - 10) }')
   echo "not needed: $change heads $queue, estimated ${size:--}, and no pending change holds a proposal or finding"
