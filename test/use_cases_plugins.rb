@@ -378,12 +378,12 @@ module UseCasesPluginsTest
     processes = rig.processes
     processes.install("git")
     processes.script("git symbolic-ref --short -q HEAD", "main\n")
-    r = h.run_program(["git", "symbolic-ref", "--short", "-q", "HEAD"])
+    ran = h.run_program(["git", "symbolic-ref", "--short", "-q", "HEAD"])
     # run_program answers the program's output
-    t.assert_equal([true, "main\n", ["git symbolic-ref --short -q HEAD"]], [r.ok, r.text, processes.captured], "run_program answers the program's output and the port gets the words as given")
-    r = h.run_program(["svn", "info"])
+    t.assert_equal([true, "main\n", ["git symbolic-ref --short -q HEAD"]], [ran.ok, ran.text, processes.captured], "run_program answers the program's output and the port gets the words as given")
+    ran = h.run_program(["svn", "info"])
     # run_program fails when the program cannot start
-    t.assert_equal([false, "cannot run svn"], [r.ok, r.message], "run_program fails when the program cannot start")
+    t.assert_equal([false, "cannot run svn"], [ran.ok, ran.message], "run_program fails when the program cannot start")
     # run_program refuses a path or an empty command
     t.assert_equal([false, false, false, false], [h.run_program([]).ok, h.run_program(["./git", "status"]).ok, h.run_program(["git", ""]).ok, h.run_program(["git", "a\0b"]).ok], "run_program refuses a path or an empty command, an empty word, and a NUL")
     t.assert_equal(["./git: the program must be a name on the PATH", 1], [h.run_program(["/usr/bin/git"]).message.sub("/usr/bin/git", "./git"), processes.captured.length], "and starts nothing for them")
