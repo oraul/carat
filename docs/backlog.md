@@ -1892,12 +1892,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: K at one position, a cursor move, and K again while the first request is in flight: the first answer drained in the next poll before the cancel is marked arrived, so `ShowHover` shows the old position's documentation at the new anchor and keeps it when the new request times out.
 - Fix outline: drop an answer whose request is not the one last asked, as the completion path does for its serial, with a hover row queuing the first answer after the second K and before its idle tick.
 
-## The markdown text comment names only completion items
-
-- Where: the module comment of `carat/domain/markdown_text.rb` line 7 at b0dd342. Periodic quality. Raised again at 38628bb (periodic quality). Queued in `hover-tidy`.
-- Why it matters: `ShowHover` reads hover contents through it too, so the comment misleads a reader.
-- Fix outline: say a completion item's or a hover answer's documentation.
-
 ## The hover request holders are reached through other use cases
 
 - Where: `carat/adapters/input_controller.rb` line 81 reads the shared `HoverRequest` through `show_hover.hover`, and `carat/use_cases/handle_key.rb` line 93 through `follow_hover.hover`, at b0dd342. Periodic quality. Queued in `hover-tidy`.
@@ -2714,23 +2708,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a regression in either path would show wrong colors or keep a failing plugin enabled, unnoticed.
 - Fix outline: add `test/adapters_hover.rb` rows with a raising tokenizer double, and with a fenced Ruby string spanning two lines followed by a second block.
 
-## MarkdownText.rows is public surface only a test calls
-
-- Where: `MarkdownText.rows` in `carat/domain/markdown_text.rb` line 35, called only by `test/domain_markdown_text.rb` since `quick-docs-styles`, production going through `FormatDocs` (parse then wrap). Quality advisory in `quick-docs-styles`; part of the public helpers no other file calls.
-- Why it matters: dead public surface invites callers that bypass the owner.
-- Fix outline: move it into the test as a typed helper over `wrap(parse(text), width).texts` and drop it from the module.
-
 ## Comments name only the cursor-line layer
 
 - Where: the `SgrTable` class comment in `carat/adapters/sgr_table.rb` line 8, `Frame`'s comment in `carat/domain/frame.rb` line 13, and `docs/architecture.md` line 260, at the `quick-docs-styles` change. Quality advisory in `quick-docs-styles`.
 - Why it matters: cells and sequences now also carry `Highlight::FLOAT_LAYER`, so the comments mislead a reader adding a layer.
 - Fix outline: mention the float layer in all three.
-
-## The MarkdownText comment still says plain rows
-
-- Where: the module comment of `carat/domain/markdown_text.rb` line 10, at the `quick-docs-styles` change. Quality advisory in `quick-docs-styles`.
-- Why it matters: `parse` now also keeps markup spans and each fence's language and block number, which the comment does not say.
-- Fix outline: add a sentence on `parse`, `wrap`, and the spans they keep.
 
 ## Documentation formatting scans every token quad per row
 
@@ -4801,10 +4783,6 @@ The header (line 3) says open notes are rechecked when the pin is bumped, but th
 
 The file's opening says each note holds at the pinned compiler, but the byteindex IndexError rule now describes 84aa303b1, after the pin 6af548c9, with no recheck marker like the other notes about other commits. Why: a reader takes it as true at the pin, which it is not. Fix: mark it as not at the pin and rechecked when a bump passes 84aa303b1, the reason Utf8.boundary is kept.
 
-### docs/spinel-notes.md:47: the note copies the pin value, which the next bump makes false
-
-The phrase 'the pin stays at its parent 6af548c9' copies the Makefile's pin value into a binding note that the next bump past 2440954d1 (after untyped-elephant) makes false. Why: a binding note that goes stale with every bump misleads. Fix: say '6af548c9, its parent, is the newest commit without it' and leave the pin value to SPINEL_REF.
-
 ## Findings of untyped-elephant, non-blocking
 
 ### Rename the private element reader list in carat/testing.rb:83
@@ -5375,12 +5353,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: quality advisory, docs currency: they say the vendored header tools/spinel/spinel_rt_responds_generated.h is regenerated and changed, but commit 7d6e154 leaves it byte for byte the 6af548c9 one and the diff has no header change.
 - Fix outline: say the header was regenerated at 93d7883b and came out unchanged, and drop it from Impact (in the next note that cites the pin, since the archive records the change as it was).
 
-## Regression bullet reads as a changelog of pins (docs/spinel-notes.md:47)
-
-- Location: docs/spinel-notes.md:47.
-- Why: quality advisory, simplicity: the untyped-receiver regression bullet grows a sixth dated measurement and now reads as a changelog of pins and figures rather than a rule.
-- Fix outline: keep the rule (avoid a [] on an untyped receiver; read through Testing#cell, Testing#cases, Carat::Json.field/element/reach) and the current pin's figures, and leave the history to the archived changes.
-
 ## Accepted rebuild count unexplained at 93d7883b (docs/spinel-notes.md:47)
 
 - Location: docs/spinel-notes.md:47.
@@ -5900,11 +5872,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: the pack-currency cases (2795, 2797, 2798) match the prose of PACK_CURRENT, the workflow source, and scout.md by regex, so a rewording breaks them and they prove no behavior, the pattern of the advisory at tools/tools_test.sh:2790.
 - Fix: keep one case that PACK_CURRENT reaches the area-plan prompt through a stubbed agent, or accept them as wording guards and say so in a comment.
 
-### Sprint count exemption trusts model-written queue text
-- Location: tools/run_state.sh:1505
-- Why: security Low (confidence 3): review-due trusts the words 'user-approved exception' in a model-written queue item, so the sprint-end review can be put off.
-- Fix: require proof the user approved the exception, such as a run-state record the workflow writes from the user's input, rather than words the planner writes into docs/queue.md; or cap exceptions per sprint (for example one) and make review-due fall due anyway after a set number of merges since sprint_base.
-
 ### merged_on_main repeats supported
 - Location: tools/run_state.sh:1121
 - Why: quality advisory: merged_on_main repeats supported (tools/run_state.sh:1735) line for line, differing only in the base it reads.
@@ -5919,16 +5886,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: tools/run_state.sh:287, .claude/agents/planner.md:25, docs/goals.md
 - Why: quality advisory: the proposal says the planner writes the beyond-the-sprint marker, yet neither planner.md step 5 nor docs/goals.md names it, so only a hand edit of docs/queue.md ever marks an item and review-due's exception rule depends on memory.
 - Fix: name EXCEPTION_MARK's words in planner.md's item parenthesis rule beside the pipeline-limit line, and in the sprint rule of docs/goals.md, for a change the user approves beyond the five.
-
-### Double negative in the sprint exception count
-- Location: tools/run_state.sh:1492
-- Why: quality advisory: '! exception_item ... || sprint_exceptions=...' is a double negative that reads as the opposite of what it does.
-- Fix: write 'if exception_item "$name" "$(merged_of "$name")"; then sprint_exceptions=...; fi'.
-
-### sprint_row takes exception rows past the fifth counted row
-- Location: tools/run_state.sh:1583
-- Why: quality advisory: sprint_row keeps taking exception rows after the fifth counted row until a sixth counted one, so an exception whose history row lands after the sprint review (a merge between /sprint and the groom) joins the closed sprint's row and becomes its last change, the next sprint_base, leaving its diff in neither sprint's combined diff.
-- Fix: end the row at the fifth counted row, taking only the exceptions before it, or bound it by the reviewed head.
 
 ### ToggleReading's call takes a Command it never reads
 - Location: carat/use_cases/docs/toggle_reading.rb:39
@@ -6052,12 +6009,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: .github/workflows/open-pr.yml:45, ci.yml, main.yml (sprint-8 sweep, security Low (5)); queued in `ci-hardening`.
 - Why: actions/checkout is pinned to the v4 tag in the job that later reads PR_TOKEN.
 - Fix: pin every action to a full commit hash.
-
-### toolchain-clean removes all of tmp
-
-- Location: Makefile:203, README.md:11, docs/architecture.md:33 (sprint-8 sweep, quality); queued in `check-runner-safety`.
-- Why: `rm -rf tmp` also deletes linked worktrees (stale git worktree records) and the scout packs and ignores SPINEL_SRC and PREFIX, while the docs say it removes the two toolchain directories.
-- Fix: remove the SPINEL_SRC and PREFIX directories only and correct the README table.
 
 ### The tab width fallback is copied in ten places
 
@@ -6345,3 +6296,59 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: tools/run_state.sh:187, tools/run_state.sh:1807, tools/run_state.sh:1812 (quality advisory, review-coverage-b)
 - Why: comment wrapping: over-long lines and a broken wrap.
 - Fix: rewrap both to the file's comment width.
+
+### lane_of falls back to the backlog lane against its proposal, untested
+- Location: tools/run_state.sh:1200
+- Why: lane_of sends a squash subject of no known type to the backlog lane, as its comment says, while the archived backlog-lane-a proposal and design say the feature lane, and no tools-test case covers the fallback, so either could drift unnoticed.
+- Fix: align the code or the design on one lane and add a tools-test case for a squash subject of no known type.
+
+### docs-lint counts the pipeline limit per lane file, not per sprint
+- Location: tools/docs_lint.sh:178
+- Why: the check runs once per lane file, so a sprint may hold two pipeline items (one per lane) and the feature lane may hold one, where the old check allowed one per sprint.
+- Fix: count pipeline items over both lanes' sprint sections together, or refuse a pipeline item in the feature lane.
+
+### The findings append fails in a fresh checkout without docs/findings
+- Location: .claude/agents/contributor.md:48, .claude/workflows/deliver-change.js:1099
+- Why: the package step appends to docs/findings/CHANGE.md with >>, but no docs/findings/ directory is tracked (groom removes every file in it), so the append fails in a fresh checkout.
+- Fix: say mkdir -p docs/findings before the append in both places, or keep a tracked placeholder in the directory that groom leaves.
+
+### docs-lint RETIRED exemption hides stale references to the old queue and metrics paths
+- Location: tools/docs_lint.sh:60
+- Why: RETIRED exempts docs/queue.md and docs/metrics.tsv in every document check_paths reads, agent files and CLAUDE.md included, so a stale reference to a retired path is no longer caught.
+- Fix: exempt them only in the records that keep history (the backlog), or drop the exemption once those records name the lanes.
+
+### tools-test BASE-names-no-commit case accepts either of two rows
+- Location: tools/tools_test.sh:899
+- Why: the case accepts based or history, though the working-tree lane file holds only the history row (based's row lives only in the committed file m.keep replaced), so a misorder between them would pass.
+- Fix: expect ^history$.
+
+
+### docs/spinel-notes.md:47: the regression bullet holds pin values and dated figures
+
+- Location: docs/spinel-notes.md:47 (merged at the sprint-9 grooming from two quality advisories: the note copying the pin value, and the bullet reading as a changelog of pins).
+- Why it matters: the binding note names a pin ("stays at its parent 6af548c9") and grows a dated measurement per bump, so every bump makes it false (the pin is c0502112 since #151) and the rule is buried in history.
+- Fix outline: keep the rule (no [] on an untyped receiver; read through Testing#cell, Testing#cases, Carat::Json.field/element/reach) and the current figures only, say "6af548c9, its parent, is the newest commit without it", leave the pin value to SPINEL_REF and the history to the archived changes.
+
+### Relative PATH entries let git_signs run a project's ./git
+
+- Location: carat/drivers/process_runner.rb:98, carat/use_cases/plugins/file_requests.rb:139 (sprint-9 review, security Low (5)); queued in `process-capture-hardening`.
+- Why it matters: run_program looks the program up on the PATH and the no-slash check does not stop a relative or empty PATH entry (".", "::", a trailing ":"); git_signs is on by default and runs git when it activates, so opening carat in a checkout shipping an executable ./git runs it with no user action.
+- Fix outline: resolve argv[0] against only the absolute PATH directories, spawn the absolute path found, refuse when none is found; a driver test with PATH=".:..." and a planted program in the working directory.
+
+### capture leaves a child past the output limit running
+
+- Location: carat/drivers/process_runner.rb:87 (sprint-9 review, quality); queued in `process-capture-hardening`.
+- Why it matters: capture kills the child only on timeout; when the output passes CAPTURE_LIMIT it closes the pipe and detaches, so a child ignoring SIGPIPE runs on with no deadline.
+- Fix outline: kill the child unless collect read the output to its end; a case with a SIGPIPE-ignoring child.
+
+### Review runs and full commits are looked up in several places of run_state.sh
+
+- Location: tools/run_state.sh:1763 and :1818 (sprint-9 review, quality); queued in `sprint-marker-tidy`.
+- Why it matters: passed_since and plan_needed repeat the review-run listing (ls of the state directory, sed, grep REVIEW_RUNS), and merged_since, passed_since, and supported repeat the valid check plus git rev-parse --verify of a full commit, so a fix lands in one copy only.
+- Fix outline: add review_runs and full_commit helpers and call them from each place.
+
+### The core Branch slot row of docs/compatibility.md contradicts the git_signs segment
+
+- Location: carat/domain/status_slots.rb:18, carat/adapters/status_bar.rb:164 and :241, docs/compatibility.md:466 and :468 (sprint-9 review, quality); queued in `ui-code-tidy` beside "## The status bar's branch slot has no writer".
+- Why it matters: only tests fill the core branch slot while git_signs draws the branch as its own segment at the same priority 40, yet the compatibility row says the core slot shows it.
+- Fix outline: remove the slot from StatusSlots and StatusBar and fold the row into the git_signs row, or have the plugin fill the core slot.
