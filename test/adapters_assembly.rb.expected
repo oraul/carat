@@ -85,7 +85,7 @@ ok   the plugin registry, in the tokenizer part
 ok   the terminal port
 ok   the clock port
 ok   the file port
-ok   the process port
+ok   the process port, in the services and the plugin file requests
 ok   the message queue port
 ok   the language services
 ok   the status slots, in the language services

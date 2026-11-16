@@ -31,6 +31,8 @@ ok   nerd kind_property is a pua glyph
 ok   nerd kind_keyword is a pua glyph
 ok   nerd kind_snippet is a pua glyph
 ok   nerd kind_constant is a pua glyph
+ok   nerd ahead is a pua glyph
+ok   nerd behind is a pua glyph
 ok   unicode folder_closed is a unicode glyph
 ok   unicode folder_open is a unicode glyph
 ok   unicode file is a unicode glyph
@@ -64,6 +66,8 @@ ok   unicode kind_property is a unicode glyph
 ok   unicode kind_keyword is a unicode glyph
 ok   unicode kind_snippet is a unicode glyph
 ok   unicode kind_constant is a unicode glyph
+ok   unicode ahead is a unicode glyph
+ok   unicode behind is a unicode glyph
 ok   ascii folder_closed is a ascii glyph
 ok   ascii folder_open is a ascii glyph
 ok   ascii file is a ascii glyph
@@ -97,6 +101,8 @@ ok   ascii kind_property is a ascii glyph
 ok   ascii kind_keyword is a ascii glyph
 ok   ascii kind_snippet is a ascii glyph
 ok   ascii kind_constant is a ascii glyph
+ok   ascii ahead is a ascii glyph
+ok   ascii behind is a ascii glyph
 ok   ascii closed folder
 ok   ascii open folder
 ok   ascii error
@@ -109,6 +115,10 @@ ok   unknown set reads as the default, unicode
 ok   ascii function kind
 ok   ascii variable kind
 ok   unicode class kind
+ok   the ahead and behind glyphs per set: unicode ahead
+ok   unicode behind
+ok   ascii ahead
+ok   ascii behind
 ok   the default folder_closed is one cell outside the private use areas
 ok   the default folder_open is one cell outside the private use areas
 ok   the default file is one cell outside the private use areas
@@ -142,7 +152,9 @@ ok   the default kind_property is one cell outside the private use areas
 ok   the default kind_keyword is one cell outside the private use areas
 ok   the default kind_snippet is one cell outside the private use areas
 ok   the default kind_constant is one cell outside the private use areas
-ok   thirty-three icon names, twelve of them completion kinds
+ok   the default ahead is one cell outside the private use areas
+ok   the default behind is one cell outside the private use areas
+ok   thirty-five icon names, twelve of them completion kinds and two the branch counts
 ok   the ascii current marker is >
 ok   unicode is a set
 ok   emoji is not a set
@@ -166,4 +178,4 @@ ok   a wide character is still wide
 ok   a unicode icon
 ok   private_use? for a nerd glyph
 ok   private_use? for a letter
-domain_icons: 168 passed, 0 failed
+domain_icons: 180 passed, 0 failed
