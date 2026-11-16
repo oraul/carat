@@ -1319,6 +1319,7 @@ expect "run_state: plan-needed leaves a change with a history row" 1 "^not neede
 state init review-20261116 main > /dev/null 2>&1
 state review review-20261116 periodic-security partial "high=0 medium=1 low=0 blocking=1 not_reviewed=2" > /dev/null
 expect "run_state: plan-needed names a failing periodic security review no merge followed" 0 "^needed: review-20261116 records a failing periodic security review at [0-9a-f]*, and no change merged since\$" state plan-needed next
+expect "run_state: plan-needed names a failing periodic security review before any other reason" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed later
 state review review-20261116 periodic-security blocked "high=0 medium=1 low=0 blocking=1" "$(git rev-parse --short=12 HEAD^)" > /dev/null
 expect "run_state: plan-needed leaves a failing periodic security review a later merge followed" 1 "^not needed" state plan-needed next
 printf '# Queue\n\n1. UI track: themes (T5, estimated medium).\n' > docs/queue.md
@@ -2858,6 +2859,12 @@ expect "scout: the pack records its tool calls" 0 '^2$' grep -c -E '^Tool calls:
 expect "workflow: a brief fixing the order skips the planner" 0 '^\[true,false,false,false,false\]$' \
   js "$wf" "planSkipped" "[planSkipped({}, 'not needed: c heads docs/queue.md, estimated medium'), planSkipped({}, 'needed: c is not the head of docs/queue.md (b)'), planSkipped({ 'phase.plan': 'abc1234' }, 'not needed: c'), planSkipped({ merged: 'abc1234' }, 'not needed: c'), planSkipped({}, '')]"
 expect "workflow: the plan skip reads plan-needed alone, not the brief" 0 '^1$' grep -c -x 'if (!stopped && planSkipped(state, planLine)) {' "$wf"
+# The planner reads the review run plan-needed names for a failing
+# periodic security review, which its pending list never holds
+# (review-coverage).
+expect "workflow: the planner is told the failing review run plan-needed names" 0 '^\[true,""\]$' \
+  js "$wf" "planReview" '[/show review-20261116` and apply your security-first step/.test(planReview("needed: review-20261116 records a failing periodic security review at abc1234def56, and no change merged since")), planReview("needed: c is not the head of docs/queue.md (b)")]'
+expect "workflow: the planner prompt carries the failing review" 0 '^1$' grep -c -F '${planReview(planLine)}${capLine('"'"'planner'"'"')}' "$wf"
 speed_js() {
   js "$wf" "COMMIT CLOSABLE noteText staleRed findingAt reRaised securityBlocking narrowedFrom mergeRecords" "$1"
 }

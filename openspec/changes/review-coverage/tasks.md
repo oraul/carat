@@ -4,6 +4,8 @@
 
 - [x] 1.1 Add `merged_since` to `tools/run_state.sh` and make `plan_needed` print `needed:` for a `review-*` or `sprint-*` run state whose periodic security review failed with no merge after its commit; proved by "run_state: plan-needed names a failing periodic security review no merge followed" and "run_state: plan-needed leaves a failing periodic security review a later merge followed" in `tools/tools_test.sh`
 
+- [x] 1.2 Name a failing periodic security review first in `plan_needed`, before the queue-head and pending-note reasons, and hand the review run it names to the planner (`planReview` in `.claude/workflows/deliver-change.js`, the run's `show` in `.claude/agents/planner.md`), so the merge that clears it followed a planner that read it; proved by "run_state: plan-needed names a failing periodic security review before any other reason", "workflow: the planner is told the failing review run plan-needed names", and "workflow: the planner prompt carries the failing review" in `tools/tools_test.sh`
+
 ## 2. Sprint count
 
 - [x] 2.1 Add `SPRINT_EXCEPTIONS` to `tools/run_state.sh`, cap the exceptions in `sprint_state` with a plain `if` that stops at the cap; proved by "run_state: review-due counts a change beyond the sprint past the sprint's one exception" in `tools/tools_test.sh`

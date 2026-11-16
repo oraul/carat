@@ -997,6 +997,15 @@ function resumeBrief(change, line) {
 function planSkipped(state, line) {
   return !state.merged && !state['phase.plan'] && !state['phase.implement'] && /^not needed:/.test(line || '')
 }
+// The planner prompt's line for a failing periodic security review that
+// plan-needed names first: the review run, whose show the planner reads,
+// since its pending list holds merged run states only and merged_since
+// clears the review at the next merge (review-coverage); otherwise
+// nothing. tools/tools_test.sh runs this helper.
+function planReview(line) {
+  const m = /^needed: ((?:review|sprint)-[0-9][a-z0-9-]*) records a failing periodic security review at ([0-9a-f]{7,40}),/.exec(line || '')
+  return m ? ` plan-needed: \`${m[1]}\` records a failing periodic security review at ${m[2]}; read \`sh tools/run_state.sh show ${m[1]}\` and apply your security-first step to its findings.` : ''
+}
 const request = typeof input.brief === 'string' && input.brief.trim() !== '' && input.brief.trim() !== state.change
 const brief = request ? input.brief : resumeBrief(state.change, planLine)
 if (!stopped && planSkipped(state, planLine)) {
@@ -1011,7 +1020,7 @@ if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement
   phase('Plan')
   planned = 1
   const p = await measured('plan', () => agent(
-    `${intro()} Plan the queue for this delivery. Brief: ${input.brief || 'the existing OpenSpec change'}.${capLine('planner')}`,
+    `${intro()} Plan the queue for this delivery. Brief: ${input.brief || 'the existing OpenSpec change'}.${planReview(planLine)}${capLine('planner')}`,
     calibrate('planner', { agentType: 'planner', schema: withCalls(PLAN) })), callCap('planner'))
   if (!p) stopped = 'the planner returned no result'
   else {

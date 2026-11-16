@@ -1720,9 +1720,10 @@ records_excluded() {
 
 # True when a change merged after COMMIT, the commit a periodic review
 # read: the newest history row's merged commit, or a pending change's,
-# descends from it and is not it. That change's planner saw the review, as
-# plan-needed named it, so its finding was delivered first or judged not
-# blocking. A COMMIT git does not know is never merged since.
+# descends from it and is not it. That change's planner saw the review:
+# plan-needed names a failing review before any other reason and the
+# workflow passes the review run to the planner, so its finding was
+# delivered first or judged not blocking. A COMMIT git does not know is never merged since.
 merged_since() {
   valid '[0-9a-f]{7,40}' "$1" || return 1
   since=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
@@ -1735,19 +1736,32 @@ merged_since() {
   return 1
 }
 
-# Whether the queue needs the planner before the change starts: needed
-# when the change is not the first item of docs/queue.md, when another
-# merged change without a history row holds a note of a PLAN_NOTES kind
-# (a retrospective proposal, an overrun, a periodic finding) that only the
-# planner places, or when a review run (REVIEW_RUNS) records a failing
-# periodic security review (blocked, or blocking findings counted) and no
-# change merged since (merged_since), so its security-first stop applies;
-# otherwise the head item is taken as written, its size
+# Whether the queue needs the planner before the change starts: needed,
+# first, when a review run (REVIEW_RUNS) records a failing periodic
+# security review (blocked, or blocking findings counted) and no change
+# merged since (merged_since), the line naming that run, which the
+# workflow hands the planner so its security-first stop applies whatever
+# else needs it; then when the change is not the first item of
+# docs/queue.md, or when another merged change without a history row
+# holds a note of a PLAN_NOTES kind (a retrospective proposal, an
+# overrun, a periodic finding) that only the planner places; otherwise the head item is taken as written, its size
 # printed for the run's estimate. It prints one line: a run whose brief is
 # only the change name has its agents read the item in docs/queue.md.
 plan_needed() {
   queue=docs/queue.md
   ! sprint_waiting || queue=$plan_dir/queue.md
+  for run in $(ls "$state_dir" 2>/dev/null | sed -n 's/[.]json$//p' | grep -E "$REVIEW_RUNS"); do
+    record=$(change=$run; read_key review.periodic-security)
+    case "${record%% *}: $record" in
+      blocked:*|*" blocking="[1-9]*) ;;
+      *) continue ;;
+    esac
+    reviewed=${record#* }
+    reviewed=${reviewed%% *}
+    merged_since "$reviewed" && continue
+    echo "needed: $run records a failing periodic security review at $reviewed, and no change merged since"
+    return 0
+  done
   head_item=$(sed -n 's/^1[.] //p' "$queue" 2>/dev/null | head -1)
   name=$(printf '%s\n' "$head_item" | sed -n 's/^`\([a-z0-9][a-z0-9-]*\)`.*/\1/p')
   if [ "$name" != "$change" ]; then
@@ -1761,18 +1775,6 @@ plan_needed() {
       echo "needed: $other holds $n proposal(s) or finding(s) to place"
       return 0
     fi
-  done
-  for run in $(ls "$state_dir" 2>/dev/null | sed -n 's/[.]json$//p' | grep -E "$REVIEW_RUNS"); do
-    record=$(change=$run; read_key review.periodic-security)
-    case "${record%% *}: $record" in
-      blocked:*|*" blocking="[1-9]*) ;;
-      *) continue ;;
-    esac
-    reviewed=${record#* }
-    reviewed=${reviewed%% *}
-    merged_since "$reviewed" && continue
-    echo "needed: $run records a failing periodic security review at $reviewed, and no change merged since"
-    return 0
   done
   size=$(printf '%s\n' "$head_item" | awk 'match($0, /estimated (small|medium|large)/) { print substr($0, RSTART + 10, RLENGTH - 10) }')
   echo "not needed: $change heads $queue, estimated ${size:--}, and no pending change holds a proposal or finding"
