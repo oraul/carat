@@ -1152,21 +1152,23 @@ lane_rows() {
 }
 
 # The header, then both lanes' history rows oldest merge first: ordered by
-# the committer time of each row's merged commit, read in one git call; a
-# row whose commit git does not know sorts first, in its file's order.
+# the place of each row's merged commit in HEAD's ancestry, oldest first
+# (rev-list --topo-order, which main's chain of squash commits orders
+# whole, whatever their timestamps); a row whose commit HEAD does not hold
+# sorts first, in its file's order.
 history_rows() {
   printf '%s\n' "$HEADER"
   rows=$(lane_rows)
   [ -n "$rows" ] || return 0
-  commits=$(printf '%s\n' "$rows" | cut -f3 | grep -E '^[0-9a-f]{7,40}$' | sort -u)
-  times=""
-  # shellcheck disable=SC2086
-  [ -z "$commits" ] || times=$(git log --no-walk=unsorted --ignore-missing --format='%H %ct' $commits -- 2>/dev/null)
-  { printf '%s\n' "$times"; echo --; printf '%s\n' "$rows"; } | awk -F'\t' '
-    !body { if ($0 == "--") body = 1; else if (split($0, p, " ") == 2) t[p[1]] = p[2]; next }
+  { git rev-list --reverse --topo-order HEAD -- 2>/dev/null; echo --; printf '%s\n' "$rows"; } | awk -F'\t' '
+    !body { if ($0 == "--") body = 1; else { n++; at[substr($0, 1, 12)] = n; full[n] = $0 }; next }
     {
       k = 0
-      if ($3 ~ /^[0-9a-f]+$/ && length($3) >= 7) for (h in t) if (index(h, $3) == 1) { k = t[h]; break }
+      if ($3 ~ /^[0-9a-f]+$/ && length($3) >= 7) {
+        if (length($3) >= 12) k = at[substr($3, 1, 12)] + 0
+        else for (i = 1; i <= n; i++) if (index(full[i], $3) == 1) { k = i; break }
+        if (k && index(full[k], $3) != 1) k = 0
+      }
       printf "%d\t%d\t%s\n", k, NR, $0
     }' | sort -n -k1,1 -k2,2 | cut -f3-
 }
