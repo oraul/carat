@@ -13,6 +13,9 @@ Goals: apply the sprint-10 plan once, with the history rows it needs, and leave 
 - Run `history` before `groom`, as `groom` refuses a sprint with fewer history rows than its size.
 - Copy `build/plan/sprint-10-records/queue-feature.md` over `docs/queue-feature.md` after `groom`: the delivery planner wrote it to replace the sprint plan's feature queue, and `plan-apply` in the package step copies only this change's lane queue (backlog). Alternative: edit the sprint plan's file before `groom`, which would change an ignored record no commit shows.
 
+- Copy the delivery planner's backlog queue now too, so `docs/queue-backlog.md` already holds what `plan-apply` will copy and `make docs-lint` reads the final text.
+- Drop the backticks of the two nonexistent paths the fold and the queue brought, rather than reword the entries: the text stays the finding's, and the lint passes.
+
 ## Risks / Trade-offs
 
-- The sprint plan's backlog queue lands first and the delivery planner's version replaces it in the package step; the two differ by one note line, so the commit history shows both.
+- Editing a folded backlog entry and an ignored plan file is outside what `groom` writes; both edits are only backticks removed, named in the proposal.

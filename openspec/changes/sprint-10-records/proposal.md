@@ -8,9 +8,10 @@ Sprint 10 closed with its five changes merged, its sprint-end review recorded, a
 
 - `sh tools/run_state.sh history sprint-10-records` appends the pending history rows of both lanes: `markdown-reading-b` to `docs/metrics-feature.tsv` and `git-signs-trust` to `docs/metrics-backlog.tsv`.
 - `sh tools/run_state.sh groom sprint-10-records` applies the sprint-10 plan: removes the five headings of `build/plan/groom.txt` from `docs/backlog.md`, folds the eight findings files under `docs/findings/` into it and removes them, appends `build/plan/groomed.md`, copies the sprint plan's two lane queues over `docs/queue-feature.md` and `docs/queue-backlog.md`, and appends the sprint-10 row to `docs/sprints.tsv`.
-- `docs/queue-feature.md` is then taken from this delivery's plan, `build/plan/sprint-10-records/queue-feature.md`, which removes `git-signs-trust`, merged as #160 after the sprint plan was written, and draws `markdown-reading-c` into sprint 11.
+- `docs/queue-feature.md` is then taken from this delivery's plan, `build/plan/sprint-10-records/queue-feature.md`, which removes `git-signs-trust`, merged as #160 after the sprint plan was written, and draws `markdown-reading-c` into sprint 11; `docs/queue-backlog.md` is likewise taken from this delivery's plan, `build/plan/sprint-10-records/queue-backlog.md`, the copy the package step's `plan-apply` makes.
+- `make docs-lint` refuses a backticked path that does not exist: the folded entry "### No case pins a bare directory word known only by its files" names `tools/a.sh` and the backlog queue's batch note names `docs/queue.md`, so both lose their backticks (the queue note in the delivery plan's file too, so `plan-apply` copies the fixed text).
 
-Out of scope: any code, test, or tool change; removing the backlog heading "### git_signs rev-list can lazy-fetch from a promisor remote in an untrusted .git (security Medium, confidence 6)", which `git-signs-trust` listed and the next sprint's grooming removes as listed; the backlog lane's queue of this delivery's plan, which the package step's `plan-apply` copies.
+Out of scope: any code, test, or tool change; removing the backlog heading "### git_signs rev-list can lazy-fetch from a promisor remote in an untrusted .git (security Medium, confidence 6)", which `git-signs-trust` listed and the next sprint's grooming removes as listed.
 
 Assumptions:
 
