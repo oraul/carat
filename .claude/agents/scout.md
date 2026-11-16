@@ -17,6 +17,7 @@ You are a scout for this repository. You read; you never change the repository. 
 ## Input
 
 - The area: a section of `docs/codebase-map.md`, by number or name (for example `8` or "edit path"). Several areas mean one pack each.
+- The locations: the paths or `path:line` of existing code the change edits in the area, as the workflow gives them. They bound what you read.
 - Optionally a question or a focus from the requester, such as "where does `:w` decide to write" or "every caller of `Buffer#set_lines`". Keep it verbatim in the pack.
 - Optionally the change's brief, for scope only: it says which code matters, never what to write.
 
@@ -24,19 +25,19 @@ You are a scout for this repository. You read; you never change the repository. 
 
 - Read-only. Use Read, Grep, and Glob for files, and the shell only for read-only commands: `git rev-parse`, `git log`, `git show`, `git diff`, `git merge-base`, `git ls-files`, `ls`, `wc`, `date`. The only writes you make are under `tmp/scout/`: `mkdir -p tmp/scout`, the pack itself (the Write tool, which may write only there), and the pruning below. Never edit, stage, commit, push, check out, or build anything, and never run `make` or `spin`.
 - Facts, never conclusions. Write what the code says, where, and who calls it. Do not propose a design, judge code, guess at intent, or say what a change should do. When something the map names cannot be found, say so under Gaps; do not fill it in.
-- Stay inside the area and the question. Follow a call out of the area only far enough to name the callee's file, line, and signature. Code the change will add does not exist yet: when the question asks for it, say so in one Gaps line and search no further.
+- Stay inside the locations, the area, and the question. Follow a call out of the area only far enough to name the callee's file, line, and signature. Code the change will add does not exist yet: when the question asks for it, say so in one Gaps line and search no further.
 - No URL, email address, session identifier, or model name in the pack.
 
 ## Steps
 
 1. Name the commit: `git rev-parse HEAD` and `git rev-parse --short HEAD`, and `git merge-base --is-ancestor HEAD origin/main` to note whether it is on `main`. Take the UTC timestamp with `date -u +%Y%m%dT%H%M%SZ`.
 2. Prune: for every pack in `tmp/scout/`, read its `Commit:` line; delete the pack when that commit is no longer an ancestor of `origin/main` (`git merge-base --is-ancestor <commit> origin/main` fails). Delete nothing else.
-3. Reuse: if a pack for the same area and question exists whose commit equals `HEAD`, or for which `git diff --quiet <its commit> HEAD -- <its Files read>` reports no change, report its path and stop; it is still current.
-4. Read the area's section of `docs/codebase-map.md`. Open each file it lists only as far as the question needs: find the entry points it names with `grep -n "def name"`, read the method and its signature line (`#:`), and note the line number.
-5. Find callers with Grep over `carat/`, `bin/`, `test/`, and `bench/` for each entry point the question concerns.
-6. Find the tests the map lists for the area; for each, the check names (`assert_equal(..., "name")`) that exercise the entry points, with line numbers.
-7. Open the archived designs the map lists (`openspec/changes/archive/*-<name>/design.md`) only for the entry points of the question, and quote one sentence per section that explains them.
-8. Copy the map's Rules line for the area as written. Do not open `CLAUDE.md` or `docs/architecture.md` for rules: the contributor holds `CLAUDE.md`, and the Rules line names the sections.
+3. Reuse: if a pack for the same area and question exists whose `Locations:` line lists every location you were given, each the same path or `path:line`, and whose commit equals `HEAD` or for which `git diff --quiet <its commit> HEAD -- <its Files read>` reports no change, report its path and stop; it is still current. A pack missing any of your locations is not current, however recent: it read only its own.
+4. Read only what the locations need; never a whole file, and no file of the area that no location names. With `grep -n -F`, read the lines of the area's section of `docs/codebase-map.md` that name each location's file and its Rules and Tests lines. Open each location's file only at the location: find the method or block there with `grep -n`, read it and its signature line (`#:`), and note the line number. A scout started without locations takes the entry points its question names instead.
+5. Find callers with Grep over `carat/`, `bin/`, `test/`, and `bench/` (and `tools/` and `.claude/` for a location there) only for the methods at the locations.
+6. In the tests the map lists for the area, grep for those methods only; for each match, the check name (`assert_equal(..., "name")`, `expect "name"`) and its line number.
+7. Open an archived design (`openspec/changes/archive/*-<name>/design.md`) only when the question asks for one, and quote one sentence per section that explains the locations.
+8. Copy the map's Rules line for the area as written, whether it names sections of `CLAUDE.md` and `docs/architecture.md` or states the rule itself. Do not open `CLAUDE.md` or `docs/architecture.md` for rules: the contributor holds `CLAUDE.md` and opens the sections it needs.
 9. Write the pack to `tmp/scout/<area>-<short commit>-<UTC timestamp>.md`, where `<area>` is the map section's name in kebab case (`edit-path`, `windows-and-tabs`), and report its path.
 
 ## Pack shape
@@ -48,6 +49,8 @@ Commit: <full sha> (<short sha>), on main: yes|no
 Read at: <UTC timestamp>
 Area: <number>. <name> in docs/codebase-map.md
 Question: <verbatim, or "none">
+Locations: <as given, or "none">
+Tool calls: <the calls this start made, the pack's Write included: the tool_calls you return>
 
 ## Files read
 
@@ -86,4 +89,4 @@ Every line under Entry points, Callers, and Tests carries a path and a line numb
 
 ## Report
 
-Return the pack's path, the commit, and one line per section with its count of entries. If a current pack was reused, say so and return its path.
+Return the pack's path, the commit, and one line per section with its count of entries, and as `tool_calls` the number the pack's `Tool calls:` line records. If a current pack was reused, say so and return its path, with the calls this start made.

@@ -161,13 +161,33 @@ const RESUME = {
   },
   required: ['status', 'change', 'branch', 'head', 'state_json'],
 }
+const SCOUT_AREA = { type: 'object', properties: { area: { type: 'string' }, question: { type: 'string' }, locations: { ...LINES, description: 'path or path:line of existing code the change edits in this area, each a path the area\'s section of docs/codebase-map.md names, itself or by its directory' } }, required: ['area', 'question', 'locations'] }
 const SCOUT_PLAN = {
   type: 'object',
   properties: {
     current: LINES,
-    needed: { type: 'array', items: { type: 'object', properties: { area: { type: 'string' }, question: { type: 'string' } }, required: ['area', 'question'] } },
+    needed: { type: 'array', items: SCOUT_AREA },
   },
   required: ['current', 'needed'],
+}
+// When a pack an earlier change left serves this one: packs are bounded to
+// their locations, so a pack of the same area and commit that names other
+// locations holds no facts about this change's (.claude/agents/scout.md
+// step 3 applies the same rule).
+const PACK_CURRENT = 'a pack under tmp/scout/ is current for an area only when its Locations: line lists every location the change edits in that area, each the same path or path:line, and its Commit: is origin/main or `git diff --quiet <its commit> origin/main -- <its Files read>` passes; a pack of the area missing any of those locations is not current, however recent its commit'
+// The scouts a plan starts: an area given no location the change edits
+// there (a file the map places in no area, such as a root LICENSE) starts
+// none, and the rest are cut at the room the current packs leave.
+function scoutTargets(plan, max) {
+  if (!plan) return { current: [], needed: [], unplaced: [], beyond: [] }
+  const placed = plan.needed.filter((n) => Array.isArray(n.locations) && n.locations.some((l) => String(l).trim()))
+  const room = Math.max(0, max - plan.current.length)
+  return { current: plan.current, needed: placed.slice(0, room), unplaced: plan.needed.filter((n) => !placed.includes(n)), beyond: placed.slice(room) }
+}
+// A scout's prompt: its area, the locations the change edits there, which
+// bound what it reads (.claude/agents/scout.md), and the question.
+function scoutPrompt(n, brief) {
+  return `Area: ${n.area}. Locations: ${n.locations.join(', ')}; read only what these locations need. Question: ${n.question}. The change, for scope only: ${brief}. Write the pack and return its path.`
 }
 const PACK = { type: 'object', properties: { pack: { type: 'string' } }, required: ['pack'] }
 const WORK = {
@@ -1014,15 +1034,17 @@ if (!stopped && !state.merged) {
     phase('Scout')
     let packs = input.packs || []
     if (!packs.length) {
-      const plan = await measured('scout', () => agent(
-        `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${brief}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only appends to docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. For each area, a pack under tmp/scout/ is current when its Commit: is origin/main or \`git diff --quiet <its commit> origin/main -- <its Files read>\` passes; list current packs by path and the areas still needing one, with the question a contributor needs answered about the existing code it edits or hooks into (callers, registration, tests), never about code the change will add, which does not exist yet; an area whose only edits are new files needs no pack.${capLine('areas')}`,
+      // The plan's calls are its own key, so phase.scout holds only the
+      // scouts' starts, the figure their packs' Tool calls lines match.
+      const plan = await measured('areas', () => agent(
+        `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${brief}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only appends to docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. A file belongs to an area only when the area's section names its path, itself or by its directory (look the path up in docs/codebase-map.md): a file the map places in no area, such as a root LICENSE, belongs to none, and a change editing only such files lists no area. For each area, first name its locations, the paths or path:line of the existing code the change edits there, and the question a contributor needs answered about that code (callers, registration, tests), never about code the change will add, which does not exist yet; an area whose only edits are new files needs no pack. Then ${PACK_CURRENT}. List current packs by path and the areas still needing one, each with its locations and question.${capLine('areas')}`,
         calibrate('areas', { schema: withCalls(SCOUT_PLAN), label: 'scout plan' })), callCap('areas'))
-      const room = plan ? Math.max(0, MAX_AREAS - plan.current.length) : 0
-      const needed = plan ? plan.needed.slice(0, room) : []
-      if (plan && plan.needed.length > room) note(`not scouted, beyond ${MAX_AREAS} areas: ${plan.needed.slice(room).map((n) => n.area).join(', ')}`)
-      const fresh = plan ? await measured('scout', () => parallel(needed.map((n) => () =>
-        agent(`Area: ${n.area}. Question: ${n.question}. The change, for scope only: ${brief}. Write the pack and return its path.${capLine('scout')}`, calibrate('scout', { agentType: 'scout', schema: withCalls(PACK), label: `scout: ${n.area}` })))), callCap('scout')) : []
-      packs = (plan ? plan.current : []).concat(fresh.filter(Boolean).map((p) => p.pack))
+      const targets = scoutTargets(plan, MAX_AREAS)
+      if (targets.unplaced.length) note(`not scouted, no location in the area: ${targets.unplaced.map((n) => n.area).join(', ')}`)
+      if (targets.beyond.length) note(`not scouted, beyond ${MAX_AREAS} areas: ${targets.beyond.map((n) => n.area).join(', ')}`)
+      const fresh = targets.needed.length ? await measured('scout', () => parallel(targets.needed.map((n) => () =>
+        agent(scoutPrompt(n, brief) + capLine('scout'), calibrate('scout', { agentType: 'scout', schema: withCalls(PACK), label: `scout: ${n.area}` })))), callCap('scout')) : []
+      packs = targets.current.concat(fresh.filter(Boolean).map((p) => p.pack))
       note(`scout packs: ${packs.join(', ') || 'none'}`)
     }
     phase('Implement')

@@ -5887,3 +5887,39 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: .github/workflows/main.yml:151
 - Why: the Keep and Save steps test github.ref == 'refs/heads/main' beside github.event_name == 'push', which the main-only push trigger already implies (quality advisory, ci-time-tidy-b).
 - Fix: drop the ref test.
+
+### The scout step's README line says the area plan's figures are apart
+
+- Location: README.md:187
+- Why: the scout step says the area plan's figures are recorded apart from the scouts', but tools/run_state.sh tokens still keys the plan start under the workflow phase Scout, so metric.weighted.scout mixes both (design.md of scout-focus says so).
+- Fix: say only phase.areas is apart, or run the area plan under its own phase.
+
+### scoutPrompt joins blank locations
+
+- Location: .claude/workflows/deliver-change.js:184
+- Why: scoutPrompt joins every location, blank ones included, while scoutTargets keeps an area for one non-blank location, so a prompt can read 'Locations: , x'.
+- Fix: have scoutTargets return the areas with their trimmed non-blank locations and join those.
+
+### Scout tools_test cases grep the workflow source text
+
+- Location: tools/tools_test.sh:2790
+- Why: 'no scout start without a needed area' and 'the area plan is measured apart' grep the workflow's source text, so a reformatting breaks them and a logic change can pass.
+- Fix: drop the source-text greps, since the scoutTargets cases already prove the behavior, or test the phase through a stubbed measured.
+
+### scout-focus proposal omits the pack-currency rule
+
+- Location: openspec/changes/archive/2026-11-16-scout-focus/proposal.md:10
+- Why: What Changes and the Cases bullet (line 13) omit the fix round's rule that a pack is current only when its Locations: line covers every location, which design.md and tasks.md 1.4 and 2.2 carry.
+- Fix: add a What Changes bullet for PACK_CURRENT and scout.md step 3 and name its cases in the Cases bullet.
+
+### PACK_CURRENT and scout.md step 3 apply different currency rules
+
+- Location: .claude/workflows/deliver-change.js:176
+- Why: the comment says scout.md step 3 applies the same rule as PACK_CURRENT, but step 3 (.claude/agents/scout.md:35) also requires the same question while PACK_CURRENT ignores it, so the plan reuses a pack the scout itself would not.
+- Fix: drop 'and question' from step 3 or add the question to PACK_CURRENT, keeping one rule.
+
+### Pack-currency tools_test cases match prose by regex
+
+- Location: tools/tools_test.sh:2795
+- Why: the pack-currency cases (2795, 2797, 2798) match the prose of PACK_CURRENT, the workflow source, and scout.md by regex, so a rewording breaks them and they prove no behavior, the pattern of the advisory at tools/tools_test.sh:2790.
+- Fix: keep one case that PACK_CURRENT reaches the area-plan prompt through a stubbed agent, or accept them as wording guards and say so in a comment.

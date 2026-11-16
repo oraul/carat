@@ -2776,6 +2776,32 @@ expect "workflow: the metric line carries the profiles" 0 ' calib[.]scout=cheap/
   calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = ''; planned = null; state = { change: 'c' }; calibrate('scout', {}); calibrate('security', {}); return metricLine() })()"
 expect "workflow: a restart restores the recorded profiles of the kinds not used yet" 0 '^[{]"planner":"session/session","scout":"cheap/low"[}]$' \
   calib_js "(() => { calibrate('planner', {}); return restoreCalibration({ 'metric.calib.scout': 'cheap/low', 'metric.calib.planner': 'cheap/low', 'metric.calib.checker': 'cheap/high', 'metric.rework': '1' }, calibrated) })()"
+# The scouts read only the change's locations, and none starts for an area
+# given no location, such as a root file in no map area (scout-focus).
+scout_js() {
+  js "$wf" "LINES SCOUT_AREA scoutTargets scoutPrompt" "$1"
+}
+expect "workflow: the area plan asks for each area's locations" 0 '^\["area","question","locations"\]$' \
+  scout_js "SCOUT_AREA.required"
+expect "workflow: an area without locations starts no scout" 0 '^\[\["2"\],\["1","3"\]\]$' \
+  scout_js "(t => [t.needed.map((n) => n.area), t.unplaced.map((n) => n.area)])(scoutTargets({ current: [], needed: [{ area: '1', question: 'q', locations: [' '] }, { area: '2', question: 'q', locations: ['tools/x.sh:3'] }, { area: '3', question: 'q' }] }, 3))"
+expect "workflow: a plan of no area starts no scout" 0 '^\[0,0,0\]$' \
+  scout_js "[scoutTargets({ current: [], needed: [] }, 3).needed.length, scoutTargets(null, 3).needed.length, scoutTargets(null, 3).current.length]"
+expect "workflow: no scout start without a needed area" 0 '^1$' grep -c "targets[.]needed[.]length ? await measured('scout'" "$wf"
+expect "workflow: the areas beyond the room are cut" 0 '^\[\["p"\],\["a","b"\],\["c"\]\]$' \
+  scout_js "(t => [t.current, t.needed.map((n) => n.area), t.beyond.map((n) => n.area)])(scoutTargets({ current: ['p'], needed: ['a', 'b', 'c'].map((a) => ({ area: a, question: 'q', locations: ['x'] })) }, 3))"
+expect "workflow: the scout prompt carries the locations" 0 '^"Area: 1[.] Build and CI[.] Locations: a[.]js:9, b[.]md; read only what these locations need[.] Question: q[.]' \
+  scout_js "scoutPrompt({ area: '1. Build and CI', question: 'q', locations: ['a.js:9', 'b.md'] }, 'the brief')"
+expect "workflow: a pack is current only when its Locations: cover the area's" 0 '^\[true,true\]$' \
+  js "$wf" "PACK_CURRENT" "[/Locations: line lists every location the change edits in that area/.test(PACK_CURRENT), /missing any of those locations is not current/.test(PACK_CURRENT)]"
+expect "workflow: the area plan applies the pack currency rule" 0 '^1$' grep -c -F 'Then ${PACK_CURRENT}. List current packs' "$wf"
+expect "scout: a pack is reused only when it lists every given location" 0 '^1$' grep -c -E '^3[.] Reuse: .*`Locations:` line lists every location you were given.*A pack missing any of your locations is not current' "$agents/scout.md"
+expect "workflow: the area plan is measured apart from the scouts" 0 '^1 1$' \
+  sh -c 'echo "$(grep -c "measured(.areas., () => agent(" "$1") $(grep -c "measured(.scout.," "$1")"' _ "$wf"
+expect "scout: the steps read only the locations" 0 '^4[.] Read only what the locations need; never a whole file' grep -E '^4[.] ' "$agents/scout.md"
+expect "scout: step 8 copies the Rules line whatever it names" 0 '^1 0$' \
+  sh -c 'echo "$(grep -c "^8[.] .*as written, whether it names sections" "$1") $(grep -c "the Rules line names the sections" "$1")"' _ "$agents/scout.md"
+expect "scout: the pack records its tool calls" 0 '^2$' grep -c -E '^Tool calls: |`tool_calls` the number the pack.s `Tool calls:` line records' "$agents/scout.md"
 speed_js() {
   js "$wf" "COMMIT CLOSABLE noteText staleRed findingAt reRaised securityBlocking narrowedFrom mergeRecords" "$1"
 }
