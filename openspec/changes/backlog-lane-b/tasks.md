@@ -16,3 +16,4 @@
 ## 4. Review fixes
 
 - [x] 4.1 The pick reads `##` and deeper headings, `- Where:` and `- Why it matters:` lines, and a heading's path:line without a Location, and maps every backticked path of an area's lines; proved by "run_state: backlog-pick reads ## entries with Where and Why it matters lines", "run_state: backlog-pick places an entry by its heading's path without a Location", "run_state: backlog-pick maps a path on a Tests: line of an area", and "run_state: backlog-pick maps every path of a bullet and skips a section heading"
+- [x] 4.2 The pick places a Location by the first path of its line the map holds, backticked first, or a directory holding a mapped path, a line opening with a symbol, a constant, or prose included; proved by "run_state: backlog-pick places a Location by its first mapped path or directory, a symbol or prose first"

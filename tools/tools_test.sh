@@ -812,6 +812,18 @@ expect "run_state: backlog-pick maps a path on a Tests: line of an area" 0 "^1$"
   sh -c 'printf "%s\n" "$1" | grep -c "^## w4 test$"' _ "$pick"
 expect "run_state: backlog-pick maps every path of a bullet and skips a section heading" 0 "^batch 2: area 1[.] Build and CI, its 1 security entries alone of 2 ## w7 at [.]github/workflows/ci[.]yml:5 0$" \
   sh -c 'echo "$(printf "%s\n" "$1" | sed -n "/^batch 2/,\$p" | tr "\n" " ")$(printf "%s\n" "$1" | grep -c "unmapped\|Section")"' _ "$pick"
+# A Location or Where line opening with a symbol, a constant, or prose,
+# an unmapped backticked token before a mapped word, a directory holding
+# mapped paths.
+{ printf '## v1 symbol\n\n- Where: -> `Foo::Bar#baz` in `tools/t.sh:20`, the reader\n'
+  printf '\n## v2 prose\n\n- Location: the loop of tools/t_test.sh:8 (t)\n'
+  printf '\n## v3 directory\n\n- Location: .github/workflows (every job)\n- Why: security Low.\n'
+  printf '\n## v4 target first\n\n- Where: in `make lint`, tools/a.sh:3\n'
+  printf '\n## v5 two paths\n\n- Location: see `nowhere/x.rb:1` and tools/t.sh:2, tools/a.sh:4\n'
+  printf '\n## v6 plain\n\n- Location: tools/t.sh:30\n\n## v7 plain\n\n- Location: tools/t.sh:31\n'
+} > bk5.md
+expect "run_state: backlog-pick places a Location by its first mapped path or directory, a symbol or prose first" 0 "^batch 1: area 1[.] Build and CI, its 1 security entries alone of 2 ## v3 directory batch 2: area 2[.] Toolchain, 5 of 5 entries ## v1 symbol ## v2 prose ## v5 two paths ## v6 plain ## v7 plain $" \
+  sh -c 'sh "$1" backlog-pick bk5.md | tr "\n" " "' _ "$here/run_state.sh"
 
 
 # ------------------------------------------------------------ open_pr.sh

@@ -178,6 +178,9 @@
 #                               an entry a queue file names, or whose whole
 #                               heading line ends a line of
 #                               PLAN_DIR/groom.txt, is skipped, one
+#                               placed by the first path of its Location
+#                               line the map holds, or a directory holding
+#                               one, else by its heading's path:line; one
 #                               no mapped path holds printed "unmapped:";
 #                               exit 1 when no batch
 #   groom [CHANGE]             nothing when CHANGE's run state sets
@@ -1738,11 +1741,13 @@ backlog_entry() {
 # the next heading, with a "- Location:" or "- Where:" line or a path:line
 # in the heading; any other heading a section) of the FILEs in order, else
 # of folded_backlog, ranked into batches of one docs/codebase-map.md area
-# each (backlog-pick in the header). A Location's first token, its
-# backticks and :line dropped, else the heading's first path:line, matches
-# a path the map names under a numbered area (a bullet's leading path
-# first, then any backticked path of the area's lines), or lies under the
-# longest one ending in "/"; an entry whose heading text a queue file
+# each (backlog-pick in the header). The first token of a Location that
+# the map places (its backticked tokens first, then each word holding a "."
+# or "/" or a :line, its :line and punctuation dropped), else the heading's
+# first path:line, matches a path the map names under a numbered area (a
+# bullet's leading path first, then any backticked path of the area's
+# lines), or lies under the longest one ending in "/", or is a directory
+# holding one (the first in name order); an entry whose heading text a queue file
 # holds, not as the start of a longer word, is queued, and one whose
 # whole heading line ends a line of PLAN_DIR/groom.txt is groomed: the
 # closed sprint's removals, which stay in the backlog until the next
@@ -1791,6 +1796,38 @@ backlog_pick() {
       a = under(own, p)
       return a != "" ? a : under(seen, p)
     }
+    function dir_area(p,   d, k, best) {
+      if (p !~ /\//) return ""
+      d = p; if (d !~ /\/$/) d = d "/"
+      best = ""
+      for (k in own) if (index(k, d) == 1 && (best == "" || k < best)) best = k
+      if (best != "") return own[best]
+      for (k in seen) if (index(k, d) == 1 && (best == "" || k < best)) best = k
+      return best == "" ? "" : seen[best]
+    }
+    function place(p,   a) {
+      a = area_of(p)
+      return a != "" ? a : dir_area(p)
+    }
+    function clean(t) {
+      sub(/^[ \t]+/, "", t); sub(/[ \t].*$/, "", t); sub(/^[(\"]+/, "", t)
+      if (t ~ /::/) return ""
+      sub(/:.*$/, "", t); sub(/[).,;\"]+$/, "", t)
+      return t ~ /^[A-Za-z0-9_.\/-]+$/ ? t : ""
+    }
+    function pathlike(raw, t) {
+      return t != "" && (t ~ /[.\/]/ || raw ~ /^[A-Za-z0-9_.\/-]+:[0-9]/)
+    }
+    function candidates(s,   k, r, raw, t, nw, w, x) {
+      k = 0
+      for (r = s; match(r, /`[^`]+`/); r = substr(r, RSTART + RLENGTH)) {
+        raw = substr(r, RSTART + 1, RLENGTH - 2); t = clean(raw)
+        if (pathlike(raw, t) || (t != "" && t == raw)) cand[++k] = t
+      }
+      gsub(/`/, "", s); nw = split(s, w, /[ \t]+/)
+      for (x = 1; x <= nw; x++) if (pathlike(w[x], t = clean(w[x]))) cand[++k] = t
+      return k
+    }
     function head_path(h) {
       if (!match(h, /[A-Za-z0-9_.\/-]+[.][A-Za-z]+:[0-9]+/)) return ""
       h = substr(h, RSTART, RLENGTH); sub(/:[0-9]+$/, "", h); return h
@@ -1801,11 +1838,11 @@ backlog_pick() {
         if (!(i in loc) && hp == "") continue
         t = head[i]; sub(/^#+ /, "", t)
         if (queued_at(t) || (head[i] in groomed)) continue
-        p = loc[i]; sub(/^- (Location|Where):[ \t]*/, "", p); gsub(/`/, "", p)
-        sub(/[ \t,;(].*$/, "", p); sub(/:.*$/, "", p)
-        a = area_of(p)
-        if (a == "" && area_of(hp) != "") { p = hp; a = area_of(hp) }
-        if (p == "") p = hp
+        s = loc[i]; sub(/^- (Location|Where):[ \t]*/, "", s)
+        nc = candidates(s); a = ""; p = ""
+        for (c = 1; c <= nc && a == ""; c++) if ((a = place(cand[c])) != "") p = cand[c]
+        if (a == "" && (a = area_of(hp)) != "") p = hp
+        if (p == "") p = nc ? cand[1] : hp
         if (a == "") { print "unmapped: " head[i] " (" p ")"; continue }
         at[i] = a; count[a]++
         if (tolower(head[i] " " why[i]) ~ /security/) { secure[i] = 1; nsec[a]++ }
