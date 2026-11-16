@@ -11,4 +11,4 @@
 
 ## 3. Docs
 
-- [ ] 3.1 Update the gateway's header comment and `docs/codebase-map.md` area 17 flow; run `make gates`, `make spec-validate`, and the allocation check against lh 26.0, j 27.0, insert 26.0.
+- [x] 3.1 Update the gateway's header comment and `docs/codebase-map.md` area 17 flow; run `make gates`, `make spec-validate`, and the allocation check against lh 26.0, j 27.0, insert 26.0.
