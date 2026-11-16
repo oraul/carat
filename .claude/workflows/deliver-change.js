@@ -241,7 +241,7 @@ const MERGE = {
   properties: {
     ci: { type: 'string', enum: ['green', 'red', 'pending', 'stale'] }, head: HEAD, minutes: { type: 'number' },
     waited: { type: 'number', description: 'minutes waited for CI in all' },
-    step: { type: 'string' }, log_excerpt: { type: 'string' }, checks: { ...LINES, description: 'each check run of the head, oldest first: name, status, conclusion' },
+    step: { type: 'string' }, log_excerpt: { type: 'string' }, checks: { ...LINES, description: 'each check run of the head, oldest first: workflow, name, status, conclusion, the workflow its file under .github/workflows/' },
     body_only: { type: 'boolean', description: 'CI is red only on the scan check, and its log names the pull request title or body, no commit or added line' },
     merged: { type: 'boolean' }, sha: { type: 'string' }, subject: { type: 'string' }, branch_deleted: { type: 'boolean' }, problem: { type: 'string' },
   },
@@ -358,14 +358,18 @@ function noteText(text) {
   return String(text || '').replace(/[^A-Za-z0-9 .,:;()/_+=#%'?*@-]/g, ' ').replace(/ +/g, ' ').trim().slice(0, 400)
 }
 // Whether a red CI is stale: the merger lists every check run of the head
-// oldest first, as "name, status, conclusion", and the last run of every
-// check name passed, so each failed run was superseded by a green run of
-// the same check (a scan re-run by a body edit).
+// oldest first, as "workflow, name, status, conclusion", the workflow being
+// the run's file under .github/workflows/, and the last run of every check
+// of every workflow file passed, so each failed run was superseded by a
+// green run of the same check of the same file (a scan re-run by a body
+// edit). A check name alone could be a job of a workflow the branch added,
+// so an entry naming no workflow file leaves the red standing.
 function staleRed(checks) {
   const last = {}
   for (const c of checks || []) {
-    const [name, status, conclusion] = String(c).split(',').map((s) => s.trim().toLowerCase())
-    if (name) last[name] = `${status} ${conclusion}`
+    const [workflow, name, status, conclusion] = String(c).split(',').map((s) => s.trim().toLowerCase())
+    if (!/^[.]github\/workflows\/[a-z0-9_.-]+[.]ya?ml$/.test(workflow || '') || !name) return false
+    last[`${workflow} ${name}`] = `${status} ${conclusion}`
   }
   const names = Object.keys(last)
   return names.length > 0 && names.every((n) => /^completed (success|skipped|neutral)$/.test(last[n]))
@@ -824,15 +828,20 @@ function priorSecurity() {
 }
 function securityReview(more) {
   return agent(more
-    ? `${intro()} The last security review did not complete.${more} Run it, every sub-task inline, and return the result.${capLine('security')}`
+    ? `${intro()} ${continuedSecurity(more)}${capLine('security')}`
     : `${intro()} Run the security review on the committed diff and return the result.${priorSecurity()}${capLine('security')}`,
   calibrate('security', { agentType: 'security-reviewer', schema: withCalls(SECURITY), phase: 'Security', label: more ? 'security-reviewer: continued' : 'security-reviewer' }))
 }
+// The continued security request, its closing sentence on a line of its
+// own so the last file of the list stands alone.
+const continuedSecurity = (more) => `The last security review did not complete.${more}\nRun it, every sub-task inline, and return the result.`
 // What a continued review is told: the files the last start left, or the
 // whole diff when it returned nothing.
-const reviewMore = (r, left) => (r && left.length && left[0] !== 'the whole diff'
-  ? `\nThe last start reached its cap and left these files of the diff; review only them against the rules, and return their findings:\n- ${left.join('\n- ')}`
-  : '\nThe last start returned no result or did not run; review the whole committed diff.')
+function reviewMore(r, left) {
+  return r && left.length && left[0] !== 'the whole diff'
+    ? `\nThe last start reached its cap and left these files of the diff; review only them against the rules, and return their findings:\n- ${left.join('\n- ')}`
+    : '\nThe last start returned no result or did not run; review the whole committed diff.'
+}
 // A review continued while it left files or returned nothing, at most
 // CONTINUES more starts, the findings of every start kept.
 async function continueReview(kind, scope, first) {
