@@ -688,6 +688,9 @@ function recordLate() {
   for (const f of handOver()) queue(`sh tools/run_state.sh note ${state.change} late-finding "${noteText(f)}"`, head)
 }
 const intro = () => `Change \`${state.change}\` on branch \`${state.branch}\`, in its worktree \`${laneDir(state.change)}\`: run every command there (\`cd ${laneDir(state.change)} && ...\`) and read and edit its files there, but where a step names the main checkout; the run state, stage logs, plans, and the body file stay in the main checkout's build/, linked into the worktree, so write the body file there.`
+// The merger's step 7 closes the worktree it would otherwise stand in, and
+// checks out main, which only the main checkout can, so it runs there.
+const MERGER_CLOSE = ' Run step 7 (the merged record, lane-close, the branch deletion, and the fast-forward of main) in the main checkout, with no `cd` into the worktree: lane-close removes the worktree, and main is checked out only in the main checkout.'
 // Every contributor start, the package start that pushes included, carries
 // the brief, so what it asks, a hold for the user's reading included,
 // reaches each of them.
@@ -1213,7 +1216,7 @@ if (!stopped && !state.merged) {
       if (!pushed) { stopped = `the pushed head ${state.pushed || 'none'} is not a full sha beginning with the reported head ${head}`; break }
       const lines = mergeLines()
       const m = await measured('merge', () => agent(
-        `${intro()}${mergeTarget()} The pushed head is ${pushed}. Wait for CI at it${waits ? ' (it was still running when you last returned; keep waiting)' : ''}, and merge the pull request if CI is green and every merge gate passes.\nThe green line: \`${lines.green}\`\nThe red line: \`${lines.red}\`\nTool calls: at most ${FIXED_CAPS.merger} in this start when CI passes within your first two waits, and 2 more for each later wait.`,
+        `${intro()}${MERGER_CLOSE}${mergeTarget()} The pushed head is ${pushed}. Wait for CI at it${waits ? ' (it was still running when you last returned; keep waiting)' : ''}, and merge the pull request if CI is green and every merge gate passes.\nThe green line: \`${lines.green}\`\nThe red line: \`${lines.red}\`\nTool calls: at most ${FIXED_CAPS.merger} in this start when CI passes within your first two waits, and 2 more for each later wait.`,
         calibrate('merger', { agentType: 'merger', schema: withCalls(MERGE) })), mergerCap)
       if (!m) { stopped = 'the merger returned no result'; break }
       ciWaitCalls = (ciWaitCalls || 0) + 2 * waitsOf(m)
