@@ -627,12 +627,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the redundant stage makes the one length that matters harder to read and to change with the budget.
 - Fix outline: `head -c "$((17369 - $(wc -c < docs/queue.md)))" /dev/zero | tr '\0' x >> docs/queue.md`. Queued in `phase-shares`.
 
-## The scout's step 8 says every Rules line names sections
-
-- Where: step 8 of `.claude/agents/scout.md` (line 38 at 3a4db08); the Rules lines of areas 6, 9, 10, 13, and 16 of `docs/codebase-map.md` name no `CLAUDE.md` or `docs/architecture.md` section. Quality advisory of `agent-inputs`.
-- Why it matters: a scout on one of those areas finds no section to point the contributor to and may open the files step 8 tells it not to.
-- Fix outline: say "the sections it names, if any", or drop the clause. Queued in `phase-shares`.
-
 ## The ex commands a global most often runs besides :s and :d
 
 - Where: `carat/use_cases/ex/` and `docs/compatibility.md` Global; `buffer-global` brought `:g`, `:v`, and `:d` without `:m`, `:t`, `:normal`, and `:p`, which `docs/architecture.md` section 5.2 lists with them.
@@ -3490,12 +3484,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the comment-wrap rule of the block (72 to 75).
 - Fix outline: rewrap. Backlog batch: comment wraps.
 
-## CI time doubled after the Spinel pin bump
-
-- Where: `ci_min` in `docs/metrics.tsv`: 6 to 8 in 8 of 9 rows #86 to #94, 13.0 in #95, 17.0 in #96.
-- Why it matters: every merge waits twice as long (goal 4).
-- Fix outline: name the cause from the CI stage times and bring CI under 10 min in 3 runs, or record the new floor with its reason. Queue item `check-skip`.
-
 ## A styled float row reads its line and decoded tokens twice
 
 - Where: `carat/adapters/frame_presenter.rb` line 639, `paint_float_row`, which calls `buffer.line(row)` and `@cache.fetch` once for `paint_text` and again for `paint_tokens` on a styled row. Quality advisory of `float-frame`.
@@ -4244,12 +4232,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Location: `.claude/workflows/periodic-review.js:122`.
 - Why it matters: the comment says a partial review keeps the next one due, but `review-due` now counts sprints only, so a reader is misled about when the review runs again.
 - Fix outline: drop the review-due clause or state the new rule.
-
-### Delivery brief names the sprint queue even when none waits (`sprint-planning` quality advisory)
-
-- Location: `.claude/workflows/deliver-change.js:920`.
-- Why it matters: the brief always names `build/plan/queue.md` "while a sprint plan waits there", even when none waits and `build/plan/` holds an older run's files, leaving the agent to judge which queue is live.
-- Fix outline: name only the queue file `plan-needed`'s line reports (`docs/queue.md` or `build/plan/queue.md`).
 
 ### Rerun of /sprint duplicates the skeptic's notes (`sprint-planning` quality advisory)
 
@@ -5511,12 +5493,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: `make gen-config` is the one documented way, with tools/noruby first on the PATH.
 - Fix outline: say make gen-config in both renderers and the architecture, then regenerate.
 
-### docs_lint's usage header says a sprint holds 1 to 5 items
-
-- Location: tools/docs_lint.sh:18 against check_queue at :148 to :153 and the map area 1. Sprint-6 sweep, quality (raised twice). Queue item `tools-docs-tidy`.
-- Why: a drained sprint holds 0 items and passes; the header misstates the check.
-- Fix outline: say 0 to 5.
-
 ### RcLine splits the key at a literal byte
 
 - Location: carat/domain/rc_line.rb:224. Sprint-6 sweep, quality advisory. Queue item `input-core-tidy`.
@@ -5978,3 +5954,179 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: test/use_cases_toggle_reading.rb:83
 - Why: tests beside behavior: the new test cites scenario 'Toggling back to the source', but the delta spec has no scenario for the closed-source refusal (quality advisory, markdown-reading-a)
 - Fix: add a scenario 'The source file was closed' (THEN the message 'The Markdown file is closed' shows and the view stays) to openspec/specs/markdown-reading/spec.md through a proposal and cite it in the test comment
+
+
+### The finder lists hidden .ruby-lsp files the explorer hides
+- Location: carat/plugins/finder/plugin.rb
+- Why: a ruby-lsp project shows .ruby-lsp/Gemfile and .gitignore first in Ctrl-P while plugin.explorer.show_hidden false hides them
+- Fix: apply the explorer's hidden and ignore rules to the finder's file list
+
+## Findings of the sprint-8 review and sweep
+
+### The main workflow skips the release build on a build-input-only equal-tree merge
+
+- Location: .github/workflows/main.yml:47, tools/ci_scope.sh:45, .github/workflows/main.yml:155 (sprint-8 review, quality blocking, and security Low (5)); queued as `ci-workflow-tidy`.
+- Why: the compile gate reads a lookup-only probe keyed on the .rb sources only, so an equal-tree squash merge that changes only the Makefile, tools/metrics.sh, bench/, spin.toml, or config/ skips the release build, its smoke test, and main's measurement; pull requests never build the release binary, so a broken `make build` merges unbuilt, where every push to main built it before sprint 8.
+- Fix: in the equal-tree branch still list the squash commit's paths and compile when one is a build input; a tools-test case for a Makefile-only equal-tree push with cached units.
+
+### rules.sh documentation() comment disagrees with TOOLS_RE on .claude/commands
+
+- Location: tools/rules.sh:70 against :86 (sprint-8 review, quality); queued in `ci-scope-quoting`.
+- Why: the comment says it is true only for paths no case reads, yet it is true for .claude/commands/*, which tools-test reads; only the separate TOOLS_RE check keeps tools-test running.
+- Fix: return 1 for .claude/commands/* too, or say tools-test is decided by TOOLS_RE alone.
+
+### Three path classifiers decide which stages run
+
+- Location: tools/run_state.sh:233 TEST_ONLY, :242 NOT_COMPILED, :475 documentation plus TOOLS_RE (sprint-8 review, quality); queued in `ci-scope-quoting`.
+- Why: three overlapping classifiers for one decision drift apart.
+- Fix: derive TEST_ONLY and NOT_COMPILED from the rules.sh classifiers, or record why each differs.
+
+### A docs/architecture.md-only change skips the tests that read it
+
+- Location: tools/rules.sh:73, test/lint.rb:772 and :1285 (sprint-8 sweep, quality, correctness); queued in `ci-scope-quoting`.
+- Why: documentation() counts docs/architecture.md as documentation, but lint compares its section 6 port table with the ports, so such a change skips the test stage in CI and the checker and can merge a table the next code change fails on.
+- Fix: return 1 for docs/architecture.md beside docs/actions.md, with a tools-test expect case.
+
+### ci_scope.sh splits path lists on blanks
+
+- Location: tools/ci_scope.sh:99 and :123 (sprint-8 sweep, quality); queued in `ci-scope-quoting`.
+- Why: `for path in $changed` splits and globs, so a path with a space is judged piece by piece and can skip the checks.
+- Fix: read the lists line by line with `while IFS= read -r path`, or set -f and a newline IFS around the loops.
+
+### ci_scope.sh fetches one pull request twice
+
+- Location: tools/ci_scope.sh:80 (sprint-8 sweep, quality); queued in `ci-scope-quoting`.
+- Why: two identical gh api calls on the commit's pulls fetch the head sha and the number separately.
+- Fix: one call whose jq prints both fields, split with read.
+
+### ci_scope.sh answer comment overruns its wrap
+
+- Location: tools/ci_scope.sh:42 and :30 (sprint-8 review, quality); queued in `ci-scope-quoting`.
+- Why: the answer line runs to 110 columns and the Environment comment breaks mid-sentence.
+- Fix: rewrap both comment blocks.
+
+### The sprint exception membership test is written three times
+
+- Location: tools/run_state.sh:1494, :1582, :1624 (sprint-8 review, quality); queued in `sprint-marker-tidy`.
+- Why: the same index(" list ", " name ") trick in sprint_state, sprint_row, and groom.
+- Fix: filter the counted names once in sprint_state and pass them, or one helper.
+
+### EXCEPTION_MARK names clash with the user-approved exception
+
+- Location: tools/run_state.sh:289, :1507 (sprint-8 review, quality); queued in `sprint-marker-tidy`.
+- Why: EXCEPTION_MARK, exception_item, and sprint_exceptions mean beyond the sprint while the user-approved exception of tools/docs_lint.sh:157 only lifts the pipeline limit, so a comment has to warn about the clash.
+- Fix: rename to BEYOND_SPRINT_MARK, beyond_sprint_item, sprint_beyond.
+
+### docs-lint counts beyond-the-sprint items in the sprint cap
+
+- Location: tools/docs_lint.sh:154 (sprint-8 review, quality); queued in `sprint-marker-tidy`.
+- Why: run_state.sh leaves marked items out of the five, but docs-lint counts every numbered item, so five items plus one marked fail docs-lint though review-due accepts them.
+- Fix: leave items whose parenthesis holds the mark out of the count, with a docs_lint case.
+
+### CLAUDE.md's Sprints bullet omits the beyond-the-sprint mark
+
+- Location: CLAUDE.md:213, README.md:196 (sprint-8 review, quality); queued in `hook-one-place`.
+- Why: the bullet says the sprint closes at the fifth merge review-due counts and never names the mark it now leaves out; only README.md and run_state.sh name it.
+- Fix: add the mark to the Sprints bullet and to planner.md.
+
+### Sprint-8 tools_test cases grep scout and workflow prose
+
+- Location: tools/tools_test.sh:2833, :2836, :2840, :2936 (sprint-8 review, quality); queued in `prose-grep-cases`.
+- Why: the cases grep scout.md steps and contributorTask text; they break on rewording and prove no behavior.
+- Fix: fold into `prose-grep-cases`, keeping the js-evaluated helper cases.
+
+### The merge gate and resume trust review records branch code can write
+
+- Location: tools/gates.sh:415, tools/run_state.sh:610 (sprint-8 sweep, security Medium (6)); queued in `gate-object-pin`.
+- Why: gate_passed and the resume read run-state review records that executed branch code can write, and the check clone links back into the project through tmp/.toolchain.
+- Fix: keep review records where branch code cannot write them (a workflow-held key, a signed record, or check runs the workflow posts), verify them in the gate and the resume, and drop the link back.
+
+### A pull request's own scan.yml runs its scan
+
+- Location: .github/workflows/scan.yml:13 (sprint-8 sweep, security Low (7)); queued in `ci-hardening`.
+- Why: the pull_request event runs the pull request's copy of scan.yml, so a pull request editing it passes its own scan despite the base scanner.
+- Fix: run the scan from the base's workflow reading the head only as data, or have the merge gate refuse a scan.yml change without the user's approval.
+
+### Actions pinned to mutable tags beside a token
+
+- Location: .github/workflows/open-pr.yml:45, ci.yml, main.yml (sprint-8 sweep, security Low (5)); queued in `ci-hardening`.
+- Why: actions/checkout is pinned to the v4 tag in the job that later reads PR_TOKEN.
+- Fix: pin every action to a full commit hash.
+
+### toolchain-clean removes all of tmp
+
+- Location: Makefile:203, README.md:11, docs/architecture.md:33 (sprint-8 sweep, quality); queued in `check-runner-safety`.
+- Why: `rm -rf tmp` also deletes linked worktrees (stale git worktree records) and the scout packs and ignores SPINEL_SRC and PREFIX, while the docs say it removes the two toolchain directories.
+- Fix: remove the SPINEL_SRC and PREFIX directories only and correct the README table.
+
+### The tab width fallback is copied in ten places
+
+- Location: carat/use_cases/dispatcher.rb:112, arrange_view.rb:43, repeat_last.rb:104, insert_tab.rb:25, leave_insert.rb:69, adapters/frame_presenter.rb:216, domain/operators.rb:172, :251, :272, display_width.rb:57 (sprint-8 sweep, quality); queued in `editing-dedup-a`.
+- Why: `tabstop > 0 ? tabstop : 8` repeats Options#tab_width (carat/domain/options.rb:131), on the per-key path too, and Options already keeps tabstop at 1 or more.
+- Fix: call options.tab_width, passing the width into the domain helpers.
+
+### Editing helpers repeat existing ones
+
+- Location: carat/use_cases/operate.rb:204 and repeat_last.rb:117 (clamp repeats EditorState#clamp_col), carat/domain/operators.rb:271 (indent_width repeats DisplayWidth.column; the shift step written at :172 and :251), carat/use_cases/visual/put_over_selection.rb:126 (repeated duplicates Operators.put's loop at operators.rb:42) (sprint-8 sweep, quality); queued in `editing-dedup-a`.
+- Why: four private copies of logic the domain already holds.
+- Fix: call state.clamp_col, DisplayWidth.column, one shift-width helper, and one Operators function for repeated lines.
+
+### Small core code nits from the sweep
+
+- Location: carat/domain/walker.rb:63 (calls Motions.code_class without requiring motions.rb, a cycle hidden by load order), carat/domain/runs.rb:18 and text_objects.rb:86 (`cls`), carat/use_cases/handle_key.rb:384 and search/find_match.rb:68 (bare key codes 40, 44, 47, 63), carat/adapters/input_controller.rb:128 (both branches call handle), carat/use_cases/completion/show_completion.rb:96 (`[0]` then clear), carat/domain/range.rb:4 (stale comment), carat/domain/buffer.rb:472 (blanks public) (sprint-8 sweep, quality); queued in `editing-dedup-b`.
+- Why: a hidden require cycle, a named abbreviation, magic numbers, duplication, an idiom against the codebase, a false comment, and needless public surface.
+- Fix: a small CharClass module the three callers require; `char_class`; named Domain::Key constants; one handle call; `Array.new(0, 0)`; drop the sentence; move blanks below private.
+
+### Buffer#line reads the last line for a negative row
+
+- Location: carat/domain/buffer.rb:406 (sprint-8 sweep, quality); queued in `core-correctness-b`.
+- Why: the method says it gives an empty string outside the buffer but `lines[-1]` answers a negative row; every caller guards today.
+- Fix: return "" when row < 0, with a domain_buffer test row.
+
+### A count grows without bound
+
+- Location: carat/domain/command_grammar.rb:97 (sprint-8 sweep, quality); queued in `core-correctness-b`.
+- Why: digit grows count without a cap and take multiplies the operator count, so a long digit run passes Vim's 999999999 and the 64-bit range, and a huge count can stall an insert repeat.
+- Fix: clamp the count and the product at 999_999_999, with a test in test/domain_grammar.rb.
+
+### The language gateway holds a URI codec, UTF-16 walkers, and missing requires
+
+- Location: carat/adapters/json_rpc_language_gateway.rb:774 and :1328 (URI codec), :1089 and :1135 with carat/use_cases/definitions/visit_target.rb:204 (three UTF-16 walkers), :1 and carat/drivers/process_runner.rb:1 and carat/use_cases/plugins/plugin_registry.rb:1 (names constants they do not require) (sprint-8 sweep, quality); queued in `gateway-split-a`.
+- Why: the 1,374-line gateway keeps conversions no protocol state needs, three copies of one walk, and compiles alone only through carat.rb's order.
+- Fix: Domain modules for the file URI and UTF-16 with table tests, the gateway and VisitTarget calling them; add the require_relative lines.
+
+### The gateway repeats its request send, cancel, and start paths
+
+- Location: carat/adapters/json_rpc_language_gateway.rb:691 and :838 (send_definition and send_hover alike), :594, :665, :719, :865, :945, :998 (six cancels), :222 (restart repeats start), :268 (listed public), :208 (waiting? comment) (sprint-8 sweep, quality); queued in `gateway-split-b`.
+- Why: 22 duplicated lines, six copies of one cancel, a repeated start tail, and public surface only the class calls.
+- Fix: one cursor-request send and cancel path, one private start tail, listed below private, the comment completed.
+
+### PluginHost builds what EditorAssembly should share
+
+- Location: carat/use_cases/plugins/plugin_host.rb:73 and :78, carat/adapters/editor_assembly.rb:431 (sprint-8 sweep, quality, found twice); queued in `plugin-host-tidy`.
+- Why: PluginHost builds its own ResolveInside, MakePath, RenamePath, DeletePath, ListTree, registry, router, events, and families, so test/adapters_assembly.rb cannot check they share one instance.
+- Fix: build them in the assembly, pass them in, and extend the one-instance check.
+
+### Plugin host code repeats itself and breaks two record rules
+
+- Location: carat/use_cases/plugins/window_requests.rb:95 with ui_requests.rb:82 (binding errors loop), window_requests.rb:179 (split save and restore beside in_window at :303), buffer_requests.rb:144 with window_requests.rb:344, :347 (cursor_on), plugin_events.rb:205 (detail uncopied), pending_event.rb:9 (Struct never mutated), plugin_registry.rb:175 (recomputes cause), ui_requests.rb:123 and 4 more files (`e` for an entry), carat/plugins/explorer/plugin.rb:194, :331, :404, :422 and :160 (cursor_to and toggle) (sprint-8 sweep, quality); queued in `plugin-host-tidy`.
+- Why: duplicated helpers, a string crossing the plugin boundary uncopied, a Data value written as a Struct, and an unclear abbreviation.
+- Fix: one record_bindings, splits through in_window, one cursor helper, `detail.dup`, a Data subclass, `= cause`, `entry`, and a private cursor_to with toggle calling focus.
+
+### ShowHover repeats the definition float's placement
+
+- Location: carat/use_cases/docs/show_hover.rb:74, carat/use_cases/definitions/open_definition_float.rb:29 (sprint-8 sweep, quality, found twice); queued in `hover-tidy`.
+- Why: the below-or-above room, height clamp, width loop, and bordered FloatSpec are copied line for line.
+- Fix: one cursor-float use case taking the built buffer, both callers using it.
+
+### The map omits public methods in several areas
+
+- Location: docs/codebase-map.md:232 (Registers, Selection, ExTable, Layout, BufferList), :99 (Options), :153 (CommandGrammar), :530 and :536 (PluginApi::Paths, PluginHost, PluginRegistry) (sprint-8 sweep, quality); queued in `architecture-docs`.
+- Why: entries miss methods callers use, so the map misleads a scout.
+- Fix: bring the method lists in line with the code.
+
+### Testing's comment names spin test as the snapshot runner
+
+- Location: carat/testing.rb:4, docs/architecture.md:425 (sprint-8 sweep, quality); queued in `architecture-docs`.
+- Why: both say spin test diffs the output against the snapshot, while tools/run_tests.sh compares it and spin test is never run.
+- Fix: name tools/run_tests.sh in both places.

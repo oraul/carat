@@ -7,3 +7,4 @@ sprint-4	ci-scope-errors	5	carat-palette,pr-edit-path,spinel-compile-time,untype
 sprint-5	architecture-review	5	guard-ref-pin,guard-pin-no-url,untyped-gateway,carat-glyphs,architecture-review	296.0	59.2	5049384	2	check:5/5,quality:4/5,security:4/5,bench:5/5,ci:5/5,gates:5/5
 sprint-6	spinel-untyped-bump-b	5	design-principles,architecture-tidy,winbar-outline,spinel-untyped-bump,spinel-untyped-bump-b	290.0	58.0	3896160	0	check:5/5,quality:5/5,security:5/5,bench:5/5,ci:5/5,gates:5/5
 sprint-7	core-correctness	5	spinel-warnings,mit-license,carat-palette-b,ux-pass,core-correctness	280.0	56.0	4360766	1	check:5/5,quality:4/5,security:5/5,bench:5/5,gates:5/5,ci:4/4
+sprint-8	sprint-tidy	5	brief-only-relay,ci-time-tidy,ci-time-tidy-b,scout-focus,sprint-tidy	212.0	42.4	4101144	0	check:5/5,quality:3/5,security:5/5,bench:5/5,ci:5/5,gates:5/5
