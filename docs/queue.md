@@ -4,9 +4,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 9
 
-1. `review-coverage` (T1 pipeline security, estimated medium): sprint 8 found the sprint security reviews skipped or missing a diff: Medium (5) `.claude/workflows/deliver-change.js:996` with `tools/run_state.sh:1712`: plan-needed reads notes only from pending runs, never the `review-*` or `sprint-*` run states a periodic security review records on, so a delivery of the queue head skips the security-first stop; Medium (4) `tools/run_state.sh:1507`: items marked `beyond the sprint` go uncounted without a cap, so review-due may never reach five; `tools/run_state.sh:1583`: sprint_row takes such rows after the fifth counted one, so a later diff reaches no sprint review; `:1492` a double negative. Fix outline: plan-needed sees a failing periodic security record no later merge fixed; uncounted exceptions bounded per sprint; the row ends at the fifth counted change. Accepted when a tools-test case fails before and passes after each, review-due fires after a fixed number of merges whatever the markers say, and tools-test seconds are not higher. Backlog: "### Sprint count exemption trusts model-written queue text", "### sprint_row takes exception rows past the fifth counted row", "### Double negative in the sprint exception count".
-2. `lsp-incremental-sync` (T2 fix, estimated small): carat sends `textDocument/didChange` as one whole-document change with no range (`carat/adapters/json_rpc_language_gateway.rb:1311`) although ruby-lsp 0.26 declares incremental sync (`textDocumentSync` change 2); ruby-lsp applies each change by its range and drops a rangeless one, so after the first edit its copy is stale and completion answers InvalidLocationError. Fix outline: honor the server's sync kind, ranged changes (or one range covering the old text) for 2, whole text for 1. Accepted when a canned server announcing change 2 receives a range that reproduces the buffer, one announcing 1 receives whole text, and allocations hold. Backlog: none.
-3. `spinel-notice` (T2 user request, docs, estimated medium, beyond the sprint, the user-approved exception): `tools/spinel/` carries a header generated from Spinel, but the credit at `README.md:212` names the MIT license without its copyright and permission notice (#137 advisory 2). Fix outline: a LICENSE file in `tools/spinel/` with Spinel's MIT copyright and permission notice, the copyright line without the email, the README credit pointing at it; no URL, no email. Accepted when that file holds the notice, the README credit names it, and docs-lint and gates pass. Backlog: "### Spinel's MIT notice does not travel with the vendored generated header (README.md:212)".
+1. `lsp-incremental-sync` (T2 fix, estimated small): carat sends `textDocument/didChange` as one whole-document change with no range (`carat/adapters/json_rpc_language_gateway.rb:1311`) although ruby-lsp 0.26 declares incremental sync (`textDocumentSync` change 2); ruby-lsp applies each change by its range and drops a rangeless one, so after the first edit its copy is stale and completion answers InvalidLocationError. Fix outline: honor the server's sync kind, ranged changes (or one range covering the old text) for 2, whole text for 1. Accepted when a canned server announcing change 2 receives a range that reproduces the buffer, one announcing 1 receives whole text, and allocations hold. Backlog: none.
+2. `spinel-notice` (T2 user request, docs, estimated medium, beyond the sprint, the user-approved exception): `tools/spinel/` carries a header generated from Spinel, but the credit at `README.md:212` names the MIT license without its copyright and permission notice (#137 advisory 2). Fix outline: a LICENSE file in `tools/spinel/` with Spinel's MIT copyright and permission notice, the copyright line without the email, the README credit pointing at it; no URL, no email. Accepted when that file holds the notice, the README credit names it, and docs-lint and gates pass. Backlog: "### Spinel's MIT notice does not travel with the vendored generated header (README.md:212)".
 
 ## Pool
 
@@ -50,53 +49,54 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 38. `plan-apply-guard` (T1 pipeline retrospective, estimated small): #145's package applied the planner's queue over the branch's own queue edit, reverting a marker and carrying a stale path that failed docs-lint (1 extra commit). Accepted when a case keeps the branch edit or stops naming the conflict.
 39. `sprint-marker-tidy` (T1 pipeline advisories, estimated small): sprint-8 `tools/run_state.sh:1494` one test three times, `:289` names, `tools/docs_lint.sh:154` counts marked items; `:1121`, `:1143` (#145).
 40. `plan-skip` (T1 pipeline retrospective, estimated small): the plan phase ran in 10 of the last 10 rows, 159,199 of 1,159,581 output (13.7%); #147's 13,718/10 made 6 decisions, none changing the queue. Accepted when plan-needed finds no decision for a queue head delivered as queued with no new finding, and the plan phase is absent in 2 of the next 5 runs with no overrun or reorder missed.
-41. `language-ask-port` (T5 architecture-review H1, estimated medium, S15).
-42. `markdown-preview` plugin (T2 user now-request, estimated medium, pushed back 4).
-43. `mermaid-flowchart` (T2 user now-request, estimated large, pushed back 4, split at its start).
-44. `mermaid-sequence` (T2 user now-request, estimated medium, pushed back 4).
-45. `finder-grep` (T5 user request, estimated medium, pushed back 6).
-46. `definition-tab` (T5 user request, estimated medium, pushed back 6).
-47. `finder-pickers` (T5 user request, estimated medium, pushed back 6).
-48. `csv-viewer` plugin (T5 user-scheduled, estimated large, pushed back 10).
-49. `filetype-rules` (T5 user request, estimated medium, pushed back 6).
-50. `syntax-definitions` (T5 user request, estimated medium, pushed back 6).
-51. `syntax-forms` (T5 user request, estimated medium, pushed back 6).
-52. `syntax-embedded` (T5 user request, estimated medium, pushed back 6).
-53. `javascript-syntax` (T5 user request, estimated medium, pushed back 6).
-54. `html-syntax` (T5 user request, estimated medium, pushed back 6).
-55. `sprint-security` (T1 pipeline security, estimated medium, pushed back 3): Medium (7) `sprint-planning.js:121`.
-56. `content-gate-gaps` (T1 security, estimated medium, pushed back 15): Medium (7) `gates.sh:224`.
-57. `ci-scope-quoting` (T1 pipeline, Low (6), estimated medium, pushed back 3): `tools/ci_scope.sh:95`, `:78`, `:31`, `tools/run_state.sh:503`; sweep `tools/rules.sh:73` (an architecture-only change skips tests), `ci_scope.sh:99`, `:80`; sprint-8 `rules.sh:70`, `run_state.sh:233`, `ci_scope.sh:42`. Accepted when a case fails before and passes after each.
-58. `spec-tests-first` (T1 retrospective, estimated medium, pushed back 3): quality 52/106 first pass. Accepted above 60% over 10 changes.
-59. `open-pr-refusals` (T1 security Lows, estimated medium, pushed back 3).
-60. `run-resume` (T1 retrospective, estimated medium, pushed back 17): `deliver-change.js:967` builds the resume brief before the planner runs (#141).
-61. `check-runner-safety` (T1 security, estimated medium, pushed back 15): Medium (6) `run_state.sh:571`; `toolchain-clean` (sweep `Makefile:203`).
-62. `spinel-bump` (T3 toolchain, estimated medium): upstream Spinel is about 90 commits past the pinned `SPINEL_REF` 93d7883b; bump in its own change after `make check`, regenerating the vendored header.
-63. `bidi-controls` (T3 security Lows, estimated small, pushed back 11).
-64. `ci-hardening` (T3 with T6, estimated medium, pushed back 23): tag-pinned actions (sweep Low (5) `open-pr.yml:45`); sweep Low (7) `scan.yml:13`.
-65. `project-config-guards` (T3, estimated medium, pushed back 23): a cloned `.caratrc` binds a write (`config.rb:221`).
-66. `insert-copy` (T4, estimated small, pushed back 12).
-67. `bench-scenarios` (T4 tests, estimated small, pushed back 1): `bench/run.sh:69`, `:22`.
-68. `file-access-tidy` (T4 with T6, estimated medium, pushed back 26): `open_file.rb:62`.
-69. `architecture-docs` (T6, estimated small, pushed back 1): floats (M4); sweep map drift `docs/codebase-map.md:99`, `:232`, `:530`; `carat/testing.rb:4`.
-70. `periodic-blockers-b` (T6 periodic quality, estimated medium, pushed back 8).
-71. `ex-handlers-tidy` (T6 sweep, estimated medium): `history_command_handler.rb:44`.
-72. `editing-counts` (T6, estimated medium, pushed back 11).
-73. `hover-tidy` (T6, estimated medium, pushed back 13): sweep `show_hover.rb:74`.
-74. `signature-tidy` (T6, estimated medium, pushed back 12).
-75. `slots-tidy` (T6, estimated medium, pushed back 12).
-76. `completion-tidy` (T6, estimated medium, pushed back 14).
-77. `completion-docs-tidy` (T6, estimated medium, pushed back 14).
-78. `buffer-list-tidy` (T6, estimated medium, pushed back 16).
-79. `definitions-tidy` (T6, estimated medium, pushed back 11).
-80. `plugin-host-tidy` (T6 sweep, estimated medium, pushed back 1): `plugin_router.rb:40`; sweep `plugin_host.rb:73` and 9 more.
-81. `input-core-tidy` (T6 sweep, estimated medium, pushed back 1): `handle_key.rb:253`.
-82. `core-correctness-b` (T6 sweep, estimated small): `carat/domain/buffer.rb:656`, `carat/domain/keymap.rb:348`, `carat/use_cases/handle_key.rb:198`; sweep `buffer.rb:406`, `command_grammar.rb:97`.
-83. `editing-dedup-a` (T6 sweep, estimated medium): the tab width fallback in 10 places (`carat/use_cases/dispatcher.rb:112`), `operate.rb:204`, `operators.rb:271`, `put_over_selection.rb:126`.
-84. `editing-dedup-b` (T6 sweep, estimated small): `walker.rb:63`, `runs.rb:18`, `handle_key.rb:384`, `input_controller.rb:128`, `show_completion.rb:96`, `range.rb:4`, `buffer.rb:472`.
-85. `ui-code-tidy` (T6 sweep, estimated medium, pushed back 1): `carat/domain/themes.rb:470`, `test/domain_theme.rb:453`.
-86. `tools-docs-tidy` (T6 sweep, estimated medium, pushed back 1): `Makefile:254`, `docs/architecture.md:351`; #136 to #143 advisories.
-87. `docs-index` (T6, estimated medium, pushed back 21, split at its start).
+41. `scout-value` (T1 pipeline retrospective, estimated small): #148 scout 31,419/27 (16.6% of 189,491 output) and implement still 95 calls, the most in 11 rows; runs with scout at 3 calls or fewer averaged 55.5 implement calls, at 25 or more 64.5. Accepted when over the next 5 runs scout plus implement calls stay at or below the last-10 median of 60 and implement calls do not rise.
+42. `language-ask-port` (T5 architecture-review H1, estimated medium, S15).
+43. `markdown-preview` plugin (T2 user now-request, estimated medium, pushed back 4).
+44. `mermaid-flowchart` (T2 user now-request, estimated large, pushed back 4, split at its start).
+45. `mermaid-sequence` (T2 user now-request, estimated medium, pushed back 4).
+46. `finder-grep` (T5 user request, estimated medium, pushed back 6).
+47. `definition-tab` (T5 user request, estimated medium, pushed back 6).
+48. `finder-pickers` (T5 user request, estimated medium, pushed back 6).
+49. `csv-viewer` plugin (T5 user-scheduled, estimated large, pushed back 10).
+50. `filetype-rules` (T5 user request, estimated medium, pushed back 6).
+51. `syntax-definitions` (T5 user request, estimated medium, pushed back 6).
+52. `syntax-forms` (T5 user request, estimated medium, pushed back 6).
+53. `syntax-embedded` (T5 user request, estimated medium, pushed back 6).
+54. `javascript-syntax` (T5 user request, estimated medium, pushed back 6).
+55. `html-syntax` (T5 user request, estimated medium, pushed back 6).
+56. `sprint-security` (T1 pipeline security, estimated medium, pushed back 3): Medium (7) `sprint-planning.js:121`.
+57. `content-gate-gaps` (T1 security, estimated medium, pushed back 15): Medium (7) `gates.sh:224`.
+58. `ci-scope-quoting` (T1 pipeline, Low (6), estimated medium, pushed back 3): `tools/ci_scope.sh:95`, `:78`, `:31`, `tools/run_state.sh:503`; sweep `tools/rules.sh:73` (an architecture-only change skips tests), `ci_scope.sh:99`, `:80`; sprint-8 `rules.sh:70`, `run_state.sh:233`, `ci_scope.sh:42`. Accepted when a case fails before and passes after each.
+59. `spec-tests-first` (T1 retrospective, estimated medium, pushed back 3): quality 53/107 first pass, 0 in 4 of the last 6 rows (#144, #145, #146, #148); #148 note 18: both blockers were spec clauses with no scenario while gates passed. Accepted above 60% over 10 changes, and quality blocked for an untested behavior in at most 1 of the next 5 runs.
+60. `open-pr-refusals` (T1 security Lows, estimated medium, pushed back 3).
+61. `run-resume` (T1 retrospective, estimated medium, pushed back 17): `deliver-change.js:967` builds the resume brief before the planner runs (#141).
+62. `check-runner-safety` (T1 security, estimated medium, pushed back 15): Medium (6) `run_state.sh:571`; `toolchain-clean` (sweep `Makefile:203`).
+63. `spinel-bump` (T3 toolchain, estimated medium): upstream Spinel is about 90 commits past the pinned `SPINEL_REF` 93d7883b; bump in its own change after `make check`, regenerating the vendored header.
+64. `bidi-controls` (T3 security Lows, estimated small, pushed back 11).
+65. `ci-hardening` (T3 with T6, estimated medium, pushed back 23): tag-pinned actions (sweep Low (5) `open-pr.yml:45`); sweep Low (7) `scan.yml:13`.
+66. `project-config-guards` (T3, estimated medium, pushed back 23): a cloned `.caratrc` binds a write (`config.rb:221`).
+67. `insert-copy` (T4, estimated small, pushed back 12).
+68. `bench-scenarios` (T4 tests, estimated small, pushed back 1): `bench/run.sh:69`, `:22`.
+69. `file-access-tidy` (T4 with T6, estimated medium, pushed back 26): `open_file.rb:62`.
+70. `architecture-docs` (T6, estimated small, pushed back 1): floats (M4); sweep map drift `docs/codebase-map.md:99`, `:232`, `:530`; `carat/testing.rb:4`.
+71. `periodic-blockers-b` (T6 periodic quality, estimated medium, pushed back 8).
+72. `ex-handlers-tidy` (T6 sweep, estimated medium): `history_command_handler.rb:44`.
+73. `editing-counts` (T6, estimated medium, pushed back 11).
+74. `hover-tidy` (T6, estimated medium, pushed back 13): sweep `show_hover.rb:74`.
+75. `signature-tidy` (T6, estimated medium, pushed back 12).
+76. `slots-tidy` (T6, estimated medium, pushed back 12).
+77. `completion-tidy` (T6, estimated medium, pushed back 14).
+78. `completion-docs-tidy` (T6, estimated medium, pushed back 14).
+79. `buffer-list-tidy` (T6, estimated medium, pushed back 16).
+80. `definitions-tidy` (T6, estimated medium, pushed back 11).
+81. `plugin-host-tidy` (T6 sweep, estimated medium, pushed back 1): `plugin_router.rb:40`; sweep `plugin_host.rb:73` and 9 more.
+82. `input-core-tidy` (T6 sweep, estimated medium, pushed back 1): `handle_key.rb:253`.
+83. `core-correctness-b` (T6 sweep, estimated small): `carat/domain/buffer.rb:656`, `carat/domain/keymap.rb:348`, `carat/use_cases/handle_key.rb:198`; sweep `buffer.rb:406`, `command_grammar.rb:97`.
+84. `editing-dedup-a` (T6 sweep, estimated medium): the tab width fallback in 10 places (`carat/use_cases/dispatcher.rb:112`), `operate.rb:204`, `operators.rb:271`, `put_over_selection.rb:126`.
+85. `editing-dedup-b` (T6 sweep, estimated small): `walker.rb:63`, `runs.rb:18`, `handle_key.rb:384`, `input_controller.rb:128`, `show_completion.rb:96`, `range.rb:4`, `buffer.rb:472`.
+86. `ui-code-tidy` (T6 sweep, estimated medium, pushed back 1): `carat/domain/themes.rb:470`, `test/domain_theme.rb:453`.
+87. `tools-docs-tidy` (T6 sweep, estimated medium, pushed back 1): `Makefile:254`, `docs/architecture.md:351`; #136 to #143 advisories.
+88. `docs-index` (T6, estimated medium, pushed back 21, split at its start).
 
 ## Guide
 
@@ -107,12 +107,10 @@ The user's guide (2026-11-15), security first and review findings adjusting it:
 
 ## Decisions
 
-- `git-signs-status-a` (T2 user request, part a), this change, estimated medium, not split further: one plugin, one host request, 4 checks; features 676,270 to 1,035,751 total in 31 to 74 min (ux-pass, #147, #146), under 1.2M.
-- Removed from Sprint 9, nothing else reordered; Sprint 9 keeps 3 features (`markdown-reading-a` #146, `ruby-structure-check` #147, `git-signs-status-a`), 2 fixes (`review-coverage` T1, the one pipeline; `lsp-incremental-sync` T2); `spinel-notice` the approved exception.
-- `ruby-structure-bound` (T2 fix, small) added at pool 7 (user-delegated): Ruby open 22 to 116 ms at 100,000 lines; after T1 `ci-workflow-tidy`.
-- #146 close placeholder (0 tool calls, recorded false) folded into `merge-gate-integrity` (T1, pool 26, user-delegated); #147 merge 12 calls.
-- #147 retro note 8 (reviews 32.9% of output, 0 blocking) folded into `review-demotion` (T1, pool 35), 18% kept, not moved (nothing else reordered).
-- #147 retro note 9 (plan phase in 10 of 10 rows, 13.7% of output) queued as `plan-skip` (T1, small, pool 40) after the T1 retrospective items.
-- #147 (all first pass, 775,758 total in 61 min, within medium): 7 advisories appended by its package; `plugin.rb:111` covered by `ruby-structure-bound`, the 6 others (`plugin.rb:86`, `:24`, `tokenizer.rb:820`, two tests, `README.md:124`) T6, left to sprint 9's grooming.
-- Security: none open at 8 or above, none disputed: #147 high 0 medium 0; sprint-8 Medium (5), (4); sweep Medium (6).
-- Pace: quality 52/106 first pass, ci 102/108, 89 rework rounds over 106 changes.
+- `review-coverage` (T1 pipeline security), this change, estimated medium, not split: 4 fixes in one script and its plan-needed caller, `:1492` a one-line rename; pipeline rows 784,166 to 957,700 total in 40 to 46 min (#143, #144, #145), under 1.2M.
+- Removed from Sprint 9, nothing reordered; Sprint 9 keeps 3 features (#146, #147, #148), 2 fixes (`review-coverage` T1, the one pipeline; `lsp-incremental-sync` T2); `spinel-notice` the approved exception.
+- #148 retro note 17 (scout 31,419/27, 16.6% of output; implement 95 calls; scout at 25 calls or more 64.5 implement calls against 55.5) queued as `scout-value` (T1, small, pool 41) after `plan-skip`.
+- #148 retro note 18 (quality first pass 0 in 4 of the last 6 rows, 2 untested clauses, about 43,545 output) folded into `spec-tests-first` (T1, pool 59), not moved; its aging reason kept: T1 cannot rise, accepted over 10 changes.
+- #148 (1,124,717 total in 104 min, within medium tokens, 104 min the slowest of 11 rows): 2 quality-blocking fixed before the merge; 14 advisories appended by its package (`process_runner.rb:110`, `:15`, `:131`, `:76`, `plugin.rb:76`, `:43`, `file_requests.rb:23`, map, `docs/plugins.md:79`, tests, spec): T6, left to sprint 9's grooming, `plugin.rb` ones beside `git-signs-status-b`.
+- Security: none open at 8 or above, none disputed: #148 high 0 medium 0; sprint-8 Medium (5), (4) are this change; sweep Medium (6) in `gate-object-pin`.
+- Pace: quality 53/107 first pass, ci 103/109, 89 rework rounds over 107 changes.

@@ -6253,3 +6253,45 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: openspec/specs/plugin-host/spec.md (from the archived change git-signs-status-a, delta spec line 4)
 - Why: the requirement cuts before a character the limit would split, but no scenario names that and the test at test/drivers_process_runner.rb:62 names none.
 - Fix: add a scenario such as 'Long output is cut before a character' and label the driver test with it.
+
+### merged_since clears a periodic security finding on a merge planned before it
+
+- Location: tools/run_state.sh:1726
+- Why: security Low (4). merged_since clears a failing periodic security review on any later merge, including one whose delivery started before the review was recorded; a delivery planned (or plan-skipped) before a /review records a blocking finding merges afterwards, so plan-needed treats the finding as seen by a planner and later queue-head deliveries skip the security-first stop. A gap in the new trigger, not a regression.
+- Fix: count only a merge whose planner start came after the review was recorded, for example by storing the review run's name or time in the merged run's state when its planner or plan-needed saw it and having merged_since require that marker instead of commit ancestry alone, or keep the trigger until a planner start records that it read the review run.
+
+### merged_since reads only the last metrics row's merged commit
+
+- Location: tools/run_state.sh:1729
+- Why: quality advisory. Metrics rows follow run-state order, not merge order, so a later merge in an earlier row is missed and the planner keeps running; the pending loop also adds a subprocess per state file.
+- Fix: since every commit on main is a squash merge, test that origin/main descends from COMMIT and differs from it.
+
+### No case for a passing periodic security review in plan-needed
+
+- Location: tools/tools_test.sh:1321
+- Why: quality advisory. No case shows that a passing periodic security review, or a partial one with blocking=0, leaves plan-needed not needed, the filter of tools/run_state.sh:1767-1770.
+- Fix: add a pass "... blocking=0" case expecting ^not needed.
+
+### sprint_state picks an exception past the fifth counted row
+
+- Location: tools/run_state.sh:1502
+- Why: quality advisory. sprint_state picks the exception from every name merged since the last sprint while sprint_row (tools/run_state.sh:1599) now ends at the fifth counted row, so review-due names an exception (x1 in tools/tools_test.sh:1178) that the groomed row leaves out and that then spends the next sprint's one exemption, x2 counted.
+- Fix: pick sprint_exceptions only among the names before the SPRINT_SIZE-th counted one, so review-due, groom, and the row read the same window.
+
+### A resumed delivery clears a periodic security review unseen
+
+- Location: tools/run_state.sh:1723
+- Why: quality advisory. merged_since clears a failing periodic security review at any later merge on the premise that the merging change's planner saw it, but a delivery resumed past its plan phase (phase.plan or phase.implement recorded before the review) skips the planner and still clears it unseen; the review-coverage design names this risk.
+- Fix: clear only on a merged change whose run state records phase.plan after the review was recorded, or keep the record until a later periodic security review passes.
+
+### plan_needed lists run states differently from pending_list
+
+- Location: tools/run_state.sh:1753
+- Why: quality advisory. plan_needed lists run states with ls piped to sed and grep while pending_list (tools/run_state.sh:1142) globs the state directory's json files; one clear way to do each thing.
+- Fix: loop over the state directory's json files with basename and a case on REVIEW_RUNS as pending_list does.
+
+### Unwrapped comment lines in run_state.sh
+
+- Location: tools/run_state.sh:1726
+- Why: quality advisory. Comment lines are left unwrapped beside wrapped ones (also tools/run_state.sh:1747), against the file's comment style.
+- Fix: rewrap both comments at the width of the surrounding lines.
