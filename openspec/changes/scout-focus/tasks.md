@@ -12,5 +12,5 @@
 
 ## 3. Docs
 
-- [ ] 3.1 Update the README pipeline section's scout step and the `scout` line of `CLAUDE.md`; checked by `make docs-lint` and `make gates`
+- [x] 3.1 Update the README pipeline section's scout step (CLAUDE.md unchanged, the proposal says why); checked by `make docs-lint` and `make gates`
 - [ ] 3.2 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`

@@ -11,7 +11,7 @@ Scouts spent 51,496 of 127,096 output tokens (40.5%) and 62 of 166 tool calls at
 - The area plan is measured under its own key, `areas` (its calibration kind and fixed cap already are), so `phase.scout` holds only the scouts' starts, the figure compared with the packs' own counts; the scouts' share the acceptance measures is `phase.scout` plus `phase.areas`, the same total the brief's figures counted.
 - `.claude/agents/scout.md` reads only what the locations need: the map lines naming them, each file only at its locations, callers and tests of the methods there, a design only when the question asks for one; step 8 copies the Rules line as written, whether or not it names sections; the pack header records the scout's tool calls, the number it returns.
 - Cases in `tools/tools_test.sh` prove an area without locations starts no scout, a plan of no area starts none, the `MAX_AREAS` cut, the scout prompt's locations, and the plan measured under `areas`.
-- The README pipeline section and the `scout` line of `CLAUDE.md` say the scouts read the edited locations and none starts for a change in no map area.
+- The README pipeline section says the scouts read the edited locations, none starts for a change in no map area, and the area plan is recorded apart.
 
 ## Capabilities
 
@@ -27,7 +27,7 @@ None: the change alters the delivery pipeline, which no spec under `openspec/spe
 
 - `.claude/workflows/deliver-change.js`, `.claude/agents/scout.md`, `tools/tools_test.sh`.
 - README.md: changed, the pipeline section's scout step.
-- CLAUDE.md: changed, the `scout` line of Agents.
+- CLAUDE.md: unchanged, its `scout` line (one map area at the current commit into a pack of facts) still holds; the locations and the no-area rule live in `.claude/agents/scout.md`, the workflow, and the README, and the file is 2 bytes under its budget.
 - docs/architecture.md: unchanged, it does not describe the scouts' reading.
 - docs/codebase-map.md: unchanged, no file is added, moved, or removed.
 
