@@ -11,4 +11,4 @@
 
 ## 3. Docs
 
-- [ ] 3.1 `docs/codebase-map.md` area 1 names `backlog-pick`; README.md's sprint planning step names the pick, the triage, and the calibration; `make docs-lint` and `make gates` pass
+- [x] 3.1 `docs/codebase-map.md` area 1 names `backlog-pick`; README.md's sprint planning step names the pick, the triage, and the calibration; `make docs-lint` and `make gates` pass
