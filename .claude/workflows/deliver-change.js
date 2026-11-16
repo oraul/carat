@@ -900,6 +900,18 @@ function resumeFix(by, used) {
   return ''
 }
 
+// After a resume past the push passed its check and reviews at the head
+// (verify(false)): push when the head is not the recorded push and no
+// review fix push was made (used, the run state's review_fixes), so the
+// fix commit of an earlier resume that then stopped is pushed as the review
+// fix too; empty when the head is the pushed one or no push is recorded
+// (the merge loop stops on that); else the stop's reason.
+function resumePush(pushed, head, used) {
+  if (!/^[0-9a-f]{40}$/.test(String(pushed || '')) || pushedHead(pushed, head)) return ''
+  if (Number(used || 0) >= 1) return `the head ${head} is not the pushed head ${pushed} and the run's one review fix push was made`
+  return 'push'
+}
+
 async function rounds(fixes = true) {
   for (;;) {
     let blocked = ''
@@ -1146,12 +1158,16 @@ if (!stopped && !state.merged) {
     // gates' settled_at allows that records-only diff. A blocking quality or
     // security review gets one fix round a run (resumeFix), the security
     // review over the whole diff again, pushed as a review fix; a failed
-    // check or benchmark, or a second review fix, stops the run.
+    // check or benchmark, or a second review fix, stops the run. A head
+    // past the recorded push once the check and reviews passed is pushed as
+    // that review fix whichever start committed it (resumePush).
     if (!ranAll(ran)) {
       note('resumed past the push: the check and the reviews run again at the head')
       if (!(await verify(false)) && !stopped) stopped = `the check or a review did not pass at ${head} on resume`
       phase('Merge')
-      if (!stopped && reviewFixRounds) {
+      const push = stopped ? '' : resumePush(state.pushed, head, state.review_fixes)
+      if (push && push !== 'push') stopped = `${push}: nothing pushes it`
+      else if (push) {
         recordLate()
         await contributor('push', `Push the review fix of this resume past the push with \`sh tools/run_state.sh push ${state.change} --review-fix\`, not --ci-fix; the findings that arrived after the package step are recorded in the run state, not appended.`)
       }

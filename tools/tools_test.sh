@@ -3154,7 +3154,13 @@ expect "workflow: a second review fix round is refused" 0 '^\["a second review f
 expect "workflow: a resume's failed check or benchmark gets no fix round" 0 '^\[true,true\]$' \
   js "$wf" "resumeFix" "[/only a blocking review/.test(resumeFix('check', 0)), /only a blocking review/.test(resumeFix('bench', 0))]"
 expect "workflow: the round reads the run state's review fixes and this start's" 0 "^1$" grep -c -F "resumeFix(by, Number(state.review_fixes || 0) + reviewFixRounds)" "$wf"
-expect "workflow: the review fix round pushes once more" 0 "^1$" grep -c -F 'if (!stopped && reviewFixRounds) {' "$wf"
+expect "workflow: a passed resume pushes a head past the recorded push as the review fix" 0 '^\["push","push"\]$' \
+  js "$wf" "pushedHead resumePush" "[resumePush('$full', 'bbcdef012345', 0), resumePush('$full', 'bbcdef012345', undefined)]"
+expect "workflow: a passed resume at the pushed head pushes nothing" 0 '^\["",""\]$' \
+  js "$wf" "pushedHead resumePush" "[resumePush('$full', 'abcdef012345', 0), resumePush('', 'abcdef012345', 0)]"
+expect "workflow: a head past the push after the review fix push stops with its reason" 0 '^true$' \
+  js "$wf" "pushedHead resumePush" "/is not the pushed head .* one review fix push was made/.test(resumePush('$full', 'bbcdef012345', '1'))"
+expect "workflow: the resume asks for the push from the run state, not this start's rounds" 0 "^1$" grep -c -F "const push = stopped ? '' : resumePush(state.pushed, head, state.review_fixes)" "$wf"
 expect "workflow: the review fix round pushes with --review-fix" 0 "^1$" \
   grep -c "await contributor('push', .Push the review fix of this resume past the push with .*sh tools/run_state.sh push [\$]{state.change} --review-fix" "$wf"
 expect "workflow: the review fix round reviews security over the whole diff" 0 "^1$" grep -c -F "const since = reviewFixRounds ? '' : narrowedFrom(ran, 'security', head)" "$wf"
