@@ -14,5 +14,5 @@
 
 ## 4. Docs
 
-- [ ] 4.1 Update the README pipeline section, CLAUDE.md's Sprints line, and the map's `tools/run_state.sh` entry; checked by `make docs-lint` and `make gates`
+- [x] 4.1 Update the README pipeline section and the map's `tools/run_state.sh` entry (CLAUDE.md unchanged, the proposal says why); checked by `make docs-lint` and `make gates`
 - [ ] 4.2 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`

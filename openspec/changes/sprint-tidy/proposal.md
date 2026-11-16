@@ -10,7 +10,7 @@ Three pipeline defects of sprint 8's first item (`docs/queue.md` item 1, T1). A 
 - `pending_list` lists a merged run only when its `merged` commit is one git knows on HEAD or on BASE (`origin/main`), so `history`, `bench`, `plan-needed`, and `review-due` never take a never-merged run; `history` names each such run it leaves out.
 - `review-due` leaves out of a sprint's count a change whose item in `docs/queue.md` at the parent of its squash commit carries `user-approved exception` in its parenthesis; the not-due line names it, and the due line still lists it, so the sprint review covers its diff. `groom`'s sprint row and its history-row check count the same way, so the sprint closes where review-due says.
 - Cases in `tools/tools_test.sh` prove each: a fixed-order brief skips the planner, a never-merged run gets no row, and a marked change does not count.
-- Docs: the README pipeline section (the planner trigger, the sprint count), CLAUDE.md's sprint line, and the map's `tools/run_state.sh` entry.
+- Docs: the README pipeline section (the planner trigger, the sprint count) and the map's `tools/run_state.sh` entry.
 
 ## Capabilities
 
@@ -26,7 +26,7 @@ None: the change alters the delivery pipeline, which no spec under `openspec/spe
 
 - `.claude/workflows/deliver-change.js`, `tools/run_state.sh`, `tools/tools_test.sh`.
 - README.md: changed, the planner's trigger and the sprint count.
-- CLAUDE.md: changed, the Sprints line says a marked exception is not counted.
+- CLAUDE.md: unchanged, its Sprints line (`/sprint` ends until `review-due` counts the sprint's fifth merge) and its planner line (it runs only when `plan-needed` finds a decision) still hold; the exception rule lives in `tools/run_state.sh`, the README, and the map, and the file is 2 bytes under its budget.
 - docs/architecture.md: unchanged, it does not describe the planner trigger or the sprint count.
 - docs/codebase-map.md: changed, the `tools/run_state.sh` entry names the new helpers; no file is added, moved, or removed.
 
