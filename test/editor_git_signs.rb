@@ -52,6 +52,24 @@ module EditorGitSignsTest
     h.type(":w<CR>")
     t.assert_equal("g topic", segment(h), "the segment follows a branch change on save, no zero count shown")
 
+    # Scenario "The segment follows a branch change on focus".
+    h = editor
+    h.processes.install("git")
+    h.processes.script(BRANCH, "main\n")
+    h.open("a.txt")
+    h.type("<C-w>s")
+    t.assert_equal("± main", segment(h), "a split keeps the branch")
+    h.processes.script(BRANCH, "topic\n")
+    h.type("<C-w>w")
+    t.assert_equal("± topic", segment(h), "the segment follows a branch change on focus")
+
+    # Scenario "The segment shows on activation".
+    h = editor
+    h.processes.install("git")
+    h.processes.script(BRANCH, "main\n")
+    h.plugins.activate_all(Carat::Doubles::FixedConfig.defaults)
+    t.assert_equal(["± main", [BRANCH, COUNTS]], [segment(h), h.processes.captured], "the segment shows on activation, before any buffer opens")
+
     # Scenario "A branch without an upstream shows alone".
     h = editor
     h.processes.install("git")

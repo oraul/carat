@@ -25,6 +25,14 @@ The plugin SHALL refresh its segment when it is activated, when a buffer opens o
 - **WHEN** git answers another branch and a buffer is saved
 - **THEN** the segment shows the new branch
 
+#### Scenario: The segment follows a branch change on focus
+- **WHEN** git answers another branch and the focus moves to another window
+- **THEN** the segment shows the new branch
+
+#### Scenario: The segment shows on activation
+- **WHEN** git answers a branch and the plugin is activated, before any buffer opens
+- **THEN** the segment shows the branch
+
 ### Requirement: No branch shows without a repository or without git
 Outside a git repository, on a detached head, or when git cannot run, the plugin SHALL show no segment and no message, and no error SHALL reach the editor.
 
