@@ -13,4 +13,23 @@ ok   under ascii the view and the whole screen hold no code point above 127, so 
 ok   escape sequences and controls in the file are dropped
 ok   40,000 lines keep at most 10,000 reading rows
 ok   a megabyte line reads at most 262,144 bytes into at most 10,000 rows
-use_cases_toggle_reading: 15 passed, 0 failed
+ok   a 100-column window draws the table aligned:
+┌───────┬───────────┬───────┐
+│ Name  │   Kind    │  Size │
+├───────┼───────────┼───────┤
+│ alpha │   file    │    12 │
+│ be    │ directory │ 3,400 │
+└───────┴───────────┴───────┘
+and the wide one at the 80-column measure
+ok   a 60-column window wraps the wide table's cells within 60 columns:
+┌────────────────┬─────────┬───────────────────────────────┐
+│ Option         │ Default │                       Meaning │
+├────────────────┼─────────┼───────────────────────────────┤
+│ option.icons   │ unicode │    the glyph set the borders, │
+│                │         │   bullets, and bars are drawn │
+│                │         │                          from │
+│ option.jumptab │  keep   │   where a jump to a file with │
+│                │         │               no tab opens it │
+└────────────────┴─────────┴───────────────────────────────┘
+ok   under ascii the tables' borders are +, -, and |, and the screen holds no box character
+use_cases_toggle_reading: 18 passed, 0 failed

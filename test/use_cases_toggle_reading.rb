@@ -10,6 +10,9 @@ require_relative "../carat/testing"
 module UseCasesToggleReadingTest
   D = Carat::Domain
   NOTES = "# Notes\n\nRead **the** guide.\n\n- one\n- two\n\n> quoted\n> > twice\n\n---\n\n```ruby\nx = 1\n```\n"
+  # A three-column table, one column of each alignment, and one wider
+  # than 60 columns.
+  TABLES = "| Name | Kind | Size |\n|:-----|:----:|-----:|\n| alpha | file | 12 |\n| be | directory | 3,400 |\n\n| Option | Default | Meaning |\n|:--|:-:|--:|\n| option.icons | unicode | the glyph set the borders, bullets, and bars are drawn from |\n| option.jumptab | keep | where a jump to a file with no tab opens it |\n"
 
   # A 24 by cols editor on path holding text, "main.rb" beside it.
   def self.session(path, text, cols)
@@ -118,6 +121,40 @@ module UseCasesToggleReadingTest
     big = session("big.md", "words " * 200_000 + "\n", 80)
     big.type("<Space>dr")
     t.assert_equal([true, true], [big.lines.join.bytesize <= D::MarkdownText::READING_RAW_LIMIT, big.lines.length <= D::MarkdownText::READING_ROW_LIMIT], "a megabyte line reads at most 262,144 bytes into at most 10,000 rows")
+
+    # markdown-reading, scenario "A three-column table at 100 columns": at
+    # a 100-column window the measure is 80, so the narrow table keeps its
+    # width and the wide one fills the measure.
+    narrow = ["┌" + "─" * 7 + "┬" + "─" * 11 + "┬" + "─" * 7 + "┐",
+      "│ Name  │   Kind    │  Size │",
+      "├" + "─" * 7 + "┼" + "─" * 11 + "┼" + "─" * 7 + "┤",
+      "│ alpha │   file    │    12 │",
+      "│ be    │ directory │ 3,400 │",
+      "└" + "─" * 7 + "┴" + "─" * 11 + "┴" + "─" * 7 + "┘"]
+    hundred = session("tables.md", TABLES, 100)
+    hundred.type("<Space>dr")
+    rows = hundred.lines
+    t.assert_equal([narrow.join("\n"), "", 7, true], [rows[0, 6].join("\n"), rows[6], rows.length - 7, rows[7, 7].all? { |row| row.length == 80 }], "a 100-column window draws the table aligned:\n#{narrow.join("\n")}\nand the wide one at the 80-column measure")
+
+    # markdown-reading, scenario "A three-column table wider than 60 columns".
+    at_60 = ["┌" + "─" * 16 + "┬" + "─" * 9 + "┬" + "─" * 31 + "┐",
+      "│ Option         │ Default │" + " " * 23 + "Meaning │",
+      "├" + "─" * 16 + "┼" + "─" * 9 + "┼" + "─" * 31 + "┤",
+      "│ option.icons   │ unicode │    the glyph set the borders, │",
+      "│                │         │   bullets, and bars are drawn │",
+      "│                │         │" + " " * 26 + "from │",
+      "│ option.jumptab │  keep   │   where a jump to a file with │",
+      "│                │         │" + " " * 15 + "no tab opens it │",
+      "└" + "─" * 16 + "┴" + "─" * 9 + "┴" + "─" * 31 + "┘"]
+    sixty = session("tables.md", TABLES, 60)
+    sixty.type("<Space>dr")
+    t.assert_equal([(narrow + [""] + at_60).join("\n"), 60], [sixty.lines.join("\n"), widest(sixty.lines)], "a 60-column window wraps the wide table's cells within 60 columns:\n#{at_60.join("\n")}")
+
+    # markdown-reading, scenario "A table under ascii".
+    boxed = session("tables.md", TABLES, 60)
+    boxed.state.options.icons = "ascii"
+    boxed.type("<Space>dr")
+    t.assert_equal(["+-------+-----------+-------+", true, true], [boxed.lines[0], ascii?(boxed.lines.join), ascii?(boxed.screen.join)], "under ascii the tables' borders are +, -, and |, and the screen holds no box character")
 
     t.finish
   end

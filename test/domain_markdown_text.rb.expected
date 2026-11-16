@@ -55,4 +55,36 @@ ok   an empty document has no rows
 ok   a megabyte of short lines keeps at most 10,000 reading rows
 ok   at most 262,144 bytes of a file are read
 ok   a file under the caps keeps every row, beyond the docs caps
-domain_markdown_text: 57 passed, 0 failed
+ok   a three-column table at 100 columns, left, center, and right aligned:
+┌───────┬───────────┬───────┐
+│ Name  │   Kind    │  Size │
+├───────┼───────────┼───────┤
+│ alpha │   file    │    12 │
+│ be    │ directory │ 3,400 │
+└───────┴───────────┴───────┘
+ok   a three-column table wider than 60 columns wraps its widest column, every row 60 wide:
+┌────────────────┬─────────┬───────────────────────────────┐
+│ Option         │ Default │                       Meaning │
+├────────────────┼─────────┼───────────────────────────────┤
+│ option.icons   │ unicode │    the glyph set the borders, │
+│                │         │   bullets, and bars are drawn │
+│                │         │                          from │
+│ option.jumptab │  keep   │   where a jump to a file with │
+│                │         │               no tab opens it │
+└────────────────┴─────────┴───────────────────────────────┘
+ok   a table under ascii has plain borders and no box character:
++-------+-----------+-------+
+| Name  |   Kind    |  Size |
++-------+-----------+-------+
+| alpha |   file    |    12 |
+| be    | directory | 3,400 |
++-------+-----------+-------+
+ok   a separator of another cell count makes no table
+ok   a measure too narrow for two cells a column keeps the source
+ok   a short row is padded, a long one cut, markup and escapes read out
+ok   text right after a table is its own row
+ok   a table after text is parted by a blank row
+ok   a pipe inside fenced code is code
+ok   a megabyte line is gathered only to the 262,144-byte cap
+ok   lines under the cap are joined whole, a crossing line cut to the cap on a character boundary
+domain_markdown_text: 68 passed, 0 failed

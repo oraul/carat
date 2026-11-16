@@ -15,7 +15,8 @@ module Carat
     # window's width capped at MEASURE columns, loaded in the window as
     # PinHover loads its split, so the buffer list releases it when no
     # window shows it. At most MarkdownText::READING_RAW_LIMIT bytes of
-    # the lines are gathered. Pressed in a reading view, it loads the file
+    # the lines are gathered (MarkdownText.gather), a line crossing the
+    # cap read only up to it. Pressed in a reading view, it loads the file
     # its title names again, its cursor where it was left. Any other
     # buffer, or a file closed meanwhile, is refused with a message.
     class ToggleReading
@@ -45,7 +46,8 @@ module Carat
         width = window.width
         width = MEASURE if width > MEASURE
         width = 1 if width < 1
-        docs = @format_docs.call(state, text_of(source), width, true)
+        text = Domain::MarkdownText.gather(source.lines, Domain::MarkdownText::READING_RAW_LIMIT)
+        docs = @format_docs.call(state, text, width, true)
         lines = docs.texts
         lines = [""] if lines.empty?
         buffer = Domain::Buffer.new(lines: lines, path: nil, line_ending: "\n")
@@ -75,21 +77,6 @@ module Carat
       def markdown?(path)
         lower = path.downcase
         lower.end_with?(".md") || lower.end_with?(".markdown")
-      end
-
-      # The buffer's lines joined by newlines, gathered up to the reading
-      # cap so a huge file costs no more than the reader reads.
-      #: (Domain::Buffer) -> String
-      def text_of(buffer)
-        out = +""
-        count = buffer.line_count
-        row = 0
-        while row < count && out.bytesize <= Domain::MarkdownText::READING_RAW_LIMIT
-          out << "\n" if row > 0
-          out << buffer.line(row)
-          row += 1
-        end
-        out
       end
     end
   end

@@ -19,7 +19,7 @@ module DomainMarkdownTextTest
   def self.texts(text, set)
     raw = D::MarkdownText::RAW_LIMIT
     limit = D::MarkdownText::ROW_LIMIT
-    D::MarkdownText.wrap(D::MarkdownText.parse(text, set, raw, limit), 40, set, limit).texts
+    D::MarkdownText.wrap(D::MarkdownText.parse(text, set, raw, limit, 40), 40, set, limit).texts
   end
 
   # The rows of a document in the ascii set, joined with "|". A typed
@@ -32,13 +32,13 @@ module DomainMarkdownTextTest
   def self.reading(text)
     raw = D::MarkdownText::READING_RAW_LIMIT
     limit = D::MarkdownText::READING_ROW_LIMIT
-    D::MarkdownText.wrap(D::MarkdownText.parse(text, "unicode", raw, limit), 80, "unicode", limit).texts
+    D::MarkdownText.wrap(D::MarkdownText.parse(text, "unicode", raw, limit, 80), 80, "unicode", limit).texts
   end
 
   # The spans of a document wrapped at width cells, each as row:start+
   # length name, joined with spaces. A typed helper, as rows is.
   def self.spans(text, width)
-    doc = D::MarkdownText.wrap(D::MarkdownText.parse(text.to_s, "unicode", D::MarkdownText::RAW_LIMIT, D::MarkdownText::ROW_LIMIT), width.to_i, "unicode", D::MarkdownText::ROW_LIMIT)
+    doc = D::MarkdownText.wrap(D::MarkdownText.parse(text.to_s, "unicode", D::MarkdownText::RAW_LIMIT, D::MarkdownText::ROW_LIMIT, width.to_i), width.to_i, "unicode", D::MarkdownText::ROW_LIMIT)
     quads = doc.spans
     out = []
     i = 0
@@ -47,6 +47,33 @@ module DomainMarkdownTextTest
       i += 4
     end
     out.join(" ")
+  end
+
+  # A three-column table, one column of each alignment.
+  TABLE = "| Name | Kind | Size |\n|:-----|:----:|-----:|\n| alpha | file | 12 |\n| be | directory | 3,400 |"
+  # The same kind of table, wider than 60 columns.
+  WIDE = "| Option | Default | Meaning |\n|:--|:-:|--:|\n| option.icons | unicode | the glyph set the borders, bullets, and bars are drawn from |\n| option.jumptab | keep | where a jump to a file with no tab opens it |"
+
+  # The rows of a document read with the reading caps in an icon set at
+  # width cells, joined with newlines, as a reading view shows them. A
+  # typed helper, as rows is.
+  def self.drawn(text, set, width)
+    raw = D::MarkdownText::READING_RAW_LIMIT
+    limit = D::MarkdownText::READING_ROW_LIMIT
+    cells = width.to_i
+    D::MarkdownText.wrap(D::MarkdownText.parse(text.to_s, set.to_s, raw, limit, cells), cells, set.to_s, limit).texts.join("\n")
+  end
+
+  # Whether every row of the text, split at newlines, is width
+  # characters wide.
+  def self.even?(text, width)
+    rows = text.split("\n")
+    i = 0
+    while i < rows.length
+      return false unless rows[i].length == width
+      i += 1
+    end
+    !rows.empty?
   end
 
   def self.main
@@ -119,9 +146,9 @@ module DomainMarkdownTextTest
     ]) do |input|
       spans(input[0], input[1])
     end
-    doc = D::MarkdownText.parse("```ruby\nx = 1\n```\n\n~~~ rb extra\ny\n~~~\n```\nz\n```", "unicode", D::MarkdownText::RAW_LIMIT, D::MarkdownText::ROW_LIMIT)
+    doc = D::MarkdownText.parse("```ruby\nx = 1\n```\n\n~~~ rb extra\ny\n~~~\n```\nz\n```", "unicode", D::MarkdownText::RAW_LIMIT, D::MarkdownText::ROW_LIMIT, 40)
     t.assert_equal([4, "ruby", 1, "", 0, "rb", 2, "", 3], [doc.count, doc.syntax(0), doc.block(0), doc.syntax(1), doc.block(1), doc.syntax(2), doc.block(2), doc.syntax(3), doc.block(3)], "a fence's first word is its language, and each fenced block has its number")
-    styled = D::MarkdownText.wrap(D::MarkdownText.parse("# T\n\nx", "unicode", D::MarkdownText::RAW_LIMIT, D::MarkdownText::ROW_LIMIT), 40, "unicode", D::MarkdownText::ROW_LIMIT)
+    styled = D::MarkdownText.wrap(D::MarkdownText.parse("# T\n\nx", "unicode", D::MarkdownText::RAW_LIMIT, D::MarkdownText::ROW_LIMIT, 40), 40, "unicode", D::MarkdownText::ROW_LIMIT)
     buffer = D::Buffer.new(lines: styled.texts, path: nil, line_ending: "\n")
     buffer.styles = styled.styles
     t.assert_equal([true, [0, 1, D::Highlight::MARKUP_HEADING], 0, false], [buffer.styled?, buffer.style_at(0, buffer.line(0)).tokens, buffer.style_at(2, buffer.line(2)).tokens.length, buffer.style_at(0, "T").equal?(buffer.style_at(0, buffer.line(0)))], "styles gives each row its tokens, kept for the row's own string")
@@ -137,6 +164,56 @@ module DomainMarkdownTextTest
     t.assert_equal([true, "a"], [long.length <= D::MarkdownText::READING_ROW_LIMIT, long[long.length - 1].to_s], "a megabyte of short lines keeps at most 10,000 reading rows")
     t.assert_equal(true, reading("y" * 1_000_000).join.bytesize <= D::MarkdownText::READING_RAW_LIMIT, "at most 262,144 bytes of a file are read")
     t.assert_equal(299, reading("a\n\n" * 150).length, "a file under the caps keeps every row, beyond the docs caps")
+
+    # markdown-reading, scenario "A three-column table at 100 columns".
+    at_100 = ["┌" + "─" * 7 + "┬" + "─" * 11 + "┬" + "─" * 7 + "┐",
+      "│ Name  │   Kind    │  Size │",
+      "├" + "─" * 7 + "┼" + "─" * 11 + "┼" + "─" * 7 + "┤",
+      "│ alpha │   file    │    12 │",
+      "│ be    │ directory │ 3,400 │",
+      "└" + "─" * 7 + "┴" + "─" * 11 + "┴" + "─" * 7 + "┘"].join("\n")
+    t.assert_equal(at_100, drawn(TABLE, "unicode", 100), "a three-column table at 100 columns, left, center, and right aligned:\n#{at_100}")
+
+    # markdown-reading, scenario "A three-column table wider than 60 columns".
+    at_60 = ["┌" + "─" * 16 + "┬" + "─" * 9 + "┬" + "─" * 31 + "┐",
+      "│ Option         │ Default │" + " " * 23 + "Meaning │",
+      "├" + "─" * 16 + "┼" + "─" * 9 + "┼" + "─" * 31 + "┤",
+      "│ option.icons   │ unicode │    the glyph set the borders, │",
+      "│                │         │   bullets, and bars are drawn │",
+      "│                │         │" + " " * 26 + "from │",
+      "│ option.jumptab │  keep   │   where a jump to a file with │",
+      "│                │         │" + " " * 15 + "no tab opens it │",
+      "└" + "─" * 16 + "┴" + "─" * 9 + "┴" + "─" * 31 + "┘"].join("\n")
+    wide = drawn(WIDE, "unicode", 60)
+    t.assert_equal([at_60, true], [wide, even?(wide, 60)], "a three-column table wider than 60 columns wraps its widest column, every row 60 wide:\n#{at_60}")
+
+    # markdown-reading, scenario "A table under ascii".
+    plain = ["+-------+-----------+-------+",
+      "| Name  |   Kind    |  Size |",
+      "+-------+-----------+-------+",
+      "| alpha |   file    |    12 |",
+      "| be    | directory | 3,400 |",
+      "+-------+-----------+-------+"].join("\n")
+    t.assert_equal([plain, true], [drawn(TABLE, "ascii", 100), drawn(WIDE, "ascii", 60).bytesize == drawn(WIDE, "ascii", 60).length], "a table under ascii has plain borders and no box character:\n#{plain}")
+
+    # The edges of a table. Rows are [label, [document, width], rows joined with newlines].
+    t.cases([
+      ["a separator of another cell count makes no table", ["a | b\n|---|", 40], "a | b||---|"],
+      ["a measure too narrow for two cells a column keeps the source", ["| a | b | c |\n|---|---|---|", 15], "| a | b | c |||---|---|---|"],
+      ["a short row is padded, a long one cut, markup and escapes read out", ["a | b\n---|---\n**x** |\n`y` | z \\| w | extra", 40], "┌────┬───────┐|│ a  │ b     │|├────┼───────┤|│ x  │       │|│ y  │ z | w │|└────┴───────┘"],
+      ["text right after a table is its own row", ["| a |\n| - |\n| b |\nafter", 40], "┌────┐|│ a  │|├────┤|│ b  │|└────┘|after"],
+      ["a table after text is parted by a blank row", ["before\n\n| a |\n|:-:|", 40], "before||┌────┐|│ a  │|└────┘"],
+      ["a pipe inside fenced code is code", ["```\n| a |\n|---|\n```", 40], "  | a ||  |---|"]
+    ]) do |input|
+      drawn(input[0], "unicode", input[1]).split("\n").join("|")
+    end
+
+    # markdown-reading, scenario "An over-cap line": the gathering reads
+    # a line crossing the cap only up to it, on a character boundary.
+    cap = D::MarkdownText::READING_RAW_LIMIT
+    huge = D::MarkdownText.gather(["x" * 1_000_000, "after"], cap)
+    t.assert_equal([cap, "x"], [huge.bytesize, huge[huge.length - 1].to_s], "a megabyte line is gathered only to the 262,144-byte cap")
+    t.assert_equal(["ab\ncd", "ab\ncd", "a\u{E9}"], [D::MarkdownText.gather(["ab", "cd"], 100), D::MarkdownText.gather(["ab", "cdef"], 5), D::MarkdownText.gather(["a\u{E9}\u{E9}"], 4)], "lines under the cap are joined whole, a crossing line cut to the cap on a character boundary")
 
     t.finish
   end
