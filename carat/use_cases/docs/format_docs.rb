@@ -14,7 +14,10 @@ module Carat
     # and drawn over the block's own group. A tokenizer that raises is
     # disabled by the plugin guard and the rest of its block stays plain
     # code. The lines are tokenized whole, then wrapped with their spans.
-    # Used by ShowHover and ShowCompletionDocs.
+    # The bullets, bars, and rules are those of option.icons, and reading
+    # chooses the caps: a file's reading view (ToggleReading) reads up to
+    # MarkdownText::READING_RAW_LIMIT bytes into READING_ROW_LIMIT rows, the
+    # documentation floats (ShowHover, ShowCompletionDocs) the docs caps.
     class FormatDocs
       INDENT = 2
       private_constant :INDENT
@@ -26,11 +29,14 @@ module Carat
         @syntax = syntax
       end
 
-      #: (Domain::EditorState, String, Integer) -> Domain::DocsText
-      def call(state, text, width)
-        doc = Domain::MarkdownText.parse(text)
+      #: (Domain::EditorState, String, Integer, bool) -> Domain::DocsText
+      def call(state, text, width, reading)
+        set = state.options.icons
+        raw_limit = reading ? Domain::MarkdownText::READING_RAW_LIMIT : Domain::MarkdownText::RAW_LIMIT
+        row_limit = reading ? Domain::MarkdownText::READING_ROW_LIMIT : Domain::MarkdownText::ROW_LIMIT
+        doc = Domain::MarkdownText.parse(text, set, raw_limit, row_limit)
         highlight(doc) if state.options.syntax_on
-        Domain::MarkdownText.wrap(doc, width)
+        Domain::MarkdownText.wrap(doc, width, set, row_limit)
       end
 
       private

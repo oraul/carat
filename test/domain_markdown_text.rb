@@ -11,13 +11,34 @@ module DomainMarkdownTextTest
   # a table value is untyped, and an untyped argument widens the library
   # method it reaches for every test (docs/spinel-notes.md).
   def self.rows(text)
-    D::MarkdownText.rows(text.to_s, 40).join("|")
+    texts(text.to_s, "unicode").join("|")
+  end
+
+  # The rows of a document in an icon set at 40 cells, through parse and
+  # wrap with the documentation caps, as FormatDocs reads them.
+  def self.texts(text, set)
+    raw = D::MarkdownText::RAW_LIMIT
+    limit = D::MarkdownText::ROW_LIMIT
+    D::MarkdownText.wrap(D::MarkdownText.parse(text, set, raw, limit), 40, set, limit).texts
+  end
+
+  # The rows of a document in the ascii set, joined with "|". A typed
+  # helper, as rows is.
+  def self.ascii_rows(text)
+    texts(text.to_s, "ascii").join("|")
+  end
+
+  # The rows of a file read with the reading caps at 80 cells.
+  def self.reading(text)
+    raw = D::MarkdownText::READING_RAW_LIMIT
+    limit = D::MarkdownText::READING_ROW_LIMIT
+    D::MarkdownText.wrap(D::MarkdownText.parse(text, "unicode", raw, limit), 80, "unicode", limit).texts
   end
 
   # The spans of a document wrapped at width cells, each as row:start+
   # length name, joined with spaces. A typed helper, as rows is.
   def self.spans(text, width)
-    doc = D::MarkdownText.wrap(D::MarkdownText.parse(text.to_s), width.to_i)
+    doc = D::MarkdownText.wrap(D::MarkdownText.parse(text.to_s, "unicode", D::MarkdownText::RAW_LIMIT, D::MarkdownText::ROW_LIMIT), width.to_i, "unicode", D::MarkdownText::ROW_LIMIT)
     quads = doc.spans
     out = []
     i = 0
@@ -68,6 +89,20 @@ module DomainMarkdownTextTest
       rows(text)
     end
 
+    # The markers of the ascii set (hover-docs, scenario "Documentation
+    # markers under ascii"). Rows are [label, document, rows joined with "|"].
+    t.table([
+      ["ascii list markers are stars", "- one\n  - two", "* one|  * two"],
+      ["an ascii quote is a pipe per level", "> a\n> > b", "| a|| | b"],
+      ["an ascii thematic break is a rule of hyphens", "a\n\n***\n\nb", "a||--------------------||b"],
+      ["an ascii bullet stays with the long word after it", "- " + "w" * 45, "* " + "w" * 38 + "|" + "w" * 7],
+      ["an ascii quote wraps after its bar", "> " + "q " * 25, "| " + "q " * 18 + "q|" + "q " * 5 + "q"]
+    ]) do |text|
+      ascii_rows(text)
+    end
+    ascii = texts("# T\n\n- a\n\n> > b\n\n---\n\n```\nc\n```", "ascii").join
+    t.assert_equal(true, ascii.bytesize == ascii.length && !ascii.empty?, "an ascii document under the ascii set holds no code point above 127")
+
     # The spans of the markup. Rows are [label, [document, width], spans].
     t.cases([
       ["a heading", ["## Title", 40], "0:0+5 @markup.heading"],
@@ -84,18 +119,24 @@ module DomainMarkdownTextTest
     ]) do |input|
       spans(input[0], input[1])
     end
-    doc = D::MarkdownText.parse("```ruby\nx = 1\n```\n\n~~~ rb extra\ny\n~~~\n```\nz\n```")
+    doc = D::MarkdownText.parse("```ruby\nx = 1\n```\n\n~~~ rb extra\ny\n~~~\n```\nz\n```", "unicode", D::MarkdownText::RAW_LIMIT, D::MarkdownText::ROW_LIMIT)
     t.assert_equal([4, "ruby", 1, "", 0, "rb", 2, "", 3], [doc.count, doc.syntax(0), doc.block(0), doc.syntax(1), doc.block(1), doc.syntax(2), doc.block(2), doc.syntax(3), doc.block(3)], "a fence's first word is its language, and each fenced block has its number")
-    styled = D::MarkdownText.wrap(D::MarkdownText.parse("# T\n\nx"), 40)
+    styled = D::MarkdownText.wrap(D::MarkdownText.parse("# T\n\nx", "unicode", D::MarkdownText::RAW_LIMIT, D::MarkdownText::ROW_LIMIT), 40, "unicode", D::MarkdownText::ROW_LIMIT)
     buffer = D::Buffer.new(lines: styled.texts, path: nil, line_ending: "\n")
     buffer.styles = styled.styles
     t.assert_equal([true, [0, 1, D::Highlight::MARKUP_HEADING], 0, false], [buffer.styled?, buffer.style_at(0, buffer.line(0)).tokens, buffer.style_at(2, buffer.line(2)).tokens.length, buffer.style_at(0, "T").equal?(buffer.style_at(0, buffer.line(0)))], "styles gives each row its tokens, kept for the row's own string")
 
-    kept = D::MarkdownText.rows("a\n\n" * 400_000, 40)
+    kept = texts("a\n\n" * 400_000, "unicode")
     t.assert_equal([99, "a"], [kept.length, kept[kept.length - 1].to_s], "a megabyte of short lines keeps at most 100 rows, no blank last")
-    t.assert_equal(true, D::MarkdownText.rows("y" * 1_000_000, 40).join.bytesize <= D::MarkdownText::RAW_LIMIT, "at most 16,384 bytes are read")
-    t.assert_equal(100, D::MarkdownText.rows("x" * 16_000, 40).length, "a long line wraps to at most 100 rows")
-    t.assert_equal([], D::MarkdownText.rows("", 40), "an empty document has no rows")
+    t.assert_equal(true, texts("y" * 1_000_000, "unicode").join.bytesize <= D::MarkdownText::RAW_LIMIT, "at most 16,384 bytes are read")
+    t.assert_equal(100, texts("x" * 16_000, "unicode").length, "a long line wraps to at most 100 rows")
+    t.assert_equal([], texts("", "unicode"), "an empty document has no rows")
+
+    # The reading caps (markdown-reading, scenario "An over-cap document").
+    long = reading("a\n\n" * 400_000)
+    t.assert_equal([true, "a"], [long.length <= D::MarkdownText::READING_ROW_LIMIT, long[long.length - 1].to_s], "a megabyte of short lines keeps at most 10,000 reading rows")
+    t.assert_equal(true, reading("y" * 1_000_000).join.bytesize <= D::MarkdownText::READING_RAW_LIMIT, "at most 262,144 bytes of a file are read")
+    t.assert_equal(299, reading("a\n\n" * 150).length, "a file under the caps keeps every row, beyond the docs caps")
 
     t.finish
   end
