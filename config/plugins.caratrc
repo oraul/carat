@@ -5,3 +5,4 @@
 plugin.explorer explorer/plugin Carat::Plugins::Explorer::Plugin
 plugin.ruby ruby/plugin Carat::Plugins::Ruby::Plugin
 plugin.finder finder/plugin Carat::Plugins::Finder::Plugin
+plugin.git_signs git_signs/plugin Carat::Plugins::GitSigns::Plugin

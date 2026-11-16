@@ -10,9 +10,14 @@ module Carat
     # when the framer refuses it; and a writer that takes queued bytes
     # off an outbox, so a child that stops reading never blocks the editor
     # thread. Process.detach reaps a stopped child (Spinel compiles no
-    # Process.wait(pid) or WNOHANG).
+    # Process.wait(pid) or WNOHANG). capture runs a short command on the
+    # editor thread instead: the same spawn without a shell, its output read
+    # with IO.select until it ends, CAPTURE_LIMIT bytes are kept, or
+    # CAPTURE_SECONDS pass, when the child is killed.
     class ProcessRunner < Ports::ProcessPort
       READ_SIZE = 65_536
+      CAPTURE_LIMIT = 65_536
+      CAPTURE_SECONDS = 2.0
 
       # @rbs @messages: Ports::MessageQueuePort
       # @rbs @pids: Array[Integer]
@@ -67,7 +72,75 @@ module Carat
         Process.detach(@pids[handle - 1])
       end
 
+      # @rbs argv: Array[String]
+      def capture(argv)
+        return nil if argv.empty?
+        output = IO.pipe
+        pid = start_quiet(argv, output[1])
+        output[1].close
+        if pid == 0
+          output[0].close
+          return nil
+        end
+        text = collect(output[0], Process.clock_gettime(Process::CLOCK_MONOTONIC) + CAPTURE_SECONDS)
+        output[0].close
+        kill(pid) if text.nil?
+        Process.detach(pid)
+        text
+      end
+
       private
+
+      # The child's pid with no input and no error output, or 0 when the
+      # command cannot start.
+      #: (Array[String], IO) -> Integer
+      def start_quiet(argv, output)
+        Process.spawn([argv[0], argv[0]], *argv.drop(1), in: File::NULL, out: output, err: File::NULL)
+      rescue SystemCallError
+        0
+      end
+
+      # The output until it ends, at most CAPTURE_LIMIT bytes of it cut
+      # before a character, or nil when the deadline passes first. It
+      # reads past the limit so the byte at the limit shows whether the
+      # cut splits a character.
+      #: (IO, Float) -> String?
+      def collect(output, deadline)
+        text = +""
+        while text.bytesize <= CAPTURE_LIMIT
+          left = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          return nil if left <= 0
+          ready = IO.select([output], nil, nil, left)
+          return nil if ready.nil?
+          chunk = read_chunk(output)
+          break if chunk.nil?
+          text << chunk
+        end
+        text.bytesize > CAPTURE_LIMIT ? text.byteslice(0, cut_point(text)).to_s : text
+      end
+
+      # The byte offset at or below CAPTURE_LIMIT where text can be cut
+      # without splitting a UTF-8 character: back past the continuation
+      # bytes (0x80 to 0xBF) at the limit, at most three, the most a
+      # character holds after its lead byte, so a cut of valid text stays
+      # valid and a cut of other bytes stays near the limit.
+      #: (String) -> Integer
+      def cut_point(text)
+        at = CAPTURE_LIMIT
+        steps = 0
+        while steps < 3 && at > 0 && (text.getbyte(at).to_i & 0xC0) == 0x80
+          at -= 1
+          steps += 1
+        end
+        at
+      end
+
+      #: (Integer) -> void
+      def kill(pid)
+        Process.kill("KILL", pid)
+      rescue SystemCallError
+        nil
+      end
 
       #: (Integer) -> bool
       def open?(handle)

@@ -762,6 +762,7 @@ module Carat
       plugin.ruby.enabled true
       plugin.finder.enabled true
       plugin.finder.ignore .git build tmp
+      plugin.git_signs.enabled true
     CARATRC
   end
 end

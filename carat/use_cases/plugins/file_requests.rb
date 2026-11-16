@@ -1,5 +1,6 @@
 require_relative "../../plugin_api"
 require_relative "../../ports/file_port"
+require_relative "../../ports/process_port"
 require_relative "../files/probe_path"
 require_relative "../../domain/utf8"
 require_relative "../files/make_path"
@@ -15,7 +16,9 @@ module Carat
     # the first rows of a file of at most READ_LIMIT bytes, stating a
     # path through ProbePath, and creating, renaming, and deleting
     # entries inside a root, which MakePath, RenamePath, and DeletePath
-    # check and perform. The plugin link has checked that the plugin is
+    # check and perform, and running a program on the PATH through the
+    # process port's capture, never a path, so not one a cloned project
+    # carries. The plugin link has checked that the plugin is
     # enabled. The use cases have no reader named as a request.
     class FileRequests
       MAX_FILES = 100_000
@@ -25,15 +28,17 @@ module Carat
 
       attr_reader :files #: Ports::FilePort
       attr_reader :probe_path #: ProbePath
+      attr_reader :processes #: Ports::ProcessPort
 
       # @rbs @make_path: MakePath
       # @rbs @rename_path: RenamePath
       # @rbs @delete_path: DeletePath
       # @rbs @list_tree: ListTree
 
-      #: (files: Ports::FilePort, probe_path: ProbePath, make_path: MakePath, rename_path: RenamePath, delete_path: DeletePath, list_tree: ListTree) -> void
-      def initialize(files:, probe_path:, make_path:, rename_path:, delete_path:, list_tree:)
+      #: (files: Ports::FilePort, processes: Ports::ProcessPort, probe_path: ProbePath, make_path: MakePath, rename_path: RenamePath, delete_path: DeletePath, list_tree: ListTree) -> void
+      def initialize(files:, processes:, probe_path:, make_path:, rename_path:, delete_path:, list_tree:)
         @files = files
+        @processes = processes
         @probe_path = probe_path
         @make_path = make_path
         @rename_path = rename_path
@@ -108,7 +113,32 @@ module Carat
         respond(@delete_path.call(root, path))
       end
 
+      # Runs the program after the checks; the words are copied, so the
+      # plugin cannot change them while they run.
+      #: (String, Array[String]) -> PluginApi::TextResponse
+      def run_program(name, argv)
+        why = program_refusal(argv)
+        return PluginApi::TextResponse.failure(why) unless why.empty?
+        words = argv.map { |word| word.dup }
+        output = @processes.capture(words)
+        return PluginApi::TextResponse.failure("cannot run #{words[0]}") if output.nil?
+        return PluginApi::TextResponse.failure("#{words[0]} answered bytes that are not UTF-8") unless output.valid_encoding?
+        PluginApi::TextResponse.success(output.dup)
+      end
+
       private
+
+      # Why the words are not run, "" when they may be.
+      #: (Array[String]) -> String
+      def program_refusal(argv)
+        return "no program to run" if argv.empty?
+        argv.each do |word|
+          return "an empty word cannot be run" if word.empty?
+          return "a word holding NUL cannot be run" if word.include?("\0")
+        end
+        return "#{argv[0]}: the program must be a name on the PATH" if argv[0].include?("/")
+        ""
+      end
 
       #: (String, Integer) -> Array[String]
       def first_lines(text, rows)

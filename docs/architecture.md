@@ -210,7 +210,7 @@ Ports to the outside are the interfaces use cases depend on. Each is a Ruby clas
 | `SignalPort` | `install`, `terminated?`, `resized?`, `acknowledge_resize` | `Signals` | `ManualSignals`, which a test trips |
 | `LanguageServicePort` | `poll(state)` when idle, `start(state)`, `restart(state)`, `saved(buffer)`, `waiting?`, `stop` | `JsonRpcLanguageGateway` | `FakeLanguageServices` |
 | `CompletionPort` | `ready?`, `candidates`, `documentation`, `request`, never waits | `ServerCompletions` | `FixedCompletions` |
-| `ProcessPort` | `spawn(argv)` returning a handle (0 when it cannot start), `write(handle, bytes)`, `stop(handle)`; output comes on the queue | `ProcessRunner` | `FakeProcesses` |
+| `ProcessPort` | `spawn(argv)` returning a handle (0 when it cannot start), `write(handle, bytes)`, `stop(handle)`; output comes on the queue; one-shot `capture(argv)` | `ProcessRunner` | `FakeProcesses` |
 | `MessageQueuePort` | `push(message)`, `pop` (nil at once when empty) | `RuntimeQueue` | `MemoryQueue` |
 
 ## 7. Configuration and key maps in .caratrc files
@@ -306,7 +306,7 @@ What a plugin can do, through its `PluginApi::Host` (one method per request; the
 - Ask for input on the command line with a prompt, the answer arriving through `on_input` (*, from the explorer change); a live prompt reporting each change, with its own keymap, and `close_prompt` (*, 2.5).
 - Read the working directory and the ids of the editing window and of its own scratch window; create, rename, and delete files and empty directories inside a root it names, validated by the host so a typed name cannot leave the root or overwrite an entry (*, from the explorer change).
 - Run an ex command string, list a directory, stat a path, look up an icon by name, read the plugin's own options (*); list the files below a root, read a file's first rows (*, 2.5).
-- Start a child process and receive its output, through the same `ProcessPort` as language servers.
+- Run a program on the `PATH` without a shell and read its output (*, 2.7).
 
 Every call is a request value in and a response value out, with no callbacks: the method's parameters are the request and its return the response (`Response`, `WindowResponse`, `TextResponse`, `BufferView`, or `FileInfo`), and every string crossing the boundary is a copy. Enumerations are strings, so every value has a JSON form. Buffers and windows are addressed by stable ids, 0 meaning the current one. Events are delivered as values too, after the key that caused them: the buffer events from the buffer feed (opens, closes, renames, and closed transactions with their rows) and from the write and the render, then `cursor_move`, `mode_change`, and `window_focus` by comparing the state with the state after the previous key (`idle` once the main loop has an idle tick). What a plugin call causes is queued and delivered after the outermost call, to every plugin but the one that caused it, in at most eight rounds. This shape is what lets one API serve both plugin kinds; the `plugin-protocol` change adds one table of requests, each a method name, its parameters, and its response type, from which the JSON-RPC gateway decodes and encodes.
 
@@ -380,7 +380,7 @@ carat/drivers/                  terminal, files, processes and their threads, cl
 carat/plugin_api.rb             the only file a plugin may require; the innermost ring beside the entities
 carat/plugins/
   registry.rb (generated)       explicit require and constructor per plugin
-  explorer/ ruby/ finder/        built-in compiled plugins (git_signs/ planned)
+  explorer/ ruby/ finder/        built-in compiled plugins, git_signs/
   hello/                        the smallest example, a test fixture outside the registry
 config/plugins.caratrc          the ordered list of compiled plugins
 carat/doubles/                  the test doubles of section 10

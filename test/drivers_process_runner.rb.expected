@@ -8,6 +8,12 @@ ok   a stopped child takes no input
 ok   a missing command does not start
 ok   no words start nothing
 ok   an unknown handle takes no input
+ok   capture answers the output of the words as given, no shell splitting them
+ok   capture of a missing program answers nothing
+ok   capture of no words answers nothing
+ok   capture of a program past the deadline answers nothing
+ok   capture of output over the limit keeps at most 64 KiB, cut before the character the limit splits
+ok   capture of long valid UTF-8 output answers valid UTF-8
 ok   sh starts
 ok   an oversized frame stops the reading
-drivers_process_runner: 12 passed, 0 failed
+drivers_process_runner: 18 passed, 0 failed

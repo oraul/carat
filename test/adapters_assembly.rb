@@ -185,7 +185,7 @@ module AdaptersAssemblyTest
     t.assert_equal([], strangers(h.files, [["assembly", a.files], ["open_file", a.open_file.files], ["save_file", a.save_file.files], ["probe_path", a.probe_path.files], ["make_path", host.make_path.files],
       ["resolve_inside", host.make_path.resolve_inside.files], ["rename_path", host.rename_path.files], ["delete_path", host.delete_path.files], ["file_requests", host.file_requests.files],
       ["ui_requests", host.ui_requests.files], ["window_requests", host.window_requests.files]]), "the file port")
-    t.assert_equal([], strangers(h.processes, [["assembly", a.processes], ["services", a.services.processes]]), "the process port")
+    t.assert_equal([], strangers(h.processes, [["assembly", a.processes], ["services", a.services.processes], ["plugin file requests", a.plugins.file_requests.processes]]), "the process port, in the services and the plugin file requests")
     t.assert_equal([], strangers(h.messages, [["assembly", a.messages], ["services", a.services.messages]]), "the message queue port")
     t.assert_equal([], strangers(a.services, [["controller", a.controller.services], ["save_file", a.save_file.services]]), "the language services")
     t.assert_equal([], strangers(a.status_slots, [["services", a.services.slots]]), "the status slots, in the language services")

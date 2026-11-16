@@ -4,17 +4,23 @@ module Carat
   module Doubles
     # Child processes that are never started: a command starts only when a
     # test installed it, so by default no language server runs; spawns,
-    # written bodies, and stops are recorded for a test to read.
+    # written bodies, and stops are recorded for a test to read. A capture
+    # answers the output a test scripted for the command, "" for an
+    # installed command with none, and nil for one not installed.
     class FakeProcesses < Ports::ProcessPort
       # @rbs @installed: Array[String]
       # @rbs @spawned: Array[String]
       # @rbs @bodies: Array[String]
       # @rbs @stopped: Array[Integer]
       # @rbs @broken: Array[Integer]
+      # @rbs @scripted: Array[String]
+      # @rbs @outputs: Array[String]
+      # @rbs @captured: Array[String]
 
       attr_reader :spawned #: Array[String]
       attr_reader :bodies #: Array[String]
       attr_reader :stopped #: Array[Integer]
+      attr_reader :captured #: Array[String]
 
       #: () -> void
       def initialize
@@ -23,6 +29,22 @@ module Carat
         @bodies = []
         @stopped = []
         @broken = []
+        @scripted = []
+        @outputs = []
+        @captured = []
+      end
+
+      # Gives the command, its words joined by spaces, the output a capture
+      # answers, replacing an earlier one.
+      #: (String, String) -> void
+      def script(command, output)
+        at = @scripted.index(command)
+        if at.nil?
+          @scripted << command
+          @outputs << output
+        else
+          @outputs[at] = output
+        end
       end
 
       # Lets a command start.
@@ -58,6 +80,16 @@ module Carat
       #: (Integer) -> void
       def stop(handle)
         @stopped << handle
+      end
+
+      # Records the command and answers its scripted output.
+      # @rbs argv: Array[String]
+      def capture(argv)
+        return nil if argv.empty? || !@installed.include?(argv[0])
+        command = argv.join(" ")
+        @captured << command
+        at = @scripted.index(command)
+        at.nil? ? "" : @outputs[at]
       end
 
       # The method names of the bodies written, in order.

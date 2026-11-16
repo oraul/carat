@@ -213,6 +213,14 @@ module Carat
       end
 
       # Returns a TextResponse.
+      # @rbs argv: Array[String]
+      def run_program(argv)
+        why = refusal
+        return PluginApi::TextResponse.failure(why) unless why.empty?
+        @files.run_program(@name, argv)
+      end
+
+      # Returns a TextResponse.
       # @rbs name: String
       def icon(name)
         why = refusal

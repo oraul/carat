@@ -4,13 +4,14 @@ require_relative "../plugin_api"
 require_relative "explorer/plugin"
 require_relative "ruby/plugin"
 require_relative "finder/plugin"
+require_relative "git_signs/plugin"
 
 module Carat
   module Plugins
     # The built-in compiled plugins in registry order, one constructor
     # call each, so the compiler sees a fixed list.
     module Registry
-      NAMES = ["explorer", "ruby", "finder"]
+      NAMES = ["explorer", "ruby", "finder", "git_signs"]
 
       #: () -> Array[untyped]
       def self.all
@@ -18,6 +19,7 @@ module Carat
         list << Carat::Plugins::Explorer::Plugin.new
         list << Carat::Plugins::Ruby::Plugin.new
         list << Carat::Plugins::Finder::Plugin.new
+        list << Carat::Plugins::GitSigns::Plugin.new
         list
       end
     end

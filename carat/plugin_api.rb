@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 6
-    VERSION = "2.6"
+    MINOR = 7
+    VERSION = "2.7"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -668,6 +668,21 @@ module Carat
       # @rbs name: String
       def icon(name)
         TextResponse.failure("Host#icon is not implemented")
+      end
+
+      # Runs the program the first word names, looked up on the PATH, with
+      # the other words as its arguments, without a shell, with no input,
+      # its error output discarded, in the editor's working directory, and
+      # returns a TextResponse with its standard output, at most 64 KiB
+      # (API 2.7). Failed without running anything for an empty command,
+      # an empty word, a word holding a NUL, or a first word holding a "/";
+      # failed when the program cannot start, runs past 2 seconds, when it
+      # is stopped, or answers bytes that are not UTF-8. The output is the
+      # program's, so a plugin treats it as untrusted text.
+      # The base answers a failure rather than raising, as stat does.
+      # @rbs argv: Array[String]
+      def run_program(argv)
+        TextResponse.failure("Host#run_program is not implemented")
       end
 
       # Returns a TextResponse with the plugin's option value as text,

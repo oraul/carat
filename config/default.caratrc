@@ -757,3 +757,4 @@ plugin.explorer.ignore .git build tmp
 plugin.ruby.enabled true
 plugin.finder.enabled true
 plugin.finder.ignore .git build tmp
+plugin.git_signs.enabled true

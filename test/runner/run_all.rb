@@ -66,6 +66,7 @@ require_relative "../editor_completion"
 require_relative "../editor_explorer"
 require_relative "../editor_finder"
 require_relative "../editor_floats"
+require_relative "../editor_git_signs"
 require_relative "../editor_global"
 require_relative "../editor_grammar"
 require_relative "../editor_insert"
@@ -174,6 +175,7 @@ when "editor_completion" then EditorCompletionTest.main
 when "editor_explorer" then EditorExplorerTest.main
 when "editor_finder" then EditorFinderTest.main
 when "editor_floats" then EditorFloatsTest.main
+when "editor_git_signs" then EditorGitSignsTest.main
 when "editor_global" then EditorGlobalTest.main
 when "editor_grammar" then EditorGrammarTest.main
 when "editor_insert" then EditorInsertTest.main
