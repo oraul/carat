@@ -28,18 +28,18 @@ The user-approved exception: parallel-lanes is Sprint 10's fourth pipeline chang
 12. `plugin-api-split` (T5 architecture-review M3, estimated medium, S12).
 13. `merge-gate-integrity` (T1 pipeline defect, estimated medium, pushed back 14, S13): merge 12+ calls in 10 of 12 runs. User fold: the merger gates at open, enables pinned auto-merge and stops; README: only a created pull request gets a footer (#150 note 17). Accepted when 5 merges take 9 calls or fewer, 3 store main's squash commit, a placeholder close restarts once or is named. Backlog: "### The close start returned a placeholder with no tool calls".
 14. `language-followers` (T5 architecture-review H2, estimated medium, S13).
-15. `review-demotion` (T1 pipeline defect, estimated medium, pushed back 4, S15): reviews 21.9% to 32.9% of output. Accepted when 3 runs stay under 18%.
+15. `review-demotion` (T1 pipeline defect, estimated medium, pushed back 4, S15): reviews 21.9% to 32.9% of output; rework-guards: 7 of 20 quality notes repeats, one turned blocking unchanged. Accepted when 3 runs stay under 18%, 3 rework runs repeat none.
 16. `record-tier` (T1 pipeline, estimated small): record about 103,000 weighted a start. Accepted when 3 runs stay under 5,000.
 17. `prose-grep-cases` (T1 pipeline, estimated medium): 17 of 957 expect lines grep prose (`tools/tools_test.sh:2790`).
-18. `plan-apply-guard` (T1 pipeline, estimated small): #145's package applied the plan over the branch's queue edit; backlog-lane-split note 9: no plan-needed case heads the feature lane (`tools/tools_test.sh:1360`).
-19. `sprint-marker-tidy` (T1 pipeline advisories, estimated small): `tools/run_state.sh:1494` and 8 more; #150 notes; sprint-9 note 15 (`run_state.sh:1763`); history_rows walks HEAD and BASE twice per groom, once per status; backlog-lane-split notes 2, 3, 7, 8 (`run_state.sh:1187`, `:236`, `:239`, the authoring-kit row): lane_of misses "`git-panel` plugin (" items. Backlog: "### Review runs and full commits are looked up in several places of run_state.sh", "### history_rows walks the whole rev-list on every call".
+18. `plan-apply-guard` (T1 pipeline, estimated small): #145's package applied the plan over the branch's queue edit; backlog-lane-split note 9: no plan-needed case heads the feature lane (`tools/tools_test.sh:1360`); rework-guards: a refused records commit cost a fix start. Accepted when 5 package steps pass docs-lint first.
+19. `sprint-marker-tidy` (T1 pipeline advisories, estimated small): `tools/run_state.sh:1494` and 8 more; #150 notes; sprint-9 note 15 (`run_state.sh:1763`); backlog-lane-split notes 2, 3, 7, 8 (`run_state.sh:1187`, `:236`, `:239`, the authoring-kit row): lane_of misses "`git-panel` plugin (" items. Backlog: "### Review runs and full commits are looked up in several places of run_state.sh", "### history_rows walks the whole rev-list on every call".
 20. `plan-skip` (T1 pipeline, estimated small): plan in 10 of 10 rows, 13.7% of output. Accepted when absent in 2 of the next 5 runs or at most 15%.
 21. `scout-value` (T1 pipeline, estimated small): #148 scout 31,419/27, implement 95 calls. Accepted when 5 runs keep scout plus implement at 60 calls or under.
 22. `language-ask-port` (T5 architecture-review H1, estimated medium, S15).
 23. `sprint-security` (T1 pipeline security, estimated medium, pushed back 3): Medium (7) `sprint-planning.js:121`; `run_state.sh:1735` (sprint-9 Low (4)).
 24. `content-gate-gaps` (T1 security, estimated medium, pushed back 15): Medium (7) `gates.sh:224`.
 25. `ci-scope-quoting` (T1 pipeline, Low (6), estimated medium, pushed back 3): `tools/ci_scope.sh:95` and 9 more.
-26. `spec-tests-first` (T1 pipeline, estimated medium, pushed back 3): quality 54/110 first pass. Accepted above 60% over 10 changes.
+26. `spec-tests-first` (T1 pipeline, estimated medium, pushed back 3): quality 54/111 first pass. Accepted above 60% over 10 changes.
 27. `open-pr-refusals` (T1 security Lows, estimated medium, pushed back 3).
 28. `run-resume` (T1 pipeline, estimated medium, pushed back 17): `deliver-change.js:967`, `:945`: a resume re-ran quality on unchanged code.
 29. `check-runner-safety` (T1 security, estimated medium, pushed back 15): Medium (6) `run_state.sh:571`; `Makefile:203`.
@@ -67,7 +67,7 @@ The user-approved exception: parallel-lanes is Sprint 10's fourth pipeline chang
 
 ## Decisions
 
-- `resume-fix-round`, `merged-name-guard` (T1) absorbed by `rework-guards` (user decision 3).
-- `rework-guards` (T1 defect, quality 14/41 first pass), `backlog-lane-b`, `parallel-lanes`: exception lines by the user; Sprint 10 numbers only `lsp-incremental-sync`; `ruby-structure-remove` heads the pool, S11.
-- backlog-lane-split notes (T1): 2, 3, 7, 8 to `sprint-marker-tidy`, 5, 6 to `hook-one-place`, 9 to `plan-apply-guard`, 4 fixed.
-- Security: none at 8 or above (backlog-lane-split high=0 medium=0).
+- `backlog-lane-c` (T1, user request) replaces `backlog-lane-b`, stopped after 3 blocked rounds.
+- Estimated medium: backlog rows 676,270 to 1,040,433 tokens; 3 fixes, no split.
+- Retro notes 26, 27 (T1) to `review-demotion`, `plan-apply-guard`; rework-guards 1,739,169 of 1.2M tokens.
+- Security: none at 8 or above (rework-guards, backlog-lane-b high=0 medium=0).
