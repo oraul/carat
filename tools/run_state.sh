@@ -181,7 +181,8 @@
 #                               pending change holds a proposal or finding
 #                               (PLAN_NOTES) to place, or a review run records
 #                               a failing periodic security review with no
-#                               change merged since; print "not needed:
+#                               change planned and merged since
+#                               (merged_since); print "not needed:
 #                               ..." with the head item's size and exit 1
 #   budget CHANGE               print "over:", "under:", "unmeasured:", or
 #                               "no estimate:" with the change's estimate, its
@@ -1718,22 +1719,36 @@ records_excluded() {
   echo "$1: $2 excludes the planning records (records=skip); $what"
 }
 
-# True when a change merged after COMMIT, the commit a periodic review
-# read: the newest history row's merged commit, or a pending change's,
-# descends from it and is not it. That change's planner saw the review:
-# plan-needed names a failing review before any other reason and the
-# workflow passes the review run to the planner, so its finding was
-# delivered first or judged not blocking. A COMMIT git does not know is never merged since.
+# True when a change planned and merged after COMMIT, the commit a
+# periodic review read: the newest history row's change, or a pending
+# one, whose merged commit and recorded phase.plan both descend from
+# COMMIT and are not it, its planner not skipped (metric.planned is not
+# 0). That planner saw the review: plan-needed names a failing review
+# before any other reason and the workflow passes the review run to the
+# planner, so its finding was delivered first or judged not blocking. A
+# merge planned at or before COMMIT, or without its run state, clears
+# nothing (review-coverage-b). A COMMIT git does not know is never merged since.
 merged_since() {
   valid '[0-9a-f]{7,40}' "$1" || return 1
   since=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
-  newest=$(awk -F'\t' 'NR > 1 && $3 ~ /^[0-9a-f]+$/ { m = $3 } END { print m }' "$metrics_file" 2>/dev/null)
-  for m in $newest $(for p in $(pending_list); do change=$p; merged_commit; done); do
-    valid '[0-9a-f]{7,40}' "$m" || continue
-    full=$(git rev-parse --verify -q --end-of-options "$m^{commit}" 2>/dev/null) || continue
-    [ "$full" != "$since" ] && git merge-base --is-ancestor "$since" "$full" 2>/dev/null && return 0
+  newest=$(awk -F'\t' 'NR > 1 && $3 ~ /^[0-9a-f]+$/ { m = $1 } END { print m }' "$metrics_file" 2>/dev/null)
+  for ran in $newest $(pending_list); do
+    valid '[a-z0-9][a-z0-9-]*' "$ran" || continue
+    [ "$(change=$ran; read_key metric.planned)" != 0 ] || continue
+    for m in "$(merged_of "$ran")" "$(change=$ran; read_key phase.plan)"; do
+      descends "$since" "$m" || continue 2
+    done
+    return 0
   done
   return 1
+}
+
+# True when COMMIT, 7 to 40 hexadecimal digits, names a commit that
+# descends from the full commit SINCE and is not it.
+descends() {
+  valid '[0-9a-f]{7,40}' "$2" || return 1
+  full=$(git rev-parse --verify -q --end-of-options "$2^{commit}" 2>/dev/null) || return 1
+  [ "$full" != "$1" ] && git merge-base --is-ancestor "$1" "$full" 2>/dev/null
 }
 
 # Whether the queue needs the planner before the change starts: needed,

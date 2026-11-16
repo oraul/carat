@@ -1321,6 +1321,15 @@ state review review-20261116 periodic-security partial "high=0 medium=1 low=0 bl
 expect "run_state: plan-needed names a failing periodic security review no merge followed" 0 "^needed: review-20261116 records a failing periodic security review at [0-9a-f]*, and no change merged since\$" state plan-needed next
 expect "run_state: plan-needed names a failing periodic security review before any other reason" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed later
 state review review-20261116 periodic-security blocked "high=0 medium=1 low=0 blocking=1" "$(git rev-parse --short=12 HEAD^)" > /dev/null
+# Only a merge whose planner ran after the review clears it: prev planned
+# at the reviewed commit, or with its planner skipped, leaves it standing
+# (review-coverage-b).
+state phase prev plan "$(git rev-parse --short=12 HEAD^)" > /dev/null
+expect "run_state: plan-needed keeps a failing periodic security review a merge planned before it followed" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed next
+state phase prev plan > /dev/null
+state metric prev planned=0 > /dev/null
+expect "run_state: plan-needed keeps a failing periodic security review a merge with a skipped planner followed" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed next
+state metric prev planned=1 > /dev/null
 expect "run_state: plan-needed leaves a failing periodic security review a later merge followed" 1 "^not needed" state plan-needed next
 printf '# Queue\n\n1. UI track: themes (T5, estimated medium).\n' > docs/queue.md
 expect "run_state: plan-needed names a head without a change name" 0 "^needed: next is not the head of docs/queue[.]md [(]no named item[)]" state plan-needed next
