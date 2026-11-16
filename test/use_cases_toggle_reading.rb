@@ -80,6 +80,16 @@ module UseCasesToggleReadingTest
     back.type("<Space>dr")
     t.assert_equal(["notes.md", [2, 2], false], [path(back), back.cursor, back.buffer.scratch?], "the toggle again shows notes.md with its cursor where it was")
 
+    # markdown-reading, scenario "Toggling back to the source": a source
+    # closed while its view shows is refused and the view stays.
+    closed = session("notes.md", NOTES, 80)
+    source = closed.buffer.id
+    closed.type("<Space>dr")
+    closed.type(":bd #{source}<CR>")
+    t.assert_equal(nil, closed.assembly.buffers.with_id(source), "the source notes.md left the buffer list")
+    closed.type("<Space>dr")
+    t.assert_equal(["The Markdown file is closed", "[reading] notes.md", true], [closed.message, closed.buffer.title, closed.buffer.scratch?], "the toggle in a view whose source is closed is refused and the view still shows")
+
     # markdown-reading, scenario "A buffer that is not Markdown".
     plain = session("main.rb", "puts 1\n", 80)
     plain.type("<Space>dr")
