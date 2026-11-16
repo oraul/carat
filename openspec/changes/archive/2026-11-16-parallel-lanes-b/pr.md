@@ -14,7 +14,7 @@ Runs each delivery in its own git worktree under the hidden tmp/.lane-CHANGE, sh
 - Change the delivery workflow so the resume opens the lane, every agent start runs its commands in the worktree, each implement or fix start merges main first, and the merger's green line runs in the lane so two deliveries never share a merge-gates path
 - Change agent_guard.sh to admit the contributor's merge-main and the merger's lane-close, and the contributor and merger agents to name them
 - Add tools-test cases for a worktree under the hidden tmp/ directory sharing the toolchain and removed after the merge, two lanes' records merging by appended rows only, and distinct merge-gates paths for two concurrent deliveries
-- Document the worktrees and the one-feature-lane and one-backlog-lane concurrency rule in the README and the codebase map
+- Document the worktrees and the one-feature-lane and one-backlog-lane concurrency rule in the README, and the lane commands in the codebase map
 - Apply the user's queue decisions: the Sprint 10 exception for this change, lsp-incremental-sync at the head of the backlog pool for Sprint 11, and planner-split-rule after it
 - Add the merged parallel-lanes row to the backlog metrics history and this change's findings file
 
@@ -32,4 +32,4 @@ Runs each delivery in its own git worktree under the hidden tmp/.lane-CHANGE, sh
 
 ## Notes
 
-CLAUDE.md is unchanged: its Agents section (the Sprints, Backlog, and Run state bullets) still needs the worktree and concurrency wording, which the archived design.md drafts and leaves to the user to apply in its own approved change. The lane worktree is tmp/.lane-CHANGE rather than a tmp/.lanes directory, so each lane's path stays one hidden directory. The security Medium (5) on a branch-controlled build/pipeline in the lane is below the blocking confidence and is recorded in the findings file with its fix. The dead mergeGatesDir helper in the workflow was dropped from the findings as a style advisory, and the codebase map's lane sentence was moved after the write_key clause.
+CLAUDE.md is unchanged: its Agents section (the Sprints, Backlog, and Run state bullets) still needs the worktree and concurrency wording, which the archived design.md drafts and leaves to the user to apply in its own approved change. The lane worktree is tmp/.lane-CHANGE rather than a tmp/.lanes directory, so each lane's path stays one hidden directory. The security Medium (5) on a branch-controlled build/pipeline in the lane is below the blocking confidence and is recorded in the findings file with its fix. The dead mergeGatesDir helper and the codebase map wording of the lane sentence are dropped as style advisories, since any code or map edit now would void the recorded check and review.
