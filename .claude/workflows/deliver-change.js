@@ -565,7 +565,23 @@ async function flush() {
 // hook, both of which branch code run by the checks can write: a global
 // insteadOf would fetch a forged main, a hook would rewrite the copy.
 // Before the fetch, originCheck holds origin to the hosted repository.
+// The line runs in the delivery's worktree, whose HEAD is the branch, so
+// its merge gates are a worktree under the lane's own tmp/ and two
+// deliveries never share one (mergeGatesDir); when the cd fails the rest
+// runs in the main checkout, where the gates refuse a HEAD other than the
+// pushed head.
 const MERGE_GATES = 'tmp/.merge-gates'
+// Each delivery's own git worktree of the main checkout, hidden under tmp/
+// (tools/run_state.sh lane-open), where its agents run every command; the
+// toolchain, compile cache, run states, stage logs, and plans stay the main
+// checkout's, linked in, so a feature-lane and a backlog-lane delivery run
+// at once.
+function laneDir(change) {
+  return `tmp/.lane-${change}`
+}
+function mergeGatesDir(change) {
+  return `${laneDir(change)}/${MERGE_GATES}`
+}
 const PINNED_GIT = 'GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null'
 // The git blob ids (printf %s FORM | git hash-object --stdin) of the
 // repository's address in its https, ssh (git@host/path), and scp
@@ -589,7 +605,7 @@ function mergeLines() {
   const first = (line) => [metricLine(), line].filter(Boolean).join(' && ')
   const ci = (result) => `sh tools/run_state.sh set ${state.change} ci "${result} ${head}"`
   return {
-    green: `git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck()} && ${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
+    green: `cd ${laneDir(state.change)} && git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck()} && ${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
     red: first(ci('red')),
   }
 }
@@ -671,13 +687,16 @@ function handOver() {
 function recordLate() {
   for (const f of handOver()) queue(`sh tools/run_state.sh note ${state.change} late-finding "${noteText(f)}"`, head)
 }
-const intro = () => `Change \`${state.change}\` on branch \`${state.branch}\`.`
+const intro = () => `Change \`${state.change}\` on branch \`${state.branch}\`, in its worktree \`${laneDir(state.change)}\`: run every command there (\`cd ${laneDir(state.change)} && ...\`) and read and edit its files there, but where a step names the main checkout; the run state, stage logs, plans, and the body file stay in the main checkout's build/, linked into the worktree, so write the body file there.`
 // Every contributor start, the package start that pushes included, carries
 // the brief, so what it asks, a hold for the user's reading included,
 // reaches each of them.
 function contributorTask(mode, briefText, detail) {
-  return `Mode: ${mode}. Brief: ${briefText}. ${detail}${mode === 'implement' || mode === 'fix' ? SELF_CHECK : ''}`
+  return `Mode: ${mode}. Brief: ${briefText}. ${detail}${mode === 'implement' || mode === 'fix' ? `\n${MERGE_MAIN}${SELF_CHECK}` : ''}`
 }
+// An implement or fix start first takes in a main that moved while the
+// delivery ran (parallel-lanes-b), so the checks and reviews cover the merge.
+const MERGE_MAIN = 'First run `sh tools/run_state.sh merge-main <change>` in the worktree: it merges a moved origin/main into the branch, never a rebase, both sides of the appended records kept; on a conflict it names, follow your push mode\'s conflict rules.'
 // The contributor's self-check before an implement or fix start returns
 // (its agent file's implement step 5): the mechanical findings a review
 // would otherwise block on.
@@ -991,10 +1010,10 @@ phase('Resume')
 const resume = await agent(
   `Prepare the delivery of one change. Input: ${JSON.stringify(input)}.
 1. \`git fetch -q origin\`. The change name is input.change, or an existing change under openspec/changes/ that the brief names, or a kebab-case name of 2 to 5 words derived from the brief.
-2. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Check it out when it exists locally or on origin; otherwise create it from origin/main, which needs a clean tree (stop with the reason when it is not).
+2. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Run `sh tools/run_state.sh lane-open <change> <branch>` in the main checkout, which stays on main: it makes the change's worktree tmp/.lane-<change> on the branch (local, else origin's, else new from origin/main), keeps it on a resume, and links the shared toolchain, compile cache, and run states; stop with its message when it fails.
 3. \`make doctor\`; run \`make toolchain\` when it fails and stop when that fails too.
-4. Run \`sh tools/run_state.sh init <change> <branch>\`; when it refuses (a merged change name), stop with its message as reason. Then \`sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git rev-parse --short=12 HEAD\` as head.
-5. Run \`sh tools/run_state.sh plan-needed <change>\` and return its one line verbatim as plan; its exit 1 means not needed, not a failure.${capLine('resume')}`,
+4. Run \`sh tools/run_state.sh init <change> <branch>\`; when it refuses (a merged change name), stop with its message as reason. Then \`cd tmp/.lane-<change> && sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git -C tmp/.lane-<change> rev-parse --short=12 HEAD\` as head.
+5. Run \`cd tmp/.lane-<change> && sh tools/run_state.sh plan-needed <change>\` and return its one line verbatim as plan; its exit 1 means not needed, not a failure.${capLine('resume')}`,
   calibrate('resume', { schema: RESUME, label: 'resume' }))
 if (!resume || resume.status !== 'done') {
   stopped = `resume stopped: ${resume ? resume.reason : 'no result'}`
