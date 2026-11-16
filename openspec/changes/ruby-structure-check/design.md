@@ -24,6 +24,6 @@ The ruby plugin tokenizes one line at a time for `HighlightView`, which only tok
 
 ## Risks / Trade-offs
 
-- [A whole-buffer pass on open and on each normal-mode change of a large file] → the pass is one tokenizer run without token output; it does not run on cursor moves, so `lh-ruby` and `open-ruby` allocations per key hold, and the `open-ruby` open time is reported.
+- [A whole-buffer pass on open and on each normal-mode change of a large file] → the pass is one tokenizer run without token output; it does not run on cursor moves, so `lh-ruby` (26.0) and `open-ruby` (24.0) allocations per key hold, as does `insert-ruby` (38.0), whose keys only wait for insert mode to end. Opening costs about 1 microsecond per line: measured with the events off and on, the 10,000-line `lh-ruby` file opens in 10.2 ms instead of 1.6 ms and the 100,000-line `open-ruby` file in 116 ms instead of 22 ms.
 - [Heuristic modifiers: an `if` after a line ending in a value with a continuation] → such code is rare; the mark only shows a sign and changes no text.
 - [Plain matching marks an outer opener when an inner `end` is missing] → the innermost opener left open is marked; indentation-guided matching is left out of scope.

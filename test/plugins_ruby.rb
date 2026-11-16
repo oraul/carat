@@ -132,9 +132,11 @@ module PluginsRubyTest
       ["an open %w", ["%w[a"], "mode=0 heredocs=0 frames=1"]
     ]) { |lines| state_after(lines) }
 
-    # Scenario "An unclosed opener of each kind is marked", "A modifier if
-    # or while is not an opener", "A closed file shows no mark", and
-    # "Openers in literals do not count" (ruby-syntax).
+    # ruby-syntax scenarios:
+    # "An unclosed opener of each kind is marked"
+    # "A modifier if or while is not an opener"
+    # "A closed file shows no mark"
+    # "Openers in literals do not count"
     t.table([
       ["an unclosed def is marked", ["x = 1", "def go"], 1],
       ["an unclosed class is marked", ["x = 1", "class A"], 1],
