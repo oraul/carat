@@ -1734,8 +1734,9 @@ merged_since() {
   newest=$(awk -F'\t' 'NR > 1 && $3 ~ /^[0-9a-f]+$/ { m = $1 } END { print m }' "$metrics_file" 2>/dev/null)
   for ran in $newest $(pending_list); do
     valid '[a-z0-9][a-z0-9-]*' "$ran" || continue
-    [ "$(change=$ran; read_key metric.planned)" != 0 ] || continue
-    for m in "$(merged_of "$ran")" "$(change=$ran; read_key phase.plan)"; do
+    commits=$(change=$ran; planned_commits)
+    [ -n "$commits" ] || continue
+    for m in $commits; do
       descends "$since" "$m" || continue 2
     done
     return 0
@@ -1743,10 +1744,27 @@ merged_since() {
   return 1
 }
 
-# True when COMMIT, 7 to 40 hexadecimal digits, names a commit that
-# descends from the full commit SINCE and is not it.
+# The change's merged and phase.plan commits, on one line, when both are 7
+# to 40 hexadecimal digits and its planner was not skipped (metric.planned
+# is not 0); nothing otherwise. One read of the run state.
+planned_commits() {
+  file=$(state_file)
+  [ -f "$file" ] || return 0
+  awk '
+    /^  "(merged|phase[.]plan|metric[.]planned)": "/ {
+      key = $0; sub(/^  "/, "", key); sub(/".*/, "", key)
+      value = $0; sub(/^  "[^"]*": "/, "", value); sub(/",?$/, "", value)
+      if (!(key in got)) got[key] = value
+    }
+    function commit(v) { return v ~ /^[0-9a-f]+$/ && length(v) >= 7 && length(v) <= 40 }
+    END {
+      if (got["metric.planned"] != "0" && commit(got["merged"]) && commit(got["phase.plan"])) print got["merged"], got["phase.plan"]
+    }' "$file"
+}
+
+# True when COMMIT, a hexadecimal hash (planned_commits checked it), names
+# a commit that descends from the full commit SINCE and is not it.
 descends() {
-  valid '[0-9a-f]{7,40}' "$2" || return 1
   full=$(git rev-parse --verify -q --end-of-options "$2^{commit}" 2>/dev/null) || return 1
   [ "$full" != "$1" ] && git merge-base --is-ancestor "$1" "$full" 2>/dev/null
 }
