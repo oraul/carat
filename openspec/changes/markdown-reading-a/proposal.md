@@ -33,4 +33,4 @@ Assumptions: a buffer is Markdown when its path ends in `.md` or `.markdown`, in
 `carat/domain/markdown_text.rb`, `carat/use_cases/docs/format_docs.rb`, `ShowHover`, `ShowCompletionDocs`, a new `carat/use_cases/docs/toggle_reading.rb`, `DocsHandler`, `EditorAssembly`, `carat.rb`, `config/default.caratrc` and `carat/domain/default_config.rb`; tests in `test/domain_markdown_text.rb` and a new `test/use_cases_toggle_reading.rb`. No dependency is added; nothing runs per key unless the toggle is pressed.
 
 - README.md: changed, the reading toggle and the ascii glyphs of the documentation.
-- docs/architecture.md: changed, the docs use cases line names `ToggleReading`.
+- docs/architecture.md: unchanged, its layer rules and ports hold as they are (the toggle adds a use case and no port), the map places `ToggleReading`, and the file is 97 bytes short of room for another name on its docs use cases line.

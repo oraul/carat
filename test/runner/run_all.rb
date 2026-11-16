@@ -109,6 +109,7 @@ require_relative "../use_cases_plugin_files"
 require_relative "../use_cases_plugin_hardening"
 require_relative "../use_cases_plugin_syntax"
 require_relative "../use_cases_plugins"
+require_relative "../use_cases_toggle_reading"
 
 case ARGV[0]
 when "adapters_assembly" then AdaptersAssemblyTest.main
@@ -215,6 +216,7 @@ when "use_cases_plugin_files" then UseCasesPluginFilesTest.main
 when "use_cases_plugin_hardening" then UseCasesPluginHardeningTest.main
 when "use_cases_plugin_syntax" then UseCasesPluginSyntaxTest.main
 when "use_cases_plugins" then UseCasesPluginsTest.main
+when "use_cases_toggle_reading" then UseCasesToggleReadingTest.main
 else
   STDERR.puts "run_all: unknown test #{ARGV[0].inspect}; add it to test/runner/run_all.rb"
   exit 2
