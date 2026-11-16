@@ -5839,3 +5839,51 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: tools/tools_test.sh:1862
 - Why: the records-only case now counts ci_scope by its documentation call yet still prints it under the label RECORDS_RE, which ci_scope.sh no longer names.
 - Fix: drop ci_scope from that list (documentation is in rules.sh, already counted) or label the readers by what they call.
+
+### The ci-stages secs filter is never run by a test
+
+- Location: tools/run_state.sh:1250
+- Why: the fake gh at tools/tools_test.sh:902 prints precomputed seconds, so the timestamp parsing of the new jq secs filter (and gojq's tonumber of a leading-dot string such as .44, whose error the // swallows into 0) is unproved (quality advisory, ci-time-tidy-b).
+- Fix: capture only the digits and use ("0." + .f | tonumber), and add a case that feeds a jobs JSON through the same filter.
+
+### The compile cache key is written three times across the CI workflows
+
+- Location: .github/workflows/main.yml:52
+- Why: the key expression is written twice in main.yml (probe and restore) and again in ci.yml, so a drift silently makes the probe never hit (every push compiles) or pull requests miss main's units (quality advisory, ci-time-tidy-b).
+- Fix: compute the key once in a step output used by both steps, and add a tools_test case that the key text in ci.yml equals main.yml's.
+
+### The check steps of main.yml are copied from ci.yml
+
+- Location: .github/workflows/main.yml:95
+- Why: the check steps (doctor, no-cruby, docs-lint, tools, config-current, test) are copied from ci.yml, so a check added to one workflow is easily missed in the other (quality advisory, ci-time-tidy-b).
+- Fix: a tools_test case that every check step name of main.yml exists in ci.yml with the same run line, or a composite action both jobs use.
+
+### The README and CLAUDE.md still say CI runs every other stage on the pull request
+
+- Location: README.md:189, CLAUDE.md:231
+- Why: the checker paragraph says CI runs the rest of CHECK_STAGES on the pull request, and CLAUDE.md that the Makefile records why CI leaves out two, but build now runs only on a push to main (quality advisory, ci-time-tidy-b).
+- Fix: say the pull request runs the rest but the release build, which main.yml runs after the merge, and name the third stage in CLAUDE.md.
+
+### The Makefile comment on the CI stages reads unclearly
+
+- Location: Makefile:122
+- Why: the comment 'Every other stage runs once, in CI, on every pull request, but build on main.' reads unclearly (quality advisory, ci-time-tidy-b).
+- Fix: '... on every pull request, except build, which runs on a push to main (.github/workflows/main.yml).'
+
+### An orphan line in the ci_scope.sh Environment comment
+
+- Location: tools/ci_scope.sh:31
+- Why: the Environment comment leaves an orphan line '# a pull request' after the CACHED insertion (quality advisory, ci-time-tidy-b).
+- Fix: reflow the paragraph.
+
+### The main workflow's compile probe ignores the measurement tool
+
+- Location: .github/workflows/main.yml:47
+- Why: the probe keys only on Ruby sources, so an equal-tree push that changes only tools/metrics.sh or the Makefile's budgets skips main's measurement and pull requests keep comparing with one made by the old tool; the design names build flags only (quality advisory, ci-time-tidy-b).
+- Fix: add hashFiles of Makefile and tools/metrics.sh to the compile cache key in both workflows, or probe the measurement entry separately.
+
+### A redundant ref test in the main workflow's Keep and Save steps
+
+- Location: .github/workflows/main.yml:151
+- Why: the Keep and Save steps test github.ref == 'refs/heads/main' beside github.event_name == 'push', which the main-only push trigger already implies (quality advisory, ci-time-tidy-b).
+- Fix: drop the ref test.

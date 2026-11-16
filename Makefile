@@ -108,7 +108,9 @@ UNIT_SUMMARY := awk '/^spinel-timing: phase=analysis / { a = $$3 } /^spinel-timi
 # The canonical stage list: make check runs it in order, and CI runs the
 # same targets but two: diagnose, a second analysis of every root, about a
 # minute, kept off pull requests, and gates, which need the branch's
-# history and its run state, which a pull request's checkout lacks. docs-lint
+# history and its run state, which a pull request's checkout lacks; build,
+# the release build, runs with its smoke test only on a push to main
+# (.github/workflows/main.yml), pull requests smoke testing dev-build. docs-lint
 # comes right after doctor: it needs no build and fails in a second.
 CHECK_STAGES := doctor docs-lint build dev-build config-current test-build test-run diagnose no-cruby bench-budget metrics tools-test gates
 # The checker's stages (delivery-speed), which make stages prints and
@@ -117,7 +119,7 @@ CHECK_STAGES := doctor docs-lint build dev-build config-current test-build test-
 # compares with main's (metrics and the builds it reads), and tools-test,
 # which tests the pipeline's own tools, agents, and workflows a pipeline
 # change pushes (tools/ci_scope.sh counts those as code for CI too). Every
-# other stage runs once, in CI, on every pull request.
+# other stage runs once, in CI, on every pull request, but build on main.
 FAST_STAGES := docs-lint dev-build test-build test-run diagnose bench-budget metrics tools-test gates
 # The measurement make metrics writes from the builds of dev-build,
 # test-build, and bench-budget (tools/metrics.sh), and the base make

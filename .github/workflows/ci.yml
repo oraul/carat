@@ -1,18 +1,18 @@
 name: ci
 
+# Pull requests only: the full checks, under the job spin, the check branch
+# protection requires. A push to main, and a run by hand, run main.yml,
+# which measures main, warms the compile cache, and builds and smoke tests
+# the release binary; no step runs in both.
 on:
-  push:
-    branches: [main]
   pull_request:
-  workflow_dispatch:
 
-# A newer push to the same pull request, or a newer merge to main, cancels
-# the run it supersedes.
+# A newer push to the same pull request cancels the run it supersedes.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# The scope step reads the pull request of a push and its check runs.
+# The scope step reads the pull request's commits and their check runs.
 permissions:
   contents: read
   pull-requests: read
@@ -40,12 +40,8 @@ jobs:
 
       # The job always runs and reports, so a required check on it passes;
       # tools/ci_scope.sh says whether the checks below are needed. They are
-      # skipped when only documentation no test reads changed, on a pull
-      # request also since its last head whose spin check passed, and on a
-      # push to main whose tree is the head of a pull request that passed.
-      # A push to main still compiles the development builds, which keeps
-      # main's compile cache warm, and builds and smoke tests the release
-      # binary.
+      # skipped when only documentation no test reads changed, also since
+      # the pull request's last head whose spin check passed.
       - name: Scope
         id: scope
         env:
@@ -59,12 +55,12 @@ jobs:
 
       - name: Resolve the Spinel commit
         id: spinel
-        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
+        if: steps.scope.outputs.run == 'true'
         run: echo "rev=$(make -s spinel-rev)" >> "$GITHUB_OUTPUT"
 
       - name: Restore the toolchain from cache
         id: toolchain-cache
-        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
+        if: steps.scope.outputs.run == 'true'
         uses: actions/cache@v4
         with:
           path: tmp/.toolchain
@@ -75,7 +71,7 @@ jobs:
       # toolchain build proves that the toolchain builds with no Ruby
       # interpreter, and no later step can reach the runner's Ruby either.
       - name: Build and install the toolchain without Ruby
-        if: (steps.scope.outputs.run == 'true' || github.event_name == 'push') && steps.toolchain-cache.outputs.cache-hit != 'true'
+        if: steps.scope.outputs.run == 'true' && steps.toolchain-cache.outputs.cache-hit != 'true'
         run: make toolchain
 
       # The objects of the units of C of the three development builds
@@ -87,10 +83,11 @@ jobs:
       # entry, and the fallback restores the newest entry of the same
       # compiler and level: a unit whose text did not change is not
       # compiled again. A pull request can restore what its own runs and
-      # main's saved; a push to main always compiles the three builds, so
-      # main keeps a warm entry for every unit a pull request compiles.
+      # main's saved; main.yml compiles the three builds on a push to main
+      # whose sources main has not compiled, so main keeps a warm entry for
+      # every unit a pull request compiles.
       - name: Restore the compile cache
-        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
+        if: steps.scope.outputs.run == 'true'
         uses: actions/cache@v4
         with:
           path: build/spinel-cache
@@ -114,7 +111,6 @@ jobs:
       # second, so every pull request runs it, a documentation-only one
       # whose compile, test, and bench steps tools/ci_scope.sh skips too.
       - name: Docs lint
-        if: steps.scope.outputs.run == 'true' || github.event_name == 'pull_request'
         run: make docs-lint
 
       # The shell tools behind CI and the delivery pipeline, tested in
@@ -129,11 +125,11 @@ jobs:
       # (-O 0, --incremental) like the test runner: Spinel documents the
       # same answers at every level, and the C compiles in seconds instead
       # of the release build's 15 to 20. The release build at -O 2 runs on
-      # every push to main and by hand, below.
+      # every push to main and by hand, in main.yml.
       # Its compile report is checked against the analysis budget, as the
       # test runner's is.
       - name: Build the editor for the smoke test
-        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
+        if: steps.scope.outputs.run == 'true'
         run: make dev-build
 
       # The config mirror and the plugin registry both match config/.
@@ -145,7 +141,7 @@ jobs:
       # must take at most ANALYSIS_ROUNDS re-narrowing rounds (see the
       # Makefile), checked from the compile's own report.
       - name: Compile the tests
-        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
+        if: steps.scope.outputs.run == 'true'
         run: make test-build
 
       - name: Test
@@ -155,16 +151,15 @@ jobs:
       # One key of the cursor scenario of the benchmark must allocate fewer
       # than ALLOC_BUDGET objects (see the Makefile). The benchmark is a
       # development build too: every scenario allocates the same objects
-      # and bytes per key at -O 0 as at -O 2. A push to main runs it to keep
-      # the benchmark's units in the compile cache.
+      # and bytes per key at -O 0 as at -O 2.
       - name: Allocation budget
-        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
+        if: steps.scope.outputs.run == 'true'
         run: make bench-budget
 
       # The measurement of tools/metrics.sh from the three development
       # builds above: re-narrowing rounds and analysis milliseconds of both
-      # roots, allocations and time per key of eight scenarios. A push to
-      # main saves it in the Actions cache; a pull request compares itself
+      # roots, allocations and time per key of eight scenarios. main.yml
+      # saves main's in the Actions cache; a pull request compares itself
       # with the entry of its base commit, or the newest of main, on the
       # same kind of runner: more allocations or rounds fail, time more
       # than 20 percent slower warns. A pull request cannot write main's
@@ -172,11 +167,11 @@ jobs:
       # the delivery workflow still compares with the last history row,
       # and with main when they differ, before the push.
       - name: Measure
-        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
+        if: steps.scope.outputs.run == 'true'
         run: make metrics
 
       - name: Restore the measurement of main
-        if: steps.scope.outputs.run == 'true' && github.event_name == 'pull_request'
+        if: steps.scope.outputs.run == 'true'
         uses: actions/cache/restore@v4
         with:
           path: build/metrics/main
@@ -185,29 +180,5 @@ jobs:
             carat-metrics-main-
 
       - name: Compare with main
-        if: steps.scope.outputs.run == 'true' && github.event_name == 'pull_request'
+        if: steps.scope.outputs.run == 'true'
         run: make metrics-compare BASE_METRICS=build/metrics/main/current.tsv
-
-      - name: Keep the measurement of main
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: mkdir -p build/metrics/main && cp build/metrics/current.tsv build/metrics/main/current.tsv
-
-      - name: Save the measurement of main
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/cache/save@v4
-        with:
-          path: build/metrics/main
-          key: carat-metrics-main-${{ github.sha }}
-
-      # The release binary, spin build at -O 2, and the smoke test against
-      # it, on every push to main, on a run by hand, and on a pull request
-      # that changes code, so the binary make build and make install produce
-      # is built and run before and after the merge; the checker no longer
-      # builds it (FAST_STAGES).
-      - name: Release build
-        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
-        run: make build
-
-      - name: Smoke test the release build
-        if: steps.scope.outputs.run == 'true' || github.event_name == 'push'
-        run: make test-run TESTS=test/smoke_editor.rb

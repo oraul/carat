@@ -1233,10 +1233,13 @@ add_usage() {
 
 # ci-stages COMMIT: the seconds of each step of the spin job of the newest
 # run of the ci workflow at COMMIT, read with gh, its seconds computed by
-# gh's jq, as metric.ci.STEP (the step's name in lowercase, every other
-# character an underscore, cut at a word within 32 characters), replacing
-# the previous run's; a step under a second is left out. The merger's green and red
-# lines run it first, so it exits 0 when nothing could be read.
+# gh's jq with their fraction (the timestamp to the second through
+# fromdateiso8601, plus the digits after its point), as metric.ci.STEP (the
+# step's name in lowercase, every other character an underscore, cut at a
+# word within 32 characters), rounded to a tenth and written without a
+# point when whole, replacing the previous run's; a step rounding to 0 is
+# left out. The merger's green and red lines run it first, so it exits 0
+# when nothing could be read.
 ci_stages() {
   valid '[0-9a-f]{40}' "$1" || die "ci-stages: not a full commit: $1"
   [ -f "$(state_file)" ] || die "no run state for $change"
@@ -1244,14 +1247,15 @@ ci_stages() {
   valid '[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+' "$repo" || { echo "ci-stages: no repository recorded"; return 0; }
   run=$(gh api "repos/$repo/actions/runs?head_sha=$1&per_page=20" --jq '[.workflow_runs[] | select(.name == "ci")][0].id // empty' 2>/dev/null || true)
   valid '[0-9]+' "$run" || { echo "ci-stages: no ci run found at $1"; return 0; }
-  pairs=$(gh api "repos/$repo/actions/runs/$run/jobs?per_page=10" --jq '.jobs[] | select(.name == "spin") | .steps[] | select(.started_at != null and .completed_at != null) | "\((.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601)) \(.name)"' 2>/dev/null | awk '
-    $1 ~ /^[0-9]+$/ {
-      s = $1; $1 = ""; name = tolower($0)
+  pairs=$(gh api "repos/$repo/actions/runs/$run/jobs?per_page=10" --jq 'def secs: (.[0:19] + "Z" | fromdateiso8601) + ((capture("^.{19}(?<f>[.][0-9]+)") | .f | tonumber) // 0); .jobs[] | select(.name == "spin") | .steps[] | select(.started_at != null and .completed_at != null) | "\((.completed_at | secs) - (.started_at | secs)) \(.name)"' 2>/dev/null | LC_ALL=C awk '
+    function tenth(v,  r) { r = sprintf("%.1f", v); sub(/[.]0$/, "", r); return r }
+    $1 ~ /^[0-9]+([.][0-9]+)?$/ {
+      s = tenth($1) + 0; $1 = ""; name = tolower($0)
       gsub(/[^a-z0-9]+/, "_", name); sub(/^_+/, "", name); sub(/_+$/, "", name)
       if (length(name) > 32) { name = substr(name, 1, 33); sub(/_[^_]*$/, "", name) }
-      if (name != "" && s >= 1) { if (!(name in t)) order[++n] = name; t[name] += s }
+      if (name != "" && s > 0) { if (!(name in t)) order[++n] = name; t[name] += s }
     }
-    END { for (i = 1; i <= n; i++) print order[i] "=" t[order[i]] }')
+    END { for (i = 1; i <= n; i++) print order[i] "=" tenth(t[order[i]]) }')
   [ -n "$pairs" ] || { echo "ci-stages: no step of run $run was read"; return 0; }
   for key in $(keys_under metric.ci. | sed 's/=.*//'); do drop_key "metric.ci.$key"; done
   for pair in $pairs; do write_key "metric.ci.${pair%%=*}" "${pair#*=}"; done

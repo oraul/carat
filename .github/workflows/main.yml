@@ -1,0 +1,161 @@
+name: main
+
+# A push to main, and a run by hand, only: the measurement of main, the
+# compile cache's warming, the release build and its smoke test, and the
+# full checks only when the squash tree differs from the head that passed
+# as a pull request with code changed. Pull requests run ci.yml, whose job
+# spin is the required check; no step runs in both.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer merge to main cancels the run it supersedes; the newer run probes
+# the compile cache again and warms what the cancelled one did not save.
+concurrency:
+  group: main-${{ github.ref }}
+  cancel-in-progress: true
+
+# The scope step reads the pull request of a push and its check runs.
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    env:
+      # The optimization level of the development builds, part of the
+      # compile cache's key, as in ci.yml.
+      TEST_OPT: "0"
+    steps:
+      - name: Check out carat
+        uses: actions/checkout@v4
+        with:
+          # The first parent too, which the scope step compares with.
+          fetch-depth: 2
+
+      - name: Resolve the Spinel commit
+        id: spinel
+        run: echo "rev=$(make -s spinel-rev)" >> "$GITHUB_OUTPUT"
+
+      # Whether main's compile cache already holds the exact entry of these
+      # sources, the key of the restore below without its fallback, looked
+      # up without downloading it: a hit means main compiled, measured, and
+      # release-built exactly these sources already.
+      - name: Probe the compile cache
+        id: probe
+        uses: actions/cache/restore@v4
+        with:
+          path: build/spinel-cache
+          key: spinel-units-${{ runner.os }}-${{ steps.spinel.outputs.rev }}-O${{ env.TEST_OPT }}-${{ hashFiles('carat.rb', 'carat/**/*.rb', 'bin/**/*.rb', 'test/**/*.rb', 'bench/**/*.rb') }}
+          lookup-only: true
+
+      # tools/ci_scope.sh: run=false when the tree equals the head of a pull
+      # request whose spin check passed, or only documentation no test reads
+      # changed; compile=false when the checks do not run and the probe hit,
+      # so an equal-tree push of sources main compiled compiles nothing.
+      - name: Scope
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          CACHED: ${{ steps.probe.outputs.cache-hit }}
+          GH_TOKEN: ${{ github.token }}
+        run: sh tools/ci_scope.sh
+
+      - name: Restore the toolchain from cache
+        id: toolchain-cache
+        if: steps.scope.outputs.compile == 'true'
+        uses: actions/cache@v4
+        with:
+          path: tmp/.toolchain
+          key: spinel-${{ runner.os }}-${{ steps.spinel.outputs.rev }}
+
+      # The runner image ships Ruby; the Makefile's refusing ruby comes first
+      # on every target's PATH, as in ci.yml.
+      - name: Build and install the toolchain without Ruby
+        if: steps.scope.outputs.compile == 'true' && steps.toolchain-cache.outputs.cache-hit != 'true'
+        run: make toolchain
+
+      # The units of C of the three development builds, keyed as in ci.yml.
+      # On a miss of the exact key the job saves its entry at the end, in
+      # main's scope, which every pull request restores from.
+      - name: Restore the compile cache
+        if: steps.scope.outputs.compile == 'true'
+        uses: actions/cache@v4
+        with:
+          path: build/spinel-cache
+          key: spinel-units-${{ runner.os }}-${{ steps.spinel.outputs.rev }}-O${{ env.TEST_OPT }}-${{ hashFiles('carat.rb', 'carat/**/*.rb', 'bin/**/*.rb', 'test/**/*.rb', 'bench/**/*.rb') }}
+          restore-keys: |
+            spinel-units-${{ runner.os }}-${{ steps.spinel.outputs.rev }}-O${{ env.TEST_OPT }}-
+
+      # The full checks, as in ci.yml, when the tree was not tested as is.
+      - name: Doctor
+        if: steps.scope.outputs.run == 'true'
+        run: make doctor
+
+      - name: No CRuby
+        if: steps.scope.outputs.run == 'true'
+        run: make no-cruby
+
+      - name: Docs lint
+        if: steps.scope.outputs.run == 'true'
+        run: make docs-lint
+
+      - name: Tools
+        if: steps.scope.outputs.tools == 'true'
+        run: make tools-test
+
+      # The three development builds warm the compile cache and feed the
+      # measurement.
+      - name: Build the editor for the smoke test
+        if: steps.scope.outputs.compile == 'true'
+        run: make dev-build
+
+      - name: Generated config is current
+        if: steps.scope.outputs.run == 'true'
+        run: make config-current
+
+      - name: Compile the tests
+        if: steps.scope.outputs.compile == 'true'
+        run: make test-build
+
+      - name: Test
+        if: steps.scope.outputs.run == 'true'
+        run: make test-run CARAT_BIN=build/dev/carat
+
+      - name: Allocation budget
+        if: steps.scope.outputs.compile == 'true'
+        run: make bench-budget
+
+      # The measurement of main, which every pull request's Compare with
+      # main restores by its base commit or the newest entry; a push whose
+      # sources main already measured saves none, the newest being theirs.
+      - name: Measure
+        if: steps.scope.outputs.compile == 'true'
+        run: make metrics
+
+      - name: Keep the measurement of main
+        if: steps.scope.outputs.compile == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: mkdir -p build/metrics/main && cp build/metrics/current.tsv build/metrics/main/current.tsv
+
+      - name: Save the measurement of main
+        if: steps.scope.outputs.compile == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: build/metrics/main
+          key: carat-metrics-main-${{ github.sha }}
+
+      # The release binary, spin build at -O 2, and the smoke test against
+      # it, so the binary make build and make install produce is built and
+      # run after the merge; neither the checker nor a pull request builds it.
+      - name: Release build
+        if: steps.scope.outputs.compile == 'true'
+        run: make build
+
+      - name: Smoke test the release build
+        if: steps.scope.outputs.compile == 'true'
+        run: make test-run TESTS=test/smoke_editor.rb
