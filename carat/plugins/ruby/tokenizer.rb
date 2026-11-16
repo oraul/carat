@@ -33,6 +33,11 @@ module Carat
         attr_reader :keywords #: Keywords
         attr_reader :terminators #: Array[String]
         attr_accessor :ids #: Array[Integer]
+        # The block openers the last line closed that earlier lines opened,
+        # and the openers it left open, an opener closed on its own line
+        # counting in neither: Structure stacks them across lines.
+        attr_reader :ends #: Integer
+        attr_reader :opens #: Integer
 
         # @rbs @text: String
         # @rbs @size: Integer
@@ -56,6 +61,7 @@ module Carat
         # @rbs @word: bool
         # @rbs @spaced: bool
         # @rbs @dot: bool
+        # @rbs @loop: bool
 
         #: (keywords: Keywords) -> void
         def initialize(keywords:)
@@ -84,6 +90,9 @@ module Carat
           @word = false
           @spaced = false
           @dot = false
+          @ends = 0
+          @opens = 0
+          @loop = false
         end
 
         # Tokenizes text from state into tokens and returns the end state.
@@ -98,6 +107,9 @@ module Carat
           @word = false
           @spaced = false
           @dot = false
+          @ends = 0
+          @opens = 0
+          @loop = false
           if @mode == LineState::EMBDOC
             @mode = LineState::CODE if starts_with_word?("=end")
             comment(0)
@@ -725,14 +737,23 @@ module Carat
           if at >= 0 && @keywords.kind(at) != Groups::TODO
             kind = @keywords.kind(at)
             emit(pos, stop, kind)
+            starts = !@operand
             if @keywords.value?(at)
               value
             else
               operator
             end
             word_text = Keywords::WORDS[at]
-            return definition(stop) if word_text == "def"
-            return class_name(stop) if word_text == "class" || word_text == "module"
+            if word_text == "def"
+              after = definition(stop)
+              @opens += 1 unless endless?(after)
+              return after
+            end
+            if word_text == "class" || word_text == "module"
+              @opens += 1
+              return class_name(stop)
+            end
+            structure(word_text, pos, starts)
             return stop
           end
           first = @text.getbyte(pos).to_i
@@ -777,6 +798,80 @@ module Carat
           emit(i, stop, Groups::FUNCTION) if stop > i
           operator
           stop > i ? stop : pos
+        end
+
+        # The keywords after which an if, unless, while, or until is a
+        # modifier although an operand may follow them.
+        JUMPS = ["return", "break", "next", "redo", "retry", "yield", "super"]
+
+        # Counts the block opener or end a keyword other than def, class,
+        # and module is: begin, case, for, a do that no while, until, or
+        # for on the line took, and an if, unless, while, or until that
+        # starts an expression (starts) rather than follows a value.
+        #: (String, Integer, bool) -> void
+        def structure(word, pos, starts)
+          if word == "end"
+            if @opens > 0
+              @opens -= 1
+            else
+              @ends += 1
+            end
+          elsif word == "do"
+            if @loop
+              @loop = false
+            else
+              @opens += 1
+            end
+          elsif word == "begin" || word == "case"
+            @opens += 1
+          elsif word == "for"
+            @opens += 1
+            @loop = true
+          elsif word == "if" || word == "unless" || word == "while" || word == "until"
+            return unless starts
+            return if modifier_before?(pos)
+            @opens += 1
+            @loop = true if word == "while" || word == "until"
+          end
+        end
+
+        # Whether the keyword at pos follows a closing brace or one of
+        # JUMPS, either making it a modifier.
+        #: (Integer) -> bool
+        def modifier_before?(pos)
+          i = pos - 1
+          i -= 1 while i >= 0 && space?(byte(i))
+          return false if i < 0
+          return true if byte(i) == 125
+          stop = i + 1
+          i -= 1 while i >= 0 && word_byte?(byte(i))
+          from = i + 1
+          return false if from == stop
+          at = @keywords.find(@text, from, stop)
+          return false if at < 0
+          JUMPS.include?(Keywords::WORDS[at])
+        end
+
+        # Whether the definition whose name ends at pos is endless: the
+        # name, or its parameters in parentheses on this line, followed
+        # by = and not by == or =~.
+        #: (Integer) -> bool
+        def endless?(pos)
+          i = pos
+          i += 1 while i < @size && space?(byte(i))
+          if byte(i) == 40
+            depth = 0
+            while i < @size
+              b = byte(i)
+              depth += 1 if b == 40
+              depth -= 1 if b == 41
+              i += 1
+              break if depth == 0
+            end
+            return false if depth > 0
+            i += 1 while i < @size && space?(byte(i))
+          end
+          byte(i) == 61 && byte(i + 1) != 61 && byte(i + 1) != 126
         end
 
         OPERATOR_NAMES = ["[]=", "[]", "<=>", "===", "==", "=~", "!=", "!~", "**", "+@", "-@", "<<", ">>", "<=", ">=", "<", ">", "+", "-", "*", "/", "%", "&", "|", "^", "~", "!", "`"]

@@ -65,6 +65,25 @@ ok   a pending heredoc
 ok   three pending heredocs keep two
 ok   a closed heredoc
 ok   an open %w
+ok   an unclosed def is marked
+ok   an unclosed class is marked
+ok   an unclosed module is marked
+ok   an unclosed do is marked
+ok   an unclosed if is marked
+ok   an unclosed unless, while, until, case, begin, for
+ok   the innermost opener left open is marked
+ok   an opener closed on its line is not
+ok   an end on a line before an opener
+ok   modifier if and while are not openers
+ok   a block if after an operator is an opener
+ok   an else if needs its own end
+ok   a closed file shows no mark
+ok   a setter and an operator are not endless
+ok   the do of a loop is not an opener
+ok   openers in literals do not count
+ok   openers in heredocs and block comments do not count
+ok   an extra end marks nothing
+ok   an empty file marks nothing
 ok   equal heredoc terminators give equal states
 ok   another terminator gives another state
 ok   a state too deep to encode is still a state
@@ -73,4 +92,4 @@ ok   states stay within 58 bits
 ok   the manifest declares the ruby filetype
 ok   and breaks no rule
 ok   one id per group
-plugins_ruby: 75 passed, 0 failed
+plugins_ruby: 94 passed, 0 failed

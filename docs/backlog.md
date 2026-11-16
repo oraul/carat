@@ -6130,3 +6130,51 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: carat/testing.rb:4, docs/architecture.md:425 (sprint-8 sweep, quality); queued in `architecture-docs`.
 - Why: both say spin test diffs the output against the snapshot, while tools/run_tests.sh compares it and spin test is never run.
 - Fix: name tools/run_tests.sh in both places.
+
+### Ruby structure sign goes stale after a buffer rename
+
+- Location: carat/plugins/ruby/plugin.rb:86
+- Why: a Ruby buffer renamed to a non-Ruby name (buffer_rename, for example :saveas a.txt) keeps its error sign forever, since every later event returns at ruby_path? before check, and a buffer renamed to a .rb name is not checked until its next change.
+- Fix: subscribe to buffer_rename and check a Ruby path or clear_signs otherwise, with an editor test row.
+
+### Ruby plugin restates the filetype tables
+
+- Location: carat/plugins/ruby/plugin.rb:24
+- Why: EXTENSIONS and NAMES restate Domain::Filetype EXTENSIONS and NAMES (config.ru covered only through .ru), two tables that can drift.
+- Fix: add a test in test/plugins_ruby.rb asserting the plugin lists match Domain::Filetype, or expose the filetype to plugins in a later API minor version.
+
+### Ruby structure editor test covers only insert mode
+
+- Location: test/editor_ruby_structure.rb:30
+- Why: only insert mode is exercised, while the spec also names replace and completion; the Gemfile and Rakefile name branch and the bare .rb exclusion of ruby_path? are untested.
+- Fix: add rows typing R...<Esc> and opening a Gemfile holding def go.
+
+### Ruby structure modifier table misses most jump words
+
+- Location: test/plugins_ruby.rb:145
+- Why: of the JUMPS modifiers only return and break are covered; next, redo, retry, yield, and super are not.
+- Fix: add next if a, yield if b, super unless c rows to the modifier table row.
+
+### Ruby tokenizer keeps the loop flag across a semicolon
+
+- Location: carat/plugins/ruby/tokenizer.rb:820
+- Why: @loop is not reset at a semicolon, so in while x; items.each do |i| the block do is taken by the while and one opener goes uncounted, and a missing end then goes unmarked.
+- Fix: clear @loop when a semicolon is met and add a table row.
+
+### Ruby structure check rescans the whole buffer per normal-mode change
+
+- Location: carat/plugins/ruby/plugin.rb:111
+- Why: every normal-mode change (x, dd, p, each . or macro step) copies all lines through read_buffer and tokenizes the whole buffer, about 100 ms per edit on the 100,000-line open-ruby file by the design figure of 1 microsecond per line, N passes for a macro of N changes, and no bench scenario measures a normal-mode edit.
+- Fix: coalesce the changes of one key (mark the buffer waiting and check once on the following cursor_move or idle) and add a normal-mode edit bench scenario.
+
+### README wording makes the structure sign sound conditional
+
+- Location: README.md:124
+- Why: the sentence starting Without a language server, the plugin also marks reads as conditional on no server running, while the plugin marks regardless of one.
+- Fix: reword it to Needing no language server, the plugin also marks.
+
+
+### The close start returned a placeholder with no tool calls
+- Location: .claude/workflows/deliver-change.js, the close (retrospective) start of markdown-reading-a (#146), run state notes 8 and 9
+- Why: twice in one run the retrospective start returned a placeholder after no tool calls, so the main session ran its record line by hand and corrected the merger's squash commit (67562e699059 stored for 67562e69905c); the run's last records depend on that start
+- Fix: refuse a close result made with no tool calls and restart it once, or record the run's last lines without the model; accepted when a stubbed placeholder close is refused by a case and the record line still lands

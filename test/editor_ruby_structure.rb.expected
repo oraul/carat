@@ -1,0 +1,9 @@
+ok   an unclosed def is marked when the file opens
+ok   typing in insert mode leaves the sign until the mode ends
+ok   leaving insert mode with the def closed clears the sign
+ok   a change in normal mode marks the def again
+ok   and undoing it clears the sign
+ok   a closed file shows no mark
+ok   deleting an inner end marks the outer opener left open
+ok   a file that is not Ruby is not checked
+editor_ruby_structure: 8 passed, 0 failed
