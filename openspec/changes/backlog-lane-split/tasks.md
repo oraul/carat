@@ -24,4 +24,4 @@
 
 - [x] 4.1 The planner, contributor (findings file after `mkdir -p docs/findings`, conflict rules), checker, quality reviewer, retrospective, the commands, and `.claude/workflows/deliver-change.js` (the `mkdir -p` in the package prompt)
 - [x] 4.2 CLAUDE.md (the `ci-stages CHANGE COMMIT` and `tokens CHANGE DIR` descriptions restored), README.md (main's merge order), docs/goals.md, docs/codebase-map.md, the `tools/gates.sh` settled_at comment rewrapped
-- [ ] 4.3 Run `make tools-test` (seconds compared with main), `make docs-lint`, `make gates`, `make spec-validate`
+- [x] 4.3 Run `make tools-test` (1331 cases, 102 s against main's 103 to 105 s), `make docs-lint`, `make gates`, `make spec-validate`
