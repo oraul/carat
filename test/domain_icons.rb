@@ -48,7 +48,12 @@ module DomainIconsTest
       ["unknown set reads as the default, unicode", ["folder_closed", "emoji"], "▸"],
       ["ascii function kind", ["kind_function", "ascii"], "f"],
       ["ascii variable kind", ["kind_variable", "ascii"], "v"],
-      ["unicode class kind", ["kind_class", "unicode"], "◈"]
+      ["unicode class kind", ["kind_class", "unicode"], "◈"],
+      # The ahead and behind glyphs per set
+      ["the ahead and behind glyphs per set: unicode ahead", ["ahead", "unicode"], "↑"],
+      ["unicode behind", ["behind", "unicode"], "↓"],
+      ["ascii ahead", ["ahead", "ascii"], "+"],
+      ["ascii behind", ["behind", "ascii"], "-"]
     ]) do |pair|
       I.glyph(pair[0], pair[1])
     end
@@ -64,7 +69,7 @@ module DomainIconsTest
       [glyph.codepoints.length, D::DisplayWidth.of(code), D::DisplayWidth.private_use?(code)]
     end
 
-    t.assert_equal(33, I::NAMES.length, "thirty-three icon names, twelve of them completion kinds")
+    t.assert_equal(35, I::NAMES.length, "thirty-five icon names, twelve of them completion kinds and two the branch counts")
     t.assert_equal(">", I.glyph("current", "ascii"), "the ascii current marker is >")
     t.assert_equal(true, I.set?("unicode"), "unicode is a set")
     t.assert_equal(false, I.set?("emoji"), "emoji is not a set")

@@ -12,7 +12,7 @@ The request `run_program(argv)` (API 2.7) SHALL run the program the first word n
 - **THEN** the first answers "a;b", the semicolon reaching printf as text, and the second answers nothing
 
 ### Requirement: The host refuses a program it should not run
-The request SHALL fail without starting anything for an empty command, an empty word, a word holding a NUL character, or a first word holding a `/`, and SHALL fail when the program cannot start or runs past 2 seconds, when it is stopped.
+The request SHALL fail without starting anything for an empty command, an empty word, a word holding a NUL character, or a first word holding a `/`, and SHALL fail when the program cannot start, runs past 2 seconds, when it is stopped, or answers bytes that are not UTF-8.
 
 #### Scenario: run_program refuses a path or an empty command
 - **WHEN** a plugin runs an empty command, or `./git status`

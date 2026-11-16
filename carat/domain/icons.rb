@@ -11,7 +11,7 @@ module Carat
     module Icons
       SETS = ["nerd", "unicode", "ascii"]
 
-      NAMES = ["folder_closed", "folder_open", "file", "symlink", "modified", "current", "error", "warning", "info", "hint", "ruby", "json", "markdown", "toml", "makefile", "shell", "c", "yaml", "git", "lock", "default", "kind_text", "kind_method", "kind_function", "kind_constructor", "kind_field", "kind_variable", "kind_class", "kind_module", "kind_property", "kind_keyword", "kind_snippet", "kind_constant"]
+      NAMES = ["folder_closed", "folder_open", "file", "symlink", "modified", "current", "error", "warning", "info", "hint", "ruby", "json", "markdown", "toml", "makefile", "shell", "c", "yaml", "git", "lock", "default", "kind_text", "kind_method", "kind_function", "kind_constructor", "kind_field", "kind_variable", "kind_class", "kind_module", "kind_property", "kind_keyword", "kind_snippet", "kind_constant", "ahead", "behind"]
 
       NERD = {
         "folder_closed" => "\u{F07B}",
@@ -46,7 +46,9 @@ module Carat
         "kind_property" => "\u{EB65}",
         "kind_keyword" => "\u{EB62}",
         "kind_snippet" => "\u{EB66}",
-        "kind_constant" => "\u{EB5D}"
+        "kind_constant" => "\u{EB5D}",
+        "ahead" => "\u{F062}",
+        "behind" => "\u{F063}"
       }
 
       UNICODE = {
@@ -82,7 +84,9 @@ module Carat
         "kind_property" => "▸",
         "kind_keyword" => "◇",
         "kind_snippet" => "‣",
-        "kind_constant" => "◆"
+        "kind_constant" => "◆",
+        "ahead" => "↑",
+        "behind" => "↓"
       }
 
       ASCII = {
@@ -118,7 +122,9 @@ module Carat
         "kind_property" => "p",
         "kind_keyword" => "k",
         "kind_snippet" => "s",
-        "kind_constant" => "K"
+        "kind_constant" => "K",
+        "ahead" => "+",
+        "behind" => "-"
       }
 
       # The glyph for a name in a set, "" for an unknown name; an unknown
