@@ -70,3 +70,10 @@ Every glyph of the default set, "unicode", SHALL be a single character of displa
 #### Scenario: Every default glyph is one cell outside the private use areas
 - **WHEN** each icon name is looked up in the default set
 - **THEN** each glyph is one character whose display width is 1 and whose code point is in neither private use area
+
+### Requirement: The icon table holds the branch counts
+The table SHALL hold, for each set, a glyph for the names `ahead` and `behind`: a Nerd Font arrow in the private use areas in the nerd set, `↑` and `↓` in the unicode set, and `+` and `-` in the ascii set.
+
+#### Scenario: The ahead and behind glyphs per set
+- **WHEN** "ahead" and "behind" are looked up in the unicode and the ascii sets
+- **THEN** they are "↑" and "↓", then "+" and "-"
