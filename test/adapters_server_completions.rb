@@ -105,7 +105,7 @@ module AdaptersServerCompletionsTest
 
   # A server that completes.
   def self.completing
-    rig({ "completionProvider" => { "triggerCharacters" => ["."] } })
+    rig({ "completionProvider" => { "triggerCharacters" => ["."] }, "textDocumentSync" => { "change" => 2 } })
   end
 
   # Idle ticks until a request of the method was sent, at most limit.

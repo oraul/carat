@@ -44,12 +44,108 @@ module AdaptersLanguageGatewayTest
 
   # An editor whose server answered initialize.
   def self.ready
+    ready_with(INIT)
+  end
+
+  # An editor whose server answered initialize with the body given.
+  def self.ready_with(body)
     h = editor(true)
     h.open("a.rb")
     h.wait
-    h.messages.body(1, INIT)
+    h.messages.body(1, body.to_s)
     h.wait
     h
+  end
+
+  # The initialize answer announcing a textDocumentSync value, as JSON.
+  def self.init_with(sync)
+    "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"capabilities\":{\"textDocumentSync\":#{sync}},\"serverInfo\":{\"name\":\"ruby-lsp\"}}}"
+  end
+
+  # An editor over a.rb holding the text given, its server ready and
+  # announcing the textDocumentSync value given.
+  def self.synced(sync, text)
+    files = Carat::Doubles::MemoryFiles.new
+    files.move_to("/project")
+    files.put("a.rb", text.to_s)
+    config = Carat::Doubles::FixedConfig.with_user("language.trusted_roots /project\n")
+    h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 10, cols: 60, plugins: [])
+    h.processes.install("ruby-lsp")
+    h.open("a.rb")
+    h.wait
+    h.messages.body(1, init_with(sync.to_s))
+    h.wait
+    h
+  end
+
+  # What a server announcing a sync value is sent when x deletes a
+  # character: none, the whole text, or a ranged change.
+  def self.change_sent(sync)
+    h = synced(sync.to_s, "x = 1\n")
+    n = h.processes.bodies.length
+    h.type("x")
+    h.wait
+    return "none" unless sent_since(h, n).include?("textDocument/didChange")
+    change = J.reach(last_body(h), "params.contentChanges.0")
+    J.field(change, "range").is_a?(Hash) ? "ranged" : "whole #{J.field(change, "text").to_s.gsub("\n", "/")}"
+  end
+
+  # The byte offset of a zero-based line and UTF-16 character in a text.
+  def self.offset_of(text, line, character)
+    i = 0
+    row = 0
+    while row < line && i < text.bytesize
+      row += 1 if text.getbyte(i).to_i == 10
+      i += 1
+    end
+    units = 0
+    while units < character && i < text.bytesize
+      units += text.getbyte(i).to_i >= 0xF0 ? 2 : 1
+      i += 1
+      i += 1 while i < text.bytesize && (text.getbyte(i).to_i & 0xC0) == 0x80
+    end
+    i
+  end
+
+  # A text with one content change applied: a range replaced, or the
+  # whole text without one.
+  def self.applied(text, change)
+    replacement = J.field(change, "text").to_s
+    return replacement unless J.field(change, "range").is_a?(Hash)
+    from = offset_of(text, J.reach(change, "range.start.line").to_i, J.reach(change, "range.start.character").to_i)
+    to = offset_of(text, J.reach(change, "range.end.line").to_i, J.reach(change, "range.end.character").to_i)
+    text.byteslice(0, from).to_s + replacement + text.byteslice(to, text.bytesize - to).to_s
+  end
+
+  # What a server announcing incremental sync holds after each comma
+  # separated group of keys is typed and an idle tick passes: whether the
+  # opened text with every change applied in order is the buffer's text,
+  # the ranged changes of all changes, and the buffer's text.
+  def self.replayed(text, keys)
+    h = synced("2", text.to_s)
+    keys.to_s.split(",").each do |group|
+      h.type(group.to_s)
+      h.wait
+    end
+    held = ""
+    ranged = 0
+    changes = 0
+    h.processes.bodies.each do |raw|
+      body = J.parse(raw.to_s)
+      name = J.field(body, "method").to_s
+      held = J.reach(body, "params.textDocument.text").to_s if name == "textDocument/didOpen"
+      next unless name == "textDocument/didChange"
+      k = 0
+      while J.reach(body, "params.contentChanges.#{k}").is_a?(Hash)
+        change = J.reach(body, "params.contentChanges.#{k}")
+        ranged += 1 if J.field(change, "range").is_a?(Hash)
+        changes += 1
+        held = applied(held, change)
+        k += 1
+      end
+    end
+    buffer = h.assembly.state.buffer.to_text
+    "#{held == buffer}|#{ranged}/#{changes}|#{buffer.gsub("\n", "/")}"
   end
 
   # The methods sent since a count of bodies.
@@ -106,7 +202,7 @@ module AdaptersLanguageGatewayTest
     # A failed initialize is a crash: nothing more is sent. Rows are
     # [label, the answer, "slot|methods sent|handles stopped"].
     t.table([
-      ["a result makes the server ready", INIT, "ruby-lsp|initialize,initialized,textDocument/didOpen,textDocument/didChange|"],
+      ["a result makes the server ready", INIT, "ruby-lsp|initialize,initialized,textDocument/didOpen|"],
       ["an initialize error stops the server as crashed and sends nothing more", "{\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32603,\"message\":\"boom\"}}", "ruby-lsp crashed :LspRestart|initialize|1"],
       ["an error beside a result is still an error", "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{},\"error\":{\"code\":1}}", "ruby-lsp crashed :LspRestart|initialize|1"],
       ["a null result is a crash", "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":null}", "ruby-lsp crashed :LspRestart|initialize|1"],
@@ -138,8 +234,9 @@ module AdaptersLanguageGatewayTest
     h.wait
     t.assert_equal([[], "ruby-lsp untrusted :LspStart"], [h.processes.spawned, label(h)], "a project file cannot trust its own directory")
 
-    # Change, save, close.
-    h = ready
+    # Change, save, close. Scenario: Open, change, save, close (a server
+    # announcing sync kind 1).
+    h = ready_with(init_with("1"))
     n = h.processes.bodies.length
     h.wait
     t.assert_equal([], sent_since(h, n), "an unchanged buffer sends nothing")
@@ -161,6 +258,51 @@ module AdaptersLanguageGatewayTest
     h.type(":e a.rb<CR>:bd<CR>")
     h.wait
     t.assert_equal(["textDocument/didClose"], sent_since(h, n), "closing the buffer sends didClose")
+
+    # The announced sync kind. Scenario: The options object announces the
+    # kind. Scenario: No sync kind sends no change. Rows are [label, the
+    # textDocumentSync value, what x sends].
+    t.table([
+      ["no textDocumentSync sends no change", "null", "none"],
+      ["sync kind 0 sends no change", "0", "none"],
+      ["sync kind 1 sends the whole text", "1", "whole  = 1/"],
+      ["sync kind 2 sends a ranged change", "2", "ranged"],
+      ["the options object announces the kind", "{\"openClose\":true,\"change\":2}", "ranged"],
+      ["the options object's full kind sends the whole text", "{\"change\":1}", "whole  = 1/"],
+      ["an options object without change sends no change", "{\"openClose\":true}", "none"],
+      ["an unknown kind sends no change", "3", "none"]
+    ]) { |sync| change_sent(sync.to_s) }
+
+    h = synced("2", "\u00e9 \u{1F600} x\n")
+    h.type("$x")
+    h.wait
+    change = J.reach(last_body(h), "params.contentChanges.0")
+    t.assert_equal([2, 0, 5, 0, 6, ""], [J.reach(last_body(h), "params.textDocument.version"), J.reach(change, "range.start.line"), J.reach(change, "range.start.character"), J.reach(change, "range.end.line"), J.reach(change, "range.end.character"), J.field(change, "text")], "a character deleted after a four-byte one spans UTF-16 characters 5 to 6 at version 2")
+
+    # Scenario: Incremental changes reproduce the buffer. Rows are [label,
+    # "the file's text|the key groups, each followed by an idle tick",
+    # "the opened text with the changes applied is the buffer|ranged
+    # changes/changes|the buffer"].
+    t.table([
+      ["an insert", "x = 1\n|ix<Esc>", "true|1/1|xx = 1/"],
+      ["a delete", "x = 1\n|x", "true|1/1| = 1/"],
+      ["an append and a delete before one tick", "x = 1\n|Ay<Esc>0x", "true|1/1| = 1y/"],
+      ["edits at several ticks", "x = 1\n|ab<Esc>,x,$x", "true|3/3|x = /"],
+      ["a new line", "x = 1\n|oy = 2<Esc>", "true|1/1|x = 1/y = 2/"],
+      ["a split line", "x = 1\n|a<CR><Esc>", "true|1/1|x/ = 1/"],
+      ["a joined line", "x = 1\ny = 2\n|J", "true|1/1|x = 1 y = 2/"],
+      ["a deleted middle line", "a\nb\nc\n|jdd", "true|1/1|a/c/"],
+      ["the last line deleted", "a\nb\n|Gdd", "true|1/1|a/"],
+      ["a pasted line", "a\nb\n|yyjp", "true|1/1|a/b/a/"],
+      ["the whole text deleted", "a\nb\n|ggdG", "true|1/1|/"],
+      ["a non-ASCII line in UTF-16 characters", "\u00e9 = \"\u65e5\u672c\" \u{1F600}\n|$x,A!<Esc>,0lx,a\u{1F600}<Esc>", "true|4/4|\u00e9=\u{1F600} \"\u65e5\u672c\" !/"],
+      ["an undo", "x = 1\n|x,u", "true|2/2|x = 1/"],
+      ["an undo of several lines and a redo", "a\nb\nc\n|dj,u,<C-R>", "true|3/3|c/"],
+      ["an edit undone before the tick sends nothing", "x = 1\n|xu", "true|0/0|x = 1/"]
+    ]) do |row|
+      parts = row.to_s.split("|", -1)
+      replayed(parts[0].to_s, parts[1].to_s)
+    end
 
     # Progress and server requests.
     h = ready
@@ -256,7 +398,7 @@ module AdaptersLanguageGatewayTest
     h.messages.push(Carat::Domain::ServiceMessage.new(handle: 1, kind: "overflow", text: ""))
     h.wait
     t.assert_equal("ruby-lsp crashed :LspRestart", label(h), "an oversized frame crashes the server")
-    h = ready
+    h = ready_with(init_with("1"))
     h.processes.break_input(1)
     h.type("x")
     h.wait

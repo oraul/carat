@@ -24,6 +24,30 @@ ok   an undo is a change with a higher version
 ok   a write sends didSave
 ok   a text buffer hides the slot and keeps the server
 ok   closing the buffer sends didClose
+ok   no textDocumentSync sends no change
+ok   sync kind 0 sends no change
+ok   sync kind 1 sends the whole text
+ok   sync kind 2 sends a ranged change
+ok   the options object announces the kind
+ok   the options object's full kind sends the whole text
+ok   an options object without change sends no change
+ok   an unknown kind sends no change
+ok   a character deleted after a four-byte one spans UTF-16 characters 5 to 6 at version 2
+ok   an insert
+ok   a delete
+ok   an append and a delete before one tick
+ok   edits at several ticks
+ok   a new line
+ok   a split line
+ok   a joined line
+ok   a deleted middle line
+ok   the last line deleted
+ok   a pasted line
+ok   the whole text deleted
+ok   a non-ASCII line in UTF-16 characters
+ok   an undo
+ok   an undo of several lines and a redo
+ok   an edit undone before the tick sends nothing
 ok   a progress token request gets a null result
 ok   another request is refused as not found
 ok   progress begins
@@ -54,4 +78,4 @@ ok   a broken input crashes the server
 ok   stop sends shutdown and exit and stops the child
 ok   a missing command leaves the slot empty
 ok   a text file starts nothing
-adapters_language_gateway: 56 passed, 0 failed
+adapters_language_gateway: 80 passed, 0 failed
