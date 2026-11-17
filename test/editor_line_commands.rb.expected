@@ -1,0 +1,27 @@
+ok   Move a line to the top
+ok   Move a range to the end
+ok   Move is one undo step
+ok   Move each marked line to the top
+ok   the long name moves the cursor line down
+ok   a move up keeps the order of the range
+ok   a move keeps the wanted column
+ok   a move clamps the column to the line and keeps the wanted one
+ok   a move of the visual lines
+ok   a move just below its range changes nothing
+ok   a move just above its range changes nothing
+ok   Copy the cursor line below itself
+ok   Copy the cursor line to the top
+ok   a copy of a range to the end
+ok   a copy into its own range
+ok   a copy is one undo step
+ok   each marked line copied to the end
+ok   A move into its own range
+ok   A bad address past the last line
+ok   A bad address that is not one
+ok   no address
+ok   an offset is not read
+ok   a bad range
+ok   move takes no bang
+ok   copy takes no bang
+ok   a move into its own range inside a global
+editor_line_commands: 26 passed, 0 failed
