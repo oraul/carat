@@ -442,7 +442,7 @@ docs-lint:
 gates:
 	sh tools/gates.sh static
 
-## stages: print the checker's stage list, FAST_STAGES, which tools/run_state.sh check runs in order; make check runs CHECK_STAGES
+## stages: print the checker's stage list, FAST_STAGES, which tools/run_state.sh check runs CHECK_JOBS at once (default 3) in the order the stages need; make check runs CHECK_STAGES in order
 stages:
 	@echo $(FAST_STAGES)
 

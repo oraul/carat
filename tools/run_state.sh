@@ -93,8 +93,11 @@
 #                               FAST_STAGES; origin/main's CHECK_STAGES while
 #                               its Makefile has no FAST_STAGES, as its merge
 #                               gates require) in
-#                               order in the check clone (below) and stop
-#                               at the first failure (the
+#                               the check clone (below), CHECK_JOBS at once
+#                               (default 3) in the order STAGE_AFTER and
+#                               STAGE_ALONE need, and stop at the first
+#                               failure, its log's last lines printed and
+#                               the stages still running recorded killed (the
 #                               workflow records phase.check); a stage record
 #                               counts only at COMMIT, the last check the
 #                               workflow passed, or carried from it: skipped
@@ -498,8 +501,8 @@ utc_now() {
 # word is then the exit status, "killed" when a signal ended the command
 # (KILLED_STATUSES: a hang-up, interrupt, kill, or terminate), or
 # "superseded" when HEAD moved while it ran, and the log's last line says
-# which. The command runs in the background and is waited for, so a signal
-# the check traps interrupts the wait at once (check_signalled). Sets
+# which. The stage command runs it; the check starts its stages as jobs
+# (stage_launch) and ends each with stage_end, as this does. Sets
 # stage_word to the record's first word; returns the status, 1 for a
 # superseded stage that exited 0.
 KILLED_STATUSES="129 130 137 143"
@@ -512,34 +515,168 @@ run_stage() {
   at=$(head_commit)
   start=$(date +%s)
   write_key "stage.$name" "running 0s $at $(utc_now)"
-  running_stage=$name
   "$@" > "$log" 2>&1 < /dev/null &
-  child=$!
-  wait "$child"
-  status=$?
-  child=''
-  running_stage=''
-  secs=$(( $(date +%s) - start ))
+  wait "$!"
+  stage_end "$name" "$at" "$start" "$?"
+}
+
+# stage_end NAME AT START STATUS: the end of a stage started at commit AT
+# and second START that exited with STATUS: appends its log's last line,
+# writes its record, and prints it; sets stage_word and returns as
+# run_stage does.
+stage_end() {
+  log=$stage_dir/$change/$1.log
+  secs=$(( $(date +%s) - $3 ))
   now=$(head_commit)
-  stage_word=$status
-  if [ "$now" != "$at" ]; then
+  stage_word=$4
+  if [ "$now" != "$2" ]; then
     stage_word=superseded
-    echo "EXIT $status" >> "$log"
-    echo "SUPERSEDED: HEAD moved from $at to $now while the stage ran" >> "$log"
-  elif one_of "$status" "$KILLED_STATUSES"; then
+    echo "EXIT $4" >> "$log"
+    echo "SUPERSEDED: HEAD moved from $2 to $now while the stage ran" >> "$log"
+  elif one_of "$4" "$KILLED_STATUSES"; then
     stage_word=killed
-    echo "KILLED: exit $status, a signal ended the stage" >> "$log"
+    echo "KILLED: exit $4, a signal ended the stage" >> "$log"
   else
-    echo "EXIT $status" >> "$log"
+    echo "EXIT $4" >> "$log"
   fi
-  write_key "stage.$name" "$stage_word ${secs}s $at $(utc_now)"
-  if [ "$stage_word" = "$status" ]; then
-    echo "stage $name: exit $status in ${secs}s, log $log"
+  write_key "stage.$1" "$stage_word ${secs}s $2 $(utc_now)"
+  if [ "$stage_word" = "$4" ]; then
+    echo "stage $1: exit $4 in ${secs}s, log $log"
   else
-    echo "stage $name: $stage_word (exit $status) in ${secs}s, log $log"
+    echo "stage $1: $stage_word (exit $4) in ${secs}s, log $log"
   fi
-  [ "$stage_word" != superseded ] || [ "$status" -ne 0 ] || return 1
-  return $status
+  [ "$stage_word" != superseded ] || [ "$4" -ne 0 ] || return 1
+  return "$4"
+}
+
+# The order the stages need, "STAGE:BEFORE" pairs: STAGE starts only once
+# BEFORE passed (skipped, carried, scoped, or compiled counts) when both
+# are in the list. test-run runs test-build's runner and, in the smoke
+# test, dev-build's binary; metrics reads the reports of dev-build and
+# test-build and measures bench-budget's binary. Every other stage is
+# free: each writes its own build path (build/dev, build/test,
+# build/bench, build/diagnose, build/metrics), and the compile cache
+# build/spinel-cache takes concurrent compilers, Spinel storing each
+# object by renaming a whole file over it. STAGE_ALONE stages start only
+# with no stage running and hold every other start while they run, so
+# metrics measures time per key beside no compiler. CHECK_JOBS caps the
+# stages running at once (default 3: 4 CPUs, two lanes checking at once).
+STAGE_AFTER="test-run:test-build test-run:dev-build metrics:dev-build metrics:test-build metrics:bench-budget"
+STAGE_ALONE="metrics"
+
+# Prints why CHECK_JOBS is refused, nothing when it is a positive number.
+jobs_refusal() {
+  case "${CHECK_JOBS:-3}" in
+    *[!0-9]*|'') echo "check: refused: CHECK_JOBS is ${CHECK_JOBS}, not a positive number" ;;
+    *) [ "${CHECK_JOBS:-3}" -ge 1 ] || echo "check: refused: CHECK_JOBS is ${CHECK_JOBS}, not a positive number" ;;
+  esac
+}
+
+# stage_launch NAME CMD...: starts CMD as a job in the background, its
+# record reading running, its log NAME.log, and "PID SECONDS COMMIT" in
+# job_dir/NAME.start; the job writes CMD's exit status to
+# job_dir/NAME.status when CMD ends, passing a terminate signal on to CMD
+# and waiting for it again. Only the runner writes the run state.
+stage_launch() {
+  launch_name=$1
+  shift
+  launch_log=$stage_dir/$change/$launch_name.log
+  launch_at=$(head_commit)
+  launch_start=$(date +%s)
+  write_key "stage.$launch_name" "running 0s $launch_at $(utc_now)"
+  rm -f "$job_dir/$launch_name.status"
+  (
+    job_child=''
+    trap '[ -z "$job_child" ] || kill -TERM "$job_child" 2> /dev/null' TERM
+    "$@" > "$launch_log" 2>&1 < /dev/null &
+    job_child=$!
+    wait "$job_child"
+    job_status=$?
+    while kill -0 "$job_child" 2> /dev/null; do
+      wait "$job_child"
+      job_status=$?
+    done
+    { echo "$job_status" > "$job_dir/$launch_name.status.tmp" &&
+        mv "$job_dir/$launch_name.status.tmp" "$job_dir/$launch_name.status"; } 2> /dev/null
+  ) &
+  echo "$! $launch_start $launch_at" > "$job_dir/$launch_name.start"
+  running="$running $launch_name"
+}
+
+# Starts the queued stages that are ready, in queue order, while fewer
+# than CHECK_JOBS run and no STAGE_ALONE stage runs.
+stages_start() {
+  for s in $running; do
+    ! one_of "$s" "$STAGE_ALONE" || return 0
+  done
+  for s in $queue; do
+    # shellcheck disable=SC2086
+    set -- $running
+    [ $# -lt "${CHECK_JOBS:-3}" ] || return 0
+    [ -z "$running" ] || ! one_of "$s" "$STAGE_ALONE" || continue
+    ready=1
+    for pair in $STAGE_AFTER; do
+      [ "${pair%%:*}" = "$s" ] || continue
+      ! one_of "${pair#*:}" "$queue $running" || ready=0
+    done
+    [ "$ready" = 1 ] || continue
+    queue=$(echo " $queue " | sed "s/ $s / /; s/^ *//; s/ *\$//")
+    # The clone has no release build (make stages leaves out build), so the
+    # smoke test runs dev-build's binary, as CI does on a pull request.
+    stage_launch "$s" sh -c "$CLONE_EXEC" in_clone "$check_root" "$make_cmd" --no-print-directory check-stage "S=$s" "CARAT_BIN=$CHECK_BIN"
+    ! one_of "$s" "$STAGE_ALONE" || return 0
+  done
+}
+
+# Waits until a running stage ended and records it; returns 1, its name in
+# ended, when it did not pass.
+stages_reap() {
+  while :; do
+    for s in $running; do
+      [ -f "$job_dir/$s.status" ] || continue
+      read -r job_pid job_start job_at < "$job_dir/$s.start"
+      wait "$job_pid" 2> /dev/null
+      read -r job_status < "$job_dir/$s.status"
+      running=$(echo " $running " | sed "s/ $s / /; s/^ *//; s/ *\$//")
+      ended=$s
+      stage_end "$s" "$job_at" "$job_start" "$job_status" || return 1
+      ! one_of "$s" "$COMPILE_STAGES" || compiled_set "$s" "$key $(outputs_sum "$s")"
+      return 0
+    done
+    pause
+  done
+}
+
+# stages_stop LINE: stops every running stage, its job and command, and
+# records it killed, or superseded when HEAD moved, LINE ending its log;
+# a stage that ended meanwhile keeps its own record. The runner, detached
+# by setsid, leads its process group, which it stops with them.
+stages_stop() {
+  stop_word=killed
+  [ "$(head_commit)" = "$head" ] || stop_word=superseded
+  stopped=''
+  for s in $running; do
+    [ -f "$job_dir/$s.status" ] && continue
+    read -r job_pid _ < "$job_dir/$s.start" 2> /dev/null && kill -TERM "$job_pid" 2> /dev/null
+  done
+  if [ "$(ps -o pgid= -p $$ 2>/dev/null | tr -d ' ')" = "$$" ]; then
+    trap '' HUP INT TERM
+    kill -TERM 0 2>/dev/null
+  fi
+  for s in $running; do
+    read -r job_pid job_start job_at < "$job_dir/$s.start" 2> /dev/null || continue
+    if [ -f "$job_dir/$s.status" ] && ! one_of "$(cat "$job_dir/$s.status")" "$KILLED_STATUSES"; then
+      stage_end "$s" "$job_at" "$job_start" "$(cat "$job_dir/$s.status")" || :
+      continue
+    fi
+    n=0
+    while [ ! -f "$job_dir/$s.status" ] && [ $n -lt 50 ]; do pause; n=$((n + 1)); done
+    echo "$1" >> "$stage_dir/$change/$s.log"
+    write_key "stage.$s" "$stop_word $(( $(date +%s) - job_start ))s $job_at $(utc_now)"
+    stopped="$stopped $s"
+    echo "stage $s: $stop_word in $(( $(date +%s) - job_start ))s, log $stage_dir/$change/$s.log"
+  done
+  running=''
 }
 
 # True when every path changed from COMMIT to HEAD matches TEST_ONLY; a
@@ -554,8 +691,9 @@ tests_only_since() {
 # it, so a record at HEAD that no workflow record backs runs again. A stage
 # passed at BACKED is skipped when BACKED is HEAD, and carried to HEAD when
 # it reads no test program and only tests changed since BACKED.
-# The runner (check-run) runs them detached from the waiter (check_wait);
-# each stage that does not pass ends the run with its verdict line.
+# The runner (check-run) runs them detached from the waiter (check_wait),
+# the ones not skipped at once (STAGE_AFTER); the first stage that does not
+# pass ends the run with its verdict line.
 # The merge gates run origin/main's copy (BASE), which requires the stages
 # of its Makefile: while that Makefile has CHECK_STAGES and no FAST_STAGES,
 # main's CHECK_STAGES; otherwise nothing, and make stages decides.
@@ -619,14 +757,28 @@ check_stages() {
       continue
     fi
     one_of "$s" "$COMPILE_STAGES" && compiled_set "$s" ""
-    # The clone has no release build (make stages leaves out build), so the
-    # smoke test runs dev-build's binary, as CI does on a pull request.
-    if ! run_stage "$s" sh -c "$CLONE_EXEC" in_clone "$check_root" "$make_cmd" --no-print-directory check-stage "S=$s" "CARAT_BIN=$CHECK_BIN"; then
+    queue="$queue $s"
+  done
+  refused=$(jobs_refusal)
+  if [ -n "$refused" ]; then
+    echo "$refused"
+    echo "check: stage none failed at $head; read $(check_log)"
+    exit 1
+  fi
+  # The stages left run at once (stages_start), each in its job; the runner
+  # alone writes their records as they end (stages_reap).
+  job_dir=${check_root%/repo}/jobs
+  mkdir -p "$job_dir" "$stage_dir/$change"
+  while [ -n "$queue$running" ]; do
+    stages_start
+    if ! stages_reap; then
       case "$stage_word" in killed|superseded) word=$stage_word ;; *) word=failed ;; esac
-      echo "check: stage $s $word at $head; read $stage_dir/$change/$s.log"
+      stages_stop "KILLED: the check stopped after stage $ended $word"
+      echo "the last lines of the log of stage $ended:"
+      tail -n 20 "$stage_dir/$change/$ended.log" | sed 's/^/| /'
+      echo "check: stage $ended $word at $head; read $stage_dir/$change/$ended.log"
       exit 1
     fi
-    one_of "$s" "$COMPILE_STAGES" && compiled_set "$s" "$key $(outputs_sum "$s")"
   done
   # The workflow records phase.check from the checker's result, so a check
   # run outside it backs nothing.
@@ -663,8 +815,9 @@ check_run() {
   head=$(head_commit)
   pid_file=$(check_pid_file)
   echo "$$ $head" > "$pid_file"
-  running_stage=''
-  child=''
+  queue=''
+  running=''
+  job_dir=''
   check_root=''
   trap 'check_signalled HUP' HUP
   trap 'check_signalled INT' INT
@@ -755,18 +908,20 @@ clone_drop() {
 
 check_signalled() {
   trap '' HUP INT TERM
-  [ -z "$child" ] || kill -TERM "$child" 2>/dev/null
-  # Detached by setsid, the runner leads its process group: the stage's
-  # make and compilers stop with it.
-  [ "$(ps -o pgid= -p $$ 2>/dev/null | tr -d ' ')" != "$$" ] || kill -TERM 0 2>/dev/null
+  signal=$1
   word=killed
   [ "$(head_commit)" = "$head" ] || word=superseded
-  if [ -n "$running_stage" ]; then
-    log=$stage_dir/$change/$running_stage.log
-    echo "KILLED: the check received SIG$1 during the stage" >> "$log"
-    write_key "stage.$running_stage" "$word $(( $(date +%s) - start ))s $head $(utc_now)"
-    echo "check: stage $running_stage $word at $head; read $log"
+  # Every running stage stops and is recorded; the verdict names the first.
+  first=''
+  if [ -n "$running" ]; then
+    stages_stop "KILLED: the check received SIG$signal during the stage"
+    first=${stopped# }
+    first=${first%% *}
+  fi
+  if [ -n "$first" ]; then
+    echo "check: stage $first $word at $head; read $stage_dir/$change/$first.log"
   else
+    [ "$(ps -o pgid= -p $$ 2>/dev/null | tr -d ' ')" != "$$" ] || kill -TERM 0 2>/dev/null
     echo "check: stage none $word at $head; read $(check_log)"
   fi
   exit 1
@@ -778,20 +933,27 @@ check_signalled() {
 check_lost() {
   at=$1
   clone_lost
-  lost=$(grep -E '^  "stage\.[^"]*": "running ' "$(state_file)" | head -1 | sed 's/^  "stage\.\([^"]*\)": "running \(.*\)",*$/\1 \2/')
-  if [ -n "$lost" ]; then
-    s=${lost%% *}
-    rest=${lost#* }
-    log=$stage_dir/$change/$s.log
-    echo "KILLED: the check ended without a verdict during the stage" >> "$log"
+  lost=$(grep -E '^  "stage\.[^"]*": "running ' "$(state_file)" | sed 's/^  "stage\.\([^"]*\)": "running \(.*\)",*$/\1 \2/')
+  # Every stage the runner left running is recorded killed; the verdict
+  # names the first.
+  first=''
+  while read -r s rest; do
+    [ -n "$s" ] || continue
+    [ -n "$first" ] || first=$s
+    echo "KILLED: the check ended without a verdict during the stage" >> "$stage_dir/$change/$s.log"
     write_key "stage.$s" "killed $rest"
-    line="check: stage $s killed at $at; read $log"
+  done <<LOST
+$lost
+LOST
+  if [ -n "$first" ]; then
+    line="check: stage $first killed at $at; read $stage_dir/$change/$first.log"
   else
     line="check: stage none killed at $at; read $(check_log)"
   fi
   echo "$line" >> "$(check_log)"
   echo "$line"
 }
+
 
 # check BACKED: refuse a dirty tree, then rejoin the runner running at
 # HEAD, stop one at another commit (its verdict reads superseded), or
@@ -804,6 +966,8 @@ check_wait() {
   [ -z "$dirty" ] || die "check: refused: tracked files differ from HEAD; commit them first: $(printf '%s\n' "$dirty" | head -3 | tr '\n' ' ')"
   loose=$(git ls-files --others --exclude-standard -- carat bin test bench)
   [ -z "$loose" ] || die "check: refused: untracked files under carat/, bin/, test/, or bench/, which spin compiles: $(printf '%s\n' "$loose" | head -3 | tr '\n' ' ')"
+  refused=$(jobs_refusal)
+  [ -z "$refused" ] || die "$refused"
   [ -f "$(state_file)" ] || die "no run state for $change; run init first"
   mkdir -p "$stage_dir/$change"
   head=$(head_commit)

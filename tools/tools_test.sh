@@ -459,6 +459,56 @@ EOF
 chmod +x "$work/bin/bin-make"
 expect "run_state: check runs the smoke test on dev-build's binary, as CI does" 0 "every stage passed" \
   env STAGES="test-run" MAKE="$work/bin/bin-make" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
+# The stages run at once, CHECK_JOBS at a time, in the order they need:
+# each stage of par-make notes its start and end in PAR_OUT, and order A B
+# says whether line A came before line B.
+cat > "$work/bin/par-make" <<'EOF'
+#!/bin/sh
+for arg in "$@"; do
+  case "$arg" in S=*) s=${arg#S=} ;; esac
+done
+echo "start $s" >> "$PAR_OUT"
+case "$s" in
+  fail) echo "the own output of fail"; sleep 0.5; echo "end $s" >> "$PAR_OUT"; exit 5 ;;
+  long) sleep 4 ;;
+  *) sleep 1 ;;
+esac
+echo "end $s" >> "$PAR_OUT"
+exit 0
+EOF
+chmod +x "$work/bin/par-make"
+par_check() {
+  rm -f "$work/par.out"
+  env STAGES="$1" CHECK_JOBS="${2:-3}" MAKE="$work/bin/par-make" PAR_OUT="$work/par.out" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
+}
+order() {
+  awk -v a="$1" -v b="$2" '$0 == a { x = NR } $0 == b { y = NR } END { print (x && y && x < y) ? "before" : "not before" }' "$work/par.out"
+}
+at=$(git rev-parse --short=12 HEAD)
+expect "run_state: a parallel check passes" 0 "^check: every stage passed at $at" par_check "slowa slowb"
+expect "run_state: check runs two free stages at once" 0 "^before$" order "start slowb" "end slowa"
+expect "run_state: every stage of a parallel check is recorded" 0 "^0 [0-9]+s $at " sh "$here/run_state.sh" get isolated stage.slowa
+expect "run_state: every stage of a parallel check is recorded, the second too" 0 "^0 [0-9]+s $at " sh "$here/run_state.sh" get isolated stage.slowb
+expect "run_state: each parallel stage keeps its own log" 0 "^EXIT 0$" tail -1 build/stages/isolated/slowb.log
+expect "run_state: a parallel check with test-build passes" 0 "every stage passed" par_check "test-build test-run docs-lint"
+expect "run_state: check starts test-run only after test-build passed" 0 "^before$" order "end test-build" "start test-run"
+expect "run_state: a free stage runs beside test-build" 0 "^before$" order "start docs-lint" "end test-build"
+expect "run_state: a parallel check with metrics passes" 0 "every stage passed" par_check "slowa metrics slowb"
+expect "run_state: check runs metrics alone, after the first stage" 0 "^before$" order "end slowa" "start metrics"
+expect "run_state: check runs metrics alone, after the second stage" 0 "^before$" order "end slowb" "start metrics"
+expect "run_state: a stage queued after metrics starts before it" 0 "^before$" order "start slowb" "end slowa"
+expect "run_state: a check with CHECK_JOBS=1 passes" 0 "every stage passed" par_check "slowa slowb" 1
+expect "run_state: check runs one stage at a time with CHECK_JOBS=1" 0 "^before$" order "end slowa" "start slowb"
+expect "run_state: check refuses a CHECK_JOBS that is no number" 1 "CHECK_JOBS is two, not a positive number" par_check "slowa" two
+expect "run_state: check refuses a CHECK_JOBS of 0" 1 "CHECK_JOBS is 0, not a positive number" par_check "slowa" 0
+expect "run_state: a failing stage fails a parallel check with its own log" 1 "^check: stage fail failed at $at; read build/stages/isolated/fail[.]log$" par_check "long fail"
+expect "run_state: a failing stage's excerpt comes before the verdict" 0 "^[|] the own output of fail$" sed '$d' build/stages/isolated/check.log
+expect "run_state: a failing parallel stage's log ends with its status" 0 "^EXIT 5$" tail -1 build/stages/isolated/fail.log
+expect "run_state: a failing parallel stage is recorded with its status" 0 "^5 [0-9]+s $at " sh "$here/run_state.sh" get isolated stage.fail
+expect "run_state: a sibling stopped by a failure is recorded killed" 0 "^killed [0-9]+s $at " sh "$here/run_state.sh" get isolated stage.long
+expect "run_state: a stopped sibling's log names the failed stage" 0 "^KILLED: the check stopped after stage fail failed$" tail -1 build/stages/isolated/long.log
+expect "run_state: a stopped sibling never ends" 0 "^not before$" order "start long" "end long"
+expect "run_state: a failed parallel check removes its clone" 0 "^$" ls -A "$work/checks"
 cd "$work/state" || exit 1
 # A check that did not finish says so: a stage ended by a signal, its own
 # or the runner's, is killed; one during which HEAD moved is superseded at
@@ -470,8 +520,8 @@ cat > "$work/bin/stop-make" <<'EOF'
 for arg in "$@"; do
   case "$arg" in
     S=own) kill -TERM $$ ;;
-    S=runner) kill -TERM $PPID; sleep 5 ;;
-    S=hard) kill -KILL $PPID ;;
+    S=runner) kill -TERM "$(cut -d" " -f1 "$MOVE_IN/build/stages/state/check.pid")"; sleep 5 ;;
+    S=hard) kill -KILL "$(cut -d" " -f1 "$MOVE_IN/build/stages/state/check.pid")" ;;
     S=moves) git -C "$MOVE_IN" -c user.name=Claude -c user.email=noreply@anthropic.com commit -q --allow-empty -m "chore: moved" -m "Co-Authored-By: Claude <noreply@anthropic.com>" ;;
     S=slow) sleep "${SLOW:-0}" ;;
   esac
@@ -480,7 +530,7 @@ exit 0
 EOF
 chmod +x "$work/bin/stop-make"
 stop_check() {
-  env STAGES="$1" MAKE="$work/bin/stop-make" MOVE_IN="$work/state" TMPDIR="$work/checks" sh "$here/run_state.sh" check state
+  env CHECK_JOBS=1 STAGES="$1" MAKE="$work/bin/stop-make" MOVE_IN="$work/state" TMPDIR="$work/checks" sh "$here/run_state.sh" check state
 }
 at=$(git rev-parse --short=12 HEAD)
 expect "run_state: a stage killed by a signal is recorded as killed" 143 "^stage c: killed [(]exit 143[)]" state stage state c sh -c 'kill -TERM $$'
@@ -493,6 +543,19 @@ expect "run_state: a hard-killed check is reported killed by the next check" 1 "
 expect "run_state: a hard-killed check's stage is recorded as killed" 0 "^killed 0s $at " state get state stage.hard
 expect "run_state: a hard-killed check's clone is removed" 0 "^$" ls -A "$work/checks"
 expect "run_state: a check leaves no runner behind" 1 "" test -e build/stages/state/check.pid
+# Stages running at once: a signal stops and records each of them, and a
+# runner killed past its trap has each reported by the next check.
+expect "run_state: a killed parallel check names its first stage" 1 "^check: stage slow killed at $at; read build/stages/state/slow[.]log$" \
+  env CHECK_JOBS=2 SLOW=5 STAGES="slow runner" MAKE="$work/bin/stop-make" MOVE_IN="$work/state" TMPDIR="$work/checks" sh "$here/run_state.sh" check state
+expect "run_state: a killed check records each running stage" 0 "^killed [0-9]+s $at " state get state stage.slow
+expect "run_state: a killed check records each running stage, the second too" 0 "^killed [0-9]+s $at " state get state stage.runner
+expect "run_state: each stage a killed check stopped says so in its log" 0 "^KILLED: the check received SIGTERM" tail -1 build/stages/state/slow.log
+expect "run_state: a hard-killed parallel check is reported by the next check" 1 "^check: stage (slow|hard) killed at $at" \
+  env CHECK_JOBS=2 SLOW=3 STAGES="slow hard" MAKE="$work/bin/stop-make" MOVE_IN="$work/state" TMPDIR="$work/checks" sh "$here/run_state.sh" check state
+expect "run_state: a hard-killed check records each running stage" 0 "^killed [0-9]+s $at " state get state stage.slow
+expect "run_state: a hard-killed check records each running stage, the second too" 0 "^killed [0-9]+s $at " state get state stage.hard
+expect "run_state: each stage a hard-killed check left says so in its log" 0 "^KILLED: the check ended without a verdict" tail -1 build/stages/state/slow.log
+sleep 3
 expect "run_state: a stage during which HEAD moved is superseded at the commit it ran on" 1 "^check: stage moves superseded at $at; read" stop_check "a moves b"
 expect "run_state: a superseded stage is recorded at its own commit" 0 "^superseded [0-9]+s $at " state get state stage.moves
 at=$(git rev-parse --short=12 HEAD)

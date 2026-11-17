@@ -4,6 +4,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 
 ## Sprint 13
 
+The user-approved exception: `check-parallel` (T1 pipeline, user request, estimated medium, beyond the sprint, the user-approved exception), Sprint 13's one exemption.
+
 1. `git-signs-transport` (T3 security Low (5), Medium (4) below 8, with a blocking T6 correctness fix, estimated medium, backlog-pick batch 2): under a trusted root a partial clone's repo-local `uploadpack` or `core.sshCommand` runs on a lazy fetch where git is older than 2.44, since BRANCH and COUNTS disable only the ext transport (`carat/plugins/git_signs/plugin.rb:27`, `:28`, `:42`; `carat/use_cases/plugins/file_requests.rb:30`), the guard words spelled three times; `head_lines` strips only LF while `Buffer.from_text` drops CR LF (`plugin.rb:253`, `carat/domain/buffer.rb:382`), so every line of an unedited CR LF file gets the changed sign (sprint-12 blocking note 2). Accepted when the promisor scenario of `test/editor_git_signs.rb` shows every transport off whatever the git version, one place holds the guards, and a CR LF row shows no sign on an unedited file. Backlog: "### git_signs relies on GIT_NO_LAZY_FETCH, which a git older than 2.44 ignores (security Low, confidence 5)", "### git_signs disables only the ext transport, so a lazy fetch can run a command", "### BRANCH and COUNTS repeat git_signs' safety arguments".
 
 ## Pool
@@ -26,8 +28,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 16. `ci-hardening` (T3 with T6, estimated medium, pushed back 23): "### CI checkout keeps GITHUB_TOKEN while pull request targets run", "### Workflow actions are pinned by movable tags".
 17. `tools-fail-open` (T1 pipeline defect, estimated medium): "### Scanner errors pass the text gates", "### metrics.sh compare passes a base name never measured", "### gate_pushes passes a non-numeric count", "### ci_scope.sh splits changed paths at whitespace".
 18. `merge-gate-integrity` (T1 pipeline defect, estimated medium, pushed back 14): merge over 12 calls in 8 of 20 lane rows (lsp-container 15, planner-split-rule 14).
-19. `scout-value`, `check-skip`, `records-trim`, `budget-prediction`, `plan-apply-guard`, `run-resume` (T1 pipeline, estimated small each, pushed back up to 17): lsp-container scout 25.9% of output. Retro sprint-12-records note 4: bench 6,460 of 36,282 output (17.8%) and 10 of 79 calls on a docs-only run, equal to main 3 of 3, goes to `check-skip`; note 5: groom output hand-edited in 2 of the last 3 records runs, 3 of 3 advisories on it, goes to `records-trim`.
-20. `review-demotion`, `hook-one-place`, `gate-object-pin`, `own-line-advisories`, `prose-grep-cases`, `spec-tests-first`, `ci-workflow-tidy` (T1 pipeline, estimated medium each, pushed back up to 4).
+19. `scout-value`, `check-skip`, `records-trim`, `budget-prediction`, `plan-apply-guard`, `run-resume` (T1 pipeline, estimated small each, pushed back up to 17): lsp-container scout 25.9% of output. Retro sprint-12-records note 4: bench 6,460 of 36,282 output (17.8%) and 10 of 79 calls on a docs-only run, equal to main 3 of 3, goes to `check-skip`; note 5: groom output hand-edited in 2 of the last 3 records runs, 3 of 3 advisories on it, goes to `records-trim`; sprint-security scout 34,911 of 181,413 output (19.2%) to `scout-value`; 1 push refused after a post-review prose edit (lsp-container-b) to `check-skip`; in-run total at 6 per output against 59 (sprint-12-records) to `budget-prediction`.
+20. `review-demotion`, `hook-one-place`, `gate-object-pin`, `own-line-advisories`, `prose-grep-cases`, `spec-tests-first`, `ci-workflow-tidy` (T1 pipeline, estimated medium each, pushed back up to 4): quality first pass 66/130, lsp-container-b fix round 153,294 of 264,142 output, and 3 of 6 sprint-security advisories dropped as naming go to `review-demotion`.
 21. `backlog-read-guard`, `record-tier`, `plan-skip`, `sprint-marker-tidy` (T1 pipeline, estimated small each).
 22. `open-pr-refusals`, `check-runner-safety` (T1 security, estimated medium each, pushed back 3 and 15); `ci-scope-quoting` (T1, Low (6), estimated medium).
 23. `gateway-split-a`, `gateway-split-b`, `frame-painters`, `plugin-api-split`, `language-followers`, `language-ask-port` (T5 architecture, estimated medium each).
@@ -39,11 +41,13 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 
 ## Decisions
 
-- Security first clear (T0): no High or Medium at confidence 8 or above; sprint-security's Medium (7) is below 8, sprint-12 sweep high=0 medium=0, no review.periodic in pending sprint-12-records.
-- Delivered: `sprint-security` part a (T1 pipeline defect, security Medium (7) and the partial-report advisory) removed from Sprint 13 by the user's brief; `git-signs-transport` is now Sprint 13 item 1.
-- Split rule: the 6-heading item held five independently testable parts (pushed back 15); its Lows (6), (5) and the fixed advisory are `sprint-security-b` (T1, estimated small), pool 2 after `toolchain-clean-scope` (data loss), by the user's brief.
-- Estimate medium for part a: T1 backlog rows planner-split-rule 751,218/35 min, review-pipeline-a 765,652/32, checks-and-pr-lows 1,125,404/67; of the last two rows only windows-buffers-tidy 1,373,899 went over 1.2M, so no size up.
-- Part a holds two testable parts (closure refusals with the partial report; findings recorded without the skeptic), under the three of the split rule.
-- Retro notes 4 and 5 of sprint-12-records (bench 6,460/10 calls on a docs-only run; groom hand edit in 2 of 3 records runs) fold into `check-skip` and `records-trim` (T1), entries in this plan's backlog.md.
-- Quality first pass 65/129 over all changes; sprint-12-records quality notes 1 to 3 already handled.
-- Carried: 27 unmapped headings left for `docs-index`; backlog triage done once (9b764e3, b31fcd5); "## Five methods walk every window of every tab page" kept for `windows-buffers-walk`.
+- Security first clear (T0): no review.periodic note in pending lsp-container-b or sprint-security; sprint-12 sweep high=0 medium=0; sprint-security's Medium (7) is below 8.
+- `check-parallel` (T1 pipeline, user request): Sprint 13's user-approved exception, beyond the sprint, by the user's request; the 9 FAST_STAGES ran one after another in 614 s measured (10.5 min), test-build then test-run 194 s the longest chain.
+- Estimate medium: T1 backlog rows planner-split-rule 751,218/35 min, review-pipeline-a 765,652/32, sprint-security 818,032/39, checks-and-pr-lows 1,125,404/67; of the last two only sprint-12-records (2,147,268 over small) went over, so no size up.
+- No split: two testable parts (stages at once in their order under a cap; shared writes safe), under the split rule's 3; no `tools/rules.sh` edit, so no merge-gate change first.
+- Order kept: `git-signs-transport` stays Sprint 13 item 1, `toolchain-clean-scope` pool 1; the exception counts in no sprint share (exception_item).
+- `check-runner-safety` stays pool 22 (T1 security, pushed back 15): its entries are not this change's.
+- Retro notes fold (T1), entries in this plan's backlog.md: sprint-security 7 (scout 19.2%) to `scout-value`; lsp-container-b 12 (1 push refused after a prose edit) to `check-skip`; lsp-container-b 13 and sprint-security 8 (59 total per output, 6 assumed) to `budget-prediction`; lsp-container-b 11 (quality 66/130) and sprint-security 9 (3 of 6 advisories dropped) to `review-demotion`.
+- Overruns noted: lsp-container-b check 229,659 output over medium's 200,000 (total 1,004,078 under 1.2M); sprint-12-records 2,147,268 over small's 500,000 (4.3x).
+- Quality notes of lsp-container-b (1 to 9) and sprint-security (1 to 6) handled already.
+- Carried: 27 unmapped headings left for `docs-index`; backlog triage done once (9b764e3, b31fcd5).
