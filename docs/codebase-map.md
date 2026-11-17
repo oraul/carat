@@ -557,7 +557,7 @@ Files:
 - `carat/plugins/finder/matcher.rb`: `Finder::Matcher`, path fuzzy scoring by bytes without allocating (file name first, word starts, runs, gaps); `score`, `key`, `index_of`.
 - `carat/plugins/git_signs/plugin.rb`: `GitSigns::Plugin`; `manifest`, `activate`, `deactivate`, `on_event` (the branch with its ahead and behind counts as the segment at priority 40, from `git symbolic-ref` and `git rev-list` through `run_program`, on activation, open, save, and focus, only under a trusted root, each command refusing `ext::` and fsmonitor; git's output untrusted).
 
-Tests: `test/domain_plugin_manifest.rb`, `test/use_cases_plugins.rb`, `test/use_cases_plugin_files.rb`, `test/use_cases_plugin_hardening.rb`, `test/editor_plugins.rb`, `test/editor_finder.rb`, `test/plugins_finder_matcher.rb`, `test/editor_git_signs.rb`.
+Tests: `test/domain_plugin_manifest.rb`, `test/use_cases_plugins.rb`, `test/use_cases_plugin_files.rb`, `test/use_cases_plugin_hardening.rb`, `test/editor_plugins.rb`, `test/editor_finder.rb`, `test/plugins_finder_matcher.rb`, `test/editor_git_signs.rb`, `test/plugins_git_signs_diff.rb`.
 
 Bench: `finder` (typing into the finder over 10,000 files, every key filtering all of them; about 2.3 ms a key at 8d8832f's machine, the target under 20 ms).
 

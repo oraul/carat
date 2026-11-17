@@ -1,4 +1,5 @@
 require_relative "../../plugin_api"
+require_relative "line_diff"
 
 module Carat
   module Plugins

@@ -103,6 +103,7 @@ require_relative "../json"
 require_relative "../lint"
 require_relative "../plugins_explorer"
 require_relative "../plugins_finder_matcher"
+require_relative "../plugins_git_signs_diff"
 require_relative "../plugins_ruby"
 require_relative "../smoke_editor"
 require_relative "../use_cases_actions"
@@ -213,6 +214,7 @@ when "json" then JsonTest.main
 when "lint" then LintTest.main
 when "plugins_explorer" then PluginsExplorerTest.main
 when "plugins_finder_matcher" then PluginsFinderMatcherTest.main
+when "plugins_git_signs_diff" then PluginsGitSignsDiffTest.main
 when "plugins_ruby" then PluginsRubyTest.main
 when "smoke_editor" then SmokeEditorTest.main
 when "use_cases_actions" then UseCasesActionsTest.main
