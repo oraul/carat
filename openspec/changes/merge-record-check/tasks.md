@@ -12,7 +12,7 @@
 
 ## 3. Workflow and agents
 
-- [x] 3.1 Record the CI lines and `phase.ci` at the pushed head in `.claude/workflows/deliver-change.js`; the merger's sha checked by 1.2 (no test of the script; `make docs-lint`, `make gates`)
+- [x] 3.1 Record the CI lines and `phase.ci` at the pushed head in `.claude/workflows/deliver-change.js`; the merger's sha checked by 1.2; proved by "workflow: CI is recorded at the pushed head, never the merger's reported head" and "workflow: the merger's lines leave the CI stages to the record and closing starts" in `tools/tools_test.sh`
 - [x] 3.2 Copy the merged sha from git output in `.claude/agents/merger.md` and show the run state's merged commit in `.claude/agents/retrospective.md` (docs only; the guard cases in `tools/tools_test.sh` stay green)
 
 ## 4. Docs and checks
