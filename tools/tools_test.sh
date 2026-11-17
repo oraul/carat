@@ -3085,6 +3085,32 @@ expect "gates: passed refuses a dirty tree" 1 "FAIL passed: tracked files differ
 git_q checkout -q -- tools/code.sh
 expect "gates: passed passes a clean tree" 0 "ok   passed" gates passed
 
+# Groom's sprint row after the check, as the sprint-N-records change
+# commits it, keeps the stages and passed gates passing: settled_at's
+# helpers leave the gate's own names (want) alone (merge-record-check).
+fresh groomed
+printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
+{ printf 'header\n'; mrow seed bbb222 small 1 1 -; mrow a1 c1 small 1 1 -; mrow a2 c2 small 1 1 -; mrow a3 c3 small 1 1 -; mrow a4 c4 small 1 1 -; mrow a5 c5 small 1 1 -; } > docs/metrics-backlog.tsv
+mkdir -p build/plan
+echo sprint-1 > build/plan/sprint
+echo code > tools/code.sh
+commit "feat: code and the sprint log"
+state init groomed chore/groomed > /dev/null
+state phase groomed check > /dev/null
+state stage groomed lint true > /dev/null
+state review groomed quality pass "blocking=0" > /dev/null
+state review groomed security pass "high=0" > /dev/null
+state review groomed bench pass "blocking=0" > /dev/null
+state sprint-row "$(git rev-parse --short=12 HEAD)" >> docs/sprints.tsv
+commit "docs: record the sprint row"
+state set groomed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "gates: stages passes after groom's sprint row" 0 "ok   stages: every stage passed at the recorded check" gates stages
+expect "gates: passed passes after groom's sprint row" 0 "ok   passed: check, quality, security, and bench passed at the pushed head" gates passed
+printf 'sprint-2\tb1\n' >> docs/sprints.tsv
+commit "docs: append a second sprint row"
+state set groomed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "gates: stages refuses a second sprint row after the check" 1 "the check passed at [0-9a-f]+, but code changed since" gates stages
+
 # The stages gate counts a stage only at the check the workflow recorded,
 # and the merge runs a copy of main's gates against the branch.
 fresh staged

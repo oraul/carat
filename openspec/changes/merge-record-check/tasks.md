@@ -9,6 +9,7 @@
 ## 2. Gate
 
 - [x] 2.1 Accept only groom's row in `settled_at` (`groom_row`, `tools/gates.sh`); proved by "gates: security passes after groom's sprint row", "gates: security refuses an edit of an earlier sprint row", "gates: security refuses a sprint row not groom's", "gates: security refuses a second sprint row", and "gates: security refuses a row for a sprint the marker does not name" in `tools/tools_test.sh`
+- [x] 2.2 Keep the helpers `settled_at` calls (`groom_row`, `appended_rows`) to names of their own, so the stages gate's `want` survives groom's row; proved by "gates: stages passes after groom's sprint row", "gates: passed passes after groom's sprint row", and "gates: stages refuses a second sprint row after the check" in `tools/tools_test.sh`
 
 ## 3. Workflow and agents
 
