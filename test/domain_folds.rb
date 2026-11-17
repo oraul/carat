@@ -82,6 +82,15 @@ module DomainFoldsTest
     t.assert_equal("+---  3 lines: x····", folds.label(1, "x", 20), "an edit drops the kept text")
     t.assert_equal("+--  6 lines: a b", made([[1, 6]]).label(0, "a\tb", 0), "a tab after the first non-blank becomes a space")
 
+    # A fold made or deleted around a drawn one changes its dashes.
+    folds = made([[2, 4]])
+    t.assert_equal("+--  3 lines: c·····", folds.label(0, "c", 20), "a fold alone has two dashes")
+    folds.create(1, 6)
+    t.assert_equal("+---  3 lines: c····", folds.label(1, "c", 20), "an outer fold made after the inner one was drawn adds a dash")
+    folds.delete_at(1)
+    t.assert_equal([[2, 4, true]], triples(folds), "zd on the outer fold keeps the inner one")
+    t.assert_equal("+--  3 lines: c·····", folds.label(0, "c", 20), "zd on the outer fold drops the inner one's dash")
+
     # Closing, toggling, and deleting.
     folds = made([[1, 6], [2, 4]])
     folds.open_at(2)

@@ -8,7 +8,8 @@ module Carat
     # row is the first closed fold holding it, which the window draws as
     # one row and j and k pass as one line. shift moves the folds with an
     # edit of the buffer, which calls it for every record it tracks.
-    # labels keeps each fold's text for one width until the next change.
+    # labels keeps each fold's text for one width until the next change
+    # of the folds or the buffer.
     # A Struct record built with no arguments.
     class Folds < Struct.new(:starts, :ends, :closed, :labels, :label_widths, keyword_init: true)
       # @rbs @starts: Array[Integer]
@@ -97,6 +98,7 @@ module Carat
         closed.insert(at, true)
         labels.insert(at, "")
         label_widths.insert(at, 0)
+        forget_labels
       end
 
       # The index of the outermost closed fold holding row, -1 for none.
@@ -250,11 +252,7 @@ module Carat
         added = inserted - same
         delete_rows(at, gone) if gone > 0
         insert_rows(at, added) if added > 0
-        i = 0
-        while i < labels.length
-          labels[i] = ""
-          i += 1
-        end
+        forget_labels
       end
 
       # Neovim's default fold text for fold i, whose first line is text,
@@ -336,6 +334,18 @@ module Carat
         closed.delete_at(i)
         labels.delete_at(i)
         label_widths.delete_at(i)
+        forget_labels
+      end
+
+      # Drops every kept fold text: a fold made or deleted changes the
+      # level, and so the dashes, of the folds it holds or sits in.
+      #: () -> void
+      def forget_labels
+        i = 0
+        while i < labels.length
+          labels[i] = ""
+          i += 1
+        end
       end
     end
   end

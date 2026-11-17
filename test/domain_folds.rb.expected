@@ -29,6 +29,10 @@ ok   the fold text is kept for one width
 ok   a narrow width keeps the whole text with no fill
 ok   an edit drops the kept text
 ok   a tab after the first non-blank becomes a space
+ok   a fold alone has two dashes
+ok   an outer fold made after the inner one was drawn adds a dash
+ok   zd on the outer fold keeps the inner one
+ok   zd on the outer fold drops the inner one's dash
 ok   zo twice opens both folds
 ok   zc on a row in a fold succeeds
 ok   zc closes the innermost open fold
@@ -39,4 +43,4 @@ ok   zd on a closed fold succeeds
 ok   zd deletes the closed fold first
 ok   zd again deletes the outer fold
 ok   clear empties the record and a copy keeps its own folds
-domain_folds: 41 passed, 0 failed
+domain_folds: 45 passed, 0 failed
