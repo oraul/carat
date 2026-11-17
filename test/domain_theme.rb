@@ -154,6 +154,18 @@ module DomainThemeTest
     out
   end
 
+  # The lsp groups whose background differs from StatusLine's at some
+  # depth, by name.
+  #: (Carat::Domain::Theme) -> Array[String]
+  def self.lsp_holes(theme)
+    out = []
+    [H::STATUS_LSP_STARTING, H::STATUS_LSP_READY, H::STATUS_LSP_ERROR].each do |id|
+      same = theme.bg(id) == theme.bg(H::STATUS) && theme.bg256(id) == theme.bg256(H::STATUS) && theme.bg16(id) == theme.bg16(H::STATUS)
+      out << H::NAMES[id] unless same
+    end
+    out
+  end
+
   # The groups of a theme with no 24-bit foreground or background.
   #: (Carat::Domain::Theme) -> Array[String]
   def self.uncolored(theme)
@@ -276,16 +288,17 @@ module DomainThemeTest
     dark = D::Themes.find("one_dark", "terminal")
     painted = D::Themes.find("one_dark", "theme")
     # The status bar's groups per mode and state: the pills' text on the
-    # mode's accent, bold, the lsp slot's accent on the editor's background.
+    # mode's accent, bold, the lsp slot's accent on the status bar's own
+    # background.
     t.cases([
       ["normal pill", [H::STATUS_MODE_NORMAL], [0x282c34, 0x61afef, D::Theme::BOLD, 0, 12]],
       ["insert pill", [H::STATUS_MODE_INSERT], [0x282c34, 0x98c379, D::Theme::BOLD, 0, 10]],
       ["visual pill", [H::STATUS_MODE_VISUAL], [0x282c34, 0xc97fe0, D::Theme::BOLD, 0, 13]],
       ["replace pill", [H::STATUS_MODE_REPLACE], [0x282c34, 0xe8757e, D::Theme::BOLD, 0, 9]],
       ["command pill", [H::STATUS_MODE_COMMAND], [0x282c34, 0xe5c07b, D::Theme::BOLD, 0, 11]],
-      ["lsp starting", [H::STATUS_LSP_STARTING], [0xe5c07b, -1, 0, 11, -1]],
-      ["lsp ready", [H::STATUS_LSP_READY], [0x98c379, -1, 0, 10, -1]],
-      ["lsp error", [H::STATUS_LSP_ERROR], [0xe8757e, -1, D::Theme::BOLD, 9, -1]]
+      ["lsp starting", [H::STATUS_LSP_STARTING], [0xe5c07b, 0x3e4452, 0, 3, 7]],
+      ["lsp ready", [H::STATUS_LSP_READY], [0x98c379, 0x3e4452, 0, 2, 7]],
+      ["lsp error", [H::STATUS_LSP_ERROR], [0xf5a3a8, 0x3e4452, D::Theme::BOLD, 1, 7]]
     ]) { |input| id = input[0].to_i; [dark.fg(id), dark.bg(id), dark.attr(id), dark.fg16(id), dark.bg16(id)] }
     light = D::Themes.find("one_light", "terminal")
     t.assert_equal([0xfafafa, 0x2f63d6, 15, 4], [light.fg(H::STATUS_MODE_NORMAL), light.bg(H::STATUS_MODE_NORMAL), light.fg16(H::STATUS_MODE_NORMAL), light.bg16(H::STATUS_MODE_NORMAL)], "a light palette's pill is light text on its dark accent, even with the terminal's background")
@@ -310,10 +323,20 @@ module DomainThemeTest
     # colors written. The pills and the lsp groups are text groups, so the
     # same rows prove two more scenarios:
     # Every palette's pills pass
-    # Every palette's lsp groups pass
+    # Every palette's lsp groups pass on the bar
     D::Themes::NAMES.each do |name|
       t.assert_equal([], low_contrast(D::Themes.find(name, "theme"), false, 0), "#{name} at 24 bits")
       t.assert_equal([], low_contrast(D::Themes.find(name, "theme"), true, 0), "#{name} at 256 colors")
+    end
+
+    # Scenario: The lsp groups share the bar's background. With either
+    # background choice, at 24 bits, 256 colors, and 16 colors, the lsp
+    # slot is drawn on StatusLine's background, so the bar has no hole.
+    D::Themes::NAMES.each do |name|
+      D::Themes::BACKGROUNDS.each do |background|
+        theme = D::Themes.find(name, background)
+        t.assert_equal([], lsp_holes(theme), "The lsp groups share the bar's background: #{name} on the #{background}'s background")
+      end
     end
 
     # Every palette's selected tab stands out: TabLineSel on its accent

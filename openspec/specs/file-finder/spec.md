@@ -61,7 +61,7 @@ The finder SHALL never list nor enter an entry whose name is in `plugin.finder.i
 - **THEN** the second row is highlighted
 
 ### Requirement: A pick opens in the window, a split, a vertical split, or a tab page
-`<CR>` SHALL close the finder and open the highlighted file in the editing window; `<C-x>` and `<C-s>` in a horizontal split of it, `<C-v>` in a vertical split, and `<C-t>` in a new tab page. The mode SHALL be normal afterwards and the floats gone. `<CR>` with no match SHALL close the finder and open nothing.
+`<CR>` SHALL close the finder and open the highlighted file in the editing window; `<C-x>` and `<C-s>` in a horizontal split of it, `<C-v>` in a vertical split, and `<C-t>` in a new tab page. The mode SHALL be normal afterwards and the floats gone. `<CR>` with no match SHALL keep the finder open on the typed text: the prompt with the same text, the float reading `No match`, and nothing opened, so a typo costs only the keys that fix it.
 
 #### Scenario: Enter opens the file
 - **WHEN** the user types `bet` and presses `<CR>`
@@ -81,7 +81,15 @@ The finder SHALL never list nor enter an entry whose name is in `plugin.finder.i
 
 #### Scenario: Enter with no match opens nothing
 - **WHEN** nothing matches and the user presses `<CR>`
-- **THEN** the finder closes and the current buffer is unchanged
+- **THEN** no file is opened and the current buffer is unchanged
+
+#### Scenario: Enter with no match keeps the finder open
+- **WHEN** the user presses `<C-p>`, types `zzqx`, which no file matches, and presses `<CR>`
+- **THEN** the mode is still command-line with the prompt reading `> zzqx`, the float reads `No match`, and the current buffer is unchanged
+
+#### Scenario: The query is kept for a correction
+- **WHEN** after `<C-p>zzqx<CR>` the user presses `<BS>` four times and types `bet`, then `<CR>`
+- **THEN** the current buffer is `lib/beta.rb` and no float shows
 
 ### Requirement: Esc closes the finder
 `<Esc>` in the prompt SHALL close the finder with its floats, return to normal mode, and open nothing.

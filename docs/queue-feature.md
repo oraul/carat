@@ -1,12 +1,11 @@
 # Queue: features
 
-Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feature is also accepted with a docs row, a table-driven test per command, key, and option, and `lh` 26.0, `j` 27.0, `insert` 32.0 held.
+Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feature is also accepted with a docs row, a table-driven test per command, key, and option, and `lh` 26.0, `j` 27.0, `insert` 26.0 held.
 
 ## Sprint 11
 
-1. `ux-fixes-a` (T2 user now-request, feature, estimated medium, S11 by the user): ux-pass findings 3, 5, 10 (`openspec/changes/archive/2026-11-15-ux-pass/design.md:63`, `:65`, `:70`): the lsp segment draws on the terminal's default background, a hole in the `#2e3346` bar (`carat/domain/themes.rb:129` to `:131`, `carat/adapters/status_bar.rb:316`); Enter on a finder showing `No match` closes it and drops the query (`carat/plugins/finder/plugin.rb:140`); palette rows lead with a 30-column dotted name and cut descriptions mid-word with no ellipsis beside an empty key column (`carat/use_cases/discovery/follow_palette.rb:34`, `:163`). Accepted when snapshots show the segment on the bar's background in every theme, `<C-p>zzqx<CR>` leaving the finder open on `zzqx`, a palette row with its readable label first, the dotted name kept second, and a cut marked, allocations held. Backlog: "### The language server's status segment has no status bar background", "### Enter on a finder with no match closes it and drops the query", "### The palette leads with action names and cuts descriptions mid-word", "### The ux-pass finding 5 entry names no line of its cause".
-2. `git-signs-status-b` (T2 user request, part b, feature, estimated medium, S11 by the user): no sign shows a line added, changed, or deleted. Part a runs two captures on the editor thread per buffer_open, buffer_save, window_focus (`plugin.rb:43`, `:60`), up to 4 s (sprint-9 Low (5); sweep note 34: each window switch waits on git); a diff capture adds a third. Accepted when a canned git shows each sign kind on its lines, a focus change with HEAD and the file unchanged runs no git, a timed-out capture stalls no later event, allocations held. Backlog: "### git_signs runs git synchronously on the editor thread".
-3. `markdown-reading-c` (T2 user now-request, feature, estimated small, S11, back from the pool): at 60 columns paragraphs and quotes show ragged (`carat/domain/markdown_text.rb`). Folds: a pipe line right after a table stays a row (`:177`, sprint-10 note 6), the table row-cap overrun (`:182`), `format_docs.rb:33` bool literals. Accepted when a two-line paragraph and quote each flow as one at 60 columns, allocations held. Backlog: "### MarkdownText.parse overruns its row cap with a table".
+1. `git-signs-status-b` (T2 user request, part b, feature, estimated medium, S11 by the user): no sign shows a line added, changed, or deleted. Part a runs two captures on the editor thread per buffer_open, buffer_save, window_focus (`plugin.rb:43`, `:60`), up to 4 s (sprint-9 Low (5); sweep note 34: each window switch waits on git); a diff capture adds a third. Accepted when a canned git shows each sign kind on its lines, a focus change with HEAD and the file unchanged runs no git, a timed-out capture stalls no later event, allocations held. Backlog: "### git_signs runs git synchronously on the editor thread".
+2. `markdown-reading-c` (T2 user now-request, feature, estimated small, S11, back from the pool): at 60 columns paragraphs and quotes show ragged (`carat/domain/markdown_text.rb`). Folds: a pipe line right after a table stays a row (`:177`, sprint-10 note 6), the table row-cap overrun (`:182`), `format_docs.rb:33` bool literals. Accepted when a two-line paragraph and quote each flow as one at 60 columns, allocations held. Backlog: "### MarkdownText.parse overruns its row cap with a table".
 
 ## Pool
 
@@ -59,6 +58,10 @@ The user's guide, security first:
 
 ## Decisions
 
-- Security first resolved: sweep High (9) `git_signs/plugin.rb:23` fixed by f29f956 (#160, review security pass high=0); `git-signs-trust` (T0) removed from Sprint 11, merged.
-- Sprint 11, 3 features, 2 backlog: the T0 slot docs-lint counted is free, so `markdown-reading-c` (T2, estimated small, first in the pool) returns as item 3 behind `ux-fixes-a` and `git-signs-status-b` (T2, S11 by the user).
-- `lsp-container` stays pool 1 (pushed back 2, goal 2 behind the UI now-requests); `ex-global-commands` stays from backlog-pick batch 2, a feature.
+- Security first clear (T0): no open High or Medium at 8+; sweep High (9) `git_signs/plugin.rb:23` fixed by f29f956 (#160); review-pipeline-a security high=0 medium=0 at 7c4b5907ab82.
+- `ux-fixes-a` (T2 user now-request) delivered as Sprint 11 item 1 and removed: 3 fixes plus 1 entry heading, under the about-four split line; no `tools/rules.sh` edit.
+- Estimate medium: last 10 feature rows 775,758 to 1,284,000 total, 51 to 169 min; palette-rows (same palette file) 1,284,000 with 2 rework, the overrun risk.
+- Sprint 11 keeps `git-signs-status-b` and `markdown-reading-c` (T2, S11 by the user); its 3 feature slots counted with `ux-fixes-a`, none drawn; pool order unchanged, no push-back.
+- Header `insert` 26.0: the last feature row (git-signs-trust, #160) records insert=26.0, not 32.0 (sprint-10-records quality note 2).
+- Handed `ProcessPort` row finding (`docs/architecture.md:213`, `capture(argv)` since #160): T6 docs drift, appended by the contributor per the brief; not queued.
+- Pending retro notes: review-pipeline-a 5 to 8 placed by the backlog lane's plan; sprint-10-records note 5 shares note 3's cause, kept by `plan-apply-guard`; note 4 (bench 4,848 of 52,240 output) to `backlog.md`.

@@ -68,7 +68,12 @@ module Carat
       # the palette's background color, kept when the terminal paints its
       # own background.
       ON_STRONG = 37
-      ROLES = 38
+      # The state accents of the language server's slot on the status
+      # bar, picked per palette to read on its PANEL background.
+      PANEL_YELLOW = 38
+      PANEL_GREEN = 39
+      PANEL_RED = 40
+      ROLES = 41
       NONE = -1
 
       BOLD = Theme::BOLD
@@ -126,9 +131,9 @@ module Carat
         Highlight::STATUS_MODE_VISUAL, ON_STRONG, PURPLE, BOLD, BOLD,
         Highlight::STATUS_MODE_REPLACE, ON_STRONG, RED, BOLD, BOLD,
         Highlight::STATUS_MODE_COMMAND, ON_STRONG, YELLOW, BOLD, BOLD,
-        Highlight::STATUS_LSP_STARTING, YELLOW, NONE, 0, 0,
-        Highlight::STATUS_LSP_READY, GREEN, NONE, 0, 0,
-        Highlight::STATUS_LSP_ERROR, RED, NONE, BOLD, BOLD,
+        Highlight::STATUS_LSP_STARTING, PANEL_YELLOW, PANEL, 0, 0,
+        Highlight::STATUS_LSP_READY, PANEL_GREEN, PANEL, 0, 0,
+        Highlight::STATUS_LSP_ERROR, PANEL_RED, PANEL, BOLD, BOLD,
         Highlight::INDENT_GUIDE, FAINT, NONE, 0, 0,
         Highlight::INDENT_GUIDE_SCOPE, DIM, NONE, 0, 0,
         Highlight::FLOAT_TITLE, BLUE, FLOAT, BOLD, BOLD,
@@ -204,6 +209,9 @@ module Carat
         INC_SEARCH, 0xf0a35e, -1, 9,
         ON_ACCENT, 0x1b1d26, -1, 0,
         ON_STRONG, 0x1b1d26, -1, 0,
+        PANEL_YELLOW, 0xe8c46a, -1, 3,
+        PANEL_GREEN, 0x8fd18b, -1, 2,
+        PANEL_RED, 0xf27a8a, -1, 1,
         RED, 0xf27a8a, -1, 9,
         ORANGE, 0xf0a35e, -1, 11,
         YELLOW, 0xe8c46a, -1, 11,
@@ -247,6 +255,9 @@ module Carat
         INC_SEARCH, 0xf2b06e, -1, 9,
         ON_ACCENT, 0x2f3340, -1, 0,
         ON_STRONG, 0xfbfbfd, -1, 15,
+        PANEL_YELLOW, 0x7a5f00, -1, 3,
+        PANEL_GREEN, 0x2b7330, 22, 2,
+        PANEL_RED, 0xbf1f3c, -1, 1,
         RED, 0xbf1f3c, -1, 1,
         ORANGE, 0x985600, -1, 3,
         YELLOW, 0x7a5f00, -1, 3,
@@ -290,6 +301,9 @@ module Carat
         INC_SEARCH, 0xd19a66, -1, 9,
         ON_ACCENT, 0x282c34, -1, 0,
         ON_STRONG, 0x282c34, -1, 0,
+        PANEL_YELLOW, 0xe5c07b, -1, 3,
+        PANEL_GREEN, 0x98c379, 150, 2,
+        PANEL_RED, 0xf5a3a8, -1, 1,
         RED, 0xe8757e, -1, 9,
         ORANGE, 0xd19a66, -1, 11,
         YELLOW, 0xe5c07b, -1, 11,
@@ -333,6 +347,9 @@ module Carat
         INC_SEARCH, 0xeeb36c, -1, 9,
         ON_ACCENT, 0x383a42, -1, 0,
         ON_STRONG, 0xfafafa, -1, 15,
+        PANEL_YELLOW, 0x7a5700, -1, 3,
+        PANEL_GREEN, 0x2f6b2e, 22, 2,
+        PANEL_RED, 0xb8103c, -1, 1,
         RED, 0xca1243, 125, 1,
         ORANGE, 0x986801, -1, 3,
         YELLOW, 0x8a6300, -1, 3,
@@ -376,6 +393,9 @@ module Carat
         INC_SEARCH, 0x9e5a0a, -1, 1,
         ON_ACCENT, 0xffffff, -1, 15,
         ON_STRONG, 0x1e1e1e, -1, 0,
+        PANEL_YELLOW, 0xffe58f, -1, 11,
+        PANEL_GREEN, 0xc0f5bc, -1, 10,
+        PANEL_RED, 0xffdcdc, -1, 9,
         RED, 0xf65c5c, -1, 9,
         ORANGE, 0xce9178, -1, 11,
         YELLOW, 0xcca700, -1, 11,
@@ -420,6 +440,9 @@ module Carat
         INC_SEARCH, 0xf5a970, -1, 9,
         ON_ACCENT, 0x000000, -1, 0,
         ON_STRONG, 0xffffff, -1, 15,
+        PANEL_YELLOW, 0xffe58f, -1, 11,
+        PANEL_GREEN, 0xc0f5bc, -1, 10,
+        PANEL_RED, 0xffdcdc, -1, 9,
         RED, 0xb52a2a, -1, 1,
         ORANGE, 0xa31515, -1, 3,
         YELLOW, 0x8a6400, -1, 3,
