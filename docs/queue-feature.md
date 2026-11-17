@@ -4,8 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 13
 
-1. `palette-narrow` (T2 user now-request regression, feature, estimated medium): below about 14 cells of float a row shows only its key, `label_room` being `width - KEY_WIDTH` (`carat/use_cases/discovery/follow_palette.rb:166`); `styles` never reads `cut` (`:187`, call `:144`); `pad` adds one space per pass (`:296`); `docs/codebase-map.md:169` names DisplayWidth.fit. Fix outline: room for a label at the narrowest width, `cut` read or dropped, one padding step, the map entry corrected. Accepted when a table row at the smallest screen shows a label. Backlog: "### Palette rows below about 14 cells show only the key", "### FollowPalette#styles never reads its cut parameter", "### The palette's pad appends one space per loop pass", "### The follow_palette map entry names DisplayWidth.fit".
-2. `bar-colors` (T2 user now-request, feature, estimated medium): at 16 colors the lsp accents 3 and 2 on PANEL 7 read near 1.5:1 (`carat/domain/themes.rb:212`); the diagnostics counts draw on NONE (`carat/adapters/status_bar.rb:243`), not the bar. Fix outline: accents readable on the bar, counts on its background. Accepted when `test/domain_theme.rb` asserts both. Backlog: "### The lsp accents at 16 colors read poorly on the light gray bar", "### The status bar's diagnostics counts draw on the terminal's background".
+1. `bar-colors` (T2 user now-request, feature, estimated medium): at 16 colors the lsp accents 3 and 2 on PANEL 7 read near 1.5:1 (`carat/domain/themes.rb:212`); the diagnostics counts draw on NONE (`carat/adapters/status_bar.rb:243`), not the bar. Fix outline: accents readable on the bar, counts on its background. Accepted when `test/domain_theme.rb` asserts both. Backlog: "### The lsp accents at 16 colors read poorly on the light gray bar", "### The status bar's diagnostics counts draw on the terminal's background".
 
 ## Pool
 
@@ -30,9 +29,12 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- Security first clear (T0): sprint-12 security Low (5) only, sweep high=0 medium=0; no pending run holds a review.periodic note; nothing at 8, nothing disputed.
-- `lsp-container-b` delivered as written (T2 user request, Sprint 13 item 1, pushed back 2): 2 parts, under the split rule's 3; removed, `palette-narrow` and `bar-colors` follow in order.
-- Estimate medium: last 10 feature rows 757,631 to 1,902,958 total, all medium; part a `lsp-container` 802,117 in 47.0 min; of the last two only markdown-reading-c (1,902,958) went over, so no size up.
-- `lsp-container-c` stays pool 1 (T2, small): the gateway's third part, kept apart by the split rule.
-- sprint-12-records retro notes 4 (bench 15,099 of 127,367 output tokens over 3 docs-only records runs) and 5 (groom hand edits 2 of 3 records runs, 3 of 3 advisories on its output) are T1 pipeline: backlog lane, not this one, so to this plan's `backlog.md`.
-- Sprint-12-records quality-advisory notes 1 to 3 are handled already (quality-* notes); no other pending note.
+- Security first clear (T0): lsp-container-b security pass high=0 medium=0 at b89f709acdc9, sprint-security high=0 medium=0 low=1 at 1a344eabf30c; no pending run holds a review.periodic note.
+- `palette-narrow` delivered as written (T2 user now-request regression, Sprint 13 item 1 at c848525, the user's brief): removed; `bar-colors` is now Sprint 13 item 1, the pool unchanged.
+- No split (T2): 4 headings in one file and one map line hold one behavior check (a label at the smallest screen); `cut`, `pad`, and the map line are tidy-ups, under the split rule's 3 independently testable parts.
+- Estimate medium: last 10 feature rows 757,631 to 1,902,958 total, all medium; UI fix ux-fixes-a 894,511 in 54 min; the last two, lsp-container 802,117 and lsp-container-b 1,004,078, stayed under 1,200,000, so no size up.
+- Overrun noted (T1): lsp-container-b note 10, 229,659 output against the medium 200,000 after one quality fix round (implement 153,294 of 264,142); its total 1,004,078 stayed under budget.
+- Quality first pass 66/130 overall and quality:0 in 4 of the last 10 feature rows plus lsp-container-b: this item's acceptance names its test.
+- Retro notes lsp-container-b 11 to 13 and sprint-security 7 to 9 (T1 pipeline, scout 19.2%, 59 total per output): backlog lane, not this one, so entries in this plan's `backlog.md`.
+- Overrun notes lsp-container-b 14 and sprint-security 10 (sprint-12-records 2,147,268 over small 500,000) dropped: already in its history row and the lsp-container-b plan.
+- Quality-advisory notes lsp-container-b 1 to 9 and sprint-security 1 to 6 are handled already (quality-* notes).
