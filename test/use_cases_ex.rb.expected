@@ -178,4 +178,7 @@ ok   v is vglobal, not vsplit
 ok   vg is vglobal
 ok   d is delete, not display
 ok   di is display
-use_cases_ex: 180 passed, 0 failed
+ok   m is move, not messages
+ok   co is copy
+ok   t is copy, not a tab command
+use_cases_ex: 183 passed, 0 failed

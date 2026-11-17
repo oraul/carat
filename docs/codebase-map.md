@@ -407,7 +407,7 @@ Files:
 
 - `carat/domain/ex_command.rb`: `ExCommand` value (`range`, `name`, `bang`, `args`).
 - `carat/domain/ex_grammar.rb`: `ExGrammar.parse`, `range_end`, `letter?`; the `&` name.
-- `carat/domain/ex_range.rb`: `ExRange` value (`first`, `last`, `given`, `error`); `resolve` (`%`, `.`, `$`, numbers, `'<`, `'>`, `E16`, `E20`, `E493`).
+- `carat/domain/ex_range.rb`: `ExRange` value (`first`, `last`, `given`, `error`); `resolve` (`%`, `.`, `$`, numbers, `'<`, `'>`, `E16`, `E20`, `E493`); `target`, the one address of `:m`, `:co`, and `:t`.
 - `carat/domain/delimited_pattern.rb`: `DelimitedPattern` value; `parse` (the delimiter and pattern of `:s`, `:g`, and `:v`; `E146`), the one reader `SubstituteArgs` and `GlobalArgs` call.
 - `carat/domain/substitute_args.rb`: `SubstituteArgs` value; `parse` (delimiter, pattern, string, flags, count; `E146`, `E488`).
 - `carat/domain/last_substitute.rb`: `LastSubstitute`, what the next substitute reuses; `apply_flags`, `keep_replacement`, `keep_previous`.
@@ -445,8 +445,10 @@ Files:
 - `carat/use_cases/ex/lsp_restart_command_handler.rb`: `LspRestartCommandHandler.register` (`:LspRestart`): stops every language server and starts the current buffer's again through `LanguageServicePort#restart`.
 - `carat/use_cases/ex/messages_command_handler.rb`: `MessagesCommandHandler.register` (`:mes[sages]`): the message history on the message row or as a listing, `clear` empties it, `E474` for another argument.
 - `carat/use_cases/files/list_tree.rb`: `ListTree#call(root, ignore, limit)`, the regular files below a root for the plugins' `list_files`: ignored names skipped, links never entered, a link to a file kept only inside the resolved root.
+- `carat/use_cases/ex/move_command_handler.rb`: `MoveCommandHandler.register` (`:m[ove] {address}`), `ranged?`; moves the range below the target, `E134` into itself, one undo step.
+- `carat/use_cases/ex/copy_command_handler.rb`: `CopyCommandHandler.register` (`:co[py] {address}`, `:t`), `ranged?`; copies the range below the target, one undo step.
 
-Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`, `test/editor_messages.rb` (`:messages`, the notification boxes, their expiry, and `NO_COLOR`), `test/domain_messages.rb` (the history and the notices).
+Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`, `test/editor_messages.rb` (`:messages`, the notification boxes, their expiry, and `NO_COLOR`), `test/domain_messages.rb` (the history and the notices), `test/editor_line_commands.rb` (`:m`, `:co`, `:t`).
 
 Designs: `ex-write-quit-all` (all Decisions), `dependency-injection` (Ex names; ExecuteEx moves to use_cases/ex), `editor-foundation` (Use cases), `plugin-explorer` (The file requests are validated in the host), `use-case-boundaries` (The splits), `buffer-substitute` (all Decisions), `buffer-global` (all Decisions).
 

@@ -4,7 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 14
 
-1. `vim-line-commands-a` (T2 user request, estimated medium, pushed back 2, part a of 2): `:m` and `:t` (`:co`) do not exist (`docs/compatibility.md:384`), so `:g` cannot move or copy lines. Fix outline: two ex commands registered in the order of `docs/compatibility.md`, each with a range and a target address, one undo step each. Accepted when their compatibility rows and a table-driven test show `:2m0`, `:1,3m$`, `:t.`, `:co0`, and `:g/x/m0` as Neovim gives them, `E134` for a move into its own range, `E16` for a bad address, and line 384's sentence updated.
+Drained: the lane's 3 features of Sprint 14 delivered, 0 left; `/sprint` draws Sprint 15 from the pool.
 
 ## Pool
 
@@ -26,11 +26,12 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- Security first clear (T0): no `review.periodic-*` in the pending `lsp-container-c` or `sprint-13-records` run states; sprint-13 security Medium (6) `tools/run_state.sh:639` is below confidence 8.
-- `markdown-reading-d` delivered and removed (T2 user request, Sprint 14 item 1): delivered as written at 49d305d8b4bc, the user's reading-view parts 2 of 4.
-- `markdown-reading-d` estimated medium (T2): same area as markdown-reading a 1,035,751, b 817,671, c 1,902,958 total, median 1,035,751 under medium's 1,200,000.
-- No size up (T2): bar-colors 879,991 and palette-narrow 736,843, the last two feature rows, under medium's 1,200,000; pending lsp-container-c 816,907 too.
-- `markdown-reading-d` not split (T2): 2 testable parts in 1 map area, below the split rule's 3: the one marker scan (its 3 entries, one fix) and the heading and framed-code styles.
-- Sprint 14 keeps 3 features, 2 backlog (T2 sprint rule): `vim-line-commands-a` left in this lane; the backlog lane's `tab-close-b` and `merge-record-check` untouched by this plan.
-- `lsp-container-c` retro notes 4 to 6 (T1 pipeline, backlog lane): merge 30 of 119 calls to `merge-gate-integrity`, 3 of 3 advisories dropped to `review-demotion`, scout and areas 18.9% of output to `scout-value`; entries in this plan's backlog.md.
-- `lsp-container-c` notes 1 to 3 and `sprint-13-records` notes 1 to 5 are handled already (quality-* notes); `sprint-13-records` notes 6 and 7 placed by the last plan.
+- Security first clear (T0): no `review.periodic-*` in the pending `markdown-reading-d` or `tab-close-b` run states; sprint-13 security Medium (6) `tools/run_state.sh:639` is below confidence 8.
+- `vim-line-commands-a` delivered as written and removed (T2 user request, Sprint 14 item 1, pushed back 2): the brief at c451abd5d6d6; the lane's Sprint 14 drained, 0 of 3 features left.
+- `vim-line-commands-a` estimated medium (T2): nearest row `buffer-global` (`:g`, same ex area) 1,231,942 total in 76.6 min, estimated medium; last-10 feature median 848,831 under medium's 1,200,000.
+- No size up (T2): bar-colors 879,991 and lsp-container-c 816,907, the last two feature rows, under 1,200,000; pending markdown-reading-d 848,371 in 55.7 min too.
+- `vim-line-commands-a` not split (T2): 2 testable parts (`:m`, `:t`/`:co`) in 1 map area, below the split rule's 3; already part a of 2.
+- No merge-gate edit (T2): the brief names no `tools/rules.sh` change, 0 pattern edits.
+- `markdown-reading-d` retro notes 4 and 5 (T1 pipeline, backlog lane): gates_failed 2 and package 22 calls to `review-demotion`, checker 35,360 output (13.0%) to `check-skip`; entries in this plan's backlog.md, `docs/queue-backlog.md` untouched by the brief.
+- `markdown-reading-d` notes 1 to 3 are handled already (quality-* notes); `tab-close-b` notes 4 to 7 were placed by the backlog lane's `merge-record-check` plan.
+- Pool order kept (T2 before T3 to T5): 0 items moved; `vim-line-commands-b` and `vim-folds` lead Sprint 15's draw.

@@ -515,7 +515,10 @@ module UseCasesExTest
       ["v is vglobal, not vsplit", "v", "vglobal"],
       ["vg is vglobal", "vg", "vglobal"],
       ["d is delete, not display", "d", "delete"],
-      ["di is display", "di", "display"]
+      ["di is display", "di", "display"],
+      ["m is move, not messages", "m", "move"],
+      ["co is copy", "co", "copy"],
+      ["t is copy, not a tab command", "t", "t"]
     ]) do |typed|
       handler = table.find(typed)
       handler.nil? ? "" : handler.name.full
