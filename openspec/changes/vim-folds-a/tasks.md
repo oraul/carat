@@ -12,6 +12,7 @@
 ## 3. The drawing
 
 - [x] 3.1 Draw a closed fold as one row in `FramePresenter#paint_window`, place the cursor and scroll by screen row (`Window#scroll_to_row`, `ArrangeView`); proved by `test/editor_folds.rb`
+- [x] 3.2 Count a closed fold as one row where the screen row is computed: the syntax range ends at `Window#shown_end`, and the completion, documentation, hover, signature, and definition floats and `Layout#neighbour` use `Window#row_offset`; a fold made or deleted drops every kept fold text; proved by `test/editor_folds.rb` (the highlighted line below a fold, the float below a cursor under a fold, showing another buffer) and `test/domain_folds.rb` (the outer fold made after the inner one)
 
 ## 4. Docs
 

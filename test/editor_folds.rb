@@ -30,6 +30,26 @@ module EditorFoldsTest
     rows
   end
 
+  # A 12 by 40 editor on a Ruby file, highlighted by the ruby plugin.
+  def self.ruby_editor(text)
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.rb", text)
+    h = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with(""), rows: 12, cols: 40, plugins: [Carat::Plugins::Ruby::Plugin.new])
+    h.open("a.rb")
+    h
+  end
+
+  # Whether a frame row has a cell of a syntax group.
+  def self.tokens?(h, row)
+    frame = h.frame
+    col = 0
+    while col < frame.cols
+      return true if Carat::Domain::Highlight.token?(Carat::Domain::Highlight.base(frame.hl_at(row, col)))
+      col += 1
+    end
+    false
+  end
+
   # A fold row: head filled with the fold character to the 36 columns
   # the window's text takes past its 4-column gutter.
   def self.fold_row(head)
@@ -141,6 +161,32 @@ module EditorFoldsTest
     t.assert_equal([[0, 1, true]], folds_of(h), "zE in one window leaves the other's folds")
     h.type("dd")
     t.assert_equal(["c"], h.lines, "dd on the other window's closed fold deletes its lines")
+    h = editor("a\nb\nc\n", "")
+    h.files.put("b.txt", "x\ny\nz\n")
+    h.type("zfj")
+    old = h.state.window.buffer
+    h.type(":e b.txt<CR>")
+    t.assert_equal([[], ["x", "y", "z"], true], [folds_of(h), shown(h, 3), old.fold_lists.empty?], "showing another buffer drops the window's folds, untracked, and draws the new buffer's lines")
+
+    # A window with a closed fold shows more buffer rows than its height:
+    # the rows below the fold are highlighted and a float anchored at the
+    # cursor counts the fold as one row.
+    text = +""
+    i = 1
+    while i <= 20
+      text << "x = #{i}\n"
+      i += 1
+    end
+    h = ruby_editor(text)
+    h.type("zf4j")
+    window = h.state.window
+    last = window.height - 1
+    t.assert_equal([last + 5, "x = #{last + 5}", true], [window.shown_end, shown(h, window.height)[last], tokens?(h, window.row + last)], "a syntax-highlighted line below a closed fold, past top plus the height")
+    h.type("5j")
+    lines = Carat::Domain::Buffer.new(lines: ["one", "two"], path: nil, line_ending: "\n")
+    id = h.assembly.open_definition_float.call(h.state, lines, "t", false)
+    floats = h.state.tab.floats
+    t.assert_equal([9, 5, 1], [h.cursor[0], window.row_offset(9), floats.at(floats.index_of(id)).spec.row], "a float opens below a cursor under a closed fold where the rows below have room")
 
     t.finish
   end

@@ -37,4 +37,7 @@ ok   a count passes the fold once
 ok   a split window has its parent's folds
 ok   zE in one window leaves the other's folds
 ok   dd on the other window's closed fold deletes its lines
-editor_folds: 39 passed, 0 failed
+ok   showing another buffer drops the window's folds, untracked, and draws the new buffer's lines
+ok   a syntax-highlighted line below a closed fold, past top plus the height
+ok   a float opens below a cursor under a closed fold where the rows below have room
+editor_folds: 42 passed, 0 failed

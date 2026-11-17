@@ -63,7 +63,7 @@ module Carat
       #: (Domain::EditorState, Domain::Window, String, Integer) -> void
       def open(state, window, label, width)
         signature = @signature
-        screen_row = window.row + window.cursor.row - window.top
+        screen_row = window.row + window.row_offset(window.cursor.row)
         spec = Domain::FloatSpec.new(anchor: "cursor", row: screen_row >= 3 ? -3 : 1, col: 0, height: 1, width: width, border: true, title: "", z: Z)
         buffer = Domain::Buffer.new(lines: [label], path: nil, line_ending: "\n")
         buffer.owner = Domain::SignatureRequest::OWNER

@@ -66,7 +66,7 @@ module Carat
           end
           cache.prepare(entry.name, name, @serial)
           top = window.top
-          bottom = top + window.height
+          bottom = window.shown_end
           count = buffer.line_count
           bottom = count if bottom > count
           return if top >= bottom

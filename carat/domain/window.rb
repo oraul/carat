@@ -126,6 +126,15 @@ module Carat
         folds.rows_between(top, row)
       end
 
+      # The row after the last buffer row the window shows, a closed fold
+      # counted as one screen row: top plus the height while nothing is
+      # folded or before the first render.
+      #: () -> Integer
+      def shown_end
+        return top + height if height <= 0 || !folds.folded?
+        folds.last_row(folds.down(top, height - 1, buffer.line_count - 1)) + 1
+      end
+
       # The gutter is the sign column, two cells while the buffer has
       # signs, plus max(3, digits of the line count) and one space when
       # numbers are shown. A plugin's scratch buffer shows no numbers, as

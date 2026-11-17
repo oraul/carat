@@ -72,7 +72,7 @@ module Carat
       #: (Domain::EditorState, Integer) -> Integer
       def row_offset(state, height)
         window = state.tab.layout_window
-        screen_row = window.row + window.cursor.row - window.top
+        screen_row = window.row + window.row_offset(window.cursor.row)
         below = state.screen_rows - 2 - screen_row
         above = screen_row
         below < height && above > below ? -height : 1

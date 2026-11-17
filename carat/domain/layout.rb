@@ -244,7 +244,7 @@ module Carat
       #: (Integer, Symbol) -> Integer
       def neighbour(id, direction)
         window = window_at(id)
-        crow = window.row + window.cursor.row - window.top
+        crow = window.row + window.row_offset(window.cursor.row)
         crow = window.row if crow < window.row
         crow = window.row + window.height - 1 if crow > window.row + window.height - 1
         ccol = window.col + window.cursor.col - window.left

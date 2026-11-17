@@ -29,7 +29,7 @@ module Carat
       #: (Domain::EditorState, Domain::Buffer, String, bool) -> Integer
       def call(state, buffer, title, enter)
         window = state.tab.layout_window
-        screen_row = window.row + window.cursor.row - window.top
+        screen_row = window.row + window.row_offset(window.cursor.row)
         wanted = buffer.line_count
         below = state.screen_rows - 4 - screen_row
         above = screen_row - 2
