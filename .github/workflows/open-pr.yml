@@ -41,11 +41,14 @@ jobs:
     environment: AI
     steps:
       # Main's tools only; the branch's tip is fetched below as objects,
-      # never checked out.
+      # never checked out. No token is stored in the checkout: the
+      # repository is public, so the read step fetches without one, and
+      # only the open step holds a token, PR_TOKEN, for gh.
       - name: Check out main
         uses: actions/checkout@v4
         with:
           ref: main
+          persist-credentials: false
 
       # Every value from the push reaches the shell through files and the
       # environment, never written into a script. The script checks the

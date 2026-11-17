@@ -30,7 +30,7 @@ None.
 
 ## Impact
 
-- `tools/run_state.sh` (`add_note`, `late_findings`, header), `tools/open_pr.sh` (`wait`, header), `.github/workflows/open-pr.yml`, `.claude/workflows/deliver-change.js` (`staleRed`, `recordLate` call, merger schema), `.claude/agents/merger.md`, `tools/tools_test.sh`, `docs/codebase-map.md` (area 1 lines of `run_state.sh` and `open_pr.sh`).
+- `tools/run_state.sh` (`add_note`, `late_findings`, header), `tools/open_pr.sh` (`wait`, header), `.github/workflows/open-pr.yml`, `.claude/workflows/deliver-change.js` (`staleRed`, `recordLate` call, merger schema), `.claude/agents/merger.md`, `tools/tools_test.sh`, `docs/codebase-map.md` (area 1 lines of `run_state.sh`, `open_pr.sh`, and `open-pr.yml`).
 - CLAUDE.md: unchanged, its Agents and Commands lines describe the merger, `wait`, and `history` at a level these fixes leave true.
 - README.md: unchanged, no command or user-facing behavior changes.
 - docs/architecture.md: unchanged, section 10 does not describe late findings, the open-pr checkout, or the checks list.

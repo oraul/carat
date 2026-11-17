@@ -241,7 +241,7 @@ const MERGE = {
   properties: {
     ci: { type: 'string', enum: ['green', 'red', 'pending', 'stale'] }, head: HEAD, minutes: { type: 'number' },
     waited: { type: 'number', description: 'minutes waited for CI in all' },
-    step: { type: 'string' }, log_excerpt: { type: 'string' }, checks: { ...LINES, description: 'each check run of the head, oldest first: workflow, name, status, conclusion, the workflow its file under .github/workflows/' },
+    step: { type: 'string' }, log_excerpt: { type: 'string' }, checks: { ...LINES, description: 'each check run of the head, oldest first: workflow, name, status, conclusion, the workflow the path of the workflow run of the head holding the check (actions_list, by check suite), or - on green; one form for every result' },
     body_only: { type: 'boolean', description: 'CI is red only on the scan check, and its log names the pull request title or body, no commit or added line' },
     merged: { type: 'boolean' }, sha: { type: 'string' }, subject: { type: 'string' }, branch_deleted: { type: 'boolean' }, problem: { type: 'string' },
   },
@@ -363,11 +363,16 @@ function noteText(text) {
 // of every workflow file passed, so each failed run was superseded by a
 // green run of the same check of the same file (a scan re-run by a body
 // edit). A check name alone could be a job of a workflow the branch added,
-// so an entry naming no workflow file leaves the red standing.
+// so an entry naming no workflow file leaves the red standing. A name may
+// hold commas (spin (ubuntu, 4)): the workflow is the first field, the
+// status and conclusion the last two, the name all between.
 function staleRed(checks) {
   const last = {}
   for (const c of checks || []) {
-    const [workflow, name, status, conclusion] = String(c).split(',').map((s) => s.trim().toLowerCase())
+    const parts = String(c).split(',').map((s) => s.trim().toLowerCase())
+    if (parts.length < 4) return false
+    const [workflow, status, conclusion] = [parts[0], parts[parts.length - 2], parts[parts.length - 1]]
+    const name = parts.slice(1, -2).join(', ')
     if (!/^[.]github\/workflows\/[a-z0-9_.-]+[.]ya?ml$/.test(workflow || '') || !name) return false
     last[`${workflow} ${name}`] = `${status} ${conclusion}`
   }
@@ -1296,10 +1301,12 @@ if (!stopped && !state.merged) {
 const looking = !stopped && Boolean(state.merged) && !state['phase.retro']
 phase('Close')
 // The findings that arrived after the package step become late-finding
-// notes. A line the close profile refuses (a check or review record a
-// failed flush left) is reported, not recorded: a resume runs that check
-// or review again.
-if (state.pushed) recordLate()
+// notes, of a merged run only: the note command stamps each with the
+// merged commit and refuses an unmerged run, which would stop the record
+// line's && chain. A line the close profile refuses (a check or review
+// record a failed flush left) is reported, not recorded: a resume runs
+// that check or review again.
+if (state.merged) recordLate()
 const refused = pending.filter((l) => !CLOSABLE.test(l))
 if (refused.length) note(`not recorded, refused by the close profile: ${refused.join('; ')}`)
 const closeAt = state.merged || head
