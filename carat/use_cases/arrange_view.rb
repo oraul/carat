@@ -1,4 +1,5 @@
 require_relative "../domain/editor_state"
+require_relative "../domain/mode"
 require_relative "../domain/window"
 require_relative "../domain/options"
 require_relative "../domain/border_style"
@@ -21,7 +22,10 @@ module Carat
     # column of its cursor visible, read from the shared line cache. The
     # floats of the tab page are then placed over the rows above the
     # message row, from the editor's top-left cell or the cursor cell of
-    # the layout's current window, and scroll like windows. It
+    # the layout's current window, and scroll like windows. Outside insert
+    # and replace modes a cursor inside a closed fold first moves to the
+    # fold's first line, where the fold is drawn, as Neovim's
+    # foldAdjustCursor does after every command. It
     # does nothing before the size is known. Run after every key, after a
     # file is opened, and before every render.
     class ArrangeView
@@ -49,8 +53,13 @@ module Carat
         reserve_headers(state.tab)
         reserve_winbars(layout, state.tab.winbar?(options.breadcrumbs))
         id = 0
+        typing = state.mode == Domain::Mode::INSERT || state.mode == Domain::Mode::REPLACE
         while id < layout.node_count
-          scroll(layout.window_at(id), options, tabstop) if layout.node(id).leaf?
+          if layout.node(id).leaf?
+            window = layout.window_at(id)
+            to_fold_start(window, Domain::Mode.visual?(state.mode)) unless typing
+            scroll(window, options, tabstop)
+          end
           id += 1
         end
         floats = state.tab.floats
@@ -119,6 +128,22 @@ module Carat
           scroll(float.window, options, tabstop)
           i += 1
         end
+      end
+
+      # Moves the cursor of window from inside a closed fold to the fold's
+      # first line, its column kept on that line: past the last character
+      # only in the visual modes, where it selects the line break.
+      #: (Domain::Window, bool) -> void
+      def to_fold_start(window, visual)
+        folds = window.folds
+        return unless folds.folded?
+        cursor = window.cursor
+        first = folds.first_row(cursor.row)
+        return if first == cursor.row
+        len = window.buffer.line(first).length
+        max = visual || len == 0 ? len : len - 1
+        cursor.row = first
+        cursor.col = max if cursor.col > max
       end
 
       #: (Domain::Window, Domain::Options, Integer) -> void

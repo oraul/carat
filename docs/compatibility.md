@@ -443,7 +443,7 @@ Differences from Neovim: the view never scrolls past the last line, so the windo
 
 ## Folding
 
-Manual folds, Neovim's `foldmethod=manual`, kept per window: a split copies them and showing another buffer drops them, and they move with the lines edited above or inside them, a fold whose lines are all deleted going with them. A closed fold is drawn as one row, Neovim's default fold text `+--  N lines: text` (a dash more per nesting level, the first line's leading blanks removed and its tabs made spaces) filled with `·`; `j`, `k`, and the scrolling that keeps the cursor in view count it as one line, and a linewise operator whose range starts or ends on one acts on all its lines, so `dd` deletes the fold and `2dd` the fold and the line after it.
+Manual folds, Neovim's `foldmethod=manual`, kept per window: a split copies them and showing another buffer drops them, and they move with the lines edited above or inside them, a fold whose lines are all deleted going with them. A closed fold is drawn as one row, Neovim's default fold text `+--  N lines: text` (a dash more per nesting level, the first line's leading blanks removed and its tabs made spaces) filled with `·`; `j`, `k`, and the scrolling that keeps the cursor in view count it as one line, a cursor any other command (`G`, `gg`, a search, a mark) leaves inside it moves to its first line outside insert mode, and a linewise operator whose range starts or ends on one acts on all its lines, so `dd` deletes the fold and `2dd` the fold and the line after it.
 
 | Keys | Action name | Behavior | Test |
 | --- | --- | --- | --- |
@@ -454,7 +454,7 @@ Manual folds, Neovim's `foldmethod=manual`, kept per window: a split copies them
 | `zd` | `fold.delete` | Delete the fold under the cursor, a closed one first, keeping the folds nested in it; `E490` without one | `editor_folds` |
 | `zE` | `fold.delete_all` | Delete every fold of the window | `editor_folds` |
 
-Differences from Neovim: `zF`, `zD`, `zO`, `zC`, `zA`, `zv`, `zx`, `zX`, `zn`, `zN`, `zi`, a count before `zo` and `zc`, `zo` and the other keys in visual mode, and every other fold method and fold option (`foldlevel`, `foldcolumn`, `foldtext`, `foldopen`, `foldclose`) are not implemented, nor yet `zR`, `zM`, `zj`, `zk`, `[z`, `]z`, `:fold`, `:foldopen`, and `:foldclose`; a fold row has the normal colors, no `Folded` group; search, `G`, and jumps do not open a fold; `H`, `M`, `L`, the scroll keys, and relative numbers count the lines of a closed fold; a charwise operator on a closed fold acts on its range only; folds are not kept for a buffer the window shows again.
+Differences from Neovim: `zF`, `zD`, `zO`, `zC`, `zA`, `zv`, `zx`, `zX`, `zn`, `zN`, `zi`, a count before `zo` and `zc`, `zo` and the other keys in visual mode, and every other fold method and fold option (`foldlevel`, `foldcolumn`, `foldtext`, `foldopen`, `foldclose`) are not implemented, nor yet `zR`, `zM`, `zj`, `zk`, `[z`, `]z`, `:fold`, `:foldopen`, and `:foldclose`; a fold row has the normal colors, no `Folded` group; search, `G`, and jumps do not open a fold but land on its first line; `H`, `M`, `L`, the scroll keys, and relative numbers count the lines of a closed fold; a charwise operator on a closed fold acts on its range only; folds are not kept for a buffer the window shows again.
 
 ## Tab pages
 

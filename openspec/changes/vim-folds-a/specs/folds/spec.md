@@ -43,7 +43,7 @@ Collapses lines of a window into manual folds, as Neovim's foldmethod=manual doe
 - **THEN** the message is "E490: No fold found"
 
 ### Requirement: j and k pass a closed fold as one line
-`j` and `k` SHALL count a closed fold as one line and land on its first line.
+`j` and `k` SHALL count a closed fold as one line and land on its first line, and outside insert and replace modes a cursor any other command leaves inside a closed fold SHALL move to the fold's first line, where the fold is drawn, as Neovim's foldAdjustCursor does.
 
 #### Scenario: j passes a closed fold
 - **WHEN** "zfjj" is typed on the first of the lines "one", "two", "three"
@@ -52,6 +52,10 @@ Collapses lines of a window into manual folds, as Neovim's foldmethod=manual doe
 #### Scenario: k lands on the first line of a closed fold
 - **WHEN** "jzfjjk" is typed on the first of the lines "a", "b", "c", "d"
 - **THEN** the cursor is on row 1
+
+#### Scenario: A count G into a closed fold lands on its first line
+- **WHEN** "jzfjgg3G" is typed on the first of the lines "one", "two", "three", "four"
+- **THEN** the cursor is on row 1, drawn on the fold row
 
 ### Requirement: A linewise operator on a closed fold acts on all its lines
 A linewise operator whose range starts or ends on a closed fold SHALL act on every line of that fold, a count counting the fold as one line. A fold whose lines are all deleted SHALL be gone, and the folds SHALL move with the lines edited above or inside them.

@@ -85,12 +85,18 @@ module EditorFoldsTest
       ["a fold over a text object", "zfip", [[fold_row("+--  4 lines: one"), "", ""], [0, 0]]],
       ["a nested closed fold has a dash more", "zf3jzojzfj", [["one", fold_row("+---  2 lines: two"), "four"], [1, 0]]],
       ["zd on a nested closed fold keeps the outer one", "zf3jzojzfjzd", [["one", "two", "three"], [1, 0]]],
-      ["a fold below the first line", "jzfj", [["one", fold_row("+--  2 lines: two"), "four"], [1, 0]]]
+      ["a fold below the first line", "jzfj", [["one", fold_row("+--  2 lines: two"), "four"], [1, 0]]],
+      ["a count G into a closed fold lands on its first line", "jzfjgg3G", [["one", fold_row("+--  2 lines: two"), "four"], [1, 0]]],
+      ["G into a closed fold at the end lands on its first line", "jjzfjggG", [["one", "two", fold_row("+--  2 lines: three")], [2, 0]]]
     ]) do |keys|
       h = editor("one\ntwo\nthree\nfour\n", "")
       h.type(keys.to_s)
       [shown(h, 3), h.cursor]
     end
+
+    h = editor("one\ntwo\nthree\nfour\n", "")
+    h.type("jzfjgg3G")
+    t.assert_equal(h.state.window.row + 1, h.frame.cursor_row, "a cursor moved into a closed fold is drawn on the fold row")
 
     h = editor("  one\ntwo\nthree\n", "")
     h.type("zfj")
