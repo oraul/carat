@@ -3,6 +3,7 @@ require_relative "../../domain/registers"
 require_relative "../../domain/history"
 require_relative "../../domain/last_search"
 require_relative "../../domain/last_substitute"
+require_relative "../../domain/messages"
 require_relative "../../domain/substitute_args"
 require_relative "../../domain/vim_pattern"
 require_relative "../../domain/search"
@@ -34,9 +35,7 @@ module Carat
       # @rbs @budget: Domain::SearchBudget
 
       NO_SUBSTITUTE = "E33: No previous substitute regular expression"
-      # Vim's 'report': more substitutions than this are reported.
-      REPORT = 2
-      private_constant :NO_SUBSTITUTE, :REPORT
+      private_constant :NO_SUBSTITUTE
 
       #: (last_substitute: Domain::LastSubstitute, last_search: Domain::LastSearch, registers: Domain::Registers, search_history: Domain::History) -> void
       def initialize(last_substitute:, last_search:, registers:, search_history:)
@@ -146,7 +145,7 @@ module Carat
         landed = apply(buffer, rows, texts)
         state.cursor.move_to(landed, buffer.first_nonblank(landed))
         return Outcome.success(printed(buffer, landed, memory.print == 2)) if memory.print > 0
-        return Outcome.none if total <= REPORT
+        return Outcome.none if total <= Domain::Messages::REPORT
         Outcome.success("#{plural(total, "substitution", "substitutions")} on #{plural(rows.length, "line", "lines")}")
       end
 

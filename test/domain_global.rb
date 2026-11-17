@@ -57,6 +57,11 @@ module DomainGlobalTest
     [a.register, a.count, a.error]
   end
 
+  def self.count_only(text)
+    a = D::RegisterCount.parse_count(text.to_s)
+    [a.register, a.count, a.error]
+  end
+
   def self.main
     t = Carat::Testing.new("domain_global")
 
@@ -147,6 +152,17 @@ module DomainGlobalTest
       ["blanks after the count", "4  ", ["", 4, ""]]
     ]) do |text|
       register_count(text)
+    end
+
+    # The count of :j, :>, and :<, which take no register. Rows are
+    # [label, [text], [register, count, error]].
+    t.cases([
+      ["a count alone", ["3"], ["", 3, ""]],
+      ["no count", [""], ["", -1, ""]],
+      ["a letter is trailing text", ["a"], ["", -1, "E488: Trailing characters: a"]],
+      ["a zero count alone", ["0"], ["", -1, "E939: Positive count required"]]
+    ]) do |input|
+      count_only(Carat::Json.element(input, 0))
     end
 
     t.finish

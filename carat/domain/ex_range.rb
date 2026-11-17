@@ -20,6 +20,7 @@ module Carat
       INVALID = Messages::E16
       BACKWARDS = "E493: Backwards range given"
       NO_MARK = "E20: Mark not set"
+      UNREAD = "Not implemented: "
       # A line number is read up to this, which no buffer reaches.
       MAX_NUMBER = 1_000_000_000
 
@@ -34,7 +35,9 @@ module Carat
       end
 
       # The range of text on a buffer of line_count lines with the cursor
-      # on row, selection being the window's last visual selection.
+      # on row, selection being the window's last visual selection. An
+      # address line_of refuses as unread answers "Not implemented: range"
+      # with the whole range.
       #: (String, Integer, Integer, Selection) -> ExRange
       def self.resolve(text, row, line_count, selection)
         return ExRange.new(first: row, last: row, given: false, error: "") if text.empty?
@@ -45,11 +48,12 @@ module Carat
         while start <= size
           comma = text.byteindex(",", Utf8.boundary(text, start))
           stop = comma.nil? ? size : comma
-          number = address(text.byteslice(start, stop - start).to_s.strip, row, line_count, selection)
-          return refused(NO_MARK) if number == -2
-          return refused("Not implemented: range #{text}") if number < 0
-          return refused(INVALID) if number > line_count
-          numbers << number
+          piece = text.byteslice(start, stop - start).to_s.strip
+          # "%" is a range of its own, not an address, as in Neovim.
+          return refused("#{UNREAD}range #{text}") if piece.start_with?("%")
+          line = line_of(piece, row, line_count, selection)
+          return refused(line.error.start_with?(UNREAD) ? "#{UNREAD}range #{text}" : line.error) unless line.ok?
+          numbers << line.first
           start = stop + 1
         end
         low = numbers.length > 1 ? numbers[numbers.length - 2].to_i : numbers[0].to_i
@@ -58,24 +62,57 @@ module Carat
         ExRange.new(first: low > 0 ? low - 1 : 0, last: high > 0 ? high - 1 : 0, given: true, error: "")
       end
 
-      # The target address of :m, :co, and :t, the line the lines go below,
-      # as first and last (0 for above the first line): the address one
-      # piece of a range takes. Empty text, a line past the last, or text
-      # that is not an address is E16, an offset, a pattern, or another
-      # mark answers Not implemented, as resolve answers a range.
+      # The target address of :m, :co, and :t as the row the lines are put
+      # at, in first and last: the row below the line the address names,
+      # so 0 is above the first line, the same base as resolve's rows.
+      # Empty text is E16; the rest is what line_of answers.
       #: (String, Integer, Integer, Selection) -> ExRange
       def self.target(text, row, line_count, selection)
         address_text = text.strip
         return refused(INVALID) if address_text.empty?
-        number = address(address_text, row, line_count, selection)
+        line_of(address_text, row, line_count, selection)
+      end
+
+      # The one reading of a single address, for resolve and target: the
+      # 1-based line it names in first and last (empty text is the
+      # cursor line), or its refusal: E20 for an unset visual mark, E16
+      # past the last line or for text that is not an address, and "Not
+      # implemented: address" for an address Carat does not read: an
+      # offset, a ";", a pattern, another mark, or numbers joined by
+      # blanks, which Neovim adds.
+      #: (String, Integer, Integer, Selection) -> ExRange
+      def self.line_of(text, row, line_count, selection)
+        number = address(text, row, line_count, selection)
         return refused(NO_MARK) if number == -2
-        if number < 0
-          unread = address_text.include?("+") || address_text.include?("-") || address_text.include?(";") ||
-                   address_text.start_with?("/") || address_text.start_with?("?") || address_text.start_with?("'")
-          return refused(unread ? "Not implemented: address #{address_text}" : INVALID)
-        end
+        return refused(unread?(text) ? "#{UNREAD}address #{text}" : INVALID) if number < 0
         return refused(INVALID) if number > line_count
         ExRange.new(first: number, last: number, given: true, error: "")
+      end
+
+      # Whether text, which address could not read, is an address Neovim
+      # reads and Carat does not.
+      #: (String) -> bool
+      def self.unread?(text)
+        return true if text.include?("+") || text.include?("-") || text.include?(";")
+        return true if text.start_with?("/") || text.start_with?("?") || text.start_with?("'")
+        digits = false
+        i = 0
+        while i < text.bytesize
+          byte = text.getbyte(i).to_i
+          return false unless (byte >= 48 && byte <= 57) || byte == 32 || byte == 9
+          digits = true if byte >= 48 && byte <= 57
+          i += 1
+        end
+        digits
+      end
+
+      # The range a count after a line command names, as Neovim's: from
+      # the last row, count rows, stopping at the buffer's last row.
+      #: (Integer, Integer) -> ExRange
+      def counted(count, line_count)
+        stop = last + count - 1
+        stop = line_count - 1 if stop > line_count - 1
+        ExRange.new(first: last, last: stop, given: true, error: "")
       end
 
       # The line number one address names, -2 for a mark that is not set,

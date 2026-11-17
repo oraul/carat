@@ -518,7 +518,11 @@ module UseCasesExTest
       ["di is display", "di", "display"],
       ["m is move, not messages", "m", "move"],
       ["co is copy", "co", "copy"],
-      ["t is copy, not a tab command", "t", "t"]
+      ["t is copy, not a tab command", "t", "t"],
+      ["j is join", "j", "join"],
+      ["joi is join", "joi", "join"],
+      ["> shifts right", ">", ">"],
+      ["< shifts left", "<", "<"]
     ]) do |typed|
       handler = table.find(typed)
       handler.nil? ? "" : handler.name.full

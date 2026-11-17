@@ -30,6 +30,9 @@ module DomainExGrammarTest
       ["a mark at the end", "'", ["", "", false, "'"]],
       ["ampersand is a name", "&&", ["", "&", false, "&"]],
       ["ampersand with a range", "%&g", ["%", "&", false, "g"]],
+      ["a shift is a one-character name", "3>> 2", ["3", ">", false, "> 2"]],
+      ["a left shift with a range", "1,2<", ["1,2", "<", false, ""]],
+      ["a bang after a shift", ">!", ["", ">", true, ""]],
       ["s with a delimiter", "s#a#b#", ["", "s", false, "#a#b#"]],
       ["letters after s are the name", "sxaxbx", ["", "sxaxbx", false, ""]]
     ]) do |text|

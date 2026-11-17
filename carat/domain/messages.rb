@@ -8,7 +8,10 @@ module Carat
       E36 = "E36: Not enough room"
       E37 = "E37: No write since last change (add ! to override)"
       E444 = "E444: Cannot close last window"
+      E477 = "E477: No ! allowed"
       E490 = "E490: No fold found"
+      # Neovim's 'report': a command changing more lines than this says so.
+      REPORT = 2
 
       # The two lines of Neovim's check_changed_any, which refuses to quit
       # over another buffer's unsaved changes: E37 without the hint, then

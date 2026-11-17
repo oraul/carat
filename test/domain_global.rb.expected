@@ -46,4 +46,8 @@ ok   a zero count
 ok   something after the count
 ok   two registers
 ok   blanks after the count
-domain_global: 48 passed, 0 failed
+ok   a count alone
+ok   no count
+ok   a letter is trailing text
+ok   a zero count alone
+domain_global: 52 passed, 0 failed

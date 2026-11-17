@@ -55,13 +55,16 @@ module DomainExRangeTest
       ["another mark", ["'a", 0, 5, -1, -1], [0, 0, true, "Not implemented: range 'a"]],
       ["arithmetic", [".+1", 0, 5, -1, -1], [0, 0, true, "Not implemented: range .+1"]],
       ["a semicolon", ["1;2", 0, 5, -1, -1], [0, 0, true, "Not implemented: range 1;2"]],
-      ["percent with another address", ["%,2", 0, 5, -1, -1], [0, 0, true, "Not implemented: range %,2"]]
+      ["percent with another address", ["%,2", 0, 5, -1, -1], [0, 0, true, "Not implemented: range %,2"]],
+      ["numbers joined by a blank", ["1 2", 0, 5, -1, -1], [0, 0, true, "Not implemented: range 1 2"]],
+      ["text that is no address", ["x", 0, 5, -1, -1], [0, 0, true, "E16: Invalid range"]]
     ]) do |input|
       resolve(input[0], input[1], input[2], input[3], input[4])
     end
 
     # The target of :m, :co, and :t. Rows are [label, [address, cursor
-    # row, lines], [line, error]] on a buffer of five lines.
+    # row, lines], [row, error]] on a buffer of five lines: the row the
+    # lines are put at, which is the 1-based line they go below.
     t.cases([
       ["a target line number", ["3", 0, 5], [3, ""]],
       ["target 0 is above the first line", ["0", 2, 5], [0, ""]],
@@ -75,9 +78,22 @@ module DomainExRangeTest
       ["a target with an offset", [".+1", 0, 5], [0, "Not implemented: address .+1"]],
       ["a target pattern", ["/a/", 0, 5], [0, "Not implemented: address /a/"]],
       ["another mark as the target", ["'a", 0, 5], [0, "Not implemented: address 'a"]],
-      ["an unset visual mark as the target", ["'<", 0, 5], [0, "E20: Mark not set"]]
+      ["an unset visual mark as the target", ["'<", 0, 5], [0, "E20: Mark not set"]],
+      ["numbers joined by a blank as the target", ["1 2", 0, 5], [0, "Not implemented: address 1 2"]],
+      ["a percent target is no address", ["%", 0, 5], [0, "E16: Invalid range"]]
     ]) do |input|
       target(input[0], input[1], input[2])
+    end
+
+    # A count after a line command. Rows are [label, [first, last, count,
+    # lines], [first, last]].
+    t.cases([
+      ["a count from the last row", [1, 2, 3, 9], [2, 4]],
+      ["a count stops at the last row", [0, 0, 9, 3], [0, 2]],
+      ["a count of one is the last row", [0, 3, 1, 9], [3, 3]]
+    ]) do |input|
+      r = D::ExRange.new(first: input[0].to_i, last: input[1].to_i, given: true, error: "").counted(input[2].to_i, input[3].to_i)
+      [r.first, r.last]
     end
 
     t.finish

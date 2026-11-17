@@ -20,6 +20,8 @@ ok   another mark
 ok   arithmetic
 ok   a semicolon
 ok   percent with another address
+ok   numbers joined by a blank
+ok   text that is no address
 ok   a target line number
 ok   target 0 is above the first line
 ok   a target dot is the cursor line
@@ -33,4 +35,9 @@ ok   a target with an offset
 ok   a target pattern
 ok   another mark as the target
 ok   an unset visual mark as the target
-domain_ex_range: 35 passed, 0 failed
+ok   numbers joined by a blank as the target
+ok   a percent target is no address
+ok   a count from the last row
+ok   a count stops at the last row
+ok   a count of one is the last row
+domain_ex_range: 42 passed, 0 failed
