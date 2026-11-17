@@ -125,7 +125,7 @@ Files:
 - `carat/domain/position.rb`: `Position` value; `sure`, `before?`, `to_a`.
 - `carat/domain/range.rb`: `Range` value; `charwise`, `normalized`.
 - `carat/domain/cursor.rb`: `Cursor` record (`row`, `col`, `want_col`); `position`, `move_to`.
-- `carat/domain/messages.rb`: `Messages`, messages several use cases show (`E36`, `E37`, the register refusals, `not_an_editor_command`, `seconds_ago`).
+- `carat/domain/messages.rb`: `Messages`, messages several use cases show (`E36`, `E37`, `E477`, `REPORT` (the report threshold), the register refusals, `not_an_editor_command`, `seconds_ago`).
 - `carat/use_cases/outcome.rb`: `Outcome`; `success`, `failure`, `none` (shared).
 - `carat/use_cases/concerns/reporting.rb`: `Reporting#report(state, outcome)`, the one place an outcome reaches the message row.
 
@@ -419,7 +419,7 @@ Files:
 - `carat/domain/substitution.rb`: `Substitution.line`, one line under the budget, Vim's empty-match rule, `OUTPUT_COST` per character of replacement.
 - `carat/domain/global_args.rb`: `GlobalArgs` value; `parse` (delimiter, pattern, command; `E146`, `E148`).
 - `carat/domain/global_marks.rb`: `GlobalMarks`, a running global's marked lines, moved by `Buffer#splice` through `LineSplice.shift_marks`; `mark`, `take`, `shift`, `clear`.
-- `carat/domain/register_count.rb`: `RegisterCount` value; `parse` (`[x] [count]` of a line command; `E488`, `E939`).
+- `carat/domain/register_count.rb`: `RegisterCount` value; `parse` (`[x] [count]` of a line command; `E488`, `E939`), `parse_count` (the `[count]` of `:j`, `:>`, `:<`).
 - `carat/domain/ex_name.rb`: `ExName` in Vim's `name[suffix]` notation; `parse`, `match?`, `to_s`; the one matcher for core and plugin commands.
 - `carat/use_cases/ex/command_runner.rb`: `CommandRunner`, the interface the command line and the plugin host depend on.
 - `carat/use_cases/ex/execute_ex.rb`: `ExecuteEx#call`.
