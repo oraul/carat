@@ -17,9 +17,15 @@ module Carat
       #: (scroll_window: ScrollWindow, target: Symbol) -> void
       def initialize(scroll_window:, target:)
         super(kind: :action, repeat: false)
-        @breaks_insert = true
         @scroll_window = scroll_window
         @target = target
+      end
+
+      # Whether the action breaks the insert session: true, as a page key
+      # does in Neovim.
+      # @rbs skip
+      def breaks_insert?
+        true
       end
 
       # @rbs state: Domain::EditorState
@@ -31,7 +37,7 @@ module Carat
       #: (ActionTable, scroll_window: ScrollWindow) -> void
       def self.register(table, scroll_window:)
         names = ["scroll.page_down", "scroll.page_up", "scroll.half_page_down", "scroll.half_page_up", "scroll.line_down", "scroll.line_up", "scroll.cursor_top", "scroll.cursor_middle", "scroll.cursor_bottom"]
-        targets = [:page_down, :page_up, :half_down, :half_up, :line_down, :line_up, :cursor_top, :cursor_middle, :cursor_bottom]
+        targets = [:page_down, :page_up, :half_page_down, :half_page_up, :line_down, :line_up, :cursor_top, :cursor_middle, :cursor_bottom]
         descriptions = ["Page down", "Page up", "Half page down", "Half page up", "Scroll line down", "Scroll line up", "Cursor line to top", "Cursor line to middle", "Cursor line to bottom"]
         i = 0
         while i < names.length

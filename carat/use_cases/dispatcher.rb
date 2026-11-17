@@ -65,7 +65,7 @@ module Carat
         before = state.cursor.position
         mode = state.mode
         if mode == Domain::Mode::INSERT
-          return split(state, handler, command) if handler.kind == :motion || handler.breaks_insert
+          return split(state, handler, command) if handler.kind == :motion || handler.breaks_insert?
         elsif buffer.transaction_open?
           buffer.commit_transaction(before)
         end

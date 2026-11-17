@@ -15,9 +15,9 @@ module Carat
     # onto the nearest line the window shows with scrolloff, keeping its
     # wanted column. The clamp and the scrolloff cap are the Window's own
     # (scroll_top_to, max_top, margin), which ArrangeView's scroll_to_row
-    # uses too, so the arrangement after the key keeps the view. <C-f> with the last line shown goes to the
-    # last line. Before the first render, when the window has no height,
-    # nothing scrolls.
+    # uses too, so the arrangement after the key keeps the view. <C-f>
+    # with the last line shown goes to the last line. Before the first
+    # render, when the window has no height, nothing scrolls.
     class ScrollWindow
       #: (Domain::EditorState, ScrollRequest) -> Outcome
       def call(state, request)
@@ -26,8 +26,8 @@ module Carat
         case request.target
         when :page_down then page(state, window, request.steps)
         when :page_up then page(state, window, -request.steps)
-        when :half_down then half(state, window, request.count, 1)
-        when :half_up then half(state, window, request.count, -1)
+        when :half_page_down then half(state, window, request.count, 1)
+        when :half_page_up then half(state, window, request.count, -1)
         when :line_down then line(state, window, request.steps)
         when :line_up then line(state, window, -request.steps)
         else place(state, window, request.target, request.count)

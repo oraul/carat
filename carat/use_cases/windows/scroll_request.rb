@@ -1,8 +1,8 @@
 module Carat
   module UseCases
     # How ScrollWindow scrolls: target :page_down or :page_up by count
-    # pages, :half_down or :half_up by the scroll option (a count sets it
-    # first), :line_down or :line_up by count lines, and :cursor_top,
+    # pages, :half_page_down or :half_page_up by the scroll option (a
+    # count sets it first), :line_down or :line_up by count lines, and :cursor_top,
     # :cursor_middle, or :cursor_bottom to place the cursor line, on line
     # count first when it is not 0. A Data value.
     class ScrollRequest < Data.define(:target, :count)
