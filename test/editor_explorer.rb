@@ -240,8 +240,8 @@ module EditorExplorerTest
     h = session(" e<C-w>l<C-w>cj<CR>")
     t.assert_equal([true, false], [h.state.tab.layout.window_at(h.state.tab.layout.leaves[0]).fixed_width, h.state.window.fixed_width], "the new tree is fixed-width and the file window is not")
 
-    # t follows the top row. Scenarios "t opens a buffer tab" and "Open as
-    # a tab under buffer tabs".
+    # t follows the top row. Scenario "t opens a buffer tab".
+    # Scenario "Open as a tab under buffer tabs".
     h = session(" ejt")
     t.assert_equal([1, true, true, "b.rb", ["a.md", "b.rb"]], [h.tab_count, h.row(0).include?("a.md"), h.row(0).include?("b.rb"), h.buffer.path.to_s, file_paths(h)], "t opens a buffer tab: one tab page, the row shows a.md and b.rb, b.rb current")
     h.type("gT")
@@ -257,8 +257,8 @@ module EditorExplorerTest
     # Buffer switches from the tree act on the file window: rows are
     # [label, keys, [windows, current window, current buffer, tab pages]].
     # Scenarios "gt from the explorer moves the file window's buffer tab",
-    # "gT from the explorer moves the file window's buffer tab", and ":bn
-    # and :bp from the explorer switch the file window".
+    # "gT from the explorer moves the file window's buffer tab", and
+    # ":bn and :bp from the explorer switch the file window".
     t.table([
       ["gt from the explorer moves the file window's buffer tab", ":e b.rb<CR>:b 1<CR> egt", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, "b.rb", 1]],
       ["gT from the explorer moves the file window's buffer tab", ":e b.rb<CR>:b 1<CR> egT", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, "b.rb", 1]],
