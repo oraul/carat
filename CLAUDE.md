@@ -38,7 +38,7 @@ These apply to every commit, pull request, comment, file, and chat reply.
 - Work on the branch you were assigned. Never push to `main` directly.
 - Do not create a pull request unless explicitly asked; running `/deliver` or the `contributor` agent counts.
 - Do not rewrite history on a shared branch (no rebase, amend, or force-push).
-- The checker's stages (`make stages`) pass before every push and CI runs the rest; `make check` runs them all by hand. Push once, plus once per CI fix and one review fix; `tools/run_state.sh push` enforces it.
+- The checker's stages (`make stages`) pass before every push and CI runs the rest; `make check` runs them all by hand. Push once, plus once per CI fix, one review fix, and one main-moved push; `tools/run_state.sh push` enforces it.
 
 ## Branch naming
 
@@ -207,7 +207,7 @@ Agents live in `.claude/agents/` and obey this file. Agents cannot start agents,
 - `scout`: one map area at the current commit into a pack of facts in `tmp/scout/`. `checker`, `quality-reviewer`, `security-reviewer` (`security-review` on the committed diff), `benchmark`, and `merger` never edit; each agent's hook runs `tools/agent_guard.sh`.
 - Backlog: a delivery never reads or greps `docs/backlog.md`: the contributor appends the findings it is handed to `docs/findings/<change>.md` with `>>`, and `plan-apply` the planner's `build/plan/<change>/backlog.md`, which `groom` folds in. Only the planner's sprint mode reads it: duplicates (`backlog-dups`, the model deciding), entries a merged item listed by heading, a security entry leaving only that way or with its fixing commit.
 - Run state: `build/pipeline/<change>.json`, written only by `tools/run_state.sh`, its phases, reviews, and figures only by the workflow; stage logs in `build/stages/<change>/`. A package step commits only its lane's history rows (`history`) and queue (`plan-apply`).
-- Lanes: each delivery runs in its own worktree `tmp/.lane-<change>` (`lane-open`; removed after the merge or when replaced, kept on a stop), sharing the toolchain, compile cache, and run states; `merge-main` takes in a moved main, keeping both sides' appended rows. The main session may start one feature-lane and one backlog-lane delivery at once, never two of one lane, and a `sprint-N-records` change beside no other.
+- Lanes: each delivery runs in its own worktree `tmp/.lane-<change>` (`lane-open`; removed after the merge or when replaced, kept on a stop), sharing the toolchain, compile cache, and run states; `merge-main` takes in a moved main, keeping both sides' appended rows; a merge refused because main moved merges it, reruns the check (the reviews only when `moved` finds the change's files changed), and pushes once with `push --main-moved`. The main session may start one feature-lane and one backlog-lane delivery at once, never two of one lane, and a `sprint-N-records` change beside no other.
 
 ## Stack
 
