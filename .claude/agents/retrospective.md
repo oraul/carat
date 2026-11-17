@@ -25,7 +25,7 @@ Retrospective steps, only when the input asks for them:
 
 Report steps, always:
 
-6. Read the change's proposal (Assumptions and Out of scope) under `openspec/changes/`, and, when it merged, the squash commit with `git show --stat <merged>`. When merged, check it with the gates: `BASE=<merged>~1 sh tools/gates.sh trailer`, `... content`, and `... docs`, the last of which fails when a command, binding, option, make target, or the process changed without the README. Quote any `FAIL` line.
+6. Read the change's proposal (Assumptions and Out of scope) under `openspec/changes/`, and, when it merged, the squash commit with `git show --stat <merged>`, `<merged>` the commit `sh tools/run_state.sh get <change> merged` prints, which the run state accepted only as the pull request's squash commit on main; when it is empty or differs from the commit the input names, report both values. When merged, check it with the gates: `BASE=<merged>~1 sh tools/gates.sh trailer`, `... content`, and `... docs`, the last of which fails when a command, binding, option, make target, or the process changed without the README. Quote any `FAIL` line.
 7. Last, run the record line exactly as given, with nothing added; `recorded` is true when it exited 0, and `record_output` holds its output when it did not.
 8. Return the proposals with their evidence, the review-due line and `due` (none and false without the retrospective steps), `recorded`, and the report in exactly this shape, one short line or list each:
 
