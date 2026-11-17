@@ -2,36 +2,39 @@
 
 Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feature is also accepted with a docs row, a table-driven test per command, key, and option, and `lh` 26.0, `j` 27.0, `insert` 26.0 held.
 
-## Sprint 14
+## Sprint 15
 
-Drained: the lane's 3 features of Sprint 14 delivered, 0 left; `/sprint` draws Sprint 15 from the pool.
+1. `tab-close-c` (T2 user-reported bug, a regression of tab-close-b, estimated medium, part c of `tab-close`): in a lone reading view `:bn`, `:bp`, `:b N`, Ctrl-^, and gt fail with "No file window to show the buffer in", and with a split they switch the other window: the side-window rule takes any scratch buffer for a side window (`carat/use_cases/buffers/switch_buffer.rb:39`, `carat/domain/tab_page.rb:112` to `:117`) while ToggleReading loads its [reading] buffer into the file window (`carat/use_cases/docs/toggle_reading.rb`); a refused switch from a side window rewrites the tab page's previous window (`switch_buffer.rb:45`); 0 tests switch from the reading view. Fix outline: a side window is known by what it is, not by scratch; a refused switch changes nothing. Accepted when editor rows show the 5 commands from a lone and from a split reading view acting on the focused window, and a refused switch leaving the previous window as it was. Backlog: "### Buffer switches fail in a lone reading view (sprint-14 review quality)", "### A refused buffer switch from a side window moves the tab page's previous window".
+2. `ruby-structure-remove` (T2 user request, estimated medium, pushed back 4, moved from the backlog lane): #147's unclosed-opener sign took a 100,000-line Ruby open from 22 to 116 ms and the user asked for its removal; it lives in `carat/plugins/ruby/structure.rb`, `carat/plugins/ruby/plugin.rb:86` and `:111` (a whole-buffer rescan per normal-mode change), the tokenizer's opener state (`carat/plugins/ruby/tokenizer.rb:820`), `test/editor_ruby_structure.rb`, `test/plugins_ruby.rb:145`, `README.md:124`, and `openspec/specs/ruby-syntax/spec.md`. Fix outline: remove the sign and its spec requirement, highlighting unchanged. Accepted when no structure sign is drawn, the open-ruby bench is at or under main's, the spec and README name no sign, highlighting snapshots are unchanged, and each entry below is closed or carried to the findings file. Backlog: "### Ruby structure sign goes stale after a buffer rename", "### Ruby plugin restates the filetype tables", "### Ruby structure editor test covers only insert mode", "### Ruby structure modifier table misses most jump words", "### Ruby tokenizer keeps the loop flag across a semicolon", "### Ruby structure check rescans the whole buffer per normal-mode change", "### README wording makes the structure sign sound conditional".
+3. `vim-folds-a` (T2 user request, estimated medium, pushed back 3, part a of 2): carat has no folds: `docs/compatibility.md` holds 0 fold rows and zf, zo, zc, za, zd, zE do nothing. Fix outline: manual folds per window; a closed fold drawn as one row and passed by j and k as one line; an operator on a closed fold acting on all its lines; part b takes zR, zM, zj, zk, [z, ]z, `:fold`, `:foldopen`, `:foldclose`. Accepted when compatibility rows and a table-driven test show zfj leaving a closed 2-line fold drawn as one row, j passing it, zo, zc, za, zd, zE, and dd on a closed fold deleting its lines as Neovim does, the keys bound in `config/default.caratrc`, and `lh` and `j` held.
 
 ## Pool
 
-1. `vim-line-commands-b`, `vim-folds` (T2 user request, estimated medium each; folds pushed back 3, reason: part a goes first as `:g` needs it): b takes `:j`, `:>`, `:<`, `:normal`, and "## The ex commands a global most often runs besides :s and :d".
-2. `markdown-reading-e` (T2 user request, estimated medium): rules and list gaps in the reading view.
-3. `git-panel` plugin (T2 user request, estimated large, pushed back 2, split at its start): Unstaged, Staged, Recent; after backlog `git-signs-transport`, which puts git's guards, spelled 3 times (`carat/plugins/git_signs/plugin.rb:27`, `:28`, `:42`), in one place.
-4. `ux-pass-2` (T2 user now-request, estimated medium, pushed back 2, reason: no item list recorded beyond its name; drawn once the user names it).
-5. `lint-panel` (T2 user request, estimated large, split at its start): diagnostics; `:grep :make :cnext :copen`.
-6. `git-push-pull`, `git-diff-blame`, `language-any`, `vim-macros-marks`, `vim-case-increment` (T2 user request, estimated medium each).
-7. `spinel-workarounds` (T2 user request, estimated medium, pushed back 6, reason: no user-visible effect, goals 1 and 2 first): `json.rb:72`; `test/lint.rb:255`. Backlog: both "### docs/spinel-notes.md:47:" entries.
-8. `plugin-protocol-a`, `formatting` (T5, T5 roadmap 14; estimated medium each, pushed back 2): protocol a takes "## The plugin API cannot read or set the visual selection", "## Plugins cannot highlight ranges or add virtual text".
-9. `plugin-protocol-b`, `release-build`, `sample-plugin` (T5), `dogfooding`, `ux-fixes-b` (T2 user request) (estimated medium each, S15).
-10. `claude-bridge`, `claude-workflow` (T2 ideas to confirm, estimated large each, not before S15).
-11. `markdown-preview` (T2, estimated medium), `mermaid-flowchart` (estimated large), `mermaid-sequence` (estimated medium) (T2 user now-request, pushed back 4).
-12. `finder-grep`, `definition-tab`, `finder-pickers`, `filetype-rules`, `syntax-definitions`, `syntax-forms`, `syntax-embedded`, `javascript-syntax`, `html-syntax` (T5 user request, estimated medium each, pushed back 6).
-13. `csv-viewer` plugin (T5 user-scheduled, estimated large, pushed back 10).
-14. `bidi-controls` (T3 security Lows, estimated small, pushed back 11); `project-config-guards` (T3, estimated medium, pushed back 23): `config.rb:221`, "### An untrusted project .caratrc may bind keys to destructive actions".
-15. `insert-copy`, `bench-scenarios` (T4, estimated small each): "### make bench without SCENARIOS skips four scenarios".
+1. `vim-line-commands-b` (T2 user request, estimated medium, pushed back 1, reason: a regression and two aged items took Sprint 15; `:normal` and `:p` split to c): `:j`, `:>`, `:<`; with the line-command tidy of sprint-14 (`move_command_handler.rb:81`, `copy_command_handler.rb:67`, REPORT 3 times, E477 5 times, `ex_range.rb:67`, map `docs/codebase-map.md:402`).
+2. `tab-close-d` (T2 user-reported bug, estimated small): the explorer's t with no file window opens a tab page holding only the tree (`window_requests.rb:211`); the finder's tab pick opens a tab page under `option.gt buffers` (`carat/plugins/finder/plugin.rb:327`); explorer comment `:253`.
+3. `markdown-reading-e` (T2 user request, estimated medium, pushed back 1): rules and list gaps in the reading view; parse scans markers twice per line; `format_docs.rb:36` bare framed flag.
+4. `vim-folds-b`, `vim-line-commands-c` (T2 user request, estimated medium each): c takes `:normal`, `:p`, "## The ex commands a global most often runs besides :s and :d".
+5. `git-panel` plugin (T2 user request, estimated large, pushed back 2, split at its start): Unstaged, Staged, Recent; after backlog `git-signs-transport`.
+6. `ux-pass-2` (T2 user now-request, estimated medium, pushed back 2, reason: no item list beyond its name; drawn once the user names it).
+7. `lint-panel` (T2 user request, estimated large, split at its start): diagnostics; `:grep :make :cnext :copen`.
+8. `git-push-pull`, `git-diff-blame`, `language-any`, `vim-macros-marks`, `vim-case-increment` (T2 user request, estimated medium each).
+9. `spinel-workarounds` (T2 user request, estimated medium, pushed back 6, reason: no user-visible effect): `json.rb:72`, `test/lint.rb:255`, the two spinel-notes entries.
+10. `plugin-protocol-a`, `formatting` (T5 roadmap 14, estimated medium each, pushed back 2): selection and highlight requests.
+11. `plugin-protocol-b`, `release-build`, `sample-plugin` (T5), `dogfooding`, `ux-fixes-b` (T2 user request) (estimated medium each).
+12. `claude-bridge`, `claude-workflow` (T2 ideas to confirm, estimated large each).
+13. `markdown-preview` (T2, estimated medium), `mermaid-flowchart` (estimated large), `mermaid-sequence` (estimated medium) (T2 user now-request, pushed back 4, reason: after the UI track).
+14. `finder-grep`, `definition-tab`, `finder-pickers`, `filetype-rules`, `syntax-definitions`, `syntax-forms`, `syntax-embedded`, `javascript-syntax`, `html-syntax` (T5 user request, estimated medium each, pushed back 6).
+15. `csv-viewer` plugin (T5 user-scheduled, estimated large, pushed back 10, reason: after the UI track).
+16. `bidi-controls` (T3 security Lows, estimated small, pushed back 11); `project-config-guards` (T3, estimated medium, pushed back 23): `config.rb:221`, untrusted keymap lines; sweep `rc_config_gateway.rb:70` Low (3), `config.rb:204` trusted_roots.
+17. `insert-copy`, `bench-scenarios` (T4, estimated small each): bench skips 4 scenarios (`bench/run.sh:69`).
 
 ## Decisions
 
-- Security first clear (T0): no `review.periodic-*` in the pending `markdown-reading-d` or `tab-close-b` run states; sprint-13 security Medium (6) `tools/run_state.sh:639` is below confidence 8.
-- `vim-line-commands-a` delivered as written and removed (T2 user request, Sprint 14 item 1, pushed back 2): the brief at c451abd5d6d6; the lane's Sprint 14 drained, 0 of 3 features left.
-- `vim-line-commands-a` estimated medium (T2): nearest row `buffer-global` (`:g`, same ex area) 1,231,942 total in 76.6 min, estimated medium; last-10 feature median 848,831 under medium's 1,200,000.
-- No size up (T2): bar-colors 879,991 and lsp-container-c 816,907, the last two feature rows, under 1,200,000; pending markdown-reading-d 848,371 in 55.7 min too.
-- `vim-line-commands-a` not split (T2): 2 testable parts (`:m`, `:t`/`:co`) in 1 map area, below the split rule's 3; already part a of 2.
-- No merge-gate edit (T2): the brief names no `tools/rules.sh` change, 0 pattern edits.
-- `markdown-reading-d` retro notes 4 and 5 (T1 pipeline, backlog lane): gates_failed 2 and package 22 calls to `review-demotion`, checker 35,360 output (13.0%) to `check-skip`; entries in this plan's backlog.md, `docs/queue-backlog.md` untouched by the brief.
-- `markdown-reading-d` notes 1 to 3 are handled already (quality-* notes); `tab-close-b` notes 4 to 7 were placed by the backlog lane's `merge-record-check` plan.
-- Pool order kept (T2 before T3 to T5): 0 items moved; `vim-line-commands-b` and `vim-folds` lead Sprint 15's draw.
+- Security first clear (T0): sprint-14 review security 1 Low (3) `tools/gates.sh:131`; sweep high 0, medium 0, low 5 (partial, shell-tools not reviewed); 0 disputed.
+- 3 features, 2 backlog (T2): `tab-close-c`, `ruby-structure-remove`, `vim-folds-a` here; backlog-pick batches 1 and 2 in the backlog lane.
+- `tab-close-c` first (T2 user-reported bug): sprint-14 quality `switch_buffer.rb:39`, a regression of #181 failing 5 commands in a reading view; 4 testable parts split 2 and 2 with `tab-close-d` (rule 3).
+- `ruby-structure-remove` moved here (T2 user request, pushed back 4): the backlog slots are backlog-pick's and a fifth push-back breaks aging; #147 open 22 to 116 ms.
+- `vim-folds-a` drawn (T2, pushed back 3): its reason, line commands a first, ended at #184; split a and b.
+- `vim-line-commands-b`, `markdown-reading-e` pushed back 1 (T2): 3 slots, a regression and 2 aged items.
+- Sizes medium, no size up (T2): last two feature rows 848,371 and 890,042 total under 1,200,000; `tab-close-c` from tab-close 1,038,200 and tab-close-b 1,050,899.
+- Sweep placed (T3, T6): 2 Lows to `project-config-guards`, the ex tidy to `vim-line-commands-b`, the finder pick to `tab-close-d`.
