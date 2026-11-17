@@ -28,6 +28,19 @@ module DriversProcessRunnerTest
     describe_one(message)
   end
 
+  # The handle and kind of the next message, or "none".
+  def self.ended(queue)
+    message = next_message(queue)
+    return "none" if message.nil?
+    handle_and_kind(message)
+  end
+
+  # A message's handle and kind; typed, since the queue answers untyped.
+  #: (Carat::Domain::ServiceMessage) -> String
+  def self.handle_and_kind(message)
+    "#{message.handle} #{message.kind}"
+  end
+
   # A message's kind and text; typed, since the queue answers untyped.
   #: (Carat::Domain::ServiceMessage) -> String
   def self.describe_one(message)
@@ -49,6 +62,17 @@ module DriversProcessRunnerTest
     runner.stop(handle)
     t.assert_equal("exit ", describe(queue), "a stopped child's output ends")
     t.assert_equal(false, runner.write(handle, "x"), "a stopped child takes no input")
+
+    # Scenario "Stopping a server ends only that server": a child that
+    # ignores its input ends only when stopped, and its sibling runs on.
+    first = runner.spawn(["sleep", "30"])
+    second = runner.spawn(["sleep", "30"])
+    runner.stop(first)
+    t.assert_equal("#{first} exit", ended(queue), "stopping a server ends only that server: the stopped child ends")
+    sleep 0.3
+    t.assert_equal(true, queue.pop.nil?, "and its sibling keeps running")
+    runner.stop(second)
+    t.assert_equal("#{second} exit", ended(queue), "until it is stopped in turn")
 
     t.assert_equal(0, runner.spawn(["carat-no-such-command"]), "a missing command does not start")
     t.assert_equal(0, runner.spawn([]), "no words start nothing")
