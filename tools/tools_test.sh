@@ -2001,7 +2001,7 @@ expect "guard: read refuses git fsck" 2 "git fsck is not a command of this profi
 # The merger's first green: the green and red lines as the workflow builds
 # them (mergeLines), and its two closing calls, each one call the guard
 # admits.
-expect "guard: merger runs the green line" 0 "^$" guard merger 'cd tmp/.lane-c && git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null hash-object --stdin | grep -q -x -E '\'''"$inv_ids"''\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null fsck --no-dangling --no-progress origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger runs the green line" 0 "^$" guard merger 'cd tmp/.lane-c && git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null hash-object --stdin | grep -q -x -E '\'''"$inv_ids"''\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null for-each-ref refs/replace | wc -l | grep -q -x -E '\'' *0'\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null fsck --no-dangling --no-progress origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: merger refuses another global configuration before git" 2 "a GIT_CONFIG_GLOBAL other than /dev/null" guard merger 'GIT_CONFIG_GLOBAL=tmp/g git fetch -q --prune origin'
 expect "guard: merger refuses a pinned configuration before another command" 2 "an assignment before ls" guard merger 'GIT_CONFIG_NOSYSTEM=1 ls'
 expect "guard: merger refuses another assignment before git" 2 "an assignment of BASE before git" guard merger 'BASE=main git fetch -q --prune origin'
@@ -3440,6 +3440,25 @@ cp ".git/objects/$(echo "$fake" | cut -c1-2)/$(echo "$fake" | cut -c3-)" ".git/o
 expect "workflow: the green line runs main's merge gates over a clean store" 0 '^main gates$' sh -c 'cd "$1" && sh -c "$2"' _ "$work/objplant-clean" "$green_tail"
 expect "workflow: a planted loose object stops the green line before the merge gates" 3 'mismatch' sh -c 'cd "$1" && sh -c "$2"' _ "$work/objplant-lane" "$green_tail"
 expect "workflow: the stopped line's worktree add wrote the planted text" 0 '^echo planted$' cat "$work/objplant-lane/tmp/.merge-gates/tools/gates.sh"
+# A refs/replace entry pointing the blob of main's tools/gates.sh at a
+# valid planted blob, which fsck ignores (replace-lane): the green line
+# stops before the worktree add; without its refs/replace check the
+# pinned --no-replace-objects still runs main's gates, and with neither
+# the planted script would run as main's merge gates.
+cd "$work" || exit 1
+rm -rf replace-lane
+git_q clone -q "$work/objplant-origin.git" "$work/replace-lane" 2>/dev/null
+cd "$work/replace-lane" || exit 1
+fake=$(printf 'echo planted\n' | git hash-object -w --stdin)
+git_q update-ref "refs/replace/$real" "$fake"
+no_check=$(printf %s "$green_tail" | sed 's/ && [^&]*for-each-ref refs\/replace[^&]*//')
+neither=$(printf %s "$no_check" | sed 's/ --no-replace-objects//g')
+expect "workflow: a refs/replace entry stops the green line before the worktree add" 1 '^$' sh -c 'cd "$1" && sh -c "$2"' _ "$work/replace-lane" "$green_tail"
+expect "workflow: the line stopped by a refs/replace entry added no merge-gates worktree" 1 '' test -e "$work/replace-lane/tmp/.merge-gates"
+expect "workflow: the pinned git ignores a refs/replace entry and runs main's merge gates" 0 '^main gates$' sh -c 'cd "$1" && sh -c "$2"' _ "$work/replace-lane" "$no_check"
+rm -rf "$work/replace-lane/tmp/.merge-gates"
+git -C "$work/replace-lane" worktree prune
+expect "workflow: an unpinned git would run the replaced gates past fsck" 0 '^echo planted$' sh -c 'cd "$1" && sh -c "$2" >/dev/null 2>&1; cat tmp/.merge-gates/tools/gates.sh' _ "$work/replace-lane" "$neither"
 cd "$back" || exit 1
 expect "workflow: every agent start runs its commands in the change's worktree" 0 '^true$' \
   lane_js "intro().includes('cd tmp/.lane-a && ')"
@@ -3695,7 +3714,7 @@ expect "claude: the Agents section names the lanes rule" 0 "^2$" \
   sh -c 'sed -n "/^## Agents/,/^## Stack/p" "$1" | grep -o -e "^- Lanes: each delivery runs in its own worktree .tmp/[.]lane-<change>." -e "may start one feature-lane and one backlog-lane delivery at once, never two of one lane" | wc -l | tr -d " "' _ "$here/../CLAUDE.md"
 expect "claude: the Agents section names the self-check, the review fix, the gate-rules rule, and the merged-name refusal" 0 "^4$" \
   sh -c 'sed -n "/^## Agents/,/^## Stack/p" "$1" | grep -o -e "It self-checks tests, docs, and the brief" -e "may fix a new blocking review once (.push --review-fix.)" -e "an edit of the merge gate.s rules (.tools/rules.sh.) goes first" -e ".init. refuses a merged name" | wc -l | tr -d " "' _ "$here/../CLAUDE.md"
-expect "workflow: the green line fetches and adds the copy with no global configuration or hook" 0 "^2$" sh -c 'grep -c -F -e "const PINNED_GIT = '\''GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null'\''" -e "&& \${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && \${PINNED_GIT} worktree add -q --detach" "$1"' _ "$wf"
+expect "workflow: the green line fetches and adds the copy with no global configuration or hook" 0 "^2$" sh -c 'grep -c -F -e "const PINNED_GIT = '\''GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null'\''" -e "&& \${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && \${PINNED_GIT} for-each-ref refs/replace | wc -l | grep -q -x -E" "$1"' _ "$wf"
 # A local bare origin planted after the push, by branch code the checks
 # ran: the green line's origin check, the script's, fails before the
 # fetch, whose main would bring its own gates and guard, and main's guard

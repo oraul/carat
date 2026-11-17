@@ -8,6 +8,7 @@ Two trust gaps on the merge side of the delivery pipeline (T1 pipeline defect, s
 
 - The green line of `.claude/workflows/deliver-change.js` (`mergeLines`) runs `git fsck --no-dangling --no-progress origin/main`, with no global or system configuration and no hook, after the worktree add and before main's merge gates: fsck hashes every object of the store, loose, packed, and alternate, and checks the commit graph, so a planted object fails the line before any gate script runs.
 - `tools/agent_guard.sh` admits that one fsck form, to the merger only.
+- Every git of the green line runs with `--no-replace-objects` (PINNED_GIT), and the line stops before the worktree add when any `refs/replace` entry stands, since fsck ignores replace refs; `tools/agent_guard.sh` admits `--no-replace-objects` as a git global option.
 - Every hook line under `.claude/agents/` pins origin by the blob id of its https form alone; `ORIGIN_IDS` holds that id with and without `.git`; an ssh or scp origin is refused by every hook and by the green line's origin check.
 - `tools/tools_test.sh`: a planted loose object under the id of main's `tools/gates.sh` blob stops the green line's tail before the gates (and the plain worktree add is shown to have written the planted text); the ssh and scp forms are refused by the hook and by the origin check; the pinned-digest and green-line cases follow the new forms.
 - `docs/codebase-map.md` and README.md describe the single pinned form and the fsck before the merge gates; the guard's header says the same.

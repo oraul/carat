@@ -599,6 +599,11 @@ async function flush() {
 // keeps and the add writes into the copy, so a planted object fails the
 // line before main's gates run. Given a head, fsck reads no index or
 // reflog, so another lane's work in progress does not fail it.
+// fsck ignores replace refs, so a refs/replace entry pointing main's
+// gates.sh blob at a valid planted one would pass it while the add
+// checked out the planted text: every pinned git runs with
+// --no-replace-objects, and the line stops before the add when any
+// refs/replace entry stands.
 // The line runs in the delivery's worktree, whose HEAD is the branch, so
 // its merge gates are a worktree under the lane's own tmp/ and two
 // deliveries never share one (mergeGatesDir); when the cd fails the rest
@@ -616,7 +621,7 @@ function laneDir(change) {
 function mergeGatesDir(change) {
   return `${laneDir(change)}/${MERGE_GATES}`
 }
-const PINNED_GIT = 'GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null'
+const PINNED_GIT = 'GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null'
 // The git blob ids (printf %s FORM | git hash-object --stdin) of the
 // repository's address in its https form, the one the hook lines under
 // .claude/agents/ pin, then the same with .git; recomputed when the
@@ -642,7 +647,7 @@ function mergeLines(pushed) {
   const first = (line) => [metricLine(), line].filter(Boolean).join(' && ')
   const ci = (result) => `sh tools/run_state.sh set ${state.change} ci "${result} ${pushed}"`
   return {
-    green: `cd ${laneDir(state.change)} && git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck()} && ${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && ${PINNED_GIT} fsck --no-dangling --no-progress origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
+    green: `cd ${laneDir(state.change)} && git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck()} && ${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && ${PINNED_GIT} for-each-ref refs/replace | wc -l | grep -q -x -E ' *0' && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && ${PINNED_GIT} fsck --no-dangling --no-progress origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
     red: first(ci('red')),
   }
 }

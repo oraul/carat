@@ -41,8 +41,9 @@
 # -fprintf -fls; sed -n with a line-number print script; cd to the project
 # or a worktree tmp/.NAME; git, after GIT_CONFIG_GLOBAL=/dev/null and
 # GIT_CONFIG_NOSYSTEM=1 at most, with the global options -C (the project
-# or a worktree tmp/.NAME), -c core.hooksPath=/dev/null, and --no-pager,
-# and the verbs status log show diff rev-parse merge-base ls-files ls-tree cat-file blame describe shortlog
+# or a worktree tmp/.NAME), -c core.hooksPath=/dev/null,
+# --no-replace-objects (which only stops git following refs/replace), and
+# --no-pager, and the verbs status log show diff rev-parse merge-base ls-files ls-tree cat-file blame describe shortlog
 # rev-list grep show-ref for-each-ref name-rev (none with a prefix of
 # --output, --ext-diff, --textconv, --filters, --upload-pack,
 # --receive-pack, --exec, or --open-files-in-pager, nor grep with a short
@@ -444,7 +445,7 @@ git_form() {
           *) refuse "a git configuration override: -c $2" ;;
         esac
         shift 2 ;;
-      --no-pager|-P) shift ;;
+      --no-pager|-P|--no-replace-objects) shift ;;
       -*) refuse "the git option $1" ;;
       *) break ;;
     esac
