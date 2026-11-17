@@ -774,7 +774,7 @@ expect "run_state: a second push is refused" 1 "refused: 1 push" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a CI fix push needs a red CI run" 1 "needs a red CI run" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --ci-fix
-state set pushing ci "red abc" > /dev/null
+state set pushing ci "red $(state get pushing pushed)" > /dev/null
 expect "run_state: a CI fix allows one more push" 0 "ok   pushes|ok   stages" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --ci-fix
 # A resume past the push fixing a blocking review pushes once more, once a
@@ -1095,7 +1095,7 @@ expect "run_state: history appends no row main already has" 0 "^history: based a
 # A merged value naming no commit on main is a run that never merged: no
 # row, no pending name (sprint-tidy).
 state init stray chore/stray > /dev/null
-state set stray merged e375e4cfa5cf > /dev/null
+{ sed '$d' build/pipeline/stray.json | sed '$s/$/,/'; printf '  "merged": "e375e4cfa5cf"\n}\n'; } > forged.json && mv forged.json build/pipeline/stray.json
 expect "run_state: pending skips a run whose merged commit is not on main" 0 "^$" sh -c "sh '$here/run_state.sh' pending | grep -x stray; true"
 expect "run_state: history keeps a never-merged run out" 0 "^history: stray records merged e375e4cfa5cf, no commit on main; not appended\$" env BASE=HEAD sh "$here/run_state.sh" history
 expect "run_state: history appends no row of a never-merged run" 0 "^0\$" sh -c "grep -c '^stray' docs/metrics-backlog.tsv; true"
@@ -1109,7 +1109,7 @@ landed_full=$(git_q commit-tree -p main -m "chore: land another change" -m "$TRA
 git_q update-ref refs/heads/main "$landed_full"
 landed_at=$(git rev-parse --short=12 "$landed_full")
 state init landed chore/landed > /dev/null
-state set landed merged "$landed_at" > /dev/null
+env BASE=main sh "$here/run_state.sh" set landed merged "$landed_at" > /dev/null
 expect "run_state: history appends a change merged on BASE after the branch point" 0 "appended landed" env BASE=main sh "$here/run_state.sh" history
 expect "run_state: a change merged on BASE after the branch point is the newest history row" 0 "^landed$" \
   sh -c "env BASE=main sh '$here/run_state.sh' status | awk -F'\t' 'f { print \$1; exit } /^change\tdate/ { f = 1 }'"
@@ -1127,7 +1127,8 @@ state stage derived a true > /dev/null
 state stage derived b true > /dev/null
 state review derived quality blocked "blocking=1" > /dev/null
 state review derived security pass "high=0" > /dev/null
-state set derived ci "green abc" > /dev/null
+state set derived pushed "$(git rev-parse HEAD)" > /dev/null
+state set derived ci "green $(git rev-parse --short=12 HEAD)" > /dev/null
 state metric derived first_pass=ci:0 first.bench=0 phase.implement=1000/30 phase.check=200/10 rework=1 > /dev/null
 expect "run_state: usage adds a start's totals" 0 "^no estimate: .*actual 5000 total tokens in 3[.]5 minutes, 1200 output tokens$" state usage derived 5000 3.5
 expect "run_state: usage adds the starts' totals" 0 "actual 7500 total tokens in 4[.]5 minutes" state usage derived 2500 1
@@ -1399,6 +1400,44 @@ echo more >> README.md
 commit "docs: more"
 expect "run_state: bench refuses a measurement of another commit" 1 "passed at another commit" bench
 
+# A recorded CI head is the pushed head, and a merged commit the pull
+# request's squash commit on main, resolved with git; an agent's swapped or
+# mistyped value is refused naming both (merge-record-check).
+fresh merges
+state init merges chore/merges > /dev/null
+state init nopush chore/nopush > /dev/null
+echo work >> README.md
+commit "feat: work"
+pushed_full=$(git rev-parse HEAD)
+head12=$(printf '%s' "$pushed_full" | cut -c1-12)
+expect "run_state: set refuses a CI record before a push" 1 "no pushed head is recorded for nopush" state set nopush ci "green $head12"
+state set merges pushed "$pushed_full" > /dev/null
+state set merges ci "green $pushed_full" > /dev/null
+expect "run_state: set stores the pushed head as the CI head" 0 "^green $head12\$" state get merges ci
+git_q checkout -q main
+echo squash >> README.md
+commit "fix: the work (#7)"
+squash=$(git rev-parse --short=12 HEAD)
+echo later >> README.md
+commit "fix: later (#17)"
+later=$(git rev-parse --short=12 HEAD)
+typo=$(printf '%s' "$squash" | cut -c1-11)$(printf '%s' "$squash" | cut -c12 | tr '0-9a-f' '1-9a-f0')
+expect "run_state: set refuses a CI head not the pushed head" 1 "refused: the CI head $squash is not the pushed head $pushed_full" state set merges ci "green $squash"
+expect "run_state: phase refuses a CI head not the pushed head" 1 "refused: the CI head $squash is not the pushed head $pushed_full" state phase merges ci "$squash"
+state phase merges ci "$head12" > /dev/null
+expect "run_state: phase records the CI phase at the pushed head" 0 "^$head12\$" state get merges phase.ci
+expect "run_state: set refuses a merged commit not on main" 1 "refused: $head12 is no commit on main" env BASE=main sh "$here/run_state.sh" set merges merged "$head12"
+state set merges pr 7 > /dev/null
+expect "run_state: set refuses a merged commit that is not the pull request's squash commit" 1 "refused: $later is not the squash commit of pull request #7 on main, $squash" env BASE=main sh "$here/run_state.sh" set merges merged "$later"
+expect "run_state: set refuses the pushed head as the merged commit" 1 "refused: $head12 is not the squash commit of pull request #7 on main, $squash" env BASE=main sh "$here/run_state.sh" set merges merged "$head12"
+expect "run_state: set refuses a mistyped merged commit" 1 "refused: $typo is not the squash commit of pull request #7 on main, $squash" env BASE=main sh "$here/run_state.sh" set merges merged "$typo"
+expect "run_state: phase refuses a merge that is not the pull request's squash commit" 1 "refused: $later is not the squash commit of pull request #7 on main, $squash" env BASE=main sh "$here/run_state.sh" phase merges merge "$later"
+expect "run_state: a refused merged record writes nothing" 0 "^\$" state get merges merged
+env BASE=main sh "$here/run_state.sh" set merges merged "$squash" > /dev/null
+expect "run_state: set records the pull request's squash commit as merged" 0 "^$squash\$" state get merges merged
+env BASE=main sh "$here/run_state.sh" phase merges merge "$squash" > /dev/null
+expect "run_state: phase records the merge at the pull request's squash commit" 0 "^$squash\$" state get merges phase.merge
+
 # Sprints: review-due counts the history rows after the last sprint's last
 # change, then the merged changes without a row. mrow CHANGE MERGED
 # ESTIMATE TOKENS MINUTES FIRST: a history row with those columns.
@@ -1434,6 +1473,7 @@ state init sprint-1 main > /dev/null 2>&1
 state review sprint-1 periodic-security pass "diff blocking=0" > /dev/null
 state groom sprint-1-records > /dev/null
 expect "run_state: the groomed sprint row ends at the fifth counted change in merge order, its exception inside" 0 "^sprint-1 e5 6 e1,e2,e3,e4,x1,e5 " sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
+expect "run_state: sprint-row prints the row groom appended" 0 "^same$" sh -c '[ "$(sh "$1/run_state.sh" sprint-row "$(git rev-parse --short=12 HEAD)")" = "$(tail -1 docs/sprints.tsv)" ] && echo same' _ "$here"
 echo x2 >> README.md
 commit "feat: x2"
 state init x2 chore/x2 > /dev/null
@@ -1782,8 +1822,8 @@ echo other >> README.md
 commit "feat: other"
 other=$(git rev-parse --short=12 HEAD)
 git_q checkout -q chore/trust
-state phase trust merge "$squashed" > /dev/null
-state set trust merged "$squashed" > /dev/null
+env BASE=main sh "$here/run_state.sh" phase trust merge "$squashed" > /dev/null
+env BASE=main sh "$here/run_state.sh" set trust merged "$squashed" > /dev/null
 state phase trust package "$other" > /dev/null
 forge trust '  "phase.check": "0000000000"'
 forge trust '  "phase.plan": "HEAD"'
@@ -2914,6 +2954,14 @@ commit "test: test"
 expect "gates: snapshots refuses without the runner" 1 "build/test/run_all is missing" gates snapshots
 
 fresh security
+# The sprint log and the history rows groom computes its row from, before
+# the review: sprint-0 ends at seed, a1 to a5 merged since, and the plan's
+# marker names sprint-1 (merge-record-check).
+printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
+{ printf 'header\n'; mrow seed bbb222 small 1 1 -; mrow a1 c1 small 1 1 -; mrow a2 c2 small 1 1 -; mrow a3 c3 small 1 1 -; mrow a4 c4 small 1 1 -; mrow a5 c5 small 1 1 -; } > docs/metrics-backlog.tsv
+mkdir -p build/plan
+echo sprint-1 > build/plan/sprint
+commit "docs: the sprint log and the history"
 state init security chore/security > /dev/null
 expect "gates: security refuses when no review is recorded" 1 "no security review is recorded" gates security
 state review security security blocked "one high" > /dev/null
@@ -2946,29 +2994,45 @@ echo archived > openspec/changes/archive/x/tasks.md
 commit "chore: archive"
 expect "gates: security passes after an archive only" 0 "ok   security: pass" gates security
 echo "1. next" > docs/queue-backlog.md
-echo change > docs/metrics-backlog.tsv
+mrow b1 - small 1 1 - >> docs/metrics-backlog.tsv
 commit "docs: record the queue and the metrics"
 expect "gates: security passes after the planning records only" 0 "ok   security: pass" gates security
-printf 'sprint\tlast\nsprint-1\ta5\n' > docs/sprints.tsv
+# The records-only diff counts docs/sprints.tsv only by the one row groom
+# appends for the sprint the marker names (merge-record-check).
+groomed=$(state sprint-row "$reviewed")
+expect "run_state: sprint-row prints the row of the marker's sprint" 0 "^sprint-1 a5 5 a1,a2,a3,a4,a5 " sh -c "sh '$here/run_state.sh' sprint-row '$reviewed' | tr '\t' ' '"
+printf '%s\n' "$groomed" >> docs/sprints.tsv
 commit "docs: record the sprint row"
-expect "gates: security passes after the sprint row only" 0 "ok   security: pass" gates security
-printf 'sprint-2\tb5\n' >> docs/sprints.tsv
+expect "gates: security passes after groom's sprint row" 0 "ok   security: pass" gates security
 echo code > tools/sprint.sh
 commit "fix: code beside the sprint row"
 expect "gates: security refuses a code change beside the sprint row" 1 "code changed since" gates security
 git_q rm -q tools/sprint.sh
 commit "chore: remove the code"
-expect "gates: security passes after appended sprint rows" 0 "ok   security: pass" gates security
-first_review=$(state get security review.security | cut -d" " -f2)
-state review security security pass "no finding" > /dev/null
-printf 'sprint-3\tc5\n' >> docs/sprints.tsv
-commit "docs: append a sprint row"
-expect "gates: security passes after a row appended to the reviewed sprint rows" 0 "ok   security: pass" gates security
-printf 'sprint\tlast\nsprint-1\ta4\nsprint-2\tb5\nsprint-3\tc5\n' > docs/sprints.tsv
+expect "gates: security passes after groom's sprint row and a removed code change" 0 "ok   security: pass" gates security
+mv build/plan/sprint build/plan/sprint.applied
+expect "gates: security passes after groom's sprint row, its marker retired" 0 "ok   security: pass" gates security
+mv build/plan/sprint.applied build/plan/sprint
+printf 'sprint-2\tb1\n' >> docs/sprints.tsv
+commit "docs: append a second sprint row"
+expect "gates: security refuses a second sprint row" 1 "code changed since" gates security
+printf 'sprint\tlast\nsprint-0\tseed\nsprint-1\tb1\n' > docs/sprints.tsv
+commit "docs: forge the sprint row"
+expect "gates: security refuses a sprint row not groom's" 1 "code changed since" gates security
+printf 'sprint\tlast\nsprint-0\ta3\n%s\n' "$groomed" > docs/sprints.tsv
 commit "docs: edit an earlier sprint row"
 expect "gates: security refuses an edit of an earlier sprint row" 1 "code changed since" gates security
-printf 'sprint\tlast\nsprint-1\ta5\nsprint-2\tb5\nsprint-3\tc5\n' > docs/sprints.tsv
+printf 'sprint\tlast\nsprint-0\tseed\n%s\n' "$groomed" > docs/sprints.tsv
 commit "docs: restore the sprint rows"
+expect "gates: security passes after the restored sprint rows" 0 "ok   security: pass" gates security
+expect "run_state: sprint-row refuses a marker naming another sprint" 1 "names sprint-1, but the sprint in progress at [0-9a-f]+ is sprint-2" state sprint-row "$(git rev-parse --short=12 HEAD)"
+first_review=$(state get security review.security | cut -d" " -f2)
+state review security security pass "no finding" > /dev/null
+printf 'sprint-2\tb1\n' >> docs/sprints.tsv
+commit "docs: append a row for the next sprint"
+expect "gates: security refuses a row for a sprint the marker does not name" 1 "code changed since" gates security
+printf 'sprint\tlast\nsprint-0\tseed\n%s\n' "$groomed" > docs/sprints.tsv
+commit "docs: restore the sprint rows again"
 state review security security pass "no finding" "$first_review" > /dev/null
 mkdir -p openspec/moved
 git_q mv tools/base.sh openspec/moved/base.sh
@@ -3020,6 +3084,32 @@ echo dirty >> tools/code.sh
 expect "gates: passed refuses a dirty tree" 1 "FAIL passed: tracked files differ from HEAD:  M tools/code.sh" gates passed
 git_q checkout -q -- tools/code.sh
 expect "gates: passed passes a clean tree" 0 "ok   passed" gates passed
+
+# Groom's sprint row after the check, as the sprint-N-records change
+# commits it, keeps the stages and passed gates passing: settled_at's
+# helpers leave the gate's own names (want) alone (merge-record-check).
+fresh groomed
+printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
+{ printf 'header\n'; mrow seed bbb222 small 1 1 -; mrow a1 c1 small 1 1 -; mrow a2 c2 small 1 1 -; mrow a3 c3 small 1 1 -; mrow a4 c4 small 1 1 -; mrow a5 c5 small 1 1 -; } > docs/metrics-backlog.tsv
+mkdir -p build/plan
+echo sprint-1 > build/plan/sprint
+echo code > tools/code.sh
+commit "feat: code and the sprint log"
+state init groomed chore/groomed > /dev/null
+state phase groomed check > /dev/null
+state stage groomed lint true > /dev/null
+state review groomed quality pass "blocking=0" > /dev/null
+state review groomed security pass "high=0" > /dev/null
+state review groomed bench pass "blocking=0" > /dev/null
+state sprint-row "$(git rev-parse --short=12 HEAD)" >> docs/sprints.tsv
+commit "docs: record the sprint row"
+state set groomed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "gates: stages passes after groom's sprint row" 0 "ok   stages: every stage passed at the recorded check" gates stages
+expect "gates: passed passes after groom's sprint row" 0 "ok   passed: check, quality, security, and bench passed at the pushed head" gates passed
+printf 'sprint-2\tb1\n' >> docs/sprints.tsv
+commit "docs: append a second sprint row"
+state set groomed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "gates: stages refuses a second sprint row after the check" 1 "the check passed at [0-9a-f]+, but code changed since" gates stages
 
 # The stages gate counts a stage only at the check the workflow recorded,
 # and the merge runs a copy of main's gates against the branch.
@@ -3423,7 +3513,9 @@ expect "workflow: the merger's waits come from its minutes, its cap from the wai
 expect "workflow: the merger's waiting calls are recorded" 0 ' ci_wait_calls=4"$' \
   calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = 4; estimate = ''; planned = null; state = { change: 'c' }; return metricLine() })()"
 expect "workflow: the merger's lines leave the CI stages to the record and closing starts" 0 "^1 0$" \
-  sh -c 'echo "$(grep -c "queue(\`sh tools/run_state.sh ci-stages \${state.change} \${pushed}\`, m.head)" "$1") $(grep -c "ci-stages" "$2")"' _ "$wf" "$here/../.claude/agents/merger.md"
+  sh -c 'echo "$(grep -c "queue(\`sh tools/run_state.sh ci-stages \${state.change} \${pushed}\`, pushed)" "$1") $(grep -c "ci-stages" "$2")"' _ "$wf" "$here/../.claude/agents/merger.md"
+expect "workflow: CI is recorded at the pushed head, never the merger's reported head" 0 "^1 1 0$" \
+  sh -c 'echo "$(grep -c "state.ci = \`green \${pushed}\`; phaseDone(.ci., pushed)" "$1") $(grep -c "ci \"\${result} \${pushed}\"" "$1") $(grep -c "phaseDone(.ci., m.head)" "$1")"' _ "$wf"
 expect "deliver: the command records the weighted tokens" 0 "sh tools/run_state.sh tokens <change> <dir>" cat "$here/../.claude/commands/deliver.md"
 expect "workflow: both reviews' scopes read this start's records" 0 '^2$' grep -c "narrowedFrom(ran, '" "$wf"
 expect "workflow: a resume past the push builds no merge records from the run state" 0 '^\[\]$' \

@@ -109,27 +109,41 @@ state() {
 # backlog and the findings files, and the planning records the package
 # step writes (the lane queues, goals, the lane metrics histories, and
 # the sprint row groom appends to docs/sprints.tsv), whose docs-lint the
-# package step and CI run again. docs/sprints.tsv counts only by appended
-# rows: an edit of an earlier row moves the sprint base, which the
-# sprint-end security review starts from. Without rename detection, a
-# file moved into openspec/ counts by its old path too.
+# package step and CI run again. docs/sprints.tsv counts only by groom's
+# one appended row (appended_rows, groom_row): an edited, forged, or second
+# row moves the sprint base, which the sprint-end security review starts
+# from. The security, stages, and passed gates share it. Without rename
+# detection, a file moved into openspec/ counts by its old path too.
+# The three helpers set only names of their own (settled_, row_, rows_),
+# since a gate calls them between setting and reading its own (want).
 settled_at() {
   hex "$1" || return 1
-  rest=$(git diff --no-renames --name-only --end-of-options "$1" HEAD -- 2>/dev/null) || return 1
-  [ -z "$(printf '%s\n' "$rest" | grep -v -E "^($RECORDS_RE|\$)")" ] || return 1
-  ! printf '%s\n' "$rest" | grep -q -x -F docs/sprints.tsv || appended_rows "$1" docs/sprints.tsv
+  settled_rest=$(git diff --no-renames --name-only --end-of-options "$1" HEAD -- 2>/dev/null) || return 1
+  [ -z "$(printf '%s\n' "$settled_rest" | grep -v -E "^($RECORDS_RE|\$)")" ] || return 1
+  ! printf '%s\n' "$settled_rest" | grep -q -x -F docs/sprints.tsv || { appended_rows "$1" docs/sprints.tsv && groom_row "$1"; }
+}
+
+# True when the bytes HEAD appended to docs/sprints.tsv since COMMIT are
+# exactly the one row groom appends for the sprint the plan's marker names
+# (tools/run_state.sh sprint-row COMMIT, the copy beside this script), so
+# no forged row or second row moves the sprint base.
+groom_row() {
+  row_size=$(git cat-file -s "$1:docs/sprints.tsv" 2>/dev/null) || row_size=0
+  row_added=$(git cat-file blob HEAD:docs/sprints.tsv 2>/dev/null | tail -c +$((row_size + 1)))
+  row_want=$(sh "$here/run_state.sh" sprint-row "$1" 2>/dev/null) || return 1
+  [ -n "$row_want" ] && [ "$row_added" = "$row_want" ]
 }
 
 # True when FILE at HEAD is FILE at COMMIT with lines appended: absent at
 # COMMIT, or empty or ending in a line break there, and its bytes at COMMIT
 # the first bytes at HEAD.
 appended_rows() {
-  before=$(git rev-parse -q --verify --end-of-options "$1:$2" 2>/dev/null) || return 0
-  size=$(git cat-file -s "$before") || return 1
-  [ "$size" -eq 0 ] && return 0
-  [ -z "$(git cat-file blob "$before" | tail -c 1)" ] || return 1
-  prefix=$(git cat-file blob "HEAD:$2" 2>/dev/null | head -c "$size" | git hash-object --stdin) || return 1
-  [ "$prefix" = "$before" ]
+  rows_before=$(git rev-parse -q --verify --end-of-options "$1:$2" 2>/dev/null) || return 0
+  rows_size=$(git cat-file -s "$rows_before") || return 1
+  [ "$rows_size" -eq 0 ] && return 0
+  [ -z "$(git cat-file blob "$rows_before" | tail -c 1)" ] || return 1
+  rows_prefix=$(git cat-file blob "HEAD:$2" 2>/dev/null | head -c "$rows_size" | git hash-object --stdin) || return 1
+  [ "$rows_prefix" = "$rows_before" ]
 }
 
 require_base() {

@@ -627,10 +627,12 @@ const ORIGIN_IDS = ['244706f6059ecef3ab5cd192a3b80eea788e0e2a', '5cd0861f1cf8aa9
 function originCheck() {
   return `${PINNED_GIT} remote get-url origin | tr -d '\\n' | ${PINNED_GIT} hash-object --stdin | grep -q -x -E '${ORIGIN_IDS.join('|')}'`
 }
-function mergeLines() {
+// The CI record names the pushed head, the only head the run state accepts
+// as CI's (tools/run_state.sh, pushed_at), never a head an agent reported.
+function mergeLines(pushed) {
   const records = mergeRecords(ran)
   const first = (line) => [metricLine(), line].filter(Boolean).join(' && ')
-  const ci = (result) => `sh tools/run_state.sh set ${state.change} ci "${result} ${head}"`
+  const ci = (result) => `sh tools/run_state.sh set ${state.change} ci "${result} ${pushed}"`
   return {
     green: `cd ${laneDir(state.change)} && git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck()} && ${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
     red: first(ci('red')),
@@ -1264,7 +1266,7 @@ if (!stopped && !state.merged) {
       // head the push recorded is the one the reviews and gates covered.
       const pushed = pushedHead(state.pushed, head)
       if (!pushed) { stopped = `the pushed head ${state.pushed || 'none'} is not a full sha beginning with the reported head ${head}`; break }
-      const lines = mergeLines()
+      const lines = mergeLines(pushed)
       const m = await measured('merge', () => agent(
         `${intro()}${MERGER_CLOSE}${mergeTarget()} The pushed head is ${pushed}. Wait for CI at it${waits ? ' (it was still running when you last returned; keep waiting)' : ''}, and merge the pull request if CI is green and every merge gate passes.\nThe green line: \`${lines.green}\`\nThe red line: \`${lines.red}\`\nTool calls: at most ${FIXED_CAPS.merger} in this start when CI passes within your first two waits, and 2 more for each later wait.`,
         calibrate('merger', { agentType: 'merger', schema: withCalls(MERGE) })), mergerCap)
@@ -1272,7 +1274,7 @@ if (!stopped && !state.merged) {
       ciWaitCalls = (ciWaitCalls || 0) + 2 * waitsOf(m)
       // The CI steps' seconds, read once the run finished, by the record
       // start or the closing start, whose guard is main's after the merge.
-      if (m.ci === 'green' || m.ci === 'red') queue(`sh tools/run_state.sh ci-stages ${state.change} ${pushed}`, m.head)
+      if (m.ci === 'green' || m.ci === 'red') queue(`sh tools/run_state.sh ci-stages ${state.change} ${pushed}`, pushed)
       const checks = (m.checks || []).join('; ')
       note(`CI at ${m.head}: ${m.ci}${m.minutes ? ` in ${m.minutes} min` : ''}${m.ci === 'pending' && checks ? ` (${checks})` : ''}`)
       if (m.ci === 'pending' && !(m.waited >= 30)) note(`the merger returned pending after waiting ${Number.isFinite(m.waited) ? m.waited : 'unknown'} of 30 minutes`)
@@ -1292,7 +1294,11 @@ if (!stopped && !state.merged) {
       waits = 0
       if (m.ci === 'green' || m.ci === 'red') verdict('ci', m.ci === 'green')
       if (Number.isFinite(m.minutes) && m.minutes > 0) ciMinutes = m.minutes
-      if (m.ci === 'green') { state.ci = `green ${m.head}`; phaseDone('ci', m.head) }
+      // CI ran at the pushed head, the one the merger checked the pull request
+      // against; the merger's sha is recorded as given, and the run state
+      // refuses it, naming both, unless it is the pull request's squash
+      // commit on main (merged_at).
+      if (m.ci === 'green') { state.ci = `green ${pushed}`; phaseDone('ci', pushed) }
       if (m.merged) {
         state.merged = m.sha
         phaseDone('merge', m.sha)
