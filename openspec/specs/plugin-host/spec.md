@@ -673,7 +673,7 @@ The request `run_program(argv)` (API 2.7) SHALL run the program the first word n
 - **THEN** the first answers "a;b", the semicolon reaching printf as text, and the second answers nothing
 
 ### Requirement: The host refuses a program it should not run
-The request SHALL fail without starting anything for an empty command, an empty word, a word holding a NUL character, or a first word holding a `/`, and SHALL fail when the program cannot start, runs past 2 seconds, when it is stopped, or answers bytes that are not UTF-8.
+The request SHALL fail without starting anything for an empty command, an empty word, a word holding a NUL character, or a first word holding a `/`, and SHALL fail when the program cannot start, runs past 2 seconds, when it is stopped, or answers bytes that are not UTF-8. A program that ran past 2 seconds SHALL fail with its name and "ran past 2 seconds", and one that cannot start with "cannot run" and its name, so a plugin can tell a slow program from a missing one.
 
 #### Scenario: run_program refuses a path or an empty command
 - **WHEN** a plugin runs an empty command, or `./git status`
@@ -682,6 +682,10 @@ The request SHALL fail without starting anything for an empty command, an empty 
 #### Scenario: run_program fails when the program cannot start
 - **WHEN** a plugin runs a program that is not installed
 - **THEN** the response fails with "cannot run" and the program's name
+
+#### Scenario: run_program says a program ran past its deadline
+- **WHEN** a plugin runs a program that runs past 2 seconds
+- **THEN** the response fails with the program's name and "ran past 2 seconds"
 
 ### Requirement: The host runs a program only under a trusted root
 The request `run_program` SHALL fail without starting anything while the editor's working directory is not a root of `language.trusted_roots` or below one, the same roots under which a language server starts on its own, and before the plugins are activated. The response SHALL say the program runs only under a trusted root.

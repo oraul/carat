@@ -56,11 +56,13 @@ module DriversProcessRunnerTest
 
     # The driver runs a program without a shell
     t.assert_equal("a;b", runner.capture(["printf", "%s", "a;b"], ENVIRONMENT).to_s, "capture answers the output of the words as given, no shell splitting them")
-    t.assert_equal(true, runner.capture(["carat-no-such-command"], ENVIRONMENT).nil?, "capture of a missing program answers nothing")
+    t.assert_equal([true, false], [runner.capture(["carat-no-such-command"], ENVIRONMENT).nil?, runner.timed_out?], "capture of a missing program answers nothing and did not time out")
     # The driver adds the variables to the child environment
     t.assert_equal("1", runner.capture(["sh", "-c", "printf %s \"$GIT_NO_LAZY_FETCH\""], ENVIRONMENT).to_s, "capture adds the variables to the child's environment: it sees GIT_NO_LAZY_FETCH=1")
     t.assert_equal(true, runner.capture([], ENVIRONMENT).nil?, "capture of no words answers nothing")
-    t.assert_equal(true, runner.capture(["sh", "-c", "sleep 5"], ENVIRONMENT).nil?, "capture of a program past the deadline answers nothing")
+    # Scenario "run_program says a program ran past its deadline": the port's half.
+    t.assert_equal([true, true], [runner.capture(["sh", "-c", "sleep 5"], ENVIRONMENT).nil?, runner.timed_out?], "capture of a program past the deadline answers nothing and says it timed out")
+    t.assert_equal(["x", false], [runner.capture(["printf", "x"], ENVIRONMENT).to_s, runner.timed_out?], "and the next capture clears it")
     # "é\n" is three bytes, so byte 65,536 of the stream is the second byte of an é
     long = runner.capture(["sh", "-c", "yes é | head -c 70000"], ENVIRONMENT).to_s
     t.assert_equal(65_535, long.bytesize, "capture of output over the limit keeps at most 64 KiB, cut before the character the limit splits")

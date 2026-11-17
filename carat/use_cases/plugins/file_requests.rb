@@ -128,8 +128,9 @@ module Carat
 
       # Runs the program after the checks, refused outside a trusted root,
       # with PROGRAM_ENVIRONMENT added to its environment; the words are
-      # copied, so the
-      # plugin cannot change them while they run.
+      # copied, so the plugin cannot change them while they run. A program
+      # killed at its deadline fails apart from one that cannot start, so
+      # a plugin can tell a slow program from a missing one.
       #: (String, Array[String]) -> PluginApi::TextResponse
       def run_program(name, argv)
         return PluginApi::TextResponse.failure("a program runs only under a root of language.trusted_roots") unless @trusted
@@ -137,6 +138,7 @@ module Carat
         return PluginApi::TextResponse.failure(why) unless why.empty?
         words = argv.map { |word| word.dup }
         output = @processes.capture(words, PROGRAM_ENVIRONMENT)
+        return PluginApi::TextResponse.failure("#{words[0]} ran past 2 seconds") if output.nil? && @processes.timed_out?
         return PluginApi::TextResponse.failure("cannot run #{words[0]}") if output.nil?
         return PluginApi::TextResponse.failure("#{words[0]} answered bytes that are not UTF-8") unless output.valid_encoding?
         PluginApi::TextResponse.success(output.dup)

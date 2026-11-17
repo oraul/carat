@@ -38,6 +38,15 @@ module Carat
       def capture(argv, environment)
         raise NotImplementedError, "ProcessPort#capture"
       end
+
+      # Whether the last capture answered nil because it ran past its
+      # deadline and was killed, rather than because it could not start.
+      # The base answers false rather than raising, as Host#stat does
+      # (spinel-notes, Known miscompilations). Returns a bool.
+      # @rbs skip
+      def timed_out?
+        false
+      end
     end
   end
 end

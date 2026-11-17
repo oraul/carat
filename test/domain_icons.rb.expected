@@ -33,6 +33,9 @@ ok   nerd kind_snippet is a pua glyph
 ok   nerd kind_constant is a pua glyph
 ok   nerd ahead is a pua glyph
 ok   nerd behind is a pua glyph
+ok   nerd git_added is a pua glyph
+ok   nerd git_changed is a pua glyph
+ok   nerd git_deleted is a pua glyph
 ok   unicode folder_closed is a unicode glyph
 ok   unicode folder_open is a unicode glyph
 ok   unicode file is a unicode glyph
@@ -68,6 +71,9 @@ ok   unicode kind_snippet is a unicode glyph
 ok   unicode kind_constant is a unicode glyph
 ok   unicode ahead is a unicode glyph
 ok   unicode behind is a unicode glyph
+ok   unicode git_added is a unicode glyph
+ok   unicode git_changed is a unicode glyph
+ok   unicode git_deleted is a unicode glyph
 ok   ascii folder_closed is a ascii glyph
 ok   ascii folder_open is a ascii glyph
 ok   ascii file is a ascii glyph
@@ -103,6 +109,9 @@ ok   ascii kind_snippet is a ascii glyph
 ok   ascii kind_constant is a ascii glyph
 ok   ascii ahead is a ascii glyph
 ok   ascii behind is a ascii glyph
+ok   ascii git_added is a ascii glyph
+ok   ascii git_changed is a ascii glyph
+ok   ascii git_deleted is a ascii glyph
 ok   ascii closed folder
 ok   ascii open folder
 ok   ascii error
@@ -119,6 +128,15 @@ ok   the ahead and behind glyphs per set: unicode ahead
 ok   unicode behind
 ok   ascii ahead
 ok   ascii behind
+ok   the git sign glyphs per set: unicode git_added
+ok   unicode git_changed
+ok   unicode git_deleted
+ok   ascii git_added
+ok   ascii git_changed
+ok   ascii git_deleted
+ok   nerd git_added
+ok   nerd git_changed
+ok   nerd git_deleted
 ok   the default folder_closed is one cell outside the private use areas
 ok   the default folder_open is one cell outside the private use areas
 ok   the default file is one cell outside the private use areas
@@ -154,7 +172,10 @@ ok   the default kind_snippet is one cell outside the private use areas
 ok   the default kind_constant is one cell outside the private use areas
 ok   the default ahead is one cell outside the private use areas
 ok   the default behind is one cell outside the private use areas
-ok   thirty-five icon names, twelve of them completion kinds and two the branch counts
+ok   the default git_added is one cell outside the private use areas
+ok   the default git_changed is one cell outside the private use areas
+ok   the default git_deleted is one cell outside the private use areas
+ok   thirty-eight icon names, twelve of them completion kinds, two the branch counts, and three the git line signs
 ok   the ascii current marker is >
 ok   unicode is a set
 ok   emoji is not a set
@@ -178,4 +199,4 @@ ok   a wide character is still wide
 ok   a unicode icon
 ok   private_use? for a nerd glyph
 ok   private_use? for a letter
-domain_icons: 180 passed, 0 failed
+domain_icons: 201 passed, 0 failed

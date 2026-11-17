@@ -13,7 +13,8 @@ module Carat
     # Process.wait(pid) or WNOHANG). capture runs a short command on the
     # editor thread instead: the same spawn without a shell, its output read
     # with IO.select until it ends, CAPTURE_LIMIT bytes are kept, or
-    # CAPTURE_SECONDS pass, when the child is killed.
+    # CAPTURE_SECONDS pass, when the child is killed and timed_out? says
+    # so until the next capture.
     class ProcessRunner < Ports::ProcessPort
       READ_SIZE = 65_536
       CAPTURE_LIMIT = 65_536
@@ -23,6 +24,7 @@ module Carat
       # @rbs @pids: Array[Integer]
       # @rbs @outboxes: Array[untyped]
       # @rbs @open: Array[bool]
+      # @rbs @timed_out: bool
 
       #: (messages: Ports::MessageQueuePort) -> void
       def initialize(messages:)
@@ -30,6 +32,7 @@ module Carat
         @pids = []
         @outboxes = []
         @open = []
+        @timed_out = false
       end
 
       # Starts the command; its handle is its place in the lists plus one.
@@ -75,6 +78,7 @@ module Carat
       # @rbs argv: Array[String]
       # @rbs environment: Hash[String, String]
       def capture(argv, environment)
+        @timed_out = false
         return nil if argv.empty?
         output = IO.pipe
         pid = start_quiet(argv, environment, output[1])
@@ -85,9 +89,18 @@ module Carat
         end
         text = collect(output[0], Process.clock_gettime(Process::CLOCK_MONOTONIC) + CAPTURE_SECONDS)
         output[0].close
-        kill(pid) if text.nil?
+        if text.nil?
+          kill(pid)
+          @timed_out = true
+        end
         Process.detach(pid)
         text
+      end
+
+      # Whether the last capture was killed at the deadline; a bool.
+      # @rbs skip
+      def timed_out?
+        @timed_out
       end
 
       private
