@@ -23,8 +23,8 @@ Out of scope: changing `open_as_tab` or `open_in_tab` in the host; keeping the t
 ### New Capabilities
 
 ### Modified Capabilities
-- `file-explorer`: `t` with no file window in the tab page opens the file as `l` does.
-- `file-finder`: `<C-t>` follows `option.gt` and, with no file window, opens the pick as `<CR>` does.
+- `file-explorer`: adds that `t` with no file window in the tab page opens the file as `l` does.
+- `file-finder`: `<C-t>` moves to its own requirement: it follows `option.gt` and, with no file window, opens the pick as `<CR>` does.
 
 ## Impact
 
