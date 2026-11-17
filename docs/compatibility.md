@@ -283,7 +283,7 @@ Neovim shows signature help on request (`vim.lsp.buf.signature_help()`, `<C-s>` 
 | `:vne[w]` | Split vertically with a new unnamed buffer | `E36` | `use_cases_ex`, `editor_windows` |
 | `:clo[se]` | Close the window, or its tab page when it was the last one there | `E444` | `use_cases_ex`, `editor_windows` |
 | `:on[ly]` | Close every other window of the tab page | `Already only one window` | `use_cases_ex`, `editor_windows` |
-| `:tabnew`, `:tabe[dit] [file]` | Open a tab page after the current one on a new buffer or the file | as `:e` | `use_cases_ex`, `editor_tabs` |
+| `:tabnew`, `:tabe[dit] [file]` | Open a tab page after the current one on a new buffer or the file, a listed file showing its buffer with no empty buffer left listed | as `:e` | `use_cases_ex`, `editor_tabs` |
 | `:tabc[lose] [N]` | Close the tab page, or tab page N; the next one, or the previous when it was last, becomes current | `E784` first with one tab page, `E16: Invalid range` for 0, `E475: Invalid argument: x` for a word or a number past the last | `use_cases_ex`, `editor_tabs` |
 | `:tabo[nly] [N]` | Close every other tab page, after going to tab page N | `Already only one tab page` first, then as `:tabc N` | `use_cases_ex`, `editor_tabs` |
 | `:tabn[ext] [N]` | Next tab page, wrapping, or tab page N | as `:tabc N` | `use_cases_ex`, `editor_tabs` |
@@ -291,7 +291,7 @@ Neovim shows signature help on request (`vim.lsp.buf.signature_help()`, `<C-s>` 
 | `:tabfir[st]`, `:tabl[ast]` | First and last tab page | `E488: Trailing characters: x` | `use_cases_ex`, `editor_tabs` |
 | `:ls`, `:buffers`, `:files` | List the file buffers: number, flags (`%` current, `a` shown or `h` hidden, `=` read-only, `+` modified), the quoted name, and the line of the cursor, the current window's for the current buffer and where a window last left the others; in number order; with `!` also the unlisted buffers, flagged `u`: the plugins' scratch buffers and those a jump left under `option.jumptab replace`, which `:bn`, `:bp`, and `:bd`'s next buffer skip and any open lists again; an argument keeps the buffers matching each of its flags `u + a h % =`, and `# - x R F ?` keep none | | `editor_buffers` |
 | `:b[uffer] N`, `:b[uffer]! N` | Show buffer number N in the window with the cursor where a window last left it; the buffer left stays listed, hidden; without N stay | `E86: Buffer N does not exist`, `E37`, `Not implemented: :buffer name` | `editor_buffers`, `use_cases_ex` |
-| `:bn[ext] [N]`, `:bn[ext]! [N]` | Show the next listed file buffer, or the Nth, wrapping; 0 stays | `E85: There is no listed buffer`, `E37`, `E488: Trailing characters: x` | `editor_buffers`, `use_cases_ex` |
+| `:bn[ext] [N]`, `:bn[ext]! [N]` | Show the next listed file buffer, or the Nth, wrapping; 0 stays; run in a side window such as the explorer, every buffer switch (`:b N`, `:bn`, `:bp`, `gt`, `gT`) shows the buffer in the file window and focuses it, the side window kept, and with no file window says `No file window to show the buffer in` | `E85: There is no listed buffer`, `E37`, `E488: Trailing characters: x` | `editor_buffers`, `use_cases_ex` |
 | `:bp[revious] [N]`, `:bN[ext] [N]`, `:bp[revious]! [N]` | Show the previous listed file buffer, or the Nth before, wrapping | as `:bn` | `editor_buffers`, `use_cases_ex` |
 | `:bf[irst]`, `:br[ewind]`, `:bf[irst]!` | Show the first listed file buffer | `E85: There is no listed buffer`, `E37`, `E488: Trailing characters: x` | `editor_buffers` |
 | `:bl[ast]`, `:bl[ast]!` | Show the last listed file buffer | as `:bfirst` | `editor_buffers` |
@@ -448,7 +448,7 @@ Each tab page holds its own window layout; from two tab pages their numbers stan
 | `[count]<C-PageDown>` | `tab.next` | Next tab page, wrapping; with a count, tab page count, or nothing when there is none | `editor_tabs`, `domain_keymap` |
 | `[count]<C-PageUp>` | `tab.previous` | Count tab pages back, wrapping | `editor_tabs`, `domain_keymap` |
 | `g<Tab>` | `tab.last_accessed` | The tab page current before the current one; nothing when it closed or there is none | `editor_tabs`, `domain_keymap` |
-| `[count]gt`, `[count]gT` | `tabline.next`, `tabline.previous` | Under `option.gt buffers` (shipped): the next buffer tab, wrapping, with a count the count-th tab of the row or nothing when there is none, and count buffer tabs back, the tab page staying, `E37` for a modified buffer as `:bn`; under `option.gt tabpages` (without a configuration, Vim's) as `<C-PageDown>` and `<C-PageUp>` | `editor_tabs`, `domain_keymap` |
+| `[count]gt`, `[count]gT` | `tabline.next`, `tabline.previous` | Under `option.gt buffers` (shipped): the next buffer tab, wrapping, with a count the count-th tab of the row or nothing when there is none, and count buffer tabs back, the tab page staying, `E37` for a modified buffer as `:bn`, from the explorer acting on the file window as `:bn` does; under `option.gt tabpages` (without a configuration, Vim's) as `<C-PageDown>` and `<C-PageUp>` | `editor_tabs`, `domain_keymap` |
 | `option.gt` | none | `buffers` or `tabpages`; `file:line: unknown gt mode WORD` for another word | `domain_options_config` |
 
 Each tab page's number is a space, the number, and a space, the current one in `TabLineSel` (`editor_tabs`, `adapters_tab_bar`).

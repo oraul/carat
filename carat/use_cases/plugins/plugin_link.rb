@@ -126,6 +126,14 @@ module Carat
         @windows.open_in_tab(@name, path)
       end
 
+      # Returns a WindowResponse.
+      # @rbs path: String
+      def open_as_tab(path)
+        why = refusal
+        return PluginApi::WindowResponse.failure(why) unless why.empty?
+        @windows.open_as_tab(@name, path)
+      end
+
       # Returns a Response.
       # @rbs text: String
       # @rbs error: bool

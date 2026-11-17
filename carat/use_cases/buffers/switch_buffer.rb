@@ -15,11 +15,15 @@ module Carat
     # modified current file buffer refuses the switch with E37 unless the
     # request carries the bang, as :e does; a number of no listed file
     # buffer is E86 and a list without file buffers E85, as Neovim's
-    # do_buffer answers.
+    # do_buffer answers. Run with the focus in a side window (a plugin's
+    # scratch buffer, the explorer), the switch acts on the tab page's
+    # editing window (TabPage#editing_leaf), focused first and left
+    # focused unless the switch fails; with no file window it fails.
     class SwitchBuffer
       E85 = "E85: There is no listed buffer"
       E23 = "E23: No alternate file"
-      private_constant :E85, :E23
+      NO_FILE_WINDOW = "No file window to show the buffer in"
+      private_constant :E85, :E23, :NO_FILE_WINDOW
 
       attr_reader :buffers #: Domain::BufferList
 
@@ -31,6 +35,22 @@ module Carat
       #: (Domain::EditorState, BufferRequest) -> Outcome
       def call(state, request)
         return Outcome.none if request.target == :current
+        tab = state.tab
+        return switch(state, request) if tab.floats.focused? || !tab.window.buffer.scratch?
+        leaf = tab.editing_leaf
+        return Outcome.failure(NO_FILE_WINDOW) if leaf < 0
+        side = tab.current
+        tab.focus(leaf)
+        outcome = switch(state, request)
+        tab.focus(side) unless outcome.ok
+        outcome
+      end
+
+      private
+
+      # Shows the buffer the request names in the current window.
+      #: (Domain::EditorState, BufferRequest) -> Outcome
+      def switch(state, request)
         current = state.buffer
         if request.target == :number
           found = @buffers.with_id(request.count)

@@ -201,23 +201,24 @@ module Carat
         PluginApi::WindowResponse.success(outcome.message, @state.window.id)
       end
 
+      # Opens the file as the tab the top row shows: under option.gt
+      # buffers in the editing window as open_file does, a buffer tab;
+      # under option.gt tabpages, or with no file window, a tab page.
+      #: (String, String) -> PluginApi::WindowResponse
+      def open_as_tab(name, path)
+        return open_in_tab(name, path) unless @state.options.gt_follows_buffers?
+        target = editing_window(name).window
+        return open_in_tab(name, path) if target == 0
+        open_file(name, target, path)
+      end
+
       # The previously used window when it shows a file buffer, otherwise
       # the first window in layout order that does, 0 when none does.
       #: (String) -> PluginApi::WindowResponse
       def editing_window(name)
         tab = @state.tab
-        layout = tab.layout
-        if tab.previous? && !layout.window_at(tab.previous).buffer.scratch?
-          return PluginApi::WindowResponse.success("", layout.window_at(tab.previous).id)
-        end
-        ids = layout.leaves
-        i = 0
-        while i < ids.length
-          window = layout.window_at(ids[i])
-          return PluginApi::WindowResponse.success("", window.id) unless window.buffer.scratch?
-          i += 1
-        end
-        PluginApi::WindowResponse.success("", 0)
+        leaf = tab.editing_leaf
+        PluginApi::WindowResponse.success("", leaf < 0 ? 0 : tab.layout.window_at(leaf).id)
       end
 
       #: (String, String) -> PluginApi::WindowResponse
