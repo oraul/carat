@@ -24,7 +24,7 @@ None.
 
 - `carat/domain/tab_page.rb`, `carat/use_cases/buffers/switch_buffer.rb`.
 - Tests: `test/editor_tab_flows.rb` and its snapshot; a `side_window?` row in `test/editor_breadcrumbs.rb`, beside the file-window count rows.
-- README.md: unchanged, its buffer-tab sentence already says the explorer's switches move the file window's buffer tab and names no reading-view exception.
+- README.md: changed, its buffer-tab sentence says a reading view switches its own window, since docs/compatibility.md changes.
 - docs/architecture.md: unchanged, no layer, port, or roadmap change, and no section states the buffer-switch rule.
 - CLAUDE.md: unchanged, no process change.
 - docs/codebase-map.md: changed, the `tab_page.rb` and `switch_buffer.rb` entries.
