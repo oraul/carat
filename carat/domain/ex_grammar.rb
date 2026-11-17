@@ -3,6 +3,7 @@ module Carat
     # Parses a command line into an ExCommand: leading colons and blanks are
     # skipped, the range is the run of address characters before the name
     # (ExRange resolves it), the name is a run of letters or a single "&",
+    # ">", or "<" (the rest of a run of ">" staying in the argument),
     # "!" directly after it sets bang, and the rest, trimmed, is the
     # argument.
     module ExGrammar
@@ -16,7 +17,7 @@ module Carat
         range = s[0, stop].strip
         s = s[stop, s.length - stop]
         j = 0
-        if s.start_with?("&")
+        if s.start_with?("&") || s.start_with?(">") || s.start_with?("<")
           j = 1
         else
           j += 1 while j < s.length && letter?(s[j, 1])

@@ -108,6 +108,8 @@ require_relative "../use_cases/ex/lsp_restart_command_handler"
 require_relative "../use_cases/ex/messages_command_handler"
 require_relative "../use_cases/ex/move_command_handler"
 require_relative "../use_cases/ex/copy_command_handler"
+require_relative "../use_cases/ex/join_command_handler"
+require_relative "../use_cases/ex/shift_command_handler"
 require_relative "../use_cases/ex/plugin_command_handler"
 require_relative "../use_cases/actions/action_table"
 require_relative "../use_cases/actions/motion_handler"
@@ -461,6 +463,8 @@ module Carat
         UseCases::MessagesCommandHandler.register(@commands)
         UseCases::MoveCommandHandler.register(@commands)
         UseCases::CopyCommandHandler.register(@commands)
+        UseCases::JoinCommandHandler.register(@commands)
+        UseCases::ShiftCommandHandler.register(@commands)
         UseCases::PluginCommandHandler.register(@commands, plugins: @plugins)
         @plugins.activate_all(value)
 

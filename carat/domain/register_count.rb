@@ -48,6 +48,14 @@ module Carat
         RegisterCount.new(register: register, count: count, error: "")
       end
 
+      # The "[count]" argument of a line command that takes no register,
+      # such as :j: a leading byte that is not a digit is trailing text.
+      #: (String) -> RegisterCount
+      def self.parse_count(text)
+        return trailing(text, 0) if text.bytesize > 0 && !digit?(text.getbyte(0).to_i)
+        parse(text)
+      end
+
       # E488 for what is left of text from byte i.
       #: (String, Integer) -> RegisterCount
       def self.trailing(text, i)

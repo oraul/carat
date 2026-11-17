@@ -24,4 +24,36 @@ ok   a bad range
 ok   move takes no bang
 ok   copy takes no bang
 ok   a move into its own range inside a global
-editor_line_commands: 26 passed, 0 failed
+ok   Join the cursor line with the next
+ok   Join a range
+ok   Join with a bang
+ok   Join a count
+ok   Join on the last line
+ok   Join is one undo step
+ok   the long name joins
+ok   a join to the first non-blank
+ok   a join with a count of one joins two lines
+ok   one line with two addresses joins nothing
+ok   one address and a count of one joins nothing
+ok   a count past the end stops at the last line
+ok   no space before a closing paren or after a blank
+ok   a join of the visual lines
+ok   a join of every line
+ok   each marked line joined with the next
+ok   Shift the cursor line right
+ok   Shift a range twice
+ok   Shift left with a count
+ok   Shift is one undo step
+ok   a shift left of three lines once
+ok   a shift keeps an empty line empty
+ok   a shift left stops at column 0
+ok   a shift with blanks between the characters
+ok   a shift count from the range's last line
+ok   a shift of the visual lines
+ok   A zero count for join
+ok   Text after the shift
+ok   A bang on a shift
+ok   a register is no count for join
+ok   the other shift character is trailing text
+ok   a bad range for join
+editor_line_commands: 58 passed, 0 failed

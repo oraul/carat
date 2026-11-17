@@ -410,7 +410,7 @@ Files:
 
 - `carat/domain/ex_command.rb`: `ExCommand` value (`range`, `name`, `bang`, `args`).
 - `carat/domain/ex_grammar.rb`: `ExGrammar.parse`, `range_end`, `letter?`; the `&` name.
-- `carat/domain/ex_range.rb`: `ExRange` value (`first`, `last`, `given`, `error`); `resolve` (`%`, `.`, `$`, numbers, `'<`, `'>`, `E16`, `E20`, `E493`); `target`, the one address of `:m`, `:co`, and `:t`.
+- `carat/domain/ex_range.rb`: `ExRange` value (`first`, `last`, `given`, `error`); `resolve` (`%`, `.`, `$`, numbers, `'<`, `'>`, `E16`, `E20`, `E493`); `target`, the one address of `:m`, `:co`, and `:t`, as the row the lines are put at; `line_of`, the one reading of an address both use (`E16`, `E20`, `Not implemented`); `counted`, a count after a line command.
 - `carat/domain/delimited_pattern.rb`: `DelimitedPattern` value; `parse` (the delimiter and pattern of `:s`, `:g`, and `:v`; `E146`), the one reader `SubstituteArgs` and `GlobalArgs` call, and `typed` (a `/` or `?` prompt's pattern and offset).
 - `carat/domain/substitute_args.rb`: `SubstituteArgs` value; `parse` (delimiter, pattern, string, flags, count; `E146`, `E488`).
 - `carat/domain/last_substitute.rb`: `LastSubstitute`, what the next substitute reuses; `apply_flags`, `keep_replacement`, `keep_previous`.
@@ -428,7 +428,8 @@ Files:
 - `carat/use_cases/ex/file_command_handler.rb`: `FileCommandHandler.register`.
 - `carat/use_cases/ex/substitute_command_handler.rb`: `SubstituteCommandHandler.register` (`:s[ubstitute]`, `:&`), `ranged?`.
 - `carat/use_cases/ex/global_command_handler.rb`: `GlobalCommandHandler.register` (`:g[lobal]`, `:g!`, `:v[global]`), `ranged?`; every line without a range.
-- `carat/use_cases/ex/delete_command_handler.rb`: `DeleteCommandHandler.register` (`:d[elete] [x] [count]`), `ranged?`.
+- `carat/use_cases/ex/line_command_handler.rb`: `LineCommandHandler`, the base of the line commands `:d`, `:m`, `:co`, `:t`, `:j`, `:>`, `:<`: `ranged?`, `bang?`, and the shared `lines_of` (`E477`, the range), `target_of`, and `place_cursor`.
+- `carat/use_cases/ex/delete_command_handler.rb`: `DeleteCommandHandler.register` (`:d[elete] [x] [count]`), a line command.
 - `carat/use_cases/search/global_command.rb`: `GlobalCommand#call(state, first, last, text, invert)`: marks under the budget, remembers the pattern, runs the command per marked line through the `CommandRunner` in one transaction, lists without one, `E147` when nested with a range.
 - `carat/use_cases/delete_lines.rb`: `DeleteLines#call(state, first, last, register)`, the linewise delete into a register.
 - `carat/use_cases/search/substitute_lines.rb`: `SubstituteLines#call(state, first, last, args)`, the one substitute use case.
@@ -448,10 +449,12 @@ Files:
 - `carat/use_cases/ex/lsp_restart_command_handler.rb`: `LspRestartCommandHandler.register` (`:LspRestart`): stops every language server and starts the current buffer's again through `LanguageServicePort#restart`.
 - `carat/use_cases/ex/messages_command_handler.rb`: `MessagesCommandHandler.register` (`:mes[sages]`): the message history on the message row or as a listing, `clear` empties it, `E474` for another argument.
 - `carat/use_cases/files/list_tree.rb`: `ListTree#call(root, ignore, limit)`, the regular files below a root for the plugins' `list_files`: ignored names skipped, links never entered, a link to a file kept only inside the resolved root.
-- `carat/use_cases/ex/move_command_handler.rb`: `MoveCommandHandler.register` (`:m[ove] {address}`), `ranged?`; moves the range below the target, `E134` into itself, one undo step.
-- `carat/use_cases/ex/copy_command_handler.rb`: `CopyCommandHandler.register` (`:co[py] {address}`, `:t`), `ranged?`; copies the range below the target, one undo step.
+- `carat/use_cases/ex/move_command_handler.rb`: `MoveCommandHandler.register` (`:m[ove] {address}`), a line command; moves the range below the target, `E134` into itself, one undo step.
+- `carat/use_cases/ex/copy_command_handler.rb`: `CopyCommandHandler.register` (`:co[py] {address}`, `:t`), a line command; copies the range below the target, one undo step.
+- `carat/use_cases/ex/join_command_handler.rb`: `JoinCommandHandler.register` (`:j[oin][!] [count]`), a line command; joins the range, or the cursor line and the next, as `J` does or as they are with `!`, one undo step.
+- `carat/use_cases/ex/shift_command_handler.rb`: `ShiftCommandHandler.register` (`:>`, `:<` with a count), a line command; shifts the range by shiftwidth once per character typed, "N lines >ed M times", one undo step.
 
-Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`, `test/editor_messages.rb` (`:messages`, the notification boxes, their expiry, and `NO_COLOR`), `test/domain_messages.rb` (the history and the notices), `test/editor_line_commands.rb` (`:m`, `:co`, `:t`).
+Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`, `test/editor_messages.rb` (`:messages`, the notification boxes, their expiry, and `NO_COLOR`), `test/domain_messages.rb` (the history and the notices), `test/editor_line_commands.rb` (`:m`, `:co`, `:t`, `:j`, `:>`, `:<`).
 
 Designs: `ex-write-quit-all` (all Decisions), `dependency-injection` (Ex names; ExecuteEx moves to use_cases/ex), `editor-foundation` (Use cases), `plugin-explorer` (The file requests are validated in the host), `use-case-boundaries` (The splits), `buffer-substitute` (all Decisions), `buffer-global` (all Decisions).
 

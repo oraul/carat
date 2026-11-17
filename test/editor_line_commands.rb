@@ -62,7 +62,46 @@ module EditorLineCommandsTest
       ["a bad range", ["a\nb\n", [0, 0], ":5m0<CR>"], [[0, 0], "E16: Invalid range", "a|b"]],
       ["move takes no bang", ["a\nb\n", [0, 0], ":m! 2<CR>"], [[0, 0], "E477: No ! allowed", "a|b"]],
       ["copy takes no bang", ["a\nb\n", [0, 0], ":t! 2<CR>"], [[0, 0], "E477: No ! allowed", "a|b"]],
-      ["a move into its own range inside a global", ["x\nx\n", [0, 0], ":g/x/.,$m1<CR>"], [[0, 0], "E134: Cannot move a range of lines into itself", "x|x"]]
+      ["a move into its own range inside a global", ["x\nx\n", [0, 0], ":g/x/.,$m1<CR>"], [[0, 0], "E134: Cannot move a range of lines into itself", "x|x"]],
+      # :j (scenarios: Join the cursor line with the next, Join a range,
+      # Join with a bang, Join a count, Join on the last line, Join is one
+      # undo step).
+      ["Join the cursor line with the next", ["a\n  b\nc\n", [0, 0], ":j<CR>"], [[0, 0], "", "a b|c"]],
+      ["Join a range", ["a\nb\nc\nd\n", [3, 0], ":1,3j<CR>"], [[0, 0], "", "a b c|d"]],
+      ["Join with a bang", ["a\n  b\n", [0, 0], ":j!<CR>"], [[0, 0], "", "a  b"]],
+      ["Join a count", ["a\nb\nc\nd\ne\n", [0, 0], ":2j 3<CR>"], [[1, 0], "", "a|b c d|e"]],
+      ["Join on the last line", ["a\nb\n", [1, 0], ":j<CR>"], [[1, 0], "", "a|b"]],
+      ["Join is one undo step", ["a\nb\nc\n", [0, 0], ":1,3j<CR>u"], [[0, 0], "2 more lines; before #1  0 seconds ago", "a|b|c"]],
+      ["the long name joins", ["a\nb\n", [0, 0], ":join<CR>"], [[0, 0], "", "a b"]],
+      ["a join to the first non-blank", ["  a\nb\n", [1, 0], ":1j<CR>"], [[0, 2], "", "  a b"]],
+      ["a join with a count of one joins two lines", ["a\nb\nc\n", [0, 0], ":j 1<CR>"], [[0, 0], "", "a b|c"]],
+      ["one line with two addresses joins nothing", ["a\nb\nc\n", [0, 0], ":2,2j<CR>"], [[1, 0], "", "a|b|c"]],
+      ["one address and a count of one joins nothing", ["a\nb\nc\n", [0, 0], ":2j 1<CR>"], [[1, 0], "", "a|b|c"]],
+      ["a count past the end stops at the last line", ["a\nb\nc\n", [0, 0], ":2j 9<CR>"], [[1, 0], "", "a|b c"]],
+      ["no space before a closing paren or after a blank", ["f(\n)\nx \ny\n", [0, 0], ":1,2j<CR>:2,3j<CR>"], [[1, 0], "", "f()|x y"]],
+      ["a join of the visual lines", ["a\nb\nc\n", [0, 0], "Vj<Esc>:'<lt>,'>j<CR>"], [[0, 0], "", "a b|c"]],
+      ["a join of every line", ["a\nb\nc\n", [0, 0], ":%j<CR>"], [[0, 0], "", "a b c"]],
+      ["each marked line joined with the next", ["x\n1\nx\n2\n", [0, 0], ":g/x/j<CR>"], [[1, 0], "", "x 1|x 2"]],
+      # :> and :< (scenarios: Shift the cursor line right, Shift a range
+      # twice, Shift left with a count, Shift is one undo step).
+      ["Shift the cursor line right", ["a\nb\n", [0, 0], ":><CR>"], [[0, 2], "", "  a|b"]],
+      ["Shift a range twice", ["a\nb\nc\n", [0, 0], ":1,3>><CR>"], [[2, 4], "3 lines >ed 2 times", "    a|    b|    c"]],
+      ["Shift left with a count", ["    a\n  b\nc\n", [0, 0], ":<lt> 2<CR>"], [[1, 0], "", "  a|b|c"]],
+      ["Shift is one undo step", ["a\nb\n", [0, 0], ":1,2><CR>u"], [[0, 0], "2 changes; before #1  0 seconds ago", "a|b"]],
+      ["a shift left of three lines once", ["  a\n  b\n  c\n", [0, 0], ":%<lt><CR>"], [[2, 0], "3 lines <ed 1 time", "a|b|c"]],
+      ["a shift keeps an empty line empty", ["a\n\nb\n", [0, 0], ":1,3><CR>"], [[2, 2], "3 lines >ed 1 time", "  a||  b"]],
+      ["a shift left stops at column 0", [" a\n", [0, 0], ":<lt><lt><CR>"], [[0, 0], "", "a"]],
+      ["a shift with blanks between the characters", ["a\n", [0, 0], ":> ><CR>"], [[0, 4], "", "    a"]],
+      ["a shift count from the range's last line", ["a\nb\nc\nd\n", [0, 0], ":2> 2<CR>"], [[2, 2], "", "a|  b|  c|d"]],
+      ["a shift of the visual lines", ["a\nb\nc\n", [0, 0], "Vj<Esc>:'<lt>,'>><CR>"], [[1, 2], "", "  a|  b|c"]],
+      # Refusals (scenarios: A zero count for join, Text after the shift,
+      # A bang on a shift).
+      ["A zero count for join", ["a\nb\n", [0, 0], ":j 0<CR>"], [[0, 0], "E939: Positive count required", "a|b"]],
+      ["Text after the shift", ["a\nb\n", [0, 0], ":> x<CR>"], [[0, 0], "E488: Trailing characters: x", "a|b"]],
+      ["A bang on a shift", ["a\nb\n", [0, 0], ":>!<CR>"], [[0, 0], "E477: No ! allowed", "a|b"]],
+      ["a register is no count for join", ["a\nb\n", [0, 0], ":j a<CR>"], [[0, 0], "E488: Trailing characters: a", "a|b"]],
+      ["the other shift character is trailing text", ["a\nb\n", [0, 0], ":<lt>><CR>"], [[0, 0], "E488: Trailing characters: >", "a|b"]],
+      ["a bad range for join", ["a\nb\n", [0, 0], ":5j<CR>"], [[0, 0], "E16: Invalid range", "a|b"]]
     ]) do |input|
       run(input[0], input[1], input[2])
     end
