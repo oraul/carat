@@ -11,5 +11,5 @@
 
 ## 3. Docs and checks
 
-- [ ] 3.1 `docs/codebase-map.md` (`tab_page.rb`, `switch_buffer.rb`), `docs/compatibility.md` (the `:bnext` row), the `switch_buffer.rb` header comment
+- [x] 3.1 `docs/codebase-map.md` (`tab_page.rb`, `switch_buffer.rb`), `docs/compatibility.md` (the `:bnext` row), the `switch_buffer.rb` header comment
 - [ ] 3.2 `make gates`, `make spec-validate`, `make lint`, `make docs-lint`, and the touched tests pass
