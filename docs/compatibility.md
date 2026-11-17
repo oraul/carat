@@ -58,8 +58,8 @@ Differences from Neovim: a different operator after a pending one cancels silent
 | `a` | `mode.insert_after` | Insert after the cursor | `editor_normal` |
 | `I` | `mode.insert_line_start` | Insert at the first non-blank character | `editor_normal` |
 | `A` | `mode.insert_line_end` | Insert after the last character | `editor_normal` |
-| `o` | `mode.insert_open_below` | Open a line below, with autoindent | `editor_normal`, `editor_insert` |
-| `O` | `mode.insert_open_above` | Open a line above, with autoindent | `editor_normal` |
+| `o` | `mode.insert_open_below` | Open a line below, with autoindent; on a closed fold below its last line | `editor_normal`, `editor_insert`, `editor_folds` |
+| `O` | `mode.insert_open_above` | Open a line above, with autoindent; on a closed fold above its first line | `editor_normal`, `editor_folds` |
 | `:` | `mode.cmdline` | Enter command-line mode | `editor_cmdline` |
 | `<C-c>` | `message.quit_hint` | Show how to quit with unsaved changes | `editor_normal` |
 | `[count]<leader>ws`, `[count]<leader>wv`, `[count]<leader>wh`, `wj`, `wk`, `wl`, `[count]<leader>wc`, `<leader>wo` | `window.*` | Carat's window group: as `<C-w>` with the same last key | `editor_leader`, `domain_keymap` |
@@ -209,7 +209,7 @@ The selection runs from the anchor, where visual mode started, to the cursor, bo
 
 Blockwise registers: a block yank or delete stores a blockwise entry, and `p` and `P` in normal mode put it as a block from the display column after or at the cursor, padding short rows with spaces and adding rows past the end of the buffer (`editor_visual`, `editor_registers`, `domain_registers`).
 
-Differences from Neovim: there are no `'<` and `'>` marks yet and no `:'<,'>` ranges, so `:` does nothing in visual mode; a count before `v V <C-v>` and on `J gJ r ~ u U I A` is ignored; `selection` is always `inclusive` and `virtualedit` does not exist; in a block a tab or a wide character the block's columns only partly cover is taken whole by the operators instead of being split into spaces, and `>` and `<` on a block insert and remove spaces, never tabs; the showcmd area shows the pending keys, not the size of the selection; a register prefix typed before `v` is not kept for the operator; on a larger selection a quote object selects the string around the selection's start when that is larger and otherwise leaves the selection alone; `p` with an empty register leaves visual mode with `E353`; `.` after a visual operator uses its count for the operator over a region of the original size; `gq`, `g?`, `=`, `!`, `<C-a>`, `<C-x>`, `zf`, select mode, and the mouse are not implemented.
+Differences from Neovim: there are no `'<` and `'>` marks yet and no `:'<,'>` ranges, so `:` does nothing in visual mode; a count before `v V <C-v>` and on `J gJ r ~ u U I A` is ignored; `selection` is always `inclusive` and `virtualedit` does not exist; in a block a tab or a wide character the block's columns only partly cover is taken whole by the operators instead of being split into spaces, and `>` and `<` on a block insert and remove spaces, never tabs; the showcmd area shows the pending keys, not the size of the selection; a register prefix typed before `v` is not kept for the operator; on a larger selection a quote object selects the string around the selection's start when that is larger and otherwise leaves the selection alone; `p` with an empty register leaves visual mode with `E353`; `.` after a visual operator uses its count for the operator over a region of the original size; `gq`, `g?`, `=`, `!`, `<C-a>`, `<C-x>`, select mode, and the mouse are not implemented.
 
 ## Insert mode
 
@@ -440,6 +440,21 @@ Each command scrolls the current window and then keeps the cursor on a line the 
 | `[count]zb` | `scroll.cursor_bottom` | The cursor line, or line count, at the bottom of the window, with `scrolloff` | `editor_scroll` |
 
 Differences from Neovim: the view never scrolls past the last line, so the window never shows filler rows after the end of a buffer longer than the window, and `<C-e>` and `<C-f>` stop at the last full window (`<C-f>` there moves the cursor to the last line, where Neovim's repeated `<C-f>` ends); `<C-b>` at the first line changes nothing instead of beeping; `scroll` is global, not local to the window, and `:set scroll` is not implemented yet; `z<CR>`, `z.`, `z-`, `zh`, `zl`, `zs`, `ze`, `<S-Down>`, `<S-Up>`, and smooth scrolling are not implemented.
+
+## Folding
+
+Manual folds, Neovim's `foldmethod=manual`, kept per window: a split copies them and showing another buffer drops them, and they move with the lines edited above or inside them, a fold whose lines are all deleted going with them. A closed fold is drawn as one row, Neovim's default fold text `+--  N lines: text` (a dash more per nesting level, the first line's leading blanks removed and its tabs made spaces) filled with `·`; `j`, `k`, and the scrolling that keeps the cursor in view count it as one line, a cursor any other command (`G`, `gg`, a search, a mark) leaves inside it moves to its first line outside insert mode, and a linewise operator whose range starts or ends on one acts on all its lines, so `dd` deletes the fold and `2dd` the fold and the line after it. `o` and `O` on a closed fold open the new line below its last line or above its first, leaving the fold closed over its lines.
+
+| Keys | Action name | Behavior | Test |
+| --- | --- | --- | --- |
+| `zf{motion}`, `{Visual}zf` | `fold.create` | A closed fold over the lines the motion or the selection covers, the cursor on its first line; inside a fold it nests, crossing one it grows to hold it | `editor_folds` |
+| `zo` | `fold.open` | Open the closed fold under the cursor; `E490: No fold found` without one | `editor_folds` |
+| `zc` | `fold.close` | Close the innermost open fold under the cursor, the cursor going to its first line; `E490` without one | `editor_folds` |
+| `za` | `fold.toggle` | Open the fold under the cursor when it is closed, else close it; `E490` without one | `editor_folds` |
+| `zd` | `fold.delete` | Delete the fold under the cursor, a closed one first, keeping the folds nested in it; `E490` without one | `editor_folds` |
+| `zE` | `fold.delete_all` | Delete every fold of the window | `editor_folds` |
+
+Differences from Neovim: `zF`, `zD`, `zO`, `zC`, `zA`, `zv`, `zx`, `zX`, `zn`, `zN`, `zi`, a count before `zo` and `zc`, `zo` and the other keys in visual mode, and every other fold method and fold option (`foldlevel`, `foldcolumn`, `foldtext`, `foldopen`, `foldclose`) are not implemented, nor yet `zR`, `zM`, `zj`, `zk`, `[z`, `]z`, `:fold`, `:foldopen`, and `:foldclose`; a fold row has the normal colors, no `Folded` group; search, `G`, and jumps do not open a fold but land on its first line; `H`, `M`, `L`, the scroll keys, and relative numbers count the lines of a closed fold; a charwise operator on a closed fold acts on its range only; folds are not kept for a buffer the window shows again.
 
 ## Tab pages
 

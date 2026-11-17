@@ -7,6 +7,7 @@ require_relative "transaction"
 require_relative "undo_tree"
 require_relative "sign_layer"
 require_relative "global_marks"
+require_relative "folds"
 require_relative "buffer_feed"
 require_relative "filetype"
 require_relative "syntax_cache"
@@ -60,9 +61,11 @@ module Carat
     # marks a file buffer that is never written, as a definition target
     # outside the project opens (SaveFile refuses it with E45). listed is
     # Neovim's 'buflisted': false for a buffer a jump left, which stays
-    # loaded with its number but has no tab until it is opened again. A Struct
+    # loaded with its number but has no tab until it is opened again.
+    # fold_lists holds the folds of the windows with folds over the
+    # buffer, which every splice moves with its lines. A Struct
     # record: mutable, with a reader and a writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks, :styles, :readonly, :listed, keyword_init: true)
+    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks, :styles, :readonly, :listed, :fold_lists, keyword_init: true)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
@@ -89,6 +92,7 @@ module Carat
       # @rbs @styles: Array[untyped]
       # @rbs @readonly: bool
       # @rbs @listed: bool
+      # @rbs @fold_lists: Array[untyped]
 
       # Every member is stored through its writer after super(), so the
       # empty sign list takes the pinned type: Spinel's keyword super of a
@@ -125,6 +129,32 @@ module Carat
         self.styles = Array.new(0, nil)
         self.readonly = false
         self.listed = true
+        self.fold_lists = []
+      end
+
+      # Has splice move folds, a window's, with every edit; once only.
+      #: (Folds) -> void
+      def track_folds(folds)
+        i = 0
+        while i < fold_lists.length
+          return if fold_list_at(i).equal?(folds)
+          i += 1
+        end
+        fold_lists.push(folds)
+      end
+
+      # Stops moving folds, as a window with no fold left or showing
+      # another buffer asks.
+      #: (Folds) -> void
+      def untrack_folds(folds)
+        i = 0
+        while i < fold_lists.length
+          if fold_list_at(i).equal?(folds)
+            fold_lists.delete_at(i)
+            return
+          end
+          i += 1
+        end
       end
 
       # Whether the buffer carries the styles of documentation rows.
@@ -687,6 +717,7 @@ module Carat
         shift_signs(a, b - a, inserted.length)
         syntax_cache.shift(a, b - a, inserted.length)
         global_marks.shift(a, b - a, inserted.length)
+        shift_folds(a, b - a, inserted.length) unless fold_lists.empty?
         self.changes = changes + 1
         record(ChangeRecord.new(buffer_id: id, row: a, removed: removed, inserted: inserted))
       end
@@ -737,6 +768,22 @@ module Carat
         notice.removed = span[1]
         notice.inserted = span[2]
         sink.push(notice)
+      end
+
+      # The fold record at i of fold_lists, a boxed array as sign_layers.
+      #: (Integer) -> Folds
+      def fold_list_at(i)
+        fold_lists[i]
+      end
+
+      # Moves the folds of every window that tracks the buffer.
+      #: (Integer, Integer, Integer) -> void
+      def shift_folds(row, removed, inserted)
+        i = 0
+        while i < fold_lists.length
+          fold_list_at(i).shift(row, removed, inserted)
+          i += 1
+        end
       end
 
       # Moves every sign layer, and the diagnostic marks, by an edit at row

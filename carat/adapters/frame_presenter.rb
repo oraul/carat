@@ -731,8 +731,8 @@ module Carat
           window = state.window
           cursor = window.cursor
           gutter = window.gutter_width(options)
-          cursor_dcol = @cache.fetch(window.buffer.line(cursor.row), tabstop).col(cursor.col)
-          row = clamp(window.row + cursor.row - window.top, rows - 1)
+          cursor_dcol = window.folds.closed_at(cursor.row) >= 0 ? window.left : @cache.fetch(window.buffer.line(cursor.row), tabstop).col(cursor.col)
+          row = clamp(window.row + window.row_offset(cursor.row), rows - 1)
           col = clamp(window.col + gutter + cursor_dcol - window.left, cols - 1)
           frame.cursor_row = row
           frame.cursor_col = col
@@ -770,7 +770,10 @@ module Carat
       # One window: each text row painted when what it shows changed and
       # marked dirty when it differs from the base frame's, a scroll
       # recorded for a full-width window, then the separator row under it
-      # unless that row is the status bar's, bar.
+      # unless that row is the status bar's, bar. A closed fold is one row
+      # of its fold text, numbered by its first line; a window with one
+      # records no scroll and draws no indent guides, its rows no longer
+      # one per line.
       #: (Domain::Frame, Domain::Window, Integer, bool, Domain::Options, Integer, Integer, Domain::Selection, Integer, bool) -> void
       def paint_window(frame, window, slot, current, options, tabstop, bar, selection, cols, base_same)
         buffer = window.buffer
@@ -786,8 +789,10 @@ module Carat
         wrow = window.row
         selecting = selection.kind != :none
         block = selection.kind == :blockwise ? selection.block(buffer, tabstop) : @no_block
+        folds = window.folds
+        folded = folds.folded?
         delta = 0
-        if base_same && x == 0 && width == cols && height > 1 && !(@floating && under_float?(wrow, wrow + height))
+        if base_same && !folded && x == 0 && width == cols && height > 1 && !(@floating && under_float?(wrow, wrow + height))
           first = @front_rows.index(wrow, slot)
           if @front_rows.painted?(first) && @front_rows.owner(first) == window.id
             moved = top - @front_rows.top(first)
@@ -802,12 +807,13 @@ module Carat
         @current = current
         lit = current && options.cursorline ? Domain::Highlight::CURSOR_LINE_LAYER : 0
         count = buffer.line_count
-        guided = @guides.on? && !buffer.scratch?
+        guided = @guides.on? && !buffer.scratch? && !folded
         @guides.measure(buffer, top, height, cursor.row, current) if guided
+        row = top
         i = 0
         while i < height
           frame_row = wrow + i
-          row = top + i
+          shown_last = row
           seg = @back_rows.index(frame_row, slot)
           line = PaintedRows::TILDE
           syntax = Domain::SyntaxLine::NONE
@@ -820,7 +826,17 @@ module Carat
           @sel_from = -1
           @sel_to = -2
           @sel_end = -1
-          if row < count
+          fold = folded && row < count ? folds.closed_at(row) : -1
+          if fold >= 0
+            shown_last = folds.last_of(fold)
+            line = folds.label(fold, buffer.line(folds.first_of(fold)), text_width)
+            number = number_shown(row, cursor.row, options, gutter, signs)
+            sign = buffer.sign_at(row) if signs
+            if cursor.row >= row && cursor.row <= shown_last
+              cur = 0
+              layer = lit
+            end
+          elsif row < count
             line = buffer.line(row)
             syntax = highlights.lookup(row, line)
             syntax = buffer.style_at(row, line) if styled
@@ -850,6 +866,7 @@ module Carat
             end
             frame.dirty[frame_row] = 1 if source < 0 || !@front_rows.same?(@front_rows.index(source, slot), line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide)
           end
+          row = shown_last + 1
           i += 1
         end
         below = wrow + height

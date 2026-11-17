@@ -74,7 +74,7 @@ module Carat
       #: (Domain::EditorState, Domain::Window, Domain::DocsText) -> void
       def open(state, window, docs)
         rows = docs.texts
-        screen_row = window.row + window.cursor.row - window.top
+        screen_row = window.row + window.row_offset(window.cursor.row)
         wanted = rows.length > MAX_ROWS ? MAX_ROWS : rows.length
         below = state.screen_rows - 4 - screen_row
         above = screen_row - 2

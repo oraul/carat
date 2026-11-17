@@ -12,6 +12,7 @@ require_relative "../adapters_frame_presenter"
 require_relative "../adapters_hover"
 require_relative "../adapters_definitions"
 require_relative "../adapters_indent_guides"
+require_relative "../domain_folds"
 require_relative "../domain_jump_list"
 require_relative "../adapters_key_decoder"
 require_relative "../adapters_language_gateway"
@@ -67,6 +68,7 @@ require_relative "../editor_completion"
 require_relative "../editor_explorer"
 require_relative "../editor_finder"
 require_relative "../editor_floats"
+require_relative "../editor_folds"
 require_relative "../editor_git_signs"
 require_relative "../editor_global"
 require_relative "../editor_grammar"
@@ -124,6 +126,7 @@ when "adapters_frame_presenter" then AdaptersFramePresenterTest.main
 when "adapters_hover" then AdaptersHoverTest.main
 when "adapters_definitions" then AdaptersDefinitionsTest.main
 when "adapters_indent_guides" then AdaptersIndentGuidesTest.main
+when "domain_folds" then DomainFoldsTest.main
 when "domain_jump_list" then DomainJumpListTest.main
 when "adapters_key_decoder" then AdaptersKeyDecoderTest.main
 when "adapters_language_gateway" then AdaptersLanguageGatewayTest.main
@@ -179,6 +182,7 @@ when "editor_completion" then EditorCompletionTest.main
 when "editor_explorer" then EditorExplorerTest.main
 when "editor_finder" then EditorFinderTest.main
 when "editor_floats" then EditorFloatsTest.main
+when "editor_folds" then EditorFoldsTest.main
 when "editor_git_signs" then EditorGitSignsTest.main
 when "editor_global" then EditorGlobalTest.main
 when "editor_grammar" then EditorGrammarTest.main

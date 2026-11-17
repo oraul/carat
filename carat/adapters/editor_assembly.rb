@@ -161,6 +161,8 @@ require_relative "../use_cases/discovery/follow_palette"
 require_relative "../use_cases/actions/docs_handler"
 require_relative "../use_cases/actions/palette_handler"
 require_relative "../use_cases/actions/layout_handler"
+require_relative "../use_cases/windows/change_folds"
+require_relative "../use_cases/actions/fold_handler"
 require_relative "../use_cases/actions/plugin_action_handler"
 require_relative "../use_cases/dispatcher"
 require_relative "../use_cases/handle_key"
@@ -498,6 +500,7 @@ module Carat
         @open_palette = UseCases::OpenPalette.new(actions: @actions, commands: @commands, keymap: @keymap, plugins: @plugins, palette: @palette, plugin_ui: @plugin_ui, search_prompt: @search_prompt)
         UseCases::PaletteHandler.register(@actions, open_palette: @open_palette, palette: @palette)
         UseCases::LayoutHandler.register(@actions, toggle_slot: @toggle_slot)
+        UseCases::FoldHandler.register(@actions, operate: @operate, change_folds: UseCases::ChangeFolds.new)
         UseCases::PluginActionHandler.register(@actions, plugins: @plugins)
 
         @keymap.add_checked(value, known_actions)

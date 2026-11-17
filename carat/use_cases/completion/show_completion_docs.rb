@@ -89,7 +89,7 @@ module Carat
         return if rows.empty?
         window = state.tab.layout_window
         cursor = window.cursor
-        screen_row = window.row + cursor.row - window.top
+        screen_row = window.row + window.row_offset(cursor.row)
         below = popup.row > 0
         height = rows.length > MAX_ROWS ? MAX_ROWS : rows.length
         room = below ? state.screen_rows - 2 - screen_row : screen_row

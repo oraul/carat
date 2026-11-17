@@ -1,0 +1,49 @@
+ok   zfj leaves a closed two-line fold drawn as one row
+ok   j passes a closed fold
+ok   k lands on the first line of a closed fold
+ok   zo opens a closed fold
+ok   zc closes an open fold
+ok   za toggles a fold open
+ok   za toggles a fold closed again
+ok   zd deletes the fold under the cursor
+ok   a fold over a text object
+ok   a nested closed fold has a dash more
+ok   zd on a nested closed fold keeps the outer one
+ok   a fold below the first line
+ok   a count G into a closed fold lands on its first line
+ok   G into a closed fold at the end lands on its first line
+ok   a cursor moved into a closed fold is drawn on the fold row
+ok   o on a closed fold opens below it, the insert cursor drawn on the row below the fold
+ok   the fold text drops the leading blanks of the first line
+ok   dd on a closed fold deletes its lines
+ok   2dd on a closed fold deletes the fold and the next line
+ok   dj on a closed fold deletes the fold and the next line
+ok   dj onto a closed fold deletes all its lines
+ok   yy on a closed fold yanks its lines
+ok   A fold moves down with a line put above it
+ok   a line opened inside an open fold extends it
+ok   o on a closed fold opens a line below its last line
+ok   O on a closed fold opens a line above its first line
+ok   a line deleted inside an open fold shrinks it
+ok   zf in linewise visual mode folds the selection
+ok   zf in visual mode folds the selected lines
+ok   zfk folds the line above too, the cursor on the first
+ok   zE deletes every fold
+ok   a fold crossing another grows to hold it
+ok   u restores the lines of a deleted fold, not the fold
+ok   zo with no fold gives E490
+ok   zc with no fold gives E490
+ok   za with no fold gives E490
+ok   zd with no fold gives E490
+ok   zd below a fold gives E490
+ok   the cursor on the tenth row after a closed fold of ten lines
+ok   one line more scrolls the fold out
+ok   gg back onto the fold scrolls it in
+ok   a count passes the fold once
+ok   a split window has its parent's folds
+ok   zE in one window leaves the other's folds
+ok   dd on the other window's closed fold deletes its lines
+ok   showing another buffer drops the window's folds, untracked, and draws the new buffer's lines
+ok   a syntax-highlighted line below a closed fold, past top plus the height
+ok   a float opens below a cursor under a closed fold where the rows below have room
+editor_folds: 48 passed, 0 failed
