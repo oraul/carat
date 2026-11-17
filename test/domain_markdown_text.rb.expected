@@ -83,6 +83,7 @@ ok   a table under ascii has plain borders and no box character:
 +-------+-----------+-------+
 ok   a separator of another cell count makes no table, its line flowing as text
 ok   a measure too narrow for two cells a column keeps the source
+ok   a measure too narrow keeps each table line its own row, unflowed
 ok   a short row is padded, a long one cut, markup and escapes read out
 ok   text right after a table is its own row
 ok   a table after text is parted by a blank row
@@ -111,4 +112,4 @@ ok   a flowed quote wider than 60 columns keeps its bar on every row:
 │ bar starting every row.
 ok   a megabyte line is gathered only to the 262,144-byte cap
 ok   lines under the cap are joined whole, a crossing line cut to the cap on a character boundary
-domain_markdown_text: 89 passed, 0 failed
+domain_markdown_text: 90 passed, 0 failed

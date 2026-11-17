@@ -10,6 +10,7 @@
 - [x] 2.1 End a table's rows at a block opener in `MarkdownText.table` (`opens_block?`); prove with `test/domain_markdown_text.rb` (a heading, quote, and list item with a pipe right after a table)
 - [x] 2.2 Keep the gap row and top border under the cap in `MarkdownText.table` and `draw_table`; prove with `test/domain_markdown_text.rb` (a table after a gap at a cap of two rows)
 - [x] 2.3 Pass the caps to `FormatDocs#call` (`carat/use_cases/docs/format_docs.rb`) from `ShowHover`, `ShowCompletionDocs`, and `ToggleReading`; prove with `test/use_cases_toggle_reading.rb` and `test/adapters_hover.rb`
+- [x] 2.4 Keep each line of a table the width cannot draw its own row, unflowed, in `MarkdownText.parse` and `MarkdownText.table` (-2 for a matching header and separator too narrow for the width); prove with `test/domain_markdown_text.rb` (a narrow table with a third, longer row and a paragraph line after it, at width 15)
 
 ## 3. Docs and checks
 

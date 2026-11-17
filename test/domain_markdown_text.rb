@@ -202,6 +202,10 @@ module DomainMarkdownTextTest
     t.cases([
       ["a separator of another cell count makes no table, its line flowing as text", ["a | b\n|---|", 40], "a | b |---|"],
       ["a measure too narrow for two cells a column keeps the source", ["| a | b | c |\n|---|---|---|", 15], "| a | b | c |||---|---|---|"],
+      # markdown-reading-c, requirement "The reading view flows paragraphs
+      # and quotes to the measure": a table the width cannot draw ends
+      # the flow, each of its lines its own row.
+      ["a measure too narrow keeps each table line its own row, unflowed", ["| a | b | c |\n|---|---|---|\n| alpha | bc |\ntext", 15], "| a | b | c |||---|---|---||| alpha | bc ||text"],
       ["a short row is padded, a long one cut, markup and escapes read out", ["a | b\n---|---\n**x** |\n`y` | z \\| w | extra", 40], "┌────┬───────┐|│ a  │ b     │|├────┼───────┤|│ x  │       │|│ y  │ z | w │|└────┴───────┘"],
       ["text right after a table is its own row", ["| a |\n| - |\n| b |\nafter", 40], "┌────┐|│ a  │|├────┤|│ b  │|└────┘|after"],
       ["a table after text is parted by a blank row", ["before\n\n| a |\n|:-:|", 40], "before||┌────┐|│ a  │|└────┘"],

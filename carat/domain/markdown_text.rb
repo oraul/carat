@@ -22,10 +22,12 @@ module Carat
     # character). A table (a header row, a separator row, and the rows
     # holding a pipe after it) is drawn by parse at the width as aligned
     # columns in borders from the icon set, its cells wrapped when it is
-    # wider, so wrap leaves its rows whole. The lines of a paragraph, and
-    # those of a quote at one depth and indentation, flow into one row
-    # until a blank line, another block, or a line ending in two spaces,
-    # and a wrapped row's prefix starts each of its continuation rows.
+    # wider, so wrap leaves its rows whole; one the width cannot draw
+    # keeps each of its source lines its own row. The lines of a
+    # paragraph, and those of a quote at one depth and indentation, flow
+    # into one row until a blank line, another block, or a line ending
+    # in two spaces, and a wrapped row's prefix starts each of its
+    # continuation rows.
     # parse keeps a span (Highlight group) for each heading, strong and
     # emphasized run, code span, link text, and fenced row; wrap cuts
     # them with the rows. gather joins a file's lines up to the raw cap.
@@ -77,6 +79,7 @@ module Carat
         flow_cols = 0
         flowing = +""
         flowing_row = -1
+        source = false
         len = body.bytesize
         start = 0
         while start <= len && doc.count < row_limit
@@ -87,6 +90,7 @@ module Carat
           if fence?(line)
             code = !code
             flow = -1
+            source = false
             if code
               fenced += 1
               syntax = fence_syntax(line)
@@ -101,8 +105,11 @@ module Carat
               flow = -1
               next
             end
+            source = after == -2 || (source && !opens_block?(line))
+          else
+            source = false
           end
-          key = code ? -1 : flow_key(line)
+          key = code || source ? -1 : flow_key(line)
           if key >= 0 && key == flow && !gap
             at = doc.count - 1
             if flowing_row != at
@@ -245,7 +252,9 @@ module Carat
       # row starts at byte start of body, its rows drawn into the document
       # at width cells, after a blank row when gap is set; -1, nothing
       # added, when the next line is no separator row of as many cells as
-      # the header or the width cannot give each column CELL_MIN cells.
+      # the header, and -2, nothing added, when it is one but the width
+      # cannot give each column CELL_MIN cells, so parse keeps the header
+      # and each line holding a pipe after it its own row, unflowed.
       # Its rows are the lines holding a pipe after the separator up to one
       # that opens another block, at most row_limit of them counted with
       # the header, and no row is added past row_limit.
@@ -256,9 +265,10 @@ module Carat
         stop = line_end(body, start)
         aligns = alignments(ControlText.line(body.byteslice(start, stop - start).to_s, raw_limit))
         cols = aligns.length
-        return -1 if cols == 0 || (CELL_MIN + 3) * cols + 1 > width
+        return -1 if cols == 0
         head = split_cells(line)
         return -1 unless head.length == cols
+        return -2 if (CELL_MIN + 3) * cols + 1 > width
         scratch = DocsText.new
         cells = add_cells(head, cols, Array.new(0, ""), scratch)
         rows = 1
