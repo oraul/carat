@@ -28,7 +28,7 @@ None.
 
 - `carat/use_cases/files/quit.rb`, `carat/use_cases/buffers/delete_buffer.rb`, `carat/use_cases/files/open_file.rb`, `carat/use_cases/plugins/window_requests.rb`, `carat/domain/buffer_list.rb`.
 - Tests: `test/editor_buffers.rb`, `test/editor_tabs.rb`, `test/editor_explorer.rb`, and other tests whose sessions depended on the old `:bd` and `:q` rules under the default `option.gt`, with their snapshots.
-- README.md: unchanged, it describes neither the quit nor the buffer-delete rules.
+- README.md: changed, its `gt` and `gT` sentence now says that `:q` on the last window closes the buffer tab while another is left, that `:bd` closes it keeping every window, and that the empty startup buffer leaves the row once a file opens in another window or tab page.
 - docs/architecture.md: unchanged, its `BufferList` entry's keep-or-release policy still holds and the file is at its byte budget; the codebase map names `withdraw` and `retire_startup`.
 - CLAUDE.md: unchanged, no process change.
 - docs/codebase-map.md: changed, the entries of `buffer_list.rb`, `delete_buffer.rb`, `quit.rb`, `open_file.rb`, and `window_requests.rb`; no file is added, moved, or removed.
