@@ -181,8 +181,8 @@ module Carat
         marker_stop(markers(line))
       end
 
-      # A line's leading spaces and quote markers read once, for
-      # flow_key, marker_end, and block: under four leading spaces, each
+      # The one scan of a line's leading spaces and quote markers that
+      # flow_key, marker_end, and block share: under four leading spaces, each
       # ">" and the spaces after it, the text's indentation being the
       # spaces after the last marker less the one the marker takes, and
       # the scan ending after a marker followed by four or more (an
