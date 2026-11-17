@@ -16,5 +16,5 @@
 
 ## 4. Checks
 
-- [ ] 4.1 Run one real `sh tools/run_state.sh check check-parallel` and record its wall time against the 10.5-minute sequential figure in the proposal's Results
-- [ ] 4.2 `make gates`, `make spec-validate`, `make docs-lint`, and `make tools-test` pass
+- [x] 4.1 Run one real `sh tools/run_state.sh check check-parallel` and record its wall time against the 10.5-minute sequential figure in the proposal's Results
+- [x] 4.2 `make gates`, `make spec-validate`, `make docs-lint`, and `make tools-test` pass

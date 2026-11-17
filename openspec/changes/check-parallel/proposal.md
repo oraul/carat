@@ -53,4 +53,4 @@ Minor assumptions: a failing stage stops its running siblings rather than lettin
 
 ## Results
 
-Filled in after the real check of this change (task 4.1).
+One real `sh tools/run_state.sh check check-parallel` at efbd21f8ae65, with the default `CHECK_JOBS=3` on the 4-CPU lane machine (load average 3.27 just after it, so the other lane may have been compiling too), passed every stage in 368 s of wall time, against the 10.5-minute (about 630 s) sequential figure: 42 percent less, 4.3 minutes saved. Every stage was recorded at the head: docs-lint 6 s, dev-build 107 s, bench-budget 82 s, test-build 234 s, test-run 53 s (started after test-build passed), gates 1 s, diagnose 285 s, tools-test 139 s, and metrics 20 s (alone, last). Run beside each other the stages took 927 s of stage time against the 614 s measured one at a time, about 1.5 times as long each, since three stages and a compiler's own work share 4 CPUs; the wall time stays well under the sequential one, and inside the checker's 540 s wait.
