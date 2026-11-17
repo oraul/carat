@@ -30,7 +30,8 @@ ok   Ctrl-W Ctrl-P from the file window returns to the tree
 ok   the root, the directories, then the files, the current file marked
 ok   the status bar shows the tree's title and the width option is 30
 ok   quitting the last file window ends the editor with the tree open
-ok   a file opened in a tab page from the tree retires the startup buffer
+ok   a file opened as a tab from the tree takes the startup buffer's place
+ok   a second file opened as a tab from the tree is a second buffer tab
 ok   Quit beside the explorer closes the buffer tab
 ok   :q beside the tree closes the buffer tab and the tree stays
 ok   Delete beside the explorer keeps every file window: the tab page stays, showing b.rb
@@ -54,11 +55,23 @@ ok   Enter on a file in an expanded directory opens it
 ok   Enter on a file in a nested directory opens it
 ok   s opens it in a horizontal split
 ok   v opens it in a vertical split
-ok   t opens it in a new tab page
+ok   t opens it as a buffer tab in the editing window
 ok   s on a directory does nothing
 ok   with only the tree left the file gets a new window
 ok   Enter opens in the window used before the tree
 ok   the new tree is fixed-width and the file window is not
+ok   t opens a buffer tab: one tab page, the row shows a.md and b.rb, b.rb current
+ok   and gT then shows a.md in the file window, the tree kept
+ok   t on a listed file shows its tab
+ok   Tab page: under option.gt tabpages t opens tab page 2
+ok   gt from the explorer moves the file window's buffer tab
+ok   gT from the explorer moves the file window's buffer tab
+ok   :bn from the explorer switches the file window
+ok   :bp from the explorer switches the file window
+ok   :b N from the explorer switches the file window
+ok   a refused switch keeps the focus in the explorer
+ok   the refusal is E37
+ok   A switch from a lone side window is refused
 ok   Enter expands a directory
 ok   l expands it too
 ok   Enter closes an expanded directory
@@ -143,4 +156,4 @@ ok   the screen shows each illegal byte as one replacement character
 ok   the explorer stays enabled after listing them
 ok   Enter opens a name that is not UTF-8
 ok   the status line names the opened file with one replacement character per illegal byte
-editor_explorer: 145 passed, 0 failed
+editor_explorer: 158 passed, 0 failed

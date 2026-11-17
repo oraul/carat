@@ -92,6 +92,7 @@ require_relative "../editor_breadcrumbs"
 require_relative "../editor_start_screen"
 require_relative "../editor_substitute"
 require_relative "../editor_syntax"
+require_relative "../editor_tab_flows"
 require_relative "../editor_tabs"
 require_relative "../editor_text_objects"
 require_relative "../editor_transactions"
@@ -203,6 +204,7 @@ when "editor_breadcrumbs" then EditorBreadcrumbsTest.main
 when "editor_start_screen" then EditorStartScreenTest.main
 when "editor_substitute" then EditorSubstituteTest.main
 when "editor_syntax" then EditorSyntaxTest.main
+when "editor_tab_flows" then EditorTabFlowsTest.main
 when "editor_tabs" then EditorTabsTest.main
 when "editor_text_objects" then EditorTextObjectsTest.main
 when "editor_transactions" then EditorTransactionsTest.main

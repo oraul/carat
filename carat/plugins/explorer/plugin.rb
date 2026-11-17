@@ -13,7 +13,7 @@ module Carat
       class Plugin < Carat::PluginApi::Plugin
         NAME = "explorer"
         TITLE = "explorer"
-        HELP = "<CR>/o toggle  l open  h close  s/v/t split/vsplit/tab  a add  r rename  d delete  R refresh  H hidden  - up  C root  q quit"
+        HELP = "<CR>/o toggle  l open  h close  s/v split/vsplit  t buffer tab or tab page (option.gt)  a add  r rename  d delete  R refresh  H hidden  - up  C root  q quit"
 
         # @rbs @host: Carat::PluginApi::Host?
         # @rbs @tree: Tree?
@@ -49,7 +49,7 @@ module Carat
               "plugin.explorer.toggle_dir" => "Expand or collapse the directory under the cursor, or open the file",
               "plugin.explorer.open_split" => "Open the file under the cursor in a horizontal split",
               "plugin.explorer.open_vsplit" => "Open the file under the cursor in a vertical split",
-              "plugin.explorer.open_tab" => "Open the file under the cursor in a new tab page",
+              "plugin.explorer.open_tab" => "Open the file under the cursor as a tab: a buffer tab under option.gt buffers, a tab page under option.gt tabpages",
               "plugin.explorer.create" => "Create a file, or a directory with a trailing /, next to the entry",
               "plugin.explorer.rename" => "Rename the entry under the cursor",
               "plugin.explorer.delete" => "Delete the file or empty directory under the cursor after confirmation",
@@ -277,7 +277,7 @@ module Carat
         def open_path(host, path, how)
           relative = PluginApi::Paths.relative(cwd(host), path)
           if how == :tab
-            report_window(host, host.open_in_tab(relative))
+            report_window(host, host.open_as_tab(relative))
             return
           end
           target = host.editing_window.window

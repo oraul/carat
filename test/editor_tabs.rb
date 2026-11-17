@@ -75,6 +75,9 @@ module EditorTabsTest
     t = Carat::Testing.new("editor_tabs")
 
     # Opening, closing, and moving: rows are [label, keys, [tab count, current tab, paths per tab]].
+    # Scenarios "Tab new", "Tab edit a file", "Tab edit without a file", and
+    # "New tab after the current one"; "Tab edit a listed file leaves no
+    # empty buffer" is in test/editor_buffers.rb.
     t.table([
       [":tabnew opens a tab page after the current one", ":tabnew<CR>", [2, 2, ["a.txt", ""]]],
       [":tabe file opens a tab page on the file", ":tabe b.txt<CR>", [2, 2, ["a.txt", "b.txt"]]],

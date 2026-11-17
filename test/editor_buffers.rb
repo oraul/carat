@@ -74,6 +74,13 @@ module EditorBuffersTest
     ]) do |keys|
       session(keys).message
     end
+    # Scenario "Tab edit a listed file leaves no empty buffer".
+    h = session(":e b.txt<CR>:tabe a.txt<CR>")
+    t.assert_equal([2, 2, "a.txt", ["a.txt", "b.txt"], false], [h.tab_count, h.tab_index, h.buffer.path.to_s, h.buffer_paths, h.row(0).include?("[No Name]")], "Tab edit a listed file leaves no empty buffer: the row lists a.txt and b.txt only")
+    h.type(":ls<CR>")
+    t.assert_equal(false, h.message.include?("No Name"), "and :ls lists no empty buffer")
+    h = session(":tabe<CR>")
+    t.assert_equal([2, ["a.txt", ""]], [h.tab_count, h.buffer_paths], ":tabe with no name keeps opening an empty buffer")
 
     # Scratch buffers show only with the bang or u.
     # Scenario "Scratch buffers with the bang".

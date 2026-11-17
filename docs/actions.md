@@ -198,7 +198,7 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `plugin.explorer.toggle_dir` | `explorer` | `<CR>`, `o` in the tree | Expand or collapse the directory under the cursor, or open the file |
 | `plugin.explorer.open_split` | `explorer` | `s` in the tree | Open the file under the cursor in a horizontal split |
 | `plugin.explorer.open_vsplit` | `explorer` | `v` in the tree | Open the file under the cursor in a vertical split |
-| `plugin.explorer.open_tab` | `explorer` | `t` in the tree | Open the file under the cursor in a new tab page |
+| `plugin.explorer.open_tab` | `explorer` | `t` in the tree | Open the file under the cursor as a tab: a buffer tab under option.gt buffers, a tab page under option.gt tabpages |
 | `plugin.explorer.create` | `explorer` | `a` in the tree | Create a file, or a directory with a trailing /, next to the entry |
 | `plugin.explorer.rename` | `explorer` | `r` in the tree | Rename the entry under the cursor |
 | `plugin.explorer.delete` | `explorer` | `d` in the tree | Delete the file or empty directory under the cursor after confirmation |

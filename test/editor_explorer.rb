@@ -161,11 +161,14 @@ module EditorExplorerTest
 
     # Buffer tabs beside the tree, under option.gt buffers. Scenario "Quit
     # beside the explorer closes the buffer tab": started on no file, as
-    # `carat .`, a file opened in a tab page from the tree, gT, :q.
+    # `carat .`, a file opened as a tab from the tree, another opened as a
+    # tab from the tree, :q.
     h = Carat::Doubles::EditorHarness.new(files: disk, config: config_with("ascii", ""), rows: 24, cols: 80, plugins: Carat::Plugins::Registry.all)
     h.type(" eGkt")
-    t.assert_equal([["a.md"], 2, false], [file_paths(h), h.tab_count, h.row(0).include?("[No Name]")], "a file opened in a tab page from the tree retires the startup buffer")
-    h.type("gT:q<CR>")
+    t.assert_equal([["a.md"], 1, false], [file_paths(h), h.tab_count, h.row(0).include?("[No Name]")], "a file opened as a tab from the tree takes the startup buffer's place")
+    h.type(" ejt")
+    t.assert_equal([["a.md", "b.rb"], 1, "b.rb"], [file_paths(h), h.tab_count, h.buffer.path.to_s], "a second file opened as a tab from the tree is a second buffer tab")
+    h.type(":q<CR>")
     t.assert_equal([false, ["a.md"], 1, [[0, 30, "explorer"], [31, 49, "a.md"]]], [h.quit?, file_paths(h), h.tab_count, shape(h)], "Quit beside the explorer closes the buffer tab")
     h = session(":e b.rb<CR> e<C-w>l:q<CR>")
     t.assert_equal([false, ["a.md"], [[0, 30, "explorer"], [31, 49, "a.md"]]], [h.quit?, file_paths(h), shape(h)], ":q beside the tree closes the buffer tab and the tree stays")
@@ -224,7 +227,7 @@ module EditorExplorerTest
       ["Enter on a file in a nested directory opens it", " eggjjlj<CR>j<CR>", [[[0, 30, "explorer"], [31, 49, "lib/deep/x.rb"]], 2, 1, "lib/deep/x.rb", "\"lib/deep/x.rb\" 1L, 2B"]],
       ["s opens it in a horizontal split", " ejs", [[[0, 30, "explorer"], [31, 49, "b.rb"], [31, 49, "a.md"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]],
       ["v opens it in a vertical split", " ejv", [[[0, 30, "explorer"], [31, 24, "b.rb"], [56, 24, "a.md"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]],
-      ["t opens it in a new tab page", " ejt", [[[0, 80, "b.rb"]], 1, 2, "b.rb", "\"b.rb\" 1L, 7B"]],
+      ["t opens it as a buffer tab in the editing window", " ejt", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]],
       ["s on a directory does nothing", " eggjs", [OPEN, 1, 1, "explorer", ""]],
       ["with only the tree left the file gets a new window", " e<C-w>l<C-w>cj<CR>", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]]
     ]) do |keys|
@@ -236,6 +239,42 @@ module EditorExplorerTest
     t.assert_equal([3, "b.rb", "a.md"], [h.window_index, h.state.tab.layout.window_at(h.state.tab.layout.leaves[2]).buffer.path, h.state.tab.layout.window_at(h.state.tab.layout.leaves[1]).buffer.path], "Enter opens in the window used before the tree")
     h = session(" e<C-w>l<C-w>cj<CR>")
     t.assert_equal([true, false], [h.state.tab.layout.window_at(h.state.tab.layout.leaves[0]).fixed_width, h.state.window.fixed_width], "the new tree is fixed-width and the file window is not")
+
+    # t follows the top row. Scenario "t opens a buffer tab".
+    # Scenario "Open as a tab under buffer tabs".
+    h = session(" ejt")
+    t.assert_equal([1, true, true, "b.rb", ["a.md", "b.rb"]], [h.tab_count, h.row(0).include?("a.md"), h.row(0).include?("b.rb"), h.buffer.path.to_s, file_paths(h)], "t opens a buffer tab: one tab page, the row shows a.md and b.rb, b.rb current")
+    h.type("gT")
+    t.assert_equal([[[0, 30, "explorer"], [31, 49, "a.md"]], 2, "a.md"], [shape(h), h.window_index, h.buffer.path.to_s], "and gT then shows a.md in the file window, the tree kept")
+    # Scenario "t on a listed file shows its tab".
+    h = session(":e b.rb<CR> ekt")
+    t.assert_equal([[[0, 30, "explorer"], [31, 49, "a.md"]], ["a.md", "b.rb"], 1], [shape(h), file_paths(h), h.tab_count], "t on a listed file shows its tab")
+    # Scenarios "Tab page" and "Open as a tab under tab pages".
+    h = editor_on("a.md", config_with("ascii", "option.gt tabpages\n"))
+    h.type(" ejt")
+    t.assert_equal([2, 2, 1, "b.rb"], [h.tab_count, h.tab_index, h.window_count, h.buffer.path.to_s], "Tab page: under option.gt tabpages t opens tab page 2")
+
+    # Buffer switches from the tree act on the file window: rows are
+    # [label, keys, [windows, current window, current buffer, tab pages]].
+    # Scenarios "gt from the explorer moves the file window's buffer tab",
+    # "gT from the explorer moves the file window's buffer tab", and
+    # ":bn and :bp from the explorer switch the file window".
+    t.table([
+      ["gt from the explorer moves the file window's buffer tab", ":e b.rb<CR>:b 1<CR> egt", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, "b.rb", 1]],
+      ["gT from the explorer moves the file window's buffer tab", ":e b.rb<CR>:b 1<CR> egT", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, "b.rb", 1]],
+      [":bn from the explorer switches the file window", ":e b.rb<CR>:b 1<CR> e:bn<CR>", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, "b.rb", 1]],
+      [":bp from the explorer switches the file window", ":e b.rb<CR>:b 1<CR> e:bn<CR><C-w>h:bp<CR>", [[[0, 30, "explorer"], [31, 49, "a.md"]], 2, "a.md", 1]],
+      [":b N from the explorer switches the file window", ":e b.rb<CR>:b 1<CR> e:b 2<CR>", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, "b.rb", 1]],
+      ["a refused switch keeps the focus in the explorer", ":e b.rb<CR>:b 1<CR>x e:bn<CR>", [[[0, 30, "explorer"], [31, 49, "a.md"]], 1, "", 1]]
+    ]) do |keys|
+      h = session(keys)
+      [shape(h), h.window_index, h.buffer.path.to_s, h.tab_count]
+    end
+    h = session(":e b.rb<CR>:b 1<CR>x e:bn<CR>")
+    t.assert_equal("E37: No write since last change (add ! to override)", h.message, "the refusal is E37")
+    # Scenario "A switch from a lone side window is refused".
+    h = session(" e:only<CR>:bn<CR>")
+    t.assert_equal([1, "explorer", "No file window to show the buffer in"], [h.window_count, h.buffer.display_name.to_s, h.message], "A switch from a lone side window is refused")
 
     # Directories: rows are [label, keys, [tree lines, cursor]].
     t.table([
@@ -392,7 +431,9 @@ module EditorExplorerTest
     t.assert_equal(["   m a|b.md", "   m my notes.md"], [tree_lines(h)[4], tree_lines(h)[6]], "the tree lists both names")
     h.type("7Gs")
     t.assert_equal([3, "my notes.md", ["spaced"]], [h.window_count, h.buffer.path, h.lines], "s opens a name with a space in a split")
-    h = session(" e")
+    # Scenario "A name with a bar in a tab page".
+    h = editor_on("a.md", config_with("ascii", "option.gt tabpages\n"))
+    h.type(" e")
     h.files.put("a|b.md", "barred\n")
     h.type("R5Gt")
     t.assert_equal([2, "a|b.md", ["barred"]], [h.tab_count, h.buffer.path, h.lines], "t opens a name with a bar in a tab page")

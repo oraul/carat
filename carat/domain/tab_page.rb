@@ -104,6 +104,22 @@ module Carat
         self.current = id
       end
 
+      # The leaf of the window a side window edits files in: the
+      # previously used window when it shows a buffer that is not a
+      # scratch buffer, otherwise the first such window in layout order,
+      # -1 when none does.
+      #: () -> Integer
+      def editing_leaf
+        return previous if previous? && !layout.window_at(previous).buffer.scratch?
+        ids = layout.leaves
+        i = 0
+        while i < ids.length
+          return ids[i] unless layout.window_at(ids[i]).buffer.scratch?
+          i += 1
+        end
+        -1
+      end
+
       # Whether the previously used window still exists.
       #: () -> bool
       def previous?

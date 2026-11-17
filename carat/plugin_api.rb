@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 7
-    VERSION = "2.7"
+    MINOR = 8
+    VERSION = "2.8"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -575,6 +575,16 @@ module Carat
       # @rbs path: String
       def open_in_tab(path)
         raise NotImplementedError, "Host#open_in_tab"
+      end
+
+      # Opens the file at path, taken as it is, as the tab the top row
+      # shows (API 2.8): under option.gt buffers in the editing window, as
+      # open_file does there, so it becomes a buffer tab; under option.gt
+      # tabpages, or with no file window, in a tab page as open_in_tab.
+      # Returns a WindowResponse with the id of the window showing it.
+      # @rbs path: String
+      def open_as_tab(path)
+        raise NotImplementedError, "Host#open_as_tab"
       end
 
       # Shows text in the message row, as an error when error is true, and
