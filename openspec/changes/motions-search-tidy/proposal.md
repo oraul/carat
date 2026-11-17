@@ -27,7 +27,7 @@ None.
 
 - `carat/domain/vim_pattern.rb`, `carat/domain/delimited_pattern.rb`, `carat/domain/search_prompt.rb`, `carat/domain/last_search.rb`, `carat/use_cases/search/preview_search.rb`, `carat/use_cases/search/find_match.rb`, `carat/use_cases/search/global_command.rb`, `carat/use_cases/ex/set_command_handler.rb`, `carat/adapters/editor_assembly.rb`.
 - Tests: `test/editor_search.rb`, `test/domain_vim_pattern.rb`, `test/adapters_assembly.rb` when it builds the touched use cases, with their snapshots.
-- README.md: unchanged, its search paragraph names neither `~` nor the collection escapes and points to `docs/compatibility.md` for the rest.
+- README.md: changed, the patterns line names `~` as the last substitute's replacement string.
 - docs/architecture.md: unchanged, it names `PreviewSearch` and `VimPattern` only by role, which stays.
 - CLAUDE.md: unchanged, no process change.
 - docs/compatibility.md: changed, the pattern paragraph and the substitute differences no longer say `~` in a search answers E33 after a substitute, and say a second `^` is literal.
