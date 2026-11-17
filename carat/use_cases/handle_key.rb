@@ -62,19 +62,19 @@ module Carat
     # in ShowCompletion, which opens, filters, or closes the popup. While
     # a documentation float shows, every key ends in FollowHover, which
     # closes it when the cursor moved; with none, one comparison; the
-    # definition peek float and pick list end in FollowDefinition alike. A typed
-    # `(` or `,` in insert mode ends in RequestSignature, and while a call
-    # is followed every key ends in FollowSignature, which asks again as
-    # the cursor moves through the call and closes the signature float
-    # outside it; with none, one comparison. A key arriving while the key
-    # hints show closes them first, through HideKeyHints; with none, one
-    # comparison. While the
-    # command palette follows, every key ends in FollowPalette, which
-    # filters and shows its list or closes it; an action its Enter chose
-    # is then dispatched with no keys, as if its key had been pressed.
-    # While a plugin's live prompt is open its keymap answers first on the
-    # command line and every key ends in PluginHost#follow_prompt, which
-    # reports a changed text; with none, one comparison.
+    # definition peek float and pick list end in FollowDefinition
+    # alike. A typed `(` or `,` in insert mode ends in RequestSignature,
+    # and while a call is followed every key ends in FollowSignature,
+    # which asks again as the cursor moves through the call and closes
+    # the signature float outside it; with none, one comparison. A
+    # key arriving while the key hints show closes them first, through
+    # HideKeyHints; with none, one comparison. While the command palette
+    # follows, every key ends in FollowPalette, which filters and shows
+    # its list or closes it; an action its Enter chose is then dispatched
+    # with no keys, as if its key had been pressed. While a plugin's
+    # live prompt is open its keymap answers first on the command line
+    # and every key ends in PluginHost#follow_prompt, which reports a
+    # changed text; with none, one comparison.
     class HandleKey
       include Reporting
 

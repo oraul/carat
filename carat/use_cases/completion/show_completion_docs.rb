@@ -22,12 +22,12 @@ module Carat
     # the float shows that candidate's same text beside the same popup it
     # stays, so moving the selection costs one comparison. Otherwise the
     # float is replaced: the text read as rows with their markup styles
-    # (FormatDocs, kept on the float's buffer) at most WIDTH cells wide, at most MAX_ROWS rows and the rows free on the
-    # popup's side shown, at the popup's rows (from its first row below
-    # the cursor, ending on the row above it above), on the popup's right,
-    # or on its left when the right lacks the room and the left has it,
-    # with no border, under the popup. CloseCompletion closes it with the
-    # popup.
+    # (FormatDocs, kept on the float's buffer) at most WIDTH cells wide,
+    # at most MAX_ROWS rows and the rows free on the popup's side shown,
+    # at the popup's rows (from its first row below the cursor, ending
+    # on the row above it above), on the popup's right, or on its left
+    # when the right lacks the room and the left has it, with no border,
+    # under the popup. CloseCompletion closes it with the popup.
     class ShowCompletionDocs
       WIDTH = 60
       MAX_ROWS = 12

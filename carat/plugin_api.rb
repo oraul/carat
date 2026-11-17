@@ -516,9 +516,10 @@ module Carat
       # columns wide, or its "bottom" panel (2.4), width rows high, unless
       # the slot's size option is set, holding the lines, with its own
       # keymap built from bindings, keymap lines
-      # "keymap.<mode> <keys> <action>" as in the manifest. A new buffer's syntax is the plugin's name when the
-      # manifest declares that filetype (API 2.1), so the plugin tokenizes
-      # its own lines. Returns a WindowResponse with the window's id.
+      # "keymap.<mode> <keys> <action>" as in the manifest. A new
+      # buffer's syntax is the plugin's name when the manifest declares
+      # that filetype (API 2.1), so the plugin tokenizes its own
+      # lines. Returns a WindowResponse with the window's id.
       # @rbs title: String
       # @rbs side: String
       # @rbs width: Integer

@@ -1,8 +1,9 @@
 module Carat
   module Ports
     # The terminal as the editor core sees it: a size, raw key bytes with a
-    # timeout, a byte sink, how many colors it shows, and whether color is unwanted. Drivers and doubles subclass it. Return types
-    # of overridden methods are described in prose because the compiler
+    # timeout, a byte sink, how many colors it shows, and whether color
+    # is unwanted. Drivers and doubles subclass it. Return types of
+    # overridden methods are described in prose because the compiler
     # applies only the parameter types of a method a subclass overrides.
     class TerminalPort
       # Returns [rows, cols].
