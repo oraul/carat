@@ -7,7 +7,7 @@
 
 ## 2. Docs lint
 
-- [x] 2.1 Cap the backlog lane's sprint at 3 items in `tools/docs_lint.sh`; proved by "docs-lint refuses a backlog sprint of 4 items" and "docs-lint accepts a backlog sprint of 3 items" in `tools/tools_test.sh`
+- [x] 2.1 Cap the backlog lane's sprint at 3 items in `tools/docs_lint.sh`; proved by "docs_lint: a backlog lane sprint of four items fails" and "docs_lint: a backlog lane sprint of three items passes, the sprint of 6 (3 + 3)" in `tools/tools_test.sh`
 
 ## 3. Agents and docs
 
@@ -16,4 +16,4 @@
 
 ## 4. Checks
 
-- [ ] 4.1 `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate` pass
+- [x] 4.1 `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate` pass
