@@ -160,3 +160,17 @@ A buffer that lost its tab to a jump SHALL be unlisted as in Neovim: loaded, wit
 #### Scenario: First refused on a modified buffer
 - **WHEN** "x" is pressed on "b.txt" with "a.txt" listed first and ":bfirst" is run
 - **THEN** the message is "E37: No write since last change (add ! to override)" and the window keeps "b.txt"
+
+### Requirement: Control characters in a buffer's name
+
+A control character in a buffer's name (a C0 control or DEL) SHALL be shown in caret notation, `^` and the character 64 above it (`^J` for a newline, `^?` for DEL), in the `:ls` listing and in the E162 refusal of quitting, so no name breaks either message into lines.
+
+#### Scenario: A newline in a name in the listing
+
+- **WHEN** the editor is on a file whose name is "x" followed by a newline and "y.txt" and ":ls" is run
+- **THEN** the message is one line naming "x^Jy.txt"
+
+#### Scenario: A newline in a name in E162
+
+- **WHEN** that buffer is modified and ":qa" is run
+- **THEN** the editor stays and the message is "E37: No write since last change" and "E162: No write since last change for buffer "x^Jy.txt"" on two lines
