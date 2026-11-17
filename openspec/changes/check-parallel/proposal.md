@@ -34,7 +34,7 @@ None: the change alters the pipeline's tooling only, no editor behavior (`skip_s
 - `tools/tools_test.sh`: the new cases; the stubs that end the runner find it by its pid file, since a stage's parent is now its job, not the runner.
 - `Makefile`: the comment of `stages` says how the check runs them.
 - README.md: changed, the checker paragraph says the stages run at once in the order they need.
-- CLAUDE.md: changed, the `check CHANGE` entry names `CHECK_JOBS`.
+- CLAUDE.md: unchanged, its `check CHANGE` entry ("runs the stages detached") stays true and the file is at its byte budget; the Makefile help, the script header, and `.claude/agents/checker.md` name `CHECK_JOBS`.
 - docs/architecture.md: unchanged, it does not describe how the checker runs its stages.
 - docs/codebase-map.md: changed, the Build and CI flow says the stages run at once; no file is added, moved, or removed.
 - `.claude/agents/checker.md`: changed, its step 1 says the stages run at once and a failure stops the others.

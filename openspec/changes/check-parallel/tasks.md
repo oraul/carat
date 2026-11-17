@@ -12,7 +12,7 @@
 
 ## 3. Docs
 
-- [ ] 3.1 Describe the parallel check in the Makefile's `stages` comment, README.md, CLAUDE.md, `docs/codebase-map.md` area 1, and `.claude/agents/checker.md` (docs only, no test; `make docs-lint` and `make gates`)
+- [x] 3.1 Describe the parallel check in the Makefile's `stages` comment, README.md, `docs/codebase-map.md` area 1, and `.claude/agents/checker.md` (docs only, no test; `make docs-lint` and `make gates`)
 
 ## 4. Checks
 
