@@ -60,7 +60,7 @@ The leader is Space. Its keys come in groups named by their first letter, and ea
 - `<leader>d` docs: `dp` pins the documentation float `K` opened into a split, `dd` peeks at the definition under the cursor in a float.
 - `<leader>l` layout: `ls` hides the left sidebar and shows it again where it was, `lr` does the same for the right sidebar and `lp` for the bottom panel.
 - `<leader>e` opens the file tree, as before.
-- `<leader>p` (or F1) opens the command palette: every action and ex command, each row its description first, then its dotted name, dimmed, and its key on the right (a control key as `^W`), a text too long for its column cut with `…` (`>` under `option.icons ascii`) and the name left out on a narrow screen, filtered as you type with the typed letters marked; Ctrl-N and Ctrl-P move the selection, Enter runs it, Escape closes it.
+- `<leader>p` (or F1) opens the command palette: every action and ex command, each row its description first, then its dotted name, dimmed, and its key on the right (a control key as `^W`), a text too long for its column cut with `…` (`>` under `option.icons ascii`) and the name left out on a narrow screen, the key too on the narrowest, so a row always shows its description, filtered as you type with the typed letters marked; Ctrl-N and Ctrl-P move the selection, Enter runs it, Escape closes it.
 
 Pause after a group key, or after `g`, `z`, or `<C-w>`, and a panel centered at the bottom lists the keys that may follow and what each does, a group of your own named by the actions under it. `option.keyhints.delay` sets the pause in milliseconds (300; 0 turns the hints off), and `keymap.group <keys> <name>` names a group of your own, as `keymap.group <leader>w panes`.
 
