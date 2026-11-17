@@ -20,14 +20,17 @@ module Carat
     # process port's capture, never a path, so not one a cloned project
     # carries, and only while the working directory is trusted
     # (Domain::TrustedRoots, which the plugin host decides on activation),
-    # with git's lazy fetch off (PROGRAM_ENVIRONMENT), so a cloned
-    # repository's promisor remote cannot run a command. The plugin link
+    # with git's lazy fetch off and every git transport refused
+    # (PROGRAM_ENVIRONMENT: an empty GIT_ALLOW_PROTOCOL allows none,
+    # whatever the configuration, also for a git older than 2.44, which
+    # ignores GIT_NO_LAZY_FETCH), so a cloned repository's promisor
+    # remote, upload-pack, or ssh command cannot run. The plugin link
     # has checked that the plugin is enabled. The use cases have no reader named as a request.
     class FileRequests
       MAX_FILES = 100_000
       READ_LIMIT = 262_144
       MAX_ROWS = 1000
-      PROGRAM_ENVIRONMENT = { "GIT_NO_LAZY_FETCH" => "1" }
+      PROGRAM_ENVIRONMENT = { "GIT_NO_LAZY_FETCH" => "1", "GIT_ALLOW_PROTOCOL" => "" }
       private_constant :MAX_FILES, :READ_LIMIT, :MAX_ROWS, :PROGRAM_ENVIRONMENT
 
       attr_reader :files #: Ports::FilePort

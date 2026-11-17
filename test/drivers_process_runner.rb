@@ -9,7 +9,7 @@ require_relative "../carat/testing"
 # oversized header, and a missing command does not start.
 module DriversProcessRunnerTest
   D = Carat::Domain
-  ENVIRONMENT = { "GIT_NO_LAZY_FETCH" => "1" }
+  ENVIRONMENT = { "GIT_NO_LAZY_FETCH" => "1", "GIT_ALLOW_PROTOCOL" => "" }
 
   # The next message, waiting up to two seconds for a thread to push it.
   def self.next_message(queue)
@@ -103,6 +103,8 @@ module DriversProcessRunnerTest
     t.assert_equal([true, false], [runner.capture(["carat-no-such-command"], ENVIRONMENT).nil?, runner.timed_out?], "capture of a missing program answers nothing and did not time out")
     # The driver adds the variables to the child environment
     t.assert_equal("1", runner.capture(["sh", "-c", "printf %s \"$GIT_NO_LAZY_FETCH\""], ENVIRONMENT).to_s, "capture adds the variables to the child's environment: it sees GIT_NO_LAZY_FETCH=1")
+    # The driver adds an empty variable to the child environment
+    t.assert_equal("set:", runner.capture(["sh", "-c", "printf %s \"${GIT_ALLOW_PROTOCOL+set}:$GIT_ALLOW_PROTOCOL\""], ENVIRONMENT).to_s, "capture sets a variable given the empty string: the child sees GIT_ALLOW_PROTOCOL set, and empty")
     t.assert_equal(true, runner.capture([], ENVIRONMENT).nil?, "capture of no words answers nothing")
     # Scenario "run_program says a program ran past its deadline": the port's half.
     t.assert_equal([true, true], [runner.capture(["sh", "-c", "sleep 5"], ENVIRONMENT).nil?, runner.timed_out?], "capture of a program past the deadline answers nothing and says it timed out")
