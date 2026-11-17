@@ -1,3 +1,42 @@
-ok   an empty line has no characters
-ok   a word counts its characters
-domain_folds: 2 passed, 0 failed
+ok   one fold is closed
+ok   a reversed range is put in order
+ok   an inner fold sorts after its outer one
+ok   an outer fold sorts before its inner one
+ok   an outer fold at the same first row sorts first
+ok   a fold crossing another from above grows to hold it
+ok   a fold crossing another from below grows to hold it
+ok   an edit below leaves the fold
+ok   a line inserted above shifts it down
+ok   a line inserted at its first row shifts it down
+ok   a line inserted inside extends it
+ok   a line inserted after its last row leaves it
+ok   a line changed in place leaves it
+ok   a line split in its first row extends it
+ok   a line deleted above shifts it up
+ok   a line deleted inside shrinks it
+ok   lines deleted over its start keep the rest
+ok   lines deleted over its end keep the rest
+ok   all its lines deleted drop it
+ok   lines around it deleted drop it
+ok   zo opens the outermost closed fold
+ok   the closed region is the closed fold holding the row
+ok   first_row and last_row span the closed region
+ok   down and up count the closed fold once and stop at the ends
+ok   rows_between counts the closed fold as one row
+ok   a closed fold makes the record folded
+ok   the fold text has a dash per level, no leading blanks, and the fill
+ok   the fold text is kept for one width
+ok   a narrow width keeps the whole text with no fill
+ok   an edit drops the kept text
+ok   a tab after the first non-blank becomes a space
+ok   zo twice opens both folds
+ok   zc on a row in a fold succeeds
+ok   zc closes the innermost open fold
+ok   zc again closes the outer fold
+ok   za on a closed fold opens it
+ok   no fold at the row is false
+ok   zd on a closed fold succeeds
+ok   zd deletes the closed fold first
+ok   zd again deletes the outer fold
+ok   clear empties the record and a copy keeps its own folds
+domain_folds: 41 passed, 0 failed
