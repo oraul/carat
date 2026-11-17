@@ -11,4 +11,4 @@
 
 ## 3. Verification
 
-- [ ] 3.1 Run `make test`, `make gates`, and `make spec-validate`, and compare `make bench SCENARIOS=open-ruby` with main's recorded figures (allocations 24.0), at or under them.
+- [x] 3.1 Run `make test`, `make gates`, and `make spec-validate`, and compare `make bench SCENARIOS=open-ruby` with main's recorded figures (allocations 24.0), at or under them.

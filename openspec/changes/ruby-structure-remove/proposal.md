@@ -31,7 +31,7 @@ None.
 ## Impact
 
 - Code: `carat/plugins/ruby/plugin.rb`, `carat/plugins/ruby/tokenizer.rb`; `carat/plugins/ruby/structure.rb` deleted.
-- Tests: `test/editor_ruby_structure.rb` and its snapshot deleted, its lines in `test/runner/run_all.rb` removed; `test/plugins_ruby.rb` and its snapshot lose the structure rows.
+- Tests: `test/editor_ruby_structure.rb` and its snapshot deleted, its lines in `test/runner/run_all.rb` removed; `test/plugins_ruby.rb` and its snapshot lose the structure rows; `test/editor_syntax.rb` gains one row proving a Ruby buffer with an unclosed opener shows no sign after insert mode ends and after a normal-mode change, its other rows unchanged.
 - Performance: the `open-ruby` and `lh-ruby` scenarios no longer pay a whole-buffer pass on open.
 - Docs: `docs/codebase-map.md` area 14, `docs/plugins.md` (the sentence on the ruby plugin's events).
 - README.md: changed, the sentence on the sign is removed.
