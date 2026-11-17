@@ -26,6 +26,6 @@ None.
 - Adapters: `EditorAssembly` requires and registers the two handlers; `carat.rb` requires them.
 - Tests: new `test/editor_line_commands.rb`, a table over the editor; `test/use_cases_ex.rb` spelling rows.
 - Docs: `docs/compatibility.md` rows and the Global section's sentence, `docs/codebase-map.md` area 12, `docs/architecture.md` section 5.2 (`m t` move from planned to registered).
-- README.md: unchanged, it names no ex command list that `:m` or `:t` would join.
+- README.md: changed, its list of commands and its global examples name `:m`, `:co`, and `:t`.
 - Out of scope: part b of the request (`:normal`, `:p`, or what `docs/queue-feature.md` names for it); offsets in addresses (`:m+1`, `:t-2`), patterns, and marks other than `'<` and `'>` as the target; flags after the address (`:t. l`); Vim's totals after a global.
 - Assumptions: the cursor column after `:m` and `:t` is the wanted column clamped to the line, as Neovim's default `nostartofline` gives it (`beginline(BL_SOL | BL_FIX)`); text after the address is `E16`, where Neovim may report `E488`; the messages follow Carat's fixed `'report'` of 2.
