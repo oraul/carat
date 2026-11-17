@@ -74,6 +74,21 @@ module UseCasesPluginSyntaxTest
     end
   end
 
+  # A tokenizer for "toy" whose activate raises, so the provider passes
+  # over it to the next plugin declaring the syntax.
+  class Broken < Carat::PluginApi::Plugin
+    # Returns the manifest.
+    # @rbs skip
+    def manifest
+      Carat::PluginApi::Manifest.new(name: "broken", version: "1.0.0", api_version: "2.0", actions: {}, commands: {}, bindings: [], events: [], options: [], option_types: {}, filetypes: ["toy"])
+    end
+
+    #: (Carat::PluginApi::Host) -> void
+    def activate(host)
+      raise "no grammar"
+    end
+  end
+
   def self.main
     t = Carat::Testing.new("use_cases_plugin_syntax")
 
@@ -126,6 +141,18 @@ module UseCasesPluginSyntaxTest
     first.tokens = [0, 1, 9999]
     h.type(":set ft=toy<CR>")
     t.assert_equal(H::NORMAL, H.base(h.frame.hl_at(0, 4)), "an out of range id is drawn normal")
+
+    # A provider whose late activate raises is disabled with its message and
+    # the next plugin declaring the syntax tokenizes the visible rows in the
+    # same frame.
+    later = Toy.new("later", ["toy"])
+    later.tokens = [0, 3, H::COMMENT]
+    later.finish = 1
+    h = Carat::Doubles::EditorHarness.with_plugins(files, 8, 40, [Broken.new, later])
+    h.open("a.txt")
+    h.type(":set ft=toy<CR>")
+    t.assert_equal([false, "Plugin broken disabled: no grammar"], [h.plugins.enabled?("broken"), h.message], "a tokenizer raising in its first activate is disabled with its message")
+    t.assert_equal([true, ["toy one 0", "toy two 1"], H::COMMENT, H::COMMENT], [h.plugins.active?("later"), later.log.last(2), H.base(h.frame.hl_at(0, 4)), H.base(h.frame.hl_at(1, 4))], "the next plugin declaring the syntax tokenizes the visible rows in the same frame")
 
     t.finish
   end

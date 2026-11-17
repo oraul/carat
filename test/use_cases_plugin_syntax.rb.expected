@@ -11,4 +11,6 @@ ok   each line starts in the state the line before ended in
 ok   a missing tokenize disables the plugin
 ok   and the buffer is plain
 ok   an out of range id is drawn normal
-use_cases_plugin_syntax: 13 passed, 0 failed
+ok   a tokenizer raising in its first activate is disabled with its message
+ok   the next plugin declaring the syntax tokenizes the visible rows in the same frame
+use_cases_plugin_syntax: 15 passed, 0 failed
