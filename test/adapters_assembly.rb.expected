@@ -42,7 +42,7 @@ ok   the float use cases hold the tab list
 ok   the file operations
 ok   the containment check of the file operations
 ok   the key handler
-ok   the last substitute
+ok   the last substitute, in the substitute, the global, and the searches
 ok   the last search, in the searches and the substitute
 ok   the search history, in the searches and the substitute
 ok   the substitute use case behind :s and &

@@ -177,3 +177,51 @@ With "hlsearch" on, every match of the last pattern in the visible rows SHALL be
 #### Scenario: incsearch previews the match
 - **WHEN** "/", "b" are pressed on ["a b"] with the cursor at row 0, column 0
 - **THEN** the cursor of the buffer is at row 0, column 2 and that cell is in the `IncSearch` group
+
+### Requirement: incsearch keeps the cursor on a character
+
+While a pattern is typed with "incsearch" on, the cursor SHALL rest on the first match clamped to the last character of the match's line, as Enter then places it, so a match at the end of a line never leaves the cursor past the line's last character.
+
+#### Scenario: incsearch on a match at the line end
+
+- **WHEN** "/", "$" are pressed on ["abc"] with the cursor at row 0, column 0
+- **THEN** the cursor is at row 0, column 2
+
+### Requirement: Tilde, a second caret, and a collection holding the delimiter read as in Neovim
+
+`~` in a "/" or "?" pattern, and in the pattern of ":g" and ":v", SHALL match the replacement string of the last substitute, and report "E33: No previous substitute regular expression" only when no substitute has run. A `^` right after an anchoring `^` SHALL match a literal caret. A collection SHALL end at the `]` the compiler ends it at, a `]` first in it or after a backslash being a member, so a delimiter inside a collection never ends the typed pattern.
+
+#### Scenario: Tilde after a substitute
+
+- **WHEN** ":s/a/xy/" was run on ["a", "b xy"] and "/", "~", Enter are pressed with the cursor at row 0, column 0
+- **THEN** the cursor is at row 1, column 2
+
+#### Scenario: Tilde with no substitute
+
+- **WHEN** "/", "~", Enter are pressed on ["a"]
+- **THEN** the message is the error "E33: No previous substitute regular expression"
+
+#### Scenario: Tilde in :global after a substitute
+
+- **WHEN** ":s/a/xy/" was run on ["a", "b", "xy z"] with the cursor at row 0, column 0 and ":g/~/d" is run
+- **THEN** the lines are ["b"]
+
+#### Scenario: Tilde in :vglobal after a substitute
+
+- **WHEN** ":s/a/xy/" was run on ["a", "b", "xy z"] with the cursor at row 0, column 0 and ":v/~/d" is run
+- **THEN** the lines are ["xy", "xy z"]
+
+#### Scenario: Tilde in :global with no substitute
+
+- **WHEN** ":g/~/" is run on ["a"]
+- **THEN** the message is the error "E33: No previous substitute regular expression"
+
+#### Scenario: A second caret is literal
+
+- **WHEN** "/", "^", "^", Enter are pressed on ["^a", "b", "^c"] with the cursor at row 0, column 0
+- **THEN** the cursor is at row 2, column 0
+
+#### Scenario: An escaped bracket in a collection
+
+- **WHEN** "/", "[", "\", "]", "/", "]", Enter are pressed on ["a", "x/"] with the cursor at row 0, column 0
+- **THEN** the cursor is at row 1, column 1

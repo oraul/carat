@@ -197,13 +197,13 @@ Files:
 - `carat/use_cases/move.rb`: `Move#call`.
 - `carat/use_cases/actions/motion_handler.rb`: `MotionHandler.register`, registers `Motions::NAMES` and `FIND_NAMES`.
 - `carat/use_cases/actions/text_object_handler.rb`: `TextObjectHandler.register`, registers `TextObjects::NAMES`.
-- `carat/domain/vim_pattern.rb`: `VimPattern`; `compile`, `escape`, `pattern_end`; the magic modes, Vim's errors, `MAX_SIZE`, and no backtracking construct.
+- `carat/domain/vim_pattern.rb`: `VimPattern`; `compile`, `compile_search` (`~` the last replacement), `compile_substitute`, `escape`, `pattern_end` and the compiler's one collection scan `collection_close`; the magic modes, Vim's errors, `MAX_SIZE`, and no backtracking construct.
 - `carat/domain/search_pattern.rb`: `SearchPattern` value (`source`, `regexp`, `size`, `error`); `ok?`, `refused`, `none`.
 - `carat/domain/search.rb`: `Search`; `find`, `match_at`, `last_before`, `searchable` (U+FFFD for illegal bytes), `action?`, `PROMPT_NAMES`, `MOTION_NAMES`, and the messages.
 - `carat/domain/search_budget.rb`: `SearchBudget`, the work a search (`SEARCH`) or a frame (`FRAME`) may do; `charge`, `refund`, `reset`.
 - `carat/domain/search_hit.rb`: `SearchHit`, where a search landed, its status and message; `land`, `refused`.
 - `carat/domain/last_search.rb`: `LastSearch`, the pattern `n` repeats and what is highlighted; `remember`, `hide`, `show`, `recompile`, `preview_at`, `highlighted`, `drawn`.
-- `carat/domain/search_prompt.rb`: `SearchPrompt`, the open `/` or `?` prompt; `open`, `restore`, `enter`, `take_text`.
+- `carat/domain/search_prompt.rb`: `SearchPrompt`, the open `/` or `?` prompt; `open`, `restore`, `enter`, `take_text`, `prefix_of` (the prompt character).
 - `carat/domain/history.rb`: `History`, a prompt's entries; `add`, `older`, `newer`, `restart`.
 - `carat/use_cases/search/find_match.rb`: `FindMatch#call`, a search command to a `SearchHit`, remembering the pattern, the `/` register, and the history.
 - `carat/use_cases/search/jump_to_match.rb`: `JumpToMatch#call`, moves the cursor to the hit.
@@ -411,7 +411,7 @@ Files:
 - `carat/domain/ex_command.rb`: `ExCommand` value (`range`, `name`, `bang`, `args`).
 - `carat/domain/ex_grammar.rb`: `ExGrammar.parse`, `range_end`, `letter?`; the `&` name.
 - `carat/domain/ex_range.rb`: `ExRange` value (`first`, `last`, `given`, `error`); `resolve` (`%`, `.`, `$`, numbers, `'<`, `'>`, `E16`, `E20`, `E493`); `target`, the one address of `:m`, `:co`, and `:t`.
-- `carat/domain/delimited_pattern.rb`: `DelimitedPattern` value; `parse` (the delimiter and pattern of `:s`, `:g`, and `:v`; `E146`), the one reader `SubstituteArgs` and `GlobalArgs` call.
+- `carat/domain/delimited_pattern.rb`: `DelimitedPattern` value; `parse` (the delimiter and pattern of `:s`, `:g`, and `:v`; `E146`), the one reader `SubstituteArgs` and `GlobalArgs` call, and `typed` (a `/` or `?` prompt's pattern and offset).
 - `carat/domain/substitute_args.rb`: `SubstituteArgs` value; `parse` (delimiter, pattern, string, flags, count; `E146`, `E488`).
 - `carat/domain/last_substitute.rb`: `LastSubstitute`, what the next substitute reuses; `apply_flags`, `keep_replacement`, `keep_previous`.
 - `carat/domain/replacement.rb`: `Replacement`; `tilde`, `check`, `expand` (the string's special characters; a line break as `BREAK`).

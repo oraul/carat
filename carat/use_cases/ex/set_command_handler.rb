@@ -2,6 +2,7 @@ require_relative "../../domain/editor_state"
 require_relative "../../domain/buffer"
 require_relative "../../domain/options"
 require_relative "../../domain/last_search"
+require_relative "../../domain/last_substitute"
 require_relative "../outcome"
 require_relative "ex_handler"
 require_relative "ex_table"
@@ -22,15 +23,17 @@ module Carat
     # implemented, any other name with E518.
     class SetCommandHandler < ExHandler
       attr_reader :last_search #: Domain::LastSearch
+      attr_reader :last_substitute #: Domain::LastSubstitute
 
       # The options Carat has that :set does not handle yet.
       PENDING = ["number", "nu", "relativenumber", "rnu", "tabstop", "ts", "shiftwidth", "sw", "expandtab", "et", "autoindent", "ai", "scroll", "scr", "scrolloff", "so", "timeoutlen", "tm", "undolevels", "ul", "icons", "theme", "background", "bg", "startscreen", "reducedmotion", "breadcrumbs", "winborder"]
       private_constant :PENDING
 
-      #: (spec: String, last_search: Domain::LastSearch) -> void
-      def initialize(spec:, last_search:)
+      #: (spec: String, last_search: Domain::LastSearch, last_substitute: Domain::LastSubstitute) -> void
+      def initialize(spec:, last_search:, last_substitute:)
         super(spec: spec)
         @last_search = last_search
+        @last_substitute = last_substitute
       end
 
       # @rbs state: Domain::EditorState
@@ -75,9 +78,9 @@ module Carat
       end
 
       # Registers :set after :syntax.
-      #: (ExTable, last_search: Domain::LastSearch) -> void
-      def self.register(table, last_search:)
-        table.register(SetCommandHandler.new(spec: "se[t]", last_search: last_search), "Set an option")
+      #: (ExTable, last_search: Domain::LastSearch, last_substitute: Domain::LastSubstitute) -> void
+      def self.register(table, last_search:, last_substitute:)
+        table.register(SetCommandHandler.new(spec: "se[t]", last_search: last_search, last_substitute: last_substitute), "Set an option")
       end
 
       private
@@ -121,7 +124,7 @@ module Carat
         when "cursorline" then options.cursorline = value
         else options.incsearch = value
         end
-        @last_search.recompile(options) if name == "ignorecase" || name == "smartcase"
+        @last_search.recompile(options, @last_substitute) if name == "ignorecase" || name == "smartcase"
         @last_search.show if name == "hlsearch" && value
       end
 

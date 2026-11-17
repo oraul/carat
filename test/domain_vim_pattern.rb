@@ -24,6 +24,15 @@ module DomainVimPatternTest
     P.pattern_end(text.to_s, delimiter.to_i)
   end
 
+  # Where a search pattern holding ~ first matches text, previous being
+  # the last replacement string when kept. Typed, as probe is.
+  def self.tilde_probe(pattern, text, previous, kept)
+    compiled = P.compile_search(pattern.to_s, false, false, previous.to_s, kept == true)
+    return compiled.error unless compiled.ok?
+    found = compiled.regexp.match(text.to_s, 0)
+    found.nil? ? "none" : "#{found.begin(0)}-#{found.end(0)}"
+  end
+
   def self.main
     t = Carat::Testing.new("domain_vim_pattern")
 
@@ -57,6 +66,8 @@ module DomainVimPatternTest
       # Anchors.
       ["caret anchors at the start", ["^a", "ba a"], "none"],
       ["caret inside is literal", ["a^b", "a^b"], "0-3"],
+      ["a second caret is literal", ["^^a", "^a"], "0-2"],
+      ["a caret after a bar anchors again", ["^^a\\|^b", "b"], "0-1"],
       ["dollar anchors at the end", ["a$", "a ba"], "3-4"],
       ["dollar inside is literal", ["a$b", "a$b"], "0-3"],
       ["dollar before a bar anchors", ["x$\\|a", "ab"], "0-1"],
@@ -129,10 +140,21 @@ module DomainVimPatternTest
     # Rows are [label, [text, delimiter byte], end byte].
     t.cases([
       ["a slash in a collection does not end the pattern", ["[/]/", 47], 3],
-      ["a collection of a multibyte character ends after it", ["[\u00E9]/x", 47], 4]
+      ["a collection of a multibyte character ends after it", ["[\u00E9]/x", 47], 4],
+      ["an escaped bracket in a collection does not end it", ["[\\]/]/", 47], 5],
+      ["a bracket first in a collection is a member", ["[]/]/", 47], 4],
+      ["a bracket first after a caret is a member", ["[^]/]/", 47], 5],
+      ["a POSIX class does not end the collection", ["[[:alpha:]/]/", 47], 12]
     ]) do |input|
       pattern_end(input[0], input[1])
     end
+
+    # A search pattern's ~: the previous replacement string once a
+    # substitute ran, E33 before (Tilde after a substitute, Tilde with no
+    # substitute).
+    t.assert_equal("1-3", tilde_probe("~", "axy", "xy", true), "tilde in a search is the previous replacement")
+    t.assert_equal("4-7", tilde_probe("a~b", "axb a.b", ".", true), "the previous replacement matches literally")
+    t.assert_equal("E33: No previous substitute regular expression", tilde_probe("~", "a", "", false), "tilde in a search before any substitute")
 
     t.assert_equal("a\\.b\\*c\\/\\\\", P.escape("a.b*c/\\"), "escape for a literal search")
     t.assert_equal("1-5", probe(P.escape("a.*b"), "xa.*b", false, false), "an escaped text matches itself")

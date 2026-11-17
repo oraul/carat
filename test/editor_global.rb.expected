@@ -16,6 +16,9 @@ ok   an empty pattern is the last search
 ok   no previous pattern
 ok   no argument
 ok   a letter as delimiter
+ok   Tilde in :global after a substitute
+ok   Tilde in :vglobal after a substitute
+ok   Tilde in :global with no substitute
 ok   a bad pattern
 ok   smartcase keeps an uppercase pattern exact
 ok   ignorecase without smartcase
@@ -50,4 +53,4 @@ ok   :d of the only line
 ok   :d is one undo step
 ok   a global whose scan runs out of budget changes nothing
 ok   a command that leaves the buffer stops the global
-editor_global: 52 passed, 0 failed
+editor_global: 55 passed, 0 failed

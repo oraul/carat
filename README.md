@@ -99,7 +99,7 @@ The files load in order, and a later line wins: the built-in defaults (`config/d
 
 `/pattern<CR>` searches forward and `?pattern<CR>` backward, `n` and `N` repeat the last search in the same or the other direction, and `*`, `#`, `g*`, and `g#` search for the word under the cursor. Each takes a count, works after an operator (`d/foo<CR>`, `cn`) and in the visual modes, wraps around the buffer with Vim's "search hit BOTTOM, continuing at TOP", and the last pattern is in the `/` register. `<Up>` and `<Down>` at the `/` or `:` prompt recall earlier patterns or commands starting with what you typed.
 
-- Patterns are Vim's magic patterns: `. * \+ \= \{n,m} ^ $ [a-z] \( \) \| \< \> \s \d \w \k \c \C \v \V` and the rest `docs/compatibility.md` lists; back references and look-around are not supported.
+- Patterns are Vim's magic patterns: `. * \+ \= \{n,m} ^ $ [a-z] \( \) \| \< \> \s \d \w \k \c \C \v \V` and the rest `docs/compatibility.md` lists, with `~` for the last substitute's replacement string; back references and look-around are not supported.
 - `hlsearch` (on) highlights every match until `:noh`, `incsearch` (on) moves to the first match while you type, and `ignorecase` with `smartcase` ignores case unless the pattern has a capital letter; set them with `option.hlsearch false` in a configuration file or `:set nohls`, `:set ic`, `:set scs?`.
 - A pattern can never hang Carat: one too large is refused with `E363`, and a search that would scan too long stops with a message.
 

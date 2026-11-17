@@ -58,6 +58,12 @@ module Carat
       # The prompt character, "/" or "?".
       #: () -> String
       def prefix
+        SearchPrompt.prefix_of(forward)
+      end
+
+      # The prompt character of a direction: "/" forward, "?" backward.
+      #: (bool) -> String
+      def self.prefix_of(forward)
         forward ? "/" : "?"
       end
 
