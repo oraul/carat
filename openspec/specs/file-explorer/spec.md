@@ -126,7 +126,7 @@ The line of the file shown in the current window SHALL carry the `current` icon 
 - **THEN** the cursor is on the line of "lib" and "deep" stays collapsed
 
 ### Requirement: Files open in splits and tab pages
-`s` and `v` on a file SHALL open it in a new window split horizontally or vertically from the previously used file window. `t` SHALL open it as the tab the top row shows: under `option.gt buffers` a buffer tab in that file window, the focus in it and the tree kept, and under `option.gt tabpages` a new tab page. On a directory they SHALL do nothing. A file name holding a space or a `|` SHALL open as it is named, since the tree opens files without building an ex command line.
+`s` and `v` on a file SHALL open it in a new window split horizontally or vertically from the previously used file window. `t` SHALL open it as the tab the top row shows: under `option.gt buffers` a buffer tab in that file window, the focus in it and the tree kept, under `option.gt tabpages` a new tab page, and with no file window beside the tree a file window as `l` opens. On a directory they SHALL do nothing. A name holding a space or a `|` SHALL open as it is named.
 
 #### Scenario: Horizontal split
 - **WHEN** `s` is pressed on "b.rb" with the tree and one file window
@@ -147,6 +147,14 @@ The line of the file shown in the current window SHALL carry the `current` icon 
 #### Scenario: Tab page
 - **WHEN** `option.gt tabpages` is set and `t` is pressed on "b.rb"
 - **THEN** there are two tab pages and the current one shows "b.rb"
+
+#### Scenario: t from a lone tree opens a file window
+- **WHEN** the file window was closed with `<C-w>c`, leaving only the tree, and `t` is pressed on "alpha.txt"
+- **THEN** one tab page remains, holding the tree and a file window that shows "alpha.txt" and is current
+
+#### Scenario: t from a lone tree under tab pages opens a file window
+- **WHEN** `option.gt tabpages` is set, the file window was closed with `<C-w>c`, leaving only the tree, and `t` is pressed on "alpha.txt"
+- **THEN** one tab page remains, holding the tree and a file window that shows "alpha.txt" and is current
 
 #### Scenario: A name with a space in a split
 - **WHEN** `s` is pressed on "my notes.md"

@@ -61,7 +61,7 @@ The finder SHALL never list nor enter an entry whose name is in `plugin.finder.i
 - **THEN** the second row is highlighted
 
 ### Requirement: A pick opens in the window, a split, a vertical split, or a tab page
-`<CR>` SHALL close the finder and open the highlighted file in the editing window; `<C-x>` and `<C-s>` in a horizontal split of it, `<C-v>` in a vertical split, and `<C-t>` in a new tab page. The mode SHALL be normal afterwards and the floats gone. `<CR>` with no match SHALL keep the finder open on the typed text: the prompt with the same text, the float reading `No match`, and nothing opened, so a typo costs only the keys that fix it.
+`<CR>` SHALL close the finder and open the highlighted file in the editing window; `<C-x>` and `<C-s>` in a horizontal split of it, `<C-v>` in a vertical split, and `<C-t>` as a tab, as the next requirement says. The mode SHALL be normal afterwards and the floats gone. `<CR>` with no match SHALL keep the finder open on the typed text: the prompt with the same text, the float reading `No match`, and nothing opened, so a typo costs only the keys that fix it.
 
 #### Scenario: Enter opens the file
 - **WHEN** the user types `bet` and presses `<CR>`
@@ -76,7 +76,7 @@ The finder SHALL never list nor enter an entry whose name is in `plugin.finder.i
 - **THEN** the window is split side by side and the new, current window shows the file
 
 #### Scenario: Ctrl-T opens it in a tab page
-- **WHEN** the user presses `<C-t>` on a highlighted file
+- **WHEN** `option.gt tabpages` is set and the user presses `<C-t>` on a highlighted file
 - **THEN** a second tab page is current and shows the file
 
 #### Scenario: Enter with no match opens nothing
@@ -119,3 +119,14 @@ The finder SHALL size its boxes from the float frame the host answers, so under 
 #### Scenario: The finder boxes share an edge without a border
 - **WHEN** the screen is 120 columns wide under `option.winborder none` and the finder opens on a project with a file
 - **THEN** the list box spans columns 1 to 59 and the preview box columns 60 to 118, no column between them
+
+### Requirement: Ctrl-T opens the pick as the tab the top row shows
+`<C-t>` SHALL open the highlighted file as the explorer's `t` does: under `option.gt buffers` a buffer tab in the editing window, and under `option.gt tabpages` a new tab page. When no window of the tab page shows a file, it SHALL open the file as `<CR>` does, under either value, so no tab page is left without a file window.
+
+#### Scenario: Ctrl-T opens a buffer tab
+- **WHEN** `option.gt buffers` is set and the user presses `<C-t>` on a highlighted file
+- **THEN** one tab page remains and its window, current, shows the file as a buffer tab
+
+#### Scenario: Ctrl-T from a lone tree
+- **WHEN** the explorer's file window was closed with `<C-w>c`, leaving only the tree, and the user presses `<C-t>` on a highlighted file, under `option.gt buffers` or `option.gt tabpages`
+- **THEN** one tab page remains and its current window shows the file
