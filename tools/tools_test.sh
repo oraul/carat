@@ -2742,6 +2742,7 @@ expect "gates: cases reads shell scripts only and wants an expect line" 1 "FAIL 
 # Secrets, each assembled from pieces like the forbidden text above.
 KEY_LINE="-----BEGIN ""RSA PRIVATE KEY-----"
 AWS_KEY="AK""IAABCDEFGHIJKLMNOP"
+PASS_WORD="pass""word"
 for kind in "key:$KEY_LINE" "aws:aws_id = $AWS_KEY" "github:GH=gh""p_abcdefghijklmnopqrstuvwxyz0123456789" \
     "slack:hook xo""xb-1234567890-abcdef" "sk:export KEY=s""k-abcdefghijklmnopqrstuvwx" \
     "password:db_pass""word = \"hunter2hunter2\"" "secret:client_sec""ret: 'abcdefghijkl'" \
@@ -2762,6 +2763,17 @@ commit "chore: add a key"
 git_q show HEAD~1:README.md > README.md
 commit "chore: remove the key"
 expect "gates: content refuses a secret a later commit removed" 1 "FAIL content: README[.]md:[0-9]+: secret: \[not shown\]" gates content
+# An unquoted secret assignment: refused in a configuration file, a name
+# in code.
+fresh secret4
+printf '%s = hunter2hunter2\n' "$PASS_WORD" > .caratrc
+commit "chore: add a setting"
+expect "gates: content refuses an unquoted secret in a configuration file" 1 "FAIL content: [.]caratrc:1: secret: \[not shown\]" gates content
+fresh secret5
+mkdir -p carat
+printf '%s\n' 'token = next_token' "$PASS_WORD = hunter2hunter2" > carat/x.rb
+commit "chore: assign a token"
+expect "gates: content allows an unquoted assignment in code" 0 "ok   content" gates content
 fresh dotenv
 echo "X=1" > .env
 commit "chore: add an env file"
@@ -2790,8 +2802,9 @@ expect "gates: content notes a binary file and does not read it" 0 "note: data[.
 
 # ------------------------------------------------------------ scan_text.sh
 # The one scanner: each URL form, an address, a session id, the two
-# exceptions, a split URL, a quoted string, a ++ line, a binary file, and
-# a secret masked. Each host is split before its dot, like the text above.
+# exceptions, a split URL, a quoted string, a ++ line, a binary file, a
+# secret masked, and an unquoted secret assignment. Each host is split
+# before its dot, like the text above.
 
 scantext() {
   printf '%s\n' "$1" | sh "$here/scan_text.sh"
@@ -2829,6 +2842,25 @@ expect "scan_text: masks a URL's user and password" 1 "^stdin:1: url: https:[/][
 expect "scan_text: never prints a token inside a URL" 0 "^0$" sh -c 'printf "see %s\n" "$2" | sh "$1/scan_text.sh" | grep -c abcdefghijklmnop; true' _ "$here" "$TOKEN_URL"
 expect "scan_text: names the model name and the secret by label" 1 "^stdin:2: secret: \[not shown\]$" scantext "run on $TIER
 aws_id = $AWS_KEY"
+# Unquoted secret assignments: refused in a configuration file (YAML, TOML,
+# shell, caratrc) read from a diff or by name, left alone in code, in
+# standard input, and for a variable, a substitution, or a call.
+for kind in "yaml:config/app.yml:db_$PASS_WORD: hunter2hunter2" "toml:Cargo.toml:api_""key = abcdefgh12345678" \
+    "shell:tools/env.sh:export GH_TO""KEN=hunter2hunter2" "caratrc:.caratrc:$PASS_WORD = hunter2hunter2" \
+    "caratrc setting:config/default.caratrc:lsp.api_to""ken abcdefgh12345678"; do
+  rest=${kind#*:}
+  expect "scan_text: refuses an unquoted secret assignment: ${kind%%:*}" 1 "^${rest%%:*}:2: secret: \[not shown\]$" onediff "${rest%%:*}" "${rest#*:}"
+done
+printf 'db_%s: hunter2hunter2\n' "$PASS_WORD" > "$work/app.toml"
+expect "scan_text: refuses an unquoted secret assignment in a configuration file read by name" 1 "app[.]toml:1: secret: \[not shown\]$" sh "$here/scan_text.sh" "$work/app.toml"
+expect "scan_text: reads standard input as no configuration file" 0 "^$" scantext "db_$PASS_WORD: hunter2hunter2"
+for line in "token = next_token" "$PASS_WORD = hunter2hunter2"; do
+  expect "scan_text: allows an unquoted assignment in code: ${line%% *}" 0 "^$" onediff carat/x.rb "$line"
+done
+for row in 'config/app.yml:token: ${TOKEN_VALUE}' 'tools/env.sh:export TOKEN=$secret_value' \
+    "tools/env.sh:$PASS_WORD=\$(read_password)" 'tools/env.sh:token = read_token(prompt)'; do
+  expect "scan_text: allows a variable or a call in a configuration file: ${row#*:}" 0 "^$" onediff "${row%%:*}" "${row#*:}"
+done
 expect "scan_text: refuses an unknown option" 2 "Usage: sh tools/scan_text.sh" sh "$here/scan_text.sh" --nope
 
 # ------------------------------------------------- make toolchain, pr_scan.sh
