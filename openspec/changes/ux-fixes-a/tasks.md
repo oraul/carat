@@ -8,7 +8,7 @@
 
 ## 3. The palette row
 
-- [ ] 3.1 `Carat::UseCases::FollowPalette#rows` and `#styles` lay out the label, the name in `PmenuExtra`, and the key, with a marked cut and the name left out when narrow, proved by `test/editor_palette.rb` "The label first, the key in caret notation on the right", "A cut description is marked", "An ascii cut mark", "A narrow palette leaves the name out", "A 29-character name is whole", "A key of wide characters", "A key with combining marks", "A row leads with its label and fits its columns by display cells", and the three scenarios of "Matched characters are marked"
+- [x] 3.1 `Carat::UseCases::FollowPalette#rows` and `#styles` lay out the label, the name in `PmenuExtra`, and the key, with a marked cut and the name left out when narrow, proved by `test/editor_palette.rb` "The label first, the key in caret notation on the right", "A cut description is marked", "An ascii cut mark", "A narrow palette leaves the name out", "A 29-character name is whole", "A key of wide characters", "A key with combining marks", "A row leads with its label and fits its columns by display cells", and the three scenarios of "Matched characters are marked"
 
 ## 4. Docs and checks
 

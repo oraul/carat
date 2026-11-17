@@ -22,20 +22,25 @@ module Carat
     # scores in the table's order, every entry for an empty text) and
     # selects the first, and a changed text or selection reopens the
     # float: a bordered menu titled "Commands" near the top of the editor,
-    # the rows around the selection, each the name, the description, and
-    # the key on the right in columns measured in cells, the description
-    # in PmenuExtra and the matched characters of the field that ranked
-    # the entry in PmenuMatch (their Sel forms on the selected row), "No
-    # match" when nothing matches.
+    # the rows around the selection, each the description, its readable
+    # label, then the dotted name, left out when the label would get under
+    # LABEL_MIN cells, and the key on the right, in columns measured in
+    # cells, a text cut to its column ending in CUT (CUT_ASCII under
+    # option.icons ascii), the name in PmenuExtra and the matched
+    # characters of the field that ranked the entry in PmenuMatch (their
+    # Sel forms on the selected row), "No match" when nothing matches.
     class FollowPalette
       Z = 960
       MAX_ROWS = 15
       MAX_WIDTH = 90
       NAME_WIDTH = 30
       KEY_WIDTH = 12
+      LABEL_MIN = 20
+      CUT = "\u2026"
+      CUT_ASCII = ">"
       TITLE = "Commands"
       EMPTY = "No match"
-      private_constant :Z, :MAX_ROWS, :MAX_WIDTH, :NAME_WIDTH, :KEY_WIDTH, :TITLE, :EMPTY
+      private_constant :Z, :MAX_ROWS, :MAX_WIDTH, :NAME_WIDTH, :KEY_WIDTH, :LABEL_MIN, :CUT, :CUT_ASCII, :TITLE, :EMPTY
 
       attr_reader :palette #: Domain::Palette
       attr_reader :open_float #: OpenFloat
@@ -131,11 +136,12 @@ module Carat
         height = 1 if height < 1
         top = palette.selected - height + 1
         top = 0 if top < 0
-        lines = rows(top, height, width)
+        cut = state.options.icons == "ascii" ? CUT_ASCII : CUT
+        lines = rows(top, height, width, cut)
         spec = Domain::FloatSpec.new(anchor: "editor", row: 1, col: 0, height: height, width: width, border: true, title: TITLE, z: Z)
         buffer = Domain::Buffer.new(lines: lines, path: nil, line_ending: "\n")
         buffer.owner = Domain::Palette::OWNER
-        buffer.styles = styles(top, lines, width) unless matches.empty?
+        buffer.styles = styles(top, lines, width, cut) unless matches.empty?
         float = Domain::FloatWindow.new(window: Domain::Window.new(buffer: buffer), spec: spec)
         float.centered = true
         float.selected = matches.empty? ? -1 : palette.selected - top
@@ -145,10 +151,11 @@ module Carat
         palette.shown_selected = palette.selected
       end
 
-      # The rows of the matches from top, the name, the description, and
-      # the key on the right in columns cut to the width.
-      #: (Integer, Integer, Integer) -> Array[String]
-      def rows(top, height, width)
+      # The rows of the matches from top, the description, the name when
+      # it has room, and the key on the right in columns cut to the width,
+      # a cut marked with cut.
+      #: (Integer, Integer, Integer, String) -> Array[String]
+      def rows(top, height, width, cut)
         palette = @palette
         matches = palette.matches
         lines = []
@@ -156,28 +163,32 @@ module Carat
           lines << EMPTY
           return lines
         end
-        room = width - NAME_WIDTH - KEY_WIDTH
+        room = label_room(width)
+        named = named?(width)
         r = top
         while r < top + height && r < matches.length
           entry = matches[r]
-          line = pad(palette.names[entry], NAME_WIDTH)
-          line << pad(palette.descriptions[entry], room) if room >= 2
-          line << pad(palette.keys[entry], KEY_WIDTH)
+          line = pad(palette.descriptions[entry], room, cut)
+          line << pad(palette.names[entry], NAME_WIDTH, cut) if named
+          line << pad(palette.keys[entry], KEY_WIDTH, cut)
           lines << Domain::DisplayWidth.cut(line, width)
           r += 1
         end
         lines
       end
 
-      # A style per row of the lines, the matches from top: the
-      # description column in PmenuExtra, then the runs of the matched
-      # characters of the field that ranked the entry in PmenuMatch, their
-      # Sel forms on the selected row.
-      #: (Integer, Array[String], Integer) -> Array[untyped]
-      def styles(top, lines, width)
+      # A style per row of the lines, the matches from top: the runs of
+      # the matched characters of the description in PmenuMatch when it
+      # ranked the entry, then, when the name shows, its column in
+      # PmenuExtra and the runs of its matched characters when it ranked
+      # the entry, their Sel forms on the selected row. A cut mark is never
+      # marked.
+      #: (Integer, Array[String], Integer, String) -> Array[untyped]
+      def styles(top, lines, width, cut)
         palette = @palette
         query = bare(palette.query)
-        room = width - NAME_WIDTH - KEY_WIDTH
+        room = label_room(width)
+        named = named?(width)
         out = Array.new(0, nil)
         i = 0
         while i < lines.length
@@ -188,24 +199,36 @@ module Carat
           description = palette.descriptions[entry]
           field = palette.fields[r]
           tokens = Array.new(0, 0)
-          shown = Domain::DisplayWidth.cut(name, NAME_WIDTH - 1)
-          limit = char_count(shown, shown.bytesize)
-          mark(tokens, query, name, name.start_with?(":") ? 1 : 0, 0, limit, selected) if field == 0
-          if room >= 2
-            # The name's cell: its kept characters and the spaces padding
-            # them to NAME_WIDTH cells.
-            from = limit + NAME_WIDTH - Domain::DisplayWidth.text_width(shown, 0)
-            shown = Domain::DisplayWidth.cut(description, room - 1)
-            limit = char_count(shown, shown.bytesize)
+          mark(tokens, query, description, 0, 0, kept(description, room), selected) if field == 1
+          if named
+            # The name's column starts after the label's characters and
+            # the spaces padding them to its cells.
+            label = pad(description, room, cut)
+            from = char_count(label, label.bytesize)
+            cell = pad(name, NAME_WIDTH, cut)
             tokens << from
-            tokens << limit + 1
+            tokens << char_count(cell, cell.bytesize)
             tokens << (selected ? Domain::Highlight::POPUP_MENU_EXTRA_SELECTED : Domain::Highlight::POPUP_MENU_EXTRA)
-            mark(tokens, query, description, 0, from, limit, selected) if field == 1
+            mark(tokens, query, name, name.start_with?(":") ? 1 : 0, from, kept(name, NAME_WIDTH), selected) if field == 0
           end
           out << Domain::SyntaxLine.new(text: lines[i], start: 0, tokens: tokens, end_state: 0)
           i += 1
         end
         out
+      end
+
+      # Whether the name has its column: the label keeps LABEL_MIN cells
+      # beside it and the key.
+      #: (Integer) -> bool
+      def named?(width)
+        width - NAME_WIDTH - KEY_WIDTH >= LABEL_MIN
+      end
+
+      # The cells of the label's column: what the name and the key leave,
+      # or what the key leaves when the name is left out.
+      #: (Integer) -> Integer
+      def label_room(width)
+        named?(width) ? width - NAME_WIDTH - KEY_WIDTH : width - KEY_WIDTH
       end
 
       # Adds a token per run of the characters of text the query matched,
@@ -247,13 +270,32 @@ module Carat
         count
       end
 
-      # The text cut to the width less one in cells, then padded with
-      # spaces to the width, so at least one space follows it.
+      # The part of text a column of width cells shows: all of it when
+      # it fits in a cell less, else cut at a character boundary to leave
+      # a cell for the cut mark and one for the space after it.
       #: (String, Integer) -> String
-      def pad(text, width)
-        cell = Domain::DisplayWidth.fit(text, width - 1)
-        cell << " "
-        cell
+      def shown(text, width)
+        return text if Domain::DisplayWidth.text_width(text, 0) < width
+        Domain::DisplayWidth.cut(text, width < 3 ? width - 1 : width - 2)
+      end
+
+      # The characters of text a column of width cells shows, the cut mark
+      # left out.
+      #: (String, Integer) -> Integer
+      def kept(text, width)
+        part = shown(text, width)
+        char_count(part, part.bytesize)
+      end
+
+      # The text in a column of width cells: what it shows, cut followed
+      # by the mark, then padded with spaces to the width, so at least one
+      # space follows it.
+      #: (String, Integer, String) -> String
+      def pad(text, width, cut)
+        cell = +""
+        cell << shown(text, width)
+        cell << cut if width >= 3 && cell.bytesize < text.bytesize
+        Domain::DisplayWidth.fit(cell, width)
       end
     end
   end
