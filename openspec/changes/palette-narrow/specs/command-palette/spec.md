@@ -2,7 +2,7 @@
 
 ### Requirement: A row leads with its label and fits its columns by display cells
 
-Each palette row SHALL show, from the left, the entry's description, its readable label, then its name in a 30-cell column, then its first normal-mode key in a 12-cell column at the row's right end, a control key in caret notation (`^W` for `<C-w>`). Each column SHALL start at the same cell on every row. When the description would get under 20 cells the name SHALL be left out, and when it would get under 12 cells beside the key the key SHALL be left out too, so the description takes the row and every row shows its label at every width the palette opens at. No key width SHALL stop the editor.
+Each palette row SHALL show, from the left, the entry's description, its readable label, then its name in a 30-cell column, then its first normal-mode key in a 12-cell column at the row's right end, a control key in caret notation (`^W` for `<C-w>`). Each column SHALL start at the same cell on every row. Under 20 description cells the name SHALL be left out, under 12 the key too, so every row shows its label. No key width SHALL stop the editor.
 
 #### Scenario: A key of wide characters
 
