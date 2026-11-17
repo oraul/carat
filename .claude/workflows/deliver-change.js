@@ -266,7 +266,8 @@ const CLOSE = {
     proposals: { type: 'array', items: { type: 'object', properties: { proposal: { type: 'string' }, evidence: { type: 'string' } }, required: ['proposal', 'evidence'] } },
     review_due: { type: 'string', description: 'the line tools/run_state.sh review-due printed, empty without the retrospective steps' },
     due: { type: 'boolean' },
-    recorded: { type: 'boolean', description: 'the record line exited 0' },
+    recorded: { type: 'boolean', description: 'the record line printed no refused: N' },
+    refused: { type: 'array', items: { type: 'integer' }, description: 'each N of a refused: N the record line printed, in order' },
     record_output: { type: 'string' },
     report: { type: 'string' },
   },
@@ -541,20 +542,57 @@ function summary() {
 // command lines of fixed words, commits, and counts, then run by flush().
 const COMMIT = /^[0-9a-f]{7,40}$/
 const CHANGE = /^[a-z0-9][a-z0-9-]*$/
+// The merged commit by name: tools/run_state.sh phase resolves the word to
+// the squash commit of the pull request on main, the run state's merged
+// (squash_of_change), so no phase line names a sha an agent reported.
+const SQUASH = 'merged'
 const pending = []
 function queue(line, commit) {
-  if (CHANGE.test(state.change || '') && COMMIT.test(commit || '')) pending.push(line)
+  if (CHANGE.test(state.change || '') && (COMMIT.test(commit || '') || commit === SQUASH)) pending.push(line)
   else note(`not recorded (change ${state.change}, commit ${commit}): ${line}`)
 }
 const phaseLine = (name, commit) => `sh tools/run_state.sh phase ${state.change} ${name} ${commit}`
-function phaseDone(name, commit) {
+function phaseDone(name, commit, reported = '') {
   state['phase.' + name] = commit
   ran['phase.' + name] = commit
-  queue(phaseLine(name, commit), commit)
+  queue(`${phaseLine(name, commit)}${reported ? ' ' + reported : ''}`, commit)
+}
+// The merge, at the merged commit by name, never at the sha the merger
+// reported (#185 recorded the pushed head, #169 and #188 a mistyped one):
+// the reported sha rides along, so the run state notes a disagreement
+// naming both values.
+function mergeDone(reported) {
+  state.merged = SQUASH
+  phaseDone('merge', SQUASH, COMMIT.test(reported || '') ? reported : '')
+}
+// The close's lines: the closable queued ones, this start's own phase
+// lines (the retro and report at the merged commit by name once the
+// change merged, else at the head), and the metric line.
+function closeLines(looking) {
+  const closeAt = state.merged ? SQUASH : head
+  const own = CHANGE.test(state.change || '') && (closeAt === SQUASH || COMMIT.test(closeAt || ''))
+    ? (looking ? ['retro', 'report'] : ['report']).map((n) => phaseLine(n, closeAt)) : []
+  return pending.splice(0).filter((l) => CLOSABLE.test(l)).concat(own, [metricLine()].filter(Boolean))
+}
+// One shell line that runs every record whatever an earlier one did: a
+// refused line prints its refusal and refused: N, its position, and costs
+// only itself (an && chain lost sprint-14-records its merge, retro, and
+// report phases and every metric field to one refused merge phase).
+function recordLine(lines) {
+  return lines.map((l, i) => `${l} || echo refused: ${i + 1}`).join('; ')
+}
+// The note naming each refused line by its text, from the positions the
+// close returned; empty when none was refused.
+function refusedNote(lines, close) {
+  const at = ((close && close.refused) || []).filter((n) => Number.isInteger(n) && n >= 1 && n <= lines.length)
+  if (!at.length) return ''
+  return `refused at the close, the other lines recorded: ${at.map((n) => lines[n - 1]).join('; ')}${close.record_output ? `; output: ${close.record_output}` : ''}`
 }
 // The queued lines the closing start may run under the guard's close
-// profile: the phases no merge gate reads, notes, and the CI stages.
-const CLOSABLE = /^sh tools\/run_state\.sh (phase [a-z0-9-]+ (plan|implement|package|ci|merge|retro|report) [0-9a-f]{7,40}|note [a-z0-9-]+ [a-z-]+ "[^"]*"|ci-stages [a-z0-9-]+ [0-9a-f]{40})$/
+// profile: the phases no merge gate reads, at a commit or at the merged
+// commit by name (the merge with the merger's sha, noted when it differs),
+// notes, and the CI stages.
+const CLOSABLE = /^sh tools\/run_state\.sh (phase [a-z0-9-]+ (plan|implement|package|ci|merge|retro|report) [0-9a-f]{7,40}|phase [a-z0-9-]+ (merge|retro|report) merged|phase [a-z0-9-]+ merge merged [0-9a-f]{7,40}|note [a-z0-9-]+ [a-z-]+ "[^"]*"|ci-stages [a-z0-9-]+ [0-9a-f]{40})$/
 function reviewed(kind, passed, commit, counts) {
   const result = passed ? 'pass' : 'blocked'
   state['review.' + kind] = `${result} ${commit}`
@@ -1308,14 +1346,12 @@ if (!stopped && !state.merged) {
       if (m.ci === 'green' || m.ci === 'red') verdict('ci', m.ci === 'green')
       if (Number.isFinite(m.minutes) && m.minutes > 0) ciMinutes = m.minutes
       // CI ran at the pushed head, the one the merger checked the pull request
-      // against; the merger's sha is recorded as given, and the run state
-      // refuses it, naming both, unless it is the pull request's squash
-      // commit on main (merged_at).
+      // against; the merge is recorded at the squash commit the run state
+      // resolves (mergeDone), the merger's sha only reported beside it.
       if (m.ci === 'green') { state.ci = `green ${pushed}`; phaseDone('ci', pushed) }
       if (m.merged) {
-        state.merged = m.sha
-        phaseDone('merge', m.sha)
-        note(`merged ${m.sha}: ${m.subject}${m.branch_deleted ? '' : ' (branch deletion refused)'}`)
+        mergeDone(m.sha)
+        note(`merged: ${m.subject}; the merger reported ${m.sha || 'no sha'}, recorded at the run state's squash commit${m.branch_deleted ? '' : ' (branch deletion refused)'}`)
         break
       }
       // A red only on the scan of the pull request body: the contributor
@@ -1359,26 +1395,25 @@ phase('Close')
 // commit, held-finding notes of one pushed but unmerged, which a merged
 // resume notes late, and unpushed-finding notes of one stopped before the
 // push, which a resume's package step hands over (a late finding before
-// the merge would be refused and stop the record line's && chain). A line the close profile refuses (a check or review
+// the merge would be refused). A line the close profile refuses (a check or review
 // record a failed flush left) is reported, not recorded: a resume runs
 // that check or review again.
 recordLate()
 const refused = pending.filter((l) => !CLOSABLE.test(l))
 if (refused.length) note(`not recorded, refused by the close profile: ${refused.join('; ')}`)
-const closeAt = state.merged || head
-const own = CHANGE.test(state.change || '') && COMMIT.test(closeAt || '')
-  ? (looking ? ['retro', 'report'] : ['report']).map((n) => phaseLine(n, closeAt)) : []
-const left = pending.splice(0).filter((l) => CLOSABLE.test(l))
-const records = left.concat(own, [metricLine()].filter(Boolean)).join(' && ')
+const closeRecords = closeLines(looking)
+const records = recordLine(closeRecords)
 const figures = summary()
 const close = await measured('close', () => agent(
-  `Change \`${state.change || input.change || 'unknown'}\`${state.branch ? ` on branch \`${state.branch}\`` : ''}. ${state.merged ? `It merged as ${state.merged}.` : 'It did not merge.'} ${looking ? 'Run the retrospective steps, then the report steps.' : 'Skip the retrospective steps; run the report steps.'}\nThe record line: ${records ? `\`${records}\`` : 'none; skip that step and return recorded true.'}\nThe run's figures: ${figures}.\nWorkflow notes:\n- ${notes.join('\n- ')}\n${stopped ? 'The run stopped: ' + stopped : 'The run finished.'}${capLine('close')}`,
+  `Change \`${state.change || input.change || 'unknown'}\`${state.branch ? ` on branch \`${state.branch}\`` : ''}. ${state.merged ? `It merged: its merged commit is the squash commit of pull request #${state.pr || 'unknown'} on main whose subject ends with its number, the commit \`sh tools/run_state.sh get ${state.change} merged\` prints, never the sha the merger returned; a refused line of the record line prints refused: N and the rest still run.` : 'It did not merge.'} ${looking ? 'Run the retrospective steps, then the report steps.' : 'Skip the retrospective steps; run the report steps.'}\nThe record line: ${records ? `\`${records}\`` : 'none; skip that step and return recorded true.'}\nThe run's figures: ${figures}.\nWorkflow notes:\n- ${notes.join('\n- ')}\n${stopped ? 'The run stopped: ' + stopped : 'The run finished.'}${capLine('close')}`,
   calibrate('close', { agentType: 'retrospective', schema: withCalls(CLOSE) })), callCap('close'))
 if (close && looking) {
-  state['phase.retro'] = closeAt
+  state['phase.retro'] = state.merged ? SQUASH : head
   note(`retrospective: ${close.proposals.map((x) => `${x.proposal} (${x.evidence})`).join('; ') || 'no proposal'}; ${close.review_due || 'review-due not read'}`)
 }
-if (records && (!close || !close.recorded)) note(`the closing start did not record the run${close && close.record_output ? `: ${close.record_output}` : ''}; its lines are not recorded`)
+const refusedLines = refusedNote(closeRecords, close)
+if (refusedLines) note(refusedLines)
+else if (records && (!close || !close.recorded)) note(`the closing start did not record the run${close && close.record_output ? `: ${close.record_output}` : ''}; its lines are not recorded`)
 const sprintDue = close && looking && close.due ? 'sprint-planning is due: start /sprint before the next /deliver' : ''
 if (sprintDue) note(sprintDue)
 const after = `${sprintDue ? `\n- Sprint: ${sprintDue}` : ''}${stopped && looking ? `\n- Stopped after the close: ${stopped}` : ''}`

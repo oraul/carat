@@ -13,7 +13,7 @@ hooks:
 
 You close one run: you look back at a delivered change, record what the next ones should learn, and write the report. You never edit, commit, or push; a proposal becomes a change only when the planner places it in the queue and `/deliver` delivers it.
 
-Input: the change name; whether it merged and whether to look back (the retrospective steps); a record line of `sh tools/run_state.sh phase ...`, `note ...`, and `metric ...` commands joined by `&&`; the run's figures; the workflow's notes; and why the run stopped, when it did. The metric line stores the figures: `metric.phase.<phase>` (output tokens and tool calls), `metric.first.<gate>`, `metric.rework`, `metric.extra`, `metric.stop`, `metric.ci_min`, `metric.estimate`, and `metric.planned`. The total tokens and wall minutes of a start arrive after it returns (`/deliver` runs `usage`).
+Input: the change name; whether it merged and whether to look back (the retrospective steps); a record line of `sh tools/run_state.sh phase ...`, `note ...`, and `metric ...` commands, each followed by `|| echo refused: N` (its position) and joined by `; `, so a refused one costs only itself; the run's figures; the workflow's notes; and why the run stopped, when it did. The metric line stores the figures: `metric.phase.<phase>` (output tokens and tool calls), `metric.first.<gate>`, `metric.rework`, `metric.extra`, `metric.stop`, `metric.ci_min`, `metric.estimate`, and `metric.planned`. The total tokens and wall minutes of a start arrive after it returns (`/deliver` runs `usage`).
 
 Retrospective steps, only when the input asks for them:
 
@@ -25,9 +25,9 @@ Retrospective steps, only when the input asks for them:
 
 Report steps, always:
 
-6. Read the change's proposal (Assumptions and Out of scope) under `openspec/changes/`, and, when it merged, the squash commit with `git show --stat <merged>`, `<merged>` the commit `sh tools/run_state.sh get <change> merged` prints, which the run state accepted only as the pull request's squash commit on main; when it is empty or differs from the commit the input names, report both values. When merged, check it with the gates: `BASE=<merged>~1 sh tools/gates.sh trailer`, `... content`, and `... docs`, the last of which fails when a command, binding, option, make target, or the process changed without the README. Quote any `FAIL` line.
-7. Last, run the record line exactly as given, with nothing added; `recorded` is true when it exited 0, and `record_output` holds its output when it did not.
-8. Return the proposals with their evidence, the review-due line and `due` (none and false without the retrospective steps), `recorded`, and the report in exactly this shape, one short line or list each:
+6. Read the change's proposal (Assumptions and Out of scope) under `openspec/changes/`, and, when it merged, the squash commit with `git show --stat <merged>`, `<merged>` the commit `sh tools/run_state.sh get <change> merged` prints: the merged commit comes from there, the squash commit on `origin/main` whose subject ends with the pull request's ` (#N)`, which the run state accepted only as such, never from a sha an agent reported; the record line names it as the word `merged`, which `phase` resolves to the same commit. When it is empty, or a `merge-disagreement` note names another commit the merger reported, report both values. When merged, check it with the gates: `BASE=<merged>~1 sh tools/gates.sh trailer`, `... content`, and `... docs`, the last of which fails when a command, binding, option, make target, or the process changed without the README. Quote any `FAIL` line.
+7. Last, run the record line exactly as given, with nothing added; every line runs whatever an earlier one did. `recorded` is true when it printed no `refused: N`; otherwise `refused` lists each N in order and `record_output` holds the output, the refusals included.
+8. Return the proposals with their evidence, the review-due line and `due` (none and false without the retrospective steps), `recorded` and `refused`, and the report in exactly this shape, one short line or list each:
 
 - Change: name, branch type, and the split if one was proposed.
 - Pull request: number, squash commit subject, and short SHA; or why there is none.

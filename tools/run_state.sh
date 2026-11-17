@@ -83,6 +83,15 @@
 #                               COMMIT, HEAD when omitted
 #                               (ci only at the pushed head, merge only at
 #                               the squash commit, as set checks them)
+#   phase CHANGE NAME merged [REPORTED]
+#                               record merge, retro, or report at the squash
+#                               commit: once pr is recorded, the commit of
+#                               main whose subject ends with " (#PR)", which a
+#                               recorded merged must name, else the recorded
+#                               merged; REPORTED, the commit an agent
+#                               reported (merge only), when it is not that
+#                               commit, adds a merge-disagreement note naming
+#                               both
 #   review CHANGE KIND RESULT SUMMARY [COMMIT]
 #                               record a review (KIND one of REVIEW_KINDS,
 #                               RESULT pass or blocked, and for the periodic
@@ -1583,6 +1592,28 @@ merged_at() {
   printf '%s\n' "$at"
 }
 
+# The twelve-digit squash commit of the change, for the word merged in
+# place of a commit (phase, as COMMAND $1): once the pull request is
+# recorded, its squash commit on main (squash_commit), which a recorded
+# merged value must name; before, the recorded merged value as set checks
+# it (merged_at). Dies naming both values, or when neither is recorded, so
+# the close records a phase at the squash commit and never at a sha an
+# agent reported.
+squash_of_change() {
+  recorded=$(read_key merged)
+  pr=$(read_key pr)
+  if valid '[0-9]+' "$pr"; then
+    squash=$(squash_commit "$pr") || die "$1: refused: pull request #$pr has no squash commit on main"
+    [ -z "$recorded" ] || [ "$(git rev-parse --verify -q --short=12 --end-of-options "$recorded^{commit}" 2>/dev/null)" = "$squash" ] ||
+      die "$1: refused: the recorded merged commit $recorded is not the squash commit of pull request #$pr on main, $squash"
+    printf '%s\n' "$squash"
+  elif [ -n "$recorded" ]; then
+    merged_at "$recorded" "$1"
+  else
+    die "$1: refused: $change records neither a pull request nor a merged commit"
+  fi
+}
+
 # The merged changes whose run state has no history row, one per line; a
 # merged value that is not a commit hash, or names no commit on main
 # (merged_on_main), is not a merge, so no history row, sprint, or bench
@@ -2748,11 +2779,18 @@ case "$command" in
     esac
     write_key "$1" "$value" ;;
   phase)
-    [ $# -eq 1 ] || [ $# -eq 2 ] || usage
+    [ $# -eq 1 ] || [ $# -eq 2 ] || { [ $# -eq 3 ] && [ "$1" = merge ] && [ "$2" = merged ]; } || usage
     one_of "$1" "$PHASES" || die "phase: not a phase: $1 (one of $PHASES)"
-    case "$1" in
-      ci) at=$(pushed_at "${2:-$(head_commit)}" phase) || exit 1 ;;
-      merge) at=$(merged_at "${2:-$(head_commit)}" phase) || exit 1 ;;
+    case "$1:${2:-}" in
+      merge:merged|retro:merged|report:merged)
+        at=$(squash_of_change phase) || exit 1
+        if [ $# -eq 3 ] && ! { valid '[0-9a-f]{7,40}' "$3" &&
+            [ "$(git rev-parse --verify -q --short=12 --end-of-options "$3^{commit}" 2>/dev/null)" = "$at" ]; }; then
+          add_note merge-disagreement "the merged commit reported, $(printf '%s' "$3" | cut -c1-40), is not the squash commit on main, $at, recorded instead"
+        fi ;;
+      *:merged) die "phase: refused: only merge, retro, and report are recorded at the merged commit, not $1" ;;
+      ci:*) at=$(pushed_at "${2:-$(head_commit)}" phase) || exit 1 ;;
+      merge:*) at=$(merged_at "${2:-$(head_commit)}" phase) || exit 1 ;;
       *) at=$(commit_at "${2:-}") || exit 1 ;;
     esac
     write_key "phase.$1" "$at" ;;
