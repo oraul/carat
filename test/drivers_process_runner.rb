@@ -28,10 +28,32 @@ module DriversProcessRunnerTest
     describe_one(message)
   end
 
+  # The handle and kind of the next message, or "none".
+  def self.ended(queue)
+    message = next_message(queue)
+    return "none" if message.nil?
+    handle_and_kind(message)
+  end
+
+  # A message's handle and kind; typed, since the queue answers untyped.
+  #: (Carat::Domain::ServiceMessage) -> String
+  def self.handle_and_kind(message)
+    "#{message.handle} #{message.kind}"
+  end
+
   # A message's kind and text; typed, since the queue answers untyped.
   #: (Carat::Domain::ServiceMessage) -> String
   def self.describe_one(message)
     "#{message.kind} #{message.text}"
+  end
+
+  # Starts cat, echoes one frame, stops it, and describes its end.
+  def self.stop_cat(runner, queue)
+    handle = runner.spawn(["cat"])
+    runner.write(handle, D::RpcFramer.frame("{}"))
+    describe(queue)
+    runner.stop(handle)
+    describe(queue)
   end
 
   def self.main
@@ -49,6 +71,28 @@ module DriversProcessRunnerTest
     runner.stop(handle)
     t.assert_equal("exit ", describe(queue), "a stopped child's output ends")
     t.assert_equal(false, runner.write(handle, "x"), "a stopped child takes no input")
+
+    # Scenario "Stopping a server ends only that server": a child that
+    # ignores its input ends only when stopped, and its sibling runs on.
+    first = runner.spawn(["sleep", "30"])
+    second = runner.spawn(["sleep", "30"])
+    runner.stop(first)
+    t.assert_equal("#{first} exit", ended(queue), "stopping a server ends only that server: the stopped child ends")
+    sleep 0.3
+    t.assert_equal(true, queue.pop.nil?, "and its sibling keeps running")
+    runner.stop(second)
+    t.assert_equal("#{second} exit", ended(queue), "until it is stopped in turn")
+
+    # Scenario "Stopping a stalled server keeps the editor running":
+    # A child stopped while its writer is blocked on a full pipe: the
+    # write after it ends answers EPIPE, never SIGPIPE ending the runner.
+    stalled = runner.spawn(["sleep", "30"])
+    t.assert_equal(true, runner.write(stalled, "x" * 200_000), "a stalled child takes more input than its pipe holds")
+    sleep 0.2
+    runner.stop(stalled)
+    t.assert_equal("#{stalled} exit", ended(queue), "stopping a child its writer is blocked on still ends it, and the runner survives the broken pipe")
+    sleep 0.2
+    t.assert_equal("exit ", stop_cat(runner, queue), "and the runner starts and stops the next child")
 
     t.assert_equal(0, runner.spawn(["carat-no-such-command"]), "a missing command does not start")
     t.assert_equal(0, runner.spawn([]), "no words start nothing")

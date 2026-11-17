@@ -110,6 +110,8 @@ module Carat
       # @rbs @refused: Array[String]
       # @rbs @saves: Array[Integer]
       # @rbs @trust: Symbol
+      # @rbs @languages: Array[String]
+      # @rbs @heads: Array[String]
       # @rbs @published: Array[String]
       # @rbs @items: Array[untyped]
       # @rbs @resolvers: Array[String]
@@ -147,6 +149,10 @@ module Carat
         @refused = []
         @saves = []
         @trust = :unknown
+        @languages = [""]
+        @languages.clear
+        @heads = [""]
+        @heads.clear
         @published = []
         @items = []
         @resolvers = [""]
@@ -316,7 +322,21 @@ module Carat
 
       #: (String) -> bool
       def command?(language)
-        !language.empty? && !words_of(language).empty?
+        !language.empty? && !head_of(language).empty?
+      end
+
+      # The program of a language's server command, "" for none, settled
+      # on the first ask and kept, since neither the directory nor the
+      # configuration changes: an idle tick without a server, which asks
+      # it and shows its name, reads no configuration line.
+      #: (String) -> String
+      def head_of(language)
+        at = @languages.index(language)
+        return @heads[at.to_i].to_s unless at.nil?
+        head = words_of(language)[0].to_s
+        @languages << language
+        @heads << head
+        head
       end
 
       # The command of a language's server: the words after the root of
@@ -364,7 +384,7 @@ module Carat
       # untrusted directory; answers whether the slot changed.
       #: (String) -> bool
       def hold(language)
-        name = Domain::ControlText.strip(File.basename(words_of(language)[0].to_s), NAME_LIMIT)
+        name = Domain::ControlText.strip(File.basename(head_of(language)), NAME_LIMIT)
         @slots.set_lsp(name, :untrusted, 0)
       end
 

@@ -76,6 +76,13 @@ module EditorLspTest
       h.type(":LspRestart<CR>")
       h.wait
       return "#{h.processes.methods_sent.join(",")}|#{h.assembly.status_slots.lsp_label}"
+    when "restart stops only the old server"
+      h = editor("a.rb", true)
+      h.messages.body(1, INIT)
+      h.wait
+      h.type(":LspRestart<CR>")
+      h.wait
+      return "#{h.processes.stopped.join(",")}|#{h.processes.spawned.length}"
     when "untrusted"
       h = untrusted("a.rb")
       h.wait
@@ -157,6 +164,7 @@ module EditorLspTest
       ["the bar names the restart after a crash, the encoding dropped at 60 columns", "crashed", "\"a.rb\" 1L, 6B|NORMAL  a.rb  ruby-lsp crashed :LspRestart  ruby  1:1  All"],
       [":LspRestart starts the server again", "restart after a crash", "2 |ruby-lsp starting"],
       [":LspRestart stops a running server first", "restart a running server", "initialize,initialized,textDocument/didOpen,shutdown,exit,initialize|ruby-lsp starting"],
+      [":LspRestart stops only the old server", "restart stops only the old server", "1|2"],
       [":LspRestart on a buffer without a server", "a text buffer", "No language server for this buffer|NORMAL  b.txt                              utf-8  1:1  All"],
       [":LspRestart with a command that cannot start", "a missing command", "Cannot start ruby-lsp|NORMAL  a.rb                         ruby  utf-8  1:1  All"],
       [":LspRestart refuses arguments", "arguments", "E488: Trailing characters: x|NORMAL  a.rb      ruby-lsp starting  ruby  utf-8  1:1  All"],

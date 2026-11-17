@@ -85,6 +85,8 @@ ok   a crashed server is not started again on its own
 ok   an oversized frame crashes the server
 ok   a broken input crashes the server
 ok   stop sends shutdown and exit and stops the child
+ok   a second stop stops nothing more
+ok   an idle tick with no server reads no configuration line: a line read after the first tick is not seen
 ok   a missing command leaves the slot empty
 ok   a text file starts nothing
-adapters_language_gateway: 89 passed, 0 failed
+adapters_language_gateway: 91 passed, 0 failed

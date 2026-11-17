@@ -5,6 +5,12 @@ ok   the reader thread frames the echo
 ok   two frames in one write
 ok   a stopped child's output ends
 ok   a stopped child takes no input
+ok   stopping a server ends only that server: the stopped child ends
+ok   and its sibling keeps running
+ok   until it is stopped in turn
+ok   a stalled child takes more input than its pipe holds
+ok   stopping a child its writer is blocked on still ends it, and the runner survives the broken pipe
+ok   and the runner starts and stops the next child
 ok   a missing command does not start
 ok   no words start nothing
 ok   an unknown handle takes no input
@@ -18,4 +24,4 @@ ok   capture of output over the limit keeps at most 64 KiB, cut before the chara
 ok   capture of long valid UTF-8 output answers valid UTF-8
 ok   sh starts
 ok   an oversized frame stops the reading
-drivers_process_runner: 20 passed, 0 failed
+drivers_process_runner: 26 passed, 0 failed

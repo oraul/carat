@@ -3,6 +3,7 @@ ok   the bar shows the ready server by name
 ok   the bar names the restart after a crash, the encoding dropped at 60 columns
 ok   :LspRestart starts the server again
 ok   :LspRestart stops a running server first
+ok   :LspRestart stops only the old server
 ok   :LspRestart on a buffer without a server
 ok   :LspRestart with a command that cannot start
 ok   :LspRestart refuses arguments
@@ -16,4 +17,4 @@ ok   the sign and the message move with an inserted line
 ok   another buffer shows its own counts, none
 ok   a start after a crash clears the drawn diagnostics
 ok   :LspStart refuses arguments
-editor_lsp: 18 passed, 0 failed
+editor_lsp: 19 passed, 0 failed

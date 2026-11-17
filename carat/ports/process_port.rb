@@ -21,8 +21,9 @@ module Carat
         raise NotImplementedError, "ProcessPort#write"
       end
 
-      # Closes the child's input once what was queued is written, and
-      # reaps the child when it ends, without waiting for it.
+      # Closes the child's input once what was queued is written, ends
+      # that child, and no other process, and reaps it when it ends,
+      # without waiting for it.
       #: (Integer) -> void
       def stop(handle)
         raise NotImplementedError, "ProcessPort#stop"
