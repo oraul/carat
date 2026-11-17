@@ -16,7 +16,7 @@ On quit and on `:LspRestart` the editor SHALL send `shutdown` and `exit` to each
 - **THEN** only the old server's process is stopped and one new server is started
 
 ### Requirement: A language's server command is settled once
-The editor SHALL read the configuration for a language's server command the first time it needs it and keep the answer for the session, so an idle tick while the current buffer's language has no server reads no configuration line.
+The editor SHALL settle whether a language names a server command, and the program it names, the first time it needs them and keep them for the session, so an idle tick while the current buffer's language has no server reads no configuration line; the full command is read when a server starts.
 
 #### Scenario: An idle tick with no server reads no configuration line
 - **WHEN** a Ruby buffer waits for `:LspStart` in an untrusted directory, so no server runs, for one idle tick, and a configuration line naming another Ruby server command is read afterward

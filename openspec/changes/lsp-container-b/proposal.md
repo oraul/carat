@@ -12,7 +12,7 @@ Re-verified on main at 5fdd787bbddd: `ProcessRunner#stop` sends no signal at all
 ## What Changes
 
 - `ProcessPort#stop` ends the child it started: the driver queues the close of the child's input, signals `TERM` to the child's own process number (never a group, never a number of another handle), while the child is still unreaped, then detaches it; a child already gone is ignored.
-- The gateway settles a language's server command the first time it is asked and keeps the answer for the session, as `trusted?` keeps its own; an idle tick with no server for the current buffer's language reads no configuration line.
+- The gateway settles whether a language names a server command, and its program, the first time it is asked and keeps the answer for the session, as `trusted?` keeps its own; an idle tick with no server for the current buffer's language reads no configuration line. The full command is still read when a server starts.
 
 Out of scope: a grace period between `exit` and the signal (the server gets `shutdown` and `exit` queued first, then `TERM`); ending processes the server itself started; several servers of one language at once; re-reading the configuration in a session, which carat does not do.
 
