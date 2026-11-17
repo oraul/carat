@@ -4,8 +4,6 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 
 ## Sprint 14
 
-1. `merge-record-check` (T1 pipeline defect, estimated medium, backlog-pick batch 1 part a, the user's decision: front of Sprint 14): 3 of 6 backlog merges (#161, #162, #166) recorded a wrong CI or merge head (`tools/run_state.sh:1289` `merged_commit`, the merger's records); `settled_at` (`tools/gates.sh:113`, `:117`) exempts any edit of `docs/sprints.tsv` after the reviewed commit, so a forged or rewritten row naming the latest merge moves the sprint base and the combined review skips changes (security Low (5), Low (3)); the map names settled_at and appended_rows under the stages gate only (`docs/codebase-map.md:117`, against `tools/gates.sh:342`, `:425`). Fix outline: a recorded CI head is the pushed head and a merged commit is on main; the gate accepts only the row groom appends for the sprint `build/plan/sprint` names; the map names the shared helper once. Accepted when tools-test cases refuse a CI head not the pushed head, a merged commit not on main, an edited sprint row, and a row not groom's. Backlog: "## The security gate exempts any edit to the sprint log, not only an appended row", "## A forged sprint row settles the sprint review gate (sprint-2 review security Low (5))", "## records-once quality advisory at docs/codebase-map.md:117".
-
 ## Pool
 
 1. `explorer-tidy` (T6 with a correctness bug, estimated medium, backlog-pick batch 2, area 16, 10 of 17 entries): "## The file tree's cursor drifts when follow expands directories above it" and 9 explorer tidy entries (tokenize, token table, DOCS rows, Tree boolean, icon alias, focus_window, help, sort, opens left).
@@ -28,9 +26,9 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 18. `process-capture-hardening` (T3 security Lows, estimated medium, pushed back 1): `process_runner.rb:98` (5), `plugin_host.rb:110` (3).
 19. `ci-hardening` (T3 with T6, estimated medium, pushed back 23): "### CI checkout keeps GITHUB_TOKEN while pull request targets run", "### Workflow actions are pinned by movable tags".
 20. `tools-fail-open` (T1 pipeline defect, estimated medium): "### Scanner errors pass the text gates", "### metrics.sh compare passes a base name never measured", "### gate_pushes passes a non-numeric count", "### ci_scope.sh splits changed paths at whitespace".
-21. `merge-gate-integrity` (T1 pipeline defect, estimated medium, pushed back 14): merge over 12 calls in 8 of 20 lane rows; 22,685 of 239,451 output on a first-pass CI (check-parallel).
-22. `scout-value`, `check-skip`, `records-trim`, `budget-prediction`, `plan-apply-guard`, `run-resume` (T1 pipeline, estimated small each, pushed back up to 17): scout 19.2% to 25.9% of output; records-trim takes sprint-13-records retro notes 6 (bench 13,863 of 42,893 output, 32.3%, on a run with no code; accepted when a records row has no bench phase) and 7 (groom appends a note twice, level two, no blank line: 5 of 5 quality advisories on its output; accepted when backlog-dups finds no pair groom made).
-23. `review-demotion`, `hook-one-place`, `gate-object-pin`, `own-line-advisories`, `prose-grep-cases`, `spec-tests-first`, `ci-workflow-tidy` (T1 pipeline, estimated medium each, pushed back up to 4): quality first pass 67/132; prose-grep-cases takes sprint-13 quality `tools_test.sh:3701`.
+21. `merge-gate-integrity` (T1 pipeline defect, estimated medium, pushed back 14): merge over 12 calls in 8 of 20 lane rows; first-pass CI merges check-parallel 22,685 of 239,451 output, tab-close-b 43,705 of 338,656 (12.9%, 13 calls); lsp-container-c's merger returned pending at 3 and 0 of 30 minutes, merge 30 of 119 calls. Accepted when 10 first-pass-CI lane rows each show merge at or under 10,000 output and 12 calls.
+22. `scout-value`, `check-skip`, `records-trim`, `budget-prediction`, `plan-apply-guard`, `run-resume` (T1 pipeline, estimated small each, pushed back up to 17): scout 18.9% (lsp-container-c) to 25.9% of output, tab-close-b 25.1% on an area scouted one run earlier; records-trim takes sprint-13-records retro notes 6 (bench 13,863 of 42,893 output, 32.3%, on a run with no code; accepted when a records row has no bench phase) and 7 (groom appends a note twice, level two, no blank line: 5 of 5 quality advisories on its output; accepted when backlog-dups finds no pair groom made); budget-prediction takes the records runs estimated small and over (sprint-13-records 1,264,361 total, sprint-12-records 2,147,268; accepted when the next records run ends under its estimate's budget).
+23. `review-demotion`, `hook-one-place`, `gate-object-pin`, `own-line-advisories`, `prose-grep-cases`, `spec-tests-first`, `ci-workflow-tidy` (T1 pipeline, estimated medium each, pushed back up to 4): quality first pass 72/137; advisories left out of the findings file 14 of 23 over 4 rows (lsp-container-c 3 of 3), to review-demotion; prose-grep-cases takes sprint-13 quality `tools_test.sh:3701`.
 24. `backlog-read-guard`, `record-tier`, `plan-skip`, `sprint-marker-tidy` (T1 pipeline, estimated small each).
 25. `open-pr-refusals` (T1 security, estimated medium, pushed back 3); `ci-scope-quoting` (T1, Low (6), estimated medium).
 26. `gateway-split-a`, `gateway-split-b`, `frame-painters`, `plugin-api-split`, `language-followers`, `language-ask-port` (T5 architecture, estimated medium each).
@@ -42,11 +40,13 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 
 ## Decisions
 
-- Security first clear (T0): sprint-13 review security Medium (6) `tools/run_state.sh:639` below confidence 8, no finding at 8 or above unfixed or disputed.
-- `tab-close-b` delivered first (T2 user-reported bug): the user's decision "tab-close-b first", ahead of `merge-record-check` (T1); its Sprint 14 line leaves in this package step, 1 of 2 backlog items left.
-- `tab-close-b` kept whole (T2): 3 fixes and a scenario suite, over the split rule's 3 parts, kept together by the user's decision ("added to tab-close-b").
-- `tab-close-b` estimated large, not medium (T2): part a `tab-close` 1,038,200 total and 81.6 min for 1 fix; windows-tabs-tidy 1,433,283 and windows-buffers-tidy 1,373,899 over medium's 1,200,000.
-- No size up (T1 rule): check-parallel 849,706 and tab-close 1,038,200, the last two backlog rows, under 1,200,000.
-- No merge-gate edit (T1): the brief names no `tools/rules.sh` change, 0 pattern edits.
-- sprint-13-records retro notes 6 and 7 folded into pool 22 `records-trim` (T1, same records runs): bench 32.3% of a no-code run's output; 5 of 5 quality advisories on groom output; notes 1 to 5 (T6 quality advisories) handled already.
-- Feature lane untouched (T2 brief): `lsp-container-c` runs there, 0 pushes.
+- Security first clear (T0): sprint-13 review security Medium (6) `tools/run_state.sh:639` below confidence 8; no `review.periodic-*` in the pending `lsp-container-c` and `tab-close-b` run states.
+- `merge-record-check` delivered and removed (T1 pipeline defect, the user's decision: front of Sprint 14); its Sprint 14 line leaves in this package step, 0 of 2 backlog items left, the sprint drained for /sprint.
+- `merge-record-check` estimated medium (T1): pipeline rows sprint-security 818,032, check-parallel 849,706, checks-and-pr-lows 1,125,404 total, all under medium's 1,200,000.
+- No size up (T1): of the last two backlog rows only sprint-13-records (small, 1,264,361) went over; tab-close 1,038,200 under medium, pending tab-close-b 1,050,899 under large.
+- `merge-record-check` kept whole (T1): 2 testable parts (the recorded heads, the sprint-row gate) and one map line, all in the tools area, under the split rule's 3.
+- No merge-gate rule edit (T1): `settled_at` and `appended_rows` are functions of `tools/gates.sh` (`:116`, `:126`), 0 `tools/rules.sh` pattern edits; this branch appends no sprint row, so main's gate passes it unchanged.
+- Head part evidence (T1): 5 wrong heads since the queue line, check-parallel (#175) ci and merge swapped, lsp-container-c (#180) and tab-close-b (#181) phase.ci on squash commits 49d305d8b4bc and 79b6b7cf3f90 against ci 2a0e35ccc70f and 7c6ac255b52b, and 2 typed heads.
+- The merge refused when main moved (the 405 of #169) stays in the backlog (the brief), 0 queue lines.
+- Pending retro notes placed (T1): lsp-container-c 4 and tab-close-b 4 in pool 21, lsp-container-c 6 and tab-close-b 5 in `scout-value`, tab-close-b 6 and overrun 7 in `budget-prediction`, lsp-container-c 5 in `review-demotion`; 6 quality advisories handled already.
+- Feature lane untouched (the brief): `markdown-reading-d` runs there, 0 edits of its queue or history.
