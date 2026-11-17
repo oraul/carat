@@ -465,14 +465,15 @@ function metricLine() {
   return CHANGE.test(state.change || '') ? `sh tools/run_state.sh metric ${state.change} ${safe.join(' ')}` : ''
 }
 // A restart carries on the figures the run state holds.
-// The held-finding notes an unmerged close recorded, in order and without
-// duplicates, less those a merged close already noted as late findings
-// ("late-finding MERGED TEXT").
-function heldFindings(noted) {
+// The held-finding notes an unmerged close recorded after the push (or,
+// given kind, the unpushed-finding notes of a close before it), in order
+// and without duplicates, less those a merged close already noted as late
+// findings ("late-finding MERGED TEXT").
+function heldFindings(noted, kind = 'held-finding') {
   const late = noted.filter((v) => v.startsWith('late-finding ')).map((v) => v.replace(/^late-finding [^ ]+ /, ''))
   const kept = []
   for (const v of noted) {
-    const t = v.startsWith('held-finding ') ? noteText(v.slice(13)) : ''
+    const t = v.startsWith(kind + ' ') ? noteText(v.slice(kind.length + 1)) : ''
     if (t && !late.includes(t) && !kept.includes(t)) kept.push(t)
   }
   return kept
@@ -508,6 +509,10 @@ function seed() {
   }
   if (state.pushed) for (const f of findings()) handed.add(f)
   held = heldFindings(noted)
+  // A close before the push handed nothing yet: its findings go back into
+  // the list the package step hands over, once a resume has not pushed
+  // either (a pushed one's package step handed them).
+  if (!state.pushed) for (const t of heldFindings(noted, 'unpushed-finding')) addBacklog(t)
   // The last quality review's blocking findings, recorded as
   // quality-blocking notes; kept only when all of them are there.
   const [result, commit, blockingCount] = at('review.quality')
@@ -664,6 +669,12 @@ const doneAtHead = (name) => passedAt(ran, 'phase.' + name, head)
 const reviewedAtHead = (kind) => passedAt(ran, 'review.' + kind, head)
 const note = (line) => { notes.push(line); log(line) }
 const backlog = []
+// A finding joins the list once, compared as its note text, so a resumed
+// review's raw line and the same line seeded from a note are one entry.
+function addBacklog(line) {
+  const t = noteText(line)
+  if (t && !findings().some((f) => noteText(f) === t)) backlog.push(line)
+}
 let planNotes = []
 // The checker's word on the benchmark at a commit, and the blocking findings
 // of the quality review at qualityAt, for the next review of a fix.
@@ -707,15 +718,19 @@ function handOver() {
 // in the run state: the next change's package step writes them to
 // docs/findings/CHANGE.md with this run's history row, so no push records them.
 // The note command refuses a late finding before the merge, so an unmerged
-// run's close keeps them as held-finding notes instead, which seed reads
-// back into held (a security Low lives only in this start's memory, and
-// seed marks every advisory handed once pushed); a merged close notes the
-// held ones still not noted late, then the fresh ones, as late findings.
+// run's close after the push keeps them as held-finding notes instead,
+// which seed reads back into held (a security Low lives only in this
+// start's memory, and seed marks every advisory handed once pushed); a
+// merged close notes the held ones still not noted late, then the fresh
+// ones, as late findings. A close before the push, no package step having
+// handed anything, keeps them as unpushed-finding notes, which seed of a
+// resume still unpushed puts back into the list its package step hands
+// over, so they never reach held and are written once.
 let held = []
 function recordLate() {
   const fresh = handOver().map(noteText).filter((t) => t && !held.includes(t))
   const texts = state.merged ? held.splice(0).concat(fresh) : fresh
-  const kind = state.merged ? 'late-finding' : 'held-finding'
+  const kind = state.merged ? 'late-finding' : state.pushed ? 'held-finding' : 'unpushed-finding'
   for (const t of texts) queue(`sh tools/run_state.sh note ${state.change} ${kind} "${t}"`, head)
 }
 const intro = () => `Change \`${state.change}\` on branch \`${state.branch}\`, in its worktree \`${laneDir(state.change)}\`: run every command there (\`cd ${laneDir(state.change)} && ...\`) and read and edit its files there, but where a step names the main checkout; the run state, stage logs, plans, and the body file stay in the main checkout's build/, linked into the worktree, so write the body file there.`
@@ -914,7 +929,7 @@ async function reviews() {
     verdict('security', !blocking.length)
     for (const f of s.findings.filter((f) => !blocking.includes(f))) {
       const line = `security ${f.severity} (${f.confidence}) ${f.file}:${f.line || 0} ${f.title}; fix: ${f.fix}`
-      if (!backlog.includes(line)) backlog.push(line)
+      addBacklog(line)
     }
     note(`security at ${s.head}: ${s.findings.length} finding(s), ${blocking.length} blocking`)
     const count = (severity) => s.findings.filter((f) => f.severity === severity).length
@@ -1322,9 +1337,10 @@ const looking = !stopped && Boolean(state.merged) && !state['phase.retro']
 phase('Close')
 // The findings that arrived after the package step become late-finding
 // notes of a merged run, which the note command stamps with the merged
-// commit, and held-finding notes of an unmerged one, which a merged resume
-// notes late (a late finding before the merge would be refused and stop
-// the record line's && chain). A line the close profile refuses (a check or review
+// commit, held-finding notes of one pushed but unmerged, which a merged
+// resume notes late, and unpushed-finding notes of one stopped before the
+// push, which a resume's package step hands over (a late finding before
+// the merge would be refused and stop the record line's && chain). A line the close profile refuses (a check or review
 // record a failed flush left) is reported, not recorded: a resume runs
 // that check or review again.
 recordLate()
