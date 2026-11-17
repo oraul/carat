@@ -49,7 +49,7 @@ work=$(mktemp -d "${TMPDIR:-/tmp}/carat-scan.XXXXXX") || exit 2
 trap 'rm -rf "$work"' EXIT
 : > "$work/rows"
 : > "$work/notes"
-export URL_RE MODEL_PATH_RE MODEL_LINE_RE
+export URL_RE MODEL_PATH_RE MODEL_LINE_RE CONFIG_PATH_RE
 
 # Rows "FLAG<TAB>WHERE:LINE<TAB>WHERE<TAB>TEXT": l for a line, j for the
 # last word of a line joined to the first word of the next, kept only when
@@ -99,10 +99,10 @@ fi
 
 # One text per check: the clone line has no URL, a join row only a URL, a
 # URL's user and password no address, an agent's frontmatter tier alias no
-# model name.
+# model name, and a line outside a configuration file no bare assignment.
 cut -f2 "$work/rows" > "$work/labels"
 awk -v dir="$work" '
-  BEGIN { FS = "\t"; line = ENVIRON["MODEL_LINE_RE"]; agents = ENVIRON["MODEL_PATH_RE"] }
+  BEGIN { FS = "\t"; line = ENVIRON["MODEL_LINE_RE"]; agents = ENVIRON["MODEL_PATH_RE"]; config = ENVIRON["CONFIG_PATH_RE"] }
   {
     text = $0; sub(/^[^\t]*\t[^\t]*\t[^\t]*\t/, "", text)
     u = text; t = text; m = text
@@ -110,7 +110,8 @@ awk -v dir="$work" '
     a = t; gsub(/:\/\/[^\/@[:space:]]*@/, "://", a)
     if ($3 == "Makefile" && text ~ /git -C .* remote add origin /) u = ""
     if ($3 ~ agents && text ~ line) m = ""
-    print u > (dir "/url"); print t > (dir "/text"); print a > (dir "/addr"); print m > (dir "/model")
+    c = ($3 ~ config) ? t : ""
+    print u > (dir "/url"); print t > (dir "/text"); print a > (dir "/addr"); print m > (dir "/model"); print c > (dir "/config")
   }' "$work/rows"
 
 # found KIND FILE PATTERN [GREP-OPTION]: each match as WHERE:LINE: KIND: TEXT.
@@ -135,7 +136,7 @@ found() {
 found "model name" model "$MODEL_RE" -i >> "$work/hits"
 # Only the label: a log, which CI may print, never repeats a secret.
 if [ -s "$work/text" ]; then
-  { grep -n -E -e "$KEY_RE|$TOKEN_RE" "$work/text"; grep -n -i -E -e "$ASSIGN_RE" "$work/text"; } |
+  { grep -n -E -e "$KEY_RE|$TOKEN_RE" "$work/text"; grep -n -i -E -e "$ASSIGN_RE" "$work/text"; grep -n -i -E -e "$BARE_ASSIGN_RE" "$work/config"; } |
     cut -d: -f1 | sort -n -u | awk '
       NR == FNR { label[NR] = $0; next }
       { print label[$0] ": secret: [not shown]" }' "$work/labels" - >> "$work/hits"

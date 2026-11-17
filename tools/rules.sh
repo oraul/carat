@@ -22,11 +22,20 @@ MODEL_LINE_RE="^model: ($TIERS|inherit)\$"
 # platforms (an AWS access key id, GitHub, GitLab, Slack, Google API, an
 # sk- key, Stripe live, npm), matched with their case; and a name ending in
 # password, passwd, secret, token, or api_key assigned a quoted literal of
-# eight characters or more, matched without case.
+# eight characters or more, matched without case. In a configuration file
+# (CONFIG_PATH_RE: YAML, TOML, shell, and caratrc), where an unquoted value
+# is a literal and not a name as in code, BARE_ASSIGN_RE also refuses such a
+# name assigned with =, :, or => an unquoted literal of eight characters or
+# more starting with a letter or digit, holding no quote, dollar sign,
+# backquote, or parenthesis (so a variable, a substitution, or a call
+# passes), and ending at a space or the line's end; or a whole caratrc line
+# "scope.name value" whose dotted name ends in one of those words.
 KEY_RE='-----BEGIN ([A-Z0-9]+ )*PRIVATE KEY( BLOCK)?-----'
 TOKEN_RE='(^|[^A-Za-z0-9])((AKIA|ASIA)[A-Z0-9]{16}|gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,}|glpat-[A-Za-z0-9_-]{20,}|xox[abeprs]-[A-Za-z0-9-]{10,}|AIza[A-Za-z0-9_-]{35}|sk-[A-Za-z0-9_-]{20,}|[rs]k_live_[A-Za-z0-9]{16,}|npm_[A-Za-z0-9]{36})'
 QUOTE="[\"']"
 ASSIGN_RE="(password|passwd|secret|token|api_?key)$QUOTE?[[:space:]]*(=|:|=>)[[:space:]]*$QUOTE[^\"'[:space:]]{8,}$QUOTE"
+CONFIG_PATH_RE='(^|/)[^/]*caratrc$|\.(ya?ml|toml|sh|bash)$'
+BARE_ASSIGN_RE="(password|passwd|secret|token|api_?key)$QUOTE?[[:space:]]*(=|:|=>)[[:space:]]*[A-Za-z0-9][^\"'\$\`()[:space:]]{7,}([[:space:]]|\$)|^[[:space:]]*[A-Za-z0-9_.-]*\.[A-Za-z0-9_-]*(password|passwd|secret|token|api_?key)[[:space:]]+[A-Za-z0-9][^\"'\$\`()[:space:]]{7,}[[:space:]]*\$"
 
 # report OUTPUT: each hit line of tools/scan_text.sh's OUTPUT through bad(),
 # each note printed. A here-document, not a pipeline, so bad() runs in this
