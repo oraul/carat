@@ -241,7 +241,7 @@ const MERGE = {
   properties: {
     ci: { type: 'string', enum: ['green', 'red', 'pending', 'stale'] }, head: HEAD, minutes: { type: 'number' },
     waited: { type: 'number', description: 'minutes waited for CI in all' },
-    step: { type: 'string' }, log_excerpt: { type: 'string' }, checks: { ...LINES, description: 'each check run of the head, oldest first: workflow, name, status, conclusion, the workflow its file under .github/workflows/' },
+    step: { type: 'string' }, log_excerpt: { type: 'string' }, checks: { ...LINES, description: 'each check run of the head, oldest first: workflow, name, status, conclusion, the workflow the path of the workflow run of the head holding the check (actions_list, by check suite), or - on green; one form for every result' },
     body_only: { type: 'boolean', description: 'CI is red only on the scan check, and its log names the pull request title or body, no commit or added line' },
     merged: { type: 'boolean' }, sha: { type: 'string' }, subject: { type: 'string' }, branch_deleted: { type: 'boolean' }, problem: { type: 'string' },
   },
@@ -363,11 +363,16 @@ function noteText(text) {
 // of every workflow file passed, so each failed run was superseded by a
 // green run of the same check of the same file (a scan re-run by a body
 // edit). A check name alone could be a job of a workflow the branch added,
-// so an entry naming no workflow file leaves the red standing.
+// so an entry naming no workflow file leaves the red standing. A name may
+// hold commas (spin (ubuntu, 4)): the workflow is the first field, the
+// status and conclusion the last two, the name all between.
 function staleRed(checks) {
   const last = {}
   for (const c of checks || []) {
-    const [workflow, name, status, conclusion] = String(c).split(',').map((s) => s.trim().toLowerCase())
+    const parts = String(c).split(',').map((s) => s.trim().toLowerCase())
+    if (parts.length < 4) return false
+    const [workflow, status, conclusion] = [parts[0], parts[parts.length - 2], parts[parts.length - 1]]
+    const name = parts.slice(1, -2).join(', ')
     if (!/^[.]github\/workflows\/[a-z0-9_.-]+[.]ya?ml$/.test(workflow || '') || !name) return false
     last[`${workflow} ${name}`] = `${status} ${conclusion}`
   }
@@ -460,6 +465,19 @@ function metricLine() {
   return CHANGE.test(state.change || '') ? `sh tools/run_state.sh metric ${state.change} ${safe.join(' ')}` : ''
 }
 // A restart carries on the figures the run state holds.
+// The held-finding notes an unmerged close recorded after the push (or,
+// given kind, the unpushed-finding notes of a close before it), in order
+// and without duplicates, less those a merged close already noted as late
+// findings ("late-finding MERGED TEXT").
+function heldFindings(noted, kind = 'held-finding') {
+  const late = noted.filter((v) => v.startsWith('late-finding ')).map((v) => v.replace(/^late-finding [^ ]+ /, ''))
+  const kept = []
+  for (const v of noted) {
+    const t = v.startsWith(kind + ' ') ? noteText(v.slice(kind.length + 1)) : ''
+    if (t && !late.includes(t) && !kept.includes(t)) kept.push(t)
+  }
+  return kept
+}
 function seed() {
   for (const key of Object.keys(state)) {
     let m = /^metric\.phase\.([a-z0-9_-]+)$/.exec(key)
@@ -490,6 +508,11 @@ function seed() {
     if (m) addAdvisories([m[1]])
   }
   if (state.pushed) for (const f of findings()) handed.add(f)
+  held = heldFindings(noted)
+  // A close before the push handed nothing yet: its findings go back into
+  // the list the package step hands over, once a resume has not pushed
+  // either (a pushed one's package step handed them).
+  if (!state.pushed) for (const t of heldFindings(noted, 'unpushed-finding')) addBacklog(t)
   // The last quality review's blocking findings, recorded as
   // quality-blocking notes; kept only when all of them are there.
   const [result, commit, blockingCount] = at('review.quality')
@@ -646,6 +669,12 @@ const doneAtHead = (name) => passedAt(ran, 'phase.' + name, head)
 const reviewedAtHead = (kind) => passedAt(ran, 'review.' + kind, head)
 const note = (line) => { notes.push(line); log(line) }
 const backlog = []
+// A finding joins the list once, compared as its note text, so a resumed
+// review's raw line and the same line seeded from a note are one entry.
+function addBacklog(line) {
+  const t = noteText(line)
+  if (t && !findings().some((f) => noteText(f) === t)) backlog.push(line)
+}
 let planNotes = []
 // The checker's word on the benchmark at a commit, and the blocking findings
 // of the quality review at qualityAt, for the next review of a fix.
@@ -688,8 +717,21 @@ function handOver() {
 // The findings that arrived after the package step, as late-finding notes
 // in the run state: the next change's package step writes them to
 // docs/findings/CHANGE.md with this run's history row, so no push records them.
+// The note command refuses a late finding before the merge, so an unmerged
+// run's close after the push keeps them as held-finding notes instead,
+// which seed reads back into held (a security Low lives only in this
+// start's memory, and seed marks every advisory handed once pushed); a
+// merged close notes the held ones still not noted late, then the fresh
+// ones, as late findings. A close before the push, no package step having
+// handed anything, keeps them as unpushed-finding notes, which seed of a
+// resume still unpushed puts back into the list its package step hands
+// over, so they never reach held and are written once.
+let held = []
 function recordLate() {
-  for (const f of handOver()) queue(`sh tools/run_state.sh note ${state.change} late-finding "${noteText(f)}"`, head)
+  const fresh = handOver().map(noteText).filter((t) => t && !held.includes(t))
+  const texts = state.merged ? held.splice(0).concat(fresh) : fresh
+  const kind = state.merged ? 'late-finding' : state.pushed ? 'held-finding' : 'unpushed-finding'
+  for (const t of texts) queue(`sh tools/run_state.sh note ${state.change} ${kind} "${t}"`, head)
 }
 const intro = () => `Change \`${state.change}\` on branch \`${state.branch}\`, in its worktree \`${laneDir(state.change)}\`: run every command there (\`cd ${laneDir(state.change)} && ...\`) and read and edit its files there, but where a step names the main checkout; the run state, stage logs, plans, and the body file stay in the main checkout's build/, linked into the worktree, so write the body file there.`
 // The merger's step 7 closes the worktree it would otherwise stand in, and
@@ -887,7 +929,7 @@ async function reviews() {
     verdict('security', !blocking.length)
     for (const f of s.findings.filter((f) => !blocking.includes(f))) {
       const line = `security ${f.severity} (${f.confidence}) ${f.file}:${f.line || 0} ${f.title}; fix: ${f.fix}`
-      if (!backlog.includes(line)) backlog.push(line)
+      addBacklog(line)
     }
     note(`security at ${s.head}: ${s.findings.length} finding(s), ${blocking.length} blocking`)
     const count = (severity) => s.findings.filter((f) => f.severity === severity).length
@@ -1214,8 +1256,7 @@ if (!stopped && !state.merged) {
       const push = stopped ? '' : resumePush(state.pushed, head, state.review_fixes)
       if (push && push !== 'push') stopped = `${push}: nothing pushes it`
       else if (push) {
-        recordLate()
-        await contributor('push', `Push the review fix of this resume past the push with \`sh tools/run_state.sh push ${state.change} --review-fix\`, not --ci-fix; the findings that arrived after the package step are recorded in the run state, not appended.`)
+        await contributor('push', `Push the review fix of this resume past the push with \`sh tools/run_state.sh push ${state.change} --review-fix\`, not --ci-fix; the findings that arrived after the package step are recorded in the run state at the close, not appended.`)
       }
     }
     for (; !stopped;) {
@@ -1275,8 +1316,7 @@ if (!stopped && !state.merged) {
       if (!(await contributor('fix', `CI failed at ${m.step}; its log:\n${m.log_excerpt || ''}`))) break
       if (!(await verify())) break
       phase('Merge')
-      recordLate()
-      if (!(await contributor('push', 'Push the CI fix; the findings that arrived after the package step are recorded in the run state, not appended.'))) break
+      if (!(await contributor('push', 'Push the CI fix; the findings that arrived after the package step are recorded in the run state at the close, not appended.'))) break
     }
   }
 }
@@ -1296,10 +1336,14 @@ if (!stopped && !state.merged) {
 const looking = !stopped && Boolean(state.merged) && !state['phase.retro']
 phase('Close')
 // The findings that arrived after the package step become late-finding
-// notes. A line the close profile refuses (a check or review record a
-// failed flush left) is reported, not recorded: a resume runs that check
-// or review again.
-if (state.pushed) recordLate()
+// notes of a merged run, which the note command stamps with the merged
+// commit, held-finding notes of one pushed but unmerged, which a merged
+// resume notes late, and unpushed-finding notes of one stopped before the
+// push, which a resume's package step hands over (a late finding before
+// the merge would be refused and stop the record line's && chain). A line the close profile refuses (a check or review
+// record a failed flush left) is reported, not recorded: a resume runs
+// that check or review again.
+recordLate()
 const refused = pending.filter((l) => !CLOSABLE.test(l))
 if (refused.length) note(`not recorded, refused by the close profile: ${refused.join('; ')}`)
 const closeAt = state.merged || head

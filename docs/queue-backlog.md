@@ -4,8 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 
 ## Sprint 12
 
-1. `checks-and-pr-lows` (T1 pipeline defect, security Lows (3) to (5), estimated medium, backlog-pick batch 1): late-finding notes reach `docs/backlog.md` verbatim (`tools/run_state.sh:1657`, `:1670`), writable by branch code the checks run (Low (3)); the head checkout keeps persist-credentials true (`.github/workflows/open-pr.yml:46`, Low (4)); `wait` records the highest pull request whose `refs/pull/*/head` equals the pushed sha (`tools/open_pr.sh:126`), so a fork's on the same commit wins (Low (5), raised at the removed pr_tag.sh); `staleRed` splits a check on every comma (`.claude/workflows/deliver-change.js:367`), misreading `spin (ubuntu, 4)`; `.claude/agents/merger.md:24` returns checks as `workflow, name, status, conclusion` but pending ones as `name: status, conclusion`, the workflow field with no stated source. Accepted when tools-test cases show a note not written by the workflow kept out of the history, the head checkout storing no token, a fork's pull request on the pushed sha not recorded, a comma name parsed, one checks format. Backlog: "## delivery-speed security Low (3) at tools/run_state.sh:1215", "## pr-by-tag security Low at .github/workflows/open-pr.yml:36", "## pr-by-tag security Low at tools/pr_tag.sh:121", "## delivery-speed quality advisory at .claude/workflows/deliver-change.js:301", "### The merger's checks list has no stated source for each check's workflow", "### The merger returns checks in two shapes".
-2. `windows-buffers-tidy` (T6 with a security Low (4), estimated medium, backlog-pick batch 2; lines at 68eb750): `:ls` and E162 print a newline in a file name as a line break, forging lines (`carat/use_cases/buffers/list_buffers.rb:72`, `carat/domain/messages.rb:16`); five methods walk every window of every tab (`carat/domain/tab_list.rb:128`, `:145`, `:164`, `:229`, `carat/domain/buffer_list.rb:308`); DeleteBuffer, ListBuffers, CloseOtherWindows reach TabList through `BufferList#tabs` (`delete_buffer.rb:31`, `list_buffers.rb:56`, `:73`, `close_other_windows.rb:26`) while their siblings take `tabs:`; stale comments (`close_tab.rb:8`, `close_other_tabs.rb:8`, `window_requests.rb:124`, `layout_node.rb:8`, `buffer.rb:145`) and an 83-column line (`carat/use_cases/windows/scroll_request.rb:5`). Accepted when `test/editor_buffers.rb` shows a newline name escaped in `:ls` and E162, one walk answers the five, `test/adapters_assembly.rb` checks the injected `tabs:`, no comment over its file's width. Backlog: "## :ls and E162 show a newline in a file name as a line break", "## Five methods walk every window of every tab page", "## DeleteBuffer and ListBuffers reach TabList through BufferList", "## Three window closers still say only a modified buffer stays listed", "## Two comments still call the row under a window its status line", "### A rewrapped comment in scroll_request.rb is still 83 columns wide".
+1. `windows-buffers-tidy` (T6 with a security Low (4), estimated medium, backlog-pick batch 2; lines at 68eb750): `:ls` and E162 print a newline in a file name as a line break, forging lines (`carat/use_cases/buffers/list_buffers.rb:72`, `carat/domain/messages.rb:16`); five methods walk every window of every tab (`carat/domain/tab_list.rb:128`, `:145`, `:164`, `:229`, `carat/domain/buffer_list.rb:308`); DeleteBuffer, ListBuffers, CloseOtherWindows reach TabList through `BufferList#tabs` (`delete_buffer.rb:31`, `list_buffers.rb:56`, `:73`, `close_other_windows.rb:26`) while their siblings take `tabs:`; stale comments (`close_tab.rb:8`, `close_other_tabs.rb:8`, `window_requests.rb:124`, `layout_node.rb:8`, `buffer.rb:145`) and an 83-column line (`carat/use_cases/windows/scroll_request.rb:5`). Accepted when `test/editor_buffers.rb` shows a newline name escaped in `:ls` and E162, one walk answers the five, `test/adapters_assembly.rb` checks the injected `tabs:`, no comment over its file's width. Backlog: "## :ls and E162 show a newline in a file name as a line break", "## Five methods walk every window of every tab page", "## DeleteBuffer and ListBuffers reach TabList through BufferList", "## Three window closers still say only a modified buffer stays listed", "## Two comments still call the row under a window its status line", "### A rewrapped comment in scroll_request.rb is still 83 columns wide".
 
 ## Pool
 
@@ -30,32 +29,30 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 19. `merge-gate-integrity` (T1 pipeline defect, estimated medium, pushed back 14, S13): merge over 12 calls in 5 of 11 backlog runs (windows-tabs-tidy 14, 27,782 output). Backlog: "### The close start returned a placeholder with no tool calls".
 20. `review-demotion` (T1 pipeline defect, estimated medium, pushed back 4, S15): reviews 21.9% to 36.6% of output.
 21. `budget-prediction` (T1 pipeline, estimated small): 12.2 total per output token at sprint-10-records; windows-tabs-tidy check 240,137 output against 200,000. Accepted when the check-pass line predicts right for five runs.
-22. `plan-apply-guard` (T1 pipeline, estimated small): groom took a stale feature queue and folded an absent path. Backlog: "### Records change steps outside groom to fix the queues and docs-lint (quality advisory)".
+22. `plan-apply-guard` (T1 pipeline, estimated small): groom took a stale feature queue and folded an absent path. Groom printed 22 headings groomed, the backlog lost 20 (sprint-11-records retro note 10); accepted when a tools-test case counts the two apart. Backlog: "### Records change steps outside groom to fix the queues and docs-lint (quality advisory)".
 23. `sprint-marker-tidy` (T1 pipeline advisories, estimated small).
 24. `scout-value` (T1 pipeline, estimated small): scout 20.4% at review-pipeline-a, 25.1% at windows-tabs-tidy, 31.5% on ux-fixes-a's resume. Accepted when the next three no-`carat/` changes and resumes past the proposal run no scout, first.check 1.
 25. `check-skip` (T1 pipeline, estimated small): check output 22,463 at ux-fixes-a against 2,010 to 6,432 before, first pass 118/120. Accepted when three runs keep it at or under 6,000.
-26. `sprint-security`, `content-gate-gaps` (pushed back 15) (T1 security, Medium (7), estimated medium each).
-27. `ci-scope-quoting` (T1 pipeline, Low (6), estimated medium, pushed back 3).
-28. `open-pr-refusals` (T1 security Lows, estimated medium, pushed back 3).
-29. `run-resume` (T1 pipeline, estimated medium, pushed back 17).
-30. `check-runner-safety` (T1 security, Medium (6), estimated medium, pushed back 15).
-31. `ci-hardening` (T3 with T6, estimated medium, pushed back 23): sweep Low (6).
-32. `file-access-tidy` (T4 with T6, estimated medium, pushed back 26).
-33. `architecture-docs` (T6, estimated small, pushed back 1): sweep notes 17, 24 to 29, 69; `docs/architecture.md:213`.
-34. `periodic-blockers-b`, `ex-handlers-tidy`, `plugin-host-tidy`, `input-core-tidy`, `ui-code-tidy`, `tools-docs-tidy` (T6, estimated medium each, pushed back up to 8).
-35. `editing-counts`, `hover-tidy`, `signature-tidy`, `slots-tidy`, `completion-tidy`, `completion-docs-tidy`, `buffer-list-tidy`, `definitions-tidy` (T6, estimated medium each, pushed back 11 to 16).
-36. `core-correctness-b`, `editing-dedup-b` (T6, estimated small each); `editing-dedup-a` (T6, estimated medium).
-37. `docs-index` (T6, estimated medium, pushed back 21, split at its start).
+26. `records-trim` (T1 pipeline, estimated small): a records change ran the benchmark (3,791 of 38,845 output, 9.8%) and the quality review (reviews 15,912, 41.0%) with no carat/ change and nothing blocking (sprint-11-records retro notes 8, 9; bench 4,848 at sprint-10-records). Accepted when the next two records changes record no bench phase and reviews at or under 20% of output, the security review kept. Backlog: "### A change touching no carat/, bench/, or test/ file still runs the benchmark phase".
+27. `sprint-security`, `content-gate-gaps` (pushed back 15) (T1 security, Medium (7), estimated medium each).
+28. `ci-scope-quoting` (T1 pipeline, Low (6), estimated medium, pushed back 3).
+29. `open-pr-refusals` (T1 security Lows, estimated medium, pushed back 3).
+30. `run-resume` (T1 pipeline, estimated medium, pushed back 17).
+31. `check-runner-safety` (T1 security, Medium (6), estimated medium, pushed back 15).
+32. `ci-hardening` (T3 with T6, estimated medium, pushed back 23): sweep Low (6).
+33. `file-access-tidy` (T4 with T6, estimated medium, pushed back 26).
+34. `architecture-docs` (T6, estimated small, pushed back 1): sweep notes 17, 24 to 29, 69; `docs/architecture.md:213`.
+35. `periodic-blockers-b`, `ex-handlers-tidy`, `plugin-host-tidy`, `input-core-tidy`, `ui-code-tidy`, `tools-docs-tidy` (T6, estimated medium each, pushed back up to 8).
+36. `editing-counts`, `hover-tidy`, `signature-tidy`, `slots-tidy`, `completion-tidy`, `completion-docs-tidy`, `buffer-list-tidy`, `definitions-tidy` (T6, estimated medium each, pushed back 11 to 16).
+37. `core-correctness-b`, `editing-dedup-b` (T6, estimated small each); `editing-dedup-a` (T6, estimated medium).
+38. `docs-index` (T6, estimated medium, pushed back 21, split at its start).
 
 ## Decisions
 
-- Security first clear (T0): sprint-11 security Medium (4) and Low (3) under 8, none disputed; `git-signs-transport` (T3) placed pool 3.
-- Sprint 12: 3 features, 2 backlog: backlog-pick batches 1 and 2, each named by every location (windows-tabs-tidy retro note 6).
-- Batch 1 (T1 pipeline defect): 5 of its 10 headings listed by `review-pipeline-a`; `gates.sh:112` entry left to `content-gate-gaps` (merge-gate rule, alone); the 186ddfb entry stays with `ci-hardening`, `bidi-controls`, `file-access-tidy`.
-- Batch 2 (T6, Low (4)): 5 of its 10 headings listed by `windows-tabs-tidy`; folds the 83-column line (sprint-11 note 9).
-- 23 `unmapped:` pick headings (no map area) stay in the backlog.
-- Push-backs: S12 `ruby-structure-remove` to 2, `process-capture-hardening`, `plugin-api-split` to 1, `hook-one-place` to 2.
-- Sprint-11 quality notes 5, 6 to `lsp-sync-fixes` (now medium, 6 parts); notes 2, 8, 10 to `process-capture-hardening`; note 11 to batch 1.
-- Retro notes: ux-fixes-a 6 to `check-skip`, 7 and windows-tabs-tidy 5 to `scout-value`, windows-tabs-tidy 4 to `budget-prediction`, 7 and 8 to `merge-gate-integrity`.
-- Calibration: last 10 backlog rows 639,673 to 1,739,169 total, 24 to 100 min, quality 5/10, feature 775,758 to 1,284,000, 51 to 169, 6/10: no change.
-- Triage done (b31fcd5); 4 `spinel-notes.md:47` entries merged, 2 repeated headings dropped.
+- Security first clear (T0): no periodic review in pending sprint-11-records; sprint-11 Medium (4), Low (3) under 8, none disputed.
+- `checks-and-pr-lows` (T1 pipeline defect, Lows (3) to (5)) delivered whole: 5 parts, the comma parse and the merger's format being one checks string, so 4 fixes, within goals' about four; no `tools/rules.sh` edit.
+- Estimate medium: last 10 backlog rows 639,673 to 1,739,169 total, 24 to 100 min; T1 pipeline rows parallel-lanes 1,072,940/63, review-pipeline-a 765,652/32.
+- Removed at delivery; `windows-buffers-tidy` (T6, Low (4)) stays Sprint 12 item 1; feature lane untouched.
+- Retro notes 8, 9 (sprint-11-records, bench 9.8%, reviews 41.0% of output) to new `records-trim` (T1, small), pool 26 beside `check-skip`; note 8 repeats a backlog entry, listed by heading.
+- Retro note 10 (groom 22 against 20 removed) to `plan-apply-guard` (T1).
+- Sprint-11-records quality advisories 1 to 7 handled already; left to the sprint planner.

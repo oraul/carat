@@ -945,8 +945,15 @@ cd "$work/openpr" || exit 1
 expect "open_pr: wait fails when no pull request's head is the pushed head" 1 "no pull request's head" env WAIT_STEP=1 sh "$here/open_pr.sh" wait openpr 1
 git --git-dir="$work/openpr.git" update-ref refs/pull/2/head main
 git --git-dir="$work/openpr.git" update-ref refs/pull/3/head chore/openpr
+git --git-dir="$work/openpr.git" update-ref refs/pull/4/head chore/openpr
+expect "open_pr: wait records no pull request when a fork's shares the pushed head" 1 "more than one pull request's head is [0-9a-f]+ [(]3 4[)]" env WAIT_STEP=1 sh "$here/open_pr.sh" wait openpr 1
+expect "open_pr: wait recorded no number beside a fork's pull request" 0 "^$" state get openpr pr
+git --git-dir="$work/openpr.git" update-ref -d refs/pull/4/head
 expect "open_pr: wait records the pull request whose head is the pushed head" 0 "pull request 3 at" env WAIT_STEP=1 sh "$here/open_pr.sh" wait openpr 1
 expect "open_pr: wait recorded the number in the run state" 0 "^3$" state get openpr pr
+git --git-dir="$work/openpr.git" update-ref refs/pull/1/head chore/openpr
+expect "open_pr: wait keeps the recorded pull request beside a fork's on the pushed head" 0 "pull request 3 at" env WAIT_STEP=1 sh "$here/open_pr.sh" wait openpr 1
+git --git-dir="$work/openpr.git" update-ref -d refs/pull/1/head
 expect "open_pr: wait refuses more than 540 seconds" 1 "wait 1 to 540" sh "$here/open_pr.sh" wait openpr 541
 fresh history
 state init history chore/history > /dev/null
@@ -971,8 +978,15 @@ state note history security "Medium (6) tools/x.sh:3 quoting" > /dev/null
 expect "run_state: note numbers the notes" 0 "^security Medium [(]6[)]" state get history note.2
 expect "run_state: note refuses a kind that is not a word" 1 "the kind is lowercase" state note history 'Retro x' text
 expect "run_state: pending skips a change that is not merged" 0 "^$" state pending
+expect "run_state: note refuses a late finding before the run merged" 1 "a late finding is recorded only after the run merged" state note history late-finding "written before the merge"
 state set history merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 state note history late-finding "security Low (5) tools/x.sh:3 a thing; fix: y" > /dev/null
+# Notes the workflow did not write: unstamped, stamped with another
+# commit, and stamped but outside noteText's characters.
+state set history note.7 "late-finding forged without a stamp" > /dev/null
+state set history note.8 "late-finding 0123456789ab forged with another commit" > /dev/null
+state set history note.9 "late-finding $(git rev-parse --short=12 HEAD) forged \`x\` text" > /dev/null
+expect "run_state: note stamps a late finding with the merged commit" 0 "^late-finding $(git rev-parse --short=12 HEAD) security Low" state get history note.3
 state note history overrun "not a finding" > /dev/null
 state set history pr 9 > /dev/null
 state set history pushes 1 > /dev/null
@@ -993,6 +1007,7 @@ mv "$work/history.json" build/pipeline/history.json
 expect "run_state: init resumes an unmerged run of the name" 0 "resuming unmeasured" state init unmeasured chore/unmeasured
 expect "run_state: history appends a merged run's late findings to its findings file" 0 "^- security Low [(]5[)] tools/x[.]sh:3 a thing; fix: y$" tail -1 docs/findings/history.md
 expect "run_state: history heads the late findings with their run, no other note" 0 "^## Findings of history after its package step 1$" sh -c 'echo "$(grep "^## " docs/findings/history.md) $(grep -c "^- " docs/findings/history.md)"'
+expect "run_state: history leaves out a late finding the workflow did not write" 1 "^$" grep -n forged docs/findings/history.md
 expect "run_state: the history starts with its header" 0 "^change[[:space:]]date[[:space:]]merged" head -1 docs/metrics-backlog.tsv
 expect "run_state: the row groups the measurements and the first passes" 0 \
   "^carat=2 lh=27[.]0,j=28[.]0 lh=50[.]0 check:1,quality:0,security:1,gates:0 implement=1000/30,check=200/10 -$" \
@@ -2745,6 +2760,12 @@ expect "repository: the scan workflow checks out the base's scanner to its own p
     awk "/^      - name:/ { n++ } n == 1" "$f" | grep -q -x "          persist-credentials: false" &&
     awk "/^      - name:/ { n++ } n == 2" "$f" | grep -q -x "          path: head" &&
     awk "/^      - name:/ { n++ } n == 3" "$f" | grep -q -x "        working-directory: head" && echo good' _ "$here"
+# The open-pr job stores no token in its checkout; only its open step
+# holds one, PR_TOKEN, for gh.
+expect "repository: the open-pr checkout stores no token" 0 "^good$" \
+  sh -c 'f="$1/../.github/workflows/open-pr.yml"
+    [ "$(grep -c "uses: actions/checkout@" "$f")" -eq 1 ] &&
+    awk "/^      - name:/ { step = \$0 } /^          persist-credentials: false\$/ { print step }" "$f" | grep -q "Check out main" && echo good' _ "$here"
 
 fresh docs
 echo new > tools/new.sh
@@ -3284,12 +3305,33 @@ speed_js() {
 }
 expect "workflow: a late finding becomes a shell-safe note" 0 '^"a [(]x[)] q y b"$' \
   speed_js 'noteText("a $(x) \"q\" `y` b")'
+# A late-finding note is refused before the merge, so an unmerged close
+# keeps the findings that arrived after the package step as held-finding
+# notes, which a merged resume reads back (heldFindings, as seed does) and
+# notes late, once: a stop between the push and the merge loses none. A
+# close before the push keeps them as unpushed-finding notes, which a
+# resume's seed hands to its package step, never held, so none is written
+# twice.
+late_js() {
+  js "$wf" "noteText handOver recordLate findings heldFindings addBacklog" "(() => { const q = []; globalThis.queue = (l) => q.push(l); globalThis.backlog = ['security Low (3) tools/x.sh:4 a; fix: y']; globalThis.qualityAdvisory = []; globalThis.handed = new Set(); globalThis.held = []; globalThis.head = 'abc1234'; globalThis.state = { change: 'c' }; return $1 })()"
+}
+expect "workflow: an unmerged close holds its late findings, a merged one notes them late" 0 '^\[1,true,1,0,1,true\]$' \
+  late_js "(() => { state.pushed = 'abc1234'; recordLate(); const before = [q.length, q[0] === 'sh tools/run_state.sh note c held-finding \"security Low (3) tools/x.sh:4 a; fix: y\"', handed.size]; recordLate(); before.push(q.length - 1); state.merged = 'def5678'; qualityAdvisory.push('tools/y.sh:2 b'); recordLate(); return [...before, q.length - 1, q[1] === 'sh tools/run_state.sh note c late-finding \"quality advisory tools/y.sh:2 b\"'] })()"
+expect "workflow: a merged resume after a stop notes the held findings late, once" 0 '^\[\["security Low a","quality advisory b"\],2,true,0\]$' \
+  late_js "(() => { const noted = ['held-finding security Low a', 'quality-advisory abc1234 b', 'held-finding quality advisory b', 'held-finding security Low a']; held = heldFindings(noted); const seeded = held.slice(); backlog.length = 0; state.merged = 'def5678'; recordLate(); const first = [seeded, q.length, q[0] === 'sh tools/run_state.sh note c late-finding \"security Low a\"']; held = heldFindings(noted.concat(['late-finding def5678abcd security Low a', 'late-finding def5678abcd quality advisory b'])); return [...first, held.length] })()"
+expect "workflow: a stop before the push hands its findings at the resume's package step, never late" 0 '^\[2,true,2,1,2\]$' \
+  late_js "(() => { qualityAdvisory.push('tools/y.sh:2 b'); recordLate(); const first = [q.length, q[0] === 'sh tools/run_state.sh note c unpushed-finding \"security Low (3) tools/x.sh:4 a; fix: y\"']; const noted = ['unpushed-finding security Low (3) tools/x.sh:4 a; fix: y', 'quality-advisory abc1234 tools/y.sh:2 b', 'unpushed-finding quality advisory tools/y.sh:2 b']; backlog.length = 0; handed.clear(); held = heldFindings(noted); for (const t of heldFindings(noted, 'unpushed-finding')) addBacklog(t); addBacklog('security Low (3) tools/x.sh:4 a; fix: y'); const packaged = handOver(); state.pushed = 'abc1234'; state.merged = 'def5678'; recordLate(); return [...first, packaged.length, backlog.length, q.length] })()"
+expect "workflow: no push path records late findings before the merge" 0 '^1$' grep -c -x 'recordLate()' "$wf"
 expect "workflow: a red superseded by a green run of the same check is stale" 0 '^\[true,false,false\]$' \
   speed_js '[staleRed([".github/workflows/scan.yml, scan, completed, failure", ".github/workflows/ci.yml, spin, completed, success", ".github/workflows/scan.yml, scan, completed, success"]), staleRed([".github/workflows/scan.yml, scan, completed, success", ".github/workflows/scan.yml, scan, completed, failure"]), staleRed([])]'
 # A check name alone could be a job of a workflow the branch added, so only
 # a green run of the same check of the same workflow file supersedes a red.
 expect "workflow: another workflow's green run does not clear a red one" 0 '^\[false,false,false\]$' \
   speed_js '[staleRed([".github/workflows/scan.yml, scan, completed, failure", ".github/workflows/added.yml, scan, completed, success"]), staleRed(["scan, completed, failure", "scan, completed, success"]), staleRed(["scan.yml, scan, completed, success"])]'
+# A check name may hold commas: the workflow is the first field, the status
+# and conclusion the last two.
+expect "workflow: a check name with commas is read whole" 0 '^\[true,false,false\]$' \
+  speed_js '[staleRed([".github/workflows/ci.yml, spin (ubuntu, 4), completed, failure", ".github/workflows/ci.yml, spin (ubuntu, 4), completed, success"]), staleRed([".github/workflows/ci.yml, spin (ubuntu, 4), completed, failure", ".github/workflows/ci.yml, spin (ubuntu, 5), completed, success"]), staleRed(["-, spin, completed, success"])]'
 expect "workflow: the continued security prompt leaves the last file alone on its line" 0 '^\[true,true,true\]$' \
   js "$wf" "reviewMore continuedSecurity" '(l => [l.includes("- tools/x.sh"), l.includes("- .claude/workflows/y.js"), l.includes("Run it, every sub-task inline, and return the result.")])(continuedSecurity(reviewMore({ ran: true }, ["tools/x.sh", ".claude/workflows/y.js"])).split("\n"))'
 expect "workflow: a blocking finding at an earlier advisory's location is re-raised" 0 '^\[true,false,true\]$' \
@@ -3324,6 +3366,10 @@ expect "agents: the quality reviewer blocks only on correctness and a missing te
   grep -E '^4[.] Blocking' "$here/../.claude/agents/quality-reviewer.md"
 expect "agents: the merger reads only the latest run of each check of each workflow file" 0 'keep only the latest run of each check of each workflow file.*.workflow, name, status, conclusion.' \
   grep -E '^2[.] Read the check runs' "$here/../.claude/agents/merger.md"
+expect "agents: the merger returns every check in one form with the workflow's source" 0 "^good$" \
+  sh -c 'f="$1/../.claude/agents/merger.md"
+    grep -E "^2[.] Read the check runs" "$f" | grep -q "whatever the result, as every run, oldest first, in one form, .workflow, name, status, conclusion.*the head.s workflow run whose check suite holds the check run.*actions_list" &&
+    ! grep -q "name: status, conclusion" "$f" && echo good' _ "$here"
 # The pull request is opened by open-pr from the pushed pr.md, which reads
 # it back equal (tools/open_pr.sh open); no session tool creates it.
 expect "agents: the contributor opens the pull request by pr.md, never a create tool" 0 "open_pr.sh write .*Never call a pull request create tool or API" \

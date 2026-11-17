@@ -19,7 +19,9 @@
 #   sh tools/open_pr.sh wait CHANGE [SECONDS]   the contributor: waits, at
 #       most SECONDS (1 to 540, default 540), until a pull request's head
 #       is the pushed head, and records its number (tools/run_state.sh set
-#       CHANGE pr N)
+#       CHANGE pr N): the one such pull request, or the one recorded at an
+#       earlier push among several; refuses several otherwise, since a
+#       fork's pull request can share the commit
 #   sh tools/open_pr.sh read BRANCH DIR      the workflow: refuses a branch
 #       of no allowed type; fetches the branch's tip and reads the one
 #       pr.md of an archived change that HEAD's tree (main's) lacks into
@@ -121,10 +123,24 @@ case "$cmd" in
     matches "$step" '[0-9]{1,3}' || refuse "WAIT_STEP is not a number of seconds: $step"
     pushed=$(state pushed)
     matches "$pushed" '[0-9a-f]{40}' || refuse "no pushed head in the run state"
+    # Git shows no pull request's head repository, so a fork's pull request
+    # on the pushed commit looks like ours: one number is taken, or the one
+    # the run state recorded at an earlier push; more are refused.
+    recorded=$(state pr)
     waited=0
     while :; do
       refs=$(git ls-remote origin 'refs/pull/*/head') || refs=""
-      number=$(printf '%s\n' "$refs" | awk -v sha="$pushed" '$1 == sha && $2 ~ /^refs\/pull\/[0-9]+\/head$/ { split($2, p, "/"); if (p[3] + 0 > n) n = p[3] + 0 } END { if (n) print n }')
+      numbers=$(printf '%s\n' "$refs" | awk -v sha="$pushed" '$1 == sha && $2 ~ /^refs\/pull\/[0-9]+\/head$/ { split($2, p, "/"); print p[3] + 0 }' | sort -n -u)
+      number=""
+      if [ -n "$numbers" ] && [ "$(printf '%s\n' "$numbers" | wc -l)" -eq 1 ]; then
+        number=$numbers
+      elif [ -n "$numbers" ]; then
+        if matches "$recorded" '[0-9]+' && printf '%s\n' "$numbers" | grep -q -x -F "$recorded"; then
+          number=$recorded
+        else
+          refuse "more than one pull request's head is $pushed ($(printf '%s\n' "$numbers" | tr '\n' ' ' | sed 's/ $//')): a fork's can share the commit, so none is recorded; read the open-pr workflow's log for the number"
+        fi
+      fi
       if [ -n "$number" ]; then
         sh "$here/run_state.sh" set "$change" pr "$number" >/dev/null || refuse "the run state did not take pr $number"
         echo "open_pr: pull request $number at $pushed"

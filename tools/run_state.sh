@@ -139,6 +139,9 @@
 #   note CHANGE KIND TEXT       record note.N, the next number, as "KIND TEXT";
 #                               a quality-advisory whose TEXT, without its
 #                               leading commit, is already noted is not
+#                               recorded again; a late-finding is refused
+#                               until merged names a commit on main and is
+#                               stored as "late-finding MERGED TEXT"
 #   usage CHANGE TOKENS MINUTES add one start's total tokens (input plus
 #                               output) and wall minutes, as the Workflow
 #                               tool reported them, to metric.total_tokens
@@ -250,6 +253,8 @@
 #                               such run's late-finding notes to
 #                               the change's findings file
 #                               (FINDINGS_DIR/CHANGE.md) as one entry
+#                               (late_findings: only a note stamped with its
+#                               merged commit, in the workflow's note shape)
 #   lane CHANGE                 print the change's lane, feature or backlog
 #                               (lane_of), whose history file gets its row
 #   plan-apply CHANGE           apply the delivery planner's PLAN_DIR/CHANGE/
@@ -1213,6 +1218,15 @@ add_note() {
       return 0
     fi
   fi
+  # A late finding is the workflow's, written at the close after the
+  # merge: stamped with the squash commit, which no note written before
+  # the merge (branch code a check runs, an earlier start) can name.
+  if [ "$1" = late-finding ]; then
+    stamp=$(merged_commit)
+    [ -n "$stamp" ] && merged_on_main "$stamp" ||
+      die "note: a late finding is recorded only after the run merged; $change records no merged commit on main"
+    set -- "$1" "$stamp $2"
+  fi
   n=$(($(grep -c '^  "note[.]' "$(state_file)") + 1))
   write_key "note.$n" "$1 $2"
 }
@@ -1652,11 +1666,21 @@ history_row() {
 }
 
 # The findings a run's workflow recorded after its package step, as
-# late-finding notes, one per line in the order recorded.
+# late-finding notes, one per line in the order recorded: only a note
+# stamped with the run's merged commit (add_note) whose text has the shape
+# the workflow's noteText writes (LATE_TEXT_RE, at most 400 characters);
+# any other is named on stderr and left out of the findings file.
+LATE_TEXT_RE="^[A-Za-z0-9 .,:;()/_+=#%'?*@-]{1,400}\$"
 late_findings() {
+  stamp=$(merged_commit)
   for key in $(sed -n 's/^  "\(note\.[0-9][0-9]*\)": "late-finding .*/\1/p' "$(state_file)"); do
     value=$(read_key "$key")
-    printf '%s\n' "${value#late-finding }"
+    text=${value#late-finding }
+    if [ -n "$stamp" ] && [ "$text" != "${text#* }" ] && [ "${text%% *}" = "$stamp" ] && valid "$LATE_TEXT_RE" "${text#* }"; then
+      printf '%s\n' "${text#* }"
+    else
+      echo "history: $change's $key is no late finding the workflow recorded after the merge; left out" >&2
+    fi
   done
 }
 
