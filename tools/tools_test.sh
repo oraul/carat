@@ -2639,7 +2639,7 @@ expect "new: refuses a test that exists" 2 "test/lint.rb exists" new test lint 1
 
 kit plugin
 expect "new: plugin writes the plugin" 0 "wrote carat/plugins/greeter/plugin.rb" new plugin greeter
-expect "new: plugin's template activates on its first trigger" 0 "has " has carat/plugins/greeter/plugin.rb "# Called once, on the plugin's first trigger, never at startup: the"
+expect "new: plugin's template activates on its first trigger" 0 "has " has carat/plugins/greeter/plugin.rb "        # Called once, on the plugin's first trigger, never at startup: the"
 expect "new: plugin lists it for the registry" 0 "has " has config/plugins.caratrc "plugin.greeter greeter/plugin Carat::Plugins::Greeter::Plugin"
 expect "new: plugin enables it" 0 "has " has config/default.caratrc "plugin.greeter.enabled true"
 expect "new: plugin documents its action" 0 "has " has docs/actions.md '| `plugin.greeter.run` | `greeter` | none | TODO: the effect |'
