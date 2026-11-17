@@ -693,7 +693,11 @@ function handOver() {
 // The findings that arrived after the package step, as late-finding notes
 // in the run state: the next change's package step writes them to
 // docs/findings/CHANGE.md with this run's history row, so no push records them.
+// Only a merged run's: the note command refuses an unmerged run, whose
+// refused note would stop the next flush's && chain, so before the merge
+// nothing is queued nor marked handed, and the close records them all.
 function recordLate() {
+  if (!state.merged) return
   for (const f of handOver()) queue(`sh tools/run_state.sh note ${state.change} late-finding "${noteText(f)}"`, head)
 }
 const intro = () => `Change \`${state.change}\` on branch \`${state.branch}\`, in its worktree \`${laneDir(state.change)}\`: run every command there (\`cd ${laneDir(state.change)} && ...\`) and read and edit its files there, but where a step names the main checkout; the run state, stage logs, plans, and the body file stay in the main checkout's build/, linked into the worktree, so write the body file there.`
@@ -1219,8 +1223,7 @@ if (!stopped && !state.merged) {
       const push = stopped ? '' : resumePush(state.pushed, head, state.review_fixes)
       if (push && push !== 'push') stopped = `${push}: nothing pushes it`
       else if (push) {
-        recordLate()
-        await contributor('push', `Push the review fix of this resume past the push with \`sh tools/run_state.sh push ${state.change} --review-fix\`, not --ci-fix; the findings that arrived after the package step are recorded in the run state, not appended.`)
+        await contributor('push', `Push the review fix of this resume past the push with \`sh tools/run_state.sh push ${state.change} --review-fix\`, not --ci-fix; the findings that arrived after the package step are recorded in the run state once the change merges, not appended.`)
       }
     }
     for (; !stopped;) {
@@ -1280,8 +1283,7 @@ if (!stopped && !state.merged) {
       if (!(await contributor('fix', `CI failed at ${m.step}; its log:\n${m.log_excerpt || ''}`))) break
       if (!(await verify())) break
       phase('Merge')
-      recordLate()
-      if (!(await contributor('push', 'Push the CI fix; the findings that arrived after the package step are recorded in the run state, not appended.'))) break
+      if (!(await contributor('push', 'Push the CI fix; the findings that arrived after the package step are recorded in the run state once the change merges, not appended.'))) break
     }
   }
 }
@@ -1306,7 +1308,7 @@ phase('Close')
 // line's && chain. A line the close profile refuses (a check or review
 // record a failed flush left) is reported, not recorded: a resume runs
 // that check or review again.
-if (state.merged) recordLate()
+recordLate()
 const refused = pending.filter((l) => !CLOSABLE.test(l))
 if (refused.length) note(`not recorded, refused by the close profile: ${refused.join('; ')}`)
 const closeAt = state.merged || head

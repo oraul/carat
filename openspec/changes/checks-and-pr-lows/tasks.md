@@ -3,7 +3,7 @@
 ## 1. Late findings stamped by the merge
 
 - [x] 1.1 `tools/run_state.sh` `add_note`: refuse a `late-finding` while `merged` names no commit on main, store it as `late-finding MERGED TEXT`; `late_findings`: keep only the stamp equal to `merged` and text in `noteText`'s shape, naming each left out; header lines of `note` and `history`. Test: `tools/tools_test.sh` "run_state: note refuses a late finding before the run merged", "run_state: history leaves out a late finding the workflow did not write".
-- [x] 1.2 `.claude/workflows/deliver-change.js`: `recordLate` only for a merged run. Test: the existing history cases, and `make tools-test`'s workflow helpers.
+- [x] 1.2 `.claude/workflows/deliver-change.js`: `recordLate` returns before the merge and runs only at the close, the pre-merge calls before the CI fix and review-fix pushes dropped and their prompts reworded. Test: `tools/tools_test.sh` "workflow: recordLate queues nothing before the merge", "workflow: no push path records late findings before the merge".
 
 ## 2. The open-pr checkout and wait
 

@@ -3305,6 +3305,15 @@ speed_js() {
 }
 expect "workflow: a late finding becomes a shell-safe note" 0 '^"a [(]x[)] q y b"$' \
   speed_js 'noteText("a $(x) \"q\" `y` b")'
+# A late-finding note is refused before the merge, so recordLate queues
+# nothing and marks nothing handed until merged is set: a CI fix's push
+# leaves the next flush's && chain whole, and the close records them all.
+late_js() {
+  js "$wf" "noteText handOver recordLate findings" "(() => { const q = []; globalThis.queue = (l) => q.push(l); globalThis.backlog = ['security Low (3) tools/x.sh:4 a; fix: y']; globalThis.qualityAdvisory = []; globalThis.handed = new Set(); globalThis.head = 'abc1234'; globalThis.state = { change: 'c' }; return $1 })()"
+}
+expect "workflow: recordLate queues nothing before the merge" 0 '^\[0,0,1,true\]$' \
+  late_js "(() => { recordLate(); const before = [q.length, handed.size]; state.merged = 'def5678'; recordLate(); return [...before, q.length, q[0].startsWith('sh tools/run_state.sh note c late-finding ')] })()"
+expect "workflow: no push path records late findings before the merge" 0 '^1$' grep -c -x 'recordLate()' "$wf"
 expect "workflow: a red superseded by a green run of the same check is stale" 0 '^\[true,false,false\]$' \
   speed_js '[staleRed([".github/workflows/scan.yml, scan, completed, failure", ".github/workflows/ci.yml, spin, completed, success", ".github/workflows/scan.yml, scan, completed, success"]), staleRed([".github/workflows/scan.yml, scan, completed, success", ".github/workflows/scan.yml, scan, completed, failure"]), staleRed([])]'
 # A check name alone could be a job of a workflow the branch added, so only

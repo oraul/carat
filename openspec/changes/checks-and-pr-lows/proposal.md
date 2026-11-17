@@ -7,7 +7,7 @@ Three security Lows and two parsing defects of the delivery pipeline remain open
 ## What Changes
 
 - `tools/run_state.sh note CHANGE late-finding TEXT` records the note only once the run's `merged` commit is on main, stamped with that commit (`late-finding MERGED TEXT`); `history` appends a late finding to the findings file only when its stamp is the run's merged commit and its text has the shape the workflow's `noteText` writes (its characters, at most 400), so a note written before the merge, or in any other form, stays out.
-- The workflow records its late findings only for a merged run (`if (state.merged) recordLate()`), since the note now refuses an unmerged run and the close's record line is one `&&` chain.
+- The workflow records its late findings only for a merged run: `recordLate` returns before the merge, queueing nothing and marking nothing handed, and runs only at the close, no longer before a CI fix's or a resume's review-fix push, since the note now refuses an unmerged run and each flush's record line is one `&&` chain.
 - `.github/workflows/open-pr.yml`: the `Check out main` step sets `persist-credentials: false`; the repository is public, so the read step's anonymous fetch of the branch still works.
 - `tools/open_pr.sh wait` records a pull request only when exactly one `refs/pull/N/head` is the pushed head, or the one the run state already records is among them; two or more others are refused, none recorded.
 - `staleRed` reads a check as the first field (the workflow file), the last two (status and conclusion), and the name between them, commas included.
