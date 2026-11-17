@@ -3285,7 +3285,13 @@ speed_js() {
 expect "workflow: a late finding becomes a shell-safe note" 0 '^"a [(]x[)] q y b"$' \
   speed_js 'noteText("a $(x) \"q\" `y` b")'
 expect "workflow: a red superseded by a green run of the same check is stale" 0 '^\[true,false,false\]$' \
-  speed_js '[staleRed(["scan, completed, failure", "spin, completed, success", "scan, completed, success"]), staleRed(["scan, completed, success", "scan, completed, failure"]), staleRed([])]'
+  speed_js '[staleRed([".github/workflows/scan.yml, scan, completed, failure", ".github/workflows/ci.yml, spin, completed, success", ".github/workflows/scan.yml, scan, completed, success"]), staleRed([".github/workflows/scan.yml, scan, completed, success", ".github/workflows/scan.yml, scan, completed, failure"]), staleRed([])]'
+# A check name alone could be a job of a workflow the branch added, so only
+# a green run of the same check of the same workflow file supersedes a red.
+expect "workflow: another workflow's green run does not clear a red one" 0 '^\[false,false,false\]$' \
+  speed_js '[staleRed([".github/workflows/scan.yml, scan, completed, failure", ".github/workflows/added.yml, scan, completed, success"]), staleRed(["scan, completed, failure", "scan, completed, success"]), staleRed(["scan.yml, scan, completed, success"])]'
+expect "workflow: the continued security prompt leaves the last file alone on its line" 0 '^\[true,true,true\]$' \
+  js "$wf" "reviewMore continuedSecurity" '(l => [l.includes("- tools/x.sh"), l.includes("- .claude/workflows/y.js"), l.includes("Run it, every sub-task inline, and return the result.")])(continuedSecurity(reviewMore({ ran: true }, ["tools/x.sh", ".claude/workflows/y.js"])).split("\n"))'
 expect "workflow: a blocking finding at an earlier advisory's location is re-raised" 0 '^\[true,false,true\]$' \
   speed_js '[reRaised(findingAt("abc1234 tools/x.sh:12 a thing"), ["tools/x.sh:12 earlier"]), reRaised(findingAt("abc1234 tools/x.sh:13 b"), ["tools/x.sh:12 earlier"]), reRaised("tools/x.sh:4", ["abc1234 tools/x.sh:4 an advisory"])]'
 expect "workflow: a re-rated security Medium at confidence 8 still blocks" 0 '^\[2,0\]$' \
@@ -3316,7 +3322,7 @@ expect "workflow: a red only on the body's scan is fixed once, before any fix ro
 expect "guard: the close profile runs a late-finding note" 0 "^$" guard close 'sh tools/run_state.sh note c late-finding \"security Medium (7) tools/x.sh:3 a; fix: y\" && sh tools/run_state.sh phase c report abc1234'
 expect "agents: the quality reviewer blocks only on correctness and a missing test" 0 '^4[.] Blocking is only a correctness bug or a behavior change without its test[.]' \
   grep -E '^4[.] Blocking' "$here/../.claude/agents/quality-reviewer.md"
-expect "agents: the merger reads only the latest run of each check name" 0 'keep only the latest run of each check name' \
+expect "agents: the merger reads only the latest run of each check of each workflow file" 0 'keep only the latest run of each check of each workflow file.*.workflow, name, status, conclusion.' \
   grep -E '^2[.] Read the check runs' "$here/../.claude/agents/merger.md"
 # The pull request is opened by open-pr from the pushed pr.md, which reads
 # it back equal (tools/open_pr.sh open); no session tool creates it.
@@ -3512,6 +3518,8 @@ expect "periodic: the quality slices cover every area once" 0 '^true$' \
   js "$pwf" "MAP_AREAS QUALITY_SLICES areaSlices" "(a => a.length === QUALITY_SLICES && a.flat().join(',') === Array.from({ length: MAP_AREAS }, (_, i) => i + 1).join(','))(areaSlices(MAP_AREAS, QUALITY_SLICES))"
 expect "periodic: the areas left are kept to the start's slice" 0 '^\[\[3\],\[1,2,3\],\[\]\]$' \
   js "$pwf" "areasLeft" "[areasLeft({ head: 'abc1234', not_reviewed: [3, 9] }, [1, 2, 3]), areasLeft(null, [1, 2, 3]), areasLeft({ head: 'abc1234', not_reviewed: [] }, [1, 2, 3])]"
+expect "periodic: missedOf keeps only its own kind's values" 0 '^\[\["ci"\],\[3\],\[\]\]$' \
+  js "$pwf" "SECURITY_AREAS MAP_AREAS missedOf" "[missedOf({ not_reviewed: ['ci', 3] }, 'security'), missedOf({ not_reviewed: ['ci', 3, 99] }, 'quality'), missedOf(null, 'security')]"
 expect "periodic: each quality start has its own worktree" 0 'tmp/[.]review-quality-[$][{]n[}]' grep '^const taskAreas = ' "$pwf"
 expect "periodic: the quality record states its coverage" 0 'covered=[$][{]MAP_AREAS - ' grep -F 'covered=${MAP_AREAS - ' "$pwf"
 # Sprint planning: review-due first, ending when not due; the diff
@@ -3539,6 +3547,11 @@ expect "sprint: a records change that stopped with a report gets the resume hint
 expect "sprint: a merged records change names its commit" 0 '^"sprint-3-records: merged as abc1234; - Change: sprint-3-records"$' \
   js "$swf" "isCommit recordsLine" "recordsLine('sprint-3-records', 'abc1234', '- Change: sprint-3-records\nmore')"
 expect "sprint: the records line reads the run state's merged commit" 0 '^1$' grep -c -F 'sh tools/run_state.sh get ${recordsName} merged' "$swf"
+# The sprint review covers the whole combined diff, no path filter, so the
+# record keepers the gates trust (tools/run_state.sh and the workflows)
+# are reviewed with every other file.
+expect "sprint: the sprint review covers the whole combined diff, the record keepers included" 0 "^1$" \
+  grep -c -E '^const scope = .the combined diff ..git diff [$][{]sprint[.]base[}] [$][{]sprint[.]tip[}].. of ' "$swf"
 expect "sprint: a due line naming a shell word is not due" 0 '^null$' \
   sprint_js "parseDue('due: sprint-1 has 1 changes merged (\$(x)); combined diff abc1234..origin/main; sweep: no')"
 # A sprint security review left at its cap gets one more start over the
