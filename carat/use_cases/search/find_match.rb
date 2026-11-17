@@ -4,6 +4,8 @@ require_relative "../../domain/registers"
 require_relative "../../domain/history"
 require_relative "../../domain/last_search"
 require_relative "../../domain/last_substitute"
+require_relative "../../domain/delimited_pattern"
+require_relative "../../domain/search_prompt"
 require_relative "../../domain/vim_pattern"
 require_relative "../../domain/search"
 require_relative "../../domain/search_budget"
@@ -68,9 +70,9 @@ module Carat
       # "/" or "?" with what was typed at the prompt.
       #: (Domain::EditorState, String, bool, Integer) -> Domain::SearchHit
       def typed(state, text, forward, count)
-        stop = Domain::VimPattern.pattern_end(text, forward ? 47 : 63)
-        source = text.byteslice(0, stop).to_s
-        offset = text.byteslice(stop + 1, text.bytesize - stop).to_s
+        cut = Domain::DelimitedPattern.typed(text, forward)
+        source = cut.pattern
+        offset = cut.rest
         return refuse(state, "Not implemented: search offset #{offset}") unless offset.empty?
         if source.empty?
           return refuse(state, Domain::Search::NO_PREVIOUS) unless @last_search.any?
@@ -160,7 +162,7 @@ module Carat
         hit = Domain::Search.find(state.buffer, compiled, row, col, forward, count, budget)
         case hit.status
         when :found
-          hit.message = hit.wrapped ? (forward ? Domain::Search::BOTTOM : Domain::Search::TOP) : "#{forward ? "/" : "?"}#{compiled.source}"
+          hit.message = hit.wrapped ? (forward ? Domain::Search::BOTTOM : Domain::Search::TOP) : "#{Domain::SearchPrompt.prefix_of(forward)}#{compiled.source}"
         when :stopped
           hit.message = Domain::Search::STOPPED
         else

@@ -12,7 +12,7 @@
 
 ## 3. One cut
 
-- [ ] 3.1 Add `DelimitedPattern.typed` and `SearchPrompt.prefix_of` and use them in `FindMatch` and `PreviewSearch`; proved by the search and offset rows of `test/editor_search.rb` staying green
+- [x] 3.1 Add `DelimitedPattern.typed` and `SearchPrompt.prefix_of` and use them in `FindMatch` and `PreviewSearch`; proved by the search and offset rows of `test/editor_search.rb` staying green
 
 ## 4. Docs and checks
 

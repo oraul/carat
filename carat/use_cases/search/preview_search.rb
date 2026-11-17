@@ -2,6 +2,7 @@ require_relative "../../domain/editor_state"
 require_relative "../../domain/search_prompt"
 require_relative "../../domain/last_search"
 require_relative "../../domain/last_substitute"
+require_relative "../../domain/delimited_pattern"
 require_relative "../../domain/vim_pattern"
 require_relative "../../domain/search"
 require_relative "../../domain/search_budget"
@@ -36,8 +37,7 @@ module Carat
         return Outcome.none unless prompt.active
         prompt.restore(state.window)
         options = state.options
-        text = state.cmdline
-        source = text.byteslice(0, Domain::VimPattern.pattern_end(text, prompt.forward ? 47 : 63)).to_s
+        source = Domain::DelimitedPattern.typed(state.cmdline, prompt.forward).pattern
         unless options.incsearch && !source.empty?
           @last_search.end_preview
           return Outcome.none
