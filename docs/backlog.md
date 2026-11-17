@@ -182,24 +182,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: Neovim waits without a limit only on its built-in multi-key commands and times user mappings out, so a configuration binding such as `<leader>x` with `<leader>` alone bound to nothing never resolves on its own here.
 - Fix outline: mark the keymap trie nodes that only configuration-origin (user and project) bindings pass through, and have `HandleKey` answer `:pending` for such a prefix so `timeoutlen` applies, with a row in `test/editor_normal.rb`.
 
-## ScrollHandler sets a base class trait after super
-
-- Where: `ScrollHandler#initialize` in `carat/use_cases/actions/scroll_handler.rb` (line 20 writes `@breaks_insert` after `super(kind: :action, repeat: false)`); `ActionHandler#initialize` (`carat/use_cases/actions/action_handler.rb` line 28) takes only `kind` and `repeat`. Advisory of the periodic quality review at 66fd52b.
-- Why it matters: a handler trait set in two ways (the constructor's keywords and a later write) is easy to miss when the base class changes.
-- Fix outline: add `breaks_insert:` to `ActionHandler#initialize`, pass it from every subclass, and drop the write; or document the override in `docs/examples.md`.
-
-## Half-page scroll targets have two names
-
-- Where: `ScrollHandler.register` in `carat/use_cases/actions/scroll_handler.rb` (lines 33 and 34: actions `scroll.half_page_down` and `half_page_up`, targets `:half_down` and `:half_up`), `carat/use_cases/windows/scroll_window.rb` (lines 29 and 30), and `carat/use_cases/windows/scroll_request.rb` (line 4). Advisory of the periodic quality review at 66fd52b.
-- Why it matters: one thing under two names makes a search for the action miss the code that runs it.
-- Fix outline: rename the targets `:half_page_down` and `:half_page_up` in the three files.
-
-## Nine comments break their file's wrap width
-
-- Where: the class comment of `carat/use_cases/windows/scroll_window.rb` (line 18, 107 characters), advisory of the periodic quality review at 66fd52b, the class comment of `carat/doubles/memory_files.rb` (line 10, 104 characters), advisory of the periodic quality review at 389c118, the class comment of `carat/ports/terminal_port.rb` (line 4, 130 characters), advisory of the periodic quality review at 5b128b5, the class comments of `carat/use_cases/plugins/window_requests.rb` (line 23, 104 characters) and `carat/adapters/frame_presenter.rb` (line 48 at 3a99ddd, 105 characters, the line about one segment per row and window), advisories of the periodic quality review at 3a99ddd, and, quality advisories of `cursor-shapes`, the class comment of `carat/use_cases/ex/set_command_handler.rb` (line 17, 94 characters) the class comment of `carat/domain/frame.rb` (line 15, a short ragged line of 37 characters), and the class comment of `carat/domain/options.rb` (line 21, 77 characters), advisory of the periodic quality review at d5036f4, and the class comment of `carat/domain/buffer_list.rb` (line 15 at 68eb750, which breaks after "The feed" at about 51 characters), advisory of the periodic quality review at 68eb750. Line 37 of `carat/use_cases/dispatcher.rb`, once listed here, is the one-line signature of the constructor, not a comment to rewrap (quality advisory of `explorer-folder-toggle`). At 38628bb also `carat/use_cases/handle_key.rb` line 65, `carat/domain/config.rb` line 206, `carat/domain/options.rb` line 17, and `tools/agent_guard.sh` line 31 (periodic quality); also `carat/adapters/json_rpc_language_gateway.rb` line 509 and `carat/domain/language_server.rb` line 166 at b76b722; also `tools/agent_guard.sh` lines 37 to 38 and `carat/use_cases/plugins/buffer_requests.rb` line 49 (periodic quality at 847851d); also, periodic quality at 186ddfb, `carat/use_cases/files/open_file.rb` line 20 (about 140 characters), `carat/use_cases/completion/show_completion.rb` line 25, `carat.rb` lines 2 to 6 (about 91 characters), `carat/adapters/frame_presenter.rb` lines 41, 68, and 81, `carat/adapters/status_bar.rb` line 16 (about 100 characters), `carat/adapters/painted_rows.rb` lines 9 and 16, and `carat/domain/frame.rb` line 31. Raised again at 9a92265 (#99), adding `carat/use_cases/files/open_file.rb` line 20, `list_buffers.rb` lines 12 and 16, and `buffer_command_handler.rb` line 15.
-- Why it matters: style only; the rest of each file wraps comments at the surrounding width.
-- Fix outline: rewrap the nine comments to the width of the lines around them.
-
 ## lh time per key rose 26% at window-navigation-and-scroll
 
 - Where: the `review.bench` record of `window-navigation-and-scroll` (lh median 11.7 to 14.8 microseconds per key, allocations 27.0 unchanged); no code location is known. Advisory of the periodic quality review at 66fd52b.
@@ -422,12 +404,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the shared forms of the header of `tools/agent_guard.sh` (line 25). Quality advisory of `guard-allowlist` at 3efc71ba34f8 and again at 31a93d257317.
 - Why it matters: `judge` refuses `printf` with a leading option, so the header no longer says what the code allows.
 - Fix outline: write `printf (no leading option)` in the header's shared forms. Queued in `guard-lows`.
-
-## The guard and gates review area leaves out the review's own record keepers
-
-- Where: the `guard and gates` pattern of `REVIEW_AREAS` in `tools/run_state.sh` (line 161). Security Low (7) of `pipeline-speed` at b0df2ac092ed.
-- Why it matters: the narrowed pattern leaves out `tools/run_state.sh` (whose review, get, trusted, and push records `tools/gates.sh` trusts), `.claude/workflows/deliver-change.js` (which runs the security reviewer and writes the review record), and the security-reviewer and merger agent bodies, so a change that weakens how the review is recorded no longer makes a whole-tree periodic review due.
-- Fix outline: add `tools/run_state[.]sh$` and `[.]claude/workflows/` to the pattern, and count an edit of `.claude/agents/security-reviewer.md` or `.claude/agents/merger.md` as due, with a `tools/tools_test.sh` case. Queued in the backlog-items change of `docs/queue.md` (review triggers).
 
 ## agent_hooks misses frontmatter keys that widen an agent's authority
 
@@ -948,12 +924,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a matching `pr` or `sessionUrl` line outside the attribution object passes while the attribution object itself could still allow pull request text or a session link.
 - Fix outline: cut the attribution block by its lines (a sed range from the attribution line to its closing brace) and run the greps on that block, with a `tools/tools_test.sh` case of a value outside it.
 
-## TabRequest#counted? and CommandGrammar#operator_pending? have no caller
-
-- Where: `TabRequest#counted?` in `carat/use_cases/windows/tab_request.rb` (line 13 at 5b128b5) and `CommandGrammar#operator_pending?` in `carat/domain/command_grammar.rb` (line 84), called nowhere in `carat/`, `bin/`, `test/`, or `bench/`, yet named as key methods on lines 146 and 340 of `docs/codebase-map.md`. Periodic quality at 5b128b5.
-- Why it matters: the map points readers at methods nothing uses, and dead predicates can drift from the state they describe.
-- Fix outline: delete both methods and drop them from the two map lines.
-
 ## FakeTerminal#input? is called by no test
 
 - Where: `FakeTerminal#input?` in `carat/doubles/fake_terminal.rb` (line 55 at 5b128b5). Periodic quality at 5b128b5.
@@ -1049,12 +1019,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `step_from` (line 145 at `buffer-list`) and `file_count` (line 169) in `carat/domain/buffer_list.rb`. Quality advisory of `buffer-list`.
 - Why it matters: a modulo shortcut combined with a sentinel-reset loop makes `:bn` and `:bp` with a count hard to check by reading, and `file_count` is public only for it.
 - Fix outline: gather the file-buffer indices once and index them modulo their count from the target's position, and make `file_count` private or fold it in, keeping the `test/domain_buffer_list.rb` rows. Since `bars`, `BufferList#tab_row?` and the buffer tabs also count file buffers, so `file_count` stays public or gives way to a shared walk. Queued as `buffer-list-structure` in `docs/queue.md`.
-
-## CloseOtherWindows clears tab.previous a second time
-
-- Where: `tab.previous = -1` in `carat/use_cases/windows/close_other_windows.rb` (line 34 at `buffer-list`). Quality advisory of `buffer-list`.
-- Why it matters: `BufferList#close_window` already clears `previous` when it names a closed window, and `previous` never names the current one, so the line reads as a needed step it is not.
-- Fix outline: drop the line, or keep it with a comment if it is meant to clear a stale id. Queued as `buffer-list-structure` in `docs/queue.md`.
 
 ## :ls and E162 show a newline in a file name as a line break
 
@@ -1207,23 +1171,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the duplicate adds run time and a second place to update without covering anything more.
 - Fix outline: drop the case.
 
-## The security reviewer's not-run order reads reversed
-
-- Where: `.claude/agents/security-reviewer.md` line 33 at `periodic-review-caps`. Quality advisory of `periodic-review-caps`.
-- Why it matters: the line says a review without a result is recorded not-run and only then started once more, the reverse of what the periodic workflow does, so an agent following it literally could record not-run before the retry.
-- Fix outline: write that a review without a result is started once more, then recorded as not-run, never as passed.
-
 ## The periodic review caps design names the wrong owner of the overrun notes
 
 - Where: `openspec/changes/archive/2026-11-06-periodic-review-caps/design.md` line 20, against `.claude/workflows/periodic-review.js` lines 96 to 97 and `.claude/workflows/deliver-change.js`. Quality advisory of `periodic-review-caps`.
 - Why it matters: the decision says the periodic result returns the cap and the delivery workflow notes overruns with its `overCap`, but the periodic workflow writes the overrun notes itself and returns `over`, and the delivery workflow only logs them, so the archived record misleads the next change to this code.
 - Fix outline: add a note to the next change touching the periodic workflow's caps that corrects the decision (the archived design is not edited), or move the noting into the delivery workflow so the design holds.
-
-## The periodic review's missed check accepts either kind's values
-
-- Where: `missedOf` in `.claude/workflows/periodic-review.js` line 85 at `periodic-review-caps`. Quality advisory of `periodic-review-caps`.
-- Why it matters: it accepts the security and the quality values for both results, although the design says the schema keeps the line safe, and it is recomputed four times per run.
-- Fix outline: compute `securityMissed` and `qualityMissed` once and drop the filter, or filter by each kind's own values.
 
 ## Four float layer methods are exempt from the predicate rule by name
 
@@ -1452,12 +1404,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: the loop `for (const k of kinds) got[k] = await continueReview(k, scope, got[k])` in `.claude/workflows/deliver-change.js` (line 627 at 594dd35). Quality advisory in `partial-results`.
 - Why it matters: after the parallel first starts, a capped security review waits for the quality continuation to finish, lengthening the round.
 - Fix outline: run `continueReview` for each kind with `parallel`.
-
-## The continued security prompt joins its sentence to the last file left
-
-- Where: the continued security prompt in `.claude/workflows/deliver-change.js` (line 586 at 594dd35) appends `Run it, every sub-task inline` right after the last bullet of `reviewMore`. Quality advisory in `partial-results`.
-- Why it matters: the last file left reads as that file followed by the sentence, so the reviewer may misread the path.
-- Fix outline: start the sentence on its own line.
 
 ## The CALL_CAPS comment has a short line
 
@@ -3920,12 +3866,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a stale clause sends a later change after a fixed defect.
 - Fix outline: drop that clause from the entry's fix outline, in the periodic review's backlog step. Queue item `periodic-council`.
 
-## delivery-speed security Low (4) at .claude/workflows/deliver-change.js:301
-
-- Where: `.claude/workflows/deliver-change.js:301`. Delivery review of `delivery-speed` (security Low (4)) at 2dcfd3d.
-- Why it matters: staleRed and merger step 2 match check runs by name only, so a later green run of a same-named job from a branch-added workflow hides a real failed run; the merger then asks again instead of starting a fix round.
-- Fix outline: Group check runs by workflow file (or check suite) plus job name; treat a red as superseded only when the later green run comes from the same workflow as the failed one, and that workflow exists on the base branch.
-
 ## delivery-speed security Low (3) at tools/run_state.sh:1215
 
 - Where: `tools/run_state.sh:1215`. Delivery review of `delivery-speed` (security Low (3)) at 2dcfd3d.
@@ -4504,12 +4444,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why: duplication; sized_session repeats session (line 11) but for the cols and the wait count.
 - Fix: give session a cols parameter (the existing callers passing 80) and drop sized_session.
 
-## Float offset check overflows at the integer minimum (float-placement, security Low (4))
-
-- Where: `carat/domain/float_spec.rb:58`, `offset_refusal`.
-- Why it matters: it relies on Integer#abs, which for the integer minimum raises RangeError (default overflow mode) or wraps to a negative value (wrap mode) and passes the range check; a plugin passing that offset to open_float or move_float either has its own call fail through the guarded path or gets an offset past the new limit, which place still clamps to the screen, so there is no out-of-bounds write.
-- Fix outline: compare without abs: refuse when row < -OFFSET_MAX or row > OFFSET_MAX, then the same for col, and add a test row with the integer minimum.
-
 ## offset_refusal reassigns bad and compares abs (float-placement, quality advisory)
 
 - Where: `carat/domain/float_spec.rb:57`, `offset_refusal`.
@@ -4771,12 +4705,6 @@ The file's opening says each note holds at the pinned compiler, but the byteinde
 - Location: carat/testing.rb:83 (quality advisory, naming).
 - Why: the private element reader `list` reads as a collection constructor and shares its name with `FilePort#list`, which `DiskFiles` and `MemoryFiles` implement, the shared-name shape `docs/spinel-notes.md` warns can leave calls unresolved.
 - Fix: rename it after what it returns, for example `array_cell`, beside `cell`.
-
-### Use one term for the rebuilt structure in docs/spinel-notes.md:47
-
-- Location: docs/spinel-notes.md:47 and the comment at carat/testing.rb:52 (quality advisory, docs currency).
-- Why: the bullet calls the rebuilt structure both the position map and the load record, and the testing comment says position map.
-- Fix: use one term, load record, as `SP_TIMING` and the design name it, in both places.
 
 ### Split the golden table-test sentence in docs/examples.md:55
 
@@ -5323,22 +5251,11 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Quality advisory, one clear way: DomainGrammarTest wraps Carat::Json.element as at while about thirty other test files call Carat::Json.element inline, and the tests use a JSON reader as a general untyped-array reader.
 - Fix: pick one form, either a named element reader in Carat::Testing used by every test or the inline call everywhere with at dropped.
 
-### docs/spinel-notes.md:47 the element reader advice drifted from the design
-
-- Quality advisory, docs drift: the bullet still advises reading an untyped array through an element reader (Array[untyped], Integer) -> T, while design.md found a bare reader given an untyped argument does not help since nothing narrows it, and the change relies on Json.element's is_a?(Array) check.
-- Fix: say the reader must narrow an untyped argument with is_a?(Array), as Carat::Json.element does.
-
 ## Header claimed regenerated in the archived spinel-untyped-bump-b (openspec/changes/archive/2026-11-15-spinel-untyped-bump-b/proposal.md:11)
 
 - Location: openspec/changes/archive/2026-11-15-spinel-untyped-bump-b/proposal.md:11, also its :29 Impact, design.md:7, and tasks.md:6.
 - Why: quality advisory, docs currency: they say the vendored header tools/spinel/spinel_rt_responds_generated.h is regenerated and changed, but commit 7d6e154 leaves it byte for byte the 6af548c9 one and the diff has no header change.
 - Fix outline: say the header was regenerated at 93d7883b and came out unchanged, and drop it from Impact (in the next note that cites the pin, since the archive records the change as it was).
-
-## Accepted rebuild count unexplained at 93d7883b (docs/spinel-notes.md:47)
-
-- Location: docs/spinel-notes.md:47.
-- Why: quality advisory, acceptance: the entry records 125 runner rebuilds at 93d7883b while the brief accepted the bump at rebuilds near the old pin's 39 (FileUtils' 26 aside), and neither the notes nor the proposal say why 125 was accepted.
-- Fix outline: state in the entry that compile time (test-build 169 s, diagnose 219 s) met the target while the rebuild count stays at part a's 125, with what is left to bring it down listed; the pull request notes of spinel-untyped-bump-b say so.
 
 ## Findings of spinel-warnings
 
@@ -5581,23 +5498,11 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: on a pristine `[No Name]` buffer the hint tells the user to `:q!` and abandon all changes, spells the name `Carat` where carat writes `carat` everywhere else, copies Neovim's sentence, and clears the start screen (ux-pass review finding 2). Reproduction: start with no file, `<C-c>`, `openspec/changes/archive/*-ux-pass/screens/first-quit-hint.txt`.
 - Fix: name `:q` when no buffer is modified and `:q!` only when one is, in carat's own words with a lowercase name, and keep the start screen under the message.
 
-### The language server's status segment has no status bar background
-
-- Location: `carat/domain/themes.rb:129` to `:131` (`STATUS_LSP_STARTING`, `STATUS_LSP_READY`, `STATUS_LSP_ERROR` with background `NONE`); `carat/adapters/status_bar.rb:316` reuses `STATUS_LSP_READY` for finished progress.
-- Why: the segment is drawn on the terminal's default background, a hole in the bar's `#2e3346` band, while starting and once ready (ux-pass review finding 3). Reproduction: a user `caratrc` naming a language server and trusting the project, start on a Ruby file, `openspec/changes/archive/*-ux-pass/screens/lsp-starting.txt` and `lsp-ready.txt`, row 23's color runs.
-- Fix: give the three highlights the status bar's background in every theme, with a test that every status segment highlight has one.
-
 ### The explorer's help is one message line cut at the terminal's width
 
 - Location: `carat/plugins/explorer/plugin.rb:16` and `:249`.
 - Why: `?` prints every key on the message row and loses the end at 80 columns (`... d delet`), so `R`, `H`, `-`, `C`, and `q` are never shown (ux-pass review finding 4). Reproduction: start in an empty folder, `<Space>e`, `?`, `openspec/changes/archive/*-ux-pass/screens/empty-explorer-help.txt`.
 - Fix: show the help as a bordered float like the key-hint menu, one key per row, closed by `<Esc>`, `q`, or `?`.
-
-### Enter on a finder with no match closes it and drops the query
-
-- Location: `carat/plugins/finder/plugin.rb`, the open action with no entry.
-- Why: after `No match`, `<CR>` closes the finder with no message, so a typo costs the whole query; VS Code's quick open and Neovim's fuzzy finders stay open (ux-pass review finding 5). Reproduction: start with no file in a project, `<C-p>`, `zzqx`, `<CR>`, `openspec/changes/archive/*-ux-pass/screens/empty-finder-nomatch.txt` then `empty-finder-nomatch-enter.txt`.
-- Fix: keep the finder open on Enter with no entry, with a test in the finder plugin's tests.
 
 ### Insert mode is shown twice, in the pill and on the message row
 
@@ -5623,12 +5528,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: the finder's prompt is `> ` and its title counts (`Files 0/5`), the palette's prompt is `>` with no space and its title `Commands` has no count, two floats of one kind a few keys apart (ux-pass review finding 9). Reproduction: start on a file, `<Space>p`, `wri`, `openspec/changes/archive/*-ux-pass/screens/float-palette-filter.txt` against `empty-finder-nomatch.txt`.
 - Fix: one prompt and one title form, `> ` and `Name shown/total`, for both.
 
-### The palette leads with action names and cuts descriptions mid-word
-
-- Location: `carat/use_cases/discovery/follow_palette.rb:34` (`NAME_WIDTH`) and `:163`.
-- Why: each row starts with a 30-column dotted name and the description is cut with no ellipsis (`Replace the word with completio`) beside an empty key column, and the unfiltered list opens on `motion.repeat_find` and the arrow motions (ux-pass review finding 10). Reproduction: start on a file, `<Space>p`, then `wri`, `openspec/changes/archive/*-ux-pass/screens/float-palette.txt` and `float-palette-filter.txt`, rows 15 to 17.
-- Fix: the description first, the dotted name dimmed after it, an ellipsis on a cut, the key column only as wide as its longest key, and the most used commands first when the query is empty.
-
 ### The leader buffer list prints Vim's :ls line
 
 - Location: the `buffer.list` action, `docs/actions.md:168` (`List the buffers as :ls does`).
@@ -5652,12 +5551,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: `openspec/changes/archive/2026-11-15-ux-pass/design.md:66`.
 - Why: finding 6's reproduction starts on `notes.txt`, but its evidence `time-insert-char` is `greet.rb` with the canned server (row 23 shows `greet.rb` and `fake-lsp`), so following it does not reproduce the screen; quality advisory from ux-pass.
 - Fix: name `greet.rb` and the keys the screen records in the reproduction and in the backlog entry of finding 6.
-
-### The ux-pass finding 5 entry names no line of its cause
-
-- Location: `carat/plugins/finder/plugin.rb:140` (the cause, lines 139 to 141), the finding 5 entry of `docs/backlog.md`, and `openspec/changes/archive/2026-11-15-ux-pass/design.md:65`.
-- Why: the entry's location names no line, while the cause is `on_input` closing the finder before it checks for an empty path, so the fix starts with a search; quality advisory from ux-pass.
-- Fix: cite `carat/plugins/finder/plugin.rb:140` in the finding 5 entry's location.
 
 ### The ux-pass finding 11 entry names only the doc row
 
@@ -6101,11 +5994,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: twice in one run the retrospective start returned a placeholder after no tool calls, so the main session ran its record line by hand and corrected the merger's squash commit (67562e699059 stored for 67562e69905c); the run's last records depend on that start
 - Fix: refuse a close result made with no tool calls and restart it once, or record the run's last lines without the model; accepted when a stubbed placeholder close is refused by a case and the record line still lands
 
-### git_signs rev-list can lazy-fetch from a promisor remote in an untrusted .git (security Medium, confidence 6)
-- Location: carat/plugins/git_signs/plugin.rb:23
-- Why: a crafted .git handed over in a project directory or archive (repositoryformatversion 1, extensions.partialClone, a promisor remote whose core.sshCommand or remote.NAME.uploadpack is a command, a branch with an upstream, the HEAD commit object missing) makes `git rev-list --left-right --count HEAD...@{upstream}`, run on activation, open, save, and focus by the default-on plugin, lazy-fetch the missing object, so git runs the attacker's command as the user as soon as carat starts there; the design and the plugin comment claim no command the repository configures can run, which does not hold for rev-list.
-- Fix: add `--missing=allow-any` (or `--exclude-promisor-objects`) to COUNTS, which sets fetch_if_missing to 0, with a test that pins the flag; alternatively read the branch and counts without git objects, or pass `-c core.sshCommand= -c protocol.allow=never` (a repository-level protocol.NAME.allow can still override the last); correct the claim in the archived design.md and the plugin comment.
-
 ### Code map entries lack the git-signs-status-a methods
 - Location: docs/codebase-map.md:547, 608, 617, 629
 - Why: the map is not current: file_requests.rb lacks run_program, process_port.rb and process_runner.rb lack capture, fake_processes.rb lacks script, capture, and captured.
@@ -6303,12 +6191,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: rows before pipeline-speed hold output tokens only and remain in both lane histories, so a total-token estimate read from them is skewed low; the clause did not fit the file's budget in this change
 - Fix: restore the one-clause caveat, making room by pointing to a note elsewhere in the file
 
-
-### docs/spinel-notes.md:47: the regression bullet holds pin values and dated figures
-
-- Location: docs/spinel-notes.md:47 (merged at the sprint-9 grooming from two quality advisories: the note copying the pin value, and the bullet reading as a changelog of pins).
-- Why it matters: the binding note names a pin ("stays at its parent 6af548c9") and grows a dated measurement per bump, so every bump makes it false (the pin is c0502112 since #151) and the rule is buried in history.
-- Fix outline: keep the rule (no [] on an untyped receiver; read through Testing#cell, Testing#cases, Carat::Json.field/element/reach) and the current figures only, say "6af548c9, its parent, is the newest commit without it", leave the pin value to SPINEL_REF and the history to the archived changes.
 
 ### Relative PATH entries let git_signs run a project's ./git
 
@@ -6704,3 +6586,135 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: carat/domain/cell.rb:8
 - Why: an immutable value view, which CLAUDE.md makes a Data subclass. Folded into ui-code-tidy.
 - Fix: make it a Data subclass of code, width, hl.
+
+### The merger's checks list has no stated source for each check's workflow
+- Location: .claude/agents/merger.md:24 (step 2)
+- Why: the merger is told to return every check as workflow, name, status, conclusion but to read the workflow files only when a check failed, and never how a check run is matched to its workflow run, so a tier that omits the field turns each stale red into a needless fix round, since staleRed treats an entry without a workflow file as not stale.
+- Fix: say the workflow field is needed only on red, and match each check run to the workflow run of its check suite id.
+
+### sprint-10-records proposal miscounts the sprint's changes (quality advisory)
+
+- Location: openspec/changes/archive/2026-11-16-sprint-10-records/proposal.md:5 (written as openspec/changes/sprint-10-records/proposal.md:5)
+- Why: it says sprint 10 closed with its five changes merged, while the sprint-10 row of docs/sprints.tsv records size 6 with six changes, so the archived record disagrees with the sprints file.
+- Fix: say six changes, backlog-lane-split being the user-approved place beyond the five.
+
+### Lane queues state a stale insert acceptance figure (quality advisory)
+
+- Location: docs/queue-backlog.md:3 and docs/queue-feature.md:3
+- Why: both lane queues accept with insert 32.0 held, but every metrics row since #153 records insert=26.0, so a regression of six allocations passes the stated acceptance.
+- Fix: have the planner write the current figures (insert 26.0) or point to metrics-compare instead of numbers.
+
+### Records change steps outside groom to fix the queues and docs-lint (quality advisory)
+
+- Location: openspec/changes/archive/2026-11-16-sprint-10-records/design.md:13 (written as openspec/changes/sprint-10-records/design.md:13)
+- Why: one clear way: the records change hand-copied the delivery plan's feature queue over groom's copy (the sprint plan still named the merged git-signs-trust) and hand-edited a folded entry and an ignored plan file so docs-lint passes, steps outside groom.
+- Fix: make groom prefer build/plan/CHANGE/queue-*.md when present (or plan-apply copy both lanes for a records change) and refuse or de-backtick a nonexistent path while folding, with tools-test cases.
+
+
+### A change touching no carat/, bench/, or test/ file still runs the benchmark phase
+- Location: .claude/workflows/deliver-change.js, the benchmark phase (sprint-10-records retro note 4)
+- Why: the records-only sprint-10-records spent 4,848 output tokens and 6 calls on the benchmark (9.3% of 52,240 output tokens, 7% of 86 calls) plus a base and a change build, while its check scoped the metrics stage out; bench first pass 117 of 118 over the history, allocations and rounds unchanged on every key.
+- Fix: skip the benchmark phase, recording the skip, when the committed diff touches no file under carat/, bench/, test/, or the Makefile; accepted when the next records change shows a recorded skip and no skipped change later shows an allocation or rounds difference.
+
+### The ProcessPort row still names capture(argv)
+- Location: docs/architecture.md:213
+- Why: the port takes capture(argv, environment) since #160, so the binding architecture table misstates the port.
+- Fix: name the environment argument in the row.
+
+### The lsp accents at 16 colors read poorly on the light gray bar
+
+- Location: carat/domain/themes.rb:212
+- Why: at 16 colors the lsp accents PANEL_YELLOW 3 and PANEL_GREEN 2 now sit on PANEL's 7 in carat-dark, carat-light, one_dark, and one_light; dark yellow and green on light gray read near 1.5:1 in common terminal palettes, where the dark palettes had 11 and 10 on the terminal's background, and no test measures 16-color contrast.
+- Fix: give these palettes 16-color accents that read on 7 (0 with bold, or 4 and 1), or keep a 16-color background that suits 3 and 2, and assert the pairs in test/domain_theme.rb.
+
+### The status bar's diagnostics counts draw on the terminal's background
+
+- Location: carat/adapters/status_bar.rb:243
+- Why: the diagnostics counts on the bar still draw in DIAGNOSTIC_ERROR, WARN, INFO, and HINT, whose background is NONE (carat/domain/themes.rb:125), the same hole in the bar ux-fixes-a closed for the lsp slot.
+- Fix: add PANEL-backed status diagnostic groups, as for the lsp slot, and extend lsp_holes in test/domain_theme.rb to them.
+
+### The palette's pad appends one space per loop pass
+
+- Location: carat/use_cases/discovery/follow_palette.rb:296
+- Why: pad appends one space per loop pass, redoing the padding DisplayWidth.fit already does, with a string per pass on a path drawn after each key while the palette is open.
+- Fix: cell << " " * (width - used) if used < width, as DisplayWidth.fit does.
+### The follow_palette map entry names DisplayWidth.fit
+
+- Location: docs/codebase-map.md:169
+- Why: the follow_palette entry says its columns are fit by DisplayWidth.fit, which the file no longer calls since ux-fixes-a, so the map misdescribes the file.
+- Fix: name the private pad and kept_bytes on DisplayWidth.bytes_within instead.
+
+### The windows-tabs-tidy artifacts and a comment describe a close_window clear that never shipped
+- Location: openspec/changes/archive/2026-11-17-windows-tabs-tidy/tasks.md:13, design.md ('The previous window never names the current one'), carat/use_cases/windows/close_other_windows.rb:10, carat/domain/buffer_list.rb:369
+- Why: task 3.1 (marked done) and the design describe a BufferList#close_window clear of tab.previous when it equals the new current window and a test 'closing into the previous window clears it', neither in the diff (buffer_list.rb:369 unchanged), so <C-w>s<C-w>c still leaves previous == current and the new comment 'the window kept is never the previous' is false; the design also gives the integer minimum as -4_611_686_018_427_387_903 - 1 where the test uses -2^63.
+- Fix: implement the close_window clear with its editor_windows row, or correct the comment to the shipped behavior and record the design's integer minimum as -2^63.
+
+### A rewrapped comment in scroll_request.rb is still 83 columns wide
+- Location: carat/use_cases/windows/scroll_request.rb:5
+- Why: the rewrap leaves an 83-column comment line, the kind of line the windows-tabs-tidy change set out to fix.
+- Fix: refill the paragraph to the file's width.
+
+### FloatSpec writes its offset bound test twice
+- Location: carat/domain/float_spec.rb:61
+- Why: duplication: the bound test 'x >= -OFFSET_MAX && x <= OFFSET_MAX' is written twice (lines 61-62), where the design names one outside?(value) helper.
+- Fix: add the class predicate outside?(value) and call it for row and bad.
+
+### docs/spinel-notes.md:47: the Spinel regression bullet mixes terms, stale advice, and dated figures
+
+- Location: docs/spinel-notes.md:47 and the comment at carat/testing.rb:52 (merged at the sprint-11 grooming from four quality advisories on the one bullet).
+- Why: the bullet calls the rebuilt structure both the position map and the load record; it still advises an element reader (Array[untyped], Integer) -> T although a bare reader given an untyped argument narrows nothing; it records 125 runner rebuilds at 93d7883b without saying why the bump was accepted against the old pin's 39; and it names a pin ("stays at its parent 6af548c9") and grows a dated figure per bump, so every bump makes it false (the pin is c0502112 since #151).
+- Fix outline: rewrite the bullet once: one term, load record, as SP_TIMING names it (also in carat/testing.rb:52); the reader must narrow with is_a?(Array) as Carat::Json.element does; keep the rule (no [] on an untyped receiver; read through Testing#cell, Testing#cases, Carat::Json.field, element, reach) and the current figures only, saying compile time (test-build 169 s, diagnose 219 s) met the target; "6af548c9, its parent, is the newest commit without it"; leave the pin to SPINEL_REF and the history to the archived changes.
+
+### git_signs disables only the ext transport, so a lazy fetch can run a command
+
+- Location: carat/plugins/git_signs/plugin.rb:27, :28 (BRANCH, COUNTS); carat/use_cases/plugins/file_requests.rb:30 (GIT_NO_LAZY_FETCH). Sprint-11 review, security Medium (4).
+- Why: a cloned partial-clone repository under a trusted root sets a repo-local remote.<name>.uploadpack (file transport) or core.sshCommand (ssh); when rev-list reaches a missing upstream commit it lazy-fetches over that transport and runs the named command; GIT_NO_LAZY_FETCH works only on git 2.44 and later.
+- Fix outline: disable every transport whatever the git version (for example -c protocol.allow=never on both commands, or GIT_PROTOCOL_FROM_USER=0 and an empty GIT_ALLOW_PROTOCOL in the program environment), and extend the promisor scenario of test/editor_git_signs.rb to assert it.
+
+### BRANCH and COUNTS repeat git_signs' safety arguments
+
+- Location: carat/plugins/git_signs/plugin.rb:27, :28. Sprint-11 review, quality advisory.
+- Why: both repeat the same four safety words (-c protocol.ext.allow=never -c core.fsmonitor=false), so a third git command, such as the diff capture of git-signs-status-b, could leave them out.
+- Fix outline: build both from one safety prefix constant, as test/editor_git_signs.rb already holds SAFE.
+
+### PluginHost decides run_program trust once at activation
+
+- Location: carat/use_cases/plugins/plugin_host.rb:110. Sprint-11 review, security Low (3).
+- Why: the trust flag comes from TrustedRoots.cover? in activate_all and never again; no attack today since the editor has no chdir, but a later :cd or configuration reload changing the working directory or the roots would keep the old decision and could run git in an untrusted directory.
+- Fix outline: decide trust at each run_program call, or again wherever the working directory or the roots change, with a test changing the roots after activation.
+
+### FollowPalette#styles never reads its cut parameter
+
+- Location: carat/use_cases/discovery/follow_palette.rb:187, called at :144. Sprint-11 review, quality advisory.
+- Why: dead parameter in styles(top, lines, width, cut), its signature, and its call.
+- Fix outline: drop the parameter from the method, its signature, and the call.
+
+### Palette rows below about 14 cells show only the key
+
+- Location: carat/use_cases/discovery/follow_palette.rb:166. Sprint-11 review, quality advisory (narrow-screen regression of ux-fixes-a).
+- Why: label_room is width - KEY_WIDTH when the name is left out, zero or negative below about 14 cells of float, so a row shows only its key where the code before ux-fixes-a still showed the name.
+- Fix outline: keep a few cells for the label, cutting the key column first when width - KEY_WIDTH < 2, with a table row at the smallest screen.
+
+### The incremental-sync text diff lives in the 1438-line gateway
+
+- Location: carat/adapters/json_rpc_language_gateway.rb:1331 (ranged_change, shared_head, shared_tail, continuation?, content_change). Sprint-11 review, quality advisory, architecture layers 3 and 5.
+- Why: a pure text-diff algorithm sits inside a 1438-line adapter, tested only end to end.
+- Fix outline: move the diff into a Domain module (for example a line delta between the sent lines and the buffer's) with its own table test, keeping only the JSON shaping in the gateway.
+
+### The gateway repeats the UTF-8 continuation-byte test
+
+- Location: carat/adapters/json_rpc_language_gateway.rb:1377, inlined again at :1074 and :1119. Sprint-11 review, quality advisory.
+- Why: the & 0xC0 == 0x80 test is written three times beside Domain::Utf8 (boundary, size_at), which holds the same knowledge.
+- Fix outline: add a Utf8 continuation predicate and use it at all three places.
+
+### Three comments wrap past 72 columns in file_requests.rb and the gateway
+
+- Location: carat/use_cases/plugins/file_requests.rb:25 (94 columns) and :131 (breaks after "copied, so the"); carat/adapters/json_rpc_language_gateway.rb:33 (94 columns). Sprint-11 review, quality advisory.
+- Why: the files' 72-column wrap, restored elsewhere in sprint-11, is broken again.
+- Fix outline: rewrap the three paragraphs.
+
+### The merger returns checks in two shapes
+
+- Location: .claude/agents/merger.md:24 (step 2). Sprint-11 review, quality advisory.
+- Why: checks are returned as "workflow, name, status, conclusion" but the pending result of the same step as "name: status, conclusion", so one field arrives in two shapes.
+- Fix outline: one format for every checks list, saying plainly when the workflow column may be missing.
