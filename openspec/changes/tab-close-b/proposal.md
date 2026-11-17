@@ -28,9 +28,9 @@ None.
 ## Impact
 
 - `carat/use_cases/buffers/switch_buffer.rb`, `carat/domain/tab_page.rb`, `carat/use_cases/windows/open_tab.rb`, `carat/use_cases/plugins/window_requests.rb`, `carat/use_cases/plugins/plugin_link.rb`, `carat/plugin_api.rb`, `carat/plugins/explorer/plugin.rb`.
-- Tests: `test/editor_explorer.rb`, `test/editor_buffers.rb`, `test/editor_tabs.rb`, the plugin API version rows (`test/use_cases_plugins.rb`, `test/domain_plugin_manifest.rb`, `test/editor_floats.rb`), and the new `test/editor_tab_flows.rb`, with their snapshots.
+- Tests: `test/editor_explorer.rb`, `test/editor_buffers.rb`, the plugin API version rows (`test/use_cases_plugins.rb`, `test/domain_plugin_manifest.rb`, `test/editor_floats.rb`), and the new `test/editor_tab_flows.rb`, with their snapshots.
 - README.md: changed, its `gt` and `gT` sentence says that from the explorer they move the file window's buffer tab and that the explorer's `t` opens a buffer tab.
-- docs/architecture.md: changed, section 9's window requests name opening a file as the top row's tab (2.8).
+- docs/architecture.md: unchanged, the file is at its byte budget and section 9 points to `docs/plugins.md`, whose request table names `open_as_tab` (2.8).
 - CLAUDE.md: unchanged, no process change.
 - docs/codebase-map.md: changed, area 11 names `test/editor_tab_flows.rb`, and the entries of `switch_buffer.rb`, `open_tab.rb`, and `tab_page.rb` where they describe the changed behavior.
 - docs/compatibility.md: changed, the `:bnext` family and `:tabedit` rows note the side-window and listed-file behavior. docs/actions.md: changed, the `plugin.explorer.open_tab` row.
