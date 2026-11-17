@@ -110,6 +110,23 @@ ok   a flowed quote wider than 60 columns keeps its bar on every row:
 │ The reading view flows the lines of a block quote into
 │ one text, and wraps it at the measure of the window, its
 │ bar starting every row.
+ok   two indented code lines in a quote keep their rows
+ok   an indented code line after quote text keeps its row
+ok   a quote line mixing spaces and markers reads its text behind its bars
+ok   the same line joins the quote row before it at the same byte
+ok   spaces before a quote marker only place it
+ok   a marker after an indented code line in a quote is text
+ok   a line mixing spaces and markers is cut at one byte by all readers, and a marker after an indented code line in a quote is text
+ok   a heading reads in @markup.heading and a fenced block in a frame, its code in @markup.raw.block: Title||┌─────────┐|│ x = 1   │|│ yy = 22 │|└─────────┘
+ok   a code line wider than 20 columns goes on in the next framed row, every row 20 wide:
+┌──────────────────┐
+│ aaaaaaaaaaaaaaaa │
+│ aaaaaaaaaaaaaa   │
+└──────────────────┘
+ok   a framed code block under ascii is drawn with +, -, and |
+ok   a blank line inside fenced code is a blank framed row
+ok   two fenced blocks are two frames
+ok   a measure under six columns keeps the code indented
 ok   a megabyte line is gathered only to the 262,144-byte cap
 ok   lines under the cap are joined whole, a crossing line cut to the cap on a character boundary
-domain_markdown_text: 90 passed, 0 failed
+domain_markdown_text: 103 passed, 0 failed

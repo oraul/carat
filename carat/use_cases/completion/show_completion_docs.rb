@@ -84,7 +84,7 @@ module Carat
       # Opens the float of the text beside the popup's spec.
       #: (Domain::EditorState, Domain::CompletionMenu, Domain::FloatSpec, Integer, String) -> void
       def open_beside(state, menu, popup, index, text)
-        docs = @format_docs.call(state, text, WIDTH, Domain::MarkdownText::RAW_LIMIT, Domain::MarkdownText::ROW_LIMIT)
+        docs = @format_docs.call(state, text, WIDTH, Domain::MarkdownText::RAW_LIMIT, Domain::MarkdownText::ROW_LIMIT, false)
         rows = docs.texts
         return if rows.empty?
         window = state.tab.layout_window
