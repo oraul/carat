@@ -8,7 +8,7 @@
 
 - [x] 2.1 Read a `^` right after an anchoring one as a literal in `Domain::VimPattern`; proved by "A second caret is literal" in `test/editor_search.rb` and the `^^` rows of `test/domain_vim_pattern.rb`
 - [x] 2.2 Share one collection scan between `VimPattern.pattern_end` and the compiler (`collection_close`, `posix_class_close`); proved by "An escaped bracket in a collection" in `test/editor_search.rb` and the pattern end rows of `test/domain_vim_pattern.rb`
-- [x] 2.3 Add `VimPattern.compile_search` and pass the last substitute's string from `FindMatch`, `PreviewSearch`, `GlobalCommand`, and `LastSearch#recompile` (through `SetCommandHandler`), wired in `EditorAssembly`; proved by "Tilde after a substitute" and "Tilde with no substitute" in `test/editor_search.rb` and the tilde rows of `test/domain_vim_pattern.rb`
+- [x] 2.3 Add `VimPattern.compile_search` and pass the last substitute's string from `FindMatch`, `PreviewSearch`, `GlobalCommand`, and `LastSearch#recompile` (through `SetCommandHandler`), wired in `EditorAssembly`; proved by "Tilde after a substitute" and "Tilde with no substitute" in `test/editor_search.rb`, "Tilde in :global after a substitute", "Tilde in :vglobal after a substitute", and "Tilde in :global with no substitute" in `test/editor_global.rb` and the tilde rows of `test/domain_vim_pattern.rb`
 
 ## 3. One cut
 

@@ -11,7 +11,7 @@ While a pattern is typed with "incsearch" on, the cursor SHALL rest on the first
 
 ### Requirement: Tilde, a second caret, and a collection holding the delimiter read as in Neovim
 
-`~` in a "/" or "?" pattern SHALL match the replacement string of the last substitute, and report "E33: No previous substitute regular expression" only when no substitute has run. A `^` right after an anchoring `^` SHALL match a literal caret. A collection SHALL end at the `]` the compiler ends it at, a `]` first in it or after a backslash being a member, so a delimiter inside a collection never ends the typed pattern.
+`~` in a "/" or "?" pattern, and in the pattern of ":g" and ":v", SHALL match the replacement string of the last substitute, and report "E33: No previous substitute regular expression" only when no substitute has run. A `^` right after an anchoring `^` SHALL match a literal caret. A collection SHALL end at the `]` the compiler ends it at, a `]` first in it or after a backslash being a member, so a delimiter inside a collection never ends the typed pattern.
 
 #### Scenario: Tilde after a substitute
 
@@ -21,6 +21,21 @@ While a pattern is typed with "incsearch" on, the cursor SHALL rest on the first
 #### Scenario: Tilde with no substitute
 
 - **WHEN** "/", "~", Enter are pressed on ["a"]
+- **THEN** the message is the error "E33: No previous substitute regular expression"
+
+#### Scenario: Tilde in :global after a substitute
+
+- **WHEN** ":s/a/xy/" was run on ["a", "b", "xy z"] with the cursor at row 0, column 0 and ":g/~/d" is run
+- **THEN** the lines are ["b"]
+
+#### Scenario: Tilde in :vglobal after a substitute
+
+- **WHEN** ":s/a/xy/" was run on ["a", "b", "xy z"] with the cursor at row 0, column 0 and ":v/~/d" is run
+- **THEN** the lines are ["xy", "xy z"]
+
+#### Scenario: Tilde in :global with no substitute
+
+- **WHEN** ":g/~/" is run on ["a"]
 - **THEN** the message is the error "E33: No previous substitute regular expression"
 
 #### Scenario: A second caret is literal

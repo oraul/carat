@@ -28,5 +28,5 @@ Four search bugs and one duplicated cut, all in area 6's search half. The patter
 
 ## Risks
 
-- A search pattern holding `~` now compiles after a substitute instead of failing; the substitute and global tests cover the other callers.
+- A search pattern holding `~` now compiles after a substitute instead of failing; the substitute tests cover the other callers, and `:g` and `:v` gain rows of their own, since their `~` now matches the last replacement instead of answering E33.
 - The pattern end differs only for collections whose first `]` or a `\]` precedes the delimiter; `:s` and `:g` share it through `DelimitedPattern.parse`, which the substitute tests cover.
