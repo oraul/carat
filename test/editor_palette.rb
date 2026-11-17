@@ -348,6 +348,24 @@ module EditorPaletteTest
     narrow.each_with_index { |line, i| at = i if at < 0 && line.to_s.start_with?("Split window ") }
     row = at < 0 ? "" : narrow[at].to_s.rstrip
     t.assert_equal([42, 30, false, false], [width_of(h), row.index("^Ws").to_i, row.include?("window.split"), at < 0 || extra?(h, at, 0, width_of(h))], "A narrow palette leaves the name out: the key follows the label and no cell is in PmenuExtra")
+    # Scenario: A palette at the smallest screen shows a label. Under 24
+    # cells of text the key is left out and the label takes the row; at
+    # 24 the key keeps its 12 cells. The first row is window.split's.
+    # Rows are [label, [project lines, screen columns], [the text width,
+    # the first row, where ^Ws starts or -1]].
+    t.cases([
+      ["the smallest screen under the default border", ["", 8], [2, "S", -1]],
+      ["the smallest screen without a border", ["option.winborder none\n", 8], [4, "Sp…", -1]],
+      ["a text of 14 cells", ["option.winborder none\n", 18], [14, "Split window", -1]],
+      ["a text of 23 cells", ["option.winborder none\n", 27], [23, "Split window", -1]],
+      ["a text of 24 cells keeps the key", ["option.winborder none\n", 28], [24, "Split wind… ^Ws", 12]]
+    ]) do |size|
+      h = sized(size[0].to_s, 24, size[1].to_i)
+      h.type("<Space>pwindow.split")
+      first = lines(h)[0].to_s.rstrip
+      at = first.index("^Ws")
+      [width_of(h), first, at.nil? ? -1 : Carat::Domain::DisplayWidth.text_width(first[0, at].to_s, 0)]
+    end
 
     h = session("<Space>p<Esc>:")
     t.assert_equal(":", h.message_row[0, 1], "the colon prompt returns after the palette")

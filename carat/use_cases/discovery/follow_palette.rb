@@ -24,8 +24,9 @@ module Carat
     # float: a bordered menu titled "Commands" near the top of the editor,
     # the rows around the selection, each the description, its readable
     # label, then the dotted name, left out when the label would get under
-    # LABEL_MIN cells, and the key on the right, in columns measured in
-    # cells, a text cut to its column ending in CUT (CUT_ASCII under
+    # LABEL_MIN cells, and the key on the right, left out when the label
+    # would get under KEY_WIDTH cells, in columns measured in cells, a
+    # text cut to its column ending in CUT (CUT_ASCII under
     # option.icons ascii), the name in PmenuExtra and the matched
     # characters of the field that ranked the entry in PmenuMatch (their
     # Sel forms on the selected row), "No match" when nothing matches.
@@ -141,7 +142,7 @@ module Carat
         spec = Domain::FloatSpec.new(anchor: "editor", row: 1, col: 0, height: height, width: width, border: true, title: TITLE, z: Z)
         buffer = Domain::Buffer.new(lines: lines, path: nil, line_ending: "\n")
         buffer.owner = Domain::Palette::OWNER
-        buffer.styles = styles(top, lines, width, cut) unless matches.empty?
+        buffer.styles = styles(top, lines, width) unless matches.empty?
         float = Domain::FloatWindow.new(window: Domain::Window.new(buffer: buffer), spec: spec)
         float.centered = true
         float.selected = matches.empty? ? -1 : palette.selected - top
@@ -151,9 +152,9 @@ module Carat
         palette.shown_selected = palette.selected
       end
 
-      # The rows of the matches from top, the description, the name when
-      # it has room, and the key on the right in columns cut to the width,
-      # a cut marked with cut.
+      # The rows of the matches from top, the description, the name and the
+      # key when each has room, the key on the right, in columns cut to the
+      # width, a cut marked with cut.
       #: (Integer, Integer, Integer, String) -> Array[String]
       def rows(top, height, width, cut)
         palette = @palette
@@ -165,12 +166,13 @@ module Carat
         end
         room = label_room(width)
         named = named?(width)
+        keyed = keyed?(width)
         r = top
         while r < top + height && r < matches.length
           entry = matches[r]
           line = pad(palette.descriptions[entry], room, cut)
           line << pad(palette.names[entry], NAME_WIDTH, cut) if named
-          line << pad(palette.keys[entry], KEY_WIDTH, cut)
+          line << pad(palette.keys[entry], KEY_WIDTH, cut) if keyed
           lines << Domain::DisplayWidth.cut(line, width)
           r += 1
         end
@@ -183,8 +185,8 @@ module Carat
       # PmenuExtra and the runs of its matched characters when it ranked
       # the entry, their Sel forms on the selected row. A cut mark is never
       # marked.
-      #: (Integer, Array[String], Integer, String) -> Array[untyped]
-      def styles(top, lines, width, cut)
+      #: (Integer, Array[String], Integer) -> Array[untyped]
+      def styles(top, lines, width)
         palette = @palette
         query = bare(palette.query)
         room = label_room(width)
@@ -224,11 +226,20 @@ module Carat
         width - NAME_WIDTH - KEY_WIDTH >= LABEL_MIN
       end
 
+      # Whether the key has its column: the label keeps at least as many
+      # cells beside it, so a row shows its label at every width.
+      #: (Integer) -> bool
+      def keyed?(width)
+        width - KEY_WIDTH >= KEY_WIDTH
+      end
+
       # The cells of the label's column: what the name and the key leave,
-      # or what the key leaves when the name is left out.
+      # what the key leaves when the name is left out, or the whole width
+      # when the key is left out too.
       #: (Integer) -> Integer
       def label_room(width)
-        named?(width) ? width - NAME_WIDTH - KEY_WIDTH : width - KEY_WIDTH
+        return width - NAME_WIDTH - KEY_WIDTH if named?(width)
+        keyed?(width) ? width - KEY_WIDTH : width
       end
 
       # Adds a token per run of the characters of text the query matched,
@@ -281,23 +292,18 @@ module Carat
 
       # The text in a column of width cells: what it shows, cut followed
       # by the mark, then padded with spaces to the width, so at least one
-      # space follows it. One new string, a cut adding its slice.
+      # space follows it, in one step: the spaces the cells lack added by
+      # character count. One new string, a cut adding its slice.
       #: (String, Integer, String) -> String
       def pad(text, width, cut)
-        cell = +""
+        cell = text
         size = kept_bytes(text, width)
         if size < text.bytesize
-          cell << text.byteslice(0, size).to_s
+          cell = text.byteslice(0, size).to_s
           cell << cut if width >= 3
-        else
-          cell << text
         end
         used = Domain::DisplayWidth.text_width(cell, 0)
-        while used < width
-          cell << " "
-          used += 1
-        end
-        cell
+        cell.ljust(used < width ? cell.length + width - used : cell.length)
       end
     end
   end
