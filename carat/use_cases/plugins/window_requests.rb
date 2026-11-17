@@ -140,8 +140,8 @@ module Carat
       end
 
       # Opens the file in the window as :e would there, then focuses the
-      # window: a failed open leaves the focus where it was. A modified
-      # file buffer the window showed stays listed, hidden; the file the
+      # window: a failed open leaves the focus where it was. The file
+      # buffer the window showed stays listed, hidden; the file the
       # window already shows is left as it is; a side window that takes a
       # file loses its fixed width.
       #: (String, Integer, String) -> PluginApi::WindowResponse

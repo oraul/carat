@@ -187,8 +187,8 @@ module Carat
         !listed || scratch?
       end
 
-      # The name the status line shows: the path, the scratch title, or
-      # nil for an unnamed file buffer.
+      # The name the status bar and the winbar show: the path, the scratch
+      # title, or nil for an unnamed file buffer.
       #: () -> String?
       def display_name
         return path unless path.nil?
