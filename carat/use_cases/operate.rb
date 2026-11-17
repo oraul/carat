@@ -27,7 +27,10 @@ module Carat
     # yank rules; naming a read-only register refuses the command with
     # E354. A search is an exclusive charwise motion found by FindMatch,
     # whose message the outcome carries. A jump motion or a search records
-    # the position left in the window's jump list, as in Neovim.
+    # the position left in the window's jump list, as in Neovim. zf makes
+    # a fold of the lines its range covers. A linewise range reaches over
+    # the closed folds at its two ends, and a doubled operator counts a
+    # closed fold as one line, as Neovim's hasFolding adjustments do.
     class Operate
       attr_reader :registers #: Domain::Registers
       attr_reader :last_find #: Domain::LastFind
@@ -62,6 +65,7 @@ module Carat
         @notice = Outcome.none
         range = operand(state, command)
         return @notice if range.nil?
+        return fold(state, range) if operator == Domain::OperatorKind::FOLD
         state.buffer.start_at(range.normalized.from) unless range.kind == :linewise
         case command.operator
         when Domain::OperatorKind::DELETE then delete(state, command, range)
@@ -81,6 +85,12 @@ module Carat
         cursor = state.cursor
         if command.linewise
           last = state.buffer.line_count - 1
+          folds = state.window.folds
+          if folds.folded?
+            first = folds.first_row(cursor.row)
+            last_row = folds.last_row(folds.down(first, command.count_or(1) - 1, last))
+            return Domain::Range.new(from: Domain::Position.new(row: first, col: cursor.col), to: Domain::Position.new(row: last_row, col: cursor.col), kind: :linewise, inclusive: true)
+          end
           last_row = cursor.row + command.count_or(1) - 1
           last_row = last if last_row > last
           return Domain::Range.new(from: cursor.position, to: Domain::Position.new(row: last_row, col: cursor.col), kind: :linewise, inclusive: true)
@@ -97,7 +107,14 @@ module Carat
           from = to
           to = swap
         end
-        return Domain::Range.new(from: from, to: to, kind: :linewise, inclusive: true) if motion.linewise
+        if motion.linewise
+          folds = state.window.folds
+          if folds.folded?
+            from = Domain::Position.new(row: folds.first_row(from.row), col: from.col)
+            to = Domain::Position.new(row: folds.last_row(to.row), col: to.col)
+          end
+          return Domain::Range.new(from: from, to: to, kind: :linewise, inclusive: true)
+        end
         inclusive = motion.inclusive
         if !inclusive && to.col == 0 && to.row > from.row
           if from.col <= state.buffer.first_nonblank(from.row)
@@ -133,6 +150,18 @@ module Carat
         @notice = Outcome.new(ok: hit.found?, message: hit.message) if !hit.found? || hit.wrapped
         return nil unless hit.found?
         Domain::Motion.new(target: Domain::Position.new(row: hit.row, col: hit.col), linewise: false, inclusive: false, want: :set)
+      end
+
+      # zf: a closed fold over the rows of the range, the cursor on its
+      # first line.
+      #: (Domain::EditorState, Domain::Range) -> Outcome
+      def fold(state, range)
+        span = range.normalized
+        window = state.window
+        window.add_fold(span.from.row, span.to.row)
+        row = window.folds.first_row(span.from.row)
+        state.cursor.move_to(row, clamp(state, row, state.cursor.col))
+        @notice
       end
 
       #: (Domain::EditorState, Domain::Command, Domain::Range) -> void

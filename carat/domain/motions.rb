@@ -212,11 +212,19 @@ module Carat
       # --------------------------------------------------------- up-down
 
       # Up (delta < 0) or down count rows, clamped to the buffer, aiming for
-      # the wanted column; nil when already at the edge.
+      # the wanted column; nil when already at the edge. A closed fold of
+      # the window counts as one row, entered at its first line.
       #: (EditorState, Integer) -> Motion?
       def self.vertical(state, delta)
         cursor = state.cursor
         last = state.buffer.line_count - 1
+        folds = state.window.folds
+        if folds.folded?
+          from = folds.first_row(cursor.row)
+          row = delta < 0 ? folds.up(from, -delta) : folds.down(from, delta, last)
+          return nil if row == from
+          return to_row(state, row)
+        end
         return nil if delta < 0 && cursor.row == 0
         return nil if delta > 0 && cursor.row == last
         row = cursor.row + delta

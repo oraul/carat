@@ -105,7 +105,7 @@ module Carat
         window = state.tab.layout_window
         cursor = window.cursor
         dcol = @cache.fetch(window.buffer.line(cursor.row), tabstop).col(cursor.col)
-        cursor_row = window.row + cursor.row - window.top
+        cursor_row = window.row + window.row_offset(cursor.row)
         cursor_col = window.col + window.gutter_width(options) + dcol - window.left
         edged = Domain::BorderStyle.edged?(options.winborder)
         i = 0

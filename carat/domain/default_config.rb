@@ -188,6 +188,12 @@ module Carat
       keymap.normal zt scroll.cursor_top
       keymap.normal zz scroll.cursor_middle
       keymap.normal zb scroll.cursor_bottom
+      keymap.normal zf fold.create
+      keymap.normal zo fold.open
+      keymap.normal zc fold.close
+      keymap.normal za fold.toggle
+      keymap.normal zd fold.delete
+      keymap.normal zE fold.delete_all
       keymap.normal gt tabline.next
       keymap.normal gT tabline.previous
       keymap.normal <C-PageDown> tab.next
@@ -395,6 +401,7 @@ module Carat
       keymap.visual zt scroll.cursor_top
       keymap.visual zz scroll.cursor_middle
       keymap.visual zb scroll.cursor_bottom
+      keymap.visual zf fold.create
 
       # Linewise visual mode.
       keymap.visual_line <Esc> mode.normal
@@ -522,6 +529,7 @@ module Carat
       keymap.visual_line zt scroll.cursor_top
       keymap.visual_line zz scroll.cursor_middle
       keymap.visual_line zb scroll.cursor_bottom
+      keymap.visual_line zf fold.create
 
       # Blockwise visual mode.
       keymap.visual_block <Esc> mode.normal
@@ -649,6 +657,7 @@ module Carat
       keymap.visual_block zt scroll.cursor_top
       keymap.visual_block zz scroll.cursor_middle
       keymap.visual_block zb scroll.cursor_bottom
+      keymap.visual_block zf fold.create
 
       # Operator-pending mode.
       keymap.operator_pending <Esc> mode.normal

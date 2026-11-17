@@ -10,7 +10,7 @@ Carat has no folds: `docs/compatibility.md` holds no fold row and `zf`, `zo`, `z
 - `j` and `k` pass a closed fold as one line, a count counting it once, and land on its first line.
 - A linewise operator on a closed fold acts on all its lines: `dd` deletes them, `2dd` the fold and the line after it, `dj` the fold and the next line, `yy` yanks them.
 - The folds move with the buffer's edits: lines inserted above shift them, lines inserted inside extend them, deleted lines shrink them, and a fold whose lines are all deleted is gone.
-- The keys are bound in `config/default.caratrc`: `zf` in normal and the visual modes, `zo`, `zc`, `za`, `zd`, `zE` in normal and the visual modes.
+- The keys are bound in `config/default.caratrc`: `zf` in normal and the visual modes, `zo`, `zc`, `za`, `zd`, `zE` in normal mode.
 
 ## Capabilities
 
@@ -32,5 +32,5 @@ None.
 - Docs: `docs/compatibility.md` rows, `docs/actions.md` rows, `docs/codebase-map.md` areas, `docs/architecture.md` (the window record and the folds).
 - README.md: changed, its feature list names manual folds.
 - docs/architecture.md: changed, the window record holds its folds.
-- Out of scope: part b (`zR`, `zM`, `zj`, `zk`, `[z`, `]z`, `:fold`, `:foldopen`, `:foldclose`); `zF`, `zD`, `zO`, `zC`, `zA`, `zv`, `zx`, counts before `zo` and `zc`; every other `foldmethod`, `foldlevel`, `foldcolumn`, `foldtext`, `foldopen`, and the `Folded` highlight group (a fold row uses the normal colors); search, `G`, and jumps opening a fold; `H`, `M`, `L`, and the scroll keys counting a closed fold as one row; a charwise operator on a closed fold; folds kept for a buffer the window shows again (showing another buffer drops them).
+- Out of scope: part b (`zR`, `zM`, `zj`, `zk`, `[z`, `]z`, `:fold`, `:foldopen`, `:foldclose`); `zF`, `zD`, `zO`, `zC`, `zA`, `zv`, `zx`, counts before `zo` and `zc`, and `zo`, `zc`, `za`, `zd`, `zE` in visual mode; every other `foldmethod`, `foldlevel`, `foldcolumn`, `foldtext`, `foldopen`, and the `Folded` highlight group (a fold row uses the normal colors); search, `G`, and jumps opening a fold; `H`, `M`, `L`, and the scroll keys counting a closed fold as one row; a charwise operator on a closed fold; folds kept for a buffer the window shows again (showing another buffer drops them).
 - Assumptions: `zf` leaves the cursor on the first line of the fold; `zc` and `za` move the cursor to the first line of the fold they close, as Neovim's cursor adjustment does; `zf` and the fold keys are not repeated by `.`, as in Neovim.

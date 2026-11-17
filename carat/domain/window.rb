@@ -1,4 +1,5 @@
 require_relative "jump_list"
+require_relative "folds"
 
 module Carat
   module Domain
@@ -19,8 +20,10 @@ module Carat
     # (0 for none), Neovim's alternate file, copied with the list.
     # winbar is whether ArrangeView gave the window's first row to its
     # winbar at the last arrange (false until then and for floats).
+    # folds are the window's manual folds over its buffer, which a split
+    # copies and showing another buffer drops; a closed one is one row.
     # A Struct record: mutable, with a reader and a writer per member.
-    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :fixed_height, :anchor, :last_selection, :id, :jumps, :alternate, :winbar, keyword_init: true)
+    class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :fixed_height, :anchor, :last_selection, :id, :jumps, :alternate, :winbar, :folds, keyword_init: true)
       SIGN_WIDTH = 2
 
       # @rbs @buffer: Buffer
@@ -39,16 +42,18 @@ module Carat
       # @rbs @jumps: JumpList
       # @rbs @alternate: Integer
       # @rbs @winbar: bool
+      # @rbs @folds: Folds
 
       #: (buffer: Buffer) -> void
       def initialize(buffer:)
-        super(buffer: buffer, cursor: Cursor.new(row: 0, col: 0), top: 0, left: 0, row: 0, col: 0, height: 0, width: 0, fixed_width: false, fixed_height: false, anchor: Position.new(row: 0, col: 0), last_selection: Selection.none, id: 0, jumps: JumpList.new, alternate: 0, winbar: false)
+        super(buffer: buffer, cursor: Cursor.new(row: 0, col: 0), top: 0, left: 0, row: 0, col: 0, height: 0, width: 0, fixed_width: false, fixed_height: false, anchor: Position.new(row: 0, col: 0), last_selection: Selection.none, id: 0, jumps: JumpList.new, alternate: 0, winbar: false, folds: Folds.new)
       end
 
       # Shows another buffer from its start, forgetting the last selection,
       # which belonged to the buffer shown before.
       #: (Buffer) -> void
       def show(buffer)
+        drop_folds unless buffer.equal?(self.buffer)
         self.buffer = buffer
         self.cursor = Cursor.new(row: 0, col: 0)
         self.top = 0
@@ -86,6 +91,39 @@ module Carat
         self.last_selection = other.last_selection
         jumps.restore_from(other.jumps)
         self.alternate = other.alternate
+        folds.copy_from(other.folds)
+        buffer.track_folds(folds) unless folds.empty?
+      end
+
+      # Adds a closed fold over rows from to to (zf), which the buffer's
+      # edits then move.
+      #: (Integer, Integer) -> void
+      def add_fold(from, to)
+        folds.create(from, to)
+        buffer.track_folds(folds)
+      end
+
+      # Deletes the fold at row (zd); false when there is none.
+      #: (Integer) -> bool
+      def delete_fold(row)
+        return false unless folds.delete_at(row)
+        buffer.untrack_folds(folds) if folds.empty?
+        true
+      end
+
+      # Deletes every fold of the window (zE).
+      #: () -> void
+      def drop_folds
+        folds.clear
+        buffer.untrack_folds(folds)
+      end
+
+      # The screen rows from the first shown line down to row, a closed
+      # fold counted as one.
+      #: (Integer) -> Integer
+      def row_offset(row)
+        return row - top if row <= top || !folds.folded?
+        folds.rows_between(top, row)
       end
 
       # The gutter is the sign column, two cells while the buffer has
@@ -112,10 +150,27 @@ module Carat
       #: (Integer, Integer, Integer) -> void
       def scroll_to_row(row, line_count, scrolloff)
         return if height <= 0
+        return scroll_folded(row, line_count, scrolloff) if folds.folded?
         off = margin(scrolloff)
         self.top = row - off if row - off < top
         self.top = row + off - height + 1 if row + off >= top + height
         scroll_top_to(top, line_count)
+      end
+
+      # scroll_to_row in a window with a closed fold, counting it as one
+      # row: the first shown line is never inside a closed fold, and the
+      # last first-shown line is the one that fills the window to the end.
+      #: (Integer, Integer, Integer) -> void
+      def scroll_folded(row, line_count, scrolloff)
+        off = margin(scrolloff)
+        row = folds.first_row(row)
+        above = folds.up(row, off)
+        self.top = above if above < top
+        self.top = folds.first_row(top)
+        self.top = folds.up(row, height - 1 - off) if folds.rows_between(top, row) + off >= height
+        last = folds.up(line_count - 1, height - 1)
+        self.top = last if top > last
+        self.top = 0 if top < 0
       end
 
       # Makes row the first shown line, clamped between the first line and
