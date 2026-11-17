@@ -145,9 +145,10 @@ module EditorBuffersTest
     t.assert_equal([["ne", "two", "three"], true], [h.lines, h.buffer.modified?], "its changes come back with it")
 
     # Deleting: rows are [label, keys, [listed paths, path, windows, tab pages, message]].
-    # Under option.gt buffers no window closes. Scenarios "Delete the
-    # current buffer", "Delete the last buffer", "Delete a hidden buffer
-    # by number", "Delete keeps the windows showing the buffer", and
+    # Under option.gt buffers no window closes. Scenarios:
+    # "Delete the current buffer", "Delete the last buffer",
+    # "Delete a hidden buffer by number",
+    # "Delete keeps the windows showing the buffer",
     # "Delete in a split keeps the window".
     t.table([
       [":bd shows the next buffer", ":e b.txt<CR>:b 1<CR>:bd<CR>", [["b.txt"], "b.txt", 1, 1, ""]],
@@ -171,9 +172,9 @@ module EditorBuffersTest
       h = session(keys)
       [h.buffer_paths, path(h), h.window_count, h.tab_count, h.message]
     end
-    # Under option.gt tabpages the windows close as in Neovim. Scenarios
-    # "Delete closes the windows showing the buffer" and "Delete in a
-    # split closes the window".
+    # Under option.gt tabpages the windows close as in Neovim. Scenarios:
+    # "Delete closes the windows showing the buffer",
+    # "Delete in a split closes the window".
     t.table([
       [":bd N closes the windows showing it", ":sp b.txt<CR><C-w>j:bd 2<CR>", [["a.txt"], "a.txt", 1, 1, ""]],
       [":bd in a split closes the window", ":sp b.txt<CR>:bd<CR>", [["a.txt"], "a.txt", 1, 1, ""]],
@@ -218,9 +219,10 @@ module EditorBuffersTest
       h = session(keys)
       [h.message, h.quit?, path(h), h.tab_index]
     end
-    # Under option.gt tabpages the quit rule is Neovim's. Scenarios "Quit
-    # refused by a hidden buffer", "Forced quit shows the hidden buffer",
-    # and "Under tab pages quit on the last window ends the editor".
+    # Under option.gt tabpages the quit rule is Neovim's. Scenarios:
+    # "Quit refused by a hidden buffer",
+    # "Forced quit shows the hidden buffer",
+    # "Under tab pages quit on the last window ends the editor".
     t.table([
       [":q names a hidden buffer", ":sp b.txt<CR>x<C-w>c:q<CR>", [unsaved("b.txt"), false, "b.txt", 1]],
       [":q! names a hidden buffer", ":sp b.txt<CR>x<C-w>c:q!<CR>", [unsaved("b.txt"), false, "b.txt", 1]],
@@ -238,10 +240,11 @@ module EditorBuffersTest
     # listed paths]]. Scenarios "Quit closes the buffer tab and shows the
     # next", "Quit on the last listed buffer ends the editor", "Quit on a
     # modified buffer with others listed is refused", and "Forced quit
-    # closes the buffer tab discarding its changes"; with "Quit a clean
-    # buffer", "Quit refused", "Forced quit", "Quit one of two windows",
-    # and "Quit the last window showing a modified buffer" above and in
-    # test/use_cases_ex.rb.
+    # closes the buffer tab discarding its changes"; with these, proved
+    # above, in test/use_cases_ex.rb, and in test/editor_windows.rb:
+    # "Quit a clean buffer",
+    # "Quit refused", "Forced quit", "Quit one of two windows",
+    # "Quit the last window showing a modified buffer".
     t.table([
       ["Quit closes the buffer tab and shows the next", ":e b.txt<CR>:b 1<CR>:q<CR>", ["", false, "b.txt", ["b.txt"]]],
       ["the last in the list shows the one before", ":e b.txt<CR>:q<CR>", ["", false, "a.txt", ["a.txt"]]],
