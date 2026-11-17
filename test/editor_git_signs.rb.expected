@@ -30,6 +30,7 @@ ok   a save asks for the branch and counts, not the text it holds
 ok   the signs follow an unsaved edit on focus: the added line has the added sign
 ok   with no git run
 ok   a focus after HEAD moved asks git for the branch, the counts, and the text again
+ok   a HEAD naming a ref outside refs/ is not followed, so a focus asks git
 ok   lines removed at the top mark the first line
 ok   a file git does not hold shows no sign
 ok   a text at HEAD a capture may have cut shows no sign
@@ -37,4 +38,4 @@ ok   a timed-out capture stalls no later event: no git runs after the one that t
 ok   and the segment stays, nothing said
 ok   a timed-out text capture stalls the save after it too
 ok   git runs again after HEAD moves
-editor_git_signs: 39 passed, 0 failed
+editor_git_signs: 40 passed, 0 failed

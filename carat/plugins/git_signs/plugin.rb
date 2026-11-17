@@ -73,7 +73,8 @@ module Carat
         def activate(host)
           @host = host
           forget
-          refresh("activate", 0)
+          view = host.read_buffer(0)
+          refresh("activate", view.buffer, view.ok ? view.path : "")
         end
 
         #: () -> void
@@ -87,7 +88,7 @@ module Carat
             drop(event.buffer)
             return
           end
-          refresh(event.name, event.buffer)
+          refresh(event.name, event.buffer, event.path)
         end
 
         private
@@ -105,12 +106,13 @@ module Carat
           @texts.clear
         end
 
-        # Sets the segment and the buffer's signs, asking git unless the
-        # event is a focus with nothing git knows changed, or a command
-        # timed out at the current HEAD key; a timeout stops the event's
-        # remaining commands and keeps what shows.
-        #: (String, Integer) -> void
-        def refresh(name, buffer)
+        # Sets the segment and the signs of the buffer at path, asking git
+        # unless the event is a focus with nothing git knows changed, or a
+        # command timed out at the current HEAD key; a timeout stops the
+        # event's remaining commands and keeps what shows. The buffer is
+        # read only to place its signs.
+        #: (String, Integer, String) -> void
+        def refresh(name, buffer, path)
           host = @host
           return if host.nil?
           key = head_key(host)
@@ -118,11 +120,12 @@ module Carat
             return if key == @stalled_key
             @stalled = false
           end
-          view = host.read_buffer(buffer)
-          path = view.ok ? relative_path(host, view.path) : ""
-          if name == "window_focus" && !key.empty? && key == @key && (path.empty? || held?(view.buffer, key))
-            show_signs(host, view, held_text(view.buffer)) unless path.empty?
-            return
+          if name == "window_focus" && !key.empty? && key == @key
+            file = relative_path(host, path)
+            if file.empty? || held?(buffer, key)
+              show_signs(host, buffer, held_text(buffer)) unless file.empty?
+              return
+            end
           end
           branch = branch_name(run(host, BRANCH, key))
           return if @stalled
@@ -130,17 +133,18 @@ module Carat
           return if @stalled
           show_segment(host, text)
           @key = key
-          return if path.empty?
           if branch.empty?
-            drop(view.buffer)
+            drop(buffer)
             return
           end
-          unless held?(view.buffer, key)
-            output = run(host, TEXT + ["HEAD:./#{path}"], key)
+          file = relative_path(host, path)
+          return if file.empty?
+          unless held?(buffer, key)
+            output = run(host, TEXT + ["HEAD:./#{file}"], key)
             return if @stalled
-            keep(view.buffer, key, output)
+            keep(buffer, key, output)
           end
-          show_signs(host, view, held_text(view.buffer))
+          show_signs(host, buffer, held_text(buffer))
         end
 
         # The segment's text, "" when there is no branch to show.
@@ -179,9 +183,11 @@ module Carat
 
         # What .git/HEAD, its branch's ref file, packed-refs, and logs/HEAD
         # read below the working directory, joined; "" when .git/HEAD
-        # cannot be read or names a ref outside refs/.
+        # cannot be read or names a ref outside refs/. A stat comes first,
+        # so outside a repository nothing is read.
         #: (Carat::PluginApi::Host) -> String
         def head_key(host)
+          return "" unless host.stat(".git/HEAD").ok
           answer = host.read_file(".git/HEAD", 1)
           return "" unless answer.ok && answer.lines.length == 1
           line = answer.lines[0]
@@ -217,11 +223,13 @@ module Carat
 
         # Places the buffer's signs against the text at HEAD, none when it
         # has no lines.
-        #: (Carat::PluginApi::Host, Carat::PluginApi::BufferView, String) -> void
-        def show_signs(host, view, text)
-          host.clear_signs(view.buffer)
+        #: (Carat::PluginApi::Host, Integer, String) -> void
+        def show_signs(host, buffer, text)
+          host.clear_signs(buffer)
           head = head_lines(text)
           return if head.empty?
+          view = host.read_buffer(buffer)
+          return unless view.ok
           marks = LineDiff.marks(head, view.lines)
           row = 0
           while row < marks.length

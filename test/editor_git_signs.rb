@@ -210,6 +210,14 @@ module EditorGitSignsTest
     h.type("<C-w>w")
     t.assert_equal([BRANCH, COUNTS, TEXT_A], h.processes.captured.drop(5), "a focus after HEAD moved asks git for the branch, the counts, and the text again")
 
+    # A HEAD naming a ref outside refs/ gives no key: a focus asks git.
+    h = repository("one\n", "one\n")
+    h.files.put(".git/HEAD", "ref: refs/../../secret\n")
+    h.files.put("secret", "1111111\n")
+    h.open("a.txt")
+    h.type("<C-w>s")
+    t.assert_equal([BRANCH, COUNTS, TEXT_A, BRANCH, COUNTS, TEXT_A], h.processes.captured, "a HEAD naming a ref outside refs/ is not followed, so a focus asks git")
+
     # Scenario "Lines removed at the top mark the first line".
     h = repository("one\ntwo\n", "zero\none\ntwo\n")
     h.open("a.txt")
