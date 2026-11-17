@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Files open in splits and tab pages
-`s` and `v` on a file SHALL open it in a new window split horizontally or vertically from the previously used file window. `t` SHALL open it as the tab the top row shows: under `option.gt buffers` a buffer tab in that file window, the focus in it and the tree kept, and under `option.gt tabpages` a new tab page; when no window of the tab page shows a file, `t` SHALL open it as `l` does under either option, so no tab page holds only the tree. On a directory they SHALL do nothing. A file name holding a space or a `|` SHALL open as it is named, since the tree opens files without building an ex command line.
+`s` and `v` on a file SHALL open it in a new window split horizontally or vertically from the previously used file window. `t` SHALL open it as the tab the top row shows: under `option.gt buffers` a buffer tab in that file window, the focus in it and the tree kept, under `option.gt tabpages` a new tab page, and with no file window beside the tree a file window as `l` opens. On a directory they SHALL do nothing. A name holding a space or a `|` SHALL open as it is named.
 
 #### Scenario: Horizontal split
 - **WHEN** `s` is pressed on "b.rb" with the tree and one file window
