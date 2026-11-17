@@ -13,7 +13,7 @@ Quit and :LspRestart now end only the language server process carat started, and
 - Change JsonRpcLanguageGateway to keep each language's settled program in head_of, used by command? and hold, so an idle tick with no server reads no configuration line
 - Add tests for stopping only the started server, a stalled server keeping the editor running, quit and :LspRestart stopping only the old server, and an idle tick reading no configuration line
 - Add two scenarios to the language-server spec through the archived OpenSpec change
-- Document the stop signal in the README and the ProcessRunner entry of the architecture, which now says one-shot tools run through capture, and the settled program in the codebase map
+- Document the stop signal in the README and the ProcessRunner entry of the architecture, and the settled program in the codebase map
 
 ---
 
@@ -29,4 +29,4 @@ Quit and :LspRestart now end only the language server process carat started, and
 
 ## Notes
 
-Part b of lsp-container (171). Advisory review findings on the stop ordering against the queued shutdown and on the stalled server test's timing are recorded in the change's findings file for the backlog; the wording advisories on the architecture entry, the proposal, and the task numbering are fixed here, and the style advisories on the duplicated signal helper, the parallel settled lists, and the PIPE trap's owner are dropped.
+Part b of lsp-container (171). Advisory review findings on the stop ordering against the queued shutdown and on the stalled server test's timing are recorded in the change's findings file for the backlog; the wording advisories on the proposal and the task numbering are fixed here, and the advisories on the architecture entry naming Open3 for one-shot tools, the duplicated signal helper, the parallel settled lists, and the PIPE trap's owner are dropped.
