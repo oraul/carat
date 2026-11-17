@@ -6,6 +6,9 @@ require_relative "../carat/testing"
 # the file is compiled on its own (make test-one).
 module DomainFloatLayerTest
   D = Carat::Domain
+  # The integer minimum, written as a sum since its magnitude has no
+  # literal.
+  INTEGER_MIN = -9_223_372_036_854_775_807 - 1
 
   def self.spec(anchor, row, col, height, width, border, z)
     D::FloatSpec.new(anchor: anchor, row: row, col: col, height: height, width: width, border: border, title: "", z: z)
@@ -90,7 +93,9 @@ module DomainFloatLayerTest
       ["a row past the top", ["editor", 10_001, 0, 1, 1, 0], "No offset 10001: -10000 to 10000"],
       ["a column past the bottom", ["cursor", 0, -10_001, 1, 1, 0], "No offset -10001: -10000 to 10000"],
       ["the row first", ["editor", -20_000, 20_000, 1, 1, 0], "No offset -20000: -10000 to 10000"],
-      ["an offset near the integer maximum", ["editor", 0, 4_611_686_018_427_387_903, 1, 1, 0], "No offset 4611686018427387903: -10000 to 10000"]
+      ["an offset near the integer maximum", ["editor", 0, 4_611_686_018_427_387_903, 1, 1, 0], "No offset 4611686018427387903: -10000 to 10000"],
+      ["an offset at the integer minimum", ["editor", INTEGER_MIN, 0, 1, 1, 0], "No offset -9223372036854775808: -10000 to 10000"],
+      ["a column at the integer minimum", ["cursor", 0, INTEGER_MIN, 1, 1, 0], "No offset -9223372036854775808: -10000 to 10000"]
     ]) do |row|
       D::FloatSpec.refusal(row[0].to_s, row[1].to_i, row[2].to_i, row[3].to_i, row[4].to_i, row[5].to_i)
     end

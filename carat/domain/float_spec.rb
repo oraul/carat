@@ -53,11 +53,13 @@ module Carat
 
       # Why a row and column offset cannot place a float, "" when they
       # can: each lies within OFFSET_MAX either way, the row checked first.
+      # The bounds are compared, never the absolute value, which overflows
+      # at the integer minimum.
       #: (Integer, Integer) -> String
       def self.offset_refusal(row, col)
         bad = row
-        bad = col if row.abs <= OFFSET_MAX
-        return "" if bad.abs <= OFFSET_MAX
+        bad = col if row >= -OFFSET_MAX && row <= OFFSET_MAX
+        return "" if bad >= -OFFSET_MAX && bad <= OFFSET_MAX
         "No offset #{bad}: -#{OFFSET_MAX} to #{OFFSET_MAX}"
       end
     end
