@@ -504,7 +504,7 @@ module LintTest
     return true if path.include?("/concerns/") || path.start_with?("carat/use_cases/plugins/")
     return true if ONE_CALL_EXEMPT.include?(path)
     return true if text.include?("< Data.define(") || text.include?("< Struct.new(")
-    text.include?(" < ActionHandler") || text.include?(" < ExHandler")
+    text.include?(" < ActionHandler") || text.include?(" < ExHandler") || text.include?(" < LineCommandHandler")
   end
 
   # The public instance methods of a use case other than initialize and
@@ -911,7 +911,6 @@ module LintTest
     "E32: No file name" => "file_command_handler.rb and save_file.rb: queue item messages-tidy",
     "E33: No previous substitute regular expression" => "vim_pattern.rb and substitute_lines.rb: queue item messages-tidy",
     "E474: Invalid argument" => "history_command_handler.rb and messages_command_handler.rb: queue item messages-tidy",
-    "E477: No ! allowed" => "three ex command handlers: queue item messages-tidy",
     "E484: Can't open file" => "path_info.rb, visit_target.rb, and open_file.rb: queue item messages-tidy",
     "E486: Pattern not found:" => "find_match.rb and substitute_lines.rb: queue item messages-tidy",
     "E488: Trailing characters:" => "five files: queue item messages-tidy",
@@ -1418,7 +1417,7 @@ module LintTest
     modes_seen = binding_modes("keymap.leader <Space>\nkeymap.group <leader>f Files\nkeymap.normal j motion.down\nkeymap.visual_line j motion.down\nkeymap.normal k motion.up\n")
     t.assert_equal([["normal", "visual_line"], true, true, false, false], [modes_seen, binding_literal?("PICK = \"keymap.normal <CR> pick.accept\"", modes_seen), binding_literal?("['keymap.visual_line > op.shift']", modes_seen), binding_literal?("return \"keymap.leader takes one key\"", modes_seen), binding_literal?("x = \"keymap.normalize\"", modes_seen)], "the hard-coded binding rule")
     violations.each { |v| STDOUT.puts v }
-    t.assert_equal([true, true, true, true, false], [one_call_exempt?("carat/use_cases/actions/window_handler.rb", "    class WindowHandler < ActionHandler\n"), one_call_exempt?("carat/use_cases/windows/focus_request.rb", "    class FocusRequest < Data.define(:target, :count)\n"), one_call_exempt?("carat/use_cases/plugins/plugin_host.rb", "    class PluginHost\n"), one_call_exempt?("carat/use_cases/outcome.rb", "    class Outcome\n"), one_call_exempt?("carat/use_cases/operate.rb", "    class Operate\n")], "the one-call rule leaves out handlers, records, the plugin host, and Outcome")
+    t.assert_equal([true, true, true, true, true, false], [one_call_exempt?("carat/use_cases/ex/join_command_handler.rb", "    class JoinCommandHandler < LineCommandHandler\n"), one_call_exempt?("carat/use_cases/actions/window_handler.rb", "    class WindowHandler < ActionHandler\n"), one_call_exempt?("carat/use_cases/windows/focus_request.rb", "    class FocusRequest < Data.define(:target, :count)\n"), one_call_exempt?("carat/use_cases/plugins/plugin_host.rb", "    class PluginHost\n"), one_call_exempt?("carat/use_cases/outcome.rb", "    class Outcome\n"), one_call_exempt?("carat/use_cases/operate.rb", "    class Operate\n")], "the one-call rule leaves out handlers, records, the plugin host, and Outcome")
     t.assert_equal([["a use case exposes only call; other is public", "a use case has no public writer (:mode)"], []], [one_call_problems(["class X\n", "attr_reader :tabs\n", "def initialize(tabs:)\n", "def call(state)\n", "def self.build(x)\n", "def other(state)\n", "attr_writer :mode\n", "private\n", "def helper\n"]), one_call_problems(["class X\n", "def call(state)\n", "private\n", "def helper(state)\n"])], "the one-call rule")
     t.assert_equal([["B is not listed in a private_constant"], []], [private_constant_problems("A = 1\nB = \"b\"\nprivate_constant :A\n"), private_constant_problems("A = 1\nB = 2\nprivate_constant :A, :B\nx = A\n")], "the private constant rule")
     t.assert_equal([true, true, false, false, false], [constant_read?("x = Operate::DELETE", "Operate", "DELETE"), constant_read?("x = UseCases::Operate::DELETE", "Operate", "DELETE"), constant_read?("x = MyOperate::DELETE", "Operate", "DELETE"), constant_read?("x = Operate::DELETED", "Operate", "DELETE"), constant_read?("x = Domain::OperatorKind::DELETE", "Operate", "DELETE")], "the constant read rule")

@@ -1,5 +1,6 @@
 require_relative "../../domain/editor_state"
 require_relative "../../domain/ex_range"
+require_relative "../../domain/messages"
 require_relative "../search/global_command"
 require_relative "../outcome"
 require_relative "ex_handler"
@@ -32,7 +33,7 @@ module Carat
       # @rbs state: Domain::EditorState
       # @rbs command: Domain::ExCommand
       def call(state, command)
-        return Outcome.failure("E477: No ! allowed") if command.bang && @invert
+        return Outcome.failure(Domain::Messages::E477) if command.bang && @invert
         count = state.buffer.line_count
         range = command.range.empty? ? "%" : command.range
         lines = Domain::ExRange.resolve(range, state.cursor.row, count, state.window.last_selection)
