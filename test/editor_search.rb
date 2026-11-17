@@ -154,6 +154,8 @@ module EditorSearchTest
     t.assert_equal("E33: No previous substitute regular expression", h.message, "Tilde with no substitute")
     h.type(":s/a/xy/<CR>/~<CR>")
     t.assert_equal([1, 2], h.cursor, "Tilde after a substitute")
+    h.type(":set ic<CR>n")
+    t.assert_equal([0, 0], h.cursor, ":set ic keeps the replacement string of a ~ in the last pattern")
     h = editor("^a\nb\n^c\n", 0, 0)
     h.type("/^^<CR>")
     t.assert_equal([2, 0], h.cursor, "A second caret is literal")

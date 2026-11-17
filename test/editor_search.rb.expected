@@ -66,6 +66,7 @@ ok   escape returns to visual mode
 ok   incsearch on a match at the line end
 ok   Tilde with no substitute
 ok   Tilde after a substitute
+ok   :set ic keeps the replacement string of a ~ in the last pattern
 ok   A second caret is literal
 ok   An escaped bracket in a collection
 ok   hlsearch draws every match
@@ -83,4 +84,4 @@ ok   invcul switches it
 ok   cul! switches it twice back on
 ok   cul turns it back on
 ok   a value is E474
-editor_search: 85 passed, 0 failed
+editor_search: 86 passed, 0 failed

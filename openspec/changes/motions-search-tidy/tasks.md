@@ -16,4 +16,4 @@
 
 ## 4. Docs and checks
 
-- [ ] 4.1 Update `docs/compatibility.md` (patterns, substitute differences) and `docs/codebase-map.md` (area 6 and the `DelimitedPattern` entry); `make gates`, `make spec-validate`, `make lint`, `make docs-lint`, and the touched tests pass
+- [x] 4.1 Update `docs/compatibility.md` (patterns, substitute differences) and `docs/codebase-map.md` (area 6 and the `DelimitedPattern` entry); `make gates`, `make spec-validate`, `make lint`, `make docs-lint`, and the touched tests pass
