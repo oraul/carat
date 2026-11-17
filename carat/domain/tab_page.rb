@@ -104,6 +104,23 @@ module Carat
         self.current = id
       end
 
+      # Whether the leaf id holds a side window: the window of a shown
+      # slot, a sidebar or the panel showing a plugin's view. A window
+      # merely showing a scratch buffer, such as a reading view, is not
+      # one. The window's identity is checked first, so the slot's walk
+      # runs only for its own window; nothing is allocated.
+      #: (Integer) -> bool
+      def side_window?(id)
+        target = layout.window_at(id)
+        i = 0
+        while i < SLOT_COUNT
+          held = slot_at(i)
+          return true if held.occupied? && held.view_window.equal?(target) && held.shown?(layout)
+          i += 1
+        end
+        false
+      end
+
       # The leaf of the window a side window edits files in: the
       # previously used window when it shows a buffer that is not a
       # scratch buffer, otherwise the first such window in layout order,
