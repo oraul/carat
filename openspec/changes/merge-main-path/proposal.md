@@ -26,7 +26,7 @@ None: the merge loop is the delivery pipeline's, which no spec under `openspec/s
 ## Impact
 
 - `.claude/workflows/deliver-change.js`, `.claude/agents/merger.md`, `.claude/agents/contributor.md`, `tools/run_state.sh`, `tools/gates.sh`, `tools/agent_guard.sh`, `tools/tools_test.sh`.
-- CLAUDE.md: changed, the Git workflow push count and the Lanes rule name the main-moved push.
+- CLAUDE.md: changed, the Git workflow push count names the main-moved push (the budget leaves no room for more; README.md describes the path).
 - README.md: changed, the pipeline description names the main-moved path and push.
 - docs/codebase-map.md: changed, the `run_state.sh` entry names `moved` and `push --main-moved`; no file is added, moved, or removed.
 - docs/architecture.md: unchanged, it does not describe the merge loop or the push kinds.
