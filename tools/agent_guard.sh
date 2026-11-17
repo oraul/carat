@@ -91,7 +91,10 @@
 #                create tool or API
 #   close        the read profile, plus sh tools/run_state.sh phase CHANGE
 #                NAME COMMIT with NAME one of CLOSE_PHASES, the phases
-#                no merge gate reads, and ci-stages CHANGE COMMIT (a full
+#                no merge gate reads, or CHANGE NAME merged (NAME merge,
+#                retro, or report, at the squash commit the run state
+#                resolves; merge also with the reported COMMIT), and
+#                ci-stages CHANGE COMMIT (a full
 #                sha): the retrospective's closing start
 #                runs the run's last records, never review and never the
 #                phase of check, quality, security, or bench
@@ -624,8 +627,12 @@ run_state_form() {
       [ "$closing" = 1 ] && [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && matches "$3" '^[0-9a-f]{40}$' ||
         refuse "tools/run_state.sh ci-stages, which only the close profile runs, as CHANGE COMMIT" ;;
     read:phase)
-      [ "$closing" = 1 ] && [ $# -eq 4 ] && matches "$2" "$CHANGE_NAME" && options_in "$CLOSE_PHASES" "$3" && matches "$4" '^[0-9a-f]{7,40}$' ||
-        refuse "tools/run_state.sh phase, which the workflow runs; the close profile records only CHANGE NAME COMMIT, NAME one of $CLOSE_PHASES" ;;
+      [ "$closing" = 1 ] && matches "$2" "$CHANGE_NAME" && options_in "$CLOSE_PHASES" "$3" && {
+        { [ $# -eq 4 ] && matches "$4" '^[0-9a-f]{7,40}$'; } ||
+        { [ $# -eq 4 ] && [ "$4" = merged ] && options_in "merge retro report" "$3"; } ||
+        { [ $# -eq 5 ] && [ "$3" = merge ] && [ "$4" = merged ] && matches "$5" '^[0-9a-f]{7,40}$'; }
+      } ||
+        refuse "tools/run_state.sh phase, which the workflow runs; the close profile records only CHANGE NAME COMMIT, NAME one of $CLOSE_PHASES, or CHANGE NAME merged, NAME merge, retro, or report, the merge with the reported COMMIT" ;;
     *) refuse "tools/run_state.sh $verb, which the workflow or another agent runs" ;;
   esac
 }

@@ -1437,6 +1437,22 @@ env BASE=main sh "$here/run_state.sh" set merges merged "$squash" > /dev/null
 expect "run_state: set records the pull request's squash commit as merged" 0 "^$squash\$" state get merges merged
 env BASE=main sh "$here/run_state.sh" phase merges merge "$squash" > /dev/null
 expect "run_state: phase records the merge at the pull request's squash commit" 0 "^$squash\$" state get merges phase.merge
+# The close records merge, retro, and report at the merged commit by name,
+# the squash commit the run state resolves, whatever sha the merger
+# reported; a reported commit that differs is noted naming both
+# (record-squash-commit).
+env BASE=main sh "$here/run_state.sh" phase merges merge merged "$head12" > /dev/null
+expect "run_state: phase merged records the merge at the squash commit, not the reported head" 0 "^$squash\$" state get merges phase.merge
+expect "run_state: phase merged notes the reported head beside the squash commit" 0 "merge-disagreement the merged commit reported, $head12, is not the squash commit on main, $squash, recorded instead" state show merges
+env BASE=main sh "$here/run_state.sh" phase merges retro merged > /dev/null
+env BASE=main sh "$here/run_state.sh" phase merges report merged > /dev/null
+expect "run_state: phase merged records the retro and report at the squash commit" 0 "^$squash $squash\$" sh -c 'echo "$(sh "$1" get merges phase.retro) $(sh "$1" get merges phase.report)"' _ "$here/run_state.sh"
+expect "run_state: phase merged notes no agreeing reported commit" 0 "^1\$" sh -c 'env BASE=main sh "$1" phase merges merge merged "$2" > /dev/null && sh "$1" show merges | grep -c merge-disagreement' _ "$here/run_state.sh" "$squash"
+expect "run_state: phase merged refuses a phase other than merge, retro, or report" 1 "only merge, retro, and report are recorded at the merged commit, not ci" env BASE=main sh "$here/run_state.sh" phase merges ci merged
+expect "run_state: phase merged refuses a change with no pull request or merged commit" 1 "nopush records neither a pull request nor a merged commit" env BASE=main sh "$here/run_state.sh" phase nopush merge merged
+env BASE=main sh "$here/run_state.sh" set nopush merged "$squash" > /dev/null
+state set nopush pr 17 > /dev/null
+expect "run_state: phase merged refuses a recorded merged that is not the squash commit" 1 "the recorded merged commit $squash is not the squash commit of pull request #17 on main, $later" env BASE=main sh "$here/run_state.sh" phase nopush merge merged
 
 # Sprints: review-due counts the history rows after the last sprint's last
 # change, then the merged changes without a row. mrow CHANGE MERGED
@@ -1961,6 +1977,9 @@ for gated in check quality security bench; do
 done
 expect "guard: close refuses a phase without its commit" 2 "the close profile records only" guard close 'sh tools/run_state.sh phase c report'
 expect "guard: close refuses a phase at a word that is not a commit" 2 "the close profile records only" guard close 'sh tools/run_state.sh phase c report HEAD'
+expect "guard: close records a phase at the merged commit" 0 "^$" guard close 'sh tools/run_state.sh phase c merge merged abc1234 || echo refused: 1; sh tools/run_state.sh phase c retro merged || echo refused: 2; sh tools/run_state.sh phase c report merged || echo refused: 3; sh tools/run_state.sh phase c merge merged'
+expect "guard: close refuses a phase at another word" 2 "the close profile records only" guard close 'sh tools/run_state.sh phase c ci merged'
+expect "guard: close refuses a reported commit beside the retro" 2 "the close profile records only" guard close 'sh tools/run_state.sh phase c retro merged abc1234'
 expect "guard: close refuses a review record" 2 "tools/run_state.sh review" guard close 'sh tools/run_state.sh review c security pass x abc1234'
 expect "guard: close refuses a push" 2 "git push" guard close 'git push origin x'
 expect "guard: close names its profile" 2 "refused for the close profile" guard close 'sh tools/run_state.sh set c pushes 0'
@@ -3521,6 +3540,42 @@ speed_js() {
 }
 expect "workflow: a late finding becomes a shell-safe note" 0 '^"a [(]x[)] q y b"$' \
   speed_js 'noteText("a $(x) \"q\" `y` b")'
+# A merger that reports the pushed head as the merged sha: the lines the
+# workflow builds, run as the close runs them, record the merge, retro,
+# and report at the squash commit, the disagreement noted naming both;
+# one refused line (a CI phase with no push recorded) costs only itself,
+# the other phases and every metric field recorded and the refused line
+# reported by its position (record-squash-commit).
+close_js() {
+  js "$wf" "COMMIT CHANGE SQUASH pending queue phaseLine phaseDone mergeDone CLOSABLE closeLines recordLine refusedNote SIZES usage firstPass calibrated metricLine" "(() => { globalThis.notes = []; globalThis.note = (l) => notes.push(l); globalThis.ran = {}; globalThis.rework = 1; globalThis.extra = 0; globalThis.stopKind = 'none'; globalThis.ciMinutes = 4.2; globalThis.ciWaitCalls = 2; globalThis.estimate = 'small'; globalThis.planned = null; return $1 })()"
+}
+close_back=$PWD
+fresh closes
+state init closes chore/closes > /dev/null
+echo work >> README.md
+commit "feat: close work"
+close_head=$(git rev-parse --short=12 HEAD)
+git_q checkout -q main
+echo squash >> README.md
+commit "feat: close work (#9)"
+close_squash=$(git rev-parse --short=12 HEAD)
+state set closes pr 9 > /dev/null
+env BASE=main sh "$here/run_state.sh" set closes merged "$close_squash" > /dev/null
+close_line=$(close_js "(() => { globalThis.head = '$close_head'; globalThis.state = { change: 'closes' }; usage.close = { tokens: 1200, calls: 5 }; firstPass.check = 1; phaseDone('package', head); phaseDone('ci', head); mergeDone(head); return recordLine(closeLines(true)) })()" | node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(0, "utf8")))')
+close_out=$(printf '%s' "$close_line" | sed "s|sh tools/run_state.sh|sh $here/run_state.sh|g" | BASE=main sh 2>&1)
+expect "workflow: a merger reporting the pushed head records the squash commit as phase.merge, phase.retro, and phase.report" 0 "^$close_squash $close_squash $close_squash\$" \
+  sh -c 'echo "$(sh "$1" get closes phase.merge) $(sh "$1" get closes phase.retro) $(sh "$1" get closes phase.report)"' _ "$here/run_state.sh"
+expect "workflow: the merger's reported head is noted beside the squash commit" 0 "merge-disagreement the merged commit reported, $close_head, is not the squash commit on main, $close_squash" state show closes
+expect "workflow: a close record line with one refused phase reports the refused line" 0 "^refused: 2\$" printf '%s\n' "$close_out"
+expect "workflow: a close record line with one refused phase reports its refusal" 0 "refused: no pushed head is recorded for closes" printf '%s\n' "$close_out"
+expect "workflow: a close record line with one refused phase reports only that line" 0 "^1\$" sh -c 'printf "%s\n" "$1" | grep -c "^refused: "' _ "$close_out"
+expect "workflow: a close record line with one refused phase still records the rest and every metric field" 0 "^$close_head  ok\$" \
+  sh -c 'pairs=$(printf "%s" "$2" | sed "s/.*run_state.sh metric closes //; s/ || echo refused: [0-9]*\$//"); bad=""; for p in $pairs; do [ "$(sh "$1" get closes "metric.${p%%=*}")" = "${p#*=}" ] || bad="$bad $p"; done; echo "$(sh "$1" get closes phase.package) $(sh "$1" get closes phase.ci)$bad ok"' _ "$here/run_state.sh" "$close_line"
+expect "workflow: the close's metric line carries every figure" 0 "^8\$" sh -c 'printf "%s" "$1" | sed "s/.*run_state.sh metric closes //; s/ || echo refused: [0-9]*\$//" | tr " " "\n" | grep -c "="' _ "$close_line"
+expect "workflow: the refused close lines are noted by their text" 0 '^"refused at the close, the other lines recorded: b; output: x"$' \
+  close_js "refusedNote(['a', 'b', 'c'], { refused: [2, 9], record_output: 'x' })"
+expect "workflow: a close with no refused line writes no refused note" 0 '^""$' close_js "refusedNote(['a'], { refused: [] })"
+cd "$close_back" || exit 1
 # A late-finding note is refused before the merge, so an unmerged close
 # keeps the findings that arrived after the package step as held-finding
 # notes, which a merged resume reads back (heldFindings, as seed does) and
