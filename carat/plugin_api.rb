@@ -678,7 +678,9 @@ module Carat
       # (API 2.7). Failed without running anything for an empty command,
       # an empty word, a word holding a NUL, or a first word holding a "/";
       # failed when the program cannot start, runs past 2 seconds, when it
-      # is stopped, or answers bytes that are not UTF-8. The output is the
+      # is stopped, or answers bytes that are not UTF-8; a program killed
+      # at the deadline fails with its name and "ran past 2 seconds", one
+      # that cannot start with "cannot run" and its name. The output is the
       # program's, so a plugin treats it as untrusted text.
       # The base answers a failure rather than raising, as stat does.
       # @rbs argv: Array[String]
