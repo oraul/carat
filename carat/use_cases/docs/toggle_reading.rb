@@ -47,7 +47,7 @@ module Carat
         width = MEASURE if width > MEASURE
         width = 1 if width < 1
         text = Domain::MarkdownText.gather(source.lines, Domain::MarkdownText::READING_RAW_LIMIT)
-        docs = @format_docs.call(state, text, width, true)
+        docs = @format_docs.call(state, text, width, Domain::MarkdownText::READING_RAW_LIMIT, Domain::MarkdownText::READING_ROW_LIMIT)
         lines = docs.texts
         lines = [""] if lines.empty?
         buffer = Domain::Buffer.new(lines: lines, path: nil, line_ending: "\n")

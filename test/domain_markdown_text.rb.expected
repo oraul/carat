@@ -24,8 +24,8 @@ ok   an illegal byte reads as U+FFFD
 ok   a long row wraps at its last space
 ok   a word longer than the width is cut
 ok   a code row before a long word is cut on a character, not its indent
-ok   a bullet stays with the long word after it
-ok   a quote bar stays with the long word after it
+ok   a bullet stays with the long word after it, its text hung under it
+ok   a quote bar stays with the long word after it and starts its next row
 ok   a bullet's text still wraps at a space
 ok   wide characters wrap by cells
 ok   a document reads as plain rows
@@ -33,7 +33,7 @@ ok   ascii list markers are stars
 ok   an ascii quote is a pipe per level
 ok   an ascii thematic break is a rule of hyphens
 ok   an ascii bullet stays with the long word after it
-ok   an ascii quote wraps after its bar
+ok   an ascii quote wraps after its bar, its bar on each row
 ok   an ascii document under the ascii set holds no code point above 127
 ok   a heading
 ok   strong and emphasized runs
@@ -45,6 +45,8 @@ ok   a heading's run over the heading
 ok   a bullet's and a quote's runs after their prefix
 ok   fenced code rows after a gap
 ok   a run cut where its row wraps
+ok   a run cut where a quote wraps, moved past the repeated bar
+ok   the runs of a flowed line after the row it joins
 ok   characters, not bytes
 ok   a fence's first word is its language, and each fenced block has its number
 ok   styles gives each row its tokens, kept for the row's own string
@@ -79,12 +81,33 @@ ok   a table under ascii has plain borders and no box character:
 | alpha |   file    |    12 |
 | be    | directory | 3,400 |
 +-------+-----------+-------+
-ok   a separator of another cell count makes no table
+ok   a separator of another cell count makes no table, its line flowing as text
 ok   a measure too narrow for two cells a column keeps the source
 ok   a short row is padded, a long one cut, markup and escapes read out
 ok   text right after a table is its own row
 ok   a table after text is parted by a blank row
 ok   a pipe inside fenced code is code
+ok   a heading with a pipe right after a table is its own row
+ok   a quote with a pipe right after a table is its own row
+ok   a list item with a pipe right after a table is its own row
+ok   a plain line with a pipe right after a table is a table row
+ok   a table after a gap at a cap of two rows keeps the parsed rows at the cap
+ok   a two-line paragraph flows as one row at 60 columns
+ok   a two-line quote flows as one row at 60 columns
+ok   an indented paragraph flows at its indentation
+ok   a line ending in two spaces breaks the flow
+ok   a heading after a paragraph is its own row
+ok   a list item after a paragraph is its own row
+ok   ordered items stay apart
+ok   a rule after a paragraph is its own row
+ok   quote lines of another depth stay apart
+ok   a bare quote marker parts a quote's paragraphs
+ok   code and an empty fence end the flow
+ok   a line after a table does not join the text before it
+ok   a flowed quote wider than 60 columns keeps its bar on every row:
+│ The reading view flows the lines of a block quote into
+│ one text, and wraps it at the measure of the window, its
+│ bar starting every row.
 ok   a megabyte line is gathered only to the 262,144-byte cap
 ok   lines under the cap are joined whole, a crossing line cut to the cap on a character boundary
-domain_markdown_text: 68 passed, 0 failed
+domain_markdown_text: 88 passed, 0 failed

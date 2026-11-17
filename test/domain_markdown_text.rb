@@ -107,9 +107,9 @@ module DomainMarkdownTextTest
       ["a long row wraps at its last space", "one two three four five six seven eight nine ten", "one two three four five six seven eight|nine ten"],
       ["a word longer than the width is cut", "x" * 50, "x" * 40 + "|" + "x" * 10],
       ["a code row before a long word is cut on a character, not its indent", "```\n" + "y" * 45 + "\n```", "  " + "y" * 38 + "|" + "y" * 7],
-      ["a bullet stays with the long word after it", "- " + "z" * 45, "• " + "z" * 38 + "|" + "z" * 7],
-      ["a quote bar stays with the long word after it", "> " + "w" * 45, "│ " + "w" * 38 + "|" + "w" * 7],
-      ["a bullet's text still wraps at a space", "- " + "a" * 30 + " " + "b" * 20, "• " + "a" * 30 + "|" + "b" * 20],
+      ["a bullet stays with the long word after it, its text hung under it", "- " + "z" * 45, "• " + "z" * 38 + "|  " + "z" * 7],
+      ["a quote bar stays with the long word after it and starts its next row", "> " + "w" * 45, "│ " + "w" * 38 + "|│ " + "w" * 7],
+      ["a bullet's text still wraps at a space", "- " + "a" * 30 + " " + "b" * 20, "• " + "a" * 30 + "|  " + "b" * 20],
       ["wide characters wrap by cells", "\u{6F22}" * 25, "\u{6F22}" * 20 + "|" + "\u{6F22}" * 5],
       ["a document reads as plain rows", "# Title\n\nUse **`map`** or [each](#each).\n\n- one\n\n```ruby\nx = 1\n```", "Title||Use map or each.||• one||  x = 1"]
     ]) do |text|
@@ -122,8 +122,8 @@ module DomainMarkdownTextTest
       ["ascii list markers are stars", "- one\n  - two", "* one|  * two"],
       ["an ascii quote is a pipe per level", "> a\n> > b", "| a|| | b"],
       ["an ascii thematic break is a rule of hyphens", "a\n\n***\n\nb", "a||--------------------||b"],
-      ["an ascii bullet stays with the long word after it", "- " + "w" * 45, "* " + "w" * 38 + "|" + "w" * 7],
-      ["an ascii quote wraps after its bar", "> " + "q " * 25, "| " + "q " * 18 + "q|" + "q " * 5 + "q"]
+      ["an ascii bullet stays with the long word after it", "- " + "w" * 45, "* " + "w" * 38 + "|  " + "w" * 7],
+      ["an ascii quote wraps after its bar, its bar on each row", "> " + "q " * 25, "| " + "q " * 18 + "q|| " + "q " * 5 + "q"]
     ]) do |text|
       ascii_rows(text)
     end
@@ -142,6 +142,8 @@ module DomainMarkdownTextTest
       ["a bullet's and a quote's runs after their prefix", ["- **a**\n\n> `b`", 40], "0:2+1 @markup.strong 2:2+1 @markup.raw"],
       ["fenced code rows after a gap", ["text\n\n```ruby\nx = 1\n```", 40], "2:2+5 @markup.raw.block"],
       ["a run cut where its row wraps", ["aaaa **bbbb cccc** dd", 10], "0:5+4 @markup.strong 1:0+4 @markup.strong"],
+      ["a run cut where a quote wraps, moved past the repeated bar", ["> aaaa **bbbb cccc** dd", 12], "0:7+4 @markup.strong 1:2+4 @markup.strong"],
+      ["the runs of a flowed line after the row it joins", ["**a**\nb `c`", 40], "0:0+1 @markup.strong 0:4+1 @markup.raw"],
       ["characters, not bytes", ["\u{6F22}\u{6F22} **x**", 40], "0:3+1 @markup.strong"]
     ]) do |input|
       spans(input[0], input[1])
@@ -198,7 +200,7 @@ module DomainMarkdownTextTest
 
     # The edges of a table. Rows are [label, [document, width], rows joined with newlines].
     t.cases([
-      ["a separator of another cell count makes no table", ["a | b\n|---|", 40], "a | b||---|"],
+      ["a separator of another cell count makes no table, its line flowing as text", ["a | b\n|---|", 40], "a | b |---|"],
       ["a measure too narrow for two cells a column keeps the source", ["| a | b | c |\n|---|---|---|", 15], "| a | b | c |||---|---|---|"],
       ["a short row is padded, a long one cut, markup and escapes read out", ["a | b\n---|---\n**x** |\n`y` | z \\| w | extra", 40], "┌────┬───────┐|│ a  │ b     │|├────┼───────┤|│ x  │       │|│ y  │ z | w │|└────┴───────┘"],
       ["text right after a table is its own row", ["| a |\n| - |\n| b |\nafter", 40], "┌────┐|│ a  │|├────┤|│ b  │|└────┘|after"],
@@ -207,6 +209,43 @@ module DomainMarkdownTextTest
     ]) do |input|
       drawn(input[0], "unicode", input[1]).split("\n").join("|")
     end
+
+    # A table ends where another block starts (markdown-reading-c,
+    # scenario "A heading with a pipe right after a table"). Rows are
+    # [label, document, rows joined with "|"].
+    t.table([
+      ["a heading with a pipe right after a table is its own row", "| a |\n| - |\n| b |\n# x | y", "┌────┐|│ a  │|├────┤|│ b  │|└────┘|x | y"],
+      ["a quote with a pipe right after a table is its own row", "| a |\n| - |\n| b |\n> q | r", "┌────┐|│ a  │|├────┤|│ b  │|└────┘|│ q | r"],
+      ["a list item with a pipe right after a table is its own row", "| a |\n| - |\n| b |\n- i | j", "┌────┐|│ a  │|├────┤|│ b  │|└────┘|• i | j"],
+      ["a plain line with a pipe right after a table is a table row", "| a |\n| - |\n| b |\nc | d", "┌────┐|│ a  │|├────┤|│ b  │|│ c  │|└────┘"]
+    ]) do |text|
+      drawn(text, "unicode", 40).split("\n").join("|")
+    end
+    capped = D::MarkdownText.parse("a\n\n| x |\n|---|\n| y |", "unicode", D::MarkdownText::RAW_LIMIT, 2, 40)
+    t.assert_equal(2, capped.count, "a table after a gap at a cap of two rows keeps the parsed rows at the cap")
+
+    # Paragraphs and quotes flow (markdown-reading-c, scenarios "A
+    # two-line paragraph at 60 columns" and "A two-line quote at 60
+    # columns"). Rows are [label, document, rows at 60 joined with "|"].
+    t.table([
+      ["a two-line paragraph flows as one row at 60 columns", "The reading view joins\nthe lines of a paragraph.", "The reading view joins the lines of a paragraph."],
+      ["a two-line quote flows as one row at 60 columns", "> A quote written\n> on two lines.", "│ A quote written on two lines."],
+      ["an indented paragraph flows at its indentation", "  one\n  two", "  one two"],
+      ["a line ending in two spaces breaks the flow", "one  \ntwo", "one|two"],
+      ["a heading after a paragraph is its own row", "text\n# Head\nmore", "text|Head|more"],
+      ["a list item after a paragraph is its own row", "text\n- item\nmore", "text|• item|more"],
+      ["ordered items stay apart", "1. one\n2. two", "1. one|2. two"],
+      ["a rule after a paragraph is its own row", "text\n***\nmore", "text|────────────────────|more"],
+      ["quote lines of another depth stay apart", "> a\n> > b\nc", "│ a|│ │ b|c"],
+      ["a bare quote marker parts a quote's paragraphs", "> a\n>\n> b", "│ a|│|│ b"],
+      ["code and an empty fence end the flow", "a\n```\nx\n```\nb\nc\n```\n```\nd", "a|  x|b c|d"],
+      ["a line after a table does not join the text before it", "text\n| a |\n| - |\n| b |\nafter\nmore", "text|┌────┐|│ a  │|├────┤|│ b  │|└────┘|after more"]
+    ]) do |text|
+      drawn(text, "unicode", 60).split("\n").join("|")
+    end
+    # markdown-reading-c, scenario "A flowed quote wider than the measure".
+    quote = drawn("> The reading view flows the lines of a block quote\n> into one text, and wraps it at the measure of the\n> window, its bar starting every row.", "unicode", 60).split("\n")
+    t.assert_equal([3, true, true], [quote.length, quote.all? { |row| row.start_with?("│ ") }, quote.all? { |row| row.length <= 60 }], "a flowed quote wider than 60 columns keeps its bar on every row:\n#{quote.join("\n")}")
 
     # markdown-reading, scenario "An over-cap line": the gathering reads
     # a line crossing the cap only up to it, on a character boundary.

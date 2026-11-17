@@ -32,4 +32,5 @@ ok   a 60-column window wraps the wide table's cells within 60 columns:
 │                │         │               no tab opens it │
 └────────────────┴─────────┴───────────────────────────────┘
 ok   under ascii the tables' borders are +, -, and |, and the screen holds no box character
-use_cases_toggle_reading: 18 passed, 0 failed
+ok   a 60-column window shows a two-line paragraph and a two-line quote each as one row
+use_cases_toggle_reading: 19 passed, 0 failed

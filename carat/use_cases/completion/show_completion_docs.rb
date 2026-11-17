@@ -1,5 +1,6 @@
 require_relative "../../domain/editor_state"
 require_relative "../../domain/completion_menu"
+require_relative "../../domain/markdown_text"
 require_relative "../../domain/display_width"
 require_relative "../../domain/buffer"
 require_relative "../../domain/window"
@@ -83,7 +84,7 @@ module Carat
       # Opens the float of the text beside the popup's spec.
       #: (Domain::EditorState, Domain::CompletionMenu, Domain::FloatSpec, Integer, String) -> void
       def open_beside(state, menu, popup, index, text)
-        docs = @format_docs.call(state, text, WIDTH, false)
+        docs = @format_docs.call(state, text, WIDTH, Domain::MarkdownText::RAW_LIMIT, Domain::MarkdownText::ROW_LIMIT)
         rows = docs.texts
         return if rows.empty?
         window = state.tab.layout_window
