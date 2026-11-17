@@ -445,7 +445,27 @@ module AdaptersLanguageGatewayTest
     h = ready
     n = h.processes.bodies.length
     h.assembly.services.stop
+    # Scenario "Quit stops only the started server": quit calls stop
+    # (bin/carat.rb), which stops the handle of each server it started.
     t.assert_equal([["shutdown", "exit"], [1], "ruby-lsp stopped"], [sent_since(h, n), h.processes.stopped, label(h)], "stop sends shutdown and exit and stops the child")
+    h.assembly.services.stop
+    t.assert_equal([1], h.processes.stopped, "a second stop stops nothing more")
+
+    # Scenario "An idle tick with no server reads no configuration line":
+    # the first tick settles the command, so a line read afterward is
+    # never seen by a later tick, which would show its command.
+    files = Carat::Doubles::MemoryFiles.new
+    files.move_to("/work")
+    files.put("a.rb", "x = 1\n")
+    config = Carat::Doubles::FixedConfig.with_user("")
+    h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 10, cols: 60, plugins: [])
+    h.processes.install("ruby-lsp")
+    h.processes.install("podman")
+    h.open("a.rb")
+    h.wait
+    config.read("~/.config/carat/caratrc", "language.ruby.lsp podman run app ruby-lsp\n", true)
+    h.wait
+    t.assert_equal("|ruby-lsp untrusted :LspStart", "#{h.processes.spawned.join(",")}|#{label(h)}", "an idle tick with no server reads no configuration line: a line read after the first tick is not seen")
 
     # Nothing starts without a command.
     h = editor(false)
