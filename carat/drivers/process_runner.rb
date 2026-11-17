@@ -11,7 +11,12 @@ module Carat
     # off an outbox, so a child that stops reading never blocks the editor
     # thread. stop signals TERM to the child's own pid, then
     # Process.detach reaps it (Spinel compiles no Process.wait(pid) or
-    # WNOHANG). capture runs a short command on the
+    # WNOHANG). The constructor traps PIPE so a write to a child that
+    # ended answers EPIPE, which write_bytes rescues, instead of ending
+    # Carat at the default action: stop TERMs a child its writer may still
+    # be writing to. A handler, unlike IGNORE, resets to the default in
+    # the spawned children, so their own writes to a closed pipe still end
+    # them. capture runs a short command on the
     # editor thread instead: the same spawn without a shell, its output read
     # with IO.select until it ends, CAPTURE_LIMIT bytes are kept, or
     # CAPTURE_SECONDS pass, when the child is killed and timed_out? says
@@ -34,6 +39,7 @@ module Carat
         @outboxes = []
         @open = []
         @timed_out = false
+        Signal.trap("PIPE") { nil }
       end
 
       # Starts the command; its handle is its place in the lists plus one.

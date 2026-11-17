@@ -47,6 +47,15 @@ module DriversProcessRunnerTest
     "#{message.kind} #{message.text}"
   end
 
+  # Starts cat, echoes one frame, stops it, and describes its end.
+  def self.stop_cat(runner, queue)
+    handle = runner.spawn(["cat"])
+    runner.write(handle, D::RpcFramer.frame("{}"))
+    describe(queue)
+    runner.stop(handle)
+    describe(queue)
+  end
+
   def self.main
     t = Carat::Testing.new("drivers_process_runner")
     queue = Carat::Drivers::RuntimeQueue.new
@@ -73,6 +82,17 @@ module DriversProcessRunnerTest
     t.assert_equal(true, queue.pop.nil?, "and its sibling keeps running")
     runner.stop(second)
     t.assert_equal("#{second} exit", ended(queue), "until it is stopped in turn")
+
+    # Scenario "Stopping a stalled server keeps the editor running":
+    # A child stopped while its writer is blocked on a full pipe: the
+    # write after it ends answers EPIPE, never SIGPIPE ending the runner.
+    stalled = runner.spawn(["sleep", "30"])
+    t.assert_equal(true, runner.write(stalled, "x" * 200_000), "a stalled child takes more input than its pipe holds")
+    sleep 0.2
+    runner.stop(stalled)
+    t.assert_equal("#{stalled} exit", ended(queue), "stopping a child its writer is blocked on still ends it, and the runner survives the broken pipe")
+    sleep 0.2
+    t.assert_equal("exit ", stop_cat(runner, queue), "and the runner starts and stops the next child")
 
     t.assert_equal(0, runner.spawn(["carat-no-such-command"]), "a missing command does not start")
     t.assert_equal(0, runner.spawn([]), "no words start nothing")

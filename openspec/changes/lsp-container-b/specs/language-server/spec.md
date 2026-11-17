@@ -1,11 +1,15 @@
 ## ADDED Requirements
 
 ### Requirement: Quit and :LspRestart end only the server carat started
-On quit and on `:LspRestart` the editor SHALL send `shutdown` and `exit` to each language server it started and end that server's process by signalling that process itself, and SHALL end no other process: not another child, not the server's process group, and not a process that took the number of a child already reaped.
+On quit and on `:LspRestart` the editor SHALL send `shutdown` and `exit` to each language server it started and end that server's process by signalling that process itself, and SHALL end no other process: not another child, not the server's process group, and not a process that took the number of a child already reaped. Ending a server while bytes for it are still being written SHALL leave the editor running.
 
 #### Scenario: Stopping a server ends only that server
 - **WHEN** two server processes run and the first is stopped
 - **THEN** the first process ends and the second keeps running until it is stopped
+
+#### Scenario: Stopping a stalled server keeps the editor running
+- **WHEN** a server stops reading, more input is queued for it than its pipe holds, and it is stopped
+- **THEN** its process ends, the write to it fails without ending the editor, and the next server starts and stops
 
 #### Scenario: Quit stops only the started server
 - **WHEN** ruby-lsp runs and the editor quits
